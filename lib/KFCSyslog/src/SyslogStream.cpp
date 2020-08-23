@@ -116,11 +116,6 @@ void SyslogStream::dumpQueue(Print &print) const
     return _syslog._queue.dump(print);
 }
 
-Syslog &SyslogStream::getSyslog()
-{
-    return _syslog;
-}
-
 // String SyslogStream::getLevel() const
 // {
 // 	String result;

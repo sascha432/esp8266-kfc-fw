@@ -26,6 +26,8 @@
         syslog.flush();                             \
     }
 
+class SyslogPlugin;
+
 class SyslogStream : public Stream {
 public:
     SyslogStream(Syslog *syslog, Event::Timer &timer);
@@ -48,9 +50,9 @@ public:
     virtual int read() override;
     virtual int peek() override;
 
-    Syslog &getSyslog();
-
 private:
+    friend SyslogPlugin;
+
     Syslog &_syslog;
     String _message;
     Event::Timer &_timer;

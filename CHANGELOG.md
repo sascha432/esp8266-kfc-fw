@@ -30,6 +30,9 @@
 - Clearing EspSaveCrash EEPROM during factory reset
 - Device title is being used as name for MQTT auto discovery
 - Ping monitor improvements
+- Memory debugging and leak detection added
+- Improved event scheduler (freed ~500 byte IRAM), memory usage and performance
+- Remove filters from syslog, reduced memory usage and improved performance
 
 ## Version 0.0.3
 

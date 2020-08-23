@@ -71,7 +71,7 @@ void SyslogPlugin::_timerCallback(Event::CallbackTimerPtr timer)
         _stream->deliverQueue();
     }
     else {
-        if (!_stream->getSyslog().isSending()) {
+        if (!_stream->_syslog.isSending()) {
             timer->updateInterval(Event::seconds(10));
         }
     }
@@ -118,8 +118,7 @@ void SyslogPlugin::_zeroConfCallback(const String &hostname, const IPAddress &ad
 {
     __LDBG_printf("zeroconf callback host=%s address=%s port=%u stream=%p", hostname.c_str(), address.toString().c_str(), port, _stream);
     if (_stream) {
-        auto &syslog = _stream->getSyslog();
-        syslog.setupZeroConf(hostname, address, port);
+        _stream->_syslog.setupZeroConf(hostname, address, port);
     }
 }
 
@@ -152,22 +151,34 @@ void SyslogPlugin::getStatus(Print &output)
 {
 #if SYSLOG_SUPPORT
     if (_stream) {
-        auto &syslog = _stream->getSyslog();
+        auto &syslog = _stream->_syslog;
         switch(SyslogClient::getConfig().protocol_enum) {
             case SyslogClient::SyslogProtocolType::UDP:
-                output.printf_P(PSTR("UDP @ %s:%u"), syslog.getHostname().c_str(), syslog.getPort());
-                return;
-            case SyslogClient::SyslogProtocolType::TCP:
-                output.printf_P(PSTR("TCP @ %s:%u"), syslog.getHostname().c_str(), syslog.getPort());
-                return;
-            case SyslogClient::SyslogProtocolType::TCP_TLS:
-                output.printf_P(PSTR("TCP TLS @ %s:%u"), syslog.getHostname().c_str(), syslog.getPort());
-                return;
-            default:
+                output.print(F("UDP"));
                 break;
+            case SyslogClient::SyslogProtocolType::TCP:
+                output.print(F("TCP"));
+                break;
+            case SyslogClient::SyslogProtocolType::TCP_TLS:
+                output.print(F("TCP TLS"));
+                break;
+            default:
+                output.print(FSPGM(Disabled));
+                return;
+        }
+        output.printf_P(PSTR(" @ %s:%u"), syslog.getHostname().c_str(), syslog.getPort());
+        auto &queue = _stream->_syslog._queue;
+        if (queue.empty()) {
+            output.print(F(" - queue empty"));
+        }
+        else {
+            output.printf_P(PSTR(" - %u message(s) queued, state %s"), queue.size(), syslog.isSending() ? PSTR("sending") : PSTR("waiting"));
         }
     }
-    output.print(FSPGM(Disabled));
+    else {
+        output.print(FSPGM(Disabled));
+    }
+
 #else
     output.print(FSPGM(Not_supported));
 #endif

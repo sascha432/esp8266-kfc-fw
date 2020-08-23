@@ -73,6 +73,7 @@ PROGMEM_STRING_DECL(syslog_nil_value);
 
 class SyslogQueue;
 class SyslogParameter;
+class SyslogPlugin;
 
 class Syslog {
 public:
@@ -92,6 +93,7 @@ public:
 
 protected:
     friend SyslogStream;
+    friend SyslogPlugin;
 
     String _getHeader(uint32_t millis);
 

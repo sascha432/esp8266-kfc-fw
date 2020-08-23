@@ -178,24 +178,6 @@ size_t PrintString::print(int64_t value)
     return concat_to_string(*this, value);
 }
 
-size_t PrintString::print(const __FlashStringHelper *str) {
-    size_t len = length();
-    *this += str;
-    return length() - len;
-}
-
-size_t PrintString::print(const String &str) {
-    size_t len = length();
-    *this += str;
-    return length() - len;
-}
-
-size_t PrintString::print(const char *str) {
-    size_t len = length();
-    *this += str;
-    return length() - len;
-}
-
 size_t PrintString::strftime(const char *format, struct tm *tm)
 {
     char temp[64];

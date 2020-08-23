@@ -40,9 +40,6 @@ public:
 
     size_t print(uint64_t value);
     size_t print(int64_t value);
-    size_t print(const __FlashStringHelper *str);
-    size_t print(const String &str);
-    size_t print(const char *str);
     using Print::print;
 
     size_t strftime_P(PGM_P format, struct tm *tm);

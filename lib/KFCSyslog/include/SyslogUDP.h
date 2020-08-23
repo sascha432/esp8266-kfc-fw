@@ -13,7 +13,12 @@ public:
     SyslogUDP(SyslogParameter &&parameter, SyslogQueue &queue, const String &host, uint16_t port = kDefaultPort);
     virtual ~SyslogUDP();
 
+    virtual bool setupZeroConf(const String &hostname, const IPAddress &address, uint16_t port);
+    virtual bool canSend() const;
+    virtual bool isSending();
     virtual void transmit(const SyslogQueueItem &item);
+    virtual String getHostname() const;
+    virtual uint16_t getPort() const;
 
 private:
     char *_host;

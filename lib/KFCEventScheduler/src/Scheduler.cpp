@@ -107,11 +107,11 @@ bool Scheduler::_removeTimer(CallbackTimerPtr timer)
         __LDBG_assert(iterator != _timers.end());
         if (iterator != _timers.end()) {
 
-            __LDBG_printf("timer=%p iterator=%p %s:%u", timer, *iterator, __S(timer->_file), timer->_line);
+            __LDBG_printf("timer=%p iterator=%p managed=%p iterator_managed=%p %s:%u", timer, *iterator, timer->_timer, (*iterator)->_timer, __S(timer->_file), timer->_line);
 
-            if (timer->_timer) {
-                timer->_timer->_managedCallbackTimer.clear();
-            }
+            // if (timer->_timer) {
+            //     timer->_timer->_managedCallbackTimer.clear();
+            // }
 
             // mark as deleted in vector
             *iterator = nullptr;
@@ -130,7 +130,6 @@ void Scheduler::_cleanup()
 {
     _timers.erase(std::remove(_timers.begin(), _timers.end(), nullptr));
     _timers.shrink_to_fit();
-    // __list();
 }
 
 void Scheduler::run(PriorityType runAbovePriority)
@@ -200,9 +199,9 @@ void Scheduler::_run(PriorityType runAbovePriority)
 #endif
 
         if (size != _timers.size()) {
-            //TODO
-            // sort vector by priority
-            // move nullptr to the end for removal
+            std::sort(_timers.begin(), _timers.end(), [](const CallbackTimerPtr a, const CallbackTimerPtr b) {
+                return a && b && (b->_priority < a->_priority);
+            });
         }
         else if (cleanup && runAbovePriority == PriorityType::NONE) {
             _cleanup(); // remove empty pointers
@@ -231,7 +230,7 @@ void Scheduler::_run(PriorityType runAbovePriority)
 
 void ICACHE_RAM_ATTR Scheduler::__TimerCallback(void *arg)
 {
-    auto timer = reinterpret_cast<CallbackTimer *>(arg);
+    auto timer = reinterpret_cast<CallbackTimerPtr>(arg);
     if (timer->_remainingDelay >= 1) {
         uint32_t delay = (--timer->_remainingDelay) ?
             kMaxDelay // repeat until delay <= max delay

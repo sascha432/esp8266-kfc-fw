@@ -23,9 +23,13 @@ public:
     SyslogTCP(SyslogParameter &&parameter, SyslogQueue &queue, const String &host, uint16_t port = kDefaultPort, bool useTLS = false);
     virtual ~SyslogTCP();
 
+    virtual bool setupZeroConf(const String &hostname, const IPAddress &address, uint16_t port);
 	virtual void transmit(const SyslogQueueItem &item);
+    virtual bool canSend() const;
+	virtual bool isSending();
     virtual void clear() override;
-	virtual bool isSending() override;
+    virtual String getHostname() const;
+    virtual uint16_t getPort() const;
 
 public:
     static void _onDisconnect(void *arg, AsyncClient *client);
@@ -54,6 +58,6 @@ private:
     Buffer _buffer;                     // data to write for _queueid
     uint32_t _queueId;                  // queue id
     uint32_t _port: 16;
-    uint32_t _useTLS: 1;
     uint32_t _ack: 15;                  // number of bytes waiting for ack
+    uint32_t _useTLS: 1;
 };

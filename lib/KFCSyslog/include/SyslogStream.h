@@ -5,17 +5,13 @@
 /**
  * Asynchronous syslog library with queue and different storage types
  *
- * SyslogStream -> SyslogFilter -> SyslogQueue(Memory/File) -> SyslogUDP/TCP/File -> destination server -> callback to SyslogQueue -> callback to SyslogStream
- *
+ * SyslogStream -> SyslogQueue(Memory/File) -> SyslogUDP/TCP/File -> destination server/file
  *
  */
 
 #pragma once
 
-#define SYSLOG_STREAM_MAX_FAILURES                      10
-#if SYSLOG_STREAM_MAX_FAILURES >= 0x7e
-#error SyslogQueueItem._failureCount is 7bit only
-#endif
+#include <EventScheduler.h>
 
 #define Syslog_log(syslog, severity, format, ...) \
     {                                               \
@@ -32,7 +28,7 @@
 
 class SyslogStream : public Stream {
 public:
-    SyslogStream(Syslog *syslog);
+    SyslogStream(Syslog *syslog, Event::Timer &timer);
     virtual ~SyslogStream();
 
     void setFacility(SyslogFacility facility);
@@ -52,26 +48,10 @@ public:
     virtual int read() override;
     virtual int peek() override;
 
-    // void transmitCallback(const SyslogQueue::ItemPtr &item, bool success);
-
-    // String getLevel() const;
-
-    // SyslogQueue &getQueue() {
-    //     return _queue;
-    // }
-    // void setQueue(SyslogQueue *queue) {
-    //     _queue = queue;
-    // }
-    // SyslogFilter *getFilter() {
-    //     return _filter;
-    // }
-    // const SyslogParameter &getParameter() const {
-    //     return _syslog._parameter;
-    // }
+    Syslog &getSyslog();
 
 private:
-    // SyslogParameter &_parameter;
-    // SyslogFilter *_filter;
     Syslog &_syslog;
     String _message;
+    Event::Timer &_timer;
 };

@@ -61,6 +61,4 @@ private:
 private:
     SyslogStream *_stream;
     Event::Timer _timer;
-    String _hostname;
-    uint16_t _port;
 };

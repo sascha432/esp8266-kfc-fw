@@ -59,7 +59,7 @@ public:
     // remove item after it has been delivered
     virtual void remove(uint32_t id, bool success) = 0;
 
-    // return size of the queue
+    // return size of the queue excluding messages in transit
     virtual size_t size() const = 0;
 
     // clear queue
@@ -67,6 +67,9 @@ public:
 
     // dump queue in human readable format
     virtual void dump(Print &output) const = 0;
+
+    // return true if the queue is empty and all messages have been delivered
+    virtual bool empty() const = 0;
 
 protected:
     // get size of SyslogQueueItem::Ptr for a particular message
@@ -88,6 +91,7 @@ public:
     virtual void remove(uint32_t id, bool success);
     virtual void clear() override;
     virtual void dump(Print &output) const;
+    virtual bool empty() const;
 
 private:
     QueueVector _items;

@@ -61,7 +61,7 @@ bool Timer::remove()
     if (_managedCallbackTimer) {
         return __Scheduler._removeTimer(_managedCallbackTimer.get());
     }
-    return  false;
+    return false;
 }
 
 bool Timer::_isActive() const
@@ -72,4 +72,9 @@ bool Timer::_isActive() const
 Timer::operator bool() const
 {
     return _isActive();
+}
+
+CallbackTimerPtr Timer::operator->() const noexcept
+{
+    return _managedCallbackTimer.get();
 }

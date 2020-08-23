@@ -54,6 +54,7 @@ void SyslogPlugin::reconfigure(const String &source)
 void SyslogPlugin::shutdown()
 {
     _kill(500);
+    _end();
 }
 
 void SyslogPlugin::timerCallback(Event::CallbackTimerPtr timer)
@@ -64,60 +65,62 @@ void SyslogPlugin::timerCallback(Event::CallbackTimerPtr timer)
 void SyslogPlugin::_timerCallback(Event::CallbackTimerPtr timer)
 {
 #if DEBUG
-    if (!_stream) {
-        __DBG_panic("_timerCallback() syslog=nullptr");
-    }
+    assert(_stream != nullptr);
 #endif
     if (_stream->hasQueuedMessages()) {
         _stream->deliverQueue();
+    }
+    else {
+        if (!_stream->getSyslog().isSending()) {
+            timer->updateInterval(Event::seconds(10));
+        }
     }
 }
 
 void SyslogPlugin::_begin()
 {
 #if DEBUG
-    if (_stream) {
-        __DBG_panic("begin() called twice");
-    }
+    assert(_stream == nullptr);
 #endif
 
     if (SyslogClient::isEnabled()) {
 
         auto cfg = SyslogClient::getConfig();
-        _hostname = SyslogClient::getHostname();
-        _port = cfg.getPort();
+        String hostname = SyslogClient::getHostname();
+        auto port = cfg.getPort();
 
-        //TODO support for zeroconf
+        String tmp;
+        if (config.hasZeroConf(hostname)) {
+            tmp = String(); // remove hostname, the class will initialize and wait for it
+        }
+        else {
+            tmp = hostname;
+        }
+
+        _Timer(_timer).add(Event::seconds(1), true, timerCallback);
 
         _stream = __LDBG_new(SyslogStream, SyslogFactory::create(
             SyslogParameter(System::Device::getName(), FSPGM(kfcfw)),
-            __LDBG_new(SyslogMemoryQueue, SYSLOG_PLUGIN_QUEUE_SIZE), cfg.protocol_enum, _hostname, _port)
+            __LDBG_new(SyslogMemoryQueue, SYSLOG_PLUGIN_QUEUE_SIZE), cfg.protocol_enum, tmp, port),
+            _timer
         );
         _logger.setSyslog(_stream);
-        _Timer(_timer).add(100, true, timerCallback);
 
-        // if (config.hasZeroConf(_hostname)) {
-        //     config.resolveZeroConf(getFriendlyName(), _hostname, _port, [](const String &hostname, const IPAddress &address, uint16_t port, const String &resolved, MDNSResolver::ResponseType type) {
-        //         plugin._zeroConfCallback(hostname, address, port, type);
-        //     });
-        // }
-        // else {
-        //     _zeroConfCallback(_hostname, IPAddress(), _port, MDNSResolver::ResponseType::NONE);
-        // }
+        if (tmp.length() == 0) {
+            config.resolveZeroConf(getFriendlyName(), hostname, port, [](const String &hostname, const IPAddress &address, uint16_t port, const String &resolved, MDNSResolver::ResponseType type) {
+                plugin._zeroConfCallback(hostname, address, port, type);
+            });
+        }
     }
 }
 
 void SyslogPlugin::_zeroConfCallback(const String &hostname, const IPAddress &address, uint16_t port, MDNSResolver::ResponseType type)
 {
-    // _hostname = address.isSet() ? address.toString() : hostname;
-    // _port = port;
-    // auto cfg = SyslogClient::getConfig();
-    // _stream = __LDBG_new(SyslogStream, SyslogFactory::create(
-    //     SyslogParameter(System::Device::getName(), FSPGM(kfcfw)),
-    //     __LDBG_new(SyslogMemoryQueue, SYSLOG_PLUGIN_QUEUE_SIZE), cfg.protocol_enum, _hostname, _port)
-    // );
-    // _logger.setSyslog(_stream);
-    // _Timer(_timer).add(100, true, timerCallback);
+    __LDBG_printf("zeroconf callback host=%s address=%s port=%u stream=%p", hostname.c_str(), address.toString().c_str(), port, _stream);
+    if (_stream) {
+        auto &syslog = _stream->getSyslog();
+        syslog.setupZeroConf(hostname, address, port);
+    }
 }
 
 void SyslogPlugin::_end()
@@ -148,20 +151,23 @@ void SyslogPlugin::_kill(uint32_t timeout)
 void SyslogPlugin::getStatus(Print &output)
 {
 #if SYSLOG_SUPPORT
-    switch(SyslogClient::getConfig().protocol_enum) {
-        case SyslogClient::SyslogProtocolType::UDP:
-            output.printf_P(PSTR("UDP @ %s:%u"), _hostname.c_str(), _port);
-            break;
-        case SyslogClient::SyslogProtocolType::TCP:
-            output.printf_P(PSTR("TCP @ %s:%u"), _hostname.c_str(), _port);
-            break;
-        case SyslogClient::SyslogProtocolType::TCP_TLS:
-            output.printf_P(PSTR("TCP TLS @ %s:%u"), _hostname.c_str(), _port);
-            break;
-        default:
-            output.print(FSPGM(Disabled));
-            break;
+    if (_stream) {
+        auto &syslog = _stream->getSyslog();
+        switch(SyslogClient::getConfig().protocol_enum) {
+            case SyslogClient::SyslogProtocolType::UDP:
+                output.printf_P(PSTR("UDP @ %s:%u"), syslog.getHostname().c_str(), syslog.getPort());
+                return;
+            case SyslogClient::SyslogProtocolType::TCP:
+                output.printf_P(PSTR("TCP @ %s:%u"), syslog.getHostname().c_str(), syslog.getPort());
+                return;
+            case SyslogClient::SyslogProtocolType::TCP_TLS:
+                output.printf_P(PSTR("TCP TLS @ %s:%u"), syslog.getHostname().c_str(), syslog.getPort());
+                return;
+            default:
+                break;
+        }
     }
+    output.print(FSPGM(Disabled));
 #else
     output.print(FSPGM(Not_supported));
 #endif
@@ -171,12 +177,7 @@ void SyslogPlugin::getStatus(Print &output)
 
 void SyslogPlugin::prepareDeepSleep(uint32_t sleepTimeMillis)
 {
-    uint16_t defaultWaitTime = 250;
-    if (sleepTimeMillis > 60000) {  // longer than 1min, increase wait time
-        defaultWaitTime *= 4;
-    }
-
-    kill(defaultWaitTime);
+    kill((sleepTimeMillis > 60000) ? 1000 : 250);
 }
 
 #endif
@@ -205,7 +206,7 @@ bool SyslogPlugin::atModeHandler(AtModeArgs &args)
                 args.printf_P(PSTR("Messages in queue %d"), _stream->queueSize());
                 _stream->dumpQueue(args.getStream());
             }
-            else {
+            else { // info or invalid command
                 args.printf_P(PSTR("%d"), _stream->queueSize());
             }
         }

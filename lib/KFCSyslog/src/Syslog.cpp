@@ -80,51 +80,6 @@ const SyslogFilterItemPair syslogFilterSeverityItems[] PROGMEM = {
 
 #endif
 
-#if 0
-
-SyslogFilterItem::SyslogFilterItem(const String &facility, const String &severity) : SyslogFilterItem(Syslog::facilityToInt(facility), Syslog::severityToInt(severity)) {
-}
-
-
-SyslogFileFilterItem::SyslogFileFilterItem(const String &filter, Syslog *syslog) : _syslog(syslog)
-{
-	_parseFilter(filter, _filter);
-}
-
-bool SyslogFileFilterItem::isStop() const
-{
-	return _syslog == SyslogFilter::kFilterStop;
-}
-
-bool SyslogFileFilterItem::isMatch(SyslogFacility _facility, SyslogSeverity _severity)
-{
-	for (auto &item : _filter) {
-		if (item.isMatch(_facility, _severity)) {
-			return true;
-		}
-	}
-	return false;
-}
-
-void SyslogFileFilterItem::_parseFilter(const String &filter, SyslogFilterItemVector &filters)
-{
-    int startPos = 0;
-    do {
-        String severity, facility;
-        int endPos = filter.indexOf(',', startPos);
-        facility = endPos == -1 ? filter.substring(startPos) : filter.substring(startPos, endPos);
-        int splitPos = facility.indexOf('.');
-        if (splitPos != -1) {
-            severity = facility.substring(splitPos + 1);
-            facility.remove(splitPos);
-        }
-        filters.push_back(SyslogFilterItem(facility, severity));
-        startPos = endPos + 1;
-    } while (startPos);
-}
-
-#endif
-
 PROGMEM_STRING_DEF(syslog_nil_value, "- ");
 
 Syslog::Syslog(SyslogParameter &&parameter, SyslogQueue &queue) : _parameter(std::move(parameter)), _queue(queue)
@@ -137,12 +92,6 @@ Syslog::~Syslog()
 {
 	__LDBG_free(&_queue);
 }
-
-// void Syslog::transmit(const SyslogQueueItem &item)
-// {
-// 	__LDBG_printf("id=%u msg=%s", id, message.c_str());
-// 	_queue.remove(item.id, true);
-// }
 
 void Syslog::_addTimestamp(PrintString &buffer, PGM_P format)
 {
@@ -292,54 +241,3 @@ void Syslog::clear()
     __LDBG_print("clear");
     _queue.clear();
 }
-
-bool Syslog::canSend() const
-{
-	return WiFi.isConnected();
-}
-
-bool Syslog::isSending()
-{
-	return false;
-}
-
-#if 0
-
-bool Syslog::isNumeric(const char *str) {
-    while (*str) {
-        if (!isdigit(*str++)) {
-            return false;
-        }
-    }
-    return true;
-}
-
-SyslogFacility Syslog::facilityToInt(const String &str) {
-    if (!isWildcard(str)) {
-        if (isNumeric(str.c_str())) {
-            return (SyslogFacility)str.toInt();
-        }
-        for (uint8_t i = 0; syslogFilterFacilityItems[i].value != 0xff; i++) {
-            if (strcasecmp_P(str.c_str(), syslogFilterFacilityItems[i].name) == 0) {
-                return (SyslogFacility)syslogFilterFacilityItems[i].value;
-            }
-        }
-    }
-    return SYSLOG_FACILITY_ANY;
-}
-
-SyslogSeverity Syslog::severityToInt(const String &str) {
-    if (!isWildcard(str)) {
-        if (isNumeric(str.c_str())) {
-            return (SyslogSeverity)str.toInt();
-        }
-        for (uint8_t i = 0; syslogFilterSeverityItems[i].value != 0xff; i++) {
-            if (strcasecmp_P(str.c_str(), syslogFilterSeverityItems[i].name) == 0) {
-                return (SyslogSeverity)syslogFilterSeverityItems[i].value;
-            }
-        }
-    }
-    return SYSLOG_SEVERITY_ANY;
-}
-
-#endif

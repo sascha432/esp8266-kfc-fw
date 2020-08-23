@@ -56,42 +56,6 @@ SyslogQueue::~SyslogQueue()
 {
 }
 
-// SyslogQueue::IdType SyslogQueue::add(const String &message, Syslog *syslog)
-// {
-//     _item.reset(new SyslogQueueItem(message, syslog, _item ? _item->getId() + 1 : 1)); // id can only be 1 or 2, if a queued item is replaced before sending
-//     return _item->getId();
-// }
-
-// void SyslogQueue::remove(const ItemPtr &item, bool success)
-// {
-//     if (item) {
-//         if (_item.get() == item.get()) {
-//             _item.reset();
-//         }
-//         else {
-//             __LDBG_print("item=%p not _item=%p", item.get(), _item.get());
-//         }
-//     }
-//     else {
-//         __LDBG_print("invalid item");
-//     }
-// }
-
-// size_t SyslogQueue::size() const
-// {
-//     return _reportEmpty ? 0 : (_item ? 1 : 0);
-// }
-
-// SyslogQueue::ItemPtr SyslogQueue::at(IndexType index)
-// {
-//     return _item;
-// }
-
-// void SyslogQueue::clear()
-// {
-//     _item.reset();
-// }
-
 #if defined(ESP8266)
 
 class StringAllocSize : public String {
@@ -173,6 +137,11 @@ void SyslogMemoryQueue::dump(Print &output) const
         output.printf_P(PSTR("id=%08x locked=%u errors=%u msg="), item._id, item._locked, item._failureCount);
         output.println(item._message);
     }
+}
+
+bool SyslogMemoryQueue::empty() const
+{
+    return _items.empty();
 }
 
 bool SyslogMemoryQueue::canSend()

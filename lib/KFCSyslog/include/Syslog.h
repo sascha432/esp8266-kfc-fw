@@ -16,7 +16,7 @@
 #include "SyslogQueue.h"
 
 #ifndef SYSLOG_USE_RFC5424
-#define SYSLOG_USE_RFC5424                      0   // 1 is not working ATM
+#define SYSLOG_USE_RFC5424                      0                           // 1 is not working ATM
 #endif
 #if SYSLOG_USE_RFC5424
 #define SEND_NILVALUE_IF_INVALID_TIMESTAMP      1
@@ -28,13 +28,11 @@
 // #define SYSLOG_TIMESTAMP_FRAC_FUNC              (micros() % 1000000)
 #define SYSLOG_SEND_BOM                         1                           // UTF8 BOM
 // TCP only
-#define SYSLOG_OCTECT_COUNTING                  0                           // 0 = add TRAILER
 #else
 // old/fall-back format
 #define SYSLOG_TIMESTAMP_FORMAT                 "%h %d %T "
-#define SYSLOG_VERSION                          ""      // not used
-#define SEND_NILVALUE_IF_INVALID_TIMESTAMP      0       // must be 0 for fallback
-#define SYSLOG_OCTECT_COUNTING                  0       // must be 0 for fallback
+#define SYSLOG_VERSION                          ""                          // not used
+#define SEND_NILVALUE_IF_INVALID_TIMESTAMP      0                           // must be 0 for fallback
 #endif
 
 #define SYSLOG_FILE_TIMESTAMP_FORMAT            "%FT%T%z"
@@ -63,49 +61,6 @@ enum class SyslogProtocol {
 #endif
 
 #if 0
-class SyslogFilterItem {
-public:
-    SyslogFilterItem(SyslogFacility facility, SyslogSeverity severity) {
-        _facility = facility;
-        _severity = severity;
-    }
-    SyslogFilterItem(const String &facility, const String &severity);
-
-    bool isMatch(SyslogFacility facility, SyslogSeverity severity) const {
-        return ((_facility == SYSLOG_FACILITY_ANY || _facility == facility) && (_severity == SYSLOG_SEVERITY_ANY ||_severity == severity));
-    }
-
-private:
-    SyslogFacility _facility;
-    SyslogSeverity _severity;
-};
-
-typedef std::vector<SyslogFilterItem> SyslogFilterItemVector;
-
-class SyslogFileFilterItem {
-public:
-    SyslogFileFilterItem() : _syslog(nullptr) {
-    }
-    SyslogFileFilterItem(const String &filter, Syslog *_syslog);
-
-    bool isStop() const;
-    bool isMatch(SyslogFacility facility, SyslogSeverity severity);
-
-    Syslog *getSyslog() const {
-        return _syslog;
-    }
-
-public:
-    static void _parseFilter(const String &filter, SyslogFilterItemVector &filters);
-
-private:
-    SyslogFilterItemVector _filter;
-    Syslog *_syslog;
-};
-
-#endif
-
-#if 0
 // facility/severity name/value pairs
 typedef struct {
     PGM_P name;
@@ -129,23 +84,14 @@ public:
     Syslog(SyslogParameter &&parameter, SyslogQueue &queue);
     virtual ~Syslog();
 
+    virtual bool setupZeroConf(const String &hostname, const IPAddress &address, uint16_t port) = 0;
+    virtual bool canSend() const = 0;
+	virtual bool isSending() = 0;
     virtual void transmit(const SyslogQueueItem &item) = 0;
+    virtual String getHostname() const = 0;
+    virtual uint16_t getPort() const = 0;
+
     virtual void clear();
-
-    // able to send?
-    virtual bool canSend() const;
-    // busy sending?
-	virtual bool isSending();
-
-#if 0
-	static bool isNumeric(const char *str);
-    static inline bool isWildcard(const String &string) {
-        return string.length() == 1 && string.charAt(0) == '*';
-    }
-
-	static SyslogFacility facilityToInt(const String &str);
-	static SyslogSeverity severityToInt(const String &str);
-#endif
 
 protected:
     friend SyslogStream;

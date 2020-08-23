@@ -33,6 +33,7 @@ namespace Event {
         bool remove();
 
         operator bool() const;
+        CallbackTimerPtr operator->() const noexcept;
 
     private:
         friend CallbackTimer;

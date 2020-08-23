@@ -15,7 +15,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-SyslogStream::SyslogStream(Syslog *syslog) : _syslog(*syslog)
+SyslogStream::SyslogStream(Syslog *syslog, Event::Timer &timer) : _syslog(*syslog), _timer(timer)
 {
     assert(&_syslog != nullptr);
 }
@@ -64,6 +64,9 @@ void SyslogStream::flush()
         _syslog._queue.add(_message);
         _message = String();
         deliverQueue();
+        if (!_syslog._queue.empty() && _timer) {
+            _timer->rearm(Event::milliseconds(100));
+        }
     }
 }
 
@@ -93,6 +96,9 @@ void SyslogStream::deliverQueue()
     while(millis() < _startMillis && !_syslog.isSending() && _syslog._queue.canSend()) {
         _syslog.transmit(_syslog._queue.get());
 	}
+    if (_syslog._queue.empty() && _timer) {
+        _timer->rearm(Event::seconds(60));
+    }
 }
 
 void SyslogStream::clearQueue()
@@ -108,6 +114,11 @@ size_t SyslogStream::queueSize() const
 void SyslogStream::dumpQueue(Print &print) const
 {
     return _syslog._queue.dump(print);
+}
+
+Syslog &SyslogStream::getSyslog()
+{
+    return _syslog;
 }
 
 // String SyslogStream::getLevel() const

@@ -32,6 +32,12 @@ CallbackTimer::CallbackTimer(Callback callback, int64_t delay, RepeatType repeat
 CallbackTimer::~CallbackTimer()
 {
     __LDBG_printf("_timer=%p has_timer=%u(%p)", _timer, __Scheduler._hasTimer(this), this);
+
+    if (_timer) {
+        __LDBG_printf("removing managed timer=%p", _timer);
+        _timer->_managedCallbackTimer.clear();
+    }
+
     // the Timer object must be nullptr
     __LDBG_assert(_timer == nullptr);
     // the CallbackTimer must be removed from the list
@@ -169,10 +175,10 @@ void CallbackTimer::_invokeCallback(CallbackTimerPtr timer)
             _rearm();
         }
     }
-    else {
-        if (timer->_timer) {
-            __LDBG_printf("timer %p _timer=%p removing managed timer", timer, timer->_timer);
-            timer->_timer->_managedCallbackTimer.clear();
-        }
-    }
+    // else {
+    //     if (timer->_timer) {
+    //         __LDBG_printf("timer %p _timer=%p removing managed timer", timer, timer->_timer);
+    //         timer->_timer->_managedCallbackTimer.clear();
+    //     }
+    // }
 }

@@ -12,8 +12,13 @@ public:
 public:
     SyslogFile(SyslogParameter &&parameter, SyslogQueue &queue, const String &filename, size_t maxSize = kMaxFileSize, uint16_t maxRotate = kKeepRotatedFilesLimit);
 
+    virtual bool setupZeroConf(const String &hostname, const IPAddress &address, uint16_t port);
     virtual void transmit(const SyslogQueueItem &item);
-    virtual bool canSend() const override;
+    virtual bool canSend() const;
+    virtual bool isSending();
+
+    virtual String getHostname() const;
+    virtual uint16_t getPort() const;
 
     void _rotateLogfile(const String &filename, uint16_t maxRotate);
 

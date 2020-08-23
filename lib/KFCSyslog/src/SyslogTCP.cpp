@@ -19,13 +19,15 @@ SyslogTCP::SyslogTCP(SyslogParameter &&parameter, SyslogQueue &queue, const Stri
     _host(nullptr),
     _queueId(0),
     _port(port),
-    _useTLS(useTLS),
-    _ack(0)
+    _ack(0),
+    _useTLS(useTLS)
 {
     __LDBG_printf("%s:%d TLS %d", host.c_str(), _port, _useTLS);
 
-    if (!_address.fromString(host)) {
-        _host = strdup(host.c_str());
+    if (host.length()) {
+        if (!_address.fromString(host)) {
+            _host = strdup(host.c_str());
+        }
     }
 
     _client.onConnect(_onPoll, this);
@@ -52,44 +54,6 @@ SyslogTCP::~SyslogTCP()
     }
 }
 
-void SyslogTCP::__onPoll(AsyncClient *client)
-{
-    if (_queueId && _buffer.length() && client->canSend()) {
-        auto toSend = std::min(client->space(), _buffer.length());
-        auto written = client->write(_buffer.cstr_begin(), toSend);
-        __LDBG_printf("buffer=%u send=%u written=%u", _buffer.length(), toSend, written);
-        if (written == toSend) {
-            _buffer.removeAndShrink(0, toSend); // remove what has been written already
-        }
-        else {
-            _status(false __LDBG_IF(, PSTR("write")));
-            _disconnect();
-        }
-    }
-}
-
-void SyslogTCP::__onAck(AsyncClient *client, size_t len, uint32_t time)
-{
-    __LDBG_printf("len=%u time=%u ack=%u id=%u buffer=%u", len, time, _ack, _queueId, _buffer.length());
-    if (_queueId) {
-        if (len > _ack) {
-            _status(false __LDBG_IF(, PSTR("ack > message")));
-            _disconnect();
-        }
-        else {
-            _ack -= len;
-            if (_ack == 0 && _buffer.length() == 0) {
-                // report success and remove queueId
-                _status(true);
-            }
-        }
-    }
-    else {
-        __LDBG_printf("ack while not sending");
-        _disconnect();
-    }
-}
-
 void SyslogTCP::transmit(const SyslogQueueItem &item)
 {
     auto &message = item.getMessage();
@@ -103,18 +67,9 @@ void SyslogTCP::transmit(const SyslogQueueItem &item)
 #endif
 
     _queueId = item.getId();
-#if SYSLOG_OCTECT_COUNTING
-    String header = _getHeader();
-    size_t msgLen = header.length() + message.length();
-    _buffer.write(String(msgLen));
-    _buffer.write(' ');
-    _buffer.write(header);
-    _buffer.write(message);
-#else
     _buffer = _getHeader();
     _buffer.write(message);
     _buffer.write('\n');
-#endif
     _ack = _buffer.length();
 
     // canSend() means that the connection is established and tcp buffers have free space
@@ -136,6 +91,44 @@ void SyslogTCP::clear()
     _buffer.clear();
     _ack = 0;
     _queue.clear();
+}
+
+bool SyslogTCP::setupZeroConf(const String &hostname, const IPAddress &address, uint16_t port)
+{
+    _client.close();
+    if (_host) {
+        free(_host);
+        _host = nullptr;
+    }
+    if (address.isSet()) {
+        _address = address;
+    }
+    else {
+        _host = strdup(hostname.c_str());
+    }
+    _port = port;
+    return true;
+}
+
+String SyslogTCP::getHostname() const
+{
+    if (_host) {
+        return _host;
+    }
+    if (_address.isSet()) {
+        return _address.toString();
+    }
+    return F("N/A");
+}
+
+uint16_t SyslogTCP::getPort() const
+{
+    return _port;
+}
+
+bool SyslogTCP::canSend() const
+{
+    return (_host || _address.isSet()) && WiFi.isConnected();
 }
 
 bool SyslogTCP::isSending()
@@ -174,12 +167,50 @@ void SyslogTCP::_disconnect()
 
 void SyslogTCP::_status(bool success __LDBG_IF(, const char *reason))
 {
-    __LDBG_printf("success=%u id=%u ack=%u reason=%s", success, _queueId, _ack, __S(reason));
+    __LDBG_printf("success=%u id=%u ack=%u reason=%s state=%s", success, _queueId, _ack, __S(reason), _queueId ? PSTR("busy") : PSTR("idle"));
     if (_queueId) {
         _queue.remove(_queueId, success);
         _queueId = 0;
         _ack = 0;
         _buffer.clear();
+    }
+}
+
+void SyslogTCP::__onPoll(AsyncClient *client)
+{
+    if (_queueId && _buffer.length() && client->canSend()) {
+        auto toSend = std::min(client->space(), _buffer.length());
+        auto written = client->write(_buffer.cstr_begin(), toSend);
+        __LDBG_printf("buffer=%u send=%u written=%u", _buffer.length(), toSend, written);
+        if (written == toSend) {
+            _buffer.removeAndShrink(0, toSend); // remove what has been written already
+        }
+        else {
+            _status(false __LDBG_IF(, PSTR("write")));
+            _disconnect();
+        }
+    }
+}
+
+void SyslogTCP::__onAck(AsyncClient *client, size_t len, uint32_t time)
+{
+    __LDBG_printf("len=%u time=%u ack=%u id=%u buffer=%u", len, time, _ack, _queueId, _buffer.length());
+    if (_queueId) {
+        if (len > _ack) {
+            _status(false __LDBG_IF(, PSTR("ack > message")));
+            _disconnect();
+        }
+        else {
+            _ack -= len;
+            if (_ack == 0 && _buffer.length() == 0) {
+                // report success and remove queueId
+                _status(true);
+            }
+        }
+    }
+    else {
+        __LDBG_printf("ack while not sending");
+        _disconnect();
     }
 }
 

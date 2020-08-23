@@ -17,8 +17,10 @@ SyslogUDP::SyslogUDP(SyslogParameter &&parameter, SyslogQueue &queue, const Stri
     _host(nullptr),
     _port(port)
 {
-    if (!_address.fromString(host)) {
-        _host = strdup(host.c_str()); // resolve hostname later
+    if (host.length()) {
+        if (!_address.fromString(host)) {
+            _host = strdup(host.c_str()); // resolve hostname later
+        }
     }
     __LDBG_printf("%s:%d address=%s", host.c_str(), port, _address.toString().c_str());
 }
@@ -28,6 +30,48 @@ SyslogUDP::~SyslogUDP()
     if (_host) {
         free(_host);
     }
+}
+
+bool SyslogUDP::setupZeroConf(const String &hostname, const IPAddress &address, uint16_t port)
+{
+    if (_host) {
+        free(_host);
+        _host = nullptr;
+    }
+    if (address.isSet()) {
+        _address = address;
+    }
+    else {
+        _host = strdup(hostname.c_str());
+    }
+    _port = port;
+    return true;
+}
+
+String SyslogUDP::getHostname() const
+{
+    if (_host) {
+        return _host;
+    }
+    if (_address.isSet()) {
+        return _address.toString();
+    }
+    return F("N/A");
+}
+
+uint16_t SyslogUDP::getPort() const
+{
+    return _port;
+}
+
+bool SyslogUDP::canSend() const
+{
+    return (_host || _address.isSet()) && WiFi.isConnected();
+}
+
+bool SyslogUDP::isSending()
+{
+    return false;
 }
 
 void SyslogUDP::transmit(const SyslogQueueItem &item)

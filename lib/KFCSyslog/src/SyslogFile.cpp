@@ -41,6 +41,21 @@ String SyslogFile::_getHeader()
     return buffer;
 }
 
+bool SyslogFile::setupZeroConf(const String &hostname, const IPAddress &address, uint16_t port)
+{
+    return false;
+}
+
+String SyslogFile::getHostname() const
+{
+    return String(F("file://")) + _filename;
+}
+
+uint16_t SyslogFile::getPort() const
+{
+    return 0;
+}
+
 void SyslogFile::transmit(const SyslogQueueItem &item)
 {
     auto &message = item.getMessage();
@@ -75,6 +90,11 @@ void SyslogFile::transmit(const SyslogQueueItem &item)
 bool SyslogFile::canSend() const
 {
     return true;
+}
+
+bool SyslogFile::isSending()
+{
+    return false;
 }
 
 void SyslogFile::_rotateLogfile(const String &filename, uint16_t maxRotate)

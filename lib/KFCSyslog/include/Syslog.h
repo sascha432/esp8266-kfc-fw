@@ -23,9 +23,6 @@
 #define SYSLOG_VERSION                          "1"
 #define SYSLOG_TIMESTAMP_FORMAT                 "%FT%H:%M:%S."
 #define SYSLOG_TIMESTAMP_FRAC_FMT               "%03u"
-#define SYSLOG_TIMESTAMP_FRAC_FUNC              (millis() % 1000)
-// #define SYSLOG_TIMESTAMP_FRAC_FMT               "%06u"
-// #define SYSLOG_TIMESTAMP_FRAC_FUNC              (micros() % 1000000)
 #define SYSLOG_SEND_BOM                         1                           // UTF8 BOM
 // TCP only
 #else
@@ -96,9 +93,9 @@ public:
 protected:
     friend SyslogStream;
 
-    String _getHeader();
+    String _getHeader(uint32_t millis);
 
-    void _addTimestamp(PrintString &buffer, PGM_P format);
+    void _addTimestamp(PrintString &buffer, uint32_t millis, PGM_P format);
     void _addParameter(PrintString &buffer, PGM_P value);
 
     SyslogParameter _parameter;

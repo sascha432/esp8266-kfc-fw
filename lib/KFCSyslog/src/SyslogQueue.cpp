@@ -20,11 +20,11 @@
 // ------------------------------------------------------------------------
 
 
-SyslogQueueItem::SyslogQueueItem() : _id(0), _failureCount(0), _locked(false)
+SyslogQueueItem::SyslogQueueItem() : _id(0), _millis(0), _failureCount(0), _locked(false)
 {
 }
 
-SyslogQueueItem::SyslogQueueItem(const String &message, uint32_t id) : _message(message), _id(id), _failureCount(0), _locked(false)
+SyslogQueueItem::SyslogQueueItem(const String &message, uint32_t id) : _message(message), _id(id), _millis(millis()), _failureCount(0), _locked(false)
 {
 }
 
@@ -33,10 +33,10 @@ uint32_t SyslogQueueItem::getId() const
 	return _id;
 }
 
-// void SyslogQueueItem::setMessage(const String &message)
-// {
-// 	_message = message;
-// }
+uint32_t SyslogQueueItem::getMillis() const
+{
+    return _millis;
+}
 
 const String &SyslogQueueItem::getMessage() const
 {

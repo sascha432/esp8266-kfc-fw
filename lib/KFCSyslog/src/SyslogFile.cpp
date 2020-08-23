@@ -24,7 +24,7 @@ SyslogFile::SyslogFile(SyslogParameter &&parameter, SyslogQueue &queue, const St
 String SyslogFile::_getHeader()
 {
     PrintString buffer;
-    _addTimestamp(buffer, PSTR(SYSLOG_FILE_TIMESTAMP_FORMAT));
+    _addTimestamp(buffer, 0, PSTR(SYSLOG_FILE_TIMESTAMP_FORMAT));
     _addParameter(buffer, _parameter.getHostname());
     auto appName = _parameter.getAppName();
     if (appName) {

@@ -80,7 +80,7 @@ void SyslogUDP::transmit(const SyslogQueueItem &item)
 
 #if DEBUG_SYSLOG
     if (!String_startsWith(message, F("::transmit '"))) {
-        __LDBG_printf("::transmit id=%u msg=%s%s", item.getId(), _getHeader().c_str(), message.c_str());
+        __LDBG_printf("::transmit id=%u msg=%s%s", item.getId(), _getHeader(item.getMillis()).c_str(), message.c_str());
     }
 #endif
 
@@ -102,7 +102,7 @@ void SyslogUDP::transmit(const SyslogQueueItem &item)
         success = _udp.beginPacket(_address, _port);
         if (success) {
             {
-                String header = _getHeader();
+                String header = _getHeader(item.getMillis());
                 success = _udp.write((const uint8_t*)header.c_str(), header.length()) == header.length();
             }
             if (success) {

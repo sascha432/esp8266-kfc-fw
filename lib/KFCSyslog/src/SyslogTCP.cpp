@@ -59,7 +59,7 @@ void SyslogTCP::transmit(const SyslogQueueItem &item)
     auto &message = item.getMessage();
 #if DEBUG_SYSLOG
     if (!String_startsWith(message, F("::transmit '"))) {
-        __LDBG_printf("::transmit id=%u msg=%s%s", item.getId(), _getHeader().c_str(), message.c_str());
+        __LDBG_printf("::transmit id=%u msg=%s%s", item.getId(), _getHeader(item.getMillis()).c_str(), message.c_str());
     }
     if (_queueId) {
         __DBG_panic("FATAL: Transmit called while sending");
@@ -67,7 +67,7 @@ void SyslogTCP::transmit(const SyslogQueueItem &item)
 #endif
 
     _queueId = item.getId();
-    _buffer = _getHeader();
+    _buffer = _getHeader(item.getMillis());
     _buffer.write(message);
     _buffer.write('\n');
     _ack = _buffer.length();

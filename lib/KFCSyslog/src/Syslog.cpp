@@ -93,18 +93,19 @@ Syslog::~Syslog()
 	__LDBG_free(&_queue);
 }
 
-void Syslog::_addTimestamp(PrintString &buffer, PGM_P format)
+void Syslog::_addTimestamp(PrintString &buffer, uint32_t ms, PGM_P format)
 {
 	time_t now = time(nullptr);
-#ifdef SYSLOG_TIMESTAMP_FRAC_FMT
-    uint32_t frac = SYSLOG_TIMESTAMP_FRAC_FUNC;
-#endif
+    uint32_t frac = millis() - ms;
 #if SEND_NILVALUE_IF_INVALID_TIMESTAMP
 	if (!IS_TIME_VALID(now)) {
 		buffer.print(FSPGM(syslog_nil_value));
 		return;
 	}
 #endif
+    if (ms) {
+        now -= frac / 1000;
+    }
     auto tm = localtime(&now);
     buffer.strftime_P(format, tm);
 #ifdef SYSLOG_TIMESTAMP_FRAC_FMT
@@ -188,7 +189,7 @@ DIGIT           = %d48 / NONZERO-DIGIT
 NILVALUE        = "-"
 */
 
-String Syslog::_getHeader()
+String Syslog::_getHeader(uint32_t millis)
 {
 #if SYSLOG_USE_RFC5424
 
@@ -200,7 +201,7 @@ String Syslog::_getHeader()
     // "<" PRIVAL ">" VERSION SP TIMESTAMP SP HOSTNAME SP APP-NAME SP PROCID SP MSGID SP STRUCTURED-DATA [SP MSG]
 
 	PrintString buffer(F("<%u>" SYSLOG_VERSION " "), (_parameter.getFacility() << 3) | _parameter.getSeverity()); // <PRIVAL> VERSION SP
-	_addTimestamp(buffer, PSTR(SYSLOG_TIMESTAMP_FORMAT)); // TIMESTAMP SP
+	_addTimestamp(buffer, millis, PSTR(SYSLOG_TIMESTAMP_FORMAT)); // TIMESTAMP SP
 	_addParameter(buffer, _parameter.getHostname()); // HOSTNAME SP
 	_addParameter(buffer, (PGM_P)_parameter.getAppName()); // APP-NAME SP
 	_addParameter(buffer, _parameter.getProcessId()); // PROCID SP
@@ -219,7 +220,7 @@ String Syslog::_getHeader()
 	// <PRIVAL> TIMESTAMP SP HOSTNAME SP APPNAME ["[" PROCESSID "]"] ":" SP MESSAGE
 
 	PrintString buffer(F("<%u>"), (_parameter.getFacility() << 3) | _parameter.getSeverity()); // <PRIVAL>
-	_addTimestamp(buffer, PSTR(SYSLOG_TIMESTAMP_FORMAT)); // TIMESTAMP SP
+	_addTimestamp(buffer, millis, PSTR(SYSLOG_TIMESTAMP_FORMAT)); // TIMESTAMP SP
 	_addParameter(buffer, _parameter.getHostname()); // HOSTNAME SP
     if (_parameter.getAppName()) {
         buffer.print(_parameter.getAppName()); // APP-NAME

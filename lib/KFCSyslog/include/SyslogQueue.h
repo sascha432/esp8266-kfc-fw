@@ -20,6 +20,7 @@ public:
 
 	void clear();
 	uint32_t getId() const;
+    uint32_t getMillis() const;
 	const String &getMessage() const;
 
 private:
@@ -27,8 +28,9 @@ private:
     friend SyslogMemoryQueue;
 
     String _message;
+    uint32_t _id;
+    uint32_t _millis;
     struct __attribute__packed__ {
-        uint32_t _id;
         uint8_t _failureCount: 7;
         uint8_t _locked: 1;
     };

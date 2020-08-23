@@ -58,8 +58,6 @@ extern unsigned long millis(void);
 #define __NDBG_strdup(str)                                  strdup(str)
 #define __NDBG_strdup_P(str)                                strdup_P(str)
 
-extern "C" bool can_yield();
-
 // invokes panic() on ESP8266/32, calls __debugbreak() with visual studio to intercept and debug the error
 extern int ___debugbreak_and_panic(const char *filename, int line, const char *function);
 

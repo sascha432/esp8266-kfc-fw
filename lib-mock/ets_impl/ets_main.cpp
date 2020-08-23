@@ -4,6 +4,7 @@
 
 #include <Arduino_compat.h>
 #include "ets_sys_win32.h"
+#include "LoopFunctions.h"
 
 void setup();
 void loop();
@@ -26,6 +27,7 @@ int main() {
     setup();
     do {
         loop();
+        run_scheduled_functions();
         yield();
     } while (ets_is_running);
     return 0;

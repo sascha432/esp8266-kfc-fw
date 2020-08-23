@@ -11,14 +11,15 @@
 #endif
 
 
-#if ESP32
+#if defined(ESP32) || defined(_MSC_VER)
+
+#include <vector>
 
 #define SCHEDULED_FN_MAX_COUNT 32
 
-static std::vector<LoopFunctions::Callback> scheduled_functions;
+static std::vector<std::function<void(void)>> scheduled_functions;
 
-
-bool ICACHE_RAM_ATTR schedule_function (const std::function<void(void)>& fn)
+bool ICACHE_RAM_ATTR schedule_function (const std::function<void(void)> &fn)
 {
     if (fn) {
         if (scheduled_functions.size() < SCHEDULED_FN_MAX_COUNT) {

@@ -124,7 +124,11 @@ class __FlashStringHelper;
 #include <vector>
 #include <iostream>
 #include <Psapi.h>
+#include <assert.h>
 #include <CRTDBG.h>
+
+#include <ets_sys_win32.h>
+#include <ets_timer_win32.h>
 
 #define __attribute__(a)
 
@@ -133,9 +137,6 @@ class __FlashStringHelper;
 #endif
 
 #include <global.h>
-
-void panic();
-void yield();
 
 void init_winsock();
 
@@ -169,15 +170,9 @@ void throwException(PGM_P message);
 #include "ESP.h"
 
 #include "debug_helper.h"
-#include "debug_helper_enable.h"
 #include "misc.h"
 
 extern "C" uint32_t _EEPROM_start;
-
-inline void noInterrupts() {
-}
-inline void interrupts() {
-}
 
 extern const String emptyString;
 

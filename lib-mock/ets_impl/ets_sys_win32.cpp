@@ -27,7 +27,7 @@ void yield()
 	if (__ets_in_timer_isr) {
 		panic();
 	}
-	ets_timer_delay_us(1000);
+	Sleep(1);
 }
 
 int ets_printf(const char *fmt, ...)

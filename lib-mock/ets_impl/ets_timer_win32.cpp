@@ -10,46 +10,6 @@
 
 #pragma pack(push, 4)
 
-#if 0
-typedef void os_timer_func_t(void *timer_arg);
-
-struct os_timer_t {
-    int _interval;
-    int _repeat;
-    os_timer_func_t *_func;
-    void *_arg;
-    unsigned long _nextCall;
-};
-
-void os_timer_setfn(os_timer_t *timer, os_timer_func_t func, void *arg);
-void os_timer_arm(os_timer_t *timer, int interval, int repeat);
-void os_timer_disarm(os_timer_t *timer);
-
-v
-void os_timer_setfn(os_timer_t *timer, os_timer_func_t func, void *arg) {
-    timer->_arg = arg;
-    timer->_func = func;
-}
-
-void os_timer_arm(os_timer_t *timer, int interval, int repeat) {
-    timer->_interval = interval;
-    timer->_repeat = repeat;
-    timer->_nextCall = millis() + timer->_interval;
-    timerThread.getVector().push_back(timer);
-}
-
-void os_timer_disarm(os_timer_t *timer) {
-    timerThread.getVector().erase(std::remove_if(timerThread.getVector().begin(), timerThread.getVector().end(), [timer](const os_timer_t *_timer) {
-        return (timer == _timer);
-    }), timerThread.getVector().end());
-}
-
-
-
-#endif
-
-
-
 constexpr auto etstimer_zerotime = std::chrono::time_point<std::chrono::steady_clock, std::chrono::microseconds>(std::chrono::microseconds(0));
 #define __ETSTimerInitVal           0x23542
 
@@ -73,7 +33,7 @@ static bool init_timer_thread_func()
             Sleep(1);
             ETSTimer *cur = timer_list;
             do {
-                if (cur->timer_func && cur->timer_arg && cur->timer_expire != etstimer_zerotime) {
+                if (can_yield() && cur->timer_func && cur->timer_arg && cur->timer_expire != etstimer_zerotime) {
                     if (std::chrono::high_resolution_clock::now() > cur->timer_expire) {
                         if (cur->timer_period) {
                             cur->timer_expire += std::chrono::microseconds(cur->timer_period);
@@ -81,7 +41,9 @@ static bool init_timer_thread_func()
                         else {
                             cur->timer_expire = etstimer_zerotime;
                         }
+                        __ets_in_timer_isr = true;
                         cur->timer_func(cur->timer_arg);
+                        __ets_in_timer_isr = false;
                     }
                 }
                 cur = cur->timer_next;
@@ -132,7 +94,6 @@ static void remove_timer(ETSTimer *timer)
 void ets_timer_delay(uint32_t time_ms)
 {
     Sleep(time_ms);
-    //ets_timer_delay_us(time_ms * 1000LL);
 }
 
 void ets_timer_delay_us(uint64_t time_us)
@@ -144,11 +105,10 @@ void ets_timer_delay_us(uint64_t time_us)
         ms -= 5;
     }
     if (ms) {
-        Sleep((DWORD)ms);
+        ets_timer_delay((uint32_t)ms);
     }
-    while (std::chrono::high_resolution_clock::now() <= end) {
+    while (std::chrono::high_resolution_clock::now() < end) {
     }
-
 }
 
 /*

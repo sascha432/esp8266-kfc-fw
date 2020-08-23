@@ -17,6 +17,10 @@
 #    define IRAM_ATTR
 #endif
 
+#ifndef ICACHE_RAM_ATTR
+#    define ICACHE_RAM_ATTR
+#endif
+
 typedef int32_t esp_err_t;
 
 /* Definitions for error constants. */

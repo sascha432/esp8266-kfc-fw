@@ -23,10 +23,6 @@ const char *fs::FileOpenMode::appendplus = "a+";
 
 #include <winternl.h>
 
-extern "C" bool can_yield() {
-    return true;
-}
-
 #endif
 
 int ___debugbreak_and_panic(const char *filename, int line, const char *function) {
@@ -52,6 +48,7 @@ int ___debugbreak_and_panic(const char *filename, int line, const char *function
 
 #if _MSC_VER
 
+#include "ets_timer_win32.h"
 #include <algorithm>
 #include <BufferStream.h>
 #include <DumpBinary.h>
@@ -168,17 +165,6 @@ void detachInterrupt(uint8_t) {
 
 static bool panic_message_box_active = false;
 
-void panic() {
-    printf("panic() called\n");
-    if (!panic_message_box_active) {
-        panic_message_box_active = true;
-        if (MessageBox(NULL, L"panic() called. Continue execution?", L"Error", MB_OK | MB_ICONERROR | MB_APPLMODAL | MB_YESNO) != IDYES) {
-            ExitProcess(-1);
-        }
-        panic_message_box_active = false;
-    }
-}
-
 static bool winsock_initialized = false;
 
 void init_winsock() {
@@ -230,55 +216,14 @@ void EspClass::rtcClear() {
     }
 }
 
-ESPTimerThread timerThread;
-static bool timerThreadExitFuncRegistered = false;
-
-
-void ESPTimerThread::begin() {
-    if (!_handle) {
-    }
-}
-
-void ESPTimerThread::end() {
-    if (_handle) {
-        _handle = nullptr;
-    }
-}
-
-ESPTimerThread::TimerVector &ESPTimerThread::getVector() {
-    return _timers;
-}
-
-void ESPTimerThread::run() {
-    unsigned long time = millis();
-    for (auto timer : _timers) {
-        if (timer->_nextCall && time >= timer->_nextCall) {
-            timer->_nextCall = timer->_repeat ? time + timer->_interval : 0;
-            timer->_func(timer->_arg);
-        }
-    }
-    _removeEndedTimers();
-}
-
-void ESPTimerThread::_removeEndedTimers() {
-    _timers.erase(std::remove_if(_timers.begin(), _timers.end(), [](const os_timer_t *_timer) {
-        return _timer->_nextCall == 0;
-    }), _timers.end());
-}
-
-
-void delay(unsigned long time_ms) {
-    unsigned long _endSleep = millis() + time_ms;
-    timerThread.run();
-    while (millis() < _endSleep) {
-        Sleep(1);
-        timerThread.run();
-    }
+void delay(unsigned long time_ms) 
+{
+    ets_timer_delay(time_ms);
 }
 
 void delayMicroseconds(unsigned int us)
 {
-    Sleep((DWORD)ceil(us / 1000.0));
+    ets_timer_delay_us(us);
 }
 
 unsigned long pulseIn(uint8_t pin, uint8_t state, unsigned long timeout)
@@ -290,29 +235,6 @@ unsigned long pulseInLong(uint8_t pin, uint8_t state, unsigned long timeout)
 {
     return 0;
 }
-
-void yield() {
-    delay(1);
-}
-
-void os_timer_setfn(os_timer_t * timer, os_timer_func_t func, void * arg) {
-    timer->_arg = arg;
-    timer->_func = func;
-}
-
-void os_timer_arm(os_timer_t * timer, int interval, int repeat) {
-    timer->_interval = interval;
-    timer->_repeat = repeat;
-    timer->_nextCall = millis() + timer->_interval;
-    timerThread.getVector().push_back(timer);
-}
-
-void os_timer_disarm(os_timer_t * timer) {
-    timerThread.getVector().erase(std::remove_if(timerThread.getVector().begin(), timerThread.getVector().end(), [timer](const os_timer_t *_timer) {
-        return (timer == _timer);
-    }), timerThread.getVector().end());
-}
-
 
 
 uint16_t __builtin_bswap16(uint16_t word) {

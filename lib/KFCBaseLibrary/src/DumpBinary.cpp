@@ -9,7 +9,7 @@ extern "C" {
     void __dump_binary(const void *ptr, size_t len, size_t perLine)
     {
         DumpBinary d(Serial);
-        d.setPerLine(perLine).dump(ptr, len);
+        d.setPerLine((uint8_t)perLine).dump(ptr, len);
     }
 
 }

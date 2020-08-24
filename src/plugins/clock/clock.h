@@ -59,8 +59,6 @@ extern FixedCircularBuffer<uint16_t, IOT_CLOCK_DEBUG_ANIMATION_TIME> _timerDiff;
 
 using KFCConfigurationClasses::Plugins;
 
-class BrightnessTimer;
-
 class ClockPlugin : public PluginComponent, public MQTTComponent {
 public:
     using SevenSegmentDisplay = Clock::SevenSegmentDisplay;
@@ -230,8 +228,6 @@ public:
 #endif
 
 private:
-    friend BrightnessTimer;
-
 #if IOT_CLOCK_BUTTON_PIN
     PushButton _button;
     uint8_t _buttonCounter;
@@ -261,9 +257,6 @@ private:
     Plugins::Clock::ConfigStructType _config;
     Event::Timer _timer;
     uint32_t _timerCounter;
-#if HAVE_SMOOTH_BRIGHTNESS_ADJUSTMENT == 0
-    BrightnessTimer _displayBrightnessTimer;
-#endif
 
 private:
     bool _isTemperatureBelowThresholds(float temp) const;

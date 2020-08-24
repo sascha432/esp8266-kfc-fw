@@ -37,67 +37,6 @@ __DBGTM(
 
 static ClockPlugin plugin;
 
-#if HAVE_SMOOTH_BRIGHTNESS_ADJUSTMENT == 0
-
-#include <OSTimer.h>
-
-class BrightnessTimer : public OSTimer {
-public:
-    using BrightnessType = Clock::SevenSegmentDisplay::BrightnessType;
-    using FadingFinishedCallback = Clock::SevenSegmentDisplay::FadingFinishedCallback;
-    using FadingRefreshCallback = Clock::SevenSegmentDisplay::FadingRefreshCallback;
-
-    static constexpr double kInterval = 1000 / 20.0; // 20ms/50Hz refresh rate
-
-    BrightnessTimer() {}
-
-    BrightnessTimer(BrightnessType targetBrightness, float fadeTime, FadingFinishedCallback finishedCallback = nullptr, FadingRefreshCallback refreshCallback = nullptr) :
-        _finishedCallback(finishedCallback),
-        _refreshCallback(refreshCallback),
-        _targetBrightness(targetBrightness),
-        _stepSize(std::max_unsigned( 1, (BrightnessType)(Clock::SevenSegmentDisplay::kMaxBrightness / (fadeTime * kInterval)) ))
-    {
-        startTimer(kInterval, true);
-    }
-
-    virtual void ICACHE_RAM_ATTR run() override;
-
-private:
-    FadingFinishedCallback _finishedCallback;
-    FadingRefreshCallback _refreshCallback;
-    BrightnessType _targetBrightness;
-    uint16_t _stepSize;
-};
-
-void ICACHE_RAM_ATTR BrightnessTimer::run()
-{
-    int32_t tmp = plugin._display._params.brightness;
-    if (tmp < _targetBrightness) {
-        tmp += _stepSize;
-        if (tmp > _targetBrightness) {
-            tmp = _targetBrightness;
-        }
-    }
-    else if (tmp > _targetBrightness) {
-        tmp -= _stepSize;
-        if (tmp < _targetBrightness) {
-            tmp = _targetBrightness;
-        }
-    }
-    else {
-        detach();
-        if (_finishedCallback) {
-            _finishedCallback(tmp);
-        }
-        return;
-    }
-    if (_refreshCallback) {
-        _refreshCallback(tmp);
-    }
-}
-
-#endif
-
 PROGMEM_DEFINE_PLUGIN_OPTIONS(
     ClockPlugin,
     "clock",            // name
@@ -402,9 +341,6 @@ void ClockPlugin::shutdown()
     AlarmPlugin::setCallback(nullptr);
 #endif
     _timer.remove();
-#if HAVE_SMOOTH_BRIGHTNESS_ADJUSTMENT == 0
-    _displayBrightnessTimer.detach();
-#endif
     IF_LIGHT_SENSOR(
         _autoBrightnessTimer.remove();
     );
@@ -764,31 +700,12 @@ void ClockPlugin::_setSevenSegmentDisplay()
 
 void ClockPlugin::_setBrightness()
 {
-#if HAVE_SMOOTH_BRIGHTNESS_ADJUSTMENT
     _display.setBrightness(_getBrightness(), 2.5, [this](uint16_t) {
         _schedulePublishState = true;
     }, [this](uint16_t) {
         _forceUpdate = true;
     });
     _schedulePublishState = true;
-#else
-    // smooth brightness change
-    // NOTE: callbacks are called inside ISR, do not call any code without IRAM attribute or schedule the function
-    if (_displayBrightnessTimer.isRunning()) {
-        _displayBrightnessTimer.setTargetBrightness(_getBrightness());
-    }
-    else {
-        _displayBrightnessTimer = BrightnessTimer(_getBrightness(), 2.5 fadeTime, [this](uint16_t brightness) {
-            _schedulePublishState = true;
-            _display.setBrightness(brightness);
-        }, [this](uint16_t brightness) {
-            _forceUpdate = true;
-            _display.setBrightness(brightness);
-        });
-        _displayBrightnessTimer.start();
-
-    }
-#endif
 }
 
 void ClockPlugin::_setBrightness(uint16_t brightness)

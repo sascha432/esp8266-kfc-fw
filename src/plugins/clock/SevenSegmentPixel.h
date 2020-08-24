@@ -37,10 +37,6 @@
 #define IOT_CLOCK_USE_FAST_LED_BRIGHTNESS                           0
 #endif
 
-#ifndef HAVE_SMOOTH_BRIGHTNESS_ADJUSTMENT
-#define HAVE_SMOOTH_BRIGHTNESS_ADJUSTMENT                           1
-#endif
-
 static constexpr char _digits2SegmentsTable[]  = { 0x3f, 0x06, 0x5b, 0x4f, 0x66, 0x6d, 0x7d, 0x07, 0x7f, 0x6f, 0x77, 0x7c, 0x39, 0x5e, 0x79, 0x71 };  // 0-F
 
 #include <OSTimer.h>
@@ -123,9 +119,7 @@ public:
 #else
         _controller( FastLED.addLeds<IOT_CLOCK_FASTLED_CHIPSET, IOT_CLOCK_LED_PIN>(_pixels.data(), _pixels.size()) ),
 #endif
-#if HAVE_SMOOTH_BRIGHTNESS_ADJUSTMENT
         _targetBrightness(0),
-#endif
         _params({0, kMaxBrightness / 3})
     {
 #if IOT_CLOCK_NEOPIXEL
@@ -180,17 +174,9 @@ public:
     }
 
     inline void setColor(ColorType color) {
-        // for(PixelAddressType i = 0; i < getTotalPixels(); i++) {
-        //     _pixels[i] = color;
-        // }
         _pixels.fill(color);
         show();
     }
-
-    // void setColor(PixelAddressType num, ColorType color) {
-    //     _pixels[num] = color;
-    //     show();
-    // }
 
     void clearDigit(uint8_t digit) {
         for(const auto &segments: _pixelAddress[digit]) {
@@ -478,9 +464,7 @@ private:
 
     DigitsArray _pixelAddress;
 
-#if HAVE_SMOOTH_BRIGHTNESS_ADJUSTMENT
     BrightnessType _targetBrightness;
     Event::Timer _brightnessTimer;
-#endif
     Params_t _params;
 };

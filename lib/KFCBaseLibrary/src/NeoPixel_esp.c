@@ -10,6 +10,7 @@
 #include <eagle_soc.h>
 #include <user_interface.h>
 #endif
+#include "NeoPixel_esp.h"
 
 #include <push_optimize.h>
 #pragma GCC optimize ("O2")
@@ -35,7 +36,7 @@ static inline uint32_t _getCycleCount(void)
 
 // 213 byte IRAM
 
-void ICACHE_RAM_ATTR espShow(uint8_t pin, uint8_t *pixels, uint32_t numBytes, boolean is800KHz) {
+void NEOPIXEL_ICACHE_RAM_ATTR espShow(uint8_t pin, uint8_t *pixels, uint32_t numBytes, boolean is800KHz) {
 
 #ifdef ESP8266
 #if SPEED_BOOSTER_ENABLED
@@ -140,7 +141,7 @@ void ICACHE_RAM_ATTR espShow(uint8_t pin, uint8_t *pixels, uint32_t numBytes, bo
 
 }
 
-extern void ICACHE_RAM_ATTR NeoPixel_espShow(uint8_t pin, uint8_t *pixels, uint32_t numBytes, boolean is800KHz)
+extern void NEOPIXEL_ICACHE_RAM_ATTR NeoPixel_espShow(uint8_t pin, uint8_t *pixels, uint32_t numBytes, boolean is800KHz)
 {
     espShow(pin, pixels, numBytes, is800KHz);
 }

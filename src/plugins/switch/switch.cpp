@@ -19,9 +19,31 @@
 #include <debug_helper_disable.h>
 #endif
 
+using KFCConfigurationClasses::Plugins;
+
 SwitchPlugin plugin;
 
-SwitchPlugin::SwitchPlugin() : MQTTComponent(ComponentTypeEnum_t::SWITCH), _states(0), _pins({IOT_SWITCH_CHANNEL_PINS})
+PROGMEM_DEFINE_PLUGIN_OPTIONS(
+    SwitchPlugin,
+    "switch",           // name
+    "Switch",           // friendly name
+    "",                 // web_templates
+    "switch",           // config_forms
+    "",                 // reconfigure_dependencies
+    PluginComponent::PriorityType::SWITCH,
+    PluginComponent::RTCMemoryId::NONE,
+    static_cast<uint8_t>(PluginComponent::MenuType::AUTO),
+    false,              // allow_safe_mode
+    false,              // setup_after_deep_sleep
+    true,               // has_get_status
+    true,               // has_config_forms
+    true,               // has_web_ui
+    false,              // has_web_templates
+    false,              // has_at_mode
+    0                   // __reserved
+);
+
+SwitchPlugin::SwitchPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(SwitchPlugin)), MQTTComponent(ComponentTypeEnum_t::SWITCH), _states(0), _pins({IOT_SWITCH_CHANNEL_PINS})
 {
     REGISTER_PLUGIN(this, "SwitchPlugin");
 }
@@ -56,14 +78,14 @@ void SwitchPlugin::shutdown()
     _updateTimer.remove();
 #endif
 #if IOT_SWITCH_STORE_STATES
-    if (_delayedWrite.active()) {
-        _delayedWrite->detach(); // stop timer and store now
-        _delayedWrite->getCallback()(nullptr);
+    if (_delayedWrite) {
+        _delayedWrite->__getLoopCallback()(nullptr);
+        _delayedWrite.remove(); // stop timer and store now
     }
 #endif
 }
 
-void SwitchPlugin::reconfigure(PGM_P source)
+void SwitchPlugin::reconfigure(const String &source)
 {
     _readConfig();
 }
@@ -76,57 +98,57 @@ void SwitchPlugin::getStatus(Print &output)
     }
 }
 
-void SwitchPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
+void SwitchPlugin::createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request)
 {
-    using KFCConfigurationClasses::Plugins;
-
-    form.setFormUI(F("Switch Configuration"));
-
-    FormUI::ItemsList states;
-    states.emplace_back(String(SwitchStateEnum::OFF), FSPGM(Off));
-    states.emplace_back(String(SwitchStateEnum::ON), FSPGM(On));
-    states.emplace_back(String(SwitchStateEnum::RESTORE), F("Restore Last State"));
-
-    FormUI::ItemsList webUI;
-    webUI.emplace_back(String(WebUIEnum::NONE), F("None"));
-    webUI.emplace_back(String(WebUIEnum::HIDE), F("Hide"));
-    webUI.emplace_back(String(WebUIEnum::NEW_ROW), F("New row after switch"));
-
-    for (size_t i = 0; i < _pins.size(); i++) {
-
-        FormGroup *group = nullptr;
-        if (_pins.size() > 1) {
-            group = &form.addGroup(PrintString(FSPGM(channel__u), i), PrintString(F("Channel %u"), i), true);
-        }
-
-        form.add(PrintString(F("name[%u]"), i), _names[i], [this, i](const String &name, FormField &, bool) {
-            _names[i] = name;
-            return false;
-        }, FormField::Type::TEXT)->setFormUInew FormUI::UI(FormUI::Type::TEXT, F("Name")));
-
-        form.add<SwitchStateEnum>(PrintString(F("state[%u]"), i), _configs[i].state, [this, i](SwitchStateEnum state, FormField &, bool) {
-            _configs[i].state = state;
-            return false;
-        }, FormField::Type::SELECT)->setFormUI(new FormUI::UI(FormUI::Type::SELECT, F("Default State")))->addItems(states));
-
-        form.add<WebUIEnum>(PrintString(F("webui[%u]"), i), _configs[i].webUI, [this, i](WebUIEnum webUI, FormField &, bool) {
-            _configs[i].webUI = webUI;
-            return false;
-        }, FormField::Type::SELECT)->setFormUI(new FormUI::UI(FormUI::Type::SELECT, F("WebUI")))->addItems(webUI));
-
-        if (group) {
-            group->end();
-        }
+    if (type == FormCallbackType::SAVE) {
+        __LDBG_println(F("Storing config"));
+        Plugins::IOTSwitch::setConfig(_names, _configs);
+        return;
+    }
+    else if (!isCreateFormCallbackType(type)) {
+        return;
     }
 
-    form.setValidateCallback([this](Form &form) {
-        if (form.isValid()) {
-            _debug_println(F("Storing config"));
-            Plugins::IOTSwitch::setConfig(_names, _configs);
-            return true;
-        }
-        return false;
-    });
+    auto &ui = form.getFormUIConfig();
+    ui.setTitle(F("Switch Configuration"));
+    ui.setContainerId(F("switch_settings"));
+    ui.setStyle(FormUI::StyleType::ACCORDION);
+
+    FormUI::ItemsList states(
+        SwitchStateEnum::OFF, FSPGM(Off),
+        SwitchStateEnum::ON, FSPGM(On),
+        SwitchStateEnum::RESTORE, F("Restore Last State")
+    );
+
+    FormUI::ItemsList webUI(
+        WebUIEnum::NONE, F("None"),
+        WebUIEnum::HIDE, F("Hide"),
+        WebUIEnum::NEW_ROW, F("New row after switch")
+    );
+
+    for (size_t i = 0; i < _pins.size(); i++) {
+        auto &group = form.addCardGroup(PrintString(FSPGM(channel__u), i), PrintString(F("Channel %u"), i), true);
+
+        form.add(PrintString(F("name_%u"), i), _names[i], [this, i](const String &name, FormField &, bool) {
+            _names[i] = name;
+            return false;
+        }, FormField::Type::TEXT);
+        form.addFormUI(F("Name"));
+
+        form.add<SwitchStateEnum>(PrintString(F("state_%u"), i), _configs[i].state, [this, i](SwitchStateEnum state, FormField &, bool) {
+            _configs[i].state = state;
+            return false;
+        }, FormField::Type::SELECT);
+        form.addFormUI(F("Default State"), states);
+
+        form.add<WebUIEnum>(PrintString(F("webui_%u"), i), _configs[i].webUI, [this, i](WebUIEnum webUI, FormField &, bool) {
+            _configs[i].webUI = webUI;
+            return false;
+        }, FormField::Type::SELECT);
+        form.addFormUI(F("WebUI"), webUI);
+
+        group.end();
+    }
 
     form.finalize();
 }
@@ -153,12 +175,11 @@ void SwitchPlugin::createWebUI(WebUI &webUI)
             row = &webUI.addRow();
         }
     }
-
 }
 
 void SwitchPlugin::getValues(JsonArray &array)
 {
-    _debug_println();
+    __LDBG_println();
 
     for (size_t i = 0; i < _pins.size(); i++) {
         auto obj = &array.addObject(2);
@@ -252,13 +273,13 @@ String SwitchPlugin::_getChannelName(uint8_t channel) const
 
 void SwitchPlugin::_readConfig()
 {
-    KFCConfigurationClasses::Plugins::IOTSwitch::getConfig(_names, _configs);
+    Plugins::IOTSwitch::getConfig(_names, _configs);
 }
 
 void SwitchPlugin::_readStates()
 {
 #if IOT_SWITCH_STORE_STATES
-    File file = SPIFFSWrapper::open(FSPGM(iot_switch_states_file, "/.pvt/switch.states"), fs::FileOpenMode::read);
+    auto file = SPIFFSWrapper::open(FSPGM(iot_switch_states_file, "/.pvt/switch.states"), fs::FileOpenMode::read);
     if (file) {
         if (file.read(reinterpret_cast<uint8_t *>(&_states), sizeof(_states)) != sizeof(_states)) {
             _states = 0;
@@ -272,10 +293,9 @@ void SwitchPlugin::_writeStates()
 {
     __LDBG_printf("states=%s", String(_states, 2).c_str());
 #if IOT_SWITCH_STORE_STATES
-    _delayedWrite.remove();
     _Timer(_delayedWrite).add(IOT_SWITCH_STORE_STATES_WRITE_DELAY, false, [this](Event::CallbackTimerPtr timer) {
-        __LDBG_printf("SwitchPlugin::_writeStates(): delayed write states=%s", String(_states, 2).c_str());
-        File file = SPIFFSWrapper::open(FSPGM(iot_switch_states_file), fs::FileOpenMode::write);
+        __LDBG_printf("delayed write states=%s", String(_states, 2).c_str());
+        auto file = SPIFFSWrapper::open(FSPGM(iot_switch_states_file), fs::FileOpenMode::write);
         if (file) {
             file.write(reinterpret_cast<const uint8_t *>(&_states), sizeof(_states));
         }

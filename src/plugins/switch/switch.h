@@ -47,24 +47,12 @@ public:
 
 // PluginComponent
 public:
-    virtual PGM_P getName() const override {
-        return PSTR("switch");
-    }
-    virtual const __FlashStringHelper *getFriendlyName() const override {
-        return F("Switch");
-    }
-    virtual PriorityType getSetupPriority() const override {
-        return PriorityType::DEFAULT;
-    }
-    virtual OptionsType getOptions() const override {
-        return EnumHelper::Bitset::all(OptionsType::HAS_STATUS, OptionsType::HAS_CONFIG_FORM, OptionsType::HAS_WEB_UI);
-    }
-
     virtual void setup(SetupModeType mode) override;
+    virtual void reconfigure(const String &source) override;
     virtual void shutdown() override;
-    virtual void reconfigure(PGM_P source) override;
     virtual void getStatus(Print &output) override;
-    virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
+
+    virtual void createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request) override;
 
 // WebUI
 public:

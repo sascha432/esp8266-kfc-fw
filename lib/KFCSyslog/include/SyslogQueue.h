@@ -42,8 +42,8 @@ public:
     using Item = SyslogQueueItem;
 
     static constexpr size_t kSyslogQueueItemSize = sizeof(Item);
-    static constexpr uint32_t kFailureWaitDelay = 1000U;        // delay before retrying in milliseconds
-    static constexpr uint8_t kFailureRetryLimit = 60;           // number of times before discarding a message or the entire queue
+    static constexpr uint32_t kFailureWaitDelay = 2000U;            // delay before retrying in milliseconds
+    static constexpr uint8_t kFailureRetryLimit = 30;               // number of times before discarding a message or the entire queue
 
     SyslogQueue();
     virtual ~SyslogQueue();

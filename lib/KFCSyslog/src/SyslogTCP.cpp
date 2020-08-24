@@ -77,15 +77,7 @@ void SyslogTCP::transmit(const SyslogQueueItem &item)
     _buffer.write('\n');
     _ack = _buffer.length();
 
-    // canSend() means that the connection is established and tcp buffers have free space
-    if (_client.canSend()) {
-        __LDBG_print("already connected");
-        _sendQueue(&_client);
-    }
-    else {
-        // check if we are disconnected
-        _connect();
-    }
+    _connect();
 }
 
 void SyslogTCP::clear()
@@ -166,7 +158,7 @@ void SyslogTCP::_connect()
 
 void SyslogTCP::_disconnect()
 {
-    __LDBG_printf("id=%u connected=%d connecting=%d disconnecting=%d", _queueId, _client.connected(), _client.connecting(), _client.disconnecting());
+    __LDBG_printf("disconnect id=%u connected=%d connecting=%d disconnecting=%d", _queueId, _client.connected(), _client.connecting(), _client.disconnecting());
     _client.close(true);
 }
 
@@ -219,10 +211,10 @@ void SyslogTCP::__onAck(AsyncClient *client, size_t len, uint32_t time)
                 // report success and remove queueId
                 _status(true);
             }
-            else if (_buffer.length()) {
-                // try to send more data
-                _sendQueue(client);
-            }
+            // else if (_buffer.length()) {
+            //     // try to send more data
+            //     _sendQueue(client);
+            // }
         }
     }
     else {
@@ -238,15 +230,17 @@ void SyslogTCP::_onDisconnect(void *arg, AsyncClient *client)
 
 void SyslogTCP::_onError(void *arg, AsyncClient *client, int8_t error)
 {
+    __LDBG_printf("error=%d", error);
     auto &syslog = *reinterpret_cast<SyslogTCP *>(arg);
     syslog._status(false __LDBG_IF(, PSTR("error")));
-    syslog._disconnect();
+    // syslog._disconnect();
 }
 
 // default ack timeout is 5000ms for sending
 // rx timeout is set to kMaxIdleSeconds
 void SyslogTCP::_onTimeout(void *arg, AsyncClient *client, uint32_t time)
 {
+    __LDBG_printf("timeout=%u", time);
     auto &syslog = *reinterpret_cast<SyslogTCP *>(arg);
     syslog._status(false __LDBG_IF(, PSTR("timeout")));
     syslog._disconnect(); // make sure to reconnect even if the connection is still up
@@ -254,11 +248,14 @@ void SyslogTCP::_onTimeout(void *arg, AsyncClient *client, uint32_t time)
 
 void SyslogTCP::_onAck(void *arg, AsyncClient *client, size_t len, uint32_t time)
 {
+    __LDBG_printf("ack=%u time=%u", len, time);
     reinterpret_cast<SyslogTCP *>(arg)->__onAck(client, len, time);
 }
 
 // gets called once per second
 void SyslogTCP::_onPoll(void *arg, AsyncClient *client)
 {
-    reinterpret_cast<SyslogTCP *>(arg)->_sendQueue(client);
+    // __LDBG_printf("poll");
+    auto &syslog = *reinterpret_cast<SyslogTCP *>(arg);
+    syslog._sendQueue(client);
 }

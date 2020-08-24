@@ -7,14 +7,11 @@
 #include <Arduino_compat.h>
 #include <EventScheduler.h>
 #include <kfc_fw_config.h>
+#include "Syslog.h"
 #include "plugins.h"
 
 #if !defined(SYSLOG_SUPPORT) || !SYSLOG_SUPPORT
 #error requires SYSLOG_SUPPORT=1
-#endif
-
-#ifndef DEBUG_SYSLOG
-#define DEBUG_SYSLOG                        1
 #endif
 
 #if defined(ESP32)

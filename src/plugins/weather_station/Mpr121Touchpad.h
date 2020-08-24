@@ -18,8 +18,6 @@
 #define DEBUG_TOUCHPAD                      0
 #endif
 
-using EventTimerPtr = Event::TimerPtr;
-
 class Mpr121Touchpad;
 class WeatherStationPlugin;
 
@@ -304,7 +302,7 @@ private:
     void _loop();
     void _get();
     void _fireEvent();
-    void _timerCallback(EventTimerPtr &timer);
+    void _timerCallback(::Event::CallbackTimerPtr timer);
 
 private:
     friend WeatherStationPlugin;

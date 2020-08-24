@@ -29,12 +29,6 @@ Timer &Timer::operator=(CallbackTimerPtr callbackTimer)
     return *this;
 }
 
-// Timer::Timer(Timer &&move) : _managedTimer(std::move(move))
-// {
-// //     __DBG_assert(_timer->_timer == nullptr || _timer->_timer == &move);
-// //     _timer->_timer = this;
-//  }
-
 Timer::~Timer()
 {
     remove();

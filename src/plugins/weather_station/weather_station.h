@@ -13,7 +13,6 @@
 #include "WebUIComponent.h"
 #include "WSDraw.h"
 #include "NeoPixel_esp.h"
-#include "FadeTimer.h"
 #include "plugins.h"
 #if IOT_ALARM_PLUGIN_ENABLED
 #include "./plugins/alarm/alarm.h"
@@ -109,7 +108,6 @@ private:
     void _getWeatherInfo(Callback_t finishedCallback);
     void _getWeatherForecast(Callback_t finishedCallback);
 
-    // void _serialHandler(const uint8_t *buffer, size_t len);
     void _loop();
 
     void _fadeBacklight(uint16_t fromLevel, uint16_t toLevel, int8_t step = 16);
@@ -123,7 +121,7 @@ private:
     // uint32_t _updateTimer;
     uint32_t _updateCounter;
     uint16_t _backlightLevel;
-    FadeTimer *_fadeTimer;
+    Event::Timer _fadeTimer;
 
 private:
     uint32_t _pollTimer;

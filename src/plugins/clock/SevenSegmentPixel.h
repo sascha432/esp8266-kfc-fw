@@ -322,7 +322,6 @@ public:
         _params.brightness = brightness;
     }
 
-#if HAVE_SMOOTH_BRIGHTNESS_ADJUSTMENT
     void setBrightness(BrightnessType brightness, float fadeTime, FadingFinishedCallback finishedCallback = nullptr, FadingRefreshCallback refreshCallback = nullptr) {
         _targetBrightness = brightness;
         if (!_brightnessTimer) {
@@ -361,7 +360,6 @@ public:
             }, Event::PriorityType::HIGHEST);
         }
     }
-#endif
 
     char getSegmentChar(int segment) {
         return 'a' + (segment % SegmentEnum_t::NUM);
@@ -444,18 +442,6 @@ private:
 
 public:
 
-#if IOT_CLOCK_USE_FAST_LED_BRIGHTNESS
-
-    static inline ColorType _adjustBrightness(ColorType color, BrightnessType brightness) {
-        return color;
-    }
-
-    static inline ColorType _adjustBrightnessAlways(ColorType color, BrightnessType brightness) {
-        return color;
-    }
-
-#else
-
     static inline ColorType _adjustBrightness(ColorType color, BrightnessType brightness) {
         if (color) {
             return _adjustBrightnessAlways(color, brightness);
@@ -470,8 +456,6 @@ public:
         *ptr = *ptr * brightness / kMaxBrightness;
         return color;
     }
-
-#endif
 
 private:
     friend class ClockPlugin;

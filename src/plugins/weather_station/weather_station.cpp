@@ -84,7 +84,6 @@ WeatherStationPlugin::WeatherStationPlugin() :
     // _updateTimer(0),
     _updateCounter(0),
     _backlightLevel(1023),
-    _fadeTimer(nullptr),
     _pollTimer(0),
     _httpClient(nullptr),
     _toggleScreenTimer(0),
@@ -383,9 +382,7 @@ void WeatherStationPlugin::shutdown()
 #if IOT_WEATHER_STATION_HAS_TOUCHPAD
     _touchpad.end();
 #endif
-    if (_fadeTimer) {
-        delete _fadeTimer;
-    }
+    _fadeTimer.remove();
     _canvasLocked++;
     __DBG_delete(_canvas);
     _canvas = nullptr;
@@ -571,11 +568,18 @@ void WeatherStationPlugin::_getWeatherForecast(Callback_t finishedCallback)
 
 void WeatherStationPlugin::_fadeBacklight(uint16_t fromLevel, uint16_t toLevel, int8_t step)
 {
-    if (_fadeTimer) {
-        delete _fadeTimer;
-        __DBG_assert(_fadeTimer == nullptr);
-    }
-    _fadeTimer = new FadeTimer(&_fadeTimer, fromLevel, toLevel, step);
+    analogWrite(TFT_PIN_LED, fromLevel);
+    int8_t direction = fromLevel > toLevel ? -step : step;
+    _Timer(_fadeTimer).add(Event::milliseconds(25), true, [fromLevel, toLevel, step, direction](Event::CallbackTimerPtr timer) mutable {
+
+        if (abs(toLevel - fromLevel) > step) {
+            fromLevel += direction;
+        } else {
+            fromLevel = toLevel;
+            timer->disarm();
+        }
+        analogWrite(TFT_PIN_LED, fromLevel);
+    }, Event::PriorityType::HIGHEST);
 }
 
 void WeatherStationPlugin::_fadeStatusLED()
@@ -585,18 +589,18 @@ void WeatherStationPlugin::_fadeStatusLED()
     int16_t dir = 0x100;
     NeoPixel_fillColor(_pixels, sizeof(_pixels), color);
     NeoPixel_espShow(IOT_WEATHER_STATION_WS2812_PIN, _pixels, sizeof(_pixels), true);
-    _Timer(_pixelTimer).add(50, true, [this, color, dir](Event::CallbackTimerPtr timer) mutable {
+    _Timer(_pixelTimer).add(50, true, [this, color, dir](::Event::CallbackTimerPtr timer) mutable {
         color += dir;
         if (color >= 0x003000) {
             dir = -dir;
             color = 0x003000;
         }
         else if (color == 0) {
-            timer.reset();
+            timer->disarm();
         }
         NeoPixel_fillColor(_pixels, sizeof(_pixels), color);
         NeoPixel_espShow(IOT_WEATHER_STATION_WS2812_PIN, _pixels, sizeof(_pixels), true);
-    }, PriorityType::HIGHER);
+    }, ::Event::PriorityType::HIGHEST);
 #endif
 }
 
@@ -839,7 +843,7 @@ void WeatherStationPlugin::_alarmCallback(Alarm::AlarmModeType mode, uint16_t ma
     }
 
     // check if an alarm is already active
-    if (!_alarmTimer.isActive()) {
+    if (!_alarmTimer) {
 #if IOT_WEATHER_STATION_WS2812_NUM
         BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::FAST, 0xff0000);
 #endif
@@ -857,8 +861,7 @@ bool WeatherStationPlugin::_resetAlarm()
 {
     debug_printf_P(PSTR("alarm_func=%u alarm_state=%u"), _resetAlarmFunc ? 1 : 0, AlarmPlugin::getAlarmState());
     if (_resetAlarmFunc) {
-        Event::TimerPtr timer;
-        _resetAlarmFunc(timer);
+        _resetAlarmFunc(*_alarmTimer);
         AlarmPlugin::resetAlarm();
         return true;
     }

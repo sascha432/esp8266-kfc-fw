@@ -636,7 +636,7 @@ void WSDraw::_draw()
 #ifndef _WIN32
         _Scheduler.add(150, true, [this](Event::CallbackTimerPtr timer) {
             if (_currentScreen != TEXT) {
-                timer.reset();
+                timer->disarm();
             }
             else {
                 _drawText(_text, _textFont, COLORS_DEFAULT_TEXT);

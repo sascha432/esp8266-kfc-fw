@@ -10,7 +10,6 @@
 #include <eagle_soc.h>
 #include <user_interface.h>
 #endif
-#include "NeoPixel_esp.h"
 
 #include <push_optimize.h>
 #pragma GCC optimize ("O2")
@@ -25,31 +24,33 @@ void NeoPixel_fillColor(uint8_t *pixels, uint16_t numBytes, uint32_t color)
     }
 }
 
-static uint32_t _getCycleCount(void) __attribute__((always_inline));
-static inline uint32_t _getCycleCount(void)
-{
-    uint32_t ccount;
-    __asm__ __volatile__("rsr %0,ccount"
-                         : "=a"(ccount));
-    return ccount;
-}
+#if defined(ESP8266)
 
-// 213 byte IRAM
-
-void NEOPIXEL_ICACHE_RAM_ATTR espShow(uint8_t pin, uint8_t *pixels, uint32_t numBytes, boolean is800KHz) {
-
-#ifdef ESP8266
-#if SPEED_BOOSTER_ENABLED
-    uint8_t freq = system_get_cpu_freq();
-    if (freq == SYS_CPU_160MHZ) {
-        system_update_cpu_freq(SYS_CPU_80MHZ);
-    }
-#endif
 // compensation for if (pin == ...)
 // high 400-410ns low 800-810ns period 1300ns 769kHz
 #define COMP_CYCLES     3
+
+#define gpio_set_level_high() \
+    if (pin == 16) { \
+        WRITE_PERI_REG(RTC_GPIO_OUT, gpio_set); \
+    } else { \
+        GPIO_REG_WRITE(GPIO_OUT_W1TS_ADDRESS, pinMask); \
+    }
+
+#define gpio_set_level_low() \
+    if (pin == 16) { \
+        WRITE_PERI_REG(RTC_GPIO_OUT, gpio_clear); \
+    } else { \
+        GPIO_REG_WRITE(GPIO_OUT_W1TC_ADDRESS, pinMask); \
+    }
+
 #else
-#define COMP_CYCLES     0
+
+#define COMP_CYCLES                     0
+
+#define gpio_set_level_high()           gpio_set_level(pin, HIGH)
+#define gpio_set_level_low()            gpio_set_level(pin, LOW)
+
 #endif
 
 #define CYCLES_800_T0H  (F_CPU / 2500000) // 0.4us
@@ -59,17 +60,67 @@ void NEOPIXEL_ICACHE_RAM_ATTR espShow(uint8_t pin, uint8_t *pixels, uint32_t num
 #define CYCLES_400_T1H  (F_CPU / 833333) // 1.2us
 #define CYCLES_400      (F_CPU / 400000) // 2.5us per bit
 
+
+static uint32_t _getCycleCount(void) __attribute__((always_inline));
+static inline uint32_t _getCycleCount(void)
+{
+    uint32_t ccount;
+    __asm__ __volatile__("rsr %0,ccount"
+                         : "=a"(ccount));
+    return ccount;
+}
+
+// ~213 byte IRAM~
+// 162 byte
+
+#if defined(ESP8266)
+void ICACHE_RAM_ATTR espShow(uint8_t pin, uint8_t *pixels, uint32_t numBytes, uint8_t *p, uint8_t *end, uint32_t time0, uint32_t time1, uint32_t period, uint32_t pinMask, uint32_t gpio_clear, uint32_t gpio_set)
+#else
+void ICACHE_RAM_ATTR espShow(uint8_t pin, uint8_t *pixels, uint32_t numBytes, uint8_t *p, uint8_t *end, uint32_t time0, uint32_t time1, uint32_t period)
+#endif
+{
+    uint8_t pix, mask;
+    uint32_t c, t;
+    uint32_t startTime = 0;
+
+    pix = *p++;
+    mask = 0x80;
+
+    for (t = time0;; t = time0) {
+        if (pix & mask)
+            t = time1; // Bit high duration
+        while (((c = _getCycleCount()) - startTime) < period)
+            ; // Wait for bit start
+        gpio_set_level_high();
+        startTime = c; // Save start time
+        while (((c = _getCycleCount()) - startTime) < t)
+            ; // Wait high duration
+        gpio_set_level_low();
+        if (!(mask >>= 1)) { // Next bit/byte
+            if (p >= end)
+                break;
+            pix = *p++;
+            mask = 0x80;
+        }
+    }
+    while ((_getCycleCount() - startTime) < period)
+        ; // Wait for last bit
+}
+
+void NeoPixel_espShow(uint8_t pin, uint8_t *pixels, uint32_t numBytes, boolean is800KHz)
+{
+#ifdef ESP8266
+    system_update_cpu_freq(SYS_CPU_80MHZ);
+#endif
+
     noInterrupts();
 
-    uint8_t *p, *end, pix, mask;
-    uint32_t t, time0, time1, period, c, startTime, pinMask;
+    uint8_t *p, *end;
+    uint32_t time0, time1, period, pinMask;
 
     pinMask = _BV(pin);
     p = pixels;
     end = p + numBytes;
-    pix = *p++;
-    mask = 0x80;
-    startTime = 0;
 
 #ifdef NEO_KHZ400
     if (is800KHz) {
@@ -86,64 +137,39 @@ void NEOPIXEL_ICACHE_RAM_ATTR espShow(uint8_t pin, uint8_t *pixels, uint32_t num
 #endif
 
 #ifdef ESP8266
-    uint32_t gpio_clear = 0;
-    uint32_t gpio_set = 0;
+    // TODO gpio_set_level_high() / gpio_set_level_low() could be replaced with a single write operator without the
+    // if, but that seems to mess with the number of clock cycles. needs some disassembling to figure out what the
+    // compiler is doing....
+    // WRITE_PERI_REG(gpio_set_address, gpio_set);
+    // WRITE_PERI_REG(gpio_clear_address, gpio_clear);
+
+    // uint32_t gpio_clear_address;
+    // uint32_t gpio_set_address;
+    uint32_t gpio_clear;
+    uint32_t gpio_set;
     if (pin == 16) {
-        // reading and writing RTC_GPIO_OUT is too slow inside the loop
-        gpio_clear = (READ_PERI_REG(RTC_GPIO_OUT) & (uint32)0xfffffffe);
+        // gpio_clear_address = RTC_GPIO_OUT;
+        // gpio_set_address = RTC_GPIO_OUT;
+        gpio_clear = (READ_PERI_REG(RTC_GPIO_OUT) & 0xfffffffeU);
         gpio_set = gpio_clear | 1;
+
+    }
+    else {
+        // gpio_clear_address = PERIPHS_GPIO_BASEADDR + GPIO_OUT_W1TC_ADDRESS;
+        // gpio_set_address = PERIPHS_GPIO_BASEADDR + GPIO_OUT_W1TS_ADDRESS;
+        gpio_set = pinMask;
+        gpio_clear = pinMask;
+
     }
 #endif
 
-    for (t = time0;; t = time0) {
-        if (pix & mask)
-            t = time1; // Bit high duration
-        while (((c = _getCycleCount()) - startTime) < period)
-            ; // Wait for bit start
-#ifdef ESP8266
-        if (pin == 16) {
-            WRITE_PERI_REG(RTC_GPIO_OUT, gpio_set);
-        } else {
-            GPIO_REG_WRITE(GPIO_OUT_W1TS_ADDRESS, pinMask); // Set high
-        }
+#if defined(ESP8266)
+    espShow(pin, pixels, numBytes, p, end, time0, time1, period, pinMask, gpio_clear, gpio_set);
 #else
-            gpio_set_level(pin, HIGH);
+    espShow(pin, pixels, numBytes, p, end, time0, time1, period);
 #endif
-        startTime = c; // Save start time
-        while (((c = _getCycleCount()) - startTime) < t)
-            ; // Wait high duration
-#ifdef ESP8266
-        if (pin == 16) {
-            WRITE_PERI_REG(RTC_GPIO_OUT, gpio_clear);
-        } else {
-            GPIO_REG_WRITE(GPIO_OUT_W1TC_ADDRESS, pinMask); // Set low
-        }
-#else
-            gpio_set_level(pin, LOW);
-#endif
-        if (!(mask >>= 1)) { // Next bit/byte
-            if (p >= end)
-                break;
-            pix = *p++;
-            mask = 0x80;
-        }
-    }
-    while ((_getCycleCount() - startTime) < period)
-        ; // Wait for last bit
-
 
     interrupts();
-#if SPEED_BOOSTER_ENABLED && ESP8266
-    if (freq == SYS_CPU_160MHZ) {
-        system_update_cpu_freq(SYS_CPU_160MHZ);
-    }
-#endif
-
-}
-
-extern void NEOPIXEL_ICACHE_RAM_ATTR NeoPixel_espShow(uint8_t pin, uint8_t *pixels, uint32_t numBytes, boolean is800KHz)
-{
-    espShow(pin, pixels, numBytes, is800KHz);
 }
 
 #endif

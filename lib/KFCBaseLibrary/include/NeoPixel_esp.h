@@ -8,25 +8,14 @@
 extern "C" {
 #endif
 
-#ifndef HAVE_NEOPIXEL_ICACHE_RAM_ATTR
-#define HAVE_NEOPIXEL_ICACHE_RAM_ATTR           1
-#endif
-
-#ifndef HAVE_NEOPIXEL_ICACHE_RAM_ATTR
-#define NEOPIXEL_ICACHE_RAM_ATTR                ICACHE_RAM_ATTR
-#else
-#define  NEOPIXEL_ICACHE_RAM_ATTR
-#endif
-
-static inline void NeoPixel_setColor(uint8_t *pixels, uint32_t color)
-{
-    *pixels++ = color >> 8;
-    *pixels++ = color >> 16;
-    *pixels++ = color;
-}
-
 void NeoPixel_fillColor(uint8_t *pixels, uint16_t numBytes, uint32_t color);
-void NEOPIXEL_ICACHE_RAM_ATTR NeoPixel_espShow(uint8_t pin, uint8_t *pixels, uint32_t numBytes, boolean is800KHz);
+void NeoPixel_espShow(uint8_t pin, uint8_t *pixels, uint32_t numBytes, boolean is800KHz);
+
+// #if defined(ESP8266)
+// void ICACHE_RAM_ATTR espShow(uint8_t *p, uint8_t *end, uint8_t pix, uint8_t mask, uint32_t time0, uint32_t time1, uint32_t period, const uint32_t gpio_clear_address, const uint32_t gpio_set_address, const uint32_t gpio_clear_mask, const uint32_t gpio_set_mask);
+// #else
+// void ICACHE_RAM_ATTR espShow(uint8_t pin, uint8_t *p, uint8_t *end, uint8_t pix, uint8_t mask, uint32_t time0, uint32_t time1, uint32_t period);
+// #endif
 
 #ifdef __cplusplus
 }

@@ -19,13 +19,13 @@ Timer::Timer() : _managedTimer()
 {
 }
 
-Timer::Timer(CallbackTimerPtr &&callbackTimer) : _managedTimer(std::move(callbackTimer), this)
+Timer::Timer(CallbackTimerPtr callbackTimer) : _managedTimer(callbackTimer, this)
 {
 }
 
-Timer &Timer::operator=(CallbackTimerPtr &&callbackTimer)
+Timer &Timer::operator=(CallbackTimerPtr callbackTimer)
 {
-    _managedTimer = ManangedCallbackTimer(std::move(callbackTimer), this);
+    _managedTimer = ManangedCallbackTimer(callbackTimer, this);
     return *this;
 }
 
@@ -75,6 +75,11 @@ Timer::operator bool() const
 }
 
 CallbackTimerPtr Timer::operator->() const noexcept
+{
+    return _managedTimer.get();
+}
+
+CallbackTimerPtr Timer::operator*() const noexcept
 {
     return _managedTimer.get();
 }

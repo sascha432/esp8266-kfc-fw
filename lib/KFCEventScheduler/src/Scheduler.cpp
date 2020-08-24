@@ -12,6 +12,7 @@
 
 #if DEBUG_EVENT_SCHEDULER
 #include <debug_helper_enable.h>
+#include <debug_helper_enable_mem.h>
 #else
 #include <debug_helper_disable.h>
 #endif
@@ -52,7 +53,7 @@ CallbackTimer *Scheduler::_add(int64_t delay, RepeatType repeat, Callback callba
     // auto iterator = _timers.insert(iter, std::move(ptr));
     // auto &timerPtr = *iterator;
 
-    auto timerPtr = new CallbackTimer(callback, delay, repeat, priority);
+    auto timerPtr = __LDBG_new(CallbackTimer, callback, delay, repeat, priority);
     _timers.push_back(timerPtr);
 
     __LDBG_IF(
@@ -62,7 +63,6 @@ CallbackTimer *Scheduler::_add(int64_t delay, RepeatType repeat, Callback callba
         DebugContext::__pos = DebugContext();
     );
 
-    // __list();
     timerPtr->_initTimer();
     return timerPtr;
 }
@@ -113,20 +113,12 @@ bool Scheduler::_removeTimer(CallbackTimerPtr timer)
         auto iterator = _getTimer(timer);
         __LDBG_assert(iterator != _timers.end());
         if (iterator != _timers.end()) {
-
-            __LDBG_printf("timer=%p iterator=%p managed=%p iterator_managed=%p %s:%u", timer, *iterator, timer->_timer, (*iterator)->_timer, __S(timer->_file), timer->_line);
-
-            // if (timer->_timer) {
-            //     timer->_timer->_managedTimer.clear();
-            // }
-
+            __LDBG_printf("timer=%p iterator=%p managed=%p %s:%u", timer, *iterator, timer->_timer, __S(timer->_file), timer->_line);
             // mark as deleted in vector
             *iterator = nullptr;
-
             // disarm and delete
             timer->_disarm();
-            delete timer;
-
+            __LDBG_delete(timer);
             return true;
         }
     }
@@ -265,7 +257,8 @@ void Scheduler::__list(bool debug)
 
     if (_timers.empty()) {
         output.println(F("no timers attached"));
-    } else {
+    }
+    else {
         int scheduled = 0;
         int deleted = 0;
         for(const auto timer: _timers) {

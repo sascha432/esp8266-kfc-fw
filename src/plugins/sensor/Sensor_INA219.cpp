@@ -192,7 +192,7 @@ bool Sensor_INA219::atModeHandler(AtModeArgs &args)
             });
         };
 
-        if (!timerPrintFunc(timer)) {
+        if (!timerPrintFunc(*timer)) {
             serial.printf_P(PSTR("+%s: No sensor found\n"), PROGMEM_AT_MODE_HELP_COMMAND(SENSORINA219));
         }
         else {

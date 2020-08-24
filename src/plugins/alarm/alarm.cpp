@@ -48,7 +48,7 @@ AlarmPlugin::AlarmPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(AlarmPlu
 void AlarmPlugin::setup(SetupModeType mode)
 {
     _debug_println();
-    _installAlarms(_timer);
+    _installAlarms(*_timer);
     addTimeUpdatedCallback(ntpCallback);
     dependsOn(FSPGM(mqtt), [this](const PluginComponent *plugin) {
         MQTTClient::safeRegisterComponent(this);
@@ -63,7 +63,7 @@ void AlarmPlugin::reconfigure(const String &source)
     }
     else {
         _removeAlarms();
-        _installAlarms(_timer);
+        _installAlarms(*_timer);
     }
 }
 
@@ -292,7 +292,7 @@ void AlarmPlugin::_removeAlarms()
     _debug_println();
     _nextAlarm = 0;
     if (_timer) {
-        _timer->stop();
+        _timer->disarm();
     }
     _alarms.clear();
 }
@@ -303,7 +303,7 @@ void AlarmPlugin::_ntpCallback(time_t now)
     if (IS_TIME_VALID(now)) {
         // reinstall alarms if time changed
         _removeAlarms();
-        _installAlarms(_timer);
+        _installAlarms(*_timer);
     }
 }
 

@@ -13,10 +13,10 @@ class FixedCircularBuffer {
 public:
     class iterator {
     public:
-        iterator(const FixedCircularBuffer<T, SIZE>& buffer, const T* iterator) : _buffer(buffer), _iterator(iterator) {
+        iterator(const FixedCircularBuffer<T, SIZE> &buffer, const T *iterator) : _buffer(buffer), _iterator(iterator) {
         }
 
-        iterator& operator=(const iterator& iter) {
+        iterator &operator=(iterator iter) {
             _iterator = iter._iterator;
             return *this;
         }
@@ -32,32 +32,36 @@ public:
             return tmp;
         }
 
-        iterator& operator+=(int step) {
+        iterator &operator+=(int step) {
             _iterator += step;
             return *this;
         }
-        iterator& operator-=(int step) {
+        iterator &operator-=(int step) {
             _iterator -= step;
             return *this;
         }
-        iterator& operator++() {
+        iterator &operator++() {
             ++_iterator;
             return *this;
         }
-        iterator& operator--() {
+        iterator &operator--() {
             --_iterator;
             return *this;
         }
 
-        T& operator*() {
-            return *(T*)&_buffer._values[offset()];
+        T &operator*() {
+            return const_cast<T &>(_buffer._values[offset()]);
         }
 
-        bool operator==(const iterator& iter) {
+        const T &operator*() const {
+            return static_cast<T &>(_buffer._values[offset()]);
+        }
+
+        bool operator==(iterator iter) const {
             return _iterator == iter._iterator;
         }
 
-        bool operator!=(const iterator& iter) {
+        bool operator!=(iterator iter) const {
             return _iterator != iter._iterator;
         }
 
@@ -72,59 +76,60 @@ public:
     private:
         friend FixedCircularBuffer;
 
-        const FixedCircularBuffer<T, SIZE>& _buffer;
-        const T* _iterator;
+        const FixedCircularBuffer<T, SIZE> &_buffer;
+        const T *_iterator;
     };
 
     FixedCircularBuffer() : _count(0), _write_position(0), _read_position(0), _locked(false) {
     }
 
-    FixedCircularBuffer(FixedCircularBuffer&& buffer) {
+    FixedCircularBuffer(FixedCircularBuffer &&buffer) {
         *this = std::move(buffer);
     }
 
-    FixedCircularBuffer& operator=(FixedCircularBuffer&& buffer) {
+    FixedCircularBuffer& operator=(FixedCircularBuffer &&buffer) {
         _count = buffer._count;
         _write_position = buffer._write_position;
         _read_position = buffer._read_position;
         _locked = buffer._locked;
-        memcpy(_values, buffer._values, size() * sizeof(*_values));
+        std::copy_n(buffer._values, size(), _values);
+        //memcpy(_values, buffer._values, size() * sizeof(*_values));
         buffer.clear();
         return *this;
     }
 
-    FixedCircularBuffer slice(const iterator& first, const iterator& last) {
-        //assert(distance(first, last) <= SIZE);
+    FixedCircularBuffer slice(iterator first, iterator last) {
         FixedCircularBuffer tmp;
-        for (auto iterator = first; iterator != last; ++iterator) {
-            tmp._values[tmp._count++] = *iterator;
+        while (first != last) {
+            tmp._values[tmp._count++] = *first;
+            ++first;
         }
         tmp._write_position = tmp._count % SIZE;
         return tmp;
     }
 
-    void shrink(const iterator& first, const iterator& last) {
+    void shrink(iterator first, iterator last) {
         _read_position = first.offset();
         _write_position = last.offset();
         _count = distance(first, last) + _read_position;
     }
 
     template<class T2, size_t SIZE2>
-    void copy(FixedCircularBuffer<T2, SIZE2>& target, const iterator& first, const iterator& last) {
-        for (auto iterator = first; iterator != last; ++iterator) {
-            target.push_back(*iterator);
+    void copy(FixedCircularBuffer<T2, SIZE2> &target, iterator first, iterator last) {
+        while(first != last) {
+            target.push_back(*first);
+            ++first;
         }
     }
 
-    static int distance(const iterator& iter1, const iterator& iter2) {
+    static int distance(iterator iter1, iterator iter2) {
         return iter2._iterator - iter1._iterator;
     }
 
-    inline __attribute__((always_inline)) void push_back(T &&value) {
+    void push_back(T &&value) {
         _values[_write_position++] = std::move(value);
         _write_position %= SIZE;
-        _count++;
-        if (_count - _read_position > SIZE) {
+        if (++_count - _read_position > SIZE) {
             _read_position++;
         }
     }
@@ -135,7 +140,7 @@ public:
     }
 
 
-    inline __attribute__((always_inline)) void push_back_no_block(T &&value) {
+    void push_back_no_block(T &&value) {
         if (!_locked) {
             push_back(std::move(value));
         }
@@ -183,7 +188,7 @@ public:
         return _count;
     }
 
-    void printTo(Print &output, const iterator &first, const iterator &last, char separator = ',') {
+    void printTo(Print &output, iterator first, iterator last, char separator = ',') {
         for(auto iter = first; iter != last; ++iter) {
             if (iter != first) {
                 output.print(separator);
@@ -194,11 +199,11 @@ public:
 
 public:
 
-    T& front() {
+    T &front() {
         return *begin();
     }
 
-    T& back() {
+    T &back() {
         return *(end() - 1);
     }
 

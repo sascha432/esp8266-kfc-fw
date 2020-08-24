@@ -256,7 +256,7 @@ void ClockPlugin::setup(SetupModeType mode)
 
         _Timer(_autoBrightnessTimer).add(IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL, true, [this](Event::CallbackTimerPtr timer) {
             _adjustAutobrightness();
-        });
+        }, Event::PriorityType::HIGHEST);
         _adjustAutobrightness();
 
         _installWebHandlers();
@@ -846,7 +846,7 @@ void ClockPlugin::_alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration
     }
 
     // check if an alarm is already active
-    if (!_alarmTimer.isActive()) {
+    if (!_alarmTimer) {
         __LDBG_printf("alarm brightness=%u auto_brightness=%d color=#%06x", _brightness, _autoBrightness, _color.get());
         _autoBrightness = kAutoBrightnessOff;
         _brightness = SevenSegmentDisplay::kMaxBrightness;
@@ -867,7 +867,7 @@ bool ClockPlugin::_resetAlarm()
     __LDBG_printf("alarm_func=%u alarm_state=%u", _resetAlarmFunc ? 1 : 0, AlarmPlugin::getAlarmState());
     if (_resetAlarmFunc) {
         // reset prior clock settings
-        _resetAlarmFunc(_timer);
+        _resetAlarmFunc(*_timer);
         AlarmPlugin::resetAlarm();
         _schedulePublishState = true;
         return true;

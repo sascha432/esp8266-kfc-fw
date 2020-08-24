@@ -65,6 +65,7 @@ void SyslogStream::flush()
         _message = String();
         deliverQueue();
         if (!_syslog._queue.empty() && _timer) {
+            __LDBG_printf("queue filled rearm=100ms");
             _timer->rearm(Event::milliseconds(100));
         }
     }
@@ -97,6 +98,7 @@ void SyslogStream::deliverQueue()
         _syslog.transmit(_syslog._queue.get());
 	}
     if (_syslog._queue.empty() && _timer) {
+        __LDBG_printf("queue empty rearm=60s (deliverQueue)");
         _timer->rearm(Event::seconds(60));
     }
 }

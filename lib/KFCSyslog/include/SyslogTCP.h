@@ -41,7 +41,7 @@ public:
 private:
     void __onAck(AsyncClient *client, size_t len, uint32_t time);
     void __onError(AsyncClient *client, int8_t error);
-    void __onPoll(AsyncClient *client);
+    void _sendQueue(AsyncClient *client);
 
 private:
     void _connect();

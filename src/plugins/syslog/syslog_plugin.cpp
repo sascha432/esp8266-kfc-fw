@@ -70,8 +70,10 @@ void SyslogPlugin::_timerCallback(Event::CallbackTimerPtr timer)
         _stream->deliverQueue();
     }
     else {
-        if (!_stream->_syslog.isSending()) {
-            timer->updateInterval(Event::seconds(10));
+        if (_stream->_syslog._queue.empty()) {
+            if (timer->updateInterval(Event::seconds(60))) {
+                __LDBG_printf("queue empty rearm=60s (_timerCallback)");
+            }
         }
     }
 }
@@ -90,7 +92,7 @@ void SyslogPlugin::_begin()
 
         String tmp;
         if (config.hasZeroConf(hostname)) {
-            tmp = String(); // remove hostname, the class will initialize and wait for it
+            tmp = String(); // remove hostname, the class will initialize and wait for zeroconf
         }
         else {
             tmp = hostname;
@@ -118,6 +120,10 @@ void SyslogPlugin::_zeroConfCallback(const String &hostname, const IPAddress &ad
     __LDBG_printf("zeroconf callback host=%s address=%s port=%u stream=%p", hostname.c_str(), address.toString().c_str(), port, _stream);
     if (_stream) {
         _stream->_syslog.setupZeroConf(hostname, address, port);
+        if (!_stream->_syslog._queue.empty()) {
+            __LDBG_print("queue filled rearm=100ms");
+            _stream->_timer->rearm(Event::milliseconds(100));
+        }
     }
 }
 

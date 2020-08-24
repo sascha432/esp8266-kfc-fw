@@ -325,7 +325,7 @@ public:
 #if HAVE_SMOOTH_BRIGHTNESS_ADJUSTMENT
     void setBrightness(BrightnessType brightness, float fadeTime, FadingFinishedCallback finishedCallback = nullptr, FadingRefreshCallback refreshCallback = nullptr) {
         _targetBrightness = brightness;
-        if (!_brightnessTimer.isActive()) {
+        if (!_brightnessTimer) {
             auto steps = (BrightnessType)(kMaxBrightness / (fadeTime * (1000 / 20.0))); // 20ms/50Hz refresh rate
             if (!steps) {
                 steps = 1;
@@ -348,7 +348,7 @@ public:
                     _params.brightness = tmp;
                 }
                 else {
-                    timer->stop();
+                    timer->disarm();
                     if (finishedCallback) {
                         finishedCallback(_params.brightness);
                     }
@@ -358,7 +358,7 @@ public:
                     refreshCallback(_params.brightness);
                 }
 
-            }, Event::PriorityType::HIGHER);
+            }, Event::PriorityType::HIGHEST);
         }
     }
 #endif

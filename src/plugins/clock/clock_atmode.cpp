@@ -106,7 +106,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                     if (num == _pixelOrder.size()) {
                         _display.clear();
                         _display.show();
-                        timer.reset();
+                        timer->disarm();
                     }
                     else {
                         if (num) {

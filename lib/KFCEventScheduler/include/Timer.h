@@ -17,14 +17,14 @@ namespace Event {
     class Timer {
     public:
         Timer(const Timer &timer) = delete;
+        Timer(Timer &&timer) = delete;
         Timer &operator=(const Timer &timer) = delete;
 
         Timer();
-        Timer(CallbackTimerPtr &&callbackTimer);
-        Timer(Timer &&timer) = delete;
+        Timer(CallbackTimerPtr callbackTimer);
         ~Timer();
 
-        Timer &operator=(CallbackTimerPtr &&callbackTimer);
+        Timer &operator=(CallbackTimerPtr callbackTimer);
 
         // add() is using rearm() if the timer already exists
         // to change priority, use remove() and add()
@@ -34,6 +34,7 @@ namespace Event {
 
         operator bool() const;
         CallbackTimerPtr operator->() const noexcept;
+        CallbackTimerPtr operator*() const noexcept;
 
     private:
         friend CallbackTimer;

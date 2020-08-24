@@ -570,7 +570,11 @@ void WeatherStationPlugin::_fadeBacklight(uint16_t fromLevel, uint16_t toLevel, 
 {
     analogWrite(TFT_PIN_LED, fromLevel);
     int8_t direction = fromLevel > toLevel ? -step : step;
-    _Timer(_fadeTimer).add(Event::milliseconds(25), true, [fromLevel, toLevel, step, direction](Event::CallbackTimerPtr timer) mutable {
+
+    //TODO sometimes fading does not work...
+    //probably when called multiple times before its done
+
+    _Timer(_fadeTimer).add(Event::milliseconds(30), true, [fromLevel, toLevel, step, direction](Event::CallbackTimerPtr timer) mutable {
 
         if (abs(toLevel - fromLevel) > step) {
             fromLevel += direction;
@@ -579,28 +583,36 @@ void WeatherStationPlugin::_fadeBacklight(uint16_t fromLevel, uint16_t toLevel, 
             timer->disarm();
         }
         analogWrite(TFT_PIN_LED, fromLevel);
-    }, Event::PriorityType::HIGHEST);
+
+    }, Event::PriorityType::TIMER);
 }
 
 void WeatherStationPlugin::_fadeStatusLED()
 {
 #if IOT_WEATHER_STATION_WS2812_NUM
-    uint32_t color = 0x001500;
+
+    int32_t color = 0x001500;
     int16_t dir = 0x100;
+
     NeoPixel_fillColor(_pixels, sizeof(_pixels), color);
     NeoPixel_espShow(IOT_WEATHER_STATION_WS2812_PIN, _pixels, sizeof(_pixels), true);
-    _Timer(_pixelTimer).add(50, true, [this, color, dir](::Event::CallbackTimerPtr timer) mutable {
+
+    _Timer(_pixelTimer).add(Event::milliseconds(50), true, [this, color, dir](::Event::CallbackTimerPtr timer) mutable {
         color += dir;
         if (color >= 0x003000) {
             dir = -dir;
             color = 0x003000;
         }
-        else if (color == 0) {
+        else if (color <= 0) {
+            color = 0;
             timer->disarm();
         }
+
         NeoPixel_fillColor(_pixels, sizeof(_pixels), color);
         NeoPixel_espShow(IOT_WEATHER_STATION_WS2812_PIN, _pixels, sizeof(_pixels), true);
-    }, ::Event::PriorityType::HIGHEST);
+
+    }, ::Event::PriorityType::TIMER);
+
 #endif
 }
 

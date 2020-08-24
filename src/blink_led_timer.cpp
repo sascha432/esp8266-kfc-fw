@@ -18,6 +18,7 @@ BlinkLEDTimer *ledTimer = nullptr;
 #include <LoopFunctions.h>
 #include <reset_detector.h>
 #include "NeoPixel_esp.h"
+#include "SpeedBooster.h"
 
 class WS2812LEDTimer : public BlinkLEDTimer {
 public:
@@ -37,6 +38,7 @@ public:
 
     void set(uint32_t delay, int8_t pin, dynamic_bitset &pattern)
     {
+        off();
         _pattern = pattern;
         startTimer(delay, true);
     }
@@ -45,7 +47,7 @@ public:
         _color = color;
     }
 
-    virtual ICACHE_RAM_ATTR void run() override {
+    virtual void run() override {
         auto state = _pattern.test(_counter++ % _pattern.size());
         if (!state) {
             off();
@@ -57,7 +59,6 @@ public:
 
     virtual void detach() override {
         off();
-        pinMode(__LED_BUILTIN_WS2812_PIN, INPUT);
         OSTimer::detach();
     }
 
@@ -72,7 +73,7 @@ BlinkLEDTimer::BlinkLEDTimer() : _pin(INVALID_PIN)//, _on(false)
 {
 }
 
-void /*ICACHE_RAM_ATTR*/ BlinkLEDTimer::run()
+void BlinkLEDTimer::run()
 {
     digitalWrite(_pin, BUILTIN_LED_STATE(_pattern.test(_counter++ % _pattern.size())));
 }
@@ -102,7 +103,6 @@ void BlinkLEDTimer::detach()
         analogWrite(_pin, 0);
         digitalWrite(_pin, BUILTIN_LED_STATE(false));
     }
-    //_on = false;
     OSTimer::detach();
 }
 

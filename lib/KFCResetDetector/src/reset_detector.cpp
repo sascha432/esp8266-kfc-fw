@@ -95,14 +95,14 @@ void ResetDetector::armTimer()
     ets_timer_arm_new(&_timer, RESET_DETECTOR_TIMEOUT, false, true);
 }
 
-void ICACHE_RAM_ATTR ResetDetector::disarmTimer()
+void ResetDetector::disarmTimer()
 {
     ets_timer_disarm(&_timer);
     ets_timer_done(&_timer);
 }
 
 
-void ICACHE_RAM_ATTR ResetDetector::_timerCallback(void *arg)
+void ResetDetector::_timerCallback(void *arg)
 {
     auto rd = reinterpret_cast<ResetDetector *>(arg);
     rd->clearCounter();

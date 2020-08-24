@@ -50,27 +50,31 @@ void SpeedBooster::enable(bool value)
     }
 }
 
-bool SpeedBooster::isAvailable() {
+bool SpeedBooster::isAvailable()
+{
     return true;
 }
 
 #else
 
-SpeedBooster::SpeedBooster(bool autoEnable) {
+SpeedBooster::SpeedBooster(bool autoEnable)
+{
 }
 
 SpeedBooster::~SpeedBooster() {
 }
 
-bool SpeedBooster::isEnabled() {
+bool SpeedBooster::isEnabled()
+{
     return false;
 }
 
-void SpeedBooster::enable(bool value) {
-
+void SpeedBooster::enable(bool value)
+{
 }
 
-bool SpeedBooster::isAvailable() {
+bool SpeedBooster::isAvailable()
+{
     return false;
 }
 

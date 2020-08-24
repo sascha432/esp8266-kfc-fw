@@ -71,9 +71,10 @@ namespace Event {
         LOWER = -75,
         LOW = -50,
         NORMAL = 0,
-        HIGH = 50,       // above normal is limited to 15ms
+        HIGH = 50,       // above normal is limited to 15ms runtime
         HIGHER = 75,
         HIGHEST = 100,
+        TIMER = 126,    // run as timer, limit to 5ms runtime. interval limited to 6870946 ms
         MAX
     };
 

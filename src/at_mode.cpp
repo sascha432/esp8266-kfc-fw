@@ -39,58 +39,6 @@
 #include <debug_helper_disable.h>
 #endif
 
-#if defined(ESP8266) && 0
-
-typedef struct {
-  uint32_t nextServiceCycle;   // ESP cycle timer when a transition required
-  uint32_t expiryCycle;        // For time-limited waveform, the cycle when this waveform must stop
-  uint32_t nextTimeHighCycles; // Copy over low->high to keep smooth waveform
-  uint32_t nextTimeLowCycles;  // Copy over high->low to keep smooth waveform
-} Waveform;
-
-extern volatile uint32_t *__waveForm_states[4];
-// volatile uint32_t *__waveForm_states[4] = { &waveformState, &waveformEnabled, &waveformToEnable, &waveformToDisable };
-
-extern const Waveform (&__waveForm_waveform)[17];
-// const Waveform (&__waveForm_waveform)[17] = waveform;
-
-extern bool &__waveForm_timerRunning;
-// bool &__waveForm_timerRunning = timerRunning;
-
-
-String bitStr(uint32_t value, int bits)
-{
-    String tmp(value, 2);
-    int diff = bits - (int)tmp.length();
-    if (diff) {
-        if (diff < 0) {
-            tmp.remove(0, -diff);
-        }
-        else {
-            char buf[diff + 1];
-            memset(buf, '0', diff);
-            buf[diff] = 0;
-            tmp.reserve(bits);
-            tmp = buf + tmp;
-        }
-    }
-    return tmp;
-}
-
-void print_wave_form(Print &output)
-{
-    output.printf_P(PSTR("waveForm timerRunning=%u\n"), __waveForm_timerRunning);
-    output.printf_P(PSTR("waveformState=%s waveformEnabled=%s waveformToEnable=%s waveformToDisable=%s\n"),
-        bitStr(*__waveForm_states[0], 17).c_str(), bitStr(*__waveForm_states[1], 17).c_str(), bitStr(*__waveForm_states[2], 17).c_str(), bitStr(*__waveForm_states[3], 17).c_str()
-    );
-    for(int i = 0; i < 17; i++) {
-        auto &wf = __waveForm_waveform[i];
-        output.printf_P(PSTR("%02u: nextServiceCycle=%u expiryCycle=%u nextTimeHighCycles=%u nextTimeLowCycles=%u\n"), i, wf.nextServiceCycle, wf.expiryCycle, wf.nextTimeHighCycles, wf.nextTimeLowCycles);
-    }
-}
-
-#endif
-
 using KFCConfigurationClasses::System;
 using KFCConfigurationClasses::Network;
 using KFCConfigurationClasses::MainConfig;

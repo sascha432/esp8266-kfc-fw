@@ -65,7 +65,7 @@ namespace Event {
         RepeatType _repeat;
         PriorityType _priority;
         uint32_t _remainingDelay: 17;
-        volatile uint32_t _callbackScheduled: 1;
+        uint32_t _callbackScheduled: 1;
         uint32_t ____free: 14;
 
 #if DEBUG_EVENT_SCHEDULER

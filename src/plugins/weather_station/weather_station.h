@@ -110,7 +110,7 @@ private:
 
     void _loop();
 
-    void _fadeBacklight(uint16_t fromLevel, uint16_t toLevel, int8_t step = 16);
+    void _fadeBacklight(uint16_t fromLevel, uint16_t toLevel, int8_t step = 8);
     void _fadeStatusLED();
 
     virtual void canvasUpdatedEvent(int16_t x, int16_t y, int16_t w, int16_t h) override;

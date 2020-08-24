@@ -29,7 +29,7 @@ using namespace Event;
  *
  * - support for intervals of months in millisecond precision
  * - no loop() function that wastes CPU cycles except a single boolean check
- * - all code is executed in the main loop and no IRAM is used except 137 byte for the interrupt handler
+ * - all code is executed in the main loop and no IRAM is used
  */
 Scheduler::Scheduler() : _hasEvent(false), _runtimeLimit(250) {
 }
@@ -114,10 +114,10 @@ bool Scheduler::_removeTimer(CallbackTimerPtr timer)
         __LDBG_assert(iterator != _timers.end());
         if (iterator != _timers.end()) {
             __LDBG_printf("timer=%p iterator=%p managed=%p %s:%u", timer, *iterator, timer->_timer, __S(timer->_file), timer->_line);
-            // mark as deleted in vector
-            *iterator = nullptr;
             // disarm and delete
             timer->_disarm();
+            // mark as deleted in vector
+            *iterator = nullptr;
             __LDBG_delete(timer);
             return true;
         }
@@ -227,10 +227,16 @@ void Scheduler::_run(PriorityType runAbovePriority)
     }
 }
 
-void ICACHE_RAM_ATTR Scheduler::__TimerCallback(void *arg)
+void Scheduler::__TimerCallback(void *arg)
 {
     auto timer = reinterpret_cast<CallbackTimerPtr>(arg);
-    if (timer->_remainingDelay >= 1) {
+    if (timer->_priority == PriorityType::TIMER) {
+        timer->_callback(timer);
+        if (!timer->isArmed()) {
+            __Scheduler._removeTimer(timer);
+        }
+    }
+    else if (timer->_remainingDelay >= 1) {
         uint32_t delay = (--timer->_remainingDelay) ?
             kMaxDelay // repeat until delay <= max delay
             :

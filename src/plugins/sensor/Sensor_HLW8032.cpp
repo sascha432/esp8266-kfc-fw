@@ -19,7 +19,7 @@
 
 static volatile unsigned long energyCounter = 0;
 
-void ICACHE_RAM_ATTR Sensor_HLW8032_callbackPF() {
+extern "C" void ICACHE_RAM_ATTR Sensor_HLW8032_callbackPF() {
     energyCounter++;
 }
 

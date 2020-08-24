@@ -24,16 +24,16 @@ using KFCConfigurationClasses::Plugins;
 
 static Sensor_HLW8012 *sensor = nullptr;
 static volatile uint32_t energyCounter = 0;
-static Sensor_HLW8012::InterruptBuffer _interruptBufferCF;
-static Sensor_HLW8012::InterruptBuffer _interruptBufferCF1;
+static volatile Sensor_HLW8012::InterruptBuffer _interruptBufferCF;
+static volatile Sensor_HLW8012::InterruptBuffer _interruptBufferCF1;
 
-void ICACHE_RAM_ATTR Sensor_HLW8012_callbackCF()
+extern "C" void ICACHE_RAM_ATTR Sensor_HLW8012_callbackCF()
 {
     _interruptBufferCF.push_back(micros());
     energyCounter++;
 }
 
-void ICACHE_RAM_ATTR Sensor_HLW8012_callbackCF1()
+extern "C" void ICACHE_RAM_ATTR Sensor_HLW8012_callbackCF1()
 {
     _interruptBufferCF1.push_back(micros());
 }

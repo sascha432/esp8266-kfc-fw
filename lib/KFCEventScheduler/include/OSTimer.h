@@ -13,8 +13,7 @@
 #include <osapi.h>
 #endif
 
-extern "C" void ICACHE_RAM_ATTR _ostimer_callback(void *arg);
-extern "C" void _ostimer_detach(ETSTimer *etsTimer, void *timerArg);
+extern "C" void ICACHE_FLASH_ATTR _etsstimer_callback(void *arg);
 
 class OSTimer {
 public:

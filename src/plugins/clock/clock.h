@@ -245,9 +245,8 @@ private:
     uint8_t _isSyncing : 1;
     uint8_t _displaySensorValue : 2;
     uint8_t _tempProtection : 2;
-    // keep aligned and 32bit to avoid locking interrupts when reading/writing
-    volatile bool _schedulePublishState;
-    volatile bool _forceUpdate;
+    uint8_t _schedulePublishState: 1;
+    uint8_t _forceUpdate: 1;
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
     int16_t _autoBrightness;
     float _autoBrightnessValue;

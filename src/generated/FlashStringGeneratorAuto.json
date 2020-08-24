@@ -80,7 +80,7 @@
         "default": "OK"
     },
     "atmode_file_autorun": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "/autorun_atmode.cmd"
     },
     "on": {
@@ -352,7 +352,7 @@
         "default": "https"
     },
     "disabled": {
-        "use_counter": 26,
+        "use_counter": 27,
         "default": "disabled"
     },
     "mqtt_color_temp_state_topic": {
@@ -492,7 +492,7 @@
         "default": "Anonymous"
     },
     "Disabled": {
-        "use_counter": 10,
+        "use_counter": 11,
         "default": "Disabled"
     },
     "enabled": {
@@ -624,111 +624,111 @@
         "default": "http://api.openweathermap.org/data/2.5/{api_type}?q={query}&appid={api_key}"
     },
     "kern": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "kern"
     },
     "user": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "user"
     },
     "mail": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "mail"
     },
     "daemon": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "daemon"
     },
     "secure": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "secure"
     },
     "syslog": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "syslog"
     },
     "ntp": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "ntp"
     },
     "local0": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "local0"
     },
     "local1": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "local1"
     },
     "local2": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "local2"
     },
     "local3": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "local3"
     },
     "local4": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "local4"
     },
     "local5": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "local5"
     },
     "local6": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "local6"
     },
     "local7": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "local7"
     },
     "emerg": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "emerg"
     },
     "emergency": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "emergency"
     },
     "alert": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "alert"
     },
     "crit": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "crit"
     },
     "critical": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "critical"
     },
     "err": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "err"
     },
     "error": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "error"
     },
     "warn": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "warn"
     },
     "warning": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "warning"
     },
     "notice": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "notice"
     },
     "info": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "info"
     },
     "debug": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "debug"
     },
     "fs_mapping_dir": {
@@ -1976,7 +1976,7 @@
         "default": "/.logs/debug"
     },
     "logger_filename_access": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "/.logs/access"
     },
     "logger_filename_error": {
@@ -1994,5 +1994,9 @@
     "logger_filename_warning": {
         "use_counter": 1,
         "default": "/.logs/warning"
+    },
+    "syslog_nil_value": {
+        "use_counter": 1,
+        "default": "- "
     }
 }

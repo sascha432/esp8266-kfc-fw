@@ -26,14 +26,6 @@ extern "C" void ICACHE_RAM_ATTR mpr121_irq_callback()
     mpr121_irq_callback_flag = true;
 }
 
-// extern "C" void ICACHE_RAM_ATTR mpr121_timer()
-// {
-//     if (mpr121_irq_callback_flag) {
-//         mpr121_irq_callback_flag = false;
-//         buffer.emplace_back(touchpad->_mpr121.touched(), millis());
-//     }
-// }
-
 void Mpr121Timer::run()
 {
     if (mpr121_irq_callback_flag) {

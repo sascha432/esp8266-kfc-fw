@@ -33,7 +33,7 @@ namespace Event {
 
     public:
         static void run(PriorityType runAbovePriority = PriorityType::NONE);
-        static void ICACHE_RAM_ATTR __TimerCallback(void *arg);
+        static void __TimerCallback(void *arg);
 
     public:
         TimerVector &__getTimers() { return _timers; }
@@ -53,7 +53,7 @@ namespace Event {
 
     private:
         TimerVector _timers;
-        volatile int8_t _hasEvent;
+        int8_t _hasEvent;
         uint32_t _runtimeLimit; // if a callback takes longer than this amount of time, the next callback will be delayed until the next loop function call
     };
 

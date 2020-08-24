@@ -307,7 +307,6 @@ private:
 private:
     friend WeatherStationPlugin;
     friend Mpr121Timer;
-    // friend void mpr121_timer();
 
     Adafruit_MPR121 _mpr121;
     uint8_t _address;

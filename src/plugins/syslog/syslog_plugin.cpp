@@ -278,13 +278,11 @@ bool SyslogPlugin::atModeHandler(AtModeArgs &args)
 #if LOGGER
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LOG))) {
         if (atModeHasStream(args)) {
-            if (args.requireArgs(1, 2)) {
-                if (args.size() == 2) {
-                    _logger.log(_logger.getLevelFromString(args.get(0)), args.toString(1));
-                }
-                else {
-                    Logger_error(F("+LOG: %s"), implode(',', args.getArgs()).c_str());
-                }
+            if (args.size() == 2) {
+                _logger.log(_logger.getLevelFromString(args.get(0)), PSTR("%s"), args.get(1));
+            }
+            else if (args.requireArgs(1, 1)) {
+                Logger_error(F("%s"), args.get(0));
             }
         }
         return true;

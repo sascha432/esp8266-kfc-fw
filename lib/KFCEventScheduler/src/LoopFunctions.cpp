@@ -34,6 +34,7 @@ void run_scheduled_functions()
 {
     for(auto fn: scheduled_functions) {
         fn();
+        _ASSERTE(_CrtCheckMemory());
     }
     scheduled_functions.clear();
 }

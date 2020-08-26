@@ -58,6 +58,9 @@ namespace Event {
         int64_t __getRemainingDelayMillis() const { return (_remainingDelay == 0) ?  0 : ((_remainingDelay == 1) ? (_delay % kMaxDelay) : ((_remainingDelay - 1) * kMaxDelay)); }
 
     private:
+#if _MSC_VER
+    public:
+#endif
         ETSTimer _etsTimer;
         Timer *_timer;
         Callback _callback;

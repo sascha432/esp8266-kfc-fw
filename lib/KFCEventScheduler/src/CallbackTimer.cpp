@@ -85,7 +85,11 @@ void CallbackTimer::rearm(int64_t delay, RepeatType repeat, Callback callback)
 {
     _disarm();
     _delay = std::max_signed(kMinDelay, delay);
-    _repeat |= repeat;
+    if (repeat._repeat != RepeatType::kPreset) {
+        _repeat._repeat = repeat._repeat;
+    }
+    // __LDBG_assert_panic(_repeat._repeat != RepeatType::kPreset, "repeat=0 %s:%u", __S(_file), _line);
+    assert(_repeat._repeat != RepeatType::kPreset);
     if (callback) {
         _callback = callback;
     }

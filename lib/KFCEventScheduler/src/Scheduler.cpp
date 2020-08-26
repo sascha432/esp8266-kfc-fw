@@ -13,9 +13,17 @@
 #if DEBUG_EVENT_SCHEDULER
 #include <debug_helper_enable.h>
 #include <debug_helper_enable_mem.h>
+#define DEBUG_EVENT_SCHEDULER_ASSERT        1
 #else
 #include <debug_helper_disable.h>
+// enable extra asserts
+#define DEBUG_EVENT_SCHEDULER_ASSERT        1
 #endif
+
+#if DEBUG_EVENT_SCHEDULER_ASSERT
+#include <MicrosTimer.h>
+#endif
+
 
 #if !DISABLE_GLOBAL_EVENT_SCHEDULER
 Event::Scheduler __Scheduler;
@@ -29,9 +37,21 @@ using namespace Event;
  *
  * - support for intervals of months in millisecond precision
  * - no loop() function that wastes CPU cycles except a single boolean check
- * - all code is executed in the main loop and no IRAM is used
+ * - no IRAM is used
+ * - all code is executed in the main loop
+ * - runtime limit per loop()
+ * - high priority timers have no runlimit
+ * - priority TIMER executed directly
  */
-Scheduler::Scheduler() : _hasEvent(false), _runtimeLimit(250) {
+Scheduler::Scheduler() :
+    _size(0),
+    _hasEvent(false),
+    _addedFlag(false),
+    _removedFlag(false)
+#if DEBUG_EVENT_SCHEDULER_RUNTIME_LIMIT_CONSTEXPR == 0
+    , _runtimeLimit(kMaxRuntimeLimit)
+#endif
+{
 }
 
 void Scheduler::add(int64_t intervalMillis, RepeatType repeat, Callback callback, PriorityType priority)
@@ -55,13 +75,21 @@ CallbackTimer *Scheduler::_add(int64_t delay, RepeatType repeat, Callback callba
 
     auto timerPtr = __LDBG_new(CallbackTimer, callback, delay, repeat, priority);
     _timers.push_back(timerPtr);
+    _addedFlag = true;
 
-    __LDBG_IF(
-        timerPtr->_file = DebugContext::__pos._file;
-        timerPtr->_line = DebugContext::__pos._line;
-        __LDBG_printf("dly=%.0f maxrep=%d prio=%u callback=%p timer=%p %s:%u", delay / 1.0, repeat._repeat, priority, lambda_target(callback), timerPtr, __S(DebugContext::__pos._file), DebugContext::__pos._line);
-        DebugContext::__pos = DebugContext();
-    );
+#if DEBUG_EVENT_SCHEDULER_ASSERT
+    __DBG_assert_printf(delay >= kMinDelay, "delay delay=%u limit=%u", (uint32_t)delay, kMinDelay);
+    if (priority == PriorityType::TIMER) {
+        __DBG_assert_printf(repeat._repeat == RepeatType::kPreset || repeat._repeat == RepeatType::kUnlimited || repeat._repeat == RepeatType::kNoRepeat, "invalid repeat value %u", repeat._repeat);
+        __DBG_assert_printf(delay < kMaxDelay, "delay delay=%u limit=%u", (uint32_t)delay, kMaxDelay);
+    }
+#endif
+#if DEBUG_EVENT_SCHEDULER
+    timerPtr->_file = DebugContext::__pos._file;
+    timerPtr->_line = DebugContext::__pos._line;
+    __LDBG_printf("dly=%.0f maxrep=%d prio=%u callback=%p timer=%p %s:%u", delay / 1.0, repeat._repeat, priority, lambda_target(callback), timerPtr, __S(DebugContext::__pos._file), DebugContext::__pos._line);
+    DebugContext::__pos = DebugContext();
+#endif
 
     timerPtr->_initTimer();
     return timerPtr;
@@ -88,6 +116,8 @@ void Scheduler::end()
         }
     }
     _hasEvent = (int8_t)PriorityType::NONE;
+    _addedFlag = false;
+    _removedFlag = false;
 }
 
 void Scheduler::remove(CallbackTimerPtr timer)
@@ -111,13 +141,14 @@ bool Scheduler::_removeTimer(CallbackTimerPtr timer)
 {
     if (timer) {
         auto iterator = _getTimer(timer);
-        __LDBG_assert(iterator != _timers.end());
+        assert(iterator != _timers.end());
         if (iterator != _timers.end()) {
             __LDBG_printf("timer=%p iterator=%p managed=%p %s:%u", timer, *iterator, timer->_timer, __S(timer->_file), timer->_line);
             // disarm and delete
             timer->_disarm();
             // mark as deleted in vector
             *iterator = nullptr;
+            _removedFlag = true;
             __LDBG_delete(timer);
             return true;
         }
@@ -125,10 +156,49 @@ bool Scheduler::_removeTimer(CallbackTimerPtr timer)
     return false;
 }
 
+#if _MSC_VER
+
+static void __dump(Event::TimerVector &timers)
+{
+    Serial.printf("--- %u\n", timers.size());
+    int i = 0;
+    for (auto &timer : timers) {
+        if (timer) {
+            Serial.printf("%03d %u\n", i, timer->_priority);
+        }
+        else {
+            Serial.printf("%03d null\n", i);
+        }
+        i++;
+    }
+}
+
+#endif
+
 void Scheduler::_cleanup()
 {
-    _timers.erase(std::remove(_timers.begin(), _timers.end(), nullptr));
+    _timers.erase(std::remove(_timers.begin(), _timers.end(), nullptr), _timers.end());
     _timers.shrink_to_fit();
+    _size = _timers.size();
+    _removedFlag = false;
+}
+
+void Event::Scheduler::_sort()
+{
+    // if _size changed, new timers have been added
+    __LDBG_printf("size=%u timers=%u", _size, _timers.size());
+    //__dump(_timers);
+    // sort by priority and move all nullptr to the end for removal
+    std::sort(_timers.begin(), _timers.end(), [](const CallbackTimerPtr a, const CallbackTimerPtr b) {
+        return (a && b) ? (b->_priority < a->_priority) : (b < a);
+    });
+    // remove all null pointers with std::find()
+    _timers.erase(std::find(_timers.begin(), _timers.end(), nullptr), _timers.end());
+    _timers.shrink_to_fit();
+    _size = _timers.size();
+    //__dump(_timers);
+    _addedFlag = false;
+    _removedFlag = false;
 }
 
 void Scheduler::run(PriorityType runAbovePriority)
@@ -136,94 +206,115 @@ void Scheduler::run(PriorityType runAbovePriority)
     __Scheduler._run(runAbovePriority);
 }
 
+void Scheduler::run()
+{
+    __Scheduler._run();
+}
+
 void Scheduler::_run(PriorityType runAbovePriority)
 {
     if (_hasEvent > (int8_t)runAbovePriority) {
+        // store size to skip all new timers that are added inside the callback
+        for(size_t i = 0; i < _size; i++) {
+            // the pointers do not change position but may become nullptr
+            auto timer = _timers[i];
+            if (timer) {
+#if DEBUG_EVENT_SCHEDULER_ASSERT
+                // store values, timer might become a dangling pointer
+                auto timerPriority = timer->_priority;
+#if DEBUG_EVENT_SCHEDULER
+                auto timerFile = timer->_file;
+                auto timerLine = timer->_line;
+#endif
+#endif
+                if (timer->_priority > runAbovePriority && timer->_callbackScheduled) {
+                    timer->_callbackScheduled = false;
+#if DEBUG_EVENT_SCHEDULER_ASSERT
+                    uint32_t _diff = (timer->_priority > PriorityType::NORMAL);
+                    uint32_t _start = _diff ? micros() : 0;
+#endif
+                    timer->_invokeCallback(timer);
+#if DEBUG_EVENT_SCHEDULER_ASSERT
+                    if (_diff && (_diff = get_time_diff(_start, micros())) > kMaxRuntimePrioAboveNormal) {
+#if DEBUG_EVENT_SCHEDULER
+                        __DBG_printf("timer=%p priority=%u time=%u limit=%u %s:%u", timer, timerPriority, _diff, kMaxRuntimePrioAboveNormal, __S(timerFile), timerLine);
+#else
+                        __DBG_printf("timer=%p priority=%u time=%u limit=%u", timer, timerPriority, _diff, kMaxRuntimePrioAboveNormal);
+#endif
+                    }
+#endif
+                }
+            }
+        }
+    }
+}
+
+void Scheduler::_run()
+{
+    if (_hasEvent != (int8_t)PriorityType::NONE) {
         uint32_t start = millis();
         uint32_t timeout = start + _runtimeLimit;
-        bool updateHasEvents = false;       // check if we have any events left
-        bool cleanup = false;               // cleanup empty pointers
-
+        // cleanup empty pointers
         // store size to skip all new timers that are added inside the callback
-        auto size = _timers.size();
-        for(size_t i = 0; i < size; i++) {
+        for (size_t i = 0; i < _size; i++) {
             // the pointers do not change position but may become nullptr
             auto timer = _timers[i];
             if (timer) {
                 auto timerPriority = timer->_priority;
-                if (timerPriority > runAbovePriority) {
-                    if (timer->_callbackScheduled) {
-                        timer->_callbackScheduled = false;
-                        updateHasEvents = true; // update event flag
-                        __LDBG_IF(
-                            uint32_t _start = micros();
-                            bool check = timerPriority > PriorityType::NORMAL;
-                        );
-                        timer->_invokeCallback(timer);
-                        __LDBG_IF(
-                            uint32_t _dur = micros() - _start;
-                            if (check && _dur > 5000) {
-                                __LDBG_printf("timer with priority above NORMAL time=%u limit=15000", _dur);
-                            }
-                        );
-                        // check after _invokeCallback() and only if priority is NORMAL or less
-                        // priority above NORMAL will be executed regardless any timeout
-                        if (timerPriority <= PriorityType::NORMAL && millis() >= timeout) {
-                            __LDBG_printf("timer=%p time=%d limit=%d", timer, millis() - start, _runtimeLimit);
-                            cleanup = false; // skip cleanup and update event flag
-                            updateHasEvents = true;
-                            break;
-                        }
+                if (timer->_callbackScheduled) {
+                    timer->_callbackScheduled = false;
+#if DEBUG_EVENT_SCHEDULER_ASSERT
+                    uint32_t _diff = (timerPriority > PriorityType::NORMAL);
+                    uint32_t _start = _diff ? micros() : 0;
+#endif
+                    timer->_invokeCallback(timer);
+#if DEBUG_EVENT_SCHEDULER_ASSERT
+                    if (_diff && (_diff = get_time_diff(_start, micros())) > kMaxRuntimePrioAboveNormal) {
+                        __DBG_printf("timer=%p priority=%u time=%u limit=%u %s:%u", timer, timerPriority, _diff, kMaxRuntimePrioAboveNormal, __LDBG_IF(__S(timer->_file), timer->_line) __LDBG_N_IF(PSTR(""), 0));
+                    }
+#endif
+                    // check after _invokeCallback() and only if priority is NORMAL or less
+                    // priority above NORMAL will be executed regardless any timeout
+                    if (timerPriority <= PriorityType::NORMAL && millis() >= timeout) {
+                        __LDBG_printf("timer=%p time=%d limit=%d", timer, millis() - start, _runtimeLimit);
+                        break;
                     }
                 }
-            }
-            else {
-                cleanup = true;
             }
         }
 
 #if DEBUG_EVENT_SCHEDULER
         int left = 0;
         int deleted = 0;
-        if (runAbovePriority == PriorityType::NONE) {
-            for(const auto timer: _timers) {
-                if (!timer) {
-                    deleted++;
-                }
-                else if (timer->_callbackScheduled) {
-                    left++;
-                }
+        for (const auto timer : _timers) {
+            if (!timer) {
+                deleted++;
+            }
+            else if (timer->_callbackScheduled) {
+                left++;
             }
         }
 #endif
 
-        if (size != _timers.size()) {
-            std::sort(_timers.begin(), _timers.end(), [](const CallbackTimerPtr a, const CallbackTimerPtr b) {
-                return a && b && (b->_priority < a->_priority);
-            });
-        }
-        else if (cleanup && runAbovePriority == PriorityType::NONE) {
-            _cleanup(); // remove empty pointers
-        }
-
-        if (updateHasEvents) {
-            // reset event flag if nothing is scheduled
-            noInterrupts();
-            _hasEvent = (int8_t)PriorityType::NONE;
-            for(const auto &timer: _timers) {
-                if (timer && timer->_callbackScheduled && (int8_t)timer->_priority > _hasEvent) {
-                    _hasEvent = (int8_t)timer->_priority;
-                }
+        // reset event flag if nothing is scheduled
+        noInterrupts();
+        _hasEvent = (int8_t)PriorityType::NONE;
+        for (const auto &timer : _timers) {
+            if (timer && timer->_callbackScheduled && (int8_t)timer->_priority > _hasEvent) {
+                _hasEvent = (int8_t)timer->_priority;
             }
-            interrupts();
         }
 #if DEBUG_EVENT_SCHEDULER
-        if (runAbovePriority == PriorityType::LOWEST) {
-            if (left || deleted || _hasEvent != (int8_t)PriorityType::NONE) {
-                __LDBG_printf("skipped=%d deleted=%d has_event=%d", left, deleted, _hasEvent);
-            }
+        if (left || deleted || _hasEvent != (int8_t)PriorityType::NONE) {
+            __LDBG_printf("skipped=%d deleted=%d has_event=%d", left, deleted, _hasEvent);
         }
 #endif
+    }
+    if (_addedFlag) {
+        _sort();
+    }
+    else if (_removedFlag) {
+        _cleanup();
     }
 }
 
@@ -231,7 +322,16 @@ void Scheduler::__TimerCallback(void *arg)
 {
     auto timer = reinterpret_cast<CallbackTimerPtr>(arg);
     if (timer->_priority == PriorityType::TIMER) {
+#if DEBUG_EVENT_SCHEDULER_ASSERT
+        uint32_t start = micros();
+#endif
         timer->_callback(timer);
+#if DEBUG_EVENT_SCHEDULER_ASSERT
+        auto diff = get_time_diff(start, micros());
+        if (diff > kMaxRuntimePrioTimer) {
+            __DBG_printf("timer=%p priority=%u time=%u limit=%u %s:%u", timer, timer->_priority, diff, kMaxRuntimePrioTimer, __LDBG_IF(__S(timer->_file), timer->_line) __LDBG_N_IF(PSTR(""), 0));
+        }
+#endif
         if (!timer->isArmed()) {
             __Scheduler._removeTimer(timer);
         }

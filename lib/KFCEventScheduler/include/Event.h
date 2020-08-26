@@ -15,6 +15,10 @@
 #define DISABLE_GLOBAL_EVENT_SCHEDULER                  0
 #endif
 
+#ifndef DEBUG_EVENT_SCHEDULER_RUNTIME_LIMIT_CONSTEXPR
+#define DEBUG_EVENT_SCHEDULER_RUNTIME_LIMIT_CONSTEXPR   1
+#endif
+
 #if DEBUG_EVENT_SCHEDULER
 #define __DBG_Event_Timer_store_position()              __DBG_store_position()
 #define _Scheduler                                      ((__DBG_store_position()) ? __Scheduler : __Scheduler)
@@ -26,10 +30,8 @@
 
 #pragma push_macro("HIGH")
 #pragma push_macro("LOW")
-#pragma push_macro("DEFAULT")
 #undef HIGH
 #undef LOW
-#undef DEFAULT
 
 namespace Event {
 
@@ -65,16 +67,19 @@ namespace Event {
         return milliseconds((milliseconds::rep)minutes * (milliseconds::rep)60000);
     }
 
+    // 6 bit -31...31
     enum class PriorityType : int8_t {
-        NONE = -127,
-        LOWEST = -100,
-        LOWER = -75,
-        LOW = -50,
+        NONE = -31,
+        LOWEST = -24,
+        LOWER = -16,
+        LOW = -8,
+        _LOW = LOW,
         NORMAL = 0,
-        HIGH = 50,       // above normal is limited to 15ms runtime
-        HIGHER = 75,
-        HIGHEST = 100,
-        TIMER = 126,    // run as timer, limit to 5ms runtime. interval limited to 6870946 ms
+        HIGH = 8,               // above normal is limited to 15ms runtime
+        _HIGH = HIGH,
+        HIGHER = 16,
+        HIGHEST = 24,
+        TIMER = 30,             // run as timer, limit to 5ms runtime. interval limited to 6870946 ms. RepeatType true or false only
         MAX
     };
 
@@ -82,55 +87,35 @@ namespace Event {
     public:
         static const uint32_t kUnlimited = ~0;
         static const uint32_t kPreset = 0;
+        static const uint32_t kNoRepeat = 1;
 
         // use preset
-        RepeatType() : _repeat(kPreset) {}
+        RepeatType();
         // repeat timer
-        // false = call it one time
-        // true = unlimited times
-        RepeatType(bool repeat) : _repeat(repeat ? kUnlimited : 1) {}
+        // false = do not repeat
+        // true = repeat unlimited times
+        RepeatType(bool repeat);
         // repeat timer "repeat" times
-        RepeatType(int repeat) : _repeat(static_cast<uint32_t>(repeat)) {}
-        RepeatType(uint32_t repeat) : _repeat(repeat) {}
+        // 0 = must not be used
+        // 1 = do not repeat
+        // 2 = repeat once
+        // ...
+        RepeatType(int repeat);
+        RepeatType(uint32_t repeat);
 
-        RepeatType(const RepeatType &repeat) : _repeat(repeat._repeat) {}
+        RepeatType(const RepeatType &repeat);
 
     protected:
         friend Scheduler;
         friend CallbackTimer;
 
-        RepeatType &operator|=(const RepeatType &repeat) {
-            if (repeat._repeat != kPreset) {
-                _repeat = repeat._repeat;
-            }
-            if (_repeat == 0) {
-                _repeat = 1;
-            }
-            return *this;
-        }
-
-        bool _doRepeat() {
-            if (_repeat == kUnlimited) {
-                return true;
-            }
-            if (_repeat > 0) {
-                _repeat--;
-            }
-            return _hasRepeat();
-        }
-
-        bool _hasRepeat() const {
-            if (_repeat == kUnlimited) {
-                return true;
-            }
-            return _repeat > 0 && (_repeat != kPreset);
-        }
+        bool _doRepeat();
+        bool _hasRepeat() const;
 
         uint32_t _repeat;
     };
 
 }
 
-#pragma pop_macro("DEFAULT")
 #pragma pop_macro("HIGH")
 #pragma pop_macro("LOW")

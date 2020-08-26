@@ -107,7 +107,7 @@ void ICACHE_RAM_ATTR espShow(uint8_t pin, uint8_t *pixels, uint32_t numBytes, ui
         ; // Wait for last bit
 }
 
-void NeoPixel_espShow(uint8_t pin, uint8_t *pixels, uint32_t numBytes, boolean is800KHz)
+void NeoPixel_espShow(uint8_t pin, uint8_t *pixels, uint32_t numBytes, bool is800KHz)
 {
 #ifdef ESP8266
     system_update_cpu_freq(SYS_CPU_80MHZ);

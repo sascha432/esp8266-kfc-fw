@@ -168,6 +168,16 @@ uint32_t SyslogQueue::getDropped() const
     return _dropped;
 }
 
+void SyslogQueue::setManager(SyslogQueueManager &manager)
+{
+    _manager = &manager;
+}
+
+void SyslogQueue::removeManager()
+{
+    _manager = nullptr;
+}
+
 size_t SyslogQueue::_getQueueItemSize(const String &msg) const
 {
     return StringAllocSize::getAllocSize(msg.length()) + kSyslogQueueItemSize;

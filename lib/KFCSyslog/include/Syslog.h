@@ -5,7 +5,7 @@
 #pragma once
 
 #ifndef DEBUG_SYSLOG
-#define DEBUG_SYSLOG                            1
+#define DEBUG_SYSLOG                            0
 #endif
 
 #include <Arduino_compat.h>
@@ -73,6 +73,7 @@ PROGMEM_STRING_DECL(syslog_nil_value);
 
 class SyslogQueue;
 class SyslogParameter;
+class SyslogManagedStream;
 class SyslogPlugin;
 
 class Syslog {
@@ -93,6 +94,7 @@ public:
 
 protected:
     friend SyslogStream;
+    friend SyslogManagedStream;
     friend SyslogPlugin;
 
     String _getHeader(uint32_t millis);

@@ -44,6 +44,7 @@ private:
     void __onAck(size_t len, uint32_t time);
     void __onError(int8_t error);
     void __onTimeout(uint32_t time);
+    void __onDisconnect();
     void __onPoll();
     void __sendQueue();
 

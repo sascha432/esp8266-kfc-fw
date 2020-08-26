@@ -133,11 +133,24 @@ bool SyslogTCP::isSending()
 	 return _queueId;
 }
 
+void SyslogTCP::__onDisconnect()
+{
+    __LDBG_assert_panic(_client != nullptr, "_client==nullptr");
+    bool hasNoQueue = (_queueId == 0);
+    __LDBG_printf("has_no_queue=%u state=%s state=%u", hasNoQueue, _client->stateToString(), _client->state());
+    if (_client->state() == 0 && hasNoQueue) {
+        _freeClient();
+    }
+    else {
+        _status(false __LDBG_IF(, PSTR("disconnect")));
+    }
+}
+
 void SyslogTCP::__onTimeout(uint32_t time)
 {
-    __LDBG_assert_panic(_client != nullptr, "_client=nullptr");
-    __LDBG_printf("timeout=%u connected=%u state=%s", time, _client->connected(), _client->stateToString());
+    __LDBG_assert_panic(_client != nullptr, "_client==nullptr");
     bool hasNoQueue = (_queueId == 0); // store queue state
+    __LDBG_printf("timeout=%u has_no_queue=%u connected=%u state=%s", time, hasNoQueue, _client->connected(), _client->stateToString());
     _status(false __LDBG_IF(, PSTR("timeout")));
     if (hasNoQueue) {
         _freeClient(); // disconnect and free client
@@ -180,7 +193,7 @@ void SyslogTCP::_connect()
 
 void SyslogTCP::_disconnect()
 {
-    __LDBG_assert_panic(_client != nullptr, "_client=nullptr");
+    __LDBG_assert_panic(_client != nullptr, "_client==nullptr");
     __LDBG_printf("disconnect id=%u connected=%d state=%s", _queueId, _client->connected(), _client->stateToString());
     _client->close(true);
 }
@@ -204,6 +217,7 @@ void SyslogTCP::_freeClient()
 {
     __LDBG_printf("client=%p", _client);
     if (_client) {
+        __LDBG_assert(_queueId == 0);
         _client->onConnect(nullptr);
         _client->onPoll(nullptr);
         _client->onDisconnect(nullptr);
@@ -220,7 +234,7 @@ void SyslogTCP::_freeClient()
 
 void SyslogTCP::_status(bool success __LDBG_IF(, const char *reason))
 {
-    __LDBG_assert_panic(_client != nullptr, "_client=nullptr");
+    __LDBG_assert_panic(_client != nullptr, "_client==nullptr");
     __LDBG_printf("success=%u id=%u ack=%u reason=%s queue=%s state=%s error=%s", success, _queueId, _ack, __S(reason), _queueId ? PSTR("busy") : PSTR("idle"), _client->stateToString(), success ? PSTR("null") : _client->errorToString(_client->getCloseError()));
     if (_queueId) {
         if (!success) {
@@ -235,7 +249,7 @@ void SyslogTCP::_status(bool success __LDBG_IF(, const char *reason))
 
 void SyslogTCP::__sendQueue()
 {
-    __LDBG_assert_panic(_client != nullptr, "_client=nullptr");
+    __LDBG_assert_panic(_client != nullptr, "_client==nullptr");
     if (_queueId && _buffer.length() && _client->connected() && _client->canSend()) {
         auto toSend = std::min(_client->space(), _buffer.length());
         auto written = _client->write(_buffer.cstr_begin(), toSend);
@@ -258,7 +272,7 @@ void SyslogTCP::__sendQueue()
 
 void SyslogTCP::__onAck(size_t len, uint32_t time)
 {
-    __LDBG_assert_panic(_client != nullptr, "_client=nullptr");
+    __LDBG_assert_panic(_client != nullptr, "_client==nullptr");
     __LDBG_printf("len=%u time=%u ack=%u id=%u buffer=%u state=%s", len, time, _ack, _queueId, _buffer.length(), _client->stateToString());
     if (_queueId) {
         if (len > _ack) {
@@ -285,7 +299,7 @@ void SyslogTCP::__onAck(size_t len, uint32_t time)
 
 void SyslogTCP::__onError(int8_t error)
 {
-    __LDBG_assert_panic(_client != nullptr, "_client=nullptr");
+    __LDBG_assert_panic(_client != nullptr, "_client==nullptr");
     __LDBG_printf("err=%d error=%s state=%s", error, _client->errorToString(error), _client->stateToString());
     _status(false __LDBG_IF(, PSTR("error")));
 }
@@ -293,7 +307,7 @@ void SyslogTCP::__onError(int8_t error)
 void SyslogTCP::_onDisconnect(void *arg, AsyncClient *client)
 {
     __LDBG_assert(reinterpret_cast<SyslogTCP *>(arg)->_client == client);
-    reinterpret_cast<SyslogTCP *>(arg)->_status(false __LDBG_IF(, PSTR("disconnect")));
+    reinterpret_cast<SyslogTCP *>(arg)->__onDisconnect();
 }
 
 void SyslogTCP::_onError(void *arg, AsyncClient *client, int8_t error)

@@ -5,7 +5,7 @@
 #if AT_MODE_SUPPORTED
 
 #include <Arduino_compat.h>
-#include <KFCSyslog.h>
+#include <Syslog.h>
 #include <ProgmemStream.h>
 #include <ReadADC.h>
 #include <EventScheduler.h>
@@ -1513,11 +1513,7 @@ void at_mode_serial_handle_event(String &commandString)
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LOG))) {
                 if (args.requireArgs(1, 2)) {
                     if (args.size() == 2) {
-                        int level = stringlist_find_P_P(PSTR("error|security|warning|notice|debug"), args.get(0), '|'); // match Logger::LogLevel
-                        if (level != -1) {
-                            level = LogLevel::LOGLEVEL_ERROR;
-                        }
-                        _logger.log(static_cast<LogLevel>(level), args.toString(1));
+                        _logger.log(_logger.getLevelFromString(args.get(0)), args.toString(1));
                     }
                     else {
                         Logger_error(F("+LOG: %s"), implode(',', args.getArgs()).c_str());
@@ -1531,9 +1527,9 @@ void at_mode_serial_handle_event(String &commandString)
                     static File debugLog;
                     if (enable) {
                         if (!debugLog) {
-                            _logger.setExtraFileEnabled(LOGLEVEL_DEBUG, true);
-                            _logger.__rotate(LOGLEVEL_DEBUG);
-                            debugLog = _logger.__openLog(LOGLEVEL_DEBUG, true);
+                            _logger.setExtraFileEnabled(Logger::Level::_DEBUG, true);
+                            _logger.__rotate(Logger::Level::_DEBUG);
+                            debugLog = _logger.__openLog(Logger::Level::_DEBUG, true);
                             if (debugLog) {
                                 debugStreamWrapper.add(&debugLog);
                                 args.printf_P(PSTR("enabled=%s"), debugLog.fullName());
@@ -1544,8 +1540,8 @@ void at_mode_serial_handle_event(String &commandString)
                         if (debugLog) {
                             debugStreamWrapper.remove(&debugLog);
                             debugLog.close();
-                            _logger.__rotate(LOGLEVEL_DEBUG);
-                            _logger.setExtraFileEnabled(LOGLEVEL_DEBUG, false);
+                            _logger.__rotate(Logger::Level::_DEBUG);
+                            _logger.setExtraFileEnabled(Logger::Level::_DEBUG, false);
                         }
                     }
                     if (!debugLog) {

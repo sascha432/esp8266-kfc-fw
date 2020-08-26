@@ -90,7 +90,7 @@ Syslog::Syslog(SyslogParameter &&parameter, SyslogQueue &queue) : _parameter(std
 
 Syslog::~Syslog()
 {
-	__LDBG_free(&_queue);
+	__LDBG_delete(reinterpret_cast<SyslogQueue *>(&_queue));
 }
 
 void Syslog::_addTimestamp(PrintString &buffer, uint32_t ms, PGM_P format)

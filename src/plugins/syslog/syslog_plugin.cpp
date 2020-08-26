@@ -4,6 +4,8 @@
 
 #include "syslog_plugin.h"
 #include <SyslogMemoryQueue.h>
+#include <SyslogStream.h>
+#include <SyslogFactory.h>
 
 #if DEBUG_SYSLOG
 #include <debug_helper_enable.h>
@@ -74,7 +76,7 @@ void SyslogPlugin::queueSize(uint32_t size, bool isAvailable)
     }
     else if (isAvailable && !_timer) {
         __LDBG_print("add timer");
-        _timer.add(Event::milliseconds(100), true, timerCallback);
+        _Timer(_timer).add(Event::milliseconds(125), true, timerCallback);
     }
 }
 
@@ -118,15 +120,16 @@ void SyslogPlugin::_begin()
 
             _stream = __LDBG_new(SyslogStream, SyslogFactory::create(
                 SyslogParameter(System::Device::getName(), FSPGM(kfcfw)),
-                __LDBG_new(SyslogMemoryQueue, *this, SYSLOG_PLUGIN_QUEUE_SIZE), cfg.protocol_enum, zeroconf ? emptyString : hostname, zeroconf ? 0 : port),
+                __LDBG_new(SyslogMemoryQueue, *this, SYSLOG_PLUGIN_QUEUE_SIZE), cfg.protocol_enum, zeroconf ? emptyString : hostname, static_cast<uint16_t>(zeroconf ? SyslogFactory::kZeroconfPort : port)),
                 _timer
             );
             _logger.setSyslog(_stream);
 
             __LDBG_printf("zeroconf=%u port=%u", zeroconf, port);
             if (zeroconf) {
-                config.resolveZeroConf(getFriendlyName(), hostname, port, [](const String &hostname, const IPAddress &address, uint16_t port, const String &resolved, MDNSResolver::ResponseType type) {
-                    plugin._zeroConfCallback(hostname, address, port, type);
+                auto stream = _stream;
+                config.resolveZeroConf(getFriendlyName(), hostname, port, [stream](const String &hostname, const IPAddress &address, uint16_t port, const String &resolved, MDNSResolver::ResponseType type) {
+                    plugin._zeroConfCallback(stream, hostname, address, port, type);
                 });
             }
         }
@@ -136,15 +139,12 @@ void SyslogPlugin::_begin()
     }
 }
 
-void SyslogPlugin::_zeroConfCallback(const String &hostname, const IPAddress &address, uint16_t port, MDNSResolver::ResponseType type)
+void SyslogPlugin::_zeroConfCallback(const SyslogStream *stream, const String &hostname, const IPAddress &address, uint16_t port, MDNSResolver::ResponseType type)
 {
-    __LDBG_printf("zeroconf callback host=%s address=%s port=%u type=%u stream=%p", hostname.c_str(), address.toString().c_str(), port, type, _stream);
-    if (_stream) {
+    __LDBG_printf("zeroconf callback host=%s address=%s port=%u type=%u _stream=%p stream=%p", hostname.c_str(), address.toString().c_str(), port, type, _stream, stream);
+    // make sure that the callback belongs to the same stream
+    if (_stream == stream) {
         _stream->_syslog.setupZeroConf(hostname, address, port);
-        if (!_stream->_syslog._queue.empty()) {
-            __LDBG_print("queue filled rearm=100ms");
-            _Timer(_stream->_timer).add(Event::milliseconds(100), true, timerCallback);
-        }
     }
 }
 

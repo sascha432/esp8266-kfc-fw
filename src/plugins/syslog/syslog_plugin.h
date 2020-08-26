@@ -49,11 +49,13 @@ public:
     static NameType protocolToString(SyslogProtocol proto);
 
 private:
-    void _zeroConfCallback(const String &hostname, const IPAddress &address, uint16_t port, MDNSResolver::ResponseType type);
+    void _zeroConfCallback(const SyslogStream *stream, const String &hostname, const IPAddress &address, uint16_t port, MDNSResolver::ResponseType type);
 
 private:
     void _begin();
     void _end();
+    // try to deliver any existing queue and terminate stream
+    // does not free all memory
     void _kill(uint32_t timeout);
     void _timerCallback(Event::CallbackTimerPtr timer);
 

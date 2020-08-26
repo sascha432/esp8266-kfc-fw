@@ -22,7 +22,7 @@
 #include <chrono>
 #include <Configuration.h>
 #if SYSLOG_SUPPORT
-#include <KFCSyslog.h>
+#include <Syslog.h>
 #endif
 #include "../src/plugins/mdns/mdns_resolver.h"
 #include <SaveCrash.h>

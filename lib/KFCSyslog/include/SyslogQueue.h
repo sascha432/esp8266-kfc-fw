@@ -99,6 +99,10 @@ public:
 
     uint32_t getDropped() const;
 
+    void setManager(SyslogQueueManager &manager);
+
+    void removeManager();
+
 protected:
     SyslogQueue(SyslogQueueManager *_manager = nullptr);
 

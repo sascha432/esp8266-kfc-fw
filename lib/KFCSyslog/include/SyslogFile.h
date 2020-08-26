@@ -8,6 +8,12 @@ class SyslogFile : public Syslog {
 public:
     static constexpr size_t kMaxFileSize = 0xffff;
     static constexpr uint16_t kKeepRotatedFilesLimit = 10;
+    static constexpr uint32_t kMaxFilesizeMask = 0xffffff;
+
+    // pack max. filesize and rotation limit into uint32_t for SyslogFactory
+    static uint32_t getPackedFilesize(size_t maxSize = kMaxFileSize, uint8_t maxRotate = kKeepRotatedFilesLimit) {
+        return ((maxSize >> 2) & kMaxFilesizeMask) | (maxRotate << 24);
+    }
 
 public:
     SyslogFile(SyslogParameter &&parameter, SyslogQueue &queue, const String &filename, size_t maxSize = kMaxFileSize, uint16_t maxRotate = kKeepRotatedFilesLimit);

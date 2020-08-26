@@ -27,16 +27,22 @@ class SyslogStream;
 
 extern Logger _logger;
 
-typedef enum {
-    LOGLEVEL_ERROR,
-    LOGLEVEL_SECURITY,
-    LOGLEVEL_WARNING,
-    LOGLEVEL_NOTICE,
-    LOGLEVEL_DEBUG,
-    LOGLEVEL_MAX
-} LogLevel;
+#pragma push_macro("DEBUG")
+#undef DEBUG
 
 class Logger {
+public:
+    enum class Level : uint8_t {
+        ERROR = _BV(0),
+        SECURITY = _BV(1),
+        WARNING = _BV(2),
+        NOTICE = _BV(3),
+        DEBUG = _BV(4),
+        MAX,
+        _DEBUG = DEBUG,
+        ANY = std::numeric_limits<std::underlying_type<Level>::type>::max()
+    };
+
 public:
     Logger();
 
@@ -50,40 +56,41 @@ public:
     void notice(const __FlashStringHelper *message, ...);
     void debug(const String &message, ...);
     void debug(const __FlashStringHelper *message, ...);
-    void log(LogLevel level, const String &message, ...);
-    void log(LogLevel level, const char *message, ...);
+    void log(Level level, const String &message, ...);
+    void log(Level level, const char *message, ...);
 
-    const String getLogLevelAsString(LogLevel logLevel);
-    void setLogLevel(LogLevel logLevel);
+    static const __FlashStringHelper *getLevelAsString(Level logLevel);
+    static Level getLevelFromString(PGM_P str);
+    void setLevel(Level logLevel);
 
 #if SYSLOG_SUPPORT
     void setSyslog(SyslogStream *syslog);
 #endif
 
-    bool isExtraFileEnabled(LogLevel level) const;
-    void setExtraFileEnabled(LogLevel level, bool state);
+    bool isExtraFileEnabled(Level level) const;
+    void setExtraFileEnabled(Level level, bool state);
 
-    File __openLog(LogLevel logLevel, bool write);
-    void __rotate(LogLevel logLevel);
+    File __openLog(Level logLevel, bool write);
+    void __rotate(Level logLevel);
 
 protected:
-    void writeLog(LogLevel logLevel, const char *message, va_list arg);
-    inline void writeLog(LogLevel logLevel, const String &message, va_list arg) {
+    void writeLog(Level logLevel, const char *message, va_list arg);
+    inline void writeLog(Level logLevel, const String &message, va_list arg) {
         writeLog(logLevel, message.c_str(), arg);
     }
-    inline void writeLog(LogLevel logLevel, const __FlashStringHelper *message, va_list arg) {
+    inline void writeLog(Level logLevel, const __FlashStringHelper *message, va_list arg) {
         writeLog(logLevel, String(message).c_str(), arg);
     }
 
 private:
-    String _getLogFilename(LogLevel logLevel);
-    String _getLogDevice(LogLevel logLevel);
+    String _getLogFilename(Level logLevel);
+    String _getLogDevice(Level logLevel);
     String _getBackupFilename(String filename, int num);
     void _closeLog(File file);
 
 private:
-    LogLevel _logLevel;
-    uint8_t _enabled;
+    Level _logLevel;
+    Level _enabled;
 #if SYSLOG_SUPPORT
     SyslogStream *_syslog;
 #endif
@@ -98,3 +105,5 @@ private:
 #define Logger_debug(...)        ;
 
 #endif
+
+#pragma pop_macro("DEBUG")

@@ -5,8 +5,7 @@
 /**
  * Asynchronous syslog library with queue and different storage types
  *
- * SyslogStream -> SyslogQueue(Memory/File) -> SyslogUDP/TCP/File -> destination server/file
- *
+ * SyslogStream -> Syslog(Memory)Queue -> Syslog(UDP/TCP/File) -> destination server/file
  */
 
 #pragma once
@@ -50,7 +49,7 @@ public:
     virtual int read() override;
     virtual int peek() override;
 
-private:
+protected:
     friend SyslogPlugin;
 
     Syslog &_syslog;

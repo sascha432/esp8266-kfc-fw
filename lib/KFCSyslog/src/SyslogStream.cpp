@@ -15,7 +15,13 @@
 #include <debug_helper_disable.h>
 #endif
 
-SyslogStream::SyslogStream(Syslog *syslog, Event::Timer &timer) : _syslog(*syslog), _timer(timer)
+// ------------------------------------------------------------------------
+// SyslogStream
+// ------------------------------------------------------------------------
+
+SyslogStream::SyslogStream(Syslog *syslog, Event::Timer &timer) :
+    _syslog(*syslog),
+    _timer(timer)
 {
     assert(&_syslog != nullptr);
 }
@@ -64,10 +70,6 @@ void SyslogStream::flush()
         _syslog._queue.add(_message);
         _message = String();
         deliverQueue();
-        if (!_syslog._queue.empty() && _timer) {
-            __LDBG_printf("queue filled rearm=100ms");
-            _timer->rearm(Event::milliseconds(100));
-        }
     }
 }
 
@@ -97,10 +99,6 @@ void SyslogStream::deliverQueue()
     while(millis() < _startMillis && !_syslog.isSending() && _syslog._queue.isAvailable()) {
         _syslog.transmit(_syslog._queue.get());
 	}
-    if (_syslog._queue.empty() && _timer) {
-        __LDBG_printf("queue empty rearm=60s (deliverQueue)");
-        _timer->rearm(Event::seconds(60));
-    }
 }
 
 void SyslogStream::clearQueue()
@@ -140,3 +138,4 @@ void SyslogStream::dumpQueue(Print &print, bool items) const
 
 // 	return result;
 // }
+

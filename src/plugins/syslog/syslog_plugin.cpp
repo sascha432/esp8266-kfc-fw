@@ -230,7 +230,7 @@ void SyslogPlugin::prepareDeepSleep(uint32_t sleepTimeMillis)
 #include <at_mode.h>
 #include <logger.h>
 
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(SQ, "SQ", "<clear|info|queue>", "Syslog queue command");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(SQ, "SQ", "<clear|info|queue|pause>", "Syslog queue command");
 #if LOGGER
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LOG, "LOG", "[<error|security|warning|notice|debug>,]<message>", "Send message to the logger component");
 #endif
@@ -260,8 +260,20 @@ bool SyslogPlugin::atModeHandler(AtModeArgs &args)
 {
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SQ))) {
         if (atModeHasStream(args)) {
-            int cmd = -1;
-            if (args.size() >= 1 && (cmd = stringlist_find_P_P(PSTR("queue|info|clear"), args.get(0), '|')) == 2) {
+            int cmd = args.size() >= 1 ? stringlist_find_P_P(PSTR("queue|info|clear|pause"), args.get(0), '|') : -1;
+            if (cmd == 3) {
+                // cmd == pause
+                SyslogMemoryQueue &queue = reinterpret_cast<SyslogMemoryQueue &>(_stream->_syslog._queue);
+                if (queue._timer == ~1U) {
+                    queue._timer = 0;
+                    queueSize(queue._items.size(), queue._isAvailable());
+                }
+                else {
+                    queue._timer = ~1U;
+                }
+                args.printf_P(PSTR("Queue paused=%u"), queue._timer == ~1U);
+            }
+            else if (cmd == 2) {
                 // cmd == clear
                 _stream->clearQueue();
                 args.print(F("Queue cleared"));

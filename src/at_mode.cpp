@@ -643,8 +643,8 @@ void at_mode_list_ets_timers(Print &output)
     while(cur) {
         void *callback = nullptr;
         for(const auto &timer: __Scheduler.__getTimers()) {
-            if (&timer->__getETSTimer() == cur) {
-                callback = lambda_target(timer->__getLoopCallback());
+            if (&timer->_etsTimer == cur) {
+                callback = lambda_target(timer->_callback);
                 break;
             }
         }
@@ -869,6 +869,7 @@ void at_mode_serial_handle_event(String &commandString)
                 args.printf_P(PSTR("sizeof(FormField): %u"), sizeof(FormField));
                 args.printf_P(PSTR("sizeof(FormUI:UI): %u"), sizeof(FormUI::UI));
                 args.printf_P(PSTR("sizeof(AsyncClient): %u"), sizeof(AsyncClient));
+                args.printf_P(PSTR("sizeof(CallbackTimer): %u"), sizeof(Event::CallbackTimer));
 #if DEBUG
                 String hash;
                 if (System::Firmware::getElfHashHex(hash)) {

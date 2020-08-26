@@ -87,7 +87,7 @@
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;DEBUG_KFC_FORMS=1;DEBUG=1;_DEBUG=1;_CRTDBG_MAP_ALLOC;ARDUINO=101;HAVE_MEM_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib-mock\KFCBaseLibrary\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\tests\enum_test\pattern_test;C:\Users\sascha\Documents\PlatformIO\Projects\libcrc16\src;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCJson\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCWebFramework\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib-mock\ets_impl;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib-mock\KFCBaseLibrary\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\tests\enum_test\pattern_test;C:\Users\sascha\Documents\PlatformIO\Projects\libcrc16\src;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCJson\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCWebFramework\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCEventScheduler\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp14</LanguageStandard>
       <BrowseInformation>true</BrowseInformation>
       <DisableSpecificWarnings>26812 </DisableSpecificWarnings>
@@ -155,6 +155,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\..\..\..\lib-mock\ets_impl\ets_main.cpp" />
+    <ClCompile Include="..\..\..\..\..\lib-mock\ets_impl\ets_sys_win32.cpp" />
+    <ClCompile Include="..\..\..\..\..\lib-mock\ets_impl\ets_timer_win32.cpp" />
+    <ClCompile Include="..\..\..\..\..\lib-mock\KFCBaseLibrary\src\Compat.cpp" />
     <ClCompile Include="..\..\..\..\..\lib-mock\KFCBaseLibrary\src\EEPROM.cpp" />
     <ClCompile Include="..\..\..\..\..\lib-mock\KFCBaseLibrary\src\ESP8266HttpClient.cpp" />
     <ClCompile Include="..\..\..\..\..\lib-mock\KFCBaseLibrary\src\FS.cpp" />
@@ -175,6 +179,7 @@
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\debug_helper.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\DumpBinary.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\int64_to_string.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\MicrosTimer.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\misc.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\PrintArgs.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\PrintHtmlEntities.cpp" />
@@ -183,6 +188,11 @@
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\SSIProxyStream.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\StringDepulicator.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\TypeName.cpp" />
+    <ClCompile Include="..\..\..\..\KFCEventScheduler\src\CallbackTimer.cpp" />
+    <ClCompile Include="..\..\..\..\KFCEventScheduler\src\LoopFunctions.cpp" />
+    <ClCompile Include="..\..\..\..\KFCEventScheduler\src\ManagedTimer.cpp" />
+    <ClCompile Include="..\..\..\..\KFCEventScheduler\src\Scheduler.cpp" />
+    <ClCompile Include="..\..\..\..\KFCEventScheduler\src\Timer.cpp" />
     <ClCompile Include="..\..\..\..\KFCJson\src\JsonString.cpp" />
     <ClCompile Include="..\..\..\..\KFCJson\src\JsonTools.cpp" />
     <ClCompile Include="..\..\..\src\BootstrapMenu.cpp" />
@@ -195,7 +205,7 @@
     <ClCompile Include="..\..\..\src\FormUI.cpp" />
     <ClCompile Include="..\..\..\src\FormUIRenderHtml.cpp" />
     <ClCompile Include="..\..\..\src\FormValidator.cpp" />
-    <ClCompile Include="test1.cpp" />
+    <ClCompile Include="test_fixedcircularbuffer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\..\KFCBaseLibrary\include\AllocPointerList.h" />

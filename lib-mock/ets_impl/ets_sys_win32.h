@@ -21,6 +21,10 @@
 #    define ICACHE_RAM_ATTR
 #endif
 
+#ifndef ICACHE_FLASH_ATTR
+#    define ICACHE_FLASH_ATTR
+#endif
+
 typedef int32_t esp_err_t;
 
 /* Definitions for error constants. */
@@ -45,6 +49,7 @@ typedef uint8_t byte;
 bool can_yield();
 void yield();
 void __panic_func(const char *file, int line, const char *func);
+void end_loop(); // exit program
 
 #define panic() __panic_func(PSTR(__FILE__), __LINE__, __func__)
 
@@ -66,5 +71,8 @@ void ets_intr_unlock(void);
 int ets_printf(const char *fmt, ...);
 
 extern volatile bool ets_is_running;
+bool is_loop_running();
+void loop();
+void setup();
 
 #pragma pack(pop)

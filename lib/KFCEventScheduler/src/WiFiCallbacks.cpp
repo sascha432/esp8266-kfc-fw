@@ -18,13 +18,14 @@ WiFiCallbacks::EventType WiFiCallbacks::add(EventType events, Callback callback,
 {
     __SLDBG_printf("events=%u callbackPtr=%p callback=%p", events, callbackPtr, lambda_target(callback));
 
+    // events &= EventType::ANY;
     events = EnumHelper::Bitset::getAnd(events, EventType::ANY);
 
     for (auto &callback : _callbacks) {
         if (callbackPtr == callback.callbackPtr) {
             __SLDBG_printf("callbackPtr=%p, changed events from %u to %u", callbackPtr, callback.events, events);
             // callback.events |= events;
-            callback.events = EnumHelper::Bitset::getOr(callback.events, events);
+            EnumHelper::Bitset::addBits(callback.events, events);
             return callback.events;
         }
     }
@@ -50,7 +51,7 @@ WiFiCallbacks::EventType WiFiCallbacks::remove(EventType events, CallbackPtr cal
         if (callbackPtr == iterator->callbackPtr) {
             __SLDBG_printf("callbackPtr=%p changed events from %u to %u", callbackPtr, iterator->events, iterator->events & ~events);
             // iterator->events &= ~events;
-            iterator->events = EnumHelper::Bitset::getAnd(iterator->events, EnumHelper::Bitset::getInverted(events));
+            EnumHelper::Bitset::removeBits(iterator->events, events);
             if (iterator->events == EventType::NONE) {
                 if (!_locked) {
                     _callbacks.erase(iterator);

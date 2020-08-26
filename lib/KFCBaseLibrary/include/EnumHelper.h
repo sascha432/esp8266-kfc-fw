@@ -20,6 +20,38 @@ namespace EnumHelper {
             return first;
         }
 
+        // add or remove bits
+        template<typename Ta, typename... Args>
+        static Ta getSetBits(Ta value, bool state, Args... args) {
+            if (state)  {
+                return addBits(value, args...);
+            }
+            else {
+                return removeBits(value, args...);
+            }
+        }
+
+        // add or remove bits
+        template<typename Ta, typename... Args>
+        static void setBits(Ta &value, bool state, Args... args) {
+            if (state)  {
+                value = addBits(value, args...);
+            }
+            else {
+                value = removeBits(value, args...);
+            }
+        }
+
+        template<typename Ta, typename... Args>
+        static constexpr Ta addBits(Ta value, Args... args) {
+            return getOr(value, all(args...));
+        }
+
+        template<typename Ta, typename... Args>
+        static constexpr Ta removeBits(Ta value, Args... args) {
+            return getAnd(value, getInverted(args...));
+        }
+
         // AND for any type
         template<typename Tn, typename... Args>
         static constexpr bool hasAny(Tn value, Args... args) {

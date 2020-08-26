@@ -24,9 +24,12 @@ CallbackTimer::CallbackTimer(Callback callback, int64_t delay, RepeatType repeat
     _repeat(repeat),
     _priority(priority),
     _remainingDelay(0),
-    _callbackScheduled(false)
+    _callbackScheduled(false),
+    _maxDelayExceeded(false)
 {
+#if DEBUG
     assert(delay >= kMinDelay);
+#endif
 }
 
 CallbackTimer::~CallbackTimer()
@@ -89,7 +92,9 @@ void CallbackTimer::rearm(int64_t delay, RepeatType repeat, Callback callback)
         _repeat._repeat = repeat._repeat;
     }
     // __LDBG_assert_panic(_repeat._repeat != RepeatType::kPreset, "repeat=0 %s:%u", __S(_file), _line);
+#if DEBUG
     assert(_repeat._repeat != RepeatType::kPreset);
+#endif
     if (callback) {
         _callback = callback;
     }
@@ -113,9 +118,11 @@ void CallbackTimer::_rearm()
     uint32_t delay;
     bool repeat;
 
+#if DEBUG
     assert(_remainingDelay == 0);
     assert(_callbackScheduled == false);
     assert(isArmed() == false);
+#endif
 
     // split interval in multiple parts if max delay is exceeded
     if (_delay > kMaxDelay) {
@@ -128,12 +135,14 @@ void CallbackTimer::_rearm()
             _delay += kMinDelay - lastDelay;
         }
         _remainingDelay = (_delay / kMaxDelay) + 1; // 1 to n times kMaxDelay
+        _maxDelayExceeded = true;
         delay = kMaxDelay;
         repeat = false; // we manually repeat
         __LDBG_printf("delay=%.0f repeat=%u * %d + %u", _delay / 1.0, (_remainingDelay - 1), kMaxDelay, (uint32_t)(_delay % kMaxDelay));
     }
     else { // default delay
         delay = std::max(kMinDelay, (uint32_t)_delay);
+        _maxDelayExceeded = false;
         repeat = _repeat._hasRepeat();
         __LDBG_printf("delay=%d", delay);
     }
@@ -154,6 +163,7 @@ void CallbackTimer::_disarm()
         ets_timer_disarm(&_etsTimer);
         _callbackScheduled = false;
         _remainingDelay = 0;
+        _maxDelayExceeded = false;
         _etsTimer.timer_func = nullptr;
     }
 }
@@ -172,7 +182,7 @@ void CallbackTimer::_invokeCallback(CallbackTimerPtr timer)
             __LDBG_printf("arg=%p this=%p fn=%p armed=%u cb=%p %s:%u", _etsTimer.timer_arg, this, _etsTimer.timer_func, isArmed(), lambda_target(_callback), __S(_file), _line);
             __Scheduler._removeTimer(timer);
         }
-        else if (_delay > kMaxDelay) {
+        else if (_maxDelayExceeded) {
             // if max delay is exceeded we need to manually reschedule
             __LDBG_printf("arg=%p this=%p fn=%p armed=%u cb=%p %s:%u", _etsTimer.timer_arg, this, _etsTimer.timer_func, isArmed(), lambda_target(_callback), __S(_file), _line);
             _disarm();

@@ -22,13 +22,17 @@ Event::RepeatType::RepeatType(bool repeat) : _repeat(repeat ? kUnlimited : kNoRe
 Event::RepeatType::RepeatType(int repeat) : _repeat(static_cast<uint32_t>(repeat))
 {
     // __LDBG_assert_panic(_repeat != kPreset, "invalid value");
+#if DEBUG
     assert(_repeat != kPreset);
+#endif
 }
 
 Event::RepeatType::RepeatType(uint32_t repeat) : _repeat(repeat)
 {
     // __LDBG_assert_panic(_repeat != kPreset, "invalid value");
+#if DEBUG
     assert(_repeat != kPreset);
+#endif
 }
 
 Event::RepeatType::RepeatType(const RepeatType &repeat) : _repeat(repeat._repeat)
@@ -37,13 +41,20 @@ Event::RepeatType::RepeatType(const RepeatType &repeat) : _repeat(repeat._repeat
 
 bool Event::RepeatType::_doRepeat()
 {
-    if (_repeat < kUnlimited && _repeat > kNoRepeat) {
-        _repeat--;
+    static_assert(kUnlimited > kNoRepeat, "check kUnlimited");
+    if (_repeat == kUnlimited) {
+        return true;
     }
-    return _hasRepeat();
+    else if (_repeat > kNoRepeat) {
+        _repeat--;
+        return true;
+    }
+    return false;
 }
 
 bool Event::RepeatType::_hasRepeat() const
 {
-    return _repeat > kNoRepeat && (_repeat != kPreset);
+    static_assert(kNoRepeat + 1 > kNoRepeat && kNoRepeat + 1 != kPreset, "check kNoRepeat and kPreset");
+    return _repeat > kNoRepeat; // && (_repeat != kPreset);
 }
+

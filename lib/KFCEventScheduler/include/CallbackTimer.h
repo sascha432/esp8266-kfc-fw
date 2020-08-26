@@ -69,7 +69,8 @@ namespace Event {
         PriorityType _priority;
         uint32_t _remainingDelay: 17;
         uint32_t _callbackScheduled: 1;
-        uint32_t ____free: 14;
+        uint32_t _maxDelayExceeded: 1;
+        uint32_t ____free: 13;
 
 #if DEBUG_EVENT_SCHEDULER
     public:

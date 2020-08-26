@@ -33,8 +33,13 @@ Stream
 */
 
 class Stream : public Print {
+protected:
+    unsigned long _startMillis;
+    unsigned long _timeout;
 public:
     Stream(FILE *fp = nullptr);
+
+    void setTimeout(unsigned long timeout);
 
     virtual size_t size() const;
 

@@ -7,7 +7,7 @@
 #include <Arduino_compat.h>
 #include "Stream.h"
 
-Stream::Stream(FILE *fp) : Print(), _fp(fp), _size(0)
+Stream::Stream(FILE *fp) : Print(), _timeout(1000), _fp(fp), _size(0)
 {
     _fp = fp;
     if (fp) {
@@ -17,7 +17,13 @@ Stream::Stream(FILE *fp) : Print(), _fp(fp), _size(0)
     }
 }
 
-size_t Stream::size() const {
+inline void Stream::setTimeout(unsigned long timeout) 
+{ 
+    _timeout = timeout; 
+}
+
+size_t Stream::size() const 
+{
     return _size;
 }
 

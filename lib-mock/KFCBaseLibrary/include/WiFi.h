@@ -77,6 +77,10 @@ public:
         ((_address *)&_addr)->byte[3] = d;
     }
 
+    bool isSet() const {
+        return _addr != 0 && _addr != 0xffffffffU;
+    }
+
     operator uint32_t() const {
         return *(uint32_t *)&_addr;
     }

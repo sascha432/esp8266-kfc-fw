@@ -52,8 +52,8 @@ namespace Event {
         friend Timer;
 
         CallbackTimer *_add(int64_t intervalMillis, RepeatType repeat, Callback callback, PriorityType priority = PriorityType::NORMAL);
+        void _invokeCallback(CallbackTimerPtr timer);
 
-        TimerVectorIterator _getTimer(CallbackTimerPtr timer);
         bool _hasTimer(CallbackTimerPtr timer) const;
         bool _removeTimer(CallbackTimerPtr timer);
         void _run(PriorityType runAbovePriority);
@@ -62,17 +62,39 @@ namespace Event {
         void _sort();
 
     private:
+        using EventType = int32_t;
+
         TimerVector _timers;
-        size_t _size;
-        volatile int8_t _hasEvent : 6;
-        int8_t _addedFlag : 1;
-        int8_t _removedFlag : 1;
+        int32_t _size: 16;
+        volatile EventType _hasEvent: 8;
+        int32_t _addedFlag : 1;
+        int32_t _removedFlag : 1;
+        int32_t _checkTimers : 1;
+        int32_t __free : 5;
+
 #if DEBUG_EVENT_SCHEDULER_RUNTIME_LIMIT_CONSTEXPR
         static constexpr uint32_t _runtimeLimit = kMaxRuntimeLimit;
 #else
         uint32_t _runtimeLimit;
 #endif
     };
+
+    static constexpr auto SchedulerSize = sizeof(Scheduler);
+
+    inline void Scheduler::remove(CallbackTimerPtr timer)
+    {
+        _removeTimer(timer);
+    }
+
+    inline void Scheduler::add(int64_t intervalMillis, RepeatType repeat, Callback callback, PriorityType priority)
+    {
+        _add(intervalMillis, repeat, callback, priority);
+    }
+
+    inline void Scheduler::add(milliseconds interval, RepeatType repeat, Callback callback, PriorityType priority)
+    {
+        _add(interval.count(), repeat, callback, priority);
+    }
 
 }
 

@@ -33,6 +33,13 @@
 #undef HIGH
 #undef LOW
 
+#if DEBUG_EVENT_SCHEDULER
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
+
 namespace Event {
 
     class Timer;
@@ -52,7 +59,6 @@ namespace Event {
 
     using CallbackTimerPtr = CallbackTimer *;
     using TimerVector = std::vector<CallbackTimerPtr>;
-    using TimerVectorIterator = TimerVector::iterator;
     using Callback = std::function<void(CallbackTimerPtr timer)>;
 
     using milliseconds = std::chrono::duration<int64_t, std::ratio<1>>;
@@ -67,19 +73,18 @@ namespace Event {
         return milliseconds((milliseconds::rep)minutes * (milliseconds::rep)60000);
     }
 
-    // 6 bit -31...31
     enum class PriorityType : int8_t {
-        NONE = -31,
-        LOWEST = -24,
-        LOWER = -16,
-        LOW = -8,
+        NONE = -127,
+        LOWEST = -64,
+        LOWER = -32,
+        LOW = -16,
         _LOW = LOW,
         NORMAL = 0,
-        HIGH = 8,               // above normal is limited to 15ms runtime
+        HIGH = 16,               // above normal is limited to 15ms runtime
         _HIGH = HIGH,
-        HIGHER = 16,
-        HIGHEST = 24,
-        TIMER = 30,             // run as timer, limit to 5ms runtime. interval limited to 6870946 ms. RepeatType true or false only
+        HIGHER = 32,
+        HIGHEST = 64,
+        TIMER = 126,             // run as timer, limit to 5ms runtime
         MAX
     };
 
@@ -103,19 +108,51 @@ namespace Event {
         RepeatType(int repeat);
         RepeatType(uint32_t repeat);
 
-        RepeatType(const RepeatType &repeat);
-
-    protected:
+    private:
         friend Scheduler;
         friend CallbackTimer;
 
         bool _doRepeat();
         bool _hasRepeat() const;
 
+    private:
         uint32_t _repeat;
     };
 
+    inline RepeatType::RepeatType() : _repeat(kPreset)
+    {
+    }
+
+    inline RepeatType::RepeatType(bool repeat) : _repeat(repeat ? kUnlimited : kNoRepeat)
+    {
+    }
+
+    inline RepeatType::RepeatType(int repeat) : RepeatType(static_cast<uint32_t>(repeat))
+    {
+    }
+
+    inline bool RepeatType::_doRepeat()
+    {
+        static_assert(kUnlimited > kNoRepeat, "check kUnlimited");
+        if (_repeat == kUnlimited) {
+            return true;
+        }
+        else if (_repeat > kNoRepeat) {
+            _repeat--;
+            return true;
+        }
+        return false;
+    }
+
+    inline bool RepeatType::_hasRepeat() const
+    {
+        static_assert(kNoRepeat + 1 > kNoRepeat && kNoRepeat + 1 != kPreset, "check kNoRepeat and kPreset");
+        return _repeat > kNoRepeat; // && (_repeat != kPreset);
+    }
+
 }
+
+#include <debug_helper_disable.h>
 
 #pragma pop_macro("HIGH")
 #pragma pop_macro("LOW")

@@ -84,11 +84,6 @@ void ManangedCallbackTimer::clear()
         if (_callbackTimer->_timer) {
             __LDBG_printf("this=%p timer=%p managed=%p", this, _callbackTimer, _callbackTimer->_timer->_managedTimer._callbackTimer);
             _callbackTimer->_timer = nullptr;
-            // _callbackTimer = nullptr;
-            // auto callbackTimer = _callbackTimer;
-            // callbackTimer->_timer->_managedTimer._callbackTimer = nullptr;
-            // callbackTimer->_timer = nullptr;
-            // __LDBG_assert(_callbackTimer == nullptr);
         }
         _callbackTimer = nullptr;
     }

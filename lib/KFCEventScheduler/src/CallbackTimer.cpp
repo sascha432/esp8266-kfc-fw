@@ -18,8 +18,8 @@ using namespace Event;
 
 CallbackTimer::CallbackTimer(Callback callback, int64_t delay, RepeatType repeat, PriorityType priority) :
     _etsTimer({}),
-    _timer(nullptr),
     _callback(callback),
+    _timer(nullptr),
     _delay(std::max_signed(kMinDelay, delay)),
     _repeat(repeat),
     _priority(priority),
@@ -52,36 +52,6 @@ CallbackTimer::~CallbackTimer()
     __LDBG_assert(isArmed() == false);
 
     ets_timer_done(&_etsTimer);
-}
-
-void CallbackTimer::_initTimer()
-{
-    _rearm();
-}
-
-int64_t CallbackTimer::getInterval() const
-{
-    return _delay;
-}
-
-uint32_t CallbackTimer::getShortInterval() const
-{
-    __DBG_assert(_delay <= std::numeric_limits<uint32_t>::max());
-    return (uint32_t)_delay;
-}
-
-void CallbackTimer::setInterval(milliseconds interval)
-{
-    rearm(interval);
-}
-
-bool CallbackTimer::updateInterval(milliseconds interval)
-{
-    if (interval.count() != _delay) {
-        rearm(interval);
-        return true;
-    }
-    return false;
 }
 
 void CallbackTimer::rearm(int64_t delay, RepeatType repeat, Callback callback)
@@ -151,11 +121,6 @@ void CallbackTimer::_rearm()
     ets_timer_arm_new(&_etsTimer, delay, repeat, true);
 }
 
-bool CallbackTimer::isArmed() const
-{
-    return (_etsTimer.timer_func == Scheduler::__TimerCallback);
-}
-
 void CallbackTimer::_disarm()
 {
     __LDBG_printf("arg=%p this=%p fn=%p armed=%u cb=%p %s:%u", _etsTimer.timer_arg, this, _etsTimer.timer_func, isArmed(), lambda_target(_callback), __S(_file), _line);
@@ -170,29 +135,5 @@ void CallbackTimer::_disarm()
 
 void CallbackTimer::_invokeCallback(CallbackTimerPtr timer)
 {
-    _callback(timer);
-
-    if (__Scheduler._hasTimer(timer)) {
-        if (timer->isArmed() == false) { // check if timer is still armed
-            __LDBG_printf("arg=%p this=%p fn=%p armed=%u cb=%p %s:%u", _etsTimer.timer_arg, this, _etsTimer.timer_func, isArmed(), lambda_target(_callback), __S(_file), _line);
-            // reset can be safely
-            __Scheduler._removeTimer(timer);
-        }
-        else if (_repeat._doRepeat() == false) { // check if the timer has any repetitions left
-            __LDBG_printf("arg=%p this=%p fn=%p armed=%u cb=%p %s:%u", _etsTimer.timer_arg, this, _etsTimer.timer_func, isArmed(), lambda_target(_callback), __S(_file), _line);
-            __Scheduler._removeTimer(timer);
-        }
-        else if (_maxDelayExceeded) {
-            // if max delay is exceeded we need to manually reschedule
-            __LDBG_printf("arg=%p this=%p fn=%p armed=%u cb=%p %s:%u", _etsTimer.timer_arg, this, _etsTimer.timer_func, isArmed(), lambda_target(_callback), __S(_file), _line);
-            _disarm();
-            _rearm();
-        }
-    }
-    // else {
-    //     if (timer->_timer) {
-    //         __LDBG_printf("timer %p _timer=%p removing managed timer", timer, timer->_timer);
-    //         timer->_timer->_managedTimer.clear();
-    //     }
-    // }
+    __Scheduler._invokeCallback(timer);
 }

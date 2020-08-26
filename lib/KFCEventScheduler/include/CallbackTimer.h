@@ -53,30 +53,64 @@ namespace Event {
         void _invokeCallback(CallbackTimerPtr timer);
 
     public:
-        ETSTimer &__getETSTimer() { return _etsTimer; }
-        Callback &__getLoopCallback() { return _callback; }
-        int64_t __getRemainingDelayMillis() const { return (_remainingDelay == 0) ?  0 : ((_remainingDelay == 1) ? (_delay % kMaxDelay) : ((_remainingDelay - 1) * kMaxDelay)); }
+        inline int64_t __getRemainingDelayMillis() const {
+            return (_remainingDelay == 0) ?  0 : ((_remainingDelay == 1) ? (_delay % kMaxDelay) : ((_remainingDelay - 1) * (int64_t)kMaxDelay));
+        }
 
-    private:
-#if _MSC_VER
     public:
-#endif
         ETSTimer _etsTimer;
-        Timer *_timer;
         Callback _callback;
+        Timer *_timer;
         int64_t _delay;
         RepeatType _repeat;
         PriorityType _priority;
-        uint32_t _remainingDelay: 17;
-        uint32_t _callbackScheduled: 1;
-        uint32_t _maxDelayExceeded: 1;
-        uint32_t ____free: 13;
+        uint32_t _remainingDelay : 17;
+        uint32_t _callbackScheduled : 1;
+        uint32_t _maxDelayExceeded : 1;
 
 #if DEBUG_EVENT_SCHEDULER
-    public:
+        uint32_t _line : 13;
         const char *_file;
-        uint32_t _line;
 #endif
     };
+
+    static constexpr auto CallbackTimerSize = sizeof(CallbackTimer);
+
+    inline bool CallbackTimer::isArmed() const
+    {
+        //return (_etsTimer.timer_func == Scheduler::__TimerCallback);
+        return (_etsTimer.timer_func != nullptr);
+    }
+
+    inline void CallbackTimer::_initTimer()
+    {
+        _rearm();
+    }
+
+    inline int64_t CallbackTimer::getInterval() const
+    {
+        return _delay;
+    }
+
+    inline uint32_t CallbackTimer::getShortInterval() const
+    {
+        __DBG_assert(_delay <= std::numeric_limits<uint32_t>::max());
+        return (uint32_t)_delay;
+    }
+
+    inline void CallbackTimer::setInterval(milliseconds interval)
+    {
+        rearm(interval);
+    }
+
+    inline bool CallbackTimer::updateInterval(milliseconds interval)
+    {
+        if (interval.count() != _delay) {
+            rearm(interval);
+            return true;
+        }
+        return false;
+    }
+
 
 }

@@ -307,8 +307,9 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(RTCCLR, "RTCCLR", "Clear RTC memory");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RTCQCC, "RTCQCC", "<0=channel/bssid|1=static ip config.>", "Clear quick connect RTC memory");
 #endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIMO, "WIMO", "<0=off|1=STA|2=AP|3=STA+AP>", "Set WiFi mode, store configuration and reboot");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LOG, "LOG", "[<error|security|warning|notice|debug>,]<message>", "Send message to the logger component");
+#if LOGGER
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LOGDBG, "LOGDBG", "<1|0>", "Enable/disable writing debug output to log://debug");
+#endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(PANIC, "PANIC", "Cause an exception by calling panic()");
 
 #endif
@@ -380,9 +381,8 @@ void at_mode_help_commands()
 #endif
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(WIMO), name);
 #if LOGGER
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(LOG), name);
-#endif
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(LOGDBG), name);
+#endif
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(PANIC), name);
 #endif
 
@@ -1244,12 +1244,6 @@ void at_mode_serial_handle_event(String &commandString)
                 }
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(PWM))) {
-/*
-                if (args.isQueryMode()) {
-                    print_wave_form(Serial);
-                }
-                else
-*/
                 if (args.requireArgs(2, 4)) {
                     auto pin = (uint8_t)args.toInt(0);
                     if (args.equalsIgnoreCase(1, F("input"))) {
@@ -1269,6 +1263,7 @@ void at_mode_serial_handle_event(String &commandString)
                         }
                         auto freq = (uint16_t)args.toIntMinMax(2, 100, 40000, 1000);
                         auto duration = (uint16_t)args.toMillis(3);
+                        String durationStr;
                         if (duration > 0 && duration < 10) {
                             duration = 10;
                         }
@@ -1293,14 +1288,23 @@ void at_mode_serial_handle_event(String &commandString)
                             type = PSTR("analogWrite");
                             analogWrite(pin, level);
                         }
-                        float period = (1000000 / (float)freq);
-                        float dc = period * (level / (float)PWMRANGE);
-                        args.printf_P(PSTR("%s(%u, %u) (%.2f/%.2fµs), f=%uHz"), type, pin, level, dc, period, freq);
                         if (duration) {
-                            args.printf_P(PSTR("setting pin %u to low in %ums"), pin, duration);
-                            _Scheduler.add(duration, false, [pin](Event::CallbackTimerPtr) {
+                            durationStr = PrintString(F(" for %ums"), duration);
+                        }
+                        if (freq == 0) {
+                            args.printf_P(PSTR("%s(%u, %u)%s"), type, pin, level, durationStr.c_str());
+                        }
+                        else {
+                            float cycle = (1000000 / (float)freq);
+                            float dc = cycle * (level / (float)PWMRANGE);
+                            args.printf_P(PSTR("%s(%u, %u) duty cycle=%.2f cycle=%.2fµs f=%uHz%s"), type, pin, level, dc, cycle, freq, durationStr.c_str());
+                        }
+                        if (duration) {
+                            auto &stream = args.getStream();
+                            _Scheduler.add(duration, false, [pin, &stream](Event::CallbackTimerPtr) mutable {
+                                stream.printf_P(PSTR("+PWM: digitalWrite(%u, 0)\n"), pin);
                                 digitalWrite(pin, LOW);
-                            });
+                            }, Event::PriorityType::TIMER);
                         }
                     }
                 }
@@ -1510,17 +1514,6 @@ void at_mode_serial_handle_event(String &commandString)
                 }
             }
 #if LOGGER
-            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LOG))) {
-                if (args.requireArgs(1, 2)) {
-                    if (args.size() == 2) {
-                        _logger.log(_logger.getLevelFromString(args.get(0)), args.toString(1));
-                    }
-                    else {
-                        Logger_error(F("+LOG: %s"), implode(',', args.getArgs()).c_str());
-                    }
-                }
-            }
-#endif
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LOGDBG))) {
                 if (args.requireArgs(1, 1)) {
                     bool enable = args.isTrue(0);
@@ -1549,6 +1542,7 @@ void at_mode_serial_handle_event(String &commandString)
                     }
                 }
             }
+#endif
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(PANIC))) {
                 delay(100);
                 panic();

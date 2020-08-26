@@ -39,8 +39,9 @@ public:
 #endif
 
 #if AT_MODE_SUPPORTED
-    void atModeHelpGenerator() override;
-    bool atModeHandler(AtModeArgs &args) override;
+    virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const override;
+    virtual bool atModeHandler(AtModeArgs &args) override;
+    bool atModeHasStream(AtModeArgs &args) const;
 #endif
 
 public:

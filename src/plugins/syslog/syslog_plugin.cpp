@@ -190,7 +190,7 @@ void SyslogPlugin::getStatus(Print &output)
         output.print(proto);
 
         auto &syslog = _stream->_syslog;
-        if (syslog.getPort() == 0) {
+        if (syslog.getPort() == SyslogFactory::kZeroconfPort) {
             output.print(F(" @ resolving zeroconf"));
         }
         else {
@@ -227,19 +227,39 @@ void SyslogPlugin::prepareDeepSleep(uint32_t sleepTimeMillis)
 
 #if AT_MODE_SUPPORTED
 
-#include "at_mode.h"
+#include <at_mode.h>
+#include <logger.h>
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(SQ, "SQ", "<clear|info|queue>", "Syslog queue command");
+#if LOGGER
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LOG, "LOG", "[<error|security|warning|notice|debug>,]<message>", "Send message to the logger component");
+#endif
 
-void SyslogPlugin::atModeHelpGenerator()
+ATModeCommandHelpArrayPtr SyslogPlugin::atModeCommandHelp(size_t &size) const
 {
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(SQ), getName_P());
+    static ATModeCommandHelpArray tmp PROGMEM = {
+        PROGMEM_AT_MODE_HELP_COMMAND(SQ),
+#if LOGGER
+        PROGMEM_AT_MODE_HELP_COMMAND(LOG),
+#endif
+    };
+    size = sizeof(tmp) / sizeof(tmp[0]);
+    return tmp;
+}
+
+bool SyslogPlugin::atModeHasStream(AtModeArgs &args) const
+{
+    if (!_stream) {
+        args.print(F("Syslog is disabled"));
+        return false;
+    }
+    return true;
 }
 
 bool SyslogPlugin::atModeHandler(AtModeArgs &args)
 {
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SQ))) {
-        if (_stream) {
+        if (atModeHasStream(args)) {
             int cmd = -1;
             if (args.size() >= 1 && (cmd = stringlist_find_P_P(PSTR("queue|info|clear"), args.get(0), '|')) == 2) {
                 // cmd == clear
@@ -253,11 +273,24 @@ bool SyslogPlugin::atModeHandler(AtModeArgs &args)
                 _stream->dumpQueue(args.getStream(), cmd != 1);         // show queue if cmd != info
             }
         }
-        else {
-            args.print(F("Syslog is disabled"));
+        return true;
+    }
+#if LOGGER
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LOG))) {
+        if (atModeHasStream(args)) {
+            if (args.requireArgs(1, 2)) {
+                if (args.size() == 2) {
+                    _logger.log(_logger.getLevelFromString(args.get(0)), args.toString(1));
+                }
+                else {
+                    Logger_error(F("+LOG: %s"), implode(',', args.getArgs()).c_str());
+                }
+            }
         }
         return true;
     }
+#endif
+
     return false;
 }
 

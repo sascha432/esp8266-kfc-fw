@@ -3,8 +3,8 @@
 */
 
 #include <Arduino_compat.h>
+#include <EventScheduler.h>
 #include "ets_sys_win32.h"
-#include "LoopFunctions.h"
 
 extern volatile bool ets_is_running;
 volatile bool ets_is_running = true;
@@ -41,13 +41,42 @@ int main() {
     _ASSERTE(_CrtCheckMemory());
     setup();
     _ASSERTE(_CrtCheckMemory());
+    __start_timer_thread_func();
+    _ASSERTE(_CrtCheckMemory());
     do {
         loop();
         _ASSERTE(_CrtCheckMemory());
+        auto &loopFunctions = LoopFunctions::getVector();
+        bool cleanup = false;
+        for (uint8_t i = 0; i < loopFunctions.size(); i++) { // do not use iterators since the vector can be modifed inside the callback
+            if (loopFunctions[i].deleteCallback) {
+                cleanup = true;
+            }
+            else {
+                _Scheduler.run(Event::PriorityType::NORMAL); // check priority above NORMAL after every loop function
+                _ASSERTE(_CrtCheckMemory());
+                if (loopFunctions[i].callback) {
+                    loopFunctions[i].callback();
+                    _ASSERTE(_CrtCheckMemory());
+                }
+                else {
+                    loopFunctions[i].callbackPtr();
+                    _ASSERTE(_CrtCheckMemory());
+                }
+            }
+        }
+        if (cleanup) {
+            loopFunctions.erase(std::remove(loopFunctions.begin(), loopFunctions.end(), LoopFunctions::Entry::Type::DELETED), loopFunctions.end());
+            loopFunctions.shrink_to_fit();
+        }
+        _Scheduler.run(); // check all events
+        _ASSERTE(_CrtCheckMemory());
         run_scheduled_functions();
         _ASSERTE(_CrtCheckMemory());
-        yield();
+        __loop_do_yield();
         _ASSERTE(_CrtCheckMemory());
-    } while (ets_is_running);
+    } 
+    while (ets_is_running);
+
     return 0;
 }

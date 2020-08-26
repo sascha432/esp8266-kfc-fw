@@ -7,11 +7,12 @@
 #include "ets_timer_win32.h"
 #include <chrono>
 #include <thread>
+#include <mutex>
 
 #pragma pack(push, 4)
 
 constexpr auto etstimer_zerotime = std::chrono::time_point<std::chrono::steady_clock, std::chrono::microseconds>(std::chrono::microseconds(0));
-#define __ETSTimerInitVal           0x23542
+static constexpr uint32_t __ETSTimerInitVal = 0xa23542f3;
 
 static ETSTimer *init_ets_timers() {
 	static ETSTimer root;
@@ -20,17 +21,37 @@ static ETSTimer *init_ets_timers() {
 	return &root;
 }
 
-static bool init_timer_thread_func();
-
 ETSTimer *timer_list = init_ets_timers();
-volatile bool __ets_in_timer_isr = false;
-static bool init_timer_thread = init_timer_thread_func();
+static std::mutex __ets_timer_list_mutex;
+static std::mutex __ets_timer_callback_mutex;
+static bool __ets_timer_callback;
 
-static bool init_timer_thread_func()
+bool can_yield()
+{
+    return (__ets_timer_callback == false);
+}
+
+void __loop_do_yield() 
+{
+    __ets_timer_callback_mutex.lock();
+    yield();
+    __ets_timer_callback_mutex.unlock();
+}
+
+void yield()
+{
+    if (__ets_timer_callback) {
+        //panic();
+        __debugbreak();
+    }
+    Sleep(1);
+}
+
+void __start_timer_thread_func()
 {
     auto thread = std::thread([]() {
         while (ets_is_running) {
-            Sleep(1);
+            __ets_timer_list_mutex.lock();
             ETSTimer *cur = timer_list;
             do {
                 if (can_yield() && cur->timer_func && cur->timer_arg && cur->timer_expire != etstimer_zerotime) {
@@ -41,18 +62,24 @@ static bool init_timer_thread_func()
                         else {
                             cur->timer_expire = etstimer_zerotime;
                         }
-                        __ets_in_timer_isr = true;
+                        __ets_timer_list_mutex.unlock();
+                        __ets_timer_callback_mutex.lock();
+                        __ets_timer_callback = true;
                         cur->timer_func(cur->timer_arg);
-                        __ets_in_timer_isr = false;
+                        __ets_timer_callback = false;
+                        __ets_timer_callback_mutex.unlock();
+                        __ets_timer_list_mutex.lock();
                     }
                 }
                 cur = cur->timer_next;
             } while (cur);
+
+            __ets_timer_list_mutex.unlock();
+            Sleep(1);
         }
     });
     thread.detach();
-    return true;
-};
+}
 
 static ETSTimer *find_timer(ETSTimer *timer)
 {
@@ -121,6 +148,7 @@ static bool timer_initialized(ETSTimer *ptimer)
 
 void ets_timer_setfn(ETSTimer *ptimer, ETSTimerFunc *pfunction, void *parg)
 {
+    __ets_timer_list_mutex.lock();
     if (!timer_initialized(ptimer)) {
         *ptimer = {};
         ptimer->init = __ETSTimerInitVal;
@@ -128,24 +156,28 @@ void ets_timer_setfn(ETSTimer *ptimer, ETSTimerFunc *pfunction, void *parg)
     }
     ptimer->timer_func = pfunction;
     ptimer->timer_arg = parg;
+    __ets_timer_list_mutex.unlock();
 }
 
 void ets_timer_arm_us(ETSTimer *ptimer, uint32_t time_us, bool repeat_flag)
 {
+    __ets_timer_list_mutex.lock();
     assert(timer_initialized(ptimer));
 
     ptimer->timer_period = repeat_flag ? time_us : 0;
     ptimer->timer_expire = std::chrono::high_resolution_clock::now() + std::chrono::microseconds(time_us);
-
+    __ets_timer_list_mutex.unlock();
 }
 
 void ets_timer_arm(ETSTimer *ptimer, uint32_t time_ms, bool repeat_flag)
 {
+    __ets_timer_list_mutex.lock();
     uint64_t time_us = 1000ULL * (uint64_t)time_ms;
 
     assert(timer_initialized(ptimer));
     ptimer->timer_period = repeat_flag ? (uint32_t)time_us : 0;
     ptimer->timer_expire = std::chrono::high_resolution_clock::now() + std::chrono::microseconds(ptimer->timer_period);
+    __ets_timer_list_mutex.unlock();
 }
 
 void ets_timer_arm_new(ETSTimer *ptimer, int time_ms, int repeat_flag, int isMillis)
@@ -160,14 +192,17 @@ void ets_timer_arm_new(ETSTimer *ptimer, int time_ms, int repeat_flag, int isMil
 
 void ets_timer_done(ETSTimer *ptimer)
 {
+    __ets_timer_list_mutex.lock();
     if (timer_initialized(ptimer)) {
         remove_timer(ptimer);
         ptimer->timer_arg = nullptr;
     }
+    __ets_timer_list_mutex.unlock();
 }
 
 void ets_timer_disarm(ETSTimer *ptimer)
 {
+    __ets_timer_list_mutex.lock();
     if (timer_initialized(ptimer)) {
         auto prev = find_timer(ptimer);
         if (prev) {
@@ -175,6 +210,7 @@ void ets_timer_disarm(ETSTimer *ptimer)
             ptimer->timer_period = 0;
         }
     }
+    __ets_timer_list_mutex.unlock();
 }
 
 void ets_timer_init(void)

@@ -48,6 +48,7 @@ typedef uint8_t byte;
 
 bool can_yield();
 void yield();
+void __loop_do_yield();
 void __panic_func(const char *file, int line, const char *func);
 void end_loop(); // exit program
 

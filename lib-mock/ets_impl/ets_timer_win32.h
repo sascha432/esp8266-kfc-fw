@@ -24,6 +24,8 @@ typedef struct _ETSTIMER_ {
 
 extern volatile bool __ets_in_timer_isr;
 extern ETSTimer *timer_list;
+void __start_timer_thread_func();
+
 
 void ets_timer_delay(uint32_t time_ms);
 void ets_timer_delay_us(uint64_t time_us);

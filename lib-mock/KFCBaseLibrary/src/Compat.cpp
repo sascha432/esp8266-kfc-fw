@@ -5,6 +5,7 @@
 #if _MSC_VER
 
 #include "Arduino_compat.h"
+#include <chrono>
 #include <ets_timer_win32.h>
 #include <winternl.h>
 #include <algorithm>
@@ -70,38 +71,21 @@ void analogWrite(uint8_t pin, int value)
     printf("analogWrite(%u, %u)\n", pin, value);
 }
 
-typedef union {
-    FILETIME filetime;
-    uint64_t micros;
-} MicrosTime_t;
-
-static bool init_micros();
-static MicrosTime_t micros_start_time;
-static bool millis_initialized = init_micros();
-
-static bool init_micros()
-{
-    GetSystemTimePreciseAsFileTime(&micros_start_time.filetime);
-    micros_start_time.micros /= 10;
-    return true;
-}
+static auto micros_start_time = std::chrono::high_resolution_clock::now();
 
 uint64_t micros64()
 {
-    MicrosTime_t now;
-    GetSystemTimePreciseAsFileTime(&now.filetime);
-    now.micros /= 10;
-    return now.micros - micros_start_time.micros;
+    return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - micros_start_time).count();
 }
 
 unsigned long millis(void)
 {
-    return (unsigned long)(micros64() / 1000ULL);
+    return static_cast<unsigned long>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - micros_start_time).count());
 }
 
 unsigned long micros(void)
 {
-    return (unsigned long)micros64();
+    return static_cast<unsigned long>(micros64());
 }
 
 void shiftOut(uint8_t dataPin, uint8_t clockPin, uint8_t bitOrder, uint8_t val)

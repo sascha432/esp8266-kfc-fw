@@ -6,11 +6,6 @@
 #include "ets_sys_win32.h"
 #include "ets_timer_win32.h"
 
-bool can_yield()
-{
-	return (__ets_in_timer_isr == false);
-}
-
 void __panic_func(const char *file, int line, const char *func)
 {
 	__debugbreak();
@@ -18,16 +13,8 @@ void __panic_func(const char *file, int line, const char *func)
 	ets_printf("PANIC in %s:%u function %s\n", file, line, func);
 
 	while (ets_is_running) {
-		Sleep(10);
+		Sleep(1);
 	}
-}
-
-void yield()
-{
-	if (__ets_in_timer_isr) {
-		panic();
-	}
-	Sleep(1);
 }
 
 int ets_printf(const char *fmt, ...)

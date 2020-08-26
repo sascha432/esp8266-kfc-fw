@@ -163,7 +163,7 @@ void Sensor_HLW80xx::reconfigure(PGM_P source)
     _calibrationP = sensor.calibrationP;
     _extraDigits = sensor.extraDigits;
     _energyCounter[0] = sensor.energyCounter;
-    __DBG_printf("calibration U=%f I=%f P=%f x_digits=%u energy=%.0f", _calibrationU, _calibrationI, _calibrationP, _extraDigits, (double)_energyCounter[0]);
+    __LDBG_printf("calibration U=%f I=%f P=%f x_digits=%u energy=%.0f", _calibrationU, _calibrationI, _calibrationP, _extraDigits, (double)_energyCounter[0]);
 }
 
 void Sensor_HLW80xx::shutdown()

@@ -63,7 +63,7 @@ void BootstrapMenu::html(PrintInterface &output, ItemsVectorIterator top)
 		__LDBG_printf("menu_id=%d", menuId);
 		if (top->hashURI()) {
 			// menu bar only
-			output.printf_P(PSTR("<li class=\"nav-item\">" "<a class=\"nav-link\" href=\"%s\">%s</a></li>" BOOTSTRAP_MENU_CRLF), top->getUri().c_str(), top->getLabel().c_str());
+			output.printf_P(PSTR("<li class=\"nav-item\">" "<a class=\"nav-link\" href=\"/%s\">%s</a></li>" BOOTSTRAP_MENU_CRLF), top->getUri().c_str(), top->getLabel().c_str());
 		}
 		else if (isValid(std::find(_items.begin(), _items.end(), FindHelper(top->getId(), FindHelper::ParentMenuIdType())))) {
 			// drop down menu
@@ -75,7 +75,7 @@ void BootstrapMenu::html(PrintInterface &output, ItemsVectorIterator top)
 
 			for (auto dropdown = top + 1; dropdown != _items.end(); ++dropdown) {
 				if (dropdown->getParentMenuId() == menuId) {
-					output.printf_P(PSTR("<a class=\"dropdown-item\" href=\"%s\">%s</a>" BOOTSTRAP_MENU_CRLF), dropdown->getUri().c_str(), dropdown->getLabel().c_str());
+					output.printf_P(PSTR("<a class=\"dropdown-item\" href=\"/%s\">%s</a>" BOOTSTRAP_MENU_CRLF), dropdown->getUri().c_str(), dropdown->getLabel().c_str());
 				}
 			}
 			output.printf_P(PSTR("</div></li>" BOOTSTRAP_MENU_CRLF));
@@ -104,7 +104,7 @@ void BootstrapMenu::htmlSubMenu(PrintInterface &output, ItemsVectorIterator top,
 		for (auto iterator = top + 1; iterator != _items.end(); ++iterator) {
 			if (iterator->getParentMenuId() == menuId) {
 				output.printf_P(PSTR(
-						"<a href=\"%s\" class=\"list-group-item list-group-item-action align-items-start%s\">"
+						"<a href=\"/%s\" class=\"list-group-item list-group-item-action align-items-start%s\">"
 						"<h5 class=\"mb-1\">%s</h5></a>" BOOTSTRAP_MENU_CRLF
 					), iterator->getUri().c_str(), active == pos ? PSTR(" active") : emptyString.c_str(), iterator->getLabel().c_str()
 				);

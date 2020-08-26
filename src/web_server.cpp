@@ -465,7 +465,7 @@ void WebServerPlugin::handlerUpdate(AsyncWebServerRequest *request)
 
                 response = request->beginResponse(302);
                 HttpHeaders httpHeaders(false);
-                httpHeaders.add(new HttpLocationHeader(FSPGM(_serial_console_html, "/serial_console.html")));
+                httpHeaders.add(new HttpLocationHeader(String('/') + FSPGM(serial_console_html)));
                 httpHeaders.replace(new HttpConnectionHeader(HttpConnectionHeader::CLOSE));
                 httpHeaders.setAsyncWebServerResponseHeaders(response);
                 request->send(response);
@@ -908,7 +908,7 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
                     plugin->createConfigureForm(PluginComponent::FormCallbackType::DISCARD, formName, *form, request);
                     config.discard();
 #if IOT_WEATHER_STATION
-                request->onDisconnect(__weatherStationAttachCanvas); // unlock on disconnect
+                    request->onDisconnect(__weatherStationAttachCanvas); // unlock on disconnect
 #endif
                 }
             }

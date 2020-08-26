@@ -17,7 +17,7 @@ class SyslogTCP : public Syslog {
 public:
     static constexpr uint16_t kDefaultPort = 514;
     static constexpr uint16_t kDefaultPortTLS = 6514;
-    static constexpr uint16_t kMaxIdleSeconds = 15;
+    static constexpr uint16_t kMaxIdleSeconds = 90;
 
 public:
     SyslogTCP(SyslogParameter &&parameter, SyslogQueue &queue, const String &host, uint16_t port = kDefaultPort, bool useTLS = false);

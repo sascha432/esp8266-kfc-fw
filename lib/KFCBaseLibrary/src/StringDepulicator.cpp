@@ -85,6 +85,7 @@ const char *StringBuffer::addString(const char *str, size_t len)
     return ptr;
 }
 
+#if DEBUG_STRING_DEDUPLICATOR
 void StringBuffer::dump(Print &output) const
 {
 #if 1
@@ -101,6 +102,7 @@ void StringBuffer::dump(Print &output) const
     }
 #endif
 }
+#endif
 
 StringBufferPool::StringBufferPool() : _pool()
 {

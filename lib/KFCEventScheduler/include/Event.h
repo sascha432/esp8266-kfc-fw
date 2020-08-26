@@ -8,7 +8,7 @@
 #include <chrono>
 
 #ifndef DEBUG_EVENT_SCHEDULER
-#define DEBUG_EVENT_SCHEDULER                           1
+#define DEBUG_EVENT_SCHEDULER                           0
 #endif
 
 #ifndef DISABLE_GLOBAL_EVENT_SCHEDULER

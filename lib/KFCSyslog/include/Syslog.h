@@ -5,7 +5,7 @@
 #pragma once
 
 #ifndef DEBUG_SYSLOG
-#define DEBUG_SYSLOG                            1
+#define DEBUG_SYSLOG                            0
 #endif
 
 #include <Arduino_compat.h>

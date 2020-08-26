@@ -62,10 +62,10 @@ void SyslogMemoryQueue::dump(Print &output, bool items) const
     if (_timer) {
         uint32_t ms = millis();
         if (ms <= _timer) {
-            output.printf_P(PSTR("Locked for %.3f seconds, "), (_timer - ms) / 1000.0);
+            output.printf_P(PSTR("locked=%.3fs "), (_timer - ms) / 1000.0);
         }
     }
-    output.printf_P(PSTR("%u bytes, max. size %u, %u message(s)\n"), _curSize, _maxSize, _items.size());
+    output.printf_P(PSTR("size=%u max=%u messages=%u\n"), _curSize, _maxSize, _items.size());
     if (items) {
         for(const auto &item: _items) {
             output.printf_P(PSTR("id=%08x locked=%u errors=%u msg="), item.getId(), item.isLocked(), item.getFailureCount());

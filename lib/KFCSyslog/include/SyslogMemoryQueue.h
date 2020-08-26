@@ -7,6 +7,8 @@
 #include <Arduino_compat.h>
 #include "SyslogQueue.h"
 
+class SyslogPlugin;
+
 // Stores multiple messages in memory to resend them if an error occurs. If it runs out of space, new messages are dropped
 class SyslogMemoryQueue : public SyslogQueue {
 public:
@@ -25,6 +27,8 @@ public:
     virtual bool empty() const;
 
 private:
+    friend SyslogPlugin;
+
     SyslogMemoryQueue(SyslogQueueManager *manager, size_t maxSize);
 
     bool _isAvailable() const;

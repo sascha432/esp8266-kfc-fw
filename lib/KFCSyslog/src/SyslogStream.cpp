@@ -111,9 +111,12 @@ size_t SyslogStream::queueSize() const
     return _syslog._queue.size();
 }
 
-void SyslogStream::dumpQueue(Print &print, bool items) const
+void SyslogStream::dumpQueue(Print &output, bool items) const
 {
-    return _syslog._queue.dump(print, items);
+    if (_syslog.getState(Syslog::StateType::HAS_CONNECTION)) {
+        output.printf_P(PSTR("connected=%d "), _syslog.getState(Syslog::StateType::CONNECTED));
+    }
+    return _syslog._queue.dump(output, items);
 }
 
 // String SyslogStream::getLevel() const

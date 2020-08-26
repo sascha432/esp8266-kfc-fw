@@ -44,11 +44,7 @@ SyslogTCP::~SyslogTCP()
 void SyslogTCP::transmit(const SyslogQueueItem &item)
 {
     auto &message = item.getMessage();
-#if DEBUG_SYSLOG
-    if (!String_startsWith(message, F("::transmit '"))) {
-        __LDBG_printf("::transmit id=%u msg=%s%s", item.getId(), _getHeader(item.getMillis()).c_str(), message.c_str());
-    }
-#endif
+    __LDBG_printf("id=%u msg=%s%s", item.getId(), _getHeader(item.getMillis()).c_str(), message.c_str());
     __LDBG_assert(_ack == 0);
     __LDBG_assert(_queueId == 0);
 #if DEBUG_SYSLOG
@@ -65,6 +61,23 @@ void SyslogTCP::transmit(const SyslogQueueItem &item)
     _ack = _buffer.length();
 
     _connect();
+}
+
+uint32_t SyslogTCP::getState(StateType state)
+{
+    switch (state) {
+    case StateType::CAN_SEND:
+        return (_port != 0) && (_host || _address.isSet()) && WiFi.isConnected();
+    case StateType::IS_SENDING:
+        return _queueId;
+    case StateType::CONNECTED:
+        return _client && _client->connected();
+    case StateType::HAS_CONNECTION:
+        return true;
+    default:
+        break;
+    }
+    return false;
 }
 
 void SyslogTCP::clear()
@@ -121,16 +134,6 @@ String SyslogTCP::getHostname() const
 uint16_t SyslogTCP::getPort() const
 {
     return _port;
-}
-
-bool SyslogTCP::canSend() const
-{
-    return (_port != 0) && (_host || _address.isSet()) && WiFi.isConnected();
-}
-
-bool SyslogTCP::isSending()
-{
-	 return _queueId;
 }
 
 void SyslogTCP::__onDisconnect()

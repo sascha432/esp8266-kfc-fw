@@ -78,14 +78,36 @@ class SyslogPlugin;
 
 class Syslog {
 public:
+    enum class StateType {
+        NONE = 0,
+        CAN_SEND,               // ready to send messages
+        IS_SENDING,             // busy sending
+        HAS_CONNECTION,         // connection based?
+        CONNECTED,              // is connected?
+    };
+
+public:
     Syslog(const Syslog &) = delete;
 
     Syslog(SyslogParameter &&parameter, SyslogQueue &queue);
     virtual ~Syslog();
 
     virtual bool setupZeroConf(const String &hostname, const IPAddress &address, uint16_t port) = 0;
-    virtual bool canSend() const = 0;
-	virtual bool isSending() = 0;
+    virtual uint32_t getState(StateType type) = 0;
+
+    inline bool canSend() {
+        return getState(StateType::CAN_SEND);
+    }
+    inline bool isSending() {
+        return getState(StateType::IS_SENDING);
+    }
+    inline bool isConnected() {
+        return getState(StateType::CONNECTED);
+    }
+    inline bool hasConnection() {
+        return getState(StateType::HAS_CONNECTION);
+    }
+
     virtual void transmit(const SyslogQueueItem &item) = 0;
     virtual String getHostname() const = 0;
     virtual uint16_t getPort() const = 0;

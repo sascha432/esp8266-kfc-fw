@@ -87,13 +87,14 @@ void SyslogFile::transmit(const SyslogQueueItem &item)
     _queue.remove(item.getId(), false);
 }
 
-bool SyslogFile::canSend() const
+uint32_t SyslogFile::getState(StateType state)
 {
-    return true;
-}
-
-bool SyslogFile::isSending()
-{
+    switch (state) {
+    case StateType::CAN_SEND:
+        return true;
+    default:
+        break;
+    }
     return false;
 }
 

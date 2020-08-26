@@ -64,25 +64,21 @@ uint16_t SyslogUDP::getPort() const
     return _port;
 }
 
-bool SyslogUDP::canSend() const
+uint32_t SyslogUDP::getState(StateType state)
 {
-    return (_port != 0) && (_host || _address.isSet()) && WiFi.isConnected();
-}
-
-bool SyslogUDP::isSending()
-{
+    switch (state) {
+    case StateType::CAN_SEND:
+        return (_port != 0) && (_host || _address.isSet()) && WiFi.isConnected();
+    default:
+        break;
+    }
     return false;
 }
 
 void SyslogUDP::transmit(const SyslogQueueItem &item)
 {
     auto &message = item.getMessage();
-
-#if DEBUG_SYSLOG
-    if (!String_startsWith(message, F("::transmit '"))) {
-        __LDBG_printf("::transmit id=%u msg=%s%s", item.getId(), _getHeader(item.getMillis()).c_str(), message.c_str());
-    }
-#endif
+    __LDBG_printf("id=%u msg=%s%s", item.getId(), _getHeader(item.getMillis()).c_str(), message.c_str());
 
     bool success = false;
     while(true) {

@@ -6,6 +6,12 @@
 
 #include <Arduino_compat.h>
 
+#if DEBUG_EVENT_SCHEDULER
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
 class Syslog;
 
 class SyslogQueueItem {
@@ -110,10 +116,36 @@ protected:
 
     // get size of SyslogQueueItem::Ptr for a particular message
     size_t _getQueueItemSize(const String &msg) const;
+
+protected:
     uint32_t _dropped;
     SyslogQueueManager *_manager;
 };
 
+inline uint32_t SyslogQueue::getDropped() const
+{
+    return _dropped;
+}
+
+inline void SyslogQueue::setManager(SyslogQueueManager &manager)
+{
+    _manager = &manager;
+}
+
+inline void SyslogQueue::removeManager()
+{
+    _manager = nullptr;
+}
+
+inline void SyslogQueue::managerQueueSize(uint32_t size, bool isAvailable)
+{
+    __LDBG_printf("size=%u available=%u", size, isAvailable);
+    if (_manager) {
+        _manager->queueSize(size, isAvailable);
+    }
+}
+
+#include <debug_helper_disable.h>
 
 #if 0
 // persistant storage that survives reboots and can store a significant amount of messages if the syslog server isn't available

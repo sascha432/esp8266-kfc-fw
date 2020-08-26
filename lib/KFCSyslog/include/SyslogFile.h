@@ -20,9 +20,7 @@ public:
 
     virtual bool setupZeroConf(const String &hostname, const IPAddress &address, uint16_t port);
     virtual void transmit(const SyslogQueueItem &item);
-    virtual bool canSend() const;
-    virtual bool isSending();
-
+    virtual uint32_t getState(StateType state);
     virtual String getHostname() const;
     virtual uint16_t getPort() const;
 

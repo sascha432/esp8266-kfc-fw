@@ -178,7 +178,7 @@ private:
     typedef std::vector<DimmerButton> DimmerButtonVector;
 
     DimmerButtonVector _buttons;
-    std::array<EventScheduler::Timer, IOT_DIMMER_MODULE_CHANNELS> _turnOffTimer;
+    std::array<Event::Timer, IOT_DIMMER_MODULE_CHANNELS> _turnOffTimer;
     std::array<uint8_t, IOT_DIMMER_MODULE_CHANNELS> _turnOffTimerRepeat;
     std::array<int16_t, IOT_DIMMER_MODULE_CHANNELS> _turnOffLevel;
 #endif

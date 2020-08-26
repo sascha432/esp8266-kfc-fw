@@ -39,7 +39,7 @@ void DimmerModulePlugin::getStatus(Print &out)
 
 void Driver_DimmerModule::_begin()
 {
-    _debug_println();
+    __LDBG_println();
     Dimmer_Base::_begin();
     _beginMqtt();
     _beginButtons();
@@ -166,7 +166,7 @@ bool Driver_DimmerModule::off(uint8_t channel)
 // get brightness values from dimmer
 void Driver_DimmerModule::_getChannels()
 {
-    _debug_println();
+    __LDBG_println();
 
     if (_wire.lock()) {
         _wire.beginTransmission(DIMMER_I2C_ADDRESS);
@@ -190,13 +190,6 @@ void Driver_DimmerModule::_getChannels()
 #endif
         }
         _wire.unlock();
-
-#if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
-    // sensors are initialized after the dimmer plugin
-    _Scheduler.add(100, false, [this](Event::TimerPtr &) {
-        _setDimmingLevels();
-    });
-#endif
     }
 }
 
@@ -351,7 +344,7 @@ void Driver_DimmerModule::_buttonShortPress(uint8_t channel, bool up)
         // single short press, start timer
         // _turnOffTimerRepeat[channel] will be 0 for a single button down press
 
-        if (_turnOffTimer[channel].active()) {
+        if (_turnOffTimer[channel]) {
             _turnOffTimerRepeat[channel]++;
             _turnOffTimer[channel]->rearm(_config.shortpress_no_repeat_time, false);     // rearm timer after last keypress
         }
@@ -365,7 +358,7 @@ void Driver_DimmerModule::_buttonShortPress(uint8_t channel, bool up)
                         _channels[channel].setStoredBrightness(_turnOffLevel[channel]); // restore level to when the button was pressed
                     }
                 }
-            });
+            }, Event::PriorityType::HIGHEST);
         }
         if (up) {
             _buttonRepeat(channel, true, 0);        // short press up = fire repeat event
@@ -447,6 +440,10 @@ void DimmerModulePlugin::setup(SetupModeType mode)
 {
     setupWebServer();
     _begin();
+    dependsOn(F("sensor"), [this](const PluginComponent *plugin) {
+        __LDBG_printf("sensor=%p loaded", plugin);
+        this->_setDimmingLevels();
+    });
 }
 
 void DimmerModulePlugin::reconfigure(const String &source)

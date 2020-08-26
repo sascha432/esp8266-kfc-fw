@@ -1196,13 +1196,13 @@ void at_mode_serial_handle_event(String &commandString)
                 }
                 else if (args.size() == 1) {
                     static Event::Timer timer;
-                    if (args.isTrue(0) && !timer.active()) {
+                    if (args.isTrue(0) && !timer) {
                         args.print(FSPGM(started));
                         _Timer(timer).add(1000, true, [&output](Event::CallbackTimerPtr timer) {
                             PinMonitor::getInstance()->dumpPins(output);
                         });
                     }
-                    else if (args.isFalse(0) && timer.active()) {
+                    else if (args.isFalse(0) && timer) {
                         timer.remove();
                         args.print(FSPGM(stopped));
                     }

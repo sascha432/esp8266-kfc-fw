@@ -47,10 +47,10 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
 
     auto &ui = form.getFormUIConfig();
     ui.setTitle(F("Blinds Controller"));
-    ui.setContainerId(F("blinds_setttings"));
+    ui.setContainerId(F("blinds_settings"));
     ui.setStyle(FormUI::StyleType::ACCORDION);
 
-    if (String_equals(formName, PSTR("blinds"))) {
+    if (String_equals(formName, PSTR("channels"))) {
 
         for (uint8_t i = 0; i < kChannelCount; i++) {
             String prefix = PrintString(F("ch%u_"), i);
@@ -128,7 +128,6 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
         }
 
         closeGroup.end();
-
 
     }
     else {

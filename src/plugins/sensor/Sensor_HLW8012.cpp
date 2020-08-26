@@ -24,8 +24,8 @@ using KFCConfigurationClasses::Plugins;
 
 static Sensor_HLW8012 *sensor = nullptr;
 static volatile uint32_t energyCounter = 0;
-static volatile Sensor_HLW8012::InterruptBuffer _interruptBufferCF;
-static volatile Sensor_HLW8012::InterruptBuffer _interruptBufferCF1;
+static Sensor_HLW8012::InterruptBuffer _interruptBufferCF;
+static Sensor_HLW8012::InterruptBuffer _interruptBufferCF1;
 
 extern "C" void ICACHE_RAM_ATTR Sensor_HLW8012_callbackCF()
 {
@@ -117,8 +117,7 @@ void Sensor_HLW8012::_loop()
         // add energy counter
         // decltype(energyCounter) tempCounter2 = 0;
         noInterrupts();
-        auto tempCounter = energyCounter;
-        energyCounter = 0;
+        auto tempCounter = std::exchange(energyCounter, 0);
         interrupts();
         if (IOT_SENSOR_HLW80xx_NO_NOISE(_noiseLevel)) {
             _incrEnergyCounters(tempCounter);
@@ -184,7 +183,10 @@ bool Sensor_HLW8012::_processInterruptBuffer(InterruptBuffer &buffer, SensorInpu
 {
     auto settings = input.getSettings();
 
-    if (buffer.size() >= 2) {
+    noInterrupts();
+    auto size = buffer.size();
+    interrupts();
+    if (size >= 2) {
 
 #if IOT_SENSOR_HLW80xx_DATA_PLOT
         auto client = _getWebSocketClient();
@@ -207,10 +209,12 @@ bool Sensor_HLW8012::_processInterruptBuffer(InterruptBuffer &buffer, SensorInpu
         // tested up to 5KHz
         // jitter +-0.03Hz @ 500Hz
 
+        noInterrupts();
         auto iterator = buffer.begin();
         auto lastValue = *iterator;
         while(++iterator != buffer.end()) {
             auto value = *iterator;
+            interrupts();
             auto diff = __inline_get_time_diff(lastValue, value);
             lastValue = value;
 
@@ -288,11 +292,11 @@ bool Sensor_HLW8012::_processInterruptBuffer(InterruptBuffer &buffer, SensorInpu
             }
 #endif
 
+        noInterrupts();
     }
 
     // copy last value and items that have not been processed
     --iterator;
-    noInterrupts();
     // buffer = std::move(buffer.slice(iterator, buffer.end()));           // takes ~20-30µs
     buffer.shrink(iterator, buffer.end());                              // <1µs
     interrupts();
@@ -331,16 +335,16 @@ bool Sensor_HLW8012::_processInterruptBuffer(InterruptBuffer &buffer, SensorInpu
                         _power,
                         _getEnergy(0),
                         _getPowerFactor(),
-    #if IOT_SENSOR_HLW80xx_NOISE_SUPPRESSION
+#if IOT_SENSOR_HLW80xx_NOISE_SUPPRESSION
                         _noiseLevel,
-    #else
+#else
                         0.0f,
-    #endif
-    #if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
+#endif
+#if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
                         _dimmingLevel
-    #else
+#else
                         -1.0f
-    #endif
+#endif
                     };
                     buffer += sizeof(header_t);
                     memcpy(buffer, _plotData.data(), _plotData.size() * sizeof(*_plotData.data()));
@@ -512,7 +516,7 @@ bool Sensor_HLW8012::atModeHandler(AtModeArgs &args)
                         _Timer(_dumpTimer).add(500, true, [this, &serial, data](Event::CallbackTimerPtr timer) mutable {
                             if (_voltage) {
                                 if (data.max-- == 0) {
-                                    timer->detach();
+                                    timer->disarm();
                                     _calibrationU = Plugins::Sensor::getConfig().hlw80xx.calibrationU;
                                 }
                                 data.sum += _voltage;
@@ -534,7 +538,7 @@ bool Sensor_HLW8012::atModeHandler(AtModeArgs &args)
                         _Timer(_dumpTimer).add(500, true, [this, &serial, data, dimmingLevel](Event::CallbackTimerPtr timer) mutable {
                             if (_current) {
                                 if (data.max-- == 0) {
-                                    timer->detach();
+                                    timer->disarm();
                                     _calibrationI = Plugins::Sensor::getConfig().hlw80xx.calibrationI;
 #if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
                                     _dimmingLevel = dimmingLevel;
@@ -554,7 +558,7 @@ bool Sensor_HLW8012::atModeHandler(AtModeArgs &args)
                         _Timer(_dumpTimer).add(500, true, [this, &serial, data](Event::CallbackTimerPtr timer) mutable {
                             if (_power) {
                                 if (data.max-- == 0) {
-                                    timer->detach();
+                                    timer->disarm();
                                     _calibrationP = Plugins::Sensor::getConfig().hlw80xx.calibrationP;
                                 }
                                 data.sum += _power;

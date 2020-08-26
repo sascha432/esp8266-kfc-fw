@@ -619,12 +619,6 @@ void Driver_4ChDimmer::_getChannels()
             }
         }
         _wire.unlock();
-
-#if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
-        LoopFunctions::callOnce([this]() {
-            _setDimmingLevels();
-        });
-#endif
     }
 }
 
@@ -660,6 +654,10 @@ void AtomicSunPlugin::setup(SetupModeType mode)
 {
     _begin();
     setupWebServer();
+    dependsOn(F("sensor"), [this](const PluginComponent *plugin) {
+        __LDBG_printf("sensor=%p loaded", plugin);
+        _setDimmingLevels();
+    });
 }
 
 void AtomicSunPlugin::reconfigure(const String &source)

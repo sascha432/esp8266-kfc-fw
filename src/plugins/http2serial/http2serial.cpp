@@ -23,11 +23,16 @@
 #include <debug_helper_disable.h>
 #endif
 
+FLASH_STRING_GENERATOR_AUTO_INIT(
+    AUTO_STRING_DEF(serial_console_html, "serial_console.html")
+    AUTO_STRING_DEF(_serial_console, "/serial_console")
+    AUTO_STRING_DEF(Serial_Console, "Serial Console")
+);
+
 using KFCConfigurationClasses::System;
 
 Http2Serial *Http2Serial::_instance = nullptr;
 WsClientAsyncWebSocket *wsSerialConsole = nullptr;
-
 
 Http2Serial::Http2Serial() : _client(serialHandler.addClient(onData, SerialHandler::EventType::RW))
 {
@@ -190,7 +195,7 @@ public:
     virtual void shutdown() override;
 
     virtual void createMenu() override {
-        bootstrapMenu.addSubMenu(F("Serial Console"), FSPGM(_serial_console_html), navMenu.util);
+        bootstrapMenu.addSubMenu(FSPGM(Serial_Console), FSPGM(serial_console_html), navMenu.util);
     }
 
 #if AT_MODE_SUPPORTED
@@ -230,7 +235,7 @@ void Http2SerialPlugin::setup(SetupModeType mode)
 {
     auto server = WebServerPlugin::getWebServerObject();
     if (server) {
-        auto ws = new WsClientAsyncWebSocket(F("/serial_console"), &wsSerialConsole);
+        auto ws = new WsClientAsyncWebSocket(FSPGM(_serial_console), &wsSerialConsole);
         ws->onEvent(http2serial_event_handler);
         server->addHandler(ws);
         __LDBG_printf("Web socket for http2serial running on port %u", System::WebServer::getConfig().port);

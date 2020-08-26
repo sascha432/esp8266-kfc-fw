@@ -219,18 +219,26 @@ void Sensor_HLW80xx::createConfigureForm(AsyncWebServerRequest *request, Form &f
 
 }
 
+void Sensor_HLW80xx::_publishPersistantStorage(ConfigType *cfgPtr)
+{
+    auto client = MQTTClient::getClient();
+    if (client && client->isConnected()) {
+        ConfigType cfg = cfgPtr ? *cfgPtr : Plugins::Sensor::getConfig().hlw80xx;
+        PrintString data;
+        data.printf_P(PSTR("U=%f,I=%f,P=%f,e1="), cfg.calibrationU, cfg.calibrationI, cfg.calibrationP);
+        data.print(getEnergyPrimaryCounter());
+        data.print(F(",e2="));
+        data.print(getEnergySecondaryCounter());
+
+        client->publishPersistantStorage(MQTTClient::StorageFrequencyType::DAILY, F("hlw80xx"), data);
+    }
+}
+
 void Sensor_HLW80xx::configurationSaved(Form *form)
 {
     auto &cfg = Plugins::Sensor::getWriteableConfig();
     getEnergyPrimaryCounter() = cfg.hlw80xx.energyCounter;
-
-    auto container = ContainerPtr(new Container());
-    container->add(Item::create(F("hlw80xx_u"), cfg.hlw80xx.calibrationU));
-    container->add(Item::create(F("hlw80xx_i"), cfg.hlw80xx.calibrationI));
-    container->add(Item::create(F("hlw80xx_p"), cfg.hlw80xx.calibrationP));
-    container->add(Item::create(F("hlw80xx_e1"), getEnergyPrimaryCounter()));
-    container->add(Item::create(F("hlw80xx_e2"), getEnergySecondaryCounter()));
-    config.callPersistantConfig(container);
+    _publishPersistantStorage(&cfg.hlw80xx);
 }
 
 void Sensor_HLW80xx::publishState(MQTTClient *client)
@@ -274,11 +282,7 @@ void Sensor_HLW80xx::_saveEnergyCounter()
         file.close();
     }
     _saveEnergyCounterTimeout = millis() + IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT;
-
-    config.callPersistantConfig(ContainerPtr(new Container()), [this](Container &data) {
-        data.replace(Item::create(F("hlw80xx_e1_a"), getEnergyPrimaryCounter()));
-        data.replace(Item::create(F("hlw80xx_e2_a"), getEnergySecondaryCounter()));
-    });
+    _publishPersistantStorage(nullptr);
 #else
     _saveEnergyCounterTimeout = ~0;
 #endif

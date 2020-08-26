@@ -11,6 +11,7 @@
 // HLW8032 (and CSE7759B, ...)
 
 #include <Arduino_compat.h>
+#include <kfc_fw_config.h>
 #include "WebUIComponent.h"
 #include "plugins.h"
 #include "MQTTSensor.h"
@@ -46,7 +47,7 @@
 
 // enables output for the HLW8012 live graph
 #ifndef IOT_SENSOR_HLW80xx_DATA_PLOT
-#define IOT_SENSOR_HLW80xx_DATA_PLOT                    1
+#define IOT_SENSOR_HLW80xx_DATA_PLOT                    0
 #endif
 
 // voltage divider for V2P
@@ -177,6 +178,7 @@ class Sensor_HLW8032;
 class Sensor_HLW80xx : public MQTTSensor {
 public:
     using EnergyCounterArray = std::array<uint64_t, IOT_SENSOR_HLW80xx_NUM_ENERGY_COUNTERS>;
+    using ConfigType = KFCConfigurationClasses::Plugins::Sensor::SensorConfig_t::HLW80xxConfig_t;
 
 public:
     Sensor_HLW80xx(const String &name);
@@ -223,6 +225,7 @@ protected:
     void _saveEnergyCounter();
     void _loadEnergyCounter();
     void _incrEnergyCounters(uint32_t count);
+    void _publishPersistantStorage(ConfigType *cfg);
 
     JsonNumber _currentToNumber(float current) const;
     JsonNumber _energyToNumber(float energy) const;

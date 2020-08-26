@@ -7,7 +7,7 @@
 #include <Arduino_compat.h>
 #include <EventScheduler.h>
 #include <kfc_fw_config.h>
-#include "Syslog.h"
+#include <Syslog.h>
 #include "plugins.h"
 
 #if !defined(SYSLOG_SUPPORT) || !SYSLOG_SUPPORT
@@ -20,7 +20,7 @@
 #define SYSLOG_PLUGIN_QUEUE_SIZE            1024
 #endif
 
-class SyslogPlugin : public PluginComponent {
+class SyslogPlugin : public PluginComponent, public SyslogQueueManager {
 public:
     static constexpr size_t kMaxQueueSize = SYSLOG_PLUGIN_QUEUE_SIZE;
 
@@ -45,6 +45,8 @@ public:
 
 public:
     static void timerCallback(Event::CallbackTimerPtr timer);
+    virtual void queueSize(uint32_t size, bool isAvailable);
+    static NameType protocolToString(SyslogProtocol proto);
 
 private:
     void _zeroConfCallback(const String &hostname, const IPAddress &address, uint16_t port, MDNSResolver::ResponseType type);

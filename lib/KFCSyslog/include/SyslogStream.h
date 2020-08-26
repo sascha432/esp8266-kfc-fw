@@ -44,7 +44,7 @@ public:
     void deliverQueue();
     void clearQueue();
     size_t queueSize() const;
-    void dumpQueue(Print &print) const;
+    void dumpQueue(Print &print, bool items) const;
 
     virtual int available() override;
     virtual int read() override;

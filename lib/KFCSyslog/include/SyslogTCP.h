@@ -11,13 +11,15 @@
 #include <ESPAsyncTCP.h>
 #elif defined(ESP32)
 #include <AsyncTCP.h>
+#else
+#include <ESPAsyncTCP.h>
 #endif
 
 class SyslogTCP : public Syslog {
 public:
     static constexpr uint16_t kDefaultPort = 514;
     static constexpr uint16_t kDefaultPortTLS = 6514;
-    static constexpr uint16_t kMaxIdleSeconds = 90;
+    static constexpr uint16_t kMaxIdleSeconds = 30;
 
 public:
     SyslogTCP(SyslogParameter &&parameter, SyslogQueue &queue, const String &host, uint16_t port = kDefaultPort, bool useTLS = false);
@@ -39,9 +41,11 @@ public:
     static void _onPoll(void *arg, AsyncClient *client);
 
 private:
-    void __onAck(AsyncClient *client, size_t len, uint32_t time);
-    void __onError(AsyncClient *client, int8_t error);
-    void _sendQueue(AsyncClient *client);
+    void __onAck(size_t len, uint32_t time);
+    void __onError(int8_t error);
+    void __onTimeout(uint32_t time);
+    void __onPoll();
+    void __sendQueue();
 
 private:
     void _connect();
@@ -52,9 +56,12 @@ private:
     void _status(bool success);
 #endif
 
+    void _allocClient();
+    void _freeClient();
+
+    AsyncClient *_client;
     char *_host;
     IPAddress _address;
-    AsyncClient _client;
     Buffer _buffer;                     // data to write for _queueid
     uint32_t _queueId;                  // queue id
     uint32_t _port: 16;

@@ -307,7 +307,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(RTCCLR, "RTCCLR", "Clear RTC memory");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RTCQCC, "RTCQCC", "<0=channel/bssid|1=static ip config.>", "Clear quick connect RTC memory");
 #endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIMO, "WIMO", "<0=off|1=STA|2=AP|3=STA+AP>", "Set WiFi mode, store configuration and reboot");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LOG, "LOG", "<message>", "Send an error to the logger component");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LOG, "LOG", "[<error|security|warning|notice|debug>,]<message>", "Send message to the logger component");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LOGDBG, "LOGDBG", "<1|0>", "Enable/disable writing debug output to log://debug");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(PANIC, "PANIC", "Cause an exception by calling panic()");
 
@@ -379,7 +379,9 @@ void at_mode_help_commands()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(RTCQCC), name);
 #endif
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(WIMO), name);
+#if LOGGER
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(LOG), name);
+#endif
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(LOGDBG), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(PANIC), name);
 #endif
@@ -866,6 +868,7 @@ void at_mode_serial_handle_event(String &commandString)
                 args.printf_P(PSTR("sizeof(std::list<int>): %u"), sizeof(std::list<int>));
                 args.printf_P(PSTR("sizeof(FormField): %u"), sizeof(FormField));
                 args.printf_P(PSTR("sizeof(FormUI:UI): %u"), sizeof(FormUI::UI));
+                args.printf_P(PSTR("sizeof(AsyncClient): %u"), sizeof(AsyncClient));
 #if DEBUG
                 String hash;
                 if (System::Firmware::getElfHashHex(hash)) {
@@ -1506,11 +1509,22 @@ void at_mode_serial_handle_event(String &commandString)
                     config.restartDevice();
                 }
             }
+#if LOGGER
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LOG))) {
-                if (args.requireArgs(1)) {
-                    Logger_error(F("+LOG: %s"), implode(',', args.getArgs()).c_str());
+                if (args.requireArgs(1, 2)) {
+                    if (args.size() == 2) {
+                        int level = stringlist_find_P_P(PSTR("error|security|warning|notice|debug"), args.get(0), '|'); // match Logger::LogLevel
+                        if (level != -1) {
+                            level = LogLevel::LOGLEVEL_ERROR;
+                        }
+                        _logger.log(static_cast<LogLevel>(level), args.toString(1));
+                    }
+                    else {
+                        Logger_error(F("+LOG: %s"), implode(',', args.getArgs()).c_str());
+                    }
                 }
             }
+#endif
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LOGDBG))) {
                 if (args.requireArgs(1, 1)) {
                     bool enable = args.isTrue(0);

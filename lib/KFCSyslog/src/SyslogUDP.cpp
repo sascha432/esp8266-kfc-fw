@@ -41,7 +41,7 @@ bool SyslogUDP::setupZeroConf(const String &hostname, const IPAddress &address, 
     if (address.isSet()) {
         _address = address;
     }
-    else {
+    else if (hostname.length()) {
         _host = strdup(hostname.c_str());
     }
     _port = port;
@@ -56,7 +56,7 @@ String SyslogUDP::getHostname() const
     if (_address.isSet()) {
         return _address.toString();
     }
-    return F("N/A");
+    return emptyString;
 }
 
 uint16_t SyslogUDP::getPort() const
@@ -66,7 +66,7 @@ uint16_t SyslogUDP::getPort() const
 
 bool SyslogUDP::canSend() const
 {
-    return (_host || _address.isSet()) && WiFi.isConnected();
+    return (_port != 0) && (_host || _address.isSet()) && WiFi.isConnected();
 }
 
 bool SyslogUDP::isSending()

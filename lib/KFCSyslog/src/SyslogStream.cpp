@@ -94,7 +94,7 @@ int SyslogStream::peek()
 void SyslogStream::deliverQueue()
 {
     _startMillis = _timeout + millis();
-    while(millis() < _startMillis && !_syslog.isSending() && _syslog._queue.canSend()) {
+    while(millis() < _startMillis && !_syslog.isSending() && _syslog._queue.isAvailable()) {
         _syslog.transmit(_syslog._queue.get());
 	}
     if (_syslog._queue.empty() && _timer) {
@@ -113,9 +113,9 @@ size_t SyslogStream::queueSize() const
     return _syslog._queue.size();
 }
 
-void SyslogStream::dumpQueue(Print &print) const
+void SyslogStream::dumpQueue(Print &print, bool items) const
 {
-    return _syslog._queue.dump(print);
+    return _syslog._queue.dump(print, items);
 }
 
 // String SyslogStream::getLevel() const

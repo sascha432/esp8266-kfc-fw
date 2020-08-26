@@ -20,7 +20,6 @@
 #define Logger_security                 _logger.security
 #define Logger_warning                  _logger.warning
 #define Logger_notice                   _logger.notice
-#define Logger_access                   _logger.access
 #define Logger_debug                    _logger.debug
 
 class Logger;

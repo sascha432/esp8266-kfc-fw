@@ -3,6 +3,7 @@
  */
 
 #include "syslog_plugin.h"
+#include <SyslogMemoryQueue.h>
 
 #if DEBUG_SYSLOG
 #include <debug_helper_enable.h>
@@ -61,68 +62,88 @@ void SyslogPlugin::timerCallback(Event::CallbackTimerPtr timer)
     plugin._timerCallback(timer);
 }
 
+void SyslogPlugin::queueSize(uint32_t size, bool isAvailable)
+{
+    __LDBG_printf("size=%u available=%u timer=%u stream=%p", size, isAvailable, (bool)_timer, _stream);
+    if (!_stream) {
+        return;
+    }
+    if (size == 0) {
+        __LDBG_print("remove timer");
+        _timer.remove();
+    }
+    else if (isAvailable && !_timer) {
+        __LDBG_print("add timer");
+        _timer.add(Event::milliseconds(100), true, timerCallback);
+    }
+}
+
+SyslogPlugin::NameType SyslogPlugin::protocolToString(SyslogProtocol proto)
+{
+    switch(proto) {
+        case SyslogProtocol::TCP:
+            return F("TCP");
+        case SyslogProtocol::TCP_TLS:
+            return F("Secure TCP");
+        case SyslogProtocol::UDP:
+            return F("UDP");
+        case SyslogProtocol::FILE:
+            return F("File");
+        default:
+            break;
+    }
+    return nullptr;
+}
+
 void SyslogPlugin::_timerCallback(Event::CallbackTimerPtr timer)
 {
-#if DEBUG
-    assert(_stream != nullptr);
-#endif
+    __LDBG_assert_panic(_stream != nullptr, "stream=nullptr");
     if (_stream->hasQueuedMessages()) {
         _stream->deliverQueue();
-    }
-    else {
-        if (_stream->_syslog._queue.empty()) {
-            if (timer->updateInterval(Event::seconds(60))) {
-                __LDBG_printf("queue empty rearm=60s (_timerCallback)");
-            }
-        }
     }
 }
 
 void SyslogPlugin::_begin()
 {
-#if DEBUG
-    assert(_stream == nullptr);
-#endif
+    __LDBG_assert_panic(_stream == nullptr, "stream=%p", _stream);
 
     if (SyslogClient::isEnabled()) {
 
         auto cfg = SyslogClient::getConfig();
         String hostname = SyslogClient::getHostname();
-        auto port = cfg.getPort();
+        uint16_t port = cfg.getPort();
+        hostname.trim();
+        if (hostname.length() && port) {
+            bool zeroconf = config.hasZeroConf(hostname);
 
-        String tmp;
-        if (config.hasZeroConf(hostname)) {
-            tmp = String(); // remove hostname, the class will initialize and wait for zeroconf
+            _stream = __LDBG_new(SyslogStream, SyslogFactory::create(
+                SyslogParameter(System::Device::getName(), FSPGM(kfcfw)),
+                __LDBG_new(SyslogMemoryQueue, *this, SYSLOG_PLUGIN_QUEUE_SIZE), cfg.protocol_enum, zeroconf ? emptyString : hostname, zeroconf ? 0 : port),
+                _timer
+            );
+            _logger.setSyslog(_stream);
+
+            __LDBG_printf("zeroconf=%u port=%u", zeroconf, port);
+            if (zeroconf) {
+                config.resolveZeroConf(getFriendlyName(), hostname, port, [](const String &hostname, const IPAddress &address, uint16_t port, const String &resolved, MDNSResolver::ResponseType type) {
+                    plugin._zeroConfCallback(hostname, address, port, type);
+                });
+            }
         }
         else {
-            tmp = hostname;
-        }
-
-        _Timer(_timer).add(Event::seconds(1), true, timerCallback);
-
-        _stream = __LDBG_new(SyslogStream, SyslogFactory::create(
-            SyslogParameter(System::Device::getName(), FSPGM(kfcfw)),
-            __LDBG_new(SyslogMemoryQueue, SYSLOG_PLUGIN_QUEUE_SIZE), cfg.protocol_enum, tmp, port),
-            _timer
-        );
-        _logger.setSyslog(_stream);
-
-        if (tmp.length() == 0) {
-            config.resolveZeroConf(getFriendlyName(), hostname, port, [](const String &hostname, const IPAddress &address, uint16_t port, const String &resolved, MDNSResolver::ResponseType type) {
-                plugin._zeroConfCallback(hostname, address, port, type);
-            });
+            __LDBG_printf("hostname=%s port=%u", hostname.c_str(), port);
         }
     }
 }
 
 void SyslogPlugin::_zeroConfCallback(const String &hostname, const IPAddress &address, uint16_t port, MDNSResolver::ResponseType type)
 {
-    __LDBG_printf("zeroconf callback host=%s address=%s port=%u stream=%p", hostname.c_str(), address.toString().c_str(), port, _stream);
+    __LDBG_printf("zeroconf callback host=%s address=%s port=%u type=%u stream=%p", hostname.c_str(), address.toString().c_str(), port, type, _stream);
     if (_stream) {
         _stream->_syslog.setupZeroConf(hostname, address, port);
         if (!_stream->_syslog._queue.empty()) {
             __LDBG_print("queue filled rearm=100ms");
-            _stream->_timer->rearm(Event::milliseconds(100));
+            _Timer(_stream->_timer).add(Event::milliseconds(100), true, timerCallback);
         }
     }
 }
@@ -140,15 +161,20 @@ void SyslogPlugin::_end()
 void SyslogPlugin::_kill(uint32_t timeout)
 {
     if (_stream) {
+        //stream->_syslog._queue.setManager(nullptr);
+        auto stream = _stream;
+        _stream = nullptr;
         _timer.remove();
 
-        _stream->setTimeout(timeout);
+        stream->setTimeout(timeout);
         timeout += millis();
-        while(millis() < timeout && _stream->hasQueuedMessages()) {
-            _stream->deliverQueue();
+        while(millis() < timeout && stream->hasQueuedMessages()) {
+            stream->deliverQueue();
             delay(10); // let system process tcp buffers etc...
         }
-        _stream->clearQueue();
+        stream->clearQueue();
+
+        // __LDBG_delete(stream);
     }
 }
 
@@ -156,22 +182,20 @@ void SyslogPlugin::getStatus(Print &output)
 {
 #if SYSLOG_SUPPORT
     if (_stream) {
-        auto &syslog = _stream->_syslog;
-        switch(SyslogClient::getConfig().protocol_enum) {
-            case SyslogClient::SyslogProtocolType::UDP:
-                output.print(F("UDP"));
-                break;
-            case SyslogClient::SyslogProtocolType::TCP:
-                output.print(F("TCP"));
-                break;
-            case SyslogClient::SyslogProtocolType::TCP_TLS:
-                output.print(F("TCP TLS"));
-                break;
-            default:
-                output.print(FSPGM(Disabled));
-                return;
+        auto proto = protocolToString(SyslogClient::getConfig().protocol_enum);
+        if (!proto) {
+            output.print(FSPGM(Disabled));
+            return;
         }
-        output.printf_P(PSTR(" @ %s:%u"), syslog.getHostname().c_str(), syslog.getPort());
+        output.print(proto);
+
+        auto &syslog = _stream->_syslog;
+        if (syslog.getPort() == 0) {
+            output.print(F(" @ resolving zeroconf"));
+        }
+        else {
+            output.printf_P(PSTR(" @ %s:%u"), syslog.getHostname().c_str(), syslog.getPort());
+        }
         auto &queue = _stream->_syslog._queue;
         if (queue.empty()) {
             output.print(F(" - queue empty"));
@@ -215,18 +239,18 @@ void SyslogPlugin::atModeHelpGenerator()
 bool SyslogPlugin::atModeHandler(AtModeArgs &args)
 {
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SQ))) {
-        if (_stream && args.size() >= 1) {
-            int cmd = stringlist_find_P_P(PSTR("clear|info|queue"), args.get(0), '|');
-            if (cmd == 0) { // clear
+        if (_stream) {
+            int cmd = -1;
+            if (args.size() >= 1 && (cmd = stringlist_find_P_P(PSTR("queue|info|clear"), args.get(0), '|')) == 2) {
+                // cmd == clear
                 _stream->clearQueue();
                 args.print(F("Queue cleared"));
             }
-            else if (cmd == 2) { // queue
-                args.printf_P(PSTR("Messages in queue %d"), _stream->queueSize());
-                _stream->dumpQueue(args.getStream());
-            }
-            else { // info or invalid command
-                args.printf_P(PSTR("%d"), _stream->queueSize());
+            else { // cmd == queue|info|<none/invalid>
+                auto cfg = SyslogClient::getConfig();
+                args.printf_P(PSTR("hostname=%s port=%u resolved=%s protocol=%s"), SyslogClient::getHostname(), cfg.getPort(), _stream->_syslog.getHostname().c_str(), protocolToString(cfg.protocol_enum));
+                args.print();
+                _stream->dumpQueue(args.getStream(), cmd != 1);         // show queue if cmd != info
             }
         }
         else {

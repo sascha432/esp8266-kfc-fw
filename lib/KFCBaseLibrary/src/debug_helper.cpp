@@ -173,6 +173,32 @@ bool DebugContext::__store_pos(DebugContext &&dctx)
     return true;
 }
 
+#if LOGGER
+#include "Logger.h"
+#endif
+
+bool DebugContext::reportAssert(const DebugContext &ctx, const __FlashStringHelper *message)
+{
+    auto file = SPIFFS.open(F("/.logs/assert.log"), fs::FileOpenMode::append);
+    if (file) {
+        PrintString str;
+        str.strftime_P(SPGM(strftime_date_time_zone), time(nullptr));
+        file.print(str);
+        file.print(' ');
+        str = PrintString();
+        str.printf_P(PSTR("%s:%u %s: "), __S(ctx._file), ctx._line, __S(ctx._functionName));
+        file.print(str);
+        file.printf_P(PSTR(" assert(%s)\n"), FPSTR(message));
+        file.close();
+
+#if LOGGER
+        Logger_error(F("%sassert(%s) failed"), str.c_str(), FPSTR(message));
+#endif
+
+    }
+    return true;
+}
+
 // DebugContextFilterVector DebugContext::__filters;
 
 // FixedCircularBuffer<DebugContext::Positon_t,100> DebugContext::__pos;
@@ -182,15 +208,6 @@ const char ___debugPrefix[] PROGMEM = "D%08lu (%s:%u <%d:%u> %s): ";
 #else
 const char ___debugPrefix[] PROGMEM = "DBG: ";
 #endif
-
-
-// void DebugContext::regPrint(FixedCircularBuffer<Positon_t,100>::iterator it) {
-//     while(it != __pos.end()) {
-//         auto &position = (*it);
-//         DEBUG_OUTPUT.printf_P(PSTR("%s:%u - %u\n"), position.file, position.line, position.time);
-//         ++it;
-//     }
-// }
 
 void DebugContext::vprintf(const char *format, va_list arg) const
 {

@@ -33,6 +33,8 @@
 #endif
 #include "umm_malloc/umm_malloc_cfg.h"
 
+#include "core_esp8266_waveform.h"
+
 #if DEBUG_AT_MODE
 #include <debug_helper_enable.h>
 #else
@@ -281,7 +283,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HEAP, "HEAP", "[interval in seconds|0=disa
 #endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RSSI, "RSSI", "[interval in seconds|0=disable]", "Display WiFi RSSI");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(GPIO, "GPIO", "[interval in seconds|0=disable]", "Display GPIO states");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PWM, "PWM", "<pin>,<input|level=0-" __STRINGIFY(PWMRANGE) ">[,<frequency=100-40000Hz>[,<duration/ms>]]", "PWM output on PIN, min./max. level set it to LOW/HIGH");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PWM, "PWM", "<pin>,<input|waveform|level=0-" __STRINGIFY(PWMRANGE) ">[,<frequency=100-40000Hz>[,<duration/ms>]]", "PWM output on PIN, min./max. level set it to LOW/HIGH");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(ADC, "ADC", "<off|display interval=1s>[,<period=1s>,<multiplier=1.0>,<unit=mV>,<read delay=5000us>]", "Read the ADC and display values");
 #if defined(ESP8266)
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(CPU, "CPU", "<80|160>", "Set CPU speed", "Display CPU speed");
@@ -870,6 +872,7 @@ void at_mode_serial_handle_event(String &commandString)
                 args.printf_P(PSTR("sizeof(FormUI:UI): %u"), sizeof(FormUI::UI));
                 args.printf_P(PSTR("sizeof(AsyncClient): %u"), sizeof(AsyncClient));
                 args.printf_P(PSTR("sizeof(CallbackTimer): %u"), sizeof(Event::CallbackTimer));
+
 #if DEBUG
                 String hash;
                 if (System::Firmware::getElfHashHex(hash)) {
@@ -1245,9 +1248,47 @@ void at_mode_serial_handle_event(String &commandString)
                 }
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(PWM))) {
-                if (args.requireArgs(2, 4)) {
+                if (args.requireArgs(2, 7)) {
                     auto pin = (uint8_t)args.toInt(0);
-                    if (args.equalsIgnoreCase(1, F("input"))) {
+                    if (args.equalsIgnoreCase(1, F("waveform"))) {
+                        uint32_t timeHighUS = args.toInt(2, ~0U);
+                        uint32_t timeLowUS = args.toInt(3, ~0U);
+                        uint32_t runTimeUS = args.toInt(4, 0);
+                        uint32_t increment = args.toInt(5, 0);
+                        uint32_t delayTime = args.toInt(6);
+                        if (timeHighUS == ~0U || timeLowUS == ~0U) {
+                            digitalWrite(pin, LOW);
+                            stopWaveform(pin);
+                            pinMode(pin, INPUT);
+                            args.print(F("usage: <pin>,waveform,<high-time cycles>,<low-time cycles>[,<run-time cycles|0=unlimited>,<increment>,<delay ms>]"));
+                        }
+                        else {
+                            digitalWrite(pin, LOW);
+                            pinMode(pin, OUTPUT);
+                            if (increment) {
+                                args.printf_P(PSTR("pin=%u high=%u low=%u runtime=%u increment=%u delay=%u"), pin, timeHighUS, timeLowUS, runTimeUS, increment, delayTime);
+                                uint32_t start = 0;
+                                _Scheduler.add(Event::milliseconds(delayTime), true, [args, delayTime, pin, timeHighUS, timeLowUS, runTimeUS, increment, start](Event::CallbackTimerPtr timer) mutable {
+                                    start += increment;
+                                    if (start >= timeHighUS) {
+                                        start = timeHighUS;
+                                        timer->disarm();
+                                    }
+                                    startWaveformClockCycles(pin, start, timeLowUS, runTimeUS);
+                                    if (delayTime > 20) {
+                                        args.printf_P(PSTR("pin=%u high=%u low=%u runtime=%u"), pin, start, timeLowUS, runTimeUS);
+                                    }
+                                }, Event::PriorityType::TIMER);
+
+                            } else {
+                                args.printf_P(PSTR("pin=%u high=%u low=%u runtime=%u"), pin, timeHighUS, timeLowUS, runTimeUS);
+                                startWaveformClockCycles(pin, timeHighUS, timeLowUS, runTimeUS);
+                            }
+
+                        }
+                    }
+                    else if (args.equalsIgnoreCase(1, F("input"))) {
+
                         digitalWrite(pin, LOW);
                         pinMode(pin, INPUT);
                         args.printf_P(PSTR("set pin=%u to INPUT"), pin);

@@ -15,10 +15,5 @@ using namespace Event;
 
 RepeatType::RepeatType(uint32_t repeat) : _repeat(repeat)
 {
-    // __LDBG_assert_panic(_repeat != kPreset, "invalid value");
-#if DEBUG
-    assert(_repeat != kPreset);
-#endif
+    EVENT_SCHEDULER_ASSERT(_repeat != kPreset);
 }
-
-

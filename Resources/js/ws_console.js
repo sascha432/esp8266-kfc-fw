@@ -64,11 +64,13 @@ WS_Console.prototype.console_log = function(message, prefix) {
 
         if (message.indexOf('\033') != -1) {
             var pos;
-            while (pos = message.indexOf('\033[2J') != -1) {
-                message = message.substr(pos, 4);
-                consolePanel.value = "";
+            if (pos = message.lastIndexOf('\033[2J') != -1) {
+                message = message.substr(pos + 4);
+                consolePanel.value = '';
             }
-            message.replace(/\\033\[\d(;\d)?H/g, '');
+            // discard other vt100 sequences
+            // https://github.com/xtermjs/xterm.js
+            message = message.replace(/\033\[[\d;]*[mHJ]/g, '');
         }
 
         if (prefix) {

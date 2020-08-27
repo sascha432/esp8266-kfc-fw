@@ -198,16 +198,18 @@ $(function() {
         var value = $(target).val();
         var dlg_id = 'resolve_zeroconf_dialog';
         var dlg_title = 'Zeroconf Resolver';
-        var dlg = function(body) {
+        var show_dlg = function(body) {
             $.addModalDialog(dlg_id, dlg_title, body, function() {
                 button.prop('disabled', false);
             });
         };
         button.prop('disabled', true);
         $.get('/zeroconf?SID=' + $.getSessionId() + '&value=' + value, function (data) {
-            dlg(data);
+            dbg_console.log(data);
+            show_dlg(data);
         }).fail(function(jqXHR, textStatus, error) {
-            dlg('An error occured loading results:<br>' + error);
+            dbg_console.error(error);
+            show_dlg('An error occured loading results:<br>' + error);
         });
     });
 

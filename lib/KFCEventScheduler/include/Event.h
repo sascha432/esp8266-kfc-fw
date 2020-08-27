@@ -19,6 +19,12 @@
 #define DEBUG_EVENT_SCHEDULER_RUNTIME_LIMIT_CONSTEXPR   1
 #endif
 
+#ifndef EVENT_SCHEDULER_ASSERT
+// #define EVENT_SCHEDULER_ASSERT(cond)                    assert(cond)
+#define EVENT_SCHEDULER_ASSERT(cond)                    __DBG_assert(cond)
+#endif
+
+
 #if DEBUG_EVENT_SCHEDULER
 #define __DBG_Event_Timer_store_position()              __DBG_store_position()
 #define _Scheduler                                      ((__DBG_store_position()) ? __Scheduler : __Scheduler)
@@ -71,6 +77,16 @@ namespace Event {
     template<typename T>
     constexpr milliseconds minutes(T minutes) {
         return milliseconds((milliseconds::rep)minutes * (milliseconds::rep)60000);
+    }
+
+    template<typename T>
+    constexpr milliseconds milliseconds_cast(T ms) {
+        return milliseconds((milliseconds::rep)ms * (milliseconds::rep)1);
+    }
+
+    template<typename T>
+    constexpr milliseconds hertz(T hertz) {
+        return milliseconds((milliseconds::rep)(1000 / hertz));
     }
 
     enum class PriorityType : int8_t {

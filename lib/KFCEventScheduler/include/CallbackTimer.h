@@ -51,6 +51,7 @@ namespace Event {
         void _rearm();
         void _disarm();
         void _invokeCallback(CallbackTimerPtr timer);
+        uint32_t _runtimeLimit(PriorityType priority) const;
 
     public:
         inline int64_t __getRemainingDelayMillis() const {
@@ -71,6 +72,9 @@ namespace Event {
 #if DEBUG_EVENT_SCHEDULER
         uint32_t _line : 13;
         const char *_file;
+        String __getFilePos();
+#else
+        String __getFilePos() { return emptyString; }
 #endif
     };
 
@@ -94,7 +98,7 @@ namespace Event {
 
     inline uint32_t CallbackTimer::getShortInterval() const
     {
-        __DBG_assert(_delay <= std::numeric_limits<uint32_t>::max());
+        EVENT_SCHEDULER_ASSERT(_delay <= std::numeric_limits<uint32_t>::max());
         return (uint32_t)_delay;
     }
 

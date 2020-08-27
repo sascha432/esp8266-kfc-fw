@@ -5,8 +5,8 @@
  // generator in
  // Resources/html/__prototypes.html
  $.__prototypes = {
-    dismissible_alert: '<div class="pt-2"><div class="alert alert-dismissible fade show" role="alert"><h4 class="alert-heading"></h4><span></span><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div></div>',
-    modal_dialog: '<div class="modal" tabindex="-1" role="dialog"><div class="modal-dialog modal-lg" role="document"><div class="modal-content"><div class="modal-header"><h5 class="modal-title"></h5><button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button></div><div class="modal-body"></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button></div></div></div></div>',
+    dismissible_alert: '<div><div class="pt-2"><div class="alert alert-dismissible fade show" role="alert"><h4 class="alert-heading"></h4><span></span><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div></div></div>',
+    modal_dialog: '<div><div class="modal" tabindex="-1" role="dialog"><div class="modal-dialog modal-lg" role="document"><div class="modal-content"><div class="modal-header"><h5 class="modal-title"></h5><button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button></div><div class="modal-body"></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button></div></div></div></div></div>',
     filemanager_upload_progress: '<p class="text-center">Uploading <span id="upload_percent"></span>...</p><div class="progress"><div class="progress-bar progress-bar-striped progress-bar-animated text-center" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="10000" style="width:0%;" id="upload_progress"></div></div>',
 };
 
@@ -124,7 +124,7 @@ function random_str() {
 
 $.addModalDialog = function(id, title, body, onremove) {
     $('#' + id).remove();
-    var html = $($.__prototypes.dismissible_alert);
+    var html = $($.__prototypes.modal_dialog);
     html.find('.modal').attr('id', id);
     html.find('.modal-title').html(title);
     html.find('.modal-body').html(body);

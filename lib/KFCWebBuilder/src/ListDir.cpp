@@ -4,6 +4,7 @@
 
 #include "ListDir.h"
 #include <misc.h>
+#include <crc16.h>
 #include "fs_mapping.h"
 
 #include "debug_helper_disable.h"

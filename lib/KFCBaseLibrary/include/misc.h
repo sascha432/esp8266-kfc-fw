@@ -13,8 +13,6 @@
 #include <type_traits>
 #include <utility>
 #include <array_of.h>
-#include <MillisTimer.h>
-#include <crc16.h>
 #include <float.h>
 #include <limits.h>
 

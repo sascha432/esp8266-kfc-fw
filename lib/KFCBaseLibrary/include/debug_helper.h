@@ -85,16 +85,23 @@ extern const char ___debugPrefix[] PROGMEM;
 #define DEBUG_HELPER_POSITION                               DebugContext()
 #endif
 
+#define __reset_terminal                                    "\033[m"
+#define __yellow                                            "\033[33m"
+#define __bold_red                                          "\033[1;31m"
+#define __bold_green                                        "\033[1;32m"
+#define __bold_cyan                                         "\033[1;36m"
+#define __DBG_newline                                       "\033[m\r\n"
+
 // regular debug functions
-#define __DBG_print(arg)                                    debug_println(F(arg))
-#define __DBG_printf(fmt, ...)                              debug_printf(PSTR(fmt "\n"), ##__VA_ARGS__)
-#define __DBG_println()                                     debug_println()
-#define __DBG_panic(fmt, ...)                               (DEBUG_OUTPUT.printf_P(PSTR(fmt "\n"), ## __VA_ARGS__) && __debugbreak_and_panic())
-#define __DBG_assert(cond)                                  (!(cond) ? (__DBG_print("assert( " _STRINGIFY(cond) ") FAILED") && true) : false)
+#define __DBG_print(arg)                                    debug_print(F(arg __DBG_newline))
+#define __DBG_printf(fmt, ...)                              debug_printf(PSTR(fmt __DBG_newline), ##__VA_ARGS__)
+#define __DBG_println()                                     debug_print(F(__DBG_newline))
+#define __DBG_panic(fmt, ...)                               (DEBUG_OUTPUT.printf_P(PSTR(fmt __DBG_newline), ## __VA_ARGS__) && __debugbreak_and_panic())
+#define __DBG_assert(cond)                                  (!(cond) ? (__DBG_print(__bold_red "assert( " _STRINGIFY(cond) ") FAILED") && DebugContext::reportAssert(DEBUG_HELPER_POSITION, F(_STRINGIFY(cond)))) : false)
 #define __DBG_assert_printf(cond, fmt, ...)                 (!(cond) ? (__DBG_print("assert( " _STRINGIFY(cond) ")") && __DBG_printf(fmt, ##__VA_ARGS__)) : false)
 #define __DBG_assert_panic(cond, fmt, ...)                  (!(cond) ? (__DBG_print("assert( " _STRINGIFY(cond) ")") && __DBG_panic(fmt, ##__VA_ARGS__)) : false)
 #define __DBG_print_result(result)                          debug_print_result(result)
-#define __DBG_printf_result(result, fmt, ...)               debug_printf_result(result, PSTR(fmt "\n"), ##__VA_ARGS__)
+#define __DBG_printf_result(result, fmt, ...)               debug_printf_result(result, PSTR(fmt __DBG_newline), ##__VA_ARGS__)
 #define __DBG_prints_result(result, to_string)              debug_prints_result(result, to_string)
 #define __DBG_IF(...)                                       __VA_ARGS__
 #define __DBG_N_IF(...)

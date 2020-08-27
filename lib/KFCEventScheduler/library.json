@@ -8,11 +8,5 @@
       "maintainer": true
     },
     "frameworks": "arduino",
-    "platforms": ["espressif8266", "espressif32"],
-    "dependencies": [
-      {
-        "name": "KFCBaseLibrary",
-        "authors": "sascha lammers"
-      }
-    ]
+    "platforms": ["espressif8266", "espressif32"]
 }

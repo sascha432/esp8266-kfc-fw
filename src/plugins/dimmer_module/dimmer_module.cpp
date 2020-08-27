@@ -358,7 +358,7 @@ void Driver_DimmerModule::_buttonShortPress(uint8_t channel, bool up)
                         _channels[channel].setStoredBrightness(_turnOffLevel[channel]); // restore level to when the button was pressed
                     }
                 }
-            }, Event::PriorityType::HIGHEST);
+            }, Event::PriorityType::TIMER);
         }
         if (up) {
             _buttonRepeat(channel, true, 0);        // short press up = fire repeat event

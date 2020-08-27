@@ -99,7 +99,7 @@ SyslogPlugin::NameType SyslogPlugin::protocolToString(SyslogProtocol proto)
 
 void SyslogPlugin::_timerCallback(Event::CallbackTimerPtr timer)
 {
-    __LDBG_assert_panic(_stream != nullptr, "stream=nullptr");
+    __LDBG_assert(_stream != nullptr);
     if (_stream->hasQueuedMessages()) {
         _stream->deliverQueue();
     }
@@ -107,8 +107,7 @@ void SyslogPlugin::_timerCallback(Event::CallbackTimerPtr timer)
 
 void SyslogPlugin::_begin()
 {
-    __LDBG_assert_panic(_stream == nullptr, "stream=%p", _stream);
-
+    __LDBG_assert(_stream == nullptr);
     if (SyslogClient::isEnabled()) {
 
         auto cfg = SyslogClient::getConfig();

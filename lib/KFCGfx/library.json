@@ -12,11 +12,8 @@
   ],
   "dependencies": [
     {
-      "name": "KFCBaseLibrary",
-      "authors": "sascha lammers"
-    },
-    {
-      "name": "Adafruit GFX Library"
+      "name": "Adafruit GFX Library",
+      "version": "https://github.com/sascha432/Adafruit-GFX-Library.git"
     }
   ]
 }

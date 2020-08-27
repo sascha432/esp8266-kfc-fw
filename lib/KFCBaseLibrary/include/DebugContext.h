@@ -63,7 +63,6 @@ public:
     static Print &getOutput() {
         return DEBUG_OUTPUT;
     }
-
     static uint8_t __state;
     static DebugContext __pos;
     static bool __store_pos(DebugContext &&dctx);
@@ -71,5 +70,7 @@ public:
     static void activate(bool state = true) {
         __state = state ? DEBUG_HELPER_STATE_ACTIVE : DEBUG_HELPER_STATE_DISABLED;
     }
+
+    static bool reportAssert(const DebugContext &ctx, const __FlashStringHelper *message);
 };
 

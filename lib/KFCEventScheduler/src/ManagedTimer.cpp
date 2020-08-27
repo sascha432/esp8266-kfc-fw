@@ -25,7 +25,7 @@ ManangedCallbackTimer::ManangedCallbackTimer(CallbackTimerPtr callbackTimer) : _
 
 ManangedCallbackTimer::ManangedCallbackTimer(CallbackTimerPtr callbackTimer, TimerPtr timer) : _callbackTimer(callbackTimer)
 {
-    __LDBG_assert(callbackTimer != nullptr);
+    EVENT_SCHEDULER_ASSERT(callbackTimer != nullptr);
     __LDBG_printf("callback_timer=%p timer=%p _timer=%p", callbackTimer, timer, callbackTimer->_timer);
     if (callbackTimer) {
         if (callbackTimer->_timer) {
@@ -38,14 +38,14 @@ ManangedCallbackTimer::ManangedCallbackTimer(CallbackTimerPtr callbackTimer, Tim
 
 ManangedCallbackTimer &ManangedCallbackTimer::operator=(ManangedCallbackTimer &&move) noexcept
 {
-    __LDBG_assert(move._callbackTimer != nullptr);
+    EVENT_SCHEDULER_ASSERT(move._callbackTimer != nullptr);
     if (_callbackTimer) {
         if (_callbackTimer->_timer) {
             __LDBG_printf("removing managed timer=%p", _callbackTimer->_timer);
             _callbackTimer->_timer->_managedTimer.clear();
         }
     }
-    __LDBG_assert(move._callbackTimer != nullptr);
+    EVENT_SCHEDULER_ASSERT(move._callbackTimer != nullptr);
     _callbackTimer = std::exchange(move._callbackTimer, nullptr);
     return *this;
 }

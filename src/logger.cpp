@@ -214,6 +214,8 @@ void Logger::writeLog(Level logLevel, const char *message, va_list arg)
 
         msg.vprintf_P(message, arg);
 
+        String_rtrim(msg);
+
         if (file) {
             file.print(header);
             file.println(msg);
@@ -234,7 +236,7 @@ void Logger::writeLog(Level logLevel, const char *message, va_list arg)
         if (System::Flags::getConfig().is_at_mode_enabled) {
             Serial.print(F("+LOGGER="))
             Serial.print(header);
-            Serial.print(msg);
+            Serial.println(msg);
         }
 #endif
 

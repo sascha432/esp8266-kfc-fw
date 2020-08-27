@@ -5,6 +5,7 @@
 #include <Arduino_compat.h>
 #include <EventScheduler.h>
 #include <MicrosTimer.h>
+#include <MillisTimer.h>
 #include <vector>
 #include "animation.h"
 #include "WebUIComponent.h"
@@ -64,6 +65,8 @@ public:
     using SevenSegmentDisplay = Clock::SevenSegmentDisplay;
     using Color = Clock::Color;
     using AnimationType = Clock::AnimationType;
+    using BrightnessType = SevenSegmentDisplay::BrightnessType;
+    using milliseconds = std::chrono::duration<uint32_t, std::ratio<1>>;
 
     static constexpr uint16_t kDefaultUpdateRate = 1000;
     static constexpr uint16_t kMinBlinkColonSpeed = 50;
@@ -79,6 +82,7 @@ public:
     static constexpr uint8_t kMinimumTemperatureThreshold = IOT_CLOCK_MIN_TEMPERATURE_THRESHOLD;
 
     static constexpr int16_t kAutoBrightnessOff = -1;
+    static constexpr float kAutoBrightnessInterval = IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL;     // milliseconds
 
     enum ProtectionType {
         OFF,
@@ -147,7 +151,8 @@ public:
     void setSyncing(bool sync);
     void setBlinkColon(uint16_t value);
     void setColorAndRefresh(Color color);
-    void setBrightness(uint16_t brightness);
+    // time represents fading level 0 to max, the fading time is relative to the different between the brightness levels
+    void setBrightness(BrightnessType brightness, milliseconds time = milliseconds(2500));
     // use NONE to remove all animations
     // use NEXT to remove the current animation and start the next one. if next animation isnt set, animation is set to NONE
     void setAnimation(AnimationType animation);
@@ -212,9 +217,18 @@ private:
     void _loop();
 
     void _setSevenSegmentDisplay();
-    void _setBrightness();
-    void _setBrightness(uint16_t brightness);
-    uint16_t _getBrightness() const;
+
+    // set brightness
+    // it is updated with the next refresh of the display
+    void _setBrightness(BrightnessType brightness);
+
+    // returns display brightness using current brightness and auto brightness value
+    BrightnessType _getBrightness() const;
+
+    // returns current brightness without auto brightness value
+    // while fading between different levels it returns the current level
+    BrightnessType _getFadingBrightness() const;
+
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
     void _installWebHandlers();
     void _adjustAutobrightness();
@@ -224,6 +238,7 @@ private:
     // uint16_t _readLightSensor(uint8_t num, uint8_t delayMillis) const;
     void _broadcastWebUI();
 public:
+    static void adjustAutobrightness(Event::CallbackTimerPtr timer);
     static void handleWebServer(AsyncWebServerRequest *request);
 #endif
 
@@ -236,8 +251,6 @@ private:
     SevenSegmentDisplay _display;
     std::array<SevenSegmentDisplay::PixelAddressType, IOT_CLOCK_PIXEL_ORDER_LEN * IOT_CLOCK_NUM_DIGITS> _pixelOrder;
 
-    uint16_t _brightness;
-    uint16_t _savedBrightness;
     Color _color;
     uint32_t _lastUpdateTime;
     time_t _time;
@@ -247,6 +260,7 @@ private:
     uint8_t _tempProtection : 2;
     uint8_t _schedulePublishState: 1;
     uint8_t _forceUpdate: 1;
+    uint8_t _isFading: 1;
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
     int16_t _autoBrightness;
     float _autoBrightnessValue;
@@ -256,6 +270,11 @@ private:
     Plugins::Clock::ConfigStructType _config;
     Event::Timer _timer;
     uint32_t _timerCounter;
+
+    MillisTimer _fadeTimer;
+    BrightnessType _savedBrightness;
+    BrightnessType _startBrightness;
+    BrightnessType _targetBrightness;
 
 private:
     bool _isTemperatureBelowThresholds(float temp) const;

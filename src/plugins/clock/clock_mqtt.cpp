@@ -74,28 +74,25 @@ void ClockPlugin::onMessage(MQTTClient *client, char *topic, char *payload, size
         setBrightness(atoi(payload));
     }
     else if (!strcmp_end_P(topic, SPGM(_color_set))) {
-        char *r, *g, *b;
-        const char *comma = ",";
-        r = strtok(payload, comma);
-        if (r) {
-            g = strtok(nullptr, comma);
-            if (g) {
-                b = strtok(nullptr, comma);
-                if (b) {
-                    setColorAndRefresh(Color(atoi(r), atoi(g), atoi(b)));
-                }
+        char *endptr = nullptr;
+        auto red = (uint8_t)strtoul(payload, &endptr, 10);
+        if (endptr && *endptr++ == ',') {
+            auto green = (uint8_t)strtoul(endptr, &endptr, 10);
+            if (endptr && *endptr++ == ',') {
+                auto blue = (uint8_t)strtoul(endptr, nullptr, 10);
+                setColorAndRefresh(Color(red, green, blue));
             }
         }
     }
     else if (!strcmp_end_P(topic, SPGM(_set))) {
         auto value = atoi(payload);
         if (value) {
-            if (_brightness == 0) {
+            if (_targetBrightness == 0) {
                 if (_savedBrightness) {
                     setBrightness(_savedBrightness);
                 }
                 else {
-                    setBrightness(_config.brightness);
+                    setBrightness(_config.getBrightness());
                 }
             }
         }
@@ -110,10 +107,10 @@ void ClockPlugin::_publishState(MQTTClient *client)
     if (!client) {
         client = MQTTClient::getClient();
     }
-    __LDBG_printf("client=%p color=%s brightness=%u auto_brightness=%d", client, _color.implode(',').c_str(), _brightness, _autoBrightness);
+    __DBG_printf("client=%p color=%s brightness=%u auto=%d", client, _color.implode(',').c_str(), _targetBrightness, _autoBrightness);
     if (client && client->isConnected()) {
         client->publish(MQTTClient::formatTopic(FSPGM(_state)), true, String(_color ? 1 : 0));
-        client->publish(MQTTClient::formatTopic(FSPGM(_brightness_state)), true, String(_brightness));
+        client->publish(MQTTClient::formatTopic(FSPGM(_brightness_state)), true, String(_targetBrightness));
         client->publish(MQTTClient::formatTopic(FSPGM(_color_state)), true, _color.implode(','));
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
         client->publish(MQTTClient::formatTopic(FSPGM(light_sensor)), true, String(_autoBrightnessValue * 100, 0));

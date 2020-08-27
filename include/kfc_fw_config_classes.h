@@ -1388,6 +1388,14 @@ namespace KFCConfigurationClasses {
                 CREATE_UINT8_BITFIELD(animation, 7);
                 CREATE_UINT8_BITFIELD(time_format_24h, 1);
                 uint8_t brightness;
+
+                uint16_t getBrightness() const {
+                    return brightness << 8;
+                }
+                void setBrightness(uint16_t pBrightness) {
+                    brightness = pBrightness >> 8;
+                }
+
                 int16_t auto_brightness;
                 uint16_t blink_colon_speed;
                 uint16_t flashing_speed;

@@ -19,51 +19,51 @@
 
 // number of digits
 #ifndef IOT_CLOCK_NUM_DIGITS
-#define IOT_CLOCK_NUM_DIGITS                    4
+#define IOT_CLOCK_NUM_DIGITS                        4
 #endif
 
 // pixels per segment
 #ifndef IOT_CLOCK_NUM_PIXELS
-#define IOT_CLOCK_NUM_PIXELS                    2
+#define IOT_CLOCK_NUM_PIXELS                        2
 #endif
 
 // number of colons
 #ifndef IOT_CLOCK_NUM_COLONS
 #if IOT_CLOCK_NUM_DIGITS == 4
-#define IOT_CLOCK_NUM_COLONS                    1
+#define IOT_CLOCK_NUM_COLONS                        1
 #else
-#define IOT_CLOCK_NUM_COLONS                    2
+#define IOT_CLOCK_NUM_COLONS                        2
 #endif
 #endif
 
 // pixels per dot
 #ifndef IOT_CLOCK_NUM_COLON_PIXELS
-#define IOT_CLOCK_NUM_COLON_PIXELS              2
+#define IOT_CLOCK_NUM_COLON_PIXELS                  2
 #endif
 
 // order of the segments (a-g)
 #ifndef IOT_CLOCK_SEGMENT_ORDER
-#define IOT_CLOCK_SEGMENT_ORDER                 { 0, 1, 3, 4, 5, 6, 2 }
+#define IOT_CLOCK_SEGMENT_ORDER                     { 0, 1, 3, 4, 5, 6, 2 }
 #endif
 
 // digit order, 30=colon #1,31=#2, etc...
 #ifndef IOT_CLOCK_DIGIT_ORDER
-#define IOT_CLOCK_DIGIT_ORDER                   { 0, 1, 30, 2, 3, 31, 4, 5 }
+#define IOT_CLOCK_DIGIT_ORDER                       { 0, 1, 30, 2, 3, 31, 4, 5 }
 #endif
 
 // pixel order of pixels that belong to digits, 0 to use pixel addresses of the 7 segment class
 #ifndef IOT_CLOCK_PIXEL_ORDER
-#define IOT_CLOCK_PIXEL_ORDER                   { 0 }
+#define IOT_CLOCK_PIXEL_ORDER                       { 0 }
 #endif
 
 // update interval in ms, 0 to disable
 #ifndef IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
-#define IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL      25
+#define IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL          125
 #endif
 
 // show rotating animation while time is invalid
 #ifndef IOT_CLOCK_PIXEL_SYNC_ANIMATION
-#define IOT_CLOCK_PIXEL_SYNC_ANIMATION               0
+#define IOT_CLOCK_PIXEL_SYNC_ANIMATION              0
 #endif
 
 class ClockPlugin;

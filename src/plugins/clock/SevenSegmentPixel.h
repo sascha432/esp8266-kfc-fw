@@ -26,7 +26,6 @@
 
 #endif
 
-#include <EventScheduler.h>
 #include <avr/pgmspace.h>
 
 #ifndef IOT_CLOCK_LED_PIN
@@ -117,16 +116,11 @@ public:
 #else
         _controller( FastLED.addLeds<IOT_CLOCK_FASTLED_CHIPSET, IOT_CLOCK_LED_PIN>(_pixels.data(), _pixels.size()) ),
 #endif
-        _targetBrightness(0),
         _params({0, kMaxBrightness / 3})
     {
 #if IOT_CLOCK_NEOPIXEL
         _pixels.begin();
 #endif
-    }
-
-    ~SevenSegmentPixel() {
-        _brightnessTimer.remove();
     }
 
     PixelAddressType setSegments(uint8_t digit, PixelAddressType offset, PGM_P order) {
@@ -150,10 +144,19 @@ public:
         return num;
     }
 
-    // set millis for the AnimationCallback
-    // can be any value
+    // millis is passed to AnimationCallback
+
     inline void setMillis(uint32_t millis) {
+        _params.brightness = millis;
+    }
+
+    inline void setBrightness(BrightnessType brightness) {
+        _params.brightness = brightness;
+    }
+
+    inline void setParams(uint32_t millis, BrightnessType brightness) {
         _params.millis = millis;
+        _params.brightness = brightness;
     }
 
     inline void show() {
@@ -302,49 +305,6 @@ public:
         }
     }
 
-    void setBrightness(BrightnessType brightness) {
-        _params.brightness = brightness;
-    }
-
-    void setBrightness(BrightnessType brightness, float fadeTime, FadingFinishedCallback finishedCallback = nullptr, FadingRefreshCallback refreshCallback = nullptr) {
-        _targetBrightness = brightness;
-        if (!_brightnessTimer) {
-            auto steps = (BrightnessType)(kMaxBrightness / (fadeTime * (1000 / 20.0))); // 20ms/50Hz refresh rate
-            if (!steps) {
-                steps = 1;
-            }
-            //__LDBG_printf("to=%u steps=%u time=%f", _brightness, steps, fadeTime);
-            _Timer(_brightnessTimer).add(20, true, [this, steps, finishedCallback, refreshCallback](Event::CallbackTimerPtr timer) {
-                int32_t tmp = _params.brightness;
-                if (tmp < _targetBrightness) {
-                    tmp += steps;
-                    if (tmp > _targetBrightness) {
-                        tmp = _targetBrightness;
-                    }
-                    _params.brightness = tmp;
-                }
-                else if (tmp > _targetBrightness) {
-                    tmp -= steps;
-                    if (tmp < _targetBrightness) {
-                        tmp = _targetBrightness;
-                    }
-                    _params.brightness = tmp;
-                }
-                else {
-                    timer->disarm();
-                    if (finishedCallback) {
-                        finishedCallback(_params.brightness);
-                    }
-                    return;
-                }
-                if (refreshCallback) {
-                    refreshCallback(_params.brightness);
-                }
-
-            }, Event::PriorityType::HIGHEST);
-        }
-    }
-
     char getSegmentChar(int segment) {
         return 'a' + (segment % SegmentEnum_t::NUM);
     }
@@ -461,8 +421,5 @@ private:
     using DigitsArray = std::array<SegmentArray, NUM_DIGIT_PIXELS>;
 
     DigitsArray _pixelAddress;
-
-    BrightnessType _targetBrightness;
-    Event::Timer _brightnessTimer;
     Params_t _params;
 };

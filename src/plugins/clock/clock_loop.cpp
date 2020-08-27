@@ -48,7 +48,7 @@ time_t ClockPlugin::LoopOptionsType::getNow() const {
 
 bool ClockPlugin::LoopOptionsType::doUpdate() const
 {
-    return (_millisSinceLastUpdate >= _plugin._updateRate);
+    return (_millisSinceLastUpdate >= (_plugin._isFading ? (1000 / 50/*Hz*/) : _plugin._updateRate));
 }
 
 bool ClockPlugin::LoopOptionsType::hasTimeChanged() const
@@ -108,7 +108,7 @@ bool ClockPlugin::_loopSyncingAnimation(LoopOptionsType &options)
 
     // show 88:88:88 instead of the syncing animation
     uint32_t color = _color;
-    _display.setMillis(options.getMillis());
+    _display.setParams(options.getMillis(), _getBrightness());
     _display.setDigit(0, 8, color);
     _display.setDigit(1, 8, color);
     _display.setDigit(2, 8, color);
@@ -157,10 +157,10 @@ bool ClockPlugin::_loopDisplayLightSensor(LoopOptionsType &options)
             if (callback) {
                 std::swap(callback, emptyCallback);
             }
-            _display.setBrightness(SevenSegmentDisplay::kMaxBrightness / 2);
+            auto brightness = std::exchange(_display._params.brightness, SevenSegmentDisplay::kMaxBrightness / 2);
             _display.print(str, Color(0, 0xff, 0));
             _display.show();
-            _display.setBrightness(_brightness);
+            _display._params.brightness = brightness;
             if (emptyCallback) {
                 std::swap(callback, emptyCallback);
             }
@@ -231,8 +231,23 @@ void ClockPlugin::_loop()
         displayColon = false;
 #endif
 
+#if 0
+        static unsigned counter = 0;
+        if (_isFading && (millis() / 250) % 2 == counter % 2) {
+            counter++;
+            __LDBG_printf("left=%u fading=%u brightness=%u", _fadeTimer.getTimeLeft(), _getFadingBrightness(), _getBrightness());
+        }
+#endif
+
+        if (_isFading && _fadeTimer.reached()) {
+            __LDBG_printf("fading=done brightness=%u", _targetBrightness);
+            _isFading = false;
+            _schedulePublishState = true;
+        }
+
         __DBGTM(mt.start());
-        _display.setMillis(options.getMillis());
+        _display.setParams(options.getMillis(), _getBrightness());
+
         _display.setDigit(0, tm.tm_hour_format() / 10, color);
         _display.setDigit(1, tm.tm_hour_format() % 10, color);
         _display.setDigit(2, tm.tm_min / 10, color);

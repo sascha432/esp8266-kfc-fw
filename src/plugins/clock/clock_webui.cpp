@@ -46,7 +46,7 @@ void ClockPlugin::getValues(JsonArray &array)
     obj = &array.addObject(3);
     obj->add(JJ(id), FSPGM(brightness));
     obj->add(JJ(state), true);
-    obj->add(JJ(value), _brightness);
+    obj->add(JJ(value), _targetBrightness);
 
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
     obj = &array.addObject(3);

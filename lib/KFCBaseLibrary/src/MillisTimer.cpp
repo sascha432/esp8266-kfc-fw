@@ -9,10 +9,6 @@ MillisTimer::MillisTimer(uint32_t delay)
     set(_delay);
 }
 
-MillisTimer::MillisTimer() : _active(false)
-{
-}
-
 void MillisTimer::set(uint32_t delay)
 {
     uint32_t ms = millis();
@@ -25,11 +21,8 @@ void MillisTimer::set(uint32_t delay)
     _delay = delay;
 }
 
-int32_t MillisTimer::get() const
+uint32_t MillisTimer::getTimeLeft() const
 {
-    if (!_active) {
-        return -1;
-    }
     uint32_t ms = millis();
     if (_overflow) {
         ms += 0x7fffffffU;
@@ -40,14 +33,12 @@ int32_t MillisTimer::get() const
     return 0;
 }
 
-bool MillisTimer::isActive() const
+int32_t MillisTimer::get() const
 {
-    return _active;
-}
-
-void MillisTimer::disable()
-{
-    _active = false;
+    if (!_active) {
+        return -1;
+    }
+    return getTimeLeft();
 }
 
 bool MillisTimer::reached(bool reset)

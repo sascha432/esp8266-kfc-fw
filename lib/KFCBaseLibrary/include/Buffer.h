@@ -115,7 +115,12 @@ public:
     // bool available(size_t len) const;
     size_t available() const;
 
-    size_t write(uint8_t data) {
+    // fastest single byte write() version
+    inline size_t write(uint8_t data) {
+        if (_length < _size) {
+            _buffer[_length++] = data;
+            return 1;
+        }
         return write(&data, sizeof(data));
     }
 
@@ -133,19 +138,16 @@ public:
     }
 
     template<class T>
-    size_t writeObject(const T &data) {
+    size_t copy(const T &data) {
         return write(reinterpret_cast<const uint8_t *>(&data), sizeof(T));
-    }
-    template<class T>
-    size_t writeVector(std::vector<T> vector) {
-        return write(reinterpret_cast<const uint8_t *>(vector.data()), vector.size() * sizeof(T));
     }
 
     template<class T>
-    size_t writeRange(T first, T last) {
+    size_t copy(T first, T last) {
         size_t written = 0;
         for(auto iterator = first; iterator != last; ++iterator) {
-            written += writeObject<typename T::value_type>(*iterator);
+            // written += copy<typename T::value_type>(*iterator);
+            written += copy<decltype(*iterator)>(*iterator);
         }
         return written;
     }

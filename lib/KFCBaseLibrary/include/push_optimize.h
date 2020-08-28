@@ -11,6 +11,6 @@
 // 4    Og
 // 5    Os
 
-#ifndef GCC_OPTIMIZE_LEVEL
+#if !defined(GCC_OPTIMIZE_LEVEL) && !defined(_MSC_VER)
 #pragma GCC push_options
 #endif

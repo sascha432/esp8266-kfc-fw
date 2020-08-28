@@ -18,6 +18,6 @@
 #else
 #error Invalid optimize level
 #endif
-#else
+#elif !defined(_MSC_VER)
 #pragma GCC pop_options
 #endif

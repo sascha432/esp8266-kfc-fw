@@ -266,6 +266,9 @@ namespace __va_args__
 #define FLASH_STRING_GENERATOR_AUTO_INIT(...)           __VA_ARGS__
 #endif
 
+extern "C" void __dump_binary(const void *ptr, size_t len, size_t perLine);
+
+
 #if _MSC_VER
 #include "../../../src/generated/FlashStringGeneratorAuto.h"
 #elif defined(HAVE_FLASH_STRING_GENERATOR) && HAVE_FLASH_STRING_GENERATOR

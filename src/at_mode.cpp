@@ -479,7 +479,7 @@ DisplayTimer displayTimer;
 
 static void print_heap()
 {
-    Serial.printf_P(PSTR("+HEAP: free=%u cpu=%dMHz"), ESP.getFreeHeap(), ESP.getCpuFreqMHz());
+    Serial.printf_P(PSTR("+HEAP: free=%u cpu=%dMHz frag=%u"), ESP.getFreeHeap(), ESP.getCpuFreqMHz(), ESP.getHeapFragmentation());
 #if HAVE_MEM_DEBUG
     KFCMemoryDebugging::dumpShort(Serial);
 #endif

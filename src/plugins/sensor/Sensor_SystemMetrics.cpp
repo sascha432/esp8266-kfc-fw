@@ -65,8 +65,13 @@ MQTTComponent::MQTTAutoDiscoveryPtr Sensor_SystemMetrics::nextAutoDiscovery(MQTT
             discovery->addStateTopic(_getTopic());
             discovery->addValueTemplate(FSPGM(version));
             break;
-#if PING_MONITOR_SUPPORT
         case 3:
+            discovery->create(this, F("heap_frag"), format);
+            discovery->addStateTopic(_getTopic());
+            discovery->addValueTemplate(F("heap_frag"));
+            break;
+#if PING_MONITOR_SUPPORT
+        case 4:
             discovery->create(this, FSPGM(ping_monitor), format);
             discovery->addStateTopic(_getTopic());
             discovery->addValueTemplate(FSPGM(ping_monitor));
@@ -80,9 +85,9 @@ MQTTComponent::MQTTAutoDiscoveryPtr Sensor_SystemMetrics::nextAutoDiscovery(MQTT
 uint8_t Sensor_SystemMetrics::getAutoDiscoveryCount() const
 {
 #if PING_MONITOR_SUPPORT
-    return 4;
+    return 5;
 #else
-    return 3;
+    return 4;
 #endif
 }
 
@@ -106,6 +111,7 @@ void Sensor_SystemMetrics::_getMetricsJson(Print &json) const
 
     obj.add(FSPGM(uptime), getSystemUptime());
     obj.add(FSPGM(heap), (int)ESP.getFreeHeap());
+    obj.add(F("heap_frag"), (int)ESP.getHeapFragmentation());
     obj.add(FSPGM(version), FPSTR(config.getShortFirmwareVersion_P()));
 
 #if PING_MONITOR_SUPPORT

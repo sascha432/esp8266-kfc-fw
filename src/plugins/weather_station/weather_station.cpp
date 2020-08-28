@@ -7,7 +7,6 @@
 #include <EventScheduler.h>
 #include <MicrosTimer.h>
 #include <HeapStream.h>
-#include <ProgmemStream.h>
 #include <serial_handler.h>
 #include <WebUISocket.h>
 #include <AsyncBitmapStreamResponse.h>
@@ -96,19 +95,6 @@ WeatherStationPlugin::WeatherStationPlugin() :
     REGISTER_PLUGIN(this, "WeatherStationPlugin");
 #if IOT_WEATHER_STATION_HAS_TOUCHPAD
     _touchpadDebug = false;
-#endif
-
-#if SAVE_CRASH_HAVE_CALLBACKS
-    auto nextCallback = EspSaveCrash::getCallback();
-    EspSaveCrash::setCallback([this, nextCallback](const EspSaveCrash::ResetInfo_t &info) {
-        if (_canvas) {
-            delete _canvas;
-            _canvas = nullptr;
-        }
-        if (nextCallback) {
-            nextCallback(info);
-        }
-    });
 #endif
 }
 
@@ -537,8 +523,7 @@ void WeatherStationPlugin::_getWeatherInfo(Callback_t finishedCallback)
 #if 0
     if (_weatherError.indexOf("avail") != -1) { // load dummy data
         _weatherError = F("Dummy data");
-        PGM_P data = PSTR("{\"coord\":{\"lon\":-123.07,\"lat\":49.32},\"weather\":[{\"id\":500,\"main\":\"Rain\",\"description\":\"light rain\",\"icon\":\"10n\"},{\"id\":701,\"main\":\"Mist\",\"description\":\"mist\",\"icon\":\"50n\"}],\"base\":\"stations\",\"main\":{\"temp\":277.55,\"pressure\":1021,\"humidity\":100,\"temp_min\":275.37,\"temp_max\":279.26},\"visibility\":8047,\"wind\":{\"speed\":1.19,\"deg\":165},\"rain\":{\"1h\":0.93},\"clouds\":{\"all\":90},\"dt\":1575357173,\"sys\":{\"type\":1,\"id\":5232,\"country\":\"CA\",\"sunrise\":1575301656,\"sunset\":1575332168},\"timezone\":-28800,\"id\":6090785,\"name\":\"North Vancouver\",\"cod\":200}");
-        ProgmemStream stream(data, strlen(data));
+        StreamString stream = F("{\"coord\":{\"lon\":-123.07,\"lat\":49.32},\"weather\":[{\"id\":500,\"main\":\"Rain\",\"description\":\"light rain\",\"icon\":\"10n\"},{\"id\":701,\"main\":\"Mist\",\"description\":\"mist\",\"icon\":\"50n\"}],\"base\":\"stations\",\"main\":{\"temp\":277.55,\"pressure\":1021,\"humidity\":100,\"temp_min\":275.37,\"temp_max\":279.26},\"visibility\":8047,\"wind\":{\"speed\":1.19,\"deg\":165},\"rain\":{\"1h\":0.93},\"clouds\":{\"all\":90},\"dt\":1575357173,\"sys\":{\"type\":1,\"id\":5232,\"country\":\"CA\",\"sunrise\":1575301656,\"sunset\":1575332168},\"timezone\":-28800,\"id\":6090785,\"name\":\"North Vancouver\",\"cod\":200}");
         _weatherApi.clear();
         if (!_weatherApi.parseWeatherData(stream)) {
             _weatherError = F("Invalid data");

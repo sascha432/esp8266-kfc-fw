@@ -63,7 +63,8 @@ size_t GFXCanvasRLEStream::readBytes(uint8_t *buffer, size_t length)
         if (bufferLen > length) {
             bufferLen = length;
         }
-        memcpy(begin, _buffer.begin(), bufferLen);
+        std::copy_n(_buffer.begin(), bufferLen, begin);
+        //memcpy(begin, _buffer.begin(), bufferLen);
         _buffer.remove(0, bufferLen);
         begin += bufferLen;
         length -= bufferLen;

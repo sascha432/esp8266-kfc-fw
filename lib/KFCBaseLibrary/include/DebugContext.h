@@ -10,7 +10,7 @@ public:
     DebugContext() : _file(nullptr), _line(0), _functionName(nullptr) {}
     DebugContext(const char* file, int line, const char* functionName) : _file(file), _line(line), _functionName(functionName) {}
     void prefix() const {
-        DEBUG_OUTPUT.printf_P(___debugPrefix, millis(), _file, _line, ESP.getFreeHeap(), _functionName);
+        DEBUG_OUTPUT.printf_P(___debugPrefix, millis(), _file, _line, ESP.getFreeHeap(), can_yield(), _functionName);
     }
     const char* _file;
     int _line;

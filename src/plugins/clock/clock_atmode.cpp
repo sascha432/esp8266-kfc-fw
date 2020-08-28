@@ -152,7 +152,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             else if (value >= 0 && value < (int)AnimationType::MAX) {
                 switch(static_cast<AnimationType>(value)) {
                     case AnimationType::RAINBOW:
-                        _setAnimation(new Clock::RainbowAnimation(*this,
+                        _setAnimation(__LDBG_new(Clock::RainbowAnimation, *this,
                             args.toIntMinMax(1, ClockPlugin::kMinRainbowSpeed, (uint16_t)0xfffe, _config.rainbow.speed),
                             args.toFloatMinMax(2, 0.1f, 100.0f, _config.rainbow.multiplier),
                             Color((uint8_t)args.toInt(3, _config.rainbow.factor.red), (uint8_t)args.toInt(4, _config.rainbow.factor.green), (uint8_t)args.toInt(5, _config.rainbow.factor.blue))

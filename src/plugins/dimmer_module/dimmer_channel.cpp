@@ -31,7 +31,7 @@ MQTTComponent::MQTTAutoDiscoveryPtr DimmerChannel::nextAutoDiscovery(MQTTAutoDis
     if (num > 0) {
         return nullptr;
     }
-    auto discovery = new MQTTAutoDiscovery();
+    auto discovery = __LDBG_new(MQTTAutoDiscovery);
     switch(num) {
         case 0:
             _createTopics();

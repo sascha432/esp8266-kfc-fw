@@ -14,6 +14,8 @@
 #include <debug_helper_disable.h>
 #endif
 
+#include <debug_helper_enable_mem.h>
+
 Sensor_Battery::Sensor_Battery(const JsonString &name) : MQTTSensor(), _name(name)
 {
     REGISTER_SENSOR_CLIENT(this);
@@ -31,7 +33,7 @@ MQTTComponent::MQTTAutoDiscoveryPtr Sensor_Battery::nextAutoDiscovery(MQTTAutoDi
     if (num >= getAutoDiscoveryCount()) {
         return nullptr;
     }
-    auto discovery = new MQTTAutoDiscovery();
+    auto discovery = __LDBG_new(MQTTAutoDiscovery);
     switch(num) {
         case 0:
             discovery->create(this, _getId(BatteryType::LEVEL), format);

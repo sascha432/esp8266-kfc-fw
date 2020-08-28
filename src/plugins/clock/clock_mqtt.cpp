@@ -18,7 +18,7 @@ MQTTComponent::MQTTAutoDiscoveryPtr ClockPlugin::nextAutoDiscovery(MQTTAutoDisco
     if (num >= getAutoDiscoveryCount()) {
         return nullptr;
     }
-    auto discovery = MQTTAutoDiscoveryPtr(new MQTTAutoDiscovery());
+    auto discovery = __LDBG_new(MQTTAutoDiscovery);
     switch(num) {
         case 0: {
             discovery->create(this, F("clock"), format);

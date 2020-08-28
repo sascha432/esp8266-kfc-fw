@@ -39,10 +39,10 @@ WebTemplate::WebTemplate() : _form(nullptr), _json(nullptr)
 WebTemplate::~WebTemplate()
 {
     if (_json) {
-        delete _json;
+        __LDBG_delete(_json);
     }
     if (_form) {
-        delete _form;
+        __LDBG_delete(_form);
     }
 }
 

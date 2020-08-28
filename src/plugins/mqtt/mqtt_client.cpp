@@ -18,6 +18,8 @@
 #include <debug_helper_disable.h>
 #endif
 
+#include <debug_helper_enable_mem.h>
+
 using KFCConfigurationClasses::System;
 
 DEFINE_ENUM(MQTTQueueEnum_t);
@@ -29,7 +31,7 @@ void MQTTClient::setupInstance()
     __LDBG_printf("enabled=%u", System::Flags::getConfig().is_mqtt_enabled);
     deleteInstance();
     if (System::Flags::getConfig().is_mqtt_enabled) {
-        _mqttClient = new MQTTClient();
+        _mqttClient = __LDBG_new(MQTTClient);
     }
 }
 
@@ -37,12 +39,12 @@ void MQTTClient::deleteInstance()
 {
     __LDBG_printf("client=%p", _mqttClient);
     if (_mqttClient) {
-        delete _mqttClient;
+        __LDBG_delete(_mqttClient);
         _mqttClient = nullptr;
     }
 }
 
-MQTTClient::MQTTClient() : _client(new AsyncMqttClient()), _componentsEntityCount(0), _lastWillPayload('0')
+MQTTClient::MQTTClient() : _client(__LDBG_new(AsyncMqttClient)), _componentsEntityCount(0), _lastWillPayload('0')
 {
     _hostname = ClientConfig::getHostname();
     _username = ClientConfig::getUsername();
@@ -74,7 +76,7 @@ MQTTClient::~MQTTClient()
         disconnect(true);
         onDisconnect(AsyncMqttClientDisconnectReason::TCP_DISCONNECTED);
     }
-    delete _client;
+    __LDBG_delete(_client);
 }
 
 void MQTTClient::_zeroConfCallback(const String &hostname, const IPAddress &address, uint16_t port, MDNSResolver::ResponseType type)

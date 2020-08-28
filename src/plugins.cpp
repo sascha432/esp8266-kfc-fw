@@ -45,7 +45,7 @@ void register_plugin(PluginComponent *plugin)
     }
     __LDBG_printf("register_plugin %s priority %d", plugin->getName_P(), plugin->getOptions().priority);
     if (!pluginsPtr) {
-        pluginsPtr = new PluginsVector();
+        pluginsPtr = __LDBG_new(PluginsVector);
         pluginsPtr->reserve(16);
     }
     pluginsPtr->push_back(plugin);
@@ -103,6 +103,8 @@ void prepare_plugins()
 
 static void create_menu()
 {
+    //TODO move to PROGMEM
+
     navMenu.home = bootstrapMenu.addMenu(FSPGM(Home));
     bootstrapMenu.getItem(navMenu.home)->setUri(FSPGM(index_html));
 

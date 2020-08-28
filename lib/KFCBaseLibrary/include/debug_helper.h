@@ -50,7 +50,7 @@ extern unsigned long millis(void);
 #define __NDBG_track_new(...)                               ;
 #define __NDBG_track_delete(...)                            ;
 #define __NDBG_malloc(size)                                 malloc(size)
-#define __NDBG_realloc(ptr, size)                           realloc(ptr, size)
+#define __NDBG_realloc(ptr, size, ...)                      realloc(ptr, size)
 
 #define __NDBG_free(ptr)                                    free(ptr)
 #define __NDBG_malloc_str(size)                             reinterpret_cast<char *>(__NDBG_malloc(size))
@@ -130,7 +130,7 @@ extern const char ___debugPrefix[] PROGMEM;
 #define __DBG_new_array(num, name, ...)                     KFCMemoryDebugging::_new(DEBUG_HELPER_POSITION, num * sizeof(name), new name[num](__VA_ARGS__))
 #define __DBG_delete_array(ptr)                             delete[] KFCMemoryDebugging::_delete(DEBUG_HELPER_POSITION, ptr)
 #define __DBG_malloc(size)                                  KFCMemoryDebugging::_alloc(DEBUG_HELPER_POSITION, size, malloc(size))
-#define __DBG_realloc(ptr, size)                            KFCMemoryDebugging::_realloc(DEBUG_HELPER_POSITION, size, ptr, realloc(ptr, size))
+#define __DBG_realloc(ptr, size)                            KFCMemoryDebugging::_realloc(DEBUG_HELPER_POSITION, size, ptr, decltype(ptr)(realloc(ptr, size)))
 
 #define __DBG_free(ptr)                                     free(KFCMemoryDebugging::_free(DEBUG_HELPER_POSITION, ptr))
 #define __DBG_malloc_str(size)                              reinterpret_cast<char *>(__DBG_malloc(size))
@@ -391,4 +391,5 @@ static inline int DEBUG_OUTPUT_flush() {
 #endif
 
 #include "debug_helper_enable.h"
-#include "debug_helper_disable_mem.h"
+//#include "debug_helper_disable_mem.h"
+#include "debug_helper_enable_mem.h"

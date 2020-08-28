@@ -3,6 +3,7 @@
 */
 
 #include <PrintString.h>
+#include "debug_helper.h"
 #include "Buffer.h"
 
 #if 0
@@ -30,6 +31,8 @@ void MoveStringHelper::move(Buffer &buf)
         else {
             buf.setBuffer((uint8_t *)wbuffer(), capacity());
             buf.setLength(length());
+            // register allocated block
+            __LMDBG_IF(KFCMemoryDebugging::_alloc(DEBUG_HELPER_POSITION, capacity(), wbuffer()));
         }
         setSSO(false);
         setCapacity(0);

@@ -6,7 +6,6 @@
 
 #include <Arduino_compat.h>
 #include <Syslog.h>
-#include <ProgmemStream.h>
 #include <ReadADC.h>
 #include <EventScheduler.h>
 #include <MicrosTimer.h>
@@ -397,7 +396,7 @@ static void new_ATModeHelpVector_atModeCommandHelp()
         __DBG_panic("atModeCommandHelp=%p", atModeCommandHelp);
     }
 #endif
-    atModeCommandHelp = new ATModeHelpVector();
+    atModeCommandHelp = __LDBG_new(ATModeHelpVector);
 }
 
 void at_mode_generate_help(Stream &output, StringVector *findText = nullptr)
@@ -413,7 +412,7 @@ void at_mode_generate_help(Stream &output, StringVector *findText = nullptr)
     }
     at_mode_display_help(output, findText);
 
-    delete atModeCommandHelp;
+    __LDBG_delete(atModeCommandHelp);
     atModeCommandHelp = nullptr;
 
     if (config.isSafeMode()) {
@@ -447,7 +446,7 @@ String at_mode_print_command_string(Stream &output, char separator)
         }
     }
 
-    delete atModeCommandHelp;
+    __LDBG_delete(atModeCommandHelp);
     atModeCommandHelp = nullptr;
 
     return commands;
@@ -1356,7 +1355,7 @@ void at_mode_serial_handle_event(String &commandString)
                     if (args.isAnyMatchIgnoreCase(0, F("0|off|stop"))) {
                         args.print(F("ADC display off"));
                         if (atModeADC) {
-                            delete atModeADC;
+                            __LDBG_delete(atModeADC);
                             atModeADC = nullptr;
                         }
                     }
@@ -1368,7 +1367,7 @@ void at_mode_serial_handle_event(String &commandString)
                         auto readDelay = args.toIntMinMax(4, 0U, ~0U, 1250U);
 
                         if (!atModeADC) {
-                            atModeADC = new AtModeADC();
+                            atModeADC = __LDBG_new(AtModeADC);
                         }
                         if (atModeADC->init(period, multiplier, unit, readDelay)) {
 
@@ -1381,7 +1380,7 @@ void at_mode_serial_handle_event(String &commandString)
                         }
                         else {
                             args.print(F("Failed to initialize ADC"));
-                            delete atModeADC;
+                            __LDBG_delete(atModeADC);
                             atModeADC = nullptr;
                         }
 

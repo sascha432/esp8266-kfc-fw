@@ -17,7 +17,7 @@
 
 WsClient *WsConsoleClient::getInstance(AsyncWebSocketClient *socket)
 {
-    return new WsConsoleClient(socket);
+    return __LDBG_new(WsConsoleClient, socket);
 }
 
 void WsConsoleClient::onAuthenticated(uint8_t *data, size_t len)

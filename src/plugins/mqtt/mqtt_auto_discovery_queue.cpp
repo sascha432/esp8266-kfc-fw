@@ -112,7 +112,7 @@ void MQTTAutoDiscoveryQueue::_timerCallback(Event::CallbackTimerPtr timer)
                 component->_autoDiscoveryNum--;
             }
         }
-        delete discovery;
+        __LDBG_delete(discovery);
         return;
     }
 

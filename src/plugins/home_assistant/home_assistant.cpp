@@ -695,7 +695,7 @@ void HassPlugin::executeAction(const Action &action, StatusCallback_t statusCall
 void HassPlugin::getState(const String &entityId, uint8_t apiId, GetStateCallback_t callback, StatusCallback_t statusCallback)
 {
     __LDBG_printf("entity=%s", entityId.c_str());
-    auto jsonReader = new JsonVariableReader::Reader();
+    auto jsonReader = __LDBG_new(JsonVariableReader::Reader);
     auto groups = jsonReader->getElementGroups();
     groups->emplace_back(JsonString());
     HassJsonReader::GetState::apply(groups->back());
@@ -716,7 +716,7 @@ void HassPlugin::getState(const String &entityId, uint8_t apiId, GetStateCallbac
 void HassPlugin::callService(const String &service, uint8_t apiId, const JsonUnnamedObject &payload, ServiceCallback_t callback, StatusCallback_t statusCallback)
 {
     __LDBG_printf("service=%s payload=%s", service.c_str(), payload.toString().c_str());
-    auto jsonReader = new JsonVariableReader::Reader();
+    auto jsonReader = __LDBG_JsonVariableReader::Reader);
     auto groups = jsonReader->getElementGroups();
     groups->emplace_back(JsonString());
     HassJsonReader::CallService::apply(groups->back());

@@ -138,13 +138,13 @@ void BlinkLEDTimer::setBlink(int8_t pin, uint16_t delay, int32_t color)
 
 
     if (ledTimer) {
-        delete ledTimer;
+        __LDBG_delete(ledTimer);
         ledTimer = nullptr;
     }
 
 #if __LED_BUILTIN == -3
     if (pin == -3) {
-        auto timer = new WS2812LEDTimer();
+        auto timer = __LDBG_new(WS2812LEDTimer);
         if (delay == BlinkLEDTimer::OFF) {
             timer->off();
         }
@@ -171,7 +171,7 @@ void BlinkLEDTimer::setBlink(int8_t pin, uint16_t delay, int32_t color)
     else
 #endif
     {
-        ledTimer = new BlinkLEDTimer();
+        ledTimer = __LDBG_new(BlinkLEDTimer);
         if (pin >= 0) {
             // reset pin
             analogWrite(pin, 0);

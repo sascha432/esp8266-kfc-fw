@@ -13,6 +13,8 @@
 #include <debug_helper_disable.h>
 #endif
 
+#include <debug_helper_enable_mem.h>
+
 Sensor_DimmerMetrics::Sensor_DimmerMetrics(const String &name) : MQTTSensor(), _name(name), _webUIinitialized(false)
 {
     REGISTER_SENSOR_CLIENT(this);
@@ -28,7 +30,7 @@ Sensor_DimmerMetrics::MQTTAutoDiscoveryPtr Sensor_DimmerMetrics::nextAutoDiscove
     if (num >= getAutoDiscoveryCount()) {
         return nullptr;
     }
-    auto discovery = new MQTTAutoDiscovery();
+    auto discovery = __LDBG_new(MQTTAutoDiscovery);
     switch(num) {
         case 0:
             discovery->create(this, F("temp"), format);

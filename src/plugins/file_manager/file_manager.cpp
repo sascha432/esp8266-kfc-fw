@@ -6,7 +6,6 @@
 #include "file_manager.h"
 #include <Buffer.h>
 #include <PrintString.h>
-#include <ProgmemStream.h>
 #include <HttpHeaders.h>
 #include <ListDir.h>
 #include "fs_mapping.h"
@@ -211,7 +210,7 @@ uint16_t FileManager::list()
     __LDBG_printf("FileManager::list()");
     auto dirName = _requireDir(FSPGM(dir));
     if (_isValidData()) {
-        _response = new AsyncDirResponse(_getDir(dirName), dirName);
+        _response = __LDBG_new(AsyncDirResponse, _getDir(dirName), dirName);
         return 200;
     }
     return 500;
@@ -324,8 +323,8 @@ uint16_t FileManager::upload()
 
         message = String();
         httpCode = 302;
-        _headers.replace(new HttpLocationHeader(url));
-        _headers.replace(new HttpConnectionHeader(HttpConnectionHeader::CLOSE));
+        _headers.replace<HttpLocationHeader>(url);
+        _headers.replace<HttpConnectionHeader>();
     }
     _debug_println(message);
     _response = _request->beginResponse(httpCode, FSPGM(mime_text_plain), message);

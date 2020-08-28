@@ -30,7 +30,7 @@ PinMonitor::~PinMonitor()
 PinMonitor *PinMonitor::createInstance()
 {
     if (!_instance) {
-        _instance = new PinMonitor();
+        _instance = __LDBG_new(PinMonitor());
     }
     return _instance;
 }
@@ -38,7 +38,7 @@ PinMonitor *PinMonitor::createInstance()
 void PinMonitor::deleteInstance()
 {
     if (_instance) {
-        delete _instance;
+        __LDBG_delete(_instance);
         _instance = nullptr;
     }
 }

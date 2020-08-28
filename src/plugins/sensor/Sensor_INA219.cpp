@@ -16,6 +16,8 @@
 #include <debug_helper_disable.h>
 #endif
 
+#include <debug_helper_enable_mem.h>
+
 Sensor_INA219::Sensor_INA219(const JsonString &name, TwoWire &wire, uint8_t address) : MQTTSensor(), _name(name), _address(address), _updateTimer(0), _holdPeakTimer(0), _Ipeak(NAN), _ina219(address)
 {
     REGISTER_SENSOR_CLIENT(this);
@@ -41,7 +43,7 @@ MQTTComponent::MQTTAutoDiscoveryPtr Sensor_INA219::nextAutoDiscovery(MQTTAutoDis
     if (num >= getAutoDiscoveryCount()) {
         return nullptr;
     }
-    auto discovery = new MQTTAutoDiscovery();
+    auto discovery = __LDBG_new(MQTTAutoDiscovery);
     switch(num) {
         case 0:
             discovery->create(this, _getId(VOLTAGE), format);

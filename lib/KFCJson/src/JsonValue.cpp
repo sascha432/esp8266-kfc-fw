@@ -10,6 +10,8 @@
 #include <debug_helper_disable.h>
 #endif
 
+#include <debug_helper_enable_mem.h>
+
 AbstractJsonValue::~AbstractJsonValue() {
 }
 

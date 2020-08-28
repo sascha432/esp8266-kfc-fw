@@ -336,15 +336,27 @@ public:
     void init();
     void clear(uint8_t reserveItems = 0);
 
-    void add(HttpHeader *header) {
+    HttpHeader &add(HttpHeader *header) {
         _headers.emplace_back(header);
+        return *_headers.back().get();
+    }
+
+    template <typename Th, typename ... Args>
+    Th &add(Args &&...args) {
+        return reinterpret_cast<Th &>(add(new Th(std::forward<Args &&>(args)...)));
     }
 
     void add(const String& name, const String& value);
 
-    void replace(HttpHeader *header) {
+    HttpHeader &replace(HttpHeader *header) {
         remove(*header);
         _headers.emplace_back(header);
+        return *_headers.back().get();
+    }
+
+    template <typename Th, typename ... Args>
+    Th &replace(Args &&...args) {
+        return reinterpret_cast<Th &>(replace(new Th(std::forward<Args &&>(args)...)));
     }
 
     void remove(const String &name) {

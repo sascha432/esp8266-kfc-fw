@@ -79,7 +79,7 @@ AlarmPlugin::MQTTAutoDiscoveryPtr AlarmPlugin::nextAutoDiscovery(MQTTAutoDiscove
     if (num >= getAutoDiscoveryCount()) {
         return nullptr;
     }
-    auto discovery = new MQTTAutoDiscovery();
+    auto discovery = __LDBG_new(MQTTAutoDiscovery);
     switch(num) {
         case 0:
             discovery->create(this, FSPGM(alarm), format);

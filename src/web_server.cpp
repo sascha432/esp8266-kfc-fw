@@ -250,7 +250,7 @@ void WebServerPlugin::handlerLogout(AsyncWebServerRequest *request)
     HttpHeaders httpHeaders;
     httpHeaders.addNoCache(true);
     httpHeaders.add(createRemoveSessionIdCookie());
-    httpHeaders.add(new HttpLocationHeader(String('/')));
+    httpHeaders.add<HttpLocationHeader>(String('/'));
     httpHeaders.setAsyncWebServerResponseHeaders(response);
     request->send(response);
 }
@@ -345,7 +345,7 @@ void WebServerPlugin::handlerSpeedTest(AsyncWebServerRequest *request, bool zip)
         auto size = std::max(1024 * 64, (int)request->arg(FSPGM(size, "size")).toInt());
         if (zip) {
             response = new AsyncSpeedTestResponse(FSPGM(mime_application_zip), size);
-            httpHeaders.add(new HttpDispositionHeader(F("speedtest.zip")));
+            httpHeaders.add<HttpDispositionHeader>(F("speedtest.zip"));
         } else {
             response = new AsyncSpeedTestResponse(FSPGM(mime_image_bmp), size);
         }
@@ -424,7 +424,7 @@ void WebServerPlugin::handlerExportSettings(AsyncWebServerRequest *request)
         struct tm *tm = localtime(&now);
         strftime_P(timeStr, sizeof(timeStr), PSTR("%Y%m%d_%H%M%S"), tm);
         PrintString filename(F("kfcfw_config_%s_b" __BUILD_NUMBER "_%s.json"), hostname, timeStr);
-        httpHeaders.add(new HttpDispositionHeader(filename));
+        httpHeaders.add<HttpDispositionHeader>(filename);
 
         PrintString content;
         config.exportAsJson(content, config.getFirmwareVersion());
@@ -465,8 +465,8 @@ void WebServerPlugin::handlerUpdate(AsyncWebServerRequest *request)
 
                 response = request->beginResponse(302);
                 HttpHeaders httpHeaders(false);
-                httpHeaders.add(new HttpLocationHeader(String('/') + FSPGM(serial_console_html)));
-                httpHeaders.replace(new HttpConnectionHeader(HttpConnectionHeader::CLOSE));
+                httpHeaders.add<HttpLocationHeader>(String('/') + FSPGM(serial_console_html));
+                httpHeaders.replace<HttpConnectionHeader>(HttpConnectionHeader::CLOSE));
                 httpHeaders.setAsyncWebServerResponseHeaders(response);
                 request->send(response);
             }
@@ -504,8 +504,8 @@ void WebServerPlugin::handlerUpdate(AsyncWebServerRequest *request)
             }
             response = request->beginResponse(302);
             HttpHeaders httpHeaders(false);
-            httpHeaders.add(new HttpLocationHeader(location));
-            httpHeaders.replace(new HttpConnectionHeader(HttpConnectionHeader::CLOSE));
+            httpHeaders.add<HttpLocationHeader>(location);
+            httpHeaders.replace<HttpConnectionHeader>(HttpConnectionHeader::CLOSE);
             httpHeaders.setAsyncWebServerResponseHeaders(response);
             request->send(response);
 
@@ -763,10 +763,10 @@ bool WebServerPlugin::_sendFile(const FileMapping &mapping, const String &formNa
     else {
         // regular file
         response = new AsyncProgmemFileResponse(FPSTR(getContentType(path)), mapping.open(FileOpenMode::read));
-        httpHeaders.replace(new HttpDateHeader(FSPGM(Expires), 86400 * 30));
-        httpHeaders.replace(new HttpDateHeader(FSPGM(Last_Modified), mapping.getModificationTime()));
+        httpHeaders.replace<HttpDateHeader>(FSPGM(Expires), 86400 * 30);
+        httpHeaders.replace<HttpDateHeader>(FSPGM(Last_Modified), mapping.getModificationTime());
         if (_isPublic(path)) {
-            httpHeaders.replace(new HttpCacheControlHeader(HttpCacheControlHeader::PUBLIC));
+            httpHeaders.replace<HttpCacheControlHeader>(HttpCacheControlHeader::PUBLIC);
         }
     }
     if (mapping.isGz()) {
@@ -843,20 +843,19 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
 
             if (_loginFailures.isAddressBlocked(remote_addr) == false && request->arg(FSPGM(username)) == username && request->arg(FSPGM(password)) == password) {
 
-                auto cookie = new HttpCookieHeader(FSPGM(SID), generate_session_id(username, password, nullptr), String('/'));
+                auto &cookie = httpHeaders.add<HttpCookieHeader>(FSPGM(SID), generate_session_id(username, password, nullptr), String('/'));
                 authType = AuthType::PASSWORD;
                 time_t keepTime = request->arg(FSPGM(keep, "keep")).toInt();
                 if (keepTime) {
                     auto now = time(nullptr);
                     keepTime = (keepTime == 1 && IS_TIME_VALID(now)) ? now : keepTime; // check if the time was provied, otherwise use system time
                     if (IS_TIME_VALID(keepTime)) {
-                        cookie->setExpires(keepTime + System::Device::getConfig().getWebUICookieLifetimeInSeconds());
+                        cookie.setExpires(keepTime + System::Device::getConfig().getWebUICookieLifetimeInSeconds());
                     }
                 }
-                __SID(debug_printf_P(PSTR("new SID cookie=%s\n"), cookie->getValue().c_str()));
-                httpHeaders.add(cookie);
+                __SID(debug_printf_P(PSTR("new SID cookie=%s\n"), cookie.getValue().c_str()));
 
-                __LDBG_printf("Login successful: type=%u cookie=%s", getAuthTypeStr(authType), cookie->getValue().c_str());
+                __LDBG_printf("Login successful: type=%u cookie=%s", getAuthTypeStr(authType), cookie.getValue().c_str());
                 isAuthenticated = true;
                 Logger_security(F("Login successful from %s (%s)"), remote_addr.toString().c_str(), getAuthTypeStr(authType));
             }
@@ -1099,7 +1098,7 @@ WebServerPlugin::AsyncRestWebHandler *WebServerPlugin::addRestHandler(RestHandle
     }
     if (plugin._restCallbacks.empty()) {
         __LDBG_printf("installing REST handler");
-        restHandler = new AsyncRestWebHandler();
+        restHandler = __LDBG_new(AsyncRestWebHandler);
         plugin._server->addHandler(restHandler);
         __LDBG_printf("handler=%p", restHandler);
     }
@@ -1196,7 +1195,7 @@ AsyncWebServerResponse *WebServerPlugin::RestRequest::createResponse(AsyncWebSer
         return getHandler().invokeCallback(request, *this);
     }
 
-    auto response = new AsyncJsonResponse();
+    auto response = __LDBG_new(AsyncJsonResponse);
     auto &json = response->getJsonObject();
     if (_auth == false) {
         json.add(FSPGM(status), 401);
@@ -1261,9 +1260,9 @@ bool WebServerPlugin::AsyncRestWebHandler::canHandle(AsyncWebServerRequest *requ
         // match "/api/endpoint" and "/api/endpoint/*"
         if (strncmp_P(url, handlerUrl, handlerUrlLen) == 0 && (url[handlerUrlLen] == 0 || url[handlerUrlLen] == '/')) {
             request->addInterestingHeader(FSPGM(Authorization));
-            request->_tempObject = new WebServerPlugin::RestRequest(request, handler, WebServerPlugin::getInstance().isAuthenticated(request));
+            request->_tempObject = __LDBG_new(WebServerPlugin::RestRequest, request, handler, WebServerPlugin::getInstance().isAuthenticated(request));
             request->onDisconnect([this, request]() {
-                delete reinterpret_cast<WebServerPlugin::RestRequest *>(request->_tempObject);
+                __LDBG_delete(reinterpret_cast<WebServerPlugin::RestRequest *>(request->_tempObject));
                 request->_tempObject = nullptr;
             });
             return true;

@@ -88,7 +88,7 @@ bool MDNSPlugin::atModeHandler(AtModeArgs &args)
             auto query = PrintString(F("service=%s proto=%s wait=%ums"), args.toString(0).c_str(), args.toString(1).c_str(), timeout);
             args.printf_P(PSTR("Querying: %s"), query.c_str());
 
-            ServiceInfoVector *services = new ServiceInfoVector();
+            ServiceInfoVector *services = __LDBG_new(ServiceInfoVector);
 
             auto serviceQuery = MDNS.installServiceQuery(args.toString(0).c_str(), args.toString(1).c_str(), [this, services](MDNSResponder::MDNSServiceInfo mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent) {
                 serviceCallback(*services, false, mdnsServiceInfo, answerType, p_bSetContent);
@@ -107,7 +107,7 @@ bool MDNSPlugin::atModeHandler(AtModeArgs &args)
                         }).c_str(), svc.txts.c_str());
                     }
                 }
-                delete services;
+                __LDBG_delete(services);
             });
 #endif
         }

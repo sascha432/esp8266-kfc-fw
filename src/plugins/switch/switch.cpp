@@ -210,7 +210,7 @@ MQTTComponent::MQTTAutoDiscoveryPtr SwitchPlugin::nextAutoDiscovery(MQTTAutoDisc
     if (num >= getAutoDiscoveryCount()) {
         return nullptr;
     }
-    auto discovery = new MQTTAutoDiscovery();
+    auto discovery =__LDBG_new(MQTTAutoDiscovery);
     auto channel = PrintString(FSPGM(channel__u), num);
     discovery->create(this, channel, format);
     discovery->addStateTopic(MQTTClient::formatTopic(channel, FSPGM(_state)));

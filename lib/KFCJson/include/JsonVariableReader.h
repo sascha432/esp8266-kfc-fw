@@ -8,6 +8,7 @@
 #include "JsonString.h"
 #include "JsonBaseReader.h"
 
+#include <debug_helper_enable_mem.h>
 namespace JsonVariableReader {
 
     class Element;
@@ -32,7 +33,7 @@ namespace JsonVariableReader {
         //    *this = Result();
         //    return nullptr;
         //    // save results
-        //    return new Result(std::move(*this));
+        //    return __LDBG_new(Result, std::move(*this));
         //}
     };
 
@@ -84,7 +85,7 @@ namespace JsonVariableReader {
         std::vector<T *> &getResults() {
             _results.erase(std::remove_if(_results.begin(), _results.end(), [](Result *result) {
                 if (result->empty()) {
-                    delete result;
+                    __LDBG_delete(result);
                     return true;
                 }
                 return false;
@@ -98,7 +99,7 @@ namespace JsonVariableReader {
         // set result class type
         template <class T>
         void initResultType() {
-            _results.emplace_back(new T());
+            _results.emplace_back(__LDBG_new(T));
         }
 
     private:
@@ -127,3 +128,5 @@ namespace JsonVariableReader {
     };
 
 };
+
+#include <debug_helper_disable_mem.h>

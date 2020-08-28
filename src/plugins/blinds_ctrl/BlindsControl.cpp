@@ -51,7 +51,7 @@ MQTTComponent::MQTTAutoDiscoveryPtr BlindsControl::nextAutoDiscovery(MQTTAutoDis
     if (num >= getAutoDiscoveryCount()) {
         return nullptr;
     }
-    auto discovery = new MQTTAutoDiscovery();
+    auto discovery = __LDBG_new(MQTTAutoDiscovery);
     if (num < kChannelCount) {
         ChannelType channel = (ChannelType)num;
         discovery->create(this, PrintString(FSPGM(channel__u, "channel_%u"), channel), format);

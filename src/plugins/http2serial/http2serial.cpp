@@ -153,14 +153,14 @@ void Http2Serial::createInstance()
 {
     destroyInstance();
     if (!_instance) {
-        _instance = new Http2Serial();
+        _instance = __LDBG_new(Http2Serial);
     }
 }
 
 void Http2Serial::destroyInstance()
 {
     if (_instance) {
-        delete _instance;
+        __LDBG_delete(_instance);
         _instance = nullptr;
     }
 }
@@ -235,7 +235,7 @@ void Http2SerialPlugin::setup(SetupModeType mode)
 {
     auto server = WebServerPlugin::getWebServerObject();
     if (server) {
-        auto ws = new WsClientAsyncWebSocket(FSPGM(_serial_console), &wsSerialConsole);
+        auto ws = __LDBG_new(WsClientAsyncWebSocket, FSPGM(_serial_console), &wsSerialConsole);
         ws->onEvent(http2serial_event_handler);
         server->addHandler(ws);
         __LDBG_printf("Web socket for http2serial running on port %u", System::WebServer::getConfig().port);

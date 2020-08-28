@@ -87,7 +87,7 @@ void WebUIRow::setExtraClass(const JsonString &extraClasses)
 
 WebUIComponent &WebUIRow::addColumn(size_t reserve)
 {
-    auto &column = *new WebUIComponent(reserve);
+    auto &column = *__LDBG_new(WebUIComponent, reserve);
     _getColumns().add(reinterpret_cast<AbstractJsonValue *>(&column));
     return column;
 }
@@ -209,7 +209,7 @@ WebUI::WebUI(JsonUnnamedObject &json) : _json(json)
 
 WebUIRow &WebUI::addRow()
 {
-    auto rowPtr = new WebUIRow();
+    auto rowPtr = __LDBG_new(WebUIRow);
     _rows->add(reinterpret_cast<AbstractJsonValue *>(rowPtr));
     return *rowPtr;
 }

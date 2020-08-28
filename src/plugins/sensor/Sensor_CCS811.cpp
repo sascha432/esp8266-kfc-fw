@@ -16,6 +16,8 @@
 #include <debug_helper_disable.h>
 #endif
 
+#include <debug_helper_enable_mem.h>
+
 Sensor_CCS811::Sensor_CCS811(const String &name, uint8_t address) : MQTTSensor(), _name(name), _address(address)
 {
     REGISTER_SENSOR_CLIENT(this);
@@ -37,7 +39,7 @@ void Sensor_CCS811::createAutoDiscovery(MQTTAutoDiscovery::FormatType format, MQ
 {
     String topic = MQTTClient::formatTopic(_getId());
 
-    auto discovery = new MQTTAutoDiscovery();
+    auto discovery = __LDBG_newMQTTAutoDiscovery);
     discovery->create(this, _getId(F("eco2")), format);
     discovery->addStateTopic(topic);
     discovery->addUnitOfMeasurement(F("ppm"));
@@ -45,7 +47,7 @@ void Sensor_CCS811::createAutoDiscovery(MQTTAutoDiscovery::FormatType format, MQ
     discovery->finalize();
     vector.emplace_back(discovery);
 
-    discovery = new MQTTAutoDiscovery();
+    discovery = __LDBG_new(MQTTAutoDiscovery);
     discovery->create(this, _getId(F("tvoc")), format);
     discovery->addStateTopic(topic);
     discovery->addUnitOfMeasurement(F("ppb"));

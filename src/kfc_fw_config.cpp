@@ -1369,7 +1369,7 @@ void KFCConfigurationPlugin::reconfigure(const String &source)
 
 WebTemplate *KFCConfigurationPlugin::getWebTemplate(const String &name)
 {
-    return new StatusTemplate();
+    return __LDBG_new(StatusTemplate);
 }
 
 extern const char *session_get_token();

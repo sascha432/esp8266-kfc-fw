@@ -36,7 +36,7 @@ void RemoteControlPlugin::setup(SetupModeType mode)
     _readConfig();
 
     for(uint8_t n = 0; n < _buttons.size(); n++) {
-        auto &button = *(_buttons[n] = new PushButton(_buttonPins[n], PRESSED_WHEN_HIGH));
+        auto &button = *(_buttons[n] = __LDBG_new(PushButton, _buttonPins[n], PRESSED_WHEN_HIGH));
         button.onPress(onButtonPressed);
         button.onHoldRepeat(_config.longpressTime, _config.repeatTime, onButtonHeld);
         button.onRelease(onButtonReleased);
@@ -293,7 +293,7 @@ void RemoteControlPlugin::disableAutoSleepHandler(AsyncWebServerRequest *request
         AsyncWebServerResponse *response = request->beginResponse(302);
         HttpHeaders httpHeaders;
         httpHeaders.addNoCache(true);
-        httpHeaders.add(new HttpLocationHeader(F("/status.html")));
+        httpHeaders.add<HttpLocationHeader>(F("/status.html"));
         httpHeaders.setAsyncWebServerResponseHeaders(response);
         request->send(response);
     }
@@ -309,7 +309,7 @@ void RemoteControlPlugin::deepSleepHandler(AsyncWebServerRequest *request)
         AsyncWebServerResponse *response = request->beginResponse(302);
         HttpHeaders httpHeaders;
         httpHeaders.addNoCache(true);
-        httpHeaders.add(new HttpLocationHeader(F("/status.html")));
+        httpHeaders.add<HttpLocationHeader>(F("/status.html"));
         httpHeaders.setAsyncWebServerResponseHeaders(response);
         request->send(response);
 

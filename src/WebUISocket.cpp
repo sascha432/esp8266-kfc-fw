@@ -19,6 +19,7 @@
 
 #if DEBUG_WEBUI
 #include <debug_helper_enable.h>
+#include <debug_helper_enable_mem.h>
 #else
 #include <debug_helper_disable.h>
 #endif
@@ -39,7 +40,7 @@ void WsWebUISocket::setup()
 {
     auto server = WebServerPlugin::getWebServerObject();
     if (server) {
-        auto ws = new WsClientAsyncWebSocket(FSPGM(webui_socket_uri), &wsWebUI);
+        auto ws = __LDBG_new(WsClientAsyncWebSocket, FSPGM(webui_socket_uri), &wsWebUI);
         ws->onEvent(webui_socket_event_handler);
         server->addHandler(ws);
         __LDBG_printf("Web socket for UI running on port %u", System::WebServer::getConfig().port);
@@ -76,8 +77,8 @@ WsClientAsyncWebSocket *WsWebUISocket::getWsWebUI()
 
 WsClient *WsWebUISocket::getInstance(AsyncWebSocketClient *socket)
 {
-    _debug_println();
-    return new WsWebUISocket(socket);
+    __LDBG_println();
+    return __LDBG_new(WsWebUISocket, socket);
 }
 
 void WsWebUISocket::onText(uint8_t *data, size_t len)

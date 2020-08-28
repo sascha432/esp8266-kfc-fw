@@ -35,7 +35,9 @@ public:
     template<class T>
     static T _realloc(const DebugContext &p, size_t s, T r, T t) {
         _reallocCount++;
-        _free(p, r);
+        if (r) {
+            _free(p, r);
+        }
         return _alloc(p, s, t);
     }
 

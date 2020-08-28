@@ -6,6 +6,8 @@
 #include "JsonArray.h"
 #include "JsonObject.h"
 
+#include <debug_helper_enable_mem.h>
+
 JsonConverter::JsonConverter(Stream &stream) : JsonBaseReader(stream), _current(nullptr), _ignoreInvalid(true), _filtered(0)
 {
 }
@@ -15,18 +17,18 @@ bool JsonConverter::beginObject(bool isArray)
     AbstractJsonValue *value;
     if (isArray) {
         if (_current && _current->hasChildName()) {
-            value = new JsonArray(getKey());
+            value = __LDBG_new(JsonArray, getKey());
         }
         else {
-            value = new JsonUnnamedArray();
+            value = __LDBG_new(JsonUnnamedArray);
         }
     }
     else {
         if (_current && _current->hasChildName()) {
-            value = new JsonObject(getKey());
+            value = __LDBG_new(JsonObject, getKey());
         }
         else {
-            value = new JsonUnnamedObject();
+            value = __LDBG_new(JsonUnnamedObject);
         }
     }
     if (_current) {
@@ -69,20 +71,20 @@ bool JsonConverter::processElement()
     if (_current->hasChildName()) {
         switch (getType()) {
         case JSON_TYPE_BOOLEAN:
-            value = new JsonNamedVariant<bool>(_keyStr, _valueStr.length() == 4);
+            value = __LDBG_new(JsonNamedVariant<bool>, _keyStr, _valueStr.length() == 4);
             break;
         case JSON_TYPE_NUMBER:
         case JSON_TYPE_FLOAT:
-            value = new JsonNamedVariant<JsonNumber>(_keyStr, JsonNumber(_valueStr));
+            value = __LDBG_new(JsonNamedVariant<JsonNumber>, _keyStr, JsonNumber(_valueStr));
             break;
         case JSON_TYPE_INT:
-            value = new JsonNamedVariant<int32_t>(_keyStr, (int32_t)_valueStr.toInt());
+            value = __LDBG_new(JsonNamedVariant<int32_t>, _keyStr, (int32_t)_valueStr.toInt());
             break;
         case JSON_TYPE_NULL:
-            value = new JsonNamedVariant<std::nullptr_t>(_keyStr, nullptr);
+            value = __LDBG_new(JsonNamedVariant<std::nullptr_t>, _keyStr, nullptr);
             break;
         case JSON_TYPE_STRING:
-            value = new JsonNamedVariant<String>(_keyStr, _valueStr);
+            value = __LDBG_new(JsonNamedVariant<String>, _keyStr, _valueStr);
             break;
         default:
             break;
@@ -91,20 +93,20 @@ bool JsonConverter::processElement()
     else {
         switch (getType()) {
         case JSON_TYPE_BOOLEAN:
-            value = new JsonUnnamedVariant<bool>(_valueStr.length() == 4);
+            value = __LDBG_new(JsonUnnamedVariant<bool>, _valueStr.length() == 4);
             break;
         case JSON_TYPE_NUMBER:
         case JSON_TYPE_FLOAT:
-            value = new JsonUnnamedVariant<JsonNumber>(JsonNumber(_valueStr));
+            value = __LDBG_new(JsonUnnamedVariant<JsonNumber>, JsonNumber(_valueStr));
             break;
         case JSON_TYPE_INT:
-            value = new JsonUnnamedVariant<int32_t>((int32_t)_valueStr.toInt());
+            value = __LDBG_new(JsonUnnamedVariant<int32_t>, (int32_t)_valueStr.toInt());
             break;
         case JSON_TYPE_NULL:
-            value = new JsonUnnamedVariant<std::nullptr_t>(nullptr);
+            value = __LDBG_new(JsonUnnamedVariant<std::nullptr_t>, nullptr);
             break;
         case JSON_TYPE_STRING:
-            value = new JsonUnnamedVariant<String>(_valueStr);
+            value = __LDBG_new(JsonUnnamedVariant<String>, _valueStr);
             break;
         default:
             break;
@@ -137,3 +139,5 @@ void JsonConverter::addFilter(const JsonString &str)
     _filter.push_back(str);
     _filtered = ~0;
 }
+
+#include <debug_helper_disable_mem.h>

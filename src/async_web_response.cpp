@@ -3,7 +3,6 @@
 */
 
 #include "async_web_response.h"
-#include <ProgmemStream.h>
 #include <PrintHtmlEntitiesString.h>
 #include <MicrosTimer.h>
 #include "fs_mapping.h"
@@ -651,7 +650,7 @@ AsyncTemplateResponse::AsyncTemplateResponse(const String &contentType, const Fi
 
 AsyncTemplateResponse::~AsyncTemplateResponse()
 {
-    delete _webTemplate;
+    __LDBG_delete(_webTemplate);
 }
 
 AsyncSpeedTestResponse::AsyncSpeedTestResponse(const String &contentType, uint32_t size) : AsyncBaseResponse(true)
@@ -723,7 +722,7 @@ void AsyncFillBufferCallbackResponse::finished(bool *async, AsyncFillBufferCallb
         response->_async = nullptr;
         response->_finished = true;
     }
-    delete async;
+    __LDBG_delete(async);
 }
 
 bool AsyncFillBufferCallbackResponse::_sourceValid() const

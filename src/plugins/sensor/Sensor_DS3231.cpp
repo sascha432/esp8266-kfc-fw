@@ -12,6 +12,8 @@
 #include <debug_helper_disable.h>
 #endif
 
+#include <debug_helper_enable_mem.h>
+
 #if RTC_DEVICE_DS3231
 extern RTC_DS3231 rtc;
 #endif
@@ -35,7 +37,7 @@ MQTTComponent::MQTTAutoDiscoveryPtr Sensor_DS3231::nextAutoDiscovery(MQTTAutoDis
     if (num >= getAutoDiscoveryCount()) {
         return nullptr;
     }
-    auto discovery = new MQTTAutoDiscovery();
+    auto discovery = __LDBG_new(MQTTAutoDiscovery);
     switch(num) {
         case 0:
             discovery->create(this, FSPGM(ds3231_id_temp), format);

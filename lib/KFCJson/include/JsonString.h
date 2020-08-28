@@ -6,6 +6,13 @@
 
 #include <Arduino_compat.h>
 
+#ifndef DEBUG_KFC_JSON
+#define DEBUG_KFC_JSON                          0
+#endif
+#ifndef DEBUG_KFC_JSON_MEM
+#define DEBUG_KFC_JSON_MEM                      1
+#endif
+
 class JsonString {
 public:
     typedef enum : uint8_t {

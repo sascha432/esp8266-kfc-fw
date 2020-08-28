@@ -32,7 +32,7 @@ namespace GFXCanvas {
         static constexpr size_t kExtendSize = 8;
         static constexpr size_t kShrinkSize = 32;
 
-        BufferTemplate() : _data(nullptr), _size(0), _capacity(0) {
+        inline BufferTemplate() : _data(nullptr), _size(0), _capacity(0) {
         }
 
         // BufferTemplate(const BufferTemplate &copy) = delete;
@@ -44,7 +44,7 @@ namespace GFXCanvas {
         BufferTemplate(const BufferTemplate &copy) : _data(copy._size ? new data_type[copy._size] : nullptr), _size(copy._size), _capacity(_size) {
             if (_data) {
                 __LDBG_track_new(copy._size * sizeof(data_type));
-                std::copy(copy.begin(), copy.end(), _data);
+                std::copy(copy.begin(), copy.end(), begin());
             }
             else {
                 _size = 0;
@@ -52,7 +52,7 @@ namespace GFXCanvas {
             }
         }
 
-        BufferTemplate(BufferTemplate &&move) noexcept :
+        inline BufferTemplate(BufferTemplate &&move) noexcept :
             _data(std::exchange(move._data, nullptr)),
             _size(std::exchange(move._size, 0)),
             _capacity(std::exchange(move._capacity, 0)) {
@@ -74,7 +74,8 @@ namespace GFXCanvas {
                 resize(copy._size);
                 if (_capacity >= copy._size) {
                     _size = copy._size;
-                    std::fill(std::copy(copy.begin(), copy.end(), _data), begin() + _capacity, 0);
+                    //std::fill(std::copy(copy.begin(), copy.end(), begin()), begin() + _capacity, 0);
+                    std::copy(copy.begin(), copy.end(), begin());
                     return *this;
                 }
             }
@@ -89,56 +90,56 @@ namespace GFXCanvas {
             }
         }
 
-        data_type_ptr data() {
+        inline data_type_ptr data() {
             return _data;
         }
 
-        data_type at(size_type n) const {
+        inline data_type at(size_type n) const {
             return _data[n];
         }
-        data_type &at(size_type n) {
-            return _data[n];
-        }
-
-        data_type operator[](size_t n) const {
-            return _data[n];
-        }
-        data_type &operator[](size_t n) {
+        inline data_type &at(size_type n) {
             return _data[n];
         }
 
-        data_type_ptr begin() {
+        inline data_type operator[](size_t n) const {
+            return _data[n];
+        }
+        inline data_type &operator[](size_t n) {
+            return _data[n];
+        }
+
+        inline data_type_ptr begin() {
             return _data;
         }
-        const data_type_ptr begin() const {
+        inline const data_type_ptr begin() const {
             return _data;
         }
-        data_type_ptr end() {
+        inline data_type_ptr end() {
             return &_data[_size];
         }
-        const data_type_ptr end() const {
+        inline const data_type_ptr end() const {
             return &_data[_size];
         }
 
-        void push(uint8_t data) {
+        inline void push(uint8_t data) {
             _check_capacity(1);
             _push_back(data);
         }
 
-        void push_bb(uint8_t data1, uint8_t data2) {
+        inline void push_bb(uint8_t data1, uint8_t data2) {
             _check_capacity(2);
             _push_back(data1);
             _push_back(data2);
         }
 
-        void push_bw(uint8_t data1, uint16_t data2) {
+        inline void push_bw(uint8_t data1, uint16_t data2) {
             _check_capacity(3);
             _push_back(data1);
             _push_back((data_type)data2);
             _push_back((data_type)(data2 >> 8));
         }
 
-        void clear() {
+        inline void clear() {
             _size = 0;
         }
 
@@ -146,15 +147,15 @@ namespace GFXCanvas {
             reserve(_size);
         }
 
-        size_type length() const {
+        inline size_type length() const {
             return _size;
         }
 
-        size_type size() const {
+        inline size_type size() const {
             return _capacity;
         }
 
-        void setLength(size_type n) {
+        inline void setLength(size_type n) {
             _size = n;
         }
 
@@ -196,17 +197,17 @@ namespace GFXCanvas {
                     }
                     _data = newData;
                     _capacity = static_cast<size_type>(n);
-                    std::fill(end(), begin() + _capacity, 0);
+                    //std::fill(end(), begin() + _capacity, 0);
                 }
             }
         }
 
     private:
-        void _push_back(data_type data) {
+        inline void _push_back(data_type data) {
             _data[_size++] = data;
         }
 
-        void _check_capacity(size_type n) {
+        inline void _check_capacity(size_type n) {
             if (_size + n > _capacity) {
                 reserve(_size + n);
             }

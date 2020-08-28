@@ -16,7 +16,6 @@
 #error Platform not supported
 #endif
 #include <time.h>
-#include <ProgmemStream.h>
 #include "fs_mapping.h"
 #if LOGGER
 #include "logger.h"

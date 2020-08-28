@@ -35,7 +35,7 @@ GFXCanvasCompressed::GFXCanvasCompressed(uWidthType width, uHeightType height) :
 {
 }
 
-GFXCanvasCompressed::GFXCanvasCompressed(uWidthType width, const Lines &lines) : AdafruitGFXExtension(width, lines.height()), _lines(lines.height(), lines._lines), _cache(width, lines.height(), 0)
+GFXCanvasCompressed::GFXCanvasCompressed(uWidthType width, const Lines &lines) : AdafruitGFXExtension(width, lines.height()), _lines(lines), _cache(width, _lines.height(), 0)
 {
 }
 

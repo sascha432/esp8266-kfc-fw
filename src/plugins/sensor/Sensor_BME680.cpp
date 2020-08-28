@@ -28,7 +28,7 @@ void Sensor_BME680::createAutoDiscovery(MQTTAutoDiscovery::FormatType format, MQ
 {
     String topic = MQTTClient::formatTopic(_getId());
 
-    auto discovery = new MQTTAutoDiscovery();
+    auto discovery = __LDBG_new(MQTTAutoDiscovery);
     discovery->create(this, _getId(FSPGM(temperature)), format);
     discovery->addStateTopic(topic);
     discovery->addUnitOfMeasurement(FSPGM(_degreeC));
@@ -36,7 +36,7 @@ void Sensor_BME680::createAutoDiscovery(MQTTAutoDiscovery::FormatType format, MQ
     discovery->finalize();
     vector.emplace_back(discovery);
 
-    discovery = new MQTTAutoDiscovery();
+    discovery = __LDBG_new(MQTTAutoDiscovery);
     discovery->create(this, _getId(FSPGM(humidity)), format);
     discovery->addStateTopic(topic);
     discovery->addUnitOfMeasurement('%');
@@ -44,7 +44,7 @@ void Sensor_BME680::createAutoDiscovery(MQTTAutoDiscovery::FormatType format, MQ
     discovery->finalize();
     vector.emplace_back(discovery);
 
-    discovery = new MQTTAutoDiscovery();
+    discovery = __LDBG_new(MQTTAutoDiscovery);
     discovery->create(this, _getId(FSPGM(pressure)), format);
     discovery->addStateTopic(topic);
     discovery->addUnitOfMeasurement(FSPGM(hPa));
@@ -52,7 +52,7 @@ void Sensor_BME680::createAutoDiscovery(MQTTAutoDiscovery::FormatType format, MQ
     discovery->finalize();
     vector.emplace_back(discovery);
 
-    discovery = new MQTTAutoDiscovery();
+    discovery = __LDBG_new(MQTTAutoDiscovery);
     discovery->create(this, _getId(F("gas")), format);
     discovery->addStateTopic(topic);
     discovery->addUnitOfMeasurement(emptyString);

@@ -10,20 +10,21 @@
 #else
 #include <debug_helper_disable.h>
 #endif
+#include <debug_helper_enable_mem.h>
 
 JsonArray & JsonObjectMethods::addArray(const JsonString & name, size_t reserve) {
-    return reinterpret_cast<JsonArray &>(add(new JsonArray(name, reserve)));
+    return reinterpret_cast<JsonArray &>(add(__LDBG_new(JsonArray, name, reserve)));
 }
 
 JsonObject & JsonObjectMethods::addObject(const JsonString & name, size_t reserve) {
-    return reinterpret_cast<JsonObject &>(add(new JsonObject(name, reserve)));
+    return reinterpret_cast<JsonObject &>(add(__LDBG_new(JsonObject, name, reserve)));
 }
 
 AbstractJsonValue & JsonObjectMethods::replace(const JsonString & name, AbstractJsonValue * value) {
     auto vector = getVector();
     for (auto iterator = vector->begin(); iterator != vector->end(); ++iterator) {
         if (*(*iterator)->getName() == name) {
-            delete *iterator;
+            __LDBG_delete(*iterator);
             *iterator = value;
             return *value;
         }
@@ -45,7 +46,8 @@ AbstractJsonValue * JsonObjectMethods::find(const JsonString & name) {
     return nullptr;
 }
 
-AbstractJsonValue * JsonObjectMethods::find(const __FlashStringHelper * name) {
+AbstractJsonValue *JsonObjectMethods::find(const __FlashStringHelper * name)
+{
     auto vector = getVector();
     for (auto iterator = vector->begin(); iterator != vector->end(); ++iterator) {
         if (*(*iterator)->getName() == name) {
@@ -55,7 +57,8 @@ AbstractJsonValue * JsonObjectMethods::find(const __FlashStringHelper * name) {
     return nullptr;
 }
 
-AbstractJsonValue * JsonObjectMethods::find(const char * name) {
+AbstractJsonValue *JsonObjectMethods::find(const char * name)
+{
     auto vector = getVector();
     for (auto iterator = vector->begin(); iterator != vector->end(); ++iterator) {
         if (*(*iterator)->getName() == name) {
@@ -65,22 +68,27 @@ AbstractJsonValue * JsonObjectMethods::find(const char * name) {
     return nullptr;
 }
 
-JsonUnnamedObject::JsonUnnamedObject(size_t reserve) : JsonUnnamedVariant<AbstractJsonValue::JsonVariantVector>(nullptr, reserve) {
+JsonUnnamedObject::JsonUnnamedObject(size_t reserve) : JsonUnnamedVariant<AbstractJsonValue::JsonVariantVector>(nullptr, reserve)
+{
 }
 
-size_t JsonUnnamedObject::printTo(Print & output) const {
+size_t JsonUnnamedObject::printTo(Print & output) const
+{
     return output.write('{') + JsonUnnamedVariant<AbstractJsonValue::JsonVariantVector>::printTo(output) + output.write('}');
 }
 
-AbstractJsonValue::JsonVariantEnum_t JsonUnnamedObject::getType() const {
+AbstractJsonValue::JsonVariantEnum_t JsonUnnamedObject::getType() const
+{
     return AbstractJsonValue::JsonVariantEnum_t::JSON_UNNAMED_OBJECT;
 }
 
-bool JsonUnnamedObject::hasChildName() const {
+bool JsonUnnamedObject::hasChildName() const
+{
     return true;
 }
 
-AbstractJsonValue & JsonUnnamedObject::add(AbstractJsonValue * value) {
+AbstractJsonValue & JsonUnnamedObject::add(AbstractJsonValue * value)
+{
     _getValue().push_back(value);
     return *_getValue().back();
 }
@@ -89,26 +97,34 @@ AbstractJsonValue::JsonVariantVector * JsonUnnamedObject::getVector() {
     return &_getValue();
 }
 
-JsonObject::JsonObject(const JsonString & name, size_t reserve) : JsonNamedVariant<AbstractJsonValue::JsonVariantVector>(name, nullptr, reserve) {
+JsonObject::JsonObject(const JsonString & name, size_t reserve) : JsonNamedVariant<AbstractJsonValue::JsonVariantVector>(name, nullptr, reserve)
+{
 }
 
-size_t JsonObject::printTo(Print & output) const {
+size_t JsonObject::printTo(Print & output) const
+{
     return JsonNamedVariant<AbstractJsonValue::JsonVariantVector>::_printName(output) + output.write('{') + JsonUnnamedVariant<AbstractJsonValue::JsonVariantVector>::printTo(output) + output.write('}');
 }
 
-AbstractJsonValue::JsonVariantEnum_t JsonObject::getType() const {
+AbstractJsonValue::JsonVariantEnum_t JsonObject::getType() const
+{
     return AbstractJsonValue::JsonVariantEnum_t::JSON_OBJECT;
 }
 
-bool JsonObject::hasChildName() const {
+bool JsonObject::hasChildName() const
+{
     return true;
 }
 
-AbstractJsonValue & JsonObject::add(AbstractJsonValue * value) {
+AbstractJsonValue & JsonObject::add(AbstractJsonValue * value)
+{
     _getValue().push_back(value);
     return *_getValue().back();
 }
 
-AbstractJsonValue::JsonVariantVector * JsonObject::getVector() {
+AbstractJsonValue::JsonVariantVector * JsonObject::getVector()
+{
     return &_getValue();
 }
+
+#include <debug_helper_disable_mem.h>

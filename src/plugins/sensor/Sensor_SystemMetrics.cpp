@@ -18,6 +18,9 @@
 #include <debug_helper_disable.h>
 #endif
 
+#include <debug_helper_enable_mem.h>
+
+
 FLASH_STRING_GENERATOR_AUTO_INIT(
     AUTO_STRING_DEF(uptime, "uptime")
     AUTO_STRING_DEF(heap, "heap")
@@ -43,7 +46,7 @@ MQTTComponent::MQTTAutoDiscoveryPtr Sensor_SystemMetrics::nextAutoDiscovery(MQTT
     if (num >= getAutoDiscoveryCount()) {
         return nullptr;
     }
-    auto discovery = new MQTTAutoDiscovery();
+    auto discovery = __LDBG_new(MQTTAutoDiscovery);
     switch(num) {
         case 0:
             discovery->create(this, FSPGM(uptime), format);

@@ -38,7 +38,7 @@ void Serial2TcpServer::begin()
     Serial2TcpBase::begin();
 
     end();
-    _server = new AsyncServer(getPort());
+    _server =__LDBG_(AsyncServer, getPort());
     _server->onClient(&Serial2TcpServer::handleNewClient, this);
 
 #if ASYNC_TCP_SSL_ENABLED
@@ -59,7 +59,7 @@ void Serial2TcpServer::end()
         for(auto &&conn: _connections) {
             _onDisconnect(conn->getClient(), F("server shutdown"));
         }
-        delete _server;
+        __LDBG_delete(_server);
         _server = nullptr;
     }
     _onEnd();
@@ -148,7 +148,7 @@ void Serial2TcpServer::_handleNewClient(AsyncClient *client)
 Serial2TcpConnection &Serial2TcpServer::_addClient(AsyncClient *client)
 {
     _debug_printf_P(PSTR("Serial2TcpServer::_addClient(%p) IP address %s\n"), client, client->remoteIP().toString().c_str());
-    _connections.emplace_back(new Serial2TcpConnection(client, false));
+    _connections.emplace_back(__LDBG_new(Serial2TcpConnection, client, false));
     if (_connections.size() == 1) {
         _onStart();
     }

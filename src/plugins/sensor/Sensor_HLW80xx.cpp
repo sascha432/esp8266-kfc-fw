@@ -18,6 +18,8 @@
 #include <debug_helper_disable.h>
 #endif
 
+#include <debug_helper_enable_mem.h>
+
 using KFCConfigurationClasses::Plugins;
 
 PROGMEM_STRING_DEF(iot_sensor_hlw80xx_state_file, );
@@ -52,7 +54,7 @@ MQTTComponent::MQTTAutoDiscoveryPtr Sensor_HLW80xx::nextAutoDiscovery(MQTTAutoDi
         return nullptr;
     }
     String topic = _getTopic();
-    auto discovery = new MQTTAutoDiscovery();
+    auto discovery = __LDBG_new(MQTTAutoDiscovery);
     switch(num) {
         case 0:
             discovery->create(this, FSPGM(power), format);

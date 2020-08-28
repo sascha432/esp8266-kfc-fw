@@ -13,6 +13,8 @@
 #include <debug_helper_disable.h>
 #endif
 
+#include <debug_helper_enable_mem.h>
+
 Sensor_DHTxx::Sensor_DHTxx(const String &name, uint8_t pin/*, uint8_t type*/) : MQTTSensor(), _name(name), _pin(pin), _dht(pin)
 //_type(type), _dht(_pin, _type)
 {
@@ -30,7 +32,7 @@ void Sensor_DHTxx::createAutoDiscovery(MQTTAutoDiscovery::FormatType format, MQT
     _debug_println();
     String topic = MQTTClient::formatTopic(_getId());
 
-    auto discovery = new MQTTAutoDiscovery();
+    auto discovery = __LDBG_new(MQTTAutoDiscovery);
     discovery->create(this, _getId(FSPGM(temperature)), format);
     discovery->addStateTopic(topic);
     discovery->addUnitOfMeasurement(FSPGM(_degreeC));
@@ -38,7 +40,7 @@ void Sensor_DHTxx::createAutoDiscovery(MQTTAutoDiscovery::FormatType format, MQT
     discovery->finalize();
     vector.emplace_back(discovery);
 
-    discovery = new MQTTAutoDiscovery();
+    discovery = __LDBG_new(MQTTAutoDiscovery);
     discovery->create(this, _getId(FSPGM(humidity)), format);
     discovery->addStateTopic(topic);
     discovery->addUnitOfMeasurement(F("%"));

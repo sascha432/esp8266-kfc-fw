@@ -183,7 +183,7 @@ void ClockPlugin::_startTempProtectionAnimation()
 {
     _autoBrightness = kAutoBrightnessOff;
     _setBrightness(Clock::kBrightnessTempProtection); // 25% brightness and 20% of the time enabled = 5% power
-    _setAnimation(new Clock::FlashingAnimation(*this, Color(0xff0000), 250, 5));
+    _setAnimation(__LDBG_new(Clock::FlashingAnimation, *this, Color(0xff0000), 250, 5));
 }
 
 void ClockPlugin::setup(SetupModeType mode)
@@ -481,13 +481,13 @@ void ClockPlugin::setAnimation(AnimationType animation)
     _config.animation = static_cast<uint8_t>(animation);
     switch(animation) {
         case AnimationType::FADING:
-            _setAnimation(new Clock::FadingAnimation(*this, _color, Color().rnd(), _config.fading.speed, _config.fading.delay, _config.fading.factor.value));
+            _setAnimation(__LDBG_new(Clock::FadingAnimation, *this, _color, Color().rnd(), _config.fading.speed, _config.fading.delay, _config.fading.factor.value));
             break;
         case AnimationType::RAINBOW:
-            _setAnimation(new Clock::RainbowAnimation(*this, _config.rainbow.speed, _config.rainbow.multiplier, _config.rainbow.factor.value, _config.rainbow.minimum.value));
+            _setAnimation(__LDBG_new(Clock::RainbowAnimation, *this, _config.rainbow.speed, _config.rainbow.multiplier, _config.rainbow.factor.value, _config.rainbow.minimum.value));
             break;
         case AnimationType::FLASHING:
-            _setAnimation(new Clock::FlashingAnimation(*this, _color, _config.flashing_speed));
+            _setAnimation(__LDBG_new(Clock::FlashingAnimation, *this, _color, _config.flashing_speed));
             break;
         case AnimationType::NEXT:
             __LDBG_printf("animation NEXT animation=%p next=%p", _animation, _nextAnimation);
@@ -569,7 +569,7 @@ void ClockPlugin::onButtonHeld(Button& btn, uint16_t duration, uint16_t repeatCo
     if (repeatCount == 12) {    // start flashing after 2 seconds, hard reset occurs ~2.5s
         plugin._autoBrightness = kAutoBrightnessOff;
         plugin._display.setBrightness(SevenSegmentDisplay::kMaxBrightness);
-        plugin._setAnimation(new Clock::FlashingAnimation(*this, Color(255, 0, 0), 150));
+        plugin._setAnimation(__LDBG_new(Clock::FlashingAnimation, *this, Color(255, 0, 0), 150));
 
         _Scheduler.add(2000, false, [](Event::CallbackTimerPtr timer) {   // call restart if no reset occured
             __LDBG_printf("restarting device\n"));
@@ -629,7 +629,7 @@ void ClockPlugin::_setNextAnimation(Clock::Animation *nextAnimation)
 {
     __LDBG_printf("next=%p", nextAnimation);
     if (_nextAnimation) {
-        delete _nextAnimation;
+        __LDBG_delete(_nextAnimation);
     }
     _nextAnimation = nextAnimation;
 }
@@ -642,7 +642,7 @@ void ClockPlugin::_deleteAnimaton(bool startNext)
         return;
     }
     if (_animation) {
-        delete _animation;
+        __LDBG_delete(_animation);
         _animation = nullptr;
     }
     if (_nextAnimation) {
@@ -653,7 +653,7 @@ void ClockPlugin::_deleteAnimaton(bool startNext)
             _animation->begin();
         }
         else {
-            delete _nextAnimation;
+            __LDBG_delete(_nextAnimation);
             _nextAnimation = nullptr;
         }
     }
@@ -665,7 +665,7 @@ void ClockPlugin::handleWebServer(AsyncWebServerRequest *request)
 {
     if (WebServerPlugin::getInstance().isAuthenticated(request) == true) {
         HttpHeaders httpHeaders(false);
-        auto response = new AsyncFillBufferCallbackResponse([](bool *async, bool fillBuffer, AsyncFillBufferCallbackResponse *response) {
+        auto response = __LDBG_new(AsyncFillBufferCallbackResponse, [](bool *async, bool fillBuffer, AsyncFillBufferCallbackResponse *response) {
             if (*async && !fillBuffer) {
                 response->setContentType(FSPGM(mime_text_plain));
                 if (!ADCManager::getInstance().requestAverage(10, 25, [async, response](const ADCManager::ADCResult &result) {
@@ -792,7 +792,7 @@ void ClockPlugin::_alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration
         __LDBG_printf("alarm brightness=%u auto=%d color=#%06x", _targetBrightness, _autoBrightness, _color.get());
         _autoBrightness = kAutoBrightnessOff;
         _targetBrightness = SevenSegmentDisplay::kMaxBrightness;
-        _setAnimation(new Clock::FlashingAnimation(*this, _config.alarm.color.value, _config.alarm.speed));
+        _setAnimation(__LDBG_new(Clock::FlashingAnimation, *this, _config.alarm.color.value, _config.alarm.speed));
     }
 
     if (maxDuration == 0) {

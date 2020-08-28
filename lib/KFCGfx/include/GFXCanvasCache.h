@@ -19,79 +19,70 @@ namespace GFXCanvas {
         Cache() = delete;
         Cache(const Cache& cache) = delete;
 
-        Cache(Cache &&cache);
+        Cache(Cache &&cache) noexcept;
         Cache(uWidthType width, sYType y);
         Cache(uWidthType width, nullptr_t);
         ~Cache();
 
         Cache &operator =(const Cache &cache) = delete;
-        Cache &operator =(Cache &&cache);
+        Cache &operator =(Cache &&cache) noexcept;
 
         // allocate buffer if nullptr
         void allocate();
         // release memory
         void release();
 
-        bool isY(sYType y) const
+        inline bool isY(sYType y) const
         {
             return _y == y;
         }
 
-        sYType getY() const
+        inline sYType getY() const
         {
             return _y;
         }
 
-        void setY(sYType y)
+        inline void setY(sYType y)
         {
             _flags = 0;
             _y = y;
         }
 
         // invalidate cache
-        void clear() {
+        inline void clear()
+        {
             invalidate();
         }
 
-        void invalidate()
+        inline void invalidate()
         {
             _flags = 0;
             _y = kYInvalid;
         }
-
-        // use after std::move() or if allocating the buffer failed
-        void __reset()
-        {
-            _buffer = nullptr;
-            _y = kYInvalid;
-            _width = 0;
-            _flags = 0;
-        }
-
         // if the y position is changed, flags are cleared. in case the write flag is set, the cache must be written before
-        bool isValid() const {
+        inline bool isValid() const {
             return _y != kYInvalid;
         }
 
-        bool hasWriteFlag() const {
+        inline bool hasWriteFlag() const {
             return _write;
         }
 
         // indicates that the cache has not been written
-        void setWriteFlag(bool value) {
+        inline void setWriteFlag(bool value) {
             _write = value;
         }
 
-        bool hasReadFlag() const {
+        inline bool hasReadFlag() const {
             return _read;
         }
 
         // indicates that the cache contains a copy
-        void setReadFlag(bool value) {
+        inline void setReadFlag(bool value) {
             _read = value;
         }
 
-        ColorType *getBuffer() const
+        inline ColorType *getBuffer() const
         {
             __LDBG_check_alloc_no_null(_buffer);
             __LDBG_assert(_y != kYInvalid);
@@ -102,6 +93,14 @@ namespace GFXCanvas {
         void fill(ColorType color, uWidthType startX, uWidthType endX);
         // deprecated
         void setPixel(sXType x, ColorType color);
+
+        inline ColorType *begin() const {
+            return _buffer;
+        }
+
+        inline ColorType *end() const {
+            return &_buffer[_width];
+        }
 
     protected:
         friend GFXCanvasRLEStream;
@@ -118,6 +117,23 @@ namespace GFXCanvas {
         };
     };
 
+    inline void Cache::fill(ColorType color)
+    {
+        __DBG_BOUNDS_RETURN(__DBG_check_alloc_aligned(_buffer));
+        std::fill(begin(), end(), color);
+    }
+
+    inline void Cache::setPixel(sXType x, ColorType color)
+    {
+        __DBG_BOUNDS_RETURN(
+            __DBG_BOUNDS_sx(x, _width) ||
+            __DBG_check_alloc_aligned(_buffer)
+        );
+        _buffer[x] = color;
+    }
+
+
+
     class SingleLineCache : public Cache
     {
     public:
@@ -133,9 +149,30 @@ namespace GFXCanvas {
 
         void resize(GFXCanvasCompressed &canvas, size_t numLines);
         size_t length() const;
+
     };
 
+    inline void SingleLineCache::invalidateRange(sYType startY, sYType endY)
+    {
+        invalidate();
+    }
 
+    inline void SingleLineCache::free(GFXCanvasCompressed &canvas)
+    {
+        flush(canvas);
+        release();
+    }
+
+    inline void SingleLineCache::resize(GFXCanvasCompressed &canvas, size_t numLines)
+    {
+        __LDBG_printf("lines=%u", numLines);
+        flush(canvas);
+    }
+
+    inline size_t SingleLineCache::length() const
+    {
+        return 1;
+    }
 #if GFXCANVAS_MAX_CACHED_LINES < 2
     using LinesCache = SingleLineCache;
 #else

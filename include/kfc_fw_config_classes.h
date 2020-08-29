@@ -837,7 +837,7 @@ namespace KFCConfigurationClasses {
                 Buffer buffer;
                 for(size_t i = 0; i < names.size(); i++) {
                     configs[i].length = names[i].length();
-                    buffer.writeObject(configs[i]);
+                    buffer.copy(configs[i]);
                     buffer.write(names[i]);
                 }
                 setConfig(buffer.begin(), buffer.length());
@@ -851,9 +851,9 @@ namespace KFCConfigurationClasses {
             typedef struct __attribute__packed__ Config_t {
                 using Type = Config_t;
 
-                uint8_t weather_poll_interval;
-                uint16_t api_timeout;
-                uint8_t backlight_level;
+                uint8_t weather_poll_interval;                      // minutes
+                uint16_t api_timeout;                               // seconds
+                uint8_t backlight_level;                            // PWM level 0-1023
                 uint8_t touch_threshold;
                 uint8_t released_threshold;
                 CREATE_UINT8_BITFIELD(is_metric, 1);
@@ -862,9 +862,7 @@ namespace KFCConfigurationClasses {
                 float temp_offset;
                 float humidity_offset;
                 float pressure_offset;
-                uint8_t screenTimer[8];
-
-                uint32_t getPollIntervalMillis() const;
+                uint8_t screenTimer[8];                             // seconds
 
                 Config_t();
             } Config_t;

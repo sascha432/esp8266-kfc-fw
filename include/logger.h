@@ -96,6 +96,8 @@ private:
 #endif
 };
 
+#pragma pop_macro("DEBUG")
+
 #else
 
 #define Logger_error(...)        ;
@@ -106,4 +108,3 @@ private:
 
 #endif
 
-#pragma pop_macro("DEBUG")

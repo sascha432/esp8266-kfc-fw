@@ -47,7 +47,7 @@ using namespace Event;
  */
 Scheduler::Scheduler() :
     _size(0),
-    _hasEvent(false),
+    _hasEvent((EventType)PriorityType::NONE),
     _addedFlag(false),
     _removedFlag(false),
     _checkTimers(false)

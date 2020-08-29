@@ -90,10 +90,14 @@ namespace JsonVariableReader {
                 }
                 return false;
             }), _results.end()); // remove invalid results
+#ifndef  _MSC_VER
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#endif
             return reinterpret_cast<std::vector<T *> &>(_results);
+#ifndef  _MSC_VER
 #pragma GCC diagnostic pop
+#endif
         }
 
         // set result class type

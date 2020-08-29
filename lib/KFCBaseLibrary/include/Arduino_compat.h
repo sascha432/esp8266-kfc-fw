@@ -140,8 +140,6 @@ class __FlashStringHelper;
 
 void init_winsock();
 
-uint64_t micros64();
-
 #ifndef strdup
 #define strdup _strdup
 #endif
@@ -266,7 +264,7 @@ namespace __va_args__
 #define FLASH_STRING_GENERATOR_AUTO_INIT(...)           __VA_ARGS__
 #endif
 
-extern "C" void __dump_binary(const void *ptr, size_t len, size_t perLine);
+extern "C" void __dump_binary(const void *ptr, size_t len, size_t perLine, PGM_P title = nullptr);
 
 
 #if _MSC_VER

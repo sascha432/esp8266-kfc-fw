@@ -104,7 +104,7 @@ public:
     void setLogging(int logging) {
         _logging = (LoggingEnum_t)logging;
         if (_logging == LOG_FILE) {
-            SPIFFS.open(FSPGM(stk500v1_log_file), fs::FileOpenMode::write).close(); // truncate
+            KFCFS.open(FSPGM(stk500v1_log_file), fs::FileOpenMode::write).close(); // truncate
         }
     }
 

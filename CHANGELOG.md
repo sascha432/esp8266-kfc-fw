@@ -32,7 +32,8 @@
 - Ping monitor improvements
 - Memory debugging and leak detection added
 - Improved event scheduler (freed ~500 byte IRAM), memory usage and performance
-- Remove filters from syslog, reduced memory usage and improved performance
+- Removed filters from syslog, reduced memory usage and improved performance
+- Read ADC over web sockets with kfcfw_tool
 
 ## Version 0.0.3
 

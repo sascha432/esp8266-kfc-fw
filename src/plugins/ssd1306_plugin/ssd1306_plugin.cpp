@@ -48,7 +48,7 @@ public:
     static bool readFromFile(const String &filename, GFXfontContainer::Ptr &target) {
         _debug_printf_P(PSTR("GFXfontContainer::readFromFile(%s)\n"), filename.c_str());
 
-        File file = SPIFFS.open(filename, fs::FileOpenMode::read);
+        File file = KFCFS.open(filename, fs::FileOpenMode::read);
         if (file && file.size()) {
             return readFromStream(file, target);
         }
@@ -350,7 +350,7 @@ bool SSD1306Plugin::atModeHandler(AtModeArgs &args)
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SSDRF))) {
         if (args.requireArgs(1, 1)) {
             auto filename = args.get(0);
-            auto file = SPIFFS.open(filename, fs::FileOpenMode::read);
+            auto file = KFCFS.open(filename, fs::FileOpenMode::read);
             if (file) {
                 ssd1306_disable_status();
                 args.printf_P(PSTR("Reading %d bytes from %s..."), file.size(), filename);

@@ -186,7 +186,7 @@ void KFCFWConfiguration::_readAlertStorage()
 File KFCFWConfiguration::_openAlertStorage(bool append)
 {
     debug_printf_P(PSTR("file=%s,append=%d\n"), SPGM(alert_storage_filename), append);
-    return SPIFFS.open(FSPGM(alerts_storage_filename), append ? FileOpenMode::appendplus : FileOpenMode::read);
+    return KFCFS.open(FSPGM(alerts_storage_filename), append ? FileOpenMode::appendplus : FileOpenMode::read);
 }
 
 void KFCFWConfiguration::_closeAlertStorage(File &file)

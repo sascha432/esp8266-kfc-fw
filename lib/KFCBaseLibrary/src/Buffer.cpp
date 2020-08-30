@@ -8,11 +8,11 @@
 
 #if 0
 #include "debug_helper_enable.h"
+#include "debug_helper_enable_mem.h"
 #else
 #include "debug_helper_disable.h"
+#include "debug_helper_disable_mem.h"
 #endif
-
-//#include "debug_helper_disable_mem.h"
 
 MoveStringHelper::MoveStringHelper()
 {
@@ -34,7 +34,7 @@ void MoveStringHelper::move(Buffer &buf)
             buf.setBuffer((uint8_t *)wbuffer(), capacity());
             buf.setLength(length());
             // register allocated block
-            __LMDBG_IF(KFCMemoryDebugging::_alloc(DEBUG_HELPER_POSITION, capacity(), wbuffer()));
+            __LDBG_NOP_malloc(wbuffer(), capacity());
         }
         setSSO(false);
         setCapacity(0);
@@ -152,12 +152,8 @@ void Buffer::move(uint8_t **ptr)
     _size = 0;
     _length = 0;
     *ptr = tmp;
-}
-
-char *Buffer::getNulByteString()
-{
-    _length -= write(0);
-    return getChar();
+    // remove from registered blocks
+    __LDBG_NOP_free(tmp);
 }
 
 void Buffer::setBuffer(uint8_t *buffer, size_t size)
@@ -165,24 +161,6 @@ void Buffer::setBuffer(uint8_t *buffer, size_t size)
     clear();
     _buffer = buffer;
     _size = size;
-}
-
-size_t Buffer::size() const
-{
-    return _size;
-}
-
-size_t Buffer::length() const
-{
-    return _length;
-}
-
-size_t Buffer::available() const
-{
-    if (_length < _size) {
-        return _size - _length;
-    }
-    return 0;
 }
 
 String Buffer::toString() const
@@ -209,23 +187,23 @@ String Buffer::toString() const
 size_t Buffer::write(const uint8_t *data, size_t len)
 {
     // __LDBG_printf("len=%d", len);
-    if (!reserve(_length + len)) {
-        return 0;
+    if (reserve(_length + len)) {
+        memmove(_buffer + _length, data, len);
+        _length += len;
+        return len;
     }
-    memmove(_buffer + _length, data, len);
-    _length += len;
-    return len;
+    return 0;
 }
 
 size_t Buffer::write_P(PGM_P data, size_t len)
 {
     // __LDBG_printf("len=%d", len);
-    if (!reserve(_length + len)) {
-        return 0;
+    if (reserve(_length + len)) {
+        memcpy_P(_buffer + _length, data, len);
+        _length += len;
+        return len;
     }
-    memcpy_P(_buffer + _length, data, len);
-    _length += len;
-    return len;
+    return 0;
 }
 
 int Buffer::read()
@@ -254,20 +232,24 @@ int Buffer::peek()
 
 void Buffer::remove(size_t index, size_t count)
 {
-    // __LDBG_printf("index=%d count=%d", index, count);
-    if(index >= _length) {
-        return;
-    }
-    if(count <= 0) {
+    // // __LDBG_printf("index=%d count=%d", index, count);
+    if (!count || index >= _length) {
         return;
     }
     if(count > _length - index) {
         count = _length - index;
     }
-    _length = _length - count;
-    if (_length - index) {
-        memmove(_buffer + index, _buffer + index + count, _length - index);
-    }
+    //_length = _length - count;
+    // if (_length - index) {
+//     memmove(_buffer + index, _buffer + index + count, _length - index);
+// }
+
+    // move data to index and fill up with zeros
+    auto dst_begin = begin() + index;
+    std::copy(dst_begin + count, end(), dst_begin);
+    _length -= count;
+    std::fill(begin() + _length, _buffer_end(), 0);
+
 }
 
 void Buffer::removeAndShrink(size_t index, size_t count, size_t minFree)
@@ -278,93 +260,38 @@ void Buffer::removeAndShrink(size_t index, size_t count, size_t minFree)
     }
 }
 
-Buffer& Buffer::operator+=(const char *str)
-{
-    write((uint8_t *)str, strlen(str));
-    return *this;
-}
-
-Buffer& Buffer::operator+=(const String &str)
-{
-    write((uint8_t *)str.c_str(), str.length());
-    return *this;
-}
-
-Buffer &Buffer::operator+=(const __FlashStringHelper *str)
-{
-    auto pstr = reinterpret_cast<PGM_P>(str);
-    write_P(pstr, strlen_P(pstr));
-    return *this;
-}
-
-Buffer &Buffer::operator+=(const Buffer &buffer)
-{
-    write(buffer.get(), buffer.length());
-    return *this;
-}
-
 bool Buffer::_changeBuffer(size_t newSize)
 {
-    if (_alignSize(newSize) != _size) {
-        _size = _alignSize(newSize);
-        // __LDBG_printf("size=%d", _size);
-        if (_size == 0) {
-            if (_buffer) {
-                __LDBG_free(_buffer);
-                _buffer = nullptr;
-            }
-        }
-        else {
-            _buffer = reinterpret_cast<uint8_t *>(_buffer ? __LDBG_realloc(_buffer, _size) : __LDBG_malloc(_size));
-            if (_buffer == nullptr) {
-                __LDBG_printf("alloc failed");
-                _size = 0;
-                _length = 0;
-                return false;
-            }
-        }
+    if (newSize == 0 && _size) {
+        clear();
     }
-    if (_length > _size) {
-        _length = _size;
+    else {
+        auto resize = _alignSize(newSize);
+        if (resize != _size) {
+            // __LDBG_printf("size=%d", _size);
+            if (!_buffer) {
+                _buffer = __LDBG_malloc_buf(resize);
+                if (!_buffer) {
+                    // __LDBG_printf("alloc failed");
+                    return false;
+                }
+            }
+            else {
+                _buffer = __DBG_realloc_buf(_buffer, resize);
+                if (!_buffer) {
+                    // __LDBG_printf("alloc failed");
+                    _size = 0;
+                    _length = 0;
+                    return false;
+                }
+                if (_length > newSize) {
+                    _length = newSize;
+                }
+            }
+            _size = resize;
+            std::fill(_data_end(), _buffer_end(), 0);
+        }
     }
     // __LDBG_printf("length=%d size=%d", _length, _size);
     return true;
-}
-
-bool Buffer::reserve(size_t size)
-{
-    if (size > _size) {
-        if (!_changeBuffer(size)) {
-            return false;
-        }
-    }
-    return true;
-    //if (shrink) {
-    //    if (size == 0) {
-    //        clear();
-    //        return true;
-    //    }
-    //}
-    //else if (size < _size) {
-    //    // shrink is false, ignore...
-    //    return true;
-    //}
-    //_size = _alignSize(size);
-    //if (nullptr == (_buffer = (uint8_t *)x_r_ealloc(_buffer, _size))) {
-    //    _size = 0;
-    //    start_length = 0;
-    //    return false;
-    //}
-    //if (start_length > _size) {
-    //    start_length = _size;
-    //}
-    //return true;
-}
-
-bool Buffer::shrink(size_t newSize)
-{
-    if (newSize == 0) {
-        newSize = _length;
-    }
-    return _changeBuffer(newSize);
 }

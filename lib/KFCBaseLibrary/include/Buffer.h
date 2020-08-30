@@ -65,12 +65,21 @@ public:
 
     String toString() const;
     inline const char *c_str() {
-        return getNulByteString();
+        return begin_str();
     }
+    // return NUL terminated string
     inline char *begin_str() {
-        return getNulByteString();
+#if 0
+        // the buffer is filled zero padded already
+        if (_length == _size && reserve(_length + 1)) {
+            _buffer[_length] = 0;
+        }
+#else
+        // safe version in case _buffer was modified outside and is not zero padded anymore
+        _length -= write(0);
+#endif
+        return reinterpret_cast<char *>(_buffer);
     }
-    char *getNulByteString(); // return NUL terminated string
 
     inline uint8_t charAt(size_t index) const {
         return _buffer[index];
@@ -78,39 +87,68 @@ public:
     inline uint8_t &charAt(size_t index) {
         return _buffer[index];
     }
-    uint8_t &operator[](size_t index) {
+    inline uint8_t &operator[](size_t index) {
         return _buffer[index];
     }
 
     void setBuffer(uint8_t *buffer, size_t size);
 
-    size_t size() const;
-    size_t length() const;
+    inline size_t size() const {
+        return _size;
+    }
+    inline size_t capacity() const {
+        return _size;
+    }
 
-    uint8_t *begin() const {
+    inline size_t length() const {
+        return _length;
+    }
+
+    inline uint8_t *begin() const {
         return _buffer;
     }
-    uint8_t *end() const {
+    inline uint8_t *end() const {
         return _buffer + _length;
     }
 
-    const uint8_t *cbegin() const {
-        return _buffer;
+    inline const uint8_t *cbegin() const {
+        return begin();
     }
-    const uint8_t *cend() const {
-        return _buffer + _length;
-    }
-
-    const char *cstr_begin() const {
-        return reinterpret_cast<const char *>(_buffer);
-    }
-    const char *cstr_end() const {
-        return reinterpret_cast<const char *>(_buffer + _length);
+    inline const uint8_t *cend() const {
+        return end();
     }
 
-    bool reserve(size_t newSize);
-    bool shrink(size_t newSize = 0);
-    bool _changeBuffer(size_t newSize);
+    inline const char *cstr_begin() const {
+        return reinterpret_cast<const char *>(begin());
+    }
+    inline const char *cstr_end() const {
+        return reinterpret_cast<const char *>(end());
+    }
+
+    // reserve buffer
+    // on success size() will be greater or equal newSize
+    // size() will not decrease
+    // length() does not change
+    inline bool reserve(size_t newSize) {
+        return (newSize <= _size || _changeBuffer(newSize));
+    }
+    // reduce size and length
+    // on success size() will be greater or equal newSize
+    // length() will be smaller or equal newSize
+    inline bool shrink(size_t newSize) {
+        return (newSize >= _size) || _changeBuffer(newSize);
+    }
+    // reduce size to fit the existing content
+    // on success size() will be greater or equal _length
+    inline bool shrink_to_fit() {
+        return shrink(_length);
+    }
+    // increase or decrease size, filling unused space with zeros
+    // on success size() will be greater or equal newSize
+    // length() will be smaller or equal newSize
+    inline bool resize(size_t newSize) {
+        return (newSize != _size) || _changeBuffer(newSize);
+    }
 
     // bool available(size_t len) const;
     size_t available() const;
@@ -176,11 +214,18 @@ public:
     Buffer &operator+=(const __FlashStringHelper *str);
     Buffer &operator+=(const Buffer &buffer);
 
-    void setLength(size_t length) {
-        _length = length;
-    }
+    void setLength(size_t length);
 
 protected:
+    bool _changeBuffer(size_t newSize);
+
+    inline uint8_t *_data_end() const {
+        return _buffer + _length;
+    }
+    inline uint8_t *_buffer_end() const {
+        return _buffer + _size;
+    }
+
     uint8_t *_buffer;
     size_t _length;
     size_t _size;
@@ -194,3 +239,41 @@ private:
 #endif
     }
 };
+
+inline size_t Buffer::available() const
+{
+    if (_length < _size) {
+        return _size - _length;
+    }
+    return 0;
+}
+
+inline void Buffer::setLength(size_t length)
+{
+    _length = length;
+}
+
+inline Buffer &Buffer::operator+=(const char *str)
+{
+    write(str, strlen(str));
+    return *this;
+}
+
+inline Buffer &Buffer::operator+=(const String &str)
+{
+    write(str.c_str(), str.length());
+    return *this;
+}
+
+inline Buffer &Buffer::operator+=(const __FlashStringHelper *str)
+{
+    auto pstr = reinterpret_cast<PGM_P>(str);
+    write_P(pstr, strlen_P(pstr));
+    return *this;
+}
+
+inline Buffer &Buffer::operator+=(const Buffer &buffer)
+{
+    write(buffer.get(), buffer.length());
+    return *this;
+}

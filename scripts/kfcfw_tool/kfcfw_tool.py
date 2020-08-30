@@ -21,13 +21,13 @@ from threading import Lock, Thread
 
 from statistics import mean
 import os
-import websocket
-import _thread as thread
 import json
 import time
-import struct
 
-import kfcfw_session
+from libs import kfcfw as kfcfw
+
+import pages.adc
+
 
 # import serial
 # import atexit
@@ -36,137 +36,6 @@ LARGE_FONT= ("Verdana", 16)
 
 def var_dump(o):
     pprint(vars(o))
-
-class WSConsole:
-
-    def __init__(self, controller):
-        self.controller = controller
-        self.set_disconnected()
-
-    def set_disconnected(self):
-        self.client_id = '???'
-        self.auth = False
-        self.connected = False
-
-    def send_cmd(self, command, *args):
-        if self.connected:
-            sep = ','
-            cmd_str = '+' + command + '=' + sep.join(args)
-            print('Sending cmd: ' + cmd_str)
-            self.ws.send(cmd_str + '\n')
-            return True
-        return False
-
-    def on_message(self, data):
-        if isinstance(data, bytes):
-            try:
-                (packetId, ) = struct.unpack_from('H', data)
-                if packetId==0x0100:
-                    fmt = 'HHHfffffff'
-                    header = struct.unpack_from(fmt, data)
-                    ofs = struct.calcsize(fmt)
-                    m = memoryview(data[ofs:])
-                    data = m.cast('f')
-                    self.controller.plot.data_handler(header, data)
-                elif packetId==0x0200:
-                    (packetId, x, y, px, py, time, event_type) = struct.unpack_from('HHHHHLc', data)
-                    data = {
-                        "x": x,
-                        "y": y,
-                        "px": px,
-                        "py": py,
-                        "time": time,
-                        "raw_type": event_type
-                    }
-                    self.controller.touchpad.data_handler(data)
-            except Exception as e:
-                print("Invalid binary packet " + str(e))
-        else:
-            lines = data.split("\n")
-            for message in lines:
-                if message != "":
-                    # print(message)
-                    if not self.auth:
-                        if message == "+AUTH_OK":
-                            self.auth = True
-                            self.send_cmd('H2SBUFDLY', '500')
-                            self.send_cmd('H2SBUFSZ', '256')
-                            self.controller.plot.sensor_config = None
-                        elif message == "+AUTH_ERROR":
-                            self.on_error('Authentication failed')
-                        elif message == "+REQ_AUTH":
-                            print("Sending authentication " + self.sid)
-                            self.ws.send("+SID " + self.sid)
-                    else:
-                        if message[0:12] == "+SP_HLWPLOT:":
-                            try:
-                                if message[13]=='{':
-                                    self.controller.plot.sensor_config = json.loads(message[13:])
-                                    print("Sensor config: " + str(self.controller.plot.sensor_config))
-                            except:
-                                print("Sensor config error: " + str(e))
-                        elif message[0:11] == "+CLIENT_ID=":
-                            self.client_id = message[11:]
-                            print("ClientID: " + self.client_id)
-
-    def on_error(self, error):
-        # tk.messagebox.showerror(title='Error', message='Connection failed: ' + str(error))
-        print('Connection failed: ' + str(error))
-
-        self.set_disconnected()
-        self.controller.set_connection_status(False, str(error))
-        try:
-            self.ws.close()
-        except:
-            self.connected = False
-
-        time.sleep(1)
-        print("Reconnecting...")
-        self.connect(self.hostname, self.sid)
-
-    def on_close(self):
-        if self.connected:
-            self.set_disconnected()
-            tk.messagebox.showerror(title='Error', message='Connection closed')
-        self.controller.set_connection_status(False)
-
-    def on_open(self):
-        self.connected = True
-        self.controller.set_connection_status(True)
-        print("Web Socket connected")
-
-    def url(self):
-        return 'ws://' + self.hostname + '/serial_console'
-
-    def connect(self, hostname, sid):
-        if self.connected:
-            self.set_disconnected()
-            try:
-                self.ws.close()
-            except:
-                self.connected = False
-
-        self.hostname = hostname
-        self.sid = sid
-
-        # websocket.enableTrace(True)
-
-        self.ws = websocket.WebSocketApp(self.url(),
-            on_message = self.on_message,
-            on_error = self.on_error,
-            on_close = self.on_close,
-            on_open = self.on_open)
-
-        def run(*args):
-            self.ws.run_forever()
-        thread.start_new_thread(run, ())
-
-    def close(self):
-        if self.connected:
-            self.connected = False
-            self.ws.close()
-        self.set_disconnected()
-        self.controller.set_connection_status(False)
 
 class TouchpadEventType:
 
@@ -629,11 +498,12 @@ class Plot:
             self.lock.release()
 
 
-class MainApp(tk.Tk):
+class MainApp(tk.Tk, kfcfw.connection.Controller):
 
     def __init__(self, *args, **kwargs):
 
         tk.Tk.__init__(self, *args, **kwargs)
+        kfcfw.connection.Controller.__init__(self, True)
 
         self.gui_settings = {
             'y_range': 0,
@@ -649,10 +519,10 @@ class MainApp(tk.Tk):
         self.gui_settings['retention'].set('60')
         self.gui_settings['compress'].set('0.1')
 
-        self.connection_name = 'NOT CONNECTED'
+        self.connection_name = None
         self.plot = Plot(self)
         self.touchpad = Touchpad(self)
-        self.wsc = WSConsole(self)
+        self.wsc = kfcfw.connection.WebSocket(self)
         self.set_plot_type('')
 
         tk.Tk.wm_title(self, "KFCFirmware Debug Tool")
@@ -665,22 +535,32 @@ class MainApp(tk.Tk):
         self.frames = {}
         self.active = False
 
-        for F in (StartPage, PageEnergyMonitor, PageTouchpad):
+        for F in (StartPage, PageEnergyMonitor, PageTouchpad, pages.adc.ReadADC):
             frame = F(container, self)
             self.frames[F] = frame
             frame.grid(row=0, column=0, sticky="nsew")
         self.show_frame(StartPage)
 
-    def set_connection_status(self, state, error = ''):
-        if state==False:
-            self.connection_name = 'Disconnected'
-            if error!='':
-                self.connection_name = self.connection_name + ': ' + error
-        self.connect_label.config(text='Start Page - ' + self.connection_name)
+    def connection_status(self, conn):
+        kfcfw.connection.Controller.connection_status(self, conn)
+
+        title = ''
+        if conn.is_authenticated():
+            title = 'Connected to %s' % self.connection_name
+        elif conn.is_connected():
+            title = 'Authenticating %s' % self.connection_name
+            self.connect_button.configure(text='Disconnect');
+        elif not conn.is_connected():
+            self.connect_button.configure(text='Connect');
+            title = 'DISCONNECTED'
+            if conn.has_error():
+                title += ': %s' % conn.get_error()
+
+        self.connect_label.config(text='Start Page - ' + title)
         self.set_plot_title()
 
     def set_plot_title(self):
-        if not self.wsc.connected:
+        if not self.wsc.is_connected():
             title = 'Not connected'
         else:
             type = self.gui_settings['plot_type']
@@ -693,9 +573,6 @@ class MainApp(tk.Tk):
             else:
                 title='Paused'
         self.plot.title = title
-
-    def set_connection(self, name):
-        self.connection_name = name
 
     def toggle_data_state(self, num):
         self.gui_settings['data_state'][num] = not self.gui_settings['data_state'][num]
@@ -758,14 +635,13 @@ class StartPage(tk.Frame):
 
         self.controller = controller
         self.password_placeholder = '********'
-        self.config_filename = os.path.dirname(os.path.realpath(__file__)) + '/kfcfw_tool.json'
+        self.config_filename = os.path.dirname(os.path.realpath(__file__)) + '/.config/kfcfw_tool.json'
         self.read_config()
 
-        connection_name = 'NOT CONNECTED'
-        controller.set_connection(connection_name)
-        label = tk.Label(self, text="Start Page - " + connection_name, font=LARGE_FONT)
+        label = tk.Label(self, text="Start Page - DISCONNECTED", font=LARGE_FONT)
         label.pack(pady=10,padx=10)
         self.controller.connect_label = label
+        self.controller.connection_name = None
 
         menu = tk.Frame(self)
         menu.pack(side=tkinter.TOP)
@@ -775,6 +651,9 @@ class StartPage(tk.Frame):
         button.pack(in_=menu, side=tkinter.LEFT, padx=pad)
 
         button = ttk.Button(self, text="MPR121 Touchpad", command=lambda: controller.show_frame(PageTouchpad))
+        button.pack(in_=menu, side=tkinter.LEFT, padx=pad)
+
+        button = ttk.Button(self, text="ADC", command=lambda: controller.show_frame(pages.adc.PageADC))
         button.pack(in_=menu, side=tkinter.LEFT, padx=pad)
 
         top = tk.Frame(self)
@@ -801,10 +680,13 @@ class StartPage(tk.Frame):
 
         ttk.Checkbutton(self, text="Safe credentials", variable=self.form['safe_credentials']).grid(in_=top, row=3, column=0, padx=pad, pady=pad, columnspan=2)
 
-        ttk.Button(self, text="Connect", command=self.connect).grid(in_=top, row=4, column=0, padx=pad, pady=pad, columnspan=2)
+        self.controller.connect_button = ttk.Button(self, text="Connect", command=self.connect)
+        self.controller.connect_button.grid(in_=top, row=4, column=0, padx=pad, pady=pad, columnspan=2)
 
     def connect(self):
-        self.controller.wsc.close()
+        if self.controller.wsc.is_connected():
+            self.controller.wsc.disconnect()
+            return
 
         cur = self.hostname.current()
         if cur==0:
@@ -833,7 +715,7 @@ class StartPage(tk.Frame):
             except Exception as e:
                 tk.messagebox.showerror(title='Error', message='Enter ' + str(e))
             else:
-                session = kfcfw_session.Session()
+                session = kfcfw.session.Session()
                 if new_conn:
                     sid = session.generate(username, password)
                     if safe==1:
@@ -852,7 +734,7 @@ class StartPage(tk.Frame):
                     else:
                         sid = self.config['connections'][cur - 1]['sid']
 
-                self.controller.set_connection('Connected to ' + username + '@' + hostname)
+                self.controller.connection_name =  username + '@' + hostname
                 self.controller.wsc.connect(hostname, sid)
 
 

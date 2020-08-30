@@ -5,12 +5,9 @@
 # requires:
 # pip install requests-toolbelt progressbar2
 
-import sys
 import os
 import time
 import argparse
-import kfcfw_session
-import kfcfw_configuration
 # import progressbar
 from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor
 import requests
@@ -18,6 +15,15 @@ import re
 import json
 import hashlib
 import shutil
+
+from os import path
+import sys
+libs_dir = path.realpath(path.join(path.dirname(__file__), '../libs'))
+sys.path.insert(0, libs_dir)
+
+import kfcfw.session
+import kfcfw.configuration
+
 
 class SimpleProgressBar:
 
@@ -255,7 +261,7 @@ def import_settings(url, target, sid, file, params):
     except Exception as e:
         error("Failed to read " + file.name + ": " + str(e))
 
-    cfg = kfcfw_configuration.Configuration()
+    cfg = kfcfw.configuration.Configuration()
     data = {}
     for handle in params:
         if handle[0:2]!="0x":
@@ -311,9 +317,9 @@ if args.secure:
 url = url + "://" + args.hostname + "/"
 
 if args.sha1:
-    session = kfcfw_session.Session(hashlib.sha1())
+    session = kfcfw.session.Session(hashlib.sha1())
 else:
-    session = kfcfw_session.Session()
+    session = kfcfw.session.Session()
 sid = session.generate(args.user, args.pw)
 target = args.user + ":***@" + args.hostname
 

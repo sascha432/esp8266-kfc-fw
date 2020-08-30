@@ -6,9 +6,15 @@
 
 extern "C" {
 
-    void __dump_binary(const void *ptr, size_t len, size_t perLine)
+    void __dump_binary(const void *ptr, size_t len, size_t perLine, PGM_P title)
     {
         DumpBinary d(Serial);
+        if (title) {
+            Serial.printf_P(PSTR("%s: %p:%u\n"), title, ptr, len);
+        }
+        if (perLine == 0) {
+            perLine = len;
+        }
         d.setPerLine((uint8_t)perLine).dump(ptr, len);
     }
 

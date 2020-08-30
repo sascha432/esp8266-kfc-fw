@@ -179,7 +179,7 @@ bool DebugContext::__store_pos(DebugContext &&dctx)
 
 bool DebugContext::reportAssert(const DebugContext &ctx, const __FlashStringHelper *message)
 {
-    auto file = SPIFFS.open(F("/.logs/assert.log"), fs::FileOpenMode::append);
+    auto file = KFCFS.open(F("/.logs/assert.log"), fs::FileOpenMode::append);
     if (file) {
         PrintString str;
         str.strftime_P(SPGM(strftime_date_time_zone), time(nullptr));

@@ -32,15 +32,10 @@ public:
         return str;
     }
 
-    template<class T>
-    static T _realloc(const DebugContext &p, size_t s, T r, T t) {
-        _reallocCount++;
-        // if (r == t) {
-        //     return t;
-        // }
-        //if (r)
-        {
-            _free(p, r);
+    static void *_realloc(const DebugContext &p, size_t s, void *r, void *t) {
+        if (r) { // realloc with a null pointer is malloc
+            _reallocCount++;
+            _remove(p, r);
         }
         return _alloc(p, s, t);
     }

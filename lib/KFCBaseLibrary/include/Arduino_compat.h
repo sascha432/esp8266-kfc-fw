@@ -67,7 +67,11 @@
 
 #include "esp32_compat.h"
 
+#define KFCFS                                           SPIFFS
+
 class __FlashStringHelper;
+
+#define KFCFS                                           SPIFFS
 
 #define SPGM(name, ...)                                 PROGMEM_STRING_ID(name)
 #define FSPGM(name, ...)                                reinterpret_cast<const __FlashStringHelper *>(SPGM(name))
@@ -89,7 +93,13 @@ class __FlashStringHelper;
 #include <ESP8266WiFi.h>
 #include <ESP8266WiFiType.h>
 #include <WiFiUdp.h>
+#if USE_LITTLEFS
+#include <LittleFS.h>
+#define KFCFS                                           LittleFS
+#else
 #include <FS.h>
+#define KFCFS                                           SPIFFS
+#endif
 
 #include "esp8266_compat.h"
 
@@ -126,6 +136,8 @@ class __FlashStringHelper;
 #include <Psapi.h>
 #include <assert.h>
 #include <CRTDBG.h>
+
+#define KFCFS                                           SPIFFS
 
 #include <ets_sys_win32.h>
 #include <ets_timer_win32.h>

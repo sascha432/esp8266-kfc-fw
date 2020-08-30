@@ -68,6 +68,7 @@ AllocPointerInfo::PointerType AllocPointerInfo::_compress(const void *ptr, size_
     if (ptr == nullptr) {
         return kNullPointer;
     }
+    assert(((uint32_t)ptr - startAddress) % alignment == 0);
     return ((uint32_t)ptr - startAddress) / alignment;
 }
 

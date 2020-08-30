@@ -77,7 +77,7 @@ void FailureCounter::addFailure()
         loginFailures.rewriteSPIFFSFile();
     }
     else {
-        auto file = SPIFFS.open(FSPGM(login_failure_file), fs::FileOpenMode::append);
+        auto file = KFCFS.open(FSPGM(login_failure_file), fs::FileOpenMode::append);
         if (file) {
             write(file);
             file.close();
@@ -133,7 +133,7 @@ String FailureCounter::getFirstFailure() const
 void FailureCounterContainer::readFromSPIFFS()
 {
     _failures.clear();
-    auto file = SPIFFS.open(FSPGM(login_failure_file), fs::FileOpenMode::read);
+    auto file = KFCFS.open(FSPGM(login_failure_file), fs::FileOpenMode::read);
     if (file) {
 #if DEBUG
         auto count = 0;
@@ -163,7 +163,7 @@ void FailureCounterContainer::readFromSPIFFS()
  **/
 void FailureCounterContainer::rewriteSPIFFSFile()
 {
-    auto file = SPIFFS.open(FSPGM(login_failure_file), fs::FileOpenMode::write);
+    auto file = KFCFS.open(FSPGM(login_failure_file), fs::FileOpenMode::write);
     if (file) {
 #if DEBUG
         auto count = _failures.size();

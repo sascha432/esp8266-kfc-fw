@@ -251,7 +251,7 @@ void setup()
 #endif
 
     // start FS, we need it for getCrashCounter()
-    SPIFFS.begin();
+    KFCFS.begin();
 
 #if KFC_AUTO_SAFE_MODE_CRASH_COUNT
     if (resetDetector.hasCrashDetected() || increaseCrashCounter) {

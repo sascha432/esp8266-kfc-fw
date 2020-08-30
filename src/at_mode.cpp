@@ -20,6 +20,7 @@
 #include "logger.h"
 #include "misc.h"
 #include "web_server.h"
+#include "web_socket.h"
 #include "async_web_response.h"
 #include "serial_handler.h"
 #include "blink_led_timer.h"
@@ -27,8 +28,9 @@
 #include "NeoPixel_esp.h"
 #include "plugins.h"
 #include "WebUIAlerts.h"
+#include "../src/plugins/http2serial/http2serial.h"
 #if IOT_DIMMER_MODULE || IOT_ATOMIC_SUN_V2
-#include "plugins/dimmer_module/dimmer_base.h"
+#include "../src/plugins/dimmer_module/dimmer_base.h"
 #endif
 #include "umm_malloc/umm_malloc_cfg.h"
 
@@ -256,7 +258,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RM, "RM", "<filename>", "Delete file");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RN, "RN", "<filename>,<new filename>", "Rename file");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LS, "LS", "[<directory>[,<hidden=true|false>,<subdirs=true|false>]]", "List files and directories");
 #if ESP8266
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LSR, "LSR", "[<directory>]", "List files and directories using SPIFFS.openDir()");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LSR, "LSR", "[<directory>]", "List files and directories using FS.openDir()");
 #endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIFI, "WIFI", "[<reset|on|off|ap_on|ap_off>]", "Modify WiFi settings");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(REM, "REM", "Ignore comment");
@@ -669,13 +671,14 @@ void at_mode_list_ets_timers(Print &output)
 
 #endif
 
-void at_mode_adc_loop();
+static void at_mode_adc_loop();
+static void at_mode_adc_delete_object();
 
 class AtModeADC {
 public:
-    AtModeADC() : _adcIntegralMultiplier(0),  _adc(ADCManager::getInstance()) {
+    AtModeADC() : _adcIntegralMultiplier(0), _adc(ADCManager::getInstance()) {
     }
-    ~AtModeADC() {
+    virtual ~AtModeADC() {
         _displayTimer.remove();
         if (_adcIntegralMultiplier) {
             LoopFunctions::remove(at_mode_adc_loop);
@@ -683,7 +686,7 @@ public:
     }
 
     // useable values for integrating the average value is 1-100 (averagePeriodMillis)
-    bool init(uint16_t averagePeriodMillis, float convertMultiplier, const String &unit, uint16_t readDelay = 5000) {
+    bool init(uint16_t averagePeriodMillis, float convertMultiplier, const String &unit, uint32_t readDelayMicros = 5000) {
         _displayTimer.remove();
         if (!averagePeriodMillis) {
             return false;
@@ -696,7 +699,7 @@ public:
         _timerSum = 0;
         _timerCount = 0;
         _lastUpdate = 0;
-        _readDelay = readDelay;
+        _readDelay = readDelayMicros;
         LoopFunctions::add(at_mode_adc_loop);
         _timer.start();
         return true;
@@ -719,9 +722,24 @@ public:
         _timerCount = 0;
     }
 
+private:
+    virtual void processData(uint16_t reading, uint32_t diff, uint32_t micros) {
+        float count = diff * _adcIntegralMultiplier;
+        _adcIntegral = ((count * _adcIntegral) + (double)reading) / (count + 1.0);
+        _adcIntegral2 = ((1.0 * _adcIntegral2) + (double)reading) / 2.0;
+        _timerSum += diff;
+        _timerCount++;
+        if (_timerSum > 30 * 1000 * 1000) {
+            _timerSum /= 2;
+            _timerCount /= 2;
+        }
+    }
+
+public:
     void loop() {
-        auto micros = _timer.getTime();
-        if (micros <= _readDelay) {
+        auto time = micros();
+        auto diff = _timer.getTime(time);
+        if (diff < _readDelay) {
             return; // wait for the next loop
         }
         uint32_t tmp;
@@ -732,39 +750,141 @@ public:
         _lastUpdate = tmp;
 
         _timer.start();
-        float count = micros * _adcIntegralMultiplier;
-        _adcIntegral = ((count * _adcIntegral) + (double)reading) / (count + 1.0);
-        _adcIntegral2 = ((1.0 * _adcIntegral2) + (double)reading) / 2.0;
-        _timerSum += micros;
-        _timerCount++;
-        if (_timerSum > 30 * 1000 * 1000) {
-            _timerSum /= 2;
-            _timerCount /= 2;
-        }
+        processData(reading, diff, time);
     }
 
     Event::Timer &getTimer() {
         return _displayTimer;
     }
 
-private:
-    String _unit;
-    float _convMultiplier;
-    float _adcIntegralMultiplier;
-    float _adcIntegral;
-    float _adcIntegral2;
-    MicrosTimer _timer;
-    uint32_t _timerSum;
-    uint32_t _timerCount;
+protected:
+    union {
+        struct {
+            float _convMultiplier;
+            float _adcIntegral;
+            float _adcIntegral2;
+            uint32_t _timerSum;
+            uint32_t _timerCount;
+        };
+        struct {
+            uint32_t duration;
+            uint32_t start;
+            uint16_t packetSize;
+            uint32_t sent;
+            uint32_t dropped;
+        } _webSocket;
+    };
+    uint32_t _readDelay;
     uint32_t _lastUpdate;
-    uint16_t _readDelay;
+    float _adcIntegralMultiplier;
+    String _unit;
+    MicrosTimer _timer;
     Event::Timer _displayTimer;
     ADCManager &_adc;
 };
 
+class AtModeADCWebSocket : public AtModeADC
+{
+public:
+    using AtModeADC::AtModeADC;
+
+    bool init(uint32_t interval, uint32_t duration, uint16_t packetSize, AsyncWebSocketClient *client) {
+        _displayTimer.remove();
+        if (!interval) {
+            return false;
+        }
+        _adcIntegralMultiplier = 1;
+        _webSocket.duration = duration;
+        _webSocket.start = micros() / 1000U;
+        _webSocket.packetSize = packetSize;
+        _webSocket.dropped = 0;
+        _webSocket.sent = 0;
+        _client = client;
+
+        resetBuffer();
+
+        _lastUpdate = 0;
+        _readDelay = interval;
+        LoopFunctions::add(at_mode_adc_loop);
+        _timer.start();
+        return true;
+    }
+
+private:
+    typedef struct __attribute__packed__ {
+        uint32_t _time: 22;
+        uint32_t _value: 10;
+    } Data_t;
+
+    void resetBuffer() {
+        _buffer.setLength(0);
+        _buffer.reserve(_webSocket.packetSize + 1);
+        _buffer.copy(WsClient::BinaryPacketType::ADC_READINGS);
+    }
+
+    virtual void processData(uint16_t reading, uint32_t diff, uint32_t micros) override {
+
+        Data_t data;
+        uint32_t ms = micros / 1000U;
+        auto time = get_time_diff(_webSocket.start, ms);
+
+        if (_buffer.length() + sizeof(data) >= _webSocket.packetSize) {
+            if (Http2Serial::getClientById(_client)) {
+                if (_client->canSend()) {
+                    uint8_t *ptr;
+                    _buffer.write(0); // terminate with NUL byte
+                    size_t len = _buffer.length() - 1;
+                    _buffer.move(&ptr);
+                    _webSocket.sent += len;
+
+                    auto wsBuffer = _client->server()->makeBuffer(ptr, len, false);
+                    if (wsBuffer) {
+                        _client->binary(wsBuffer);
+                    }
+                }
+                else {
+                    //__DBG_printf("dropped ADC packet size=%u", _buffer.length());
+                    _webSocket.dropped += _buffer.length();
+                }
+            }
+
+            if (time > _webSocket.duration) {
+                _buffer.clear();
+                Serial.printf_P(PSTR("+ADC: Finished client=%p %u bytes @ %.2fKB/s%s\n"),
+                    _client,
+                    _webSocket.sent,
+                    _webSocket.sent * (1000.0 / 1024.0) / _webSocket.duration,
+                    _webSocket.dropped ? PrintString(F(" %u bytes dropped"), _webSocket.dropped).c_str() : emptyString.c_str()
+                );
+                LoopFunctions::remove(at_mode_adc_loop);
+                LoopFunctions::callOnce(at_mode_adc_delete_object);
+                return;
+            }
+
+            resetBuffer();
+        }
+
+        data._time = time;
+        data._value = std::min(reading, (uint16_t)1023);
+        _buffer.copy(data);
+    }
+
+private:
+    Buffer _buffer;
+    AsyncWebSocketClient *_client;
+};
+
 AtModeADC *atModeADC = nullptr;
 
-void at_mode_adc_loop() {
+static void at_mode_adc_delete_object()
+{
+    if (atModeADC) {
+        __LDBG_delete(atModeADC);
+        atModeADC = nullptr;
+    }
+}
+
+static void at_mode_adc_loop() {
     if (atModeADC) {
         atModeADC->loop();
     }
@@ -912,7 +1032,7 @@ void at_mode_serial_handle_event(String &commandString)
                         args.print(F("Configuration marked dirty"));
                     }
                     else {
-                        auto file = SPIFFS.open(filename, fs::FileOpenMode::read);
+                        auto file = KFCFS.open(filename, fs::FileOpenMode::read);
                         if (file) {
                             args.print(filename);
                             Configuration::Handle_t *handlesPtr = nullptr;
@@ -1058,7 +1178,7 @@ void at_mode_serial_handle_event(String &commandString)
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RM))) {
                 if (args.requireArgs(1, 1)) {
                     auto filename = args.get(0);
-                    auto result = SPIFFS.remove(filename);
+                    auto result = KFCFS.remove(filename);
                     args.printf_P(PSTR("%s: %s"), filename, result ? PSTR("success") : PSTR("failure"));
                 }
             }
@@ -1066,7 +1186,7 @@ void at_mode_serial_handle_event(String &commandString)
                 if (args.requireArgs(2, 2)) {
                     auto filename = args.get(0);
                     auto newFilename = args.get(0);
-                    auto result = SPIFFS.rename(filename, newFilename);
+                    auto result = KFCFS.rename(filename, newFilename);
                     args.printf_P(PSTR("%s => %s: %s"), filename, newFilename, result ? PSTR("success") : PSTR("failure"));
                 }
             }
@@ -1085,7 +1205,7 @@ void at_mode_serial_handle_event(String &commandString)
             }
 #if ESP8266
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LSR))) {
-                auto dir = SPIFFS.openDir(args.toString(0));
+                auto dir = KFCFS.openDir(args.toString(0));
                 while(dir.next()) {
                     output.print(F("+LS: "));
                     if (dir.isFile()) {
@@ -1352,12 +1472,38 @@ void at_mode_serial_handle_event(String &commandString)
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(ADC))) {
                 if (args.requireArgs(1)) {
-                    if (args.isAnyMatchIgnoreCase(0, F("0|off|stop"))) {
-                        args.print(F("ADC display off"));
-                        if (atModeADC) {
-                            __LDBG_delete(atModeADC);
-                            atModeADC = nullptr;
+                    if (args.equalsIgnoreCase(0, F("websocket"))) {
+
+                        // websocket,<client_id>,<read interval/microseconds>,<duration/ms>[,<packet size=1024>]
+                        // +ADC=websocket,0x3fff595c,2500,10,1024
+                        // +ADC=websocket,0,25000,5000,512
+                        // +ADC=websocket,0,500,5000,1024
+                        // +ADC=websocket,0x3fff2dcc,500,10000,1536
+
+                        uint32_t clientId = args.toNumber(1, 0, 16);
+                        auto interval = args.toIntMinMax(2, 250U, ~0U, 0xffffffffU);                            // 0.25ms up to 4000 seconds
+                        auto duration = args.toIntMinMax(3, 1U, (1U << 22), 10000U);                            // 1ms - 4194 seconds
+                        auto packetSize = args.toIntMinMax(4, 64U, TCP_SND_BUF - 64U, TCP_SND_BUF - 64U);       // ESP8266: TCP_SND_BUF = 536 * 2 = max. 1072 - overhead for the web socket
+                        AsyncWebSocketClient *client = Http2Serial::getClientById(reinterpret_cast<AsyncWebSocketClient *>(clientId));
+                        if (client) {
+                            at_mode_adc_delete_object();
+                            atModeADC = __LDBG_new(AtModeADCWebSocket);
+                            if (reinterpret_cast<AtModeADCWebSocket *>(atModeADC)->init(interval, duration, packetSize, client)) {
+                                args.printf_P(PSTR("Sending ADC readings to client=%p for %.2f seconds, interval=%.3f milliseconds, packet size=%u"), client, duration / 1000.0, interval / 1000.0, packetSize);
+                            }
+                            else {
+                                args.print(F("Failed to initialize ADC"));
+                                at_mode_adc_delete_object();
+                            }
                         }
+                        else {
+                            args.printf_P(PSTR("Cannot find web socket client id=0x%08x"), clientId);
+                        }
+
+                    }
+                    else if (args.isAnyMatchIgnoreCase(0, F("0|off|stop"))) {
+                        args.print(F("ADC display off"));
+                        at_mode_adc_delete_object();
                     }
                     else {
                         auto interval = args.toMillis(0, 100, ~0, 1000, String('s'));
@@ -1366,9 +1512,8 @@ void at_mode_serial_handle_event(String &commandString)
                         auto unit = args.toString(3, String('V'));
                         auto readDelay = args.toIntMinMax(4, 0U, ~0U, 1250U);
 
-                        if (!atModeADC) {
-                            atModeADC = __LDBG_new(AtModeADC);
-                        }
+                        at_mode_adc_delete_object();
+                        atModeADC = __LDBG_new(AtModeADC);
                         if (atModeADC->init(period, multiplier, unit, readDelay)) {
 
                             args.printf_P(PSTR("ADC display interval %ums"), interval);
@@ -1380,8 +1525,7 @@ void at_mode_serial_handle_event(String &commandString)
                         }
                         else {
                             args.print(F("Failed to initialize ADC"));
-                            __LDBG_delete(atModeADC);
-                            atModeADC = nullptr;
+                            at_mode_adc_delete_object();
                         }
 
                     }

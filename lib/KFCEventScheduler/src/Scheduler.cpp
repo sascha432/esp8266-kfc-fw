@@ -128,7 +128,7 @@ bool Scheduler::_removeTimer(CallbackTimerPtr timer)
             return true;
         }
         else {
-            __LDBG_printf(__bold_red "timer=%p NOT FOUND", timer);
+            __LDBG_printf(_VT100(bold_red) "timer=%p NOT FOUND", timer);
         }
     }
     return false;
@@ -215,7 +215,7 @@ void Scheduler::_run()
             auto timer = _timers[i];
             if (timer) {
                 if (timer->_priority <= PriorityType::NORMAL && millis() > timeout) {
-                    __LDBG_printf(__bold_red "runtime limit=%u exceeded=%u", _runtimeLimit, millis() - start);
+                    __LDBG_printf(_VT100(bold_red) "runtime limit=%u exceeded=%u", _runtimeLimit, millis() - start);
                     break;
                 }
                 if (timer->_callbackScheduled) {
@@ -279,7 +279,7 @@ void Scheduler::_invokeCallback(CallbackTimerPtr timer, uint32_t runtimeLimit)
     uint32_t diff = runtimeLimit ? get_time_diff(start, micros()) : 0;
 
     if (diff > runtimeLimit) {
-        __LDBG_printf(__bold_red "timer=%p time=%u limit=%u exceeded%s", timer, diff, runtimeLimit, fpos.c_str());
+        __LDBG_printf(_VT100(bold_red) "timer=%p time=%u limit=%u exceeded%s", timer, diff, runtimeLimit, fpos.c_str());
     }
 
     // verify _checkTimers is set. if false the timer must still exist
@@ -287,7 +287,7 @@ void Scheduler::_invokeCallback(CallbackTimerPtr timer, uint32_t runtimeLimit)
 
     // if _checkTimers is set, we need to check if the timer was removed
     if (_checkTimers && !_hasTimer(timer)) {
-        __LDBG_printf(__bold_green "timer=%p removed%s", timer, fpos.c_str());
+        __LDBG_printf(_VT100(bold_green) "timer=%p removed%s", timer, fpos.c_str());
         return;
     }
 

@@ -15,11 +15,11 @@ namespace SaveCrash {
     uint8_t getCrashCounter()
     {
         uint8_t counter = 0;
-        File file = SPIFFS.open(FSPGM(crash_counter_file), fs::FileOpenMode::read);
+        File file = KFCFS.open(FSPGM(crash_counter_file), fs::FileOpenMode::read);
         if (file) {
             counter = file.read() + 1;
         }
-        file = SPIFFS.open(FSPGM(crash_counter_file), fs::FileOpenMode::write);
+        file = KFCFS.open(FSPGM(crash_counter_file), fs::FileOpenMode::write);
         file.write(counter);
         return counter;
     }
@@ -32,10 +32,10 @@ namespace SaveCrash {
 
     void removeCrashCounter()
     {
-        SPIFFS.begin();
+        KFCFS.begin();
         auto filename = String(FSPGM(crash_counter_file, "/.pvt/crash_counter"));
-        if (SPIFFS.exists(filename)) {
-            SPIFFS.remove(filename);
+        if (KFCFS.exists(filename)) {
+            KFCFS.remove(filename);
         }
     }
 
@@ -75,10 +75,10 @@ namespace SaveCrash {
 
                 do {
                     filename = PrintString(FSPGM(crash_dump_file, "/.pvt/crash.%03x"), num++);
-                } while(SPIFFS.exists(filename) && num < max_limit);
+                } while(KFCFS.exists(filename) && num < max_limit);
 
                 if (num < max_limit) {
-                    auto file = SPIFFS.open(filename, fs::FileOpenMode::write);
+                    auto file = KFCFS.open(filename, fs::FileOpenMode::write);
                     if (file) {
                         String hash;
                         KFCConfigurationClasses::System::Firmware::getElfHashHex(hash);

@@ -630,7 +630,7 @@ void BlindsControl::_stop()
 #if IOT_BLINDS_CTRL_TESTMODE
     if (_currentValues.size()) {
         String currentFile = F("/.pvt/current.log");
-        auto file = SPIFFS.open(currentFile, fs::FileOpenMode::write);
+        auto file = KFCFS.open(currentFile, fs::FileOpenMode::write);
         if (file) {
             file.println(info);
             file.println(F("---"));
@@ -673,7 +673,7 @@ String BlindsControl::_getTopic(ChannelType channel, TopicType type)
 void BlindsControl::_loadState()
 {
 #if IOT_BLINDS_CTRL_SAVE_STATE
-    auto file = SPIFFS.open(FSPGM(iot_blinds_control_state_file), fs::FileOpenMode::read);
+    auto file = KFCFS.open(FSPGM(iot_blinds_control_state_file), fs::FileOpenMode::read);
     if (file) {
         file.read(reinterpret_cast<uint8_t *>(_states.data()), _states.size() * sizeof(*_states.data()));
     }
@@ -684,7 +684,7 @@ void BlindsControl::_loadState()
 void BlindsControl::_saveState()
 {
 #if IOT_BLINDS_CTRL_SAVE_STATE
-    auto file = SPIFFS.open(FSPGM(iot_blinds_control_state_file), fs::FileOpenMode::write);
+    auto file = KFCFS.open(FSPGM(iot_blinds_control_state_file), fs::FileOpenMode::write);
     if (file) {
         file.write(reinterpret_cast<const uint8_t *>(_states.data()), _states.size() * sizeof(*_states.data()));
     }

@@ -5,7 +5,6 @@
 #pragma once
 
 #include <Arduino_compat.h>
-#include <FS.h>
 
 #include <push_pack.h>
 

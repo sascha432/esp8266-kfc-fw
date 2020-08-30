@@ -510,7 +510,7 @@ void WebServerPlugin::handlerUpdate(AsyncWebServerRequest *request)
             request->send(response);
 
         } else {
-            // SPIFFS.begin();
+            // KFCFS.begin();
 
             BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::SOS);
             StreamString errorStr;
@@ -582,7 +582,7 @@ void WebServerPlugin::handlerUploadUpdate(AsyncWebServerRequest *request, String
 #if STK500V1
             if (imageType == 3) {
                 status->command = U_ATMEGA;
-                firmwareTempFile = SPIFFS.open(FSPGM(stk500v1_tmp_file), fs::FileOpenMode::write);
+                firmwareTempFile = KFCFS.open(FSPGM(stk500v1_tmp_file), fs::FileOpenMode::write);
                 __LDBG_printf("ATmega fw temp file %u, filename %s", (bool)firmwareTempFile, String(FSPGM(stk500v1_tmp_file)).c_str());
             } else
 #endif
@@ -594,8 +594,8 @@ void WebServerPlugin::handlerUploadUpdate(AsyncWebServerRequest *request, String
                     size = 1048576;
 #endif
                     command = U_SPIFFS;
-                    // SPIFFS.end();
-                    // SPIFFS.format();
+                    // KFCFS.end();
+                    // KFCFS.format();
                 } else {
                     size = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
                     command = U_FLASH;
@@ -741,14 +741,14 @@ bool WebServerPlugin::_sendFile(const FileMapping &mapping, const String &formNa
                 __weatherStationDetachCanvas(true);
                 request->onDisconnect(__weatherStationAttachCanvas); // unlock on disconnect
 #endif
-                Form *form = new SettingsForm(nullptr);
+                Form *form = __LDBG_new(SettingsForm, nullptr);
                 plugin->createConfigureForm(PluginComponent::FormCallbackType::CREATE_GET, formName, *form, request);
-                webTemplate = new ConfigTemplate(form);
+                webTemplate = __LDBG_new(ConfigTemplate, form);
             }
         }
     }
     if ((isHtml || String_endsWith(path, SPGM(_xml, ".xml"))) && webTemplate == nullptr) {
-        webTemplate = new WebTemplate(); // default for all .html files
+        webTemplate = __LDBG_new(WebTemplate); // default for all .html files
     }
 
     AsyncBaseResponse *response;

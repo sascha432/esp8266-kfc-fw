@@ -6,7 +6,6 @@
 
 #include <Arduino_compat.h>
 #include <WString.h>
-#include <FS.h>
 #include <FSImpl.h>
 
 using namespace fs;

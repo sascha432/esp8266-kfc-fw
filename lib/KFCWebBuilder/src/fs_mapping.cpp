@@ -7,11 +7,10 @@
 
 #if defined(ESP32)
 #include <WiFi.h>
-#include <SPIFFS.h>
+#include <KFCFS.h>
 #elif defined(ESP8266)
 #include <ESP8266WiFi.h>
 #include <ESP8266WiFiType.h>
-#include <FS.h>
 #else
 #error Platform not supported
 #endif
@@ -45,9 +44,9 @@ uint32_t crc32b(const void *message, size_t length, uint32_t crc)
 
 void FileMapping::_openByFilename()
 {
-    if (SPIFFS.exists(_filename)) {
+    if (KFCFS.exists(_filename)) {
         _uuid = 0;
-        _fileSize = SPIFFS.open(_filename, fs::FileOpenMode::read).size();
+        _fileSize = KFCFS.open(_filename, fs::FileOpenMode::read).size();
         _modificationTime = 0;
         _gzipped = 0;
         __LDBG_printf("file=%s uuid=%08x gz=%u size=%u mtime=%u", _filename.c_str(), _uuid, _gzipped, _fileSize, _modificationTime);
@@ -62,7 +61,7 @@ void FileMapping::_openByUUID()
 {
     char buf[34];
     snprintf_P(buf, sizeof(buf) - 1, PSTR("%s%08x.lnk"), SPGM(fs_mapping_dir), _uuid);
-    auto file = SPIFFS.open(buf, fs::FileOpenMode::read);
+    auto file = KFCFS.open(buf, fs::FileOpenMode::read);
     if (file) {
         if (file.readBytes(reinterpret_cast<char *>(&_modificationTime), 8) == 8) {
             _filename = file.readString();
@@ -97,7 +96,7 @@ File FileMapping::open(const char *mode) const
         __DBG_printf("write access denied to mapped file=%s", fnPtr);
         return File();
     }
-    return SPIFFS.open(fnPtr, mode);
+    return KFCFS.open(fnPtr, mode);
 }
 
 File SPIFFSWrapper::open(Dir dir, const char *mode)
@@ -112,7 +111,7 @@ File SPIFFSWrapper::open(Dir dir, const char *mode)
 
 File SPIFFSWrapper::open(const char *path, const char *mode)
 {
-    auto file = SPIFFS.open(path, mode);
+    auto file = KFCFS.open(path, mode);
     if (file) {
         return file;
     }
@@ -125,7 +124,7 @@ File SPIFFSWrapper::open(const char *path, const char *mode)
 
 bool SPIFFSWrapper::exists(const char *path)
 {
-    if (SPIFFS.exists(path)) {
+    if (KFCFS.exists(path)) {
         return true;
     }
     return FileMapping(path).exists();
@@ -136,10 +135,10 @@ bool SPIFFSWrapper::rename(const char* pathFrom, const char* pathTo)
     if (exists(pathTo)) {
         return false;
     }
-    return SPIFFS.rename(pathFrom, pathTo);
+    return KFCFS.rename(pathFrom, pathTo);
 }
 
 bool SPIFFSWrapper::remove(const char *path)
 {
-    return SPIFFS.remove(path);
+    return KFCFS.remove(path);
 }

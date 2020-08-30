@@ -62,12 +62,12 @@ long AtModeArgs::toInt(uint16_t num, long defaultValue) const
     return defaultValue;
 }
 
-long AtModeArgs::toNumber(uint16_t num, long defaultValue) const
+long AtModeArgs::toNumber(uint16_t num, long defaultValue, uint8_t base) const
 {
     ArgumentPtr arg;
     if (nullptr != (arg = get(num))) {
         char *endPtr = nullptr;
-        auto value = strtol(arg, &endPtr, 0); // auto detect base
+        auto value = strtol(arg, &endPtr, base); // auto detect base
         if (!endPtr) {
             return defaultValue;
         }

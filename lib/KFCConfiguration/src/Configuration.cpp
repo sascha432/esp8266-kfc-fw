@@ -278,7 +278,7 @@ void DebugHandle::logUsage()
 {
     auto uptime = getSystemUptime();
     __DBG_printf("writing usage to log uptime=%u file=%s", uptime, __DBG_config_handle_log_file);
-    auto file = SPIFFS.open(FPSTR(__DBG_config_handle_log_file), fs::FileOpenMode::append);
+    auto file = KFCFS.open(FPSTR(__DBG_config_handle_log_file), fs::FileOpenMode::append);
     if (file) {
         PrintString str;
         str.strftime_P(SPGM(strftime_date_time_zone), time(nullptr));
@@ -300,8 +300,8 @@ void DebugHandle::printAll(Print &output)
 
 void ConfigurationHelper::readHandles()
 {
-    SPIFFS.begin();
-    auto file = SPIFFS.open(FPSTR(__DBG_config_handle_storage), fs::FileOpenMode::read);
+    KFCFS.begin();
+    auto file = KFCFS.open(FPSTR(__DBG_config_handle_storage), fs::FileOpenMode::read);
     if (file) {
         uint32_t count = 0;
         while (file.available()) {
@@ -323,7 +323,7 @@ void ConfigurationHelper::writeHandles(bool clear)
         DebugHandle::clear();
     }
     __DBG_printf("storing %u handles file=%s", DebugHandle::getHandles().size(), __DBG_config_handle_storage);
-    auto file = SPIFFS.open(FPSTR(__DBG_config_handle_storage), fs::FileOpenMode::write);
+    auto file = KFCFS.open(FPSTR(__DBG_config_handle_storage), fs::FileOpenMode::write);
     if (file) {
         for (const auto &handle : DebugHandle::getHandles()) {
             file.printf_P(PSTR("%s\n"), handle.getName());

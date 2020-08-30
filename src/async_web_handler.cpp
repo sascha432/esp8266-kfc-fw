@@ -31,7 +31,7 @@ void AsyncFileUploadWebHandler::_handleUpload(AsyncWebServerRequest *request, co
                 request->_tempObject = strdup(request->_tempFile.name());
                 if (!request->_tempObject) {
                     request->_tempFile.close();
-                    SPIFFS.remove(request->_tempFile.name());
+                    KFCFS.remove(request->_tempFile.name());
                     request->send(500, FSPGM(mime_text_plain), F("Out of memory"));
                 } else {
                     request->onDisconnect([this, request]() {
@@ -67,7 +67,7 @@ void AsyncFileUploadWebHandler::_cleanUp(AsyncWebServerRequest *request) {
         auto tmpFile = reinterpret_cast<char *>(request->_tempObject);
         if (*tmpFile) {
             debug_printf_P(PSTR("AsyncFileUploadWebHandler::_cleanUp(): Deleting %s\n"), tmpFile);
-            SPIFFS.remove(tmpFile);
+            KFCFS.remove(tmpFile);
         } else {
             debug_println(F("AsyncFileUploadWebHandler::_cleanUp(): Temporary file already removed"));
         }

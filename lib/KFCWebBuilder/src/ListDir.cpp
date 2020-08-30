@@ -18,12 +18,12 @@ ListDir::ListDir() : _listing({})
 
 ListDir::ListDir(const String &dirName, bool filterSubdirs, bool hiddenFiles) :
     _dirName(dirName),
-    _listings(SPIFFS.open(FSPGM(fs_mapping_listings), FileOpenMode::read)),
+    _listings(KFCFS.open(FSPGM(fs_mapping_listings), FileOpenMode::read)),
     _listing({}),
     _isDir(false),
     _filterSubdirs(filterSubdirs),
     _hiddenFiles(hiddenFiles),
-    _dir(SPIFFS.openDir(dirName))
+    _dir(KFCFS.openDir(dirName))
 {
     append_slash(_dirName);
     __LDBG_printf("dirName=%s hiddenFiles=%u", _dirName.c_str(), _hiddenFiles);
@@ -38,12 +38,12 @@ File ListDir::openFile(const char* mode)
 
 ListDir::ListDir(const String &dirName, bool filterSubdirs, bool hiddenFiles) :
     _dirName(dirName),
-    _listings(SPIFFS.open(FSPGM(fs_mapping_listings), FileOpenMode::read)),
+    _listings(KFCFS.open(FSPGM(fs_mapping_listings), FileOpenMode::read)),
     _listing({}),
     _isDir(false),
     _filterSubdirs(filterSubdirs),
     _hiddenFiles(hiddenFiles),
-    _dir(SPIFFS.open(dirName))
+    _dir(KFCFS.open(dirName))
 {
     append_slash(_dirName);
     __LDBG_printf("dirName=%s", _dirName.c_str());
@@ -51,7 +51,7 @@ ListDir::ListDir(const String &dirName, bool filterSubdirs, bool hiddenFiles) :
 
 File ListDir::openFile(const char* mode)
 {
-    return SPIFFS.open(_file.name(), mode);
+    return KFCFS.open(_file.name(), mode);
 }
 
 #endif
@@ -259,7 +259,7 @@ bool ListDir::next()
 
 bool ListDir::rewind()
 {
-    _listings = SPIFFS.open(FSPGM(fs_mapping_listings), FileOpenMode::read);
+    _listings = KFCFS.open(FSPGM(fs_mapping_listings), FileOpenMode::read);
     _listing = {};
     _isDir = false;
 #if ESP8266

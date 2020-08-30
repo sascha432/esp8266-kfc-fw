@@ -158,7 +158,10 @@ void BlindsControlPlugin::loopMethod()
 
 #include "at_mode.h"
 
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(BCME, "BCME", "<store|div|open|close>[,<value>]", "Set or display test mode value");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(BCME, "BCME", "<adc|div|open|close>[,<value>]", "Set or display test mode value\n"
+        "\n"
+        "adc,<client_id>            send ADC readings to web socket client\n"
+);
 
 // void BlindsControlPlugin::_printTestInfo() {
 
@@ -234,7 +237,7 @@ bool BlindsControlPlugin::atModeHandler(AtModeArgs &args)
 {
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(BCME))) {
         if (args.requireArgs(1, 4)) {
-            auto cmds = PSTR("store|div|open|close");
+            auto cmds = PSTR("adc|div|open|close");
             int cmd = stringlist_find_P_P(cmds, args.get(0), '|');
             switch(cmd) {
                 case 0:

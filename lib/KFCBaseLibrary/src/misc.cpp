@@ -130,9 +130,9 @@ File tmpfile(const String &dir, const String &prefix) {
             tmp = tmp.substring(0, 24);
         }
         tmp += ch;
-    } while (SPIFFS.exists(tmp));
+    } while (KFCFS.exists(tmp));
 
-    return SPIFFS.open(tmp, fs::FileOpenMode::write);
+    return KFCFS.open(tmp, fs::FileOpenMode::write);
 }
 
 String WiFi_disconnect_reason(WiFiDisconnectReason reason)

@@ -18,6 +18,21 @@
 #include <debug_helper_disable.h>
 #endif
 
+// BoostrapMenuItem_t bootstrap_items[] PROGMEM = {
+// 	{ SPGM(Home), SPGM(index_html), 1, 0, },
+// 	{ SPGM(Status), SPGM(status_html), 2, 0, },
+// 	{ SPGM(Configuration), nullptr, 3, 0 },
+// 	{ SPGM(Device), nullptr, 4, 0 },
+// 	{ SPGM(Admin), nullptr, 5, 0 },
+// 	{ SPGM(Utilities), nullptr, 6, 0 },
+
+// 	{ SPGM(Home), SPGM(index_html), 100, 1, },
+// 	{ SPGM(Status), SPGM(status_html), 101, 1, },
+
+
+// 	{ nullptr, nullptr, 0, 0  }
+// };
+
 BootstrapMenu::BootstrapMenu() : _unqiueId(0) {
 }
 

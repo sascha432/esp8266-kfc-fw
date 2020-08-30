@@ -422,7 +422,7 @@ void ConfigTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     }
     else if (String_equals(key, F("SSL_CERT"))) {
 #if WEBSERVER_TLS_SUPPORT
-        File file = SPIFFS.open(FSPGM(server_crt, "/.pvt/server.crt"), fs::FileOpenMode::read);
+        File file = KFCFS.open(FSPGM(server_crt, "/.pvt/server.crt"), fs::FileOpenMode::read);
         if (file) {
             output.print(file.readString());
         }
@@ -430,7 +430,7 @@ void ConfigTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     }
     else if (String_equals(key, F("SSL_KEY"))) {
 #if WEBSERVER_TLS_SUPPORT
-        File file = SPIFFS.open(FSPGM(server_key, "/.pvt/server.key"), fs::FileOpenMode::read);
+        File file = KFCFS.open(FSPGM(server_key, "/.pvt/server.key"), fs::FileOpenMode::read);
         if (file) {
             output.print(file.readString());
         }
@@ -541,12 +541,12 @@ File2String::File2String(const String &filename)
 
 String File2String::toString()
 {
-    return SPIFFS.open(_filename, fs::FileOpenMode::read).readString();
+    return KFCFS.open(_filename, fs::FileOpenMode::read).readString();
 }
 
 void File2String::fromString(const String &value)
 {
-    SPIFFS.open(_filename, fs::FileOpenMode::write).print(value);
+    KFCFS.open(_filename, fs::FileOpenMode::write).print(value);
     //write((const uint8_t *)value.c_str(), value.length());
 }
 

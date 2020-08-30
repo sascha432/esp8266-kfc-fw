@@ -13,7 +13,16 @@
 #define DEBUG_BOOTSTRAP_MENU                    0
 #endif
 
-#include "push_pack.h"
+// #include "push_pack.h"
+
+// typedef struct __attribute__packed__ {
+//     PGM_P _label;
+//     PGM_P _uri;
+//     uint8_t _id;
+//     uint8_t _parent_id;
+// } BoostrapMenuItem_t;
+
+// extern BoostrapMenuItem_t bootstrap_items[] PROGMEM;
 
 class BootstrapMenu {
 public:

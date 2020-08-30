@@ -300,7 +300,7 @@ File Logger::__openLog(Level logLevel, bool write)
 {
     auto fileName = _getLogFilename(logLevel);
     __LDBG_printf("logLevel=%u filename=%s", logLevel, fileName.c_str());
-    return SPIFFS.open(fileName, write ? (SPIFFS.exists(fileName) ? fs::FileOpenMode::append : fs::FileOpenMode::write) : fs::FileOpenMode::read);
+    return KFCFS.open(fileName, write ? (KFCFS.exists(fileName) ? fs::FileOpenMode::append : fs::FileOpenMode::write) : fs::FileOpenMode::read);
 }
 
 void Logger::__rotate(Level logLevel)
@@ -329,26 +329,26 @@ void Logger::_closeLog(File file)
         int i;
         for(i = 0; i < LOGGER_MAX_BACKUP_FILES; i++) {
             backFilename = _getBackupFilename(filename, i);
-            if (!SPIFFS.exists(backFilename)) { // available?
+            if (!KFCFS.exists(backFilename)) { // available?
                 __LDBG_printf("rotating num=%u max=%u", i, LOGGER_MAX_BACKUP_FILES);
-                SPIFFS.remove(_getBackupFilename(filename, i + 1)); // delete next logfile to keep rotating
+                KFCFS.remove(_getBackupFilename(filename, i + 1)); // delete next logfile to keep rotating
                 break;
             }
         }
         if (i == LOGGER_MAX_BACKUP_FILES) { // max. rotations reached, restarting with 0
             __LDBG_printf("restarting rotation num=0 max=%u", LOGGER_MAX_BACKUP_FILES);
             backFilename = _getBackupFilename(filename, 0);
-            SPIFFS.remove(backFilename);
-            SPIFFS.remove(_getBackupFilename(filename, 1));
+            KFCFS.remove(backFilename);
+            KFCFS.remove(_getBackupFilename(filename, 1));
         }
 #else
         // rotation enabled disabled
         backFilename = _getBackupFilename(filename, 0);
-        SPIFFS.remove(backFilename);
+        KFCFS.remove(backFilename);
 #endif
         __LDBG_printf("renaming %s to %s", filename.c_str(), backFilename.c_str());
         file.close();
-        SPIFFS.rename(filename, backFilename);
+        KFCFS.rename(filename, backFilename);
         return;
     }
 #endif

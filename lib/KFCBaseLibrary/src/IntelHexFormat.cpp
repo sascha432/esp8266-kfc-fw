@@ -20,7 +20,7 @@ bool IntelHexFormat::open(const String &filename)
 {
     _error = NONE;
     _endAddress = 0;
-    _file = SPIFFS.open(filename, fs::FileOpenMode::read);
+    _file = KFCFS.open(filename, fs::FileOpenMode::read);
     if (!_file) {
         _error = FAILED_TO_OPEN;
         return false;

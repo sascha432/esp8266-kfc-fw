@@ -65,14 +65,14 @@ void SyslogFile::transmit(const SyslogQueueItem &item)
     }
 #endif
 
-    auto logFile = SPIFFS.open(_filename, fs::FileOpenMode::appendplus);
+    auto logFile = KFCFS.open(_filename, fs::FileOpenMode::appendplus);
     if (logFile) {
         String header = _getHeader();
         size_t msgLen = message.length() + header.length() + 1;
         if (_maxSize && (msgLen + logFile.size()) >= _maxSize) {
             logFile.close();
             _rotateLogfile(_filename, _maxRotate);
-            logFile = SPIFFS.open(_filename, fs::FileOpenMode::append); // if the rotation fails, just append to the existing file
+            logFile = KFCFS.open(_filename, fs::FileOpenMode::append); // if the rotation fails, just append to the existing file
         }
 		if (logFile) {
             auto written = logFile.print(header);
@@ -117,14 +117,14 @@ void SyslogFile::_rotateLogfile(const String &filename, uint16_t maxRotate)
 #if DEBUG_SYSLOG
 		int renameResult = -1;
 #endif
-        if (SPIFFS.exists(from)) {
-			if (SPIFFS.exists(to)) {
-				SPIFFS.remove(to);
+        if (KFCFS.exists(from)) {
+			if (KFCFS.exists(to)) {
+				KFCFS.remove(to);
 			}
 #if DEBUG_SYSLOG
 			renameResult =
 #endif
-			SPIFFS.rename(from, to);
+			KFCFS.rename(from, to);
 		}
 		_debug_printf_P(PSTR("rename = %d: %s => %s\n"), renameResult, from.c_str(), to.c_str());
 	}

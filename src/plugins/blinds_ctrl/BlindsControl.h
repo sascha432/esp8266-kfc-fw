@@ -7,7 +7,9 @@
 #include <Arduino_compat.h>
 #include <WebUIComponent.h>
 #include <MicrosTimer.h>
+#include <MillisTimer.h>
 #include <ReadADC.h>
+#include <Buffer.h>
 #include <FunctionalInterrupt.h>
 #include "../src/plugins/mqtt/mqtt_component.h"
 #include <kfc_fw_config.h>

@@ -9,6 +9,7 @@
 #include "sensor.h"
 #include "MQTTSensor.h"
 #include "MicrosTimer.h"
+#include "web_socket.h"
 
 #if DEBUG_IOT_SENSOR
 #include <debug_helper_enable.h>
@@ -310,7 +311,7 @@ bool Sensor_HLW8012::_processInterruptBuffer(InterruptBuffer &buffer, SensorInpu
 
             if (client->canSend()) { // drop data if the queue is full
                 typedef struct {
-                    uint16_t packetId;
+                    WSClient::BinaryPacketType type;
                     uint16_t outputMode;
                     uint16_t dataType;
                     float voltage;
@@ -327,7 +328,7 @@ bool Sensor_HLW8012::_processInterruptBuffer(InterruptBuffer &buffer, SensorInpu
                 if (buffer) {
                     header_t *header = reinterpret_cast<header_t *>(buffer);
                     *header = {
-                        0x0100,
+                        WSClient::BinaryPacketType::HLW8012_PLOT_DATA,
                         _getOutputMode(&input),
                         dataType,
                         _voltage,

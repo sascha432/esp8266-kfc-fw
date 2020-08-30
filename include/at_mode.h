@@ -251,7 +251,7 @@ public:
         return static_cast<T>(toInt(num, static_cast<long>(defaultValue)));
     }
 
-    long toNumber(uint16_t num, long defaultValue = 0) const; // auto detect octal, hex and decimal
+    long toNumber(uint16_t num, long defaultValue = 0, uint8_t base = 0) const; // auto detect octal, hex and decimal
     long long toLongLong(uint16_t num, long long defaultValue = 0) const;
 
     template<class T>

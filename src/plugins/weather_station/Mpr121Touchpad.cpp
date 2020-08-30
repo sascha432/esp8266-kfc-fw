@@ -9,6 +9,7 @@
 #include <map>
 #include "Mpr121Touchpad.h"
 #include "LoopFunctions.h"
+#include "../src/plugins/http2serial/http2serial.h"
 
 #if DEBUG_TOUCHPAD
 #include <debug_helper_enable.h>
@@ -175,7 +176,7 @@ void Mpr121Touchpad::Event::broadcastData(const Movement &movement)
     auto wsSerialConsole = Http2Serial::getConsoleServer();
     if (wsSerialConsole && !wsSerialConsole->getClients().isEmpty()) {
         typedef struct {
-            uint16_t packetId;
+            WsClient::BinaryPacketType packetId;
             int16_t x;
             int16_t y;
             int16_t px;
@@ -183,7 +184,7 @@ void Mpr121Touchpad::Event::broadcastData(const Movement &movement)
             uint32_t time;
             EventType type;
         } Packet_t;
-        Packet_t data = { 0x200, movement.getX(), movement.getY(), _predict.x, _predict.y, movement.getTime(), movement.getType() };
+        Packet_t data = { WsClient::BinaryPacketType::TOUCHPAD_DATA, movement.getX(), movement.getY(), _predict.x, _predict.y, movement.getTime(), movement.getType() };
 
         for(auto client: wsSerialConsole->getClients()) {
             if (client->status() && client->_tempObject && reinterpret_cast<WsClient *>(client->_tempObject)->isAuthenticated()) {

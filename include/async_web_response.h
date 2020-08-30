@@ -92,7 +92,7 @@ public:
     }
     ~AsyncMDNSResponse() {
         MDNS.removeServiceQuery(_serviceQuery);
-        delete _services;
+        __LDBG_delete(_services);
     }
 
     virtual size_t _fillBuffer(uint8_t *data, size_t len) override;

@@ -29,16 +29,18 @@ class WebServerPlugin;
 //typedef std::function<WsClient *(WsClient *wsSClient, WsAwsEventType type, AsyncWebSocket *server, AsyncWebSocketClient *client, uint8_t *data, size_t len, void *arg)> WsEventHandlerCallback;
 typedef std::function<WsClient *(AsyncWebSocketClient *client)> WsGetInstance;
 
-typedef enum : uint16_t {
-    RGB565_RLE_COMPRESSED_BITMAP            = 0x0001,
-} WebSocketBinaryPacketUnqiueId_t;
-
-
 class WsClient {
 public:
     enum WsErrorType {
         ERROR_FROM_SERVER,
         ERROR_AUTHENTTICATION_FAILED,
+    };
+
+    enum class BinaryPacketType : uint16_t {
+        RGB565_RLE_COMPRESSED_BITMAP,
+        HLW8012_PLOT_DATA,
+        TOUCHPAD_DATA,
+        ADC_READINGS,
     };
 
     WsClient(AsyncWebSocketClient *client);

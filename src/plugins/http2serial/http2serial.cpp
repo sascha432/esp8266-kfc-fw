@@ -180,6 +180,19 @@ AsyncWebSocket *Http2Serial::getConsoleServer()
     return wsSerialConsole;
 }
 
+AsyncWebSocketClient *Http2Serial::getClientById(const void *clientId)
+{
+    if (wsSerialConsole) {
+        for(auto client: wsSerialConsole->getClients()) {
+            if ((clientId == nullptr || reinterpret_cast<const void *>(client) == clientId) && client->status() && client->_tempObject && reinterpret_cast<WsClient *>(client->_tempObject)->isAuthenticated()) {
+                return client;
+            }
+        }
+    }
+    return nullptr;
+}
+
+
 void http2serial_event_handler(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len)
 {
     WsClient::onWsEvent(server, client, type, data, len, arg, WsConsoleClient::getInstance);

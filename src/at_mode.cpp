@@ -816,10 +816,20 @@ private:
         uint32_t _value: 10;
     } Data_t;
 
+    typedef struct __attribute__packed__ {
+        WsClient::BinaryPacketType type;
+        uint16_t flags;
+    } Header_t;
+
+    static constexpr uint16_t FLAGS_NONE = 0x0000;
+    static constexpr uint16_t FLAGS_LAST_PACKET = 0x0001;
+    static constexpr uint16_t FLAGS_DROPPED_PACKETS = 0x0002;
+
     void resetBuffer() {
         _buffer.setLength(0);
         _buffer.reserve(_webSocket.packetSize + 1);
-        _buffer.copy(WsClient::BinaryPacketType::ADC_READINGS);
+        Header_t header = { WsClient::BinaryPacketType::ADC_READINGS, FLAGS_NONE };
+        _buffer.copy(header);
     }
 
     virtual void processData(uint16_t reading, uint32_t diff, uint32_t micros) override {
@@ -829,6 +839,9 @@ private:
         auto time = get_time_diff(_webSocket.start, ms);
 
         if (_buffer.length() + sizeof(data) >= _webSocket.packetSize) {
+
+            bool endReading = (time > _webSocket.duration);
+
             if (Http2Serial::getClientById(_client)) {
                 if (_client->canSend()) {
                     uint8_t *ptr;
@@ -836,6 +849,17 @@ private:
                     size_t len = _buffer.length() - 1;
                     _buffer.move(&ptr);
                     _webSocket.sent += len;
+
+                    if (len >= sizeof(Header_t)) {
+                        auto flags = FLAGS_NONE;
+                        if (endReading) {
+                            flags |= FLAGS_LAST_PACKET;
+                        }
+                        if (_webSocket.dropped) {
+                            flags |= FLAGS_DROPPED_PACKETS;
+                        }
+                        ((Header_t *)&ptr[0])->flags |= flags;
+                    }
 
                     auto wsBuffer = _client->server()->makeBuffer(ptr, len, false);
                     if (wsBuffer) {
@@ -848,7 +872,7 @@ private:
                 }
             }
 
-            if (time > _webSocket.duration) {
+            if (endReading) {
                 _buffer.clear();
                 Serial.printf_P(PSTR("+ADC: Finished client=%p %u bytes @ %.2fKB/s%s\n"),
                     _client,
@@ -1413,6 +1437,9 @@ void at_mode_serial_handle_event(String &commandString)
                         args.printf_P(PSTR("set pin=%u to INPUT"), pin);
                     }
                     else {
+
+                        // +PWM=4,512,40000,2000
+
                         auto level = (uint16_t)args.toIntMinMax(1, 0, PWMRANGE, 0);
                         if (level == 0) {
                             if (args.isAnyMatchIgnoreCase(1, F("h|hi|high"))) {

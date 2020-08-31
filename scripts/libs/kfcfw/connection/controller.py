@@ -28,12 +28,12 @@ class PrintConsole:
     def log(self, msg, end = '\n'):
         print(msg, end=end, flush=True)
 
+    def error(self, msg, end = '\n'):
+        self.log('ERROR: %s' % msg, end)
+
     def debug(self, msg, end = '\n'):
         if self._debug:
             self.log('DEBUG: %s' % msg, end)
-
-    def error(self, e, end = '\n'):
-        self.log('ERROR: %s' % msg, end)
 
 class Controller:
     def __init__(self, debug = True, console = None):

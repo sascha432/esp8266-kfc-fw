@@ -28,7 +28,9 @@ class PageStart(tk.Frame, PageBase):
         PageBase.__init__(self, controller)
 
         self.password_placeholder = '********'
-        self.config_filename = os.path.normpath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '../.config/kfcfw_tool.json'))
+        self.controller.config_dir = os.path.normpath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '../.config'))
+        self.config_filename = os.path.join(self.controller.config_dir, 'kfcfw_tool.json')
+
         self.read_config()
 
         label = tk.Label(self, text="Start Page - DISCONNECTED", font=self.LARGE_FONT)

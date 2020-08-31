@@ -8,6 +8,8 @@ import tkinter as tk
 from tkinter import ttk
 import os
 import json
+from libs import kfcfw as kfcfw
+
 # import matplotlib
 # matplotlib.use("TkAgg")
 # from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
@@ -57,8 +59,17 @@ class PageStart(tk.Frame, PageBase):
         ttk.Label(self, text="Hostname or IP:").grid(in_=top, row=0, column=0, padx=pad, pady=pad)
 
         values = ['']
+        n = 1
+        select_hostname = None
+        select_item = 0
         for conn in self.config['connections']:
-            values.append(conn['username'] + '@' + conn['hostname'])
+            name = conn['username'] + '@' + conn['hostname']
+            values.append(name)
+            if 'last_conn' in self.config.keys() and self.config['last_conn']==n:
+                select_hostname = name
+                select_item = n
+            n += 1
+
         self.hostname = ttk.Combobox(self, width=40, values=values, textvariable=self.form['hostname'])
         self.hostname.grid(in_=top, row=0, column=1, padx=pad, pady=pad)
         self.hostname.bind('<<ComboboxSelected>>', self.on_select)
@@ -73,6 +84,10 @@ class PageStart(tk.Frame, PageBase):
 
         self.controller.connect_button = ttk.Button(self, text="Connect", command=self.connect)
         self.controller.connect_button.grid(in_=top, row=4, column=0, padx=pad, pady=pad, columnspan=2)
+
+        if select_item:
+            self.form['hostname'].set(select_hostname)
+            self._on_select(select_item)
 
     def connect(self):
         if self.controller.wsc.is_connected():
@@ -130,9 +145,12 @@ class PageStart(tk.Frame, PageBase):
 
 
     def on_select(self, event):
-        cur = event.widget.current()
-        if cur>0:
+        self._on_select(event.widget.current())
+
+    def _on_select(self, cur):
+        if cur>0 and cur<=len(self.config['connections']):
             conn = self.config['connections'][cur - 1]
+            self.config['last_conn'] = cur
             self.form['username'].set(conn['username'])
             self.form['password'].set(self.password_placeholder)
             self.form['safe_credentials'].set(1)
@@ -146,7 +164,7 @@ class PageStart(tk.Frame, PageBase):
                 self.config = json.loads(file.read())
         except Exception as e:
             print('Failed to read config: %s' % e)
-            self.config = { 'connections': [] }
+            self.config = { 'connections': [], 'last_conn': 0 }
 
     def write_config(self):
         try:

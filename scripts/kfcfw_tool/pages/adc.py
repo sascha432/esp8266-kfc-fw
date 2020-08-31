@@ -8,6 +8,16 @@ import tkinter
 import tkinter as tk
 from tkinter import ttk
 
+import matplotlib
+matplotlib.use("TkAgg")
+from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
+from matplotlib.figure import Figure
+import matplotlib.animation as animation
+import matplotlib.pyplot as plt
+from matplotlib import style
+import numpy as np
+
+
 class PageADC(tk.Frame, PageBase):
 
     def __init__(self, parent, controller):
@@ -23,47 +33,88 @@ class PageADC(tk.Frame, PageBase):
 
         ttk.Button(self, text="Home", width=7, command=lambda: self.show_frame('PageStart')).pack(in_=top, side=tkinter.LEFT, padx=10)
 
-        # action = tk.Frame(self)
-        # action.pack(in_=top, side=tkinter.LEFT, padx=15)
+        action = tk.Frame(self)
+        action.pack(in_=top, side=tkinter.LEFT, padx=15)
 
-        # ttk.Button(self, text="Current", command=lambda: controller.set_plot_type('I')).grid(in_=action, row=1, column=1)
-        # ttk.Button(self, text="Voltage", command=lambda: controller.set_plot_type('U')).grid(in_=action, row=1, column=2)
-        # ttk.Button(self, text="Power", command=lambda: controller.set_plot_type('P')).grid(in_=action, row=2, column=1)
-        # ttk.Button(self, text="Pause", command=lambda: controller.set_plot_type('')).grid(in_=action, row=2, column=2)
+        ttk.Button(self, text="Start", command=lambda: self.send_adc_start_cmd()).grid(in_=action, row=1, column=1)
+        ttk.Button(self, text="PWM pin 4 512 for 2000ms", command=lambda: self.controller.wsc.send_pwm_cmd(4, 512, 2000)).grid(in_=action, row=1, column=2)
+        ttk.Button(self, text="PWM pin 12 512 for 2000ms", command=lambda: self.controller.wsc.send_pwm_cmd(12, 512, 2000)).grid(in_=action, row=1, column=3)
+        ttk.Button(self, text="pin 14 LOW", command=lambda: self.controller.wsc.send_pwm_cmd(14, 0, 0)).grid(in_=action, row=1, column=4)
+        ttk.Button(self, text="pin 14 HIGH", command=lambda: self.controller.wsc.send_pwm_cmd(14, 1023, 0)).grid(in_=action, row=1, column=5)
 
-        # options = tk.Frame(self)
-        # options.pack(in_=top, side=tkinter.LEFT, padx=15)
-        # ttk.Label(self, text="Options:").grid(in_=options, row=1, column=1, columnspan=2, padx=5)
-        # ttk.Checkbutton(self, text="Convert Units", variable=controller.gui_settings['convert_units']).grid(in_=options, row=2, column=1)
-        # check2 = ttk.Checkbutton(self, text="Noise", variable=controller.gui_settings['noise']).grid(in_=options, row=2, column=2)
+        self.fig = Figure(figsize=(12, 8), dpi=100)
+        self.axis = self.fig.add_subplot(111)
+        self.axis.set_title('ADC readings')
+        self.axis.set_xlabel('time (µs)')
+        self.axis.set_ylabel('ADC value')
+        self.line, = self.axis.plot([0, 1000], [0, 1023], lw=2)
+        self.reset_data(1000)
 
-        # ylimit = tk.Frame(self)
-        # ylimit.pack(in_=top, side=tkinter.LEFT, padx=15)
-        # ttk.Label(self, text="Lower Y Limit:").grid(in_=ylimit, row=1, column=1, padx=5)
-        # scale1 = ttk.Scale(self, from_=0, to=100, command=controller.set_y_range)
-        # scale1.grid(in_=ylimit, row=2, column=1, padx=10)
+        self.anim_running = False
+        self.update_plot = False
+        canvas = FigureCanvasTkAgg(self.fig, self)
+        canvas.draw()
+        canvas.get_tk_widget().pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True, pady=5, padx=5)
+        self.anim = animation.FuncAnimation(self.fig, func=self.plot_values, interval=100)
 
-        # retention = tk.Frame(self)
-        # retention.pack(in_=top, side=tkinter.LEFT, padx=15)
-        # ttk.Label(self, text="Data Retention:").grid(in_=retention, row=1, column=1, columnspan=2, padx=5)
-        # ttk.Entry(self, width=5, textvariable=controller.gui_settings['retention']).grid(in_=retention, row=2, column=1)
-        # ttk.Label(self, text="seconds").grid(in_=retention, row=2, column=2)
-        # ttk.Entry(self, width=5, textvariable=controller.gui_settings['compress']).grid(in_=retention, row=3, column=1)
-        # ttk.Label(self, text="seconds").grid(in_=retention, row=3, column=2)
+        toolbar = NavigationToolbar2Tk(canvas, self)
+        toolbar.update()
+        canvas.get_tk_widget().pack(side=tkinter.TOP, fill=tkinter.BOTH, expand=1)
 
-        # data = tk.Frame(self)
-        # data.pack(in_=top, side=tkinter.LEFT, padx=15)
-        # ttk.Label(self, text="Display Data:").grid(in_=data, row=1, column=1, columnspan=2, padx=5)
-        # ttk.Button(self, text="Sensor", width=7, command=lambda: controller.toggle_data_state(0)).grid(in_=data, row=2, column=1)
-        # ttk.Button(self, text="Avg", width=7, command=lambda: controller.toggle_data_state(1)).grid(in_=data, row=2, column=2)
-        # ttk.Button(self, text="Integral", width=7, command=lambda: controller.toggle_data_state(2)).grid(in_=data, row=3, column=1)
-        # ttk.Button(self, text="Display", width=7, command=lambda: controller.toggle_data_state(3)).grid(in_=data, row=3, column=2)
+    def data_handler(self, data, flags):
+        self.data['packets'] += 1
+        for packed in data:
+            time = packed & 0x3fffff
+            value = packed >> 22
+            self.data['time'].append(time)
+            self.data['value'].append(value)
+        self.update_plot = True
+        # last packet flag
+        if flags & 0x0002:
+            self.data['dropped'] = True
+        if flags & 0x0001:
+            self.console._debug = self._debug
+            self.console.debug('last packet flag set')
+            if self.data['dropped']:
+                self.console.error('packets lost flag set')
 
-        # canvas = FigureCanvasTkAgg(controller.plot.fig, self)
-        # canvas.draw()
-        # canvas.get_tk_widget().pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True, pady=5, padx=5)
-        # self.controller.plot.set_animation(False)
+    def plot_values(self, i):
+        if not self.anim_running:
+            self.anim.event_source.stop()
+        if not self.update_plot:
+            return
+        # self.line.set_data(self.data.values())
+        if len(self.data['time']):
+            self.line.set_data(self.data['time'], self.data['value'])
+            max_time_millis = max(self.data['time'])
+            max_time = max_time_millis / 1000.0
+            self.axis.set_ylim(bottom=0, top=int(max(self.data['value']) / 10) * 10 + 10)
+            if max_time>=1.0:
+                self.axis.set_title('ADC readings %.2f packets/s interval %.0fµs' % (self.data['packets'] / max_time, max_time_millis * 1000.0 / len(self.data['value'])))
+        self.update_plot = False
 
-        # toolbar = NavigationToolbar2Tk(canvas, self)
-        # toolbar.update()
-        # canvas.get_tk_widget().pack(side=tkinter.TOP, fill=tkinter.BOTH, expand=1)
+    def set_animation(self, state):
+        if self.anim_running!=state:
+            self.anim_running = state
+            self.update_plot = state
+            if state:
+                self.anim.event_source.start()
+
+    def reset_data(self, xlim):
+        self.data = {'time': [], 'value': [], 'packets': 0, 'dropped': False }
+        self.axis.set_xlim(left=0, right=xlim)
+        self.line.set_data(self.data['time'], self.data['value'])
+
+    def send_adc_start_cmd(self, interval_micros = 250, duration_millis = 5000, packet_size = 1536):
+        self.reset_data(duration_millis)
+        # calculate packet size to get about 5 packets per second
+        packets_per_second = 5.0
+        packet_size = int((1000000 * 4 / interval_micros) / packets_per_second)
+        if packet_size<128:
+            packet_size=128
+        self.controller.wsc.send_cmd_adc_start(interval_micros, duration_millis, packet_size)
+        self.console._debug = False
+
+    def send_adc_stop_cmd(self):
+        self.controller.wsc.send_cmd_adc_stop()
+        self.console._debug = self._debug

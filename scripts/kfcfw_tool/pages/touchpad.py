@@ -39,3 +39,6 @@ class PageTouchpad(tk.Frame, PageBase):
         toolbar = NavigationToolbar2Tk(canvas, self)
         toolbar.update()
         canvas.get_tk_widget().pack(side=tkinter.TOP, fill=tkinter.BOTH, expand=1)
+
+    def set_animation(self, state):
+        self.controller.touchpad.set_animation(state)

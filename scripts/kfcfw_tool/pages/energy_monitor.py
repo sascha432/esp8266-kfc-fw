@@ -76,6 +76,5 @@ class PageEnergyMonitor(tk.Frame, PageBase):
         toolbar.update()
         canvas.get_tk_widget().pack(side=tkinter.TOP, fill=tkinter.BOTH, expand=1)
 
-    def set_active(self, state):
-        print('set_active=%s animation=%u' % (self.__class__.__name__, state))
+    def set_animation(self, state):
         self.controller.plot.set_animation(state)

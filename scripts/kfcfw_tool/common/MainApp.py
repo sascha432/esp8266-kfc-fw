@@ -59,6 +59,8 @@ class MainApp(tk.Tk, kfcfw.connection.Controller):
 
         self.show_frame(pages.base.PageBase.classes[0])
 
+        self.adc = self.frames['PageADC']
+
     def connection_status(self, conn):
         kfcfw.connection.Controller.connection_status(self, conn)
 

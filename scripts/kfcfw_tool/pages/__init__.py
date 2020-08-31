@@ -2,8 +2,7 @@
 # Author: sascha_lammers@gmx.de
 #
 
-__all__ = ['base', 'start', 'energy_monitor', 'touchpad', 'adc']
-
+from .base import PageBase
 from .start import PageStart
 from .energy_monitor import PageEnergyMonitor
 from .touchpad import PageTouchpad

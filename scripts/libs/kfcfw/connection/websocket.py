@@ -28,6 +28,24 @@ class WebSocket(BaseConnection):
             return True
         return False
 
+    def send_pwm_cmd(self, pin, value, duration_milliseconds, freq = 40000):
+        if self.is_authenticated():
+            self.send_cmd('PWM', pin, value, freq, duration_milliseconds)
+        else:
+            self.error('not connected')
+
+    def send_cmd_adc_start(self, interval_micros = 1500, duration_millis = 5000, packet_size = 1536):
+        if self.is_authenticated():
+            self.send_cmd('ADC', 'websocket', self.client_id, interval_micros, duration_millis, packet_size)
+        else:
+            self.error('not connected')
+
+    def send_cmd_adc_stop():
+        if self.is_authenticated():
+            self.send_cmd('ADC', 'stop')
+        else:
+            self.error('not connected')
+
     def send(self, msg, end = '\n'):
         if self.is_connected():
             self.debug('sending: %s' % msg)
@@ -59,11 +77,13 @@ class WebSocket(BaseConnection):
                     "raw_type": event_type
                 }
             elif packet_id==3: # WsClient::BinaryPacketType::ADC_READINGS
-                ofs = struct.calcsize('H')
+                fmt = 'HH'
+                ofs = struct.calcsize(fmt)
+                (packet_id, flags) = struct.unpack_from(fmt, data)
                 m = memoryview(data[ofs:])
                 data = m.cast('L')
-                self.debug('WsClient::BinaryPacketType::ADC_READINGS packet_id=%u data_len=%u' % (packet_id, len(data)))
-                # self.controller.adc.data_handler(data)
+                self.debug('WsClient::BinaryPacketType::ADC_READINGS packet_id=%u flags=%04x data_len=%u' % (packet_id, flags, len(data)))
+                self.controller.adc.data_handler(data, flags)
         except Exception as e:
             print("Invalid binary packet " + str(e))
 
@@ -93,10 +113,6 @@ class WebSocket(BaseConnection):
                 self.log('ClientID: %s' % self.client_id)
                 self.connection['client_id'] = self.client_id;
                 self.debug('Connection: %s' % self.conn());
-                interval_micros = 1500
-                duration_millis = 5000
-                packet_size = 1536
-                self.send_cmd('ADC', 'websocket', self.client_id, interval_micros, duration_millis, packet_size)
 
     def on_error(self, error):
         BaseConnection.on_error(self, error)

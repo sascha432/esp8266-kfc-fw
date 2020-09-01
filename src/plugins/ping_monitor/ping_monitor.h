@@ -6,6 +6,7 @@
 
 #include <Arduino_compat.h>
 #include <ESPAsyncWebServer.h>
+#include <ArduinoJson.h>
 #include <AsyncPing.h>
 #include <web_socket.h>
 
@@ -15,8 +16,6 @@
 
 #define __LDBG_AsyncPingResponse(type, response) \
     __LDBG_printf("on=%u response=%p mac=%p time=%u answer=%u ttl=%u addr=%s", type, &response, response.mac, response.time, response.answer, response.ttl, response.addr.toString().c_str());
-
-class JsonUnnamedObject;
 
 using AsyncPingPtr = std::shared_ptr<AsyncPing>;
 
@@ -116,7 +115,7 @@ public:
 
     static bool hasStats();
     static PingStatistics getStats();
-    static void addToJson(JsonUnnamedObject &obj);
+    static void addToJson(DynamicJsonDocument &obj);
 
 private:
     void _addAnswer(bool answer, uint32_t time);

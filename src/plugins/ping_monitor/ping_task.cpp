@@ -239,16 +239,24 @@ void PingMonitorTask::printStats(Print &out)
     }
 }
 
-void PingMonitorTask::addToJson(JsonUnnamedObject &obj)
+void PingMonitorTask::addToJson(DynamicJsonDocument &doc)
 {
     if (hasStats()) {
         auto stats = getStats();
-        auto &json = obj.addObject(FSPGM(ping_monitor));
-        json.add(F("avg_resp_time"), stats.getAvgResponseTime());
-        json.add(F("rcvd_pkts"), stats.getReceivedCount());
-        json.add(F("lost_pkts"), stats.getLostCount());
-        json.add(F("success"), stats.getSuccessCount());
-        json.add(F("failure"), stats.getFailureCount());
+        auto json = doc.createNestedObject(FSPGM(ping_monitor));
+
+        json[F("avg_resp_time")] = stats.getAvgResponseTime();
+        json[F("rcvd_pkts")] = stats.getReceivedCount();
+        json[F("lost_pkts")] = stats.getLostCount();
+        json[F("success")] = stats.getSuccessCount();
+        json[F("failure")] = stats.getFailureCount();
+
+        // auto &json = obj.addObject(FSPGM(ping_monitor));
+        // json.add(F("avg_resp_time"), stats.getAvgResponseTime());
+        // json.add(F("rcvd_pkts"), stats.getReceivedCount());
+        // json.add(F("lost_pkts"), stats.getLostCount());
+        // json.add(F("success"), stats.getSuccessCount());
+        // json.add(F("failure"), stats.getFailureCount());
     }
 }
 

@@ -7,6 +7,7 @@
 
 #include <JsonTools.h>
 #include "Sensor_SystemMetrics.h"
+#include <ArduinoJson.h>
 
 #if PING_MONITOR_SUPPORT
 #include "../src/plugins/ping_monitor/ping_monitor.h"
@@ -107,6 +108,9 @@ String Sensor_SystemMetrics::_getTopic() const
 
 void Sensor_SystemMetrics::_getMetricsJson(Print &json) const
 {
+#if 0
+    __DBG_print("before");
+    {
     JsonUnnamedObject obj;
 
     obj.add(FSPGM(uptime), getSystemUptime());
@@ -118,7 +122,34 @@ void Sensor_SystemMetrics::_getMetricsJson(Print &json) const
     PingMonitorTask::addToJson(obj);
 #endif
 
+    __DBG_print("after");
+
     obj.printTo(json);
+
+    __DBG_print("after printto");
+
+
+    }
+    __DBG_print("return");
+#else
+
+#if PING_MONITOR_SUPPORT
+    DynamicJsonDocument doc(316);
+#else
+    DynamicJsonDocument doc(128);
+#endif
+
+    doc[FSPGM(uptime)] = getSystemUptime();
+    doc[FSPGM(heap)] = (int)ESP.getFreeHeap();
+    doc[F("heap_frag")] = ESP.getHeapFragmentation();
+    doc[FSPGM(version)] = FPSTR(config.getShortFirmwareVersion_P());
+
+#if PING_MONITOR_SUPPORT
+    PingMonitorTask::addToJson(doc);
+#endif
+
+    serializeJson(doc, json);
+#endif
 }
 
 #endif

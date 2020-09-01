@@ -4,11 +4,13 @@
 
 #pragma once
 
+#include <KFCRestApi.h>
+
 namespace WeatherStation {
 
     class RestAPI : public KFCRestAPI {
     public:
-        typedef std::function<void(bool status, const String &error)> Callback;
+        // typedef std::function<void(bool status, const String &error)> Callback;
 
     public:
         RestAPI(const String &url) : _url(url) {
@@ -19,24 +21,21 @@ namespace WeatherStation {
         }
 
         virtual void autoDelete(void *restApiPtr) override {
-            __DBG_printf("executing auto delete api=%p", restApiPtr);
-            __DBG_delete((RestAPI *)restApiPtr);
+            __LDBG_printf("executing auto delete api=%p", restApiPtr);
+            __LDBG_delete((RestAPI *)restApiPtr);
         }
 
-        void call(JsonBaseReader *reader, int timeout, Callback callback) {
-            debug_printf_P(PSTR("timeout=%u\n"), timeout);
-
+        void call(JsonBaseReader *reader, int timeout, HttpRequest::Callback_t callback) {
             _timeout = timeout;
-
-            _createRestApiCall(emptyString, emptyString, reader, [callback](int16_t code, KFCRestAPI::HttpRequest &request) {
-                if (code == 200) {
-                    callback(true, String());
-                    //callback(false, F("Invalid response"));
-                }
-                else {
-                    callback(false, request.getMessage());
-                }
-            });
+            _createRestApiCall(emptyString, emptyString, reader, callback);
+            //  [callback](int16_t code, KFCRestAPI::HttpRequest &request) {
+            //     if (code == 200) {
+            //         callback(true, emptyString);
+            //     }
+            //     else {
+            //         callback(false, request.getMessage());
+            //     }
+            // });
         }
 
     private:

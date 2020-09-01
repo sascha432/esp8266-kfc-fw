@@ -126,6 +126,6 @@ void SyslogFile::_rotateLogfile(const String &filename, uint16_t maxRotate)
 #endif
 			KFCFS.rename(from, to);
 		}
-		_debug_printf_P(PSTR("rename = %d: %s => %s\n"), renameResult, from.c_str(), to.c_str());
+		__LDBG_printf("rename = %d: %s => %s", renameResult, from.c_str(), to.c_str());
 	}
 }

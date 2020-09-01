@@ -12,7 +12,7 @@
         "default": "Set-Cookie"
     },
     "mime_text_plain": {
-        "use_counter": 17,
+        "use_counter": 18,
         "default": "text/plain"
     },
     "null": {
@@ -44,7 +44,7 @@
         "default": "Invalid hostname or IP address"
     },
     "webui_json_id": {
-        "use_counter": 29,
+        "use_counter": 31,
         "default": "id"
     },
     "webui_json_name": {
@@ -64,11 +64,11 @@
         "default": "offset"
     },
     "webui_json_value": {
-        "use_counter": 29,
+        "use_counter": 31,
         "default": "value"
     },
     "webui_json_state": {
-        "use_counter": 22,
+        "use_counter": 25,
         "default": "state"
     },
     "mime_application_json": {
@@ -112,11 +112,11 @@
         "default": "pure virtual call: %s\\n"
     },
     "yes": {
-        "use_counter": 3,
+        "use_counter": 2,
         "default": "yes"
     },
     "no": {
-        "use_counter": 2,
+        "use_counter": 1,
         "default": "no"
     },
     "comma_": {
@@ -272,7 +272,7 @@
         "default": "events"
     },
     "http": {
-        "use_counter": 14,
+        "use_counter": 13,
         "default": "http"
     },
     "SID": {
@@ -368,15 +368,15 @@
         "default": "/.pvt/blinds_ctrl.state"
     },
     "Yes": {
-        "use_counter": 3,
+        "use_counter": 1,
         "default": "Yes"
     },
     "No": {
-        "use_counter": 3,
+        "use_counter": 1,
         "default": "No"
     },
     "webui_json_title": {
-        "use_counter": 5,
+        "use_counter": 4,
         "default": "title"
     },
     "upload": {
@@ -516,7 +516,7 @@
         "default": "switch"
     },
     "strftime_date_time_zone": {
-        "use_counter": 4,
+        "use_counter": 3,
         "default": "%FT%T %Z"
     },
     "ping_monitor_response": {
@@ -536,7 +536,7 @@
         "default": "Detected eth address %s"
     },
     "stk500v1_log_file": {
-        "use_counter": 4,
+        "use_counter": 5,
         "default": "/stk500v1/debug.log"
     },
     "stk500v1_sig_file": {
@@ -600,7 +600,7 @@
         "default": "Waxing Gibbous"
     },
     "weather_station_webui_id": {
-        "use_counter": 3,
+        "use_counter": 0,
         "default": "ws_tft"
     },
     "SPIFFS_tmp_dir": {
@@ -792,27 +792,27 @@
         "default": "keep-alive"
     },
     "status": {
-        "use_counter": 11,
+        "use_counter": 2,
         "default": "status"
     },
     "message": {
-        "use_counter": 12,
+        "use_counter": 2,
         "default": "message"
     },
     "ds3231_id_temp": {
-        "use_counter": 5,
+        "use_counter": 0,
         "default": "ds3231_temp"
     },
     "ds3231_id_time": {
-        "use_counter": 5,
+        "use_counter": 0,
         "default": "ds3231_time"
     },
     "ds3231_id_lost_power": {
-        "use_counter": 3,
+        "use_counter": 0,
         "default": "ds3231_lost_power"
     },
     "webui_json_head": {
-        "use_counter": 2,
+        "use_counter": 1,
         "default": "head"
     },
     "fs_mapping_listings": {
@@ -852,19 +852,19 @@
         "default": "status=%u"
     },
     "display": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "display"
     },
     "sensors": {
-        "use_counter": 2,
+        "use_counter": 0,
         "default": "sensors"
     },
     "name": {
-        "use_counter": 4,
+        "use_counter": 3,
         "default": "name"
     },
     "values": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "values"
     },
     "Home": {
@@ -952,7 +952,7 @@
         "default": "Reboot Device"
     },
     "title": {
-        "use_counter": 3,
+        "use_counter": 2,
         "default": "title"
     },
     "KFC_Firmware": {
@@ -1040,19 +1040,19 @@
         "default": "n/a"
     },
     "stk500v1_tmp_file": {
-        "use_counter": 0,
+        "use_counter": 2,
         "default": "/stk500v1/firmware_tmp.hex"
     },
     "iot_sensor_hlw80xx_state_file": {
-        "use_counter": 0,
+        "use_counter": 2,
         "default": ""
     },
     "seconds": {
-        "use_counter": 14,
+        "use_counter": 16,
         "default": "seconds"
     },
     "milliseconds": {
-        "use_counter": 6,
+        "use_counter": 9,
         "default": "milliseconds"
     },
     "__s_": {
@@ -1084,7 +1084,7 @@
         "default": "storage"
     },
     "image_type": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "image_type"
     },
     "id": {
@@ -1136,15 +1136,15 @@
         "default": "\\u00b0C"
     },
     "vcc": {
-        "use_counter": 0,
+        "use_counter": 2,
         "default": "vcc"
     },
     "frequency": {
-        "use_counter": 0,
+        "use_counter": 2,
         "default": "frequency"
     },
     "Hz": {
-        "use_counter": 0,
+        "use_counter": 2,
         "default": "Hz"
     },
     "light_sensor": {
@@ -1156,11 +1156,11 @@
         "default": "rd"
     },
     "alarm": {
-        "use_counter": 3,
+        "use_counter": 2,
         "default": "alarm"
     },
     "Alarm": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "Alarm"
     },
     "defaultPassword": {
@@ -1716,7 +1716,7 @@
         "default": "ms"
     },
     "mA": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "mA"
     },
     "Open": {
@@ -1808,31 +1808,31 @@
         "default": "Auto"
     },
     "power": {
-        "use_counter": 0,
+        "use_counter": 5,
         "default": "power"
     },
     "energy_total": {
-        "use_counter": 0,
+        "use_counter": 5,
         "default": "energy_total"
     },
     "energy": {
-        "use_counter": 0,
+        "use_counter": 5,
         "default": "energy"
     },
     "kWh": {
-        "use_counter": 0,
+        "use_counter": 6,
         "default": "kWh"
     },
     "voltage": {
-        "use_counter": 0,
+        "use_counter": 5,
         "default": "voltage"
     },
     "current": {
-        "use_counter": 0,
+        "use_counter": 5,
         "default": "current"
     },
     "pf": {
-        "use_counter": 0,
+        "use_counter": 5,
         "default": "pf"
     },
     "Brightness": {
@@ -1872,7 +1872,7 @@
         "default": "Speed"
     },
     "Color": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "Color"
     },
     "Protection": {
@@ -1996,7 +1996,7 @@
         "default": "- "
     },
     "serial_console_html": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "serial_console.html"
     },
     "_serial_console": {

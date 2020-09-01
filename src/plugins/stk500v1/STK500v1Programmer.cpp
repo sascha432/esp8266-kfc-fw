@@ -34,7 +34,7 @@ STK500v1Programmer::STK500v1Programmer(Stream &serial) : _serial(serial), _delay
     _fuseBytes[FUSE_LOW] = 0xff;
     _fuseBytes[FUSE_HIGH] = 0xda;
     _fuseBytes[FUSE_EXT] = 0xff;
-    _pageBuffer = __LDBG_new_array(_pageSize, int8_t);
+    _pageBuffer = __LDBG_new_array(_pageSize, uint8_t);
     BlinkLEDTimer::setBlink(__LED_BUILTIN, 500);
 }
 

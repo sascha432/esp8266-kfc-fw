@@ -37,7 +37,7 @@ KFCRestAPI::HttpRequest::HttpRequest(KFCRestAPI &api, JsonBaseReader *json, Call
 
 KFCRestAPI::HttpRequest::~HttpRequest()
 {
-    _debug_printf_P(PSTR("httpRequestPtr=%p\n"), this);
+    __LDBG_printf("httpRequestPtr=%p", this);
     __DBG_delete(_request);
     __DBG_delete(_json);
 }
@@ -53,13 +53,13 @@ int16_t KFCRestAPI::HttpRequest::getCode() const {
 
 void KFCRestAPI::HttpRequest::setMessage(const String &message)
 {
-    _debug_printf_P(PSTR("msg=%s\n"), message.c_str());
+    __LDBG_printf("msg=%s", message.c_str());
     _message = message;
 }
 
 void KFCRestAPI::HttpRequest::finish(int16_t code)
 {
-    _debug_printf_P(PSTR("code=%d, msg=%s\n"), code, _message.c_str());
+    __LDBG_printf("code=%d, msg=%s", code, _message.c_str());
     _code = code;
     _callback(code, *this);
 }
@@ -68,19 +68,19 @@ void KFCRestAPI::HttpRequest::setUri(const String &uri)
 {
     _api.getRestUrl(_url);
     _url += uri;
-    _debug_printf_P(PSTR("url=%s\n"), _url.c_str());
+    __LDBG_printf("url=%s", _url.c_str());
 }
 
 void KFCRestAPI::_onData(void *ptr, HttpClient *request, size_t available)
 {
-    _debug_printf_P(PSTR("available=%u, httpRequestPtr=%p\n"), available, ptr);
+    __LDBG_printf("available=%u, httpRequestPtr=%p", available, ptr);
     auto &httpRequest = *reinterpret_cast<HttpRequest *>(ptr);
     uint8_t buffer[64];
     size_t len;
     HeapStream stream(buffer);
     httpRequest.setStream(&stream);
     while((len = request->responseRead(buffer, sizeof(buffer))) > 0) {
-        _debug_printf_P(PSTR("response(%u): %*.*s\n"), len, len, len, buffer);
+        __LDBG_printf("response(%u): %*.*s", len, len, len, buffer);
         stream.setLength(len);
         if (!httpRequest.parseStream()) {
             request->abort();
@@ -92,7 +92,7 @@ void KFCRestAPI::_onData(void *ptr, HttpClient *request, size_t available)
 
 void KFCRestAPI::_onReadyStateChange(void *ptr, HttpClient *request, int readyState)
 {
-    _debug_printf_P(PSTR("readyState=%d, httpRequestPtr=%p\n"), readyState, ptr);
+    __LDBG_printf("readyState=%d, httpRequestPtr=%p", readyState, ptr);
     auto httpRequestPtr = reinterpret_cast<HttpRequest *>(ptr);
     auto &httpRequest = *httpRequestPtr;
 
@@ -125,7 +125,7 @@ void KFCRestAPI::_onReadyStateChange(void *ptr, HttpClient *request, int readySt
 
             size_t len;
             while((len = request->responseRead(buffer, sizeof(buffer))) > 0) {
-                _debug_printf_P(PSTR("response(%u): %*.*s\n"), len, len, len, buffer);
+                __LDBG_printf("response(%u): %*.*s", len, len, len, buffer);
                 stream.setLength(len);
                 if (!reader.parseStream()) {
                     break;
@@ -139,7 +139,7 @@ void KFCRestAPI::_onReadyStateChange(void *ptr, HttpClient *request, int readySt
                 httpRequest.setMessage(PrintString(F("HTTP error code %d"), httpCode));
             }
 
-            _debug_printf_P(PSTR("http_code=%d code=%d message=%s\n"), httpCode, readyState, message.c_str());
+            __LDBG_printf("http_code=%d code=%d message=%s", httpCode, readyState, message.c_str());
             httpRequest.finish(httpCode);
         }
 
@@ -152,7 +152,7 @@ void KFCRestAPI::_onReadyStateChange(void *ptr, HttpClient *request, int readySt
 
 void KFCRestAPI::_removeHttpRequest(KFCRestAPI::HttpRequest *httpRequestPtr)
 {
-    _debug_printf_P(PSTR("httpRequestPtr=%p\n"), httpRequestPtr);
+    __LDBG_printf("httpRequestPtr=%p", httpRequestPtr);
 
     auto &api = httpRequestPtr->getApi();
     api._requests.erase(std::remove(api._requests.begin(), api._requests.end(), httpRequestPtr), api._requests.end());
@@ -166,9 +166,9 @@ void KFCRestAPI::_removeHttpRequest(KFCRestAPI::HttpRequest *httpRequestPtr)
 
 void KFCRestAPI::_createRestApiCall(const String &endPointUri, const String &body, JsonBaseReader *json, HttpRequest::Callback_t callback)
 {
-    _debug_printf_P(PSTR("endpoint=%s payload=%s timeout=%u\n"), endPointUri.c_str(), body.c_str(), _timeout);
+    __LDBG_printf("endpoint=%s payload=%s timeout=%u", endPointUri.c_str(), body.c_str(), _timeout);
     auto httpRequestPtr = __DBG_new(HttpRequest, *this, json, callback);
-    _debug_printf_P(PSTR("httpRequestPtr=%p\n"), httpRequestPtr);
+    __LDBG_printf("httpRequestPtr=%p", httpRequestPtr);
 
     auto &httpRequest = *httpRequestPtr;
     _requests.push_back(httpRequestPtr);

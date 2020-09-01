@@ -169,7 +169,7 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
 
         form.add(F("pss"), _H_W_STRUCT_VALUE(cfg, pwm_softstart_time));
         form.addFormUI(F("PWM Soft Start Ramp-up Time"), FormUI::Type::INTEGER, FormUI::PlaceHolder(Plugins::Blinds::ConfigStructType::kPwmSoftStartTime), FormUI::Suffix(F("microseconds")));
-        form.addValidator(FormRangeValidator(0, 1000000));
+        form.addValidator(FormRangeValidator(100U, 150U * 1000U));
 
         form.add(F("adca"), _H_W_STRUCT_VALUE(cfg, adc_divider));
         form.addFormUI(F("ADC Averaging"), FormUI::Type::INTEGER, FormUI::PlaceHolder(Plugins::Blinds::ConfigStructType::kAdcDividerDefault), FormUI::Suffix(F("period in milliseconds")));

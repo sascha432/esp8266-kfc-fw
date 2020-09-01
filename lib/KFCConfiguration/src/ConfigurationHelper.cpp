@@ -312,7 +312,7 @@ uint16_t ConfigurationHelper::EEPROMAccess::read(uint8_t *dst, uint16_t offset, 
 #endif
 
 #if DEBUG_CONFIGURATION && 0
-    _debug_printf_P(PSTR("ofs=%u len=%u size=%u data=%s"), offset, length, size, Configuration::__debugDumper(dst, length).c_str());
+    __LDBG_printf("ofs=%u len=%u size=%u data=%s", offset, length, size, Configuration::__debugDumper(dst, length).c_str());
 #endif
     return readSize;
 }

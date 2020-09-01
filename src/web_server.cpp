@@ -466,7 +466,7 @@ void WebServerPlugin::handlerUpdate(AsyncWebServerRequest *request)
                 response = request->beginResponse(302);
                 HttpHeaders httpHeaders(false);
                 httpHeaders.add<HttpLocationHeader>(String('/') + FSPGM(serial_console_html));
-                httpHeaders.replace<HttpConnectionHeader>(HttpConnectionHeader::CLOSE));
+                httpHeaders.replace<HttpConnectionHeader>(HttpConnectionHeader::CLOSE);
                 httpHeaders.setAsyncWebServerResponseHeaders(response);
                 request->send(response);
             }

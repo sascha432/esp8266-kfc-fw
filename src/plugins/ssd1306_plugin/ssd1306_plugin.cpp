@@ -38,7 +38,7 @@ public:
     }
 
     const GFXfont *getFontPtr() const {
-        _debug_printf_P(PSTR("GFXfontContainer::getFontPtr(): _gfxFont.bitmap=%p\n"), _gfxFont.bitmap);
+        __LDBG_printf("GFXfontContainer::getFontPtr(): _gfxFont.bitmap=%p", _gfxFont.bitmap);
         if (_gfxFont.bitmap) {
             return &_gfxFont;
         }
@@ -46,7 +46,7 @@ public:
     }
 
     static bool readFromFile(const String &filename, GFXfontContainer::Ptr &target) {
-        _debug_printf_P(PSTR("GFXfontContainer::readFromFile(%s)\n"), filename.c_str());
+        __LDBG_printf("GFXfontContainer::readFromFile(%s)", filename.c_str());
 
         File file = KFCFS.open(filename, fs::FileOpenMode::read);
         if (file && file.size()) {
@@ -56,7 +56,7 @@ public:
     }
 
     static bool readFromStream(Stream &stream, GFXfontContainer::Ptr &target) {
-        _debug_printf_P(PSTR("GFXfontContainer::readFromStream()\n"));
+        __LDBG_printf("GFXfontContainer::readFromStream()");
 
         GFXfontContainer::Ptr font(new GFXfontContainer());
         uint16_t length, options, headerCrc;
@@ -66,13 +66,13 @@ public:
             return false;
         }
         if ((options & 0xff) > VERSION) {
-            _debug_printf_P(PSTR("Version not supported\n"));
+            __LDBG_printf("Version not supported");
             return false;
         }
-        _debug_printf_P(PSTR("Version=%02x, flags=%02x, CRC=%04x\n"), (options & 0xff), ((options >> 8) & 0xff), headerCrc);
+        __LDBG_printf("Version=%02x, flags=%02x, CRC=%04x", (options & 0xff), ((options >> 8) & 0xff), headerCrc);
         if ((options & OPTIONS_HAS_CRC16) != OPTIONS_HAS_CRC16) {
             if (headerCrc != 0xffff) { // CRC16 is always 0xffff for version 1
-                _debug_printf_P(PSTR("Invalid CRC\n"));
+                __LDBG_printf("Invalid CRC");
                 return false;
             }
         }
@@ -90,14 +90,14 @@ public:
         crc = crc16_update(crc, &_font.last, sizeof(_font.last));
         crc = crc16_update(crc, &_font.yAdvance, sizeof(_font.yAdvance));
 
-        _debug_printf_P(PSTR("First '%c' last '%c' yAdvance %u\n"), _font.first, _font.last, _font.yAdvance);
+        __LDBG_printf("First '%c' last '%c' yAdvance %u", _font.first, _font.last, _font.yAdvance);
 
         if (stream.readBytes((uint8_t *)&length, sizeof(length)) != sizeof(length)) {
             return false;
         }
         crc = crc16_update(crc, (uint8_t *)&length, sizeof(length));
 
-        _debug_printf_P(PSTR("Bitmap size %u\n"), length);
+        __LDBG_printf("Bitmap size %u", length);
         _font.bitmap = (uint8_t *)malloc(length);
         if (!_font.bitmap || stream.readBytes((uint8_t *)_font.bitmap, length) != length) {
             return false;
@@ -109,18 +109,18 @@ public:
         }
         crc = crc16_update(crc, (uint8_t *)&length, sizeof(length));
 
-        _debug_printf_P(PSTR("Glyph table size %u\n"), length);
+        __LDBG_printf("Glyph table size %u", length);
         _font.glyph = (GFXglyph *)malloc(length);
         if (!_font.glyph || stream.readBytes((uint8_t *)_font.glyph, length) != length) {
             return false;
         }
         crc = crc16_update(crc, (uint8_t *)_font.glyph, length);
         if (options & OPTIONS_HAS_CRC16 && crc != headerCrc) {
-            _debug_printf_P(PSTR("CRC mismatch %04x!=%04x\n"), crc, headerCrc);
+            __LDBG_printf("CRC mismatch %04x!=%04x", crc, headerCrc);
             return false;
         }
 
-        _debug_printf_P(PSTR("CRC=%04x,stored CRC=%04x\n"), crc, headerCrc);
+        __LDBG_printf("CRC=%04x,stored CRC=%04x", crc, headerCrc);
         font.swap(target);
         return true;
     }
@@ -217,7 +217,7 @@ void ssd1306_enable_status() {
 }
 
 void ssd1306_setup() {
-    _debug_printf_P(PSTR("ssd1306_setup(): sda=%d, scl=%d, rst=%d, i2c_addr=%02x, width=%d, height=%d\n"),
+    __LDBG_printf("ssd1306_setup(): sda=%d, scl=%d, rst=%d, i2c_addr=%02x, width=%d, height=%d",
         SSD1306_PLUGIN_SDA_PIN,
         SSD1306_PLUGIN_SCL_PIN,
         SSD1306_PLUGIN_RESET_PIN,

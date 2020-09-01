@@ -67,7 +67,7 @@ BootstrapMenu::ItemsVectorIterator BootstrapMenu::findMenuByURI(const String &ur
 //			count++;
 //		}
 //	}
-//	_debug_printf_P(PSTR("BootstrapMenu::getItemCount(menuId=%d): count=%d\n"), menuId, count);
+//	__LDBG_printf("BootstrapMenu::getItemCount(menuId=%d): count=%d", menuId, count);
 //	return count;
 //}
 

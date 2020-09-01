@@ -74,7 +74,7 @@ void Serial2TcpServer::handleNewClient(void *arg, AsyncClient *client)
 void Serial2TcpServer::_onSerialData(Stream &client)
 {
     if (!_connections.empty()) {
-        // // _debug_printf_P(PSTR("Serial2TcpServer::_onData(): type %d, length %u\n"), type, len);
+        // // __LDBG_printf("Serial2TcpServer::_onData(): type %d, length %u", type, len);
         // for(auto &&conn: _connections) {
         //     auto written = conn->getClient()->write(reinterpret_cast<const char *>(buffer), len);
         //     if (written < len) {
@@ -94,7 +94,7 @@ void Serial2TcpServer::_onData(AsyncClient *client, void *data, size_t len)
 
 void Serial2TcpServer::_onDisconnect(AsyncClient *client, const String &reason)
 {
-    _debug_printf_P(PSTR("client=%p reason=%s\n"), client, reason.c_str());
+    __LDBG_printf("client=%p reason=%s", client, reason.c_str());
     _removeClient(client);
 }
 
@@ -132,7 +132,7 @@ Serial2TcpConnection *Serial2TcpServer::_getConn(AsyncClient *client)
 
 void Serial2TcpServer::_handleNewClient(AsyncClient *client)
 {
-    _debug_printf_P(PSTR("%p: client connected from %s\n"), client, client->remoteIP().toString().c_str());
+    __LDBG_printf("%p: client connected from %s", client, client->remoteIP().toString().c_str());
 
 // #if DEBUG
 //     if (_getSerialPort() == SERIAL2TCP_HARDWARE_SERIAL) { // disable any debug output
@@ -147,12 +147,12 @@ void Serial2TcpServer::_handleNewClient(AsyncClient *client)
 
 Serial2TcpConnection &Serial2TcpServer::_addClient(AsyncClient *client)
 {
-    _debug_printf_P(PSTR("Serial2TcpServer::_addClient(%p) IP address %s\n"), client, client->remoteIP().toString().c_str());
+    __LDBG_printf("Serial2TcpServer::_addClient(%p) IP address %s", client, client->remoteIP().toString().c_str());
     _connections.emplace_back(__LDBG_new(Serial2TcpConnection, client, false));
     if (_connections.size() == 1) {
         _onStart();
     }
-    _debug_printf_P(PSTR("client %p conn.client %p\n"), client, _connections.back()->getClient());
+    __LDBG_printf("client %p conn.client %p", client, _connections.back()->getClient());
 	client->onData(&handleData, this);
 	client->onError(&handleError, this);
 	client->onDisconnect(&handleDisconnect, this);
@@ -165,7 +165,7 @@ Serial2TcpConnection &Serial2TcpServer::_addClient(AsyncClient *client)
 
 void Serial2TcpServer::_removeClient(AsyncClient *client)
 {
-    _debug_printf_P(PSTR("Serial2TcpServer::_removeClient(%p) IP address %s\n"), client, client->remoteIP().toString().c_str());
+    __LDBG_printf("Serial2TcpServer::_removeClient(%p) IP address %s", client, client->remoteIP().toString().c_str());
 
     client->abort();
     _connections.erase(std::remove_if(_connections.begin(), _connections.end(), [&client](const Serial2TcpConnectionPtr &conn) {

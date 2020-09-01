@@ -40,13 +40,13 @@ bool RTCMemoryManager::_readHeader(RTCMemoryManager::Header_t &header, uint32_t 
 
     if (system_rtc_mem_read(offset / __blockSize, (uint32_t *)&header, sizeof(header))) {
         if (header.length == 0) {
-            _debug_printf_P(PSTR("RTC memory: Empty\n"));
+            __LDBG_print("RTC memory: Empty");
         } else if (header.length & __blockSizeMask) {
-            _debug_printf_P(PSTR("RTC memory: Stored length not DWORD aligned: %d\n"), header.length);
+            __LDBG_printf("RTC memory: Stored length not DWORD aligned: %d", header.length);
         } else {
             offset = __memorySize - __dataSize - header.length;
             if (offset > __headerOffset) {
-                _debug_printf_P(PSTR("RTC memory: Invalid length, start offset %d\n"), offset);
+                __LDBG_printf("RTC memory: Invalid length, start offset %d", offset);
             } else {
                 length = header.length;
                 result = true;
@@ -54,7 +54,7 @@ bool RTCMemoryManager::_readHeader(RTCMemoryManager::Header_t &header, uint32_t 
         }
     }
     if (!result) {
-        debug_printf_P(PSTR("Failed to read RTC memory\n"));
+        __DBG_print("Failed to read RTC memory");
     }
     return result;
 }
@@ -71,7 +71,7 @@ uint32_t *RTCMemoryManager::_readMemory(uint16_t &length) {
         memPtr = reinterpret_cast<uint32_t *>(RTCMemoryManager_allocated_block + offset);
         uint16_t crc = crc16_calc((const uint8_t *)memPtr, header.length + sizeof(header) - sizeof(header.crc));
         if (crc != header.crc) {
-            _debug_printf(PSTR("RTC memory: CRC mismatch %04x != %04x, length %d\n"), crc, header.crc, header.length);
+            __LDBG_printf("RTC memory: CRC mismatch %04x != %04x, length %d", crc, header.crc, header.length);
             return nullptr;
         }
 #else
@@ -81,7 +81,7 @@ uint32_t *RTCMemoryManager::_readMemory(uint16_t &length) {
         memPtr = (uint32_t *)buf;
         uint16_t crc = -1;
         if (!system_rtc_mem_read(offset / __blockSize, memPtr, size) || ((crc = crc16_update(memPtr, header.length + sizeof(header) - sizeof(header.crc))) != header.crc)) {
-            _debug_printf(PSTR("RTC memory: CRC mismatch %04x != %04x, length %d\n"), crc, header.crc, size);
+            __LDBG_printf("RTC memory: CRC mismatch %04x != %04x, length %d", crc, header.crc, size);
             __LDBG_delete_array(buf);
             return nullptr;
         }
@@ -93,7 +93,7 @@ uint32_t *RTCMemoryManager::_readMemory(uint16_t &length) {
 bool RTCMemoryManager::read(RTCMemoryId id, void *dataPtr, uint8_t maxSize)
 {
     std::fill_n((uint8_t *)dataPtr, maxSize, 0);
-    _debug_printf_P(PSTR("plugin_read_rtc_memory(%d, %d)\n"), id, maxSize);
+    __LDBG_printf("plugin_read_rtc_memory(%d, %d)", id, maxSize);
     uint16_t length;
 
     auto memPtr = _readMemory(length);
@@ -107,7 +107,7 @@ bool RTCMemoryManager::read(RTCMemoryId id, void *dataPtr, uint8_t maxSize)
         auto entry = (Entry_t *)ptr;
         ptr += sizeof(*entry);
         if (ptr + entry->length > endPtr) {
-            _debug_printf_P(PSTR("RTC memory: entry length exceeds total size. id %d, length %d\n"), entry->mem_id, entry->length);
+            __LDBG_printf("RTC memory: entry length exceeds total size. id %d, length %d", entry->mem_id, entry->length);
             break;
         }
         if (entry->mem_id == static_cast<decltype(entry->mem_id)>(id)) {
@@ -127,7 +127,7 @@ bool RTCMemoryManager::read(RTCMemoryId id, void *dataPtr, uint8_t maxSize)
 
 bool RTCMemoryManager::write(RTCMemoryId id, void *dataPtr, uint8_t dataLength)
 {
-    _debug_printf_P(PSTR("plugin_write_rtc_memory(%d, %d)\n"), id, dataLength);
+    __LDBG_printf("plugin_write_rtc_memory(%d, %d)", id, dataLength);
 
     Buffer newData;
     uint16_t length;
@@ -222,7 +222,7 @@ void RTCMemoryManager::dump(Print &output) {
     uint16_t length;
     auto memPtr = _readMemory(length);
     if (!memPtr) {
-        _debug_printf_P(PSTR("plugin_debug_dump_rtc_memory(): read returned nullptr\n"));
+        __LDBG_printf("plugin_debug_dump_rtc_memory(): read returned nullptr");
         return;
     }
 
@@ -238,7 +238,7 @@ void RTCMemoryManager::dump(Print &output) {
         }
         ptr += sizeof(*entry);
         if (ptr + entry->length > endPtr) {
-            _debug_printf_P(PSTR("RTC memory: entry length exceeds total size. id %d, block count %d\n"), entry->mem_id, entry->length);
+            __LDBG_printf("RTC memory: entry length exceeds total size. id %d, block count %d", entry->mem_id, entry->length);
             break;
         }
 #if HAVE_KFC_PLUGINS

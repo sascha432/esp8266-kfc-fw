@@ -46,7 +46,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
 
 
 virtual void createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request) override;
-_debug_printf_P(PSTR("source=%s\n"), source.c_str());
+__LDBG_printf("source=%s", source.c_str());
 */
 
 #include <push_pack.h>

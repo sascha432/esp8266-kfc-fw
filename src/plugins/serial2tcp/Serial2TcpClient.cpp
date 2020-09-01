@@ -94,7 +94,7 @@ void Serial2TcpClient::_onDisconnect(AsyncClient *client, const String &reason)
     end();
 
     auto time = getAutoReconnect();
-    // _debug_printf_P(PSTR("auto reconnect=%u\n"), time);
+    // __LDBG_printf("auto reconnect=%u", time);
     __DBGS2T("auto reconnect=%u\n", time);
     if (time) {
         _Timer(_timer).add(Event::seconds(time), false, [this](Event::CallbackTimerPtr timer) {

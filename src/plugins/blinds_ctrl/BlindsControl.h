@@ -261,6 +261,7 @@ protected:
     void _clearAdc();
     void _updateAdc();
     void _setMotorSpeed(ChannelType channel, uint16_t speed, bool open);
+    void _setMotorSpeedUpdate(ChannelType channel, uint16_t speed, bool open);
     void _setMotorBrake(ChannelType channel);
     void _stop();
 

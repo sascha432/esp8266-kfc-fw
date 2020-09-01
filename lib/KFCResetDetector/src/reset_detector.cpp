@@ -72,11 +72,11 @@ void ResetDetector::_init()
 
 
 #if HAVE_KFC_PLUGINS
-    _debug_printf_P(PSTR("\n\n\nRD: valid %d, safe mode=%d, reset counter=%d\n"), isValid, data.safe_mode, data.reset_counter);
-    _debug_printf_P(PSTR("RD: reset reason: %s (%d), reset info: %s, crash=%d, reset=%d, reboot=%d, wakeup=%d\n"), getResetReason().c_str(), _resetReason, getResetInfo().c_str(), hasCrashDetected(), hasResetDetected(), hasRebootDetected(), hasWakeUpDetected());
+    __LDBG_printf("\n\n\nRD: valid %d, safe mode=%d, reset counter=%d", isValid, data.safe_mode, data.reset_counter);
+    __LDBG_printf("RD: reset reason: %s (%d), reset info: %s, crash=%d, reset=%d, reboot=%d, wakeup=%d", getResetReason().c_str(), _resetReason, getResetInfo().c_str(), hasCrashDetected(), hasResetDetected(), hasRebootDetected(), hasWakeUpDetected());
 #else
-    _debug_printf_P(PSTR("\n\n\nRD: valid %d, magic word %08x, safe mode=%d, reset counter=%d\n"), isValid, data.magic_word, data.safe_mode, data.reset_counter);
-    _debug_printf_P(PSTR("RD: reset reason: %s (%d), reset info: %s, crash=%d, reset=%d, reboot=%d, wakeup=%d\n"), getResetReason().c_str(), _resetReason, getResetInfo().c_str(), hasCrashDetected(), hasResetDetected(), hasRebootDetected(), hasWakeUpDetected());
+    __LDBG_printf("\n\n\nRD: valid %d, magic word %08x, safe mode=%d, reset counter=%d", isValid, data.magic_word, data.safe_mode, data.reset_counter);
+    __LDBG_printf("RD: reset reason: %s (%d), reset info: %s, crash=%d, reset=%d, reboot=%d, wakeup=%d", getResetReason().c_str(), _resetReason, getResetInfo().c_str(), hasCrashDetected(), hasResetDetected(), hasRebootDetected(), hasWakeUpDetected());
 #endif
 
     _writeData();
@@ -238,7 +238,7 @@ void ResetDetector::setSafeMode(uint8_t safeMode)
 
 void ResetDetector::clearCounter()
 {
-    _debug_printf_P(PSTR("RD: reset counter = 0 (%d)\n"), _resetCounter);
+    __LDBG_printf("RD: reset counter = 0 (%d)", _resetCounter);
     _resetCounter = 0;
     _writeData();
 }
@@ -253,7 +253,7 @@ void ResetDetector::__setResetCounter(uint8_t counter)
 
 void ResetDetector::setSafeModeAndClearCounter(uint8_t safeMode)
 {
-    _debug_printf_P(PSTR("RD: reset counter = 0 (%d) and safe_mode=%u\n"), _resetCounter, safeMode);
+    __LDBG_printf("RD: reset counter = 0 (%d) and safe_mode=%u", _resetCounter, safeMode);
     _safeMode = safeMode;
     _resetCounter = 0;
     _writeData();
@@ -273,7 +273,7 @@ void ResetDetector::_writeData()
     data.crc = crc16_update(&data, sizeof(data) - sizeof(data.crc));
 
     if (!ESP.rtcUserMemoryWrite(RESET_DETECTOR_RTC_MEM_ADDRESS, (uint32_t *)&data, sizeof(data))) {
-        _debug_printf_P(PSTR("RD: Failed to write to RTC MEM\n"));
+        __LDBG_printf("RD: Failed to write to RTC MEM");
     }
 
 #endif

@@ -528,7 +528,7 @@ size_t AsyncNetworkScanResponse::_fillBuffer(uint8_t *data, size_t len)
     }
     else {
         if (_position >= n) {
-            _debug_printf_P(PSTR("AsyncNetworkScanResponse %d >= %d\n, EOF"), (int)_position, (int)n);
+            __LDBG_printf("AsyncNetworkScanResponse %d >= %d, EOF", (int)_position, (int)n);
             return 0;
         }
         auto ptr = reinterpret_cast<char *>(data);

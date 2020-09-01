@@ -49,7 +49,7 @@ public:
         if (_callback) {
             _handled = _callback(name, *this);
         }
-        _debug_printf_P(PSTR("name=%s handled=%p callback=%p fillBuffer=%p\n"), name.c_str(), _handled, &_callback, &_fillBuffer);
+        __LDBG_printf("name=%s handled=%p callback=%p fillBuffer=%p", name.c_str(), _handled, &_callback, &_fillBuffer);
         return _handled;
     }
 
@@ -62,7 +62,7 @@ public:
         size_t len = 0;
         if (_fillBuffer) {
             len = _fillBuffer(data, size);
-            //_debug_printf_P(PSTR("fillBuffer size=%d: result=%d\n"), size, len);
+            //__LDBG_printf("fillBuffer size=%d: result=%d", size, len);
             if (len == 0) {
                 setFillBuffer(nullptr);
             }

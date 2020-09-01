@@ -19,8 +19,8 @@ OpenWeatherMapAPI::OpenWeatherMapAPI(const String &apiKey) : _apiKey(apiKey)
 
 void OpenWeatherMapAPI::clear()
 {
-    _info = WeatherInfo();
-    _forecast = WeatherForecast();
+    _info.clear();
+    _forecast.clear();
 }
 
 void OpenWeatherMapAPI::setAPIKey(const String &key)
@@ -100,12 +100,6 @@ OpenWeatherMapAPI::WeatherForecast &OpenWeatherMapAPI::getWeatherForecast()
     return _forecast;
 }
 
-bool OpenWeatherMapAPI::WeatherInfo::hasData() const
-{
-    // _debug_printf_P(PSTR("location=%s weather=%u\n"), location.c_str(), weather.size());
-    return location.length() && weather.size();
-}
-
 time_t OpenWeatherMapAPI::WeatherInfo::getSunRiseAsGMT() const
 {
     return val.sunrise + val.timezone;
@@ -152,11 +146,6 @@ void OpenWeatherMapAPI::WeatherInfo::dump(Print &output) const
     for (auto &rain : rain_mm) {
         output.printf_P(PSTR("Rain: %s - %.2f mm\n"), rain.first.c_str(), rain.second);
     }
-}
-
-bool OpenWeatherMapAPI::WeatherForecast::hasData() const
-{
-    return forecast.size() && city.length();
 }
 
 //void OpenWeatherMapAPI::WeatherForecast::updateKeys()

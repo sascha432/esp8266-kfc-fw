@@ -41,10 +41,33 @@ public:
 
         WeatherInfo() : val({}) {}
 
-        bool hasData() const;
         time_t getSunRiseAsGMT() const;
         time_t getSunSetAsGMT() const;
         void dump(Print &output) const;
+
+        bool hasData() const
+        {
+            return hasError() == false && location.length() && weather.size();
+        }
+
+        void clear()
+        {
+            *this = WeatherInfo();
+        }
+
+        bool hasError() const {
+            return val.error;
+        }
+
+        const String &getError() const {
+            return country;
+        }
+
+        void setError(const String &message) {
+            clear();
+            country = message;
+            val.error = true;
+        }
 
     public:
         String location;
@@ -61,6 +84,7 @@ public:
             float wind_speed;
             uint16_t wind_deg;
             uint32_t visibility;
+            bool error;
         } val;
         std::vector<OpenWeatherMapAPI::Weather_t> weather;
         std::map<String, float> rain_mm;
@@ -71,15 +95,39 @@ public:
         WeatherForecast() : val({}) {};
 
     public:
-        bool hasData() const;
         //void updateKeys();
         void dump(Print &output) const;
+
+        bool hasData() const
+        {
+            return hasError() == false && forecast.size() && city.length();
+        }
+
+        void clear()
+        {
+            *this = WeatherForecast();
+        }
+
+        bool hasError() const {
+            return val.error;
+        }
+
+        const String &getError() const {
+            return country;
+        }
+
+        void setError(const String &message) {
+            clear();
+            country = message;
+            val.error = true;
+        }
 
     public:
         String city;
         String country;
         struct {
             int32_t timezone;
+            bool error;
         } val;
         std::map<String, OpenWeatherMapAPI::Forecast_t> forecast;
     };

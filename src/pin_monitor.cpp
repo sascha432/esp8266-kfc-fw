@@ -30,7 +30,7 @@ PinMonitor::~PinMonitor()
 PinMonitor *PinMonitor::createInstance()
 {
     if (!_instance) {
-        _instance = __LDBG_new(PinMonitor());
+        _instance = __LDBG_new(PinMonitor);
     }
     return _instance;
 }
@@ -45,7 +45,7 @@ void PinMonitor::deleteInstance()
 
 void PinMonitor::callback(InterruptInfo info)
 {
-    _debug_printf_P(PSTR("PinMonitor::callback(): pin=%u,value=%u,micros=%u\n"), info.pin, info.value, info.micro);
+    __LDBG_printf("pin=%u value=%u micros=%u", info.pin, info.value, info.micro);
     auto monitor = PinMonitor::getInstance();
     if (monitor) {
         for(auto &pin: monitor->_pins) {
@@ -59,7 +59,7 @@ void PinMonitor::callback(InterruptInfo info)
 PinMonitor::Pin *PinMonitor::addPin(uint8_t pin, Callback_t callback, void *arg, uint8_t mode)
 {
     if (_findPin(pin, arg) == _pins.end()) {
-        _debug_printf_P(PSTR("PinMonitor::addPin(): adding pin %u, mode %u, callback %p, arg %p\n"), pin, mode, callback, arg);
+        __LDBG_printf("adding=%u mode=%u callback=%p arg=%p", pin, mode, callback, arg);
         _pins.emplace_back(Pin(pin, digitalRead(pin), callback, arg));
         attachScheduledInterrupt(digitalPinToInterrupt(pin), PinMonitor::callback, CHANGE);
         pinMode(pin, mode);
@@ -75,7 +75,7 @@ bool PinMonitor::removePin(uint8_t pin, void *arg)
     if (_pin == _pins.end()) {
         return false;
     }
-    _debug_printf_P(PSTR("PinMonitor::removePin(): removing pin %u, callback %p, arg %p\n"), pin, _pin->_callback, _pin->_arg);
+    __LDBG_printf("remove=%u callback=%p arg=%p", pin, _pin->_callback, _pin->_arg);
     detachInterrupt(digitalPinToInterrupt(pin));
     _pins.erase(_pin);
     return true;

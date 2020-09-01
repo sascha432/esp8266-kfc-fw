@@ -505,18 +505,18 @@ void MQTTClient::onMessageRaw(char *topic, char *payload, AsyncMqttClientMessage
 {
     __LDBG_printf("topic=%s payload=%s idx:len:total=%d:%d:%d qos=%u dup=%d retain=%d", topic, printable_string(payload, len, DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str(), index, len, total, properties.qos, properties.dup, properties.retain);
     if (total > MQTT_RECV_MAX_MESSAGE_SIZE) {
-        _debug_printf(PSTR("discarding message, size exceeded %d/%d\n"), (unsigned)total, MQTT_RECV_MAX_MESSAGE_SIZE);
+        __LDBG_printf("discarding message, size exceeded %d/%d", (unsigned)total, MQTT_RECV_MAX_MESSAGE_SIZE);
         return;
     }
     if (index == 0) {
         if (_buffer.length()) {
-            _debug_printf(PSTR("discarding previous message, buffer=%u\n"), _buffer.length());
+            __LDBG_printf("discarding previous message, buffer=%u", _buffer.length());
             _buffer.clear();
         }
         _buffer.write(payload, len);
     } else if (index > 0) {
         if (index != _buffer.length()) {
-            _debug_printf(PSTR("discarding message, index=%u buffer=%u\n"), index, _buffer.length());
+            __LDBG_printf("discarding message, index=%u buffer=%u", index, _buffer.length());
             _buffer.clear();
             return;
         }

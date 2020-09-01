@@ -32,11 +32,6 @@
 #define IOT_BLINDS_CTRL_RPM_PULSES          3
 #endif
 
-// AT mode command for parameter tuning
-#ifndef IOT_BLINDS_CTRL_TESTMODE
-#define IOT_BLINDS_CTRL_TESTMODE            1
-#endif
-
 // motor pins
 #ifndef IOT_BLINDS_CTRL_M1_PIN
 #define IOT_BLINDS_CTRL_M1_PIN              D1
@@ -55,13 +50,18 @@
 #endif
 
 // pin for the shunt multiplexer
-#ifndef IOT_BLINDS_CTRL_RSSEL_PIN
-#define IOT_BLINDS_CTRL_RSSEL_PIN           D5
+#ifndef IOT_BLINDS_CTRL_MULTIPLEXER_PIN
+#define IOT_BLINDS_CTRL_MULTIPLEXER_PIN     D5
 #endif
 
-// wait for RC filter to discharge, max. time in milliseconds
-#ifndef IOT_BLINDS_CTRL_RSSEL_WAIT
-#define IOT_BLINDS_CTRL_RSSEL_WAIT          50
+// pin for the current limit
+#ifndef IOT_BLINDS_CTRL_DAC_PIN
+#define IOT_BLINDS_CTRL_DAC_PIN             16
+#endif
+
+// time to wait after setting up ADC and DAC in milliseconds
+#ifndef IOT_BLINDS_CTRL_SETUP_DELAY
+#define IOT_BLINDS_CTRL_SETUP_DELAY         25
 #endif
 
 // shunt resistance in milliohm
@@ -73,10 +73,20 @@ namespace BlindsControllerConversion {
 
     static constexpr double kShuntValue = IOT_BLINDS_CTRL_SHUNT / 1000.0; // Ohm
 
+    // add this to all ADC readings
+    static constexpr uint16_t kADCRawValueOffset = -2;
+
     static constexpr int kADCMaxValue = 1024; // 0-1024 (!)
     // Function Measure the input voltage of TOUT pin 6; unit: 1/1024 V.
     // Prototype uint16	system_adc_read(void)
     static constexpr double kADCMaxVoltage = (1.0 / 1024.0) * kADCMaxValue;
+
+    // adust value to match ADC readings
+    static constexpr double kDACCorrectionFactor = 1.1;
+    // DAC PWM value to current
+    static constexpr double kDACValueToPWMMultiplier = (3.3 / kADCMaxValue) / (kShuntValue * 10.0) / kDACCorrectionFactor;
+    // DAC PWM value * kCurrentLimitToPWMMultiplierMilliamps = current limit in mA
+    static constexpr double kCurrentLimitToPWMMultiplierMilliamps = kDACValueToPWMMultiplier * 1000.0;
 
     // ADC value = (kADCMaxValue * I * Rs) / kADCMaxVoltage
     static constexpr double kConvertCurrentToADCValueMulitplierAmps = (kADCMaxValue * kShuntValue) / kADCMaxVoltage;

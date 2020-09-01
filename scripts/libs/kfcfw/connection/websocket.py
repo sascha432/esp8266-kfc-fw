@@ -40,7 +40,7 @@ class WebSocket(BaseConnection):
         else:
             self.error('not connected')
 
-    def send_cmd_adc_stop():
+    def send_cmd_adc_stop(self):
         if self.is_authenticated():
             self.send_cmd('ADC', 'stop')
         else:
@@ -85,7 +85,7 @@ class WebSocket(BaseConnection):
                 self.debug('WsClient::BinaryPacketType::ADC_READINGS packet_id=%u flags=%04x data_len=%u' % (packet_id, flags, len(data)))
                 self.controller.adc.data_handler(data, flags)
         except Exception as e:
-            print("Invalid binary packet " + str(e))
+            self.console.error('packet parse error: %u: %s' % (packet_id, e))
 
     def on_text(self, msg):
         BaseConnection.on_text(self, msg)

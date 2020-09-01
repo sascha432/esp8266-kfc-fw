@@ -21,7 +21,7 @@
 
 #if DEBUG_READ_ADC && 0
 static uint32_t count = 0;
-static inline uint16 __system_adc_read() {
+static inline uint16 ___system_adc_read() {
     count++;
     if (count%10000==0) {
         __DBG_printf("read_adc: #%u", count);
@@ -29,7 +29,7 @@ static inline uint16 __system_adc_read() {
     return system_adc_read();
 }
 #else
-static inline uint16 __system_adc_read() {
+static inline uint16 ___system_adc_read() {
     return system_adc_read();
 }
 #endif
@@ -107,7 +107,7 @@ void ADCManager::ResultQueue::invokeCallback()
 
 static ADCManager *adc = nullptr;
 
-ADCManager::ADCManager() : _value(__system_adc_read()), _nextDelay(kMinDelayMicros), _lastUpdated(micros64()), _lastMaxDelay(_lastUpdated), _minDelayMicros(kMinDelayMicros), _maxDelayMicros(kMaxDelayMicros), _repeatMaxDelayPerSecond(kRepeatMaxDelayPerSecond), _maxDelayYieldTimeMicros(kMaxDelayYieldTimeMicros)
+ADCManager::ADCManager() : _value(__readAndNormalizeADCValue()), _offset(0), _nextDelay(kMinDelayMicros), _lastUpdated(micros64()), _lastMaxDelay(_lastUpdated), _minDelayMicros(kMinDelayMicros), _maxDelayMicros(kMaxDelayMicros), _repeatMaxDelayPerSecond(kRepeatMaxDelayPerSecond), _maxDelayYieldTimeMicros(kMaxDelayYieldTimeMicros)
 {
 }
 
@@ -177,6 +177,18 @@ void ADCManager::_loop()
     }
 }
 
+uint16_t ADCManager::__readAndNormalizeADCValue()
+{
+    int32_t value = ___system_adc_read() + _offset;
+    if (value < 0) {
+        return 0;
+    }
+    else if (value >= (int32_t)ADCResult::kMaxADCValue)  {
+        return ADCResult::kMaxADCValue;
+    }
+    return value;
+}
+
 uint32_t ADCManager::_canRead() const
 {
     // if (!can_yield()) {
@@ -228,7 +240,7 @@ uint16_t ADCManager::readValue()
         return _value;
     }
     _updateTimestamp();
-    return (_value = __system_adc_read());
+    return (_value = __readAndNormalizeADCValue());
 }
 
 uint16_t ADCManager::readValueWait(uint16_t maxWaitMicros, uint16_t maxAgeMicros, uint32_t *lastUpdate)
@@ -247,7 +259,7 @@ uint16_t ADCManager::readValueWait(uint16_t maxWaitMicros, uint16_t maxAgeMicros
     if (lastUpdate) {
         *lastUpdate = (uint32_t)_lastUpdated;
     }
-    return (_value = __system_adc_read());
+    return (_value = __readAndNormalizeADCValue());
 }
 
 uint16_t ADCManager::readValue(uint32_t &lastUpdate)
@@ -259,7 +271,7 @@ uint16_t ADCManager::readValue(uint32_t &lastUpdate)
     }
     _updateTimestamp();
     lastUpdate = (uint32_t)_lastUpdated;
-    return (_value = __system_adc_read());
+    return (_value = __readAndNormalizeADCValue());
 }
 
 uint32_t ADCManager::getLastUpdate() const
@@ -278,6 +290,11 @@ bool ADCManager::requestAverage(uint8_t numSamples, uint16_t delayMillis, Callba
     }
     _queue.emplace_back(numSamples, delayMillis, callback);
     return true;
+}
+
+void ADCManager::setOffset(int16_t offset)
+{
+    _offset = offset;
 }
 
 void ADCManager::setMinDelayMicros(uint16_t minDelayMicros)

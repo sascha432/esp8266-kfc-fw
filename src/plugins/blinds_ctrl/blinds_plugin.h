@@ -37,7 +37,7 @@ public:
     virtual void getValues(JsonArray &array) override;
     virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) override;
 
-#if AT_MODE_SUPPORTED && IOT_BLINDS_CTRL_TESTMODE
+#if AT_MODE_SUPPORTED && 0
     virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const override;
     virtual bool atModeHandler(AtModeArgs &args) override;
 #endif

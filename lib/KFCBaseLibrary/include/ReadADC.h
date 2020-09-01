@@ -116,12 +116,17 @@ public:
     // return lower 32bit part
     uint32_t getLastUpdate() const;
 
+    // set offset that is added to the raw value of the adc
+    // the value is clamped to 0 - kMaxADCValue
+    void setOffset(int16_t offset);
+
     void setMinDelayMicros(uint16_t minDelayMicros);
     void setMaxDelayMicros(uint16_t maxDelayMicros);
     void setRepeatMaxDelayPerSecond(uint8_t repeatMaxDelayPerSecond);
     void setMaxDelayYieldTimeMicros(uint16_t maxDelayYieldTimeMicros);
 
 private:
+    uint16_t __readAndNormalizeADCValue();
     uint32_t _canRead() const;
     void _updateTimestamp();
     void _terminate(bool invokeCallbacks);
@@ -130,6 +135,7 @@ private:
 
 private:
     uint16_t _value;
+    int16_t _offset;
     uint32_t _nextDelay;
     uint64_t _lastUpdated;
     uint64_t _lastMaxDelay;
@@ -139,5 +145,4 @@ private:
     uint16_t _maxDelayMicros;
     uint8_t _repeatMaxDelayPerSecond;
     uint16_t _maxDelayYieldTimeMicros;
-
 };

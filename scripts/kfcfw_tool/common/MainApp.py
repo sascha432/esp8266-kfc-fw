@@ -35,7 +35,8 @@ class MainApp(tk.Tk, kfcfw.connection.Controller):
         self.gui_settings['retention'].set('60')
         self.gui_settings['compress'].set('0.1')
 
-        self.connection_name = None
+        self.config = {}
+
         self.plot = Plot(self)
         self.touchpad = Touchpad(self)
         self.wsc = kfcfw.connection.WebSocket(self)
@@ -61,22 +62,42 @@ class MainApp(tk.Tk, kfcfw.connection.Controller):
 
         self.adc = self.frames['PageADC']
 
+    def get_config(self):
+        return self.config
+
+    def set_config(self, config):
+        self.config = config
+
+    def write_config(self):
+        self.frames['PageStart'].write_config()
+
+    def get_connection_name(self):
+        conn = ''
+        try:
+            conn = self.config['connections'][self.config['last_conn'] - 1]
+            conn = '%s@%s' % (conn['username'], conn['hostname'])
+        except Exception as e:
+            self.console.error(e)
+        return conn
+
     def connection_status(self, conn):
         kfcfw.connection.Controller.connection_status(self, conn)
 
+        font = self.frames['PageStart'].LARGE_FONT
         title = ''
         if conn.is_authenticated():
-            title = 'Connected to %s' % self.connection_name
+            title = 'Connected to %s' % self.get_connection_name()
         elif conn.is_connected():
-            title = 'Authenticating %s' % self.connection_name
+            title = 'Authenticating %s' % self.get_connection_name()
             self.connect_button.configure(text='Disconnect');
         elif not conn.is_connected():
             self.connect_button.configure(text='Connect');
             title = 'DISCONNECTED'
             if conn.has_error():
-                title += ': %s' % conn.get_error()
+                font = self.frames['PageStart'].SMALL_FONT
+                title += '\n%s' % conn.get_error()
 
-        self.connect_label.config(text='Start Page - ' + title)
+        self.connect_label.config(text='Start Page - %s' % title, wraplength=840, font=font)
         self.set_plot_title()
 
     def set_plot_title(self):
@@ -146,4 +167,3 @@ class MainApp(tk.Tk, kfcfw.connection.Controller):
         self.active = name;
         frame.set_active(True)
         frame.tkraise()
-

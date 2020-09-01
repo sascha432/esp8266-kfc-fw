@@ -83,6 +83,10 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
             form.add(prefix + F("ilt"), _H_W_STRUCT_VALUE(cfg, channels[i].current_limit_time, i));
             form.addFormUI(F("Current Limit Trigger Time"), currentLimitItems);
 
+            form.add(prefix + F("ih"), _H_W_STRUCT_VALUE(cfg, channels[i].dac_current_limit, i));
+            form.addFormUI(F("Hard Current Limit (DRV8870)"), FormUI::Suffix(FSPGM(mA)));
+            form.addValidator(FormRangeValidator(BlindsControllerConversion::kMinCurrent, BlindsControllerConversion::kMaxCurrent));
+
             form.add(prefix + FSPGM(pwm), _H_W_STRUCT_VALUE(cfg, channels[i].pwm_value, i));
             form.addFormUI(F("Motor PWM"), FormUI::Suffix(String(0) + '-' + String(PWMRANGE)));
             form.addValidator(FormRangeValidator(0, PWMRANGE));
@@ -150,7 +154,10 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
         form.addFormUI(FormUI::Type::HIDDEN);
 
         form.add(F("pin4"), _H_W_STRUCT_VALUE_TYPE(cfg, pins[4], uint8_t));
-        form.addFormUI(F("Shunt Multiplexer Pin"), FormUI::Type::INTEGER, FormUI::PlaceHolder(IOT_BLINDS_CTRL_RSSEL_PIN), FormUI::UI::createCheckBoxButton(multiplexer, F("HIGH State For Channel 0")));
+        form.addFormUI(F("Shunt Multiplexer Pin"), FormUI::Type::INTEGER, FormUI::PlaceHolder(IOT_BLINDS_CTRL_MULTIPLEXER_PIN), FormUI::UI::createCheckBoxButton(multiplexer, F("HIGH State For Channel 0")));
+
+        form.add(F("pin5"), _H_W_STRUCT_VALUE_TYPE(cfg, pins[5], uint8_t));
+        form.addFormUI(F("DAC Current Limit Pin"), FormUI::Type::INTEGER, FormUI::PlaceHolder(IOT_BLINDS_CTRL_DAC_PIN));
 
         pinsGroup.end();
 
@@ -159,6 +166,10 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
         form.add(F("pwm"), _H_W_STRUCT_VALUE(cfg, pwm_frequency));
         form.addFormUI(F("PWM Frequency"), FormUI::Type::INTEGER, FormUI::PlaceHolder(Plugins::Blinds::ConfigStructType::kPwmFrequencyDefault), FormUI::Suffix(F("Hz")));
         form.addValidator(FormRangeValidator(1000, 40000));
+
+        form.add(F("pss"), _H_W_STRUCT_VALUE(cfg, pwm_softstart_time));
+        form.addFormUI(F("PWM Soft Start Ramp-up Time"), FormUI::Type::INTEGER, FormUI::PlaceHolder(Plugins::Blinds::ConfigStructType::kPwmSoftStartTime), FormUI::Suffix(F("microseconds")));
+        form.addValidator(FormRangeValidator(0, 1000000));
 
         form.add(F("adca"), _H_W_STRUCT_VALUE(cfg, adc_divider));
         form.addFormUI(F("ADC Averaging"), FormUI::Type::INTEGER, FormUI::PlaceHolder(Plugins::Blinds::ConfigStructType::kAdcDividerDefault), FormUI::Suffix(F("period in milliseconds")));
@@ -175,6 +186,10 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
         form.add(F("adcrr"), _H_W_STRUCT_VALUE(cfg, adc_recoveries_per_second));
         form.addFormUI(F("ADC Repeat Recovery"), FormUI::Type::INTEGER, FormUI::PlaceHolder(Plugins::Blinds::ConfigStructType::kAdcRecoveriesPerSecDefault), FormUI::Suffix(F("per second")));
         form.addValidator(FormRangeValidator(1, 20));
+
+        form.add(F("adco"), _H_W_STRUCT_VALUE(cfg, adc_offset));
+        form.addFormUI(F("ADC Offset"), FormUI::Type::INTEGER, FormUI::Suffix(F("raw value")));
+        form.addValidator(FormRangeValidator(-1023, 1023));
 
         motorGroup.end();
 

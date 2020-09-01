@@ -311,7 +311,7 @@ static inline int DEBUG_OUTPUT_flush() {
 }
 
 // debug_print* macros return 0 if debugging is disabled or >=1, basically the length of the data that was sent + 1
-#define debug_print(msg)                                    ((DebugContext::__state == DEBUG_HELPER_STATE_ACTIVE) ? (DEBUG_OUTPUT.print(msg) + DEBUG_OUTPUT_flush()) : 0)
+#define debug_print(msg)                                    ((DebugContext::__state == DEBUG_HELPER_STATE_ACTIVE) ? (debug_prefix() + DEBUG_OUTPUT.print(msg) + DEBUG_OUTPUT_flush()) : 0)
 #define debug_println(...)                                  ((DebugContext::__state == DEBUG_HELPER_STATE_ACTIVE) ? (debug_prefix() + DEBUG_OUTPUT.println(__VA_ARGS__) + DEBUG_OUTPUT_flush()) : 0)
 #define debug_printf(fmt, ...)                              ((DebugContext::__state == DEBUG_HELPER_STATE_ACTIVE) ? (debug_prefix() + DEBUG_OUTPUT.printf(fmt, ##__VA_ARGS__) + DEBUG_OUTPUT_flush()) : 0)
 #define debug_printf_P(fmt, ...)                            ((DebugContext::__state == DEBUG_HELPER_STATE_ACTIVE) ? (debug_prefix() + DEBUG_OUTPUT.printf_P(fmt, ##__VA_ARGS__) + DEBUG_OUTPUT_flush()) : 0)

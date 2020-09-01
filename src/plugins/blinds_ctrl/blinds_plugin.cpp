@@ -154,14 +154,11 @@ void BlindsControlPlugin::loopMethod()
 }
 
 
-#if AT_MODE_SUPPORTED && IOT_BLINDS_CTRL_TESTMODE
+#if AT_MODE_SUPPORTED && 0
 
 #include "at_mode.h"
 
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(BCME, "BCME", "<adc|div|open|close>[,<value>]", "Set or display test mode value\n"
-        "\n"
-        "adc,<client_id>            send ADC readings to web socket client\n"
-);
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(BCME, "BCME", "<adc|div|open|close>[,<value>]", "Set or display test mode value");
 
 // void BlindsControlPlugin::_printTestInfo() {
 

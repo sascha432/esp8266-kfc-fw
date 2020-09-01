@@ -1243,6 +1243,7 @@ namespace KFCConfigurationClasses {
                 uint16_t current_limit_time;        // ms
                 uint16_t open_time;                 // ms
                 uint16_t close_time;                // ms
+                uint16_t dac_current_limit;                 // 0-1023
 
                 BlindsConfigChannel_t();
 
@@ -1263,19 +1264,22 @@ namespace KFCConfigurationClasses {
                 BlindsConfigChannel_t channels[2];
                 BlindsConfigOperation_t open[6];
                 BlindsConfigOperation_t close[6];
-                uint8_t pins[5];
+                uint8_t pins[6];
                 CREATE_ENUM_BITFIELD(multiplexer, MultiplexerType);
                 uint16_t adc_divider;
                 uint16_t pwm_frequency;
                 uint16_t adc_read_interval;                 // microseconds
                 uint16_t adc_recovery_time;                 // microseconds
                 uint8_t adc_recoveries_per_second;
+                int16_t adc_offset;
+                uint32_t pwm_softstart_time;                // microseconds
 
                 static constexpr uint16_t kAdcDividerDefault = 25;
                 static constexpr uint16_t kPwmFrequencyDefault = 27500;
                 static constexpr uint16_t kAdcReadIntervalDefault = 750;
                 static constexpr uint16_t kAdcRecoveryTimeDefault = 10000;
                 static constexpr uint8_t kAdcRecoveriesPerSecDefault = 5;
+                static constexpr uint32_t kPwmSoftStartTime = 50000;
 
                 template<typename Archive>
                 void serialize(Archive & ar, kfc::serialization::version version) {

@@ -21,6 +21,8 @@
 #           see connection class for more info...
 #
 
+import tkinter as tk
+
 class PrintConsole:
     def __init__(self, debug = True):
         self._debug = debug
@@ -34,6 +36,9 @@ class PrintConsole:
     def debug(self, msg, end = '\n'):
         if self._debug:
             self.log('DEBUG: %s' % msg, end)
+
+    def show_message(message, title = 'Error'):
+        tk.messagebox.showerror(title=title, message=message)
 
 class Controller:
     def __init__(self, debug = True, console = None):

@@ -653,11 +653,10 @@ AsyncTemplateResponse::~AsyncTemplateResponse()
     __LDBG_delete(_webTemplate);
 }
 
-AsyncSpeedTestResponse::AsyncSpeedTestResponse(const String &contentType, uint32_t size) : AsyncBaseResponse(true)
+AsyncSpeedTestResponse::AsyncSpeedTestResponse(const String &contentType, uint32_t size) : AsyncBaseResponse(true), _size(sizeof(_header)), _header({})
 {
     uint16_t width = sqrt(size / 2);
-    _size = width * width * 2 + sizeof(_header);
-    memset(&_header, 0, sizeof(_header));
+    _size += width * width * 2;
     _header.h.bfh.bfType = 'B' | ('M' << 8);
     _header.h.bfh.bfSize = _size;
     _header.h.bfh.bfReserved2 = sizeof(_header.h);

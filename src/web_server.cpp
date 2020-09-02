@@ -451,14 +451,14 @@ void WebServerPlugin::handlerUpdate(AsyncWebServerRequest *request)
             else {
                 Logger_security(F("Starting ATmega firmware upgrade..."));
 
-                stk500v1 = new STK500v1Programmer(Serial);
+                stk500v1 = __LDBG_new(STK500v1Programmer, Serial);
                 stk500v1->setSignature_P(PSTR("\x1e\x95\x0f"));
                 stk500v1->setFile(FSPGM(stk500v1_tmp_file));
                 stk500v1->setLogging(STK500v1Programmer::LOG_FILE);
 
                 _Scheduler.add(3500, false, [](Event::CallbackTimerPtr timer) {
                     stk500v1->begin([]() {
-                        delete stk500v1;
+                        __LDBG_free(stk500v1);
                         stk500v1 = nullptr;
                     });
                 });
@@ -523,7 +523,7 @@ void WebServerPlugin::handlerUpdate(AsyncWebServerRequest *request)
 
             HttpHeaders httpHeaders(false);
             httpHeaders.addNoCache();
-            if (!plugin._sendFile(String('/') + FSPGM(update_fw_html), String(), httpHeaders, plugin._clientAcceptsGzip(request), request, new UpgradeTemplate(message))) {
+            if (!plugin._sendFile(String('/') + FSPGM(update_fw_html), String(), httpHeaders, plugin._clientAcceptsGzip(request), request, __LDBG_new(UpgradeTemplate, message))) {
                 message += F("<br><a href=\"/\">Home</a>");
                 request->send(200, FSPGM(mime_text_plain), message);
             }
@@ -755,7 +755,7 @@ bool WebServerPlugin::_sendFile(const FileMapping &mapping, const String &formNa
     if (webTemplate != nullptr) {
         webTemplate->setSelfUri(request->url());
         // process with template
-        response = new AsyncTemplateResponse(FPSTR(getContentType(path)), mapping.open(FileOpenMode::read), webTemplate, [webTemplate](const String& name, DataProviderInterface &provider) {
+        response = __LDBG_new(AsyncTemplateResponse, FPSTR(getContentType(path)), mapping.open(FileOpenMode::read), webTemplate, [webTemplate](const String& name, DataProviderInterface &provider) {
             return TemplateDataProvider::callback(name, provider, *webTemplate);
         });
         httpHeaders.addNoCache();
@@ -863,13 +863,13 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
                 loginError = FSPGM(Invalid_username_or_password, "Invalid username or password");
                 const FailureCounter &failure = _loginFailures.addFailure(remote_addr);
                 Logger_security(F("Login from %s failed %d times since %s (%s)"), remote_addr.toString().c_str(), failure.getCounter(), failure.getFirstFailure().c_str(), getAuthTypeStr(authType));
-                return _sendFile(FSPGM(_login_html, "/login.html"), String(), httpHeaders, client_accepts_gzip, request, new LoginTemplate(loginError));
+                return _sendFile(FSPGM(_login_html, "/login.html"), String(), httpHeaders, client_accepts_gzip, request, __LDBG_new(LoginTemplate, loginError));
             }
         }
         else {
             if (String_endsWith(path, SPGM(_html))) {
                 httpHeaders.add(createRemoveSessionIdCookie());
-                return _sendFile(FSPGM(_login_html), String(), httpHeaders, client_accepts_gzip, request, new LoginTemplate(loginError));
+                return _sendFile(FSPGM(_login_html), String(), httpHeaders, client_accepts_gzip, request, __LDBG_new(LoginTemplate, loginError));
             }
             else {
                 request->send(403);
@@ -891,9 +891,9 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
 #if IOT_WEATHER_STATION
                 __weatherStationDetachCanvas(true);
 #endif
-                Form *form = new SettingsForm(request);
+                Form *form = __LDBG_new(SettingsForm, request);
                 plugin->createConfigureForm(PluginComponent::FormCallbackType::CREATE_POST, formName, *form, request);
-                webTemplate = new ConfigTemplate(form);
+                webTemplate = __LDBG_new(ConfigTemplate, form);
                 if (form->validate()) {
                     plugin->createConfigureForm(PluginComponent::FormCallbackType::SAVE, formName, *form, request);
                     config.write();

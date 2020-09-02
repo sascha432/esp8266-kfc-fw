@@ -28,7 +28,7 @@ void JsonBaseReader::initParser() {
 
 void JsonBaseReader::error(const String &message, JsonErrorEnum_t type)
 {
-	_debug_printf_P(PSTR("JSON error: %s at %d\n"), message.c_str(), position());
+	__LDBG_printf("JSON error: %s at %d", message.c_str(), position());
 	_lastError.message = message;
 	_lastError.position = position();
     _lastError.type = type;
@@ -182,7 +182,7 @@ bool JsonBaseReader::_prepareElement()
 	    }
 
 	    _count++;
-	    _debug_printf_P(PSTR("processing key '%s' data %s type %d level %d at %d\n"), _keyStr.c_str(), JsonVar::formatValue(_valueStr, getType()).c_str(), (int)getType(), (int)getLevel(), (int)getLength());
+	    __LDBG_printf("processing key '%s' data %s type %d level %d at %d", _keyStr.c_str(), JsonVar::formatValue(_valueStr, getType()).c_str(), (int)getType(), (int)getLevel(), (int)getLength());
 
 	    result = processElement();
     }
@@ -196,7 +196,7 @@ bool JsonBaseReader::parseStream()
 {
 #if DEBUG_KFC_JSON
 	if (_stream) {
-		_debug_printf_P(PSTR("JSONparseStream available %d\n"), _stream->available());
+		__LDBG_printf("JSONparseStream available %d", _stream->available());
 	}
 #endif
 
@@ -213,7 +213,7 @@ bool JsonBaseReader::parseStream()
 			}
 		}
         else if (!_quoted && (ch == '{' || ch == '[')) {
-			_debug_printf_P(PSTR("open %s level %d key %s array %d count %d\n"), (ch == '[' ? "array" : "object"), _level + 1, _keyStr.c_str(), _arrayIndex, _count);
+			__LDBG_printf("open %s level %d key %s array %d count %d", (ch == '[' ? "array" : "object"), _level + 1, _keyStr.c_str(), _arrayIndex, _count);
 			_stack.push_back({_keyStr, _keyPosition, _arrayIndex, _count});
 			if (++_level <= 0) {
 				error(F("Maximum nested level reached"), JSON_ERROR_MAX_NESTED_LEVEL);
@@ -237,7 +237,7 @@ bool JsonBaseReader::parseStream()
 			_count = 0;
 		}
         else if (!_quoted && (ch == '}' || ch == ']')) {
-			_debug_printf_P(PSTR("closing %s level %d key %s data %s array %d count %d\n"), (ch == ']' ? "array" : "object"), _level, _keyStr.c_str(), _valueStr.c_str(), _arrayIndex, _count);
+			__LDBG_printf("closing %s level %d key %s data %s array %d count %d", (ch == ']' ? "array" : "object"), _level, _keyStr.c_str(), _valueStr.c_str(), _arrayIndex, _count);
             if ((_arrayIndex == -1 && ch == ']') || (_arrayIndex != -1 && ch == '}')) {
                 error(F("Invalid array or object end"), JSON_ERROR_INVALID_END);
                 return false;
@@ -273,7 +273,7 @@ bool JsonBaseReader::parseStream()
                 }
                 //_valueStr = String();
 			}
-			_debug_printf_P(PSTR("got key '%s' at %d\n"), _valueStr.c_str(), getLength());
+			__LDBG_printf("got key '%s' at %d", _valueStr.c_str(), getLength());
 
 			_keyStr = _valueStr;
             _keyPosition = _valuePosition;
@@ -296,7 +296,7 @@ bool JsonBaseReader::parseStream()
 			return false;
 		}
 	}
-	_debug_printf_P(PSTR("JSON parser end\n"));
+	__LDBG_printf("JSON parser end");
 	return true;
 }
 

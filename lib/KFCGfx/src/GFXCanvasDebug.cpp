@@ -4,7 +4,9 @@
 
 #include <Arduino_compat.h>
 #include <PrintString.h>
+#if LOGGER
 #include <logger.h>
+#endif
 #include "GFXCanvasConfig.h"
 
 #include <push_optimize.h>
@@ -32,7 +34,9 @@ bool __debug_GFXCanvasBounds_printf(const DebugContext &p, const char *format, .
         p.prefix();
         p.getOutput().println(message);
     }
+#if LOGGER
     Logger_error(message);
+#endif
     return true;
 }
 

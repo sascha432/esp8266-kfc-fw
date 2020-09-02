@@ -145,7 +145,7 @@ namespace GFXCanvas {
         // flush cache and write to line buffer
         void flush(GFXCanvasCompressed &canvas);
         // flush cache and free memory
-        void free(GFXCanvasCompressed &canvas);
+        void release(GFXCanvasCompressed &canvas);
 
         void resize(GFXCanvasCompressed &canvas, size_t numLines);
         size_t length() const;
@@ -157,10 +157,10 @@ namespace GFXCanvas {
         invalidate();
     }
 
-    inline void SingleLineCache::free(GFXCanvasCompressed &canvas)
+    inline void SingleLineCache::release(GFXCanvasCompressed &canvas)
     {
         flush(canvas);
-        release();
+        Cache::release();
     }
 
     inline void SingleLineCache::resize(GFXCanvasCompressed &canvas, size_t numLines)
@@ -180,4 +180,3 @@ namespace GFXCanvas {
 #endif
 
 }
-

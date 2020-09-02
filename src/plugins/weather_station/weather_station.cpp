@@ -2,6 +2,8 @@
  * Author: sascha_lammers@gmx.de
  */
 
+#if IOT_WEATHER_STATION
+
 #include "weather_station.h"
 #include <PrintHtmlEntitiesString.h>
 #include <EventScheduler.h>
@@ -41,6 +43,22 @@ using KFCConfigurationClasses::Plugins;
 
 static WeatherStationPlugin plugin;
 
+WeatherStationBase &__weatherStationGetPlugin()
+{
+    return static_cast<WeatherStationBase &>(plugin);
+}
+
+void __weatherStationDetachCanvas(bool release)
+{
+    plugin._detachCanvas(release);
+}
+
+void __weatherStationAttachCanvas()
+{
+    plugin._attachCanvas();
+}
+
+
 PROGMEM_DEFINE_PLUGIN_OPTIONS(
     WeatherStationPlugin,
     // name
@@ -66,36 +84,16 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     0                   // __reserved
 );
 
-void __weatherStationDetachCanvas(bool release)
-{
-    plugin._detachCanvas(release);
-}
-
-void __weatherStationAttachCanvas()
-{
-    plugin._attachCanvas();
-}
-
-
 WeatherStationPlugin::WeatherStationPlugin() :
     PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(WeatherStationPlugin)),
-    WSDraw(),
-    // _updateTimer(0),
     _updateCounter(0),
     _backlightLevel(1023),
     _pollTimer(0),
     _httpClient(nullptr),
     _toggleScreenTimer(0),
-    _redrawFlag(false),
     _lockCanvasUpdateEvents(0)
 {
-#if DEBUG_IOT_WEATHER_STATION
-    _debugDisplayCanvasBorder = false;
-#endif
     REGISTER_PLUGIN(this, "WeatherStationPlugin");
-#if IOT_WEATHER_STATION_HAS_TOUCHPAD
-    _touchpadDebug = false;
-#endif
 }
 
 void WeatherStationPlugin::_sendScreenCaptureBMP(AsyncWebServerRequest *request)
@@ -389,10 +387,6 @@ void WeatherStationPlugin::getStatus(Print &output)
 #endif
 }
 
-void WeatherStationPlugin::loop()
-{
-    plugin._loop();
-}
 
 void WeatherStationPlugin::_init()
 {
@@ -495,63 +489,7 @@ void WeatherStationPlugin::_getIndoorValues(float *data)
     data[2] = values.pressure;
 }
 
-void WeatherStationPlugin::_httpRequest(const String &url, int timeout, JsonBaseReader *jsonReader, Callback_t finishedCallback)
-{
-    auto rest = __DBG_new(::WeatherStation::RestAPI, url);
-    rest->call(jsonReader, std::max(15, timeout), [this, url, finishedCallback](bool status, const String &error) {
-        __LDBG_printf("status=%u error=%s url=%s", status, error.c_str(), url.c_str());
-        if (!status) {
-            Logger_notice(F("Failed to load %s, error %s"), url.c_str(), error.c_str());
-            _weatherError = F("Failed to load data");
-        }
-        LoopFunctions::callOnce([finishedCallback, status]() {
-            finishedCallback(status);
-        });
-    });
-}
-
-
-void WeatherStationPlugin::_getWeatherInfo(Callback_t finishedCallback)
-{
-#if DEBUG_IOT_WEATHER_STATION && 0
-    auto prev = finishedCallback;
-    finishedCallback = [this, prev](bool status) {
-        _weatherApi.dump(DEBUG_OUTPUT);
-        prev(status);
-    };
-
-#if 0
-    if (_weatherError.indexOf("avail") != -1) { // load dummy data
-        _weatherError = F("Dummy data");
-        StreamString stream = F("{\"coord\":{\"lon\":-123.07,\"lat\":49.32},\"weather\":[{\"id\":500,\"main\":\"Rain\",\"description\":\"light rain\",\"icon\":\"10n\"},{\"id\":701,\"main\":\"Mist\",\"description\":\"mist\",\"icon\":\"50n\"}],\"base\":\"stations\",\"main\":{\"temp\":277.55,\"pressure\":1021,\"humidity\":100,\"temp_min\":275.37,\"temp_max\":279.26},\"visibility\":8047,\"wind\":{\"speed\":1.19,\"deg\":165},\"rain\":{\"1h\":0.93},\"clouds\":{\"all\":90},\"dt\":1575357173,\"sys\":{\"type\":1,\"id\":5232,\"country\":\"CA\",\"sunrise\":1575301656,\"sunset\":1575332168},\"timezone\":-28800,\"id\":6090785,\"name\":\"North Vancouver\",\"cod\":200}");
-        _weatherApi.clear();
-        if (!_weatherApi.parseWeatherData(stream)) {
-            _weatherError = F("Invalid data");
-        }
-        finishedCallback(true);
-        return;
-    }
-#endif
-
-#endif
-
-    _httpRequest(_weatherApi.getWeatherApiUrl(), WeatherStation::getConfig().api_timeout, _weatherApi.getWeatherInfoParser(), finishedCallback);
-}
-
-void WeatherStationPlugin::_getWeatherForecast(Callback_t finishedCallback)
-{
-#if DEBUG_IOT_WEATHER_STATION && 0
-    auto prev = finishedCallback;
-    finishedCallback = [this, prev](bool status) {
-        _weatherApi.dump(DEBUG_OUTPUT);
-        prev(status);
-    };
-#endif
-
-    _httpRequest(_weatherApi.getForecastApiUrl(), WeatherStation::getConfig().api_timeout, _weatherApi.getWeatherForecastParser(), finishedCallback);
-}
-
-void WeatherStationPlugin::_fadeBacklight(uint16_t fromLevel, uint16_t toLevel, int8_t step)
+void WeatherStationPlugin::_fadeBacklight(uint16_t fromLevel, uint16_t toLevel, uint8_t step)
 {
     analogWrite(TFT_PIN_LED, fromLevel);
     int8_t direction = fromLevel > toLevel ? -step : step;
@@ -601,105 +539,6 @@ void WeatherStationPlugin::_fadeStatusLED()
 #endif
 }
 
-void WeatherStationPlugin::_loop()
-{
-    if (!isCanvasAttached()) {
-        return;
-    }
-
-#if IOT_WEATHER_STATION_HAS_TOUCHPAD
-    if (_touchpadDebug) {
-        SpeedBooster speedBooster;
-
-        const auto &coords = _touchpad.get();
-        uint16_t colorTouched = ST77XX_RED;
-        uint16_t colorPredict = ST77XX_YELLOW;
-        uint16_t colorGrid = ST77XX_WHITE;
-        _canvas->fillScreen(COLORS_BACKGROUND);
-        for(int yy = 1; yy <= 8; yy++) {
-            _canvas->drawLine(10, yy * 10, 8 * 14, yy * 10, yy == coords.y ? colorTouched : (yy == _touchpad._event._predict.y ? colorPredict : colorGrid));
-        }
-        for(int xx = 1; xx <= 13; xx++) {
-            _canvas->drawLine(xx * 8, 10, xx * 8, 8 * 10, xx == coords.x ? colorTouched : (xx == _touchpad._event._predict.x ? colorPredict : colorGrid));
-        }
-
-        _displayScreen(0, 0, TFT_WIDTH, 85);
-        return;
-    }
-#endif
-
-    if (_config.weather_poll_interval && millis() > _pollTimer) {
-        if (config.isWiFiUp()) {
-            _debug_println(F("polling weather info"));
-            _pollTimer = millis() + _config.getPollIntervalMillis();
-            _getWeatherInfo([this](bool status) {
-                if (!status) {
-                    _pollTimer = millis() + 60000;
-                }
-                redraw();
-            });
-        }
-        else {
-            _pollTimer = millis() + 1000;
-        }
-    }
-
-    if (_redrawFlag) {
-        _draw();
-        _redrawFlag = false;
-    }
-    else if (_currentScreen == TEXT_CLEAR || _currentScreen == TEXT_UPDATE) {
-        _draw();
-    }
-    else {
-
-        if (_displayMessageTimer) {
-            return;
-        }
-
-        if (_toggleScreenTimer && millis() > _toggleScreenTimer) {
-            // __LDBG_printf("_toggleScreenTimer %lu", _toggleScreenTimer);
-            _setScreen((_currentScreen + 1) % NUM_SCREENS);
-            _draw();
-            return;
-        }
-
-        time_t _time = time(nullptr);
-        if (_currentScreen < NUM_SCREENS && _lastTime != _time) {
-            _updateCounter++;
-            do {
-                if (/*_currentScreen == ScreenEnum_t::MAIN &&*/ (_updateCounter % 60 == 0)) {
-                    // redraw all screens once per minute
-                    _draw();
-                    break;
-                }
-                else if (_currentScreen == ScreenEnum_t::INDOOR && (_updateCounter % 5 == 0)) {
-                    // update indoor section every 5 seconds
-                    _updateScreenIndoor();
-                }
-                else if (_currentScreen == ScreenEnum_t::MAIN && (_updateCounter % 5 == 0)) {
-                    // update indoor section every 5 seconds
-                    _updateWeatherIndoor();
-                }
-
-                if (_time - _lastTime > 10) {
-                    // time jumped, redraw everything
-                    _draw();
-                }
-                else {
-                    _updateTime();
-                }
-            } while(false);
-        }
-
-    }
-}
-
-void WeatherStationPlugin::redraw()
-{
-    _redrawFlag = true;
-}
-
 void WeatherStationPlugin::canvasUpdatedEvent(int16_t x, int16_t y, int16_t w, int16_t h)
 {
     if (!_config.show_webui) {
@@ -724,7 +563,7 @@ void WeatherStationPlugin::canvasUpdatedEvent(int16_t x, int16_t y, int16_t w, i
         SpeedBooster speedBooster;
         Buffer buffer;
 
-        WebSocketBinaryPacketUnqiueId_t packetIdentifier = RGB565_RLE_COMPRESSED_BITMAP;
+        WSClient::BinaryPacketType packetIdentifier = WSClient::BinaryPacketType::RGB565_RLE_COMPRESSED_BITMAP;
         buffer.write(reinterpret_cast<uint8_t *>(&packetIdentifier), sizeof(packetIdentifier));
 
         size_t len = strlen_P(SPGM(weather_station_webui_id));
@@ -864,5 +703,7 @@ bool WeatherStationPlugin::_resetAlarm()
     }
     return false;
 }
+
+#endif
 
 #endif

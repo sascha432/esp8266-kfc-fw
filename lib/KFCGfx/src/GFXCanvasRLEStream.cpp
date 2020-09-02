@@ -36,12 +36,13 @@ GFXCanvasRLEStream::GFXCanvasRLEStream(GFXCanvasCompressed& canvas, uint16_t x, 
     auto palette = _canvas.getPalette();
     if (palette) {
         _canvas.flushCache();
-        _header.paletteCount = palette->length();
-        _buffer.writeObject(_header);
-        _buffer.write(palette->getBytes(), palette->getBytesLength());
+        _header.paletteCount = (decltype(_header.paletteCount))palette->length();
+        _buffer.copy(_header);
+        _buffer.copy(palette->begin(), palette->end());
+//        _buffer.write(palette->getBytes(), palette->getBytesLength());
     }
     else {
-        _buffer.writeObject(_header);
+        _buffer.copy(_header);
     }
     // __DBG_printf("header=%u", _buffer.length());
 }
@@ -212,7 +213,7 @@ uint8_t *GFXCanvasRLEStream::_writeColor(uint8_t *buffer, uint16_t rle, uint16_t
     if (_header.paletteCount) {
         if (rle >= (0xff + 0xe)) {
             *buffer++ = (color << 4) | 0xf;
-            *buffer++ = rle;
+            *buffer++ = (uint8_t)rle;
             *buffer++ = rle >> 8;
         }
         else if (rle >= 0xe) {
@@ -227,8 +228,8 @@ uint8_t *GFXCanvasRLEStream::_writeColor(uint8_t *buffer, uint16_t rle, uint16_t
         if (rle > 0x7f) {
             *buffer++ = (rle >> 8) | 0x80; // high byte first, last bit marks 2 bytes
         }
-        *buffer++ = rle;
-        *buffer++ = color;
+        *buffer++ = (uint8_t)rle;
+        *buffer++ = (uint8_t)color;
         *buffer++ = color >> 8;
     }
     return buffer;

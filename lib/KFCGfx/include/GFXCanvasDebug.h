@@ -20,7 +20,7 @@
 
 bool __debug_GFXCanvasBounds_printf(const DebugContext &p, const char *format, ...);
 
-#define __DBG_GFXCANVAS_PRINTF(format, ...)                 __debug_GFXCanvasBounds_printf(DEBUG_HELPER_POSITION, PSTR(format), #__VA_ARGS__)
+#define __DBG_GFXCANVAS_PRINTF(format, ...)                 __debug_GFXCanvasBounds_printf(DEBUG_HELPER_POSITION, PSTR(format), ##__VA_ARGS__)
 
 #define __DBG_BOUNDS(...)                                   __VA_ARGS__
 #define __DBG_BOUNDS_ACTION(cond, action)                   { if (cond) { action; } }
@@ -35,6 +35,7 @@ bool __debug_GFXCanvasBounds_printf(const DebugContext &p, const char *format, .
 #define __DBG_BOUNDS_buffer(ptr, start, end)                ((ptr < start || ptr >= end) ? __DBG_GFXCANVAS_PRINTF("out of bounds ptr=%p begin=%p end=%p", ptr, start, end) : false)
 #define __DBG_BOUNDS_buffer_end(ptr, end)                   ((ptr >= end) ? __DBG_GFXCANVAS_PRINTF("out of bounds ptr=%p end=%p", ptr, end) : false)
 #define __DBG_BOUNDS_assert(cond)                           __DBG_assert(cond)
+#define __DBG_BOUNDS_assertp(cond, fmt, ...)                __DBG_assert_printf(cond, fmt, ##__VA_ARGS__)
 
 #else
 

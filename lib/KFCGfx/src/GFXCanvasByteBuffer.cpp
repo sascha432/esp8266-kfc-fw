@@ -14,8 +14,9 @@
 #pragma GCC optimize ("O3")
 #endif
 
-using namespace GFXCanvas;
+#include "GFXCanvasByteBuffer.h"
 
+using namespace GFXCanvas;
 
 
 #include <pop_optimize.h>

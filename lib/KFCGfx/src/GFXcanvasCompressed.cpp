@@ -3,6 +3,7 @@
 */
 
 #include <Arduino_compat.h>
+#include <Buffer.h>
 #include "GFXCanvasConfig.h"
 
 #include "GFXCanvas.h"
@@ -67,7 +68,7 @@ void GFXCanvasCompressed::drawPixel(int16_t x, int16_t y, uint16_t color)
 void GFXCanvasCompressed::fillScreen(uint16_t color)
 {
     _lines.clear(color);
-    _cache.free(*this);
+    _cache.release(*this);
 }
 
 void GFXCanvasCompressed::fillScreenPartial(sYType y, sHeightType height, ColorType color)
@@ -184,7 +185,7 @@ void GFXCanvasCompressed::drawInto(sXType x, sYType y, sWidthType w, sHeightType
         }
     }
 
-    _cache.free(*this);
+    _cache.release(*this);
     __DBG_STATS(
         stats.drawInto += timer.getTime();
     );
@@ -202,7 +203,7 @@ void GFXCanvasCompressed::flushCache()
 
 void GFXCanvasCompressed::freeCache()
 {
-    _cache.free(*this);
+    _cache.release(*this);
 }
 
 void GFXCanvasCompressed::_RLEdecode(ByteBuffer &buffer, ColorType *output)
@@ -222,7 +223,7 @@ void GFXCanvasCompressed::_RLEdecode(ByteBuffer &buffer, ColorType *output)
     __DBG_BOUNDS_assert(count == _width);
 }
 
-void GFXCanvasCompressed::_RLEencode(ColorType *data, ByteBuffer &buffer)
+void GFXCanvasCompressed::_RLEencode(ColorType *data, Buffer &buffer)
 {
     uint8_t rle = 0;
     auto begin = data;
@@ -237,14 +238,18 @@ void GFXCanvasCompressed::_RLEencode(ColorType *data, ByteBuffer &buffer)
         }
         else {
             __DBG_BOUNDS(count += rle);
-            buffer.push_bw(rle, lastColor);
+            buffer.write(rle);
+            buffer.write((uint8_t)lastColor);
+            buffer.write((uint8_t)(lastColor >> 8));
             lastColor = color;
             rle = 1;
         }
     }
     if (begin == end) {
         __DBG_BOUNDS(count += rle);
-        buffer.push_bw(rle, lastColor);
+        buffer.write(rle);
+        buffer.write((uint8_t)lastColor);
+        buffer.write((uint8_t)(lastColor >> 8));
     }
     else {
         __DBG_printf("begin=%p != end=%p rle=%u ???", begin, end, rle); //TODO remove
@@ -312,12 +317,26 @@ void GFXCanvasCompressed::_encodeLine(Cache &cache)
         timer.start();
     );
 
-    auto &buffer = _lines.getBuffer(cache.getY());
-    buffer.clear();
-    _RLEencode(cache.getBuffer(), buffer);
+    auto &lineBuffer = _lines.getBuffer(cache.getY());
+    auto &pool = BufferPool::getInstance();
+    _RLEencode(cache.getBuffer(), pool.get());
 
-    buffer.shrink_to_fit();
+    // move encoded buffer to the line
+    lineBuffer = std::move(pool);
+
     cache.setWriteFlag(false);
+
+    // __dump_binary(cache.getBuffer(), 256, 256 / 4, PSTR("in"));
+
+    // __dump_binary(lineBuffer.begin(), lineBuffer.length(), 0, PSTR("RLE"));
+
+
+    // ColorType out[128];
+    // memset(out,0xcc,sizeof(out));
+    // _RLEdecode(lineBuffer, out);
+
+    // __dump_binary(out, 256, 256 / 4, PSTR("out"));
+
 
     __DBG_STATS(
         stats.encode_time += timer.getTime() / 1000.0;

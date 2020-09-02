@@ -4,8 +4,10 @@
 
 #pragma once
 
+#ifndef _MSC_VER
 #include <push_optimize.h>
 #pragma GCC optimize ("O3")
+#endif
 
 #include <Arduino_compat.h>
 #include "Adafruit_GFX.h"
@@ -25,7 +27,7 @@
 template<class T>
 class GFXExtension : public T {
 public:
-	using T::T;
+    using T::T;
     using T::drawBitmap;
     using T::drawPixel;
 
@@ -165,7 +167,7 @@ public:
             height = (pgm_read_byte(dataPtr++) >> 8);
             height |= pgm_read_byte(dataPtr++);
 
-            // _debug_printf_P(PSTR("drawBitmap(): %u (%u) x %u x %u\n"), width, ((width + 7) & ~7), height, pgm_read_byte(bmp + 1));
+            // __LDBG_printf("drawBitmap(): %u (%u) x %u x %u", width, ((width + 7) & ~7), height, pgm_read_byte(bmp + 1));
 
             width += x; // set to x end position
             uint8_t ofs = (x & 3); // first bit relative to x1, indicator for reading a new byte
@@ -195,4 +197,6 @@ public:
 
 using AdafruitGFXExtension = GFXExtension<Adafruit_GFX>;
 
+#ifndef _MSC_VER
 #include <pop_optimize.h>
+#endif

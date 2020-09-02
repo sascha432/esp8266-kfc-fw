@@ -5,6 +5,7 @@
 #include <LoopFunctions.h>
 #include <GFXCanvasConfig.h>
 #include "WSDraw.h"
+#include "WSScreen.h"
 
 #if 1
 #include "fonts/fonts_includes.h"
@@ -77,42 +78,42 @@ const unsigned char icon_house[] PROGMEM = {
             __DBG_panic("canvas not attached"); \
         }
 
+using namespace WeatherStation::Screen;
+
 WSDraw::WSDraw() :
     _tft(TFT_PIN_CS, TFT_PIN_DC, TFT_PIN_RST),
     // _canvas(_tft.width(), _tft.height()),
     _canvas(__DBG_new(WeatherStationCanvas, _tft.width(), _tft.height())),
     _canvasLocked(0),
-    _scrollCanvas(nullptr),
-    _scrollPosition(0),
-    _weatherError(F("No data available")),
-    _currentScreen(0),
-    _textFont(nullptr),
-    _lastTime(0),
-    _offsetX(0),
-    _offsetY(0)
+    _screen(nullptr),
+    //_scrollCanvas(nullptr),
+    //_scrollPosition(0),
+    _redrawFlag(false),
+    _screenLastUpdateTime(~0)
+    // _textFont(nullptr),
+    // _lastTime(0),
+    // _offsetX(0),
+    // _offsetY(0)
 #if WSDRAW_STATS
     , _debug_stats(false)
 #endif
 {
-#if _MSC_VER
-    _debug_stats = true;
-    const char * data = PSTR("{\"coord\":{\"lon\":-123.07,\"lat\":49.32},\"weather\":[{\"id\":500,\"main\":\"Rain\",\"description\":\"light rain\",\"icon\":\"10n\"},{\"id\":701,\"main\":\"Mist\",\"description\":\"mist\",\"icon\":\"50n\"}],\"base\":\"stations\",\"main\":{\"temp\":277.55,\"pressure\":1021,\"humidity\":100,\"temp_min\":275.37,\"temp_max\":279.26},\"visibility\":8047,\"wind\":{\"speed\":1.19,\"deg\":165},\"rain\":{\"1h\":0.93},\"clouds\":{\"all\":90},\"dt\":1575357173,\"sys\":{\"type\":1,\"id\":5232,\"country\":\"CA\",\"sunrise\":1575301656,\"sunset\":1575332168},\"timezone\":-28800,\"id\":6090785,\"name\":\"North Vancouver\",\"cod\":200}");
-    StreamString stream;
-    stream.write((uint8_t*)data, strlen(data));
-    _weatherApi.clear();
-    if (!_weatherApi.parseWeatherData(*(Stream*)&stream)) {
-        _weatherError = F("Invalid data");
-    }
-#endif
 }
 
 WSDraw::~WSDraw()
 {
-    _displayMessageTimer.remove();
-    ScrollCanvas::destroy(this);
+    _screenTimer.remove();
+    delete _screen;
+    // _displayMessageTimer.remove();
+    //ScrollCanvas::destroy(this);
     if (_canvas) {
         __DBG_delete(_canvas);
     }
+}
+
+void WSDraw::redraw()
+{
+    _redrawFlag = true;
 }
 
 bool WSDraw::_attachCanvas()
@@ -164,6 +165,8 @@ void WSDraw::releaseCanvasLock()
 
     }
 }
+
+#if 0
 
 
 void WSDraw::drawText(const String &text, const GFXfont *font, uint16_t color, bool clear)
@@ -357,7 +360,7 @@ void WSDraw::_drawWeather(GFXCanvasCompressed *canvas, int16_t top)
     else {
         canvas->setFont(FONTS_DEFAULT_MEDIUM);
         canvas->setTextColor(COLORS_DEFAULT_TEXT);
-        canvas->drawTextAligned(TFT_WIDTH / 2, (Y_END_POSITION_WEATHER - Y_START_POSITION_WEATHER), _weatherError, AdafruitGFXExtension::CENTER, AdafruitGFXExtension::MIDDLE);
+        canvas->drawTextAligned(TFT_WIDTH / 2, (Y_END_POSITION_WEATHER - Y_START_POSITION_WEATHER), _weatherApi.getWeatherInfo().getError(), AdafruitGFXExtension::CENTER, AdafruitGFXExtension::MIDDLE);
     }
 
     _drawWeatherIndoor(canvas, Y_START_POSITION_WEATHER);
@@ -652,6 +655,8 @@ void WSDraw::_draw()
 #endif
 }
 
+#endif
+
 void WSDraw::_displayScreen(int16_t x, int16_t y, int16_t w, int16_t h)
 {
     __LDBG_isCanvasAttached();
@@ -670,11 +675,6 @@ void WSDraw::canvasUpdatedEvent(int16_t x, int16_t y, int16_t w, int16_t h)
 {
 }
 
-void WSDraw::redraw()
-{
-    _draw();
-}
-
 Adafruit_ST7735_Ex& WSDraw::getST7735()
 {
     return _tft;
@@ -688,14 +688,17 @@ WeatherStationCanvas *WSDraw::getCanvas()
     return nullptr;
 }
 
-void WSDraw::setScreen(uint8_t screen)
+void WSDraw::setScreen(BaseScreen *screen)
 {
-    _currentScreen = screen;
-}
-
-uint8_t WSDraw::getScreen() const
-{
-    return _currentScreen;
+    if (_screen) {
+        screen->deletePrevScreen(_screen);
+    }
+    _screen = screen;
+    if (_screen) {
+        _screen->initNextScreen();
+    }
+    _screenLastUpdateTime = ~0;
+    redraw();
 }
 
 #if WSDRAW_STATS
@@ -742,5 +745,46 @@ void WSDraw::_getIndoorValues(float *data)
     data[1] = 49.13f;
     data[2] = 1022.17f;
 }
+
+void WSDraw::_drawTime()
+{
+    int _offsetY = 0;
+    int _offsetX = 0;
+
+
+    _canvas->drawRect(10, 10, 50,50, COLORS_DATE);
+
+    return;
+
+    char buf[32];
+    time_t _lastTime = _screenLastUpdateTime;
+    struct tm *tm = localtime(&_lastTime);
+
+    _canvas->setFont(FONTS_DATE);
+    _canvas->setTextColor(COLORS_DATE);
+    strftime_P(buf, sizeof(buf), PSTR("%a %b %d %Y"), tm);
+    _canvas->drawTextAligned(X_POSITION_DATE, Y_POSITION_DATE, buf, H_POSITION_DATE);
+
+    _canvas->setFont(FONTS_TIME);
+    _canvas->setTextColor(COLORS_TIME);
+    if (_config.time_format_24h) {
+        strftime_P(buf, sizeof(buf), PSTR("%H:%M:%S"), tm);
+    }
+    else {
+        strftime_P(buf, sizeof(buf), PSTR("%I:%M:%S"), tm);
+    }
+    _canvas->drawTextAligned(X_POSITION_TIME, Y_POSITION_TIME, buf, H_POSITION_TIME);
+
+    _canvas->setFont(FONTS_TIMEZONE);
+    _canvas->setTextColor(COLORS_TIMEZONE);
+    if (_config.time_format_24h) {
+        strftime_P(buf, sizeof(buf), PSTR("%Z"), tm);
+    }
+    else {
+        strftime_P(buf, sizeof(buf), PSTR("%p - %Z"), tm);
+    }
+    _canvas->drawTextAligned(X_POSITION_TIMEZONE, Y_POSITION_TIMEZONE, buf, H_POSITION_TIMEZONE);
+}
+
 
 #include <debug_helper_disable.h>

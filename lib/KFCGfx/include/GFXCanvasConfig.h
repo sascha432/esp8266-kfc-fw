@@ -24,7 +24,8 @@
 
 #if _MSC_VER
 #define DEBUG_GFXCANVASCOMPRESSED_BOUNDS_CHECK      1
-#define GFXCANVAS_MAX_CACHED_LINES                  16
+#define GFXCANVAS_MAX_CACHED_LINES                  1
+//#define GFXCANVAS_MAX_CACHED_LINES                  16
 #endif
 
 // max. number of cached lines
@@ -45,6 +46,7 @@ namespace GFXCanvas {
     using ColorPaletteType = ColorType;
     using RGBColorType = uint32_t;
     using ByteBufferSizeType = uint8_t;
+    using ByteBufferDataType = uint8_t;
 
     using uXType = uint16_t;
     using sXType = int16_t;

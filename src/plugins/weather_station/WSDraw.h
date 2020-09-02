@@ -2,6 +2,8 @@
  * Author: sascha_lammers@gmx.de
  */
 
+#if IOT_WEATHER_STATION
+
 #pragma once
 
 #include <Arduino_compat.h>
@@ -13,9 +15,52 @@
 #include <SpeedBooster.h>
 #include <EventScheduler.h>
 #include "FixedCircularBuffer.h"
-#include "kfc_fw_config.h"
 #include "fonts/fonts.h"
 #include "moon_phase.h"
+
+#ifndef _MSC_VER
+#include <kfc_fw_config.h>
+#endif
+
+#if _MSC_VER
+
+namespace WeatherStationConfig {
+
+    typedef struct __attribute__packed__ Config_t {
+        using Type = Config_t;
+
+        uint8_t weather_poll_interval;
+        uint16_t api_timeout;
+        uint8_t backlight_level;
+        uint8_t touch_threshold;
+        uint8_t released_threshold;
+        CREATE_UINT8_BITFIELD(is_metric, 1);
+        CREATE_UINT8_BITFIELD(time_format_24h, 1);
+        CREATE_UINT8_BITFIELD(show_webui, 1);
+        float temp_offset;
+        float humidity_offset;
+        float pressure_offset;
+        uint8_t screenTimer[8];
+
+        Config_t() : weather_poll_interval(15),
+            api_timeout(30),
+            backlight_level(100),
+            touch_threshold(5),
+            released_threshold(8),
+            is_metric(true),
+            time_format_24h(true),
+            show_webui(false),
+            temp_offset(0),
+            humidity_offset(0),
+            pressure_offset(0),
+            screenTimer{ 10, 10 }
+        {
+        }
+    } Config_t;
+
+}
+
+#endif
 
 #define WSDRAW_STATS            0
 
@@ -165,6 +210,12 @@ using Canvas = WeatherStationCanvas;
 
 using Adafruit_ST7735_Ex = GFXExtension<Adafruit_ST7735>;
 
+namespace WeatherStation {
+    namespace Screen {
+        class BaseScreen;
+    }
+}
+
 #if 0
 
 class CanvasObject {
@@ -207,6 +258,9 @@ public:
     virtual ~WSDraw();
 
 public:
+    // safely redraw in next main loop
+    void redraw();
+
     // reattach canvas object
     bool _attachCanvas();
     // detach canvas object and free memory
@@ -218,44 +272,39 @@ public:
     WeatherStationCanvas *getCanvasAndLock();
     void releaseCanvasLock();
 
-    // can be called while the canvas is detached
-    // without a canvas, it is using the TFT directly and clear is forced true
-    void drawText(const String &text, const GFXfont *font, uint16_t color, bool clear = false);
+    //// can be called while the canvas is detached
+    //// without a canvas, it is using the TFT directly and clear is forced true
+    //void drawText(const String &text, const GFXfont *font, uint16_t color, bool clear = false);
 
-    void displayMessage(const String &title, const String &message, uint16_t titleColor, uint16_t messageColor, uint32_t timeout) {
-        if (isCanvasAttached()) {
-            _displayMessage(title, message, ST77XX_YELLOW, ST77XX_WHITE, timeout);
-        }
-        else {
-            // this->callOnce([&]() {
-            //     _displayMessage(title, message, ST77XX_YELLOW, ST77XX_WHITE, timeout);
-            // });
-        }
-    }
+    //void displayMessage(const String &title, const String &message, uint16_t titleColor, uint16_t messageColor, uint32_t timeout) {
+    //    if (isCanvasAttached()) {
+    //        _displayMessage(title, message, ST77XX_YELLOW, ST77XX_WHITE, timeout);
+    //    }
+    //    else {
+    //        // this->callOnce([&]() {
+    //        //     _displayMessage(title, message, ST77XX_YELLOW, ST77XX_WHITE, timeout);
+    //        // });
+    //    }
+    //}
 
 public:
     // called for partial or full updates of the screen
     virtual void canvasUpdatedEvent(int16_t x, int16_t y, int16_t w, int16_t h);
 
-    // call to redraw the entire screen
-    virtual void redraw();
-
     Adafruit_ST7735_Ex& getST7735();
     WeatherStationCanvas *getCanvas();
-    void setScreen(uint8_t screen);
-    uint8_t getScreen() const;
 
 public:
     void _initScreen() {
         if (isCanvasAttached()) {
-            _draw();
+            redraw();
         }
     }
 
-    void setText(const String &text, const GFXfont *textFont) {
-        _text = text;
-        _textFont = textFont;
-    }
+    //void setText(const String &text, const GFXfont *textFont) {
+    //    _text = text;
+    //    _textFont = textFont;
+    //}
 
 protected:
     Adafruit_ST7735_Ex _tft;
@@ -264,69 +313,70 @@ protected:
 
 public:
     void _drawTime();
-    void _updateTime();
+    //void _drawTime();
+    //void _updateTime();
 
-    void _drawWeather();
-    void _drawWeather(GFXCanvasCompressed *canvas, int16_t top);
-    void _drawWeatherIndoor(GFXCanvasCompressed *canvas, int16_t top);
-    void _updateWeatherIndoor();
-    void _drawIndoor();
-    void _drawIndoor(GFXCanvasCompressed *canvas, int16_t top);
-    void _drawSunAndMoon();
+    //void _drawWeather();
+    //void _drawWeather(GFXCanvasCompressed *canvas, int16_t top);
+    //void _drawWeatherIndoor(GFXCanvasCompressed *canvas, int16_t top);
+    //void _updateWeatherIndoor();
+    //void _drawIndoor();
+    //void _drawIndoor(GFXCanvasCompressed *canvas, int16_t top);
+    //void _drawSunAndMoon();
 
-    void _drawScreenMain();
+    //void _drawScreenMain();
 
-    void _drawScreenIndoor();
-    void _updateScreenIndoor();
+    //void _drawScreenIndoor();
+    //void _updateScreenIndoor();
 
-    void _drawScreenForecast();
+    //void _drawScreenForecast();
 
-    void _doScroll();
-    void _scrollTimer(WSDraw &draw);
-    bool _isScrolling() const;
+    //void _doScroll();
+    //void _scrollTimer(WSDraw &draw);
+    //bool _isScrolling() const;
 
-    void _displayMessage(const String &title, const String &message, uint16_t titleColor, uint16_t messageColor, uint32_t timeout);
+    //void _displayMessage(const String &title, const String &message, uint16_t titleColor, uint16_t messageColor, uint32_t timeout);
 
-    void _drawText(const String &text, const GFXfont *font, uint16_t color, bool clear = false);
-    void _draw();
+    //void _drawText(const String &text, const GFXfont *font, uint16_t color, bool clear = false);
+    //void _draw();
 
     void _displayScreen(int16_t x, int16_t y, int16_t w, int16_t h);
 
 public:
-    class ScrollCanvas {
-    public:
-        ScrollCanvas(WSDraw &draw, uint16_t width, uint16_t height) : _draw(draw), _canvas(width, height)  {
-            if (_draw._scrollCanvas) {
-                __DBG_panic("scroll canvas set ptr=%p this=%p", _draw._scrollCanvas, this);
-            }
-            _draw._scrollCanvas = this;
-        }
-        ~ScrollCanvas() {
-            _timer.remove();
-            _draw._scrollCanvas = nullptr;
-        }
+    //class ScrollCanvas {
+    //public:
+    //    ScrollCanvas(WSDraw &draw, uint16_t width, uint16_t height) : _draw(draw), _canvas(width, height)  {
+    //        if (_draw._scrollCanvas) {
+    //            __DBG_panic("scroll canvas set ptr=%p this=%p", _draw._scrollCanvas, this);
+    //        }
+    //        _draw._scrollCanvas = this;
+    //    }
+    //    ~ScrollCanvas() {
+    //        _timer.remove();
+    //        _draw._scrollCanvas = nullptr;
+    //    }
 
-        WeatherStationCanvas &getCanvas() {
-            return _canvas;
-        }
+    //    WeatherStationCanvas &getCanvas() {
+    //        return _canvas;
+    //    }
 
-        static void create(WSDraw *draw, uint16_t width, int16_t height) {
-            destroy(draw);
-            draw->_scrollCanvas = __DBG_new(ScrollCanvas, *draw, width, height);
-        }
+    //    static void create(WSDraw *draw, uint16_t width, int16_t height) {
+    //        destroy(draw);
+    //        draw->_scrollCanvas = __DBG_new(ScrollCanvas, *draw, width, height);
+    //    }
 
-        static void destroy(WSDraw *draw) {
-            if (draw->_scrollCanvas) {
-                __DBG_delete(draw->_scrollCanvas);
-                draw->_scrollCanvas = nullptr;
-            }
-        }
+    //    static void destroy(WSDraw *draw) {
+    //        if (draw->_scrollCanvas) {
+    //            __DBG_delete(draw->_scrollCanvas);
+    //            draw->_scrollCanvas = nullptr;
+    //        }
+    //    }
 
-    private:
-        WSDraw &_draw;
-        WeatherStationCanvas _canvas;
-        Event::Timer _timer;
-    };
+    //private:
+    //    WSDraw &_draw;
+    //    WeatherStationCanvas _canvas;
+    //    Event::Timer _timer;
+    //};
 
 #if WSDRAW_STATS
 private:
@@ -357,28 +407,47 @@ public:
         return F("Unknown");
     }
 
-protected:
+public:
+#ifdef _MSC_VER
+    using WeatherStationConfigType = WeatherStationConfig::Config_t;
+#else
     using WeatherStationConfigType = KFCConfigurationClasses::Plugins::WeatherStation::ConfigStructType;
+#endif
+    using BaseScreen = WeatherStation::Screen::BaseScreen;
+    // friend WeatherStation::Screen::BaseScreen;
+    friend BaseScreen;
+
+    WeatherStationConfigType &getConfig() {
+        return _config;
+    }
+
+    void setScreen(BaseScreen *screen);
+
+    BaseScreen *_screen;
+    Event::Timer _screenTimer;
+    uint32_t _screenLastUpdateTime;
+
+protected:
 
     String _getTemperature(float value, bool kelvin = false/*celsius = true*/);
     virtual void _getIndoorValues(float *data);
 
-    ScrollCanvas *_scrollCanvas;
-    uint8_t _scrollPosition;
+    //ScrollCanvas *_scrollCanvas;
+    //uint8_t _scrollPosition;
     OpenWeatherMapAPI _weatherApi;
-    String _weatherError;
 
-    uint8_t _currentScreen;
-    String _text;
-    const GFXfont *_textFont;
+    bool _redrawFlag: 1;
+    // uint8_t _currentScreen;
+    // String _text;
+    // const GFXfont *_textFont;
 
-    time_t _lastTime;
+    // time_t _lastTime;
     WeatherStationConfigType _config;
 
-    uint16_t _offsetX;
-    int16_t _offsetY;
+    // uint16_t _offsetX;
+    // int16_t _offsetY;
 
-    Event::Timer _displayMessageTimer;
+    // Event::Timer _displayMessageTimer;
 
 #if WSDRAW_STATS
     bool _debug_stats;
@@ -386,3 +455,5 @@ protected:
     std::map<String, StatsBuffer> _stats;
 #endif
 };
+
+#endif

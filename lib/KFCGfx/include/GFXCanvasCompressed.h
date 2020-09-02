@@ -12,6 +12,7 @@ RLE compressed 16bit canvas
 
 #include <MicrosTimer.h>
 #include <PrintString.h>
+#include <Buffer.h>
 #include <forward_list>
 #include "AdafruitGFXExtension.h"
 #include "GFXCanvasConfig.h"
@@ -89,7 +90,7 @@ public:
             }
         }
 
-        _cache.free(*this);
+        _cache.release(*this);
         __DBG_STATS(stats.drawInto += timer.getTime());
     }
 
@@ -122,7 +123,7 @@ private:
 
 protected:
     virtual void _RLEdecode(ByteBuffer &buffer, ColorType *output);
-    virtual void _RLEencode(ColorType *data, ByteBuffer &buffer);
+    virtual void _RLEencode(ColorType *data, Buffer &buffer);
 
     // colors are translated only inside the decode/encode methods
     virtual ColorType getPaletteColor(ColorType color) const;

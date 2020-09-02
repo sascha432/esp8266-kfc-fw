@@ -21,7 +21,7 @@ public:
     virtual void fillScreen(uint16_t color);
 
     virtual void _RLEdecode(ByteBuffer &buffer, ColorType *output);
-    virtual void _RLEencode(ColorType *data, ByteBuffer &buffer);
+    virtual void _RLEencode(ColorType *data, Buffer &buffer);
     virtual ColorType getPaletteColor(ColorType color) const;
     virtual const ColorPalette *getPalette() const;
 

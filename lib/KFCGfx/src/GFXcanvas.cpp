@@ -24,7 +24,7 @@ ColorPalette::ColorPalette() : _count(0), _palette{}
 
 ColorType &ColorPalette::at(int index)
 {
-    __DBG_BOUNDS_ACTION(__DBG_BOUNDS_assert((unsigned)index < (unsigned)_count), return _palette[0]);
+    __DBG_BOUNDS_ACTION(__DBG_BOUNDS_assertp((unsigned)index < (unsigned)_count, "index=%d count=%d", index, _count), return _palette[0]);
     index = (unsigned)index % _count;
     __DBG_BOUNDS_ACTION(__DBG_BOUNDS_assert((unsigned)index < (unsigned)_count), return _palette[0]);
     return _palette[index];
@@ -32,7 +32,7 @@ ColorType &ColorPalette::at(int index)
 
 ColorType ColorPalette::at(ColorType index) const
 {
-    __DBG_BOUNDS_ACTION(__DBG_BOUNDS_assert((unsigned)index < (unsigned)_count), return _palette[0]);
+    __DBG_BOUNDS_ACTION(__DBG_BOUNDS_assertp((unsigned)index < (unsigned)_count, "index=%d count=%d", index, _count), return _palette[0]);
     if (_count == 0) {
         return 0;
     }

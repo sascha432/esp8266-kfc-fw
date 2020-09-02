@@ -62,10 +62,10 @@ void GFXCanvasCompressedPalette::_RLEdecode(ByteBuffer &buffer, ColorType *outpu
         __DBG_BOUNDS_RETURN(__DBG_BOUNDS_buffer_end(&output[rle - 1], &output[_width]));
         output = std::fill_n(output, rle, _palette[index]);
     }
-    __DBG_BOUNDS_assert(count == _width);
+    __DBG_BOUNDS_assertp(count == _width, "count=%u width=%u", count, _width);
 }
 
-void GFXCanvasCompressedPalette::_RLEencode(ColorType *data, ByteBuffer &buffer)
+void GFXCanvasCompressedPalette::_RLEencode(ColorType *data, Buffer &buffer)
 {
     // 4 bit: rle = data [0x0-0xe], 0xf indicates that a byte follows
     // 4 bit: palette index
@@ -89,10 +89,12 @@ void GFXCanvasCompressedPalette::_RLEencode(ColorType *data, ByteBuffer &buffer)
             auto index = _palette.addColor(lastColor);
             __DBG_BOUNDS_RETURN(__DBG_BOUNDS_assert(index != -1));
             if (rle > 0xf) {
-                buffer.push_bb(index << 4, rle - 0xf);
+                //buffer.push_bb(index << 4, rle - 0xf);
+                buffer.write(index << 4);
+                buffer.write(rle - 0xf);
             }
             else {
-                buffer.push(rle | (index << 4));
+                buffer.write(rle | (index << 4));
             }
             lastColor = color;
             rle = 1;
@@ -103,10 +105,12 @@ void GFXCanvasCompressedPalette::_RLEencode(ColorType *data, ByteBuffer &buffer)
         auto index = _palette.addColor(lastColor);
         __DBG_BOUNDS_RETURN(__DBG_BOUNDS_assert(index != -1));
         if (rle > 0xf) {
-            buffer.push_bb(index << 4, rle - 0xf);
+            //buffer.push_bb(index << 4, rle - 0xf);
+            buffer.write(index << 4);
+            buffer.write(rle - 0xf);
         }
         else {
-            buffer.push(rle | (index << 4));
+            buffer.write(rle | (index << 4));
         }
     }
     __DBG_BOUNDS_assert(count == _width);

@@ -72,6 +72,9 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
                 setText(args.get(1), FONTS_DEFAULT_MEDIUM);
                 _setScreen(TEXT_CLEAR);
             }
+            else if (args.equalsIgnoreCase(0, F("dump"))) {
+                BufferPool::getInstance().dump(args.getStream());
+            }
             else if (args.equalsIgnoreCase(0, F("attach"))) {
                 int mem = ESP.getFreeHeap();
                 if (_canvasLocked > 0) {

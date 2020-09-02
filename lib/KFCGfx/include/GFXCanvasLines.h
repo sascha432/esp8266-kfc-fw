@@ -22,8 +22,7 @@ namespace GFXCanvas {
 
         // height must match
         Lines(const Lines &_lines);
-
-        ~Lines();
+        virtual ~Lines();
 
         uHeightType height() const;
 

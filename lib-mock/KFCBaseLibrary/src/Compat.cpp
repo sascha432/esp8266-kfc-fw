@@ -71,23 +71,6 @@ void analogWrite(uint8_t pin, int value)
     printf("analogWrite(%u, %u)\n", pin, value);
 }
 
-static auto micros_start_time = std::chrono::high_resolution_clock::now();
-
-uint64_t micros64()
-{
-    return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - micros_start_time).count();
-}
-
-unsigned long millis(void)
-{
-    return static_cast<unsigned long>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - micros_start_time).count());
-}
-
-unsigned long micros(void)
-{
-    return static_cast<unsigned long>(micros64());
-}
-
 void shiftOut(uint8_t dataPin, uint8_t clockPin, uint8_t bitOrder, uint8_t val)
 {
 }
@@ -157,16 +140,6 @@ void EspClass::rtcClear() {
         memset(_rtcMemory, 0, rtcMemorySize);
         _writeRtcMemory();
     }
-}
-
-void delay(unsigned long time_ms)
-{
-    ets_timer_delay(time_ms);
-}
-
-void delayMicroseconds(unsigned int us)
-{
-    ets_timer_delay_us(us);
 }
 
 unsigned long pulseIn(uint8_t pin, uint8_t state, unsigned long timeout)

@@ -7,6 +7,14 @@
 #include <stdint.h>
 #include <chrono>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#ifndef ETS_MAIN_NO_MAIN_FUNC
+#    define ETS_MAIN_NO_MAIN_FUNC 0
+#endif
+
 #pragma pack(push, 4)
 
 #ifndef PSTR
@@ -46,11 +54,14 @@ typedef int32_t esp_err_t;
 
 typedef uint8_t byte;
 
-bool can_yield();
-void yield();
-void __loop_do_yield();
+extern bool can_yield();
+extern void yield();
+
 void __panic_func(const char *file, int line, const char *func);
-void end_loop(); // exit program
+uint64_t micros64();
+unsigned long millis(void);
+unsigned long micros(void);
+void delay(unsigned long time_ms);
 
 #define panic() __panic_func(PSTR(__FILE__), __LINE__, __func__)
 
@@ -65,15 +76,27 @@ int __xt_wsr_ps(int state);
 void ets_intr_lock(void);
 void ets_intr_unlock(void);
 
+void ets_timer_init(void);
+void ets_timer_deinit(void);
+
 #define ETS_INTR_LOCK() ets_intr_lock()
 
 #define ETS_INTR_UNLOCK() ets_intr_unlock()
 
 int ets_printf(const char *fmt, ...);
 
-extern volatile bool ets_is_running;
-bool is_loop_running();
-void loop();
-void setup();
+extern volatile bool __ets_is_running;
+extern bool __ets_is_loop_running();
+extern void __ets_end_loop();
+
+extern void __ets_post_loop_do_yield();
+extern void __ets_post_loop_exec_loop_functions();
+extern void __ets_pre_setup();
+extern void loop();
+extern void setup();
 
 #pragma pack(pop)
+
+#ifdef __cplusplus
+}
+#endif

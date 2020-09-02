@@ -161,7 +161,7 @@ public:
     void write(int idx, uint8_t val);
     void update(int idx, uint8_t val);
 
-private:
+protected:
     friend EERef;
 
     uint8_t __read(int const address);
@@ -230,15 +230,17 @@ public:
     // set write cycles for all cells to 0
     void clearWriteCycles();
 
- private:
+ protected:
      bool isProtected(uint32_t index, AccessProtection::Type accessType, bool debugBreak = false) const;
 
-private:
+protected:
     uint8_t *_eeprom;
     uint16_t _position;
     uint16_t _size;
+    bool _dirty;
+    uint8_t *&_data;
 
-private:
+protected:
     uint32_t *_eepromWriteCycles;
     uint32_t _cellLifetime;
     std::vector<AccessProtection> _accessProtection;

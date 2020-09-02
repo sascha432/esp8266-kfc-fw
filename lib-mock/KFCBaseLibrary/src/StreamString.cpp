@@ -23,7 +23,7 @@ int StreamString::read() {
     if(length()) {
         char c = charAt(0);
         remove(0, 1);
-        return c;
+        return (uint8_t)c;
 
     }
     return -1;
@@ -32,7 +32,7 @@ int StreamString::read() {
 int StreamString::peek() {
     if(length()) {
         char c = charAt(0);
-        return c;
+        return (uint8_t)c;
     }
     return -1;
 }

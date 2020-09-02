@@ -7,12 +7,12 @@
 #include <Arduino_compat.h>
 #include "Stream.h"
 
-Stream::Stream(FILE *fp) : Print(), _timeout(1000), _fp(fp), _size(0)
+Stream::Stream(FILE *fp) : Print(), _timeout(1000), _fp(fp), _fp_size(0)
 {
     _fp = fp;
     if (fp) {
         _fp_seek(0, SeekEnd);
-        _size = _fp_position();
+        _fp_size = _fp_position();
         _fp_seek(0);
     }
 }
@@ -24,7 +24,7 @@ inline void Stream::setTimeout(unsigned long timeout)
 
 size_t Stream::size() const 
 {
-    return _size;
+    return _fp_size;
 }
 
 int Stream::read() {
@@ -77,11 +77,18 @@ void Stream::flush() {
 }
 
 size_t Stream::readBytes(char *buffer, size_t length) {
-    return _fp_read((uint8_t *)buffer, length);
+    return readBytes((uint8_t *)buffer, length);
 }
 
 size_t Stream::readBytes(uint8_t *buffer, size_t length) {
-    return readBytes((char *)buffer, length);
+    size_t written = 0;
+    while (available() && length--) {
+        *buffer++ = read();
+        written++;
+
+    }
+    return written;
+    //return _fp_read((uint8_t *)buffer, length);
 }
 
 int Stream::_fp_available() const {
@@ -100,7 +107,7 @@ size_t Stream::_fp_position() const {
 void Stream::_fp_set(FILE *fp) {
     _fp = fp;
     _fp_seek(0, SeekEnd);
-    _size = _fp_position();
+    _fp_size = _fp_position();
     _fp_seek(0, SeekSet);
     clearerr(_fp);
 }

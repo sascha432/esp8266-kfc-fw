@@ -12,8 +12,8 @@ void __panic_func(const char *file, int line, const char *func)
 
 	ets_printf("PANIC in %s:%u function %s\n", file, line, func);
 
-	while (ets_is_running) {
-		Sleep(1);
+	while (__ets_is_running) {
+		delay(1);
 	}
 }
 

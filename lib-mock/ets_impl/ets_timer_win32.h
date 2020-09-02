@@ -16,21 +16,20 @@ typedef void ETSTimerFunc(void *timer_arg);
 typedef struct _ETSTIMER_ {
     struct _ETSTIMER_ *timer_next;
     std::chrono::steady_clock::time_point timer_expire;
-    uint32_t timer_period;
+    uint64_t timer_period;
     ETSTimerFunc *timer_func;
     void *timer_arg;
     uint32_t init;
 } ETSTimer;
 
-extern volatile bool __ets_in_timer_isr;
 extern ETSTimer *timer_list;
-void __start_timer_thread_func();
 
 
 void ets_timer_delay(uint32_t time_ms);
 void ets_timer_delay_us(uint64_t time_us);
 
 void ets_timer_init(void);
+void ets_timer_deinit(void);
 
 void ets_timer_setfn(ETSTimer *ptimer, ETSTimerFunc *pfunction, void *parg);
 void ets_timer_arm_new(ETSTimer *ptimer, int time_ms, int repeat_flag, int isMillis);

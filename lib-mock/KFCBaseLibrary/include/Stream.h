@@ -68,5 +68,5 @@ public:
 
 private:
     FILE *_fp;
-    size_t _size;
+    size_t _fp_size;
 };

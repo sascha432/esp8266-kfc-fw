@@ -18,7 +18,7 @@ EERef &EERef::operator=(uint8_t in)
     return *this; 
 }
 
-EEPROMFile::EEPROMFile(uint16_t size) : _eeprom(nullptr), _position(0), _size(size), _eepromWriteCycles(nullptr), _cellLifetime(100000)
+EEPROMFile::EEPROMFile(uint16_t size) : _eeprom(nullptr), _position(0), _size(size), _dirty(true), _data(_eeprom), _eepromWriteCycles(nullptr), _cellLifetime(100000)
 {
 }
 

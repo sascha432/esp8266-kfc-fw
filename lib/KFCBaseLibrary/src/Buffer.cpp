@@ -136,7 +136,7 @@ bool Buffer::equals(const Buffer &buffer) const
 
 void Buffer::clear()
 {
-    // __LDBG_printf("len=%u size=%u ptr=%p", _length, _size, _buffer);
+    // __LDBG_printf("len=%u size=%u ptr=%p", _length, _fp_size, _buffer);
     if (_buffer) {
         __LDBG_free(_buffer);
         _buffer = nullptr;
@@ -244,12 +244,15 @@ void Buffer::remove(size_t index, size_t count)
 //     memmove(_buffer + index, _buffer + index + count, _length - index);
 // }
 
-    // move data to index and fill up with zeros
+    _remove(index, count);
+}
+
+void Buffer::_remove(size_t index, size_t count)
+{
     auto dst_begin = begin() + index;
     std::copy(dst_begin + count, end(), dst_begin);
     _length -= count;
     std::fill(begin() + _length, _buffer_end(), 0);
-
 }
 
 void Buffer::removeAndShrink(size_t index, size_t count, size_t minFree)
@@ -268,7 +271,7 @@ bool Buffer::_changeBuffer(size_t newSize)
     else {
         auto resize = _alignSize(newSize);
         if (resize != _size) {
-            // __LDBG_printf("size=%d", _size);
+            // __LDBG_printf("size=%d", _fp_size);
             if (!_buffer) {
                 _buffer = __LDBG_malloc_buf(resize);
                 if (!_buffer) {
@@ -292,6 +295,6 @@ bool Buffer::_changeBuffer(size_t newSize)
             std::fill(_data_end(), _buffer_end(), 0);
         }
     }
-    // __LDBG_printf("length=%d size=%d", _length, _size);
+    // __LDBG_printf("length=%d size=%d", _length, _fp_size);
     return true;
 }

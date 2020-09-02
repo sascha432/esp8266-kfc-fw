@@ -6,55 +6,35 @@
 
 int BufferStream::available()
 {
-    int len = length() - _position;
-    return len > 0 ? len : 0;
-}
-
-size_t BufferStream::available() const
-{
-    int len = length() - _position;
-    return len > 0 ? len : 0;
+    return _available();
 }
 
 bool BufferStream::seek(long pos, int mode)
 {
     if (mode == SEEK_SET) {
-        if ((size_t)pos >= length()) {
+        if ((size_t)pos >= _length) {
             return false;
         }
         _position = pos;
     }
     else if (mode == SEEK_CUR) {
-        if ((size_t)(_position + pos) >= length()) {
+        if ((size_t)(_position + pos) >= _length) {
             return false;
         }
         _position += pos;
     }
     else if (mode == SEEK_END) {
-        if ((size_t)pos > Buffer::length()) {
+        if ((size_t)pos > _length) {
             return false;
         }
-        _position = length() - pos;
+        _position = _length - pos;
     }
     return true;
 }
 
-char BufferStream::charAt(size_t pos) const
-{
-    if (available()) {
-        return _buffer[pos];
-    }
-    return 0;
-}
-
-size_t BufferStream::position() const
-{
-    return _position;
-}
-
 int BufferStream::read()
 {
-    if (available()) {
+    if (_available()) {
         return _buffer[_position++];
     }
     return -1;
@@ -62,7 +42,7 @@ int BufferStream::read()
 
 int BufferStream::peek()
 {
-    if (available()) {
+    if (_available()) {
         return _buffer[_position];
     }
     return -1;
@@ -70,8 +50,9 @@ int BufferStream::peek()
 
 size_t BufferStream::readBytes(uint8_t *buffer, size_t length)
 {
-    if (available()) {
-        auto len = std::min((size_t)available(), length);
+    size_t len;
+    if ((len = _available()) != 0) {
+        len = std::min(len, length);
         memcpy(buffer, &_buffer[_position], len);
         _position += len;
         return len;
@@ -79,14 +60,29 @@ size_t BufferStream::readBytes(uint8_t *buffer, size_t length)
     return 0;
 }
 
-void BufferStream::clear()
+void BufferStream::remove(size_t index, size_t count)
 {
-    Buffer::clear();
-    _position = 0;
+    if (!count || index >= _length) {
+        return;
+    }
+    if (count > _length - index) {
+        count = _length - index;
+    }
+    if (_position >= index) {
+        if (_position < index + count) {
+            _position = index;
+        }
+        else {
+            _position -= count;
+        }
+    }
+    Buffer::_remove(index, count);
 }
 
-void BufferStream::reset()
+void BufferStream::removeAndShrink(size_t index, size_t count, size_t minFree)
 {
-    _length = 0;
-    _position = 0;
+    remove(index, count);
+    if (_length + minFree < _size) {
+        shrink(_length);
+    }
 }

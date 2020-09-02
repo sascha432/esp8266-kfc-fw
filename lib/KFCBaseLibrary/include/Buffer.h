@@ -71,7 +71,7 @@ public:
     inline char *begin_str() {
 #if 0
         // the buffer is filled zero padded already
-        if (_length == _size && reserve(_length + 1)) {
+        if (_length == _fp_size && reserve(_length + 1)) {
             _buffer[_length] = 0;
         }
 #else
@@ -218,6 +218,7 @@ public:
 
 protected:
     bool _changeBuffer(size_t newSize);
+    void _remove(size_t index, size_t count);
 
     inline uint8_t *_data_end() const {
         return _buffer + _length;

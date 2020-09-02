@@ -123,8 +123,10 @@ void ClockPlugin::createWebUI(WebUI &webUI)
 
 void ClockPlugin::_broadcastWebUI()
 {
-    JsonUnnamedObject json(2);
-    json.add(JJ(type), JJ(ue));
-    getValues(json.addArray(JJ(events)));
-    WsWebUISocket::broadcast(WsWebUISocket::getSender(), json);
+    if (WsWebUISocket::getWsWebUI() && WsWebUISocket::hasClients(WsWebUISocket::getWsWebUI())) {
+        JsonUnnamedObject json(2);
+        json.add(JJ(type), JJ(ue));
+        getValues(json.addArray(JJ(events)));
+        WsWebUISocket::broadcast(WsWebUISocket::getSender(), json);
+    }
 }

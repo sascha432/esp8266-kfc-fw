@@ -92,6 +92,11 @@ uint8_t Sensor_SystemMetrics::getAutoDiscoveryCount() const
 #endif
 }
 
+void Sensor_SystemMetrics::getStatus(Print &output)
+{
+    output.printf_P(PSTR("System Metrics" HTML_S(br)));
+}
+
 void Sensor_SystemMetrics::publishState(MQTTClient *client)
 {
     if (client && client->isConnected()) {

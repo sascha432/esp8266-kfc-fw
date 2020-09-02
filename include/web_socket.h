@@ -101,6 +101,8 @@ public:
     // verify that the client is attached to the server
     static void safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, const String &message);
 
+    static bool hasClients(AsyncWebSocket *server);
+
 public:
     typedef enum {
         CONNECT,

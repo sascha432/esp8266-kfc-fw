@@ -305,6 +305,7 @@ void SwitchPlugin::_writeStates()
 
 void SwitchPlugin::_publishState(MQTTClient *client, int8_t channel)
 {
+    __DBG_println();
     if (client) {
         for (size_t i = 0; i < _pins.size(); i++) {
             if (channel == -1 || (uint8_t)channel == i) {

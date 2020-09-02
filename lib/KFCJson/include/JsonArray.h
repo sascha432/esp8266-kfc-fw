@@ -84,6 +84,13 @@ public:
         return *getVector();
     }
 
+    void clear() {
+        for(auto variant : elements()) {
+            __LDBG_delete(variant);
+        }
+        elements().clear();
+    }
+
     inline size_t size() {
         return getVector()->size();
     }
@@ -100,6 +107,7 @@ public:
     using JsonArrayMethods::JsonArrayMethods::addObject;
     using JsonArrayMethods::JsonArrayMethods::size;
     using JsonArrayMethods::JsonArrayMethods::elements;
+    using JsonArrayMethods::JsonArrayMethods::clear;
 
     JsonUnnamedArray(size_t reserve = 0);
 
@@ -118,6 +126,7 @@ public:
     using JsonArrayMethods::JsonArrayMethods::addObject;
     using JsonArrayMethods::JsonArrayMethods::size;
     using JsonArrayMethods::JsonArrayMethods::elements;
+    using JsonArrayMethods::JsonArrayMethods::clear;
 
     JsonArray(const JsonString &name, size_t reserve = 0);
 

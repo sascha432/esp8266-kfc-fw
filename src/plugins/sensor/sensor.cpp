@@ -130,14 +130,17 @@ void SensorPlugin::timerEvent(Event::CallbackTimerPtr timer)
 // low priority timer executed in main loop()
 void SensorPlugin::_timerEvent()
 {
-    JsonUnnamedObject json(2);
-    json.add(JJ(type), JJ(ue));
-    auto &events = json.addArray(JJ(events));
-    for(auto sensor: _sensors) {
-        sensor->timerEvent(events);
-    }
-    if (events.size()) {
-        WsWebUISocket::broadcast(WsWebUISocket::getSender(), json);
+    if (WsWebUISocket::getWsWebUI() && WsWebUISocket::hasClients(WsWebUISocket::getWsWebUI())) {
+        JsonUnnamedObject json(2);
+        json.add(JJ(type), JJ(ue));
+        auto &events = json.addArray(JJ(events));
+        for(auto sensor: _sensors) {
+            sensor->timerEvent(events);
+        }
+            __DBG_printf("events=%u", events.size());
+        if (events.size()) {
+            WsWebUISocket::broadcast(WsWebUISocket::getSender(), json);
+        }
     }
 }
 

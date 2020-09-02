@@ -384,6 +384,19 @@ void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, const __Flash
     }
 }
 
+
+bool WsClient::hasClients(AsyncWebSocket *server)
+{
+    if (server) {
+        for(auto socket: server->getClients()) {
+            if (socket->status() == WS_CONNECTED && socket->_tempObject && reinterpret_cast<WsClient *>(socket->_tempObject)->isAuthenticated()) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, const String &message)
 {
     for(auto socket: server->getClients()) {

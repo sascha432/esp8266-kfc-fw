@@ -138,15 +138,17 @@ String ClockPlugin::_getLightSensorWebUIValue()
 
 void ClockPlugin::_updateLightSensorWebUI()
 {
-    JsonUnnamedObject json(2);
-    json.add(JJ(type), JJ(ue));
-    auto &events = json.addArray(JJ(events), 1);
-    auto &obj = events.addObject(3);
-    obj.add(JJ(id), FSPGM(light_sensor, "light_sensor"));
-    obj.add(JJ(value), _getLightSensorWebUIValue());
-    obj.add(JJ(state), true);
+    if (WsWebUISocket::getWsWebUI() && WsWebUISocket::hasClients(WsWebUISocket::getWsWebUI())) {
+        JsonUnnamedObject json(2);
+        json.add(JJ(type), JJ(ue));
+        auto &events = json.addArray(JJ(events), 1);
+        auto &obj = events.addObject(3);
+        obj.add(JJ(id), FSPGM(light_sensor, "light_sensor"));
+        obj.add(JJ(value), _getLightSensorWebUIValue());
+        obj.add(JJ(state), true);
 
-    WsWebUISocket::broadcast(WsWebUISocket::getSender(), json);
+        WsWebUISocket::broadcast(WsWebUISocket::getSender(), json);
+    }
 }
 
 uint16_t ClockPlugin::_readLightSensor() const

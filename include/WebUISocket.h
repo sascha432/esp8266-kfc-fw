@@ -15,6 +15,7 @@
 class WsWebUISocket : public WsClient {
 public:
     using WsClient::WsClient;
+    using WsClient::hasClients;
 
     static WsClient *getInstance(AsyncWebSocketClient *socket);
 

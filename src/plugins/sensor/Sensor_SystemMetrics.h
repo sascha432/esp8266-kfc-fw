@@ -25,7 +25,7 @@ public:
 
     virtual void getValues(JsonArray &json, bool timer) override {}
     virtual void createWebUI(WebUI &webUI, WebUIRow **row) override {}
-    virtual void getStatus(Print &output) override {}
+    virtual void getStatus(Print &output) override;
 
     virtual MQTTSensorSensorType getType() const override {
         return MQTTSensorSensorType::SYSTEM_METRICS;

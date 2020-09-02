@@ -2,6 +2,8 @@
   Author: sascha_lammers@gmx.de
 */
 
+#include <debug_helper.h>
+
 #if HAVE_MEM_DEBUG
 
 #include <Arduino_compat.h>

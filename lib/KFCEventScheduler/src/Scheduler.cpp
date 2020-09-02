@@ -163,7 +163,7 @@ void Scheduler::_cleanup()
 
 void Event::Scheduler::_sort()
 {
-    // if _size changed, new timers have been added
+    // if _fp_size changed, new timers have been added
     __LDBG_printf("size=%u timers=%u", _size, _timers.size());
     //__dump(_timers);
     // sort by priority and move all nullptr to the end for removal

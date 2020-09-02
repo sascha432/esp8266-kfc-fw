@@ -4,12 +4,22 @@
 
 #pragma once
 
+#if defined(HAVE_MEM_NO_DEBUG) || defined(KFC_DEVICE_ID)
+#undef HAVE_MEM_DEBUG
+#endif
+
+#ifndef HAVE_MEM_DEBUG
+#define HAVE_MEM_DEBUG                                      0
+#endif
+
+
 #include <Arduino_compat.h>
 #include <Print.h>
 #include <StreamWrapper.h>
 #include <vector>
 #include "constexpr_tools.h"
 #include "section_defines.h"
+
 
 #ifdef _MSC_VER
 #ifndef DEBUG_INCLUDE_SOURCE_INFO
@@ -138,10 +148,6 @@ extern const char ___debugPrefix[] PROGMEM;
 
 #include "DebugContext.h"
 
-#ifndef HAVE_MEM_DEBUG
-#define HAVE_MEM_DEBUG                                      0
-#endif
-
 // debug
 #if HAVE_MEM_DEBUG
 #include "DebugMemoryHelper.h"
@@ -175,31 +181,34 @@ extern const char ___debugPrefix[] PROGMEM;
 #define __DBG_NOP_free(ptr)                                 KFCMemoryDebugging::_free(DEBUG_HELPER_POSITION, ptr)
 
 #else
-// #define __DBG_allocator                                     __NDBG_allocator
-// #define __DBG_operator_new(...)                             __NDBG_operator_new(__VA_ARGS__)
-// #define __DBG_operator_delete(...)                          __NDBG_operator_delete(__VA_ARGS__)
-// #define __DBG_track_new(...)                                __NDBG_track_new(__VA_ARGS__)
-// #define __DBG_track_delete(...)                             __NDBG_track_delete(__VA_ARGS__)
-// #define __DBG_new(...)                                      __NDBG_new(__VA_ARGS__)
-// #define __DBG_delete(...)                                   __NDBG_delete(__VA_ARGS__)
-// #define __DBG_new_array(...)                                __NDBG_new_array(__VA_ARGS__)
-// #define __DBG_delete_array(...)                             __NDBG_delete_array(__VA_ARGS__)
-// #define __DBG_malloc(...)                                   __NDBG_malloc(__VA_ARGS__)
-// #define __DBG_realloc(...)                                  __NDBG_realloc(__VA_ARGS__)
-// #define __DBG_free(...)                                     __NDBG_free(__VA_ARGS__)
-// #define __DBG_malloc_str(...)                               __NDBG_malloc_str(__VA_ARGS__)
-// #define __DBG_malloc_buf(...)                               __NDBG_malloc_buf(__VA_ARGS__)
-// #define __DBG_realloc_str(...)                              __NDBG_realloc_str(__VA_ARGS__)
-// #define __DBG_realloc_buf(...)                              __NDBG_realloc_buf(__VA_ARGS__)
-// #define __DBG_strdup(...)                                   __NDBG_strdup(__VA_ARGS__)
-// #define __DBG_strdup_P(...)                                 __NDBG_strdup_P(__VA_ARGS__)
-// #define __DBG_NOP_new(...)                                  __NDBG_NOP_new(__VA_ARGS__)
-// #define __DBG_NOP_delete(...)                               __NDBG_NOP_delete(__VA_ARGS__)
-// #define __DBG_NOP_new_array(...)                            __NDBG_NOP_new_array(__VA_ARGS__)
-// #define __DBG_NOP_delete_array(...)                         __NDBG_NOP_delete_array(__VA_ARGS__)
-// #define __DBG_NOP_malloc(...)                               __NDBG_NOP_malloc(__VA_ARGS__)
-// #define __DBG_NOP_realloc(...)                              __NDBG_NOP_realloc(__VA_ARGS__)
-// #define __DBG_NOP_free(...)                                 __NDBG_NOP_free(__VA_ARGS__)
+
+#define __DBG_allocator                                     __NDBG_allocator
+#define __DBG_operator_new(...)                             __NDBG_operator_new(__VA_ARGS__)
+#define __DBG_operator_delete(...)                          __NDBG_operator_delete(__VA_ARGS__)
+#define __DBG_track_new(...)                                __NDBG_track_new(__VA_ARGS__)
+#define __DBG_track_delete(...)                             __NDBG_track_delete(__VA_ARGS__)
+#define __DBG_new(...)                                      __NDBG_new(__VA_ARGS__)
+#define __DBG_delete(...)                                   __NDBG_delete(__VA_ARGS__)
+#define __DBG_new_array(...)                                __NDBG_new_array(__VA_ARGS__)
+#define __DBG_delete_array(...)                             __NDBG_delete_array(__VA_ARGS__)
+#define __DBG_malloc(...)                                   __NDBG_malloc(__VA_ARGS__)
+#define __DBG_realloc(...)                                  __NDBG_realloc(__VA_ARGS__)
+#define __DBG_free(...)                                     __NDBG_free(__VA_ARGS__)
+
+#define __DBG_malloc_str(...)                               __NDBG_malloc_str(__VA_ARGS__)
+#define __DBG_malloc_buf(...)                               __NDBG_malloc_buf(__VA_ARGS__)
+#define __DBG_realloc_str(...)                              __NDBG_realloc_str(__VA_ARGS__)
+#define __DBG_realloc_buf(...)                              __NDBG_realloc_buf(__VA_ARGS__)
+#define __DBG_strdup(...)                                   __NDBG_strdup(__VA_ARGS__)
+#define __DBG_strdup_P(...)                                 __NDBG_strdup_P(__VA_ARGS__)
+
+#define __DBG_NOP_new(...)                                  __NDBG_NOP_new(__VA_ARGS__)
+#define __DBG_NOP_delete(...)                               __NDBG_NOP_delete(__VA_ARGS__)
+#define __DBG_NOP_new_array(...)                            __NDBG_NOP_new_array(__VA_ARGS__)
+#define __DBG_NOP_delete_array(...)                         __NDBG_NOP_delete_array(__VA_ARGS__)
+#define __DBG_NOP_malloc(...)                               __NDBG_NOP_malloc(__VA_ARGS__)
+#define __DBG_NOP_realloc(...)                              __NDBG_NOP_realloc(__VA_ARGS__)
+#define __DBG_NOP_free(...)                                 __NDBG_NOP_free(__VA_ARGS__)
 
 #endif
 

@@ -154,25 +154,28 @@ bool DimmerChannel::off()
 
 void DimmerChannel::publishState(MQTTClient *client)
 {
+    __DBG_println();
     if (!client) {
         client = MQTTClient::getClient();
     }
     if (client && client->isConnected()) {
-        __LDBG_printf("DimmerChannel[%u]::publishState(): brightness %d, state %u, client %p", _channel, _data.brightness.value, _data.state.value, client);
+        __LDBG_printf("channel=%u brightness=%d state=%u client=%p", _channel, _data.brightness.value, _data.state.value, client);
 
         client->publish(_data.state.state, true, String(_data.state.value));
         client->publish(_data.brightness.state, true, String(_data.brightness.value));
     }
 
-    JsonUnnamedObject json(2);
-    json.add(JJ(type), JJ(ue));
-    auto &events = json.addArray(JJ(events), 1);
-    auto &obj = events.addObject(3);
-    PrintString id(F("dimmer_channel%u"), _channel);
-    obj.add(JJ(id), id);
-    obj.add(JJ(value), _data.brightness.value);
-    obj.add(JJ(state), _data.state.value);
-    WsWebUISocket::broadcast(WsWebUISocket::getSender(), json);
+    if (WsWebUISocket::getWsWebUI() && WsWebUISocket::hasClients(WsWebUISocket::getWsWebUI())) {
+        JsonUnnamedObject json(2);
+        json.add(JJ(type), JJ(ue));
+        auto &events = json.addArray(JJ(events), 1);
+        auto &obj = events.addObject(3);
+        PrintString id(F("dimmer_channel%u"), _channel);
+        obj.add(JJ(id), id);
+        obj.add(JJ(value), _data.brightness.value);
+        obj.add(JJ(state), _data.state.value);
+        WsWebUISocket::broadcast(WsWebUISocket::getSender(), json);
+    }
 }
 
 bool DimmerChannel::getOnState() const

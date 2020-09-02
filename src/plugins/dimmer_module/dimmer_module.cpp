@@ -456,7 +456,6 @@ void DimmerModulePlugin::reconfigure(const String &source)
         _beginMqtt();
     }
     else {
-        writeConfig();
         _endButtons();
         _beginButtons();
     }

@@ -37,11 +37,10 @@ Dimmer_Base::Dimmer_Base() :
 
 void Dimmer_Base::_begin()
 {
-    _debug_println();
+    __LDBG_println();
     _version = Version();
 
 #if IOT_DIMMER_MODULE_INTERFACE_UART
-    _wire.onReadSerial(SerialHandler::Wrapper::pollSerial);
     _client = &serialHandler.addClient(onData, SerialHandler::EventType::READ);
     #if AT_MODE_SUPPORTED
         // disable_at_mode(Serial);
@@ -53,7 +52,7 @@ void Dimmer_Base::_begin()
     _wire.begin(DIMMER_I2C_ADDRESS + 1);
     _wire.onReceive(Dimmer_Base::onReceive);
 
-    _Scheduler.add(2000, false, [this](Event::CallbackTimerPtr timer) { // delay for 2 seconds
+    _Scheduler.add(Event::milliseconds(2000), false, [this](Event::CallbackTimerPtr timer) { // delay for 2 seconds
         if (_wire.lock()) {
             _wire.beginTransmission(DIMMER_I2C_ADDRESS);
             _wire.write(DIMMER_REGISTER_COMMAND);
@@ -65,10 +64,11 @@ void Dimmer_Base::_begin()
 
 #else
     // ESP I2C does not support slave mode. Use timer to poll metrics instead
-    _timer.addTimer(2000, true, Dimmer_Base::fetchMetrics);
+    _Timer(_timer).add(Event::milliseconds(2000), true, Dimmer_Base::fetchMetrics);
 #endif
 
-    readConfig();
+    _config = Plugins::Dimmer::getConfig();
+    _readConfig(_config);
 
     if (_wire.lock()) {
         _wire.beginTransmission(DIMMER_I2C_ADDRESS);
@@ -87,7 +87,7 @@ void Dimmer_Base::_begin()
 
 void Dimmer_Base::_end()
 {
-    _debug_println();
+    __LDBG_println();
 
     _version = Version();
 
@@ -110,23 +110,24 @@ void Dimmer_Base::_end()
 
 void Dimmer_Base::onData(Stream &client)
 {
-    // __LDBG_printf("length=%u", len);
+    // __DBG_printf("length=%u", len);
     while(client.available()) {
-        // __LDBG_printf("feed=%u '%c'", *buffer, *buffer);
-        dimmer_plugin._wire.feed(client.read());
+        auto data = client.read();
+        // __DBG_printf("feed=%u '%c'", data, data);
+        dimmer_plugin._wire.feed(data);
     }
 }
 
 void Dimmer_Base::onReceive(int length)
 {
-    // __LDBG_printf("length=%u", length);
+    // __DBG_printf("len=%u", length);
     dimmer_plugin._onReceive(length);
 }
 
 void Dimmer_Base::_onReceive(size_t length)
 {
     auto type = _wire.read();
-    __LDBG_printf("length=%u type=%02x", length, type);
+    // __LDBG_printf("length=%u type=%02x", length, type);
 
     if (type == DIMMER_METRICS_REPORT && length >= sizeof(dimmer_metrics_t) + 1) {
         dimmer_metrics_t metrics;
@@ -145,9 +146,7 @@ void Dimmer_Base::_onReceive(size_t length)
 
 void Dimmer_Base::fetchMetrics(Event::CallbackTimerPtr timer)
 {
-    if (timer->getDelay() != METRICS_DEFAULT_UPDATE_RATE) {
-        timer->rearm(METRICS_DEFAULT_UPDATE_RATE);
-    }
+    timer->updateInterval(Event::milliseconds(METRICS_DEFAULT_UPDATE_RATE));
     // using dimmer_plugin avoids adding extra static variable to Dimmer_Base
     dimmer_plugin._fetchMetrics();
 }
@@ -173,37 +172,46 @@ void Dimmer_Base::_fetchMetrics()
 
 #endif
 
-void Dimmer_Base::readConfig()
+void Dimmer_Base::_readConfig(ConfigType &config)
 {
-    _config = Plugins::Dimmer::getConfig();
-    _config.config_valid = false;
+    config.config_valid = false;
 
     for(uint8_t i = 0; i < 3; i++) {
 
+        uint8_t res1 = 0xff, res2 = 0;
+        size_t res3 = 0;
+        bool res4;
+
         __LDBG_printf("attempt=%u", i);
 
-        if (_wire.lock()) {
+        if ((res4 = _wire.lock())) {
             register_mem_cfg_t cfg;
             _wire.beginTransmission(DIMMER_I2C_ADDRESS);
             _wire.write(DIMMER_REGISTER_READ_LENGTH);
             _wire.write(DIMMER_REGISTER_CONFIG_SZ);
             _wire.write(DIMMER_REGISTER_CONFIG_OFS);
+
+            res1 = _wire.endTransmission();
+            res2 = _wire.requestFrom(DIMMER_I2C_ADDRESS, DIMMER_REGISTER_CONFIG_SZ);
+
             if (
-                (_wire.endTransmission() == 0) &&
-                (_wire.requestFrom(DIMMER_I2C_ADDRESS, DIMMER_REGISTER_CONFIG_SZ) == sizeof(cfg)) &&
-                (_wire.read(cfg) == sizeof(cfg))
+                (res1 == 0) &&
+                (res2 == sizeof(cfg))
             ) {
-                _config.config_valid = true;
-                _config.fw = cfg;
-                _wire.unlock();
-                __LDBG_print("read success");
-                return;
+                if ((res3 = _wire.read(cfg)) == sizeof(cfg)) {
+                    config.config_valid = true;
+                    config.fw = cfg;
+                    _wire.unlock();
+                    __LDBG_print("read success");
+                    break;
+                }
             }
-            else {
-                _config.fw = {};
-            }
+            config.fw = {};
+
         }
         _wire.unlock();
+
+        __DBG_printf("trans=%u lock=%u request=%u read=%u can_yield=%u", res1, res4, res2, res3, can_yield());
 
         if (!can_yield()) {
             break;
@@ -211,45 +219,62 @@ void Dimmer_Base::readConfig()
 
         delay(50);
     }
-    __LDBG_print("read failed");
-    WebUIAlerts_error(F("Reading firmware configuration failed"), AlertMessage::ExpiresType::REBOOT);
+
+    // if address does not match member, copy data
+    if (&config != &_config) {
+        _config = config;
+    }
+
+    if (!config.config_valid) {
+        __LDBG_print("read failed");
+        WebUIAlerts_error(F("Reading firmware configuration failed"), AlertMessage::ExpiresType::REBOOT);
+    }
 }
 
-void Dimmer_Base::writeConfig()
+void Dimmer_Base::_writeConfig(ConfigType &config)
 {
-    if (!_config.config_valid) { // readConfig() was not successful
-        __LDBG_print("invalid config");
-        WebUIAlerts_error(F("Cannot write firmware configuration"), AlertMessage::ExpiresType::REBOOT);
-        return;
-    }
+    if (config.config_valid) {
+        config.fw.fade_in_time = config.fade_time;
+        // if address does not match member, copy data
+        if (&config != &_config) {
+            _config = config;
+        }
 
-    _config.fw.fade_in_time = _config.fade_time;
+        for(uint8_t i = 0; i < 3; i++) {
+            uint8_t res1 = 0xff;
+            bool res2;
 
-    for(uint8_t i = 0; i < 3; i++) {
+            __LDBG_printf("attempt=%u", i);
 
-        __LDBG_printf("attempt=%u", i);
-
-        if (_wire.lock()) {
-            _wire.beginTransmission(DIMMER_I2C_ADDRESS);
-            _wire.write(DIMMER_REGISTER_CONFIG_OFS);
-            _wire.write(_config.fw);
-            if (_wire.endTransmission() == 0) {
-                writeEEPROM(true);
-                _wire.unlock();
-                __LDBG_print("write success");
-                return;
+            if ((res2 = _wire.lock()) != false) {
+                _wire.beginTransmission(DIMMER_I2C_ADDRESS);
+                _wire.write(DIMMER_REGISTER_CONFIG_OFS);
+                _wire.write(config.fw);
+                if ((res1 = _wire.endTransmission()) == 0) {
+                    writeEEPROM(true);
+                    _wire.unlock();
+                    config.config_valid = true;
+                    __LDBG_print("write success");
+                    break;
+                }
             }
-        }
-        _wire.unlock();
+            _wire.unlock();
+            config.config_valid = false;
 
-        if (!can_yield()) {
-            break;
-        }
+            __DBG_printf("trans=%u lock=%u can_yield=%u", res1, res2, can_yield());
 
-        delay(50);
+            if (!can_yield()) {
+                break;
+            }
+
+            delay(50);
+        }
     }
-    __LDBG_print("write failed");
-    WebUIAlerts_error(F("Writing firmware configuration failed"), AlertMessage::ExpiresType::REBOOT);
+
+    if (!config.config_valid) {
+        __LDBG_print("write failed");
+        WebUIAlerts_error(F("Writing firmware configuration failed"), AlertMessage::ExpiresType::REBOOT);
+    }
 }
 
 void Dimmer_Base::_printStatus(Print &output)
@@ -366,7 +391,7 @@ void Dimmer_Base::writeEEPROM(bool noLocking)
 
 void Dimmer_Base::_getValues(JsonArray &array)
 {
-    _debug_println();
+    __LDBG_println();
     JsonUnnamedObject *obj;
 
     for (uint8_t i = 0; i < getChannelCount(); i++) {

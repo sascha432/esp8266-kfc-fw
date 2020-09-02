@@ -194,11 +194,16 @@ public:
     virtual void getStatus(Print &output) override;
     virtual void createWebUI(WebUI &webUI) override;
 
+    virtual void readConfig(DimmerModuleForm::ConfigType &cfg) {
+        _readConfig(cfg);
+    }
+
+    virtual void writeConfig(DimmerModuleForm::ConfigType &cfg) {
+        _writeConfig(cfg);
+    }
+
     virtual void createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request) override {
-        if (isCreateFormCallbackType(type)) {
-            readConfig();
-            DimmerModuleForm::_createConfigureForm(type, formName, form, request);
-        }
+        DimmerModuleForm::_createConfigureForm(type, formName, form, request);
     }
 
     virtual void getValues(JsonArray &array) override {

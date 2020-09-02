@@ -73,7 +73,7 @@ public:
 
 #if IOT_DIMMER_MODULE_INTERFACE_UART
 
-    DimmerTwoWireEx(Stream &stream) : DimmerTwoWireClass(stream), _locked(false) {}
+    DimmerTwoWireEx(Stream &stream) : DimmerTwoWireClass(stream, SerialHandler::Wrapper::pollSerial), _locked(false) {}
 
     bool lock() {
         if (_locked) {
@@ -112,7 +112,8 @@ class AsyncWebServerRequest;
 
 class Dimmer_Base {
 public:
-    static const uint32_t METRICS_DEFAULT_UPDATE_RATE = 60e3;
+    static const uint32_t METRICS_DEFAULT_UPDATE_RATE = 60000;
+    using ConfigType = Plugins::DimmerConfig::DimmerConfig_t;
 
     Dimmer_Base();
 
@@ -131,9 +132,9 @@ public:
     virtual uint8_t getChannelCount() const = 0;
 
     // read config from dimmer
-    virtual void readConfig();
+    void _readConfig(ConfigType &config);
     // write config to dimmer
-    virtual void writeConfig();
+    void _writeConfig(ConfigType &config);
     // store dimmer config in EEPROM
     void writeEEPROM(bool noLocking = false);
 
@@ -174,9 +175,9 @@ protected:
 
     Version _version;
     DimmerMetrics _metrics;
-    Plugins::DimmerConfig::DimmerConfig_t _config;
+    ConfigType _config;
 
-    Plugins::DimmerConfig::DimmerConfig_t &_getConfig() {
+    ConfigType &_getConfig() {
         return _config;
     }
 

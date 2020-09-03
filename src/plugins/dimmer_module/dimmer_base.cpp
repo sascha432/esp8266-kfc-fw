@@ -279,7 +279,7 @@ void Dimmer_Base::_writeConfig(ConfigType &config)
 
 void Dimmer_Base::_printStatus(Print &output)
 {
-    PrintHtmlEntitiesString out;
+    PrintString out;
     auto length = out.length();
     if (_metrics.hasTemp2()) {
         out.printf_P(PSTR("Internal temperature %.2f" PRINTHTMLENTITIES_DEGREE "C"), _metrics.getTemp2());

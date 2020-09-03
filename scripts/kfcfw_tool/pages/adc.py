@@ -10,6 +10,7 @@ from tkinter import ttk
 import time
 import os
 import json
+from pathlib import Path
 
 import matplotlib
 matplotlib.use("TkAgg")
@@ -130,8 +131,8 @@ class PageADC(tk.Frame, PageBase):
             self.axis.set_ylabel('ADC value converter to %s' % self.config['unit'])
 
         self.lines = []
-        self.reset_data(1000)
-        tmp, = self.axis.plot(self.values[0], self.values[1], lw=0.1, color='blue', alpha = 0.2)
+        self.reset_data()
+        tmp, = self.axis.plot(self.values[0], self.values[1], lw=0.1, color='blue', alpha = 0.5)
         self.lines.append(tmp)
         tmp, = self.axis.plot(self.values[0], self.values[2], lw=0.5, color='green')
         self.lines.append(tmp)
@@ -182,13 +183,22 @@ class PageADC(tk.Frame, PageBase):
     def load_previous_data(self):
         try:
             self.reset_data()
-            with open(self.data_file) as file:
-                self.data = json.loads(file.read())
-            self.calc_data(True)
-            self.set_data()
-            self.update_plot = True
+
+            dir = os.path.dirname(self.data_file)
+            patt = 'adc_data.*.json'
+            files = sorted(Path(dir).iterdir(), key=lambda key: key.is_file() and key.match(patt) and key.stat().st_mtime or 0, reverse=True)
+            if files and files[0].is_file():
+                with open(files[0].resolve()) as file:
+                    self.data = json.loads(file.read())
+                self.calc_data(True)
+                self.set_data()
+                self.current_data_file = files[0].name
+                self.update_plot = True
+            else:
+                self.console.error('cannot find %s' % os.path.join(dir, patt))
+
         except Exception as e:
-            self.reset_data(1000)
+            self.reset_data()
             self.console.error(e)
             raise e
 
@@ -269,21 +279,22 @@ class PageADC(tk.Frame, PageBase):
                     diff2 = diff1 + 1.0
                     avg2 = ((avg2 * diff1) + value) / diff2
 
-                    diff1 = diff0 * 50.0
+                    diff1 = diff0 * 75.0
                     diff2 = diff1 + 1.0
                     avg3 = ((avg3 * diff1) + value) / diff2
 
                 val = 0
-                if n>0:
+                # if n>0:
                     # cover the last 100ms
-                    start = self.find_start(time - 100, n)
-                    val = np.median(self.values[1][start:n])
+                    # start = self.find_start(time - 5000, n)
+                    # start=0
+                    # val = np.percentile(self.values[1][start:n], 15)
 
                 self.values[0].append(time)
                 self.values[1].append(value)
                 self.values[2].append(avg1)
                 self.values[3].append(avg2)
-                self.values[4].append(val)
+                self.values[4].append(avg3)
 
             # store values for next call
             self._calc['n'] = n
@@ -391,7 +402,10 @@ class PageADC(tk.Frame, PageBase):
                 self.data['ylim'] = int(max(self.values[1]) * 1.15 / 10) * 10 + 1
                 self.axis.set_ylim(bottom=0, top=self.data['ylim'])
                 if max_time>=1.0:
-                    self.axis.set_title('ADC readings %.2f packets/s interval %.0fµs' % (self.data['packets'] / max_time, max_time_millis * 1000.0 / num))
+                    file = ''
+                    if self.current_data_file:
+                        file = ' (' + self.current_data_file + ')'
+                    self.axis.set_title('ADC readings %.2f packets/s interval %.0fµs%s' % (self.data['packets'] / max_time, max_time_millis * 1000.0 / num, file))
         except Exception as e:
             self.console.log(e)
 
@@ -411,10 +425,13 @@ class PageADC(tk.Frame, PageBase):
         if len(self.lines):
             for n in range(len(self.lines)):
                 self.lines[n].set_data(self.values[0], self.values[n + 1])
+        self.axis.hlines([800], 0, self.data['xlim'], color='red')
+        self.axis.hlines([630], 0, self.data['xlim'], color='orange')
 
-    def reset_data(self, xlim):
+    def reset_data(self, xlim = 1000):
         if xlim>self.config['display']:
             xlim=self.config['display']
+        self.current_data_file = None
         self.data = { 'time': [], 'adc_raw': [], 'packets': 0, 'dropped': False, 'xlim': xlim, 'ylim': 0 }
         self.values = [ [],[],[],[],[] ]
         self._calc = {'n': -1}

@@ -5,7 +5,6 @@
 #pragma once
 
 #include <Arduino_compat.h>
-#include <vector>
 #include "MicrosTimer.h"
 
 #if _CRTDBG_MAP_ALLOC
@@ -62,111 +61,100 @@ public:
     using const_pointer = const T *;
     using value_type = T;
     using size_type = size_t;
-    using difference_type = typename std::make_unsigned<size_type>::type;
+    using difference_type = typename std::make_signed<size_type>::type;
     using iterator_category = std::random_access_iterator_tag;
 
-    template<class Ta, class Tb>
-    class iterator_base {
+    class iterator : public std::iterator<iterator_category, value_type, difference_type, pointer, reference> {
     public:
-        using iterator_type = iterator_base<Ta, Tb>;
-        using iterator_category = typename FixedCircularBuffer::iterator_category;
-        using difference_type = typename FixedCircularBuffer::difference_type;
-        using value_type = typename FixedCircularBuffer::value_type;
-        using pointer = typename FixedCircularBuffer::pointer;
-        using reference = typename FixedCircularBuffer::reference;
-
-        iterator_base(Tb &buffer, Ta *iterator) : _buffer(buffer), _iterator(iterator) {
+        iterator(buffer_type &buffer, pointer iterator) : _buffer(&buffer), _iterator(iterator) {
         }
 
-        iterator_base(const Tb &buffer, const Ta *iterator) : _buffer(const_cast<Tb &>(buffer)), _iterator(const_cast<Ta *>(iterator)) {
+        iterator(const buffer_type &buffer, const_pointer iterator) : _buffer(&const_cast<buffer_type &>(buffer)), _iterator(const_cast<pointer>(iterator)) {
         }
 
-        iterator_type &operator=(const iterator_type iter) {
+        iterator &operator=(const iterator iter) {
             _iterator = iter._iterator;
             return *this;
         }
 
-        const iterator_type operator+(difference_type step) const {
+        const iterator operator+(difference_type step) const {
             auto tmp = *this;
             tmp += step;
             return tmp;
         }
 
-        iterator_type operator+(difference_type step) {
+        iterator operator+(difference_type step) {
             auto tmp = *this;
             tmp += step;
             return tmp;
         }
 
-        difference_type operator-(const iterator_type iter) const {
+        difference_type operator-(const iterator iter) const {
             return _iterator - iter._iterator;
         }
 
-        const iterator_type operator-(difference_type step) const {
+        iterator operator-(difference_type step) const {
             auto tmp = *this;
             tmp -= step;
             return tmp;
         }
 
-        iterator_type operator-(difference_type step) {
+        iterator operator-(difference_type step) {
             auto tmp = *this;
             tmp -= step;
             return tmp;
         }
 
-        iterator_type &operator+=(difference_type step) {
+        iterator &operator+=(difference_type step) {
             _iterator += step;
             return *this;
         }
 
-        iterator_type &operator-=(difference_type step) {
+        iterator &operator-=(difference_type step) {
             _iterator -= step;
             return *this;
         }
 
-        iterator_type &operator++() {
+        iterator &operator++() {
             ++_iterator;
             return *this;
         }
 
-        iterator_type &operator--() {
+        iterator &operator--() {
             --_iterator;
             return *this;
         }
 
         const reference operator*() const {
-            return _buffer._values[offset()];
+            return _buffer->_values[offset()];
         }
 
         reference operator*() {
-            return _buffer._values[offset()];
+            return _buffer->_values[offset()];
         }
 
-        bool operator==(iterator_type iter) const {
+        bool operator==(iterator iter) const {
             return _iterator == iter._iterator;
         }
 
-        bool operator!=(iterator_type iter) const {
+        bool operator!=(iterator iter) const {
             return _iterator != iter._iterator;
         }
 
         size_type offset() const {
-            return (_iterator - _buffer._begin()) % _buffer.capacity();
+            return (_iterator - _buffer->_begin()) % _buffer->capacity();
         }
 
         bool isValid() const {
-            return _iterator >= _buffer._begin() + _buffer._read_position && _iterator < _buffer._begin() + _buffer._count;
+            return _iterator >= _buffer->_begin() + _buffer->_read_position && _iterator < _buffer->_begin() + _buffer->_count;
         }
 
     private:
         friend FixedCircularBuffer;
 
-        Tb &_buffer;
-        Ta *_iterator;
+        buffer_type *_buffer;
+        pointer _iterator;
     };
-
-    using iterator = iterator_base<value_type, buffer_type>;
-    using const_iterator = const iterator;
 
     FixedCircularBuffer() : _count(0), _write_position(0), _read_position(0), _values() {
     }
@@ -340,19 +328,19 @@ public:
         return iterator(*this, &_values.data()[_count]);
     }
 
-    const_iterator begin() const {
+    iterator begin() const {
         return iterator(*this, &_values.data()[_read_position]);
     }
 
-    const_iterator end() const {
+    iterator end() const {
         return iterator(*this, &_values.data()[_count]);
     }
 
-    const_iterator cbegin() const {
+    iterator cbegin() const {
         return begin();
     }
 
-    const_iterator cend() const {
+    iterator cend() const {
         return end();
     }
 

@@ -137,7 +137,7 @@ void SensorPlugin::_timerEvent()
         for(auto sensor: _sensors) {
             sensor->timerEvent(events);
         }
-            __DBG_printf("events=%u", events.size());
+        // __DBG_printf("events=%u", events.size());
         if (events.size()) {
             WsWebUISocket::broadcast(WsWebUISocket::getSender(), json);
         }

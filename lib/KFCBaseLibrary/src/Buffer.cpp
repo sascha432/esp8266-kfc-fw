@@ -18,40 +18,59 @@ MoveStringHelper::MoveStringHelper()
 {
 }
 
-void MoveStringHelper::move(Buffer &buf)
+void MoveStringHelper::move(Buffer &buf, String &&_str)
 {
+    auto &&str = static_cast<MoveStringHelper &&>(_str);
     __LDBG_println();
 #if ESP8266
-    if (length()) {
+    if (str.length()) {
 #if ARDUINO_ESP8266_VERSION_COMBINED >= 0x020603
-        if (isSSO()) {
+        if (str.isSSO()) {
 #else
-        if (sso()) {
+        if (str.sso()) {
 #endif
-            buf.write(*this);
+            buf.write(str);
         }
         else {
-            buf.setBuffer((uint8_t *)wbuffer(), capacity());
-            buf.setLength(length());
+            buf.setBuffer((uint8_t *)str.wbuffer(), str.capacity());
+            buf.setLength(str.length());
             // register allocated block
-            __LDBG_NOP_malloc(wbuffer(), capacity());
+            __LDBG_NOP_malloc(str.wbuffer(), str.capacity());
+            IF_DEBUG_BUFFER_ALLOC(buf._alloc++);
         }
-        setSSO(false);
-        setCapacity(0);
-        setLen(0);
-        setBuffer(nullptr);
+        str.init();
+        // str.setSSO(true);
+        // str.setLen(0);
+        // str.wbuffer()[0] = 0;
     }
 #else
-    buf.write(*this);
-    *this = MoveStringHelper();
+    // move not implemented
+    buf.write(str);
+    str = MoveStringHelper();
 #endif
 }
 
-Buffer::Buffer() : _buffer(nullptr), _length(0), _size(0)
+Buffer::Buffer() :
+    _buffer(nullptr),
+    _length(0),
+    _size(0)
+#if DEBUG_BUFFER_ALLOC
+   ,_realloc(0),
+    _alloc(0),
+    _free(0)
+#endif
 {
 }
 
-Buffer::Buffer(Buffer &&buffer) noexcept : _buffer(std::exchange(buffer._buffer, nullptr)), _length(std::exchange(buffer._length, 0)), _size(std::exchange(buffer._size, 0))
+Buffer::Buffer(Buffer &&buffer) noexcept :
+    _buffer(std::exchange(buffer._buffer, nullptr)),
+    _length(std::exchange(buffer._length, 0)),
+    _size(std::exchange(buffer._size, 0))
+#if DEBUG_BUFFER_ALLOC
+    ,_realloc(std::exchange(buffer._realloc, 0)),
+    _alloc(std::exchange(buffer._alloc, 0)),
+    _free(std::exchange(buffer._free, 0))
+#endif
 {
 }
 
@@ -65,6 +84,7 @@ Buffer::~Buffer()
     __LDBG_printf("len=%u size=%u ptr=%p this=%p", _length, _size, _buffer, this);
     if (_buffer) {
         __LDBG_free(_buffer);
+        IF_DEBUG_BUFFER_ALLOC(_free++);
     }
     CHECK_MEMORY();
 }
@@ -76,7 +96,7 @@ Buffer::Buffer(const __FlashStringHelper *str) : Buffer()
 
 Buffer::Buffer(String &&str) : Buffer()
 {
-    *this = std::move(str);
+    MoveStringHelper::move(*this, std::move(str));
 }
 
 Buffer::Buffer(const String &str) : Buffer()
@@ -88,6 +108,7 @@ Buffer &Buffer::operator =(Buffer &&buffer) noexcept
 {
     if (_buffer) {
         __LDBG_free(_buffer);
+        IF_DEBUG_BUFFER_ALLOC(_free++);
     }
     _buffer = buffer._buffer;
     _length = buffer._length;
@@ -95,6 +116,11 @@ Buffer &Buffer::operator =(Buffer &&buffer) noexcept
     buffer._buffer = nullptr;
     buffer._length = 0;
     buffer._size = 0;
+#if DEBUG_BUFFER_ALLOC
+    _realloc = std::exchange(buffer._realloc, 0);
+    _alloc = std::exchange(buffer._alloc, 0);
+    _free = std::exchange(buffer._free, 0);
+#endif
     return *this;
 }
 
@@ -102,7 +128,7 @@ Buffer &Buffer::operator =(const Buffer &buffer)
 {
     _length = buffer._length;
     if (_changeBuffer(buffer._size)) {
-        memcpy(_buffer, buffer._buffer, _length);
+        std::copy_n(buffer.begin(), _length, begin());
     }
     else {
         clear();
@@ -114,7 +140,7 @@ Buffer &Buffer::operator=(String &&str)
 {
     __LDBG_printf("len=%u size=%u ptr=%p", _length, _size, _buffer);
     clear();
-    static_cast<MoveStringHelper &&>(str).move(*this);
+    MoveStringHelper::move(*this, std::move(str));
     return *this;
 }
 
@@ -139,6 +165,7 @@ void Buffer::clear()
     // __LDBG_printf("len=%u size=%u ptr=%p", _length, _fp_size, _buffer);
     if (_buffer) {
         __LDBG_free(_buffer);
+        IF_DEBUG_BUFFER_ALLOC(_free++);
         _buffer = nullptr;
     }
     _size = 0;
@@ -154,6 +181,7 @@ void Buffer::move(uint8_t **ptr)
     *ptr = tmp;
     // remove from registered blocks
     __LDBG_NOP_free(tmp);
+    IF_DEBUG_BUFFER_ALLOC(_free++);
 }
 
 void Buffer::setBuffer(uint8_t *buffer, size_t size)
@@ -212,6 +240,9 @@ int Buffer::read()
         auto tmp = *_buffer;
         if (--_length) {
             memmove(_buffer, _buffer + 1, _length);
+#if BUFFER_ZERO_FILL
+            _buffer[_length] = 0;
+#endif
         }
         else {
             clear();
@@ -239,11 +270,6 @@ void Buffer::remove(size_t index, size_t count)
     if(count > _length - index) {
         count = _length - index;
     }
-    //_length = _length - count;
-    // if (_length - index) {
-//     memmove(_buffer + index, _buffer + index + count, _length - index);
-// }
-
     _remove(index, count);
 }
 
@@ -252,8 +278,19 @@ void Buffer::_remove(size_t index, size_t count)
     auto dst_begin = begin() + index;
     std::copy(dst_begin + count, end(), dst_begin);
     _length -= count;
+#if BUFFER_ZERO_FILL
     std::fill(begin() + _length, _buffer_end(), 0);
+#endif
 }
+
+#if DEBUG_BUFFER_ALLOC
+
+void Buffer::dumpAlloc(Print &output)
+{
+    output.printf_P(PSTR("buffer=%p alloc=%u realloc=%u free=%u"), this, _alloc, _realloc, _free);
+}
+
+#endif
 
 void Buffer::removeAndShrink(size_t index, size_t count, size_t minFree)
 {
@@ -278,6 +315,7 @@ bool Buffer::_changeBuffer(size_t newSize)
                     // __LDBG_printf("alloc failed");
                     return false;
                 }
+                IF_DEBUG_BUFFER_ALLOC(_alloc++);
             }
             else {
                 _buffer = __DBG_realloc_buf(_buffer, resize);
@@ -287,12 +325,15 @@ bool Buffer::_changeBuffer(size_t newSize)
                     _length = 0;
                     return false;
                 }
+                IF_DEBUG_BUFFER_ALLOC(_realloc++);
                 if (_length > newSize) {
                     _length = newSize;
                 }
             }
             _size = resize;
+#if BUFFER_ZERO_FILL
             std::fill(_data_end(), _buffer_end(), 0);
+#endif
         }
     }
     // __LDBG_printf("length=%d size=%d", _length, _fp_size);

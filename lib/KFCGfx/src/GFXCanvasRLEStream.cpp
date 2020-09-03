@@ -37,12 +37,12 @@ GFXCanvasRLEStream::GFXCanvasRLEStream(GFXCanvasCompressed& canvas, uint16_t x, 
     if (palette) {
         _canvas.flushCache();
         _header.paletteCount = (decltype(_header.paletteCount))palette->length();
-        _buffer.copy(_header);
+        _buffer.push_back(_header);
         _buffer.copy(palette->begin(), palette->end());
 //        _buffer.write(palette->getBytes(), palette->getBytesLength());
     }
     else {
-        _buffer.copy(_header);
+        _buffer.push_back(_header);
     }
     // __DBG_printf("header=%u", _buffer.length());
 }

@@ -119,7 +119,7 @@ BufferPool::BufferIterator BufferPool::add(BufferTypePtr id)
         iterator = BufferIterator(_list.back());
     }
 
-    iterator->copy(header);
+    iterator->push_back(header);
     iterator->write(_temp.begin(), _temp.length());
 #if _MSC_VER
     std::fill(iterator->end(), iterator->begin() + iterator->size(), 0xcc);

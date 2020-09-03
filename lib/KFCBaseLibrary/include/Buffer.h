@@ -6,15 +6,162 @@
 
 #include <Arduino_compat.h>
 
+#ifndef DEBUG_BUFFER
+#define DEBUG_BUFFER                            0
+#endif
+
+#ifndef DEBUG_BUFFER_ALLOC
+#define DEBUG_BUFFER_ALLOC                      1
+#endif
+
+#ifndef BUFFER_ZERO_FILL
+#define BUFFER_ZERO_FILL                        0
+#endif
+
+#if DEBUG_BUFFER || 1
+#define __DBG_BUFFER_assert(...)                assert(__VA_ARGS__)
+#define __DBG_BUFFER_asserted(cmp, ...)         { auto res = __VA_ARGS__; __DBG_BUFFER_assert(res == cmp); }
+#else
+#define __DBG_BUFFER_assert(...)
+#define __DBG_BUFFER_asserted(cmp, ...)         __VA_ARGS__
+#endif
+
+#if DEBUG_BUFFER_ALLOC
+#define IF_DEBUG_BUFFER_ALLOC(...)              __VA_ARGS__
+#else
+#define IF_DEBUG_BUFFER_ALLOC(...)
+#endif
+
 class Buffer;
 
 class MoveStringHelper : public String {
 public:
     MoveStringHelper();
-    void move(Buffer &stream);
+    static void move(Buffer &buffer, String &&move);
 };
 
 class Buffer {
+public:
+    using reference = uint8_t &;
+    using const_reference = const uint8_t &;
+    using pointer = uint8_t *;
+    using const_pointer = const uint8_t *;
+    using value_type = uint8_t;
+    using size_type = size_t;
+    using difference_type = typename std::make_signed<size_type>::type;
+    using iterator_category = std::random_access_iterator_tag;
+
+    class back_inserter : public std::iterator<std::output_iterator_tag, void, void, void, void>
+    {
+    public:
+        back_inserter(Buffer &buffer) : _buffer(&buffer) {}
+
+        template<class Ta>
+        back_inserter operator =(const Ta &obj) {
+            _buffer->push_back(obj);
+            return *this;
+        }
+
+        back_inserter operator++() noexcept {
+            return *this;
+        }
+
+        back_inserter operator++(int) noexcept {
+            return *this;
+        }
+
+        back_inserter &operator*() {
+            return *this;
+        }
+
+    private:
+        Buffer *_buffer;
+    };
+
+    class iterator : public std::iterator<iterator_category, value_type, difference_type, pointer, reference> {
+    public:
+        iterator(Buffer &buffer, size_type offset) : _buffer(&buffer), _offset(offset) {
+        }
+
+        iterator(const Buffer &buffer, size_type offset) : iterator(const_cast<Buffer &>(buffer), offset) {
+        }
+
+        iterator &operator=(const iterator iter) {
+            _offset = iter._offset;
+            return *this;
+        }
+
+        const iterator operator+(difference_type step) const {
+            auto tmp = *this;
+            tmp += step;
+            return tmp;
+        }
+
+        iterator operator+(difference_type step) {
+            auto tmp = *this;
+            tmp += step;
+            return tmp;
+        }
+
+        difference_type operator-(const iterator iter) const {
+            return _offset - iter._offset;
+        }
+
+        const iterator operator-(difference_type step) const {
+            auto tmp = *this;
+            tmp -= step;
+            return tmp;
+        }
+
+        iterator operator-(difference_type step) {
+            auto tmp = *this;
+            tmp -= step;
+            return tmp;
+        }
+
+        iterator &operator+=(difference_type step) {
+            _offset += step;
+            return *this;
+        }
+
+        iterator &operator-=(difference_type step) {
+            _offset -= step;
+            return *this;
+        }
+
+        iterator &operator++() {
+            ++_offset;
+            return *this;
+        }
+
+        iterator &operator--() {
+            --_offset;
+            return *this;
+        }
+
+        const_pointer operator*() const {
+            return &_buffer->operator[](_offset);
+        }
+
+        pointer operator*() {
+            return &_buffer->_buffer[_offset];
+        }
+
+        bool operator==(iterator iter) const {
+            return _offset == iter._offset;
+        }
+
+        bool operator!=(iterator iter) const {
+            return _offset != iter._offset;
+        }
+
+    private:
+        friend Buffer;
+
+        Buffer *_buffer;
+        size_type _offset;
+    };
+
 public:
     Buffer();
     Buffer(Buffer &&buffer) noexcept;
@@ -85,6 +232,9 @@ public:
         return _buffer[index];
     }
     inline uint8_t &charAt(size_t index) {
+        return _buffer[index];
+    }
+    inline uint8_t operator[](size_t index) const {
         return _buffer[index];
     }
     inline uint8_t &operator[](size_t index) {
@@ -175,21 +325,6 @@ public:
         return write(str.c_str(), str.length());
     }
 
-    template<class T>
-    size_t copy(const T &data) {
-        return write(reinterpret_cast<const uint8_t *>(&data), sizeof(T));
-    }
-
-    template<class T>
-    size_t copy(T first, T last) {
-        size_t written = 0;
-        for(auto iterator = first; iterator != last; ++iterator) {
-            // written += copy<typename T::value_type>(*iterator);
-            written += copy<decltype(*iterator)>(*iterator);
-        }
-        return written;
-    }
-
     // read one byte and remove it from the buffer
     // release memory after reading the last byte
     // returns -1 if no data is available
@@ -216,6 +351,53 @@ public:
 
     void setLength(size_t length);
 
+public:
+     template <class T>
+     void push_back(const T &data) {
+         __DBG_BUFFER_asserted(sizeof(T), write(reinterpret_cast<const uint8_t *>(&data), sizeof(T)));
+     }
+
+     inline void push_back(uint8_t data) {
+         __DBG_BUFFER_asserted(1, write(data));
+     }
+
+     inline void push_back(const char *str) {
+         __DBG_BUFFER_asserted(strlen(str), write(str));
+     }
+
+     inline void push_back(const String &str) {
+         __DBG_BUFFER_asserted(str.length(), write(str));
+     }
+
+     inline void push_back(const __FlashStringHelper *fpstr) {
+         __DBG_BUFFER_asserted(strlen_P(reinterpret_cast<PGM_P>(fpstr)), write(fpstr, strlen_P(reinterpret_cast<PGM_P>(fpstr))));
+     }
+
+     template <typename Ta, typename std::enable_if<std::is_pointer<Ta>::value, int>::type = 0>
+     inline size_t copy(const Ta first, const Ta last) {
+         return write(
+            reinterpret_cast<const uint8_t *>(first),
+            reinterpret_cast<const uint8_t *>(last) - reinterpret_cast<const uint8_t *>(first) + sizeof(std::remove_pointer<Ta>::type) - 1
+         );
+     }
+
+     //
+     // Write raw data of objects to the buffer
+     //
+     // specialized version for String, const char * and const __FlashStringHelper * implemented
+     //
+     // Buffer::copy(begin_iterator, end_iterator)
+     // or
+     // std::copy(begin_iterator, end_iterator, Buffer::back_inserter(buffer));
+     //
+
+     template <typename Ta, typename std::iterator_traits<Ta>::iterator_category* = nullptr, typename std::enable_if<!std::is_pointer<Ta>::value, int>::type = 0>
+     void copy(Ta first, Ta last) {
+         for (auto iterator = first; iterator != last; ++iterator) {
+             push_back(*iterator);
+         }
+     }
+
 protected:
     bool _changeBuffer(size_t newSize);
     void _remove(size_t index, size_t count);
@@ -239,6 +421,15 @@ private:
         return size;
 #endif
     }
+#if DEBUG_BUFFER_ALLOC
+
+public:
+    void dumpAlloc(Print &output);
+
+    uint32_t _realloc;
+    uint32_t _alloc;
+    uint32_t _free;
+#endif
 };
 
 inline size_t Buffer::available() const

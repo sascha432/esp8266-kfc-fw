@@ -829,7 +829,7 @@ private:
         _buffer.setLength(0);
         _buffer.reserve(_webSocket.packetSize + 1);
         Header_t header = { WsClient::BinaryPacketType::ADC_READINGS, FLAGS_NONE };
-        _buffer.copy(header);
+        _buffer.push_back(header);
     }
 
     virtual void processData(uint16_t reading, uint32_t diff, uint32_t micros) override {
@@ -890,7 +890,7 @@ private:
 
         data._time = time;
         data._value = std::min(reading, (uint16_t)1023);
-        _buffer.copy(data);
+        _buffer.push_back(data);
     }
 
 private:

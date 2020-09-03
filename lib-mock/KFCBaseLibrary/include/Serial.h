@@ -55,6 +55,9 @@ public:
         return ch;
     }
     int read(uint8_t *buffer, size_t len) {
+        if (!_buffer) {
+            return 0;
+        }
         if (_position + len >= _size) {
             len = _size - _position;
         }
@@ -85,6 +88,9 @@ public:
             }
         }
         ::printf("\n");
+        if (!_buffer) {
+            return len;
+        }
         memcpy(_buffer + _position, data, len);
         _position += (uint16_t)len;
         return len;

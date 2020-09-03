@@ -24,8 +24,24 @@ static const uint32_t kProgmemStartAddress = (uint32_t)&_irom0_text_start[0];
 static constexpr uint8_t kProgmemAlignment = sizeof(uint32_t);
 #endif
 
+#if _MSC_VER
 
+static AllocPointerList *allocPointerList;
 
+static void at_exit_func() 
+{
+    if (allocPointerList) {
+
+        for(auto & item: allocPointerList->getList()) {
+            ::printf("exit: %s:%u\n", item.getFile(), item.getLine());        
+        }
+        allocPointerList->getList().clear();
+
+        allocPointerList = nullptr;
+    }
+}
+
+#endif
 
 AllocPointerInfo::AllocPointerInfo() :
     _size(0),
@@ -134,6 +150,10 @@ void AllocPointerInfo::setNoLeak(bool state)
 
 AllocPointerList::AllocPointerList()
 {
+#if _MSC_VER
+    allocPointerList = this;
+    atexit(at_exit_func);
+#endif
 }
 
 AllocPointerList::Iterator AllocPointerList::find(const void *ptr)
@@ -156,6 +176,13 @@ AllocPointerInfo *AllocPointerList::add(const void *ptr, size_t size, const char
 
 bool AllocPointerList::remove(const void *ptr)
 {
+#if _MSC_VER
+    // for some reason the list gets clear on exit but the remove method is still called
+    if (allocPointerList == nullptr) {
+        return true;
+    }
+#endif
+
     auto iterator = find(ptr);
     if (isValid(iterator)) {
         iterator->setPointer(nullptr);

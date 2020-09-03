@@ -837,7 +837,7 @@ namespace KFCConfigurationClasses {
                 Buffer buffer;
                 for(size_t i = 0; i < names.size(); i++) {
                     configs[i].length = names[i].length();
-                    buffer.copy(configs[i]);
+                    buffer.push_back(configs[i]);
                     buffer.write(names[i]);
                 }
                 setConfig(buffer.begin(), buffer.length());

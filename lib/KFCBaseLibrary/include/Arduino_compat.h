@@ -223,21 +223,38 @@ namespace std {
 #endif
 #endif
 
-// support nullptr as zero start_length
-static size_t constexpr constexpr_strlen(const char *str)
+
+#if __GNUC__
+
+static size_t constexpr constexpr_strlen(const char *str) noexcept
 {
-    return StringConstExpr::strlen(str);
+    return __builtin_strlen(str);
 }
 
-static size_t constexpr constexpr_strlen(const uint8_t *str)
+#else
+
+constexpr size_t constexpr_strlen(const char *s) noexcept 
 {
-    return StringConstExpr::strlen(str);
+    return s ? (*s ? 1 + constexpr_strlen(s + 1) : 0) : 0;
 }
 
-static size_t constexpr constexpr_strlen_P(const char *str)
+#endif
+
+static size_t constexpr constexpr_strlen(const uint8_t *str) noexcept
 {
-    return StringConstExpr::strlen(str);
+    return constexpr_strlen((const char *)str);
 }
+
+static size_t constexpr constexpr_strlen_P(const char *str) noexcept
+{
+    return constexpr_strlen(str);
+}
+
+static size_t constexpr constexpr_strlen(const __FlashStringHelper *str) noexcept
+{
+    return constexpr_strlen((const char *)str);
+}
+
 
 #ifndef _STRINGIFY
 #define _STRINGIFY(...)                     ___STRINGIFY(__VA_ARGS__)

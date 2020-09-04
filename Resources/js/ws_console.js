@@ -62,16 +62,20 @@ WS_Console.prototype.console_log = function(message, prefix) {
         var consolePanel = document.getElementById(this.consoleId);
         var scrollPos = consolePanel.scrollHeight - consolePanel.scrollTop - $(consolePanel).innerHeight();
 
-        if (message.indexOf('\033') != -1) {
-            var pos;
-            if (pos = message.lastIndexOf('\033[2J') != -1) {
-                message = message.substr(pos + 4);
-                consolePanel.value = '';
-            }
-            // discard other vt100 sequences
-            // https://github.com/xtermjs/xterm.js
-            message = message.replace(/\033\[[\d;]*[mHJ]/g, '');
-        }
+        // dbg_console.debug('msg escpape', message.indexOf('\033'), "msg", message, "replace esc", message.replace(/\033\[[\d;]*[mHJ]/g, ''));
+
+        // if (message.indexOf('\033') != -1) {
+        //     var pos;
+        //     if (pos = message.lastIndexOf('\033[2J') != -1) {
+        //         message = message.substr(pos + 4);
+        //         consolePanel.value = '';
+        //         dbg_console.debug("clear screen", message);
+        //     }
+        //     // discard other vt100 sequences
+        //     // https://github.com/xtermjs/xterm.js
+        //     message = message.replace(/\033\[[\d;]*[mHJ]/g, '');
+        //     dbg_console.debug("replaced", message);
+        // }
 
         if (prefix) {
             if (consolePanel.value.endsWith(message + "\n") && (pos = consolePanel.value.lastIndexOf("\n", consolePanel.value.length - message.length)) != -1) {
@@ -79,7 +83,6 @@ WS_Console.prototype.console_log = function(message, prefix) {
             } else {
                 consolePanel.value += prefix + message + "\n";
             }
-
         } else {
             consolePanel.value += message + "\n";
         }

@@ -13,7 +13,7 @@ def build_webui(source, target, env, clean = False):
     args = [
         '%PHPEXE%',
         "lib/KFCWebBuilder/bin/include/cli_tool.php",
-        "./conf/KFCWebBuilder.json",
+        "./KFCWebBuilder.json",
         "-b",
         "spiffs",
         "-e",

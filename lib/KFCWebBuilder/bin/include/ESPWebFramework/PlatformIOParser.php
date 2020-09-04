@@ -36,6 +36,20 @@ class PlatformIOParser {
     private $environments;
 
     /**
+     * Lines of the configuration file
+     *
+     * @var array
+     */
+    private $lines;
+
+    /**
+     * Directory of the .ini file
+     *
+     * @var array
+     */
+    private $ini_base_dir;
+
+    /**
      * Configuration per environment
      *
      * @var array
@@ -141,6 +155,21 @@ class PlatformIOParser {
     }
 
     /**
+     * Add all lines from the file to $this->lines
+     *
+     * @param string $filename
+     */
+    public function append_ini_file(string $filename): void
+    {
+        if (!file_exists($filename)) {
+            throw new \RuntimeException("Cannot load extra config '".$filename."'");
+        }
+        foreach(file($filename, FILE_IGNORE_NEW_LINES) as $line) {
+            $this->lines[] = $line;
+        }
+    }
+
+    /**
      * Store keywords
      *
      * @param string $keyword
@@ -149,7 +178,26 @@ class PlatformIOParser {
     private function processIniLine(?string $environment, ?string $keyword, string $line): void
     {
         if ($environment !== null && $keyword !== null) {
-            if ($keyword == 'extends') {
+            if ($keyword == 'extra_configs') {
+
+                // load extra configs and append at the end
+                $extra_files = preg_split("/\s+/", $line, -1, PREG_SPLIT_NO_EMPTY);
+                foreach($extra_files as $file) {
+                    if ($file{0} != '/') {
+                        $file = $this->ini_base_dir.'/'.$file;
+                        if (strchr($file, '*')) {
+                            foreach(glob($file) as $filename) {
+                                $this->append_ini_file($filename);
+                            }
+                        }
+                        else {
+                            $this->append_ini_file($file);
+                        }
+                    }
+                }
+
+            }
+            else if ($keyword == 'extends') {
                 $line = trim($line);
                 if (!isset($this->envConfig[$line])) {
                     throw new \RuntimeException("extends missing environment '".$line."'");
@@ -284,7 +332,16 @@ class PlatformIOParser {
         $skip = $section !== null;
         $fullLine = '';
 
+        $this->ini_base_dir = dirname($filename);
+        $this->lines = [];
         foreach(file($filename, FILE_IGNORE_NEW_LINES) as $line) {
+            $this->lines[] = $line;
+        }
+
+        // use a for loop since lines will be added in the loop
+        for($line_num = 0; $line_num < count($this->lines); $line_num++) {
+
+            $line = $this->lines[$line_num];
 
             $ch = substr(ltrim($line), 0, 1);
             if ($ch === '#' || $ch === ';') {
@@ -322,6 +379,7 @@ class PlatformIOParser {
                     if (preg_match('/^\s/', $line)) { // line starts with white space
                         $fullLine .= $line;
                     } else { // new configuration keyword, process full line
+
                         $this->processIniLine($environment, $keyword, $fullLine);
                         $keyword = null;
                         $fullLine = '';

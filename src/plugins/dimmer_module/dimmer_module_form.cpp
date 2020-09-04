@@ -85,19 +85,26 @@ void DimmerModuleForm::_createConfigureForm(PluginComponent::FormCallbackType ty
 
 #if IOT_DIMMER_MODULE_HAS_BUTTONS
 
+#if DEBUG_IOT_DIMMER_MODULE
+    static constexpr uint8_t kFactor = 10;
+#else
+    static constexpr uint8_t kFactor = 1;
+#endif
+
+
     auto &buttonGroup = form.addCardGroup(F("btncfg"), F("Buttons"), false);
 
     form.add<uint16_t>(F("sptime"), _H_W_STRUCT_VALUE(cfg, shortpress_time));
     form.addFormUI(F("Short Press Time"), FormUI::Suffix(FSPGM(milliseconds)), FormUI::PlaceHolder(250));
-    form.addValidator(FormRangeValidator(50, 1000));
+    form.addValidator(FormRangeValidator(50, 1000 * kFactor));
 
     form.add<uint16_t>(F("lptime"), _H_W_STRUCT_VALUE(cfg, longpress_time));
     form.addFormUI(F("Long Press Time"), FormUI::Suffix(FSPGM(milliseconds)), FormUI::PlaceHolder(600));
-    form.addValidator(FormRangeValidator(250, 2000));
+    form.addValidator(FormRangeValidator(250, 2000 * kFactor));
 
     form.add<uint16_t>(F("rtime"), _H_W_STRUCT_VALUE(cfg, repeat_time));
     form.addFormUI(F("Hold/Repeat Time"), FormUI::Suffix(FSPGM(milliseconds)), FormUI::PlaceHolder(150));
-    form.addValidator(FormRangeValidator(50, 500));
+    form.addValidator(FormRangeValidator(50, 500 * kFactor));
 
     form.add<uint8_t>(F("sstep"), _H_W_STRUCT_VALUE(cfg, shortpress_step));
     form.addFormUI(F("Brightness Steps"), FormUI::Suffix('%'), FormUI::PlaceHolder(5));
@@ -105,7 +112,7 @@ void DimmerModuleForm::_createConfigureForm(PluginComponent::FormCallbackType ty
 
     form.add<uint16_t>(F("snrt"), _H_W_STRUCT_VALUE(cfg, shortpress_no_repeat_time));
     form.addFormUI(F("Short Press Down = Off/No Repeat Time"), FormUI::Suffix(FSPGM(milliseconds)), FormUI::PlaceHolder(800));
-    form.addValidator(FormRangeValidator(250, 2500));
+    form.addValidator(FormRangeValidator(250, 2500 * kFactor));
 
     form.add<uint8_t>(F("minbr"), _H_W_STRUCT_VALUE(cfg, min_brightness));
     form.addFormUI(F("Min. Brightness"), FormUI::Suffix('%'), FormUI::PlaceHolder(15));

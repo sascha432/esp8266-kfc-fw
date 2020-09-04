@@ -27,7 +27,7 @@ using DimmerTwoWireClass = TwoWire;
 #endif
 
 #ifndef DEBUG_IOT_DIMMER_MODULE
-#define DEBUG_IOT_DIMMER_MODULE             0
+#define DEBUG_IOT_DIMMER_MODULE             1
 #endif
 
 #if IOT_SENSOR && (IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032)
@@ -59,11 +59,7 @@ public:
 
     uint8_t endTransmission(uint8_t sendStop)
     {
-#if DEBUG_IOT_DIMMER_MODULE
-        return _debug_print_result(DimmerTwoWireClass::endTransmission(sendStop));
-#else
         return DimmerTwoWireClass::endTransmission(sendStop);
-#endif
     }
 
     uint8_t endTransmission() {
@@ -77,7 +73,7 @@ public:
 
     bool lock() {
         if (_locked) {
-            _debug_println("Wire locked");
+            __DBG_print("Wire locked");
             return false;
         }
         _locked = true;

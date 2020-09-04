@@ -75,7 +75,7 @@ void Dimmer_Base::_begin()
         _wire.write(DimmerRetrieveVersionLegacy().data());
         if (_wire.endTransmission() == 0) {
             if (_wire.requestFrom(DIMMER_I2C_ADDRESS, _version.size()) == _version.size()) {
-                _version.read(_wire);
+                _version.read(reinterpret_cast<Stream &>(_wire));
                 if (_version.getMajor() != 2) {
                     __DBG_printf("version %u.%u.%u not supported", DIMMER_VERSION_SPLIT(_version));
                 }

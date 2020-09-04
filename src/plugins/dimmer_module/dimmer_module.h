@@ -72,13 +72,6 @@
 #define IOT_DIMMER_MODULE_HAS_BUTTONS       0
 #endif
 
-#if IOT_DIMMER_MODULE_HAS_BUTTONS
-#include <Button.h>
-#include <ButtonEventCallback.h>
-#include <PushButton.h>
-#include <Bounce2.h>
-#endif
-
 #if IOT_DIMMER_MODULE_HAS_BUTTONS && !PIN_MONITOR
 #error PIN_MONITOR=1 required
 #endif
@@ -97,9 +90,11 @@
 #define IOT_SWITCH_ACTIVE_STATE             PRESSED_WHEN_LOW
 #endif
 
-class DimmerModuleForm;
+// provides DimmerButtons and DimmerChannels
+// if buttons are disabled, DimmerButtons is an alias for DimmerChannels
+#include "dimmer_buttons.h"
 
-class Driver_DimmerModule: public MQTTComponent, public Dimmer_Base, public DimmerModuleForm
+class Driver_DimmerModule: public MQTTComponent, public Dimmer_Base, public DimmerButtons, public DimmerModuleForm
 {
 public:
     Driver_DimmerModule();
@@ -132,95 +127,11 @@ protected:
     void _endButtons();
     void _printStatus(Print &out);
 
+    void _addLoopFunction();
+    void _removeLoopFunction();
+
 private:
     void _getChannels();
-
-protected:
-    std::array<DimmerChannel, IOT_DIMMER_MODULE_CHANNELS> _channels;
-
-// buttons
-#if IOT_DIMMER_MODULE_HAS_BUTTONS
-public:
-    static void pinCallback(void *arg);
-    static void loop();
-
-    static void onButtonPressed(Button& btn);
-    static void onButtonHeld(Button& btn, uint16_t duration, uint16_t repeatCount);
-    static void onButtonReleased(Button& btn, uint16_t duration);
-
-private:
-    void _pinCallback(PinMonitor::Pin &pin);
-    void _loop();
-
-    void _buttonShortPress(uint8_t channel, bool up);
-    void _buttonLongPress(uint8_t channel, bool up);
-    void _buttonRepeat(uint8_t channel, bool up, uint16_t repeatCount);
-
-    // get number of pressed buttons, channel and up or down button. returns false if no match
-    bool _findButton(Button &btn, uint8_t &pressed, uint8_t &channel, bool &buttonUp);
-
-private:
-    class DimmerButton {
-    public:
-        DimmerButton(uint8_t pin) : _pin(pin), _button(pin, IOT_SWITCH_ACTIVE_STATE) {
-        }
-        inline uint8_t getPin() const {
-            return _pin;
-        }
-        inline PushButton &getButton() {
-            return _button;
-        }
-    private:
-        uint8_t _pin;
-        PushButton _button;
-    };
-
-    typedef std::vector<DimmerButton> DimmerButtonVector;
-
-    DimmerButtonVector _buttons;
-    std::array<Event::Timer, IOT_DIMMER_MODULE_CHANNELS> _turnOffTimer;
-    std::array<uint8_t, IOT_DIMMER_MODULE_CHANNELS> _turnOffTimerRepeat;
-    std::array<int16_t, IOT_DIMMER_MODULE_CHANNELS> _turnOffLevel;
-#endif
 };
 
-class DimmerModulePlugin : public PluginComponent, public Driver_DimmerModule {
-public:
-    DimmerModulePlugin();
-
-    virtual void setup(SetupModeType mode) override;
-    virtual void reconfigure(const String &source) override;
-    virtual void shutdown() override;
-    virtual void getStatus(Print &output) override;
-    virtual void createWebUI(WebUI &webUI) override;
-
-    virtual void readConfig(DimmerModuleForm::ConfigType &cfg) {
-        _readConfig(cfg);
-    }
-
-    virtual void writeConfig(DimmerModuleForm::ConfigType &cfg) {
-        _writeConfig(cfg);
-    }
-
-    virtual void createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request) override {
-        DimmerModuleForm::_createConfigureForm(type, formName, form, request);
-    }
-
-    virtual void getValues(JsonArray &array) override {
-        _getValues(array);
-    }
-    virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) override {
-        _setValue(id, value, hasValue, state, hasState);
-    }
-
-#if AT_MODE_SUPPORTED
-    virtual void atModeHelpGenerator() override {
-        _atModeHelpGenerator(getName_P());
-    }
-    virtual bool atModeHandler(AtModeArgs &args) override {
-        return _atModeHandler(args, *this, IOT_DIMMER_MODULE_MAX_BRIGHTNESS);
-    }
-#endif
-};
-
-extern DimmerModulePlugin dimmer_plugin;
+#include "dimmer_plugin.h"

@@ -26,6 +26,8 @@
 
 #endif
 
+#include  <SerialTwoWire.h>
+
 #define DIMMER_REGISTER_CONFIG_OFS                  (DIMMER_REGISTER_START_ADDR + offsetof(register_mem_t, cfg))
 #define DIMMER_REGISTER_CONFIG_SZ                   sizeof(register_mem_cfg_t)
 #define DIMMER_VERSION_SPLIT(version)               version.getMajor(), version.getMinor(), version.getRevision()

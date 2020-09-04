@@ -16,7 +16,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-Driver_DimmerModule::Driver_DimmerModule() : MQTTComponent(ComponentTypeEnum_t::SENSOR), Dimmer_Base()
+Driver_DimmerModule::Driver_DimmerModule() : MQTTComponent(ComponentTypeEnum_t::SENSOR), Dimmer_Base(), _loopAdded(false)
 {
 }
 
@@ -48,11 +48,18 @@ void Driver_DimmerModule::_begin()
 
 void Driver_DimmerModule::_end()
 {
-    _debug_println();
+    __LDBG_println();
     _endButtons();
     _endMqtt();
     Dimmer_Base::_end();
 }
+
+#if IOT_DIMMER_MODULE_HAS_BUTTONS == 0
+
+void Driver_DimmerModule::_beginButtons() {}
+void Driver_DimmerModule::_endButtons() {}
+
+#endif
 
 void Driver_DimmerModule::_beginMqtt()
 {
@@ -76,59 +83,6 @@ void Driver_DimmerModule::_endMqtt()
             mqttClient->unregisterComponent(&_channels[i]);
         }
     }
-}
-
-void Driver_DimmerModule::_beginButtons()
-{
-#if IOT_DIMMER_MODULE_HAS_BUTTONS
-    PinMonitor &monitor = *PinMonitor::createInstance();
-
-    for(uint8_t i = 0; i < _channels.size() * 2; i++) {
-        auto pinNum = _config.pins[i];
-        __LDBG_printf("Channel %u button %u PIN %u", i / 2, i % 2, pinNum);
-        if (pinNum) {
-            auto pin = monitor.addPin(pinNum, pinCallback, this, IOT_DIMMER_MODULE_PINMODE);
-            if (pin) {
-                _buttons.emplace_back(pinNum);
-                auto &button = _buttons.back().getButton();
-#if DEBUG_IOT_DIMMER_MODULE
-                // not used, debug only
-                button.onPress(Driver_DimmerModule::onButtonPressed);
-#else
-                button.onPress(nullptr);    // the callback needs to be set to nullptr since it is not initialized in the button class
-#endif
-                button.onHoldRepeat(_config.longpress_time, _config.repeat_time, Driver_DimmerModule::onButtonHeld);
-                button.onRelease(Driver_DimmerModule::onButtonReleased);
-            }
-            else {
-                __LDBG_printf("Failed to add PIN %u", pinNum);
-                monitor.removePin(pinNum, this);
-            }
-        }
-    }
-#endif
-}
-
-void Driver_DimmerModule::_endButtons()
-{
-#if IOT_DIMMER_MODULE_HAS_BUTTONS
-    _debug_println(F("removing timers"));
-    for(uint8_t i = 0; i < _channels.size(); i++) {
-        _turnOffTimer[i].remove();
-    }
-
-    _debug_println(F("removing pin monitor"));
-    PinMonitor *monitor = PinMonitor::getInstance();
-    if (monitor) {
-        for(auto &button: _buttons) {
-            monitor->removePin(button.getPin(), this);
-        }
-        if (!monitor->size()) {
-            PinMonitor::deleteInstance();
-        }
-    }
-    LoopFunctions::remove(Driver_DimmerModule::loop);
-#endif
 }
 
 void Driver_DimmerModule::onConnect(MQTTClient *client)
@@ -241,172 +195,6 @@ void Driver_DimmerModule::_onReceive(size_t length)
 }
 
 
-// buttons
-#if IOT_DIMMER_MODULE_HAS_BUTTONS
-
-void Driver_DimmerModule::pinCallback(void *arg)
-{
-    auto pin = reinterpret_cast<PinMonitor::Pin *>(arg);
-    reinterpret_cast<Driver_DimmerModule *>(pin->getArg())->_pinCallback(*pin);
-}
-
-void Driver_DimmerModule::loop()
-{
-    dimmer_plugin._loop();
-}
-
-void Driver_DimmerModule::onButtonPressed(Button& btn)
-{
-    __LDBG_printf("onButtonPressed %p", &btn);
-}
-
-void Driver_DimmerModule::onButtonHeld(Button& btn, uint16_t duration, uint16_t repeatCount)
-{
-    __LDBG_printf("onButtonHeld %p duration %u repeat %u", &btn, duration, repeatCount);
-
-    uint8_t pressed, channel;
-    bool buttonUp;
-    if (dimmer_plugin._findButton(btn, pressed, channel, buttonUp)) {
-        dimmer_plugin._buttonRepeat(channel, buttonUp, repeatCount);
-    }
-}
-
-void Driver_DimmerModule::onButtonReleased(Button& btn, uint16_t duration)
-{
-    __LDBG_printf("onButtonReleased %p duration %u", &btn, duration);
-
-    uint8_t pressed, channel;
-    bool buttonUp;
-    auto &config = dimmer_plugin._getConfig();
-
-    if (dimmer_plugin._findButton(btn, pressed, channel, buttonUp)) {
-        if (duration < config.shortpress_time) {   // short press
-            dimmer_plugin._buttonShortPress(channel, buttonUp);
-        }
-        else if (duration < config.longpress_time) { // long press
-            dimmer_plugin._buttonLongPress(channel, buttonUp);
-        }
-        else { // held
-
-        }
-    }
-    if (!pressed) { // no button pressed anymore, remove main loop functions
-        LoopFunctions::remove(Driver_DimmerModule::loop);
-    }
-}
-
-bool Driver_DimmerModule::_findButton(Button &btn, uint8_t &pressed, uint8_t &channel, bool &buttonUp)
-{
-    uint8_t num = 0;
-
-    channel = 0xff;
-    pressed = 0;
-    for(auto &button: dimmer_plugin._buttons) {
-        if (btn.is(button.getButton())) {
-            channel = num / 2;
-            buttonUp = !(num % 2);
-        }
-        if (button.getButton().isPressed()) {
-            pressed++;
-        }
-        num++;
-    }
-    __LDBG_printf("pressed=%u channel=%u button=%s", pressed, channel, channel == 0xff ? PSTR("N/A") : (buttonUp ? PSTR("up") : PSTR("down")));
-
-    return channel != 0xff;
-}
-
-
-void Driver_DimmerModule::_pinCallback(PinMonitor::Pin &pin)
-{
-    // add main loop function to handle timings and debouncing
-    LoopFunctions::add(Driver_DimmerModule::loop);
-    // find button and update
-    for(auto &button: _buttons) {
-        if (button.getPin() == pin.getPin()) {
-            button.getButton().update();
-        }
-    }
-}
-
-void Driver_DimmerModule::_loop()
-{
-    // update all buttons
-    for(auto &button: _buttons) {
-        button.getButton().update();
-    }
-}
-
-void Driver_DimmerModule::_buttonShortPress(uint8_t channel, bool up)
-{
-    __LDBG_printf("channel=%d dir=%s repeat=%u", channel, up ? PSTR("up") : PSTR("down"), _turnOffTimerRepeat[channel]);
-    if (getChannelState(channel)) {
-        // single short press, start timer
-        // _turnOffTimerRepeat[channel] will be 0 for a single button down press
-
-        if (_turnOffTimer[channel]) {
-            _turnOffTimerRepeat[channel]++;
-            _turnOffTimer[channel]->rearm(_config.shortpress_no_repeat_time, false);     // rearm timer after last keypress
-        }
-        else {
-            _turnOffLevel[channel] = getChannel(channel);
-            _turnOffTimerRepeat[channel] = 0;
-            _Timer(_turnOffTimer[channel]).add(_config.shortpress_no_repeat_time, false, [this, channel](Event::CallbackTimerPtr timer) {
-                __LDBG_printf("turn off channel=%u timer expired, repeat=%d", channel, _turnOffTimerRepeat[channel]);
-                if (_turnOffTimerRepeat[channel] == 0) { // single button down press detected, turn off
-                    if (off(channel)) {
-                        _channels[channel].setStoredBrightness(_turnOffLevel[channel]); // restore level to when the button was pressed
-                    }
-                }
-            }, Event::PriorityType::TIMER);
-        }
-        if (up) {
-            _buttonRepeat(channel, true, 0);        // short press up = fire repeat event
-            _turnOffTimerRepeat[channel]++;
-        } else {
-            _buttonRepeat(channel, false, 0);       // short press down = fire repeat event
-        }
-    }
-    else {
-        if (up) {                                   // short press up while off = turn on
-            on(channel);
-        }
-        else {                                      // short press down while off = ignore
-        }
-    }
-}
-
-void Driver_DimmerModule::_buttonLongPress(uint8_t channel, bool up)
-{
-    __LDBG_printf("channel=%d dir=%s", channel, up ? PSTR("up") : PSTR("down"));
-    //if (getChannelState(channel))
-    {
-        if (up) {
-            // long press up = increase to max brightness
-            setChannel(channel, IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config.longpress_max_brightness / 100, _config.longpress_fadetime);
-        }
-        else {
-            // long press down = decrease to min brightness
-            setChannel(channel, IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config.longpress_min_brightness / 100, _config.longpress_fadetime);
-        }
-    }
-}
-
-void Driver_DimmerModule::_buttonRepeat(uint8_t channel, bool up, uint16_t repeatCount)
-{
-    auto level = getChannel(channel);
-    int16_t change = IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config.shortpress_step / 100;
-    if (!up) {
-        change = -change;
-    }
-    int16_t newLevel = max(IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config.min_brightness / 100, min(IOT_DIMMER_MODULE_MAX_BRIGHTNESS, level + change));
-    if (level != newLevel) {
-        __LDBG_printf("channel=%d dir=%s repeat=%d change=%d new_level=%d", channel, up ? PSTR("up") : PSTR("down"), repeatCount, change, newLevel);
-        setChannel(channel, newLevel, _config.shortpress_fadetime);
-    }
-}
-
-#endif
 
 DimmerModulePlugin dimmer_plugin;
 

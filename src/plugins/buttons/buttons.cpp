@@ -11,10 +11,10 @@ static ButtonsPlugin plugin;
 void ButtonsPlugin::setup(SetupModeType mode)
 {
     _readConfig();
-    PinMonitor &monitor = *PinMonitor::createInstance();
+    PinMonitor &monitor = PinMonitor::createInstance();
     for(auto &button: _buttons) {
-        auto pin = monitor.addPin(button.getPin(), pinCallback, this, button.getPinMode());
-        if (pin) {
+        auto iterator = monitor.addPin(button.getPin(), pinCallback, this, button.getPinMode());
+        if (iterator != monitor.end()) {
             __LDBG_printf("pin=%u added", button.getPin());
             PushButton &pushButton = button.getButton();
             pushButton.onPress(onButtonPressed);
@@ -31,12 +31,12 @@ void ButtonsPlugin::setup(SetupModeType mode)
 
 void ButtonsPlugin::shutdown()
 {
-    PinMonitor *monitor = PinMonitor::getInstance();
-    if (monitor) {
+    if (PinMonitor::hasInstance()) {
+        PinMonitor &monitor = PinMonitor::getInstance();
         for(auto &button: _buttons) {
-            monitor->removePin(button.getPin(), this);
+            monitor.removePin(button.getPin(), this);
         }
-        if (!monitor->size()) {
+        if (monitor.empty()) {
             PinMonitor::deleteInstance();
         }
     }
@@ -45,14 +45,14 @@ void ButtonsPlugin::shutdown()
 
 void ButtonsPlugin::reconfigure(PGM_P source)
 {
-    PinMonitor *monitor = PinMonitor::getInstance();
-    if (monitor) {
+    if (PinMonitor::hasInstance()) {
+        PinMonitor &monitor = PinMonitor::getInstance();
         for(auto &button: _buttons) {
-            monitor->removePin(button.getPin(), this);
+            monitor.removePin(button.getPin(), this);
         }
     }
     setup(SetupModeType::DEFAULT);
-    if (!monitor->size()) {
+    if (PinMonitor::hasInstance() && PinMonitor::getInstance().empty()) {
         PinMonitor::deleteInstance();
     }
 }
@@ -74,7 +74,7 @@ void ButtonsPlugin::_readConfig()
     __LDBG_printf("size=%u", _buttons.size());
 }
 
-void ButtonsPlugin::pinCallback(void *arg)
+void ButtonsPlugin::pinCallback(PinMonitor::Pin *arg)
 {
 
 }

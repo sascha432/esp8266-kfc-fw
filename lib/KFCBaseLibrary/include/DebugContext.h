@@ -4,20 +4,23 @@
 
 #pragma once
 
+#include <misc.h>
+
 class DebugContext {
 public:
 #if DEBUG_INCLUDE_SOURCE_INFO
     DebugContext() : _file(nullptr), _line(0), _functionName(nullptr) {}
     DebugContext(const char* file, int line, const char* functionName) : _file(file), _line(line), _functionName(functionName) {}
-    void prefix() const {
-        DEBUG_OUTPUT.printf_P(___debugPrefix, millis(), _file, _line, ESP.getFreeHeap(), can_yield(), _functionName);
+
+    inline void prefix() const {
+        getOutput().printf_P(___debugPrefix, millis(), _file, _line, ESP.getFreeHeap(), can_yield(), _functionName);
     }
-    const char* _file;
-    int _line;
-    const char* _functionName;
 #else
-    void prefix() const {
-        DEBUG_OUTPUT.print(FPSTR(___debugPrefix));
+    DebugContext() {}
+    DebugContext(const char *file, int line, const char *functionName) {}
+
+    inline void prefix() const {
+        getOutput().print(FPSTR(___debugPrefix));
     }
 #endif
 
@@ -57,20 +60,41 @@ public:
 
     static void pause(uint32_t timeout = ~0);
 
-    static bool isActive() {
+    inline static bool isActive() {
         return __state == DEBUG_HELPER_STATE_ACTIVE;
     }
-    static Print &getOutput() {
+
+    inline static bool isActive(const char *file, long line, const char *funcname) {
+        return __state == DEBUG_HELPER_STATE_ACTIVE;
+    }
+
+    inline static Print &getOutput() {
         return DEBUG_OUTPUT;
     }
-    static uint8_t __state;
-    static DebugContext __pos;
-    static bool __store_pos(DebugContext &&dctx);
-    static const char* pretty_function(const char* name);
-    static void activate(bool state = true) {
+
+    inline static void activate(bool state = true) {
         __state = state ? DEBUG_HELPER_STATE_ACTIVE : DEBUG_HELPER_STATE_DISABLED;
     }
 
-    static bool reportAssert(const DebugContext &ctx, const __FlashStringHelper *message);
-};
+    inline static void setState(uint8_t state = DEBUG_HELPER_STATE_ACTIVE) {
+        __state = state;
+    }
 
+    static bool reportAssert(const DebugContext &ctx, const __FlashStringHelper *message);
+
+    static bool __store_pos(DebugContext &&dctx);
+
+    static const char *pretty_function(const char *name);
+
+public:
+#if DEBUG_INCLUDE_SOURCE_INFO
+    const char *_file;
+    int _line;
+    const char *_functionName;
+    // String _functionName
+#endif
+
+    static uint8_t __state;
+    static DebugContext __pos;
+
+};

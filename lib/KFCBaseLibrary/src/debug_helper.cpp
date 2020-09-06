@@ -162,8 +162,6 @@ KFCMemoryDebugging &KFCMemoryDebugging::getInstance()
 
 #endif
 
-// String DebugContext::__file;
-// String DebugContext::__function;
 uint8_t DebugContext::__state = DEBUG_HELPER_STATE_DISABLED; // needs to be disabled until the output stream has been initialized
 DebugContext DebugContext::__pos;
 
@@ -198,10 +196,6 @@ bool DebugContext::reportAssert(const DebugContext &ctx, const __FlashStringHelp
     }
     return true;
 }
-
-// DebugContextFilterVector DebugContext::__filters;
-
-// FixedCircularBuffer<DebugContext::Positon_t,100> DebugContext::__pos;
 
 #if DEBUG_INCLUDE_SOURCE_INFO
 const char ___debugPrefix[] PROGMEM = "D%08lu (%s:%u <%d:%u> %s): ";

@@ -86,8 +86,26 @@ void printable_string(Print &output, const uint8_t *buffer, size_t length, size_
         }
         else if (isprint(*ptr) || (extra && strchr_P(extra, *ptr))) {
             output.print((char)*ptr);
-        } else {
-            output.printf_P(PSTR("\\x%02X"), (int)(*ptr & 0xff));
+        } 
+        else {
+            output.print('\\');
+            switch(*ptr) {
+            case '\n':
+                output.print('n');
+                break;
+            case '\r':
+                output.print('r');
+                break;
+            case '\t':
+                output.print('t');
+                break;
+            case '\b':
+                output.print('b');
+                break;
+            default:
+                output.printf_P(PSTR("x%02x"), (int)(*ptr & 0xff));
+                break;
+            }
         }
         ptr++;
     }

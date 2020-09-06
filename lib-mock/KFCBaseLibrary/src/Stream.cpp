@@ -17,7 +17,7 @@ Stream::Stream(FILE *fp) : Print(), _timeout(1000), _fp(fp), _fp_size(0)
     }
 }
 
-inline void Stream::setTimeout(unsigned long timeout) 
+void Stream::setTimeout(unsigned long timeout) 
 { 
     _timeout = timeout; 
 }

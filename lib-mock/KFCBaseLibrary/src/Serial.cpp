@@ -2,7 +2,9 @@
 * Author: sascha_lammers@gmx.de
 */
 
-#if _WIN32
+#pragma once
+
+#if _MSC_VER
 
 #include "Serial.h"
 

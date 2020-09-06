@@ -11,7 +11,6 @@
 #include <algorithm>
 #include <BufferStream.h>
 #include <DumpBinary.h>
-
 #include "EEPROM.h"
 
 EEPROMClass EEPROM;

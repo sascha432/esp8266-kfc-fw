@@ -62,7 +62,7 @@ DumpBinary &DumpBinary::dump(const uint8_t *data, size_t length, ptrdiff_t offse
         _output.printf_P(PSTR("[%04X] "), pos);
         uint8_t j = 0;
         for (ptrdiff_t i = pos; i < end && j < perLine; i++, j++) {
-            char ch = pgm_read_byte(data + i);
+            auto ch = (uint8_t)pgm_read_byte(data + i);
             if (isprint(ch)) {
                 _output.print(ch);
             } else {

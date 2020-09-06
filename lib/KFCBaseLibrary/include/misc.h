@@ -78,7 +78,11 @@ String formatTime(unsigned long seconds, bool printDaysIfZero = false);
 String url_encode(const String &str);
 void printable_string(Print &output, const uint8_t *buffer, size_t length, size_t maxLength = 0, PGM_P extra = nullptr, bool crlfAsText = false);
 String printable_string(const uint8_t *buffer, size_t length, size_t maxLength = 0, PGM_P extra = nullptr, bool crlfAsText = false);
-inline String printable_string(const char *buffer, size_t length, size_t maxLength = 0, PGM_P extra = nullptr, bool crlfAsText = false) {
+
+static inline void printable_string(Print &output, const void *buffer, size_t length, size_t maxLength = 0, PGM_P extra = nullptr, bool crlfAsText = false) {
+    return printable_string(output, reinterpret_cast<const uint8_t *>(buffer), length, maxLength, extra, crlfAsText);
+}
+static inline String printable_string(const void *buffer, size_t length, size_t maxLength = 0, PGM_P extra = nullptr, bool crlfAsText = false) {
     return printable_string(reinterpret_cast<const uint8_t *>(buffer), length, maxLength, extra, crlfAsText);
 }
 

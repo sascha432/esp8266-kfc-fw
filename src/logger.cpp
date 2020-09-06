@@ -228,10 +228,7 @@ void Logger::writeLog(Level logLevel, const char *message, va_list arg)
         }
 
 #if ___DEBUG
-        if (DebugContext::__state == DEBUG_HELPER_STATE_ACTIVE) {
-            debug_prefix();
-            DEBUG_OUTPUT.println(msg);
-        }
+        DebugContext_prefix(DEBUG_OUTPUT.println(msg));
 #elif LOGGER_SERIAL_OUTPUT
         if (System::Flags::getConfig().is_at_mode_enabled) {
             Serial.print(F("+LOGGER="))

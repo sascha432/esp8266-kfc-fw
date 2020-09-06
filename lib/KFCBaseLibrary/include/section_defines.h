@@ -8,12 +8,12 @@
 
 #if _MSC_VER
 
-#define SECTION_FLASH_START_ADDRESS                         0x40200000
+#define SECTION_FLASH_START_ADDRESS                         ((uintptr_t)&_EEPROM_start)
 #define SECTION_IROM0_TEXT_START_ADDRESS                    0
 #define SECTION_IROM0_TEXT_END_ADDRESS                      UINTPTR_MAX
 #define SECTION_HEAP_START_ADDRESS                          0
 #define SECTION_HEAP_END_ADDRESS                            UINTPTR_MAX
-#define SECTION_EEPROM_START_ADDRESS                        SECTION_FLASH_START_ADDRESS
+#define SECTION_EEPROM_START_ADDRESS                        ((uintptr_t)&_EEPROM_start)
 
 #else
 

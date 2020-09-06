@@ -287,7 +287,7 @@ void Buffer::_remove(size_t index, size_t count)
 
 void Buffer::dumpAlloc(Print &output)
 {
-    output.printf_P(PSTR("buffer=%p alloc=%u realloc=%u free=%u"), this, _alloc, _realloc, _free);
+    output.printf_P(PSTR("(re-)/alloc/free=%u %u %u len/size=%u"), _realloc, _alloc, _free, length(), size());
 }
 
 #endif

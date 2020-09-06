@@ -11,16 +11,16 @@
 #endif
 
 #ifndef DEBUG_BUFFER_ALLOC
-#define DEBUG_BUFFER_ALLOC                      1
+#define DEBUG_BUFFER_ALLOC                      0
 #endif
 
 #ifndef BUFFER_ZERO_FILL
 #define BUFFER_ZERO_FILL                        0
 #endif
 
-#if DEBUG_BUFFER || 1
+#if DEBUG_BUFFER
 #define __DBG_BUFFER_assert(...)                assert(__VA_ARGS__)
-#define __DBG_BUFFER_asserted(cmp, ...)         { auto res = __VA_ARGS__; __DBG_BUFFER_assert(res == cmp); }
+#define __DBG_BUFFER_asserted(cmp, ...)         { auto res = (bool)(__VA_ARGS__); __DBG_BUFFER_assert(res == cmp); }
 #else
 #define __DBG_BUFFER_assert(...)
 #define __DBG_BUFFER_asserted(cmp, ...)         __VA_ARGS__

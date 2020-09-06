@@ -34,8 +34,8 @@ Stream
 
 class Stream : public Print {
 protected:
-    unsigned long _startMillis;
     unsigned long _timeout;
+    unsigned long _startMillis;
 public:
     Stream(FILE *fp = nullptr);
 

@@ -211,19 +211,6 @@ namespace std {
 #include "FileOpenMode.h"
 #include "constexpr_tools.h"
 
-#define __CLASS_FROM__(name)             StringConstExpr::StringArray<DebugContextConstExpr::get_class_name_len(name)>(DebugContextConstExpr::get_class_name_start(name)).array
-
-#ifndef __CLASS__
-#ifdef _MSC_VER
-#define __CLASS__                       __CLASS_FROM__(__FUNCSIG__)
-#else
-// __PRETTY_FUNCTION__ is not constexpr, we need to parse it during runtime
-// extern String __class_from_String(const char *str);
-#define __CLASS__                       __PRETTY_FUNCTION__ //__class_from_String(__PRETTY_FUNCTION__).c_str()
-#endif
-#endif
-
-
 #if __GNUC__
 
 static size_t constexpr constexpr_strlen(const char *str) noexcept
@@ -233,7 +220,7 @@ static size_t constexpr constexpr_strlen(const char *str) noexcept
 
 #else
 
-constexpr size_t constexpr_strlen(const char *s) noexcept 
+constexpr size_t constexpr_strlen(const char *s) noexcept
 {
     return s ? (*s ? 1 + constexpr_strlen(s + 1) : 0) : 0;
 }

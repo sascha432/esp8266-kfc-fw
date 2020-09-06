@@ -37,7 +37,7 @@ void delayMicroseconds(unsigned int us)
     ets_timer_delay_us(us);
 }
 
-bool __ets_is_loop_running() 
+bool __ets_is_loop_running()
 {
     return __ets_is_running;
 }
@@ -52,7 +52,7 @@ static void ets_main_thread_stop()
     }
 }
 
-void __ets_end_loop() 
+void __ets_end_loop()
 {
     __ets_is_running = false;
     __DBG_printf("__ets_end_loop invoked=1");
@@ -60,7 +60,7 @@ void __ets_end_loop()
     ets_main_thread_stop();
 }
 
-static bool __ets_console_handler(int signal) 
+static bool __ets_console_handler(int signal)
 {
     if (signal == CTRL_C_EVENT || signal == CTRL_CLOSE_EVENT || signal == CTRL_BREAK_EVENT || signal == CTRL_SHUTDOWN_EVENT) {
         __ets_end_loop();
@@ -104,13 +104,19 @@ static void start_main_thread();
 void __ets_pre_setup()
 {
     micros_start_time = std::chrono::high_resolution_clock::now();
+#if !ETS_MAIN_NO_TIMERS
     ets_timer_init();
+#endif
     SetConsoleOutputCP(65001);
     ESP._enableMSVCMemdebug();
+#if !ETS_MAIN_NO_TIMERS
     SetConsoleCtrlHandler((PHANDLER_ROUTINE)__ets_console_handler, TRUE);
+#endif
     DEBUG_HELPER_INIT();
 
+#if !ETS_MAIN_NO_LOOP
     start_main_thread();
+#endif
 }
 
 #if ETS_MAIN_NO_MAIN_FUNC
@@ -137,7 +143,7 @@ static void start_main_thread()
 {
 }
 
-int main() 
+int main()
 {
     __ets_pre_setup();
     setup();
@@ -149,7 +155,7 @@ int main()
         _ASSERTE(_CrtCheckMemory());
         __ets_post_loop_do_yield();
         _ASSERTE(_CrtCheckMemory());
-    } 
+    }
     while (__ets_is_running);
     __DBG_printf("ets_main_loop ended=1");
     _ASSERTE(_CrtCheckMemory());

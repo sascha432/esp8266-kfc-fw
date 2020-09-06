@@ -21,14 +21,14 @@
 #include "section_defines.h"
 
 
-#ifdef _MSC_VER
+#if _MSC_VER
 #ifndef DEBUG_INCLUDE_SOURCE_INFO
 #define DEBUG_INCLUDE_SOURCE_INFO                           1
 #endif
 extern unsigned long millis(void);
-#define ____DEBUG_FUNCTION__                                __FUNCSIG__
+#define __DEBUG_FUNCTION__                                  DebugContext::pretty_function(__FUNCSIG__)
 #else
-#define ____DEBUG_FUNCTION__                                __FUNCTION__
+#define __DEBUG_FUNCTION__                                  __FUNCTION__
 #endif
 
 #ifndef DEBUG_VT100_SUPPORT
@@ -39,12 +39,6 @@ extern unsigned long millis(void);
 #define __BASENAME_FILE__                                   StringConstExpr::basename(__FILE__)
 #else
 #define __BASENAME_FILE__                                   __FILE__
-#endif
-
-#if 1
-#define __DEBUG_FUNCTION__                                  DebugContext::pretty_function(____DEBUG_FUNCTION__)
-#else
-#define __DEBUG_FUNCTION__                                  ____DEBUG_FUNCTION__
 #endif
 
 #define __NDBG_allocator                                    std::allocator
@@ -98,14 +92,13 @@ extern const char ___debugPrefix[] PROGMEM;
 #define DEBUG_HELPER_STATE_DEFAULT                          DEBUG_HELPER_STATE_ACTIVE
 #endif
 
-#define DEBUG_HELPER_STATE_ACTIVE                           0
-#define DEBUG_HELPER_STATE_FILTERED                         1
-#define DEBUG_HELPER_STATE_DISABLED                         2
+#define DEBUG_HELPER_STATE_DISABLED                         0
+#define DEBUG_HELPER_STATE_ACTIVE                           1
 
 #if DEBUG_INCLUDE_SOURCE_INFO
-#define DEBUG_HELPER_POSITION                               DebugContext(__BASENAME_FILE__, __LINE__, __DEBUG_FUNCTION__)
+#define DEBUG_HELPER_POSITION                               __BASENAME_FILE__, __LINE__, __DEBUG_FUNCTION__
 #else
-#define DEBUG_HELPER_POSITION                               DebugContext()
+#define DEBUG_HELPER_POSITION
 #endif
 
 #if DEBUG_VT100_SUPPORT
@@ -134,15 +127,24 @@ extern const char ___debugPrefix[] PROGMEM;
 #define __DBG_printf(fmt, ...)                              debug_printf(PSTR(fmt __DBG_newline), ##__VA_ARGS__)
 #define __DBG_println()                                     debug_print(F(__DBG_newline))
 #define __DBG_panic(fmt, ...)                               (DEBUG_OUTPUT.printf_P(PSTR(fmt __DBG_newline), ## __VA_ARGS__) && __debugbreak_and_panic())
-#define __DBG_assert(cond)                                  (!(cond) ? (__DBG_print(_VT100(bold_red) "assert( " _STRINGIFY(cond) ") FAILED") && DebugContext::reportAssert(DEBUG_HELPER_POSITION, F(_STRINGIFY(cond)))) : false)
-#define __DBG_assert_printf(cond, fmt, ...)                 (!(cond) ? (__DBG_print("assert( " _STRINGIFY(cond) ")") && __DBG_printf(fmt, ##__VA_ARGS__)) : false)
-#define __DBG_assert_panic(cond, fmt, ...)                  (!(cond) ? (__DBG_print("assert( " _STRINGIFY(cond) ")") && __DBG_panic(fmt, ##__VA_ARGS__)) : false)
+#define __DBG_assert(cond)                                  (!(cond) ? (__DBG_print(_VT100(bold_red) "assert( " _STRINGIFY(cond) ") FAILED") && DebugContext::reportAssert(DebugContext_ctor(), F(_STRINGIFY(cond)))) : false)
+#define __DBG_assert_printf(cond, fmt, ...)                 (__DBG_assert(cond) ? __DBG_printf(fmt, ##__VA_ARGS__) : false)
+#define __DBG_assert_panic(cond, fmt, ...)                  (__DBG_assert(cond) ? __DBG_panic(fmt, ##__VA_ARGS__) : false)
 #define __DBG_print_result(result)                          debug_print_result(result)
 #define __DBG_printf_result(result, fmt, ...)               debug_printf_result(result, PSTR(fmt __DBG_newline), ##__VA_ARGS__)
 #define __DBG_prints_result(result, to_string)              debug_prints_result(result, to_string)
 #define __DBG_IF(...)                                       __VA_ARGS__
 #define __DBG_N_IF(...)
 #define __DBG_S_IF(a, b)                                    __DBG_IF(a)__DBG_N_IF(b)
+
+// MSVC version
+
+#ifndef _ASSERTE
+#define _ASSERTE(cond)                                      __DBG_assert(cond)
+#endif
+#ifndef _ASSERT_EXPR
+#define _ASSERT_EXPR(cond, fmt, ...)                        __DBG_assert_printf(cond, fmt, ##__VA_ARGS__)
+#endif
 
 // memory management
 
@@ -153,32 +155,32 @@ extern const char ___debugPrefix[] PROGMEM;
 #include "DebugMemoryHelper.h"
 #define __DBG_allocator                                     __DebugAllocator
 #define __DBG_track_allocator                               __TrackAllocator
-#define __DBG_operator_new(...)                             KFCMemoryDebugging::_new(DEBUG_HELPER_POSITION, (__VA_ARGS__), __NDBG_operator_new(__VA_ARGS__))
-#define __DBG_operator_delete(ptr)                          __NDBG_operator_delete(KFCMemoryDebugging::_delete(DEBUG_HELPER_POSITION, ptr))
+#define __DBG_operator_new(...)                             KFCMemoryDebugging::_new(DebugContext_ctor(), (__VA_ARGS__), __NDBG_operator_new(__VA_ARGS__))
+#define __DBG_operator_delete(ptr)                          __NDBG_operator_delete(KFCMemoryDebugging::_delete(DebugContext_ctor(), ptr))
 #define __DBG_track_new(size)                               KFCMemoryDebugging::_track_new(size)
 #define __DBG_track_delete(size)                            KFCMemoryDebugging::_track_delete(nullptr, size)
-#define __DBG_new(name, ...)                                KFCMemoryDebugging::_new(DEBUG_HELPER_POSITION, sizeof(name), new name(__VA_ARGS__))
-#define __DBG_delete(ptr)                                   delete KFCMemoryDebugging::_delete(DEBUG_HELPER_POSITION, ptr)
-#define __DBG_new_array(n, name, ...)                       KFCMemoryDebugging::_new(DEBUG_HELPER_POSITION, n * sizeof(name), new name[n](__VA_ARGS__))
-#define __DBG_delete_array(ptr)                             delete[] KFCMemoryDebugging::_delete(DEBUG_HELPER_POSITION, ptr)
-#define __DBG_malloc(size)                                  KFCMemoryDebugging::_alloc(DEBUG_HELPER_POSITION, size, malloc(size))
-#define __DBG_realloc(ptr, size)                            KFCMemoryDebugging::_realloc(DEBUG_HELPER_POSITION, size, ptr, realloc(ptr, size))
-#define __DBG_free(ptr)                                     free(KFCMemoryDebugging::_free(DEBUG_HELPER_POSITION, ptr))
+#define __DBG_new(name, ...)                                KFCMemoryDebugging::_new(DebugContext_ctor(), sizeof(name), new name(__VA_ARGS__))
+#define __DBG_delete(ptr)                                   delete KFCMemoryDebugging::_delete(DebugContext_ctor(), ptr)
+#define __DBG_new_array(n, name, ...)                       KFCMemoryDebugging::_new(DebugContext_ctor(), n * sizeof(name), new name[n](__VA_ARGS__))
+#define __DBG_delete_array(ptr)                             delete[] KFCMemoryDebugging::_delete(DebugContext_ctor(), ptr)
+#define __DBG_malloc(size)                                  KFCMemoryDebugging::_alloc(DebugContext_ctor(), size, malloc(size))
+#define __DBG_realloc(ptr, size)                            KFCMemoryDebugging::_realloc(DebugContext_ctor(), size, ptr, realloc(ptr, size))
+#define __DBG_free(ptr)                                     free(KFCMemoryDebugging::_free(DebugContext_ctor(), ptr))
 
 #define __DBG_malloc_str(size)                              reinterpret_cast<char *>(__DBG_malloc(size))
 #define __DBG_malloc_buf(size)                              reinterpret_cast<uint8_t *>(__DBG_malloc(size))
 #define __DBG_realloc_str(ptr, size)                        reinterpret_cast<char *>(__DBG_realloc(ptr, size))
 #define __DBG_realloc_buf(ptr, size)                        reinterpret_cast<uint8_t *>(__DBG_realloc(ptr, size))
-#define __DBG_strdup(str)                                   KFCMemoryDebugging::_alloc(DEBUG_HELPER_POSITION, strdup(str))
-#define __DBG_strdup_P(str)                                 KFCMemoryDebugging::_alloc(DEBUG_HELPER_POSITION, strdup_P(str))
+#define __DBG_strdup(str)                                   KFCMemoryDebugging::_alloc(DebugContext_ctor(), strdup(str))
+#define __DBG_strdup_P(str)                                 KFCMemoryDebugging::_alloc(DebugContext_ctor(), strdup_P(str))
 
-#define __DBG_NOP_new(ptr)                                  KFCMemoryDebugging::_new(DEBUG_HELPER_POSITION, sizeof(*ptr), ptr)
-#define __DBG_NOP_delete(ptr)                               KFCMemoryDebugging::_delete(DEBUG_HELPER_POSITION, ptr)
-#define __DBG_NOP_new_array(n, ptr)                         KFCMemoryDebugging::_new(DEBUG_HELPER_POSITION, n * sizeof(*ptr), ptr)
-#define __DBG_NOP_delete_array(ptr)                         KFCMemoryDebugging::_delete(DEBUG_HELPER_POSITION, ptr)
-#define __DBG_NOP_malloc(ptr, size)                         KFCMemoryDebugging::_alloc(DEBUG_HELPER_POSITION, size, ptr)
-#define __DBG_NOP_realloc(old_ptr, new_ptr, size)           KFCMemoryDebugging::_realloc(DEBUG_HELPER_POSITION, size, old_ptr, new_ptr)
-#define __DBG_NOP_free(ptr)                                 KFCMemoryDebugging::_free(DEBUG_HELPER_POSITION, ptr)
+#define __DBG_NOP_new(ptr)                                  KFCMemoryDebugging::_new(DebugContext_ctor(), sizeof(*ptr), ptr)
+#define __DBG_NOP_delete(ptr)                               KFCMemoryDebugging::_delete(DebugContext_ctor(), ptr)
+#define __DBG_NOP_new_array(n, ptr)                         KFCMemoryDebugging::_new(DebugContext_ctor(), n * sizeof(*ptr), ptr)
+#define __DBG_NOP_delete_array(ptr)                         KFCMemoryDebugging::_delete(DebugContext_ctor(), ptr)
+#define __DBG_NOP_malloc(ptr, size)                         KFCMemoryDebugging::_alloc(DebugContext_ctor(), size, ptr)
+#define __DBG_NOP_realloc(old_ptr, new_ptr, size)           KFCMemoryDebugging::_realloc(DebugContext_ctor(), size, old_ptr, new_ptr)
+#define __DBG_NOP_free(ptr)                                 KFCMemoryDebugging::_free(DebugContext_ctor(), ptr)
 
 #else
 
@@ -291,9 +293,9 @@ extern const char ___debugPrefix[] PROGMEM;
 #define __LDBG_printf(...)                                  __LDBG_IF(__DBG_printf(__VA_ARGS__))
 #define __LDBG_print(...)                                   __LDBG_IF(__DBG_print(__VA_ARGS__))
 #define __LDBG_println(...)                                 __LDBG_IF(__DBG_println(__VA_ARGS__))
-#define __LDBG_assert(...)                                  __LDBG_IF(__DBG_assert(__VA_ARGS__))
-#define __LDBG_assert_printf(...)                           __LDBG_IF(__DBG_assert_printf(__VA_ARGS__))
-#define __LDBG_assert_panic(...)                            __LDBG_IF(__DBG_assert_panic(__VA_ARGS__))
+#define __LDBG_assert(...)                                  __DBG_assert(__VA_ARGS__)
+#define __LDBG_assert_printf(cond, fmt, ...)                __DBG_assert_printf(cond, fmt, ##__VA_ARGS__)
+#define __LDBG_assert_panic(cond, fmt, ...)                 __DBG_assert_panic(cond, fmt, ##__VA_ARGS__)
 #define __LDBG_print_result(result, ...)                    __LDBG_S_IF(__DBG_print_result(result, ##__VA_ARGS__), result)
 
 #define __LDBG_check_alloc(...)                             __LDBG_IF(__DBG_check_alloc(__VA_ARGS__))
@@ -319,19 +321,23 @@ static inline int DEBUG_OUTPUT_flush() {
     return 1;
 }
 
+#define isDebugContextActive()                              DebugContext::isActive(__BASENAME_FILE__, __LINE__, __DEBUG_FUNCTION__)
+#define DebugContext_ctor()                                 DebugContext(DEBUG_HELPER_POSITION)
+#define DebugContext_prefix(...)                            { if (isDebugContextActive()) { debug_prefix(); __VA_ARGS__; } }
+
 // debug_print* macros return 0 if debugging is disabled or >=1, basically the length of the data that was sent + 1
-#define debug_print(msg)                                    ((DebugContext::__state == DEBUG_HELPER_STATE_ACTIVE) ? (debug_prefix() + DEBUG_OUTPUT.print(msg) + DEBUG_OUTPUT_flush()) : 0)
-#define debug_println(...)                                  ((DebugContext::__state == DEBUG_HELPER_STATE_ACTIVE) ? (debug_prefix() + DEBUG_OUTPUT.println(__VA_ARGS__) + DEBUG_OUTPUT_flush()) : 0)
-#define debug_printf(fmt, ...)                              ((DebugContext::__state == DEBUG_HELPER_STATE_ACTIVE) ? (debug_prefix() + DEBUG_OUTPUT.printf(fmt, ##__VA_ARGS__) + DEBUG_OUTPUT_flush()) : 0)
-#define debug_printf_P(fmt, ...)                            ((DebugContext::__state == DEBUG_HELPER_STATE_ACTIVE) ? (debug_prefix() + DEBUG_OUTPUT.printf_P(fmt, ##__VA_ARGS__) + DEBUG_OUTPUT_flush()) : 0)
+#define debug_print(msg)                                    (isDebugContextActive() ? (debug_prefix() + DEBUG_OUTPUT.print(msg) + DEBUG_OUTPUT_flush()) : 0)
+#define debug_println(...)                                  (isDebugContextActive() ? (debug_prefix() + DEBUG_OUTPUT.println(__VA_ARGS__) + DEBUG_OUTPUT_flush()) : 0)
+#define debug_printf(fmt, ...)                              (isDebugContextActive() ? (debug_prefix() + DEBUG_OUTPUT.printf(fmt, ##__VA_ARGS__) + DEBUG_OUTPUT_flush()) : 0)
+#define debug_printf_P(fmt, ...)                            (isDebugContextActive() ? (debug_prefix() + DEBUG_OUTPUT.printf_P(fmt, ##__VA_ARGS__) + DEBUG_OUTPUT_flush()) : 0)
 
 // Print::println(result) must be possible
-#define debug_print_result(result)                          DebugContext(__BASENAME_FILE__, __LINE__, __DEBUG_FUNCTION__).printResult(result)
+#define debug_print_result(result)                          DebugContext_ctor().printResult(result)
 // to_string needs to convert result to a value that can be passed to (const String &) ...
-#define debug_prints_result(result, to_string)              DebugContext(__BASENAME_FILE__, __LINE__, __DEBUG_FUNCTION__).printsResult(result, to_string(result))
-#define debug_printf_result(result, fmt, ...)               DebugContext(__BASENAME_FILE__, __LINE__, __DEBUG_FUNCTION__).printfResult(result, fmt, #__VA_ARGS__)
+#define debug_prints_result(result, to_string)              DebugContext_ctor().printsResult(result, to_string(result))
+#define debug_printf_result(result, fmt, ...)               DebugContext_ctor().printfResult(result, fmt, #__VA_ARGS__)
 
-#define __DBG_store_position()                              DebugContext::__store_pos(std::move(DebugContext(__BASENAME_FILE__, __LINE__, __DEBUG_FUNCTION__)))
+#define __DBG_store_position()                              DebugContext::__store_pos(std::move(DebugContext_ctor()))
 
 #define __SDBG_printf(fmt, ...)                             ::printf(PSTR(fmt "\n"), ##__VA_ARGS__);
 
@@ -384,7 +390,19 @@ static inline int DEBUG_OUTPUT_flush() {
 #define DEBUG_SOURCE_APPEND_ARGS
 #define DEBUG_SOURCE_FORMAT
 
+// MSVC version
+
+#ifndef _ASSERTE
+#define _ASSERTE(...)
+#endif
+#ifndef _ASSERT_EXPR
+#define _ASSERT_EXPR(...)
+#endif
+
 // new functions
+
+#define isDebugContextActive()                              false
+#define DebugContext_prefix(...)
 
 #define __DBG_print(...)                                    ;
 #define __DBG_printf(...)                                   ;

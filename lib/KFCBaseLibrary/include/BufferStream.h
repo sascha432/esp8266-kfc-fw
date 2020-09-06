@@ -36,7 +36,7 @@ public:
     virtual int peek() override;
 
     int charAt(size_t pos) const;
-    
+
     using Buffer::operator[];
 
     virtual size_t write(uint8_t data) override {
@@ -56,7 +56,7 @@ public:
     }
 #endif
 
-private:
+protected:
     size_t _available() const;
 
     size_t _position;

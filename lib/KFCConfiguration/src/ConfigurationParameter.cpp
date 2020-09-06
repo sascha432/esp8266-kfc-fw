@@ -99,10 +99,11 @@ uint8_t ConfigurationParameter::getDefaultSize(TypeEnum_t type)
         return sizeof(float);
     case ConfigurationParameter::DOUBLE:
         return sizeof(double);
-    case ConfigurationParameter::STRING:
-    case ConfigurationParameter::BINARY:
-    case ConfigurationParameter::_ANY:
-    case ConfigurationParameter::_INVALID:
+    default:
+    // case ConfigurationParameter::STRING:
+    // case ConfigurationParameter::BINARY:
+    // case ConfigurationParameter::_ANY:
+    // case ConfigurationParameter::_INVALID:
         break;
     }
     return 0; // dynamic size
@@ -170,37 +171,33 @@ uint16_t ConfigurationParameter::read(Configuration *conf, uint16_t offset)
 
 void ConfigurationParameter::_makeWriteable(Configuration *conf, uint16_t size)
 {
+    auto new_size = _param.getSize(size);
     if (isDirty()) {
-        // check if the size has changed
-        if (_param.getSize(size) != _info.size) {
-            uint16_t oldSize = _info.size;
-            _info.size = _param.getSize(size);
-            auto tmp = __LDBG_new_array(_info.size, uint8_t);
-            std::fill(std::copy_n(_info.data, std::min(oldSize, _info.size), tmp), tmp + _info.size, 0);
+        // check if size changed
+        if (new_size != _info.size) {
+            auto tmp = __LDBG_new_array(new_size, uint8_t);
+            std::fill(std::copy_n(_info.data, std::min(new_size, _info.size), tmp), tmp + new_size, 0);
             __LDBG_delete_array(_info.data);
+            _info.size = new_size;
             _info.data = tmp;
-            // _info.data = reinterpret_cast<uint8_t *>(x_r_ealloc(_info.data, _info.size));
-            // if (_info.size > oldSize) {
-            //     memset(_info.data + oldSize, 0, _info.size - oldSize);
-            // }
         }
     }
     else {
-        if (!_info.data) {
-            conf->_writeAllocate(*this, size);
+        auto new_size = _param.getSize(size);
+        auto tmp = __LDBG_new_array(new_size, uint8_t);
+        if (_info.data) {
+            // has a pointer to the memory pool
+            std::fill(std::copy_n(_info.data, std::min(new_size, _info.size), tmp), tmp + new_size, 0);
+            conf->__release(_info.data);
         }
         else {
-            auto ptr = _info.data;
-            auto oldSize = _param.getSize();
-            conf->_writeAllocate(*this, size);                                  // allocate new memory
-            // memcpy(_info.data, ptr, std::min(oldSize, size));                   // copy data
-            std::copy_n(ptr, std::min(oldSize, size), _info.data);
-            conf->__release(ptr);                                               // release pool ptr
+            std::fill_n(tmp, _info.size, 0);
         }
+        _info.size = new_size;
+        _info.data = tmp;
         _info.dirty = 1;
     }
 }
-
 const __FlashStringHelper *ConfigurationParameter::getTypeString(TypeEnum_t type)
 {
     switch (type) {
@@ -220,8 +217,9 @@ const __FlashStringHelper *ConfigurationParameter::getTypeString(TypeEnum_t type
         return F("FLOAT");
     case ConfigurationParameter::DOUBLE:
         return F("DOUBLE");
-    case ConfigurationParameter::_INVALID:
-    case ConfigurationParameter::_ANY:
+    default:
+    // case ConfigurationParameter::_INVALID:
+    // case ConfigurationParameter::_ANY:
         break;
     }
     return F("INVALID");
@@ -356,7 +354,7 @@ bool ConfigurationParameter::hasDataChanged(Configuration *conf) const
     auto size = _param.getSize();
     auto alignedSize = Configuration::Pool::align(size);
     // get original size and allocate aligned blocked
-    auto tmp = conf->_allocate(_param.getSize());
+    auto tmp = conf->_allocate(size);//_param.getSize());
     // auto tmp = reinterpret_cast<uint8_t *>(malloc(alignedSize));
     // std::fill_n(tmp, alignedSize, 0);
     if (!tmp) {

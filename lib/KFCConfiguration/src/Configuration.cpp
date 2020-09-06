@@ -661,15 +661,6 @@ bool Configuration::isDirty() const
     return false;
 }
 
-void Configuration::_writeAllocate(ConfigurationParameter &param, uint16_t size)
-{
-    //param._param.length = size;
-    param._info.size = param._param.getSize(size);
-    param._info.data = __LDBG_new_array(param._info.size, uint8_t);
-    std::fill_n(param._info.data, param._info.size, 0);
-    __LDBG_printf("malloc %s", param.toString().c_str());
-}
-
 uint8_t *Configuration::_allocate(uint16_t size, PoolVector *poolVector)
 {
     if (!poolVector) {
@@ -683,14 +674,12 @@ uint8_t *Configuration::_allocate(uint16_t size, PoolVector *poolVector)
             uint16_t size = (uint16_t)CONFIG_POOL_SIZE;
             poolVector->emplace_back(size);
             poolPtr = &poolVector->back();
-            poolPtr->init();
         }
         poolPtr = _findPool(size, poolVector);
     }
     if (!poolPtr) {
         poolVector->emplace_back(size);
         poolPtr = &poolVector->back();
-        poolPtr->init();
     }
     return poolPtr->allocate(size);
 }
@@ -719,8 +708,9 @@ Configuration::Pool *Configuration::_getPool(const void *ptr)
 
 Configuration::Pool *Configuration::_findPool(uint16_t length, PoolVector *poolVector) const
 {
+    length = Pool::align(length) + 3;
     for (auto &pool : *poolVector) {
-        if (pool.space(length)) {
+        if (pool.space_unaligned(length)) {
             return &pool;
         }
     }
@@ -810,16 +800,6 @@ bool Configuration::importJson(Stream &stream, uint16_t *handles)
     JsonConfigReader reader(&stream, *this, handles);
     reader.initParser();
     return reader.parseStream();
-}
-
-void Configuration::__crashCallback()
-{
-    __LDBG_printf("clearing memory");
-    _offset = kInvalidOffset;
-    static_cast<ConfigurationHelper::EEPROMClassEx &>(EEPROM).clearAndEnd();
-    _params.clear();
-    _storage.clear();
-    __LDBG_printf("done");
 }
 
 Configuration::ParameterList::iterator Configuration::_findParam(ConfigurationParameter::TypeEnum_t type, Handle_t handle, uint16_t &offset)

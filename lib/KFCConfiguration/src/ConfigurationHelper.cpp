@@ -31,7 +31,20 @@
 EEPROMClass EEPROM((SECTION_EEPROM_START_ADDRESS) / SPI_FLASH_SEC_SIZE);
 #endif
 
-ConfigurationHelper::Pool::Pool(uint16_t size) : _ptr(nullptr), _length(0), _size((size + 0xf) & ~0xf), _count(0)
+static_assert(sizeof(ConfigurationHelper::Pool) == 8, "");
+
+ConfigurationHelper::Pool::Pool(uint16_t size) :
+    _ptr(__LDBG_new_array(size, uint8_t)),
+    _length(0),
+    _size((size + 7) & ~7),
+    _count(0)
+{
+    std::fill_n(_ptr, _size, 0);
+}
+
+ConfigurationHelper::Pool::Pool(Pool &&pool) noexcept :
+    _ptr(std::exchange(pool._ptr, nullptr)),
+    _val(std::exchange(pool._val, 0))
 {
 }
 
@@ -42,86 +55,25 @@ ConfigurationHelper::Pool::~Pool()
     }
 }
 
-ConfigurationHelper::Pool::Pool(Pool &&pool) noexcept
-{
-    *this = std::move(pool);
-}
-
-ConfigurationHelper::Pool &ConfigurationHelper::Pool::operator=(Pool &&pool) noexcept
-{
-    _ptr = pool._ptr;
-    _length = pool._length;
-    _size = pool._size;
-    _count = pool._count;
-    pool._ptr = nullptr;
-    return *this;
-}
-
-
-void ConfigurationHelper::Pool::init()
-{
-    _ptr = __LDBG_new_array(_size, uint8_t);
-    // _ptr = (uint8_t *)malloc(_size);
-    std::fill_n(_ptr, _size, 0);
-}
-
-bool ConfigurationHelper::Pool::space(uint16_t length) const
-{
-    return align(length) <= (_size - _length);
-}
-
-uint16_t ConfigurationHelper::Pool::available() const
-{
-    return _size - _length;
-}
-
-uint16_t ConfigurationHelper::Pool::size() const
-{
-    return _size;
-}
-
-uint8_t ConfigurationHelper::Pool::count() const
-{
-    return _count;
-}
-
 uint8_t *ConfigurationHelper::Pool::allocate(uint16_t length)
 {
+    _count++;
     length = align(length);
     auto endPtr = _ptr + _length;
     _length += length;
-    _count++;
+    __LDBG_assert_printf(endPtr + length <= _end(), "begin=%p end=%p ptr=%p len=%d size=%d alloc_len=%d", _ptr, _end(), endPtr, _length, _size, length);
     std::fill_n(endPtr, length, 0);
-    __LDBG_assert_panic(endPtr + length < _end(), "begin=%p end=%p ptr=%p len=%d size=%d alloc_len=%d", _ptr, _end(), endPtr, _length, _size, length);
     return endPtr;
-}
-
-uint16_t ConfigurationHelper::Pool::align(uint16_t length)
-{
-    return (length + 4) & ~3;
 }
 
 void ConfigurationHelper::Pool::release(const void *ptr)
 {
 #if DEBUG_CONFIGURATION
-    if (!hasPtr(ptr)) {
-        __DBG_panic("ptr=%p not in pool", ptr);
-    }
+    __DBG_assert_printf(hasPtr(ptr), "ptr=%p not in pool", ptr);
 #endif
-    _count--;
-    if (_count == 0) {
+    if (--_count == 0) {
         _length = 0;
     }
-}
-
-bool ConfigurationHelper::Pool::hasPtr(const void *ptr) const
-{
-    return (ptr >= _ptr && ptr <= _ptr + _length);
-}
-
-void *ConfigurationHelper::Pool::getPtr() const
-{
-    return _ptr;
 }
 
 #if DEBUG_CONFIGURATION && DEBUG_EEPROM_ENABLE
@@ -196,7 +148,7 @@ uint16_t ConfigurationHelper::EEPROMAccess::read(uint8_t *dst, uint16_t offset, 
     // if the EEPROM is not intialized, copy data from flash directly
     if (_isInitialized) {
         // memcpy(dst, EEPROM.getConstDataPtr() + offset, length); // data is already in RAM
-        assert(dst + length <= dst + size);
+        __DBG_assert(dst + length <= dst + size);
         std::copy_n(EEPROM.getConstDataPtr() + offset, length, dst);
         return 0;
     }
@@ -223,7 +175,7 @@ uint16_t ConfigurationHelper::EEPROMAccess::read(uint8_t *dst, uint16_t offset, 
             interrupts();
             if (result == SPI_FLASH_RESULT_OK) {
                 // memcpy(dst, buf + alignment, length); // copy to destination
-                assert(dst + length <= dst + size);
+                __DBG_assert(dst + length <= dst + size);
                 std::copy_n(buf + alignment, length, dst);
             }
         }
@@ -237,7 +189,7 @@ uint16_t ConfigurationHelper::EEPROMAccess::read(uint8_t *dst, uint16_t offset, 
                 interrupts();
                 if (result == SPI_FLASH_RESULT_OK) {
                     // memcpy(dst, ptr + alignment, length); // copy to destination
-                    assert(dst + length <= dst + size);
+                    __DBG_assert(dst + length <= dst + size);
                     std::copy_n(ptr + alignment, length, dst);
                 }
                 __LDBG_delete_array(ptr);
@@ -250,7 +202,7 @@ uint16_t ConfigurationHelper::EEPROMAccess::read(uint8_t *dst, uint16_t offset, 
         interrupts();
         if (result == SPI_FLASH_RESULT_OK && alignment) { // move to beginning of the destination
             // memmove(dst, dst + alignment, length);
-            assert(dst + length <= dst + size);
+            __DBG_assert(dst + length <= dst + size);
             std::copy_n(dst + alignment, length, dst);
         }
     }
@@ -343,7 +295,7 @@ void ConfigurationHelper::EEPROMAccess::dump(Print &output, bool asByteArray, ui
 #if ESP32
         dumper.dump(EEPROM.getDataPtr() + offset, length);
 #else
-    dumper.dump(EEPROM.getConstDataPtr() + offset, length);
+        dumper.dump(EEPROM.getConstDataPtr() + offset, length);
 #endif
 //#if 1
 //        output.printf_P(PSTR("Dumping flash (spi_read) %d:%d\n"), offset, length);

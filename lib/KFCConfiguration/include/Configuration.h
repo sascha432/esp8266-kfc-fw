@@ -17,7 +17,6 @@
 #include <Buffer.h>
 #include <EEPROM.h>
 #include <DumpBinary.h>
-#include "ConfigurationParameter.h"
 #if !_WIN32
 #include <EEPROM.h>
 #endif
@@ -124,165 +123,13 @@ extern EEPROMClass EEPROM;
 
 #include <push_pack.h>
 
-#ifdef _MSC_VER
+#if _MSC_VER
 #pragma warning(push)
 #pragma warning(disable : 26812)
 #endif
 
-namespace ConfigurationHelper {
-
-    using HandleType = ConfigurationParameter::Handle_t;
-
-    class EEPROMClassEx : public EEPROMClass {
-    public:
-        using EEPROMClass::EEPROMClass;
-
-        size_t getWriteSize() const {
-            if (!_size || !_dirty || !_data) {
-                return 0;
-            }
-            return _size;
-        }
-        bool getDirty() const {
-            return _dirty;
-        }
-        void clearAndEnd() {
-            _dirty = false;
-            end();
-        }
-    };
-
-
-#if DEBUG_CONFIGURATION_GETHANDLE
-    const HandleType registerHandleName(const char *name, uint8_t type);
-    const HandleType registerHandleName(const __FlashStringHelper *name, uint8_t type);
-    bool registerHandleExists(HandleType handle);
-    void setPanicMode(bool value);
-    void addFlashUsage(HandleType handle, size_t readSize, size_t writeSize);
-
-    void readHandles();
-    void writeHandles(bool clear = false);
-    void dumpHandles(Print &output, bool log);
-#endif
-    const char *getHandleName(HandleType crc);
-
-    // memory pool for configuration data
-    class Pool {
-    public:
-        Pool(uint16_t size);
-        ~Pool();
-        Pool(const Pool &pool) = delete;
-        Pool(Pool &&pool) noexcept;
-        Pool &operator=(Pool &&pool) noexcept;
-
-        // initialize memory pool
-        void init();
-
-        // returns true if enough space for length bytes
-        bool space(uint16_t length) const;
-
-        uint16_t available() const;
-        uint16_t size() const;
-
-        // number of pointers
-        uint8_t count() const;
-
-        uint8_t *allocate(uint16_t length);
-        void release(const void *ptr);
-
-        // returns length dword aligned
-        static uint16_t align(uint16_t length);
-
-        // returns true if ptr belongs to this pool
-        bool hasPtr(const void *ptr) const;
-
-        void *getPtr() const;
-
-    private:
-        uint8_t *_end() const {
-            return _ptr + _size;
-        }
-
-        struct __attribute__packed__ {
-            uint8_t *_ptr;
-            uint32_t _length: 12;
-            uint32_t _size: 12;
-            uint32_t _count: 8;
-        };
-    };
-
-    // direct access to EEPROM if supported
-    class EEPROMAccess {
-    public:
-        EEPROMAccess(bool isInitialized, uint16_t size) : _isInitialized(isInitialized), _size(size) {
-//#if defined(ESP32)
-//            _partition = nullptr;
-//#endif
-        }
-
-        operator bool() const {
-            return _isInitialized;
-        }
-
-        uint16_t getSize() const {
-            return _size;
-        }
-
-        void begin(uint16_t size = 0);
-        void end();
-        void commit();
-
-        uint16_t read(uint8_t *dst, uint16_t offset, uint16_t length, uint16_t size);
-        void dump(Print &output, bool asByteArray = true, uint16_t offset = 0, uint16_t length = 0);
-
-        uint8_t *getDataPtr() {
-#if DEBUG_CONFIGURATION
-            if (!_isInitialized) {
-                __DBG_panic("EEPROM is not initialized");
-            }
-#endif
-#if _MSC_VER
-            return const_cast<uint8_t *>(EEPROM.getConstDataPtr());
-#else
-            return EEPROM.getDataPtr();
-#endif
-        }
-
-        const uint8_t *getConstDataPtr() const {
-#if DEBUG_CONFIGURATION
-            if (!_isInitialized) {
-                __DBG_panic("EEPROM is not initialized");
-            }
-#endif
-#if defined(ESP32)
-            return EEPROM.getDataPtr();
-#else
-            return EEPROM.getConstDataPtr();
-#endif
-        }
-
-        template<typename T>
-        inline T &get(int const address, T &t) {
-#if DEBUG_CONFIGURATION
-            if (!_isInitialized) {
-                __DBG_panic("EEPROM is not initialized");
-            }
-            if (address + sizeof(T) > _size) {
-                __DBG_panic("address=%u size=%u eeprom_size=%u", address, sizeof(T), _size);
-            }
-#endif
-            return EEPROM.get(address, t);
-        }
-
-    private:
-        bool _isInitialized;
-        uint16_t _size;
- //#if defined(ESP32)
- //       const esp_partition_t *_partition;
- //#endif
-    };
-
-};
+#include "ConfigurationParameter.h"
+#include "ConfigurationHelper.h"
 
 class Configuration {
 public:
@@ -329,7 +176,6 @@ public:
     ConfigurationParameter &getWritableParameter(Handle_t handle, uint16_t maxLength = sizeof(T)) {
         uint16_t offset;
         auto &param = _getOrCreateParam(ConfigurationParameter::getType<T>(), handle, offset);
-        param._info.base = std::is_convertible<T*, ConfigurationParameterBase*>::value;
         if (param._param.isString()) {
             param.getString(this, offset);
         }
@@ -338,16 +184,7 @@ public:
             auto ptr = param.getBinary(this, length, offset);
             if (ptr) {
                 if (length != maxLength) {
-                    if (ptr && param._info.base) {
-                        reinterpret_cast<const ConfigurationParameterBase *>(ptr)->beforeResize(param, maxLength);
-                    }
-                    debug_printf_P(PSTR("%04x: resizing binary blob=%u to %u maxLength=%u type=%u\n"), handle, length, sizeof(T), maxLength, ConfigurationParameter::getType<T>());
-                    // __DBG_panic("%s size does not match len=%u size=%u", param.toString().c_str(), length, sizeof(T));
-                    //__release(ptr);
-                    //ptr = nullptr;
-                }
-                else if (param._info.base) {
-                    reinterpret_cast<ConfigurationParameterBase *>(param._info.data)->afterRead(param);
+                    __DBG_printf("%04x: resizing binary blob=%u to %u maxLength=%u type=%u", handle, length, sizeof(T), maxLength, ConfigurationParameter::getType<T>());
                 }
             }
         }
@@ -362,20 +199,13 @@ public:
         if (iterator == _params.end()) {
             return nullptr;
         }
-        auto &param = *iterator;
-        if ((param._info.base = std::is_convertible<T*, ConfigurationParameterBase*>::value)) {
-            reinterpret_cast<ConfigurationParameterBase *>(param._info.data)->afterRead(param);
-        }
-        return &param;
+        return &(*iterator);
     }
 
     template <typename T>
     ConfigurationParameterT<T> &getParameterT(Handle_t handle) {
         uint16_t offset;
         auto &param = _getOrCreateParam(ConfigurationParameter::getType<T>(), handle, offset);
-        if ((param._info.base = std::is_convertible<T*, ConfigurationParameterBase*>::value)) {
-            reinterpret_cast<ConfigurationParameterBase *>(param._info.data)->afterRead(param);
-        }
         return static_cast<ConfigurationParameterT<T> &>(param);
     }
 
@@ -437,14 +267,14 @@ public:
         if (!ptr || length != sizeof(T)) {
 #if DEBUG_CONFIGURATION
             if (ptr && length != sizeof(T)) {
-                __LDBG_printf("size does not match, type=%s handle %04x (%s)", (const char *)ConfigurationParameter::getTypeString(param->_param.getType()), handle, ConfigurationHelper::getHandleName(handle));
+                __LDBG_printf("size does not match, type=%s handle %04x (%s)",
+                    (const char *)ConfigurationParameter::getTypeString(param->_param.getType()),
+                    handle,
+                    ConfigurationHelper::getHandleName(handle)
+                );
             }
 #endif
             return T();
-        }
-
-        if ((param->_info.base = std::is_convertible<T*, ConfigurationParameterBase*>::value)) {
-            reinterpret_cast<ConfigurationParameterBase *>(param->_info.data)->afterRead(*param);
         }
         return *ptr;
     }
@@ -460,26 +290,14 @@ public:
         uint16_t offset;
         auto &param = _getOrCreateParam(ConfigurationParameter::getType<T>(), handle, offset);
         param.setData(this, (const uint8_t *)&data, sizeof(T));
-        param._info.base = std::is_convertible<T*, ConfigurationParameterBase*>::value;
         return data;
     }
-
- /*   template <typename T>
-    T &getObject(Handle_t handle) {
-        uint16_t offset;
-        auto &param = _getOrCreateParam(ConfigurationParameter::getType<T>(), handle, offset);
-        uint16_t length;
-        return *reinterpret_cast<T *>(param->getBinary(this, length, offset))
-    }*/
 
     void dump(Print &output, bool dirty = false, const String &name = String());
     bool isDirty() const;
 
     void exportAsJson(Print& output, const String &version);
     bool importJson(Stream& stream, uint16_t *handles = nullptr);
-
-    // release memory
-    void __crashCallback();
 
 // ------------------------------------------------------------------------
 // Memory management
@@ -499,7 +317,6 @@ private:
 private:
     friend ConfigurationParameter;
 
-    void _writeAllocate(ConfigurationParameter &param, uint16_t size);
     uint8_t *_allocate(uint16_t size, PoolVector *pool = nullptr);
     void __release(const void *ptr);
     Pool *_getPool(const void *ptr);
@@ -566,10 +383,9 @@ protected:
 #endif
 };
 
-#ifdef _MSC_VER
+#if _MSC_VER
 #pragma warning(pop)
 #endif
 
 #include <pop_pack.h>
-
 #include <debug_helper_disable.h>

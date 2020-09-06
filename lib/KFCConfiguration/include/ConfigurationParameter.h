@@ -18,7 +18,7 @@
 
 class Buffer;
 class Configuration;
-class ConfigurationParameterBase;
+// class ConfigurationParameterBase;
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -38,8 +38,8 @@ public:
         QWORD,
         FLOAT,
         DOUBLE,
-        _ANY = 0b1110,
-        _INVALID = 0b1111
+        _ANY = 0b1111,
+        _INVALID = 14
     } TypeEnum_t;
 
     typedef struct __attribute__packed__ {
@@ -67,8 +67,8 @@ public:
         uint8_t *data;                                  // pointer to data
         uint16_t size : 12;                             // max. size of data
         uint16_t dirty : 1;                             // data has been changed
-        uint16_t base: 1;                               // can be converted to ConfigurationParameterBase
-        uint16_t ___reserved : 2;
+        // uint16_t base: 1;                               // can be converted to ConfigurationParameterBase
+        uint16_t ___reserved : 3;
     } Info_t;
 
     ConfigurationParameter(const ConfigurationParameter &) = delete;
@@ -160,7 +160,7 @@ private:
     bool _compareData(const uint8_t *data, uint16_t size) const;
 
 protected:
-    friend ConfigurationParameterBase;
+    // friend ConfigurationParameterBase;
 
     Info_t _info;
     Param_t _param;
@@ -202,27 +202,6 @@ public:
     }
     void set(const String &value) {
         strncpy(reinterpret_cast<char *>(_info.data), value.c_str(), _param.length)[_param.length] = 0;
-    }
-};
-
-class ConfigurationParameterBase
-{
-public:
-    // called before storing
-    virtual void beforeWrite(const ConfigurationParameter &param) {
-        __DBG_printf("handle=%04x size=%u type=%s", param.getHandle(), param.getSize(), param.getTypeString(param._param.getType()));
-    }
-    // called before discarding changes
-    virtual void beforeDiscard(const ConfigurationParameter &param) {
-        __DBG_printf("handle=%04x size=%u type=%s", param.getHandle(), param.getSize(), param.getTypeString(param._param.getType()));
-    }
-    // called before being resize
-    virtual void beforeResize(const ConfigurationParameter &param, uint16_t newSize) const {
-        __DBG_printf("handle=%04x size=%u new_size=%u type=%s", param.getHandle(), param.getSize(), newSize, param.getTypeString(param._param.getType()));
-    }
-    // called after data has been read
-    virtual void afterRead(const ConfigurationParameter &param) {
-        __DBG_printf("handle=%04x size=%u type=%s", param.getHandle(), param.getSize(), param.getTypeString(param._param.getType()));
     }
 };
 

@@ -117,6 +117,14 @@ public:
         return val;
     }
 
+    template<class T, typename... Args>
+    T &addValidator(Args &&...args) {
+        _getValidators().emplace_back(new T(std::forward<Args>(args)...));
+        auto &val = reinterpret_cast<T &>(*_validators->back());
+        val.setField(this);
+        return val;
+    }
+
     bool hasValidators() const {
         return _validators != nullptr;
     }
@@ -128,6 +136,14 @@ public:
     //void setValueType(ValueType valueType) {
     //    _valueType = valueType;
     //}
+
+    void setDisabled(bool state) {
+        _disabled = state;
+    }
+
+    bool isDisabled() const {
+        return _disabled;
+    }
 
 private:
     friend Form;
@@ -146,6 +162,7 @@ private:
     Form *_form;
     Type _type;
     bool _hasChanged : 1;
+    bool _disabled: 1;
 // FormGroup
 protected:
     bool _expanded: 1;

@@ -6,7 +6,8 @@
 #include "FormValidator.h"
 #include "Form.h"
 
-FormField::FormField(const String &name, const String &value, Type type) : _name(name), _value(value), _validators(nullptr), _formUI(nullptr), _form(nullptr), _type(type), _hasChanged(false), _expanded(false)
+FormField::FormField(const String &name, const String &value, Type type) :
+    _name(name), _value(value), _validators(nullptr), _formUI(nullptr), _form(nullptr), _type(type), _hasChanged(false), _disabled(false), _expanded(false)
 {
 #if DEBUG_KFC_FORMS && defined(ESP8266)
     if (name.length() >= PrintString::getSSOSIZE()) {
@@ -123,7 +124,8 @@ void FormField::setChanged(bool hasChanged)
     _hasChanged = hasChanged;
 }
 
-void FormField::setType(Type type) {
+void FormField::setType(Type type)
+{
     _type = type;
 }
 

@@ -52,6 +52,8 @@ public:
     FormField &getField(int index) const;
     size_t hasFields() const;
 
+    void removeValidators();
+
     // --------------------------------------------------------------------
     // Validators
     //

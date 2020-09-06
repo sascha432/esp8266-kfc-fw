@@ -76,6 +76,13 @@ size_t Form::hasFields() const
     return _fields.size();
 }
 
+void Form::removeValidators()
+{
+    for (const auto &field: _fields) {
+        field->getValidators().clear();
+    }
+}
+
 void Form::clearErrors()
 {
     _errors.clear();
@@ -98,7 +105,8 @@ bool Form::validateOnly()
     _hasChanged = false;
     _errors.clear();
     for (const auto &field: _fields) {
-        if (field->getType() != FormField::Type::GROUP) {
+        // __DBG_printf("name=%s disabled=%u", field->getName().c_str(), field->isDisabled());
+        if (field->getType() != FormField::Type::GROUP && field->isDisabled() == false) {
             if (_data->hasArg(field->getName())) {
                 __LDBG_printf("Form::validateOnly() Set value %s = %s", field->getName().c_str(), _data->arg(field->getName()).c_str());
                 if (field->setValue(_data->arg(field->getName()))) {
@@ -147,7 +155,9 @@ void Form::copyValidatedData()
 {
     if (isValid()) {
         for (const auto &field : _fields) {
-            field->copyValue();
+            if (field->isDisabled() == false) {
+                field->copyValue();
+            }
         }
     }
 }

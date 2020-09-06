@@ -470,6 +470,9 @@ namespace FormUI {
 	void UI::_addItem(const Attribute &attribute)
     {
 		addAttribute(attribute._key, attribute._value);
+        if (strcmp_P_P((PGM_P)attribute._key, PSTR("disabled")) == 0 && String_equals(attribute._value, PSTR("disabled"))) {
+            _parent->setDisabled(true);
+        }
 	}
 
 	void UI::_addItem(const ItemsList &items)

@@ -1,0 +1,14 @@
+{
+  "name": "KFCPinMonitor",
+  "version": "0.0.1",
+  "include": "lib/KFCPinMonitor",
+  "authors": {
+    "name": "sascha lammers",
+    "maintainer": true
+  },
+  "frameworks": "arduino",
+  "platforms": [
+    "espressif8266",
+    "espressif32"
+  ]
+}

@@ -16,9 +16,11 @@ namespace PinMonitor {
         Monitor();
         ~Monitor();
 
-        // set debounce time, default = 10000 microseconds
-        void setDebounceTime(uint32_t debounceTime) {
+        inline void setDebounceTime(uint8_t debounceTime) {
             _debounceTime = debounceTime;
+        }
+        inline uint8_t getDebounceTime() const {
+            return _debounceTime;
         }
 
         // set default pin mode for adding new pins
@@ -26,40 +28,67 @@ namespace PinMonitor {
             _pinMode = mode;
         }
 
-        void begin();
+        // if the main loop is not executed fast enough, set useTimer to true
+        void begin(bool useTimer = false);
         void end();
 
+#if DEBUG
         // enable debug output on serial port
-        void beginDebug();
+        void beginDebug(Print &outout, uint32_t interval = 1000);
         // disable debug mode
         void endDebug();
+#endif
 
         // add a pin object
         Pin &attach(Pin *pin);
 
-        // remove a pin or multiple pins
-        // pinMode will be set to INPUT if the pin is not in use anymore
+        template<class T, class ...Args>
+        T &attach(Args&&... args) {
+            return static_cast<T &>(attach(new T(std::forward<Args>(args)...)));
+        }
+
+        // remove one or more pins
         void detach(Predicate pred);
-        void detach(Iterator begin, Iterator end);
         void detach(Pin *pin);
+        void detach(void *arg);
+
+        inline void detach(Iterator begin, Iterator end) {
+            _detach(begin, end, false);
+        }
+        inline void detach(Pin &pin) {
+            detach(&pin);
+        }
+
+        const Vector &getVector() const {
+            return _handlers;
+        }
 
     public:
         static void loop();
-        static void callback(InterruptInfo info);
+        static void loopTimer(Event::CallbackTimerPtr);
+        // return true if the loop has executed since the last call
+        static bool getLoopExecuted();
+
+        static const __FlashStringHelper *stateType2String(StateType);
 
     private:
         Pin &_attach(Pin &pin);
+        void _detach(Iterator begin, Iterator end, bool clear);
         void _attachLoop();
         void _detachLoop();
         void _loop();
-        void _callback(InterruptInfo info);
-        void _event(uint8_t pin, bool state, TimeType now);
+        void _event(uint8_t pin, StateType state, TimeType now);
 
-        uint32_t _debounceTime;
+        Vector _handlers;
+        PinVector _pins;
+        TimeType _lastRun;
+        Event::Timer *_loopTimer;
+#if DEBUG
+        Event::Timer *_debugTimer;
+#endif
 
-        Vector _pins;
-        std::vector<PinUsage> _pinsActive;
         uint8_t _pinMode;
+        uint8_t _debounceTime;
     };
 
 }

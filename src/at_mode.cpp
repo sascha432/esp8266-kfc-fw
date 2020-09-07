@@ -24,10 +24,10 @@
 #include "async_web_response.h"
 #include "serial_handler.h"
 #include "blink_led_timer.h"
-#include "pin_monitor.h"
 #include "NeoPixel_esp.h"
 #include "plugins.h"
 #include "WebUIAlerts.h"
+#include "PinMonitor.h"
 #include "../src/plugins/http2serial/http2serial.h"
 #if IOT_DIMMER_MODULE || IOT_ATOMIC_SUN_V2
 #include "../src/plugins/dimmer_module/dimmer_base.h"
@@ -275,7 +275,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(ALERT, "ALERT", "<message>[,<type|0-3>]", 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DSH, "DSH", "Display serial handler");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(FSM, "FSM", "Display FS mapping");
 #if PIN_MONITOR
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PINM, "PINM", "[<1=start|0=stop>}", "List or monitor PINs");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PINM, "PINM", "[<1=start|0=stop>,<interval in ms>]", "List or monitor PINs");
 #endif
 #if LOAD_STATISTICS
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HEAP, "HEAP", "[interval in seconds|0=disable]", "Display free heap and system load");
@@ -1015,6 +1015,7 @@ void at_mode_serial_handle_event(String &commandString)
                 args.printf_P(PSTR("sizeof(FormUI:UI): %u"), sizeof(FormUI::UI));
                 args.printf_P(PSTR("sizeof(AsyncClient): %u"), sizeof(AsyncClient));
                 args.printf_P(PSTR("sizeof(CallbackTimer): %u"), sizeof(Event::CallbackTimer));
+                args.printf_P(PSTR("sizeof(SerialTwoWire): %u"), sizeof(SerialTwoWire));
 
 #if DEBUG
                 String hash;
@@ -1341,23 +1342,13 @@ void at_mode_serial_handle_event(String &commandString)
             }
     #if PIN_MONITOR
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(PINM))) {
-                if (!PinMonitor::getInstance()) {
-                    args.print(F("Pin monitor not initialized"));
+                if (args.isTrue(0)) {
+                    args.print(F("starting debug mode"));
+                    pinMonitor.beginDebug(args.getStream(), args.toMillis(1, 500, ~0, 1000U));
                 }
-                else if (args.size() == 1) {
-                    static Event::Timer timer;
-                    if (args.isTrue(0) && !timer) {
-                        args.print(FSPGM(started));
-                        _Timer(timer).add(1000, true, [&output](Event::CallbackTimerPtr timer) {
-                            PinMonitor::getInstance()->dumpPins(output);
-                        });
-                    }
-                    else if (args.isFalse(0) && timer) {
-                        timer.remove();
-                        args.print(FSPGM(stopped));
-                    }
-                } else {
-                    PinMonitor::getInstance()->dumpPins(output);
+                else {
+                    args.print(F("ending debug mode"));
+                    pinMonitor.endDebug();
                 }
             }
     #endif

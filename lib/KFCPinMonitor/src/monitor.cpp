@@ -6,66 +6,111 @@
 #include "monitor.h"
 #include "debounce.h"
 #include "pin.h"
+#include <PrintString.h>
 #include <misc.h>
-#include <FunctionalInterrupt.h>
+#include <MicrosTimer.h>
 
 #if DEBUG_PIN_MONITOR
 #include <debug_helper_enable.h>
 #endif
 
-
 using namespace PinMonitor;
 
 Monitor pinMonitor;
 
-Monitor::Monitor() : _debounceTime(10), _pinMode(INPUT)
+Monitor::Monitor() : _lastRun(0), _loopTimer(nullptr), __DBG_IF(_debugTimer(nullptr),) _pinMode(INPUT), _debounceTime(kDebounceTimeDefault)
 {
 }
 
 Monitor::~Monitor()
 {
+#if DEBUG
+    endDebug();
+#endif
     end();
 }
 
-void Monitor::begin()
+void Monitor::begin(bool useTimer)
 {
-    __LDBG_printf("begin pins=%u", _pins.size());
+    __LDBG_printf("begin pins=%u handlers=%u use_timer=%u", _pins.size(), _handlers.size(), useTimer);
+    if (useTimer && !_loopTimer) {
+        _loopTimer = new Event::Timer();
+    }
+    else if (!useTimer && _loopTimer) {
+        delete _loopTimer;
+        _loopTimer = nullptr;
+    }
+    if (!_pins.empty()) {
+        _attachLoop();
+    }
 }
 
 void Monitor::end()
 {
-    __LDBG_printf("end pins=%u", _pins.size());
-    detach(_pins.begin(), _pins.end());
-    _pins.clear();
-    _pinsActive.clear();
+    __LDBG_printf("end pins=%u handlers=%u", _pins.size(), _handlers.size());
+    if (_loopTimer) {
+        delete _loopTimer;
+        _loopTimer = nullptr;
+    }
+    _detach(_handlers.begin(), _handlers.end(), true);
 }
 
-Pin &Monitor::attach(Pin *pin)
+#if DEBUG
+
+void Monitor::beginDebug(Print &output, uint32_t interval)
 {
-    _pins.emplace_back(pin);
-    return _attach(*_pins.back().get());
+    output.printf_P(PSTR("+PINM: pins=%u handlers=%u\n"), _pins.size(), _handlers.size());
+    if (!_debugTimer && !_handlers.empty()) {
+        _debugTimer = new Event::Timer();
+        _Timer(_debugTimer)->add(Event::milliseconds(interval), true, [this, &output](Event::CallbackTimerPtr) {
+            PrintString str = F("+PINM: ");
+            for(auto &handler: _handlers) {
+                str.printf_P(PSTR("%p=[pin=%u events=%u value=%u] "), handler.get(), handler->getPin(), handler->_eventCounter, digitalRead(handler->getPin()));
+            }
+            output.println(str);
+        });
+    }
 }
 
+void Monitor::endDebug()
+{
+    if (_debugTimer) {
+        delete _debugTimer;
+        _debugTimer = nullptr;
+    }
+}
+
+#endif
+
+Pin &Monitor::attach(Pin *handler)
+{
+    _handlers.emplace_back(handler);
+    return _attach(*_handlers.back().get());
+}
 
 Pin &Monitor::_attach(Pin &pin)
 {
     auto pinNum = pin.getPin();
-    auto iterator = std::find(_pinsActive.begin(), _pinsActive.end(), pinNum);
-    if (iterator == _pinsActive.end()) {
-        _pinsActive.emplace_back(pinNum, _debounceTime);
-        iterator = _pinsActive.end() -1;
-        __LDBG_printf("pin=%u pinMode=%u", pinNum, _pinMode);
-        pinMode(pinNum, _pinMode);
-    }
-    auto &curPin = *iterator;
-    ++curPin;
+    bool pinsEmpty = _pins.empty();
+    auto iterator = std::find_if(_pins.begin(), _pins.end(), [pinNum](const HardwarePinPtr &pin) {
+        return pin->getPin() == pinNum;
+    });
+    if (iterator == _pins.end()) {
 
-    __LDBG_printf("attaching pin=%u usage=%u", curPin.getPin(), curPin.getCount());
-    if (curPin) {
-        __LDBG_printf("attaching interrupt pin=%u", pinNum);
-        attachScheduledInterrupt(pinNum, callback, CHANGE);
+        pinMode(pinNum, _pinMode);
+        _pins.emplace_back(new HardwarePin(pinNum));
+        iterator = _pins.end() - 1;
+
+        __LDBG_printf("pin=%u pinMode=%u", pinNum, _pinMode);
     }
-    if (_pins.size() == 1) {
+    auto &curPin = *iterator->get();
+
+    __LDBG_printf("attaching pin=%u usage=%u", curPin.getPin(), curPin.getCount() + 1);
+    if (++curPin) {
+        __LDBG_printf("attaching interrupt pin=%u", pinNum);
+        attachInterruptArg(digitalPinToInterrupt(pinNum), HardwarePin::callback, &curPin, CHANGE);
+    }
+    if (pinsEmpty) {
         _attachLoop();
     }
     return pin;
@@ -73,40 +118,55 @@ Pin &Monitor::_attach(Pin &pin)
 
 void Monitor::detach(Predicate pred)
 {
-    detach(std::remove_if(_pins.begin(), _pins.end(), pred), _pins.end());
+    detach(std::remove_if(_handlers.begin(), _handlers.end(), pred), _handlers.end());
 }
 
-void Monitor::detach(Iterator begin, Iterator end)
+void Monitor::detach(void *arg) {
+    detach([arg](const PinPtr &pin) {
+        return pin->getArg() == arg;
+    });
+}
+
+void Monitor::_detach(Iterator begin, Iterator end, bool clear)
 {
-#if DEBUG_PIN_MONITOR
-    for(const auto &pin: _pins) {
+    for(const auto &pin: _handlers) {
         auto pinNum = pin->getPin();
-        auto iterator = std::find(_pinsActive.begin(), _pinsActive.end(), pinNum);
-        if (iterator != _pinsActive.end()) {
-            auto &curPin = *iterator;
-            --curPin;
-            __LDBG_printf("detaching pin=%u usage=%u", pin->getPin(), curPin.getCount());
-            if (curPin) {
-                pinMode(pinNum, INPUT);
+        auto iterator = std::find_if(_pins.begin(), _pins.end(), [pinNum](const HardwarePinPtr &pin) {
+            return pin->getPin() == pinNum;
+        });
+        if (iterator != _pins.end()) {
+            auto &curPin = *iterator->get();
+            __LDBG_printf("detaching pin=%u usage=%u remove=%u", pin->getPin(), curPin.getCount(), curPin.getCount() == 1);
+            if (!--curPin) {
                 __LDBG_printf("detaching interrupt pin=%u", pinNum);
                 detachInterrupt(digitalPinToInterrupt(pinNum));
+                pinMode(pinNum, INPUT);
+
+                if (clear == false) {
+                    _pins.erase(iterator);
+                }
             }
         }
         else {
             __LDBG_printf("pin=%u not attached to any interrupt handler", pinNum);
         }
-
     }
-#endif
-    _pins.erase(begin, end);
-    if (_pins.empty()) {
+    if (clear) {
         _detachLoop();
+        _handlers.clear();
+        _pins.clear();
+    }
+    else {
+        _handlers.erase(begin, end);
+        if (_pins.empty()) {
+            _detachLoop();
+        }
     }
 }
 
-void Monitor::detach(Pin *pin)
+void Monitor::detach(Pin *handler)
 {
-    detach(std::remove_if(_pins.begin(), _pins.end(), std::compare_unique_ptr(pin)), _pins.end());
+    detach(std::remove_if(_handlers.begin(), _handlers.end(), std::compare_unique_ptr(handler)), _handlers.end());
 }
 
 void Monitor::loop()
@@ -114,104 +174,105 @@ void Monitor::loop()
     pinMonitor._loop();
 }
 
-void Monitor::callback(InterruptInfo info)
+void Monitor::loopTimer(Event::CallbackTimerPtr)
 {
-    pinMonitor._callback(info);
+    pinMonitor._loop();
 }
 
 void Monitor::_attachLoop()
 {
-    __LDBG_printf("adding pin monitor loop");
-    LoopFunctions::add(loop);
+    __LDBG_printf("attach=loop timer=%d", _loopTimer ? (bool)*_loopTimer : -1);
+    if (_loopTimer) {
+        _Timer(_loopTimer)->add(Event::kMinDelay, true, loopTimer, Event::PriorityType::TIMER);
+    }
+    else {
+        LoopFunctions::add(loop);
+    }
 }
 
 void Monitor::_detachLoop()
 {
-    __LDBG_printf("removing pin monitor loop");
-    LoopFunctions::remove(loop);
+    __LDBG_printf("detach=loop timer=%d", _loopTimer ? (bool)*_loopTimer : -1);
+    if (_loopTimer) {
+        _loopTimer->remove();
+    }
+    else {
+        LoopFunctions::remove(loop);
+    }
 }
-
-#if DEBUG_PIN_MONITOR && DEBUG_PIN_MONITOR_SHOW_EVENTS_INTERVAL
-#include <PrintString.h>
-static std::array<uint16_t, kMaxPins * 2> _events;
-static unsigned eventTimerCount = 0;
-#endif
-
 
 void Monitor::_loop()
 {
-#if DEBUG_PIN_MONITOR && DEBUG_PIN_MONITOR_SHOW_EVENTS_INTERVAL
-    // display events once per second
-    if ((millis() / DEBUG_PIN_MONITOR_SHOW_EVENTS_INTERVAL) % 2 == eventTimerCount % 2) {
-        PrintString str;
-        eventTimerCount++;
-        int n = 0;
-        for(auto count: _events) {
-            if (count) {
-                str.printf_P(PSTR("pin=%u %s=%u "), n % kMaxPins, (n >= kMaxPins) ? PSTR("HIGH") : PSTR("LOW"), count);
-            }
-            n++;
-        }
-        _events = {};
-        if (str.length()) {
-            __DBG_printf("Events: %s", str.c_str());
-        }
-    }
-#endif
-
     uint32_t now = millis();
-    for(auto &pin: _pinsActive) {
+    if (now == _lastRun) {
+        return;
+    }
+    _lastRun = now;
+
+    for(auto &pinPtr: _pins) {
+        auto &pin = *pinPtr;
         auto &debounce = pin.getDebounce();
-        auto state = debounce.pop_state(now);
-        switch(state) {
-            case StateType::IS_HIGH:
-                __LDBG_printf("EVENT: state changed to HIGH");
-                break;
-            case StateType::IS_LOW:
-                __LDBG_printf("EVENT: state changed to LOW");
-                break;
-            case StateType::IS_FALLING:
-                __LDBG_printf("EVENT: state changed to FALLING");
-                break;
-            case StateType::IS_RISING:
-                __LDBG_printf("EVENT: state changed to RISING");
-                break;
-            case StateType::NONE:
-            default:
-                break;
+
+        noInterrupts();
+        auto micros = pin._micros;
+        auto intCount = pin._intCount;
+        bool value = pin._value;
+        pin._intCount = 0;
+        interrupts();
+
+#if DEBUG_PIN_MONITOR
+        auto state = debounce.debounce(value, intCount, micros, now);
+        if (state != StateType::NONE) {
+            __LDBG_printf("EVENT: pin=%u state=%s time=%u bounced=%u", pin.getPin(), stateType2String(state), get_time_diff(debounce._startDebounce, now), debounce._bounceCounter);
+            // print --- of the state does not change for 1 second
+            static Event::Timer timer;
+            static uint32_t counter;
+            auto tmp = ++counter;
+            _Timer(timer).add(Event::milliseconds(1000), false, [tmp](Event::CallbackTimerPtr) {
+                if (tmp == counter) {
+                    __LDBG_print("---");
+                }
+            });
         }
-    // for(const auto &pin: _pins) {
-    //     if (info.pin == pin->getPin()) {
-    //         auto value = pin->_config._isActive(info.value);
-
-    //     }
-    // }
-
-    }
-
-}
-
-void Monitor::_callback(InterruptInfo info)
-{
-#if DEBUG_PIN_MONITOR && DEBUG_PIN_MONITOR_SHOW_EVENTS_INTERVAL
-    _events[info.pin + (info.value ? kMaxPins : 0)]++;
+        _event(pin.getPin(), state, now);
+#else
+        _event(pin.getPin(), debounce.debounce(value, intCount, micros, now), now);
 #endif
+    }
+    for(const auto &handler: _handlers) {
+        handler.loop();
+    }
+}
 
-    uint32_t now = millis();
-    for(auto &pin: _pinsActive) {
-        if (pin.getPin() == info.pin) {
-            // each pin has its own debounce object preparing the events for the pin object
-            auto &debounce = pin.getDebounce();
-            debounce.event(info.value, info.micro, now);
+void Monitor::_event(uint8_t pinNum, StateType state, TimeType now)
+{
+    for(const auto &handler: _handlers) {
+        StateType tmp;
+        if (handler->getPin() == pinNum && handler->isEnabled() && (tmp = handler->_getState(state)) != StateType::NONE) {
+            handler->_eventCounter++;
+            handler->event(tmp, now);
         }
     }
 }
 
-void Monitor::_event(uint8_t pinNum, bool state, TimeType now)
+const __FlashStringHelper *Monitor::stateType2String(StateType state)
 {
-    for(const auto &pin: _pins) {
-        if (pin->getPin() == pinNum && pin->_config._disabled == false) {
-            pin->event(state, now);
-        }
+    switch(state) {
+        case StateType::IS_HIGH:
+            return F("HIGH");
+        case StateType::IS_LOW:
+            return F("LOW");
+        case StateType::IS_FALLING:
+            return F("FALLING");
+        case StateType::IS_RISING:
+            return F("RISING");
+        case StateType::RISING_BOUNCED:
+            return F("RISING_BOUNCED");
+        case StateType::FALLING_BOUNCED:
+            return F("FALLING_BOUNCED");
+        default:
+        case StateType::NONE:
+            break;
     }
+    return F("NONE");
 }

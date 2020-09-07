@@ -27,6 +27,7 @@
 #include "../src/plugins/mdns/mdns_plugin.h"
 #include "../src/plugins/mdns/mdns_resolver.h"
 #endif
+#include "PinMonitor.h"
 
 #if defined(ESP8266)
 #include <sntp.h>
@@ -909,7 +910,7 @@ void KFCFWConfiguration::restartDevice(bool safeMode)
     // clear queue silently
     ADCManager::terminate(false);
 
-    __LDBG_printf("Scheduled tasks %u, WiFi callbacks %u, Loop Functions %u", Scheduler.size(), WiFiCallbacks::getVector().size(), LoopFunctions::size());
+    __LDBG_printf("Scheduled tasks %u, WiFi callbacks %u, Loop Functions %u", _Scheduler.size(), WiFiCallbacks::getVector().size(), LoopFunctions::size());
 
     auto webUiSocket = WsWebUISocket::getWsWebUI();
     if (webUiSocket) {
@@ -925,16 +926,14 @@ void KFCFWConfiguration::restartDevice(bool safeMode)
         plugin->clearSetupTime();
     }
 
-    __LDBG_printf("After plugins: Scheduled tasks %u, WiFi callbacks %u, Loop Functions %u", Scheduler.size(), WiFiCallbacks::getVector().size(), LoopFunctions::size());
+    __LDBG_printf("After plugins: Scheduled tasks %u, WiFi callbacks %u, Loop Functions %u", _Scheduler.size(), WiFiCallbacks::getVector().size(), LoopFunctions::size());
 
+#if PIN_MONITOR
+    pinMonitor.end();
+#endif
     WiFiCallbacks::clear();
     LoopFunctions::clear();
     __Scheduler.end();
-
-#if PIN_MONITOR
-    __LDBG_printf("Pin monitor has %u pins attached", PinMonitor::getInstance() ? PinMonitor::getInstance()->size() : 0);
-    PinMonitor::deleteInstance();
-#endif
 
     // give system time to finish all tasks
     restart_device_timeout = millis() + 250;

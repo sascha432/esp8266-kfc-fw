@@ -4,43 +4,58 @@
 
 #pragma once
 
-#include "pin_monitor.h"
-
 namespace PinMonitor {
+
+    class Monitor;
+
+    using TimeType = uint32_t;
+
+    enum class StateType : uint8_t {
+        NONE                   = 0,
+        IS_RISING              = 0x01,
+        IS_FALLING             = 0x02,
+        IS_HIGH                = 0x04,
+        IS_LOW                 = 0x08,
+        RISING_BOUNCED         = 0x10,
+        FALLING_BOUNCED        = 0x20,
+        HIGH_LOW               = IS_HIGH | IS_LOW,
+        BOUNCED                = RISING_BOUNCED | FALLING_BOUNCED,
+        RISING_FALLING         = IS_RISING | IS_FALLING,
+        RISING_FALLING_BOUNCED = IS_RISING | IS_FALLING | BOUNCED,
+        ANY                    = 0xff
+    };
 
     class Debounce {
     public:
 
-        Debounce(uint8_t debounceTime = 20) :
-#if DEBUG_PIN_MONITOR && DEBUG_PIN_MONITOR_DEBOUNCER
+        Debounce(bool value) :
+#if DEBUG_PIN_MONITOR
             _bounceCounter(0),
+            _startDebounce(0),
+            _debounceTime(0),
 #endif
-            _debounceTime(debounceTime),
-            _stateChanged(false),
-            _isRising(false),
-            _isFalling(false),
-            _state(false),
-            _debounceTimer(0)
+            _debounceTimer(0),
+            _state(value),
+            _value(value)
         {
         }
 
-        // debounce events for a pin
-        void event(uint8_t value, uint32_t micros, uint32_t millis);
-        // return last state of the pin
-        StateType pop_state(uint32_t millis);
+        StateType debounce(bool lastValue, uint16_t interruptCount, TimeType last, TimeType now);
 
     private:
-#if DEBUG_PIN_MONITOR && DEBUG_PIN_MONITOR_DEBOUNCER
+        void setRisingFalling(bool value, TimeType now);
+
+    private:
+        friend Monitor;
+
+#if DEBUG_PIN_MONITOR
         uint16_t _bounceCounter;
+        TimeType _startDebounce;
+        uint16_t _debounceTime;
 #endif
-        uint8_t _debounceTime;
-        int8_t _stateChanged: 2;        // -1=LOW, 1=HIGH
-        bool _isRising: 1;
-        bool _isFalling: 1;
+        TimeType _debounceTimer;
         bool _state: 1;
         bool _value: 1;
-        uint32_t _debounceTimer;
     };
-
 
 }

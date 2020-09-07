@@ -9,62 +9,46 @@
 #include <vector>
 
 #ifndef DEBUG_PIN_MONITOR
-#define DEBUG_PIN_MONITOR                                       1
+#define DEBUG_PIN_MONITOR                                       0
 #endif
 
-#if DEBUG_PIN_MONITOR
-
-// display all events in intervals
-#ifndef DEBUG_PIN_MONITOR_SHOW_EVENTS_INTERVAL
-#define DEBUG_PIN_MONITOR_SHOW_EVENTS_INTERVAL                  0
-// #define DEBUG_PIN_MONITOR_SHOW_EVENTS_INTERVAL                  1000
+// milliseconds
+#ifndef PIN_MONITOR_DEBOUNCE_TIME
+#define PIN_MONITOR_DEBOUNCE_TIME                               10
 #endif
 
-// display diebouncer info
-#ifndef DEBUG_PIN_MONITOR_DEBOUNCER
-#define DEBUG_PIN_MONITOR_DEBOUNCER                             0
-#endif
-
-// display pin events (rising, falling, high, low)
-#ifndef DEBUG_PIN_MONITOR_EVENTS
-#define DEBUG_PIN_MONITOR_EVENTS                                1
-#endif
-
-
-#endif
-
-struct InterruptInfo;
+#include "debounce.h"
 
 namespace PinMonitor {
 
-    static constexpr uint8_t kMaxPins = 17;
+    // all frequencies above (1000 / kDebounceTimeDefault) Hz will be filtered
+    static constexpr uint8_t kDebounceTimeDefault = PIN_MONITOR_DEBOUNCE_TIME; // milliseconds
 
     class Pin;
-    class Monitor;
+    class HardwarePin;
     class Debounce;
+    class Monitor;
 
-    using TimeType = uint32_t;
-    using TimeDiffType = int32_t;
-    using DebouncePtr = std::unique_ptr<Debounce>;
     using PinPtr = std::unique_ptr<Pin>;
     using Vector = std::vector<PinPtr>;
     using Iterator = Vector::iterator;
+    using HardwarePinPtr = std::unique_ptr<HardwarePin>;
+    using PinVector = std::vector<HardwarePinPtr>;
     using Predicate = std::function<bool(const PinPtr &pin)>;
 
-    enum class StateType : uint8_t {
-        NONE,
-        IS_RISING,
-        IS_FALLING,
-        IS_HIGH,
-        IS_LOW
-    };
-
-    class PinUsage {
+    class HardwarePin {
     public:
-        PinUsage(uint8_t pin, uint16_t debounceTime);
+        // HardwarePin(HardwarePin &&move) noexcept;
+        // HardwarePin &operator=(HardwarePin &&move) noexcept;
 
-        bool operator==(uint8_t pin) const {
-            return _pin == pin;
+        HardwarePin(uint8_t pin) :
+            _micros(0),
+            _intCount(0),
+            _value(false),
+            _pin(pin),
+            _count(0),
+            _debounce(digitalRead(pin))
+        {
         }
 
         operator bool() const {
@@ -78,32 +62,43 @@ namespace PinMonitor {
             return _pin;
         }
 
-        PinUsage &operator++() {
+        HardwarePin &operator++() {
             ++_count;
             return *this;
         }
-        PinUsage &operator--() {
+        HardwarePin &operator--() {
             ++_count;
             return *this;
         }
 
-        Debounce &getDebounce();
+        Debounce &getDebounce()
+        {
+            return _debounce;
+        }
+
+        static void ICACHE_RAM_ATTR callback(void *arg);
 
     private:
+        friend Monitor;
+
+        volatile TimeType _micros;
+        volatile uint16_t _intCount: 15;
+        volatile uint16_t _value: 1;
         uint8_t _pin;
         uint8_t _count;
-        DebouncePtr _debounce;
+        Debounce _debounce;
     };
-
 
     class ConfigType {
     public:
-        ConfigType(uint8_t pin, bool activeLow = false) :
+        ConfigType(uint8_t pin, StateType states = StateType::HIGH_LOW, bool activeLow = false) :
+            _states(states),
             _pin(pin),
             _disabled(false),
             _activeLow(activeLow)
         {
         }
+        virtual ~ConfigType() {}
 
         uint8_t getPin() const {
             return _pin;
@@ -113,8 +108,8 @@ namespace PinMonitor {
             return _activeLow;
         }
 
-        void setInverted(bool activeLow) {
-            _activeLow = activeLow;
+        void setInverted(bool inverted) {
+            _activeLow = inverted;
         }
 
         bool isEnabled() const {
@@ -126,15 +121,29 @@ namespace PinMonitor {
             _disabled = disabled;
         }
 
-    private:
-        friend Monitor;
-        friend Pin;
-
-        bool _isActive(bool state) const{
-            return state != _activeLow;
+        void setStates(StateType states) {
+            _states = states;
         }
 
-        uint8_t _pin;
+    protected:
+        friend Monitor;
+
+        // return state if state is enabled and invert if _activeLow is true
+        StateType _getState(StateType state) const {
+            return
+                (((uint8_t)_states & (uint8_t)state)) ?
+                    (_activeLow ? _invertState(state) : state) :
+                    StateType::NONE;
+        }
+
+        static inline StateType _invertState(StateType state) {
+            auto tmp = (uint8_t)state;
+            // swap pairs of bits
+            return (StateType)(((tmp & 0xaa) >> 1) | ((tmp & 0x55) << 1));
+        }
+
+        StateType _states;
+        uint8_t _pin: 6;
         bool _disabled: 1;
         bool _activeLow: 1;
     };

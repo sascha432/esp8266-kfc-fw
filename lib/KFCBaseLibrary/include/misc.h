@@ -792,7 +792,7 @@ namespace std {
     // auto iterator = std::find_if(_timers.begin(), _timers.end(), std::compare_unique_ptr(timer));
 
     template <class Ta>
-    class compare_unique_ptr_function : unary_function<Ta, bool>
+    class compare_unique_ptr_function : public unary_function<Ta, bool>
     {
     protected:
         Ta *_ptr;

@@ -8,37 +8,39 @@
 
 namespace PinMonitor {
 
-    class Pin
+    class Pin : public ConfigType
     {
     public:
+        using StateType = PinMonitor::StateType;
+        using TimeType = PinMonitor::TimeType;
+
         // arg can be used to add an unique identifier
-        Pin(ConfigType config, void *arg);
-        virtual ~Pin();
-
-        ConfigType &configure();
-
-        // receives events with state true for active and false for inactive
-        // if the pin is confiured as activeLow, the state is inverted
-        // now is the time when trhe event occured
-        virtual void event(bool state, TimeType now);
-
-    public:
-        uint8_t getPin() const {
-            return _config.getPin();
+        Pin(uint8_t pin, void *arg, StateType states = StateType::HIGH_LOW, bool activeLow = false) :
+            ConfigType(pin, states, activeLow),
+            _arg(arg),
+            _eventCounter(0)
+        {
         }
-        bool getState() const {
-            return _state;
-        }
-        void *getArg() const {
+
+        // event handlers are not executed more than once per millisecond
+        virtual void event(StateType state, TimeType now) {}
+
+        // loop is called even if events are disabled
+        virtual void loop() {}
+
+        inline void *getArg() const {
             return _arg;
+        }
+
+        inline void setEnabled(bool enabled) {
+            setDisabled(!enabled);
         }
 
     private:
         friend Monitor;
 
-        ConfigType _config;
         void *_arg;
-        bool _state;
+        uint32_t _eventCounter;
     };
 
 }

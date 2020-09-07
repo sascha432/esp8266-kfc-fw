@@ -20,7 +20,7 @@
 
 bool __debug_GFXCanvasBounds_printf(const DebugContext &p, const char *format, ...);
 
-#define __DBG_GFXCANVAS_PRINTF(format, ...)                 __debug_GFXCanvasBounds_printf(DEBUG_HELPER_POSITION, PSTR(format), ##__VA_ARGS__)
+#define __DBG_GFXCANVAS_PRINTF(format, ...)                 __debug_GFXCanvasBounds_printf(DebugContext_ctor(), PSTR(format), ##__VA_ARGS__)
 
 #define __DBG_BOUNDS(...)                                   __VA_ARGS__
 #define __DBG_BOUNDS_ACTION(cond, action)                   { if (cond) { action; } }

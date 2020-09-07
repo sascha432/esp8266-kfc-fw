@@ -14,7 +14,7 @@
 #endif
 
 #include <Arduino_compat.h>
-#include <WiFiCallbacks.h>
+#include <EventScheduler.h>
 #include <Wire.h>
 #include <vector>
 #include <functional>

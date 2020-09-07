@@ -15,7 +15,6 @@
 #include <StreamWrapper.h>
 #include <NullStream.h>
 #include <Buffer.h>
-#include <LoopFunctions.h>
 #include <EventScheduler.h>
 #include <HardwareSerial.h>
 #include <EnumHelper.h>

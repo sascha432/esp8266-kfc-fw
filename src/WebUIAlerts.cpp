@@ -14,7 +14,6 @@
 
 PROGMEM_STRING_DEF(alerts_storage_filename, WEBUI_ALERTS_SPIFF_STORAGE);
 
-
 void KFCFWConfiguration::AlertMessage::remove()
 {
     config.dismissAlert(_id);

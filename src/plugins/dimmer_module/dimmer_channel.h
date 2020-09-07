@@ -4,9 +4,8 @@
 
 #pragma once
 
-#include <Arduino_compat.h>
-#include "kfc_fw_config.h"
-#include "../mqtt/mqtt_client.h"
+#include <kfc_fw_config.h>
+#include "../src/plugins/mqtt/mqtt_client.h"
 
 typedef struct {
     struct {

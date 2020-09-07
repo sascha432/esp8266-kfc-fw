@@ -11,50 +11,50 @@ static ButtonsPlugin plugin;
 void ButtonsPlugin::setup(SetupModeType mode)
 {
     _readConfig();
-    PinMonitor &monitor = PinMonitor::createInstance();
-    for(auto &button: _buttons) {
-        auto iterator = monitor.addPin(button.getPin(), pinCallback, this, button.getPinMode());
-        if (iterator != monitor.end()) {
-            __LDBG_printf("pin=%u added", button.getPin());
-            PushButton &pushButton = button.getButton();
-            pushButton.onPress(onButtonPressed);
-            pushButton.onHoldRepeat(button.getConfig().longpress.time, button.getConfig().repeat.time, onButtonHeld);
-            pushButton.onRelease(onButtonReleased);
+    // for(auto &button: _buttons) {
 
-        }
-        else {
-            __LDBG_printf("failed to add pin=%u", button.getPin());
-            monitor.removePin(button.getPin(), this);
-        }
-    }
+    //     auto iterator = monitor.addPin(button.getPin(), pinCallback, this, button.getPinMode());
+    //     if (iterator != monitor.end()) {
+    //         __LDBG_printf("pin=%u added", button.getPin());
+    //         PushButton &pushButton = button.getButton();
+    //         pushButton.onPress(onButtonPressed);
+    //         pushButton.onHoldRepeat(button.getConfig().longpress.time, button.getConfig().repeat.time, onButtonHeld);
+    //         pushButton.onRelease(onButtonReleased);
+
+    //     }
+    //     else {
+    //         __LDBG_printf("failed to add pin=%u", button.getPin());
+    //         monitor.removePin(button.getPin(), this);
+    //     }
+    // }
 }
 
 void ButtonsPlugin::shutdown()
 {
-    if (PinMonitor::hasInstance()) {
-        PinMonitor &monitor = PinMonitor::getInstance();
-        for(auto &button: _buttons) {
-            monitor.removePin(button.getPin(), this);
-        }
-        if (monitor.empty()) {
-            PinMonitor::deleteInstance();
-        }
-    }
-    LoopFunctions::remove(loop);
+    // if (PinMonitor::hasInstance()) {
+    //     PinMonitor &monitor = PinMonitor::getInstance();
+    //     for(auto &button: _buttons) {
+    //         monitor.removePin(button.getPin(), this);
+    //     }
+    //     if (monitor.empty()) {
+    //         PinMonitor::deleteInstance();
+    //     }
+    // }
+    // LoopFunctions::remove(loop);
 }
 
 void ButtonsPlugin::reconfigure(PGM_P source)
 {
-    if (PinMonitor::hasInstance()) {
-        PinMonitor &monitor = PinMonitor::getInstance();
-        for(auto &button: _buttons) {
-            monitor.removePin(button.getPin(), this);
-        }
-    }
-    setup(SetupModeType::DEFAULT);
-    if (PinMonitor::hasInstance() && PinMonitor::getInstance().empty()) {
-        PinMonitor::deleteInstance();
-    }
+    // if (PinMonitor::hasInstance()) {
+    //     PinMonitor &monitor = PinMonitor::getInstance();
+    //     for(auto &button: _buttons) {
+    //         monitor.removePin(button.getPin(), this);
+    //     }
+    // }
+    // setup(SetupModeType::DEFAULT);
+    // if (PinMonitor::hasInstance() && PinMonitor::getInstance().empty()) {
+    //     PinMonitor::deleteInstance();
+    // }
 }
 
 void ButtonsPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
@@ -74,7 +74,7 @@ void ButtonsPlugin::_readConfig()
     __LDBG_printf("size=%u", _buttons.size());
 }
 
-void ButtonsPlugin::pinCallback(PinMonitor::Pin *arg)
+void ButtonsPlugin::pinCallback(Pin &arg)
 {
 
 }
@@ -83,17 +83,17 @@ void ButtonsPlugin::loop() {
 
 }
 
-void ButtonsPlugin::onButtonPressed(::Button& btn)
-{
+// void ButtonsPlugin::onButtonPressed(::Button& btn)
+// {
 
-}
+// }
 
-void ButtonsPlugin::onButtonHeld(::Button& btn, uint16_t duration, uint16_t repeatCount)
-{
+// void ButtonsPlugin::onButtonHeld(::Button& btn, uint16_t duration, uint16_t repeatCount)
+// {
 
-}
+// }
 
-void ButtonsPlugin::onButtonReleased(::Button& btn, uint16_t duration)
-{
+// void ButtonsPlugin::onButtonReleased(::Button& btn, uint16_t duration)
+// {
 
-}
+// }

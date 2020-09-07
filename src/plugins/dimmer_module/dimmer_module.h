@@ -13,47 +13,13 @@
 // NOTE: I2C Wire.onReceive() is not working on ESP8266
 
 #include <Arduino_compat.h>
-#include <PrintString.h>
-#include <PrintHtmlEntitiesString.h>
-#include <WebUIComponent.h>
-#include <array>
-#include <kfc_fw_config.h>
-#include "./plugins/mqtt/mqtt_client.h"
-#include "serial_handler.h"
 #include "dimmer_module_form.h"
 #include "dimmer_channel.h"
 #include "dimmer_base.h"
-#include "pin_monitor.h"
 
 // number of channels
 #ifndef IOT_DIMMER_MODULE_CHANNELS
 #define IOT_DIMMER_MODULE_CHANNELS          1
-#endif
-
-// use UART instead of I2C
-#ifndef IOT_DIMMER_MODULE_INTERFACE_UART
-#define IOT_DIMMER_MODULE_INTERFACE_UART    0
-#endif
-
-#if IOT_DIMMER_MODULE_INTERFACE_UART
-
-// UART only change baud rate of the Serial port to match the dimmer module
-#ifndef IOT_DIMMER_MODULE_BAUD_RATE
-#define IOT_DIMMER_MODULE_BAUD_RATE         57600
-#endif
-
-#else
-
-// I2C only. SDA PIN
-#ifndef IOT_DIMMER_MODULE_INTERFACE_SDA
-#define IOT_DIMMER_MODULE_INTERFACE_SDA     D3
-#endif
-
-// I2C only. SCL PIN
-#ifndef IOT_DIMMER_MODULE_INTERFACE_SCL
-#define IOT_DIMMER_MODULE_INTERFACE_SCL     D5
-#endif
-
 #endif
 
 // max. brightness level
@@ -61,19 +27,27 @@
 #define IOT_DIMMER_MODULE_MAX_BRIGHTNESS    16666
 #endif
 
-#if IOT_DIMMER_MODULE_INTERFACE_UART
-#include "SerialTwoWire.h"
-#else
-#include <Wire.h>
-#endif
-
 // enable or disable buttons
 #ifndef IOT_DIMMER_MODULE_HAS_BUTTONS
 #define IOT_DIMMER_MODULE_HAS_BUTTONS       0
 #endif
 
-#if IOT_DIMMER_MODULE_HAS_BUTTONS && !PIN_MONITOR
+#if IOT_DIMMER_MODULE_HAS_BUTTONS
+
+#if !PIN_MONITOR
 #error PIN_MONITOR=1 required
+#endif
+
+#include <PinMonitor.h>
+
+class DimmerButtonsImpl;
+using DimmerButtons = DimmerButtonsImpl;
+
+#else
+
+class DimmerNoButtonsImpl;
+using DimmerButtons = DimmerNoButtonsImpl;
+
 #endif
 
 // pins for dimmer buttons
@@ -86,15 +60,16 @@
 #define IOT_DIMMER_MODULE_PINMODE           INPUT
 #endif
 
-#ifndef IOT_SWITCH_ACTIVE_STATE
-#define IOT_SWITCH_ACTIVE_STATE             PRESSED_WHEN_LOW
+#ifndef IOT_SWITCH_PRESSED_STATE
+#define IOT_SWITCH_PRESSED_STATE            PinMonitor::ActiveStateType::PRESSED_WHEN_LOW
 #endif
 
-// provides DimmerButtons and DimmerChannels
-// if buttons are disabled, DimmerButtons is an alias for DimmerChannels
+//
+// DimmerButtons -> [ DimmerButtonsImpl -> ] DimmerChannels -> Dimmer_Base
+//
 #include "dimmer_buttons.h"
 
-class Driver_DimmerModule: public MQTTComponent, public Dimmer_Base, public DimmerButtons, public DimmerModuleForm
+class Driver_DimmerModule: public MQTTComponent, public DimmerButtons, public DimmerModuleForm
 {
 public:
     Driver_DimmerModule();
@@ -123,15 +98,8 @@ protected:
     void _end();
     void _beginMqtt();
     void _endMqtt();
-    void _beginButtons();
-    void _endButtons();
     void _printStatus(Print &out);
-
-    void _addLoopFunction();
-    void _removeLoopFunction();
 
 private:
     void _getChannels();
 };
-
-#include "dimmer_plugin.h"

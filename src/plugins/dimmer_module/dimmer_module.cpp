@@ -3,11 +3,9 @@
  */
 
 #include "../include/templates.h"
-#include <EventScheduler.h>
-#include "plugins.h"
+#include <plugins.h>
 #include "dimmer_module.h"
-#include "WebUISocket.h"
-
+#include "dimmer_plugin.h"
 #include "firmware_protocol.h"
 
 #if DEBUG_IOT_DIMMER_MODULE
@@ -16,7 +14,9 @@
 #include <debug_helper_disable.h>
 #endif
 
-Driver_DimmerModule::Driver_DimmerModule() : MQTTComponent(ComponentTypeEnum_t::SENSOR), Dimmer_Base(), _loopAdded(false)
+using KFCConfigurationClasses::Plugins;
+
+Driver_DimmerModule::Driver_DimmerModule() : MQTTComponent(ComponentTypeEnum_t::SENSOR)
 {
 }
 
@@ -55,6 +55,8 @@ void Driver_DimmerModule::_end()
 }
 
 #if IOT_DIMMER_MODULE_HAS_BUTTONS == 0
+
+// if IOT_DIMMER_MODULE_HAS_BUTTONS == 1 defined in dimmer_buttons.cpp
 
 void Driver_DimmerModule::_beginButtons() {}
 void Driver_DimmerModule::_endButtons() {}
@@ -244,8 +246,10 @@ void DimmerModulePlugin::reconfigure(const String &source)
         _beginMqtt();
     }
     else {
-        _endButtons();
-        _beginButtons();
+        //_endButtons();
+        _end();
+        _begin();
+        //_beginButtons();
     }
 }
 

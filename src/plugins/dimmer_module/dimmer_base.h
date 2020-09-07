@@ -7,17 +7,42 @@
 #include <Arduino_compat.h>
 #include <PrintHtmlEntitiesString.h>
 #include <WebUIComponent.h>
-#include <EventScheduler.h>
 #include <serial_handler.h>
 #include <kfc_fw_config.h>
 #include "../src/plugins/sensor/Sensor_DimmerMetrics.h"
 
+// use UART instead of I2C
+#ifndef IOT_DIMMER_MODULE_INTERFACE_UART
+#define IOT_DIMMER_MODULE_INTERFACE_UART    0
+#endif
+
 #if IOT_DIMMER_MODULE_INTERFACE_UART
-#include "SerialTwoWire.h"
+
+#include <SerialTwoWire.h>
+
 using DimmerTwoWireClass = SerialTwoWire;
+
+// UART only change baud rate of the Serial port to match the dimmer module
+#ifndef IOT_DIMMER_MODULE_BAUD_RATE
+#define IOT_DIMMER_MODULE_BAUD_RATE         57600
+#endif
+
 #else
+
 #include <Wire.h>
+
 using DimmerTwoWireClass = TwoWire;
+
+// I2C only. SDA PIN
+#ifndef IOT_DIMMER_MODULE_INTERFACE_SDA
+#define IOT_DIMMER_MODULE_INTERFACE_SDA     D3
+#endif
+
+// I2C only. SCL PIN
+#ifndef IOT_DIMMER_MODULE_INTERFACE_SCL
+#define IOT_DIMMER_MODULE_INTERFACE_SCL     D5
+#endif
+
 #endif
 
 #include "firmware_protocol.h"
@@ -31,8 +56,8 @@ using DimmerTwoWireClass = TwoWire;
 #endif
 
 #if IOT_SENSOR && (IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032)
-#include "./plugins/sensor/sensor.h"
-#include "./plugins/sensor/Sensor_HLW80xx.h"
+#include "../src/plugins/sensor/sensor.h"
+#include "../src/plugins/sensor/Sensor_HLW80xx.h"
 #endif
 
 #if (!defined(IOT_DIMMER_MODULE) || !IOT_DIMMER_MODULE) && (!defined(IOT_ATOMIC_SUN_V2) || !IOT_ATOMIC_SUN_V2)
@@ -72,20 +97,25 @@ public:
     DimmerTwoWireEx(Stream &stream) : DimmerTwoWireClass(stream, SerialHandler::Wrapper::pollSerial), _locked(false) {}
 
     bool lock() {
+        noInterrupts();
         if (_locked) {
+            interrupts();
             __DBG_print("Wire locked");
             return false;
         }
+        interrupts();
         _locked = true;
         return true;
     }
 
     void unlock() {
+        noInterrupts();
         _locked = false;
+        interrupts();
     }
 
 private:
-    bool _locked;
+    volatile bool _locked;
 #else
 
     using DimmerTwoWireClass::DimmerTwoWireClass;
@@ -112,6 +142,7 @@ public:
     using ConfigType = Plugins::DimmerConfig::DimmerConfig_t;
 
     Dimmer_Base();
+    virtual ~Dimmer_Base() {}
 
 #if IOT_DIMMER_MODULE_INTERFACE_UART
     static void onData(Stream &client);
@@ -142,6 +173,7 @@ protected:
 
     void _printStatus(Print &out);
     void _updateMetrics(const dimmer_metrics_t &metrics);
+    void _readVersion();
 
     void _fade(uint8_t channel, int16_t toLevel, float fadeTime);
 #if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
@@ -173,7 +205,7 @@ protected:
     DimmerMetrics _metrics;
     ConfigType _config;
 
-    ConfigType &_getConfig() {
+    inline ConfigType &_getConfig() {
         return _config;
     }
 

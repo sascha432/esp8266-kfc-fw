@@ -4,8 +4,7 @@
 
 #include "dimmer_channel.h"
 #include "dimmer_module.h"
-#include <PrintString.h>
-#include "WebUISocket.h"
+#include <WebUISocket.h>
 
 #if DEBUG_IOT_DIMMER_MODULE
 #include <debug_helper_enable.h>

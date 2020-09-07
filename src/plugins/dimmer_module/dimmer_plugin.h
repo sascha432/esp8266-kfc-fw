@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "PluginComponent.h"
+#include <PluginComponent.h>
 #include "dimmer_module.h"
 
 class DimmerModulePlugin : public PluginComponent, public Driver_DimmerModule {

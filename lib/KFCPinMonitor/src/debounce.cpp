@@ -17,15 +17,13 @@ StateType Debounce::debounce(bool lastValue, uint16_t interruptCount, TimeType l
 {
     if (interruptCount) {
 
-        // debounce timer running?
-        bool timerNotRunning = (_debounceTimer == 0);
-
         // set start to time when we received the last pin change interrupt
-        if (!(_debounceTimer = now - (get_time_diff(last, micros()) / 1000U))) {
-            _debounceTimer++;
-        }
+        _debounceTimer = now - (get_time_diff(last, micros()) / 1000U);
 
-        if (timerNotRunning) {
+        // debounce timer running?
+        if (_debounceTimerRunning == false) {
+
+            _debounceTimerRunning = true;
 
             // the expected start is the opposite of the stored value
             _state = !_value;
@@ -51,16 +49,17 @@ StateType Debounce::debounce(bool lastValue, uint16_t interruptCount, TimeType l
         return StateType::NONE;
     }
 
-    if (_debounceTimer != 0 && get_time_diff(_debounceTimer, now) >= pinMonitor.getDebounceTime()) {
+    if (_debounceTimerRunning && get_time_diff(_debounceTimer, now) >= pinMonitor.getDebounceTime()) {
 
 #if DEBUG_PIN_MONITOR
         _bounceCounter += interruptCount;
         _debounceTime = get_time_diff(_startDebounce, now);
 #endif
 
-        // we did not register any changes and the timeout has expired
+        // we did not register any changes and the debounce timout has expired
         // remove timer
-        _debounceTimer = 0;
+        _debounceTimerRunning = false;
+
         // save last value
         _value = lastValue;
         if (_value != _state) {

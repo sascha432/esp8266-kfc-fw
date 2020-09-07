@@ -38,9 +38,6 @@ namespace PinMonitor {
 
     class HardwarePin {
     public:
-        // HardwarePin(HardwarePin &&move) noexcept;
-        // HardwarePin &operator=(HardwarePin &&move) noexcept;
-
         HardwarePin(uint8_t pin) :
             _micros(0),
             _intCount(0),
@@ -51,35 +48,36 @@ namespace PinMonitor {
         {
         }
 
-        operator bool() const {
-            return _count != 0;
-        }
-
-        uint8_t getCount() const {
-            return _count;
-        }
-        uint8_t getPin() const {
-            return _pin;
-        }
-
-        HardwarePin &operator++() {
-            ++_count;
-            return *this;
-        }
-        HardwarePin &operator--() {
-            ++_count;
-            return *this;
-        }
-
-        Debounce &getDebounce()
+        inline Debounce &getDebounce()
         {
             return _debounce;
         }
 
-        static void ICACHE_RAM_ATTR callback(void *arg);
 
     private:
         friend Monitor;
+
+        inline operator bool() const {
+            return _count != 0;
+        }
+
+        inline uint8_t getCount() const {
+            return _count;
+        }
+        inline uint8_t getPin() const {
+            return _pin;
+        }
+
+        inline HardwarePin &operator++() {
+            ++_count;
+            return *this;
+        }
+        inline HardwarePin &operator--() {
+            ++_count;
+            return *this;
+        }
+
+        static void ICACHE_RAM_ATTR callback(void *arg);
 
         volatile TimeType _micros;
         volatile uint16_t _intCount: 15;
@@ -91,37 +89,42 @@ namespace PinMonitor {
 
     class ConfigType {
     public:
-        ConfigType(uint8_t pin, StateType states = StateType::HIGH_LOW, bool activeLow = false) :
+        ConfigType(uint8_t pin, StateType states = StateType::UP_DOWN, ActiveStateType activeState = ActiveStateType::PRESSED_WHEN_LOW) :
             _states(states),
             _pin(pin),
             _disabled(false),
-            _activeLow(activeLow)
+            _activeState(static_cast<bool>(activeState))
         {
         }
         virtual ~ConfigType() {}
 
-        uint8_t getPin() const {
+        inline uint8_t getPin() const {
             return _pin;
         }
 
-        bool isInverted() const {
-            return _activeLow;
+        inline bool isInverted() const {
+            return _activeState == static_cast<bool>(ActiveStateType::INVERTED);
         }
 
-        void setInverted(bool inverted) {
-            _activeLow = inverted;
+        inline void setInverted(bool inverted) {
+            _activeState =  static_cast<bool>(inverted ? ActiveStateType::INVERTED : ActiveStateType::NON_INVERTED);
         }
 
-        bool isEnabled() const {
+        inline void setActiveState(ActiveStateType activeState) {
+            _activeState = static_cast<bool>(activeState);
+        }
+
+        inline bool isEnabled() const {
             return _disabled == false;
         }
 
         // disable receiving events
-        void setDisabled(bool disabled) {
+        inline void setDisabled(bool disabled) {
             _disabled = disabled;
         }
 
-        void setStates(StateType states) {
+        // change events to receive
+        inline void setEvents(StateType states) {
             _states = states;
         }
 
@@ -129,23 +132,17 @@ namespace PinMonitor {
         friend Monitor;
 
         // return state if state is enabled and invert if _activeLow is true
-        StateType _getState(StateType state) const {
+        inline StateType _getStateIfEnabled(StateType state) const {
             return
-                (((uint8_t)_states & (uint8_t)state)) ?
-                    (_activeLow ? _invertState(state) : state) :
-                    StateType::NONE;
-        }
-
-        static inline StateType _invertState(StateType state) {
-            auto tmp = (uint8_t)state;
-            // swap pairs of bits
-            return (StateType)(((tmp & 0xaa) >> 1) | ((tmp & 0x55) << 1));
+                (static_cast<uint8_t>(_states) & static_cast<uint8_t>(state)) == static_cast<uint8_t>(StateType::NONE) ?
+                    (StateType::NONE) :
+                    (_activeState == static_cast<bool>(ActiveStateType::INVERTED) ? getInvertedState(state) : state);
         }
 
         StateType _states;
         uint8_t _pin: 6;
         bool _disabled: 1;
-        bool _activeLow: 1;
+        bool _activeState: 1;
     };
 
 }

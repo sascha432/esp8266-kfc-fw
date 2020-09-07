@@ -240,7 +240,7 @@ void Monitor::_loop()
 #endif
     }
     for(const auto &handler: _handlers) {
-        handler.loop();
+        handler->loop();
     }
 }
 
@@ -248,7 +248,7 @@ void Monitor::_event(uint8_t pinNum, StateType state, TimeType now)
 {
     for(const auto &handler: _handlers) {
         StateType tmp;
-        if (handler->getPin() == pinNum && handler->isEnabled() && (tmp = handler->_getState(state)) != StateType::NONE) {
+        if (handler->getPin() == pinNum && handler->isEnabled() && (tmp = handler->_getStateIfEnabled(state)) != StateType::NONE) {
             handler->_eventCounter++;
             handler->event(tmp, now);
         }
@@ -259,9 +259,9 @@ const __FlashStringHelper *Monitor::stateType2String(StateType state)
 {
     switch(state) {
         case StateType::IS_HIGH:
-            return F("HIGH");
+            return F("DOWN");
         case StateType::IS_LOW:
-            return F("LOW");
+            return F("UP");
         case StateType::IS_FALLING:
             return F("FALLING");
         case StateType::IS_RISING:

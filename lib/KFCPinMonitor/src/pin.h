@@ -12,14 +12,19 @@ namespace PinMonitor {
     {
     public:
         using StateType = PinMonitor::StateType;
+        using ActiveStateType = PinMonitor::ActiveStateType;
         using TimeType = PinMonitor::TimeType;
 
         // arg can be used to add an unique identifier
-        Pin(uint8_t pin, void *arg, StateType states = StateType::HIGH_LOW, bool activeLow = false) :
+        Pin(uint8_t pin, void *arg, StateType states = StateType::UP_DOWN, ActiveStateType activeLow = ActiveStateType::PRESSED_WHEN_HIGH) :
             ConfigType(pin, states, activeLow),
             _arg(arg),
             _eventCounter(0)
         {
+        }
+
+        inline void *getArg() const {
+            return _arg;
         }
 
         // event handlers are not executed more than once per millisecond
@@ -27,14 +32,6 @@ namespace PinMonitor {
 
         // loop is called even if events are disabled
         virtual void loop() {}
-
-        inline void *getArg() const {
-            return _arg;
-        }
-
-        inline void setEnabled(bool enabled) {
-            setDisabled(!enabled);
-        }
 
     private:
         friend Monitor;

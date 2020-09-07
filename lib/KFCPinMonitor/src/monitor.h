@@ -24,7 +24,7 @@ namespace PinMonitor {
         }
 
         // set default pin mode for adding new pins
-        void setDefaultPinMode(uint8_t mode) {
+        inline void setDefaultPinMode(uint8_t mode) {
             _pinMode = mode;
         }
 
@@ -79,6 +79,7 @@ namespace PinMonitor {
         void _loop();
         void _event(uint8_t pin, StateType state, TimeType now);
 
+    private:
         Vector _handlers;
         PinVector _pins;
         TimeType _lastRun;

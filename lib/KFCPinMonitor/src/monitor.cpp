@@ -12,6 +12,8 @@
 
 #if DEBUG_PIN_MONITOR
 #include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
 #endif
 
 using namespace PinMonitor;
@@ -59,7 +61,10 @@ void Monitor::end()
 
 void Monitor::beginDebug(Print &output, uint32_t interval)
 {
-    output.printf_P(PSTR("+PINM: pins=%u handlers=%u\n"), _pins.size(), _handlers.size());
+    output.printf_P(PSTR("+PINM: pins=%u handlers=%u debounce=%ums loop_timer=%d\n"), _pins.size(), _handlers.size(), getDebounceTime(), _loopTimer ? *_loopTimer : -1);
+    for(auto &pin: _pins) {
+        output.printf_P(PSTR("+PINM: pin=%u usage=%u\n"), pin->getPin(), pin->getCount());
+    }
     if (!_debugTimer && !_handlers.empty()) {
         _debugTimer = new Event::Timer();
         _Timer(_debugTimer)->add(Event::milliseconds(interval), true, [this, &output](Event::CallbackTimerPtr) {
@@ -121,7 +126,7 @@ void Monitor::detach(Predicate pred)
     detach(std::remove_if(_handlers.begin(), _handlers.end(), pred), _handlers.end());
 }
 
-void Monitor::detach(void *arg) {
+void Monitor::detach(const void *arg) {
     detach([arg](const PinPtr &pin) {
         return pin->getArg() == arg;
     });
@@ -153,15 +158,18 @@ void Monitor::_detach(Iterator begin, Iterator end, bool clear)
     }
     if (clear) {
         _detachLoop();
+        __LDBG_printf("handlers/pins clear");
         _handlers.clear();
         _pins.clear();
     }
     else {
+        __LDBG_printf("handlers erase begin=%d end=%u size=%u", std::distance(_handlers.begin(), begin), std::distance(_handlers.begin(), end), _handlers.size());
         _handlers.erase(begin, end);
         if (_pins.empty()) {
             _detachLoop();
         }
     }
+    __LDBG_printf("handlers=%u pins=%u", _handlers.size(), _pins.size());
 }
 
 void Monitor::detach(Pin *handler)
@@ -220,10 +228,10 @@ void Monitor::_loop()
         pin._intCount = 0;
         interrupts();
 
-#if DEBUG_PIN_MONITOR
+#if DEBUG_PIN_MONITOR_EVENTS
         auto state = debounce.debounce(value, intCount, micros, now);
         if (state != StateType::NONE) {
-            __LDBG_printf("EVENT: pin=%u state=%s time=%u bounced=%u", pin.getPin(), stateType2String(state), get_time_diff(debounce._startDebounce, now), debounce._bounceCounter);
+            __LDBG_printf("EVENT: pin=%u state=%s time=%u bounced=%u", pin.getPin(), stateType2Level(state), get_time_diff(debounce._startDebounce, now), std::max(0, debounce._bounceCounter - 1));
             // print --- of the state does not change for 1 second
             static Event::Timer timer;
             static uint32_t counter;
@@ -258,10 +266,32 @@ void Monitor::_event(uint8_t pinNum, StateType state, TimeType now)
 const __FlashStringHelper *Monitor::stateType2String(StateType state)
 {
     switch(state) {
+        case StateType::PRESSED:
+            return F("PRESSED");
+        case StateType::RELEASED:
+            return F("RELEASED");
+        case StateType::IS_FALLING:
+            return F("RELEASING");
+        case StateType::IS_RISING:
+            return F("PRESSING");
+        case StateType::RISING_BOUNCED:
+            return F("RELEASE_BOUNCED");
+        case StateType::FALLING_BOUNCED:
+            return F("PRESS_BOUNCED");
+        default:
+        case StateType::NONE:
+            break;
+    }
+    return F("NONE");
+}
+
+const __FlashStringHelper *Monitor::stateType2Level(StateType state)
+{
+    switch(state) {
         case StateType::IS_HIGH:
-            return F("DOWN");
+            return F("HIGH");
         case StateType::IS_LOW:
-            return F("UP");
+            return F("LOW");
         case StateType::IS_FALLING:
             return F("FALLING");
         case StateType::IS_RISING:

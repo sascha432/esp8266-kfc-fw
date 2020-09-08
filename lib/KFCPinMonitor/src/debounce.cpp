@@ -30,7 +30,7 @@ StateType Debounce::debounce(bool lastValue, uint16_t interruptCount, TimeType l
             // save last value read from the pin
             _value = lastValue;
 
-#if DEBUG_PIN_MONITOR
+#if DEBUG_PIN_MONITOR_EVENTS
             _bounceCounter = interruptCount;
             _startDebounce = _debounceTimer; // not exactly the start but close to it
             _debounceTime = 0;
@@ -41,7 +41,7 @@ StateType Debounce::debounce(bool lastValue, uint16_t interruptCount, TimeType l
 
         // save last value
         _value = lastValue;
-#if DEBUG_PIN_MONITOR
+#if DEBUG_PIN_MONITOR_EVENTS
         _bounceCounter += interruptCount;
         _debounceTime = get_time_diff(_startDebounce, now);
 #endif
@@ -51,7 +51,7 @@ StateType Debounce::debounce(bool lastValue, uint16_t interruptCount, TimeType l
 
     if (_debounceTimerRunning && get_time_diff(_debounceTimer, now) >= pinMonitor.getDebounceTime()) {
 
-#if DEBUG_PIN_MONITOR
+#if DEBUG_PIN_MONITOR_EVENTS
         _bounceCounter += interruptCount;
         _debounceTime = get_time_diff(_startDebounce, now);
 #endif

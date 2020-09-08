@@ -50,7 +50,7 @@ namespace PinMonitor {
         // remove one or more pins
         void detach(Predicate pred);
         void detach(Pin *pin);
-        void detach(void *arg);
+        void detach(const void *arg);
 
         inline void detach(Iterator begin, Iterator end) {
             _detach(begin, end, false);
@@ -69,7 +69,8 @@ namespace PinMonitor {
         // return true if the loop has executed since the last call
         static bool getLoopExecuted();
 
-        static const __FlashStringHelper *stateType2String(StateType);
+        static const __FlashStringHelper *stateType2String(StateType state);
+        static const __FlashStringHelper *stateType2Level(StateType state);
 
     private:
         Pin &_attach(Pin &pin);

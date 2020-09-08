@@ -68,7 +68,7 @@ namespace PinMonitor {
     public:
 
         Debounce(bool value) :
-#if DEBUG_PIN_MONITOR
+#if DEBUG_PIN_MONITOR_EVENTS
             _bounceCounter(0),
             _startDebounce(0),
             _debounceTime(0),
@@ -85,7 +85,7 @@ namespace PinMonitor {
     private:
         friend Monitor;
 
-#if DEBUG_PIN_MONITOR
+#if DEBUG_PIN_MONITOR_EVENTS
         uint16_t _bounceCounter;
         TimeType _startDebounce;
         uint16_t _debounceTime;

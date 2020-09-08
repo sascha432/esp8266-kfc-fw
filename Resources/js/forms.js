@@ -57,6 +57,21 @@ $.formValidator = {
 // $.formValidator.addErrors([{'target':'#colon_sp','error':'This fields value must be between 50 and 65535 or 0'}]);
 // $.formValidator.addErrors([{'target':'#brightness','error':'This fields value must be between 50 and 65535 or 0'}]);
 
+$.addFormHelp = function(data) {
+    for (key in data) {
+        var label = $('label[for="' +key +'"]');
+        if (label.length) {
+            var tmp = label.html();
+            var pos = tmp.indexOf(':');
+            if (pos != -1) {
+                tmp = tmp.substring(0, pos + 1);
+            }
+            tmp = tmp + '<br><small>' + data[key] + '</small>';
+            label.html(tmp);
+        }
+    }
+};
+
 $.urlParam = function(name, remove) {
     var results = new RegExp('([\?&])' + name + '=([^&#]*)([&#]?)').exec(window.location.href);
     if (results == null) {

@@ -5,6 +5,7 @@
 #pragma once
 
 #include <kfc_fw_config.h>
+#include <EventScheduler.h>
 #include "../src/plugins/mqtt/mqtt_client.h"
 
 typedef struct {
@@ -28,6 +29,16 @@ public:
     static constexpr int16_t MAX_LEVEL = IOT_DIMMER_MODULE_MAX_BRIGHTNESS;
     static constexpr int16_t MIN_LEVEL = MAX_LEVEL / 100;
     static constexpr int16_t DEFAULT_LEVEL = MAX_LEVEL / 2;
+
+    static constexpr uint16_t kWebUIMaxUpdateRate = 250;
+    static constexpr uint16_t kMQTTMaxUpdateRate = 1000;
+    static constexpr uint8_t kMQTTUpdateRateMultiplier = kMQTTMaxUpdateRate / kWebUIMaxUpdateRate;
+
+    static constexpr uint8_t kWebUIUpdateFlag = 0x01;
+    static constexpr uint8_t kMQTTUpdateFlag = 0x02;
+    static constexpr uint8_t kUpdateAllFlag = kWebUIUpdateFlag|kMQTTUpdateFlag;
+    static constexpr uint8_t kStartTimerFlag = 0xff;
+
 public:
     DimmerChannel();
 
@@ -40,7 +51,7 @@ public:
 
     bool on();
     bool off();
-    void publishState(MQTTClient *client = nullptr);
+    void publishState(MQTTClient *client = nullptr, uint8_t publishFlag = kStartTimerFlag);
 
     bool getOnState() const;
     int16_t getLevel() const;
@@ -54,4 +65,7 @@ private:
     uint16_t _storedBrightness;
     Driver_DimmerModule *_dimmer;
     uint8_t _channel;
+    uint8_t _publishFlag;
+    uint8_t _mqttCounter;
+    Event::Timer _publishTimer;
 };

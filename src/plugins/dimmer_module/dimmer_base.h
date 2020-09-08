@@ -10,49 +10,20 @@
 #include <serial_handler.h>
 #include <kfc_fw_config.h>
 #include "../src/plugins/sensor/Sensor_DimmerMetrics.h"
-
-// use UART instead of I2C
-#ifndef IOT_DIMMER_MODULE_INTERFACE_UART
-#define IOT_DIMMER_MODULE_INTERFACE_UART    0
-#endif
+#include "dimmer_def.h"
 
 #if IOT_DIMMER_MODULE_INTERFACE_UART
-
 #include <SerialTwoWire.h>
-
 using DimmerTwoWireClass = SerialTwoWire;
-
-// UART only change baud rate of the Serial port to match the dimmer module
-#ifndef IOT_DIMMER_MODULE_BAUD_RATE
-#define IOT_DIMMER_MODULE_BAUD_RATE         57600
-#endif
-
 #else
-
 #include <Wire.h>
-
 using DimmerTwoWireClass = TwoWire;
-
-// I2C only. SDA PIN
-#ifndef IOT_DIMMER_MODULE_INTERFACE_SDA
-#define IOT_DIMMER_MODULE_INTERFACE_SDA     D3
-#endif
-
-// I2C only. SCL PIN
-#ifndef IOT_DIMMER_MODULE_INTERFACE_SCL
-#define IOT_DIMMER_MODULE_INTERFACE_SCL     D5
-#endif
-
 #endif
 
 #include "firmware_protocol.h"
 
 #ifndef STK500V1_RESET_PIN
 #error STK500V1_RESET_PIN not defined
-#endif
-
-#ifndef DEBUG_IOT_DIMMER_MODULE
-#define DEBUG_IOT_DIMMER_MODULE             1
 #endif
 
 #if IOT_SENSOR && (IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032)
@@ -64,11 +35,6 @@ using DimmerTwoWireClass = TwoWire;
 #error requires IOT_ALARM_PLUGIN_ENABLED=1 or IOT_ATOMIC_SUN_V2=1
 #endif
 
-// enable or disable buttons
-#ifndef IOT_DIMMER_MODULE_HAS_BUTTONS
-#define IOT_DIMMER_MODULE_HAS_BUTTONS       0
-#endif
-
 class DimmerButtonsImpl;
 class DimmerNoButtonsImpl;
 class DimmerChannel;
@@ -77,21 +43,14 @@ class DimmerButton;
 class AsyncWebServerRequest;
 
 #if IOT_DIMMER_MODULE_HAS_BUTTONS
-
 #if !PIN_MONITOR
 #error PIN_MONITOR=1 required
 #endif
-
 #include <PinMonitor.h>
-
 using DimmerButtons = DimmerButtonsImpl;
-
 #else
-
 using DimmerButtons = DimmerNoButtonsImpl;
-
 #endif
-
 
 using KFCConfigurationClasses::Plugins;
 
@@ -167,13 +126,9 @@ public:
     static const uint32_t METRICS_DEFAULT_UPDATE_RATE = 60000;
     using ConfigType = Plugins::DimmerConfig::DimmerConfig_t;
 
-    // divide repeat time (milliseconds) / (level change * kLevelChangeToSecondsPerLevel)
-    static constexpr float kLevelChangeToSecondsPerLevel = (float)(1 / ((double)IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 1000.0));
-
-    // fadeTime for setLevel()
-    float _getAbsoluteFadeTime(uint32_t repeatTimeMillis, uint16_t positiveLevelChange) {
-        return repeatTimeMillis / (positiveLevelChange * kLevelChangeToSecondsPerLevel);
-    }
+    // stepSize = IOT_DIMMER_MODULE_MAX_BRIGHTNESS * ((repeatTime / 1000.0) / fadetime)
+    // fadetime = (IOT_DIMMER_MODULE_MAX_BRIGHTNESS * repeatTime) / (1000.0 * stepSize)
+    // repeatTime = (1000 * fadetime * stepSize) / IOT_DIMMER_MODULE_MAX_BRIGHTNESS
 
 public:
     Dimmer_Base();

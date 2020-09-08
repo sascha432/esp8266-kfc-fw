@@ -44,6 +44,17 @@
 	<!--JAVASCRIPT%%-->
 	<script>
 		$(function() {
+
+            $.addFormHelp({
+                'sptime': 'If pressed less than this, a click is detected',
+                'lptime': 'If pressed less than this but longer than click time, a long press is detected. Holding a button for longer will start to increase or decrease the brightness',
+                'sstep': 'Number of steps to change the brightness from 0-100%. Holding a button can be used to fine adjust the brightness',
+                'snrt': 'Time between clicks to detect it as multiple clicks. A single click down turns the dimmer off. Increase value if dimmer turns off while adjusting the brightness',
+                'lpfd': 'Time to change brightness from 0-100%. Applies to Long Press, Single Click down (turn off) and Holding a button down',
+                'minbr': "Minimum brightness that can be set using the buttons",
+                'lpmaxb': 'Change brightness to this value and turn dimmer on if it is off',
+                'lpminb': 'Change brightness to this value and turn dimmer on if it is off',
+            });
 			$('#dimmer_settings').find('button[type=submit]').parent().append('<button type="button" class="btn btn-secondary ml-3" id="reset_firmware">Reset Firmware...</button>');
 			$('#reset_firmware').on('click', function(event) {
 				event.preventDefault();

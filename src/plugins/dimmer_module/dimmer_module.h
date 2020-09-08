@@ -14,36 +14,6 @@
 
 #include <Arduino_compat.h>
 #include "dimmer_module_form.h"
-#include "dimmer_channel.h"
-#include "dimmer_base.h"
-
-// number of channels
-#ifndef IOT_DIMMER_MODULE_CHANNELS
-#define IOT_DIMMER_MODULE_CHANNELS          1
-#endif
-
-// max. brightness level
-#ifndef IOT_DIMMER_MODULE_MAX_BRIGHTNESS
-#define IOT_DIMMER_MODULE_MAX_BRIGHTNESS    16666
-#endif
-
-// pins for dimmer buttons
-// each channel needs 2 buttons, up & down
-#ifndef IOT_DIMMER_MODULE_BUTTONS_PINS
-#define IOT_DIMMER_MODULE_BUTTONS_PINS      D6, D7
-#endif
-
-#ifndef IOT_DIMMER_MODULE_PINMODE
-#define IOT_DIMMER_MODULE_PINMODE           INPUT
-#endif
-
-#ifndef IOT_SWITCH_PRESSED_STATE
-#define IOT_SWITCH_PRESSED_STATE            PinMonitor::ActiveStateType::PRESSED_WHEN_LOW
-#endif
-
-//
-// DimmerButtons -> [ DimmerButtonsImpl -> ] DimmerChannels -> Dimmer_Base
-//
 #include "dimmer_buttons.h"
 
 class Driver_DimmerModule: public MQTTComponent, public DimmerButtons, public DimmerModuleForm

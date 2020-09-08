@@ -1344,10 +1344,9 @@ namespace KFCConfigurationClasses {
             #if IOT_DIMMER_MODULE_HAS_BUTTONS
                 uint16_t shortpress_time;
                 uint16_t longpress_time;
-                uint16_t repeat_time;
-                uint16_t shortpress_no_repeat_time;
+                uint16_t single_click_time;
                 uint8_t min_brightness;
-                uint8_t shortpress_step;
+                uint8_t shortpress_steps;
                 uint8_t longpress_max_brightness;
                 uint8_t longpress_min_brightness;
                 float longpress_fadetime;

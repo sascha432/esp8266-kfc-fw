@@ -23,6 +23,9 @@ public:
 
     static void send(AsyncWebSocketClient *client, const JsonUnnamedObject &json);
     static void broadcast(WsWebUISocket *sender, const JsonUnnamedObject &json);
+    // buf is an allocated (new uint8_t[len + 1]) null terminated string
+    // len = strlen(buf)
+    static void broadcast(WsWebUISocket *sender, uint8_t *buf, size_t len);
     static void setup();
 
     static void createWebUIJSON(JsonUnnamedObject &json);

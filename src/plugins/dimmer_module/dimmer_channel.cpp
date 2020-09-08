@@ -12,7 +12,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-DimmerChannel::DimmerChannel() : MQTTComponent(ComponentTypeEnum_t::LIGHT), _data(), _storedBrightness(0)
+DimmerChannel::DimmerChannel() : MQTTComponent(ComponentTypeEnum_t::LIGHT), _data(), _storedBrightness(0), _publishFlag(0)
 {
 #if DEBUG_MQTT_CLIENT
     debug_printf_P(PSTR("DimmerChannel(): component=%p\n"), this);
@@ -78,7 +78,7 @@ void DimmerChannel::onConnect(MQTTClient *client)
     client->subscribe(this, _data.state.set);
     client->subscribe(this, _data.brightness.set);
 
-    publishState(client);
+    publishState(client, kUpdateAllFlag);
 }
 
 void DimmerChannel::onMessage(MQTTClient *client, char *topic, char *payload, size_t len)
@@ -96,7 +96,7 @@ void DimmerChannel::onMessage(MQTTClient *client, char *topic, char *payload, si
             result = off();
         }
         if (!result) {
-            publishState(client); // publish state again even if it has not been turned on or off
+            publishState(client, kUpdateAllFlag); // publish state again even if it has not been turned on or off
         }
 
     } else if (_data.brightness.set.equals(topic)) {
@@ -115,7 +115,7 @@ void DimmerChannel::onMessage(MQTTClient *client, char *topic, char *payload, si
             _data.brightness.value = 0;
         }
         _dimmer->_fade(_channel, _data.brightness.value, fadetime);
-        publishState(client);
+        publishState(client, kUpdateAllFlag);
     }
 }
 
@@ -151,29 +151,74 @@ bool DimmerChannel::off()
     return false;
 }
 
-void DimmerChannel::publishState(MQTTClient *client)
+void DimmerChannel::publishState(MQTTClient *client, uint8_t publishFlag)
 {
-    if (!client) {
-        client = MQTTClient::getClient();
+    if (publishFlag == 0) { // no updates
+        return;
     }
-    if (client && client->isConnected()) {
-        __LDBG_printf("channel=%u brightness=%d state=%u client=%p", _channel, _data.brightness.value, _data.state.value, client);
+    else if (publishFlag == kStartTimerFlag) { // start timer
 
-        client->publish(_data.state.state, true, String(_data.state.value));
-        client->publish(_data.brightness.state, true, String(_data.brightness.value));
+        _publishFlag |= kWebUIUpdateFlag|kMQTTUpdateFlag;
+        if (_publishTimer) { // timer already running
+            return;
+        }
+        // start timer to limit update rate
+        _mqttCounter = 0;
+        _Timer(_publishTimer).add(Event::milliseconds(kWebUIMaxUpdateRate), true, [this](Event::CallbackTimerPtr timer) {
+            auto flag = _publishFlag;
+            if (flag == 0) { // no updates, end timer
+                timer->disarm();
+                return;
+            }
+            if (_mqttCounter < kMQTTUpdateRateMultiplier) {
+                // once the counter reached its max. it is reset by the publishState() method
+                _mqttCounter++;
+                // remove MQTT flag
+                flag &= ~kMQTTUpdateFlag;
+            }
+            publishState(nullptr, flag);
+        });
+        return;
     }
 
-    if (WsWebUISocket::getWsWebUI() && WsWebUISocket::hasClients(WsWebUISocket::getWsWebUI())) {
-        JsonUnnamedObject json(2);
-        json.add(JJ(type), JJ(ue));
-        auto &events = json.addArray(JJ(events), 1);
-        auto &obj = events.addObject(3);
-        PrintString id(F("dimmer_channel%u"), _channel);
-        obj.add(JJ(id), id);
-        obj.add(JJ(value), _data.brightness.value);
-        obj.add(JJ(state), _data.state.value);
-        WsWebUISocket::broadcast(WsWebUISocket::getSender(), json);
+    if (publishFlag & kMQTTUpdateFlag) {
+        if (!client) {
+            client = MQTTClient::getClient();
+        }
+        if (client && client->isConnected()) {
+
+            // __LDBG_printf("channel=%u brightness=%d state=%u client=%p", _channel, _data.brightness.value, _data.state.value, client);
+
+            client->publish(_data.state.state, true, String(_data.state.value));
+            client->publish(_data.brightness.state, true, String(_data.brightness.value));
+        }
+        _publishFlag &= ~kMQTTUpdateFlag;
+        _mqttCounter = 0;
     }
+
+    if (publishFlag & kWebUIUpdateFlag) {
+        auto webUi = WsWebUISocket::getWsWebUI();
+        if (webUi && WsWebUISocket::hasClients(webUi)) {
+            // JsonUnnamedObject json(2);
+            // json.add(JJ(type), JJ(ue));
+            // auto &events = json.addArray(JJ(events), 1);
+            // auto &obj = events.addObject(3);
+            // PrintString id(F("dimmer_channel%u"), _channel);
+            // obj.add(JJ(id), id);
+            // obj.add(JJ(value), _data.brightness.value);
+            // obj.add(JJ(state), _data.state.value);
+
+            static constexpr size_t bufSize = 88; // max json length ~81 byte
+            auto buf = new uint8_t[bufSize];
+            snprintf_P((char *)buf, bufSize - 1, PSTR("{\"type\":\"ue\",\"events\":[{\"id\":\"dimmer_channel%u\",\"value\":%d,\"state\":%s}]}"),
+                _channel, _data.brightness.value, _data.state.value ? PSTR("true") : PSTR("false")
+            );
+            buf[bufSize - 1] = 0;
+            WsWebUISocket::broadcast(WsWebUISocket::getSender(), buf, strlen((const char *)buf));
+        }
+        _publishFlag &= ~kWebUIUpdateFlag;
+    }
+
 }
 
 bool DimmerChannel::getOnState() const

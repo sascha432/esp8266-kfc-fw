@@ -7,7 +7,7 @@
 
 namespace KFCConfigurationClasses {
 
-    Plugins::DimmerConfig::DimmerConfig_t::DimmerConfig_t() : fw(), on_off_fade_time(7.5), fade_time(5), config_valid(false)
+    Plugins::DimmerConfig::DimmerConfig_t::DimmerConfig_t() : fw(), on_off_fade_time(12.5), fade_time(4.5), config_valid(false)
         #if IOT_ATOMIC_SUN_V2
         ,
         #ifdef IOT_ATOMIC_SUN_CHANNEL_WW1
@@ -18,15 +18,14 @@ namespace KFCConfigurationClasses {
         #endif
         #if IOT_DIMMER_MODULE_HAS_BUTTONS
         ,
-            shortpress_time(250),
-            longpress_time(600),
-            repeat_time(75),
-            shortpress_no_repeat_time(650),
-            min_brightness(25),
-            shortpress_step(2),
-            longpress_max_brightness(100),
-            longpress_min_brightness(45),
-            longpress_fadetime(4.5),
+            shortpress_time(275),
+            longpress_time(750),
+            single_click_time(1000),
+            min_brightness(20),
+            shortpress_steps(15),
+            longpress_max_brightness(85),
+            longpress_min_brightness(33),
+            longpress_fadetime(3.5),
 
         #if IOT_SENSOR_HAVE_HLW8012
             pins{ D2, D7 }

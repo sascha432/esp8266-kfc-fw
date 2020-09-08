@@ -64,6 +64,15 @@ void WsWebUISocket::broadcast(WsWebUISocket *sender, const JsonUnnamedObject &js
     }
 }
 
+void WsWebUISocket::broadcast(WsWebUISocket *sender, uint8_t *buf, size_t len)
+{
+    if (wsWebUI) {
+        auto buffer = wsWebUI->makeBuffer(buf, len, false);
+        __LDBG_printf("buffer=%s", buffer->get());
+        WsClient::broadcast(wsWebUI, sender, buffer);
+    }
+}
+
 WsWebUISocket *WsWebUISocket::getSender()
 {
     return _sender;

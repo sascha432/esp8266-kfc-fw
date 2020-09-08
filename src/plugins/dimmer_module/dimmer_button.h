@@ -22,8 +22,8 @@ public:
             EnumHelper::Bitset::all(EventType::REPEAT, EventType::CLICK, EventType::LONG_CLICK),
             config.shortpress_time,
             config.longpress_time,
-            config.repeat_time,
-            config.shortpress_no_repeat_time
+            IOT_DIMMER_MODULE_HOLD_REPEAT_TIME,
+            config.shortpress_steps
         )
     {
     }
@@ -34,7 +34,7 @@ public:
     using ConfigType = DimmerButtonConfig::ConfigType;
 
 public:
-    DimmerButton(uint8_t pin, uint8_t channel, uint8_t button, DimmerButtons &dimmer);
+    DimmerButton(uint8_t pin, uint8_t channel, uint8_t button, DimmerButtons &dimmer, SingleClickGroupPtr singleClickGroup);
 
     virtual void event(EventType state, TimeType now) override;
 
@@ -42,7 +42,8 @@ private:
     void _setLevel(int32_t newLevel, int16_t curLevel, float fadeTime);
     void _setLevel(int32_t newLevel, float fadeTime);
     void _changeLevel(int32_t changeLevel, float fadeTime);
-    void _changeLevel(uint16_t stepSize);
+    void _changeLevelSingle(uint16_t steps, bool invert);
+    void _changeLevelRepeat(uint16_t repeatTime, bool invert);
 
 private:
     DimmerButtons &_dimmer;

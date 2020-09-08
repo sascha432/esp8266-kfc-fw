@@ -1342,7 +1342,7 @@ void at_mode_serial_handle_event(String &commandString)
             }
     #if PIN_MONITOR
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(PINM))) {
-                if (args.isTrue(0)) {
+                if (args.isTrue(0) || !pinMonitor.isDebugRunning()) {
                     args.print(F("starting debug mode"));
                     pinMonitor.beginDebug(args.getStream(), args.toMillis(1, 500, ~0, 1000U));
                 }

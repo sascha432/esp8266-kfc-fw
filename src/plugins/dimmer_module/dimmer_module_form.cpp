@@ -126,11 +126,18 @@ void DimmerModuleForm::_createConfigureForm(PluginComponent::FormCallbackType ty
 
     auto &fwGroup = form.addCardGroup(F("fwcfg"), F("Advanced Firmware Configuration"), false);
 
+    auto &pin0Inverted = form.addObjectGetterSetter(F("p0i"), cfg, cfg.get_inverted_pin0, cfg.set_inverted_pin0);
+    form.addFormUI(FormUI::Type::HIDDEN);
+
     form.add<uint8_t>(F("pin0"), _H_W_STRUCT_VALUE_TYPE(cfg, pins[0], uint8_t));
-    form.addFormUI(F("Button Up Pin #"));
+    form.addFormUI(F("Button Up Pin #"), FormUI::UI::createCheckBoxButton(pin0Inverted, F("Active Low")));
+
+
+    auto &pin1Inverted = form.addObjectGetterSetter(F("p1i"), cfg, cfg.get_inverted_pin1, cfg.set_inverted_pin1);
+    form.addFormUI(FormUI::Type::HIDDEN);
 
     form.add<uint8_t>(F("pin1"), _H_W_STRUCT_VALUE_TYPE(cfg, pins[1], uint8_t));
-    form.addFormUI(F("Button Down Pin #"));
+    form.addFormUI(F("Button Down Pin #"), FormUI::UI::createCheckBoxButton(pin1Inverted, F("Active Low")));
 
     form.add<uint8_t>(F("max_temp"), _H_W_STRUCT_VALUE(cfg, fw.max_temp));
     form.addFormUI(F("Max. Temperature"), configValidAttr, FormUI::PlaceHolder(80), FormUI::Suffix(FSPGM(_degreeC)));

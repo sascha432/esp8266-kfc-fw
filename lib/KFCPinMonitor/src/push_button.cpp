@@ -18,7 +18,7 @@ SingleClickGroupPtr::SingleClickGroupPtr(PushButton &button) : PtrType(button._s
 {
 }
 
-void PushButton::event(StateType state, TimeType now)
+void PushButton::event(StateType state, uint32_t now)
 {
     __LDBG_printf("%s EVENT state=%s time=%u", name(), Monitor::stateType2String(state), now);
     if (state == StateType::DOWN) {

@@ -4,6 +4,7 @@
 
 #include <Configuration.h>
 #include <kfc_fw_config.h>
+#include <PinMonitor.h>
 
 namespace KFCConfigurationClasses {
 
@@ -27,6 +28,7 @@ namespace KFCConfigurationClasses {
             longpress_min_brightness(33),
             longpress_fadetime(3.5),
 
+            pins_inverted(IOT_SWITCH_PRESSED_STATE == PinMonitor::ActiveStateType::INVERTED ? 0xff : 0x00),
         #if IOT_SENSOR_HAVE_HLW8012
             pins{ D2, D7 }
         #else

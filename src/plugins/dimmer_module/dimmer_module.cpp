@@ -100,7 +100,7 @@ void Driver_DimmerModule::_printStatus(Print &out)
     for(uint8_t i = 0; i < _channels.size(); i++) {
         out.printf_P(PSTR("Channel %u: "), i);
         if (_channels[i].getOnState()) {
-            out.printf_P(PSTR("on - %.1f%%" HTML_S(br)), _channels[i].getLevel() / (float)IOT_DIMMER_MODULE_MAX_BRIGHTNESS * 100.0);
+            out.printf_P(PSTR("on - %.1f%%" HTML_S(br)), _channels[i].getLevel() / (IOT_DIMMER_MODULE_MAX_BRIGHTNESS * 100.0));
         } else {
             out.print(F("off" HTML_S(br)));
         }
@@ -246,10 +246,10 @@ void DimmerModulePlugin::reconfigure(const String &source)
         _beginMqtt();
     }
     else {
-        //_endButtons();
-        _end();
-        _begin();
-        //_beginButtons();
+        _endMqtt();
+        _endButtons();
+        _beginMqtt();
+        _beginButtons();
     }
 }
 

@@ -82,12 +82,12 @@ namespace PinMonitor {
         void _attachLoop();
         void _detachLoop();
         void _loop();
-        void _event(uint8_t pin, StateType state, TimeType now);
+        void _event(uint8_t pin, StateType state, uint32_t now);
 
     private:
         Vector _handlers;
         PinVector _pins;
-        TimeType _lastRun;
+        uint32_t _lastRun;
         Event::Timer *_loopTimer;
 #if DEBUG
         Event::Timer *_debugTimer;

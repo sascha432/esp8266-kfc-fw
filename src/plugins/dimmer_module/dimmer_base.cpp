@@ -317,37 +317,38 @@ void Dimmer_Base::_writeConfig(ConfigType &config)
 
 void Dimmer_Base::_printStatus(Print &output)
 {
-    PrintString out;
-    auto length = out.length();
+    auto &out = static_cast<PrintHtmlEntitiesString &>(output);
+    bool written = false;
     if (_metrics.hasTemp2()) {
         out.printf_P(PSTR("Internal temperature %.2f" PRINTHTMLENTITIES_DEGREE "C"), _metrics.getTemp2());
+        written = true;
     }
     if (_metrics.hasTemp()) {
-        if (length != out.length()) {
+        if (written) {
             out.print(F(", "));
         }
+        written = true;
         out.printf_P(PSTR("NTC %.2f" PRINTHTMLENTITIES_DEGREE "C"), _metrics.getTemp());
     }
     if (_metrics.hasVCC()) {
-        if (length != out.length()) {
+        if (written) {
             out.print(F(", "));
         }
+        written = true;
         out.printf_P(PSTR("VCC %.3fV"), _metrics.getVCC());
     }
     if (_metrics.hasFrequency()) {
-        if (length != out.length()) {
+        if (written) {
             out.print(F(", "));
         }
         out.printf_P(PSTR("AC frequency %.2fHz"), _metrics.getFrequency());
     }
 #if AT_MODE_SUPPORTED
     if (_version) {
-        out.print(F(HTML_S(br)));
-
-        out.printf_P(PSTR("Firmware Version %u.%u.%u"), DIMMER_VERSION_SPLIT(_version));
+        out.printf_P(PSTR(HTML_S(br) "Firmware Version %u.%u.%u"), DIMMER_VERSION_SPLIT(_version));
     }
 #endif
-    output.print(out);
+    // output.print(out);
 }
 
 void Dimmer_Base::_updateMetrics(const dimmer_metrics_t &metrics)

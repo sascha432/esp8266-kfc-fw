@@ -8,8 +8,6 @@ namespace PinMonitor {
 
     class Monitor;
 
-    using TimeType = uint32_t;
-
     // default settings is active high = button is pressed when the pin reads high
     enum class StateType : uint8_t {
         NONE                   = 0,
@@ -80,17 +78,17 @@ namespace PinMonitor {
         {
         }
 
-        StateType debounce(bool lastValue, uint16_t interruptCount, TimeType last, TimeType now);
+        StateType debounce(bool lastValue, uint16_t interruptCount, uint32_t last, uint32_t now);
 
     private:
         friend Monitor;
 
 #if DEBUG_PIN_MONITOR_EVENTS
         uint16_t _bounceCounter;
-        TimeType _startDebounce;
+        uint32_t _startDebounce;
         uint16_t _debounceTime;
 #endif
-        TimeType _debounceTimer;
+        uint32_t _debounceTimer;
         bool _state: 1;
         bool _value: 1;
         bool _debounceTimerRunning: 1;

@@ -13,7 +13,9 @@ namespace PinMonitor {
     public:
         using StateType = PinMonitor::StateType;
         using ActiveStateType = PinMonitor::ActiveStateType;
-        using TimeType = PinMonitor::TimeType;
+
+        Pin() = delete;
+        Pin(const Pin &) = delete;
 
         // arg can be used as identifier for removal
         // see Monitor::detach(const void *)
@@ -29,7 +31,7 @@ namespace PinMonitor {
         virtual ~Pin() {}
 
         // event handlers are not executed more than once per millisecond
-        virtual void event(StateType state, TimeType now) {}
+        virtual void event(StateType state, uint32_t now) {}
 
         // loop is called even if events are disabled
         virtual void loop() {}
@@ -140,7 +142,7 @@ namespace PinMonitor {
 
         static void ICACHE_RAM_ATTR callback(void *arg);
 
-        volatile TimeType _micros;
+        volatile uint32_t _micros;
         volatile uint16_t _intCount: 15;
         volatile uint16_t _value: 1;
         uint8_t _pin;

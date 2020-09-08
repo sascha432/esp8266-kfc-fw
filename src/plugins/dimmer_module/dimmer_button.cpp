@@ -18,7 +18,7 @@
 
 
 DimmerButton::DimmerButton(uint8_t pin, uint8_t channel, uint8_t button, DimmerButtons &dimmer, SingleClickGroupPtr singleClickGroup) :
-    PushButton(pin, &dimmer, std::move(DimmerButtonConfig(dimmer._getConfig())), singleClickGroup, IOT_SWITCH_PRESSED_STATE),
+    PushButton(pin, &dimmer, std::move(DimmerButtonConfig(dimmer._getConfig())), singleClickGroup, dimmer._getConfig().getInverted(channel * 2 + button) ? ActiveStateType::INVERTED : ActiveStateType::NON_INVERTED),
     _dimmer(dimmer),
     _level(0),
     _channel(channel),
@@ -32,7 +32,7 @@ DimmerButton::DimmerButton(uint8_t pin, uint8_t channel, uint8_t button, DimmerB
 #endif
 }
 
-void DimmerButton::event(EventType eventType, TimeType now)
+void DimmerButton::event(EventType eventType, uint32_t now)
 {
     auto &config = _dimmer._getConfig();
     switch (eventType) {

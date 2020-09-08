@@ -4,8 +4,8 @@
 
 #pragma once
 
+#include <MicrosTimer.h>
 #include "pin.h"
-#include <memory>
 
 namespace PinMonitor {
 
@@ -150,22 +150,24 @@ namespace PinMonitor {
 
     class PushButton : public Pin, public PushButtonConfig {
     public:
-        PushButton(uint8_t pin, const void *arg, PushButtonConfig &&config, SingleClickGroupPtr singleClickGroup = SingleClickGroupPtr(), ActiveStateType activeLow = ActiveStateType::PRESSED_WHEN_HIGH) :
+        PushButton(uint8_t pin, const void *arg, const PushButtonConfig &config, SingleClickGroupPtr singleClickGroup = SingleClickGroupPtr(), ActiveStateType activeLow = ActiveStateType::PRESSED_WHEN_HIGH) :
             Pin(pin, arg, StateType::UP_DOWN, activeLow),
-            PushButtonConfig(std::move(config)),
+            PushButtonConfig(config),
+            _singleClickGroup(singleClickGroup),
             _startTimer(0),
             _duration(0),
             _repeatCount(0),
-            _startTimerRunning(false),
-            _singleClickGroup(singleClickGroup)
+            _startTimerRunning(false)
+
         {
 #if DEBUG_PIN_MONITOR
             setName(String((uint32_t)arg, 16) + ':' + String((uint32_t)this, 16));
 #endif
         }
+        ~PushButton() {}
 
     public:
-        virtual void event(EventType eventType, TimeType now);
+        virtual void event(EventType eventType, uint32_t now) {}
         virtual void loop() override;
 
 #if DEBUG
@@ -173,7 +175,7 @@ namespace PinMonitor {
 #endif
 
     protected:
-        virtual void event(StateType state, TimeType now) final;
+        virtual void event(StateType state, uint32_t now) final;
 
         void _buttonReleased();
 
@@ -190,12 +192,12 @@ namespace PinMonitor {
     protected:
         friend SingleClickGroupPtr;
 
+        // pointer to the group settings
+        SingleClickGroupPtr _singleClickGroup;
         uint32_t _startTimer;
         uint32_t _duration;
         uint16_t _repeatCount: 15;
         uint16_t _startTimerRunning: 1;
-        // pointer to the group settings
-        SingleClickGroupPtr _singleClickGroup;
 
 #if DEBUG_PIN_MONITOR
     protected:

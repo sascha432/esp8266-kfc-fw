@@ -257,7 +257,7 @@ void Monitor::_loop()
     }
 }
 
-void Monitor::_event(uint8_t pinNum, StateType state, TimeType now)
+void Monitor::_event(uint8_t pinNum, StateType state, uint32_t now)
 {
     for(const auto &handler: _handlers) {
         StateType tmp;

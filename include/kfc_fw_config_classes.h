@@ -1333,6 +1333,7 @@ namespace KFCConfigurationClasses {
         class DimmerConfig {
         public:
             typedef struct __attribute__packed__ DimmerConfig_t {
+                using Type = DimmerConfig_t;
                 register_mem_cfg_t fw;
                 float on_off_fade_time;
                 float fade_time;
@@ -1350,10 +1351,38 @@ namespace KFCConfigurationClasses {
                 uint8_t longpress_max_brightness;
                 uint8_t longpress_min_brightness;
                 float longpress_fadetime;
+                uint8_t pins_inverted;
+                static_assert(IOT_DIMMER_MODULE_CHANNELS * 2 <= 8, "limited to 8 buttons, change pins_inverted to uint16_t for 16 etc...");
             #if IOT_DIMMER_MODULE_CHANNELS
                 uint8_t pins[IOT_DIMMER_MODULE_CHANNELS * 2];
             #endif
             #endif
+
+                bool getInverted(uint8_t pin) const {
+                    return pins_inverted & (1 << pin);
+                }
+                void setInverted(uint8_t pin, bool inverted) {
+                    uint8_t mask = (1 << pin);
+                    if (inverted) {
+                        pins_inverted |= mask;
+                    }
+                    else {
+                        pins_inverted &= ~mask;
+                    }
+                }
+
+                static bool get_inverted_pin0(const DimmerConfig_t &cfg) {
+                    return cfg.getInverted(0);
+                }
+                static void set_inverted_pin0(DimmerConfig_t &cfg, bool inverted) {
+                    return cfg.setInverted(0, inverted);
+                }
+                static bool get_inverted_pin1(const DimmerConfig_t &cfg) {
+                    return cfg.getInverted(1);
+                }
+                static void set_inverted_pin1(DimmerConfig_t &cfg, bool inverted) {
+                    return cfg.setInverted(1, inverted);
+                }
 
                 DimmerConfig_t();
 

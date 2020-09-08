@@ -36,7 +36,7 @@ public:
 public:
     DimmerButton(uint8_t pin, uint8_t channel, uint8_t button, DimmerButtons &dimmer, SingleClickGroupPtr singleClickGroup);
 
-    virtual void event(EventType state, TimeType now) override;
+    virtual void event(EventType state, uint32_t now) override;
 
 private:
     void _setLevel(int32_t newLevel, int16_t curLevel, float fadeTime);

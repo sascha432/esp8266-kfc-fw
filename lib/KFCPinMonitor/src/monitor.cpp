@@ -63,7 +63,7 @@ void Monitor::beginDebug(Print &output, uint32_t interval)
 {
     output.printf_P(PSTR("+PINM: pins=%u handlers=%u debounce=%ums loop_timer=%d\n"), _pins.size(), _handlers.size(), getDebounceTime(), _loopTimer ? *_loopTimer : -1);
     for(auto &pin: _pins) {
-        output.printf_P(PSTR("+PINM: pin=%u usage=%u\n"), pin->getPin(), pin->getCount());
+        output.printf_P(PSTR("+PINM: pin=%u this=%p usage=%u\n"), pin->getPin(), pin.get(), pin->getCount());
     }
     for(auto &handler: _handlers) {
         output.printf_P(PSTR("+PINM: handler=%p "));
@@ -117,7 +117,6 @@ Pin &Monitor::_attach(Pin &pin)
 
     __LDBG_printf("attaching pin=%u usage=%u", curPin.getPin(), curPin.getCount() + 1);
     if (++curPin) {
-        __LDBG_printf("attaching interrupt pin=%u", pinNum);
         attachInterruptArg(digitalPinToInterrupt(pinNum), HardwarePin::callback, &curPin, CHANGE);
     }
     if (pinsEmpty) {
@@ -214,10 +213,12 @@ void Monitor::_detachLoop()
     }
 }
 
+
+
 void Monitor::_loop()
 {
     uint32_t now = millis();
-    if (now == _lastRun) {
+    if (now == _lastRun) { // runs up to 10-15x per millisecond
         return;
     }
     _lastRun = now;

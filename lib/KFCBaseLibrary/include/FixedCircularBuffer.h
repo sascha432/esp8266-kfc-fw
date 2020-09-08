@@ -21,6 +21,8 @@ public:
     BoolMutex(BoolMutex &&move) noexcept : _locked(true) {
         *this = std::move(move);
     }
+
+    inline __attribute__((__always_inline__))
     BoolMutex &operator=(BoolMutex &&move) noexcept {
         noInterrupts();
         _locked = std::exchange(move._locked, false);
@@ -28,6 +30,7 @@ public:
         return *this;
     }
 
+    inline __attribute__((__always_inline__))
     bool try_lock() {
         noInterrupts();
         if (_locked == false) {
@@ -39,16 +42,35 @@ public:
         return false;
     }
 
+    inline __attribute__((__always_inline__))
     void lock() {
         _locked = true;
     }
 
+    inline __attribute__((__always_inline__))
     void unlock() {
         _locked = false;
     }
 
 private:
     volatile bool _locked;
+};
+
+class NullMutex {
+public:
+    NullMutex(const NullMutex &) = delete;
+    NullMutex &operator=(const NullMutex &) = delete;
+
+    NullMutex(bool locked = false) {}
+    NullMutex(NullMutex &&move) noexcept {}
+    NullMutex &operator=(NullMutex &&move) noexcept {
+        return *this;
+    }
+    bool try_lock() {
+        return true;
+    }
+    void lock() {}
+    void unlock() {}
 };
 
 template<class T, size_t SIZE, class mutex_type = BoolMutex>
@@ -224,23 +246,37 @@ public:
         std::copy(first, last, std::back_inserter(*this));
     }
 
+    inline __attribute__((__always_inline__))
     void push_back(T &&value) {
         emplace_back(std::move(value));
     }
 
+    inline __attribute__((__always_inline__))
     void push_back(const T &value) {
         emplace_back(value);
     }
 
+    inline __attribute__((__always_inline__))
+    T& get_write_ref() {
+        T &tmp = _values[_write_position++];
+        _write_position %= capacity();
+        if (++_count - _read_position > capacity()) {
+            _read_position++;
+        }
+        return tmp;
+    }
+
     template<typename... Args>
+    inline __attribute__((__always_inline__))
     void emplace_back(Args &&... args) {
-        new(&_values[_write_position++]) T(std::forward<Args>(args)...);
+        ::new(static_cast<void *>(&_values[_write_position++])) T(std::forward<Args>(args)...);
         _write_position %= capacity();
         if (++_count - _read_position > capacity()) {
             _read_position++;
         }
     }
 
+    inline __attribute__((__always_inline__))
     void push_back_no_block(T &&value) {
         if (_mutex.try_lock() == false) {
             emplace_back(std::move(value));
@@ -248,11 +284,12 @@ public:
         }
     }
 
+    inline __attribute__((__always_inline__))
     bool push_back_timeout(T &&value, uint32_t timeoutMicros) {
         if (_mutex.try_lock() == false) {
             uint32_t start = micros();
             while (_mutex.try_lock() == false) {
-                if (get_time_diff(start, micros()) > timeoutMicros) {
+                if (__inline_get_time_diff(start, micros()) > timeoutMicros) {
                     return false;
                 }
             }
@@ -262,33 +299,39 @@ public:
         return true;
     }
 
+    inline __attribute__((__always_inline__))
     value_type pop_front() {
         return _values[_read_position++];
     }
 
+    inline __attribute__((__always_inline__))
     bool try_lock() {
         return _mutex.try_lock();
     }
 
+    inline __attribute__((__always_inline__))
     void lock() {
         _mutex.lock();
     }
 
+    inline __attribute__((__always_inline__))
     void unlock() {
         _mutex.unlock();
     }
 
+    inline __attribute__((__always_inline__))
     mutex_type &get_mutex() {
         return _mutex;
     }
 
+    inline __attribute__((__always_inline__))
     void clear() {
         _count = 0;
         _write_position = 0;
         _read_position = 0;
-        _mutex.unlock();
     }
 
+    inline __attribute__((__always_inline__))
     size_type count() const {
         return _count;
     }
@@ -304,59 +347,73 @@ public:
 
 public:
 
+    inline __attribute__((__always_inline__))
     reference front() {
         return _values[_read_position];
     }
 
+    inline __attribute__((__always_inline__))
     reference back() {
         return _values[_count - 1];
     }
 
+    inline __attribute__((__always_inline__))
     const_reference front() const {
         return front();
     }
 
+    inline __attribute__((__always_inline__))
     const_reference back() const {
         return back();
     }
 
+    inline __attribute__((__always_inline__))
     iterator begin() {
         return iterator(*this, &_values.data()[_read_position]);
     }
 
+    inline __attribute__((__always_inline__))
     iterator end() {
         return iterator(*this, &_values.data()[_count]);
     }
 
+    inline __attribute__((__always_inline__))
     iterator begin() const {
         return iterator(*this, &_values.data()[_read_position]);
     }
 
+    inline __attribute__((__always_inline__))
     iterator end() const {
         return iterator(*this, &_values.data()[_count]);
     }
 
+    inline __attribute__((__always_inline__))
     iterator cbegin() const {
         return begin();
     }
 
+    inline __attribute__((__always_inline__))
     iterator cend() const {
         return end();
     }
 
+    inline __attribute__((__always_inline__))
     size_type size() const {
         return _count - _read_position;
     }
 
+    inline __attribute__((__always_inline__))
     constexpr size_type capacity() const {
         return (size_type)SIZE;
     }
 
 private:
+    inline __attribute__((__always_inline__))
     constexpr const_pointer _begin() const {
         return &_values[0];
     }
 
+    inline __attribute__((__always_inline__))
     constexpr const_pointer _end() const {
         return &_values[SIZE];
     }

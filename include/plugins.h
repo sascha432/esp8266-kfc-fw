@@ -32,6 +32,17 @@ typedef std::vector<PluginComponent *> PluginsVector;
 
 extern PluginsVector plugins;
 
+#ifndef ENABLE_BOOT_LOG
+#define ENABLE_BOOT_LOG                                 0
+#endif
+
+#if ENABLE_BOOT_LOG
+void bootlog_printf(PGM_P fmt, ...);
+#define BOOTLOG_PRINTF(fmt, ...)                        bootlog_printf(PSTR(fmt), ##__VA_ARGS__)
+#else
+#define BOOTLOG_PRINTF(fmt, ...)
+#endif
+
 // dump list of plug-ins and some details
 void dump_plugin_list(Print &output);
 

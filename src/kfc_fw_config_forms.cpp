@@ -198,6 +198,9 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             form.addObjectGetterSetter(F("led_mode"), cfg, System::Device::ConfigStructType::get_int_status_led_mode, System::Device::ConfigStructType::set_int_status_led_mode);
             form.addFormUI(FSPGM(Status_LED_Mode), FormUI::BoolItems(F("Solid when connected to WiFi"), F("Turn off when connected to WiFi")));
 
+            form.addCStringGetterSetter(F("pbl"), System::Firmware::getPluginBlacklist, System::Firmware::setPluginBlacklistCStr);
+            form.addFormUI(F("Plugin Blacklist"), FormUI::Suffix(F("Comma Separated")));
+
             auto &webUIGroup = deviceGroup.end().addCardGroup(F("webui"), FSPGM(WebUI), true);
 
             form.addObjectGetterSetter(F("wui_en"), flags, System::Flags::ConfigStructType::get_bit_is_webui_enabled, System::Flags::ConfigStructType::set_bit_is_webui_enabled);

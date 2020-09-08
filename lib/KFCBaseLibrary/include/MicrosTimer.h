@@ -8,7 +8,8 @@
 
 uint32_t get_time_diff(uint32_t start, uint32_t end);
 
-inline uint32_t __inline_get_time_diff(uint32_t start, uint32_t end) {
+inline __attribute__((__always_inline__))
+uint32_t __inline_get_time_diff(uint32_t start, uint32_t end) {
     if (end >= start) {
         return end - start;
     }

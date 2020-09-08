@@ -27,6 +27,57 @@ PluginsVector plugins;
 BootstrapMenu bootstrapMenu;
 NavMenu_t navMenu;
 
+#if ENABLE_BOOT_LOG
+
+File bootLog;
+int8_t bootLogOpenRetries = -10;
+
+#include <PrintString.h>
+
+void bootlog_printf(PGM_P format, ...)
+{
+    if (config.isSafeMode()) {
+        bootLogOpenRetries = 0;
+        if (bootLog) {
+            bootLog.close();
+        }
+        return;
+    }
+    if (bootLogOpenRetries < 0) {
+        bootLogOpenRetries = -bootLogOpenRetries;
+        if (KFCFS.exists(F("/.pvt/boot.txt"))) {
+            KFCFS.remove(F("/.pvt/boot.txt.old"));
+            KFCFS.rename(F("/.pvt/boot.txt"), F("/.pvt/boot.txt.old"));
+        }
+        bootLog = KFCFS.open(F("/.pvt/boot.txt"), fs::FileOpenMode::append);
+        bootLog.println(F("--- start"));
+    }
+    else if (bootLogOpenRetries == 0) {
+        return;
+    }
+    if (!bootLog) {
+        bootLog = KFCFS.open(F("/.pvt/boot.txt"), fs::FileOpenMode::append);
+        if (!bootLog) {
+            delay(10);
+            bootLogOpenRetries--;
+            return;
+        }
+    }
+
+    va_list arg;
+    va_start(arg, format);
+    PrintString str(FPSTR(format), arg);
+    bootLog.printf_P(PSTR("%lu: "), millis());
+    bootLog.println(str);
+    bootLog.flush();
+    vprintf(format, arg);
+    va_end(arg);
+    delay(10);
+
+}
+
+#endif
+
 // we need to store the plugins somewhere until the vector is initialized otherwise it will discard already registered plugins
 static PluginsVector *pluginsPtr = nullptr;
 
@@ -91,6 +142,7 @@ void dump_plugin_list(Print &output)
 
 void prepare_plugins()
 {
+    BOOTLOG_PRINTF("prepare_plugins");
     // copy & sort plugins and free temporary data
     plugins.resize(pluginsPtr->size());
     std::partial_sort_copy(pluginsPtr->begin(), pluginsPtr->end(), plugins.begin(), plugins.end(), [](const PluginComponent *a, const PluginComponent *b) {
@@ -98,6 +150,7 @@ void prepare_plugins()
     });
     free(pluginsPtr);
 
+    BOOTLOG_PRINTF("plugins=%u", plugins.size());
     __LDBG_printf("counter=%d", plugins.size());
 }
 
@@ -144,12 +197,15 @@ static bool enableWebUIMenu = false;
 void setup_plugins(PluginComponent::SetupModeType mode)
 {
     __LDBG_printf("mode=%d counter=%d", mode, plugins.size());
+    BOOTLOG_PRINTF("setup_plugins size=%u mode=%u", plugins.size(), mode);
 
     if (mode != PluginComponent::SetupModeType::DELAYED_AUTO_WAKE_UP) {
         create_menu();
     }
 
     auto blacklist = System::Firmware::getPluginBlacklist();
+    BOOTLOG_PRINTF("blacklist=%s", __S(blacklist));
+
 
     PluginComponent::createDependencies();
 
@@ -169,9 +225,12 @@ void setup_plugins(PluginComponent::SetupModeType mode)
         );
         __LDBG_printf("name=%s prio=%d setup=%d mode=%u menu=%u add_menu=%u", plugin->getName_P(), plugin->getOptions().priority, runSetup, mode, plugin->getMenuType(), (mode != PluginComponent::SetupModeType::DELAYED_AUTO_WAKE_UP));
         if (runSetup) {
+            BOOTLOG_PRINTF("setup plugin=%s", plugin->getName_P());
             plugin->setSetupTime();
             plugin->setup(mode);
+            BOOTLOG_PRINTF("checking dependencies");
             PluginComponent::checkDependencies();
+            BOOTLOG_PRINTF("done");
 
             if (plugin->hasWebUI()) {
                 enableWebUIMenu = true;
@@ -214,6 +273,7 @@ void setup_plugins(PluginComponent::SetupModeType mode)
         }
     }
 
+    BOOTLOG_PRINTF("deleting dependencies");
     PluginComponent::deleteDependencies();
 
 #ifndef DISABLE_EVENT_SCHEDULER

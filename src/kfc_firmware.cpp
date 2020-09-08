@@ -309,6 +309,7 @@ void setup()
     } else {
 
         #if AT_MODE_SUPPORTED
+            BOOTLOG_PRINTF("at_mode_setup");
             at_mode_setup();
         #endif
 
@@ -340,6 +341,7 @@ void setup()
         );
 
         // check if wifi is up
+        BOOTLOG_PRINTF("adding wifi check");
         _Scheduler.add(Event::seconds(60), true, [](Event::CallbackTimerPtr timer) {
             if (System::Flags::getConfig().is_station_mode_enabled) {
                 if (!WiFi.isConnected()) {
@@ -356,6 +358,7 @@ void setup()
         });
 
         // reset crash counter
+        BOOTLOG_PRINTF("installing safecrash crash recovery");
         SaveCrash::installRemoveCrashCounter(KFC_CRASH_RECOVERY_TIME);
     }
 
@@ -364,6 +367,7 @@ void setup()
 #endif
 
     _debug_println(F("end"));
+    BOOTLOG_PRINTF("setup done");
 }
 
 #if LOAD_STATISTICS

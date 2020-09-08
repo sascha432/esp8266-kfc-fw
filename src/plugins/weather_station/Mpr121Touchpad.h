@@ -82,7 +82,7 @@ public:
         };
     };
 
-    using ReadBuffer = FixedCircularBuffer<TouchpadEvent_t, 64> ;
+    using ReadBuffer = FixedCircularBuffer<TouchpadEvent_t, 64, NUllMutex>;
 
     class Coordinates {
     public:

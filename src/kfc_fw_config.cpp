@@ -658,12 +658,17 @@ void KFCFWConfiguration::read()
 {
     __LDBG_println();
 
+    BOOTLOG_PRINTF("read config");
+
     if (!Configuration::read()) {
+        BOOTLOG_PRINTF("failed");
+
         Logger_error(F("Failed to read configuration, restoring factory settings"));
         config.restoreFactorySettings();
         Configuration::write();
     } else {
         auto version = System::Device::getConfig().config_version;
+        BOOTLOG_PRINTF("version %08x", version);
         uint32_t currentVersion = (FIRMWARE_VERSION << 16) | (uint16_t)String(F(__BUILD_NUMBER)).toInt();
         if (currentVersion != version) {
             uint16_t build = version;
@@ -992,6 +997,7 @@ String KFCFWConfiguration::getWiFiEncryptionType(uint8_t type)
 bool KFCFWConfiguration::reconfigureWiFi()
 {
     _debug_println();
+    BOOTLOG_PRINTF("reconfigure WiFi");
 
     WiFi.persistent(false); // disable during disconnects since it saves the configuration
     WiFi.setAutoConnect(false);
@@ -1006,6 +1012,7 @@ bool KFCFWConfiguration::reconfigureWiFi()
 bool KFCFWConfiguration::connectWiFi()
 {
     __LDBG_println();
+    BOOTLOG_PRINTF("connecting to WiFi");
     setLastError(String());
 
     bool station_mode_success = false;
@@ -1013,6 +1020,7 @@ bool KFCFWConfiguration::connectWiFi()
 
     auto flags = System::Flags::getConfig();
     if (flags.is_station_mode_enabled) {
+        BOOTLOG_PRINTF("init station mode");
         __LDBG_print("init station mode");
         WiFi.setAutoConnect(false); // WiFi callbacks have to be installed first during boot
         WiFi.setAutoReconnect(true);
@@ -1049,11 +1057,15 @@ bool KFCFWConfiguration::connectWiFi()
     }
 
     if (flags.is_softap_enabled) {
+        BOOTLOG_PRINTF("init AP mode");
         __LDBG_print("init AP mode");
 
         auto softAp = Network::SoftAP::getConfig();
+        BOOTLOG_PRINTF("config=%p size=%u", &softAp, sizeof(softAp));
 
+        BOOTLOG_PRINTF("WiFi.softAPConfig");
         if (!WiFi.softAPConfig(softAp.getAddress(), softAp.getGateway(), softAp.getSubnet())) {
+            BOOTLOG_PRINTF("failed");
             String message = F("Cannot configure AP mode");
             setLastError(message);
             Logger_error(message);
@@ -1085,15 +1097,18 @@ bool KFCFWConfiguration::connectWiFi()
 
             // setup after WiFi.softAPConfig()
             struct dhcps_lease dhcp_lease;
+            BOOTLOG_PRINTF("wifi_softap_dhcps_stop");
             wifi_softap_dhcps_stop();
             dhcp_lease.enable = flags.is_softap_dhcpd_enabled;
             dhcp_lease.start_ip.addr = softAp.dhcp_start;
             dhcp_lease.end_ip.addr = softAp.dhcp_end;
+            BOOTLOG_PRINTF("wifi_softap_set_dhcps_lease");
             if (!wifi_softap_set_dhcps_lease(&dhcp_lease)) {
                 String message = F("Failed to configure DHCP server");
                 setLastError(message);
                 Logger_error(message);
             } else {
+                BOOTLOG_PRINTF("wifi_softap_dhcps_start");
                 if (flags.is_softap_dhcpd_enabled) {
                     if (!wifi_softap_dhcps_start()) {
                         String message = F("Failed to start DHCP server");
@@ -1105,7 +1120,9 @@ bool KFCFWConfiguration::connectWiFi()
 
 #endif
 
+            BOOTLOG_PRINTF("WiFi.softAP");
             if (!WiFi.softAP(Network::WiFi::getSoftApSSID(), Network::WiFi::getSoftApPassword(), softAp.getChannel(), flags.is_softap_ssid_hidden)) {
+                BOOTLOG_PRINTF("failed");
                 String message = F("Cannot start AP mode");
                 setLastError(message);
                 Logger_error(message);
@@ -1131,9 +1148,11 @@ bool KFCFWConfiguration::connectWiFi()
 
     if (!station_mode_success || !ap_mode_success) {
         BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::FAST);
+        BOOTLOG_PRINTF("WiFi error");
     }
 
     auto hostname = System::Device::getName();
+    BOOTLOG_PRINTF("hostname %p", hostname);
 #if defined(ESP32)
     WiFi.setHostname(hostname);
     WiFi.softAPsetHostname(hostname);

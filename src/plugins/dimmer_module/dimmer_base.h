@@ -64,6 +64,35 @@ using DimmerTwoWireClass = TwoWire;
 #error requires IOT_ALARM_PLUGIN_ENABLED=1 or IOT_ATOMIC_SUN_V2=1
 #endif
 
+// enable or disable buttons
+#ifndef IOT_DIMMER_MODULE_HAS_BUTTONS
+#define IOT_DIMMER_MODULE_HAS_BUTTONS       0
+#endif
+
+class DimmerButtonsImpl;
+class DimmerNoButtonsImpl;
+class DimmerChannel;
+class DimmerChannels;
+class DimmerButton;
+class AsyncWebServerRequest;
+
+#if IOT_DIMMER_MODULE_HAS_BUTTONS
+
+#if !PIN_MONITOR
+#error PIN_MONITOR=1 required
+#endif
+
+#include <PinMonitor.h>
+
+using DimmerButtons = DimmerButtonsImpl;
+
+#else
+
+using DimmerButtons = DimmerNoButtonsImpl;
+
+#endif
+
+
 using KFCConfigurationClasses::Plugins;
 
 class DimmerTwoWireEx : public DimmerTwoWireClass
@@ -133,14 +162,20 @@ private:
 #endif
 };
 
-class DimmerChannel;
-class AsyncWebServerRequest;
-
 class Dimmer_Base {
 public:
     static const uint32_t METRICS_DEFAULT_UPDATE_RATE = 60000;
     using ConfigType = Plugins::DimmerConfig::DimmerConfig_t;
 
+    // divide repeat time (milliseconds) / (level change * kLevelChangeToSecondsPerLevel)
+    static constexpr float kLevelChangeToSecondsPerLevel = (float)(1 / ((double)IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 1000.0));
+
+    // fadeTime for setLevel()
+    float _getAbsoluteFadeTime(uint32_t repeatTimeMillis, uint16_t positiveLevelChange) {
+        return repeatTimeMillis / (positiveLevelChange * kLevelChangeToSecondsPerLevel);
+    }
+
+public:
     Dimmer_Base();
     virtual ~Dimmer_Base() {}
 

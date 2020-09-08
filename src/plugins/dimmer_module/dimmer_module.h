@@ -27,29 +27,6 @@
 #define IOT_DIMMER_MODULE_MAX_BRIGHTNESS    16666
 #endif
 
-// enable or disable buttons
-#ifndef IOT_DIMMER_MODULE_HAS_BUTTONS
-#define IOT_DIMMER_MODULE_HAS_BUTTONS       0
-#endif
-
-#if IOT_DIMMER_MODULE_HAS_BUTTONS
-
-#if !PIN_MONITOR
-#error PIN_MONITOR=1 required
-#endif
-
-#include <PinMonitor.h>
-
-class DimmerButtonsImpl;
-using DimmerButtons = DimmerButtonsImpl;
-
-#else
-
-class DimmerNoButtonsImpl;
-using DimmerButtons = DimmerNoButtonsImpl;
-
-#endif
-
 // pins for dimmer buttons
 // each channel needs 2 buttons, up & down
 #ifndef IOT_DIMMER_MODULE_BUTTONS_PINS

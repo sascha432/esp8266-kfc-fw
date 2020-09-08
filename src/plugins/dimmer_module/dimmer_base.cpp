@@ -415,7 +415,7 @@ Sensor_DimmerMetrics *Dimmer_Base::getMetricsSensor() const
 
 void Dimmer_Base::writeEEPROM(bool noLocking)
 {
-    __LDBG_printf("noLocking=%d", noLocking);
+    // __LDBG_printf("noLocking=%d", noLocking);
     if (noLocking || _wire.lock()) {
         _wire.beginTransmission(DIMMER_I2C_ADDRESS);
         _wire.write(DIMMER_REGISTER_COMMAND);

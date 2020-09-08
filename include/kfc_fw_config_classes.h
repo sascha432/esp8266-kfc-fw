@@ -1350,7 +1350,6 @@ namespace KFCConfigurationClasses {
                 uint8_t shortpress_step;
                 uint8_t longpress_max_brightness;
                 uint8_t longpress_min_brightness;
-                float shortpress_fadetime;
                 float longpress_fadetime;
             #if IOT_DIMMER_MODULE_CHANNELS
                 uint8_t pins[IOT_DIMMER_MODULE_CHANNELS * 2];

@@ -9,13 +9,12 @@
 #include "session.h"
 #include "WebUISocket.h"
 
-#if IOT_DIMMER_MODULE
-#include "./plugins/dimmer_module/dimmer_module.h"
-#endif
+// #if IOT_ATOMIC_SUN_V2
+// #include "../src/plugins/atomic_sun/atomic_sun_v2.h"
+// #elif IOT_DIMMER_MODULE
+// #include "../src/plugins/dimmer_module/dimmer_plugin.h"
+// #endif
 
-#if IOT_ATOMIC_SUN_V2
-#include "./plugins/atomic_sun/atomic_sun_v2.h"
-#endif
 
 #if DEBUG_WEBUI
 #include <debug_helper_enable.h>

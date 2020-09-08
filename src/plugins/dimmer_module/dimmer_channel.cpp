@@ -153,7 +153,6 @@ bool DimmerChannel::off()
 
 void DimmerChannel::publishState(MQTTClient *client)
 {
-    __DBG_println();
     if (!client) {
         client = MQTTClient::getClient();
     }

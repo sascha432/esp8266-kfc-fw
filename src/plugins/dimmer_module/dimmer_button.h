@@ -4,35 +4,51 @@
 
 #pragma once
 
-#include "dimmer_base.h"
+#if IOT_DIMMER_MODULE_HAS_BUTTONS
 
-class DimmerButton : public PinMonitor::Pin {
+#include "dimmer_buttons.h"
+#include <EnumHelper.h>
+#include <PinMonitor.h>
+
+using namespace PinMonitor;
+
+class DimmerButtonConfig : public PushButtonConfig
+{
 public:
-    using ConfigType = Dimmer_Base::ConfigType;
+    using ConfigType = Plugins::DimmerConfig::DimmerConfig_t;
+
+    DimmerButtonConfig(ConfigType &config) :
+        PushButtonConfig(
+            EnumHelper::Bitset::all(EventType::REPEAT, EventType::CLICK, EventType::LONG_CLICK),
+            config.shortpress_time,
+            config.longpress_time,
+            config.repeat_time,
+            config.shortpress_no_repeat_time
+        )
+    {
+    }
+};
+
+class DimmerButton : public PushButton {
+public:
+    using ConfigType = DimmerButtonConfig::ConfigType;
 
 public:
     DimmerButton(uint8_t pin, uint8_t channel, uint8_t button, DimmerButtons &dimmer);
 
-    virtual void event(StateType state, TimeType now) override;
-    virtual void loop() override;
+    virtual void event(EventType state, TimeType now) override;
 
 private:
-    void _buttonReleased();
-
-    void _setLevel(int32_t newLevel, int32_t curLevel, float fadeTime);
+    void _setLevel(int32_t newLevel, int16_t curLevel, float fadeTime);
     void _setLevel(int32_t newLevel, float fadeTime);
-    void _changeLevel(int32_t change, float fadeTime);
+    void _changeLevel(int32_t changeLevel, float fadeTime);
+    void _changeLevel(uint16_t stepSize);
 
 private:
     DimmerButtons &_dimmer;
-    uint32_t _startTimer;
-    uint32_t _noRepeatTimer;
-    uint32_t _duration;
-    uint16_t _repeatCount;
     int16_t _level;
     uint8_t _channel: 3;
     uint8_t _button: 1;
-    uint8_t _startTimerRunning: 1;
-    uint8_t _noRepeatTimerRunning: 1;
-    uint8_t _noRepeatCount: 2;
 };
+
+#endif

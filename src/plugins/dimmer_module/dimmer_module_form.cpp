@@ -5,7 +5,7 @@
 #if IOT_ATOMIC_SUN_V2
 #include "../src/plugins/atomic_sun/atomic_sun_v2.h"
 #else
-#include "dimmer_module.h"
+#include "dimmer_plugin.h"
 #endif
 
 #if DEBUG_IOT_DIMMER_MODULE
@@ -120,9 +120,6 @@ void DimmerModuleForm::_createConfigureForm(PluginComponent::FormCallbackType ty
     form.add<uint8_t>(F("lpminb"), _H_W_STRUCT_VALUE(cfg, longpress_min_brightness));
     form.addFormUI(F("Long Press Down/Min. Brightness"), FormUI::Suffix('%'), FormUI::PlaceHolder(33));
     form.addValidator(FormRangeValidator(0, 100));
-
-    form.add<float>(F("spft"), _H_W_STRUCT_VALUE(cfg, shortpress_fadetime));
-    form.addFormUI(F("Short Press Fade Time"), FormUI::Suffix(FSPGM(seconds)), FormUI::PlaceHolder(1.0, 1));
 
     form.add<float>(F("lpfd"), _H_W_STRUCT_VALUE(cfg, longpress_fadetime));
     form.addFormUI(F("Long Press Fade Time"), FormUI::Suffix(FSPGM(seconds)), FormUI::PlaceHolder(5.0, 1));

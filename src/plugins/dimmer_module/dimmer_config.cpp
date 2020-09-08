@@ -26,7 +26,6 @@ namespace KFCConfigurationClasses {
             shortpress_step(2),
             longpress_max_brightness(100),
             longpress_min_brightness(45),
-            shortpress_fadetime(3.0),
             longpress_fadetime(4.5),
 
         #if IOT_SENSOR_HAVE_HLW8012

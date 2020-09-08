@@ -128,7 +128,7 @@ namespace PinMonitor {
             return *this;
         }
         inline HardwarePin &operator--() {
-            ++_count;
+            --_count;
             return *this;
         }
 

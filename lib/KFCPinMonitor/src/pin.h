@@ -26,12 +26,18 @@ namespace PinMonitor {
             _activeState(static_cast<bool>(activeState))
         {
         }
+        virtual ~Pin() {}
 
         // event handlers are not executed more than once per millisecond
         virtual void event(StateType state, TimeType now) {}
 
         // loop is called even if events are disabled
         virtual void loop() {}
+
+#if DEBUG
+        virtual void dumpConfig(Print &output);
+#endif
+
 
     public:
         inline const void *getArg() const {

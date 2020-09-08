@@ -5,6 +5,7 @@
 #pragma once
 
 #include "pin.h"
+#include <memory>
 
 namespace PinMonitor {
 
@@ -38,7 +39,83 @@ namespace PinMonitor {
         DOUBLE_CLICK                    = _BV(8),
 
 
-        ANY                             = 0xffff
+        ANY                             = 0xffff,
+        MAX_BITS                        = 8
+    };
+
+    class PushButton;
+
+    // Object to manage a group of buttons with shared properties
+    class SingleClickGroup {
+    public:
+        static constexpr uint16_t kClickRepeatCountMax = (1 << 15) - 1;
+
+        SingleClickGroup(uint16_t singleClickTimeout) : _timerOwner(nullptr), _timer(0), _timeout(singleClickTimeout), _repeatCount(kClickRepeatCountMax), _timerRunning(false)  {}
+
+        void pressed() {
+            if (_repeatCount == kClickRepeatCountMax) {
+                _repeatCount = 0;
+                __LDBG_assert(_timerRunning == false);
+            }
+        }
+
+        void released(const void *owner, uint32_t millis) {
+            _timer = millis;
+            _timerRunning = true;
+            _timerOwner = owner; // replace owner
+            if (_repeatCount < kClickRepeatCountMax - 1) {
+                _repeatCount++;
+            }
+        }
+
+        inline bool isTimerRunning(const void *owner) const {
+            return (owner == nullptr || owner == _timerOwner) ? _timerRunning : false;
+        }
+
+        inline uint16_t getTimeout() const {
+            return _timeout;
+        }
+
+        inline uint16_t getRepeatCount() const {
+            return _repeatCount;
+        }
+
+        inline uint32_t getDuration() const {
+            return get_time_diff(_timer, millis());
+        }
+
+        void stopTimer(const void *owner) {
+            if (_timerOwner == owner) {
+                _repeatCount = kClickRepeatCountMax;
+                _timerRunning = false;
+                _timerOwner = nullptr;
+            }
+        }
+
+    protected:
+        const void *_timerOwner;
+        uint32_t _timer;
+        // clicks in a row with less than _timeout milliseconds after the clicks
+        // _repeatCount 1 = one click, 2 = double click, 3 tripple click etc...
+        uint16_t _timeout;
+        uint16_t _repeatCount : 15;
+        uint16_t _timerRunning : 1;
+    };
+
+    class SingleClickGroupPtr : public std::shared_ptr<SingleClickGroup>
+    {
+    public:
+        using PtrType = std::shared_ptr<SingleClickGroup>;
+        using PtrType::reset;
+
+        SingleClickGroupPtr() : std::shared_ptr<SingleClickGroup>() {}
+        SingleClickGroupPtr(PtrType ptr) : std::shared_ptr<SingleClickGroup>(ptr) {}
+        SingleClickGroupPtr(uint16_t singleClickTimeout) : PtrType(new SingleClickGroup(singleClickTimeout)) {}
+        SingleClickGroupPtr(PushButton &button);
+
+        inline void reset(uint16_t singleClickTimeout) {
+            reset(new SingleClickGroup(singleClickTimeout));
+        }
     };
 
     class PushButtonConfig {
@@ -46,12 +123,12 @@ namespace PinMonitor {
         using EventType = PushButtonEventType;
 
     public:
-        PushButtonConfig(EventType subscribedEvents = EventType::ANY, uint16_t shortpressTime = 250, uint16_t longpressTime = 600, uint16_t repeatTime = 150, uint16_t shortpressNoRepeatTime = 800) :
+        PushButtonConfig(EventType subscribedEvents = EventType::ANY, uint16_t clickTime = 250, uint16_t longpressTime = 600, uint16_t repeatTime = 100, uint16_t singleClickSteps = 15) :
             _subscribedEvents(subscribedEvents),
-            _shortpressTime(shortpressTime),
+            _clickTime(clickTime),
+            _singleClickSteps(singleClickSteps),
             _longpressTime(longpressTime),
-            _repeatTime(repeatTime),
-            _shortpressNoRepeatTime(shortpressNoRepeatTime)
+            _repeatTime(repeatTime)
         {
         }
 
@@ -60,34 +137,27 @@ namespace PinMonitor {
         }
 
     protected:
-
         EventType _subscribedEvents;
-        // short press or click < _shortpressTime milliseconds
-        uint16_t _shortpressTime;
+        // short press or click < _clickTime milliseconds
+        uint16_t _clickTime;
+        // 100% / shortpressSteps = level change per click
+        uint16_t _singleClickSteps;
         // long press < longpressTime milliseconds
         uint16_t _longpressTime;
         // button held >= longpressTime, repeated event every _repeatTime milliseconds
         uint16_t _repeatTime;
-        // clicks in a row with less than _shortpressNoRepeatTime milliseconds after the clicks
-        // _clickRepeatCount 1 = one click, 2 = double click, 3 tripple click etc...
-        uint16_t _shortpressNoRepeatTime;
     };
 
     class PushButton : public Pin, public PushButtonConfig {
     public:
-            static constexpr uint16_t kClickRepeatCountMax = (1 << 14) - 1;
-    public:
-
-        PushButton(uint8_t pin, const void *arg, PushButtonConfig &&config, ActiveStateType activeLow = ActiveStateType::PRESSED_WHEN_HIGH) :
+        PushButton(uint8_t pin, const void *arg, PushButtonConfig &&config, SingleClickGroupPtr singleClickGroup = SingleClickGroupPtr(), ActiveStateType activeLow = ActiveStateType::PRESSED_WHEN_HIGH) :
             Pin(pin, arg, StateType::UP_DOWN, activeLow),
             PushButtonConfig(std::move(config)),
             _startTimer(0),
-            _clickRepeatTimer(0),
             _duration(0),
             _repeatCount(0),
-            _clickRepeatCount(kClickRepeatCountMax),
             _startTimerRunning(false),
-            _clickRepeatTimerRunning(false)
+            _singleClickGroup(singleClickGroup)
         {
 #if DEBUG_PIN_MONITOR
             setName(String((uint32_t)arg, 16) + ':' + String((uint32_t)this, 16));
@@ -97,6 +167,10 @@ namespace PinMonitor {
     public:
         virtual void event(EventType eventType, TimeType now);
         virtual void loop() override;
+
+#if DEBUG
+        virtual void dumpConfig(Print &output) override;
+#endif
 
     protected:
         virtual void event(StateType state, TimeType now) final;
@@ -114,13 +188,14 @@ namespace PinMonitor {
         const __FlashStringHelper *eventTypeToString(EventType eventType);
 
     protected:
+        friend SingleClickGroupPtr;
+
         uint32_t _startTimer;
-        uint32_t _clickRepeatTimer;
         uint32_t _duration;
-        uint16_t _repeatCount;
-        uint16_t _clickRepeatCount : 14;
-        uint16_t _startTimerRunning : 1;
-        uint16_t _clickRepeatTimerRunning : 1;
+        uint16_t _repeatCount: 15;
+        uint16_t _startTimerRunning: 1;
+        // pointer to the group settings
+        SingleClickGroupPtr _singleClickGroup;
 
 #if DEBUG_PIN_MONITOR
     protected:

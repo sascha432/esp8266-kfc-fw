@@ -65,6 +65,11 @@ void Monitor::beginDebug(Print &output, uint32_t interval)
     for(auto &pin: _pins) {
         output.printf_P(PSTR("+PINM: pin=%u usage=%u\n"), pin->getPin(), pin->getCount());
     }
+    for(auto &handler: _handlers) {
+        output.printf_P(PSTR("+PINM: handler=%p "));
+        handler->dumpConfig(output);
+        output.println();
+    }
     if (!_debugTimer && !_handlers.empty()) {
         _debugTimer = new Event::Timer();
         _Timer(_debugTimer)->add(Event::milliseconds(interval), true, [this, &output](Event::CallbackTimerPtr) {

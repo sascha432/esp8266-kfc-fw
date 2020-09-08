@@ -37,6 +37,10 @@ namespace PinMonitor {
         void beginDebug(Print &outout, uint32_t interval = 1000);
         // disable debug mode
         void endDebug();
+
+        bool isDebugRunning() const {
+            return !!_debugTimer;
+        }
 #endif
 
         // add a pin object

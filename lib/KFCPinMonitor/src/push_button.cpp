@@ -14,6 +14,10 @@
 
 using namespace PinMonitor;
 
+SingleClickGroupPtr::SingleClickGroupPtr(PushButton &button) : PtrType(button._singleClickGroup)
+{
+}
+
 void PushButton::event(StateType state, TimeType now)
 {
     __LDBG_printf("%s EVENT state=%s time=%u", name(), Monitor::stateType2String(state), now);
@@ -22,11 +26,8 @@ void PushButton::event(StateType state, TimeType now)
         _startTimer = now;
         _startTimerRunning = true;
         _repeatCount = 0;
-        if (_clickRepeatCount == kClickRepeatCountMax) {
-            _clickRepeatCount = 0;
-            __LDBG_assert(_clickRepeatTimerRunning == false);
-        }
-        __LDBG_printf("%s PRESSED no_repeat_timer_running=%u no_repeat_count=%u", name(), _clickRepeatTimerRunning, _clickRepeatCount);
+        _singleClickGroup->pressed();
+        __LDBG_printf("%s PRESSED sp_timer=%u sp_count=%u", name(), _singleClickGroup->isTimerRunning(this), _singleClickGroup->getRepeatCount());
         _fireEvent(EventType::DOWN);
         return;
 
@@ -59,20 +60,19 @@ void PushButton::loop()
             }
         }
     }
-    else if (_clickRepeatTimerRunning) {
+    else if (_singleClickGroup->isTimerRunning(this)) {
         // after up and next down
-        uint16_t duration = get_time_diff(_clickRepeatTimer, millis());
-        if (duration > _shortpressNoRepeatTime) {
-            __LDBG_printf("%s no_repeat_time=%u duration=%u no_repeat_count=%u", name(), _shortpressNoRepeatTime, duration, _clickRepeatCount);
+        uint16_t duration = _singleClickGroup->getDuration();
+        if (duration > _singleClickGroup->getTimeout()) {
+            __LDBG_printf("%s duration=%u sp_timeout=%u sp_count=%u", name(), duration, _singleClickGroup->getTimeout(), _singleClickGroup->getRepeatCount());
 
             if (!(
-                (_clickRepeatCount == 1 && _fireEvent(EventType::SINGLE_CLICK)) ||
-                (_clickRepeatCount == 2 && _fireEvent(EventType::DOUBLE_CLICK))
+                (_singleClickGroup->getRepeatCount() == 1 && _fireEvent(EventType::SINGLE_CLICK)) ||
+                (_singleClickGroup->getRepeatCount() == 2 && _fireEvent(EventType::DOUBLE_CLICK))
             )) {
                 _fireEvent(EventType::REPEATED_CLICK);
             }
-            _clickRepeatCount = kClickRepeatCountMax;
-            _clickRepeatTimerRunning = false;
+            _singleClickGroup->stopTimer(this);
         }
     }
 }
@@ -81,20 +81,18 @@ void PushButton::_buttonReleased()
 {
     uint32_t ms = millis();
     _duration = get_time_diff(_startTimer, ms);
-    _clickRepeatTimer = ms;
-    _clickRepeatTimerRunning = true;
-    if (_clickRepeatCount < kClickRepeatCountMax - 1) {
-        _clickRepeatCount++;
-    }
-    __LDBG_printf("%s no_repeat_timer_running=%u no_repeat_count=%u", name(), _clickRepeatTimerRunning, _clickRepeatCount);
+    _singleClickGroup->released(this, ms);
+    __LDBG_printf("%s sp_timer=%u sp_count=%u", name(), _singleClickGroup->isTimerRunning(this), _singleClickGroup->getRepeatCount());
 
-    if (_duration < _shortpressTime) {
+    if (_duration < _clickTime) {
 
-        __LDBG_printf("%s CLICK=%u duration=%u", name(), _shortpressTime, _duration);
+        __LDBG_printf("%s CLICK=%u duration=%u", name(), _clickTime, _duration);
         _fireEvent(EventType::CLICK);
         return;
 
     }
+    // reset click counter and timer after _clickTime is over
+    _singleClickGroup->stopTimer(this);
 
     if (_duration < _longpressTime) {
 
@@ -134,3 +132,20 @@ const __FlashStringHelper *PushButton::eventTypeToString(EventType eventType)
     }
     return F("NONE");
 }
+
+#if DEBUG
+void PushButton::dumpConfig(Print &output)
+{
+    Pin::dumpConfig(output);
+
+    output.print(F(" events="));
+    for(int i = 0; i < (int)EventType::MAX_BITS; i++) {
+        if (i > 0) {
+            output.print('|');
+        }
+        output.print(eventTypeToString((EventType)((int)_subscribedEvents & (1 << i))));
+    }
+
+    output.printf_P(PSTR(" sp_time=%u lp_time=%u rep_time=%u steps=%u sp_group=%p(%u) timeout=%u"), _clickTime, _longpressTime, _repeatTime, _singleClickSteps, _singleClickGroup.get(), _singleClickGroup.use_count(), _singleClickGroup->getTimeout());
+}
+#endif

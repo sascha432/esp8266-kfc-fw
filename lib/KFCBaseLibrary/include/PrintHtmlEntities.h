@@ -33,7 +33,7 @@ class PrintHtmlEntitiesString;
 
 class PrintHtmlEntities {
 public:
-    enum class Mode {
+    enum class Mode : uint8_t {
         HTML,
         ATTRIBUTE,
         RAW,
@@ -94,4 +94,5 @@ protected:
     size_t _writeRawString(const __FlashStringHelper *str);
 
     Mode _mode;
+    uint8_t _lastChar;
 };

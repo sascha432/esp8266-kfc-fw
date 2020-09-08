@@ -48,10 +48,11 @@ size_t PrintHtmlEntitiesString::write(uint8_t data)
 
 size_t PrintHtmlEntitiesString::writeRaw(uint8_t data)
 {
+    _lastChar = data;
     return PrintString::write(data);
 }
 
-size_t PrintHtmlEntitiesString::write(const uint8_t *buffer, size_t size)
+inline size_t PrintHtmlEntitiesString::write(const uint8_t *buffer, size_t size)
 {
     if (_mode == Mode::RAW) {
         return PrintString::write(buffer, size);

@@ -39,7 +39,7 @@ static size_t memcpy_strlen_P_v3(char *dst, PGM_P src) {
 
 #endif
 
-PrintHtmlEntities::PrintHtmlEntities() : _mode(Mode::HTML)
+PrintHtmlEntities::PrintHtmlEntities() : _mode(Mode::HTML), _lastChar(0)
 {
 }
 
@@ -279,21 +279,30 @@ size_t PrintHtmlEntities::translate(uint8_t data)
             return _writeRawString(FPSTR(values[i]));
         }
         else {
-            switch (data) {
-                case '\1':
-                    return writeRaw('<');
-                case '\2':
-                    return writeRaw('>');
-                case '\3':
-                    return writeRaw('&');
-                case '\4':
-                    return writeRaw('"');
-                case '\5':
-                    return writeRaw('=');
-                case '\6':
-                    return writeRaw('%');
-                case '\7':
-                    return writeRaw('\'');
+            if (data >= 0x80) {
+                if (_lastChar != 0xc2) { // utf8 encoded?
+                    writeRaw(0xc2);
+                    writeRaw(data);
+                    return 2;
+                }
+            }
+            else {
+                switch (data) {
+                    case '\1':
+                        return writeRaw('<');
+                    case '\2':
+                        return writeRaw('>');
+                    case '\3':
+                        return writeRaw('&');
+                    case '\4':
+                        return writeRaw('"');
+                    case '\5':
+                        return writeRaw('=');
+                    case '\6':
+                        return writeRaw('%');
+                    case '\7':
+                        return writeRaw('\'');
+                }
             }
         }
     }

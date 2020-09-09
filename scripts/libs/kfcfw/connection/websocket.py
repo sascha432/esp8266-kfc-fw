@@ -14,21 +14,27 @@ class WebSocket(BaseConnection):
         self.client_id = None
         self.ws = None
 
+    def get_cmd_str(self, command, *args):
+        parts = []
+        for arg in args:
+            if not isinstance(arg, str):
+                arg = str(arg)
+            if ' ' in arg or '"' in arg or ',' in arg:
+                arg = '"%s"' % arg.replace('\\',  '\\\\').replace('"',  '\\"')
+            parts.append(arg)
+        return '+%s=%s' % (command, ','.join(parts))
+
     def send_cmd(self, command, *args):
         if self.is_connected():
-            parts = []
-            for arg in args:
-                if not isinstance(arg, str):
-                    arg = str(arg)
-                if ' ' in arg or '"' in arg or ',' in arg:
-                    arg = '"%s"' % arg.replace('\\',  '\\\\').replace('"',  '\\"')
-                parts.append(arg)
-            cmd_str = '+%s=%s' % (command, ','.join(parts))
-            self.send(cmd_str)
+            self.send(self.get_cmd_str(command, *args))
             return True
         return False
 
     def send_pwm_cmd(self, pin, value, duration_milliseconds, freq = 40000):
+        if value==True:
+            value = 1023
+        elif value==False:
+            value = 0
         if self.is_authenticated():
             self.send_cmd('PWM', pin, value, freq, duration_milliseconds)
         else:
@@ -49,6 +55,7 @@ class WebSocket(BaseConnection):
     def send(self, msg, end = '\n'):
         if self.is_connected():
             self.debug('sending: %s' % msg)
+            print(msg)
             self.ws.send(msg + end)
             return True
         self.debug('sending failed: not connected: %s' % msg)

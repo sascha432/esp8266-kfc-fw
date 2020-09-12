@@ -21,7 +21,7 @@ class TkEZGrid(object):
         self.pady = pady
         self.sticky = sticky
 
-    def _set_grid(self, obj, span):
+    def _set_grid(self, obj, span, padx=None, pady=None):
         columnspan = 1
         rowspan = 1
         if self.direction=='v':
@@ -30,19 +30,21 @@ class TkEZGrid(object):
         else:
             rowspan = span
             n = self.row
-        padx = self.padx
-        if isinstance(padx, list):
-            padx = padx[n % len(padx)]
-        pady = self.pady
-        if isinstance(pady, list):
-            pady = pady[n % len(pady)]
+        if padx==None:
+            padx = self.padx
+            if isinstance(padx, list):
+                padx = padx[n % len(padx)]
+        if pady==None:
+            pady = self.pady
+            if isinstance(pady, list):
+                pady = pady[n % len(pady)]
         obj.grid(in_=self.in_frame, row=self.row, column=self.column, padx=padx, pady=pady, sticky=self.sticky, columnspan=columnspan, rowspan=rowspan)
 
     def label(self, text):
         label = ttk.Label(self.frame, text=text)
         return self.first(label)
 
-    def first(self, obj, span=1):
+    def first(self, obj, span=1, padx=None, pady=None):
         if self.direction=='v':
             self.row += 1
             self.column = 0
@@ -50,15 +52,15 @@ class TkEZGrid(object):
             self.column += 1
             self.row = 0
         if obj:
-            self._set_grid(obj, span)
+            self._set_grid(obj, span, padx, pady)
         if self.direction=='v':
             self.column += span
         else:
             self.row += span
         return obj
 
-    def next(self, obj, span=1):
-        self._set_grid(obj, span)
+    def next(self, obj, span=1, padx=None, pady=None):
+        self._set_grid(obj, span, padx, pady)
         if self.direction=='v':
             self.column += span
         else:

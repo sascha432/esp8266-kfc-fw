@@ -33,8 +33,9 @@ class PageBase:
         self.controller.show_frame(name)
 
     def set_animation(self, state):
-        self.console.debug('page=%s active=%s animation=None' % (self.__class__.__name__, str(state)))
+        # self.console.debug('page=%s active=%s animation=None' % (self.__class__.__name__, str(state)))
+        pass
 
     def set_active(self, state):
-        self.console.debug('set_active=%s animation=%s' % (self.__class__.__name__, str(state)))
+        # self.console.debug('set_active=%s animation=%s' % (self.__class__.__name__, str(state)))
         self.set_animation(state)

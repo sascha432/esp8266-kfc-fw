@@ -55,7 +55,6 @@ class WebSocket(BaseConnection):
     def send(self, msg, end = '\n'):
         if self.is_connected():
             self.debug('sending: %s' % msg)
-            print(msg)
             self.ws.send(msg + end)
             return True
         self.debug('sending failed: not connected: %s' % msg)
@@ -107,7 +106,9 @@ class WebSocket(BaseConnection):
             elif msg == '+REQ_AUTH':
                 self.send('+SID ' + self.sid, end = '')
         else:
-            if msg.startswith('+SP_HLWPLOT:'):
+            if msg.startswith('+ADC: ADC display off'):
+                self.controller.adc.adc_reading_ended()
+            elif msg.startswith('+SP_HLWPLOT:'):
                 try:
                     pos = msg.find('{')
                     if pos!=-1:

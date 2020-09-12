@@ -9,6 +9,8 @@ import tkinter as tk
 from tkinter import ttk
 import time
 import os
+import sys
+import copy
 import json
 from pathlib import Path
 
@@ -18,6 +20,7 @@ from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationTool
 from matplotlib.figure import Figure
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
+import matplotlib.ticker as plticker
 from matplotlib import style
 
 import numpy as np
@@ -35,6 +38,12 @@ class PageADC(tk.Frame, PageBase):
         PageBase.__init__(self, controller)
 
         self.lock = Lock()
+        self.store_data_in_file_lock = Lock()
+        self.store_invoked = None
+        self.invoke_stop = None
+        self.threshold = 4
+        self.motor_running = False
+        self.motor_pin = 0
         self.data_file = os.path.join(self.controller.config_dir, 'adc_data.json')
 
         self.thread_id = 1
@@ -56,16 +65,15 @@ class PageADC(tk.Frame, PageBase):
         grid.first(ttk.Button(self, text="Stop", command=lambda: self.send_cmd_adc_stop_threaded(0.1)))
         grid.next(ttk.Button(self, text="Load Data", command=self.load_previous_data))
 
-        # ttk.Button(self, text="Start", command=self.send_adc_start_cmd).grid(in_=action, row=1, column=1)
-        # ttk.Button(self, text="Clear", command=self.load_previous_data).grid(in_=action, row=1, column=2)
-        # ttk.Button(self, text="Load Data", command=self.load_previous_data).grid(in_=action, row=2, column=2)
-
         cfg = tk.Frame(self)
         cfg.pack(in_=top, side=tkinter.LEFT, padx=15)
         self.form = tk_form_var.TkFormVar(self.config)
         self.form.trace('m', callback=self.form_modified_callback)
 
         grid = tk_ez_grid.TkEZGrid(self, cfg, padx=[2, 4], pady=[0, 1], direction='h', sticky=tkinter.W)
+
+        grid.first(ttk.Label(self, text="Pin:"))
+        grid.next(ttk.Entry(self, width=10, textvariable=self.form['pin']))
 
         grid.first(ttk.Label(self, text="Interval (µs):"))
         grid.next(ttk.Entry(self, width=10, textvariable=self.form['interval']))
@@ -88,15 +96,23 @@ class PageADC(tk.Frame, PageBase):
         grid.first(ttk.Label(self, text="Stop current (mA):"))
         grid.next(self.form.set_textvariable(ttk.Entry(self, width=10), 'stop_current', True))
 
+        grid.first(ttk.Label(self, text="Stop time (ms):"))
+        grid.next(self.form.set_textvariable(ttk.Entry(self, width=10), 'stop_time', True))
+
         grid.first(ttk.Label(self, text="PWM value:"))
         grid.next(ttk.Entry(self, width=10, textvariable=self.form['pwm']))
 
         grid.first(ttk.Label(self, text="frequency:"))
         grid.next(ttk.Entry(self, width=10, textvariable=self.form['frequency']))
 
-        grid.first(None);
-        grid.next(ttk.Button(self, text="Save", command=self.write_config))
+        grid.first(ttk.Label(self, text="Name:"))
+        values = list(self.controller.config['adc']['items'].keys())
+        name = grid.next(self.form.set_textvariable(ttk.Combobox(self, width=15, values=values), 'name', True))
+        name.bind('<<ComboboxSelected>>', lambda event: self.load_config_by_number(event.widget.current()))
+        # grid.next(self.form.set_textvariable(ttk.Entry(self, width=15), 'name', True))
 
+        grid.first(ttk.Button(self, text="Reset", command=self.reset_named_config), padx=4)
+        grid.next(ttk.Button(self, text="Save", command=self.write_config))
 
         action2 = tk.Frame(self)
         action2.pack(in_=top, side=tkinter.LEFT, padx=15)
@@ -114,6 +130,11 @@ class PageADC(tk.Frame, PageBase):
         grid.next(ttk.Button(self, text="pin 13 PWM", command=lambda: self.set_motor_pin_threaded(13, True)))
         grid.next(ttk.Button(self, text="pin 13 LOW", command=lambda: self.set_motor_pin_threaded(13, False)))
 
+        grid.first(ttk.Button(self, text="turn_open", command=lambda: self.load_and_execute('turn_open')))
+        grid.next(ttk.Button(self, text="turn_close", command=lambda: self.load_and_execute('turn_close')))
+        grid.next(ttk.Button(self, text="move_open", command=lambda: self.load_and_execute('move_open')))
+        grid.next(ttk.Button(self, text="move_close", command=lambda: self.load_and_execute('move_close')))
+
         # .grid(in_=cfg, row=1, column=2)
         # ttk.Button(self, text="PWM pin 4 500", command=lambda: self.send_pwm_cmd(12, 500, 0)).grid(in_=cfg, row=1, column=1)
         # ttk.Button(self, text="PWM pin 4 300", command=lambda: self.send_pwm_cmd(12, 300, 0)).grid(in_=action, row=1, column=10)
@@ -129,24 +150,34 @@ class PageADC(tk.Frame, PageBase):
         self.fig = Figure(figsize=(12, 8), dpi=100)
         self.fig.subplots_adjust(top=0.96, bottom=0.06, left=0.06, right=0.96)
         self.axis = self.fig.add_subplot(111)
+        self.axis.grid(True)
+        self.axis.grid(True, linewidth=0.1, color='gray', which='minor')
+        self.axis.xaxis.set_major_locator(plticker.MultipleLocator(base=1000))
+        self.axis.xaxis.set_minor_locator(plticker.MultipleLocator(base=100))
+        self.axis.yaxis.set_major_locator(plticker.MultipleLocator(base=100))
+        self.axis.yaxis.set_minor_locator(plticker.MultipleLocator(base=10))
+        # self.axis.set_yticks(True)
         self.axis.set_title('ADC readings')
         self.axis.set_xlabel('time (ms)')
-        self.hlines = {}
+        self.hvlines = {}
         if self.config['multiplier']==1:
             self.axis.set_ylabel('ADC value')
         else:
             self.axis.set_ylabel('ADC value converter to %s' % self.config['unit'])
 
+        self.averaging = [1.0, 50.0, 15.0]
+
         self.lines = []
         self.reset_data()
-        tmp, = self.axis.plot(self.values[0], self.values[1], lw=0.1, color='blue', alpha = 0.5)
+        tmp, = self.axis.plot(self.values[0], self.values[1], lw=0.1, color='blue', alpha = 0.7, label='ADC')
         self.lines.append(tmp)
-        tmp, = self.axis.plot(self.values[0], self.values[2], lw=0.5, color='green')
+        tmp, = self.axis.plot(self.values[0], self.values[2], lw=0.5, color='green', label='Average/%ums' % self.averaging[0])
         self.lines.append(tmp)
-        tmp, = self.axis.plot(self.values[0], self.values[3], lw=1, color='orange')
+        tmp, = self.axis.plot(self.values[0], self.values[3], lw=1, color='orange', label='Average/%ums' % self.averaging[1])
         self.lines.append(tmp)
-        tmp, = self.axis.plot(self.values[0], self.values[4], lw=2, color='red')
+        tmp, = self.axis.plot(self.values[0], self.values[4], lw=2, color='red', label='Average/%ums' % self.averaging[2])
         self.lines.append(tmp)
+        self.axis.legend()
 
 
         self.anim_running = False
@@ -154,16 +185,15 @@ class PageADC(tk.Frame, PageBase):
         canvas = FigureCanvasTkAgg(self.fig, self)
         canvas.draw()
         canvas.get_tk_widget().pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True, pady=5, padx=5)
-        self.anim = animation.FuncAnimation(self.fig, func=self.plot_values, interval=200)
+        self.anim = animation.FuncAnimation(self.fig, func=self.plot_values, interval=100)
 
         toolbar = NavigationToolbar2Tk(canvas, self)
         toolbar.update()
         canvas.get_tk_widget().pack(side=tkinter.TOP, fill=tkinter.BOTH, expand=1)
 
-    def read_config(self):
-        # merge config with main config
-        config = self.get_config()
-        defaults = {
+    def get_config_defaults(self):
+        return {
+            'pin': 0,
             'multiplier': 1,
             'offset': 0,
             'unit': 'raw',
@@ -173,21 +203,87 @@ class PageADC(tk.Frame, PageBase):
             'frequency': 40000,
             'dac': 850,
             'stop_current': 650,
+            'stop_time': 1000,
             'pwm': 128,
         }
+
+    def update_config_defaults(self, name, config):
+        tmp = self.get_config_defaults()
+        for key, val in tmp.items():
+            if key not in config:
+                config[key] = val
+        config['name'] = name
+
+    def get_named_config_copy(self, name='defaults'):
+        if name in self.controller.config['adc']['items']:
+            return copy.deepcopy(self.controller.config['adc']['items'][name])
+        else:
+            self.console.log('config %s not found, creating from defaults' % name)
+            if name!='defaults':
+                return self.get_named_config_copy()
+        return self.get_config_defaults()
+
+    def read_config(self):
+        # merge config with main config
         try:
-            tmp = defaults.copy()
-            tmp.update(config['adc'])
+            config = copy.deepcopy(self.controller.config["adc"])
         except:
-            tmp = defaults.copy()
-        config['adc'] = tmp.copy()
-        self.set_config(config)
-        self.config = self.controller.config['adc']
-        self.console.debug('ADC config: %s' % self.config)
+            self.controller.config["adc"] = {
+                'last': 'defaults',
+                'items': {
+                    'defaults': self.get_config_defaults()
+                }
+            }
+            config = copy.deepcopy(self.controller.config["adc"])
+            config['items']['defaults']['name'] = 'defaults'
+
+        self.console.debug('ADC config: %s' % (self.controller.config["adc"]['items']))
+        name = config['last']
+        if name not in config['items']:
+            name = 'defaults'
+        self.config = config['items'][name]
+        self.update_config_defaults(name, self.config)
+        self.console.debug('ADC config selected: %s' % (self.config))
 
     def write_config(self):
-        self.console.debug('write ADC config: %s' % self.config)
+        # remove name before storing
+        tmp = copy.deepcopy(self.config)
+        name = tmp['name']
+        del tmp['name']
+        self.console.debug('write ADC config %s: %s' % (name, tmp))
+        self.controller.config['adc']['items'][name] = tmp
         self.controller.write_config()
+
+    def reset_named_config(self):
+        name = self.config['name']
+        self.console.debug('reset config %s' % (name))
+        self.load_named_config(name, True)
+
+    def load_config_by_number(self, num):
+        self.console.debug('load config #%u' % num)
+        n = 0
+        for name in self.controller.config['adc']['items'].keys():
+            if n == num:
+                self.load_named_config(name)
+                break
+            n += 1
+
+    def load_named_config(self, name, reset=False):
+        if reset==False:
+            self.console.debug('load config %s' % name)
+            self.controller.config["adc"]['last'] = name
+            self.controller.write_config()
+        tmp = self.get_named_config_copy(name)
+        self.update_config_defaults(name, tmp)
+        # copy to form vars
+        for key in self.config.keys():
+            val = None
+            try:
+                val = tmp[key]
+                self.config[key] = val
+                self.form[key].set(val)
+            except Exception as e:
+                self.console.log('copy name=%s key=%s val=%s failed: %s' % (name, key, val, e))
 
     def load_previous_data(self):
         try:
@@ -199,6 +295,7 @@ class PageADC(tk.Frame, PageBase):
             if files and files[0].is_file():
                 with open(files[0].resolve()) as file:
                     self.data = json.loads(file.read())
+                self.data['display'] = max(self.data['time'])
                 self.calc_data(True)
                 self.set_data()
                 self.current_data_file = files[0].name
@@ -237,6 +334,8 @@ class PageADC(tk.Frame, PageBase):
         if num==0:
             return
 
+        time_val = self.data['time'][-1]
+
         try:
             diff = self._calc['diff']
             avg1 = self._calc['avg1']
@@ -244,7 +343,7 @@ class PageADC(tk.Frame, PageBase):
             avg3 = self._calc['avg3']
 
             for n in range(self._calc['n'], num):
-                time = self.data['time'][n]
+                time_val = self.data['time'][n]
                 raw_value = self.data['adc_raw'][n]
                 value = self.adc_cvt_raw_value(raw_value)
                 # end = n - 1
@@ -267,29 +366,53 @@ class PageADC(tk.Frame, PageBase):
                 # orange
                 # red
 
-                diff0 = time - diff
+                diff0 = time_val - diff
                 if diff0>0:
-                    diff = time
-                    diff1 = diff0 * 10.0
+                    # averaging diff1 = diff0 * N = last N milliseconds
+
+                    diff = time_val
+                    diff1 = diff0 * self.averaging[0]
                     diff2 = diff1 + 1.0
                     avg1 = ((avg1 * diff1) + value) / diff2
 
-                    diff1 = diff0 * 25.0
+                    diff1 = diff0 * self.averaging[1]
                     diff2 = diff1 + 1.0
                     avg2 = ((avg2 * diff1) + value) / diff2
 
-                    diff1 = diff0 * 75.0
+                    diff1 = diff0 * self.averaging[2]
                     diff2 = diff1 + 1.0
                     avg3 = ((avg3 * diff1) + value) / diff2
 
                 val = 0
                 # if n>0:
                     # cover the last 100ms
-                    # start = self.find_start(time - 5000, n)
+                    # start = self.find_start(time_val - 5000, n)
                     # start=0
                     # val = np.percentile(self.values[1][start:n], 15)
 
-                self.values[0].append(time)
+                if self.stopped==None and avg1>self.threshold:
+                    self.stopped = False
+                    self.add_vlines['start'] = time_val
+                    if self.invoke_stop!=None:
+                        tmp = self.invoke_stop / 1000.0
+                        self.add_vlines['timeout'] = self.invoke_stop
+                        self.invoke_stop = None
+                        self.send_stop_delayed(tmp, self.add_vlines['start'])
+                        self.console.debug("auto off in %.3fs triggered by avg1=%u time_val=%u @%.6f" % (tmp, avg1, time_val, time.monotonic()))
+                elif self.stopped==False and avg1<self.threshold:
+                    self.stopped = True
+                    self.add_vlines['stop'] = time_val
+
+                # CURRENT LIMIT
+                if avg3>self.config['stop_current'] and self.motor_running:
+                    self.console.log('Current limit @ %u pin=%u' % (time_val, self.motor_pin))
+                    if self.motor_pin!=0:
+                        self.send_pwm_cmd_threaded(self.motor_pin, 0)
+                    self.send_cmd_set_pins_to_input([4, 5, 12, 13])
+                    self.add_vlines['limit'] = time_val
+                    self.motor_running = False
+
+                self.values[0].append(time_val)
                 self.values[1].append(value)
                 self.values[2].append(avg1)
                 self.values[3].append(avg2)
@@ -302,39 +425,36 @@ class PageADC(tk.Frame, PageBase):
             self._calc['avg2'] = avg2
             self._calc['avg3'] = avg3
 
-            if avg1>self.config['stop_current'] and self.motor_running:
-                self.motor_running = False
-                self.send_cmd_set_pins_to_input([4, 5, 12, 13])
-
             if last_packet:
-                info = {
-                    'std': {
-                        'adc_raw': float(np.std(self.data['adc_raw'])),
-                        'values': float(np.std(self.values[1])),
-                        'average': float(np.std(self.values[3])),
-                    },
-                    'mean': {
-                        'adc_raw': float(np.mean(self.data['adc_raw'])),
-                        'values': float(np.mean(self.values[1])),
-                        'average': float(np.mean(self.values[3])),
-                    },
-                    'median': {
-                        'adc_raw': float(np.median(self.data['adc_raw'])),
-                        'values': float(np.median(self.values[1])),
-                        'average': float(np.median(self.values[3])),
-                    },
-                    'min': {
-                        'adc_raw': float(np.min(self.data['adc_raw'])),
-                        'values': float(np.min(self.values[1])),
-                        'average': float(np.min(self.values[3])),
-                    },
-                    'max': {
-                        'adc_raw': float(np.max(self.data['adc_raw'])),
-                        'values': float(np.max(self.values[1])),
-                        'average': float(np.max(self.values[3])),
-                    },
-                }
-                self.console.log('stats: %s' % json.dumps(info, indent=True))
+                if False:
+                    info = {
+                        'std': {
+                            'adc_raw': float(np.std(self.data['adc_raw'])),
+                            'values': float(np.std(self.values[1])),
+                            'average': float(np.std(self.values[3])),
+                        },
+                        'mean': {
+                            'adc_raw': float(np.mean(self.data['adc_raw'])),
+                            'values': float(np.mean(self.values[1])),
+                            'average': float(np.mean(self.values[3])),
+                        },
+                        'median': {
+                            'adc_raw': float(np.median(self.data['adc_raw'])),
+                            'values': float(np.median(self.values[1])),
+                            'average': float(np.median(self.values[3])),
+                        },
+                        'min': {
+                            'adc_raw': float(np.min(self.data['adc_raw'])),
+                            'values': float(np.min(self.values[1])),
+                            'average': float(np.min(self.values[3])),
+                        },
+                        'max': {
+                            'adc_raw': float(np.max(self.data['adc_raw'])),
+                            'values': float(np.max(self.values[1])),
+                            'average': float(np.max(self.values[3])),
+                        },
+                    }
+                    self.console.log('stats: %s' % json.dumps(info, indent=True))
                 self._calc = {'n': -1}
 
 
@@ -346,6 +466,7 @@ class PageADC(tk.Frame, PageBase):
         if not self.lock.acquire(True):
             self.console.error('data_handler: failed to lock plot')
             return
+        time_val = 0
         try:
             self.data['packets'] += 1
             for packed in data:
@@ -363,22 +484,8 @@ class PageADC(tk.Frame, PageBase):
                 self.console.debug('last packet flag set')
                 if self.data['dropped']:
                     self.console.error('packets lost flag set')
-                self.send_cmd_adc_stop_threaded(0.1)
-                try:
-                    # find file that does not exist
-                    # keep up to 100 files overwriting old ones first
-                    n = 0
-                    tmp = self.data_file
-                    while os.path.exists(tmp):
-                        tmp = self.data_file.replace('.json', '.%02u.json' % (n % 100))
-                        if n>=100:
-                            break
-                        n += 1
-
-                    with open(tmp, 'wt') as file:
-                        file.write(json.dumps(self.data))
-                except Exception as e:
-                    self.console.error('write adc data: %s' % e)
+                self.store_data_in_file_delayed(2.0)
+                self.send_cmd_adc_stop_threaded(0.5)
         except Exception as e:
             self.console.error(e)
         finally:
@@ -397,19 +504,24 @@ class PageADC(tk.Frame, PageBase):
                 self.set_data()
                 num = len(self.values[0])
                 max_time_millis = max(self.values[0])
-
-                # scroll if there is more data thasn 15 seconds
-                if max_time_millis>self.config['display']:
-                    self.axis.set_xlim(left=max_time_millis - self.config['display'], right=max_time_millis)
+                x_right = max(self.data['xlim'], max_time_millis)
+                x_right = max(x_right, self.data['display'])
+                self.data['xlim'] = x_right
+                x_left = max(self.data['xlim'] - self.data['display'], 0)
+                self.axis.set_xlim(left=x_left, right=x_right)
 
                 max_time = max_time_millis / 1000.0
-                self.data['ylim'] = int(max(self.values[1]) * 1.15 / 10) * 10 + 1
+                self.data['ylim'] = max(self.data['hlines']['threshold'] * 2, int(max(self.values[1]) * 1.05 / 10) * 10 + 1)
                 self.axis.set_ylim(bottom=0, top=self.data['ylim'])
                 if max_time>=1.0:
                     file = ''
                     if self.current_data_file:
                         file = ' (' + self.current_data_file + ')'
                     self.axis.set_title('ADC readings %.2f packets/s interval %.0fµs%s' % (self.data['packets'] / max_time, max_time_millis * 1000.0 / num, file))
+
+            self.add_vlines_from_list(self.add_vlines)
+            self.add_vlines = {}
+
         except Exception as e:
             self.console.log(e)
 
@@ -424,34 +536,91 @@ class PageADC(tk.Frame, PageBase):
             if state:
                 self.anim.event_source.start()
 
-    def set_data(self):
-        self.axis.set_xlim(left=0, right=self.data['xlim'])
-        if len(self.lines):
-            for n in range(len(self.lines)):
-                self.lines[n].set_data(self.values[0], self.values[n + 1])
-        self.remove_hlines(['stop_current', 'dac', 'noise'])
-        self.hlines['noise'] = self.axis.hlines(15, 0, self.data['xlim'], color='yellow', label="Noise")
-        self.hlines['stop_current'] = self.axis.hlines(self.config['stop_current'], 0, self.data['xlim'], color='red', label="Stop Current")
-        if self.config['dac']<self.config['stop_current']*1.2:
-            self.hlines['dac'] = self.axis.hlines(self.config['dac'], 0, self.data['xlim'], color='orange', label="Current Limit")
+    def get_vlines(self):
+        return [('start', 'green'), ('stop', 'blue'), ('limit', 'red'), ('timeout', 'purple')]
 
-    def reset_data(self, xlim = 1000):
-        if xlim>self.config['display']:
-            xlim=self.config['display']
+    def get_hlines(self):
+        return {'threshold': 'purple', 'current': 'red', 'dac': 'orange'}
+
+    def get_hvlines_keys(self):
+        l = list(self.get_hlines().keys())
+        for item in self.get_vlines():
+            l.append(item[0])
+        return l
+
+    def add_vlines_from_list(self, lines):
+        for item in self.get_vlines():
+            name = item[0]
+            if name in lines:
+                time_val = lines[name]
+                color = item[1]
+                self.data['vlines'][name] = time_val
+                self.remove_hvlines(name)
+                self.hvlines[name] = self.axis.vlines(time_val, 0, self.adc_cvt_raw_value(1024), color=color, label=name)
+                self.update_plot = True
+                # self.hvlines[name] = self.axis.vlines(time_val, 0, self.config['stop_current'], color=color, label=name)
+
+    def value_with_unit(self, y):
+        if self.config['multiplier']==1:
+            return str(y)
+        return '%u%s' % (y, self.config['unit'])
+
+    def add_hline(self, name, y, color = None):
+        colors = self.get_hlines()
+        if color==None:
+            color = colors[name]
+        self.remove_hvlines(name)
+        self.hvlines[name] = self.axis.hlines(y, 0, self.config['duration'] * 2, color=color, label='%s (%s)' % (name, self.value_with_unit(y)), linestyle='dotted')
+        self.axis.legend()
+
+    def set_data(self):
+        self.threshold = self.adc_cvt_raw_value(1024 / 200.0) + 0.5
+        has_data = len(self.data['time'])>1
+        x_left = 0
+        x_right = 1000
+        if has_data:
+            # show all data when loaded from file
+            max_time = self.data['time'][-1]
+            x_lim = max_time
+            x_right = max(200, x_lim)
+            self.data['xlim'] = x_right
+
+        self.remove_hvlines(self.get_hvlines_keys())
+        if has_data:
+            n = 1
+            for line in self.lines:
+                line.set_data(self.values[0], self.values[n])
+                n += 1
+
+            self.axis.set_xlim(left=x_left, right=x_right)
+            self.add_vlines_from_list(self.data['vlines'])
+        else:
+            for line in self.lines:
+                line.set_data([0, 0], [1000, 100])
+            self.axis.set_ylim(bottom=0, top=100)
+            # self.add_hline('threshold', self.threshold)
+            # self.add_hline('current', self.config['stop_current'])
+            # self.add_hline('dac', self.config['dac'])
+        self.axis.set_xlim(left=0, right=1000)
+        for name, val in self.data['hlines'].items():
+            self.add_hline(name, val)
+
+    def reset_data(self, x_lim = 1000):
+        self.store_invoked = None
         self.current_data_file = None
-        self.data = { 'time': [], 'adc_raw': [], 'packets': 0, 'dropped': False, 'xlim': xlim, 'ylim': 0 }
+        self.data = { 'time': [], 'adc_raw': [], 'packets': 0, 'dropped': False, 'xlim': x_lim, 'ylim': self.threshold * 2, 'display': self.config['display'], 'vlines': {}, 'hlines': {'current': self.config['stop_current'], 'threshold': self.threshold, 'dac': self.config['dac']} }
         self.values = [ [],[],[],[],[] ]
+        self.add_vlines = {}
+        self.stopped = None
         self._calc = {'n': -1}
-        # for line in self.axis.lines:
-        #     self.axis.lines.remove(line)
         self.set_data()
 
     def ___thread(self, thread_id, callback, args = (), delay = 0):
         if delay>0:
-            self.console.debug('thread #%u: delayed %.4f' % (thread_id, delay / 1.0))
+            self.console.log('thread @%.6f #%u: delayed %.4f' % (time.monotonic(), thread_id, delay / 1.0))
             time.sleep(delay)
-        self.console.debug('thread #%u: start' % (thread_id))
-        print(callback, args)
+        self.console.log('thread @%.6f #%u: start (delay=%.4f)' % (time.monotonic(), thread_id, delay / 1.0))
+        # print(callback, args)
         callback(*args)
         self.console.debug('thread #%u: end' % (thread_id))
 
@@ -468,10 +637,75 @@ class PageADC(tk.Frame, PageBase):
         self.start_thread(self.send_pwm_cmd, (pin, value, duration_milliseconds))
         time.sleep(wait)
 
-    def send_cmd_adc_stop_threaded(self, delay):
-        self.console._debug = self._debug
+    def store_data_in_file(self):
+        if not self.store_data_in_file_lock.acquire(False):
+            return
+        try:
+            if self.store_invoked=='thread_started':
+                # 0 = time
+                # 1 = value
+                # 2 = avg1
+                # 3 = avg2...
+                max_value = max(self.values[2])
+                self.console.debug('write if %u>%u = %s' % (max_value, self.threshold, str(max_value>self.threshold)))
+                if max_value>self.threshold:
+                    self.store_invoked = 'writing'
+                    # find file that does not exist
+                    # keep up to 100 files overwriting old ones first
+                    n = 0
+                    tmp = self.data_file
+                    while os.path.exists(tmp):
+                        tmp = self.data_file.replace('.json', '.%02u.json' % (n % 100))
+                        if n>=100:
+                            break
+                        n += 1
+
+                    with open(tmp, 'wt') as file:
+                        file.write(json.dumps(self.data))
+                    self.store_invoked = 'written'
+                else:
+                    self.store_invoked = 'no data'
+        except Exception as e:
+            self.store_invoked = 'write_error'
+            self.console.error('write adc data: %s' % e)
+        finally:
+            self.store_data_in_file_lock.release();
+
+    def store_data_in_file_delayed(self, delay = 2.0):
+        if self.store_invoked==False:
+            if self.store_data_in_file_lock.acquire(False):
+                try:
+                    self.store_invoked = 'thread_started'
+                    self.start_thread(self.store_data_in_file, (), delay)
+                except:
+                    self.store_invoked = 'lock_error'
+                finally:
+                    self.store_data_in_file_lock.release()
+
+    def adc_reading_ended(self):
+        self.store_data_in_file_delayed()
+
+    def send_cmd_adc_stop(self):
         self.send_cmd_set_pins_to_input([4, 5, 12, 13])
-        self.start_thread(self.controller.wsc.send_cmd_adc_stop, delay=delay)
+        self.controller.wsc.send_cmd_adc_stop()
+        self.store_data_in_file_delayed(2.0)
+
+    def send_cmd_adc_stop_threaded(self, delay):
+        self.start_thread(self.send_cmd_adc_stop, (), delay)
+
+    def send_stop_delayed_exec(self, time_val, dummy):
+        self.send_cmd_set_pins_to_input([4, 5, 12, 13])
+        self.controller.wsc.send_cmd_adc_stop()
+        try:
+            self.add_vlines['timeout'] = self.data['time'][-1]
+        except:
+            self.add_vlines['timeout'] = time_val
+        self.add_vlines_from_list(self.add_vlines)
+        self.add_vlines = {}
+        self.console._debug = self._debug
+
+    def send_stop_delayed(self, delay, time_val):
+        self.start_thread(self.send_stop_delayed_exec, (time_val, 1), delay)
 
     def send_cmd_set_pins_to_input(self, list):
         parts = []
@@ -479,6 +713,12 @@ class PageADC(tk.Frame, PageBase):
             parts.append("+PWM=%u,0" % (pin))
             parts.append("+PWM=%u,input" % (pin))
         self.send_cmd_threaded(parts, 0.05)
+
+    def load_and_execute(self, name):
+        self.console.debug('execute config %s' % (name))
+        self.load_named_config(name, True)
+        self.invoke_stop = self.config['stop_time']
+        self.set_motor_pin_threaded(self.config['pin'], True)
 
     def set_motor_pin_threaded(self, pin, value):
         if value==False:
@@ -508,14 +748,18 @@ class PageADC(tk.Frame, PageBase):
 
         if not value:
             self.motor_running = False
+            self.motor_pin = 0
             self.send_cmd_adc_stop_threaded(1.25)
         else:
             self.motor_running = True
+            self.motor_pin = pin
             value_14 = 0
             if pin in [4, 5]:
                 value_14 = 1023
             parts = []
             parts.append(self.get_cmd_str_pwm(14, value_14))
+            self.send_cmd_threaded(parts, 0.05)
+            parts = []
             parts.append(self.get_cmd_str_pwm(4, 0))
             parts.append(self.get_cmd_str_pwm(5, 0))
             parts.append(self.get_cmd_str_pwm(12, 0))
@@ -530,19 +774,24 @@ class PageADC(tk.Frame, PageBase):
 
             if value!=0 and value!=False:
                 parts = []
-                for i in range(0, value, int(value/10)):
-                    parts.append(self.get_cmd_str_pwm(pin, i))
+                duration = int(self.config['stop_time'])
+                # 40-100% in 4 steps
+                start_val = int(value * 0.4)
+                step = int((value - start_val) / 3 + 0.5)
+                for i in range(start_val, value, step):
+                    parts.append(self.get_cmd_str_pwm(pin, i, duration))
+                    duration = 0
                     # parts.append(self.get_cmd_str_delay(1))
-                parts.append(self.get_cmd_str_pwm(pin, value))
+                parts.append(self.get_cmd_str_pwm(pin, value, duration))
 
                 self.send_cmd_threaded(parts);
                 time.sleep(0.5)
                 self.console._debug = False
             else:
-                self.send_pwm_cmd_threaded_wait(pin, value, duration_milliseconds)
+                self.send_pwm_cmd_threaded_wait(pin, value)
 
-    def get_cmd_str_pwm(self, pin, value):
-        return self.controller.wsc.get_cmd_str('PWM', pin, value, self.config['frequency'], 0)
+    def get_cmd_str_pwm(self, pin, value, duration = 0):
+        return self.controller.wsc.get_cmd_str('PWM', pin, value, self.config['frequency'], duration)
 
     def get_cmd_str_delay(self, delay):
         return self.controller.wsc.get_cmd_str('DLY', delay)
@@ -558,7 +807,14 @@ class PageADC(tk.Frame, PageBase):
         self.controller.wsc.send_pwm_cmd(pin, value, duration_milliseconds, self.config['frequency'])
 
     def send_adc_start_cmd(self):
-        self.reset_data(self.config['duration'])
+        self.reset_data(self.config['display'])
+        self.axis.set_xlim(left=0, right=self.data['xlim'])
+        # allows to store the data
+        if self.store_invoked!=False:
+            if not self.store_data_in_file_lock.acquire(False):
+                raise Exception('cannot lock store_data_in_file_lock')
+            self.store_invoked = False
+            self.store_data_in_file_lock.release()
 
         # calculate packet size to get about 5 packets per second
         packets_per_second = 5.0
@@ -572,29 +828,33 @@ class PageADC(tk.Frame, PageBase):
         self.start_thread(callback=self.controller.wsc.send_cmd_adc_start, args=(self.config['interval'], self.config['duration'], packet_size))
         time.sleep(0.05)
 
-
-    def remove_hlines(self, names):
+    def remove_hvlines(self, names):
+        if isinstance(names, str):
+            names = [names]
         for name in names:
-            if name in self.hlines:
-                self.hlines[name].remove();
-                del self.hlines[name]
+            if name in self.hvlines:
+                self.hvlines[name].remove();
+                del self.hvlines[name]
 
     def update_current_limit(self, val):
         pwm = int(1024 / 3.3 * (val / 1000.0))
         self.console.log('setting DAC to %umA / %u' % (val, pwm))
         self.send_pwm_cmd(16, pwm)
-        self.remove_hlines(['dac'])
+        self.remove_hvlines('dac')
         if self.config['dac']>self.config['stop_current']*1.2:
             return
-        self.hlines['dac'] = self.axis.hlines(val, 0, self.data['xlim'], color='orange')
+        self.hvlines['dac'] = self.axis.hlines(val, 0, self.data['xlim'], color='orange')
 
     def update_stop_current(self, val):
-        self.remove_hlines(['stop_current'])
-        self.hlines['stop_current'] = self.axis.hlines(val, 0, self.data['xlim'], color='red')
+        self.remove_hvlines('stop_current')
+        self.hvlines['stop_current'] = self.axis.hlines(val, 0, self.data['xlim'], color='red')
 
     def form_modified_callback(self, event, key, val, var, *args):
+        self.console.debug('callback %s=%s' % (str(key), str(val)))
         if key=='dac':
             self.update_current_limit(val)
         elif key=='stop_current':
             self.update_stop_current(val)
+        elif key=='name':
+            self.load_named_config(val)
 

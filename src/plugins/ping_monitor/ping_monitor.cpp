@@ -320,7 +320,7 @@ void PingMonitorPlugin::createConfigureForm(FormCallbackType type, const String 
 
     for(uint8_t i = 0; i < Plugins::Ping::kHostsMax; i++) {
 
-        form.addCStringGetterSetter(String('h') + i, [i]() { return Plugins::Ping::getHost(i); }, [i](const char *hostname) { Plugins::Ping::setHost(i, hostname); });
+        form.addStringGetterSetter(String('h') + i, [i]() { return Plugins::Ping::getHost(i); }, [i](const char *hostname) { Plugins::Ping::setHost(i, hostname); });
         form.addFormUI(FormUI::Label(PrintString(F("Host %u"), i + 1)));
         form.addValidator(FormHostValidatorEx(FormHostValidator::AllowedType::ALLOW_EMPTY)).emplace_back(FSPGM(_var_gateway, "${gateway}"));
         Plugins::Ping::addHost1LengthValidator(form); // length is the same for all

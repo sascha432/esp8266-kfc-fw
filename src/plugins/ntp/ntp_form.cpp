@@ -40,24 +40,24 @@ void NTPPlugin::createConfigureForm(FormCallbackType type, const String &formNam
 
     auto &group = form.addDivGroup(F("ntpcfg"), F("{'i':'#ntp_en','s':{'0':'$T.hide()','1':'$T.show()'}}"));
 
-    form.addCStringGetterSetter(F("posix_tz"), Plugins::NTPClient::getPosixTimezone, Plugins::NTPClient::setPosixTimezoneCStr);
+    form.addStringGetterSetter(F("posix_tz"), Plugins::NTPClient::getPosixTimezone, Plugins::NTPClient::setPosixTimezone);
     form.addFormUI(FormUI::Type::SELECT, FSPGM(Timezone, "Timezone"));
-    form.addCStringGetterSetter(F("tz_name"), Plugins::NTPClient::getTimezoneName, Plugins::NTPClient::setTimezoneNameCStr);
+    form.addStringGetterSetter(F("tz_name"), Plugins::NTPClient::getTimezoneName, Plugins::NTPClient::setTimezoneName);
     form.addFormUI(FormUI::Type::HIDDEN);
 
-    form.addCStringGetterSetter(F("ntpsvr1"), Plugins::NTPClient::getServer1, Plugins::NTPClient::setServer1CStr);
-    form.addFormUI(FormUI::Label(PrintString(FSPGM(NTP_Server___, "NTP Server %u"), 1)));
+    form.addStringGetterSetter(F("ntpsvr1"), Plugins::NTPClient::getServer1, Plugins::NTPClient::setServer1);
+    form.addFormUI(F("NTP Server 1"));
     form.addValidator(FormHostValidator(FormHostValidator::AllowedType::ALLOW_EMPTY));
 
-    form.addCStringGetterSetter(F("ntpsvr2"), Plugins::NTPClient::getServer2, Plugins::NTPClient::setServer2CStr);
-    form.addFormUI(FormUI::Label(PrintString(FSPGM(NTP_Server___), 2)));
+    form.addStringGetterSetter(F("ntpsvr2"), Plugins::NTPClient::getServer2, Plugins::NTPClient::setServer2);
+    form.addFormUI(F("NTP Server 2"));
     form.addValidator(FormHostValidator(FormHostValidator::AllowedType::ALLOW_EMPTY));
 
-    form.addCStringGetterSetter(F("ntpsvr3"), Plugins::NTPClient::getServer3, Plugins::NTPClient::setServer3CStr);
-    form.addFormUI(FormUI::Label(PrintString(FSPGM(NTP_Server___), 3)));
+    form.addStringGetterSetter(F("ntpsvr3"), Plugins::NTPClient::getServer3, Plugins::NTPClient::setServer3);
+    form.addFormUI(F("NTP Server 3"));
     form.addValidator(FormHostValidator(FormHostValidator::AllowedType::ALLOW_EMPTY));
 
-    form.addMemberVariable(F("ntpri"), ntp, &Plugins::NTPClient::ConfigStructType::refreshInterval);
+    form.addPointer(F("ntpri"), &ntp.refreshInterval);
     form.addFormUI(FormUI::Type::INTEGER, FSPGM(Refresh_Interval, "Refresh Interval"), FormUI::Suffix(FSPGM(minutes__5_, "minutes \u00b15%")));
     form.addValidator(FormRangeValidator(F("Invalid refresh interval: %min%-%max% minutes"), ntp.kRefreshIntervalMin, ntp.kRefreshIntervalMax));
 

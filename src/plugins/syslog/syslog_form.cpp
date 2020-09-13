@@ -34,15 +34,12 @@ void SyslogPlugin::createConfigureForm(FormCallbackType type, const String &form
     form.addMemberVariable(F("sl_proto"), cfg, &SyslogClient::ConfigStructType::protocol, FormField::Type::SELECT);
     form.addValidator(FormRangeValidatorEnum<SyslogClient::SyslogProtocolType>());
 
-    form.addCStringGetterSetter("sl_host", SyslogClient::getHostname, SyslogClient::setHostnameCStr);
+    form.addStringGetterSetter("sl_host", SyslogClient::getHostname, SyslogClient::setHostname);
     form.addValidator(FormHostValidator(FormHostValidator::AllowedType::ALLOW_EMPTY_AND_ZEROCONF));
 
-    form.add(F("sl_port"), cfg.getPortAsString(), [&cfg](const String &value, FormField &field, bool store) {
-        if (store) {
-            cfg.setPort(value.toInt(), cfg.isSecure());
-            field.setValue(cfg.getPortAsString());
-        }
-        return false;
+    form.addCallbackSetter(F("sl_port"), cfg.getPortAsString(), [&cfg](const String &value, FormField &field) {
+        cfg.setPort(value.toInt(), cfg.isSecure());
+        field.setValue(cfg.getPortAsString());
     });
     form.addValidator(FormNetworkPortValidator(true));
 

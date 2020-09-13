@@ -47,37 +47,45 @@ MQTTComponent::MQTTAutoDiscoveryPtr Sensor_SystemMetrics::nextAutoDiscovery(MQTT
     if (num >= getAutoDiscoveryCount()) {
         return nullptr;
     }
-    auto discovery = __LDBG_new(MQTTAutoDiscovery);
+    MQTTAutoDiscovery* discovery = nullptr;
     switch(num) {
         case 0:
+            discovery = __LDBG_new(MQTTAutoDiscovery);
+            discovery = __LDBG_new(MQTTAutoDiscovery);
             discovery->create(this, FSPGM(uptime), format);
             discovery->addStateTopic(_getTopic());
             discovery->addUnitOfMeasurement(FSPGM(seconds));
             discovery->addValueTemplate(FSPGM(uptime));
             break;
         case 1:
+            discovery = __LDBG_new(MQTTAutoDiscovery);
             discovery->create(this, FSPGM(heap), format);
             discovery->addStateTopic(_getTopic());
             discovery->addUnitOfMeasurement(FSPGM(bytes));
             discovery->addValueTemplate(FSPGM(heap));
             break;
         case 2:
+            discovery = __LDBG_new(MQTTAutoDiscovery);
             discovery->create(this, FSPGM(version), format);
             discovery->addStateTopic(_getTopic());
             discovery->addValueTemplate(FSPGM(version));
             break;
         case 3:
+            discovery = __LDBG_new(MQTTAutoDiscovery);
             discovery->create(this, F("heap_frag"), format);
             discovery->addStateTopic(_getTopic());
             discovery->addValueTemplate(F("heap_frag"));
             break;
 #if PING_MONITOR_SUPPORT
         case 4:
+            discovery = __LDBG_new(MQTTAutoDiscovery);
             discovery->create(this, FSPGM(ping_monitor), format);
             discovery->addStateTopic(_getTopic());
             discovery->addValueTemplate(FSPGM(ping_monitor));
             break;
 #endif
+        default:
+            return nullptr;
     }
     discovery->finalize();
     return discovery;

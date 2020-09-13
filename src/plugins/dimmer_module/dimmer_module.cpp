@@ -162,8 +162,10 @@ bool Driver_DimmerModule::getChannelState(uint8_t channel) const
 void Driver_DimmerModule::setChannel(uint8_t channel, int16_t level, float time)
 {
     if (time == -1) {
-        time = _config.fade_time;
+        time = getFadeTime(_channels[channel].getLevel(), level);
     }
+
+
     _channels[channel].setLevel(level);
     _fade(channel, level, time);
     writeEEPROM();

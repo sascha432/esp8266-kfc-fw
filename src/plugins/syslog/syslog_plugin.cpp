@@ -9,8 +9,10 @@
 
 #if DEBUG_SYSLOG
 #include <debug_helper_enable.h>
+#include <debug_helper_enable_mem.h>
 #else
 #include <debug_helper_disable.h>
+#include <debug_helper_disable_mem.h>
 #endif
 
 using SyslogClient = KFCConfigurationClasses::Plugins::SyslogClient;
@@ -117,11 +119,9 @@ void SyslogPlugin::_begin()
         if (hostname.length() && port) {
             bool zeroconf = config.hasZeroConf(hostname);
 
-            _stream = __LDBG_new(SyslogStream, SyslogFactory::create(
-                SyslogParameter(System::Device::getName(), FSPGM(kfcfw)),
-                __LDBG_new(SyslogMemoryQueue, *this, SYSLOG_PLUGIN_QUEUE_SIZE), cfg.protocol_enum, zeroconf ? emptyString : hostname, static_cast<uint16_t>(zeroconf ? SyslogFactory::kZeroconfPort : port)),
-                _timer
-            );
+            auto queue = __LDBG_new(SyslogMemoryQueue, *this, SYSLOG_PLUGIN_QUEUE_SIZE);
+            auto syslog = SyslogFactory::create(SyslogParameter(System::Device::getName(), FSPGM(kfcfw)), queue, cfg.protocol_enum, zeroconf ? emptyString : hostname, static_cast<uint16_t>(zeroconf ? SyslogFactory::kZeroconfPort : port));
+            _stream = __LDBG_new(SyslogStream, syslog, _timer);
             _logger.setSyslog(_stream);
 
             __LDBG_printf("zeroconf=%u port=%u", zeroconf, port);

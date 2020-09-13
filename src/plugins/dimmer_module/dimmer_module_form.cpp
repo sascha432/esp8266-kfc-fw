@@ -36,15 +36,26 @@ void DimmerModuleForm::_createConfigureForm(PluginComponent::FormCallbackType ty
 
     auto configValidAttr = FormUI::ConditionalAttribute(cfg.config_valid == false, FSPGM(disabled), FSPGM(disabled));
 
-    auto &mainGroup = form.addCardGroup(FSPGM(config), F("Common"), true);
+    auto &mainGroup = form.addCardGroup(FSPGM(config), F("General"), true);
 
-    form.add(F("fade_time"), _H_W_STRUCT_VALUE(cfg, fade_time));
-    form.addFormUI(F("Fade In/Out Time"), FormUI::PlaceHolder(5.0, 1), FormUI::Suffix(FSPGM(seconds)));
+    form.add(F("onft"), _H_W_STRUCT_VALUE(cfg, on_fadetime));
+    form.addFormUI(F("On Fade Time"), FormUI::PlaceHolder(7.5, 1), FormUI::Suffix(FSPGM(seconds)));
     form.addValidator(FormRangeValidatorDouble(1.0, 30.0));
 
-    form.add(F("fade_onoff"), _H_W_STRUCT_VALUE(cfg, on_off_fade_time));
-    form.addFormUI(F("Turn On/Off Fade Time"), FormUI::PlaceHolder(7.5, 1), FormUI::Suffix(FSPGM(seconds)));
+    form.add(F("offft"), _H_W_STRUCT_VALUE(cfg, off_fadetime));
+    form.addFormUI(F("Off Fade Time"), FormUI::PlaceHolder(7.5, 1), FormUI::Suffix(FSPGM(seconds)));
     form.addValidator(FormRangeValidatorDouble(1.0, 30.0));
+
+    auto &offDelaySignal = form.addObjectGetterSetter(F("offdlys"), cfg, cfg.get_bits_off_delay_signal, cfg.set_bits_off_delay_signal);
+    form.addFormUI(FormUI::Type::HIDDEN);
+
+    form.addObjectGetterSetter(F("offdly"), cfg, cfg.get_bits_off_delay, cfg.set_bits_off_delay);
+    // PrintHtmlEntitiesString tmp;
+    // FormUI::UI::appendGroupText(tmp, FSPGM(seconds));
+    // FormUI::UI::appendGroupText(tmp, FormUI::UI::createCheckBoxButton(offDelaySignal, F("Confirm Signal")));
+    // , FormUI::StringSuffix(tmp)
+    form.addFormUI(F("Off Delay"), FormUI::PlaceHolder(0));
+    cfg.addRangeValidatorFor_off_delay(form);
 
 #if DIMMER_FIRMWARE_VERSION < 0x030000
     form.add(F("lcf"), _H_W_STRUCT_VALUE(cfg, fw.linear_correction_factor));
@@ -53,6 +64,14 @@ void DimmerModuleForm::_createConfigureForm(PluginComponent::FormCallbackType ty
 
     form.add<bool>(F("restore"), _H_W_STRUCT_VALUE(cfg, fw.bits.restore_level));
     form.addFormUI(F("After Power Failure"), configValidAttr, FormUI::BoolItems(F("Restore last brightness level"), F("Do not turn on")));
+
+    form.add<uint8_t>(F("max_temp"), _H_W_STRUCT_VALUE(cfg, fw.max_temp));
+    form.addFormUI(F("Max. Temperature"), configValidAttr, FormUI::PlaceHolder(80), FormUI::Suffix(FSPGM(_degreeC)));
+    form.addValidator(FormRangeValidator(F("Temperature out of range: %min%-%max%"), 45, 110));
+
+    form.add<uint8_t>(F("metricsint"), _H_W_STRUCT_VALUE(cfg, fw.report_metrics_max_interval));
+    form.addFormUI(F("Metrics Report Interval"), configValidAttr, FormUI::PlaceHolder(10), FormUI::Suffix(FSPGM(seconds)));
+    form.addValidator(FormRangeValidator(5, 60));
 
     mainGroup.end();
 
@@ -82,70 +101,67 @@ void DimmerModuleForm::_createConfigureForm(PluginComponent::FormCallbackType ty
 
 #if IOT_DIMMER_MODULE_HAS_BUTTONS
 
-    auto &buttonGroup = form.addCardGroup(F("btncfg"), F("Buttons"), false);
+    auto &buttonGroup = form.addCardGroup(F("btncfg"), F("Button Configuration"), false);
 
-    form.add<uint16_t>(F("sptime"), _H_W_STRUCT_VALUE(cfg, shortpress_time));
-    form.addFormUI(F("Click Time"), FormUI::Suffix(FSPGM(milliseconds)), FormUI::PlaceHolder(275));
-    form.addValidator(FormRangeValidator(50, 1500));
+    form.addObjectGetterSetter(F("sptime"), cfg, cfg.get_bits_shortpress_time, cfg.set_bits_shortpress_time);
+    form.addFormUI(F("Click Time"), FormUI::Suffix(FSPGM(milliseconds)), FormUI::PlaceHolder(cfg.kDefaultValueFor_shortpress_time));
+    cfg.addRangeValidatorFor_longpress_time(form);
 
-    form.add<uint16_t>(F("lptime"), _H_W_STRUCT_VALUE(cfg, longpress_time));
-    form.addFormUI(F("Long Press Time"), FormUI::Suffix(FSPGM(milliseconds)), FormUI::PlaceHolder(1000));
-    form.addValidator(FormRangeValidator(250, 5000));
+    form.addObjectGetterSetter(F("lptime"), cfg, cfg.get_bits_longpress_time, cfg.set_bits_longpress_time);
+    form.addFormUI(F("Long Press Time"), FormUI::Suffix(FSPGM(milliseconds)), FormUI::PlaceHolder(cfg.kDefaultValueFor_longpress_time));
+    cfg.addRangeValidatorFor_longpress_time(form);
 
-    // form.add<uint16_t>(F("rtime"), _H_W_STRUCT_VALUE(cfg, repeat_time));
-    // form.addFormUI(F("Repeat Click Time"), FormUI::Suffix(FSPGM(milliseconds)), FormUI::PlaceHolder(150));
-    // form.addValidator(FormRangeValidator(50, 500 * kFactor));
-
-    form.add<float>(F("lpfd"), _H_W_STRUCT_VALUE(cfg, longpress_fadetime));
-    form.addFormUI(F("Fade Time"), FormUI::Suffix(FSPGM(seconds)), FormUI::PlaceHolder(3.5, 1));
+    form.add<float>(F("lpft"), _H_W_STRUCT_VALUE(cfg, lp_fadetime));
+    form.addFormUI(F("Button Held Fade Time"), FormUI::Suffix(FSPGM(seconds)), FormUI::PlaceHolder(3.5, 1));
     form.addValidator(FormRangeValidatorDouble(1.0, 30.0));
 
-    form.add<uint8_t>(F("sstep"), _H_W_STRUCT_VALUE(cfg, shortpress_steps));
-    form.addFormUI(F("Brightness Steps"), FormUI::Suffix(F("per 100%")), FormUI::PlaceHolder(15));
-    form.addValidator(FormRangeValidator(4, 50));
+    form.addObjectGetterSetter(F("sstep"), cfg, cfg.get_bits_shortpress_steps, cfg.set_bits_shortpress_steps);
+    form.addFormUI(F("Brightness Steps"), FormUI::Suffix(F("per 100%")), FormUI::PlaceHolder(cfg.kDefaultValueFor_shortpress_steps));
+    cfg.addRangeValidatorFor_shortpress_steps(form);
 
-    form.add<uint16_t>(F("snrt"), _H_W_STRUCT_VALUE(cfg, single_click_time));
-    form.addFormUI(F("Double Click Speed:"), FormUI::Suffix(FSPGM(milliseconds)), FormUI::PlaceHolder(1500));
-    form.addValidator(FormRangeValidator(500, 15000));
+    form.addObjectGetterSetter(F("snrt"), cfg, cfg.get_bits_single_click_time, cfg.set_bits_single_click_time);
+    form.addFormUI(F("Double Click Speed:"), FormUI::Suffix(FSPGM(milliseconds)), FormUI::PlaceHolder(cfg.kDefaultValueFor_shortpress_time));
+    cfg.addRangeValidatorFor_single_click_time(form);
 
-    form.add<uint8_t>(F("minbr"), _H_W_STRUCT_VALUE(cfg, min_brightness));
-    form.addFormUI(F("Min. Brightness"), FormUI::Suffix('%'), FormUI::PlaceHolder(15));
-    form.addValidator(FormRangeValidator(0, 50));
+    form.addObjectGetterSetter(F("maxbr"), cfg, cfg.get_bits_max_brightness, cfg.set_bits_max_brightness);
+    form.addFormUI(F("Min. Brightness"), FormUI::Suffix('%'), FormUI::PlaceHolder(cfg.kDefaultValueFor_max_brightness));
+    cfg.addRangeValidatorFor_max_brightness(form);
 
-    form.add<uint8_t>(F("lpmaxb"), _H_W_STRUCT_VALUE(cfg, longpress_max_brightness));
-    form.addFormUI(F("Long Press Up/Max. Brightness"), FormUI::Suffix('%'), FormUI::PlaceHolder(85));
-    form.addValidator(FormRangeValidator(20, 100));
+    form.addObjectGetterSetter(F("minbr"), cfg, cfg.get_bits_min_brightness, cfg.set_bits_min_brightness);
+    form.addFormUI(F("Min. Brightness"), FormUI::Suffix('%'), FormUI::PlaceHolder(cfg.kDefaultValueFor_min_brightness));
+    cfg.addRangeValidatorFor_min_brightness(form);
 
-    form.add<uint8_t>(F("lpminb"), _H_W_STRUCT_VALUE(cfg, longpress_min_brightness));
-    form.addFormUI(F("Long Press Down/Min. Brightness"), FormUI::Suffix('%'), FormUI::PlaceHolder(33));
-    form.addValidator(FormRangeValidator(0, 80));
+    form.addObjectGetterSetter(F("lpmaxb"), cfg, cfg.get_bits_longpress_max_brightness, cfg.set_bits_longpress_max_brightness);
+    form.addFormUI(F("Long Press Up/Max. Brightness"), FormUI::Suffix('%'), FormUI::PlaceHolder(cfg.kDefaultValueFor_longpress_max_brightness));
+    cfg.addRangeValidatorFor_longpress_max_brightness(form);
+
+    form.addObjectGetterSetter(F("lpminb"), cfg, cfg.get_bits_longpress_min_brightness, cfg.set_bits_longpress_min_brightness);
+    form.addFormUI(F("Long Press Down/Min. Brightness"), FormUI::Suffix('%'), FormUI::PlaceHolder(cfg.kDefaultValueFor_longpress_min_brightness));
+    cfg.addRangeValidatorFor_longpress_min_brightness(form);
 
     buttonGroup.end();
 
 #endif
 
-    auto &fwGroup = form.addCardGroup(F("fwcfg"), F("Advanced Firmware Configuration"), false);
+    auto &buttonPinGroup = form.addCardGroup(F("btncfg"), F("Button Pin Configuration"), false);
 
-    auto &pin0Inverted = form.addObjectGetterSetter(F("p0i"), cfg, cfg.get_inverted_pin0, cfg.set_inverted_pin0);
+    auto &pin0Inverted = form.addObjectGetterSetter(F("pupi"), cfg, cfg.get_bits_pin_ch0_up_inverted, cfg.set_bits_pin_ch0_up_inverted);
     form.addFormUI(FormUI::Type::HIDDEN);
 
-    form.add<uint8_t>(F("pin0"), _H_W_STRUCT_VALUE_TYPE(cfg, pins[0], uint8_t));
+    form.addObjectGetterSetter(F("pinup"), cfg, cfg.get_bits_pin_ch0_up, cfg.set_bits_pin_ch0_up);
     form.addFormUI(F("Button Up Pin #"), FormUI::UI::createCheckBoxButton(pin0Inverted, F("Active Low")));
+    cfg.addRangeValidatorFor_pin_ch0_up(form);
 
-
-    auto &pin1Inverted = form.addObjectGetterSetter(F("p1i"), cfg, cfg.get_inverted_pin1, cfg.set_inverted_pin1);
+    auto &pin1Inverted = form.addObjectGetterSetter(F("pdbi"), cfg, cfg.get_bits_pin_ch0_down_inverted, cfg.set_bits_pin_ch0_down_inverted);
     form.addFormUI(FormUI::Type::HIDDEN);
 
-    form.add<uint8_t>(F("pin1"), _H_W_STRUCT_VALUE_TYPE(cfg, pins[1], uint8_t));
+    form.addObjectGetterSetter(F("pindn"),  cfg, cfg.get_bits_pin_ch0_down, cfg.set_bits_pin_ch0_down);
     form.addFormUI(F("Button Down Pin #"), FormUI::UI::createCheckBoxButton(pin1Inverted, F("Active Low")));
+    cfg.addRangeValidatorFor_pin_ch0_down(form);
 
-    form.add<uint8_t>(F("max_temp"), _H_W_STRUCT_VALUE(cfg, fw.max_temp));
-    form.addFormUI(F("Max. Temperature"), configValidAttr, FormUI::PlaceHolder(80), FormUI::Suffix(FSPGM(_degreeC)));
-    form.addValidator(FormRangeValidator(F("Temperature out of range: %min%-%max%"), 45, 110));
+    buttonPinGroup.end();
 
-    form.add<uint8_t>(F("metricsint"), _H_W_STRUCT_VALUE(cfg, fw.report_metrics_max_interval));
-    form.addFormUI(F("Metrics Report Interval"), configValidAttr, FormUI::PlaceHolder(10), FormUI::Suffix(FSPGM(seconds)));
-    form.addValidator(FormRangeValidator(5, 255));
+    auto &fwGroup = form.addCardGroup(F("fwcfg"), F("Advanced Firmware Configuration"), false);
 
     form.add<uint8_t>(F("zc_offset"), _H_W_STRUCT_VALUE(cfg, fw.zero_crossing_delay_ticks));
     form.addFormUI(F("Zero Crossing Offset"), configValidAttr, FormUI::Suffix(FSPGM(ticks, "ticks")));

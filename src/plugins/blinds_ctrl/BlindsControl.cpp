@@ -208,7 +208,7 @@ void BlindsControl::_executeAction(ChannelType channel, bool open)
         // create queue from open or close automation
         auto &automation = open ? _config.open : _config.close;
         for(size_t i = 0; i < sizeof(automation) / sizeof(automation[0]); i++) {
-            auto action = Actions::cast_enum_type(automation[i].type);
+            auto action = automation[i].type;
             if (action != ActionType::NONE) {
                 uint16_t delay = automation[i].delay;
                 __LDBG_printf("queue action=%u channel=%u delay=%u", action, channel, delay);

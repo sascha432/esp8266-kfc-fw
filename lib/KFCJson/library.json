@@ -1,14 +1,13 @@
 {
-  "name": "KFCJson",
-  "version": "0.0.1",
-  "include": "lib/KFCJson",
-  "authors": {
-    "name": "sascha lammers",
-    "maintainer": true
-  },
-  "frameworks": "arduino",
-  "platforms": [
-    "espressif8266",
-    "espressif32"
-  ]
+    "name": "KFCJson",
+    "version": "0.0.1",
+    "authors": {
+        "name": "sascha lammers",
+        "maintainer": true
+    },
+    "frameworks": "arduino",
+    "platforms": [
+        "espressif8266",
+        "espressif32"
+    ]
 }

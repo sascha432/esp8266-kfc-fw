@@ -716,7 +716,7 @@ void WebServerPlugin::begin()
     _server->on(String(F("/update")).c_str(), HTTP_POST, handlerUpdate, handlerUploadUpdate);
 
     _server->begin();
-    __LDBG_printf("HTTP running on port %u", port);
+    __LDBG_printf("HTTP running on port %u", System::WebServer::getConfig().getPort());
 }
 
 bool WebServerPlugin::_sendFile(const FileMapping &mapping, const String &formName, HttpHeaders &httpHeaders, bool client_accepts_gzip, AsyncWebServerRequest *request, WebTemplate *webTemplate)
@@ -732,6 +732,7 @@ bool WebServerPlugin::_sendFile(const FileMapping &mapping, const String &formNa
     bool isHtml = String_endsWith(path, SPGM(_html));
     if (webTemplate == nullptr) {
         if (path.charAt(0) == '/' && formName.length()) {
+            __LDBG_printf("template=%s", formName.c_str());
             auto plugin = PluginComponent::getTemplate(formName);
             if (plugin) {
                 webTemplate = plugin->getWebTemplate(formName);
@@ -741,6 +742,7 @@ bool WebServerPlugin::_sendFile(const FileMapping &mapping, const String &formNa
                 __weatherStationDetachCanvas(true);
                 request->onDisconnect(__weatherStationAttachCanvas); // unlock on disconnect
 #endif
+                __LDBG_printf("form=%s", formName.c_str());
                 Form *form = __LDBG_new(SettingsForm, nullptr);
                 plugin->createConfigureForm(PluginComponent::FormCallbackType::CREATE_GET, formName, *form, request);
                 webTemplate = __LDBG_new(ConfigTemplate, form);
@@ -751,6 +753,7 @@ bool WebServerPlugin::_sendFile(const FileMapping &mapping, const String &formNa
         webTemplate = __LDBG_new(WebTemplate); // default for all .html files
     }
 
+    __LDBG_printf("web_template=%p", webTemplate);
     AsyncBaseResponse *response;
     if (webTemplate != nullptr) {
         webTemplate->setSelfUri(request->url());
@@ -1007,6 +1010,30 @@ void WebServerPlugin::getStatus(Print &output)
     }
 }
 
+typedef struct WebServerConfigCombo_t {
+    using Type = WebServerConfigCombo_t;
+    using ModeType = WebServerTypes::ModeType;
+
+    System::FlagsConfig::ConfigFlags_t *flags;
+    System::WebServerConfig::WebServerConfig_t *cfg;
+
+    static ModeType get_webserver_mode(const Type &obj) {
+        return obj.flags->is_web_server_enabled == false ? ModeType::DISABLED : (obj.cfg->is_https ? ModeType::SECURE : ModeType::UNSECURE);
+    }
+    static void set_webserver_mode(Type &obj, ModeType mode) {
+        if (mode == ModeType::DISABLED) {
+            obj.flags->is_web_server_enabled = false;
+        }
+        else {
+            obj.flags->is_web_server_enabled = true;
+            obj.cfg->is_https = (mode == ModeType::SECURE);
+        }
+    }
+
+} WebServerConfigCombo_t;
+
+
+
 void WebServerPlugin::createConfigureForm(PluginComponent::FormCallbackType type, const String &name, Form &form, AsyncWebServerRequest *request)
 {
     if (type == PluginComponent::FormCallbackType::SAVE) {
@@ -1017,9 +1044,13 @@ void WebServerPlugin::createConfigureForm(PluginComponent::FormCallbackType type
         return;
     }
 
+    auto &flags = System::Flags::getWriteableConfig();
+    auto &cfg = System::WebServer::getWriteableConfig();
+    WebServerConfigCombo_t combo = { &flags, &cfg };
+
     // form.setFormUI(F("Remote Access Configuration"));
 
-    form.addGetterSetterType_P(SPGM(httpmode, "httpmode"), System::WebServer::getMode, System::WebServer::setMode, uint8_t)); //->setFormUI(new FormUI::UI(FormUI::Type::SELECT, FSPGM(HTTP_Server, "HTTP Server")))->setBoolItems());
+    form.addObjectGetterSetter(FSPGM(httpmode, "httpmode"), combo, combo.get_webserver_mode, combo.set_webserver_mode);
     form.addValidator(FormRangeValidatorEnum<System::WebServer::ModeType>());
 
 #if WEBSERVER_TLS_SUPPORT
@@ -1028,19 +1059,13 @@ void WebServerPlugin::createConfigureForm(PluginComponent::FormCallbackType type
     }));
 #endif
 
-    auto &flags = System::Flags::getWriteableConfig();
-    auto &cfg = System::WebServer::getWriteableConfig();
-
 #if defined(ESP8266)
-    form.addWriteableStruct("httperf", flags, is_webserver_performance_mode_enabled));
+    form.addObjectGetterSetter(F("httperf"), flags, flags.get_bit_is_webalerts_enabled, flags.set_bit_is_webserver_performance_mode_enabled);
 #endif
 
-    form.add(F("httport"), cfg.getPortAsString(), [&cfg](const String &value, FormField &field, bool store) {
-        if (store) {
-            cfg.setPort(value.toInt(), cfg.isSecure()); // setMode() is executed already and cfg.is_https set
-            field.setValue(cfg.getPortAsString());
-        }
-        return false;
+    form.addCallbackSetter(F("httport"), cfg.getPortAsString(), [&cfg](const String &value, FormField &field) {
+        cfg.setPort(value.toInt(), cfg.isSecure()); // setMode() is executed already and cfg.is_https set
+        field.setValue(cfg.getPortAsString());
     }); //->setFormUI(new FormUI::UI(FormUI::Type::INTEGER, FSPGM(Port, "Port"))));
     form.addValidator(FormNetworkPortValidator(true));
 
@@ -1050,7 +1075,7 @@ void WebServerPlugin::createConfigureForm(PluginComponent::FormCallbackType type
     form.add(new FormObject<File2String>(F("ssl_key"), File2String(FSPGM(server_key)), nullptr));
 
 #endif
-    form.addCStrGetterSetter("btok", System::Device::getToken, System::Device::setToken)); //->setFormUI(new FormUI::UI(FormUI::Type::TEXT, F("Token for Web Server, Web Sockets and Tcp2Serial"))));
+    form.addStringGetterSetter(F("btok"), System::Device::getToken, System::Device::setToken); //->setFormUI(new FormUI::UI(FormUI::Type::TEXT, F("Token for Web Server, Web Sockets and Tcp2Serial"))));
     form.addValidator(FormLengthValidator(System::Device::kTokenMinSize, System::Device::kTokenMaxSize));
 
     form.finalize();
@@ -1117,11 +1142,11 @@ WebServerPlugin::AuthType WebServerPlugin::isAuthenticated(AsyncWebServerRequest
     auto auth = request->getHeader(FSPGM(Authorization));
     if (auth) {
         auto &value = auth->value();
-        __SID(debug_printf_P(PSTR("auth SID=%s remote=%s\n"), value.c_str(), request->client()->remoteIP().toString().c_str()));
+        __SID(__DBG_printf("auth SID=%s remote=%s", value.c_str(), request->client()->remoteIP().toString().c_str()));
         if (String_startsWith(value, FSPGM(Bearer_))) {
             auto token = value.c_str() + 7;
             const auto len = value.length() - 7;
-            __SID(debug_printf_P(PSTR("token=%s device_token=%s len=%u\n"), token, System::Device::getToken(), len));
+            __SID(__DBG_printf("token=%s device_token=%s len=%u", token, System::Device::getToken(), len));
             if (len >= System::Device::kTokenMinSize && !strcmp(token, System::Device::getToken())) {
                 __SID(__DBG_print("valid BEARER token"));
                 return AuthType::BEARER;
@@ -1132,12 +1157,12 @@ WebServerPlugin::AuthType WebServerPlugin::isAuthenticated(AsyncWebServerRequest
     else {
         auto isRequestSID = request->hasArg(FSPGM(SID));
         if ((isRequestSID && (SID = request->arg(FSPGM(SID)))) || HttpCookieHeader::parseCookie(request, FSPGM(SID), SID)) {
-            __SID(debug_printf_P(PSTR("SID=%s remote=%s type=%s\n"), SID.c_str(), request->client()->remoteIP().toString().c_str(), request->methodToString()));
+            __SID(__DBG_printf("SID=%s remote=%s type=%s", SID.c_str(), request->client()->remoteIP().toString().c_str(), request->methodToString()));
             if (SID.length() == 0) {
                 return AuthType::NONE;
             }
             if (verify_session_id(SID.c_str(), System::Device::getUsername(), System::Device::getPassword())) {
-                __SID(debug_printf_P(PSTR("valid SID=%s type=%s\n"), SID.c_str(), isRequestSID ? request->methodToString() : FSPGM(cookie, "cookie")));
+                __SID(__DBG_printf("valid SID=%s type=%s", SID.c_str(), isRequestSID ? request->methodToString() : FSPGM(cookie, "cookie")));
                 return isRequestSID ? AuthType::SID : AuthType::SID_COOKIE;
             }
             __SID(__DBG_printf("invalid SID=%s", SID.c_str()));

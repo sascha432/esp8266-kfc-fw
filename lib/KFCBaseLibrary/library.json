@@ -1,14 +1,15 @@
 {
     "name": "KFCBaseLibrary",
     "version": "0.0.1",
-    "include": "lib/KFCBaseLibrary",
-    "authors":
-    {
-      "name": "sascha lammers",
-      "maintainer": true
+    "authors": {
+        "name": "sascha lammers",
+        "maintainer": true
     },
     "frameworks": "arduino",
-    "platforms": ["espressif8266", "espressif32"],
+    "platforms": [
+        "espressif8266",
+        "espressif32"
+    ],
     "build": {
         "srcFilter": [
             "+<../src/>",

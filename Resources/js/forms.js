@@ -57,20 +57,15 @@ $.formValidator = {
 // $.formValidator.addErrors([{'target':'#colon_sp','error':'This fields value must be between 50 and 65535 or 0'}]);
 // $.formValidator.addErrors([{'target':'#brightness','error':'This fields value must be between 50 and 65535 or 0'}]);
 
-$.addFormHelp = function(data) {
-    for (key in data) {
-        var label = $('label[for="' +key +'"]');
-        if (label.length) {
-            var tmp = label.html();
-            var pos = tmp.indexOf(':');
-            if (pos != -1) {
-                tmp = tmp.substring(0, pos + 1);
-            }
-            tmp = tmp + '<br><small>' + data[key] + '</small>';
-            label.html(tmp);
-        }
-    }
+$.addFormHelp = function() {
+    $('.form-help-block div[data-target]').each(function() {
+        $($(this).data('target')).html($(this).html());
+    });
 };
+
+$(function() {
+    $.addFormHelp();
+});
 
 $.urlParam = function(name, remove) {
     var results = new RegExp('([\?&])' + name + '=([^&#]*)([&#]?)').exec(window.location.href);
@@ -307,6 +302,9 @@ $(function() {
     $('.button-checkbox').each(function () {
         var widget = $(this);
         var button = widget.find('button');
+        if (button.length == 0) {
+            button = widget;
+        }
         var color = button.data('color'); // btn-<color> class
         var on_icon = button.data('on-icon');
         var off_icon = button.data('off-icon');

@@ -32,6 +32,7 @@
 
 #if HAVE_KFC_PLUGINS
 
+#include <debug_helper.h>
 #include <plugins.h>
 #include <PluginComponent.h>
 #include <RTCMemoryManager.h>

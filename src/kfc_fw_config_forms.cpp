@@ -74,11 +74,11 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
 
             auto &stationGroup = modeGroup.end().addCardGroup(FSPGM(station), FSPGM(Station_Mode), true);
 
-            form.addCStringGetterSetter(F("wssid"), Network::WiFi::getSSID, Network::WiFi::setSSIDCStr);
+            form.addStringGetterSetter(F("wssid"), Network::WiFi::getSSID, Network::WiFi::setSSID);
             Network::WiFi::addSSIDLengthValidator(form);
             form.addFormUI(FSPGM(SSID), FormUI::Suffix(F("<button class=\"btn btn-default\" type=\"button\" id=\"wifi_scan_button\" data-toggle=\"modal\" data-target=\"#network_dialog\">Scan...</button>")));
 
-            form.addCStringGetterSetter(F("st_pass"), Network::WiFi::getPassword, Network::WiFi::setPasswordCStr);
+            form.addStringGetterSetter(F("st_pass"), Network::WiFi::getPassword, Network::WiFi::setPassword);
             Network::WiFi::addPasswordLengthValidator(form);
             form.addFormUI(FormUI::Type::PASSWORD, FSPGM(Passphrase, "Passphrase"));
 
@@ -90,19 +90,19 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             auto &ssidHidden = form.addObjectGetterSetter(F("ap_hid"), flags, flags.get_bit_is_softap_ssid_hidden, flags.set_bit_is_softap_ssid_hidden);
             form.addFormUI(FormUI::Type::HIDDEN);
 
-            form.addCStringGetterSetter(F("ap_ssid"), Network::WiFi::getSoftApSSID, Network::WiFi::setSoftApSSIDCStr);
+            form.addStringGetterSetter(F("ap_ssid"), Network::WiFi::getSoftApSSID, Network::WiFi::setSoftApSSID);
             Network::WiFi::addSoftApSSIDLengthValidator(form);
             form.addFormUI(FSPGM(SSID, "SSID"), FormUI::UI::createCheckBoxButton(ssidHidden, FSPGM(HIDDEN, "HIDDEN")));
 
-            form.addCStringGetterSetter(F("ap_pass"), Network::WiFi::getSoftApPassword, Network::WiFi::setSoftApPasswordCStr);
+            form.addStringGetterSetter(F("ap_pass"), Network::WiFi::getSoftApPassword, Network::WiFi::setSoftApPassword);
             Network::WiFi::addSoftApPasswordLengthValidator(form);
             form.addFormUI(FormUI::Type::PASSWORD, FSPGM(Passphrase));
 
-            form.addMemberVariable(F("ap_ch"), softAp, &Network::SoftAP::ConfigStructType::channel);
+            form.addReference(F("ap_ch"), softAp.channel);
             form.addValidator(FormRangeValidator(1, config.getMaxWiFiChannels(), true));
             form.addFormUI(FSPGM(Channel), channelItems);
 
-            form.addMemberVariable("ap_enc", softAp, &Network::SoftAP::ConfigStructType::encryption);
+            form.addReference("ap_enc", softAp.encryption);
             form.addValidator(FormEnumValidator<uint8_t, WiFiEncryptionTypeArray().size()>(F("Invalid encryption"), createWiFiEncryptionTypeArray()));
             form.addFormUI(FSPGM(Encryption), channelItems);
 
@@ -122,12 +122,12 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
 
             auto &deviceGroup = form.addCardGroup(FSPGM(device), FSPGM(Device), true);
 
-            form.addCStringGetterSetter(FSPGM(dev_hostn), System::Device::getName, System::Device::setNameCStr);
+            form.addStringGetterSetter(FSPGM(dev_hostn), System::Device::getName, System::Device::setName);
             form.addFormUI(FSPGM(Hostname));
             System::Device::addNameLengthValidator(form);
 
-            form.addCStringGetterSetter(FSPGM(dev_title), System::Device::getTitle, System::Device::setTitleCStr);
-            form.addFormUI(FormUI::Label(String(FSPGM(Title)) + F(":<br><small>Set friendly name for the WebUI, MQTT auto discovery and SSDP</small>"), true));
+            form.addStringGetterSetter(FSPGM(dev_title), System::Device::getTitle, System::Device::setTitle);
+            form.addFormUI(FSPGM(Title));
             System::Device::addTitleLengthValidator(form);
 
             auto &stationGroup = deviceGroup.end().addCardGroup(FSPGM(station), FSPGM(Station_Mode));
@@ -135,15 +135,15 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             form.addObjectGetterSetter(F("st_dhcp"), flags, flags.get_bit_is_station_mode_dhcp_enabled, flags.set_bit_is_station_mode_dhcp_enabled);
             form.addFormUI(FSPGM(DHCP_Client), FormUI::BoolItems());
 
-            form.addIPGetterSetter(F("st_ip"), network, network.get_ipv4_local_ip, network.set_ipv4_local_ip);
+            form.addObjectGetterSetter(F("st_ip"), network, network.get_ipv4_local_ip, network.set_ipv4_local_ip);
             form.addFormUI(FSPGM(IP_Address));
-            form.addIPGetterSetter(F("st_subnet"), network, network.get_ipv4_subnet, network.set_ipv4_subnet);
+            form.addObjectGetterSetter(F("st_subnet"), network, network.get_ipv4_subnet, network.set_ipv4_subnet);
             form.addFormUI(FSPGM(Subnet));
-            form.addIPGetterSetter(F("st_gw"), network, network.get_ipv4_gateway, network.set_ipv4_gateway);
+            form.addObjectGetterSetter(F("st_gw"), network, network.get_ipv4_gateway, network.set_ipv4_gateway);
             form.addFormUI(FSPGM(Gateway));
-            form.addIPGetterSetter(F("st_dns1"), network, network.get_ipv4_dns1, network.set_ipv4_dns1);
+            form.addObjectGetterSetter(F("st_dns1"), network, network.get_ipv4_dns1, network.set_ipv4_dns1);
             form.addFormUI(FSPGM(DNS_1));
-            form.addIPGetterSetter(F("st_dns2"), network, network.get_ipv4_dns2, network.set_ipv4_dns2);
+            form.addObjectGetterSetter(F("st_dns2"), network, network.get_ipv4_dns2, network.set_ipv4_dns2);
             form.addFormUI(FSPGM(DNS_2));
 
             auto &apGroup = stationGroup.end().addCardGroup(FSPGM(ap_mode), FSPGM(Access_Point));
@@ -151,13 +151,13 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             form.addObjectGetterSetter(F("ap_dhcpd"), flags, flags.get_bit_is_softap_dhcpd_enabled, flags.set_bit_is_softap_dhcpd_enabled);
             form.addFormUI(FSPGM(DHCP_Server), FormUI::BoolItems());
 
-            form.addIPGetterSetter(F("ap_ip"), softAp, softAp.get_ipv4_address, softAp.set_ipv4_address);
+            form.addObjectGetterSetter(F("ap_ip"), softAp, softAp.get_ipv4_address, softAp.set_ipv4_address);
             form.addFormUI(FSPGM(IP_Address));
-            form.addIPGetterSetter(F("ap_subnet"), softAp, softAp.get_ipv4_subnet, softAp.set_ipv4_subnet);
+            form.addObjectGetterSetter(F("ap_subnet"), softAp, softAp.get_ipv4_subnet, softAp.set_ipv4_subnet);
             form.addFormUI(FSPGM(Subnet));
-            form.addIPGetterSetter(F("ap_dhcpds"), softAp, softAp.get_ipv4_dhcp_start, softAp.set_ipv4_dhcp_start);
+            form.addObjectGetterSetter(F("ap_dhcpds"), softAp, softAp.get_ipv4_dhcp_start, softAp.set_ipv4_dhcp_start);
             form.addFormUI(F("DHCP Start IP"));
-            form.addIPGetterSetter(F("ap_dhcpde"), softAp, softAp.get_ipv4_dhcp_end, softAp.set_ipv4_dhcp_end);
+            form.addObjectGetterSetter(F("ap_dhcpde"), softAp, softAp.get_ipv4_dhcp_end, softAp.set_ipv4_dhcp_end);
             form.addFormUI(F("DHCP End IP"));
 
             apGroup.end();
@@ -174,7 +174,7 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
 
             auto &deviceGroup = form.addCardGroup(FSPGM(device), FSPGM(Device), true);
 
-            form.addCStringGetterSetter(FSPGM(dev_title), System::Device::getTitle, System::Device::setTitleCStr);
+            form.addStringGetterSetter(FSPGM(dev_title), System::Device::getTitle, System::Device::setTitle);
             form.addFormUI(FSPGM(Title));
             System::Device::addTitleLengthValidator(form);
 
@@ -198,7 +198,7 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             form.addObjectGetterSetter(F("led_mode"), cfg, System::Device::ConfigStructType::get_int_status_led_mode, System::Device::ConfigStructType::set_int_status_led_mode);
             form.addFormUI(FSPGM(Status_LED_Mode), FormUI::BoolItems(F("Solid when connected to WiFi"), F("Turn off when connected to WiFi")));
 
-            form.addCStringGetterSetter(F("pbl"), System::Firmware::getPluginBlacklist, System::Firmware::setPluginBlacklistCStr);
+            form.addStringGetterSetter(F("pbl"), System::Firmware::getPluginBlacklist, System::Firmware::setPluginBlacklist);
             form.addFormUI(F("Plugin Blacklist"), FormUI::Suffix(F("Comma Separated")));
 
             auto &webUIGroup = deviceGroup.end().addCardGroup(F("webui"), FSPGM(WebUI), true);
@@ -207,7 +207,7 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             form.addFormUI(FSPGM(WebUI), FormUI::BoolItems());
 
             form.addObjectGetterSetter(F("scookie_lt"), cfg, System::Device::ConfigStructType::get_bits_webui_cookie_lifetime_days, System::Device::ConfigStructType::set_bits_webui_cookie_lifetime_days);
-            form.addFormUI(FormUI::Type::INTEGER, FormUI::Label(F("Allow to store credentials in a cookie to login automatically:<br><span class=\"oi oi-shield p-2\"></span><small>If the cookie is stolen, it is not going to expire and changing the password is the only options to invalidate it.</small>"), true), FormUI::Suffix(FSPGM(days)));
+            form.addFormUI(FormUI::Type::INTEGER, FormUI::Label(F("Allow to store credentials in a cookie to login automatically")), FormUI::Suffix(FSPGM(days)));
             form.addValidator(FormRangeValidator(System::Device::kWebUICookieMinLifetime, System::Device::kWebUICookieMaxLifetime, true));
 
             form.addObjectGetterSetter(F("walert_en"), flags, System::Flags::ConfigStructType::get_bit_is_webalerts_enabled, System::Flags::ConfigStructType::set_bit_is_webalerts_enabled);

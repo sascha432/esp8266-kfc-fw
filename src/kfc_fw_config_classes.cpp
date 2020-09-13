@@ -58,6 +58,19 @@ namespace KFCConfigurationClasses {
     {
     }
 
+    WebServerTypes::ModeType System::Flags::ConfigFlags_t::get_webserver_mode(const Type &obj) {
+        return obj.is_web_server_enabled == false ? WebServerTypes::ModeType::DISABLED : (WebServer::getConfig().is_https ? WebServerTypes::ModeType::SECURE : WebServerTypes::ModeType::UNSECURE);
+    }
+    void System::Flags::ConfigFlags_t::set_webserver_mode(Type &obj, WebServerTypes::ModeType mode) {
+        if (mode == WebServerTypes::ModeType::DISABLED) {
+            obj.is_web_server_enabled = false;
+        }
+        else {
+            obj.is_web_server_enabled = true;
+            WebServer::getWriteableConfig().is_https = (mode == WebServerTypes::ModeType::SECURE);
+        }
+    }
+
     // "${zeroconf:" service "." proto "," variable "|" default_value "}"
     String createZeroConf(const __FlashStringHelper *service, const __FlashStringHelper *proto, const __FlashStringHelper *varName, const __FlashStringHelper *defaultValue)
     {

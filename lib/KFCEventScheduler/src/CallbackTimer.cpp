@@ -3,6 +3,7 @@
 */
 
 #include <Arduino_compat.h>
+#include <stl_ext/utility.h>
 #include "Event.h"
 #include "CallbackTimer.h"
 #include "EventScheduler.h"

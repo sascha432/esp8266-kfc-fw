@@ -1,9 +1,6 @@
 {
     "name": "KFCWebFramework",
     "version": "0.0.1",
-    "build": {
-        "include": "include"
-    },
     "authors": {
         "name": "sascha lammers",
         "maintainer": true

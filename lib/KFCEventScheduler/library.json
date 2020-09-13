@@ -1,7 +1,6 @@
 {
     "name": "KFCEventScheduler",
     "version": "0.0.1",
-    "include": "lib/KFCEventScheduler",
     "authors":
     {
       "name": "sascha lammers",

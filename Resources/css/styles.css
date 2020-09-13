@@ -403,3 +403,7 @@
 .light-sensor-value {
     font-size: 1rem;
 }
+
+.form-help-block {
+    display: none;
+}

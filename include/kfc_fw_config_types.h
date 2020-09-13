@@ -46,3 +46,15 @@ enum class SyslogProtocolType : uint8_t {
     FILE,
     MAX
 };
+
+namespace WebServerTypes {
+
+    enum class ModeType : uint8_t {
+        MIN = 0,
+        DISABLED = 0,
+        UNSECURE,
+        SECURE,
+        MAX
+    };
+
+}

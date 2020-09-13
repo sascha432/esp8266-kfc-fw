@@ -8,7 +8,7 @@
 #if WEBSERVER_SUPPORT
 
 #ifndef DEBUG_WEB_SERVER
-#define DEBUG_WEB_SERVER 0
+#define DEBUG_WEB_SERVER                    0
 #endif
 
 #include <Arduino_compat.h>

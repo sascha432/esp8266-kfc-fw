@@ -153,6 +153,7 @@ namespace Config_QuickConnect
         return false; \
     }
 
+
 #define _H_STRUCT_VALUE_TYPE(name, field, type, ...) \
     config._H_GET(name).field, [__VA_ARGS__](const type &value, FormField &, bool store) { \
         if (store) { \

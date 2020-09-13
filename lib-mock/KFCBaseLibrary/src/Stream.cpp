@@ -24,6 +24,13 @@ void Stream::setTimeout(unsigned long timeout)
 
 size_t Stream::size() const 
 {
+    if (_fp) {
+        auto pos = ftell(_fp);
+        fseek(_fp, 0, SEEK_END);
+        auto size = ftell(_fp);
+        fseek(_fp, pos, SEEK_SET);
+        return size;
+    }
     return _fp_size;
 }
 

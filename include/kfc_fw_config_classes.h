@@ -14,7 +14,10 @@
 #include <push_pack.h>
 
 #include <kfc_fw_config_types.h>
+
+#if IOT_DIMMER_MODULE || DEBUG_4CH_DIMMER
 #include "../src/plugins/dimmer_module/firmware_protocol.h"
+#endif
 
 class Form;
 class FormLengthValidator;
@@ -95,29 +98,60 @@ namespace ConfigurationHelper {
 #define CREATE_STRING_GETTER_SETTER_BINARY(class_name, name, len) \
     static constexpr size_t k##name##MaxSize = len; \
     static constexpr HandleType k##name##ConfigHandle = CONFIG_GET_HANDLE_STR(_STRINGIFY(class_name) "." _STRINGIFY(name)); \
-    static size_t get##name##Size() { return k##name##MaxSize; } \
-    static const uint8_t *get##name() { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_GET); return loadBinaryConfig(k##name##ConfigHandle, k##name##MaxSize); } \
-    static void set##name(const uint8_t *data) { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_SET); storeBinaryConfig(k##name##ConfigHandle, data, k##name##MaxSize); }
+    static inline size_t get##name##Size() { return k##name##MaxSize; } \
+    static inline const uint8_t *get##name() { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_GET); return loadBinaryConfig(k##name##ConfigHandle, k##name##MaxSize); } \
+    static inline void set##name(const uint8_t *data) { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_SET); storeBinaryConfig(k##name##ConfigHandle, data, k##name##MaxSize); }
 
 #define CREATE_STRING_GETTER_SETTER(class_name, name, len) \
     static constexpr size_t k##name##MaxSize = len; \
     static constexpr HandleType k##name##ConfigHandle = CONFIG_GET_HANDLE_STR(_STRINGIFY(class_name) "." _STRINGIFY(name)); \
-    static const char *get##name() { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_GET); return loadStringConfig(k##name##ConfigHandle); } \
-    static char *getWriteable##name() { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_GET); return loadWriteableStringConfig(k##name##ConfigHandle, k##name##MaxSize); } \
-    static void set##name(const char *str) { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_SET); storeStringConfig(k##name##ConfigHandle, str); } \
-    static void set##name##CStr(const char *str) { set##name(str); } \
-    static void set##name(const __FlashStringHelper *str) { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_SET); storeStringConfig(k##name##ConfigHandle, str); } \
-    static void set##name(const String &str) { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_SET); storeStringConfig(k##name##ConfigHandle, str); }
+    static inline const char *get##name() { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_GET); return loadStringConfig(k##name##ConfigHandle); } \
+    static inline char *getWriteable##name() { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_GET); return loadWriteableStringConfig(k##name##ConfigHandle, k##name##MaxSize); } \
+    static inline void set##name(const char *str) { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_SET); storeStringConfig(k##name##ConfigHandle, str); } \
+    static inline void set##name(const __FlashStringHelper *str) { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_SET); storeStringConfig(k##name##ConfigHandle, str); } \
+    static inline void set##name(const String &str) { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_SET); storeStringConfig(k##name##ConfigHandle, str); }
 
 #define CREATE_STRING_GETTER_SETTER_MIN_MAX(class_name, name, mins, maxs) \
-    static FormLengthValidator &add##name##LengthValidator(Form &form, bool allowEmpty = false) { \
+    static inline FormLengthValidator &add##name##LengthValidator(Form &form, bool allowEmpty = false) { \
         return form.addValidator(FormLengthValidator(k##name##MinSize, k##name##MaxSize, allowEmpty)); \
     } \
-    static FormLengthValidator &add##name##LengthValidator(const String &message, Form &form, bool allowEmpty = false) { \
+    static inline FormLengthValidator &add##name##LengthValidator(const String &message, Form &form, bool allowEmpty = false) { \
         return form.addValidator(FormLengthValidator(message, k##name##MinSize, k##name##MaxSize, allowEmpty)); \
     } \
     static constexpr size_t k##name##MinSize = mins; \
     CREATE_STRING_GETTER_SETTER(class_name, name, maxs)
+
+#define CREATE_BITFIELD_TYPE_MIN_MAX(name, size, type, min_value, max_value, default_value) \
+    static inline FormRangeValidator &addRangeValidatorFor_##name(Form &form, bool allowZero = false) { \
+        return form.addValidator(FormRangeValidator((long)kMinValueFor_##name, (long)kMaxValueFor_##name, allowZero)); \
+    } \
+    static inline FormRangeValidator &addRangeValidatorFor_##name(const String &message, Form &form, bool allowZero = false) { \
+        return form.addValidator(FormRangeValidator(message, (long)kMinValueFor_##name, (long)kMaxValueFor_##name, allowZero)); \
+    } \
+    static constexpr type kMinValueFor_##name = min_value; \
+    static constexpr type kMaxValueFor_##name = max_value; \
+    static constexpr type kDefaultValueFor_##name = default_value; \
+    static_assert(min_value >= 0 && min_value < (1U << size), "min_value value out of range (" _STRINGIFY(size) " bits)"); \
+    static_assert(max_value >= 0 && max_value < (1U << size), "max_value value out of range (" _STRINGIFY(size) " bits)"); \
+    static_assert(default_value == 0 || (default_value >= min_value && default_value <= max_value), "default_value value out of range"); \
+    static_assert(min_value >= std::numeric_limits<long>::min() && min_value <= std::numeric_limits<long>::max(), "min_value value out of range (type long)"); \
+    static_assert(max_value >= std::numeric_limits<long>::min() && max_value <= std::numeric_limits<long>::max(), "max_value value out of range (type long)"); \
+    CREATE_BITFIELD_TYPE(name, size, type, bits)
+
+#define CREATE_BOOL_BITFIELD_MIN_MAX(name, min_value, max_value, default_value) \
+    CREATE_BITFIELD_TYPE_MIN_MAX(name, 1, bool, min_value, max_value, default_value)
+
+#define CREATE_UINT8_BITFIELD_MIN_MAX(name, size, min_value, max_value, default_value) \
+    CREATE_BITFIELD_TYPE_MIN_MAX(name, size, uint8_t, min_value, max_value, default_value)
+
+#define CREATE_UINT16_BITFIELD_MIN_MAX(name, size, min_value, max_value, default_value) \
+    CREATE_BITFIELD_TYPE_MIN_MAX(name, size, uint16_t, min_value, max_value, default_value)
+
+#define CREATE_UINT32_BITFIELD_MIN_MAX(name, size, min_value, max_value, default_value) \
+    CREATE_BITFIELD_TYPE_MIN_MAX(name, size, uint32_t, min_value, max_value, default_value)
+
+#define CREATE_UINT64_BITFIELD_MIN_MAX(name, size, min_value, max_value, default_value) \
+    CREATE_BITFIELD_TYPE_MIN_MAX(name, size, uint64_t, min_value, max_value, default_value)
 
 #define CREATE_GETTER_SETTER_IP(class_name, name) \
     static constexpr HandleType k##name##ConfigHandle = CONFIG_GET_HANDLE_STR(_STRINGIFY(class_name) "." _STRINGIFY(name)); \
@@ -126,10 +160,10 @@ namespace ConfigurationHelper {
 
 #define CREATE_IPV4_ADDRESS(name) \
     uint32_t name; \
-    static void set_ipv4_##name(Type &obj, const IPAddress &addr) { \
+    static inline void set_ipv4_##name(Type &obj, const IPAddress &addr) { \
         obj.name = static_cast<uint32_t>(addr); \
     } \
-    static IPAddress get_ipv4_##name(const Type &obj) { \
+    static inline IPAddress get_ipv4_##name(const Type &obj) { \
         return obj.name; \
     }
 
@@ -319,6 +353,8 @@ namespace KFCConfigurationClasses {
                     obj.is_station_mode_enabled = (mode & WIFI_STA) == WIFI_STA;
                     obj.is_softap_enabled = (mode & WIFI_AP) == WIFI_AP;
                 }
+                static WebServerTypes::ModeType get_webserver_mode(const Type &obj);
+                static void set_webserver_mode(Type &obj, WebServerTypes::ModeType mode);
 
                 template<class T>
                 void dump() {
@@ -453,13 +489,7 @@ namespace KFCConfigurationClasses {
 
         class WebServerConfig {
         public:
-            enum class ModeType : uint8_t {
-                MIN = 0,
-                DISABLED = 0,
-                UNSECURE,
-                SECURE,
-                MAX
-            };
+            using ModeType = WebServerTypes::ModeType;
 
             AUTO_DEFAULT_PORT_CONST_SECURE(0, 80, 443);
 
@@ -476,8 +506,10 @@ namespace KFCConfigurationClasses {
         class WebServer : public WebServerConfig, public ConfigGetterSetter<WebServerConfig::WebServerConfig_t, _H(MainConfig().system.webserver.cfg) CIF_DEBUG(, &handleNameWebServerConfig_t)> {
         public:
             static void defaults();
+
             static ModeType getMode();
             static void setMode(ModeType mode);
+
         };
 
         Flags flags;
@@ -1225,9 +1257,9 @@ namespace KFCConfigurationClasses {
                 using Type = BlindsConfigOperation_t;
 
                 uint16_t delay;                                     // delay before execution in seconds
-                CREATE_ENUM_BITFIELD(type, OperationType);          // action
+                OperationType type;                                 // action
 
-                BlindsConfigOperation_t() : delay(0), type(0) {}
+                BlindsConfigOperation_t() : delay(0), type(OperationType::NONE) {}
 
                 template<typename Archive>
                 void serialize(Archive & ar, kfc::serialization::version version){
@@ -1243,7 +1275,7 @@ namespace KFCConfigurationClasses {
                 uint16_t current_limit_time;        // ms
                 uint16_t open_time;                 // ms
                 uint16_t close_time;                // ms
-                uint16_t dac_current_limit;                 // 0-1023
+                uint16_t dac_current_limit;         // 0-1023
 
                 BlindsConfigChannel_t();
 
@@ -1335,54 +1367,54 @@ namespace KFCConfigurationClasses {
             typedef struct __attribute__packed__ DimmerConfig_t {
                 using Type = DimmerConfig_t;
                 register_mem_cfg_t fw;
-                float on_off_fade_time;
-                float fade_time;
-                bool config_valid;
             #if IOT_ATOMIC_SUN_V2
                 int8_t channel_mapping[4];
             #endif
-
+                float on_fadetime;
+                float off_fadetime;
+                float lp_fadetime;
             #if IOT_DIMMER_MODULE_HAS_BUTTONS
-                uint16_t shortpress_time;
-                uint16_t longpress_time;
-                uint16_t single_click_time;
-                uint8_t min_brightness;
-                uint8_t shortpress_steps;
-                uint8_t longpress_max_brightness;
-                uint8_t longpress_min_brightness;
-                float longpress_fadetime;
-                uint8_t pins_inverted;
-                static_assert(IOT_DIMMER_MODULE_CHANNELS * 2 <= 8, "limited to 8 buttons, change pins_inverted to uint16_t for 16 etc...");
-            #if IOT_DIMMER_MODULE_CHANNELS
-                uint8_t pins[IOT_DIMMER_MODULE_CHANNELS * 2];
-            #endif
-            #endif
+                CREATE_UINT32_BITFIELD_MIN_MAX(config_valid, 1, 0, 1, false);                               // bits 00:00 ofs:len 000:01 0-0x0001 (1)
+                CREATE_UINT32_BITFIELD_MIN_MAX(off_delay, 9, 0, 480, 0);                                    // bits 01:09 ofs:len 001:09 0-0x01ff (511)
+                CREATE_UINT32_BITFIELD_MIN_MAX(off_delay_signal, 1, 0, 1, false);                           // bits 10:10 ofs:len 010:01 0-0x0001 (1)
+                CREATE_UINT32_BITFIELD_MIN_MAX(pin_ch0_down_inverted, 1, 0, 1, false);                      // bits 11:11 ofs:len 011:01 0-0x0001 (1)
+                CREATE_UINT32_BITFIELD_MIN_MAX(pin_ch0_up, 5, 0, 16, 4);                                    // bits 12:16 ofs:len 012:05 0-0x001f (31)
+                CREATE_UINT32_BITFIELD_MIN_MAX(pin_ch0_up_inverted, 1, 0, 1, false);                        // bits 17:17 ofs:len 017:01 0-0x0001 (1)
+                CREATE_UINT32_BITFIELD_MIN_MAX(single_click_time, 14, 500, 16000, 750);                     // bits 18:31 ofs:len 018:14 0-0x3fff (16383)
+                CREATE_UINT32_BITFIELD_MIN_MAX(longpress_time, 12, 250, 4000, 1000);                        // bits 00:11 ofs:len 032:12 0-0x0fff (4095)
+                CREATE_UINT32_BITFIELD_MIN_MAX(min_brightness, 7, 0, 50, 15);                               // bits 12:18 ofs:len 044:07 0-0x007f (127)
+                CREATE_UINT32_BITFIELD_MIN_MAX(pin_ch0_down, 5, 0, 16, 13);                                 // bits 19:23 ofs:len 051:05 0-0x001f (31)
+                CREATE_UINT32_BITFIELD_MIN_MAX(shortpress_steps, 7, 4, 50, 15);                             // bits 24:30 ofs:len 056:07 0-0x007f (127)
+                uint32_t __free2: 1;                                                                        // bits 31:31 ofs:len 063:01 0-0x0001 (1)
+                CREATE_UINT32_BITFIELD_MIN_MAX(longpress_max_brightness, 7, 20, 100, 80);                   // bits 00:06 ofs:len 064:07 0-0x007f (127)
+                CREATE_UINT32_BITFIELD_MIN_MAX(longpress_min_brightness, 7, 0, 80, 33);                     // bits 07:13 ofs:len 071:07 0-0x007f (127)
+                CREATE_UINT32_BITFIELD_MIN_MAX(max_brightness, 7, 50, 100, 100);                            // bits 14:20 ofs:len 078:07 0-0x007f (127)
+                CREATE_UINT32_BITFIELD_MIN_MAX(shortpress_time, 10, 100, 1000, 275);                        // bits 21:30 ofs:len 085:10 0-0x03ff (1023)
+                uint32_t __free3: 1;                                                                        // bits 31:31 ofs:len 095:01 0-0x0001 (1)
 
-                bool getInverted(uint8_t pin) const {
-                    return pins_inverted & (1 << pin);
+                uint8_t pin(uint8_t idx) const {
+                    return pin(idx / 2, idx % 2);
                 }
-                void setInverted(uint8_t pin, bool inverted) {
-                    uint8_t mask = (1 << pin);
-                    if (inverted) {
-                        pins_inverted |= mask;
+                uint8_t pin(uint8_t channel, uint8_t button) const {
+                    switch(channel<<4|button) {
+                        case 0x00: return pin_ch0_up;
+                        case 0x01: return pin_ch0_down;
                     }
-                    else {
-                        pins_inverted &= ~mask;
+                    return 0xff;
+                }
+                uint8_t pin_inverted(uint8_t idx) const {
+                    return pin_inverted(idx / 2, idx % 2);
+                }
+                bool pin_inverted(uint8_t channel, uint8_t button) const {
+                    switch(channel<<4|button) {
+                        case 0x00: return pin_ch0_up_inverted;
+                        case 0x01: return pin_ch0_down_inverted;
                     }
+                    return 0xff;
                 }
-
-                static bool get_inverted_pin0(const DimmerConfig_t &cfg) {
-                    return cfg.getInverted(0);
-                }
-                static void set_inverted_pin0(DimmerConfig_t &cfg, bool inverted) {
-                    return cfg.setInverted(0, inverted);
-                }
-                static bool get_inverted_pin1(const DimmerConfig_t &cfg) {
-                    return cfg.getInverted(1);
-                }
-                static void set_inverted_pin1(DimmerConfig_t &cfg, bool inverted) {
-                    return cfg.setInverted(1, inverted);
-                }
+            #else
+                CREATE_BOOL_BITFIELD(config_valid);
+            #endif
 
                 DimmerConfig_t();
 

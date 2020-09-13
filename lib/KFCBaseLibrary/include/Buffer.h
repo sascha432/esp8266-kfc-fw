@@ -5,13 +5,10 @@
 #pragma once
 
 #include <Arduino_compat.h>
+#include <stl_ext/type_traits.h>
 
 #ifndef DEBUG_BUFFER
 #define DEBUG_BUFFER                            0
-#endif
-
-#ifndef DEBUG_BUFFER_ALLOC
-#define DEBUG_BUFFER_ALLOC                      0
 #endif
 
 #ifndef BUFFER_ZERO_FILL
@@ -24,12 +21,6 @@
 #else
 #define __DBG_BUFFER_assert(...)
 #define __DBG_BUFFER_asserted(cmp, ...)         __VA_ARGS__
-#endif
-
-#if DEBUG_BUFFER_ALLOC
-#define IF_DEBUG_BUFFER_ALLOC(...)              __VA_ARGS__
-#else
-#define IF_DEBUG_BUFFER_ALLOC(...)
 #endif
 
 class Buffer;
@@ -421,15 +412,6 @@ private:
         return size;
 #endif
     }
-#if DEBUG_BUFFER_ALLOC
-
-public:
-    void dumpAlloc(Print &output);
-
-    uint32_t _realloc;
-    uint32_t _alloc;
-    uint32_t _free;
-#endif
 };
 
 inline size_t Buffer::available() const

@@ -60,14 +60,14 @@ String url_encode(const String &str)
     return out_str;
 }
 
-String printable_string(const uint8_t *buffer, size_t length, size_t maxLength, const char *extra, bool crlfAsText)
+String printable_string(const uint8_t *buffer, size_t length, size_t maxLength, PGM_P extra, bool crlfAsText)
 {
     PrintString str;
     printable_string(str, buffer, length, maxLength, extra, crlfAsText);
     return str;
 }
 
-void printable_string(Print &output, const uint8_t *buffer, size_t length, size_t maxLength, const char *extra, bool crlfAsText)
+void printable_string(Print &output, const uint8_t *buffer, size_t length, size_t maxLength, PGM_P extra, bool crlfAsText)
 {
     if (maxLength) {
         length = std::min(maxLength, length);
@@ -77,16 +77,16 @@ void printable_string(Print &output, const uint8_t *buffer, size_t length, size_
         if (crlfAsText && (*ptr == '\n' || *ptr == '\r')) {
             switch(*ptr) {
                 case '\r':
-                    output.print(F("<CR>"));
+                    output.print(F("<<CR>>"));
                     break;
                 case '\n':
-                    output.println(F("<LF>"));
+                    output.println(F("<<LF>>"));
                     break;
             }
         }
         else if (isprint(*ptr) || (extra && strchr_P(extra, *ptr))) {
             output.print((char)*ptr);
-        } 
+        }
         else {
             output.print('\\');
             switch(*ptr) {
@@ -113,16 +113,18 @@ void printable_string(Print &output, const uint8_t *buffer, size_t length, size_
 
 void append_slash(String &dir)
 {
-    if (dir.length() == 0 || (dir.length() != 0 && dir.charAt(dir.length() - 1) != '/')) {
+    auto len = dir.length();
+    if (len == 0 || (len != 0 && dir.charAt(len - 1) != '/')) {
         dir += '/';
     }
 }
 
 void remove_trailing_slash(String &dir)
 {
-    if (dir.length() && dir.charAt(dir.length() - 1) == '/')
+    auto len = dir.length();
+    if (len && dir.charAt(len - 1) == '/')
     {
-        dir.remove(dir.length() - 1);
+        dir.remove(len - 1);
     }
 }
 
@@ -132,7 +134,7 @@ const __FlashStringHelper *sys_get_temp_dir()
 }
 
 File tmpfile(const String &dir, const String &prefix) {
-    String tmp = dir;
+    auto tmp = dir;
     append_slash(tmp);
     tmp += prefix;
     do {
@@ -421,7 +423,7 @@ size_t str_case_replace(char *src, int from, int to, size_t maxLen)
 
 size_t String_rtrim(String &str)
 {
-    size_t len = str.length();
+    auto len = str.length();
     while (len && isspace(str.charAt(len - 1))) {
         len--;
     }
@@ -453,7 +455,7 @@ size_t String_rtrim(String &str, const char *chars, size_t minLength)
 #endif
         return str.length();
     }
-    size_t len = str.length();
+    auto len = str.length();
     if (len) {
         minLength = len - minLength;
         while (minLength-- && len && strchr(chars, str.charAt(len - 1))) {
@@ -554,7 +556,7 @@ size_t String_rtrim(String &str, char ch, size_t minLength)
 size_t printTrimmedDouble(Print *output, double value, int digits)
 {
     auto str = PrintString(F("%.*f"), digits, value);
-    size_t size = String_rtrim(str, '0', str.indexOf('.') + 2); // min. length dot + 1 char to avoid getting "1." for "1.0000"
+    auto size = String_rtrim(str, '0', str.indexOf('.') + 2); // min. length dot + 1 char to avoid getting "1." for "1.0000"
     if (output) {
         return output->print(str);
     }
@@ -619,6 +621,28 @@ bool String_endsWith(const String &str1, char ch)
     auto len = str1.length();
     return (len != 0) && (str1.charAt(len - 1) == ch);
 }
+
+bool str_endswith(const char *str, char ch)
+{
+    if (!str) {
+        return false;
+    }
+    auto len = strlen(str);
+    return (len != 0) && (str[len - 1] == ch);
+}
+
+#if defined(ESP8266)
+
+bool str_endswith_P(const char *str, char ch)
+{
+    if (!str) {
+        return false;
+    }
+    auto len = strlen_P(str);
+    return (len != 0) && (pgm_read_byte(str + len - 1) == ch);
+}
+
+#endif
 
 int strcmp_end_P(const char *str1, size_t len1, PGM_P str2, size_t len2)
 {

@@ -8,10 +8,8 @@
 
 #if 0
 #include "debug_helper_enable.h"
-#include "debug_helper_enable_mem.h"
 #else
 #include "debug_helper_disable.h"
-#include "debug_helper_disable_mem.h"
 #endif
 
 MoveStringHelper::MoveStringHelper()
@@ -36,7 +34,6 @@ void MoveStringHelper::move(Buffer &buf, String &&_str)
             buf.setLength(str.length());
             // register allocated block
             __LDBG_NOP_malloc(str.wbuffer(), str.capacity());
-            IF_DEBUG_BUFFER_ALLOC(buf._alloc++);
         }
         str.init();
         // str.setSSO(true);
@@ -54,11 +51,6 @@ Buffer::Buffer() :
     _buffer(nullptr),
     _length(0),
     _size(0)
-#if DEBUG_BUFFER_ALLOC
-   ,_realloc(0),
-    _alloc(0),
-    _free(0)
-#endif
 {
 }
 
@@ -66,11 +58,6 @@ Buffer::Buffer(Buffer &&buffer) noexcept :
     _buffer(std::exchange(buffer._buffer, nullptr)),
     _length(std::exchange(buffer._length, 0)),
     _size(std::exchange(buffer._size, 0))
-#if DEBUG_BUFFER_ALLOC
-    ,_realloc(std::exchange(buffer._realloc, 0)),
-    _alloc(std::exchange(buffer._alloc, 0)),
-    _free(std::exchange(buffer._free, 0))
-#endif
 {
 }
 
@@ -84,7 +71,6 @@ Buffer::~Buffer()
     __LDBG_printf("len=%u size=%u ptr=%p this=%p", _length, _size, _buffer, this);
     if (_buffer) {
         __LDBG_free(_buffer);
-        IF_DEBUG_BUFFER_ALLOC(_free++);
     }
     CHECK_MEMORY();
 }
@@ -108,7 +94,6 @@ Buffer &Buffer::operator =(Buffer &&buffer) noexcept
 {
     if (_buffer) {
         __LDBG_free(_buffer);
-        IF_DEBUG_BUFFER_ALLOC(_free++);
     }
     _buffer = buffer._buffer;
     _length = buffer._length;
@@ -116,11 +101,6 @@ Buffer &Buffer::operator =(Buffer &&buffer) noexcept
     buffer._buffer = nullptr;
     buffer._length = 0;
     buffer._size = 0;
-#if DEBUG_BUFFER_ALLOC
-    _realloc = std::exchange(buffer._realloc, 0);
-    _alloc = std::exchange(buffer._alloc, 0);
-    _free = std::exchange(buffer._free, 0);
-#endif
     return *this;
 }
 
@@ -165,7 +145,6 @@ void Buffer::clear()
     // __LDBG_printf("len=%u size=%u ptr=%p", _length, _fp_size, _buffer);
     if (_buffer) {
         __LDBG_free(_buffer);
-        IF_DEBUG_BUFFER_ALLOC(_free++);
         _buffer = nullptr;
     }
     _size = 0;
@@ -181,7 +160,6 @@ void Buffer::move(uint8_t **ptr)
     *ptr = tmp;
     // remove from registered blocks
     __LDBG_NOP_free(tmp);
-    IF_DEBUG_BUFFER_ALLOC(_free++);
 }
 
 void Buffer::setBuffer(uint8_t *buffer, size_t size)
@@ -283,15 +261,6 @@ void Buffer::_remove(size_t index, size_t count)
 #endif
 }
 
-#if DEBUG_BUFFER_ALLOC
-
-void Buffer::dumpAlloc(Print &output)
-{
-    output.printf_P(PSTR("(re-)/alloc/free=%u %u %u len/size=%u"), _realloc, _alloc, _free, length(), size());
-}
-
-#endif
-
 void Buffer::removeAndShrink(size_t index, size_t count, size_t minFree)
 {
     remove(index, count);
@@ -315,7 +284,6 @@ bool Buffer::_changeBuffer(size_t newSize)
                     // __LDBG_printf("alloc failed");
                     return false;
                 }
-                IF_DEBUG_BUFFER_ALLOC(_alloc++);
             }
             else {
                 _buffer = __DBG_realloc_buf(_buffer, resize);
@@ -325,7 +293,6 @@ bool Buffer::_changeBuffer(size_t newSize)
                     _length = 0;
                     return false;
                 }
-                IF_DEBUG_BUFFER_ALLOC(_realloc++);
                 if (_length > newSize) {
                     _length = newSize;
                 }

@@ -36,16 +36,9 @@ void Form::setInvalidMissing(bool invalidMissing)
 
 FormGroup &Form::addGroup(const String &name, const FormUI::Label &label, bool expanded, FormUI::Type type)
 {
-    auto &group = _add(new FormGroup(name, expanded));
+    auto &group = _add<FormGroup>(name, expanded);
     group.setFormUI(&group, type, label);
     return group;
-}
-
-FormField &Form::_add(FormField *field)
-{
-    field->setForm(this);
-    _fields.emplace_back(field);
-    return *_fields.back();
 }
 
 FormUI::UI &Form::addFormUI(FormUI::UI *formUI)
@@ -66,16 +59,6 @@ FormField *Form::getField(const String &name) const
     return nullptr;
 }
 
-FormField &Form::getField(int index) const
-{
-    return *_fields.at(index);
-}
-
-size_t Form::hasFields() const
-{
-    return _fields.size();
-}
-
 void Form::removeValidators()
 {
     for (const auto &field: _fields) {
@@ -83,8 +66,12 @@ void Form::removeValidators()
     }
 }
 
-void Form::clearErrors()
-{
+
+// --------------------------------------------------------------------
+// Form data handling
+//
+
+void Form::clearErrors() {
     _errors.clear();
 }
 
@@ -233,7 +220,7 @@ const char *Form::jsonEncodeString(const String &str, PrintInterface &output)
 void Form::createJavascript(PrintInterface &output)
 {
     if (!isValid()) {
-        __LDBG_printf(PSTR("errors=%d"), _errors.size());
+        __LDBG_printf("errors=%d", _errors.size());
         output.printf_P(PSTR("<script>" FORMUI_CRLF "$.formValidator.addErrors("));
         uint16_t idx = 0;
         for (auto &error: _errors) {

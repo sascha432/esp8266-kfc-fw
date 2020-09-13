@@ -8,8 +8,6 @@
 #include <vector>
 #include "FormUI.h"
 
-#include <push_pack.h>
-
 class Form;
 class FormValidator;
 
@@ -73,7 +71,7 @@ public:
     /**
     * Returns the value of the initialized field or changes the user submitted
     **/
-    const String &getValue();
+    const String &getValue() const;
 
     /**
     * Initialize the value of the field. Should only be used in the constructor.
@@ -105,6 +103,9 @@ public:
     }
 
     FormUI::UI &setFormUI(FormUI::UI *formUI);
+    FormUI::UI *getFormUI() const {
+        return _formUI;
+    }
 
     FormUI::Type getFormType() const;
     void html(PrintInterface &output);
@@ -190,5 +191,3 @@ public:
         _expanded = expanded;
     }
 };
-
-#include <pop_pack.h>

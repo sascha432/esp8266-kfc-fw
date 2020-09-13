@@ -12,7 +12,6 @@
 #include <functional>
 #include <type_traits>
 #include <utility>
-#include <array_of.h>
 #include <float.h>
 #include <limits.h>
 
@@ -31,45 +30,7 @@ PROGMEM_READ_ALIGNED_CHUNK(var)
 #endif
 
 class String;
-typedef std::vector<String> StringVector;
-
-// #if !_WIN32
-
-// // adds nconcat(c_str, max_len), for example to append a byte array to the string that isnt null terminated
-// class StringEx : public String {
-// public:
-//     StringEx() : String() {
-//     }
-//     StringEx(const String &str) : String(str) {
-//     }
-//     StringEx(const char *cstr, size_t alen) : String() {
-//         if (!reserve(alen)) {
-//             invalidate();
-//         } else {
-// #if defined(ARDUINO_ESP8266_RELEASE_2_5_2) || defined(ARDUINO_ESP8266_RELEASE_2_6_3)
-//             setLen(alen);
-// #else
-//             len = alen;
-// #endif
-// #if ESP32
-//             strncpy(buffer, cstr, alen)[alen] = 0;
-// #else
-//             strncpy(begin(), cstr, alen)[alen] = 0;
-// #endif
-//         }
-//     }
-
-//     // void nconcat(const char *cstr, size_t alen) {
-//     //     if (!reserve(start_length() + alen)) {
-//     //         invalidate();
-//     //     } else {
-//     //         setLen(start_length() + alen);
-//     //         strncpy(begin() + start_length(), cstr, alen)[alen] = 0;
-//     //     }
-//     // }
-// };
-
-// #endif
+using StringVector = std::vector<String>;
 
 // pretty format for bytes and unix time
 String formatBytes(size_t bytes);
@@ -93,15 +54,6 @@ const __FlashStringHelper *sys_get_temp_dir();
 File tmpfile(const String &dir, const String &prefix);
 
 String WiFi_disconnect_reason(WiFiDisconnectReason reason);
-
-// copy data without NUL to a string object. truncated at len or first NUL
-// NOTE src must not be a pointer
-#define STRNCPY_TO_STRING(dst, src, src_len)    { \
-        char buffer[sizeof(src) + 1]; \
-        IF_DEBUG(if (src_len > sizeof(src) { debug_println("STRNCPY_TO_STRING(): len > sizeof(src)"); panic(); })); \
-        strncpy(buffer, (char *)src, src_len)[src_len] = 0; \
-        dst = buffer; \
-    }
 
 size_t _printMacAddress(const uint8_t *mac, Print &output, char separator = ':');
 
@@ -152,6 +104,20 @@ template<typename Tl, typename Tf, typename Tc>
 inline int stringlist_find_P_P(Tl list, Tf find, Tc separator) {
     return stringlist_find_P_P(reinterpret_cast<PGM_P>(list), reinterpret_cast<PGM_P>(find), separator);
 }
+
+bool str_endswith(const char *str, char ch);
+
+#if defined(ESP8266)
+
+bool str_endswith_P(const char *str, char ch);
+
+#else
+
+static inline bool str_endswith_P(const char *str, char ch) {
+    return str_endswith(str, ch);
+}
+
+#endif
 
 // compare two PROGMEM strings
 int strcmp_P_P(PGM_P str1, PGM_P str2);
@@ -504,8 +470,8 @@ namespace split {
     void split_P(const FPStr &str, const FPStr &sep, AddItemCallback callback, int flags = SplitFlagsType::EMPTY, uint16_t limit = UINT16_MAX);
 };
 
-template<class G, class C>
-String implode(G glue, const C &pieces, uint32_t max = (uint32_t)~0) {
+template<typename _Ta, typename _Tb>
+String implode(_Ta glue, const _Tb &pieces, size_t max = ~0) {
     String tmp;
     if (max-- && pieces.begin() != pieces.end()) {
         auto iterator = pieces.begin();
@@ -518,8 +484,8 @@ String implode(G glue, const C &pieces, uint32_t max = (uint32_t)~0) {
     return tmp;
 }
 
-template<class G, class C, class CB>
-String implode_cb(G glue, const C &pieces, CB toString, uint32_t max = (uint32_t)~0) {
+template<typename _Ta, typename _Tb, typename _Tc>
+String implode_cb(_Ta glue, const _Tb &pieces, _Tc toString, size_t max = ~0) {
     String tmp;
     if (max-- && pieces.begin() != pieces.end()) {
         auto iterator = pieces.begin();
@@ -750,62 +716,4 @@ inline uint32_t createIPv4Address(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
 #define CREATE_UINT8_BITFIELD(name, size)                   CREATE_BITFIELD_TYPE(name, size, uint8_t, bits)
 #define CREATE_UINT16_BITFIELD(name, size)                  CREATE_BITFIELD_TYPE(name, size, uint16_t, bits)
 #define CREATE_UINT32_BITFIELD(name, size)                  CREATE_BITFIELD_TYPE(name, size, uint32_t, bits)
-
-namespace std {
-
-    template<typename Ta, typename Tb, typename Tr = typename std::common_type<typename std::make_unsigned<Ta>::type, typename std::make_unsigned<Tb>::type>::type>
-    constexpr Tr max_unsigned(Ta a, Tb b) {
-        return max(static_cast<Tr>(b), static_cast<Tr>(b));
-    }
-
-    template<typename Ta, typename Tb, typename Tr = typename std::common_type<typename std::make_signed<Ta>::type, typename std::make_signed<Tb>::type>::type>
-    constexpr Tr max_signed(Ta a, Tb b) {
-        return max(static_cast<Tr>(b), static_cast<Tr>(b));
-    }
-
-    template<typename Ta, typename Tb, typename Tr = typename std::common_type<typename std::make_unsigned<Ta>::type, typename std::make_unsigned<Tb>::type>::type>
-    constexpr Tr min_unsigned(Ta a, Tb b) {
-        return min(static_cast<Tr>(b), static_cast<Tr>(b));
-    }
-
-    template<typename Ta, typename Tb, typename Tr = typename std::common_type<typename std::make_signed<Ta>::type, typename std::make_signed<Tb>::type>::type>
-    constexpr Tr min_signed(Ta a, Tb b) {
-        return min(static_cast<Tr>(b), static_cast<Tr>(b));
-    }
-
-    template<typename Ta, typename Tb, typename Tc, typename Tr = typename std::common_type<typename std::make_unsigned<Ta>::type, typename std::make_unsigned<Tb>::type, typename std::make_unsigned<Tc>::type>::type>
-    constexpr Tr clamp_unsigned(Ta v, Tb lo, Tc hi)
-    {
-        return (static_cast<Tr>(v) < static_cast<Tr>(lo)) ? static_cast<Tr>(lo) : (static_cast<Tr>(hi) < static_cast<Tr>(v)) ? static_cast<Tr>(hi) : static_cast<Tr>(v);
-    }
-
-    template<typename Ta, typename Tb, typename Tc, typename Tr = typename std::common_type<typename std::make_signed<Ta>::type, typename std::make_signed<Tb>::type, typename std::make_signed<Tc>::type>::type>
-    constexpr Tr clamp_signed(Ta v, Tb lo, Tc hi)
-    {
-        return (static_cast<Tr>(v) < static_cast<Tr>(lo)) ? static_cast<Tr>(lo) : (static_cast<Tr>(hi) < static_cast<Tr>(v)) ? static_cast<Tr>(hi) : static_cast<Tr>(v);
-    }
-
-
-
-    // std::vector<std:unique_ptr<Test>> _timers;
-    // Test *timer;
-    // auto iterator = std::find_if(_timers.begin(), _timers.end(), std::compare_unique_ptr(timer));
-
-    template <class Ta>
-    class compare_unique_ptr_function : public unary_function<Ta, bool>
-    {
-    protected:
-        Ta *_ptr;
-    public:
-        explicit compare_unique_ptr_function(Ta *ptr) : _ptr(ptr) {}
-        bool operator() (const unique_ptr<Ta> &obj) const {
-            return obj.get() == _ptr;
-        }
-    };
-
-    template <class Ta>
-    static inline compare_unique_ptr_function<Ta> compare_unique_ptr(Ta *ptr) {
-        return compare_unique_ptr_function<Ta>(ptr);
-    }
-
-}
+#define CREATE_UINT64_BITFIELD(name, size)                  CREATE_BITFIELD_TYPE(name, size, uint64_t, bits)

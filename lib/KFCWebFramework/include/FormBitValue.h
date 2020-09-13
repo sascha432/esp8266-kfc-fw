@@ -10,9 +10,15 @@
 #define FormBitValue_UNSET_ALL 0    // static const T FormBitValue<T, N>::UNSET_ALL = 0;
 
 template <typename T, size_t N>
-class FormBitValue : public FormValue<T> {
+class FormBitValue : public FormValuePointer<T> {
 public:
-    FormBitValue(const String &name, T *value, std::array<T, N> bitmask, FormField::Type type = FormField::Type::SELECT) : FormValue<T>(name, value, type), _bitmask(bitmask) {
+    using VarType = typename FormValuePointer<T>::VarType;
+
+public:
+    FormBitValue(const String &name, VarType *value, std::array<T, N> bitmask, FormField::Type type = FormField::Type::SELECT) :
+        FormValuePointer<T>(name, value, type),
+        _bitmask(bitmask)
+    {
         FormField::initValue(String(_convertToValue(*value)));
     }
 

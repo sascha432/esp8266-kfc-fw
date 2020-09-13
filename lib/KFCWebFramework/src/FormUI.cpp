@@ -18,7 +18,8 @@ namespace FormUI {
 
     const char *Config::encodeHtmlEntities(const char *cStr, bool attribute)
     {
-        if (pgm_read_byte(cStr) == 0xff) {
+        uint8_t byte = pgm_read_byte(cStr);
+        if (byte == 0xff || byte == '<') { // marker for html
             return strings().attachString(cStr) + 1;
         }
 
@@ -32,135 +33,67 @@ namespace FormUI {
         return strings().attachString(cStr);
     }
 
-    StringPairList::StringPairList(Config &ui, const ItemsList &items)
+    void UI::_addItem(const CheckboxButtonSuffix &suffix)
     {
-        reserve(items.size());
-		for(const auto &item : items) {
-            emplace_back(ui.strings().attachString(item.first), ui.encodeHtmlEntities(item.second, false));
-        }
-    }
-
-
-    UI *UI::setBoolItems()
-    {
-        return setBoolItems(FSPGM(Enabled), FSPGM(Disabled));
-    }
-
-    UI *UI::setBoolItems(const String &enabled, const String &disabled)
-    {
-        _setItems(ItemsList(0, disabled, 1, enabled));
-        return this;
-    }
-
-    UI *UI::addItems(const ItemsList &items)
-    {
-        _setItems(items);
-        return this;
-    }
-
-    UI *UI::setSuffix(const String &suffix)
-    {
-        _suffix = _parent->getFormUIConfig().strings().attachString(suffix);
-        return this;
-    }
-
-    UI *UI::setPlaceholder(const String &placeholder)
-    {
-        addAttribute(FSPGM(placeholder), placeholder);
-        return this;
-    }
-
-    UI *UI::setMinMax(const String &min, const String &max)
-    {
-        addAttribute(FSPGM(min), min);
-        addAttribute(FSPGM(max), max);
-        return this;
-    }
-
-    void UI::_printAttributeTo(PrintInterface &output) const
-    {
-        if (_attributesVector.empty()) {
-            output.printf_P(PSTR(">"));
-        }
-        else {
-            auto iterator = _attributesVector.begin();
-            auto end = _attributesVector.end() - 1;
-            for(; iterator != end; ++iterator) {
-                output.printf_P(PSTR(" %s=\"%s\""), iterator->first, iterator->second);
+        auto size = suffix._items.size();
+        ItemsStorage::CStrVector _vector(size);
+        auto ptr = _vector.data();
+        for (auto &str : suffix._items) {
+            if (--size == 0) {
+                *ptr++ = encodeHtmlEntities(str);
             }
-            output.printf_P(PSTR(" %s=\"%s\">"), iterator->first, iterator->second);
+            else{
+                *ptr++ = attachString(str);
+            }
         }
+        _storage.push_back(ItemsStorage::StorageType::SUFFIX_HTML, _vector.begin(), _vector.end());
     }
 
-    UI *UI::addAttribute(const __FlashStringHelper *name, const String &value)
+    bool UI::_isSelected(int32_t value) const
     {
-        PrintHtmlEntitiesString tmp(PrintHtmlEntities::Mode::ATTRIBUTE, value);
-        _attributesVector.emplace_back(name, _parent->getFormUIConfig().strings().attachString(tmp));
-
-
-        // _attributes += ' ';
-        // _attributes += name;
-        // _attributes.reserve(_attributes.length() + value.length() + 4);
-        // if (value.length()) {
-        //     _attributes += '=';
-        //     _attributes += '"';
-        //     // append translated value to _attributes
-        //     if (!PrintHtmlEntities::translateTo(value.c_str(), _attributes, true)) {
-        //         _attributes += value; // no translation required, just append value
-        //     }
-        //     _attributes += '"';
-        // }
-        return this;
+        return value == _parent->getValue().toInt();
     }
 
-    UI *UI::addConditionalAttribute(bool cond, const __FlashStringHelper *name, const String &value)
-    {
-        if (cond) {
-            return addAttribute(name, value);
-        }
-        return this;
-    }
-
-    bool UI::_compareValue(const String &value) const
+    bool UI::_compareValue(const char *value) const
     {
         if (_parent->getType() == FormField::Type::TEXT) {
-            return value.equals(_parent->getValue());
+            return String_equals(_parent->getValue().c_str(), value);
         }
         else {
-            return value.toInt() == _parent->getValue().toInt();
+            return String(FPSTR(value)).toInt() == _parent->getValue().toInt();
         }
     }
 
     void UI::_setItems(const ItemsList &items)
     {
-        if (_items) {
-            delete _items;
+        //_storage.erase(std::remove(_storage.begin(), _storage.end(), PointerStorage::Type::OPTION), _storage.end());
+        _storage.reserve(_storage.size() + items.size() * (sizeof(ItemsStorage::Option) + 1));
+		for(const auto &item : items) {
+            const char *value = _attachMixedContainer(item.second, AttachStringAsType::HTML_ENTITIES);
+            if (item.first.isInt()) {
+                _storage.push_back(ItemsStorage::OptionNumKey(item.first.getInt(), value));
+            }
+            else {
+                _storage.push_back(ItemsStorage::Option(_attachMixedContainer(item.first, AttachStringAsType::HTML_ATTRIBUTE), value));
+            }
         }
-        _items = new StringPairList(_parent->getFormUIConfig(), items);
     }
 
-    // const char *UI::_getAttributes()
-    // {
-    //     auto str = _parent->getFormUIConfig().strings().attachString(_attributes);
-    //     return str;
-    // }
-
-    char UI::_hasLabel() const
+    bool UI::_hasLabel() const
     {
-        if (!_label) {
-            return 0;
-        }
-        return pgm_read_byte(_label);
+        return _storage.find(_storage.begin(), _storage.end(), ItemsStorage::isLabel) != _storage.end();
     }
 
-    char UI::_hasSuffix() const
+    bool UI::_hasSuffix() const
     {
-        if (!_suffix) {
-            return 0;
-        }
-        return pgm_read_byte(_suffix);
+        return _storage.find(_storage.begin(), _storage.end(), ItemsStorage::isSuffix) != _storage.end();
     }
 
+    bool UI::_hasAttributes() const
+    {
+        return _storage.find(_storage.begin(), _storage.end(), ItemsStorage::isAttribute) != _storage.end();
+    }
+                
 }
 
 #if !_MSC_VER

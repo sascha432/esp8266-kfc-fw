@@ -16,7 +16,7 @@
 #include "FormStringObject.h"
 
 #ifndef DEBUG_KFC_FORMS
-#define DEBUG_KFC_FORMS         0
+#define DEBUG_KFC_FORMS                             1
 #endif
 
 #if DEBUG_KFC_FORMS
@@ -37,10 +37,8 @@ public:
     using PrintInterface = FormField::PrintInterface;
     using FormFieldPtr = std::unique_ptr<FormField>;
     using FieldsVector = std::vector<FormFieldPtr>;
-    using ErrorsVector = std::vector<FormError> ;
-    using ValidateCallback = std::function<bool(Form &form)> ;
-    using CStringGetter = std::function<const char *()>;
-    using CStringSetter = std::function<void(const char *)>;
+    using ErrorsVector = std::vector<FormError>;
+    using ValidateCallback = std::function<bool(Form &form)>;
 
     Form(FormData *data = nullptr);
 
@@ -49,8 +47,15 @@ public:
     void setInvalidMissing(bool invalidMissing);
 
     FormField *getField(const String &name) const;
-    FormField &getField(int index) const;
-    size_t hasFields() const;
+    FormField &getField(size_t index) const {
+        return *_fields.at(index);
+    }
+    size_t hasFields() const {
+        return _fields.size();
+    }
+    const FieldsVector &getFields() const {
+        return _fields;
+    }
 
     void removeValidators();
 
@@ -142,89 +147,105 @@ public:
     // NOTES:
     // - variable names that fit into the String's SSOSIZE saves a lot memory (ESP8266 length <= 10)
     // - lambda functions as callback requires memory. use a static function whenever possible
-    // - ESP8266/32 accessing packed structures that have been passed as reference or pointer might
-    //   cause an exception cause of unaligend reads/writes. use getter and setters
+    // - ESP8266/ESP32/other ARM arch: accessing packed/unaligned structures by reference or pointer might
+    //   cause an expcetion or undefined behavior. use addPointer/addReference for TriviallyCopyable
+    //   or getter/setters for other objects inside the structure
     //
 
-    // getter and setter for const char *
-    FormField &addCStringGetterSetter(const String &name, CStringGetter getter, CStringSetter setter, FormField::Type type = FormField::Type::TEXT) {
-        return add(name, String(getter()), [setter](const String &str, FormField &, bool store) {
-            if (store) {
-                setter(str.c_str());
-            }
-            return false;
-        }, type);
-    }
 
-    // getter and setters for enum, bitfields etc...
-    // obj must exist until the form object has been deleted
-    template<typename ObjType, typename VarType>
-    FormField &addObjectGetterSetter(const String &name, ObjType &obj, VarType(*getter)(const ObjType &obj), void(*setter)(ObjType &obj, VarType), FormField::Type type = FormField::Type::TEXT) {
-        __LDBG_printf("name=%s value=%s obj=%p", name.c_str(), String(getter(obj)).c_str(), &obj);
-        return add(name, getter(obj), [&obj, setter _IF_DEBUG(, getter)](const VarType &value, FormField &field, bool store) {
-            if (store) {
-                setter(obj, value);
-            }
-            __LDBG_printf("name=%s value=%s obj=%p new_value=%s store=%u", field.getName().c_str(), String(value).c_str(), &obj, String(getter(obj)).c_str(), store);
-            return false;
-        }, type);
-    }
+    // --------------------------------------------------------------------
+    // general add methods
 
-    template<typename ObjType>
-    FormField &addIPGetterSetter(const String &name, ObjType &obj, IPAddress(*getter)(const ObjType &obj), void(*setter)(ObjType &obj, const IPAddress &value), FormField::Type type = FormField::Type::TEXT) {
-        __LDBG_printf("name=%s value=%s obj=%p", name.c_str(), getter(obj).toString().c_str(), &obj);
-        return add(name, getter(obj), [&obj, setter _IF_DEBUG(, getter)](const IPAddress &value, FormField &field, bool store) {
-            if (store) {
-                setter(obj, value);
-            }
-            __LDBG_printf("name=%s value=%s obj=%p new_value=%s store=%u", field.getName().c_str(), value.toString().c_str(), &obj, getter(obj).toString().c_str(), store);
-            return false;
-        }, type);
-    }
-
-    // ESP8266 support for accessing unaligned member variables
-    // obj must exist until the form object has been deleted
-    template<typename ObjType, typename VarType, typename CastVarType = VarType>
-    FormField &addMemberVariable(const String &name, ObjType &obj, VarType ObjType::*memberPtr, FormField::Type type = FormField::Type::TEXT) {
-        __LDBG_printf("name=%s value=%s obj=%p ptr=%p", name.c_str(), String(static_cast<VarType>(obj.*memberPtr)).c_str(), &obj, memberPtr);
-        return add<VarType>(name, static_cast<VarType>(obj.*memberPtr), [&obj, memberPtr](const VarType &value, FormField &field, bool store) {
-            if (store) {
-                obj.*memberPtr = static_cast<CastVarType>(value);
-            }
-            __LDBG_printf("name=%s value=%s obj=%p ptr=%p cast=%s new_value=%s store=%u", field.getName().c_str(), String(static_cast<VarType>(value)).c_str(), &obj, memberPtr, String(static_cast<CastVarType>(value)).c_str(), String(static_cast<VarType>(obj.*memberPtr)).c_str(), store);
-            return false;
-        }, type);
+    template<typename ObjType, typename VarType, typename MemberVarType = std::member_pointer_value_t<VarType typename ObjType:: *>>
+    FormValueCallback<MemberVarType> &add(const String &name, ObjType &obj, VarType ObjType:: *memberPtr, FormField::Type type = FormField::Type::TEXT) {
+        return addMemberVariable<ObjType, VarType, MemberVarType>(name, obj, memberPtr, type);
     }
 
     FormField &add(const String &name, const String &value, FormField::Type type = FormField::Type::TEXT) {
-        return _add(new FormField(name, value, type));
-    }
-
-    FormField &add(const String &name, const String &value, FormStringObject::Callback callback = nullptr, FormField::Type type = FormField::Type::TEXT) {
-        return _add(new FormStringObject(name, value, callback, type));
-    }
-
-    FormField &add(const String &name, String &value, FormField::Type type = FormField::Type::TEXT) {
-        return _add(new FormStringObject(name, value, type));
-    }
-
-    FormField &add(const String &name, const IPAddress &value, typename FormObject<IPAddress>::Callback callback = nullptr, FormField::Type type = FormField::Type::TEXT) {
-        return _add(new FormObject<IPAddress>(name, value, callback, type));
+        return _add<FormField>(name, value, type);
     }
 
     template <typename VarType>
-    FormField &add(const String &name, VarType value, typename FormValue<VarType>::Callback callback = nullptr, FormField::Type type = FormField::Type::SELECT) {
-        return _add(new FormValue<VarType>(name, value, callback, type));
+    FormValueCallback<VarType> &add(const String &name, typename FormValueCallback<VarType>::GetterSetterCallback callback, FormField::Type type = FormField::Type::SELECT) {
+        return addCallbackGetterSetter(name, callback, type);
     }
 
-    template <typename ArrayElementType, size_t kArraySize>
-    FormField &add(const String &name, ArrayElementType *value, std::array<ArrayElementType, kArraySize> bitmask, FormField::Type type = FormField::Type::SELECT) {
-        return _add(new FormBitValue<ArrayElementType, kArraySize>(name, value, bitmask, type));
+    template <typename VarType, typename Callback = typename FormValueCallback<VarType>::SetterCallback>
+    FormValueCallback<VarType> &add(const String &name, VarType value, Callback callback, FormField::Type type = FormField::Type::SELECT) {
+        return _add<FormValueCallback<VarType>>(name, value, callback, type);
+    }
+
+    // this method cannot be used for packed or unaligned structs
+    // see addPointer, addReference and addMemberVariable
+    template <typename VarType>
+    FormValuePointer<VarType> &add(const String &name, VarType *value, FormField::Type type = FormField::Type::SELECT) {
+#if defined(__AVR__) || defined(ESP8266) || defined(ESP32)
+        static_assert(((uintptr_t)value) % sizeof(uintptr_t) == 0, "address not aligned");
+#endif
+        return _add<FormValuePointer<VarType>>(name, value, type);
+    }
+
+    // this method cannot be used for packed or unaligned structs
+    // see addPointer, addReference and addMemberVariable
+    template <typename VarType>
+    FormValuePointer<VarType> &add(const String &name, VarType &value, FormField::Type type = FormField::Type::SELECT) {
+#if defined(__AVR__) || defined(ESP8266) || defined(ESP32)
+        static_assert(((uintptr_t)std::addressof(value)) % sizeof(uintptr_t) == 0, "address not aligned");
+#endif
+        return _add<FormValuePointer<VarType>>(name, reinterpret_cast<VarType *>(std::addressof(value)), type);
+    }
+
+    template <typename ArrayElementType, size_t N>
+    FormBitValue<ArrayElementType, N> &add(const String &name, ArrayElementType *value, std::array<ArrayElementType, N> bitmask, FormField::Type type = FormField::Type::SELECT) {
+        return _add<FormBitValue<ArrayElementType, N>>(name, value, bitmask, type);
     }
 
     template <size_t kMaxSize>
-    FormField &add(const String &name, char *value, FormField::Type type = FormField::Type::TEXT) {
-        return _add(new FormCString(name, value, kMaxSize, type));
+    FormCString &add(const String &name, char *value, FormField::Type type = FormField::Type::TEXT) {
+        return _add<FormCString>(name, value, kMaxSize, type);
+    }
+
+    // getter and setter for char *
+    FormValueCallback<String> &addStringGetterSetter(const String &name, const char *(* getter)(), void(* setter)(const char *), FormField::Type type = FormField::Type::TEXT) {
+        return _add<FormValueCallback<String>>(name, [setter, getter](String &str, FormField &, bool store) {
+            if (store) {
+                setter(str.c_str());
+            }
+            else {
+                str = getter();
+            }
+            return true;
+        }, type);
+    }
+
+    template<typename ObjType, typename VarType>
+    struct ConstRefSetterCallback {
+        using Setter = void(*)(ObjType &obj, const VarType &value);
+        //typedef void(*setter)(ObjType &obj, const VarType &value);
+    };
+    template<typename ObjType, typename VarType>
+    struct PointerSetterCallback {
+        using Setter = void(*)(ObjType &obj, VarType *value);
+        //typedef void(*setter)(ObjType &obj, VarType *value);
+    };
+    template<typename ObjType, typename VarType>
+    struct CopySetterCallback {
+        using Setter = void(*)(ObjType &obj, VarType value);
+        //typedef void(*setter)(ObjType &obj, VarType value);
+    };
+
+
+    template<typename ObjType, typename VarType, typename CallbackType = typename ConstRefSetterCallback<ObjType, VarType>::Setter>
+    FormValueCallback<VarType> &addObjectGetterSetter(const String &name, ObjType &obj, VarType(* getter)(const ObjType &obj), CallbackType setter, FormField::Type type = FormField::Type::TEXT) {
+        return _add<FormValueCallback<VarType>>(name, [&obj, setter, getter](VarType &value, FormField &field, bool store) {
+            if (store) {
+                setter(obj, value);
+            }
+            else {
+                value = getter(obj);
+            }
+            return true;
+        }, type);
     }
 
     // --------------------------------------------------------------------
@@ -248,7 +269,7 @@ public:
         return addGroup(id, label, false, FormUI::Type::GROUP_START_HR);
     }
 
-    // no disible attributes
+    // no visible attributes
     //
     // dependencies field:
     // the string must contain a valid JSON object. ' is replaced with " to avoid too much escaping. use \\' for javascript strings (becomes ")
@@ -259,7 +280,7 @@ public:
     // #group-div-class is the target, #my_input_field: value 0 and 1 hide the div, 2 shows it
     // auto &group = form.addDivGroup(F("group-div-class"), F("{'i':'#my_input_field','s':{'0':'$T.hide()','1':'$T.hide()','2':'$T.show()'}},'m':'alert(\\'Invalid value: \\'+$V)'"));
     FormGroup &addDivGroup(const String &id, const String &dependencies = String()) {
-        return addGroup(id, FormUI::Label(dependencies, true), false, FormUI::Type::GROUP_START_DIV);
+        return addGroup(id, FormUI::RawLabel(dependencies), false, FormUI::Type::GROUP_START_DIV);
     }
 
     // form/field.getFormUIConfig() provides the container id
@@ -270,10 +291,74 @@ public:
         return addGroup(id, label, expanded, FormUI::Type::GROUP_START_CARD);
     }
 
+    // --------------------------------------------------------------------
+    // specialized add methds
+
+#ifndef _MSC_VER
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#endif
+
+   // For accessing unaligned member variables in packed structures
+    template<typename ObjType, typename VarType, typename MemberVarType = std::member_pointer_value_t<VarType typename ObjType::*>>
+    FormValueCallback<MemberVarType> &addMemberVariable(const String &name, ObjType &obj, VarType ObjType:: *memberPtr, FormField::Type type = FormField::Type::TEXT) {
+        static_assert(std::is_trivially_copyable<MemberVarType>::value, "only for TriviallyCopyable");
+        auto objectBegin = reinterpret_cast<uint8_t *>(std::addressof(obj));
+        auto valuePtr = &objectBegin[*(uintptr_t *)&memberPtr];
+        return addPointerTriviallyCopyable<MemberVarType>(name, valuePtr, type);
+    }
+
+    // use addMemberVariable for packed and unaligned structures
+    template<typename VarType>
+    FormValueCallback<VarType> &addReference(const String &name, VarType &valueRef, FormField::Type type = FormField::Type::TEXT) {
+        static_assert(std::is_trivially_copyable<VarType>::value, "only for TriviallyCopyable");
+        return addPointerTriviallyCopyable<VarType>(name, reinterpret_cast<VarType *>(std::addressof(valueRef)), type);
+    }
+
+    // data is copied with memcpy to avoid alignment issues when reading from/writing to unaligned/packed structures
+    // only for TriviallyCopyable
+    template<typename VarType>
+    FormValueCallback<VarType> &addPointerTriviallyCopyable(const String &name, VarType *valuePtr, FormField::Type type = FormField::Type::TEXT) {
+        static_assert(std::is_trivially_copyable<VarType>::value, "only for TriviallyCopyable");
+        auto bytePtr = reinterpret_cast<uint8_t *>(valuePtr);
+        return _add<FormValueCallback<VarType>>(name, [bytePtr](VarType &value, FormField &field, bool store) {
+            __LDBG_printf("size=%u ptr=%p align=%u", sizeof(VarType), bytePtr, ((intptr_t)bytePtr) % 4);
+            // use memcpy to avoid alignment issues
+            if (store) {
+                memcpy(bytePtr, &value, sizeof(VarType));
+            }
+            else {
+                memcpy(&value, bytePtr, sizeof(VarType));
+            }
+            return true;
+        }, type);
+    }
+
+#ifndef _MSC_VER
+#pragma GCC diagnostic pop
+#endif
+
+    template <typename VarType>
+    FormValueCallback<VarType> &addCallbackGetterSetter(const String &name, typename FormValueCallback<VarType>::GetterSetterCallback callback, FormField::Type type = FormField::Type::SELECT) {
+        return _add<FormValueCallback<VarType>>(name, callback, type);
+    }
+
+    template <typename VarType>
+    FormValueCallback<VarType> &addCallbackSetter(const String &name, VarType value, typename FormValueCallback<VarType>::SetterCallback callback, FormField::Type type = FormField::Type::SELECT) {
+        return _add<FormValueCallback<VarType>>(name, value, callback, type);
+    }
+
+    template<class Ta, class ...Args>
+    Ta &_add(Args &&...args) {
+        return reinterpret_cast<Ta &>(__add(new Ta(std::forward<Args>(args)...)));
+    }
+
 private:
-    FormField &_add(FormField *field);
-    FormGroup &_add(FormGroup *field) {
-        return reinterpret_cast<FormGroup &>(_add(reinterpret_cast<FormField *>(field)));
+    inline FormField &__add(FormField *field)
+    {
+        field->setForm(this);
+        _fields.emplace_back(field);
+        return *_fields.back();
     }
 
     const char *jsonEncodeString(const String &str, PrintInterface &out);

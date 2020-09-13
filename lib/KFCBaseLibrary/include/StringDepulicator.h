@@ -7,7 +7,7 @@
 #include "Buffer.h"
 
 #ifndef DEBUG_STRING_DEDUPLICATOR
-#define DEBUG_STRING_DEDUPLICATOR               0
+#define DEBUG_STRING_DEDUPLICATOR               1
 #endif
 
 // object to store and manage strings with deduplication and PROGMEM detection

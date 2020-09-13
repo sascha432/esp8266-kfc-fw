@@ -33,7 +33,7 @@ bool FormData::hasArg(const String &name) const
     return _data.find(name) != _data.end();
 }
 
-void FormData::set(const String &name, const String &value)
+void FormData::setValue(const String &name, const String &value)
 {
     _data[name] = value;
 }

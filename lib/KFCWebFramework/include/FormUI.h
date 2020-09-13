@@ -20,312 +20,149 @@
 #define FORMUI_CRLF ""
 #endif
 
-class Form;
-class FormField;
-class PrintInterface;
+#include "FormUIStorage.h"
 
 namespace FormUI {
 
-	using ItemPair = std::pair<String, String>;
-	using ItemsListVector = std::vector<ItemPair>;
-
-	class ItemsList : public ItemsListVector {
-	public:
-		ItemsList() : ItemsListVector() {}
-
-		ItemsList &operator=(const ItemsList &items) {
-			clear();
-			reserve(items.size());
-			for (const auto &item : items) {
-				ItemsListVector::push_back(item);
-			}
-			return *this;
-		}
-
-		ItemsList &operator=(ItemsList &&items) noexcept {
-			ItemsListVector::swap(items);
-			return *this;
-		}
-
-		// pass key value pairs as arguments
-		// everything that can be converted to String() including enum class
-		template <typename... Args>
-		ItemsList(Args &&... args) : ItemsListVector() {
-			static_assert(sizeof ... (args) % 2 == 0, "invalid number of pairs");
-			reserve((sizeof ... (args)) / 2);
-			_addAll(args...);
-		}
-
-		template <typename Ta, typename Tb>
-		void push_back(const Ta &key, const Tb &val) {
-			ItemsListVector::emplace_back(_enumConverter(key), _enumConverter(val));
-		}
-
-		template <typename Ta, typename Tb>
-		void emplace_back(Ta &&key, Tb &&val) {
-			ItemsListVector::emplace_back(_enumConverter(std::move(key)), _enumConverter(std::move(val)));
-		}
-
-		void emplace_back_pair(const String &key, const String &val) {
-			ItemsListVector::emplace_back(key, val);
-		}
-
-		void emplace_back_pair(int key, int val) {
-			ItemsListVector::emplace_back(String(key), String(val));
-		}
-
-		void dump(Print &output) {
-			for (const auto &item : *this) {
-				output.print(item.first);
-				output.print('=');
-				output.println(item.second);
-			}
-		}
-
-	private:
-		void _addAll() {
-		}
-
-		template <typename T, typename std::enable_if<std::is_enum<T>::value, int>::type = 0>
-		String _enumConverter(const T &t) {
-			return String(static_cast<typename std::underlying_type<T>::type>(t));
-		}
-
-		template <typename T, typename std::enable_if<!std::is_enum<T>::value, int>::type = 0>
-		String _enumConverter(const T &t) {
-			return String(t);
-		}
-
-		template <typename T>
-		T &&_enumConverter(T &&t) {
-			return t;
-		}
-
-		template <typename Ta, typename Tb, typename... Args>
-		void _push(const Ta &key, const Tb &val, Args &&... args) {
-			push_back(key, val);
-			_addAll(args...);
-		}
-
-		template <typename T, typename... Args>
-		void _addAll(const T &t, Args &&... args) {
-			_push(t, args...);
-		}
-
-	};
-
-	using StringPairListVector = std::vector<std::pair<const char *, const char *>>;
-
-	class StringPairList : public StringPairListVector
-	{
-	public:
-		using StringPairListVector::StringPairListVector;
-
-		StringPairList(Config &ui, const ItemsList &items);
-	};
-
-	class UI;
-
-	class Label : public String
-	{
-	public:
-		Label() : String() {}
-
-		// adds ":" at the end if not found and encodes html entities
-		Label(const String &label) : String(label) {}
-		Label(const __FlashStringHelper *label) : String(label) {}
-
-		Label(const __FlashStringHelper *label, bool raw) : Label(String(label), raw) {}
-
-		// if raw is set to true, the output is not modified
-		Label(const String &label, bool raw) : String(raw ? String('\xff') : label) {
-			if (raw) {
-				*this += label;
-			}
-			if (!raw && String_endsWith(*this, ':')) {
-				__DBG_printf("Label '%s' ends with ':'", label.c_str());
-			}
-		}
-
-	};
-
-	class FPStrSuffix {
-	public:
-		FPStrSuffix(const __FlashStringHelper *str) : _str(str) {}
-
-	private:
-		friend UI;
-		const __FlashStringHelper *_str;
-	};
-
-	class StringSuffix : public String {
-	public:
-		StringSuffix(const String &suffix) : String(suffix) {}
-		StringSuffix(String &&suffix) : String(std::move(suffix)) {}
-	};
-
-	static inline FPStrSuffix Suffix(const __FlashStringHelper *suffix) {
-		return FPStrSuffix(suffix);
-	}
-	static inline StringSuffix Suffix(const String &suffix) {
-		return StringSuffix(suffix);
-	}
-	static inline StringSuffix Suffix(String &&suffix) {
-		return StringSuffix(std::move(suffix));
-	}
-	template<class T>
-	static inline StringSuffix Suffix(T suffix) {
-		return StringSuffix(std::move(String(suffix)));
-	}
-
-	class ZeroconfSuffix : public FPStrSuffix {
-	public:
-		ZeroconfSuffix() : FPStrSuffix(F("<button type=\"button\" class=\"btn btn-default resolve-zerconf-button\" data-color=\"primary\">Resolve Zeroconf</button>")) {}
-	};
-
-	class PlaceHolder : public String {
-	public:
-		PlaceHolder(int placeholder) : String(placeholder) {}
-		PlaceHolder(double placeholder, uint8_t digits) : String(placeholder, digits) {}
-		PlaceHolder(const String &placeholder) : String(placeholder) {}
-		PlaceHolder(String &&placeholder) : String(std::move(placeholder)) {}
-	};
-
-	class MinMax
-	{
-	public:
-		MinMax(int min, int max) : _min(min), _max(max) {}
-		MinMax(const String &min, const String &max) : _min(min), _max(max) {}
-		MinMax(String &&min, String &&max) : _min(std::move(min)), _max(std::move(max)) {}
-
-	private:
-		friend UI;
-
-		String _min;
-		String _max;
-	};
-
-	class Attribute
-	{
-	public:
-		Attribute(const __FlashStringHelper *key, const String &value) : _key(key), _value(value) {}
-		Attribute(const __FlashStringHelper *key, String &&value) : _key(key), _value(std::move(value)) {}
-
-	private:
-		friend UI;
-
-		const __FlashStringHelper *_key;
-		String _value;
-	};
-
-	class ReadOnly : public Attribute
-	{
-	public:
-		ReadOnly() : Attribute(FSPGM(readonly), emptyString) {}
-	};
-
-	class BoolItems
-	{
-	public:
-		BoolItems() : _false(FSPGM(Disabled)), _true(FSPGM(Enabled)) {}
-		BoolItems(const String &pTrue, const String &pFalse) : _false(pFalse), _true(pTrue) {}
-		BoolItems(String &&pTrue, String &&pFalse) : _false(std::move(pFalse)), _true(std::move(pTrue)) {}
-
-	private:
-		friend UI;
-		String _false;
-		String _true;
-	};
-
-	template<class T>
-	class Conditional {
-	public:
-		Conditional(bool condition, const T &value) : _value(value), _condition(condition) {}
-		Conditional(bool condition, T &&value) : _value(std::move(value)), _condition(condition) {}
-
-	private:
-		friend UI;
-
-		T _value;
-		bool _condition: 1;
-	};
-
-	class ConditionalAttribute : public Conditional<Attribute> {
-	public:
-		ConditionalAttribute(bool condition, const __FlashStringHelper *key, const String &value) : Conditional<Attribute>(condition, Attribute(key, value)) {}
-		ConditionalAttribute(bool condition, const __FlashStringHelper *key, String &&value) : Conditional<Attribute>(condition, Attribute(key, std::move(value))) {}
-	};
-
 	class UI {
 	public:
-		using PrintInterface = PrintArgs::PrintInterface;
 		using Type = ::FormUI::Type;
 
 		template <typename... Args>
-		UI(FormField *parent, Args &&... args) : _parent(parent), _type(Type::TEXT), _label(nullptr), _suffix(nullptr), _items(nullptr)
+		UI(FormField *parent, Args &&... args) : _parent(parent), _type(Type::TEXT)
 		{
 			_addAll(args...);
 		}
-		UI(UI &&ui) noexcept : _items(nullptr)
+
+		UI(UI &&ui) noexcept : _parent(ui._parent), _type(std::exchange(ui._type, Type::NONE)), _storage(std::move(ui._storage))
 		{
-			*this = std::move(ui);
-		}
-		~UI()
-		{
-			if (_items) {
-				delete _items;
-			}
 		}
 
 		UI &operator=(UI &&ui) noexcept {
-			if (_items) {
-				delete _items;
-			}
 			_parent = ui._parent;
-			_type = ui._type;
-			_label = ui._label;
-			_suffix = ui._suffix;
-			// _attributes = std::move(ui._attributes);
-			_attributesVector = std::move(ui._attributesVector);
-			_items = std::exchange(ui._items, nullptr);
+			_type = std::exchange(ui._type, Type::NONE);
+			_storage = std::move(ui._storage);
 			return *this;
 		}
 
 		const __FlashStringHelper *kIconsNone = FPSTR(emptyString.c_str());
 		static constexpr __FlashStringHelper *kIconsDefault = nullptr;
 
-		static StringSuffix createCheckBoxButton(FormField &hiddenField, const String &label, const __FlashStringHelper *onIcons = nullptr, const __FlashStringHelper *offIcons = nullptr);
-
 		// DEPRECATED METHODS
 
-		UI *setBoolItems()  __attribute__ ((deprecated)) ;
-		// custom text
-		UI *setBoolItems(const String &enabled, const String &disabled)  __attribute__ ((deprecated)) ;
-		//UI *addItems(const String &value, const String &label)  __attribute__ ((deprecated)) ;
-		UI *addItems(const ItemsList &items)  __attribute__ ((deprecated)) ;
-		// add input-append-group text or html if the string starts with <
-		UI *setSuffix(const String &suffix)  __attribute__ ((deprecated)) ;
-		UI *setPlaceholder(const String &placeholder)  __attribute__ ((deprecated)) ;
-		// add min and max attribute
-		UI *setMinMax(const String &min, const String &max)  __attribute__ ((deprecated)) ;
-		UI *addAttribute(const __FlashStringHelper *name, const String &value);
-		UI *addConditionalAttribute(bool cond, const __FlashStringHelper *name, const String &value)  __attribute__ ((deprecated)) ;
+		UI &addItems(const ItemsList &items)  __attribute__((deprecated))
+		{
+			_setItems(items);
+			return *this;
+		}
 
 		void html(PrintInterface &output);
 
-		Type getType() const;
+		inline Type getType() const {
+			return _type;
+		}
 
 	private:
-		void _addItem(Type type);
-		void _addItem(const __FlashStringHelper *label);
-		void _addItem(const Label &label);
-		void _addItem(const StringSuffix &suffix);
-		void _addItem(const FPStrSuffix &suffix);
-		void _addItem(const PlaceHolder &placeholder);
-		void _addItem(const MinMax &minMax);
-		void _addItem(const Attribute &attribute);
-		void _addItem(const ItemsList &items);
-		void _addItem(const BoolItems &boolItems);
+		inline void _addItem(Type type) {
+			_type = type;
+		}
+
+		inline const char *attachString(const char *str) {
+			return __FormFieldAttachString(_parent, str);
+		}
+
+		inline const char *attachString(const __FlashStringHelper *fpstr) {
+			return attachString((PGM_P)fpstr);
+		}
+
+		inline const char *attachString(const String &str) {
+			return attachString(str.c_str());
+		}
+
+		inline const char *encodeHtmlEntities(const char *str) {
+			return __FormFieldEncodeHtmlEntities(_parent, str);
+		}
+
+		inline const char *encodeHtmlEntities(const __FlashStringHelper *fpstr) {
+			return encodeHtmlEntities((PGM_P)fpstr);
+		}
+
+		inline const char *encodeHtmlEntities(const String &str) {
+			return encodeHtmlEntities(str.c_str());
+		}
+
+		inline const char *encodeHtmlAttribute(const char *str) {
+			return __FormFieldEncodeHtmlAttribute(_parent, str);
+		}
+
+		inline const char *encodeHtmlAttribute(const __FlashStringHelper *fpstr) {
+			return encodeHtmlAttribute((PGM_P)fpstr);
+		}
+
+		inline const char *encodeHtmlAttribute(const String &str) {
+			return encodeHtmlAttribute(str.c_str());
+		}
+
+		enum class AttachStringAsType : uint8_t {
+			STRING,
+			HTML_ATTRIBUTE,
+			HTML_ENTITIES
+		};
+
+		template<typename _Ta>
+		inline const char *attachStringAs(_Ta str, AttachStringAsType type) {
+			switch (type) {
+			case AttachStringAsType::STRING:
+				return attachString(str);
+			case AttachStringAsType::HTML_ATTRIBUTE:
+				return encodeHtmlAttribute(str);
+			case AttachStringAsType::HTML_ENTITIES:
+				return encodeHtmlEntities(str);
+			}
+			return attachString(emptyString);
+		}
+
+		inline void _addItem(const __FlashStringHelper *label) {
+			_storage.push_back(ItemsStorage::Label(encodeHtmlEntities(label)));
+		}
+
+		inline void _addItem(const Label &label) {
+			_storage.push_back(ItemsStorage::Label(encodeHtmlEntities(label.getValue())));
+		}
+
+		inline void _addItem(const RawLabel &label) {
+			_storage.push_back(ItemsStorage::LabelRaw(attachString(label.getValue())));
+		}
+
+		inline void _addItem(const Suffix &suffix) {
+			_storage.push_back(ItemsStorage::SuffixText(encodeHtmlEntities(suffix.getValue())));
+		}
+
+		void _addItem(const CheckboxButtonSuffix &suffix);
+
+		inline void _addItem(const IntMinMax &minMax) {
+			_storage.push_back(ItemsStorage::AttributeMinMax(minMax._min, minMax._max));
+		}
+
+		bool __isDisabledAttribute(const char *key, const char *value) {
+			auto disabled = PSTR("disabled");
+			// with PROGMEM the linker should have deduplicated the strings already and we get the same pointers
+			return ((key == disabled || strcmp_P_P(key, disabled) == 0) && (value == disabled || strcmp_P_P(value, disabled) == 0));
+		}
+
+		void _addItem(const StringAttribute &attribute);
+		void _addItem(const FPStringAttribute &attribute);
+
+		inline void _addItem(const ItemsList &items) {
+			_setItems(items);
+			_type = Type::SELECT;
+		}
+
+		inline void _addItem(const BoolItems &boolItems) {
+			_storage.push_back(ItemsStorage::OptionNumKey(0, encodeHtmlEntities(boolItems._false)));
+			_storage.push_back(ItemsStorage::OptionNumKey(1, encodeHtmlEntities(boolItems._true)));
+			_type = Type::SELECT;
+		}
 
 		template<typename T>
 		void _addItem(const Conditional<T> &conditional) {
@@ -348,33 +185,68 @@ namespace FormUI {
 			_addAll(args...);
 		}
 
+#if 0
+		template <typename T>
+		void _addall(T &&t) {
+			_addItem(std::move(t));
+		}
+
+		template <typename T, typename... Args>
+		void _addAll(T &&t, Args &&... args) {
+			_addItem(std::move(t));
+			_addAll(args...);
+		}
+#endif
+
 	private:
 		friend Form;
 
-		bool _compareValue(const String &value) const;
+		const char *_attachMixedContainer(const MixedContainer &container, AttachStringAsType type) {
+			if (container.isFPStr()) {
+				return attachStringAs((const char *)container.getFPString(), type);
+			}
+			else if (container.isStringPtr()) {
+				return attachStringAs(*container.getStringPtr(), type);
+			}
+			else if (container.isCStr()) {
+				return attachStringAs(container.getCStr(), type);
+			}
+			return attachStringAs(container.getString(), type);
+		}
+
+		bool _isSelected(int32_t value) const;
+		bool _compareValue(const char *value) const;
 		void _setItems(const ItemsList &items);
-		// const char *_getAttributes();
-		char _hasLabel() const;
-		char _hasSuffix() const;
+
+        bool _hasLabel() const;
+		bool _hasSuffix() const;
+        bool _hasAttributes() const;
 
 		void _printAttributeTo(PrintInterface &output) const;
+        void _printSuffixTo(PrintInterface &output) const;
+        void _printLabelTo(PrintInterface &output, const char *forLabel) const;
+        void _printOptionsTo(PrintInterface &output) const;
+
+	public:
+		template<typename _Ta>
+		void for_each(_Ta func) {
+			for (auto iterator = _storage.begin(); iterator != _storage.end(); iterator = ItemsStorage::PrintValue::advance(iterator)) {
+				func(iterator);
+			}
+		}
 
 	private:
-		using FPStrStringPairVector = std::vector<std::pair<const __FlashStringHelper *, const char *>>;
+		friend ItemsStorage;
 
+		StringDeduplicator &strings();
+
+	private:
 		FormField *_parent;
 		Type _type;
-		const char *_label;
-		const char *_suffix;
-		// String _attributes;
-		FPStrStringPairVector _attributesVector;
-		StringPairList *_items;
+		ItemsStorage _storage;
 	};
 
-
 };
-
-#include "FormUIConfig.h"
 
 #if !_MSC_VER
 #pragma GCC diagnostic pop

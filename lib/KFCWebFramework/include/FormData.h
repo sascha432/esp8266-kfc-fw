@@ -32,7 +32,7 @@ public:
     const String arg(const String &name) const;
     bool hasArg(const String &name) const;
 
-    void set(const String &name, const String &value);
+    void setValue(const String &name, const String &value);
 
 private:
     std::map<String, String> _data;

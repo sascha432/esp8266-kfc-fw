@@ -16,78 +16,51 @@
 #endif
 
 
-// PrintArgs::CharPtrContainer::CharPtrContainer(CharPtrContainer &&str) noexcept
-// {
-//     *this = std::move(str);
-// }
+const __FlashStringHelper *PrintArgs::getFormatByType(FormatType type) const
+{
+    switch(type) {
+        case FormatType::SINGLE_STRING:
+            return F("%s");
+        case FormatType::SINGLE_CHAR:
+            return F("%c");
+        case FormatType::HTML_CLOSE_QUOTE_CLOSE_TAG:
+            return F("\">");
+        case FormatType::HTML_CLOSE_TAG:
+            return F(">");
+        case FormatType::HTML_CLOSE_DIV:
+            return F("</div>");
+        case FormatType::HTML_CLOSE_DIV_2X:
+            return F("</div></div></div>");
+        case FormatType::HTML_CLOSE_DIV_3X:
+            return F("</div></div>");
+        case FormatType::HTML_CLOSE_SPAN:
+            return F("</span>");
+        case FormatType::HTML_CLOSE_SELECT:
+            return F("</select>");
+        case FormatType::HTML_CLOSE_LABEL:
+            return F("</label>");
+        case FormatType::HTML_CLOSE_LABEL_WITH_COLON:
+            return F(":</label>");
+        case FormatType::HTML_OPEN_DIV_FORM_GROUP:
+            return F("<div class=\"form-group\">");
+        case FormatType::HTML_OPEN_DIV_INPUT_GROUP:
+            return F("<div class=\"input-group\">");
+        case FormatType::HTML_OPEN_DIV_INPUT_GROUP_APPEND:
+            return F("<div class=\"input-group-append\">");
+        case FormatType::HTML_OPEN_SPAN_INPUT_GROUP_TEXT:
+            return F("<span class=\"input-group-text\">");
+        case FormatType::HTML_OPEN_DIV_CARD_DIV_DIV_CARD_BODY:
+            return F("<div class=\"card\"><div><div class=\"card-body\">");
+        case FormatType::HTML_CLOSE_GROUP_START_HR:
+            return F("</h5></div><div class=\"col-lg-12\"><hr class=\"mt-0\"></div></div><div class=\"form-group\">");
 
-// PrintArgs::CharPtrContainer &PrintArgs::CharPtrContainer::operator=(CharPtrContainer &&str) noexcept
-// {
-//     _str = str._str;
-//     str._str = nullptr;
-// #if !defined(ESP8266)
-//     _free = str._free;
-//     str._free = false;
-// #endif
-//     return *this;
-// }
-
-// #if defined(ESP8266)
-
-// PrintArgs::CharPtrContainer::CharPtrContainer(char *str, bool) : _str(str)
-// {
-// }
-
-// PrintArgs::CharPtrContainer::CharPtrContainer(const __FlashStringHelper *str) : _str(reinterpret_cast<char *>(const_cast<__FlashStringHelper *>(str)))
-// {
-// }
-
-// #else
-
-// PrintArgs::CharPtrContainer::CharPtrContainer(char *str, bool free) : _str(str), _free(free)
-// {
-// }
-
-// PrintArgs::CharPtrContainer::CharPtrContainer(const __FlashStringHelper *str) : _str(reinterpret_cast<char *>(const_cast<__FlashStringHelper *>(str))), _free(false)
-// {
-// }
-
-// #endif
-
-// PrintArgs::CharPtrContainer::operator const char *() const
-// {
-//     return _str;
-// }
-
-// const char *PrintArgs::CharPtrContainer::c_str() const
-// {
-//     return _str;
-// }
-
-// bool PrintArgs::CharPtrContainer::operator==(const char *str) const
-// {
-//     return strcmp_P_P(_str, str) == 0; // function is nullptr sdafe
-// }
-
-// bool PrintArgs::CharPtrContainer::operator!=(const char *str) const
-// {
-//     return strcmp_P_P(_str, str);
-// }
-
-// PrintArgs::CharPtrContainer::~CharPtrContainer()
-// {
-// #if defined(ESP8266)
-//     // detect if string is allocated
-//     if (_str && !is_PGM_P(_str)) {
-//         free(_str);
-//     }
-// #else
-//     if (_free) {
-//         free(_str);
-//     }
-// #endif
-// }
-
+default://TODO remove default
+        case FormatType::NONE:
+        case FormatType::MAX:
+            break;
+    }
+    return nullptr;
+}
 
 PrintArgs::PrintArgs() : _bufferPtr(nullptr), _position(0), _strLength(0)
 {
@@ -120,8 +93,10 @@ void PrintArgs::clear()
 size_t PrintArgs::fillBuffer(uint8_t *data, size_t sizeIn)
 {
     int size = sizeIn;
+    std::array<uintptr_t *, kMaximumPrintfArguments + 1> args;
+    static_assert(args.size() >= (uint8_t)FormatType::MAX, "invalid size");
+    Buffer temp;
 
-    void *args[kMaximumPrintfArguments + 1];
     if (!_bufferPtr) {
         _bufferPtr = _buffer.begin();
         _position = 0;
@@ -145,18 +120,93 @@ size_t PrintArgs::fillBuffer(uint8_t *data, size_t sizeIn)
 #endif
             return data - dataStart;
         }
-        uint8_t numArgs = *_bufferPtr;
-        if (++numArgs >= (sizeof(args) / sizeof(uintptr_t))) {
-            clear();
-            return 0;
+        uint8_t numArgs = *_bufferPtr & static_cast<uint8_t>(FormatType::MASK_NO_FORMAT);
+        // print a list of strings instead using printf
+        bool noFormat = *_bufferPtr & ~static_cast<uint8_t>(FormatType::MASK_NO_FORMAT);
+        auto src = reinterpret_cast<uintptr_t **>(_bufferPtr + 1);
+        size_t advance = 1;
+
+        if (numArgs >= (uint8_t)FormatType::MAX) {
+            auto formatType = static_cast<FormatType>(numArgs);
+            switch(formatType) {
+
+                //TODO
+                // case FormatType::SINGLE_CHAR:
+                //     break;
+                case FormatType::HTML_CLOSE_QUOTE_CLOSE_TAG:
+                case FormatType::HTML_CLOSE_TAG:
+                case FormatType::HTML_CLOSE_DIV:
+                case FormatType::HTML_CLOSE_DIV_2X:
+                case FormatType::HTML_CLOSE_DIV_3X:
+                case FormatType::HTML_CLOSE_SPAN:
+                case FormatType::HTML_CLOSE_SELECT:
+                case FormatType::HTML_OPEN_DIV_FORM_GROUP:
+                case FormatType::HTML_OPEN_DIV_INPUT_GROUP:
+                case FormatType::HTML_OPEN_DIV_INPUT_GROUP_APPEND:
+                case FormatType::HTML_OPEN_SPAN_INPUT_GROUP_TEXT:
+                case FormatType::HTML_OPEN_DIV_CARD_DIV_DIV_CARD_BODY:
+                case FormatType::HTML_CLOSE_GROUP_START_HR:
+                    {
+                        numArgs = 0; // no arguments
+                        args[0] = reinterpret_cast<uintptr_t *>(const_cast<__FlashStringHelper *>(getFormatByType(formatType)));
+                        advance = 1;
+                        src = &args[0];
+                    }
+                    break;
+                case FormatType::SINGLE_CHAR:
+                    {
+                        numArgs = 1;
+                        args[0] = reinterpret_cast<uintptr_t *>(const_cast<__FlashStringHelper *>(getFormatByType(FormatType::SINGLE_CHAR)));
+                        args[1] = reinterpret_cast<uintptr_t *>(*_bufferPtr + 1);
+                        advance += 1;
+                        src = &args[0];
+                    }
+                    break;
+                case FormatType::SINGLE_STRING:
+                    {
+                        numArgs = 1;
+                        args[0] = reinterpret_cast<uintptr_t *>(const_cast<__FlashStringHelper *>(getFormatByType(FormatType::SINGLE_STRING)));
+                        args[1] = reinterpret_cast<uintptr_t *>(*_bufferPtr + 1);
+                        advance += sizeof(const char *);
+                        src = &args[0];
+                    }
+                    break;
+
+default://TODO remove default
+                case FormatType::NONE:
+                case FormatType::MAX:
+                case FormatType::ENCODE_HTML_ATTRIBUTE:
+                case FormatType::ENCODE_HTML_ENTITIES:
+                case FormatType::ENCODE_JSON:
+                case FormatType::ESCAPE_JAVASCRIPT:
+                case FormatType::REPEAT_FORMAT:
+                    clear();
+                    return 0;
+            }
+            numArgs++;
         }
-        size_t advance = sizeof(uintptr_t) * numArgs;
-        memset(args, 0, sizeof(args));
-        memcpy(args, _bufferPtr + 1, advance++);
+        else {
+            advance += sizeof(uintptr_t) * ++numArgs;
+            //if (src != args.data()) {
+            std::copy_n(src, numArgs, args.begin());
+            //}
+        }
+#if DEBUG_PRINT_ARGS
+        std::fill(args.begin() + numArgs, args.end(), nullptr);
+#endif
+
+#if DEBUG_PRINT_MSC_VER
+        PrintString str;
+        str.printf_P(PSTR("fmt='%-10.10s...' args=%u buf=%u"), args[0], numArgs - 1, _buffer.length());
+        for (int i = 1; i < numArgs; i++) {
+            str.printf_P(PSTR("idx=%u ptr=%p str='%-10.10s'"), i, args[i], args[i]);
+        }
+        Serial.println(str);
+#endif
 
         // sprintf starts at position 0
         if (_position == 0) {
-            _strLength = _snprintf_P(data, size, args, numArgs);
+            _strLength = _snprintf_P(data, size, args.data(), numArgs);
             if (_strLength < size) {
                 // fits into buffer, advance all pointers to the next string
                 size -= _strLength;
@@ -178,7 +228,7 @@ size_t PrintArgs::fillBuffer(uint8_t *data, size_t sizeIn)
             int left = _strLength - _position;
             // does the entire string fit?
             if (size - _position >= _strLength + 1) {
-                /*_strLength = */_snprintf_P(data, _strLength + 1, args, numArgs);
+                /*_strLength = */_snprintf_P(data, _strLength + 1, args.data(), numArgs);
                 memmove(data, data + _position, left);
                 data += left;
                 size -= left;
@@ -188,11 +238,10 @@ size_t PrintArgs::fillBuffer(uint8_t *data, size_t sizeIn)
             }
             // we need extra space
             int maxTmpLen = std::min(_strLength, size + _position) + 1;
-            uint8_t *tmp = (uint8_t *)malloc(maxTmpLen);
-            /*_strLength = */_snprintf_P(tmp, maxTmpLen, args, numArgs);
+            temp.reserve(maxTmpLen);
+            /*_strLength = */_snprintf_P(temp.begin(), maxTmpLen, args.data(), numArgs);
             if (left <= size) {
-                memcpy(data, tmp + _position, left);
-                free(tmp);
+                memcpy(data, temp.begin() + _position, left);
                 data += left;
                 size -= left;
                 _bufferPtr += advance;
@@ -200,8 +249,7 @@ size_t PrintArgs::fillBuffer(uint8_t *data, size_t sizeIn)
                 continue;
             }
             else {
-                memcpy(data, tmp + _position, size);
-                free(tmp);
+                memcpy(data, temp.begin() + _position, size);
                 data += size;
                 _position += size;
                 size = 0;
@@ -218,12 +266,12 @@ void PrintArgs::vprintf_P(const char *format, const uintptr_t **args, size_t num
     _printfArgs += numArgs;
 #endif
     _buffer.write((uint8_t)numArgs);
-    _writeFormat(format);
+    _buffer.push_back((uintptr_t)format);
     _buffer.write(reinterpret_cast<const uint8_t *>(&args[0]), sizeof(uintptr_t) * numArgs);
 }
 
 
-int PrintArgs::_snprintf_P(uint8_t *buffer, size_t size, void **args, uint8_t numArgs)
+int PrintArgs::_snprintf_P(uint8_t *buffer, size_t size, uintptr_t **args, uint8_t numArgs)
 {
 #if DEBUG_PRINT_ARGS && 0
     String fmt = F("format='%s' args[");
@@ -240,56 +288,38 @@ int PrintArgs::_snprintf_P(uint8_t *buffer, size_t size, void **args, uint8_t nu
     return snprintf_P(reinterpret_cast<char *>(buffer), size, (PGM_P)args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11], args[12], args[13], args[14], args[15]);
 }
 
-void PrintArgs::_copy(float value)
-{
-    _copy((double)value);
-}
+//void PrintArgs::_copy(const __FlashStringHelper *fpstr)
+//{
+//    _writeFormat(fpstr);
+//    //_buffer.write(reinterpret_cast<const uint8_t *>(&fpstr), sizeof(const char *));
+//}
 
-// signed integers need to be converted
-void PrintArgs::_copy(int8_t value8)
-{
-    int32_t value = value8;
-    _buffer.write(reinterpret_cast<const uint8_t *>(&value), sizeof(value));
-}
-
-void PrintArgs::_copy(int16_t value16)
-{
-    int32_t value = value16;
-    _buffer.write(reinterpret_cast<const uint8_t *>(&value), sizeof(value));
-}
-
-void PrintArgs::_copy(const __FlashStringHelper *fpstr)
-{
-    _writeFormat(fpstr);
-    //_buffer.write(reinterpret_cast<const uint8_t *>(&fpstr), sizeof(const char *));
-}
-
-void PrintArgs::_copy(const char *str)
-{
-    _writeFormat(str);
-// #if defined(ESP8266) && 0
-//     if (is_PGM_P(str))
-//         _buffer.write(reinterpret_cast<const uint8_t *>(&str), sizeof(const char *));
-//     }
-//     else {
-//         auto copy = _strings.attachString(str);
-//         _buffer.write(reinterpret_cast<const uint8_t *>(&copy), sizeof(const char *));
-//     }
-// #else
-//     _buffer.write(reinterpret_cast<const uint8_t *>(&str), sizeof(const char *));
-// #endif
-}
-
-void PrintArgs::_writeFormat(const void *format)
-{
-#if defined(ESP8266) && 0
-    uint16_t value = (uintptr_t)format - SECTION_HEAP_START_ADDRESSS;
-    _buffer.write(reinterpret_cast<const uint8_t *>(&value), sizeof(value));
-#else
-    _buffer.write(reinterpret_cast<const uint8_t *>(&format), sizeof(const char *));
-#endif
-}
-
+//void PrintArgs::_copy(const char *str)
+//{
+//    _writeFormat(str);
+//// #if defined(ESP8266) && 0
+////     if (is_PGM_P(str))
+////         _buffer.write(reinterpret_cast<const uint8_t *>(&str), sizeof(const char *));
+////     }
+////     else {
+////         auto copy = _strings.attachString(str);
+////         _buffer.write(reinterpret_cast<const uint8_t *>(&copy), sizeof(const char *));
+////     }
+//// #else
+////     _buffer.write(reinterpret_cast<const uint8_t *>(&str), sizeof(const char *));
+//// #endif
+//}
+//
+//void PrintArgs::_writeFormat(const void *format)
+//{
+//#if defined(ESP8266) && 0
+//    uint16_t value = (uintptr_t)format - SECTION_HEAP_START_ADDRESSS;
+//    _buffer.write(reinterpret_cast<const uint8_t *>(&value), sizeof(value));
+//#else
+//    _buffer.write(reinterpret_cast<const uint8_t *>(&format), sizeof(const char *));
+//#endif
+//}
+//
 
 // void PrintArgs::dump(Print &output)
 // {

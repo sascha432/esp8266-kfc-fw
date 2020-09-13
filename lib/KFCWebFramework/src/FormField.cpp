@@ -70,7 +70,7 @@ PGM_P FormField::getNameType() const
 * Returns the value of the initialized field or changes the user submitted
 **/
 
-const String &FormField::getValue()
+const String &FormField::getValue() const
 {
     return _value;
 }

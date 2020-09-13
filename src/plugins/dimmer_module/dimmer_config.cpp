@@ -8,32 +8,39 @@
 
 namespace KFCConfigurationClasses {
 
-    Plugins::DimmerConfig::DimmerConfig_t::DimmerConfig_t() : fw(), on_off_fade_time(12.5), fade_time(4.5), config_valid(false)
+    Plugins::DimmerConfig::DimmerConfig_t::DimmerConfig_t() :
+            fw({}),
         #if IOT_ATOMIC_SUN_V2
-        ,
         #ifdef IOT_ATOMIC_SUN_CHANNEL_WW1
-            channel_mapping{ IOT_ATOMIC_SUN_CHANNEL_WW1, IOT_ATOMIC_SUN_CHANNEL_WW2, IOT_ATOMIC_SUN_CHANNEL_CW1, IOT_ATOMIC_SUN_CHANNEL_CW2 }
+            channel_mapping{ IOT_ATOMIC_SUN_CHANNEL_WW1, IOT_ATOMIC_SUN_CHANNEL_WW2, IOT_ATOMIC_SUN_CHANNEL_CW1, IOT_ATOMIC_SUN_CHANNEL_CW2 },
         #else
-            channel_mapping{ 0, 1, 2, 3 }
+            channel_mapping{ 0, 1, 2, 3 },
         #endif
+            on_fadetime(12.5),
+            off_fadetime(12.5),
+        #else
+            on_fadetime(4.5),
+            off_fadetime(4.5),
         #endif
+            lp_fadetime(3.5),
         #if IOT_DIMMER_MODULE_HAS_BUTTONS
-        ,
-            shortpress_time(275),
-            longpress_time(750),
-            single_click_time(1000),
-            min_brightness(20),
-            shortpress_steps(15),
-            longpress_max_brightness(85),
-            longpress_min_brightness(33),
-            longpress_fadetime(3.5),
-
-            pins_inverted(IOT_SWITCH_PRESSED_STATE == PinMonitor::ActiveStateType::INVERTED ? 0xff : 0x00),
-        #if IOT_SENSOR_HAVE_HLW8012
-            pins{ D2, D7 }
+            config_valid(kDefaultValueFor_config_valid),
+            off_delay(kDefaultValueFor_off_delay),
+            off_delay_signal(kDefaultValueFor_off_delay_signal),
+            pin_ch0_down_inverted(kDefaultValueFor_pin_ch0_down_inverted),
+            pin_ch0_up(kDefaultValueFor_pin_ch0_up),
+            pin_ch0_up_inverted(kDefaultValueFor_pin_ch0_up_inverted),
+            single_click_time(kDefaultValueFor_single_click_time),
+            longpress_time(kDefaultValueFor_longpress_time),
+            min_brightness(kDefaultValueFor_min_brightness),
+            pin_ch0_down(kDefaultValueFor_pin_ch0_down),
+            shortpress_steps(kDefaultValueFor_shortpress_steps),
+            longpress_max_brightness(kDefaultValueFor_longpress_max_brightness),
+            longpress_min_brightness(kDefaultValueFor_longpress_min_brightness),
+            max_brightness(kDefaultValueFor_max_brightness),
+            shortpress_time(kDefaultValueFor_shortpress_time)
         #else
-            pins{ D6, D7 }
-        #endif
+            config_valid(kDefaultValueFor_config_valid)
         #endif
     {
     }

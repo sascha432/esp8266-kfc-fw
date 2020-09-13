@@ -268,7 +268,7 @@ void Dimmer_Base::_readConfig(ConfigType &config)
 void Dimmer_Base::_writeConfig(ConfigType &config)
 {
     if (config.config_valid) {
-        config.fw.fade_in_time = config.fade_time;
+        config.fw.fade_in_time = config.on_fadetime;
         // if address does not match member, copy data
         if (&config != &_config) {
             _config = config;

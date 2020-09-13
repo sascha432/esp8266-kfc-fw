@@ -12,7 +12,14 @@
 #include <debug_helper_disable.h>
 #endif
 
-DimmerChannel::DimmerChannel() : MQTTComponent(ComponentTypeEnum_t::LIGHT), _data(), _storedBrightness(0), _publishFlag(0)
+DimmerChannel::DimmerChannel() :
+    MQTTComponent(ComponentTypeEnum_t::LIGHT),
+    _data(),
+    _storedBrightness(0),
+    _publishFlag(0)
+#if IOT_DIMMER_MODULE_HAS_BUTTONS
+    ,_delayTimer(nullptr)
+#endif
 {
 #if DEBUG_MQTT_CLIENT
     debug_printf_P(PSTR("DimmerChannel(): component=%p\n"), this);
@@ -101,33 +108,38 @@ void DimmerChannel::onMessage(MQTTClient *client, char *topic, char *payload, si
 
     } else if (_data.brightness.set.equals(topic)) {
 
-        float fadetime;
-
         // if brightness changes, also turn dimmer on or off
+        auto tmp = _data.brightness.value;
         if (value > 0) {
-            fadetime = _data.state.value ? _dimmer->getFadeTime() : _dimmer->getOnOffFadeTime();
             _data.state.value = true;
             _data.brightness.value = std::min(value, (int)MAX_LEVEL);
             setStoredBrightness(_data.brightness.value);
         } else {
-            fadetime = _data.state.value ? _dimmer->getOnOffFadeTime() : _dimmer->getFadeTime();
             _data.state.value = false;
             _data.brightness.value = 0;
         }
-        _dimmer->_fade(_channel, _data.brightness.value, fadetime);
+        _dimmer->_fade(_channel, _data.brightness.value, _dimmer->getFadeTime(tmp, _data.brightness.value));
         publishState(client, kUpdateAllFlag);
     }
 }
 
 bool DimmerChannel::on()
 {
+#if IOT_DIMMER_MODULE_HAS_BUTTONS
+    // returns -1 for abort with false, 1 for abort with true and 0 for continue
+    int result = _offDelayPrecheck(DEFAULT_LEVEL);
+    if (result != 0) {
+        return result != -1;
+    }
+#endif
     if (!_data.state.value) {
+        auto tmp = _data.brightness.value;
         _data.brightness.value = _storedBrightness;
         if (_data.brightness.value <= MIN_LEVEL) {
             _data.brightness.value = DEFAULT_LEVEL;
         }
         _data.state.value = true;
-        _dimmer->_fade(_channel, _data.brightness.value, _dimmer->getOnOffFadeTime());
+        _dimmer->_fade(_channel, _data.brightness.value, _dimmer->getFadeTime(tmp, _data.brightness.value));
         _dimmer->writeEEPROM();
 
         publishState();
@@ -136,13 +148,21 @@ bool DimmerChannel::on()
     return false;
 }
 
-bool DimmerChannel::off()
+bool DimmerChannel::off(ConfigType *config, int16_t level)
 {
+#if IOT_DIMMER_MODULE_HAS_BUTTONS
+    // returns -1 for abort with false, 1 for abort with true and 0 for continue
+    int result = _offDelayPrecheck(0, config, level);
+    if (result != 0) {
+        return result != -1;
+    }
+#endif
     if (_data.state.value) {
-        setStoredBrightness(_data.brightness.value);
+        auto tmp = _data.brightness.value;
+        setStoredBrightness(level == -1 ? _data.brightness.value : level);
         _data.brightness.value = 0;
         _data.state.value = false;
-        _dimmer->_fade(_channel, 0, _dimmer->getOnOffFadeTime());
+        _dimmer->_fade(_channel, 0, _dimmer->getFadeTime(tmp, _data.brightness.value));
         _dimmer->writeEEPROM();
 
         publishState();
@@ -233,6 +253,9 @@ int16_t DimmerChannel::getLevel() const
 
 void DimmerChannel::setLevel(int16_t level)
 {
+#if IOT_DIMMER_MODULE_HAS_BUTTONS
+    _offDelayPrecheck(level, nullptr);
+#endif
     _data.brightness.value = level;
     _data.state.value = (level != 0);
     setStoredBrightness(level);
@@ -244,3 +267,76 @@ void DimmerChannel::setStoredBrightness(uint16_t store)
         _storedBrightness = store;
     }
 }
+
+#if IOT_DIMMER_MODULE_HAS_BUTTONS
+
+int DimmerChannel::_offDelayPrecheck(int16_t level, ConfigType *config, int16_t storeLevel)
+{
+    __LDBG_printf("timer=%p level=%d config=%p store=%d", _delayTimer, level, config, storeLevel);
+    if (_delayTimer) {
+        // restore brightness
+        (*_delayTimer)->_callback(nullptr);
+        delete _delayTimer;
+        _delayTimer = nullptr;
+
+        if (level == 0) {
+            // timer was running, turn off now
+            return off(nullptr) ? -1 : 1;
+        }
+    }
+    if (level != 0 || config == nullptr) {
+        // continue
+        return 0;
+    }
+    if (_data.state.value == false || config->off_delay == 0) {
+        // no delay, continue
+        return 0;
+    }
+
+    __LDBG_printf("off_delay=%d signal=%d", config->off_delay, config->off_delay_signal);
+    _delayTimer = new Event::Timer();
+
+    if (config->off_delay >= 5 && config->off_delay_signal) {
+        auto delay = config->off_delay - 4;
+        int16_t brightness = storeLevel + (storeLevel * 100 / MAX_LEVEL > 70 ? MAX_LEVEL * -0.3 : MAX_LEVEL * 0.3);
+        // flash once to signal confirmation
+        _Timer(_delayTimer)->add(Event::milliseconds(1900), true, [this, delay, brightness, storeLevel](Event::CallbackTimerPtr timer) {
+            if (timer == nullptr) {
+                __LDBG_printf("timer=%p fade_to=%d", timer, storeLevel);
+                _dimmer->_fade(_channel, storeLevel, 0.9);
+                return;
+            }
+            auto interval = timer->getShortInterval();
+            if (interval == 1900) {
+                __LDBG_printf("timer=%p fade_to=%d reschedule=%d", timer, brightness, Event::milliseconds(2100).count());
+                // first callback, dim up or down and reschedule
+                _dimmer->_fade(_channel, brightness, 0.9);
+                timer->updateInterval(Event::milliseconds(2100));
+            }
+            else if (interval == 2100) {
+                __LDBG_printf("timer=%p fade_to=%d reschedule=%d", timer, brightness, Event::seconds(delay).count());
+                // second callback, dim back and wait
+                _dimmer->_fade(_channel, storeLevel, 0.9);
+                timer->updateInterval(Event::seconds(delay));
+            }
+            else {
+                // third callback
+                __LDBG_printf("timer=%p store_level=%d off=%u", timer, storeLevel, true);
+                off(nullptr, storeLevel);
+                // the timer has been deleted at this point
+                // make sure to exit
+                return;
+            }
+        }, Event::PriorityType::HIGHEST);
+    }
+    else {
+        _Timer(_delayTimer)->add(Event::seconds(config->off_delay), false, [this, storeLevel](Event::CallbackTimerPtr timer) {
+            __LDBG_printf("timer=%p store_level=%d off=%u", timer, storeLevel, true);
+            off(nullptr, storeLevel);
+        }, Event::PriorityType::HIGHEST);
+        // abort command
+    }
+    return 1;
+}
+
+#endif

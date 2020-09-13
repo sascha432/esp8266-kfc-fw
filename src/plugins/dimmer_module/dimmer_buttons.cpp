@@ -27,7 +27,7 @@ void DimmerButtons::_beginButtons()
     SingleClickGroupPtr group;
 
     for(uint8_t i = 0; i < _channels.size() * 2; i++) {
-        auto pinNum = _config.pins[i];
+        auto pinNum = _config.pin(i);
         if (i % 2 == 0) {
             group.reset(_config.single_click_time); // create new group for each channel
         }

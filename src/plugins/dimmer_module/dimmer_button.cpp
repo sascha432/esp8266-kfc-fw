@@ -18,7 +18,7 @@
 
 
 DimmerButton::DimmerButton(uint8_t pin, uint8_t channel, uint8_t button, DimmerButtons &dimmer, SingleClickGroupPtr singleClickGroup) :
-    PushButton(pin, &dimmer, std::move(DimmerButtonConfig(dimmer._getConfig())), singleClickGroup, dimmer._getConfig().getInverted(channel * 2 + button) ? ActiveStateType::INVERTED : ActiveStateType::NON_INVERTED),
+    PushButton(pin, &dimmer, std::move(DimmerButtonConfig(dimmer._getConfig())), singleClickGroup, dimmer._getConfig().pin_inverted(channel, button) ? ActiveStateType::INVERTED : ActiveStateType::NON_INVERTED),
     _dimmer(dimmer),
     _level(0),
     _channel(channel),
@@ -64,15 +64,12 @@ void DimmerButton::event(EventType eventType, uint32_t now)
             }
             break;
         case EventType::LONG_CLICK:
-            _setLevel(IOT_DIMMER_MODULE_MAX_BRIGHTNESS * (int32_t)(_button == 0 ? config.longpress_max_brightness : config.longpress_min_brightness) / 100, config.longpress_fadetime);
+            _setLevel(IOT_DIMMER_MODULE_MAX_BRIGHTNESS * (int32_t)(_button == 0 ? config.longpress_max_brightness : config.longpress_min_brightness) / 100, config.lp_fadetime);
             break;
         case EventType::SINGLE_CLICK:
-            if (_dimmer.off(_channel)) {
+            if (_dimmer._channels[_channel].off(&config, _level)) {
                 __LDBG_printf("%s OFF store_level=%d duration=%u", name(), _level, _duration);
                 _dimmer._channels[_channel].setStoredBrightness(_level);
-            }
-            else {
-                __LDBG_printf("%s OFF level=0 duration=%u", name(), _duration);
             }
             break;
         default:
@@ -90,13 +87,13 @@ void DimmerButton::_changeLevel(int32_t change, float fadeTime)
 void DimmerButton::_changeLevelSingle(uint16_t steps, bool invert)
 {
     int16_t levelChange = (IOT_DIMMER_MODULE_MAX_BRIGHTNESS / steps);
-    __LDBG_printf("fadetime=%f/%f step=%u%% level=%d", _dimmer._config.longpress_fadetime, _dimmer._config.longpress_fadetime * 1.048, steps, invert ? -levelChange : levelChange);
-    _changeLevel(invert ? -levelChange : levelChange, _dimmer._config.longpress_fadetime * 1.048);
+    __LDBG_printf("fadetime=%f/%f step=%u%% level=%d", _dimmer._config.lp_fadetime, _dimmer._config.lp_fadetime * 1.048, steps, invert ? -levelChange : levelChange);
+    _changeLevel(invert ? -levelChange : levelChange, _dimmer._config.lp_fadetime * 1.048);
 }
 
 void DimmerButton::_changeLevelRepeat(uint16_t repeatTime, bool invert)
 {
-    float fadeTime = _dimmer._config.longpress_fadetime;
+    float fadeTime = _dimmer._config.lp_fadetime;
     int16_t levelChange = IOT_DIMMER_MODULE_MAX_BRIGHTNESS * ((repeatTime / 1000.0) / fadeTime);
     __LDBG_printf("fadetime=%f/%f repeat=%u level=%d", fadeTime, fadeTime * 1.024, repeatTime, invert ? -levelChange : levelChange);
     _changeLevel(invert ? -levelChange : levelChange, fadeTime * 1.024);

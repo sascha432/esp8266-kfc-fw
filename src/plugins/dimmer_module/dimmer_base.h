@@ -172,11 +172,15 @@ protected:
     void _forceMetricsUpdate(uint8_t delay);
     Sensor_DimmerMetrics *getMetricsSensor() const;
 
-    inline float getFadeTime() {
-        return _config.fade_time;
-    }
-    inline float getOnOffFadeTime() {
-        return _config.on_off_fade_time;
+    // return fade time for changing to another level
+    float getFadeTime(int curLevel, int newLevel) {
+        if (newLevel == 0) {
+            return _config.off_fadetime;
+        }
+        if (curLevel == 0 && newLevel) {
+            return _config.on_fadetime;
+        }
+        return _config.lp_fadetime;
     }
 
 protected:

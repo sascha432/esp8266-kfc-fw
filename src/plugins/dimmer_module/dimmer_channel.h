@@ -8,6 +8,8 @@
 #include <EventScheduler.h>
 #include "../src/plugins/mqtt/mqtt_client.h"
 
+using KFCConfigurationClasses::Plugins;
+
 typedef struct {
     struct {
         String set;
@@ -40,7 +42,21 @@ public:
     static constexpr uint8_t kStartTimerFlag = 0xff;
 
 public:
+    using ConfigType = Plugins::DimmerConfig::DimmerConfig_t;
+
+public:
     DimmerChannel();
+
+#if IOT_DIMMER_MODULE_HAS_BUTTONS
+    DimmerChannel(const DimmerChannel &) = delete;
+    DimmerChannel &operator=(const DimmerChannel &) = delete;
+
+    ~DimmerChannel() {
+        if (_delayTimer) {
+            delete _delayTimer;
+        }
+    }
+#endif
 
     void setup(Driver_DimmerModule *dimmer, uint8_t channel);
 
@@ -50,13 +66,18 @@ public:
     virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len) override;
 
     bool on();
-    bool off();
+    bool off(ConfigType *config = nullptr, int16_t level = -1);
     void publishState(MQTTClient *client = nullptr, uint8_t publishFlag = kStartTimerFlag);
 
     bool getOnState() const;
     int16_t getLevel() const;
     void setLevel(int16_t level);
     void setStoredBrightness(uint16_t store);
+
+protected:
+#if IOT_DIMMER_MODULE_HAS_BUTTONS
+    int _offDelayPrecheck(int16_t level, ConfigType *config = nullptr, int16_t storeLevel = -1);
+#endif
 
 private:
     void _createTopics();
@@ -68,4 +89,7 @@ private:
     uint8_t _publishFlag;
     uint8_t _mqttCounter;
     Event::Timer _publishTimer;
+#if IOT_DIMMER_MODULE_HAS_BUTTONS
+    Event::Timer *_delayTimer;
+#endif
 };

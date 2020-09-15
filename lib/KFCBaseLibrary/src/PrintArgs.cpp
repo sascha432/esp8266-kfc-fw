@@ -30,9 +30,9 @@ const __FlashStringHelper *PrintArgs::getFormatByType(FormatType type) const
         case FormatType::HTML_CLOSE_DIV:
             return F("</div>");
         case FormatType::HTML_CLOSE_DIV_2X:
-            return F("</div></div></div>");
-        case FormatType::HTML_CLOSE_DIV_3X:
             return F("</div></div>");
+        case FormatType::HTML_CLOSE_DIV_3X:
+            return F("</div></div></div>");
         case FormatType::HTML_CLOSE_SPAN:
             return F("</span>");
         case FormatType::HTML_CLOSE_SELECT:
@@ -281,7 +281,7 @@ void PrintArgs::vprintf_P(const char *format, const uintptr_t **args, size_t num
 
 int PrintArgs::_snprintf_P(uint8_t *buffer, size_t size, uintptr_t **args, uint8_t numArgs)
 {
-#if DEBUG_PRINT_ARGS && 0
+#if DEBUG_PRINT_ARGS && 1
     String fmt = F("format='%s' args[");
     fmt += String((numArgs - 1));
     fmt += "]={";
@@ -304,6 +304,6 @@ void PrintArgs::_debugPrint(PGM_P format, ...)
     va_start(arg, format);
     str.vprintf_P(format, arg);
     va_end(arg);
-    //Serial.print(str);
+    // Serial.print(str);
 }
 #endif

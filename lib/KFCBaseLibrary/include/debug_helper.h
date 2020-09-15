@@ -277,6 +277,9 @@ extern const char ___debugPrefix[] PROGMEM;
 #define __DBG_check_ptr_null(ptr)                           __DBG_assert_printf((ptr == nullptr) || ___IsValidPointer(ptr), "pointer=%08x", ptr)
 #define __DBG_check_ptr(ptr, allow_null)                    __DBG_assert_printf((allow_null && ptr == nullptr) || (!allow_null && ptr != nullptr && ___IsValidPointer(ptr)), "pointer=%08x", ptr)
 
+#define __DBG_function()                                    DebugContext::Guard guard(DebugContext_ctor());
+#define __DBG_function_printf(fmt, ...)                     DebugContext::Guard guard(DebugContext_ctor(), PSTR(fmt), ##__VA_ARGS__);
+
 // local functions that need to be activated by including debug_helper_[enable|disable].h
 #define __LDBG_IF(...)
 #define __LDBG_N_IF(...)                                    __VA_ARGS__
@@ -297,6 +300,8 @@ extern const char ___debugPrefix[] PROGMEM;
 #define __LDBG_assert_printf(cond, fmt, ...)                __DBG_assert_printf(cond, fmt, ##__VA_ARGS__)
 #define __LDBG_assert_panic(cond, fmt, ...)                 __DBG_assert_panic(cond, fmt, ##__VA_ARGS__)
 #define __LDBG_print_result(result, ...)                    __LDBG_S_IF(__DBG_print_result(result, ##__VA_ARGS__), result)
+#define __LDBG_function()                                   __LDBG_IF(__DBG_function())
+#define __LDBG_function_printf(fmt, ...)                    __LDBG_IF(__DBG_function_printf(fmt, ##__VA_ARGS__))
 
 #define __LDBG_check_alloc(...)                             __LDBG_IF(__DBG_check_alloc(__VA_ARGS__))
 #define __LDBG_check_alloc_no_null(...)                     __LDBG_IF(__DBG_check_alloc_no_null(__VA_ARGS__))

@@ -4,6 +4,7 @@
 */
 
 #include <Arduino_compat.h>
+#include <stl_ext/algorithm.h>
 #include "Event.h"
 #include "OSTimer.h"
 

@@ -8,6 +8,7 @@
 #include "pin.h"
 #include <PrintString.h>
 #include <misc.h>
+#include <stl_ext/memory.h>
 #include <MicrosTimer.h>
 
 #if DEBUG_PIN_MONITOR

@@ -5,22 +5,41 @@
 #pragma once
 
 #include <misc.h>
+#include <stack>
 
 class DebugContext {
 public:
-#if DEBUG_INCLUDE_SOURCE_INFO
-    DebugContext() : _file(nullptr), _line(0), _functionName(nullptr) {}
-    DebugContext(const char* file, int line, const char* functionName) : _file(file), _line(line), _functionName(functionName) {}
 
-    inline void prefix() const {
-        getOutput().printf_P(___debugPrefix, millis(), _file, _line, ESP.getFreeHeap(), can_yield(), _functionName);
-    }
+#if DEBUG_INCLUDE_SOURCE_INFO
+    class Guard {
+    public:
+        Guard(DebugContext &&ctx);
+        Guard(DebugContext &&ctx, const char *fmt, ...);
+        ~Guard();
+
+        const String &getArgs() const;
+
+    private:
+        String _args;
+    };
+
+    DebugContext() : _file(nullptr), _line(0), _functionName(nullptr), _stackGuard(nullptr) {}
+    DebugContext(const char* file, int line, const char* functionName) : _file(file), _line(line), _functionName(functionName), _stackGuard(nullptr) {}
+
+    void prefix() const;
+    String getPrefix() const;
+
+    void printStack() const;
+
 #else
     DebugContext() {}
     DebugContext(const char *file, int line, const char *functionName) {}
 
-    inline void prefix() const {
+    void prefix() const {
         getOutput().print(FPSTR(___debugPrefix));
+    }
+    String getPrefix() const {
+        return String;
     }
 #endif
 
@@ -88,13 +107,18 @@ public:
 
 public:
 #if DEBUG_INCLUDE_SOURCE_INFO
+    using Stack = std::stack<DebugContext>;
+
     const char *_file;
     int _line;
     const char *_functionName;
+    Guard *_stackGuard;
     // String _functionName
+
+
+    static Stack _stack;
 #endif
 
     static uint8_t __state;
     static DebugContext __pos;
-
 };

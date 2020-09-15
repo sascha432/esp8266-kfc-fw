@@ -8,9 +8,9 @@
 #include "stl_ext.h"
 #endif
 
-#include "./__ext/algorithm.h"
-#include "./__ext/array_of.h"
-#include "./__ext/is_trivially_copyable.h"
-#include "./__ext/memory.h"
-#include "./__ext/type_traits.h"
-#include "./__ext/utility.h"
+#include "./stl_ext/algorithm.h"
+#include "./stl_ext/array_of.h"
+#include "./stl_ext/is_trivially_copyable.h"
+#include "./stl_ext/memory.h"
+#include "./stl_ext/type_traits.h"
+#include "./stl_ext/utility.h"

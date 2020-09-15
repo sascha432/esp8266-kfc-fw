@@ -12,14 +12,14 @@
 
 namespace STL_STD_EXT_NAMESPACE {
 
-#if __GNUG__ && __GNUC__ < 5
+// #if __GNUG__ && __GNUC__ < 5
 
-    template<typename _Ta>
-    struct is_trivially_copyable : integral_constant<bool, __has_trivial_copy(_Ta)> {
-    };
+//     template<typename _Ta>
+//     struct is_trivially_copyable : integral_constant<bool, __has_trivial_copy(_Ta)> {
+//     };
 
 
-#endif
+// #endif
 
 #if !__HAS_CPP14
 

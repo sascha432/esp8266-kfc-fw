@@ -268,6 +268,14 @@ void PrintArgs::vprintf_P(const char *format, const uintptr_t **args, size_t num
     _buffer.write((uint8_t)numArgs);
     _buffer.push_back((uintptr_t)format);
     _buffer.write(reinterpret_cast<const uint8_t *>(&args[0]), sizeof(uintptr_t) * numArgs);
+
+    Serial.printf_P(PSTR("num=%u fmt=%p ('%-10.10s') "), numArgs, format, format);
+    int i  = 0;
+    while(numArgs--) {
+        Serial.printf_P(PSTR("arg=%p '%-10.10s'"), args[i], args[i]);
+        i++;
+    }
+    Serial.println();
 }
 
 
@@ -288,64 +296,14 @@ int PrintArgs::_snprintf_P(uint8_t *buffer, size_t size, uintptr_t **args, uint8
     return snprintf_P(reinterpret_cast<char *>(buffer), size, (PGM_P)args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11], args[12], args[13], args[14], args[15]);
 }
 
-//void PrintArgs::_copy(const __FlashStringHelper *fpstr)
-//{
-//    _writeFormat(fpstr);
-//    //_buffer.write(reinterpret_cast<const uint8_t *>(&fpstr), sizeof(const char *));
-//}
-
-//void PrintArgs::_copy(const char *str)
-//{
-//    _writeFormat(str);
-//// #if defined(ESP8266) && 0
-////     if (is_PGM_P(str))
-////         _buffer.write(reinterpret_cast<const uint8_t *>(&str), sizeof(const char *));
-////     }
-////     else {
-////         auto copy = _strings.attachString(str);
-////         _buffer.write(reinterpret_cast<const uint8_t *>(&copy), sizeof(const char *));
-////     }
-//// #else
-////     _buffer.write(reinterpret_cast<const uint8_t *>(&str), sizeof(const char *));
-//// #endif
-//}
-//
-//void PrintArgs::_writeFormat(const void *format)
-//{
-//#if defined(ESP8266) && 0
-//    uint16_t value = (uintptr_t)format - SECTION_HEAP_START_ADDRESSS;
-//    _buffer.write(reinterpret_cast<const uint8_t *>(&value), sizeof(value));
-//#else
-//    _buffer.write(reinterpret_cast<const uint8_t *>(&format), sizeof(const char *));
-//#endif
-//}
-//
-
-// void PrintArgs::dump(Print &output)
-// {
-//     int outLen = 0;
-//     int calls = 0;
-//     int argCount = 0;
-//     int maxPrintSize = 0;
-//     void *args[8];
-//     auto ptr = _buffer.begin();
-//     while (ptr < _buffer.end()) {
-//         uint8_t num = *ptr++;
-//         if (++num >= 8) {
-//             break;
-//         }
-//         memset(args, 0, sizeof(args));
-//         memcpy(args, ptr, num * sizeof(ArgPtr));
-//         ptr += num * sizeof(ArgPtr);
-//         argCount += num;
-//         calls++;
-//         output.print('|');
-//         int n = output.printf_P((PGM_P)args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]);
-//         output.println('|');
-//         maxPrintSize = std::max(maxPrintSize, n);
-//         outLen += n;
-//     }
-//     output.println();
-//     output.printf_P(PSTR("buffer len=%u print calls=%u arguments=%u output len=%u max print size=%u\n"), _buffer.start_length(), calls, argCount, outLen, maxPrintSize);
-//     clear();
-// }
+#if DEBUG_PRINT_ARGS
+void PrintArgs::_debugPrint(PGM_P format, ...)
+{
+    PrintString str;
+    va_list arg;
+    va_start(arg, format);
+    str.vprintf_P(format, arg);
+    va_end(arg);
+    //Serial.print(str);
+}
+#endif

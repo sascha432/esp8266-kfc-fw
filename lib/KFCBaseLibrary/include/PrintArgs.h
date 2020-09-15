@@ -12,8 +12,15 @@
 #include <StringDepulicator.h>
 
 #ifndef DEBUG_PRINT_ARGS
-#define DEBUG_PRINT_ARGS                    DEBUG_STRING_DEDUPLICATOR
+#define DEBUG_PRINT_ARGS                                DEBUG_STRING_DEDUPLICATOR
 #endif
+
+#if DEBUG_PRINT_ARGS
+#define DEBUG_PRINT_ARGS_PRINT(fmt, ...)                _debugPrint(PSTR(fmt), ##__VA_ARGS__)
+#else
+#define DEBUG_PRINT_ARGS_PRINT(...)
+#endif
+
 
 #define DEBUG_PRINT_MSC_VER  0
 
@@ -120,6 +127,11 @@ public:
             _buffer.write(0);
             _copy(format);
 
+            DEBUG_PRINT_ARGS_PRINT("num=%u fmt=%p ", (sizeof...(args)), format);
+            if ((uint32_t)format > 0x3ff00000) {
+                DEBUG_PRINT_ARGS_PRINT("('%-10.10s') ", format);
+            }
+
 #if DEBUG_PRINT_MSC_VER
             int k = sizeof...(args);
             _str.printf("buf=%u fmt='%-10.10s...' args=%u ", _buffer.length(), format, k);
@@ -130,6 +142,8 @@ public:
 
             // update argument counter
             _buffer[counterLen] = (uint8_t)((_buffer.length() - counterLen - (sizeof(const char *) + sizeof(uint8_t))) / sizeof(uint32_t));
+
+            DEBUG_PRINT_ARGS_PRINT(" outlen=%u\n", _buffer[counterLen]);
 
 #if DEBUG_PRINT_MSC_VER
             _str.printf("buf=%u size=%u ", _buffer.length(), _buffer[counterLen]);
@@ -171,14 +185,17 @@ public:
     }
 
     void printf_P(FormatType type, char ch) {
+        DEBUG_PRINT_ARGS_PRINT("fmt=%u char=%c ", type, ch);
         printf_P(RFPSTR(getFormatByType(FormatType::SINGLE_CHAR)), ch);
     }
 
     void printf_P(FormatType type, const char *str) {
+        DEBUG_PRINT_ARGS_PRINT("fmt=%u str=%p ", type, str);
         printf_P(RFPSTR(getFormatByType(FormatType::SINGLE_STRING)), str);
     }
 
     void printf_P(FormatType type, const __FlashStringHelper *fpstr) {
+        DEBUG_PRINT_ARGS_PRINT("fmt=%u fpstr=%p ", type, fpstr);
         printf_P(FormatType::SINGLE_STRING, RFPSTR(fpstr));
     }
 
@@ -198,49 +215,55 @@ public:
             case FormatType::HTML_OPEN_DIV_CARD_DIV_DIV_CARD_BODY:
             case FormatType::HTML_CLOSE_GROUP_START_HR:
                 _buffer.write((uint8_t)type);
+                DEBUG_PRINT_ARGS_PRINT("fmt=%u switch ", type);
                 return;
 default:break;//TODO remove
         }
+        DEBUG_PRINT_ARGS_PRINT("fmt=%u str=%p ", type, getFormatByType(type));
         printf_P(RFPSTR(getFormatByType(type)));
     }
 
 private:
     int _snprintf_P(uint8_t *buffer, size_t size, uintptr_t **args, uint8_t numArgs);
 
-    // float needs to be converted to double
-    inline void _copy(float value) {
-        double tmp;
-        _buffer.push_back(tmp);
-    }
-
-    // signed integers need to be converted
+    // convert to 32bit signed int, basically its padding with 0xff
     inline void _copy(int8_t value8) {
         _copy((int32_t)value8);
     }
 
+    // convert to 32bit signed int
     inline void _copy(int16_t value16) {
         _copy((int32_t)value16);
     }
 
-    // string de-duplication
-    //void _copy(const __FlashStringHelper *fpstr);
-    //void _copy(const char *str);
+    // if double is 64bit and float 32, convert to double
+    template <typename T, typename std::enable_if<(std::is_same<T, float>::value && sizeof(double) != sizeof(float)), int>::type = 0>
+    inline void _copy(T value) {
+        _copy((double)value);
+    }
 
-
-    // args are dwords
+    // unsigned types can be zero padded to 32bit
     template <typename T, typename std::enable_if<(sizeof(T) < sizeof(uintptr_t)), int>::type = 0>
-    void _copy(T arg) {
+    inline void _copy(T arg) {
         _copy((uintptr_t)arg);
     }
 
+    // 32 bit args
     template <typename T, typename std::enable_if<(sizeof(T) == sizeof(uintptr_t)), int>::type = 0>
-    void _copy(T arg) {
+    inline void _copy(T arg) {
+        auto ptr = _buffer.begin();
         _buffer.push_back((uintptr_t)arg);
+        DEBUG_PRINT_ARGS_PRINT("copy=%p buf=%p ", reinterpret_cast<const uint8_t *>(arg), (uint32_t)&ptr[0]);
+        if ((uint32_t)arg > 0x3ff00000) {
+            DEBUG_PRINT_ARGS_PRINT("('%-10.10s') ", reinterpret_cast<const uint8_t *>(arg));
+        }
     }
 
+    // 64bit args
     template <typename T, typename std::enable_if<(sizeof(T) == sizeof(uint64_t)), int>::type = 0>
-    void _copy(T arg) {
+    inline void _copy(T arg) {
         _buffer.push_back((uint64_t)arg);
+        DEBUG_PRINT_ARGS_PRINT("copy=%p %p ", reinterpret_cast<const uint8_t *>(&arg));
     }
 
     // process arguments
@@ -275,8 +298,9 @@ private:
     size_t _outputSize;
     size_t _printfCalls;
     size_t _printfArgs;
-#if DEBUG_PRINT_MSC_VER
-    PrintString _str;
+#if DEBUG_PRINT_ARGS
+    void _debugPrint(PGM_P format, ...);
+    PrintString _debugStr;
 #endif
 #endif
 };

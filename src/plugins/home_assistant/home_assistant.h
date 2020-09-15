@@ -49,7 +49,7 @@ public:
     virtual bool canHandleForm(const String &formName) const {
         return String_equals(formName, getName()) || String_equals(formName, PSTR("hass_edit")) || String_equals(formName, PSTR("hass_actions"));
     }
-    virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
+    virtual void createConfigureForm(AsyncWebServerRequest *request, FormUI::Form::BaseForm &form) override;
 
     virtual void setup(SetupModeType mode);
     virtual void reconfigure(PGM_P source);
@@ -91,7 +91,7 @@ private:
 
 // // WebUI
 // public:
-//     virtual void createWebUI(WebUI &webUI) override;
+//     virtual void createWebUI(WebUIRoot &webUI) override;
 //     virtual void getValues(JsonArray &array);
 //     virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState);
 

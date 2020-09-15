@@ -164,6 +164,7 @@ KFCMemoryDebugging &KFCMemoryDebugging::getInstance()
 
 uint8_t DebugContext::__state = DEBUG_HELPER_STATE_DISABLED; // needs to be disabled until the output stream has been initialized
 DebugContext DebugContext::__pos;
+DebugContext::Stack DebugContext::_stack;
 
 bool DebugContext::__store_pos(DebugContext &&dctx)
 {
@@ -174,6 +175,32 @@ bool DebugContext::__store_pos(DebugContext &&dctx)
 #if LOGGER
 #include "Logger.h"
 #endif
+
+DebugContext::Guard::Guard(DebugContext &&ctx)
+{
+    ctx._stackGuard = this;
+    _stack.emplace(std::move(ctx));
+}
+
+DebugContext::Guard::Guard(DebugContext &&ctx, const char *fmt, ...)
+{
+    ctx._stackGuard = this;
+    va_list arg;
+    va_start(arg, fmt);
+    _args = PrintString(FPSTR(fmt), arg);
+    va_end(arg);
+    _stack.emplace(std::move(ctx));
+}
+
+DebugContext::Guard::~Guard()
+{
+    _stack.pop();
+}
+
+const String &DebugContext::Guard::getArgs() const
+{
+    return _args;
+}
 
 bool DebugContext::reportAssert(const DebugContext &ctx, const __FlashStringHelper *message)
 {
@@ -202,6 +229,36 @@ const char ___debugPrefix[] PROGMEM = "D%08lu (%s:%u <%d:%u> %s): ";
 #else
 const char ___debugPrefix[] PROGMEM = "DBG: ";
 #endif
+
+void DebugContext::prefix() const 
+{
+    getOutput().printf_P(___debugPrefix, millis(), _file, _line, ESP.getFreeHeap(), can_yield(), _functionName);
+}
+
+String DebugContext::getPrefix() const 
+{
+    PrintString str(F("%s:%u: "), __S(_file), _line);
+    return str;
+}
+
+void DebugContext::printStack() const
+{
+    if (!_stack.empty()) {
+        auto stack = _stack;
+        auto &output = getOutput();
+        output.println(F("Stack trace"));
+        while (!stack.empty()) {
+            auto &item = stack.top();
+            output.printf_P(PSTR("#%u %s:%u"), stack.size(), __S(item._file), item._line);
+            if (item._stackGuard) {
+                output.print(F(" args="));
+                output.print(item._stackGuard->getArgs());
+            }
+            output.println();
+            stack.pop();
+        }
+    }
+}
 
 void DebugContext::vprintf(const char *format, va_list arg) const
 {

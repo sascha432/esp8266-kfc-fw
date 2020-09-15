@@ -23,7 +23,7 @@ public:
 
     virtual void publishState(MQTTClient *client) override;
     virtual void getValues(JsonArray &json, bool timer) override;
-    virtual void createWebUI(WebUI &webUI, WebUIRow **row) override;
+    virtual void createWebUI(WebUIRoot &webUI, WebUIRow **row) override;
     virtual void getStatus(Print &output) override;
     virtual MQTTSensorSensorType getType() const override;
 
@@ -41,7 +41,7 @@ private:
 
     String _getMetricsTopics(TopicType num) const;
     DimmerMetrics &_updateMetrics(const dimmer_metrics_t &metrics);
-    void _createWebUI(WebUI &webUI, WebUIRow **row);
+    void _createWebUI(WebUIRoot &webUI, WebUIRow **row);
 
     // String _getId(const __FlashStringHelper *type = nullptr);
     String _name;

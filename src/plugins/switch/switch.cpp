@@ -98,7 +98,7 @@ void SwitchPlugin::getStatus(Print &output)
     }
 }
 
-void SwitchPlugin::createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request)
+void SwitchPlugin::createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
 {
     if (type == FormCallbackType::SAVE) {
         __LDBG_println(F("Storing config"));
@@ -109,18 +109,18 @@ void SwitchPlugin::createConfigureForm(FormCallbackType type, const String &form
         return;
     }
 
-    auto &ui = form.getFormUIConfig();
+    auto &ui = form.createWebUI();
     ui.setTitle(F("Switch Configuration"));
     ui.setContainerId(F("switch_settings"));
-    ui.setStyle(FormUI::StyleType::ACCORDION);
+    ui.setStyle(FormUI::WebUI::StyleType::ACCORDION);
 
-    FormUI::ItemsList states(
+    FormUI::Container::List states(
         SwitchStateEnum::OFF, FSPGM(Off),
         SwitchStateEnum::ON, FSPGM(On),
         SwitchStateEnum::RESTORE, F("Restore Last State")
     );
 
-    FormUI::ItemsList webUI(
+    FormUI::Container::List webUI(
         WebUIEnum::NONE, F("None"),
         WebUIEnum::HIDE, F("Hide"),
         WebUIEnum::NEW_ROW, F("New row after switch")
@@ -129,19 +129,19 @@ void SwitchPlugin::createConfigureForm(FormCallbackType type, const String &form
     for (size_t i = 0; i < _pins.size(); i++) {
         auto &group = form.addCardGroup(PrintString(FSPGM(channel__u), i), PrintString(F("Channel %u"), i), true);
 
-        form.add(PrintString(F("name_%u"), i), _names[i], [this, i](const String &name, FormField &, bool) {
+        form.add(PrintString(F("name_%u"), i), _names[i], [this, i](const String &name, FormUI::Field::Base &, bool) {
             _names[i] = name;
             return false;
         }, FormField::Type::TEXT);
         form.addFormUI(F("Name"));
 
-        form.add<SwitchStateEnum>(PrintString(F("state_%u"), i), _configs[i].state, [this, i](SwitchStateEnum state, FormField &, bool) {
+        form.add<SwitchStateEnum>(PrintString(F("state_%u"), i), _configs[i].state, [this, i](SwitchStateEnum state, FormUI::Field::Base &, bool) {
             _configs[i].state = state;
             return false;
         }, FormField::Type::SELECT);
         form.addFormUI(F("Default State"), states);
 
-        form.add<WebUIEnum>(PrintString(F("webui_%u"), i), _configs[i].webUI, [this, i](WebUIEnum webUI, FormField &, bool) {
+        form.add<WebUIEnum>(PrintString(F("webui_%u"), i), _configs[i].webUI, [this, i](WebUIEnum webUI, FormUI::Field::Base &, bool) {
             _configs[i].webUI = webUI;
             return false;
         }, FormField::Type::SELECT);
@@ -153,7 +153,7 @@ void SwitchPlugin::createConfigureForm(FormCallbackType type, const String &form
     form.finalize();
 }
 
-void SwitchPlugin::createWebUI(WebUI &webUI)
+void SwitchPlugin::createWebUI(WebUIRoot &webUI)
 {
     auto row = &webUI.addRow();
     row->setExtraClass(FSPGM(title));

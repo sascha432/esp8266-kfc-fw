@@ -155,3 +155,5 @@ private:
     JsonUnnamedObject &_json;
     JsonArray *_rows;
 };
+
+using WebUIRoot = ::WebUI;

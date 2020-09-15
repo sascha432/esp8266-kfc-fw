@@ -108,7 +108,7 @@ void BlindsControlPlugin::createMenu()
     bootstrapMenu.addSubMenu(getFriendlyName(), F("blinds/controller.html"), navMenu.config);
 }
 
-void BlindsControlPlugin::createWebUI(WebUI &webUI) {
+void BlindsControlPlugin::createWebUI(WebUIRoot &webUI) {
 
     auto row = &webUI.addRow();
     row->setExtraClass(JJ(title));

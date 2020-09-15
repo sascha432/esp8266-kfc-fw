@@ -57,7 +57,7 @@ void ButtonsPlugin::reconfigure(PGM_P source)
     // }
 }
 
-void ButtonsPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
+void ButtonsPlugin::createConfigureForm(AsyncWebServerRequest *request, FormUI::Form::BaseForm &form)
 {
     form.finalize();
 }

@@ -74,7 +74,7 @@ public:
     // using update rate
     virtual void getValues(JsonArray &json, bool timer) = 0;
 
-    virtual void createWebUI(WebUI &webUI, WebUIRow **row) = 0;
+    virtual void createWebUI(WebUIRoot &webUI, WebUIRow **row) = 0;
     virtual void getStatus(Print &output) = 0;
 
     virtual SensorType getType() const {
@@ -89,9 +89,9 @@ public:
         return false;
     }
 
-    virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) {
+    virtual void createConfigureForm(AsyncWebServerRequest *request, FormUI::Form::BaseForm &form) {
     }
-    virtual void configurationSaved(Form *form) {
+    virtual void configurationSaved(FormUI::Form::BaseForm *form) {
     }
     virtual void reconfigure(PGM_P source) {
     }

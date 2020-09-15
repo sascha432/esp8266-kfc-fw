@@ -1011,11 +1011,11 @@ void at_mode_serial_handle_event(String &commandString)
                 args.printf_P(PSTR("sizeof(std::vector<int>): %u"), sizeof(std::vector<int>));
                 args.printf_P(PSTR("sizeof(std::vector<double>): %u"), sizeof(std::vector<double>));
                 args.printf_P(PSTR("sizeof(std::list<int>): %u"), sizeof(std::list<int>));
-                args.printf_P(PSTR("sizeof(FormField): %u"), sizeof(FormField));
-                args.printf_P(PSTR("sizeof(FormUI:UI): %u"), sizeof(FormUI::UI));
+                // args.printf_P(PSTR("sizeof(FormUI::Field::Base): %u"), sizeof(FormUI::Field::Base));
+                // args.printf_P(PSTR("sizeof(FormUI:UI): %u"), sizeof(FormUI::WebUI::Base));
                 args.printf_P(PSTR("sizeof(AsyncClient): %u"), sizeof(AsyncClient));
                 args.printf_P(PSTR("sizeof(CallbackTimer): %u"), sizeof(Event::CallbackTimer));
-                args.printf_P(PSTR("sizeof(SerialTwoWire): %u"), sizeof(SerialTwoWire));
+                // args.printf_P(PSTR("sizeof(SerialTwoWire): %u"), sizeof(SerialTwoWire));
 
 #if DEBUG
                 String hash;

@@ -33,7 +33,7 @@ public:
 
     virtual void publishState(MQTTClient *client) override;
     virtual void getValues(JsonArray &json, bool timer) override;
-    virtual void createWebUI(WebUI &webUI, WebUIRow **row) override;
+    virtual void createWebUI(WebUIRoot &webUI, WebUIRow **row) override;
     virtual void getStatus(Print &output) override;
     virtual MQTTSensorSensorType Sensor_LM75A::getType() const override;
 }

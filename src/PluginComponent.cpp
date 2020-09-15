@@ -14,6 +14,7 @@
 #include <misc.h>
 #include <kfc_fw_config.h>
 #include <ReadADC.h>
+#include <KFCForms.h>
 
 #if DEBUG_PLUGINS
 #include "debug_helper_enable.h"
@@ -130,7 +131,7 @@ void PluginComponent::getStatus(Print &output)
 {
 }
 
-void PluginComponent::createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request)
+void PluginComponent::createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
 {
     __DBG_panic_pure_virtual();
 }
@@ -146,7 +147,7 @@ WebTemplate *PluginComponent::getWebTemplate(const String &formName)
     return nullptr;
 }
 
-void PluginComponent::createWebUI(WebUI &webUI)
+void PluginComponent::createWebUI(WebUIRoot &webUI)
 {
     __DBG_panic_pure_virtual();
 }

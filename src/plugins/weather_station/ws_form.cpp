@@ -15,7 +15,7 @@
 
 using KFCConfigurationClasses::Plugins;
 
-void WeatherStationPlugin::createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request)
+void WeatherStationPlugin::createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
 {
     if (!isCreateFormCallbackType(type)) {
         return;
@@ -23,10 +23,10 @@ void WeatherStationPlugin::createConfigureForm(FormCallbackType type, const Stri
 
     auto &cfg = Plugins::WeatherStation::getWriteableConfig();
 
-    auto &ui = form.getFormUIConfig();
+    auto &ui = form.createWebUI();
     ui.setTitle(F("Weather Station Configuration"));
     ui.setContainerId(F("dimmer_settings"));
-    ui.setStyle(FormUI::StyleType::ACCORDION);
+    ui.setStyle(FormUI::WebUI::StyleType::ACCORDION);
 
     auto &mainGroup = form.addCardGroup(FSPGM(config), String());
 
@@ -38,15 +38,15 @@ void WeatherStationPlugin::createConfigureForm(FormCallbackType type, const Stri
 
     form.add(F("api"), _H_W_STRUCT_VALUE(cfg, weather_poll_interval));
     form.addFormUI(F("Weather Poll Interval"), FormUI::Suffix(FSPGM(minutes)));
-    form.addValidator(FormRangeValidator(5, 240));
+    form.addValidator(FormUI::Validator::Range(5, 240));
 
     form.add(F("ato"), _H_W_STRUCT_VALUE(cfg, api_timeout));
     form.addFormUI(F("API Timeout"), FormUI::Suffix(FSPGM(seconds)));
-    form.addValidator(FormRangeValidator(30, 900));
+    form.addValidator(FormUI::Validator::Range(30, 900));
 
     form.add(F("bll"), _H_W_STRUCT_VALUE(cfg, backlight_level));
     form.addFormUI(F("Backlight Level"), FormUI::Suffix('%'));
-    form.addValidator(FormRangeValidator(0, 100));
+    form.addValidator(FormUI::Validator::Range(0, 100));
 
     form.add(F("tth"), _H_W_STRUCT_VALUE(cfg, touch_threshold));
     form.addFormUI(F("Touch Threshold"));

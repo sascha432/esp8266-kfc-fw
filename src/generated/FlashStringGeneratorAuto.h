@@ -4,9 +4,9 @@
 #ifdef __cplusplus
 extern "C"{
 #endif
-// lib/KFCBaseLibrary/include/misc.h:650
-// lib/KFCBaseLibrary/include/misc.h:651
-// lib/KFCBaseLibrary/include/misc.h:652
+// lib/KFCBaseLibrary/include/misc.h:616
+// lib/KFCBaseLibrary/include/misc.h:617
+// lib/KFCBaseLibrary/include/misc.h:618
 // lib/KFCJson/include/JsonVariant.h:82
 // src/plugins/serial2tcp/Serial2TcpServer.cpp:112
 // lib/KFCConfiguration/src/ConfigurationParameter.cpp:281
@@ -27,12 +27,12 @@ PROGMEM_STRING_DECL(Cache_Control);
 PROGMEM_STRING_DECL(Set_Cookie);
 // lib/KFCWebFramework/include/HttpHeaders.h:300
 // src/MissingFlashStrings.cpp:52
-// src/web_server.cpp:1120
-// src/web_server.cpp:1265
+// src/web_server.cpp:1142
+// src/web_server.cpp:1287
 PROGMEM_STRING_DECL(Authorization);
 // lib/KFCWebFramework/include/HttpHeaders.h:308
 // src/MissingFlashStrings.cpp:53
-// src/web_server.cpp:1124
+// src/web_server.cpp:1146
 PROGMEM_STRING_DECL(Bearer_);
 // lib/KFCJson/include/JsonVariant.h:79
 // src/WebUISocket.cpp:128
@@ -65,9 +65,24 @@ PROGMEM_STRING_DECL(false);
 // src/plugins/file_manager/file_manager.cpp:428
 // src/plugins/home_assistant/home_assistant.cpp:769
 PROGMEM_STRING_DECL(mime_text_plain);
-// lib/KFCWebFramework/include/FormUI.h:225
+// lib/KFCWebFramework/include/Validator/Range.h:62
+// src/MissingFlashStrings.cpp:31
+// lib/KFCWebFramework/src/Validator/Length.cpp:34
+PROGMEM_STRING_DECL(FormValidator_min_macro);
+// lib/KFCWebFramework/include/Validator/Range.h:63
+// src/MissingFlashStrings.cpp:32
+// lib/KFCWebFramework/src/Validator/Length.cpp:35
+PROGMEM_STRING_DECL(FormValidator_max_macro);
+// lib/KFCWebFramework/include/Validator/Enum.h:24
+// src/MissingFlashStrings.cpp:27
+PROGMEM_STRING_DECL(FormEnumValidator_default_message);
+// lib/KFCWebFramework/include/Validator/Length.h:17
+// lib/KFCWebFramework/include/Validator/Length.h:24
+// src/MissingFlashStrings.cpp:26
+PROGMEM_STRING_DECL(FormLengthValidator_default_message);
+// lib/KFCWebFramework/include/WebUI/Containers.h:543
 PROGMEM_STRING_DECL(readonly);
-// lib/KFCWebFramework/include/FormUI.h:231
+// lib/KFCWebFramework/include/WebUI/Containers.h:549
 // src/kfc_fw_config_forms.cpp:14
 // src/plugins/mqtt/mqtt_form.cpp:35
 // src/plugins/mqtt/mqtt_plugin.cpp:74
@@ -77,43 +92,19 @@ PROGMEM_STRING_DECL(readonly);
 // src/plugins/ssdp/ssdp.cpp:114
 // src/plugins/syslog/syslog_plugin.cpp:186
 // src/plugins/syslog/syslog_plugin.cpp:210
-// lib/KFCWebFramework/src/FormUI.cpp:46
 PROGMEM_STRING_DECL(Disabled);
-// lib/KFCWebFramework/include/FormUI.h:231
-// src/kfc_fw_config_forms.cpp:186
+// lib/KFCWebFramework/include/WebUI/Containers.h:549
+// src/kfc_fw_config_forms.cpp:187
 // src/plugins/mqtt/mqtt_form.cpp:36
-// lib/KFCWebFramework/src/FormUI.cpp:46
 PROGMEM_STRING_DECL(Enabled);
-// lib/KFCWebFramework/include/FormLengthValidator.h:14
-// lib/KFCWebFramework/include/FormLengthValidator.h:16
-// src/MissingFlashStrings.cpp:26
-PROGMEM_STRING_DECL(FormLengthValidator_default_message);
-// lib/KFCWebFramework/include/FormLengthValidator.h:38
-// src/MissingFlashStrings.cpp:31
-// lib/KFCWebFramework/src/FormRangeValidator.cpp:42
-// lib/KFCWebFramework/src/FormRangeValidator.cpp:72
-PROGMEM_STRING_DECL(FormValidator_min_macro);
-// lib/KFCWebFramework/include/FormLengthValidator.h:39
-// src/MissingFlashStrings.cpp:32
-// lib/KFCWebFramework/src/FormRangeValidator.cpp:43
-// lib/KFCWebFramework/src/FormRangeValidator.cpp:73
-PROGMEM_STRING_DECL(FormValidator_max_macro);
-// lib/KFCWebFramework/include/FormEnumValidator.h:15
-// src/MissingFlashStrings.cpp:27
-PROGMEM_STRING_DECL(FormEnumValidator_default_message);
-// lib/KFCWebFramework/include/FormEnumValidator.h:35
-// lib/KFCWebFramework/include/FormEnumValidator.h:44
-// src/MissingFlashStrings.cpp:30
-PROGMEM_STRING_DECL(FormValidator_allowed_macro);
-// lib/KFCWebFramework/include/FormHostValidator.h:19
-// lib/KFCWebFramework/include/FormHostValidator.h:21
+// lib/KFCWebFramework/include/Validator/Host.h:22
 // src/MissingFlashStrings.cpp:28
 PROGMEM_STRING_DECL(FormHostValidator_default_message);
-// lib/KFCWebFramework/include/FormHostValidator.h:31
+// lib/KFCWebFramework/include/Validator/Host.h:41
 // src/async_web_response.cpp:804
 // src/kfc_fw_config.cpp:706
 // src/kfc_fw_config.cpp:762
-// src/kfc_fw_config_classes.cpp:64
+// src/kfc_fw_config_classes.cpp:77
 PROGMEM_STRING_DECL(_var_zeroconf);
 // src/async_web_response.cpp:166
 // src/async_web_response.cpp:302
@@ -129,22 +120,20 @@ PROGMEM_STRING_DECL(mime_text_html);
 // src/async_web_response.cpp:786
 PROGMEM_STRING_DECL(Address);
 // src/async_web_response.cpp:790
-// src/kfc_fw_config_forms.cpp:126
-// src/plugins/mqtt/mqtt_form.cpp:68
+// src/kfc_fw_config_forms.cpp:127
+// src/plugins/mqtt/mqtt_form.cpp:70
 // src/plugins/serial2tcp/serial2tcp.cpp:132
 PROGMEM_STRING_DECL(Hostname);
-// src/AtModeArgs.cpp:127
-// lib/KFCWebFramework/src/FormUI.cpp:75
-// lib/KFCWebFramework/src/FormUIRenderHtml.cpp:499
+// src/AtModeArgs.cpp:128
 PROGMEM_STRING_DECL(min);
-// src/AtModeArgs.cpp:130
+// src/AtModeArgs.cpp:131
 PROGMEM_STRING_DECL(hour);
-// src/AtModeArgs.cpp:133
+// src/AtModeArgs.cpp:134
 // lib/KFCBaseLibrary/src/misc.cpp:39
 PROGMEM_STRING_DECL(day);
-// src/AtModeArgs.cpp:136
+// src/AtModeArgs.cpp:137
 PROGMEM_STRING_DECL(sec);
-// src/AtModeArgs.cpp:183
+// src/AtModeArgs.cpp:184
 // src/plugins/dimmer_module/dimmer_base.cpp:500
 // src/plugins/file_manager/file_manager.cpp:374
 // src/plugins/file_manager/file_manager.cpp:420
@@ -192,7 +181,7 @@ PROGMEM_STRING_DECL(failure);
 // src/kfc_fw_config_forms.cpp:25
 PROGMEM_STRING_DECL(defaultPassword);
 // src/kfc_fw_config.cpp:479
-// src/kfc_fw_config_classes.cpp:167
+// src/kfc_fw_config_classes.cpp:180
 // src/plugins/mqtt/mqtt_auto_discovery.cpp:80
 PROGMEM_STRING_DECL(KFC_Firmware);
 // include/retracted/custom_config.h:254
@@ -204,7 +193,7 @@ PROGMEM_STRING_DECL(KFC_Firmware);
 // src/plugins/dimmer_module/dimmer_module.cpp:246
 // src/plugins/home_assistant/home_assistant.cpp:476
 // src/plugins/mqtt/mqtt_auto_discovery.cpp:63
-// src/plugins/mqtt/mqtt_form.cpp:86
+// src/plugins/mqtt/mqtt_form.cpp:85
 PROGMEM_STRING_DECL(mqtt);
 // include/retracted/custom_config.h:254
 // include/retracted/custom_config.h:293
@@ -223,7 +212,7 @@ PROGMEM_STRING_DECL(tcp);
 PROGMEM_STRING_DECL(address);
 // src/kfc_fw_config.cpp:740
 // src/plugins/mdns/mdns_resolver.cpp:75
-// src/plugins/mqtt/mqtt_form.cpp:72
+// src/plugins/mqtt/mqtt_form.cpp:74
 // src/plugins/serial2tcp/serial2tcp.cpp:134
 PROGMEM_STRING_DECL(port);
 // src/kfc_fw_config.cpp:1170
@@ -234,146 +223,146 @@ PROGMEM_STRING_DECL(safe_mode_enabled);
 // src/templates.cpp:212
 PROGMEM_STRING_DECL(default_password_warning);
 // src/kfc_fw_config.cpp:1383
-// src/kfc_fw_config_forms.cpp:113
+// src/kfc_fw_config_forms.cpp:114
 PROGMEM_STRING_DECL(network);
 // src/kfc_fw_config.cpp:1383
 // src/kfc_fw_config_forms.cpp:37
 PROGMEM_STRING_DECL(wifi);
 // src/kfc_fw_config_forms.cpp:14
 // src/kfc_fw_config_forms.cpp:14
-// src/kfc_fw_config_forms.cpp:75
-// src/kfc_fw_config_forms.cpp:133
+// src/kfc_fw_config_forms.cpp:76
+// src/kfc_fw_config_forms.cpp:134
 // src/templates.cpp:470
 // src/templates.cpp:479
 PROGMEM_STRING_DECL(Station_Mode);
 // src/kfc_fw_config_forms.cpp:14
 // src/kfc_fw_config_forms.cpp:14
-// src/kfc_fw_config_forms.cpp:85
-// src/kfc_fw_config_forms.cpp:149
+// src/kfc_fw_config_forms.cpp:86
+// src/kfc_fw_config_forms.cpp:150
 // src/templates.cpp:472
 // src/templates.cpp:476
 // src/templates.cpp:479
 // src/templates.cpp:493
 PROGMEM_STRING_DECL(Access_Point);
 // src/kfc_fw_config_forms.cpp:21
-// src/kfc_fw_config_forms.cpp:219
-// src/kfc_fw_config_forms.cpp:230
+// src/kfc_fw_config_forms.cpp:220
+// src/kfc_fw_config_forms.cpp:231
 // src/web_server.cpp:840
 // src/web_server.cpp:847
 PROGMEM_STRING_DECL(password);
 // src/kfc_fw_config_forms.cpp:22
-// src/kfc_fw_config_forms.cpp:236
-// src/kfc_fw_config_forms.cpp:243
+// src/kfc_fw_config_forms.cpp:237
+// src/kfc_fw_config_forms.cpp:244
 PROGMEM_STRING_DECL(npwd);
 // src/kfc_fw_config_forms.cpp:29
-// src/kfc_fw_config_forms.cpp:123
-// src/kfc_fw_config_forms.cpp:166
-// src/kfc_fw_config_forms.cpp:175
+// src/kfc_fw_config_forms.cpp:124
+// src/kfc_fw_config_forms.cpp:167
+// src/kfc_fw_config_forms.cpp:176
 PROGMEM_STRING_DECL(device);
 // src/kfc_fw_config_forms.cpp:43
 // src/kfc_fw_config_forms.cpp:53
 PROGMEM_STRING_DECL(Auto);
-// src/kfc_fw_config_forms.cpp:66
-PROGMEM_STRING_DECL(WiFi_Configuration);
 // src/kfc_fw_config_forms.cpp:67
+PROGMEM_STRING_DECL(WiFi_Configuration);
+// src/kfc_fw_config_forms.cpp:68
 PROGMEM_STRING_DECL(wifi_settings);
-// src/kfc_fw_config_forms.cpp:69
-// src/plugins/mqtt/mqtt_form.cpp:61
+// src/kfc_fw_config_forms.cpp:70
+// src/plugins/mqtt/mqtt_form.cpp:63
 // src/plugins/serial2tcp/serial2tcp.cpp:118
 PROGMEM_STRING_DECL(mode);
-// src/kfc_fw_config_forms.cpp:71
-PROGMEM_STRING_DECL(wifi_mode);
 // src/kfc_fw_config_forms.cpp:72
-PROGMEM_STRING_DECL(Invalid_mode);
+PROGMEM_STRING_DECL(wifi_mode);
 // src/kfc_fw_config_forms.cpp:73
+PROGMEM_STRING_DECL(Invalid_mode);
+// src/kfc_fw_config_forms.cpp:74
 PROGMEM_STRING_DECL(WiFi_Mode);
-// src/kfc_fw_config_forms.cpp:75
-// src/kfc_fw_config_forms.cpp:133
+// src/kfc_fw_config_forms.cpp:76
+// src/kfc_fw_config_forms.cpp:134
 PROGMEM_STRING_DECL(station);
-// src/kfc_fw_config_forms.cpp:79
-// src/kfc_fw_config_forms.cpp:95
+// src/kfc_fw_config_forms.cpp:80
+// src/kfc_fw_config_forms.cpp:96
 PROGMEM_STRING_DECL(SSID);
-// src/kfc_fw_config_forms.cpp:83
-// src/kfc_fw_config_forms.cpp:99
+// src/kfc_fw_config_forms.cpp:84
+// src/kfc_fw_config_forms.cpp:100
 PROGMEM_STRING_DECL(Passphrase);
-// src/kfc_fw_config_forms.cpp:95
+// src/kfc_fw_config_forms.cpp:96
 PROGMEM_STRING_DECL(HIDDEN);
-// src/kfc_fw_config_forms.cpp:103
+// src/kfc_fw_config_forms.cpp:104
 PROGMEM_STRING_DECL(Channel);
-// src/kfc_fw_config_forms.cpp:107
+// src/kfc_fw_config_forms.cpp:108
 PROGMEM_STRING_DECL(Encryption);
-// src/kfc_fw_config_forms.cpp:120
-PROGMEM_STRING_DECL(Network_Configuration);
 // src/kfc_fw_config_forms.cpp:121
+PROGMEM_STRING_DECL(Network_Configuration);
+// src/kfc_fw_config_forms.cpp:122
 PROGMEM_STRING_DECL(network_settings);
-// src/kfc_fw_config_forms.cpp:123
-// src/kfc_fw_config_forms.cpp:175
+// src/kfc_fw_config_forms.cpp:124
+// src/kfc_fw_config_forms.cpp:176
 // src/plugins.cpp:179
 // src/plugins.cpp:182
 PROGMEM_STRING_DECL(Device);
-// src/kfc_fw_config_forms.cpp:125
+// src/kfc_fw_config_forms.cpp:126
 PROGMEM_STRING_DECL(dev_hostn);
-// src/kfc_fw_config_forms.cpp:129
-// src/kfc_fw_config_forms.cpp:177
-PROGMEM_STRING_DECL(dev_title);
 // src/kfc_fw_config_forms.cpp:130
 // src/kfc_fw_config_forms.cpp:178
+PROGMEM_STRING_DECL(dev_title);
+// src/kfc_fw_config_forms.cpp:131
+// src/kfc_fw_config_forms.cpp:179
 PROGMEM_STRING_DECL(Title);
-// src/kfc_fw_config_forms.cpp:136
+// src/kfc_fw_config_forms.cpp:137
 PROGMEM_STRING_DECL(DHCP_Client);
-// src/kfc_fw_config_forms.cpp:139
-// src/kfc_fw_config_forms.cpp:155
+// src/kfc_fw_config_forms.cpp:140
+// src/kfc_fw_config_forms.cpp:156
 PROGMEM_STRING_DECL(IP_Address);
-// src/kfc_fw_config_forms.cpp:141
-// src/kfc_fw_config_forms.cpp:157
+// src/kfc_fw_config_forms.cpp:142
+// src/kfc_fw_config_forms.cpp:158
 PROGMEM_STRING_DECL(Subnet);
-// src/kfc_fw_config_forms.cpp:143
+// src/kfc_fw_config_forms.cpp:144
 PROGMEM_STRING_DECL(Gateway);
-// src/kfc_fw_config_forms.cpp:145
+// src/kfc_fw_config_forms.cpp:146
 PROGMEM_STRING_DECL(DNS_1);
-// src/kfc_fw_config_forms.cpp:147
+// src/kfc_fw_config_forms.cpp:148
 PROGMEM_STRING_DECL(DNS_2);
-// src/kfc_fw_config_forms.cpp:149
+// src/kfc_fw_config_forms.cpp:150
 PROGMEM_STRING_DECL(ap_mode);
-// src/kfc_fw_config_forms.cpp:152
+// src/kfc_fw_config_forms.cpp:153
 PROGMEM_STRING_DECL(DHCP_Server);
-// src/kfc_fw_config_forms.cpp:172
+// src/kfc_fw_config_forms.cpp:173
 PROGMEM_STRING_DECL(Device_Configuration);
-// src/kfc_fw_config_forms.cpp:182
-// src/plugins/mqtt/mqtt_form.cpp:119
+// src/kfc_fw_config_forms.cpp:183
+// src/plugins/mqtt/mqtt_form.cpp:118
 // src/plugins/ping_monitor/ping_monitor.cpp:331
 // src/plugins/weather_station/ws_form.cpp:40
 PROGMEM_STRING_DECL(minutes);
-// src/kfc_fw_config_forms.cpp:189
+// src/kfc_fw_config_forms.cpp:190
 PROGMEM_STRING_DECL(Zeroconf_Timeout);
-// src/kfc_fw_config_forms.cpp:189
+// src/kfc_fw_config_forms.cpp:190
 // src/plugins/clock/clock_form.cpp:73
 // src/plugins/ping_monitor/ping_monitor.cpp:314
 // src/plugins/remote/remote.cpp:110
 // src/plugins/remote/remote.cpp:112
 PROGMEM_STRING_DECL(milliseconds);
-// src/kfc_fw_config_forms.cpp:193
+// src/kfc_fw_config_forms.cpp:194
 PROGMEM_STRING_DECL(Zeroconf_Logging);
-// src/kfc_fw_config_forms.cpp:196
+// src/kfc_fw_config_forms.cpp:197
 PROGMEM_STRING_DECL(SSDP_Discovery);
-// src/kfc_fw_config_forms.cpp:199
+// src/kfc_fw_config_forms.cpp:200
 PROGMEM_STRING_DECL(Status_LED_Mode);
-// src/kfc_fw_config_forms.cpp:204
-// src/kfc_fw_config_forms.cpp:207
+// src/kfc_fw_config_forms.cpp:205
+// src/kfc_fw_config_forms.cpp:208
 // src/plugins.cpp:270
 PROGMEM_STRING_DECL(WebUI);
-// src/kfc_fw_config_forms.cpp:210
+// src/kfc_fw_config_forms.cpp:211
 // lib/KFCBaseLibrary/src/misc.cpp:37
 PROGMEM_STRING_DECL(days);
-// src/kfc_fw_config_forms.cpp:214
+// src/kfc_fw_config_forms.cpp:215
 PROGMEM_STRING_DECL(Web_Alerts);
-// src/kfc_fw_config_forms.cpp:223
+// src/kfc_fw_config_forms.cpp:224
 // src/plugins.cpp:169
 // src/plugins.cpp:185
 PROGMEM_STRING_DECL(Change_Password);
-// src/kfc_fw_config_forms.cpp:226
+// src/kfc_fw_config_forms.cpp:227
 // src/web_server.cpp:383
-// src/plugins/blinds_ctrl/blinds_form.cpp:139
+// src/plugins/blinds_ctrl/blinds_form.cpp:128
 // src/plugins/clock/clock_form.cpp:30
 // src/plugins/dimmer_module/dimmer_module_form.cpp:39
 // src/plugins/mqtt/mqtt_form.cpp:59
@@ -393,16 +382,16 @@ PROGMEM_STRING_DECL(logger_filename_warning);
 // src/logger.cpp:293
 PROGMEM_STRING_DECL(logger_filename_messags);
 // src/MissingFlashStrings.cpp:24
-// lib/KFCWebFramework/src/FormRangeValidator.cpp:15
-// lib/KFCWebFramework/src/FormRangeValidator.cpp:52
+// lib/KFCWebFramework/src/Validator/Range.cpp:13
 PROGMEM_STRING_DECL(FormRangeValidator_default_message);
 // src/MissingFlashStrings.cpp:25
-// lib/KFCWebFramework/src/FormRangeValidator.cpp:15
-// lib/KFCWebFramework/src/FormRangeValidator.cpp:52
+// lib/KFCWebFramework/src/Validator/Range.cpp:13
 PROGMEM_STRING_DECL(FormRangeValidator_default_message_zero_allowed);
 // src/MissingFlashStrings.cpp:29
-// lib/KFCWebFramework/src/Form.cpp:124
+// lib/KFCWebFramework/src/Form/BaseForm.cpp:93
 PROGMEM_STRING_DECL(Form_value_missing_default_message);
+// src/MissingFlashStrings.cpp:30
+PROGMEM_STRING_DECL(FormValidator_allowed_macro);
 // src/MissingFlashStrings.cpp:35
 // lib/KFCWebFramework/src/HttpHeaders.cpp:73
 PROGMEM_STRING_DECL(Pragma);
@@ -419,7 +408,7 @@ PROGMEM_STRING_DECL(RFC7231_date);
 // src/web_server.cpp:776
 PROGMEM_STRING_DECL(Content_Encoding);
 // src/MissingFlashStrings.cpp:42
-// src/plugins/mqtt/mqtt_form.cpp:65
+// src/plugins/mqtt/mqtt_form.cpp:67
 // lib/KFCWebFramework/src/HttpHeaders.cpp:247
 PROGMEM_STRING_DECL(Connection);
 // src/MissingFlashStrings.cpp:43
@@ -439,7 +428,7 @@ PROGMEM_STRING_DECL(Expires);
 // lib/KFCWebFramework/src/HttpHeaders.cpp:285
 PROGMEM_STRING_DECL(no_cache);
 // src/MissingFlashStrings.cpp:48
-// src/plugins/blinds_ctrl/blinds_form.cpp:116
+// src/plugins/blinds_ctrl/blinds_form.cpp:111
 // lib/KFCWebFramework/src/HttpHeaders.cpp:247
 PROGMEM_STRING_DECL(close);
 // src/MissingFlashStrings.cpp:49
@@ -451,13 +440,13 @@ PROGMEM_STRING_DECL(public);
 // src/MissingFlashStrings.cpp:51
 // lib/KFCWebFramework/src/HttpHeaders.cpp:143
 PROGMEM_STRING_DECL(private);
-// src/PluginComponent.cpp:135
-// src/PluginComponent.cpp:140
-// src/PluginComponent.cpp:145
-// src/PluginComponent.cpp:151
-// src/PluginComponent.cpp:156
-// src/PluginComponent.cpp:161
-// src/PluginComponent.cpp:187
+// src/PluginComponent.cpp:137
+// src/PluginComponent.cpp:142
+// src/PluginComponent.cpp:147
+// src/PluginComponent.cpp:153
+// src/PluginComponent.cpp:158
+// src/PluginComponent.cpp:163
+// src/PluginComponent.cpp:189
 PROGMEM_STRING_DECL(__pure_virtual);
 // src/plugins.cpp:161
 // src/plugins.cpp:165
@@ -547,7 +536,7 @@ PROGMEM_STRING_DECL(http);
 PROGMEM_STRING_DECL(Offline);
 // src/templates.cpp:257
 // src/plugins/ssdp/ssdp.cpp:62
-// src/plugins/syslog/syslog_plugin.cpp:120
+// src/plugins/syslog/syslog_plugin.cpp:123
 PROGMEM_STRING_DECL(kfcfw);
 // src/templates.cpp:265
 // src/templates.cpp:277
@@ -559,7 +548,7 @@ PROGMEM_STRING_DECL(_hidden);
 // src/templates.cpp:464
 PROGMEM_STRING_DECL(Not_supported);
 // src/templates.cpp:420
-// lib/KFCWebFramework/src/Form.cpp:208
+// lib/KFCWebFramework/src/Form/BaseForm.cpp:172
 PROGMEM_STRING_DECL(_selected);
 // src/templates.cpp:452
 // src/plugins/ntp/ntp_plugin.cpp:139
@@ -576,9 +565,9 @@ PROGMEM_STRING_DECL(Off);
 // src/web_server.cpp:110
 // src/web_server.cpp:832
 // src/web_server.cpp:849
-// src/web_server.cpp:1136
-// src/web_server.cpp:1137
-// src/web_server.cpp:1137
+// src/web_server.cpp:1158
+// src/web_server.cpp:1159
+// src/web_server.cpp:1159
 PROGMEM_STRING_DECL(SID);
 // src/web_server.cpp:119
 PROGMEM_STRING_DECL(mime_text_css);
@@ -668,13 +657,13 @@ PROGMEM_STRING_DECL(safe_mode);
 // src/plugins/PinDebugger/PinDebugger.cpp:125
 // src/plugins/ping_monitor/ping_monitor.cpp:257
 PROGMEM_STRING_DECL(disabled);
-// src/web_server.cpp:1025
+// src/web_server.cpp:1053
 PROGMEM_STRING_DECL(httpmode);
-// src/web_server.cpp:1204
-// src/web_server.cpp:1208
+// src/web_server.cpp:1226
+// src/web_server.cpp:1230
 PROGMEM_STRING_DECL(status);
-// src/web_server.cpp:1205
-// src/web_server.cpp:1209
+// src/web_server.cpp:1227
+// src/web_server.cpp:1231
 PROGMEM_STRING_DECL(message);
 // src/web_socket.cpp:76
 PROGMEM_STRING_DECL(Device_is_rebooting);
@@ -811,7 +800,7 @@ PROGMEM_STRING_DECL(Turn);
 // src/plugins/blinds_ctrl/blinds_config.cpp:46
 PROGMEM_STRING_DECL(Move);
 // src/plugins/blinds_ctrl/blinds_form.cpp:37
-// lib/KFCWebFramework/src/Form.cpp:252
+// lib/KFCWebFramework/src/Form/BaseForm.cpp:216
 PROGMEM_STRING_DECL(None);
 // src/plugins/blinds_ctrl/blinds_form.cpp:63
 // src/plugins/blinds_ctrl/blinds_form.cpp:67
@@ -830,29 +819,24 @@ PROGMEM_STRING_DECL(pwm);
 // src/plugins/blinds_ctrl/blinds_form.cpp:98
 PROGMEM_STRING_DECL(open);
 // src/plugins/blinds_ctrl/blinds_form.cpp:103
-// src/plugins/blinds_ctrl/blinds_form.cpp:121
+// src/plugins/blinds_ctrl/blinds_form.cpp:116
 PROGMEM_STRING_DECL(Action);
-// src/plugins/blinds_ctrl/blinds_form.cpp:107
-// src/plugins/blinds_ctrl/blinds_form.cpp:125
-PROGMEM_STRING_DECL(Delay_After_Execution_br_explanation);
-// src/plugins/blinds_ctrl/blinds_form.cpp:107
-// src/plugins/blinds_ctrl/blinds_form.cpp:110
-// src/plugins/blinds_ctrl/blinds_form.cpp:125
-// src/plugins/blinds_ctrl/blinds_form.cpp:128
+// src/plugins/blinds_ctrl/blinds_form.cpp:106
+// src/plugins/blinds_ctrl/blinds_form.cpp:119
+PROGMEM_STRING_DECL(Delay);
+// src/plugins/blinds_ctrl/blinds_form.cpp:106
+// src/plugins/blinds_ctrl/blinds_form.cpp:119
 // src/plugins/clock/clock_form.cpp:111
 // src/plugins/clock/clock_form.cpp:115
 // src/plugins/dimmer_module/dimmer_module_form.cpp:42
 // src/plugins/dimmer_module/dimmer_module_form.cpp:46
 // src/plugins/dimmer_module/dimmer_module_form.cpp:73
-// src/plugins/mqtt/mqtt_form.cpp:83
+// src/plugins/mqtt/mqtt_form.cpp:82
 // src/plugins/remote/remote.cpp:105
-// src/plugins/sensor/Sensor_SystemMetrics.cpp:55
+// src/plugins/sensor/Sensor_SystemMetrics.cpp:57
 // src/plugins/weather_station/ws_form.cpp:44
 // src/plugins/weather_station/ws_form.cpp:74
 PROGMEM_STRING_DECL(seconds);
-// src/plugins/blinds_ctrl/blinds_form.cpp:110
-// src/plugins/blinds_ctrl/blinds_form.cpp:128
-PROGMEM_STRING_DECL(Delay);
 // src/plugins/clock/clock.cpp:146
 // src/plugins/clock/clock_mqtt.cpp:38
 // src/plugins/clock/clock_mqtt.cpp:39
@@ -964,32 +948,32 @@ PROGMEM_STRING_DECL(udp);
 // src/plugins/ssdp/ssdp.cpp:73
 PROGMEM_STRING_DECL(KFCLabs);
 // src/plugins/mqtt/mqtt_client.cpp:299
-// src/plugins/mqtt/mqtt_form.cpp:89
+// src/plugins/mqtt/mqtt_form.cpp:88
 PROGMEM_STRING_DECL(Anonymous);
-// src/plugins/mqtt/mqtt_form.cpp:62
+// src/plugins/mqtt/mqtt_form.cpp:64
 // src/plugins/serial2tcp/serial2tcp.cpp:118
 PROGMEM_STRING_DECL(Mode);
-// src/plugins/mqtt/mqtt_form.cpp:67
+// src/plugins/mqtt/mqtt_form.cpp:69
 // src/plugins/serial2tcp/serial2tcp.cpp:132
 PROGMEM_STRING_DECL(host);
-// src/plugins/mqtt/mqtt_form.cpp:79
+// src/plugins/mqtt/mqtt_form.cpp:78
 // src/plugins/serial2tcp/serial2tcp.cpp:134
 PROGMEM_STRING_DECL(Port);
-// src/plugins/mqtt/mqtt_form.cpp:82
+// src/plugins/mqtt/mqtt_form.cpp:81
 PROGMEM_STRING_DECL(keepalive);
-// src/plugins/mqtt/mqtt_form.cpp:83
+// src/plugins/mqtt/mqtt_form.cpp:82
 PROGMEM_STRING_DECL(Keep_Alive);
-// src/plugins/mqtt/mqtt_form.cpp:89
+// src/plugins/mqtt/mqtt_form.cpp:88
 // src/plugins/serial2tcp/serial2tcp.cpp:149
 PROGMEM_STRING_DECL(Username);
-// src/plugins/mqtt/mqtt_form.cpp:93
+// src/plugins/mqtt/mqtt_form.cpp:92
 // src/plugins/serial2tcp/serial2tcp.cpp:151
 PROGMEM_STRING_DECL(Password);
-// src/plugins/mqtt/mqtt_form.cpp:96
+// src/plugins/mqtt/mqtt_form.cpp:95
 PROGMEM_STRING_DECL(topic);
-// src/plugins/mqtt/mqtt_form.cpp:98
+// src/plugins/mqtt/mqtt_form.cpp:97
 PROGMEM_STRING_DECL(Topic);
-// src/plugins/mqtt/mqtt_form.cpp:114
+// src/plugins/mqtt/mqtt_form.cpp:113
 PROGMEM_STRING_DECL(prefix);
 // src/plugins/ntp/ntp_form.cpp:32
 PROGMEM_STRING_DECL(NTP_Client_Configuration);
@@ -1044,21 +1028,21 @@ PROGMEM_STRING_DECL(ping_monitor_service_status);
 PROGMEM_STRING_DECL(started);
 // src/plugins/ping_monitor/ping_task.cpp:306
 PROGMEM_STRING_DECL(stopped);
-// src/plugins/sensor/Sensor_SystemMetrics.cpp:53
-// src/plugins/sensor/Sensor_SystemMetrics.cpp:56
-// src/plugins/sensor/Sensor_SystemMetrics.cpp:147
+// src/plugins/sensor/Sensor_SystemMetrics.cpp:55
+// src/plugins/sensor/Sensor_SystemMetrics.cpp:58
+// src/plugins/sensor/Sensor_SystemMetrics.cpp:155
 PROGMEM_STRING_DECL(uptime);
-// src/plugins/sensor/Sensor_SystemMetrics.cpp:59
 // src/plugins/sensor/Sensor_SystemMetrics.cpp:62
-// src/plugins/sensor/Sensor_SystemMetrics.cpp:148
-PROGMEM_STRING_DECL(heap);
-// src/plugins/sensor/Sensor_SystemMetrics.cpp:61
-PROGMEM_STRING_DECL(bytes);
 // src/plugins/sensor/Sensor_SystemMetrics.cpp:65
-// src/plugins/sensor/Sensor_SystemMetrics.cpp:67
-// src/plugins/sensor/Sensor_SystemMetrics.cpp:150
+// src/plugins/sensor/Sensor_SystemMetrics.cpp:156
+PROGMEM_STRING_DECL(heap);
+// src/plugins/sensor/Sensor_SystemMetrics.cpp:64
+PROGMEM_STRING_DECL(bytes);
+// src/plugins/sensor/Sensor_SystemMetrics.cpp:69
+// src/plugins/sensor/Sensor_SystemMetrics.cpp:71
+// src/plugins/sensor/Sensor_SystemMetrics.cpp:158
 PROGMEM_STRING_DECL(version);
-// src/plugins/sensor/Sensor_SystemMetrics.cpp:111
+// src/plugins/sensor/Sensor_SystemMetrics.cpp:119
 PROGMEM_STRING_DECL(sys);
 // src/plugins/serial2tcp/serial2tcp.cpp:106
 PROGMEM_STRING_DECL(Software_Serial);
@@ -1085,7 +1069,7 @@ PROGMEM_STRING_DECL(Yes);
 // src/plugins/weather_station/ws_form.cpp:78
 PROGMEM_STRING_DECL(No);
 // lib/KFCBaseLibrary/src/DumpBinary.cpp:83
-// lib/KFCBaseLibrary/src/misc.cpp:704
+// lib/KFCBaseLibrary/src/misc.cpp:728
 // lib/KFCConfiguration/src/ConfigurationParameter.cpp:296
 PROGMEM_STRING_DECL(_02x);
 // lib/KFCBaseLibrary/src/PrintHtmlEntities.cpp:81
@@ -1138,18 +1122,8 @@ PROGMEM_STRING_DECL(fs_mapping_listings);
 // lib/KFCWebFramework/src/failure_counter.cpp:136
 // lib/KFCWebFramework/src/failure_counter.cpp:166
 PROGMEM_STRING_DECL(login_failure_file);
-// lib/KFCWebFramework/src/Form.cpp:194
+// lib/KFCWebFramework/src/Form/BaseForm.cpp:158
 PROGMEM_STRING_DECL(_checked);
-// lib/KFCWebFramework/src/FormRangeValidator.cpp:47
-PROGMEM_STRING_DECL(FormRangeValidator_invalid_port);
-// lib/KFCWebFramework/src/FormRangeValidator.cpp:47
-PROGMEM_STRING_DECL(FormRangeValidator_invalid_port_range);
-// lib/KFCWebFramework/src/FormUI.cpp:69
-// lib/KFCWebFramework/src/FormUIRenderHtml.cpp:494
-PROGMEM_STRING_DECL(placeholder);
-// lib/KFCWebFramework/src/FormUI.cpp:76
-// lib/KFCWebFramework/src/FormUIRenderHtml.cpp:500
-PROGMEM_STRING_DECL(max);
 #ifdef __cplusplus
 } // extern "C"
 #endif

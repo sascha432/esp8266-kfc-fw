@@ -45,7 +45,7 @@ public:
     virtual void setup(SetupModeType mode) override;
     virtual void reconfigure(const String &source) override;
     virtual void shutdown() override;
-    virtual void createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request);
+    virtual void createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request);
     virtual void getStatus(Print &output) override;
 
 // MQTTComponent

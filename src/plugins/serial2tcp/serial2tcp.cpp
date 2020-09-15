@@ -87,7 +87,7 @@ void Serial2TcpPlugin::getStatus(Print &output)
     }
 }
 
-void Serial2TcpPlugin::createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request)
+void Serial2TcpPlugin::createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
 {
     if (!isCreateFormCallbackType(type)) {
         return;
@@ -95,8 +95,8 @@ void Serial2TcpPlugin::createConfigureForm(FormCallbackType type, const String &
 
     using KFCConfigurationClasses::MainConfig;
     auto &cfg = Serial2TcpPlugin::Serial2TCP::getWriteableConfig();
-    FormUI::ItemsList serialPorts;
-    FormUI::ItemsList modes;
+    FormUI::Container::List serialPorts;
+    FormUI::Container::List modes;
 
     using SerialPortType = Serial2TcpPlugin::Serial2TCP::SerialPortType;
     using ModeType = Serial2TcpPlugin::Serial2TCP::ModeType;
@@ -123,9 +123,9 @@ void Serial2TcpPlugin::createConfigureForm(FormCallbackType type, const String &
 
     auto &customGroup = form.addDivGroup(F("scustom"), F("{'i':'#s_port','m':'$T.hide()','s':{'2':'$T.show()'}}"));
     form.add<uint8_t>(F("rxpin"), _H_W_STRUCT_VALUE(cfg, rx_pin))->setFormUI(new FormUI::UI(FormUI::Type::TEXT, F("Rx Pin:"))));
-    form.addValidator(FormRangeValidator(0, NUM_DIGITAL_PINS - 1));
+    form.addValidator(FormUI::Validator::Range(0, NUM_DIGITAL_PINS - 1));
     form.add<uint8_t>(F("txpin"), _H_W_STRUCT_VALUE(cfg, tx_pin))->setFormUI(new FormUI::UI(FormUI::Type::TEXT, F("Tx Pin:"))));
-    form.addValidator(FormRangeValidator(0, NUM_DIGITAL_PINS - 1));
+    form.addValidator(FormUI::Validator::Range(0, NUM_DIGITAL_PINS - 1));
     customGroup.end();
 
     auto &connGroup = form.addDivGroup(F("conn_group"));
@@ -135,12 +135,12 @@ void Serial2TcpPlugin::createConfigureForm(FormCallbackType type, const String &
     form.addValidator(FormNetworkPortValidator());
     form.add<bool>(F("autocnn"), _H_W_STRUCT_VALUE(cfg, auto_connect))->setFormUI(new FormUI::UI(FormUI::Type::SELECT, F("Auto Connect")))->setBoolItems());
     form.add<uint8_t>(F("autoreconn"), _H_W_STRUCT_VALUE(cfg, auto_reconnect))->setFormUI(new FormUI::UI(FormUI::Type::TEXT, F("Auto Reconnect Delay")))->setSuffix(F("seconds, 0 = disable")));
-    form.addValidator(FormRangeValidator(0, 255));
+    form.addValidator(FormUI::Validator::Range(0, 255));
     connGroup.end();
 
     auto &idleGroup = form.addDivGroup(F("idle_group"));
     form.add<uint16_t>(F("idltimeout"), _H_W_STRUCT_VALUE(cfg, idle_timeout))->setFormUI(new FormUI::UI(FormUI::Type::TEXT, F("Idle Timeout")))->setSuffix(F("seconds, 0 = disable")));
-    form.addValidator(FormRangeValidator(0, 65535));
+    form.addValidator(FormUI::Validator::Range(0, 65535));
     idleGroup.end();
 
     auto &authDivGroup = form.addDivGroup(F("authdiv"));

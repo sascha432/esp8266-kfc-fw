@@ -16,7 +16,7 @@
 
 using KFCConfigurationClasses::System;
 
-void MQTTPlugin::createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request)
+void MQTTPlugin::createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
 {
     using ClientConfig = MQTTClient::ClientConfig;
 
@@ -31,11 +31,11 @@ void MQTTPlugin::createConfigureForm(FormCallbackType type, const String &formNa
 
     auto &cfg = ClientConfig::getWriteableConfig();
 
-    FormUI::ItemsList modeItems(
+    FormUI::Container::List modeItems(
         ClientConfig::ModeType::DISABLED, FSPGM(Disabled),
         ClientConfig::ModeType::UNSECURE, FSPGM(Enabled)
     );
-    FormUI::ItemsList qosItems(
+    FormUI::Container::List qosItems(
         ClientConfig::QosType::AT_MODE_ONCE, F("At most once (0)"),
         ClientConfig::QosType::AT_LEAST_ONCE, F("At least once (1)"),
         ClientConfig::QosType::EXACTLY_ONCE, F("Exactly once (2)")
@@ -48,10 +48,10 @@ void MQTTPlugin::createConfigureForm(FormCallbackType type, const String &formNa
         ClientConfig::ConfigStructType::set_enum_mode(cfg, ClientConfig::ModeType::DISABLED); // set to disabled before adding value to form
     }
 
-    auto &ui = form.getFormUIConfig();
+    auto &ui = form.createWebUI();
     ui.setTitle(F("MQTT Client Configuration"));
     ui.setContainerId(F("mqtt_setttings"));
-    ui.setStyle(FormUI::StyleType::ACCORDION);
+    ui.setStyle(FormUI::WebUI::StyleType::ACCORDION);
 
     auto &cfgGroup = form.addDivGroup(String(), F("{'i':'#mode','e':'var $T=$(\\'#mode\\').closest(\\'.card\\').nextAll().not(\\':last\\');var $P=function(v){$(\\'#port\\').attr(\\'placeholder\\',v);}','s':{'0':'$T.hide()','1':'$T.show();$P(1883)','2':'$T.show();$P(8883)'}}"));
     cfgGroup.end();
@@ -62,31 +62,31 @@ void MQTTPlugin::createConfigureForm(FormCallbackType type, const String &formNa
 
     form.addObjectGetterSetter(FSPGM(mode), cfg, cfg.get_enum_mode, cfg.set_enum_mode);
     form.addFormUI(FSPGM(Mode), modeItems);
-    form.addValidator(FormRangeValidatorEnum<ClientConfig::ModeType>());
+    form.addValidator(FormUI::Validator::EnumRange<ClientConfig::ModeType>());
 
     auto &connGroup = commonGroup.end().addCardGroup(F("conn"), FSPGM(Connection), true);
 
     form.addStringGetterSetter(FSPGM(host), ClientConfig::getHostname, ClientConfig::setHostname);
     form.addFormUI(FSPGM(Hostname), FormUI::ZeroconfSuffix());
-    form.addValidator(FormHostValidator(FormHostValidator::AllowedType::ALLOW_ZEROCONF));
-    form.addValidator(FormLengthValidator(3, ClientConfig::kHostnameMaxSize));
+    form.addValidator(FormUI::Validator::Hostname(FormUI::AllowedType::ZEROCONF));
+    form.addValidator(FormUI::Validator::Length(3, ClientConfig::kHostnameMaxSize));
 
     form.addCallbackSetter(FSPGM(port), cfg.getPortAsString(), [&cfg](const String &value, FormField &field) {
         cfg.setPort(value.toInt(), cfg.isSecure());
         field.setValue(cfg.getPortAsString());
     });
     form.addFormUI(FormUI::Type::INTEGER, FSPGM(Port), FormUI::PlaceHolder(1883));
-    form.addValidator(FormNetworkPortValidator(true));
+    form.addValidator(FormUI::Validator::NetworkPort(true));
 
     form.addMemberVariable(FSPGM(keepalive), cfg, &ConfigType::keepalive);
     form.addFormUI(FSPGM(Keep_Alive), FormUI::Suffix(FSPGM(seconds)));
-    form.addValidator(FormRangeValidatorType<decltype(cfg.keepalive)>());
+    form.addValidator(FormUI::Validator::RangeTemplate<decltype(cfg.keepalive)>());
 
     auto &serverGroup = connGroup.end().addCardGroup(FSPGM(mqtt), F("Server Settings"), true);
 
     form.addStringGetterSetter(F("mqttuser"), ClientConfig::getUsername, ClientConfig::setUsername);
     form.addFormUI(FSPGM(Username), FormUI::PlaceHolder(FSPGM(Anonymous)));
-    form.addValidator(FormLengthValidator(0, ClientConfig::kUsernameMaxSize));
+    form.addValidator(FormUI::Validator::Length(0, ClientConfig::kUsernameMaxSize));
 
     form.addStringGetterSetter(F("mqttpass"), ClientConfig::getPassword, ClientConfig::setPassword);
     form.addFormUI(FormUI::Type::PASSWORD, FSPGM(Password));
@@ -98,7 +98,7 @@ void MQTTPlugin::createConfigureForm(FormCallbackType type, const String &formNa
 
     form.addObjectGetterSetter(F("qos"), cfg, cfg.get_enum_qos, cfg.set_enum_qos);
     form.addFormUI(F("Quality Of Service"), qosItems);
-    form.addValidator(FormRangeValidatorEnum<ClientConfig::QosType>(F("Invalid value for QoS")));
+    form.addValidator(FormUI::Validator::EnumRange<ClientConfig::QosType>(F("Invalid value for QoS")));
 
     serverGroup.end();
 
@@ -112,11 +112,11 @@ void MQTTPlugin::createConfigureForm(FormCallbackType type, const String &formNa
 
     form.addStringGetterSetter(FSPGM(prefix), ClientConfig::getAutoDiscoveryPrefix, ClientConfig::setAutoDiscoveryPrefix);
     form.addFormUI(F("Auto Discovery Prefix"));
-    form.addValidator(FormLengthValidator(0, ClientConfig::kAutoDiscoveryPrefixMaxSize));
+    form.addValidator(FormUI::Validator::Length(0, ClientConfig::kAutoDiscoveryPrefixMaxSize));
 
     form.addMemberVariable(F("adrb"), cfg, &ConfigType::auto_discovery_rebroadcast_interval);
     form.addFormUI(F("Auto Discovery Rebroadcast"), FormUI::Suffix(FSPGM(minutes)));
-    form.addValidator(FormRangeValidator(15, std::numeric_limits<decltype(cfg.auto_discovery_rebroadcast_interval)>::max()));
+    form.addValidator(FormUI::Validator::Range(15, std::numeric_limits<decltype(cfg.auto_discovery_rebroadcast_interval)>::max()));
 
 
     autoDiscoveryGroup.end();

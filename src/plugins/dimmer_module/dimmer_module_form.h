@@ -18,5 +18,5 @@ protected:
     virtual void readConfig(ConfigType &cfg) = 0;
     virtual void writeConfig(ConfigType &cfg) = 0;
 
-    void _createConfigureForm(PluginComponent::FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request);
+    void _createConfigureForm(PluginComponent::FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request);
 };

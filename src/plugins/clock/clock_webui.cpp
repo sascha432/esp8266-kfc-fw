@@ -103,7 +103,7 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
     }
 }
 
-void ClockPlugin::createWebUI(WebUI &webUI)
+void ClockPlugin::createWebUI(WebUIRoot &webUI)
 {
     auto row = &webUI.addRow();
     row->setExtraClass(JJ(title));

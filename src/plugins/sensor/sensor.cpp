@@ -165,7 +165,7 @@ bool SensorPlugin::_hasConfigureForm() const
     return false;
 }
 
-void SensorPlugin::createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request)
+void SensorPlugin::createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
 {
     if (type == FormCallbackType::SAVE) {
         for(auto sensor: _sensors) {
@@ -176,10 +176,10 @@ void SensorPlugin::createConfigureForm(FormCallbackType type, const String &form
         return;
     }
 
-    auto &ui = form.getFormUIConfig();
+    auto &ui = form.createWebUI();
     ui.setTitle(F("Sensor Configuration"));
     ui.setContainerId(F("sensor_settings"));
-    ui.setStyle(FormUI::StyleType::ACCORDION);
+    ui.setStyle(FormUI::WebUI::StyleType::ACCORDION);
 
     for(auto sensor: _sensors) {
         sensor->createConfigureForm(request, form);
@@ -195,7 +195,7 @@ void SensorPlugin::createMenu()
     }
 }
 
-void SensorPlugin::createWebUI(WebUI &webUI)
+void SensorPlugin::createWebUI(WebUIRoot &webUI)
 {
     auto row = &webUI.addRow();
     row->setExtraClass(JJ(title));

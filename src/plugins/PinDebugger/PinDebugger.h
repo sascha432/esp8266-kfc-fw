@@ -40,7 +40,7 @@ public:
     // virtual PGM_P getConfigureForm() const override {
     //     return PSTR("ping_monitor");
     // }
-    // virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
+    // virtual void createConfigureForm(AsyncWebServerRequest *request, FormUI::Form::BaseForm &form) override;
 
 #if AT_MODE_SUPPORTED
     virtual void atModeHelpGenerator() override;

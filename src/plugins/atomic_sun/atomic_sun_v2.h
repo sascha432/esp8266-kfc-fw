@@ -189,11 +189,11 @@ public:
     virtual void reconfigure(const String &source) override;
     virtual void shutdown() override;
     virtual void getStatus(Print &output) override;
-    virtual void createConfigureForm(PluginComponent::FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request) override;
+    virtual void createConfigureForm(PluginComponent::FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request) override;
 
 // WebUI
 public:
-    virtual void createWebUI(WebUI &webUI) override;
+    virtual void createWebUI(WebUIRoot &webUI) override;
     virtual void getValues(JsonArray &array) override {
         Driver_4ChDimmer::_getValues(array);
     }

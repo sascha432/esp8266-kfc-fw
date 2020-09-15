@@ -260,7 +260,7 @@ void DimmerModulePlugin::shutdown()
     _end();
 }
 
-void DimmerModulePlugin::createWebUI(WebUI &webUI)
+void DimmerModulePlugin::createWebUI(WebUIRoot &webUI)
 {
     auto row = &webUI.addRow();
     row->setExtraClass(JJ(title));

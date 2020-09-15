@@ -13,7 +13,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request)
+void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
 {
     __LDBG_printf("type=%u name=%s", type, formName.c_str());
     if (!isCreateFormCallbackType(type)) {
@@ -22,10 +22,10 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
     auto &cfg = Plugins::Clock::getWriteableConfig();
 
-    auto &ui = form.getFormUIConfig();
+    auto &ui = form.createWebUI();
     ui.setTitle(F("Clock Configuration"));
     ui.setContainerId(F("clock_settings"));
-    ui.setStyle(FormUI::StyleType::ACCORDION);
+    ui.setStyle(FormUI::WebUI::StyleType::ACCORDION);
 
     auto &mainGroup = form.addCardGroup(FSPGM(config), String());
 
@@ -39,7 +39,7 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
     form.add<int16_t>(F("auto_br"), _H_W_STRUCT_VALUE(cfg, auto_brightness));
     form.addFormUI(F("Auto Brightness Value"), FormUI::Suffix(F("<span class=\"input-group-text\">0-1023</span><span id=\"abr_sv\" class=\"input-group-text\"></span><button class=\"btn btn-secondary\" type=\"button\" id=\"dis_auto_br\">Disable</button>")));
-    form.addValidator(FormRangeValidator(-1, 1023));
+    form.addValidator(FormUI::Validator::Range(-1, 1023));
 
 #endif
 
@@ -49,15 +49,15 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
     auto &animationGroup = form.addCardGroup(F("anicfg"), FSPGM(Animation), true);
 
     form.add<int8_t>(F("ani"), _H_W_STRUCT_VALUE(cfg, animation));
-    form.addFormUI(FSPGM(Type), FormUI::ItemsList(
+    form.addFormUI(FSPGM(Type), FormUI::Container::List(
         AnimationType::NONE, FSPGM(Solid_Color),
         AnimationType::RAINBOW, FSPGM(Rainbow),
         AnimationType::FLASHING, FSPGM(Flashing),
         AnimationType::FADING, FSPGM(Fading)
     ));
-    form.addValidator(FormRangeValidatorEnum<AnimationType>());
+    form.addValidator(FormUI::Validator::RangeEnum<AnimationType>());
 
-    form.add(F("col"), Color(cfg.solid_color.value).toString(), [&cfg](const String &value, FormField &field, bool store) {
+    form.add(F("col"), Color(cfg.solid_color.value).toString(), [&cfg](const String &value, FormUI::Field::Base &field, bool store) {
         if (store) {
             cfg.solid_color.value = Color::fromString(value);
         }
@@ -67,11 +67,11 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
     form.add<float>(F("colon_sp"), _H_W_STRUCT_VALUE(cfg, blink_colon_speed));
     form.addFormUI(F("Colon Blink Speed"), FormUI::Suffix(F("milliseconds, 0 = solid")));
-    form.addValidator(FormRangeValidator(kMinBlinkColonSpeed, 0xffff, true));
+    form.addValidator(FormUI::Validator::Range(kMinBlinkColonSpeed, 0xffff, true));
 
     form.add<uint16_t>(F("flash_sp"), _H_W_STRUCT_VALUE(cfg, flashing_speed));
     form.addFormUI(F("Flashing Speed"), FormUI::Suffix(FSPGM(milliseconds)));
-    form.addValidator(FormRangeValidator(kMinFlashingSpeed, 0xffff));
+    form.addValidator(FormUI::Validator::Range(kMinFlashingSpeed, 0xffff));
 
     animationGroup.end();
 
@@ -80,13 +80,13 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
     form.add<float>(F("rb_mul"), _H_W_STRUCT_VALUE(cfg, rainbow.multiplier));
     form.addFormUI(FSPGM(Multiplier));
-    form.addValidator(FormRangeValidator(0.1f, 100.0f));
+    form.addValidator(FormUI::Validator::Range(0.1f, 100.0f));
 
     form.add<uint16_t>(F("rb_sp"), _H_W_STRUCT_VALUE(cfg, rainbow.speed));
     form.addFormUI(FSPGM(Speed));
-    form.addValidator(FormRangeValidator(kMinRainbowSpeed, 0xffff));
+    form.addValidator(FormUI::Validator::Range(kMinRainbowSpeed, 0xffff));
 
-    form.add(F("rb_cf"), Color(cfg.rainbow.factor.value).toString(), [&cfg](const String &value, FormField &field, bool store) {
+    form.add(F("rb_cf"), Color(cfg.rainbow.factor.value).toString(), [&cfg](const String &value, FormUI::Field::Base &field, bool store) {
         if (store) {
             cfg.rainbow.factor.value = Color::fromString(value);
         }
@@ -94,7 +94,7 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
     });
     form.addFormUI(F("Color Factor"));
 
-    form.add(F("rb_mv"), Color(cfg.rainbow.minimum.value).toString(), [&cfg](const String &value, FormField &field, bool store) {
+    form.add(F("rb_mv"), Color(cfg.rainbow.minimum.value).toString(), [&cfg](const String &value, FormUI::Field::Base &field, bool store) {
         if (store) {
             cfg.rainbow.minimum.value = Color::fromString(value);
         }
@@ -109,13 +109,13 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
     form.add<float>(F("fade_sp"), _H_W_STRUCT_VALUE(cfg, fading.speed));
     form.addFormUI(F("Time Between Fading Colors"), FormUI::Suffix(FSPGM(seconds)));
-    form.addValidator(FormRangeValidator(Clock::FadingAnimation::kMinSeconds, Clock::FadingAnimation::kMaxSeconds));
+    form.addValidator(FormUI::Validator::Range(Clock::FadingAnimation::kMinSeconds, Clock::FadingAnimation::kMaxSeconds));
 
     form.add<uint16_t>(F("fade_dy"), _H_W_STRUCT_VALUE(cfg, fading.delay));
     form.addFormUI(F("Delay Before Start Fading To Next Random Color"), FormUI::Suffix(FSPGM(seconds)));
-    form.addValidator(FormRangeValidator(0, Clock::FadingAnimation::kMaxDelay));
+    form.addValidator(FormUI::Validator::Range(0, Clock::FadingAnimation::kMaxDelay));
 
-    form.add(F("fade_cf"), Color(cfg.fading.factor.value).toString(), [&cfg](const String &value, FormField &field, bool store) {
+    form.add(F("fade_cf"), Color(cfg.fading.factor.value).toString(), [&cfg](const String &value, FormUI::Field::Base &field, bool store) {
         if (store) {
             cfg.fading.factor.value = Color::fromString(value);
         }
@@ -130,7 +130,7 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
     // --------------------------------------------------------------------
     auto &alarmGroup = form.addCardGroup(FSPGM(alarm), FSPGM(Alarm), true);
 
-    form.add(F("alrm_col"), Color(cfg.alarm.color.value).toString(), [&cfg](const String &value, FormField &field, bool store) {
+    form.add(F("alrm_col"), Color(cfg.alarm.color.value).toString(), [&cfg](const String &value, FormUI::Field::Base &field, bool store) {
         if (store) {
             cfg.alarm.color.value = Color::fromString(value);
         }
@@ -140,7 +140,7 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
     form.add<uint16_t>(F("alrm_sp"), _H_W_STRUCT_VALUE(cfg, alarm.speed));
     form.addFormUI(F("Flashing Speed"), FormUI::Suffix(FSPGM(milliseconds)));
-    form.addValidator(FormRangeValidator(50, 0xffff));
+    form.addValidator(FormUI::Validator::Range(50, 0xffff));
 
     alarmGroup.end();
 
@@ -151,15 +151,15 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
     form.add<uint8_t>(F("temp_75"), _H_W_STRUCT_VALUE(cfg, protection.temperature_75));
     form.addFormUI(F("Temperature To Reduce Brightness To 75%"), FormUI::Suffix(FSPGM(_degreeC)));
-    form.addValidator(FormRangeValidator(kMinimumTemperatureThreshold, 90));
+    form.addValidator(FormUI::Validator::Range(kMinimumTemperatureThreshold, 90));
 
     form.add<uint8_t>(F("temp_50"), _H_W_STRUCT_VALUE(cfg, protection.temperature_50));
     form.addFormUI(F("Temperature To Reduce Brightness To 50%"), FormUI::Suffix(FSPGM(_degreeC)));
-    form.addValidator(FormRangeValidator(kMinimumTemperatureThreshold, 90));
+    form.addValidator(FormUI::Validator::Range(kMinimumTemperatureThreshold, 90));
 
     form.add<uint8_t>(F("max_temp"), _H_W_STRUCT_VALUE(cfg, protection.max_temperature));
     form.addFormUI(F("Over Temperature Protection"), FormUI::Suffix(FSPGM(_degreeC)));
-    form.addValidator(FormRangeValidator(kMinimumTemperatureThreshold, 105));
+    form.addValidator(FormUI::Validator::Range(kMinimumTemperatureThreshold, 105));
 
     protectionGroup.end();
 

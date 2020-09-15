@@ -51,13 +51,13 @@ void WebTemplate::setSelfUri(const String &selfUri)
     _selfUri = selfUri;
 }
 
-void WebTemplate::setForm(Form *form)
+void WebTemplate::setForm(FormUI::Form::BaseForm *form)
 {
     _json = nullptr; //static_cast<SettingsForm *>(form)->_json;
     _form = form;
 }
 
-Form *WebTemplate::getForm()
+FormUI::Form::BaseForm *WebTemplate::getForm()
 {
     return _form;
 }
@@ -529,7 +529,7 @@ void PasswordTemplate::process(const String &key, PrintHtmlEntitiesString &outpu
     }
 }
 
-SettingsForm::SettingsForm(AsyncWebServerRequest *request) : Form(static_cast<FormData *>(request)) //, _json(nullptr)
+SettingsForm::SettingsForm(AsyncWebServerRequest *request) : BaseForm(static_cast<FormData *>(request)) //, _json(nullptr)
 {
 }
 

@@ -95,7 +95,7 @@ void RemoteControlPlugin::createMenu()
     bootstrapMenu.addSubMenu(F("Disable Auto Sleep"), F("remote_nosleep.html"), navMenu.device);
 }
 
-void RemoteControlPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
+void RemoteControlPlugin::createConfigureForm(AsyncWebServerRequest *request, FormUI::Form::BaseForm &form)
 {
     using KFCConfigurationClasses::MainConfig;
 
@@ -111,7 +111,7 @@ void RemoteControlPlugin::createConfigureForm(AsyncWebServerRequest *request, Fo
     form.add<uint16_t>(F("repeat_time"), _H_STRUCT_VALUE(MainConfig().plugins.remotecontrol, repeatTime))
         ->setFormUI(new FormUI::UI(FormUI::Type::TEXT, F("Repeat Time")))->setSuffix(FSPGM(milliseconds)));
 
-    FormUI::ItemsList actions;
+    FormUI::Container::List actions;
     Plugins::HomeAssistant::ActionVector vector;
     Plugins::HomeAssistant::getActions(vector);
 

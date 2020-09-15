@@ -283,7 +283,7 @@ void HassPlugin::_mqttGet(const String &topic, std::function<void(bool, int)> ca
     });
 }
 
-void HassPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
+void HassPlugin::createConfigureForm(AsyncWebServerRequest *request, FormUI::Form::BaseForm &form)
 {
     __LDBG_printf("url=%s method=%s", request->url().c_str(), request->methodToString());
     if (request->url().endsWith(F("hass.html"))) {
@@ -293,28 +293,28 @@ void HassPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
         //FormUI::ZeroconfSuffix()
 
         form.add(F("api_endpoint"), _H_STR_VALUE(MainConfig().plugins.homeassistant.api_endpoint));
-        form.addValidator(FormLengthValidator(1, sizeof(MainConfig().plugins.homeassistant.api_endpoint) - 1));
+        form.addValidator(FormUI::Validator::Length(1, sizeof(MainConfig().plugins.homeassistant.api_endpoint) - 1));
 
         form.add(F("token"), _H_STR_VALUE(MainConfig().plugins.homeassistant.token));
-        form.addValidator(FormLengthValidator(1, sizeof(MainConfig().plugins.homeassistant.token) - 1));
+        form.addValidator(FormUI::Validator::Length(1, sizeof(MainConfig().plugins.homeassistant.token) - 1));
 
         form.add(F("api_endpoint1"), _H_STR_VALUE(MainConfig().plugins.homeassistant.api_endpoint1));
-        form.addValidator(FormLengthValidator(1, sizeof(MainConfig().plugins.homeassistant.api_endpoint1) - 1));
+        form.addValidator(FormUI::Validator::Length(1, sizeof(MainConfig().plugins.homeassistant.api_endpoint1) - 1));
 
         form.add(F("token1"), _H_STR_VALUE(MainConfig().plugins.homeassistant.token1));
-        form.addValidator(FormLengthValidator(1, sizeof(MainConfig().plugins.homeassistant.token1) - 1));
+        form.addValidator(FormUI::Validator::Length(1, sizeof(MainConfig().plugins.homeassistant.token1) - 1));
 
         form.add(F("api_endpoint2"), _H_STR_VALUE(MainConfig().plugins.homeassistant.api_endpoint2));
-        form.addValidator(FormLengthValidator(1, sizeof(MainConfig().plugins.homeassistant.api_endpoint2) - 1));
+        form.addValidator(FormUI::Validator::Length(1, sizeof(MainConfig().plugins.homeassistant.api_endpoint2) - 1));
 
         form.add(F("token2"), _H_STR_VALUE(MainConfig().plugins.homeassistant.token2));
-        form.addValidator(FormLengthValidator(1, sizeof(MainConfig().plugins.homeassistant.token2) - 1));
+        form.addValidator(FormUI::Validator::Length(1, sizeof(MainConfig().plugins.homeassistant.token2) - 1));
 
         form.add(F("api_endpoint3"), _H_STR_VALUE(MainConfig().plugins.homeassistant.api_endpoint3));
-        form.addValidator(FormLengthValidator(1, sizeof(MainConfig().plugins.homeassistant.api_endpoint3) - 1));
+        form.addValidator(FormUI::Validator::Length(1, sizeof(MainConfig().plugins.homeassistant.api_endpoint3) - 1));
 
         form.add(F("token3"), _H_STR_VALUE(MainConfig().plugins.homeassistant.token3));
-        form.addValidator(FormLengthValidator(1, sizeof(MainConfig().plugins.homeassistant.token3) - 1));
+        form.addValidator(FormUI::Validator::Length(1, sizeof(MainConfig().plugins.homeassistant.token3) - 1));
 
     }
     else if (request->url().endsWith(F("actions.html"))) {
@@ -487,7 +487,7 @@ void HassPlugin::reconfigure(PGM_P source)
 
 
 /*
-void HassPlugin::createWebUI(WebUI &webUI)
+void HassPlugin::createWebUI(WebUIRoot &webUI)
 {
     auto row = &webUI.addRow();
     row->setExtraClass(JJ(title));

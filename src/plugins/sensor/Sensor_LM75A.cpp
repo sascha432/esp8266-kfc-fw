@@ -57,7 +57,7 @@ void Sensor_LM75A::getValues(JsonArray &array, bool timer)
     obj.add(JJ(value), JsonNumber(temp, 2));
 }
 
-void Sensor_LM75A::createWebUI(WebUI &webUI, WebUIRow **row)
+void Sensor_LM75A::createWebUI(WebUIRoot &webUI, WebUIRow **row)
 {
     _debug_println();
     // if ((*row)->size() > 3) {

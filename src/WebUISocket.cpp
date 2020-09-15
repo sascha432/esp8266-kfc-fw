@@ -162,7 +162,7 @@ void WsWebUISocket::sendValues(AsyncWebSocketClient *client)
 
 void WsWebUISocket::createWebUIJSON(JsonUnnamedObject &json)
 {
-    WebUI webUI(json);
+    WebUIRoot webUI(json);
 
     for( const auto plugin: plugins) {
         if (plugin->hasWebUI()) {

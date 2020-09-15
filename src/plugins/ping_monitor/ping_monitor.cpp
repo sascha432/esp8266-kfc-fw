@@ -133,7 +133,7 @@ public:
     virtual void getStatus(Print &output) override;
     virtual void createMenu() override;
 
-    virtual void createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request) override;
+    virtual void createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request) override;
 
 #if AT_MODE_SUPPORTED
     virtual void atModeHelpGenerator() override;
@@ -280,7 +280,7 @@ void PingMonitorPlugin::_setPingConsoleMenu(bool enable)
     bootstrapMenu.addSubMenu(label, F("ping.html"), navMenu.util);
 }
 
-void PingMonitorPlugin::createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request)
+void PingMonitorPlugin::createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
 {
     __LDBG_printf("type=%u name=%s", type, formName.c_str());
     if (type == FormCallbackType::SAVE) {
@@ -293,8 +293,8 @@ void PingMonitorPlugin::createConfigureForm(FormCallbackType type, const String 
 
     auto &cfg = Plugins::Ping::getWriteableConfig();
 
-    auto &ui = form.getFormUIConfig();
-    ui.setStyle(FormUI::StyleType::ACCORDION);
+    auto &ui = form.createWebUI();
+    ui.setStyle(FormUI::WebUI::StyleType::ACCORDION);
     ui.setTitle(F("Ping Monitor Configuration"));
     ui.setContainerId(F("ping_settings"));
 
@@ -308,11 +308,11 @@ void PingMonitorPlugin::createConfigureForm(FormCallbackType type, const String 
 
     form.addObjectGetterSetter(F("pc"), cfg, Plugins::PingConfig::PingConfig_t::get_bits_count, Plugins::PingConfig::PingConfig_t::set_bits_count);
     form.addFormUI(F("Ping Count"));
-    form.addValidator(FormRangeValidator(Plugins::PingConfig::PingConfig_t::kRepeatCountMin, Plugins::PingConfig::PingConfig_t::kRepeatCountMax));
+    form.addValidator(FormUI::Validator::Range(Plugins::PingConfig::PingConfig_t::kRepeatCountMin, Plugins::PingConfig::PingConfig_t::kRepeatCountMax));
 
     form.add(F("pt"), _H_W_STRUCT_VALUE(cfg, timeout));
     form.addFormUI(FSPGM(Timeout), FormUI::Suffix(FSPGM(milliseconds)));
-    form.addValidator(FormRangeValidator(Plugins::PingConfig::PingConfig_t::kTimeoutMin, Plugins::PingConfig::PingConfig_t::kTimeoutMax));
+    form.addValidator(FormUI::Validator::Range(Plugins::PingConfig::PingConfig_t::kTimeoutMin, Plugins::PingConfig::PingConfig_t::kTimeoutMax));
 
     mainGroup.end();
 
@@ -322,14 +322,14 @@ void PingMonitorPlugin::createConfigureForm(FormCallbackType type, const String 
 
         form.addStringGetterSetter(String('h') + i, [i]() { return Plugins::Ping::getHost(i); }, [i](const char *hostname) { Plugins::Ping::setHost(i, hostname); });
         form.addFormUI(FormUI::Label(PrintString(F("Host %u"), i + 1)));
-        form.addValidator(FormHostValidatorEx(FormHostValidator::AllowedType::ALLOW_EMPTY)).emplace_back(FSPGM(_var_gateway, "${gateway}"));
+        form.addValidator(FormUI::Validator::HostnameEx(FormUI::Validator::Hostname::AllowedType::ALLOW_EMPTY)).emplace_back(FSPGM(_var_gateway, "${gateway}"));
         Plugins::Ping::addHost1LengthValidator(form); // length is the same for all
 
     }
 
     form.add(F("pi"), _H_W_STRUCT_VALUE(cfg, interval));
     form.addFormUI(FSPGM(Interval), FormUI::Suffix(FSPGM(minutes)));
-    form.addValidator(FormRangeValidator(Plugins::PingConfig::PingConfig_t::kIntervalMin, Plugins::PingConfig::PingConfig_t::kIntervalMax));
+    form.addValidator(FormUI::Validator::Range(Plugins::PingConfig::PingConfig_t::kIntervalMin, Plugins::PingConfig::PingConfig_t::kIntervalMax));
 
     serviceGroup.end();
 

@@ -17,11 +17,16 @@
 
 class AsyncWebServerRequest;
 class WebTemplate;
-class Form;
 class AtModeArgs;
 class KFCFWConfiguration;
 using ATModeCommandHelpArray = const struct ATModeCommandHelp_t *[];
 using ATModeCommandHelpArrayPtr = const struct ATModeCommandHelp_t **;
+
+namespace FormUI {
+    namespace Form {
+        class BaseForm;
+    }
+}
 
 /*
 PROGMEM_DEFINE_PLUGIN_OPTIONS(
@@ -45,7 +50,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
 );
 
 
-virtual void createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request) override;
+virtual void createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request) override;
 __LDBG_printf("source=%s", source.c_str());
 */
 
@@ -285,13 +290,13 @@ public:
     virtual void createMenu();
 
      // form processing for html files. formName will be wifi for /wifi.html
-    virtual void createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request);
+    virtual void createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request);
 
     // template processing for html files. templateName will be home for /home.html
     virtual WebTemplate *getWebTemplate(const String &templateName);
 
     // webui.html
-    virtual void createWebUI(WebUI &webUI);
+    virtual void createWebUI(WebUIRoot &webUI);
     virtual void getValues(JsonArray &array);
     virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState);
 

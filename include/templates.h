@@ -27,8 +27,8 @@ public:
 
     void setSelfUri(const String &selfUri);
 
-    void setForm(Form *form);
-    Form *getForm();
+    void setForm(FormUI::Form::BaseForm *form);
+    FormUI::Form::BaseForm *getForm();
 
     JsonUnnamedObject *getJson();
 
@@ -47,7 +47,7 @@ public:
     static String _aliveRedirection;
 
 protected:
-    Form *_form;
+    FormUI::Form::BaseForm *_form;
     String _selfUri;
     JsonUnnamedObject *_json;
     PrintArgs _printArgs;
@@ -57,7 +57,7 @@ class ConfigTemplate : public WebTemplate {
 public:
     ConfigTemplate() {
     }
-    ConfigTemplate(Form *form) : WebTemplate() {
+    ConfigTemplate(FormUI::Form::BaseForm *form) : WebTemplate() {
         setForm(form);
     }
     virtual void process(const String &key, PrintHtmlEntitiesString &output) override;
@@ -109,7 +109,7 @@ private:
     String _filename;
 };
 
-class SettingsForm : public Form {
+class SettingsForm : public FormUI::Form::BaseForm {
 public:
     // typedef std::vector<std::pair<String, String>> TokenVector;
 

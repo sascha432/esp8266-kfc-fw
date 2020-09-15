@@ -19,7 +19,7 @@
 using KFCConfigurationClasses::System;
 using KFCConfigurationClasses::Plugins;
 
-void NTPPlugin::createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request)
+void NTPPlugin::createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
 {
     if (!isCreateFormCallbackType(type)) {
         return;
@@ -28,10 +28,10 @@ void NTPPlugin::createConfigureForm(FormCallbackType type, const String &formNam
     auto &cfg = System::Flags::getWriteableConfig();
     auto &ntp = Plugins::NTPClient::getWriteableConfig();
 
-    auto &ui = form.getFormUIConfig();
+    auto &ui = form.createWebUI();
     ui.setTitle(FSPGM(NTP_Client_Configuration, "NTP Client Configuration"));
     ui.setContainerId(F("ntp_settings"));
-    ui.setStyle(FormUI::StyleType::ACCORDION);
+    ui.setStyle(FormUI::WebUI::StyleType::ACCORDION);
 
     auto &mainGroup = form.addCardGroup(FSPGM(config), String(), true);
 
@@ -47,19 +47,19 @@ void NTPPlugin::createConfigureForm(FormCallbackType type, const String &formNam
 
     form.addStringGetterSetter(F("ntpsvr1"), Plugins::NTPClient::getServer1, Plugins::NTPClient::setServer1);
     form.addFormUI(F("NTP Server 1"));
-    form.addValidator(FormHostValidator(FormHostValidator::AllowedType::ALLOW_EMPTY));
+    form.addValidator(FormUI::Validator::Hostname(FormUI::AllowedType::EMPTY));
 
     form.addStringGetterSetter(F("ntpsvr2"), Plugins::NTPClient::getServer2, Plugins::NTPClient::setServer2);
     form.addFormUI(F("NTP Server 2"));
-    form.addValidator(FormHostValidator(FormHostValidator::AllowedType::ALLOW_EMPTY));
+    form.addValidator(FormUI::Validator::Hostname(FormUI::AllowedType::EMPTY));
 
     form.addStringGetterSetter(F("ntpsvr3"), Plugins::NTPClient::getServer3, Plugins::NTPClient::setServer3);
     form.addFormUI(F("NTP Server 3"));
-    form.addValidator(FormHostValidator(FormHostValidator::AllowedType::ALLOW_EMPTY));
+    form.addValidator(FormUI::Validator::Hostname(FormUI::AllowedType::EMPTY));
 
-    form.addPointer(F("ntpri"), &ntp.refreshInterval);
+    form.addPointerTriviallyCopyable(F("ntpri"), &ntp.refreshInterval);
     form.addFormUI(FormUI::Type::INTEGER, FSPGM(Refresh_Interval, "Refresh Interval"), FormUI::Suffix(FSPGM(minutes__5_, "minutes \u00b15%")));
-    form.addValidator(FormRangeValidator(F("Invalid refresh interval: %min%-%max% minutes"), ntp.kRefreshIntervalMin, ntp.kRefreshIntervalMax));
+    form.addValidator(FormUI::Validator::Range(ntp.kRefreshIntervalMin, ntp.kRefreshIntervalMax, false, F("Invalid refresh interval: %min%-%max% minutes")));
 
     group.end();
     mainGroup.end();

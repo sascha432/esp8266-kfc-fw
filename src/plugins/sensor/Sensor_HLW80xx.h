@@ -188,7 +188,7 @@ public:
 
     virtual void publishState(MQTTClient *client) override;
     virtual void getValues(JsonArray &json, bool timer) override;
-    virtual void createWebUI(WebUI &webUI, WebUIRow **row) override;
+    virtual void createWebUI(WebUIRoot &webUI, WebUIRow **row) override;
 
     virtual String _getId(const __FlashStringHelper *type = nullptr) {
         return String();
@@ -197,8 +197,8 @@ public:
     virtual bool hasForm() const {
         return true;
     }
-    virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form);
-    virtual void configurationSaved(Form *form);
+    virtual void createConfigureForm(AsyncWebServerRequest *request, FormUI::Form::BaseForm &form);
+    virtual void configurationSaved(FormUI::Form::BaseForm *form);
 
     virtual void reconfigure(PGM_P source) override;
     virtual void shutdown() override;

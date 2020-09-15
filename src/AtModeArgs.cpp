@@ -7,6 +7,7 @@
 #include <Arduino_compat.h>
 #include "at_mode.h"
 #include "kfc_fw_config.h"
+#include <Form.h>
 
 #if DEBUG_AT_MODE
 #include <debug_helper_enable.h>

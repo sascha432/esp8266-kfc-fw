@@ -743,7 +743,7 @@ bool WebServerPlugin::_sendFile(const FileMapping &mapping, const String &formNa
                 request->onDisconnect(__weatherStationAttachCanvas); // unlock on disconnect
 #endif
                 __LDBG_printf("form=%s", formName.c_str());
-                Form *form = __LDBG_new(SettingsForm, nullptr);
+                FormUI::Form::BaseForm *form = __LDBG_new(SettingsForm, nullptr);
                 plugin->createConfigureForm(PluginComponent::FormCallbackType::CREATE_GET, formName, *form, request);
                 webTemplate = __LDBG_new(ConfigTemplate, form);
             }
@@ -894,7 +894,7 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
 #if IOT_WEATHER_STATION
                 __weatherStationDetachCanvas(true);
 #endif
-                Form *form = __LDBG_new(SettingsForm, request);
+                FormUI::Form::BaseForm *form = __LDBG_new(SettingsForm, request);
                 plugin->createConfigureForm(PluginComponent::FormCallbackType::CREATE_POST, formName, *form, request);
                 webTemplate = __LDBG_new(ConfigTemplate, form);
                 if (form->validate()) {
@@ -1034,7 +1034,7 @@ typedef struct WebServerConfigCombo_t {
 
 
 
-void WebServerPlugin::createConfigureForm(PluginComponent::FormCallbackType type, const String &name, Form &form, AsyncWebServerRequest *request)
+void WebServerPlugin::createConfigureForm(PluginComponent::FormCallbackType type, const String &name, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
 {
     if (type == PluginComponent::FormCallbackType::SAVE) {
         config.setConfigDirty(true);
@@ -1050,11 +1050,11 @@ void WebServerPlugin::createConfigureForm(PluginComponent::FormCallbackType type
 
     // form.setFormUI(F("Remote Access Configuration"));
 
-    form.addObjectGetterSetter(FSPGM(httpmode, "httpmode"), combo, combo.get_webserver_mode, combo.set_webserver_mode);
-    form.addValidator(FormRangeValidatorEnum<System::WebServer::ModeType>());
+    form.addObjectGetterSetter(FSPGM(httpmode, "httpmode"), combo, combo.get_webserver_mode, combo.set_webserver_mode, FormUI::Field::Type::SELECT);
+    form.addValidator(FormUI::Validator::EnumRange<System::WebServer::ModeType>());
 
 #if WEBSERVER_TLS_SUPPORT
-    form.addValidator(FormMatchValidator(F("There is not enough free RAM for TLS support"), [](FormField &field) {
+    form.addValidator(FormUI::Validator::Match(F("There is not enough free RAM for TLS support"), [](FormField &field) {
         return (field.getValue().toInt() != HTTP_MODE_SECURE) || (ESP.getFreeHeap() > 24000);
     }));
 #endif
@@ -1067,7 +1067,7 @@ void WebServerPlugin::createConfigureForm(PluginComponent::FormCallbackType type
         cfg.setPort(value.toInt(), cfg.isSecure()); // setMode() is executed already and cfg.is_https set
         field.setValue(cfg.getPortAsString());
     }); //->setFormUI(new FormUI::UI(FormUI::Type::INTEGER, FSPGM(Port, "Port"))));
-    form.addValidator(FormNetworkPortValidator(true));
+    form.addValidator(FormUI::Validator::NetworkPort(true));
 
 #if WEBSERVER_TLS_SUPPORT
 
@@ -1076,7 +1076,7 @@ void WebServerPlugin::createConfigureForm(PluginComponent::FormCallbackType type
 
 #endif
     form.addStringGetterSetter(F("btok"), System::Device::getToken, System::Device::setToken); //->setFormUI(new FormUI::UI(FormUI::Type::TEXT, F("Token for Web Server, Web Sockets and Tcp2Serial"))));
-    form.addValidator(FormLengthValidator(System::Device::kTokenMinSize, System::Device::kTokenMaxSize));
+    form.addValidator(FormUI::Validator::Length(System::Device::kTokenMinSize, System::Device::kTokenMaxSize));
 
     form.finalize();
 }

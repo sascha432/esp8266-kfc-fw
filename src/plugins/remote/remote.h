@@ -180,7 +180,7 @@ public:
 
     virtual void createMenu() override;
 
-    virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
+    virtual void createConfigureForm(AsyncWebServerRequest *request, FormUI::Form::BaseForm &form) override;
 
 #if AT_MODE_SUPPORTED
     virtual void atModeHelpGenerator() override;

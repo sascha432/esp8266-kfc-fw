@@ -15,7 +15,7 @@ public:
     virtual void reconfigure(const String &source) override;
     virtual void shutdown() override;
     virtual void getStatus(Print &output) override;
-    virtual void createWebUI(WebUI &webUI) override;
+    virtual void createWebUI(WebUIRoot &webUI) override;
 
     virtual void readConfig(DimmerModuleForm::ConfigType &cfg) {
         _readConfig(cfg);
@@ -25,7 +25,7 @@ public:
         _writeConfig(cfg);
     }
 
-    virtual void createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request) override {
+    virtual void createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request) override {
         DimmerModuleForm::_createConfigureForm(type, formName, form, request);
     }
 

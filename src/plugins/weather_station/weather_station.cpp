@@ -404,7 +404,7 @@ WeatherStationPlugin &WeatherStationPlugin::_getInstance()
     return plugin;
 }
 
-void WeatherStationPlugin::createWebUI(WebUI &webUI)
+void WeatherStationPlugin::createWebUI(WebUIRoot &webUI)
 {
     auto row = &webUI.addRow();
     row->setExtraClass(JJ(title));

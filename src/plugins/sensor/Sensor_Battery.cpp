@@ -72,7 +72,7 @@ void Sensor_Battery::getValues(JsonArray &array, bool timer)
 #endif
 }
 
-void Sensor_Battery::createWebUI(WebUI &webUI, WebUIRow **row)
+void Sensor_Battery::createWebUI(WebUIRoot &webUI, WebUIRow **row)
 {
     (*row)->addSensor(_getId(BatteryType::LEVEL), _name, 'V');
 #if IOT_SENSOR_BATTERY_CHARGE_DETECTION
@@ -110,7 +110,7 @@ bool Sensor_Battery::getSensorData(String &name, StringVector &values)
     return true;
 }
 
-void Sensor_Battery::createConfigureForm(AsyncWebServerRequest *request, Form &form)
+void Sensor_Battery::createConfigureForm(AsyncWebServerRequest *request, FormUI::Form::BaseForm &form)
 {
     auto &cfg = Plugins::Sensor::getWriteableConfig();
 #if IOT_SENSOR_BATTERY_CHARGE_DETECTION

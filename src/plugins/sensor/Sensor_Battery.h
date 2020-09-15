@@ -49,7 +49,7 @@ public:
 
     virtual void publishState(MQTTClient *client) override;
     virtual void getValues(JsonArray &json, bool timer) override;
-    virtual void createWebUI(WebUI &webUI, WebUIRow **row) override;
+    virtual void createWebUI(WebUIRoot &webUI, WebUIRow **row) override;
     virtual void getStatus(Print &output) override;
     virtual MQTTSensorSensorType getType() const override {
         return MQTTSensorSensorType::BATTERY;
@@ -59,7 +59,7 @@ public:
     virtual bool hasForm() const {
         return true;
     }
-    virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
+    virtual void createConfigureForm(AsyncWebServerRequest *request, FormUI::Form::BaseForm &form) override;
 
     virtual void reconfigure(PGM_P source) override;
 

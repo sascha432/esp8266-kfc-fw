@@ -82,7 +82,7 @@ void AtomicSunPlugin::getStatus(Print &output)
     }
 }
 
-void AtomicSunPlugin::createConfigureForm(PluginComponent::FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request)
+void AtomicSunPlugin::createConfigureForm(PluginComponent::FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
 {
     if (isCreateFormCallbackType(type)) {
         readConfig();
@@ -678,7 +678,7 @@ void AtomicSunPlugin::shutdown()
     _end();
 }
 
-void AtomicSunPlugin::createWebUI(WebUI &webUI)
+void AtomicSunPlugin::createWebUI(WebUIRoot &webUI)
 {
     auto row = &webUI.addRow();
     row->setExtraClass(FSPGM(title));

@@ -24,11 +24,11 @@
         "default": "This field must be between %min% and %max% characters"
     },
     "FormValidator_min_macro": {
-        "use_counter": 4,
+        "use_counter": 3,
         "default": "%min%"
     },
     "FormValidator_max_macro": {
-        "use_counter": 4,
+        "use_counter": 3,
         "default": "%max%"
     },
     "FormEnumValidator_default_message": {
@@ -36,11 +36,11 @@
         "default": "Invalid value: %allowed%"
     },
     "FormValidator_allowed_macro": {
-        "use_counter": 3,
+        "use_counter": 1,
         "default": "%allowed%"
     },
     "FormHostValidator_default_message": {
-        "use_counter": 3,
+        "use_counter": 2,
         "default": "Invalid hostname or IP address"
     },
     "webui_json_id": {
@@ -492,7 +492,7 @@
         "default": "Anonymous"
     },
     "Disabled": {
-        "use_counter": 11,
+        "use_counter": 10,
         "default": "Disabled"
     },
     "enabled": {
@@ -744,7 +744,7 @@
         "default": "This field is missing"
     },
     "FormRangeValidator_default_message": {
-        "use_counter": 3,
+        "use_counter": 2,
         "default": "This fields value must be between %min% and %max%"
     },
     "RFC7231_date": {
@@ -968,7 +968,7 @@
         "default": "hidden"
     },
     "FormRangeValidator_default_message_zero_allowed": {
-        "use_counter": 3,
+        "use_counter": 2,
         "default": "This fields value must be 0 or between %min% and %max%"
     },
     "network": {
@@ -1048,7 +1048,7 @@
         "default": ""
     },
     "seconds": {
-        "use_counter": 14,
+        "use_counter": 12,
         "default": "seconds"
     },
     "milliseconds": {
@@ -1168,7 +1168,7 @@
         "default": "12345678"
     },
     "Enabled": {
-        "use_counter": 4,
+        "use_counter": 3,
         "default": "Enabled"
     },
     "Invalid_time": {
@@ -1324,15 +1324,15 @@
         "default": "&acute;"
     },
     "placeholder": {
-        "use_counter": 2,
+        "use_counter": 0,
         "default": "placeholder"
     },
     "min": {
-        "use_counter": 3,
+        "use_counter": 1,
         "default": "min"
     },
     "max": {
-        "use_counter": 2,
+        "use_counter": 0,
         "default": "max"
     },
     "readonly": {
@@ -1596,11 +1596,11 @@
         "default": "httpmode"
     },
     "FormRangeValidator_invalid_port": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "Invalid Port"
     },
     "FormRangeValidator_invalid_port_range": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "Invalid Port (%min%-%max%)"
     },
     "minutes__5_": {

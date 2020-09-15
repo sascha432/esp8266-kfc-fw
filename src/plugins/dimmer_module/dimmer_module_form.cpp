@@ -14,7 +14,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-void DimmerModuleForm::_createConfigureForm(PluginComponent::FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request)
+void DimmerModuleForm::_createConfigureForm(PluginComponent::FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
 {
     if (type == PluginComponent::FormCallbackType::SAVE) {
         writeConfig(Plugins::Dimmer::getWriteableConfig());
@@ -29,10 +29,10 @@ void DimmerModuleForm::_createConfigureForm(PluginComponent::FormCallbackType ty
         readConfig(cfg);
     }
 
-    auto &ui = form.getFormUIConfig();
+    auto &ui = form.createWebUI();
     ui.setTitle(F("Dimmer Configuration"));
     ui.setContainerId(F("dimmer_settings"));
-    ui.setStyle(FormUI::StyleType::ACCORDION);
+    ui.setStyle(FormUI::WebUI::StyleType::ACCORDION);
 
     auto configValidAttr = FormUI::ConditionalAttribute(cfg.config_valid == false, FSPGM(disabled), FSPGM(disabled));
 
@@ -40,11 +40,11 @@ void DimmerModuleForm::_createConfigureForm(PluginComponent::FormCallbackType ty
 
     form.add(F("onft"), _H_W_STRUCT_VALUE(cfg, on_fadetime));
     form.addFormUI(F("On Fade Time"), FormUI::PlaceHolder(7.5, 1), FormUI::Suffix(FSPGM(seconds)));
-    form.addValidator(FormRangeValidatorDouble(1.0, 30.0));
+    form.addValidator(FormUI::Validator::RangeDouble(1.0, 30.0));
 
     form.add(F("offft"), _H_W_STRUCT_VALUE(cfg, off_fadetime));
     form.addFormUI(F("Off Fade Time"), FormUI::PlaceHolder(7.5, 1), FormUI::Suffix(FSPGM(seconds)));
-    form.addValidator(FormRangeValidatorDouble(1.0, 30.0));
+    form.addValidator(FormUI::Validator::RangeDouble(1.0, 30.0));
 
     auto &offDelaySignal = form.addObjectGetterSetter(F("offdlys"), cfg, cfg.get_bits_off_delay_signal, cfg.set_bits_off_delay_signal);
     form.addFormUI(FormUI::Type::HIDDEN);
@@ -67,11 +67,11 @@ void DimmerModuleForm::_createConfigureForm(PluginComponent::FormCallbackType ty
 
     form.add<uint8_t>(F("max_temp"), _H_W_STRUCT_VALUE(cfg, fw.max_temp));
     form.addFormUI(F("Max. Temperature"), configValidAttr, FormUI::PlaceHolder(80), FormUI::Suffix(FSPGM(_degreeC)));
-    form.addValidator(FormRangeValidator(F("Temperature out of range: %min%-%max%"), 45, 110));
+    form.addValidator(FormUI::Validator::Range(F("Temperature out of range: %min%-%max%"), 45, 110));
 
     form.add<uint8_t>(F("metricsint"), _H_W_STRUCT_VALUE(cfg, fw.report_metrics_max_interval));
     form.addFormUI(F("Metrics Report Interval"), configValidAttr, FormUI::PlaceHolder(10), FormUI::Suffix(FSPGM(seconds)));
-    form.addValidator(FormRangeValidator(5, 60));
+    form.addValidator(FormUI::Validator::Range(5, 60));
 
     mainGroup.end();
 
@@ -81,19 +81,19 @@ void DimmerModuleForm::_createConfigureForm(PluginComponent::FormCallbackType ty
 
     form.add<int8_t>(F("channel0"), _H_W_STRUCT_VALUE_TYPE(cfg, channel_mapping[0], int8_t));
     form.addFormUI(F("Channel Warm White 1"), FormUI::PlaceHolder(IOT_ATOMIC_SUN_CHANNEL_WW1));
-    form.addValidator(FormRangeValidator(0, 3));
+    form.addValidator(FormUI::Validator::Range(0, 3));
 
     form.add<int8_t>(F("channel1"), _H_W_STRUCT_VALUE_TYPE(cfg, channel_mapping[1], int8_t));
     form.addFormUI(F("Channel Warm White 2"), FormUI::PlaceHolder(IOT_ATOMIC_SUN_CHANNEL_WW2));
-    form.addValidator(FormRangeValidator(0, 3));
+    form.addValidator(FormUI::Validator::Range(0, 3));
 
     form.add<int8_t>(F("channel2"), _H_W_STRUCT_VALUE_TYPE(cfg, channel_mapping[2], int8_t));
     form.addFormUI(F("Channel Cold White 1"), FormUI::PlaceHolder(IOT_ATOMIC_SUN_CHANNEL_CW1));
 
-    form.addValidator(FormRangeValidator(0, 3));
+    form.addValidator(FormUI::Validator::Range(0, 3));
     form.add<int8_t>(F("channel3"), _H_W_STRUCT_VALUE_TYPE(cfg, channel_mapping[3], int8_t));
     form.addFormUI(F("Channel Cold White 2"), FormUI::PlaceHolder(IOT_ATOMIC_SUN_CHANNEL_CW2));
-    form.addValidator(FormRangeValidator(0, 3));
+    form.addValidator(FormUI::Validator::Range(0, 3));
 
     channelsGroup.end();
 
@@ -113,7 +113,7 @@ void DimmerModuleForm::_createConfigureForm(PluginComponent::FormCallbackType ty
 
     form.add<float>(F("lpft"), _H_W_STRUCT_VALUE(cfg, lp_fadetime));
     form.addFormUI(F("Button Held Fade Time"), FormUI::Suffix(FSPGM(seconds)), FormUI::PlaceHolder(3.5, 1));
-    form.addValidator(FormRangeValidatorDouble(1.0, 30.0));
+    form.addValidator(FormUI::Validator::RangeDouble(1.0, 30.0));
 
     form.addObjectGetterSetter(F("sstep"), cfg, cfg.get_bits_shortpress_steps, cfg.set_bits_shortpress_steps);
     form.addFormUI(F("Brightness Steps"), FormUI::Suffix(F("per 100%")), FormUI::PlaceHolder(cfg.kDefaultValueFor_shortpress_steps));
@@ -165,19 +165,19 @@ void DimmerModuleForm::_createConfigureForm(PluginComponent::FormCallbackType ty
 
     form.add<uint8_t>(F("zc_offset"), _H_W_STRUCT_VALUE(cfg, fw.zero_crossing_delay_ticks));
     form.addFormUI(F("Zero Crossing Offset"), configValidAttr, FormUI::Suffix(FSPGM(ticks, "ticks")));
-    form.addValidator(FormRangeValidator(0, 255));
+    form.addValidator(FormUI::Validator::Range(0, 255));
 
     form.add<uint16_t>(F("min_on"), _H_W_STRUCT_VALUE(cfg, fw.minimum_on_time_ticks));
     form.addFormUI(F("Minimum On-time"), configValidAttr, FormUI::Suffix(FSPGM(ticks)));
-    form.addValidator(FormRangeValidator(1, 65535));
+    form.addValidator(FormUI::Validator::Range(1, 65535));
 
     form.add<uint16_t>(F("min_off"), _H_W_STRUCT_VALUE(cfg, fw.adjust_halfwave_time_ticks));
     form.addFormUI(F("Minimum Off-time"), configValidAttr, FormUI::Suffix(FSPGM(ticks)));
-    form.addValidator(FormRangeValidator(1, 65535));
+    form.addValidator(FormUI::Validator::Range(1, 65535));
 
     form.add<float>(F("vref11"), _H_W_STRUCT_VALUE(cfg, fw.internal_1_1v_ref));
     form.addFormUI(F("ATmega 1.1V Reference Calibration"), configValidAttr, FormUI::PlaceHolder(1.1, 1), FormUI::Suffix('V'));
-    form.addValidator(FormRangeValidatorDouble(0.9, 1.3, 1));
+    form.addValidator(FormUI::Validator::RangeDouble(0.9, 1.3, 1));
 
     form.add<float>(F("temp_ofs"), (cfg.fw.ntc_temp_offset / DIMMER_TEMP_OFFSET_DIVIDER), [&cfg](const float &value, FormField &, bool) {
         cfg.fw.ntc_temp_offset = value * DIMMER_TEMP_OFFSET_DIVIDER;

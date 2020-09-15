@@ -141,7 +141,7 @@ void Sensor_HLW80xx::getValues(JsonArray &array, bool timer)
     obj->add(JJ(value), String(pf, 2));
 }
 
-void Sensor_HLW80xx::createWebUI(WebUI &webUI, WebUIRow **row)
+void Sensor_HLW80xx::createWebUI(WebUIRoot &webUI, WebUIRow **row)
 {
     __LDBG_println();
 
@@ -178,7 +178,7 @@ void Sensor_HLW80xx::shutdown()
     config.write();
 }
 
-void Sensor_HLW80xx::createConfigureForm(AsyncWebServerRequest *request, Form &form)
+void Sensor_HLW80xx::createConfigureForm(AsyncWebServerRequest *request, FormUI::Form::BaseForm &form)
 {
     auto &cfg = Plugins::Sensor::getWriteableConfig();
 
@@ -195,7 +195,7 @@ void Sensor_HLW80xx::createConfigureForm(AsyncWebServerRequest *request, Form &f
 
     form.add<uint8_t>(F("hlw80xx_xd"), _H_W_STRUCT_VALUE(cfg, hlw80xx.extraDigits));
     form.addFormUI(F("Extra Digits/Precision"));
-    form.addValidator(FormRangeValidator(0, 4));
+    form.addValidator(FormUI::Validator::Range(0, 4));
 
     form.add(F("hlw80xx_e1"), String(), FormField::Type::TEXT);
     form.addFormUI(F("Total Energy"), FormUI::Suffix(FSPGM(kWh)), FormUI::PlaceHolder(IOT_SENSOR_HLW80xx_PULSE_TO_KWH(getEnergyPrimaryCounter()), 3));
@@ -236,7 +236,7 @@ void Sensor_HLW80xx::_publishPersistantStorage(ConfigType *cfgPtr)
     }
 }
 
-void Sensor_HLW80xx::configurationSaved(Form *form)
+void Sensor_HLW80xx::configurationSaved(FormUI::Form::BaseForm *form)
 {
     auto &cfg = Plugins::Sensor::getWriteableConfig();
     getEnergyPrimaryCounter() = cfg.hlw80xx.energyCounter;

@@ -17,13 +17,17 @@
 #include "WebUIAlerts.h"
 #include "web_server.h"
 #include "build.h"
+#include <JsonBaseReader.h>
+#include <Form/Types.h>
 #if NTP_CLIENT
 #include "../src/plugins/ntp/ntp_plugin.h"
 #endif
 #if MQTT_SUPPORT
+#include <AsyncMqttClient.h>
 #include "../src/plugins/mqtt/mqtt_client.h"
 #endif
 #if MDNS_PLUGIN
+#include <ESP8266SSDP.h>
 #include "../src/plugins/mdns/mdns_plugin.h"
 #include "../src/plugins/mdns/mdns_resolver.h"
 #endif

@@ -19,8 +19,7 @@
 #include "../src/plugins/dimmer_module/firmware_protocol.h"
 #endif
 
-class Form;
-class FormLengthValidator;
+#include <Form/Types.h>
 
 #ifndef DEBUG_CONFIG_CLASS
 #define DEBUG_CONFIG_CLASS                                                  0
@@ -112,21 +111,21 @@ namespace ConfigurationHelper {
     static inline void set##name(const String &str) { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_SET); storeStringConfig(k##name##ConfigHandle, str); }
 
 #define CREATE_STRING_GETTER_SETTER_MIN_MAX(class_name, name, mins, maxs) \
-    static inline FormLengthValidator &add##name##LengthValidator(Form &form, bool allowEmpty = false) { \
-        return form.addValidator(FormLengthValidator(k##name##MinSize, k##name##MaxSize, allowEmpty)); \
+    static inline FormUI::Validator::Length &add##name##LengthValidator(FormUI::Form::BaseForm &form, bool allowEmpty = false) { \
+        return form.addValidator(FormUI::Validator::Length(k##name##MinSize, k##name##MaxSize, allowEmpty)); \
     } \
-    static inline FormLengthValidator &add##name##LengthValidator(const String &message, Form &form, bool allowEmpty = false) { \
-        return form.addValidator(FormLengthValidator(message, k##name##MinSize, k##name##MaxSize, allowEmpty)); \
+    static inline FormUI::Validator::Length &add##name##LengthValidator(const String &message, FormUI::Form::BaseForm &form, bool allowEmpty = false) { \
+        return form.addValidator(FormUI::Validator::Length(message, k##name##MinSize, k##name##MaxSize, allowEmpty)); \
     } \
     static constexpr size_t k##name##MinSize = mins; \
     CREATE_STRING_GETTER_SETTER(class_name, name, maxs)
 
 #define CREATE_BITFIELD_TYPE_MIN_MAX(name, size, type, min_value, max_value, default_value) \
-    static inline FormRangeValidator &addRangeValidatorFor_##name(Form &form, bool allowZero = false) { \
-        return form.addValidator(FormRangeValidator((long)kMinValueFor_##name, (long)kMaxValueFor_##name, allowZero)); \
+    static inline FormUI::Validator::Range &addRangeValidatorFor_##name(FormUI::Form::BaseForm &form, bool allowZero = false) { \
+        return form.addValidator(FormUI::Validator::Range((long)kMinValueFor_##name, (long)kMaxValueFor_##name, allowZero)); \
     } \
-    static inline FormRangeValidator &addRangeValidatorFor_##name(const String &message, Form &form, bool allowZero = false) { \
-        return form.addValidator(FormRangeValidator(message, (long)kMinValueFor_##name, (long)kMaxValueFor_##name, allowZero)); \
+    static inline FormUI::Validator::Range &addRangeValidatorFor_##name(const String &message, FormUI::Form::BaseForm &form, bool allowZero = false) { \
+        return form.addValidator(FormUI::Validator::Range(message, (long)kMinValueFor_##name, (long)kMaxValueFor_##name, allowZero)); \
     } \
     static constexpr type kMinValueFor_##name = min_value; \
     static constexpr type kMaxValueFor_##name = max_value; \
@@ -1361,6 +1360,11 @@ namespace KFCConfigurationClasses {
 
         // --------------------------------------------------------------------
         // Dimmer
+
+#if !(IOT_DIMMER_MODULE || DEBUG_4CH_DIMMER)
+typedef struct {
+} register_mem_cfg_t;
+#endif
 
         class DimmerConfig {
         public:

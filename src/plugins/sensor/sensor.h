@@ -79,7 +79,7 @@ public:
 
 // WebUI
 public:
-    virtual void createWebUI(WebUI &webUI) override;
+    virtual void createWebUI(WebUIRoot &webUI) override;
     virtual void getValues(JsonArray &array) override;
     virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) override;
 
@@ -91,7 +91,7 @@ public:
     virtual void reconfigure(const String &source) override;
     virtual void shutdown() override;
     virtual void getStatus(Print &output) override;
-    virtual void createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request) override;
+    virtual void createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request) override;
     virtual void createMenu() override;
 
     static void timerEvent(Event::CallbackTimerPtr timer);

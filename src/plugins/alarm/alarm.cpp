@@ -129,7 +129,7 @@ void AlarmPlugin::getStatus(Print &output)
 }
 
 #define FORM_CREATE_CALLBACK(name, field_name, type) \
-    static bool form_##name##_callback(type value, FormField &field, bool store) { \
+    static bool form_##name##_callback(type value, FormUI::Field::Base &field, bool store) { \
         if (store) { \
             AlarmPlugin::Alarm::getWriteableConfig().alarms[atoi(field.getName().c_str() + 1)].field_name = value; \
         } \
@@ -145,7 +145,7 @@ FORM_CREATE_CALLBACK(enabled, is_enabled, bool);
 FORM_CREATE_CALLBACK(mode, mode, uint8_t);
 #endif
 
-void AlarmPlugin::createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request)
+void AlarmPlugin::createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
 {
     __LDBG_printf("type=%u name=%s form=%p request=%p", type, formName.c_str(), &form, request);
     if (type == FormCallbackType::SAVE) {

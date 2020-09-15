@@ -84,7 +84,7 @@ void Sensor_BME280::getValues(JsonArray &array, bool timer)
     obj->add(JJ(value), JsonNumber(sensor.pressure, 2));
 }
 
-void Sensor_BME280::createWebUI(WebUI &webUI, WebUIRow **row)
+void Sensor_BME280::createWebUI(WebUIRoot &webUI, WebUIRow **row)
 {
     _debug_println();
     // if ((*row)->size() > 1) {

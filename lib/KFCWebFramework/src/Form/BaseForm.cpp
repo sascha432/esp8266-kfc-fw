@@ -96,6 +96,35 @@ bool Form::BaseForm::hasError(Field::BaseField &field) const
     return false;
 }
 
+WebUI::BaseUI &Form::BaseForm::addFormUI(WebUI::BaseUI *formUI)
+{
+    const auto &field = _fields.back();
+    field->setFormUI(formUI);
+    return *formUI;
+}
+
+
+Group &Form::BaseForm::addGroup(const String &name, const Container::Label &label, bool expanded, WebUI::Type type)
+{
+    auto &group = _add<Group>(name, expanded);
+    group.setFormUI(&group, type, label);
+    return group;
+}
+
+Group &Form::BaseForm::addGroup(const String &name, bool expanded, WebUI::Type type)
+{
+    auto &group = _add<Group>(name, expanded);
+    group.setFormUI(&group, type);
+    return group;
+}
+
+void Form::BaseForm::setFormUI(const String &title, const String &submit)
+{
+    auto &cfg = createWebUI();
+    cfg.setTitle(title);
+    cfg.setSaveButtonLabel(submit);
+}
+
 void Form::BaseForm::copyValidatedData()
 {
     if (isValid()) {

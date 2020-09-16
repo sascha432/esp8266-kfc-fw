@@ -76,7 +76,7 @@ using namespace FormUI;
 //    }
 //}
 
-void FormUI::Storage::Vector::dump(Print &output) const
+void Storage::Vector::dump(Print &output) const
 {
     auto iterator = begin();
     while (iterator != end()) {
@@ -123,18 +123,16 @@ void FormUI::Storage::Vector::dump(Print &output) const
 // FormUI::CheckboxButtonSuffix
 // -----------------------------------------------------------------------
 
-Container::CheckboxButtonSuffix::CheckboxButtonSuffix(Field::BaseField &hiddenField, const char *label, const __FlashStringHelper *onIcons, const __FlashStringHelper *offIcons)
+void Container::CheckboxButtonSuffix::initButton(FormField &hiddenField, const __FlashStringHelper *onIcons, const __FlashStringHelper *offIcons)
 {
     if (onIcons && offIcons) {
-        _items.push_back(F("<button type=\"button\" class=\"btn btn-default button-checkbox\" data-on-icon=\"%s\" data-off-icon=\"%s\" id=\"_%s\">%s</button>"));
-        _items.push_back(onIcons);
-        _items.push_back(offIcons);
-        _items.push_back(hiddenField.getName().c_str());
-        _items.push_back(label);
+        _items.emplace_back(F("<button type=\"button\" class=\"button-checkbox btn btn-default\" data-on-icon=\"%s\" data-off-icon=\"%s\" id=\"_%s\">%s</button>"));
+        _items.emplace_back(onIcons);
+        _items.emplace_back(offIcons);
+        _items.emplace_back(hiddenField.getName());
     }
     else {
-        _items.push_back(F("<button type=\"button\" class=\"btn btn-default button-checkbox\" id=\"_%s\">%s</button>"));
-        _items.push_back(hiddenField.getName().c_str());
-        _items.push_back(label);
+        _items.emplace_back(F("<button type=\"button\" class=\"button-checkbox btn btn-default\" id=\"_%s\">%s</button>"));
+        _items.emplace_back(hiddenField.getName());
     }
 }

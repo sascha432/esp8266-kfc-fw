@@ -20,7 +20,7 @@ namespace FormUI {
 			static _Ta *find(_Ta *iterator, _Pr pred) {
 				if (iterator) {
 					do {
-						if (pred((*iterator))) {
+						if (pred(*iterator)) {
 							return iterator;
 						}
 						iterator = iterator->__next();

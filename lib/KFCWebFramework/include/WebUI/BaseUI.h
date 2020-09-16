@@ -127,6 +127,10 @@ namespace FormUI {
                 _storage.push_back(Storage::Value::SuffixText(encodeHtmlEntities(suffix.getValue())));
             }
 
+            inline void _addItem(const Container::SuffixHtml &suffix) {
+                _storage.push_back(Storage::Value::SuffixHtml(attachString(suffix.getValue())));
+            }
+
             void _addItem(const Container::CheckboxButtonSuffix &suffix);
 
             inline void _addItem(const Container::IntMinMax &minMax) {
@@ -206,6 +210,7 @@ namespace FormUI {
             }
 
             bool _isSelected(int32_t value) const;
+            bool _compareTextValue(const char *value) const;
             bool _compareValue(const char *value) const;
             void _setItems(const Container::List &items);
 

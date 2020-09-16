@@ -41,6 +41,9 @@ namespace FormUI {
                 _hasChanged(false),
                 _uiConfig(nullptr)
             {
+#if DEBUG_KFC_FORMS
+                _duration.start();
+#endif
             }
 
             virtual ~BaseForm() {
@@ -136,20 +139,11 @@ namespace FormUI {
             // Form data handling
             // --------------------------------------------------------------------
 
-            inline void clearErrors() {
-                _clearErrors();
-            }
-
+            void clearErrors();
             bool validate();
             bool validateOnly();
-
-            inline bool isValid() const {
-                return _errors == nullptr || _errors->empty();
-            }
-
-            inline bool hasChanged() const {
-                return _hasChanged;
-            }
+            bool isValid() const;
+            bool hasChanged() const;
 
             bool hasErrors() const;
             bool hasError(Field::BaseField &field) const;
@@ -304,6 +298,9 @@ namespace FormUI {
             // empty = no id/no class
             Group &addGroup(const String &name, const Container::Label &label, bool expanded, WebUI::Type type = WebUI::Type::GROUP_START);
 
+            // no label
+            Group &addGroup(const String &name, bool expanded, WebUI::Type type = WebUI::Type::GROUP_START);
+
             // title and separator
             Group &addHrGroup(const String &id, const Container::Label &label = String()) {
                 return addGroup(id, label, false, WebUI::Type::GROUP_START_HR);
@@ -325,10 +322,14 @@ namespace FormUI {
 
             // form/field.createWebUI()/getWebUI() provides the container id
             // id is "header-<id>" for the card header and "collapse-<id>" for the card body
-            // if label is empty, the card header is not created and the card body cannot be collapsed
             // expanded is the intial state of the cardd body either show=true or hide=false
             Group &addCardGroup(const String &id, const Container::Label &label, bool expanded = false) {
                 return addGroup(id, label, expanded, WebUI::Type::GROUP_START_CARD);
+            }
+
+            // card body without header that cannot be collapsed
+            Group &addCardGroup(const String &id) {
+                return addGroup(id, true, WebUI::Type::GROUP_START_CARD);
             }
 
             // --------------------------------------------------------------------
@@ -451,6 +452,9 @@ namespace FormUI {
             Validator::Callback _validateCallback;
 #endif
             StringDeduplicator _strings;
+#if DEBUG_KFC_FORMS
+            MicrosTimer _duration;
+#endif
         };
 
     }

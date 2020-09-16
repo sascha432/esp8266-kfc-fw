@@ -298,7 +298,7 @@ void PingMonitorPlugin::createConfigureForm(FormCallbackType type, const String 
     ui.setTitle(F("Ping Monitor Configuration"));
     ui.setContainerId(F("ping_settings"));
 
-    auto &mainGroup = form.addCardGroup(FSPGM(config), String());
+    auto &mainGroup = form.addCardGroup(FSPGM(config));
 
     form.addObjectGetterSetter(F("pwc"), cfg, Plugins::PingConfig::PingConfig_t::get_bits_console, Plugins::PingConfig::PingConfig_t::set_bits_console);
     form.addFormUI(F("Ping Console"), FormUI::BoolItems());

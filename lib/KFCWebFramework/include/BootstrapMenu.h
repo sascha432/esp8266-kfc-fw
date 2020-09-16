@@ -11,7 +11,7 @@
 #include <MicrosTimer.h>
 
 #ifndef DEBUG_BOOTSTRAP_MENU
-#define DEBUG_BOOTSTRAP_MENU                    1
+#define DEBUG_BOOTSTRAP_MENU                    0
 #endif
 
  #include "push_pack.h"

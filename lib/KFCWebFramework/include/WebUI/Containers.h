@@ -56,8 +56,6 @@ namespace FormUI {
             const __FlashStringHelper *_fpstr;
         };
 
-        #include <push_pack.h>
-
         class Mixed {
         public:
             enum class Type : uint8_t {
@@ -273,12 +271,14 @@ namespace FormUI {
 
         using MixedPair = std::pair<Mixed, Mixed>;
 
-        static constexpr size_t MixedContainerSize = sizeof(Mixed);
-        static constexpr size_t MixedContainerPairSize = sizeof(MixedPair);
+        using MixedVector = std::vector<Mixed>;
 
-        #include <pop_pack.h>
+        using MixedStringVector = std::vector<MixedString>;
 
         using ListVector = std::vector<MixedPair>;
+
+        static constexpr size_t MixedContainerSize = sizeof(Mixed);
+        static constexpr size_t MixedContainerPairSize = sizeof(MixedPair);
 
         class List : public ListVector {
         public:
@@ -374,58 +374,52 @@ namespace FormUI {
         {
         public:
             using MixedString::MixedString;
-            using MixedString::getValue;
         };
 
-        class RawLabel : public MixedString
+        class RawLabel : public Label
         {
         public:
-            using MixedString::MixedString;
-            using MixedString::getValue;
+            using Label::Label;
         };
 
         class Suffix : public MixedString {
         public:
             using MixedString::MixedString;
-            using MixedString::getValue;
         };
 
-            inline Suffix ZeroconfSuffix() {
-            return F("<button type=\"button\" class=\"btn btn-default resolve-zerconf-button\" data-color=\"primary\">Resolve Zeroconf</button>");
-        }
+        class SuffixHtml : public Suffix {
+        public:
+            using Suffix::Suffix;
+        };
+
+        class ZeroconfSuffix : public SuffixHtml {
+        public:
+            ZeroconfSuffix() : SuffixHtml(F("<button type=\"button\" class=\"resolve-zerconf-button btn btn-default\" data-color=\"primary\">Resolve Zeroconf</button>")) {}
+        };
 
         class CheckboxButtonSuffix {
         public:
-            CheckboxButtonSuffix(Field::BaseField &hiddenField, const char *label, const __FlashStringHelper *onIcons = nullptr, const __FlashStringHelper *offIcons = nullptr);
-            //{
-            //	if (onIcons && offIcons) {
-            //		_items.push_back(F("<button type=\"button\" class=\"btn btn-default button-checkbox\" data-on-icon=\"%s\" data-off-icon=\"%s\" id=\"_%s\">%s</button>"));
-            //		_items.push_back(onIcons);
-            //		_items.push_back(offIcons);
-            //		_items.push_back(__FormFieldGetName(hiddenField));
-            //		_items.push_back(label);
-            //	}
-            //	else {
-            //		_items.push_back(F("<button type=\"button\" class=\"btn btn-default button-checkbox\" id=\"_%s\">%s</button>"));
-            //		_items.push_back(onIcons);
-            //		_items.push_back(offIcons);
-            //		_items.push_back(__FormFieldGetName(hiddenField));
-            //		_items.push_back(label);
-            //	}
-            //}
-            CheckboxButtonSuffix(Field::BaseField &hiddenField, const String &label, const __FlashStringHelper *onIcons = nullptr, const __FlashStringHelper *offIcons = nullptr) :
-                CheckboxButtonSuffix(hiddenField, label.c_str(), onIcons, offIcons)
+            using FormField = ::FormUI::Field::BaseField;
+
+        public:
+            CheckboxButtonSuffix(FormField &hiddenField, const String &label, const __FlashStringHelper *onIcons = nullptr, const __FlashStringHelper *offIcons = nullptr)
             {
+                initButton(hiddenField, onIcons, offIcons);
+                _items.emplace_back(label);
             }
-            CheckboxButtonSuffix(Field::BaseField &hiddenField, const __FlashStringHelper *label, const __FlashStringHelper *onIcons = nullptr, const __FlashStringHelper *offIcons = nullptr) :
-                CheckboxButtonSuffix(hiddenField, (const char *)label, onIcons, offIcons)
+            CheckboxButtonSuffix(FormField &hiddenField, const __FlashStringHelper *label, const __FlashStringHelper *onIcons = nullptr, const __FlashStringHelper *offIcons = nullptr)
             {
+                initButton(hiddenField, onIcons, offIcons);
+                _items.emplace_back(label);
             }
+
+        protected:
+            void initButton(FormField &hiddenField, const __FlashStringHelper *onIcons, const __FlashStringHelper *offIcons);
 
         private:
             friend WebUI::BaseUI;
 
-            StringVector _items;
+            MixedStringVector _items;
         };
 
         class IntMinMax
@@ -509,7 +503,7 @@ namespace FormUI {
         class ReadOnly : public StringAttribute
         {
         public:
-            ReadOnly() : StringAttribute(FSPGM(readonly), emptyString) {}
+            ReadOnly() : StringAttribute(FSPGM(readonly), std::move(String())) {}
         };
 
         class BoolItems

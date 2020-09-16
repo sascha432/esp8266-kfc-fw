@@ -16,36 +16,31 @@
 using namespace FormUI;
 
 __KFC_FORMS_INLINE_METHOD__
-Group &Form::BaseForm::addGroup(const String &name, const Container::Label &label, bool expanded, WebUI::Type type)
+void Form::BaseForm::clearErrors()
 {
-    auto &group = _add<Group>(name, expanded);
-    group.setFormUI(&group, type, label);
-    return group;
+    _clearErrors();
 }
 
 
 __KFC_FORMS_INLINE_METHOD__
-WebUI::BaseUI &Form::BaseForm::addFormUI(WebUI::BaseUI *formUI)
+bool Form::BaseForm::isValid() const
 {
-    const auto &field = _fields.back();
-    field->setFormUI(formUI);
-    return *formUI;
-}
-
-
-__KFC_FORMS_INLINE_METHOD__
-void Form::BaseForm::setFormUI(const String &title, const String &submit)
-{
-    auto &cfg = createWebUI();
-    cfg.setTitle(title);
-    cfg.setSaveButtonLabel(submit);
+    return _errors == nullptr || _errors->empty();
 }
 
 
 __KFC_FORMS_INLINE_METHOD__
 bool Form::BaseForm::hasErrors() const
 {
-    return _errors != nullptr && _errors->empty() == false;
+    return !isValid();
+    // return _errors != nullptr && _errors->empty() == false;
+}
+
+
+__KFC_FORMS_INLINE_METHOD__
+bool Form::BaseForm::hasChanged() const
+{
+    return _hasChanged;
 }
 
 
@@ -62,6 +57,9 @@ const Form::Error::Vector &Form::BaseForm::getErrors() const
 __KFC_FORMS_INLINE_METHOD__
 void Form::BaseForm::finalize() const
 {
+#if DEBUG_KFC_FORMS
+    __LDBG_printf("render=create_form time=%.3fms", _duration.getTimeConst() / 1000.0);
+#endif
     // if (hasWebUIConfig()) {
     //     for (const auto &field : _fields) {
     //         int n = 0;

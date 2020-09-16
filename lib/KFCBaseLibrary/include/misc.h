@@ -611,11 +611,23 @@ inline IPAddress convertToIPAddress(const String &hostname) {
 extern "C" const char SPGM_null[] PROGMEM;
 extern "C" const char SPGM_0x_08x[] PROGMEM;
 
+#if defined(ESP8266)
+#define __IS_SAFE_STR(str)              (((((uintptr_t)str) >= 0x3FF00000) && ((uintptr_t)str) < 0x40300000) ? str : __safeCString((const void *)str).c_str())
+#else
+#define __IS_SAFE_STR(str)              str
+#endif
+
+inline const String __safeCString(const void *ptr) {
+    char buf[16];
+    snprintf_P(buf, sizeof(buf), SPGM(0x_08x), ptr);
+    return buf;
+}
+
 class SafeStringWrapper {
 public:
     constexpr SafeStringWrapper() : _str(SPGM(null)) {}
-    constexpr SafeStringWrapper(const char *str) : _str(str ? str : SPGM(null)) {}
-    constexpr SafeStringWrapper(const __FlashStringHelper *str) : _str(str ? (PGM_P)str : SPGM(null)) {}
+    constexpr SafeStringWrapper(const char *str) : _str(str ? __IS_SAFE_STR(str) : SPGM(null)) {}
+    constexpr SafeStringWrapper(const __FlashStringHelper *str) : _str(str ? __IS_SAFE_STR((PGM_P)str) : SPGM(null)) {}
     constexpr const char *c_str() const {
         return _str;
     }
@@ -625,12 +637,6 @@ public:
 
 inline const String __safeCString(const IPAddress &addr) {
     return addr.toString();
-}
-
-inline const String __safeCString(const void *ptr) {
-    char buf[16];
-    snprintf_P(buf, sizeof(buf), SPGM(0x_08x), ptr);
-    return buf;
 }
 
 constexpr const String &__safeCString(const String &str) {

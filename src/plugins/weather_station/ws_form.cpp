@@ -28,7 +28,7 @@ void WeatherStationPlugin::createConfigureForm(FormCallbackType type, const Stri
     ui.setContainerId(F("dimmer_settings"));
     ui.setStyle(FormUI::WebUI::StyleType::ACCORDION);
 
-    auto &mainGroup = form.addCardGroup(FSPGM(config), String());
+    auto &mainGroup = form.addCardGroup(FSPGM(config));
 
     form.add(F("tf"), _H_W_STRUCT_VALUE(cfg, time_format_24h));
     form.addFormUI(F("Time Format"), FormUI::BoolItems(F("24h"), F("12h")));

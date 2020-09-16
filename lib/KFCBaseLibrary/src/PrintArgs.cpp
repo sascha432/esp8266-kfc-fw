@@ -33,8 +33,6 @@ const __FlashStringHelper *PrintArgs::getFormatByType(FormatType type) const
             return F("</div></div>");
         case FormatType::HTML_CLOSE_DIV_3X:
             return F("</div></div></div>");
-        case FormatType::HTML_CLOSE_SPAN:
-            return F("</span>");
         case FormatType::HTML_CLOSE_SELECT:
             return F("</select>");
         case FormatType::HTML_CLOSE_LABEL:
@@ -47,8 +45,8 @@ const __FlashStringHelper *PrintArgs::getFormatByType(FormatType type) const
             return F("<div class=\"input-group\">");
         case FormatType::HTML_OPEN_DIV_INPUT_GROUP_APPEND:
             return F("<div class=\"input-group-append\">");
-        case FormatType::HTML_OPEN_SPAN_INPUT_GROUP_TEXT:
-            return F("<span class=\"input-group-text\">");
+        case FormatType::HTML_OPEN_DIV_INPUT_GROUP_TEXT:
+            return F("<div class=\"input-group-text\">");
         case FormatType::HTML_OPEN_DIV_CARD_DIV_DIV_CARD_BODY:
             return F("<div class=\"card\"><div><div class=\"card-body\">");
         case FormatType::HTML_CLOSE_GROUP_START_HR:
@@ -122,7 +120,7 @@ size_t PrintArgs::fillBuffer(uint8_t *data, size_t sizeIn)
         }
         uint8_t numArgs = *_bufferPtr & static_cast<uint8_t>(FormatType::MASK_NO_FORMAT);
         // print a list of strings instead using printf
-        bool noFormat = *_bufferPtr & ~static_cast<uint8_t>(FormatType::MASK_NO_FORMAT);
+        // bool noFormat = *_bufferPtr & ~static_cast<uint8_t>(FormatType::MASK_NO_FORMAT);
         auto src = reinterpret_cast<uintptr_t **>(_bufferPtr + 1);
         size_t advance = 1;
 
@@ -131,19 +129,16 @@ size_t PrintArgs::fillBuffer(uint8_t *data, size_t sizeIn)
             switch(formatType) {
 
                 //TODO
-                // case FormatType::SINGLE_CHAR:
-                //     break;
                 case FormatType::HTML_CLOSE_QUOTE_CLOSE_TAG:
                 case FormatType::HTML_CLOSE_TAG:
                 case FormatType::HTML_CLOSE_DIV:
                 case FormatType::HTML_CLOSE_DIV_2X:
                 case FormatType::HTML_CLOSE_DIV_3X:
-                case FormatType::HTML_CLOSE_SPAN:
                 case FormatType::HTML_CLOSE_SELECT:
                 case FormatType::HTML_OPEN_DIV_FORM_GROUP:
                 case FormatType::HTML_OPEN_DIV_INPUT_GROUP:
                 case FormatType::HTML_OPEN_DIV_INPUT_GROUP_APPEND:
-                case FormatType::HTML_OPEN_SPAN_INPUT_GROUP_TEXT:
+                case FormatType::HTML_OPEN_DIV_INPUT_GROUP_TEXT:
                 case FormatType::HTML_OPEN_DIV_CARD_DIV_DIV_CARD_BODY:
                 case FormatType::HTML_CLOSE_GROUP_START_HR:
                     {
@@ -261,7 +256,7 @@ default://TODO remove default
 
 void PrintArgs::vprintf_P(const char *format, const uintptr_t **args, size_t numArgs)
 {
-#if DEBUG_PRINT_ARGS
+#if DEBUG_PRINT_ARGS && 0
     _printfCalls++;
     _printfArgs += numArgs;
 #endif
@@ -269,10 +264,10 @@ void PrintArgs::vprintf_P(const char *format, const uintptr_t **args, size_t num
     _buffer.push_back((uintptr_t)format);
     _buffer.write(reinterpret_cast<const uint8_t *>(&args[0]), sizeof(uintptr_t) * numArgs);
 
-    Serial.printf_P(PSTR("num=%u fmt=%p ('%-10.10s') "), numArgs, format, format);
+    Serial.printf_P(PSTR("num=%u fmt=%p ('%-16.16s') "), numArgs, format, __S(format));
     int i  = 0;
     while(numArgs--) {
-        Serial.printf_P(PSTR("arg=%p '%-10.10s'"), args[i], args[i]);
+        Serial.printf_P(PSTR("arg=%p '%-16.16s'"), args[i], __S(args[i]));
         i++;
     }
     Serial.println();
@@ -304,6 +299,8 @@ void PrintArgs::_debugPrint(PGM_P format, ...)
     va_start(arg, format);
     str.vprintf_P(format, arg);
     va_end(arg);
-    // Serial.print(str);
+#if 0
+    Serial.print(str);
+#endif
 }
 #endif

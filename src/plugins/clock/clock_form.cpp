@@ -27,7 +27,7 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
     ui.setContainerId(F("clock_settings"));
     ui.setStyle(FormUI::WebUI::StyleType::ACCORDION);
 
-    auto &mainGroup = form.addCardGroup(FSPGM(config), String());
+    auto &mainGroup = form.addCardGroup(FSPGM(config));
 
     form.add<bool>(F("timef"), _H_W_STRUCT_VALUE(cfg, time_format_24h));
     form.addFormUI(F("Time Format"), FormUI::BoolItems(F("24h"), F("12h")));

@@ -25,32 +25,33 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
 
     auto &cfg = Plugins::Blinds::getWriteableConfig();
 
-    FormUI::Container::List currentLimitItems(
-        5, F("Extra Fast (5ms)"),
-        20, F("Fast (20ms)"),
-        50, F("Medium (50ms)"),
-        150, F("Slow (150ms)"),
-        250, F("Extra Slow (250ms)")
-    );
-
-    FormUI::Container::List operationTypeItems(
-        Plugins::Blinds::OperationType::NONE, FSPGM(None),
-        Plugins::Blinds::OperationType::OPEN_CHANNEL0, F("Open Channel 0"),
-        Plugins::Blinds::OperationType::OPEN_CHANNEL1, F("Open Channel 1"),
-        Plugins::Blinds::OperationType::CLOSE_CHANNEL0, F("Close Channel 0"),
-        Plugins::Blinds::OperationType::CLOSE_CHANNEL1, F("Close Channel 1"),
-        Plugins::Blinds::OperationType::OPEN_CHANNEL0_FOR_CHANNEL1, F("Open Channel 0 For Channel 1"),
-        Plugins::Blinds::OperationType::OPEN_CHANNEL1_FOR_CHANNEL0, F("Open Channel 1 For Channel 0"),
-        Plugins::Blinds::OperationType::CLOSE_CHANNEL0_FOR_CHANNEL1, F("Close Channel 0 For Channel 1"),
-        Plugins::Blinds::OperationType::CLOSE_CHANNEL1_FOR_CHANNEL0, F("Close Channel 1 For Channel 0")
-    );
-
     auto &ui = form.createWebUI();
     ui.setTitle(F("Blinds Controller"));
     ui.setContainerId(F("blinds_settings"));
     ui.setStyle(FormUI::WebUI::StyleType::ACCORDION);
 
     if (String_equals(formName, PSTR("channels"))) {
+
+        FormUI::Container::List currentLimitItems(
+            5, F("Extra Fast (5ms)"),
+            20, F("Fast (20ms)"),
+            50, F("Medium (50ms)"),
+            150, F("Slow (150ms)"),
+            250, F("Extra Slow (250ms)")
+        );
+
+        FormUI::Container::List operationTypeItems(
+            Plugins::Blinds::OperationType::NONE, FSPGM(None),
+            Plugins::Blinds::OperationType::OPEN_CHANNEL0, F("Open Channel 0"),
+            Plugins::Blinds::OperationType::OPEN_CHANNEL1, F("Open Channel 1"),
+            Plugins::Blinds::OperationType::CLOSE_CHANNEL0, F("Close Channel 0"),
+            Plugins::Blinds::OperationType::CLOSE_CHANNEL1, F("Close Channel 1"),
+            Plugins::Blinds::OperationType::OPEN_CHANNEL0_FOR_CHANNEL1, F("Open Channel 0 For Channel 1"),
+            Plugins::Blinds::OperationType::OPEN_CHANNEL1_FOR_CHANNEL0, F("Open Channel 1 For Channel 0"),
+            Plugins::Blinds::OperationType::CLOSE_CHANNEL0_FOR_CHANNEL1, F("Close Channel 0 For Channel 1"),
+            Plugins::Blinds::OperationType::CLOSE_CHANNEL1_FOR_CHANNEL0, F("Close Channel 1 For Channel 0")
+        );
+
 
         for (uint8_t i = 0; i < kChannelCount; i++) {
             String prefix = PrintString(F("ch%u_"), i);

@@ -84,31 +84,6 @@ void Form::BaseForm::createHtml(PrintInterface &output)
 }
 
 // -----------------------------------------------------------------------
-// FormUI
-// -----------------------------------------------------------------------
-
-//const char *::FormUI::Container::__FormFieldGetName(Field::BaseField &field)
-//{
-//    return field.getName().c_str();
-//}
-//
-//const char *::FormUI::Container::__FormFieldAttachString(Field::BaseField *parent, const char *str)
-//{
-//    return parent->getWebUIConfig().attachString(str);
-//}
-//
-//const char *::FormUI::Container::__FormFieldEncodeHtmlEntities(Field::BaseField *parent, const char *str)
-//{
-//    return parent->getWebUIConfig().encodeHtmlEntities(str);
-//}
-//
-//const char *::FormUI::Container::__FormFieldEncodeHtmlAttribute(Field::BaseField *parent, const char *str)
-//{
-//    return parent->getWebUIConfig().encodeHtmlAttribute(str);
-//}
-
-
-// -----------------------------------------------------------------------
 // FormUI::UI
 // -----------------------------------------------------------------------
 
@@ -171,26 +146,21 @@ void WebUI::BaseUI::_printAttributeTo(PrintInterface &output) const
 
 void WebUI::BaseUI::_printSuffixTo(PrintInterface &output) const
 {
-    auto iterator = _storage.find_if(_storage.begin(), _storage.end(), Storage::Vector::isSuffix);
-    if (iterator != _storage.end()) {
-        output.printf_P(PrintArgs::FormatType::HTML_OPEN_DIV_INPUT_GROUP_APPEND);
-        _storage.for_each_if(iterator, Storage::Vector::isSuffix, [&](Storage::ConstIterator &iterator, Storage::TypeByte tb) {
-            switch (tb.type()) {
-                case Storage::Value::SuffixText::type: {
-                    output.printf_P(PrintArgs::FormatType::HTML_OPEN_SPAN_INPUT_GROUP_TEXT);
-                    Storage::SingleValueArgs<Storage::Value::SuffixText>(iterator, tb).print(output);
-                    output.printf_P(PrintArgs::FormatType::HTML_CLOSE_SPAN);
-                } break;
-                case Storage::Value::SuffixHtml::type: {
-                    Storage::SingleValueArgs<Storage::Value::SuffixHtml>(iterator, tb).print(output);
-                } break;
-                default:
-                    __LDBG_assert_printf(false, "invalid type %u: %s", tb.type(), tb.name());
-                    break;
-            }
-        });
-        output.printf_P(PrintArgs::FormatType::HTML_CLOSE_DIV_3X);//TODO was HTML_CLOSE_DIV_2X
-    }
+    _storage.for_each_if(_storage.begin(), Storage::Vector::isSuffix, [&](Storage::ConstIterator &iterator, Storage::TypeByte tb) {
+        switch (tb.type()) {
+            case Storage::Value::SuffixText::type: {
+                output.printf_P(PrintArgs::FormatType::HTML_OPEN_DIV_INPUT_GROUP_TEXT);
+                Storage::SingleValueArgs<Storage::Value::SuffixText>(iterator, tb).print(output);
+                output.printf_P(PrintArgs::FormatType::HTML_CLOSE_DIV_INPUT_GROUP_TEXT);
+            } break;
+            case Storage::Value::SuffixHtml::type: {
+                Storage::SingleValueArgs<Storage::Value::SuffixHtml>(iterator, tb).print(output);
+            } break;
+            default:
+                __LDBG_assert_printf(false, "invalid type %u: %s", tb.type(), tb.name());
+                break;
+        }
+    });
 }
 
 void WebUI::BaseUI::_printOptionsTo(PrintInterface &output) const
@@ -244,12 +214,14 @@ void WebUI::BaseUI::html(PrintInterface &output)
         case Type::GROUP_START_CARD: {
                 Group &group = reinterpret_cast<Group &>(*_parent);
                 if (_hasLabel()) {
+                    // 2x open div
                     output.printf_P(PSTR("<div class=\"card\"><div class=\"card-header p-1\" id=\"heading-%s\"><h2 class=\"mb-1\"><button class=\"btn btn-link btn-lg collapsed\" type=\"button\" data-toggle=\"collapse\" data-target=\"#collapse-%s\" aria-expanded=\"false\" aria-controls=\"collapse-%s\"><strong>"),
                         name,
                         name,
                         name
                     );
                     _printLabelTo(output, nullptr);
+                    // 1x close div 2x open
                     output.printf_P(PSTR("</strong></button></h2></div><div id=\"collapse-%s\" class=\"collapse%s\" aria-labelledby=\"heading-%s\" data-cookie=\"#%s\"><div class=\"card-body\">"),
                         name,
                         (group.isExpanded() ? PSTR(" show") : emptyString.c_str()),
@@ -263,7 +235,7 @@ void WebUI::BaseUI::html(PrintInterface &output)
             }
             break;
         case Type::GROUP_END_CARD: {
-                output.printf_P(PrintArgs::FormatType::HTML_CLOSE_DIV_3X);
+                output.printf_P(PrintArgs::FormatType::HTML_CLOSE_DIV_CARD_BODY_DIV_COLLAPSE_DIV_CARD);
             }
             break;
 
@@ -272,15 +244,21 @@ void WebUI::BaseUI::html(PrintInterface &output)
         // ---------------------------------------------------------------
         case Type::GROUP_START_HR: {
                 if (_hasLabel()) {
+
+                    // 2x open div, 1x open h5
                     output.printf_P(PSTR("<div class=\"form-row%s%s\"><div class=\"col-lg-12\"><h5>"), _parent->getNameType(), _parent->getNameForType());
                     _printLabelTo(output, nullptr);
+                    // 1xclose h5, 1x close div , 1x open div, 2x close div, 1x open div form-group
                     output.printf_P(PrintArgs::FormatType::HTML_CLOSE_GROUP_START_HR);
+                    // 1x open div form group-left
                 }
                 else {
+                    // 2x open div, 2x close div, 1x oppen div form-group
                     output.printf_P(PSTR("<div class=\"form-row%s%s\"><div class=\"col-lg-12 mt-3\"><hr></div></div><div class=\"form-group\">"),
                         _parent->getNameType(),
                         _parent->getNameForType()
                     );
+                    // 1x open div form group-left
                 }
             } break;
 
@@ -299,10 +277,11 @@ void WebUI::BaseUI::html(PrintInterface &output)
                         _parent->getNameForType()
                     );
                 }
+                // 1x open div form-dependency-group
             } break;
         case Type::GROUP_END_HR:
         case Type::GROUP_END_DIV: {
-                output.printf_P(PrintArgs::FormatType::HTML_CLOSE_DIV);
+                output.printf_P(PrintArgs::FormatType::HTML_CLOSE_DIV_FORM_DEPENDENCY_GROUP);
             } break;
 
         // ---------------------------------------------------------------
@@ -310,12 +289,14 @@ void WebUI::BaseUI::html(PrintInterface &output)
         // ---------------------------------------------------------------
         case Type::GROUP_START: {
             Group &group = reinterpret_cast<Group &>(*_parent);
+                // 1x open div
                 output.printf_P(PSTR("<div class=\"form-group\"><button class=\"btn btn-secondary btn-block\" type=\"button\" data-toggle=\"collapse\" data-target=\"#%s\" aria-expanded=\"false\" aria-controls=\"%s\">"), name, name);
                 _printLabelTo(output, nullptr);
+                // 1x close div, 1x open div collapse, 1x open div card-body
                 output.printf_P(PSTR("</button></div><div class=\"collapse%s\" id=\"%s\"><div class=\"card card-body mb-3\">"), group.isExpanded() ? PSTR(" show") : emptyString.c_str(), name);
             } break;
         case Type::GROUP_END: {
-                output.printf_P(PrintArgs::FormatType::HTML_CLOSE_DIV_3X);//TODO was HTML_CLOSE_DIV_2X
+                output.printf_P(PrintArgs::FormatType::HTML_CLOSE_DIV_CARD_BODY_DIV_COLLAPSE);
             } break;
 
         // ---------------------------------------------------------------
@@ -403,17 +384,19 @@ void WebUI::BaseUI::html(PrintInterface &output)
                         name
                     );
                     _printAttributeTo(output);
-                    output.printf_P(PrintArgs::FormatType::HTML_CLOSE_DIV);
+                    output.printf_P(PrintArgs::FormatType::HTML_CLOSE_DIV_RANGE_SLIDER);
                     break;
                 default:
                     break;
             }
 
-            if (_hasSuffix()) {
+            if (hasSuffix) {
+                output.printf_P(PrintArgs::FormatType::HTML_OPEN_DIV_INPUT_GROUP_APPEND);
                 _printSuffixTo(output);
+                output.printf_P(PrintArgs::FormatType::HTML_CLOSE_DIV_INPUT_GROUP_APPEND_DIV_INPUT_GROUP_DIV_FORM_GROUP);
             }
             else {
-                output.printf_P(PrintArgs::FormatType::HTML_CLOSE_DIV);
+                output.printf_P(PrintArgs::FormatType::HTML_CLOSE_DIV_FORM_GROUP);
             }
 
         } break;

@@ -67,7 +67,7 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             ui.setTitle(FSPGM(WiFi_Configuration, "WiFi Configuration"));
             ui.setContainerId(FSPGM(wifi_settings));
 
-            auto &modeGroup = form.addCardGroup(FSPGM(mode), emptyString, true);
+            auto &modeGroup = form.addCardGroup(FSPGM(mode));
 
             form.addObjectGetterSetter(FSPGM(wifi_mode), flags, flags.get_wifi_mode, flags.set_wifi_mode);
             form.addValidator(FormUI::Validator::EnumRange<WiFiMode, WIFI_OFF, WIFI_AP_STA, 0>(FSPGM(Invalid_mode)));
@@ -77,7 +77,7 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
 
             form.addStringGetterSetter(F("wssid"), Network::WiFi::getSSID, Network::WiFi::setSSID);
             Network::WiFi::addSSIDLengthValidator(form);
-            form.addFormUI(FSPGM(SSID), FormUI::Suffix(F("<button class=\"btn btn-default\" type=\"button\" id=\"wifi_scan_button\" data-toggle=\"modal\" data-target=\"#network_dialog\">Scan...</button>")));
+            form.addFormUI(FSPGM(SSID), FormUI::SuffixHtml(F("<button class=\"btn btn-default\" type=\"button\" id=\"wifi_scan_button\" data-toggle=\"modal\" data-target=\"#network_dialog\">Scan...</button>")));
 
             form.addStringGetterSetter(F("st_pass"), Network::WiFi::getPassword, Network::WiFi::setPassword);
             Network::WiFi::addPasswordLengthValidator(form);
@@ -106,7 +106,6 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             form.addReference("ap_enc", softAp.encryption);
             form.addValidator(FormUI::Validator::Enum<uint8_t, WiFiEncryptionTypeArray().size()>(F("Invalid encryption"), createWiFiEncryptionTypeArray()));
             form.addFormUI(FSPGM(Encryption), channelItems);
-
 
             apModeGroup.end();
 
@@ -179,14 +178,14 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             form.addFormUI(FSPGM(Title));
             System::Device::addTitleLengthValidator(form);
 
-            form.addMemberVariable(F("safem_to"), cfg, &System::Device::ConfigStructType::safe_mode_reboot_timeout_minutes);
+            form.addPointerTriviallyCopyable(F("safem_to"), &cfg.safe_mode_reboot_timeout_minutes);
             form.addFormUI(FormUI::Type::INTEGER, F("Reboot Delay Running In Safe Mode"), FormUI::Suffix(FSPGM(minutes)));
             form.addValidator(FormUI::Validator::Range(5, 3600, true));
 
             form.addObjectGetterSetter(F("mdns_en"), flags, System::Flags::ConfigStructType::get_bit_is_mdns_enabled, System::Flags::ConfigStructType::set_bit_is_mdns_enabled);
             form.addFormUI(F("mDNS Announcements"), FormUI::BoolItems(FSPGM(Enabled), F("Disabled (Zeroconf is still available)")));
 
-            form.addMemberVariable(F("zconf_to"), cfg, &System::Device::ConfigStructType::zeroconf_timeout);
+            form.addPointerTriviallyCopyable(F("zconf_to"), &cfg.zeroconf_timeout);
             form.addFormUI(FormUI::Type::INTEGER, FSPGM(Zeroconf_Timeout), FormUI::Suffix(FSPGM(milliseconds)));
             form.addValidator(FormUI::Validator::Range(System::Device::kZeroConfMinTimeout, System::Device::kZeroConfMaxTimeout));
 
@@ -202,13 +201,14 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             form.addStringGetterSetter(F("pbl"), System::Firmware::getPluginBlacklist, System::Firmware::setPluginBlacklist);
             form.addFormUI(F("Plugin Blacklist"), FormUI::Suffix(F("Comma Separated")));
 
-            auto &webUIGroup = deviceGroup.end().addCardGroup(F("webui"), FSPGM(WebUI), true);
+            deviceGroup.end();
+            auto &webUIGroup = form.addCardGroup(F("webui"), FSPGM(WebUI), true);
 
             form.addObjectGetterSetter(F("wui_en"), flags, System::Flags::ConfigStructType::get_bit_is_webui_enabled, System::Flags::ConfigStructType::set_bit_is_webui_enabled);
             form.addFormUI(FSPGM(WebUI), FormUI::BoolItems());
 
             form.addObjectGetterSetter(F("scookie_lt"), cfg, System::Device::ConfigStructType::get_bits_webui_cookie_lifetime_days, System::Device::ConfigStructType::set_bits_webui_cookie_lifetime_days);
-            form.addFormUI(FormUI::Type::INTEGER, FormUI::Label(F("Allow to store credentials in a cookie to login automatically")), FormUI::Suffix(FSPGM(days)));
+            form.addFormUI(FormUI::Type::INTEGER, F("Allow to store credentials in a cookie to login automatically"), FormUI::Suffix(FSPGM(days)));
             form.addValidator(FormUI::Validator::Range(System::Device::kWebUICookieMinLifetime, System::Device::kWebUICookieMaxLifetime, true));
 
             form.addObjectGetterSetter(F("walert_en"), flags, System::Flags::ConfigStructType::get_bit_is_webalerts_enabled, System::Flags::ConfigStructType::set_bit_is_webalerts_enabled);
@@ -224,7 +224,7 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             ui.setTitle(FSPGM(Change_Password));
             ui.setContainerId(F("password_settings"));
 
-            auto &group = form.addCardGroup(FSPGM(config), emptyString);
+            auto &group = form.addCardGroup(FSPGM(config));
 
             auto password = String(System::Device::getPassword());
 

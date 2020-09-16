@@ -33,7 +33,7 @@ void NTPPlugin::createConfigureForm(FormCallbackType type, const String &formNam
     ui.setContainerId(F("ntp_settings"));
     ui.setStyle(FormUI::WebUI::StyleType::ACCORDION);
 
-    auto &mainGroup = form.addCardGroup(FSPGM(config), String(), true);
+    auto &mainGroup = form.addCardGroup(FSPGM(config));
 
     form.addObjectGetterSetter<System::Flags::ConfigStructType, bool>(F("ntp_en"), cfg, System::Flags::ConfigStructType::get_bit_is_ntp_client_enabled, System::Flags::ConfigStructType::set_bit_is_ntp_client_enabled);
     form.addFormUI(FSPGM(NTP_Client, "NTP Client"), FormUI::BoolItems());

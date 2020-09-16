@@ -56,7 +56,7 @@ void MQTTPlugin::createConfigureForm(FormCallbackType type, const String &formNa
     auto &cfgGroup = form.addDivGroup(String(), F("{'i':'#mode','e':'var $T=$(\\'#mode\\').closest(\\'.card\\').nextAll().not(\\':last\\');var $P=function(v){$(\\'#port\\').attr(\\'placeholder\\',v);}','s':{'0':'$T.hide()','1':'$T.show();$P(1883)','2':'$T.show();$P(8883)'}}"));
     cfgGroup.end();
 
-    auto &commonGroup = form.addCardGroup(FSPGM(config), String());
+    auto &commonGroup = form.addCardGroup(FSPGM(config));
 
     using ConfigType = typename std::remove_reference<decltype(cfg)>::type;
 

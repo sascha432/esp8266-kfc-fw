@@ -14,5 +14,4 @@ using namespace FormUI;
 
 #include "Utility/Debug.h"
 
-
 #include <debug_helper_disable.h>

@@ -81,18 +81,18 @@ namespace FormUI {
 
                 template <typename _Ta>
                 void push_back(_Ta &&target) const {
-                    std::copy_n(((VectorBase::const_pointer) & _key), sizeof(_key), target);
                     Single<_StorageType, _Tv>::push_back(target);
+                    std::copy_n(((VectorBase::const_pointer) & _key), sizeof(_key), target);
                 }
 
                 template <typename _Ta, typename _Tb>
                 static _Ta pop_front(_Tb &iterator) {
                     _Tk key;
                     _Tv value;
-                    std::copy_n(iterator, sizeof(key), (VectorBase::pointer)&key);
-                    iterator += sizeof(key);
                     std::copy_n(iterator, sizeof(value), (VectorBase::pointer)&value);
                     iterator += sizeof(value);
+                    std::copy_n(iterator, sizeof(key), (VectorBase::pointer)&key);
+                    iterator += sizeof(key);
                     return _Ta(key, value);
                 }
 
@@ -110,8 +110,6 @@ namespace FormUI {
                 using Single::push_back;
                 using Single::pop_front;
             };
-
-            using String = Label;
 
             class LabelRaw : public Single<Type::LABEL_RAW> {
             public:
@@ -373,31 +371,54 @@ namespace FormUI {
 
             void dump(Print &output) const;
 
-            void reserve(size_t extra) {
+            void reserve_extend(size_t extra)
+            {
                 size_t newCapacity = size() + extra;
                 size_t allocBlockSize = (newCapacity + 7) & ~7;     // use mallocs 8 byte block size
-                VectorBase::reserve(allocBlockSize);
+                reserve(allocBlockSize);
             }
 
-              template<typename _Ta>
+            template<typename _Ta>
             void push_back(const _Ta &item)
             {
-                reserve(sizeof(item) + sizeof(_Ta::type));
+                reserve_extend(sizeof(item) + sizeof(_Ta::type));
+#if KFC_FORMS_NO_DIRECT_COPY
+                
                 auto iterator = std::back_inserter<VectorBase>(*this);
                 *iterator = static_cast<uint8_t>(_Ta::type);
                 item.push_back(++iterator);
+#else
+                auto vSize = size();
+                resize(vSize + sizeof(item) + sizeof(_Ta::type));
+                auto ptr = (uint8_t *)data() + vSize;
+                *ptr++ = static_cast<uint8_t>(_Ta::type);
+                //std::copy_n((uint8_t *)&item, sizeof(item), ptr);
+                memcpy(ptr, (uint8_t *)&item, sizeof(item));
+#endif
             }
 
-            void push_back(Type type, CStrVector::iterator begin, CStrVector::iterator end)
+            void push_back(Type type, ValueStringVector::iterator begin, ValueStringVector::iterator end)
             {
-                TypeByte tb(type, std::distance(begin, end));
-                reserve(tb.size());
+                auto count = std::distance(begin, end);
+                TypeByte tb(type, count);
+                size_t vSize = size();
+                reserve(vSize + tb.size());
+#if KFC_FORMS_NO_DIRECT_COPY
                 auto target = std::back_inserter<VectorBase>(*this);
                 *target = tb.toByte();
                 ++target;
                 for (auto iterator = begin; iterator != end; ++iterator) {
                     Value::String(*iterator).push_back(target);
                 }
+#else
+                static_assert(sizeof(Storage::Value::String) == sizeof(const char *), "size does not match");
+                resize(vSize + tb.size());
+                auto ptr = data() + vSize;
+                *ptr++ = tb.toByte();
+                auto beginPtr = (const char **)&(*begin);
+                //std::copy(beginPtr, beginPtr + count, (const char **)ptr);
+                memcpy(ptr, beginPtr, count);
+#endif
             }
 
             template <class _Ta>

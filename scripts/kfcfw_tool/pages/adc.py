@@ -90,7 +90,7 @@ class PageADC(tk.Frame, PageBase):
         grid.first(ttk.Label(self, text="Multiplier:"))
         grid.next(ttk.Entry(self, width=10, textvariable=self.form['multiplier']))
 
-        grid.first(ttk.Label(self, text="Current limit (mA):"))
+        grid.first(ttk.Label(self, text="DAC mA 40KHz:"))
         grid.next(self.form.set_textvariable(ttk.Entry(self, width=10), 'dac', True))
 
         grid.first(ttk.Label(self, text="Stop current (mA):"))
@@ -119,6 +119,10 @@ class PageADC(tk.Frame, PageBase):
         grid = tk_ez_grid.TkEZGrid(self, action2, padx=1, pady=1, direction='h')
         grid.first(ttk.Button(self, text="pin 14 HIGH", command=lambda: self.send_pwm_cmd_threaded(14, True)))
         grid.next(ttk.Button(self, text="pin 14 LOW", command=lambda: self.send_pwm_cmd_threaded(14, False)))
+        grid.next(ttk.Button(self, text="run test", command=lambda: self.load_and_execute('test')))
+        grid.next(ttk.Button(self, text="increase dac", command=lambda: self.increase_dac_threaded(0.5, 10, 1013, 25)))
+        # grid.next(ttk.Button(self, text="increase pwm", command=lambda: self.increase_pwm_threaded(1.0, self.config['pwm'], 1023, 20)))
+
 
         grid.first(ttk.Button(self, text="pin 4 PWM", command=lambda: self.set_motor_pin_threaded(4, True)))
         grid.next(ttk.Button(self, text="pin 4 LOW", command=lambda: self.set_motor_pin_threaded(4, False)))
@@ -142,9 +146,6 @@ class PageADC(tk.Frame, PageBase):
         # .grid(in_=action, row=1, column=4)
         # ttk.Button(self, text="pin 14 HIGH", command=lambda: self.send_pwm_cmd(14, 1023, 0)).grid(in_=action, row=1, column=5)
         # # //VREF/(10 * RS)
-        # ttk.Button(self, text="DAC 0.1A", command=lambda: self.send_pwm_cmd(16, int(1024 / 3.3 * 0.1), 0)).grid(in_=action, row=1, column=6)
-        # ttk.Button(self, text="DAC 0.2A", command=lambda: self.send_pwm_cmd(16, int(1024 / 3.3 * 0.2), 0)).grid(in_=action, row=1, column=7)
-        # ttk.Button(self, text="DAC 1.3A", command=lambda: self.send_pwm_cmd(16, int(1024 / 3.3 * 1.3), 0)).grid(in_=action, row=1, column=8)
         # ttk.Button(self, text="Seq #1", command=self.seq1).grid(in_=action, row=1, column=9)
 
         self.fig = Figure(figsize=(12, 8), dpi=100)
@@ -165,17 +166,22 @@ class PageADC(tk.Frame, PageBase):
         else:
             self.axis.set_ylabel('ADC value converter to %s' % self.config['unit'])
 
+
         self.averaging = [1.0, 50.0, 15.0]
+        lines_width = [ 0.1, 0.5, 1.0, 2.0 ]
+        #self.averaging[2] = current limit
+
+        # lines_width = [ 0.01, 0.01, 2.0, 0.01 ]
 
         self.lines = []
         self.reset_data()
-        tmp, = self.axis.plot(self.values[0], self.values[1], lw=0.1, color='blue', alpha = 0.7, label='ADC')
+        tmp, = self.axis.plot(self.values[0], self.values[1], lw=lines_width[0], color='blue', alpha = 0.7, label='ADC')
         self.lines.append(tmp)
-        tmp, = self.axis.plot(self.values[0], self.values[2], lw=0.5, color='green', label='Average/%ums' % self.averaging[0])
+        tmp, = self.axis.plot(self.values[0], self.values[2], lw=lines_width[1], color='green', label='Average/%ums' % self.averaging[0])
         self.lines.append(tmp)
-        tmp, = self.axis.plot(self.values[0], self.values[3], lw=1, color='orange', label='Average/%ums' % self.averaging[1])
+        tmp, = self.axis.plot(self.values[0], self.values[3], lw=lines_width[2], color='orange', label='Average/%ums' % self.averaging[1])
         self.lines.append(tmp)
-        tmp, = self.axis.plot(self.values[0], self.values[4], lw=2, color='red', label='Average/%ums' % self.averaging[2])
+        tmp, = self.axis.plot(self.values[0], self.values[4], lw=lines_width[3], color='red', label='Average/%ums' % self.averaging[2])
         self.lines.append(tmp)
         self.axis.legend()
 
@@ -614,12 +620,17 @@ class PageADC(tk.Frame, PageBase):
         self.stopped = None
         self._calc = {'n': -1}
         self.set_data()
+        xloc = int(self.config['display'] / 10000) * 1000
+        if xloc<1000:
+            xloc=1000
+        self.axis.xaxis.set_major_locator(plticker.MultipleLocator(base=xloc))
+        self.axis.xaxis.set_minor_locator(plticker.MultipleLocator(base=int(xloc / 10)))
 
     def ___thread(self, thread_id, callback, args = (), delay = 0):
         if delay>0:
-            self.console.log('thread @%.6f #%u: delayed %.4f' % (time.monotonic(), thread_id, delay / 1.0))
+            self.console.debug('thread @%.6f #%u: delayed %.4f' % (time.monotonic(), thread_id, delay / 1.0))
             time.sleep(delay)
-        self.console.log('thread @%.6f #%u: start (delay=%.4f)' % (time.monotonic(), thread_id, delay / 1.0))
+        self.console.debug('thread @%.6f #%u: start (delay=%.4f)' % (time.monotonic(), thread_id, delay / 1.0))
         # print(callback, args)
         callback(*args)
         self.console.debug('thread #%u: end' % (thread_id))
@@ -632,6 +643,60 @@ class PageADC(tk.Frame, PageBase):
 
     def send_pwm_cmd_threaded(self, pin, value, duration_milliseconds = 0):
         self.start_thread(self.send_pwm_cmd, (pin, value, duration_milliseconds))
+
+    def write_data(self, val, avg):
+        tmp = 'data_pwm_%04u_freq_%05u.csv' % (self.config['pwm'], self.config['frequency'])
+        print("%u,%.3f,%u,%u,%u (%s)" % (val, avg, self.config['dac'], self.config['pwm'], self.config['frequency'], tmp))
+
+        with open(tmp, 'at') as file:
+            file.write('%u,%.3f,%u,%u,%u\n' % (val, avg, int(self.config['dac']), int(self.config['pwm']), int(self.config['frequency'])))
+
+
+    def increase_dac(self, delay, from_val, to_val, step):
+        val_before = 0
+        for val in range(from_val, to_val, step):
+            time.sleep(delay)
+            try:
+                avg = self._calc['avg2']
+            except:
+                avg = 0
+            self.console.log("setting DAC to %u (avg current before %.2f)" % (val, avg))
+            self.write_data(val_before, avg)
+            val_before = val
+            self.config['dac']= val
+            if self.motor_running!=True:
+                return
+            self.send_pwm_cmd(16, val, 0, 40000);
+        self.write_data(val_before, avg)
+        self.send_cmd_adc_stop()
+
+
+    def increase_pwm(self, delay, from_val, to_val, step):
+        val_before = 0
+        for val in range(from_val, to_val + step + 1, step):
+            time.sleep(delay)
+            if val>1023:
+                val=1023;
+            try:
+                avg = self._calc['avg2']
+            except:
+                avg = 0
+            # self.console.log("setting DAC to %u (avg current before %.2f)" % (val, avg))
+            self.write_data(val_before, avg)
+            val_before = val
+            self.config['pwm']= val
+            if self.motor_running!=True:
+                return
+            self.send_pwm_cmd(5, val, 0);
+        self.write_data(val_before, avg)
+        self.send_cmd_adc_stop()
+
+
+    def increase_dac_threaded(self, delay, from_val, to_val, step):
+        self.start_thread(self.increase_dac, (delay, from_val, to_val, step))
+
+    def increase_pwm_threaded(self, delay, from_val, to_val, step):
+        self.start_thread(self.increase_pwm, (delay, from_val, to_val, step))
 
     def send_pwm_cmd_threaded_wait(self, pin, value, duration_milliseconds = 0, wait = 0.1):
         self.start_thread(self.send_pwm_cmd, (pin, value, duration_milliseconds))
@@ -687,6 +752,7 @@ class PageADC(tk.Frame, PageBase):
 
     def send_cmd_adc_stop(self):
         self.send_cmd_set_pins_to_input([4, 5, 12, 13])
+        self.motor_running = False
         self.controller.wsc.send_cmd_adc_stop()
         self.store_data_in_file_delayed(2.0)
 
@@ -695,6 +761,7 @@ class PageADC(tk.Frame, PageBase):
 
     def send_stop_delayed_exec(self, time_val, dummy):
         self.send_cmd_set_pins_to_input([4, 5, 12, 13])
+        self.motor_running = False
         self.controller.wsc.send_cmd_adc_stop()
         try:
             self.add_vlines['timeout'] = self.data['time'][-1]
@@ -796,15 +863,17 @@ class PageADC(tk.Frame, PageBase):
     def get_cmd_str_delay(self, delay):
         return self.controller.wsc.get_cmd_str('DLY', delay)
 
-    def send_pwm_cmd(self, pin, value, duration_milliseconds = 0):
+    def send_pwm_cmd(self, pin, value, duration_milliseconds = 0, freq = None):
         if value==False:
             value=0
         elif value==True:
             value=1023
         elif value<0 or value==None:
             value=self.config['pwm']
-        self.console.log('pwm pin=%u value=%u' % (pin, value))
-        self.controller.wsc.send_pwm_cmd(pin, value, duration_milliseconds, self.config['frequency'])
+        if freq==None:
+            freq = self.config['frequency']
+        self.console.debug('pwm pin=%u value=%u frequency=%u' % (pin, value, int(freq)))
+        self.controller.wsc.send_pwm_cmd(pin, value, duration_milliseconds, freq)
 
     def send_adc_start_cmd(self):
         self.reset_data(self.config['display'])
@@ -839,7 +908,7 @@ class PageADC(tk.Frame, PageBase):
     def update_current_limit(self, val):
         pwm = int(1024 / 3.3 * (val / 1000.0))
         self.console.log('setting DAC to %umA / %u' % (val, pwm))
-        self.send_pwm_cmd(16, pwm)
+        self.send_pwm_cmd(16, pwm, 0, 40000)
         self.remove_hvlines('dac')
         if self.config['dac']>self.config['stop_current']*1.2:
             return

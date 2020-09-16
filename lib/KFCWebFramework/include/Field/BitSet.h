@@ -8,6 +8,8 @@
 #include "Field/BaseField.h"
 #include "Field/ValuePointer.h"
 
+#include "Utility/Debug.h"
+
 #define FormBitValue_UNSET_ALL 0    // static const _Ta FormBitValue<_Ta, N>::UNSET_ALL = 0;
 
 namespace FormUI {
@@ -82,3 +84,5 @@ namespace FormUI {
 
     }
 }
+
+#include <debug_helper_disable.h>

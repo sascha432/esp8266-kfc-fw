@@ -8,6 +8,8 @@
 #include <vector>
 #include "Field/BaseField.h"
 
+#include "Utility/Debug.h"
+
 namespace FormUI {
 
     class Group : public Field::BaseField {
@@ -34,3 +36,5 @@ namespace FormUI {
     };
 
 }
+
+#include <debug_helper_disable.h>

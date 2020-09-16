@@ -9,12 +9,9 @@
 #include "WebUI/Containers.h"
 #include <PrintHtmlEntitiesString.h>
 #include <misc.h>
+#include "Form/Form.hpp"
 
-#if DEBUG_KFC_FORMS
-#include <debug_helper_enable.h>
-#else
-#include <debug_helper_disable.h>
-#endif
+#include "Utility/Debug.h"
 
 using namespace FormUI;
 
@@ -24,6 +21,10 @@ using namespace FormUI;
 
 void Form::BaseForm::createHtml(PrintInterface &output)
 {
+#if DEBUG_KFC_FORMS
+    MicrosTimer duration;
+    duration.start();
+#endif
     auto &ui = getWebUIConfig();
     __LDBG_printf("style=%u", ui.getStyle());
 
@@ -43,11 +44,19 @@ void Form::BaseForm::createHtml(PrintInterface &output)
         break;
     }
     for (const auto &field : _fields) {
+#if DEBUG_KFC_FORMS
+        // String name = field->getName();
+        // MicrosTimer dur2;
+        // dur2.start();
+#endif
         field->html(output);
         if (field->_formUI) {
             delete field->_formUI;
             field->_formUI = nullptr;
         }
+#if DEBUG_KFC_FORMS
+    // __DBG_printf("render=field_%s time=%.3fms", name.c_str(), dur2.getTime() / 1000.0);
+#endif
     }
 
     switch(ui.getStyle()) {
@@ -69,6 +78,9 @@ void Form::BaseForm::createHtml(PrintInterface &output)
         }
         break;
     }
+#if DEBUG_KFC_FORMS
+    __DBG_printf("render=form_html time=%.3fms", duration.getTime() / 1000.0);
+#endif
 }
 
 // -----------------------------------------------------------------------
@@ -147,7 +159,7 @@ void WebUI::BaseUI::_printAttributeTo(PrintInterface &output) const
             case Storage::Value::AttributeMinMax::type: {
                 auto attribute = Storage::Value::AttributeMinMax::pop_front<Storage::Value::AttributeMinMax>(iterator);
                 output.printf_P(PSTR(" min=\"%d\" max=\"%d\""), attribute.getMin(), attribute.getMax());
-                __DBG_assert_printf(tb.count() == 1, "AttributeMinMax count=%u != 1", tb.count());
+                __LDBG_assert_printf(tb.count() == 1, "AttributeMinMax count=%u != 1", tb.count());
             } break;
             default:
                 __LDBG_assert_printf(false, "invalid type %u: %s", tb.type(), tb.name());
@@ -177,7 +189,7 @@ void WebUI::BaseUI::_printSuffixTo(PrintInterface &output) const
                     break;
             }
         });
-        output.printf_P(PrintArgs::FormatType::HTML_CLOSE_DIV_2X);
+        output.printf_P(PrintArgs::FormatType::HTML_CLOSE_DIV_3X);//TODO was HTML_CLOSE_DIV_2X
     }
 }
 
@@ -303,7 +315,7 @@ void WebUI::BaseUI::html(PrintInterface &output)
                 output.printf_P(PSTR("</button></div><div class=\"collapse%s\" id=\"%s\"><div class=\"card card-body mb-3\">"), group.isExpanded() ? PSTR(" show") : emptyString.c_str(), name);
             } break;
         case Type::GROUP_END: {
-                output.printf_P(PrintArgs::FormatType::HTML_CLOSE_DIV_2X);
+                output.printf_P(PrintArgs::FormatType::HTML_CLOSE_DIV_3X);//TODO was HTML_CLOSE_DIV_2X
             } break;
 
         // ---------------------------------------------------------------

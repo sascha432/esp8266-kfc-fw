@@ -5,6 +5,9 @@
 #include <Arduino_compat.h>
 #include "Validator/Length.h"
 #include "Field/BaseField.h"
+#include "Form/Form.hpp"
+
+#include "Utility/Debug.h"
 
 using namespace FormUI;
 

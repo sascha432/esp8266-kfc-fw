@@ -7,6 +7,8 @@
 
 #include <functional>
 
+#include "Utility/Debug.h"
+
 namespace FormUI {
 
 	namespace Utility {
@@ -91,3 +93,5 @@ namespace FormUI {
 	}
 
 }
+
+#include <debug_helper_disable.h>

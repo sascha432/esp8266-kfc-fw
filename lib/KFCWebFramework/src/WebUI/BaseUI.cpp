@@ -14,14 +14,20 @@
 #include "Field/BaseField.h"
 #include "Form/BaseForm.h"
 #include "WebUI/Config.h"
+#include "Form/Form.hpp"
+
+#include "Utility/Debug.h"
 
 using namespace FormUI;
 
 const char *WebUI::Config::encodeHtmlEntities(const char *cStr, bool attribute)
 {
     uint8_t byte = pgm_read_byte(cStr);
-    if (byte == 0xff || byte == '<') { // marker for html
+    if (byte == 0xff) { // marker for html
         return strings().attachString(cStr) + 1;
+    }
+    if (byte == '<') { // marker for html
+        return strings().attachString(cStr);
     }
 
     int size;

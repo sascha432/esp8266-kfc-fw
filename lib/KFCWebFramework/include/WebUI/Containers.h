@@ -8,44 +8,13 @@
 #include <vector>
 #include <PrintString.h>
 #include "Types.h"
-#include "Config.h"
+#include "WebUI/Config.h"
+
+#include "Utility/Debug.h"
 
 namespace FormUI {
 
     inline namespace Container {
-
-        //const char *__FormFieldGetName(Field::BaseField &field);
-
- /*       const char *__FormFieldAttachString(Field::BaseField *parent, const char *str);
-
-        inline const char *__FormFieldAttachString(Field::BaseField *parent, const String &str) {
-            return __FormFieldAttachString(parent, str.c_str());
-        }
-
-        inline const char *__FormFieldAttachString(Field::BaseField *parent, const __FlashStringHelper *fpstr) {
-            return __FormFieldAttachString(parent, (PGM_P)fpstr);
-        }
-
-        const char *__FormFieldEncodeHtmlEntities(Field::BaseField *parent, const char *str);
-
-        inline const char *__FormFieldEncodeHtmlEntities(Field::BaseField *parent, const String &str) {
-            return __FormFieldEncodeHtmlEntities(parent, str.c_str());
-        }
-
-        inline const char *__FormFieldEncodeHtmlEntities(Field::BaseField *parent, const __FlashStringHelper *fpstr) {
-            return __FormFieldEncodeHtmlEntities(parent, (PGM_P)fpstr);
-        }
-
-        const char *__FormFieldEncodeHtmlAttribute(Field::BaseField *parent, const char *str);
-
-        inline const char *__FormFieldEncodeHtmlAttribute(Field::BaseField *parent, const String &str) {
-            return __FormFieldEncodeHtmlAttribute(parent, str.c_str());
-        }
-
-        static inline const char *__FormFieldEncodeHtmlAttribute(Field::BaseField *parent, const __FlashStringHelper *fpstr) {
-            return __FormFieldEncodeHtmlAttribute(parent, (PGM_P)fpstr);
-        }*/
-
 
         class MixedString : public String
         {
@@ -579,3 +548,5 @@ namespace FormUI {
     }
 
 }
+
+#include <debug_helper_disable.h>

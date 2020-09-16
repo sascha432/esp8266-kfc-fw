@@ -16,6 +16,8 @@
 #include "WebUI/Storage.h"
 #include "WebUI/Containers.h"
 
+#include "Utility/Debug.h"
+
 namespace FormUI {
 
     namespace WebUI {
@@ -231,3 +233,4 @@ namespace FormUI {
 
 };
 
+#include <debug_helper_disable.h>

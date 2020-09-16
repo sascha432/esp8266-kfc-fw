@@ -13,6 +13,7 @@
 
 using namespace FormUI;
 
+#include "Utility/Debug.h"
 
 __KFC_FORMS_INLINE_METHOD__
 const char *FormUI::WebUI::BaseUI::attachString(const char *str)
@@ -56,3 +57,5 @@ void FormUI::WebUI::BaseUI::_checkDisableAttribute(const char *key, const char *
         _parent->setDisabled(true);
     }
 }
+
+#include <debug_helper_disable.h>

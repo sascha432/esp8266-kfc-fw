@@ -7,13 +7,15 @@
 #include <Arduino_compat.h>
 #include "Field/BaseField.h"
 
+#include "Utility/Debug.h"
+
 namespace FormUI {
 
     namespace Field {
 
         class CString : public BaseField {
         public:
-            CString(const String &name, char *value, size_t maxSize, Field::Type type = Field::Type::TEXT) : 
+            CString(const String &name, char *value, size_t maxSize, Field::Type type = Field::Type::TEXT) :
                 BaseField(name, value, type), _value(value), _size(maxSize)
             {
                 if (BaseField::_value.length() >= maxSize) {
@@ -33,3 +35,5 @@ namespace FormUI {
     }
 
 }
+
+#include <debug_helper_disable.h>

@@ -103,16 +103,27 @@ void BootstrapMenu::html(PrintInterface &output, ItemsVectorIterator top)
 
 void BootstrapMenu::html(PrintInterface &output)
 {
+#if DEBUG_BOOTSTRAP_MENU
+    MicrosTimer dur;
+    dur.start();
+#endif
 	__LDBG_println();
 	for (auto iterator = _items.begin(); iterator != _items.end(); ++iterator) {
 		if (iterator->getParentMenuId() == InvalidMenuId) {
 			html(output, iterator);
 		}
 	}
+#if DEBUG_BOOTSTRAP_MENU
+    __DBG_printf("render=bootstrap_menu time=%.3fms", dur.getTime() / 1000.0);
+#endif
 }
 
 void BootstrapMenu::htmlSubMenu(PrintInterface &output, ItemsVectorIterator top, uint8_t active)
 {
+#if DEBUG_BOOTSTRAP_MENU
+    MicrosTimer dur;
+    dur.start();
+#endif
 	if (isValid(top)) {
 		auto menuId = top->getId();
 		menu_item_id_t pos = 0;
@@ -128,6 +139,9 @@ void BootstrapMenu::htmlSubMenu(PrintInterface &output, ItemsVectorIterator top,
 		}
 		__LDBG_printf("menu_id=%d active=%d items=%d", menuId, active, pos);
 	}
+#if DEBUG_BOOTSTRAP_MENU
+    __DBG_printf("render=bootstrap_sub_menu time=%.3fms", dur.getTime() / 1000.0);
+#endif
 }
 
 BootstrapMenu::menu_item_id_t BootstrapMenu::_add(Item &item, menu_item_id_t afterId)

@@ -5,6 +5,9 @@
 #include "Validator/Range.h"
 #include "Field/BaseField.h"
 #include "Form/BaseForm.h"
+#include "Form/Form.hpp"
+
+#include "Utility/Debug.h"
 
 String FormUI::Validator::RangeMessage::getDefaultMessage(const String &message, bool allowZero) {
     if (message.length()) {

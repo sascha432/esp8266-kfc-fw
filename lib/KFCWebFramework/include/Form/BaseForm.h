@@ -24,23 +24,8 @@
 #include "WebUI/Storage.h"
 #include "WebUI/Containers.h"
 #include "Utility/ForwardList.h"
-// #include "Field/String.h"
-// #include "Field/Object.h"
 
-#ifndef DEBUG_KFC_FORMS
-#define DEBUG_KFC_FORMS                             1
-#endif
-
-#if DEBUG_KFC_FORMS
-#include <debug_helper_enable.h>
-#else
-#include <debug_helper_disable.h>
-#endif
-
-// #ifdef DEFAULT
-// #undef DEFAULT
-// #endif
-
+#include "Utility/Debug.h"
 namespace FormUI {
 
     namespace Form {
@@ -159,13 +144,14 @@ namespace FormUI {
             bool validateOnly();
 
             inline bool isValid() const {
-                return _errors == nullptr;
+                return _errors == nullptr || _errors->empty();
             }
 
             inline bool hasChanged() const {
                 return _hasChanged;
             }
 
+            bool hasErrors() const;
             bool hasError(Field::BaseField &field) const;
             void copyValidatedData();
             const Error::Vector &getErrors() const;
@@ -471,7 +457,4 @@ namespace FormUI {
 
 }
 
-
-#if DEBUG_KFC_FORMS
 #include <debug_helper_disable.h>
-#endif

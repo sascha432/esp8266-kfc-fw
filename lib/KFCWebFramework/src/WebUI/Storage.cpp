@@ -2,16 +2,13 @@
 * Author: sascha_lammers@gmx.de
 */
 
+#include <PrintArgs.h>
 #include "WebUI/BaseUI.h"
 #include "WebUI/Storage.h"
 #include "Field/BaseField.h"
-#include <PrintArgs.h>
+#include "Form/Form.hpp"
 
-#if DEBUG_KFC_FORMS
-#include <debug_helper_enable.h>
-#else
-#include <debug_helper_disable.h>
-#endif
+#include "Utility/Debug.h"
 
 using namespace FormUI;
 
@@ -58,8 +55,8 @@ using namespace FormUI;
 //    uint8_t count = tb.count();
 //
 //    DEBUG_STORAGE_RANGE_CHECK(vector, iterator, 0, tb.type(), count);
-//    __DBG_assert_printf(count < Storage::kTypeMaxCount, "count=%u not less than max=%u", count, Storage::kTypeMaxCount);
-//    __DBG_assert_printf(tb.item_size() == sizeof(Storage::Value::String), "size=%u does not match Storage::Value::String=%u", tb.item_size(), sizeof(Storage::Value::String));
+//    __LDBG_assert_printf(count < Storage::kTypeMaxCount, "count=%u not less than max=%u", count, Storage::kTypeMaxCount);
+//    __LDBG_assert_printf(tb.item_size() == sizeof(Storage::Value::String), "size=%u does not match Storage::Value::String=%u", tb.item_size(), sizeof(Storage::Value::String));
 //    DEBUG_STORAGE_RANGE_CHECK(vector, iterator, tb.size(), tb.type(), count);
 //
 //    auto str = Vector::pop_front<Storage::Value::String>(iterator);
@@ -108,7 +105,7 @@ void FormUI::Storage::Vector::dump(Print &output) const
 //            iter = tb + iter;
 //        }
 //        str += String(size());
-//        __DBG_assert_printf(match == true, "%p: iterator has invalid offset %u (%s)", this, std::distance(begin(), iterator), str.c_str());
+//        __LDBG_assert_printf(match == true, "%p: iterator has invalid offset %u (%s)", this, std::distance(begin(), iterator), str.c_str());
 //    }
 //
 //    while (iterator != end) {

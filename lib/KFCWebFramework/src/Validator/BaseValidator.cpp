@@ -5,6 +5,9 @@
 #include "Validator/BaseValidator.h"
 #include "Field/BaseField.h"
 #include "Form/BaseForm.h"
+#include "Form/Form.hpp"
+
+#include "Utility/Debug.h"
 
 using namespace FormUI::Validator;
 
@@ -16,8 +19,8 @@ BaseValidator::BaseValidator(const String &message) : _field(nullptr), _message(
 {
 }
 
-BaseValidator::BaseValidator(const String &message, const __FlashStringHelper *defaultMessage) : 
-    BaseValidator(message.length() == 0 ? String(defaultMessage) : message) 
+BaseValidator::BaseValidator(const String &message, const __FlashStringHelper *defaultMessage) :
+    BaseValidator(message.length() == 0 ? String(defaultMessage) : message)
 {
 }
 

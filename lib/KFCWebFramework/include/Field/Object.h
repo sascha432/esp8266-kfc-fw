@@ -7,6 +7,8 @@
 #include <Arduino_compat.h>
 #include "Field/BaseField.h"
 
+#include "Utility/Debug.h"
+
 namespace FormUI {
 
     namespace Field {
@@ -66,3 +68,4 @@ namespace FormUI {
 
 }
 
+#include <debug_helper_disable.h>

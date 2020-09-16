@@ -8,6 +8,8 @@
 #include <type_traits>
 #include "Validator/BaseValidator.h"
 
+#include "Utility/Debug.h"
+
 namespace FormUI {
 
     namespace Validator {
@@ -56,3 +58,5 @@ namespace FormUI {
     }
 
 }
+
+#include <debug_helper_disable.h>

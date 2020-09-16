@@ -13,15 +13,9 @@
 #include "Validator/Length.h"
 #include "Validator/Match.h"
 
-using FormData = FormUI::Form::Data;
 using FormField = FormUI::Field::BaseField;
 
 namespace FormUI {
-
-    //using Suffix = Container::Suffix;
-    //using Label = Container::Label;
-    //using BoolItems = Container::BoolItems;
-    //using CheckboxButtonSuffix = Container::CheckboxButtonSuffix;
 
     using Type = WebUI::Type;
     using StyleType = WebUI::StyleType;

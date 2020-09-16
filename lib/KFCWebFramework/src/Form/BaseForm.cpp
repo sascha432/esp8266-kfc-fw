@@ -10,12 +10,9 @@
 #include "Validator/BaseValidator.h"
 #include "WebUI/Containers.h"
 #include <JsonTools.h>
+#include "Form/Form.hpp"
 
-#if DEBUG_KFC_FORMS
-#include <debug_helper_enable.h>
-#else
-#include <debug_helper_disable.h>
-#endif
+#include "Utility/Debug.h"
 
 using namespace FormUI;
 
@@ -172,6 +169,10 @@ const char *Form::BaseForm::jsonEncodeString(const String &str, PrintInterface &
 
 void Form::BaseForm::createJavascript(PrintInterface &output)
 {
+#if DEBUG_KFC_FORMS
+    MicrosTimer dur2;
+    dur2.start();
+#endif
     if (!isValid()) {
         __LDBG_printf("errors=%d", _errors->size());
         output.printf_P(PSTR("<script>" "$.formValidator.addErrors("));
@@ -181,6 +182,17 @@ void Form::BaseForm::createJavascript(PrintInterface &output)
         }
         output.printf_P(PSTR("]);" "</script>"));
     }
+#if DEBUG_KFC_FORMS
+    __DBG_printf("render=form_javascript time=%.3fms", dur2.getTime() / 1000.0);
+#endif
+}
+
+WebUI::Config &Form::BaseForm::createWebUI()
+{
+    if (_uiConfig == nullptr) {
+        _uiConfig = new WebUI::Config(_strings);
+    }
+    return *_uiConfig;
 }
 
 void Form::BaseForm::dump(Print &out, const String &prefix) const {

@@ -8,9 +8,10 @@
 #include <vector>
 #include <PrintArgs.h>
 #include <StaticString.h>
+#include <MicrosTimer.h>
 
 #ifndef DEBUG_BOOTSTRAP_MENU
-#define DEBUG_BOOTSTRAP_MENU                    0
+#define DEBUG_BOOTSTRAP_MENU                    1
 #endif
 
  #include "push_pack.h"

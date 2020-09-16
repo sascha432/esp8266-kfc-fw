@@ -8,6 +8,8 @@
 #include "Field/BaseField.h"
 #include "Utility/ForwardList.h"
 
+#include "Utility/Debug.h"
+
 namespace FormUI {
 
     namespace Validator {
@@ -41,3 +43,5 @@ namespace FormUI {
 
     }
 }
+
+#include <debug_helper_disable.h>

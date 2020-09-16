@@ -281,7 +281,7 @@ void PrintArgs::vprintf_P(const char *format, const uintptr_t **args, size_t num
 
 int PrintArgs::_snprintf_P(uint8_t *buffer, size_t size, uintptr_t **args, uint8_t numArgs)
 {
-#if DEBUG_PRINT_ARGS && 1
+#if DEBUG_PRINT_ARGS && 0
     String fmt = F("format='%s' args[");
     fmt += String((numArgs - 1));
     fmt += "]={";

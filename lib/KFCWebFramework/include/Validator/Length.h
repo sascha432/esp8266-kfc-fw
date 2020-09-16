@@ -5,7 +5,9 @@
 #pragma once
 
 #include <Arduino_compat.h>
-#include "BaseValidator.h"
+#include "Validator/BaseValidator.h"
+
+#include "Utility/Debug.h"
 
 namespace FormUI {
 
@@ -39,3 +41,5 @@ namespace FormUI {
     }
 
 }
+
+#include <debug_helper_disable.h>

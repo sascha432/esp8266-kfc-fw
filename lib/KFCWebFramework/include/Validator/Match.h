@@ -5,7 +5,9 @@
 #pragma once
 
 #include <Arduino_compat.h>
-#include "BaseValidator.h"
+#include "Validator/BaseValidator.h"
+
+#include "Utility/Debug.h"
 
 namespace FormUI {
 
@@ -15,9 +17,9 @@ namespace FormUI {
         public:
             using Callback = std::function<bool(Field::BaseField &field)>;
 
-            Match(const String &message, Callback callback) : 
-                BaseValidator(message), 
-                _callback(callback) 
+            Match(const String &message, Callback callback) :
+                BaseValidator(message),
+                _callback(callback)
             {
             }
 
@@ -36,4 +38,4 @@ namespace FormUI {
 
 }
 
-
+#include <debug_helper_disable.h>

@@ -9,7 +9,9 @@
 #include <Arduino_compat.h>
 #include <vector>
 #include <PrintArgs.h>
-#include "Config.h"
+#include "WebUI/Config.h"
+
+#include "Utility/Debug.h"
 
 #ifndef DEBUG_STORAGE_VECTOR
 #define DEBUG_STORAGE_VECTOR                                1
@@ -190,19 +192,23 @@ namespace FormUI {
             }
 
             TypeByte(uint8_t byte) : _byte(byte) {
+#if DEBUG_KFC_FORMS_DISABLE_ASSERT == 0
                 __assert();
+#endif
             }
 
             TypeByte(Type type, size_t count) : _type(static_cast<uint8_t>(type)), _count((uint8_t)count - 1) {
+#if DEBUG_KFC_FORMS_DISABLE_ASSERT == 0
                 __assert();
-            }
-
-            void __assert() {
-#if DEBUG
-                __LDBG_assert_printf((count() > 0 && count() < kTypeMaxCount), "count=0 < %u(%u) < %u: out of range", count(), kTypeMaxCount);
-                __LDBG_assert_printf(type() >= Storage::Type::MIN && type() < Storage::Type::MAX, "invalid type %u", type());
 #endif
             }
+
+#if DEBUG_KFC_FORMS_DISABLE_ASSERT == 0
+            void __assert() {
+                __LDBG_assert_printf((count() > 0 && count() < kTypeMaxCount), "count=0 < %u(%u) < %u: out of range", count(), kTypeMaxCount);
+                __LDBG_assert_printf(type() >= Storage::Type::MIN && type() < Storage::Type::MAX, "invalid type %u", type());
+            }
+#endif
 
             Iterator operator+(Iterator iterator) {
                 return iterator + size();
@@ -454,3 +460,5 @@ namespace FormUI {
     }
 
 }
+
+#include <debug_helper_disable.h>

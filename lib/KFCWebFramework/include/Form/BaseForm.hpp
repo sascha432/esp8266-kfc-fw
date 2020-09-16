@@ -11,6 +11,8 @@
 #include "WebUI/BaseUI.h"
 #include "WebUI/Storage.h"
 
+#include "Utility/Debug.h"
+
 using namespace FormUI;
 
 __KFC_FORMS_INLINE_METHOD__
@@ -32,15 +34,6 @@ WebUI::BaseUI &Form::BaseForm::addFormUI(WebUI::BaseUI *formUI)
 
 
 __KFC_FORMS_INLINE_METHOD__
-WebUI::Config &FormUI::Form::BaseForm::createWebUI()
-{
-    if (_uiConfig == nullptr) {
-        _uiConfig = new WebUI::Config(_strings);
-    }
-    return *_uiConfig;
-}
-
-__KFC_FORMS_INLINE_METHOD__
 void Form::BaseForm::setFormUI(const String &title, const String &submit)
 {
     auto &cfg = createWebUI();
@@ -50,10 +43,18 @@ void Form::BaseForm::setFormUI(const String &title, const String &submit)
 
 
 __KFC_FORMS_INLINE_METHOD__
+bool Form::BaseForm::hasErrors() const
+{
+    return _errors != nullptr && _errors->empty() == false;
+}
+
+
+__KFC_FORMS_INLINE_METHOD__
 const Form::Error::Vector &Form::BaseForm::getErrors() const
 {
     if (_errors == nullptr) {
-        __DBG_panic("errors vector is nullptr");
+        __LDBG_assert_printf(_errors != nullptr, "_errors=nullptr getErrors() called with hasErrors() == false / isValid() == true");
+        const_cast<BaseForm *>(this)->_errors = new ErrorVector();
     }
     return *_errors;
 }
@@ -61,23 +62,22 @@ const Form::Error::Vector &Form::BaseForm::getErrors() const
 __KFC_FORMS_INLINE_METHOD__
 void Form::BaseForm::finalize() const
 {
-    if (hasWebUIConfig()) {
-        for (const auto &field : _fields) {
-            int n = 0;
-            Serial.print(field->getName());
-            Serial.print('=');
-            for (uint8_t byte : field->_formUI->_storage) {
-                Serial.printf("%02x", byte);
-                if (++n == 38) {
-                    Serial.println();
-                }
-            }
-            Serial.println();
-            
-        }
-    }
+    // if (hasWebUIConfig()) {
+    //     for (const auto &field : _fields) {
+    //         int n = 0;
+    //         Serial.print(field->getName());
+    //         Serial.print('=');
+    //         for (uint8_t byte : field->_formUI->_storage) {
+    //             Serial.printf("%02x", byte);
+    //             if (++n == 38) {
+    //                 Serial.println();
+    //             }
+    //         }
+    //         Serial.println();
+    //     }
+    // }
 #if DEBUG_KFC_FORMS
-    dump(DEBUG_OUTPUT, "Form Dump: ");
+    // dump(DEBUG_OUTPUT, "Form Dump: ");
 #endif
 }
 
@@ -90,7 +90,7 @@ void Form::BaseForm::setFormUI(const String &title)
 
 
 __KFC_FORMS_INLINE_METHOD__
-Validator::BaseValidator *FormUI::Form::BaseForm::_validatorFind(Validator::BaseValidator *iterator, Field::BaseField *field)
+Validator::BaseValidator *Form::BaseForm::_validatorFind(Validator::BaseValidator *iterator, Field::BaseField *field)
 {
     if (iterator) {
         return iterator->find(iterator, [field](const Validator::BaseValidator &validator) {
@@ -102,7 +102,7 @@ Validator::BaseValidator *FormUI::Form::BaseForm::_validatorFind(Validator::Base
 
 
 __KFC_FORMS_INLINE_METHOD__
-Validator::BaseValidator *FormUI::Form::BaseForm::_validatorFindNext(Validator::BaseValidator *iterator, Field::BaseField *field)
+Validator::BaseValidator *Form::BaseForm::_validatorFindNext(Validator::BaseValidator *iterator, Field::BaseField *field)
 {
     Validator::BaseValidator::next(iterator, [field](const Validator::BaseValidator &validator) {
         return validator == field;
@@ -112,14 +112,14 @@ Validator::BaseValidator *FormUI::Form::BaseForm::_validatorFindNext(Validator::
 
 
 __KFC_FORMS_INLINE_METHOD__
-void FormUI::Form::BaseForm::_addValidator(Validator::BaseValidator *validator)
+void Form::BaseForm::_addValidator(Validator::BaseValidator *validator)
 {
     Validator::BaseValidator::push_back(&_validators, validator);
 }
 
 
 __KFC_FORMS_INLINE_METHOD__
-void FormUI::Form::BaseForm::_clearValidators()
+void Form::BaseForm::_clearValidators()
 {
     Validator::BaseValidator::clear(&_validators);
 }
@@ -140,3 +140,5 @@ void Form::BaseForm::setValidateCallback(Validator::Callback validateCallback)
 }
 
 #endif
+
+#include <debug_helper_disable.h>

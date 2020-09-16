@@ -12,6 +12,8 @@
 #include "Field/BaseField.h"
 #include "Field/Value.h"
 
+#include "Utility/Debug.h"
+
 namespace FormUI {
 
     namespace Field {
@@ -99,3 +101,5 @@ namespace FormUI {
     }
 
 }
+
+#include <debug_helper_disable.h>

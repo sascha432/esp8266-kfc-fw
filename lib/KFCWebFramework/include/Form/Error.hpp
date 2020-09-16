@@ -4,6 +4,7 @@
 
 #include "Form/Error.h"
 #include "Field/BaseField.h"
+#include "Utility/Debug.h"
 
 using namespace FormUI::Form;
 
@@ -27,3 +28,5 @@ const bool Error::is(Field::BaseField &field) const
 {
     return &field == _field;
 }
+
+#include <debug_helper_disable.h>

@@ -529,7 +529,7 @@ void PasswordTemplate::process(const String &key, PrintHtmlEntitiesString &outpu
     }
 }
 
-SettingsForm::SettingsForm(AsyncWebServerRequest *request) : BaseForm(static_cast<FormData *>(request)) //, _json(nullptr)
+SettingsForm::SettingsForm(AsyncWebServerRequest *request) : BaseForm(static_cast<FormUI::Form::Data *>(request)) //, _json(nullptr)
 {
 }
 

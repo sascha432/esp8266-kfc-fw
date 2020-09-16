@@ -11,6 +11,8 @@
 #include <map>
 #endif
 
+#include "Utility/Debug.h"
+
 namespace FormUI {
 
     namespace Form {
@@ -50,3 +52,5 @@ namespace FormUI {
     }
 
 }
+
+#include <debug_helper_disable.h>

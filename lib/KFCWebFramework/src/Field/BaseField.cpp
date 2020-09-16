@@ -7,6 +7,7 @@
 #include "Form/BaseForm.h"
 #include "WebUI/BaseUI.h"
 #include "WebUI/Containers.h"
+#include "Form/Form.hpp"
 
 using namespace FormUI;
 

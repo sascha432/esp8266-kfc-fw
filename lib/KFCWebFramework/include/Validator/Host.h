@@ -10,6 +10,8 @@
 #include "Field/BaseField.h"
 #include "Form/BaseForm.h"
 
+#include "Utility/Debug.h"
+
 namespace FormUI {
 
     namespace Validator {
@@ -22,7 +24,7 @@ namespace FormUI {
                 BaseValidator(message, FSPGM(FormHostValidator_default_message)),
                 _allowedTypes(allowedTypes)
             {
-                __DBG_assert_printf(allowedTypes != AllowedType::NONE, "allowed type NONE");
+                __LDBG_assert_printf(allowedTypes != AllowedType::NONE, "allowed type NONE");
             }
             //Hostname(const String &message, AllowedType allowedTypes = AllowedType::HOST_OR_IP) :
             //    BaseValidator(message, FSPGM(FormHostValidator_default_message)),
@@ -106,3 +108,5 @@ namespace FormUI {
     }
 
 }
+
+#include <debug_helper_disable.h>

@@ -8,7 +8,9 @@
 #include <stl_ext/type_traits.h>
 #include <limits>
 #include <misc.h>
-#include "Value.h"
+#include "Field/Value.h"
+
+#include "Utility/Debug.h"
 
 namespace FormUI {
 
@@ -66,3 +68,5 @@ namespace FormUI {
     }
 
 }
+
+#include <debug_helper_disable.h>

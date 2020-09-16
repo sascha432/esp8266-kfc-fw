@@ -7,6 +7,8 @@
 #include <Arduino_compat.h>
 #include "Types.h"
 
+#include "Utility/Debug.h"
+
 namespace FormUI {
 
     namespace Form {
@@ -41,3 +43,5 @@ namespace FormUI {
     }
 
 }
+
+#include "Utility/Debug.h"

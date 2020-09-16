@@ -5,9 +5,11 @@
 #pragma once
 
 #include <stl_ext/type_traits.h>
-#include "BaseValidator.h"
+#include "Validator/BaseValidator.h"
 #include <array>
 #include <cstring>
+
+#include "Utility/Debug.h"
 
 namespace FormUI {
 
@@ -20,15 +22,15 @@ namespace FormUI {
             using EnumType = _Ta;
             using IntType = std::relaxed_underlying_type_t<_Ta>;
 
-            Enum(ArrayType values) : 
-                BaseValidator(FSPGM(FormEnumValidator_default_message)), 
-                _values(values) 
+            Enum(ArrayType values) :
+                BaseValidator(FSPGM(FormEnumValidator_default_message)),
+                _values(values)
             {
             }
 
-            Enum(const String &message, ArrayType values) : 
-                BaseValidator(message), 
-                _values(values) 
+            Enum(const String &message, ArrayType values) :
+                BaseValidator(message),
+                _values(values)
             {
             }
 
@@ -65,3 +67,4 @@ namespace FormUI {
     }
 }
 
+#include <debug_helper_disable.h>

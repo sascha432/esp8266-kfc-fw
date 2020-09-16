@@ -7,6 +7,7 @@
 #include <Arduino_compat.h>
 #include <vector>
 #include "Types.h"
+#include "Utility/Debug.h"
 
 namespace FormUI {
 
@@ -38,7 +39,7 @@ namespace FormUI {
             //     return _optional;
             // }
 
-            const String &getName() const;
+            __inlined_hpp__ const String &getName() const;
 
             // returns ltrim '#.' of the name
             const char *getNameForType() const;
@@ -114,3 +115,5 @@ namespace FormUI {
     }
 
 }
+
+#include <debug_helper_disable.h>

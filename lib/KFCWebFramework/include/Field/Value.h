@@ -9,7 +9,9 @@
 #include <stl_ext/type_traits.h>
 #include <limits>
 #include <misc.h>
-#include "BaseField.h"
+#include "Field/BaseField.h"
+
+#include "Utility/Debug.h"
 
 namespace FormUI {
 
@@ -158,3 +160,5 @@ namespace FormUI {
     }
 
 }
+
+#include <debug_helper_disable.h>

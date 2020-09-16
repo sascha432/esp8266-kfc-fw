@@ -7,6 +7,8 @@
 #include "Field/BaseField.h"
 #include "Form/BaseForm.h"
 
+#include "Utility/Debug.h"
+
 using namespace FormUI;
 
 __KFC_FORMS_INLINE_METHOD__
@@ -83,3 +85,5 @@ Field::Type Field::BaseField::getType() const
 {
     return _type;
 }
+
+#include <debug_helper_disable.h>

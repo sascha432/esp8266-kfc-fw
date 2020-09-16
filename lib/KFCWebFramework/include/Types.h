@@ -12,13 +12,15 @@
 #endif
 
 #ifndef KFC_FORMS_INCLUDE_HPP_AS_INLINE
-#define KFC_FORMS_INCLUDE_HPP_AS_INLINE                 0
+#define KFC_FORMS_INCLUDE_HPP_AS_INLINE                 1
 #endif
 
 #if KFC_FORMS_INCLUDE_HPP_AS_INLINE
 #define __KFC_FORMS_INLINE_METHOD__                     inline
+#define __inlined_hpp__                                 inline
 #else
 #define __KFC_FORMS_INLINE_METHOD__
+#define __inlined_hpp__
 #endif
 
 

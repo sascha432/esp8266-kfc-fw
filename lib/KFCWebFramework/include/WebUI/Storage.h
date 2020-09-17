@@ -323,7 +323,7 @@ namespace FormUI {
             void print(PrintInterface &output) {
                 auto count = size();
                 if (count == 1) {
-                    output.printf_P(PrintArgs::FormatType::SINGLE_STRING, (const char *)_args[0]);
+                    output.print((const char *)_args[0]);
                 }
                 else {
                     output.vprintf_P(_args, size());

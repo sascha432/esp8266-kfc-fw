@@ -16,13 +16,11 @@
 #endif
 
 
-const __FlashStringHelper *PrintArgs::getFormatByType(FormatType type) const
+const __FlashStringHelper *PrintArgsHelper::getFormatByType(FormatType type)
 {
+    __LDBG_assert_printf((type >= FormatType::HTML_OUTPUT_BEGIN && type <= FormatType::HTML_OUTPUT_END), "type=%u invalid", type);
+
     switch(type) {
-        case FormatType::SINGLE_STRING:
-            return F("%s");
-        case FormatType::SINGLE_CHAR:
-            return F("%c");
         case FormatType::HTML_CLOSE_QUOTE_CLOSE_TAG:
             return F("\">");
         case FormatType::HTML_CLOSE_TAG:
@@ -52,21 +50,175 @@ const __FlashStringHelper *PrintArgs::getFormatByType(FormatType type) const
         case FormatType::HTML_CLOSE_GROUP_START_HR:
             return F("</h5></div><div class=\"col-lg-12\"><hr class=\"mt-0\"></div></div><div class=\"form-group\">");
 
-default://TODO remove default
-        case FormatType::NONE:
-        case FormatType::MAX:
+        default:
             break;
     }
     return nullptr;
 }
 
+
+namespace PrintArgsHelper {
+
+    class BufferContext {
+    public:
+        BufferContext(PrintArgs &printArgs, uint8_t *data, size_t sizeIn) :
+            _printArgs(printArgs),
+            _strLength(printArgs._strLength),
+            _outIterator(data),
+            _outBegin(data),
+            _outEnd(data + sizeIn),
+            _advanceInputBuffer(0)
+        {
+            _printArgs._initOutput();
+        }
+
+        void initContext(uint8_t *buffer)
+        {
+//#if DEBUG_PRINT_ARGS
+//            // fill with nullptr to detect any issues
+//            std::fill(&_args[0], &_args[PrintArgs::kMaximumPrintfArguments + 1], nullptr);
+//#endif
+            _advanceInputBuffer = sizeof(_type);
+            _type = static_cast<FormatType>(*buffer);
+            if (_type >= FormatType::MAX) {
+
+                __LDBG_assert_printf(_type < FormatType::MASK_NO_FORMAT, "not implemented");
+
+                if (_type >= FormatType::HTML_OUTPUT_BEGIN && _type <= FormatType::HTML_OUTPUT_END) {
+                    // predefined string
+                    _str = (char *)getFormatByType(_type);
+                    _strLength = strlen_P(_str);
+                }
+                else if (_type == FormatType::SINGLE_CHAR) {
+                    // single char argument, create a string
+                    _char[0] = buffer[1];
+                    _str = _char;
+                    _advanceInputBuffer += sizeof(*buffer);
+                    _strLength = 1;
+                }
+                else if (_type == FormatType::SINGLE_CRLF) {
+                    // single char argument, create a string
+                    _char[0] = '\r';
+                    _char[1] = '\n';
+                    _str = _char;
+                    _advanceInputBuffer += sizeof(*buffer);
+                    _strLength = 2;
+                }
+                else if (_type == FormatType::SINGLE_STRING) {
+                    // single string
+                    std::copy_n(buffer + 1, sizeof(_str), (uint8_t *)&_str);
+                    _advanceInputBuffer += sizeof(_str);
+                    _strLength = strlen_P(_str);
+                }
+                else {
+                    __LDBG_assert_printf(false, "invalid type %u", _type);
+                }
+                __PADBG_printf_prefix("type=%u strlen=%u adv=%u\n", _type, _strLength, _advanceInputBuffer);
+
+            }
+            else {
+                // get number of arguments for print
+                _numArgs = static_cast<uint8_t>(_type) + 1;
+                // advance input buffer when done
+                _advanceInputBuffer += (sizeof(uintptr_t) * _numArgs);
+                // copy arguments from input buffer
+                std::copy_n(reinterpret_cast<uintptr_t **>(buffer + 1), _numArgs, _args);
+                _type = FormatType::VPRINTF;
+
+                __PADBG_printf_prefix("fmt='%0.32s' args=%u adv=%u\n", _args[0], _numArgs, _advanceInputBuffer);
+            }
+        }
+
+        inline bool isPrintf() const {
+            return _type == FormatType::VPRINTF;
+        }
+
+        inline size_t size() const {
+            return _outIterator - _outBegin;
+        }
+
+        inline int capacity() const {
+            return _outEnd - _outIterator;
+        }
+
+        int copyString(size_t offset)
+        {
+            auto toCopy = _printArgs._strLength - offset;
+            auto end = _outIterator + toCopy;
+            if (end >= _outEnd) {
+                end = _outEnd;
+            }
+            auto written = end - _outIterator;
+            memcpy_P(_outIterator, _str + offset, written);
+            _outIterator += written;
+            return written;
+        }
+
+        int vprintf(size_t offset)
+        {
+            auto maxCapacity = capacity();
+            int written = _printArgs._snprintf_P(_outIterator, maxCapacity, _args, _numArgs);
+            if (offset == 0) {
+                // update string length when starting with a zero offset
+                _strLength = written;
+            }
+            // printf adds a NUL byte, capacity is reduced
+            written = std::min(written, maxCapacity - 1);
+            if (offset) {
+                // if we have an offset, move data to the beginning
+                written -= offset;
+                __LDBG_assert_printf(written >= 0, "written=%d negative", written);
+                std::copy_n(_outIterator + offset, written, _outIterator);
+            }
+            _outIterator += written;
+            return written;
+        }
+
+        int copyBuffer(int offset) {
+            int written;
+            if (isPrintf()) {
+                written = vprintf(offset);
+            }
+            else {
+                written = copyString(offset);
+            }
+            __LDBG_assert_printf(written <= _strLength - offset, "written=%d > data=%d", written, _strLength - offset);
+            return written;
+        }
+
+        uint8_t *advanceInputBuffer()
+        {
+            _printArgs._position = 0;
+            _printArgs._bufferPtr += _advanceInputBuffer;
+            _advanceInputBuffer = 0;
+            return _printArgs._bufferPtr;
+        }
+
+        PrintArgs &_printArgs;
+        // size of data to be copied to output buffer
+        int &_strLength;
+        union {
+            // arguments for printf
+            uintptr_t *_args[PrintArgs::kMaximumPrintfArguments + 1];
+            // data for copyString
+            struct {
+                char *_str;
+                char _char[4];
+            };
+        };
+        uint8_t *_outIterator;
+        uint8_t *_outBegin;
+        uint8_t *_outEnd;
+        uint16_t _advanceInputBuffer;
+        uint8_t _numArgs;
+        // current format type
+        FormatType _type;
+    };
+
+}
+
 PrintArgs::PrintArgs() : _bufferPtr(nullptr), _position(0), _strLength(0)
 {
-#if DEBUG_PRINT_ARGS
-    _outputSize = 0;
-    _printfCalls = 0;
-    _printfArgs = 0;
-#endif
 }
 
 PrintArgs::~PrintArgs()
@@ -75,183 +227,66 @@ PrintArgs::~PrintArgs()
 
 void PrintArgs::clear()
 {
-#if DEBUG_PRINT_ARGS
-    if (_outputSize) {
-        __LDBG_printf("out=%d buffer=%d calls=%u args=%u", _outputSize, _buffer.size(), _printfCalls, _printfArgs);
-        _outputSize = 0;
-    }
-#endif
     if (_buffer.size()) {
-        __LDBG_printf("this=%p buffer=%d", this, _buffer.size());
         _buffer.clear();
     }
     _bufferPtr = nullptr;
 }
 
+using BufferContext = PrintArgsHelper::BufferContext;
+
 size_t PrintArgs::fillBuffer(uint8_t *data, size_t sizeIn)
 {
-    int size = sizeIn;
-    std::array<uintptr_t *, kMaximumPrintfArguments + 1> args;
-    static_assert(args.size() >= (uint8_t)FormatType::MAX, "invalid size");
-    Buffer temp;
+    BufferContext ctx(*this, data, sizeIn);
 
-    if (!_bufferPtr) {
-        _bufferPtr = _buffer.begin();
-        _position = 0;
-#if DEBUG_PRINT_ARGS
-        _outputSize = 0;
-#endif
-    }
-    auto dataStart = data;
-    // _debug_printf("_buffer %p-%p, ptr %p position %d\n", _buffer.begin(), _buffer.end(), _bufferPtr, _position);
-    do {
-        if (size == 0) {
-#if DEBUG_PRINT_ARGS
-            _outputSize += (data - dataStart);
-#endif
-            return data - dataStart;
-        }
+    while(ctx._outIterator < ctx._outEnd) {
+
+        // input buffer empty
         if (_bufferPtr >= _buffer.end()) {
+            __PADBG_printf_prefix("end of input buffer\n");
             clear();
-#if DEBUG_PRINT_ARGS
-            _outputSize += (data - dataStart);
-#endif
-            return data - dataStart;
+            break;
         }
-        uint8_t numArgs = *_bufferPtr & static_cast<uint8_t>(FormatType::MASK_NO_FORMAT);
-        // print a list of strings instead using printf
-        // bool noFormat = *_bufferPtr & ~static_cast<uint8_t>(FormatType::MASK_NO_FORMAT);
-        auto src = reinterpret_cast<uintptr_t **>(_bufferPtr + 1);
-        size_t advance = 1;
 
-        if (numArgs >= (uint8_t)FormatType::MAX) {
-            auto formatType = static_cast<FormatType>(numArgs);
-            switch(formatType) {
+        // read type and format from buffer
+        ctx.initContext(_bufferPtr);
 
-                //TODO
-                case FormatType::HTML_CLOSE_QUOTE_CLOSE_TAG:
-                case FormatType::HTML_CLOSE_TAG:
-                case FormatType::HTML_CLOSE_DIV:
-                case FormatType::HTML_CLOSE_DIV_2X:
-                case FormatType::HTML_CLOSE_DIV_3X:
-                case FormatType::HTML_CLOSE_SELECT:
-                case FormatType::HTML_OPEN_DIV_FORM_GROUP:
-                case FormatType::HTML_OPEN_DIV_INPUT_GROUP:
-                case FormatType::HTML_OPEN_DIV_INPUT_GROUP_APPEND:
-                case FormatType::HTML_OPEN_DIV_INPUT_GROUP_TEXT:
-                case FormatType::HTML_OPEN_DIV_CARD_DIV_DIV_CARD_BODY:
-                case FormatType::HTML_CLOSE_GROUP_START_HR:
-                    {
-                        numArgs = 0; // no arguments
-                        args[0] = reinterpret_cast<uintptr_t *>(const_cast<__FlashStringHelper *>(getFormatByType(formatType)));
-                        advance = 1;
-                        src = &args[0];
-                    }
-                    break;
-                case FormatType::SINGLE_CHAR:
-                    {
-                        numArgs = 1;
-                        args[0] = reinterpret_cast<uintptr_t *>(const_cast<__FlashStringHelper *>(getFormatByType(FormatType::SINGLE_CHAR)));
-                        args[1] = reinterpret_cast<uintptr_t *>(*_bufferPtr + 1);
-                        advance += 1;
-                        src = &args[0];
-                    }
-                    break;
-                case FormatType::SINGLE_STRING:
-                    {
-                        numArgs = 1;
-                        args[0] = reinterpret_cast<uintptr_t *>(const_cast<__FlashStringHelper *>(getFormatByType(FormatType::SINGLE_STRING)));
-                        args[1] = reinterpret_cast<uintptr_t *>(*_bufferPtr + 1);
-                        advance += sizeof(const char *);
-                        src = &args[0];
-                    }
-                    break;
+        int written;
+        //auto maxCapacity = ctx.capacity();
 
-default://TODO remove default
-                case FormatType::NONE:
-                case FormatType::MAX:
-                case FormatType::ENCODE_HTML_ATTRIBUTE:
-                case FormatType::ENCODE_HTML_ENTITIES:
-                case FormatType::ENCODE_JSON:
-                case FormatType::ESCAPE_JAVASCRIPT:
-                case FormatType::REPEAT_FORMAT:
-                    clear();
-                    return 0;
-            }
-            numArgs++;
-        }
-        else {
-            advance += sizeof(uintptr_t) * ++numArgs;
-            //if (src != args.data()) {
-            std::copy_n(src, numArgs, args.begin());
-            //}
-        }
-#if DEBUG_PRINT_ARGS
-        std::fill(args.begin() + numArgs, args.end(), nullptr);
-#endif
-
-#if DEBUG_PRINT_MSC_VER
-        PrintString str;
-        str.printf_P(PSTR("fmt='%-10.10s...' args=%u buf=%u"), args[0], numArgs - 1, _buffer.length());
-        for (int i = 1; i < numArgs; i++) {
-            str.printf_P(PSTR("idx=%u ptr=%p str='%-10.10s'"), i, args[i], args[i]);
-        }
-        Serial.println(str);
-#endif
-
-        // sprintf starts at position 0
         if (_position == 0) {
-            _strLength = _snprintf_P(data, size, args.data(), numArgs);
-            if (_strLength < size) {
-                // fits into buffer, advance all pointers to the next string
-                size -= _strLength;
-                data += _strLength;
-                _bufferPtr += advance;
-                continue;
-            }
-            else {
-                // buffer full, remember last position
-                --size; // snprintf writes a NUL byte at the end of the buffer
-                data += size;
-                _position += size;
-                size = 0;
-                continue;
-            }
+            // a new string starts
+            written = ctx.copyBuffer(_position);
         }
         else {
-            // we have an offset from previous writes
-            int left = _strLength - _position;
-            // does the entire string fit?
-            if (size - _position >= _strLength + 1) {
-                /*_strLength = */_snprintf_P(data, _strLength + 1, args.data(), numArgs);
-                memmove(data, data + _position, left);
-                data += left;
-                size -= left;
-                _bufferPtr += advance;
-                _position = 0;
-                continue;
+            // printf cannot start with an offset, so we need to make sure the buffer has enough capacity
+            if (ctx.isPrintf()) {
+                if (_strLength >= ctx.capacity() - 1) {
+                    // TODO
+                    // in case the output buffer is too small, create temporary buffer for printf
+                    // or increase the output buffer if possible
+                    __LDBG_assert_printf(ctx._outIterator != ctx._outBegin, "output buffer=%u too small for the data=%u", ctx.capacity(), _strLength + 1);
+                    // not enough space, return what we have and wait for an empty buffer
+                    break;
+                }
             }
-            // we need extra space
-            int maxTmpLen = std::min(_strLength, size + _position) + 1;
-            temp.reserve(maxTmpLen);
-            /*_strLength = */_snprintf_P(temp.begin(), maxTmpLen, args.data(), numArgs);
-            if (left <= size) {
-                memcpy(data, temp.begin() + _position, left);
-                data += left;
-                size -= left;
-                _bufferPtr += advance;
-                _position = 0;
-                continue;
-            }
-            else {
-                memcpy(data, temp.begin() + _position, size);
-                data += size;
-                _position += size;
-                size = 0;
-                continue;
-            }
+            written = ctx.copyBuffer(_position);
         }
-    } while (true);
+
+        __LDBG_assert_printf(written <= _strLength - _position, "written=%d > data=%d", written, _strLength - _position);
+        if (written == _strLength - _position) {
+            // all data fit into the output buffer, continue with next item
+            ctx.advanceInputBuffer();
+            continue;
+        }
+        else {
+            // buffer full, remember last position
+            _position += written;
+            //__LDBG_assert_printf((ctx._outEnd == ctx._outIterator) || (ctx._outEnd - ctx._outIterator == 1), "out of range=%d", ctx._outEnd - ctx._outIterator);
+            break;
+        }
+    }
+    return ctx.size();
 }
 
 void PrintArgs::vprintf_P(const char *format, const uintptr_t **args, size_t numArgs)
@@ -273,7 +308,6 @@ void PrintArgs::vprintf_P(const char *format, const uintptr_t **args, size_t num
     Serial.println();
 }
 
-
 int PrintArgs::_snprintf_P(uint8_t *buffer, size_t size, uintptr_t **args, uint8_t numArgs)
 {
 #if DEBUG_PRINT_ARGS && 0
@@ -290,17 +324,3 @@ int PrintArgs::_snprintf_P(uint8_t *buffer, size_t size, uintptr_t **args, uint8
 
     return snprintf_P(reinterpret_cast<char *>(buffer), size, (PGM_P)args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11], args[12], args[13], args[14], args[15]);
 }
-
-#if DEBUG_PRINT_ARGS
-void PrintArgs::_debugPrint(PGM_P format, ...)
-{
-    PrintString str;
-    va_list arg;
-    va_start(arg, format);
-    str.vprintf_P(format, arg);
-    va_end(arg);
-#if 0
-    Serial.print(str);
-#endif
-}
-#endif

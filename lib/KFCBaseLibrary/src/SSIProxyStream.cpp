@@ -103,7 +103,7 @@ size_t SSIProxyStream::_available()
 size_t SSIProxyStream::_readBuffer(bool templateCheck)
 {
     // __LDBG_printf("templateCheck=%u", templateCheck);
-    uint8_t buf[128];
+    uint8_t buf[512];
     size_t len = 0;
     if (_provider) {
         len = _provider.fillBuffer(buf, sizeof(buf));

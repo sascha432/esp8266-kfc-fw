@@ -157,7 +157,7 @@ public:
     Buffer();
     Buffer(Buffer &&buffer) noexcept;
     Buffer(size_t size);
-    virtual ~Buffer();
+    ~Buffer();
 
     Buffer(const __FlashStringHelper *str);
     Buffer(String &&str);
@@ -343,13 +343,13 @@ public:
     void setLength(size_t length);
 
 public:
-     template <class T>
-     void push_back(const T &data) {
-         __DBG_BUFFER_asserted(sizeof(T), write(reinterpret_cast<const uint8_t *>(&data), sizeof(T)));
+     template <typename _Ta, typename std::enable_if<!std::is_same<_Ta, uint8_t>::value, int>::type = 0>
+     void push_back(const _Ta &data) {
+         __DBG_BUFFER_asserted(sizeof(_Ta), write(reinterpret_cast<const uint8_t *>(std::addressof(data)), sizeof(_Ta)));
      }
 
      inline void push_back(uint8_t data) {
-         __DBG_BUFFER_asserted(1, write(data));
+         __DBG_BUFFER_asserted(sizeof(data), write(data));
      }
 
      inline void push_back(const char *str) {

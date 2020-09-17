@@ -115,7 +115,7 @@ void WebUI::BaseUI::_printLabelTo(PrintInterface &output, const char *forLabel) 
             );
         }
         else {
-            output.printf_P(PrintArgs::FormatType::SINGLE_STRING, value);
+            output.print(value);
         }
         __LDBG_assert_printf(_storage.find_if(iterator, _storage.end(), Storage::Vector::isLabel) == _storage.end(), "multiple labels found");
     }

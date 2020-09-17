@@ -16,6 +16,12 @@
 #endif
 
 #if DEBUG_BUFFER
+#include "debug_helper_enable.h"
+#else
+#include "debug_helper_disable.h"
+#endif
+
+#if DEBUG_BUFFER
 #define __DBG_BUFFER_assert(...)                assert(__VA_ARGS__)
 #define __DBG_BUFFER_asserted(cmp, ...)         { auto res = (bool)(__VA_ARGS__); __DBG_BUFFER_assert(res == cmp); }
 #else
@@ -154,14 +160,41 @@ public:
     };
 
 public:
-    Buffer();
-    Buffer(Buffer &&buffer) noexcept;
-    Buffer(size_t size);
-    ~Buffer();
+    Buffer() :
+        _buffer(nullptr),
+        _length(0),
+        _size(0)
+    {}
 
-    Buffer(const __FlashStringHelper *str);
-    Buffer(String &&str);
-    Buffer(const String &str);
+    Buffer(Buffer &&buffer) noexcept :
+        _buffer(std::exchange(buffer._buffer, nullptr)),
+        _length(std::exchange(buffer._length, 0)),
+        _size(std::exchange(buffer._size, 0))
+    {}
+
+    Buffer(size_t size) : Buffer() {
+        _changeBuffer(size);
+    }
+
+    ~Buffer() {
+        __LDBG_printf("len=%u size=%u ptr=%p this=%p", _length, _size, _buffer, this);
+        if (_buffer) {
+            __LDBG_free(_buffer);
+        }
+        CHECK_MEMORY();
+    }
+
+    Buffer(const __FlashStringHelper *str) : Buffer() {
+        write(str, strlen_P(reinterpret_cast<PGM_P>(str)));
+    }
+
+    Buffer(String &&str) : Buffer() {
+        MoveStringHelper::move(*this, std::move(str));
+    }
+
+    Buffer(const String &str) : Buffer() {
+        write(str);
+    }
 
     Buffer &operator =(Buffer &&buffer) noexcept;
     Buffer &operator =(const Buffer &buffer);
@@ -202,6 +235,7 @@ public:
     }
 
     String toString() const;
+
     inline const char *c_str() {
         return begin_str();
     }
@@ -414,40 +448,8 @@ private:
     }
 };
 
-inline size_t Buffer::available() const
-{
-    if (_length < _size) {
-        return _size - _length;
-    }
-    return 0;
-}
+#include "Buffer.hpp"
 
-inline void Buffer::setLength(size_t length)
-{
-    _length = length;
-}
-
-inline Buffer &Buffer::operator+=(const char *str)
-{
-    write(str, strlen(str));
-    return *this;
-}
-
-inline Buffer &Buffer::operator+=(const String &str)
-{
-    write(str.c_str(), str.length());
-    return *this;
-}
-
-inline Buffer &Buffer::operator+=(const __FlashStringHelper *str)
-{
-    auto pstr = reinterpret_cast<PGM_P>(str);
-    write_P(pstr, strlen_P(pstr));
-    return *this;
-}
-
-inline Buffer &Buffer::operator+=(const Buffer &buffer)
-{
-    write(buffer.get(), buffer.length());
-    return *this;
-}
+#if DEBUG_BUFFER
+#include "debug_helper_disable.h"
+#endif

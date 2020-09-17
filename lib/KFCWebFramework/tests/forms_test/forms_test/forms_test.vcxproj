@@ -210,10 +210,13 @@
     <ClCompile Include="forms_test.cpp" />
     <ClCompile Include="test_form_01.cpp" />
     <ClCompile Include="test_form_02.cpp" />
+    <ClCompile Include="test_form_03.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\..\KFCBaseLibrary\include\AllocPointerList.h" />
     <ClInclude Include="..\..\..\..\KFCBaseLibrary\include\DebugMemoryHelper.h" />
+    <ClInclude Include="..\..\..\..\KFCBaseLibrary\include\PrintArgs.h" />
+    <ClInclude Include="..\..\..\..\KFCBaseLibrary\include\PrintArgs.hpp" />
     <ClInclude Include="..\..\..\include\BootstrapMenu.h" />
     <ClInclude Include="..\..\..\include\failure_counter.h" />
     <ClInclude Include="..\..\..\include\Field\BaseField.h" />

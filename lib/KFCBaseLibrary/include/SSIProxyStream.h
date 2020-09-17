@@ -15,8 +15,25 @@
 
 class SSIProxyStream : public Stream {
 public:
-    SSIProxyStream(File &file, DataProviderInterface &provider);
-    ~SSIProxyStream();
+    SSIProxyStream(File &file, DataProviderInterface &provider) :
+        _template({ *this, 0, -1, nullptr, 0, String() }),
+        _file(file),
+        _position(0),
+        _length(0),
+        _provider(provider)
+    {
+    #if DEBUG_SSI_PROXY_STREAM
+        _ramUsage = ESP.getFreeHeap();
+    #endif
+    }
+
+    ~SSIProxyStream()
+    {
+    #if DEBUG_SSI_PROXY_STREAM
+        debug_printf(PSTR("ram=%u\n"), _ramUsage);
+    #endif
+    }
+
 
     operator bool() const {
         return (bool)_file;
@@ -116,3 +133,5 @@ private:
     uint32_t _ramUsage;
 #endif
 };
+
+#include "SSIProxyStream.hpp"

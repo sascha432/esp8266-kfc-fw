@@ -6,7 +6,7 @@
 #include "debug_helper.h"
 #include "Buffer.h"
 
-#if 0
+#if DEBUG_BUFFER
 #include "debug_helper_enable.h"
 #else
 #include "debug_helper_disable.h"
@@ -47,48 +47,6 @@ void MoveStringHelper::move(Buffer &buf, String &&_str)
 #endif
 }
 
-Buffer::Buffer() :
-    _buffer(nullptr),
-    _length(0),
-    _size(0)
-{
-}
-
-Buffer::Buffer(Buffer &&buffer) noexcept :
-    _buffer(std::exchange(buffer._buffer, nullptr)),
-    _length(std::exchange(buffer._length, 0)),
-    _size(std::exchange(buffer._size, 0))
-{
-}
-
-Buffer::Buffer(size_t size) : Buffer()
-{
-    _changeBuffer(size);
-}
-
-Buffer::~Buffer()
-{
-    __LDBG_printf("len=%u size=%u ptr=%p this=%p", _length, _size, _buffer, this);
-    if (_buffer) {
-        __LDBG_free(_buffer);
-    }
-    CHECK_MEMORY();
-}
-
-Buffer::Buffer(const __FlashStringHelper *str) : Buffer()
-{
-    write(str, strlen_P(reinterpret_cast<PGM_P>(str)));
-}
-
-Buffer::Buffer(String &&str) : Buffer()
-{
-    MoveStringHelper::move(*this, std::move(str));
-}
-
-Buffer::Buffer(const String &str) : Buffer()
-{
-    write(str);
-}
 
 Buffer &Buffer::operator =(Buffer &&buffer) noexcept
 {
@@ -140,17 +98,6 @@ bool Buffer::equals(const Buffer &buffer) const
     return memcmp(get(), buffer.get(), _length) == 0;
 }
 
-void Buffer::clear()
-{
-    // __LDBG_printf("len=%u size=%u ptr=%p", _length, _fp_size, _buffer);
-    if (_buffer) {
-        __LDBG_free(_buffer);
-        _buffer = nullptr;
-    }
-    _size = 0;
-    _length = 0;
-}
-
 void Buffer::move(uint8_t **ptr)
 {
     auto tmp = _buffer;
@@ -160,105 +107,6 @@ void Buffer::move(uint8_t **ptr)
     *ptr = tmp;
     // remove from registered blocks
     __LDBG_NOP_free(tmp);
-}
-
-void Buffer::setBuffer(uint8_t *buffer, size_t size)
-{
-    clear();
-    _buffer = buffer;
-    _size = size;
-}
-
-String Buffer::toString() const
-{
-#if _WIN32 || _WIN64
-    String tmp;
-    tmp.reserve(_length);
-    for (size_t i = 0; i < _length; i++) {
-        tmp += (char)_buffer[i];
-    }
-    return tmp;
-#elif 1
-    return PrintString(_buffer, _length);
-#else
-    String tmp;
-    if (tmp.reserve(_length)) {
-        strncpy(tmp.begin(), (char *)_buffer, _length)[_length] = 0;
-        tmp.setLen(_length);
-}
-    return tmp;
-#endif
-}
-
-size_t Buffer::write(const uint8_t *data, size_t len)
-{
-    // __LDBG_printf("len=%d", len);
-    if (reserve(_length + len)) {
-        memmove(_buffer + _length, data, len);
-        _length += len;
-        return len;
-    }
-    return 0;
-}
-
-size_t Buffer::write_P(PGM_P data, size_t len)
-{
-    // __LDBG_printf("len=%d", len);
-    if (reserve(_length + len)) {
-        memcpy_P(_buffer + _length, data, len);
-        _length += len;
-        return len;
-    }
-    return 0;
-}
-
-int Buffer::read()
-{
-    if (_length) {
-        auto tmp = *_buffer;
-        if (--_length) {
-            memmove(_buffer, _buffer + 1, _length);
-#if BUFFER_ZERO_FILL
-            _buffer[_length] = 0;
-#endif
-        }
-        else {
-            clear();
-        }
-        return tmp;
-    }
-    return -1;
-
-}
-
-int Buffer::peek()
-{
-    if (_length) {
-        return *_buffer;
-    }
-    return -1;
-}
-
-void Buffer::remove(size_t index, size_t count)
-{
-    // // __LDBG_printf("index=%d count=%d", index, count);
-    if (!count || index >= _length) {
-        return;
-    }
-    if(count > _length - index) {
-        count = _length - index;
-    }
-    _remove(index, count);
-}
-
-void Buffer::_remove(size_t index, size_t count)
-{
-    auto dst_begin = begin() + index;
-    std::copy(dst_begin + count, end(), dst_begin);
-    _length -= count;
-#if BUFFER_ZERO_FILL
-    std::fill(begin() + _length, _buffer_end(), 0);
-#endif
 }
 
 void Buffer::removeAndShrink(size_t index, size_t count, size_t minFree)

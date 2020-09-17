@@ -12,21 +12,7 @@
 #include "debug_helper_disable.h"
 #endif
 
-SSIProxyStream::SSIProxyStream(File &file, DataProviderInterface &provider) : _template({ *this, 0, -1, nullptr, 0, String() }), _file(file), _position(0), _length(0), _provider(provider)
-{
-#if DEBUG_SSI_PROXY_STREAM
-    _ramUsage = ESP.getFreeHeap();
-#endif
-}
-
-SSIProxyStream::~SSIProxyStream()
-{
-#if DEBUG_SSI_PROXY_STREAM
-    debug_printf(PSTR("ram=%u\n"), _ramUsage);
-#endif
-}
-
-inline int SSIProxyStream::available()
+int SSIProxyStream::available()
 {
     if (!_file) {
         return false;
@@ -66,12 +52,11 @@ int SSIProxyStream::peek()
 size_t SSIProxyStream::_copy(uint8_t *buffer, size_t length)
 {
     __LDBG_assert(_template.marker == -1);
-
     if (length > _available()) {
         length = _available();
     }
-
-    memcpy(buffer, _buffer.begin() + _position, length);
+    std::copy_n(_buffer.begin() + _position, length, buffer);
+    //memcpy(buffer, _buffer.begin() + _position, length);
     _buffer.remove(_position, length);
     if (_template.position >= _buffer.begin() + _position) {
         _template.position -= length;
@@ -80,37 +65,17 @@ size_t SSIProxyStream::_copy(uint8_t *buffer, size_t length)
     return length;
 }
 
-size_t SSIProxyStream::read(uint8_t *buffer, size_t length)
-{
-    //__LDBG_printf("read_len=%d pos=%d length=%d size=%d", length, _position, _buffer.length(), _buffer.size());
-    auto ptr = buffer;
-    while (length && _available()) {
-        auto copied = _copy(ptr, length);
-        ptr += copied;
-        length -= copied;
-    }
-    return ptr - buffer;
-}
-
-size_t SSIProxyStream::_available()
-{
-    if (_position >= _buffer.length()) {
-        _readBuffer();
-    }
-    return _buffer.length() - _position;
-}
-
 size_t SSIProxyStream::_readBuffer(bool templateCheck)
 {
     // __LDBG_printf("templateCheck=%u", templateCheck);
     uint8_t buf[512];
+
     size_t len = 0;
     if (_provider) {
         len = _provider.fillBuffer(buf, sizeof(buf));
         if (len <= 0) {
             _provider.end();
             __LDBG_printf("template %c%s%c end @ %d length=%d", _template.delim, _template.template_name(), _template.delim, _length, _template.template_length());
-
             __LDBG_assert(_template.marker == -1);
             _template.position = _buffer.end();
         }

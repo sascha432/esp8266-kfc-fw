@@ -97,9 +97,14 @@ public:
     using FormatType = PrintArgsHelper::FormatType;
 
     PrintArgs(const PrintArgs &print) = delete;
+    PrintArgs &operator=(const PrintArgs &print) = delete;
 
-    PrintArgs();
-    ~PrintArgs();
+    PrintArgs() :
+        _bufferPtr(nullptr),
+        _position(0),
+        _strLength(0)
+    {
+    }
 
     // output
     void clear();
@@ -117,6 +122,7 @@ public:
     void vprintf_P(const char *format, _Ta **args, size_t numArgs) {
         vprintf_P(format, (const uintptr_t **)args, numArgs);
     }
+
     template<typename _Ta>
     void vprintf_P(_Ta **args, size_t numArgs) {
         vprintf_P(*(const char **)&args[0], (const uintptr_t **)&args[1], numArgs);
@@ -206,7 +212,8 @@ private:
     }
 
     inline void _copy(double arg) {
-        memcpy(_bufferPtr, &arg, sizeof(arg));
+        std::copy_n((uint8_t *)&arg, sizeof(arg), _bufferPtr);
+        //memcpy(_bufferPtr, &arg, sizeof(arg));
         _bufferPtr += sizeof(arg);
     }
 
@@ -275,25 +282,12 @@ protected:
     static const int PrintObject = -1;
 
     uint8_t *_bufferPtr;            // pointer to input buffer
-    int _position;                  // position on output buffer
+    int _position;                  // position in output buffer
     Buffer _buffer;                 // input buffer
-    int _strLength;                 // length of current data to be copied
+    int _strLength;                 // length of current string to be copied
 };
 
 
-// wrapper for Print objects and direct outpout
-class PrintArgsPrintWrapper : public PrintArgs
-{
-public:
-    PrintArgsPrintWrapper(Print &output) {
-        _bufferPtr = reinterpret_cast<uint8_t *>(&output);
-        _position = PrintArgs::PrintObject;
-    }
-    PrintArgsPrintWrapper(const PrintArgsPrintWrapper &wrapper) {
-        _bufferPtr = wrapper._bufferPtr;
-        _position = wrapper._position;
-    }
-};
 
 #include "PrintArgs.hpp"
 

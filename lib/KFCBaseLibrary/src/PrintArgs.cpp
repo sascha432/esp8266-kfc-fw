@@ -49,13 +49,11 @@ const __FlashStringHelper *PrintArgsHelper::getFormatByType(FormatType type)
             return F("<div class=\"card\"><div><div class=\"card-body\">");
         case FormatType::HTML_CLOSE_GROUP_START_HR:
             return F("</h5></div><div class=\"col-lg-12\"><hr class=\"mt-0\"></div></div><div class=\"form-group\">");
-
         default:
             break;
     }
     return nullptr;
 }
-
 
 namespace PrintArgsHelper {
 
@@ -74,10 +72,6 @@ namespace PrintArgsHelper {
 
         void initContext(uint8_t *buffer)
         {
-//#if DEBUG_PRINT_ARGS
-//            // fill with nullptr to detect any issues
-//            std::fill(&_args[0], &_args[PrintArgs::kMaximumPrintfArguments + 1], nullptr);
-//#endif
             _advanceInputBuffer = sizeof(_type);
             _type = static_cast<FormatType>(*buffer);
             if (_type >= FormatType::MAX) {
@@ -194,6 +188,9 @@ namespace PrintArgsHelper {
             return _printArgs._bufferPtr;
         }
 
+    private:
+        friend PrintArgs;
+
         PrintArgs &_printArgs;
         // size of data to be copied to output buffer
         int &_strLength;
@@ -215,14 +212,6 @@ namespace PrintArgsHelper {
         FormatType _type;
     };
 
-}
-
-PrintArgs::PrintArgs() : _bufferPtr(nullptr), _position(0), _strLength(0)
-{
-}
-
-PrintArgs::~PrintArgs()
-{
 }
 
 void PrintArgs::clear()
@@ -252,7 +241,6 @@ size_t PrintArgs::fillBuffer(uint8_t *data, size_t sizeIn)
         ctx.initContext(_bufferPtr);
 
         int written;
-        //auto maxCapacity = ctx.capacity();
 
         if (_position == 0) {
             // a new string starts
@@ -291,36 +279,7 @@ size_t PrintArgs::fillBuffer(uint8_t *data, size_t sizeIn)
 
 void PrintArgs::vprintf_P(const char *format, const uintptr_t **args, size_t numArgs)
 {
-#if DEBUG_PRINT_ARGS && 0
-    _printfCalls++;
-    _printfArgs += numArgs;
-#endif
     _buffer.write((uint8_t)numArgs);
     _buffer.push_back((uintptr_t)format);
     _buffer.write(reinterpret_cast<const uint8_t *>(&args[0]), sizeof(uintptr_t) * numArgs);
-
-    Serial.printf_P(PSTR("num=%u fmt=%p ('%-16.16s') "), numArgs, format, __S(format));
-    int i  = 0;
-    while(numArgs--) {
-        Serial.printf_P(PSTR("arg=%p '%-16.16s'"), args[i], __S(args[i]));
-        i++;
-    }
-    Serial.println();
-}
-
-int PrintArgs::_snprintf_P(uint8_t *buffer, size_t size, uintptr_t **args, uint8_t numArgs)
-{
-#if DEBUG_PRINT_ARGS && 0
-    String fmt = F("format='%s' args[");
-    fmt += String((numArgs - 1));
-    fmt += "]={";
-    for(uint8_t i = 1; i < numArgs; i++) {
-        fmt += F("%08x, ");
-    }
-    String_rtrim_P(fmt, F(", "));
-    fmt += F("}\n");
-    debug_printf(fmt.c_str(), (PGM_P)args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11], args[12], args[13], args[14], args[15]);
-#endif
-
-    return snprintf_P(reinterpret_cast<char *>(buffer), size, (PGM_P)args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11], args[12], args[13], args[14], args[15]);
 }

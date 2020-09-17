@@ -109,10 +109,16 @@ void WebUI::BaseUI::_printLabelTo(PrintInterface &output, const char *forLabel) 
                 return;
         }
         if (forLabel) {
-            output.printf_P(PSTR("<label for=\"%s\">%s"), forLabel, value);
-            output.printf_P(
-                str_endswith_P(value, ':') ? PrintArgs::FormatType::HTML_CLOSE_LABEL : PrintArgs::FormatType::HTML_CLOSE_LABEL_WITH_COLON
-            );
+            if (str_endswith_P(value, ':')) {
+                output.printf_P(PSTR("<label for=\"%s\">%s</label>"), forLabel, value);
+            }
+            else {
+                output.printf_P(PSTR("<label for=\"%s\">%s:</label>"), forLabel, value);
+            }
+            //output.printf_P(PSTR("<label for=\"%s\">%s"), forLabel, value);
+            //output.printf_P(
+            //    str_endswith_P(value, ':') ? PrintArgs::FormatType::HTML_CLOSE_LABEL : PrintArgs::FormatType::HTML_CLOSE_LABEL_WITH_COLON
+            //);
         }
         else {
             output.print(value);

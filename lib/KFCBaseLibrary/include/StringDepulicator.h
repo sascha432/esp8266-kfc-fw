@@ -10,6 +10,17 @@
 #define DEBUG_STRING_DEDUPLICATOR               1
 #endif
 
+#if defined(ESP8266)
+// PROGMEM strings are detected by address and skipped
+#define safe_strcmp(a, b)   strcmp(a, b)
+#define safe_strlen(a)      strlen(a)
+#else
+#define safe_strcmp(a, b)   strcmp_P(a, b)
+#define safe_strlen(a)      strlen_P(a)
+#endif
+
+class StringDeduplicator;
+
 // object to store and manage strings with deduplication and PROGMEM detection
 
 class StringBuffer : public Buffer {
@@ -37,51 +48,54 @@ public:
 
 class StringBufferPool {
 public:
-    StringBufferPool();
+    StringBufferPool() : _pool() {}
 
     void clear();
+
     size_t count() const;
     size_t space() const;
     size_t length() const;
     size_t size() const;
+
     const char *findStr(const char *str, size_t len) const;
     const char *addString(const char *str, size_t len);
 
 private:
+    friend StringDeduplicator;
+
     using StringBufferVector = std::vector<StringBuffer>;
     StringBufferVector _pool;
 };
 
 class StringDeduplicator {
 public:
-    StringDeduplicator();
-    ~StringDeduplicator();
+#if DEBUG_STRING_DEDUPLICATOR
+    StringDeduplicator() : _dupesCount(0), _fpDupesCount(0), _fpStrCount(0) {}
+#else
+    StringDeduplicator() {}
+#endif
+
+    ~StringDeduplicator() {
+        clear();
+    }
 
     // returns the pointer to the string if a suitable match is found
-    const char *isAttached(const char *str, size_t len);
-    const char *isAttached(const __FlashStringHelper *str, size_t len) {
-        return isAttached(reinterpret_cast<const char *>(str), len);
-    }
-    const char *isAttached(const String &str){
-        return isAttached(str.c_str(), str.length());
-    }
+    // if strlen is available already, pass it as len
+    const char *isAttached(const char *str, size_t *len = nullptr);
+    const char *isAttached(const __FlashStringHelper *str, size_t *len = nullptr);
+    const char *isAttached(const String &str);
 
     // attach a string to the object
     // the returned pointer can point to RAM or FLASH
     const char *attachString(const char *str);
-    const char *attachString(const __FlashStringHelper *str) {
-        return attachString(reinterpret_cast<const char *>(str));
-    }
-    const char *attachString(const String &str) {
-        return attachString(str.c_str());
-    }
+    const char *attachString(const __FlashStringHelper *str);
+    const char *attachString(const String &str);
 
     // clear buffer and release memory
     void clear();
 
 private:
     StringBufferPool _strings;
-    // std::vector<char *> _strings;
 #if DEBUG_STRING_DEDUPLICATOR
     size_t _dupesCount;
     size_t _fpDupesCount;
@@ -89,3 +103,5 @@ private:
     std::vector<const char *> _fpStrings;
 #endif
 };
+
+#include "StringDepulicator.hpp"

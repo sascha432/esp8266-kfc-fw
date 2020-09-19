@@ -77,33 +77,12 @@ bool WebUI::BaseUI::_compareValue(const char *value) const
     }
 }
 
-__KFC_FORMS_INLINE_METHOD__
-void WebUI::BaseUI::_checkDisableAttribute(const char *key, const char *value)
-{
-    if (_isDisabledAttribute(key, value)) {
-        _parent->setDisabled(true);
-    }
-}
-
 
 __KFC_FORMS_INLINE_METHOD__
-void WebUI::BaseUI::_addItem(const Container::StringAttribute &attribute)
+void FormUI::WebUI::BaseUI::_addItem(const Container::DisabledAttribute &attribute) 
 {
-    const char *key;
-    const char *value;
-    _storage.push_back(Storage::Value::Attribute(key = attachString(attribute._key), value = encodeHtmlEntities(attribute._value)));
-    _checkDisableAttribute(key, value);
+    _addItem(static_cast<const FPStringAttribute &>(attribute));
+    _parent->setDisabled(true);
 }
-
-
-__KFC_FORMS_INLINE_METHOD__
-void WebUI::BaseUI::_addItem(const Container::FPStringAttribute &attribute)
-{
-    const char *key;
-    const char *value;
-    _storage.push_back(Storage::Value::Attribute(key = attachString(attribute._key), value = encodeHtmlEntities(attribute._value)));
-    _checkDisableAttribute(key, value);
-}
-
 
 #include <debug_helper_disable.h>

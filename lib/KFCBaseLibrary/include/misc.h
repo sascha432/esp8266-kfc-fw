@@ -231,11 +231,7 @@ inline bool is_not_PGM_P_or_aligned(const void * ptr)
 
 #else
 
-
-inline bool is_PGM_P(const void * ptr)
-{
-    return true;
-}
+bool is_PGM_P(const void *ptr);
 
 inline bool is_aligned_PGM_P(const void * ptr)
 {
@@ -349,26 +345,6 @@ uint16_t tokenizer(char *str, TokenizerArgs &args, bool hasCommand, char **nextC
         } \
     }
 
-
-// creates an object on the stack and returns a reference to it
-//
-// form.createHtml(&stack_reference<PrintArgsPrintWrapper>(Serial));
-
-template<class T>
-class stack_reference {
-public:
-    stack_reference(T &&object) : _object(std::move(object)) {
-    }
-    T &get() {
-        return _object;
-    }
-    T &operator&() {
-        return _object;
-    }
-private:
-    T _object;
-};
-
 // storage for PROGMEM strings
 // auto cast to const __FlashStringHelper *
 // read characters with charAt or operator []
@@ -470,15 +446,15 @@ namespace split {
     void split_P(const FPStr &str, const FPStr &sep, AddItemCallback callback, int flags = SplitFlagsType::EMPTY, uint16_t limit = UINT16_MAX);
 };
 
-template<typename _Ta, typename _Tb>
+template<typename _Ta, typename _Tb, typename _Tc = String>
 String implode(_Ta glue, const _Tb &pieces, size_t max = ~0) {
     String tmp;
-    if (max-- && pieces.begin() != pieces.end()) {
-        auto iterator = pieces.begin();
-        tmp += *iterator;
+    auto iterator = pieces.begin();
+    if (max-- && iterator != pieces.end()) {
+        tmp += _Tc(*iterator);
         while(max-- && ++iterator != pieces.end()) {
             tmp += glue;
-            tmp += *iterator;
+            tmp += _Tc(*iterator);
         }
     }
     return tmp;
@@ -519,20 +495,6 @@ inline void explode_P(PGM_P str, char sep, StringVector &container, uint16_t lim
     char buf[2] = { sep, 0 };
     explode_P(str, buf, container, limit);
 }
-
-namespace xtra_containers {
-
-    template <class T>
-    void remove_duplicates(T &v)
-    {
-        auto end = v.end();
-        for (auto it = v.begin(); it != end; ++it) {
-            end = std::remove(it + 1, end, *it);
-        }
-        v.erase(end, v.end());
-    }
-
-};
 
 template <class T>
 void *lambda_target(T callback) {

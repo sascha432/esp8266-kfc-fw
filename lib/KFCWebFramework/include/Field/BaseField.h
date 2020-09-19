@@ -39,7 +39,7 @@ namespace FormUI {
             //     return _optional;
             // }
 
-            __inlined_hpp__ const String &getName() const;
+            const String &getName() const;
 
             // returns ltrim '#.' of the name
             const char *getNameForType() const;

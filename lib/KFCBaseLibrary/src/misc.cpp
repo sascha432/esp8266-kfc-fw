@@ -7,7 +7,8 @@
 #include "misc.h"
 
 extern "C" {
-    PROGMEM_STRING_DEF(0x_08x, "0x%08x");
+    const char SPGM_null[] PROGMEM = { "null" };
+    const char SPGM_0x_08x[] PROGMEM = { "0x%08x" };
 }
 
 String formatBytes(size_t bytes)

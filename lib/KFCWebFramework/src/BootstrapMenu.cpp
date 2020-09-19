@@ -82,9 +82,9 @@ void BootstrapMenu::html(PrintInterface &output, ItemsVectorIterator top)
 		}
 		else if (isValid(std::find(_items.begin(), _items.end(), FindHelper(top->getId(), FindHelper::ParentMenuIdType())))) {
 			// drop down menu
+            output.print(F("<li class=\"nav-item dropdown\">" BOOTSTRAP_MENU_CRLF "<a class=\"nav-link dropdown-toggle\" href=\"#\" id=\"navbarDropdown"));
 			output.printf_P(PSTR(
-				"<li class=\"nav-item dropdown\">" BOOTSTRAP_MENU_CRLF "<a class=\"nav-link dropdown-toggle\" href=\"#\" "
-				"id=\"navbarDropdown%u\" role=\"button\" data-toggle=\"dropdown\" aria-haspopup=\"true\" aria-expanded=\"false\">%s</a>" BOOTSTRAP_MENU_CRLF
+				"%u\" role=\"button\" data-toggle=\"dropdown\" aria-haspopup=\"true\" aria-expanded=\"false\">%s</a>" BOOTSTRAP_MENU_CRLF
 				"<div class=\"dropdown-menu\" aria-labelledby=\"navbarDropdownConfig\">" BOOTSTRAP_MENU_CRLF
 			), menuId, top->getLabel().c_str());
 
@@ -93,7 +93,7 @@ void BootstrapMenu::html(PrintInterface &output, ItemsVectorIterator top)
 					output.printf_P(PSTR("<a class=\"dropdown-item\" href=\"/%s\">%s</a>" BOOTSTRAP_MENU_CRLF), dropdown->getUri().c_str(), dropdown->getLabel().c_str());
 				}
 			}
-			output.printf_P(PSTR("</div></li>" BOOTSTRAP_MENU_CRLF));
+			output.print(F("</div></li>" BOOTSTRAP_MENU_CRLF));
 		}
 		else {
 			// empty drop down, do not display
@@ -103,7 +103,7 @@ void BootstrapMenu::html(PrintInterface &output, ItemsVectorIterator top)
 
 void BootstrapMenu::html(PrintInterface &output)
 {
-#if DEBUG_BOOTSTRAP_MENU
+#if DEBUG_BOOTSTRAP_MENU_RENDER_TIME
     MicrosTimer dur;
     dur.start();
 #endif
@@ -113,52 +113,51 @@ void BootstrapMenu::html(PrintInterface &output)
 			html(output, iterator);
 		}
 	}
-#if DEBUG_BOOTSTRAP_MENU
+#if DEBUG_BOOTSTRAP_MENU_RENDER_TIME
     __DBG_printf("render=bootstrap_menu time=%.3fms", dur.getTime() / 1000.0);
 #endif
 }
 
 void BootstrapMenu::htmlSubMenu(PrintInterface &output, ItemsVectorIterator top, uint8_t active)
 {
-#if DEBUG_BOOTSTRAP_MENU
+    if (!isValid(top)) {
+        __LDBG_print("top iterator invalid");
+        return;
+    }
+#if DEBUG_BOOTSTRAP_MENU_RENDER_TIME
     MicrosTimer dur;
     dur.start();
 #endif
-	if (isValid(top)) {
-		auto menuId = top->getId();
-		menu_item_id_t pos = 0;
-		for (auto iterator = top + 1; iterator != _items.end(); ++iterator) {
-			if (iterator->getParentMenuId() == menuId) {
-				output.printf_P(PSTR(
-						"<a href=\"/%s\" class=\"list-group-item list-group-item-action align-items-start%s\">"
-						"<h5 class=\"mb-1\">%s</h5></a>" BOOTSTRAP_MENU_CRLF
-					), iterator->getUri().c_str(), active == pos ? PSTR(" active") : emptyString.c_str(), iterator->getLabel().c_str()
-				);
-				pos++;
-			}
-		}
-		__LDBG_printf("menu_id=%d active=%d items=%d", menuId, active, pos);
-	}
-#if DEBUG_BOOTSTRAP_MENU
-    __DBG_printf("render=bootstrap_sub_menu time=%.3fms", dur.getTime() / 1000.0);
+    auto menuId = top->getId();
+    menu_item_id_t pos = 0;
+    for (auto iterator = std::next(top); iterator != _items.end(); ++iterator) {
+        if (iterator->getParentMenuId() == menuId) {
+            output.printf_P(PSTR(
+                    "<a href=\"/%s\" class=\"list-group-item list-group-item-action align-items-start%s\">"
+                    "<h5 class=\"mb-1\">%s</h5></a>" BOOTSTRAP_MENU_CRLF
+                ), iterator->getUri().c_str(), active == pos ? PSTR(" active") : emptyString.c_str(), iterator->getLabel().c_str()
+            );
+            pos++;
+        }
+    }
+    __LDBG_printf("menu_id=%d active=%d items=%d", menuId, active, pos);
+#if DEBUG_BOOTSTRAP_MENU_RENDER_TIME
+    __DBG_printf("render=bootstrap_menu sub=%d time=%.3fms", menuId, dur.getTime() / 1000.0);
 #endif
 }
 
-BootstrapMenu::menu_item_id_t BootstrapMenu::_add(Item &item, menu_item_id_t afterId)
-{
-	return _add(std::move(item), afterId);
-}
+// BootstrapMenu::menu_item_id_t BootstrapMenu::_add(const Item &item, menu_item_id_t afterId)
+// {
+// 	return _add(item, afterId);
+// }
 
 BootstrapMenu::menu_item_id_t BootstrapMenu::_add(Item &&item, menu_item_id_t afterId)
 {
-	auto prev = std::find(_items.begin(), _items.end(), FindHelper(afterId, FindHelper::MenuIdType()));
-	if (prev == _items.end()) {
-		_items.emplace_back(std::move(item));
-		return _items.back().getId();
-	}
-	++prev;
-	auto newItem = _items.emplace(prev, std::move(item));
-	return newItem->getId();
+	auto insertAfter = std::find(_items.begin(), _items.end(), FindHelper(afterId, FindHelper::MenuIdType()));
+	if (insertAfter != _items.end()) {
+        insertAfter = std::next(insertAfter);
+    }
+	return _items.emplace(insertAfter, std::move(item))->getId();
 }
 
 BootstrapMenu::menu_item_id_t BootstrapMenu::_getUnqiueId()

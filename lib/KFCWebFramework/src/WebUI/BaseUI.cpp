@@ -49,7 +49,6 @@ void WebUI::BaseUI::_addItem(const Container::CheckboxButtonSuffix &suffix)
     _storage.reserve_extend(tb.size());
     __LDBG_printf("items=%u size=%u vector=%u", suffix._items.size(), tb.size(), _storage.size());
 
-#if KFC_FORMS_NO_DIRECT_COPY
     auto target = std::back_inserter<Storage::VectorBase>(_storage);
     *target = tb.toByte();
     ++target;
@@ -66,28 +65,6 @@ void WebUI::BaseUI::_addItem(const Container::CheckboxButtonSuffix &suffix)
             Storage::Value::SuffixHtml(attachString(str)).push_back(target);
         }
     }
-#else
-    auto vSize = _storage.size();
-    _storage.resize(vSize + tb.size());
-    auto beginPtr = _storage.data() + vSize;
-    *beginPtr = tb.toByte();
-    auto target = (const char **)(&beginPtr[1]);
-    static_assert(sizeof(Storage::Value::SuffixHtml) == sizeof(*target), "size does not match");
-
-    uint8_t size = (uint8_t)suffix._items.size();
-    for (const auto &mStr : suffix._items) {
-        auto str = mStr.getValue();
-        if (--size == 0) {
-            str = encodeHtmlEntities(str);
-        }
-        else{
-            str = attachString(str);
-        }
-        //std::copy_n(&ptr, 1, target++);
-        memcpy(target++, &str, sizeof(const char *));
-    }
-#endif
-    // __LDBG_printf("vector=%u", _storage.size());
 }
 
 void WebUI::BaseUI::_setItems(const Container::List &items)
@@ -127,5 +104,6 @@ bool WebUI::BaseUI::_hasAttributes() const
 #if KFC_FORMS_INCLUDE_HPP_AS_INLINE == 0
 
 #include "WebUI/BaseUI.hpp"
+#include "WebUI/Container.hpp"
 
 #endif

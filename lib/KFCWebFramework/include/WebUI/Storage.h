@@ -144,6 +144,16 @@ namespace FormUI {
                 using KeyValue::pop_front;
             };
 
+            class AttributeInt : public KeyValue<Type::ATTRIBUTE_INT, const char *, int32_t> {
+            public:
+                using KeyValue::getKey;
+                using KeyValue::getValue;
+                using KeyValue::push_back;
+                using KeyValue::pop_front;
+
+                AttributeInt(const char *key, int32_t value) : KeyValue<Type::ATTRIBUTE_INT, const char *, int32_t>(key, value) {}
+            };
+
             class Option : public KeyValue<Type::OPTION> {
             public:
                 using KeyValue::KeyValue;
@@ -208,10 +218,8 @@ namespace FormUI {
             }
 #endif
 
-            Iterator operator+(Iterator iterator) {
-                return iterator + size();
-            }
-            ConstIterator operator+(ConstIterator iterator) {
+            template<typename _Ta>
+            _Ta next(_Ta iterator) {
                 return iterator + size();
             }
 
@@ -248,6 +256,8 @@ namespace FormUI {
                 switch (type) {
                 case Type::ATTRIBUTE:
                     return sizeof(Value::Attribute);
+                case Type::ATTRIBUTE_INT:
+                    return sizeof(Value::AttributeInt);
                 case Type::LABEL:
                     return sizeof(Value::Label);
                 case Type::LABEL_RAW:
@@ -263,6 +273,7 @@ namespace FormUI {
                 case Type::ATTRIBUTE_MIN_MAX:
                     return sizeof(Value::AttributeMinMax);
                 default:
+                    __LDBG_assert_printf(false, "type=%u not defined", type);
                     break;
                 }
                 return 0;
@@ -272,6 +283,8 @@ namespace FormUI {
                 switch (type) {
                 case Type::ATTRIBUTE:
                     return PSTR("Attribute");
+                case Type::ATTRIBUTE_INT:
+                    return PSTR("AttributeInt");
                 case Type::LABEL:
                     return PSTR("Label");
                 case Type::LABEL_RAW:
@@ -287,6 +300,7 @@ namespace FormUI {
                 case Type::ATTRIBUTE_MIN_MAX:
                     return PSTR("AttributeMinMax");
                 default:
+                    __LDBG_assert_printf(false, "type=%u not defined", type);
                     break;
                 }
                 return PSTR("NONE");
@@ -308,11 +322,11 @@ namespace FormUI {
             SingleValueArgs(_Tb &iterator, Storage::TypeByte tb) : _args{}, _ptr(_args) {
                 while (--tb) {
                     auto value = _Ta::template pop_front<_Ta, _Tb>(iterator);
-                    *_ptr++ = (uintptr_t *)value.getValue();
+                    *_ptr++ = (uintptr_t)value.getValue();
                 }
             }
 
-            operator uintptr_t **() {
+            operator uintptr_t *() {
                 return &_args[0];
             }
 
@@ -331,8 +345,8 @@ namespace FormUI {
             }
 
         private:
-            uintptr_t *_args[Storage::kTypeMaxCount];
-            uintptr_t **_ptr;
+            uintptr_t _args[Storage::kTypeMaxCount];
+            uintptr_t *_ptr;
         };
 
         // converts FormUI::* to storage format
@@ -345,7 +359,7 @@ namespace FormUI {
             //typedef bool(* Pred)(Type);
 
             inline static bool isAttribute(Type type) {
-                return type == Type::ATTRIBUTE || type == Type::ATTRIBUTE_MIN_MAX;
+                return type == Type::ATTRIBUTE || type == Type::ATTRIBUTE_MIN_MAX || type == Type::ATTRIBUTE_INT;
             }
 
             inline static bool isLabel(Type type) {
@@ -364,61 +378,41 @@ namespace FormUI {
                 return type == Type::ATTRIBUTE_MIN_MAX;
             }
 
-            //template<typename _Ta, typename _Tb>
-            //inline static _Ta pop_front(_Tb &iterator) {
-            //    return _Ta::template pop_front<_Ta, _Tb>(++iterator);
-            //}
+            void validate(size_t offset, Field::BaseField *parent) const;
 
-            void dump(Print &output) const;
+            void dump(size_t offset, Print &output) const;
 
-            void reserve_extend(size_t extra)
-            {
-                size_t newCapacity = size() + extra;
-                size_t allocBlockSize = (newCapacity + 7) & ~7;     // use mallocs 8 byte block size
-                reserve(allocBlockSize);
+            inline void reserve_extend(size_t extra) {
+                reserve((size() + extra + 7) & ~7); // use mallocs 8 byte block size
             }
 
             template<typename _Ta>
             void push_back(const _Ta &item)
             {
                 reserve_extend(sizeof(item) + sizeof(_Ta::type));
-#if KFC_FORMS_NO_DIRECT_COPY
-                
                 auto iterator = std::back_inserter<VectorBase>(*this);
+                //auto vsize = size();
                 *iterator = static_cast<uint8_t>(_Ta::type);
                 item.push_back(++iterator);
-#else
-                auto vSize = size();
-                resize(vSize + sizeof(item) + sizeof(_Ta::type));
-                auto ptr = (uint8_t *)data() + vSize;
-                *ptr++ = static_cast<uint8_t>(_Ta::type);
-                //std::copy_n((uint8_t *)&item, sizeof(item), ptr);
-                memcpy(ptr, (uint8_t *)&item, sizeof(item));
-#endif
+                
+                //auto beg = std::next(begin(), vsize);
+                //Serial.printf("byte=%02x type=%s size=%u diff=%u tb_size=%u ", *beg, TypeByte(*beg).name(), size(), size() - vsize, TypeByte(*beg).size());
+                //for (auto iter = beg; iter != end(); ++iter) {
+                //    Serial.printf("%02x ", *iter);
+                //}
+                //Serial.println();
             }
 
             void push_back(Type type, ValueStringVector::iterator begin, ValueStringVector::iterator end)
             {
                 auto count = std::distance(begin, end);
                 TypeByte tb(type, count);
-                size_t vSize = size();
-                reserve(vSize + tb.size());
-#if KFC_FORMS_NO_DIRECT_COPY
+                reserve_extend(tb.size());
                 auto target = std::back_inserter<VectorBase>(*this);
-                *target = tb.toByte();
-                ++target;
+                *target++ = tb.toByte();
                 for (auto iterator = begin; iterator != end; ++iterator) {
                     Value::String(*iterator).push_back(target);
                 }
-#else
-                static_assert(sizeof(Storage::Value::String) == sizeof(const char *), "size does not match");
-                resize(vSize + tb.size());
-                auto ptr = data() + vSize;
-                *ptr++ = tb.toByte();
-                auto beginPtr = (const char **)&(*begin);
-                //std::copy(beginPtr, beginPtr + count, (const char **)ptr);
-                memcpy(ptr, beginPtr, count);
-#endif
             }
 
             template <class _Ta>
@@ -446,7 +440,7 @@ namespace FormUI {
                     if (pred(tb.type())) {
                         return iterator;
                     }
-                    iterator = tb + iterator;
+                    iterator = tb.next(iterator);
                 }
                 return iterator;
             }
@@ -475,7 +469,6 @@ namespace FormUI {
                 }
             }
 
-            //ConstIterator find(ConstIterator iterator, ConstIterator end, Pred pred) const;
         };
 
     }

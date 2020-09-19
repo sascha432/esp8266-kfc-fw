@@ -26,15 +26,18 @@ namespace FormUI {
         public:
             using Type = WebUI::Type;
 
-            const __FlashStringHelper *kIconsNone = FPSTR(emptyString.c_str());
-            static constexpr __FlashStringHelper *kIconsDefault = nullptr;
-
             template <typename... Args>
             BaseUI(Field::BaseField *parent, Args &&... args) :
                 _parent(parent),
                 _type(Type::TEXT)
             {
+#if DEBUG_STORAGE_VECTOR && 0
+                size_t from = _storage.size();
                 _addAll(args...);
+                _storage.validate(from, parent);
+#else
+                _addAll(args...);
+#endif
             }
 
             BaseUI(BaseUI &&ui) noexcept :
@@ -57,11 +60,11 @@ namespace FormUI {
                 return _type;
             }
 
-        private:
-            inline void _addItem(Type type) {
-                _type = type;
+            void dump(size_t offset, Print &output) {
+                _storage.dump(offset, output);
             }
 
+        public:
             const char *attachString(const char *str);
 
             inline const char *attachString(const __FlashStringHelper *fpstr) {
@@ -111,6 +114,11 @@ namespace FormUI {
                 return attachString(emptyString);
             }
 
+        private:
+            inline void _addItem(Type type) {
+                _type = type;
+            }
+
             inline void _addItem(const __FlashStringHelper *label) {
                 _storage.push_back(Storage::Value::Label(encodeHtmlEntities(label)));
             }
@@ -134,20 +142,16 @@ namespace FormUI {
             void _addItem(const Container::CheckboxButtonSuffix &suffix);
 
             inline void _addItem(const Container::IntMinMax &minMax) {
-                _storage.push_back(Storage::Value::AttributeMinMax(minMax._minValue, minMax._maxValue));
+                _storage.push_back(minMax.create());
             }
 
-            bool _isDisabledAttribute(const char *key, const char *value) {
-                auto disabled = PSTR("disabled");
-                // with PROGMEM the linker should have deduplicated the strings already and we get the same pointers
-                return ((key == disabled || strcmp_P_P(key, disabled) == 0) && (value == disabled || strcmp_P_P(value, disabled) == 0));
+            template<typename _Ta>
+            inline void _addItem(const Container::AttributeTmpl<_Ta> &attribute) {
+                attribute.push_back(_storage, *this);
             }
 
-            void _checkDisableAttribute(const char *key, const char *value);
-
-            void _addItem(const Container::StringAttribute &attribute);
-            void _addItem(const Container::FPStringAttribute &attribute);
-
+            void _addItem(const Container::DisabledAttribute &attribute);
+            
             inline void _addItem(const Container::List &items) {
                 _setItems(items);
                 _type = Type::SELECT;
@@ -159,8 +163,8 @@ namespace FormUI {
                 _type = Type::SELECT;
             }
 
-            template<typename _Ta>
-            void _addItem(const Container::Conditional<_Ta> &conditional) {
+            template<typename _Ta, typename _Tb>
+            void _addItem(const Container::Conditional<_Ta, _Tb> &conditional) {
                 if (conditional._condition) {
                     _addItem(conditional._value);
                 }
@@ -218,6 +222,7 @@ namespace FormUI {
             bool _hasSuffix() const;
             bool _hasAttributes() const;
 
+            const char *_getLabel() const;
             void _printAttributeTo(PrintInterface &output) const;
             void _printSuffixTo(PrintInterface &output) const;
             void _printLabelTo(PrintInterface &output, const char *forLabel) const;
@@ -235,6 +240,18 @@ namespace FormUI {
         };
 
     }
+
+    // string object that removes the first character using --varName
+    class VarNameString : public String {
+    public:
+        VarNameString(PrintString &&str) : String(std::move(str)) {}
+        VarNameString(String &&str) : String(std::move(str)) {}
+
+        VarNameString &operator--() {
+            remove(0, 1);
+            return *this;
+        }
+    };
 
 };
 

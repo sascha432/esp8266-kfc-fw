@@ -15,17 +15,11 @@
 #define KFC_FORMS_INCLUDE_HPP_AS_INLINE                 1
 #endif
 
-#ifndef KFC_FORMS_NO_DIRECT_COPY
-// if set to 0, copying data into vectors is done with reserve, resize and memcpy instead of reserve and push_back
-#define KFC_FORMS_NO_DIRECT_COPY                        1
-#endif
-
 #if KFC_FORMS_INCLUDE_HPP_AS_INLINE
 #define __KFC_FORMS_INLINE_METHOD__                     inline
-#define __inlined_hpp__                                 inline
 #else
 #define __KFC_FORMS_INLINE_METHOD__
-#define __inlined_hpp__
+#define 
 #endif
 
 
@@ -152,6 +146,7 @@ namespace FormUI {
             MIN = LABEL,
             LABEL_RAW,
             ATTRIBUTE,
+            ATTRIBUTE_INT,
             ATTRIBUTE_MIN_MAX,
             SUFFIX_TEXT,
             SUFFIX_HTML,

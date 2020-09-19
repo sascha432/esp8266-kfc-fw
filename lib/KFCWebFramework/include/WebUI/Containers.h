@@ -427,9 +427,18 @@ namespace FormUI {
         public:
             IntMinMax(int32_t aMin, int32_t aMax) : _minValue(aMin), _maxValue(aMax) {}
 
-        private:
-            friend WebUI::BaseUI;
+            //inline int32_t getMinValue() const {
+            //    return _minValue;
+            //}
+            //inline int32_t getMaxValue() const {
+            //    return _maxValue;
+            //}
 
+            inline FormUI::Storage::Value::AttributeMinMax create() const {
+                return FormUI::Storage::Value::AttributeMinMax(_minValue, _maxValue);
+            }
+
+        private:
             int32_t _minValue;
             int32_t _maxValue;
         };
@@ -438,30 +447,54 @@ namespace FormUI {
             return IntMinMax(aMin, aMax);
         }
 
-        class StringAttribute
-        {
+        template<typename _Ta>
+        class AttributeTmpl {
         public:
-            StringAttribute(const __FlashStringHelper *key, const String &value) : _key(key), _value(value) {}
-            StringAttribute(const __FlashStringHelper *key, String &&value) : _key(key), _value(std::move(value)) {}
+        };
+
+        template<>
+        class AttributeTmpl<int32_t> {
+        public:
+            AttributeTmpl(const __FlashStringHelper *key, int32_t value) : _key(key), _value(value) {}
+
+            void push_back(FormUI::Storage::Vector &storage, FormUI::WebUI::BaseUI &ui) const;
 
         private:
             friend WebUI::BaseUI;
 
+            const __FlashStringHelper *_key;
+            int32_t _value;
+        };
+
+        template<>
+        class AttributeTmpl<const __FlashStringHelper *> {
+        public:
+            AttributeTmpl(const __FlashStringHelper *key, const __FlashStringHelper *value) : _key(key), _value(value) {}
+
+            void push_back(FormUI::Storage::Vector &storage, FormUI::WebUI::BaseUI &ui) const;
+
+        private:
+            const __FlashStringHelper *_key;
+            const __FlashStringHelper *_value;
+        };
+
+        template<>
+        class AttributeTmpl<String> {
+        public:
+            AttributeTmpl(const __FlashStringHelper *key, const String &value) : _key(key), _value(value) {}
+            AttributeTmpl(const __FlashStringHelper *key, String &&value) : _key(key), _value(std::move(value)) {}
+
+            void push_back(FormUI::Storage::Vector &storage, FormUI::WebUI::BaseUI &ui) const;
+
+        private:
             const __FlashStringHelper *_key;
             String _value;
         };
 
-        class FPStringAttribute
-        {
-        public:
-            FPStringAttribute(const __FlashStringHelper *key, const __FlashStringHelper *value) : _key(key), _value(value) {}
+        using IntAttribute = AttributeTmpl<int32_t>;
+        using StringAttribute = AttributeTmpl<String>;
+        using FPStringAttribute = AttributeTmpl<const __FlashStringHelper *>;
 
-        private:
-            friend WebUI::BaseUI;
-
-            const __FlashStringHelper *_key;
-            const __FlashStringHelper *_value;
-        };
 
         inline FPStringAttribute Attribute(const __FlashStringHelper *key, const __FlashStringHelper *value) {
             return FPStringAttribute(key, value);
@@ -475,13 +508,8 @@ namespace FormUI {
             return StringAttribute(key, std::move(value));
         }
 
-
-        inline StringAttribute PlaceHolder(int32_t placeholder) {
-            return StringAttribute(F("placeholder"), String(placeholder));
-        }
-
-        inline StringAttribute PlaceHolder(uint32_t placeholder) {
-            return StringAttribute(F("placeholder"), String(placeholder));
+        inline IntAttribute PlaceHolder(int32_t placeholder) {
+            return IntAttribute(F("placeholder"), placeholder);
         }
 
         inline StringAttribute PlaceHolder(double placeholder, uint8_t digits) {
@@ -500,10 +528,16 @@ namespace FormUI {
             return StringAttribute(F("placeholder"), std::move(placeholder));
         }
 
-        class ReadOnly : public StringAttribute
+        class ReadOnlyAttribute : public FPStringAttribute
         {
         public:
-            ReadOnly() : StringAttribute(FSPGM(readonly), std::move(String())) {}
+            ReadOnlyAttribute() : FPStringAttribute(FSPGM(readonly), FSPGM(readonly)) {}
+        };
+
+        class DisabledAttribute : public FPStringAttribute
+        {
+        public:
+            DisabledAttribute() : FPStringAttribute(FSPGM(disabled), FSPGM(disabled)) {}
         };
 
         class BoolItems
@@ -520,23 +554,26 @@ namespace FormUI {
             String _true;
         };
 
-        template<class _Ta>
+        // _Ta can be any container
+        // it gets added when condition _Ta evaluates to true
+        template<typename _Tb, typename _Ta = bool>
         class Conditional {
         public:
-            Conditional(bool condition, const _Ta &value) : _value(value), _condition(condition) {}
-            Conditional(bool condition, _Ta &&value) : _value(std::move(value)), _condition(condition) {}
+            Conditional(_Ta condition, const _Tb &value) : _value(value), _condition(condition) {}
+            Conditional(_Ta condition, _Tb &&value) : _value(std::move(value)), _condition(condition) {}
+
+            template <typename... Args>
+            Conditional(_Ta condition, Args &&... args) : _value(args...), _condition(condition) {}
+
+            bool isConditionTrue() const {
+                return (_condition);
+            }
 
         private:
             friend WebUI::BaseUI;
 
-            _Ta _value;
-            bool _condition: 1;
-        };
-
-        class ConditionalAttribute : public Conditional<StringAttribute> {
-        public:
-            ConditionalAttribute(bool condition, const __FlashStringHelper *key, const String &value) : Conditional(condition, Attribute(key, value)) {}
-            ConditionalAttribute(bool condition, const __FlashStringHelper *key, String &&value) : Conditional(condition, Attribute(key, std::move(value))) {}
+            _Tb _value;
+            _Ta _condition;
         };
 
     }

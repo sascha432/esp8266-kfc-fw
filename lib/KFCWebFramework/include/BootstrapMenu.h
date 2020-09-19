@@ -14,6 +14,10 @@
 #define DEBUG_BOOTSTRAP_MENU                    0
 #endif
 
+#ifndef DEBUG_BOOTSTRAP_MENU_RENDER_TIME
+#define DEBUG_BOOTSTRAP_MENU_RENDER_TIME        1 //DEBUG_BOOTSTRAP_MENU
+#endif
+
  #include "push_pack.h"
 
 // typedef struct __attribute__packed__ {
@@ -129,18 +133,18 @@ public:
     BootstrapMenu();
     ~BootstrapMenu();
 
-    bool isValid(ItemsVectorIterator iterator) const {
+    inline bool isValid(ItemsVectorIterator iterator) const {
         return iterator != _items.end();
     }
 
-    menu_item_id_t getId(ItemsVectorIterator iterator) const {
+    inline menu_item_id_t getId(ItemsVectorIterator iterator) const {
         if (isValid(iterator)) {
             return iterator->getId();
         }
         return InvalidMenuId;
     }
 
-    void remove(ItemsVectorIterator iterator) {
+    inline void remove(ItemsVectorIterator iterator) {
         _items.erase(iterator);
     }
 
@@ -166,15 +170,10 @@ public:
     // create sub menu
     void htmlSubMenu(PrintInterface &output, ItemsVectorIterator top, uint8_t active);
 
-    // public:
-    //     void createCache();
-    // private:
-    //     String _cacheFilename;
-
 private:
     friend Item;
 
-    menu_item_id_t _add(Item &item, menu_item_id_t afterId);
+    // menu_item_id_t _add(const Item &item, menu_item_id_t afterId);
     menu_item_id_t _add(Item &&item, menu_item_id_t afterId);
     menu_item_id_t _getUnqiueId();
 

@@ -44,19 +44,11 @@ void Form::BaseForm::createHtml(PrintInterface &output)
         break;
     }
     for (const auto &field : _fields) {
-#if DEBUG_KFC_FORMS
-        // String name = field->getName();
-        // MicrosTimer dur2;
-        // dur2.start();
-#endif
         field->html(output);
         if (field->_formUI) {
             delete field->_formUI;
             field->_formUI = nullptr;
         }
-#if DEBUG_KFC_FORMS
-    // __DBG_printf("render=field_%s time=%.3fms", name.c_str(), dur2.getTime() / 1000.0);
-#endif
     }
 
     switch(ui.getStyle()) {
@@ -87,43 +79,49 @@ void Form::BaseForm::createHtml(PrintInterface &output)
 // FormUI::UI
 // -----------------------------------------------------------------------
 
-void WebUI::BaseUI::_printLabelTo(PrintInterface &output, const char *forLabel) const
+const char *WebUI::BaseUI::_getLabel() const
 {
     auto iterator = _storage.find_if(_storage.begin(), _storage.end(), Storage::Vector::isLabel);
     if (iterator != _storage.end()) {
+#if DEBUG_PRINT_ARGS && 0
+        // safe version with validation
         Storage::TypeByte tb(iterator);
+        const char *value;
         __LDBG_assert_printf(tb.count() == 1, "%s count=%u != 1", tb.name(), tb.count());
         ++iterator;
-        const char *value;
         switch (tb.type()) {
-            case Storage::Value::Label::type: {
-                auto label = Storage::Value::Label::pop_front<Storage::Value::Label>(iterator);
-                value = label.getValue();
-            } break;
-            case Storage::Type::LABEL_RAW: {
-                auto label = Storage::Value::LabelRaw::pop_front<Storage::Value::LabelRaw>(iterator);
-                value = label.getValue();
-            } break;
-            default:
-                __LDBG_assert_printf(false, "invalid type %u: %s", tb.type(), tb.name());
-                return;
-        }
-        if (forLabel) {
-            if (str_endswith_P(value, ':')) {
-                output.printf_P(PSTR("<label for=\"%s\">%s</label>"), forLabel, value);
-            }
-            else {
-                output.printf_P(PSTR("<label for=\"%s\">%s:</label>"), forLabel, value);
-            }
-            //output.printf_P(PSTR("<label for=\"%s\">%s"), forLabel, value);
-            //output.printf_P(
-            //    str_endswith_P(value, ':') ? PrintArgs::FormatType::HTML_CLOSE_LABEL : PrintArgs::FormatType::HTML_CLOSE_LABEL_WITH_COLON
-            //);
-        }
-        else {
-            output.print(value);
+        case Storage::Value::Label::type:
+            value = Storage::Value::Label::pop_front<Storage::Value::Label>(iterator).getValue();
+            break;
+        case Storage::Type::LABEL_RAW:
+            value = Storage::Value::LabelRaw::pop_front<Storage::Value::LabelRaw>(iterator).getValue();
+            break;
+        default:
+            __LDBG_assert_printf(false, "invalid type %u: %s", tb.type(), tb.name());
+            return emptyString.c_str();
         }
         __LDBG_assert_printf(_storage.find_if(iterator, _storage.end(), Storage::Vector::isLabel) == _storage.end(), "multiple labels found");
+        return value;
+#else
+        // fast version with static assert 
+        return Storage::Value::String::pop_front<Storage::Value::String>(++iterator).getValue();
+        static_assert(sizeof(Storage::Value::String) == sizeof(Storage::Value::Label) && sizeof(Storage::Value::String) == sizeof(Storage::Value::LabelRaw), "size of objects does not match");
+
+#endif
+    }
+    return emptyString.c_str();
+}
+
+void WebUI::BaseUI::_printLabelTo(PrintInterface &output, const char *forLabel) const
+{
+    auto label = _getLabel();
+    if (pgm_read_byte(label)) {
+        if (forLabel) {
+            output.printf_P(str_endswith_P(label, ':') ? PrintArgs::FormatType::HTML_LABEL_FOR : PrintArgs::FormatType::HTML_LABEL_FOR_COLON, forLabel, label);
+        }
+        else {
+            output.print(label);
+        }
     }
 }
 
@@ -134,7 +132,13 @@ void WebUI::BaseUI::_printAttributeTo(PrintInterface &output) const
             case Storage::Value::Attribute::type: {
                 while (--tb) {
                     auto attribute = Storage::Value::Attribute::pop_front<Storage::Value::Attribute>(iterator);
-                    output.printf_P(PSTR(" %s=\"%s\""), attribute.getKey(), attribute.getValue());
+                    output.printf_P(PrintArgs::FormatType::HTML_ATTRIBUTE_STR_STR, attribute.getKey(), attribute.getValue());
+                }
+            } break;
+            case Storage::Value::AttributeInt::type: {
+                while (--tb) {
+                    auto attribute = Storage::Value::AttributeInt::pop_front<Storage::Value::AttributeInt>(iterator);
+                    output.printf_P(PrintArgs::FormatType::HTML_ATTRIBUTE_STR_INT, attribute.getKey(), attribute.getValue());
                 }
             } break;
             case Storage::Value::AttributeMinMax::type: {
@@ -176,14 +180,14 @@ void WebUI::BaseUI::_printOptionsTo(PrintInterface &output) const
             case Storage::Value::OptionNumKey::type: {
                 while (--tb) {
                     auto option = Storage::Value::OptionNumKey::pop_front<Storage::Value::OptionNumKey>(iterator);
-                    auto format = _isSelected(option.getKey()) ? PSTR("<option value=\"%d\" selected>%s</option>") : PSTR("<option value=\"%d\">%s</option>");
+                    auto format = _isSelected(option.getKey()) ? PrintArgs::FormatType::HTML_OPTION_NUM_KEY_SELECTED : PrintArgs::FormatType::HTML_OPTION_NUM_KEY;
                     output.printf_P(format, option.getKey(), option.getValue());
                 }
             } break;
             case Storage::Value::Option::type: {
                 while (--tb) {
                     auto option = Storage::Value::Option::pop_front<Storage::Value::Option>(iterator);
-                    auto format = _compareValue(option.getKey()) ? PSTR("<option value=\"%s\" selected>%s</option>") : PSTR("<option value=\"%s\">%s</option>");
+                    auto format = _compareValue(option.getKey()) ? PrintArgs::FormatType::HTML_OPTION_STR_KEY_SELECTED : PrintArgs::FormatType::HTML_OPTION_STR_KEY;
                     output.printf_P(format, option.getKey(), option.getValue());
                 }
             } break;
@@ -220,20 +224,8 @@ void WebUI::BaseUI::html(PrintInterface &output)
         case Type::GROUP_START_CARD: {
                 Group &group = reinterpret_cast<Group &>(*_parent);
                 if (_hasLabel()) {
-                    // 2x open div
-                    output.printf_P(PSTR("<div class=\"card\"><div class=\"card-header p-1\" id=\"heading-%s\"><h2 class=\"mb-1\"><button class=\"btn btn-link btn-lg collapsed\" type=\"button\" data-toggle=\"collapse\" data-target=\"#collapse-%s\" aria-expanded=\"false\" aria-controls=\"collapse-%s\"><strong>"),
-                        name,
-                        name,
-                        name
-                    );
-                    _printLabelTo(output, nullptr);
-                    // 1x close div 2x open
-                    output.printf_P(PSTR("</strong></button></h2></div><div id=\"collapse-%s\" class=\"collapse%s\" aria-labelledby=\"heading-%s\" data-cookie=\"#%s\"><div class=\"card-body\">"),
-                        name,
-                        (group.isExpanded() ? PSTR(" show") : emptyString.c_str()),
-                        name,
-                        ui.getContainerId()
-                    );
+                    output.printf_P(PrintArgs::FormatType::HTML_OPEN_GROUP_START_CARD, name, name, name, _getLabel(), name, name, ui.getContainerId());
+                    output.printf_P(group.isExpanded() ? PrintArgs::FormatType::HTML_OPEN_GROUP_START_CARD_COLLAPSE_SHOW : PrintArgs::FormatType::HTML_OPEN_GROUP_START_CARD_COLLAPSE_HIDE);
                 }
                 else {
                     output.printf_P(PrintArgs::FormatType::HTML_OPEN_DIV_CARD_DIV_DIV_CARD_BODY);
@@ -259,7 +251,7 @@ void WebUI::BaseUI::html(PrintInterface &output)
                     // 1x open div form group-left
                 }
                 else {
-                    // 2x open div, 2x close div, 1x oppen div form-group
+                    // 2x open div, 2x close div, 1x open div form-group
                     output.printf_P(PSTR("<div class=\"form-row%s%s\"><div class=\"col-lg-12 mt-3\"><hr></div></div><div class=\"form-group\">"),
                         _parent->getNameType(),
                         _parent->getNameForType()
@@ -330,7 +322,7 @@ void WebUI::BaseUI::html(PrintInterface &output)
                 // Select field
                 // ---------------------------------------------------------------
                 case Type::SELECT:
-                    output.printf_P(PSTR("<select class=\"form-control\" name=\"%s\" id=\"%s\""), name, name);
+                    output.printf_P(PrintArgs::FormatType::HTML_OPEN_SELECT, name, name);
                     _printAttributeTo(output);
                     _printOptionsTo(output);
                     output.printf_P(PrintArgs::FormatType::HTML_CLOSE_SELECT);
@@ -343,11 +335,7 @@ void WebUI::BaseUI::html(PrintInterface &output)
                 case Type::NUMBER:
                 case Type::INTEGER:
                 case Type::FLOAT:
-                    output.printf_P(PSTR("<input type=\"text\" class=\"form-control\" name=\"%s\" id=\"%s\" value=\"%s\""),
-                        name,
-                        name,
-                        encodeHtmlEntities(_parent->getValue())
-                    );
+                    output.printf_P(PrintArgs::FormatType::HTML_OPEN_TEXT_INPUT, name, name, encodeHtmlEntities(_parent->getValue()));
                     _printAttributeTo(output);
                     break;
 

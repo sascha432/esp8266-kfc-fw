@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <chrono>
+#include <pgmspace.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -16,10 +17,6 @@ extern "C" {
 #endif
 
 #pragma pack(push, 4)
-
-#ifndef PSTR
-#define PSTR(str)		str
-#endif
 
 #ifndef IRAM_ATTR
 #    define IRAM_ATTR

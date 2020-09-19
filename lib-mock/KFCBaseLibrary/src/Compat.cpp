@@ -12,6 +12,7 @@
 #include <BufferStream.h>
 #include <DumpBinary.h>
 #include "EEPROM.h"
+#include <pgmspace.h>
 
 EEPROMClass EEPROM;
 _SPIFFS SPIFFS;
@@ -20,7 +21,309 @@ uint32_t _EEPROM_start;
 
 const String emptyString;
 
-void throwException(PGM_P message) {
+// flash memory is a flash emulation that creates and deduplicates data, adding usage counter and a ESP8266 flash address
+// all data is dword aligned
+// TODO the memory is write protected and can be set to read protected that only functions like strcmp_P(), memcpy_P() can access it
+
+#pragma push_macro("new")
+#undef new
+
+class flash_memory {
+public:
+    using Vector = std::vector<flash_memory>;
+    using Iterator = Vector::iterator;
+    using IteratorPair = std::pair<Iterator, Iterator>;
+    using ConstIterator = Vector::const_iterator;
+    using ConstIteratorPair = std::pair<ConstIterator, ConstIterator>;
+
+public:
+    flash_memory(const flash_memory &) = delete;
+    flash_memory &operator=(const flash_memory &) = delete;
+
+    flash_memory(flash_memory &&move) noexcept :
+        _begin(std::exchange(move._begin, nullptr)),
+        _end(std::exchange(move._end, nullptr)),
+        _address(std::exchange(move._address, 0)),
+        _deduplicated(std::exchange(move._deduplicated, 0))
+    {
+    }
+
+    flash_memory &operator=(flash_memory &&move) noexcept
+    {
+        this->~flash_memory();
+        ::new(static_cast<void *>(this)) flash_memory(std::move(move));
+        return *this;
+    }
+
+    // copy object into flash memory
+    template<typename _Ta>
+    flash_memory(const _Ta &arg, size_t alignment) : flash_memory(sizeof(_Ta), alignment) {
+        new(static_cast<void *>(_begin)) _Ta(arg);
+    }
+
+    // move object into flash memory
+    template<typename _Ta>
+    flash_memory(_Ta &&arg, size_t alignment) : flash_memory(sizeof(_Ta), alignment) {
+        new(static_cast<void *>(_begin)) _Ta() = std::move(arg);
+    }
+
+    // create flash memory from string
+    flash_memory(const char *str, size_t alignment) : flash_memory(str, strlen_P(str), alignment) {
+    }
+
+    // create flash memory string with specific size
+    // the string will be truncated at length or zero padded if shorter
+    flash_memory(const char *str, size_t length, size_t alignment) : flash_memory(length + 1, alignment) {
+        std::fill(std::copy_n(str, std::min(strlen_P(str), length), _begin), _end, 0);
+    }
+
+    // create flash memory  and copy data from begin to end
+    flash_memory(const void *begin, const void *end, size_t alignment) : flash_memory((const uint8_t *)begin, (const uint8_t *)end, alignment) {}
+
+    // create flash memory and copy data from begin to end
+    flash_memory(const uint8_t *begin, const uint8_t *end, size_t alignment) : _begin(_allocate(begin, end, (uint8_t)alignment)), _end(_begin + _align(end - begin, (uint8_t)alignment)), _address(_get_address()), _deduplicated(0)
+    {
+        std::fill(std::copy(begin, end, _begin), _end, 0);
+    }
+
+
+protected:
+    flash_memory(size_t size, size_t alignment) : _begin(_allocate(size, (uint8_t)alignment)), _end(_begin + _align(size, (uint8_t)alignment)), _address(_get_address()), _deduplicated(0) {
+        std::fill(_begin, _end, 0);
+    }
+
+    /*flash_memory(const void *ptr) : _begin((uint8_t *)ptr), _end(nullptr), _address(0), _deduplicated(0) {
+    }*/
+
+public:
+    ~flash_memory() {
+        if (_begin) {
+            free(_begin);
+        }
+    }
+
+    uint8_t *_allocate(size_t size, uint8_t alignment) {
+        return (uint8_t *)malloc(_align(size, alignment));
+    }
+
+    uint8_t *_allocate(const uint8_t *begin, const uint8_t *end, uint8_t alignment) {
+        return (uint8_t *)malloc(_align(end - begin, alignment));
+    }
+
+    const uint8_t *begin() const {
+        return _begin;
+    }
+
+    const uint8_t *end() const {
+        return _end;
+    }
+
+    size_t size() const {
+        return _end - _begin;
+    }
+
+    const char *c_str() const {
+        return (const char *)_begin;
+    }
+
+    size_t length() const {
+        auto ptr = std::find(_begin, _end, 0);
+        if (ptr != _end) {
+            return (ptr - _begin) - 1;
+        }
+        return 0;
+    }
+
+    bool in_range(const uint8_t *ptr) const {
+        return ptr >= _begin && ptr < _end;
+    }
+
+    bool in_range(const void *ptr) const {
+        return in_range(reinterpret_cast<const uint8_t *>(ptr));
+    }
+
+    bool operator<(const flash_memory &fm) const {
+        return _begin < fm._begin;
+    }
+
+    bool operator==(const flash_memory &fm) const {
+        return _length() == fm._length() && memcmp_P(_begin, fm._begin, _length()) == 0;
+    }
+
+    inline bool operator==(const uint8_t *ptr) const {
+        return _begin == ptr;
+    }
+
+    inline bool operator==(const void *ptr) const {
+        return _begin == ptr;
+    }
+
+    inline bool operator==(const char *str) const {
+        return _begin == (const uint8_t *)str;
+    }
+
+    inline bool operator==(const __FlashStringHelper *fpstr) const {
+        return _begin == (const uint8_t *)fpstr;
+    }
+
+    const void *esp8266_address() {
+        return (const void *)_address;
+    }
+
+    size_t deduplicated() const {
+        return _deduplicated;
+    }
+
+    void duplicate() {
+        _deduplicated++;
+    }
+
+    static IteratorPair find_pointer_in_range(const uint8_t *ptr) {
+        return std::make_pair(
+            std::lower_bound(_vector.begin(), _vector.end(), ptr, _comp_lower_end), 
+            std::upper_bound(_vector.begin(), _vector.end(), ptr, _comp_upper_begin)
+        );
+    }
+
+    static Iterator find_pointer(const uint8_t *ptr) {
+        return std::lower_bound(_vector.begin(), _vector.end(), ptr, _comp_lower_begin);
+    }
+
+    static const char *find_str(const char *str) {
+        auto iterator = find_pointer((const uint8_t *)str);
+        if (iterator != _vector.end() && iterator->c_str() == str) {
+            return iterator->c_str();
+        }
+        return nullptr;    
+    }
+
+    static const uint8_t *create_data(const uint8_t *ptr, size_t length, size_t alignment)
+    {
+        // we need to create an item to compare values or it gets complicated with zero padding and alignment
+        flash_memory item(ptr, ptr + length, alignment);
+        // find duplicates
+        auto iterator = std::find(_vector.begin(), _vector.end(), item);
+        if (iterator == _vector.end()) {
+            // insert sorted
+            return _vector.insert(std::upper_bound(_vector.begin(), _vector.end(), item), std::move(item))->begin();
+        }
+        // increase duplicate counter and discard item
+        iterator->duplicate();
+        return iterator->begin();
+    }
+
+protected:
+    static bool _comp_upper_begin(const uint8_t *ptr, const flash_memory &item) {
+        return ptr < item._begin;
+    }
+
+    static bool _comp_upper_end(const uint8_t *ptr, const flash_memory &item) {
+        return ptr < item._end;
+    }
+
+    static bool _comp_lower_begin(const flash_memory &item, const uint8_t *ptr) {
+        return item._begin < ptr;
+    }
+
+    static bool _comp_lower_end(const flash_memory &item, const uint8_t *ptr) {
+        return item._end < ptr;
+    }
+
+    size_t _align(size_t size, uint8_t alignment) const {
+        switch (alignment) {
+        case 0:
+        case 1:
+            return size;
+        case 2:
+            return (size + 1) & ~1;
+        case 4:
+            return (size + 3) & ~3;
+        case 8:
+            return (size + 7) & ~7;
+        }
+        uint8_t padding = (size % alignment);
+        if (padding == 0) {
+            return size;
+        }
+        return size + alignment - padding;
+    }
+
+    size_t _length() const {
+        return _end - _begin;
+    }
+
+    uintptr_t _get_address() const {
+        _end_address -= _length();
+        return _end_address;
+    }
+
+    uint8_t *_begin;
+    uint8_t *_end;
+    uintptr_t _address;
+    size_t _deduplicated;
+
+    static uintptr_t _end_address;
+public:
+    static Vector _vector;
+};
+
+uintptr_t flash_memory::_end_address = 0x40300000;
+flash_memory::Vector flash_memory::_vector;
+
+#pragma pop_macro("new")
+
+//
+//void __clear_flash_memory() {
+//    flash_memory::_vector.clear();
+//}
+//
+//const uint8_t *__flash_memory_front() {
+//    return flash_memory::_vector.front().begin();
+//}
+//
+//const uint8_t *__flash_memory_back() {
+//    return flash_memory::_vector.back().end();
+//}
+//
+//const char *__flash_memory_list() {
+//
+//    for (auto &item : flash_memory::_vector) {
+//        Serial.printf("begin=%p end=%p len=%u str=%s\n", item.begin(), item.end(), item.size(), item.c_str());
+//    }
+//    return flash_memory::_vector.at(flash_memory::_vector.size() / 2).c_str();
+//}
+
+
+const void *__register_flash_memory(const void *ptr, size_t length, size_t alignment)
+{
+    return flash_memory::create_data((const uint8_t *)ptr, length, alignment);
+}
+
+const char *__register_flash_memory_string(const void *str, size_t alignment)
+{
+    return (const char *)flash_memory::create_data((const uint8_t *)str, strlen_P((const char *)str) + 1, alignment);
+}
+
+const char *__find_flash_memory_string(const char *str) 
+{
+    return flash_memory::find_str(str);
+}
+
+bool is_PGM_P(const void *ptr)
+{
+    // there are gaps between begin-end and the next begin-end
+    // get range and check if there is a match
+    auto range = flash_memory::find_pointer_in_range((const uint8_t *)ptr);
+    for (auto iterator = range.first; iterator != range.second; ++iterator) {
+        if (iterator->in_range(ptr)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void throwException(PGM_P message) 
+{
     printf("EXCEPTION: %s\n", (const char *)message);
     exit(-1);
 }
@@ -157,3 +460,4 @@ uint16_t __builtin_bswap16(uint16_t word) {
 }
 
 #endif
+

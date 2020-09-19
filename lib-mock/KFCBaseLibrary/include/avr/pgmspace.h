@@ -2,12 +2,33 @@
 Author: sascha_lammers@gmx.de
 */
 
-#ifdef _WIN32
+#if _MSC_VER
 
 #pragma once
 
-#define PSTR(str)                               str
-#define FPSTR(str)                              (reinterpret_cast<const __FlashStringHelper *>(str))
+#define PSTR_ALIGN								4
+
+#define PSTR(str)                               (__register_flash_memory_string(str, PSTR_ALIGN))
+#define __PSTR(str)								(PSTR(str))
+#define FPSTR(str)                              (reinterpret_cast<const __FlashStringHelper *>(PSTR(str)))
+#define __FPSTR(str)							(reinterpret_cast<const __FlashStringHelper *>(PSTR(str)))
+#define F(str)									(reinterpret_cast<const __FlashStringHelper *>(PSTR(str)))
+#define RFPSTR(str)								(reinterpret_cast<const char *>(PSTR(str)))
+#define PSTR1(str)								(__register_flash_memory_string(str, 1))
+#define PSTRN(str, n)							(__register_flash_memory_string(str, n))
+
+// add PROGMEM data
+const void *__register_flash_memory(const void *ptr, size_t length, size_t alignment = PSTR_ALIGN);
+// add PROGMEM string
+const char *__register_flash_memory_string(const void *str, size_t alignment = PSTR_ALIGN);
+
+// find PROGMEM string / pointer address (this is not strcmp or memcmp)
+const char *__find_flash_memory_string(const char *str);
+
+static inline const void *__find_flash_memory_string(const void *ptr) {
+	return __find_flash_memory_string((const char *)ptr);
+}
+
 #define snprintf_P snprintf
 #define sprintf_P sprintf
 #define strstr_P strstr
@@ -37,12 +58,8 @@ typedef const void *PGM_VOID;
 #endif
 class __FlashStringHelper;
 
-#define __FPSTR(pstr_pointer) (reinterpret_cast<const __FlashStringHelper *>(pstr_pointer))
-#define __PSTR(s) ((const char *)s)
-#define F(string_literal) (__FPSTR(__PSTR(string_literal)))
-
-#define strcasecmp_P _stricmp
-#define strncasecmp _strnicmp
-#define strcmp_P strcmp
+#define strcasecmp_P					_stricmp
+#define strncasecmp						_strnicmp
+#define strcmp_P						strcmp
 
 #endif

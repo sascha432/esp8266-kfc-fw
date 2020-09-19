@@ -14,3 +14,4 @@
 #include "./stl_ext/memory.h"
 #include "./stl_ext/type_traits.h"
 #include "./stl_ext/utility.h"
+#include "./stl_ext/vector.h"

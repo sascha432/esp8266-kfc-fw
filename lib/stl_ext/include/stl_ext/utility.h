@@ -33,4 +33,43 @@ namespace STL_STD_EXT_NAMESPACE_EX {
         return min(static_cast<_Tret>(b), static_cast<_Tret>(b));
     }
 
+    // creates an object on the stack and returns a reference to it
+    // the object gets destroyed when the function returns
+    //
+    //  void myFunc(String &str) {
+    //      str += "456";
+    //      Serial.println(str);
+    //  }
+    //
+    //  myFunc(&std::stack_reference<String>(123));
+    //
+    // equal to
+    //
+    //  {
+    //      String tmp(123);
+    //      myFunc(tmp);
+    //  }
+
+    template<typename _Ta>
+    class stack_reference {
+    public:
+        template<typename... Args>
+        stack_reference(Args &&... args) : _object(std::forward<Args>(args)...) {
+        }
+        _Ta &get() {
+            return _object;
+        }
+        const _Ta &get() const {
+            return _object;
+        }
+        _Ta &operator&() {
+            return _object;
+        }
+        const _Ta &operator&() const {
+            return _object;
+        }
+    private:
+        _Ta _object;
+    };
+
 }

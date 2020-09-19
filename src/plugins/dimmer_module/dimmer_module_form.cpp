@@ -34,7 +34,7 @@ void DimmerModuleForm::_createConfigureForm(PluginComponent::FormCallbackType ty
     ui.setContainerId(F("dimmer_settings"));
     ui.setStyle(FormUI::WebUI::StyleType::ACCORDION);
 
-    auto configValidAttr = FormUI::ConditionalAttribute(cfg.config_valid == false, FSPGM(disabled), FSPGM(disabled));
+    auto configValidAttr = FormUI::Conditional<FormUI::DisabledAttribute>(cfg.config_valid == false, FormUI::DisabledAttribute());
 
     auto &mainGroup = form.addCardGroup(FSPGM(config), F("General"), true);
 

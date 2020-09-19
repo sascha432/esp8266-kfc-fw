@@ -390,8 +390,8 @@ void HassPlugin::createConfigureForm(AsyncWebServerRequest *request, FormUI::For
         form.add(F("action"), String(action.getAction()), FormField::Type::TEXT)
             ->setFormUInew FormUI::UI(FormUI::HIDDEN, emptyString));
 
-        form.add(F("action_str"), String(action.getActionFStr()), FormField::Type::TEXT)
-            ->setFormUI(new FormUI::UI(FormUI::Type::TEXT, F("Action")))->setReadOnly());
+        form.add(F("action_str"), String(action.getActionFStr()), FormField::Type::TEXT);
+        form.addFormUI(FormUI::Type::TEXT, F("Action"), FormUI::ReadOnlyAttribute());
 
         if (action.getAction() >= ActionEnum_t::MQTT_SET) {
             form.add(F("entity_id"), action.getEntityId(), FormField::Type::TEXT)

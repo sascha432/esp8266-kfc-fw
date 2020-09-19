@@ -53,70 +53,71 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
         );
 
 
+        const __FlashStringHelper *names[2] = { F("Channel 0"), F("Channel 1") };
         for (uint8_t i = 0; i < kChannelCount; i++) {
-            String prefix = PrintString(F("ch%u_"), i);
-            String name = PrintString(F("Channel %u"), i);
+            FormUI::VarNameString varName = PrintString(F("g01ocihtp%u"), i);
 
-            auto &channelGroup = form.addCardGroup(prefix + F("grp"), name, i == 0);
+            auto &channelGroup = form.addCardGroup(varName, names[i], i == 0);
 
             switch(i) {
                 case 0:
-                    form.addStringGetterSetter(prefix + FSPGM(name), Plugins::Blinds::getChannel0Name, Plugins::Blinds::setChannel0Name);
+                    form.addStringGetterSetter(--varName, Plugins::Blinds::getChannel0Name, Plugins::Blinds::setChannel0Name);
+                    --varName;
                     Plugins::Blinds::addChannel0NameLengthValidator(form);
                     break;
                 case 1:
-                    form.addStringGetterSetter(prefix + FSPGM(name), Plugins::Blinds::getChannel1Name, Plugins::Blinds::setChannel1Name);
+                    --varName;
+                    form.addStringGetterSetter(--varName, Plugins::Blinds::getChannel1Name, Plugins::Blinds::setChannel1Name);
                     Plugins::Blinds::addChannel1NameLengthValidator(form);
                     break;
             }
-            form.addFormUI(FSPGM(Name), FormUI::PlaceHolder(name));
+            form.addFormUI(FSPGM(Name), FormUI::PlaceHolder(names[i]));
 
-            form.addPointerTriviallyCopyable(prefix + F("ot"), &cfg.channels[i].open_time);
+            form.addPointerTriviallyCopyable(--varName, &cfg.channels[i].open_time);
             form.addFormUI(F("Open Time Limit"), FormUI::Suffix(FSPGM(ms)));
 
-            form.addPointerTriviallyCopyable(prefix + F("ct"), &cfg.channels[i].close_time);
+            form.addPointerTriviallyCopyable(--varName, &cfg.channels[i].close_time);
             form.addFormUI(F("Close Time Limit"), FormUI::Suffix(FSPGM(ms)));
 
-            form.addPointerTriviallyCopyable(prefix + F("il"), &cfg.channels[i].current_limit);
+            form.addPointerTriviallyCopyable(--varName, &cfg.channels[i].current_limit);
             form.addFormUI(F("Current Limit"), FormUI::Suffix(FSPGM(mA)));
             form.addValidator(FormUI::Validator::Range(BlindsControllerConversion::kMinCurrent, BlindsControllerConversion::kMaxCurrent));
 
-            form.addPointerTriviallyCopyable(prefix + F("ilt"), &cfg.channels[i].current_limit_time);
+            form.addPointerTriviallyCopyable(--varName, &cfg.channels[i].current_limit_time);
             form.addFormUI(F("Current Limit Trigger Time"), currentLimitItems);
 
-            form.addPointerTriviallyCopyable(prefix + F("ih"), &cfg.channels[i].dac_current_limit);
+            form.addPointerTriviallyCopyable(--varName, &cfg.channels[i].dac_current_limit);
             form.addFormUI(F("Hard Current Limit (DRV8870)"), FormUI::Suffix(FSPGM(mA)));
             form.addValidator(FormUI::Validator::Range(BlindsControllerConversion::kMinCurrent, BlindsControllerConversion::kMaxCurrent));
 
-            form.addPointerTriviallyCopyable(prefix + FSPGM(pwm), &cfg.channels[i].pwm_value);
-            form.addFormUI(F("Motor PWM"), FormUI::Suffix(String(0) + '-' + String(PWMRANGE)));
+            form.addPointerTriviallyCopyable(--varName, &cfg.channels[i].pwm_value);
+            form.addFormUI(F("Motor PWM"), FormUI::Suffix(F("0 - " _STRINGIFY(PWMRANGE))));
             form.addValidator(FormUI::Validator::Range(0, PWMRANGE));
 
             channelGroup.end();
-
         }
 
-        auto &autoGroup = form.addCardGroup(FSPGM(open, "open"), PrintString(F("Open Automation")), false);
+        auto &autoGroup = form.addCardGroup(FSPGM(open, "open"), F("Open Automation"), false);
 
         for(size_t i = 0; i < sizeof(cfg.open) / sizeof(cfg.open[0]); i++) {
-            String prefix = PrintString(F("oq%u_"), i);
-            form.addPointerTriviallyCopyable(prefix + String('t'), &cfg.open[i].type);
+            FormUI::VarNameString varName = PrintString(F("cqoq_%u"), i);
+            form.addPointerTriviallyCopyable(varName, &cfg.open[i].type);
             form.addFormUI(FSPGM(Action, "Action"), operationTypeItems);
 
-            form.addPointerTriviallyCopyable(prefix + String('d'), &cfg.open[i].delay);
+            form.addPointerTriviallyCopyable(--varName, &cfg.open[i].delay);
             form.addFormUI(i ? FSPGM(Delay) : F("Delay After Execution"), FormUI::Suffix(FSPGM(seconds)));
             form.addValidator(FormUI::Validator::Range(0, 3600));
 
         }
 
-        auto &closeGroup = autoGroup.end().addCardGroup(FSPGM(close), PrintString(F("Close Automation")), false);
+        auto &closeGroup = autoGroup.end().addCardGroup(FSPGM(close), F("Close Automation"), false);
 
         for(size_t i = 0; i < sizeof(cfg.close) / sizeof(cfg.close[0]); i++) {
-            String prefix = PrintString(F("cq%u_"), i);
-            form.addPointerTriviallyCopyable(prefix + String('t'), &cfg.close[i].type);
+            FormUI::VarNameString varName = PrintString(F("cq_%u"), i);
+            form.addPointerTriviallyCopyable(varName, &cfg.close[i].type);
             form.addFormUI(FSPGM(Action), operationTypeItems);
 
-            form.addPointerTriviallyCopyable(prefix + String('d'), &cfg.close[i].delay);
+            form.addPointerTriviallyCopyable(--varName, &cfg.close[i].delay);
             form.addFormUI(i ? FSPGM(Delay) : F("Delay After Execution"), FormUI::Suffix(FSPGM(seconds)));
             form.addValidator(FormUI::Validator::Range(0, 3600));
         }

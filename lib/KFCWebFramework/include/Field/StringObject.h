@@ -15,7 +15,7 @@ namespace FormUI {
 
         class StringObject : public Object<String, Field::AssignCastAdapter<String>> {
         public:
-            StringObject(const String &name, String &str, Type type = Type::TEXT) :
+            StringObject(const char *name, String &str, FormUI::InputFieldType type = FormUI::InputFieldType::TEXT) :
                 Object(name, str, type)
             {
             }

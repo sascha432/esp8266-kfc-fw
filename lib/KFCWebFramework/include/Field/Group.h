@@ -17,21 +17,31 @@ namespace FormUI {
         Group(const Group &group) = delete;
         Group &operator=(const Group &group) = delete;
 
-        Group(const String &name, bool expanded) : Field::BaseField(name, String(), Field::Type::GROUP) {
+        Group(const char *name, bool expanded) : Field::BaseField(name, String(), Field::Type::GROUP) {
             _expanded = expanded;
+            _groupOpen = true;
         }
+
+        // groups do not have values
         virtual bool setValue(const String &value) override {
             return false;
         }
+
         virtual void copyValue() override {
         }
+
         Form::BaseForm &end();
 
-        bool isExpanded() const {
+        inline bool isExpanded() const {
             return _expanded;
         }
-        void setExpanded(bool expanded) {
+
+        inline void setExpanded(bool expanded) {
             _expanded = expanded;
+        }
+
+        inline bool isOpen() const {
+            return _groupOpen;
         }
     };
 

@@ -64,65 +64,48 @@ namespace FormUI {
                 CSTR,
                 FPSTR,
                 STRING,
+                CHAR,
                 INT32,
                 UINT32,
-                DOUBLE,
+                FLOAT,
                 MAX = 15,
                 ENCODE_HTML_ATTRIBUTE		= 0x40,
                 ENCODE_HTML_ENTITIES		= 0x80
             };
 
-            Mixed() :
-                _ptr(nullptr),
-                _type(Type::NULLPTR)
-            {
+            Mixed() : _data(0), _type(Type::NULLPTR) {}
+
+            Mixed(const Mixed &copy) : _data(copy._data), _type(copy._type) {
+                _allocate(copy);
             }
 
-            Mixed(const Mixed &copy) :
-                _ptr(copy._ptr),
-                _type(copy._type)
-            {
-                _copy(copy);
-            }
+            Mixed(Mixed &&move) noexcept : _data(std::exchange(move._data, 0)), _type(std::exchange(move._type, Type::NONE)) {}
+
             Mixed &operator=(const Mixed &copy) {
                 _release();
                 _type = copy._type;
-                _ptr = copy._ptr;
-                _copy(copy);
+                _data = copy._data;
+                _allocate(copy);
                 return *this;
             }
 
-            Mixed(Mixed &&move) noexcept :
-                _ptr(std::exchange(move._ptr, nullptr)),
-                _type(std::exchange(move._type, Type::NONE))
-            {}
             Mixed &operator=(Mixed &&move) noexcept {
                 _release();
+                _data = std::exchange(move._data, 0);
                 _type = std::exchange(move._type, Type::NONE);
-                _ptr = std::exchange(move._ptr, nullptr);
                 return *this;
             }
 
-            Mixed(const String &value) :
-                _str(new String(value)),
-                _type(Type::STRING)
-            {}
-            Mixed(String &&value) :
-                _str(new String(std::move(value))),
-                _type(Type::STRING)
-            {}
-            Mixed(double value) :
-                _double((float)value),
-                _type(Type::DOUBLE)
-            {}
-            Mixed(int32_t value) :
-                _int(value),
-                _type(Type::INT32)
-            {}
-            Mixed(uint32_t value) :
-                _uint(value),
-                _type(Type::UINT32)
-            {}
+            Mixed(const __FlashStringHelper *value) : _fpStr(value), _type(Type::FPSTR) {}
+            Mixed(const String &value) : _str(new String(value)), _type(Type::STRING) {}
+            Mixed(String &&value) : _str(new String(std::move(value))), _type(Type::STRING) {}
+            Mixed(double value) : _float((float)value), _type(Type::FLOAT) {}
+            Mixed(float value) : _float(value), _type(Type::FLOAT) {}
+            Mixed(char value) : _char(value), _type(Type::CHAR) {}
+            Mixed(int32_t value) : _int(value), _type(Type::INT32) {}
+            Mixed(uint32_t value) : _uint(value), _type(Type::UINT32) {}
+            Mixed(const char *str) : _charPtr(strdup(str)), _type(Type::CSTR) {}
+
             ~Mixed() {
                 _release();
             }
@@ -130,69 +113,106 @@ namespace FormUI {
             inline void clear() {
                 _release();
                 _type = Type::NONE;
+                _data = 0;
             }
 
-            Type getType() const {
+            inline Type getType() const {
                 return _mask(_type);
             }
 
-            bool isInt() const {
-                return getType() == Type::INT32 || getType() == Type::UINT32;
+            inline bool isSigned() const {
+                return getType() == Type::INT32;
             }
 
-            bool isFPStr() const {
+            inline bool isUnsigned() const {
+                return getType() == Type::UINT32;
+            }
+
+            // returns true for all integral types that can be retrieved with getInt()
+            inline bool isInt() const {
+                return isSigned() || isUnsigned() || isChar();
+            }
+
+            inline bool isFloat() const {
+                return getType() == Type::FLOAT;
+            }
+
+            inline bool isChar() const {
+                return getType() == Type::CHAR;
+            }
+
+            inline bool isFPStr() const {
                 return getType() == Type::FPSTR;
             }
 
-            bool isStringPtr() const {
+            inline bool isStringPtr() const {
                 return getType() == Type::STRING;
             }
 
-            bool isCStr() const {
+            inline bool isCStr() const {
                 return getType() == Type::CSTR;
             }
 
-            int32_t getInt() const {
+            inline int32_t getInt() const {
                 return _int;
             }
 
-            uint32_t getUInt() const {
+            inline int32_t getSigned() const {
+                return _int;
+            }
+
+            inline uint32_t getUInt() const {
                 return _uint;
             }
 
-            const __FlashStringHelper *getFPString() const {
+            inline uint32_t getUnsigned() const {
+                return _int;
+            }
+
+            inline float getFloat() const {
+                return _float;
+            }
+
+            inline char getChar() const {
+                return _char;
+            }
+
+            inline const __FlashStringHelper *getFPString() const {
                 return _fpStr;
             }
 
-            String *getStringPtr() const {
+            inline String *getStringPtr() const {
                 return _str;
             }
 
-            const char *getCStr() const {
+            inline const char *getCStr() const {
                 return _cStr;
             }
 
-            String getString() const {
+            // precision is for convertig float to string
+            inline String getString(int precision = 2) const {
                 switch (getType()) {
                 case Type::CSTR:
                     return String(_cStr);
                 case Type::STRING:
                     return *_str;
-                case Type::DOUBLE:
-                    return String(_double);
+                case Type::FLOAT:
+                    return String(_float, precision);
                 case Type::INT32:
                     return String(_int);
                 case Type::UINT32:
                     return String(_uint);
                 case Type::FPSTR:
                     return String(_fpStr);
+                case Type::CHAR:
+                    return String(_char);
                 default:
                     break;
                 }
                 return String();
             }
 
-    #if 0
+    #if 1
             void dump(Print &output) const {
                 if (_ptr == nullptr && getType() <= Type::STRING) {
                     output.print(F("<NULL>"));
@@ -200,33 +220,51 @@ namespace FormUI {
                 }
                 switch (getType()) {
                 case Type::CSTR:
+                    output.print(F("[strdup]"));
                     output.print(_cStr);
                     break;
                 case Type::FPSTR:
+                    output.print(F("[FPSTR]"));
                     output.print(_fpStr);
                     break;
                 case Type::STRING:
+                    output.print(F("[String *]"));
                     output.print(*_str);
                     break;
                 case Type::INT32:
+                    output.print(F("[int32_t]"));
                     output.print(_int);
                     break;
                 case Type::UINT32:
+                    output.print(F("[uint32_t]"));
                     output.print(_uint);
                     break;
-                case Type::DOUBLE:
-                    output.print(_double);
+                case Type::FLOAT:
+                    output.print(F("[float]"));
+                    output.print(_float, 6);
+                    break;
+                case Type::CHAR:
+                    output.print(F("[char]"));
+                    if (isprint(_char)) {
+                        output.printf_P(PSTR("'%c' 0x%02x"), _char, (uint8_t)_char, (uint8_t)_char);
+                    }
+                    else {
+                        output.printf_P(PSTR(" 0x%02x"), (uint8_t)_char, (uint8_t)_char);
+                    }
+                    break;
+                default:
+                    output.print(F("<NULL>"));
                     break;
                 }
             }
     #endif
 
         private:
-            inline void _copy(const Mixed &copy) {
+            inline void _allocate(const Mixed &copy) {
                 if (copy._ptr) {
                     switch (getType()) {
                     case Type::CSTR:
-                        _cStr = copy._cStr ? strdup(copy._cStr) : strdup(emptyString.c_str());
+                        _charPtr = copy._charPtr ? strdup(copy._charPtr) : strdup(emptyString.c_str());
                         break;
                     case Type::STRING:
                         _str = copy._str ? new String(*copy._str) : new String();
@@ -240,7 +278,7 @@ namespace FormUI {
             inline void _release() {
                 if (_ptr) {
                     if (_isType(Type::CSTR)) {
-                        free(_ptr);
+                        free(_charPtr);
                     }
                     else if (_isType(Type::STRING)) {
                         delete _str;
@@ -253,18 +291,41 @@ namespace FormUI {
                 //return static_cast<Type>(static_cast<uint8_t>(type) & 0x0f);
                 return type;
             }
+
             inline bool _isType(Type type) const {
                 return _mask(_type) == type;
             }
 
-            union {
-                float _double;
+        public:
+            // the typedef is just for validating the size and selecting the copy type
+            typedef union {
+                float _float;
                 int32_t _int;
                 uint32_t _uint;
                 const char *_cStr;
                 const __FlashStringHelper *_fpStr;
                 String *_str;
                 void *_ptr;
+                char *_charPtr;
+                char _char;
+            } MixedUnion_t;
+
+            using UnionCopyType = std::conditional<sizeof(MixedUnion_t) == sizeof(uint32_t), uint32_t, uint64_t>::type;
+
+            // UnionCopyType is used to copy the entire data and needs to match the size
+            static_assert(sizeof(MixedUnion_t) == sizeof(UnionCopyType), "union size invalid");
+
+            union {
+                float _float;
+                int32_t _int;
+                uint32_t _uint;
+                const char *_cStr;
+                const __FlashStringHelper *_fpStr;
+                String *_str;
+                void *_ptr;
+                char *_charPtr;
+                char _char;
+                UnionCopyType _data{ 0 };
             };
             Type _type;
         };
@@ -277,6 +338,7 @@ namespace FormUI {
 
         using ListVector = std::vector<MixedPair>;
 
+        static constexpr size_t MixedContainerUnionSize = sizeof(Mixed::MixedUnion_t);
         static constexpr size_t MixedContainerSize = sizeof(Mixed);
         static constexpr size_t MixedContainerPairSize = sizeof(MixedPair);
 
@@ -284,67 +346,151 @@ namespace FormUI {
         public:
             List() : ListVector() {}
 
-            List &operator=(const List &items) {
-                clear();
-                reserve(items.size());
-                for (const auto &item : items) {
-                    ListVector::push_back(item);
-                }
+            List(const List &list) : ListVector(list) {}
+
+            List(List &&list) noexcept : ListVector(std::move(list)) {}
+
+            List &operator=(const List &copy) {
+                ListVector::operator=(copy);
                 return *this;
             }
 
-            List &operator=(List &&items) noexcept {
-                ListVector::swap(items);
+            List &operator=(List &&move) noexcept {
+                ListVector::operator=(std::move(move));
                 return *this;
             }
 
             // pass key value pairs as arguments
             // supports: String, const FlashStringHelper *, int, unsigned, float, enum class with underlying type int/unsigned, int16_t, int8_t etc..
-            template <typename... Args>
-            List(Args &&... args) : ListVector() {
-                static_assert(sizeof ...(args) % 2 == 0, "invalid number of pairs");
-                reserve((sizeof ...(args)) / 2);
-                _addAll(args...);
+            template <typename _Ta, typename... Args>
+            List(_Ta t, Args &&... args) : ListVector() {
+                static_assert((sizeof ...(args) + 1) % 2 == 0, "invalid number of pairs");
+                reserve((sizeof ...(args) + 1) / 2);
+                _addAll(t, std::forward<Args>(args)...);
             }
 
             template <typename _Ta, typename _Tb>
             void emplace_back(_Ta &&key, _Tb &&val) {
+                reserve((size() + 2) & ~1); // allocate 8 byte blocks
                 ListVector::emplace_back(std::move(_create(std::move(key))), std::move(_create(std::move(val))));
             }
 
             template <typename _Ta, typename _Tb>
             void push_back(const _Ta &key, const _Tb &val) {
+                reserve((size() + 2) & ~1); // allocate 8 byte blocks
                 ListVector::emplace_back(_passthrough(key), _passthrough(val));
             }
 
         private:
+
+            template<typename _Ta>
+            struct use_const_ref {
+                static constexpr bool value = !std::is_enum<_Ta>::value && !std::is_integral<_Ta>::value && !std::is_floating_point<_Ta>::value && !std::is_same<_Ta, const __FlashStringHelper *>::value;
+            };
+
             template <typename _Ta, typename _Tb = std::relaxed_underlying_type_t<_Ta>, typename std::enable_if<std::is_enum<_Ta>::value, int>::type = 0>
             inline _Tb _passthrough(_Ta t) {
                 return static_cast<_Tb>(t);
             }
 
-            template <typename _Ta, typename std::enable_if<!std::is_enum<_Ta>::value, int>::type = 0>
+            template <typename _Ta, typename std::enable_if<use_const_ref<_Ta>::value, int>::type = 0>
             inline const _Ta &_passthrough(const _Ta &t) {
                 return t;
             }
 
+
+            inline const __FlashStringHelper *_passthrough(const __FlashStringHelper *fpstr) {
+                return fpstr;
+            }
+
+            template <typename _Ta, typename std::enable_if<std::is_integral<_Ta>::value && std::is_signed<_Ta>::value, int>::type = 0>
+            inline int32_t _passthrough(_Ta t) {
+                return t;
+            }
+
+            template <typename _Ta, typename std::enable_if<std::is_integral<_Ta>::value && std::is_unsigned<_Ta>::value, int>::type = 0>
+            inline uint32_t _passthrough(_Ta t) {
+                return t;
+            }
+
+            inline int32_t _passthrough(char t) {
+                return t;
+            }
+
+            inline float _passthrough(double t) {
+                return t;
+            }
+
+            inline float _passthrough(float t) {
+                return t;
+            }
+
+            inline const char *_passthrough(const char t[]) {
+                return t;
+            }
+
+            inline char *_passthrough(char t[]) {
+                return t;
+            }
+
             template <typename _Ta, typename _Tb = std::relaxed_underlying_type_t<_Ta>, typename std::enable_if<std::is_enum<_Ta>::value, int>::type = 0>
-            inline Mixed _create(_Ta t) {
-                return Mixed(static_cast<_Tb>(t));
+            inline _Tb _create(_Ta t) {
+                return static_cast<_Tb>(t);
             }
 
-            template <typename _Ta, typename std::enable_if<!std::is_enum<_Ta>::value, int>::type = 0>
-            inline Mixed _create(const _Ta &t) {
-                return Mixed(t);
+            template <typename _Ta, typename std::enable_if<use_const_ref<_Ta>::value, int>::type = 0>
+            inline const _Ta &_create(const _Ta &t) {
+                return t;
             }
 
-            template <typename _Ta, typename std::enable_if<!std::is_enum<_Ta>::value, int>::type = 0>
+            inline const __FlashStringHelper *_create(const __FlashStringHelper *fpstr) {
+                return fpstr;
+            }
+
+            template <typename _Ta, typename std::enable_if<std::is_integral<_Ta>::value && std::is_signed<_Ta>::value, int>::type = 0>
+            inline int32_t _create(_Ta t) {
+                return t;
+            }
+
+            template <typename _Ta, typename std::enable_if<std::is_integral<_Ta>::value && std::is_unsigned<_Ta>::value, int>::type = 0>
+            inline uint32_t _create(_Ta t) {
+                return t;
+            }
+
+            inline int32_t _create(char t) {
+                return t;
+            }
+
+            inline float _create(double t) {
+                return t;
+            }
+
+            inline float _create(float t) {
+                return t;
+            }
+
+            inline const char *_create(const char t[]) {
+                return t;
+            }
+
+            inline char *_create(char t[]) {
+                return t;
+            }
+
+            template <typename _Ta, typename std::enable_if<use_const_ref<_Ta>::value, int>::type = 0>
             inline Mixed _create(_Ta &&t) {
                 return Mixed(std::move(t));
             }
 
-    #if 0
-            void dump(Print &output) const {
+    #if 1
+        public:
+            void dump(Print &output, const char *str = nullptr) const {
+                if (str) {
+                    output.printf_P(PSTR("list=%s size=%u capacity=%u\n"), str, size(), capacity());
+                }
+                else {
+                    output.printf_P(PSTR("list=<unnamed> size=%u capacity=%u\n"), size(), capacity());
+                }
                 for (const auto &item : *this) {
                     item.first.dump(output);
                     output.print('=');
@@ -352,6 +498,8 @@ namespace FormUI {
                     output.println();
                 }
             }
+
+        private:
     #endif
 
             void _addAll() {
@@ -426,13 +574,6 @@ namespace FormUI {
         {
         public:
             IntMinMax(int32_t aMin, int32_t aMax) : _minValue(aMin), _maxValue(aMax) {}
-
-            //inline int32_t getMinValue() const {
-            //    return _minValue;
-            //}
-            //inline int32_t getMaxValue() const {
-            //    return _maxValue;
-            //}
 
             inline FormUI::Storage::Value::AttributeMinMax create() const {
                 return FormUI::Storage::Value::AttributeMinMax(_minValue, _maxValue);
@@ -540,18 +681,13 @@ namespace FormUI {
             DisabledAttribute() : FPStringAttribute(FSPGM(disabled), FSPGM(disabled)) {}
         };
 
-        class BoolItems
+        class BoolItems : public List
         {
         public:
-            BoolItems() : _false(FSPGM(Disabled)), _true(FSPGM(Enabled)) {}
-            BoolItems(const String &pTrue, const String &pFalse) : _false(pFalse), _true(pTrue) {}
-            BoolItems(String &&pTrue, String &&pFalse) : _false(std::move(pFalse)), _true(std::move(pTrue)) {}
-
-        private:
-            friend WebUI::BaseUI;
-
-            String _false;
-            String _true;
+            BoolItems() : List(0, FSPGM(Disabled), 1, FSPGM(Enabled)) {}
+            BoolItems(const __FlashStringHelper *pTrue, const __FlashStringHelper *pFalse) : List(0, pFalse, 1, pTrue) {}
+            BoolItems(const String &pTrue, const String &pFalse) : List(0, pFalse, 1, pTrue) {}
+            BoolItems(String &&pTrue, String &&pFalse)  : List(0, std::move(pFalse), 1, std::move(pTrue)) {}
         };
 
         // _Ta can be any container

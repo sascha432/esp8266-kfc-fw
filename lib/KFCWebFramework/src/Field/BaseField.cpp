@@ -11,23 +11,6 @@
 
 using namespace FormUI;
 
-Field::BaseField::BaseField(const String &name, const String &value, Type type) :
-    _name(name),
-    _value(value),
-    _formUI(nullptr),
-    _form(nullptr),
-    _type(type),
-    _hasChanged(false),
-    _disabled(false),
-    _expanded(false)
-{
-#if DEBUG_KFC_FORMS && defined(ESP8266)
-    if (name.length() >= PrintString::getSSOSIZE()) {
-        debug_printf_P(PSTR("name '%s' exceeds SSOSIZE: %u >= %u. consider reducing the length to save memory\n"), name.c_str(), name.length(), PrintString::getSSOSIZE());
-    }
-#endif
-}
-
 Field::BaseField::~BaseField()
 {
     if (_formUI) {
@@ -37,38 +20,20 @@ Field::BaseField::~BaseField()
 
 PGM_P Field::BaseField::getNameType() const
 {
-    if (_name.length() == 0) {
+    auto ch = pgm_read_byte(_name);
+    if (!ch) {
         return emptyString.c_str();
     }
-    else if (_name.charAt(0) == '.') {
+    else if (ch == '.') {
         return PSTR(" ");
     }
     return PSTR("\" id=\"");
 }
 
-/**
-* Returns the value of the initialized field or changes the user submitted
-**/
-
-const String &Field::BaseField::getValue() const
-{
-    return _value;
-}
-
-/**
-* Initialize the value of the field. Should only be used in the constructor.
-**/
-
-void Field::BaseField::initValue(const String &value)
-{
-    _value = value;
-    _hasChanged = false;
-}
 
 /**
 * This method is called when the user submits a form
 **/
-
 bool Field::BaseField::setValue(const String &value)
 {
     if (value != _value) {
@@ -78,65 +43,24 @@ bool Field::BaseField::setValue(const String &value)
     return _hasChanged;
 }
 
-
-
-WebUI::BaseUI &Field::BaseField::setFormUI(WebUI::BaseUI *formUI)
-{
-    if (_formUI) {
-        delete _formUI;
-    }
-    _formUI = formUI;
-    //_formUI->setParent(this);
-    return *_formUI;
-}
-
-WebUI::Type Field::BaseField::getFormType() const
-{
-    if (_formUI) {
-        return _formUI->getType();
-    }
-    return WebUI::Type::NONE;
-}
-
-void Field::BaseField::html(PrintInterface &output)
-{
-    __LDBG_printf("name=%s formUI=%p", getName().c_str(), _formUI);
-    if (_formUI) {
-        _formUI->html(output);
-    }
-}
-
-//Validator::Vector &Field::BaseField::getValidators()
-//{
-//    Validator::Vector validators;
-//    auto iterator = _form
-//    while (_validators) {
+// class Group : Field::BaseField
 //
-//    }
-//    return _getValidators();
-//}
-
+// close this group
 Form::BaseForm &Group::end()
 {
-    WebUI::Type type;
-    switch(getFormType()) {
-        case WebUI::Type::GROUP_START_CARD:
-            type = WebUI::Type::GROUP_END_CARD;
-            break;
-        case WebUI::Type::GROUP_START:
-            type = WebUI::Type::GROUP_END;
-            break;
-        case WebUI::Type::GROUP_START_DIV:
-            type = WebUI::Type::GROUP_END_DIV;
-            break;
-        case WebUI::Type::GROUP_START_HR:
-            type = WebUI::Type::GROUP_END_HR;
-            break;
-        default:
-            return getForm();
+    auto &form = getForm();
+    if (_groupOpen == false) {
+        __LDBG_assert_printf(false, "group=%s already closed", getName());
+        return form;
     }
-    getForm().addGroup(getName(), String(), false, type);
-    return getForm();
+
+    // get RenderType for closing the group
+    RenderType type = getRenderType();
+    __LDBG_assert_printf(form.getGroupType(type) == Form::BaseForm::GroupType::OPEN, "invalid type=%u group=%u name=%s", type, form.getGroupType(type), getName());
+
+    _groupOpen = false;
+    form.endGroup(FPSTR(getName()), form.getEndGroupType(type));
+    return form;
 }
 
 

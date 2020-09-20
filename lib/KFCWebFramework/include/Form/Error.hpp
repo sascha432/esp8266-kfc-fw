@@ -9,16 +9,16 @@
 using namespace FormUI::Form;
 
 __KFC_FORMS_INLINE_METHOD__
-const String & Error::getName() const
+const char *Error::getName() const
 {
     if (!_field) {
-        return emptyString;
+        return emptyString.c_str();
     }
     return _field->getName();
 }
 
 __KFC_FORMS_INLINE_METHOD__
-const String & Error::getMessage() const
+const String &Error::getMessage() const
 {
     return _message;
 }

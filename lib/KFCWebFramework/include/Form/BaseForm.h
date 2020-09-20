@@ -26,6 +26,7 @@
 #include "Utility/ForwardList.h"
 
 #include "Utility/Debug.h"
+
 namespace FormUI {
 
     namespace Form {
@@ -67,7 +68,15 @@ namespace FormUI {
                 _invalidMissing = invalidMissing;
             }
 
-            Field::BaseField *getField(const String &name) const;
+            Field::BaseField *getField(const __FlashStringHelper *name) const;
+
+            Field::BaseField *getField(const char *name) const {
+                return getField(FPSTR(name));
+            }
+
+            Field::BaseField *getField(const String &name) const {
+                return getField(FPSTR(name.c_str()));
+            }
 
             Field::BaseField &getField(size_t index) const {
                 return *_fields.at(index);
@@ -106,7 +115,7 @@ namespace FormUI {
             }
 
             // createWebUI() must be called before
-            inline WebUI::Config &getWebUIConfig() {
+            WebUI::Config &getWebUIConfig() {
                 return *_uiConfig;
             }
 
@@ -190,28 +199,28 @@ namespace FormUI {
             // --------------------------------------------------------------------
 
             template<typename ObjType, typename VarType, typename MemberVarType = std::member_pointer_value_t<VarType ObjType:: *>>
-            FormValueCallback<MemberVarType> &add(const String &name, ObjType &obj, VarType ObjType:: *memberPtr, Field::Type type = Field::Type::TEXT) {
+            FormValueCallback<MemberVarType> &add(const __FlashStringHelper *name, ObjType &obj, VarType ObjType:: *memberPtr, InputFieldType type = InputFieldType::TEXT) {
                 return addMemberVariable<ObjType, VarType, MemberVarType>(name, obj, memberPtr, type);
             }
 
-            Field::BaseField &add(const String &name, const String &value, Field::Type type = Field::Type::TEXT) {
+            Field::BaseField &add(const __FlashStringHelper *name, const String &value, InputFieldType type = InputFieldType::TEXT) {
                 return _add<Field::BaseField>(name, value, type);
             }
 
             template <typename VarType>
-            Field::ValueCallback<VarType> &add(const String &name, typename Field::ValueCallback<VarType>::GetterSetterCallback callback, Field::Type type = Field::Type::SELECT) {
+            Field::ValueCallback<VarType> &add(const __FlashStringHelper *name, typename Field::ValueCallback<VarType>::GetterSetterCallback callback, InputFieldType type = InputFieldType::SELECT) {
                 return addCallbackGetterSetter(name, callback, type);
             }
 
             template <typename VarType, typename Callback = typename Field::ValueCallback<VarType>::SetterCallback>
-            Field::ValueCallback<VarType> &add(const String &name, VarType value, Callback callback, Field::Type type = Field::Type::SELECT) {
+            Field::ValueCallback<VarType> &add(const __FlashStringHelper *name, VarType value, Callback callback, InputFieldType type = InputFieldType::SELECT) {
                 return _add<Field::ValueCallback<VarType>>(name, value, callback, type);
             }
 
             // this method cannot be used for packed or unaligned structs
             // see addPointer, addReference and addMemberVariable
             template <typename VarType, typename _Tb = std::relaxed_underlying_type_t<VarType>>
-            FormValuePointer<VarType> &add(const String &name, VarType *value, Field::Type type = Field::Type::SELECT) {
+            FormValuePointer<VarType> &add(const __FlashStringHelper *name, VarType *value, InputFieldType type = InputFieldType::SELECT) {
         #if defined(__AVR__) || defined(ESP8266) || defined(ESP32)
                 static_assert(((uintptr_t)value) % sizeof(uintptr_t) == 0, "address not aligned");
         #endif
@@ -221,7 +230,7 @@ namespace FormUI {
             // this method cannot be used for packed or unaligned structs
             // see addPointer, addReference and addMemberVariable
             template <typename VarType>
-            FormValuePointer<VarType> &add(const String &name, VarType &value, Field::Type type = Field::Type::SELECT) {
+            FormValuePointer<VarType> &add(const __FlashStringHelper *name, VarType &value, InputFieldType type = InputFieldType::SELECT) {
         #if defined(__AVR__) || defined(ESP8266) || defined(ESP32)
                 static_assert(((uintptr_t)std::addressof(value)) % sizeof(uintptr_t) == 0, "address not aligned");
         #endif
@@ -229,17 +238,17 @@ namespace FormUI {
             }
 
             template <typename ArrayElementType, size_t N>
-            FormBitValue<ArrayElementType, N> &add(const String &name, ArrayElementType *value, std::array<ArrayElementType, N> bitmask, Field::Type type = Field::Type::SELECT) {
+            FormBitValue<ArrayElementType, N> &add(const __FlashStringHelper *name, ArrayElementType *value, std::array<ArrayElementType, N> bitmask, InputFieldType type = InputFieldType::SELECT) {
                 return _add<FormBitValue<ArrayElementType, N>>(name, value, bitmask, type);
             }
 
             template <size_t kMaxSize>
-            Field::CString &add(const String &name, char *value, Field::Type type = Field::Type::TEXT) {
+            Field::CString &add(const __FlashStringHelper *name, char *value, InputFieldType type = InputFieldType::TEXT) {
                 return _add<Field::CString>(name, value, kMaxSize, type);
             }
 
             // getter and setter for char *
-            FormValueCallback<String> &addStringGetterSetter(const String &name, const char *(* getter)(), void(* setter)(const char *), Field::Type type = Field::Type::TEXT) {
+            FormValueCallback<String> &addStringGetterSetter(const __FlashStringHelper *name, const char *(* getter)(), void(* setter)(const char *), InputFieldType type = InputFieldType::TEXT) {
                 return _add<FormValueCallback<String>>(name, [setter, getter](String &str, Field::BaseField &, bool store) {
                     if (store) {
                         setter(str.c_str());
@@ -269,7 +278,7 @@ namespace FormUI {
 
 
             template<typename ObjType, typename VarType, typename CallbackType = typename ConstRefSetterCallback<ObjType, VarType>::Setter>
-            FormValueCallback<VarType> &addObjectGetterSetter(const String &name, ObjType &obj, VarType(* getter)(const ObjType &obj), CallbackType setter, Field::Type type = Field::Type::TEXT) {
+            FormValueCallback<VarType> &addObjectGetterSetter(const __FlashStringHelper *name, ObjType &obj, VarType(* getter)(const ObjType &obj), CallbackType setter, InputFieldType type = InputFieldType::TEXT) {
                 return _add<FormValueCallback<VarType>>(name, [&obj, setter, getter](VarType &value, Field::BaseField &field, bool store) {
                     if (store) {
                         setter(obj, value);
@@ -296,14 +305,14 @@ namespace FormUI {
             // .my-class = add to class="my-class"
             // random-str = set id="random-str"
             // empty = no id/no class
-            Group &addGroup(const String &name, const Container::Label &label, bool expanded, WebUI::Type type = WebUI::Type::GROUP_START);
+            Group &addGroup(const __FlashStringHelper *name, const Container::Label &label, bool expanded, RenderType type = RenderType::GROUP_START);
 
             // no label
-            Group &addGroup(const String &name, bool expanded, WebUI::Type type = WebUI::Type::GROUP_START);
+            Group &addGroup(const __FlashStringHelper *name, bool expanded, RenderType type = RenderType::GROUP_START);
 
             // title and separator
-            Group &addHrGroup(const String &id, const Container::Label &label = String()) {
-                return addGroup(id, label, false, WebUI::Type::GROUP_START_HR);
+            Group &addHrGroup(const __FlashStringHelper *id, const Container::Label &label = String()) {
+                return addGroup(id, label, false, RenderType::GROUP_START_HR);
             }
 
             // no visible attributes
@@ -316,22 +325,43 @@ namespace FormUI {
             //
             // #group-div-class is the target, #my_input_field: value 0 and 1 hide the div, 2 shows it
             // auto &group = form.addDivGroup(F("group-div-class"), F("{'i':'#my_input_field','s':{'0':'$T.hide()','1':'$T.hide()','2':'$T.show()'}},'m':'alert(\\'Invalid value: \\'+$V)'"));
-            Group &addDivGroup(const String &id, const String &dependencies = String()) {
-                return addGroup(id, Container::RawLabel(dependencies), false, WebUI::Type::GROUP_START_DIV);
+            Group &addDivGroup(const __FlashStringHelper *id, const String &dependencies = String()) {
+                return addGroup(id, Container::RawLabel(dependencies), false, RenderType::GROUP_START_DIV);
             }
 
             // form/field.createWebUI()/getWebUI() provides the container id
             // id is "header-<id>" for the card header and "collapse-<id>" for the card body
             // expanded is the intial state of the cardd body either show=true or hide=false
-            Group &addCardGroup(const String &id, const Container::Label &label, bool expanded = false) {
-                return addGroup(id, label, expanded, WebUI::Type::GROUP_START_CARD);
+            Group &addCardGroup(const __FlashStringHelper *id, const Container::Label &label, bool expanded = false) {
+                return addGroup(id, label, expanded, RenderType::GROUP_START_CARD);
             }
 
             // card body without header that cannot be collapsed
-            Group &addCardGroup(const String &id) {
-                return addGroup(id, true, WebUI::Type::GROUP_START_CARD);
+            Group &addCardGroup(const __FlashStringHelper *id) {
+                return addGroup(id, true, RenderType::GROUP_START_CARD);
             }
 
+            static constexpr size_t CLOSE_ALL_GROUPS = ~0;
+
+            // end one or more groups starting with the inner ones
+            // returns the number of groups that have been closed
+            size_t endGroups(size_t levels = 1);
+
+        protected:
+            friend FormUI::Group;
+
+            enum class GroupType : uint8_t {
+                NONE,
+                OPEN,
+                CLOSE,
+            };
+
+            // use the returned Group object and call end()
+            Form::BaseForm &endGroup(const __FlashStringHelper *name, RenderType type);
+            GroupType getGroupType(RenderType type);
+            RenderType getEndGroupType(RenderType type);
+
+        public:
             // --------------------------------------------------------------------
             // specialized add methds for ARM
             // --------------------------------------------------------------------
@@ -343,7 +373,7 @@ namespace FormUI {
 
         // For accessing unaligned member variables in packed structures
             template<typename ObjType, typename VarType, typename MemberVarType = std::member_pointer_value_t<VarType ObjType::*>>
-            FormValueCallback<MemberVarType> &addMemberVariable(const String &name, ObjType &obj, VarType ObjType:: *memberPtr, Field::Type type = Field::Type::TEXT) {
+            FormValueCallback<MemberVarType> &addMemberVariable(const __FlashStringHelper *name, ObjType &obj, VarType ObjType:: *memberPtr, InputFieldType type = InputFieldType::TEXT) {
                 static_assert(std::is_trivially_copyable<MemberVarType>::value, "only for TriviallyCopyable");
                 auto objectBegin = reinterpret_cast<uint8_t *>(std::addressof(obj));
                 auto valuePtr = (MemberVarType *)&objectBegin[*(uintptr_t *)&memberPtr];
@@ -352,7 +382,7 @@ namespace FormUI {
 
             // use addMemberVariable for packed and unaligned structures
             template<typename VarType>
-            FormValueCallback<VarType> &addReference(const String &name, VarType &valueRef, Field::Type type = Field::Type::TEXT) {
+            FormValueCallback<VarType> &addReference(const __FlashStringHelper *name, VarType &valueRef, InputFieldType type = InputFieldType::TEXT) {
                 static_assert(std::is_trivially_copyable<VarType>::value, "only for TriviallyCopyable");
                 return addPointerTriviallyCopyable<VarType>(name, reinterpret_cast<VarType *>(std::addressof(valueRef)), type);
             }
@@ -360,7 +390,7 @@ namespace FormUI {
             // data is copied with memcpy to avoid alignment issues when reading from/writing to unaligned/packed structures
             // only for TriviallyCopyable
             template<typename VarType>
-            FormValueCallback<VarType> &addPointerTriviallyCopyable(const String &name, VarType *valuePtr, Field::Type type = Field::Type::TEXT) {
+            FormValueCallback<VarType> &addPointerTriviallyCopyable(const __FlashStringHelper *name, VarType *valuePtr, InputFieldType type = InputFieldType::TEXT) {
                 static_assert(std::is_trivially_copyable<VarType>::value, "only for TriviallyCopyable");
                 auto bytePtr = reinterpret_cast<uint8_t *>(valuePtr);
                 return _add<FormValueCallback<VarType>>(name, [bytePtr](VarType &value, Field::BaseField &field, bool store) {
@@ -381,18 +411,18 @@ namespace FormUI {
         #endif
 
             template <typename VarType>
-            Field::ValueCallback<VarType> &addCallbackGetterSetter(const String &name, typename Field::ValueCallback<VarType>::GetterSetterCallback callback, Field::Type type = Field::Type::SELECT) {
+            Field::ValueCallback<VarType> &addCallbackGetterSetter(const __FlashStringHelper *name, typename Field::ValueCallback<VarType>::GetterSetterCallback callback, InputFieldType type = InputFieldType::SELECT) {
                 return _add<Field::ValueCallback<VarType>>(name, callback, type);
             }
 
             template <typename VarType>
-            Field::ValueCallback<VarType> &addCallbackSetter(const String &name, VarType value, typename Field::ValueCallback<VarType>::SetterCallback callback, Field::Type type = Field::Type::SELECT) {
+            Field::ValueCallback<VarType> &addCallbackSetter(const __FlashStringHelper *name, VarType value, typename Field::ValueCallback<VarType>::SetterCallback callback, InputFieldType type = InputFieldType::SELECT) {
                 return _add<Field::ValueCallback<VarType>>(name, value, callback, type);
             }
 
             template<class _Ta, class ...Args>
-            _Ta &_add(Args &&...args) {
-                return reinterpret_cast<_Ta &>(__add(new _Ta(std::forward<Args>(args)...)));
+            _Ta &_add(const __FlashStringHelper *name, Args &&...args) {
+                return reinterpret_cast<_Ta &>(__add(new _Ta(_strings.attachString(name), std::forward<Args>(args)...)));
             }
 
         protected:

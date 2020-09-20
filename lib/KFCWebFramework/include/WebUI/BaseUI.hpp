@@ -10,10 +10,10 @@
 #include "WebUI/Config.h"
 #include "WebUI/BaseUI.h"
 #include "WebUI/Storage.h"
+#include "Utility/Debug.h"
 
 using namespace FormUI;
 
-#include "Utility/Debug.h"
 
 __KFC_FORMS_INLINE_METHOD__
 const char *WebUI::BaseUI::attachString(const char *str)
@@ -79,10 +79,61 @@ bool WebUI::BaseUI::_compareValue(const char *value) const
 
 
 __KFC_FORMS_INLINE_METHOD__
-void FormUI::WebUI::BaseUI::_addItem(const Container::DisabledAttribute &attribute) 
+void FormUI::WebUI::BaseUI::_addItem(const Container::DisabledAttribute &attribute)
 {
-    _addItem(static_cast<const FPStringAttribute &>(attribute));
+    attribute.push_back(_storage, *this);
     _parent->setDisabled(true);
+}
+
+
+__KFC_FORMS_INLINE_METHOD__
+WebUI::BaseUI &Field::BaseField::setFormUI(WebUI::BaseUI *formUI)
+{
+    __LDBG_assert_printf(formUI != nullptr, "invalid baseui=%p", formUI);
+    if (_formUI) {
+        delete _formUI;
+    }
+    return *(_formUI = formUI);
+}
+
+
+__KFC_FORMS_INLINE_METHOD__
+WebUI::BaseUI *Field::BaseField::getFormUI() const
+{
+    return _formUI;
+}
+
+
+__KFC_FORMS_INLINE_METHOD__
+RenderType Field::BaseField::getRenderType() const
+{
+    if (_formUI) {
+        return _formUI->getType();
+    }
+    return RenderType::NONE;
+}
+
+
+__KFC_FORMS_INLINE_METHOD__
+void Field::BaseField::html(PrintInterface &output)
+{
+    if (_formUI) {
+        _formUI->html(output);
+    }
+}
+
+
+__KFC_FORMS_INLINE_METHOD__
+void Field::BaseField::setDisabled(bool state)
+{
+    _disabled = state;
+}
+
+
+__KFC_FORMS_INLINE_METHOD__
+bool Field::BaseField::isDisabled() const
+{
+    return _disabled;
 }
 
 #include <debug_helper_disable.h>

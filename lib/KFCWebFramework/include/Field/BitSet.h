@@ -22,7 +22,7 @@ namespace FormUI {
             using VarType = typename Field::ValuePointer<_Ta>::VarType;
 
         public:
-            BitSet(const String &name, VarType *value, std::array<_Ta, N> bitmask, Field::Type type = Field::Type::SELECT) :
+            BitSet(const char *name, VarType *value, std::array<_Ta, N> bitmask, Field::Type type = Field::Type::SELECT) :
                 Field::ValuePointer<_Ta>(name, value, type),
                 _bitmask(bitmask)
             {

@@ -13,6 +13,7 @@
 #include <DumpBinary.h>
 #include "EEPROM.h"
 #include <pgmspace.h>
+#include <list>
 
 EEPROMClass EEPROM;
 _SPIFFS SPIFFS;

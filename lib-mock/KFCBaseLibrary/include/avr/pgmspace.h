@@ -61,5 +61,6 @@ class __FlashStringHelper;
 #define strcasecmp_P					_stricmp
 #define strncasecmp						_strnicmp
 #define strcmp_P						strcmp
+#define strncasecmp_P						_strnicmp
 
 #endif

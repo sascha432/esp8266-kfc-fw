@@ -34,14 +34,14 @@ namespace FormUI {
             GetterSetterCallback _callback;
 
         public:
-            ValueCallback(const String &name, const VarType &value, GetterSetterCallback callback, Type type = Type::SELECT) :
+            ValueCallback(const char *name, const VarType &value, GetterSetterCallback callback, Type type = Type::SELECT) :
                 ValueTemplate<Ta>(name, type),
                 _callback(callback)
             {
                 _initValue(static_cast<VarType>(value));
             }
 
-            ValueCallback(const String &name, const _VarType &value, SetterCallback callback, Type type = Type::SELECT) :
+            ValueCallback(const char *name, const _VarType &value, SetterCallback callback, Type type = Type::SELECT) :
                 ValueTemplate<Ta>(name, type),
                 _callback([callback](_VarType &value, Field::BaseField &field, bool store) {
                     if (store) {
@@ -53,7 +53,7 @@ namespace FormUI {
                 _initValue(static_cast<VarType>(value));
             }
 
-            ValueCallback(const String &name, GetterSetterCallback callback, Type type = Type::SELECT) :
+            ValueCallback(const char *name, GetterSetterCallback callback, Type type = Type::SELECT) :
                 ValueTemplate<Ta>(name, type),
                 _callback(callback)
             {

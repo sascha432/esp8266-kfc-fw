@@ -11,7 +11,7 @@
 // lib/KFCJson/src/JsonBaseReader.cpp:168
 // lib/KFCJson/src/JsonNumber.cpp:69
 // lib/KFCJson/src/JsonVar.cpp:55
-PROGMEM_STRING_DEF(null, "null");
+//PROGMEM_STRING_DEF(null, "null");
 // lib/KFCWebFramework/include/HttpHeaders.h:112
 // src/MissingFlashStrings.cpp:40
 PROGMEM_STRING_DEF(Content_Length, "Content-Length");

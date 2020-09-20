@@ -15,7 +15,7 @@ extern "C"{
 // lib/KFCJson/src/JsonBaseReader.cpp:168
 // lib/KFCJson/src/JsonNumber.cpp:69
 // lib/KFCJson/src/JsonVar.cpp:55
-PROGMEM_STRING_DECL(null);
+//PROGMEM_STRING_DECL(null);
 // lib/KFCWebFramework/include/HttpHeaders.h:112
 // src/MissingFlashStrings.cpp:40
 PROGMEM_STRING_DECL(Content_Length);

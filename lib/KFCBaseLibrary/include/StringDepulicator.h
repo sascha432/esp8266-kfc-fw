@@ -60,6 +60,10 @@ public:
     const char *findStr(const char *str, size_t len) const;
     const char *addString(const char *str, size_t len);
 
+#if DEBUG_STRING_DEDUPLICATOR
+    void dump(Print &output) const;
+#endif
+
 private:
     friend StringDeduplicator;
 
@@ -93,6 +97,10 @@ public:
 
     // clear buffer and release memory
     void clear();
+
+#if DEBUG_STRING_DEDUPLICATOR
+    void dump(Print &output) const;
+#endif
 
 private:
     StringBufferPool _strings;

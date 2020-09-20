@@ -39,14 +39,14 @@ namespace FormUI {
         template <typename _Ta, typename _Tb = typename std::add_lvalue_reference<_Ta>::type>
         class Object : public BaseField {
         public:
-            Object(const String &name, _Ta &obj, Type type = Type::TEXT) :
+            Object(const char *name, _Ta &obj, FormUI::InputFieldType type = FormUI::InputFieldType::TEXT) :
                 BaseField(name, String(), type),
                 _converter(obj)
             {
                 initValue(_converter.toString());
             }
 
-            Object(const String &name, _Ta *obj, Type type = Type::TEXT) :
+            Object(const char *name, _Ta *obj, FormUI::InputFieldType type = FormUI::InputFieldType::TEXT) :
                 BaseField(name, String(), type),
                 _converter(*obj)
             {

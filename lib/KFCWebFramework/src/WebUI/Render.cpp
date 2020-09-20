@@ -65,7 +65,7 @@ void Form::BaseForm::createHtml(PrintInterface &output)
         break;
         default: {
             if (ui.hasButtonLabel()) {
-                output.printf_P(PSTR("<button type=\"submit\" class=\"btn btn-primary\">%s...</button>"), ui.encodeHtmlEntities(ui.getButtonLabel(), false));
+                output.printf_P(PSTR("<button type=\"submit\" class=\"btn btn-primary\">%s...</button>"), ui.getButtonLabel(), false);
             }
         }
         break;
@@ -81,12 +81,12 @@ void Form::BaseForm::createHtml(PrintInterface &output)
 
 const char *WebUI::BaseUI::_getLabel() const
 {
+#if DEBUG_PRINT_ARGS && 1
+    const char *value = emptyString.c_str();
     auto iterator = _storage.find_if(_storage.begin(), _storage.end(), Storage::Vector::isLabel);
     if (iterator != _storage.end()) {
-#if DEBUG_PRINT_ARGS && 0
         // safe version with validation
         Storage::TypeByte tb(iterator);
-        const char *value;
         __LDBG_assert_printf(tb.count() == 1, "%s count=%u != 1", tb.name(), tb.count());
         ++iterator;
         switch (tb.type()) {
@@ -98,18 +98,21 @@ const char *WebUI::BaseUI::_getLabel() const
             break;
         default:
             __LDBG_assert_printf(false, "invalid type %u: %s", tb.type(), tb.name());
-            return emptyString.c_str();
+            break;
         }
         __LDBG_assert_printf(_storage.find_if(iterator, _storage.end(), Storage::Vector::isLabel) == _storage.end(), "multiple labels found");
-        return value;
+    }
+    return value;
 #else
-        // fast version with static assert 
-        return Storage::Value::String::pop_front<Storage::Value::String>(++iterator).getValue();
-        static_assert(sizeof(Storage::Value::String) == sizeof(Storage::Value::Label) && sizeof(Storage::Value::String) == sizeof(Storage::Value::LabelRaw), "size of objects does not match");
+    // fast version with static assert 
+    static_assert(sizeof(Storage::Value::String) == sizeof(Storage::Value::Label) && sizeof(Storage::Value::String) == sizeof(Storage::Value::LabelRaw), "size of objects does not match");
 
-#endif
+    auto iterator = _storage.find_if(_storage.begin(), _storage.end(), Storage::Vector::isLabel);
+    if (iterator != _storage.end()) {
+        return Storage::Value::String::pop_front<Storage::Value::String>(++iterator).getValue();
     }
     return emptyString.c_str();
+#endif
 }
 
 void WebUI::BaseUI::_printLabelTo(PrintInterface &output, const char *forLabel) const
@@ -129,23 +132,25 @@ void WebUI::BaseUI::_printAttributeTo(PrintInterface &output) const
 {
     _storage.for_each_if(_storage.begin(), Storage::Vector::isAttribute, [&](Storage::ConstIterator &iterator, Storage::TypeByte tb) {
         switch (tb.type()) {
-            case Storage::Value::Attribute::type: {
+            case Storage::Value::Attribute::type:
                 while (--tb) {
                     auto attribute = Storage::Value::Attribute::pop_front<Storage::Value::Attribute>(iterator);
                     output.printf_P(PrintArgs::FormatType::HTML_ATTRIBUTE_STR_STR, attribute.getKey(), attribute.getValue());
                 }
-            } break;
-            case Storage::Value::AttributeInt::type: {
+                break;
+            case Storage::Value::AttributeInt::type:
                 while (--tb) {
                     auto attribute = Storage::Value::AttributeInt::pop_front<Storage::Value::AttributeInt>(iterator);
                     output.printf_P(PrintArgs::FormatType::HTML_ATTRIBUTE_STR_INT, attribute.getKey(), attribute.getValue());
                 }
-            } break;
-            case Storage::Value::AttributeMinMax::type: {
-                auto attribute = Storage::Value::AttributeMinMax::pop_front<Storage::Value::AttributeMinMax>(iterator);
-                output.printf_P(PSTR(" min=\"%d\" max=\"%d\""), attribute.getMin(), attribute.getMax());
-                __LDBG_assert_printf(tb.count() == 1, "AttributeMinMax count=%u != 1", tb.count());
-            } break;
+                break;
+            case Storage::Value::AttributeMinMax::type:
+                if (true) {
+                    auto attribute = Storage::Value::AttributeMinMax::pop_front<Storage::Value::AttributeMinMax>(iterator);
+                    output.printf_P(PSTR(" min=\"%d\" max=\"%d\""), attribute.getMin(), attribute.getMax());
+                    __LDBG_assert_printf(tb.count() == 1, "AttributeMinMax count=%u != 1", tb.count());
+                }
+                break;
             default:
                 __LDBG_assert_printf(false, "invalid type %u: %s", tb.type(), tb.name());
                 break;
@@ -158,14 +163,14 @@ void WebUI::BaseUI::_printSuffixTo(PrintInterface &output) const
 {
     _storage.for_each_if(_storage.begin(), Storage::Vector::isSuffix, [&](Storage::ConstIterator &iterator, Storage::TypeByte tb) {
         switch (tb.type()) {
-            case Storage::Value::SuffixText::type: {
+            case Storage::Value::SuffixText::type:
                 output.printf_P(PrintArgs::FormatType::HTML_OPEN_DIV_INPUT_GROUP_TEXT);
                 Storage::SingleValueArgs<Storage::Value::SuffixText>(iterator, tb).print(output);
                 output.printf_P(PrintArgs::FormatType::HTML_CLOSE_DIV_INPUT_GROUP_TEXT);
-            } break;
-            case Storage::Value::SuffixHtml::type: {
+                break;
+            case Storage::Value::SuffixHtml::type:
                 Storage::SingleValueArgs<Storage::Value::SuffixHtml>(iterator, tb).print(output);
-            } break;
+                break;
             default:
                 __LDBG_assert_printf(false, "invalid type %u: %s", tb.type(), tb.name());
                 break;
@@ -177,20 +182,20 @@ void WebUI::BaseUI::_printOptionsTo(PrintInterface &output) const
 {
     _storage.for_each_if(_storage.begin(), Storage::Vector::isOption, [&](Storage::ConstIterator &iterator, Storage::TypeByte tb) {
         switch (tb.type()) {
-            case Storage::Value::OptionNumKey::type: {
+            case Storage::Value::OptionNumKey::type:
                 while (--tb) {
                     auto option = Storage::Value::OptionNumKey::pop_front<Storage::Value::OptionNumKey>(iterator);
                     auto format = _isSelected(option.getKey()) ? PrintArgs::FormatType::HTML_OPTION_NUM_KEY_SELECTED : PrintArgs::FormatType::HTML_OPTION_NUM_KEY;
                     output.printf_P(format, option.getKey(), option.getValue());
                 }
-            } break;
-            case Storage::Value::Option::type: {
+                break;
+            case Storage::Value::Option::type:
                 while (--tb) {
                     auto option = Storage::Value::Option::pop_front<Storage::Value::Option>(iterator);
                     auto format = _compareValue(option.getKey()) ? PrintArgs::FormatType::HTML_OPTION_STR_KEY_SELECTED : PrintArgs::FormatType::HTML_OPTION_STR_KEY;
                     output.printf_P(format, option.getKey(), option.getValue());
                 }
-            } break;
+                break;
             default:
                 __LDBG_assert_printf(false, "invalid type %u: %s", tb.type(), tb.name());
                 break;

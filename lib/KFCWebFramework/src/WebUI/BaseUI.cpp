@@ -24,6 +24,7 @@ const char *WebUI::Config::encodeHtmlEntities(const char *cStr, bool attribute)
 {
     uint8_t byte = pgm_read_byte(cStr);
     if (byte == 0xff) { // marker for html
+        __LDBG_assert_printf(false, "marker deprecated");
         return strings().attachString(cStr) + 1;
     }
     // if (byte == '<') { // marker for html
@@ -42,7 +43,8 @@ const char *WebUI::Config::encodeHtmlEntities(const char *cStr, bool attribute)
 
 void WebUI::BaseUI::_addItem(const Container::CheckboxButtonSuffix &suffix)
 {
-    if (suffix._items.size() == 0) {
+    __LDBG_assert_printf(suffix._items.empty() == false, "empty list");
+    if (suffix._items.empty()) {
         return;
     }
     Storage::TypeByte tb(Storage::Value::SuffixHtml::type, suffix._items.size());
@@ -69,7 +71,8 @@ void WebUI::BaseUI::_addItem(const Container::CheckboxButtonSuffix &suffix)
 
 void WebUI::BaseUI::_setItems(const Container::List &items)
 {
-    _storage.reserve_extend((items.size() * sizeof(Storage::Value::Option)) + sizeof(Storage::Type));
+
+    _storage.reserve_extend(items.size() * Storage::TypeByte::size_for<Storage::Value::Option>());
     static_assert(sizeof(Storage::Value::Option) == sizeof(Storage::Value::OptionNumKey), "size does not match");
     for(const auto &item : items) {
         const char *value = _attachMixedContainer(item.second, AttachStringAsType::HTML_ENTITIES);

@@ -49,10 +49,10 @@ void Container::CheckboxButtonSuffix::initButton(FormField &hiddenField, const _
         _items.emplace_back(F("<button type=\"button\" class=\"button-checkbox btn btn-default\" data-on-icon=\"%s\" data-off-icon=\"%s\" id=\"_%s\">%s</button>"));
         _items.emplace_back(onIcons);
         _items.emplace_back(offIcons);
-        _items.emplace_back(hiddenField.getName());
+        _items.emplace_back(FPSTR(hiddenField.getName()));
     }
     else {
         _items.emplace_back(F("<button type=\"button\" class=\"button-checkbox btn btn-default\" id=\"_%s\">%s</button>"));
-        _items.emplace_back(hiddenField.getName());
+        _items.emplace_back(FPSTR(hiddenField.getName()));
     }
 }

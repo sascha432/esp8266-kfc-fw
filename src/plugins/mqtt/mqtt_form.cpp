@@ -53,7 +53,7 @@ void MQTTPlugin::createConfigureForm(FormCallbackType type, const String &formNa
     ui.setContainerId(F("mqtt_setttings"));
     ui.setStyle(FormUI::WebUI::StyleType::ACCORDION);
 
-    auto &cfgGroup = form.addDivGroup(String(), F("{'i':'#mode','e':'var $T=$(\\'#mode\\').closest(\\'.card\\').nextAll().not(\\':last\\');var $P=function(v){$(\\'#port\\').attr(\\'placeholder\\',v);}','s':{'0':'$T.hide()','1':'$T.show();$P(1883)','2':'$T.show();$P(8883)'}}"));
+    auto &cfgGroup = form.addDivGroup(F(""), F("{'i':'#mode','e':'var $T=$(\\'#mode\\').closest(\\'.card\\').nextAll().not(\\':last\\');var $P=function(v){$(\\'#port\\').attr(\\'placeholder\\',v);}','s':{'0':'$T.hide()','1':'$T.show();$P(1883)','2':'$T.show();$P(8883)'}}"));
     cfgGroup.end();
 
     auto &commonGroup = form.addCardGroup(FSPGM(config));
@@ -105,7 +105,7 @@ void MQTTPlugin::createConfigureForm(FormCallbackType type, const String &formNa
 #if MQTT_AUTO_DISCOVERY
     auto &hassGroup = form.addCardGroup(F("adp"), F("Home Assistant"), true);
 
-    form.addObjectGetterSetter("aden", cfg, cfg.get_bits_auto_discovery, cfg.set_bits_auto_discovery);
+    form.addObjectGetterSetter(F("aden"), cfg, cfg.get_bits_auto_discovery, cfg.set_bits_auto_discovery);
     form.addFormUI(F("Auto Discovery"), FormUI::BoolItems());
 
     auto &autoDiscoveryGroup = form.addDivGroup(F("adp"), F("{'i':'#aden','m':'$T.hide()','s':{'1':'$T.show()'}}"));

@@ -42,15 +42,15 @@ namespace FormUI {
 
             BaseUI(BaseUI &&ui) noexcept :
                 _parent(ui._parent),
-                _type(std::exchange(ui._type, Type::NONE)),
-                _storage(std::move(ui._storage))
+                _storage(std::move(ui._storage)),
+                _type(std::exchange(ui._type, Type::NONE))
             {
             }
 
             BaseUI &operator=(BaseUI &&ui) noexcept {
                 _parent = ui._parent;
-                _type = std::exchange(ui._type, Type::NONE);
                 _storage = std::move(ui._storage);
+                _type = std::exchange(ui._type, Type::NONE);
                 return *this;
             }
 
@@ -151,15 +151,9 @@ namespace FormUI {
             }
 
             void _addItem(const Container::DisabledAttribute &attribute);
-            
+
             inline void _addItem(const Container::List &items) {
                 _setItems(items);
-                _type = Type::SELECT;
-            }
-
-            inline void _addItem(const Container::BoolItems &boolItems) {
-                _storage.push_back(Storage::Value::OptionNumKey(0, encodeHtmlEntities(boolItems._false)));
-                _storage.push_back(Storage::Value::OptionNumKey(1, encodeHtmlEntities(boolItems._true)));
                 _type = Type::SELECT;
             }
 
@@ -235,23 +229,11 @@ namespace FormUI {
 
         private:
             Field::BaseField *_parent;
-            Type _type;
             Storage::Vector _storage;
+            Type _type;
         };
 
     }
-
-    // string object that removes the first character using --varName
-    class VarNameString : public String {
-    public:
-        VarNameString(PrintString &&str) : String(std::move(str)) {}
-        VarNameString(String &&str) : String(std::move(str)) {}
-
-        VarNameString &operator--() {
-            remove(0, 1);
-            return *this;
-        }
-    };
 
 };
 

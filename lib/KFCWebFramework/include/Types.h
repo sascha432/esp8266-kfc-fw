@@ -84,10 +84,11 @@ namespace FormUI {
             };
 
         }
-
-        using ValueType = Value::Type;
+        //using ValueType = Value::Type;
 
     }
+
+    class Group;
 
     namespace WebUI {
 
@@ -106,7 +107,11 @@ namespace FormUI {
             PASSWORD,
             NEW_PASSWORD,
             // VISIBLE_PASSWORD,
-            GROUP_START,
+
+            // (start group) >= BEGIN_GROUPS and < END_GROUPS
+            // (end group = start group + 1 ) > BEGIN_GROUPS and <= END_GROUPS
+            BEGIN_GROUPS,
+            GROUP_START = BEGIN_GROUPS,
             GROUP_END,
             GROUP_START_DIV,
             GROUP_END_DIV,
@@ -114,6 +119,8 @@ namespace FormUI {
             GROUP_END_HR,
             GROUP_START_CARD,
             GROUP_END_CARD,
+            END_GROUPS = GROUP_END_CARD,
+
             HIDDEN,
         };
 
@@ -175,5 +182,11 @@ namespace FormUI {
         };
 
     }
+
+    using InputFieldType = Field::Type;
+    using FieldValueType = Field::Value::Type;
+    using RenderType = WebUI::Type;
+    using FormStyleType = WebUI::StyleType;
+    using HostnameAllowedType = HostnameValidator::AllowedType;
 
 }

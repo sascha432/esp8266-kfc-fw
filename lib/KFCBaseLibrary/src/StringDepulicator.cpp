@@ -13,6 +13,9 @@
 #include "debug_helper_disable.h"
 #endif
 
+static constexpr size_t kFirstPoolSize = 56;
+static constexpr size_t knthPoolSize = 32;
+
 const char *StringBuffer::findStr(const char *str, size_t len) const
 {
     auto begin = cstr_begin();
@@ -51,6 +54,7 @@ const char *StringBuffer::findStr(const char *str, size_t len) const
 
 
 #if DEBUG_STRING_DEDUPLICATOR
+
 void StringBuffer::dump(Print &output) const
 {
 #if 1
@@ -62,11 +66,22 @@ void StringBuffer::dump(Print &output) const
         if (n > 40) {
             n = 40;
         }
-        output.printf_P(PSTR("%08x(%u): %-*.*s\n"), begin, len, n, n, begin);
+        output.printf_P(PSTR("%08x(%u): %-0.*s\n"), begin, len, n, begin);
         begin += len + 1;
     }
 #endif
 }
+
+void StringBufferPool::dump(Print &output) const
+{
+    size_t n = 0;
+    for(auto &pool: _pool) {
+        output.printf_P(PSTR("POOL #%u capacity=%u space=%u\n"), n, pool.capacity(), pool.space());
+        pool.dump(output);
+        n++;
+    }
+}
+
 #endif
 
 const char *StringBufferPool::findStr(const char *str, size_t len) const
@@ -95,7 +110,7 @@ const char *StringBufferPool::addString(const char *str, size_t len)
     }
 
     if (_pool.empty()) {
-        _pool.emplace_back(128);
+        _pool.emplace_back(kFirstPoolSize);
     }
 
     StringBuffer *target = nullptr;
@@ -112,9 +127,9 @@ const char *StringBufferPool::addString(const char *str, size_t len)
     }
     if (!target) {
         // add new pool
-        size_t newSize = _pool.size() == 1 ? 256 : 128;
-        if (len + 64 > newSize) { // this string required extra space
-            newSize = len + 64;
+        size_t newSize = knthPoolSize;
+        if (len > newSize) { // this string required extra space
+            newSize = len + 1 + knthPoolSize;
         }
         newSize = (newSize + 7) & ~7; // align to memory block size
         __LDBG_printf("pools=%u new=%u", _pool.size(), newSize);
@@ -130,10 +145,17 @@ const char *StringBufferPool::addString(const char *str, size_t len)
 #endif
 }
 
-
 #if DEBUG_STRING_DEDUPLICATOR
+
+void StringDeduplicator::dump(Print &output) const
+{
+    _strings.dump(output);
+}
+
 void StringDeduplicator::clear()
 {
+    dump(DEBUG_OUTPUT);
+
     size_t heap = 0;
     if (_strings.size()) {
         heap = ESP.getFreeHeap();

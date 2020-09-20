@@ -16,9 +16,14 @@
 
 using namespace FormUI;
 
-Field::BaseField *Form::BaseForm::getField(const String &name) const
+WebUI::Config &Field::BaseField::getWebUIConfig()
 {
-    auto iterator = std::find_if(_fields.begin(), _fields.end(), [&name](const Field::Ptr &ptr) {
+    return _form->getWebUIConfig();
+}
+
+Field::BaseField *Form::BaseForm::getField(const __FlashStringHelper *name) const
+{
+    auto iterator = std::find_if(_fields.begin(), _fields.end(), [name](const Field::Ptr &ptr) {
         return *ptr == name;
     });
     if (iterator != _fields.end()) {
@@ -52,12 +57,22 @@ bool Form::BaseForm::validateOnly()
     for (const auto &_field: _fields) {
         auto field = _field.get();
         // __DBG_printf("name=%s disabled=%u", field->getName().c_str(), field->isDisabled());
-        if (field->getType() != Field::Type::GROUP && field->isDisabled() == false) {
+
+        if (field->getType() == Field::Type::GROUP || field->isDisabled()) {
+            // field ist a group or disabled
+        }
+        else {
+
+            // check if any data is available (usually from a POST request)
             if (_data->hasArg(field->getName())) {
+
                 // __LDBG_printf("Form::BaseForm::validateOnly() Set value %s = %s", field->getName().c_str(), _data->arg(field->getName()).c_str());
+
+                // set new value
                 if (field->setValue(_data->arg(field->getName()))) {
                     _hasChanged = true;
                 }
+
                 auto iterator = _validatorFind(_validators, field);
                 while (iterator) {
                     if (!iterator->validate()) {
@@ -65,13 +80,6 @@ bool Form::BaseForm::validateOnly()
                     }
                     iterator = _validatorFindNext(iterator, field);
                 }
-                //if (field->hasValidators()) {
-                //    for (const auto &validator: field->getValidators()) {
-                //        if (!validator->validate()) {
-                //            _addError(field.get(), validator->getMessage());
-                //        }
-                //    }
-                //}
             }
             else if (_invalidMissing) {
                 _addError(field, FSPGM(Form_value_missing_default_message));
@@ -104,18 +112,73 @@ WebUI::BaseUI &Form::BaseForm::addFormUI(WebUI::BaseUI *formUI)
 }
 
 
-Group &Form::BaseForm::addGroup(const String &name, const Container::Label &label, bool expanded, WebUI::Type type)
+Group &Form::BaseForm::addGroup(const __FlashStringHelper *name, const Container::Label &label, bool expanded, RenderType type)
 {
+    __LDBG_assert_printf(getGroupType(type) == GroupType::OPEN, "invalid type=%u group type=%u", type, getGroupType(type));
     auto &group = _add<Group>(name, expanded);
     group.setFormUI(&group, type, label);
     return group;
 }
 
-Group &Form::BaseForm::addGroup(const String &name, bool expanded, WebUI::Type type)
+Group &Form::BaseForm::addGroup(const __FlashStringHelper *name, bool expanded, RenderType type)
 {
+    __LDBG_assert_printf(getGroupType(type) == GroupType::OPEN, "invalid type=%u group type=%u", type, getGroupType(type));
     auto &group = _add<Group>(name, expanded);
     group.setFormUI(&group, type);
     return group;
+}
+
+size_t Form::BaseForm::endGroups(size_t levels)
+{
+    size_t count = 0;
+    for (auto iterator = _fields.rbegin(); iterator != _fields.rend(); ++iterator) {
+        auto &field = *(*iterator).get();
+        if (getGroupType(field.getRenderType()) == GroupType::OPEN) {
+            auto &group = static_cast<Group &>(field);
+            if (group.isOpen()) {
+                group.end();
+                if (++count >= levels) {
+                    break;
+                }
+            }
+        }
+    }
+    return count;
+}
+
+Form::BaseForm &Form::BaseForm::endGroup(const __FlashStringHelper *name, RenderType type)
+{
+    auto &group = _add<Group>(name, false);
+    group.setFormUI(&group, type);
+    return *this;
+}
+
+Form::BaseForm::GroupType Form::BaseForm::getGroupType(RenderType type)
+{
+    __LDBG_assert_printf(type >= RenderType::BEGIN_GROUPS && type <= RenderType::END_GROUPS, "invalid group type=%u", type);
+
+    if (type >= RenderType::BEGIN_GROUPS && type <= RenderType::END_GROUPS) {
+        return static_cast<GroupType>(
+            (
+                (static_cast<std::underlying_type<RenderType>::type>(type) - static_cast<std::underlying_type<RenderType>::type>(RenderType::BEGIN_GROUPS))
+                % 2) + 1
+            );
+    }
+    return GroupType::NONE;
+}
+
+RenderType Form::BaseForm::getEndGroupType(RenderType type)
+{
+    switch (getGroupType(type)) {
+    case GroupType::OPEN:
+        return static_cast<RenderType>(static_cast<std::underlying_type<RenderType>::type>(type) + 1);
+    case GroupType::CLOSE:
+        return type;
+    default:
+        break;
+    }
+    __LDBG_assert_printf(false, "group type=%u not valid", getGroupType(type));
+    return RenderType::NONE;
 }
 
 void Form::BaseForm::setFormUI(const String &title, const String &submit)
@@ -143,25 +206,25 @@ bool Form::BaseForm::process(const String &name, Print &output)
     // }
     // Serial.println();
     for (const auto &field : _fields) {
-        auto len = field->getName().length();
-        if (field->getType() == Field::Type::TEXT && name.equalsIgnoreCase(field->getName())) {
+        auto len = strlen_P(field->getName());
+        if (field->getType() == Field::Type::TEXT && String_equalsIgnoreCase(name, field->getName())) {
             __LDBG_printf("name=%s text=%s", name.c_str(), field->getValue().c_str());
             PrintHtmlEntities::printTo(PrintHtmlEntities::Mode::ATTRIBUTE, field->getValue().c_str(), output);
             return true;
         }
-        else if (field->getType() == Field::Type::TEXTAREA && name.equalsIgnoreCase(field->getName())) {
+        else if (field->getType() == Field::Type::TEXTAREA && String_equalsIgnoreCase(name, field->getName())) {
             __LDBG_printf("name=%s textarea=%s", name.c_str(), field->getValue().c_str());
             PrintHtmlEntities::printTo(PrintHtmlEntities::Mode::HTML, field->getValue().c_str(), output);
             return true;
         }
-        else if (field->getType() == Field::Type::CHECK && name.equalsIgnoreCase(field->getName())) {
+        else if (field->getType() == Field::Type::CHECK && String_equalsIgnoreCase(name, field->getName())) {
             __LDBG_printf("name=%s checkbox=%d", name.c_str(), field->getValue().toInt());
             if (field->getValue().toInt()) {
                 output.print(FSPGM(_checked, " checked"));
             }
             return true;
         }
-        else if (field->getType() == Field::Type::SELECT && strncasecmp(field->getName().c_str(), name.c_str(), len) == 0) {
+        else if (field->getType() == Field::Type::SELECT && strncasecmp_P(name.c_str(), field->getName(), len) == 0) {
             if (name.length() == len) {
                 __LDBG_printf("name=%s select=%s", name.c_str(), field->getValue().c_str());
                 PrintHtmlEntities::printTo(PrintHtmlEntities::Mode::ATTRIBUTE, field->getValue().c_str(), output);

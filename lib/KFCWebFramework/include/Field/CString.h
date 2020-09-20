@@ -15,7 +15,7 @@ namespace FormUI {
 
         class CString : public BaseField {
         public:
-            CString(const String &name, char *value, size_t maxSize, Field::Type type = Field::Type::TEXT) :
+            CString(const char *name, char *value, size_t maxSize, Field::Type type = Field::Type::TEXT) :
                 BaseField(name, value, type), _value(value), _size(maxSize)
             {
                 if (BaseField::_value.length() >= maxSize) {

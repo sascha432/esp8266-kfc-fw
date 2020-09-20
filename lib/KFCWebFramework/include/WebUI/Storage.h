@@ -9,6 +9,7 @@
 #include <Arduino_compat.h>
 #include <vector>
 #include <PrintArgs.h>
+#include <stl_ext/utility.h>
 #include "WebUI/Config.h"
 
 #include "Utility/Debug.h"
@@ -82,7 +83,7 @@ namespace FormUI {
                 template <typename _Ta>
                 void push_back(_Ta &&target) const {
                     Single<_StorageType, _Tv>::push_back(target);
-                    std::copy_n(((VectorBase::const_pointer) & _key), sizeof(_key), target);
+                    std::copy_n(((VectorBase::const_pointer)&_key), sizeof(_key), target);
                 }
 
                 template <typename _Ta, typename _Tb>
@@ -252,6 +253,19 @@ namespace FormUI {
                 return _byte;
             }
 
+            inline static size_t size(Type type, size_t count) {
+                return (count * item_size(type)) + sizeof(Type);
+            }
+
+            inline static size_t size(Type type) {
+                return item_size(type) + sizeof(Type);
+            }
+
+            template<typename _Ta, size_t _Count = 1>
+            static constexpr size_t size_for() {
+                return (sizeof(_Ta) * _Count) + sizeof(Type);
+            }
+
             inline static size_t item_size(Type type) {
                 switch (type) {
                 case Type::ATTRIBUTE:
@@ -356,8 +370,6 @@ namespace FormUI {
             using VectorBase::begin;
             using VectorBase::end;
 
-            //typedef bool(* Pred)(Type);
-
             inline static bool isAttribute(Type type) {
                 return type == Type::ATTRIBUTE || type == Type::ATTRIBUTE_MIN_MAX || type == Type::ATTRIBUTE_INT;
             }
@@ -372,10 +384,6 @@ namespace FormUI {
 
             inline static bool isOption(Type type) {
                 return type == Type::OPTION || type == Type::OPTION_NUM_KEY;
-            }
-
-            inline static bool isMinMax(Type type) {
-                return type == Type::ATTRIBUTE_MIN_MAX;
             }
 
             void validate(size_t offset, Field::BaseField *parent) const;
@@ -394,7 +402,7 @@ namespace FormUI {
                 //auto vsize = size();
                 *iterator = static_cast<uint8_t>(_Ta::type);
                 item.push_back(++iterator);
-                
+
                 //auto beg = std::next(begin(), vsize);
                 //Serial.printf("byte=%02x type=%s size=%u diff=%u tb_size=%u ", *beg, TypeByte(*beg).name(), size(), size() - vsize, TypeByte(*beg).size());
                 //for (auto iter = beg; iter != end(); ++iter) {
@@ -416,7 +424,7 @@ namespace FormUI {
             }
 
             template <class _Ta>
-            class compare_type : public std::unary_function<_Ta, bool>
+            class compare_type : public non_std::unary_function<_Ta, bool>
             {
             protected:
                 _Ta _type;

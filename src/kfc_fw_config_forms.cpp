@@ -9,9 +9,14 @@ using KFCConfigurationClasses::MainConfig;
 using KFCConfigurationClasses::System;
 using KFCConfigurationClasses::Network;
 
-static void createWifiModes(FormUI::Container::List &items)
+static FormUI::Container::List createWifiModes()
 {
-    items = std::move(FormUI::Container::List(WIFI_OFF, FSPGM(Disabled), WIFI_STA, FSPGM(Station_Mode), WIFI_AP, FSPGM(Access_Point), WIFI_AP_STA, PrintString(F("%s and %s"), SPGM(Access_Point), SPGM(Station_Mode))));
+    return FormUI::Container::List(
+        WIFI_OFF, FSPGM(Disabled),
+        WIFI_STA, FSPGM(Station_Mode),
+        WIFI_AP, FSPGM(Access_Point),
+        WIFI_AP_STA, F("Access Point and Station Mode")
+    );
 }
 
 
@@ -37,8 +42,7 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
         if (String_equals(formName, SPGM(wifi))) {
 
             auto &softAp = Network::SoftAP::getWriteableConfig();
-            FormUI::Container::List wifiModes;
-            createWifiModes(wifiModes);
+            FormUI::Container::List wifiModes(createWifiModes());
 
             FormUI::Container::List channelItems(0, FSPGM(Auto));
             for(uint8_t i = 1; i <= config.getMaxWiFiChannels(); i++) {
@@ -103,9 +107,9 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             form.addValidator(FormUI::Validator::Range(1, config.getMaxWiFiChannels(), true));
             form.addFormUI(FSPGM(Channel), channelItems);
 
-            form.addReference("ap_enc", softAp.encryption);
+            form.addReference(F("ap_enc"), softAp.encryption);
             form.addValidator(FormUI::Validator::Enum<uint8_t, WiFiEncryptionTypeArray().size()>(F("Invalid encryption"), createWiFiEncryptionTypeArray()));
-            form.addFormUI(FSPGM(Encryption), channelItems);
+            form.addFormUI(FSPGM(Encryption), encryptionItems);
 
             apModeGroup.end();
 
@@ -228,17 +232,17 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
 
             auto password = String(System::Device::getPassword());
 
-            form.add(FSPGM(password), emptyString, FormField::Type::TEXT);
+            form.add(FSPGM(password), emptyString, FormUI::InputFieldType::TEXT);
             form.addFormUI(FormUI::Type::PASSWORD, F("Current Password"));
             form.addValidator(FormUI::Validator::Match(F("The entered password is not correct"), [](FormUI::Field::BaseField &field) {
                 return field.getValue().equals(System::Device::getPassword());
             }));
 
-            form.add(FSPGM(npwd), emptyString, FormField::Type::TEXT);
+            form.add(FSPGM(npwd), emptyString, FormUI::InputFieldType::TEXT);
             form.addFormUI(FormUI::Type::NEW_PASSWORD, F("New Password"));
             form.addValidator(FormUI::Validator::Length(System::Device::kPasswordMinSize, System::Device::kPasswordMaxSize));
 
-            form.add(F("cpwd"), emptyString, FormField::Type::TEXT);
+            form.add(F("cpwd"), emptyString, FormUI::InputFieldType::TEXT);
             form.addFormUI(FormUI::Type::NEW_PASSWORD, F("Confirm New Password"));
             form.addValidator(FormUI::Validator::Match(F("The password confirmation does not match"), [](FormUI::Field::BaseField &field) {
                 return field.equals(field.getForm().getField(FSPGM(npwd)));

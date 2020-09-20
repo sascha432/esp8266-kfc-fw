@@ -15,52 +15,70 @@ namespace FormUI {
 
         class BaseField {
         public:
-            using Type = ::FormUI::Field::Type;
+            BaseField(const char *name, const String &value = String(), InputFieldType type = InputFieldType::NONE) :
+                _name(name),
+                _value(value),
+                _formUI(nullptr),
+                _form(nullptr),
+                _type(type),
+                _hasChanged(false),
+                _disabled(false),
+                _expanded(false),
+                _groupOpen(false)
+            {
+            }
 
-            BaseField(const String &name, const String &value = String(), Type type = Type::NONE);
-            BaseField(const String &name, Type type = Type::NONE) : BaseField(name, String(), type) {}
+            BaseField(const char *name, InputFieldType type = InputFieldType::NONE) :
+                BaseField(name, String(), type)
+            {
+            }
+
             virtual ~BaseField();
 
+            // call in the constructor of any child to intialize the value
+            /**
+            * Initialize the value of the field. Should only be used in the constructor.
+            **/
+            void initValue(const String &value)
+            {
+                _value = value;
+                _hasChanged = false;
+            }
+
+            // parent form and render setttings
+            //
             void setForm(Form::BaseForm *form);
             Form::BaseForm &getForm() const;
+
             WebUI::Config &getWebUIConfig();
 
+            ///
+            // compare name operators and other name related methods
+            ///
             bool operator==(const String &name) const {
-                return _name.equals(name);
+                return strcmp_P(name.c_str(), _name) == 0;
             }
             bool operator==(const __FlashStringHelper *name) const {
-                return String_equals(_name, name);
+                return strcmp_P_P((PGM_P)name, _name) == 0;
+            }
+            bool operator==(const char *name) const {
+                return strcmp_P_P(name, _name) == 0;
             }
 
-            // void setOptional(bool optional) {
-            //     _optional = optional;
-            // }
-            // const bool isOptional() const {
-            //     return _optional;
-            // }
-
-            const String &getName() const;
+            PGM_P getName() const;
 
             // returns ltrim '#.' of the name
-            const char *getNameForType() const;
+            PGM_P getNameForType() const;
 
             // returns '" id="' if name starts with '#' or ' ' if it starts with '.', and an empty string if the name is empty
             // use with printf("... class=\"row%s%s\" ...", getNameType(),getNameForType());
             PGM_P getNameType() const;
 
-            /**
-            * Returns the value of the initialized field or changes the user submitted
-            **/
+            // return value stored in base field
             const String &getValue() const;
 
-            /**
-            * Initialize the value of the field. Should only be used in the constructor.
-            **/
-            void initValue(const String &value);
-
-            /**
-            * This method is called when the user submits a form
-            **/
+            // set value of the field and return true, if it has changed
+            // children may call this method to assign the value rather than setting it directly (though its protected not private)
             virtual bool setValue(const String &value);
 
             /*
@@ -69,51 +87,66 @@ namespace FormUI {
             **/
             virtual void copyValue();
 
+            // compared value to another field
             bool equals(Field::BaseField *field) const;
 
+            // returns true if value has changed
             bool hasChanged() const;
+
+            // mark value as changed
             void setChanged(bool hasChanged);
 
-            void setType(Type type);
-            Type getType() const;
+            // set type of input field
+            void setType(InputFieldType type);
 
+            // get type of input field
+            InputFieldType getType() const;
+
+            // get render type
+            RenderType getRenderType() const;
+
+            // construct BaseUI and attach to field
             template <typename... Args>
-            WebUI::BaseUI &setFormUI(Field::BaseField *parent, Args &&... args) {
-                return setFormUI(new WebUI::BaseUI(parent, std::forward<Args>(args)...));
+            WebUI::BaseUI &setFormUI(Field::BaseField *parent, Args &&... args)  {
+                if (_formUI) {
+                    delete _formUI;
+                }
+                _formUI = new WebUI::BaseUI(parent, std::forward<Args>(args)...);
+                return *_formUI;
             }
 
+            // add or replace BaseUI attached to the field
             WebUI::BaseUI &setFormUI(WebUI::BaseUI *formUI);
-            WebUI::BaseUI *getFormUI() const {
-                return _formUI;
-            }
 
-            WebUI::Type getFormType() const;
+            // return BaseUI attached to this field or nullptr
+            WebUI::BaseUI *getFormUI() const;
+
+            // disabled fields are not validated or copied
+            // they do not have to be present in the POST data
+            void setDisabled(bool state);
+            bool isDisabled() const;
+
             void html(PrintInterface &output);
-
-            void setDisabled(bool state) {
-                _disabled = state;
-            }
-
-            bool isDisabled() const {
-                return _disabled;
-            }
 
         protected:
             friend Form::BaseForm;
 
-            String _name;
+            const char *_name;
             String _value;
             WebUI::BaseUI *_formUI;
             Form::BaseForm *_form;
-            Type _type;
+            InputFieldType _type;
             bool _hasChanged : 1;
             bool _disabled: 1;
         protected:
             bool _expanded: 1;
+            bool _groupOpen : 1;
         };
 
     }
 
 }
+
+#include "BaseField.hpp"
 
 #include <debug_helper_disable.h>

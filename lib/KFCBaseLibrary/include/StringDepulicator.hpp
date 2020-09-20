@@ -91,7 +91,6 @@ inline const char *StringDeduplicator::isAttached(const char *str, size_t *len)
         return str;
     }
 
-     
     auto ptr = _strings.findStr(str, (len == nullptr) ? safe_strlen(str) : (*len == ~0U ? (*len = safe_strlen(str)) : *len));
     if (ptr) {
         _dupesCount++;
@@ -106,10 +105,7 @@ inline const char *StringDeduplicator::isAttached(const char *str, size_t *len)
     if (is_PGM_P(str)) {
         return str;
     }
-    if (len == NO_STRLEN) {
-        len = safe_strlen(str);
-    }
-    return _strings.findStr(str, len);
+    return _strings.findStr(str, (len == nullptr) ? safe_strlen(str) : (*len == ~0U ? (*len = safe_strlen(str)) : *len));
 }
 
 #endif
@@ -119,7 +115,7 @@ inline const char *StringDeduplicator::isAttached(const __FlashStringHelper *str
     return isAttached(reinterpret_cast<const char *>(str), len);
 }
 
-inline const char *StringDeduplicator::isAttached(const String &str) 
+inline const char *StringDeduplicator::isAttached(const String &str)
 {
     size_t len = str.length();
     return isAttached(str.c_str(), &len);
@@ -144,12 +140,12 @@ inline const char *StringDeduplicator::attachString(const char *str)
     return _strings.addString(str, len);
 }
 
-inline const char *StringDeduplicator::attachString(const __FlashStringHelper *str) 
+inline const char *StringDeduplicator::attachString(const __FlashStringHelper *str)
 {
     return attachString(reinterpret_cast<const char *>(str));
 }
 
-inline const char *StringDeduplicator::attachString(const String &str) 
+inline const char *StringDeduplicator::attachString(const String &str)
 {
     return attachString(str.c_str());
 }

@@ -21,17 +21,17 @@ namespace FormUI {
                 _field = nullptr;
             }
 
-            Error(const String & message) {
+            Error(const String &message) {
                 _field = nullptr;
                 _message = message;
             }
 
-            Error(Field::BaseField * field, const String & message) {
+            Error(Field::BaseField *field, const String &message) {
                 _field = field;
                 _message = message;
             }
 
-            const String &getName() const;
+            const char *getName() const;
             const String &getMessage() const;
             const bool is(Field::BaseField &field) const;
 

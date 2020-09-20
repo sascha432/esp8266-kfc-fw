@@ -28,9 +28,9 @@ namespace FormUI {
             VarType *__value;
 
         public:
-            ValuePointer(const String &name, VarType *value, Type type = Type::SELECT) : ValueTemplate<Ta>(name, type), __value(_initValue(value)) {
+            ValuePointer(const char *name, VarType *value, Type type = Type::SELECT) : ValueTemplate<Ta>(name, type), __value(_initValue(value)) {
             }
-            ValuePointer(const String &name, VarType &value, Type type = Type::SELECT) : ValueTemplate<Ta>(name, type), __value(_initValue(&value)) {
+            ValuePointer(const char *name, VarType &value, Type type = Type::SELECT) : ValueTemplate<Ta>(name, type), __value(_initValue(&value)) {
             }
 
             virtual void copyValue() override  {

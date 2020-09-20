@@ -34,7 +34,7 @@ void SyslogPlugin::createConfigureForm(FormCallbackType type, const String &form
     form.addMemberVariable(F("sl_proto"), cfg, &SyslogClient::ConfigStructType::protocol, FormUI::Field::Type::SELECT);
     form.addValidator(FormUI::Validator::EnumRange<SyslogClient::SyslogProtocolType>());
 
-    form.addStringGetterSetter("sl_host", SyslogClient::getHostname, SyslogClient::setHostname);
+    form.addStringGetterSetter(F("sl_host"), SyslogClient::getHostname, SyslogClient::setHostname);
     form.addValidator(FormUI::Validator::Hostname(FormUI::AllowedType::EMPTY_AND_ZEROCONF));
 
     form.addCallbackSetter(F("sl_port"), cfg.getPortAsString(), [&cfg](const String &value, FormUI::Field::BaseField &field) {

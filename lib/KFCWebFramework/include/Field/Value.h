@@ -24,8 +24,8 @@ namespace FormUI {
             using _VarType = typename::std::remove_pointer<typename::std::remove_cv<typename std::remove_reference<_Ta>::type>::type>::type;
             using VarType = typename std::relaxed_underlying_type<_VarType>::type;
 
-            ValueTemplate(const String &name, const String &value = String(), Type type = Type::NONE) : BaseField(name, value, type) {}
-            ValueTemplate(const String &name, Type type = Type::NONE) : BaseField(name, String(), type) {}
+            ValueTemplate(const char *name, const String &value = String(), Type type = Type::NONE) : BaseField(name, value, type) {}
+            ValueTemplate(const char *name, Type type = Type::NONE) : BaseField(name, String(), type) {}
 
         protected:
             // Setter

@@ -6,6 +6,7 @@
 
 #include <Arduino_compat.h>
 #include <stl_ext/type_traits.h>
+#include <stl_ext/non_std.h>
 
 #ifndef DEBUG_BUFFER
 #define DEBUG_BUFFER                            0
@@ -48,7 +49,7 @@ public:
     using difference_type = typename std::make_signed<size_type>::type;
     using iterator_category = std::random_access_iterator_tag;
 
-    class back_inserter : public std::iterator<std::output_iterator_tag, void, void, void, void>
+    class back_inserter : public non_std::iterator<std::output_iterator_tag, void, void, void, void>
     {
     public:
         back_inserter(Buffer &buffer) : _buffer(&buffer) {}
@@ -75,7 +76,7 @@ public:
         Buffer *_buffer;
     };
 
-    class iterator : public std::iterator<iterator_category, value_type, difference_type, pointer, reference> {
+    class iterator : public non_std::iterator<iterator_category, value_type, difference_type, pointer, reference> {
     public:
         iterator(Buffer &buffer, size_type offset) : _buffer(&buffer), _offset(offset) {
         }

@@ -86,7 +86,7 @@ public:
     using difference_type = typename std::make_signed<size_type>::type;
     using iterator_category = std::random_access_iterator_tag;
 
-    class iterator : public std::iterator<iterator_category, value_type, difference_type, pointer, reference> {
+    class iterator : public non_std::iterator<iterator_category, value_type, difference_type, pointer, reference> {
     public:
         iterator(buffer_type &buffer, pointer iterator) : _buffer(&buffer), _iterator(iterator) {
         }

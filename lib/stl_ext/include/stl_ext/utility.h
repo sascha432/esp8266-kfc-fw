@@ -4,10 +4,7 @@
 
 #pragma once
 
-#ifndef STL_STD_EXT_NAMESPACE
 #include "../stl_ext.h"
-#endif
-
 #include <type_traits>
 #include "type_traits.h"
 
@@ -73,3 +70,4 @@ namespace STL_STD_EXT_NAMESPACE_EX {
     };
 
 }
+

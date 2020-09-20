@@ -4,10 +4,7 @@
 
 #pragma once
 
-#ifndef STL_STD_EXT_NAMESPACE
 #include "../stl_ext.h"
-#endif
-
 #include <type_traits>
 
 namespace STL_STD_EXT_NAMESPACE {
@@ -21,7 +18,7 @@ namespace STL_STD_EXT_NAMESPACE {
 
 // #endif
 
-#if !__HAS_CPP14
+#if __HAS_CPP14 == 0
 
     template<typename _Ta>
     using make_unsigned_t = typename std::make_unsigned<_Ta>::type;
@@ -35,9 +32,12 @@ namespace STL_STD_EXT_NAMESPACE {
     template <bool _Ta, class _Tb = void>
     using enable_if_t = typename std::enable_if<_Ta, _Tb>::type;
 
+    template <class _Ta>
+    using remove_const_t = typename remove_const<_Ta>::type;
+
 #endif
 
-#if !__HAS_CPP17
+#if __HAS_CPP17 == 0
 
     // template<typename _Ta>
     // inline constexpr bool is_trivially_copyable_v = is_trivially_copyable<_Ta>::value;

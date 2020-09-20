@@ -4,17 +4,14 @@
 
 #pragma once
 
-#ifndef STL_STD_EXT_NAMESPACE
 #include "../stl_ext.h"
-#endif
-
 #include <type_traits>
 #include <functional>
 #include "type_traits.h"
 
 namespace STL_STD_EXT_NAMESPACE {
 
-#if !__HAS_CPP17
+#if __HAS_CPP17 == 0
 
     template <typename _Ta, typename _Tpred>
     const _Ta& clamp(const _Ta& value, const _Ta& minValue, const _Ta& maxValue, _Tpred pred) {

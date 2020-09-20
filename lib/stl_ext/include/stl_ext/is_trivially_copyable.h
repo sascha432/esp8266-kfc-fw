@@ -4,9 +4,7 @@
 
 #pragma once
 
-#ifndef STL_STD_EXT_NAMESPACE
 #include "../stl_ext.h"
-#endif
 
 namespace STL_STD_EXT_NAMESPACE {
 
@@ -18,7 +16,7 @@ namespace STL_STD_EXT_NAMESPACE {
 
 #endif
 
-#if !__HAS_CPP14
+#if __HAS_CPP14 == 0
 
     template <class _Ta>
     using is_trivially_copyable_t = typename is_trivially_copyable<_Ta>::type;

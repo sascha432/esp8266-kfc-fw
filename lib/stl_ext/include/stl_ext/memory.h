@@ -4,11 +4,9 @@
 
 #pragma once
 
-#ifndef STL_STD_EXT_NAMESPACE
 #include "../stl_ext.h"
-#endif
-
 #include <memory>
+#include "non_std.h"
 
 namespace STL_STD_EXT_NAMESPACE_EX {
 
@@ -16,8 +14,8 @@ namespace STL_STD_EXT_NAMESPACE_EX {
     // Test *timer;
     // auto iterator = std::find_if(_timers.begin(), _timers.end(), std::compare_unique_ptr(timer));
 
-    template <class _Ta>
-    class compare_unique_ptr_function : public std::unary_function<_Ta, bool>
+    template <typename _Ta>
+    class compare_unique_ptr_function : public non_std::unary_function<_Ta, bool>
     {
     protected:
         _Ta *_ptr;
@@ -28,7 +26,7 @@ namespace STL_STD_EXT_NAMESPACE_EX {
         }
     };
 
-    template <class _Ta>
+    template <typename _Ta>
     static inline compare_unique_ptr_function<_Ta> compare_unique_ptr(_Ta *ptr) {
         return compare_unique_ptr_function<_Ta>(ptr);
     }

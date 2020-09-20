@@ -4,10 +4,7 @@
 
 #pragma once
 
-#ifndef STL_STD_EXT_NAMESPACE
 #include "../stl_ext.h"
-#endif
-
 #include <array>
 
 namespace STL_STD_EXT_NAMESPACE {

@@ -12,7 +12,28 @@
 #define STL_STD_EXT_NAMESPACE_EX        std_ex
 #endif
 
+#if _MSC_VER
+#include <vcruntime.h>
+#endif
 
-#define __HAS_CPP11                     (__cplusplus >= 201103L) || (defined(_MSC_VER) && (__cplusplus == 199711L || __cplusplus >= 201103L))
-#define __HAS_CPP14                     (__cplusplus >= 201402L) || (defined(_MSC_VER) && (__cplusplus == 199711L || __cplusplus >= 201402L))
-#define __HAS_CPP17                     (__cplusplus >= 201703L) || (defined(_MSC_VER) && (__cplusplus == 199711L || __cplusplus >= 201703L))
+#if (__cplusplus > 201703L) || (_HAS_CXX20)
+#define __HAS_CPP20		1
+#define __HAS_CPP17		1
+#define __HAS_CPP14		1
+#define __HAS_CPP11		1
+#elif (__cplusplus >= 201703L) || (_HAS_CXX17)
+#define __HAS_CPP20		0
+#define __HAS_CPP17		1
+#define __HAS_CPP14		1
+#define __HAS_CPP11		1
+#elif (__cplusplus >= 201402L) || (_HAS_CXX14)
+#define __HAS_CPP20		0
+#define __HAS_CPP17		0
+#define __HAS_CPP14		1
+#define __HAS_CPP11		1
+#elif (__cplusplus >= 201103L) || (_HAS_CXX11)
+#define __HAS_CPP20		0
+#define __HAS_CPP17		0
+#define __HAS_CPP14		0
+#define __HAS_CPP11		1
+#endif

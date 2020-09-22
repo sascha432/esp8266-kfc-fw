@@ -36,11 +36,11 @@ public:
 };
 static Cleanup _cleanUp;
 
-DebugHandle::DebugHandle(DebugHandle &&handle) noexcept : 
+DebugHandle::DebugHandle(DebugHandle &&handle) noexcept :
     _name(std::exchange(handle._name, nullptr)),
+    _get(std::exchange(handle._get, 0)),
     _flashReadSize(std::exchange(handle._flashReadSize, 0)),
     _handle(std::exchange(handle._handle, 0)),
-    _get(std::exchange(handle._get, 0)),
     _set(std::exchange(handle._set, 0)),
     _writeGet(std::exchange(handle._writeGet, 0)),
     _flashRead(std::exchange(handle._flashRead, 0)),
@@ -51,7 +51,7 @@ DebugHandle::DebugHandle(DebugHandle &&handle) noexcept :
 #pragma push_macro("new")
 #undef new
 
-DebugHandle &DebugHandle::operator=(DebugHandle &&handle) noexcept 
+DebugHandle &DebugHandle::operator=(DebugHandle &&handle) noexcept
 {
     ::new(static_cast<void *>(this)) DebugHandle(std::move(handle));
     return *this;
@@ -59,27 +59,27 @@ DebugHandle &DebugHandle::operator=(DebugHandle &&handle) noexcept
 
 #pragma pop_macro("new")
 
-DebugHandle::DebugHandle() : 
-    _name((char *)emptyString.c_str()), 
+DebugHandle::DebugHandle() :
+    _name((char *)emptyString.c_str()),
     _get(0),
     _flashReadSize(0),
     _handle(~0),
-    _set(0), 
-    _writeGet(0), 
-    _flashRead(0), 
-    _flashWrite(0) 
+    _set(0),
+    _writeGet(0),
+    _flashRead(0),
+    _flashWrite(0)
 {
 }
 
-DebugHandle::DebugHandle(const char *name, const HandleType handle) : 
-    _name(nullptr), 
-    _get(0), 
+DebugHandle::DebugHandle(const char *name, const HandleType handle) :
+    _name(nullptr),
+    _get(0),
     _flashReadSize(0),
-    _handle(handle), 
-    _set(0), 
-    _writeGet(0), 
-    _flashRead(0), 
-    _flashWrite(0) 
+    _handle(handle),
+    _set(0),
+    _writeGet(0),
+    _flashRead(0),
+    _flashWrite(0)
 {
     if (is_PGM_P(name)) {
         // we can just store the pointer if in PROGMEM
@@ -93,7 +93,7 @@ DebugHandle::DebugHandle(const char *name, const HandleType handle) :
     }
 }
 
-DebugHandle::~DebugHandle() 
+DebugHandle::~DebugHandle()
 {
     if (_name && _name != emptyString.c_str() && !is_PGM_P(_name)) {
         __DBG_printf("free=%p", _name);
@@ -131,7 +131,7 @@ DebugHandle::DebugHandleVector &DebugHandle::getHandles()
     return *_handles;
 }
 
-void DebugHandle::print(Print &output) const 
+void DebugHandle::print(Print &output) const
 {
     output.printf_P(PSTR("%04x: [get=%u,set=%u,write_get=%u,flash:read=#%u/%u,write=#%u/%u]: %s\n"), _handle, _get, _set, _writeGet, _flashRead, _flashReadSize, _writeGet, _writeGet * 4096, _name);
 }

@@ -6,7 +6,7 @@
 
 #include "ConfigurationParameter.h"
 
-template<class T>
+template<class _Ta>
 class ConfigurationParameterT : public ConfigurationParameter
 {
 public:
@@ -16,12 +16,12 @@ public:
         return _param.hasData();
     }
 
-    T &get() {
-        return *reinterpret_cast<T *>(_param.data());
+    _Ta &get() {
+        return *reinterpret_cast<_Ta *>(_param.data());
     }
-    void set(const T &value) {
+    void set(const _Ta &value) {
         __LDBG_assert_panic(_param.isWriteable(), "not writable");
-        *reinterpret_cast<T *>(_param._writeable->begin()) = value;
+        *reinterpret_cast<_Ta *>(_param._writeable->begin()) = value;
     }
 };
 

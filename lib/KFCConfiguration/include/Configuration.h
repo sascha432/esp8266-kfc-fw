@@ -8,10 +8,12 @@
 #include <PrintString.h>
 #include <crc16.h>
 #include <list>
-#include <chunked_list.h>
 #include <vector>
 #include <Buffer.h>
 #include <DumpBinary.h>
+#include <type_traits>
+#include <stl_ext/chunked_list.h>
+#include <stl_ext/is_trivially_copyable.h>
 
 #include "ConfigurationHelper.h"
 #include "ConfigurationParameter.h"
@@ -71,7 +73,7 @@ public:
     } HeaderAligned_t;
 
     // typedef std::list<ConfigurationParameter> ParameterList;
-    typedef xtra_containers::chunked_list<ConfigurationParameter, 6> ParameterList;
+    typedef std::chunked_list<ConfigurationParameter, 6> ParameterList;
 
 public:
     Configuration(uint16_t offset, uint16_t size);
@@ -92,11 +94,11 @@ public:
     // write data to EEPROM
     bool write();
 
-    template <typename T>
-    ConfigurationParameter &getWritableParameter(HandleType handle, size_type maxLength = sizeof(T)) {
+    template <typename _Ta>
+    ConfigurationParameter &getWritableParameter(HandleType handle, size_type maxLength = sizeof(_Ta)) {
         __LDBG_printf("handle=%04x max_len=%u", handle, maxLength);
         uint16_t offset;
-        auto &param = _getOrCreateParam(ConfigurationParameter::getType<T>(), handle, offset);
+        auto &param = _getOrCreateParam(ConfigurationParameter::getType<_Ta>(), handle, offset);
         if (param._param.isString()) {
             param.getString(*this, offset);
         }
@@ -104,30 +106,30 @@ public:
             size_type length;
             auto ptr = param.getBinary(*this, length, offset);
             if (ptr) {
-                __DBG_assert_printf(length == maxLength, "%04x: resizing binary blob=%u to %u maxLength=%u type=%u", handle, length, sizeof(T), maxLength, ConfigurationParameter::getType<T>());
+                __DBG_assert_printf(length == maxLength, "%04x: resizing binary blob=%u to %u maxLength=%u type=%u", handle, length, sizeof(_Ta), maxLength, ConfigurationParameter::getType<_Ta>());
             }
         }
         makeWriteable(param, maxLength);
         return param;
     }
 
-    template <typename T>
+    template <typename _Ta>
     ConfigurationParameter *getParameter(HandleType handle) {
         __LDBG_printf("handle=%04x", handle);
         size_type offset;
-        auto iterator = _findParam(ConfigurationParameter::getType<T>(), handle, offset);
+        auto iterator = _findParam(ConfigurationParameter::getType<_Ta>(), handle, offset);
         if (iterator == _params.end()) {
             return nullptr;
         }
         return &(*iterator);
     }
 
-    template <typename T>
-    ConfigurationParameterT<T> &getParameterT(HandleType handle) {
+    template <typename _Ta>
+    ConfigurationParameterT<_Ta> &getParameterT(HandleType handle) {
         __LDBG_printf("handle=%04x", handle);
         uint16_t offset;
-        auto &param = _getOrCreateParam(ConfigurationParameter::getType<T>(), handle, offset);
-        return static_cast<ConfigurationParameterT<T> &>(param);
+        auto &param = _getOrCreateParam(ConfigurationParameter::getType<_Ta>(), handle, offset);
+        return static_cast<ConfigurationParameterT<_Ta> &>(param);
     }
 
     void makeWriteable(ConfigurationParameter &param, size_type length);
@@ -190,26 +192,26 @@ public:
         set<bool>(handle, flag ? true : false);
     }
 
-    template <typename T>
+    template <typename _Ta>
     bool exists(HandleType handle) {
         uint16_t offset;
-        return _findParam(ConfigurationParameter::getType<T>(), handle, offset) != _params.end();
+        return _findParam(ConfigurationParameter::getType<_Ta>(), handle, offset) != _params.end();
     }
 
-    template <typename T>
+    template <typename _Ta>
     // static_assert(std::is_<>);
-    const T get(HandleType handle) {
+    const _Ta get(HandleType handle) {
         __LDBG_printf("handle=%04x", handle);
         uint16_t offset;
-        auto param = _findParam(ConfigurationParameter::getType<T>(), handle, offset);
+        auto param = _findParam(ConfigurationParameter::getType<_Ta>(), handle, offset);
         if (param == _params.end()) {
-            return T();
+            return _Ta();
         }
         size_type length;
-        auto ptr = reinterpret_cast<const T *>(param->getBinary(*this, length, offset));
-        if (!ptr || length != sizeof(T)) {
+        auto ptr = reinterpret_cast<const _Ta *>(param->getBinary(*this, length, offset));
+        if (!ptr || length != sizeof(_Ta)) {
 #if DEBUG_CONFIGURATION
-            if (ptr && length != sizeof(T)) {
+            if (ptr && length != sizeof(_Ta)) {
                 __LDBG_printf("size does not match, type=%s handle %04x (%s)",
                     (const char *)ConfigurationParameter::getTypeString(param->getType()),
                     handle,
@@ -217,24 +219,24 @@ public:
                 );
             }
 #endif
-            return T();
+            return _Ta();
         }
         return *ptr;
     }
 
-    template <typename T>
-    T &getWriteable(HandleType handle) {
+    template <typename _Ta>
+    _Ta &getWriteable(HandleType handle) {
         __LDBG_printf("handle=%04x", handle);
-        auto &param = getWritableParameter<T>(handle);
-        return *reinterpret_cast<T *>(param._getParam().data());
+        auto &param = getWritableParameter<_Ta>(handle);
+        return *reinterpret_cast<_Ta *>(param._getParam().data());
     }
 
-    template <typename T>
-    const T &set(HandleType handle, const T &data) {
-        __LDBG_printf("handle=%04x data=%p len=%u", handle, std::addressof(data), sizeof(T));
+    template <typename _Ta>
+    const _Ta &set(HandleType handle, const _Ta &data) {
+        __LDBG_printf("handle=%04x data=%p len=%u", handle, std::addressof(data), sizeof(_Ta));
         uint16_t offset;
-        auto &param = _getOrCreateParam(ConfigurationParameter::getType<T>(), handle, offset);
-        param.setData(*this, (const uint8_t *)&data, (size_type)sizeof(T));
+        auto &param = _getOrCreateParam(ConfigurationParameter::getType<_Ta>(), handle, offset);
+        param.setData(*this, (const uint8_t *)&data, (size_type)sizeof(_Ta));
         return data;
     }
 

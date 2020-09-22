@@ -33,12 +33,16 @@
 //#warning _CRTDBG_MAP_ALLOC=0
 #endif
 
-
 #else
 #define CHECK_MEMORY(...)                               ;
 #endif
 
 #if _MSC_VER
+
+#ifndef __attribute__
+#define __attribute__(...)
+#endif
+
 // place on heap for memory check
 #define stack_array(name, type, size)                   size_t name##_unique_ptr_size = sizeof(type[size]); auto name##_unique_ptr = std::unique_ptr<type[]>(new type[size]); auto *name = (name##_unique_ptr).get()
 #define sizeof_stack_array(name)                        name##_unique_ptr_size

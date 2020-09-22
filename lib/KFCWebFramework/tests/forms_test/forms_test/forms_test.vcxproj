@@ -84,10 +84,10 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;DEBUG_KFC_FORMS=1;DEBUG=1;_DEBUG=1;_CRTDBG_MAP_ALLOC;ARDUINO=101;HAVE_MEM_DEBUG=0;ETS_MAIN_NO_MAIN_FUNC=1;ETS_MAIN_NO_TIMERS=1;ETS_MAIN_NO_LOOP=1;STL_STD_EXT_NAMESPACE=std;STL_STD_EXT_NAMESPACE_EX=std;__FORM_INLINED_METHOD__=;FORM_USE_INLINE=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;DEBUG_KFC_FORMS=1;DEBUG=1;_DEBUG=1;_CRTDBG_MAP_ALLOC;ARDUINO=101;HAVE_MEM_DEBUG=0;ETS_MAIN_NO_MAIN_FUNC=1;ETS_MAIN_NO_TIMERS=1;ETS_MAIN_NO_LOOP=1;STL_STD_EXT_NAMESPACE=std;STL_STD_EXT_NAMESPACE_EX=std;__FORM_INLINED_METHOD__=inline;FORM_USE_INLINE=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\stl_ext\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib-mock\ets_impl;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib-mock\KFCBaseLibrary\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\tests\enum_test\pattern_test;C:\Users\sascha\Documents\PlatformIO\Projects\libcrc16\src;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCJson\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCWebFramework\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCEventScheduler\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\stl_ext\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib-mock\ets_impl;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib-mock\KFCBaseLibrary\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\tests\enum_test\pattern_test;C:\Users\sascha\Documents\PlatformIO\Projects\libcrc16\src;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCJson\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCWebFramework\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCEventScheduler\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib-extra\boost_1_61_0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp14</LanguageStandard>
       <BrowseInformation>true</BrowseInformation>
       <DisableSpecificWarnings>26812 </DisableSpecificWarnings>
@@ -217,6 +217,20 @@
     <ClInclude Include="..\..\..\..\KFCBaseLibrary\include\DebugMemoryHelper.h" />
     <ClInclude Include="..\..\..\..\KFCBaseLibrary\include\PrintArgs.h" />
     <ClInclude Include="..\..\..\..\KFCBaseLibrary\include\PrintArgs.hpp" />
+    <ClInclude Include="..\..\..\..\KFCBaseLibrary\include\PrintArgsPrintWrapper.h" />
+    <ClInclude Include="..\..\..\..\KFCBaseLibrary\include\StringDepulicator.h" />
+    <ClInclude Include="..\..\..\..\KFCBaseLibrary\include\StringDepulicator.hpp" />
+    <ClInclude Include="..\..\..\..\stl_ext\include\stl_ext.h" />
+    <ClInclude Include="..\..\..\..\stl_ext\include\stl_ext\algorithm.h" />
+    <ClInclude Include="..\..\..\..\stl_ext\include\stl_ext\array_of.h" />
+    <ClInclude Include="..\..\..\..\stl_ext\include\stl_ext\is_trivially_copyable.h" />
+    <ClInclude Include="..\..\..\..\stl_ext\include\stl_ext\iterator.h" />
+    <ClInclude Include="..\..\..\..\stl_ext\include\stl_ext\memory.h" />
+    <ClInclude Include="..\..\..\..\stl_ext\include\stl_ext\type_traits.h" />
+    <ClInclude Include="..\..\..\..\stl_ext\include\stl_ext\utility.h" />
+    <ClInclude Include="..\..\..\..\stl_ext\include\stl_ext\variant.h" />
+    <ClInclude Include="..\..\..\..\stl_ext\include\stl_ext\vector.h" />
+    <ClInclude Include="..\..\..\..\stl_ext\include\stl_ext_all.h" />
     <ClInclude Include="..\..\..\include\BootstrapMenu.h" />
     <ClInclude Include="..\..\..\include\failure_counter.h" />
     <ClInclude Include="..\..\..\include\Field\BaseField.h" />
@@ -241,7 +255,9 @@
     <ClInclude Include="..\..\..\include\KFCForms.h" />
     <ClInclude Include="..\..\..\include\session.h" />
     <ClInclude Include="..\..\..\include\SHA1.h" />
+    <ClInclude Include="..\..\..\include\Utility\Debug.h" />
     <ClInclude Include="..\..\..\include\Utility\ForwardList.h" />
+    <ClInclude Include="..\..\..\include\Utility\ProgMemHelper.h" />
     <ClInclude Include="..\..\..\include\Validator\BaseValidator.h" />
     <ClInclude Include="..\..\..\include\Validator\Callback.h" />
     <ClInclude Include="..\..\..\include\Validator\Enum.h" />

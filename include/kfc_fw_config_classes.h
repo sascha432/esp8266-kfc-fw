@@ -130,12 +130,14 @@ namespace ConfigurationHelper {
     static constexpr type kMinValueFor_##name = min_value; \
     static constexpr type kMaxValueFor_##name = max_value; \
     static constexpr type kDefaultValueFor_##name = default_value; \
-    static_assert(min_value >= 0 && min_value < (1U << size), "min_value value out of range (" _STRINGIFY(size) " bits)"); \
-    static_assert(max_value >= 0 && max_value < (1U << size), "max_value value out of range (" _STRINGIFY(size) " bits)"); \
-    static_assert(default_value == 0 || (default_value >= min_value && default_value <= max_value), "default_value value out of range"); \
+    static constexpr type kTypeMinValueFor_##name = std::is_signed<type>::value ? -(1U << (size - 1)) + 1 : 0; \
+    static constexpr type kTypeMaxValueFor_##name = std::is_signed<type>::value ? (1U << (size - 1)) - 1 : (1U << size) - 1; \
+    static_assert(min_value >= kTypeMinValueFor_##name && min_value <= kTypeMaxValueFor_##name, "min_value value out of range (" _STRINGIFY(size) " bits)"); \
+    static_assert(max_value >= kTypeMinValueFor_##name && max_value <= kTypeMaxValueFor_##name, "max_value value out of range (" _STRINGIFY(size) " bits)"); \
+    static_assert(default_value == 0 || (default_value >= kTypeMinValueFor_##name && default_value <= kTypeMaxValueFor_##name), "default_value value out of range"); \
     static_assert(min_value >= std::numeric_limits<long>::min() && min_value <= std::numeric_limits<long>::max(), "min_value value out of range (type long)"); \
     static_assert(max_value >= std::numeric_limits<long>::min() && max_value <= std::numeric_limits<long>::max(), "max_value value out of range (type long)"); \
-    CREATE_BITFIELD_TYPE(name, size, type, bits)
+     CREATE_BITFIELD_TYPE(name, size, type, bits)
 
 #define CREATE_BOOL_BITFIELD_MIN_MAX(name, min_value, max_value, default_value) \
     CREATE_BITFIELD_TYPE_MIN_MAX(name, 1, bool, min_value, max_value, default_value)
@@ -143,8 +145,14 @@ namespace ConfigurationHelper {
 #define CREATE_UINT8_BITFIELD_MIN_MAX(name, size, min_value, max_value, default_value) \
     CREATE_BITFIELD_TYPE_MIN_MAX(name, size, uint8_t, min_value, max_value, default_value)
 
+#define CREATE_INT16_BITFIELD_MIN_MAX(name, size, min_value, max_value, default_value) \
+    CREATE_BITFIELD_TYPE_MIN_MAX(name, size, int16_t, min_value, max_value, default_value)
+
 #define CREATE_UINT16_BITFIELD_MIN_MAX(name, size, min_value, max_value, default_value) \
     CREATE_BITFIELD_TYPE_MIN_MAX(name, size, uint16_t, min_value, max_value, default_value)
+
+#define CREATE_INT32_BITFIELD_MIN_MAX(name, size, min_value, max_value, default_value) \
+    CREATE_BITFIELD_TYPE_MIN_MAX(name, size, int32_t, min_value, max_value, default_value)
 
 #define CREATE_UINT32_BITFIELD_MIN_MAX(name, size, min_value, max_value, default_value) \
     CREATE_BITFIELD_TYPE_MIN_MAX(name, size, uint32_t, min_value, max_value, default_value)
@@ -1231,8 +1239,21 @@ namespace KFCConfigurationClasses {
         // --------------------------------------------------------------------
         // BlindsController
 
+        #ifndef BLINDS_CONFIG_MAX_OPERATIONS
+        #define BLINDS_CONFIG_MAX_OPERATIONS                        6
+        #endif
+
         class BlindsConfig {
         public:
+            static constexpr size_t kChannel0_OpenPinArrayIndex = 0;
+            static constexpr size_t kChannel0_ClosePinArrayIndex = 1;
+            static constexpr size_t kChannel1_OpenPinArrayIndex = 2;
+            static constexpr size_t kChannel1_ClosePinArrayIndex = 3;
+            static constexpr size_t kMultiplexerPinArrayIndex = 4;
+            static constexpr size_t kDACPinArrayIndex = 5;
+
+            static constexpr size_t kMaxOperations = BLINDS_CONFIG_MAX_OPERATIONS;
+
             enum class OperationType : uint8_t {
                 NONE = 0,
                 OPEN_CHANNEL0,                    // _FOR_CHANNEL0_AND_ALL
@@ -1246,7 +1267,7 @@ namespace KFCConfigurationClasses {
                 MAX
             };
 
-            enum class MultiplexerType : uint8_t {
+            enum class MultiplexerType : uint16_t {
                 LOW_FOR_CHANNEL0 = 0,
                 HIGH_FOR_CHANNEL0 = 1,
                 MAX
@@ -1269,56 +1290,51 @@ namespace KFCConfigurationClasses {
             } BlindsConfigOperation_t;
 
             typedef struct __attribute__packed__ BlindsConfigChannel_t {
-                uint16_t pwm_value;                 // 0-1023
-                uint16_t current_limit;             // mA
-                uint16_t current_limit_time;        // ms
-                uint16_t open_time;                 // ms
-                uint16_t close_time;                // ms
-                uint16_t dac_current_limit;         // 0-1023
-
+                using Type = BlindsConfigChannel_t;
+                CREATE_UINT32_BITFIELD_MIN_MAX(current_limit_mA, 12, 1, 4095, 100);                         // bits 00:11 ofs:len 000:12 0-0x0fff (4095)
+                CREATE_UINT32_BITFIELD_MIN_MAX(dac_pwm_value, 10, 0, 1023, 512);                    // bits 12:21 ofs:len 012:10 0-0x03ff (1023)
+                CREATE_UINT32_BITFIELD_MIN_MAX(pwm_value, 10, 0, 1023, 256);                                // bits 22:31 ofs:len 022:10 0-0x03ff (1023)
+                CREATE_UINT32_BITFIELD_MIN_MAX(current_avg_period_us, 16, 1000, 65000, 12500);              // bits 00:15 ofs:len 032:16 0-0xffff (65535)
+                CREATE_UINT32_BITFIELD_MIN_MAX(open_time_ms, 16, 0, 60000, 5000);                           // bits 16:31 ofs:len 048:16 0-0xffff (65535)
+                CREATE_UINT16_BITFIELD_MIN_MAX(close_time_ms, 16, 0, 60000, 5000);                          // bits 00:15 ofs:len 064:16 0-0xffff (65535)
                 BlindsConfigChannel_t();
 
                 template<typename Archive>
-                void serialize(Archive & ar, kfc::serialization::version version){
+                void serialize(Archive & ar, kfc::serialization::version version) {
+                    ar & KFC_SERIALIZATION_NVP(current_limit_mA);
+                    ar & KFC_SERIALIZATION_NVP(dac_pwm_value);
                     ar & KFC_SERIALIZATION_NVP(pwm_value);
-                    ar & KFC_SERIALIZATION_NVP(current_limit);
-                    ar & KFC_SERIALIZATION_NVP(current_limit_time);
-                    ar & KFC_SERIALIZATION_NVP(open_time);
-                    ar & KFC_SERIALIZATION_NVP(close_time);
+                    ar & KFC_SERIALIZATION_NVP(current_avg_period_us);
+                    ar & KFC_SERIALIZATION_NVP(open_time_ms);
+                    ar & KFC_SERIALIZATION_NVP(close_time_ms);
                 }
-
             } BlindsConfigChannel_t;
 
             typedef struct __attribute__packed__ BlindsConfig_t {
                 using Type = BlindsConfig_t;
 
                 BlindsConfigChannel_t channels[2];
-                BlindsConfigOperation_t open[6];
-                BlindsConfigOperation_t close[6];
+                BlindsConfigOperation_t open[kMaxOperations];
+                BlindsConfigOperation_t close[kMaxOperations];
                 uint8_t pins[6];
-                CREATE_ENUM_BITFIELD(multiplexer, MultiplexerType);
-                uint16_t adc_divider;
-                uint16_t pwm_frequency;
-                uint16_t adc_read_interval;                 // microseconds
-                uint16_t adc_recovery_time;                 // microseconds
-                uint8_t adc_recoveries_per_second;
-                int16_t adc_offset;
-                uint32_t pwm_softstart_time;                // microseconds
-
-                static constexpr uint16_t kAdcDividerDefault = 25;
-                static constexpr uint16_t kPwmFrequencyDefault = 27500;
-                static constexpr uint16_t kAdcReadIntervalDefault = 750;
-                static constexpr uint16_t kAdcRecoveryTimeDefault = 10000;
-                static constexpr uint8_t kAdcRecoveriesPerSecDefault = 5;
-                static constexpr uint32_t kPwmSoftStartTime = 50000;
+                CREATE_UINT16_BITFIELD_MIN_MAX(pwm_frequency, 16, 1000, 40000, 30000);                      // bits 00:15 ofs:len 000:16 0-0xffff (65535)
+                CREATE_UINT16_BITFIELD_MIN_MAX(adc_recovery_time, 16, 1000, 65000, 12500);                  // bits 00:15 ofs:len 016:16 0-0xffff (65535)
+                CREATE_UINT16_BITFIELD_MIN_MAX(adc_read_interval, 12, 250, 4000, 750);                      // bits 00:11 ofs:len 032:12 0-0xfff (4095)
+                CREATE_UINT16_BITFIELD_MIN_MAX(adc_recoveries_per_second, 3, 1, 7, 4);                      // bits 12:14 ofs:len 044:03 0-0x07 (7)
+                CREATE_ENUM_BITFIELD(multiplexer, MultiplexerType);                                         // bits 15:15 ofs:len 047:01 0-0x01 (1)
+                CREATE_INT32_BITFIELD_MIN_MAX(adc_offset, 11, -1000, 1000, 0);                              // bits 00:10 ofs:len 048:11 0-0x07ff (-1023 - 1023)
+                CREATE_INT32_BITFIELD_MIN_MAX(pwm_softstart_time, 18, 0, 125000, 50000);                    // bits 11:28 ofs:len 059:18 0-0x3ffff (262143)
+                // uint32_t __free4: 3;                                                                        // bits 29:31 ofs:len 077:03 0-0x0007 (7)
 
                 template<typename Archive>
                 void serialize(Archive & ar, kfc::serialization::version version) {
-                    ar & KFC_SERIALIZATION_NVP(channels);
-                    ar & KFC_SERIALIZATION_NVP(open);
-                    ar & KFC_SERIALIZATION_NVP(close);
-                    ar & KFC_SERIALIZATION_NVP(pins);
+                    ar & KFC_SERIALIZATION_NVP(pwm_frequency);
+                    ar & KFC_SERIALIZATION_NVP(adc_recovery_time);
+                    ar & KFC_SERIALIZATION_NVP(adc_read_interval);
+                    ar & KFC_SERIALIZATION_NVP(adc_recoveries_per_second);
                     ar & KFC_SERIALIZATION_NVP(multiplexer);
+                    ar & KFC_SERIALIZATION_NVP(adc_offset);
+                    ar & KFC_SERIALIZATION_NVP(pwm_softstart_time);
                 }
 
                 BlindsConfig_t();

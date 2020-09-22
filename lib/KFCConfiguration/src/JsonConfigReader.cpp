@@ -4,10 +4,16 @@
 
 #include "JsonConfigReader.h"
 
-JsonConfigReader::JsonConfigReader(Stream* stream, Configuration &config, Configuration::Handle_t *handles) : JsonBaseReader(stream), _config(config), _handles(handles), _handle(INVALID_HANDLE), _isConfigObject(false) {
+JsonConfigReader::JsonConfigReader(Stream* stream, Configuration &config, HandleType *handles) : 
+    JsonBaseReader(stream), 
+    _config(config), 
+    _handles(handles), 
+    _handle(INVALID_HANDLE), 
+    _isConfigObject(false) 
+{
 }
 
-JsonConfigReader::JsonConfigReader(Configuration &config, Configuration::Handle_t *handles) : JsonConfigReader(nullptr, config, handles) {
+JsonConfigReader::JsonConfigReader(Configuration &config, HandleType *handles) : JsonConfigReader(nullptr, config, handles) {
 }
 
 bool JsonConfigReader::beginObject(bool isArray)
@@ -15,7 +21,7 @@ bool JsonConfigReader::beginObject(bool isArray)
     if (_isConfigObject) {
         if (getLevel() == 3) {
             _handle = (uint16_t)stringToLl(getKey());
-            _type = ConfigurationParameter::_INVALID;
+            _type = ParameterType::_INVALID;
             _length = 0;
             _data = String();
             //Serial.printf("key %s\n", getKey().c_str());
@@ -31,7 +37,7 @@ bool JsonConfigReader::endObject()
 {
     if (_isConfigObject) {
         if (getLevel() == 3) {
-            if (_handle != INVALID_HANDLE && _type != ConfigurationParameter::_INVALID) {
+            if (_handle != INVALID_HANDLE && _type != ParameterType::_INVALID) {
                 if (_handles) {
                     bool found = false;
                     auto current = _handles;
@@ -43,43 +49,43 @@ bool JsonConfigReader::endObject()
                         current++;
                     }
                     if (!found) {
-                        _type = ConfigurationParameter::_INVALID;
+                        _type = ParameterType::_INVALID;
                     }
                 }
-                __LDBG_printf("JsonConfigReader::endObject(): handle %04x type %u valid %u", _handle, _type, _type != ConfigurationParameter::_INVALID);
+                __LDBG_printf("JsonConfigReader::endObject(): handle %04x type %u valid %u", _handle, _type, _type != ParameterType::_INVALID);
                 bool imported = true;
                 switch (_type) {
-                case ConfigurationParameter::BYTE: {
+                case ParameterType::BYTE: {
                         uint8_t byte = (uint8_t)stringToLl(_data);
                         _config.set<uint8_t>(_handle, byte);
                     }
                     break;
-                case ConfigurationParameter::WORD: {
+                case ParameterType::WORD: {
                         uint16_t word = (uint16_t)stringToLl(_data);
                         _config.set<uint16_t>(_handle, word);
                     }
                     break;
-                case ConfigurationParameter::DWORD: {
+                case ParameterType::DWORD: {
                         uint32_t dword = (uint32_t)stringToLl(_data);
                         _config.set<uint32_t>(_handle, dword);
                     }
                     break;
-                case ConfigurationParameter::QWORD: {
+                case ParameterType::QWORD: {
                         uint64_t qword = (uint64_t)stringToLl(_data);
                         _config.set<uint64_t>(_handle, qword);
                     }
                     break;
-                case ConfigurationParameter::FLOAT: {
+                case ParameterType::FLOAT: {
                         float number = _data.toFloat();
                         _config.set<float>(_handle, number);
                     }
                     break;
-                case ConfigurationParameter::DOUBLE: {
+                case ParameterType::DOUBLE: {
                         double number = strtod(_data.c_str(), nullptr);
                         _config.set<double>(_handle, number);
                     }
                     break;
-                case ConfigurationParameter::BINARY: {
+                case ParameterType::BINARY: {
                         if (_length * 2 == _data.length()) {
                             Buffer buffer;
                             auto ptr = _data.c_str();
@@ -93,10 +99,10 @@ bool JsonConfigReader::endObject()
                         }
                     }
                     break;
-                case ConfigurationParameter::STRING:
+                case ParameterType::STRING:
                     _config.setString(_handle, _data);
                     break;
-                case ConfigurationParameter::_INVALID:
+                case ParameterType::_INVALID:
                 default:
                     imported = false;
                     break;
@@ -125,7 +131,7 @@ bool JsonConfigReader::processElement()
         //Serial.printf("key %s value %s type %s path %s index %d\n", key, getValue().c_str(), jsonType2String(getType()).c_str(), path, getObjectIndex());
 
         if (!strcmp_P(key, PSTR("type"))) {
-            _type = (ConfigurationParameter::TypeEnum_t)stringToLl(getValue());
+            _type = (ParameterType)stringToLl(getValue());
         }
         else if (!strcmp_P(key, PSTR("length"))) {
             _length = (uint16_t)stringToLl(getValue());

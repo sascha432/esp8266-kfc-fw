@@ -682,6 +682,8 @@ inline uint32_t createIPv4Address(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
 #define CREATE_BOOL_BITFIELD(name)                          CREATE_BITFIELD_TYPE(name, 1, bool, bit)
 
 #define CREATE_UINT8_BITFIELD(name, size)                   CREATE_BITFIELD_TYPE(name, size, uint8_t, bits)
+#define CREATE_INT16_BITFIELD(name, size)                   CREATE_BITFIELD_TYPE(name, size, int16_t, bits)
 #define CREATE_UINT16_BITFIELD(name, size)                  CREATE_BITFIELD_TYPE(name, size, uint16_t, bits)
+#define CREATE_INT32_BITFIELD(name, size)                   CREATE_BITFIELD_TYPE(name, size, int32_t, bits)
 #define CREATE_UINT32_BITFIELD(name, size)                  CREATE_BITFIELD_TYPE(name, size, uint32_t, bits)
 #define CREATE_UINT64_BITFIELD(name, size)                  CREATE_BITFIELD_TYPE(name, size, uint64_t, bits)

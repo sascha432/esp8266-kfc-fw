@@ -31,56 +31,19 @@
 EEPROMClass EEPROM((SECTION_EEPROM_START_ADDRESS) / SPI_FLASH_SEC_SIZE);
 #endif
 
-static_assert(sizeof(ConfigurationHelper::Pool) == 8, "");
-
-ConfigurationHelper::Pool::Pool(uint16_t size) :
-    _ptr(__LDBG_new_array(size, uint8_t)),
-    _length(0),
-    _size((size + 7) & ~7),
-    _count(0)
-{
-    std::fill_n(_ptr, _size, 0);
-}
-
-ConfigurationHelper::Pool::Pool(Pool &&pool) noexcept :
-    _ptr(std::exchange(pool._ptr, nullptr)),
-    _val(std::exchange(pool._val, 0))
-{
-}
-
-ConfigurationHelper::Pool::~Pool()
-{
-    if (_ptr) {
-        __LDBG_delete_array(_ptr);
-    }
-}
-
-uint8_t *ConfigurationHelper::Pool::allocate(uint16_t length)
-{
-    _count++;
-    length = align(length);
-    auto endPtr = _ptr + _length;
-    _length += length;
-    __LDBG_assert_printf(endPtr + length <= _end(), "begin=%p end=%p ptr=%p len=%d size=%d alloc_len=%d", _ptr, _end(), endPtr, _length, _size, length);
-    std::fill_n(endPtr, length, 0);
-    return endPtr;
-}
-
-void ConfigurationHelper::Pool::release(const void *ptr)
-{
-#if DEBUG_CONFIGURATION
-    __DBG_assert_printf(hasPtr(ptr), "ptr=%p not in pool", ptr);
-#endif
-    if (--_count == 0) {
-        _length = 0;
-    }
-}
-
 #if DEBUG_CONFIGURATION && DEBUG_EEPROM_ENABLE
 #include <debug_helper_enable.h>
 #else
 #include <debug_helper_disable.h>
 #endif
+
+namespace ConfigurationHelper {
+
+    //extern Allocator _allocator;
+    Allocator _allocator;
+
+}
+
 
 void ConfigurationHelper::EEPROMAccess::begin(uint16_t size)
 {
@@ -96,6 +59,14 @@ void ConfigurationHelper::EEPROMAccess::begin(uint16_t size)
         __LDBG_printf("size=%u", _size);
         EEPROM.begin(_size);
         __DBG__addFlashReadSize(0, _size);
+    }
+}
+
+void ConfigurationHelper::EEPROMAccess::discard()
+{
+    if (_isInitialized) {
+        static_cast<EEPROMClassEx &>(EEPROM).clearAndEnd();
+        _isInitialized = false;
     }
 }
 
@@ -142,6 +113,19 @@ void ConfigurationHelper::EEPROMAccess::commit()
     }
 }
 
+uint16_t ConfigurationHelper::EEPROMAccess::getReadSize(uint16_t offset, uint16_t length) const
+{
+    if (_isInitialized || length < kTempReadBufferSize - 8) {
+        return length;
+    }
+#if defined(ESP8266)
+    uint8_t alignment = ((SECTION_EEPROM_START_ADDRESS - SECTION_FLASH_START_ADDRESS) + offset) & 3;
+    return (length + alignment + 3) & ~3; // align read length and add alignment
+#else
+    return length;
+#endif
+}
+
 uint16_t ConfigurationHelper::EEPROMAccess::read(uint8_t *dst, uint16_t offset, uint16_t length, uint16_t size)
 {
 #if defined(ESP8266)
@@ -150,7 +134,7 @@ uint16_t ConfigurationHelper::EEPROMAccess::read(uint8_t *dst, uint16_t offset, 
         // memcpy(dst, EEPROM.getConstDataPtr() + offset, length); // data is already in RAM
         __DBG_assert(dst + length <= dst + size);
         std::copy_n(EEPROM.getConstDataPtr() + offset, length, dst);
-        return 0;
+        return length;
     }
 
     auto eeprom_start_address = (SECTION_EEPROM_START_ADDRESS - SECTION_FLASH_START_ADDRESS) + offset;
@@ -168,11 +152,12 @@ uint16_t ConfigurationHelper::EEPROMAccess::read(uint8_t *dst, uint16_t offset, 
 
     SpiFlashOpResult result = SPI_FLASH_RESULT_ERR;
     if (readSize > size) { // does not fit into the buffer
-        if (readSize <= 64) {
-            uint8_t buf[64];
+        if (readSize <= kTempReadBufferSize) {
+            uint8_t buf[kTempReadBufferSize];
             noInterrupts();
             result = spi_flash_read(eeprom_start_address, reinterpret_cast<uint32_t *>(buf), readSize);
             interrupts();
+            __LDBG_assert_printf(result == SPI_FLASH_RESULT_OK, "spi_flash_read failed src=%08x dst=%08x size=%u", eeprom_start_address, buf, readSize);
             if (result == SPI_FLASH_RESULT_OK) {
                 // memcpy(dst, buf + alignment, length); // copy to destination
                 __DBG_assert(dst + length <= dst + size);
@@ -182,11 +167,12 @@ uint16_t ConfigurationHelper::EEPROMAccess::read(uint8_t *dst, uint16_t offset, 
         else {
             auto ptr = __LDBG_new_array(readSize, uint8_t);
             // large read operation should have an aligned address or enough extra space to avoid memory allocations
-            __LDBG_printf("allocating read buffer read_size=%d len=%d size=%u ptr=%p", readSize, length, size, ptr);
+            __LDBG_assert_printf(false, "allocating read buffer read_size=%d len=%d size=%u ptr=%p", readSize, length, size, ptr);
             if (ptr) {
                 noInterrupts();
                 result = spi_flash_read(eeprom_start_address, reinterpret_cast<uint32_t *>(ptr), readSize);
                 interrupts();
+                __LDBG_assert_printf(result == SPI_FLASH_RESULT_OK, "spi_flash_read failed src=%08x dst=%08x size=%u", eeprom_start_address, ptr, readSize);
                 if (result == SPI_FLASH_RESULT_OK) {
                     // memcpy(dst, ptr + alignment, length); // copy to destination
                     __DBG_assert(dst + length <= dst + size);
@@ -200,6 +186,7 @@ uint16_t ConfigurationHelper::EEPROMAccess::read(uint8_t *dst, uint16_t offset, 
         noInterrupts();
         result = spi_flash_read(eeprom_start_address, reinterpret_cast<uint32_t *>(dst), readSize);
         interrupts();
+        __LDBG_assert_printf(result == SPI_FLASH_RESULT_OK, "spi_flash_read failed src=%08x dst=%08x size=%u", eeprom_start_address, dst, readSize);
         if (result == SPI_FLASH_RESULT_OK && alignment) { // move to beginning of the destination
             // memmove(dst, dst + alignment, length);
             __DBG_assert(dst + length <= dst + size);
@@ -227,7 +214,7 @@ uint16_t ConfigurationHelper::EEPROMAccess::read(uint8_t *dst, uint16_t offset, 
     // }
 
     if (!hasBeenInitialized) {
-        end();
+        discard();
     }
 #endif
 
@@ -266,7 +253,7 @@ uint16_t ConfigurationHelper::EEPROMAccess::read(uint8_t *dst, uint16_t offset, 
 #if DEBUG_CONFIGURATION && 0
     __LDBG_printf("ofs=%u len=%u size=%u data=%s", offset, length, size, Configuration::__debugDumper(dst, length).c_str());
 #endif
-    return readSize;
+    return std::min(length, readSize);
 }
 
 void ConfigurationHelper::EEPROMAccess::dump(Print &output, bool asByteArray, uint16_t offset, uint16_t length)

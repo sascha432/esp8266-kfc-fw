@@ -58,7 +58,7 @@ public:
     DebugHandle() : _name((char *)emptyString.c_str()), _get(0), _handle(~0), _set(0), _writeGet(0), _flashRead(0), _flashReadSize(0), _flashWrite(0) {}
 
     DebugHandle(const char *name, const HandleType handle) :  _name(nullptr), _get(0), _handle(handle), _set(0), _writeGet(0), _flashRead(0), _flashReadSize(0), _flashWrite(0) {
-        if (isProgmem(name)) {
+        if (is_PGM_P(name)) {
             // we can just store the pointer if inside PROGMEM
             _name = (char *)name;
         }
@@ -124,7 +124,7 @@ public:
     static DebugHandleVector &getHandles();
 
 public:
-    struct __attribute__packed__ {
+    struct {
         char *_name;
         uint32_t _get;
         HandleType _handle;
@@ -216,7 +216,8 @@ const ConfigurationHelper::HandleType ConfigurationHelper::registerHandleName(co
     }
     else {
         // get handle for name
-        auto handle = crc16_update_P(name, strlen_P(name));
+        String tmp = FPSTR(name);
+        auto handle = crc16_update(tmp.c_str(), tmp.length());
         // check if this handle exists already
         debugHandle = DebugHandle::find(handle);
         if (debugHandle) {
@@ -336,7 +337,7 @@ void ConfigurationHelper::writeHandles(bool clear)
 // uint16_t getHandle(const char *name)
 // {
 //     Serial.printf("name=%s\n",name);
-//     ConfigurationParameter::Handle_t crc = constexpr_crc16_update(name, constexpr_strlen(name));
+//     ConfigurationParameter::HandleType crc = constexpr_crc16_update(name, constexpr_strlen(name));
 //     auto iterator = std::find(handles->begin(), handles->end(), crc);
 //     if (iterator == handles->end()) {
 //         handles->emplace_back(name, crc);
@@ -347,7 +348,7 @@ void ConfigurationHelper::writeHandles(bool clear)
 //     return crc;
 // }
 
-const char *ConfigurationHelper::getHandleName(ConfigurationParameter::Handle_t crc)
+const char *ConfigurationHelper::getHandleName(ConfigurationParameter::HandleType crc)
 {
     auto debugHandle = DebugHandle::find(crc);
     if (debugHandle) {
@@ -367,7 +368,7 @@ void ConfigurationHelper::dumpHandles(Print &output, bool log)
 
 #else
 
-const char *ConfigurationHelper::getHandleName(ConfigurationParameter::Handle_t crc)
+const char *ConfigurationHelper::getHandleName(ConfigurationParameter::HandleType crc)
 {
     return "N/A";
 }
@@ -379,7 +380,12 @@ const char *ConfigurationHelper::getHandleName(ConfigurationParameter::Handle_t 
 #pragma warning(disable : 26812)
 #endif
 
-Configuration::Configuration(uint16_t offset, uint16_t size) : _offset(offset), _dataOffset(0), _size(size), _eeprom(false, 4096), _readAccess(0)
+Configuration::Configuration(uint16_t offset, uint16_t size) :
+    _eeprom(false, 4096),
+    _readAccess(0),
+    _offset(offset),
+    _dataOffset(offset + sizeof(Header_t)),
+    _size(size)
 {
 }
 
@@ -390,92 +396,65 @@ Configuration::~Configuration()
 
 void Configuration::clear()
 {
-    if (_offset == kInvalidOffset) {
-        __LDBG_printf("invalid offset");
-        return;
-    }
     __LDBG_printf("params=%u", _params.size());
-    discard();
     _params.clear();
+    _eeprom.discard();
+    _dataOffset = _offset + sizeof(Header_t);
 }
 
 void Configuration::discard()
 {
-    if (_offset == kInvalidOffset) {
-        __LDBG_printf("invalid offset");
-        return;
-    }
-    __LDBG_printf("params=%u", _params.size());
-    for (auto &parameter : _params) {
-        if (parameter.isDirty()) {
-            __LDBG_delete_array(parameter._info.data);
-            parameter._info = ConfigurationParameter::Info_t();
-        }
-        else {
-            parameter.__release(this);
-        }
-    }
-    _eeprom.end();
-    _storage.clear();
+    __LDBG_printf("discard params=%u", _params.size());
+    std::for_each(_params.begin(), _params.end(), [](ConfigurationParameter &parameter) {
+        ConfigurationHelper::_allocator.deallocate(parameter);
+    });
+    ConfigurationHelper::_allocator.release();
+    _eeprom.discard();
     _readAccess = 0;
 }
 
-
 void Configuration::release()
 {
-    if (_offset == kInvalidOffset) {
-        __LDBG_printf("invalid offset");
-        return;
-    }
-    _dumpPool(_storage);
     __LDBG_printf("params=%u last_read=%d dirty=%d", _params.size(), (int)(_readAccess == 0 ? -1 : millis() - _readAccess), isDirty());
-    for (auto &parameter : _params) {
-        if (!parameter.isDirty()) {
-            parameter.__release(this);
+    std::for_each(_params.begin(), _params.end(), [this](ConfigurationParameter &parameter) {
+        if (!parameter.isWriteable()) {
+            ConfigurationHelper::_allocator.deallocate(parameter);
         }
-    }
-    _eeprom.end();
-    _shrinkStorage();
+        else if (parameter.hasDataChanged(*this) == false) {
+            ConfigurationHelper::_allocator.deallocate(parameter);
+        }
+    });
+    _eeprom.discard();
     _readAccess = 0;
 }
 
 bool Configuration::read()
 {
-    if (_offset == kInvalidOffset) {
-        __LDBG_printf("invalid offset");
-        return false;
-    }
+    __LDBG_printf("params=%u", _params.size());
     clear();
 #if DEBUG_CONFIGURATION_GETHANDLE
     ConfigurationHelper::readHandles();
 #endif
-    auto result = _readParams();
-    if (!result) {
+    if (!_readParams()) {
         __LDBG_printf("readParams()=false");
         clear();
+        return false;
     }
-    return result;
+    return true;
 }
 
 bool Configuration::write()
 {
-    if (_offset == kInvalidOffset) {
-        __LDBG_printf("invalid offset");
-        return false;
-    }
     __LDBG_printf("params=%u", _params.size());
 
     _eeprom.begin();
 
     bool dirty = false;
     for (auto &parameter : _params) {
-        //if (parameter.isDirty()) {
-            if (parameter.hasDataChanged(this)) {
-                __LDBG_printf("%s dirty", parameter.toString().c_str());
-                dirty = true;
-                //break;
-            }
-        //}
+        if (parameter.hasDataChanged(*this)) {
+            dirty = true;
+            break;
+        }
     }
     if (dirty == false) {
         __LDBG_printf("configuration did not change");
@@ -483,37 +462,29 @@ bool Configuration::write()
     }
 
     Buffer buffer; // storage for parameter information and data
+    uint16_t dataOffset = _offset + sizeof(Header_t);
 
-    _storage.clear();
-
-    // store current data offset
-    uint16_t dataOffset = _dataOffset;
     for (auto &parameter : _params) {
-        auto length = parameter._param.length;
-
-        if (parameter.isDirty()) {
-            if (parameter._param.isString()) {
-                parameter.updateStringLength();
-            }
-            else { //if (parameter._param.isBinary()) {
-                parameter._param.length = parameter._info.size;
-            }
+        // create copy
+        auto param = parameter._getParam();
+        if (parameter._getParam().isWriteable()) {
+            // update length and remove writeable flag
+            __LDBG_printf("writable: len=%u next_offset=%u", param._writeable->length(),  parameter._getParam().next_offset());
+            param._length = param._writeable->length();
+            param._is_writeable = false;
         }
-        else {
-            // update EEPROM location for unmodified parameters
-            parameter._info.data = const_cast<uint8_t *>(_eeprom.getConstDataPtr()) + dataOffset;
-        }
-
         // write parameter headers
-        __LDBG_printf("write_header: %s ofs=%d prev_data_offset=%u", parameter.toString().c_str(), (int)(buffer.length() + _offset + sizeof(Header_t)), dataOffset);
-        buffer.write(reinterpret_cast<const uint8_t *>(&parameter._param), sizeof(parameter._param));
-        dataOffset += length;
+        __LDBG_printf("write_header: %s ofs=%d", parameter.toString().c_str(), (int)(buffer.length() + _offset + sizeof(Header_t)));
+        buffer.push_back(param._header);
+        dataOffset += parameter._getParam().next_offset() ? sizeof(ParameterHeaderType) : 0;
     }
+
+    __LDBG_assert_printf(dataOffset == _dataOffset, "wrong data_offset=%u _data_offset=%u", dataOffset, _dataOffset);
 
     // new data offset is base offset + size of header + size of stored parameter information
     _dataOffset = _offset + (uint16_t)(buffer.length() + sizeof(Header_t));
 #if DEBUG_CONFIGURATION
-    auto calcOfs = _offset + (sizeof(ConfigurationParameter::Param_t) * _params.size()) + sizeof(Header_t);
+    auto calcOfs = _offset + (sizeof(ParameterHeaderType) * _params.size()) + sizeof(Header_t);
     if (_dataOffset != calcOfs) {
         __DBG_panic("real_ofs=%u ofs=%u", _dataOffset, calcOfs);
 
@@ -522,14 +493,19 @@ bool Configuration::write()
 
     // write data
     for (auto &parameter : _params) {
-        __LDBG_printf("write_data: %s ofs=%d %s", parameter.toString().c_str(), (int)(buffer.length() + _offset + sizeof(Header_t)), __debugDumper(parameter, parameter._info.data, parameter._param.length).c_str());
-        buffer.write(parameter._info.data, parameter._param.length);
-        if (parameter.isDirty()) {
-            parameter._free();
+        const auto &param = parameter._getParam();
+        __LDBG_printf("write_data: %s ofs=%d %s", parameter.toString().c_str(), (int)(buffer.length() + _offset + sizeof(Header_t)), __debugDumper(parameter, parameter._getParam().data(), parameter._param.length()).c_str());
+        if (param.isWriteable()) {
+            // write new data
+            buffer.write(param._writeable->begin(), param._writeable->length());
         }
         else {
-            parameter._info = ConfigurationParameter::Info_t();
+            // data did not change, read from eeprom into buffer
+            buffer.write(_eeprom.getConstDataPtr() + dataOffset, param.next_offset());
         }
+        dataOffset += param.next_offset();
+        ConfigurationHelper::_allocator.deallocate(parameter);
+        parameter._getParam() = {};
     }
 
     if (buffer.length() > _size) {
@@ -549,7 +525,6 @@ bool Configuration::write()
     memcpy(headerPtr + sizeof(header), buffer.get(), len);
 
     __LDBG_printf("CRC %04x, length %d", header.crc, len);
-
     _eeprom.commit();
 
 #if DEBUG_CONFIGURATION_GETHANDLE
@@ -558,206 +533,127 @@ bool Configuration::write()
 
     // _eeprom.dump(Serial, false, _offset, 160);
 
-    return true;
+    _params.clear();
+    ConfigurationHelper::_allocator.release();
+    _dataOffset = _offset + sizeof(Header_t);
+
+    return _readParams();
 }
 
-void Configuration::makeWriteable(ConfigurationParameter &param, uint16_t size)
+void Configuration::makeWriteable(ConfigurationParameter &param, size_type length)
 {
-    param._makeWriteable(this, size ? size : param._info.size);
+    param._makeWriteable(*this, length);
 }
 
-const char *Configuration::getString(Handle_t handle)
+const char *Configuration::getString(HandleType handle)
 {
+    __LDBG_printf("handle=%04x", handle);
     uint16_t offset;
-    auto param = _findParam(ConfigurationParameter::STRING, handle, offset);
+    auto param = _findParam(ParameterType::STRING, handle, offset);
     if (param == _params.end()) {
         return emptyString.c_str();
     }
-    return param->getString(this, offset);
+    return param->getString(*this, offset);
 }
 
-char *Configuration::getWriteableString(Handle_t handle, uint16_t maxLength)
+char *Configuration::getWriteableString(HandleType handle, size_type maxLength)
 {
+    __LDBG_printf("handle=%04x max_len=%u", handle, maxLength);
     auto &param = getWritableParameter<char *>(handle, maxLength);
-    return reinterpret_cast<char *>(param._info.data);
+    return param._getParam().string();
 }
 
-const uint8_t *Configuration::getBinary(Handle_t handle, uint16_t &length)
+const uint8_t *Configuration::getBinary(HandleType handle, size_type &length)
 {
+    __LDBG_printf("handle=%04x", handle);
     uint16_t offset;
-    auto param = _findParam(ConfigurationParameter::BINARY, handle, offset);
+    auto param = _findParam(ParameterType::BINARY, handle, offset);
     if (param == _params.end()) {
         return nullptr;
     }
-    return param->getBinary(this, length, offset);
+    return param->getBinary(*this, length, offset);
 }
 
-void *Configuration::getWriteableBinary(Handle_t handle, uint16_t length)
+void *Configuration::getWriteableBinary(HandleType handle, size_type length)
 {
+    __LDBG_printf("handle=%04x len=%u", handle, length);
     auto &param = getWritableParameter<void *>(handle, length);
-    return reinterpret_cast<void *>(param._info.data);
+    return param._getParam().data();
 }
 
-void Configuration::setString(Handle_t handle, const char *string, uint16_t length)
+void Configuration::_setString(HandleType handle, const char *string, size_type length, size_type maxLength)
 {
-    uint16_t offset;
-    auto &param = _getOrCreateParam(ConfigurationParameter::STRING, handle, offset);
-    param.setData(this, (const uint8_t *)string, length);
+    __LDBG_printf("handle=%04x length=%u max_len=%u", handle, length, maxLength);
+    if (maxLength != (size_type)~0U) {
+        if (length >= maxLength - 1) {
+            length = maxLength - 1;
+        }
+    }
+    _setString(handle, string, length);;
 }
 
-void Configuration::setBinary(Handle_t handle, const void *data, uint16_t length)
+void Configuration::_setString(HandleType handle, const char *string, size_type length)
 {
+    __LDBG_printf("handle=%04x length=%u", handle, length);
     uint16_t offset;
-    auto &param = _getOrCreateParam(ConfigurationParameter::BINARY, handle, offset);
-    param.setData(this, (const uint8_t *)data, length);
+    auto &param = _getOrCreateParam(ParameterType::STRING, handle, offset);
+    param.setData(*this, (const uint8_t *)string, length);
+}
+
+void Configuration::setBinary(HandleType handle, const void *data, size_type length)
+{
+    __LDBG_printf("handle=%04x data=%p length=%u", handle, data, length);
+    uint16_t offset;
+    auto &param = _getOrCreateParam(ParameterType::BINARY, handle, offset);
+    param.setData(*this, (const uint8_t *)data, length);
 }
 
 void Configuration::dump(Print &output, bool dirty, const String &name)
 {
-    if (_offset == kInvalidOffset) {
-        __LDBG_printf("invalid offset");
-        return;
-    }
     output.printf_P(PSTR("Configuration:\nofs=%d base_ofs=%d eeprom_size=%d params=%d len=%d\n"), _dataOffset, _offset, _eeprom.getSize(), _params.size(), _eeprom.getSize() - _offset);
     output.printf_P(PSTR("min_mem_usage=%d header_size=%d Param_t::size=%d, ConfigurationParameter::size=%d, Configuration::size=%d\n"), sizeof(Configuration) + _params.size() * sizeof(ConfigurationParameter), sizeof(Configuration::Header_t), sizeof(ConfigurationParameter::Param_t), sizeof(ConfigurationParameter), sizeof(Configuration));
 
-    uint16_t offset = _dataOffset;
+    uint16_t dataOffset = (uint16_t)(_offset + sizeof(Header_t) + (_params.size() * sizeof(ParameterHeaderType)));
+    output.printf_P(PSTR("_dataOffset=%u _offset=%u dataOffset=%u\n"), _dataOffset, _offset, dataOffset);
     for (auto &parameter : _params) {
         DEBUG_HELPER_SILENT();
         auto display = true;
         auto &param = parameter._param;
         if (name.length()) {
-            if (!name.equals(ConfigurationHelper::getHandleName(param.handle))) {
+            if (!name.equals(ConfigurationHelper::getHandleName(param.getHandle()))) {
                 display = false;
             }
         }
         else if (dirty) {
-            if (!parameter._info.dirty) {
+            if (!parameter.isWriteable()) {
                 display = false;
             }
         }
-        auto length = parameter.read(this, offset);
+        //auto length =
+        parameter.read(*this, dataOffset);
         DEBUG_HELPER_INIT();
         if (display) {
 #if DEBUG_CONFIGURATION_GETHANDLE
-            output.printf_P(PSTR("%s[%04x]: "), ConfigurationHelper::getHandleName(param.handle), param.handle);
+            output.printf_P(PSTR("%s[%04x]: "), ConfigurationHelper::getHandleName(param.getHandle()), param.getHandle());
 #else
-            output.printf_P(PSTR("%04x: "), param.handle);
+            output.printf_P(PSTR("%04x: "), param.getHandle());
 #endif
-            output.printf_P(PSTR("type=%s ofs=%d size=%d dirty=%u value: "), (const char *)parameter.getTypeString(parameter._param.getType()), offset, /*calculateOffset(param.handle),*/ length, parameter._info.dirty);
+            output.printf_P(PSTR("type=%s ofs=%d len=%d dirty=%u value: "), (const char *)parameter.getTypeString(parameter.getType()), param.next_offset() ? dataOffset : -1, /*calculateOffset(param.handle),*/ parameter.getLength(), parameter.isWriteable());
             parameter.dump(output);
         }
-        offset += param.length;
+        dataOffset += param.next_offset();
     }
 }
 
 bool Configuration::isDirty() const
 {
     for(auto &param: _params) {
-        if (param.isDirty()) {
+        if (param.isWriteable()) {
             return true;
         }
     }
     return false;
 }
-
-uint8_t *Configuration::_allocate(uint16_t size, PoolVector *poolVector)
-{
-    if (!poolVector) {
-        poolVector = &_storage;
-    }
-    Pool *poolPtr = nullptr;
-    if (size < CONFIG_POOL_MAX_SIZE) {
-        poolPtr = _findPool(size, poolVector);
-        if (!poolPtr) {
-            auto POOL_COUNT = poolVector->size() + 1;
-            uint16_t size = (uint16_t)CONFIG_POOL_SIZE;
-            poolVector->emplace_back(size);
-            poolPtr = &poolVector->back();
-        }
-        poolPtr = _findPool(size, poolVector);
-    }
-    if (!poolPtr) {
-        poolVector->emplace_back(size);
-        poolPtr = &poolVector->back();
-    }
-    return poolPtr->allocate(size);
-}
-
-void Configuration::__release(const void *ptr)
-{
-    if (ptr) {
-        auto pool = _getPool(ptr);
-        if (pool) {
-            pool->release(ptr);
-        }
-    }
-}
-
-Configuration::Pool *Configuration::_getPool(const void *ptr)
-{
-    if (ptr) {
-        for (auto &pool: _storage) {
-            if (pool.hasPtr(ptr)) {
-                return &pool;
-            }
-        }
-    }
-    return nullptr;
-}
-
-Configuration::Pool *Configuration::_findPool(uint16_t length, PoolVector *poolVector) const
-{
-    length = Pool::align(length) + 3;
-    for (auto &pool : *poolVector) {
-        if (pool.space_unaligned(length)) {
-            return &pool;
-        }
-    }
-    return nullptr;
-}
-
-void Configuration::_shrinkStorage()
-{
-    PoolVector newPool;
-    for (auto &param: _params) {
-        if (param._info.data && param._info.dirty == 0) {
-            auto tmp = _allocate(param.getSize(), &newPool);
-            std::copy_n(param._info.data, param.getLength(), tmp);
-            param._info.data = tmp;
-        }
-    }
-    _storage = std::move(newPool);
-    _dumpPool(_storage);
-}
-
-#if DEBUG_CONFIGURATION
-
-void Configuration::_dumpPool(PoolVector &poolVector)
-{
-    PrintString str;
-    size_t total = 0;
-    for (const auto &pool : poolVector) {
-        if (pool.getPtr()) {
-            total += pool.size();
-            str.printf_P(PSTR("[%u:%u:#%u] "), pool.size(), pool.available(), pool.count());
-        }
-        else {
-            str.printf_P(PSTR("[%u:null] "), pool.size());
-        }
-    }
-    size_t count_dirty = 0;
-    size_t total_dirty = 0;
-    for (const auto& param : _params) {
-        if (param._info.dirty) {
-            count_dirty++;
-            total_dirty += param._info.size;
-        }
-    }
-    debug_printf_P(PSTR("%ssize=%u[#%u] dirty=%u[#%u]\n"), str.c_str(), total, poolVector.size(), total_dirty, count_dirty);
-}
-
-#endif
 
 void Configuration::exportAsJson(Print &output, const String &version)
 {
@@ -772,22 +668,22 @@ void Configuration::exportAsJson(Print &output, const String &version)
             output.print(F(",\n"));
         }
 
-        output.printf_P(PSTR("\t\t\"%#04x\": {\n"), param.handle);
+        output.printf_P(PSTR("\t\t\"%#04x\": {\n"), param.getHandle());
 #if DEBUG_CONFIGURATION_GETHANDLE
         output.print(F("\t\t\t\"name\": \""));
-        auto name = ConfigurationHelper::getHandleName(param.handle);
+        auto name = ConfigurationHelper::getHandleName(param.getHandle());
         JsonTools::printToEscaped(output, name, strlen(name), false);
         output.print(F("\",\n"));
 #endif
 
-        auto length = parameter.read(this, dataOffset);
-        output.printf_P(PSTR("\t\t\t\"type\": %d,\n"), parameter._param.getType());
-        output.printf_P(PSTR("\t\t\t\"type_name\": \"%s\",\n"), (const char *)parameter.getTypeString(parameter._param.getType()));
+        auto length = parameter.read(*this, dataOffset);
+        output.printf_P(PSTR("\t\t\t\"type\": %d,\n"), parameter.getType());
+        output.printf_P(PSTR("\t\t\t\"type_name\": \"%s\",\n"), (const char *)parameter.getTypeString(parameter.getType()));
         output.printf_P(PSTR("\t\t\t\"length\": %d,\n"), length);
         output.print(F("\t\t\t\"data\": "));
         parameter.exportAsJson(output);
         output.print(F("\n"));
-        dataOffset += param.length;
+        dataOffset += param.next_offset();
 
         output.print(F("\t\t}"));
     }
@@ -795,86 +691,75 @@ void Configuration::exportAsJson(Print &output, const String &version)
     output.print(F("\n\t}\n}\n"));
 }
 
-bool Configuration::importJson(Stream &stream, uint16_t *handles)
+bool Configuration::importJson(Stream &stream, HandleType *handles)
 {
     JsonConfigReader reader(&stream, *this, handles);
     reader.initParser();
     return reader.parseStream();
 }
 
-Configuration::ParameterList::iterator Configuration::_findParam(ConfigurationParameter::TypeEnum_t type, Handle_t handle, uint16_t &offset)
+Configuration::ParameterList::iterator Configuration::_findParam(ConfigurationParameter::TypeEnum_t type, HandleType handle, uint16_t &offset)
 {
     offset = _dataOffset;
-    if (type == ConfigurationParameter::_ANY) {
+    if (type == ParameterType::_ANY) {
         for (auto it = _params.begin(); it != _params.end(); ++it) {
             if (*it == handle) {
                 //__LDBG_printf("%s FOUND", it->toString().c_str());
                 return it;
             }
-            offset += it->_param.length;
+            offset += it->_param.next_offset();
         }
     }
     else {
         for (auto it = _params.begin(); it != _params.end(); ++it) {
-            if (*it == handle && it->_param.type == type) {
+            if (*it == handle && it->_param.type() == type) {
                 //__LDBG_printf("%s FOUND", it->toString().c_str());
                 return it;
             }
-            offset += it->_param.length;
+            offset += it->_param.next_offset();
         }
     }
     __LDBG_printf("handle=%s[%04x] type=%s = NOT FOUND", ConfigurationHelper::getHandleName(handle), handle, (const char *)ConfigurationParameter::getTypeString(type));
     return _params.end();
 }
 
-ConfigurationParameter &Configuration::_getOrCreateParam(ConfigurationParameter::TypeEnum_t type, Handle_t handle, uint16_t &offset)
+ConfigurationParameter &Configuration::_getOrCreateParam(ConfigurationParameter::TypeEnum_t type, HandleType handle, uint16_t &offset)
 {
-    auto iterator = _findParam(ConfigurationParameter::_ANY, handle, offset);
+    auto iterator = _findParam(ParameterType::_ANY, handle, offset);
     if (iterator == _params.end()) {
         _params.emplace_back(handle, type);
         __LDBG_printf("new param %s", _params.back().toString().c_str());
         __DBG__checkIfHandleExists("create", handle);
         return _params.back();
     }
-    else if (type != iterator->_param.getType()) {
-        __DBG_panic("%s: new_type=%s type=%s different", ConfigurationHelper::getHandleName(iterator->_param.handle), iterator->toString().c_str(), (const char *)ConfigurationParameter::getTypeString(type));
+    else if (type != iterator->_param.type()) {
+        __DBG_panic("%s: new_type=%s type=%s different", ConfigurationHelper::getHandleName(iterator->getHandle()), iterator->toString().c_str(), (const char *)ConfigurationParameter::getTypeString(type));
     }
-    __DBG__checkIfHandleExists("find", iterator->_param.handle);
+    __DBG__checkIfHandleExists("find", iterator->getHandle());
     return *iterator;
 }
 
 uint16_t Configuration::_readHeader(uint16_t offset, HeaderAligned_t &hdr)
 {
-#if defined(ESP8266)
-    //|| defined(ESP32)
-        // read header directly from flash since we do not know the size of the configuration
     _eeprom.read(hdr.headerBuffer, (uint16_t)offset, (uint16_t)sizeof(hdr.header), (uint16_t)sizeof(hdr.headerBuffer));
-#else
-    _eeprom.begin(_offset + sizeof(hdr.header));
-    _eeprom.get(offset, hdr.header);
-    _eeprom.end();
-#endif
     return offset + sizeof(hdr.header);
 }
 
 bool Configuration::_readParams()
 {
-    if (_offset == kInvalidOffset) {
-        __LDBG_printf("invalid offset");
-        return false;
-    }
     uint16_t offset = _offset;
     HeaderAligned_t hdr;
 
-    _eeprom.end();
+    _eeprom.discard();
     offset = _readHeader(offset, hdr);
+    __LDBG_printf("offset=%u params_ofs=%u", _offset, offset);
 
 #if DEBUG_CONFIGURATION
     DumpBinary dump(F("Header:"), DEBUG_OUTPUT);
     dump.dump((const uint8_t *)&hdr, sizeof(hdr.header));
 #endif
 
-    for (;;) {
+    while(true) {
 
         if (hdr.header.magic != CONFIG_MAGIC_DWORD) {
             __LDBG_printf("invalid magic %08x", hdr.header.magic);
@@ -901,51 +786,44 @@ bool Configuration::_readParams()
             break;
         }
 
-        _dataOffset = (sizeof(ConfigurationParameter::Param_t) * hdr.header.params) + offset;
-        auto dataOffset = _dataOffset;
+        //offset += (sizeof(param._header) * hdr.header.params);
+        _dataOffset =  offset + (sizeof(ParameterHeaderType) * hdr.header.params);
 
-        for(;;) {
-
-            ConfigurationParameter::Param_t param;
-            param.type = ConfigurationParameter::_INVALID;
-            _eeprom.get(offset, param);
-            if (param.type == ConfigurationParameter::_INVALID) {
-                __LDBG_printf("invalid type");
-                break;
-            }
-            offset += sizeof(param);
-
-            _params.emplace_back(param);
-            dataOffset += param.length;
+        for(size_t i = 0; i <= hdr.header.params; i++) {
 
             if (_params.size() == hdr.header.params) {
-                _eeprom.end();
+                __LDBG_printf("_dataOffset=%u params=%u", _dataOffset, _params.size());
+                __LDBG_assert_printf(offset == _dataOffset, "offset=%u mismatch _dataOffset=%u", offset, _dataOffset);
+                _eeprom.discard();
                 return true;
             }
-        }
-        __LDBG_printf("failure before reading all parameters %d/%d", _params.size(), hdr.header.params);
-        break;
 
+            ParameterInfo param;
+            if (
+                (_eeprom.read((uint8_t *)&param._header, offset, sizeof(param._header), sizeof(param._header)) != sizeof(param._header)) ||
+                (param.type() == ParameterType::_INVALID)
+            ) {
+                __LDBG_assert_printf(false, "read error type=%u", param.type());
+                break;
+            }
+            __LDBG_assert_panic(param.isWriteable() == false, "writeable");
+
+            offset += sizeof(param._header);
+            _params.emplace_back(param._header);
+            if (_params.size() != i + 1) {
+                __LDBG_assert_printf(false, "emplace_back failed");
+                break;
+            }
+        }
+
+        break;
     }
 
     clear();
-    _eeprom.end();
     return false;
 }
 
 #if DEBUG_CONFIGURATION
-
-uint16_t Configuration::calculateOffset(Handle_t handle) const
-{
-    uint16_t offset = _dataOffset;
-    for (auto &parameter: _params) {
-        if (parameter.getHandle() == handle) {
-            return offset;
-        }
-        offset += parameter._param.length;
-    }
-    return 0;
-}
 
 String Configuration::__debugDumper(ConfigurationParameter &param, const uint8_t *data, size_t len, bool progmem)
 {

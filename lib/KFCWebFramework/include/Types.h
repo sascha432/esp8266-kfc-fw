@@ -19,7 +19,7 @@
 #define __KFC_FORMS_INLINE_METHOD__                     inline
 #else
 #define __KFC_FORMS_INLINE_METHOD__
-#define 
+#define
 #endif
 
 
@@ -107,6 +107,7 @@ namespace FormUI {
             PASSWORD,
             NEW_PASSWORD,
             // VISIBLE_PASSWORD,
+            CHECKBOX,
 
             // (start group) >= BEGIN_GROUPS and < END_GROUPS
             // (end group = start group + 1 ) > BEGIN_GROUPS and <= END_GROUPS

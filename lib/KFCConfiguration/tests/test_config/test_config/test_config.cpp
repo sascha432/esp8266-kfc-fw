@@ -286,9 +286,11 @@ int main() {
     Configuration config(0, 1024);
     if (!config.read()) {
         Serial.println("Read error, settings defaults");
+        //config._H_SET(Configuration_t().val3, 100000000);
+
         config._H_SET_STR(Configuration_t().string1, "test1");
         config._H_SET(Configuration_t().val1, 100);
-        config._H_SET_STR(Configuration_t().string2, "test2");
+        config._H_SET_STR(Configuration_t().string2, "test2_is_a_long_string_that_needs_alloc");
         config._H_SET(Configuration_t().sval, sval_t({0x8877, 0x5544}));
         config._H_SET_STR(Configuration_t().string3, "test3");
         config._H_SET(Configuration_t().val2, 10000);
@@ -299,13 +301,51 @@ int main() {
         config._H_SET(Configuration_t().val5, -12345.678f);
         config.dump(Serial);
         config.write();
+        auto tmp = config._H_W_STR(Configuration_t().string1, 33);
+        config.read();
+        config.dump(Serial);
+
+        config.clear();
+        return 0;
     }
     config.dump(Serial);
-    auto &ref = config._H_W_GET(Configuration_t().val1);
+    auto &ref = config._H_W_GET(Configuration_t().val2);
+    Serial.printf("ref=%p\n", &ref);
     ref++;
-    config.dump(Serial);
 
-//    EEPROM.commit();
+    auto tmp = config._H_W_STR(Configuration_t().string1, 33);
+    if (*tmp == 0) {
+        strcpy(tmp, "was_empty");
+    }
+    else if (strlen(tmp) < 32) {
+        char buf[2] = { tmp[strlen(tmp) - 1], 0 };
+        if (*buf >= '0' && *buf < '9') {
+            buf[0]++;
+        }
+        else {
+            buf[0] = '0';
+        }
+        strcat(tmp, buf);
+    }
+    else {
+        strcpy(tmp, "repeat_0");
+    }
+
+    config._H_SET_STR(Configuration_t().string5, "");
+
+    if (ref % 2 == 0) {
+        config._H_SET_STR(Configuration_t().string2, "testlonger1testlonger1testlonger1testlonger1testlonger1testlonger1");
+    }
+    else {
+        config._H_SET_STR(Configuration_t().string2, "shorttest");
+    }
+
+    config.dump(Serial);
+    config.write();
+
+    EEPROM.commit();
+
+    config.clear();
 
     return 0;
 
@@ -315,7 +355,6 @@ int main() {
 
     config._H_SET_STR(Configuration_t().string1, "testlonger1");
     config._H_SET_STR(Configuration_t().string1, "short");
-    config._H_SET_STR(Configuration_t().string1, "testlonger1testlonger1");
     config.dump(Serial);
 
     config.write();

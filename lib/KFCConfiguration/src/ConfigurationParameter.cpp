@@ -19,53 +19,6 @@
 #include <debug_helper_disable.h>
 #endif
 
-ConfigurationParameter::ConfigurationParameter(const Param_t &param) : _info(), _param(param)
-{
-    _info.size = getDefaultSize(_param.getType());
-}
-
-ConfigurationParameter::ConfigurationParameter(Handle_t handle, TypeEnum_t type) : _info(), _param({handle, type, 0})
-{
-    _info.size = getDefaultSize(type);
-}
-
-uint8_t *ConfigurationParameter::_allocate(Configuration *conf)
-{
-    if (_info.dirty) {
-        __DBG_panic("%s allocate called on dirty parameter", toString().c_str());
-    }
-    if (_info.data && _info.size == _param.getSize()) { // can we reuse the pointer?
-        __LDBG_printf("%s pointer reused", toString().c_str());
-        // memset(_info.data, 0, _info.size);
-        std::fill_n(_info.data, _info.size, 0);
-        return _info.data;
-    }
-    conf->__release(_info.data);
-    _info.data = conf->_allocate(_param.getSize());
-    _info.size = _param.getSize();
-    return _info.data;
-}
-
-void ConfigurationParameter::__release(Configuration *conf)
-{
-    if (_info.dirty) {
-        __DBG_panic("%s release called on dirty parameter", toString().c_str());
-    }
-    conf->__release(_info.data);
-    _info = Info_t();
-}
-
-void ConfigurationParameter::_free()
-{
-    if (!_info.dirty) {
-        __DBG_panic("%s free called on parameter without heap allocation", toString().c_str());
-    }
-    if (_info.data) {
-        __LDBG_delete_array(_info.data);
-    }
-    _info = Info_t();
-}
-
 String ConfigurationParameter::toString() const
 {
     //auto dataPtr = (uint8_t *)((((uintptr_t)&_info) + 3) & ~3);
@@ -73,9 +26,9 @@ String ConfigurationParameter::toString() const
     //ptrdiff_t dataLen = sizeof(_info) - dataOfs;
 #if DEBUG_CONFIGURATION_GETHANDLE
     //return PrintString(F("handle=%s[%04x] size=%u len=%u data=%p type=%s dirty=%u (%p:%p %u %u)"), ConfigurationHelper::getHandleName(_param.handle), _param.handle, _info.size, _param.length, _info.data, getTypeString(_param.getType()), _info.dirty, dataPtr, _info.data, dataOfs, dataLen);
-    return PrintString(F("handle=%s[%04x] size=%u len=%u data=%p type=%s dirty=%u"), ConfigurationHelper::getHandleName(_param.handle), _param.handle, _info.size, _param.length, _info.data, getTypeString(_param.getType()), _info.dirty);
+    return PrintString(F("handle=%s[%04x] size=%u len=%u data=%p type=%s dirty=%u"), ConfigurationHelper::getHandleName(_param.getHandle()), _param.getHandle(), _param.size(), _param.length(), _param.data(), getTypeString(_param.type()), _param.isWriteable());
 #else
-    return PrintString(F("handle=%04x size=%u len=%u data=%p type=%s dirty=%u"), _param.handle, _info.size, _param.length, _info.data, getTypeString(_param.getType()), _info.dirty);
+    return PrintString(F("handle=%04x size=%u len=%u data=%p type=%s writable=%u"), _param.getHandle(), _param.size(), _param.length(), _param.data(), getTypeString(_param.type()), _param.isWriteable());
 #endif
 }
 
@@ -84,142 +37,99 @@ String ConfigurationParameter::toString() const
 //    _param.type = (uint16_t)type;
 //}
 
-uint8_t ConfigurationParameter::getDefaultSize(TypeEnum_t type)
+
+bool ConfigurationParameter::_compareData(const uint8_t *data, size_type length) const
 {
-    switch (type) {
-    case ConfigurationParameter::BYTE:
-        return sizeof(uint8_t);
-    case ConfigurationParameter::WORD:
-        return sizeof(uint16_t);
-    case ConfigurationParameter::DWORD:
-        return sizeof(uint32_t);
-    case ConfigurationParameter::QWORD:
-        return sizeof(uint64_t);
-    case ConfigurationParameter::FLOAT:
-        return sizeof(float);
-    case ConfigurationParameter::DOUBLE:
-        return sizeof(double);
-    default:
-    // case ConfigurationParameter::STRING:
-    // case ConfigurationParameter::BINARY:
-    // case ConfigurationParameter::_ANY:
-    // case ConfigurationParameter::_INVALID:
-        break;
-    }
-    return 0; // dynamic size
+    return _param.hasData() && _param.length() == length && memcmp_P(_param.data(), data, length) == 0;
 }
 
-bool ConfigurationParameter::_compareData(const uint8_t *data, uint16_t size) const
+void ConfigurationParameter::setData(Configuration &conf, const uint8_t *data, size_type length)
 {
-    return _info.data && _info.size >= size && _param.length == size && memcmp_P(_info.data, data, size) == 0;
-}
-
-void ConfigurationParameter::setData(Configuration *conf, const uint8_t *data, uint16_t size)
-{
-    __LDBG_printf("%s set_size=%u %s", toString().c_str(), size, Configuration::__debugDumper(*this, data, size).c_str());
-    if (_compareData(data, size)) {
+    __LDBG_printf("%s set_size=%u %s", toString().c_str(), length, Configuration::__debugDumper(*this, data, length).c_str());
+    if (_compareData(data, length)) {
         __LDBG_printf("compareData=true");
         return;
     }
-    _makeWriteable(conf, size);
-    memcpy_P(_info.data, data, size);
-    if (_param.isString()) {
-        _info.data[size] = 0;
-    }
-}
-
-void ConfigurationParameter::updateStringLength()
-{
-    if (_info.data) {
-        _param.length = strlen(reinterpret_cast<const char *>(_info.data));
-    }
-}
-
-const char *ConfigurationParameter::getString(Configuration* conf, uint16_t offset)
-{
-    if (!_info.data && !_readData(conf, offset)) {
-        return nullptr;
-    }
-    //__LDBG_printf("%s %s", toString().c_str(), Configuration::__debugDumper(*this, _info.data, _info.size).c_str());
-    return reinterpret_cast<const char *>(_info.data);
-}
-
-const uint8_t *ConfigurationParameter::getBinary(Configuration *conf, uint16_t &length, uint16_t offset)
-{
-    if (!_info.data && !_readData(conf, offset)) {
-        return nullptr;
-    }
-    length = _info.size;
-    //__LDBG_printf("%s %s", toString().c_str(), Configuration::__debugDumper(*this, _info.data, _info.size).c_str());
-    return _info.data;
-}
-
-uint16_t ConfigurationParameter::read(Configuration *conf, uint16_t offset)
-{
-    if (!_info.data && !_readData(conf, offset)) {
-        return 0;
-    }
-    return getLength();
-    //if (_info.dirty) {
-    //    if (_param.isString()) {
-    //        return (uint16_t)strlen(reinterpret_cast<const char *>(_info.data));
-    //    }
-    //    return _info.size;
-    //}
-    //return _param.length;
-}
-
-void ConfigurationParameter::_makeWriteable(Configuration *conf, uint16_t size)
-{
-    auto new_size = _param.getSize(size);
-    if (isDirty()) {
-        // check if size changed
-        if (new_size != _info.size) {
-            auto tmp = __LDBG_new_array(new_size, uint8_t);
-            std::fill(std::copy_n(_info.data, std::min(new_size, _info.size), tmp), tmp + new_size, 0);
-            __LDBG_delete_array(_info.data);
-            _info.size = new_size;
-            _info.data = tmp;
-        }
+    if (_param.isString() && length == 0) {
+        // TODO workaround for broken 0 length strings
+        length = 1;
+        _makeWriteable(conf, length);
+        _param.data()[0] = 0;
+        _param.data()[1] = 0;
     }
     else {
-        auto new_size = _param.getSize(size);
-        auto tmp = __LDBG_new_array(new_size, uint8_t);
-        if (_info.data) {
-            // has a pointer to the memory pool
-            std::fill(std::copy_n(_info.data, std::min(new_size, _info.size), tmp), tmp + new_size, 0);
-            conf->__release(_info.data);
-        }
-        else {
-            std::fill_n(tmp, _info.size, 0);
-        }
-        _info.size = new_size;
-        _info.data = tmp;
-        _info.dirty = 1;
+        _makeWriteable(conf, length);
+        memcpy_P(_param.data(), data, length);
+        __LDBG_assert_printf(_param.isString() == false || _param.string()[length] == 0, "%s NUL byte missing", toString().c_str());
     }
 }
-const __FlashStringHelper *ConfigurationParameter::getTypeString(TypeEnum_t type)
+
+// void ConfigurationParameter::updateStringLength()
+// {
+//     __LDBG_assert_printf(_param.isWriteable(), "%s not writable", toString().c_str());
+//     if (_param.isWriteable()) {
+//         _param.length = strlen(reinterpret_cast<const char *>(_info.data));
+//     }
+// }
+
+const char *ConfigurationParameter::getString(Configuration &conf, uint16_t offset)
+{
+    if (!_readData(conf, offset)) {
+        return nullptr;
+    }
+    //__LDBG_printf("%s %s", toString().c_str(), Configuration::__debugDumper(*this, _info.data, _info.size).c_str());
+    return _param.string();
+}
+
+const uint8_t *ConfigurationParameter::getBinary(Configuration &conf, size_type &length, uint16_t offset)
+{
+    if (!_readData(conf, offset)) {
+        return nullptr;
+    }
+    //__LDBG_printf("%s %s", toString().c_str(), Configuration::__debugDumper(*this, _info.data, _info.size).c_str());
+    length = _param.length();
+    return _param.data();
+}
+
+uint16_t ConfigurationParameter::read(Configuration &conf, uint16_t offset)
+{
+    if (!_readData(conf, offset)) {
+        return 0;
+    }
+    return _param.length();
+}
+
+void ConfigurationParameter::_makeWriteable(Configuration &conf, size_type length)
+{
+    __LDBG_printf("%s length=%u is_writable=%u _writeable=%p ", toString().c_str(), length, _param.isWriteable(), _param._writeable);
+    if (_param.isWriteable()) {
+        _param.resizeWriteable(length, *this, conf);
+    }
+    else {
+        _param.setWriteable(new WriteableData(length, *this, conf));
+    }
+}
+
+const __FlashStringHelper *ConfigurationParameter::getTypeString(ParameterType type)
 {
     switch (type) {
-    case ConfigurationParameter::STRING:
+    case ParameterType::STRING:
         return F("STRING");
-    case ConfigurationParameter::BINARY:
+    case ParameterType::BINARY:
         return F("BINARY");
-    case ConfigurationParameter::BYTE:
+    case ParameterType::BYTE:
         return F("BYTE");
-    case ConfigurationParameter::WORD:
+    case ParameterType::WORD:
         return F("WORD");
-    case ConfigurationParameter::DWORD:
+    case ParameterType::DWORD:
         return F("DWORD");
-    case ConfigurationParameter::QWORD:
+    case ParameterType::QWORD:
         return F("QWORD");
-    case ConfigurationParameter::FLOAT:
+    case ParameterType::FLOAT:
         return F("FLOAT");
-    case ConfigurationParameter::DOUBLE:
+    case ParameterType::DOUBLE:
         return F("DOUBLE");
     default:
-    // case ConfigurationParameter::_INVALID:
-    // case ConfigurationParameter::_ANY:
         break;
     }
     return F("INVALID");
@@ -230,42 +140,42 @@ void ConfigurationParameter::dump(Print &output)
     if (!hasData()) {
         output.println(F("nullptr"));
     } else {
-        switch (_param.type) {
-        case STRING:
-            output.printf_P(PSTR("'%s'\n"), reinterpret_cast<const char *>(_info.data));
+        switch (_param.type()) {
+        case ParameterType::STRING:
+            output.printf_P(PSTR("'%s'\n"), _param.string());
             break;
-        case BINARY: {
+        case ParameterType::BINARY: {
                 DumpBinary dumper(output);
-                if (_info.size) {
-                    dumper.dump(_info.data, _info.size);
+                if (_param.length()) {
+                    dumper.dump(_param.data(), _param.length());
                 }
                 else {
                     output.println();
                 }
             } break;
-        case BYTE: {
-                auto value = *(uint8_t *)_info.data;
+        case ParameterType::BYTE: {
+                auto value = *(uint8_t *)_param.data();
                 output.printf_P(PSTR("%u (%d, %02X)\n"), value, value, value);
             } break;
-        case WORD: {
-                auto value = *(uint16_t *)_info.data;
+        case ParameterType::WORD: {
+                auto value = *(uint16_t *)_param.data();
                 output.printf_P(PSTR("%u (%d, %04X)\n"), value, value, value);
             } break;
-        case DWORD: {
-            auto value = *(uint32_t *)_info.data;
+        case ParameterType::DWORD: {
+            auto value = *(uint32_t *)_param.data();
             output.printf_P(PSTR("%u (%d, %08X)\n"), value, value, value);
         } break;
-        case QWORD: {
-            auto value = *(uint64_t *)_info.data;
+        case ParameterType::QWORD: {
+            auto value = *(uint64_t *)_param.data();
             print_string(output, value);
             output.println();
         } break;
-        case FLOAT: {
-                auto value = *(float *)_info.data;
+        case ParameterType::FLOAT: {
+                auto value = *(float *)_param.data();
                 output.printf_P(PSTR("%f\n"), value);
             } break;
-        case DOUBLE: {
-                auto value = *(double *)_info.data;
+        case ParameterType::DOUBLE: {
+                auto value = *(double *)_param.data();
                 output.printf_P(PSTR("%f\n"), value);
             } break;
         default:
@@ -281,45 +191,44 @@ void ConfigurationParameter::exportAsJson(Print& output)
         output.println(FSPGM(null));
     }
     else {
-        switch (_param.type) {
-        case STRING: {
+        switch (_param.type()) {
+        case ParameterType::STRING: {
             output.print('"');
-            auto str = reinterpret_cast<const char *>(_info.data);
-            JsonTools::printToEscaped(output, str, _info.dirty ? strlen(str) : _param.length, false);
+            JsonTools::printToEscaped(output, _param.string(), _param.length(), false);
             output.print('"');
         } break;
-        case BINARY: {
-            auto ptr = _info.data;
-            auto size = _info.size;
+        case ParameterType::BINARY: {
+            auto ptr = _param.data();
+            auto size = _param.length();
             output.print('"');
             while (size--) {
-                output.printf_P(SPGM(_02x, "%02x"), *ptr & 0xff);
+                output.printf_P(SPGM(_02x, "%02x"), *ptr);
                 ptr++;
             }
             output.print('"');
         } break;
-        case BYTE: {
-            auto value = *(uint8_t *)_info.data;
+        case ParameterType::BYTE: {
+            auto value = *(uint8_t *)_param.data();
             output.print((uint32_t)value);
         } break;
-        case WORD: {
-            auto value = *(uint16_t *)_info.data;
+        case ParameterType::WORD: {
+            auto value = *(uint16_t *)_param.data();
             output.print((uint32_t)value);
         } break;
-        case DWORD: {
-            auto value = *(uint32_t *)_info.data;
+        case ParameterType::DWORD: {
+            auto value = *(uint32_t *)_param.data();
             output.print(value);
         } break;
-        case QWORD: {
-            auto value = *(uint64_t *)_info.data;
+        case ParameterType::QWORD: {
+            auto value = *(uint64_t *)_param.data();
             print_string(output, value);
         } break;
-        case FLOAT: {
-            auto value = *(float *)_info.data;
+        case ParameterType::FLOAT: {
+            auto value = *(float *)_param.data();
             output.print(value, 6);
         } break;
-        case DOUBLE: {
-            auto value = *(double *)_info.data;
+        case ParameterType::DOUBLE: {
+            auto value = *(double *)_param.data();
             output.print(value, 6);
         } break;
         default:
@@ -329,112 +238,141 @@ void ConfigurationParameter::exportAsJson(Print& output)
     }
 }
 
-bool ConfigurationParameter::hasDataChanged(Configuration *conf) const
+bool ConfigurationParameter::hasDataChanged(Configuration &conf) const
 {
-    if (!isDirty()) {
+    // cannot be changed if not writable
+    if (!_param.isWriteable()) {
         return false;
-    }
-    if (!hasData()) {
-        __DBG_printf("%s not data", toString().c_str());
-        return false;
-    }
-    if (_param.length == 0) {
-        return true;
     }
     uint16_t offset;
-    auto iterator = conf->_findParam(ConfigurationParameter::TypeEnum_t::_ANY, _param.handle, offset);
-    if (iterator == conf->_params.end()) { // not found
+    auto iterator = conf._findParam(ConfigurationParameter::TypeEnum_t::_ANY, _param.getHandle(), offset);
+    if (iterator == conf._params.end()) { // not found
         __DBG_printf("%s not found", toString().c_str());
         return true;
     }
-    if (static_cast<const void *>(&(*iterator)) != static_cast<const void *>(this)) {
-        __DBG_printf("%s parameter mismatch", toString().c_str());
-        return true;
-    }
-    auto size = _param.getSize();
-    auto alignedSize = Configuration::Pool::align(size);
-    // get original size and allocate aligned blocked
-    auto tmp = conf->_allocate(size);//_param.getSize());
-    // auto tmp = reinterpret_cast<uint8_t *>(malloc(alignedSize));
-    // std::fill_n(tmp, alignedSize, 0);
-    if (!tmp) {
-        __DBG_printf("%s allocate failed", toString().c_str());
-        return true;
-    }
-    if (!_readDataTo(conf, offset, tmp, alignedSize)) {
+    __LDBG_assert_panic(static_cast<const void *>(&(*iterator)) == static_cast<const void *>(this), "*iterator=%p this=%p", &(*iterator), this);
+    size_t maxSize;
+    auto tmp = ConfigurationHelper::_allocator.allocate(conf._eeprom.getReadSize(offset, std::max(_param.length(), _param.next_offset())), &maxSize);
+    if (!_readDataTo(conf, offset, tmp, (size_type)maxSize)) {
         return false;
     }
-    auto result = (memcmp(tmp, _info.data, size) != 0);
-#if DEBUG_CONFIGURATION || 0
-    if (result)
-    {
+    auto result = (memcmp(tmp, _param.data(), _param.length()) != 0);
+#if DEBUG_CONFIGURATION && 0
+    if (result) {
         __DBG_printf("%s result=%u", toString().c_str(), result);
-        DumpBinary dump(DEBUG_OUTPUT);
-        dump.setPerLine(size);
-        dump.dump(tmp, size);
-        dump.dump(_info.data, size);
+        // DumpBinary dump(DEBUG_OUTPUT);
+        // dump.setPerLine(0xff);
+        // dump.dump(tmp, _param.length());
+        // dump.dump(_param.data(), _param.length());
     }
 #endif
-    // free(tmp);
-
-    conf->__release(tmp);
+    ConfigurationHelper::_allocator.deallocate(tmp);
     return result;
 }
 
-bool ConfigurationParameter::_readDataTo(Configuration *conf, uint16_t offset, uint8_t *ptr, uint16_t size) const
+bool ConfigurationParameter::_readDataTo(Configuration &conf, uint16_t offset, uint8_t *ptr, size_type maxSize) const
 {
-    if (_param.length) {
-
-#if DEBUG_CONFIGURATION || 0
-        auto address = (const uintptr_t)ptr;
-        if (address % 4) {
-            __DBG_panic("%s ptr=%p address=%u offset=%u not aligned", toString().c_str(), ptr, address, address % 4);
-        }
-#endif
-
+    // nothing to read
+    if (_param.length() == 0) {
+        return true;
+    }
 #if DEBUG_CONFIGURATION_GETHANDLE
-        auto readSize =
+    auto readSize =
 #endif
-        conf->_eeprom.read(ptr, offset, _param.length, size);
-        __DBG__addFlashReadSize(_param.handle, readSize);
-    }
-
-#if DEBUG_CONFIGURATION || 1
-    if (_param.isString()) {
-        if (ptr[_param.length] != 0) {
-            __DBG_panic("%s last byte not NUL", toString().c_str()); // TODO change to __DBG_printf
-        }
-        ptr[_param.length] = 0;
-    }
-#else
-    if (_param.isString()) {
-        if (ptr[_param.length] != 0) {
-            __DBG_printf("%s last byte not NUL", toString().c_str()); // TODO change to __DBG_printf
-        }
-       ptr[_param.length] = 0;
-    }
-#endif
+    conf._eeprom.read(ptr, offset, _param.length(), maxSize);
+    __DBG__addFlashReadSize(_param.getHandle(), readSize);
     return true;
 }
 
-bool ConfigurationParameter::_readData(Configuration *conf, uint16_t offset)
+bool ConfigurationParameter::_readData(Configuration &conf, uint16_t offset)
 {
-    auto ptr = _allocate(conf);
-    if (conf->_storage.size() > GARBAGE_COLLECTOR_MIN_POOL) {
-        conf->setLastReadAccess();
+    if (hasData()) { // return success if we have data
+        return true;
     }
 
-    if (!_readDataTo(conf, offset, ptr, _info.size)) {
+    // allocated memory will be increased to read data dword aligned if the size exceeds the temporary buffer
+    ConfigurationHelper::_allocator.allocate(conf._eeprom.getReadSize(offset, _param.size()), *this, 0);
+    conf.setLastReadAccess();
+
+    if (!_readDataTo(conf, offset, _param.data(), _param.size())) {
         return false;
     }
 
-#if DEBUG_CONFIGURATION
-    if (_info.size != getSize()) {
-        __LDBG_printf("ERROR: %s size mismatch", toString().c_str());
-        //__DBG_panic("%s size mismatch", toString().c_str());
-    }
-#endif
+    __DBG_assert_printf(_param.isString() == false || _param.string()[_param.length()] == 0, "%s NUL byte missing", toString().c_str());
 
-    _info.dirty = 0;
     return true;
 }
+
+ConfigurationHelper::WriteableData::WriteableData(size_type length, ConfigurationParameter &parameter, Configuration &conf) :
+    _buffer{},
+    _length(getParameterLength(parameter.getType(), length)),
+    _is_string(parameter.getType() == ParameterType::STRING)
+{
+    if (size() > sizeof(_buffer)) {
+        _data = ConfigurationHelper::_allocator.allocate(size() + 4);
+    }
+    if (parameter.hasData()) {
+        auto &param = parameter._getParam();
+        memcpy(data(), param._readable, std::min(_length, param.length()));
+        ConfigurationHelper::_allocator.deallocate(param._readable);
+        param._readable = nullptr;
+    }
+}
+
+ConfigurationHelper::WriteableData::~WriteableData()
+{
+    if (size() > sizeof(_buffer) && _data) {
+        ConfigurationHelper::_allocator.deallocate(_data);
+    }
+}
+
+void ConfigurationHelper::WriteableData::resize(size_type newLength, ConfigurationParameter &parameter, Configuration &conf)
+{
+    if (newLength == length()) {
+        return;
+    }
+
+    auto &param = parameter._getParam();
+    __LDBG_printf("new_length=%u length=%u data=%p", newLength, length(), data());
+
+    auto ptr = ConfigurationHelper::_allocator.allocate(param.sizeOf(newLength) + 4);
+    memcpy(ptr, param._writeable->data(), std::min(length(), newLength));
+    param._writeable->setData(ptr, newLength);
+}
+
+void ConfigurationHelper::WriteableData::setData(uint8_t *ptr, size_type length)
+{
+    if (size() > sizeof(_buffer) && _data) {
+        __LDBG_printf("free data=%p size=%u", _data, size());
+        ConfigurationHelper::_allocator.deallocate(_data);
+    }
+    __LDBG_printf("set data=%p length=%u", ptr, _length);
+    _data = ptr;
+    _length = length;
+}
+
+ConfigurationHelper::size_type ConfigurationHelper::getParameterLength(ParameterType type, size_t length)
+{
+    switch (type) {
+    case ParameterType::BYTE:
+        return sizeof(uint8_t);
+    case ParameterType::WORD:
+        return sizeof(uint16_t);
+    case ParameterType::DWORD:
+        return sizeof(uint32_t);
+    case ParameterType::QWORD:
+        return sizeof(uint64_t);
+    case ParameterType::FLOAT:
+        return sizeof(float);
+    case ParameterType::DOUBLE:
+        return sizeof(double);
+    case ParameterType::BINARY:
+    case ParameterType::STRING:
+        return (size_type)length;
+    default:
+        break;
+    }
+    __DBG_panic("invalid type=%u length=%u", type, length);
+    return 0;
+}
+

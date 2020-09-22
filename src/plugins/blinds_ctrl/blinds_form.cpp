@@ -25,6 +25,9 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
     }
 
     auto &cfg = Plugins::Blinds::getWriteableConfig();
+    using ConfigType = Plugins::Blinds::BlindsConfig_t;
+    using ChannelConfigType = Plugins::Blinds::BlindsConfigChannel_t;
+    using OperationType = Plugins::Blinds::OperationType;
 
     auto &ui = form.createWebUI();
     ui.setTitle(F("Blinds Controller"));
@@ -33,29 +36,28 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
 
     if (String_equals(formName, PSTR("channels"))) {
 
-        FormUI::Container::List currentLimitItems(
-            5, F("Extra Fast (5ms)"),
-            20, F("Fast (20ms)"),
-            50, F("Medium (50ms)"),
-            150, F("Slow (150ms)"),
-            250, F("Extra Slow (250ms)")
-        );
+        // FormUI::Container::List currentLimitItems(
+        //     500, F("Extra Fast (0.5ms)"),
+        //     5000, F("Fast (5ms)"),
+        //     12500, F("Medium (12.5ms)"),
+        //     20000, F("Slow (20ms)"),
+        //     50000, F("Extra Slow (50ms)")
+        // );
 
         FormUI::Container::List operationTypeItems(
-            Plugins::Blinds::OperationType::NONE, FSPGM(None),
-            Plugins::Blinds::OperationType::OPEN_CHANNEL0, F("Open Channel 0"),
-            Plugins::Blinds::OperationType::OPEN_CHANNEL1, F("Open Channel 1"),
-            Plugins::Blinds::OperationType::CLOSE_CHANNEL0, F("Close Channel 0"),
-            Plugins::Blinds::OperationType::CLOSE_CHANNEL1, F("Close Channel 1"),
-            Plugins::Blinds::OperationType::OPEN_CHANNEL0_FOR_CHANNEL1, F("Open Channel 0 For Channel 1"),
-            Plugins::Blinds::OperationType::OPEN_CHANNEL1_FOR_CHANNEL0, F("Open Channel 1 For Channel 0"),
-            Plugins::Blinds::OperationType::CLOSE_CHANNEL0_FOR_CHANNEL1, F("Close Channel 0 For Channel 1"),
-            Plugins::Blinds::OperationType::CLOSE_CHANNEL1_FOR_CHANNEL0, F("Close Channel 1 For Channel 0")
+            OperationType::NONE, FSPGM(None),
+            OperationType::OPEN_CHANNEL0, F("Open Channel 0"),
+            OperationType::OPEN_CHANNEL1, F("Open Channel 1"),
+            OperationType::CLOSE_CHANNEL0, F("Close Channel 0"),
+            OperationType::CLOSE_CHANNEL1, F("Close Channel 1"),
+            OperationType::OPEN_CHANNEL0_FOR_CHANNEL1, F("Open Channel 0 For Channel 1"),
+            OperationType::OPEN_CHANNEL1_FOR_CHANNEL0, F("Open Channel 1 For Channel 0"),
+            OperationType::CLOSE_CHANNEL0_FOR_CHANNEL1, F("Close Channel 0 For Channel 1"),
+            OperationType::CLOSE_CHANNEL1_FOR_CHANNEL0, F("Close Channel 1 For Channel 0")
         );
 
-
-        PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, 2, (grp)(n0)(n1)(otl)(ctl)(il)(ilt)(dac)(pwm));
-        PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, 6, (ot)(od)(ct)(cd));
+        PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, 2, (grp)(n0)(n1)(otl)(ctl)(il)(ip)(dac)(pwm));
+        PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, BLINDS_CONFIG_MAX_OPERATIONS, (ot)(od)(ct)(cd));
 
         const __FlashStringHelper *names[2] = { F("Channel 0"), F("Channel 1") };
         for (uint8_t i = 0; i < kChannelCount; i++) {
@@ -73,33 +75,36 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
             }
             form.addFormUI(FSPGM(Name), FormUI::PlaceHolder(names[i]));
 
-            form.addPointerTriviallyCopyable(F_VAR(otl, i), &cfg.channels[i].open_time);
+            form.addObjectGetterSetter(F_VAR(otl, i), cfg.channels[i], ChannelConfigType::get_bits_open_time_ms, ChannelConfigType::set_bits_open_time_ms);
             form.addFormUI(F("Open Time Limit"), FormUI::Suffix(FSPGM(ms)));
+            ChannelConfigType::addRangeValidatorFor_open_time_ms(form);
 
-            form.addPointerTriviallyCopyable(F_VAR(ctl, i), &cfg.channels[i].close_time);
+            form.addObjectGetterSetter(F_VAR(ctl, i), cfg.channels[i], ChannelConfigType::get_bits_close_time_ms, ChannelConfigType::set_bits_close_time_ms);
             form.addFormUI(F("Close Time Limit"), FormUI::Suffix(FSPGM(ms)));
+            ChannelConfigType::addRangeValidatorFor_close_time_ms(form);
 
-            form.addPointerTriviallyCopyable(F_VAR(il, i), &cfg.channels[i].current_limit);
-            form.addFormUI(F("Current Limit"), FormUI::Suffix(FSPGM(mA)));
-            form.addValidator(FormUI::Validator::Range(BlindsControllerConversion::kMinCurrent, BlindsControllerConversion::kMaxCurrent));
+            form.addObjectGetterSetter(F_VAR(il, i), cfg.channels[i], ChannelConfigType::get_bits_current_limit_mA, ChannelConfigType::set_bits_current_limit_mA);
+            form.addFormUI(F("Current Limit"), FormUI::Suffix(FSPGM(mA)), FormUI::IntAttribute(F("data-adc-multiplier"), BlindsControllerConversion::kConvertADCValueToCurrentMulitplier * 0xffff));
+            ChannelConfigType::addRangeValidatorFor_current_limit_mA(form);
 
-            form.addPointerTriviallyCopyable(F_VAR(ilt, i), &cfg.channels[i].current_limit_time);
-            form.addFormUI(F("Current Limit Trigger Time"), currentLimitItems);
+            form.addObjectGetterSetter(F_VAR(ip, i), cfg.channels[i], ChannelConfigType::get_bits_current_avg_period_us, ChannelConfigType::set_bits_current_avg_period_us);
+            form.addFormUI(F("Current Averaging Period"), FormUI::Suffix(F("period in microseconds")));
+            ChannelConfigType::addRangeValidatorFor_current_avg_period_us(form);
 
-            form.addPointerTriviallyCopyable(F_VAR(dac, i), &cfg.channels[i].dac_current_limit);
-            form.addFormUI(F("Hard Current Limit (DRV8870)"), FormUI::Suffix(FSPGM(mA)));
-            form.addValidator(FormUI::Validator::Range(BlindsControllerConversion::kMinCurrent, BlindsControllerConversion::kMaxCurrent));
+            form.addObjectGetterSetter(F_VAR(dac, i), cfg.channels[i], ChannelConfigType::get_bits_dac_pwm_value, ChannelConfigType::set_bits_dac_pwm_value);
+            form.addFormUI(F("DRV8870 Current Limit / DAC PWM"), FormUI::Suffix(F("0 - " _STRINGIFY(PWMRANGE))), FormUI::IntAttribute(F("data-dac-multiplier"), BlindsControllerConversion::kDACPWMtoVoltage * 0xffff));
+            ChannelConfigType::addRangeValidatorFor_dac_pwm_value(form);
 
-            form.addPointerTriviallyCopyable(F_VAR(pwm, i), &cfg.channels[i].pwm_value);
+            form.addObjectGetterSetter(F_VAR(pwm, i), cfg.channels[i], ChannelConfigType::get_bits_pwm_value, ChannelConfigType::set_bits_pwm_value);
             form.addFormUI(F("Motor PWM"), FormUI::Suffix(F("0 - " _STRINGIFY(PWMRANGE))));
-            form.addValidator(FormUI::Validator::Range(0, PWMRANGE));
+            ChannelConfigType::addRangeValidatorFor_pwm_value(form);
 
             channelGroup.end();
         }
 
         auto &autoGroup = form.addCardGroup(FSPGM(open, "open"), F("Open Automation"), false);
 
-        for(size_t i = 0; i < 6; i++) {
+        for(size_t i = 0; i < BLINDS_CONFIG_MAX_OPERATIONS; i++) {
             form.addPointerTriviallyCopyable(F_VAR(ot, i), &cfg.open[i].type);
             form.addFormUI(FSPGM(Action, "Action"), operationTypeItems);
 
@@ -111,7 +116,7 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
 
         auto &closeGroup = autoGroup.end().addCardGroup(FSPGM(close), F("Close Automation"), false);
 
-        for(size_t i = 0; i < 6; i++) {
+        for(size_t i = 0; i < BLINDS_CONFIG_MAX_OPERATIONS; i++) {
             form.addPointerTriviallyCopyable(F_VAR(ct, i), &cfg.close[i].type);
             form.addFormUI(FSPGM(Action), operationTypeItems);
 
@@ -146,41 +151,35 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
         form.addFormUI(F("Shunt Multiplexer Pin"), FormUI::Type::INTEGER, FormUI::PlaceHolder(IOT_BLINDS_CTRL_MULTIPLEXER_PIN), FormUI::CheckboxButtonSuffix(multiplexer, F("HIGH State For Channel 0")));
 
         form.addPointerTriviallyCopyable(F("pin5"), &cfg.pins[5]);
-        form.addFormUI(F("DAC Current Limit Pin"), FormUI::Type::INTEGER, FormUI::PlaceHolder(IOT_BLINDS_CTRL_DAC_PIN));
+        form.addFormUI(F("DAC Pin for DRV8870 Vref"), FormUI::Type::INTEGER, FormUI::PlaceHolder(IOT_BLINDS_CTRL_DAC_PIN));
 
         pinsGroup.end();
 
         auto &motorGroup = form.addCardGroup(F("ctrl"), F("Controller Configuration"), true);
 
-        using ConfigType = typename std::remove_reference<decltype(cfg)>::type;
+        form.addObjectGetterSetter(F("pwm"), cfg, cfg.get_bits_pwm_frequency, cfg.set_bits_pwm_frequency);
+        form.addFormUI(F("PWM Frequency"), FormUI::Type::INTEGER, FormUI::PlaceHolder(ConfigType::kDefaultValueFor_pwm_frequency), FormUI::Suffix(F("Hz")));
+        ConfigType::addRangeValidatorFor_pwm_frequency(form);
 
-        form.addMemberVariable(F("pwm"), cfg, &ConfigType::pwm_frequency);
-        form.addFormUI(F("PWM Frequency"), FormUI::Type::INTEGER, FormUI::PlaceHolder(Plugins::Blinds::ConfigStructType::kPwmFrequencyDefault), FormUI::Suffix(F("Hz")));
-        form.addValidator(FormUI::Validator::Range(1000, 40000));
+        form.addObjectGetterSetter(F("pss"), cfg, cfg.get_bits_pwm_frequency, cfg.set_bits_pwm_frequency);
+        form.addFormUI(F("PWM Soft Start Ramp-up Time"), FormUI::Type::INTEGER, FormUI::PlaceHolder(ConfigType::kDefaultValueFor_pwm_softstart_time), FormUI::Suffix(F("microseconds")));
+        ConfigType::addRangeValidatorFor_pwm_softstart_time(form);
 
-        form.addMemberVariable(F("pss"), cfg, &ConfigType::pwm_softstart_time);
-        form.addFormUI(F("PWM Soft Start Ramp-up Time"), FormUI::Type::INTEGER, FormUI::PlaceHolder(Plugins::Blinds::ConfigStructType::kPwmSoftStartTime), FormUI::Suffix(F("microseconds")));
-        form.addValidator(FormUI::Validator::Range(100U, 150U * 1000U));
+        form.addObjectGetterSetter(F("adci"), cfg, cfg.get_bits_adc_read_interval, cfg.set_bits_adc_read_interval);
+        form.addFormUI(F("ADC Read Interval"), FormUI::Type::INTEGER, FormUI::PlaceHolder(ConfigType::kDefaultValueFor_adc_read_interval), FormUI::Suffix(F("microseconds")));
+        ConfigType::addRangeValidatorFor_adc_read_interval(form);
 
-        form.addMemberVariable(F("adca"), cfg, &ConfigType::adc_divider);
-        form.addFormUI(F("ADC Averaging"), FormUI::Type::INTEGER, FormUI::PlaceHolder(Plugins::Blinds::ConfigStructType::kAdcDividerDefault), FormUI::Suffix(F("period in milliseconds")));
-        form.addValidator(FormUI::Validator::Range(1, 1000));
+        form.addObjectGetterSetter(F("adcrt"), cfg, cfg.get_bits_adc_recovery_time, cfg.set_bits_adc_recovery_time);
+        form.addFormUI(F("ADC Recovery Time"), FormUI::Type::INTEGER, FormUI::PlaceHolder(ConfigType::kDefaultValueFor_adc_recovery_time), FormUI::Suffix(F("microseconds")));
+        ConfigType::addRangeValidatorFor_adc_recovery_time(form);
 
-        form.addMemberVariable(F("adci"), cfg, &ConfigType::adc_read_interval);
-        form.addFormUI(F("ADC Read Interval"), FormUI::Type::INTEGER, FormUI::PlaceHolder(Plugins::Blinds::ConfigStructType::kAdcReadIntervalDefault), FormUI::Suffix(F("microseconds")));
-        form.addValidator(FormUI::Validator::Range(500, 20000));
+        form.addObjectGetterSetter(F("adcrr"), cfg, cfg.get_bits_adc_recoveries_per_second, cfg.set_bits_adc_recoveries_per_second);
+        form.addFormUI(F("ADC Repeat Recovery"), FormUI::Type::INTEGER, FormUI::PlaceHolder(ConfigType::kDefaultValueFor_adc_recoveries_per_second), FormUI::Suffix(F("per second")));
+        ConfigType::addRangeValidatorFor_adc_recoveries_per_second(form);
 
-        form.addMemberVariable(F("adcrt"), cfg, &ConfigType::adc_recovery_time);
-        form.addFormUI(F("ADC Recovery Time"), FormUI::Type::INTEGER, FormUI::PlaceHolder(Plugins::Blinds::ConfigStructType::kAdcRecoveryTimeDefault), FormUI::Suffix(F("microseconds")));
-        form.addValidator(FormUI::Validator::Range(2000, 50000));
-
-        form.addMemberVariable(F("adcrr"), cfg, &ConfigType::adc_recoveries_per_second);
-        form.addFormUI(F("ADC Repeat Recovery"), FormUI::Type::INTEGER, FormUI::PlaceHolder(Plugins::Blinds::ConfigStructType::kAdcRecoveriesPerSecDefault), FormUI::Suffix(F("per second")));
-        form.addValidator(FormUI::Validator::Range(1, 20));
-
-        form.addMemberVariable(F("adco"), cfg, &ConfigType::adc_offset);
+        form.addObjectGetterSetter(F("adco"), cfg, cfg.get_bits_adc_offset, cfg.set_bits_adc_offset);
         form.addFormUI(F("ADC Offset"), FormUI::Type::INTEGER, FormUI::Suffix(F("raw value")));
-        form.addValidator(FormUI::Validator::Range(-1023, 1023));
+        ConfigType::addRangeValidatorFor_adc_offset(form);
 
         motorGroup.end();
 

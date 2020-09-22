@@ -22,7 +22,7 @@ int8_t operator *(const BlindsControl::ChannelType type) {
 BlindsControl::BlindsControl() :
     MQTTComponent(ComponentTypeEnum_t::SWITCH), _queue(*this),
     _activeChannel(ChannelType::NONE),
-    _adcIntegralMultiplier(1.0 / (1000.0 / 40.0)),
+    _adcIntegralMultiplier(10.0),
     _adc(ADCManager::getInstance())
 {
 }
@@ -233,11 +233,9 @@ void BlindsControl::_executeAction(ChannelType channel, bool open)
     }
 }
 
-static constexpr float xxxx=800/(50000/50.0);
-
 void BlindsControl::_startMotor(ChannelType channel, bool open)
 {
-    __LDBG_printf("channel=%u open=%u", channel, open);
+    // __LDBG_printf("channel=%u open=%u", channel, open);
 
     // disables all motor pins
     _stop();
@@ -245,35 +243,64 @@ void BlindsControl::_startMotor(ChannelType channel, bool open)
     _activeChannel = channel;
 
     auto &cfg = _config.channels[*channel];
-    _currentLimit = cfg.current_limit * BlindsControllerConversion::kConvertCurrentToADCValueMulitplier;
+    _currentLimit = cfg.current_limit_mA * BlindsControllerConversion::kConvertCurrentToADCValueMulitplier;
 
     _states[channel] = open ? StateType::OPEN : StateType::CLOSED;
 
     _publishState();
 
-    _motorTimeout.set(open ? cfg.open_time : cfg.close_time);
-    _currentLimitTimer.set(cfg.current_limit_time);
-    _currentLimitTimer.disable();
+    _motorTimeout.set(open ? cfg.open_time_ms : cfg.close_time_ms);
+    _adcIntegralMultiplier = cfg.current_avg_period_us / 1000.0;
     // clear ADC last
     _clearAdc();
 
-    if (_config.pwm_softstart_time >= 100) {
-        uint32_t diff;
-        uint32_t start = micros();
+    if (_config.pwm_softstart_time >= 1000) {
 
-        // soft start 100us - 150ms
+        // soft start enabled
         _setMotorSpeed(channel, 0, open);
 
-        while((diff = get_time_diff(start, micros())) < _config.pwm_softstart_time) {
-            _setMotorSpeedUpdate(channel, (cfg.pwm_value * diff) / _config.pwm_softstart_time, open);
-            delayMicroseconds(50);
+        // set timer, pwm and pin
+        // the pwm value is updated in the loop function
+        _motorStartTime = micros();
+        if (_motorStartTime == 0) {
+            _motorStartTime++;
         }
-        _setMotorSpeedUpdate(channel, cfg.pwm_value, open);
-
     }
     else {
         _setMotorSpeed(channel, cfg.pwm_value, open);
     }
+    _motorPWMValue = cfg.pwm_value;
+#if DEBUG_IOT_BLINDS_CTRL
+    _softStartUpdateCount = 0;
+#endif
+
+    __LDBG_printf("pin=%u pwm=%u soft-start=%.3fms I-limit=%umA (%u) dir=%s adc-mul=%.3f timeout=%ums",
+        _motorPin, _motorPWMValue, _config.pwm_softstart_time / 1000.0,
+        cfg.current_limit_mA, _currentLimit,
+        open ? PSTR("open") : PSTR("close"),
+        _adcIntegralMultiplier,
+        _motorTimeout.getTimeLeft()
+    );
+}
+
+bool BlindsControl::_checkMotor()
+{
+    _updateAdc();
+    if (_adcIntegral > _currentLimit) {
+        __LDBG_printf("current limit time=%f @ %u ms", _adcIntegral, _motorTimeout.getDelay() - _motorTimeout.getTimeLeft());
+        return true;
+    }
+    if (_motorTimeout.reached()) {
+        __LDBG_printf("timeout");
+        return true;
+    }
+#if IOT_BLINDS_CTRL_RPM_PIN
+    if (_hasStalled()) {
+        __LDBG_printf("stalled");
+        return false;
+    }
+#endif
+    return false;
 }
 
 void BlindsControl::_monitorMotor(ChannelAction &action)
@@ -281,37 +308,7 @@ void BlindsControl::_monitorMotor(ChannelAction &action)
     if (!_motorTimeout.isActive()) {
         __DBG_panic("motor timeout inactive");
     }
-    bool finished = false;
-
-    _updateAdc();
-
-    if (_adcIntegral > _currentLimit) {
-
-        if (_currentLimitTimer.reached()) {
-            __LDBG_printf("current limit time=%u", _currentLimitTimer.getDelay());
-            finished = true;
-        }
-        else if (!_currentLimitTimer.isActive()) {
-            _currentLimitTimer.restart();
-        }
-    }
-    else if (_currentLimitTimer.isActive() && _adcIntegral < _currentLimit * 0.8) {   // reset current limit counter if current drops below 80%
-        _currentLimitTimer.disable();
-    }
-
-#if IOT_BLINDS_CTRL_RPM_PIN
-    if (_hasStalled()) {
-        __LDBG_printf("stalled");
-        finished = true;
-    }
-#endif
-
-    if (_motorTimeout.reached()) {
-        __LDBG_printf("timeout");
-        finished = true;
-    }
-
-    if (finished) {
+    if (_checkMotor()) {
         action.next();
         _stop();
         if (_cleanQueue()) {
@@ -398,7 +395,31 @@ bool BlindsControl::_cleanQueue()
 
 void BlindsControl::_loopMethod()
 {
-    if (!_queue.empty()) {
+    // soft start is running, update PWM
+    if (_motorStartTime) {
+        uint32_t diff = get_time_diff(_motorStartTime, micros());
+        if (diff >= (uint32_t)_config.pwm_softstart_time) { // finished, set final pwm value
+            analogWrite(_motorPin, _motorPWMValue);
+            __LDBG_printf("soft start finished time=%u pin=%u pwm=%u updates=%u", diff, _motorPin, _motorPWMValue, _softStartUpdateCount);
+            _motorStartTime = 0;
+        }
+        else {
+            analogWrite(_motorPin, _motorPWMValue * diff / _config.pwm_softstart_time);
+#if DEBUG_IOT_BLINDS_CTRL
+            _softStartUpdateCount++;
+#endif
+        }
+    }
+    if (_queue.empty()) {
+        // if the queue is empty check motor timeout only
+        // this also updates the ADC readings and checks the current limit
+        if (_motorTimeout.isActive()) {
+            if (_checkMotor()) {
+                _stop();
+            }
+        }
+    }
+    else {
         auto &action = _queue.getAction();
         auto channel = action.getChannel();
         switch(action.getState()) {
@@ -461,17 +482,23 @@ BlindsControl::NameType BlindsControl::_getStateStr(ChannelType channel) const
 void BlindsControl::_clearAdc()
 {
     auto channel = *_activeChannel;
-    __LDBG_printf("rssel=%u", channel == 0 && Plugins::Blinds::ConfigStructType::get_enum_multiplexer(_config) == Plugins::Blinds::MultiplexerType::HIGH_FOR_CHANNEL0 ? HIGH : LOW);
 
-    analogWrite(_config.pins[5], _config.channels[channel].dac_current_limit);
+    static const uint32_t kMaxFrequency = 40000;
+    analogWriteRange(PWMRANGE);
+    analogWriteFreq(kMaxFrequency); // set to max. for the DAC
+    analogWrite(_config.pins[5], _config.channels[channel].dac_pwm_value);
+    __LDBG_printf("dac pin=%u pwm=%u frequency=%u", _config.pins[5], _config.channels[channel].dac_pwm_value, kMaxFrequency);
 
-    digitalWrite(_config.pins[4], channel == 0 && Plugins::Blinds::ConfigStructType::get_enum_multiplexer(_config) == Plugins::Blinds::MultiplexerType::HIGH_FOR_CHANNEL0 ? HIGH : LOW);
+    analogWriteFreq(_config.pwm_frequency);
+
+    uint8_t state = channel == 0 && Plugins::Blinds::ConfigStructType::get_enum_multiplexer(_config) == Plugins::Blinds::MultiplexerType::HIGH_FOR_CHANNEL0 ? HIGH : LOW;
+    digitalWrite(_config.pins[4], state);
+    __LDBG_printf("multiplexer pin=%u channel=%u state=%u delay=%u", _config.pins[4], channel, state, IOT_BLINDS_CTRL_SETUP_DELAY);
 
     delay(IOT_BLINDS_CTRL_SETUP_DELAY);
 
     _adcLastUpdate = 0;
     _adcIntegral = 0;
-    _currentLimitTimer.disable();
     _currentTimer.start();
 
 #if IOT_BLINDS_CTRL_RPM_PIN
@@ -504,64 +531,84 @@ void BlindsControl::_setMotorBrake(ChannelType channel)
 
     __LDBG_printf("channel=%u braking pins=%u,%u", channel, *(&_config.pins[(*channel * kChannelCount)]), *(&_config.pins[(*channel * kChannelCount)] + 1));
 
+    _motorStartTime = 0;
+    _motorPWMValue = 0;
     // make sure both pins are set to high at exactly the same time
-    ets_intr_lock();
     noInterrupts();
     auto ptr = &_config.pins[(*channel * kChannelCount)];
     digitalWrite(*ptr++, HIGH);
     digitalWrite(*ptr, HIGH);
     interrupts();
-    ets_intr_unlock();
 }
 
 void BlindsControl::_setMotorSpeed(ChannelType channelType, uint16_t speed, bool open)
 {
-#if DEBUG_IOT_BLINDS_CTRL
     auto channel = *channelType;
-    uint8_t pin1 = _config.pins[(channel * kChannelCount) + !open]; // first pin is open pin
+    _motorPin = _config.pins[(channel * kChannelCount) + !open]; // first pin is open pin
     uint8_t pin2 = _config.pins[(channel * kChannelCount) + open]; // second is close pin
+#if DEBUG_IOT_BLINDS_CTRL
 
-    __LDBG_printf("channel=%u speed=%u open=%u pins=%u,%u", channel, speed, open, pin1, pin2);
+    __LDBG_printf("channel=%u speed=%u open=%u pins=%u,%u frequency=%u", channel, speed, open, _motorPin, pin2, _config.pwm_frequency);
 #endif
 
-    analogWriteFreq(_config.pwm_frequency);
+    _motorStartTime = 0;
     analogWriteRange(PWMRANGE);
+    analogWriteFreq(_config.pwm_frequency);
 
-    _setMotorSpeed(channelType, speed, open);
-}
-
-void BlindsControl::_setMotorSpeedUpdate(ChannelType channelType, uint16_t speed, bool open)
-{
-    auto channel = *channelType;
-    uint8_t pin1 = _config.pins[(channel * kChannelCount) + !open]; // first pin is open pin
-    uint8_t pin2 = _config.pins[(channel * kChannelCount) + open]; // second is close pin
-
+    noInterrupts();
     if (speed == 0) {
-        digitalWrite(pin1, LOW);
+        digitalWrite(_motorPin, LOW);
+        _motorPWMValue = 0;
     }
-    else if (speed >= PWMRANGE) {
-        digitalWrite(pin1, HIGH);
-    }
+    // use analogWrite to prevent interrupting a cycle
+    // else if (speed >= PWMRANGE) {
+    //     digitalWrite(_motorPin, HIGH);
+    // }
     else {
-        analogWrite(pin1, speed);
+        analogWrite(_motorPin, speed);
     }
     digitalWrite(pin2, LOW);
+    interrupts();
 }
+
+// void BlindsControl::_setMotorSpeedUpdate(ChannelType channelType, uint16_t speed, bool open)
+// {
+//     auto channel = *channelType;
+//     uint8_t pin1 = _config.pins[(channel * kChannelCount) + !open]; // first pin is open pin
+//     uint8_t pin2 = _config.pins[(channel * kChannelCount) + open]; // second is close pin
+
+//     noInterrupts();
+//     if (speed == 0) {
+//         digitalWrite(pin1, LOW);
+//         _motorPWMValue = 0;
+//     }
+//     else if (speed >= PWMRANGE) {
+//         digitalWrite(pin1, HIGH);
+//     }
+//     else {
+//         analogWrite(pin1, speed);
+//     }
+//     digitalWrite(pin2, LOW);
+//     interrupts();
+// }
 
 void BlindsControl::_stop()
 {
-    __LDBG_println();
+    __LDBG_printf("pwm=%u pin=%u adc=%u stopping motor", _motorPWMValue, _motorPin, (int)_adcIntegral);
 
+    _motorStartTime = 0;
+    _motorPWMValue = 0;
     _motorTimeout.disable();
+
     _activeChannel = ChannelType::NONE;
     // do not allow interrupts when changing a pin pair from high/high to low/low and vice versa
-    ets_intr_lock();
     noInterrupts();
     for(auto pin : _config.pins) {
         digitalWrite(pin, LOW);
     }
     interrupts();
-    ets_intr_unlock();
+
+    _adcIntegral = 0;
 }
 
 String BlindsControl::_getTopic(ChannelType channel, TopicType type)
@@ -613,13 +660,13 @@ void BlindsControl::_saveState()
 void BlindsControl::_readConfig()
 {
     _config = Plugins::Blinds::getConfig();
-    _adcIntegralMultiplier = 1.0 / (1000.0 / _config.adc_divider);
+    _adcIntegralMultiplier = _config.channels[0].current_avg_period_us / 1000.0;
 
     _adc.setOffset(_config.adc_offset);
     _adc.setMinDelayMicros(_config.adc_read_interval);
     _adc.setMaxDelayMicros(_config.adc_recovery_time);
     _adc.setRepeatMaxDelayPerSecond(_config.adc_recoveries_per_second);
-    _adc.setMaxDelayYieldTimeMicros(_config.adc_recovery_time / 2);
+    _adc.setMaxDelayYieldTimeMicros(std::min<uint16_t>(1000, _config.adc_recovery_time / 2));
 
     _loadState();
 }

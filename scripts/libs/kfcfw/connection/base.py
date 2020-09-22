@@ -21,6 +21,9 @@ class BaseConnection:
     def error(self, msg, end = '\n'):
         self.controller.console.error(msg, end)
 
+    def exception(self):
+        self.controller.console.exception()
+
     def has_error(self):
         return self.error_str!=None
 

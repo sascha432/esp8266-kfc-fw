@@ -418,7 +418,7 @@ namespace FormUI {
             }
 
             inline float _passthrough(double t) {
-                return t;
+                return (float)t;
             }
 
             inline float _passthrough(float t) {
@@ -462,7 +462,7 @@ namespace FormUI {
             }
 
             inline float _create(double t) {
-                return t;
+                return (float)t;
             }
 
             inline float _create(float t) {

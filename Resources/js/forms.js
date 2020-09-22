@@ -11,60 +11,76 @@ function form_invalid_feedback(selector, message) {
 $.visible_password_options = {};
 
 $.formValidator = {
-    name: 'form:last',
+    target: 'form:last',
     errors: [],
     validated: false,
-    markAsValid: false,
+    input_tags: 'select, input, .form-enable-slider',
     validate: function() {
-        $.formValidator.validated = true;
-        var $form = $($.formValidator.form);
-        if ($.formValidator.markAsValid) {
-            $form.find('select,input').addClass('is-valid').remove('.invalid-feedback');
-        }
-        for(var i = 0; i < $.formValidator.errors.length; i++) {
-            var e = $.formValidator.errors[i];
-            var $t = $(e.target);
-            if ($t.length == 0) {
-                dbg_console.error('target invalid', $t);
+        this.validated = true;
+        var form = $(this.target);
+        var form_groups = form.find('.form-group');
+        // remove previous errors
+        form.find('.is-invalid, .is-valid').removeClass('is-invalid is-valid');
+        form.find('.invalid-feedback').remove();
+        form.find('.invalid-feedback-alert').remove();
+        // add errors
+        $(this.errors).each(function(key, val) {
+            var target = $(val.target);
+            var group = target.closest('.form-group');
+            dbg_console.debug(val.name, val.target, val.error, target, group, val);
+            if (group.length) {
+                group.find(this.input_tags).addClass('is-invalid');
+                group.append('<div class="invalid-feedback">' + val.error + '</>');
+            } else {
+                if (!val.name) {
+                    val.name = 'Field "' + val.target.replace(/[\.#]/g, '').replace(/_([0-9]+)/g, ' #\$1').replace(/[_-]/g, ' ') + '"';
+                }
+                var alert = form.find('.invalid-feedback-alert');
+                if (!alert.length) {
+                    form.prepend('<div class="invalid-feedback-alert mt-3 mb-0 p-2 alert alert-danger"><h5 class="text-center">Additional errors</h5><hr></div>');
+                    alert = form.find('.invalid-feedback-alert');
+                }
+                alert.append('<div class="m-2">' + val.name + ': <strong>' + val.error + '</strong></div>');
             }
-            if ($t.parent().hasClass('form-enable-slider')) {
-                $t = $t.parent();
-                dbg_console.debug('slider', $t);
-            }
-            $t.removeClass('is-valid').addClass('is-invalid');
-            var parent = $t.closest('.input-group,.form-group');
-            if (parent.length == 0) {
-                dbg_console.error('parent group not found', $t);
-            }
-            var error = '<div class="invalid-feedback" style="display:block">' + e.error + '</div>';
-            var field = parent.children().last();
-            var added = field.after(error);
-            if (!$(added).is(":visible") || $(added).is(":hidden")) {
-                dbg_console.error('error is hodden', $(added));
-            }
-        }
+        });
+        // display feedback and open collapsed groups
+        form.find('.invalid-feedback').show().closest('.collapse').collapse('show');
+        // add is-valid to all inputs that are not marked as invalid
+        form_groups.find(this.input_tags).not('.is-invalid').addClass('is-valid');
     },
-    addErrors: function(errors, target) {
-        $.formValidator.errors = errors;
-        if (target) {
-            $.formValidator.form = target;
-        } else {
-            $.formValidator.form = $($.formValidator.name);
-        }
-        $.formValidator.validate();
+    addErrors: function(errors) {
+        this.errors = errors;
+        this.validate();
     }
 };
-// $.formValidator.addErrors([{'target':'#colon_sp','error':'This fields value must be between 50 and 65535 or 0'}]);
-// $.formValidator.addErrors([{'target':'#brightness','error':'This fields value must be between 50 and 65535 or 0'}]);
 
-$.addFormHelp = function() {
+// $.formValidator.addErrors([{target:'#brightness',name:'Display Brightness',error:'This fields value must be between 50 and 65535 or 0'},{target:'#pwm_0','error':'This fields value must be between 50 and 65535 or 0'},{target:'#pwm_1',error:'This fields value must be between 50 and 65535 or 0'}, {target:'#missing_field_123',error:'missing target'}]);
+
+$.addFormHelp = function(force) {
     $('.form-help-block div[data-target]').each(function() {
-        $($(this).data('target')).html($(this).html());
+        var targets = $($(this).data('target'));
+        // after "tag"" everything is replaced with the help. if it does not exist, the help is appended
+        var tag = '<br><div class="form-help-addon">';
+        var help = tag + '<div class="form-help-label-text">' + $(this).html() + '</div></div>';
+        targets.each(function() {
+            var label = $('label[for="' + $(this).attr('id') + '"]');
+            if (force || label.find('.form-help-addon').length == 0) {
+                dbg_console.debug('update #'+ $(this).attr('id'));
+                var regex = RegExp(tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '.*');
+                label.html(label.html().replace(regex, '') + help);
+                label.find('.form-help-label-text').on('click', function() {
+                    $(this).toggleClass('form-help-label-text-zoom-in');
+                });
+            }
+        });
     });
 };
 
+$.addFormHelp(true);
+
 $(function() {
-    $.addFormHelp();
+    // run again in update mode once the page has finished loading
+    $.addFormHelp(false);
 });
 
 $.urlParam = function(name, remove) {

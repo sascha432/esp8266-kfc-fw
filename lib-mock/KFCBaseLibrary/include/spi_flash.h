@@ -58,7 +58,7 @@ inline SpiFlashOpResult spi_flash_erase_sector(uint16_t sec) {
 inline SpiFlashOpResult spi_flash_write(uint32_t des_addr, uint32_t *src_addr, uint32_t size) {
 	auto eeprom_start_address = ((uintptr_t)&_EEPROM_start - SECTION_EEPROM_START_ADDRESS);
 	auto eeprom_ofs = (uintptr_t)(src_addr - eeprom_start_address);
-	if (eeprom_ofs + size <= SPI_FLASH_SEC_SIZE && ((size & 7) == 0) && ((((uintptr_t)&des_addr) & 7) == 0)) {
+	if (eeprom_ofs + size <= SPI_FLASH_SEC_SIZE && ((size & 3) == 0) && ((((uintptr_t)des_addr) & 3) == 0)) {
 		if (EEPROM.begin()) {
 			memcpy(EEPROM_getDataPtr() + eeprom_ofs, src_addr, size);
 			EEPROM.commit();
@@ -72,7 +72,7 @@ inline SpiFlashOpResult spi_flash_read(uint32_t src_addr, uint32_t *des_addr, ui
 {
 	auto eeprom_start_address = ((uintptr_t)&_EEPROM_start - SECTION_EEPROM_START_ADDRESS);
 	auto eeprom_ofs = (uintptr_t)(src_addr - eeprom_start_address);
-	if (eeprom_ofs + size <= SPI_FLASH_SEC_SIZE && ((size & 7) == 0) && ((((uintptr_t)&des_addr) & 7) == 0)) {
+	if (eeprom_ofs + size <= SPI_FLASH_SEC_SIZE && ((size & 3) == 0) && ((((uintptr_t)des_addr) & 3) == 0)) {
 		if (EEPROM.begin()) {
 			memcpy(des_addr, EEPROM.getConstDataPtr() + eeprom_ofs, size);
 			return SPI_FLASH_RESULT_OK;

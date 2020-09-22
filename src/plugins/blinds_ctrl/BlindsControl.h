@@ -14,6 +14,7 @@
 #include "../src/plugins/mqtt/mqtt_component.h"
 #include <kfc_fw_config.h>
 #include "blinds_defines.h"
+#include <stl_ext/algorithm.h>
 
 #if DEBUG_IOT_BLINDS_CTRL
 #include <debug_helper_enable.h>
@@ -244,6 +245,10 @@ public:
 
     // void setChannel(ChannelType channel, StateType state);
 
+    // returns ADC value * 64.0 of the current measurement
+    uint16_t getCurrent() {
+        return std::clamp<uint32_t>(_adcIntegral * 64.0, 0, 0xffff);
+    }
 protected:
     void _loopMethod();
 
@@ -257,11 +262,12 @@ protected:
     void _executeAction(ChannelType channel, bool open);
     void _startMotor(ChannelType channel, bool open);
     void _monitorMotor(ChannelAction &action);
+    bool _checkMotor();
 
     void _clearAdc();
     void _updateAdc();
     void _setMotorSpeed(ChannelType channel, uint16_t speed, bool open);
-    void _setMotorSpeedUpdate(ChannelType channel, uint16_t speed, bool open);
+    // void _setMotorSpeedUpdate(ChannelType channel, uint16_t speed, bool open);
     void _setMotorBrake(ChannelType channel);
     void _stop();
 
@@ -322,8 +328,13 @@ protected:
     ChannelQueue _queue;
     ChannelType _activeChannel;
 
+    uint32_t _motorStartTime;
+    uint8_t _motorPin;
+    uint16_t _motorPWMValue;
+#if DEBUG_IOT_BLINDS_CTRL
+    uint32_t _softStartUpdateCount;
+#endif
     MillisTimer _motorTimeout;
-    MillisTimer _currentLimitTimer;
     uint16_t _currentLimit;
 
     uint32_t _adcLastUpdate;

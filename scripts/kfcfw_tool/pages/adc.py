@@ -12,6 +12,7 @@ import os
 import sys
 import copy
 import json
+import struct
 from pathlib import Path
 
 import matplotlib
@@ -139,6 +140,11 @@ class PageADC(tk.Frame, PageBase):
         grid.next(ttk.Button(self, text="move_open", command=lambda: self.load_and_execute('move_open')))
         grid.next(ttk.Button(self, text="move_close", command=lambda: self.load_and_execute('move_close')))
 
+        grid.first(ttk.Button(self, text="ch0 open", command=lambda: self.send_cmd_threaded(['+BCME=open,0'])))
+        grid.next(ttk.Button(self, text="ch0 close", command=lambda: self.send_cmd_threaded(['+BCME=close,0'])))
+        grid.next(ttk.Button(self, text="ch1 open", command=lambda: self.send_cmd_threaded(['+BCME=open,1'])))
+        grid.next(ttk.Button(self, text="ch1 close", command=lambda: self.send_cmd_threaded(['+BCME=close,1'])))
+
         # .grid(in_=cfg, row=1, column=2)
         # ttk.Button(self, text="PWM pin 4 500", command=lambda: self.send_pwm_cmd(12, 500, 0)).grid(in_=cfg, row=1, column=1)
         # ttk.Button(self, text="PWM pin 4 300", command=lambda: self.send_pwm_cmd(12, 300, 0)).grid(in_=action, row=1, column=10)
@@ -167,7 +173,7 @@ class PageADC(tk.Frame, PageBase):
             self.axis.set_ylabel('ADC value converter to %s' % self.config['unit'])
 
 
-        self.averaging = [1.0, 50.0, 15.0]
+        self.averaging = [1.0, 50.0, 10.0]
         lines_width = [ 0.1, 0.5, 1.0, 2.0 ]
         #self.averaging[2] = current limit
 
@@ -182,6 +188,8 @@ class PageADC(tk.Frame, PageBase):
         tmp, = self.axis.plot(self.values[0], self.values[3], lw=lines_width[2], color='orange', label='Average/%ums' % self.averaging[1])
         self.lines.append(tmp)
         tmp, = self.axis.plot(self.values[0], self.values[4], lw=lines_width[3], color='red', label='Average/%ums' % self.averaging[2])
+        self.lines.append(tmp)
+        tmp, = self.axis.plot(self.values[0], self.values[5], lw=lines_width[3], color='purple', label='BlindsCtrl current')
         self.lines.append(tmp)
         self.axis.legend()
 
@@ -242,6 +250,7 @@ class PageADC(tk.Frame, PageBase):
             }
             config = copy.deepcopy(self.controller.config["adc"])
             config['items']['defaults']['name'] = 'defaults'
+            self.console.exception()
 
         self.console.debug('ADC config: %s' % (self.controller.config["adc"]['items']))
         name = config['last']
@@ -288,8 +297,8 @@ class PageADC(tk.Frame, PageBase):
                 val = tmp[key]
                 self.config[key] = val
                 self.form[key].set(val)
-            except Exception as e:
-                self.console.log('copy name=%s key=%s val=%s failed: %s' % (name, key, val, e))
+            except:
+                self.console.exception()
 
     def load_previous_data(self):
         try:
@@ -311,7 +320,7 @@ class PageADC(tk.Frame, PageBase):
 
         except Exception as e:
             self.reset_data()
-            self.console.error(e)
+            self.console.exception()
             raise e
 
     def find_start(self, min_time, n):
@@ -351,7 +360,9 @@ class PageADC(tk.Frame, PageBase):
             for n in range(self._calc['n'], num):
                 time_val = self.data['time'][n]
                 raw_value = self.data['adc_raw'][n]
+                raw_value2 = self.data['adc2_raw'][n]
                 value = self.adc_cvt_raw_value(raw_value)
+                value2 = self.adc_cvt_raw_value(raw_value2)
                 # end = n - 1
                 # # start = 0
                 # start = end - 10
@@ -389,12 +400,11 @@ class PageADC(tk.Frame, PageBase):
                     diff2 = diff1 + 1.0
                     avg3 = ((avg3 * diff1) + value) / diff2
 
-                val = 0
+                # xval = 0
                 # if n>0:
-                    # cover the last 100ms
-                    # start = self.find_start(time_val - 5000, n)
-                    # start=0
-                    # val = np.percentile(self.values[1][start:n], 15)
+                #     # cover the last 200ms
+                #     start = self.find_start(time_val - 250, n)
+                #     xval = np.std(self.values[1][start:n])
 
                 if self.stopped==None and avg1>self.threshold:
                     self.stopped = False
@@ -423,6 +433,7 @@ class PageADC(tk.Frame, PageBase):
                 self.values[2].append(avg1)
                 self.values[3].append(avg2)
                 self.values[4].append(avg3)
+                self.values[5].append(value2)
 
             # store values for next call
             self._calc['n'] = n
@@ -465,21 +476,48 @@ class PageADC(tk.Frame, PageBase):
 
 
         except Exception as e:
-            self.console.log('calc_data failed: %s' % e)
+            self.console.exception()
             raise e
 
-    def data_handler(self, data, flags):
+    def data_handler(self, data, flags, packet_size, msg, odata):
         if not self.lock.acquire(True):
             self.console.error('data_handler: failed to lock plot')
             return
         time_val = 0
         try:
             self.data['packets'] += 1
-            for packed in data:
-                time_val = packed & 0x3fffff
-                value = packed >> 22
-                self.data['time'].append(time_val)
-                self.data['adc_raw'].append(value)
+
+            i = -1
+            try:
+                for i in range(0, len(data) - 1, packet_size):
+                    if packet_size==6:
+                        (dword, word) = struct.unpack_from("=LH", data[i:i + 6])
+                    elif packet_size==4:
+                        word = 0
+                        (dword) = struct.unpack_from("=L", data[i:i + 4])
+
+                    time_val = dword & 0x3fffff
+                    value = dword >> 22
+                    value2 = word / 64.0
+                    self.data['time'].append(time_val)
+                    self.data['adc_raw'].append(value)
+                    self.data['adc2_raw'].append(value2)
+            except Exception as e:
+                self.console.error(msg)
+                self.console.error('packet error data_len=%u packet_size=%u idx=%d' % (len(data), packet_size, i))
+                print(odata)
+                self.console.exception()
+                os._exit(1)
+                raise e
+
+
+            # # 4 byte packets
+            # for packed in data:
+            #     time_val = packed & 0x3fffff
+            #     value = packed >> 22
+            #     self.data['time'].append(time_val)
+            #     self.data['adc_raw'].append(value)
+
             self.calc_data(flags & 0x0001)
 
             # last packet flag
@@ -492,8 +530,8 @@ class PageADC(tk.Frame, PageBase):
                     self.console.error('packets lost flag set')
                 self.store_data_in_file_delayed(2.0)
                 self.send_cmd_adc_stop_threaded(0.5)
-        except Exception as e:
-            self.console.error(e)
+        except:
+            self.console.exception()
         finally:
             self.update_plot = True
             self.lock.release()
@@ -528,8 +566,8 @@ class PageADC(tk.Frame, PageBase):
             self.add_vlines_from_list(self.add_vlines)
             self.add_vlines = {}
 
-        except Exception as e:
-            self.console.log(e)
+        except:
+            self.console.exception()
 
         finally:
             self.update_plot = False
@@ -614,8 +652,8 @@ class PageADC(tk.Frame, PageBase):
     def reset_data(self, x_lim = 1000):
         self.store_invoked = None
         self.current_data_file = None
-        self.data = { 'time': [], 'adc_raw': [], 'packets': 0, 'dropped': False, 'xlim': x_lim, 'ylim': self.threshold * 2, 'display': self.config['display'], 'vlines': {}, 'hlines': {'current': self.config['stop_current'], 'threshold': self.threshold, 'dac': self.config['dac']} }
-        self.values = [ [],[],[],[],[] ]
+        self.data = { 'time': [], 'adc_raw': [], 'adc2_raw': [], 'packets': 0, 'dropped': False, 'xlim': x_lim, 'ylim': self.threshold * 2, 'display': self.config['display'], 'vlines': {}, 'hlines': {'current': self.config['stop_current'], 'threshold': self.threshold, 'dac': self.config['dac']} }
+        self.values = [ [],[],[],[],[],[] ]
         self.add_vlines = {}
         self.stopped = None
         self._calc = {'n': -1}

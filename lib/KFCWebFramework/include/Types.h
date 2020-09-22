@@ -19,7 +19,6 @@
 #define __KFC_FORMS_INLINE_METHOD__                     inline
 #else
 #define __KFC_FORMS_INLINE_METHOD__
-#define
 #endif
 
 

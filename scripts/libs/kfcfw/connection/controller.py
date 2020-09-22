@@ -22,6 +22,7 @@
 #
 
 import tkinter as tk
+import traceback
 
 class PrintConsole:
     def __init__(self, debug = True):
@@ -36,6 +37,9 @@ class PrintConsole:
     def debug(self, msg, end = '\n'):
         if self._debug:
             self.log('DEBUG: %s' % msg, end)
+
+    def exception(self):
+        self.log(traceback.format_exc())
 
     def show_message(message, title = 'Error'):
         tk.messagebox.showerror(title=title, message=message)

@@ -85,8 +85,7 @@ namespace FormUI {
         class Range : public RangeTemplate<int32_t> {
         public:
             Range(int32_t aMin, int32_t aMax, bool allowZero = false, const String &message = String()) : RangeTemplate(aMin, aMax, allowZero, message) {}
-
-            Range(const String &message, int32_t aMin, int32_t aMax, bool allowZero = false) __attribute__((deprecated)) : RangeTemplate(aMin, aMax, allowZero, message) {}
+            Range(const String &message, int32_t aMin, int32_t aMax, bool allowZero = false) : RangeTemplate(aMin, aMax, allowZero, message) {}
         };
 
         class NetworkPort : public RangeTemplate<uint16_t>

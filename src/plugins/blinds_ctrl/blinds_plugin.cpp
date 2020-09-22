@@ -91,13 +91,13 @@ void BlindsControlPlugin::getStatus(Print &output)
 
     for(const auto channel: _states.channels()) {
         auto &channelConfig = _config.channels[*channel];
-        output.printf_P(PSTR("Channel %s, state %s, open/close time limit  %ums / %ums, current limit %umA/%ums" HTML_S(br)),
+        output.printf_P(PSTR("Channel %s, state %s, open/close time limit  %ums / %ums, current limit %umA/%.3fms" HTML_S(br)),
             Plugins::Blinds::getChannelName(*channel),
             _states[channel]._getFPStr(),
-            channelConfig.open_time,
-            channelConfig.close_time,
-            channelConfig.current_limit,
-            channelConfig.current_limit_time
+            channelConfig.open_time_ms,
+            channelConfig.close_time_ms,
+            channelConfig.current_limit_mA,
+            channelConfig.current_avg_period_us / 1000.0
         );
     }
 }
@@ -148,17 +148,26 @@ void BlindsControl::rpmIntCallback(InterruptInfo info) {
 
 #endif
 
+BlindsControlPlugin &BlindsControlPlugin::getInstance()
+{
+    return plugin;
+}
+
 void BlindsControlPlugin::loopMethod()
 {
     plugin._loopMethod();
 }
 
 
-#if AT_MODE_SUPPORTED && 0
+#if AT_MODE_SUPPORTED
 
 #include "at_mode.h"
 
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(BCME, "BCME", "<adc|div|open|close>[,<value>]", "Set or display test mode value");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(BCME, "BCME", "<open|close|stop>[,<channel>]", "Open, close a channel or stop motor");
+
+//+BCME=open,0
+//+BCME=open,1
+//+BCME=stop
 
 // void BlindsControlPlugin::_printTestInfo() {
 
@@ -233,64 +242,20 @@ ATModeCommandHelpArrayPtr BlindsControlPlugin::atModeCommandHelp(size_t &size) c
 bool BlindsControlPlugin::atModeHandler(AtModeArgs &args)
 {
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(BCME))) {
-        if (args.requireArgs(1, 4)) {
-            auto cmds = PSTR("adc|div|open|close");
+        if (args.requireArgs(1, 2)) {
+            auto cmds = PSTR("open|close|stop");
             int cmd = stringlist_find_P_P(cmds, args.get(0), '|');
+            int channel = args.toIntMinMax(1, 0, 1, 0);
             switch(cmd) {
                 case 0:
-                    if (args.size() == 2) {
-                        _storeValues = args.isTrue(1);
-                    }
-                    args.printf_P(PSTR("store=%u"), _storeValues);
-                    break;
                 case 1:
-                    if (args.size() == 2) {
-                        _adcIntegralMultiplier = 1.0 / (1000.0 / args.toFloatMinMax(1, 0.1, 10000.0, 40.0));
-                    }
-                    args.printf_P(PSTR("ADC multiplier=%.4f/us %.1f/ms"), _adcIntegralMultiplier, _adcIntegralMultiplier * 1000.0);
-                    break;
-                case 2:
-                case 3: {
-                        auto channel = ((uint8_t)args.toInt(1)) % kChannelCount;
-                        if (args.size() >= 3) {
-                            _adcIntegralMultiplier = 1.0 / (1000.0 / args.toFloatMinMax(2, 0.1, 10000.0, 40.0));
-                        }
-                        if (args.size() >= 4) {
-                            _config.channels[0].pwm_value =
-                            _config.channels[1].pwm_value =
-                                args.toIntMinMax(3, 0, PWMRANGE, 100);
-                        }
-                        if (_queue.empty()) {
-                            _storeValues = true;
-                            _activeChannel = (ChannelType)channel;
-                            _states[_activeChannel] = StateType::UNKNOWN;
-                            args.printf_P(PSTR("channel=%u action=%s multiplier=%.4f pwm=%u"), channel, cmd == 2 ? PSTR("open") : PSTR("close"), _adcIntegralMultiplier, _config.channels[0].pwm_value);
-                            ActionType action;
-                            if (channel == 0) {
-                                if (cmd == 2) {
-                                    action = ActionType::OPEN_CHANNEL0;
-                                }
-                                else {
-                                    action = ActionType::CLOSE_CHANNEL0;
-                                }
-                            }
-                            else {
-                                if (cmd == 2) {
-                                    action = ActionType::OPEN_CHANNEL1;
-                                }
-                                else {
-                                    action = ActionType::CLOSE_CHANNEL1;
-                                }
-                            }
-                            _queue.emplace_back(action, _activeChannel, 0);
-                        }
-                        else {
-                            args.print(F("queue not empty"));
-                        }
-                    } break;
+                    _startMotor(static_cast<ChannelType>(channel), cmd == 0);
+                    args.printf_P(PSTR("motor channel=%u direction=%s start"), channel, cmd == 0 ? PSTR("open") : PSTR("close"));
+                    args.printf_P(PSTR("pin=%u pwm=%u soft-start=%u"), _motorPin, _motorPWMValue, _motorStartTime != 0);
                     break;
                 default:
-                    args.printf_P(PSTR("expected <%s>"), cmds);
+                    _stop();
+                    args.printf_P(PSTR("motor stopped"));
                     break;
             }
         }

@@ -244,10 +244,6 @@
     }
 }
 
-.form-enable-slider.is-invalid >.rangeslider {
-    background-color: #dc3545;
-}
-
 .rangeslider,
 .rangeslider__fill {
   display: block;
@@ -407,3 +403,34 @@
 .form-help-block {
     display: none;
 }
+
+.form-help-label-text {
+    font-size: 75%;
+    font-weight: 400;
+}
+
+.form-help-label-text:hover {
+    cursor: zoom-in;
+}
+
+.form-help-label-text-zoom-in {
+    font-size: 100%;
+    font-weight: 400;
+    cursor: zoom-out !important;
+}
+
+
+/* TODO */
+.rangeslider.rangeslider--horizontal.is-invalid {
+    background-color: #f8d7da !important;
+}
+
+.is-invalid > .rangeslider__handle.off {
+    background-color: #dc3545 !important;
+    border-color: #dc3545 !important;
+}
+
+.form-enable-slider.is-invalid >.rangeslider {
+    background-color: #dc3545;
+}
+

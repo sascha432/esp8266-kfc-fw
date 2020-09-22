@@ -37,13 +37,15 @@ public:
     virtual void getValues(JsonArray &array) override;
     virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) override;
 
-#if AT_MODE_SUPPORTED && 0
+#if AT_MODE_SUPPORTED
     virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const override;
     virtual bool atModeHandler(AtModeArgs &args) override;
 #endif
 
 public:
     static void loopMethod();
+
+    static BlindsControlPlugin &getInstance();
 
 #if IOT_BLINDS_CTRL_RPM_PIN
     static void rpmIntCallback(InterruptInfo info);

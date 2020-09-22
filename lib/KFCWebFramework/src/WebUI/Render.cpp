@@ -104,7 +104,7 @@ const char *WebUI::BaseUI::_getLabel() const
     }
     return value;
 #else
-    // fast version with static assert 
+    // fast version with static assert
     static_assert(sizeof(Storage::Value::String) == sizeof(Storage::Value::Label) && sizeof(Storage::Value::String) == sizeof(Storage::Value::LabelRaw), "size of objects does not match");
 
     auto iterator = _storage.find_if(_storage.begin(), _storage.end(), Storage::Vector::isLabel);
@@ -201,6 +201,86 @@ void WebUI::BaseUI::_printOptionsTo(PrintInterface &output) const
                 break;
         }
     });
+}
+
+void WebUI::BaseUI::renderInputField(Type type, PrintInterface &output, const char *name, const String &value)
+{
+    //__LDBG_printf("type=%u", _type);
+    switch (type) {
+        // ---------------------------------------------------------------
+        // Select field
+        // ---------------------------------------------------------------
+        case Type::SELECT:
+            output.printf_P(PrintArgs::FormatType::HTML_OPEN_SELECT, name, name);
+            _printAttributeTo(output);
+            _printOptionsTo(output);
+            output.printf_P(PrintArgs::FormatType::HTML_CLOSE_SELECT);
+            break;
+
+        // ---------------------------------------------------------------
+        // Input field
+        // ---------------------------------------------------------------
+        case Type::TEXT:
+        case Type::NUMBER:
+        case Type::INTEGER:
+        case Type::FLOAT:
+            output.printf_P(PrintArgs::FormatType::HTML_OPEN_TEXT_INPUT, name, name, encodeHtmlEntities(value));
+            _printAttributeTo(output);
+            break;
+
+        // ---------------------------------------------------------------
+        // Password input fields
+        // ---------------------------------------------------------------
+        case Type::PASSWORD:
+            output.printf_P(PSTR("<input type=\"password\" class=\"form-control visible-password\" name=\"%s\" id=\"%s\" value=\"%s\" autocomplete=\"current-password\" spellcheck=\"false\""),
+                name,
+                name,
+                encodeHtmlEntities(value)
+            );
+            _printAttributeTo(output);
+            break;
+        case Type::NEW_PASSWORD:
+            output.printf_P(PSTR("<input type=\"password\" class=\"form-control visible-password\" name=\"%s\" id=\"%s\" autocomplete=\"new-password\" spellcheck=\"false\""),
+                name,
+                name
+            );
+            _printAttributeTo(output);
+            break;
+
+        // ---------------------------------------------------------------
+        // Input range fields
+        // ---------------------------------------------------------------
+        case Type::RANGE:
+            output.printf_P(PSTR("<input type=\"range\" class=\"custom-range\" value=\"%s\" name=\"%s\" id=\"%s\""),
+                encodeHtmlEntities(value),
+                name,
+                name
+            );
+            _printAttributeTo(output);
+            break;
+        case Type::RANGE_SLIDER:
+            output.printf_P(PSTR(
+                    "<div class=\"form-enable-slider\"><input type=\"range\" value=\"%s\" name=\"%s\" id=\"%s\""
+                ),
+                encodeHtmlEntities(value),
+                name,
+                name
+            );
+            _printAttributeTo(output);
+            output.printf_P(PrintArgs::FormatType::HTML_CLOSE_DIV_RANGE_SLIDER);
+            break;
+
+        case Type::CHECKBOX:
+            __LDBG_assert_printf(false, "not implemented");
+            //  <input type="checkbox" aria-label="Checkbox for following text input">
+            break;
+
+        case Type::HIDDEN:
+            output.printf_P(PSTR("<input type=\"hidden\" name=\"%s\" id=\"%s\" value=\"%s\""), name, name, encodeHtmlEntities(value));
+            _printAttributeTo(output);
+        default:
+            break;
+    }
 }
 
 void WebUI::BaseUI::html(PrintInterface &output)
@@ -305,10 +385,9 @@ void WebUI::BaseUI::html(PrintInterface &output)
         // ---------------------------------------------------------------
         // Hidden input
         // ---------------------------------------------------------------
-        case Type::HIDDEN: {
-                output.printf_P(PSTR("<input type=\"hidden\" name=\"%s\" id=\"%s\" value=\"%s\""), name, name, encodeHtmlEntities(_parent->getValue()));
-                _printAttributeTo(output);
-            } break;
+        case Type::HIDDEN:
+            renderInputField(_type, output, name, _parent->getValue());
+            break;
 
         // ---------------------------------------------------------------
         // Form group
@@ -321,73 +400,7 @@ void WebUI::BaseUI::html(PrintInterface &output)
                 output.printf_P(PrintArgs::FormatType::HTML_OPEN_DIV_INPUT_GROUP);
             }
 
-            //__LDBG_printf("type=%u", _type);
-            switch (_type) {
-                // ---------------------------------------------------------------
-                // Select field
-                // ---------------------------------------------------------------
-                case Type::SELECT:
-                    output.printf_P(PrintArgs::FormatType::HTML_OPEN_SELECT, name, name);
-                    _printAttributeTo(output);
-                    _printOptionsTo(output);
-                    output.printf_P(PrintArgs::FormatType::HTML_CLOSE_SELECT);
-                    break;
-
-                // ---------------------------------------------------------------
-                // Input field
-                // ---------------------------------------------------------------
-                case Type::TEXT:
-                case Type::NUMBER:
-                case Type::INTEGER:
-                case Type::FLOAT:
-                    output.printf_P(PrintArgs::FormatType::HTML_OPEN_TEXT_INPUT, name, name, encodeHtmlEntities(_parent->getValue()));
-                    _printAttributeTo(output);
-                    break;
-
-                // ---------------------------------------------------------------
-                // Password input fields
-                // ---------------------------------------------------------------
-                case Type::PASSWORD:
-                    output.printf_P(PSTR("<input type=\"password\" class=\"form-control visible-password\" name=\"%s\" id=\"%s\" value=\"%s\" autocomplete=\"current-password\" spellcheck=\"false\""),
-                        name,
-                        name,
-                        encodeHtmlEntities(_parent->getValue())
-                    );
-                    _printAttributeTo(output);
-                    break;
-                case Type::NEW_PASSWORD:
-                    output.printf_P(PSTR("<input type=\"password\" class=\"form-control visible-password\" name=\"%s\" id=\"%s\" autocomplete=\"new-password\" spellcheck=\"false\""),
-                        name,
-                        name
-                    );
-                    _printAttributeTo(output);
-                    break;
-
-                // ---------------------------------------------------------------
-                // Input range fields
-                // ---------------------------------------------------------------
-                case Type::RANGE:
-                    output.printf_P(PSTR("<input type=\"range\" class=\"custom-range\" value=\"%s\" name=\"%s\" id=\"%s\""),
-                        encodeHtmlEntities(_parent->getValue()),
-                        name,
-                        name
-                    );
-                    _printAttributeTo(output);
-                    break;
-                case Type::RANGE_SLIDER:
-                    output.printf_P(PSTR(
-                            "<div class=\"form-enable-slider\"><input type=\"range\" value=\"%s\" name=\"%s\" id=\"%s\""
-                        ),
-                        encodeHtmlEntities(_parent->getValue()),
-                        name,
-                        name
-                    );
-                    _printAttributeTo(output);
-                    output.printf_P(PrintArgs::FormatType::HTML_CLOSE_DIV_RANGE_SLIDER);
-                    break;
-                default:
-                    break;
-            }
+            renderInputField(_type, output, name, _parent->getValue());
 
             if (hasSuffix) {
                 output.printf_P(PrintArgs::FormatType::HTML_OPEN_DIV_INPUT_GROUP_APPEND);

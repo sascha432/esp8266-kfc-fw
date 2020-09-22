@@ -32,8 +32,29 @@ namespace STL_STD_EXT_NAMESPACE {
     template <bool _Ta, class _Tb = void>
     using enable_if_t = typename std::enable_if<_Ta, _Tb>::type;
 
+    template <bool _Test, class _Ta, class _Tb>
+    using conditional_t = typename conditional<_Test, _Ta, _Tb>::type;
+
+#ifndef _MSC_VER
+    template <class _Ta>
+    using add_pointer_t = typename add_pointer<_Ta>::type;
+#endif
+
     template <class _Ta>
     using remove_const_t = typename remove_const<_Ta>::type;
+
+    template <class _Ta>
+    using remove_cv_t = typename remove_cv<_Ta>::type;
+
+    template <class _Ta>
+    using remove_pointer_t = typename remove_pointer<_Ta>::type;
+
+    template <class _Ta>
+    using remove_reference_t = typename remove_reference<_Ta>::type;
+
+    template <class _Ta>
+    using remove_extent_t = typename remove_extent<_Ta>::type;
+
 
 #endif
 
@@ -86,5 +107,28 @@ namespace STL_STD_EXT_NAMESPACE_EX {
 
     template <class _Ta>
     using relaxed_underlying_type_t = typename relaxed_underlying_type<_Ta>::type;
+
+    // returns true if type is a "c" string
+    // char *, char[], const char *, const char[]
+    template<typename _Ta>
+    struct is_c_str : std::integral_constant<bool,
+        std::is_same<char *,
+            std::conditional_t<
+                std::is_pointer<_Ta>::value || std::is_reference<_Ta>::value || std::is_array<_Ta>::value,
+                std::add_pointer_t<
+                    std::remove_cv_t<
+                        std::remove_extent_t<
+                            std::remove_pointer_t<
+                                std::remove_reference_t<_Ta>
+                            >
+                        >
+                    >
+                >,
+                _Ta
+            >
+        >::value
+    >
+    {
+    };
 
 }

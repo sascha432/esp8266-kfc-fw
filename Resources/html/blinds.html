@@ -28,8 +28,14 @@
         <form method="POST" action="%SELF_URI%">
             %FORM_HTML%
             <div class="form-help-block">
-                <div data-target="#cq0_d">The delay is skipped if the action is not executed</div>
-                <div data-target="#oq0_d">The delay is skipped if the action is not executed</div>
+                <div data-target="#ip_0,#ip_1">The current limit will trigger depending on this setting. Less than 2500µs is very fast, 5 - 15ms normal and 50ms is very slow</div>
+                <div data-target="#dac_0,#dac_1">Reference voltage for the current limit of the DRV8870 driver. 0-1023 is 0-3.3V. This is independent from the software current limit. For further details read section "7.4.1 PWM With Current Regulation", "7.3.3 Current Regulation" and "8.2.2.3 Sense Resistor". <a href="https://www.ti.com/lit/ds/symlink/drv8870.pdf" target=="_blank">External link</a>...</div>
+                <div data-target="#cd_0">The delay is skipped if the action is not executed</div>
+                <div data-target="#od_0">The delay is skipped if the action is not executed</div>
+
+                <div data-target="#pss">Time to ramp up the motor speed from 0 to 100%. Increase if the current limit triggers during start up</div>
+                <div data-target="#pwm">A low PWM frequency is more efficient, but has the tendency to trigger the current limit of the DRV8870 early</div>
+                <div data-target="#adcrr">The ADC of the ESP8266 has some limitations. If it is read too fast without regular longer breaks, the WiFi connection becomes unstable and might disconnect. This seems to be different for each module and the presets are very conservative.</div>
             </div>
         </form>
         <!--%%FOOT-->
@@ -45,8 +51,27 @@
 	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/bootstrap.min.js"></script>
 	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/js.cookie.min.js"></script>
 	<script debug_loader="1" type="text/javascript" src="../js/main.min.js"></script>
-	<script debug_loader="1" type="text/javascript" src="../js/debug.js"></script>
+    <script debug_loader="1" type="text/javascript" src="../js/debug.js"></script>
     <!--JAVASCRIPT%%-->
+
+    <script>
+        $(function() {
+            var targets = {}
+            var tmp = $('#il_0, #il_1, #dac_0, #dac_1').closest('.form-group');
+            tmp.find('.input-group-append').append('<div class="input-group-text"></div>');
+            tmp.find('.input-group-text:last').each(function() {
+                targets[$(this).closest('.form-group').find('input').attr('id')] = $(this);
+            });
+            var adc_multiplier = parseInt($('#il_0').data('adc-multiplier')) / 65535.0;
+            var dac_multiplier = parseInt($('#dac_0').data('dac-multiplier')) / 65535.0;
+            $('#il_0, #il_1').on('keyup', function() {
+                targets[$(this).attr('id')].html('(ADC '+ (Math.round(parseInt($(this).val()) / adc_multiplier)) + ')');
+            }).trigger('keyup');
+            $('#dac_0, #dac_1').on('keyup', function() {
+                targets[$(this).attr('id')].html('(Vref '+ (Math.round(parseInt($(this).val()) / 1.023 * dac_multiplier)) + 'mV)');
+            }).trigger('keyup');
+        });
+    </script>
 
     %FORM_VALIDATOR%
 

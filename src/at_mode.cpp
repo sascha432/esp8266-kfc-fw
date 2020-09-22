@@ -32,6 +32,9 @@
 #if IOT_DIMMER_MODULE || IOT_ATOMIC_SUN_V2
 #include "../src/plugins/dimmer_module/dimmer_base.h"
 #endif
+#if IOT_BLINDS_CTRL
+#include "../src/plugins/blinds_ctrl/blinds_plugin.h"
+#endif
 #include "umm_malloc/umm_malloc_cfg.h"
 
 #include "core_esp8266_waveform.h"
@@ -814,11 +817,13 @@ private:
     typedef struct __attribute__packed__ {
         uint32_t _time: 22;
         uint32_t _value: 10;
+        uint16_t _value2;
     } Data_t;
 
     typedef struct __attribute__packed__ {
         WsClient::BinaryPacketType type;
         uint16_t flags;
+        uint8_t packet_size;
     } Header_t;
 
     static constexpr uint16_t FLAGS_NONE = 0x0000;
@@ -828,7 +833,7 @@ private:
     void resetBuffer() {
         _buffer.setLength(0);
         _buffer.reserve(_webSocket.packetSize + 1);
-        Header_t header = { WsClient::BinaryPacketType::ADC_READINGS, FLAGS_NONE };
+        Header_t header = { WsClient::BinaryPacketType::ADC_READINGS, FLAGS_NONE, sizeof(Data_t) };
         _buffer.push_back(header);
     }
 
@@ -890,6 +895,12 @@ private:
 
         data._time = time;
         data._value = std::min(reading, (uint16_t)1023);
+#if IOT_BLINDS_CTRL
+        data._value2 = BlindsControlPlugin::getInstance().getCurrent();
+#else
+        data._value2 = 0;
+#endif
+
         _buffer.push_back(data);
     }
 

@@ -55,6 +55,7 @@ namespace FormUI {
             }
 
             void html(PrintInterface &output);
+            void renderInputField(Type type, PrintInterface &output, const char *name, const String &value);
 
             inline Type getType() const {
                 return _type;

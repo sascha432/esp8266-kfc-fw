@@ -82,11 +82,11 @@ namespace BlindsControllerConversion {
     static constexpr double kADCMaxVoltage = (1.0 / 1024.0) * kADCMaxValue;
 
     // adust value to match ADC readings
-    static constexpr double kDACCorrectionFactor = 1.1;
-    // DAC PWM value to current
-    static constexpr double kDACValueToPWMMultiplier = (3.3 / kADCMaxValue) / (kShuntValue * 10.0) / kDACCorrectionFactor;
+    static constexpr double kDACCorrectionFactor = 1.05;
+    // DAC PWM value to voltage: PWM / PWMRANGE * kDACPWMtoVoltage
+    static constexpr double kDACPWMtoVoltage = (3.3 / PWMRANGE) * 1000.0;
     // DAC PWM value * kCurrentLimitToPWMMultiplierMilliamps = current limit in mA
-    static constexpr double kCurrentLimitToPWMMultiplierMilliamps = kDACValueToPWMMultiplier * 1000.0;
+    static constexpr double kCurrentLimitToPWMMultiplierMilliamps = kDACPWMtoVoltage / (kShuntValue * 10.0) / kDACCorrectionFactor;
 
     // ADC value = (kADCMaxValue * I * Rs) / kADCMaxVoltage
     static constexpr double kConvertCurrentToADCValueMulitplierAmps = (kADCMaxValue * kShuntValue) / kADCMaxVoltage;

@@ -11,19 +11,25 @@ namespace KFCConfigurationClasses {
 
     Plugins::Blinds::BlindsConfig_t::BlindsConfig_t() :
         channels(), pins{IOT_BLINDS_CTRL_M1_PIN, IOT_BLINDS_CTRL_M2_PIN, IOT_BLINDS_CTRL_M3_PIN, IOT_BLINDS_CTRL_M4_PIN, IOT_BLINDS_CTRL_MULTIPLEXER_PIN, IOT_BLINDS_CTRL_DAC_PIN},
-        multiplexer(1),
-        adc_divider(kAdcDividerDefault),
-        pwm_frequency(kPwmFrequencyDefault),
-        adc_read_interval(kAdcReadIntervalDefault),
-        adc_recovery_time(kAdcRecoveryTimeDefault),
-        adc_recoveries_per_second(kAdcRecoveriesPerSecDefault),
-        adc_offset(0),
-        pwm_softstart_time(kPwmSoftStartTime)
+        pwm_frequency(kDefaultValueFor_pwm_frequency),
+        adc_recovery_time(kDefaultValueFor_adc_recovery_time),
+        adc_read_interval(kDefaultValueFor_adc_read_interval),
+        adc_recoveries_per_second(kDefaultValueFor_adc_recoveries_per_second),
+        multiplexer(),
+        adc_offset(kDefaultValueFor_adc_offset),
+        pwm_softstart_time(kDefaultValueFor_pwm_softstart_time)
     {
     }
 
 
-    Plugins::Blinds::BlindsConfigChannel_t::BlindsConfigChannel_t() : pwm_value(255), current_limit(200), current_limit_time(50), open_time(5000), close_time(5500), dac_current_limit(500) {
+    Plugins::Blinds::BlindsConfigChannel_t::BlindsConfigChannel_t() :
+        current_limit_mA(kDefaultValueFor_current_limit_mA),
+        dac_pwm_value(kDefaultValueFor_dac_pwm_value),
+        pwm_value(kDefaultValueFor_pwm_value),
+        current_avg_period_us(kDefaultValueFor_current_avg_period_us),
+        open_time_ms(kDefaultValueFor_open_time_ms),
+        close_time_ms(kDefaultValueFor_close_time_ms)
+    {
     }
 
     void Plugins::Blinds::defaults()

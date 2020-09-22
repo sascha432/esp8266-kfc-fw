@@ -151,19 +151,19 @@ public:
         return _length() == fm._length() && memcmp_P(_begin, fm._begin, _length()) == 0;
     }
 
-    inline bool operator==(const uint8_t *ptr) const {
+    bool operator==(const uint8_t *ptr) const {
         return _begin == ptr;
     }
 
-    inline bool operator==(const void *ptr) const {
+    bool operator==(const void *ptr) const {
         return _begin == ptr;
     }
 
-    inline bool operator==(const char *str) const {
+    bool operator==(const char *str) const {
         return _begin == (const uint8_t *)str;
     }
 
-    inline bool operator==(const __FlashStringHelper *fpstr) const {
+    bool operator==(const __FlashStringHelper *fpstr) const {
         return _begin == (const uint8_t *)fpstr;
     }
 
@@ -409,24 +409,6 @@ void init_winsock() {
 }
 
 
-void Dir::__test() {
-    Dir dir = SPIFFS.openDir("./");
-    while (dir.next()) {
-        if (dir.isFile()) {
-            printf("is_file: Dir::fileName() %s Dir::fileSize() %d\n", dir.fileName().c_str(), dir.fileSize());
-            File file = dir.openFile(fs::FileOpenMode::read);
-            printf("File::size %d\n", file.size());
-            file.close();
-        }
-        else if (dir.isDirectory()) {
-            printf("is_dir: Dir::fileName() %s\n", dir.fileName().c_str());
-        }
-    }
-}
-
-File Dir::openFile(const char *mode) {
-    return SPIFFS.open(fileName(), mode);
-}
 
 
 EspClass ESP;

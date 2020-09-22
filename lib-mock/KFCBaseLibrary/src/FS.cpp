@@ -1,5 +1,10 @@
+/**
+* Author: sascha_lammers@gmx.de
+*/
 
-#include "FS.h"
+#if _MSC_VER
+
+#include "Arduino_compat.h"
 
 File _SPIFFS::open(const String filename, const char *mode) 
 {
@@ -176,3 +181,5 @@ File Dir::openFile(const char *mode)
 {
     return SPIFFS.open(fileName(), mode);
 }
+
+#endif

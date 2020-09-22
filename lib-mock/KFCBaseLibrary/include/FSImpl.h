@@ -1,7 +1,3 @@
-#ifndef _MSC_VER
-#error exclude from includes
-#endif
-
 /*
  FSImpl.h - base file system interface
  Copyright (c) 2015 Ivan Grokhotkov. All rights reserved.

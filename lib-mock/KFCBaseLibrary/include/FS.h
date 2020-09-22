@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <Arduino_compat.h>
 #include <FSImpl.h>
 
 using namespace fs;

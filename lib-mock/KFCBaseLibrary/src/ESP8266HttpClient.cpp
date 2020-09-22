@@ -2,7 +2,7 @@
 * Author: sascha_lammers@gmx.de
 */
 
-#if _WIN32
+#if _MSC_VER
 
 #include <PrintString.h>
 #include <misc.h>

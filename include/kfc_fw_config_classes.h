@@ -286,11 +286,10 @@ namespace KFCConfigurationClasses {
             uint16_t length = sizeof(ConfigType);
             auto ptr = loadBinaryConfig(kConfigStructHandle, length);
             if (!ptr || length != sizeof(ConfigType)) {
-                // __CDBG_printf("binary handle=%04x name=%s stored_size=%u mismatch. setting default values size=%u", kConfigStructHandle, *handleName, length, sizeof(ConfigType));
-                ConfigType cfg = {};
-                void *newPtr = loadWriteableBinaryConfig(kConfigStructHandle, sizeof(ConfigType));
-                ptr = memcpy(newPtr, &cfg, sizeof(ConfigType));
+                // invalid data, just initialize default object
+                return ConfigType();
             }
+            // return copy
             return *reinterpret_cast<const ConfigType *>(ptr);
         }
 

@@ -2,12 +2,15 @@
 * Author: sascha_lammers@gmx.de
 */
 
-#include "Configuration.h"
 #include "JsonConfigReader.h"
 #include <Buffer.h>
 #include <JsonTools.h>
 #include "misc.h"
 #include "DumpBinary.h"
+
+#include "ConfigurationHelper.h"
+#include "Configuration.h"
+#include "Allocator.h"
 
 #if DEBUG_CONFIGURATION
 #include <debug_helper_enable.h>
@@ -15,365 +18,9 @@
 #include <debug_helper_disable.h>
 #endif
 
-#if DEBUG_CONFIGURATION_GETHANDLE
+#include "DebugHandle.h"
 
-#include <EventScheduler.h>
-
-#ifndef __DBG__TYPE_NONE
-#define __DBG__TYPE_NONE                                            0
-#define __DBG__TYPE_GET                                             1
-#define __DBG__TYPE_SET                                             2
-#define __DBG__TYPE_W_GET                                           3
-#define __DBG__TYPE_CONST                                           4
-#define __DBG__TYPE_DEFINE_PROGMEM                                  5
-#endif
-
-class DebugHandle;
-
-class DebugHandle
-{
-public:
-    using HandleType = ConfigurationHelper::HandleType;
-    using DebugHandleVector = std::vector<DebugHandle>;
-
-    DebugHandle(const DebugHandle &) = delete;
-    DebugHandle(DebugHandle &&handle) {
-        *this = std::move(handle);
-    }
-
-    DebugHandle &operator=(const DebugHandle &) = delete;
-    DebugHandle &operator=(DebugHandle &&handle) {
-        _name = handle._name;
-        handle._name = nullptr;
-        _handle = handle._handle;
-        _get = handle._get;
-        _set = handle._set;
-        _writeGet = handle._writeGet;
-        _flashRead = handle._flashRead;
-        _flashReadSize = handle._flashReadSize;
-        _flashWrite = handle._flashWrite;
-        return *this;
-    }
-
-    DebugHandle() : _name((char *)emptyString.c_str()), _get(0), _handle(~0), _set(0), _writeGet(0), _flashRead(0), _flashReadSize(0), _flashWrite(0) {}
-
-    DebugHandle(const char *name, const HandleType handle) :  _name(nullptr), _get(0), _handle(handle), _set(0), _writeGet(0), _flashRead(0), _flashReadSize(0), _flashWrite(0) {
-        if (is_PGM_P(name)) {
-            // we can just store the pointer if inside PROGMEM
-            _name = (char *)name;
-        }
-        else {
-            _name = (char *)malloc(strlen_P(name) + 1);
-            if (_name) {
-                strcpy_P(_name, name);
-            }
-            else {
-                _name = (char *)PSTR("out of memory");
-            }
-        }
-    }
-
-    ~DebugHandle() {
-        if (_name && _name != emptyString.c_str() && !is_PGM_P(_name)) {
-            __DBG_printf("free=%p", _name);
-            free(_name);
-        }
-    }
-
-    operator HandleType() const {
-        return _handle;
-    }
-
-    // bool operator==(const HandleType handle) const {
-    //     return _handle == handle;
-    // }
-    // bool operator!=(const HandleType handle) const {
-    //     return _handle != handle;
-    // }
-
-    bool operator==(const char *name) const {
-        return strcmp_P_P(_name, name) == 0;
-    }
-    bool operator!=(const char *name) const {
-        return strcmp_P_P(_name, name) != 0;
-    }
-
-    const char *getName() const {
-        return _name;
-    }
-
-    const HandleType getHandle() const {
-        return _handle;
-    }
-
-    bool equals(const char *name) const {
-        return strcmp_P_P(_name, name) == 0;
-    }
-
-    void print(Print &output) const {
-        output.printf_P(PSTR("%04x: [get=%u,set=%u,write_get=%u,flash:read=#%u/%u,write=#%u/%u]: %s\n"), _handle, _get, _set, _writeGet, _flashRead, _flashReadSize, _writeGet, _writeGet * 4096, _name);
-    }
-
-    static DebugHandle *find(const char *name);
-    static DebugHandle *find(HandleType handle);
-    static void add(const char *name, HandleType handle);
-    static void init();
-    static void clear();
-    static void logUsage();
-    static void printAll(Print &output);
-    static DebugHandleVector &getHandles();
-
-public:
-    struct {
-        char *_name;
-        uint32_t _get;
-        HandleType _handle;
-        uint16_t _set;
-        uint16_t _writeGet;
-        uint16_t _flashRead;
-        uint32_t _flashReadSize;
-        uint16_t _flashWrite;
-    };
-    static DebugHandleVector *_handles;
-};
-
-DebugHandle::DebugHandleVector *DebugHandle::_handles = nullptr;
-
-
-void DebugHandle::init()
-{
-    if (!_handles) {
-        _handles = new DebugHandleVector();
-        _handles->emplace_back(PSTR("<EEPROM>"), 0);
-        _handles->emplace_back(PSTR("<INVALID>"), ~0);
-#if DEBUG_CONFIGURATION_GETHANDLE_LOG_INTERVAL
-        _Scheduler.add(Event::minutes(DEBUG_CONFIGURATION_GETHANDLE_LOG_INTERVAL), true, [](Event::CallbackTimerPtr timer) {
-            DebugHandle::logUsage();
-        });
-#endif
-    }
-}
-
-DebugHandle::DebugHandleVector &DebugHandle::getHandles()
-{
-    init();
-    return *_handles;
-}
-
-void DebugHandle::clear()
-{
-    if (_handles) {
-        delete _handles;
-        _handles = nullptr;
-        init();
-    }
-}
-
-DebugHandle *DebugHandle::find(const char *name)
-{
-    if (_handles) {
-        auto iterator = std::find(_handles->begin(), _handles->end(), name);
-        if (iterator != _handles->end()) {
-            return &(*iterator);
-        }
-    }
-    return nullptr;
-}
-
-DebugHandle *DebugHandle::find(HandleType handle)
-{
-    if (_handles) {
-        auto iterator = std::find(_handles->begin(), _handles->end(), handle);
-        if (iterator != _handles->end()) {
-            return &(*iterator);
-        }
-    }
-    return nullptr;
-}
-
-void DebugHandle::add(const char *name, HandleType handle)
-{
-    init();
-    __LDBG_printf("adding handle=%04x name=%s", handle, name);
-    _handles->emplace_back(name, handle);
-}
-
-const ConfigurationHelper::HandleType ConfigurationHelper::registerHandleName(const char *name, uint8_t type)
-{
-    auto debugHandle = DebugHandle::find(name);
-    if (debugHandle) {
-        // found the name, just return handle
-        if (type == __DBG__TYPE_GET) {
-            debugHandle->_get++;
-        }
-        else if (type == __DBG__TYPE_SET) {
-            debugHandle->_set++;
-        }
-        else if (type == __DBG__TYPE_W_GET) {
-            debugHandle->_writeGet++;
-        }
-        return debugHandle->getHandle();
-    }
-    else {
-        // get handle for name
-        String tmp = FPSTR(name);
-        auto handle = crc16_update(tmp.c_str(), tmp.length());
-        // check if this handle exists already
-        debugHandle = DebugHandle::find(handle);
-        if (debugHandle) {
-            __DBG_printf("handle name=%s handle=%04x matches name=%s", name, handle, debugHandle->getName());
-            ::printf(PSTR("handle name=%s handle=%04x matches name=%s"), name, handle, debugHandle->getName());
-        }
-        DebugHandle::add(name, handle);
-        return handle;
-    }
-}
-
-static bool _panicMode = false;
-
-void ConfigurationHelper::setPanicMode(bool value)
-{
-    _panicMode = value;
-}
-
-void ConfigurationHelper::addFlashUsage(HandleType handle, size_t readSize, size_t writeSize)
-{
-    DebugHandle::init();
-    auto debugHandle = DebugHandle::find(handle);
-    if (!debugHandle) {
-        if (_panicMode) {
-            writeHandles();
-            DebugHandle::printAll(DEBUG_OUTPUT);
-            __DBG_panic("handle=%04x not found read=%u write=%u size=%u", handle, readSize, writeSize, DebugHandle::getHandles().size());
-        }
-        else {
-            __DBG_printf("handle=%04x not found read=%u write=%u size=%u", handle, readSize, writeSize, DebugHandle::getHandles().size());
-        }
-        debugHandle = DebugHandle::find(~0);
-    }
-    if (debugHandle) {
-        if (readSize) {
-            debugHandle->_flashRead++;
-            debugHandle->_flashReadSize += readSize;
-        }
-        else if (writeSize) {
-            debugHandle->_flashWrite++;
-        }
-    }
-}
-
-const ConfigurationHelper::HandleType ConfigurationHelper::registerHandleName(const __FlashStringHelper *name, uint8_t type)
-{
-    return registerHandleName(RFPSTR(name), type);
-}
-
-bool registerHandleExists(ConfigurationHelper::HandleType crc)
-{
-    return DebugHandle::find(crc) != nullptr;
-}
-
-static const char __DBG_config_handle_storage[] PROGMEM = { "/.pvt/cfg_handles" };
-static const char __DBG_config_handle_log_file[] PROGMEM = { "/.pvt/cfg_handles.log" };
-
-void DebugHandle::logUsage()
-{
-    auto uptime = getSystemUptime();
-    __DBG_printf("writing usage to log uptime=%u file=%s", uptime, __DBG_config_handle_log_file);
-    auto file = KFCFS.open(FPSTR(__DBG_config_handle_log_file), fs::FileOpenMode::append);
-    if (file) {
-        PrintString str;
-        str.strftime_P(SPGM(strftime_date_time_zone), time(nullptr));
-
-        file.print(F("--- "));
-        file.print(str);
-        file.print(F(" uptime "));
-        file.println(formatTime(uptime));
-        printAll(file);
-    }
-}
-
-void DebugHandle::printAll(Print &output)
-{
-    for(const auto &handle: getHandles()) {
-        handle.print(output);
-    }
-}
-
-void ConfigurationHelper::readHandles()
-{
-    KFCFS.begin();
-    auto file = KFCFS.open(FPSTR(__DBG_config_handle_storage), fs::FileOpenMode::read);
-    if (file) {
-        uint32_t count = 0;
-        while (file.available()) {
-            auto line = file.readStringUntil('\n');
-            if (String_rtrim(line)) {
-                ConfigurationHelper::registerHandleName(line.c_str(), __DBG__TYPE_NONE);
-                count++;
-            }
-        }
-        file.close();
-        __DBG_printf("read %u handles from=%s", count, __DBG_config_handle_storage);
-    }
-}
-
-
-void ConfigurationHelper::writeHandles(bool clear)
-{
-    if (clear) {
-        DebugHandle::clear();
-    }
-    __DBG_printf("storing %u handles file=%s", DebugHandle::getHandles().size(), __DBG_config_handle_storage);
-    auto file = KFCFS.open(FPSTR(__DBG_config_handle_storage), fs::FileOpenMode::write);
-    if (file) {
-        for (const auto &handle : DebugHandle::getHandles()) {
-            file.printf_P(PSTR("%s\n"), handle.getName());
-        }
-        file.close();
-    }
-    DebugHandle::logUsage();
-}
-
-// uint16_t getHandle(const char *name)
-// {
-//     Serial.printf("name=%s\n",name);
-//     ConfigurationParameter::HandleType crc = constexpr_crc16_update(name, constexpr_strlen(name));
-//     auto iterator = std::find(handles->begin(), handles->end(), crc);
-//     if (iterator == handles->end()) {
-//         handles->emplace_back(name, crc);
-//     }
-//     else if (*iterator != name) {
-//         __DBG_panic("getHandle(%s): CRC not unique: %x, %s", name, crc, iterator->getName());
-//     }
-//     return crc;
-// }
-
-const char *ConfigurationHelper::getHandleName(ConfigurationParameter::HandleType crc)
-{
-    auto debugHandle = DebugHandle::find(crc);
-    if (debugHandle) {
-        return debugHandle->getName();
-    }
-    return "<Unknown>";
-}
-
-void ConfigurationHelper::dumpHandles(Print &output, bool log)
-{
-    DebugHandle::printAll(output);
-    if (log) {
-        writeHandles();
-    }
-}
-
-
-#else
-
-const char *ConfigurationHelper::getHandleName(ConfigurationParameter::HandleType crc)
-{
-    return "N/A";
-}
-
-#endif
+#include "Allocator.hpp"
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -589,7 +236,7 @@ void Configuration::_setString(HandleType handle, const char *string, size_type 
             length = maxLength - 1;
         }
     }
-    _setString(handle, string, length);;
+    _setString(handle, string, length);
 }
 
 void Configuration::_setString(HandleType handle, const char *string, size_type length)
@@ -638,7 +285,7 @@ void Configuration::dump(Print &output, bool dirty, const String &name)
 #else
             output.printf_P(PSTR("%04x: "), param.getHandle());
 #endif
-            output.printf_P(PSTR("type=%s ofs=%d len=%d dirty=%u value: "), (const char *)parameter.getTypeString(parameter.getType()), param.next_offset() ? dataOffset : -1, /*calculateOffset(param.handle),*/ parameter.getLength(), parameter.isWriteable());
+            output.printf_P(PSTR("type=%s ofs=%d[+%u] len=%d dirty=%u value: "), (const char *)parameter.getTypeString(parameter.getType()), dataOffset, param.next_offset(), /*calculateOffset(param.handle),*/ parameter.getLength(), parameter.isWriteable());
             parameter.dump(output);
         }
         dataOffset += param.next_offset();

@@ -19,6 +19,7 @@ bool start_out = false;
 int total = 0;
 int del_num = 0;
 std::map<void *, size_t> memptrs;
+
 //
 //void *operator new(size_t size)
 //{
@@ -288,21 +289,30 @@ int main() {
         Serial.println("Read error, settings defaults");
         //config._H_SET(Configuration_t().val3, 100000000);
 
+        //config._H_SET_STR(Configuration_t().string1, "test1");
+        //config._H_SET(Configuration_t().val1, 100);
+        //config._H_SET_STR(Configuration_t().string2, "test2_is_a_long_string_that_needs_alloc");
+        //config._H_SET(Configuration_t().sval, sval_t({0x8877, 0x5544}));
+        //config._H_SET_STR(Configuration_t().string3, "test3");
+        //config._H_SET(Configuration_t().val3, 100000000);
+        //config._H_SET_STR(Configuration_t().string4, "test4");
+        //config._H_SET(Configuration_t().val4, 10000000000000000);
+        //config._H_SET_STR(Configuration_t().string5, "test5");
+        //config._H_SET(Configuration_t().val5, -12345.678f);
+        //config.dump(Serial);
+        //config.write();
+
+        //auto tmp = config._H_W_STR(Configuration_t().string1, 33);
+        //*tmp = 0;
+
         config._H_SET_STR(Configuration_t().string1, "test1");
-        config._H_SET(Configuration_t().val1, 100);
-        config._H_SET_STR(Configuration_t().string2, "test2_is_a_long_string_that_needs_alloc");
-        config._H_SET(Configuration_t().sval, sval_t({0x8877, 0x5544}));
+        config._H_SET_STR(Configuration_t().string2, "test2");
         config._H_SET_STR(Configuration_t().string3, "test3");
-        config._H_SET(Configuration_t().val2, 10000);
-        config._H_SET(Configuration_t().val3, 100000000);
-        config._H_SET_STR(Configuration_t().string4, "test4");
-        config._H_SET(Configuration_t().val4, 10000000000000000);
-        config._H_SET_STR(Configuration_t().string5, "test5");
-        config._H_SET(Configuration_t().val5, -12345.678f);
-        config.dump(Serial);
         config.write();
-        auto tmp = config._H_W_STR(Configuration_t().string1, 33);
-        config.read();
+        config.dump(Serial);
+
+        config._H_SET_STR(Configuration_t().string2, "");
+        config.write();
         config.dump(Serial);
 
         config.clear();

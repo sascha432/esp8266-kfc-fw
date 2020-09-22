@@ -11,11 +11,12 @@
 #include <chunked_list.h>
 #include <vector>
 #include <Buffer.h>
-#include <EEPROM.h>
 #include <DumpBinary.h>
-#if !_WIN32
-#include <EEPROM.h>
-#endif
+
+#include "ConfigurationHelper.h"
+#include "ConfigurationParameter.h"
+#include "ConfigurationParameterT.h"
+#include "EEPROMAccess.h"
 
 #if defined(ESP8266)
 #ifdef NO_GLOBAL_EEPROM
@@ -34,96 +35,10 @@ extern EEPROMClass EEPROM;
 #include <debug_helper_disable.h>
 #endif
 
-// do not run garbage collector if pool count <= GARBAGE_COLLECTOR_MIN_POOL
-#ifndef GARBAGE_COLLECTOR_MIN_POOL
-#if DEBUG_CONFIGURATION
-#define GARBAGE_COLLECTOR_MIN_POOL                                  0
-#else
-#define GARBAGE_COLLECTOR_MIN_POOL                                  2
-#endif
-#endif
-
-// create custom pool if a parameter exceeds this length
-#ifndef CONFIG_POOL_MAX_SIZE
-#define CONFIG_POOL_MAX_SIZE                                        96
-#endif
-
-// 16, 32, 48, 64, 80, 96 byte...
-#ifndef CONFIG_POOL_SIZE
-#define CONFIG_POOL_SIZE                                            std::min((size_t)CONFIG_POOL_MAX_SIZE, (size_t)(POOL_COUNT * 16))
-#endif
-
-
-// compare direct reads vs. EEPROM class
-#ifndef DEBUG_CONFIGURATION_VERIFY_DIRECT_EEPROM_READ
-#define DEBUG_CONFIGURATION_VERIFY_DIRECT_EEPROM_READ               DEBUG_CONFIGURATION
-#endif
-
-#ifndef CONFIG_MAGIC_DWORD
-#define CONFIG_MAGIC_DWORD                                          0xfef31214
-#endif
-
-#define CONFIG_GET_HANDLE(name)                                     __get_constexpr_getHandle(_STRINGIFY(name))
-#define CONFIG_GET_HANDLE_STR(name)                                 __get_constexpr_getHandle(name)
-#define _H(name)                                                    CONFIG_GET_HANDLE(name)
-#define _HS(name)                                                   __get_constexpr_getHandle(name)
-
-#if DEBUG_CONFIGURATION_GETHANDLE
-
-#define _H_GET(name)                                                get<decltype(name)>(__DBG__registerHandleName(PSTR(_STRINGIFY(name)), __DBG__TYPE_GET))
-#define _H_W_GET(name)                                              getWriteable<decltype(name)>(__DBG__registerHandleName(PSTR(_STRINGIFY(name)), __DBG__TYPE_W_GET))
-#define _H_SET(name, value)                                         set<decltype(name)>(__DBG__registerHandleName(PSTR(_STRINGIFY(name)), __DBG__TYPE_SET), value)
-#define _H_STR(name)                                                getString(__DBG__registerHandleName(PSTR(_STRINGIFY(name)), __DBG__TYPE_GET))
-#define _H_W_STR(name, max_len)                                     getWriteableString(__DBG__registerHandleName(PSTR(_STRINGIFY(name)), __DBG__TYPE_W_GET), max_len)
-#define _H_SET_STR(name, value)                                     setString(__DBG__registerHandleName(PSTR(_STRINGIFY(name)), __DBG__TYPE_SET), value)
-#define _H_GET_IP(name)                                             get<uint32_t>(__DBG__registerHandleName(PSTR(_STRINGIFY(name)), __DBG__TYPE_GET))
-#define _H_W_GET_IP(name)                                           getWriteable<uint32_t>(__DBG__registerHandleName(PSTR(_STRINGIFY(name)), __DBG__TYPE_W_GET))
-#define _H_SET_IP(name, value)                                      set<uint32_t>(__DBG__registerHandleName(PSTR(_STRINGIFY(name)), __DBG__TYPE_SET), (uint32_t)value)
-
-#else
-
-#define _H_GET(name)                                                get<decltype(name)>(_H(name))
-#define _H_W_GET(name)                                              getWriteable<decltype(name)>(_H(name))
-#define _H_SET(name, value)                                         set<decltype(name)>(_H(name), value)
-#define _H_STR(name)                                                getString(_H(name))
-#define _H_W_STR(name, max_len)                                     getWriteableString(_H(name), max_len)
-#define _H_SET_STR(name, value)                                     setString(_H(name), value)
-#define _H_GET_IP(name)                                             get<uint32_t>(_H(name))
-#define _H_W_GET_IP(name)                                           getWriteable<uint32_t>(_H(name))
-#define _H_SET_IP(name, value)                                      set<uint32_t>(_H(name), (uint32_t)value)
-
-#endif
-
-#if DEBUG_CONFIGURATION_GETHANDLE
-
-// log usage to file, 0 = disable
-#ifndef DEBUG_CONFIGURATION_GETHANDLE_LOG_INTERVAL
-#define DEBUG_CONFIGURATION_GETHANDLE_LOG_INTERVAL                  5   // minutes
-#endif
-
-// store all configuration handle names for debugging. needs a lot RAM
-#define __DBG__registerHandleName(name, type)                       ConfigurationHelper::registerHandleName(name, type)
-#define __DBG__checkIfHandleExists(type, handle)                    if (!registerHandleExists(handle)) { __DBG_printf("handle=%04x no name registered, type=%s", handle, PSTR(type)); }
-#define __DBG__addFlashReadSize(handle, size)                       ConfigurationHelper::addFlashUsage(handle, size, 0)
-#define __DBG__addFlashWriteSize(handle, size)                      ConfigurationHelper::addFlashUsage(handle, 0, size)
-
-#else
-
-#define __DBG__registerHandleName(...)
-#define __DBG__checkIfHandleExists(...)
-#define __DBG__addFlashReadSize(...)
-#define __DBG__addFlashWriteSize(...)
-
-#endif
-#define __get_constexpr_getHandle(name)                             constexpr_crc16_update(name, constexpr_strlen(name))
-
 #if _MSC_VER
 #pragma warning(push)
 #pragma warning(disable : 26812)
 #endif
-
-// #include "ConfigurationParameter.h"
-#include "ConfigurationHelper.h"
 
 class Configuration {
 public:

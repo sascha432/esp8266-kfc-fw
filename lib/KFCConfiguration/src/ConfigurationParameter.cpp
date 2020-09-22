@@ -19,24 +19,38 @@
 #include <debug_helper_disable.h>
 #endif
 
+#include "ConfigurationHelper.h"
+
+#include "Allocator.hpp"
+
+
 String ConfigurationParameter::toString() const
 {
     //auto dataPtr = (uint8_t *)((((uintptr_t)&_info) + 3) & ~3);
     //auto dataOfs = (intptr_t)dataPtr - (intptr_t)&_info;
     //ptrdiff_t dataLen = sizeof(_info) - dataOfs;
 #if DEBUG_CONFIGURATION_GETHANDLE
+
     //return PrintString(F("handle=%s[%04x] size=%u len=%u data=%p type=%s dirty=%u (%p:%p %u %u)"), ConfigurationHelper::getHandleName(_param.handle), _param.handle, _info.size, _param.length, _info.data, getTypeString(_param.getType()), _info.dirty, dataPtr, _info.data, dataOfs, dataLen);
-    return PrintString(F("handle=%s[%04x] size=%u len=%u data=%p type=%s dirty=%u"), ConfigurationHelper::getHandleName(_param.getHandle()), _param.getHandle(), _param.size(), _param.length(), _param.data(), getTypeString(_param.type()), _param.isWriteable());
+    return PrintString(F("handle=%s[%04x] size=%u len=%u data=%p type=%s dirty=%u next_ofs=%u"),
+        ConfigurationHelper::getHandleName(_param.getHandle()),
+        _param.getHandle(),
+        _param.size(),
+        _param.length(),
+        _param.data(),
+        getTypeString(_param.type()),
+        _param.isWriteable(),
+        _param.next_offset()
+    );
+
 #else
-    return PrintString(F("handle=%04x size=%u len=%u data=%p type=%s writable=%u"), _param.getHandle(), _param.size(), _param.length(), _param.data(), getTypeString(_param.type()), _param.isWriteable());
+
+    return PrintString(F("handle=%04x size=%u len=%u data=%p type=%s writable=%u next_ofs=%u"),
+        _param.getHandle(), _param.size(), _param.length(), _param.data(), getTypeString(_param.type()), _param.isWriteable(), _param.next_offset()
+    );
+
 #endif
 }
-
-//void ConfigurationParameter::setType(ConfigurationParameter::TypeEnum_t type)
-//{
-//    _param.type = (uint16_t)type;
-//}
-
 
 bool ConfigurationParameter::_compareData(const uint8_t *data, size_type length) const
 {
@@ -51,29 +65,24 @@ void ConfigurationParameter::setData(Configuration &conf, const uint8_t *data, s
         return;
     }
     if (_param.isString() && length == 0) {
-        // TODO workaround for broken 0 length strings
+        // we have an empty string, set length to 1 and fill with 2 NUL bytes
+        // otherwise the string will not be stored and created in write mode each time its access, using 24 bytes instead of 8
         length = 1;
         _makeWriteable(conf, length);
-        _param.data()[0] = 0;
-        _param.data()[1] = 0;
+        *((uint16_t *)_param.data()) = 0;
     }
     else {
         _makeWriteable(conf, length);
         memcpy_P(_param.data(), data, length);
-        __LDBG_assert_printf(_param.isString() == false || _param.string()[length] == 0, "%s NUL byte missing", toString().c_str());
     }
+    __LDBG_assert_printf(_param.isString() == false || _param.string()[length] == 0, "%s NUL byte missing", toString().c_str());
 }
-
-// void ConfigurationParameter::updateStringLength()
-// {
-//     __LDBG_assert_printf(_param.isWriteable(), "%s not writable", toString().c_str());
-//     if (_param.isWriteable()) {
-//         _param.length = strlen(reinterpret_cast<const char *>(_info.data));
-//     }
-// }
 
 const char *ConfigurationParameter::getString(Configuration &conf, uint16_t offset)
 {
+    if (_param.size() == 0) {
+        return nullptr;
+    }
     if (!_readData(conf, offset)) {
         return nullptr;
     }
@@ -83,7 +92,12 @@ const char *ConfigurationParameter::getString(Configuration &conf, uint16_t offs
 
 const uint8_t *ConfigurationParameter::getBinary(Configuration &conf, size_type &length, uint16_t offset)
 {
+    if (_param.size() == 0) {
+        length = 0;
+        return nullptr;
+    }
     if (!_readData(conf, offset)) {
+        length = 0;
         return nullptr;
     }
     //__LDBG_printf("%s %s", toString().c_str(), Configuration::__debugDumper(*this, _info.data, _info.size).c_str());
@@ -247,27 +261,32 @@ bool ConfigurationParameter::hasDataChanged(Configuration &conf) const
     uint16_t offset;
     auto iterator = conf._findParam(ConfigurationParameter::TypeEnum_t::_ANY, _param.getHandle(), offset);
     if (iterator == conf._params.end()) { // not found
-        __DBG_printf("%s not found", toString().c_str());
+        __LDBG_printf("%s not found", toString().c_str());
         return true;
     }
     __LDBG_assert_panic(static_cast<const void *>(&(*iterator)) == static_cast<const void *>(this), "*iterator=%p this=%p", &(*iterator), this);
-    size_t maxSize;
-    auto tmp = ConfigurationHelper::_allocator.allocate(conf._eeprom.getReadSize(offset, std::max(_param.length(), _param.next_offset())), &maxSize);
-    if (!_readDataTo(conf, offset, tmp, (size_type)maxSize)) {
-        return false;
+
+    if (_param.length() != _param.next_offset()) {
+        __LDBG_printf("%s length changed", toString().c_str());
+        return true;
     }
-    auto result = (memcmp(tmp, _param.data(), _param.length()) != 0);
-#if DEBUG_CONFIGURATION && 0
-    if (result) {
-        __DBG_printf("%s result=%u", toString().c_str(), result);
-        // DumpBinary dump(DEBUG_OUTPUT);
-        // dump.setPerLine(0xff);
-        // dump.dump(tmp, _param.length());
-        // dump.dump(_param.data(), _param.length());
+
+    size_t requiredSize = conf._eeprom.getReadSize(offset, _param.length());
+    static constexpr size_t kStackBufferSize = 64;
+    if (requiredSize <= kStackBufferSize - 1) {
+        // use stack
+        uint8_t buffer[kStackBufferSize] = {};
+        _readDataTo(conf, offset, buffer, (size_type)requiredSize);
+        return (memcmp(buffer, _param.data(), _param.length()) != 0);
     }
-#endif
-    ConfigurationHelper::_allocator.deallocate(tmp);
-    return result;
+
+    // allocate memory
+    auto tmp = std::unique_ptr<uint8_t[]>(::new uint8_t[requiredSize]{});
+    __LDBG_assert_panic(tmp.get(), "allocate returned nullptr");
+
+    _readDataTo(conf, offset, tmp.get(), (size_type)requiredSize);
+
+    return (memcmp(tmp.get(), _param.data(), _param.length()) != 0);
 }
 
 bool ConfigurationParameter::_readDataTo(Configuration &conf, uint16_t offset, uint8_t *ptr, size_type maxSize) const
@@ -276,11 +295,19 @@ bool ConfigurationParameter::_readDataTo(Configuration &conf, uint16_t offset, u
     if (_param.length() == 0) {
         return true;
     }
-#if DEBUG_CONFIGURATION_GETHANDLE
-    auto readSize =
-#endif
+
+#if DEBUG_CONFIGURATION_GETHANDLE && 0
+
+    size_t flashReadSize = 0;
+    conf._eeprom.read(ptr, offset, _param.length(), maxSize, flashReadSize);
+    ConfigurationHelper::addFlashUsage(_param.getHandle(), flashReadSize, 0);
+
+#else
+
     conf._eeprom.read(ptr, offset, _param.length(), maxSize);
-    __DBG__addFlashReadSize(_param.getHandle(), readSize);
+
+#endif
+
     return true;
 }
 
@@ -301,78 +328,5 @@ bool ConfigurationParameter::_readData(Configuration &conf, uint16_t offset)
     __DBG_assert_printf(_param.isString() == false || _param.string()[_param.length()] == 0, "%s NUL byte missing", toString().c_str());
 
     return true;
-}
-
-ConfigurationHelper::WriteableData::WriteableData(size_type length, ConfigurationParameter &parameter, Configuration &conf) :
-    _buffer{},
-    _length(getParameterLength(parameter.getType(), length)),
-    _is_string(parameter.getType() == ParameterType::STRING)
-{
-    if (size() > sizeof(_buffer)) {
-        _data = ConfigurationHelper::_allocator.allocate(size() + 4);
-    }
-    if (parameter.hasData()) {
-        auto &param = parameter._getParam();
-        memcpy(data(), param._readable, std::min(_length, param.length()));
-        ConfigurationHelper::_allocator.deallocate(param._readable);
-        param._readable = nullptr;
-    }
-}
-
-ConfigurationHelper::WriteableData::~WriteableData()
-{
-    if (size() > sizeof(_buffer) && _data) {
-        ConfigurationHelper::_allocator.deallocate(_data);
-    }
-}
-
-void ConfigurationHelper::WriteableData::resize(size_type newLength, ConfigurationParameter &parameter, Configuration &conf)
-{
-    if (newLength == length()) {
-        return;
-    }
-
-    auto &param = parameter._getParam();
-    __LDBG_printf("new_length=%u length=%u data=%p", newLength, length(), data());
-
-    auto ptr = ConfigurationHelper::_allocator.allocate(param.sizeOf(newLength) + 4);
-    memcpy(ptr, param._writeable->data(), std::min(length(), newLength));
-    param._writeable->setData(ptr, newLength);
-}
-
-void ConfigurationHelper::WriteableData::setData(uint8_t *ptr, size_type length)
-{
-    if (size() > sizeof(_buffer) && _data) {
-        __LDBG_printf("free data=%p size=%u", _data, size());
-        ConfigurationHelper::_allocator.deallocate(_data);
-    }
-    __LDBG_printf("set data=%p length=%u", ptr, _length);
-    _data = ptr;
-    _length = length;
-}
-
-ConfigurationHelper::size_type ConfigurationHelper::getParameterLength(ParameterType type, size_t length)
-{
-    switch (type) {
-    case ParameterType::BYTE:
-        return sizeof(uint8_t);
-    case ParameterType::WORD:
-        return sizeof(uint16_t);
-    case ParameterType::DWORD:
-        return sizeof(uint32_t);
-    case ParameterType::QWORD:
-        return sizeof(uint64_t);
-    case ParameterType::FLOAT:
-        return sizeof(float);
-    case ParameterType::DOUBLE:
-        return sizeof(double);
-    case ParameterType::BINARY:
-    case ParameterType::STRING:
-        return (size_type)length;
-    default:
-        break;
-    }
-    __DBG_panic("invalid type=%u length=%u", type, length);
-    return 0;
 }
 

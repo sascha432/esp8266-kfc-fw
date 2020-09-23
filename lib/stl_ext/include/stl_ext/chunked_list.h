@@ -14,11 +14,6 @@
 #include <assert.h>
 #endif
 
-// frees all objects in reverse order
-#ifndef XTRA_CONTAINERS_CHUNKED_LIST_DESTROY_RECURSIVE
-#define XTRA_CONTAINERS_CHUNKED_LIST_DESTROY_RECURSIVE          0
-#endif
-
 #ifndef XTRA_CONTAINERS_CHUNKED_LIST_ENABLE_ERASE
 #define XTRA_CONTAINERS_CHUNKED_LIST_ENABLE_ERASE               0
 #endif
@@ -66,7 +61,7 @@ namespace STL_STD_EXT_NAMESPACE {
     //
     // size()
     // empty()
-    // capacity() - of the current chunk
+    // capacity()
     //
     // clear()
     // swap()
@@ -145,7 +140,7 @@ namespace STL_STD_EXT_NAMESPACE {
     }
 #endif
 
-    template<class _Ta, size_t numElements, bool enableErase = false>
+    template<class _Ta, size_t numElements/*, bool enableErase = false*/>
     class chunked_list {
     private:
         class chunk;
@@ -167,7 +162,13 @@ namespace STL_STD_EXT_NAMESPACE {
 
     private:
 
-        struct alignas(alignof(value_type)) value_storage_type {
+        struct alignas(value_type) value_storage_type {
+            union {
+                uint8_t _storage[1];
+                value_type _value;
+            };
+            value_storage_type() {}
+            ~value_storage_type() {}
         };
 
         class chunk_value_ptr {
@@ -175,19 +176,19 @@ namespace STL_STD_EXT_NAMESPACE {
             chunk_value_ptr() : _ptr(nullptr) {
             }
 
-            chunk_value_ptr(pointer ptr) : _ptr(reinterpret_cast<void *>(ptr)) {
+            chunk_value_ptr(pointer ptr) : _ptr(reinterpret_cast<value_storage_type *>(ptr)) {
             }
 
             inline chunk_pointer chunk(chunk_pointer chunk) {
-                return reinterpret_cast<chunk_pointer>(_ptr = reinterpret_cast<void *>(chunk));
+                return reinterpret_cast<chunk_pointer>(_ptr = reinterpret_cast<value_storage_type *>(chunk));
             }
 
             inline chunk_pointer chunk() const {
                 return reinterpret_cast<chunk_pointer>(_ptr);
             }
 
-            inline pointer forward() {
-                return reinterpret_cast<pointer &>(_ptr)++;
+            inline void *forward() {
+                return reinterpret_cast<void *>(_ptr++);
             }
 
             inline pointer value() const {
@@ -195,7 +196,7 @@ namespace STL_STD_EXT_NAMESPACE {
             }
 
         private:
-            void *_ptr;
+            value_storage_type *_ptr;
         };
 
 #if XTRA_CONTAINERS_CHUNKED_LIST_ENABLE_ERASE
@@ -207,24 +208,7 @@ namespace STL_STD_EXT_NAMESPACE {
 #endif
         public:
 
-            chunk() : _ptr(_begin()) {
-            }
-
-            chunk(chunk_pointer source, chunk_pointer &last) : _ptr(_begin()) {
-                if (source) {
-                    // copy all objects
-                    for (auto iterator = source->_begin(); iterator != source->_lastElement(); ++iterator) {
-                        ::new(static_cast<void *>(_ptr.forward())) value_type(const_cast<const_reference>(*iterator));
-                    }
-                    if (source->_hasChildren()) {
-                        // create a new chunk and copy all objects from children
-                        _ptr.chunk(::new chunk(source->_ptr.chunk(), last));
-                    }
-                    else {
-                        // set last chunk
-                        last = this;
-                    }
-                }
+            chunk() : _ptr(begin()) {
             }
 
             ~chunk() {
@@ -236,7 +220,7 @@ namespace STL_STD_EXT_NAMESPACE {
                 if (deleted_chunk_type::value && deleted_chunk_type::_all_exist() == false) {
                     size_type count = 0;
                     size_type n = _size() - 1;
-                    for (auto data = _lastElement() - 1; data >= _cbegin(); --data, --n) {
+                    for (auto data = _last() - 1; data >= _cbegin(); --data, --n) {
                         if (deleted_chunk_type::_exists(n)) {
                             count++;
                         }
@@ -253,84 +237,85 @@ namespace STL_STD_EXT_NAMESPACE {
 
         private:
             inline size_type _size() const {
-                return _lastElement() - _cbegin();
+                return _last() - _cbegin();
             }
 
             inline void _destroy() {
 #if XTRA_CONTAINERS_CHUNKED_LIST_ENABLE_ERASE
                 if (deleted_chunk_type::value && deleted_chunk_type::_all_exist() == false) {
                     size_type n = _size() - 1;
-                    for (auto data = _lastElement() - 1; data >= _begin(); --data, --n) {
+                    for (auto data = _last() - 1; data >= begin(); --data, --n) {
                         if (deleted_chunk_type::_exists(n)) {
                             data->~value_type();
                         }
                     }
                 }
-                else 
+                else
 #endif
-                {
-                    for (auto data = _lastElement() - 1; data >= _begin(); --data) {
-                        data->~value_type();
-                    }
+                for(auto &value: *this) {
+                    value.~value_type();
                 }
             }
 
-#if XTRA_CONTAINERS_CHUNKED_LIST_DESTROY_RECURSIVE
-            void _destroyRecursive() {
-                if (_hasChildren()) {
-                    _ptr.chunk()._destroyRecursive();
-                    delete _ptr.chunk();
-                }
-                _destroy();
+            pointer begin() {
+                return const_cast<pointer>(_cbegin());
             }
-#endif
+
+            pointer end() {
+                return const_cast<pointer>(_last());
+            }
+
+            const_pointer cbegin() {
+                return _cbegin();
+            }
+
+            const_pointer cend() {
+                return _last();
+            }
 
         private:
-            inline bool _hasChildren() const {
-                return !_isDataPtr();
+            inline bool has_children() const {
+                return !is_pointer_to_data();
             }
 
-            chunk_pointer _getNextChunk() const {
-                return _hasChildren() ? _ptr.chunk() : nullptr;
+            chunk_pointer next_chunk() const {
+                return is_pointer_to_data() ? nullptr : _ptr.chunk();
             }
 
-            bool _isDataPtr(pointer ptr) const {
+            bool is_pointer_to_data(pointer ptr) const {
                 return (ptr >= _cbegin()) && (ptr <= _cend());
             }
 
-            inline bool _isDataPtr() const {
-                return _isDataPtr(_ptr.value());
+            inline bool is_pointer_to_data() const {
+                return is_pointer_to_data(_ptr.value());
             }
 
-            inline pointer _begin() {
-                return const_cast<pointer>(_cbegin());
-            }
 
             inline pointer _end() {
                 return const_cast<pointer>(_cend());
             }
 
-            inline const_pointer _cbegin() const {
-                return static_cast<const_pointer>(reinterpret_cast<const void *>(&_data[0]));
+            const_pointer _cbegin() const {
+                return static_cast<const_pointer>(reinterpret_cast<const void *>(&_data[0]._value));
             }
 
-            inline const_pointer _cend() const {
-                return static_cast<const_pointer>(reinterpret_cast<const void *>(&_data[0])) + numElements;
+            const_pointer _cend() const {
+                return static_cast<const_pointer>(reinterpret_cast<const void *>(&_data[numElements]._value));
             }
 
-            inline pointer _lastElement() {
-                return _isDataPtr() ? _ptr.value() : _end();
+            inline pointer _last() {
+                return is_pointer_to_data() ? _ptr.value() : _end();
             }
 
-            inline const_pointer _lastElement() const {
-                return _isDataPtr() ? _ptr.value() : _cend();
+            inline const_pointer _last() const {
+                return is_pointer_to_data() ? _ptr.value() : _cend();
             }
 
         private:
             friend chunked_list;
 
             chunk_value_ptr _ptr;
-            uint8_t _data[numElements * sizeof(value_type)];
+            value_storage_type _data[numElements];
         };
 
         class iterator_base : public non_std::iterator<iterator_category, value_type, difference_type, pointer, reference> {
@@ -340,37 +325,50 @@ namespace STL_STD_EXT_NAMESPACE {
             iterator_base(chunk_pointer chunk, pointer next) : _chunk(chunk), _next(next) {
             }
 
+//            iterator_base &operator++() {
+//#if XTRA_CONTAINERS_CHUNKED_LIST_ASSERT
+//                assert(_chunk);
+//                assert(_chunk->is_pointer_to_data(_next));
+//#endif
+//#if XTRA_CONTAINERS_CHUNKED_LIST_ENABLE_ERASE
+//                if (deleted_chunk_type::value) {
+//                    while(true) {
+//                        __next();
+//                        size_type n = _next - _chunk->_cbegin();
+//                        Serial.printf("TEST %d next=%p exists=%u\n",n,_next, _next?_chunk->_exists(n):-1);
+//                        if (_next == nullptr || _chunk->_exists(n)) {
+//                            break;
+//                        }
+//                    }
+//                }
+//                else
+//#endif
+//                {
+//                    __next();
+//                }
+//                return *this;
+//            }
+
             iterator_base &operator++() {
-#if XTRA_CONTAINERS_CHUNKED_LIST_ASSERT
-                assert(_chunk);
-                assert(_chunk->_isDataPtr(_next));
-#endif
-#if XTRA_CONTAINERS_CHUNKED_LIST_ENABLE_ERASE
-                if (deleted_chunk_type::value) {
-                    while(true) {
-                        __next();
-                        size_type n = _next - _chunk->_cbegin();
-                        Serial.printf("TEST %d next=%p exists=%u\n",n,_next, _next?_chunk->_exists(n):-1);
-                        if (_next == nullptr || _chunk->_exists(n)) {
-                            break;
-                        }
-                    }
-                }
-                else 
-#endif
-                {
-                    __next();
-                }
+                __next();
                 return *this;
             }
 
-            iterator_base operator+=(int step) {
-#if XTRA_CONTAINERS_CHUNKED_LIST_ASSERT
-                assert(step >= 0);
-#endif
-                while (step > 0) {
-                    _chunk->_isDataPtr();
-                }
+            iterator_base operator++(const difference_type) {
+                auto tmp = *this;
+                __next();
+                return tmp;
+            }
+
+            iterator_base &operator+=(const difference_type step) {
+                _advance(step);
+                return *this;
+            }
+
+            iterator_base operator+(const difference_type step) const {
+                auto tmp = *this;
+                tmp._advance(step);
+                return tmp;
             }
 
             bool operator !=(const iterator_base &iterator) const {
@@ -382,11 +380,11 @@ namespace STL_STD_EXT_NAMESPACE {
             }
 
             const_pointer operator->() const {
-                return get();
+                return _get();
             }
 
             const_reference operator*() const {
-                return *get();
+                return *_get();
             }
 
             const_pointer get() const {
@@ -396,12 +394,41 @@ namespace STL_STD_EXT_NAMESPACE {
         protected:
             friend chunked_list;
 
+
+            void _advance(difference_type step) {
+#if XTRA_CONTAINERS_CHUNKED_LIST_ASSERT
+                assert(step >= 0);
+#endif
+                if (!_next || !_chunk || step <= 0) {
+                    return;
+                }
+                while (step > 0) {
+                    difference_type left = _chunk->_last() - _next;
+                    if (step < left) {
+                        _next += step;
+                        return;
+                    }
+                    if (!(_chunk = _chunk->next_chunk())) {
+                        _next = nullptr;
+                        return;
+                }
+                    _next = _chunk->begin();
+                    step -= left;
+            }
+        }
+
             void __next() {
+                if (!_next || !_chunk) {
+                    return;
+                }
                 // check if the last element has been reached
-                if (++_next == _chunk->_lastElement()) {
+                if (++_next >= _chunk->_last()) {
                     // proceed with next chunk
-                    _chunk = _chunk->_getNextChunk();
-                    _next = _chunk ? _chunk->_begin() : nullptr;
+                    if ((_chunk = _chunk->next_chunk())) {
+                        _next = _chunk->begin();
+                        return;
+                    }
+                    _next = nullptr;
                 }
             }
 
@@ -417,7 +444,7 @@ namespace STL_STD_EXT_NAMESPACE {
             inline pointer _get() const {
 #if XTRA_CONTAINERS_CHUNKED_LIST_ASSERT
                 assert(_chunk);
-                assert(_chunk->_isDataPtr(_next));
+                assert(_chunk->is_pointer_to_data(_next));
 #endif
                 return _next;
             }
@@ -436,11 +463,11 @@ namespace STL_STD_EXT_NAMESPACE {
             using iterator_base::_get;
 
             pointer operator->() {
-                return get();
+                return _get();
             }
 
             reference operator*() {
-                return *get();
+                return *_get();
             }
 
             pointer get() {
@@ -448,12 +475,11 @@ namespace STL_STD_EXT_NAMESPACE {
             }
         };
 
-        static constexpr size_t chunk_size = sizeof(chunk);
+        static constexpr size_type chunk_size = sizeof(chunk);
 
         chunked_list() :
             _firstChunk(nullptr),
             _lastChunk(nullptr)
-            //_size(0)
         {
         }
         ~chunked_list() {
@@ -463,26 +489,27 @@ namespace STL_STD_EXT_NAMESPACE {
         chunked_list(chunked_list &&list) noexcept :
             _firstChunk(std::exchange(list._firstChunk, nullptr)),
             _lastChunk(std::exchange(list._lastChunk, nullptr))
-            //_size(std::exchange(list._size, 0))
         {
         }
 
-        chunked_list(const chunked_list &list) : chunked_list()
+        chunked_list(const chunked_list &list) :
+            _firstChunk(nullptr),
+            _lastChunk(nullptr)
+
         {
-            *this = list;
+            std::copy(list.cbegin(), list.cend(), std::back_inserter(*this));
         }
 
         chunked_list &operator=(const chunked_list &list) {
-            clear();
-            if (list._firstChunk) {
-                _firstChunk = ::new chunk(list._firstChunk, _lastChunk);
-            }
-            //_size = list._size;
+            _destroy();
+            _firstChunk = nullptr;
+            _lastChunk = nullptr;
+            std::copy(list.cbegin(), list.cend(), std::back_inserter(*this));
             return *this;
         }
 
         chunked_list &operator=(chunked_list &&list) noexcept {
-            clear();
+            _destroy();
             ::new(static_cast<void *>(this)) chunked_list(std::move(list));
             return *this;
         }
@@ -496,7 +523,7 @@ namespace STL_STD_EXT_NAMESPACE {
             auto chunk = _firstChunk;
             while (chunk) {
                 count += chunk->size();
-                chunk = chunk->_getNextChunk();
+                chunk = chunk->next_chunk();
             }
             return count;
         }
@@ -510,7 +537,7 @@ namespace STL_STD_EXT_NAMESPACE {
             auto chunk = _firstChunk;
             while (chunk) {
                 count += numElements;
-                chunk = chunk->_getNextChunk();
+                chunk = chunk->next_chunk();
             }
             return count;
         }
@@ -519,14 +546,14 @@ namespace STL_STD_EXT_NAMESPACE {
 #if XTRA_CONTAINERS_CHUNKED_LIST_ASSERT
             assert(_firstChunk);
 #endif
-            return *_firstChunk->_begin();
+            return *_firstChunk->begin();
         }
 
         inline reference back() {
 #if XTRA_CONTAINERS_CHUNKED_LIST_ASSERT
             assert(_lastChunk);
 #endif
-            return *(_lastChunk->_lastElement() - 1);
+            return *(_lastChunk->_last() - 1);
         }
 
         inline void push_back(const _Ta &data) {
@@ -547,15 +574,14 @@ namespace STL_STD_EXT_NAMESPACE {
             else {
                 // chunk is full, create a new chunk
 #if XTRA_CONTAINERS_CHUNKED_LIST_ASSERT
-                assert(_lastChunk->_ptr.value() == _lastChunk->_lastElement());
+                assert(_lastChunk->_ptr.value() == _lastChunk->_last());
 #endif
                 if (_lastChunk->_ptr.value() == _lastChunk->_end()) {
                     _lastChunk = _lastChunk->_ptr.chunk(::new chunk());
                 }
             }
             // emplace data
-            ::new(static_cast<void *>(_lastChunk->_ptr.forward())) value_type(std::forward<Args>(args)...);
-            //_size++;
+            ::new(_lastChunk->_ptr.forward()) value_type(std::forward<Args>(args)...);
         }
 
         void clear() {
@@ -563,7 +589,6 @@ namespace STL_STD_EXT_NAMESPACE {
                 _destroy();
                 _firstChunk = nullptr;
                 _lastChunk = nullptr;
-                //_size = 0;
             }
         }
 
@@ -606,27 +631,20 @@ namespace STL_STD_EXT_NAMESPACE {
 
     private:
         void _destroy() {
-#if XTRA_CONTAINERS_CHUNKED_LIST_DESTROY_RECURSIVE
-            if (_firstChunk) {
-                _firstChunk->_destroyRecursive();
-            }
-#else
             auto chunk = _firstChunk;
             while (chunk) {
-                auto nextChunk = chunk->_getNextChunk();
+                auto nextChunk = chunk->next_chunk();
                 delete chunk;
                 chunk = nextChunk;
             }
-#endif
         }
 
         pointer _first() const {
-            return _firstChunk ? _firstChunk->_begin() : nullptr;
+            return _firstChunk ? _firstChunk->begin() : nullptr;
         }
     private:
         chunk_pointer _firstChunk;
         chunk_pointer _lastChunk;
-        //size_type _size;
     };
 
     template<class _Ta>

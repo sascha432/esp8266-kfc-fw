@@ -582,6 +582,8 @@ namespace FormUI {
         private:
             int32_t _minValue;
             int32_t _maxValue;
+            // int32_t _step: 31;
+            // int32_t _hasStep: 1;
         };
 
         inline IntMinMax MinMax(int32_t aMin, int32_t aMax) {

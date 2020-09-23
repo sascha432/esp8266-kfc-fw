@@ -65,6 +65,16 @@ namespace FormUI {
                 _storage.dump(offset, output);
             }
 
+            template<typename _Ta>
+            void addItem(const _Ta &item) {
+                _addItem(item);
+            }
+
+            template <typename... Args>
+            void addItems(Args &&... args) {
+                _addAll(args...);
+            }
+
         public:
             const char *attachString(const char *str);
 

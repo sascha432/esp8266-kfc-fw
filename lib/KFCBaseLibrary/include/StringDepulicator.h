@@ -7,16 +7,16 @@
 #include "Buffer.h"
 
 #ifndef DEBUG_STRING_DEDUPLICATOR
-#define DEBUG_STRING_DEDUPLICATOR               1
+#define DEBUG_STRING_DEDUPLICATOR               0
 #endif
 
 #if defined(ESP8266)
 // PROGMEM strings are detected by address and skipped
-#define safe_strcmp(a, b)   strcmp(a, b)
-#define safe_strlen(a)      strlen(a)
+#define safe_strcmp(a, b)                       strcmp(a, b)
+#define safe_strlen(a)                          strlen(a)
 #else
-#define safe_strcmp(a, b)   strcmp_P(a, b)
-#define safe_strlen(a)      strlen_P(a)
+#define safe_strcmp(a, b)                       strcmp_P(a, b)
+#define safe_strlen(a)                          strlen_P(a)
 #endif
 
 class StringDeduplicator;

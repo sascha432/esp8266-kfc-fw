@@ -3,7 +3,7 @@
 */
 
 #ifndef DEBUG_KFC_FORMS
-#define DEBUG_KFC_FORMS                             1
+#define DEBUG_KFC_FORMS                             0
 #endif
 
 #ifndef DEBUG_KFC_FORMS_DISABLE_ASSERT

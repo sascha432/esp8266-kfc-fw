@@ -221,10 +221,12 @@ void WebUI::BaseUI::renderInputField(Type type, PrintInterface &output, const ch
         // Input field
         // ---------------------------------------------------------------
         case Type::TEXT:
-        case Type::NUMBER:
-        case Type::INTEGER:
-        case Type::FLOAT:
             output.printf_P(PrintArgs::FormatType::HTML_OPEN_TEXT_INPUT, name, name, encodeHtmlEntities(value));
+            _printAttributeTo(output);
+            break;
+
+        case Type::NUMBER:
+            output.printf_P(PrintArgs::FormatType::HTML_OPEN_NUMBER_INPUT, name, name, encodeHtmlEntities(value));
             _printAttributeTo(output);
             break;
 

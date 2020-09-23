@@ -63,6 +63,9 @@ void Configuration::discard()
 void Configuration::release()
 {
     __LDBG_printf("params=%u last_read=%d dirty=%d", _params.size(), (int)(_readAccess == 0 ? -1 : millis() - _readAccess), isDirty());
+#if DEBUG_CONFIGURATION_STATS
+    DebugMeasureTime::dump(DEBUG_OUTPUT);
+#endif
     std::for_each(_params.begin(), _params.end(), [this](ConfigurationParameter &parameter) {
         if (!parameter.isWriteable()) {
             ConfigurationHelper::_allocator.deallocate(parameter);
@@ -194,6 +197,7 @@ void Configuration::makeWriteable(ConfigurationParameter &param, size_type lengt
 
 const char *Configuration::getString(HandleType handle)
 {
+    __LDBG_measure_time(handle);
     __LDBG_printf("handle=%04x", handle);
     uint16_t offset;
     auto param = _findParam(ParameterType::STRING, handle, offset);
@@ -205,6 +209,7 @@ const char *Configuration::getString(HandleType handle)
 
 char *Configuration::getWriteableString(HandleType handle, size_type maxLength)
 {
+    __LDBG_measure_time(handle);
     __LDBG_printf("handle=%04x max_len=%u", handle, maxLength);
     auto &param = getWritableParameter<char *>(handle, maxLength);
     return param._getParam().string();
@@ -212,6 +217,7 @@ char *Configuration::getWriteableString(HandleType handle, size_type maxLength)
 
 const uint8_t *Configuration::getBinary(HandleType handle, size_type &length)
 {
+    __LDBG_measure_time(handle);
     __LDBG_printf("handle=%04x", handle);
     uint16_t offset;
     auto param = _findParam(ParameterType::BINARY, handle, offset);
@@ -223,6 +229,7 @@ const uint8_t *Configuration::getBinary(HandleType handle, size_type &length)
 
 void *Configuration::getWriteableBinary(HandleType handle, size_type length)
 {
+    __LDBG_measure_time(handle);
     __LDBG_printf("handle=%04x len=%u", handle, length);
     auto &param = getWritableParameter<void *>(handle, length);
     return param._getParam().data();
@@ -241,6 +248,7 @@ void Configuration::_setString(HandleType handle, const char *string, size_type 
 
 void Configuration::_setString(HandleType handle, const char *string, size_type length)
 {
+    __LDBG_measure_time(handle);
     __LDBG_printf("handle=%04x length=%u", handle, length);
     uint16_t offset;
     auto &param = _getOrCreateParam(ParameterType::STRING, handle, offset);
@@ -249,6 +257,7 @@ void Configuration::_setString(HandleType handle, const char *string, size_type 
 
 void Configuration::setBinary(HandleType handle, const void *data, size_type length)
 {
+    __LDBG_measure_time(handle);
     __LDBG_printf("handle=%04x data=%p length=%u", handle, data, length);
     uint16_t offset;
     auto &param = _getOrCreateParam(ParameterType::BINARY, handle, offset);

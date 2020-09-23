@@ -314,7 +314,7 @@ void Form::BaseForm::dump(Print &out, const String &prefix) const {
     out.println(F("Form data:"));
     for (const auto &field : _fields) {
         out.print(prefix);
-        out.print(field->getName());
+        out.print(FPSTR(field->getName()));
         if (field->hasChanged()) {
             out.print('*');
         }

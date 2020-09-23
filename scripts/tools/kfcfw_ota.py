@@ -3,7 +3,7 @@
 #
 
 # requires:
-# pip install requests-toolbelt progressbar2
+# pip3 install requests-toolbelt progressbar2
 
 import os
 import time

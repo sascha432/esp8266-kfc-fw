@@ -71,19 +71,19 @@ namespace FormUI {
             MAX
         };
 
-        namespace Value {
+        // namespace Value {
 
-            enum class Type : uint8_t {
-                NONE = 0,
-                BOOLEAN,
-                INTEGRAL,
-                FLOATING_POINT,
-                STRING,
-                MAX
-            };
+        //     enum class Type : uint8_t {
+        //         NONE = 0,
+        //         BOOLEAN,
+        //         INTEGRAL,
+        //         FLOATING_POINT,
+        //         STRING,
+        //         MAX
+        //     };
 
-        }
-        //using ValueType = Value::Type;
+        // }
+        // //using ValueType = Value::Type;
 
     }
 
@@ -99,8 +99,6 @@ namespace FormUI {
             SELECT,
             TEXT,
             NUMBER,
-            INTEGER,
-            FLOAT,
             RANGE,
             RANGE_SLIDER,
             PASSWORD,
@@ -184,7 +182,7 @@ namespace FormUI {
     }
 
     using InputFieldType = Field::Type;
-    using FieldValueType = Field::Value::Type;
+    // using FieldValueType = Field::Value::Type;
     using RenderType = WebUI::Type;
     using FormStyleType = WebUI::StyleType;
     using HostnameAllowedType = HostnameValidator::AllowedType;

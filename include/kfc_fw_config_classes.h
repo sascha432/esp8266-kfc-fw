@@ -122,9 +122,11 @@ namespace ConfigurationHelper {
 
 #define CREATE_BITFIELD_TYPE_MIN_MAX(name, size, type, min_value, max_value, default_value) \
     static inline FormUI::Validator::Range &addRangeValidatorFor_##name(FormUI::Form::BaseForm &form, bool allowZero = false) { \
+        form.getLastField().getFormUI()->addItems(FormUI::Type::NUMBER, FormUI::MinMax((int32_t)kMinValueFor_##name, (int32_t)kMaxValueFor_##name)); \
         return form.addValidator(FormUI::Validator::Range((long)kMinValueFor_##name, (long)kMaxValueFor_##name, allowZero)); \
     } \
     static inline FormUI::Validator::Range &addRangeValidatorFor_##name(const String &message, FormUI::Form::BaseForm &form, bool allowZero = false) { \
+        form.getLastField().getFormUI()->addItems(FormUI::Type::NUMBER, FormUI::MinMax((int32_t)kMinValueFor_##name, (int32_t)kMaxValueFor_##name)); \
         return form.addValidator(FormUI::Validator::Range(message, (long)kMinValueFor_##name, (long)kMaxValueFor_##name, allowZero)); \
     } \
     static constexpr type kMinValueFor_##name = min_value; \
@@ -1291,9 +1293,9 @@ namespace KFCConfigurationClasses {
             typedef struct __attribute__packed__ BlindsConfigChannel_t {
                 using Type = BlindsConfigChannel_t;
                 CREATE_UINT32_BITFIELD_MIN_MAX(current_limit_mA, 12, 1, 4095, 100);                         // bits 00:11 ofs:len 000:12 0-0x0fff (4095)
-                CREATE_UINT32_BITFIELD_MIN_MAX(dac_pwm_value, 10, 0, 1023, 512);                    // bits 12:21 ofs:len 012:10 0-0x03ff (1023)
+                CREATE_UINT32_BITFIELD_MIN_MAX(dac_pwm_value, 10, 0, 1023, 512);                            // bits 12:21 ofs:len 012:10 0-0x03ff (1023)
                 CREATE_UINT32_BITFIELD_MIN_MAX(pwm_value, 10, 0, 1023, 256);                                // bits 22:31 ofs:len 022:10 0-0x03ff (1023)
-                CREATE_UINT32_BITFIELD_MIN_MAX(current_avg_period_us, 16, 1000, 65000, 12500);              // bits 00:15 ofs:len 032:16 0-0xffff (65535)
+                CREATE_UINT32_BITFIELD_MIN_MAX(current_avg_period_us, 16, 100, 50000, 2500);                // bits 00:15 ofs:len 032:16 0-0xffff (65535)
                 CREATE_UINT32_BITFIELD_MIN_MAX(open_time_ms, 16, 0, 60000, 5000);                           // bits 16:31 ofs:len 048:16 0-0xffff (65535)
                 CREATE_UINT16_BITFIELD_MIN_MAX(close_time_ms, 16, 0, 60000, 5000);                          // bits 00:15 ofs:len 064:16 0-0xffff (65535)
                 BlindsConfigChannel_t();
@@ -1322,8 +1324,9 @@ namespace KFCConfigurationClasses {
                 CREATE_UINT16_BITFIELD_MIN_MAX(adc_recoveries_per_second, 3, 1, 7, 4);                      // bits 12:14 ofs:len 044:03 0-0x07 (7)
                 CREATE_ENUM_BITFIELD(multiplexer, MultiplexerType);                                         // bits 15:15 ofs:len 047:01 0-0x01 (1)
                 CREATE_INT32_BITFIELD_MIN_MAX(adc_offset, 11, -1000, 1000, 0);                              // bits 00:10 ofs:len 048:11 0-0x07ff (-1023 - 1023)
-                CREATE_INT32_BITFIELD_MIN_MAX(pwm_softstart_time, 18, 0, 125000, 50000);                    // bits 11:28 ofs:len 059:18 0-0x3ffff (262143)
-                // uint32_t __free4: 3;                                                                        // bits 29:31 ofs:len 077:03 0-0x0007 (7)
+                CREATE_INT32_BITFIELD_MIN_MAX(pwm_softstart_time, 20, 0, 500000, 50000);                    // bits 11:30 ofs:len 059:31
+                // 1 bit free
+
 
                 template<typename Archive>
                 void serialize(Archive & ar, kfc::serialization::version version) {

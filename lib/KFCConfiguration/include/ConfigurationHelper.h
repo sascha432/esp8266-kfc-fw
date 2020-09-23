@@ -8,11 +8,15 @@
 #include <EEPROM.h>
 
 #ifndef DEBUG_CONFIGURATION
-#define DEBUG_CONFIGURATION                                         1
+#define DEBUG_CONFIGURATION                                         0
+#endif
+
+#ifndef DEBUG_CONFIGURATION_STATS
+#define DEBUG_CONFIGURATION_STATS                                   0
 #endif
 
 #ifndef DEBUG_CONFIGURATION_GETHANDLE
-#define DEBUG_CONFIGURATION_GETHANDLE                               1
+#define DEBUG_CONFIGURATION_GETHANDLE                               0
 #endif
 
 #ifndef DEBUG_EEPROM_ENABLE

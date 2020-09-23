@@ -1066,7 +1066,7 @@ void WebServerPlugin::createConfigureForm(PluginComponent::FormCallbackType type
     form.addCallbackSetter(F("httport"), cfg.getPortAsString(), [&cfg](const String &value, FormField &field) {
         cfg.setPort(value.toInt(), cfg.isSecure()); // setMode() is executed already and cfg.is_https set
         field.setValue(cfg.getPortAsString());
-    }); //->setFormUI(new FormUI::UI(FormUI::Type::INTEGER, FSPGM(Port, "Port"))));
+    }); //->setFormUI(new FormUI::UI(FormUI::Type::NUMBER, FSPGM(Port, "Port"))));
     form.addValidator(FormUI::Validator::NetworkPort(true));
 
 #if WEBSERVER_TLS_SUPPORT

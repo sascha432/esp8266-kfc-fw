@@ -23,6 +23,9 @@
 
 #include "Allocator.hpp"
 
+#if DEBUG_CONFIGURATION_STATS
+ConfigurationHelper::DebugMeasureTime::DebugMeasureTime_t ConfigurationHelper::DebugMeasureTime::_data = {};
+#endif
 
 String ConfigurationParameter::toString() const
 {
@@ -208,7 +211,7 @@ void ConfigurationParameter::exportAsJson(Print& output)
         switch (_param.type()) {
         case ParameterType::STRING: {
             output.print('"');
-            JsonTools::printToEscaped(output, _param.string(), _param.length(), false);
+            JsonTools::printToEscaped(output, _param.string(), strlen(_param.string()), false);
             output.print('"');
         } break;
         case ParameterType::BINARY: {

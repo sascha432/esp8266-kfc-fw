@@ -15,6 +15,8 @@
 
 extern int8_t operator *(const BlindsControl::ChannelType type);
 
+static constexpr float kAdcIntegralMultiplierDivider = 1000.0 * 10.0;
+
 int8_t operator *(const BlindsControl::ChannelType type) {
     return static_cast<int8_t>(type);
 }
@@ -22,7 +24,7 @@ int8_t operator *(const BlindsControl::ChannelType type) {
 BlindsControl::BlindsControl() :
     MQTTComponent(ComponentTypeEnum_t::SWITCH), _queue(*this),
     _activeChannel(ChannelType::NONE),
-    _adcIntegralMultiplier(10.0),
+    _adcIntegralMultiplier(2500 / kAdcIntegralMultiplierDivider),
     _adc(ADCManager::getInstance())
 {
 }
@@ -250,7 +252,7 @@ void BlindsControl::_startMotor(ChannelType channel, bool open)
     _publishState();
 
     _motorTimeout.set(open ? cfg.open_time_ms : cfg.close_time_ms);
-    _adcIntegralMultiplier = cfg.current_avg_period_us / 1000.0;
+    _adcIntegralMultiplier = cfg.current_avg_period_us / kAdcIntegralMultiplierDivider;
     // clear ADC last
     _clearAdc();
 
@@ -274,7 +276,7 @@ void BlindsControl::_startMotor(ChannelType channel, bool open)
     _softStartUpdateCount = 0;
 #endif
 
-    __LDBG_printf("pin=%u pwm=%u soft-start=%.3fms I-limit=%umA (%u) dir=%s adc-mul=%.3f timeout=%ums",
+    __LDBG_printf("pin=%u pwm=%u soft-start=%.3fms I-limit=%umA (%u) dir=%s adc-mul=%.6f timeout=%ums",
         _motorPin, _motorPWMValue, _config.pwm_softstart_time / 1000.0,
         cfg.current_limit_mA, _currentLimit,
         open ? PSTR("open") : PSTR("close"),
@@ -521,7 +523,7 @@ void BlindsControl::_updateAdc()
 
     _currentTimer.start();
     float count = micros * _adcIntegralMultiplier;
-    _adcIntegral = ((count * _adcIntegral) + reading) / (float)(count + 1);
+    _adcIntegral = ((count * _adcIntegral) + reading) / (count + 1.0f);
 }
 
 void BlindsControl::_setMotorBrake(ChannelType channel)
@@ -660,7 +662,7 @@ void BlindsControl::_saveState()
 void BlindsControl::_readConfig()
 {
     _config = Plugins::Blinds::getConfig();
-    _adcIntegralMultiplier = _config.channels[0].current_avg_period_us / 1000.0;
+    _adcIntegralMultiplier = _config.channels[0].current_avg_period_us / kAdcIntegralMultiplierDivider;
 
     _adc.setOffset(_config.adc_offset);
     _adc.setMinDelayMicros(_config.adc_read_interval);

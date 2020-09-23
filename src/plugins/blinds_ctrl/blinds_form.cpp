@@ -37,11 +37,11 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
     if (String_equals(formName, PSTR("channels"))) {
 
         // FormUI::Container::List currentLimitItems(
-        //     500, F("Extra Fast (0.5ms)"),
-        //     5000, F("Fast (5ms)"),
-        //     12500, F("Medium (12.5ms)"),
-        //     20000, F("Slow (20ms)"),
-        //     50000, F("Extra Slow (50ms)")
+        //      500, F("Extra Fast (500µs)"),
+        //     1250, F("Fast (1250µs)"),
+        //     2500, F("Medium (1250µs)"),
+        //     5000, F("Slow (5000µs)"),
+        //    10000, F("Extra Slow (10000µs)")
         // );
 
         FormUI::Container::List operationTypeItems(
@@ -133,52 +133,52 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
         auto &pinsGroup = form.addCardGroup(FSPGM(config), F("Pin Configuration"), false);
 
         form.addPointerTriviallyCopyable(F("pin0"), &cfg.pins[0]);
-        form.addFormUI(F("Channel 0 Open Pin"), FormUI::Type::INTEGER, FormUI::PlaceHolder(IOT_BLINDS_CTRL_M1_PIN));
+        form.addFormUI(F("Channel 0 Open Pin"), FormUI::Type::NUMBER, FormUI::PlaceHolder(IOT_BLINDS_CTRL_M1_PIN));
 
         form.addPointerTriviallyCopyable(F("pin1"), &cfg.pins[1]);
-        form.addFormUI(F("Channel 0 Close Pin"), FormUI::Type::INTEGER, FormUI::PlaceHolder(IOT_BLINDS_CTRL_M2_PIN));
+        form.addFormUI(F("Channel 0 Close Pin"), FormUI::Type::NUMBER, FormUI::PlaceHolder(IOT_BLINDS_CTRL_M2_PIN));
 
         form.addPointerTriviallyCopyable(F("pin2"), &cfg.pins[2]);
-        form.addFormUI(F("Channel 1 Open Pin"), FormUI::Type::INTEGER, FormUI::PlaceHolder(IOT_BLINDS_CTRL_M3_PIN));
+        form.addFormUI(F("Channel 1 Open Pin"), FormUI::Type::NUMBER, FormUI::PlaceHolder(IOT_BLINDS_CTRL_M3_PIN));
 
         form.addPointerTriviallyCopyable(F("pin3"), &cfg.pins[3]);
-        form.addFormUI(F("Channel 1 Close Pin"), FormUI::Type::INTEGER, FormUI::PlaceHolder(IOT_BLINDS_CTRL_M4_PIN));
+        form.addFormUI(F("Channel 1 Close Pin"), FormUI::Type::NUMBER, FormUI::PlaceHolder(IOT_BLINDS_CTRL_M4_PIN));
 
         auto &multiplexer = form.addObjectGetterSetter(F("shmp"), cfg, cfg.get_int_multiplexer, cfg.set_int_multiplexer);
         form.addFormUI(FormUI::Type::HIDDEN);
 
         form.addPointerTriviallyCopyable(F("pin4"), &cfg.pins[4]);
-        form.addFormUI(F("Shunt Multiplexer Pin"), FormUI::Type::INTEGER, FormUI::PlaceHolder(IOT_BLINDS_CTRL_MULTIPLEXER_PIN), FormUI::CheckboxButtonSuffix(multiplexer, F("HIGH State For Channel 0")));
+        form.addFormUI(F("Shunt Multiplexer Pin"), FormUI::Type::NUMBER, FormUI::PlaceHolder(IOT_BLINDS_CTRL_MULTIPLEXER_PIN), FormUI::CheckboxButtonSuffix(multiplexer, F("HIGH State For Channel 0")));
 
         form.addPointerTriviallyCopyable(F("pin5"), &cfg.pins[5]);
-        form.addFormUI(F("DAC Pin for DRV8870 Vref"), FormUI::Type::INTEGER, FormUI::PlaceHolder(IOT_BLINDS_CTRL_DAC_PIN));
+        form.addFormUI(F("DAC Pin for DRV8870 Vref"), FormUI::Type::NUMBER, FormUI::PlaceHolder(IOT_BLINDS_CTRL_DAC_PIN));
 
         pinsGroup.end();
 
         auto &motorGroup = form.addCardGroup(F("ctrl"), F("Controller Configuration"), true);
 
         form.addObjectGetterSetter(F("pwm"), cfg, cfg.get_bits_pwm_frequency, cfg.set_bits_pwm_frequency);
-        form.addFormUI(F("PWM Frequency"), FormUI::Type::INTEGER, FormUI::PlaceHolder(ConfigType::kDefaultValueFor_pwm_frequency), FormUI::Suffix(F("Hz")));
+        form.addFormUI(F("PWM Frequency"), FormUI::PlaceHolder(ConfigType::kDefaultValueFor_pwm_frequency), FormUI::Suffix(F("Hz")));
         ConfigType::addRangeValidatorFor_pwm_frequency(form);
 
-        form.addObjectGetterSetter(F("pss"), cfg, cfg.get_bits_pwm_frequency, cfg.set_bits_pwm_frequency);
-        form.addFormUI(F("PWM Soft Start Ramp-up Time"), FormUI::Type::INTEGER, FormUI::PlaceHolder(ConfigType::kDefaultValueFor_pwm_softstart_time), FormUI::Suffix(F("microseconds")));
+        form.addObjectGetterSetter(F("pss"), cfg, cfg.get_bits_pwm_softstart_time, cfg.set_bits_pwm_softstart_time);
+        form.addFormUI(F("PWM Soft Start Ramp-up Time"), FormUI::PlaceHolder(ConfigType::kDefaultValueFor_pwm_softstart_time), FormUI::Suffix(F("microseconds")));
         ConfigType::addRangeValidatorFor_pwm_softstart_time(form);
 
         form.addObjectGetterSetter(F("adci"), cfg, cfg.get_bits_adc_read_interval, cfg.set_bits_adc_read_interval);
-        form.addFormUI(F("ADC Read Interval"), FormUI::Type::INTEGER, FormUI::PlaceHolder(ConfigType::kDefaultValueFor_adc_read_interval), FormUI::Suffix(F("microseconds")));
+        form.addFormUI(F("ADC Read Interval"), FormUI::PlaceHolder(ConfigType::kDefaultValueFor_adc_read_interval), FormUI::Suffix(F("microseconds")));
         ConfigType::addRangeValidatorFor_adc_read_interval(form);
 
         form.addObjectGetterSetter(F("adcrt"), cfg, cfg.get_bits_adc_recovery_time, cfg.set_bits_adc_recovery_time);
-        form.addFormUI(F("ADC Recovery Time"), FormUI::Type::INTEGER, FormUI::PlaceHolder(ConfigType::kDefaultValueFor_adc_recovery_time), FormUI::Suffix(F("microseconds")));
+        form.addFormUI(F("ADC Recovery Time"), FormUI::PlaceHolder(ConfigType::kDefaultValueFor_adc_recovery_time), FormUI::Suffix(F("microseconds")));
         ConfigType::addRangeValidatorFor_adc_recovery_time(form);
 
         form.addObjectGetterSetter(F("adcrr"), cfg, cfg.get_bits_adc_recoveries_per_second, cfg.set_bits_adc_recoveries_per_second);
-        form.addFormUI(F("ADC Repeat Recovery"), FormUI::Type::INTEGER, FormUI::PlaceHolder(ConfigType::kDefaultValueFor_adc_recoveries_per_second), FormUI::Suffix(F("per second")));
+        form.addFormUI(F("ADC Repeat Recovery"), FormUI::PlaceHolder(ConfigType::kDefaultValueFor_adc_recoveries_per_second), FormUI::Suffix(F("per second")));
         ConfigType::addRangeValidatorFor_adc_recoveries_per_second(form);
 
         form.addObjectGetterSetter(F("adco"), cfg, cfg.get_bits_adc_offset, cfg.set_bits_adc_offset);
-        form.addFormUI(F("ADC Offset"), FormUI::Type::INTEGER, FormUI::Suffix(F("raw value")));
+        form.addFormUI(F("ADC Offset"), FormUI::Suffix(F("raw value")));
         ConfigType::addRangeValidatorFor_adc_offset(form);
 
         motorGroup.end();

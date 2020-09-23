@@ -75,7 +75,7 @@ void MQTTPlugin::createConfigureForm(FormCallbackType type, const String &formNa
         cfg.setPort(value.toInt(), cfg.isSecure());
         field.setValue(cfg.getPortAsString());
     });
-    form.addFormUI(FormUI::Type::INTEGER, FSPGM(Port), FormUI::PlaceHolder(1883));
+    form.addFormUI(FormUI::Type::NUMBER, FSPGM(Port), FormUI::PlaceHolder(1883));
     form.addValidator(FormUI::Validator::NetworkPort(true));
 
     form.addMemberVariable(FSPGM(keepalive), cfg, &ConfigType::keepalive);

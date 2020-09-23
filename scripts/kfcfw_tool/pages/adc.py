@@ -174,22 +174,22 @@ class PageADC(tk.Frame, PageBase):
 
 
         self.averaging = [1.0, 50.0, 10.0]
-        lines_width = [ 0.1, 0.5, 1.0, 2.0 ]
+        lines_width = [ 0.1, 0.2, 0.5, 0.5, 4.0 ]
         #self.averaging[2] = current limit
 
         # lines_width = [ 0.01, 0.01, 2.0, 0.01 ]
 
         self.lines = []
         self.reset_data()
-        tmp, = self.axis.plot(self.values[0], self.values[1], lw=lines_width[0], color='blue', alpha = 0.7, label='ADC')
+        tmp, = self.axis.plot(self.values[0], self.values[1], lw=lines_width[0], color='blue', alpha = 0.5, label='ADC')
         self.lines.append(tmp)
         tmp, = self.axis.plot(self.values[0], self.values[2], lw=lines_width[1], color='green', label='Average/%ums' % self.averaging[0])
         self.lines.append(tmp)
         tmp, = self.axis.plot(self.values[0], self.values[3], lw=lines_width[2], color='orange', label='Average/%ums' % self.averaging[1])
         self.lines.append(tmp)
-        tmp, = self.axis.plot(self.values[0], self.values[4], lw=lines_width[3], color='red', label='Average/%ums' % self.averaging[2])
+        tmp, = self.axis.plot(self.values[0], self.values[4], lw=lines_width[3], color='purple', alpha = 0.7, label='Average/%ums' % self.averaging[2])
         self.lines.append(tmp)
-        tmp, = self.axis.plot(self.values[0], self.values[5], lw=lines_width[3], color='purple', label='BlindsCtrl current')
+        tmp, = self.axis.plot(self.values[0], self.values[5], lw=lines_width[4], color='red', label='BlindsCtrl current')
         self.lines.append(tmp)
         self.axis.legend()
 
@@ -403,8 +403,10 @@ class PageADC(tk.Frame, PageBase):
                 # xval = 0
                 # if n>0:
                 #     # cover the last 200ms
-                #     start = self.find_start(time_val - 250, n)
-                #     xval = np.std(self.values[1][start:n])
+                #     start = self.find_start(time_val - 10, n)
+                #     xval = np.mean(self.values[1][start:n])
+                #     # xval = np.mean(self.data['adc_raw'][start:n])
+                # value2=xval;
 
                 if self.stopped==None and avg1>self.threshold:
                     self.stopped = False

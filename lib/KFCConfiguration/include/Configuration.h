@@ -37,6 +37,12 @@ extern EEPROMClass EEPROM;
 #include <debug_helper_disable.h>
 #endif
 
+#if DEBUG_CONFIGURATION_STATS
+#define __LDBG_measure_time(handle) ConfigurationHelper::DebugMeasureTime _____D_timer1(handle);
+#else
+#define __LDBG_measure_time(...)
+#endif
+
 #if _MSC_VER
 #pragma warning(push)
 #pragma warning(disable : 26812)
@@ -96,6 +102,7 @@ public:
 
     template <typename _Ta>
     ConfigurationParameter &getWritableParameter(HandleType handle, size_type maxLength = sizeof(_Ta)) {
+        __LDBG_measure_time(handle);
         __LDBG_printf("handle=%04x max_len=%u", handle, maxLength);
         uint16_t offset;
         auto &param = _getOrCreateParam(ConfigurationParameter::getType<_Ta>(), handle, offset);
@@ -115,6 +122,7 @@ public:
 
     template <typename _Ta>
     ConfigurationParameter *getParameter(HandleType handle) {
+        __LDBG_measure_time(handle);
         __LDBG_printf("handle=%04x", handle);
         size_type offset;
         auto iterator = _findParam(ConfigurationParameter::getType<_Ta>(), handle, offset);
@@ -126,6 +134,7 @@ public:
 
     template <typename _Ta>
     ConfigurationParameterT<_Ta> &getParameterT(HandleType handle) {
+        __LDBG_measure_time(handle);
         __LDBG_printf("handle=%04x", handle);
         uint16_t offset;
         auto &param = _getOrCreateParam(ConfigurationParameter::getType<_Ta>(), handle, offset);

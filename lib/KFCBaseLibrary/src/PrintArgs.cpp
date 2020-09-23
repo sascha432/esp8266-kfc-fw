@@ -45,6 +45,8 @@ const __FlashStringHelper *PrintArgsHelper::getFormatByType(FormatType type)
             return F("<select class=\"form-control\" name=\"%s\" id=\"%s\"");
         case FormatType::HTML_OPEN_TEXT_INPUT:
             return F("<input type=\"text\" class=\"form-control\" name=\"%s\" id=\"%s\" value=\"%s\"");
+        case FormatType::HTML_OPEN_NUMBER_INPUT:
+            return F("<input type=\"number\" class=\"form-control\" name=\"%s\" id=\"%s\" value=\"%s\"");
         case FormatType::HTML_OPEN_GROUP_START_CARD:
             return F("<div class=\"card\"><div class=\"card-header p-1\" id=\"heading-%s\"><h2 class=\"mb-1\"><button class=\"btn btn-link btn-lg collapsed\" type=\"button\" data-toggle=\"collapse\" data-target=\"#collapse-%s\" aria-expanded=\"false\" aria-controls=\"collapse-%s\"><strong>%s</strong></button></h2></div><div id=\"collapse-%s\" aria-labelledby=\"heading-%s\" data-cookie=\"#%s\"");
         case FormatType::HTML_OPEN_GROUP_START_CARD_COLLAPSE_HIDE:
@@ -347,12 +349,12 @@ namespace PrintArgsHelper {
 void PrintArgs::clear()
 {
 #if DEBUG_PRINT_ARGS
-    
+
     if (_stats.outputSize) {
         __LDBG_printf("calls: copystr=%u[repeated=%u] vprintf=%u[%u] fillbuffer=%u ",
             _stats.calls.copyString, _stats.repeat.copyString, _stats.calls.vprintf, _stats.repeat.vprintf, _stats.calls.fillBuffer
         );
-        __LDBG_printf("output=%u buffer_capacity=%u max_len: vprintf=%u copystr=%u", 
+        __LDBG_printf("output=%u buffer_capacity=%u max_len: vprintf=%u copystr=%u",
             _stats.outputSize, _buffer.capacity(), _stats.maxLen.vprintf, _stats.maxLen.copyString
         );
         PrintString str;

@@ -6,6 +6,7 @@
 
 #include <Arduino_compat.h>
 #include <EEPROM.h>
+#include <MicrosTimer.h>
 #include <type_traits>
 #include <algorithm>
 #include <stl_ext/type_traits.h>
@@ -29,6 +30,36 @@ class Configuration;
 #endif
 
 namespace ConfigurationHelper {
+
+#if DEBUG_CONFIGURATION_STATS
+    class DebugMeasureTime {
+    public:
+        DebugMeasureTime(HandleType) {
+            if (_data._stack++ == 0) {
+                _data._start = micros();
+            }
+        }
+        ~DebugMeasureTime() {
+            if (--_data._stack == 0) {
+                _data._sum += get_time_diff(_data._start, micros());
+                _data._counter++;
+            }
+        }
+
+        static void dump(Print &output) {
+            output.printf_P(PSTR("config stats: total=%uus count=%u avg=%uus\n"), _data._sum, _data._counter, (uint32_t)(_data._sum / (double)_data._counter));
+        }
+
+        struct DebugMeasureTime_t {
+            uint32_t _start;
+            uint32_t _counter;
+            uint32_t _stack;
+            uint32_t _sum;
+        };
+
+        static DebugMeasureTime_t _data;
+    };
+#endif
 
     class ParameterInfo {
     public:
@@ -207,8 +238,6 @@ public:
 
     const uint8_t *getBinary(Configuration &conf, size_type &length, uint16_t offset);
 
-    uint16_t read(Configuration &conf, uint16_t offset);
-
     void dump(Print &output);
     void exportAsJson(Print& output);
 
@@ -247,6 +276,8 @@ public:
 private:
     friend Configuration;
     friend WriteableData;
+
+    uint16_t read(Configuration &conf, uint16_t offset);
 
     bool _readData(Configuration &conf, uint16_t offset);
     bool _readDataTo(Configuration &conf, uint16_t offset, uint8_t *ptr, size_type maxSize) const;

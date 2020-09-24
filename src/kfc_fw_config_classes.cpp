@@ -4,6 +4,7 @@
 
 #include <Configuration.h>
 #include "kfc_fw_config.h"
+#include <Utility/ProgMemHelper.h>
 
 #if DEBUG_CONFIG_CLASS
 #include <debug_helper_enable.h>
@@ -69,6 +70,38 @@ namespace KFCConfigurationClasses {
             obj.is_web_server_enabled = true;
             WebServer::getWriteableConfig().is_https = (mode == WebServerTypes::ModeType::SECURE);
         }
+    }
+
+    FormUI::Container::List createFormPinList(uint8_t from, uint8_t to)
+    {
+#if defined(ESP8266)
+        PROGMEM_DEF_LOCAL_PSTR_ARRAY(pinNames, "GPIO0", "U0TXD", "GPIO2", "U0RXD", "GPIO4", "GPIO5", "", "", "", "", "", "", "GPIO12", "GPIO13", "GPIO14", "GPIO15", "GPIO16/RTC_GPIO0");
+#else
+        #ifndef NUM_DIGITAL_PINS
+        #define NUM_DIGITAL_PINS 16
+        #endif
+        #ifndef isFlashInterfacePin
+        #define isFlashInterfacePin(i) false
+        #endif
+        PROGMEM_DEF_LOCAL_PSTR_ARRAY_INDEXED(pinNames, 0, NUM_DIGITAL_PINS, "", GPIO);
+#endif
+
+        FormUI::Container::List list;
+        to = ((to >= NUM_DIGITAL_PINS) ? NUM_DIGITAL_PINS : to + 1);
+        to = to ? to : NUM_DIGITAL_PINS;
+        // __LDBG_printf("from=%u to=%u", from, to);
+        for(uint8_t i = from; i < to; i++) {
+            if (!isFlashInterfacePin(i)) {
+                // __LDBG_printf("i=%u has_name=%u name=%s", i, i < kPinNamesNum, __S(pinNames[i]));
+                if ((i < kpinNamesSize) && pgm_read_byte(pinNames[i])) {
+                    list.emplace_back(i, FPSTR(pinNames[i]));
+                }
+                else {
+                    list.emplace_back(i, PrintString(F("GPIO%u"), i));
+                }
+            }
+        }
+        return list;
     }
 
     // "${zeroconf:" service "." proto "," variable "|" default_value "}"

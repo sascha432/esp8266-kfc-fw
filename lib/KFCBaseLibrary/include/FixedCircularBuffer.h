@@ -12,72 +12,10 @@
 #pragma push_macro("new")
 #undef new
 #endif
-
-class BoolMutex {
-public:
-    BoolMutex(const BoolMutex &) = delete;
-    BoolMutex &operator=(const BoolMutex &) = delete;
-
-    BoolMutex(bool locked = false) : _locked(locked) {}
-    BoolMutex(BoolMutex &&move) noexcept : _locked(true) {
-        *this = std::move(move);
-    }
-
-    inline __attribute__((__always_inline__))
-    BoolMutex &operator=(BoolMutex &&move) noexcept {
-        noInterrupts();
-        _locked = std::exchange(move._locked, false);
-        interrupts();
-        return *this;
-    }
-
-    inline __attribute__((__always_inline__))
-    bool try_lock() {
-        noInterrupts();
-        if (_locked == false) {
-            _locked = true;
-            interrupts();
-            return true;
-        }
-        interrupts();
-        return false;
-    }
-
-    inline __attribute__((__always_inline__))
-    void lock() {
-        _locked = true;
-    }
-
-    inline __attribute__((__always_inline__))
-    void unlock() {
-        _locked = false;
-    }
-
-private:
-    volatile bool _locked;
-};
-
-class NullMutex {
-public:
-    NullMutex(const NullMutex &) = delete;
-    NullMutex &operator=(const NullMutex &) = delete;
-
-    NullMutex(bool locked = false) {}
-    NullMutex(NullMutex &&move) noexcept {}
-    NullMutex &operator=(NullMutex &&move) noexcept {
-        return *this;
-    }
-    bool try_lock() {
-        return true;
-    }
-    void lock() {}
-    void unlock() {}
-};
-
-template<class T, size_t SIZE, class mutex_type = BoolMutex>
+template<class T, size_t SIZE>
 class FixedCircularBuffer {
 public:
-    using buffer_type = FixedCircularBuffer<T, SIZE, mutex_type>;
+    using buffer_type = FixedCircularBuffer<T, SIZE>;
     using reference = T &;
     using const_reference = const T &;
     using pointer = T *;
@@ -194,8 +132,7 @@ public:
         _count(std::exchange(buffer._count, 0)),
         _write_position(std::exchange(buffer._write_position, 0)),
         _read_position(std::exchange(buffer._read_position, 0)),
-        _values(std::move(buffer._values)),
-        _mutex(std::move(buffer._mutex))
+        _values(std::move(buffer._values))
     {
     }
 
@@ -212,7 +149,6 @@ public:
         _write_position = std::exchange(buffer._write_position, 0);
         _read_position = std::exchange(buffer._read_position, 0);
         _values = std::move(buffer._values);
-        _mutex = std::move(buffer._mutex);
         return *this;
     }
 
@@ -236,6 +172,7 @@ public:
     }
 
     // faster version of buffer = std::move(buffer.slice(first, last))
+    // the objects removed are not destroyed until overwritten
     void shrink(const iterator first, const iterator last) {
         _read_position = first.offset();
         _write_position = last.offset();
@@ -270,7 +207,8 @@ public:
     template<typename... Args>
     inline __attribute__((__always_inline__))
     void emplace_back(Args &&... args) {
-        ::new(static_cast<void *>(&_values[_write_position++])) T(std::forward<Args>(args)...);
+        _values[_write_position].~value_type();
+        ::new(static_cast<void *>(&_values[_write_position++])) value_type(std::forward<Args>(args)...);
         _write_position %= capacity();
         if (++_count - _read_position > capacity()) {
             _read_position++;
@@ -278,51 +216,8 @@ public:
     }
 
     inline __attribute__((__always_inline__))
-    void push_back_no_block(T &&value) {
-        if (_mutex.try_lock() == false) {
-            emplace_back(std::move(value));
-            _mutex.unlock();
-        }
-    }
-
-    inline __attribute__((__always_inline__))
-    bool push_back_timeout(T &&value, uint32_t timeoutMicros) {
-        if (_mutex.try_lock() == false) {
-            uint32_t start = micros();
-            while (_mutex.try_lock() == false) {
-                if (__inline_get_time_diff(start, micros()) > timeoutMicros) {
-                    return false;
-                }
-            }
-        }
-        emplace_back(std::move(value));
-        _mutex.unlock();
-        return true;
-    }
-
-    inline __attribute__((__always_inline__))
     value_type pop_front() {
-        return _values[_read_position++];
-    }
-
-    inline __attribute__((__always_inline__))
-    bool try_lock() {
-        return _mutex.try_lock();
-    }
-
-    inline __attribute__((__always_inline__))
-    void lock() {
-        _mutex.lock();
-    }
-
-    inline __attribute__((__always_inline__))
-    void unlock() {
-        _mutex.unlock();
-    }
-
-    inline __attribute__((__always_inline__))
-    mutex_type &get_mutex() {
-        return _mutex;
+        return std::exchange(_values[_read_position++], value_type());
     }
 
     inline __attribute__((__always_inline__))
@@ -330,6 +225,7 @@ public:
         _count = 0;
         _write_position = 0;
         _read_position = 0;
+        std::fill(_values.begin(), _values.end(), value_type());
     }
 
     inline __attribute__((__always_inline__))
@@ -424,7 +320,6 @@ private:
     size_type _write_position;
     size_type _read_position;
     std::array<value_type, SIZE> _values;
-    mutex_type _mutex;
 };
 
 #if _CRTDBG_MAP_ALLOC

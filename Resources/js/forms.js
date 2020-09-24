@@ -10,6 +10,14 @@ function form_invalid_feedback(selector, message) {
 
 $.visible_password_options = {};
 
+// ---------------------------------------------------------------------------------
+// marks fields as invalid and adds "invalid-feedback" divs when
+// $.formValidator.addErrors() is called. if the input is inside a collapsed
+// group, the group is shown
+//
+// example:
+// $.formValidator.addErrors([{target:'#brightness',name:'Display Brightness',error:'This fields value must be between 50 and 65535 or 0'},{target:'#pwm_0','error':'This fields value must be between 50 and 65535 or 0'},{target:'#pwm_1',error:'This fields value must be between 50 and 65535 or 0'}, {target:'#missing_field_123',error:'missing target'}]);
+// ---------------------------------------------------------------------------------
 $.formValidator = {
     target: 'form:last',
     errors: [],
@@ -54,8 +62,18 @@ $.formValidator = {
     }
 };
 
-// $.formValidator.addErrors([{target:'#brightness',name:'Display Brightness',error:'This fields value must be between 50 and 65535 or 0'},{target:'#pwm_0','error':'This fields value must be between 50 and 65535 or 0'},{target:'#pwm_1',error:'This fields value must be between 50 and 65535 or 0'}, {target:'#missing_field_123',error:'missing target'}]);
 
+// ---------------------------------------------------------------------------------
+// appends the html from the class .form-help-block to the designated target labels
+// it uses a small font size that can be increase/decreased by clicking on the text
+// the function is executed when the javascript has loaded to speed up the process
+// it is also executed on window.onload() with a small delay to add the help
+// to labels that did not exist at the time of loading the script
+//
+// <div class="form-help-block">
+// <div data-target="#target,#target2">The ADC of the ESP8266 has some limitations. If it is read too...</div>
+// </div>
+// ---------------------------------------------------------------------------------
 $.addFormHelp = function(force) {
     $('.form-help-block div[data-target]').each(function() {
         var targets = $($(this).data('target'));
@@ -81,6 +99,9 @@ $.addFormHelp(true);
 $(function() {
     // run again in update mode once the page has finished loading
     $.addFormHelp(false);
+    window.setTimeout(function() {
+        $.addFormHelp(false);
+    }, 100);
 });
 
 $.urlParam = function(name, remove) {
@@ -125,10 +146,17 @@ $(function() {
     } catch(e) {
         dbg_console.error(e);
     }
+
+    // ---------------------------------------------------------------------------------
+    // range slider
+    // ---------------------------------------------------------------------------------
     $('.form-enable-slider input[type="range"]').rangeslider({
         polyfill : false
     });
 
+    // ---------------------------------------------------------------------------------
+    // allows to hide a group on input fields when the value of target changes
+    // ---------------------------------------------------------------------------------
     $('.form-dependency-group').each(function() {
         var dep;
         var actionStr;
@@ -180,6 +208,11 @@ $(function() {
         }).trigger('change');
     });
 
+    // ---------------------------------------------------------------------------------
+    // stores the state of collapsible accordion type cards in a cookie
+    // the child needs to have the attribute data-cookie="cookie-name" set instead
+    // of data-parent="..."
+    // ---------------------------------------------------------------------------------
     (function() {
         var cookies = {}; // cookie cache
         $('.card .collapse').each(function() {
@@ -215,6 +248,9 @@ $(function() {
         });
     })();
 
+    // ---------------------------------------------------------------------------------
+    // adds an input-group-append button to the field to test resolving zeroconf
+    // ---------------------------------------------------------------------------------
     $('.resolve-zerconf-button').on('click', function() {
         var button = $(this);
         var target = $(button.data('target'));
@@ -240,7 +276,9 @@ $(function() {
     });
 
 
-    // all forms
+    // ---------------------------------------------------------------------------------
+    // adds a warning to the top of the page if this value gets changed
+    // ---------------------------------------------------------------------------------
     $('.setting-requires-restart').change(function(e) {
         var $this = $(this);
         var id = "#alert-for-" + $this.attr('id');
@@ -262,6 +300,13 @@ $(function() {
             $(id).alert('close');
         }
     });
+
+    // ---------------------------------------------------------------------------------
+    // password fields with visible toggle button
+    // ---------------------------------------------------------------------------------
+    // adds a button to password fields to make the password visible
+    // options are permanently visile, visible while editing and hidden (***)
+    // the option can be fixed or adjustable by the user
 
     // global presets
     // override with data-protected="true", data-icon-protected="oi-xyz" ...
@@ -315,6 +360,18 @@ $(function() {
         });
     });
 
+    // ---------------------------------------------------------------------------------
+    // links a checkbox button to a hidden field
+    // the id of the checkbox must match the id of the hidden field with a suffix '_' or
+    // use data-target=... to point to the hidden field
+    //
+    // <input type="hidden" id="myfield">
+    // <button class=".button-checkbox btn ..." id="_myfield">
+    // <button class=".button-checkbox btn ..." data-target="#myfield">
+    //
+    // <button data-color="primary" data-on-icon="oi oi-task" data-off-icon="oi oi-ban">
+    // data-color="primary" adds the class "btn-primary" to the button if checked
+    // ---------------------------------------------------------------------------------
     $('.button-checkbox').each(function () {
         var widget = $(this);
         var button = widget.find('button');
@@ -339,8 +396,11 @@ $(function() {
         var id = '#' + button.attr('id').substr(1); // id of hidden field = _<id>
         var hiddenInput = $(id);
         if (hiddenInput.length == 0) {
-            dbg_console.error('cannot find hidden input field', id);
-            return;
+            hiddenInput = $(button.data('target'));
+            if (hiddenInput.length == 0) {
+                dbg_console.error('cannot find hidden input field', id);
+                return;
+            }
         }
 
         // get inverted initial state from input field
@@ -364,4 +424,84 @@ $(function() {
         button.trigger('click');
 
     });
+
+
+    // ---------------------------------------------------------------------------------
+    // transfer hidden inputs to other input fields
+    // ---------------------------------------------------------------------------------
+    // transfers hidden input field "target" to another input field and removes the target
+    // supports select, input type=[text,number,range,password,checkbox]
+    // attributes copied: ['id', 'name', 'min', 'max', 'step', 'placeholder', 'readonly', 'spellcheck', 'autocomplete']
+    //
+    // example:
+    // <input type="hidden" name="shmp" id="shmp" value="1">
+    // <div class="input-group-append"><select data-target="#shmp" data-action="transfer-hidden-field" class="input-group-text form-select"><option value="0">Enable for Channel 0</option><option value="1">Enable for Channel 1</option></select></div>
+    //
+    // output
+    // <div class="input-group-append"><select id="shmp" class="input-group-text form-select" name="shmp"><option value="0">Enable for Channel 0</option><option value="1" selected>Enable for Channel 1</option></select></div>
+    //
+    $('[data-action="transfer-hidden-field"]').each(function() {
+        var target = $(this).data('target');
+        var src = $(target);
+        var dst = $(this);
+        if (src.length) {
+            var attributes = ['id', 'name', 'min', 'max', 'step', 'placeholder', 'readonly', 'spellcheck', 'autocomplete']
+            for(key in attributes) {
+                var name = attributes[key];
+                var val = src.attr(name);
+                if (val !== undefined) {
+                    dst.attr(name, val);
+                }
+            }
+            if (dst.attr('type') == 'checkbox') {
+                dst.prop('checked', parseInt(src.val()) != 0);
+            }
+            else {
+                dst.val(src.val());
+            }
+            dst.removeAttr('data-target').removeAttr('data-action');
+            src.remove();
+        }
+        else {
+            dbg_console.error('transfer-hidden-field target ' + target + ' not found');
+        }
+    });
+
+    // ---------------------------------------------------------------------------------
+    // alternative to <input type="number" class="form-control">
+    // the range input is hidden until javascript initializes the pair by adding the
+    // class show
+    // the class custom-range for range input is optional
+    //
+    // the input range can be hidden by removing the show class
+    // $('div.input-text-range').removeClass('show');
+    // $('div.input-text-range').addClass('show');
+    //
+    // <div class="form-control input-text-range">
+    // <input type="text" name="name" value="750" max="2000" min="100" step="5" placeholder="750">
+    // <input type="range" class="custom-range">
+    // </div>
+    // ---------------------------------------------------------------------------------
+    $('div.input-text-range').each(function() {
+        var text = $(this).find('input[type="text"]');
+        var range = $(this).find('input[type="range"]');
+        var minVal = text.attr('min');
+        var maxVal = text.attr('max');
+        if (minVal === undefined || maxVal === undefined) {
+            return;
+        }
+        range.attr('min', minVal);
+        range.attr('max', maxVal);
+        range.attr('step', text.attr('step'));
+        range.val(text.val());
+        $(this).addClass('show');
+        text.on('input', function() {
+            range.val(text.val());
+        });
+        range.on('input', function() {
+            text.val(range.val());
+        });
+    });
+
+
 });

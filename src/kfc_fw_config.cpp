@@ -4,6 +4,7 @@
 
 #include <kfc_fw_config.h>
 #include <kfc_fw_config_plugin.h>
+#include <stl_ext/array.h>
 #include <EEPROM.h>
 #include <ReadADC.h>
 #include <PrintString.h>

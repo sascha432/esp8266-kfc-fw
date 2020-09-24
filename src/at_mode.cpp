@@ -489,7 +489,6 @@ static void print_heap()
     KFCMemoryDebugging::dumpShort(Serial);
 #endif
 }
-
 static void heap_timer_callback(Event::CallbackTimerPtr timer)
 {
     if (displayTimer._type == DisplayTimer::HEAP) {
@@ -502,7 +501,7 @@ static void heap_timer_callback(Event::CallbackTimerPtr timer)
     else if (displayTimer._type == DisplayTimer::GPIO) {
         Serial.printf_P(PSTR("+GPIO: "));
 #if defined(ESP8266)
-        for(uint8_t i = 0; i <= 16; i++) {
+        for(uint8_t i = 0; i < NUM_DIGITAL_PINS; i++) {
             if (i != 1 && i != 3 && !isFlashInterfacePin(i)) { // do not display RX/TX and flash SPI
                 // pinMode(i, INPUT);
                 Serial.printf_P(PSTR("%u=%u "), i, digitalRead(i));

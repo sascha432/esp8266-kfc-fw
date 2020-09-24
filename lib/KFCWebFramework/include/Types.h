@@ -99,6 +99,7 @@ namespace FormUI {
             SELECT,
             TEXT,
             NUMBER,
+            NUMBER_RANGE,
             RANGE,
             RANGE_SLIDER,
             PASSWORD,

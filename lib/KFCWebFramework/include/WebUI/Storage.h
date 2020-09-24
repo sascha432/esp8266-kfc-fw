@@ -155,6 +155,22 @@ namespace FormUI {
                 AttributeInt(const char *key, int32_t value) : KeyValue<Type::ATTRIBUTE_INT, const char *, int32_t>(key, value) {}
             };
 
+            class AttributeMinMax : public KeyValue<Type::ATTRIBUTE_MIN_MAX, int32_t, int32_t> {
+            public:
+                using KeyValue::push_back;
+                using KeyValue::pop_front;
+
+                AttributeMinMax(int32_t minValue, int32_t maxValue) : KeyValue<Type::ATTRIBUTE_MIN_MAX, int32_t, int32_t>(minValue, maxValue) {}
+
+                inline int32_t getMin() const {
+                    return KeyValue::getKey();
+                }
+
+                inline int32_t getMax() const {
+                    return KeyValue::getValue();
+                }
+            };
+
             class Option : public KeyValue<Type::OPTION> {
             public:
                 using KeyValue::KeyValue;
@@ -172,22 +188,6 @@ namespace FormUI {
                 using KeyValue::pop_front;
 
                 OptionNumKey(int32_t key, const char *value) : KeyValue<Type::OPTION_NUM_KEY, int32_t>(key, value) {}
-            };
-
-            class AttributeMinMax : public KeyValue<Type::OPTION_NUM_KEY, int32_t, int32_t> {
-            public:
-                using KeyValue::push_back;
-                using KeyValue::pop_front;
-
-                AttributeMinMax(int32_t minValue, int32_t maxValue) : KeyValue<Type::OPTION_NUM_KEY, int32_t, int32_t>(minValue, maxValue) {}
-
-                inline int32_t getMin() const {
-                    return KeyValue::getKey();
-                }
-
-                inline int32_t getMax() const {
-                    return KeyValue::getValue();
-                }
             };
 
         }

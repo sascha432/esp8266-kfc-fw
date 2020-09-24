@@ -56,8 +56,8 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
             OperationType::CLOSE_CHANNEL1_FOR_CHANNEL0, F("Close Channel 1 For Channel 0")
         );
 
-        PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, 2, (grp)(n0)(n1)(otl)(ctl)(il)(ip)(dac)(pwm));
-        PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, BLINDS_CONFIG_MAX_OPERATIONS, (ot)(od)(ct)(cd));
+        PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, 2, grp, n0, n1, otl, ctl, il, ip, dac, pwm);
+        PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, BLINDS_CONFIG_MAX_OPERATIONS, ot, od, ct, cd);
 
         const __FlashStringHelper *names[2] = { F("Channel 0"), F("Channel 1") };
         for (uint8_t i = 0; i < kChannelCount; i++) {
@@ -130,28 +130,30 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
     }
     else {
 
+        FormUI::Container::List pins(KFCConfigurationClasses::createFormPinList());
+
         auto &pinsGroup = form.addCardGroup(FSPGM(config), F("Pin Configuration"), false);
 
         form.addPointerTriviallyCopyable(F("pin0"), &cfg.pins[0]);
-        form.addFormUI(F("Channel 0 Open Pin"), FormUI::Type::NUMBER, FormUI::PlaceHolder(IOT_BLINDS_CTRL_M1_PIN));
+        form.addFormUI(F("Channel 0 Open Pin"), pins);
 
         form.addPointerTriviallyCopyable(F("pin1"), &cfg.pins[1]);
-        form.addFormUI(F("Channel 0 Close Pin"), FormUI::Type::NUMBER, FormUI::PlaceHolder(IOT_BLINDS_CTRL_M2_PIN));
+        form.addFormUI(F("Channel 0 Close Pin"), pins);
 
         form.addPointerTriviallyCopyable(F("pin2"), &cfg.pins[2]);
-        form.addFormUI(F("Channel 1 Open Pin"), FormUI::Type::NUMBER, FormUI::PlaceHolder(IOT_BLINDS_CTRL_M3_PIN));
+        form.addFormUI(F("Channel 1 Open Pin"), pins);
 
         form.addPointerTriviallyCopyable(F("pin3"), &cfg.pins[3]);
-        form.addFormUI(F("Channel 1 Close Pin"), FormUI::Type::NUMBER, FormUI::PlaceHolder(IOT_BLINDS_CTRL_M4_PIN));
+        form.addFormUI(F("Channel 1 Close Pin"), pins);
 
-        auto &multiplexer = form.addObjectGetterSetter(F("shmp"), cfg, cfg.get_int_multiplexer, cfg.set_int_multiplexer);
+        form.addObjectGetterSetter(F("shmp"), cfg, cfg.get_bits_adc_multiplexer, cfg.set_bits_adc_multiplexer);
         form.addFormUI(FormUI::Type::HIDDEN);
 
         form.addPointerTriviallyCopyable(F("pin4"), &cfg.pins[4]);
-        form.addFormUI(F("Shunt Multiplexer Pin"), FormUI::Type::NUMBER, FormUI::PlaceHolder(IOT_BLINDS_CTRL_MULTIPLEXER_PIN), FormUI::CheckboxButtonSuffix(multiplexer, F("HIGH State For Channel 0")));
+        form.addFormUI(F("Shunt Multiplexer Pin"), pins, FormUI::SuffixHtml(F("<select data-target=\"#shmp\" data-action=\"transfer-hidden-field\" class=\"input-group-text form-select\"><option value=\"0\">Enable for Channel 0</option><option value=\"1\">Enable for Channel 1</option></select>")));
 
         form.addPointerTriviallyCopyable(F("pin5"), &cfg.pins[5]);
-        form.addFormUI(F("DAC Pin for DRV8870 Vref"), FormUI::Type::NUMBER, FormUI::PlaceHolder(IOT_BLINDS_CTRL_DAC_PIN));
+        form.addFormUI(F("DAC Pin for DRV8870 Vref"), pins);
 
         pinsGroup.end();
 

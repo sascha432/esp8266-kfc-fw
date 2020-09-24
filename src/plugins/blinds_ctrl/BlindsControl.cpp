@@ -493,9 +493,10 @@ void BlindsControl::_clearAdc()
 
     analogWriteFreq(_config.pwm_frequency);
 
-    uint8_t state = channel == 0 && Plugins::Blinds::ConfigStructType::get_enum_multiplexer(_config) == Plugins::Blinds::MultiplexerType::HIGH_FOR_CHANNEL0 ? HIGH : LOW;
+
+    uint8_t state = (channel == _config.adc_multiplexer) ? HIGH : LOW;
     digitalWrite(_config.pins[4], state);
-    __LDBG_printf("multiplexer pin=%u channel=%u state=%u delay=%u", _config.pins[4], channel, state, IOT_BLINDS_CTRL_SETUP_DELAY);
+    __LDBG_printf("multiplexer pin=%u channel=%u multiplexer=%u state=%u delay=%u", _config.pins[4], channel, _config.adc_multiplexer, state, IOT_BLINDS_CTRL_SETUP_DELAY);
 
     delay(IOT_BLINDS_CTRL_SETUP_DELAY);
 
@@ -529,7 +530,7 @@ void BlindsControl::_updateAdc()
 void BlindsControl::_setMotorBrake(ChannelType channel)
 {
     // shorts motor wires and brakes in slow decay mode
-    // both pins low leave motor wires floating -> _setMotorSpeed(channel, 0, ...)
+    // both pins low leaves motor wires floating -> _setMotorSpeed(channel, 0, ...)
 
     __LDBG_printf("channel=%u braking pins=%u,%u", channel, *(&_config.pins[(*channel * kChannelCount)]), *(&_config.pins[(*channel * kChannelCount)] + 1));
 
@@ -549,7 +550,6 @@ void BlindsControl::_setMotorSpeed(ChannelType channelType, uint16_t speed, bool
     _motorPin = _config.pins[(channel * kChannelCount) + !open]; // first pin is open pin
     uint8_t pin2 = _config.pins[(channel * kChannelCount) + open]; // second is close pin
 #if DEBUG_IOT_BLINDS_CTRL
-
     __LDBG_printf("channel=%u speed=%u open=%u pins=%u,%u frequency=%u", channel, speed, open, _motorPin, pin2, _config.pwm_frequency);
 #endif
 
@@ -562,37 +562,12 @@ void BlindsControl::_setMotorSpeed(ChannelType channelType, uint16_t speed, bool
         digitalWrite(_motorPin, LOW);
         _motorPWMValue = 0;
     }
-    // use analogWrite to prevent interrupting a cycle
-    // else if (speed >= PWMRANGE) {
-    //     digitalWrite(_motorPin, HIGH);
-    // }
     else {
         analogWrite(_motorPin, speed);
     }
     digitalWrite(pin2, LOW);
     interrupts();
 }
-
-// void BlindsControl::_setMotorSpeedUpdate(ChannelType channelType, uint16_t speed, bool open)
-// {
-//     auto channel = *channelType;
-//     uint8_t pin1 = _config.pins[(channel * kChannelCount) + !open]; // first pin is open pin
-//     uint8_t pin2 = _config.pins[(channel * kChannelCount) + open]; // second is close pin
-
-//     noInterrupts();
-//     if (speed == 0) {
-//         digitalWrite(pin1, LOW);
-//         _motorPWMValue = 0;
-//     }
-//     else if (speed >= PWMRANGE) {
-//         digitalWrite(pin1, HIGH);
-//     }
-//     else {
-//         analogWrite(pin1, speed);
-//     }
-//     digitalWrite(pin2, LOW);
-//     interrupts();
-// }
 
 void BlindsControl::_stop()
 {

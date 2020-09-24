@@ -206,24 +206,9 @@ extern const String emptyString;
 
 #endif
 
-#if __cplusplus < 201402L && !defined(_MSC_VER)
-
-namespace std {
-
-    template<class T, class U = T>
-    T exchange(T& obj, U&& new_value)
-    {
-        T old_value = move(obj);
-        obj = forward<U>(new_value);
-        return old_value;
-    }
-
-}
-
-#endif
-
 #include "FileOpenMode.h"
 #include "constexpr_tools.h"
+#include <stl_ext/utility.h>
 
 #if __GNUC__
 

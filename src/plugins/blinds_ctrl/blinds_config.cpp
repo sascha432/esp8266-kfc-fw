@@ -15,7 +15,7 @@ namespace KFCConfigurationClasses {
         adc_recovery_time(kDefaultValueFor_adc_recovery_time),
         adc_read_interval(kDefaultValueFor_adc_read_interval),
         adc_recoveries_per_second(kDefaultValueFor_adc_recoveries_per_second),
-        multiplexer(),
+        adc_multiplexer(kDefaultValueFor_adc_recovery_time),
         adc_offset(kDefaultValueFor_adc_offset),
         pwm_softstart_time(kDefaultValueFor_pwm_softstart_time)
     {

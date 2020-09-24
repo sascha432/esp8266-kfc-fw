@@ -10,7 +10,12 @@
 #include <crc16.h>
 #include <KFCForms.h>
 #include <KFCSerialization.h>
-
+#include <boost/preprocessor/tuple/rem.hpp>
+#include <boost/preprocessor/variadic/size.hpp>
+#include <boost/preprocessor/variadic/elem.hpp>
+#include <boost/preprocessor/control/if.hpp>
+#include <boost/preprocessor/comparison/equal.hpp>
+#include <boost/preprocessor/punctuation/remove_parens.hpp>
 #include <push_pack.h>
 
 #include <kfc_fw_config_types.h>
@@ -120,47 +125,50 @@ namespace ConfigurationHelper {
     static constexpr size_t k##name##MinSize = mins; \
     CREATE_STRING_GETTER_SETTER(class_name, name, maxs)
 
-#define CREATE_BITFIELD_TYPE_MIN_MAX(name, size, type, min_value, max_value, default_value) \
+//name, size, type, min_value, max_value, default_value[, step_size]
+#define CREATE_BITFIELD_TYPE_MIN_MAX(name, size, type, min_value, max_value, ...) \
     static inline FormUI::Validator::Range &addRangeValidatorFor_##name(FormUI::Form::BaseForm &form, bool allowZero = false) { \
-        form.getLastField().getFormUI()->addItems(FormUI::Type::NUMBER, FormUI::MinMax((int32_t)kMinValueFor_##name, (int32_t)kMaxValueFor_##name)); \
+        form.getLastField().getFormUI()->addItems(FormUI::MinMax((int32_t)kMinValueFor_##name, (int32_t)kMaxValueFor_##name), \
+            BOOST_PP_REMOVE_PARENS(BOOST_PP_IF(BOOST_PP_EQUAL(BOOST_PP_VARIADIC_SIZE(__VA_ARGS__),1),(FormUI::Type::NUMBER_RANGE),(FormUI::Attribute(F("step"),BOOST_PP_VARIADIC_ELEM(1,##__VA_ARGS__)),FormUI::Type::NUMBER_RANGE)))); \
         return form.addValidator(FormUI::Validator::Range((long)kMinValueFor_##name, (long)kMaxValueFor_##name, allowZero)); \
     } \
     static inline FormUI::Validator::Range &addRangeValidatorFor_##name(const String &message, FormUI::Form::BaseForm &form, bool allowZero = false) { \
-        form.getLastField().getFormUI()->addItems(FormUI::Type::NUMBER, FormUI::MinMax((int32_t)kMinValueFor_##name, (int32_t)kMaxValueFor_##name)); \
+        form.getLastField().getFormUI()->addItems(FormUI::MinMax((int32_t)kMinValueFor_##name, (int32_t)kMaxValueFor_##name), \
+            BOOST_PP_REMOVE_PARENS(BOOST_PP_IF(BOOST_PP_EQUAL(BOOST_PP_VARIADIC_SIZE(__VA_ARGS__),1),(FormUI::Type::NUMBER_RANGE),(FormUI::Attribute(F("step"),BOOST_PP_VARIADIC_ELEM(1,##__VA_ARGS__)),FormUI::Type::NUMBER_RANGE)))); \
         return form.addValidator(FormUI::Validator::Range(message, (long)kMinValueFor_##name, (long)kMaxValueFor_##name, allowZero)); \
     } \
     static constexpr type kMinValueFor_##name = min_value; \
     static constexpr type kMaxValueFor_##name = max_value; \
-    static constexpr type kDefaultValueFor_##name = default_value; \
+    static constexpr type kDefaultValueFor_##name = BOOST_PP_VARIADIC_ELEM(0,##__VA_ARGS__); \
     static constexpr type kTypeMinValueFor_##name = std::is_signed<type>::value ? -(1U << (size - 1)) + 1 : 0; \
     static constexpr type kTypeMaxValueFor_##name = std::is_signed<type>::value ? (1U << (size - 1)) - 1 : (1U << size) - 1; \
     static_assert(min_value >= kTypeMinValueFor_##name && min_value <= kTypeMaxValueFor_##name, "min_value value out of range (" _STRINGIFY(size) " bits)"); \
     static_assert(max_value >= kTypeMinValueFor_##name && max_value <= kTypeMaxValueFor_##name, "max_value value out of range (" _STRINGIFY(size) " bits)"); \
-    static_assert(default_value == 0 || (default_value >= kTypeMinValueFor_##name && default_value <= kTypeMaxValueFor_##name), "default_value value out of range"); \
+    static_assert(kDefaultValueFor_##name == 0 || (kDefaultValueFor_##name >= kTypeMinValueFor_##name && kDefaultValueFor_##name <= kTypeMaxValueFor_##name), "default_value value out of range"); \
     static_assert(min_value >= std::numeric_limits<long>::min() && min_value <= std::numeric_limits<long>::max(), "min_value value out of range (type long)"); \
     static_assert(max_value >= std::numeric_limits<long>::min() && max_value <= std::numeric_limits<long>::max(), "max_value value out of range (type long)"); \
-     CREATE_BITFIELD_TYPE(name, size, type, bits)
+    CREATE_BITFIELD_TYPE(name, size, type, bits)
 
-#define CREATE_BOOL_BITFIELD_MIN_MAX(name, min_value, max_value, default_value) \
-    CREATE_BITFIELD_TYPE_MIN_MAX(name, 1, bool, min_value, max_value, default_value)
+#define CREATE_BOOL_BITFIELD_MIN_MAX(name, min_value, max_value, ...) \
+    CREATE_BITFIELD_TYPE_MIN_MAX(name, 1, bool, min_value, max_value, ##__VA_ARGS__)
 
-#define CREATE_UINT8_BITFIELD_MIN_MAX(name, size, min_value, max_value, default_value) \
-    CREATE_BITFIELD_TYPE_MIN_MAX(name, size, uint8_t, min_value, max_value, default_value)
+#define CREATE_UINT8_BITFIELD_MIN_MAX(name, size, min_value, max_value, ...) \
+    CREATE_BITFIELD_TYPE_MIN_MAX(name, size, uint8_t, min_value, max_value, ##__VA_ARGS__)
 
-#define CREATE_INT16_BITFIELD_MIN_MAX(name, size, min_value, max_value, default_value) \
-    CREATE_BITFIELD_TYPE_MIN_MAX(name, size, int16_t, min_value, max_value, default_value)
+#define CREATE_INT16_BITFIELD_MIN_MAX(name, size, min_value, max_value, ...) \
+    CREATE_BITFIELD_TYPE_MIN_MAX(name, size, int16_t, min_value, max_value, ##__VA_ARGS__)
 
-#define CREATE_UINT16_BITFIELD_MIN_MAX(name, size, min_value, max_value, default_value) \
-    CREATE_BITFIELD_TYPE_MIN_MAX(name, size, uint16_t, min_value, max_value, default_value)
+#define CREATE_UINT16_BITFIELD_MIN_MAX(name, size, min_value, max_value, ...) \
+    CREATE_BITFIELD_TYPE_MIN_MAX(name, size, uint16_t, min_value, max_value, ##__VA_ARGS__)
 
-#define CREATE_INT32_BITFIELD_MIN_MAX(name, size, min_value, max_value, default_value) \
-    CREATE_BITFIELD_TYPE_MIN_MAX(name, size, int32_t, min_value, max_value, default_value)
+#define CREATE_INT32_BITFIELD_MIN_MAX(name, size, min_value, max_value, ...) \
+    CREATE_BITFIELD_TYPE_MIN_MAX(name, size, int32_t, min_value, max_value, ##__VA_ARGS__)
 
-#define CREATE_UINT32_BITFIELD_MIN_MAX(name, size, min_value, max_value, default_value) \
-    CREATE_BITFIELD_TYPE_MIN_MAX(name, size, uint32_t, min_value, max_value, default_value)
+#define CREATE_UINT32_BITFIELD_MIN_MAX(name, size, min_value, max_value, ...) \
+    CREATE_BITFIELD_TYPE_MIN_MAX(name, size, uint32_t, min_value, max_value, ##__VA_ARGS__)
 
-#define CREATE_UINT64_BITFIELD_MIN_MAX(name, size, min_value, max_value, default_value) \
-    CREATE_BITFIELD_TYPE_MIN_MAX(name, size, uint64_t, min_value, max_value, default_value)
+#define CREATE_UINT64_BITFIELD_MIN_MAX(name, size, min_value, max_value, ...) \
+    CREATE_BITFIELD_TYPE_MIN_MAX(name, size, uint64_t, min_value, max_value, ##__VA_ARGS__)
 
 #define CREATE_GETTER_SETTER_IP(class_name, name) \
     static constexpr HandleType k##name##ConfigHandle = CONFIG_GET_HANDLE_STR(_STRINGIFY(class_name) "." _STRINGIFY(name)); \
@@ -265,6 +273,7 @@ namespace KFCConfigurationClasses {
 
     using HandleType = uint16_t;
 
+    FormUI::Container::List createFormPinList(uint8_t from = 0, uint8_t to = 0xff);
     String createZeroConf(const __FlashStringHelper *service, const __FlashStringHelper *proto, const __FlashStringHelper *varName, const __FlashStringHelper *defaultValue = nullptr);
     const void *loadBinaryConfig(HandleType handle, uint16_t &length);
     void *loadWriteableBinaryConfig(HandleType handle, uint16_t length);
@@ -1268,12 +1277,6 @@ namespace KFCConfigurationClasses {
                 MAX
             };
 
-            enum class MultiplexerType : uint16_t {
-                LOW_FOR_CHANNEL0 = 0,
-                HIGH_FOR_CHANNEL0 = 1,
-                MAX
-            };
-
             typedef struct __attribute__packed__ BlindsConfigOperation_t {
                 using Type = BlindsConfigOperation_t;
 
@@ -1292,12 +1295,12 @@ namespace KFCConfigurationClasses {
 
             typedef struct __attribute__packed__ BlindsConfigChannel_t {
                 using Type = BlindsConfigChannel_t;
-                CREATE_UINT32_BITFIELD_MIN_MAX(current_limit_mA, 12, 1, 4095, 100);                         // bits 00:11 ofs:len 000:12 0-0x0fff (4095)
+                CREATE_UINT32_BITFIELD_MIN_MAX(current_limit_mA, 12, 1, 4095, 100, 10);                     // bits 00:11 ofs:len 000:12 0-0x0fff (4095)
                 CREATE_UINT32_BITFIELD_MIN_MAX(dac_pwm_value, 10, 0, 1023, 512);                            // bits 12:21 ofs:len 012:10 0-0x03ff (1023)
                 CREATE_UINT32_BITFIELD_MIN_MAX(pwm_value, 10, 0, 1023, 256);                                // bits 22:31 ofs:len 022:10 0-0x03ff (1023)
-                CREATE_UINT32_BITFIELD_MIN_MAX(current_avg_period_us, 16, 100, 50000, 2500);                // bits 00:15 ofs:len 032:16 0-0xffff (65535)
-                CREATE_UINT32_BITFIELD_MIN_MAX(open_time_ms, 16, 0, 60000, 5000);                           // bits 16:31 ofs:len 048:16 0-0xffff (65535)
-                CREATE_UINT16_BITFIELD_MIN_MAX(close_time_ms, 16, 0, 60000, 5000);                          // bits 00:15 ofs:len 064:16 0-0xffff (65535)
+                CREATE_UINT32_BITFIELD_MIN_MAX(current_avg_period_us, 16, 100, 50000, 2500, 100);           // bits 00:15 ofs:len 032:16 0-0xffff (65535)
+                CREATE_UINT32_BITFIELD_MIN_MAX(open_time_ms, 16, 0, 60000, 5000, 250);                      // bits 16:31 ofs:len 048:16 0-0xffff (65535)
+                CREATE_UINT16_BITFIELD_MIN_MAX(close_time_ms, 16, 0, 60000, 5000, 250);                     // bits 00:15 ofs:len 064:16 0-0xffff (65535)
                 BlindsConfigChannel_t();
 
                 template<typename Archive>
@@ -1318,13 +1321,13 @@ namespace KFCConfigurationClasses {
                 BlindsConfigOperation_t open[kMaxOperations];
                 BlindsConfigOperation_t close[kMaxOperations];
                 uint8_t pins[6];
-                CREATE_UINT16_BITFIELD_MIN_MAX(pwm_frequency, 16, 1000, 40000, 30000);                      // bits 00:15 ofs:len 000:16 0-0xffff (65535)
-                CREATE_UINT16_BITFIELD_MIN_MAX(adc_recovery_time, 16, 1000, 65000, 12500);                  // bits 00:15 ofs:len 016:16 0-0xffff (65535)
-                CREATE_UINT16_BITFIELD_MIN_MAX(adc_read_interval, 12, 250, 4000, 750);                      // bits 00:11 ofs:len 032:12 0-0xfff (4095)
+                CREATE_UINT16_BITFIELD_MIN_MAX(pwm_frequency, 16, 1000, 40000, 30000, 1000);                // bits 00:15 ofs:len 000:16 0-0xffff (65535)
+                CREATE_UINT16_BITFIELD_MIN_MAX(adc_recovery_time, 16, 1000, 65000, 12500, 500);             // bits 00:15 ofs:len 016:16 0-0xffff (65535)
+                CREATE_UINT16_BITFIELD_MIN_MAX(adc_read_interval, 12, 250, 4000, 750, 100);                 // bits 00:11 ofs:len 032:12 0-0xfff (4095)
                 CREATE_UINT16_BITFIELD_MIN_MAX(adc_recoveries_per_second, 3, 1, 7, 4);                      // bits 12:14 ofs:len 044:03 0-0x07 (7)
-                CREATE_ENUM_BITFIELD(multiplexer, MultiplexerType);                                         // bits 15:15 ofs:len 047:01 0-0x01 (1)
+                CREATE_UINT16_BITFIELD_MIN_MAX(adc_multiplexer, 1, 0, 1, 0);                                // bits 15:15 ofs:len 047:01 0-0x01 (1)
                 CREATE_INT32_BITFIELD_MIN_MAX(adc_offset, 11, -1000, 1000, 0);                              // bits 00:10 ofs:len 048:11 0-0x07ff (-1023 - 1023)
-                CREATE_INT32_BITFIELD_MIN_MAX(pwm_softstart_time, 20, 0, 500000, 50000);                    // bits 11:30 ofs:len 059:31
+                CREATE_INT32_BITFIELD_MIN_MAX(pwm_softstart_time, 20, 0, 500000, 50000, 1000);              // bits 11:30 ofs:len 059:31
                 // 1 bit free
 
 
@@ -1334,7 +1337,7 @@ namespace KFCConfigurationClasses {
                     ar & KFC_SERIALIZATION_NVP(adc_recovery_time);
                     ar & KFC_SERIALIZATION_NVP(adc_read_interval);
                     ar & KFC_SERIALIZATION_NVP(adc_recoveries_per_second);
-                    ar & KFC_SERIALIZATION_NVP(multiplexer);
+                    ar & KFC_SERIALIZATION_NVP(adc_multiplexer);
                     ar & KFC_SERIALIZATION_NVP(adc_offset);
                     ar & KFC_SERIALIZATION_NVP(pwm_softstart_time);
                 }

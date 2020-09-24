@@ -86,7 +86,8 @@ $.addFormHelp = function(force) {
                 dbg_console.debug('update #'+ $(this).attr('id'));
                 var regex = RegExp(tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '.*');
                 label.html(label.html().replace(regex, '') + help);
-                label.find('.form-help-label-text').on('click', function() {
+                label.find('.form-help-label-text').on('click', function(e) {
+                    e.preventDefault();
                     $(this).toggleClass('form-help-label-text-zoom-in');
                 });
             }

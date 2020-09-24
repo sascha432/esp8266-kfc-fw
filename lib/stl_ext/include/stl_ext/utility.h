@@ -8,6 +8,17 @@
 #include <type_traits>
 #include "type_traits.h"
 
+namespace STL_STD_EXT_NAMESPACE {
+
+    template<class T, class U = T>
+    T exchange(T& obj, U&& new_value)
+    {
+        T old_value = move(obj);
+        obj = forward<U>(new_value);
+        return old_value;
+    }
+
+}
 namespace STL_STD_EXT_NAMESPACE_EX {
 
     template<typename _Ta, typename _Tb, typename _Tret = std::common_type_t<std::make_unsigned_t<_Ta>, std::make_unsigned_t<_Tb>>>

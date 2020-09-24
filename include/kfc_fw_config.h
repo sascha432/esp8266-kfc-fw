@@ -93,7 +93,7 @@ namespace Config_QuickConnect
 };
 
 #define _H_IP_VALUE(name, ...) \
-    IPAddress(config._H_GET_IP(name)), [__VA_ARGS__](const IPAddress &addr, FormUI::Field::Base &, bool store) { \
+    IPAddress(config._H_GET_IP(name)), [__VA_ARGS__](const IPAddress &addr, FormUI::Field::BaseField &, bool store) { \
         if (store) { \
             config._H_SET_IP(name, addr); \
         } \
@@ -101,7 +101,7 @@ namespace Config_QuickConnect
     }
 
 #define _H_STR_VALUE(name, ...) \
-    String(config._H_STR(name)), [__VA_ARGS__](const String &str, FormUI::Field::Base &, bool store) { \
+    String(config._H_STR(name)), [__VA_ARGS__](const String &str, FormUI::Field::BaseField &, bool store) { \
         if (store) { \
             config._H_SET_STR(name, str); \
         } \
@@ -109,7 +109,7 @@ namespace Config_QuickConnect
     }
 
 #define _H_CSTR_FUNC(getter, setter, ...) \
-    String(getter()), [__VA_ARGS__](const String &str, FormUI::Field::Base &, bool store) { \
+    String(getter()), [__VA_ARGS__](const String &str, FormUI::Field::BaseField &, bool store) { \
         if (store) { \
             setter(str.c_str()); \
         } \
@@ -120,7 +120,7 @@ namespace Config_QuickConnect
     _H_FUNC_TYPE(getter, setter, decltype(getter()), ##__VA_ARGS__)
 
 #define _H_FUNC_TYPE(getter, setter, type, ...) \
-    static_cast<type>(getter()), [__VA_ARGS__](const type value, FormUI::Field::Base &, bool store) { \
+    static_cast<type>(getter()), [__VA_ARGS__](const type value, FormUI::Field::BaseField &, bool store) { \
         if (store) { \
             setter(static_cast<decltype(getter())>(value)); \
         } \
@@ -128,7 +128,7 @@ namespace Config_QuickConnect
     }
 
 #define _H_STRUCT_IP_VALUE(name, field, ...) \
-    IPAddress(config._H_GET(name).field), [__VA_ARGS__](const IPAddress &value, FormUI::Field::Base &, bool store) { \
+    IPAddress(config._H_GET(name).field), [__VA_ARGS__](const IPAddress &value, FormUI::Field::BaseField &, bool store) { \
         if (store) { \
             auto &data = config._H_W_GET(name); \
             data.field = value; \
@@ -137,7 +137,7 @@ namespace Config_QuickConnect
     }
 
 #define _H_W_STRUCT_IP_VALUE(name, field, ...) \
-    IPAddress(name.field), [&name, ##__VA_ARGS__](const IPAddress &value, FormUI::Field::Base &, bool store) { \
+    IPAddress(name.field), [&name, ##__VA_ARGS__](const IPAddress &value, FormUI::Field::BaseField &, bool store) { \
         if (store) { \
             name.field = value; \
         } \
@@ -145,7 +145,7 @@ namespace Config_QuickConnect
     }
 
 #define _H_STRUCT_VALUE(name, field, ...) \
-    config._H_GET(name).field, [__VA_ARGS__](const decltype(name.field) &value, FormUI::Field::Base &, bool store) { \
+    config._H_GET(name).field, [__VA_ARGS__](const decltype(name.field) &value, FormUI::Field::BaseField &, bool store) { \
         if (store) { \
             auto &data = config._H_W_GET(name); \
             data.field = value; \
@@ -155,7 +155,7 @@ namespace Config_QuickConnect
 
 
 #define _H_STRUCT_VALUE_TYPE(name, field, type, ...) \
-    config._H_GET(name).field, [__VA_ARGS__](const type &value, FormUI::Field::Base &, bool store) { \
+    config._H_GET(name).field, [__VA_ARGS__](const type &value, FormUI::Field::BaseField &, bool store) { \
         if (store) { \
             auto &data = config._H_W_GET(name); \
             data.field = value; \
@@ -164,7 +164,7 @@ namespace Config_QuickConnect
     }
 
 #define _H_W_STRUCT_VALUE(name, field, ...) \
-    name.field, [&name, ##__VA_ARGS__](const decltype(name.field) &value, FormUI::Field::Base &, bool store) { \
+    name.field, [&name, ##__VA_ARGS__](const decltype(name.field) &value, FormUI::Field::BaseField &, bool store) { \
         if (store) { \
             name.field = value; \
         } \
@@ -172,7 +172,7 @@ namespace Config_QuickConnect
     }
 
 #define _H_W_STRUCT_VALUE_TYPE(name, field, type, ...) \
-    name.field, [&name, ##__VA_ARGS__](const type &value, FormUI::Field::Base &, bool store) { \
+    name.field, [&name, ##__VA_ARGS__](const type &value, FormUI::Field::BaseField &, bool store) { \
         if (store) { \
             name.field = value; \
         } \
@@ -180,7 +180,7 @@ namespace Config_QuickConnect
     }
 
 #define _H_FLAGS_BOOL_VALUE(name, field, ...) \
-    config._H_GET(name).field, [__VA_ARGS__](bool &value, FormUI::Field::Base &, bool store) { \
+    config._H_GET(name).field, [__VA_ARGS__](bool &value, FormUI::Field::BaseField &, bool store) { \
         if (store) { \
             auto &data = config._H_W_GET(name); \
             data.field = value; \
@@ -189,7 +189,7 @@ namespace Config_QuickConnect
     }
 
 #define _H_FLAGS_VALUE(name, field, ...) \
-    config._H_GET(name).field, [__VA_ARGS__](uint8_t &value, FormUI::Field::Base &, bool store) { \
+    config._H_GET(name).field, [__VA_ARGS__](uint8_t &value, FormUI::Field::BaseField &, bool store) { \
         if (store) { \
             auto &data = config._H_W_GET(name); \
             data.field = value; \

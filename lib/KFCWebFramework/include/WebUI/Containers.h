@@ -651,6 +651,14 @@ namespace FormUI {
             return StringAttribute(key, std::move(value));
         }
 
+        inline IntAttribute Attribute(const __FlashStringHelper *key, int value) {
+            return IntAttribute(key, value);
+        }
+
+        inline IntAttribute Attribute(const __FlashStringHelper *key, long value) {
+            return IntAttribute(key, (int)value);
+        }
+
         inline IntAttribute PlaceHolder(int32_t placeholder) {
             return IntAttribute(F("placeholder"), placeholder);
         }

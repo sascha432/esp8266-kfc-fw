@@ -61,6 +61,12 @@ namespace FormUI {
                 return _type;
             }
 
+            // if type is set to FormUI::Type::HIDDEN, addItems() won't change the value anymore
+            // use setType() instead
+            inline void setType(Type type) {
+                _type = type;
+            }
+
             void dump(size_t offset, Print &output) {
                 _storage.dump(offset, output);
             }
@@ -127,7 +133,9 @@ namespace FormUI {
 
         private:
             inline void _addItem(Type type) {
-                _type = type;
+                if (_type != Type::HIDDEN) {
+                    _type = type;
+                }
             }
 
             inline void _addItem(const __FlashStringHelper *label) {
@@ -165,7 +173,7 @@ namespace FormUI {
 
             inline void _addItem(const Container::List &items) {
                 _setItems(items);
-                _type = Type::SELECT;
+                _addItem(Type::SELECT);
             }
 
             template<typename _Ta, typename _Tb>

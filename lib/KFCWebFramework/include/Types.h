@@ -1,4 +1,4 @@
-/**
+/*
  * Author: sascha_lammers@gmx.de
  */
 
@@ -164,6 +164,16 @@ namespace FormUI {
 
         static constexpr size_t kTypeMax = (size_t)Type::MAX;
         static constexpr size_t kTypeMaxCount = (size_t)Type::MAX_COUNT;
+
+    }
+
+    inline namespace Container {
+
+        class Mixed;
+        class MixedString;
+        class List;
+        class CheckboxButtonSuffix;
+        class ZeroconfSuffix;
 
     }
 

@@ -47,6 +47,8 @@ namespace FormUI {
                 _digits(floatingPointDigits),
                 _allowZero(allowZero)
             {}
+            
+            virtual ~RangeTemplate() {}
 
             virtual bool validate() {
                 if (BaseValidator::validate()) {

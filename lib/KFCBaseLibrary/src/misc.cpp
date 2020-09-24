@@ -6,10 +6,10 @@
 #include <PrintString.h>
 #include "misc.h"
 
-extern "C" {
-    const char SPGM_null[] PROGMEM = { "null" };
-    const char SPGM_0x_08x[] PROGMEM = { "0x%08x" };
-}
+// extern "C" {
+//     const char SPGM_null[] PROGMEM = { "null" };
+//     const char SPGM_0x_08x[] PROGMEM = { "0x%08x" };
+// }
 
 String formatBytes(size_t bytes)
 {

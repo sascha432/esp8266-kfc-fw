@@ -264,25 +264,25 @@ namespace FormUI {
                 }, type);
             }
 
-            // template<typename ObjType, typename VarType>
-            // struct ConstRefSetterCallback {
-            //     using Setter = void(*)(ObjType &obj, const VarType &value);
-            //     //typedef void(*setter)(ObjType &obj, const VarType &value);
-            // };
-            // template<typename ObjType, typename VarType>
-            // struct PointerSetterCallback {
-            //     using Setter = void(*)(ObjType &obj, VarType *value);
-            //     //typedef void(*setter)(ObjType &obj, VarType *value);
-            // };
-            // template<typename ObjType, typename VarType>
-            // struct CopySetterCallback {
-            //     using Setter = void(*)(ObjType &obj, VarType value);
-            //     //typedef void(*setter)(ObjType &obj, VarType value);
-            // };
+            template<typename ObjType, typename VarType>
+            struct ConstRefSetterCallback {
+                using Setter = void(*)(ObjType &obj, const VarType &value);
+                //typedef void(*setter)(ObjType &obj, const VarType &value);
+            };
+            template<typename ObjType, typename VarType>
+            struct PointerSetterCallback {
+                using Setter = void(*)(ObjType &obj, VarType *value);
+                //typedef void(*setter)(ObjType &obj, VarType *value);
+            };
+            template<typename ObjType, typename VarType>
+            struct CopySetterCallback {
+                using Setter = void(*)(ObjType &obj, VarType value);
+                //typedef void(*setter)(ObjType &obj, VarType value);
+            };
 
 
-            template<typename ObjType, typename VarType, typename _Getter, typename _Setter>
-            FormValueCallback<VarType> &addObjectGetterSetter(const __FlashStringHelper *name, ObjType &obj, _Getter getter, _Setter setter, InputFieldType type = InputFieldType::TEXT) {
+            template<typename ObjType, typename VarType, typename CallbackType = typename ConstRefSetterCallback<ObjType, VarType>::Setter>
+            FormValueCallback<VarType> &addObjectGetterSetter(const __FlashStringHelper *name, ObjType &obj, VarType(* getter)(const ObjType &obj), CallbackType setter, InputFieldType type = InputFieldType::TEXT) {
                 return _add<FormValueCallback<VarType>>(name, [&obj, setter, getter](VarType &value, Field::BaseField &field, bool store) {
                     if (store) {
                         setter(obj, value);

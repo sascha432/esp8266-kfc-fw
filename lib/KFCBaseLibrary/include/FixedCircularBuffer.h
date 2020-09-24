@@ -6,6 +6,7 @@
 
 #include <Arduino_compat.h>
 #include "MicrosTimer.h"
+#include <stl_ext/non_std.h>
 
 #if _CRTDBG_MAP_ALLOC
 #pragma push_macro("new")

@@ -570,8 +570,13 @@ inline IPAddress convertToIPAddress(const String &hostname) {
 #define _S_STR(str)                     __S(str)
 #define __S(str)                        __safeCString(str).c_str()
 
+#if _MSC_VER
+extern "C" const char *SPGM_null PROGMEM;
+extern "C" const char *SPGM_0x_08x PROGMEM;
+#else
 extern "C" const char SPGM_null[] PROGMEM;
 extern "C" const char SPGM_0x_08x[] PROGMEM;
+#endif
 
 #if defined(ESP8266)
 #define __IS_SAFE_STR(str)              (((((uintptr_t)str) >= 0x3FF00000) && ((uintptr_t)str) < 0x40300000) ? str : __safeCString((const void *)str).c_str())

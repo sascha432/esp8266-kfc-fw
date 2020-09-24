@@ -7,7 +7,7 @@
 #include "stl_ext.h"
 #include "./stl_ext/non_std.h"
 #include "./stl_ext/algorithm.h"
-#include "./stl_ext/array_of.h"
+#include "./stl_ext/array.h"
 #include "./stl_ext/is_trivially_copyable.h"
 #include "./stl_ext/memory.h"
 #include "./stl_ext/type_traits.h"

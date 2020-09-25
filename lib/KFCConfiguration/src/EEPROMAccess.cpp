@@ -4,16 +4,14 @@
 
 #include <DumpBinary.h>
 #include "EEPROMAccess.h"
+#if !_MSC_VER
+#include <alloca.h>
+#endif
 
 #if DEBUG_CONFIGURATION && DEBUG_EEPROM_ENABLE
 #include <debug_helper_enable.h>
 #else
 #include <debug_helper_disable.h>
-#endif
-
-#if _MSC_VER
-#define ESP8266 1
-#include "spi_flash.h"
 #endif
 
 using namespace ConfigurationHelper;
@@ -95,11 +93,45 @@ uint16_t EEPROMAccess::getReadSize(uint16_t offset, uint16_t length) const
     uint8_t alignment = ((SECTION_EEPROM_START_ADDRESS - SECTION_FLASH_START_ADDRESS) + offset) & 3;
     return (length + alignment + 3) & ~3; // align read length and add alignment
 #else
-    return length;
+    return size;
 #endif
 }
 
-uint16_t EEPROMAccess::read(uint8_t *dst, uint16_t offset, uint16_t length, uint16_t size) // __DBG_IF_flashUsage(, size_t &flashReadSize))
+//uint16_t EEPROMAccess::read_with_temporary_on_stack(const uint32_t start_address, const uint16_t readSize, uint8_t *dst, const uint16_t size, const uint16_t maxSize, const uint8_t alignment)
+//{
+//    uint8_t temp[readSize];
+//    return read_with_temporary(start_address, temp, readSize, dst, size, maxSize, alignment);
+//}
+
+uint16_t EEPROMAccess::read_with_temporary(const uint32_t start_address, uint8_t *temp, const uint16_t readSize, uint8_t *dst, const uint16_t size, const uint16_t maxSize, const uint8_t alignment)
+{
+    noInterrupts();
+    SpiFlashOpResult result = spi_flash_read(start_address, reinterpret_cast<uint32_t *>(temp), readSize);
+    interrupts();
+
+    __LDBG_assert_printf(result == SPI_FLASH_RESULT_OK, "spi_flash_read failed src=%08x dst=%08x size=%u", start_address, temp, readSize);
+    __LDBG_printf("spi_flash_read(%08x, %d) = %d, alignment %u", start_address, readSize, result, alignment);
+    //__DBG_IF_flashUsage(flashReadSize = readSize);
+
+    if (result == SPI_FLASH_RESULT_OK) {
+        const auto src = &temp[alignment];
+        uint16_t fill = maxSize - size;
+        if (dst != src) {
+            // copy/move and fill
+            std::fill_n(std::copy_n(src, size, dst), fill, 0);
+        }
+        else if (fill) {
+            // just fill
+            std::fill_n(dst + size, fill, 0);
+        }
+        return size;
+    }
+
+    std::fill_n(dst, maxSize, 0);
+    return 0;
+}
+
+uint16_t EEPROMAccess::read(uint8_t *dst, uint16_t offset, uint16_t size, uint16_t maxSize) // __DBG_IF_flashUsage(, size_t &flashReadSize))
 {
     //__DBG_IF_flashUsage(flashReadSize = 0);
 
@@ -107,81 +139,58 @@ uint16_t EEPROMAccess::read(uint8_t *dst, uint16_t offset, uint16_t length, uint
     // if the EEPROM is not intialized, copy data from flash directly
     if (_isInitialized) {
         // memcpy(dst, EEPROM.getConstDataPtr() + offset, length); // data is already in RAM
-        __DBG_assert(dst + length <= dst + size);
-        std::copy_n(EEPROM.getConstDataPtr() + offset, length, dst);
-        return length;
+        __DBG_assert(dst + size <= dst + maxSize);
+        std::copy_n(EEPROM.getConstDataPtr() + offset, size, dst);
+        return size;
     }
 
     auto eeprom_start_address = (SECTION_EEPROM_START_ADDRESS - SECTION_FLASH_START_ADDRESS) + offset;
 
     uint8_t alignment = eeprom_start_address & 3;
-    uint16_t readSize = (length + alignment + 3) & ~3; // align read length and add alignment
+    uint16_t readSize = (size + alignment + 3) & ~3; // align read length and add alignment
     eeprom_start_address -= alignment; // align start address
 
-    __LDBG_printf("dst=%p ofs=%d len=%d align=%u read_size=%u", dst, offset, length, alignment, readSize);
+    __LDBG_printf("dst=%p ofs=%d len=%d align=%u read_size=%u", dst, offset, size, alignment, readSize);
+    __LDBG_assert_printf(size <= maxSize, "length=%u > size=%u", size, maxSize);;
 
     // __LDBG_printf("flash: %08X:%08X (%d) aligned: %08X:%08X (%d)",
     //     eeprom_start_address + alignment, eeprom_start_address + length + alignment, length,
     //     eeprom_start_address, eeprom_start_address + readSize, readSize
     // );
 
-    SpiFlashOpResult result = SPI_FLASH_RESULT_ERR;
-    if (readSize > size) { // does not fit into the buffer
-        if (readSize <= kTempReadBufferSize) {
-            uint8_t buf[kTempReadBufferSize];
-            noInterrupts();
-            result = spi_flash_read(eeprom_start_address, reinterpret_cast<uint32_t *>(buf), readSize);
-            interrupts();
-            __LDBG_assert_printf(result == SPI_FLASH_RESULT_OK, "spi_flash_read failed src=%08x dst=%08x size=%u", eeprom_start_address, buf, readSize);
-            if (result == SPI_FLASH_RESULT_OK) {
-                // memcpy(dst, buf + alignment, length); // copy to destination
-                __DBG_assert(dst + length <= dst + size);
-                std::copy_n(buf + alignment, length, dst);
-            }
-        }
-        else {
-            auto ptr = __LDBG_new_array(readSize, uint8_t);
-            // large read operation should have an aligned address or enough extra space to avoid memory allocations
-            __LDBG_assert_printf(false, "allocating read buffer read_size=%d len=%d size=%u ptr=%p", readSize, length, size, ptr);
-            if (ptr) {
-                noInterrupts();
-                result = spi_flash_read(eeprom_start_address, reinterpret_cast<uint32_t *>(ptr), readSize);
-                interrupts();
-                __LDBG_assert_printf(result == SPI_FLASH_RESULT_OK, "spi_flash_read failed src=%08x dst=%08x size=%u", eeprom_start_address, ptr, readSize);
-                if (result == SPI_FLASH_RESULT_OK) {
-                    // memcpy(dst, ptr + alignment, length); // copy to destination
-                    __DBG_assert(dst + length <= dst + size);
-                    std::copy_n(ptr + alignment, length, dst);
-                }
-                __LDBG_delete_array(ptr);
-            }
-        }
+    uint16_t result;
+    if (readSize <= maxSize) {
+        result = read_with_temporary(eeprom_start_address, dst, readSize, dst, size, maxSize, alignment);
+    }
+    else if (readSize <= kTempReadBufferSize) {
+#if _MSC_VER
+        uint8_t *temp = reinterpret_cast<uint8_t *>(alloca(readSize));
+#elif defined(ESP8266) || defined(ESP32)
+        uint8_t temp[readSize];
+#else
+        uint8_t *temp = reinterpret_cast<uint8_t *>(alloca(readSize));
+#endif
+        result = read_with_temporary(eeprom_start_address, temp, readSize, dst, size, maxSize, alignment);
     }
     else {
-        noInterrupts();
-        result = spi_flash_read(eeprom_start_address, reinterpret_cast<uint32_t *>(dst), readSize);
-        interrupts();
-        __LDBG_assert_printf(result == SPI_FLASH_RESULT_OK, "spi_flash_read failed src=%08x dst=%08x size=%u", eeprom_start_address, dst, readSize);
-        if (result == SPI_FLASH_RESULT_OK && alignment) { // move to beginning of the destination
-            // memmove(dst, dst + alignment, length);
-            __DBG_assert(dst + length <= dst + size);
-            std::copy_n(dst + alignment, length, dst);
+        auto temp = __LDBG_new_array(readSize, uint8_t);
+        // large read operation should have an aligned address or enough extra space to avoid memory allocations
+        __LDBG_assert_printf(false, "allocating read buffer read_size=%d len=%d size=%u ptr=%p", readSize, size, maxSize, temp);
+        if (temp) {
+            result = read_with_temporary(eeprom_start_address, temp, readSize, dst, size, maxSize, alignment);
+            __LDBG_delete_array(temp);
+        }
+        else {
+            result = 0;
         }
     }
-    if (result == SPI_FLASH_RESULT_OK) {
-        std::fill(dst + length, dst + size, 0);
-    } else {
-        std::fill(dst, dst + size, 0);
-    }
-    __LDBG_printf("spi_flash_read(%08x, %d) = %d, offset %u", eeprom_start_address, readSize, result, offset);
-    //__DBG_IF_flashUsage(flashReadSize = readSize);
 
 #if DEBUG_CONFIGURATION_VERIFY_DIRECT_EEPROM_READ
     auto hasBeenInitialized = _isInitialized;
     begin();
-    auto cmpResult = memcmp(dst, getConstDataPtr() + offset, length);
+    auto cmpResult = memcmp(dst, getConstDataPtr() + offset, size);
     if (cmpResult) {
-        __DBG_panic("res=%d dst=%p ofs=%d size=%u len=%d align=%u read_size=%u memcpy() failed=%d", result, dst, offset, size, length, alignment, readSize, cmpResult);
+        __DBG_panic("res=%d dst=%p ofs=%d size=%u len=%d align=%u read_size=%u memcpy() failed=%d", result, dst, offset, size, size, alignment, readSize, cmpResult);
     }
     // for (uint16_t i = length; i < size; i++) {
     //     if (dst[i] != 0) {
@@ -198,38 +207,35 @@ uint16_t EEPROMAccess::read(uint8_t *dst, uint16_t offset, uint16_t length, uint
 #elif defined(ESP32)
 
     begin();
-    memcpy(dst, getConstDataPtr() + offset, length);
+    memcpy(dst, getConstDataPtr() + offset, size);
 
 #elif defined(ESP32) && false
 
     // TODO the EEPROM class is not using partitions anymore but NVS blobs
 
     if (_eepromInitialized) {
-        if (!EEPROM.readBytes(offset, dst, length)) {
-            memset(dst, 0, length);
+        if (!EEPROM.readBytes(offset, dst, size)) {
+            memset(dst, 0, size);
         }
     }
     else {
         if (!_partition) {
             _partition = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_ANY, SPGM(EEPROM_partition_name));
         }
-        __LDBG_printf("ofs= %d, len=%d: using esp_partition_read(%p)", offset, length, _partition);
-        if (esp_partition_read(_partition, offset, (void *)dst, length) != ESP_OK) {
-            memset(dst, 0, length);
+        __LDBG_printf("ofs= %d, len=%d: using esp_partition_read(%p)", offset, size, _partition);
+        if (esp_partition_read(_partition, offset, (void *)dst, size) != ESP_OK) {
+            memset(dst, 0, size);
         }
     }
 
 #else
 
     begin();
-    memcpy(dst, getConstDataPtr() + offset, length);
+    memcpy(dst, getConstDataPtr() + offset, size);
 
 #endif
 
-#if DEBUG_CONFIGURATION && 0
-    __LDBG_printf("ofs=%u len=%u size=%u data=%s", offset, length, size, Configuration::__debugDumper(dst, length).c_str());
-#endif
-    return std::min(length, readSize);
+    return result;
 }
 
 void EEPROMAccess::dump(Print &output, bool asByteArray, uint16_t offset, uint16_t length)
@@ -256,7 +262,7 @@ void EEPROMAccess::dump(Print &output, bool asByteArray, uint16_t offset, uint16
     else {
         DumpBinary dumper(output);
 #if ESP32
-        dumper.dump(EEPROM.getDataPtr() + offset, length);
+        dumper.dump(EEPROM.getDataPtr() + offset, size);
 #else
         dumper.dump(EEPROM.getConstDataPtr() + offset, length);
 #endif

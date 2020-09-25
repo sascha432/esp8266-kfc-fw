@@ -6,6 +6,11 @@
 
 #include "ConfigurationHelper.h"
 
+#if _MSC_VER
+#define ESP8266 1
+#include "spi_flash.h"
+#endif
+
 namespace ConfigurationHelper {
 
     class EEPROMClassEx : public EEPROMClass {
@@ -30,7 +35,7 @@ namespace ConfigurationHelper {
     // direct access to EEPROM if supported
     class EEPROMAccess {
     public:
-        static constexpr uint16_t kTempReadBufferSize = 128;
+        static constexpr uint16_t kTempReadBufferSize = 224;
 
         EEPROMAccess(bool isInitialized, uint16_t size) :
             _size(size),
@@ -60,6 +65,18 @@ namespace ConfigurationHelper {
         void commit();
 
         uint16_t getReadSize(uint16_t offset, uint16_t length) const;
+
+#if defined(ESP8266) || 1
+
+        //// allocate memory on stack
+        //uint16_t read_with_temporary_on_stack(const uint32_t start_address, const uint16_t readSize, uint8_t *dst, const uint16_t size, const uint16_t maxSize, const uint8_t alignment);
+
+        // temp and dst can be the same buffer
+        // if alignment is not zero, data gets moved and padded with zeros
+        // if the buffers are different, data is copied and padded with zeros
+        uint16_t read_with_temporary(const uint32_t start_address, uint8_t *temp, const uint16_t readSize, uint8_t *dst, const uint16_t size, const uint16_t maxSize, const uint8_t alignment);
+
+#endif
 
         uint16_t read(uint8_t *dst, uint16_t offset, uint16_t length, uint16_t maxSize);// __DBG_IF_flashUsage(, size_t &));
 

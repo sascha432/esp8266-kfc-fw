@@ -24,6 +24,10 @@ namespace FormUI {
                 BaseValidator(message, FSPGM(FormHostValidator_default_message)),
                 _allowedTypes(allowedTypes)
             {
+                // add default value if set to empty online
+                if (_allowedTypes == AllowedType::EMPTY) {
+                    _allowedTypes = EnumHelper::Bitset::addBits(_allowedTypes, AllowedType::HOST_OR_IP);
+                }
                 __LDBG_assert_printf(allowedTypes != AllowedType::NONE, "allowed type NONE");
             }
             //Hostname(const String &message, AllowedType allowedTypes = AllowedType::HOST_OR_IP) :
@@ -38,14 +42,14 @@ namespace FormUI {
                     auto tmpStr = getField().getValue();
                     tmpStr.trim();
                     getField().setValue(tmpStr);
+                    if (EnumHelper::Bitset::has(_allowedTypes, AllowedType::EMPTY) && tmpStr.length() == 0) {
+                        return true;
+                    }
                     const char *str = tmpStr.c_str();
                     if (EnumHelper::Bitset::has(_allowedTypes, AllowedType::ZEROCONF)) {
                         if (strstr_P(str, SPGM(_var_zeroconf))) { //TODO parse and validate zeroconf
                             return true;
                         }
-                    }
-                    if (EnumHelper::Bitset::has(_allowedTypes, AllowedType::EMPTY) && tmpStr.length() == 0) {
-                        return true;
                     }
                     if (EnumHelper::Bitset::has(_allowedTypes, AllowedType::IPADDRESS)) {
                         IPAddress addr;

@@ -140,10 +140,10 @@ class PageADC(tk.Frame, PageBase):
         grid.next(ttk.Button(self, text="move_open", command=lambda: self.load_and_execute('move_open')))
         grid.next(ttk.Button(self, text="move_close", command=lambda: self.load_and_execute('move_close')))
 
-        grid.first(ttk.Button(self, text="ch0 open", command=lambda: self.send_cmd_threaded(['+BCME=open,0'])))
-        grid.next(ttk.Button(self, text="ch0 close", command=lambda: self.send_cmd_threaded(['+BCME=close,0'])))
-        grid.next(ttk.Button(self, text="ch1 open", command=lambda: self.send_cmd_threaded(['+BCME=open,1'])))
-        grid.next(ttk.Button(self, text="ch1 close", command=lambda: self.send_cmd_threaded(['+BCME=close,1'])))
+        grid.first(ttk.Button(self, text="ch0 open", command=lambda: self.send_cmd_threaded(['START', '+BCME=open,0'])))
+        grid.next(ttk.Button(self, text="ch0 close", command=lambda: self.send_cmd_threaded(['START', '+BCME=close,0'])))
+        grid.next(ttk.Button(self, text="ch1 open", command=lambda: self.send_cmd_threaded(['START', '+BCME=open,1'])))
+        grid.next(ttk.Button(self, text="ch1 close", command=lambda: self.send_cmd_threaded(['START', '+BCME=close,1'])))
 
         # .grid(in_=cfg, row=1, column=2)
         # ttk.Button(self, text="PWM pin 4 500", command=lambda: self.send_pwm_cmd(12, 500, 0)).grid(in_=cfg, row=1, column=1)
@@ -837,8 +837,12 @@ class PageADC(tk.Frame, PageBase):
     def send_cmd_threaded(self, commands, delay = 0.015):
         # parts = []
         for cmd in commands:
-            self.controller.wsc.send(cmd)
-            time.sleep(delay)
+            if cmd=="START":
+                self.send_adc_start_cmd();
+                time.sleep(0.250)
+            else:
+                self.controller.wsc.send(cmd)
+                time.sleep(delay)
         #     if len(parts)<2:
         #         parts.append(cmd)
         #     else:

@@ -50,11 +50,7 @@ void DimmerModuleForm::_createConfigureForm(PluginComponent::FormCallbackType ty
     form.addFormUI(FormUI::Type::HIDDEN);
 
     form.addObjectGetterSetter(F("offdly"), cfg, cfg.get_bits_off_delay, cfg.set_bits_off_delay);
-    // PrintHtmlEntitiesString tmp;
-    // FormUI::UI::appendGroupText(tmp, FSPGM(seconds));
-    // FormUI::UI::appendGroupText(tmp, FormUI::UI::createCheckBoxButton(offDelaySignal, F("Confirm Signal")));
-    // , FormUI::StringSuffix(tmp)
-    form.addFormUI(F("Off Delay"), FormUI::PlaceHolder(0));
+    form.addFormUI(F("Off Delay"), FormUI::PlaceHolder(0), FormUI::Suffix(FSPGM(seconds)), FormUI::CheckboxButtonSuffix(offDelaySignal, F("Confirm Signal")));
     cfg.addRangeValidatorFor_off_delay(form);
 
 #if DIMMER_FIRMWARE_VERSION < 0x030000
@@ -124,19 +120,19 @@ void DimmerModuleForm::_createConfigureForm(PluginComponent::FormCallbackType ty
     cfg.addRangeValidatorFor_single_click_time(form);
 
     form.addObjectGetterSetter(F("maxbr"), cfg, cfg.get_bits_max_brightness, cfg.set_bits_max_brightness);
-    form.addFormUI(F("Min. Brightness"), FormUI::Suffix('%'), FormUI::PlaceHolder(cfg.kDefaultValueFor_max_brightness));
+    form.addFormUI(F("Min. Brightness"), FormUI::Suffix(F("%")), FormUI::PlaceHolder(cfg.kDefaultValueFor_max_brightness));
     cfg.addRangeValidatorFor_max_brightness(form);
 
     form.addObjectGetterSetter(F("minbr"), cfg, cfg.get_bits_min_brightness, cfg.set_bits_min_brightness);
-    form.addFormUI(F("Min. Brightness"), FormUI::Suffix('%'), FormUI::PlaceHolder(cfg.kDefaultValueFor_min_brightness));
+    form.addFormUI(F("Min. Brightness"), FormUI::Suffix(F("%")), FormUI::PlaceHolder(cfg.kDefaultValueFor_min_brightness));
     cfg.addRangeValidatorFor_min_brightness(form);
 
     form.addObjectGetterSetter(F("lpmaxb"), cfg, cfg.get_bits_longpress_max_brightness, cfg.set_bits_longpress_max_brightness);
-    form.addFormUI(F("Long Press Up/Max. Brightness"), FormUI::Suffix('%'), FormUI::PlaceHolder(cfg.kDefaultValueFor_longpress_max_brightness));
+    form.addFormUI(F("Long Press Up/Max. Brightness"), FormUI::Suffix(F("%")), FormUI::PlaceHolder(cfg.kDefaultValueFor_longpress_max_brightness));
     cfg.addRangeValidatorFor_longpress_max_brightness(form);
 
     form.addObjectGetterSetter(F("lpminb"), cfg, cfg.get_bits_longpress_min_brightness, cfg.set_bits_longpress_min_brightness);
-    form.addFormUI(F("Long Press Down/Min. Brightness"), FormUI::Suffix('%'), FormUI::PlaceHolder(cfg.kDefaultValueFor_longpress_min_brightness));
+    form.addFormUI(F("Long Press Down/Min. Brightness"), FormUI::Suffix(F("%")), FormUI::PlaceHolder(cfg.kDefaultValueFor_longpress_min_brightness));
     cfg.addRangeValidatorFor_longpress_min_brightness(form);
 
     buttonGroup.end();
@@ -149,14 +145,14 @@ void DimmerModuleForm::_createConfigureForm(PluginComponent::FormCallbackType ty
     form.addFormUI(FormUI::Type::HIDDEN);
 
     form.addObjectGetterSetter(F("pinup"), cfg, cfg.get_bits_pin_ch0_up, cfg.set_bits_pin_ch0_up);
-    form.addFormUI(F("Button Up Pin #"), FormUI::UI::createCheckBoxButton(pin0Inverted, F("Active Low")));
+    form.addFormUI(F("Button Up Pin #"), FormUI::CheckboxButtonSuffix(pin0Inverted, F("Active Low")));
     cfg.addRangeValidatorFor_pin_ch0_up(form);
 
     auto &pin1Inverted = form.addObjectGetterSetter(F("pdbi"), cfg, cfg.get_bits_pin_ch0_down_inverted, cfg.set_bits_pin_ch0_down_inverted);
     form.addFormUI(FormUI::Type::HIDDEN);
 
     form.addObjectGetterSetter(F("pindn"),  cfg, cfg.get_bits_pin_ch0_down, cfg.set_bits_pin_ch0_down);
-    form.addFormUI(F("Button Down Pin #"), FormUI::UI::createCheckBoxButton(pin1Inverted, F("Active Low")));
+    form.addFormUI(F("Button Down Pin #"), FormUI::CheckboxButtonSuffix(pin1Inverted, F("Active Low")));
     cfg.addRangeValidatorFor_pin_ch0_down(form);
 
     buttonPinGroup.end();
@@ -176,7 +172,7 @@ void DimmerModuleForm::_createConfigureForm(PluginComponent::FormCallbackType ty
     form.addValidator(FormUI::Validator::Range(1, 65535));
 
     form.add<float>(F("vref11"), _H_W_STRUCT_VALUE(cfg, fw.internal_1_1v_ref));
-    form.addFormUI(F("ATmega 1.1V Reference Calibration"), configValidAttr, FormUI::PlaceHolder(1.1, 1), FormUI::Suffix('V'));
+    form.addFormUI(F("ATmega 1.1V Reference Calibration"), configValidAttr, FormUI::PlaceHolder(1.1, 1), FormUI::Suffix(F("V")));
     form.addValidator(FormUI::Validator::RangeDouble(0.9, 1.3, 1));
 
     form.add<float>(F("temp_ofs"), (cfg.fw.ntc_temp_offset / DIMMER_TEMP_OFFSET_DIVIDER), [&cfg](const float &value, FormField &, bool) {

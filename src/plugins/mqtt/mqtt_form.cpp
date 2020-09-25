@@ -58,8 +58,6 @@ void MQTTPlugin::createConfigureForm(FormCallbackType type, const String &formNa
 
     auto &commonGroup = form.addCardGroup(FSPGM(config));
 
-    using ConfigType = typename std::remove_reference<decltype(cfg)>::type;
-
     form.addObjectGetterSetter(FSPGM(mode), cfg, cfg.get_enum_mode, cfg.set_enum_mode);
     form.addFormUI(FSPGM(Mode), modeItems);
     form.addValidator(FormUI::Validator::EnumRange<ClientConfig::ModeType>());
@@ -78,9 +76,9 @@ void MQTTPlugin::createConfigureForm(FormCallbackType type, const String &formNa
     form.addFormUI(FormUI::Type::NUMBER, FSPGM(Port), FormUI::PlaceHolder(1883));
     form.addValidator(FormUI::Validator::NetworkPort(true));
 
-    form.addMemberVariable(FSPGM(keepalive), cfg, &ConfigType::keepalive);
+    form.addObjectGetterSetter(FSPGM(keepalive), cfg, cfg.get_bits_keepalive, cfg.set_bits_keepalive);
     form.addFormUI(FSPGM(Keep_Alive), FormUI::Suffix(FSPGM(seconds)));
-    form.addValidator(FormUI::Validator::RangeTemplate<decltype(cfg.keepalive)>());
+    cfg.addRangeValidatorFor_keepalive(form);
 
     auto &serverGroup = connGroup.end().addCardGroup(FSPGM(mqtt), F("Server Settings"), true);
 
@@ -114,9 +112,9 @@ void MQTTPlugin::createConfigureForm(FormCallbackType type, const String &formNa
     form.addFormUI(F("Auto Discovery Prefix"));
     form.addValidator(FormUI::Validator::Length(0, ClientConfig::kAutoDiscoveryPrefixMaxSize));
 
-    form.addMemberVariable(F("adrb"), cfg, &ConfigType::auto_discovery_rebroadcast_interval);
+    form.addObjectGetterSetter(F("adrb"), cfg, cfg.get_bits_auto_discovery_rebroadcast_interval, cfg.set_bits_auto_discovery_rebroadcast_interval);
     form.addFormUI(F("Auto Discovery Rebroadcast"), FormUI::Suffix(FSPGM(minutes)));
-    form.addValidator(FormUI::Validator::Range(15, std::numeric_limits<decltype(cfg.auto_discovery_rebroadcast_interval)>::max()));
+    cfg.addRangeValidatorFor_auto_discovery_rebroadcast_interval(form);
 
 
     autoDiscoveryGroup.end();

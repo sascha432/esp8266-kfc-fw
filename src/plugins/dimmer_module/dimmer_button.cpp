@@ -8,6 +8,7 @@
 #include "dimmer_button.h"
 #include "dimmer_buttons.h"
 #include "dimmer_module.h"
+#include <stl_ext/algorithm.h>
 // #include <EnumHelper.h>
 
 #if DEBUG_IOT_DIMMER_MODULE
@@ -109,7 +110,7 @@ void DimmerButton::_setLevel(int32_t newLevel, float fadeTime)
 
 void DimmerButton::_setLevel(int32_t newLevel, int16_t curLevel, float fadeTime)
 {
-    newLevel = std::clamp_signed(
+    newLevel = std::clamp<int32_t>(
         newLevel,
         IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _dimmer._getConfig().min_brightness / 100,
         IOT_DIMMER_MODULE_MAX_BRIGHTNESS

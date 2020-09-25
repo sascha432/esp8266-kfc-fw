@@ -128,12 +128,12 @@ namespace ConfigurationHelper {
 //name, size, type, min_value, max_value, default_value[, step_size]
 #define CREATE_BITFIELD_TYPE_MIN_MAX(name, size, type, min_value, max_value, ...) \
     static inline FormUI::Validator::Range &addRangeValidatorFor_##name(FormUI::Form::BaseForm &form, bool allowZero = false) { \
-        form.getLastField().getFormUI()->addItems(FormUI::MinMax((int32_t)kMinValueFor_##name, (int32_t)kMaxValueFor_##name), \
+        form.getLastField().getFormUI()->addItems(FormUI::PlaceHolder(kDefaultValueFor_##name), FormUI::MinMax((int32_t)kMinValueFor_##name, (int32_t)kMaxValueFor_##name), \
             BOOST_PP_REMOVE_PARENS(BOOST_PP_IF(BOOST_PP_EQUAL(BOOST_PP_VARIADIC_SIZE(__VA_ARGS__),1),(FormUI::Type::NUMBER_RANGE),(FormUI::Attribute(F("step"),BOOST_PP_VARIADIC_ELEM(1,##__VA_ARGS__)),FormUI::Type::NUMBER_RANGE)))); \
         return form.addValidator(FormUI::Validator::Range((long)kMinValueFor_##name, (long)kMaxValueFor_##name, allowZero)); \
     } \
     static inline FormUI::Validator::Range &addRangeValidatorFor_##name(const String &message, FormUI::Form::BaseForm &form, bool allowZero = false) { \
-        form.getLastField().getFormUI()->addItems(FormUI::MinMax((int32_t)kMinValueFor_##name, (int32_t)kMaxValueFor_##name), \
+        form.getLastField().getFormUI()->addItems(FormUI::PlaceHolder(kDefaultValueFor_##name), FormUI::MinMax((int32_t)kMinValueFor_##name, (int32_t)kMaxValueFor_##name), \
             BOOST_PP_REMOVE_PARENS(BOOST_PP_IF(BOOST_PP_EQUAL(BOOST_PP_VARIADIC_SIZE(__VA_ARGS__),1),(FormUI::Type::NUMBER_RANGE),(FormUI::Attribute(F("step"),BOOST_PP_VARIADIC_ELEM(1,##__VA_ARGS__)),FormUI::Type::NUMBER_RANGE)))); \
         return form.addValidator(FormUI::Validator::Range(message, (long)kMinValueFor_##name, (long)kMaxValueFor_##name, allowZero)); \
     } \
@@ -427,9 +427,9 @@ namespace KFCConfigurationClasses {
                 using Type = DeviceConfig_t;
 
                 uint32_t config_version;
-                uint16_t safe_mode_reboot_timeout_minutes;
-                uint16_t zeroconf_timeout;
-                CREATE_UINT16_BITFIELD(webui_cookie_lifetime_days, 10);
+                CREATE_UINT16_BITFIELD_MIN_MAX(safe_mode_reboot_timeout_minutes, 10, 5, 900, 0, 1);
+                CREATE_UINT16_BITFIELD_MIN_MAX(zeroconf_timeout, 16, 1000, 60000, 15000, 1000);
+                CREATE_UINT16_BITFIELD_MIN_MAX(webui_cookie_lifetime_days, 10, 3, 720, 90, 30);
                 CREATE_UINT16_BITFIELD(zeroconf_logging, 1);
                 CREATE_ENUM_BITFIELD(status_led_mode, StatusLEDModeType);
 
@@ -448,9 +448,9 @@ namespace KFCConfigurationClasses {
 
                 DeviceConfig_t() :
                     config_version(FIRMWARE_VERSION),
-                    safe_mode_reboot_timeout_minutes(0),
-                    zeroconf_timeout(15000),
-                    webui_cookie_lifetime_days(90),
+                    safe_mode_reboot_timeout_minutes(kDefaultValueFor_safe_mode_reboot_timeout_minutes),
+                    zeroconf_timeout(kDefaultValueFor_zeroconf_timeout),
+                    webui_cookie_lifetime_days(kDefaultValueFor_webui_cookie_lifetime_days),
                     zeroconf_logging(false),
                     status_led_mode(cast_int_status_led_mode(StatusLEDModeType::SOLID_WHEN_CONNECTED)) {}
 
@@ -473,11 +473,11 @@ namespace KFCConfigurationClasses {
             CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().system.device, Password, 6, 64);
             CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().system.device, Token, SESSION_DEVICE_TOKEN_MIN_LENGTH, 255);
 
-            static constexpr uint16_t kZeroConfMinTimeout = 1000;
-            static constexpr uint16_t kZeroConfMaxTimeout = 60000;
+            // static constexpr uint16_t kZeroConfMinTimeout = 1000;
+            // static constexpr uint16_t kZeroConfMaxTimeout = 60000;
 
-            static constexpr uint16_t kWebUICookieMinLifetime = 3;
-            static constexpr uint16_t kWebUICookieMaxLifetime = 720;
+            // static constexpr uint16_t kWebUICookieMinLifetime = 3;
+            // static constexpr uint16_t kWebUICookieMaxLifetime = 720;
         };
 
         // --------------------------------------------------------------------
@@ -1103,20 +1103,27 @@ namespace KFCConfigurationClasses {
 
             typedef struct __attribute__packed__ MqttConfig_t {
                 using Type = MqttConfig_t;
+                CREATE_UINT32_BITFIELD(auto_discovery, 1);
+                CREATE_UINT32_BITFIELD(enable_shared_topic, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(keepalive, 9, 0, 300, 15, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(auto_discovery_rebroadcast_interval, 16, 0, 43200, 24 * 60, 3600);
                 CREATE_ENUM_BITFIELD(mode, ModeType);
                 CREATE_ENUM_BITFIELD(qos, QosType);
-                CREATE_UINT8_BITFIELD(auto_discovery, 1);
-                CREATE_UINT8_BITFIELD(enable_shared_topic, 1);
-                uint8_t keepalive;
-                uint16_t auto_discovery_rebroadcast_interval; // minutes
                 AUTO_DEFAULT_PORT_GETTER_SETTER_SECURE(__port, get_enum_mode(*this) == ModeType::SECURE);
 
-                static constexpr uint8_t kKeepAliveDefault = 15;
-                static constexpr uint16_t kAutoDiscoveryRebroadcastDefault = 24 * 60;
-
-                MqttConfig_t() : mode(cast_int_mode(ModeType::UNSECURE)), qos(cast_int_qos(QosType::EXACTLY_ONCE)), auto_discovery(true), enable_shared_topic(true), keepalive(kKeepAliveDefault), auto_discovery_rebroadcast_interval(kAutoDiscoveryRebroadcastDefault), __port(kPortAuto) {}
+                MqttConfig_t() :
+                    auto_discovery(true),
+                    enable_shared_topic(true),
+                    keepalive(kDefaultValueFor_keepalive),
+                    auto_discovery_rebroadcast_interval(kDefaultValueFor_auto_discovery_rebroadcast_interval),
+                    mode(cast_int_mode(ModeType::UNSECURE)),
+                    qos(cast_int_qos(QosType::EXACTLY_ONCE)),
+                    __port(kPortAuto)
+                {}
 
             } MqttConfig_t;
+
+            static constexpr size_t MqttConfig_tSize = sizeof(MqttConfig_t);
         };
 
         class MQTTClient : public MQTTClientConfig, public ConfigGetterSetter<MQTTClientConfig::MqttConfig_t, _H(MainConfig().plugins.mqtt.cfg) CIF_DEBUG(, &handleNameMqttConfig_t)> {
@@ -1180,16 +1187,14 @@ namespace KFCConfigurationClasses {
         class NTPClientConfig {
         public:
             typedef struct __attribute__packed__ NtpClientConfig_t {
-                // minutes
-                uint16_t refreshInterval;
+                using Type = NtpClientConfig_t;
+
+                CREATE_UINT16_BITFIELD_MIN_MAX(refreshInterval, 16, 5, 720 * 60, 15, 5);
                 uint32_t getRefreshIntervalMillis() const {
                     return refreshInterval * 60U * 1000U;
                 }
-                static constexpr uint16_t kRefreshIntervalMin = 5;
-                static constexpr uint16_t kRefreshIntervalMax = 720 * 60;
-                static constexpr uint16_t kRefreshIntervalDefault = 15;
 
-                NtpClientConfig_t() : refreshInterval(kRefreshIntervalDefault) {}
+                NtpClientConfig_t() : refreshInterval(kDefaultValueFor_refreshInterval) {}
 
             } NtpClientConfig_t;
         };
@@ -1327,8 +1332,7 @@ namespace KFCConfigurationClasses {
                 CREATE_UINT16_BITFIELD_MIN_MAX(adc_recoveries_per_second, 3, 1, 7, 4);                      // bits 12:14 ofs:len 044:03 0-0x07 (7)
                 CREATE_UINT16_BITFIELD_MIN_MAX(adc_multiplexer, 1, 0, 1, 0);                                // bits 15:15 ofs:len 047:01 0-0x01 (1)
                 CREATE_INT32_BITFIELD_MIN_MAX(adc_offset, 11, -1000, 1000, 0);                              // bits 00:10 ofs:len 048:11 0-0x07ff (-1023 - 1023)
-                CREATE_INT32_BITFIELD_MIN_MAX(pwm_softstart_time, 20, 0, 500000, 50000, 1000);              // bits 11:30 ofs:len 059:31
-                // 1 bit free
+                CREATE_INT32_BITFIELD_MIN_MAX(pwm_softstart_time, 11, 0, 1000, 300, 10);                    // bits 11:22 ofs:len 059:22
 
 
                 template<typename Archive>

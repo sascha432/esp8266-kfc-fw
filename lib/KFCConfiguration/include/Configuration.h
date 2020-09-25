@@ -74,12 +74,16 @@ public:
 #include <pop_pack.h>
 
     typedef union {
-        uint8_t headerBuffer[(sizeof(Header_t) + 4) & ~3]; // align size to dwords
+        struct alignas(uint32_t) {
+            uint8_t buffer[sizeof(Header_t)];
+        };
         Header_t header;
     } HeaderAligned_t;
 
-    // typedef std::list<ConfigurationParameter> ParameterList;
-    typedef std::chunked_list<ConfigurationParameter, 6> ParameterList;
+    // ParameterList = std::list<ConfigurationParameter>;
+    using ParameterList = std::chunked_list<ConfigurationParameter, 6>;
+
+    static constexpr size_t ParameterListChunkSize = ParameterList::chunk_element_count * 8 + sizeof(uint32_t); ; //ParameterList::chunk_size;
 
 public:
     Configuration(uint16_t offset, uint16_t size);
@@ -255,9 +259,6 @@ public:
     void exportAsJson(Print& output, const String &version);
     bool importJson(Stream& stream, HandleType *handles = nullptr);
 
-// ------------------------------------------------------------------------
-// Memory management
-
 private:
     friend ConfigurationParameter;
 
@@ -273,18 +274,23 @@ private:
     bool _readParams();
     uint16_t _readHeader(uint16_t offset, HeaderAligned_t &header);
 
-private:
+    // ------------------------------------------------------------------------
+    // EEPROM
+
+protected:
     ConfigurationHelper::EEPROMAccess _eeprom;
     ParameterList _params;
-protected:
     uint32_t _readAccess;
-private:
     uint16_t _offset;
     uint16_t _dataOffset;
     uint16_t _size;
 
-// ------------------------------------------------------------------------
-// EEPROM
+    inline uint16_t getDataOffset() const {
+        return _offset + sizeof(Header_t);
+    }
+    inline void resetDataOffset() {
+        _dataOffset = getDataOffset();
+    }
 
 public:
     void dumpEEPROM(Print &output, bool asByteArray = true, uint16_t offset = 0, uint16_t length = 0) {

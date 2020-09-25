@@ -31,7 +31,7 @@ Configuration::Configuration(uint16_t offset, uint16_t size) :
     _eeprom(false, 4096),
     _readAccess(0),
     _offset(offset),
-    _dataOffset(offset + sizeof(Header_t)),
+    _dataOffset(getDataOffset()),
     _size(size)
 {
 }
@@ -46,7 +46,7 @@ void Configuration::clear()
     __LDBG_printf("params=%u", _params.size());
     _params.clear();
     _eeprom.discard();
-    _dataOffset = _offset + sizeof(Header_t);
+    resetDataOffset();
 }
 
 void Configuration::discard()
@@ -133,13 +133,10 @@ bool Configuration::write()
 
     // new data offset is base offset + size of header + size of stored parameter information
     _dataOffset = _offset + (uint16_t)(buffer.length() + sizeof(Header_t));
-#if DEBUG_CONFIGURATION
-    auto calcOfs = _offset + (sizeof(ParameterHeaderType) * _params.size()) + sizeof(Header_t);
-    if (_dataOffset != calcOfs) {
-        __DBG_panic("real_ofs=%u ofs=%u", _dataOffset, calcOfs);
-
-    }
-#endif
+    __LDBG_assert_printf(_dataOffset == _offset + (sizeof(ParameterHeaderType) * _params.size()) + sizeof(Header_t), "new _data_offset=%u mismatch", 
+        _dataOffset, 
+        (_offset + (sizeof(ParameterHeaderType) * _params.size()) + sizeof(Header_t))
+    );
 
     // write data
     for (auto &parameter : _params) {
@@ -185,7 +182,7 @@ bool Configuration::write()
 
     _params.clear();
     ConfigurationHelper::_allocator.release();
-    _dataOffset = _offset + sizeof(Header_t);
+    resetDataOffset();
 
     return _readParams();
 }
@@ -266,11 +263,21 @@ void Configuration::setBinary(HandleType handle, const void *data, size_type len
 
 void Configuration::dump(Print &output, bool dirty, const String &name)
 {
-    output.printf_P(PSTR("Configuration:\nofs=%d base_ofs=%d eeprom_size=%d params=%d len=%d\n"), _dataOffset, _offset, _eeprom.getSize(), _params.size(), _eeprom.getSize() - _offset);
-    output.printf_P(PSTR("min_mem_usage=%d header_size=%d Param_t::size=%d, ConfigurationParameter::size=%d, Configuration::size=%d\n"), sizeof(Configuration) + _params.size() * sizeof(ConfigurationParameter), sizeof(Configuration::Header_t), sizeof(ConfigurationParameter::Param_t), sizeof(ConfigurationParameter), sizeof(Configuration));
-
     uint16_t dataOffset = (uint16_t)(_offset + sizeof(Header_t) + (_params.size() * sizeof(ParameterHeaderType)));
-    output.printf_P(PSTR("_dataOffset=%u _offset=%u dataOffset=%u\n"), _dataOffset, _offset, dataOffset);
+    output.printf_P(PSTR("Configuration:\noffset=%d data_ofs=%u eeprom_size=%d params=%d len=%d\n"), 
+        _offset, 
+        dataOffset, 
+        _eeprom.getSize(), 
+        _params.size(), 
+        _eeprom.getSize() - _offset
+    );
+    output.printf_P(PSTR("min_mem_usage=%d header_size=%d Param_t::size=%d, ConfigurationParameter::size=%d, Configuration::size=%d\n"), 
+        sizeof(Configuration) + _params.size() * sizeof(ConfigurationParameter), 
+        sizeof(Configuration::Header_t), sizeof(ConfigurationParameter::Param_t), 
+        sizeof(ConfigurationParameter), 
+        sizeof(Configuration)
+   );
+
     for (auto &parameter : _params) {
         DEBUG_HELPER_SILENT();
         auto display = true;
@@ -397,7 +404,7 @@ ConfigurationParameter &Configuration::_getOrCreateParam(ConfigurationParameter:
 
 uint16_t Configuration::_readHeader(uint16_t offset, HeaderAligned_t &hdr)
 {
-    _eeprom.read(hdr.headerBuffer, (uint16_t)offset, (uint16_t)sizeof(hdr.header), (uint16_t)sizeof(hdr.headerBuffer));
+    _eeprom.read(hdr.buffer, (uint16_t)offset, (uint16_t)sizeof(hdr.header), (uint16_t)sizeof(hdr));
     return offset + sizeof(hdr.header);
 }
 
@@ -442,14 +449,14 @@ bool Configuration::_readParams()
             break;
         }
 
-        //offset += (sizeof(param._header) * hdr.header.params);
-        _dataOffset =  offset + (sizeof(ParameterHeaderType) * hdr.header.params);
+        _dataOffset = offset + (sizeof(ParameterHeaderType) * hdr.header.params);
 
         for(size_t i = 0; i <= hdr.header.params; i++) {
 
             if (_params.size() == hdr.header.params) {
                 __LDBG_printf("_dataOffset=%u params=%u", _dataOffset, _params.size());
                 __LDBG_assert_printf(offset == _dataOffset, "offset=%u mismatch _dataOffset=%u", offset, _dataOffset);
+                //_dataOffset = offset;
                 _eeprom.discard();
                 return true;
             }

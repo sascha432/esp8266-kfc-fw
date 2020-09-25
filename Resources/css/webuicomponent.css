@@ -1,0 +1,170 @@
+/**
+ * Author: sascha_lammers@gmx.de
+ */
+
+ .webuicomponent {
+	border: 2px solid white;
+	border-radius: 10px;
+	padding: 2px;
+	margin-top: 5px;
+	margin-bottom: 5px;
+	margin-left: -11px;
+	margin-right: -11px;
+	box-shadow: 2px 2px 2px grey;
+	background-color: #f0f0f0;
+}
+
+.webuicomponent-top {
+    box-shadow: 0 0 0;
+    background: none;
+}
+
+.webuicomponent.title {
+	background-color: #dceaf4;
+}
+
+.webuicomponent .group {
+	padding-left: 10px;
+    padding-top: 2px;
+
+}
+.webuicomponent .group .switch {
+    padding: 10px;
+    padding-top: 18px;
+    min-height: 54px;
+    width: 120px;
+    margin-right: 0;
+    margin-left: auto;
+}
+
+.webuicomponent > .switch {
+    padding: 10px;
+    padding-top: 24px;
+	min-height: 66px;
+}
+
+.webuicomponent > .named-switch {
+    padding: 10px;
+    padding-top: 24px;
+	min-height: 127px;
+}
+
+.webuicomponent .switch-name {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.webuicomponent > .slider {
+    padding: 10px;
+    padding-top: 24px;
+	min-height: 66px;
+}
+
+.webuicomponent > .color-slider {
+    padding: 10px;
+    padding-top: 24px;
+	min-height: 66px;
+	border-radius: 10px;
+	background-image: linear-gradient(to right, rgb(130, 130, 255), rgb(255, 255, 255), rgb(255, 170, 40));
+}
+
+.webuicomponent > .badge-sensor {
+	font-size: 16px;
+    color: #000000;
+}
+
+.webuicomponent .outer-badge {
+	border: 2px solid white;
+    border-radius: 50%;
+    width: 98px;
+	padding: 2px;
+	margin: auto;
+	margin-top: 5px;
+	margin-bottom: 4px;
+	box-shadow: 2px 2px 2px 2px grey;
+    background-color: #f0f0f0;
+}
+
+.webuicomponent .inner-badge {
+    padding: 6px;
+    width: 90px;
+	min-height: 86px;
+    border-radius: 50%;
+	border: 2px solid #aaaaaa;
+	background-color: #dceaf4;
+	text-align: center;
+}
+
+.webuicomponent .inner-badge h4 {
+	color: #303030;
+	font-size: 22px;
+    margin-top: 18px;
+    margin-bottom: 0;
+}
+
+.webuicomponent .inner-badge h5 {
+	color: #303030;
+	font-size: 18px;
+    margin-top: 22px;
+    margin-bottom: 0;
+}
+
+.webuicomponent .inner-badge div.unit {
+	font-size: 16px;
+	color: #a0a0a0;
+    margin-top: 0;
+	margin-bottom: 0;
+}
+
+.webuicomponent > .screen {
+    padding: 10px;
+    padding-top: 18px;
+	text-align: center;
+}
+
+.webuicomponent > .button-group {
+    padding: 10px;
+    padding-top: 18px;
+	text-align: center;
+}
+
+.webuicomponent > .sensor {
+    padding: 10px;
+	min-height: 160px;
+	text-align: center;
+}
+
+.webuicomponent > .sensor h1 {
+	color: #303030;
+	font-size: 52px;
+}
+
+.webuicomponent > .sensor h3 {
+	padding-top: 14px;
+	padding-bottom: 10px;
+	font-size: 20px;
+	color: #000000;
+}
+
+.webuicomponent > .sensor span.unit {
+	font-size: 38px;
+	color: #a0a0a0;
+	position: relative;
+	top: -4px;
+	margin-left: 4px;
+}
+
+.webui-disconnected-icon
+{
+    float: right;
+    font-size: 32px;
+    display: block;
+    padding: 8px;
+    animation: webui-disconnected-icon 0.5s linear infinite;
+}
+
+@keyframes webui-disconnected-icon {
+    50% {
+        opacity: 0;
+    }
+}

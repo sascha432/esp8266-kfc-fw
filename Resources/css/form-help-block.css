@@ -1,0 +1,22 @@
+/**
+ * Author: sascha_lammers@gmx.de
+ */
+
+.form-help-block {
+    display: none;
+}
+
+.form-help-label-text {
+    font-size: 75%;
+    font-weight: 400;
+}
+
+.form-help-label-text:hover {
+    cursor: zoom-in;
+}
+
+.form-help-label-text-zoom-in {
+    font-size: 100%;
+    font-weight: 400;
+    cursor: zoom-out !important;
+}

@@ -157,6 +157,10 @@
                         "./lib/KFCWebBuilder/Resources/css/open-iconic-bootstrap.css",
                         "./lib/KFCWebBuilder/Resources/css/rangeslider.css",
                         "./Resources/css/styles.css",
+                        "./Resources/css/webuicomponent.css",
+                        "./Resources/css/rangeslider.css",
+                        "./Resources/css/form-help-block.css",
+                        "./Resources/css/input-text-range.css",
                         "./Resources/js/charts/Chart.min.css"
                     ]
                 },

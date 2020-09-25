@@ -476,6 +476,7 @@ namespace STL_STD_EXT_NAMESPACE {
         };
 
         static constexpr size_type chunk_size = sizeof(chunk);
+        static constexpr size_type chunk_element_count = numElements;
 
         chunked_list() :
             _firstChunk(nullptr),

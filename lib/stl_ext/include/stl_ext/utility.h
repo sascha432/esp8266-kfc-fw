@@ -10,6 +10,8 @@
 
 namespace STL_STD_EXT_NAMESPACE {
 
+#if __HAVE_CPP14 == 0 && _MSC_VER == 0
+
     template<class T, class U = T>
     T exchange(T& obj, U&& new_value)
     {
@@ -17,6 +19,8 @@ namespace STL_STD_EXT_NAMESPACE {
         obj = forward<U>(new_value);
         return old_value;
     }
+
+#endif
 
 }
 namespace STL_STD_EXT_NAMESPACE_EX {

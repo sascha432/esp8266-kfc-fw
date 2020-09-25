@@ -61,29 +61,35 @@ bool Form::BaseForm::validateOnly()
         if (field->getType() == Field::Type::GROUP || field->isDisabled()) {
             // field ist a group or disabled
         }
-        else {
-
+        else if (_data->hasArg(field->getName())) {
             // check if any data is available (usually from a POST request)
-            if (_data->hasArg(field->getName())) {
 
-                // __LDBG_printf("Form::BaseForm::validateOnly() Set value %s = %s", field->getName().c_str(), _data->arg(field->getName()).c_str());
+            // __LDBG_printf("Form::BaseForm::validateOnly() Set value %s = %s", field->getName().c_str(), _data->arg(field->getName()).c_str());
 
-                // set new value
-                if (field->setValue(_data->arg(field->getName()))) {
-                    _hasChanged = true;
-                }
+            // during validation the value might get modified
+            bool restoreUserValue = false;
 
-                auto iterator = _validatorFind(_validators, field);
-                while (iterator) {
-                    if (!iterator->validate()) {
-                        _addError(field, iterator->getMessage());
-                    }
-                    iterator = _validatorFindNext(iterator, field);
-                }
+            // set new value
+            if (field->setValue(_data->arg(field->getName()))) {
+                _hasChanged = true;
             }
-            else if (_invalidMissing) {
-                _addError(field, FSPGM(Form_value_missing_default_message));
+
+            auto iterator = _validatorFind(_validators, field);
+            while (iterator) {
+                if (!iterator->validate()) {
+                    _addError(field, iterator->getMessage());
+                    restoreUserValue = true;
+                }
+                iterator = _validatorFindNext(iterator, field);
             }
+
+            // if an error has occured, restore the user input using the base class
+            if (restoreUserValue) {
+                static_cast<Field::BaseField *>(field)->setValue(_data->arg(field->getName()));
+            }
+        }
+        else if (_invalidMissing) {
+            _addError(field, FSPGM(Form_value_missing_default_message));
         }
     }
 #if DEBUG_KFC_FORMS
@@ -267,12 +273,16 @@ void Form::BaseForm::createJavascript(PrintInterface &output)
 #endif
     if (!isValid()) {
         __LDBG_printf("errors=%d", _errors->size());
-        output.printf_P(PSTR("<script>" "$.formValidator.addErrors("));
+        output.printf_P(PSTR("<script> $(function() { $.formValidator.addErrors("));
         uint16_t idx = 0;
         for (auto &error: *_errors) {
-            output.printf_P(PSTR("%c{'target':'#%s','error':'%s'}"), idx++ ? ',' : '[', jsonEncodeString(error.getName(), output), jsonEncodeString(error.getMessage(), output));
+            output.printf_P(PSTR("%c{'name':'%s','target':'#%s','error':'%s'}"), idx++ ? ',' : '[',
+                jsonEncodeString(error.getField().getName(), output),
+                jsonEncodeString(error.getName(), output),
+                jsonEncodeString(error.getMessage(), output)
+            );
         }
-        output.printf_P(PSTR("]);" "</script>"));
+        output.printf_P(PSTR("]); }); </script>"));
     }
 #if DEBUG_KFC_FORMS
     __DBG_printf("render=form_javascript time=%.3fms", dur2.getTime() / 1000.0);

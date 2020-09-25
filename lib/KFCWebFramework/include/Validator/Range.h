@@ -25,14 +25,14 @@ namespace FormUI {
         {
         public:
             using EnumType = _Ta;
-            using BaseType = typename std::relaxed_underlying_type<_Ta>::type;
+            using BaseType = typename std::relaxed_underlying_type<EnumType>::type;
 
         public:
             RangeTemplate(const String &message = String()) :
                 RangeTemplate(std::numeric_limits<BaseType>::min(), std::numeric_limits<BaseType>::max(), false, RangeMessage::getDefaultMessage(message, false))
             {}
 
-            RangeTemplate(_Ta aMin, _Ta aMax, bool allowZero = false, const String &message = String()) :
+            RangeTemplate(EnumType aMin, EnumType aMax, bool allowZero = false, const String &message = String()) :
                 BaseValidator(RangeMessage::getDefaultMessage(message, allowZero)),
                 _minValue(aMin),
                 _maxValue(aMax),
@@ -40,14 +40,14 @@ namespace FormUI {
                 _allowZero(allowZero)
             {}
 
-            RangeTemplate(_Ta aMin, _Ta aMax, uint8_t floatingPointDigits = 2, bool allowZero = false, const String &message = String()) :
+            RangeTemplate(EnumType aMin, EnumType aMax, uint8_t floatingPointDigits = 2, bool allowZero = false, const String &message = String()) :
                 BaseValidator(RangeMessage::getDefaultMessage(message, allowZero)),
                 _minValue(aMin),
                 _maxValue(aMax),
                 _digits(floatingPointDigits),
                 _allowZero(allowZero)
             {}
-            
+
             virtual ~RangeTemplate() {}
 
             virtual bool validate() {
@@ -78,8 +78,8 @@ namespace FormUI {
             }
 
         protected:
-            _Ta _minValue;
-            _Ta _maxValue;
+            EnumType _minValue;
+            EnumType _maxValue;
             uint8_t _digits: 7;
             uint8_t _allowZero: 1;
         };
@@ -102,11 +102,11 @@ namespace FormUI {
 
         class RangeDouble : public RangeTemplate<double> {
         public:
+            using RangeTemplate<double>::validate;
+            using RangeTemplate<double>::getMessage;
+
             RangeDouble(double aMin, double aMax, uint8_t digits = 2, bool allowZero = false) : RangeTemplate(aMin, aMax, digits, allowZero) {}
             RangeDouble(const String &message, double aMin, double aMax, uint8_t digits = 2, bool allowZero = false) : RangeTemplate(aMin, aMax, digits, allowZero, message) {}
-
-            virtual bool validate();
-            virtual String getMessage() override;
         };
 
         template<typename _Ta, _Ta _minValue = _Ta::MIN, _Ta _maxValue = _Ta::MAX, int _excludingMax = 1>
@@ -114,19 +114,22 @@ namespace FormUI {
         {
         public:
             using EnumType = _Ta;
-            using IntType = std::relaxed_underlying_type_t<_Ta>;
+            using IntType = std::relaxed_underlying_type_t<EnumType>;
 
-            static constexpr _Ta kMinValue = _minValue;
+            using RangeTemplate<_Ta>::validate;
+            using RangeTemplate<_Ta>::getMessage;
+
+            static constexpr EnumType kMinValue = _minValue;
             //static constexpr _Ta kMaxValue = (EnumType)(((IntType)_maxValue) - 1);
-            static constexpr _Ta kMaxValue = static_cast<EnumType>(static_cast<IntType>(_maxValue) - _excludingMax);
+            static constexpr EnumType kMaxValue = static_cast<EnumType>(static_cast<IntType>(_maxValue) - _excludingMax);
 
             EnumRange(const String &message) :
-                RangeTemplate<_Ta>(kMinValue, kMaxValue, false, message)
+                RangeTemplate<EnumType>(kMinValue, kMaxValue, false, message)
             {
             }
 
-            EnumRange(_Ta aMin = kMinValue, _Ta aMax = kMaxValue, const String &message = String()) :
-                RangeTemplate<_Ta>(aMin, aMax, false, message)
+            EnumRange(EnumType aMin = kMinValue, EnumType aMax = kMaxValue, const String &message = String()) :
+                RangeTemplate<EnumType>(aMin, aMax, false, message)
             {
             }
         };

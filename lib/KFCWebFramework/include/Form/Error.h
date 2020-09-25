@@ -35,6 +35,10 @@ namespace FormUI {
             const String &getMessage() const;
             const bool is(Field::BaseField &field) const;
 
+            Field::BaseField &getField() {
+                return *_field;
+            }
+
         private:
             Field::BaseField *_field;
             String _message;

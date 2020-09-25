@@ -34,9 +34,13 @@
     border-bottom-left-radius: 0;
 }
 
+/* input type=range class custom-range  */
+
 .form-control.input-text-range > input.custom-range {
     margin: auto 0 !important;
 }
+
+/* visible / invisible status and next child border */
 
 .form-control.input-text-range.show > input:last-child {
     display: flex !important;
@@ -57,6 +61,21 @@
     border-bottom-right-radius: 0;
 }
 
+/* validation */
+
+.form-control.input-text-range.is-invalid > input:first-child:focus {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 0.2rem rgba(220,53,69,.25) !important;
+}
+
+.form-control.input-text-range.is-valid > input:first-child:focus {
+    border-color: #28a745 !important;
+    box-shadow: 0 0 0 0.2rem rgba(40,167,69,.25) !important;
+}
+
+.form-control.input-text-range.is-invalid, .was-validated .form-control.input-text-range:invalid {
+    border-color: #dc3545;
+}
 
 @media only screen and (max-width: 640px) {
     .form-control.input-text-range > input:first-child {

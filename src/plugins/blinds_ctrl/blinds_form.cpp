@@ -160,23 +160,23 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
         auto &motorGroup = form.addCardGroup(F("ctrl"), F("Controller Configuration"), true);
 
         form.addObjectGetterSetter(F("pwm"), cfg, cfg.get_bits_pwm_frequency, cfg.set_bits_pwm_frequency);
-        form.addFormUI(F("PWM Frequency"), FormUI::PlaceHolder(ConfigType::kDefaultValueFor_pwm_frequency), FormUI::Suffix(F("Hz")));
+        form.addFormUI(F("PWM Frequency"), FormUI::Suffix(F("Hz")));
         ConfigType::addRangeValidatorFor_pwm_frequency(form);
 
         form.addObjectGetterSetter(F("pss"), cfg, cfg.get_bits_pwm_softstart_time, cfg.set_bits_pwm_softstart_time);
-        form.addFormUI(F("PWM Soft Start Ramp-up Time"), FormUI::PlaceHolder(ConfigType::kDefaultValueFor_pwm_softstart_time), FormUI::Suffix(F("microseconds")));
+        form.addFormUI(F("PWM Soft Start Ramp-up Time"), FormUI::Suffix(F("milliseconds")));
         ConfigType::addRangeValidatorFor_pwm_softstart_time(form);
 
         form.addObjectGetterSetter(F("adci"), cfg, cfg.get_bits_adc_read_interval, cfg.set_bits_adc_read_interval);
-        form.addFormUI(F("ADC Read Interval"), FormUI::PlaceHolder(ConfigType::kDefaultValueFor_adc_read_interval), FormUI::Suffix(F("microseconds")));
+        form.addFormUI(F("ADC Read Interval"), FormUI::Suffix(F("microseconds")));
         ConfigType::addRangeValidatorFor_adc_read_interval(form);
 
         form.addObjectGetterSetter(F("adcrt"), cfg, cfg.get_bits_adc_recovery_time, cfg.set_bits_adc_recovery_time);
-        form.addFormUI(F("ADC Recovery Time"), FormUI::PlaceHolder(ConfigType::kDefaultValueFor_adc_recovery_time), FormUI::Suffix(F("microseconds")));
+        form.addFormUI(F("ADC Recovery Time"), FormUI::Suffix(F("microseconds")));
         ConfigType::addRangeValidatorFor_adc_recovery_time(form);
 
         form.addObjectGetterSetter(F("adcrr"), cfg, cfg.get_bits_adc_recoveries_per_second, cfg.set_bits_adc_recoveries_per_second);
-        form.addFormUI(F("ADC Repeat Recovery"), FormUI::PlaceHolder(ConfigType::kDefaultValueFor_adc_recoveries_per_second), FormUI::Suffix(F("per second")));
+        form.addFormUI(F("ADC Repeat Recovery"), FormUI::Suffix(F("per second")));
         ConfigType::addRangeValidatorFor_adc_recoveries_per_second(form);
 
         form.addObjectGetterSetter(F("adco"), cfg, cfg.get_bits_adc_offset, cfg.set_bits_adc_offset);

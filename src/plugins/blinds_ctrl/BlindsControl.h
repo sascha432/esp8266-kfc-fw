@@ -335,7 +335,7 @@ protected:
     uint32_t _softStartUpdateCount;
 #endif
     MillisTimer _motorTimeout;
-    uint16_t _currentLimit;
+    float _currentLimit;
 
     uint32_t _adcLastUpdate;
     float _adcIntegral;

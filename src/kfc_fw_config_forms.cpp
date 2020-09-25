@@ -3,6 +3,7 @@
  */
 
 #include "kfc_fw_config_plugin.h"
+#include <stl_ext/type_traits.h>
 #include <KFCForms.h>
 
 using KFCConfigurationClasses::MainConfig;
@@ -182,16 +183,16 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             form.addFormUI(FSPGM(Title));
             System::Device::addTitleLengthValidator(form);
 
-            form.addPointerTriviallyCopyable(F("safem_to"), &cfg.safe_mode_reboot_timeout_minutes);
-            form.addFormUI(FormUI::Type::NUMBER, F("Reboot Delay Running In Safe Mode"), FormUI::Suffix(FSPGM(minutes)));
-            form.addValidator(FormUI::Validator::Range(5, 3600, true));
+            form.addObjectGetterSetter(F("safem_to"), cfg, cfg.get_bits_safe_mode_reboot_timeout_minutes, cfg.set_bits_safe_mode_reboot_timeout_minutes);
+            form.addFormUI(F("Reboot Delay Running In Safe Mode"), FormUI::Suffix(FSPGM(minutes)));
+            cfg.addRangeValidatorFor_safe_mode_reboot_timeout_minutes(form);
 
             form.addObjectGetterSetter(F("mdns_en"), flags, System::Flags::ConfigStructType::get_bit_is_mdns_enabled, System::Flags::ConfigStructType::set_bit_is_mdns_enabled);
             form.addFormUI(F("mDNS Announcements"), FormUI::BoolItems(FSPGM(Enabled), F("Disabled (Zeroconf is still available)")));
 
-            form.addPointerTriviallyCopyable(F("zconf_to"), &cfg.zeroconf_timeout);
-            form.addFormUI(FormUI::Type::NUMBER, FSPGM(Zeroconf_Timeout), FormUI::Suffix(FSPGM(milliseconds)));
-            form.addValidator(FormUI::Validator::Range(System::Device::kZeroConfMinTimeout, System::Device::kZeroConfMaxTimeout));
+            form.addObjectGetterSetter(F("zconf_to"), cfg, cfg.get_bits_zeroconf_timeout, cfg.set_bits_zeroconf_timeout);
+            form.addFormUI(FSPGM(Zeroconf_Timeout), FormUI::Suffix(FSPGM(milliseconds)));
+            cfg.addRangeValidatorFor_zeroconf_timeout(form);
 
             form.addObjectGetterSetter(F("zconf_log"), cfg, System::Device::ConfigStructType::get_bits_zeroconf_logging, System::Device::ConfigStructType::set_bits_zeroconf_logging);
             form.addFormUI(FSPGM(Zeroconf_Logging), FormUI::BoolItems());
@@ -212,8 +213,8 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             form.addFormUI(FSPGM(WebUI), FormUI::BoolItems());
 
             form.addObjectGetterSetter(F("scookie_lt"), cfg, System::Device::ConfigStructType::get_bits_webui_cookie_lifetime_days, System::Device::ConfigStructType::set_bits_webui_cookie_lifetime_days);
-            form.addFormUI(FormUI::Type::NUMBER, F("Allow to store credentials in a cookie to login automatically"), FormUI::Suffix(FSPGM(days)));
-            form.addValidator(FormUI::Validator::Range(System::Device::kWebUICookieMinLifetime, System::Device::kWebUICookieMaxLifetime, true));
+            form.addFormUI(F("Allow to store credentials in a cookie to login automatically"), FormUI::Suffix(FSPGM(days)));
+            cfg.addRangeValidatorFor_webui_cookie_lifetime_days(form);
 
             form.addObjectGetterSetter(F("walert_en"), flags, System::Flags::ConfigStructType::get_bit_is_webalerts_enabled, System::Flags::ConfigStructType::set_bit_is_webalerts_enabled);
             form.addFormUI(FSPGM(Web_Alerts), FormUI::BoolItems());

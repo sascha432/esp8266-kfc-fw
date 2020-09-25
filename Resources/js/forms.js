@@ -17,16 +17,19 @@ $.visible_password_options = {};
 //
 // example:
 // $.formValidator.addErrors([{target:'#brightness',name:'Display Brightness',error:'This fields value must be between 50 and 65535 or 0'},{target:'#pwm_0','error':'This fields value must be between 50 and 65535 or 0'},{target:'#pwm_1',error:'This fields value must be between 50 and 65535 or 0'}, {target:'#missing_field_123',error:'missing target'}]);
+// $.formValidator.addErrors([{target:'#pwm_0','error':'This fields value must be between 50 and 65535 or 0'}]);
 // ---------------------------------------------------------------------------------
+
 $.formValidator = {
     target: 'form:last',
     errors: [],
     validated: false,
-    input_tags: 'select, input, .form-enable-slider',
+    input_tags: 'select, input:not(.input-text-range-child), .form-enable-slider, .input-text-range',
     validate: function() {
         this.validated = true;
         var form = $(this.target);
         var form_groups = form.find('.form-group');
+        var input_tags = this.input_tags;
         // remove previous errors
         form.find('.is-invalid, .is-valid').removeClass('is-invalid is-valid');
         form.find('.invalid-feedback').remove();
@@ -35,14 +38,15 @@ $.formValidator = {
         $(this.errors).each(function(key, val) {
             var target = $(val.target);
             var group = target.closest('.form-group');
-            dbg_console.debug(val.name, val.target, val.error, target, group, val);
             if (group.length) {
-                group.find(this.input_tags).addClass('is-invalid');
+                dbg_console.debug('error', val, 'target', target, 'group', group, 'input-tag', group.find(input_tags));
+                group.find(input_tags).addClass('is-invalid');
                 group.append('<div class="invalid-feedback">' + val.error + '</>');
             } else {
                 if (!val.name) {
                     val.name = 'Field "' + val.target.replace(/[\.#]/g, '').replace(/_([0-9]+)/g, ' #\$1').replace(/[_-]/g, ' ') + '"';
                 }
+                dbg_console.debug('error', val, 'target', target, 'group or target not found');
                 var alert = form.find('.invalid-feedback-alert');
                 if (!alert.length) {
                     form.prepend('<div class="invalid-feedback-alert mt-3 mb-0 p-2 alert alert-danger"><h5 class="text-center">Additional errors</h5><hr></div>');
@@ -54,7 +58,7 @@ $.formValidator = {
         // display feedback and open collapsed groups
         form.find('.invalid-feedback').show().closest('.collapse').collapse('show');
         // add is-valid to all inputs that are not marked as invalid
-        form_groups.find(this.input_tags).not('.is-invalid').addClass('is-valid');
+        form_groups.find(input_tags).not('.is-invalid').addClass('is-valid');
     },
     addErrors: function(errors) {
         this.errors = errors;
@@ -474,6 +478,9 @@ $(function() {
     // class show
     // the class custom-range for range input is optional
     //
+    // events:
+    // oninput and onchange of the text field are triggered when the slider is moved
+    //
     // the input range can be hidden by removing the show class
     // $('div.input-text-range').removeClass('show');
     // $('div.input-text-range').addClass('show');
@@ -483,24 +490,50 @@ $(function() {
     // <input type="range" class="custom-range">
     // </div>
     // ---------------------------------------------------------------------------------
-    $('div.input-text-range').each(function() {
-        var text = $(this).find('input[type="text"]');
-        var range = $(this).find('input[type="range"]');
+    $('.input-text-range').each(function() {
+        var parent = $(this);
+        var text = parent.find('input[type="text"]');
+        var range = parent.find('input[type="range"]');
         var minVal = text.attr('min');
         var maxVal = text.attr('max');
         if (minVal === undefined || maxVal === undefined) {
             return;
         }
+        // assign id to div and mark inputs as children
+        $(this).attr('for', '#' + text.attr('id'));
+        text.addClass('input-text-range-child');
+        range.addClass('input-text-range-child');
+        // copy attributes and value
         range.attr('min', minVal);
         range.attr('max', maxVal);
         range.attr('step', text.attr('step'));
         range.val(text.val());
-        $(this).addClass('show');
+
+        minVal = parseFloat(minVal);
+        maxVal = parseFloat(maxVal);
+
+        function validate_range(value, child) {
+            if (value < minVal || value > maxVal) {
+                dbg_console.debug(value, child, parent, minVal, maxVal);
+                parent.addClass('is-invalid').removeClass('is-valid');
+            }
+            else {
+                parent.removeClass('is-invalid');
+            }
+        }
+
+        parent.addClass('show');
         text.on('input', function() {
-            range.val(text.val());
+            var value = text.val();
+            range.val(value);
+            validate_range(value, $(this));
         });
         range.on('input', function() {
             text.val(range.val());
+            text.trigger('input');
+        }).on('change', function() {
+            text.val(range.val());
+            text.trigger('change');
         });
     });
 

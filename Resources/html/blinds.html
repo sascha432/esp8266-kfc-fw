@@ -64,8 +64,10 @@
             });
             var adc_multiplier = parseInt($('#il_0').data('adc-multiplier')) / 65535.0;
             var dac_multiplier = parseInt($('#dac_0').data('dac-multiplier')) / 65535.0;
+            $('#il_0').parent().find('input[type=range]')
             $('#il_0, #il_1').on('input', function() {
-                targets[$(this).attr('id')].html('(ADC '+ (Math.round(parseInt($(this).val()) / adc_multiplier)) + ')');
+                var val = parseInt($(this).val()) / adc_multiplier;
+                targets[$(this).attr('id')].html('(ADC '+ (val.toFixed(2)) + ')');
             }).trigger('input');
             $('#dac_0, #dac_1').on('input', function() {
                 targets[$(this).attr('id')].html('(Vref '+ (Math.round(parseInt($(this).val()) / 1.023 * dac_multiplier)) + 'mV)');

@@ -256,7 +256,7 @@ void BlindsControl::_startMotor(ChannelType channel, bool open)
     // clear ADC last
     _clearAdc();
 
-    if (_config.pwm_softstart_time >= 1000) {
+    if (_config.pwm_softstart_time > 0) {
 
         // soft start enabled
         _setMotorSpeed(channel, 0, open);
@@ -276,8 +276,8 @@ void BlindsControl::_startMotor(ChannelType channel, bool open)
     _softStartUpdateCount = 0;
 #endif
 
-    __LDBG_printf("pin=%u pwm=%u soft-start=%.3fms I-limit=%umA (%u) dir=%s adc-mul=%.6f timeout=%ums",
-        _motorPin, _motorPWMValue, _config.pwm_softstart_time / 1000.0,
+    __LDBG_printf("pin=%u pwm=%u soft-start=%ums I-limit=%umA (%.2f) dir=%s adc-mul=%.6f timeout=%ums",
+        _motorPin, _motorPWMValue, _config.pwm_softstart_time,
         cfg.current_limit_mA, _currentLimit,
         open ? PSTR("open") : PSTR("close"),
         _adcIntegralMultiplier,
@@ -400,13 +400,14 @@ void BlindsControl::_loopMethod()
     // soft start is running, update PWM
     if (_motorStartTime) {
         uint32_t diff = get_time_diff(_motorStartTime, micros());
-        if (diff >= (uint32_t)_config.pwm_softstart_time) { // finished, set final pwm value
+        uint32_t stime = _config.pwm_softstart_time * 1000U;
+        if (diff >= stime) { // finished, set final pwm value
             analogWrite(_motorPin, _motorPWMValue);
             __LDBG_printf("soft start finished time=%u pin=%u pwm=%u updates=%u", diff, _motorPin, _motorPWMValue, _softStartUpdateCount);
             _motorStartTime = 0;
         }
         else {
-            analogWrite(_motorPin, _motorPWMValue * diff / _config.pwm_softstart_time);
+            analogWrite(_motorPin, _motorPWMValue * diff / stime);
 #if DEBUG_IOT_BLINDS_CTRL
             _softStartUpdateCount++;
 #endif

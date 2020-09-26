@@ -320,7 +320,7 @@ namespace STL_STD_EXT_NAMESPACE {
 
         class iterator_base : public non_std::iterator<iterator_category, value_type, difference_type, pointer, reference> {
         public:
-            iterator_base() = default;
+            iterator_base() : _chunk(nullptr), _next(nullptr) {}
 
             iterator_base(chunk_pointer chunk, pointer next) : _chunk(chunk), _next(next) {
             }
@@ -462,16 +462,18 @@ namespace STL_STD_EXT_NAMESPACE {
             using iterator_base::iterator_base;
             using iterator_base::_get;
 
+            iterator(const const_iterator &) = delete;
+            iterator(const_iterator &&) = delete;
+
+            iterator &operator=(const const_iterator &) = delete;
+            iterator &operator=(const_iterator &&) = delete;
+
             pointer operator->() {
                 return _get();
             }
 
             reference operator*() {
                 return *_get();
-            }
-
-            pointer get() {
-                return _get();
             }
         };
 
@@ -597,14 +599,14 @@ namespace STL_STD_EXT_NAMESPACE {
             return iterator(_firstChunk, _first());
         }
         iterator end() {
-            return iterator();
+            return iterator(_lastChunk, nullptr);
         }
 
         const_iterator begin() const {
             return const_iterator(_firstChunk, _first());
         }
         const_iterator end() const {
-            return const_iterator();
+            return const_iterator(_lastChunk, nullptr);
         }
 
         const_iterator cbegin() const {

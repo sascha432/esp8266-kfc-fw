@@ -139,21 +139,21 @@ void DimmerModuleForm::_createConfigureForm(PluginComponent::FormCallbackType ty
 
 #endif
 
+    FormUI::Container::List pins(KFCConfigurationClasses::createFormPinList());
+
     auto &buttonPinGroup = form.addCardGroup(F("btncfg"), F("Button Pin Configuration"), false);
 
     auto &pin0Inverted = form.addObjectGetterSetter(F("pupi"), cfg, cfg.get_bits_pin_ch0_up_inverted, cfg.set_bits_pin_ch0_up_inverted);
     form.addFormUI(FormUI::Type::HIDDEN);
 
     form.addObjectGetterSetter(F("pinup"), cfg, cfg.get_bits_pin_ch0_up, cfg.set_bits_pin_ch0_up);
-    form.addFormUI(F("Button Up Pin #"), FormUI::CheckboxButtonSuffix(pin0Inverted, F("Active Low")));
-    cfg.addRangeValidatorFor_pin_ch0_up(form);
+    form.addFormUI(F("Button Up Pin #"), FormUI::CheckboxButtonSuffix(pin0Inverted, F("Active Low")), pins);
 
     auto &pin1Inverted = form.addObjectGetterSetter(F("pdbi"), cfg, cfg.get_bits_pin_ch0_down_inverted, cfg.set_bits_pin_ch0_down_inverted);
     form.addFormUI(FormUI::Type::HIDDEN);
 
     form.addObjectGetterSetter(F("pindn"),  cfg, cfg.get_bits_pin_ch0_down, cfg.set_bits_pin_ch0_down);
-    form.addFormUI(F("Button Down Pin #"), FormUI::CheckboxButtonSuffix(pin1Inverted, F("Active Low")));
-    cfg.addRangeValidatorFor_pin_ch0_down(form);
+    form.addFormUI(F("Button Down Pin #"), FormUI::CheckboxButtonSuffix(pin1Inverted, F("Active Low")), pins);
 
     buttonPinGroup.end();
 

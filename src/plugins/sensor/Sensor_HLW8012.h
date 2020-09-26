@@ -7,7 +7,7 @@
 #if IOT_SENSOR_HAVE_HLW8012
 
 #include <Arduino_compat.h>
-#include <FixedCircularBuffer.h>
+#include <stl_ext/fixed_circular_buffer.h>
 #include "WebUIComponent.h"
 #include "plugins.h"
 #include "Sensor_HLW80xx.h"
@@ -55,8 +55,8 @@
 
 class Sensor_HLW8012 : public Sensor_HLW80xx {
 public:
-    using InterruptBuffer = FixedCircularBuffer<uint32_t, 16, NullMutex>;
-    using NoiseBuffer = FixedCircularBuffer<uint32_t, 5, NullMutex>;
+    using InterruptBuffer = std::fixed_circular_buffer<uint32_t, 16>;
+    using NoiseBuffer = std::fixed_circular_buffer<uint32_t, 5>;
 
     typedef enum {
         CURRENT =           1,

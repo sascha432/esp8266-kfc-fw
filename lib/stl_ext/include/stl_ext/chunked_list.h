@@ -5,6 +5,9 @@
 #pragma once
 
 #include <stdint.h>
+#if defined(ARDUINO)
+#include <Print.h>
+#endif
 
 #ifndef XTRA_CONTAINERS_CHUNKED_LIST_ASSERT
 #define XTRA_CONTAINERS_CHUNKED_LIST_ASSERT                     0
@@ -21,7 +24,7 @@
 #pragma push_macro("new")
 #undef new
 
-namespace STL_STD_EXT_NAMESPACE {
+namespace STL_STD_EXT_NAMESPACE_EX {
 
     // chunked_list is a memory efficient append only container
     // comparable to a forward_list that stores multiple elements in chunks and a pointer to the next chunk
@@ -140,21 +143,21 @@ namespace STL_STD_EXT_NAMESPACE {
     }
 #endif
 
-    template<class _Ta, size_t numElements/*, bool enableErase = false*/>
+    template<class _Ty, size_t numElements/*, bool enableErase = false*/>
     class chunked_list {
     private:
         class chunk;
 
     public:
-        using reference = _Ta &;
-        using const_reference = const _Ta &;
-        using pointer = _Ta *;
-        using const_pointer = const _Ta *;
-        using value_type = _Ta;
+        using value_type = _Ty;
+        using reference = _Ty &;
+        using const_reference = const _Ty &;
+        using pointer = _Ty *;
+        using const_pointer = const _Ty *;
         using size_type = size_t;
         using difference_type = ptrdiff_t;
-        using chunk_pointer = chunk *;
         using iterator_category = std::forward_iterator_tag;
+        using chunk_pointer = chunk *;
 
 #if XTRA_CONTAINERS_CHUNKED_LIST_ENABLE_ERASE
         static constexpr size_type erased_elements_size = enableErase * numElements;
@@ -320,7 +323,7 @@ namespace STL_STD_EXT_NAMESPACE {
 
         class iterator_base : public non_std::iterator<iterator_category, value_type, difference_type, pointer, reference> {
         public:
-            iterator_base() : _chunk(nullptr), _next(nullptr) {}
+            constexpr iterator_base() : _chunk(nullptr), _next(nullptr) {}
 
             iterator_base(chunk_pointer chunk, pointer next) : _chunk(chunk), _next(next) {
             }
@@ -462,6 +465,8 @@ namespace STL_STD_EXT_NAMESPACE {
             using iterator_base::iterator_base;
             using iterator_base::_get;
 
+            constexpr iterator() : iterator_base() {}
+
             iterator(const const_iterator &) = delete;
             iterator(const_iterator &&) = delete;
 
@@ -559,11 +564,11 @@ namespace STL_STD_EXT_NAMESPACE {
             return *(_lastChunk->_last() - 1);
         }
 
-        inline void push_back(const _Ta &data) {
+        inline void push_back(const value_type &data) {
             emplace_back(data);
         }
 
-        inline void push_back(_Ta &&data) {
+        inline void push_back(value_type &&data) {
             emplace_back(std::move(data));
         }
 
@@ -599,14 +604,14 @@ namespace STL_STD_EXT_NAMESPACE {
             return iterator(_firstChunk, _first());
         }
         iterator end() {
-            return iterator(_lastChunk, nullptr);
+            return iterator();
         }
 
         const_iterator begin() const {
             return const_iterator(_firstChunk, _first());
         }
         const_iterator end() const {
-            return const_iterator(_lastChunk, nullptr);
+            return const_iterator();
         }
 
         const_iterator cbegin() const {
@@ -650,6 +655,7 @@ namespace STL_STD_EXT_NAMESPACE {
         chunk_pointer _lastChunk;
     };
 
+#if defined(ARDUINO)
     template<class _Ta>
     class chunk_list_size {
     public:
@@ -666,6 +672,7 @@ namespace STL_STD_EXT_NAMESPACE {
             }
         }
     };
+#endif
 };
 
 #pragma pop_macro("new")

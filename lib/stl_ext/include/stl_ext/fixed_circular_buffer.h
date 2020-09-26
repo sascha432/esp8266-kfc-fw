@@ -4,32 +4,35 @@
 
 #pragma once
 
-#include <Arduino_compat.h>
-#include <stl_ext/non_std.h>
+#include "./stl_ext/non_std.h"
+
+#if defined(ARDUINO)
+#include <Print.h>
+#endif
 
 #pragma push_macro("new")
 #undef new
 
-namespace STL_STD_EXT_NAMESPACE {
+namespace STL_STD_EXT_NAMESPACE_EX {
 
     template<class _Ty, size_t SIZE>
     class fixed_circular_buffer {
     public:
-        using fixed_circular_buffer_type = fixed_circular_buffer<_Ty, SIZE>;
         using value_type = _Ty;
         using reference = _Ty &;
         using const_reference = const _Ty &;
         using pointer = _Ty *;
         using const_pointer = const _Ty *;
         using size_type = size_t;
-        using difference_type = typename std::make_signed<size_type>::type;
+        using difference_type = ptrdiff_t;
         using iterator_category = std::random_access_iterator_tag;
+        using fixed_circular_buffer_type = fixed_circular_buffer<_Ty, SIZE>;
         using values_array_type = std::array<value_type, SIZE>;
 
         class const_iterator : public non_std::iterator<iterator_category, value_type, difference_type, pointer, reference> {
         public:
-            const_iterator(const fixed_circular_buffer_type &buffer, const_pointer iterator) : 
-                _buffer(&const_cast<fixed_circular_buffer_type &>(buffer)), 
+            const_iterator(const fixed_circular_buffer_type &buffer, const_pointer iterator) :
+                _buffer(&const_cast<fixed_circular_buffer_type &>(buffer)),
                 _iterator(const_cast<pointer>(iterator)) {
                 //std::vector<int>
             }
@@ -251,6 +254,7 @@ namespace STL_STD_EXT_NAMESPACE {
             return _count;
         }
 
+#if defined(ARDUINO)
         void printTo(Print &output, const iterator first, const iterator last, char separator = ',') {
             for (auto iter = first; iter != last; ++iter) {
                 if (iter != first) {
@@ -259,6 +263,7 @@ namespace STL_STD_EXT_NAMESPACE {
                 output.print(*iter);
             }
         }
+#endif
 
     public:
 

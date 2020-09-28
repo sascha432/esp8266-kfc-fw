@@ -2,15 +2,16 @@
   Author: sascha_lammers@gmx.de
 */
 
+#include <Arduino_compat.h>
 #include <WiFiCallbacks.h>
 #include <LoopFunctions.h>
-#include <KFCForms.h>
 #include "kfc_fw_config.h"
 #include "web_server.h"
 #include "blink_led_timer.h"
 #include "remote.h"
-#include "./plugins/home_assistant/home_assistant.h"
+#include "../src/plugins/home_assistant/home_assistant.h"
 #include "plugins_menu.h"
+#include "remote_button.h"
 
 #if DEBUG_IOT_REMOTE_CONTROL
 #include <debug_helper_enable.h>
@@ -19,15 +20,41 @@
 #endif
 
 using KFCConfigurationClasses::Plugins;
+using namespace RemoteControl;
 
 static RemoteControlPlugin plugin;
 
-RemoteControlPlugin::RemoteControlPlugin() : _autoSleepTimeout(0), _buttonsLocked(~0), _longPress(0), _comboButton(-1), _hass(HassPlugin::getInstance())
+PROGMEM_DEFINE_PLUGIN_OPTIONS(
+    RemoteControlPlugin,
+    "remotectrl",       // name
+    "Remote Control",   // friendly name
+    "",                 // web_templates
+    "remote",           // config_forms
+    "http",             // reconfigure_dependencies
+    PluginComponent::PriorityType::MAX,
+    PluginComponent::RTCMemoryId::REMOTE,
+    static_cast<uint8_t>(PluginComponent::MenuType::CUSTOM),
+    false,              // allow_safe_mode
+    true,               // setup_after_deep_sleep
+    true,               // has_get_status
+    true,               // has_config_forms
+    false,              // has_web_ui
+    false,              // has_web_templates
+    true,               // has_at_mode
+    0                   // __reserved
+);
+
+RemoteControlPlugin::RemoteControlPlugin() :
+    PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(RemoteControlPlugin)),
+    Base(),
+    _hass(HassPlugin::getInstance())
 {
     REGISTER_PLUGIN(this, "RemoteControlPlugin");
-    _config.autoSleepTime = 15;
-    for(auto pin : _buttonPins) {
-        pinMode(_buttonPins[pin], INPUT);
+    // for(auto pin : _buttonPins) {
+    //     pinMode(_buttonPins[pin], INPUT);
+    // }
+    for(uint8_t n = 0; n < _buttons.size(); n++) {
+        _buttons[n] = std::move(Button(_buttonPins[n], n, this));
     }
 }
 
@@ -35,14 +62,15 @@ void RemoteControlPlugin::setup(SetupModeType mode)
 {
     _readConfig();
 
-    for(uint8_t n = 0; n < _buttons.size(); n++) {
-        auto &button = *(_buttons[n] = __LDBG_new(PushButton, _buttonPins[n], PRESSED_WHEN_HIGH));
-        button.onPress(onButtonPressed);
-        button.onHoldRepeat(_config.longpressTime, _config.repeatTime, onButtonHeld);
-        button.onRelease(onButtonReleased);
-        button.update();
-        __LDBG_printf("btn=%d pressed=%d", n, button.isPressed());
-    }
+    // for(uint8_t n = 0; n < _buttons.size(); n++) {
+    //     _buttons[n] = std::move(Button(_buttonPins[n], n, this));
+    //     // // auto &button = *(_buttons[n] = __LDBG_new(PushButton, _buttonPins[n], PRESSED_WHEN_HIGH));
+    //     // button.onPress(onButtonPressed);
+    //     // button.onHoldRepeat(_config.longpressTime, _config.repeatTime, onButtonHeld);
+    //     // button.onRelease(onButtonReleased);
+    //     // button.update();
+    //     // __LDBG_printf("btn=%d pressed=%d", n, button.isPressed());
+    // }
     WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTED, wifiCallback);
     LoopFunctions::add(loop);
 
@@ -53,25 +81,26 @@ void RemoteControlPlugin::setup(SetupModeType mode)
     _buttonsLocked = 0;
 }
 
-void RemoteControlPlugin::reconfigure(PGM_P source)
+void RemoteControlPlugin::reconfigure(const String &source)
 {
     _readConfig();
-    if (source != nullptr) {
+    if (String_equals(source, F("http"))) {
         _installWebhooks();
     }
     else {
-        for(const auto button : _buttons) {
-            button->onPress(onButtonPressed);
-            button->onHoldRepeat(_config.longpressTime, _config.repeatTime, onButtonHeld);
-            button->onRelease(onButtonReleased);
-        }
+        // buttons have this attach with &_config
+        // for(const auto button : _buttons) {
+        //     button->onPress(onButtonPressed);
+        //     button->onHoldRepeat(_config.longpressTime, _config.repeatTime, onButtonHeld);
+        //     button->onRelease(onButtonReleased);
+        // }
     }
 }
 
 void RemoteControlPlugin::shutdown()
 {
     LoopFunctions::remove(loop);
-    WiFiCallbacks::remove(WiFiCallbacks::ANY, wifiCallback);
+    WiFiCallbacks::remove(WiFiCallbacks::EventType::ANY, wifiCallback);
 }
 
 void RemoteControlPlugin::prepareDeepSleep(uint32_t sleepTimeMillis)
@@ -83,7 +112,7 @@ void RemoteControlPlugin::prepareDeepSleep(uint32_t sleepTimeMillis)
 void RemoteControlPlugin::getStatus(Print &output)
 {
     output.printf_P(PSTR("%u Button Remote Control"), _buttons.size());
-    if (_autoSleepTimeout == 0 || _autoSleepTimeout == AutoSleepDisabled) {
+    if (_autoSleepTimeout == 0 || _autoSleepTimeout == kAutoSleepDisabled) {
         output.print(F(", auto sleep disabled"));
     }
 }
@@ -95,55 +124,6 @@ void RemoteControlPlugin::createMenu()
     bootstrapMenu.addSubMenu(F("Disable Auto Sleep"), F("remote_nosleep.html"), navMenu.device);
 }
 
-void RemoteControlPlugin::createConfigureForm(AsyncWebServerRequest *request, FormUI::Form::BaseForm &form)
-{
-    using KFCConfigurationClasses::MainConfig;
-
-    form.setFormUI(F("Remote Control Configuration"));
-
-    form.add<uint8_t>(F("auto_sleep_time"), _H_STRUCT_VALUE(MainConfig().plugins.remotecontrol, autoSleepTime))
-        ->setFormUI(new FormUI::UI(FormUI::Type::TEXT, F("Auto Sleep Time")))->setSuffix(FSPGM(seconds, "seconds")));
-    form.add<uint16_t>(F("deep_sleep_time"), _H_STRUCT_VALUE(MainConfig().plugins.remotecontrol, deepSleepTime))
-        ->setFormUI(new FormUI::UI(FormUI::Type::TEXT, F("Deep Sleep Time")))->setSuffix(F("seconds (0 = indefinitely)")));
-
-    form.add<uint16_t>(F("long_press_time"), _H_STRUCT_VALUE(MainConfig().plugins.remotecontrol, longpressTime))
-        ->setFormUI(new FormUI::UI(FormUI::Type::TEXT, F("Long Press Time")))->setSuffix(FSPGM(milliseconds, "milliseconds")));
-    form.add<uint16_t>(F("repeat_time"), _H_STRUCT_VALUE(MainConfig().plugins.remotecontrol, repeatTime))
-        ->setFormUI(new FormUI::UI(FormUI::Type::TEXT, F("Repeat Time")))->setSuffix(FSPGM(milliseconds)));
-
-    FormUI::Container::List actions;
-    Plugins::HomeAssistant::ActionVector vector;
-    Plugins::HomeAssistant::getActions(vector);
-
-    actions.emplace_back(String(0), String(F("None")));
-    for(const auto &action: vector) {
-        auto str = PrintString(F("%s: %s"), action.getEntityId().c_str(), action.getActionFStr());
-        if (action.getNumValues()) {
-            str.printf_P(PSTR(" %d"), action.getValue(0));
-        }
-        actions.emplace_back(String(action.getId()), str);
-    }
-
-    for(uint8_t i = 0; i < _buttons.size(); i++) {
-
-        auto &group = form.addGroup(PrintString(F("remote_%u"), i), PrintString(F("Button %u Action"), i + 1),
-            (_config.actions[i].shortpress || _config.actions[i].longpress || _config.actions[i].repeat)
-        );
-
-        form.add<uint16_t>(PrintString(F("shortpress_action_%u"), i), _H_STRUCT_VALUE(MainConfig().plugins.remotecontrol, actions[i].shortpress, i))
-            ->setFormUI(new FormUI::UI(FormUI::Type::SELECT, F("Short Press")))->addItems(actions));
-
-        form.add<uint16_t>(PrintString(F("longpress_action_%u"), i), _H_STRUCT_VALUE(MainConfig().plugins.remotecontrol, actions[i].longpress, i))
-            ->setFormUI(new FormUI::UI(FormUI::Type::SELECT, F("Long Press")))->addItems(actions));
-
-        form.add<uint16_t>(PrintString(F("repeat_action_%u"), i), _H_STRUCT_VALUE(MainConfig().plugins.remotecontrol, actions[i].repeat, i))
-            ->setFormUI(new FormUI::UI(FormUI::Type::SELECT, F("Repeat")))->addItems(actions));
-
-        group.end();
-    }
-
-    form.finalize();
-}
 
 #if AT_MODE_SUPPORTED
 
@@ -159,7 +139,7 @@ bool RemoteControlPlugin::atModeHandler(AtModeArgs &args)
 {
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RMNOSLP))) {
         args.printf_P(PSTR("Auto sleep disabled. timeout=%u"), _autoSleepTimeout);
-        _autoSleepTimeout = AutoSleepDisabled;
+        _autoSleepTimeout = kAutoSleepDisabled;
         return true;
     }
     return false;
@@ -167,27 +147,21 @@ bool RemoteControlPlugin::atModeHandler(AtModeArgs &args)
 
 #endif
 
-void RemoteControlPlugin::onButtonPressed(Button& btn)
-{
-    __LDBG_printf("btn=%d", plugin._getButtonNum(btn));
-    //plugin._addButtonEvent(ButtonEvent(plugin._getButtonNum(btn), ButtonEvent::PRESS));
-}
+// void Base::onButtonHeld(Button& btn, uint16_t duration, uint16_t repeatCount)
+// {
+//     __LDBG_printf("btn=%d duration=%d repeat=%d", plugin._getButtonNum(btn), duration, repeatCount);
+//     plugin._onButtonHeld(btn, duration, repeatCount);
+// }
 
-void RemoteControlPlugin::onButtonHeld(Button& btn, uint16_t duration, uint16_t repeatCount)
-{
-    __LDBG_printf("btn=%d duration=%d repeat=%d", plugin._getButtonNum(btn), duration, repeatCount);
-    plugin._onButtonHeld(btn, duration, repeatCount);
-}
-
-void RemoteControlPlugin::onButtonReleased(Button& btn, uint16_t duration)
-{
-    __LDBG_printf("btn=%d duration=%d", plugin._getButtonNum(btn), duration);
-    plugin._onButtonReleased(btn, duration);
-}
+// void RemoteControlPlugin::onButtonReleased(Button& btn, uint16_t duration)
+// {
+//     __LDBG_printf("btn=%d duration=%d", plugin._getButtonNum(btn), duration);
+//     plugin._onButtonReleased(btn, duration);
+// }
 
 void RemoteControlPlugin::_onButtonHeld(Button& btn, uint16_t duration, uint16_t repeatCount)
 {
-    auto buttonNum = _getButtonNum(btn);
+    auto buttonNum = btn.getNum();
 #if IOT_REMOTE_CONTROL_COMBO_BTN
     if (_anyButton(&btn)) { // is any button pressed except btn?
         _resetAutoSleep();
@@ -197,7 +171,7 @@ void RemoteControlPlugin::_onButtonHeld(Button& btn, uint16_t duration, uint16_t
                 __LDBG_printf("longpress=%d combo=%d", _longPress, _comboButton);
             }
             if (buttonNum != _comboButton) { // fire event for any other button that is held except first one
-                _addButtonEvent(ButtonEvent(buttonNum, ButtonEvent::COMBO_REPEAT, duration, repeatCount, _comboButton));
+                _addButtonEvent(ButtonEvent(buttonNum, EventType::COMBO_REPEAT, duration, repeatCount, _comboButton));
             }
         }
         else if (_comboButton == 3) { // button 4 has special functions
@@ -239,7 +213,7 @@ void RemoteControlPlugin::_onButtonHeld(Button& btn, uint16_t duration, uint16_t
     else
 #endif
     {
-        _addButtonEvent(ButtonEvent(buttonNum, ButtonEvent::REPEAT, duration, repeatCount));
+        _addButtonEvent(ButtonEvent(buttonNum, EventType::REPEAT, duration, repeatCount));
     }
 }
 
@@ -256,13 +230,13 @@ void RemoteControlPlugin::_onButtonReleased(Button& btn, uint16_t duration)
         }
     }
     else if (_comboButton != -1) {
-        _addButtonEvent(ButtonEvent(_getButtonNum(btn), ButtonEvent::COMBO_RELEASE, duration, _comboButton));
+        _addButtonEvent(ButtonEvent(btn.getNum(), EventType::COMBO_RELEASE, duration, _comboButton));
         _comboButton = -1;
     }
     else
 #endif
     {
-        _addButtonEvent(ButtonEvent(_getButtonNum(btn), ButtonEvent::RELEASE, duration));
+        _addButtonEvent(ButtonEvent(btn.getNum(), EventType::RELEASE, duration));
     }
 }
 
@@ -272,7 +246,7 @@ void RemoteControlPlugin::loop()
     plugin._loop();
 }
 
-void RemoteControlPlugin::wifiCallback(uint8_t event, void *payload)
+void RemoteControlPlugin::wifiCallback(WiFiCallbacks::EventType event, void *payload)
 {
     if (event == WiFiCallbacks::EventType::CONNECTED) {
         plugin._wifiConnected();
@@ -282,7 +256,7 @@ void RemoteControlPlugin::wifiCallback(uint8_t event, void *payload)
 void RemoteControlPlugin::disableAutoSleep()
 {
     __LDBG_printf("disabled");
-    plugin._autoSleepTimeout = AutoSleepDisabled;
+    plugin._autoSleepTimeout = kAutoSleepDisabled;
 }
 
 void RemoteControlPlugin::disableAutoSleepHandler(AsyncWebServerRequest *request)
@@ -328,10 +302,10 @@ void RemoteControlPlugin::deepSleepHandler(AsyncWebServerRequest *request)
 
 void RemoteControlPlugin::_loop()
 {
-    for(const auto button : _buttons) {
-        button->update();
-    }
-    if (_autoSleepTimeout != AutoSleepDisabled) {
+    // for(const auto button : _buttons) {
+    //     button->update();
+    // }
+    if (_autoSleepTimeout != kAutoSleepDisabled) {
         if (_isUsbPowered()) {
             if (_autoSleepTimeout) {
                 __LDBG_printf("usb power detected, disabling auto sleep");
@@ -344,14 +318,14 @@ void RemoteControlPlugin::_loop()
                 timeout = _config.autoSleepTime;
             }
             else {
-                timeout = std::max((uint8_t)30, _config.autoSleepTime);
+                timeout = std::max<uint8_t>(30, _config.autoSleepTime);
             }
             _autoSleepTimeout = millis() + (timeout * 1000UL);
             __LDBG_printf("auto deep sleep=%u connected=%u", _autoSleepTimeout, config.isWiFiUp());
         }
         if (_autoSleepTimeout && millis() > _autoSleepTimeout) {
             __LDBG_printf("entering deep sleep (auto=%d, time=%us)", _config.autoSleepTime, _config.deepSleepTime);
-            _autoSleepTimeout = AutoSleepDisabled;
+            _autoSleepTimeout = kAutoSleepDisabled;
             config.enterDeepSleep(KFCFWConfiguration::seconds(_config.deepSleepTime), RF_DEFAULT, 1);
         }
     }
@@ -364,25 +338,6 @@ void RemoteControlPlugin::_wifiConnected()
     _scheduleSendEvents();
 }
 
-int8_t RemoteControlPlugin::_getButtonNum(const Button &btn) const
-{
-    for(uint8_t n = 0; n < _buttons.size(); n++) {
-        if (_buttons[n] == &btn) {
-            return n;
-        }
-    }
-    return -1;
-}
-
-bool RemoteControlPlugin::_anyButton(const Button *btn) const
-{
-    for(const auto button : _buttons) {
-        if (button != btn && button->isPressed()) {
-            return true;
-        }
-    }
-    return false;
-}
 
 bool RemoteControlPlugin::_isUsbPowered() const
 {
@@ -391,8 +346,7 @@ bool RemoteControlPlugin::_isUsbPowered() const
 
 void RemoteControlPlugin::_readConfig()
 {
-    _config = Plugins::RemoteControl::get();
-    _config.validate();
+    _config = Plugins::RemoteControl::getConfig();
 }
 
 void RemoteControlPlugin::_installWebhooks()
@@ -402,21 +356,14 @@ void RemoteControlPlugin::_installWebhooks()
     WebServerPlugin::addHandler(F("/remote_nosleep.html"), disableAutoSleepHandler);
 }
 
-void RemoteControlPlugin::_resetAutoSleep()
-{
-    if (_autoSleepTimeout && _autoSleepTimeout != AutoSleepDisabled) {
-        _autoSleepTimeout = millis() + (_config.autoSleepTime * 1000UL);
-        __LDBG_printf("auto deep sleep set %u", _autoSleepTimeout);
-    }
-}
 
 void RemoteControlPlugin::_addButtonEvent(ButtonEvent &&event)
 {
     _resetAutoSleep();
-    if (_events.size() > 32) { // discard events
-        _events.pop_front();
-    }
-    _events.emplace_back(event);
+    // if (_events.size() > 32) { // discard events
+    //     _events.pop_front();
+    // }
+    _events.emplace_back(std::move(event));
     __LDBG_printf("event=%s", _events.back().toString().c_str());
     _scheduleSendEvents();
 }
@@ -427,7 +374,7 @@ void RemoteControlPlugin::_sendEvents()
 
     if (config.isWiFiUp() && _events.size()) {
         for(auto iterator = _events.begin(); iterator != _events.end(); ++iterator) {
-            if (iterator->getType() == ButtonEvent::NONE) {
+            if (iterator->getType() == EventType::NONE) {
                 continue;
             }
             auto &event = *iterator;
@@ -439,10 +386,10 @@ void RemoteControlPlugin::_sendEvents()
             uint16_t actionId;
             auto &actions = _config.actions[event.getButton()];
             switch(event.getType()) {
-                case ButtonEvent::REPEAT:
+                case EventType::REPEAT:
                     actionId = actions.repeat;
                     break;
-                case ButtonEvent::RELEASE:
+                case EventType::RELEASE:
                     if (event.getDuration() < _config.longpressTime) {
                         actionId = actions.shortpress;
                     }
@@ -451,10 +398,10 @@ void RemoteControlPlugin::_sendEvents()
                     }
                     break;
 #if IOT_REMOTE_CONTROL_COMBO_BTN
-                case ButtonEvent::COMBO_REPEAT:
+                case EventType::COMBO_REPEAT:
                     actionId = event.getCombo(actions).repeat;
                     break;
-                case ButtonEvent::COMBO_RELEASE:
+                case EventType::COMBO_RELEASE:
                     if (event.getDuration() < _config.longpressTime) {
                         actionId = event.getCombo(actions).shortpress;
                     }
@@ -488,14 +435,33 @@ void RemoteControlPlugin::_sendEvents()
             event.remove();
         }
 
-        __LDBG_printf("cleaning events");
-        _events.erase(std::remove_if(_events.begin(), _events.end(), [](const ButtonEvent &event) {
-            return event.getType() == ButtonEvent::NONE;
-        }), _events.end());
+#if DEBUG_IOT_REMOTE_CONTROL
+        uint32_t start = micros();
+#endif
+        noInterrupts();
+        ButtonEventList tmp;
+        for(auto &&item: _events) {
+            if (item.getType() != EventType::NONE) {
+                tmp.emplace_back(std::move(item));
+            }
+        }
+        _events = std::move(tmp);
+        interrupts();
+
+#if DEBUG_IOT_REMOTE_CONTROL
+        auto dur = micros() - start;
+        __LDBG_printf("cleaning events time=%uus (_events=%u bytes)", dur, sizeof(_events));
+#endif
+
+        // __LDBG_printf("cleaning events");
+        // _events.erase(std::remove_if(_events.begin(), _events.end(), [](const ButtonEvent &event) {
+        //     return event.getType() == EventType::NONE;
+        // }), _events.end());
     }
 }
 
-void RemoteControlPlugin::_scheduleSendEvents() {
+void RemoteControlPlugin::_scheduleSendEvents()
+{
     if (_events.size()) {
         LoopFunctions::callOnce([this]() {
             _sendEvents();

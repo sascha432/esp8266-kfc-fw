@@ -98,6 +98,7 @@ public:
         RESET_DETECTOR,
         CONFIG,
         SERIAL2TCP,
+        REMOTE,
     };
 
     enum class FormCallbackType {

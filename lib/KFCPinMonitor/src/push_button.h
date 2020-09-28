@@ -150,6 +150,16 @@ namespace PinMonitor {
 
     class PushButton : public Pin, public PushButtonConfig {
     public:
+        PushButton() :
+            Pin(0, nullptr, StateType::UP_DOWN, ActiveStateType::ACTIVE_HIGH),
+            PushButtonConfig(),
+            _singleClickGroup(),
+            _startTimer(0),
+            _duration(0),
+            _repeatCount(0),
+            _startTimerRunning(false)
+        {}
+
         PushButton(uint8_t pin, const void *arg, const PushButtonConfig &config, SingleClickGroupPtr singleClickGroup = SingleClickGroupPtr(), ActiveStateType activeLow = ActiveStateType::PRESSED_WHEN_HIGH) :
             Pin(pin, arg, StateType::UP_DOWN, activeLow),
             PushButtonConfig(config),

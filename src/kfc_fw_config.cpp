@@ -208,7 +208,7 @@ void KFCFWConfiguration::_onWiFiConnectCb(const WiFiEventStationModeConnected &e
     if (!_wifiConnected) {
 
 #if ENABLE_DEEP_SLEEP
-        if (resetDetector.hasWakeUpDetected() && ResetDetectorPlugin::_deepSleepWifiTime == ~0) { // first connection after wakeup
+        if (resetDetector.hasWakeUpDetected() && ResetDetectorPlugin::_deepSleepWifiTime == ~0U) { // first connection after wakeup
             ResetDetectorPlugin::_deepSleepWifiTime = millis();
             Logger_notice(F("WiFi connected to %s after %u ms"), event.ssid.c_str(), ResetDetectorPlugin::_deepSleepWifiTime);
         }
@@ -692,10 +692,10 @@ void KFCFWConfiguration::storeQuickConnect(const uint8_t *bssid, int8_t channel)
     __LDBG_printf("bssid=%s channel=%d", mac2String(bssid).c_str(), channel);
 
     Config_QuickConnect::WiFiQuickConnect_t quickConnect;
-    RTCMemoryManager::read(CONFIG_RTC_MEM_ID, &quickConnect, sizeof(quickConnect));
+    RTCMemoryManager::read(RTCMemoryManager::RTCMemoryId, &quickConnect, sizeof(quickConnect));
     quickConnect.channel = channel;
     memcpy(quickConnect.bssid, bssid, WL_MAC_ADDR_LENGTH);
-    RTCMemoryManager::write(CONFIG_RTC_MEM_ID, &quickConnect, sizeof(quickConnect));
+    RTCMemoryManager::write(RTCMemoryManager::RTCMemoryId, &quickConnect, sizeof(quickConnect));
 }
 
 void KFCFWConfiguration::storeStationConfig(uint32_t ip, uint32_t netmask, uint32_t gateway)
@@ -708,7 +708,7 @@ void KFCFWConfiguration::storeStationConfig(uint32_t ip, uint32_t netmask, uint3
     );
 
     Config_QuickConnect::WiFiQuickConnect_t quickConnect;
-    if (RTCMemoryManager::read(CONFIG_RTC_MEM_ID, &quickConnect, sizeof(quickConnect))) {
+    if (RTCMemoryManager::read(RTCMemoryManager::RTCMemoryId, &quickConnect, sizeof(quickConnect))) {
         quickConnect.local_ip = ip;
         quickConnect.subnet = netmask;
         quickConnect.gateway = gateway;
@@ -716,7 +716,7 @@ void KFCFWConfiguration::storeStationConfig(uint32_t ip, uint32_t netmask, uint3
         quickConnect.dns2 = (uint32_t)WiFi.dnsIP(1);
         auto flags = System::Flags::getConfig();
         quickConnect.use_static_ip = flags.useStaticIPDuringWakeUp || !flags.stationModeDHCPEnabled;
-        RTCMemoryManager::write(CONFIG_RTC_MEM_ID, &quickConnect, sizeof(quickConnect));
+        RTCMemoryManager::write(RTCMemoryManager::RTCMemoryId, &quickConnect, sizeof(quickConnect));
     } else {
         _debug_println(F("reading RTC memory failed"));
     }

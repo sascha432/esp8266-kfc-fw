@@ -260,6 +260,8 @@ DECLARE_CONFIG_HANDLE_PROGMEM_STR(handleNameDimmerConfig_t);
 DECLARE_CONFIG_HANDLE_PROGMEM_STR(handleNameClockConfig_t);
 DECLARE_CONFIG_HANDLE_PROGMEM_STR(handleNamePingConfig_t);
 DECLARE_CONFIG_HANDLE_PROGMEM_STR(handleNameWeatherStationConfig_t);
+DECLARE_CONFIG_HANDLE_PROGMEM_STR(handleNameRemoteConfig_t);
+
 
 #define CIF_DEBUG(...) __VA_ARGS__
 
@@ -792,48 +794,49 @@ namespace KFCConfigurationClasses {
         #define IOT_REMOTE_CONTROL_BUTTON_COUNT 4
         #endif
 
-        class RemoteControl {
+        class RemoteControlConfig {
         public:
-            typedef struct __attribute__packed__ {
-                uint16_t shortpress;
-                uint16_t longpress;
-                uint16_t repeat;
+
+            typedef struct __attribute__packed__ ComboAction_t {
+                using Type = ComboAction_t;
+                CREATE_UINT16_BITFIELD_MIN_MAX(shortpress, 16, 0, 65535, 0, 1);
+                CREATE_UINT16_BITFIELD_MIN_MAX(longpress, 16, 0, 65535, 0, 1);
+                CREATE_UINT16_BITFIELD_MIN_MAX(repeat, 16, 0, 65535, 0, 1);
             } ComboAction_t;
 
-            typedef struct __attribute__packed__ {
-                uint16_t shortpress;
-                uint16_t longpress;
-                uint16_t repeat;
+            typedef struct __attribute__packed__ Action_t {
+                using Type = Action_t;
+                CREATE_UINT16_BITFIELD_MIN_MAX(shortpress, 16, 0, 65535, 0, 1);
+                CREATE_UINT16_BITFIELD_MIN_MAX(longpress, 16, 0, 65535, 0, 1);
+                CREATE_UINT16_BITFIELD_MIN_MAX(repeat, 16, 0, 65535, 0, 1);
                 ComboAction_t combo[IOT_REMOTE_CONTROL_BUTTON_COUNT];
             } Action_t;
 
-            struct __attribute__packed__ {
-                uint8_t autoSleepTime: 8;
-                uint16_t deepSleepTime: 16;       // ESP8266 max. ~14500 seconds, 0 = indefinitely
-                uint16_t longpressTime;
-                uint16_t repeatTime;
+            typedef struct __attribute__packed__ Config_t {
+                using Type = Config_t;
+                CREATE_UINT32_BITFIELD_MIN_MAX(autoSleepTime, 8, 0, 255, 2, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(deepSleepTime, 14, 0, 16383, 0, 1);         // ESP8266 max. ~14500 seconds, 0 = indefinitely
+                CREATE_UINT32_BITFIELD_MIN_MAX(longpressTime, 16, 0, 65535, 750, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(repeatTime, 16, 0, 65535, 500, 1);
+
                 Action_t actions[IOT_REMOTE_CONTROL_BUTTON_COUNT];
-            };
 
-            RemoteControl() {
-                autoSleepTime = 2;
-                deepSleepTime = 0;
-                longpressTime = 750;
-                repeatTime = 500;
-                memset(&actions, 0, sizeof(actions));
-            }
+                Config_t() :
+                    autoSleepTime(kDefaultValueFor_autoSleepTime),
+                    deepSleepTime(kDefaultValueFor_deepSleepTime),
+                    longpressTime(kDefaultValueFor_longpressTime),
+                    repeatTime(kDefaultValueFor_repeatTime),
+                    actions{}
+                {}
 
-            void validate() {
-                if (!longpressTime) {
-                    *this = RemoteControl();
-                }
-                if (!autoSleepTime) {
-                    autoSleepTime = 2;
-                }
-            }
+            } Config_t;
 
+        };
+
+        class RemoteControl : public RemoteControlConfig, public ConfigGetterSetter<RemoteControlConfig::Config_t, _H(MainConfig().plugins.remote.cfg) CIF_DEBUG(, &handleNameRemoteConfig_t)> {
+        public:
             static void defaults();
-            static RemoteControl get();
+            RemoteControl() {}
         };
 
         // --------------------------------------------------------------------

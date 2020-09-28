@@ -202,7 +202,7 @@ namespace FormUI {
             // general add methods
             // --------------------------------------------------------------------
 
-            template<typename ObjType, typename VarType, typename MemberVarType = std::member_pointer_value_t<VarType ObjType:: *>>
+            template<typename ObjType, typename VarType, typename MemberVarType = stdex::member_pointer_value_t<VarType ObjType:: *>>
             FormValueCallback<MemberVarType> &add(const __FlashStringHelper *name, ObjType &obj, VarType ObjType:: *memberPtr, InputFieldType type = InputFieldType::TEXT) {
                 return addMemberVariable<ObjType, VarType, MemberVarType>(name, obj, memberPtr, type);
             }
@@ -223,7 +223,7 @@ namespace FormUI {
 
             // this method cannot be used for packed or unaligned structs
             // see addPointer, addReference and addMemberVariable
-            template <typename VarType, typename _Tb = std::relaxed_underlying_type_t<VarType>>
+            template <typename VarType, typename _Tb = stdex::relaxed_underlying_type_t<VarType>>
             FormValuePointer<VarType> &add(const __FlashStringHelper *name, VarType *value, InputFieldType type = InputFieldType::SELECT) {
         #if defined(__AVR__) || defined(ESP8266) || defined(ESP32)
                 static_assert(((uintptr_t)value) % sizeof(uintptr_t) == 0, "address not aligned");
@@ -376,7 +376,7 @@ namespace FormUI {
         #endif
 
         // For accessing unaligned member variables in packed structures
-            template<typename ObjType, typename VarType, typename MemberVarType = std::member_pointer_value_t<VarType ObjType::*>>
+            template<typename ObjType, typename VarType, typename MemberVarType = stdex::member_pointer_value_t<VarType ObjType::*>>
             FormValueCallback<MemberVarType> &addMemberVariable(const __FlashStringHelper *name, ObjType &obj, VarType ObjType:: *memberPtr, InputFieldType type = InputFieldType::TEXT) {
                 static_assert(std::is_trivially_copyable<MemberVarType>::value, "only for TriviallyCopyable");
                 auto objectBegin = reinterpret_cast<uint8_t *>(std::addressof(obj));

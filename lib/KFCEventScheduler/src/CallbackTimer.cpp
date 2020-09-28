@@ -21,7 +21,7 @@ CallbackTimer::CallbackTimer(Callback callback, int64_t delay, RepeatType repeat
     _etsTimer({}),
     _callback(callback),
     _timer(nullptr),
-    _delay(std::max_signed(kMinDelay, delay)),
+    _delay(std::max<int64_t>(kMinDelay, delay)),
     _repeat(repeat),
     _priority(priority),
     _remainingDelay(0),
@@ -56,7 +56,7 @@ void CallbackTimer::rearm(int64_t delay, RepeatType repeat, Callback callback)
 {
     _disarm();
     EVENT_SCHEDULER_ASSERT(delay >= kMinDelay);
-    _delay = std::max_signed(kMinDelay, delay);
+    _delay = std::max<int64_t>(kMinDelay, delay);
     if (repeat._repeat != RepeatType::kPreset) {
         _repeat._repeat = repeat._repeat;
     }

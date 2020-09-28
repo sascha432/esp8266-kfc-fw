@@ -25,7 +25,7 @@ namespace FormUI {
         {
         public:
             using EnumType = _Ta;
-            using BaseType = typename std::relaxed_underlying_type<EnumType>::type;
+            using BaseType = typename stdex::relaxed_underlying_type<EnumType>::type;
 
         public:
             RangeTemplate(const String &message = String()) :
@@ -114,7 +114,7 @@ namespace FormUI {
         {
         public:
             using EnumType = _Ta;
-            using IntType = std::relaxed_underlying_type_t<EnumType>;
+            using IntType = stdex::relaxed_underlying_type_t<EnumType>;
 
             using RangeTemplate<_Ta>::validate;
             using RangeTemplate<_Ta>::getMessage;

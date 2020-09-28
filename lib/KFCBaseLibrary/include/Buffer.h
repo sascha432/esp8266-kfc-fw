@@ -381,7 +381,7 @@ public:
      template <typename _Ta, std::enable_if_t<
             !std::is_same<uint8_t, std::remove_cv_t<_Ta>>::value &&
             !std::is_same<String, std::remove_cv_t<_Ta>>::value &&
-            !std::is_c_str<_Ta>::value
+            !stdex::is_c_str<_Ta>::value
         , int> = 0>
      void push_back(const _Ta &data) {
          __DBG_BUFFER_asserted(sizeof(_Ta), write(reinterpret_cast<const uint8_t *>(std::addressof(data)), sizeof(_Ta)));

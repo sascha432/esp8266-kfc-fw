@@ -20,7 +20,7 @@ namespace FormUI {
         public:
             using ArrayType = std::array<_Ta, N>;
             using EnumType = _Ta;
-            using IntType = std::relaxed_underlying_type_t<_Ta>;
+            using IntType = stdex::relaxed_underlying_type_t<_Ta>;
 
             Enum(ArrayType values) :
                 BaseValidator(FSPGM(FormEnumValidator_default_message)),

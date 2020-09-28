@@ -388,7 +388,7 @@ namespace FormUI {
                 static constexpr bool value = !std::is_enum<_Ta>::value && !std::is_integral<_Ta>::value && !std::is_floating_point<_Ta>::value && !std::is_same<_Ta, const __FlashStringHelper *>::value;
             };
 
-            template <typename _Ta, typename _Tb = std::relaxed_underlying_type_t<_Ta>, typename std::enable_if<std::is_enum<_Ta>::value, int>::type = 0>
+            template <typename _Ta, typename _Tb = stdex::relaxed_underlying_type_t<_Ta>, typename std::enable_if<std::is_enum<_Ta>::value, int>::type = 0>
             inline _Tb _passthrough(_Ta t) {
                 return static_cast<_Tb>(t);
             }
@@ -433,7 +433,7 @@ namespace FormUI {
                 return t;
             }
 
-            template <typename _Ta, typename _Tb = std::relaxed_underlying_type_t<_Ta>, typename std::enable_if<std::is_enum<_Ta>::value, int>::type = 0>
+            template <typename _Ta, typename _Tb = stdex::relaxed_underlying_type_t<_Ta>, typename std::enable_if<std::is_enum<_Ta>::value, int>::type = 0>
             inline _Tb _create(_Ta t) {
                 return static_cast<_Tb>(t);
             }

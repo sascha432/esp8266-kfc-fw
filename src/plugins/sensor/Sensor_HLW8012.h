@@ -55,8 +55,8 @@
 
 class Sensor_HLW8012 : public Sensor_HLW80xx {
 public:
-    using InterruptBuffer = std::fixed_circular_buffer<uint32_t, 16>;
-    using NoiseBuffer = std::fixed_circular_buffer<uint32_t, 5>;
+    using InterruptBuffer = stdex::fixed_circular_buffer<uint32_t, 16>;
+    using NoiseBuffer = stdex::fixed_circular_buffer<uint32_t, 5>;
 
     typedef enum {
         CURRENT =           1,

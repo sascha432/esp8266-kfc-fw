@@ -179,7 +179,7 @@ void Monitor::_detach(Iterator begin, Iterator end, bool clear)
 
 void Monitor::detach(Pin *handler)
 {
-    detach(std::remove_if(_handlers.begin(), _handlers.end(), std::compare_unique_ptr(handler)), _handlers.end());
+    detach(std::remove_if(_handlers.begin(), _handlers.end(), stdex::compare_unique_ptr(handler)), _handlers.end());
 }
 
 void Monitor::loop()

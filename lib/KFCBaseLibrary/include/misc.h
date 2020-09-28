@@ -651,6 +651,9 @@ inline uint32_t createIPv4Address(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
     static void set_enum_##name(Type &obj, enum_type value) { \
         obj.name = static_cast<underlying_type>(value); \
     } \
+    void _set_enum_##name(enum_type value) { \
+        name = static_cast<underlying_type>(value); \
+    } \
     static enum_type get_enum_##name(const Type &obj) { \
         return static_cast<enum_type>(obj.name); \
     } \
@@ -659,6 +662,12 @@ inline uint32_t createIPv4Address(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
     } \
     static underlying_type get_##underlying_type_name##_##name(const Type &obj) { \
         return obj.name; \
+    } \
+    underlying_type _get_##underlying_type_name##_##name() const { \
+        return name; \
+    } \
+    enum_type _get_enum_##name() const { \
+        return static_cast<enum_type>(name); \
     } \
     static underlying_type cast_##underlying_type_name##_##name(enum_type value) { \
         return static_cast<underlying_type>(value); \

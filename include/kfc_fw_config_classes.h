@@ -1337,8 +1337,8 @@ namespace KFCConfigurationClasses {
                 CREATE_INT32_BITFIELD_MIN_MAX(adc_offset, 11, -1000, 1000, 0);                              // bits 00:10 ofs:len 048:11 0-0x07ff (-1023 - 1023)
                 CREATE_INT32_BITFIELD_MIN_MAX(pwm_softstart_time, 12, 0, 1000, 300, 10);                    // bits 11:23 ofs:len 059:23
                 CREATE_INT32_BITFIELD_MIN_MAX(play_tone_channel, 3, 0, 2, 0, 0);                            // bits 24:27
-                CREATE_UINT32_BITFIELD_MIN_MAX(tone_frequency, 11, 300, 2000, 800, 50);
-                CREATE_UINT32_BITFIELD_MIN_MAX(tone_pwm_value, 10, 0, 1023, 500, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(tone_frequency, 11, 150, 2000, 800, 50);
+                CREATE_UINT32_BITFIELD_MIN_MAX(tone_pwm_value, 10, 0, 1023, 150, 1);
 
 
                 template<typename Archive>

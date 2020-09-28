@@ -197,8 +197,8 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
         cfg.addRangeValidatorFor_tone_frequency(form);
 
         form.addObjectGetterSetter(F("ptpwm"), cfg, cfg.get_bits_tone_pwm_value, cfg.set_bits_tone_pwm_value);
-        form.addFormUI(F("Tone Frequency"), FormUI::Suffix(F("Hz")));
-        cfg.addRangeValidatorFor_tone_frequency(form);
+        form.addFormUI(F("Tone Pwm Value"), FormUI::Suffix(F("raw value")));
+        cfg.addRangeValidatorFor_tone_pwm_value(form);
 
         motorGroup.end();
 

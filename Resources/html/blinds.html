@@ -35,7 +35,7 @@
                 <div data-target="#pss">Time to ramp up the motor speed from 0 to 100%. Increase if the current limit triggers during start up</div>
                 <div data-target="#pwm">A low PWM frequency is more efficient, but has the tendency to trigger the current limit of the DRV8870 early</div>
                 <div data-target="#adcrr">The ADC of the ESP8266 has some limitations. If it is read too fast without regular longer breaks, the WiFi connection becomes unstable and might disconnect. This seems to be different for each module and the presets are very conservative.</div>
-                <div data-target="#pnt">Select channel to play tone with the motor while waiting to execute the next action. The tone will be played every 2 seconds for 150ms until the next action is started.<br><span class="oi oi-shield p-2"></span>The motor will stall for 150ms. Make sure that the settings do not damage motor, controller or blinds. The maximum time is limited to 120 seconds</div>
+                <div data-target="#pnt">Select channel to play tone with the motor while waiting to execute the next action. The tone will be played every 2 seconds for 150ms until the next action is started.<br><span class="oi oi-shield p-2"></span>The motor will stall for 150ms and the current limit is not active. Start testing with low PWM values until the tone is audible and make sure that the settings do not damage motor, controller or blinds. The maximum time is limited to 120 seconds</div>
             </div>
         </form>
         <!--%%FOOT-->

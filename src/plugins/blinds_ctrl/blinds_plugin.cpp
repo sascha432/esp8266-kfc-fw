@@ -163,72 +163,7 @@ void BlindsControlPlugin::loopMethod()
 
 #include "at_mode.h"
 
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(BCME, "BCME", "<open|close|stop|noise>[,<channel>]", "Open, close a channel, stop motor or run noise test");
-
-//+BCME=open,0
-//+BCME=open,1
-//+BCME=stop
-
-// void BlindsControlPlugin::_printTestInfo() {
-
-// #if IOT_BLINDS_CTRL_RPM_PIN
-//     Serial.printf_P(PSTR("%umA %u peak %u rpm %u position %u\n"), (unsigned)(_adcIntegral * BlindsControllerConversion::kConvertADCValueToCurrentMulitplier), _adcIntegral, _peakCurrent, _getRpm(), _rpmCounter);
-// #else
-//     Serial.printf_P(PSTR("%umA %u peak %u\n"), (unsigned)(_adcIntegral * BlindsControllerConversion::kConvertADCValueToCurrentMulitplier), _adcIntegral, _peakCurrent);
-// #endif
-// }
-
-// void BlindsControlPlugin::_resetTestMode()
-// {
-//     _stop();
-//     LoopFunctions::add(loopMethod);
-//     LoopFunctions::remove(testLoopMethod);
-// }
-
-// void BlindsControlPlugin::_testLoopMethod()
-// {
-//     if (_motorTimeout.isActive()) {
-//         _updateAdc();
-
-//         if (_adcIntegral > _currentLimit) {
-//             if (_currentLimitTimer.reached()) {
-//                 _resetTestMode();
-//                 _printTestInfo();
-//                 Serial.printf_P(PSTR("+BCME: Current limit time=%dms\n"), _currentLimitTimer.getDelay());
-//                 return;
-//             }
-//             else if (!_currentLimitTimer.isActive()) {
-//                 _currentLimitTimer.restart();
-//             }
-//         }
-//         else if (_currentLimitTimer.isActive() && _adcIntegral < _currentLimit * 0.8) {   // reset current limit counter if current drops below 80%
-//             Serial.printf_P(PSTR("+BCME: Current limit <80%, reset time=%dms\n"), _currentLimitTimer.get());
-//             _currentLimitTimer.disable();
-//         }
-
-// #if IOT_BLINDS_CTRL_RPM_PIN
-//         if (_hasStalled()) {
-//             _resetTestMode();
-//             _printTestInfo();
-//             Serial.println(F("+BCME: Stalled"));
-//             return;
-//         }
-// #endif
-//         if (_motorTimeout.reached()) {
-//             _resetTestMode();
-//             _printTestInfo();
-//             Serial.println(F("+BCME: Timeout"));
-//         }
-//         else if (_printCurrentTimeout.reached(true)) {
-//             _printTestInfo();
-//             _peakCurrent = 0;
-//         }
-//     }
-//     else {
-//         _resetTestMode();
-//         Serial.println(F("+BCME: Motor inactive"));
-//     }
-// }
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(BCME, "BCME", "<open|close|stop|tone>[,<channel>][,<tone_frequency>,<tone_pwm_value>]", "Open, close a channel, stop motor or run tone test");
 
 ATModeCommandHelpArrayPtr BlindsControlPlugin::atModeCommandHelp(size_t &size) const
 {
@@ -242,8 +177,8 @@ ATModeCommandHelpArrayPtr BlindsControlPlugin::atModeCommandHelp(size_t &size) c
 bool BlindsControlPlugin::atModeHandler(AtModeArgs &args)
 {
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(BCME))) {
-        if (args.requireArgs(1, 2)) {
-            auto cmds = PSTR("open|close|stop|noise");
+        if (args.requireArgs(1, 8)) {
+            auto cmds = PSTR("open|close|stop|tone|imperial");
             int cmd = stringlist_find_P_P(cmds, args.get(0), '|');
             int channel = args.toIntMinMax(1, 0, 1, 0);
             switch(cmd) {
@@ -254,9 +189,61 @@ bool BlindsControlPlugin::atModeHandler(AtModeArgs &args)
                     args.printf_P(PSTR("pin=%u pwm=%u soft-start=%u"), _motorPin, _motorPWMValue, _motorStartTime != 0);
                     break;
                 case 3:
-                    args.printf_P(PSTR("testing noise timer for 15 seconds"));
-                    _startToneTimer(15000);
-                    break;
+                case 4: {
+                        _queue.clear();
+                        _stop();
+                        auto play_tone_channel = _config.play_tone_channel;
+                        auto tone_frequency = _config.tone_frequency;
+                        auto tone_pwm_value = _config.tone_pwm_value;
+                        auto resetConfig = [&]() {
+                                _config.play_tone_channel = play_tone_channel;
+                                _config.tone_frequency = tone_frequency;
+                                _config.tone_pwm_value = tone_pwm_value;
+                        };
+                        if (args.size() >= 2) {
+                            _config.play_tone_channel = 1 + channel;
+                        }
+                        _config.tone_frequency = args.toIntMinMax(2, _config.kMinValueFor_tone_frequency, _config.kMaxValueFor_tone_frequency, _config.tone_frequency);;
+                        _config.tone_pwm_value = args.toIntMinMax(3, _config.kMinValueFor_tone_pwm_value, _config.kTypeMaxValueFor_tone_pwm_value, _config.tone_pwm_value);;
+                        args.printf_P(PSTR("testing tone timer for 15 seconds: channel=%u frequency=%u pwm_value=%u"), _config.play_tone_channel - 1, _config.tone_frequency, _config.tone_pwm_value);
+#if HAVE_IMPERIAL_MARCH
+                        if (cmd == 4) {
+                            uint16_t speed = args.toIntMinMax<uint16_t>(4, 50, 1000, 80);
+                            int8_t zweiklang = args.toIntMinMax<int8_t>(5, -15, 15, 0);
+                            uint8_t repeat = args.toIntMinMax<uint8_t>(6, 0, 255, 1);
+                            uint8_t delaySync =  args.toIntMinMax<uint8_t>(7, 30, 180, 0);
+                            if (delaySync) {
+                                uint32_t now = ((time(nullptr) / delaySync) * delaySync) + delaySync + 5;
+
+                                PrintString str;
+                                str.strftime_P(PSTR("%H:%M:%S"), now);
+                                str.strftime_P(PSTR(" now=%H:%M:%S"), time(nullptr));
+                                args.printf_P(PSTR("Imperial march @ %s in=%u seconds)"), str.c_str(), now - time(nullptr));
+
+                                _Scheduler.add(10, true, [this, now, speed, zweiklang, repeat, resetConfig](Event::CallbackTimerPtr timer) {
+                                    if ((uint32_t)time(nullptr) <= now) {
+                                        return;
+                                    }
+                                    timer->disarm();
+                                    _playImerialMarch(speed, zweiklang, repeat);
+                                    resetConfig();
+                                }, Event::PriorityType::HIGHEST);
+                            }
+                            else {
+                                args.print(F("Imperial march"));
+                                _playImerialMarch(speed, zweiklang, repeat);
+                                resetConfig();
+                            }
+
+                        } else {
+                            _startToneTimer(15000);
+                            resetConfig();
+                        }
+#else
+                        _startToneTimer(15000);
+                        resetConfig();
+#endif
+                    } break;
                 default:
                     _stop();
                     args.printf_P(PSTR("motor stopped"));

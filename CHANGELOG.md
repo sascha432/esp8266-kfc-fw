@@ -18,13 +18,13 @@
 - Added SSDP plugin
 - Improved HTML form generator
 - Added missing html enitities encoding to forms
-- Open/close automation for the Blinds Plugin
+- Open/close automation for the Blinds Plugin, audible warning while running or shortly before
 - MQTT auto discovery rebroadcast interval
 - Zeroconf resolve button for forms
 - Javascript updates and fixes
 - Enable recovery mode after version change (AP mode enabled, default SSID, broadcast SSID, enable web server, reset passwords IF empty)
 - Disable AP mode after 15min. if default password is used (does not apply to AP mode in standby)
-- Blinds plugin improved test mode
+- Removed test mode from the blinds plugin and implemented it into kfwfc_tool
 - AT mode command DUMPM for dumping memory or flash contents
 - 64KB flash storage (R/W) dedicated for the firmware
 - Clearing EspSaveCrash EEPROM during factory reset
@@ -35,6 +35,7 @@
 - Removed filters from syslog, reduced memory usage and improved performance
 - Read ADC over web sockets with kfcfw_tool and graphical analysis
 - Major improvements for forms, they are using ~10x less memory and are ~20x faster. Most need less than 1KB and load within 10ms
+
 
 ## Version 0.0.3
 

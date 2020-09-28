@@ -5,6 +5,7 @@
 #include "WebUISocket.h"
 #include "BlindsControl.h"
 #include "blinds_plugin.h"
+#include "kfc_fw_config.h"
 #include "../src/plugins/mqtt/mqtt_client.h"
 
 #if DEBUG_IOT_BLINDS_CTRL
@@ -208,41 +209,204 @@ void BlindsControl::startToneTimer(uint32_t maxLength)
     BlindsControlPlugin::getInstance()._startToneTimer(maxLength);
 }
 
-void BlindsControl::_startToneTimer(uint32_t maxLength)
+void BlindsControl::_playTone(uint8_t pin, uint16_t pwm, uint32_t frequency)
 {
+    analogWriteFreq(frequency);
+    analogWrite(pin, pwm);
+}
+
+void BlindsControl::_setDac(uint16_t pwm)
+{
+    analogWriteRange(PWMRANGE);
+    analogWriteFreq(kPwmMaxFrequency);
+    analogWrite(_config.pins[5], pwm);
+    __LDBG_printf("dac pin=%u pwm=%u frequency=%u", _config.pins[5], pwm, kPwmMaxFrequency);
+}
+
+#if HAVE_IMPERIAL_MARCH
+
+void BlindsControl::playImerialMarch(uint16_t speed, int8_t zweiklang, uint8_t repeat)
+{
+    BlindsControlPlugin::getInstance().playImerialMarch(speed, zweiklang, repeat);
+}
+
+void BlindsControl::_playNote(uint8_t pin, uint16_t pwm, uint8_t note)
+{
+    uint8_t tmp = note + MPERIAL_MARCH_NOTE_OFFSET;
+    if (tmp < NOTE_TO_FREQUENCY_COUNT) {
+        _playTone(pin, pwm, NOTE_FP_TO_INT(pgm_read_word(note_to_frequency + tmp)));
+    }
+}
+
+
+void BlindsControl::_playImerialMarch(uint16_t speed, int8_t zweiklang, uint8_t repeat)
+{
+    _stopToneTimer();
     if (_config.play_tone_channel == 0) {
         __LDBG_printf("tone timer disabled");
         return;
     }
-    uint32_t counter = 0;
+    uint8_t channel = (_config.play_tone_channel - 1) % kChannelCount;
+    uint8_t channel2 = _config.play_tone_channel % kChannelCount;
+    uint8_t index = (channel * kChannelCount) + (_states[channel].isClosed() ? 1 : 0);
+    uint8_t index2 = (channel2 * kChannelCount) + (_states[channel2].isClosed() ? 1 : 0);
+    struct {
+        uint16_t pwmValue;
+        uint16_t counter;
+        uint16_t nextNote;
+        uint16_t speed;
+        uint8_t notePosition;
+        uint8_t pin;
+        uint8_t pin2;
+        uint8_t repeat;
+        int8_t zweiklang;
+        uint8_t offDelayCounter;
+    } settings = {
+        (uint16_t)_config.tone_pwm_value,
+        0,  // counter
+        0,  // nextNote
+        speed,
+        0,  // notePosition
+        _config.pins[index], // use channel 1, and use open/close pin that is jammed
+        _config.pins[index2], // use channel 1, and use open/close pin that is jammed
+        repeat,
+        zweiklang,
+        0   // offDelayCounter
+    };
+
+    _setDac(PWMRANGE);
+
+    __LDBG_printf("imperial march length=%u speed=%u zweiklang=%d repeat=%u pin=%u pin2=%u", sizeof(imperial_march_notes), settings.speed, settings.zweiklang, settings.repeat, settings.pin, settings.pin2);
+
+    _Timer(_toneTimer).add(settings.speed, true, [this, settings](Event::CallbackTimerPtr timer) mutable {
+
+        if (settings.offDelayCounter) {
+            if (--settings.offDelayCounter == 0 || settings.pwmValue <= settings.repeat) {
+                _stop();
+                return;
+            }
+            uint8_t note = pgm_read_byte(imperial_march_notes + IMPERIAL_MARCH_NOTES_COUNT - 1);
+            _playNote(settings.pin, settings.pwmValue, note);
+            if (settings.zweiklang) {
+                _playNote(settings.pin2, settings.pwmValue, note + settings.zweiklang);
+            }
+            settings.pwmValue -= settings.repeat;
+            return;
+        }
+
+        if (settings.notePosition >= IMPERIAL_MARCH_NOTES_COUNT) {
+            if (settings.repeat-- == 0) {
+                settings.offDelayCounter = (4000 / settings.speed) + 1; // fade last node within 4 seconds
+                settings.repeat = (settings.pwmValue / settings.offDelayCounter) + 1; // decrease pwm value steps
+                return;
+            }
+            else {
+                switch(settings.zweiklang) {
+                    case 12:
+                        settings.zweiklang = -12;
+                        break;
+                    case 7:
+                        settings.zweiklang = 12;
+                        break;
+                    case 5:
+                        settings.zweiklang = 7;
+                        break;
+                    case 0:
+                        settings.zweiklang = 5;
+                        break;
+                    case -5:
+                        settings.zweiklang = 0;
+                        break;
+                    case -7:
+                        settings.zweiklang = -5;
+                        break;
+                    case -12:
+                        settings.zweiklang = -7;
+                        break;
+                    default:
+                        settings.zweiklang = 0;
+                        break;
+                }
+                __LDBG_printf("repeat imperial=%u zweiklang=%d", settings.repeat, settings.zweiklang);
+                settings.notePosition = 0;
+                settings.counter = 0;
+                settings.nextNote = 0;
+            }
+        }
+
+        if (settings.counter++ >= settings.nextNote) {
+            uint8_t note = pgm_read_byte(imperial_march_notes + settings.notePosition);
+            uint8_t length = pgm_read_byte(imperial_march_lengths + settings.notePosition);
+
+            analogWrite(settings.pin, 0);
+            analogWrite(settings.pin2, 0);
+            delay(5);
+
+            _playNote(settings.pin, settings.pwmValue, note);
+            if (settings.zweiklang) {
+                _playNote(settings.pin2, settings.pwmValue, note + settings.zweiklang);
+            }
+
+            settings.nextNote = settings.counter + length;
+            settings.notePosition++;
+
+        }
+    });
+}
+
+#endif
+
+void BlindsControl::_startToneTimer(uint32_t maxLength)
+{
+    _stopToneTimer();
+    if (_config.play_tone_channel == 0) {
+        __LDBG_printf("tone timer disabled");
+        return;
+    }
     static constexpr uint16_t tone_interval = 2000;
     static constexpr uint16_t tone_duration = 150;
     static constexpr uint32_t max_length = 120 * 10000; // stop after 120 seconds
 
+    uint8_t channel = (_config.play_tone_channel - 1) % kChannelCount;
+    uint8_t index = (channel * kChannelCount) + (_states[channel].isClosed() ? 1 : 0);
+    struct {
+        uint32_t counter;
+        uint32_t maxLength;
+        uint16_t frequency;
+        uint16_t pwmValue;
+        uint8_t pin;
+    } settings = {
+        0,
+        maxLength == 0 ? max_length : maxLength,
+        (uint16_t)_config.tone_frequency,
+        (uint16_t)_config.tone_pwm_value,
+        _config.pins[index], // use channel 1, and use open/close pin that is jammed
+    };
 
-    uint8_t channel = (_config.play_tone_channel - 1);
-    uint8_t pin = _config.pins[(channel * kChannelCount) + _states[channel].isClosed() ? 1 : 0]; // use channel 1, and use open/close pin that is jammed
-    if (maxLength == 0) {
-        maxLength = max_length;
-    }
-    __LDBG_printf("start tone timer pin=%u channel=%u frequency=%u pwm=u interval=%u duration=%u max_duration=%.1fs", pin, channel, _config.tone_frequency, _config.tone_pwm_value, tone_interval, tone_duration, ((maxLength / tone_interval) * tone_interval) / 1000.0);
+    __LDBG_printf("start tone timer pin=%u(#%u) channel=%u state=%s frequency=%u pwm=%u interval=%u duration=%u max_duration=%.1fs",
+        settings.pin,
+        index,
+        channel,
+        _states[channel]._getFPStr(),
+        settings.frequency,
+        settings.pwmValue,
+        tone_interval,
+        tone_duration,
+        ((settings.maxLength / tone_duration) * tone_duration) / 1000.0
+    );
 
-    _Timer(_toneTimer).add(tone_duration, true, [this, counter, pin, maxLength](Event::CallbackTimerPtr timer) mutable {
-        if (timer == nullptr) {
-            __LDBG_printf("disable tone signal pin=%u counter=%u max_duration=%u", pin, counter, maxLength);
-            analogWrite(pin, 0);
-            return;
-        }
-        uint16_t loop = counter % (tone_interval / tone_duration);
+    _setDac(PWMRANGE);
+
+    _Timer(_toneTimer).add(tone_duration, true, [this, settings](Event::CallbackTimerPtr timer) mutable {
+        uint16_t loop = settings.counter % (tone_interval / tone_duration);
         if (loop == 0) {
-            analogWriteFreq(_config.tone_frequency);
-            analogWrite(pin, _config.tone_pwm_value);
+            _playTone(settings.pin, settings.pwmValue, settings.frequency);
         }
         else if (loop == 1) {
-            analogWrite(pin, 0);
+            analogWrite(settings.pin, 0);
         }
-        if (++counter > (maxLength / tone_duration)) {
-            _stopToneTimer();
+        if (++settings.counter > (settings.maxLength / tone_duration)) {
+            _stop();
             return;
         }
     });
@@ -256,12 +420,7 @@ void BlindsControl::stopToneTimer()
 void BlindsControl::_stopToneTimer()
 {
     __LDBG_printf("stopping tone timer");
-    if (_toneTimer) {
-        _toneTimer->_callback(nullptr); // disables the tone
-        _toneTimer.remove();
-        uint8_t pin = _config.pins[(1 * kChannelCount) + 1];
-        analogWrite(pin, 0);
-    }
+    _toneTimer.remove();
 }
 
 void BlindsControl::_executeAction(ChannelType channel, bool open)
@@ -350,11 +509,13 @@ bool BlindsControl::_checkMotor()
 {
     _updateAdc();
     if (_adcIntegral > _currentLimit) {
-        __LDBG_printf("current limit time=%f @ %u ms", _adcIntegral, _motorTimeout.getDelay() - _motorTimeout.getTimeLeft());
+        __LDBG_printf("current limit time=%.2f @ %u ms", _adcIntegral, _motorTimeout.getDelay() - _motorTimeout.getTimeLeft());
+        Logger_notice("Channel %u, current limit %umA (%.2f/%.2f) triggered after %ums (max. %ums)", _activeChannel, (uint32_t)(_adcIntegral * BlindsControllerConversion::kConvertADCValueToCurrentMulitplier), _adcIntegral, _currentLimit, _motorTimeout.getDelay() - _motorTimeout.getTimeLeft(), _motorTimeout.getDelay());
         return true;
     }
     if (_motorTimeout.reached()) {
         __LDBG_printf("timeout");
+        Logger_notice("Channel %u, motor stopped after %ums timeout, peak current %umA (%.2f/%.2f)", _activeChannel, _motorTimeout.getDelay(), (uint32_t)(_adcIntegralPeak * BlindsControllerConversion::kConvertADCValueToCurrentMulitplier), _adcIntegralPeak, _currentLimit);
         return true;
     }
 #if IOT_BLINDS_CTRL_RPM_PIN
@@ -549,14 +710,9 @@ void BlindsControl::_clearAdc()
 
     stopToneTimer();
 
-    static const uint32_t kMaxFrequency = 40000;
-    analogWriteRange(PWMRANGE);
-    analogWriteFreq(kMaxFrequency); // set to max. for the DAC
-    analogWrite(_config.pins[5], _config.channels[channel].dac_pwm_value);
-    __LDBG_printf("dac pin=%u pwm=%u frequency=%u", _config.pins[5], _config.channels[channel].dac_pwm_value, kMaxFrequency);
+    _setDac(_config.channels[channel].dac_pwm_value);
 
     analogWriteFreq(_config.pwm_frequency);
-
 
     uint8_t state = (channel == _config.adc_multiplexer) ? HIGH : LOW;
     digitalWrite(_config.pins[4], state);
@@ -566,6 +722,7 @@ void BlindsControl::_clearAdc()
 
     _adcLastUpdate = 0;
     _adcIntegral = 0;
+    _adcIntegralPeak = 0;
     _currentTimer.start();
 
 #if IOT_BLINDS_CTRL_RPM_PIN
@@ -589,6 +746,9 @@ void BlindsControl::_updateAdc()
     _currentTimer.start();
     float count = micros * _adcIntegralMultiplier;
     _adcIntegral = ((count * _adcIntegral) + reading) / (count + 1.0f);
+    if (_adcIntegral > _adcIntegralPeak) {
+        _adcIntegralPeak = _adcIntegral;
+    }
 }
 
 void BlindsControl::_setMotorBrake(ChannelType channel)
@@ -637,7 +797,7 @@ void BlindsControl::_stop()
 {
     _stopToneTimer();
 
-    __LDBG_printf("pwm=%u pin=%u adc=%u stopping motor", _motorPWMValue, _motorPin, (int)_adcIntegral);
+    __LDBG_printf("pwm=%u pin=%u adc=%.2f peak=%.2f stopping motor", _motorPWMValue, _motorPin, _adcIntegral, _adcIntegralPeak);
 
     _motorStartTime = 0;
     _motorPWMValue = 0;

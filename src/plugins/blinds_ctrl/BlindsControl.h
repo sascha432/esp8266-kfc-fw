@@ -62,6 +62,7 @@ public:
     };
 
     static constexpr size_t kChannelCount = IOT_BLINDS_CTRL_CHANNEL_COUNT;
+    static const uint32_t kPwmMaxFrequency = 40000;
 
 protected:
     class ChannelState {
@@ -252,11 +253,20 @@ public:
     }
 
     static void startToneTimer(uint32_t maxLength = 0);
+#if HAVE_IMPERIAL_MARCH
+    static void playImerialMarch(uint16_t speed, int8_t zweiklang, uint8_t repeat);
+#endif
     static void stopToneTimer();
 
 protected:
     void _loopMethod();
     void _startToneTimer(uint32_t maxLength = 0);
+    void _playTone(uint8_t pin, uint16_t pwm, uint32_t frequency);
+    void _setDac(uint16_t pwm);
+#if HAVE_IMPERIAL_MARCH
+    void _playImerialMarch(uint16_t speed, int8_t zweiklang, uint8_t repeat);
+    void _playNote(uint8_t pin, uint16_t pwm, uint8_t note);
+#endif
     void _stopToneTimer();
 
 protected:
@@ -347,6 +357,7 @@ protected:
     uint32_t _adcLastUpdate;
     float _adcIntegral;
     float _adcIntegralMultiplier;
+    float _adcIntegralPeak;
     MicrosTimer _currentTimer;
     Event::Timer _toneTimer;
 

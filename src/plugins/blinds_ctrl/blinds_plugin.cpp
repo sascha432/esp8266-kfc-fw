@@ -163,7 +163,7 @@ void BlindsControlPlugin::loopMethod()
 
 #include "at_mode.h"
 
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(BCME, "BCME", "<open|close|stop>[,<channel>]", "Open, close a channel or stop motor");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(BCME, "BCME", "<open|close|stop|noise>[,<channel>]", "Open, close a channel, stop motor or run noise test");
 
 //+BCME=open,0
 //+BCME=open,1
@@ -243,7 +243,7 @@ bool BlindsControlPlugin::atModeHandler(AtModeArgs &args)
 {
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(BCME))) {
         if (args.requireArgs(1, 2)) {
-            auto cmds = PSTR("open|close|stop");
+            auto cmds = PSTR("open|close|stop|noise");
             int cmd = stringlist_find_P_P(cmds, args.get(0), '|');
             int channel = args.toIntMinMax(1, 0, 1, 0);
             switch(cmd) {
@@ -252,6 +252,10 @@ bool BlindsControlPlugin::atModeHandler(AtModeArgs &args)
                     _startMotor(static_cast<ChannelType>(channel), cmd == 0);
                     args.printf_P(PSTR("motor channel=%u direction=%s start"), channel, cmd == 0 ? PSTR("open") : PSTR("close"));
                     args.printf_P(PSTR("pin=%u pwm=%u soft-start=%u"), _motorPin, _motorPWMValue, _motorStartTime != 0);
+                    break;
+                case 3:
+                    args.printf_P(PSTR("testing noise timer for 15 seconds"));
+                    _startToneTimer(15000);
                     break;
                 default:
                     _stop();

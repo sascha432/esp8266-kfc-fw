@@ -105,30 +105,36 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
         auto &autoGroup = form.addCardGroup(FSPGM(open, "open"), F("Open Automation"), false);
 
         for(size_t i = 0; i < BLINDS_CONFIG_MAX_OPERATIONS; i++) {
-            form.addPointerTriviallyCopyable(F_VAR(ot, i), &cfg.open[i].type);
+            form.addObjectGetterSetter(F_VAR(ot, i), cfg.open[i], cfg.open[0].get_int_action, cfg.open[0].set_int_action);
             form.addFormUI(FSPGM(Action, "Action"), operationTypeItems);
 
-            form.addPointerTriviallyCopyable(F_VAR(od, i), &cfg.open[i].delay);
-            form.addFormUI(i ? FSPGM(Delay) : F("Delay After Execution"), FormUI::Suffix(FSPGM(seconds)));
-            form.addValidator(FormUI::Validator::Range(0, 3600));
+            form.addObjectGetterSetter(F_VAR(od, i), cfg.open[i], cfg.open[0].get_bits_delay, cfg.open[0].set_bits_delay);
+            form.addFormUI(F("Execution Time"), FormUI::Suffix(F("time in seconds")));
+            cfg.open[0].addRangeValidatorFor_delay(form);
 
         }
 
         auto &closeGroup = autoGroup.end().addCardGroup(FSPGM(close), F("Close Automation"), false);
 
         for(size_t i = 0; i < BLINDS_CONFIG_MAX_OPERATIONS; i++) {
-            form.addPointerTriviallyCopyable(F_VAR(ct, i), &cfg.close[i].type);
+            form.addObjectGetterSetter(F_VAR(ct, i), cfg.close[i], cfg.close[0].get_int_action, cfg.close[0].set_int_action);
             form.addFormUI(FSPGM(Action), operationTypeItems);
 
-            form.addPointerTriviallyCopyable(F_VAR(cd, i), &cfg.close[i].delay);
-            form.addFormUI(i ? FSPGM(Delay) : F("Delay After Execution"), FormUI::Suffix(FSPGM(seconds)));
-            form.addValidator(FormUI::Validator::Range(0, 3600));
+            form.addObjectGetterSetter(F_VAR(cd, i), cfg.close[i], cfg.close[0].get_bits_delay, cfg.close[0].set_bits_delay);
+            form.addFormUI(F("Execution Time"), FormUI::Suffix(F("time in seconds")));
+            cfg.close[0].addRangeValidatorFor_delay(form);
         }
 
         closeGroup.end();
 
     }
     else {
+
+        FormUI::Container::List channelsItems(
+            0, F("Off"),
+            1, F("Use Channel 0"),
+            2, F("Use Channel 1")
+        );
 
         FormUI::Container::List pins(KFCConfigurationClasses::createFormPinList());
 
@@ -182,6 +188,17 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
         form.addObjectGetterSetter(F("adco"), cfg, cfg.get_bits_adc_offset, cfg.set_bits_adc_offset);
         form.addFormUI(F("ADC Offset"), FormUI::Suffix(F("raw value")));
         ConfigType::addRangeValidatorFor_adc_offset(form);
+
+        form.addObjectGetterSetter(F("pnt"), cfg, cfg.get_bits_play_tone_channel, cfg.set_bits_play_tone_channel);
+        form.addFormUI(F("Play Tone While Waiting"), channelsItems);
+
+        form.addObjectGetterSetter(F("ptf"), cfg, cfg.get_bits_tone_frequency, cfg.set_bits_tone_frequency);
+        form.addFormUI(F("Tone Frequency"), FormUI::Suffix(F("Hz")));
+        cfg.addRangeValidatorFor_tone_frequency(form);
+
+        form.addObjectGetterSetter(F("ptpwm"), cfg, cfg.get_bits_tone_pwm_value, cfg.set_bits_tone_pwm_value);
+        form.addFormUI(F("Tone Frequency"), FormUI::Suffix(F("Hz")));
+        cfg.addRangeValidatorFor_tone_frequency(form);
 
         motorGroup.end();
 

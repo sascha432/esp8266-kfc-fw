@@ -7,7 +7,7 @@
 }
 
 .form-help-label-text {
-    font-size: 75%;
+    font-size: 0.75rem;
     font-weight: 400;
 }
 
@@ -16,7 +16,8 @@
 }
 
 .form-help-label-text-zoom-in {
-    font-size: 100%;
-    font-weight: 400;
+    font-size: 1.25rem;
+    font-weight: 500;
+    cursor: zoom-out !important;
     cursor: zoom-out !important;
 }

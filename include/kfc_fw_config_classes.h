@@ -1269,7 +1269,7 @@ namespace KFCConfigurationClasses {
 
             static constexpr size_t kMaxOperations = BLINDS_CONFIG_MAX_OPERATIONS;
 
-            enum class OperationType : uint8_t {
+            enum class OperationType : uint16_t {
                 NONE = 0,
                 OPEN_CHANNEL0,                    // _FOR_CHANNEL0_AND_ALL
                 OPEN_CHANNEL0_FOR_CHANNEL1,       // _ONLY
@@ -1285,14 +1285,17 @@ namespace KFCConfigurationClasses {
             typedef struct __attribute__packed__ BlindsConfigOperation_t {
                 using Type = BlindsConfigOperation_t;
 
-                uint16_t delay;                                     // delay before execution in seconds
-                OperationType type;                                 // action
+                CREATE_UINT16_BITFIELD_MIN_MAX(delay, 10, 0, 900, 0, 1);
+                CREATE_ENUM_BITFIELD(action, OperationType);
 
-                BlindsConfigOperation_t() : delay(0), type(OperationType::NONE) {}
+                // uint16_t delay;                                     // delay before execution in seconds
+                // OperationType type;                                 // action
+
+                BlindsConfigOperation_t() : delay(kDefaultValueFor_delay), action(BlindsConfigOperation_t::cast_int_action(OperationType::NONE)) {}
 
                 template<typename Archive>
                 void serialize(Archive & ar, kfc::serialization::version version){
-                    ar & KFC_SERIALIZATION_NVP(type);
+                    ar & KFC_SERIALIZATION_NVP(action);
                     ar & KFC_SERIALIZATION_NVP(delay);
                 }
 
@@ -1332,7 +1335,10 @@ namespace KFCConfigurationClasses {
                 CREATE_UINT16_BITFIELD_MIN_MAX(adc_recoveries_per_second, 3, 1, 7, 4);                      // bits 12:14 ofs:len 044:03 0-0x07 (7)
                 CREATE_UINT16_BITFIELD_MIN_MAX(adc_multiplexer, 1, 0, 1, 0);                                // bits 15:15 ofs:len 047:01 0-0x01 (1)
                 CREATE_INT32_BITFIELD_MIN_MAX(adc_offset, 11, -1000, 1000, 0);                              // bits 00:10 ofs:len 048:11 0-0x07ff (-1023 - 1023)
-                CREATE_INT32_BITFIELD_MIN_MAX(pwm_softstart_time, 11, 0, 1000, 300, 10);                    // bits 11:22 ofs:len 059:22
+                CREATE_INT32_BITFIELD_MIN_MAX(pwm_softstart_time, 12, 0, 1000, 300, 10);                    // bits 11:23 ofs:len 059:23
+                CREATE_INT32_BITFIELD_MIN_MAX(play_tone_channel, 3, 0, 2, 0, 0);                            // bits 24:27
+                CREATE_UINT32_BITFIELD_MIN_MAX(tone_frequency, 11, 300, 2000, 800, 50);
+                CREATE_UINT32_BITFIELD_MIN_MAX(tone_pwm_value, 10, 0, 1023, 500, 1);
 
 
                 template<typename Archive>
@@ -1349,6 +1355,11 @@ namespace KFCConfigurationClasses {
                 BlindsConfig_t();
 
             } SensorConfig_t;
+
+            static constexpr size_t BlindsConfig_t_Size = sizeof(BlindsConfig_t);
+            static constexpr size_t BlindsConfig_t_open_Size = sizeof(BlindsConfig_t().open);
+            static constexpr size_t BlindsConfigChannel_t_Size = sizeof(BlindsConfigChannel_t);
+            static constexpr size_t BlindsConfigOperation_t_Size = sizeof(BlindsConfigOperation_t);
         };
 
         class Blinds : public BlindsConfig, public ConfigGetterSetter<BlindsConfig::BlindsConfig_t, _H(MainConfig().plugins.blinds.cfg) CIF_DEBUG(, &handleNameBlindsConfig_t)> {

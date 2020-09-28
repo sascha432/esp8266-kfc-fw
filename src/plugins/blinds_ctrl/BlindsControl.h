@@ -159,9 +159,9 @@ protected:
 
     class ChannelAction {
     public:
-        ChannelAction() : _state(ActionStateType::NONE), _action(ActionType::NONE), _channel(ChannelType::NONE), _delay(0), _open(false) {
+        ChannelAction() : _state(ActionStateType::NONE), _action(ActionType::NONE), _channel(ChannelType::NONE), _executeTime(0), _open(false) {
         }
-        ChannelAction(ActionType state, ChannelType channel, uint16_t delay) : _state(ActionStateType::NONE), _action(state), _channel(channel), _delay(delay * 1000U), _open(false) {
+        ChannelAction(ActionType state, ChannelType channel, uint16_t delay) : _state(ActionStateType::NONE), _action(state), _channel(channel), _executeTime(delay ? millis() + (delay * 1000U) : 0), _open(false) {
         }
 
         ChannelType getChannel() const {
@@ -181,8 +181,8 @@ protected:
         }
 
         void monitorDelay() {
-            if (_state == ActionStateType::DELAY && millis() >= _delay) {
-                __LDBG_printf("delay=%u finished", _delay);
+            if (_state == ActionStateType::DELAY && millis() >= _executeTime) {
+                __LDBG_printf("delay=%u finished", _executeTime);
                 next();
             }
         }
@@ -196,6 +196,7 @@ protected:
         }
 
         void next() {
+            BlindsControl::stopToneTimer();
             __LDBG_printf("next=%u", _state);
             switch (_state) {
                 case ActionStateType::NONE:
@@ -205,10 +206,10 @@ protected:
                     _state = ActionStateType::WAIT_FOR_MOTOR;
                     break;
                 case ActionStateType::WAIT_FOR_MOTOR:
-                    if (_delay) {
+                    if (_executeTime) {
                         _state = ActionStateType::DELAY;
-                        __LDBG_printf("delay=%u start=%lu", _delay, millis());
-                        _delay += millis();
+                        __LDBG_printf("executeTime=%u now=%lu", _executeTime, millis());
+                        BlindsControl::startToneTimer();
                         break;
                     }
                     // fallthrough
@@ -220,7 +221,7 @@ protected:
 
         void end() {
             __LDBG_printf("end=%u", _state);
-            _delay = 0;
+            _executeTime = 0;
             _state = ActionStateType::REMOVE;
         }
 
@@ -228,7 +229,7 @@ protected:
         ActionStateType _state;
         ActionType _action;
         ChannelType _channel;
-        uint32_t _delay;
+        uint32_t _executeTime;
         bool _open;
     };
 
@@ -249,8 +250,14 @@ public:
     uint16_t getCurrent() {
         return std::clamp<uint32_t>(_adcIntegral * 64.0, 0, 0xffff);
     }
+
+    static void startToneTimer(uint32_t maxLength = 0);
+    static void stopToneTimer();
+
 protected:
     void _loopMethod();
+    void _startToneTimer(uint32_t maxLength = 0);
+    void _stopToneTimer();
 
 protected:
     NameType _getStateStr(ChannelType channel) const;
@@ -341,6 +348,7 @@ protected:
     float _adcIntegral;
     float _adcIntegralMultiplier;
     MicrosTimer _currentTimer;
+    Event::Timer _toneTimer;
 
 #if IOT_BLINDS_CTRL_RPM_PIN
 protected:

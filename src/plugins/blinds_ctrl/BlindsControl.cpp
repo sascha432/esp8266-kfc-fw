@@ -203,6 +203,67 @@ void BlindsControl::setValue(const String &id, const String &value, bool hasValu
     }
 }
 
+void BlindsControl::startToneTimer(uint32_t maxLength)
+{
+    BlindsControlPlugin::getInstance()._startToneTimer(maxLength);
+}
+
+void BlindsControl::_startToneTimer(uint32_t maxLength)
+{
+    if (_config.play_tone_channel == 0) {
+        __LDBG_printf("tone timer disabled");
+        return;
+    }
+    uint32_t counter = 0;
+    static constexpr uint16_t tone_interval = 2000;
+    static constexpr uint16_t tone_duration = 150;
+    static constexpr uint32_t max_length = 120 * 10000; // stop after 120 seconds
+
+
+    uint8_t channel = (_config.play_tone_channel - 1);
+    uint8_t pin = _config.pins[(channel * kChannelCount) + _states[channel].isClosed() ? 1 : 0]; // use channel 1, and use open/close pin that is jammed
+    if (maxLength == 0) {
+        maxLength = max_length;
+    }
+    __LDBG_printf("start tone timer pin=%u channel=%u frequency=%u pwm=u interval=%u duration=%u max_duration=%.1fs", pin, channel, _config.tone_frequency, _config.tone_pwm_value, tone_interval, tone_duration, ((maxLength / tone_interval) * tone_interval) / 1000.0);
+
+    _Timer(_toneTimer).add(tone_duration, true, [this, counter, pin, maxLength](Event::CallbackTimerPtr timer) mutable {
+        if (timer == nullptr) {
+            __LDBG_printf("disable tone signal pin=%u counter=%u max_duration=%u", pin, counter, maxLength);
+            analogWrite(pin, 0);
+            return;
+        }
+        uint16_t loop = counter % (tone_interval / tone_duration);
+        if (loop == 0) {
+            analogWriteFreq(_config.tone_frequency);
+            analogWrite(pin, _config.tone_pwm_value);
+        }
+        else if (loop == 1) {
+            analogWrite(pin, 0);
+        }
+        if (++counter > (maxLength / tone_duration)) {
+            _stopToneTimer();
+            return;
+        }
+    });
+}
+
+void BlindsControl::stopToneTimer()
+{
+    BlindsControlPlugin::getInstance()._stopToneTimer();
+}
+
+void BlindsControl::_stopToneTimer()
+{
+    __LDBG_printf("stopping tone timer");
+    if (_toneTimer) {
+        _toneTimer->_callback(nullptr); // disables the tone
+        _toneTimer.remove();
+        uint8_t pin = _config.pins[(1 * kChannelCount) + 1];
+        analogWrite(pin, 0);
+    }
+}
+
 void BlindsControl::_executeAction(ChannelType channel, bool open)
 {
     __LDBG_printf("channel=%u open=%u queue=%u", channel, open, _queue.size());
@@ -210,7 +271,7 @@ void BlindsControl::_executeAction(ChannelType channel, bool open)
         // create queue from open or close automation
         auto &automation = open ? _config.open : _config.close;
         for(size_t i = 0; i < sizeof(automation) / sizeof(automation[0]); i++) {
-            auto action = automation[i].type;
+            auto action = automation[i]._get_enum_action();
             if (action != ActionType::NONE) {
                 uint16_t delay = automation[i].delay;
                 __LDBG_printf("queue action=%u channel=%u delay=%u", action, channel, delay);
@@ -486,6 +547,8 @@ void BlindsControl::_clearAdc()
 {
     auto channel = *_activeChannel;
 
+    stopToneTimer();
+
     static const uint32_t kMaxFrequency = 40000;
     analogWriteRange(PWMRANGE);
     analogWriteFreq(kMaxFrequency); // set to max. for the DAC
@@ -572,6 +635,8 @@ void BlindsControl::_setMotorSpeed(ChannelType channelType, uint16_t speed, bool
 
 void BlindsControl::_stop()
 {
+    _stopToneTimer();
+
     __LDBG_printf("pwm=%u pin=%u adc=%u stopping motor", _motorPWMValue, _motorPin, (int)_adcIntegral);
 
     _motorStartTime = 0;

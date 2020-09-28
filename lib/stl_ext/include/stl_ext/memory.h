@@ -12,7 +12,7 @@ namespace STL_STD_EXT_NAMESPACE_EX {
 
     // std::vector<std:unique_ptr<Test>> _timers;
     // Test *timer;
-    // auto iterator = std::find_if(_timers.begin(), _timers.end(), std::compare_unique_ptr(timer));
+    // auto iterator = std::find_if(_timers.begin(), _timers.end(), stdex::compare_unique_ptr(timer));
 
     template <typename _Ta>
     class compare_unique_ptr_function : public non_std::unary_function<_Ta, bool>

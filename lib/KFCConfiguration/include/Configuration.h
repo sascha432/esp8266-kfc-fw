@@ -81,7 +81,7 @@ public:
     } HeaderAligned_t;
 
     // ParameterList = std::list<ConfigurationParameter>;
-    using ParameterList = std::chunked_list<ConfigurationParameter, 6>;
+    using ParameterList = stdex::chunked_list<ConfigurationParameter, 6>;
 
     static constexpr size_t ParameterListChunkSize = ParameterList::chunk_element_count * 8 + sizeof(uint32_t); ; //ParameterList::chunk_size;
 

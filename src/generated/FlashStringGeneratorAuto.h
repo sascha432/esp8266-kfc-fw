@@ -55,7 +55,6 @@ PROGMEM_STRING_DECL(false);
 // src/web_server.cpp:167
 // src/web_server.cpp:260
 // src/web_server.cpp:405
-// src/web_server.cpp:449
 // src/web_server.cpp:528
 // src/web_server.cpp:820
 // src/plugins/clock/clock.cpp:670
@@ -152,6 +151,15 @@ PROGMEM_STRING_DECL(sec);
 // src/plugins/file_manager/file_manager.cpp:420
 // src/plugins/home_assistant/home_assistant.cpp:766
 PROGMEM_STRING_DECL(OK);
+// src/plugins/blinds_ctrl/BlindsControl.h:104
+PROGMEM_STRING_DECL(Open);
+// src/plugins/blinds_ctrl/BlindsControl.h:106
+PROGMEM_STRING_DECL(Closed);
+// src/plugins/blinds_ctrl/BlindsControl.h:108
+PROGMEM_STRING_DECL(Stopped);
+// src/plugins/blinds_ctrl/BlindsControl.h:112
+// src/plugins/ping_monitor/ping_task.cpp:127
+PROGMEM_STRING_DECL(n_a);
 // src/at_mode.cpp:1153
 // src/at_mode.cpp:1177
 // src/at_mode.cpp:1178
@@ -348,9 +356,6 @@ PROGMEM_STRING_DECL(minutes);
 PROGMEM_STRING_DECL(Zeroconf_Timeout);
 // src/kfc_fw_config_forms.cpp:194
 // src/plugins/clock/clock_form.cpp:73
-// src/plugins/dimmer_module/dimmer_module_form.cpp:103
-// src/plugins/dimmer_module/dimmer_module_form.cpp:107
-// src/plugins/dimmer_module/dimmer_module_form.cpp:119
 // src/plugins/ping_monitor/ping_monitor.cpp:314
 // src/plugins/remote/remote.cpp:110
 // src/plugins/remote/remote.cpp:112
@@ -639,16 +644,12 @@ PROGMEM_STRING_DECL(size);
 PROGMEM_STRING_DECL(mime_image_bmp);
 // src/web_server.cpp:396
 PROGMEM_STRING_DECL(Success);
-// src/web_server.cpp:468
-// src/plugins/http2serial/http2serial.cpp:211
-PROGMEM_STRING_DECL(serial_console_html);
 // src/web_server.cpp:497
 // src/web_server.cpp:502
 // src/web_server.cpp:936
 PROGMEM_STRING_DECL(rebooting_html);
 // src/web_server.cpp:564
 // src/web_server.cpp:567
-// src/web_server.cpp:571
 PROGMEM_STRING_DECL(image_type);
 // src/web_server.cpp:830
 PROGMEM_STRING_DECL(Your_session_has_expired);
@@ -770,15 +771,6 @@ PROGMEM_STRING_DECL(brightness);
 // src/plugins/atomic_sun/atomic_sun_v2.cpp:684
 // src/plugins/switch/switch.cpp:159
 PROGMEM_STRING_DECL(title);
-// src/plugins/blinds_ctrl/BlindsControl.h:104
-PROGMEM_STRING_DECL(Open);
-// src/plugins/blinds_ctrl/BlindsControl.h:106
-PROGMEM_STRING_DECL(Closed);
-// src/plugins/blinds_ctrl/BlindsControl.h:108
-PROGMEM_STRING_DECL(Stopped);
-// src/plugins/blinds_ctrl/BlindsControl.h:112
-// src/plugins/ping_monitor/ping_task.cpp:127
-PROGMEM_STRING_DECL(n_a);
 // src/plugins/blinds_ctrl/BlindsControl.cpp:62
 // src/plugins/blinds_ctrl/BlindsControl.cpp:598
 PROGMEM_STRING_DECL(channels);
@@ -825,16 +817,12 @@ PROGMEM_STRING_DECL(open);
 PROGMEM_STRING_DECL(Action);
 // src/plugins/blinds_ctrl/blinds_form.cpp:112
 // src/plugins/blinds_ctrl/blinds_form.cpp:124
-PROGMEM_STRING_DECL(Delay);
-// src/plugins/blinds_ctrl/blinds_form.cpp:112
-// src/plugins/blinds_ctrl/blinds_form.cpp:124
 // src/plugins/clock/clock_form.cpp:111
 // src/plugins/clock/clock_form.cpp:115
 // src/plugins/dimmer_module/dimmer_module_form.cpp:42
 // src/plugins/dimmer_module/dimmer_module_form.cpp:46
 // src/plugins/dimmer_module/dimmer_module_form.cpp:53
 // src/plugins/dimmer_module/dimmer_module_form.cpp:69
-// src/plugins/dimmer_module/dimmer_module_form.cpp:111
 // src/plugins/mqtt/mqtt_form.cpp:80
 // src/plugins/remote/remote.cpp:105
 // src/plugins/sensor/Sensor_SystemMetrics.cpp:57
@@ -875,10 +863,6 @@ PROGMEM_STRING_DECL(Protection);
 // src/plugins/dimmer_module/dimmer_module_form.cpp:65
 // src/plugins/dimmer_module/dimmer_module_form.cpp:182
 // src/plugins/dimmer_module/dimmer_module_form.cpp:188
-// src/plugins/sensor/Sensor_DimmerMetrics.cpp:38
-// src/plugins/sensor/Sensor_DimmerMetrics.cpp:43
-// src/plugins/sensor/Sensor_DimmerMetrics.cpp:94
-// src/plugins/sensor/Sensor_DimmerMetrics.cpp:95
 PROGMEM_STRING_DECL(_degreeC);
 // src/plugins/dimmer_module/dimmer_module_form.cpp:163
 // src/plugins/dimmer_module/dimmer_module_form.cpp:167
@@ -934,6 +918,8 @@ PROGMEM_STRING_DECL(status__u);
 PROGMEM_STRING_DECL(id);
 // src/plugins/http2serial/http2serial.cpp:211
 PROGMEM_STRING_DECL(Serial_Console);
+// src/plugins/http2serial/http2serial.cpp:211
+PROGMEM_STRING_DECL(serial_console_html);
 // src/plugins/http2serial/http2serial.cpp:251
 PROGMEM_STRING_DECL(_serial_console);
 // src/plugins/mdns/mdns_plugin.cpp:94
@@ -1036,58 +1022,6 @@ PROGMEM_STRING_DECL(ping_monitor_service_status);
 PROGMEM_STRING_DECL(started);
 // src/plugins/ping_monitor/ping_task.cpp:306
 PROGMEM_STRING_DECL(stopped);
-// src/plugins/sensor/Sensor_DimmerMetrics.cpp:46
-// src/plugins/sensor/Sensor_DimmerMetrics.cpp:135
-PROGMEM_STRING_DECL(vcc);
-// src/plugins/sensor/Sensor_DimmerMetrics.cpp:51
-// src/plugins/sensor/Sensor_DimmerMetrics.cpp:137
-PROGMEM_STRING_DECL(frequency);
-// src/plugins/sensor/Sensor_DimmerMetrics.cpp:53
-// src/plugins/sensor/Sensor_DimmerMetrics.cpp:93
-PROGMEM_STRING_DECL(Hz);
-// src/plugins/sensor/Sensor_HLW80xx.cpp:60
-// src/plugins/sensor/Sensor_HLW80xx.cpp:63
-// src/plugins/sensor/Sensor_HLW80xx.cpp:111
-// src/plugins/sensor/Sensor_HLW80xx.cpp:152
-// src/plugins/sensor/Sensor_HLW80xx.cpp:251
-PROGMEM_STRING_DECL(power);
-// src/plugins/sensor/Sensor_HLW80xx.cpp:66
-// src/plugins/sensor/Sensor_HLW80xx.cpp:69
-// src/plugins/sensor/Sensor_HLW80xx.cpp:116
-// src/plugins/sensor/Sensor_HLW80xx.cpp:153
-// src/plugins/sensor/Sensor_HLW80xx.cpp:252
-PROGMEM_STRING_DECL(energy_total);
-// src/plugins/sensor/Sensor_HLW80xx.cpp:68
-// src/plugins/sensor/Sensor_HLW80xx.cpp:74
-// src/plugins/sensor/Sensor_HLW80xx.cpp:153
-// src/plugins/sensor/Sensor_HLW80xx.cpp:154
-// src/plugins/sensor/Sensor_HLW80xx.cpp:201
-// src/plugins/sensor/Sensor_HLW80xx.cpp:211
-PROGMEM_STRING_DECL(kWh);
-// src/plugins/sensor/Sensor_HLW80xx.cpp:72
-// src/plugins/sensor/Sensor_HLW80xx.cpp:75
-// src/plugins/sensor/Sensor_HLW80xx.cpp:122
-// src/plugins/sensor/Sensor_HLW80xx.cpp:154
-// src/plugins/sensor/Sensor_HLW80xx.cpp:253
-PROGMEM_STRING_DECL(energy);
-// src/plugins/sensor/Sensor_HLW80xx.cpp:78
-// src/plugins/sensor/Sensor_HLW80xx.cpp:81
-// src/plugins/sensor/Sensor_HLW80xx.cpp:128
-// src/plugins/sensor/Sensor_HLW80xx.cpp:155
-// src/plugins/sensor/Sensor_HLW80xx.cpp:254
-PROGMEM_STRING_DECL(voltage);
-// src/plugins/sensor/Sensor_HLW80xx.cpp:84
-// src/plugins/sensor/Sensor_HLW80xx.cpp:87
-// src/plugins/sensor/Sensor_HLW80xx.cpp:133
-// src/plugins/sensor/Sensor_HLW80xx.cpp:156
-// src/plugins/sensor/Sensor_HLW80xx.cpp:255
-PROGMEM_STRING_DECL(current);
-// src/plugins/sensor/Sensor_HLW80xx.cpp:90
-// src/plugins/sensor/Sensor_HLW80xx.cpp:93
-// src/plugins/sensor/Sensor_HLW80xx.cpp:138
-// src/plugins/sensor/Sensor_HLW80xx.cpp:157
-// src/plugins/sensor/Sensor_HLW80xx.cpp:257
-PROGMEM_STRING_DECL(pf);
 // src/plugins/sensor/Sensor_SystemMetrics.cpp:55
 // src/plugins/sensor/Sensor_SystemMetrics.cpp:58
 // src/plugins/sensor/Sensor_SystemMetrics.cpp:155

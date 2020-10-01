@@ -60,12 +60,14 @@
             "#if !HTTP2SERIAL_SUPPORT": [
                 "./Resources/html/serial_console.html",
                 "./lib/KFCWebBuilder/Resources/js/selectize.min.js",
-                "./Resources/js/http2serial.js"
+                "./Resources/js/http2serial.js",
+                "./Resources/css/http2serial.css"
             ],
             "#if !PING_MONITOR_SUPPORT": [
                 "./Resources/html/ping.html",
                 "./Resources/html/ping_monitor.html",
-                "./Resources/js/ping_console.js"
+                "./Resources/js/ping_console.js",
+                "./Resources/css/ping_console.css"
             ],
             "#if !IOT_CLOCK": [
                 "./Resources/html/clock.html",
@@ -96,7 +98,9 @@
                 "./Resources/js/forms/serial2tcp.js"
             ],
             "#if !WEBUI_ALERTS_ENABLED": [
-                "./Resources/js/alerts.js"
+                "./Resources/js/web_alerts.js",
+                "./Resources/js/alerts.js",
+                "./Resources/css/alert-container.css"
             ]
         },
         "groups": {
@@ -110,6 +114,7 @@
                         "./lib/KFCWebBuilder/Resources/js/rangeslider.min.js",
                         "./Resources/js/jQuery.base64.js",
                         "./Resources/js/common.js",
+                        "./Resources/js/web_alerts.js",
                         "./Resources/js/forms.js",
                         "./Resources/js/forms/*.js",
                         "./Resources/js/sync_time.js",
@@ -157,7 +162,11 @@
                         "./lib/KFCWebBuilder/Resources/css/open-iconic-bootstrap.css",
                         "./lib/KFCWebBuilder/Resources/css/rangeslider.css",
                         "./Resources/css/styles.css",
+                        "./Resources/css/http2serial.css",
+                        "./Resources/css/ping_console.css",
+                        "./Resources/css/nav-alerts.css",
                         "./Resources/css/webuicomponent.css",
+                        "./Resources/css/alert-container.css",
                         "./Resources/css/rangeslider.css",
                         "./Resources/css/form-help-block.css",
                         "./Resources/css/input-text-range.css",

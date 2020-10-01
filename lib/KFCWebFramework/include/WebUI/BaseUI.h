@@ -159,6 +159,7 @@ namespace FormUI {
             }
 
             void _addItem(const Container::CheckboxButtonSuffix &suffix);
+            void _addItem(const Container::SelectSuffix &suffix);
 
             inline void _addItem(const Container::IntMinMax &minMax) {
                 _storage.push_back(minMax.create());

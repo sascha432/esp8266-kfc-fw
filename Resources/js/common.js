@@ -167,20 +167,3 @@ $.getRandomBytes = function(n) {
     }
     return a;
 };
-
-$.WebUIAlerts = {
-    icon: false,
-    alerts: []
-};
-$(function() {
-    var tokenButton = $('#generate-bearer-token');
-    if (tokenButton.length) {
-        tokenButton.on('click', function() {
-            var len = parseInt($(this).data('len'));
-            if (len == 0) {
-                len = 32;
-            }
-            $($(this).data('for')).val($.base64Encode(String.fromCharCode.apply(String, $.getRandomBytes(len))));
-        })
-    }
-});

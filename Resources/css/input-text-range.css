@@ -77,22 +77,22 @@
     border-color: #dc3545;
 }
 
-@media only screen and (max-width: 640px) {
+@media only screen and (max-width: 576px) {
     .form-control.input-text-range > input:first-child {
         min-width: 135px;
     }
 }
-@media only screen and (max-width: 920px) and (min-width: 640px) {
+@media only screen and (max-width: 992px) and (min-width: 576px) {
     .form-control.input-text-range > input:first-child {
         min-width: 175px;
     }
 }
-@media only screen and (max-width: 1290px) and (min-width: 920px) {
+@media only screen and (max-width: 1200px) and (min-width: 992px) {
     .form-control.input-text-range > input:first-child {
         min-width: 250px;
     }
 }
-@media only screen and (min-width: 1290px) {
+@media only screen and (min-width: 1200px) {
     .form-control.input-text-range > input:first-child {
         min-width: 300px;
     }

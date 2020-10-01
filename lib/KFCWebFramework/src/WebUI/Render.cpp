@@ -171,6 +171,18 @@ void WebUI::BaseUI::_printSuffixTo(PrintInterface &output) const
             case Storage::Value::SuffixHtml::type:
                 Storage::SingleValueArgs<Storage::Value::SuffixHtml>(iterator, tb).print(output);
                 break;
+            case Storage::Value::SuffixOption::type:
+                while (--tb) {
+                    auto option = Storage::Value::SuffixOption::pop_front<Storage::Value::SuffixOption>(iterator);
+                    output.printf_P(PrintArgs::FormatType::HTML_OPTION_STR_KEY, option.getKey(), option.getValue());
+                }
+                break;
+            case Storage::Value::SuffixOptionNumKey::type:
+                while (--tb) {
+                    auto option = Storage::Value::SuffixOptionNumKey::pop_front<Storage::Value::SuffixOptionNumKey>(iterator);
+                    output.printf_P(PrintArgs::FormatType::HTML_OPTION_NUM_KEY, option.getKey(), option.getValue());
+                }
+                break;
             default:
                 __LDBG_assert_printf(false, "invalid type %u: %s", tb.type(), tb.name());
                 break;

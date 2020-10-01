@@ -43,7 +43,7 @@ void Storage::Vector::dump(size_t offset, Print &output) const
 // FormUI::CheckboxButtonSuffix
 // -----------------------------------------------------------------------
 
-void Container::CheckboxButtonSuffix::initButton(FormField &hiddenField, const __FlashStringHelper *onIcons, const __FlashStringHelper *offIcons)
+void Container::CheckboxButtonSuffix::initButton(const FormField &hiddenField, const __FlashStringHelper *onIcons, const __FlashStringHelper *offIcons)
 {
     if (onIcons && offIcons) {
         _items.emplace_back(F("<button type=\"button\" class=\"button-checkbox btn btn-default\" data-on-icon=\"%s\" data-off-icon=\"%s\" id=\"_%s\">%s</button>"));
@@ -55,4 +55,14 @@ void Container::CheckboxButtonSuffix::initButton(FormField &hiddenField, const _
         _items.emplace_back(F("<button type=\"button\" class=\"button-checkbox btn btn-default\" id=\"_%s\">%s</button>"));
         _items.emplace_back(FPSTR(hiddenField.getName()));
     }
+}
+
+// -----------------------------------------------------------------------
+// FormUI::SelectSuffix
+// -----------------------------------------------------------------------
+
+void Container::SelectSuffix::initSelect(const FormField &hiddenField)
+{
+    _items.emplace_back(F("<select data-target=\"#%s\" data-action=\"transfer-hidden-field\" class=\"input-group-text form-select\">"));
+    _items.emplace_back(FPSTR(hiddenField.getName()));
 }

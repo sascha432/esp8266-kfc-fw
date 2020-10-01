@@ -156,6 +156,8 @@ namespace FormUI {
             ATTRIBUTE_MIN_MAX,
             SUFFIX_TEXT,
             SUFFIX_HTML,
+            SUFFIX_OPTION,
+            SUFFIX_OPTION_NUM_KEY,
             OPTION,
             OPTION_NUM_KEY,
             MAX,

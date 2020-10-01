@@ -185,7 +185,7 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
 
             form.addObjectGetterSetter(F("safem_to"), cfg, cfg.get_bits_safe_mode_reboot_timeout_minutes, cfg.set_bits_safe_mode_reboot_timeout_minutes);
             form.addFormUI(F("Reboot Delay Running In Safe Mode"), FormUI::Suffix(FSPGM(minutes)));
-            cfg.addRangeValidatorFor_safe_mode_reboot_timeout_minutes(form);
+            cfg.addRangeValidatorFor_safe_mode_reboot_timeout_minutes(form, true);
 
             form.addObjectGetterSetter(F("mdns_en"), flags, System::Flags::ConfigStructType::get_bit_is_mdns_enabled, System::Flags::ConfigStructType::set_bit_is_mdns_enabled);
             form.addFormUI(F("mDNS Announcements"), FormUI::BoolItems(FSPGM(Enabled), F("Disabled (Zeroconf is still available)")));

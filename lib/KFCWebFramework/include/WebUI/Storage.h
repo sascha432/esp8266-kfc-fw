@@ -136,6 +136,25 @@ namespace FormUI {
                 using Single::pop_front;
             };
 
+            class SuffixOption : public KeyValue<Type::SUFFIX_OPTION> {
+            public:
+                using KeyValue::KeyValue;
+                using KeyValue::getKey;
+                using KeyValue::getValue;
+                using KeyValue::push_back;
+                using KeyValue::pop_front;
+            };
+
+            class SuffixOptionNumKey : public KeyValue<Type::SUFFIX_OPTION_NUM_KEY, int32_t> {
+            public:
+                using KeyValue::getKey;
+                using KeyValue::getValue;
+                using KeyValue::push_back;
+                using KeyValue::pop_front;
+
+                SuffixOptionNumKey(int32_t key, const char *value) : KeyValue<Type::SUFFIX_OPTION_NUM_KEY, int32_t>(key, value) {}
+            };
+
             class Attribute : public KeyValue<Type::ATTRIBUTE> {
             public:
                 using KeyValue::KeyValue;
@@ -280,6 +299,10 @@ namespace FormUI {
                     return sizeof(Value::SuffixText);
                 case Type::SUFFIX_HTML:
                     return sizeof(Value::SuffixHtml);
+                case Type::SUFFIX_OPTION:
+                    return sizeof(Value::SuffixOption);
+                case Type::SUFFIX_OPTION_NUM_KEY:
+                    return sizeof(Value::SuffixOptionNumKey);
                 case Type::OPTION:
                     return sizeof(Value::Option);
                 case Type::OPTION_NUM_KEY:
@@ -307,6 +330,10 @@ namespace FormUI {
                     return PSTR("SuffixText");
                 case Type::SUFFIX_HTML:
                     return PSTR("SuffixHtml");
+                case Type::SUFFIX_OPTION:
+                    return PSTR("SuffixOption");
+                case Type::SUFFIX_OPTION_NUM_KEY:
+                    return PSTR("SuffixOptionNumKey");
                 case Type::OPTION:
                     return PSTR("Option");
                 case Type::OPTION_NUM_KEY:

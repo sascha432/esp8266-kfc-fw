@@ -1,0 +1,42 @@
+/**
+ * Author: sascha_lammers@gmx.de
+ */
+
+#alert-container .reload-button {
+    margin: 0 0.5rem 0 -0.25rem;
+}
+
+#alert-container > div.alert:first-child {
+    border-top-left-radius: .25rem;
+    border-top-right-radius: .25rem;
+}
+
+#alert-container > div.alert:last-child {
+    border-bottom-left-radius: .25rem;
+    border-bottom-right-radius: .25rem;
+}
+
+#alert-container > div.alert {
+    margin:0;
+    border-radius:0;
+}
+
+#hide-alert-container {
+    border-radius: .5rem 0.5rem 0 0;
+    border-width: 1px !important;
+    border-bottom: 0 !important;
+    margin: -2.25rem 0 0 0;
+    padding: 0.375rem 1rem 0.375rem 1rem;
+    width: 20%;
+    min-width: 150px;
+    text-align: center;
+    z-index: 1;
+    height: 2.25rem;
+    font-weight: 500;
+    display: none;
+    color: white !important;
+}
+/*
+#hide-alert-container:hover {
+    color: #eee !important;
+} */

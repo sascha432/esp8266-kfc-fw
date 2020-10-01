@@ -267,7 +267,7 @@ void setup()
     config.read();
     if (safe_mode) {
 
-        WebUIAlerts_danger(F("Running in Safe Mode"), AlertMessage::ExpiresType::REBOOT);
+        WebAlerts::Alert::danger(F("Running in Safe Mode"), WebAlerts::ExpiresType::REBOOT);
         serialHandler.replaceFirst(&KFC_SAFE_MODE_SERIAL_PORT);
 
         #if AT_MODE_SUPPORTED
@@ -314,7 +314,7 @@ void setup()
         #endif
 
         if (resetDetector.hasCrashDetected()) {
-            WebUIAlerts_error(PrintString(F("System crash detected.<br>%s"), resetDetector.getResetInfo().c_str()));
+            WebAlerts::Alert::error(PrintString(F("System crash detected.<br>%s"), resetDetector.getResetInfo().c_str()));
         }
 
 #if DEBUG && HAVE_KFC_BOOT_CHECK_FLASHSIZE

@@ -90,13 +90,11 @@ void Dimmer_Base::_readVersion()
     }
     if (read) {
         if (_version.getMajor() != 2) {
-            PrintString message(F("Dimmer Firmware Version %u.%u.%u not supported"), DIMMER_VERSION_SPLIT(_version));
-            WebUIAlerts_error(message);
+            WebAlerts::Alert::error(PrintString(F("Dimmer Firmware Version %u.%u.%u not supported"), DIMMER_VERSION_SPLIT(_version)));
         }
     }
     else {
-        PrintString message(F("Failed to read dimmer firmware version"));
-        WebUIAlerts_error(message);
+        WebAlerts::Alert::error(F("Failed to read dimmer firmware version"));
     }
 }
 
@@ -147,7 +145,7 @@ void Dimmer_Base::_onReceive(size_t length)
     if (type == '+') {
         char buf[kSendDiscardMaxLength];
         auto len = _wire.readBytes(buf, sizeof(buf) - 1);
-        __LDBG_printf("len=%u cmd=%-*.*s", len, len, len, buf);
+        // __LDBG_printf("len=%u cmd=%-*.*s", len, len, len, buf);
         if (len) {
             buf[len] = 0;
             if (strncmp_P(buf, PSTR("REM=sig="), 8) == 0) {
@@ -168,8 +166,7 @@ void Dimmer_Base::_onReceive(size_t length)
     else if (type == DIMMER_TEMPERATURE_ALERT && length == 3) {
         uint8_t temperature = _wire.read();
         uint8_t max_temperature = _wire.read();
-        PrintString message(F("Dimmer temperature alarm triggered: %u°C > %u°C"), temperature, max_temperature);
-        WebUIAlerts_error(message);
+        WebAlerts::Alert::error(PrintString(F("Dimmer temperature alarm triggered: %u°C > %u°C"), temperature, max_temperature));
     }
 }
 
@@ -261,7 +258,7 @@ void Dimmer_Base::_readConfig(ConfigType &config)
 
     if (!config.config_valid) {
         __LDBG_print("read failed");
-        WebUIAlerts_error(F("Reading firmware configuration failed"), AlertMessage::ExpiresType::REBOOT);
+        WebAlerts::Alert::error(F("Reading firmware configuration failed"), WebAlerts::ExpiresType::REBOOT);
     }
 }
 
@@ -311,7 +308,7 @@ void Dimmer_Base::_writeConfig(ConfigType &config)
 
     if (!config.config_valid) {
         __LDBG_print("write failed");
-        WebUIAlerts_error(F("Writing firmware configuration failed"), AlertMessage::ExpiresType::REBOOT);
+        WebAlerts::Alert::error(F("Writing firmware configuration failed"), WebAlerts::ExpiresType::REBOOT);
     }
 }
 

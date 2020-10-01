@@ -248,7 +248,7 @@ void ClockPlugin::setup(SetupModeType mode)
                     // over temp. protection, reduce brightness to 20% and flash red
                     if (_tempProtection < ProtectionType::MAX) { // send warning once
                         message.printf_P(message1_P, temp, _config.protection.max_temperature);
-                        WebUIAlerts_error(message);
+                        WebAlerts::Alert::error(message);
                         _isSyncing = false;
                         _displaySensorValue = 0;
                         _startTempProtectionAnimation();
@@ -272,7 +272,7 @@ void ClockPlugin::setup(SetupModeType mode)
                         msg = message2b_P;
                     }
                     message.printf_P(msg, 50, temp, _config.protection.temperature_50);
-                    WebUIAlerts_warning(message);
+                    WebAlerts::Alert::warning(message);
                 }
                 else if (temp > _config.protection.temperature_75 && _tempProtection < ProtectionType::B75) {
                     // temp. too high, reduce to 75% brightness
@@ -287,7 +287,7 @@ void ClockPlugin::setup(SetupModeType mode)
                         msg = message2b_P;
                     }
                     message.printf_P(msg, 75, temp, _config.protection.temperature_75);
-                    WebUIAlerts_warning(message);
+                    WebAlerts::Alert::warning(message);
                 }
                 // restore if temperature falls 10°C below temperature_75 (or any other if lower)
                 // no recovery if the max temperature had been exceeded

@@ -2,24 +2,30 @@
  * Author: sascha_lammers@gmx.de
  */
 
- .hidden {
+.hidden {
 	display: none;
 }
+
 .hidden-override {
 	display: none !important;
 }
+
 .custom-pin-row label {
 	display: none;
 }
+
 .custom-pin-row:first-child label {
 	display: block;
 }
+
 .extra-top-space {
     margin-top: 5px;
 }
+
 .footer {
     margin-top: 13px;
 }
+
 .breadcrumb-brand {
     padding-right: 10px;
 }
@@ -27,57 +33,32 @@
 .status-table .row:nth-of-type(odd) div {
     background-color: rgba(0,0,0,.05);
 }
+
 .status-table div.col, .status-table div.col-lg-auto {
     padding: .75rem;
     vertical-align: top;
     border-top: 1px solid #dee2e6;
 }
 
-.ping-console textarea {
-    width: 100%;
-    height: 100%;
-    resize: none;
-  }
-.ping-console {
-    height: calc(100% - 98px);
-    min-height: 350px;
-}
-
-.serial-console textarea {
-    width: 100%;
-    height: 100%;
-    min-height: 100%;
-    resize: none;
-    font-family: monospace;
-}
-.serial-console {
-    height: calc(100% - 80px);
-    min-height: calc(100% - 80px);
-}
-.serial-console-inner {
-    height: 100%;
-    min-height: 100%;
-}
 .has-network-name {
     cursor: pointer;
 }
+
 #ap_mode,
 #ap_mode_dhcpd,
 #station_mode,
 #static_address {
     display: none;
 }
-.reload-button {
-    position: relative;
-    top: -3px;
-    left: -15px;
-}
+
 .rebooting-spinner {
     padding-top: 100px;
 }
+
 .oi-disabled {
     color: #808080;
 }
+
 .breadcrumb .oi-disabled {
     color: #6c757d !important;
 }
@@ -86,19 +67,17 @@
     color: #212529;
     background-color: #dddddd;
     border-color: #f8f9fa;
-  }
+}
 
-  .btn-default:hover {
+.btn-default:hover {
     color: #212529;
     background-color: #aaaaaa;
     border-color: #dae0e5;
-  }
+}
 
-  .btn-default:focus, .btn-default.focus {
+.btn-default:focus, .btn-default.focus {
     box-shadow: 0 0 0 0.2rem rgba(221, 221, 221, 0.5);
-  }
-
-
+}
 
 #firmware_upload_fullscreen .overlay {
     position: absolute;
@@ -141,67 +120,39 @@
     opacity: 0;
 }
 
-@media only screen and (max-width: 640px) {
+@media only screen and (max-width: 576px) {
     #firmware_upload_fullscreen .text {
         font-size: 22px;
     }
 }
 
-@media only screen and (max-width: 920px) and (min-width: 640px) {
+@media only screen and (max-width: 992px) and (min-width: 576px) {
     #firmware_upload_fullscreen .text {
         font-size: 44px;
     }
 }
 
-@media only screen and (max-width: 1290px) and (min-width: 920px) {
+@media only screen and (max-width: 1200px) and (min-width: 992px) {
     #firmware_upload_fullscreen .text {
         font-size: 66px;
     }
 }
 
-@media only screen and (min-width: 1290px) {
+@media only screen and (min-width: 1200px) {
     #firmware_upload_fullscreen .text {
         font-size: 88px;
     }
-}
-
-.navbar-expand-lg .alerts-icon-sm {
-    font-size: 1.25rem;
-}
-
-@media (min-width: 992px) {
-    .navbar-expand-lg .alerts-icon-sm {
-        display: none;
-    }
-    .navbar-expand-lg .alerts-icon-lg {
-        display: inline;
-    }
-}
-
-.alarm-week-day-button {
-    width: 56px;
-    height: 56px;
-    max-width: 56px;
-    max-height: 56px;
-    border-radius: 50% !important;
-}
-
-.alarm-enable-slider {
-    max-width: 120px;
-}
-
-.alarm-spinner {
-    padding-top: 100px;
 }
 
 .light-sensor-value {
     font-size: 1rem;
 }
 
-
 .input-group-append .btn-default {
 	border-color: #6c757d;
 }
+
 .input-group-append .btn-primary {
 	border-color: #6c757d;
 }
+

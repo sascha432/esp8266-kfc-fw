@@ -623,7 +623,7 @@ void KFCFWConfiguration::restoreFactorySettings()
 #if CUSTOM_CONFIG_PRESET
     customSettings();
 #endif
-    WebUIAlerts_notice(F("Factory settings restored"));
+    WebAlerts::Alert::warning(F("Factory settings restored"));
 }
 
 #if CUSTOM_CONFIG_PRESET

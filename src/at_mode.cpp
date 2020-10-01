@@ -1337,20 +1337,20 @@ void at_mode_serial_handle_event(String &commandString)
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(ALERT))) {
                 if (args.size() > 0) {
-                    WebUIAlerts_add(args.toString(0), static_cast<AlertMessage::Type>(args.toInt(1, 0)));
-                    args.print(F("Alert added"));
+                    auto id = WebAlerts::Alert::add(args.toString(0), static_cast<WebAlerts::Type>(args.toInt(1, 0)));
+                    args.printf_P(PSTR("Alert added id %u"), id);
                 }
-                #if WEBUI_ALERTS_ENABLED
-                args.print(F("--- Alerts ---"));
-                for(auto &alert: config.getAlerts()) {
-                    String str;
-                    KFCFWConfiguration::AlertMessage::toString(str, alert);
-                    String_rtrim_P(str, PSTR("\r\n"));
-                    args.print(str.c_str());
+                if (WebAlerts::Alert::hasOption(WebAlerts::OptionsType::GET_ALERTS)) {
+                    args.print(F("--- Alerts ---"));
+                    for(auto &alert: WebAlerts::Alert::getAlerts()) {
+                        String str;
+                        WebAlerts::Message::toString(str, alert);
+                        String_rtrim_P(str, PSTR("\r\n"));
+                        args.print(str.c_str());
+                    }
                 }
-                #endif
             }
-    #if PIN_MONITOR
+#if PIN_MONITOR
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(PINM))) {
                 if (args.isTrue(0) || !pinMonitor.isDebugRunning()) {
                     args.print(F("starting debug mode"));
@@ -1361,7 +1361,7 @@ void at_mode_serial_handle_event(String &commandString)
                     pinMonitor.endDebug();
                 }
             }
-    #endif
+#endif
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RSSI)) || args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(HEAP)) || args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(GPIO))) {
                 if (args.requireArgs(0, 1)) {
                     auto interval = args.toMillis(0, 500, ~0, 0, String('s'));

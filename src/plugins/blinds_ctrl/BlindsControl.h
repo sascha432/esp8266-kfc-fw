@@ -28,6 +28,7 @@ class BlindsControl : public MQTTComponent {
 public:
     using NameType = const __FlashStringHelper *;
     using ActionType = Plugins::Blinds::OperationType;
+    using PlayToneType = Plugins::Blinds::PlayToneType;
     using Actions = Plugins::Blinds::BlindsConfigOperation_t;
 
     enum class TopicType : uint8_t {
@@ -57,6 +58,7 @@ public:
         DELAY,
         START_MOTOR,
         WAIT_FOR_MOTOR,
+        START_DELAY,
         REMOVE,
         MAX
     };
@@ -160,9 +162,17 @@ protected:
 
     class ChannelAction {
     public:
-        ChannelAction() : _state(ActionStateType::NONE), _action(ActionType::NONE), _channel(ChannelType::NONE), _executeTime(0), _open(false) {
+        ChannelAction() : _delay(0), _state(ActionStateType::NONE), _action(ActionType::NONE), _channel(ChannelType::NONE), _open(false), _relativeDelay(false) {
         }
-        ChannelAction(ActionType state, ChannelType channel, uint16_t delay) : _state(ActionStateType::NONE), _action(state), _channel(channel), _executeTime(delay ? millis() + (delay * 1000U) : 0), _open(false) {
+        ChannelAction(ActionType state, ChannelType channel, uint16_t delay, bool relativeDelay, PlayToneType playTone) :
+            _state(ActionStateType::NONE),
+            _action(state),
+            _channel(channel),
+            _delay(delay ? ((relativeDelay ? 0 : millis()) + (delay * 1000U)) : 0),
+            _open(false),
+            _relativeDelay(relativeDelay),
+            _playTone(playTone)
+        {
         }
 
         ChannelType getChannel() const {
@@ -182,10 +192,15 @@ protected:
         }
 
         void monitorDelay() {
-            if (_state == ActionStateType::DELAY && millis() >= _executeTime) {
-                __LDBG_printf("delay=%u finished", _executeTime);
+            if (_state == ActionStateType::DELAY && millis() >= _delay) {
+                __LDBG_printf("delay=%u finished", _delay);
                 next();
             }
+        }
+
+        void beginDoNothing(ChannelType channel) {
+            __LDBG_printf("begin=%u channel=%u do_nothing", _state, channel);
+            _state = ActionStateType::START_DELAY;
         }
 
         void begin(ChannelType channel, bool open) {
@@ -206,11 +221,28 @@ protected:
                 case ActionStateType::START_MOTOR:
                     _state = ActionStateType::WAIT_FOR_MOTOR;
                     break;
+                case ActionStateType::START_DELAY:
                 case ActionStateType::WAIT_FOR_MOTOR:
-                    if (_executeTime) {
+                    if (_delay) {
                         _state = ActionStateType::DELAY;
-                        __LDBG_printf("executeTime=%u now=%lu", _executeTime, millis());
-                        BlindsControl::startToneTimer();
+                        if (_relativeDelay) {
+                            _delay += millis();
+                        }
+                        __LDBG_printf("delay=%u (in %ums) relative=%u play_tone=%u", _delay, (uint32_t)(millis() - _delay), _relativeDelay, _playTone);
+                        switch(_playTone) {
+                            case PlayToneType::INTERVAL:
+                                BlindsControl::startToneTimer();
+                                break;
+#if HAVE_IMPERIAL_MARCH
+                            case PlayToneType::IMPERIAL_MARCH:
+                                BlindsControl::playImerialMarch(80, 0, 1);
+                                break;
+#endif
+                            default:
+                                break;
+
+                        }
+
                         break;
                     }
                     // fallthrough
@@ -221,17 +253,20 @@ protected:
         }
 
         void end() {
+            BlindsControl::stopToneTimer();
             __LDBG_printf("end=%u", _state);
-            _executeTime = 0;
+            _delay = 0;
             _state = ActionStateType::REMOVE;
         }
 
     private:
+        uint32_t _delay;
         ActionStateType _state;
         ActionType _action;
         ChannelType _channel;
-        uint32_t _executeTime;
-        bool _open;
+        bool _relativeDelay: 1;
+        bool _open: 1;
+        PlayToneType _playTone;
     };
 
 public:
@@ -287,6 +322,7 @@ protected:
     // void _setMotorSpeedUpdate(ChannelType channel, uint16_t speed, bool open);
     void _setMotorBrake(ChannelType channel);
     void _stop();
+    void _disableMotors();
 
     void _loadState();
     void _saveState();
@@ -328,6 +364,9 @@ protected:
         }
         bool isCloseValid() const {
             return _close != ChannelType::NONE;
+        }
+        bool isDoNothing() const {
+            return _close == ChannelType::NONE && _open == ChannelType::NONE;
         }
 
         ChannelType _for;

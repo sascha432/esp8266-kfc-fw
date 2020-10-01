@@ -279,26 +279,26 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     }
     else if (String_equals(key, PSTR("IS_CONFIG_DIRTY_CLASS"))) {
         if (config.isConfigDirty()) {
-            output.print(F(" fade show"));
+            output.print(F("alert alert-dismissible alert-danger fade show"));
         } else {
-            output.print(FSPGM(_hidden));
+            output.print(FSPGM(hidden));
         }
     }
     else if (String_equals(key, PSTR("WEBUI_ALERTS_STATUS"))) {
 #if WEBUI_ALERTS_ENABLED
-        if (System::Flags::getConfig().disableWebAlerts) {
-            output.print(F("Disabled"));
-        } else {
+        if (WebAlerts::Alert::hasOption(WebAlerts::OptionsType::ENABLED)) {
             output.printf_P(PSTR("Storage %s, rewrite size %d, poll interval %.2fs, WebUI max. height %s"), SPGM(alerts_storage_filename), WEBUI_ALERTS_REWRITE_SIZE, WEBUI_ALERTS_POLL_INTERVAL / 1000.0, WEBUI_ALERTS_MAX_HEIGHT);
+        } else {
+            output.print(F("Disabled"));
         }
 #else
         output.print(F("Send to logger"));
 #endif
     }
     else if (String_equals(key, PSTR("WEBUI_ALERTS_JSON"))) {
-#if WEBUI_ALERTS_ENABLED
-        WebUIAlerts_printAsJson(output, 1);
-#endif
+        if (WebAlerts::Alert::hasOption(WebAlerts::OptionsType::PRINT_ALERTS_JSON)) {
+            WebAlerts::Alert::printAlertsAsJson(output, 1);
+        }
     }
 #if IOT_ALARM_PLUGIN_ENABLED
     else if (String_startsWith(key, PSTR("ALARM_TIMESTAMP_"))) {

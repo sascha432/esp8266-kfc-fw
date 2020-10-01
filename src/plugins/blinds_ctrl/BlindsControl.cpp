@@ -238,7 +238,6 @@ void BlindsControl::_playNote(uint8_t pin, uint16_t pwm, uint8_t note)
     }
 }
 
-
 void BlindsControl::_playImerialMarch(uint16_t speed, int8_t zweiklang, uint8_t repeat)
 {
     _stopToneTimer();
@@ -419,8 +418,9 @@ void BlindsControl::stopToneTimer()
 
 void BlindsControl::_stopToneTimer()
 {
-    __LDBG_printf("stopping tone timer");
+    __LDBG_printf("stopping tone timer and disabling motors");
     _toneTimer.remove();
+    _disableMotors();
 }
 
 void BlindsControl::_executeAction(ChannelType channel, bool open)
@@ -545,6 +545,21 @@ void BlindsControl::_monitorMotor(ChannelAction &action)
 BlindsControl::ActionToChannel::ActionToChannel(ActionType action, ChannelType channel) : ActionToChannel()
 {
     switch(action) { // translate action into which channel to check and which to open/close
+        case ActionType::DO_NOTHING:
+            _for = ChannelType::ALL;
+            _open = ChannelType::NONE;
+            _close = ChannelType::NONE;
+            break;
+        case ActionType::DO_NOTHING_CHANNEL0:
+            _for = ChannelType::CHANNEL0;
+            _open = ChannelType::NONE;
+            _close = ChannelType::NONE;
+            break;
+        case ActionType::DO_NOTHING_CHANNEL1:
+            _for = ChannelType::CHANNEL1;
+            _open = ChannelType::NONE;
+            _close = ChannelType::NONE;
+            break;
         case ActionType::OPEN_CHANNEL0:
             _for = channel == ChannelType::ALL ? ChannelType::ALL : ChannelType::CHANNEL0;
             _open = ChannelType::CHANNEL0;
@@ -586,29 +601,38 @@ bool BlindsControl::_cleanQueue()
 {
     // check queue for any actions left otherwise clear it
     for(auto &action: _queue) {
-        switch(action.getState()) {
-            case ActionStateType::NONE: {
-                auto channel = action.getChannel();
-                ActionToChannel channels(action.getAction(), channel);
-                __LDBG_printf("action=%d channel=%u for=%d open=%d close=%d channel0=%s channel1=%s", action.getAction(), channel, channels._for, channels._open, channels._close, _states[0]._getFPStr(), _states[1]._getFPStr());
-                if (channel == channels._for) {
-                    if (channels.isOpenValid() && !_states[channels._open].isOpen()) {
-                        return false;
-                    }
-                    else if (channels.isCloseValid() && !_states[channels._close].isClosed()) {
-                        return false;
-                    }
-                }
-            } break;
-            case ActionStateType::START_MOTOR:
-            case ActionStateType::WAIT_FOR_MOTOR:
-                return false;
-            case ActionStateType::DELAY:
-            case ActionStateType::REMOVE:
-                // remove finished actions and delays
+        switch(action.getAction()) {
+            // ignore do nothing actions
+            case ActionType::DO_NOTHING:
+            case ActionType::DO_NOTHING_CHANNEL0:
+            case ActionType::DO_NOTHING_CHANNEL1:
                 break;
             default:
-                __LDBG_panic("state=%u", action.getState());
+                switch(action.getState()) {
+                    case ActionStateType::NONE: {
+                        auto channel = action.getChannel();
+                        ActionToChannel channels(action.getAction(), channel);
+                        __LDBG_printf("action=%d channel=%u for=%d open=%d close=%d channel0=%s channel1=%s", action.getAction(), channel, channels._for, channels._open, channels._close, _states[0]._getFPStr(), _states[1]._getFPStr());
+                        if (channel == channels._for) {
+                            if (channels.isOpenValid() && !_states[channels._open].isOpen()) {
+                                return false;
+                            }
+                            else if (channels.isCloseValid() && !_states[channels._close].isClosed()) {
+                                return false;
+                            }
+                        }
+                    } break;
+                    case ActionStateType::START_MOTOR:
+                    case ActionStateType::WAIT_FOR_MOTOR:
+                        return false;
+                    case ActionStateType::DELAY:
+                    case ActionStateType::REMOVE:
+                        // remove finished actions and delays
+                        break;
+                    default:
+                        __LDBG_panic("state=%u", action.getState());
+                        break;
+                }
                 break;
         }
     }
@@ -648,6 +672,16 @@ void BlindsControl::_loopMethod()
         auto &action = _queue.getAction();
         auto channel = action.getChannel();
         switch(action.getState()) {
+            case ActionStateType::START_DELAY: {
+                ActionToChannel channels(action.getAction(), channel);
+                __LDBG_printf("action=%d channel=%u for=%d do nothing", action.getAction(), channel, channels._for);
+                if (channel == channels._for || channels._for != ChannelType::ALL) {
+                    action.beginDoNothing(channel);
+                }
+                else {
+                    action.end();
+                }
+            } break;
             case ActionStateType::NONE: {
                 ActionToChannel channels(action.getAction(), channel);
                 __LDBG_printf("action=%d channel=%u for=%d open=%d close=%d channel0=%s channel1=%s", action.getAction(), channel, channels._for, channels._open, channels._close, _states[0]._getFPStr(), _states[1]._getFPStr());
@@ -793,6 +827,16 @@ void BlindsControl::_setMotorSpeed(ChannelType channelType, uint16_t speed, bool
     interrupts();
 }
 
+void BlindsControl::_disableMotors()
+{
+    // do not allow interrupts when changing a pin pair from high/high to low/low and vice versa
+    noInterrupts();
+    for(uint8_t i = 0; i < 2 * kChannelCount; i++) {
+        digitalWrite(_config.pins[i], LOW);
+    }
+    interrupts();
+}
+
 void BlindsControl::_stop()
 {
     _stopToneTimer();
@@ -804,12 +848,9 @@ void BlindsControl::_stop()
     _motorTimeout.disable();
 
     _activeChannel = ChannelType::NONE;
-    // do not allow interrupts when changing a pin pair from high/high to low/low and vice versa
-    noInterrupts();
-    for(auto pin : _config.pins) {
-        digitalWrite(pin, LOW);
-    }
-    interrupts();
+    _disableMotors();
+    digitalWrite(_config.pins[4], LOW);
+    digitalWrite(_config.pins[5], LOW);
 
     _adcIntegral = 0;
 }

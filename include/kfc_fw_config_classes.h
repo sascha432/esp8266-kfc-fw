@@ -1272,7 +1272,7 @@ namespace KFCConfigurationClasses {
 
             static constexpr size_t kMaxOperations = BLINDS_CONFIG_MAX_OPERATIONS;
 
-            enum class OperationType : uint16_t {
+            enum class OperationType : uint32_t {
                 NONE = 0,
                 OPEN_CHANNEL0,                    // _FOR_CHANNEL0_AND_ALL
                 OPEN_CHANNEL0_FOR_CHANNEL1,       // _ONLY
@@ -1282,19 +1282,36 @@ namespace KFCConfigurationClasses {
                 CLOSE_CHANNEL0_FOR_CHANNEL1,
                 CLOSE_CHANNEL1,
                 CLOSE_CHANNEL1_FOR_CHANNEL0,
+                DO_NOTHING,
+                DO_NOTHING_CHANNEL0,
+                DO_NOTHING_CHANNEL1,
+                MAX
+            };
+
+            enum class PlayToneType : uint32_t {
+                NONE = 0,
+                INTERVAL,
+                IMPERIAL_MARCH,
                 MAX
             };
 
             typedef struct __attribute__packed__ BlindsConfigOperation_t {
                 using Type = BlindsConfigOperation_t;
 
-                CREATE_UINT16_BITFIELD_MIN_MAX(delay, 10, 0, 900, 0, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(delay, 20, 0, 900000, 0, 500);
+                CREATE_UINT32_BITFIELD_MIN_MAX(relative_delay, 1, 0, 1, 0, 1);
+                CREATE_ENUM_BITFIELD(play_tone, PlayToneType);
                 CREATE_ENUM_BITFIELD(action, OperationType);
 
                 // uint16_t delay;                                     // delay before execution in seconds
                 // OperationType type;                                 // action
 
-                BlindsConfigOperation_t() : delay(kDefaultValueFor_delay), action(BlindsConfigOperation_t::cast_int_action(OperationType::NONE)) {}
+                BlindsConfigOperation_t() :
+                    delay(kDefaultValueFor_delay),
+                    relative_delay(0),
+                    play_tone(BlindsConfigOperation_t::cast_int_play_tone(PlayToneType::NONE)),
+                    action(BlindsConfigOperation_t::cast_int_action(OperationType::NONE))
+                {}
 
                 template<typename Archive>
                 void serialize(Archive & ar, kfc::serialization::version version){

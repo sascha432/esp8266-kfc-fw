@@ -305,9 +305,9 @@ void WebServerPlugin::handlerAlerts(AsyncWebServerRequest *request)
         WebServerSetCPUSpeedHelper setCPUSpeed;
         auto pollId = (uint32_t)request->arg(F("poll_id")).toInt();
         if (pollId) {
-            PrintHtmlEntitiesString str = String('[');
-            config.printAlertsAsJson(str, false, pollId);
-            str += ']';
+            PrintHtmlEntitiesString str;
+            WebAlerts::Alert::printAlertsAsJson(str, pollId, false);
+
             AsyncWebServerResponse *response = new AsyncBasicResponse(200, FSPGM(mime_application_json), str);
             HttpHeaders httpHeaders;
             httpHeaders.addNoCache();
@@ -316,9 +316,9 @@ void WebServerPlugin::handlerAlerts(AsyncWebServerRequest *request)
             return;
         }
         else {
-            auto alertId = (uint32_t)request->arg(FSPGM(id)).toInt();
+            auto alertId = (WebAlerts::IdType)request->arg(FSPGM(id)).toInt();
             if (alertId) {
-                WebUIAlerts_remove(alertId);
+                WebAlerts::Alert::dimiss(alertId);
                 request->send(200, FSPGM(mime_text_plain), FSPGM(OK));
                 return;
             }
@@ -953,7 +953,7 @@ WebServerPlugin::WebServerPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(
 
 void WebServerPlugin::setup(SetupModeType mode)
 {
-    WebUIAlerts_readStorage()
+    WebAlerts::Alert::readStorage();
     begin();
     if (mode == SetupModeType::DELAYED_AUTO_WAKE_UP) {
         invokeReconfigureNow(getName());

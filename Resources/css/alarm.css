@@ -1,0 +1,19 @@
+/**
+ * Author: sascha_lammers@gmx.de
+ */
+
+.alarm-week-day-button {
+    width: 56px;
+    height: 56px;
+    max-width: 56px;
+    max-height: 56px;
+    border-radius: 50% !important;
+}
+
+.alarm-enable-slider {
+    max-width: 120px;
+}
+
+.alarm-spinner {
+    padding-top: 100px;
+}

@@ -131,13 +131,16 @@ void remove_trailing_slash(String &dir)
 
 const __FlashStringHelper *sys_get_temp_dir()
 {
-    return F("/tmp/");
+    return F("/.tmp/");
 }
 
-File tmpfile(const String &dir, const String &prefix) {
-    auto tmp = dir;
-    append_slash(tmp);
-    tmp += prefix;
+File tmpfile(String dir, const String &prefix) {
+    append_slash(dir);
+    const char *ptr = strrchr(prefix.c_str(), '/');
+    if (!ptr++) {
+        ptr = prefix.c_str();
+    }
+    dir += ptr;
     do {
         char ch = rand() % (26 + 26 + 10); // add random characters, [a-zA-Z0-9]
         if (ch < 26) {
@@ -147,13 +150,13 @@ File tmpfile(const String &dir, const String &prefix) {
         } else {
             ch += '0' - 26 - 26;
         }
-        if (tmp.length() > 31) {
-            tmp = tmp.substring(0, 24);
+        if (dir.length() > 30) {
+            dir.remove(24);
         }
-        tmp += ch;
-    } while (KFCFS.exists(tmp));
+        dir += ch;
+    } while (KFCFS.exists(dir));
 
-    return KFCFS.open(tmp, fs::FileOpenMode::write);
+    return KFCFS.open(dir, fs::FileOpenMode::write);
 }
 
 String WiFi_disconnect_reason(WiFiDisconnectReason reason)

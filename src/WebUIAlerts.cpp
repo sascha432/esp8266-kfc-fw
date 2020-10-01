@@ -4,7 +4,14 @@
 
 #if WEBUI_ALERTS_ENABLED
 
-#inclue "WebUIAlerts.h"
+#include <Arduino_compat.h>
+#include <FileOpenMode.h>
+#include <PrintString.h>
+#include <PrintHtmlEntitiesString.h>
+#include <JsonTools.h>
+#include <cerrno>
+#include "WebUIAlerts.h"
+#include "kfc_fw_config.h"
 
 #if DEBUG_WEBUI_ALERTS
 #include <debug_helper_enable.h>
@@ -14,62 +21,118 @@
 
 PROGMEM_STRING_DEF(alerts_storage_filename, WEBUI_ALERTS_SPIFF_STORAGE);
 
-void KFCFWConfiguration::AlertMessage::remove()
+using namespace WebAlerts;
+
+FileStorage FileStorage::_webAlerts;
+
+bool Base::hasOption(OptionsType option)
 {
-    config.dismissAlert(_id);
+    switch(option) {
+        case OptionsType::GET_ALERTS:
+            return true;
+        case OptionsType::PRINT_ALERTS_JSON:
+            return true;
+        case OptionsType::PERSISTANT_STORAGE:
+            return true;
+        case OptionsType::ENABLED:
+            return KFCConfigurationClasses::System::Flags::getConfig().is_webalerts_enabled;
+        case OptionsType::IS_LOGGER:
+            return false;
+        case OptionsType::NONE:
+            break;
+    }
+    return false;
+}
+
+void Message::remove()
+{
+    FileStorage::getInstance().dismissAlert(_id);
+}
+
+const char *Message::getFromString(const String &line, IdType &id, ExpiresType &type)
+{
+    char *endPtr = nullptr;
+    type = ExpiresType::EXPIRED;
+    errno = 0;
+    id = strtoul(line.c_str(), &endPtr, 10);
+    if (errno || id == 0) {
+        id = 0;
+        return nullptr;
+    }
+    if (*endPtr != ',') {
+        return nullptr;
+    }
+    auto endPtr2 = ++endPtr;
+    auto value = strtol(endPtr, &endPtr2, 10);
+    if (errno || endPtr == endPtr2) {
+        return nullptr;
+    }
+    type = static_cast<ExpiresType>(value);
+    while(isspace(*endPtr2)) {
+        endPtr2++;
+    }
+    if (*endPtr2 == 0) {
+        return endPtr2;
+    }
+    if (*endPtr2 == ',') {
+        return endPtr2 + 1;
+    }
+    return nullptr;
 }
 
 // format: 0:id,1:expires[,2:counter,3:type,4:dismissable,5:time,6:message]
 
-bool KFCFWConfiguration::AlertMessage::fromString(AlertMessage &alert, const String &line)
+bool Message::fromString(Message &alert, const String &line)
 {
+    IdType id;
+    ExpiresType expires;
+    auto start = getFromString(line, id, expires);
+    if (!start) {
+        __LDBG_printf("failed parsing %s", line.c_str());
+        return false;
+    }
+    if (!*start) {
+        alert = Message(id);
+        __LDBG_printf("str=%s", [&alert]() { String tmp; Message::toString(tmp, alert); return tmp; }().c_str());
+        return true;
+    }
     StringVector items;
     explode(line.c_str(), ',', items, 7);
-    debug_printf_P(PSTR("items=%d:%s\n"), items.size(), implode(',', items).c_str());
-    if (items.size() >= 2) {
-        uint32_t id = items[0].toInt();
-        int32_t expires = items[1].toInt();
-        if (id) {
-            if (items.size() < 7) {
-                alert = AlertMessage(id);
-            }
-            else {
-                auto message = items[6];
-                String_rtrim_P(message, PSTR("\r\n"));
-                alert = AlertMessage(id, message, static_cast<AlertMessage::Type>(items[3].toInt()), expires, items[4].toInt());
-            }
-    //#if DEBUG_KFC_CONFIG
-    #if DEBUG
-            String tmp;
-            AlertMessage::toString(tmp, alert);
-            debug_printf_P(PSTR("str=%s\n"), tmp.c_str());
-    #endif
-            return true;
-        }
+    __LDBG_printf("items=%d:%s", items.size(), implode(',', items).c_str());
+    if (items.size() != 7) {
+        __LDBG_printf("failed parsing %s", line.c_str());
+        return false;
     }
-    debug_printf_P(PSTR("failed parsing %s\n"), line.c_str());
-    return false;
+    String_rtrim(items[6]);
+    alert = Message(id, items[6], static_cast<Type>(items[3].toInt()), expires, items[4].toInt());
+    __LDBG_printf("str=%s", [&alert]() { String tmp; Message::toString(tmp, alert); return tmp; }().c_str());
+    return true;
 }
 
-void KFCFWConfiguration::AlertMessage::toString(String &line, const AlertMessage &alert)
+void Message::toString(String &line, const Message &alert)
 {
-    line = PrintString(F("%u,%d,%u,%u,%u,%lu,%s\n"), alert._id, alert._expires, alert._counter, alert._type, alert._dismissable, (unsigned long)alert._time, alert._message.c_str());
-    debug_printf_P(PSTR("str=%s\n"), line.c_str());
+    line = PrintString(F("%u,%d,%u,%u,%u,%lu,"), alert._id, alert._expires, alert._counter, alert._type, alert._dismissable, (unsigned long)alert._time);
+    line.reserve(line.length() + alert._message.length() + 2);
+    line += alert._message;
+    __LDBG_printf("str=%s", line.c_str());
+    line += '\n';
 }
 
-void KFCFWConfiguration::AlertMessage::toString(String &line, uint32_t alertId)
+void Message::toString(String &line, IdType alertId)
 {
-    line = PrintString(F("%u,%d\n"), alertId, ExpiresType::EXPIRED);
-    debug_printf_P(PSTR("str=%s\n"), line.c_str());
+    line = PrintString(F("%u,%d"), alertId, ExpiresType::EXPIRED);
+    __LDBG_printf("str=%s", line.c_str());
+    line += '\n';
 }
 
 
-uint32_t KFCFWConfiguration::addAlert(const String &message, AlertMessage::Type type, int32_t expires, bool dismissable)
+IdType FileStorage::addAlert(const String &message, Type type, ExpiresType expires, bool dismissable)
 {
+    __LDBG_printf("add=%s type=%u exp=%d dimiss=%u", message.c_str(), type, expires, dismissable);
     for(auto &alert: _alerts) {
         if (!alert.isExpired() && alert.getMessage().equals(message)) {
             alert.setCount(alert.getCount() + 1);
-            debug_printf_P(PSTR("id=%u,msg=%s,counter=%d\n"), alert.getId(), alert.getMessage().c_str(), alert.getCount());
+            __LDBG_printf("id=%u,msg=%s,counter=%d", alert.getId(), alert.getMessage().c_str(), alert.getCount());
             return alert.getId();
         }
     }
@@ -80,39 +143,45 @@ uint32_t KFCFWConfiguration::addAlert(const String &message, AlertMessage::Type 
         auto file = _openAlertStorage(true);
         if (file) {
             String line;
-            AlertMessage::toString(line, alert);
+            Message::toString(line, alert);
             file.write(line.c_str(), line.length());
         }
     }
-    debug_printf_P(PSTR("id=%u,msg=%s,type=%s,time=%lu,exp=%u,dismissable=%d,persistent=%d\n"), alert.getId(), alert.getMessage().c_str(), alert.getTypeStr(), alert.getTime(), alert.getExpires(), alert.isDismissable(), alert.isPersistent());
+    __LDBG_printf("id=%u,msg=%s,type=%s,time=%lu,exp=%u,dismissable=%d,persistent=%d",
+        alert.getId(), alert.getMessage().c_str(), alert.getTypeStr(), alert.getTime(), alert.getExpires(), alert.isDismissable(), alert.isPersistent()
+    );
     return _alertId;
 }
 
-void KFCFWConfiguration::dismissAlert(uint32_t id)
+void FileStorage::dismissAlert(IdType id)
 {
     auto alertId = _removeAlert(id);
     if (alertId) {
         auto file = _openAlertStorage(true);
         if (file) {
             String line;
-            AlertMessage::toString(line, alertId);
+            Message::toString(line, alertId);
             file.write(line.c_str(), line.length());
         }
     }
 }
 
-void KFCFWConfiguration::printAlertsAsJson(Print &output, bool sep, uint32_t minAlertId)
+void FileStorage::printAlertsAsJson(PrintHtmlEntitiesString &output, IdType minAlertId, bool separator)
 {
-    for(auto &alert: config.getAlerts()) {
+    auto mode = output.setMode(PrintHtmlEntities::Mode::RAW);
+    output.print('[');
+    for(auto &alert: getAlerts()) {
         if (!alert.isExpired() && alert.getId() >= minAlertId) {
-            if (sep) {
+            if (separator) {
                 output.print(',');
             }
             else {
-                sep = true;
+                separator = true;
             }
-            PrintHtmlEntitiesString message;
-            JsonTools::printToEscaped(message, alert.getMessage());
+
+            PrintString message;
+            message.print(F(HTML_SA(h5, HTML_A("class", "mb-0"))));
+            message.print(alert.getMessage());
             message.print(F(HTML_E(h5)));
             auto ts = alert.getTime();
             auto counter = alert.getCount();
@@ -126,30 +195,31 @@ void KFCFWConfiguration::printAlertsAsJson(Print &output, bool sep, uint32_t min
                 }
             }
             if (ts) {
-                char buf[32];
-                timezone_strftime_P(buf, sizeof(buf), PSTR("%Y-%m-%d %H:%M:%S"), timezone_localtime(&ts));
-                message.print(buf);
+                message.strftime_P(PSTR("%Y-%m-%d %H:%M:%S"), ts);
             }
             if (ts || counter > 1) {
                 message.print(F(HTML_E(small)));
             }
-            output.printf_P(PSTR("{'t':'%s','i':%d,'m':'"), alert.getTypeStr(), alert.getId());
-            output.print(F(HTML_SA(h5, HTML_A("class", "mb-0"))));
-            output.print(message);
-            output.printf_P(PSTR("','n':%s}"), alert.isDismissable() ? FSPGM(false) : FSPGM(true));
+
+            output.printf_P(PSTR("{\"t\":\"%s\",\"i\":%d,\"m\":\""), alert.getTypeStr(), alert.getId());
+            JsonTools::printToEscaped(output, message);
+            output.printf_P(PSTR("\",\"n\":%s}"), alert.isDismissable() ? SPGM(false) : SPGM(true));
         }
     }
+    output.print(']');
+    output.setMode(mode);
+    Serial.println(output);
 }
 
-uint32_t KFCFWConfiguration::_removeAlert(uint32_t id)
+IdType FileStorage::_removeAlert(IdType id)
 {
-    uint32_t alertId = 0;
-    _alerts.erase(std::remove_if(_alerts.begin(), _alerts.end(), [id, &alertId](const AlertMessage &alert) {
+    IdType alertId = 0;
+    _alerts.erase(std::remove_if(_alerts.begin(), _alerts.end(), [id, &alertId](const Message &alert) {
         if (alert.getId() == id) {
             if (alert.isPersistent()) {
                 alertId = alert.getId();
             }
-            debug_printf_P(PSTR("removed=%u,persistent=%d\n"), alert.getId(), !!alertId);
+            __LDBG_printf("removed=%u,persistent=%d", alert.getId(), !!alertId);
             return true;
         }
         return false;
@@ -157,19 +227,19 @@ uint32_t KFCFWConfiguration::_removeAlert(uint32_t id)
     return alertId;
 }
 
-void KFCFWConfiguration::_readAlertStorage()
+void FileStorage::_readAlertStorage()
 {
     auto file = _openAlertStorage(false);
     if (file) {
         String line;
         for(;;) {
             line = file.readStringUntil('\n');
-            debug_printf_P(PSTR("line=%s\n"), line.c_str());
+            __LDBG_printf("line=%s", line.c_str());
             if (line.length() == 0) {
                 break;
             }
-            AlertMessage alert;
-            if (AlertMessage::fromString(alert, line)) {
+            Message alert;
+            if (Message::fromString(alert, line)) {
                 if (alert.isExpired()) {
 
                 }
@@ -182,15 +252,15 @@ void KFCFWConfiguration::_readAlertStorage()
     }
 }
 
-File KFCFWConfiguration::_openAlertStorage(bool append)
+File FileStorage::_openAlertStorage(bool append)
 {
-    debug_printf_P(PSTR("file=%s,append=%d\n"), SPGM(alert_storage_filename), append);
-    return KFCFS.open(FSPGM(alerts_storage_filename), append ? FileOpenMode::appendplus : FileOpenMode::read);
+    __LDBG_printf("file=%s,append=%d", SPGM(alert_storage_filename), append);
+    return KFCFS.open(FSPGM(alerts_storage_filename), append ? fs::FileOpenMode::appendplus : fs::FileOpenMode::read);
 }
 
-void KFCFWConfiguration::_closeAlertStorage(File &file)
+void FileStorage::_closeAlertStorage(File &file)
 {
-    if (file && file.size() > 3072) {
+    if (file && file.size() > kReadwriteFilesize) {
         file.close();
         _rewriteAlertStorage();
     }
@@ -199,7 +269,7 @@ void KFCFWConfiguration::_closeAlertStorage(File &file)
     }
 }
 
-void KFCFWConfiguration::_rewriteAlertStorage()
+void FileStorage::_rewriteAlertStorage()
 {
     //TODO
     // remove expired and persistent messages
@@ -207,6 +277,14 @@ void KFCFWConfiguration::_rewriteAlertStorage()
     // sort by time
     // write new storage
     // delete old and rename new storage
+
+    auto file = tmpfile(sys_get_temp_dir(), FSPGM(alerts_storage_filename));
+    if (file) {
+        String tmpfile = file.fullName();
+        file.close();
+        KFCFS.remove(FSPGM(alerts_storage_filename));
+        KFCFS.rename(tmpfile, FSPGM(alerts_storage_filename));
+    }
 }
 
 #endif

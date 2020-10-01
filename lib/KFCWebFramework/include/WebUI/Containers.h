@@ -550,24 +550,38 @@ namespace FormUI {
             using FormField = ::FormUI::Field::BaseField;
 
         public:
-            CheckboxButtonSuffix(FormField &hiddenField, const String &label, const __FlashStringHelper *onIcons = nullptr, const __FlashStringHelper *offIcons = nullptr)
+            CheckboxButtonSuffix(const FormField &hiddenField, const String &label, const __FlashStringHelper *onIcons = nullptr, const __FlashStringHelper *offIcons = nullptr)
             {
                 initButton(hiddenField, onIcons, offIcons);
                 _items.emplace_back(label);
             }
-            CheckboxButtonSuffix(FormField &hiddenField, const __FlashStringHelper *label, const __FlashStringHelper *onIcons = nullptr, const __FlashStringHelper *offIcons = nullptr)
+            CheckboxButtonSuffix(const FormField &hiddenField, const __FlashStringHelper *label, const __FlashStringHelper *onIcons = nullptr, const __FlashStringHelper *offIcons = nullptr)
             {
                 initButton(hiddenField, onIcons, offIcons);
                 _items.emplace_back(label);
             }
 
         protected:
-            void initButton(FormField &hiddenField, const __FlashStringHelper *onIcons, const __FlashStringHelper *offIcons);
+            CheckboxButtonSuffix() {}
 
-        private:
+            void initButton(const FormField &hiddenField, const __FlashStringHelper *onIcons, const __FlashStringHelper *offIcons);
+
+        protected:
             friend WebUI::BaseUI;
 
             MixedStringVector _items;
+        };
+
+        class SelectSuffix : public CheckboxButtonSuffix {
+        public:
+            SelectSuffix(const FormField &hiddenField, const List &options) : _options(options) {
+                initSelect(hiddenField);
+            }
+
+        protected:
+            void initSelect(const FormField &hiddenField);
+
+            List _options;
         };
 
         class IntMinMax

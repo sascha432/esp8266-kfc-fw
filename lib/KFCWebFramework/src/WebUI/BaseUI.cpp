@@ -41,6 +41,27 @@ const char *WebUI::Config::encodeHtmlEntities(const char *cStr, bool attribute)
     return strings().attachString(cStr);
 }
 
+void WebUI::BaseUI::_addItem(const Container::SelectSuffix &suffix)
+{
+    __LDBG_assert_printf(suffix._items.empty() == false, "empty list");
+    if (suffix._items.empty()) {
+        return;
+    }
+    Storage::TypeByte tb(Storage::Value::SuffixHtml::type, suffix._items.size());
+    _storage.reserve_extend(tb.size());
+    __LDBG_printf("items=%u size=%u vector=%u", suffix._items.size(), tb.size(), _storage.size());
+
+    auto target = std::back_inserter<Storage::VectorBase>(_storage);
+    *target = tb.toByte();
+    ++target;
+
+    for(const auto &item: suffix._items) {
+        Storage::Value::SuffixHtml(attachString(item.getValue())).push_back(target);
+    }
+
+    _storage.push_back(Storage::Value::SuffixHtml(attachString(F("</select>"))));
+}
+
 void WebUI::BaseUI::_addItem(const Container::CheckboxButtonSuffix &suffix)
 {
     __LDBG_assert_printf(suffix._items.empty() == false, "empty list");
@@ -71,7 +92,6 @@ void WebUI::BaseUI::_addItem(const Container::CheckboxButtonSuffix &suffix)
 
 void WebUI::BaseUI::_setItems(const Container::List &items)
 {
-
     _storage.reserve_extend(items.size() * Storage::TypeByte::size_for<Storage::Value::Option>());
     static_assert(sizeof(Storage::Value::Option) == sizeof(Storage::Value::OptionNumKey), "size does not match");
     for(const auto &item : items) {

@@ -28,6 +28,7 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
     using ConfigType = Plugins::Blinds::BlindsConfig_t;
     using ChannelConfigType = Plugins::Blinds::BlindsConfigChannel_t;
     using OperationType = Plugins::Blinds::OperationType;
+    using PlayToneType = Plugins::Blinds::PlayToneType;
 
     auto &ui = form.createWebUI();
     ui.setTitle(F("Blinds Controller"));
@@ -53,11 +54,25 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
             OperationType::OPEN_CHANNEL0_FOR_CHANNEL1, F("Open Channel 0 For Channel 1"),
             OperationType::OPEN_CHANNEL1_FOR_CHANNEL0, F("Open Channel 1 For Channel 0"),
             OperationType::CLOSE_CHANNEL0_FOR_CHANNEL1, F("Close Channel 0 For Channel 1"),
-            OperationType::CLOSE_CHANNEL1_FOR_CHANNEL0, F("Close Channel 1 For Channel 0")
+            OperationType::CLOSE_CHANNEL1_FOR_CHANNEL0, F("Close Channel 1 For Channel 0"),
+            OperationType::DO_NOTHING, F("Do nothing")
+        );
+
+        FormUI::Container::List delayTypeItems(
+            0, F("Relative to the start of the automation"),
+            1, F("Relative to the start of the action")
+        );
+
+        FormUI::Container::List playToneItems(
+            PlayToneType::NONE, F("None"),
+            PlayToneType::INTERVAL, F("short tone, 2 second interval"),
+#if HAVE_IMPERIAL_MARCH
+            PlayToneType::IMPERIAL_MARCH, F("Imperial March")
+#endif
         );
 
         PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, 2, grp, n0, n1, otl, ctl, il, ip, dac, pwm);
-        PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, BLINDS_CONFIG_MAX_OPERATIONS, ot, od, ct, cd);
+        PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, BLINDS_CONFIG_MAX_OPERATIONS, ot, od, or, op, ct, cd, cr, cp);
 
         const __FlashStringHelper *names[2] = { F("Channel 0"), F("Channel 1") };
         for (uint8_t i = 0; i < kChannelCount; i++) {
@@ -108,8 +123,14 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
             form.addObjectGetterSetter(F_VAR(ot, i), cfg.open[i], cfg.open[0].get_int_action, cfg.open[0].set_int_action);
             form.addFormUI(FSPGM(Action, "Action"), operationTypeItems);
 
+            auto &relativeDelay = form.addObjectGetterSetter(F_VAR(or, i), cfg.open[i], cfg.open[0].get_bits_relative_delay, cfg.open[0].set_bits_relative_delay);
+            form.addFormUI(FormUI::Type::HIDDEN);
+
+            auto &playTone = form.addObjectGetterSetter(F_VAR(op, i), cfg.open[i], cfg.open[0].get_int_play_tone, cfg.open[0].set_int_play_tone);
+            form.addFormUI(FormUI::Type::HIDDEN);
+
             form.addObjectGetterSetter(F_VAR(od, i), cfg.open[i], cfg.open[0].get_bits_delay, cfg.open[0].set_bits_delay);
-            form.addFormUI(F("Execution Time"), FormUI::Suffix(F("time in seconds")));
+            form.addFormUI(F("Next Action Time"), FormUI::Suffix(F("time in milliseconds")), FormUI::SelectSuffix(relativeDelay, delayTypeItems), FormUI::SelectSuffix(playTone, playToneItems));
             cfg.open[0].addRangeValidatorFor_delay(form);
 
         }
@@ -120,8 +141,14 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
             form.addObjectGetterSetter(F_VAR(ct, i), cfg.close[i], cfg.close[0].get_int_action, cfg.close[0].set_int_action);
             form.addFormUI(FSPGM(Action), operationTypeItems);
 
+            auto &relativeDelay = form.addObjectGetterSetter(F_VAR(cr, i), cfg.close[i], cfg.close[0].get_bits_relative_delay, cfg.close[0].set_bits_relative_delay);
+            form.addFormUI(FormUI::Type::HIDDEN);
+
+            auto &playTone = form.addObjectGetterSetter(F_VAR(cp, i), cfg.close[i], cfg.close[0].get_int_play_tone, cfg.close[0].set_int_play_tone);
+            form.addFormUI(FormUI::Type::HIDDEN);
+
             form.addObjectGetterSetter(F_VAR(cd, i), cfg.close[i], cfg.close[0].get_bits_delay, cfg.close[0].set_bits_delay);
-            form.addFormUI(F("Execution Time"), FormUI::Suffix(F("time in seconds")));
+            form.addFormUI(F("Next Action Time"), FormUI::Suffix(F("time in milliseconds")), FormUI::SelectSuffix(relativeDelay, delayTypeItems), FormUI::SelectSuffix(playTone, playToneItems));
             cfg.close[0].addRangeValidatorFor_delay(form);
         }
 
@@ -152,11 +179,11 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
         form.addPointerTriviallyCopyable(F("pin3"), &cfg.pins[3]);
         form.addFormUI(F("Channel 1 Close Pin"), pins);
 
-        form.addObjectGetterSetter(F("shmp"), cfg, cfg.get_bits_adc_multiplexer, cfg.set_bits_adc_multiplexer);
+        auto &multiplexer = form.addObjectGetterSetter(F("shmp"), cfg, cfg.get_bits_adc_multiplexer, cfg.set_bits_adc_multiplexer);
         form.addFormUI(FormUI::Type::HIDDEN);
 
         form.addPointerTriviallyCopyable(F("pin4"), &cfg.pins[4]);
-        form.addFormUI(F("Shunt Multiplexer Pin"), pins, FormUI::SuffixHtml(F("<select data-target=\"#shmp\" data-action=\"transfer-hidden-field\" class=\"input-group-text form-select\"><option value=\"0\">Enable for Channel 0</option><option value=\"1\">Enable for Channel 1</option></select>")));
+        form.addFormUI(F("Shunt Multiplexer Pin"), pins, FormUI::SelectSuffix(multiplexer, FormUI::Container::List(0, F("Enable for Channel 0"), 1, F("Enable for Channel 1"))));
 
         form.addPointerTriviallyCopyable(F("pin5"), &cfg.pins[5]);
         form.addFormUI(F("DAC Pin for DRV8870 Vref"), pins);

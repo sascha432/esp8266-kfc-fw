@@ -1,0 +1,15 @@
+/**
+ * Author: sascha_lammers@gmx.de
+ */
+
+ .ping-console textarea {
+    width: 100%;
+    height: 100%;
+    resize: none;
+}
+
+.ping-console {
+    height: calc(100% - 98px);
+    min-height: 350px;
+}
+

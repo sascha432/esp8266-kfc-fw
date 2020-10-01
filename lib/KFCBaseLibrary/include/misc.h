@@ -51,7 +51,7 @@ void append_slash(String &dir);
 void remove_trailing_slash(String &dir);
 
 const __FlashStringHelper *sys_get_temp_dir();
-File tmpfile(const String &dir, const String &prefix);
+File tmpfile(String dir, const String &prefix);
 
 String WiFi_disconnect_reason(WiFiDisconnectReason reason);
 

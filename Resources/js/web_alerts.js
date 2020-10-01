@@ -9,8 +9,8 @@
     container: null,
     alert_html: null,
     next_alert_id: 1,
-    alert_poll_time: 10000,
-    alert_poll_time_on_error: 30000,
+    alert_poll_time: 30000,
+    alert_poll_time_on_error: 10000,
     init_forms: function() {
         $('.generate-bearer-token').on('click', function(e) {
             e.preventDefault();

@@ -208,7 +208,6 @@ void FileStorage::printAlertsAsJson(PrintHtmlEntitiesString &output, IdType minA
     }
     output.print(']');
     output.setMode(mode);
-    Serial.println(output);
 }
 
 IdType FileStorage::_removeAlert(IdType id)
@@ -277,10 +276,10 @@ void FileStorage::_rewriteAlertStorage()
     // sort by time
     // write new storage
     // delete old and rename new storage
-
     auto file = tmpfile(sys_get_temp_dir(), FSPGM(alerts_storage_filename));
     if (file) {
         String tmpfile = file.fullName();
+        //TODO copy alerts
         file.close();
         KFCFS.remove(FSPGM(alerts_storage_filename));
         KFCFS.rename(tmpfile, FSPGM(alerts_storage_filename));

@@ -62,9 +62,6 @@ void SensorPlugin::setValue(const String &id, const String &value, bool hasValue
 void SensorPlugin::setup(SetupModeType mode)
 {
     _Timer(_timer).add(Event::milliseconds(1000), true, SensorPlugin::timerEvent);
-#if IOT_SENSOR_HAVE_SYSTEM_METRICS
-    _sensors.push_back(__LDBG_new(Sensor_SystemMetrics));
-#endif
 #if IOT_SENSOR_HAVE_LM75A
     _sensors.push_back(__LDBG_new(Sensor_LM75A, F(IOT_SENSOR_NAMES_LM75A), config.initTwoWire(), IOT_SENSOR_HAVE_LM75A));
 #endif
@@ -97,6 +94,9 @@ void SensorPlugin::setup(SetupModeType mode)
 #endif
 #if IOT_SENSOR_HAVE_DHTxx
     _sensors.push_back(__LDBG_new(Sensor_DHTxx, F(IOT_SENSOR_NAMES_DHTxx), IOT_SENSOR_HAVE_DHTxx_PIN));
+#endif
+#if IOT_SENSOR_HAVE_SYSTEM_METRICS
+    _sensors.push_back(__LDBG_new(Sensor_SystemMetrics));
 #endif
 }
 

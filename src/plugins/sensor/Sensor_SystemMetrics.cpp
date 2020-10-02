@@ -8,6 +8,7 @@
 #include <JsonTools.h>
 #include "Sensor_SystemMetrics.h"
 #include <ArduinoJson.h>
+#include "WebUIComponent.h"
 
 #if PING_MONITOR_SUPPORT
 #include "../src/plugins/ping_monitor/ping_monitor.h"
@@ -32,7 +33,7 @@ FLASH_STRING_GENERATOR_AUTO_INIT(
 Sensor_SystemMetrics::Sensor_SystemMetrics() : MQTTSensor()
 {
     REGISTER_SENSOR_CLIENT(this);
-    setUpdateRate(3600); // not in use
+    setUpdateRate(10);
     setMqttUpdateRate(60);
     setNextMqttUpdate(10);
 }
@@ -112,6 +113,69 @@ void Sensor_SystemMetrics::publishState(MQTTClient *client)
         _getMetricsJson(json);
         client->publish(_getTopic(), true, json);
     }
+}
+
+void Sensor_SystemMetrics::getValues(::JsonArray &array, bool timer)
+{
+    using ::JsonString;
+    __LDBG_println();
+
+    auto obj = &array.addObject(3);
+    obj->add(JJ(id), _getId(MetricsType::UPTIME));
+    obj->add(JJ(state), true);
+    obj->add(JJ(value), _getUptime());
+
+    obj = &array.addObject(3);
+    obj->add(JJ(id), _getId(MetricsType::MEMORY));
+    obj->add(JJ(state), true);
+    obj->add(JJ(value), PrintString(F("%.3f KB<br>%u%%"), ESP.getFreeHeap() / 1024.0, ESP.getHeapFragmentation()));
+}
+
+String Sensor_SystemMetrics::_getUptime() const
+{
+    static constexpr auto kDaysPerYear = 365.25;
+    static constexpr auto kDaysPerMonth = 365.25 / 12.0;
+    static constexpr auto kSecondsPerDay = 86400;
+    auto sep = F("<br>");
+
+    PrintString uptimeStr;
+    auto uptime = getSystemUptime();
+    auto months = int(uptime / (kSecondsPerDay * kDaysPerMonth));
+    auto years = int(uptime / (kSecondsPerDay * kDaysPerYear));
+    if (years) {
+        return formatTime2(sep, emptyString, false, 0, 0, 0, 0, 0, months % 12, years);
+    }
+    auto days = (uptime / kSecondsPerDay);
+    if (months) {
+        return formatTime2(sep, emptyString, false, 0, 0, 0, (days - (months * kDaysPerMonth)), 0, months);
+    }
+    auto weeks = (uptime / (kSecondsPerDay * 7)) % 4;
+    if (weeks) {
+        return formatTime2(sep, emptyString, false, 0, 0, 0, days % 7, weeks);
+    }
+    auto hours = uptime / 3600;
+    if (days) {
+        return formatTime2(sep, emptyString, false, 0, 0, hours % 24, days);
+    }
+    auto minutes = uptime / 60;
+    if (hours) {
+        return formatTime2(sep, emptyString, false, 0, minutes % 60, hours);
+    }
+    return formatTime2(sep, emptyString, false, uptime % 60, minutes);
+}
+
+void Sensor_SystemMetrics::createWebUI(WebUIRoot &webUI, WebUIRow **row)
+{
+    using ::JsonString;
+    __LDBG_println();
+
+    *row = &webUI.addRow();
+    (*row)->setExtraClass(JJ(title));
+    (*row)->addGroup(PrintString(F("System Metrics<div class=\"version d-md-inline\">%s</div>"), config.getFirmwareVersion().c_str()), false);
+
+    *row = &webUI.addRow();
+    (*row)->addSensor(_getId(MetricsType::UPTIME), F("Uptime"), F(""));
+    (*row)->addSensor(_getId(MetricsType::MEMORY), F("Free Memory"), F(""));
 }
 
 String Sensor_SystemMetrics::_getTopic() const

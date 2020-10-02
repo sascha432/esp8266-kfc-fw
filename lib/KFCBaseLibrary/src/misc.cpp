@@ -28,21 +28,93 @@ String formatBytes(size_t bytes)
     return buf;
 }
 
+//
+// example
+//  1 day 05:23:42
+//
 String formatTime(unsigned long seconds, bool printDaysIfZero)
 {
     PrintString out;
     auto days = (uint32_t)(seconds / 86400U);
     if (printDaysIfZero || days) {
-        out.printf_P(PSTR("%u "), days);
+        out.printf_P(PSTR("%u day"), days);
         if (days != 1) {
-            out.print(FSPGM(days, "days"));
-        } else {
-            out.print(FSPGM(day, "day"));
+            out.print('s');
         }
         out.print(' ');
     }
     out.printf_P(PSTR("%02uh:%02um:%02us"), (unsigned)((seconds / 3600) % 24), (unsigned)((seconds / 60) % 60), (unsigned)(seconds % 60));
     return out;
+}
+
+
+//
+// create a string out of time
+//
+// formatTime2(F(", "), F(" and "), false, 0, 6, 5, 4, 0, 3, 2, 1)
+// 1 year, 2 months, 3 days, 5 hours and 6 minutes
+//
+// if lastSep is an empty string, sep will be used
+// displayZero if set to true, values with 0 will be displayed and values below 0 can be used to skip
+//
+String formatTime2(const String &sep, const String &_lastSep, bool displayZero, int seconds, int minutes, int hours, int days, int weeks, int months, int years, int milliseconds, int microseconds)
+{
+    const String &lastSep = _lastSep.length() ? _lastSep : sep;
+    StringVector items;
+    int minValue = displayZero ? 0 : 1;
+
+    if (years >= minValue) {
+        items.emplace_back(PrintString(F("%u year%s"), years, years == 1 ? emptyString.c_str() : PSTR("s")));
+    }
+    if (months >= minValue) {
+        items.emplace_back(PrintString(F("%u month%s"), months, months == 1 ? emptyString.c_str() : PSTR("s")));
+    }
+    if (weeks >= minValue) {
+        items.emplace_back(PrintString(F("%u week%s"), weeks, weeks == 1 ? emptyString.c_str() : PSTR("s")));
+    }
+    if (days >= minValue) {
+        items.emplace_back(PrintString(F("%u day%s"), days, days == 1 ? emptyString.c_str() : PSTR("s")));
+    }
+    if (hours >= minValue) {
+        items.emplace_back(PrintString(F("%u hour%s"), hours, hours == 1 ? emptyString.c_str() : PSTR("s")));
+    }
+    if (minutes >= minValue) {
+        items.emplace_back(PrintString(F("%u minute%s"), minutes, minutes == 1 ? emptyString.c_str() : PSTR("s")));
+    }
+    if (seconds >= minValue) {
+        items.emplace_back(PrintString(F("%u second%s"), seconds, seconds == 1 ? emptyString.c_str() : PSTR("s")));
+    }
+    if (milliseconds >= minValue) {
+        items.emplace_back(PrintString(F("%u millisecond%s"), milliseconds, milliseconds == 1 ? emptyString.c_str() : PSTR("s")));
+    }
+    if (microseconds >= minValue) {
+        items.emplace_back(PrintString(F("%u microsecond%s"), microseconds, microseconds == 1 ? emptyString.c_str() : PSTR("s")));
+    }
+    switch(items.size()) {
+        case 0:
+            return F("N/A");
+        case 1:
+            return items[0];
+        case 2:
+            return items[0] + lastSep + items[1];
+        default:
+        break;
+    }
+    size_t len = (sep.length() * (items.size() - 1)) + lastSep.length();
+    for(const auto &str: items) {
+        len += str.length();
+    }
+    auto end = std::prev(items.end());
+    auto iterator = items.begin();
+    String output = std::move(items[0]);
+    output.reserve(len);
+    for(++iterator; iterator != end; ++iterator) {
+        output += sep;
+        output += *iterator;
+    }
+    output += lastSep;
+    output += *iterator;
+    return output;
 }
 
 String url_encode(const String &str)

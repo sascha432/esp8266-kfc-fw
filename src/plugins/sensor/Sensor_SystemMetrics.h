@@ -22,9 +22,8 @@ public:
     virtual uint8_t getAutoDiscoveryCount() const override;
 
     virtual void publishState(MQTTClient *client) override;
-
-    virtual void getValues(JsonArray &json, bool timer) override {}
-    virtual void createWebUI(WebUIRoot &webUI, WebUIRow **row) override {}
+    virtual void getValues(::JsonArray &json, bool timer) override;
+    virtual void createWebUI(WebUIRoot &webUI, WebUIRow **row) override;
     virtual void getStatus(Print &output) override;
 
     virtual MQTTSensorSensorType getType() const override {
@@ -32,8 +31,24 @@ public:
     }
 
 private:
+    enum class MetricsType {
+        UPTIME,
+        MEMORY,
+    };
+
     String _getTopic() const;
+    String _getUptime() const;
+
     void _getMetricsJson(Print &json) const;
+    const __FlashStringHelper *_getId(MetricsType type) const {
+        switch(type) {
+            case MetricsType::UPTIME:
+                return F("metricsuptime");
+            case MetricsType::MEMORY:
+                return F("metricsmem");
+        }
+        return F("kfcfwmetrics");
+    }
 };
 
 #endif

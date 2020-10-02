@@ -240,6 +240,7 @@ void DimmerModulePlugin::setup(SetupModeType mode)
 
 void DimmerModulePlugin::reconfigure(const String &source)
 {
+    _readConfig(_config);
     if (String_equals(source, SPGM(http))) {
         setupWebServer();
     }

@@ -34,7 +34,28 @@ using StringVector = std::vector<String>;
 
 // pretty format for bytes and unix time
 String formatBytes(size_t bytes);
+
+//
+// example
+//  1 day 05:23:42
+//
 String formatTime(unsigned long seconds, bool printDaysIfZero = false);
+
+//
+// create a string out of time
+//
+// formatTime(F(", "), F(" and "), false, 0, 6, 5, 4, 0, 3, 2, 1)
+// 1 year, 2 months, 3 days, 5 hours and 6 minutes
+//
+// if lastSep is an empty string, sep will be used
+// displayZero if set to true, values with 0 will be displayed and values below 0 can be used to skip
+//
+String formatTime2(const String &sep, const String &lastSep, bool displayZero, int seconds, int minutes = -1, int hours = -1, int days = -1, int weeks = -1, int months = -1, int years = -1, int milliseconds = -1, int microseconds = -1);
+
+static inline String formatTimeMicros(const String &sep, const String &lastSep, int seconds, int milliseconds, int microseconds)
+{
+    return formatTime2(sep, lastSep, false, seconds, -1, -1, -1, -1, -1, -1, milliseconds, microseconds);
+}
 
 String url_encode(const String &str);
 void printable_string(Print &output, const uint8_t *buffer, size_t length, size_t maxLength = 0, PGM_P extra = nullptr, bool crlfAsText = false);

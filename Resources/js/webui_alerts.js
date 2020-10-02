@@ -5,22 +5,13 @@
  $.WebUIAlerts = {
     count: 0,
     icon: false,
+    cookie_name: 'webui_hide_alerts',
     alerts: [],
     container: null,
     alert_html: null,
     next_alert_id: 1,
     alert_poll_time: 30000,
-    alert_poll_time_on_error: 10000,
-    init_forms: function() {
-        $('.generate-bearer-token').on('click', function(e) {
-            e.preventDefault();
-            var len = parseInt($(this).data('len'));
-            if (len == 0) {
-                len = 32;
-            }
-            $($(this).data('for')).val($.base64Encode(String.fromCharCode.apply(String, $.getRandomBytes(len))));
-        });
-    },
+    alert_poll_time_on_error: 60000,
     update: function() {
         this.count = this.container.find('.alert').length;
         var icons = $('nav').find('.alerts-count')
@@ -74,15 +65,18 @@
             self.hide_container_toggle(false);
         }).on('click', function() {
             self.icon = true;
+            Cookies.set(self.cookie_name, 1);
             self.update();
         });
         $('span.alerts-count').parent().off('click').on('click', function(e) {
             e.preventDefault();
             self.icon = false;
+            Cookies.set(self.cookie_name, 0);
             self.update();
         })
         this.alerts = window.webui_alerts_data;
 
+        this.icon = Cookies.getJSON(this.cookie_name, 0) != 0;
         if (this.alerts.length) {
             $(this.alerts).each(function(key, val) {
                 self.add(val);
@@ -155,7 +149,14 @@
     }
 };
 
-$.WebUIAlerts.init_forms();
+$('.generate-bearer-token').on('click', function(e) {
+    e.preventDefault();
+    var len = parseInt($(this).data('len'));
+    if (len == 0) {
+        len = 32;
+    }
+    $($(this).data('for')).val($.base64Encode(String.fromCharCode.apply(String, $.getRandomBytes(len))));
+});
 
 $(function() {
     $.WebUIAlerts.init_container();

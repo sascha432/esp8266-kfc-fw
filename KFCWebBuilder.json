@@ -25,6 +25,7 @@
         "conditional_excludes": {
             "#if 1": [
                 "./Resources/html/__prototypes.html",
+                "./Resources/html/__prototypes_webui.html",
                 "./Resources/html/fmtest.html",
                 "./Resources/html/fmtest.html",
                 "./Resources/html/webuitest.html",
@@ -98,9 +99,12 @@
                 "./Resources/js/forms/serial2tcp.js"
             ],
             "#if !WEBUI_ALERTS_ENABLED": [
-                "./Resources/js/web_alerts.js",
-                "./Resources/js/alerts.js",
+                "./Resources/js/webui_alerts.js",
                 "./Resources/css/alert-container.css"
+            ],
+            "#if true": [
+                "./Resources/js/webui.js",
+                "./Resources/css/webui_component.css"
             ]
         },
         "groups": {
@@ -114,7 +118,7 @@
                         "./lib/KFCWebBuilder/Resources/js/rangeslider.min.js",
                         "./Resources/js/jQuery.base64.js",
                         "./Resources/js/common.js",
-                        "./Resources/js/web_alerts.js",
+                        "./Resources/js/webui_alerts.js",
                         "./Resources/js/forms.js",
                         "./Resources/js/forms/*.js",
                         "./Resources/js/sync_time.js",
@@ -123,7 +127,6 @@
                         "./Resources/js/http2serial.js",
                         "./Resources/js/ping_console.js",
                         "./Resources/js/webui.js",
-                        "./Resources/js/alerts.js",
                         "./Resources/js/charts/Chart.min.js",
                         "./Resources/js/charts/chartjs-plugin-dragdata.min.js"
                     ]
@@ -165,8 +168,8 @@
                         "./Resources/css/http2serial.css",
                         "./Resources/css/ping_console.css",
                         "./Resources/css/nav-alerts.css",
-                        "./Resources/css/webuicomponent.css",
                         "./Resources/css/alert-container.css",
+                        "./Resources/css/webui_component.css",
                         "./Resources/css/rangeslider.css",
                         "./Resources/css/form-help-block.css",
                         "./Resources/css/input-text-range.css",

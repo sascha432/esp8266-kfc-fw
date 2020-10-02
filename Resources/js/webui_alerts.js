@@ -154,6 +154,9 @@
         });
     }
 };
+
 $.WebUIAlerts.init_forms();
 
-$.WebUIAlerts.init_container();
+$(function() {
+    $.WebUIAlerts.init_container();
+});

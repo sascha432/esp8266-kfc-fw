@@ -82,8 +82,10 @@ Available commands: /disconnect /reconnect /clear
     <!--JAVASCRIPT%%-->
 
     <script>
-		$(function() {
+        if ($.WebUIAlerts !== undefined) {
             $.WebUIAlerts.icon = true;
+        }
+		$(function() {
 			http2serialPlugin.init();
 		});
     </script>

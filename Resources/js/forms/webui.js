@@ -5,6 +5,6 @@
 $(function() {
     // webui.html
     if ($('#webui').length) {
-        webUIComponent.init();
+        //$.webUIComponent.init();
     }
 });

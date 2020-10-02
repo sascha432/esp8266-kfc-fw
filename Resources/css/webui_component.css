@@ -1,0 +1,251 @@
+/**
+ * Author: sascha_lammers@gmx.de
+ */
+
+.webuicomponent-top {
+    box-shadow: 0 0 0;
+    background: none;
+}
+
+
+.webuicomponent .group .switch {
+    padding: 10px;
+    padding-top: 18px;
+    min-height: 54px;
+    width: 120px;
+    margin-right: 0;
+    margin-left: auto;
+}
+
+.webuicomponent > .switch {
+    padding: 10px;
+    padding-top: 24px;
+	min-height: 66px;
+}
+
+.webuicomponent > .named-switch {
+    padding: 10px;
+    padding-top: 24px;
+	min-height: 127px;
+}
+
+.webuicomponent .switch-name {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.webuicomponent > .slider {
+    padding: 10px;
+    padding-top: 24px;
+	min-height: 66px;
+}
+
+.webuicomponent > .color-slider {
+    padding: 10px;
+    padding-top: 24px;
+	min-height: 66px;
+	border-radius: 10px;
+	background-image: linear-gradient(to right, rgb(130, 130, 255), rgb(255, 255, 255), rgb(255, 170, 40));
+}
+
+.webuicomponent > .badge-sensor {
+	font-size: 16px;
+    color: #000000;
+}
+
+.webuicomponent .outer-badge {
+	border: 2px solid white;
+    border-radius: 50%;
+    width: 98px;
+	padding: 2px;
+	margin: auto;
+	margin-top: 5px;
+	margin-bottom: 4px;
+	box-shadow: 2px 2px 2px 2px grey;
+    background-color: #f0f0f0;
+}
+
+.webuicomponent .inner-badge {
+    padding: 6px;
+    width: 90px;
+	min-height: 86px;
+    border-radius: 50%;
+	border: 2px solid #aaaaaa;
+	background-color: #dceaf4;
+	text-align: center;
+}
+
+.webuicomponent .inner-badge h4 {
+	color: #303030;
+	font-size: 22px;
+    margin-top: 18px;
+    margin-bottom: 0;
+}
+
+.webuicomponent .inner-badge h5 {
+	color: #303030;
+	font-size: 18px;
+    margin-top: 22px;
+    margin-bottom: 0;
+}
+
+.webuicomponent .inner-badge div.unit {
+	font-size: 16px;
+	color: #a0a0a0;
+    margin-top: 0;
+	margin-bottom: 0;
+}
+
+.webuicomponent > .screen {
+    padding: 10px;
+    padding-top: 18px;
+	text-align: center;
+}
+
+.webuicomponent > .button-group {
+    padding: 10px;
+    padding-top: 18px;
+	text-align: center;
+}
+
+.webuicomponent > .sensor {
+    padding: 10px;
+	min-height: 160px;
+	text-align: center;
+}
+
+.webuicomponent > .sensor h1 {
+	color: #303030;
+	font-size: 52px;
+}
+
+.webuicomponent > .sensor h3 {
+	padding-top: 14px;
+	padding-bottom: 10px;
+	font-size: 20px;
+	color: #000000;
+}
+
+.webuicomponent > .sensor span.unit {
+	font-size: 38px;
+	color: #a0a0a0;
+	position: relative;
+	top: -4px;
+	margin-left: 4px;
+}
+
+
+/* updated  css */
+
+
+
+.webuicomponent {
+    border: 1px solid #a79a9a;
+    border-radius: 0.75rem;
+    padding: 0;
+    margin: 0.25rem 0 0.25rem 0.25rem;
+    box-shadow: 0.2rem 0.2rem 0.2rem 0 #a79a9a;
+    background-color: #f8f9fa;
+    width: 100%;
+}
+
+.webuicomponent h1 {
+    font-size: 2.5rem;
+}
+
+.webuicomponent .group {
+    padding: .375rem 1rem .25rem 1rem;
+}
+
+.webuicomponent span.version {
+    display: inline;
+    padding-left: 0.5rem;
+    font-size: 0.75rem;
+}
+
+.webuicomponent .webui-disconnected-icon {
+    float: right;
+    font-size: 2.25rem;
+    display: block;
+    padding: 0.375rem 0.375rem;
+    animation: webui-disconnected-icon .5s linear infinite;
+}
+
+.webuicomponent span.connected {
+    background-color: green !important;
+}
+
+.webuicomponent span.connected > .webui-disconnected-icon {
+    animation: webui-disconnected-icon 2.5s linear infinite;
+}
+
+@keyframes webui-disconnected-icon {
+    50% {
+        opacity: 0;
+    }
+}
+
+/* font-size smaller
+fb-X decreasing from fs-0=0.875rem down to fs-6=0.125rem */
+
+.webuicomponent fs-0 {
+    font-size: 0.875rem;
+}
+.webuicomponent fs-1 {
+    font-size: .75rem;
+}
+.webuicomponent fs-2 {
+    font-size: .625rem;
+}
+.webuicomponent fs-3 {
+    font-size: .5rem;
+}
+.webuicomponent fs-4 {
+    font-size: .375rem;
+}
+.webuicomponent fs-5 {
+    font-size: .25rem;
+}
+.webuicomponent fs-6 {
+    font-size: .125rem;
+}
+
+/* font-size bigger
+starting with fb-0=1.125 going up to fb-11=2.5rem */
+
+.webuicomponent fb-0 {
+    font-size: 1.125rem;
+}
+.webuicomponent fb-1 {
+    font-size: 1.25rem;
+}
+.webuicomponent fb-2 {
+    font-size: 1.375rem;
+}
+.webuicomponent fb-3 {
+    font-size: 1.5rem;
+}
+.webuicomponent fb-4 {
+    font-size: 1.675rem;
+}
+.webuicomponent fb-5 {
+    font-size: 1.75rem;
+}
+.webuicomponent fb-6 {
+    font-size: 1.875rem;
+}
+.webuicomponent fb-7 {
+    font-size: 2.0rem;
+}
+.webuicomponent fb-8 {
+    font-size: 2.125rem;
+}
+.webuicomponent fb-9 {
+    font-size: 2.25rem;
+}
+.webuicomponent fb-10 {
+    font-size: 2.375rem;
+}
+.webuicomponent fb-11 {
+    font-size: 2.5rem;
+}

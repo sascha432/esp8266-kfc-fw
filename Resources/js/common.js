@@ -167,3 +167,27 @@ $.getRandomBytes = function(n) {
     }
     return a;
 };
+
+// str          match str and get all matches for a single group
+// regex_str    regexp string
+// group        group or property name of the capture group
+// options      RegExp options
+// returns array of strings or undefined if the property for a match does not exist
+$.matchAll = function(str, regex_str, group, options) {
+	var regex = new RegExp(regex_str, options === undefined ? '' : options.replace(/g/g, ''));
+	var index = 0;
+    var results = [];
+	do {
+        var match = str.substring(index).match(regex);
+		if (match) {
+            var groups = match.groups ? match.groups : match;
+            results.push(
+                Reflect.has(groups, group) ?
+                    Reflect.get(groups, group) :
+                    Reflect.get(groups, Reflect.ownKeys(groups)[0])
+            );
+			index += match.index + match.length + 1;
+		}
+	} while(match);
+	return results;
+};

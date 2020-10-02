@@ -29,17 +29,16 @@ $.webUIComponent = {
 
     prototypes: {
         webui_group_title_content: '<div class="{{column-type}}-12"><div class="webuicomponent title text-white bg-primary"><div class="row group"><div class="col-auto mr-auto"><h1>{{title}}</h1></div>{{webui-disconnected-icon}}<div class="col-auto">{{content}}</div></div></div></div>',
-        webui_group_title: '<div class="{{column-type}}-12"><div class="webuicomponent title text-white bg-primary"><div class="row group"><div class="col-auto mr-auto"><h1>{{title}}</h1></div>{{webui-disconnected-icon}}</div></div></div>',
+        webui_group_title: '<div class="{{column-type}}-12"><div class="webuicomponent title text-white bg-primary"><div class="row group"><div class="col-auto mr-auto mt-auto mb-auto"><h1>{{title}}</h1></div>{{webui-disconnected-icon}}</div></div></div>',
         webui_disconnected_icon: '<div class="col-auto lost-connection hidden" id="lost-connection"><span class="oi oi-bolt webui-disconnected-icon"></span></div>',
         webui_row: '<div class="row">{{content}}</div>',
         webui_col_12: '<div class="{{column-type}}-12"><div class="webuicomponent">{{content}}</div></div>',
         webui_col_2: '<div class="{{column-type}}-2"><div class="webuicomponent">{{content}}</div></div>',
         webui_col_3: '<div class="{{column-type}}-3"><div class="webuicomponent">{{content}}</div></div>',
-        webui_sensor_badge: '<div class="badge-sensor"><div class="row"><div class="col"><div class="outer-badge"><div class="inner-badge"><h4 id="{{id}}"></h4><div class="unit"></div></div></div></div></div><div class="row"><div class="col text-center">{{name}}</div></div></div>',
         webui_sensor: '<div class="sensor"><h3>{{name}}</h3><h1><span id="{{id}}"></span><span class="unit">{{unit}}</span></h1></div>',
         webui_switch: '<div class="switch"><input type="range" class="switch-attribute-target"></div>',
-        webui_sensor_badge: '<div class="badge-sensor"><div class="row"><div class="col"><div class="outer-badge"><div class="inner-badge"><{{head|h4}} id="{{id}}">{{value}}<!--{{head|h4}}--><div class="unit">{{unit}}</div></div></div></div></div><div class="row"><div class="col text-center">{{name}}</div></div></div>',
-        webui_sensor: '<div class="sensor"><h3>{{name}}</h3><{{head|h1}}><span id="{{id}}">{{value}}</span><span class="unit">{{unit}}</span><!--{{head|h1}}--></div>',
+        webui_sensor_badge: '<div class="badge-sensor"><div class="row"><div class="col"><div class="outer-badge"><div class="inner-badge"><{{head|h4}}><div id="{{id}}" class="value">{{value}}</div><span class="unit">{{unit}}</span></{{head|h4}}></div></div></div></div><div class="row"><div class="col text-center">{{name}}</div></div></div>',
+        webui_sensor: '<div class="sensor"><h3>{{name}}</h3><{{head|h1}}><span id="{{id}}" class="value">{{value}}</span><span class="unit">{{unit}}</span></{{head|h1}}></div>',
     },
 
 
@@ -52,7 +51,7 @@ $.webUIComponent = {
             switch: { min: 0, max: 1, columns: 2, zero_off: true, display_name: false, attributes: [ 'min', 'max', 'value', 'zero-off', 'display-name' ] },
             slider: { min: 0, max: 255, columns: 12, attributes: [ 'min', 'max', 'zero-off', 'value' ] },
             color_slider: { min: 15300, max: 50000 },
-            sensor: { columns: 3, head: false, height: 0, attributes: [ 'head', 'height' ] },
+            sensor: { columns: 3, head: null, height: 0, attributes: [ 'head', 'height' ] },
             screen: { columns: 3, width: 128, height: 32, attributes: [ 'width', 'height' ] },
             binary_sensor: { columns: 2 },
             buttons: { columns: 3, buttons: [], height: 0, attributes: [ 'height', 'buttons' ] },
@@ -98,7 +97,7 @@ $.webUIComponent = {
             // dbg_console.log("replace ", regex, key, val);
         });
         // replace missing variables with default values
-        prototype = prototype.replace(/{{[^|]+\|([^}]*)}}/g, '\$1');
+        prototype = prototype.replace(/{{[^\|]+\|([^}]*)}}/g, '\$1');
 
         var vars = $.matchAll(prototype, '{{(?<var>[^\|}]+)(?:\|[^}]*)?}}');
         if (vars.length) {
@@ -336,32 +335,13 @@ $.webUIComponent = {
             if (options.render_type == 'badge') {
                 prototype_name += '-badge';
             }
-            prototype = this.get_prototype(prototype_name, options);
+            prototype = $(this.get_prototype(prototype_name, options));
 
-            if (options.render_type == 'badge') {
-                if (options.head === false) {
-                    options.head = 'h4';
-                }
-                var element = this.create_column(options, $('<div class="badge-sensor"><div class="row"><div class="col"><div class="outer-badge"><div class="inner-badge"><' + options.head + ' id="' + options.id + '">' + options.value + '</' + options.head + '><div class="unit">' + options.unit + '</div></div></div></div></div><div class="row"><div class="col text-center">' + options.name + '</div></div></div>'));
-                if (options.height) {
-                    $(element).find('.badge-sensor').height(options.height + 'px');
-                }
+            if (options.height) {
+                prototype.find('.badge-sensor').height(options.height + 'px');
             }
-                else if (options.render_type == 'wide') {
-                }
-                else if (options.render_type == 'medium') {
-                }
-                else {
-                    if (options.head === false) {
-                        options.head = 'h1';
-                    }
-                    var element = this.create_column(options, $('<div class="sensor"><h3>' + options.name + '</h3><' + options.head + '><span id="' + options.id + '">' + options.value + '</span><span class="unit">' + options.unit + '</span></' + options.head + '>'));
-                    if (options.height) {
-                        $(element).find('.sensor').height(options.height + 'px');
-                    }
-                }
-                // this.add_to_group(options);
-                return element;
+
+            return prototype;
 
 
 /*
@@ -804,8 +784,7 @@ if ($('#webui').length) {
     if ($.WebUIAlerts !== undefined) {
         $.WebUIAlerts.icon = true;
     }
+    $(function() {
+        $.webUIComponent.init();
+    });
 }
-
-$(function() {
-    $.webUIComponent.init();
-});

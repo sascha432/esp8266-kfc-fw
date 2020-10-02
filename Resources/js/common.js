@@ -173,8 +173,8 @@ $.getRandomBytes = function(n) {
 // group        group or property name of the capture group
 // options      RegExp options
 // returns array of strings or undefined if the property for a match does not exist
-$.matchAll = function(str, regex_str, group, options) {
-	var regex = new RegExp(regex_str, options === undefined ? '' : options.replace(/g/g, ''));
+$.matchAll = function(str, regexp_str, group, options) {
+	var regex = new RegExp(regexp_str, options === undefined ? '' : options);
 	var index = 0;
     var results = [];
 	do {
@@ -186,8 +186,23 @@ $.matchAll = function(str, regex_str, group, options) {
                     Reflect.get(groups, group) :
                     Reflect.get(groups, Reflect.ownKeys(groups)[0])
             );
-			index += match.index + match.length + 1;
+			index += match['index'] + match[0].length;
 		}
 	} while(match);
 	return results;
 };
+
+
+$.matchReverse = function(str, regexp_str, options) {
+    var regex = new RegExp(regexp_str, options === undefined ? 'm' : options);
+	var index = 0;
+    var results = [];
+	do {
+        var match = str.substring(index).match(regex);
+		if (match) {
+            results.unshift(match);
+            index += match['index'] + match[0].length;
+		}
+	} while(match);
+	return results;
+}

@@ -2,26 +2,11 @@
  * Author: sascha_lammers@gmx.de
  */
 
-.webuicomponent-top {
+/* .webuicomponent-top {
     box-shadow: 0 0 0;
     background: none;
 }
 
-
-.webuicomponent .group .switch {
-    padding: 10px;
-    padding-top: 18px;
-    min-height: 54px;
-    width: 120px;
-    margin-right: 0;
-    margin-left: auto;
-}
-
-.webuicomponent > .switch {
-    padding: 10px;
-    padding-top: 24px;
-	min-height: 66px;
-}
 
 .webuicomponent > .named-switch {
     padding: 10px;
@@ -48,9 +33,102 @@
 	background-image: linear-gradient(to right, rgb(130, 130, 255), rgb(255, 255, 255), rgb(255, 170, 40));
 }
 
-.webuicomponent > .badge-sensor {
-	font-size: 16px;
-    color: #000000;
+.webuicomponent > .screen {
+    padding: 10px;
+    padding-top: 18px;
+	text-align: center;
+}
+
+.webuicomponent > .button-group {
+    padding: 10px;
+    padding-top: 18px;
+	text-align: center;
+}
+
+.webuicomponent > .sensor {
+    padding: 10px;
+	min-height: 160px;
+	text-align: center;
+}
+
+.webuicomponent > .sensor h1 {
+	color: #303030;
+	font-size: 52px;
+}
+
+.webuicomponent > .sensor h3 {
+	padding-top: 14px;
+	padding-bottom: 10px;
+	font-size: 20px;
+	color: #000000;
+}
+
+.webuicomponent > .sensor span.unit {
+	font-size: 38px;
+	color: #a0a0a0;
+	position: relative;
+	top: -4px;
+	margin-left: 4px;
+} */
+
+
+/* updated  css */
+
+
+#webui > .row {
+        margin-right: -7px;
+        margin-left: -7px;
+        margin-top: auto;
+        margin-bottom: auto;
+}
+#webui > .row > .col,
+#webui > .row  > [class*="col-"] {
+    padding-right: 7px;
+    padding-left: 7px;
+}
+
+.webuicomponent h1 {
+    font-size: 2.5rem;
+}
+
+.webuicomponent {
+    border: 1px solid #a79a9a;
+    border-radius: 0.75rem;
+    padding: 0;
+    margin: .25rem 0 .25rem .25rem;
+    box-shadow: .2rem .2rem .2rem 0 #a79a9a;
+    background-color: #f8f9fa;
+    width: 100%;
+}
+
+.webuicomponent .group {
+    padding: .375rem 1rem .25rem 1rem;
+}
+
+.webuicomponent .group .switch {
+    padding: .75rem;
+    min-height: 2.5rem;
+    width: 135px;
+}
+
+.webuicomponent > .slider {
+    padding: 1.5rem;
+    min-height: 3.25rem;
+}
+
+/* .webuicomponent > .switch {
+    padding: .75rem;
+    min-height: 3.5rem;
+    /* padding: 10px;
+    padding-top: 24px;
+	min-height: 66px;
+} */
+
+
+
+.webuicomponent .badge-sensor {
+	font-size: 1rem;
+    color: #212529;
 }
 
 .webuicomponent .outer-badge {
@@ -96,71 +174,13 @@
 	margin-bottom: 0;
 }
 
-.webuicomponent > .screen {
-    padding: 10px;
-    padding-top: 18px;
-	text-align: center;
-}
-
-.webuicomponent > .button-group {
-    padding: 10px;
-    padding-top: 18px;
-	text-align: center;
-}
-
-.webuicomponent > .sensor {
-    padding: 10px;
-	min-height: 160px;
-	text-align: center;
-}
-
-.webuicomponent > .sensor h1 {
-	color: #303030;
-	font-size: 52px;
-}
-
-.webuicomponent > .sensor h3 {
-	padding-top: 14px;
-	padding-bottom: 10px;
-	font-size: 20px;
-	color: #000000;
-}
-
-.webuicomponent > .sensor span.unit {
-	font-size: 38px;
-	color: #a0a0a0;
-	position: relative;
-	top: -4px;
-	margin-left: 4px;
-}
-
-
-/* updated  css */
 
 
 
-.webuicomponent {
-    border: 1px solid #a79a9a;
-    border-radius: 0.75rem;
-    padding: 0;
-    margin: 0.25rem 0 0.25rem 0.25rem;
-    box-shadow: 0.2rem 0.2rem 0.2rem 0 #a79a9a;
-    background-color: #f8f9fa;
-    width: 100%;
-}
-
-.webuicomponent h1 {
-    font-size: 2.5rem;
-}
-
-.webuicomponent .group {
-    padding: .375rem 1rem .25rem 1rem;
-}
-
+.webuicomponent div.version,
 .webuicomponent span.version {
-    display: inline;
-    padding-left: 0.5rem;
-    font-size: 0.75rem;
+    padding-left: .5rem;
+    font-size: .75rem;
 }
 
 .webuicomponent .webui-disconnected-icon {
@@ -188,25 +208,25 @@
 /* font-size smaller
 fb-X decreasing from fs-0=0.875rem down to fs-6=0.125rem */
 
-.webuicomponent fs-0 {
+.webuicomponent .fs-0 {
     font-size: 0.875rem;
 }
-.webuicomponent fs-1 {
+.webuicomponent .fs-1 {
     font-size: .75rem;
 }
-.webuicomponent fs-2 {
+.webuicomponent .fs-2 {
     font-size: .625rem;
 }
-.webuicomponent fs-3 {
+.webuicomponent .fs-3 {
     font-size: .5rem;
 }
-.webuicomponent fs-4 {
+.webuicomponent .fs-4 {
     font-size: .375rem;
 }
-.webuicomponent fs-5 {
+.webuicomponent .fs-5 {
     font-size: .25rem;
 }
-.webuicomponent fs-6 {
+.webuicomponent .fs-6 {
     font-size: .125rem;
 }
 

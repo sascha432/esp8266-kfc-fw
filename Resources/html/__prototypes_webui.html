@@ -1,0 +1,159 @@
+<html>
+    <head>
+        <script type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/jquery-3.3.1.min.js"></script>
+        <style type='text/css'>
+            textarea {
+                width: 100%;
+                height: 300px;
+                white-space: nowrap;
+                overflow:    scroll;
+                overflow-y:  hidden;
+                overflow-x:  scroll;
+                overflow:    -moz-scrollbars-horizontal;
+            }
+           </style>
+    </head>
+    <body>
+        <div id="webui-group-title-content" class="__prototypes">
+            <div class="{{column-type}}-12">
+                <div class="webuicomponent title text-white bg-primary">
+                    <div class="row group">
+                        <div class="col-auto mr-auto">
+                            <h1>{{title}}</h1>
+                        </div>
+                        {{webui-disconnected-icon}}
+                        <div class="col-auto">
+                            {{content}}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="webui-group-title" class="__prototypes">
+            <div class="{{column-type}}-12">
+                <div class="webuicomponent title text-white bg-primary">
+                    <div class="row group">
+                        <div class="col-auto mr-auto mt-auto mb-auto">
+                            <h1>{{title}}</h1>
+                        </div>
+                        {{webui-disconnected-icon}}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="webui-disconnected-icon" class="__prototypes">
+            <div class="col-auto lost-connection hidden" id="lost-connection">
+                <span class="oi oi-bolt webui-disconnected-icon"></span>
+            </div>
+        </div>
+
+        <div id="webui-row" class="__prototypes">
+            <div class="row">
+                {{content}}
+            </div>
+        </div>
+
+        <div id="webui-col-12" class="__prototypes">
+            <div class="{{column-type}}-12">
+                <div class="webuicomponent">
+                    {{content}}
+                </div>
+            </div>
+        </div>
+
+        <div id="webui-col-2" class="__prototypes">
+            <div class="{{column-type}}-2">
+                <div class="webuicomponent">
+                    {{content}}
+                </div>
+            </div>
+        </div>
+
+        <div id="webui-col-3" class="__prototypes">
+            <div class="{{column-type}}-3">
+                <div class="webuicomponent">
+                    {{content}}
+                </div>
+            </div>
+        </div>
+
+        <div id="webui-sensor" class="__prototypes">
+            <div class="sensor">
+                <h3>{{name}}</h3>
+                <h1><span id="{{id}}"></span><span class="unit">{{unit}}</span></h1>
+            </div>
+        </div>
+
+        <div id="webui-switch" class="__prototypes">
+            <div class="switch">
+                <input type="range" class="switch-attribute-target">
+            </div>
+        </div>
+
+        <div id="webui-sensor-badge" class="__prototypes">
+            <div class="badge-sensor">
+                <div class="row">
+                    <div class="col">
+                        <div class="outer-badge">
+                            <div class="inner-badge">
+                                <var value="{{head|h4}}"><div id="{{id}}" class="value">{{value}}</div><span class="unit">{{unit}}</span></var>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col text-center">{{name}}</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="webui-sensor" class="__prototypes">
+            <div class="sensor">
+                <h3>{{name}}</h3>
+                <var value="{{head|h1}}"><span id="{{id}}" class="value">{{value}}</span><span class="unit">{{unit}}</span></var>
+            </div>
+        </div>
+
+        <textarea id="prototypes" spellcheck="off"></textarea>
+
+        <script>
+            $(function() {
+                //
+                // replace all var tags with their value attribute
+                // <var value="{{varname}}">...</var> = <{{varname}}>...</{{varname}}>
+                //
+                function replace_var_tags(in_str) {
+                    var values = [];
+                    return in_str.replace(/<var\s+value=\"(?<value>.*?)\"\s*>/g, function(match, value, offset, str) {
+                        values.push(value);
+                        return '<' + value + '>';
+                    }).replace(/<\/\s*var>/g, function(rep) {
+                        return '</' + values.pop() + '>';
+                    });
+                };
+                var prototypes = 'prototypes: {\n';
+                $('.__prototypes').each(function() {
+                    var html = $(this).html();
+                    var name = $(this).attr('id');
+                    name = name.replace(/-/g, '_');
+                    html = html.replace(/"&gt;/g, '">');
+                    html = html.replace(/\r/g, '');
+                    html = html.replace(/\n+/g, ' ');
+                    html = html.replace(/'/g, '\'');
+                    html = html.replace(/&amp;/g, '&');
+                    html = html.replace(/>\s+?</g, '><');
+                    html = html.replace(/>\s+?{/g, '>{');
+                    html = html.replace(/}\s+?</g, '}<');
+                    html = html.trim();
+                    html = replace_var_tags(html);
+                    prototypes += '    ' + name + ': \'' + html + '\',\n';
+                    console.log(html);
+                });
+                prototypes += '},\n';
+                $('#prototypes').val(prototypes);
+            });
+        </script>
+    </body>
+</html>

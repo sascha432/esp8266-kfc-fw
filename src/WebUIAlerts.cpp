@@ -168,7 +168,7 @@ void FileStorage::dismissAlert(IdType id)
 
 void FileStorage::printAlertsAsJson(PrintHtmlEntitiesString &output, IdType minAlertId, bool separator)
 {
-    auto mode = output.setMode(PrintHtmlEntities::Mode::RAW);
+    auto mode = output.setMode(PrintHtmlEntitiesString::Mode::RAW);
     output.print('[');
     for(auto &alert: getAlerts()) {
         if (!alert.isExpired() && alert.getId() >= minAlertId) {
@@ -179,10 +179,13 @@ void FileStorage::printAlertsAsJson(PrintHtmlEntitiesString &output, IdType minA
                 separator = true;
             }
 
-            PrintString message;
-            message.print(F(HTML_SA(h5, HTML_A("class", "mb-0"))));
-            message.print(alert.getMessage());
-            message.print(F(HTML_E(h5)));
+            output.printf_P(PSTR("{\"t\":\"%s\",\"i\":%d,\"m\":\""), alert.getTypeStr(), alert.getId());
+
+            PrintHtmlEntitiesString message = F(HTML_SA(h5, HTML_A("class", "mb-0")));
+            JsonTools::printToEscaped(output, message);
+            message = alert.getMessage();
+            JsonTools::printToEscaped(output, message);
+            message = F(HTML_E(h5));
             auto ts = alert.getTime();
             auto counter = alert.getCount();
             if (ts || counter > 1) {
@@ -200,9 +203,8 @@ void FileStorage::printAlertsAsJson(PrintHtmlEntitiesString &output, IdType minA
             if (ts || counter > 1) {
                 message.print(F(HTML_E(small)));
             }
-
-            output.printf_P(PSTR("{\"t\":\"%s\",\"i\":%d,\"m\":\""), alert.getTypeStr(), alert.getId());
             JsonTools::printToEscaped(output, message);
+
             output.printf_P(PSTR("\",\"n\":%s}"), alert.isDismissable() ? SPGM(false) : SPGM(true));
         }
     }

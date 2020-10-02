@@ -149,7 +149,18 @@
 }
 
 .input-group-append .btn-default {
-	border-color: #6c757d;
+    border-color: #ced4da;
+    background-color: #e9ecef;
+}
+
+.input-group-append .btn-default:hover {
+    border-color: #ced4da;
+    background-color: #e9ecef;
+}
+
+.input-group-append .btn-default:hover {
+    background-color: #ced4da;
+    border-color: #a1a4a7;
 }
 
 .input-group-append .btn-primary {

@@ -2,44 +2,26 @@
  * Author: sascha_lammers@gmx.de
  */
 
- if ($.matchAll===undefined) {
-    $.matchAll = function(str, regex_str, group, options) {
-        var regex = new RegExp(regex_str, options === undefined ? '' : options.replace(/g/g, ''));
-        var index = 0;
-        var results = [];
-        do {
-            var match = str.substring(index).match(regex);
-            if (match) {
-                var groups = match.groups ? match.groups : match;
-                results.push(
-                    Reflect.has(groups, group) ?
-                        Reflect.get(groups, group) :
-                        Reflect.get(groups, Reflect.ownKeys(groups)[0])
-                );
-                index += match.index + match.length + 1;
-            }
-        } while(match);
-        return results;
-    };
-}
-
 $.webUIComponent = {
     uri: '/webui_ws',
     container: $('#webui'),
 
-    prototypes: {
-        webui_group_title_content: '<div class="{{column-type}}-12"><div class="webuicomponent title text-white bg-primary"><div class="row group"><div class="col-auto mr-auto"><h1>{{title}}</h1></div>{{webui-disconnected-icon}}<div class="col-auto">{{content}}</div></div></div></div>',
-        webui_group_title: '<div class="{{column-type}}-12"><div class="webuicomponent title text-white bg-primary"><div class="row group"><div class="col-auto mr-auto mt-auto mb-auto"><h1>{{title}}</h1></div>{{webui-disconnected-icon}}</div></div></div>',
-        webui_disconnected_icon: '<div class="col-auto lost-connection hidden" id="lost-connection"><span class="oi oi-bolt webui-disconnected-icon"></span></div>',
-        webui_row: '<div class="row">{{content}}</div>',
-        webui_col_12: '<div class="{{column-type}}-12"><div class="webuicomponent">{{content}}</div></div>',
-        webui_col_2: '<div class="{{column-type}}-2"><div class="webuicomponent">{{content}}</div></div>',
-        webui_col_3: '<div class="{{column-type}}-3"><div class="webuicomponent">{{content}}</div></div>',
-        webui_sensor: '<div class="sensor"><h3>{{name}}</h3><h1><span id="{{id}}"></span><span class="unit">{{unit}}</span></h1></div>',
-        webui_switch: '<div class="switch"><input type="range" class="switch-attribute-target"></div>',
-        webui_sensor_badge: '<div class="badge-sensor"><div class="row"><div class="col"><div class="outer-badge"><div class="inner-badge"><{{head|h4}}><div id="{{id}}" class="value">{{value}}</div><span class="unit">{{unit}}</span></{{head|h4}}></div></div></div></div><div class="row"><div class="col text-center">{{name}}</div></div></div>',
-        webui_sensor: '<div class="sensor"><h3>{{name}}</h3><{{head|h1}}><span id="{{id}}" class="value">{{value}}</span><span class="unit">{{unit}}</span></{{head|h1}}></div>',
-    },
+
+prototypes: {
+    webui_group_title_content: '<div class="{{column-type}}-12"><div class="webuicomponent title text-white bg-primary"><div class="row group"><div class="col-auto mr-auto"><h1>{{title}}</h1></div>{{webui-disconnected-icon}}<div class="col-auto mb-auto mt-auto">{{content}}</div></div></div></div>',
+    webui_group_title: '<div class="{{column-type}}-12"><div class="webuicomponent title text-white bg-primary"><div class="row group"><div class="col-auto mr-auto mt-auto mb-auto"><h1>{{title}}</h1></div>{{webui-disconnected-icon}}</div></div></div>',
+    webui_disconnected_icon: '<div class="col-auto lost-connection hidden" id="lost-connection"><span class="oi oi-bolt webui-disconnected-icon"></span></div>',
+    webui_row: '<div class="row">{{content}}</div>',
+    webui_col_12: '<div class="{{column-type}}-12"><div class="webuicomponent">{{content}}</div></div>',
+    webui_col_2: '<div class="{{column-type}}-2"><div class="webuicomponent">{{content}}</div></div>',
+    webui_col_3: '<div class="{{column-type}}-3"><div class="webuicomponent">{{content}}</div></div>',
+    webui_sensor_badge: '<div class="webuicomponent"><div class="badge-sensor"><div class="row"><div class="col"><div class="outer-badge"><div class="inner-badge"><{{hb|h4}} class="data"><span id="{{id}}" class="value">{{value}}</span> <span class="unit">{{unit}}</span></{{hb|h4}}></div></div></div></div><div class="row"><div class="col title">{{title}}</div></div></div></div>',
+    webui_sensor: '<div class="webuicomponent"><div class="sensor"><{{ht|h3}} class="title">{{title}}</{{hb|h1}}><{{hb|h1}} class="data"><span id="{{id}}" class="value">{{value}}</span> <span class="unit">{{unit}}</span></{{ht|h3}}></div></div>',
+    webui_switch: '<div class="switch"><input type="range" class="attribute-target"></div>',
+    webui_slider: '<div class="webuicomponent"><div class="slider"><input type="range" class="attribute-target"></div></div>',
+},
+
+
 
 
     defaults: {
@@ -48,16 +30,17 @@ $.webUIComponent = {
         },
         column: {
             group: { columns: 12 },
-            switch: { min: 0, max: 1, columns: 2, zero_off: true, display_name: false, attributes: [ 'min', 'max', 'value', 'zero-off', 'display-name' ] },
-            slider: { min: 0, max: 255, columns: 12, attributes: [ 'min', 'max', 'zero-off', 'value' ] },
+            switch: { min: 0, max: 1, columns: 2, zero_off: true, display_name: false, attributes: [ 'min', 'max', 'value', 'display-name' ] },
+            slider: { min: 0, max: 255, columns: 12, attributes: [ 'min', 'max', 'value' ] },
             color_slider: { min: 15300, max: 50000 },
-            sensor: { columns: 3, head: null, height: 0, attributes: [ 'head', 'height' ] },
+            sensor: { columns: 3, height: 0, no_value: '-',  attributes: [ 'height' ] },
             screen: { columns: 3, width: 128, height: 32, attributes: [ 'width', 'height' ] },
             binary_sensor: { columns: 2 },
             buttons: { columns: 3, buttons: [], height: 0, attributes: [ 'height', 'buttons' ] },
         }
     },
-    groups: [],
+    components: {},
+    group: null,
     pending_requests: [],
     lock_publish: false,
     retry_time: 500,
@@ -89,8 +72,6 @@ $.webUIComponent = {
             }
         });
 
-        var prototype_tmp = prototype;
-
         $.each(replace, function(key, val) {
             regex = new RegExp('{{' + key.replace(/[_-]/g, '[_-]') + '(\|[^}]*)?}}', 'g');
             prototype = prototype.replace(regex, val);
@@ -104,7 +85,7 @@ $.webUIComponent = {
             throw 'variables not found: ' + vars.join(', ');
         }
 
-        // dbg_console.log('prototype', name, prototype_tmp, prototype, 'replaced', replace);
+        // dbg_console.log('prototype', name, prototype, 'replaced', replace);
         return prototype;
     },
 
@@ -149,11 +130,25 @@ $.webUIComponent = {
         if (element.length == 0) {
             return;
         }
-        $.each(element.attr('class').split(/\s+/), function(key, val) {
-            if (val.search(/attribute-target$/) != -1) {
-                element.removeClass(val);
+        if (options.id) {
+            element.attr('id', options.id);
+        }
+        if (options.class) {
+            element.attr('class', options.class);
+        }
+        else {
+            element.removeAttr('class');
+        }
+        if (this.group) {
+            element.data('group-id', this.group);
+            element.attr('data-group-id', this.group);
+        }
+        if (options.zero_off) {
+            element.closest('.webuicomponent').addClass('zero-off');
+            if (!options.id.match(/^group-switch-/)) {
+                element.addClass('slider-change-fill-intensity');
             }
-        });
+        }
         if (options.attributes.length) {
             $.each(options.attributes, function() {
                 var idx = this.replace(/-/g, '_');
@@ -205,88 +200,46 @@ $.webUIComponent = {
                 if (self.pending_requests[id].value != value || self.pending_requests[id].type != type) {
                     self.publish_state(id, self.pending_requests[id].value, self.pending_requests[id].type)
                 }
-            }, 100);
+            }, 150);
         }
 
-    },
-
-    toggle_group: function(groupId, value) {
-        dbg_console.log("toggle_group", groupId, value);
-
-        if (this.groups[groupId].switch.value == value) {
-            return;
-        }
-
-        var self = this;
-        $(this.groups[groupId].components).each(function() {
-            if (this.type == 'switch' || this.type == 'slider') {
-                if (this.zero_off) {
-                    self.publish_state(this.id, value, 'set_state');
-                }
-            }
-        });
     },
 
     move_slider: function(slider, id, value) {
         this.publish_state(id, value, 'set');
-        this.update_group(id, value);
-        this.update_group_switch();
+        // this.update_group(id, value);
+        // this.update_group_switch();
     },
 
     slider_callback: function (slider, position, value, onSlideEnd) {
-
         var element = $(slider.$element);
-        var dataId = element.attr('id');
-
-        if (dataId.substring(0, 12) == 'group-switch') {
-            var groupId = parseInt(dataId.substring(13)) - 1;
-            this.toggle_group(groupId, value);
+        var id = element.attr('id');
+        //console.log('slider_callback ',id, this.components[id].type,element);
+        if (this.components[id].type == 'group-switch') {
+            // this.toggle_group(id, value);
+            console.log('toggle group ', $('input[data-group-id="' + id + '"]'));
         }
         else {
-            this.move_slider(slider, dataId, value);
+            console.log('move slider for ', element.data('group-id'));
+            this.move_slider(slider, id, value);
         }
         this.sliderUpdateCSS(element, slider.$handle, slider.$fill);
     },
 
     sliderUpdateCSS: function(element, handle, fill) {
-        if (element.attr('zero-off')) {
-            var value = element.val();
-
+        var value = element.val();
+        if (element.hasClass('slider-change-fill-intensity')) {
             // change brightness of slider
-            var a = (value / parseInt(element.attr('max')) * 0.7);
+            var a = (value / (parseInt(element.attr('max') - parseInt(element.attr('min')))) * 0.7);
             fill.css('background-image', '-webkit-gradient(linear, 50% 0%, 50% 100%, color-stop(0%, rgba(255, 255, 255, '+a+')), color-stop(100%, rgba(255, 255, 255, '+a+')))');
             fill.css('background-image', '-moz-linear-gradient(rgba(255, 255, 255, '+a+'), rgba(255, 255, 255, 0, '+a+'))');
             fill.css('background-image', '-webkit-linear-gradient(rgba(255, 255, 255, '+a+'), rgba(255, 255, 255, '+a+'))');
             fill.css('background-image', 'linear-gradient(rgba(255, 255, 255, '+a+'), rgba(255, 255, 255, '+a+'))');
-
-            // change color of handle
-            if (value == 0) {
-                handle.removeClass('on').addClass('off');
-            } else if (value) {
-                handle.removeClass('off').addClass('on');
-            }
         }
-
-    },
-
-    add_to_group: function(options) {
-        if (this.groups.length) {
-            var group = this.groups[this.groups.length - 1];
-            if (options.group_switch) {
-                group.switch = options;
-            }
-            else if (group.switch) {
-                group.components.push(options);
-                if (!group.switch.state) {
-                    if (options.zero_off) {
-                        if (options.state) {
-                            group.switch.state = true;
-                            group.switch.value = 1;
-                            $('#' + group.switch.id).val(1);
-                        }
-                    }
-                }
-            }
+        if (value == 0) {
+            handle.removeClass('on').addClass('off');
+        } else if (value) {
+            handle.removeClass('off').addClass('on');
         }
     },
 
@@ -302,92 +255,79 @@ $.webUIComponent = {
         return $('<div class="' + containerClass + '">' + html + '</div>');
     },
 
+    has_value: function(options) {
+        return !(options.value === null || options.value === undefined || options.state === false);
+    },
+
     add_element: function (options) {
         var prototype;
         if (options.type === 'group') {
-            this.groups.push({components: []});
-
-            if (options.has_switch) {
-                prototype = this.get_prototype('webui-group-title-content', {
-                    title: options.name,
-                    content: this.get_prototype('webui-switch', {})
-                });
+            var row_prototype = $(this.get_prototype('webui-row', { content:
+                options.has_switch ?
+                    (prototype = this.get_prototype('webui-group-title-content', { title: options.title, content: this.get_prototype('webui-switch', {}) })) :
+                    (prototype = this.get_prototype('webui-group-title', options))
+            }));
+            if (this.row.extra_classes) {
+                row_prototype.addClass(this.row.extra_classes);
             }
-            else {
-                prototype = this.get_prototype('webui-group-title', { title: options.name })
-            }
+            var group_switch_id = 'group-switch-' + this.container.find('>.row').length;
+            this.add_attributes($(row_prototype).find('.attribute-target'), $.extend({ 'id': group_switch_id }, this.defaults.column.switch));
 
-            var row = $(this.get_prototype('webui-row', { content: prototype }));
-            // if (this.row.extra_classes) {
-            //     row.addClass(this.row.extra_classes);
-            // }
-            this.add_attributes($(row).find('.switch-attribute-target'), $.extend({ 'id': 'group-switch-' + this.groups.length }, this.defaults.column.switch));
+            row_prototype.find('.webuicomponent').addClass(options.has_switch ? 'group-switch' : 'group')
 
-            return row;
+
+            this.components[group_switch_id] = {type: 'group-switch'};
+            this.group = group_switch_id;
+            return row_prototype;
 
         } else if (options.type === 'sensor' || options.type === '"binary_sensor') {
-            var element;
-            if (options.value === undefined || options.state === false) {
-                options.value = 'N/A';
-            }
-
             var prototype_name = 'webui-sensor';
             if (options.render_type == 'badge') {
                 prototype_name += '-badge';
             }
-            prototype = $(this.get_prototype(prototype_name, options));
-
-            if (options.height) {
-                prototype.find('.badge-sensor').height(options.height + 'px');
+            var has_no_value = !this.has_value(options);
+            if (has_no_value) {
+                options.value = this.defaults.column.sensor.no_value;
             }
-
+            prototype = $(this.get_prototype(prototype_name, $.extend(options, this.defaults.column.sensor)));
+            if (has_no_value) {
+                prototype.find('.data').addClass('no-value');
+            }
+            // if (options.height) {
+            //     var sensor = prototype.find('.sensor,.badge-sensor');
+            //     if (Number.isInteger(options.height)) {
+            //         sensor.height(options.height + 'px');
+            //     }
+            //     else {
+            //         sensor.height(options.height);
+            //     }
+            // }
+            this.components[options.id] = {type: 'sensor'};
             return prototype;
-
-
-/*
-            switch: { min: 0, max: 1, columns: 2, zero_off: true, display_name: false, attributes: [ 'min', 'max', 'value', 'zero-off', 'display-name' ] },
-
-            console.log('GROUP',options);
-
-            var template = '<div class="row group"><div class="col"><h1>' + options.name + '</h1></div>';
-            if (options.has_switch) {
-                var o = {
-                    type: 'switch',
-                    value: 0,
-                    id: 'group_switch_' + this.groups.length,
-                    group_switch: true
-                };
-                o = $.extend(o, );
-                template += '<div class="col">' + this.add_element(o).html() + '</div>';
-            }
-            template += '</div>';
-            var element = this.create_column(options, $(template));
-            return element;*/
         }
-        else if (options.type === "switch") {
+        else if (options.type === 'switch') {
             if (options.display_name) {
-                var element = $('<div class="named-switch"><div class="row"><div class="col"><input type="range" id=' + options.id + '></div></div><div class="row"><div class="col switch-name">' + options.name + '</div></div></div>');
+                prototype = $(this.get_prototype('webui-named-switch', options));
             } else {
-                var element = $('<div class="switch"><input type="range" id=' + options.id + '></div>');
+                prototype = $(this.get_prototype('webui-switch', options));
             }
-            var input = element.find("input");
-            this.copy_attributes(input, options)
-            var element = this.create_column(options, element);
-            this.add_to_group(options);
-            return element;
+            this.add_attributes(prototype.find('.attribute-target'), $.extend(options, this.defaults.column.switch));
+            this.components[options.id] = {type: 'switch'};
+            return prototype;
         }
-        else if (options.type === "slider") {
-            var slider = $('<div class="' + ((options.color === "temperature") ? 'color-slider' : 'slider') + '"><input type="range" id="' + options.id + '"></div>');
-            var input = slider.find("input");
-            this.copy_attributes(input, options)
-            var element = this.create_column(options, slider);
-            this.add_to_group(options);
-            return element;
+        else if (options.type === 'slider') {
+
+            options.class = (options.color === 'temperature' ? 'color-slider' : 'slider');
+            prototype = $(this.get_prototype('webui-slider', options));
+            this.add_attributes(prototype.find('.attribute-target'), $.extend(options, this.defaults.column.slider));
+            this.components[options.id] = {type: 'slider'};
+            return prototype;
         }
-        else if (options.type === "screen") {
-            var canvas = '<canvas width="' + options.width + '" height="' + options.height + '" border="0" style="border:2px solid grey" id="' + options.id + '"></canvas>';
-            var element = this.create_column(options, $('<div class="screen"><div class="row"><div class="col">' + canvas + '</div></div></div>'));
-            return element;
+        else if (options.type === 'screen') {
+            prototype = $(this.get_prototype('webui-screen', options));
+            this.add_attributes(prototype.find('.attribute-target'), $.extend(options, this.defaults.column.screen));
+            this.components[options.id] = {type: 'screen'};
+            return prototype;
         }
         else if (options.type === "buttons") {
             options.buttons = options.buttons.split(',');
@@ -403,36 +343,7 @@ $.webUIComponent = {
             if (options.height) {
                 $(element).find('.button-group').height(options.height + 'px');
             }
-            return element;
-        }
-        else if (options.type === "sensor" || options.type === "binary_sensor") {
-            var element;
-            if (options.value === undefined || options.state === false) {
-                options.value = 'N/A';
-            }
-            if (options.render_type == 'badge') {
-                if (options.head === false) {
-                    options.head = 'h4';
-                }
-                var element = this.create_column(options, $('<div class="badge-sensor"><div class="row"><div class="col"><div class="outer-badge"><div class="inner-badge"><' + options.head + ' id="' + options.id + '">' + options.value + '</' + options.head + '><div class="unit">' + options.unit + '</div></div></div></div></div><div class="row"><div class="col text-center">' + options.name + '</div></div></div>'));
-                if (options.height) {
-                    $(element).find('.badge-sensor').height(options.height + 'px');
-                }
-            }
-            else if (options.render_type == 'wide') {
-            }
-            else if (options.render_type == 'medium') {
-            }
-            else {
-                if (options.head === false) {
-                    options.head = 'h1';
-                }
-                var element = this.create_column(options, $('<div class="sensor"><h3>' + options.name + '</h3><' + options.head + '><span id="' + options.id + '">' + options.value + '</span><span class="unit">' + options.unit + '</span></' + options.head + '>'));
-                if (options.height) {
-                    $(element).find('.sensor').height(options.height + 'px');
-                }
-            }
-            // this.add_to_group(options);
+            this.components[options.id] = {type: 'buttons'};
             return element;
         }
         else if (options.type === "row") {
@@ -476,8 +387,8 @@ $.webUIComponent = {
         dbg_console.called('update_ui', arguments);
 
         this.lock_publish = true;
-
-        this.groups = [];
+        this.components = {};
+        this.group = null;
         this.pending_requests = [];
         this.container.html('');
 
@@ -525,37 +436,57 @@ $.webUIComponent = {
         this.sliderUpdateCSS(input, handle, fill);
     },
 
-    // update state of components
-    update_group: function(id, value) {
-        $(this.groups).each(function() {
-            $(this.components).each(function() {
-                if (this.id == id && this.zero_off) {
-                    this.state = value != 0;
-                }
-            });
-        });
-    },
+    // toggle_group: function(id, value) {
+    //     dbg_console.log("toggle_group", id, value, this.components[id]['components']);
+    //     // dbg_console.log("toggle_group", groupId, value, this.groups);
+    //     // if (this.groups[groupId].switch.value == value) {
+    //     //     return;
+    //     // }
+    //     // var self = this;
+    //     // $(this.groups[groupId].components).each(function() {
+    //     //     if (this.type == 'switch' || this.type == 'slider') {
+    //     //         if (this.zero_off) {
+    //     //             self.publish_state(this.id, value, 'set_state');
+    //     //         }
+    //     //     }
+    //     // });
+    // },
 
-    // check if any component is on and update group switch
-    update_group_switch: function() {
-        var self = this;
-        $(this.groups).each(function() {
-            var value = 0;
-            $(this.components).each(function() {
-                if (this.state && this.zero_off) {
-                    value = 1;
-                }
-            });
-            if (this.switch && this.switch.value != value) {
-                var element = $('#' + this.switch.id);
-                if (element.length) {
-                    this.switch.value = value;
-                    element.val(value).change();
-                    self.update_slider_css(element);
-                }
-            }
-        });
-    },
+    // // update state of components
+    // update_group: function(id, value) {
+    //     dbg_console.log("update_group", id, value, this.components[id]);
+    //     // $(this.groups).each(function() {
+    //     //     $(this.components).each(function() {
+    //     //         if (this.id == id && this.zero_off) {
+    //     //             this.state = value != 0;
+    //     //         }
+    //     //     });
+    //     // });
+    // },
+
+    // // check if any component is on and update group switch
+    // update_group_switch: function() {
+    //     var id = $(this).attr('id');
+    //     var value = null;
+    //     dbg_console.log("update_group_switch", id, value, this.components[id]);
+    //     // var self = this;
+    //     // $(this.groups).each(function() {
+    //     //     var value = 0;
+    //     //     $(this.components).each(function() {
+    //     //         if (this.state && this.zero_off) {
+    //     //             value = 1;
+    //     //         }
+    //     //     });
+    //     //     if (this.switch && this.switch.value != value) {
+    //     //         var element = $('#' + this.switch.id);
+    //     //         if (element.length) {
+    //     //             this.switch.value = value;
+    //     //             element.val(value).change();
+    //     //             self.update_slider_css(element);
+    //     //         }
+    //     //     }
+    //     // });
+    // },
 
     update_events: function(events) {
         dbg_console.log("update_events", events);
@@ -564,8 +495,12 @@ $.webUIComponent = {
         $(events).each(function() {
             var element = $('#' + this.id);
             if (element.length) {
-                if (this.value !== undefined) {
-                    self.update_group(this.id, this.value);
+                var webui_component = $('#' + this.id).closest('.webuicomponent');
+                if (self.has_value(this)) {
+                    if (self.components[this.id]['type'] == 'sensor') {
+                        webui_component.find('.data').removeClass('no-value');
+                    }
+                    // self.update_group(this.id, this.value);
                     if (element[0].nodeName == 'DIV' && element.attr('class') && element.attr('class').indexOf('btn-group') != -1) {
                         var buttons = $(element).find('button');
                         if (this.state) {
@@ -591,16 +526,25 @@ $.webUIComponent = {
                     }
                     else {
                         // console.log("update_event", "input", this);
-                        element.val(this.value).change();
+                        element.val(this.value).trigger('change');
                         self.update_slider_css(element);
                     }
                 }
-                if (this.state !== undefined) {
-                    self.update_group(this.id, this.state ? 1 : 0);
+                else {
+                    if (self.components[this.id]['type'] == 'sensor') {
+                        var data = webui_component.find('.data');
+                        if (!data.hasClass('no-value')) {
+                            data.addClass('no-value');
+                            data.find('.value').html(self.defaults.column.sensor.no_value);
+                        }
+                    }
                 }
+                // if (this.state !== undefined) {
+                //     self.update_group(this.id, this.state ? 1 : 0);
+                // }
             }
         });
-        this.update_group_switch();
+        // this.update_group_switch();
         this.lock_publish = false;
     },
 

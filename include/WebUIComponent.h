@@ -44,7 +44,6 @@ WEBUI_PROGMEM_STRING_DECL(left)
 WEBUI_PROGMEM_STRING_DECL(max)
 WEBUI_PROGMEM_STRING_DECL(medium)
 WEBUI_PROGMEM_STRING_DECL(min)
-WEBUI_PROGMEM_STRING_DECL(name)
 WEBUI_PROGMEM_STRING_DECL(offset)
 WEBUI_PROGMEM_STRING_DECL(render_type)
 WEBUI_PROGMEM_STRING_DECL(right)
@@ -66,7 +65,8 @@ WEBUI_PROGMEM_STRING_DECL(wide)
 WEBUI_PROGMEM_STRING_DECL(width)
 WEBUI_PROGMEM_STRING_DECL(zero_off)
 WEBUI_PROGMEM_STRING_DECL(display_name)
-WEBUI_PROGMEM_STRING_DECL(head)
+WEBUI_PROGMEM_STRING_DECL(ht)
+WEBUI_PROGMEM_STRING_DECL(hb)
 
 class WebUIComponent : public JsonUnnamedObject {
 public:
@@ -85,7 +85,7 @@ public:
     }
 
     void setName(const JsonString &name) {
-        add(JJ(name), name);
+        add(JJ(title), name);
     }
 
     void setUnit(const JsonString &unit) {

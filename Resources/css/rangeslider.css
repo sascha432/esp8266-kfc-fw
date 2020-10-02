@@ -2,77 +2,14 @@
  * Author: sascha_lammers@gmx.de
  */
 
-.rangeslider,
-.rangeslider__fill {
-  display: block;
-  -moz-box-shadow: inset 0px 1px 3px rgba(0, 0, 0, 0.3);
-  -webkit-box-shadow: inset 0px 1px 3px rgba(0, 0, 0, 0.3);
-  box-shadow: inset 0px 1px 3px rgba(0, 0, 0, 0.3);
-  -moz-border-radius: 10px;
-  -webkit-border-radius: 10px;
-  border-radius: 10px;
- }
-
+ /*
  .rangeslider__fill {
-  background-color: #a8bdd4;
-  position: absolute;
-}
+    background: #b8daff;
+    position: absolute;
+  }
+*/
 
-.rangeslider--horizontal {
-  height: 20px;
-  width: 100%;
-}
-
-.rangeslider__handle {
-    background-color: #f0f0f0;
-    border: 1px solid #a0a0a0;
-    -webkit-transition: .2s;
-    transition: border .2s;
-    transition: opacity .2s;
-    transition: box-shadow .2s;
-}
-
-.rangeslider__handle.off {
-    background-color: #e03e3e;
-    border: 1px solid #850b0b;
-}
-
-.rangeslider__handle.on {
-    background-color: #1bbb0d;
-    border: 1px solid #036203;
-}
-
-.rangeslider__handle:hover {
-    box-shadow: 0 0 12px rgba(0,0,0,0.7);
-    background-image: -webkit-gradient(linear, 50% 0%, 50% 100%, color-stop(0%, rgba(255, 255, 255, 0.1)), color-stop(100%, rgba(255, 255, 255, 0.12)));
-    background-image: -moz-linear-gradient(rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.12));
-    background-image: -webkit-linear-gradient(rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.12));
-    background-image: linear-gradient(rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.12));
-}
-
-.rangeslider__handle:active,
-.rangeslider--active .rangeslider__handle,
-.rangeslider--active .rangeslider__handle:hover {
-    box-shadow: 0 0 12px rgba(0, 0, 0, 0.7);
-    background-image: -webkit-gradient(linear, 50% 0%, 50% 100%, color-stop(0%, rgba(255, 255, 255, 0.1)), color-stop(100%, rgba(255, 255, 255, 0.35)));
-    background-image: -moz-linear-gradient(rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.35));
-    background-image: -webkit-linear-gradient(rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.35));
-    background-image: linear-gradient(rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.35));
-}
-
-
-
-
-/* TODO */
-.rangeslider.rangeslider--horizontal.is-invalid {
+.is-invalid .rangeslider__fill {
     background-color: #f8d7da !important;
 }
 
-.is-invalid > .rangeslider__handle.off {
-    background-color: #dc3545 !important;
-    border-color: #dc3545 !important;
-}
-
-.form-enable-slider.is-invalid >.rangeslider {
-    background-color: #dc3545;
-}

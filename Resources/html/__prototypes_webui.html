@@ -22,7 +22,7 @@
                             <h1>{{title}}</h1>
                         </div>
                         {{webui-disconnected-icon}}
-                        <div class="col-auto">
+                        <div class="col-auto mb-auto mt-auto">
                             {{content}}
                         </div>
                     </div>
@@ -79,42 +79,72 @@
             </div>
         </div>
 
+        <div id="webui-sensor-badge" class="__prototypes">
+            <div class="webuicomponent">
+                <div class="badge-sensor">
+                    <div class="row">
+                        <div class="col">
+                            <div class="outer-badge">
+                                <div class="inner-badge">
+                                    <var value="{{hb|h4}}" class="data"><span id="{{id}}" class="value">{{value}}</span><space value=" "></space><span class="unit">{{unit}}</span></var>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col title">{{title}}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div id="webui-sensor" class="__prototypes">
-            <div class="sensor">
-                <h3>{{name}}</h3>
-                <h1><span id="{{id}}"></span><span class="unit">{{unit}}</span></h1>
+            <div class="webuicomponent">
+                <div class="sensor">
+                    <var value="{{ht|h3}}" class="title">{{title}}</var>
+                    <var value="{{hb|h1}}" class="data"><span id="{{id}}" class="value">{{value}}</span><space value=" "></space><span class="unit">{{unit}}</span></var>
+                </div>
             </div>
         </div>
 
         <div id="webui-switch" class="__prototypes">
             <div class="switch">
-                <input type="range" class="switch-attribute-target">
+                <input type="range" class="attribute-target">
             </div>
         </div>
 
-        <div id="webui-sensor-badge" class="__prototypes">
-            <div class="badge-sensor">
+        <div id="webui-named-switch" class="__prototypes">
+            <div class="named-switch">
                 <div class="row">
-                    <div class="col">
-                        <div class="outer-badge">
-                            <div class="inner-badge">
-                                <var value="{{head|h4}}"><div id="{{id}}" class="value">{{value}}</div><span class="unit">{{unit}}</span></var>
-                            </div>
+                    <div class="col"><input type="range" class="attribute-target"></div>
+                </div>
+                <div class="row">
+                    <div class="col title">{{title}}</div>
+                </div>
+
+            </div>
+        </div>
+
+        <div id="webui-slider" class="__prototypes">
+            <div class="webuicomponent">
+                <div class="slider">
+                    <input type="range" class="attribute-target">
+                </div>
+            </div>
+        </div>
+
+        <div id="webui-screen" class="__prototypes">
+            <div class="webuicomponent">
+                <div class="screen">
+                    <div class="row">
+                        <div class="col">
+                            <canvas class="attribute-target"></canvas>
                         </div>
                     </div>
                 </div>
-                <div class="row">
-                    <div class="col text-center">{{name}}</div>
-                </div>
             </div>
         </div>
 
-        <div id="webui-sensor" class="__prototypes">
-            <div class="sensor">
-                <h3>{{name}}</h3>
-                <var value="{{head|h1}}"><span id="{{id}}" class="value">{{value}}</span><span class="unit">{{unit}}</span></var>
-            </div>
-        </div>
 
         <textarea id="prototypes" spellcheck="off"></textarea>
 
@@ -123,15 +153,25 @@
                 //
                 // replace all var tags with their value attribute
                 // <var value="{{varname}}">...</var> = <{{varname}}>...</{{varname}}>
+                // <var value="{{varname}}" attribute="...">...</var> = <{{varname}} attribute="...">...</{{varname}}>
                 //
                 function replace_var_tags(in_str) {
                     var values = [];
-                    return in_str.replace(/<var\s+value=\"(?<value>.*?)\"\s*>/g, function(match, value, offset, str) {
+                    return in_str.replace(/<var\s+value=\"(?<value>[^\"]*)\"(?<attr>[^>]*)>/g, function(match, value, attr, offset, str) {
                         values.push(value);
-                        return '<' + value + '>';
+                        return '<' + value + attr + '>';
                     }).replace(/<\/\s*var>/g, function(rep) {
                         return '</' + values.pop() + '>';
                     });
+                };
+                //
+                // replace all space tags with their value attribute
+                // allows to insert any text without beging trimmed
+                //
+                function replace_space_tags(in_str) {
+                    return in_str.replace(/<space\s+value=\"(?<value>.*?)\"\s*>/g, function(match, value, offset, str) {
+                        return value;
+                    }).replace(/<\/\s*space>/g, '');
                 };
                 var prototypes = 'prototypes: {\n';
                 $('.__prototypes').each(function() {
@@ -147,7 +187,9 @@
                     html = html.replace(/>\s+?{/g, '>{');
                     html = html.replace(/}\s+?</g, '}<');
                     html = html.trim();
+                    html = html.replace(/<space\/>/g, '');
                     html = replace_var_tags(html);
+                    html = replace_space_tags(html);
                     prototypes += '    ' + name + ': \'' + html + '\',\n';
                     console.log(html);
                 });

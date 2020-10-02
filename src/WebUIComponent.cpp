@@ -30,7 +30,6 @@ WEBUI_PROGMEM_STRING_DEF(left)
 WEBUI_PROGMEM_STRING_DEF(max)
 WEBUI_PROGMEM_STRING_DEF(medium)
 WEBUI_PROGMEM_STRING_DEF(min)
-WEBUI_PROGMEM_STRING_DEF(name)
 WEBUI_PROGMEM_STRING_DEF(offset)
 WEBUI_PROGMEM_STRING_DEF(render_type)
 WEBUI_PROGMEM_STRING_DEF(right)
@@ -52,7 +51,8 @@ WEBUI_PROGMEM_STRING_DEF(wide)
 WEBUI_PROGMEM_STRING_DEF(width)
 WEBUI_PROGMEM_STRING_DEF(zero_off)
 WEBUI_PROGMEM_STRING_DEF(display_name)
-WEBUI_PROGMEM_STRING_DEF(head)
+WEBUI_PROGMEM_STRING_DEF(ht)
+WEBUI_PROGMEM_STRING_DEF(hb)
 
 
 WebUIRow::WebUIRow() : JsonUnnamedObject(2)
@@ -62,7 +62,7 @@ WebUIRow::WebUIRow() : JsonUnnamedObject(2)
 
 void WebUIRow::setName(const JsonString &name)
 {
-    add(JJ(name), name);
+    add(JJ(title), name);
 }
 
 void WebUIRow::setAlignment(AlignmentEnum_t alignment)

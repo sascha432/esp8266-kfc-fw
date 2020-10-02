@@ -76,7 +76,7 @@
         })
         this.alerts = window.webui_alerts_data;
 
-        this.icon = Cookies.getJSON(this.cookie_name, 0) != 0;
+        this.icon = Cookies.get(this.cookie_name) != 0;
         if (this.alerts.length) {
             $(this.alerts).each(function(key, val) {
                 self.add(val);

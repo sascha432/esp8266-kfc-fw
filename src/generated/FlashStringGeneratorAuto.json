@@ -44,11 +44,11 @@
         "default": "Invalid hostname or IP address"
     },
     "webui_json_id": {
-        "use_counter": 30,
+        "use_counter": 32,
         "default": "id"
     },
     "webui_json_name": {
-        "use_counter": 2,
+        "use_counter": 0,
         "default": "name"
     },
     "webui_json_unit": {
@@ -64,11 +64,11 @@
         "default": "offset"
     },
     "webui_json_value": {
-        "use_counter": 30,
+        "use_counter": 32,
         "default": "value"
     },
     "webui_json_state": {
-        "use_counter": 24,
+        "use_counter": 26,
         "default": "state"
     },
     "mime_application_json": {
@@ -120,7 +120,7 @@
         "default": ", "
     },
     "_hidden": {
-        "use_counter": 5,
+        "use_counter": 4,
         "default": " hidden"
     },
     "Not_supported": {
@@ -372,7 +372,7 @@
         "default": "No"
     },
     "webui_json_title": {
-        "use_counter": 4,
+        "use_counter": 7,
         "default": "title"
     },
     "upload": {
@@ -381,7 +381,7 @@
     },
     "file_manager_base_uri": {
         "use_counter": 2,
-        "default": "/file-manager/"
+        "default": "/file_manager/"
     },
     "dir": {
         "use_counter": 3,
@@ -960,7 +960,7 @@
         "default": "applying.html"
     },
     "hidden": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "hidden"
     },
     "FormRangeValidator_default_message_zero_allowed": {
@@ -1376,7 +1376,7 @@
         "default": "minutes"
     },
     "days": {
-        "use_counter": 2,
+        "use_counter": 1,
         "default": "days"
     },
     "Device_Configuration": {
@@ -1692,7 +1692,7 @@
         "default": "hour"
     },
     "day": {
-        "use_counter": 2,
+        "use_counter": 1,
         "default": "day"
     },
     "sec": {
@@ -2000,11 +2000,15 @@
         "default": "Serial Console"
     },
     "alerts_storage_filename": {
-        "use_counter": 2,
+        "use_counter": 5,
         "default": "/.pvt/alerts_storage"
     },
     "alert_storage_filename": {
         "use_counter": 1,
         "auto": "alert storage filename"
+    },
+    "webui_json_hb": {
+        "use_counter": 2,
+        "default": "hb"
     }
 }

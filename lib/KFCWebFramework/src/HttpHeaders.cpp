@@ -290,9 +290,17 @@ void HttpHeaders::addNoCache(bool noStore)
 
 void HttpHeaders::addDefaultHeaders()
 {
+#if DEBUG_ASSETS
+    add(F("Access-Control-Allow-Origin"), String('*'));
+    add(new HttpLinkHeader(String("<http://") + WiFi.localIP().toString() + String(":80>; rel=preconnect; crossorigin")));
+    add(new HttpLinkHeader(F("<" DEBUG_ASSETS_URL1 ">; rel=preconnect; crossorigin")));
+    add(new HttpLinkHeader(F("<" DEBUG_ASSETS_URL2 ">; rel=preconnect; crossorigin")));
+    add(new HttpLinkHeader(F("<https://fonts.gstatic.com>; rel=preconnect; crossorigin")));
+#else
     add(F("Access-Control-Allow-Origin"), String('*'));
     add(new HttpLinkHeader(F("<https://fonts.gstatic.com>; rel=preconnect; crossorigin")));
     add(F("X-Frame-Options"), F("SAMEORIGIN"));
+#endif
     add(new HttpDateHeader(FSPGM(Expires), 86400 * 30));
 }
 

@@ -314,6 +314,14 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         }
     }
 #endif
+#if DEBUG_ASSETS
+    else if (String_equals(key, PSTR("DEBUG_ASSETS_URL1"))) {
+        output.print(F(DEBUG_ASSETS_URL1));
+    }
+    else if (String_equals(key, PSTR("DEBUG_ASSETS_URL2"))) {
+        output.print(F(DEBUG_ASSETS_URL2));
+    }
+#endif
     else if (_form) {
         _form->process(key, output);
     }

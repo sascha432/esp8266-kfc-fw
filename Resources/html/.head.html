@@ -1,7 +1,45 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<!--#if (defined(DEBUG_ASSETS) && DEBUG_ASSETS)-->
+<script>
+    (function() {
+        function random_str2() {
+            return Math.random().toString(36).substring(7);
+        }
+        function random_str() {
+            return random_str2() + random_str2() + random_str2() + random_str2() + random_str2();
+        }
+        var load_css = [
+            "./lib/KFCWebBuilder/Resources/css/bootstrap.min.css",
+            "./lib/KFCWebBuilder/Resources/css/selectize.bootstrap4.css",
+            "./lib/KFCWebBuilder/Resources/css/open-iconic-bootstrap.css",
+            "./lib/KFCWebBuilder/Resources/css/rangeslider.css",
+            "./Resources/css/styles.css",
+            "./Resources/css/http2serial.css",
+            "./Resources/css/ping_console.css",
+            "./Resources/css/nav-alerts.css",
+            "./Resources/css/alert-container.css",
+            "./Resources/css/webui_component.css",
+            "./Resources/css/rangeslider.css",
+            "./Resources/css/form-help-block.css",
+            "./Resources/css/input-text-range.css",
+            "./Resources/js/charts/Chart.min.css"
+        ];
+        for(var key in load_css) {
+            var link = document.createElement("link")
+            var rel = document.createAttribute("rel");
+            rel.value = 'stylesheet';
+            var href = document.createAttribute("href");
+            href.value =  load_css[key].replace(/^.\/Resources\//, "$DEBUG_ASSETS_URL2$/").replace(/^.\/lib\/KFCWebBuilder\/Resources\//, "$DEBUG_ASSETS_URL1$/") + '?rnd=' + random_str();
+            link.setAttributeNode(rel);
+            link.setAttributeNode(href);
+            document.head.appendChild(link);
+        };
+    })();
+    </script>
+<!--#else-->
     <link rel="stylesheet" href="/%ASSETS_CSS%">
-    <link rel="stylesheet" href="http://192.168.0.61:8000/css/webui_component.css">
+<!--#endif-->
     <title>%HOSTNAME%%SAFEMODE% - %TITLE%</title>
   </head>

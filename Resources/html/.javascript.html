@@ -3,6 +3,54 @@
     window.webui_alerts_data = $WEBUI_ALERTS_JSON$;
 </script>
 <!--#endif-->
+<!--#if (defined(DEBUG_ASSETS) && DEBUG_ASSETS)-->
+<script>
+(function() {
+    function random_str2() {
+        return Math.random().toString(36).substring(7);
+    }
+    function random_str() {
+        return random_str2() + random_str2() + random_str2() + random_str2() + random_str2();
+    }
+    var load_scripts = [
+        "./lib/KFCWebBuilder/Resources/js/jquery-3.3.1.min.js",
+        "./lib/KFCWebBuilder/Resources/js/bootstrap.bundle.min.js",
+        "./lib/KFCWebBuilder/Resources/js/js.cookie.js",
+        "./lib/KFCWebBuilder/Resources/js/selectize.min.js",
+        "./lib/KFCWebBuilder/Resources/js/rangeslider.min.js",
+        "./Resources/js/jQuery.base64.js",
+        "./Resources/js/common.js",
+        "./Resources/js/webui_alerts.js",
+        "./Resources/js/forms.js",
+        "./Resources/js/forms/alarm.js",
+        "./Resources/js/forms/alive_check.js",
+        "./Resources/js/forms/clock.js",
+        "./Resources/js/forms/device.js",
+        "./Resources/js/forms/network.js",
+        "./Resources/js/forms/ntp.js",
+        "./Resources/js/forms/remote.js",
+        "./Resources/js/forms/syslog.js",
+        "./Resources/js/forms/update_fw.js",
+        "./Resources/js/forms/webui.js",
+        "./Resources/js/forms/wifi.js",
+        "./Resources/js/sync_time.js",
+        "./Resources/js/file_manager.js",
+        "./Resources/js/ws_console.js",
+        "./Resources/js/http2serial.js",
+        "./Resources/js/ping_console.js",
+        "./Resources/js/webui.js",
+        //"./Resources/js/charts/Chart.min.js",
+        //"./Resources/js/charts/chartjs-plugin-dragdata.min.js"
+    ];
+    for(var key in load_scripts) {
+        var script = document.createElement("script")
+        var src = document.createAttribute("src");
+        src.value = load_scripts[key].replace(/^.\/Resources\//, "$DEBUG_ASSETS_URL2$/").replace(/^.\/lib\/KFCWebBuilder\/Resources\//, "$DEBUG_ASSETS_URL1$/") + '?rnd=' + random_str();
+        script.setAttributeNode(src);
+        document.body.appendChild(script);
+    };
+})();
+</script>
+<!--#else-->
 <script src="/%ASSETS_JS%"></script>
-<script src="http://192.168.0.61:8000/js/webui.js"></script>
-
+<!--#endif-->

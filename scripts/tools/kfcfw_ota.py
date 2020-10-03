@@ -91,7 +91,7 @@ def is_alive(url, target):
 
 def get_alive(url, target):
     verbose("Checking if device is alive "  + target)
-    resp = requests.get(url + "is_alive", timeout=30)
+    resp = requests.get(url + "is-alive", timeout=30)
     if resp.status_code!=200:
         error("Device did not respond", 2)
     elif resp.content.decode()!='0':

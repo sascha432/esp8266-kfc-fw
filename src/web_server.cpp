@@ -492,7 +492,7 @@ void WebServerPlugin::handlerUpdate(AsyncWebServerRequest *request)
                         config.write();
                     }
 #endif
-                    WebTemplate::_aliveRedirection = String(FSPGM(update_fw_html, "update_fw.html")) + F("#u_flash");
+                    WebTemplate::_aliveRedirection = String(FSPGM(update_fw_html, "update-fw.html")) + F("#u_flash");
                     location += '/';
                     location += FSPGM(rebooting_html);
                 } break;
@@ -696,16 +696,17 @@ void WebServerPlugin::begin()
 
     if (System::Flags::getConfig().is_webui_enabled) {
         WsWebUISocket::setup();
-        WebServerPlugin::addHandler(F("/webui_get"), handlerWebUI);
+        WebServerPlugin::addHandler(F("/webui-get"), handlerWebUI);
     }
 
-    WebServerPlugin::addHandler(F("/scan_wifi"), handlerScanWiFi);
+    WebServerPlugin::addHandler(F("/scan-wifi"), handlerScanWiFi);
     WebServerPlugin::addHandler(F("/zeroconf"), handlerZeroconf);
     WebServerPlugin::addHandler(F("/logout"), handlerLogout);
+    WebServerPlugin::addHandler(F("/is-alive"), handlerAlive);
     WebServerPlugin::addHandler(F("/is_alive"), handlerAlive);
-    WebServerPlugin::addHandler(F("/sync_time"), handlerSyncTime);
-    WebServerPlugin::addHandler(F("/export_settings"), handlerExportSettings);
-    WebServerPlugin::addHandler(F("/import_settings"), handlerImportSettings);
+    WebServerPlugin::addHandler(F("/sync-time"), handlerSyncTime);
+    WebServerPlugin::addHandler(F("/export-settings"), handlerExportSettings);
+    WebServerPlugin::addHandler(F("/import-settings"), handlerImportSettings);
     WebServerPlugin::addHandler(F("/speedtest.zip"), handlerSpeedTestZip);
     WebServerPlugin::addHandler(F("/speedtest.bmp"), handlerSpeedTestImage);
 #if WEBUI_ALERTS_ENABLED

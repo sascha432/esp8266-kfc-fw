@@ -780,5 +780,5 @@ void HassPlugin::removeAction(AsyncWebServerRequest *request)
 void HassPlugin::_installWebhooks()
 {
     __LDBG_printf("server=%p", WebServerPlugin::getWebServerObject());
-    WebServerPlugin::addHandler(F("/hass_remove.html"), removeAction);
+    WebServerPlugin::addHandler(F("/hass-remove.html"), removeAction);
 }

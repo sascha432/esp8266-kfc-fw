@@ -79,10 +79,6 @@
         "use_counter": 6,
         "default": "OK"
     },
-    "atmode_file_autorun": {
-        "use_counter": 0,
-        "default": "/autorun_atmode.cmd"
-    },
     "on": {
         "use_counter": 7,
         "default": "on"
@@ -385,7 +381,7 @@
     },
     "file_manager_base_uri": {
         "use_counter": 2,
-        "default": "/file_manager/"
+        "default": "/file-manager/"
     },
     "dir": {
         "use_counter": 3,
@@ -409,7 +405,7 @@
     },
     "file_manager_html_uri": {
         "use_counter": 2,
-        "default": "file_manager.html"
+        "default": "file-manager.html"
     },
     "filename": {
         "use_counter": 6,
@@ -1025,7 +1021,7 @@
     },
     "update_fw_html": {
         "use_counter": 4,
-        "default": "update_fw.html"
+        "default": "update-fw.html"
     },
     "Invalid_port": {
         "use_counter": 0,
@@ -1993,11 +1989,11 @@
     },
     "serial_console_html": {
         "use_counter": 2,
-        "default": "serial_console.html"
+        "default": "serial-console.html"
     },
     "_serial_console": {
         "use_counter": 1,
-        "default": "/serial_console"
+        "default": "/serial-console"
     },
     "Serial_Console": {
         "use_counter": 1,

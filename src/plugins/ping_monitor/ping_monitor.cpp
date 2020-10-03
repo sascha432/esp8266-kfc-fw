@@ -260,7 +260,7 @@ void PingMonitorPlugin::getStatus(Print &output)
 
 void PingMonitorPlugin::createMenu()
 {
-    bootstrapMenu.addSubMenu(getFriendlyName(), F("ping_monitor.html"), navMenu.config);
+    bootstrapMenu.addSubMenu(getFriendlyName(), F("ping-monitor.html"), navMenu.config);
     _setPingConsoleMenu(Plugins::Ping::getConfig().console);
 }
 

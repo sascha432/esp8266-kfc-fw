@@ -28,7 +28,7 @@ function system_time_attach_handler() {
     function sync_system_date() {
         if ($('#system_date').length) {
             var system_date = $('#system_date');
-            $.get('/sync_time', function(data) {
+            $.get('/sync-time', function(data) {
                 system_date.html(data);
                 system_time = $('#system_time'); // update element
                 parse_time(system_time);

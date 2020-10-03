@@ -485,7 +485,7 @@ void Dimmer_Base::_setValue(const String &id, const String &value, bool hasValue
 void Dimmer_Base::setupWebServer()
 {
     __LDBG_printf("server=%p", WebServerPlugin::getWebServerObject());
-    WebServerPlugin::addHandler(F("/dimmer_rstfw.html"), Dimmer_Base::handleWebServer);
+    WebServerPlugin::addHandler(F("/dimmer-reset-fw"), Dimmer_Base::handleWebServer);
 }
 
 void Dimmer_Base::handleWebServer(AsyncWebServerRequest *request)

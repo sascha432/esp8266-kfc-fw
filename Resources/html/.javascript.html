@@ -13,14 +13,16 @@
         return random_str2() + random_str2() + random_str2() + random_str2() + random_str2();
     }
     var load_scripts = [
-        "./lib/KFCWebBuilder/Resources/js/jquery-3.3.1.min.js",
-        "./lib/KFCWebBuilder/Resources/js/bootstrap.bundle.min.js",
+        //"./lib/KFCWebBuilder/Resources/js/jquery-3.3.1.min.js",
+        //"./lib/KFCWebBuilder/Resources/js/bootstrap.bundle.min.js",
+        "./lib/KFCWebBuilder/Resources/jquery-3.5.2-dist/jquery.js",
+        "./lib/KFCWebBuilder/Resources/bootstrap-4.5.2-dist/js/bootstrap.bundle.js",
         "./lib/KFCWebBuilder/Resources/js/js.cookie.js",
         "./lib/KFCWebBuilder/Resources/js/selectize.min.js",
         "./lib/KFCWebBuilder/Resources/js/rangeslider.min.js",
         "./Resources/js/jQuery.base64.js",
         "./Resources/js/common.js",
-        "./Resources/js/webui_alerts.js",
+        "./Resources/js/webui-alerts.js",
         "./Resources/js/forms.js",
         "./Resources/js/forms/alarm.js",
         "./Resources/js/forms/alive_check.js",
@@ -33,14 +35,14 @@
         "./Resources/js/forms/update_fw.js",
         "./Resources/js/forms/webui.js",
         "./Resources/js/forms/wifi.js",
-        "./Resources/js/sync_time.js",
-        "./Resources/js/file_manager.js",
-        "./Resources/js/ws_console.js",
+        "./Resources/js/sync-time.js",
+        "./Resources/js/file-manager.js",
+        "./Resources/js/ws-console.js",
         "./Resources/js/http2serial.js",
-        "./Resources/js/ping_console.js",
+        "./Resources/js/ping-console.js",
         "./Resources/js/webui.js",
-        //"./Resources/js/charts/Chart.min.js",
-        //"./Resources/js/charts/chartjs-plugin-dragdata.min.js"
+        "./Resources/js/charts/Chart.min.js",
+        "./Resources/js/charts/chartjs-plugin-dragdata.min.js"
     ];
     for(var key in load_scripts) {
         var script = document.createElement("script")

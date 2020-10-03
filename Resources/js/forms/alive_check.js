@@ -5,7 +5,7 @@
 $(function() {
 	if ($('#alive_check').length) {
 		function checkIfAvailable() {
-			$.get('/is_alive?p=' + Math.floor(Math.random() * 100000), function() {
+			$.get('/is-alive?p=' + Math.floor(Math.random() * 100000), function() {
                 var target = $('#alive_check').attr('href');
                 if (target) {
                     window.location = target;

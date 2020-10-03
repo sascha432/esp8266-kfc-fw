@@ -24,8 +24,8 @@
 #endif
 
 FLASH_STRING_GENERATOR_AUTO_INIT(
-    AUTO_STRING_DEF(serial_console_html, "serial_console.html")
-    AUTO_STRING_DEF(_serial_console, "/serial_console")
+    AUTO_STRING_DEF(serial_console_html, "serial-console.html")
+    AUTO_STRING_DEF(_serial_console, "/serial-console")
     AUTO_STRING_DEF(Serial_Console, "Serial Console")
 );
 

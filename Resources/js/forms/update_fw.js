@@ -3,7 +3,7 @@
  */
 
 $(function() {
-    // update_fw.html
+    // update-fw.html
     if ($('#firmware_update').length && $('#firmware_image').length) {
         var firmware_image = $('#firmware_image');
 

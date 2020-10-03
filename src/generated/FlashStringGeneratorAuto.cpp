@@ -512,7 +512,7 @@ PROGMEM_STRING_DEF(factory_html, "factory.html");
 // src/web_server.cpp:495
 // src/web_server.cpp:500
 // src/web_server.cpp:526
-PROGMEM_STRING_DEF(update_fw_html, "update_fw.html");
+PROGMEM_STRING_DEF(update_fw_html, "update-fw.html");
 // src/plugins.cpp:255
 // src/web_server.cpp:115
 // src/web_server.cpp:732
@@ -648,7 +648,7 @@ PROGMEM_STRING_DEF(mime_image_bmp, "image/bmp");
 PROGMEM_STRING_DEF(Success, "Success");
 // src/web_server.cpp:468
 // src/plugins/http2serial/http2serial.cpp:211
-PROGMEM_STRING_DEF(serial_console_html, "serial_console.html");
+PROGMEM_STRING_DEF(serial_console_html, "serial-console.html");
 // src/web_server.cpp:497
 // src/web_server.cpp:502
 // src/web_server.cpp:936
@@ -914,7 +914,7 @@ PROGMEM_STRING_DEF(ERROR_, "ERROR:");
 PROGMEM_STRING_DEF(upload_file, "upload_file");
 // src/plugins/file_manager/file_manager.cpp:313
 // src/plugins/file_manager/file_manager.cpp:471
-PROGMEM_STRING_DEF(file_manager_html_uri, "file_manager.html");
+PROGMEM_STRING_DEF(file_manager_html_uri, "file-manager.html");
 // src/plugins/file_manager/file_manager.cpp:337
 // src/plugins/file_manager/file_manager.cpp:338
 // src/plugins/file_manager/file_manager.cpp:358
@@ -930,7 +930,7 @@ PROGMEM_STRING_DEF(status__u, "status=%u");
 // src/plugins/http2serial/http2serial.cpp:211
 PROGMEM_STRING_DEF(Serial_Console, "Serial Console");
 // src/plugins/http2serial/http2serial.cpp:251
-PROGMEM_STRING_DEF(_serial_console, "/serial_console");
+PROGMEM_STRING_DEF(_serial_console, "/serial-console");
 // src/plugins/mdns/mdns_plugin.cpp:94
 // src/plugins/mdns/mdns_plugin.cpp:206
 // src/plugins/mdns/mdns_plugin.cpp:207

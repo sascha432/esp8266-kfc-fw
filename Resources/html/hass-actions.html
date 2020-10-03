@@ -52,8 +52,8 @@
                 </div>
                 <div class="col">
                     <div class="float-right">
-                        <a class="btn btn-primary edit-item" href="hass_edit.html?id=" role="button">Edit</a>
-                        <a class="btn btn-primary remove-item" href="hass_remove.html?id=" role="button">Remove</a>
+                        <a class="btn btn-primary edit-item" href="hass-edit.html?id=" role="button">Edit</a>
+                        <a class="btn btn-primary remove-item" href="hass-remove.html?id=" role="button">Remove</a>
                     </div>
                 </div>
             </div>
@@ -63,7 +63,7 @@
                 <select class="form-control" name="action" id="action">
                     <option value="0">None</option>
                 </select>
-                <a class="btn btn-primary add-item ml-3" href="hass_edit.html" role="button">Add Action</a>
+                <a class="btn btn-primary add-item ml-3" href="hass-edit.html" role="button">Add Action</a>
             </div>
         </div>
         <!--%%FOOT-->
@@ -118,7 +118,7 @@
             });
 
             $('.container .add-item').on('click', function(event) {
-                $(this).attr('href', 'hass_edit.html?action=' + $(this).closest('div').find('select').val());
+                $(this).attr('href', 'hass-edit.html?action=' + $(this).closest('div').find('select').val());
             });
 
             var options = '<optgroup label="Home Assistant">';

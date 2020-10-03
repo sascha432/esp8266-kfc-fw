@@ -60,7 +60,7 @@
 			$('#dimmer_settings').find('button[type=submit]').parent().append('<button type="button" class="btn btn-secondary ml-3" id="reset_firmware">Reset Firmware...</button>');
 			$('#reset_firmware').on('click', function(event) {
 				event.preventDefault();
-				$.get('/dimmer_rstfw.html', function(data) {
+				$.get('/dimmer-reset-fw', function(data) {
 					if (data == 'OK') {
 						alert('Reset successful');
 					} else {

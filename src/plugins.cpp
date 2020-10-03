@@ -185,11 +185,11 @@ static void create_menu()
     bootstrapMenu.addSubMenu(FSPGM(Change_Password), FSPGM(password_html), navMenu.admin);
     bootstrapMenu.addSubMenu(FSPGM(Reboot_Device), FSPGM(reboot_html), navMenu.admin);
     bootstrapMenu.addSubMenu(F("Restore Factory Defaults"), FSPGM(factory_html), navMenu.admin);
-    bootstrapMenu.addSubMenu(F("Export Settings"), F("export_settings"), navMenu.admin);
+    bootstrapMenu.addSubMenu(F("Export Settings"), F("export-settings"), navMenu.admin);
     bootstrapMenu.addSubMenu(F("Update Firmware"), FSPGM(update_fw_html), navMenu.admin);
 
     navMenu.util = bootstrapMenu.addMenu(F("Utilities"));
-    bootstrapMenu.addSubMenu(F("Speed Test"), F("speed_test.html"), navMenu.util);
+    bootstrapMenu.addSubMenu(F("Speed Test"), F("speed-test.html"), navMenu.util);
 }
 
 static bool enableWebUIMenu = false;

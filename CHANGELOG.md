@@ -35,7 +35,7 @@
 - Removed filters from syslog, reduced memory usage and improved performance
 - Read ADC over web sockets with kfcfw_tool and graphical analysis
 - Major improvements for forms, they are using ~10x less memory and are ~20x faster. Most need less than 1KB and load within 10ms
-
+- Support for loading javascript and CSS from remote server(s) during development
 
 ## Version 0.0.3
 

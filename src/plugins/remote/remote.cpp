@@ -120,8 +120,8 @@ void RemoteControlPlugin::getStatus(Print &output)
 void RemoteControlPlugin::createMenu()
 {
     bootstrapMenu.addSubMenu(getFriendlyName(), F("remotectrl.html"), navMenu.config);
-    bootstrapMenu.addSubMenu(F("Enter Deep Sleep"), F("remote_sleep.html"), navMenu.device);
-    bootstrapMenu.addSubMenu(F("Disable Auto Sleep"), F("remote_nosleep.html"), navMenu.device);
+    bootstrapMenu.addSubMenu(F("Enter Deep Sleep"), F("remote-sleep.html"), navMenu.device);
+    bootstrapMenu.addSubMenu(F("Disable Auto Sleep"), F("remote-nosleep.html"), navMenu.device);
 }
 
 
@@ -352,8 +352,8 @@ void RemoteControlPlugin::_readConfig()
 void RemoteControlPlugin::_installWebhooks()
 {
     __LDBG_printf("server=%p", WebServerPlugin::getWebServerObject());
-    WebServerPlugin::addHandler(F("/remote_sleep.html"), deepSleepHandler);
-    WebServerPlugin::addHandler(F("/remote_nosleep.html"), disableAutoSleepHandler);
+    WebServerPlugin::addHandler(F("/remote-sleep.html"), deepSleepHandler);
+    WebServerPlugin::addHandler(F("/remote-nosleep.html"), disableAutoSleepHandler);
 }
 
 

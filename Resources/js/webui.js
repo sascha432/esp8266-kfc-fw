@@ -3,9 +3,10 @@
  */
 
 $.webUIComponent = {
-    uri: '/webui_ws',
-    slider_fill_intensity: { left: 0.0, right: 0.7 }, // slider fill value. RGB alpha depending on the slider value (left:0.0 = 0%, right: 0.7 = 70%)
+    websocket_uri: '/webui-ws',
+    http_uri: '/webui-handler',
     container: $('#webui'),
+    slider_fill_intensity: { left: 0.0, right: 0.7 }, // slider fill value. RGB alpha depending on the slider value (left:0.0 = 0%, right: 0.7 = 70%)
 
     prototypes: {
         webui_group_title_content: '<div class="{{column-type}}-12"><div class="webuicomponent title text-white bg-primary"><div class="row group"><div class="col-auto mr-auto"><h1>{{title}}</h1></div>{{webui-disconnected-icon}}<div class="col-auto mb-auto mt-auto">{{content}}</div></div></div></div>',
@@ -699,13 +700,13 @@ $.webUIComponent = {
 
     request_ui: function() {
         dbg_console.called('request_ui', arguments);
-        var url = $.getHttpLocation('/webui_get');
+        var url = $.getHttpLocation(this.http_uri);
         var SID = $.getSessionId();
         this.retry_time = 500;
         var self = this;
         $.get(url + '?SID=' + SID, function(data) {
             // dbg_console.called('get_callback_request_ui', arguments);
-            dbg_console.debug('GET /webui_get', data);
+            dbg_console.debug('get ', this.http_uri, data);
             self.update_ui(data.data);
             self.update_events(data.values);
             self.show_disconnected_icon('connected');
@@ -856,7 +857,7 @@ $.webUIComponent = {
 
     init: function() {
         dbg_console.called('init', arguments);
-        var url = $.getWebSocketLocation(this.uri);
+        var url = $.getWebSocketLocation(this.websocket_uri);
         var SID = $.getSessionId();
         var self = this;
         this.socket = new WS_Console(url, SID, 1, function(event) {

@@ -164,7 +164,7 @@ var http2serialPlugin = {
             return;
         }
         //send_action(true);
-        var url = $.getWebSocketLocation('/serial_console');
+        var url = $.getWebSocketLocation('/serial-console');
         var SID = $.getSessionId();
         var self = this;
         this.socket = new WS_Console(url, SID, 1, function(event) { self.dataHandler(event); }, this.console.attr('id'));

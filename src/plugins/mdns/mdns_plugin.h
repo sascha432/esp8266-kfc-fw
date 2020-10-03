@@ -62,7 +62,7 @@ public:
 #if ESP8266
     virtual void createMenu() override {
         if (_enabled) {
-            bootstrapMenu.addSubMenu(F("MDNS Discovery"), F("mdns_discovery.html"), navMenu.util);
+            bootstrapMenu.addSubMenu(F("MDNS Discovery"), F("mdns-discovery.html"), navMenu.util);
         }
     }
     static void mdnsDiscoveryHandler(AsyncWebServerRequest *request);

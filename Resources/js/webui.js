@@ -260,7 +260,7 @@ $.webUIComponent = {
     //
     queue_get_entry: function(id) {
         if (this.publish_queue[id] === undefined) {
-            this.publish_queue[id] = { timeout: null, update_lock: false, next_timeout: 0, values: {}, published: {}, update: {} };
+            this.publish_queue[id] = { timeout: null, update_lock: false, remove_update_lock: false, next_timeout: 0, values: {}, published: {}, update: {} };
         }
         return this.publish_queue[id];
     },
@@ -268,13 +268,8 @@ $.webUIComponent = {
     // add timeout to process the queue
     //
     add_queue_timeout: function(id, queue, timeout) {
-        if (timeout === undefined) {
-            timeout = this.queue_default_timeout;
-        }
-        else {
-            queue.next_timeout = timeout;
-        }
         if (queue.timeout) {
+            queue.next_timeout = timeout;
             return;
         }
         var callback = null;
@@ -303,6 +298,10 @@ $.webUIComponent = {
                 }
             }
             queue.values = {};
+            if (queue.remove_update_lock) {
+                queue.remove_update_lock = false;
+                queue.update_lock = false;
+            }
             // keep calling this function until the queue is done
             if (self.queue_is_done(queue)) {
                 console.log('QUEUE DONE unlocked ', id, queue);
@@ -332,7 +331,7 @@ $.webUIComponent = {
             if (queue.update_lock) {
                 queue.update['value'] = value;
                 queue.update['state'] = state;
-                this.add_queue_timeout(id, queue);
+                this.add_queue_timeout(id, queue, this.queue_default_timeout);
                 return;
             }
         }
@@ -391,8 +390,14 @@ $.webUIComponent = {
         //     // this.publish_state(id, value, 'set');
         //     this.queue_publish_state(id, value, 'set', update_lock, timeout);
         // }
-        this.queue_publish_state(id, value, 'set', onSlideEnd ? this.queue_end_slider_default_timeout : this.queue_default_timeout);
-        this.queue_get_entry(id).update_lock = onSlideEnd == false;
+        var queue = this.queue_get_entry(id);
+        if (onSlideEnd == false) {
+            queue.update_lock = true;
+        }
+        else {
+            queue.remove_update_lock = true;
+        }
+        this.queue_publish_state(id, value, 'set', onSlideEnd ? (this.queue_default_timeout + 400) : this.queue_default_timeout);
     },
 
     slider_update_css: function(element, handle, fill) {

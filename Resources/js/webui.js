@@ -4,24 +4,22 @@
 
 $.webUIComponent = {
     uri: '/webui_ws',
+    slider_fill_intensity: { left: 0.0, right: 0.7 }, // slider fill value. RGB alpha depending on the slider value (left:0.0 = 0%, right: 0.7 = 70%)
     container: $('#webui'),
 
-
-prototypes: {
-    webui_group_title_content: '<div class="{{column-type}}-12"><div class="webuicomponent title text-white bg-primary"><div class="row group"><div class="col-auto mr-auto"><h1>{{title}}</h1></div>{{webui-disconnected-icon}}<div class="col-auto mb-auto mt-auto">{{content}}</div></div></div></div>',
-    webui_group_title: '<div class="{{column-type}}-12"><div class="webuicomponent title text-white bg-primary"><div class="row group"><div class="col-auto mr-auto mt-auto mb-auto"><h1>{{title}}</h1></div>{{webui-disconnected-icon}}</div></div></div>',
-    webui_disconnected_icon: '<div class="col-auto lost-connection hidden" id="lost-connection"><span class="oi oi-bolt webui-disconnected-icon"></span></div>',
-    webui_row: '<div class="row">{{content}}</div>',
-    webui_col_12: '<div class="{{column-type}}-12"><div class="webuicomponent">{{content}}</div></div>',
-    webui_col_2: '<div class="{{column-type}}-2"><div class="webuicomponent">{{content}}</div></div>',
-    webui_col_3: '<div class="{{column-type}}-3"><div class="webuicomponent">{{content}}</div></div>',
-    webui_sensor_badge: '<div class="webuicomponent"><div class="badge-sensor"><div class="row"><div class="col"><div class="outer-badge"><div class="inner-badge"><{{hb|h4}} class="data"><span id="{{id}}" class="value">{{value}}</span> <span class="unit">{{unit}}</span></{{hb|h4}}></div></div></div></div><div class="row"><div class="col title">{{title}}</div></div></div></div>',
-    webui_sensor: '<div class="webuicomponent"><div class="sensor"><{{ht|h3}} class="title">{{title}}</{{hb|h1}}><{{hb|h1}} class="data"><span id="{{id}}" class="value">{{value}}</span> <span class="unit">{{unit}}</span></{{ht|h3}}></div></div>',
-    webui_switch: '<div class="switch"><input type="range" class="attribute-target"></div>',
-    webui_slider: '<div class="webuicomponent"><div class="slider"><input type="range" class="attribute-target"></div></div>',
-},
-
-
+    prototypes: {
+        webui_group_title_content: '<div class="{{column-type}}-12"><div class="webuicomponent title text-white bg-primary"><div class="row group"><div class="col-auto mr-auto"><h1>{{title}}</h1></div>{{webui-disconnected-icon}}<div class="col-auto mb-auto mt-auto">{{content}}</div></div></div></div>',
+        webui_group_title: '<div class="{{column-type}}-12"><div class="webuicomponent title text-white bg-primary"><div class="row group"><div class="col-auto mr-auto mt-auto mb-auto"><h1>{{title}}</h1></div>{{webui-disconnected-icon}}</div></div></div>',
+        webui_disconnected_icon: '<div class="col-auto lost-connection hidden" id="lost-connection"><span class="oi oi-bolt webui-disconnected-icon"></span></div>',
+        webui_row: '<div class="row">{{content}}</div>',
+        webui_col_12: '<div class="{{column-type}}-12"><div class="webuicomponent">{{content}}</div></div>',
+        webui_col_2: '<div class="{{column-type}}-2"><div class="webuicomponent">{{content}}</div></div>',
+        webui_col_3: '<div class="{{column-type}}-3"><div class="webuicomponent">{{content}}</div></div>',
+        webui_sensor_badge: '<div class="webuicomponent"><div class="badge-sensor"><div class="row"><div class="col"><div class="outer-badge"><div class="inner-badge"><{{hb|h4}} class="data"><span id="{{id}}" class="value">{{value}}</span> <span class="unit">{{unit}}</span></{{hb|h4}}></div></div></div></div><div class="row"><div class="col title">{{title}}</div></div></div></div>',
+        webui_sensor: '<div class="webuicomponent"><div class="sensor"><{{ht|h4}} class="title">{{title}}</{{hb|h1}}><{{hb|h1}} class="data"><span id="{{id}}" class="value">{{value}}</span> <span class="unit">{{unit}}</span></{{ht|h4}}></div></div>',
+        webui_switch: '<div class="switch"><input type="range" class="attribute-target"></div>',
+        webui_slider: '<div class="webuicomponent"><div class="slider"><input type="range" class="attribute-target"></div></div>',
+    },
 
 
     defaults: {
@@ -41,8 +39,11 @@ prototypes: {
     },
     components: {},
     group: null,
-    pending_requests: [],
+    // pending_requests: [],
     lock_publish: false,
+    publish_queue: {},
+    queue_default_timeout: 100,
+    queue_end_slider_default_timeout: 500,
     retry_time: 500,
 
     // variables can use - or _
@@ -171,74 +172,246 @@ prototypes: {
         }
     },
 
-    publish_state: function(id, value, type) {
-        // type = state, value 0 or 1
-        // type = value
+    // publish_state: function(id, value, type) {
+    //     // type = state, value 0 or 1
+    //     // type = value
+    //     if (this.lock_publish) {
+    //         return;
+    //     }
+    //     var pendingRequest = this.pending_requests[id];
+    //     if (pendingRequest) {
+    //         // store last value and request to publish if there was any change
+    //         if (pendingRequest.value != value || pendingRequest.type != type) {
+    //             pendingRequest.value = value;
+    //             pendingRequest.type = type;
+    //             pendingRequest.publish = true;
+    //         }
+    //         window.clearTimeout(pendingRequest.timeout);
+    //     }
+    //     else {
+    //         dbg_console.log("publish state", id, value, type, this.lock_publish, this.pending_requests[id]);
 
-        dbg_console.log("publish state", id, value, type, this.lock_publish);//, this.pending_requests[id]);
+    //         this.pending_requests[id] = {
+    //             sent: {
+    //                 value: value,
+    //                 type: type
+    //             },
+    //             value: value,
+    //             type: type,
+    //             publish: false
+    //         };
+    //         this.socket.send('+' + type + ' ' + id + ' ' + value);
+    //     }
+    //     // max. update rate 150ms
+    //     // last published state will be sent after the timeout if it is different from what was sent last
+    //     var self = this;
+    //     this.pending_requests[id].timeout = window.setTimeout(function() {
+    //         var request = { ...self.pending_requests[id] };
+    //         delete self.pending_requests[id];
+    //         if (request.publish && (request.value != request.sent.value || request.type != request.sent.type)) {
+    //             self.publish_state(id, request.value, request.type)
+    //         }
+    //     }, 150);
+
+    // },
+
+    // slider_unlock_timeout: function(id, element) {
+    //     if (this.components[id].locked_timeout) {
+    //         window.clearTimeout(this.components[id].locked_timeout);
+    //     }
+    //     var self = this;
+    //     this.components[id].locked_timeout = window.setTimeout(function() {
+    //         delete self.components[id].locked_timeout;
+    //         element.removeClass('locked');
+    //         if (self.components[id].set_value !== undefined) {
+    //             dbg_console.log('slider_callback set_value_delayed', self.components[id].set_value);
+    //             self.lock_publish = true;
+    //             element.val(self.components[id].set_value).trigger('change');
+    //             delete self.components[id].set_value;
+    //             window.setTimeout(function() {
+    //                 self.lock_publish = false;
+    //                 dbg_console.log('slider_callback set_value_delayed removing lock publish');
+    //             }, 50);
+    //         }
+    //     }, 500);
+    // },
+
+    //
+    // remove timeout and delete entries
+    //
+    queue_delete: function() {
+        var self = this;
+        $.each(this.publish_queue, function(key, queue) {
+            if (queue.timeout) {
+                window.clearTimeout(queue.timeout);
+                queue.timeout = null;
+            }
+            delete self.publish_queue[key];
+        });
+    },
+    //
+    // returns true if the queue is done
+    //
+    queue_is_done: function(queue) {
+        return !queue.update_lock && queue.next_timeout == 0 && queue.update['value'] === undefined && queue.update['set'] === undefined && queue.update['state'] === undefined;
+    },
+    //
+    // get or create entry in the queue for element id
+    //
+    queue_get_entry: function(id) {
+        if (this.publish_queue[id] === undefined) {
+            this.publish_queue[id] = { timeout: null, update_lock: false, next_timeout: 0, values: {}, published: {}, update: {} };
+        }
+        return this.publish_queue[id];
+    },
+    //
+    // add timeout to process the queue
+    //
+    add_queue_timeout: function(id, queue, timeout) {
+        if (timeout === undefined) {
+            timeout = this.queue_default_timeout;
+        }
+        else {
+            queue.next_timeout = timeout;
+        }
+        if (queue.timeout) {
+            return;
+        }
+        var callback = null;
+        var self = this;
+        var _callback = function() {
+            if (self.lock_publish) {
+                delete self.publish_queue[id];
+                return;
+            }
+            // update element if not locked
+            if (!queue.update_lock && queue.update['value'] !== undefined) {
+                self.queue_update_element(id, $('#' + id), queue.update['value'], queue.update['state']);
+                queue.update = {};
+            }
+            // publish queue if no global lock is set
+            for (var key in queue.values) {
+                if (queue.values.hasOwnProperty(key)) {
+                    var value = queue.values[key];
+                    var has_changed = queue.published[key] !== value;
+                    dbg_console.log('publish_if_changed ', key, 'value', value, 'has_changed', has_changed);
+                    if (has_changed) {
+                        self.socket.send('+' + key + ' ' + id + ' ' + value);
+                        console.log('SOCKET_SEND +' + key + ' ' + id + ' ' + value);
+                        queue.published[key] = value;
+                    }
+                }
+            }
+            queue.values = {};
+            // keep calling this function until the queue is done
+            if (self.queue_is_done(queue)) {
+                console.log('QUEUE DONE unlocked ', id, queue);
+                dbg_console.log('unlocked ', id, queue);
+                queue.timeout = null;
+            }
+            else {
+                var timeout = self.queue_default_timeout;
+                if (queue.next_timeout) {
+                    timeout = queue.next_timeout;
+                    queue.next_timeout = 0;
+                }
+                queue.timeout = window.setTimeout(callback, timeout);
+            }
+        };
+        callback = _callback;
+        queue.timeout = window.setTimeout(callback, timeout);
+    },
+    //
+    // update element and trigger onChange
+    // if updates are locked, add a timer to retry
+    //
+    queue_update_state: function(id, element, value, state, update_element) {
+        if (!this.lock_publish) {
+            var queue = this.queue_get_entry(id);
+            console.log('queue_update_state', id, value, state, update_element, this.lock_publish, queue);
+            if (queue.update_lock) {
+                queue.update['value'] = value;
+                queue.update['state'] = state;
+                this.add_queue_timeout(id, queue);
+                return;
+            }
+        }
+        if (update_element) {
+            this.queue_update_element(id, element, value, state);
+        }
+    },
+    //
+    // update element and trigger onChange
+    // restore update_lock status
+    //
+    queue_update_element: function(id, element, value, state) {
+        // console.log('queue_update_element', id, element, value, state);
+        var queue = this.queue_get_entry(id);
+        if (state !== undefined) {
+            queue.published.state = state;
+            element.prop('disabled', state != true);
+        }
+        if (value !== undefined) {
+            queue.published.value = value;
+            var update_lock = queue.update_lock;
+            // console.log('save lock ',queue.update_lock, update_lock);
+            element.val(value).trigger('change');
+            // console.log('restore lock ',queue.update_lock, update_lock);
+            queue.update_lock = update_lock;
+        }
+    },
+    //
+    // lock update and add timer to publish state
+    //
+    queue_publish_state: function(id, value, type, timeout) {
         if (this.lock_publish) {
             return;
         }
-
-        var pendingRequest = this.pending_requests[id];
-        if (pendingRequest && pendingRequest.pending) {
-
-            pendingRequest.value = value;
-            pendingRequest.type = type;
-
-        } else {
-            this.pending_requests[id] = {
-                pending: true,
-                value: value,
-                type: type,
-            };
-            this.socket.send('+' + type + ' ' + id + ' ' + value);
-
-            var self = this;
-            window.setTimeout(function() { // max. update rate 100ms, last published state will be sent after the timeout
-                self.pending_requests[id].pending = false;
-                if (self.pending_requests[id].value != value || self.pending_requests[id].type != type) {
-                    self.publish_state(id, self.pending_requests[id].value, self.pending_requests[id].type)
-                }
-            }, 150);
-        }
-
+        var queue = this.queue_get_entry(id);
+        queue.values[type] = value;
+        this.add_queue_timeout(id, queue, timeout);
     },
 
-    move_slider: function(slider, id, value) {
-        this.publish_state(id, value, 'set');
-        // this.update_group(id, value);
-        // this.update_group_switch();
-    },
-
-    slider_callback: function (slider, position, value, onSlideEnd) {
+    slider_callback: function (slider, value, onSlideEnd) {
         var element = $(slider.$element);
+        this.slider_update_css(element, slider.$handle, slider.$fill);
         var id = element.attr('id');
         //console.log('slider_callback ',id, this.components[id].type,element);
         if (this.components[id].type == 'group-switch') {
-            // this.toggle_group(id, value);
-            console.log('toggle group ', $('input[data-group-id="' + id + '"]'));
+            dbg_console.log('slider_callback toggle group ', $('input[data-group-id="' + id + '"]'));
+            //this.queue_publish_state(id, value, 'set', update_lock, timeout);
         }
-        else {
-            console.log('move slider for ', element.data('group-id'));
-            this.move_slider(slider, id, value);
-        }
-        this.sliderUpdateCSS(element, slider.$handle, slider.$fill);
+        // else {
+        //     // if (onSlideEnd) {
+        //     //     this.slider_unlock_timeout(id, element);
+        //     // }
+        //     // else if (!element.hasClass('locked')) {
+        //     //     element.addClass('locked');
+        //     // }
+        //     // this.publish_state(id, value, 'set');
+        //     this.queue_publish_state(id, value, 'set', update_lock, timeout);
+        // }
+        this.queue_publish_state(id, value, 'set', onSlideEnd ? this.queue_end_slider_default_timeout : this.queue_default_timeout);
+        this.queue_get_entry(id).update_lock = onSlideEnd == false;
     },
 
-    sliderUpdateCSS: function(element, handle, fill) {
+    slider_update_css: function(element, handle, fill) {
         var value = element.val();
-        if (element.hasClass('slider-change-fill-intensity')) {
+        if (this.slider_fill_intensity && element.hasClass('slider-change-fill-intensity')) {
             // change brightness of slider
-            var a = (value / (parseInt(element.attr('max') - parseInt(element.attr('min')))) * 0.7);
-            fill.css('background-image', '-webkit-gradient(linear, 50% 0%, 50% 100%, color-stop(0%, rgba(255, 255, 255, '+a+')), color-stop(100%, rgba(255, 255, 255, '+a+')))');
-            fill.css('background-image', '-moz-linear-gradient(rgba(255, 255, 255, '+a+'), rgba(255, 255, 255, 0, '+a+'))');
-            fill.css('background-image', '-webkit-linear-gradient(rgba(255, 255, 255, '+a+'), rgba(255, 255, 255, '+a+'))');
-            fill.css('background-image', 'linear-gradient(rgba(255, 255, 255, '+a+'), rgba(255, 255, 255, '+a+'))');
+            var fill_range = this.slider_fill_intensity.right - this.slider_fill_intensity.left;
+            var slider_range = parseInt(element.attr('max') - parseInt(element.attr('min')));
+            var alpha = (value / slider_range * fill_range) + this.slider_fill_intensity.left;
+            var rgba = 'rgba(255, 255, 255, ' + alpha + ')';
+            var rgba2x = rgba + ',' + rgba;
+            fill.css('background-image', '-webkit-gradient(linear,50% 0%, 50% 100%,color-stop(0%,' + rgba + '),color-stop(100%,' + rgba + '))');
+            fill.css('background-image', '-moz-linear-gradient(' + rgba2x + ')');
+            fill.css('background-image', '-webkit-linear-gradient(' + rgba2x + ')');
+            fill.css('background-image', 'linear-gradient(' + rgba2x +')');
         }
-        if (value == 0) {
+        if (value == 0 && !handle.hasClass('off')) {
             handle.removeClass('on').addClass('off');
-        } else if (value) {
+        } else if (value && !handle.hasClass('on')) {
             handle.removeClass('off').addClass('on');
         }
     },
@@ -281,6 +454,7 @@ prototypes: {
             return row_prototype;
 
         } else if (options.type === 'sensor' || options.type === '"binary_sensor') {
+            this.components[options.id] = {type: 'sensor'};
             var prototype_name = 'webui-sensor';
             if (options.render_type == 'badge') {
                 prototype_name += '-badge';
@@ -289,7 +463,7 @@ prototypes: {
             if (has_no_value) {
                 options.value = this.defaults.column.sensor.no_value;
             }
-            prototype = $(this.get_prototype(prototype_name, $.extend(options, this.defaults.column.sensor)));
+            prototype = $(this.get_prototype(prototype_name, $.extend({}, this.defaults.column.sensor, options)));
             if (has_no_value) {
                 prototype.find('.data').addClass('no-value');
             }
@@ -302,34 +476,33 @@ prototypes: {
             //         sensor.height(options.height);
             //     }
             // }
-            this.components[options.id] = {type: 'sensor'};
             return prototype;
         }
         else if (options.type === 'switch') {
+            this.components[options.id] = {type: 'switch'};
             if (options.display_name) {
                 prototype = $(this.get_prototype('webui-named-switch', options));
             } else {
                 prototype = $(this.get_prototype('webui-switch', options));
             }
-            this.add_attributes(prototype.find('.attribute-target'), $.extend(options, this.defaults.column.switch));
-            this.components[options.id] = {type: 'switch'};
+            this.add_attributes(prototype.find('.attribute-target'), $.extend({}, this.defaults.column.switch, options));
             return prototype;
         }
         else if (options.type === 'slider') {
-
-            options.class = (options.color === 'temperature' ? 'color-slider' : 'slider');
-            prototype = $(this.get_prototype('webui-slider', options));
-            this.add_attributes(prototype.find('.attribute-target'), $.extend(options, this.defaults.column.slider));
             this.components[options.id] = {type: 'slider'};
+            options.class = (options.color === 'temperature' ? 'slider color-slider' : 'slider');
+            prototype = $(this.get_prototype('webui-slider', options));
+            this.add_attributes(prototype.find('.attribute-target'), $.extend({}, this.defaults.column.slider, options));
             return prototype;
         }
         else if (options.type === 'screen') {
-            prototype = $(this.get_prototype('webui-screen', options));
-            this.add_attributes(prototype.find('.attribute-target'), $.extend(options, this.defaults.column.screen));
             this.components[options.id] = {type: 'screen'};
+            prototype = $(this.get_prototype('webui-screen', options));
+            this.add_attributes(prototype.find('.attribute-target'), $.extend({}, this.defaults.column.screen, options));
             return prototype;
         }
         else if (options.type === "buttons") {
+            this.components[options.id] = {type: 'buttons'};
             options.buttons = options.buttons.split(',');
             var buttons = '';
             $(options.buttons).each(function(key, val) {
@@ -343,7 +516,6 @@ prototypes: {
             if (options.height) {
                 $(element).find('.button-group').height(options.height + 'px');
             }
-            this.components[options.id] = {type: 'buttons'};
             return element;
         }
         else if (options.type === "row") {
@@ -389,7 +561,7 @@ prototypes: {
         this.lock_publish = true;
         this.components = {};
         this.group = null;
-        this.pending_requests = [];
+        // this.pending_requests = [];
         this.container.html('');
 
         var self = this;
@@ -411,12 +583,12 @@ prototypes: {
             var options = {
                 polyfill : false,
                 onSlideEnd: function(position, value) {
-                    self.slider_callback(this, position, value, true);
+                    self.slider_callback(this, value, true);
                 }
             };
             if ($this.attr('min') != 0 || $this.attr('max') != 1) {
                 options.onSlide = function(position, value) {
-                    self.slider_callback(this, position, value, false);
+                    self.slider_callback(this, value, false);
                 }
             }
             self.update_slider_css($this.rangeslider(options));
@@ -426,6 +598,7 @@ prototypes: {
             system_time_attach_handler();
         }
 
+        this.queue_delete();
         this.lock_publish = false;
     },
 
@@ -433,60 +606,8 @@ prototypes: {
         var next = input.next();
         var handle = next.find('.rangeslider__handle');
         var fill = next.find('.rangeslider__fill');
-        this.sliderUpdateCSS(input, handle, fill);
+        this.slider_update_css(input, handle, fill);
     },
-
-    // toggle_group: function(id, value) {
-    //     dbg_console.log("toggle_group", id, value, this.components[id]['components']);
-    //     // dbg_console.log("toggle_group", groupId, value, this.groups);
-    //     // if (this.groups[groupId].switch.value == value) {
-    //     //     return;
-    //     // }
-    //     // var self = this;
-    //     // $(this.groups[groupId].components).each(function() {
-    //     //     if (this.type == 'switch' || this.type == 'slider') {
-    //     //         if (this.zero_off) {
-    //     //             self.publish_state(this.id, value, 'set_state');
-    //     //         }
-    //     //     }
-    //     // });
-    // },
-
-    // // update state of components
-    // update_group: function(id, value) {
-    //     dbg_console.log("update_group", id, value, this.components[id]);
-    //     // $(this.groups).each(function() {
-    //     //     $(this.components).each(function() {
-    //     //         if (this.id == id && this.zero_off) {
-    //     //             this.state = value != 0;
-    //     //         }
-    //     //     });
-    //     // });
-    // },
-
-    // // check if any component is on and update group switch
-    // update_group_switch: function() {
-    //     var id = $(this).attr('id');
-    //     var value = null;
-    //     dbg_console.log("update_group_switch", id, value, this.components[id]);
-    //     // var self = this;
-    //     // $(this.groups).each(function() {
-    //     //     var value = 0;
-    //     //     $(this.components).each(function() {
-    //     //         if (this.state && this.zero_off) {
-    //     //             value = 1;
-    //     //         }
-    //     //     });
-    //     //     if (this.switch && this.switch.value != value) {
-    //     //         var element = $('#' + this.switch.id);
-    //     //         if (element.length) {
-    //     //             this.switch.value = value;
-    //     //             element.val(value).change();
-    //     //             self.update_slider_css(element);
-    //     //         }
-    //     //     }
-    //     // });
-    // },
 
     update_events: function(events) {
         dbg_console.log("update_events", events);
@@ -495,43 +616,17 @@ prototypes: {
         $(events).each(function() {
             var element = $('#' + this.id);
             if (element.length) {
-                var webui_component = $('#' + this.id).closest('.webuicomponent');
-                if (self.has_value(this)) {
-                    if (self.components[this.id]['type'] == 'sensor') {
+                var component_type = self.components[this.id]['type'];
+                if (component_type == 'sensor') {
+                    var webui_component = $('#' + this.id).closest('.webuicomponent');
+                    if (self.has_value(this)) {
                         webui_component.find('.data').removeClass('no-value');
-                    }
-                    // self.update_group(this.id, this.value);
-                    if (element[0].nodeName == 'DIV' && element.attr('class') && element.attr('class').indexOf('btn-group') != -1) {
-                        var buttons = $(element).find('button');
-                        if (this.state) {
-                            buttons.removeClass('disabled');
-                        }
-                        else {
-                            buttons.addClass('disabled');
-                        }
-                        buttons.removeClass('active');
-                        var this2 = this;
-                        $(buttons).each(function(key, val) {
-                            if (key == this2.value) {
-                                $(val).addClass('active');
-                            }
-                        });
-                    }
-                    else if (element[0].nodeName != 'INPUT') {
-                        // console.log("update_event", "innerHtml", this);
                         element.html(this.value);
-                        if (element.find('#system_time').length) {
+                        if ($('#system_time').length) {
                             system_time_attach_handler();
                         }
                     }
                     else {
-                        // console.log("update_event", "input", this);
-                        element.val(this.value).trigger('change');
-                        self.update_slider_css(element);
-                    }
-                }
-                else {
-                    if (self.components[this.id]['type'] == 'sensor') {
                         var data = webui_component.find('.data');
                         if (!data.hasClass('no-value')) {
                             data.addClass('no-value');
@@ -539,6 +634,55 @@ prototypes: {
                         }
                     }
                 }
+                else if (component_type == 'buttons') {
+                    var buttons = $(element).find('button');
+                    if (this.state) {
+                        buttons.removeClass('disabled');
+                    }
+                    else {
+                        buttons.addClass('disabled');
+                    }
+                    buttons.removeClass('active');
+                    var self2 = this;
+                    $(buttons).each(function(key, val) {
+                        if (key == self2.value) {
+                            $(val).addClass('active');
+                        }
+                    });
+                    self.queue_update_state(this.id, element, this.value, this.state, false)
+                }
+                else {
+                    self.queue_update_state(this.id, element, this.value, this.state, true)
+                }
+                // if (self.has_value(this)) {
+                //     if (component_type == 'sensor') {
+                //         webui_component.find('.data').removeClass('no-value');
+                //     }
+                //     if (component_type == 'buttons') {
+                //     }
+                //     else if (component_type == 'switch' || component_type == 'slider') {
+                //         // // console.log("update_event", "input", this);
+                //         // if (element.hasClass('locked')) {
+                //         //     self.components[this.id].set_value = this.value;
+                //         // }
+                //         // else {
+                //         queue_update_state(id, element, this.value);
+                //         //     element.val(this.value).trigger('change');
+                //         //     // self.update_slider_css(element);
+                //         // }
+                //     }
+                //     else {
+                //     }
+                // }
+                // else {
+                //     if (self.components[this.id]['type'] == 'sensor') {
+                //         var data = webui_component.find('.data');
+                //         if (!data.hasClass('no-value')) {
+                //             data.addClass('no-value');
+                //             data.find('.value').html(self.defaults.column.sensor.no_value);
+                //         }
+                //     }
+                // }
                 // if (this.state !== undefined) {
                 //     self.update_group(this.id, this.state ? 1 : 0);
                 // }

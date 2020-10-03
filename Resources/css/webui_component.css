@@ -25,14 +25,6 @@
 	min-height: 66px;
 }
 
-.webuicomponent > .color-slider {
-    padding: 10px;
-    padding-top: 24px;
-	min-height: 66px;
-	border-radius: 10px;
-	background-image: linear-gradient(to right, rgb(130, 130, 255), rgb(255, 255, 255), rgb(255, 170, 40));
-}
-
 .webuicomponent > .screen {
 7    padding: 10px;
     padding-top: 18px;
@@ -190,6 +182,7 @@
 .webuicomponent .sensor > .title {
     flex: 0 1 0;
     padding: .5rem 0 .5rem 0;
+    text-align: center;
 }
 
 .webuicomponent .sensor > .data {
@@ -340,5 +333,13 @@ starting with fb-0=1.125 going up to fb-11=2.5rem */
 }
 
 .webuicomponent.group-switch .rangeslider__fill {
-    background-color: red;
+    background-color: #e6e6e6;
+}
+
+.webuicomponent > .color-slider .rangeslider--horizontal {
+    background-image: linear-gradient(to right, rgb(76 125 241), rgb(255, 255, 255), rgb(255, 170, 40)) !important;
+}
+
+.webuicomponent > .color-slider .rangeslider__fill {
+    background-color: transparent;
 }

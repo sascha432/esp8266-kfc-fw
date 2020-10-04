@@ -26,21 +26,22 @@
             "#if 1": [
                 "./Resources/html/__prototypes.html",
                 "./Resources/html/__prototypes_webui.html",
-                "./Resources/html/fmtest.html",
-                "./Resources/html/fmtest.html",
-                "./Resources/html/webuitest.html",
-                "./Resources/html/serialtest.html",
-                "./Resources/html/wemo.html"
+
+                "./lib/KFCWebBuilder/Resources/charts-js-2.9.3-dist/Chart.js",
+                "./lib/KFCWebBuilder/Resources/charts-js-2.9.3-dist/Chart.css",
+                "./Resources/js/charts/chartjs-plugin-dragdata.min.js"
+
             ],
             "#if !IOT_DIMMER_MODULE && !IOT_ATOMIC_SUN_V2": [
                 "./Resources/html/dimmer-cfg.html",
-                "./Resources/js/forms/dimmer-cfg.js",
-                "./Resources/js/charts/Chart.min.js",
-                "./Resources/js/charts/chartjs-plugin-dragdata.min.js",
-                "./Resources/js/charts/Chart.min.css"
+                "./Resources/js/forms/dimmer-cfg.js"
             ],
-            "#if !STK500V1": "./src/plugins/stk500v1/atmega.csv",
-            "#if !SSD1306_PLUGIN": "./src/plugins/ssd1306_plugin/fonts/7digit",
+            "#if !STK500V1": [
+                "./src/plugins/stk500v1/atmega.csv"
+            ],
+            "#if !SSD1306_PLUGIN": [
+                "./src/plugins/ssd1306_plugin/fonts/7digit"
+            ],
             "#if !FILE_MANAGER": [
                 "./Resources/html/file-manager.html",
                 "./Resources/js/file-manager.js"
@@ -85,10 +86,18 @@
             "#if !IOT_BLINDS_CTRL": [
                 "./Resources/html/blinds.html"
             ],
-            "#if !IOT_SENSOR": "./Resources/html/sensor.html",
-            "#if !IOT_WEATHER_STATION": "./Resources/html/weather.html",
-            "#if !IOT_REMOTE_CONTROL": "./Resources/html/remotectrl.html",
-            "#if !REST_API_SUPPORT": "./Resources/html/rest-api.html",
+            "#if !IOT_SENSOR": [
+                "./Resources/html/sensor.html"
+            ],
+            "#if !IOT_WEATHER_STATION": [
+                "./Resources/html/weather.html"
+            ],
+            "#if !IOT_REMOTE_CONTROL": [
+                "./Resources/html/remotectrl.html"
+            ],
+            "#if !REST_API_SUPPORT": [
+                "./Resources/html/rest-api.html"
+            ],
             "#if !HOME_ASSISTANT_INTEGRATION": [
                 "./Resources/html/hass.html",
                 "./Resources/html/hass-edit.html",
@@ -101,18 +110,14 @@
             "#if !WEBUI_ALERTS_ENABLED": [
                 "./Resources/js/webui-alerts.js",
                 "./Resources/css/alert-container.css"
-            ],
-            "#if true": [
-                "./Resources/js/webui.js",
-                "./Resources/css/webui-component.css"
             ]
         },
         "groups": {
             "js_main": {
                 "target_dirs": {
                     "/data/webui/js": [
-                        "./lib/KFCWebBuilder/Resources/js/jquery-3.3.1.min.js",
-                        "./lib/KFCWebBuilder/Resources/js/bootstrap.bundle.min.js",
+                        "./lib/KFCWebBuilder/Resources/jquery-3.5.2-dist/jquery.js",
+                        "./lib/KFCWebBuilder/Resources/bootstrap-4.5.2-dist/js/bootstrap.bundle.js",
                         "./lib/KFCWebBuilder/Resources/js/js.cookie.js",
                         "./lib/KFCWebBuilder/Resources/js/selectize.min.js",
                         "./lib/KFCWebBuilder/Resources/js/rangeslider.min.js",
@@ -127,7 +132,7 @@
                         "./Resources/js/http2serial.js",
                         "./Resources/js/ping-console.js",
                         "./Resources/js/webui.js",
-                        "./Resources/js/charts/Chart.min.js",
+                        "./lib/KFCWebBuilder/Resources/charts-js-2.9.3-dist/Chart.js",
                         "./Resources/js/charts/chartjs-plugin-dragdata.min.js"
                     ]
                 },
@@ -160,7 +165,7 @@
             "css_main": {
                 "target_dirs": {
                     "./data/webui/css": [
-                        "./lib/KFCWebBuilder/Resources/css/bootstrap.min.css",
+                        "./lib/KFCWebBuilder/Resources/bootstrap-4.5.2-dist/css/bootstrap.css",
                         "./lib/KFCWebBuilder/Resources/css/selectize.bootstrap4.css",
                         "./lib/KFCWebBuilder/Resources/css/open-iconic-bootstrap.css",
                         "./lib/KFCWebBuilder/Resources/css/rangeslider.css",
@@ -173,7 +178,7 @@
                         "./Resources/css/rangeslider.css",
                         "./Resources/css/form-help-block.css",
                         "./Resources/css/input-text-range.css",
-                        "./Resources/js/charts/Chart.min.css"
+                        "./lib/KFCWebBuilder/Resources/charts-js-2.9.3-dist/Chart.css"
                     ]
                 },
                 "processors":  {

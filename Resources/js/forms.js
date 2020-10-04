@@ -39,14 +39,14 @@ $.formValidator = {
             var target = $(val.target);
             var group = target.closest('.form-group');
             if (group.length) {
-                dbg_console.debug('error', val, 'target', target, 'group', group, 'input-tag', group.find(input_tags));
+                console.debug('error', val, 'target', target, 'group', group, 'input-tag', group.find(input_tags));
                 group.find(input_tags).addClass('is-invalid');
                 group.append('<div class="invalid-feedback">' + val.error + '</>');
             } else {
                 if (!val.name) {
                     val.name = 'Field "' + val.target.replace(/[\.#]/g, '').replace(/_([0-9]+)/g, ' #\$1').replace(/[_-]/g, ' ') + '"';
                 }
-                dbg_console.debug('error', val, 'target', target, 'group or target not found');
+                console.debug('error', val, 'target', target, 'group or target not found');
                 var alert = form.find('.invalid-feedback-alert');
                 if (!alert.length) {
                     form.prepend('<div class="invalid-feedback-alert mt-3 mb-0 p-2 alert alert-danger"><h5 class="text-center">Additional errors</h5><hr></div>');
@@ -87,7 +87,7 @@ $.addFormHelp = function(force) {
         targets.each(function() {
             var label = $('label[for="' + $(this).attr('id') + '"]');
             if (force || label.find('.form-help-addon').length == 0) {
-                dbg_console.debug('update #'+ $(this).attr('id'));
+                console.debug('update #'+ $(this).attr('id'));
                 var regex = RegExp(tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '.*');
                 label.html(label.html().replace(regex, '') + help);
                 label.find('.form-help-label-text').on('click', function(e) {
@@ -149,7 +149,7 @@ $(function() {
             pop_error($.urlParam('_type', true) || 'danger', $.urlParam('_title', true) || 'ERROR!', message, null, true);
         }
     } catch(e) {
-        dbg_console.error(e);
+        console.error(e);
     }
 
     // ---------------------------------------------------------------------------------
@@ -173,11 +173,11 @@ $(function() {
             try {
                 dep = JSON.parse(str);
             } catch(e) {
-                dbg_console.error(e, $(this).data('action'), 'raw', actionStr, 'replaced', str, 'json', dep);
+                console.error(e, $(this).data('action'), 'raw', actionStr, 'replaced', str, 'json', dep);
                 return;
             }
         } catch(e) {
-            dbg_console.error(e, $(this).data('action'));
+            console.error(e, $(this).data('action'));
             return;
         }
         var states = dep.s;
@@ -186,10 +186,10 @@ $(function() {
         var $I = $(dep.i);
         var $T = dep.t ? $(dep.t) : $(this);
         if ($I.length == 0) {
-            dbg_console.error('$I not found', dep.i);
+            console.error('$I not found', dep.i);
         }
         if ($T.length == 0) {
-            dbg_console.error('$T not found', dep.t);
+            console.error('$T not found', dep.t);
         }
         $I.on('change', function() {
             var $V = $I.val();
@@ -205,10 +205,10 @@ $(function() {
             });
             try {
                 code_x = always_execute + ';;;' + code;
-                // dbg_console.debug('onChange', 'V', $V, $Vint, 'I', $I, 'T', $T, 'key', vKey, 'code', code_x);
+                // console.debug('onChange', 'V', $V, $Vint, 'I', $I, 'T', $T, 'key', vKey, 'code', code_x);
                 eval(code_x);
             } catch(e) {
-                dbg_console.error(e, {'value': $V, 'target': $T, 'input': $I, 'key': vKey, 'states': states, 'code': code_x});
+                console.error(e, {'value': $V, 'target': $T, 'input': $I, 'key': vKey, 'states': states, 'code': code_x});
             }
         }).trigger('change');
     });
@@ -238,7 +238,7 @@ $(function() {
                     }
 
                     function save() {
-                        // dbg_console.debug('set_cookie', cookie_name, JSON.stringify(cookies[cookie_name]));
+                        // console.debug('set_cookie', cookie_name, JSON.stringify(cookies[cookie_name]));
                         Cookies.set(cookie_name, cookies[cookie_name]);
                     }
                     card.on('hide.bs.collapse', function() {
@@ -272,10 +272,10 @@ $(function() {
         };
         button.prop('disabled', true);
         $.get('/zeroconf?SID=' + $.getSessionId() + '&value=' + value, function (data) {
-            dbg_console.log(data);
+            console.log(data);
             show_dlg(data);
         }).fail(function(jqXHR, textStatus, error) {
-            dbg_console.error(error);
+            console.error(error);
             show_dlg('An error occured loading results:<br>' + error);
         });
     });
@@ -292,7 +292,7 @@ $(function() {
             if (!label) {
                 label = $this.data('label');
             }
-            var $html = $($.__prototypes.dismissible_alert);
+            var $html = $(window.__global_templates.dismissible_alert);
             $html.find('div').addClass('alert-warning').attr('id', id.substr(1));
             $html.find('h4').html("WARNING!");
             $html.find('span:first').html("Changing <strong>" + label.replace(":", "") + "</strong> requires a restart...");
@@ -403,7 +403,7 @@ $(function() {
         if (hiddenInput.length == 0) {
             hiddenInput = $(button.data('target'));
             if (hiddenInput.length == 0) {
-                dbg_console.error('cannot find hidden input field', id);
+                console.error('cannot find hidden input field', id);
                 return;
             }
         }
@@ -468,7 +468,7 @@ $(function() {
             src.remove();
         }
         else {
-            dbg_console.error('transfer-hidden-field target ' + target + ' not found');
+            console.error('transfer-hidden-field target ' + target + ' not found');
         }
     });
 
@@ -514,7 +514,7 @@ $(function() {
 
         function validate_range(value, child) {
             if (value < minVal || value > maxVal) {
-                dbg_console.debug(value, child, parent, minVal, maxVal);
+                console.debug(value, child, parent, minVal, maxVal);
                 parent.addClass('is-invalid').removeClass('is-valid');
             }
             else {

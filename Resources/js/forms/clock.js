@@ -15,7 +15,7 @@ $(function() {
                 }
                 window.setTimeout(load_sensor_value, 2000);
             }).fail(function(jqXHR, textStatus, error) {
-                dbg_console.error('failed to load sensor value ', error);
+                console.error('failed to load sensor value ', error);
                 window.setTimeout(load_sensor_value, 30000);
             });
         }

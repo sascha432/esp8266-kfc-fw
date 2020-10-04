@@ -217,30 +217,30 @@ void WebServerPlugin::handlerNotFound(AsyncWebServerRequest *request)
 
 void WebServerPlugin::handlerScanWiFi(AsyncWebServerRequest *request)
 {
-    WebServerSetCPUSpeedHelper setCPUSpeed;
-    if (plugin.isAuthenticated(request) == true) {
-        HttpHeaders httpHeaders(false);
-        httpHeaders.addNoCache();
-        auto response = new AsyncNetworkScanResponse(request->arg(FSPGM(hidden, "hidden")).toInt());
-        httpHeaders.setAsyncBaseResponseHeaders(response);
-        request->send(response);
-    } else {
+    if (!plugin.isAuthenticated(request)) {
         request->send(403);
+        return;
     }
+    WebServerSetCPUSpeedHelper setCPUSpeed;
+    HttpHeaders httpHeaders(false);
+    httpHeaders.addNoCache();
+    auto response = new AsyncNetworkScanResponse(request->arg(FSPGM(hidden, "hidden")).toInt());
+    httpHeaders.setAsyncBaseResponseHeaders(response);
+    request->send(response);
 }
 
 void WebServerPlugin::handlerZeroconf(AsyncWebServerRequest *request)
 {
-    WebServerSetCPUSpeedHelper setCPUSpeed;
-    if (plugin.isAuthenticated(request) == true) {
-        HttpHeaders httpHeaders(false);
-        httpHeaders.addNoCache();
-        auto response = new AsyncResolveZeroconfResponse(request->arg(FSPGM(value)));
-        httpHeaders.setAsyncBaseResponseHeaders(response);
-        request->send(response);
-    } else {
+    if (!plugin.isAuthenticated(request)) {
         request->send(403);
+        return;
     }
+    WebServerSetCPUSpeedHelper setCPUSpeed;
+    HttpHeaders httpHeaders(false);
+    httpHeaders.addNoCache();
+    auto response = new AsyncResolveZeroconfResponse(request->arg(FSPGM(value)));
+    httpHeaders.setAsyncBaseResponseHeaders(response);
+    request->send(response);
 }
 
 void WebServerPlugin::handlerLogout(AsyncWebServerRequest *request)
@@ -266,97 +266,95 @@ void WebServerPlugin::handlerAlive(AsyncWebServerRequest *request)
 
 void WebServerPlugin::handlerSyncTime(AsyncWebServerRequest *request)
 {
-    if (plugin.isAuthenticated(request) == true) {
-        HttpHeaders httpHeaders(false);
-        httpHeaders.addNoCache();
-        PrintHtmlEntitiesString str;
-        WebTemplate::printSystemTime(time(nullptr), str);
-        auto response = new AsyncBasicResponse(200, FSPGM(mime_text_html), str);
-        httpHeaders.setAsyncWebServerResponseHeaders(response);
-        request->send(response);
-    }
-    else {
+    if (!plugin.isAuthenticated(request)) {
         request->send(403);
+        return;
     }
+    HttpHeaders httpHeaders(false);
+    httpHeaders.addNoCache();
+    PrintHtmlEntitiesString str;
+    WebTemplate::printSystemTime(time(nullptr), str);
+    auto response = new AsyncBasicResponse(200, FSPGM(mime_text_html), str);
+    httpHeaders.setAsyncWebServerResponseHeaders(response);
+    request->send(response);
 }
 
 void WebServerPlugin::handlerWebUI(AsyncWebServerRequest *request)
 {
-    if (plugin.isAuthenticated(request) == true) {
-        WebServerSetCPUSpeedHelper setCPUSpeed;
-        auto response = new AsyncJsonResponse();
-        WsWebUISocket::createWebUIJSON(response->getJsonObject());
-        response->updateLength();
-        HttpHeaders httpHeaders;
-        httpHeaders.addNoCache();
-        httpHeaders.setAsyncBaseResponseHeaders(response);
-        request->send(response);
-    }
-    else {
+    if (!plugin.isAuthenticated(request)) {
         request->send(403);
+        return;
     }
+    WebServerSetCPUSpeedHelper setCPUSpeed;
+    auto response = new AsyncJsonResponse();
+    WsWebUISocket::createWebUIJSON(response->getJsonObject());
+    response->updateLength();
+    HttpHeaders httpHeaders;
+    httpHeaders.addNoCache();
+    httpHeaders.setAsyncBaseResponseHeaders(response);
+    request->send(response);
 }
 
 #if WEBUI_ALERTS_ENABLED
 
 void WebServerPlugin::handlerAlerts(AsyncWebServerRequest *request)
 {
-    if (plugin.isAuthenticated(request) == true) {
-        WebServerSetCPUSpeedHelper setCPUSpeed;
-        auto pollId = (uint32_t)request->arg(F("poll_id")).toInt();
-        if (pollId) {
-            PrintHtmlEntitiesString str;
-            WebAlerts::Alert::printAlertsAsJson(str, pollId, false);
+    if (!plugin.isAuthenticated(request)) {
+        request->send(403);
+        return;
+    }
+    if (!WebAlerts::Alert::hasOption(WebAlerts::OptionsType::ENABLED)) {
+        request->send(503);
+    }
+    WebServerSetCPUSpeedHelper setCPUSpeed;
+    auto pollId = (uint32_t)request->arg(F("poll_id")).toInt();
+    if (pollId) {
+        PrintHtmlEntitiesString str;
+        WebAlerts::Alert::printAlertsAsJson(str, pollId, false);
 
-            AsyncWebServerResponse *response = new AsyncBasicResponse(200, FSPGM(mime_application_json), str);
-            HttpHeaders httpHeaders;
-            httpHeaders.addNoCache();
-            httpHeaders.setAsyncWebServerResponseHeaders(response);
-            request->send(response);
-            return;
-        }
-        else {
-            auto alertId = (WebAlerts::IdType)request->arg(FSPGM(id)).toInt();
-            if (alertId) {
-                WebAlerts::Alert::dimiss(alertId);
-                request->send(200, FSPGM(mime_text_plain), FSPGM(OK));
-                return;
-            }
-        }
-        request->send(400);
+        AsyncWebServerResponse *response = new AsyncBasicResponse(200, FSPGM(mime_application_json), str);
+        HttpHeaders httpHeaders;
+        httpHeaders.addNoCache();
+        httpHeaders.setAsyncWebServerResponseHeaders(response);
+        request->send(response);
+        return;
     }
     else {
-        request->send(403);
+        auto alertId = (WebAlerts::IdType)request->arg(FSPGM(id)).toInt();
+        if (alertId) {
+            WebAlerts::Alert::dimiss(alertId);
+            request->send(200, FSPGM(mime_text_plain), FSPGM(OK));
+            return;
+        }
     }
+    request->send(400);
 }
 
 #endif
 
 void WebServerPlugin::handlerSpeedTest(AsyncWebServerRequest *request, bool zip)
 {
-    WebServerSetCPUSpeedHelper setCPUSpeed;
 #if !defined(SPEED_TEST_NO_AUTH) || SPEED_TEST_NO_AUTH == 0
-    if (plugin.isAuthenticated(request)) {
-#endif
-        HttpHeaders httpHeaders(false);
-        httpHeaders.addNoCache();
-
-        AsyncSpeedTestResponse *response;
-        auto size = std::max(1024 * 64, (int)request->arg(FSPGM(size, "size")).toInt());
-        if (zip) {
-            response = new AsyncSpeedTestResponse(FSPGM(mime_application_zip), size);
-            httpHeaders.add<HttpDispositionHeader>(F("speedtest.zip"));
-        } else {
-            response = new AsyncSpeedTestResponse(FSPGM(mime_image_bmp), size);
-        }
-        httpHeaders.setAsyncBaseResponseHeaders(response);
-
-        request->send(response);
-#if !defined(SPEED_TEST_NO_AUTH) || SPEED_TEST_NO_AUTH == 0
-    } else {
+    if (!plugin.isAuthenticated(request)) {
         request->send(403);
+        return;
     }
 #endif
+    WebServerSetCPUSpeedHelper setCPUSpeed;
+    HttpHeaders httpHeaders(false);
+    httpHeaders.addNoCache();
+
+    AsyncSpeedTestResponse *response;
+    auto size = std::max(1024 * 64, (int)request->arg(FSPGM(size, "size")).toInt());
+    if (zip) {
+        response = new AsyncSpeedTestResponse(FSPGM(mime_application_zip), size);
+        httpHeaders.add<HttpDispositionHeader>(F("speedtest.zip"));
+    } else {
+        response = new AsyncSpeedTestResponse(FSPGM(mime_image_bmp), size);
+    }
+    httpHeaders.setAsyncBaseResponseHeaders(response);
+
+    request->send(response);
 }
 
 
@@ -372,70 +370,69 @@ void WebServerPlugin::handlerSpeedTestImage(AsyncWebServerRequest *request)
 
 void WebServerPlugin::handlerImportSettings(AsyncWebServerRequest *request)
 {
+    if (!plugin.isAuthenticated(request)) {
+        request->send(403);
+        return;
+    }
+
     WebServerSetCPUSpeedHelper setCPUSpeed;
-    if (plugin.isAuthenticated(request) == true) {
-        HttpHeaders httpHeaders(false);
-        httpHeaders.addNoCache();
+    HttpHeaders httpHeaders(false);
+    httpHeaders.addNoCache();
 
-        PGM_P message;
-        int count = -1;
+    PGM_P message;
+    int count = -1;
 
-        auto configArg = FSPGM(config, "config");
-        if (request->method() == HTTP_POST && request->hasArg(configArg)) {
-            StreamString data;
-            data.print(request->arg(configArg));
-            config.discard();
+    auto configArg = FSPGM(config, "config");
+    if (request->method() == HTTP_POST && request->hasArg(configArg)) {
+        StreamString data;
+        data.print(request->arg(configArg));
+        config.discard();
 
-            JsonConfigReader reader(&data, config, nullptr);
-            reader.initParser();
-            bool result = reader.parseStream();
-            if (result) {
-                config.write();
+        JsonConfigReader reader(&data, config, nullptr);
+        reader.initParser();
+        bool result = reader.parseStream();
+        if (result) {
+            config.write();
 
-                count = reader.getImportedHandles().size();
-                message = SPGM(Success, "Success");
-            }
-            else {
-                message = PSTR("Failed to parse JSON data");
-            }
+            count = reader.getImportedHandles().size();
+            message = SPGM(Success, "Success");
         }
         else {
-            message = PSTR("No POST request");
+            message = PSTR("Failed to parse JSON data");
         }
-        request->send(200, FSPGM(mime_text_plain), PrintString(F("{\"count\":%d,\"message\":\"%s\"}"), count, message));
     }
     else {
-        request->send(403);
+        message = PSTR("No POST request");
     }
+    request->send(200, FSPGM(mime_text_plain), PrintString(F("{\"count\":%d,\"message\":\"%s\"}"), count, message));
 }
 
 void WebServerPlugin::handlerExportSettings(AsyncWebServerRequest *request)
 {
-    WebServerSetCPUSpeedHelper setCPUSpeed;
-    if (plugin.isAuthenticated(request) == true) {
-
-        HttpHeaders httpHeaders(false);
-        httpHeaders.addNoCache();
-
-        auto hostname = System::Device::getName();
-
-        char timeStr[32];
-        auto now = time(nullptr);
-        struct tm *tm = localtime(&now);
-        strftime_P(timeStr, sizeof(timeStr), PSTR("%Y%m%d_%H%M%S"), tm);
-        PrintString filename(F("kfcfw_config_%s_b" __BUILD_NUMBER "_%s.json"), hostname, timeStr);
-        httpHeaders.add<HttpDispositionHeader>(filename);
-
-        PrintString content;
-        config.exportAsJson(content, config.getFirmwareVersion());
-        AsyncWebServerResponse *response = new AsyncBasicResponse(200, FSPGM(mime_application_json), content);
-        httpHeaders.setAsyncWebServerResponseHeaders(response);
-
-        request->send(response);
-    }
-    else {
+    if (!plugin.isAuthenticated(request)) {
         request->send(403);
+        return;
     }
+    WebServerSetCPUSpeedHelper setCPUSpeed;
+
+    HttpHeaders httpHeaders(false);
+    httpHeaders.addNoCache();
+
+    auto hostname = System::Device::getName();
+
+    char timeStr[32];
+    auto now = time(nullptr);
+    struct tm *tm = localtime(&now);
+    strftime_P(timeStr, sizeof(timeStr), PSTR("%Y%m%d_%H%M%S"), tm);
+    PrintString filename(F("kfcfw_config_%s_b" __BUILD_NUMBER "_%s.json"), hostname, timeStr);
+    httpHeaders.add<HttpDispositionHeader>(filename);
+
+    PrintString content;
+    config.exportAsJson(content, config.getFirmwareVersion());
+    AsyncWebServerResponse *response = new AsyncBasicResponse(200, FSPGM(mime_application_json), content);
+    httpHeaders.setAsyncWebServerResponseHeaders(response);
+
+    request->send(response);
 }
 
 void WebServerPlugin::handlerUpdate(AsyncWebServerRequest *request)
@@ -539,7 +536,7 @@ void WebServerPlugin::handlerUploadUpdate(AsyncWebServerRequest *request, String
 #if STK500V1
     static File firmwareTempFile;
 #endif
-    if (index == 0 && !request->_tempObject && plugin.isAuthenticated(request) == true) {
+    if (index == 0 && !request->_tempObject && plugin.isAuthenticated(request)) {
         request->_tempObject = new UploadStatus_t();
         Logger_notice(F("Firmware upload started"));
 #if IOT_REMOTE_CONTROL
@@ -696,21 +693,20 @@ void WebServerPlugin::begin()
 
     if (System::Flags::getConfig().is_webui_enabled) {
         WsWebUISocket::setup();
-        WebServerPlugin::addHandler(F("/webui-get"), handlerWebUI);
+        WebServerPlugin::addHandler(F("/webui-handler"), handlerWebUI);
     }
 
     WebServerPlugin::addHandler(F("/scan-wifi"), handlerScanWiFi);
     WebServerPlugin::addHandler(F("/zeroconf"), handlerZeroconf);
     WebServerPlugin::addHandler(F("/logout"), handlerLogout);
     WebServerPlugin::addHandler(F("/is-alive"), handlerAlive);
-    WebServerPlugin::addHandler(F("/is_alive"), handlerAlive);
     WebServerPlugin::addHandler(F("/sync-time"), handlerSyncTime);
     WebServerPlugin::addHandler(F("/export-settings"), handlerExportSettings);
     WebServerPlugin::addHandler(F("/import-settings"), handlerImportSettings);
     WebServerPlugin::addHandler(F("/speedtest.zip"), handlerSpeedTestZip);
     WebServerPlugin::addHandler(F("/speedtest.bmp"), handlerSpeedTestImage);
 #if WEBUI_ALERTS_ENABLED
-    if (System::Flags::getConfig().is_webalerts_enabled) {
+    if (WebAlerts::Alert::hasOption(WebAlerts::OptionsType::PRINT_ALERTS_JSON)) {
         WebServerPlugin::addHandler(F("/alerts"), handlerAlerts);
     }
 #endif
@@ -822,8 +818,8 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
         return true;
     }
 
-    auto authType = isAuthenticated(request);
-    bool isAuthenticated = (authType > AuthType::NONE);
+    auto authType = getAuthenticated(request);
+    auto isAuthenticated = this->isAuthenticated(request);
     WebTemplate *webTemplate = nullptr;
     HttpHeaders httpHeaders;
 
@@ -1128,7 +1124,7 @@ WebServerPlugin::AsyncRestWebHandler *WebServerPlugin::addRestHandler(RestHandle
         plugin._server->addHandler(restHandler);
         __LDBG_printf("handler=%p", restHandler);
     }
-    plugin._restCallbacks.emplace_back(handler);
+    plugin._restCallbacks.emplace_back(std::move(handler));
     return restHandler;
 }
 
@@ -1137,7 +1133,7 @@ bool WebServerPlugin::isRunning() const
     return (_server != nullptr);
 }
 
-WebServerPlugin::AuthType WebServerPlugin::isAuthenticated(AsyncWebServerRequest *request) const
+WebServerPlugin::AuthType WebServerPlugin::getAuthenticated(AsyncWebServerRequest *request) const
 {
     String SID;
     auto auth = request->getHeader(FSPGM(Authorization));
@@ -1286,7 +1282,7 @@ bool WebServerPlugin::AsyncRestWebHandler::canHandle(AsyncWebServerRequest *requ
         // match "/api/endpoint" and "/api/endpoint/*"
         if (strncmp_P(url, handlerUrl, handlerUrlLen) == 0 && (url[handlerUrlLen] == 0 || url[handlerUrlLen] == '/')) {
             request->addInterestingHeader(FSPGM(Authorization));
-            request->_tempObject = __LDBG_new(WebServerPlugin::RestRequest, request, handler, WebServerPlugin::getInstance().isAuthenticated(request));
+            request->_tempObject = __LDBG_new(WebServerPlugin::RestRequest, request, handler, WebServerPlugin::getInstance().getAuthenticated(request));
             request->onDisconnect([this, request]() {
                 __LDBG_delete(reinterpret_cast<WebServerPlugin::RestRequest *>(request->_tempObject));
                 request->_tempObject = nullptr;

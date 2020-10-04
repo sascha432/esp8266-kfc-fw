@@ -236,7 +236,7 @@
                     request.open("POST", $.getHttpLocation('/file_manager/upload') + defaultParams + '&id=' + random_str(), true);
 
                     var upload_status = $('#upload_status');
-                    upload_status.show().html($.__prototypes.filemanager_upload_progress);
+                    upload_status.show().html(window.__global_templates.filemanager_upload_progress);
 
                     $('#upload_form').hide();
                     request.onload = function(e) {

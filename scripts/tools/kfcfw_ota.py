@@ -80,7 +80,9 @@ def get_h3(content):
 def is_alive(url, target):
     # verbose("Checking if device is alive "  + target)
     try:
-        resp = requests.get(url + "is_alive", timeout=1)
+        resp = requests.get(url + "is-alive", timeout=1)
+        if resp.status_code==404:
+            resp = requests.get(url + "is_alive", timeout=1)
         if resp.status_code!=200:
             return False
         elif resp.content.decode()!='0':

@@ -25,7 +25,7 @@
 
 using KFCConfigurationClasses::System;
 
-PROGMEM_STRING_DEF(webui_socket_uri, "/webui_ws");
+PROGMEM_STRING_DEF(webui_socket_uri, "/webui-ws");
 
 WsClientAsyncWebSocket *wsWebUI = nullptr;
 WsWebUISocket *WsWebUISocket::_sender = nullptr;

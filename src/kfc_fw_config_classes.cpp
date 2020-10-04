@@ -53,7 +53,7 @@ namespace KFCConfigurationClasses {
         is_rest_api_enabled(),
         is_serial2tcp_enabled(true),
         is_webui_enabled(true),
-        is_webalerts_enabled(),
+        is_webalerts_enabled(true),
         is_ssdp_enabled(true),
         __reserved(0),
         __reserved2(0)

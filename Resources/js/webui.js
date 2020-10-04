@@ -52,6 +52,7 @@ $.webUIComponent = {
     // {{var_name}} <- no default, requires a variable to be set
     // {{var_name|default_value}}
     get_prototype: function(name, vars) {
+        var self = this;
         var prototype = null;
         var replace = {
             'column-type': 'col-md'
@@ -77,7 +78,7 @@ $.webUIComponent = {
         $.each(replace, function(key, val) {
             regex = new RegExp('{{' + key.replace(/[_-]/g, '[_-]') + '(\|[^}]*)?}}', 'g');
             prototype = prototype.replace(regex, val);
-            // dbg_console.log("replace ", regex, key, val);
+            // self.console.log("replace ", regex, key, val);
         });
         // replace missing variables with default values
         prototype = prototype.replace(/{{[^\|]+\|([^}]*)}}/g, '\$1');
@@ -87,7 +88,7 @@ $.webUIComponent = {
             throw 'variables not found: ' + vars.join(', ');
         }
 
-        // dbg_console.log('prototype', name, prototype, 'replaced', replace);
+        // self.console.log('prototype', name, prototype, 'replaced', replace);
         return prototype;
     },
 
@@ -162,11 +163,12 @@ $.webUIComponent = {
     },
 
     copy_attributes: function(element, options) {
+        var self = this;
         if (options.attributes.length) {
             $(options.attributes).each(function() {
                 var idx = this.replace('-', '_');
                 if (options[idx] !== undefined) {
-                    // console.log("copy_attributes", this, options[idx]);
+                    // self.console.log("copy_attributes", this, options[idx]);
                     element.attr(this, options[idx]);
                 }
             });
@@ -190,7 +192,7 @@ $.webUIComponent = {
     //         window.clearTimeout(pendingRequest.timeout);
     //     }
     //     else {
-    //         dbg_console.log("publish state", id, value, type, this.lock_publish, this.pending_requests[id]);
+    //         console.log("publish state", id, value, type, this.lock_publish, this.pending_requests[id]);
 
     //         this.pending_requests[id] = {
     //             sent: {
@@ -225,13 +227,13 @@ $.webUIComponent = {
     //         delete self.components[id].locked_timeout;
     //         element.removeClass('locked');
     //         if (self.components[id].set_value !== undefined) {
-    //             dbg_console.log('slider_callback set_value_delayed', self.components[id].set_value);
+    //             console.log('slider_callback set_value_delayed', self.components[id].set_value);
     //             self.lock_publish = true;
     //             element.val(self.components[id].set_value).trigger('change');
     //             delete self.components[id].set_value;
     //             window.setTimeout(function() {
     //                 self.lock_publish = false;
-    //                 dbg_console.log('slider_callback set_value_delayed removing lock publish');
+    //                 console.log('slider_callback set_value_delayed removing lock publish');
     //             }, 50);
     //         }
     //     }, 500);
@@ -290,10 +292,10 @@ $.webUIComponent = {
                 if (queue.values.hasOwnProperty(key)) {
                     var value = queue.values[key];
                     var has_changed = queue.published[key] !== value;
-                    dbg_console.log('publish_if_changed ', key, 'value', value, 'has_changed', has_changed);
+                    self.console.log('publish_if_changed ', key, 'value', value, 'has_changed', has_changed);
                     if (has_changed) {
                         self.socket.send('+' + key + ' ' + id + ' ' + value);
-                        console.log('SOCKET_SEND +' + key + ' ' + id + ' ' + value);
+                        self.console.log('SOCKET_SEND +' + key + ' ' + id + ' ' + value);
                         queue.published[key] = value;
                     }
                 }
@@ -305,8 +307,8 @@ $.webUIComponent = {
             }
             // keep calling this function until the queue is done
             if (self.queue_is_done(queue)) {
-                console.log('QUEUE DONE unlocked ', id, queue);
-                dbg_console.log('unlocked ', id, queue);
+                self.console.log('QUEUE DONE unlocked ', id, queue);
+                self.console.log('unlocked ', id, queue);
                 queue.timeout = null;
             }
             else {
@@ -328,7 +330,7 @@ $.webUIComponent = {
     queue_update_state: function(id, element, value, state, update_element) {
         if (!this.lock_publish) {
             var queue = this.queue_get_entry(id);
-            console.log('queue_update_state', id, value, state, update_element, this.lock_publish, queue);
+            this.console.log('queue_update_state', id, value, state, update_element, this.lock_publish, queue);
             if (queue.update_lock) {
                 queue.update['value'] = value;
                 queue.update['state'] = state;
@@ -378,7 +380,7 @@ $.webUIComponent = {
         var id = element.attr('id');
         //console.log('slider_callback ',id, this.components[id].type,element);
         if (this.components[id].type == 'group-switch') {
-            dbg_console.log('slider_callback toggle group ', $('input[data-group-id="' + id + '"]'));
+            this.console.log('slider_callback toggle group ', $('input[data-group-id="' + id + '"]'));
             //this.queue_publish_state(id, value, 'set', update_lock, timeout);
         }
         // else {
@@ -557,12 +559,12 @@ $.webUIComponent = {
 
         }
         else {
-            dbg_console.error('unknown type', options);
+            this.console.error('unknown type', options);
         }
     },
 
     update_ui: function(json) {
-        dbg_console.called('update_ui', arguments);
+        this.console.log('update_ui', arguments);
 
         this.lock_publish = true;
         this.components = {};
@@ -616,7 +618,7 @@ $.webUIComponent = {
     },
 
     update_events: function(events) {
-        dbg_console.log("update_events", events);
+        this.console.log("update_events", events);
         this.lock_publish = true;
         var self = this;
         $(events).each(function() {
@@ -699,19 +701,19 @@ $.webUIComponent = {
     },
 
     request_ui: function() {
-        dbg_console.called('request_ui', arguments);
+        this.console.log('request_ui', arguments);
         var url = $.getHttpLocation(this.http_uri);
         var SID = $.getSessionId();
         this.retry_time = 500;
         var self = this;
         $.get(url + '?SID=' + SID, function(data) {
-            // dbg_console.called('get_callback_request_ui', arguments);
-            dbg_console.debug('get ', this.http_uri, data);
+            // console.log('get_callback_request_ui', arguments);
+            self.console.debug('get ', this.http_uri, data);
             self.update_ui(data.data);
             self.update_events(data.values);
             self.show_disconnected_icon('connected');
         }, 'json').fail(function(error) {
-            dbg_console.error('request_ui get error', error, 'retry_time', self.retry_time);
+            self.console.error('request_ui get error', error, 'retry_time', self.retry_time);
             if (self.retry_time < 5000) {
                 window.setTimeout(function() {
                     self.request_ui();
@@ -739,12 +741,12 @@ $.webUIComponent = {
             var canvasIdStr = new TextDecoder("utf-8").decode(canvasId);
             var canvas = $('#' + canvasIdStr);
             if (canvas.length == 0) {
-                dbg_console.error('cannot find canvas for', canvasIdStr);
+                this.console.error('cannot find canvas for', canvasIdStr);
                 return;
             }
             ctx = canvas[0].getContext('2d');
             if (!ctx) {
-                dbg_console.error('cannot get 2d context for', canvas);
+                this.console.error('cannot get 2d context for', canvas);
                 return;
             }
             if (pos % 2) { // word alignment
@@ -768,7 +770,7 @@ $.webUIComponent = {
             maxWritePos = width * height * 4;
 
         } catch(e) {
-            dbg_console.error('failed to decode header', e);
+            this.console.error('failed to decode header', e);
             return;
         }
 
@@ -816,7 +818,7 @@ $.webUIComponent = {
             }
 
         } catch(e) {
-            dbg_console.error('failed to decode image data', e);
+            this.console.error('failed to decode image data', e);
         }
 
         ctx.putImageData(image, x, y);
@@ -835,7 +837,7 @@ $.webUIComponent = {
             if (packetId == 0x0001) {// RGB565_RLE_COMPRESSED_BITMAP
                 this.handleRLECompressedBitmap(event.data, packetId.byteLength);
             } else {
-                dbg_console.log('unknown packet id: ' + packetId)
+                this.console.log('unknown packet id: ' + packetId)
             }
         }
         else if (event.type == 'data') {
@@ -845,7 +847,7 @@ $.webUIComponent = {
                     this.update_events(json.events);
                 }
             } catch(e) {
-                dbg_console.error('failed to parse json string', e, 'event.data', event)
+                this.console.error('failed to parse json string', e, 'event.data', event)
             }
         }
         else if (event.type == 'object') {
@@ -856,22 +858,23 @@ $.webUIComponent = {
     },
 
     init: function() {
-        dbg_console.called('init', arguments);
+        this.console.log('init', arguments);
         var url = $.getWebSocketLocation(this.websocket_uri);
         var SID = $.getSessionId();
         var self = this;
         this.socket = new WS_Console(url, SID, 1, function(event) {
             event.self = self;
             self.socket_handler(event);
-        } );
+        });
 
-        if (dbg_console.vars.enabled) {
+        if (this.console.is_debug_enabled()) {
             $('body').append('<textarea id="console" style="width:350px;height:150px;font-size:10px;font-family:consolas;z-index:999;position:fixed;right:5px;bottom:5px"></textarea>');
             this.socket.setConsoleId("console");
         }
         this.socket.connect();
     }
 };
+dbg_console.register('$.webUIComponent', $.webUIComponent);
 
 if ($('#webui').length) {
     // enable alert icons for webui

@@ -16,6 +16,7 @@
             "./lib/KFCWebBuilder/Resources/css/selectize.bootstrap4.css",
             "./lib/KFCWebBuilder/Resources/css/open-iconic-bootstrap.css",
             "./lib/KFCWebBuilder/Resources/css/rangeslider.css",
+            "./lib/KFCWebBuilder/Resources/charts-js-2.9.3-dist/Chart.css",
             "./Resources/css/styles.css",
             "./Resources/css/http2serial.css",
             "./Resources/css/ping-console.css",
@@ -25,14 +26,19 @@
             "./Resources/css/rangeslider.css",
             "./Resources/css/form-help-block.css",
             "./Resources/css/input-text-range.css",
-            "./Resources/js/charts/Chart.min.css"
         ];
         for(var key in load_css) {
             var link = document.createElement("link")
             var rel = document.createAttribute("rel");
             rel.value = 'stylesheet';
             var href = document.createAttribute("href");
-            href.value =  load_css[key].replace(/^.\/Resources\//, "$DEBUG_ASSETS_URL2$/").replace(/^.\/lib\/KFCWebBuilder\/Resources\//, "$DEBUG_ASSETS_URL1$/") + '?rnd=' + random_str();
+            var dir = load_css[key];
+            if (dir.match(/^.\/lib\/KFCWebBuilder\/Resources\//)) {
+                href.value = dir.replace(/^.\/lib\/KFCWebBuilder\/Resources\//, "$DEBUG_ASSETS_URL1$/");
+            }
+            else {
+                href.value = dir.replace(/^.\/Resources\//, "$DEBUG_ASSETS_URL2$/") + '?rnd=' + random_str(); // no caching
+            }
             link.setAttributeNode(rel);
             link.setAttributeNode(href);
             document.head.appendChild(link);

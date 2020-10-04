@@ -52,7 +52,7 @@
 
         <script>
             $(function() {
-                var prototypes = '$.__prototypes = {\n';
+                var prototypes = 'window.__global_templates = {\n';
                 $('.__prototypes').each(function() {
                     var html = $(this).html();
                     var name = $(this).attr('id');

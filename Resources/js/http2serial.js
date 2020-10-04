@@ -2,9 +2,9 @@
  * Author: sascha_lammers@gmx.de
  */
 
-var http2serialPlugin = {
+ var http2serialPlugin = {
 
-    console: $("#serial_console"),
+    output: $("#serial_console"),
     input: $("#command-input"),
     sendButton: $('#sendbutton'),
 
@@ -23,14 +23,14 @@ var http2serialPlugin = {
     socket: null,
 
     addCommands: function(commands) {
-        if (window._http2serial_debug) console.log(commands);
+        $.http2serialPlugin.console.log(commands);
         this.commands = commands;
 
         // var list = this.input[0].selectize;
         // try {
         //     list.clearOptions();
         //     $(commands).each(function() {
-        //         console.log(this);
+        //         $.http2serialPlugin.console.log(this);
         //         list.addOption({text: this, value: this});
         //     });
         //     list.refreshOptions();
@@ -46,12 +46,12 @@ var http2serialPlugin = {
             }
             this.history.data = this.history.data.slice(0, 100);
         }
-        dbg_console.debug('history save', this.history);
+        $.http2serialPlugin.console.debug('history save', this.history);
         Cookies.set('http2serial_history', this.history);
     },
 
     write: function(message) {
-        var con = this.console[0];
+        var con = this.output[0];
         var scrollPos = con.scrollHeight - con.scrollTop - $(con).innerHeight();
 
         // prefilter vt100 escape codes
@@ -60,17 +60,17 @@ var http2serialPlugin = {
             if (pos = message.lastIndexOf('\033[2J') != -1) {
                 message = message.substr(pos + 4);
                 consolePanel.value = '';
-                dbg_console.debug("clear screen", message);
+                $.http2serialPlugin.console.debug("clear screen", message);
             }
             // discard other vt100 sequences
             // https://github.com/xtermjs/xterm.js
             message = message.replace(/\033\[[\d;]*[mHJ]/g, '');
-            dbg_console.debug("replaced", message);
+            $.http2serialPlugin.console.debug("replaced", message);
         }
 
-        dbg_console.debug("message", message)
+        $.http2serialPlugin.console.debug("message", message)
         if (this.filter) {
-            dbg_console.debug("filtering", this.filter)
+            console.debug("filtering", this.filter)
             var filterRegEx = new RegExp('^' + this.filter + '\n', 'gm');
             con.value = (con.value + message).replace(filterRegEx, '');
         }
@@ -85,7 +85,7 @@ var http2serialPlugin = {
     },
 
     dataHandler: function(event) {
-        if (window._http2serial_debug) console.log("dataHandler", event);
+        $.http2serialPlugin.console.log("dataHandler", event);
         if (event.type == 'data') {
             if (event.data.substring(0, 25) == "+ATMODE_CMDS_HTTP2SERIAL=") {
                 this.addCommands(event.data.substring(25).split('\t'));
@@ -99,12 +99,12 @@ var http2serialPlugin = {
     runFilter: function() {
         if (this.filter) {
             var filterRegEx = new RegExp('^' + this.filter + '\n', 'gm');
-            this.console[0].value = this.console[0].value.replace(filterRegEx, '');
+            this.output[0].value = this.output[0].value.replace(filterRegEx, '');
         }
     },
 
     setFilter: function(filter) {
-        console.log('set filter', filter);
+        $.http2serialPlugin.console.log('set filter', filter);
         this.filter = filter;
         Cookies.set('http2serial_filter', { value: filter, enabled: true });
         // this.filterModal.find('.filter-set').removeClass('btn-primary').addClass('btn-secondary');
@@ -112,7 +112,7 @@ var http2serialPlugin = {
     },
 
     removeFilter: function(filter) {
-        console.log('remove filter');
+        $.http2serialPlugin.console.log('remove filter');
         this.filter = null;
         Cookies.set('http2serial_filter', { value: filter, enabled: false });
         this.filterModal.find('.filter-remove').removeClass('btn-primary').addClass('btn-secondary').attr('disabled', 'disabled');
@@ -121,7 +121,7 @@ var http2serialPlugin = {
 
     sendCommand: function(command) {
         var command = this.input.val();
-        if (window._http2serial_debug) console.log("send " + command);
+        $.http2serialPlugin.console.log("send " + command);
         if (command.trim() != "") {
             if (this.history.data.length == 0 || this.history.data[this.history.data.length - 1] != command) {
                 this.history.data.push(command);
@@ -142,7 +142,7 @@ var http2serialPlugin = {
                 this.input.val('');
                 return;
             } else if (command.toLowerCase() == "/clear") {
-                this.console.val('');
+                this.output.val('');
                 this.input.val('');
                 return;
             }
@@ -167,14 +167,15 @@ var http2serialPlugin = {
         var url = $.getWebSocketLocation('/serial-console');
         var SID = $.getSessionId();
         var self = this;
-        this.socket = new WS_Console(url, SID, 1, function(event) { self.dataHandler(event); }, this.console.attr('id'));
+        this.socket = new WS_Console(url, SID, 1, function(event) { self.dataHandler(event); }, this.output.attr('id'));
+        $.http2serialPlugin.console.log(this.socket);
         this.socket.connect();
     },
 
     init: function() {
         var self = this;
         this.input.on('keyup', function(event) {
-            if (window._http2serial_debug) console.log('keyup', event.key, event);
+            $.http2serialPlugin.console.log('keyup', event.key, event);
             if (event.key === 'Enter') {
                 event.preventDefault();
                 self.sendCommand();
@@ -221,8 +222,7 @@ var http2serialPlugin = {
 
         this.history = Cookies.getJSON('http2serial_history', this.history);
         var filter = Cookies.getJSON('http2serial_filter', this.filterDefault);
-        dbg_console.debug('filter cookie', filter)
-        dbg_console.debug('history cookie', this.history)
+        $.http2serialPlugin.console.debug('filter cookie', filter, 'history cookie', this.history)
 
         this.filterInput.val(filter.value);
         if (filter.enabled) {
@@ -246,3 +246,6 @@ var http2serialPlugin = {
         this.connect();
     },
 };
+
+$.http2serialPlugin = http2serialPlugin;
+dbg_console.register('$.http2serialPlugin', $.http2serialPlugin);

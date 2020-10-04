@@ -12,8 +12,13 @@
 // callback({type: 'binary', socket: ws_console, data: ArrayBuffer}); -> event.data instanceof ArrayBuffer
 // callback({type: 'object', socket: ws_console, data: {} }); -> typeof event.data === 'object'
 // auto_reconnect: time in seconds or 0 to disable
+
+
+$.wsConsole = {};
+dbg_console.register('$.wsConsole', $.wsConsole);
+
 function WS_Console(url, sid, auto_reconnect, callback, consoleId) {
-    dbg_console.called('new WS_Console', arguments);
+    $.wsConsole.console.debug('new WS_Console', arguments);
     this.url = url;
     this.sid = sid;
     this.consoleId = consoleId;
@@ -36,7 +41,7 @@ WS_Console.prototype.get_sid = function() {
 }
 
 WS_Console.prototype.keep_alive = function() {
-    dbg_console.debug('iPing', this.is_connected(), this.is_authenticated());
+    $.wsConsole.console.debug('iPing', this.is_connected(), this.is_authenticated());
     if (this.is_connected()) {
         var d = new Date();
         this.socket.send('+iPING ' + (d.getTime() + d.getMilliseconds() / 1000.0));
@@ -57,24 +62,24 @@ WS_Console.prototype.reset_ping_interval = function(set_new_interval) {
 }
 
 WS_Console.prototype.console_log = function(message, prefix) {
-    dbg_console.called('console_log', arguments);
+    $.wsConsole.console.debug('console_log', arguments);
     if (this.consoleId) {
         var consolePanel = document.getElementById(this.consoleId);
         var scrollPos = consolePanel.scrollHeight - consolePanel.scrollTop - $(consolePanel).innerHeight();
 
-        // dbg_console.debug('msg escpape', message.indexOf('\033'), "msg", message, "replace esc", message.replace(/\033\[[\d;]*[mHJ]/g, ''));
+        // $.wsConsole.console.debug('msg escpape', message.indexOf('\033'), "msg", message, "replace esc", message.replace(/\033\[[\d;]*[mHJ]/g, ''));
 
         // if (message.indexOf('\033') != -1) {
         //     var pos;
         //     if (pos = message.lastIndexOf('\033[2J') != -1) {
         //         message = message.substr(pos + 4);
         //         consolePanel.value = '';
-        //         dbg_console.debug("clear screen", message);
+        //         $.wsConsole.console.debug("clear screen", message);
         //     }
         //     // discard other vt100 sequences
         //     // https://github.com/xtermjs/xterm.js
         //     message = message.replace(/\033\[[\d;]*[mHJ]/g, '');
-        //     dbg_console.debug("replaced", message);
+        //     $.wsConsole.console.debug("replaced", message);
         // }
 
         if (prefix) {
@@ -109,16 +114,15 @@ WS_Console.prototype.is_authenticated = function() {
 }
 
 WS_Console.prototype.send = function(data) {
-    dbg_console.called('send', arguments);
+    $.wsConsole.console.debug('send', arguments);
     this.socket.send(data);
 }
 
 WS_Console.prototype.connect = function(authenticated_callback) {
-    dbg_console.called('connect', arguments);
-    dbg_console.assert(this.connection_counter++ == 0)
+    $.wsConsole.console.debug('connect', arguments, this);
+    console.assert(this.connection_counter++ == 0)
 
-    dbg_console.debug('connect_counter', this.connect_counter, 'connection_counter', this.connection_counter, 'reconnect_timeout', this.reconnect_timeout);
-    dbg_console.debug(this);
+    $.wsConsole.console.debug('connect_counter', this.connect_counter, 'connection_counter', this.connection_counter, 'reconnect_timeout', this.reconnect_timeout);
     if (this.reconnect_timeout) {
         window.clearTimeout(this.reconnect_timeout);
         this.reconnect_timeout = null;
@@ -142,14 +146,12 @@ WS_Console.prototype.connect = function(authenticated_callback) {
 
     this.socket = new WebSocket(this.url);
 
-    dbg_console.debug('WebSocket:', this.url);
-    dbg_console.debug(this);
+    $.wsConsole.console.debug('new WebSocket', this);
     this.socket.binaryType = 'arraybuffer';
 
     var ws_console = this;
     this.socket.onmessage = function(e) {
-        dbg_console.called('WS_Console.socket.onmessage', arguments);
-        dbg_console.debug(ws_console);
+        $.wsConsole.console.debug('onmessage', arguments, ws_console);
         ws_console.reset_ping_interval(true);
         if (e.data instanceof ArrayBuffer) {
             ws_console.callback({type: 'binary', data: e.data, socket: ws_console});
@@ -183,13 +185,12 @@ WS_Console.prototype.connect = function(authenticated_callback) {
             ws_console.callback({type: 'object', data: e.data, socket: ws_console});
         }
         else {
-            dbg_console.error('unexpected type of data = ', typeof e.data, 'event', e);
+            console.error('unexpected type of data = ', typeof e.data, 'event', e);
         }
     }
 
     this.socket.onopen = function(e) {
-        dbg_console.called('WS_Console.socket.onopen', arguments);
-        dbg_console.debug(ws_console);
+        $.wsConsole.console.debug('WS_Console.socket.onopen', arguments, ws_console);
         ws_console.console_log("Connection has been established...");
         ws_console.connect_counter = 0;
         ws_console.callback({type: 'open', event: e});
@@ -197,8 +198,7 @@ WS_Console.prototype.connect = function(authenticated_callback) {
     }
 
     this.socket.onclose = function(e) {
-        dbg_console.called('WS_Console.socket.online', arguments);
-        dbg_console.debug(ws_console);
+        $.wsConsole.console.debug('WS_Console.socket.online', arguments, ws_console);
         ws_console.callback({type: 'close', socket: ws_console, event: e, connect_counter: ws_console.connect_counter, was_authenticated: ws_console.authenticated });
         if (ws_console.connect_counter == 0 && ws_console.authenticated) {
             ws_console.authenticated = false;
@@ -208,8 +208,7 @@ WS_Console.prototype.connect = function(authenticated_callback) {
     }
 
     this.socket.onerror = function(e) {
-        dbg_console.called('WS_Console.socket.onerror', arguments);
-        dbg_console.debug(ws_console);
+        $.wsConsole.console.debug('WS_Console.socket.onerror', arguments, ws_console);
         ws_console.callback({type: 'error', socket: ws_console, event: e, connect_counter: ws_console.connect_counter, was_authenticated: ws_console.authenticated });
         if (ws_console.authenticated) {
             ws_console.console_log("Connection lost...");
@@ -221,8 +220,7 @@ WS_Console.prototype.connect = function(authenticated_callback) {
 }
 
 WS_Console.prototype.disconnect = function(reconnect) {
-    dbg_console.called('WS_Console.disconnect', arguments);
-    dbg_console.debug(this);
+    $.wsConsole.console.debug('WS_Console.disconnect', arguments, this);
 
     this.reset_ping_interval(false);
 
@@ -234,11 +232,10 @@ WS_Console.prototype.disconnect = function(reconnect) {
     }
     if (reconnect) {
         if (this.reconnect_timeout == null && this.auto_reconnect) {
-            dbg_console.debug('reconnecting in ' + this.auto_reconnect + ' seconds')
+            $.wsConsole.console.debug('reconnecting in ' + this.auto_reconnect + ' seconds')
             var ws_console = this;
             ws_console.reconnect_timeout = window.setTimeout(function() {
-                dbg_console.called('WS_Console.reconnect_timeout', arguments);
-                dbg_console.debug(ws_console);
+                $.wsConsole.console.debug('WS_Console.reconnect_timeout', arguments, ws_console);
                 ws_console.connect();
             }, this.auto_reconnect * 1000);
         }

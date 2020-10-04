@@ -43,7 +43,7 @@ $(function () {
             }
             function check_scan() {
                 $.get('/scan-wifi?SID=' + SID + '&id=' + random_str(), function (data) {
-                    dbg_console.log(data);
+                    console.log(data);
                     if (data.pending) {
                         window.setTimeout(check_scan, 1000);
                     } else {

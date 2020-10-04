@@ -164,7 +164,10 @@ public:
     }
 
     bool isRunning() const;
-    AuthType isAuthenticated(AsyncWebServerRequest *request) const;
+    AuthType getAuthenticated(AsyncWebServerRequest *request) const;
+    bool isAuthenticated(AsyncWebServerRequest *request) const {
+        return getAuthenticated(request) > AuthType::NONE;
+    }
 };
 
 inline bool operator ==(const WebServerPlugin::AuthType &auth, bool invert) {

@@ -337,7 +337,7 @@ starting with fb-0=1.125 going up to fb-11=2.5rem */
 }
 
 .webuicomponent > .color-slider .rangeslider--horizontal {
-    background-image: linear-gradient(to right, rgb(76 125 241), rgb(255, 255, 255), rgb(255, 170, 40)) !important;
+    background-image: linear-gradient(to right, rgb(76, 125, 241), rgb(255, 255, 255), rgb(255, 170, 40)) !important;
 }
 
 .webuicomponent > .color-slider .rangeslider__fill {

@@ -253,6 +253,14 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     else if (String_equals(key, PSTR("MODEL"))) {
         WebTemplate::printModel(output);
     }
+    else if (String_equals(key, PSTR("RANDOM"))) {
+        uint8_t buf[8];
+        rng.rand(buf, sizeof(buf));
+        for(auto n: buf) {
+            n %= 36;
+            output.print((char)(n < 26 ? (n + 'a') : (n + ('0' - 26))));
+        }
+    }
     else if (String_equals(key, PSTR("UNIQUE_ID"))) {
         WebTemplate::printUniqueId(output, FSPGM(kfcfw), -1);
     }
@@ -298,6 +306,8 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     else if (String_equals(key, PSTR("WEBUI_ALERTS_JSON"))) {
         if (WebAlerts::Alert::hasOption(WebAlerts::OptionsType::PRINT_ALERTS_JSON)) {
             WebAlerts::Alert::printAlertsAsJson(output, 1);
+        } else {
+            output.print(F("null"));
         }
     }
 #if IOT_ALARM_PLUGIN_ENABLED

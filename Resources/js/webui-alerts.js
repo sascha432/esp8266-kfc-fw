@@ -20,29 +20,33 @@
         var icons_visible = icons.is(':visible');
         var container_parent = this.container.parent();
         var container_visible = container_parent.is(':visible');
-        dbg_console.log("visible", container_visible, icons_visible, this.icon, this.count);
+        this.console.log("visible", container_visible, icons_visible, this.icon, this.count);
         if (this.count && this.icon && !icons_visible) {
-            dbg_console.log("show icons");
+            this.console.log("show icons");
             icons.clearQueue().stop().fadeIn();
         }
         else if ((!this.icon && icons_visible) || this.count == 0) {
-            dbg_console.log("hide icons");
+            this.console.log("hide icons");
             icons.clearQueue().stop().fadeOut();
         }
         if (this.count && !this.icon && !container_visible) {
-            dbg_console.log("show container");
+            this.console.log("show container");
             container_parent.clearQueue().stop().show();
         }
         else if ((this.icon && container_visible) || this.count == 0) {
-            dbg_console.log("hide container");
+            this.console.log("hide container");
             container_parent.clearQueue().stop().fadeOut(750);
             this.hide_container_toggle(-1);
         }
     },
     init_container: function() {
+        if (window.webui_alerts_data === undefined || window.webui_alerts_data === null) {
+            this.console.info('WebUI alerts disabled');
+            return;
+        }
         this.container = $('#alert-container');
         if (this.container.length == 0) {
-            dbg_console.error('#alert-container missing');
+            this.console.error('#alert-container missing');
             return;
         }
         var prototype = this.container.find('div[role=alert]:first');
@@ -105,10 +109,10 @@
         if (i >= this.next_alert_id) {
             this.next_alert_id = i + 1;
         }
-        dbg_console.log('add', data, 'next', this.next_alert_id);
+        this.console.log('add', data, 'next', this.next_alert_id);
 
         var alert = $('#webui-alert-id-' + i);
-        dbg_console.log(alert,'#webui-alert-id-' + i);
+        this.console.log(alert,'#webui-alert-id-' + i);
         if (alert.length == 0) {
             alert = $(this.alert_html);
         }
@@ -133,21 +137,23 @@
         this.container.append(alert);
     },
     poll: function() {
-        dbg_console.log('poll', this.next_alert_id, 'this', this);
+        this.console.log('poll', this.next_alert_id, 'this', this);
         var self = this;
         $.get('/alerts?poll_id=' + this.next_alert_id, function(data) {
-            dbg_console.log('get', data);
+            self.console.log('get', data);
             $(data).each(function(key, val) {
                 self.add(val);
             });
             self.update();
             window.setTimeout(function() { self.poll(); }, self.alert_poll_time);
         }, 'json').fail(function(error) {
-            dbg_console.error('webui alerts poll failed', error);
+            self.console.error('webui alerts poll failed', error);
             window.setTimeout(function() { self.poll(); }, self.alert_poll_time_on_error);
         });
     }
 };
+dbg_console.register('$.WebUIAlerts',  $.WebUIAlerts);
+
 
 $('.generate-bearer-token').on('click', function(e) {
     e.preventDefault();

@@ -219,36 +219,17 @@ void DimmerChannel::publishState(MQTTClient *client, uint8_t publishFlag)
     if (publishFlag & kWebUIUpdateFlag) {
         auto webUi = WsWebUISocket::getWsWebUI();
         if (webUi && WsWebUISocket::hasClients(webUi)) {
-            // JsonUnnamedObject json(2);
-            // json.add(JJ(type), JJ(ue));
-            // auto &events = json.addArray(JJ(events), 1);
-            // auto &obj = events.addObject(3);
-            // PrintString id(F("dimmer_channel%u"), _channel);
-            // obj.add(JJ(id), id);
-            // obj.add(JJ(value), _data.brightness.value);
-            // obj.add(JJ(state), _data.state.value);
-
-            static constexpr size_t bufSize = 88; // max json length ~81 byte
+            static constexpr size_t bufSize = 96;  // max. length 86 + nul byte
             auto buf = new uint8_t[bufSize];
-            snprintf_P((char *)buf, bufSize - 1, PSTR("{\"type\":\"ue\",\"events\":[{\"id\":\"dimmer_channel%u\",\"value\":%d,\"state\":%s}]}"),
-                _channel, _data.brightness.value, _data.state.value ? PSTR("true") : PSTR("false")
+            // snprintf_P((char *)buf, bufSize - 1, PSTR("{\"type\":\"ue\",\"events\":[{\"id\":\"dimmer_channel%u\",\"value\":%d,\"state\":true},{\"id\":\"group-switch-0\",\"value\":%u,\"state\":true}]}"),
+            snprintf_P((char *)buf, bufSize - 1, PSTR("{\"type\":\"ue\",\"events\":[{\"id\":\"dimmer_channel%u\",\"value\":%d,\"state\":true,\"group\":%u}]}"),
+                _channel, _data.brightness.value, _dimmer->isAnyOn()
             );
             buf[bufSize - 1] = 0;
             WsWebUISocket::broadcast(WsWebUISocket::getSender(), buf, strlen((const char *)buf));
         }
         _publishFlag &= ~kWebUIUpdateFlag;
     }
-
-}
-
-bool DimmerChannel::getOnState() const
-{
-    return _data.state.value;
-}
-
-int16_t DimmerChannel::getLevel() const
-{
-    return _data.brightness.value;
 }
 
 void DimmerChannel::setLevel(int16_t level)
@@ -259,13 +240,6 @@ void DimmerChannel::setLevel(int16_t level)
     _data.brightness.value = level;
     _data.state.value = (level != 0);
     setStoredBrightness(level);
-}
-
-void DimmerChannel::setStoredBrightness(uint16_t store)
-{
-    if (store > MIN_LEVEL) {
-        _storedBrightness = store;
-    }
 }
 
 #if IOT_DIMMER_MODULE_HAS_BUTTONS

@@ -156,7 +156,6 @@ void SwitchPlugin::createConfigureForm(FormCallbackType type, const String &form
 void SwitchPlugin::createWebUI(WebUIRoot &webUI)
 {
     auto row = &webUI.addRow();
-    row->setExtraClass(FSPGM(title));
     row->addGroup(F("Switch"), false);
 
     row = &webUI.addRow();

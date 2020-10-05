@@ -33,7 +33,7 @@ public:
     static constexpr int16_t DEFAULT_LEVEL = MAX_LEVEL / 2;
 
     static constexpr uint16_t kWebUIMaxUpdateRate = 250;
-    static constexpr uint16_t kMQTTMaxUpdateRate = 1000;
+    static constexpr uint16_t kMQTTMaxUpdateRate = 2000;
     static constexpr uint8_t kMQTTUpdateRateMultiplier = kMQTTMaxUpdateRate / kWebUIMaxUpdateRate;
 
     static constexpr uint8_t kWebUIUpdateFlag = 0x01;

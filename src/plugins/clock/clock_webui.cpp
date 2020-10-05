@@ -25,23 +25,10 @@ void ClockPlugin::getValues(JsonArray &array)
     obj->add(JJ(state), true);
     obj->add(JJ(value), static_cast<int>(_config.animation));
 
-    int color = 3;
-    switch(_color.get()) {
-        case 0xff0000:
-            color = 0;
-            break;
-        case 0x00ff00:
-            color = 1;
-            break;
-        case 0x0000ff:
-            color = 2;
-            break;
-    }
-
     obj = &array.addObject(3);
-    obj->add(JJ(id), F("btn_color"));
-    obj->add(JJ(state), true);
-    obj->add(JJ(value), color);
+    obj->add(JJ(id), F("color"));
+    obj->add(JJ(state), _config.animation == AnimationType::NONE);
+    obj->add(JJ(value), _color.get());
 
     obj = &array.addObject(3);
     obj->add(JJ(id), FSPGM(brightness));
@@ -78,24 +65,8 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
         else if (String_equals(id, PSTR("btn_animation"))) {
             setAnimation(static_cast<AnimationType>(val));
         }
-        else if (String_equals(id, PSTR("btn_color"))) {
-            Color color;
-            switch(val) {
-                case 0:
-                    color = Color(255, 0, 0);
-                    break;
-                case 1:
-                    color = Color(0, 255, 0);
-                    break;
-                case 2:
-                    color = Color(0, 0, 255);
-                    break;
-                case 3:
-                default:
-                    color.rnd();
-                    break;
-            }
-            setColorAndRefresh(color);
+        else if (String_equals(id, PSTR("color"))) {
+            setColorAndRefresh(value.toInt());
         }
         else if (String_equals(id, SPGM(brightness))) {
             setBrightness(value.toInt());
@@ -106,19 +77,19 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
 void ClockPlugin::createWebUI(WebUIRoot &webUI)
 {
     auto row = &webUI.addRow();
-    row->setExtraClass(JJ(title));
     row->addGroup(F("Clock"), false);
 
     row = &webUI.addRow();
     row->addSlider(FSPGM(brightness), FSPGM(brightness), 0, SevenSegmentDisplay::kMaxBrightness, true);
 
     row = &webUI.addRow();
-    static const uint16_t height = 280;
-    row->addButtonGroup(F("btn_colon"), F("Colon"), F("Solid,Blink slowly,Blink fast"), height);
-    row->addButtonGroup(F("btn_animation"), F("Animation"), F("Solid,Rainbow,Flashing,Fading"), height);
-    row->addButtonGroup(F("btn_color"), F("Color"), F("Red,Green,Blue,Random"), height);
-    auto &sensor = row->addSensor(FSPGM(light_sensor), F("Ambient Light Sensor"), F("<br><img src=\"/images/light.svg\" width=\"80\" height=\"80\" style=\"margin-top:10px\">"));
-    sensor.add(JJ(height), height);
+    row->addRGBSlider(F("color"), F("Color"));
+
+    row = &webUI.addRow();
+    auto height = F("15rem");
+    row->addButtonGroup(F("btn_colon"), F("Colon"), F("Solid,Blink slowly,Blink fast")).add(JJ(height), height);
+    row->addButtonGroup(F("btn_animation"), F("Animation"), F("Solid,Rainbow,Flashing,Fading")).add(JJ(height), height);
+    row->addSensor(FSPGM(light_sensor), F("Ambient Light Sensor"), F("<img src=\"/images/light.svg\" width=\"80\" height=\"80\" style=\"margin-top:-20px;margin-bottom:1rem\">"), WebUIComponent::SensorRenderType::COLUMN).add(JJ(height), height);
 }
 
 void ClockPlugin::_broadcastWebUI()

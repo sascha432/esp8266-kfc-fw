@@ -9,7 +9,7 @@
 #include <vector>
 
 #ifndef DEBUG_PIN_MONITOR
-#define DEBUG_PIN_MONITOR                                       1
+#define DEBUG_PIN_MONITOR                                       0
 #endif
 
 #if DEBUG_PIN_MONITOR

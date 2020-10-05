@@ -51,7 +51,7 @@ private:
     bool _clientAcceptsGzip(AsyncWebServerRequest *request) const;
 
     bool _handleFileRead(String path, bool client_accepts_gzip, AsyncWebServerRequest *request);
-    bool _sendFile(const FileMapping &mapping, const String &formName, HttpHeaders &httpHeaders, bool client_accepts_gzip, AsyncWebServerRequest *request, WebTemplate *webTemplate = nullptr);
+    bool _sendFile(const FileMapping &mapping, const String &formName, HttpHeaders &httpHeaders, bool client_accepts_gzip, bool isAuthenticated, AsyncWebServerRequest *request, WebTemplate *webTemplate = nullptr);
 
 public:
     typedef std::function<void(size_t position, size_t size)> UpdateFirmwareCallback_t;
@@ -155,7 +155,7 @@ public:
             case AuthType::SID_COOKIE:
                 return F("Session Cookie");
             case AuthType::BEARER:
-                return F("Bearer Toklen");
+                return F("Bearer Token");
             case AuthType::PASSWORD:
                 return F("Password");
             default:

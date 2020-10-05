@@ -198,7 +198,6 @@ void SensorPlugin::createMenu()
 void SensorPlugin::createWebUI(WebUIRoot &webUI)
 {
     auto row = &webUI.addRow();
-    row->setExtraClass(JJ(title));
     row->addGroup(F("Sensors"), false);
 
     if (_sensors.size()) {

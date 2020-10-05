@@ -629,7 +629,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     "atomicsun",        // name
     "Atomic Sun v2",    // friendly name
     "",                 // web_templates
-    "dimmer_cfg",       // config_forms
+    "dimmer-cfg",       // config_forms
     "mqtt,http",        // reconfigure_dependencies
     PluginComponent::PriorityType::ATOMIC_SUN,
     PluginComponent::RTCMemoryId::NONE,
@@ -681,24 +681,19 @@ void AtomicSunPlugin::shutdown()
 void AtomicSunPlugin::createWebUI(WebUIRoot &webUI)
 {
     auto row = &webUI.addRow();
-    row->setExtraClass(FSPGM(title));
     row->addGroup(F("Atomic Sun"), false);
 
     row = &webUI.addRow();
     row->addSlider(F("dimmer_brightness"), F("Atomic Sun Brightness"), 0, MAX_LEVEL_ALL_CHANNELS);
 
     row = &webUI.addRow();
-    row->addColorSlider(F("dimmer_color"), F("Atomic Sun Color"));
+    row->addColorTemperatureSlider(F("dimmer_color"), F("Atomic Sun Color"));
 
     row = &webUI.addRow();
     auto sensor = getMetricsSensor();
     if (sensor) {
         sensor->_createWebUI(webUI, &row);
     }
-    // row->addBadgeSensor(F("dimmer_vcc"), F("Atomic Sun VCC"), 'V');
-    // row->addBadgeSensor(F("dimmer_frequency"), F("Frequency"), FSPGM(Hz));
-    // row->addBadgeSensor(F("dimmer_int_temp"), F("ATmega"), FSPGM(_degreeC));
-    // row->addBadgeSensor(F("dimmer_ntc_temp"), F("NTC"), FSPGM(_degreeC));
     row->addSwitch(F("dimmer_lock"), F("Lock Channels"), false, true);
 
     row->addGroup(F("Channels"), false);

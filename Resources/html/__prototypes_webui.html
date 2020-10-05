@@ -1,10 +1,10 @@
 <html>
     <head>
-        <script type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/jquery-3.3.1.min.js"></script>
+        <script type="text/javascript" src="../../lib/KFCWebBuilder/Resources/jquery-3.5.2-dist/jquery.js"></script>
         <style type='text/css'>
             textarea {
                 width: 100%;
-                height: 300px;
+                height: 400px;
                 white-space: nowrap;
                 overflow:    scroll;
                 overflow-y:  hidden;
@@ -15,7 +15,7 @@
     </head>
     <body>
         <div id="webui-group-title-content" class="__prototypes">
-            <div class="{{column-type}}-12">
+            <div class="{{column-type|col-12}}">
                 <div class="webuicomponent title text-white bg-primary">
                     <div class="row group">
                         <div class="col-auto mr-auto">
@@ -31,7 +31,7 @@
         </div>
 
         <div id="webui-group-title" class="__prototypes">
-            <div class="{{column-type}}-12">
+            <div class="{{column-type|col-12}}">
                 <div class="webuicomponent title text-white bg-primary">
                     <div class="row group">
                         <div class="col-auto mr-auto mt-auto mb-auto">
@@ -56,7 +56,7 @@
         </div>
 
         <div id="webui-col-12" class="__prototypes">
-            <div class="{{column-type}}-12">
+            <div class="{{column-type|col-12}}">
                 <div class="webuicomponent">
                     {{content}}
                 </div>
@@ -64,7 +64,7 @@
         </div>
 
         <div id="webui-col-2" class="__prototypes">
-            <div class="{{column-type}}-2">
+            <div class="{{column-type|col-2}}">
                 <div class="webuicomponent">
                     {{content}}
                 </div>
@@ -72,7 +72,7 @@
         </div>
 
         <div id="webui-col-3" class="__prototypes">
-            <div class="{{column-type}}-3">
+            <div class="{{column-type|col-3}}">
                 <div class="webuicomponent">
                     {{content}}
                 </div>
@@ -101,33 +101,38 @@
         <div id="webui-sensor" class="__prototypes">
             <div class="webuicomponent">
                 <div class="sensor">
-                    <var value="{{ht|h}}" class="title">{{title}}</var>
+                    <var value="{{ht|h4}}" class="title">{{title}}</var>
                     <var value="{{hb|h1}}" class="data"><span id="{{id}}" class="value">{{value}}</span><space value=" "></space><span class="unit">{{unit}}</span></var>
                 </div>
             </div>
         </div>
 
         <div id="webui-switch" class="__prototypes">
-            <div class="switch">
-                <input type="range" class="attribute-target">
+            <div class="webuicomponent">
+                <div class="switch">
+                    <div class="row">
+                        <div class="col"><input type="range" class="attribute-target"></div>
+                    </div>
+                </div>
             </div>
         </div>
 
         <div id="webui-named-switch" class="__prototypes">
-            <div class="named-switch">
-                <div class="row">
-                    <div class="col"><input type="range" class="attribute-target"></div>
+            <div class="webuicomponent">
+                <div class="switch named-switch">
+                    <div class="row">
+                        <div class="col"><input type="range" class="attribute-target"></div>
+                    </div>
+                    <div class="row">
+                        <div class="col title">{{title}}</div>
+                    </div>
                 </div>
-                <div class="row">
-                    <div class="col title">{{title}}</div>
-                </div>
-
             </div>
         </div>
 
         <div id="webui-slider" class="__prototypes">
             <div class="webuicomponent">
-                <div class="slider">
+                <div class="{{slider-type}}">
                     <input type="range" class="attribute-target">
                 </div>
             </div>
@@ -145,6 +150,35 @@
             </div>
         </div>
 
+        <div id="webui-listbox" class="__prototypes">
+            <div class="webuicomponent">
+                <div class="listbox">
+                    <div class="row">
+                        <div class="col title">{{title}}</div>
+                    </div>
+                    <div class="row">
+                        <div class="col"><select class="attribute-target">{{content}}</select></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="webui-button-group" class="__prototypes">
+            <div class="webuicomponent">
+                <div class="button-group" role="group">
+                    <div class="row">
+                        <div class="col">
+                            <var value="{{th|h4}}" class="title">{{title}}</var>
+                            <div class="btn-group-vertical btn-group-lg" id="{{id}}">{{content}}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="webui-button-group-button" class="__prototypes">
+            <button class="btn btn-outline-primary" data-value="{{index}}">{{value}}</button>
+        </div>
 
         <textarea id="prototypes" spellcheck="off"></textarea>
 

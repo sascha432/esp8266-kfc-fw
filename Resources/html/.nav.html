@@ -3,14 +3,14 @@
     <a class="navbar-brand" href="/index.html">KFC FW</a>
 
     <!-- less than 920px -->
-    <div class="navbar-text navbar-collapsed-show">
+    <div class="navbar-text first navbar-collapsed-show%IS_CONFIG_DIRTY%">
         <a href="/reboot.html" class="btn btn-danger%IS_CONFIG_DIRTY%">
             <span class="oi oi-reload text-white"></span></a>
         </a>
     </div>
 
     <!--#if (defined(WEBUI_ALERTS_ENABLED) && WEBUI_ALERTS_ENABLED)-->
-    <div class="navbar-text navbar-collapsed-show hidden">
+    <div class="navbar-text last navbar-collapsed-show hidden">
         <a href="#" class="btn btn-danger"><span class="alerts-count">0</span></a>
     </div>
     <!--#endif-->
@@ -24,7 +24,7 @@
         <ul class="navbar-nav mr-auto">
             %MENU_HTML_MAIN%
         </ul>
-        <form class="inline">
+        <form class="inline navbar-collapsed-hide">
             <a href="/reboot.html" class="btn btn-danger%IS_CONFIG_DIRTY%">
                 <span class="oi oi-reload text-white"></span>
             </a>

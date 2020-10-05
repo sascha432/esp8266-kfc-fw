@@ -170,7 +170,6 @@ $.__global_templates = window.__global_templates = {
                 this.set_cookie(cookie);
                 var restored = 0;
                 var removed = 0;
-                console.log(this.registered);
                 for(key in this.registered) {
                     var item = this.registered[key];
                     if (enable) {

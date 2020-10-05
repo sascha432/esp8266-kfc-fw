@@ -31,6 +31,7 @@ public:
 
     virtual bool on(uint8_t channel = -1) override;
     virtual bool off(uint8_t channel = -1) override;
+    virtual bool isAnyOn() const;
     virtual int16_t getChannel(uint8_t channel) const override;
     virtual bool getChannelState(uint8_t channel) const override;
     virtual void setChannel(uint8_t channel, int16_t level, float time = -1) override;
@@ -50,3 +51,20 @@ protected:
 private:
     void _getChannels();
 };
+
+inline bool DimmerChannel::getOnState() const
+{
+    return _data.state.value;
+}
+
+inline int16_t DimmerChannel::getLevel() const
+{
+    return _data.brightness.value;
+}
+
+inline void DimmerChannel::setStoredBrightness(uint16_t store)
+{
+    if (store > MIN_LEVEL) {
+        _storedBrightness = store;
+    }
+}

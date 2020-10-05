@@ -143,7 +143,7 @@ void Dimmer_Base::_onReceive(size_t length)
     // __LDBG_printf("length=%u type=%02x", length, type);
 
     if (type == '+') {
-        char buf[kSendDiscardMaxLength];
+        char buf[64];
         auto len = _wire.readBytes(buf, sizeof(buf) - 1);
         // __LDBG_printf("len=%u cmd=%-*.*s", len, len, len, buf);
         if (len) {
@@ -429,41 +429,44 @@ void Dimmer_Base::_getValues(JsonArray &array)
 {
     __LDBG_println();
     JsonUnnamedObject *obj;
+    bool on = false;
 
     for (uint8_t i = 0; i < getChannelCount(); i++) {
         obj = &array.addObject(3);
         PrintString id(F("dimmer_channel%u"), i);
         obj->add(JJ(id), id);
-        obj->add(JJ(value), getChannel(i));
-        obj->add(JJ(state), getChannelState(i));
+        auto value = getChannel(i);
+        obj->add(JJ(value), value);
+        auto state = getChannelState(i);
+        obj->add(JJ(state), state);
+        if (state && value) {
+            on = true;
+        }
     }
 
-    // obj = &array.addObject(3);
-    // obj->add(JJ(id), F("dimmer_int_temp"));
-    // obj->add(JJ(state), isnan(_internalTemperature));
-    // obj->add(JJ(value), JsonNumber(_internalTemperature, 2));
-
-    // obj = &array.addObject(3);
-    // obj->add(JJ(id), F("dimmer_ntc_temp"));
-    // obj->add(JJ(state), isnan(_ntcTemperature));
-    // obj->add(JJ(value), JsonNumber(_ntcTemperature, 2));
-
-    // obj = &array.addObject(3);
-    // obj->add(JJ(id), F("dimmer_vcc"));
-    // obj->add(JJ(state), _vcc != 0);
-    // obj->add(JJ(value), JsonNumber(_vcc / 1000.0, 3));
-
-    // obj = &array.addObject(3);
-    // obj->add(JJ(id), F("dimmer_frequency"));
-    // obj->add(JJ(state), isnan(_frequency));
-    // obj->add(JJ(value), JsonNumber(_frequency, 2));
+    obj = &array.addObject(3);
+    obj->add(JJ(id), F("group-switch-0"));
+    obj->add(JJ(value), on ? 1 : 0);
+    obj->add(JJ(state), true);
 }
 
 void Dimmer_Base::_setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
 {
     __LDBG_printf("id=%s", id.c_str());
 
-    if (String_startsWith(id, PSTR("dimmer_channel"))) {
+    if (String_equals(id, PSTR("group-switch-0"))) {
+        if (hasValue) {
+            int val = value.toInt();
+            for(uint8_t i = 0; i < getChannelCount(); i++) {
+                if (val) {
+                    on(i);
+                } else {
+                    off(i);
+                }
+            }
+        }
+    }
+    else if (String_startsWith(id, PSTR("dimmer_channel"))) {
         uint8_t channel = id[14] - '0';
         __LDBG_printf("channel=%d hasValue=%d value=%d hasState=%d state=%d", channel, hasValue, value.toInt(), hasState, state);
 

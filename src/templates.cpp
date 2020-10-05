@@ -32,45 +32,10 @@ using KFCConfigurationClasses::Plugins;
 
 String WebTemplate::_aliveRedirection;
 
-WebTemplate::WebTemplate() : _form(nullptr), _json(nullptr)
-{
-}
-
-WebTemplate::~WebTemplate()
-{
-    if (_json) {
-        __LDBG_delete(_json);
-    }
-    if (_form) {
-        __LDBG_delete(_form);
-    }
-}
-
-void WebTemplate::setSelfUri(const String &selfUri)
-{
-    _selfUri = selfUri;
-}
-
-void WebTemplate::setForm(FormUI::Form::BaseForm *form)
-{
-    _json = nullptr; //static_cast<SettingsForm *>(form)->_json;
-    _form = form;
-}
-
-FormUI::Form::BaseForm *WebTemplate::getForm()
-{
-    return _form;
-}
-
 JsonUnnamedObject *WebTemplate::getJson()
 {
     __DBG_print("called");
     return _json;
-}
-
-PrintArgs &WebTemplate::getPrintArgs()
-{
-    return _printArgs;
 }
 
 void WebTemplate::printSystemTime(time_t now, PrintHtmlEntitiesString &output)
@@ -261,6 +226,37 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
             output.print((char)(n < 26 ? (n + 'a') : (n + ('0' - 26))));
         }
     }
+    else if (String_equals(key, PSTR("ALIVE_REDIRECTION"))) {
+        if (_aliveRedirection.length()) {
+            output.print(_aliveRedirection);
+        }
+        else {
+            output.print(FSPGM(index_html));
+        }
+    }
+#if DEBUG_ASSETS
+    else if (String_equals(key, PSTR("DEBUG_ASSETS_URL1"))) {
+        output.print(F(DEBUG_ASSETS_URL1));
+    }
+    else if (String_equals(key, PSTR("DEBUG_ASSETS_URL2"))) {
+        output.print(F(DEBUG_ASSETS_URL2));
+    }
+#endif
+    // ------------------------------------------------------------------------------------
+    // requires to be authenticated from here on
+    else if (!isAuthenticated()) {
+        if (String_equals(key, PSTR("IS_CONFIG_DIRTY"))) {
+            output.print(FSPGM(_hidden));
+        }
+        else if (String_equals(key, PSTR("IS_CONFIG_DIRTY_CLASS"))) {
+            output.print(FSPGM(hidden));
+        }
+        else if (String_equals(key, PSTR("WEBUI_ALERTS_JSON"))) {
+            output.print(F("null"));
+        }
+        return;
+    }
+    // ------------------------------------------------------------------------------------
     else if (String_equals(key, PSTR("UNIQUE_ID"))) {
         WebTemplate::printUniqueId(output, FSPGM(kfcfw), -1);
     }
@@ -271,14 +267,6 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     }
     else if (String_equals(key, PSTR("FIRMWARE_UPGRADE_FAILURE_CLASS"))) {
         output.print(FSPGM(_hidden));
-    }
-    else if (String_equals(key, PSTR("ALIVE_REDIRECTION"))) {
-        if (_aliveRedirection.length()) {
-            output.print(_aliveRedirection);
-        }
-        else {
-            output.print(FSPGM(index_html));
-        }
     }
     else if (String_equals(key, PSTR("IS_CONFIG_DIRTY"))) {
         if (!config.isConfigDirty()) {
@@ -292,6 +280,13 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
             output.print(FSPGM(hidden));
         }
     }
+    else if (String_equals(key, PSTR("WEBUI_ALERTS_JSON"))) {
+        if (WebAlerts::Alert::hasOption(WebAlerts::OptionsType::PRINT_ALERTS_JSON)) {
+            WebAlerts::Alert::printAlertsAsJson(output, 1);
+        } else {
+            output.print(F("null"));
+        }
+    }
     else if (String_equals(key, PSTR("WEBUI_ALERTS_STATUS"))) {
 #if WEBUI_ALERTS_ENABLED
         if (WebAlerts::Alert::hasOption(WebAlerts::OptionsType::ENABLED)) {
@@ -302,13 +297,6 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 #else
         output.print(F("Send to logger"));
 #endif
-    }
-    else if (String_equals(key, PSTR("WEBUI_ALERTS_JSON"))) {
-        if (WebAlerts::Alert::hasOption(WebAlerts::OptionsType::PRINT_ALERTS_JSON)) {
-            WebAlerts::Alert::printAlertsAsJson(output, 1);
-        } else {
-            output.print(F("null"));
-        }
     }
 #if IOT_ALARM_PLUGIN_ENABLED
     else if (String_startsWith(key, PSTR("ALARM_TIMESTAMP_"))) {
@@ -322,14 +310,6 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
                 output.print(buf);
             }
         }
-    }
-#endif
-#if DEBUG_ASSETS
-    else if (String_equals(key, PSTR("DEBUG_ASSETS_URL1"))) {
-        output.print(F(DEBUG_ASSETS_URL1));
-    }
-    else if (String_equals(key, PSTR("DEBUG_ASSETS_URL2"))) {
-        output.print(F(DEBUG_ASSETS_URL2));
     }
 #endif
     else if (_form) {
@@ -346,18 +326,8 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         output.print(FSPGM(Not_supported, "Not supported"));
     }
     else {
-        output.print(F("KEY NOT FOUND: %"));
-        output.print(key);
-        output.print('%');
+        __DBG_assert_printf(false, "key not found '%s'", key.c_str());
     }
-}
-
-UpgradeTemplate::UpgradeTemplate() {
-}
-
-UpgradeTemplate::UpgradeTemplate(const String &errorMessage)
-{
-    _errorMessage = errorMessage;
 }
 
 void UpgradeTemplate::process(const String &key, PrintHtmlEntitiesString &output)
@@ -373,14 +343,6 @@ void UpgradeTemplate::process(const String &key, PrintHtmlEntitiesString &output
 }
 
 void UpgradeTemplate::setErrorMessage(const String &errorMessage)
-{
-    _errorMessage = errorMessage;
-}
-
-LoginTemplate::LoginTemplate() {
-}
-
-LoginTemplate::LoginTemplate(const String &errorMessage)
 {
     _errorMessage = errorMessage;
 }
@@ -410,6 +372,9 @@ void LoginTemplate::setErrorMessage(const String &errorMessage)
 
 void ConfigTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 {
+    // if (!_isAuthenticated) {
+    //     return;
+    // }
     if (_form) {
         if (getForm()->process(key, output)) {
             return;
@@ -461,6 +426,9 @@ void ConfigTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 
 void StatusTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 {
+    // if (!_isAuthenticated) {
+    //     return;
+    // }
     if (String_equals(key, F("GATEWAY"))) {
         WiFi.gatewayIP().printTo(output);
     }
@@ -525,11 +493,6 @@ void StatusTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     else {
         WebTemplate::process(key, output);
     }
-}
-
-PasswordTemplate::PasswordTemplate(const String &errorMessage)
-{
-    _errorMessage = errorMessage;
 }
 
 void PasswordTemplate::process(const String &key, PrintHtmlEntitiesString &output)
@@ -681,6 +644,11 @@ bool TemplateDataProvider::callback(const String& name, DataProviderInterface& p
         // debug_printf_P(PSTR("%s=%s\n"), name.c_str(), value.c_str());
         fbMethod = FillBufferMethod::BUFFER_STREAM;
     }
+
+    // if (value.length() == 0) {
+    //     // value.print(' ');
+    //     __DBG_printf("empty output for %s", name.c_str());
+    // }
 
     switch(fbMethod)  {
         case FillBufferMethod::PRINT_ARGS: {

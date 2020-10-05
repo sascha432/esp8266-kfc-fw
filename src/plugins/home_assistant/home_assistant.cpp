@@ -490,7 +490,6 @@ void HassPlugin::reconfigure(PGM_P source)
 void HassPlugin::createWebUI(WebUIRoot &webUI)
 {
     auto row = &webUI.addRow();
-    row->setExtraClass(JJ(title));
     row->addGroup(F("Home Assistant"), false);
 
     // row = &webUI.addRow();

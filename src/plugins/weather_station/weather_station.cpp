@@ -407,7 +407,6 @@ WeatherStationPlugin &WeatherStationPlugin::_getInstance()
 void WeatherStationPlugin::createWebUI(WebUIRoot &webUI)
 {
     auto row = &webUI.addRow();
-    row->setExtraClass(JJ(title));
     row->addGroup(F("Weather Station"), false);
 
     row = &webUI.addRow();

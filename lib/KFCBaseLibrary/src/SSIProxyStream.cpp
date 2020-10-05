@@ -109,6 +109,10 @@ size_t SSIProxyStream::_readBuffer(bool templateCheck)
             do {
                 uint8_t *ptr = _template.start();
                 uint8_t *end = _buffer.end();
+                // if (ptr == end) {
+                //     __DBG_printf("ptr==end template len=%u", _template.template_length());
+                //     break;
+                // }
                 __LDBG_assert(_template.in_buffer(ptr));
                 while(ptr < end) {
                     if (*ptr == '%' || *ptr == '$') {

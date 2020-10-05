@@ -7,11 +7,18 @@
     display: block;
 }
 
+.navbar-collapse-show-hide {
+    display: none;
+}
+
 @media only screen and (min-width: 992px) {
     .navbar-collapsed-show {
         display: none;
     }
-}
+    .navbar-collapse-show-hide {
+        display: block;
+    }
+    }
 
 a > .alerts-count {
     color: white;
@@ -61,4 +68,21 @@ span.oi.oi-account-logout {
     margin: 0;
     margin-top: -2px;
     top: 4px;
+}
+
+div.navbar-text.first.navbar-collapsed-show {
+    padding-right: 5%;
+    margin-left: 5%;}
+
+div.navbar-text.last.navbar-collapsed-show:not(:only-child) {
+    padding-left: 5%;
+    margin-right: 5%;
+}
+
+.navbar-text.navbar-collapsed-show.hidden {
+    margin-left: -45%;
+}
+
+.nxavbar-text.navbar-collapsed-show.hidden {
+    margin-left: 0;
 }

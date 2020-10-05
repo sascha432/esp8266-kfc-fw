@@ -170,7 +170,6 @@ void Sensor_SystemMetrics::createWebUI(WebUIRoot &webUI, WebUIRow **row)
     __LDBG_println();
 
     *row = &webUI.addRow();
-    (*row)->setExtraClass(JJ(title));
     (*row)->addGroup(PrintString(F("System Metrics<div class=\"version d-md-inline\">%s</div>"), config.getFirmwareVersion().c_str()), false);
 
     *row = &webUI.addRow();

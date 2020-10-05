@@ -119,6 +119,15 @@ bool Driver_DimmerModule::off(uint8_t channel)
     return _channels[channel].off();
 }
 
+bool Driver_DimmerModule::isAnyOn() const {
+    for(uint8_t i = 0; i < getChannelCount(); i++) {
+        if (_channels[i].getOnState()) {
+            return true;
+        }
+    }
+    return false;
+}
+
 // get brightness values from dimmer
 void Driver_DimmerModule::_getChannels()
 {
@@ -207,7 +216,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     "dimmer",           // name
     "Dimmer",           // friendly name
     "",                 // web_templates
-    "dimmer_cfg",       // config_forms
+    "dimmer-cfg",       // config_forms
     "mqtt,http",        // reconfigure_dependencies
     PluginComponent::PriorityType::DIMMER_MODULE,
     PluginComponent::RTCMemoryId::NONE,
@@ -264,7 +273,6 @@ void DimmerModulePlugin::shutdown()
 void DimmerModulePlugin::createWebUI(WebUIRoot &webUI)
 {
     auto row = &webUI.addRow();
-    row->setExtraClass(JJ(title));
     row->addGroup(F("Dimmer"), true);
 
     for (uint8_t i = 0; i < _channels.size(); i++) {
@@ -272,14 +280,59 @@ void DimmerModulePlugin::createWebUI(WebUIRoot &webUI)
         row->addSlider(PrintString(F("dimmer_channel%u"), i), PrintString(F("dimmer_channel%u"), i), 0, IOT_DIMMER_MODULE_MAX_BRIGHTNESS, true);
     }
 
+#if 0
     row = &webUI.addRow();
     auto sensor = getMetricsSensor();
     if (sensor) {
         sensor->_createWebUI(webUI, &row);
     }
-    // row->addBadgeSensor(F("dimmer_vcc"), F("Dimmer VCC"), 'V');
-    // row->addBadgeSensor(F("dimmer_frequency"), F("Dimmer Frequency"), FSPGM(Hz));
-    // row->addBadgeSensor(F("dimmer_int_temp"), F("Dimmer ATmega"), FSPGM(_degreeC));
-    // row->addBadgeSensor(F("dimmer_ntc_temp"), F("Dimmer NTC"), FSPGM(_degreeC));
+#else
+
+    row = &webUI.addRow();
+    row->addGroup(F("Clock"), false);
+
+    row = &webUI.addRow();
+    row->addSlider(FSPGM(brightness), FSPGM(brightness), 0, 1024, true);
+
+    row = &webUI.addRow();
+    row->addRGBSlider(F("colorx"), F("Color"));
+
+
+    row = &webUI.addRow();
+    auto height = F("15rem");
+    row->addButtonGroup(F("btn_colon"), F("Colon"), F("Solid,Blink slowly,Blink fast")).add(JJ(height), height);
+    row->addButtonGroup(F("btn_animation"), F("Animation"), F("Solid,Rainbow,Flashing,Fading")).add(JJ(height), height);
+    row->addSensor(FSPGM(light_sensor), F("Ambient Light Sensor"), F("<img src=\"http://192.168.0.100/images/light.svg\" width=\"80\" height=\"80\" style=\"margin-top:-20px;margin-bottom:1rem\">"), WebUIComponent::SensorRenderType::COLUMN).add(JJ(height), height);
+
+    row = &webUI.addRow();
+    row->addGroup(F("Various items"), false);
+
+    row = &webUI.addRow();
+    row->addListbox(F("listboxtest"), F("My Listbox"), F("{\"1\":\"item1\",\"2\":\"item2\",\"3\":\"item3\",\"4\":\"item4\"}"));
+
+    row = &webUI.addRow();
+    row->addGroup(F("Atomic Sun"), false);
+
+    row = &webUI.addRow();
+    row->addSlider(F("dimmer_brightness"), F("Atomic Sun Brightness"), 0, 8192);
+
+    row = &webUI.addRow();
+    row->addColorTemperatureSlider(F("dimmer_color"), F("Atomic Sun Color"));
+
+    row = &webUI.addRow();
+    auto sensor = getMetricsSensor();
+    if (sensor) {
+        sensor->_createWebUI(webUI, &row);
+    }
+    row->addSwitch(F("dimmer_lock"), F("Lock Channels"), false, true);
+
+    row->addGroup(F("Channels"), false);
+
+    for(uint8_t j = 0; j < 4; j++) {
+        row = &webUI.addRow();
+        row->addSlider(PrintString(F("dimmer_channel%u"), 0), PrintString(F("Channel %u"), j + 1), 0, 8192);
+    }
+
+#endif
 }
 

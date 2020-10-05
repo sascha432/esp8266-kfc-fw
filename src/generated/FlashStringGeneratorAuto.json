@@ -47,10 +47,6 @@
         "use_counter": 32,
         "default": "id"
     },
-    "webui_json_name": {
-        "use_counter": 0,
-        "default": "name"
-    },
     "webui_json_unit": {
         "use_counter": 1,
         "default": "unit"
@@ -183,9 +179,9 @@
         "use_counter": 2,
         "default": "zero_off"
     },
-    "webui_json_display_name": {
+    "webui_json_name": {
         "use_counter": 1,
-        "default": "display_name"
+        "default": "name"
     },
     "webui_json_slider": {
         "use_counter": 2,

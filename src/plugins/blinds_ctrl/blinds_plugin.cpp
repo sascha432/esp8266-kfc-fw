@@ -111,7 +111,6 @@ void BlindsControlPlugin::createMenu()
 void BlindsControlPlugin::createWebUI(WebUIRoot &webUI) {
 
     auto row = &webUI.addRow();
-    row->setExtraClass(JJ(title));
     row->addGroup(F("Blinds"), false);
 
     row = &webUI.addRow();

@@ -520,13 +520,13 @@ void WebServerPlugin::handlerUpdate(AsyncWebServerRequest *request)
 
             HttpHeaders httpHeaders(false);
             httpHeaders.addNoCache();
-            if (!plugin._sendFile(String('/') + FSPGM(update_fw_html), String(), httpHeaders, plugin._clientAcceptsGzip(request), request, __LDBG_new(UpgradeTemplate, message))) {
+            if (!plugin._sendFile(String('/') + FSPGM(update_fw_html), String(), httpHeaders, plugin._clientAcceptsGzip(request), true, request, __LDBG_new(UpgradeTemplate, message))) {
                 message += F("<br><a href=\"/\">Home</a>");
                 request->send(200, FSPGM(mime_text_plain), message);
             }
         }
-
-    } else {
+    }
+    else {
         request->send(403);
     }
 }
@@ -716,10 +716,10 @@ void WebServerPlugin::begin()
     __LDBG_printf("HTTP running on port %u", System::WebServer::getConfig().getPort());
 }
 
-bool WebServerPlugin::_sendFile(const FileMapping &mapping, const String &formName, HttpHeaders &httpHeaders, bool client_accepts_gzip, AsyncWebServerRequest *request, WebTemplate *webTemplate)
+bool WebServerPlugin::_sendFile(const FileMapping &mapping, const String &formName, HttpHeaders &httpHeaders, bool client_accepts_gzip, bool isAuthenticated, AsyncWebServerRequest *request, WebTemplate *webTemplate)
 {
     WebServerSetCPUSpeedHelper setCPUSpeed;
-    __LDBG_printf("mapping=%s exists=%u form=%s gz=%u request=%p web_template=%p", mapping.getFilename(), mapping.exists(), formName.c_str(), client_accepts_gzip, request, webTemplate);
+    __LDBG_printf("mapping=%s exists=%u form=%s gz=%u auth=%u request=%p web_template=%p", mapping.getFilename(), mapping.exists(), formName.c_str(), client_accepts_gzip, isAuthenticated, request, webTemplate);
 
     if (!mapping.exists()) {
         return false;
@@ -727,7 +727,7 @@ bool WebServerPlugin::_sendFile(const FileMapping &mapping, const String &formNa
 
     auto &path = mapping.getFilenameString();
     bool isHtml = String_endsWith(path, SPGM(_html));
-    if (webTemplate == nullptr) {
+    if (isAuthenticated && webTemplate == nullptr) {
         if (path.charAt(0) == '/' && formName.length()) {
             __LDBG_printf("template=%s", formName.c_str());
             auto plugin = PluginComponent::getTemplate(formName);
@@ -754,6 +754,7 @@ bool WebServerPlugin::_sendFile(const FileMapping &mapping, const String &formNa
     AsyncBaseResponse *response;
     if (webTemplate != nullptr) {
         webTemplate->setSelfUri(request->url());
+        webTemplate->setAuthenticated(isAuthenticated);
         // process with template
         response = __LDBG_new(AsyncTemplateResponse, FPSTR(getContentType(path)), mapping.open(FileOpenMode::read), webTemplate, [webTemplate](const String& name, DataProviderInterface &provider) {
             return TemplateDataProvider::callback(name, provider, *webTemplate);
@@ -863,13 +864,13 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
                 loginError = FSPGM(Invalid_username_or_password, "Invalid username or password");
                 const FailureCounter &failure = _loginFailures.addFailure(remote_addr);
                 Logger_security(F("Login from %s failed %d times since %s (%s)"), remote_addr.toString().c_str(), failure.getCounter(), failure.getFirstFailure().c_str(), getAuthTypeStr(authType));
-                return _sendFile(FSPGM(_login_html, "/login.html"), String(), httpHeaders, client_accepts_gzip, request, __LDBG_new(LoginTemplate, loginError));
+                return _sendFile(FSPGM(_login_html, "/login.html"), String(), httpHeaders, client_accepts_gzip, isAuthenticated, request, __LDBG_new(LoginTemplate, loginError));
             }
         }
         else {
             if (String_endsWith(path, SPGM(_html))) {
                 httpHeaders.add(createRemoveSessionIdCookie());
-                return _sendFile(FSPGM(_login_html), String(), httpHeaders, client_accepts_gzip, request, __LDBG_new(LoginTemplate, loginError));
+                return _sendFile(FSPGM(_login_html), String(), httpHeaders, client_accepts_gzip, isAuthenticated, request, __LDBG_new(LoginTemplate, loginError));
             }
             else {
                 request->send(403);
@@ -940,7 +941,7 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
         }
     }
 
-    return _sendFile(mapping, formName, httpHeaders, client_accepts_gzip, request, webTemplate);
+    return _sendFile(mapping, formName, httpHeaders, client_accepts_gzip, isAuthenticated, request, webTemplate);
 }
 
 WebServerPlugin::WebServerPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(WebServerPlugin)), _updateFirmwareCallback(nullptr), _server(nullptr)

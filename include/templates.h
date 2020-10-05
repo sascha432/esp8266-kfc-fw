@@ -26,6 +26,8 @@ public:
     virtual ~WebTemplate();
 
     void setSelfUri(const String &selfUri);
+    void setAuthenticated(bool isAuthenticated);
+    bool isAuthenticated() const;
 
     void setForm(FormUI::Form::BaseForm *form);
     FormUI::Form::BaseForm *getForm();
@@ -51,13 +53,58 @@ protected:
     String _selfUri;
     JsonUnnamedObject *_json;
     PrintArgs _printArgs;
+    bool _isAuthenticated;
 };
+
+inline WebTemplate::WebTemplate() : _form(nullptr), _json(nullptr), _isAuthenticated(false)
+{
+}
+
+inline WebTemplate::~WebTemplate()
+{
+    if (_json) {
+        __LDBG_delete(_json);
+    }
+    if (_form) {
+        __LDBG_delete(_form);
+    }
+}
+
+inline void WebTemplate::setSelfUri(const String &selfUri)
+{
+    _selfUri = selfUri;
+}
+
+inline void WebTemplate::setAuthenticated(bool isAuthenticated)
+{
+    _isAuthenticated = isAuthenticated;
+}
+
+inline bool WebTemplate::isAuthenticated() const
+{
+    return _isAuthenticated;
+}
+
+inline void WebTemplate::setForm(FormUI::Form::BaseForm *form)
+{
+    _json = nullptr; //static_cast<SettingsForm *>(form)->_json;
+    _form = form;
+}
+
+inline FormUI::Form::BaseForm *WebTemplate::getForm()
+{
+    return _form;
+}
+
+inline PrintArgs &WebTemplate::getPrintArgs()
+{
+    return _printArgs;
+}
+
 
 class ConfigTemplate : public WebTemplate {
 public:
-    ConfigTemplate() {
-    }
-    ConfigTemplate(FormUI::Form::BaseForm *form) : WebTemplate() {
+    ConfigTemplate(FormUI::Form::BaseForm *form) {
         setForm(form);
     }
     virtual void process(const String &key, PrintHtmlEntitiesString &output) override;
@@ -65,8 +112,7 @@ public:
 
 class UpgradeTemplate : public WebTemplate {
 public:
-    UpgradeTemplate();
-    UpgradeTemplate(const String &errorMessage);
+    UpgradeTemplate(const String &errorMessage) : _errorMessage(errorMessage) {}
 
     virtual void process(const String &key, PrintHtmlEntitiesString &output) override;
     virtual void setErrorMessage(const String &errorMessage);
@@ -82,8 +128,7 @@ public:
 
 class LoginTemplate : public WebTemplate {
 public:
-    LoginTemplate();
-    LoginTemplate(const String &errorMessage);
+    LoginTemplate(const String &errorMessage) : _errorMessage(errorMessage) {}
 
     virtual void process(const String &key, PrintHtmlEntitiesString &output) override;
     virtual void setErrorMessage(const String &errorMessage);
@@ -94,8 +139,6 @@ protected:
 
 class PasswordTemplate : public LoginTemplate {
 public:
-    PasswordTemplate(const String &errorMessage);
-
     virtual void process(const String &key, PrintHtmlEntitiesString &output) override;
 };
 

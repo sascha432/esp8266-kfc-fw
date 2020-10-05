@@ -2,71 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-/* .webuicomponent-top {
-    box-shadow: 0 0 0;
-    background: none;
-}
-
-
-.webuicomponent > .named-switch {
-    padding: 10px;
-    padding-top: 24px;
-	min-height: 127px;
-}
-
-.webuicomponent .switch-name {
-    text-align: center;
-    margin-top: 20px;
-}
-
-.webuicomponent > .slider {
-    padding: 10px;
-    padding-top: 24px;
-	min-height: 66px;
-}
-
-.webuicomponent > .screen {
-7    padding: 10px;
-    padding-top: 18px;
-	text-align: center;
-}
-
-.webuicomponent > .button-group {
-    padding: 10px;
-    padding-top: 18px;
-	text-align: center;
-}
-
-.webuicomponent > .sensor {
-    padding: 10px;
-	min-height: 160px;
-	text-align: center;
-}
-
-.webuicomponent > .sensor h1 {
-	color: #303030;
-	font-size: 52px;
-}
-
-.webuicomponent > .sensor h3 {
-	padding-top: 14px;
-	padding-bottom: 10px;
-	font-size: 20px;
-	color: #000000;
-}
-
-.webuicomponent > .sensor span.unit {
-	font-size: 38px;
-	color: #a0a0a0;
-	position: relative;
-	top: -4px;
-	margin-left: 4px;
-} */
-
-
-/* updated  css */
-
-
 #webui > .row {
         margin-right: -7px;
         margin-left: -7px;
@@ -106,6 +41,56 @@
     width: 135px;
 }
 
+.webuicomponent.group-switch {
+    background: transparent;
+    border: 0;
+    box-shadow: 0 0 black;
+}
+
+/* webui-switch */
+/* webui-named-switch */
+
+.webuicomponent > .switch {
+    font-size: 1rem;
+    color: #212529;
+    min-height: 10rem;
+    padding: 1.25rem 0 .375rem 0;
+    display: flex;
+    flex-direction: column;
+    text-align: center;
+}
+
+.webuicomponent > .switch .col {
+    padding: 1.25rem;
+    margin-left: 1rem;
+    margin-right: 1rem;
+}
+
+.webuicomponent > .switch .title {
+    font-weight: 500;
+    padding-top: 1rem;
+    padding-left: 1rem;
+}
+
+/* webui-button-group */
+
+.webuicomponent > .button-group .col {
+    text-align: center;
+}
+
+.webuicomponent > .button-group .title {
+    padding: .75rem .5rem 0.25rem 0.5rem;
+}
+
+.webuicomponent > .button-group button.disabled {
+    color: #6c757d;
+    border-color: #6c757d;
+}
+
+.webuicomponent > .button-group button.disabled:focus {
+    box-shadow: 0 0 black;
+}
+
 /* webui-slider */
 
 .webuicomponent > .slider {
@@ -122,6 +107,7 @@
 .webuicomponent .badge-sensor {
 	font-size: 1rem;
     color: #212529;
+    min-height: 10rem;
 }
 
 .webuicomponent .badge-sensor .title {
@@ -323,7 +309,7 @@ starting with fb-0=1.125 going up to fb-11=2.5rem */
     border: 1px solid #850b0b;
 }
 
-.webuicomponent.zero-off .rangeslider__handle.on {
+.webuicomponent.zero-off .rangeslider__handle {
     background-color: #1bbb0d;
     border: 1px solid #036203;
 }
@@ -336,10 +322,22 @@ starting with fb-0=1.125 going up to fb-11=2.5rem */
     background-color: #e6e6e6;
 }
 
-.webuicomponent > .color-slider .rangeslider--horizontal {
+.webuicomponent > .slider.color-slider .rangeslider--horizontal {
     background-image: linear-gradient(to right, rgb(76, 125, 241), rgb(255, 255, 255), rgb(255, 170, 40)) !important;
 }
 
-.webuicomponent > .color-slider .rangeslider__fill {
+.webuicomponent > .slider.color-slider .rangeslider__fill {
     background-color: transparent;
+}
+
+.xwebuicomponent > .slider.rgb-slider .rangeslider--horizontal {
+    background-image: linear-gradient(to right,red, orange, yellow, green, blue, purple ) !important;
+}
+
+.webuicomponent > .slider.rgb-slider .rangeslider__fill {
+    background-color: transparent;
+}
+
+.webuicomponent > .slider.rgb-slider .rangeslider--horizontal {
+    background: linear-gradient(to right, rgb(255, 0, 0), rgb(255, 125, 0),rgb(255, 255, 0), rgb(125, 255, 0), rgb(0, 255, 0), rgb(0, 255, 125), rgb(0, 255, 255),rgb(0, 125, 255), rgb(0, 0, 255) );
 }

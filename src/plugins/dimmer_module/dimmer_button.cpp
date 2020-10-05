@@ -11,7 +11,7 @@
 #include <stl_ext/algorithm.h>
 // #include <EnumHelper.h>
 
-#if DEBUG_IOT_DIMMER_MODULE
+#if DEBUG_IOT_DIMMER_MODULE && DEBUG_PIN_MONITOR
 #include <debug_helper_enable.h>
 #else
 #include <debug_helper_disable.h>

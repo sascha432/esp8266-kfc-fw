@@ -110,7 +110,6 @@ typedef enum WiFiMode
 } WiFiMode_t;
 
 
-#include <stl_ext/variant.h>
 
 
 int main() {
@@ -118,96 +117,6 @@ int main() {
     ESP._enableMSVCMemdebug();
     DEBUG_HELPER_INIT();
 
-    std::variant<int32_t, uint32_t, float> variant2;//(1.77f);
-
-    //variant2._index = 2;
-    //variant2._union._next._next._value = 1.23f;
-
-    //std_ex::nth_element<1, int, float>;
-
-    //variant2 = nullptr;
-
-    //if (std::holds_alternative<float>(variant2)) {
-    //    Serial.println("float");
-    //}
-
-    variant2 = 1.5f;
-
-    if (std::holds_alternative<float>(variant2)) {
-        Serial.println("float");
-    }
-    if (!std::holds_alternative<int>(variant2)) {
-        Serial.println("not int");
-    }
-
-    //variant2 = {};
-
-    //*std_ex::get<float>(&variant2) = 1.5;
-
-    //d::nth_element<0, int32_t, uint32_t, float, double>::type;
-
-    /*variant2.index_of<float>();*/
-
-    //auto aa = std_ex::get_if<float>(&variant2);
-
-
-    auto a = std::get_if<0>(&variant2);
-    auto b = std::get_if<1>(&variant2);
-    auto c = std::get_if<2>(&variant2);
-    auto d = std::get_if<float>(&variant2);
-
-    //if (d) {
-    //    Serial.println(*d);
-    //}
-    return 0;
-
-    //std_ex::variant_index<1, int32_t, uint32_t, float, double>::type x;
-
-    //constexpr size_t index1 = 
-    //auto x = variant2._union._next._next._next._index;
-    //constexpr size_t index2 = variant2._data.;
-
-
-    //std::variant < int32_t, uint32_t, float, String, const __FlashStringHelper * > variant1;
-
-    //constexpr size_t variant1Size = sizeof(variant1);
-    //constexpr size_t variant2Size = sizeof(variant2);
-    //constexpr size_t variant2UnionSize = sizeof(variant2._union);
-    //constexpr size_t stringSize = sizeof(String);
-
-    //variant1 = (int16_t)-100;
-
-    //auto result1 = std::get_if<0>(&variant1);
-    //auto index1 = variant1.index();
-
-    //variant1 = F("test");
-
-    //auto result2 = std::get_if<4>(&variant1);
-    //index1 = variant1.index();
-
-    //auto str1 = String(1.23, 2);
-
-    //variant1 = str1;
-
-    //auto result3 = std::get_if<3>(&variant1);
-    //index1 = variant1.index();
-
-    //variant1 = nullptr;
-
-    //index1 = variant1.index();
-    //auto result4 = std::get_if<0>(&variant1);
-
-
-    ////PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, 6, (name)(value));
-
-    //for (int i = 0; i < 6; i++) {
-    //    Serial.println(FPSTR(_VAR_name[i]));
-    //}
-    //for (int i = 0; i < 6; i++) {
-    //    Serial.println(FPSTR(_VAR_value[i]));
-    //}
-
-    //XXX().printf_P(F("test str=%s int=%d float=%f"), "test", 123, 1.23456789f);
 
 #if 0
     char *strx = strdup("test");
@@ -248,7 +157,7 @@ int main() {
     channelItems.dump(Serial);
 #endif
 
-    test_form_02_cpp();
+    test_form_01_cpp();
         
 
     return 0;

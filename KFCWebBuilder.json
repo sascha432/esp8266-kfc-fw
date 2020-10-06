@@ -108,6 +108,7 @@
                 "./Resources/js/forms/serial2tcp.js"
             ],
             "#if !WEBUI_ALERTS_ENABLED": [
+                "./lib/KFCWebBuilder/Resources/js/mqtt.min.js",
                 "./Resources/js/webui-alerts.js",
                 "./Resources/css/alert-container.css"
             ]

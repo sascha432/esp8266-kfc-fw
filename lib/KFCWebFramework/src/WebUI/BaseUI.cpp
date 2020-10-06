@@ -24,7 +24,7 @@ const char *WebUI::Config::encodeHtmlEntities(const char *cStr, bool attribute)
 {
     uint8_t byte = pgm_read_byte(cStr);
     if (byte == 0xff) { // marker for html
-        __LDBG_assert_printf(false, "marker deprecated");
+        __LDBG_assert_printf(F("marker deprecated") == nullptr, "marker deprecated");
         return strings().attachString(cStr) + 1;
     }
     // if (byte == '<') { // marker for html

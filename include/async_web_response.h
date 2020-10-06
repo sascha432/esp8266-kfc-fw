@@ -232,4 +232,3 @@ public:
 private:
     void _doStuff(bool *async, const String &value);
 };
-

@@ -251,9 +251,6 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         else if (String_equals(key, PSTR("IS_CONFIG_DIRTY_CLASS"))) {
             output.print(FSPGM(hidden));
         }
-        else if (String_equals(key, PSTR("WEBUI_ALERTS_JSON"))) {
-            output.print(F("null"));
-        }
         return;
     }
     // ------------------------------------------------------------------------------------
@@ -278,13 +275,6 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
             output.print(F("alert alert-dismissible alert-danger fade show"));
         } else {
             output.print(FSPGM(hidden));
-        }
-    }
-    else if (String_equals(key, PSTR("WEBUI_ALERTS_JSON"))) {
-        if (WebAlerts::Alert::hasOption(WebAlerts::OptionsType::PRINT_ALERTS_JSON)) {
-            WebAlerts::Alert::printAlertsAsJson(output, 1);
-        } else {
-            output.print(F("null"));
         }
     }
     else if (String_equals(key, PSTR("WEBUI_ALERTS_STATUS"))) {
@@ -326,7 +316,7 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         output.print(FSPGM(Not_supported, "Not supported"));
     }
     else {
-        __DBG_assert_printf(false, "key not found '%s'", key.c_str());
+        __DBG_assert_printf(F("key not found") == nullptr, "key not found '%s'", key.c_str());
     }
 }
 

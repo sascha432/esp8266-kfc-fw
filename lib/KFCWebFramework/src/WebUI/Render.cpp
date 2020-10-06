@@ -291,7 +291,7 @@ void WebUI::BaseUI::renderInputField(Type type, PrintInterface &output, const ch
             break;
 
         case Type::CHECKBOX:
-            __LDBG_assert_printf(false, "not implemented");
+            __LDBG_assert_printf(F("not implemented") == nullptr, "not implemented");
             //  <input type="checkbox" aria-label="Checkbox for following text input">
             break;
 

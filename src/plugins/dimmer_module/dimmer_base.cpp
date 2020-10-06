@@ -242,7 +242,7 @@ void Dimmer_Base::_readConfig(ConfigType &config)
             _wire.unlock();
         }
 
-        __DBG_printf("trans=%u lock=%u request=%u read=%u can_yield=%u", res1, res4, res2, res3, can_yield());
+        __LDBG_printf("trans=%u lock=%u request=%u read=%u can_yield=%u", res1, res4, res2, res3, can_yield());
 
         if (!can_yield()) {
             break;

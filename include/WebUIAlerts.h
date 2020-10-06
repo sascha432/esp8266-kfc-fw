@@ -15,7 +15,7 @@
 #endif
 
 #ifndef WEBUI_ALERTS_SPIFF_STORAGE
-#define WEBUI_ALERTS_SPIFF_STORAGE                      "/.pvt/alerts_storage"
+#define WEBUI_ALERTS_SPIFF_STORAGE                      "/.pvt/alerts.json"
 #endif
 
 PROGMEM_STRING_DECL(alerts_storage_filename);
@@ -37,6 +37,7 @@ PROGMEM_STRING_DECL(alerts_storage_filename);
 namespace WebAlerts {
 
     class Message;
+    class FileStorage;
     using Vector = std::vector<Message>;
 
     using IdType = uint32_t;
@@ -50,9 +51,18 @@ namespace WebAlerts {
         IS_LOGGER          = 0x010,
     };
 
+    enum class ExpiresType : uint8_t {
+        DELETED = 0,
+        REBOOT = 1,
+        PERSISTENT = 2,
+        NEVER = PERSISTENT,
+        MAX
+    };
+
     enum class Type : uint8_t {
         MIN = 0,
-        SUCCESS = MIN,
+        NONE = MIN,
+        SUCCESS,
         DANGER,
         ERROR = DANGER,
         WARNING,
@@ -62,205 +72,59 @@ namespace WebAlerts {
         MAX
     };
 
-    enum class ExpiresType : int32_t {
-        MIN = -2,
-        EXPIRED = MIN,
-        REBOOT,
-        PERSISTENT = 0,
-        NEVER = PERSISTENT,
-        MAX = INT32_MAX
-    };
+    inline static const __FlashStringHelper *getTypeStr(Type type) {
+        switch(type) {
+            case Type::SUCCESS:
+                return F("success");
+            case Type::WARNING:
+                return F("warning");
+            case Type::INFO:
+                return F("info");
+            case Type::DANGER:
+            default:
+                return F("danger");
+        }
+    }
 
     class AbstractBase {
     public:
 
-        static IdType addAlert(const String &message, Type type, ExpiresType expires = ExpiresType::NEVER, bool dismissable = true) = delete;
+        static IdType addAlert(const String &message, Type type, ExpiresType expires) = delete;
         static bool hasOption(OptionsType option) = delete;
+        static void dismissAlert(IdType id) {}
 
-        static void dismissAlert(IdType id) {
-        }
-
-        static Vector getAlerts() {
-            return Vector();
-        }
-
-        static void printAlertsAsJson(PrintHtmlEntitiesString &, IdType, bool = false) {
-        }
-
-        static void readStorage() {
-        }
-
-        static void writeStorage() {
-        }
-
+        static void readStorage() {}
+        static void writeStorage() {}
     };
 
 
 #if WEBUI_ALERTS_ENABLED
 
-    class Message {
-    public:
-        using Type = WebAlerts::Type;
-        using IdType = WebAlerts::IdType;
-        using ExpiresType = WebAlerts::ExpiresType;
-
-        Message(IdType id = 0) :
-            _id(id),
-            _counter(0),
-            _expires(ExpiresType::EXPIRED),
-            _time(0),
-            _type(Type::MIN),
-            _dismissable(false)
-        {
-        }
-
-        Message(IdType id, const String &message, Type type, ExpiresType expires = ExpiresType::NEVER, bool dismissable = true) :
-            _message(message),
-            _id(id),
-            _counter(1),
-            _expires(expires),
-            _time(time(nullptr)),
-            _type(type),
-            _dismissable(dismissable)
-        {
-        }
-
-        IdType getId() const {
-            return _id;
-        }
-
-        uint32_t getCount() const {
-            return _counter;
-        }
-
-        void setCount(uint32_t counter) {
-            _counter = counter;
-            auto now = time(nullptr);
-            if (IS_TIME_VALID(now)) {
-                _time = now;
-            }
-        }
-
-        const String &getMessage() const {
-            return _message;
-        }
-
-        bool isDismissable() const {
-            return _dismissable;
-        }
-
-        Type getType() const {
-            return _type;
-        }
-
-        const __FlashStringHelper *getTypeStr() const {
-            switch(_type) {
-                case Type::SUCCESS:
-                    return F("success");
-                case Type::WARNING:
-                    return F("warning");
-                case Type::INFO:
-                    return F("info");
-                case Type::DANGER:
-                default:
-                    return F("danger");
-            }
-        }
-
-        void setTime(time_t time) {
-            _time = time;
-        }
-
-        time_t getTime() const {
-            if (IS_TIME_VALID(_time)) {
-                return _time;
-            }
-            return 0;
-        }
-
-        void setExpires(ExpiresType expires = ExpiresType::EXPIRED) {
-            _expires = expires;
-        }
-
-        ExpiresType getExpires() const {
-            return _expires;
-        }
-
-        bool isExpired() const {
-            switch(_expires) {
-                case ExpiresType::EXPIRED:
-                    return true;
-                case ExpiresType::NEVER:
-                case ExpiresType::REBOOT:
-                    return false;
-                default:
-                    break;
-            }
-            if (!IS_TIME_VALID(_time)) {
-                return false;
-            }
-            time_t now = time(nullptr);
-            return (IS_TIME_VALID(now) && (now > _time + static_cast<int32_t>(_expires)));
-        }
-
-        bool isPersistent() const {
-            return _expires >= ExpiresType::NEVER;
-        }
-
-        void remove();
-
-        // format: 0:id,1:expires[,2:counter,3:type,4:dismissable,5:time,6:message]
-        //
-        //  on success:
-        //      returns pointer to the third item or the end of the line
-        //      id and type are set
-        //
-        //  on failure:
-        //     returns nullptr
-        static const char *getFromString(const String &line, IdType &id, ExpiresType &type);
-
-        // returns false on error and alert is not modified
-        static bool fromString(Message &alert, const String &line);
-
-        static void toString(String &line, const Message &alert);
-
-        // creates a record that the alert has been deleted
-        static void toString(String &line, IdType alertId);
-
-    private:
-        String _message;
-        IdType _id;
-        uint32_t _counter;
-        ExpiresType _expires;
-        time_t _time;
-        Type _type;
-        bool _dismissable;
-    };
-
     class FileStorage {
     public:
-        static constexpr size_t kReadwriteFilesize = 1024 * 3;
+        static constexpr size_t kReadwriteFilesize = 1024 * 2;
 
-        IdType addAlert(const String &message, Type type, ExpiresType expires = ExpiresType::NEVER, bool dismissable = true);
+        IdType addAlert(const String &message, Type type, ExpiresType expires, IdType updateId = ~0);
         void dismissAlert(IdType id);
         void printAlertsAsJson(PrintHtmlEntitiesString &output, IdType minAlertId, bool separator = false);
 
-        void _readAlertStorage();
+        void _readAlertStorage(IdType minAlertId = 0);
         File _openAlertStorage(bool append = false);
         void _closeAlertStorage(File &file);
-        void _rewriteAlertStorage();
+        void _rewriteAlertStorage(File &file, bool reboot);
         IdType _removeAlert(IdType id);
 
-        inline Vector &getAlerts() {
-            return _alerts;
-        }
+        static String _readLine(File &file);
 
         inline static FileStorage &getInstance() {
             return _webAlerts;
         }
 
+        static IdType getMaxAlertId() {
+            return getInstance()._alertId;
+        }
+
     private:
-        Vector _alerts;
         IdType _alertId;
         static FileStorage _webAlerts;
     };
@@ -268,26 +132,23 @@ namespace WebAlerts {
     class Base : public AbstractBase {
     public:
 
-        static IdType addAlert(const String &message, Type type, ExpiresType expires = ExpiresType::NEVER, bool dismissable = true) {
-            return FileStorage::getInstance().addAlert(message, type, expires, dismissable);
+        static IdType addAlert(const String &message, Type type, ExpiresType expires) {
+            return FileStorage::getInstance().addAlert(message, type, expires);
         }
 
         static void dismissAlert(IdType id) {
             FileStorage::getInstance().dismissAlert(id);
         }
 
-        static Vector &getAlerts() {
-            return FileStorage::getInstance().getAlerts();
-        }
-
-        static void printAlertsAsJson(PrintHtmlEntitiesString &output, IdType minAlertId, bool separator = false){
-            FileStorage::getInstance().printAlertsAsJson(output, minAlertId, separator);
-        }
-
         static bool hasOption(OptionsType option);
 
         static void readStorage() {
-            FileStorage::getInstance()._readAlertStorage();
+            auto &fs = FileStorage::getInstance();
+            File file = fs._openAlertStorage(true);
+            if (file) {
+                fs._rewriteAlertStorage(file, true);
+                file.close();
+            }
         }
 
     };
@@ -299,7 +160,7 @@ namespace WebAlerts {
 
     class Base : public AbstractBase {
     public:
-        static IdType addAlert(const String &message, Type type, ExpiresType = ExpiresType::NEVER, bool = true) {
+        static IdType addAlert(const String &message, Type type, ExpiresType expires) {
             logger(message, type);
         }
 
@@ -344,52 +205,32 @@ namespace WebAlerts {
     class Alert : public Base {
     public:
 
-        static IdType add(const String &message, Type type, ExpiresType expires = ExpiresType::NEVER, bool dismissable = true) {
-            return addAlert(message, type, expires, dismissable);
+        static IdType add(const String &message, Type type, ExpiresType expires = ExpiresType::PERSISTENT) {
+            return addAlert(message, type, expires);
         }
 
         static void dimiss(IdType id) {
            dismissAlert(id);
        }
 
-        static IdType danger(const String &message, ExpiresType expires = ExpiresType::NEVER, bool dismissable = true) {
-            return add(message, Type::DANGER, expires, dismissable);
+        static IdType danger(const String &message, ExpiresType type = ExpiresType::PERSISTENT) {
+            return add(message, Type::DANGER);
         }
 
-        static IdType danger(const String &message, bool dismissable, ExpiresType expires = ExpiresType::NEVER) {
-            return add(message, Type::DANGER, expires, dismissable);
+        static IdType error(const String &message, ExpiresType type = ExpiresType::PERSISTENT) {
+            return add(message, Type::ERROR);
         }
 
-        static IdType error(const String &message, ExpiresType expires = ExpiresType::NEVER, bool dismissable = true) {
-            return add(message, Type::ERROR, expires, dismissable);
+        static IdType warning(const String &message, ExpiresType type = ExpiresType::PERSISTENT) {
+            return add(message, Type::WARNING);
         }
 
-        static IdType error(const String &message, bool dismissable, ExpiresType expires = ExpiresType::NEVER) {
-            return add(message, Type::ERROR, expires, dismissable);
+        static IdType notice(const String &message, ExpiresType type = ExpiresType::PERSISTENT) {
+            return add(message, Type::NOTICE);
         }
 
-        static IdType warning(const String &message, ExpiresType expires = ExpiresType::NEVER, bool dismissable = true) {
-            return add(message, Type::WARNING, expires, dismissable);
-        }
-
-        static IdType warning(const String &message, bool dismissable, ExpiresType expires = ExpiresType::NEVER) {
-            return add(message, Type::WARNING, expires, dismissable);
-        }
-
-        static IdType notice(const String &message, ExpiresType expires = ExpiresType::NEVER, bool dismissable = true) {
-            return add(message, Type::NOTICE, expires, dismissable);
-        }
-
-        static IdType notice(const String &message, bool dismissable, ExpiresType expires = ExpiresType::NEVER) {
-            return add(message, Type::NOTICE, expires, dismissable);
-        }
-
-        static IdType success(const String &message, ExpiresType expires = ExpiresType::NEVER, bool dismissable = true) {
-            return add(message, Type::SUCCESS, expires, dismissable);
-        }
-
-        static IdType success(const String &message, bool dismissable, ExpiresType expires = ExpiresType::NEVER) {
-            return add(message, Type::SUCCESS, expires, dismissable);
+        static IdType success(const String &message, ExpiresType type = ExpiresType::PERSISTENT) {
+            return add(message, Type::SUCCESS);
         }
     };
 

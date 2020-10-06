@@ -50,7 +50,7 @@ Form::BaseForm &Group::end()
 {
     auto &form = getForm();
     if (_groupOpen == false) {
-        __LDBG_assert_printf(false, "group=%s already closed", getName());
+        __LDBG_assert_printf(F("group already closed") == nullptr, "group=%s already closed", getName());
         return form;
     }
 

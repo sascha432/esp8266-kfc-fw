@@ -133,8 +133,8 @@ bool Configuration::write()
 
     // new data offset is base offset + size of header + size of stored parameter information
     _dataOffset = _offset + (uint16_t)(buffer.length() + sizeof(Header_t));
-    __LDBG_assert_printf(_dataOffset == _offset + (sizeof(ParameterHeaderType) * _params.size()) + sizeof(Header_t), "new _data_offset=%u mismatch", 
-        _dataOffset, 
+    __LDBG_assert_printf(_dataOffset == _offset + (sizeof(ParameterHeaderType) * _params.size()) + sizeof(Header_t), "new _data_offset=%u mismatch",
+        _dataOffset,
         (_offset + (sizeof(ParameterHeaderType) * _params.size()) + sizeof(Header_t))
     );
 
@@ -264,17 +264,17 @@ void Configuration::setBinary(HandleType handle, const void *data, size_type len
 void Configuration::dump(Print &output, bool dirty, const String &name)
 {
     uint16_t dataOffset = (uint16_t)(_offset + sizeof(Header_t) + (_params.size() * sizeof(ParameterHeaderType)));
-    output.printf_P(PSTR("Configuration:\noffset=%d data_ofs=%u eeprom_size=%d params=%d len=%d\n"), 
-        _offset, 
-        dataOffset, 
-        _eeprom.getSize(), 
-        _params.size(), 
+    output.printf_P(PSTR("Configuration:\noffset=%d data_ofs=%u eeprom_size=%d params=%d len=%d\n"),
+        _offset,
+        dataOffset,
+        _eeprom.getSize(),
+        _params.size(),
         _eeprom.getSize() - _offset
     );
-    output.printf_P(PSTR("min_mem_usage=%d header_size=%d Param_t::size=%d, ConfigurationParameter::size=%d, Configuration::size=%d\n"), 
-        sizeof(Configuration) + _params.size() * sizeof(ConfigurationParameter), 
-        sizeof(Configuration::Header_t), sizeof(ConfigurationParameter::Param_t), 
-        sizeof(ConfigurationParameter), 
+    output.printf_P(PSTR("min_mem_usage=%d header_size=%d Param_t::size=%d, ConfigurationParameter::size=%d, Configuration::size=%d\n"),
+        sizeof(Configuration) + _params.size() * sizeof(ConfigurationParameter),
+        sizeof(Configuration::Header_t), sizeof(ConfigurationParameter::Param_t),
+        sizeof(ConfigurationParameter),
         sizeof(Configuration)
    );
 

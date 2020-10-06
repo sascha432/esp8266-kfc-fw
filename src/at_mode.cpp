@@ -1337,17 +1337,18 @@ void at_mode_serial_handle_event(String &commandString)
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(ALERT))) {
                 if (args.size() > 0) {
-                    auto id = WebAlerts::Alert::add(args.toString(0), static_cast<WebAlerts::Type>(args.toInt(1, 0)));
+                    auto msg = args.toString(0);
+                    auto id = WebAlerts::Alert::add(args.toString(0), static_cast<WebAlerts::Type>(args.toIntMinMax(1, (int)(WebAlerts::Type::NONE) + 1, (int)(WebAlerts::Type::MAX) - 1, (int)(WebAlerts::Type::SUCCESS))));
                     args.printf_P(PSTR("Alert added id %u"), id);
                 }
                 if (WebAlerts::Alert::hasOption(WebAlerts::OptionsType::GET_ALERTS)) {
                     args.print(F("--- Alerts ---"));
-                    for(auto &alert: WebAlerts::Alert::getAlerts()) {
-                        String str;
-                        WebAlerts::Message::toString(str, alert);
-                        String_rtrim_P(str, PSTR("\r\n"));
-                        args.print(str.c_str());
-                    }
+                    // for(auto &alert: WebAlerts::Alert::getAlerts()) {
+                    //     String str;
+                    //     WebAlerts::Message::toString(str, alert);
+                    //     String_rtrim_P(str, PSTR("\r\n"));
+                    //     args.print(str.c_str());
+                    // }
                 }
             }
 #if PIN_MONITOR

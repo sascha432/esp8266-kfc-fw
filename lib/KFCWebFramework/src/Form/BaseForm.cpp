@@ -183,7 +183,7 @@ RenderType Form::BaseForm::getEndGroupType(RenderType type)
     default:
         break;
     }
-    __LDBG_assert_printf(false, "group type=%u not valid", getGroupType(type));
+    __LDBG_assert_printf(F("group type not valid") == nullptr, "group type=%u not valid", getGroupType(type));
     return RenderType::NONE;
 }
 

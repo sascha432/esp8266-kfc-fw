@@ -44,213 +44,50 @@ bool Base::hasOption(OptionsType option)
     return false;
 }
 
-void Message::remove()
+IdType FileStorage::addAlert(const String &message, Type type, ExpiresType expires, IdType updateId)
 {
-    FileStorage::getInstance().dismissAlert(_id);
-}
-
-const char *Message::getFromString(const String &line, IdType &id, ExpiresType &type)
-{
-    char *endPtr = nullptr;
-    type = ExpiresType::EXPIRED;
-    errno = 0;
-    id = strtoul(line.c_str(), &endPtr, 10);
-    if (errno || id == 0) {
-        id = 0;
-        return nullptr;
-    }
-    if (*endPtr != ',') {
-        return nullptr;
-    }
-    auto endPtr2 = ++endPtr;
-    auto value = strtol(endPtr, &endPtr2, 10);
-    if (errno || endPtr == endPtr2) {
-        return nullptr;
-    }
-    type = static_cast<ExpiresType>(value);
-    while(isspace(*endPtr2)) {
-        endPtr2++;
-    }
-    if (*endPtr2 == 0) {
-        return endPtr2;
-    }
-    if (*endPtr2 == ',') {
-        return endPtr2 + 1;
-    }
-    return nullptr;
-}
-
-// format: 0:id,1:expires[,2:counter,3:type,4:dismissable,5:time,6:message]
-
-bool Message::fromString(Message &alert, const String &line)
-{
-    IdType id;
-    ExpiresType expires;
-    auto start = getFromString(line, id, expires);
-    if (!start) {
-        __LDBG_printf("failed parsing %s", line.c_str());
-        return false;
-    }
-    if (!*start) {
-        alert = Message(id);
-        __LDBG_printf("str=%s", [&alert]() { String tmp; Message::toString(tmp, alert); return tmp; }().c_str());
-        return true;
-    }
-    StringVector items;
-    explode(line.c_str(), ',', items, 7);
-    __LDBG_printf("items=%d:%s", items.size(), implode(',', items).c_str());
-    if (items.size() != 7) {
-        __LDBG_printf("failed parsing %s", line.c_str());
-        return false;
-    }
-    String_rtrim(items[6]);
-    alert = Message(id, items[6], static_cast<Type>(items[3].toInt()), expires, items[4].toInt());
-    __LDBG_printf("str=%s", [&alert]() { String tmp; Message::toString(tmp, alert); return tmp; }().c_str());
-    return true;
-}
-
-void Message::toString(String &line, const Message &alert)
-{
-    line = PrintString(F("%u,%d,%u,%u,%u,%lu,"), alert._id, alert._expires, alert._counter, alert._type, alert._dismissable, (unsigned long)alert._time);
-    line.reserve(line.length() + alert._message.length() + 2);
-    line += alert._message;
-    __LDBG_printf("str=%s", line.c_str());
-    line += '\n';
-}
-
-void Message::toString(String &line, IdType alertId)
-{
-    line = PrintString(F("%u,%d"), alertId, ExpiresType::EXPIRED);
-    __LDBG_printf("str=%s", line.c_str());
-    line += '\n';
-}
-
-
-IdType FileStorage::addAlert(const String &message, Type type, ExpiresType expires, bool dismissable)
-{
-    __LDBG_printf("add=%s type=%u exp=%d dimiss=%u", message.c_str(), type, expires, dismissable);
-    for(auto &alert: _alerts) {
-        if (!alert.isExpired() && alert.getMessage().equals(message)) {
-            alert.setCount(alert.getCount() + 1);
-            __LDBG_printf("id=%u,msg=%s,counter=%d", alert.getId(), alert.getMessage().c_str(), alert.getCount());
-            return alert.getId();
+    auto file = _openAlertStorage(true);
+    __LDBG_printf("add=%s type=%u file=%u pos=%u size=%u", message.c_str(), type, !!file, file.position(), file.size());
+    if (file) {
+        auto now = time(nullptr);
+        if (!IS_TIME_VALID(now)) {
+            now = 0;
         }
-    }
-    _alertId++;
-    _alerts.emplace_back(_alertId, message, type, expires, dismissable);
-    auto &alert = _alerts.back();
-    if (alert.isPersistent()) {
-        auto file = _openAlertStorage(true);
-        if (file) {
-            String line;
-            Message::toString(line, alert);
-            file.write(line.c_str(), line.length());
+        if (file.size()) {
+            auto trunc = file.truncate(file.size() - 2);
+            auto seek = file.seek(0, SeekMode::SeekEnd);
+            auto written = file.print(F(",\n"));
+            __LDBG_printf("truncate=%d seek=%d written=%d size=%u pos=%u", trunc, seek, written, file.size(), file.position());
         }
+        else {
+            file.printf_P(PSTR("[{\"created\":%lu,\"alert_id\":%u},"), now, _alertId);
+        }
+        if (updateId == ~0U) {
+            updateId = ++_alertId;
+        }
+        if (type == Type::NONE || expires == ExpiresType::DELETED) {
+            file.printf_P(PSTR("{\"i\":%u,\"d\":%u"), ++_alertId, updateId);
+        }
+        else {
+            file.printf_P(PSTR("{\"i\":%u,\"ts\":%lu,\"t\":\"%s\",\"e\":%u"), updateId, now, getTypeStr(type), expires);
+            if (message.length()) {
+                file.printf_P(PSTR(",\"m\":\""));
+                JsonTools::printToEscaped(file, message);
+                file.print('"');
+            }
+        }
+        file.print("}]\n");
+        _closeAlertStorage(file);
     }
-    __LDBG_printf("id=%u,msg=%s,type=%s,time=%lu,exp=%u,dismissable=%d,persistent=%d",
-        alert.getId(), alert.getMessage().c_str(), alert.getTypeStr(), alert.getTime(), alert.getExpires(), alert.isDismissable(), alert.isPersistent()
-    );
+    //  __LDBG_printf("id=%u,msg=%s,type=%s,time=%lu,exp=%u,dismissable=%d,persistent=%d",
+    //     alert.getId(), alert.getMessage().c_str(), alert.getTypeStr(), alert.getTime(), alert.getExpires(), alert.isDismissable(), alert.isPersistent()
+    // );
     return _alertId;
 }
 
 void FileStorage::dismissAlert(IdType id)
 {
-    auto alertId = _removeAlert(id);
-    if (alertId) {
-        auto file = _openAlertStorage(true);
-        if (file) {
-            String line;
-            Message::toString(line, alertId);
-            file.write(line.c_str(), line.length());
-        }
-    }
-}
-
-void FileStorage::printAlertsAsJson(PrintHtmlEntitiesString &output, IdType minAlertId, bool separator)
-{
-    auto mode = output.setMode(PrintHtmlEntitiesString::Mode::RAW);
-    output.print('[');
-    for(auto &alert: getAlerts()) {
-        if (!alert.isExpired() && alert.getId() >= minAlertId) {
-            if (separator) {
-                output.print(',');
-            }
-            else {
-                separator = true;
-            }
-
-            output.printf_P(PSTR("{\"t\":\"%s\",\"i\":%d,\"m\":\""), alert.getTypeStr(), alert.getId());
-
-            PrintHtmlEntitiesString message = F(HTML_SA(h5, HTML_A("class", "mb-0")));
-            JsonTools::printToEscaped(output, message);
-            message = alert.getMessage();
-            JsonTools::printToEscaped(output, message);
-            message = F(HTML_E(h5));
-            auto ts = alert.getTime();
-            auto counter = alert.getCount();
-            if (ts || counter > 1) {
-                message.print(F(HTML_S(small)));
-                if (counter > 1) {
-                    message.printf_P(PSTR("Message repeated %u times"), counter);
-                    if (ts) {
-                        message.print(F(", last timestamp "));
-                    }
-                }
-            }
-            if (ts) {
-                message.strftime_P(PSTR("%Y-%m-%d %H:%M:%S"), ts);
-            }
-            if (ts || counter > 1) {
-                message.print(F(HTML_E(small)));
-            }
-            JsonTools::printToEscaped(output, message);
-
-            output.printf_P(PSTR("\",\"n\":%s}"), alert.isDismissable() ? SPGM(false) : SPGM(true));
-        }
-    }
-    output.print(']');
-    output.setMode(mode);
-}
-
-IdType FileStorage::_removeAlert(IdType id)
-{
-    IdType alertId = 0;
-    _alerts.erase(std::remove_if(_alerts.begin(), _alerts.end(), [id, &alertId](const Message &alert) {
-        if (alert.getId() == id) {
-            if (alert.isPersistent()) {
-                alertId = alert.getId();
-            }
-            __LDBG_printf("removed=%u,persistent=%d", alert.getId(), !!alertId);
-            return true;
-        }
-        return false;
-    }), _alerts.end());
-    return alertId;
-}
-
-void FileStorage::_readAlertStorage()
-{
-    auto file = _openAlertStorage(false);
-    if (file) {
-        String line;
-        for(;;) {
-            line = file.readStringUntil('\n');
-            __LDBG_printf("line=%s", line.c_str());
-            if (line.length() == 0) {
-                break;
-            }
-            Message alert;
-            if (Message::fromString(alert, line)) {
-                if (alert.isExpired()) {
-
-                }
-                else {
-                    _alerts.push_back(alert);
-                    _alertId = std::max(_alertId, alert.getId());
-                }
-            }
-        }
-    }
+    addAlert(emptyString, Type::NONE, ExpiresType::DELETED, id);
 }
 
 File FileStorage::_openAlertStorage(bool append)
@@ -262,29 +99,142 @@ File FileStorage::_openAlertStorage(bool append)
 void FileStorage::_closeAlertStorage(File &file)
 {
     if (file && file.size() > kReadwriteFilesize) {
-        file.close();
-        _rewriteAlertStorage();
+        _rewriteAlertStorage(file, false);
     }
     else {
         file.close();
     }
 }
 
-void FileStorage::_rewriteAlertStorage()
+String FileStorage::_readLine(File &file)
 {
-    //TODO
-    // remove expired and persistent messages
-    // read storage to get persistent messages
-    // sort by time
-    // write new storage
-    // delete old and rename new storage
-    auto file = tmpfile(sys_get_temp_dir(), FSPGM(alerts_storage_filename));
-    if (file) {
-        String tmpfile = file.fullName();
-        //TODO copy alerts
-        file.close();
-        KFCFS.remove(FSPGM(alerts_storage_filename));
-        KFCFS.rename(tmpfile, FSPGM(alerts_storage_filename));
+    String line;
+    int c = file.read();
+    while (c >= 0 && c != '\n') {
+        line += (char)c;
+        c = file.read();
+    }
+    return line;
+}
+
+void FileStorage::_rewriteAlertStorage(File &file, bool reboot)
+{
+    time_t created = 0;
+    File tmpFile;
+
+    if (file && file.seek(0, SeekMode::SeekSet)) {
+        std::vector<IdType> removeItems;
+        size_t lines = 0;
+        size_t messageCount = 0;
+        while(true) {
+            int pos;
+            String line = _readLine(file);
+            if (line.length() == 0) {
+                break;
+            }
+            __LDBG_printf("line=%s num=%u", line.c_str(), lines);
+            lines++;
+            if (lines  == 1) {
+                pos = line.indexOf(F("\"created\":"));
+                if (pos != -1) {
+                    created = atol(line.c_str() + pos + 10);
+                    __LDBG_printf("created=%lu", created);
+                }
+                pos = line.indexOf(F("\"alert_id\":"));
+                if (pos != -1) {
+                    auto aid = (IdType)atol(line.c_str() + pos + 11);
+                    __LDBG_printf("alert_id=%u this->_alertid=%u", aid, _alertId);
+                    if (aid > _alertId) {
+                        _alertId = aid;
+                    }
+                }
+            }
+            else {
+                IdType id = 0;
+                // add deleted messages to removeItems
+                pos = line.indexOf(F("\"d\":"));
+                if (pos != -1) {
+                    auto id = (IdType)atol(line.c_str() + pos + 4);
+                    __LDBG_printf("delete=%u", id);
+                    if (id > 0) {
+                        if (std::find(removeItems.begin(), removeItems.end(), id) == removeItems.end()) {
+                            removeItems.push_back(id);
+                        }
+                    }
+                }
+                else {
+                    // get id
+                    pos = line.indexOf(F("\"i\":"));
+                    if (pos != -1) {
+                        id = (IdType)atol(line.c_str() + pos + 4);
+                        __LDBG_printf("id=%u", id);
+                        messageCount++;
+                    }
+                    // add non persistent message to removeItems
+                    if (reboot && id) {
+                        pos = line.indexOf(F("\"e\":"));
+                        if (pos != -1) {
+                            auto expires = static_cast<ExpiresType>(atoi(line.c_str() + pos + 4));
+                            __LDBG_printf("id=%u expires=%u reboot=%u", id, expires, reboot);
+                            if (expires == ExpiresType::REBOOT) {
+                                if (std::find(removeItems.begin(), removeItems.end(), id) == removeItems.end()) {
+                                    removeItems.push_back(id);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        auto now = time(nullptr);
+        if (!IS_TIME_VALID(now)) {
+            now = 0;
+        }
+        __LDBG_printf("messageCount=%u removeItems=%u ", messageCount, removeItems.size());
+        if (messageCount <= removeItems.size()) {
+            file.truncate(0);
+            file.printf_P(PSTR("[{\"created\":%lu,\"alert_id\":%u}]\n"), now, _alertId);
+            file.close();
+        }
+        else if (file.seek(0, SeekMode::SeekSet)) {
+
+            tmpFile = tmpfile(sys_get_temp_dir(), FSPGM(alerts_storage_filename));
+            String tmpFileName = tmpFile.fullName();
+            __LDBG_printf("tmpfile=%s", tmpFileName.c_str());
+            if (tmpFile) {
+                tmpFile.printf_P(PSTR("[{\"created\":%lu,\"alert_id\":%u}"), now, _alertId);
+                while(true) {
+                    int pos;
+                    String line = _readLine(file);
+                    if (line.length() == 0) {
+                        break;
+                    }
+                    // get id
+                    IdType id = 0;
+                    pos = line.indexOf(F("\"i\":"));
+                    if (pos != -1) {
+                        id = (IdType)atol(line.c_str() + pos + 4);
+                    }
+                    __LDBG_printf("line=%s id=%u remove=%u", line.c_str(), id, std::find(removeItems.begin(), removeItems.end(), id) != removeItems.end());
+                    if (id && std::find(removeItems.begin(), removeItems.end(), id) == removeItems.end()) {
+                        // copy this message
+                        String_rtrim_P(line, PSTR(",]\n"));
+                        tmpFile.print(F(",\n"));
+                        tmpFile.print(line);
+                    }
+                }
+                tmpFile.print(F("]\n"));
+
+                __LDBG_printf("old_size=%u new_size=%u rename=%s to %s", file.size(), tmpFile.size(), tmpFileName.c_str(), FSPGM(alerts_storage_filename));
+
+                tmpFile.close();
+                file.close();
+                KFCFS.remove(FSPGM(alerts_storage_filename));
+                if (!KFCFS.rename(tmpFileName, FSPGM(alerts_storage_filename))) {
+                    KFCFS.remove(tmpFileName);
+                }
+            }
+        }
     }
 }
 

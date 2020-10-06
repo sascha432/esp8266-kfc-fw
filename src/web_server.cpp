@@ -307,27 +307,47 @@ void WebServerPlugin::handlerAlerts(AsyncWebServerRequest *request)
         request->send(503);
     }
     WebServerSetCPUSpeedHelper setCPUSpeed;
-    auto pollId = (uint32_t)request->arg(F("poll_id")).toInt();
-    if (pollId) {
-        PrintHtmlEntitiesString str;
-        WebAlerts::Alert::printAlertsAsJson(str, pollId, false);
+    HttpHeaders headers(true);
 
-        AsyncWebServerResponse *response = new AsyncBasicResponse(200, FSPGM(mime_application_json), str);
-        HttpHeaders httpHeaders;
-        httpHeaders.addNoCache();
-        httpHeaders.setAsyncWebServerResponseHeaders(response);
-        request->send(response);
+    headers.addNoCache(true);
+
+
+    WebAlerts::IdType dismissId = request->arg(F("dismiss_id")).toInt();
+    if (dismissId) {
+        WebAlerts::Alert::dismissAlert(dismissId);
+        request->send(200);
         return;
     }
-    else {
-        auto alertId = (WebAlerts::IdType)request->arg(FSPGM(id)).toInt();
-        if (alertId) {
-            WebAlerts::Alert::dimiss(alertId);
-            request->send(200, FSPGM(mime_text_plain), FSPGM(OK));
-            return;
-        }
+
+    WebAlerts::IdType pollId = request->arg(F("poll_id")).toInt();
+    if (
+        (pollId > WebAlerts::FileStorage::getMaxAlertId()) ||
+        !plugin._sendFile(FSPGM(alerts_storage_filename), emptyString, headers, plugin._clientAcceptsGzip(request), true, request, nullptr)
+    ) {
+        request->send(204);
     }
-    request->send(400);
+
+    // auto pollId = (uint32_t)request->arg(F("poll_id")).toInt();
+    // if (pollId) {
+    //     PrintHtmlEntitiesString str;
+    //     WebAlerts::Alert::printAlertsAsJson(str, pollId, false);
+
+    //     AsyncWebServerResponse *response = new AsyncBasicResponse(200, FSPGM(mime_application_json), str);
+    //     HttpHeaders httpHeaders;
+    //     httpHeaders.addNoCache();
+    //     httpHeaders.setAsyncWebServerResponseHeaders(response);
+    //     request->send(response);
+    //     return;
+    // }
+    // else {
+    //     auto alertId = (WebAlerts::IdType)request->arg(FSPGM(id)).toInt();
+    //     if (alertId) {
+    //         WebAlerts::Alert::dimiss(alertId);
+    //         request->send(200, FSPGM(mime_text_plain), FSPGM(OK));
+    //         return;
+    //     }
+    // }
+    // request->send(400);
 }
 
 #endif
@@ -706,9 +726,7 @@ void WebServerPlugin::begin()
     WebServerPlugin::addHandler(F("/speedtest.zip"), handlerSpeedTestZip);
     WebServerPlugin::addHandler(F("/speedtest.bmp"), handlerSpeedTestImage);
 #if WEBUI_ALERTS_ENABLED
-    if (WebAlerts::Alert::hasOption(WebAlerts::OptionsType::PRINT_ALERTS_JSON)) {
-        WebServerPlugin::addHandler(F("/alerts"), handlerAlerts);
-    }
+    WebServerPlugin::addHandler(F("/alerts"), handlerAlerts);
 #endif
     _server->on(String(F("/update")).c_str(), HTTP_POST, handlerUpdate, handlerUploadUpdate);
 
@@ -951,7 +969,9 @@ WebServerPlugin::WebServerPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(
 
 void WebServerPlugin::setup(SetupModeType mode)
 {
-    WebAlerts::Alert::readStorage();
+    if (mode != SetupModeType::SAFE_MODE) {
+        WebAlerts::Alert::readStorage();
+    }
     begin();
     if (mode == SetupModeType::DELAYED_AUTO_WAKE_UP) {
         invokeReconfigureNow(getName());

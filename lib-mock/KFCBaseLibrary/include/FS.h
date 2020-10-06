@@ -12,6 +12,7 @@ class File : public Stream {
 public:
     File(FileImplPtr p = FileImplPtr(), FS *baseFS = nullptr);
     File(FILE *fp, FileImplPtr p = FileImplPtr(), FS *baseFS = nullptr);
+    File(FILE *fp, const String &filename) : Stream(fp), _p(FileImplPtr()), _baseFS(nullptr), _filename(filename) {}
 
     operator bool() const {
         return _fp_get() != nullptr;
@@ -29,6 +30,10 @@ public:
     int peek() override;
     using Stream::readBytes;
 
+    const char *fullName() const {
+        return _filename.c_str();
+    }
+
     size_t readBytes(char *buffer, size_t length)  override;
     bool seek(uint32_t pos, SeekMode mode = SeekSet);
     void close();
@@ -37,6 +42,7 @@ public:
 private:
     FileImplPtr _p;
     FS* _baseFS;
+    String _filename;
 };
 
 class Dir {

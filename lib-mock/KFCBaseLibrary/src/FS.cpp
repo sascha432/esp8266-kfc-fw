@@ -15,7 +15,7 @@ File _SPIFFS::open(const String filename, const char *mode)
     }
     fp = fopen(filename.c_str(), modeStr.c_str());
     // fopen_s(&fp, filename.c_str(), modeStr.c_str());
-    return File(fp);
+    return File(fp, filename);
 }
 
 Dir _SPIFFS::openDir(const String dir) 

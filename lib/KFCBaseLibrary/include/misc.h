@@ -424,7 +424,7 @@ public:
 
     unsigned char concat(const void *str, size_t size) {
 #if _MSC_VER
-        return concat((const char *)str, size);
+        return String::concat((const char *)str, size);
 #else
         auto len = length();
         if (reserve(len + size)) {

@@ -400,11 +400,12 @@ bool WsClient::hasClients(AsyncWebSocket *server)
 void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, const String &message)
 {
     auto len = message.length();
-    len = remove_invalid_encoding_utf8((char *)message.begin(), len);
     for(auto socket: server->getClients()) {
         if (client == socket && socket->status() == WS_CONNECTED && socket->_tempObject && reinterpret_cast<WsClient *>(socket->_tempObject)->isAuthenticated()) {
             __LDBG_printf("server=%p client=%p message=%s", server, client, message.c_str());
-            client->text(message.c_str(), len);
+            auto buffer = server->makeBuffer(len);
+            stdex::conv::utf8::strcpy<stdex::conv::utf8::DefaultReplacement>(reinterpret_cast<char *>(buffer->get()), message.c_str(), buffer->_len, len);
+            client->text(buffer);
             delay(getQeueDelay());
             return;
         }

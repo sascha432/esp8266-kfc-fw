@@ -83,6 +83,6 @@ div.navbar-text.last.navbar-collapsed-show:not(:only-child) {
     margin-left: -45%;
 }
 
-.nxavbar-text.navbar-collapsed-show.hidden {
+.navbar-text.navbar-collapsed-show.hidden {
     margin-left: 0;
 }

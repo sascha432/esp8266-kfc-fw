@@ -50,10 +50,13 @@
     </div>
     <div id="alert-container">
         <div class="%IS_CONFIG_DIRTY_CLASS%" role="alert">
-            <span class="alert-content"><a href="/reboot.html"><button class="btn btn-danger reload-button"><span class="oi oi-reload"></span></button></a>The Configuration has been changed, reboot the device to apply all settings</span>
             <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-            <span aria-hidden="true">&times;</span>
+                <span aria-hidden="true">&times;</span>
             </button>
+            <div class="alert-content">
+                <a href="/reboot.html"><button class="btn btn-danger reload-button"><span class="oi oi-reload"></span></button></a>The Configuration has been changed, reboot the device to apply all settings
+            </div>
+            <span class="alert-extra-content"></span>
         </div>
     </div>
 </div>

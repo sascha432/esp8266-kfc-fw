@@ -8,6 +8,7 @@
 #include <EEPROM.h>
 #include <ReadADC.h>
 #include <PrintString.h>
+#include <HardwareSerial.h>
 #include <EventScheduler.h>
 #include <session.h>
 #include <misc.h>
@@ -31,6 +32,9 @@
 #include <ESP8266SSDP.h>
 #include "../src/plugins/mdns/mdns_plugin.h"
 #include "../src/plugins/mdns/mdns_resolver.h"
+#endif
+#if HTTP2SERIAL_SUPPORT
+#include "../src/plugins/http2serial/http2serial.h"
 #endif
 #include "PinMonitor.h"
 
@@ -967,8 +971,6 @@ void KFCFWConfiguration::enterDeepSleep(milliseconds time, RFMode mode, uint16_t
 
 #endif
 
-static uint32_t restart_device_timeout;
-
 static void invoke_ESP_restart()
 {
 #if __LED_BUILTIN == -3
@@ -977,21 +979,16 @@ static void invoke_ESP_restart()
     ESP.restart();
 }
 
-static void restart_device()
-{
-    if (millis() > restart_device_timeout) {
-        _debug_println();
-        invoke_ESP_restart();
-    }
-}
-
 #if PIN_MONITOR
 #include "pin_monitor.h"
 #endif
 
 void KFCFWConfiguration::restartDevice(bool safeMode)
 {
-    _debug_println();
+    __LDBG_println();
+
+// enable debugging output (::printf) for shutdown sequence
+#define DEBUG_SHUTDOWN_SEQUENCE DEBUG
 
     String msg = F("Device is being restarted");
     if (safeMode) {
@@ -1000,43 +997,87 @@ void KFCFWConfiguration::restartDevice(bool safeMode)
     Logger_notice(msg);
     BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::FLICKER);
 
+    delay(500);
+
     SaveCrash::removeCrashCounterAndSafeMode();
     resetDetector.setSafeMode(safeMode);
     if (_safeMode) {
+#if DEBUG_SHUTDOWN_SEQUENCE
+    ::printf(PSTR("safe mode: invoking restart\n"));
+#endif
         invoke_ESP_restart();
     }
 
     // clear queue silently
     ADCManager::terminate(false);
 
-    __LDBG_printf("Scheduled tasks %u, WiFi callbacks %u, Loop Functions %u", _Scheduler.size(), WiFiCallbacks::getVector().size(), LoopFunctions::size());
+#if HTTP2SERIAL_SUPPORT
+#if DEBUG_SHUTDOWN_SEQUENCE
+    ::printf(PSTR("terminating http2serial instance\n"));
+#endif
+    Http2Serial::destroyInstance();
+#endif
+
+#if DEBUG_SHUTDOWN_SEQUENCE
+    ::printf(PSTR("scheduled tasks %u, WiFi callbacks %u, Loop Functions %u\n"), _Scheduler.size(), WiFiCallbacks::getVector().size(), LoopFunctions::size());
+#endif
 
     auto webUiSocket = WsWebUISocket::getWsWebUI();
     if (webUiSocket) {
-        debug_printf_P(PSTR("websocket %p\n"), webUiSocket);
+#if DEBUG_SHUTDOWN_SEQUENCE
+        ::printf(PSTR("terminating webui websocket=%p\n"), webUiSocket);
+#endif
         webUiSocket->shutdown();
     }
 
     // execute in reverse order
     for(auto iterator = plugins.rbegin(); iterator != plugins.rend(); ++iterator) {
         const auto plugin = *iterator;
-        debug_printf("plugin=%s\n", plugin->getName_P());
+#if DEBUG_SHUTDOWN_SEQUENCE
+        ::printf(PSTR("shutdown plugin=%s\n"), plugin->getName_P());
+#endif
         plugin->shutdown();
         plugin->clearSetupTime();
     }
 
-    __LDBG_printf("After plugins: Scheduled tasks %u, WiFi callbacks %u, Loop Functions %u", _Scheduler.size(), WiFiCallbacks::getVector().size(), LoopFunctions::size());
+#if DEBUG_SHUTDOWN_SEQUENCE
+    ::printf(PSTR("scheduled tasks %u, WiFi callbacks %u, Loop Functions %u\n"), _Scheduler.size(), WiFiCallbacks::getVector().size(), LoopFunctions::size());
+#endif
 
+#if DEBUG_SHUTDOWN_SEQUENCE
+    ::printf(PSTR("terminating pin monitor\n"));
+#endif
 #if PIN_MONITOR
     pinMonitor.end();
 #endif
+
+#if DEBUG_SHUTDOWN_SEQUENCE
+    ::printf(PSTR("terminating serial handlers\n"));
+#endif
+    serialHandler.end();
+#if DEBUG
+    debugStreamWrapper.clear();
+#endif
+
+#if DEBUG_SHUTDOWN_SEQUENCE
+    ::printf(PSTR("clearing wifi callbacks\n"));
+#endif
     WiFiCallbacks::clear();
+
+#if DEBUG_SHUTDOWN_SEQUENCE
+    ::printf(PSTR("clearing loop functions\n"));
+#endif
     LoopFunctions::clear();
+
+#if DEBUG_SHUTDOWN_SEQUENCE
+    ::printf(PSTR("terminating event scheduler\n"));
+#endif
     __Scheduler.end();
 
-    // give system time to finish all tasks
-    restart_device_timeout = millis() + 250;
-    LoopFunctions::add(restart_device);
+#if DEBUG_SHUTDOWN_SEQUENCE
+    ::printf(PSTR("invoking restart\n"));
+#endif
+    invoke_ESP_restart();
 }
 
 void KFCFWConfiguration::loop()

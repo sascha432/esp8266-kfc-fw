@@ -311,10 +311,9 @@ void WebServerPlugin::handlerAlerts(AsyncWebServerRequest *request)
 
     headers.addNoCache(true);
 
-
-    WebAlerts::IdType dismissId = request->arg(F("dismiss_id")).toInt();
-    if (dismissId) {
-        WebAlerts::Alert::dismissAlert(dismissId);
+    auto dismiss = request->arg(F("dismiss_id"));
+    if (dismiss.length() != 0) {
+        WebAlerts::Alert::dismissAlerts(dismiss);
         request->send(200);
         return;
     }
@@ -780,13 +779,23 @@ bool WebServerPlugin::_sendFile(const FileMapping &mapping, const String &formNa
         httpHeaders.addNoCache();
     }
     else {
-        // regular file
-        response = new AsyncProgmemFileResponse(FPSTR(getContentType(path)), mapping.open(FileOpenMode::read));
         httpHeaders.replace<HttpDateHeader>(FSPGM(Expires), 86400 * 30);
         httpHeaders.replace<HttpDateHeader>(FSPGM(Last_Modified), mapping.getModificationTime());
         if (_isPublic(path)) {
             httpHeaders.replace<HttpCacheControlHeader>(HttpCacheControlHeader::PUBLIC);
         }
+        // regular file
+#if 0
+        response = new AsyncProgmemFileResponse(FPSTR(getContentType(path)), mapping.open(FileOpenMode::read));
+#else
+        auto response = new AsyncFileResponse(mapping.open(FileOpenMode::read), path, FPSTR(getContentType(path)));
+        if (mapping.isGz()) {
+            httpHeaders.add(FSPGM(Content_Encoding), FSPGM(gzip));
+        }
+        httpHeaders.setAsyncWebServerResponseHeaders(response);
+        request->send(response);
+        return true;
+#endif
     }
     if (mapping.isGz()) {
         httpHeaders.add(FSPGM(Content_Encoding), FSPGM(gzip));
@@ -969,9 +978,6 @@ WebServerPlugin::WebServerPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(
 
 void WebServerPlugin::setup(SetupModeType mode)
 {
-    if (mode != SetupModeType::SAFE_MODE) {
-        WebAlerts::Alert::readStorage();
-    }
     begin();
     if (mode == SetupModeType::DELAYED_AUTO_WAKE_UP) {
         invokeReconfigureNow(getName());

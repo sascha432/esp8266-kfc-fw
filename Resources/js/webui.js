@@ -954,6 +954,7 @@ if ($('#webui').length) {
     // enable alert icons for webui
     if ($.WebUIAlerts !== undefined) {
         $.WebUIAlerts.icon = true;
+        $.WebUIAlerts.ignore_cookie = true;
     }
     $(function() {
         $.webUIComponent.init();

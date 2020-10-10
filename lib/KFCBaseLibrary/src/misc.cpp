@@ -206,14 +206,23 @@ const __FlashStringHelper *sys_get_temp_dir()
     return F("/.tmp/");
 }
 
-File tmpfile(String dir, const String &prefix) {
-    append_slash(dir);
+File tmpfile(String /*dir*/tmpfile, const String &prefix)
+{
+    append_slash(tmpfile);
     const char *ptr = strrchr(prefix.c_str(), '/');
-    if (!ptr++) {
-        ptr = prefix.c_str();
+    ptr = ptr ? ptr + 1 : prefix.c_str();
+    while(*ptr) {
+        if (isalnum(*ptr)) {
+            tmpfile += *ptr;
+        }
+        ptr++;
     }
-    dir += ptr;
-    do {
+    static constexpr uint8_t kRandomLen = 6;  // minimum number of random characters to add
+    if (tmpfile.length() + kRandomLen > KFCFS_MAX_FILE_LEN) {
+        tmpfile.remove(KFCFS_MAX_FILE_LEN - kRandomLen);
+    }
+    uint8_t len = kRandomLen;
+    while(true) {
         char ch = rand() % (26 + 26 + 10); // add random characters, [a-zA-Z0-9]
         if (ch < 26) {
             ch += 'A';
@@ -222,13 +231,17 @@ File tmpfile(String dir, const String &prefix) {
         } else {
             ch += '0' - 26 - 26;
         }
-        if (dir.length() > 30) {
-            dir.remove(24);
+        tmpfile += ch;
+        if (--len == 0) {
+            if (!KFCFS.exists(tmpfile)) {
+                break;
+            }
+            len = kRandomLen;
+            tmpfile.remove(tmpfile.length() - kRandomLen);
         }
-        dir += ch;
-    } while (KFCFS.exists(dir));
+    } while (len-- > 1 || KFCFS.exists(tmpfile));
 
-    return KFCFS.open(dir, fs::FileOpenMode::write);
+    return KFCFS.open(tmpfile, fs::FileOpenMode::write);
 }
 
 String WiFi_disconnect_reason(WiFiDisconnectReason reason)

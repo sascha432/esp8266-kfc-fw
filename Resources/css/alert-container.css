@@ -40,3 +40,14 @@
 #hide-alert-container:hover {
     color: #eee !important;
 } */
+
+
+#alert-container .alert-content {
+    font-size: 1.125rem;
+    font-weight: 500;
+}
+
+#alert-container .alert-extra-content {
+    font-size: 0.75em;
+}
+

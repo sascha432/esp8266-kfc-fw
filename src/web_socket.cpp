@@ -10,6 +10,7 @@
 // #include <vector>
 // #include <algorithm>
 // #include <functional>
+#include <stl_ext/conv_utf8.h>
 #include <PrintString.h>
 #include <Buffer.h>
 #include <DumpBinary.h>
@@ -182,9 +183,8 @@ void WsClient::onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, i
 
         __LDBG_printf("WS_EVT_ERROR wsClient %p", wsClient);
 
-        auto str = printable_string(data, len, 128);
+        auto str = printable_string(data, len, 16);
         str.trim();
-
         Logger_notice(F(WS_PREFIX "Error(%u): data=%s"), WS_PREFIX_ARGS, *reinterpret_cast<uint16_t *>(arg), str.c_str());
         wsClient->onError(WsClient::ERROR_FROM_SERVER, data, len);
 
@@ -370,7 +370,7 @@ void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, const char *s
 {
     if (__get_server(&server, sender)) {
         auto buffer = server->makeBuffer(length);
-        memcpy(buffer->get(), str, length);
+        stdex::conv::utf8::strcpy<stdex::conv::utf8::DefaultReplacement>(reinterpret_cast<char *>(buffer->get()), str, buffer->_len, length);
         broadcast(server, sender, buffer);
     }
 }
@@ -399,10 +399,12 @@ bool WsClient::hasClients(AsyncWebSocket *server)
 
 void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, const String &message)
 {
+    auto len = message.length();
+    len = remove_invalid_encoding_utf8((char *)message.begin(), len);
     for(auto socket: server->getClients()) {
         if (client == socket && socket->status() == WS_CONNECTED && socket->_tempObject && reinterpret_cast<WsClient *>(socket->_tempObject)->isAuthenticated()) {
             __LDBG_printf("server=%p client=%p message=%s", server, client, message.c_str());
-            client->text(message);
+            client->text(message.c_str(), len);
             delay(getQeueDelay());
             return;
         }

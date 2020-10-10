@@ -62,7 +62,7 @@
         </div>
         <div class="form-row serial-console">
             <div class="form-group col-lg-12 serial-console-inner">
-                <textarea id="serial_console" readonly>
+                <textarea id="serial_console" class="form-control" readonly>
 Available commands: /disconnect /reconnect /clear
 -----------------------------------------------------------------------------
 </textarea>
@@ -76,6 +76,7 @@ Available commands: /disconnect /reconnect /clear
     <script>
         if ($.WebUIAlerts !== undefined) {
             $.WebUIAlerts.icon = true;
+            $.WebUIAlerts.ignore_cookie = true;
         }
 		$(function() {
 			http2serialPlugin.init();

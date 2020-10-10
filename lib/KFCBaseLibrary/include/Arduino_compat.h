@@ -80,11 +80,12 @@
 
 #include "esp32_compat.h"
 
-#define KFCFS                                           SPIFFS
-
 class __FlashStringHelper;
 
 #define KFCFS                                           SPIFFS
+#define KFCFS_MAX_FILE_LEN                              31
+// includes directory slashes and filename
+#define KFCFS_MAX_PATH_LEN                              KFCFS_MAX_FILE_LEN
 
 #define SPGM(name, ...)                                 PROGMEM_STRING_ID(name)
 #define FSPGM(name, ...)                                reinterpret_cast<const __FlashStringHelper *>(SPGM(name))
@@ -109,9 +110,14 @@ class __FlashStringHelper;
 #if USE_LITTLEFS
 #include <LittleFS.h>
 #define KFCFS                                           LittleFS
+#define KFCFS_MAX_FILE_LEN                              31
+#define KFCFS_MAX_PATH_LEN                              127
 #else
 #include <FS.h>
 #define KFCFS                                           SPIFFS
+#define KFCFS_MAX_FILE_LEN                              31
+// includes directory slashes and filename
+#define KFCFS_MAX_PATH_LEN                              KFCFS_MAX_FILE_LEN
 #endif
 
 #include "esp8266_compat.h"
@@ -152,6 +158,9 @@ class __FlashStringHelper;
 #include <pgmspace.h>
 
 #define KFCFS                                           SPIFFS
+#define KFCFS_MAX_FILE_LEN                              31
+// includes directory slashes and filename
+#define KFCFS_MAX_PATH_LEN                              KFCFS_MAX_FILE_LEN
 
 #include <ets_sys_win32.h>
 #include <ets_timer_win32.h>

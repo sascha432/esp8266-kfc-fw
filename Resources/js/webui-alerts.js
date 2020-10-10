@@ -6,6 +6,7 @@
     console: window.console,
     count: 0,
     icon: false,
+    ignore_cookie: false,
     cookie_name: 'webui_hide_alerts',
     container: null,
     alert_html: null,
@@ -69,19 +70,29 @@
             self.hide_container_toggle(false);
         }).on('click', function() {
             self.icon = true;
-            Cookies.set(self.cookie_name, 1);
+            self.write_cookie();
             self.update();
         });
         $('span.alerts-count').parent().off('click').on('click', function(e) {
             e.preventDefault();
             self.icon = false;
-            Cookies.set(self.cookie_name, 0);
+            self.write_cookie();
+            self.update();
         })
 
-        this.icon = Cookies.get(this.cookie_name) == 1;
+        this.read_cookie();
         this.get_json();
     },
-
+    read_cookie: function() {
+        if (!this.ignore_cookie) {
+            this.icon = Cookies.get(this.cookie_name) == 1;
+        }
+    },
+    write_cookie: function() {
+        if (!this.ignore_cookie) {
+            Cookies.set(this.cookie_name, self.icon == true ? 1 : 0);
+        }
+    },
     hide_container_toggle: function(state) {
         var hide_container = $('#hide-alert-container');
         hide_container.clearQueue();
@@ -96,18 +107,52 @@
             hide_container.delay(1500).fadeOut(1500);
         }
     },
+    schedule_get_json: function(timeout) {
+        if (timeout === undefined) {
+            timeout = this.alert_poll_time;
+        }
+        var self = this
+        window.setTimeout(function() {
+            self.get_json();
+        }, timeout);
+    },
     get_json: function() {
         var self = this;
-        $.get(this.data_url + '&poll_id=' + this.next_alert_id, function(data) {
+        $.get(this.data_url + '&poll_id=' + this.next_alert_id, function(text) {
+
+            if (text == undefined || text == '') { // text is undefined for response code 204
+                self.schedule_get_json();
+                return;
+            }
+            var data;
+            try {
+                try {
+                    data = JSON.parse(text);
+                } catch(e) {
+                    // console.log('json parse failed, trying to filter non ascii characters', e, text);
+                    var filtered = '';
+                    for(var i = 0; i < text.length; i++) {
+                        var char = text.charCodeAt(i);
+                        if (char >= 32 && char < 128) {
+                            filtered += String.fromCharCode(char);
+                        }
+                    }
+                    data = JSON.parse(filtered);
+                }
+            } catch(e) {
+                console.log(e, text);
+                self.schedule_get_json(self.alert_poll_time_on_error);
+                return;
+            }
             if (typeof data === 'object' && data.length) {
                 var remove = {};
                 // get alerts and update next_alert_id
-                var alerts = data.filter(function(value, index, arr){
+                var alerts = data.filter(function(value, index, arr) {
                     if (value['i'] === undefined) {
                         return false;
                     }
                     var i = parseInt(value['i']);
-                    if (i < 1) {
+                    if (i < self.next_alert_id) {
                         return false;
                     }
                     if (value['d'] !== undefined) {
@@ -133,81 +178,93 @@
                     self.add(val);
                 });
                 self.update();
-            }
-            window.setTimeout(function() { self.get_json(); }, self.alert_poll_time);
 
-        }, 'json').fail(function(error) {
-            console.log(arguments);
+                var animate = self.container.find('.alert-animate');
+                $(animate.get().reverse()).each(function() {
+                    self.container.prepend($(this).closest('.alert').detach());
+                }).removeClass('alert-animate').
+                    css('color', 'red').
+                    stop().
+                    clearQueue().
+                    fadeTo(500, 0.5).fadeTo(500, 1).
+                    fadeTo(500, 0.5).fadeTo(500, 1).
+                    fadeTo(500, 0.5).fadeTo(500, 1, function() {
+                        $(this).css('color','');
+                    }
+                );
+
+            }
+            self.schedule_get_json();
+
+        }, 'text').fail(function(error) {
             if (error.status == 503) {
                 console.log("WebUIAlerts disabled");
             }
             else {
                 console.error('webui get json failed', error);
-                window.setTimeout(function() { self.get_json(); }, self.alert_poll_time_on_error);
+                self.schedule_get_json(self.alert_poll_time_on_error);
             }
         });
     },
     add: function(data) {
-        // data[i]=id,[m]=message,[t]=type,[n=true]=no dismiss
+        // data[i]=id,[m]=message,[t]=type,[ts]=unix timestamp
 
         if (data['d'] !== undefined) {
-            // this.console.log('remove', data, 'next', this.next_alert_id);
             $('#webui-alert-id-' + data['d']).remove();
             return;
         }
-        //this.console.log('add', data, 'next', this.next_alert_id);
 
-        // this.container.find('.alert-content').each(function(key, val) {
-        //     if ($(this).html() == data['m']) {
-        //         console.log($(this).html());
-        //     }
-        // });
-
-
+        var self = this;
         var i = parseInt(data['i']);
+        // check if we have the alert already
         var alert = $('#webui-alert-id-' + i);
-        // this.console.log(alert,'#webui-alert-id-' + i);
-        if (alert.length == 0) {
-            alert = $(this.alert_html);
+        if (alert.length) {
+            return;
         }
 
-        alert.attr('class', 'alert fade show alert-' + data['t']);
-        alert.attr('id', 'webui-alert-id-' + i);
-        alert.data('alert-id', i);
-        alert.find('.alert-content').html(data['m']);
-        var close = alert.find('.close');
-        // if (data['n']) {
-        //     close.remove();
-        // } else
-        {
-            alert.addClass('alert-dismissible');
-            var self = this;
-            close.data('alert-id', data['i']).off('click').on('click', function(e) {
-                e.preventDefault();
-                $.get('/alerts?dismiss_id=' + $(this).data('alert-id'), function(data) {
-                });
-                $(this).closest('.alert').remove();
-                self.update();
-            });
+        // check for duplicates
+        this.container.find('.alert-content').each(function(key, val) {
+            if (data !== null && $(this).html() == data['m']) {
+                var alert = $(this).closest('.alert');
+                var list = alert.data('alert-ids');
+                for (key in list) {
+                    if (list[key] == i) {
+                        return;
+                    }
+                }
+                n = list.length;
+                list.push(i);
+                alert.find('.alert-extra-content').addClass('alert-animate').html('Message repeated ' + ((n == 1) ? 'once' : (n + ' times')) + (data['ts'] ? (', last ' + (new Date(data['ts'] * 1000)).toLocaleString()) : ''));
+                data = null;
+                // if (!self.container.find('.alert:first').is(alert)) {
+                //     self.container.prepend(alert.detach());
+                // }
+            }
+        });
+        if (data === null) {
+            return;
         }
+
+        // create new alert
+        alert = $(this.alert_html);
+        alert.attr('class', 'alert fade show alert-' + data['t'] + ' alert-new');
+        alert.attr('id', 'webui-alert-id-' + i);
+        alert.data('alert-ids', [i]);
+        alert.find('.alert-content').html(data['m']);
+        if (data['ts']) {
+            alert.find('.alert-extra-content').append((new Date(data['ts'] * 1000)).toLocaleString());
+        }
+
+        alert.find('.close').addClass('alert-dismissible').off('click').on('click', function(e) {
+            e.preventDefault();
+            $.get('/alerts?dismiss_id=' + alert.data('alert-ids').join(','), function(data) {});
+            alert.remove();
+            self.update();
+        });
         this.container.prepend(alert);
     }
-    // poll: function() {
-    //     this.console.log('poll', this.next_alert_id, 'this', this);
-    //     var self = this;
-    //     $.get('/alerts?poll_id=' + this.next_alert_id, function(data) {
-    //         self.console.log('get', data);
-    //         $(data).each(function(key, val) {
-    //             self.add(val);
-    //         });
-    //         self.update();
-    //         window.setTimeout(function() { self.poll(); }, self.alert_poll_time);
-    //     }, 'json').fail(function(error) {
-    //         self.console.error('webui alerts poll failed', error);
-    //         window.setTimeout(function() { self.poll(); }, self.alert_poll_time_on_error);
-    //     });
-    // }
 };
+dbg_console.register('$.WebUIAlerts', $.WebUIAlerts);
 
 $('.generate-bearer-token').on('click', function(e) {
     e.preventDefault();
@@ -219,6 +276,5 @@ $('.generate-bearer-token').on('click', function(e) {
 });
 
 $(function() {
-    dbg_console.register('$.WebUIAlerts',  $.WebUIAlerts);
     $.WebUIAlerts.init_container();
 });

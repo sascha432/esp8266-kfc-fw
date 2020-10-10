@@ -20,3 +20,6 @@
     min-height: 100%;
 }
 
+.serial-console textarea.form-control[readonly] {
+    background-color: unset;
+}

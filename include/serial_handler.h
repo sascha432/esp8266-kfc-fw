@@ -46,7 +46,7 @@ namespace SerialHandler {
         Client(Callback cb, EventType events);
 
         bool operator==(const Client &cb) {
-            return &cb == this;
+            return std::addressof(cb) == this;
         }
         inline EventType getEvents() const {
             return _getEvents();

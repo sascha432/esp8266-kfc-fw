@@ -32,7 +32,9 @@ static inline const void *__find_flash_memory_string(const void *ptr) {
 #define snprintf_P snprintf
 #define sprintf_P sprintf
 #define strstr_P strstr
-#define strlen_P strlen
+static inline size_t strlen_P(const char *str) {
+	return strlen(str);
+}
 #define vsnprintf_P vsnprintf
 #ifndef pgm_read_byte
 #define pgm_read_byte(a)                        (*(a))

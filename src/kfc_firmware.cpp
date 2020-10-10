@@ -78,6 +78,7 @@ void check_flash_size()
 
 void setup()
 {
+
     KFC_SAFE_MODE_SERIAL_PORT.begin(KFC_SERIAL_RATE);
 #if KFC_DEBUG_USE_SERIAL1
     Serial1.begin(KFC_DEBUG_USE_SERIAL1);
@@ -263,11 +264,22 @@ void setup()
     }
 #endif
 
+#if WEBUI_ALERTS_ENABLED
+    // read only mode in safe mode
+    // and do not remove non persistent alerts if a crash has been detected
+    WebAlerts::Alert::readStorage(safe_mode ?
+        WebAlerts::RewriteType::READ_ONLY :
+        (resetDetector.hasCrashDetected() ?
+            WebAlerts::RewriteType::KEEP_NON_PERSISTENT :
+            WebAlerts::RewriteType::REMOVE_NON_PERSISTENT)
+    );
+#endif
+
     config.setSafeMode(safe_mode);
     config.read();
     if (safe_mode) {
 
-        WebAlerts::Alert::danger(F("Running in Safe Mode"), WebAlerts::ExpiresType::REBOOT);
+        WebAlerts::Alert::warning(F("Running in Safe Mode"), WebAlerts::ExpiresType::REBOOT);
         serialHandler.replaceFirst(&KFC_SAFE_MODE_SERIAL_PORT);
 
         #if AT_MODE_SUPPORTED

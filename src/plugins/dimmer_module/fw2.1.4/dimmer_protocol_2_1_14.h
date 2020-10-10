@@ -2,6 +2,8 @@
  * Author: sascha_lammers@gmx.de
  */
 
+// https://raw.githubusercontent.com/sascha432/trailing_edge_dimmer/276f72a01a5fae1249d6984745e8a4176309a28d/src/dimmer_protocol.h
+
 #pragma once
 
 #ifndef DIMMER_I2C_ADDRESS
@@ -41,12 +43,7 @@
 #define DIMMER_REGISTER_INT_1_1V_REF        (DIMMER_REGISTER_START_ADDR + offsetof(register_mem_t, cfg) + offsetof(register_mem_cfg_t, internal_1_1v_ref))
 #define DIMMER_REGISTER_INT_TEMP_OFS        (DIMMER_REGISTER_START_ADDR + offsetof(register_mem_t, cfg) + offsetof(register_mem_cfg_t, int_temp_offset))
 #define DIMMER_REGISTER_METRICS_INT         (DIMMER_REGISTER_START_ADDR + offsetof(register_mem_t, cfg) + offsetof(register_mem_cfg_t, report_metrics_max_interval))
-#define DIMMER_REGISTER_VERSION             (DIMMER_REGISTER_START_ADDR + offsetof(register_mem_t, cfg) + offsetof(register_mem_cfg_t, version))
-// #define DIMMER_REGISTER_VERSION             (DIMMER_REGISTER_START_ADDR + offsetof(register_mem_t, version))
-#define DIMMER_REGISTER_RANGE_OFFSET        (DIMMER_REGISTER_START_ADDR + offsetof(register_mem_t, cfg) + offsetof(register_mem_cfg_t, range_offset))
-#define DIMMER_REGISTER_RANGE_MAX_LEVEL     (DIMMER_REGISTER_START_ADDR + offsetof(register_mem_t, cfg) + offsetof(register_mem_cfg_t, range_max_level))
-#define DIMMER_REGISTER_SWITCH_ON_MIN_TIME  (DIMMER_REGISTER_START_ADDR + offsetof(register_mem_t, cfg) + offsetof(register_mem_cfg_t, switch_on_minimum_ticks))
-#define DIMMER_REGISTER_SWITCH_ON_COUNT     (DIMMER_REGISTER_START_ADDR + offsetof(register_mem_t, cfg) + offsetof(register_mem_cfg_t, switch_on_count))
+#define DIMMER_REGISTER_VERSION             (DIMMER_REGISTER_START_ADDR + offsetof(register_mem_t, version))
 #define DIMMER_REGISTER_ADDRESS             (DIMMER_REGISTER_START_ADDR + offsetof(register_mem_t, address))
 #define DIMMER_REGISTER_END_ADDR            (DIMMER_REGISTER_START_ADDR + sizeof(register_mem_t))
 

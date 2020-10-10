@@ -94,7 +94,7 @@ void Dimmer_Base::_readVersion()
         }
     }
     else {
-        WebAlerts::Alert::error(F("Failed to read dimmer firmware version"));
+        WebAlerts::Alert::error(F("Reading firmware version failed"));
     }
 }
 
@@ -264,6 +264,11 @@ void Dimmer_Base::_readConfig(ConfigType &config)
 
 void Dimmer_Base::_writeConfig(ConfigType &config)
 {
+    if (_version != config.fw.version) {
+        WebAlerts::Alert::error(F("Firmware version mismatch"), WebAlerts::ExpiresType::REBOOT);
+        return;
+    }
+
     if (config.config_valid) {
         config.fw.fade_in_time = config.on_fadetime;
         // if address does not match member, copy data
@@ -284,7 +289,7 @@ void Dimmer_Base::_writeConfig(ConfigType &config)
             if ((res2 = _wire.lock()) != false) {
                 _wire.beginTransmission(DIMMER_I2C_ADDRESS);
                 _wire.write(DIMMER_REGISTER_CONFIG_OFS);
-                _wire.write(config.fw);
+                _wire.write(reinterpret_cast<const uint8_t *>(&config.fw), DimmerRetrieveVersionLegacy::getRegisterMemCfgSize(config.fw.version));
                 if ((res1 = _wire.endTransmission()) == 0) {
                     writeEEPROM(true);
                     _wire.unlock();

@@ -105,6 +105,16 @@ public:
         uint8_t version_address;
     } LegacyGetVersion_t;
 
+    static constexpr uint16_t getVersion(uint8_t major, uint8_t minor, uint8_t revision) {
+        return (major << 10) | (minor << 6) | revision;
+    }
+
+    static uint8_t getRegisterMemCfgSize(uint16_t version) {
+        static_assert(offsetof(register_mem_cfg_t, version) == 23, "verify parameters");
+        static_assert(sizeof(register_mem_cfg_t) == 32, "verify parameters");
+        return (version < getVersion(2, 1, 6)) ? offsetof(register_mem_cfg_t, version) : sizeof(register_mem_cfg_t);
+    }
+
     class Version {
     private:
         typedef union __attribute__packed__ {
@@ -130,6 +140,10 @@ public:
 
         bool operator==(int version) const {
             return _version.word == version;
+        }
+
+        bool operator!=(int version) const {
+            return _version.word != version;
         }
 
         operator int() const {

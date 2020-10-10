@@ -159,6 +159,18 @@ void DimmerModuleForm::_createConfigureForm(PluginComponent::FormCallbackType ty
 
     auto &fwGroup = form.addCardGroup(F("fwcfg"), F("Advanced Firmware Configuration"), false);
 
+    if (cfg.fw.version >= DimmerRetrieveVersionLegacy::getVersion(2, 1, 16)) {
+
+        form.add<uint16_t>(F("rofs"), _H_W_STRUCT_VALUE(cfg, fw.range_offset));
+        form.addFormUI(F("Range Offset"), configValidAttr, FormUI::Suffix(F("Level")));
+        form.addValidator(FormUI::Validator::Range(0, 16667));
+
+        form.add<uint16_t>(F("rmax"), _H_W_STRUCT_VALUE(cfg, fw.range_max_level));
+        form.addFormUI(F("Range Max. Level"), configValidAttr, FormUI::Suffix(F("Level")));
+        form.addValidator(FormUI::Validator::Range(0, 16667));
+
+    }
+
     form.add<uint8_t>(F("zc_offset"), _H_W_STRUCT_VALUE(cfg, fw.zero_crossing_delay_ticks));
     form.addFormUI(F("Zero Crossing Offset"), configValidAttr, FormUI::Suffix(FSPGM(ticks, "ticks")));
     form.addValidator(FormUI::Validator::Range(0, 255));
@@ -170,6 +182,18 @@ void DimmerModuleForm::_createConfigureForm(PluginComponent::FormCallbackType ty
     form.add<uint16_t>(F("min_off"), _H_W_STRUCT_VALUE(cfg, fw.adjust_halfwave_time_ticks));
     form.addFormUI(F("Minimum Off-time"), configValidAttr, FormUI::Suffix(FSPGM(ticks)));
     form.addValidator(FormUI::Validator::Range(1, 65535));
+
+    if (cfg.fw.version >= DimmerRetrieveVersionLegacy::getVersion(2, 1, 16)) {
+
+        form.add<uint16_t>(F("swon_min_on"), _H_W_STRUCT_VALUE(cfg, fw.switch_on_minimum_ticks));
+        form.addFormUI(F("Switch-On Minimum On-time"), configValidAttr, FormUI::Suffix(FSPGM(ticks)));
+        form.addValidator(FormUI::Validator::Range(0, 65535));
+
+        form.add<uint8_t>(F("swon_count"), _H_W_STRUCT_VALUE(cfg, fw.switch_on_count));
+        form.addFormUI(F("Switch-On Minimum On-time"), configValidAttr, FormUI::Suffix(F("Half Cycles")));
+        form.addValidator(FormUI::Validator::Range(0, 250));
+
+    }
 
     form.add<float>(F("vref11"), _H_W_STRUCT_VALUE(cfg, fw.internal_1_1v_ref));
     form.addFormUI(F("ATmega 1.1V Reference Calibration"), configValidAttr, FormUI::PlaceHolder(1.1, 1), FormUI::Suffix(F("V")));

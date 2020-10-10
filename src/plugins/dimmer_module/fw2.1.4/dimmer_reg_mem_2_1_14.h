@@ -2,6 +2,8 @@
  * Author: sascha_lammers@gmx.de
  */
 
+// https://raw.githubusercontent.com/sascha432/trailing_edge_dimmer/276f72a01a5fae1249d6984745e8a4176309a28d/src/dimmer_reg_mem.h
+
 #pragma once
 
 #ifndef __attribute__packed__
@@ -39,11 +41,6 @@ typedef struct __attribute__packed__ {
     int8_t int_temp_offset;
     int8_t ntc_temp_offset;
     uint8_t report_metrics_max_interval;
-    uint16_t version;
-    uint16_t range_offset;
-    uint16_t range_max_level;
-    uint16_t switch_on_minimum_ticks;       // if switch_on_minimum_ticks > minimum_on_time_ticks
-    uint8_t switch_on_count;                // increase it for switch_on_count half cycles after switching on
 } register_mem_cfg_t;
 
 typedef struct __attribute__packed__ {
@@ -62,12 +59,12 @@ typedef struct __attribute__packed__ {
     float temp;
     uint16_t vcc;
     register_mem_cfg_t cfg;
-    // uint16_t version;
+    uint16_t version;
     register_mem_errors_t errors;
     uint8_t address;
 } register_mem_t;
 
-typedef union __attribute__packed__ register_mem_union_t {
+typedef union __attribute__packed__ {
     register_mem_t data;
     uint8_t raw[sizeof(register_mem_t)];
 } register_mem_union_t;
@@ -90,3 +87,4 @@ typedef struct __attribute__packed__ {
     uint8_t channel;
     uint16_t level;
 } dimmer_fading_complete_event_t;
+

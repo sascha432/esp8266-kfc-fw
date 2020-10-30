@@ -90,7 +90,7 @@
     },
     write_cookie: function() {
         if (!this.ignore_cookie) {
-            Cookies.set(this.cookie_name, self.icon == true ? 1 : 0);
+            Cookies.set(this.cookie_name, this.icon == true ? 1 : 0);
         }
     },
     hide_container_toggle: function(state) {

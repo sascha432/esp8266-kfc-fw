@@ -9,7 +9,9 @@
 namespace KFCConfigurationClasses {
 
     Plugins::DimmerConfig::DimmerConfig_t::DimmerConfig_t() :
-            fw({}),
+            version(),
+            info({}),
+            cfg({}),
         #if IOT_ATOMIC_SUN_V2
         #ifdef IOT_ATOMIC_SUN_CHANNEL_WW1
             channel_mapping{ IOT_ATOMIC_SUN_CHANNEL_WW1, IOT_ATOMIC_SUN_CHANNEL_WW2, IOT_ATOMIC_SUN_CHANNEL_CW1, IOT_ATOMIC_SUN_CHANNEL_CW2 },
@@ -24,7 +26,6 @@ namespace KFCConfigurationClasses {
         #endif
             lp_fadetime(3.5),
         #if IOT_DIMMER_MODULE_HAS_BUTTONS
-            config_valid(kDefaultValueFor_config_valid),
             off_delay(kDefaultValueFor_off_delay),
             off_delay_signal(kDefaultValueFor_off_delay_signal),
             pin_ch0_down_inverted(kDefaultValueFor_pin_ch0_down_inverted),
@@ -39,8 +40,6 @@ namespace KFCConfigurationClasses {
             longpress_min_brightness(kDefaultValueFor_longpress_min_brightness),
             max_brightness(kDefaultValueFor_max_brightness),
             shortpress_time(kDefaultValueFor_shortpress_time)
-        #else
-            config_valid(kDefaultValueFor_config_valid)
         #endif
     {
     }

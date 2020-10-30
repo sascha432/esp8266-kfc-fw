@@ -21,6 +21,8 @@ def build_webui(source, target, env, clean = False):
         "--clean-exit-code",
         "0"
     ]
+    if clean:
+        args.append('-f')
     env.Execute(' '.join(args))
 
 def rebuild_webui(source, target, env):

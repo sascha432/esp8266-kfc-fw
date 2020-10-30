@@ -22,7 +22,7 @@
 #endif
 
 #ifndef IOT_ATOMIC_SUN_MAX_BRIGHTNESS
-#define IOT_ATOMIC_SUN_MAX_BRIGHTNESS       8333
+#define IOT_ATOMIC_SUN_MAX_BRIGHTNESS       8192
 #endif
 
 //  channel order

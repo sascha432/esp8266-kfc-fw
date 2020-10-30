@@ -280,7 +280,8 @@ void DimmerModulePlugin::createWebUI(WebUIRoot &webUI)
         row->addSlider(PrintString(F("dimmer_channel%u"), i), PrintString(F("dimmer_channel%u"), i), 0, IOT_DIMMER_MODULE_MAX_BRIGHTNESS, true);
     }
 
-#if 0
+#if DEBUG_ASSETS == 0
+
     row = &webUI.addRow();
     auto sensor = getMetricsSensor();
     if (sensor) {

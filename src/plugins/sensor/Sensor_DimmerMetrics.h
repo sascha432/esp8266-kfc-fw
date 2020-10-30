@@ -15,6 +15,8 @@
 
 class Sensor_DimmerMetrics : public MQTTSensor {
 public:
+    using MetricsType = Dimmer::MetricsType;
+
     Sensor_DimmerMetrics(const String &name);
     virtual ~Sensor_DimmerMetrics();
 
@@ -40,12 +42,12 @@ private:
     };
 
     String _getMetricsTopics(TopicType num) const;
-    DimmerMetrics &_updateMetrics(const dimmer_metrics_t &metrics);
+    MetricsType &_updateMetrics(const MetricsType &metrics);
     void _createWebUI(WebUIRoot &webUI, WebUIRow **row);
 
     // String _getId(const __FlashStringHelper *type = nullptr);
     String _name;
-    DimmerMetrics _metrics;
+    MetricsType _metrics;
     bool _webUIinitialized;
 };
 

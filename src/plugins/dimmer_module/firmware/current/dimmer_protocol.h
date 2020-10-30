@@ -4,5 +4,5 @@
 
 #pragma once
 
-#define __BUILD_NUMBER "5087"
+#include "../2.2.x/dimmer_protocol.h"
 

@@ -12,14 +12,6 @@
 #include "../src/plugins/sensor/Sensor_DimmerMetrics.h"
 #include "dimmer_def.h"
 
-#if IOT_DIMMER_MODULE_INTERFACE_UART
-#include <SerialTwoWire.h>
-using DimmerTwoWireClass = SerialTwoWire;
-#else
-#include <Wire.h>
-using DimmerTwoWireClass = TwoWire;
-#endif
-
 #include "firmware_protocol.h"
 
 #ifndef STK500V1_RESET_PIN
@@ -54,77 +46,13 @@ using DimmerButtons = DimmerNoButtonsImpl;
 
 using KFCConfigurationClasses::Plugins;
 
-class DimmerTwoWireEx : public DimmerTwoWireClass
-{
-public:
-    using DimmerTwoWireClass::read;
-    using DimmerTwoWireClass::write;
-
-    template<class T>
-    size_t read(T &data) {
-        return readBytes(reinterpret_cast<uint8_t *>(&data), sizeof(data));
-    }
-
-    template<class T>
-    size_t write(const T &data) {
-        return write(reinterpret_cast<const uint8_t *>(&data), sizeof(data));
-    }
-
-    uint8_t endTransmission(uint8_t sendStop)
-    {
-        return DimmerTwoWireClass::endTransmission(sendStop);
-    }
-
-    uint8_t endTransmission() {
-        return endTransmission(true);
-    }
-
-
-#if IOT_DIMMER_MODULE_INTERFACE_UART
-
-    DimmerTwoWireEx(Stream &stream) : DimmerTwoWireClass(stream, SerialHandler::Wrapper::pollSerial), _locked(false) {}
-
-    bool lock() {
-        noInterrupts();
-        if (_locked) {
-            interrupts();
-            __DBG_print("Wire locked");
-            return false;
-        }
-        interrupts();
-        _locked = true;
-        return true;
-    }
-
-    void unlock() {
-        noInterrupts();
-        _locked = false;
-        interrupts();
-    }
-
-private:
-    volatile bool _locked;
-#else
-
-    using DimmerTwoWireClass::DimmerTwoWireClass;
-
-    bool lock() {
-        noInterrupts();
-        return true;
-    }
-
-    void unlock() {
-        interrupts();
-        delay(1);
-    }
-
-#endif
-};
 
 class Dimmer_Base {
 public:
     static const uint32_t METRICS_DEFAULT_UPDATE_RATE = 60000;
     using ConfigType = Plugins::DimmerConfig::DimmerConfig_t;
+    using VersionType = Dimmer::VersionType;
+    using MetricsType = Dimmer::MetricsType;
 
     // stepSize = IOT_DIMMER_MODULE_MAX_BRIGHTNESS * ((repeatTime / 1000.0) / fadetime)
     // fadetime = (IOT_DIMMER_MODULE_MAX_BRIGHTNESS * repeatTime) / (1000.0 * stepSize)
@@ -164,7 +92,6 @@ protected:
 
     void _printStatus(Print &out);
     void _updateMetrics(const dimmer_metrics_t &metrics);
-    void _readVersion();
 
     void _fade(uint8_t channel, int16_t toLevel, float fadeTime);
 #if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
@@ -186,23 +113,20 @@ protected:
 
 protected:
     String _getMetricsTopics(uint8_t num) const;
-
-    using Version = DimmerRetrieveVersionLegacy::Version;
-    static constexpr uint16_t DIMMER_DISABLED = DimmerRetrieveVersionLegacy::INVALID_VERSION;
-
-    bool _isEnabled() const {
-        return _version;
-    }
-
+    void _updateConfig(ConfigType &config, Dimmer::GetConfig &reader, bool status);
     uint8_t _endTransmission();
 
-    Version _version;
-    DimmerMetrics _metrics;
-    ConfigType _config;
+    inline bool _isEnabled() const {
+        return _config.version;
+    }
 
     inline ConfigType &_getConfig() {
         return _config;
     }
+
+
+    MetricsType _metrics;
+    ConfigType _config;
 
 protected:
 #if IOT_DIMMER_MODULE_INTERFACE_UART

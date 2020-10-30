@@ -1426,7 +1426,9 @@ typedef struct {
         public:
             typedef struct __attribute__packed__ DimmerConfig_t {
                 using Type = DimmerConfig_t;
-                register_mem_cfg_t fw;
+                dimmer_version_t version;
+                dimmer_config_info_t info;
+                register_mem_cfg_t cfg;
             #if IOT_ATOMIC_SUN_V2
                 int8_t channel_mapping[4];
             #endif
@@ -1434,7 +1436,7 @@ typedef struct {
                 float off_fadetime;
                 float lp_fadetime;
             #if IOT_DIMMER_MODULE_HAS_BUTTONS
-                CREATE_UINT32_BITFIELD_MIN_MAX(config_valid, 1, 0, 1, false);                               // bits 00:00 ofs:len 000:01 0-0x0001 (1)
+                /*CREATE_UINT32_BITFIELD_MIN_MAX(config_valid, 1, 0, 1, false);*/                           // bits 00:00 ofs:len 000:01 0-0x0001 (1)
                 CREATE_UINT32_BITFIELD_MIN_MAX(off_delay, 9, 0, 480, 0);                                    // bits 01:09 ofs:len 001:09 0-0x01ff (511)
                 CREATE_UINT32_BITFIELD_MIN_MAX(off_delay_signal, 1, 0, 1, false);                           // bits 10:10 ofs:len 010:01 0-0x0001 (1)
                 CREATE_UINT32_BITFIELD_MIN_MAX(pin_ch0_down_inverted, 1, 0, 1, false);                      // bits 11:11 ofs:len 011:01 0-0x0001 (1)

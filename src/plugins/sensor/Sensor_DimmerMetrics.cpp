@@ -67,32 +67,32 @@ void Sensor_DimmerMetrics::getValues(JsonArray &array, bool timer)
     JsonUnnamedObject *obj;
 
     obj = &array.addObject(3);
-    obj->add(JJ(id), F("dimmer_ntc_temp"));
-    obj->add(JJ(state), _metrics.hasTemp());
-    obj->add(JJ(value), JsonNumber(_metrics.getTemp(), 2));
+    obj->add(JJ(id), F("ntc_temp"));
+    obj->add(JJ(state), !isnan(_metrics.internal_temp));
+    obj->add(JJ(value), JsonNumber(_metrics.internal_temp, 2));
 
     obj = &array.addObject(3);
-    obj->add(JJ(id), F("dimmer_int_temp"));
-    obj->add(JJ(state), _metrics.hasTemp2());
-    obj->add(JJ(value), JsonNumber(_metrics.getTemp2(), 2));
+    obj->add(JJ(id), F("int_temp"));
+    obj->add(JJ(state), !isnan(_metrics.ntc_temp));
+    obj->add(JJ(value), JsonNumber(_metrics.ntc_temp, 2));
 
     obj = &array.addObject(3);
-    obj->add(JJ(id), F("dimmer_vcc"));
-    obj->add(JJ(state), _metrics.hasVCC());
-    obj->add(JJ(value), JsonNumber(_metrics.getVCC(), 3));
+    obj->add(JJ(id), FSPGM(vcc));
+    obj->add(JJ(state), _metrics.vcc != 0);
+    obj->add(JJ(value), JsonNumber(_metrics.vcc, 3));
 
     obj = &array.addObject(3);
-    obj->add(JJ(id), F("dimmer_frequency"));
-    obj->add(JJ(state), _metrics.hasFrequency());
-    obj->add(JJ(value), JsonNumber(_metrics.getFrequency(), 2));
+    obj->add(JJ(id), FSPGM(frequency));
+    obj->add(JJ(state), !isnan(_metrics.frequency) && _metrics.frequency != 0);
+    obj->add(JJ(value), JsonNumber(_metrics.frequency, 2));
 }
 
 void Sensor_DimmerMetrics::_createWebUI(WebUIRoot &webUI, WebUIRow **row)
 {
-    (*row)->addBadgeSensor(F("dimmer_vcc"), _name, 'V');
-    (*row)->addBadgeSensor(F("dimmer_frequency"), F("Frequency"), FSPGM(Hz));
-    (*row)->addBadgeSensor(F("dimmer_int_temp"), F("ATmega"), FSPGM(_degreeC));
-    (*row)->addBadgeSensor(F("dimmer_ntc_temp"), F("NTC"), FSPGM(_degreeC));
+    (*row)->addBadgeSensor(FSPGM(vcc), _name, 'V');
+    (*row)->addBadgeSensor(FSPGM(frequency), F("Frequency"), FSPGM(Hz));
+    (*row)->addBadgeSensor(F("int_temp"), F("ATmega"), FSPGM(_degreeC));
+    (*row)->addBadgeSensor(F("ntc_temp"), F("NTC"), FSPGM(_degreeC));
     _webUIinitialized = true;
 }
 
@@ -106,10 +106,10 @@ void Sensor_DimmerMetrics::createWebUI(WebUIRoot &webUI, WebUIRow **row)
 void Sensor_DimmerMetrics::publishState(MQTTClient *client)
 {
     if (client && client->isConnected()) {
-        client->publish(_getMetricsTopics(TopicType::TEMPERATURE2), true, String(_metrics.getTemp2(), 2));
-        client->publish(_getMetricsTopics(TopicType::TEMPERATURE), true, String(_metrics.getTemp(), 2));
-        client->publish(_getMetricsTopics(TopicType::VCC), true, String(_metrics.getVCC(), 3));
-        client->publish(_getMetricsTopics(TopicType::FREQUENCY), true, String(_metrics.getFrequency(), 2));
+        client->publish(_getMetricsTopics(TopicType::TEMPERATURE2), true, String(_metrics.internal_temp, 2));
+        client->publish(_getMetricsTopics(TopicType::TEMPERATURE), true, String(_metrics.ntc_temp, 2));
+        client->publish(_getMetricsTopics(TopicType::VCC), true, String(_metrics.vcc, 3));
+        client->publish(_getMetricsTopics(TopicType::FREQUENCY), true, String(_metrics.frequency, 2));
     }
 }
 
@@ -139,7 +139,7 @@ String Sensor_DimmerMetrics::_getMetricsTopics(TopicType num) const
     return topic;
 }
 
-DimmerMetrics &Sensor_DimmerMetrics::_updateMetrics(const dimmer_metrics_t &metrics)
+Sensor_DimmerMetrics::MetricsType &Sensor_DimmerMetrics::_updateMetrics(const MetricsType &metrics)
 {
     _metrics = metrics;
     return _metrics;

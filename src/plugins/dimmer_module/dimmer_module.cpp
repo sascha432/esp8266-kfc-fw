@@ -174,7 +174,6 @@ void Driver_DimmerModule::setChannel(uint8_t channel, int16_t level, float time)
         time = getFadeTime(_channels[channel].getLevel(), level);
     }
 
-
     _channels[channel].setLevel(level);
     _fade(channel, level, time);
     writeEEPROM();
@@ -184,7 +183,7 @@ void Driver_DimmerModule::setChannel(uint8_t channel, int16_t level, float time)
 void Driver_DimmerModule::_onReceive(size_t length)
 {
     // __LDBG_printf("length=%u type=%02x", length, _wire.peek());
-    if (_wire.peek() == DIMMER_FADING_COMPLETE) {
+    if (_wire.peek() == DIMMER_EVENT_FADING_COMPLETE) {
         _wire.read();
         length--;
 

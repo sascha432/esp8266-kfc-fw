@@ -49,9 +49,8 @@ namespace Dimmer {
     public:
 
         static constexpr uint8_t kHasVersion = 0x01;
-        static constexpr uint8_t kHasConfigInfo = 0x02;
         static constexpr uint8_t kHasConfig = 0x04;
-        static constexpr uint8_t kIsValid = kHasVersion|kHasConfigInfo|kHasConfig;
+        static constexpr uint8_t kIsValid = kHasVersion|kHasConfig;
         static constexpr uint8_t kStopped = 0x080;
 
         using Callback = std::function<void(GetConfig &config, bool)>;
@@ -107,11 +106,6 @@ namespace Dimmer {
                                 break;
                             }
                         }
-                        if (!(_valid & kHasConfigInfo)) {
-                            if (!getConfigInfo()) {
-                                break;
-                            }
-                        }
                         if (!(_valid & kHasConfig)) {
                             if (!getConfig()) {
                                 break;
@@ -144,65 +138,43 @@ namespace Dimmer {
 
         void _readConfigTimer(Event::CallbackTimerPtr timer) {
 
-            while(true) {
-                if (!(_valid & kHasVersion)) {
-                    if (!getVersion()) {
-                        _rescheduleNextRetry(timer);
-                        return;
-                    }
-                }
-                else if (!(_valid & kHasConfigInfo)) {
-                    if (!getConfigInfo()) {
-                        _rescheduleNextRetry(timer);
-                        return;
-                    }
-                }
-                else if (!(_valid & kHasConfig)) {
-                    if (!getConfig()) {
-                        _rescheduleNextRetry(timer);
-                        return;
-                    }
-                    __LDBG_printf("end callback status=true");
-                    _callback(*this, true);
+            if (!(_valid & kHasVersion)) {
+                if (!getVersion()) {
+                    _rescheduleNextRetry(timer);
+                    return;
                 }
             }
+            if (!(_valid & kHasConfig)) {
+                if (!getConfig()) {
+                    _rescheduleNextRetry(timer);
+                    return;
+                }
+            }
+
+            __LDBG_printf("end callback status=%u", (_valid & kIsValid) == kIsValid);
+            _callback(*this, (_valid & kIsValid) == kIsValid);
         }
 
     public:
 
         bool getVersion() {
-            _valid &= ~kHasVersion;
-            VersionType version;
+            _valid &= ~(kHasVersion);
+            dimmer_version_info_t version_info;
             if (_wire.lock()) {
                 _wire.beginTransmission(_address);
-                _wire.write(DIMMER_REGISTER_ADDRESS);
-                _wire.write(0x02);
-                _wire.write(DIMMER_REGISTER_VERSION);
-                if (_wire.endTransmission() == 0 && _wire.requestFrom(_address, sizeof(version)) == sizeof(version) && _wire.read<VersionType>(version) == sizeof(version)) {
-                    _config.version = version;
+                _wire.write<decltype(Dimmer::kRequestVersion)>(Dimmer::kRequestVersion);
+                if (_wire.endTransmission() == 0 && _wire.requestFrom(_address, sizeof(version_info)) == sizeof(version_info) && _wire.read<dimmer_version_info_t>(version_info) == sizeof(version_info)) {
+                    _config.version = version_info.version;
+                    _config.info = version_info.info;
                     _valid |= kHasVersion;
                 }
                 _wire.unlock();
             }
-            __LDBG_printf("status=%u version=%u.%u.%u", (_valid & kHasVersion), _config.version.major, _config.version.minor, _config.version.revision);
-            return (_valid & kHasVersion) && version;
-        }
-
-        bool getConfigInfo() {
-            _valid &= ~kHasConfigInfo;
-            ConfigInfoType info;
-            if (_wire.lock()) {
-                _wire.beginTransmission(_address);
-                _wire.write(DIMMER_REGISTER_COMMAND);
-                _wire.write(DIMMER_COMMAND_GET_CFG_LEN);
-                if (_wire.endTransmission() == 0 && _wire.requestFrom(_address, sizeof(info)) == sizeof(info) && _wire.read<ConfigInfoType>(info) == sizeof(info)) {
-                    _config.info = info;
-                    _valid |= kHasConfigInfo;
-                }
-                _wire.unlock();
-            }
-            __LDBG_printf("status=%u", (_valid & kHasConfigInfo));
-            return (_valid & kHasConfigInfo);
+            __LDBG_printf("status=%u version=%u.%u.%u levels=%u channels=%u addr=0x%02x length=%u",
+                (_valid & kHasVersion),
+                _config.version.major, _config.version.minor, _config.version.revision,
+                _config.info.max_levels, _config.info.channel_count, _config.info.cfg_start_address, _config.info.length);
+            return (_valid & kHasVersion) && _config.version;
         }
 
         bool getConfig() {
@@ -214,8 +186,8 @@ namespace Dimmer {
             if (_wire.lock()) {
                 _wire.beginTransmission(_address);
                 _wire.write(DIMMER_REGISTER_READ_LENGTH);
-                _wire.write(_config.info.start_address);
                 _wire.write(_config.info.length);
+                _wire.write(_config.info.cfg_start_address);
                 if (_wire.endTransmission() == 0 && _wire.requestFrom(_address, sizeof(cfg)) == sizeof(cfg) && _wire.read<ConfigType>(cfg) == sizeof(cfg)) {
                     _config.config = cfg;
                     _valid |= kHasConfig;

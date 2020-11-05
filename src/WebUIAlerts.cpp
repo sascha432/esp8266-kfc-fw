@@ -369,7 +369,7 @@ void FileStorage::_rewriteAlertStorage(File &file, RewriteType rewriteType)
             file.close();
             __LDBG_assert_printf(F("removing webui-alerts.json after seek to 0 failure") == nullptr, "seek to 0 failed, removing %s", FSPGM(alerts_storage_filename));
             // SPIFFS might be corrupted
-            // since its not vital information, try to delete the file
+            // since its not any vital information, try to delete the file
             KFCFS.remove(FSPGM(alerts_storage_filename));
         }
     }

@@ -151,7 +151,7 @@ uint16_t EEPROMAccess::read(uint8_t *dst, uint16_t offset, uint16_t size, uint16
     eeprom_start_address -= alignment; // align start address
 
     __LDBG_printf("dst=%p ofs=%d len=%d align=%u read_size=%u", dst, offset, size, alignment, readSize);
-    __LDBG_assert_printf(size <= maxSize, "length=%u > size=%u", size, maxSize);;
+    __LDBG_assert_printf(size <= maxSize, "length=%u > size=%u", size, maxSize);
 
     // __LDBG_printf("flash: %08X:%08X (%d) aligned: %08X:%08X (%d)",
     //     eeprom_start_address + alignment, eeprom_start_address + length + alignment, length,

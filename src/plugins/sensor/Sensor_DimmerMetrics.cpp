@@ -68,23 +68,23 @@ void Sensor_DimmerMetrics::getValues(JsonArray &array, bool timer)
 
     obj = &array.addObject(3);
     obj->add(JJ(id), F("ntc_temp"));
-    obj->add(JJ(state), !isnan(_metrics.internal_temp));
-    obj->add(JJ(value), JsonNumber(_metrics.internal_temp, 2));
+    obj->add(JJ(state), !isnan(_metrics.metrics.ntc_temp));
+    obj->add(JJ(value), JsonNumber(_metrics.metrics.ntc_temp, 2));
 
     obj = &array.addObject(3);
     obj->add(JJ(id), F("int_temp"));
-    obj->add(JJ(state), !isnan(_metrics.ntc_temp));
-    obj->add(JJ(value), JsonNumber(_metrics.ntc_temp, 2));
+    obj->add(JJ(state), !isnan(_metrics.metrics.int_temp));
+    obj->add(JJ(value), JsonNumber(_metrics.metrics.int_temp));
 
     obj = &array.addObject(3);
     obj->add(JJ(id), FSPGM(vcc));
-    obj->add(JJ(state), _metrics.vcc != 0);
-    obj->add(JJ(value), JsonNumber(_metrics.vcc, 3));
+    obj->add(JJ(state), _metrics.metrics.vcc != 0);
+    obj->add(JJ(value), JsonNumber(_metrics.metrics.vcc / 1000.0, 3));
 
     obj = &array.addObject(3);
     obj->add(JJ(id), FSPGM(frequency));
-    obj->add(JJ(state), !isnan(_metrics.frequency) && _metrics.frequency != 0);
-    obj->add(JJ(value), JsonNumber(_metrics.frequency, 2));
+    obj->add(JJ(state), !isnan(_metrics.metrics.frequency) && _metrics.metrics.frequency != 0);
+    obj->add(JJ(value), JsonNumber(_metrics.metrics.frequency, 2));
 }
 
 void Sensor_DimmerMetrics::_createWebUI(WebUIRoot &webUI, WebUIRow **row)
@@ -106,10 +106,10 @@ void Sensor_DimmerMetrics::createWebUI(WebUIRoot &webUI, WebUIRow **row)
 void Sensor_DimmerMetrics::publishState(MQTTClient *client)
 {
     if (client && client->isConnected()) {
-        client->publish(_getMetricsTopics(TopicType::TEMPERATURE2), true, String(_metrics.internal_temp, 2));
-        client->publish(_getMetricsTopics(TopicType::TEMPERATURE), true, String(_metrics.ntc_temp, 2));
-        client->publish(_getMetricsTopics(TopicType::VCC), true, String(_metrics.vcc, 3));
-        client->publish(_getMetricsTopics(TopicType::FREQUENCY), true, String(_metrics.frequency, 2));
+        client->publish(_getMetricsTopics(TopicType::TEMPERATURE2), true, String(_metrics.metrics.int_temp));
+        client->publish(_getMetricsTopics(TopicType::TEMPERATURE), true, String(_metrics.metrics.ntc_temp, 2));
+        client->publish(_getMetricsTopics(TopicType::VCC), true, String(_metrics.metrics.vcc, 3));
+        client->publish(_getMetricsTopics(TopicType::FREQUENCY), true, String(_metrics.metrics.frequency, 2));
     }
 }
 

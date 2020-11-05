@@ -146,7 +146,7 @@ void Dimmer_Base::_onReceive(size_t length)
                 __LDBG_printf("MCU reboot detected");
 
                 auto reader = std::shared_ptr<Dimmer::GetConfig>(new Dimmer::GetConfig(_wire, DIMMER_I2C_ADDRESS));
-                reader->readConfig(20, 250, [this, reader](Dimmer::GetConfig &config, bool status) {
+                reader->readConfig(10, 500, [this, reader](Dimmer::GetConfig &config, bool status) {
                     if (status) {
                         _config.version = config.config().version;
                         _config.info = config.config().info;
@@ -155,19 +155,19 @@ void Dimmer_Base::_onReceive(size_t length)
                     else {
                         _config.version = {};
                     }
-                }, 500);
+                }, 2500);
             }
         }
     }
-    else if (type == DIMMER_METRICS_REPORT && length >= sizeof(dimmer_metrics_t) + 1) {
+    else if (type == DIMMER_EVENT_METRICS_REPORT && length >= sizeof(dimmer_metrics_t) + 1) {
         dimmer_metrics_t metrics;
          _wire.read(metrics);
         _updateMetrics(metrics);
     }
-    else if (type == DIMMER_TEMPERATURE_ALERT && length == 3) {
-        uint8_t temperature = _wire.read();
-        uint8_t max_temperature = _wire.read();
-        WebAlerts::Alert::error(PrintString(F("Dimmer temperature alarm triggered: %u°C > %u°C"), temperature, max_temperature));
+    else if (type == DIMMER_EVENT_TEMPERATURE_ALERT && length == 3) {
+        dimmer_over_temperature_event_t event;
+        _wire.read(event);
+        WebAlerts::Alert::error(PrintString(F("Dimmer temperature alarm triggered: %u°C > %u°C"), event.current_temp, event.max_temp));
     }
 }
 
@@ -279,29 +279,29 @@ void Dimmer_Base::_printStatus(Print &output)
 {
     auto &out = static_cast<PrintHtmlEntitiesString &>(output);
     bool written = false;
-    if (!isnan(_metrics.internal_temp)) {
-        out.printf_P(PSTR("Internal temperature %.2f" PRINTHTMLENTITIES_DEGREE "C"), _metrics.internal_temp);
+    if (!isnan(_metrics.metrics.int_temp)) {
+        out.printf_P(PSTR("Internal temperature %d" PRINTHTMLENTITIES_DEGREE "C"), _metrics.metrics.int_temp);
         written = true;
     }
-    if (!isnan(_metrics.ntc_temp)) {
+    if (!isnan(_metrics.metrics.ntc_temp)) {
         if (written) {
             out.print(F(", "));
         }
         written = true;
-        out.printf_P(PSTR("NTC %.2f" PRINTHTMLENTITIES_DEGREE "C"), _metrics.ntc_temp);
+        out.printf_P(PSTR("NTC %.2f" PRINTHTMLENTITIES_DEGREE "C"), _metrics.metrics.ntc_temp);
     }
-    if (_metrics.vcc) {
+    if (_metrics.metrics.vcc) {
         if (written) {
             out.print(F(", "));
         }
         written = true;
-        out.printf_P(PSTR("VCC %.3fV"), _metrics.vcc / 1000.0);
+        out.printf_P(PSTR("VCC %.3fV"), _metrics.metrics.vcc / 1000.0);
     }
-    if (!isnan(_metrics.frequency) && _metrics.frequency) {
+    if (!isnan(_metrics.metrics.frequency) && _metrics.metrics.frequency) {
         if (written) {
             out.print(F(", "));
         }
-        out.printf_P(PSTR("AC frequency %.2fHz"), _metrics.frequency);
+        out.printf_P(PSTR("AC frequency %.2fHz"), _metrics.metrics.frequency);
     }
     if (_config.version) {
         out.printf_P(PSTR(HTML_S(br) "Firmware Version %u.%u.%u"), _config.version.major, _config.version.minor, _config.version.revision);

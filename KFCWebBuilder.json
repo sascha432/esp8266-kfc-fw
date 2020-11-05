@@ -170,6 +170,7 @@
                         "./lib/KFCWebBuilder/Resources/css/selectize.bootstrap4.css",
                         "./lib/KFCWebBuilder/Resources/css/open-iconic-bootstrap.css",
                         "./lib/KFCWebBuilder/Resources/css/rangeslider.css",
+                        "./lib/KFCWebBuilder/Resources/css/math.css",
                         "./Resources/css/styles.css",
                         "./Resources/css/http2serial.css",
                         "./Resources/css/ping-console.css",

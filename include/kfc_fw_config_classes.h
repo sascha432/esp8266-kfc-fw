@@ -409,7 +409,7 @@ namespace KFCConfigurationClasses {
             } ConfigFlags_t;
         };
 
-        class Flags : public FlagsConfig, public ConfigGetterSetter<FlagsConfig::ConfigFlags_t, _H(MainConfig().system.flags.cfg) CIF_DEBUG(, &handleNameFlagsConfig_t)> {
+        class Flags : public FlagsConfig, public ConfigGetterSetter<FlagsConfig::ConfigFlags_t, _H(MainConfig().system.flags) CIF_DEBUG(, &handleNameFlagsConfig_t)> {
         public:
             static void defaults();
         };
@@ -1420,6 +1420,10 @@ namespace KFCConfigurationClasses {
 #if !(IOT_DIMMER_MODULE || DEBUG_4CH_DIMMER)
 typedef struct {
 } register_mem_cfg_t;
+typedef struct  {
+} dimmer_version_t;
+typedef struct  {
+} dimmer_config_info_t;
 #endif
 
         class DimmerConfig {

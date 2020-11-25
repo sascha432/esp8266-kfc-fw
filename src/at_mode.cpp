@@ -1144,7 +1144,7 @@ void at_mode_serial_handle_event(String &commandString)
                     args.printf_P(PSTR("LED pin=%d, mode=%s, color=0x%06x"), pin, mode.c_str(), color);
                 }
             }
-            else if (args.isCommand(F("I2CT")) || args.isCommand(F("I2CR"))) {
+            else if (args.isCommand(F("I2CT")) || args.isCommand(F("I2CA")) || args.isCommand(F("I2CR"))) {
                 // ignore SerialTwoWire communication
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(WIFI))) {

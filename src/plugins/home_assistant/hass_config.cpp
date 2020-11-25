@@ -120,9 +120,9 @@ namespace KFCConfigurationClasses {
                 header.action = action.getAction();
                 header.valuesLen = action.getNumValues();
                 header.apiId = action.getApiId();
-                buffer.writeObject(header);
+                buffer.push_back(header);
                 buffer.write(action.getEntityId());
-                buffer.writeVector(action.getValues());
+                buffer.push_back(action.getValues().begin(), action.getValues().end())
             }
         }
         config.setBinary(_H(MainConfig().plugins.homeassistant.actions), buffer.get(), buffer.length());

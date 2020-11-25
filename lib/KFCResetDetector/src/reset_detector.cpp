@@ -109,54 +109,6 @@ void ResetDetector::_timerCallback(void *arg)
     rd->disarmTimer();
 }
 
-bool ResetDetector::hasCrashDetected() const
-{
-#if defined(ESP32)
-    return (
-        _resetReason == ESP_RST_WDT ||
-        _resetReason == ESP_RST_PANIC ||
-        _resetReason == ESP_RST_INT_WDT ||
-        _resetReason == ESP_RST_TASK_WDT ||
-        _resetReason == ESP_RST_WDT
-    );
-#elif defined(ESP8266)
-    return (
-        _resetReason != REASON_DEFAULT_RST &&
-        _resetReason != REASON_EXT_SYS_RST &&
-        _resetReason != REASON_SOFT_RESTART &&
-        _resetReason != REASON_DEEP_SLEEP_AWAKE &&
-        _resetReason != REASON_EXT_SYS_RST
-    );
-#endif
-}
-
-bool ResetDetector::hasResetDetected() const
-{
-#if defined(ESP32)
-    return (_resetReason == ESP_RST_UNKNOWN || _resetReason == ESP_RST_EXT || _resetReason == ESP_RST_BROWNOUT || _resetReason == ESP_RST_SDIO);
-#elif defined(ESP8266)
-    return (_resetReason == REASON_DEFAULT_RST || _resetReason == REASON_EXT_SYS_RST);
-#endif
-}
-
-bool ResetDetector::hasRebootDetected() const
-{
-#if defined(ESP32)
-    return (_resetReason == ESP_RST_SW);
-#elif defined(ESP8266)
-    return (_resetReason == REASON_SOFT_RESTART);
-#endif
-}
-
-bool ResetDetector::hasWakeUpDetected() const
-{
-#if defined(ESP32)
-    return (_resetReason == ESP_RST_DEEPSLEEP);
-#elif defined(ESP8266)
-    return (_resetReason == REASON_DEEP_SLEEP_AWAKE);
-#endif
-}
-
 const String ResetDetector::getResetReason() const
 {
 #if USE_ESP_GET_RESET_REASON
@@ -213,27 +165,6 @@ const String ResetDetector::getResetInfo() const
 #else
     return ESP.getResetInfo();
 #endif
-}
-
-uint8_t ResetDetector::getResetCounter() const
-{
-    return _resetCounter;
-}
-
-uint8_t ResetDetector::getInitialResetCounter() const
-{
-    return _initialResetCounter;
-}
-
-uint8_t ResetDetector::getSafeMode() const
-{
-    return _safeMode;
-}
-
-void ResetDetector::setSafeMode(uint8_t safeMode)
-{
-    _safeMode = safeMode;
-    _writeData();
 }
 
 void ResetDetector::clearCounter()

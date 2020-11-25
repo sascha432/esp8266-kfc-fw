@@ -140,7 +140,10 @@ void FileStorage::dismissAlerts(const String &ids)
 
 File FileStorage::_openAlertStorage(bool readOnly)
 {
-    __LDBG_printf("file=%s read_only=%d", SPGM(alert_storage_filename), readOnly);
+    __LDBG_printf("file=%s read_only=%d safe_mode=%u", SPGM(alert_storage_filename), readOnly, config.isSafeMode());
+    if (config.isSafeMode()) {
+        return BSFS.open(FSPGM(alerts_storage_filename), readOnly ? fs::FileOpenMode::read : fs::FileOpenMode::appendplus);
+    }
     return KFCFS.open(FSPGM(alerts_storage_filename), readOnly ? fs::FileOpenMode::read : fs::FileOpenMode::appendplus);
 }
 
@@ -176,6 +179,7 @@ String FileStorage::_readLine(File &file)
 void FileStorage::_rewriteAlertStorage(File &file, RewriteType rewriteType)
 {
     struct Item;
+
     using ItemsVector = std::vector<Item>;
 
     ItemsVector items;
@@ -316,7 +320,12 @@ void FileStorage::_rewriteAlertStorage(File &file, RewriteType rewriteType)
         if (msgCount == 0) {
             // we can replace the file with the header
             file.close();
-            file = KFCFS.open(FSPGM(alerts_storage_filename), fs::FileOpenMode::write);
+            if (config.isSafeMode()) {
+                file = BSFS.open(FSPGM(alerts_storage_filename), fs::FileOpenMode::write);
+            }
+            else {
+                file = KFCFS.open(FSPGM(alerts_storage_filename), fs::FileOpenMode::write);
+            }
             if (file) {
                 file.print('[');
                 Json::printHeader(file, now, _alertId);
@@ -356,12 +365,28 @@ void FileStorage::_rewriteAlertStorage(File &file, RewriteType rewriteType)
                 tmpFile.close();
                 file.close();
 
-                if (!KFCFS.remove(FSPGM(alerts_storage_filename))) {
-                    __LDBG_assert_printf(F("failed to remove webui-alerts.json") == nullptr, "failed to remove %s", FSPGM(alerts_storage_filename));
-                }
-                if (!KFCFS.rename(tmpFileName, FSPGM(alerts_storage_filename))) {
-                    __LDBG_assert_printf(F("failed to rename webui-alerts.json") == nullptr, "failed to rename %s to %s", tmpFileName.c_str(), FSPGM(alerts_storage_filename));
+                if (config.isSafeMode()) {
+                    BSFS.remove(FSPGM(alerts_storage_filename));
+                    file = KFCFS.open(tmpFileName, fs::FileOpenMode::read);
+                    File file2 = BSFS.open(FSPGM(alerts_storage_filename), fs::FileOpenMode::write);
+                    if (file && file2) {
+                        while(file.available()) {
+                            file2.write(file.read());
+                        }
+                    }
+                    file.close();
+                    file2.close();
                     KFCFS.remove(tmpFileName);
+                }
+                else {
+                    if (!KFCFS.remove(FSPGM(alerts_storage_filename))) {
+                        __LDBG_assert_printf(F("failed to remove webui-alerts.json") == nullptr, "failed to remove %s", FSPGM(alerts_storage_filename));
+                    }
+                    if (!KFCFS.rename(tmpFileName, FSPGM(alerts_storage_filename))) {
+                        __LDBG_assert_printf(F("failed to rename webui-alerts.json") == nullptr, "failed to rename %s to %s", tmpFileName.c_str(), FSPGM(alerts_storage_filename));
+                        KFCFS.remove(tmpFileName);
+                    }
+
                 }
             }
         }

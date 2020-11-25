@@ -88,14 +88,16 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;DEBUG_KFC_FORMS=1;DEBUG=1;_DEBUG=1;_CRTDBG_MAP_ALLOC;ARDUINO=101;HAVE_MEM_DEBUG=0;DEBUG_VT100_SUPPORT=0;DEBUG_SERIALTWOWIRE=1;SERIALTWOWIRE_NO_GLOBALS=1;I2C_OVER_UART_ADD_CRC16=0;ETS_MAIN_NO_MAIN_FUNC=1;ETS_MAIN_NO_TIMERS=1;ETS_MAIN_NO_LOOP=1;I2C_OVER_UART_ENABLE_DISCARD_COMMAND=15;STL_STD_EXT_NAMESPACE=std;STL_STD_EXT_NAMESPACE_EX=stdex;__FORM_INLINED_METHOD__=inline;FORM_USE_INLINE=1;ARDUINO_ESP8266_RELEASE_2_7_4;ARDUINO_ESP8266_VERSION_COMBINED=0x020704;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;DEBUG_KFC_FORMS=1;DEBUG=1;_DEBUG=1;_CRTDBG_MAP_ALLOC;ARDUINO=101;HAVE_MEM_DEBUG=0;DEBUG_VT100_SUPPORT=0;DEBUG_SERIALTWOWIRE=1;SERIALTWOWIRE_NO_GLOBALS=1;I2C_OVER_UART_ADD_CRC16=0;ETS_MAIN_NO_MAIN_FUNC=1;ETS_MAIN_NO_TIMERS=1;ETS_MAIN_NO_LOOP=1;I2C_OVER_UART_ENABLE_DISCARD_COMMAND=15;STL_STD_EXT_NAMESPACE=std;STL_STD_EXT_NAMESPACE_EX=stdex;__FORM_INLINED_METHOD__=inline;FORM_USE_INLINE=1;ARDUINO_ESP8266_RELEASE_2_7_4;ARDUINO_ESP8266_VERSION_COMBINED=0x020704;WEBUI_ALERTS_ENABLED=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\stl_ext\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib-mock\ets_impl;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib-mock\KFCEventScheduler;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib-mock\KFCBaseLibrary\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\tests\enum_test\pattern_test;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCConfiguration\include;C:\Users\sascha\Documents\PlatformIO\Projects\libcrc16\src;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCJson\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCWebFramework\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCEventScheduler\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCSyslog\include;C:\Users\sascha\Documents\PlatformIO\Projects\boost_1_74_0\include_only;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib-extra\variant\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\stl_ext\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib-mock\ets_impl;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib-mock\KFCEventScheduler;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib-mock\KFCBaseLibrary\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\tests\enum_test\pattern_test;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCConfiguration\include;C:\Users\sascha\Documents\PlatformIO\Projects\libcrc16\src;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCJson\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCWebFramework\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCEventScheduler\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCSyslog\include;C:\Users\sascha\Documents\PlatformIO\Projects\boost_1_74_0\include_only;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib-extra\variant\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+      <ImportLibrary>NtDll.dll</ImportLibrary>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -182,6 +184,8 @@
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\MicrosTimer.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\MillisTimer.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\misc.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\PrintHtmlEntities.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\PrintHtmlEntitiesString.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\PrintString.cpp" />
     <ClCompile Include="..\..\..\..\KFCEventScheduler\src\CallbackTimer.cpp" />
     <ClCompile Include="..\..\..\..\KFCEventScheduler\src\Event.cpp" />
@@ -211,9 +215,11 @@
     <ClCompile Include="..\..\..\src\EEPROMAccess.cpp" />
     <ClCompile Include="..\..\..\src\JsonConfigReader.cpp" />
     <ClCompile Include="..\..\..\src\WriteableData.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="test_int24.cpp" />
+    <ClCompile Include="tests.cpp" />
     <ClCompile Include="test_fixed_circular_buffer.cpp" />
     <ClCompile Include="test_bitfield.cpp" />
-    <ClCompile Include="main.cpp" />
     <ClCompile Include="test_configuration.cpp" />
     <ClCompile Include="test_storage.cpp" />
     <ClCompile Include="test_variant.cpp" />
@@ -229,6 +235,7 @@
     <ClInclude Include="..\..\..\..\stl_ext\include\stl_ext\array.h" />
     <ClInclude Include="..\..\..\..\stl_ext\include\stl_ext\bitfield_storage.h" />
     <ClInclude Include="..\..\..\..\stl_ext\include\stl_ext\chunked_list.h" />
+    <ClInclude Include="..\..\..\..\stl_ext\include\stl_ext\conv_utf8.h" />
     <ClInclude Include="..\..\..\..\stl_ext\include\stl_ext\fixed_circular_buffer.h" />
     <ClInclude Include="..\..\..\..\stl_ext\include\stl_ext\is_trivially_copyable.h" />
     <ClInclude Include="..\..\..\..\stl_ext\include\stl_ext\iterator.h" />
@@ -250,6 +257,7 @@
     <ClInclude Include="..\..\..\include\EEPROMAccess.h" />
     <ClInclude Include="..\..\..\include\JsonConfigReader.h" />
     <ClInclude Include="..\..\..\include\WriteableData.h" />
+    <ClInclude Include="tests.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -68,7 +68,7 @@ WsPingClient::~WsPingClient()
 
 WsClient *WsPingClient::getInstance(AsyncWebSocketClient *socket)
 {
-    return __LDBG_new(WsPingClient(socket));
+    return __LDBG_new(WsPingClient, socket);
 }
 
 void WsPingClient::onText(uint8_t *data, size_t len)

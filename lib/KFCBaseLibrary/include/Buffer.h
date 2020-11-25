@@ -31,6 +31,7 @@
 #endif
 
 class Buffer;
+class FileBufferStreamImpl;
 
 class MoveStringHelper : public String {
 public:
@@ -429,6 +430,8 @@ public:
      }
 
 protected:
+    friend FileBufferStreamImpl;
+
     bool _changeBuffer(size_t newSize);
     void _remove(size_t index, size_t count);
 
@@ -443,7 +446,7 @@ protected:
     size_t _length;
     size_t _size;
 
-private:
+protected:
     inline size_t _alignSize(size_t size) const {
 #if ESP8266 || ESP32 || 1
         return (size + 7) & ~7; // 8 byte aligned, umm block size

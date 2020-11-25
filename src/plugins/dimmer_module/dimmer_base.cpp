@@ -44,7 +44,7 @@ void Dimmer_Base::_begin()
     #endif
     // delay between request and response is ~25ms + ~450us per raw byte
     _wire.setTimeout(500);
-    _wire.begin(DIMMER_I2C_ADDRESS + 1);
+    _wire.begin(DIMMER_I2C_MASTER_ADDRESS);
     _wire.onReceive(Dimmer_Base::onReceive);
 #else
 #endif
@@ -134,30 +134,20 @@ void Dimmer_Base::onReceive(int length)
 void Dimmer_Base::_onReceive(size_t length)
 {
     auto type = _wire.read();
-    // __LDBG_printf("length=%u type=%02x", length, type);
+    __LDBG_printf("length=%u type=%02x", length, type);
 
-    if (type == '+') {
-        char buf[64];
-        auto len = _wire.readBytes(buf, sizeof(buf) - 1);
-        // __LDBG_printf("len=%u cmd=%-*.*s", len, len, len, buf);
-        if (len) {
-            buf[len] = 0;
-            if (strncmp_P(buf, PSTR("REM=sig="), 8) == 0) {
-                __LDBG_printf("MCU reboot detected");
-
-                auto reader = std::shared_ptr<Dimmer::GetConfig>(new Dimmer::GetConfig(_wire, DIMMER_I2C_ADDRESS));
-                reader->readConfig(10, 500, [this, reader](Dimmer::GetConfig &config, bool status) {
-                    if (status) {
-                        _config.version = config.config().version;
-                        _config.info = config.config().info;
-                        _config.cfg = config.config().config;
-                    }
-                    else {
-                        _config.version = {};
-                    }
-                }, 2500);
+    if (type == DIMMER_EVENT_RESTART) {
+        auto reader = std::shared_ptr<Dimmer::GetConfig>(new Dimmer::GetConfig(_wire, DIMMER_I2C_ADDRESS));
+        reader->readConfig(10, 500, [this, reader](Dimmer::GetConfig &config, bool status) {
+            if (status) {
+                _config.version = config.config().version;
+                _config.info = config.config().info;
+                _config.cfg = config.config().config;
             }
-        }
+            else {
+                _config.version = {};
+            }
+        }, 100);
     }
     else if (type == DIMMER_EVENT_METRICS_REPORT && length >= sizeof(dimmer_metrics_t) + 1) {
         dimmer_metrics_t metrics;

@@ -264,6 +264,8 @@ void setup()
     }
 #endif
 
+    config.setSafeMode(safe_mode);
+
 #if WEBUI_ALERTS_ENABLED
     // read only mode in safe mode
     // and do not remove non persistent alerts if a crash has been detected
@@ -275,7 +277,6 @@ void setup()
     );
 #endif
 
-    config.setSafeMode(safe_mode);
     config.read();
     if (safe_mode) {
 

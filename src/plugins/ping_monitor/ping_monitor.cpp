@@ -318,14 +318,27 @@ void PingMonitorPlugin::createConfigureForm(FormCallbackType type, const String 
 
     auto &serviceGroup = form.addCardGroup(F("pingbs"), FSPGM(ping_monitor_service), cfg.service);
 
+    const char *hostNames[] = { PSTR("h0"), PSTR("h1"), PSTR("h2"), PSTR("h3"), PSTR("h4"), PSTR("h5"), PSTR("h6"), PSTR("h7") };
+
     for(uint8_t i = 0; i < Plugins::Ping::kHostsMax; i++) {
 
-        form.addStringGetterSetter(String('h') + i, [i]() { return Plugins::Ping::getHost(i); }, [i](const char *hostname) { Plugins::Ping::setHost(i, hostname); });
+        form.addCallbackGetterSetter<String>(FPSTR(hostNames[i]), [i](String &str, Field::BaseField &, bool store) {
+            if (store) {
+                Plugins::Ping::setHost(i, str.c_str());
+            } else {
+                str = Plugins::Ping::getHost(i);
+            }
+            return true;
+        }, InputFieldType::TEXT);
+
+        //form.addStringGetterSetter(FPSTR(hostNames[i]), [i]() { return Plugins::Ping::getHost(i); }, [i](const char *hostname) { Plugins::Ping::setHost(i, hostname); });
+
         form.addFormUI(FormUI::Label(PrintString(F("Host %u"), i + 1)));
-        form.addValidator(FormUI::Validator::HostnameEx(FormUI::Validator::Hostname::AllowedType::ALLOW_EMPTY)).emplace_back(FSPGM(_var_gateway, "${gateway}"));
+        form.addValidator(FormUI::Validator::HostnameEx(FormUI::Validator::Hostname::AllowedType::EMPTY)).emplace_back(FSPGM(_var_gateway, "${gateway}"));
         Plugins::Ping::addHost1LengthValidator(form); // length is the same for all
 
     }
+
 
     form.add(F("pi"), _H_W_STRUCT_VALUE(cfg, interval));
     form.addFormUI(FSPGM(Interval), FormUI::Suffix(FSPGM(minutes)));

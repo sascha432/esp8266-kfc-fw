@@ -12,7 +12,7 @@
         "default": "Set-Cookie"
     },
     "mime_text_plain": {
-        "use_counter": 19,
+        "use_counter": 17,
         "default": "text/plain"
     },
     "null": {
@@ -44,7 +44,7 @@
         "default": "Invalid hostname or IP address"
     },
     "webui_json_id": {
-        "use_counter": 32,
+        "use_counter": 26,
         "default": "id"
     },
     "webui_json_unit": {
@@ -52,7 +52,7 @@
         "default": "unit"
     },
     "webui_json_columns": {
-        "use_counter": 3,
+        "use_counter": 4,
         "default": "columns"
     },
     "webui_json_offset": {
@@ -60,19 +60,19 @@
         "default": "offset"
     },
     "webui_json_value": {
-        "use_counter": 32,
+        "use_counter": 26,
         "default": "value"
     },
     "webui_json_state": {
-        "use_counter": 26,
+        "use_counter": 20,
         "default": "state"
     },
     "mime_application_json": {
-        "use_counter": 7,
+        "use_counter": 6,
         "default": "application/json"
     },
     "OK": {
-        "use_counter": 6,
+        "use_counter": 5,
         "default": "OK"
     },
     "on": {
@@ -116,7 +116,7 @@
         "default": ", "
     },
     "_hidden": {
-        "use_counter": 4,
+        "use_counter": 5,
         "default": " hidden"
     },
     "Not_supported": {
@@ -136,11 +136,11 @@
         "default": "/server.key"
     },
     "webui_json_type": {
-        "use_counter": 17,
+        "use_counter": 18,
         "default": "type"
     },
     "webui_json_row": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "row"
     },
     "webui_json_align": {
@@ -160,7 +160,7 @@
         "default": "left"
     },
     "webui_json_extra_classes": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "extra_classes"
     },
     "webui_json_group": {
@@ -200,7 +200,7 @@
         "default": "color"
     },
     "webui_json_temperature": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "temperature"
     },
     "webui_json_sensor": {
@@ -212,7 +212,7 @@
         "default": "render_type"
     },
     "webui_json_wide": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "wide"
     },
     "webui_json_badge": {
@@ -220,7 +220,7 @@
         "default": "badge"
     },
     "webui_json_big": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "big"
     },
     "webui_json_binary_sensor": {
@@ -236,11 +236,11 @@
         "default": "width"
     },
     "webui_json_height": {
-        "use_counter": 3,
+        "use_counter": 4,
         "default": "height"
     },
     "webui_json_buttons": {
-        "use_counter": 2,
+        "use_counter": 0,
         "default": "buttons"
     },
     "webui_json_ui": {
@@ -253,7 +253,7 @@
     },
     "webui_socket_uri": {
         "use_counter": 1,
-        "default": "/webui_ws"
+        "default": "/webui-ws"
     },
     "webui_json_ue": {
         "use_counter": 7,
@@ -332,7 +332,7 @@
         "default": "Last-Modified"
     },
     "Content_Encoding": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "Content-Encoding"
     },
     "login_html": {
@@ -368,7 +368,7 @@
         "default": "No"
     },
     "webui_json_title": {
-        "use_counter": 7,
+        "use_counter": 2,
         "default": "title"
     },
     "upload": {
@@ -528,7 +528,7 @@
         "default": "Detected eth address %s"
     },
     "stk500v1_log_file": {
-        "use_counter": 5,
+        "use_counter": 4,
         "default": "/stk500v1/debug.log"
     },
     "stk500v1_sig_file": {
@@ -604,11 +604,11 @@
         "default": "config"
     },
     "true": {
-        "use_counter": 7,
+        "use_counter": 6,
         "default": "true"
     },
     "false": {
-        "use_counter": 6,
+        "use_counter": 5,
         "default": "false"
     },
     "openweathermap_api_url": {
@@ -944,7 +944,7 @@
         "default": "Reboot Device"
     },
     "title": {
-        "use_counter": 2,
+        "use_counter": 0,
         "default": "title"
     },
     "KFC_Firmware": {
@@ -956,7 +956,7 @@
         "default": "applying.html"
     },
     "hidden": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "hidden"
     },
     "FormRangeValidator_default_message_zero_allowed": {
@@ -1000,7 +1000,7 @@
         "default": "application/pdf"
     },
     "gzip": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "gzip"
     },
     "deflate": {
@@ -1032,19 +1032,19 @@
         "default": "n/a"
     },
     "stk500v1_tmp_file": {
-        "use_counter": 2,
+        "use_counter": 0,
         "default": "/stk500v1/firmware_tmp.hex"
     },
     "iot_sensor_hlw80xx_state_file": {
-        "use_counter": 2,
+        "use_counter": 0,
         "default": ""
     },
     "seconds": {
-        "use_counter": 11,
+        "use_counter": 10,
         "default": "seconds"
     },
     "milliseconds": {
-        "use_counter": 6,
+        "use_counter": 3,
         "default": "milliseconds"
     },
     "__s_": {
@@ -1052,7 +1052,7 @@
         "default": "/%s/"
     },
     "hPa": {
-        "use_counter": 1,
+        "use_counter": 3,
         "default": "hPa"
     },
     "channel__u": {
@@ -1060,15 +1060,15 @@
         "default": "channel_%u"
     },
     "temperature": {
-        "use_counter": 0,
+        "use_counter": 5,
         "default": "temperature"
     },
     "humidity": {
-        "use_counter": 0,
+        "use_counter": 5,
         "default": "humidity"
     },
     "pressure": {
-        "use_counter": 0,
+        "use_counter": 5,
         "default": "pressure"
     },
     "mqtt_component_storage": {
@@ -1076,11 +1076,11 @@
         "default": "storage"
     },
     "image_type": {
-        "use_counter": 3,
+        "use_counter": 2,
         "default": "image_type"
     },
     "id": {
-        "use_counter": 6,
+        "use_counter": 5,
         "default": "id"
     },
     "mqtt": {
@@ -1124,19 +1124,19 @@
         "default": "brightness"
     },
     "_degreeC": {
-        "use_counter": 10,
+        "use_counter": 7,
         "default": "\\u00b0C"
     },
     "vcc": {
-        "use_counter": 2,
+        "use_counter": 0,
         "default": "vcc"
     },
     "frequency": {
-        "use_counter": 2,
+        "use_counter": 0,
         "default": "frequency"
     },
     "Hz": {
-        "use_counter": 2,
+        "use_counter": 0,
         "default": "Hz"
     },
     "light_sensor": {
@@ -1600,7 +1600,7 @@
         "default": "minutes \\u00b15%"
     },
     "ticks": {
-        "use_counter": 3,
+        "use_counter": 4,
         "default": "ticks"
     },
     "Offline": {
@@ -1796,31 +1796,31 @@
         "default": "Auto"
     },
     "power": {
-        "use_counter": 5,
+        "use_counter": 0,
         "default": "power"
     },
     "energy_total": {
-        "use_counter": 5,
+        "use_counter": 0,
         "default": "energy_total"
     },
     "energy": {
-        "use_counter": 5,
+        "use_counter": 0,
         "default": "energy"
     },
     "kWh": {
-        "use_counter": 6,
+        "use_counter": 0,
         "default": "kWh"
     },
     "voltage": {
-        "use_counter": 5,
+        "use_counter": 0,
         "default": "voltage"
     },
     "current": {
-        "use_counter": 5,
+        "use_counter": 0,
         "default": "current"
     },
     "pf": {
-        "use_counter": 5,
+        "use_counter": 0,
         "default": "pf"
     },
     "Brightness": {
@@ -1944,7 +1944,7 @@
         "default": "bytes"
     },
     "ping_monitor": {
-        "use_counter": 1,
+        "use_counter": 3,
         "default": "ping_monitor"
     },
     "ping_monitor_cancelled": {
@@ -1984,7 +1984,7 @@
         "default": "- "
     },
     "serial_console_html": {
-        "use_counter": 2,
+        "use_counter": 1,
         "default": "serial-console.html"
     },
     "_serial_console": {
@@ -1996,8 +1996,8 @@
         "default": "Serial Console"
     },
     "alerts_storage_filename": {
-        "use_counter": 5,
-        "default": "/.pvt/alerts_storage"
+        "use_counter": 16,
+        "default": "/.pvt/alerts.json"
     },
     "alert_storage_filename": {
         "use_counter": 1,
@@ -2006,5 +2006,25 @@
     "webui_json_hb": {
         "use_counter": 2,
         "default": "hb"
+    },
+    "webui_json_temp": {
+        "use_counter": 1,
+        "default": "temp"
+    },
+    "webui_json_rgb": {
+        "use_counter": 1,
+        "default": "rgb"
+    },
+    "webui_json_button_group": {
+        "use_counter": 1,
+        "default": "button_group"
+    },
+    "webui_json_items": {
+        "use_counter": 2,
+        "default": "items"
+    },
+    "webui_json_listbox": {
+        "use_counter": 1,
+        "default": "listbox"
     }
 }

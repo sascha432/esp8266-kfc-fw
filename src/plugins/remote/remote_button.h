@@ -78,8 +78,8 @@ namespace RemoteControl {
             _timestamp(millis()),
             _duration(duration),
             _repeat(repeat),
-            _button(button),
             _type(static_cast<uint32_t>(type)),
+            _button(button),
             _comboButton(comboButton)
         {
         }

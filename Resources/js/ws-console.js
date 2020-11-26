@@ -67,7 +67,7 @@ WS_Console.prototype.console_log = function(message, prefix) {
         var consolePanel = document.getElementById(this.consoleId);
         var scrollPos = consolePanel.scrollHeight - consolePanel.scrollTop - $(consolePanel).innerHeight();
 
-        // $.wsConsole.console.debug('msg escpape', message.indexOf('\033'), "msg", message, "replace esc", message.replace(/\033\[[\d;]*[mHJ]/g, ''));
+        // $.wsConsole.console.debug('msg escape', message.indexOf('\033'), "msg", message, "replace esc", message.replace(/\033\[[\d;]*[mHJ]/g, ''));
 
         // if (message.indexOf('\033') != -1) {
         //     var pos;

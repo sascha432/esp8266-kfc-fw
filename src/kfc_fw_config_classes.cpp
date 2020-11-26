@@ -55,6 +55,7 @@ namespace KFCConfigurationClasses {
         is_webui_enabled(true),
         is_webalerts_enabled(true),
         is_ssdp_enabled(true),
+        is_netbios_enabled(true),
         __reserved(0),
         __reserved2(0)
     {
@@ -71,6 +72,16 @@ namespace KFCConfigurationClasses {
             obj.is_web_server_enabled = true;
             WebServer::getWriteableConfig().is_https = (mode == WebServerTypes::ModeType::SECURE);
         }
+    }
+
+    System::DeviceConfig::DeviceConfig_t::DeviceConfig_t() :
+        config_version(FIRMWARE_VERSION),
+        safe_mode_reboot_timeout_minutes(kDefaultValueFor_safe_mode_reboot_timeout_minutes),
+        zeroconf_timeout(kDefaultValueFor_zeroconf_timeout),
+        webui_cookie_lifetime_days(kDefaultValueFor_webui_cookie_lifetime_days),
+        zeroconf_logging(false),
+        status_led_mode(cast_int_status_led_mode(StatusLEDModeType::SOLID_WHEN_CONNECTED))
+    {
     }
 
     FormUI::Container::List createFormPinList(uint8_t from, uint8_t to)

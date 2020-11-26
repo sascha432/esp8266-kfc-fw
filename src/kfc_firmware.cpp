@@ -321,6 +321,13 @@ void setup()
 
     } else {
 
+#if WEBUI_ALERTS_ENABLED && WEBUI_ALERTS_USE_MQTT
+        auto flags = System::Flags::getConfig();
+        if (flags.is_mqtt_enabled) {
+            WebAlerts::AbstractStorage::changeStorageToMQTT();
+        }
+#endif
+
         #if AT_MODE_SUPPORTED
             BOOTLOG_PRINTF("at_mode_setup");
             at_mode_setup();

@@ -354,7 +354,8 @@ namespace KFCConfigurationClasses {
                 CREATE_BOOL_BITFIELD(is_webui_enabled);
                 CREATE_BOOL_BITFIELD(is_webalerts_enabled);
                 CREATE_BOOL_BITFIELD(is_ssdp_enabled);
-                CREATE_UINT8_BITFIELD(__reserved, 2);
+                CREATE_BOOL_BITFIELD(is_netbios_enabled);
+                CREATE_UINT8_BITFIELD(__reserved, 1);
 
                 uint8_t __reserved2;
 
@@ -402,6 +403,7 @@ namespace KFCConfigurationClasses {
                     CONFIG_DUMP_STRUCT_VAR(is_webui_enabled);
                     CONFIG_DUMP_STRUCT_VAR(is_webalerts_enabled);
                     CONFIG_DUMP_STRUCT_VAR(is_ssdp_enabled);
+                    CONFIG_DUMP_STRUCT_VAR(is_netbios_enabled);
                 }
 
                 ConfigFlags_t();
@@ -448,13 +450,7 @@ namespace KFCConfigurationClasses {
                     return get_enum_status_led_mode(*this);
                 }
 
-                DeviceConfig_t() :
-                    config_version(FIRMWARE_VERSION),
-                    safe_mode_reboot_timeout_minutes(kDefaultValueFor_safe_mode_reboot_timeout_minutes),
-                    zeroconf_timeout(kDefaultValueFor_zeroconf_timeout),
-                    webui_cookie_lifetime_days(kDefaultValueFor_webui_cookie_lifetime_days),
-                    zeroconf_logging(false),
-                    status_led_mode(cast_int_status_led_mode(StatusLEDModeType::SOLID_WHEN_CONNECTED)) {}
+                DeviceConfig_t();
 
             } DeviceConfig_t;
         };
@@ -982,17 +978,25 @@ namespace KFCConfigurationClasses {
                 };
             } WeekDay_t;
 
-            typedef struct __attribute__packed__ {
+            typedef struct __attribute__packed__ AlarmTime_t {
+                using Type = AlarmTime_t;
                 TimeType timestamp;
-                uint8_t hour;
-                uint8_t minute;
+                CREATE_UINT8_BITFIELD(hour, 8);
+                CREATE_UINT8_BITFIELD(minute, 8);
                 WeekDay_t week_day;
+
+                static void set_bits_weekdays(Type &obj, uint8_t value) { \
+                    obj.week_day.week_days = value;
+                } \
+                static uint8_t get_bits_weekdays(const Type &obj) { \
+                    return obj.week_day.week_days; \
+                }
             } AlarmTime_t;
 
             typedef struct __attribute__packed__ SingleAlarm_t {
                 using Type = SingleAlarm_t;
                 AlarmTime_t time;
-                uint16_t max_duration;       // limit in seconds, 0 = unlimited
+                CREATE_UINT16_BITFIELD(max_duration, 16); // limit in seconds, 0 = unlimited
                 CREATE_ENUM_BITFIELD(mode, AlarmModeType);
                 CREATE_UINT8_BITFIELD(is_enabled, 1);
             } SingleAlarm_t;

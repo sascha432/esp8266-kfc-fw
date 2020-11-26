@@ -310,7 +310,7 @@
 
 // NETBIOS support for MDNS plugin
 #ifndef MDNS_NETBIOS_SUPPORT
-#define MDNS_NETBIOS_SUPPORT                                0
+#define MDNS_NETBIOS_SUPPORT                                1
 #endif
 
 #if !MDNS_PLUGIN && MDNS_NETBIOS_SUPPORT

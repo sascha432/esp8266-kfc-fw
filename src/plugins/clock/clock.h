@@ -49,11 +49,11 @@
 
 #if IOT_CLOCK_DEBUG_ANIMATION_TIME
 #define __DBGTM(...) __VA_ARGS__
-#include <FixedCircularBuffer.h>
-extern FixedCircularBuffer<uint16_t, IOT_CLOCK_DEBUG_ANIMATION_TIME> _anmationTime;
-extern FixedCircularBuffer<uint16_t, IOT_CLOCK_DEBUG_ANIMATION_TIME> _animationRenderTime;
-extern FixedCircularBuffer<uint16_t, IOT_CLOCK_DEBUG_ANIMATION_TIME> _displayTime;
-extern FixedCircularBuffer<uint16_t, IOT_CLOCK_DEBUG_ANIMATION_TIME> _timerDiff;
+#include <stl_ext/fixed_circular_buffer.h>
+extern stdex::fixed_circular_buffer<uint16_t, IOT_CLOCK_DEBUG_ANIMATION_TIME> _anmationTime;
+extern stdex::fixed_circular_buffer<uint16_t, IOT_CLOCK_DEBUG_ANIMATION_TIME> _animationRenderTime;
+extern stdex::fixed_circular_buffer<uint16_t, IOT_CLOCK_DEBUG_ANIMATION_TIME> _displayTime;
+extern stdex::fixed_circular_buffer<uint16_t, IOT_CLOCK_DEBUG_ANIMATION_TIME> _timerDiff;
 #else
 #define __DBGTM(...)
 #endif

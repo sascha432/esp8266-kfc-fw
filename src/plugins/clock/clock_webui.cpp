@@ -23,11 +23,11 @@ void ClockPlugin::getValues(JsonArray &array)
     obj = &array.addObject(3);
     obj->add(JJ(id), F("btn_animation"));
     obj->add(JJ(state), true);
-    obj->add(JJ(value), static_cast<int>(_config.animation));
+    obj->add(JJ(value), _config.animation); //static_cast<int>(_config.animation));
 
     obj = &array.addObject(3);
     obj->add(JJ(id), F("color"));
-    obj->add(JJ(state), _config.animation == AnimationType::NONE);
+    obj->add(JJ(state), static_cast<AnimationType>(_config.animation) == AnimationType::NONE);
     obj->add(JJ(value), _color.get());
 
     obj = &array.addObject(3);

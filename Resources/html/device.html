@@ -29,6 +29,9 @@
             %FORM_HTML%
             <div class="form-help-block">
                 <div data-target="#scookie_lt"><span class="oi oi-shield p-2"></span>If the cookie is stolen, it is not going to expire and changing the password is the only options to invalidate it.</div>
+                <!--#if (defined(WEBUI_ALERTS_USE_MQTT) && WEBUI_ALERTS_USE_MQTT)-->
+                <div data-target="#walert_en"><span class="oi oi-shield p-2"></span>WebUI alerts over MQTT are enabled. MQTT credentials are exposed over the (unencrypted) web interface and the browser requires direct access to the MQTT server</div>
+                <!--#endif-->
                 <div data-target="#dev_title">Set friendly name for the WebUI, MQTT auto discovery and SSDP</div>
             </div>
         </form>

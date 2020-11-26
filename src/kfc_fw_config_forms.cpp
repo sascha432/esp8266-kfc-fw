@@ -187,8 +187,24 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             form.addFormUI(F("Reboot Delay Running In Safe Mode"), FormUI::Suffix(FSPGM(minutes)));
             cfg.addRangeValidatorFor_safe_mode_reboot_timeout_minutes(form, true);
 
+            form.addObjectGetterSetter(F("led_mode"), cfg, System::Device::ConfigStructType::get_int_status_led_mode, System::Device::ConfigStructType::set_int_status_led_mode);
+            form.addFormUI(FSPGM(Status_LED_Mode), FormUI::BoolItems(F("Solid when connected to WiFi"), F("Turn off when connected to WiFi")));
+
+            form.addStringGetterSetter(F("pbl"), System::Firmware::getPluginBlacklist, System::Firmware::setPluginBlacklist);
+            form.addFormUI(F("Plugin Blacklist"), FormUI::Suffix(F("Comma Separated")));
+
+            deviceGroup.end();
+            auto &discoveryGroup = form.addCardGroup(F("ndo"), F("Network Discovery"), true);
+
+#if MDNS_PLUGIN
+
             form.addObjectGetterSetter(F("mdns_en"), flags, System::Flags::ConfigStructType::get_bit_is_mdns_enabled, System::Flags::ConfigStructType::set_bit_is_mdns_enabled);
             form.addFormUI(F("mDNS Announcements"), FormUI::BoolItems(FSPGM(Enabled), F("Disabled (Zeroconf is still available)")));
+
+#if MDNS_NETBIOS_SUPPORT
+            form.addObjectGetterSetter(F("nbns_en"), flags, System::Flags::ConfigStructType::get_bit_is_netbios_enabled, System::Flags::ConfigStructType::set_bit_is_netbios_enabled);
+            form.addFormUI(F("NetBIOS Enabled"), FormUI::BoolItems(F("Enabled (requires mDNS)"), F("Disabled")));
+#endif
 
             form.addObjectGetterSetter(F("zconf_to"), cfg, cfg.get_bits_zeroconf_timeout, cfg.set_bits_zeroconf_timeout);
             form.addFormUI(FSPGM(Zeroconf_Timeout), FormUI::Suffix(FSPGM(milliseconds)));
@@ -197,16 +213,12 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             form.addObjectGetterSetter(F("zconf_log"), cfg, System::Device::ConfigStructType::get_bits_zeroconf_logging, System::Device::ConfigStructType::set_bits_zeroconf_logging);
             form.addFormUI(FSPGM(Zeroconf_Logging), FormUI::BoolItems());
 
+#endif
+
             form.addObjectGetterSetter(F("ssdp_en"), flags, System::Flags::ConfigStructType::get_bit_is_ssdp_enabled, System::Flags::ConfigStructType::set_bit_is_ssdp_enabled);
             form.addFormUI(FSPGM(SSDP_Discovery), FormUI::BoolItems());
 
-            form.addObjectGetterSetter(F("led_mode"), cfg, System::Device::ConfigStructType::get_int_status_led_mode, System::Device::ConfigStructType::set_int_status_led_mode);
-            form.addFormUI(FSPGM(Status_LED_Mode), FormUI::BoolItems(F("Solid when connected to WiFi"), F("Turn off when connected to WiFi")));
-
-            form.addStringGetterSetter(F("pbl"), System::Firmware::getPluginBlacklist, System::Firmware::setPluginBlacklist);
-            form.addFormUI(F("Plugin Blacklist"), FormUI::Suffix(F("Comma Separated")));
-
-            deviceGroup.end();
+            discoveryGroup.end();
             auto &webUIGroup = form.addCardGroup(F("webui"), FSPGM(WebUI), true);
 
             form.addObjectGetterSetter(F("wui_en"), flags, System::Flags::ConfigStructType::get_bit_is_webui_enabled, System::Flags::ConfigStructType::set_bit_is_webui_enabled);

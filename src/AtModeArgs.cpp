@@ -5,6 +5,7 @@
 #if AT_MODE_SUPPORTED
 
 #include <Arduino_compat.h>
+#include <stl_ext/algorithm.h>
 #include "at_mode.h"
 #include "kfc_fw_config.h"
 #include <Form.h>
@@ -102,6 +103,7 @@ double AtModeArgs::toDouble(uint16_t num, double defaultValue) const
 }
 
 
+
 uint32_t AtModeArgs::toMillis(uint16_t num, uint32_t minTime, uint32_t maxTime, uint32_t defaultValue, const String &defaultSuffix) const
 {
     if (defaultValue == kNoDefaultValue) {
@@ -111,7 +113,7 @@ uint32_t AtModeArgs::toMillis(uint16_t num, uint32_t minTime, uint32_t maxTime, 
     auto arg = get(num);
     if (!arg) {
         __LDBG_printf("toMillis(): arg=%u does not exist", num);
-        return defaultValue;
+        return std::clamp(defaultValue, minTime, maxTime);
     }
 
     char *endPtr = nullptr;
@@ -124,29 +126,30 @@ uint32_t AtModeArgs::toMillis(uint16_t num, uint32_t minTime, uint32_t maxTime, 
     suffix.toLowerCase();
 
     uint32_t result;
-    char suffixChar = suffix.length() == 1 ? suffix[0] : 0;
-    if (suffixChar == 'm' || String_startsWith(suffix, SPGM(min, "min"))) {
-        result =  (uint32_t)(value * 1000.0 * 60);
+    if (String_equals(suffix, F("ms")) || String_startsWith(suffix, F("mil"))) {
+        result =  value;
     }
-    else if (suffixChar == 'h' || String_startsWith(suffix, SPGM(hour, "hour"))) {
-        result =  (uint32_t)(value * 1000.0 * 60 * 60);
+    else if (String_startsWith(suffix, F("s"))) {
+        result =  value * 1000;
     }
-    else if (suffixChar == 'd' || String_startsWith(suffix, SPGM(day, "day"))) {
-        result =  (uint32_t)(value * 1000.0 * 60 * 60 * 24);
+    else if (String_startsWith(suffix, F("m"))) {
+        result =  value * 1000 * 60;
     }
-    else if (suffixChar == 's' || String_startsWith(suffix, SPGM(sec, "sec"))) {
-        result = (uint32_t)(value * 1000.0);
+    else if (String_startsWith(suffix, F("h"))) {
+        result =  value * 1000 * 3600;
+    }
+    else if (String_startsWith(suffix, F("d"))) {
+        result =  value * 1000 * 86400;
     }
     else {
-        result = (uint32_t)value;   // use default suffix
+        result = value;
     }
-    result = std::min(maxTime, result);
     if (result < minTime) {
         __LDBG_printf("toMillis(): arg=%s < minTime=%u", arg, minTime);
-        return defaultValue;
+        result = defaultValue;
     }
     __LDBG_printf("toMillis(): arg=%s converted to %u", arg, result);
-    return result;
+    return std::clamp(result, minTime, maxTime);
 }
 
 void AtModeArgs::printf_P(PGM_P format, ...)

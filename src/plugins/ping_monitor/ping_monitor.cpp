@@ -16,6 +16,7 @@
 #include "web_server.h"
 #include "plugins.h"
 #include "plugins_menu.h"
+#include "Utility/ProgMemHelper.h"
 
 #if DEBUG_PING_MONITOR
 #include <debug_helper_enable.h>
@@ -318,11 +319,11 @@ void PingMonitorPlugin::createConfigureForm(FormCallbackType type, const String 
 
     auto &serviceGroup = form.addCardGroup(F("pingbs"), FSPGM(ping_monitor_service), cfg.service);
 
-    const char *hostNames[] = { PSTR("h0"), PSTR("h1"), PSTR("h2"), PSTR("h3"), PSTR("h4"), PSTR("h5"), PSTR("h6"), PSTR("h7") };
+    PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, Plugins::Ping::kHostsMax, h);
 
     for(uint8_t i = 0; i < Plugins::Ping::kHostsMax; i++) {
 
-        form.addCallbackGetterSetter<String>(FPSTR(hostNames[i]), [i](String &str, Field::BaseField &, bool store) {
+        form.addCallbackGetterSetter<String>(F_VAR(h, i), [i](String &str, Field::BaseField &, bool store) {
             if (store) {
                 Plugins::Ping::setHost(i, str.c_str());
             } else {
@@ -339,7 +340,7 @@ void PingMonitorPlugin::createConfigureForm(FormCallbackType type, const String 
 
     }
 
-
+    //form.addReference(F("pi"), cfg.interval);
     form.add(F("pi"), _H_W_STRUCT_VALUE(cfg, interval));
     form.addFormUI(FSPGM(Interval), FormUI::Suffix(FSPGM(minutes)));
     form.addValidator(FormUI::Validator::Range(Plugins::PingConfig::PingConfig_t::kIntervalMin, Plugins::PingConfig::PingConfig_t::kIntervalMax));

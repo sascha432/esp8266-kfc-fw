@@ -10,6 +10,7 @@
 #include "../src/plugins/ntp/ntp_plugin.h"
 #include "plugins.h"
 #include "alarm.h"
+#include "Utility/ProgMemHelper.h"
 
 #if DEBUG_ALARM_FORM
 #include <debug_helper_enable.h>
@@ -128,22 +129,6 @@ void AlarmPlugin::getStatus(Print &output)
     }
 }
 
-#define FORM_CREATE_CALLBACK(name, field_name, type) \
-    static bool form_##name##_callback(type value, FormUI::Field::Base &field, bool store) { \
-        if (store) { \
-            AlarmPlugin::Alarm::getWriteableConfig().alarms[atoi(field.getName().c_str() + 1)].field_name = value; \
-        } \
-        return false; \
-    }
-
-FORM_CREATE_CALLBACK(hour, time.hour, uint8_t);
-FORM_CREATE_CALLBACK(minute, time.minute, uint8_t);
-FORM_CREATE_CALLBACK(duration, max_duration, uint16_t);
-FORM_CREATE_CALLBACK(weekday, time.week_day.week_days, uint8_t);
-FORM_CREATE_CALLBACK(enabled, is_enabled, bool);
-#if IOT_ALARM_PLUGIN_HAS_BUZZER && IOT_ALARM_PLUGIN_HAS_SILENT
-FORM_CREATE_CALLBACK(mode, mode, uint8_t);
-#endif
 
 void AlarmPlugin::createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
 {
@@ -157,38 +142,44 @@ void AlarmPlugin::createConfigureForm(FormCallbackType type, const String &formN
 #endif
     }
     else if (isCreateFormCallbackType(type)) {
-        // example for memory consumption
-        //
-        // before optimizing: 14368
-        // shortening names to less than String::SSOSIZE: -3760 byte (10608)
-        //      String needs 16 byte memory if less than SSO size (ESP8266 = less than 11 characters)
-        //      otherwise it allocates another 16 byte aligned block = 32 byte for strings between 11-15 characters or 48 byte for strings between 16-31 characters
-        // replacing lambdas with static functions: -1200 byte (9408)
-        //      lamdba functions need 16 byte (8 byte without memory alignment) or more if variables are captured
-        // removing 7x checkbox and replacing it with a single field: -5056 byte (4352)
-        //      requires some javascript unserialize/serialize
-        //
-        // the POST request consumes about the same amount of memory as the form itself
-        // large forms can be split into small parts and posted via ajax one by one
 
         auto &cfg = Alarm::getWriteableConfig();
 
+        PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, 10, ae, ah, am, md, wd
+#if IOT_ALARM_PLUGIN_HAS_BUZZER && IOT_ALARM_PLUGIN_HAS_SILENT
+            , mt
+#endif
+        );
+
         for(uint8_t i = 0; i < Alarm::MAX_ALARMS; i++) {
-            String prefix = 'a' + String(i);
+            //String prefix = 'a' + String(i);
             auto &alarm = cfg.alarms[i];
 
-            form.add<bool>(prefix + 'e', alarm.is_enabled, form_enabled_callback);
+            form.addObjectGetterSetter(F_VAR(ae, i), alarm, alarm.get_bits_is_enabled, alarm.set_bits_is_enabled);
+            form.addObjectGetterSetter(F_VAR(ah, i), alarm.time, alarm.time.get_bits_hour, alarm.time.set_bits_hour);
+            form.addObjectGetterSetter(F_VAR(am, i), alarm.time, alarm.time.get_bits_minute, alarm.time.set_bits_minute);
+#if IOT_ALARM_PLUGIN_HAS_BUZZER && IOT_ALARM_PLUGIN_HAS_SILENT
+            form.addObjectGetterSetter(F_VAR(mt, i), alarm.mode, alarm.get_int_mode, alarm.set_int_mode);
+#else
+            alarm.mode = Alarm::AlarmConfig::SingleAlarm_t::cast_int_mode(Alarm::AlarmModeType::BOTH);
+#endif
 
-            form.add<uint8_t>(prefix + 'h', alarm.time.hour, form_hour_callback);
-            form.add<uint8_t>(prefix + 'm', alarm.time.minute, form_minute_callback);
+            form.addObjectGetterSetter(F_VAR(md, i), alarm, alarm.get_bits_max_duration, alarm.set_bits_max_duration);
+            form.addObjectGetterSetter(F_VAR(wd, i), alarm.time, alarm.time.get_bits_weekdays, alarm.time.set_bits_weekdays);
+
+/*
+            --form.add<bool>(prefix + 'e', alarm.is_enabled, form_enabled_callback);
+            --form.add<uint8_t>(prefix + 'h', alarm.time.hour, form_hour_callback);
+            --form.add<uint8_t>(prefix + 'm', alarm.time.minute, form_minute_callback);
 #if IOT_ALARM_PLUGIN_HAS_BUZZER && IOT_ALARM_PLUGIN_HAS_SILENT
             form.add<uint8_t>(prefix + String('t'), alarm.mode, form_mode_callback);
 #else
             alarm.mode = Alarm::AlarmConfig::SingleAlarm_t::cast_int_mode(Alarm::AlarmModeType::BOTH);
 #endif
-            form.add<uint16_t>(prefix + 'd', alarm.max_duration, form_duration_callback);
+            --form.add<uint16_t>(prefix + 'd', alarm.max_duration, form_duration_callback);
 
-            form.add<uint8_t>(prefix + 'w', alarm.time.week_day.week_days, form_weekday_callback);
+            --form.add<uint8_t>(prefix + 'w', alarm.time.week_day.week_days, form_weekday_callback);
+*/
         }
 
         form.finalize();

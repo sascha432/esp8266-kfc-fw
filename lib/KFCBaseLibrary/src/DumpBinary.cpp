@@ -8,9 +8,14 @@ extern "C" {
 
     void __dump_binary(const void *ptr, size_t len, size_t perLine, PGM_P title)
     {
-        DumpBinary d(Serial);
+        __dump_binary_to(Serial, ptr, len, perLine, title);
+    }
+
+    void __dump_binary_to(Print &output, const void *ptr, size_t len, size_t perLine, PGM_P title)
+    {
+        DumpBinary d(output);
         if (title) {
-            Serial.printf_P(PSTR("%s: %p:%u\n"), title, ptr, len);
+            output.printf_P(PSTR("%s: %p:%u\n"), title, ptr, len);
         }
         if (perLine == 0) {
             perLine = len;
@@ -64,7 +69,7 @@ DumpBinary &DumpBinary::dump(const uint8_t *data, size_t length, ptrdiff_t offse
         for (ptrdiff_t i = pos; i < end && j < perLine; i++, j++) {
             auto ch = (uint8_t)pgm_read_byte(data + i);
             if (isprint(ch)) {
-                _output.print(ch);
+                _output.print((char)ch);
             } else {
                 _output.print('.');
             }

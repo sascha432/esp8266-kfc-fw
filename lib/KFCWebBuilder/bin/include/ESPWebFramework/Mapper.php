@@ -143,6 +143,7 @@ class Mapper implements PluginInterface
         //file_put_contents($this->mappingsFile, $headers);
 
         $listing = '';
+        $plain_listing = "filename:uid:file-size:original-file-size:modification-time:flags:original-filename\n";
 
         $dirs = array();
         foreach($this->mappedFiles as $file) {
@@ -155,14 +156,19 @@ class Mapper implements PluginInterface
         foreach($dirs as $dirname => $mtime) {
             $listing .= pack('LLLLC', 0, 0, 0, $mtime, self::FLAGS_DIR);
             $listing .= $dirname."\n";
+
+            $plain_listing .= sprintf("%08x:%08x:%08x:%08x:%08x:%02x:%s\n", 0, 0, 0, 0, $mtime, self::FLAGS_DIR, $dirname);
         }
 
         foreach($this->mappedFiles as $file) {
             $listing .= pack('LLLLC', $file['uid'], $file['file_size'], $file['original_file_size'], $file['mtime'], $file['flags']);
             $listing .= $file['mapped_file']."\n";
+
+            $plain_listing .= sprintf("%s:%08x:%08x:%08x:%08x:%02x:%s\n", substr($file['spiffs_file'], -8, 8), $file['uid'], $file['file_size'], $file['original_file_size'], $file['mtime'], $file['flags'], $file['mapped_file']);
         }
 
         file_put_contents($this->listingsFile, $listing);
+        file_put_contents($this->listingsFile.".txt", $plain_listing);
 
         echo "--------------------------------------------\n";
         echo "Total size of SPIFFS usage: $totalSize\n";

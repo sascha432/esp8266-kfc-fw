@@ -289,7 +289,7 @@ namespace __va_args__
 #endif
 
 extern "C" void __dump_binary(const void *ptr, size_t len, size_t perLine, PGM_P title = nullptr);
-
+extern "C" void __dump_binary_to(Print &output, const void *ptr, size_t len, size_t perLine, PGM_P title = nullptr);
 
 #if _MSC_VER
 #include "../../../src/generated/FlashStringGeneratorAuto.h"

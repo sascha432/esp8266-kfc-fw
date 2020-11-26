@@ -585,8 +585,8 @@ namespace STL_STD_EXT_NAMESPACE_EX {
             template<typename _SymbolType>
             inline static size_t strcpy(char *dst, const char *str, size_t &dst_len, size_t src_len)
             {
-                auto endPtr = dst + dst_len;
-                auto result = __validate_utf8_encoding<_SymbolType, __strcpy_helper>(dst, endPtr, str, str + src_len);
+                auto endPtr = dst + dst_len + 1;
+                auto result = __validate_utf8_encoding<_SymbolType, __strcpy_helper>(dst, endPtr, str, str + src_len + 1);
                 dst_len = std::distance(dst, endPtr);
                 return result;
             }
@@ -599,8 +599,8 @@ namespace STL_STD_EXT_NAMESPACE_EX {
             inline static size_t strlen(const char *str, size_t &dst_len, size_t src_len)
             {
                 auto dst_begin = const_cast<char *>(str);
-                auto dst_end = dst_begin + dst_len;
-                auto result = __validate_utf8_encoding<_SymbolType, __strlen_helper>(dst_begin, dst_end, str, str + src_len);
+                auto dst_end = dst_begin + dst_len + 1;
+                auto result = __validate_utf8_encoding<_SymbolType, __strlen_helper>(dst_begin, dst_end, str, str + src_len + 1);
                 dst_len = std::distance(dst_begin, dst_end);
                 return result;
             }
@@ -608,7 +608,7 @@ namespace STL_STD_EXT_NAMESPACE_EX {
             template<typename _SymbolType>
             inline static size_t strlen(const char *str, size_t src_len) {
                 size_t dst_len = ~0 >> 2;
-                return strlen<_SymbolType>(str, dst_len, src_len);
+                return strlen<_SymbolType>(str, dst_len, src_len + 1);
             }
 
         };

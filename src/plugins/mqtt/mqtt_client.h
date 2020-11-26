@@ -248,6 +248,10 @@ public:
         return _topics;
     }
 
+    size_t getQueueSize() const {
+        return _queue.size();
+    }
+
 private:
     void _zeroConfCallback(const String &hostname, const IPAddress &address, uint16_t port, MDNSResolver::ResponseType type);
     void _setupClient();

@@ -119,12 +119,15 @@ void MDNSPlugin::_wifiCallback(WiFiCallbacks::EventType event, void *payload)
 #else
         _begin();
 #endif
+
 #if MDNS_NETBIOS_SUPPORT
+        if (isNetBIOSEnabled()) {
 #if DEBUG_MDNS_SD
-        auto result =
+            auto result =
 #endif
-        NBNS.begin(System::Device::getName());
-        __LDBG_printf("NetBIOS result=%u", result);
+            NBNS.begin(System::Device::getName());
+            __LDBG_printf("NetBIOS result=%u", result);
+        }
 #endif
 
         // start all queries in the queue
@@ -138,7 +141,9 @@ void MDNSPlugin::_wifiCallback(WiFiCallbacks::EventType event, void *payload)
     }
     else if (event == WiFiCallbacks::EventType::DISCONNECTED) {
 #if MDNS_NETBIOS_SUPPORT
-        NBNS.end();
+        if (isNetBIOSEnabled()) {
+            NBNS.end();
+        }
 #endif
         _end();
     }
@@ -150,9 +155,15 @@ bool MDNSPlugin::isEnabled()
     return flags.is_mdns_enabled && flags.is_station_mode_enabled;
 }
 
+bool MDNSPlugin::isNetBIOSEnabled()
+{
+    auto flags = System::Flags::getConfig();
+    return flags.is_mdns_enabled && flags.is_station_mode_enabled && flags.is_netbios_enabled;
+
+}
+
 void MDNSPlugin::setup(SetupModeType mode)
 {
-
     if (isEnabled()) {
         _enabled = true;
         begin();
@@ -339,6 +350,10 @@ void MDNSPlugin::getStatus(Print &output)
         output.print(F("not "));
     }
     output.print(F("running"));
+
+#if MDNS_NETBIOS_SUPPORT
+    output.print(F(HTML_S(br) "NetBIOS %s"), isNetBIOSEnabled() ? SPGM(enabled) : SPGM(disabled));
+#endif
 }
 
 //void resolveZeroConf(const String &service, const String &proto, const String &field, const String &fallback, uint16_t port, ResolvedCallback callback);

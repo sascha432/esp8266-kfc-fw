@@ -1084,7 +1084,7 @@ void WebServerPlugin::createConfigureForm(PluginComponent::FormCallbackType type
 #endif
 
 #if defined(ESP8266)
-    form.addObjectGetterSetter(F("httperf"), flags, flags.get_bit_is_webalerts_enabled, flags.set_bit_is_webserver_performance_mode_enabled);
+    form.addObjectGetterSetter(F("httperf"), flags, flags.get_bit_is_webserver_performance_mode_enabled, flags.set_bit_is_webserver_performance_mode_enabled);
 #endif
 
     form.addCallbackSetter(F("httport"), cfg.getPortAsString(), [&cfg](const String &value, FormField &field) {

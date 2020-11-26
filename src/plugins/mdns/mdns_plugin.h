@@ -53,6 +53,7 @@ public:
     MDNSPlugin();
 
     static bool isEnabled();
+    static bool isNetBIOSEnabled();
 
     virtual void setup(SetupModeType mode) override;
     virtual void reconfigure(const String &source) override;

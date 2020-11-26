@@ -107,8 +107,10 @@
                 "./Resources/html/serial2tcp.html",
                 "./Resources/js/forms/serial2tcp.js"
             ],
+            "#if !WEBUI_ALERTS_USE_MQTT": [
+                "./lib/KFCWebBuilder/Resources/js/mqtt.min.js"
+            ],
             "#if !WEBUI_ALERTS_ENABLED": [
-                "./lib/KFCWebBuilder/Resources/js/mqtt.min.js",
                 "./Resources/js/webui-alerts.js",
                 "./Resources/css/alert-container.css"
             ]
@@ -122,6 +124,7 @@
                         "./lib/KFCWebBuilder/Resources/js/js.cookie.js",
                         "./lib/KFCWebBuilder/Resources/js/selectize.min.js",
                         "./lib/KFCWebBuilder/Resources/js/rangeslider.min.js",
+                        "./lib/KFCWebBuilder/Resources/js/mqtt.min.js",
                         "./Resources/js/jQuery.base64.js",
                         "./Resources/js/common.js",
                         "./Resources/js/webui-alerts.js",
@@ -140,6 +143,8 @@
                 "processors":  {
                     "uglify_js": {
                         "branch": [ "!use_closure_compiler" ],
+                        // excludes files that cannot be compressed
+                        "filename_pattern": "/(.*mqtt\\.min\\.js)$/!",
                         "condition": "#if MINIFY_WEBUI",
                         "command": "${commands.uglify_js}"
                     },

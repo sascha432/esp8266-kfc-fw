@@ -3,6 +3,7 @@
  */
 
 var system_time_interval = null;
+// var system_time_interval_use_ws = false;
 
 function system_time_attach_handler() {
     // clear interval if already running

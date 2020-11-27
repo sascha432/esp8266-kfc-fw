@@ -36,6 +36,8 @@
 - Read ADC over web sockets with kfcfw_tool and graphical analysis
 - Major improvements for forms, they are using ~10x less memory and are ~20x faster. Most need less than 1KB and load within 10ms
 - Support for loading javascript and CSS from remote server(s) during development
+- Fixed some environments and adapted changes of the Espressif 8266 2.3.1 framework (Arduino Core 2.7.4)
+- utf-8 support for web sockets
 
 ## Version 0.0.3
 

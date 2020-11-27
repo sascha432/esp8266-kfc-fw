@@ -113,7 +113,10 @@ uint32_t AtModeArgs::toMillis(uint16_t num, uint32_t minTime, uint32_t maxTime, 
     auto arg = get(num);
     if (!arg) {
         __LDBG_printf("toMillis(): arg=%u does not exist", num);
-        return std::clamp(defaultValue, minTime, maxTime);
+        if (defaultValue == kNoDefaultValue) {
+            return std::clamp<uint32_t>(0, minTime, maxTime);
+        }
+        return defaultValue;
     }
 
     char *endPtr = nullptr;

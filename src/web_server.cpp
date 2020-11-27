@@ -731,6 +731,10 @@ void WebServerPlugin::begin()
 
     _server->begin();
     __LDBG_printf("HTTP running on port %u", System::WebServer::getConfig().getPort());
+
+#if WEBSERVER_WS_COMM
+    wsSetup();
+#endif
 }
 
 bool WebServerPlugin::_sendFile(const FileMapping &mapping, const String &formName, HttpHeaders &httpHeaders, bool client_accepts_gzip, bool isAuthenticated, AsyncWebServerRequest *request, WebTemplate *webTemplate)
@@ -805,7 +809,6 @@ bool WebServerPlugin::_sendFile(const FileMapping &mapping, const String &formNa
 
     return true;
 }
-
 
 void WebServerPlugin::setUpdateFirmwareCallback(UpdateFirmwareCallback_t callback)
 {
@@ -971,7 +974,14 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
     return _sendFile(mapping, formName, httpHeaders, client_accepts_gzip, isAuthenticated, request, webTemplate);
 }
 
-WebServerPlugin::WebServerPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(WebServerPlugin)), _updateFirmwareCallback(nullptr), _server(nullptr)
+WebServerPlugin::WebServerPlugin() :
+    PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(WebServerPlugin)),
+    _updateFirmwareCallback(nullptr),
+    _server(nullptr)
+#if WEBSERVER_WS_COMM
+    ,
+    wsMainSocket(nullptr)
+#endif
 {
     REGISTER_PLUGIN(this, "WebServerPlugin");
 }

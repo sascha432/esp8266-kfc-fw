@@ -1438,7 +1438,7 @@ void at_mode_serial_handle_event(String &commandString)
 #endif
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RSSI)) || args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(HEAP)) || args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(GPIO))) {
                 if (args.requireArgs(0, 1)) {
-                    auto interval = args.toMillis(0, 500, 3600 * 1000, 1000, String('s'));
+                    auto interval = args.toMillis(0, 250, 3600 * 1000, 0, String('s'));
                     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RSSI))) {
                         displayTimer._type = DisplayTimer::RSSI;
                     }

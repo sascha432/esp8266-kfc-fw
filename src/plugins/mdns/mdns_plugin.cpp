@@ -352,7 +352,7 @@ void MDNSPlugin::getStatus(Print &output)
     output.print(F("running"));
 
 #if MDNS_NETBIOS_SUPPORT
-    output.print(F(HTML_S(br) "NetBIOS %s"), isNetBIOSEnabled() ? SPGM(enabled) : SPGM(disabled));
+    output.printf_P(PSTR(HTML_S(br) "NetBIOS %s"), isNetBIOSEnabled() ? SPGM(enabled) : SPGM(disabled));
 #endif
 }
 

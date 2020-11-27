@@ -108,7 +108,8 @@
                 "./Resources/js/forms/serial2tcp.js"
             ],
             "#if !WEBUI_ALERTS_USE_MQTT": [
-                "./lib/KFCWebBuilder/Resources/js/mqtt.min.js"
+                // "./lib/KFCWebBuilder/Resources/js/mqtt.min.js",
+                "./lib/KFCWebBuilder/Resources/paho.mqtt.javascript/dist/mqttws31.js"
             ],
             "#if !WEBUI_ALERTS_ENABLED": [
                 "./Resources/js/webui-alerts.js",
@@ -124,7 +125,8 @@
                         "./lib/KFCWebBuilder/Resources/js/js.cookie.js",
                         "./lib/KFCWebBuilder/Resources/js/selectize.min.js",
                         "./lib/KFCWebBuilder/Resources/js/rangeslider.min.js",
-                        "./lib/KFCWebBuilder/Resources/js/mqtt.min.js",
+                        //"./lib/KFCWebBuilder/Resources/js/mqtt.min.js",
+                        "./lib/KFCWebBuilder/Resources/paho.mqtt.javascript/dist/mqttws31.js",
                         "./Resources/js/jQuery.base64.js",
                         "./Resources/js/common.js",
                         "./Resources/js/webui-alerts.js",

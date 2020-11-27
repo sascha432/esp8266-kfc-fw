@@ -18,6 +18,9 @@
 #include "../src/plugins/alarm/alarm.h"
 #include "../src/plugins/ntp/ntp_plugin.h"
 #endif
+#if WEBUI_ALERTS_ENABLED && WEBUI_ALERTS_USE_MQTT
+#include "../include/WebUIAlerts.h"
+#endif
 
 #if DEBUG_TEMPLATES
 #include <debug_helper_enable.h>
@@ -276,6 +279,26 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         } else {
             output.print(FSPGM(hidden));
         }
+    }
+    else if (String_equals(key, PSTR("WEBUI_ALERTS_MQTT_SCRIPT"))) {
+#if WEBUI_ALERTS_ENABLED && WEBUI_ALERTS_USE_MQTT
+
+        output.printf_P(PSTR(HTML_S(script)));
+        //TODO encode as json
+        auto mode = output.setMode(PrintHtmlEntities::Mode::RAW);
+        // load onready or after the mqtt sccript
+        // lots to do
+        output.printf_P(PSTR("window.mqttClient = { id: 'ClientId', topics: { m: '%s', r: '%s', max_id: %u, }, host: '%s', port: %u, client: new Paho.MQTT.Client(window.mqttClient.host, Number(window.mqttClient.port), window.mqttClient.id) };"),
+            WebAlerts::MQTTStorage::getInstance()._getMessageTopic(true).c_str(),
+            WebAlerts::MQTTStorage::getInstance()._getRemoveTopic().c_str(),
+            WebAlerts::MQTTStorage::getInstance().getMaxAlertId() + 1,
+            PSTR("192.168.0.3"), //Plugins::MQTTClient::getHostname(),
+            9001 //Plugins::MQTTClient::getConfig().getPort()
+        );
+        output.setMode(mode);
+        output.printf_P(PSTR(HTML_E(script)));
+
+#endif
     }
     else if (String_equals(key, PSTR("WEBUI_ALERTS_STATUS"))) {
 #if WEBUI_ALERTS_ENABLED

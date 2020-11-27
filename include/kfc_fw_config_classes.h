@@ -411,6 +411,8 @@ namespace KFCConfigurationClasses {
             } ConfigFlags_t;
         };
 
+        static_assert(sizeof(FlagsConfig::ConfigFlags_t) == 4, "invalid size");
+
         class Flags : public FlagsConfig, public ConfigGetterSetter<FlagsConfig::ConfigFlags_t, _H(MainConfig().system.flags) CIF_DEBUG(, &handleNameFlagsConfig_t)> {
         public:
             static void defaults();

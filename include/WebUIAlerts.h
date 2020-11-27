@@ -31,16 +31,10 @@
 
 #if WEBUI_ALERTS_USE_MQTT
 #include "../src/plugins/mqtt/mqtt_client.h"
-#endif
-
-
-#ifndef WEBUI_ALERTS_SPIFF_STORAGE
-#define WEBUI_ALERTS_SPIFF_STORAGE                      "/.pvt/alerts.json"
-#endif
 
 // webui_alerts
 #ifndef WEBUI_ALERTS_MQTT_TOPIC_NAME
-#define WEBUI_ALERTS_MQTT_TOPIC_NAME                    "wua"
+#define WEBUI_ALERTS_MQTT_TOPIC_NAME                    "/wua"
 #endif
 
 // %08x = unique id
@@ -66,6 +60,11 @@
 #define WEBUI_ALERTS_MQTT_REMOVE_TOPIC                  WEBUI_ALERTS_MQTT_TOPIC_NAME "/r/%s"
 #endif
 
+#endif
+
+#ifndef WEBUI_ALERTS_SPIFF_STORAGE
+#define WEBUI_ALERTS_SPIFF_STORAGE                      "/.pvt/alerts.json"
+#endif
 
 PROGMEM_STRING_DECL(alerts_storage_filename);
 
@@ -204,6 +203,12 @@ namespace WebAlerts {
             return false;
         }
 
+        virtual File _openAlertStorage(bool readOnly) {
+            return File();
+        }
+        virtual void _rewriteAlertStorage(File &file, RewriteType type) {
+        }
+
     protected:
         IdType _alertId;
         static AbstractStorage *_storage;
@@ -230,7 +235,6 @@ namespace WebAlerts {
         };
 
         using MessageVector = std::queue<MQTTMessage>;
-        // using MessageVector = std::vector<MQTTMessage>;
         using RemoveIdsVector = std::vector<IdType>;
     public:
         MQTTStorage();
@@ -267,6 +271,9 @@ namespace WebAlerts {
         }
 
     private:
+        // friend WebTemplate;
+
+    public:
         String _getTopic(IdType id, Type type, ExpiresType expires) const;
         String _getMessageTopic(bool wildcard) const;
         String _getRemoveTopic(const char *suffix = nullptr) const;
@@ -317,7 +324,7 @@ namespace WebAlerts {
 
     class Base : public AbstractBase {
     public:
-        using StorageClass = FileStorage;
+        using StorageClass = AbstractStorage;
 
         static IdType addAlert(const String &message, Type type, ExpiresType expires) {
             return StorageClass::getInstance().addAlert(message, type, expires);

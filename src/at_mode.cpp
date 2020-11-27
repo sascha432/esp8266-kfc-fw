@@ -12,6 +12,7 @@
 #include <StreamString.h>
 #include <Cat.h>
 #include <vector>
+#include <queue>
 #include <JsonTools.h>
 #include <ListDir.h>
 #include "at_mode.h"
@@ -932,6 +933,71 @@ public:
     }
 };
 
+class CommandQueue;
+
+static CommandQueue *commandQueue = nullptr;
+class CommandQueue {
+public:
+    CommandQueue(Stream &stream) : _output(stream), _queue(), _start(millis()), _commands(0) {
+        _output.printf_P(PSTR("+QUEUE: started\n"));
+        LoopFunctions::add([this]() { loop(); }, this);
+    }
+
+    virtual ~CommandQueue() {
+        LoopFunctions::remove(this);
+        _output.printf_P(PSTR("+QUEUE: finished, duration=%.2fs, commands=%u\n"), get_time_diff(_start, millis()) / 1000.0, _commands);
+    }
+
+    void loop() {
+        if (!_timer) {
+            if (_queue.empty()) {
+                __DBG_printf("SELF DELETE queue %p %p", commandQueue, this);
+                if (commandQueue == this) {
+                    commandQueue = nullptr;
+                    LoopFunctions::callOnce([this]() {
+                        delete this;
+                    });
+                }
+            }
+            else {
+                // auto args = std::move(_queue.front());
+                // _queue.pop();
+                // _commands++;
+                // __DBG_printf("ARGS cmd=%s,argc=%d,args='%s'", args.getCommand().c_str(), args.size(), implode(F("','"), args.getArgs()).c_str());
+                // at_mode_serial_handle_event(const_cast<String &>(emptyString), &args);
+            }
+        }
+        else {
+            __DBG_printf("delay timer active");
+            delay(100);
+        }
+    }
+
+    void setDelay(uint32_t delay) {
+        __DBG_printf("delay %u", delay);
+        _timer.add(delay, false, [](Event::CallbackTimerPtr timer) {});
+    }
+
+    bool hasQueue() const {
+        return (_timer == true || _queue.empty() == false);
+    }
+
+    void queueCommand(const AtModeArgs &args) {
+        __DBG_printf("ADD queue command");
+        __DBG_printf("ARGS cmd=%s,argc=%d,args='%s'", args.getCommand().c_str(), args.size(), implode(F("','"), args.getArgs()).c_str());
+        _queue.push(args);
+    }
+
+private:
+    using Queue = std::queue<AtModeArgs>;
+
+    Stream &_output;
+    Event::Timer _timer;
+    Queue _queue;
+    uint32_t _start;
+    uint16_t _commands;
+};
+
 void at_mode_serial_handle_event(String &commandString)
 {
     auto &output = Serial;
@@ -1205,10 +1271,20 @@ void at_mode_serial_handle_event(String &commandString)
                 // ignore comment
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DLY))) {
-                auto delayTime = args.toMillis(0, 1, 3000, 1);
-                args.printf_P(PSTR("%lu"), delayTime);
+                auto delayTime = args.toMillis(0, 1, 3600 * 1000, 250, String("ms"));
+                args.printf_P(PSTR("%ums"), delayTime);
                 delay(delayTime);
-                args.ok();
+
+                // if (commandQueue == nullptr && delayTime < 5) { // queue not active and delay very short delays
+                //     args.printf_P(PSTR("%ums"), delayTime);
+                //     delay(delayTime);
+                // }
+                // else {
+                //     if (!commandQueue) { // create new queue and delay next command
+                //         commandQueue = new CommandQueue(output);
+                //     }
+                //     commandQueue->setDelay(delayTime);
+                // }
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RM))) {
                 if (args.requireArgs(1, 1)) {
@@ -1342,13 +1418,10 @@ void at_mode_serial_handle_event(String &commandString)
                     args.printf_P(PSTR("Alert added id %u"), id);
                 }
                 if (WebAlerts::Alert::hasOption(WebAlerts::OptionsType::GET_ALERTS)) {
-                    args.print(F("--- Alerts ---"));
-                    // for(auto &alert: WebAlerts::Alert::getAlerts()) {
-                    //     String str;
-                    //     WebAlerts::Message::toString(str, alert);
-                    //     String_rtrim_P(str, PSTR("\r\n"));
-                    //     args.print(str.c_str());
-                    // }
+                    auto file = KFCFS.open(FSPGM(alerts_storage_filename), FileOpenMode::read);
+                    auto size = file.size();
+                    file.close();
+                    args.printf_P(PSTR("Storage: %s\nSize: %u"), SPGM(alerts_storage_filename), size);
                 }
             }
 #if PIN_MONITOR
@@ -1365,7 +1438,7 @@ void at_mode_serial_handle_event(String &commandString)
 #endif
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RSSI)) || args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(HEAP)) || args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(GPIO))) {
                 if (args.requireArgs(0, 1)) {
-                    auto interval = args.toMillis(0, 500, ~0, 0, String('s'));
+                    auto interval = args.toMillis(0, 500, 3600 * 1000, 1000, String('s'));
                     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RSSI))) {
                         displayTimer._type = DisplayTimer::RSSI;
                     }
@@ -1789,6 +1862,7 @@ void at_mode_serial_handle_event(String &commandString)
             at_mode_serial_handle_event(cmd);
         }
     }
+    return;
 }
 
 void at_mode_serial_input_handler(Stream &client)
@@ -1835,3 +1909,4 @@ void at_mode_serial_input_handler(Stream &client)
 }
 
 #endif
+

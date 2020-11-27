@@ -205,6 +205,16 @@ public:
     void clear();
     void setQueryMode(bool mode);
 
+    // AtModeArgs(Stream &output, AtModeArgs *move) : AtModeArgs(move != nullptr ? std::move(AtModeArgs(std::move(*move))) : std::move(AtModeArgs(output))) {}
+
+    // AtModeArgs(AtModeArgs &&move) :
+    //     _output(move._output),
+    //     _command(std::move(move._command)),
+    //     _args(std::move(move._args)),
+    //     _queryMode(std::exchange(move._queryMode, false))
+    // {
+    // }
+
     AtModeArgs(const AtModeArgs &args) : _output(args._output) {
         _command = args._command;
         _args = args._args;
@@ -220,6 +230,10 @@ public:
     }
 
     ArgumentVector &getArgs() {
+        return _args;
+    }
+
+    const ArgumentVector &getArgs() const {
         return _args;
     }
 
@@ -438,6 +452,9 @@ public:
         _command.toUpperCase();
     }
     String &getCommand() {
+        return _command;
+    }
+    const String &getCommand() const {
         return _command;
     }
 

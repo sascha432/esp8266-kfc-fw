@@ -19,9 +19,61 @@
 #include <debug_helper_disable.h>
 #endif
 
+struct SplitStringIntoInteger {
+
+    using SplitIdListCallback = std::function<bool(long long)>;
+
+    static void split(const char *idStr, SplitIdListCallback callback, int base = 10) {
+        char *endPtr = nullptr;
+        auto nextPtr = idStr;
+        long long value;
+        do {
+            value = strtoll(nextPtr, &endPtr, base);
+            if (!callback(value) || !endPtr) {
+                break;
+            }
+            while(isspace(*endPtr) || *endPtr == ',') {
+                endPtr++;
+            }
+            if (endPtr == nextPtr) {
+                break;
+            }
+            nextPtr = endPtr;
+        } while(*endPtr);
+    }
+};
+
 PROGMEM_STRING_DEF(alerts_storage_filename, WEBUI_ALERTS_SPIFF_STORAGE);
 
 using namespace WebAlerts;
+
+AbstractStorage *AbstractStorage::create(StorageType type) {
+    switch(type) {
+#if WEBUI_ALERTS_USE_MQTT
+        case StorageType::MQTT:
+            return new MQTTStorage();
+#endif
+        case StorageType::FILE:
+            return new FileStorage();
+        default:
+            break;
+    }
+    return nullptr;
+}
+
+#if WEBUI_ALERTS_USE_MQTT
+
+void AbstractStorage::changeStorageToMQTT()
+{
+    delete _storage;
+    // TODO copy local storage to MQTT
+    _storage = AbstractStorage::create(AbstractStorage::StorageType::MQTT);
+    __DBG_printf("_storage %p");
+}
+
+#endif
+
+AbstractStorage *AbstractStorage::_storage = AbstractStorage::create(AbstractStorage::StorageType::FILE);
 
 struct Json {
     static void printHeader(Print &output, time_t time, IdType alertId) {
@@ -45,7 +97,6 @@ struct Json {
 
 };
 
-FileStorage FileStorage::_webAlerts;
 
 bool Base::hasOption(OptionsType option)
 {
@@ -60,11 +111,181 @@ bool Base::hasOption(OptionsType option)
             return KFCConfigurationClasses::System::Flags::getConfig().is_webalerts_enabled;
         case OptionsType::IS_LOGGER:
             return false;
+        case OptionsType::IS_MQTT:
+            return AbstractStorage::getInstance().isMqtt();
         case OptionsType::NONE:
             break;
     }
     return false;
 }
+
+
+#if WEBUI_ALERTS_USE_MQTT
+
+MQTTStorage::MQTTStorage() :
+    AbstractStorage(),
+    MQTTComponent(MQTTComponent::ComponentType::STORAGE)
+{
+}
+
+IdType MQTTStorage::addAlert(const String &message, Type type, ExpiresType expires, AddAlertActionType action)
+{
+    __DBG_printf("addAlert %s", message.c_str());
+    switch(action)  {
+        case AddAlertActionType::ADD: {
+                //TODO
+                bool success = false;
+                auto &alertId = getMaxAlertId();
+                String topic = _getTopic(++alertId, type, expires);
+                if (_canSend()) {
+                    __DBG_printf("topic %s: %s", topic.c_str(), message.c_str());
+                    MQTTClient::getClient()->publish(topic, true, message, 2);
+                    success = true; //TODO currently failures are not reported
+                }
+                if (!success) {
+                    _messages.emplace(topic, message);
+                    // _messages.emplace_back(topic, message);
+                }
+                return alertId;
+            }
+        case AddAlertActionType::REMOVE:
+            dismissAlert(message.toInt());
+            break;
+        case AddAlertActionType::REMOVE_LIST:
+            dismissAlerts(message);
+            break;
+    }
+    return 1;
+}
+
+void MQTTStorage::dismissAlert(IdType id)
+{
+    __DBG_printf("dismissAlerts %d", id);
+    bool success = false;
+    // generate unique id
+    PrintString idStr(F("%08x%03%05x"), time(nullptr), micros(), millis());
+    idStr.printf_P(PSTR("%03x"), micros());
+    String topic = _getRemoveTopic(idStr.c_str());
+    if (_canSend()) {
+        MQTTClient::getClient()->publish(topic, true, String(id), 2);
+        success = true;
+    }
+    if (!success) {
+        _messages.emplace(topic, String(id));
+        //_messages.emplace_back(topic, String(id));
+    }
+}
+
+void MQTTStorage::dismissAlerts(const String &idStr)
+{
+    SplitStringIntoInteger::split(idStr.c_str(), [this](long long value) {
+        auto id = static_cast<IdType>(value);
+        if (id > 0) {
+            dismissAlert(id);
+        }
+        return true;
+    });
+}
+
+void MQTTStorage::onConnect(MQTTClient *client)
+{
+    // subscribe to remove queue first
+    __DBG_printf("subscribe %s", _getRemoveTopic().c_str());
+    client->subscribe(this, _getRemoveTopic());
+    // publish sync message and read all ids queued for removal
+    client->publish(_getRemoveTopic(), false, F("SYNC"), 2);
+    if (_messages.size()) {
+        _startQueue();
+    }
+}
+
+void MQTTStorage::onDisconnect(MQTTClient *client, AsyncMqttClientDisconnectReason reason)
+{
+    __DBG_printf("disconnect %u, queue %u", reason, _messages.size());
+    _stopQueue();
+}
+
+void MQTTStorage::onMessage(MQTTClient *client, char *topic, char *payload, size_t len)
+{
+    auto topicLen = strlen(topic);
+    if (strncmp(topic, _getRemoveTopic().c_str(), topicLen) == 0) {
+        // done reading removal queue, subscribe to messages
+        if (strcmp(payload, PSTR("SYNC")) == 0) {
+            __DBG_printf("subscribe %s", _getMessageTopic(true).c_str());
+            client->subscribe(this, _getMessageTopic(true));
+        }
+        else {
+            __DBG_printf("%s: remove %s", topic, payload);
+            _remove.emplace_back(static_cast<IdType>(atoll(payload)));
+        }
+    }
+    else {
+        IdType id = 0;
+        if (topicLen > -WEBUI_ALERTS_MQTT_TOPIC_RPOS) {
+            char *endPtr = nullptr;
+            id = static_cast<IdType>(strtoul(topic + topicLen + WEBUI_ALERTS_MQTT_TOPIC_RPOS, &endPtr, 16));
+            __DBG_printf("id '%s' end %s id %u / %08x", topic + topicLen + WEBUI_ALERTS_MQTT_TOPIC_RPOS, endPtr, id, id);
+            if (endPtr && *endPtr == '/' && id) {
+                if (std::find(_remove.begin(), _remove.end(), id) != _remove.end()) {
+                    __DBG_printf("removing message %s", topic);
+                    client->publish(topic, false, String(), 2); // publish empty message to remove it
+                }
+            }
+        }
+        __DBG_printf("%s: id %u message %s", topic, id, payload);
+    }
+}
+
+String MQTTStorage::_getTopic(IdType id, Type type, ExpiresType expires) const
+{
+    return MQTTClient::formatTopic(String(), F(WEBUI_ALERTS_MQTT_TOPIC), id, expires, type);
+}
+
+String MQTTStorage::_getMessageTopic(bool wildcard) const
+{
+    return MQTTClient::formatTopic(String(), F(WEBUI_ALERTS_MQTT_MSG_TOPIC), wildcard ? PSTR("+") : emptyString.c_str());
+}
+
+String MQTTStorage::_getRemoveTopic(const char *suffix) const
+{
+    return MQTTClient::formatTopic(String(), F(WEBUI_ALERTS_MQTT_REMOVE_TOPIC), suffix ? suffix : PSTR("+"));
+}
+
+bool MQTTStorage::_canSend() const
+{
+    __DBG_printf("client %p connected %u", MQTTClient::getClient(), MQTTClient::getClient() ? MQTTClient::getClient()->isConnected() : false);
+    return (MQTTClient::getClient() && MQTTClient::getClient()->isConnected());
+}
+
+void MQTTStorage::_startQueue()
+{
+    __DBG_printf("_startQueue");
+
+    // send queue slowly and only if nothing else is in the MQTT queue
+    _queueTimer.add(100, true, [this](Event::CallbackTimerPtr timer) {
+        if (_canSend()) {
+            auto client = MQTTClient::getClient();
+            __DBG_printf("queued %u mqtt queue %u", _messages.size(), client->getQueueSize());
+            if (client->getQueueSize() == 0) {
+                auto &msg = _messages.front();
+                client->publish(msg.getTopic(), true, msg.getMessage(), 2);
+                _messages.pop();
+                //_messages.erase(_messages.begin());
+            }
+        }
+        if (_messages.empty()) {
+            timer->disarm();
+        }
+    });
+}
+
+void MQTTStorage::_stopQueue()
+{
+    __DBG_printf("_stopQueue");
+    _queueTimer.remove();
+}
+
+#endif
 
 IdType FileStorage::addAlert(const String &message, Type type, ExpiresType expires, AddAlertActionType action)
 {
@@ -87,18 +308,33 @@ IdType FileStorage::addAlert(const String &message, Type type, ExpiresType expir
         }
         switch(action) {
             case AddAlertActionType::REMOVE_LIST: {
-                StringVector ids;
-                explode(message.c_str(), ',', ids);
-                file.print('{');
-                if (!ids.empty()) {
-                    uint16_t n = 0;
-                    for(const auto &id: ids) {
-                        if (n++ > 0) {
+                uint16_t count = 0;
+                SplitStringIntoInteger::split(message.c_str(), [this, &count, &file](long long value) {
+                    auto id = static_cast<IdType>(value);
+                    if (id > 0) {
+                        if (count++ == 0) {
+                            file.print('{');
+                        }
+                        else {
                             file.print(F("},\n{"));
                         }
-                        file.printf_P(PSTR("\"i\":%u,\"d\":%u"), ++_alertId, (uint32_t)id.toInt());
+                        file.printf_P(PSTR("\"i\":%u,\"d\":%u"), ++_alertId, id);
                     }
-                }
+                    return true;
+                });
+
+                // StringVector ids;
+                // explode(message.c_str(), ',', ids);
+                // file.print('{');
+                // if (!ids.empty()) {
+                //     uint16_t n = 0;
+                //     for(const auto &id: ids) {
+                //         if (n++ > 0) {
+                //             file.print(F("},\n{"));
+                //         }
+                //         file.printf_P(PSTR("\"i\":%u,\"d\":%u"), ++_alertId, (uint32_t)id.toInt());
+                //     }
+                // }
             }
             break;
             case AddAlertActionType::REMOVE: {

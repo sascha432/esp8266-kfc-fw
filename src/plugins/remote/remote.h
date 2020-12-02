@@ -7,6 +7,7 @@
 #include <Arduino_compat.h>
 #include "../src/plugins/mqtt/mqtt_client.h"
 #include "remote_def.h"
+#include "remote_base.h"
 #include "remote_form.h"
 #include <plugins.h>
 
@@ -66,7 +67,9 @@ private:
         _buttonsLocked &= ~(1 << button);
     }
 
+#if HOME_ASSISTANT_INTEGRATION
     HassPlugin &_hass;
+#endif
 };
 
 #include <debug_helper_disable.h>

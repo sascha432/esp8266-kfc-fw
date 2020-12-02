@@ -4,6 +4,10 @@
 
 // https://developers.home-assistant.io/docs/en/external_api_rest.html#post-api-services-lt-domain-lt-service
 
+#if HOME_ASSISTANT_INTEGRATION == 0
+#error HOME_ASSISTANT_INTEGRATION not set
+#endif
+
 #include <KFCForms.h>
 #include <KFCJson.h>
 #include <EventScheduler.h>

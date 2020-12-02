@@ -1,15 +1,21 @@
+/**
+ * Author: sascha_lammers@gmx.de
+ */
 
+#include <Arduino_compat.h>
+#include <kfc_fw_config.h>
 #include "remote_button.h"
 
 using namespace RemoteControl;
 
 void Button::event(EventType eventType, uint32_t now)
 {
-    auto &config = _base->_getConfig();
+    //auto &config = _base->_getConfig();
     switch (eventType) {
         case EventType::PRESSED:
             _pressed = true;
             break;
+
         case EventType::RELEASED:
             _pressed = false;
             break;
@@ -51,7 +57,7 @@ void Button::event(EventType eventType, uint32_t now)
         //     }
         //     break;
         default:
-            __LDBG_printf("%s IGNORED event=%s", name(), eventTypeToString(eventType));
+            __LDBG_printf("%s IGNORED event=%s", name().c_str(), eventTypeToString(eventType));
             break;
     }
 }

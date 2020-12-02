@@ -2,9 +2,12 @@
  * Author: sascha_lammers@gmx.de
  */
 
+#if HOME_ASSISTANT_INTEGRATION == 0
+#error HOME_ASSISTANT_INTEGRATION not set
+#endif
+
 #include <Configuration.h>
 #include <kfc_fw_config.h>
-
 namespace KFCConfigurationClasses {
 
     void Plugins::HomeAssistant::defaults()

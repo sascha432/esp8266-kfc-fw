@@ -181,8 +181,8 @@ namespace WebAlerts {
         virtual ~AbstractStorage() {}
 #endif
 
-        static AbstractStorage *create(StorageType type);
 #if WEBUI_ALERTS_USE_MQTT
+        static AbstractStorage *create(StorageType type);
         static void changeStorageToMQTT();
 #endif
 

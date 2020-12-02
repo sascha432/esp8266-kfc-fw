@@ -219,7 +219,7 @@ void SyslogPlugin::getStatus(Print &output)
 
 void SyslogPlugin::prepareDeepSleep(uint32_t sleepTimeMillis)
 {
-    kill((sleepTimeMillis > 60000) ? 1000 : 250);
+    _kill((sleepTimeMillis > 60000) ? 1000 : 250);
 }
 
 #endif

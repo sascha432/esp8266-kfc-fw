@@ -132,6 +132,7 @@ public:
 
 #if ENABLE_DEEP_SLEEP
 public:
+    static constexpr uint32_t kDeepSleepDisabled = ~0;
     static uint32_t _deepSleepWifiTime;
 #endif
 };

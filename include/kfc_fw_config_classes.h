@@ -652,6 +652,8 @@ namespace KFCConfigurationClasses {
 
     struct Plugins {
 
+#if HOME_ASSISTANT_INTEGRATION
+
         // --------------------------------------------------------------------
         // Home Assistant
 
@@ -784,6 +786,8 @@ namespace KFCConfigurationClasses {
             char token3[250];
             uint8_t *actions;
         };
+
+#endif
 
         // --------------------------------------------------------------------
         // Remote
@@ -1628,7 +1632,9 @@ typedef struct  {
         // --------------------------------------------------------------------
         // Plugin Structure
 
+#if HOME_ASSISTANT_INTEGRATION
         HomeAssistant homeassistant;
+#endif
         RemoteControl remotecontrol;
         IOTSwitch iotswitch;
         WeatherStation weatherstation;
@@ -1650,7 +1656,6 @@ typedef struct  {
     // Main Config Structure
 
     struct MainConfig {
-
         System system;
         Network network;
         Plugins plugins;

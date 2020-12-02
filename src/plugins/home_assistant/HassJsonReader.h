@@ -5,6 +5,10 @@
 
 #pragma once
 
+#if HOME_ASSISTANT_INTEGRATION == 0
+#error HOME_ASSISTANT_INTEGRATION not set
+#endif
+
 #include <KFCJson.h>
 
 namespace HassJsonReader {

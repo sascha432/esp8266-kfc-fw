@@ -12,9 +12,9 @@ namespace KFCConfigurationClasses {
         config._H_SET(MainConfig().plugins.remotecontrol, Plugins::RemoteControl());
     }
 
-    Plugins::RemoteControl Plugins::RemoteControl::get()
-    {
-        return config._H_GET(MainConfig().plugins.remotecontrol);
-    }
+    // Plugins::RemoteControl Plugins::RemoteControl::get()
+    // {
+    //     return config._H_GET(MainConfig().plugins.remotecontrol);
+    // }
 
 }

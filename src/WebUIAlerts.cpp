@@ -47,6 +47,8 @@ PROGMEM_STRING_DEF(alerts_storage_filename, WEBUI_ALERTS_SPIFF_STORAGE);
 
 using namespace WebAlerts;
 
+#if WEBUI_ALERTS_USE_MQTT
+
 AbstractStorage *AbstractStorage::create(StorageType type) {
     switch(type) {
 #if WEBUI_ALERTS_USE_MQTT
@@ -61,8 +63,6 @@ AbstractStorage *AbstractStorage::create(StorageType type) {
     return nullptr;
 }
 
-#if WEBUI_ALERTS_USE_MQTT
-
 void AbstractStorage::changeStorageToMQTT()
 {
     delete _storage;
@@ -71,9 +71,15 @@ void AbstractStorage::changeStorageToMQTT()
     __DBG_printf("_storage %p");
 }
 
+AbstractStorage *AbstractStorage::_storage = AbstractStorage::create(AbstractStorage::StorageType::FILE);
+
+#else
+
+static FileStorage _fileStorage;
+AbstractStorage *AbstractStorage::_storage = &_fileStorage;
+
 #endif
 
-AbstractStorage *AbstractStorage::_storage = AbstractStorage::create(AbstractStorage::StorageType::FILE);
 
 struct Json {
     static void printHeader(Print &output, time_t time, IdType alertId) {

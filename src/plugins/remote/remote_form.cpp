@@ -2,6 +2,8 @@
   Author: sascha_lammers@gmx.de
 */
 
+#include <Arduino_compat.h>
+#include <kfc_fw_config.h>
 #include <Form.h>
 #include "Utility/ProgMemHelper.h"
 #include "remote_form.h"
@@ -43,6 +45,9 @@ void RemoteControlPlugin::createConfigureForm(FormCallbackType type, const Strin
     mainGroup.end();
 
     FormUI::Container::List actions(0, F("None"));
+
+#if HOME_ASSISTANT_INTEGRATION
+
     Plugins::HomeAssistant::ActionVector vector;
     Plugins::HomeAssistant::getActions(vector);
 
@@ -58,6 +63,8 @@ void RemoteControlPlugin::createConfigureForm(FormCallbackType type, const Strin
         }
         actions.emplace_back(action.getId(), str);
     }
+
+#endif
 
     PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, IOT_REMOTE_CONTROL_BUTTON_COUNT, grp, spa, lpa, ra);
 

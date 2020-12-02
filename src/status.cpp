@@ -273,7 +273,7 @@ void WiFi_get_status(Print &out)
 #endif
 
 #if ENABLE_DEEP_SLEEP
-    if (resetDetector.hasWakeUpDetected() && ResetDetectorPlugin::_deepSleepWifiTime != ~0) {
+    if (resetDetector.hasWakeUpDetected() && ResetDetectorPlugin::_deepSleepWifiTime != ResetDetectorPlugin::kDeepSleepDisabled) {
         out.print(F(HTML_S(br) HTML_S(br) HTML_S(strong) "Quick connect:" HTML_E(strong) HTML_S(br)));
         out.printf_P(PSTR("WiFi connected established after %ums" HTML_S(br)), ResetDetectorPlugin::_deepSleepWifiTime);
     }

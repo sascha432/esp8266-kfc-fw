@@ -9,9 +9,11 @@
 #include "web_server.h"
 #include "blink_led_timer.h"
 #include "remote.h"
-#include "../src/plugins/home_assistant/home_assistant.h"
-#include "plugins_menu.h"
 #include "remote_button.h"
+#if HOME_ASSISTANT_INTEGRATION
+#include "../src/plugins/home_assistant/home_assistant.h"
+#endif
+#include "plugins_menu.h"
 
 #if DEBUG_IOT_REMOTE_CONTROL
 #include <debug_helper_enable.h>
@@ -46,8 +48,11 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
 
 RemoteControlPlugin::RemoteControlPlugin() :
     PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(RemoteControlPlugin)),
-    Base(),
+    Base()
+#if HOME_ASSISTANT_INTEGRATION
+    ,
     _hass(HassPlugin::getInstance())
+#endif
 {
     REGISTER_PLUGIN(this, "RemoteControlPlugin");
     // for(auto pin : _buttonPins) {
@@ -415,12 +420,13 @@ void RemoteControlPlugin::_sendEvents()
                     break;
             }
 
+#if HOME_ASSISTANT_INTEGRATION
             auto action = Plugins::HomeAssistant::getAction(actionId);
             if (action.getId()) {
                 // Logger_notice(F("firing event: %s"), event.toString().c_str());
 
                 _lockButton(event.getButton());
-                auto button = event.getButton();
+                // auto button = event.getButton();
                 //_events.erase(iterator);
                 event.remove();
 
@@ -430,6 +436,7 @@ void RemoteControlPlugin::_sendEvents()
                 });
                 return;
             }
+#endif
 
             __LDBG_printf("removing event with no action");
             event.remove();

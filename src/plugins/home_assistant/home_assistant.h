@@ -4,6 +4,10 @@
 
 #pragma once
 
+#if HOME_ASSISTANT_INTEGRATION == 0
+#error HOME_ASSISTANT_INTEGRATION not set
+#endif
+
 #include <Arduino_compat.h>
 #include <vector>
 #include <./plugins/mqtt/mqtt_client.h>

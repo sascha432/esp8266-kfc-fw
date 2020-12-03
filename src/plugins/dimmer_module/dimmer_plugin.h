@@ -26,7 +26,7 @@ public:
     }
 
     virtual void createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request) override {
-        DimmerModuleForm::_createConfigureForm(type, formName, form, request);
+        DimmerModuleForm::_createConfigureForm(type, formName, form);
     }
 
     virtual void getValues(JsonArray &array) override {

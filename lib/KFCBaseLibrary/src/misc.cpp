@@ -1151,7 +1151,7 @@ uint64_t getSystemUptimeMillis()
 IPAddress convertToIPAddress(const char *hostname)
 {
     IPAddress addr;
-    if (addr.fromString(hostname)) {
+    if (addr.fromString(hostname) && IPAddress_isValid(addr)) {
         return addr;
     }
     return IPAddress();

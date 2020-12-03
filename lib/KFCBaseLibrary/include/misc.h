@@ -562,7 +562,16 @@ String enumToString(T value) {
 }
 
 // auto address = convertToIPAddress("192.168.0.1");
-// if (address.isSet()) { //we can use the address }
+// if (IPAddress_isValid(address)) { //we can use the address }
+
+
+// use instead of address.isSet()
+// performs additional checks to validate the stored IP address
+// some versions of the framework had issues doing it correctly
+static inline bool IPAddress_isValid(const IPAddress &address) {
+    return address != (uint32_t)0 && address != (uint32_t)0xffffffffU && address.isSet();
+}
+
 IPAddress convertToIPAddress(const char *hostname);
 
 inline IPAddress convertToIPAddress(const String &hostname) {

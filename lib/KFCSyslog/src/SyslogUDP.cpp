@@ -86,7 +86,7 @@ void SyslogUDP::transmit(const SyslogQueueItem &item)
             break;
         }
         if (_host) {
-            if (WiFi.hostByName(_host, _address) && _address.isSet() && _address != INADDR_NONE) { // try to resolve host and store its IP
+            if (WiFi.hostByName(_host, _address) && IPAddress_isValid(_address)) { // try to resolve host and store its IP
                 free(_host);
                 _host = nullptr;
             }

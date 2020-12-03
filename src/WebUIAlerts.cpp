@@ -382,7 +382,7 @@ void FileStorage::dismissAlerts(const String &ids)
 
 File FileStorage::_openAlertStorage(bool readOnly)
 {
-    __LDBG_printf("file=%s read_only=%d safe_mode=%u", SPGM(alert_storage_filename), readOnly, config.isSafeMode());
+    __LDBG_printf("file=%s read_only=%d safe_mode=%u", SPGM(alerts_storage_filename), readOnly, config.isSafeMode());
     if (config.isSafeMode()) {
         return BSFS.open(FSPGM(alerts_storage_filename), readOnly ? fs::FileOpenMode::read : fs::FileOpenMode::appendplus);
     }

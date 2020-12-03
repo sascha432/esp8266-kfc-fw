@@ -1999,10 +1999,6 @@
         "use_counter": 16,
         "default": "/.pvt/alerts.json"
     },
-    "alert_storage_filename": {
-        "use_counter": 1,
-        "auto": "alert storage filename"
-    },
     "webui_json_hb": {
         "use_counter": 2,
         "default": "hb"

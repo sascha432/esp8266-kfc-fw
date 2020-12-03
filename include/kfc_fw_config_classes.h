@@ -799,6 +799,17 @@ namespace KFCConfigurationClasses {
         class RemoteControlConfig {
         public:
 
+            enum class ActionProtocolType {
+                NONE = 0,
+                MQTT,
+                REST,
+                TCP,
+                UDP,
+                MAX
+            };
+
+            using ActionIdType = uint16_t;
+
             typedef struct __attribute__packed__ ComboAction_t {
                 using Type = ComboAction_t;
                 CREATE_UINT16_BITFIELD_MIN_MAX(shortpress, 16, 0, 65535, 0, 1);
@@ -811,7 +822,7 @@ namespace KFCConfigurationClasses {
                 CREATE_UINT16_BITFIELD_MIN_MAX(shortpress, 16, 0, 65535, 0, 1);
                 CREATE_UINT16_BITFIELD_MIN_MAX(longpress, 16, 0, 65535, 0, 1);
                 CREATE_UINT16_BITFIELD_MIN_MAX(repeat, 16, 0, 65535, 0, 1);
-                ComboAction_t combo[IOT_REMOTE_CONTROL_BUTTON_COUNT];
+                ComboAction_t combo[IOT_REMOTE_CONTROL_BUTTON_COUNT - 1];
             } Action_t;
 
             typedef struct __attribute__packed__ Config_t {

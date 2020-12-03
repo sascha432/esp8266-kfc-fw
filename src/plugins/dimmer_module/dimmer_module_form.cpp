@@ -14,7 +14,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-void DimmerModuleForm::_createConfigureForm(PluginComponent::FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
+void DimmerModuleForm::_createConfigureForm(PluginComponent::FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form)
 {
     if (type == PluginComponent::FormCallbackType::SAVE) {
         writeConfig(Plugins::Dimmer::getWriteableConfig());

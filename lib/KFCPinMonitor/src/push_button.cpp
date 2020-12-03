@@ -14,9 +14,11 @@
 
 using namespace PinMonitor;
 
+#if PIN_MONITOR_BUTTON_GROUPS
 SingleClickGroupPtr::SingleClickGroupPtr(PushButton &button) : PtrType(button._singleClickGroup)
 {
 }
+#endif
 
 void PushButton::event(StateType state, uint32_t now)
 {
@@ -26,8 +28,14 @@ void PushButton::event(StateType state, uint32_t now)
         _startTimer = now;
         _startTimerRunning = true;
         _repeatCount = 0;
+
+#if PIN_MONITOR_BUTTON_GROUPS
         _singleClickGroup->pressed();
         __LDBG_printf("%s PRESSED sp_timer=%u sp_count=%u", name(), _singleClickGroup->isTimerRunning(this), _singleClickGroup->getRepeatCount());
+#else
+        __LDBG_printf("%s PRESSED", name());
+#endif
+
         _fireEvent(EventType::DOWN);
         return;
 
@@ -44,9 +52,14 @@ void PushButton::event(StateType state, uint32_t now)
     _startTimerRunning = false;
 }
 
+void PushButton::event(EventType eventType, uint32_t now)
+{
+    __LDBG_printf("PURE VIRTUAL: event_type=%u now=%u", eventType, now);
+}
+
 void PushButton::loop()
 {
-    if (_startTimerRunning) {
+    if (_startTimerRunning && _repeatTime) {
         _duration = get_time_diff(_startTimer, millis());
         // between down and up
         if (_duration >= _longpressTime) {
@@ -60,6 +73,7 @@ void PushButton::loop()
             }
         }
     }
+#if PIN_MONITOR_BUTTON_GROUPS
     else if (_singleClickGroup->isTimerRunning(this)) {
         // after up and next down
         uint16_t duration = _singleClickGroup->getDuration();
@@ -75,14 +89,18 @@ void PushButton::loop()
             _singleClickGroup->stopTimer(this);
         }
     }
+#endif
 }
 
 void PushButton::_buttonReleased()
 {
     uint32_t ms = millis();
     _duration = get_time_diff(_startTimer, ms);
+
+#if PIN_MONITOR_BUTTON_GROUPS
     _singleClickGroup->released(this, ms);
     __LDBG_printf("%s sp_timer=%u sp_count=%u", name(), _singleClickGroup->isTimerRunning(this), _singleClickGroup->getRepeatCount());
+#endif
 
     if (_duration < _clickTime) {
 
@@ -91,15 +109,15 @@ void PushButton::_buttonReleased()
         return;
 
     }
+#if PIN_MONITOR_BUTTON_GROUPS
     // reset click counter and timer after _clickTime is over
     _singleClickGroup->stopTimer(this);
+#endif
 
     if (_duration < _longpressTime) {
-
         __LDBG_printf("%s LONG_CLICK=%u duration=%u", name(), _longpressTime, _duration);
         _fireEvent(EventType::LONG_CLICK);
         return;
-
     }
 }
 
@@ -146,6 +164,10 @@ void PushButton::dumpConfig(Print &output)
         output.print(eventTypeToString((EventType)((int)_subscribedEvents & (1 << i))));
     }
 
+#if PIN_MONITOR_BUTTON_GROUPS
     output.printf_P(PSTR(" sp_time=%u lp_time=%u rep_time=%u steps=%u sp_group=%p(%u) timeout=%u"), _clickTime, _longpressTime, _repeatTime, _singleClickSteps, _singleClickGroup.get(), _singleClickGroup.use_count(), _singleClickGroup->getTimeout());
+#else
+    output.printf_P(PSTR(" sp_time=%u lp_time=%u rep_time=%u steps=%u"), _clickTime, _longpressTime, _repeatTime, _singleClickSteps);
+#endif
 }
 #endif

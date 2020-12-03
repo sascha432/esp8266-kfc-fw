@@ -12,6 +12,10 @@
 #define DEBUG_PIN_MONITOR                                       0
 #endif
 
+#ifndef DEBUG_PIN_MONITOR_BUTTON_NAME
+#define DEBUG_PIN_MONITOR_BUTTON_NAME                           DEBUG_PIN_MONITOR
+#endif
+
 #if DEBUG_PIN_MONITOR
 #ifndef DEBUG_PIN_MONITOR_EVENTS
 #define DEBUG_PIN_MONITOR_EVENTS                                0
@@ -24,6 +28,16 @@
 // milliseconds
 #ifndef PIN_MONITOR_DEBOUNCE_TIME
 #define PIN_MONITOR_DEBOUNCE_TIME                               10
+#endif
+
+// suport for button groups
+#ifndef PIN_MONITOR_BUTTON_GROUPS
+#define PIN_MONITOR_BUTTON_GROUPS                               0
+#endif
+
+// default input state for active
+#ifndef PIN_MONITOR_ACTIVE_STATE
+#define PIN_MONITOR_ACTIVE_STATE                                ActiveStateType::PRESSED_WHEN_HIGH
 #endif
 
 #include "debounce.h"

@@ -19,7 +19,7 @@ namespace PinMonitor {
 
         // arg can be used as identifier for removal
         // see Monitor::detach(const void *)
-        Pin(uint8_t pin, const void *arg, StateType states = StateType::UP_DOWN, ActiveStateType activeState = ActiveStateType::PRESSED_WHEN_HIGH) :
+        Pin(uint8_t pin, const void *arg, StateType states = StateType::UP_DOWN, ActiveStateType activeState = PIN_MONITOR_ACTIVE_STATE) :
             _arg(arg),
             _eventCounter(0),
             _states(states),
@@ -78,6 +78,11 @@ namespace PinMonitor {
         // change events to receive
         inline void setEvents(StateType states) {
             _states = states;
+        }
+
+        inline bool isPressed() const {
+            auto tmp = _activeState == static_cast<bool>(ActiveStateType::INVERTED) ? getInvertedState(_states) : _states;
+            return ((uint8_t)tmp & (uint8_t)StateType::DOWN) != (uint8_t)StateType::NONE;
         }
 
     private:

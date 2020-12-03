@@ -7,6 +7,12 @@
 #include <MicrosTimer.h>
 #include "pin.h"
 
+#if DEBUG_PIN_MONITOR
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
 namespace PinMonitor {
 
     enum class PushButtonEventType : uint16_t {
@@ -44,6 +50,8 @@ namespace PinMonitor {
     };
 
     class PushButton;
+
+#if PIN_MONITOR_BUTTON_GROUPS
 
     // Object to manage a group of buttons with shared properties
     class SingleClickGroup {
@@ -118,12 +126,23 @@ namespace PinMonitor {
         }
     };
 
+#endif
+
     class PushButtonConfig {
     public:
         using EventType = PushButtonEventType;
 
     public:
-        PushButtonConfig(EventType subscribedEvents = EventType::ANY, uint16_t clickTime = 250, uint16_t longpressTime = 600, uint16_t repeatTime = 100, uint16_t singleClickSteps = 15) :
+        // PushButtonConfig() :
+        //     _subscribedEvents(EventType::NONE),
+        //     _clickTime(350),
+        //     _singleClickSteps(1),
+        //     _longpressTime(1500),
+        //     _repeatTime(2500)
+        // {
+        // }
+
+        PushButtonConfig(EventType subscribedEvents = EventType::NONE, uint16_t clickTime = 250, uint16_t longpressTime = 600, uint16_t repeatTime = 100, uint16_t singleClickSteps = 15) :
             _subscribedEvents(subscribedEvents),
             _clickTime(clickTime),
             _singleClickSteps(singleClickSteps),
@@ -151,33 +170,46 @@ namespace PinMonitor {
     class PushButton : public Pin, public PushButtonConfig {
     public:
         PushButton() :
-            Pin(0, nullptr, StateType::UP_DOWN, ActiveStateType::ACTIVE_HIGH),
+            Pin(0, nullptr, StateType::UP_DOWN, PIN_MONITOR_ACTIVE_STATE),
             PushButtonConfig(),
+#if PIN_MONITOR_BUTTON_GROUPS
             _singleClickGroup(),
+#endif
             _startTimer(0),
             _duration(0),
             _repeatCount(0),
             _startTimerRunning(false)
-        {}
+        {
+#if DEBUG_PIN_MONITOR_BUTTON_NAME
+            setName(F("invalid"));
+#endif
+        }
 
-        PushButton(uint8_t pin, const void *arg, const PushButtonConfig &config, SingleClickGroupPtr singleClickGroup = SingleClickGroupPtr(), ActiveStateType activeLow = ActiveStateType::PRESSED_WHEN_HIGH) :
+        PushButton(uint8_t pin, const void *arg, const PushButtonConfig &config,
+#if PIN_MONITOR_BUTTON_GROUPS
+            SingleClickGroupPtr singleClickGroup = SingleClickGroupPtr(),
+#endif
+            ActiveStateType activeLow = PIN_MONITOR_ACTIVE_STATE) :
+
             Pin(pin, arg, StateType::UP_DOWN, activeLow),
             PushButtonConfig(config),
+#if PIN_MONITOR_BUTTON_GROUPS
             _singleClickGroup(singleClickGroup),
+#endif
             _startTimer(0),
             _duration(0),
             _repeatCount(0),
             _startTimerRunning(false)
 
         {
-#if DEBUG_PIN_MONITOR
+#if DEBUG_PIN_MONITOR_BUTTON_NAME
             setName(String((uint32_t)arg, 16) + ':' + String((uint32_t)this, 16));
 #endif
         }
         ~PushButton() {}
 
     public:
-        virtual void event(EventType eventType, uint32_t now) {}
+        virtual void event(EventType eventType, uint32_t now);
         virtual void loop() override;
 
 #if DEBUG
@@ -185,32 +217,16 @@ namespace PinMonitor {
 #endif
 
     protected:
+        // event for StateType is final
         virtual void event(StateType state, uint32_t now) final;
 
-        void _buttonReleased();
-
-        inline bool _fireEvent(EventType eventType) {
-            if (hasEvent(eventType)) {
-                event(eventType, millis());
-                return true;
-            }
-            return false;
-        }
-
         const __FlashStringHelper *eventTypeToString(EventType eventType);
+        void _buttonReleased();
+        bool _fireEvent(EventType eventType);
+        void _reset();
 
-    protected:
-        friend SingleClickGroupPtr;
-
-        // pointer to the group settings
-        SingleClickGroupPtr _singleClickGroup;
-        uint32_t _startTimer;
-        uint32_t _duration;
-        uint16_t _repeatCount: 15;
-        uint16_t _startTimerRunning: 1;
-
-#if DEBUG_PIN_MONITOR
-    protected:
+#if DEBUG_PIN_MONITOR_BUTTON_NAME
+    public:
         void setName(const String &name) {
             _name = String(F("name=<")) + name + '>';
         }
@@ -222,6 +238,39 @@ namespace PinMonitor {
     private:
         String _name;
 #endif
+
+
+    protected:
+#if PIN_MONITOR_BUTTON_GROUPS
+        friend SingleClickGroupPtr;
+        // pointer to the group settings
+        SingleClickGroupPtr _singleClickGroup;
+#endif
+
+        uint32_t _startTimer;
+        uint32_t _duration;
+        uint16_t _repeatCount: 15;
+        uint16_t _startTimerRunning: 1;
     };
 
+    inline bool PushButton::_fireEvent(EventType eventType)
+    {
+        __LDBG_printf("event_type=%u has_event=%u", eventType, hasEvent(eventType));
+        if (hasEvent(eventType)) {
+            event(eventType, millis());
+            return true;
+        }
+        return false;
+    }
+
+    inline void PushButton::_reset()
+    {
+        _startTimer = 0;
+        _duration = 0;
+        _repeatCount = 0;
+        _startTimerRunning = false;
+    }
+
 }
+
+#include <debug_helper_disable.h>

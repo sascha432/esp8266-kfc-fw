@@ -5,10 +5,12 @@
 #pragma once
 
 #include <Arduino_compat.h>
+#include <Scheduler.h>
 #include "../src/plugins/mqtt/mqtt_client.h"
 #include "remote_def.h"
 #include "remote_base.h"
 #include "remote_form.h"
+#include "remote_action.h"
 #include <plugins.h>
 
 using namespace RemoteControl;
@@ -32,10 +34,6 @@ public:
 #endif
 
 public:
-    // static void onButtonPressed(Button& btn);
-    // static void onButtonHeld(Button& btn, uint16_t duration, uint16_t repeatCount);
-    // static void onButtonReleased(Button& btn, uint16_t duration);
-
     static void loop();
     static void wifiCallback(WiFiCallbacks::EventType event, void *payload);
 
@@ -44,8 +42,12 @@ public:
     static void deepSleepHandler(AsyncWebServerRequest *request);
 
 private:
-    virtual void _onButtonHeld(Button& btn, uint16_t duration, uint16_t repeatCount);
-    virtual void _onButtonReleased(Button& btn, uint16_t duration);
+    virtual void _onShortPress(Button &button);
+    virtual void _onLongPress(Button &button);
+    virtual void _onRepeat(Button &button);
+
+    void _preSetup();
+    void _updateButtonConfig();
     void _loop();
     void _wifiConnected();
     bool _isUsbPowered() const;
@@ -54,6 +56,10 @@ private:
     void _addButtonEvent(ButtonEvent &&event);
     void _sendEvents();
     void _scheduleSendEvents();
+
+    Action *_getAction(ActionIdType id) const;
+    // resolve all hostnames that are marked as resolve once and store them as IP
+    void _resolveActionHostnames();
 
     bool _isButtonLocked(uint8_t button) const {
         return _buttonsLocked & (1 << button);
@@ -70,6 +76,13 @@ private:
 #if HOME_ASSISTANT_INTEGRATION
     HassPlugin &_hass;
 #endif
+
+private:
+    using ActionPtr = std::unique_ptr<Action>;
+    using ActionVector = std::vector<ActionPtr>;
+
+    ActionVector _actions;
+    Event::Timer _loopTimer;
 };
 
 #include <debug_helper_disable.h>

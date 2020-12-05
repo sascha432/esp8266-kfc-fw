@@ -16,17 +16,11 @@ namespace PinMonitor {
         Monitor();
         ~Monitor();
 
-        inline void setDebounceTime(uint8_t debounceTime) {
-            _debounceTime = debounceTime;
-        }
-        inline uint8_t getDebounceTime() const {
-            return _debounceTime;
-        }
+        void setDebounceTime(uint8_t debounceTime);
+        uint8_t getDebounceTime() const;
 
         // set default pin mode for adding new pins
-        inline void setDefaultPinMode(uint8_t mode) {
-            _pinMode = mode;
-        }
+        void setDefaultPinMode(uint8_t mode);
 
         // if the main loop is not executed fast enough, set useTimer to true
         void begin(bool useTimer = false);
@@ -56,16 +50,9 @@ namespace PinMonitor {
         void detach(Pin *pin);
         void detach(const void *arg);
 
-        inline void detach(Iterator begin, Iterator end) {
-            _detach(begin, end, false);
-        }
-        inline void detach(Pin &pin) {
-            detach(&pin);
-        }
-
-        const Vector &getVector() const {
-            return _handlers;
-        }
+        void detach(Iterator begin, Iterator end);
+        void detach(Pin &pin);
+        const Vector &getHandlers() const;
 
     public:
         static void loop();
@@ -85,8 +72,8 @@ namespace PinMonitor {
         void _event(uint8_t pin, StateType state, uint32_t now);
 
     private:
-        Vector _handlers;
-        PinVector _pins;
+        Vector _handlers;       // button handler, base class Pin
+        PinVector _pins;        // pins class HardwarePin
         uint32_t _lastRun;
         Event::Timer *_loopTimer;
 #if DEBUG
@@ -96,6 +83,37 @@ namespace PinMonitor {
         uint8_t _pinMode;
         uint8_t _debounceTime;
     };
+
+    inline void Monitor::setDebounceTime(uint8_t debounceTime)
+    {
+        _debounceTime = debounceTime;
+    }
+
+    inline uint8_t Monitor::getDebounceTime() const
+    {
+        return _debounceTime;
+    }
+
+    // set default pin mode for adding new pins
+    inline void Monitor::setDefaultPinMode(uint8_t mode)
+    {
+        _pinMode = mode;
+    }
+
+    inline void Monitor::detach(Iterator begin, Iterator end)
+    {
+        _detach(begin, end, false);
+    }
+
+    inline void Monitor::detach(Pin &pin)
+    {
+        detach(&pin);
+    }
+
+    inline const Vector &Monitor::getHandlers() const
+    {
+        return _handlers;
+    }
 
 }
 

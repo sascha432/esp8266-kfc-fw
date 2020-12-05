@@ -104,7 +104,7 @@ void PushButton::_buttonReleased()
 
     if (_duration < _clickTime) {
 
-        __LDBG_printf("%s CLICK=%u duration=%u", name(), _clickTime, _duration);
+        __LDBG_printf("%s CLICK=%u duration=%u repeat=%u", name(), _clickTime, _duration, _repeatCount);
         _fireEvent(EventType::CLICK);
         return;
 

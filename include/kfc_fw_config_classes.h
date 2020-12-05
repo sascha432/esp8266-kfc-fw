@@ -810,33 +810,73 @@ namespace KFCConfigurationClasses {
 
             using ActionIdType = uint16_t;
 
+            // typedef struct __attribute__packed__ ComboAction_t {
+            //     using Type = ComboAction_t;
+            //     CREATE_UINT16_BITFIELD_MIN_MAX(shortpress, 16, 0, 65535, 0, 1);
+            //     CREATE_UINT16_BITFIELD_MIN_MAX(longpress, 16, 0, 65535, 0, 1);
+            //     CREATE_UINT16_BITFIELD_MIN_MAX(repeat, 16, 0, 65535, 0, 1);
+            // } ComboAction_t;
+
             typedef struct __attribute__packed__ ComboAction_t {
                 using Type = ComboAction_t;
-                CREATE_UINT16_BITFIELD_MIN_MAX(shortpress, 16, 0, 65535, 0, 1);
-                CREATE_UINT16_BITFIELD_MIN_MAX(longpress, 16, 0, 65535, 0, 1);
-                CREATE_UINT16_BITFIELD_MIN_MAX(repeat, 16, 0, 65535, 0, 1);
+                CREATE_UINT16_BITFIELD_MIN_MAX(time, 13, 0, 8000, 1000, 500);
+                CREATE_UINT16_BITFIELD_MIN_MAX(btn0, 2, 0, 3, 0, 1);
+                CREATE_UINT16_BITFIELD_MIN_MAX(btn1, 2, 0, 3, 0, 1);
             } ComboAction_t;
+
+            typedef struct __attribute__packed__ MultiClick_t {
+                using Type = MultiClick_t;
+                CREATE_UINT16_BITFIELD_MIN_MAX(action, 16, 0, 65535, 0);
+                CREATE_UINT16_BITFIELD_MIN_MAX(clicks, 4, 3, 15, 0);
+            } MultiClick_t;
 
             typedef struct __attribute__packed__ Action_t {
                 using Type = Action_t;
-                CREATE_UINT16_BITFIELD_MIN_MAX(shortpress, 16, 0, 65535, 0, 1);
-                CREATE_UINT16_BITFIELD_MIN_MAX(longpress, 16, 0, 65535, 0, 1);
-                CREATE_UINT16_BITFIELD_MIN_MAX(repeat, 16, 0, 65535, 0, 1);
-                ComboAction_t combo[IOT_REMOTE_CONTROL_BUTTON_COUNT - 1];
+                CREATE_UINT16_BITFIELD_MIN_MAX(single_click, 16, 0, 65535, 0);
+                CREATE_UINT16_BITFIELD_MIN_MAX(double_click, 16, 0, 65535, 0);
+                CREATE_UINT16_BITFIELD_MIN_MAX(longpress, 16, 0, 65535, 0);
+                CREATE_UINT16_BITFIELD_MIN_MAX(held, 16, 0, 65535, 0);
+                CREATE_UINT16_BITFIELD_MIN_MAX(pressed, 16, 0, 65535, 0);
+                CREATE_UINT16_BITFIELD_MIN_MAX(released, 16, 0, 65535, 0);
+                MultiClick_t multi_click[4];
+
+                bool hasAction() const {
+                    return single_click || double_click || longpress || held || pressed || released;
+                }
+
+                bool hasMultiClick() const {
+                    for(uint8_t i = 0; i < 4; i++) {
+                        if (multi_click[i].action && multi_click[i].clicks > 2) {
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+                int8_t getMultiClickIndex(uint8_t clicks) const {
+                    for(uint8_t i = 0; i < 4; i++) {
+                        if (multi_click[i].action && multi_click[i].clicks == clicks) {
+                            return i;
+                        }
+                    }
+                    return -1;
+                }
             } Action_t;
 
             typedef struct __attribute__packed__ Config_t {
                 using Type = Config_t;
-                CREATE_UINT32_BITFIELD_MIN_MAX(autoSleepTime, 8, 0, 255, 2, 1);
-                CREATE_UINT32_BITFIELD_MIN_MAX(deepSleepTime, 14, 0, 16383, 0, 1);         // ESP8266 max. ~14500 seconds, 0 = indefinitely
-                CREATE_UINT32_BITFIELD_MIN_MAX(longpressTime, 16, 0, 65535, 750, 1);
-                CREATE_UINT32_BITFIELD_MIN_MAX(repeatTime, 16, 0, 65535, 500, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(autoSleepTime, 10, 0, 1000, 2, 1);           // seconds
+                CREATE_UINT32_BITFIELD_MIN_MAX(deepSleepTime, 16, 0, 44640, 0, 1);          // in minutes / max. 31 days, 0 = indefinitely
+                CREATE_UINT32_BITFIELD_MIN_MAX(shortpressTime, 11, 0, 2000, 350, 1);        // millis
+                CREATE_UINT32_BITFIELD_MIN_MAX(longpressTime, 13, 0, 8000, 750, 1);         // millis
+                CREATE_UINT32_BITFIELD_MIN_MAX(repeatTime, 12, 0, 4000, 500, 1);            // millis
 
                 Action_t actions[IOT_REMOTE_CONTROL_BUTTON_COUNT];
+                ComboAction_t combo[4];
 
                 Config_t() :
                     autoSleepTime(kDefaultValueFor_autoSleepTime),
                     deepSleepTime(kDefaultValueFor_deepSleepTime),
+                    shortpressTime(kDefaultValueFor_shortpressTime),
                     longpressTime(kDefaultValueFor_longpressTime),
                     repeatTime(kDefaultValueFor_repeatTime),
                     actions{}

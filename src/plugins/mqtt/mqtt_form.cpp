@@ -90,7 +90,7 @@ void MQTTPlugin::createConfigureForm(FormCallbackType type, const String &formNa
 
     form.addObjectGetterSetter(F("ari"), cfg, cfg.get_bits_auto_reconnect_incr, cfg.set_bits_auto_reconnect_incr);
     form.addFormUI(F("Auto Reconnect Increment:"), FormUI::Suffix(F("%")));
-    cfg.addRangeValidatorFor_auto_reconnect_max(form);
+    cfg.addRangeValidatorFor_auto_reconnect_incr(form);
 
     auto &serverGroup = connGroup.end().addCardGroup(FSPGM(mqtt), F("Server Settings"), true);
 

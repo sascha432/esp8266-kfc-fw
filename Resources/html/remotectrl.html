@@ -27,6 +27,13 @@
     <div class="container">
         <form method="POST" action="%SELF_URI%">
             %FORM_HTML%
+            <div class="form-help-block">
+                <div data-target="#ast">When running on batteries, the device will go back to deep sleep after all events have been processed and the time is up</div>
+                <div data-target="#dst">The device wakes up approximately every 3 hours to check if the time has passed to renew the IP address and deliver battery deliver statistics about the battery. Due to hardware/software restrictions, the time is not accurate ~&plusmn;20%<br>To preserve battery life, set the value to 0 to disable auto wake up. If the device is used regularly, the statistics are updated once a day.</div>
+                <div data-target="#spt">A single click is detected when the button is held less than Long Press Time. If the button is repeatedly pressed within Short Press Time in between, a double (or multi) click is detected. This value will increase the initial time before the first event is fired. If only single click is used, it should be set to 0</div>
+                <div data-target="#lpt">If a button is pressed longer then Long Press Time, a long press event is fired when releasing it before Repeat Time has been reached</div>
+                <div data-target="#rt">If the button is held down for longer than Long Press Time + Repeat Time, a button held event is fired repeatedly in intervals of Repeat Time</div>
+            </div>
         </form>
         <!--%%FOOT-->
         <div class="row">

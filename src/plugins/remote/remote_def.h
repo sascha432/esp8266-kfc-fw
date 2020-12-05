@@ -11,7 +11,7 @@
 #include <kfc_fw_config_classes.h>
 
 #ifndef DEBUG_IOT_REMOTE_CONTROL
-#define DEBUG_IOT_REMOTE_CONTROL                                1
+#define DEBUG_IOT_REMOTE_CONTROL                                0
 #endif
 
 #if DEBUG_IOT_REMOTE_CONTROL
@@ -63,7 +63,8 @@ namespace RemoteControl {
         MAX
     };
 
-    using ComboActionType = Plugins::RemoteControl::ComboAction_t;
+    //using ComboActionType = Plugins::RemoteControl::ComboAction_t;
+    using MultiClickType = Plugins::RemoteControl::MultiClick_t;
     using ActionType = Plugins::RemoteControl::Action_t;
 
     class Base;
@@ -71,30 +72,21 @@ namespace RemoteControl {
     class Button : public PushButton {
     public:
         Button();
-        Button(uint8_t pin, uint8_t button, Base *base);
+        Button(uint8_t pin, uint8_t button, Base *base, bool testMode = false);
 
         uint8_t getNum() const;
         bool isPressed() const;
 
         virtual void event(EventType state, uint32_t now) override;
 
-    // private:
-    //     void _setLevel(int32_t newLevel, int16_t curLevel, float fadeTime);
-    //     void _setLevel(int32_t newLevel, float fadeTime);
-    //     void _changeLevel(int32_t changeLevel, float fadeTime);
-    //     void _changeLevelSingle(uint16_t steps, bool invert);
-    //     void _changeLevelRepeat(uint16_t repeatTime, bool invert);
+        void updateConfig();
 
-        String name() const;
+        Base *getBase() const {
+            return reinterpret_cast<Base *>(const_cast<void *>(getArg()));
+        }
 
     private:
-        Base *_base;
         uint8_t _button;
-        bool _pressed: 1;
-        //Buttons &_dimmer;
-        // int16_t _level;
-        // uint8_t _channel: 3;
-        // uint8_t _button: 1;
     };
 
     class ButtonEvent {
@@ -104,8 +96,8 @@ namespace RemoteControl {
         ButtonEvent();
         ButtonEvent(uint8_t button, EventType type, uint32_t duration = 0, uint32_t repeat = 0, uint32_t comboButton = kComboButtonNone);
         uint8_t getButton() const;
-        int8_t getComboButton() const;
-        ComboActionType getCombo(const ActionType &actions) const;
+        //int8_t getComboButton() const;
+        //ComboActionType getCombo(const ActionType &actions) const;
         EventType getType() const;
         uint16_t getDuration() const;
         uint16_t getRepeat() const;
@@ -139,7 +131,6 @@ namespace RemoteControl {
     using KFCConfigurationClasses::Plugins;
     using ConfigType = Plugins::RemoteControl::Config_t;
     using ButtonPinsArray = std::array<const uint8_t, IOT_REMOTE_CONTROL_BUTTON_COUNT>;
-    using ButtonArray = std::array<Button, IOT_REMOTE_CONTROL_BUTTON_COUNT>;
     using ButtonEventList = stdex::fixed_circular_buffer<ButtonEvent, 32>;
 
 };

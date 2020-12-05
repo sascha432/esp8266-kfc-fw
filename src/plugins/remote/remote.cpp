@@ -21,8 +21,30 @@
 #include <debug_helper_disable.h>
 #endif
 
+#if ESP8266
+#define SHORT_POINTER_FMT       "%05x"
+#define SHORT_POINTER(ptr)      ((uint32_t)ptr & 0xfffff)
+#else
+#define SHORT_POINTER_FMT       "%08x"
+#define SHORT_POINTER(ptr)      ptr
+#endif
+
 using KFCConfigurationClasses::Plugins;
 using namespace RemoteControl;
+
+#if DEBUG_IOT_REMOTE_CONTROL
+
+const char *Base::_getPressedButtons() const
+{
+    static char buffer[_buttonPins.size() + 1];
+    char *ptr = buffer;
+    for(uint8_t n = 0; n < _buttonPins.size(); n++) {
+        *ptr++ = _isPressed(n) ? '1' : '0';
+    }
+    *ptr = 0;
+    return buffer;
+}
+#endif
 
 static RemoteControlPlugin plugin;
 
@@ -31,7 +53,8 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     "remotectrl",       // name
     "Remote Control",   // friendly name
     "",                 // web_templates
-    "remote",           // config_forms
+    // config_forms
+    "general,buttons,combos,actions",
     "http",             // reconfigure_dependencies
     PluginComponent::PriorityType::MAX,
     PluginComponent::RTCMemoryId::REMOTE,
@@ -55,27 +78,67 @@ RemoteControlPlugin::RemoteControlPlugin() :
 #endif
 {
     REGISTER_PLUGIN(this, "RemoteControlPlugin");
-    // for(auto pin : _buttonPins) {
-    //     pinMode(_buttonPins[pin], INPUT);
-    // }
-    for(uint8_t n = 0; n < _buttons.size(); n++) {
-        _buttons[n] = std::move(Button(_buttonPins[n], n, this));
+    pinMonitor.begin();
+#if DEBUG_IOT_REMOTE_CONTROL == 0
+    _preSetup();
+#endif
+}
+
+// actual code for ctor running in setup once with debug mode enabled
+void RemoteControlPlugin::_preSetup()
+{
+    _actions.emplace_back(new ActionUDP(100, Binary::Data(F("test1")), F("!acidpi1.local"), IPAddress(), 7712));
+    _actions.emplace_back(new ActionUDP(200, Binary::Data(F("test2")), F("192.168.0.3"), IPAddress(), 7712));
+    _actions.emplace_back(new ActionUDP(300, Binary::Data(F("test3")), F("acidpi1.local"), IPAddress(), 7712));
+    IPAddress addr;
+    addr.fromString(F("192.168.0.3"));
+    _actions.emplace_back(new ActionUDP(400, Binary::Data(F("test4")), emptyString, addr, 7712));
+    _resolveActionHostnames();
+
+    for(uint8_t n = 0; n < _buttonPins.size(); n++) {
+        auto pin = _buttonPins[n];
+#if DEBUG_PIN_MONITOR_BUTTON_NAME
+        auto &button = pinMonitor.attach<Button>(pin, n, this); // downcast of this is stored, which is a different pointer cause of the multiple inheritence
+        button.setName(PrintString(F(SHORT_POINTER_FMT ":" SHORT_POINTER_FMT "#%u"), SHORT_POINTER(button.getArg()), SHORT_POINTER(&button), n));
+        __LDBG_printf("%s pin=%u arg=%p btn=%p btn#%u", button.name(), pin, button.getArg(), &button, n);
+#else
+        pinMonitor.attach<Button>(pin, n, this);
+#endif
+        pinMode(pin, INPUT);
+    }
+}
+
+void RemoteControlPlugin::_updateButtonConfig()
+{
+    for(const auto &buttonPtr: pinMonitor.getHandlers()) {
+        auto &button = static_cast<Button &>(*buttonPtr);
+        __LDBG_printf("arg=%p btn=%p pin=%u digital_read=%u inverted=%u owner=%u", button.getArg(), &button, button.getPin(), digitalRead(button.getPin()), button.isInverted(), button.getBase() == this);
+        if (button.getBase() == this) { // auto downcast of this
+#if DEBUG_IOT_REMOTE_CONTROL
+            auto &cfg = _getConfig().actions[button.getNum()];
+            __DBG_printf("button#=%u action=%u,%u,%u multi=%u,%u,%u,%u pressed/releassed=%u,%u",
+                button.getNum(),
+                cfg.single_click, cfg.double_click, cfg.longpress,
+                cfg.multi_click[0].action, cfg.multi_click[1].action, cfg.multi_click[2].action, cfg.multi_click[3].action,
+                cfg.pressed, cfg.released
+            );
+#endif
+            button.updateConfig();
+        }
     }
 }
 
 void RemoteControlPlugin::setup(SetupModeType mode)
 {
-    _readConfig();
+#if DEBUG_IOT_REMOTE_CONTROL
+    if (pinMonitor.getHandlers().size() == 0) {
+        _preSetup();
+    }
+#endif
 
-    // for(uint8_t n = 0; n < _buttons.size(); n++) {
-    //     _buttons[n] = std::move(Button(_buttonPins[n], n, this));
-    //     // // auto &button = *(_buttons[n] = __LDBG_new(PushButton, _buttonPins[n], PRESSED_WHEN_HIGH));
-    //     // button.onPress(onButtonPressed);
-    //     // button.onHoldRepeat(_config.longpressTime, _config.repeatTime, onButtonHeld);
-    //     // button.onRelease(onButtonReleased);
-    //     // button.update();
-    //     // __LDBG_printf("btn=%d pressed=%d", n, button.isPressed());
-    // }
+    _readConfig();
+    _updateButtonConfig();
+
     WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTED, wifiCallback);
     LoopFunctions::add(loop);
 
@@ -93,17 +156,14 @@ void RemoteControlPlugin::reconfigure(const String &source)
         _installWebhooks();
     }
     else {
-        // buttons have this attach with &_config
-        // for(const auto button : _buttons) {
-        //     button->onPress(onButtonPressed);
-        //     button->onHoldRepeat(_config.longpressTime, _config.repeatTime, onButtonHeld);
-        //     button->onRelease(onButtonReleased);
-        // }
+        _updateButtonConfig();
     }
 }
 
 void RemoteControlPlugin::shutdown()
 {
+    pinMonitor.detach(this);
+
     LoopFunctions::remove(loop);
     WiFiCallbacks::remove(WiFiCallbacks::EventType::ANY, wifiCallback);
 }
@@ -116,7 +176,7 @@ void RemoteControlPlugin::prepareDeepSleep(uint32_t sleepTimeMillis)
 
 void RemoteControlPlugin::getStatus(Print &output)
 {
-    output.printf_P(PSTR("%u Button Remote Control"), _buttons.size());
+    output.printf_P(PSTR("%u Button Remote Control"), _buttonPins.size());
     if (_autoSleepTimeout == 0 || _autoSleepTimeout == kAutoSleepDisabled) {
         output.print(F(", auto sleep disabled"));
     }
@@ -124,7 +184,11 @@ void RemoteControlPlugin::getStatus(Print &output)
 
 void RemoteControlPlugin::createMenu()
 {
-    bootstrapMenu.addSubMenu(getFriendlyName(), F("remotectrl.html"), navMenu.config);
+    bootstrapMenu.addSubMenu(getFriendlyName(), F("remotectrl/general.html"), navMenu.config);
+    bootstrapMenu.addSubMenu(F("Buttons Assignments"), F("remotectrl/buttons.html"), navMenu.config);
+    bootstrapMenu.addSubMenu(F("Buttons Combinations"), F("remotectrl/combos.html"), navMenu.config);
+    bootstrapMenu.addSubMenu(F("Define Actions"), F("remotectrl/actions.html"), navMenu.config);
+
     bootstrapMenu.addSubMenu(F("Enter Deep Sleep"), F("remote-sleep.html"), navMenu.device);
     bootstrapMenu.addSubMenu(F("Disable Auto Sleep"), F("remote-nosleep.html"), navMenu.device);
 }
@@ -152,6 +216,24 @@ bool RemoteControlPlugin::atModeHandler(AtModeArgs &args)
 
 #endif
 
+void RemoteControlPlugin::_onShortPress(Button &button)
+{
+    __LDBG_printf("%s SHORT PRESS", button.name());
+}
+
+void RemoteControlPlugin::_onLongPress(Button &button)
+{
+    __LDBG_printf("%s LONG PRESS", button.name());
+}
+
+void RemoteControlPlugin::_onRepeat(Button &button)
+{
+    __LDBG_printf("%s REPEAT", button.name());
+}
+
+
+#if 0
+
 // void Base::onButtonHeld(Button& btn, uint16_t duration, uint16_t repeatCount)
 // {
 //     __LDBG_printf("btn=%d duration=%d repeat=%d", plugin._getButtonNum(btn), duration, repeatCount);
@@ -168,7 +250,7 @@ void RemoteControlPlugin::_onButtonHeld(Button& btn, uint16_t duration, uint16_t
 {
     auto buttonNum = btn.getNum();
 #if IOT_REMOTE_CONTROL_COMBO_BTN
-    if (_anyButton(&btn)) { // is any button pressed except btn?
+    if (anyButton(getPressedMask(buttonNum))) { // is any button pressed except btn?
         _resetAutoSleep();
         if (duration < 5000 || _comboButton != 3) {
             if (_comboButton == -1) {
@@ -226,7 +308,7 @@ void RemoteControlPlugin::_onButtonReleased(Button& btn, uint16_t duration)
 {
 #if IOT_REMOTE_CONTROL_COMBO_BTN
     if (_longPress) {
-        if (!_anyButton()) {
+        if (!anyButton()) {
             // disable LED after all buttons have been released
             BlinkLEDTimer::setBlink(__LED_BUILTIN, config.isWiFiUp() ? BlinkLEDTimer::SOLID : BlinkLEDTimer::OFF);
             __LDBG_printf("longpress=%d combo=%d", _longPress, _comboButton);
@@ -245,6 +327,7 @@ void RemoteControlPlugin::_onButtonReleased(Button& btn, uint16_t duration)
     }
 }
 
+#endif
 
 void RemoteControlPlugin::loop()
 {
@@ -307,9 +390,6 @@ void RemoteControlPlugin::deepSleepHandler(AsyncWebServerRequest *request)
 
 void RemoteControlPlugin::_loop()
 {
-    // for(const auto button : _buttons) {
-    //     button->update();
-    // }
     if (_autoSleepTimeout != kAutoSleepDisabled) {
         if (_isUsbPowered()) {
             if (_autoSleepTimeout) {
@@ -323,17 +403,32 @@ void RemoteControlPlugin::_loop()
                 timeout = _config.autoSleepTime;
             }
             else {
-                timeout = std::max<uint8_t>(30, _config.autoSleepTime);
+                timeout = std::max<uint8_t>(30, _config.autoSleepTime); // increase auto sleep timeout to at least 30 seconds if wifi is down
             }
             _autoSleepTimeout = millis() + (timeout * 1000UL);
             __LDBG_printf("auto deep sleep=%u connected=%u", _autoSleepTimeout, config.isWiFiUp());
         }
-        if (_autoSleepTimeout && millis() > _autoSleepTimeout) {
+#if DEBUG_IOT_REMOTE_CONTROL
+        else if (_events.size() != 0 && _autoSleepTimeout && millis() >= _autoSleepTimeout) {
+            static unsigned counter = 0;
+            if ((counter++ % 2) == ((millis() / 500) % 2)) { // display every 500ms
+                __DBG_printf("sleep timeout reached but %u events queued. delaying sleep by %ums", _events.size(), millis() - _autoSleepTimeout);
+            }
+        }
+#endif
+        // do not sleep until all events have been processed
+        else if (_events.size() == 0 && _autoSleepTimeout && millis() >= _autoSleepTimeout) {
             __LDBG_printf("entering deep sleep (auto=%d, time=%us)", _config.autoSleepTime, _config.deepSleepTime);
             _autoSleepTimeout = kAutoSleepDisabled;
-            config.enterDeepSleep(KFCFWConfiguration::seconds(_config.deepSleepTime), RF_DEFAULT, 1);
+            config.enterDeepSleep(KFCFWConfiguration::seconds(0), RF_DEFAULT, 1); // TODO implement deep sleep
+
+            // config.enterDeepSleep(KFCFWConfiguration::seconds(_config.deepSleepTime), RF_DEFAULT, 1);
         }
     }
+
+    // buttons are interrupt driven and do not require fast polling
+    // call delay to safe energy
+    delay(25);
 }
 
 void RemoteControlPlugin::_wifiConnected()
@@ -388,49 +483,60 @@ void RemoteControlPlugin::_sendEvents()
                 continue;
             }
 
-            uint16_t actionId;
-            auto &actions = _config.actions[event.getButton()];
-            switch(event.getType()) {
-                case EventType::REPEAT:
-                    actionId = actions.repeat;
-                    break;
-                case EventType::RELEASE:
-                    if (event.getDuration() < _config.longpressTime) {
-                        actionId = actions.shortpress;
-                    }
-                    else {
-                        actionId = actions.longpress;
-                    }
-                    break;
-#if IOT_REMOTE_CONTROL_COMBO_BTN
-                case EventType::COMBO_REPEAT:
-                    actionId = event.getCombo(actions).repeat;
-                    break;
-                case EventType::COMBO_RELEASE:
-                    if (event.getDuration() < _config.longpressTime) {
-                        actionId = event.getCombo(actions).shortpress;
-                    }
-                    else {
-                        actionId = event.getCombo(actions).longpress;
-                    }
-                    break;
-#endif
-                default:
-                    actionId = 0;
-                    break;
-            }
+            ActionIdType actionId = 0;
+
+//             auto &actions = _config.actions[event.getButton()];
+//             switch(event.getType()) {
+//                 case EventType::REPEAT:
+//                     actionId = actions.repeat;
+//                     break;
+//                 case EventType::RELEASE:
+//                     if (event.getDuration() < _config.longpressTime) {
+//                         actionId = actions.shortpress;
+//                     }
+//                     else {
+//                         actionId = actions.longpress;
+//                     }
+//                     break;
+// #if IOT_REMOTE_CONTROL_COMBO_BTN
+//                 case EventType::COMBO_REPEAT:
+//                     actionId = event.getCombo(actions).repeat;
+//                     break;
+//                 case EventType::COMBO_RELEASE:
+//                     if (event.getDuration() < _config.longpressTime) {
+//                         actionId = event.getCombo(actions).shortpress;
+//                     }
+//                     else {
+//                         actionId = event.getCombo(actions).longpress;
+//                     }
+//                     break;
+// #endif
+//                 default:
+//                     actionId = 0;
+//                     break;
+//             }
 
 #if HOME_ASSISTANT_INTEGRATION
             auto action = Plugins::HomeAssistant::getAction(actionId);
             if (action.getId()) {
-                // Logger_notice(F("firing event: %s"), event.toString().c_str());
-
                 _lockButton(event.getButton());
-                // auto button = event.getButton();
-                //_events.erase(iterator);
+                auto button = event.getButton();
                 event.remove();
 
                 _hass.executeAction(action, [this, button](bool status) {
+                    _unlockButton(button);
+                    _scheduleSendEvents();
+                });
+                return;
+            }
+#else
+            auto actionPtr = _getAction(actionId);
+            if (actionPtr && *actionPtr) {
+                auto button = event.getButton();
+                _lockButton(button);
+                event.remove();
+
+                actionPtr->execute([this, button](bool status) {
                     _unlockButton(button);
                     _scheduleSendEvents();
                 });
@@ -442,11 +548,11 @@ void RemoteControlPlugin::_sendEvents()
             event.remove();
         }
 
+        ButtonEventList tmp;
 #if DEBUG_IOT_REMOTE_CONTROL
         uint32_t start = micros();
 #endif
         noInterrupts();
-        ButtonEventList tmp;
         for(auto &&item: _events) {
             if (item.getType() != EventType::NONE) {
                 tmp.emplace_back(std::move(item));
@@ -473,5 +579,23 @@ void RemoteControlPlugin::_scheduleSendEvents()
         LoopFunctions::callOnce([this]() {
             _sendEvents();
         });
+    }
+}
+
+Action *RemoteControlPlugin::_getAction(ActionIdType id) const
+{
+    auto iterator = std::find_if(_actions.begin(), _actions.end(), [id](const ActionPtr &action) {
+        return action->getId() == id;
+    });
+    if (iterator == _actions.end()) {
+        return nullptr;
+    }
+    return iterator->get();
+}
+
+void RemoteControlPlugin::_resolveActionHostnames()
+{
+    for(auto &action: _actions) {
+        action->resolve();
     }
 }

@@ -76,13 +76,25 @@ void MQTTPlugin::createConfigureForm(FormCallbackType type, const String &formNa
     form.addFormUI(FormUI::Type::NUMBER, FSPGM(Port), FormUI::PlaceHolder(1883));
     form.addValidator(FormUI::Validator::NetworkPort(true));
 
-    form.addObjectGetterSetter(FSPGM(keepalive), cfg, cfg.get_bits_keepalive, cfg.set_bits_keepalive);
+    form.addObjectGetterSetter(F("kat"), cfg, cfg.get_bits_keepalive, cfg.set_bits_keepalive);
     form.addFormUI(FSPGM(Keep_Alive), FormUI::Suffix(FSPGM(seconds)));
     cfg.addRangeValidatorFor_keepalive(form);
 
+    form.addObjectGetterSetter(F("ami"), cfg, cfg.get_bits_auto_reconnect_min, cfg.set_bits_auto_reconnect_min);
+    form.addFormUI(F("Minimum Auto Reconnect Time:"), FormUI::Suffix(F("milliseconds, 0 = disable")));
+    cfg.addRangeValidatorFor_auto_reconnect_min(form, true);
+
+    form.addObjectGetterSetter(F("amx"), cfg, cfg.get_bits_auto_reconnect_max, cfg.set_bits_auto_reconnect_max);
+    form.addFormUI(F("Maximum Auto Reconnect Time:"), FormUI::Suffix(F("milliseconds")));
+    cfg.addRangeValidatorFor_auto_reconnect_max(form);
+
+    form.addObjectGetterSetter(F("ari"), cfg, cfg.get_bits_auto_reconnect_incr, cfg.set_bits_auto_reconnect_incr);
+    form.addFormUI(F("Auto Reconnect Increment:"), FormUI::Suffix(F("%")));
+    cfg.addRangeValidatorFor_auto_reconnect_max(form);
+
     auto &serverGroup = connGroup.end().addCardGroup(FSPGM(mqtt), F("Server Settings"), true);
 
-    form.addStringGetterSetter(F("mqttuser"), ClientConfig::getUsername, ClientConfig::setUsername);
+    form.addStringGetterSetter(F("mu"), ClientConfig::getUsername, ClientConfig::setUsername);
     form.addFormUI(FSPGM(Username), FormUI::PlaceHolder(FSPGM(Anonymous)));
     form.addValidator(FormUI::Validator::Length(0, ClientConfig::kUsernameMaxSize));
 
@@ -90,7 +102,7 @@ void MQTTPlugin::createConfigureForm(FormCallbackType type, const String &formNa
     form.addFormUI(FormUI::Type::PASSWORD, FSPGM(Password));
     ClientConfig::addPasswordLengthValidator(form, true);
 
-    form.addStringGetterSetter(FSPGM(topic), ClientConfig::getTopic, ClientConfig::setTopic);
+    form.addStringGetterSetter(F("t"), ClientConfig::getTopic, ClientConfig::setTopic);
     ClientConfig::addTopicLengthValidator(form);
     form.addFormUI(FSPGM(Topic));
 
@@ -103,19 +115,18 @@ void MQTTPlugin::createConfigureForm(FormCallbackType type, const String &formNa
 #if MQTT_AUTO_DISCOVERY
     auto &hassGroup = form.addCardGroup(F("adp"), F("Home Assistant"), true);
 
-    form.addObjectGetterSetter(F("aden"), cfg, cfg.get_bits_auto_discovery, cfg.set_bits_auto_discovery);
+    form.addObjectGetterSetter(F("ade"), cfg, cfg.get_bits_auto_discovery, cfg.set_bits_auto_discovery);
     form.addFormUI(F("Auto Discovery"), FormUI::BoolItems());
 
     auto &autoDiscoveryGroup = form.addDivGroup(F("adp"), F("{'i':'#aden','m':'$T.hide()','s':{'1':'$T.show()'}}"));
 
-    form.addStringGetterSetter(FSPGM(prefix), ClientConfig::getAutoDiscoveryPrefix, ClientConfig::setAutoDiscoveryPrefix);
+    form.addStringGetterSetter(F("pf"), ClientConfig::getAutoDiscoveryPrefix, ClientConfig::setAutoDiscoveryPrefix);
     form.addFormUI(F("Auto Discovery Prefix"));
     form.addValidator(FormUI::Validator::Length(0, ClientConfig::kAutoDiscoveryPrefixMaxSize));
 
-    form.addObjectGetterSetter(F("adrb"), cfg, cfg.get_bits_auto_discovery_rebroadcast_interval, cfg.set_bits_auto_discovery_rebroadcast_interval);
+    form.addObjectGetterSetter(F("adi"), cfg, cfg.get_bits_auto_discovery_rebroadcast_interval, cfg.set_bits_auto_discovery_rebroadcast_interval);
     form.addFormUI(F("Auto Discovery Rebroadcast"), FormUI::Suffix(FSPGM(minutes)));
     cfg.addRangeValidatorFor_auto_discovery_rebroadcast_interval(form);
-
 
     autoDiscoveryGroup.end();
     hassGroup.end();

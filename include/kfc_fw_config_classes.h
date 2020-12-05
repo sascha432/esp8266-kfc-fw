@@ -1120,6 +1120,8 @@ namespace KFCConfigurationClasses {
                 AT_LEAST_ONCE = 1,
                 EXACTLY_ONCE = 2,
                 MAX,
+                PERSISTENT_STORAGE = AT_LEAST_ONCE,
+                AUTO_DISCOVERY = AT_LEAST_ONCE,
                 DEFAULT = 0xff,
             };
 
@@ -1127,19 +1129,25 @@ namespace KFCConfigurationClasses {
 
             typedef struct __attribute__packed__ MqttConfig_t {
                 using Type = MqttConfig_t;
-                CREATE_UINT32_BITFIELD(auto_discovery, 1);
-                CREATE_UINT32_BITFIELD(enable_shared_topic, 1);
-                CREATE_UINT32_BITFIELD_MIN_MAX(keepalive, 9, 0, 300, 15, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(auto_discovery, 1, 0, 1, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(enable_shared_topic, 1, 0, 1, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(keepalive, 10, 0, 900, 15, 1);
                 CREATE_UINT32_BITFIELD_MIN_MAX(auto_discovery_rebroadcast_interval, 16, 0, 43200, 24 * 60, 3600);
+                CREATE_UINT32_BITFIELD_MIN_MAX(auto_reconnect_min, 16, 250, 60000, 5000, 500);
+                CREATE_UINT32_BITFIELD_MIN_MAX(auto_reconnect_max, 16, 5000, 60000, 5000, 1000);
+                CREATE_UINT32_BITFIELD_MIN_MAX(auto_reconnect_incr, 7, 0, 100, 10);
                 CREATE_ENUM_BITFIELD(mode, ModeType);
                 CREATE_ENUM_BITFIELD(qos, QosType);
                 AUTO_DEFAULT_PORT_GETTER_SETTER_SECURE(__port, get_enum_mode(*this) == ModeType::SECURE);
 
                 MqttConfig_t() :
-                    auto_discovery(true),
-                    enable_shared_topic(true),
+                    auto_discovery(kDefaultValueFor_auto_discovery),
+                    enable_shared_topic(kDefaultValueFor_enable_shared_topic),
                     keepalive(kDefaultValueFor_keepalive),
                     auto_discovery_rebroadcast_interval(kDefaultValueFor_auto_discovery_rebroadcast_interval),
+                    auto_reconnect_min(kDefaultValueFor_auto_reconnect_min),
+                    auto_reconnect_max(kDefaultValueFor_auto_reconnect_max),
+                    auto_reconnect_incr(kDefaultValueFor_auto_reconnect_incr),
                     mode(cast_int_mode(ModeType::UNSECURE)),
                     qos(cast_int_qos(QosType::EXACTLY_ONCE)),
                     __port(kPortAuto)

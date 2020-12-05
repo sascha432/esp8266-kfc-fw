@@ -56,15 +56,13 @@ MQTTComponent::MQTTAutoDiscoveryPtr BlindsControl::nextAutoDiscovery(MQTTAutoDis
         discovery->create(this, PrintString(FSPGM(channel__u, "channel_%u"), channel), format);
         discovery->addStateTopic(_getTopic(channel, TopicType::STATE));
         discovery->addCommandTopic(_getTopic(channel, TopicType::SET));
-        discovery->addPayloadOn(1);
-        discovery->addPayloadOff(0);
+        discovery->addPayloadOnOff();
     }
     else if (num == kChannelCount) {
         discovery->create(this, FSPGM(channels), format);
         discovery->addStateTopic(_getTopic(ChannelType::ALL, TopicType::STATE));
         discovery->addCommandTopic(_getTopic(ChannelType::ALL, TopicType::SET));
-        discovery->addPayloadOn(1);
-        discovery->addPayloadOff(0);
+        discovery->addPayloadOnOff();
     }
     else if (num == kChannelCount + 1) {
         discovery->create(MQTTComponent::ComponentType::SENSOR, FSPGM(binary), format);

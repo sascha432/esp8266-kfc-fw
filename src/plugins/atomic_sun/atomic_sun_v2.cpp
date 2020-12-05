@@ -103,8 +103,7 @@ MQTTComponent::MQTTAutoDiscoveryPtr Driver_4ChDimmer::nextAutoDiscovery(MQTTAuto
             discovery->create(this, FSPGM(main), format);
             discovery->addStateTopic(_data.state.state);
             discovery->addCommandTopic(_data.state.set);
-            discovery->addPayloadOn(1);
-            discovery->addPayloadOff(0);
+            discovery->addPayloadOnOff();
             discovery->addBrightnessStateTopic(_data.brightness.state);
             discovery->addBrightnessCommandTopic(_data.brightness.set);
             discovery->addBrightnessScale(MAX_LEVEL_ALL_CHANNELS);
@@ -115,8 +114,7 @@ MQTTComponent::MQTTAutoDiscoveryPtr Driver_4ChDimmer::nextAutoDiscovery(MQTTAuto
             discovery->create(this, FSPGM(lock_channels, "lock_channels"), format);
             discovery->addStateTopic(_data.lockChannels.state);
             discovery->addCommandTopic(_data.lockChannels.set);
-            discovery->addPayloadOn(1);
-            discovery->addPayloadOff(0);
+            discovery->addPayloadOnOff();
             break;
         case 2:
         case 3:
@@ -126,11 +124,10 @@ MQTTComponent::MQTTAutoDiscoveryPtr Driver_4ChDimmer::nextAutoDiscovery(MQTTAuto
             discovery->create(this, PrintString(FSPGM(channel__u, "channel_%u"), i), format);
             discovery->addStateTopic(_data.channels[i].state);
             discovery->addCommandTopic(_data.channels[i].set);
+            discovery->addPayloadOnOff();
             discovery->addBrightnessStateTopic(_data.channels[i].brightnessState);
             discovery->addBrightnessCommandTopic(_data.channels[i].brightnessSet);
             discovery->addBrightnessScale(MAX_LEVEL);
-            discovery->addPayloadOn(1);
-            discovery->addPayloadOff(0);
         }
         break;
     }

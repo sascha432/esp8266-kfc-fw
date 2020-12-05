@@ -80,9 +80,34 @@ MQTTComponent::MQTTAutoDiscoveryPtr Sensor_SystemMetrics::nextAutoDiscovery(MQTT
 #if PING_MONITOR_SUPPORT
         case 4:
             discovery = __LDBG_new(MQTTAutoDiscovery);
-            discovery->create(this, FSPGM(ping_monitor), format);
+            discovery->create(this, F("ping_monitor_success"), format);
             discovery->addStateTopic(_getTopic());
-            discovery->addValueTemplate(FSPGM(ping_monitor));
+            discovery->addValueTemplate(F("ping_monitor_success"));
+            break;
+        case 5:
+            discovery = __LDBG_new(MQTTAutoDiscovery);
+            discovery->create(this, F("ping_monitor_failure"), format);
+            discovery->addStateTopic(_getTopic());
+            discovery->addValueTemplate(F("ping_monitor_failure"));
+            break;
+        case 6:
+            discovery = __LDBG_new(MQTTAutoDiscovery);
+            discovery->create(this, F("ping_monitor_avg_resp_time"), format);
+            discovery->addStateTopic(_getTopic());
+            discovery->addValueTemplate(F("ping_monitor_avg_resp_time"));
+            discovery->addUnitOfMeasurement(F("ms"));
+            break;
+        case 7:
+            discovery = __LDBG_new(MQTTAutoDiscovery);
+            discovery->create(this, F("ping_monitor_rcvd_pkts"), format);
+            discovery->addStateTopic(_getTopic());
+            discovery->addValueTemplate(F("ping_monitor_rcvd_pkts"));
+            break;
+        case 8:
+            discovery = __LDBG_new(MQTTAutoDiscovery);
+            discovery->create(this, F("ping_monitor_lost_pkts"), format);
+            discovery->addStateTopic(_getTopic());
+            discovery->addValueTemplate(F("ping_monitor_lost_pkts"));
             break;
 #endif
         default:
@@ -95,7 +120,7 @@ MQTTComponent::MQTTAutoDiscoveryPtr Sensor_SystemMetrics::nextAutoDiscovery(MQTT
 uint8_t Sensor_SystemMetrics::getAutoDiscoveryCount() const
 {
 #if PING_MONITOR_SUPPORT
-    return 5;
+    return 9;
 #else
     return 4;
 #endif

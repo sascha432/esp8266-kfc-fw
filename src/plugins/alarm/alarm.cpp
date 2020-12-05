@@ -86,8 +86,7 @@ AlarmPlugin::MQTTAutoDiscoveryPtr AlarmPlugin::nextAutoDiscovery(MQTTAutoDiscove
             discovery->create(this, FSPGM(alarm), format);
             discovery->addStateTopic(_formatTopic(FSPGM(_state)));
             discovery->addCommandTopic(_formatTopic(FSPGM(_set)));
-            discovery->addPayloadOn(1);
-            discovery->addPayloadOff(0);
+            discovery->addPayloadOnOff();
             break;
     }
     discovery->finalize();

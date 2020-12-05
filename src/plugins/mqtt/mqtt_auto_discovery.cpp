@@ -8,8 +8,8 @@
 #include <PrintString.h>
 #include <JsonTools.h>
 #include <kfc_fw_config.h>
+#include "mqtt_strings.h"
 #include "mqtt_auto_discovery.h"
-#include "mqtt_component.h"
 #include "mqtt_client.h"
 #include "templates.h"
 
@@ -98,93 +98,87 @@ void MQTTAutoDiscovery::_create(ComponentType componentType, const String &name,
         _discovery.print(F("\"},"));
     }
 
-    __LDBG_printf("MQTT auto discovery topic '%s', name %s, number %d", _topic.c_str(), component->getComponentName(), component->getNumber());
+    __LDBG_printf("MQTT auto discovery topic '%s'", _topic.c_str());
 }
 
-void MQTTAutoDiscovery::addParameter(const __FlashStringHelper *name, const String &value)
+void MQTTAutoDiscovery::__addParameter(const __FlashStringHelper *name, const char *str)
 {
     if (_format == FormatType::JSON) {
+        _discovery.printf_P(PSTR("\"%s\":\""), name);
 #if MQTT_AUTO_DISCOVERY_USE_ABBREVIATIONS
-        String valueAbbr = value;
         auto len = strlen_P(RFPSTR(name));
         if (len > 2 && pgm_read_word(RFPSTR(name) + len - 2) == (('_') | ('t' << 8))) { // check if the name ends with "_t"
-            valueAbbr.replace(_baseTopic, String('~'));
+            if (strncmp_P(_baseTopic.c_str(), str, _baseTopic.length()) == 0) { // replace _baseTopic withj ~
+                str += _baseTopic.length();
+                _discovery.print('~');
+            }
         }
-        _discovery.printf_P(PSTR("\"%s\":\"%s\","), name, valueAbbr.c_str());
-#else
-        _discovery.printf_P(PSTR("\"%s\":\"%s\","), name, value.c_str());
 #endif
+        _discovery.printf_P(PSTR("%s\","), str);
     }
     else {
-        _discovery.printf_P(PSTR("%s: %s\n    "), name, value.c_str());
+        _discovery.printf_P(PSTR("%s: %s\n    "), name, str);
     }
 }
 
-void MQTTAutoDiscovery::addStateTopic(const String &value)
-{
-    addParameter(FSPGM(mqtt_state_topic), value);
-}
+// void MQTTAutoDiscovery::addStateTopic(const String &value)
+// {
+//     addParameter(FSPGM(mqtt_state_topic), value);
+// }
 
-void MQTTAutoDiscovery::addCommandTopic(const String &value)
-{
-    addParameter(FSPGM(mqtt_command_topic), value);
-}
+// void MQTTAutoDiscovery::addCommandTopic(const String &value)
+// {
+//     addParameter(FSPGM(mqtt_command_topic), value);
+// }
 
-void MQTTAutoDiscovery::addPayloadOn(const String &value)
-{
-    addParameter(FSPGM(mqtt_payload_on), value);
-}
+// void MQTTAutoDiscovery::addBrightnessStateTopic(const String &value)
+// {
+//     addParameter(FSPGM(mqtt_brightness_state_topic), value);
+// }
 
-void MQTTAutoDiscovery::addPayloadOff(const String &value)
-{
-    addParameter(FSPGM(mqtt_payload_off), value);
-}
+// void MQTTAutoDiscovery::addBrightnessCommandTopic(const String &value)
+// {
+//     addParameter(FSPGM(mqtt_brightness_command_topic), value);
+// }
 
-void MQTTAutoDiscovery::addBrightnessStateTopic(const String &value)
-{
-    addParameter(FSPGM(mqtt_brightness_state_topic), value);
-}
+// void MQTTAutoDiscovery::addBrightnessScale(uint32_t brightness)
+// {
+//     addParameter(FSPGM(mqtt_brightness_scale), String(brightness));
+// }
 
-void MQTTAutoDiscovery::addBrightnessCommandTopic(const String &value)
-{
-    addParameter(FSPGM(mqtt_brightness_command_topic), value);
-}
+// void MQTTAutoDiscovery::addColorTempStateTopic(const String &value)
+// {
+//     addParameter(FSPGM(mqtt_color_temp_state_topic), value);
+// }
 
-void MQTTAutoDiscovery::addBrightnessScale(uint32_t brightness)
-{
-    addParameter(FSPGM(mqtt_brightness_scale), String(brightness));
-}
+// void MQTTAutoDiscovery::addColorTempCommandTopic(const String &value)
+// {
+//     addParameter(FSPGM(mqtt_color_temp_command_topic), value);
+// }
 
-void MQTTAutoDiscovery::addColorTempStateTopic(const String &value)
-{
-    addParameter(FSPGM(mqtt_color_temp_state_topic), value);
-}
+// void MQTTAutoDiscovery::addRGBStateTopic(const String &value)
+// {
+//     addParameter(FSPGM(mqtt_rgb_state_topic), value);
+// }
 
-void MQTTAutoDiscovery::addColorTempCommandTopic(const String &value)
-{
-    addParameter(FSPGM(mqtt_color_temp_command_topic), value);
-}
+// void MQTTAutoDiscovery::addRGBCommandTopic(const String &value)
+// {
+//     addParameter(FSPGM(mqtt_rgb_command_topic), value);
+// }
 
-void MQTTAutoDiscovery::addRGBStateTopic(const String &value)
-{
-    addParameter(FSPGM(mqtt_rgb_state_topic), value);
-}
 
-void MQTTAutoDiscovery::addRGBCommandTopic(const String &value)
-{
-    addParameter(FSPGM(mqtt_rgb_command_topic), value);
-}
+// void MQTTAutoDiscovery::addValueTemplate(const String &value)
+// {
+//     PrintString value_json(F("{{ value_json.%s }}"), value.c_str());
+//     addParameter(FSPGM(mqtt_value_template), value_json);
+// }
 
-void MQTTAutoDiscovery::addUnitOfMeasurement(const String &value)
-{
-    addParameter(FSPGM(mqtt_unit_of_measurement), value);
-}
+// void MQTTAutoDiscovery::addExpireAfter(uint32_t seconds)
+// {
 
-void MQTTAutoDiscovery::addValueTemplate(const String &value)
-{
-    PrintString value_json(F("{{ value_json.%s }}"), value.c_str());
-    addParameter(FSPGM(mqtt_value_template), value_json);
-}
+//     addParameter(FSPGM(mqtt_expire_after), seconds);
+// }
+
 
 void MQTTAutoDiscovery::finalize()
 {

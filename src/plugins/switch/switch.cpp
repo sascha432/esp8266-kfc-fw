@@ -214,8 +214,7 @@ MQTTComponent::MQTTAutoDiscoveryPtr SwitchPlugin::nextAutoDiscovery(MQTTAutoDisc
     discovery->create(this, channel, format);
     discovery->addStateTopic(MQTTClient::formatTopic(channel, FSPGM(_state)));
     discovery->addCommandTopic(MQTTClient::formatTopic(channel, FSPGM(_set)));
-    discovery->addPayloadOn(1);
-    discovery->addPayloadOff(0);
+    discovery->addPayloadOnOff();
     discovery->finalize();
     return discovery;
 }

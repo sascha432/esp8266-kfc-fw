@@ -44,8 +44,6 @@ MQTTComponent::MQTTAutoDiscoveryPtr DimmerChannel::nextAutoDiscovery(MQTTAutoDis
             discovery->create(this, PrintString(FSPGM(channel__u), _channel), format);
             discovery->addStateTopic(_data.state.state);
             discovery->addCommandTopic(_data.state.set);
-            discovery->addPayloadOn(1);
-            discovery->addPayloadOff(0);
             discovery->addBrightnessStateTopic(_data.brightness.state);
             discovery->addBrightnessCommandTopic(_data.brightness.set);
             discovery->addBrightnessScale(MAX_LEVEL);

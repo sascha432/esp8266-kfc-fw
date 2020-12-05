@@ -101,6 +101,7 @@ Pin &Monitor::attach(Pin *handler)
 
 Pin &Monitor::_attach(Pin &pin)
 {
+    __LDBG_IF(auto type = PSTR("new pin:"));
     auto pinNum = pin.getPin();
     bool pinsEmpty = _pins.empty();
     auto iterator = std::find_if(_pins.begin(), _pins.end(), [pinNum](const HardwarePinPtr &pin) {
@@ -112,11 +113,11 @@ Pin &Monitor::_attach(Pin &pin)
         _pins.emplace_back(new HardwarePin(pinNum));
         iterator = _pins.end() - 1;
 
-        __LDBG_printf("pin=%u pinMode=%u", pinNum, _pinMode);
+        type = PSTR("updating pin:");
     }
     auto &curPin = *iterator->get();
 
-    __LDBG_printf("attaching pin=%u usage=%u", curPin.getPin(), curPin.getCount() + 1);
+    __LDBG_printf("%s attaching pin=%u usage=%u arg=%p", type, curPin.getPin(), curPin.getCount() + 1, pin.getArg());
     if (++curPin) {
         attachInterruptArg(digitalPinToInterrupt(pinNum), HardwarePin::callback, &curPin, CHANGE);
     }

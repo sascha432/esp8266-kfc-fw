@@ -68,15 +68,40 @@ public:
         return -1;
     }
 
-    virtual size_t write(uint8_t) { // write is not supported
+    virtual size_t write(uint8_t data) { // write is not supported
         return 0;
     }
 
     virtual void flush() {
     }
 
-private:
+protected:
     size_t _available;
     const char *_dataPtr;
     const char *_data;
+};
+
+
+class WriteableHeapStream : public HeapStream
+{
+public:
+    WriteableHeapStream() : HeapStream() {
+    }
+    WriteableHeapStream(char *data, size_t length) : HeapStream(data, 0), _size(length), _outPtr(data) {
+    }
+    WriteableHeapStream(uint8_t *data, size_t length) : WriteableHeapStream(reinterpret_cast<char *>(data), length) {
+    }
+
+    virtual size_t write(uint8_t data) { // write is not supported
+        if (!_size) {
+            return 0;
+        }
+        _size--;
+        *_outPtr++ = data;
+        return 1;
+    }
+
+private:
+    size_t _size;
+    char *_outPtr;
 };

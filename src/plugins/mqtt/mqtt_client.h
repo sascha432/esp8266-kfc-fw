@@ -13,7 +13,8 @@
 #define MQTT_AUTO_DISCOVERY                     1
 #endif
 
-// disable last will. status is set to offline when disconnecting only
+// 0 to disable last will. status is set to offline when disconnect(false) is called
+// useful for devices that go to deep sleep and stay "online"
 #ifndef MQTT_SET_LAST_WILL
 #define MQTT_SET_LAST_WILL                      1
 #endif
@@ -21,10 +22,6 @@
 // enable callbacks for QoS. onSubscribe(), onPublish() and onUnsubscribe()
 #ifndef MQTT_USE_PACKET_CALLBACKS
 #define MQTT_USE_PACKET_CALLBACKS               0
-#endif
-
-#ifndef MQTT_AUTO_RECONNECT_TIMEOUT
-#define MQTT_AUTO_RECONNECT_TIMEOUT             5000
 #endif
 
 // timeout if subscribe/unsubcribe/publish cannot be sent
@@ -51,6 +48,7 @@
 #include <AsyncMqttClient.h>
 #include <Buffer.h>
 #include <EventScheduler.h>
+#include <FixedString.h>
 #include <vector>
 #include "EnumBase.h"
 #include "kfc_fw_config.h"
@@ -58,34 +56,54 @@
 #include "mqtt_auto_discovery.h"
 #include "mqtt_auto_discovery_queue.h"
 
-DECLARE_ENUM(MQTTQueueEnum_t, uint8_t,
-    SUBSCRIBE = 0,
-    UNSUBSCRIBE,
-    PUBLISH,
-);
+#if DEBUG_MQTT_CLIENT
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
 
 class MQTTPersistantStorageComponent;
 class MQTTPlugin;
-
 class MQTTClient {
 public:
-    using MQTTQueueType = MQTTQueueEnum_t;
-    using MQTTComponentPtr = MQTTComponent::Ptr;
-    using MQTTComponentVector = MQTTComponent::Vector;
-    using MQTTConfigType = KFCConfigurationClasses::Plugins::MQTTClient::MqttConfig_t;
+    class MQTTTopic;
+    class MQTTQueue;
+
+    using ComponentPtr = MQTTComponent::Ptr;
+    using ComponentVector = MQTTComponent::Vector;
+    using ConfigType = KFCConfigurationClasses::Plugins::MQTTClient::MqttConfig_t;
     using ModeType = KFCConfigurationClasses::Plugins::MQTTClient::ModeType;
     using QosType = KFCConfigurationClasses::Plugins::MQTTClient::QosType;
     using ClientConfig = KFCConfigurationClasses::Plugins::MQTTClient;
 
-    enum class StorageFrequencyType {
-        DAILY,
-        WEEKLY,
-        MONTHLY,
+    using AutoReconnectType = uint16_t;
+    using TopicVector = std::vector<MQTTTopic>;
+    using QueueVector = std::vector<MQTTQueue>; // this is not used for QoS at the moment
+
+    enum class QueueType : uint8_t {
+        SUBSCRIBE,
+        UNSUBSCRIBE,
+        PUBLISH
     };
 
-    static constexpr uint8_t QOS_DEFAULT = static_cast<uint8_t>(QosType::DEFAULT);
-    static constexpr uint8_t kDefaultQoS = QOS_DEFAULT;
-    static constexpr uint8_t kPersistantStorageQoS = 1;
+    enum class StorageFrequencyType : uint8_t {
+        DAILY,
+        WEEKLY,
+        MONTHLY
+    };
+
+    enum class ConnectionState : uint8_t {
+        NONE = 0,
+        IDLE,                           // not connecting and not about to connecft
+        AUTO_RECONNECT_DELAY,           // waiting for reconnect
+        PRE_CONNECT,                    // connect method called but otherwise unknown state
+        CONNECTING,                     // disconnected and attempting to connect
+        DISCONNECTING,                  // disconnecting, waiting for tcp connection to close
+        CONNECTED,                      // connection established and aknownledges by the mqtt server
+        DISCONNECTED                    // disconnect callback received
+    };
+
+    static constexpr AutoReconnectType kAutoReconnectDisabled = 0;
 
     class MQTTTopic {
     public:
@@ -107,15 +125,17 @@ public:
 
     class MQTTQueue {
     public:
-        MQTTQueue(MQTTQueueType type, MQTTComponent *component, const String &topic, uint8_t qos, bool retain, const String &payload) :
-            _type(type),
+        MQTTQueue(QueueType type, MQTTComponent *component, const String &topic, QosType qos, bool retain, const String &payload) :
             _component(component),
             _topic(topic),
+            _payload(payload),
+            _type(type),
             _qos(qos),
-            _retain(retain),
-            _payload(payload) {
+            _retain(retain)
+        {
         }
-        inline MQTTQueueType getType() const {
+
+        inline QueueType getType() const {
             return _type;
         }
         inline MQTTComponent *getComponent() const {
@@ -124,7 +144,7 @@ public:
         inline const String &getTopic() const {
             return _topic;
         }
-        inline uint8_t getQos() const {
+        inline QosType getQos() const {
             return _qos;
         }
         inline bool getRetain() const {
@@ -134,100 +154,87 @@ public:
             return _payload;
         }
     private:
-        MQTTQueueType _type;
         MQTTComponent *_component;
         String _topic;
-        uint8_t _qos: 2;
-        uint8_t _retain: 1;
         String _payload;
+        QueueType _type;
+        QosType _qos;
+        bool _retain: 1;
     };
-
-    typedef std::vector<MQTTTopic> MQTTTopicVector;
-    typedef std::vector<MQTTQueue> MQTTQueueVector; // this is not used for QoS at the moment
 
     MQTTClient();
     virtual ~MQTTClient();
 
-    void connect();
-    void disconnect(bool forceDisconnect = false);
-    void setLastWill(char value = 0);
-    bool isConnected() const;
-    void setAutoReconnect(uint32_t timeout);
+    static void setupInstance();
+    static void deleteInstance();
 
-    void registerComponent(MQTTComponentPtr component);
-    bool unregisterComponent(MQTTComponentPtr component);
-    bool isComponentRegistered(MQTTComponentPtr component);
+    void registerComponent(ComponentPtr component);
+    bool unregisterComponent(ComponentPtr component);
+    bool isComponentRegistered(ComponentPtr component);
+
+    // connect to server if not connected/connecting
+    void connect();
+    // disconnect from server
+    void disconnect(bool forceDisconnect = false);
+    // set last will to mark component as offline on disconnect
+    // sets payload and topic
+    template<typename _T>
+    void setLastWillPayload(_T str) {
+        // last will topic and payload pointer must be valid until the connection has been closed
+        _lastWillTopic = formatTopic(FSPGM(mqtt_status_topic));
+        _lastWillPayload = str;
+    }
+    // publish last will
+    // setLastWillPayload must be called before
+    void publishLastWill();
+    // returns true for ConnectionState::CONNECTED,
+    bool isConnected() const;
+    // returns true for ConnectionState::PRE_CONNECT, CONNECTING and CONNECTED
+    bool isConnecting() const;
+    // set time to wait until next reconnect attempt. 0 = disable auto reconnect
+    void setAutoReconnect(AutoReconnectType timeout);
+    // timeout = minimum value or 0
+    void setAutoReconnect();
 
     // <mqtt_topic=home/${device_name}>/component_name><format>
     // NOTE: there is no slash between the component name and format
     static String formatTopic(const String &componentName, const __FlashStringHelper *format = nullptr, ...);
-private:
-    static String _formatTopic(const String &suffix, const __FlashStringHelper *format, va_list arg);
 
 public:
-    void subscribe(MQTTComponentPtr component, const String &topic, uint8_t qos = QOS_DEFAULT);
-    void unsubscribe(MQTTComponentPtr component, const String &topic);
-    void remove(MQTTComponentPtr component);
-    void publish(const String &topic, bool retain, const String &payload, uint8_t qos = QOS_DEFAULT);
+    void subscribe(ComponentPtr component, const String &topic, QosType qos = QosType::DEFAULT);
+    void unsubscribe(ComponentPtr component, const String &topic);
+    void remove(ComponentPtr component);
+    void publish(const String &topic, bool retain, const String &payload, QosType qos = QosType::DEFAULT);
     void publishPersistantStorage(StorageFrequencyType type, const String &name, const String &data);
 
+public:
     // returns false if running
     bool publishAutoDiscovery();
     static void publishAutoDiscoveryCallback(Event::CallbackTimerPtr timer);
 
+public:
     // return values
     // 0: failed to send
     // -1: success, but nothing was sent (in particular for unsubscribe if another component is still subscribed to the same topic)
     // for qos 1 and 2: >= 1 packet id, confirmation will be received by callbacks once delivered
     // for qos 0: 1 = successfully delivered to tcp stack
-    int subscribeWithId(MQTTComponentPtr component, const String &topic, uint8_t qos = QOS_DEFAULT);
-    int unsubscribeWithId(MQTTComponentPtr component, const String &topic);
-    int publishWithId(const String &topic, bool retain, const String &payload, uint8_t qos = QOS_DEFAULT);
+    int subscribeWithId(ComponentPtr component, const String &topic, QosType qos = QosType::DEFAULT);
+    int unsubscribeWithId(ComponentPtr component, const String &topic);
+    int publishWithId(const String &topic, bool retain, const String &payload, QosType qos = QosType::DEFAULT);
 
-    static void setupInstance();
-    static void deleteInstance();
+    static void handleWiFiEvents(WiFiCallbacks::EventType event, void *payload);
 
-    inline static void handleWiFiEvents(WiFiCallbacks::EventType event, void *payload) {
-        _mqttClient->_handleWiFiEvents(event, payload);
-    }
+public:
+    // methods that can be called without verifying getClient() is not nullptr
+    static MQTTClient *getClient();
+    static void safePublish(const String &topic, bool retain, const String &payload, QosType qos = QosType::DEFAULT);
+    static void safeRegisterComponent(ComponentPtr component);
+    static bool safeUnregisterComponent(ComponentPtr component);
+    static void safeReRegisterComponent(ComponentPtr component);
+    static void safePersistantStorage(StorageFrequencyType type, const String &name, const String &data);
 
-    static MQTTClient *getClient() {
-        return _mqttClient;
-    }
-
-    static void safePublish(const String &topic, bool retain, const String &payload, uint8_t qos = QOS_DEFAULT) {
-        if (_mqttClient && _mqttClient->isConnected()) {
-            _mqttClient->publish(topic, retain, payload, qos);
-        }
-    }
-
-    static void safeRegisterComponent(MQTTComponentPtr component) {
-        if (_mqttClient) {
-            _mqttClient->registerComponent(component);
-        }
-    }
-
-    static bool safeUnregisterComponent(MQTTComponentPtr component) {
-        if (_mqttClient) {
-            return _mqttClient->unregisterComponent(component);
-        }
-        return false;
-    }
-
-    static void safeReRegisterComponent(MQTTComponentPtr component) {
-        if (_mqttClient) {
-            _mqttClient->unregisterComponent(component);
-            _mqttClient->registerComponent(component);
-        }
-    }
-
-    static void safePersistantStorage(StorageFrequencyType type, const String &name, const String &data) {
-        if (_mqttClient) {
-            _mqttClient->publishPersistantStorage(type, name, data);
-        }
-    }
-
-    static uint8_t getDefaultQos(uint8_t qos = QOS_DEFAULT);
+public:
+    static QosType getDefaultQos(QosType qos = QosType::DEFAULT);
 
     String connectionDetailsString();
     String connectionStatusString();
@@ -244,38 +251,43 @@ public:
     void onUnsubscribe(uint16_t packetId);
 #endif
 
-    MQTTTopicVector &getTopics() {
-        return _topics;
-    }
+    TopicVector &getTopics();
+    size_t getQueueSize() const;
 
-    size_t getQueueSize() const {
-        return _queue.size();
-    }
+public:
+    // return qos if not QosType::DEFAULT, otherwise return the qos value from the configuration
+    static QosType _getDefaultQos(QosType qos = QosType::DEFAULT);
+    // translate into 0, 1 or 2
+    static uint8_t _translateQosType(QosType qos = QosType::DEFAULT);
+
+private:
+    static String _formatTopic(const String &suffix, const __FlashStringHelper *format, va_list arg);
+    static String _filterString(const char *str, bool replaceSpace = false);
 
 private:
     void _zeroConfCallback(const String &hostname, const IPAddress &address, uint16_t port, MDNSResolver::ResponseType type);
     void _setupClient();
-    void autoReconnect(uint32_t timeout);
+    void autoReconnect(AutoReconnectType timeout);
 
     const __FlashStringHelper *_reasonToString(AsyncMqttClientDisconnectReason reason) const;
 
     // match wild cards
     bool _isTopicMatch(const char *topic, const char *match) const;
     // check if the topic is in use by another component
-    bool _topicInUse(MQTTComponentPtr component, const String &topic);
+    bool _topicInUse(ComponentPtr component, const String &topic);
 
 private:
     // if subscribe/unsubscribe/publish fails cause of the tcp client's buffer being full, retry later
     // the payload can be quite large for auto discovery for example
     // messages might be delivered in a different sequence. use subscribe/unsubscribe/publishWithId for full control
     // to deliver messages in sequence, use QoS and callbacks (onPublish() etc... requires MQTT_USE_PACKET_CALLBACKS=1)
-    void _addQueue(MQTTQueueEnum_t type, MQTTComponent *component, const String &topic, uint8_t qos, uint8_t retain, const String &payload);
+    void _addQueue(QueueType type, MQTTComponent *component, const String &topic, QosType qos, bool retain, const String &payload);
     // stop timer and clear queue
     void _clearQueue();
     // process queue
     void _queueTimerCallback();
 
-    MQTTQueueVector _queue;
+    QueueVector _queue;
     Event::Timer _queueTimer;
 
 private:
@@ -285,25 +297,152 @@ private:
 
     size_t getClientSpace() const;
     static bool _isMessageSizeExceeded(size_t len, const char *topic);
+    ConnectionState setConnState(ConnectionState newState);
 
     String _hostname;
     IPAddress _address;
-    uint16_t _port;
     String _username;
     String _password;
-    MQTTConfigType _config;
+    ConfigType _config;
     AsyncMqttClient *_client;
     Event::Timer _timer;
-    uint32_t _autoReconnectTimeout;
-    uint16_t _maxMessageSize;
+    uint16_t _port;
     uint16_t _componentsEntityCount;
-    MQTTComponentVector _components;
-    MQTTTopicVector _topics;
+    FixedString<1> _lastWillPayload;
+    AutoReconnectType _autoReconnectTimeout;
+    ComponentVector _components;
+    TopicVector _topics;
     Buffer _buffer;
     String _lastWillTopic;
-    String _lastWillPayload;
     std::unique_ptr<MQTTAutoDiscoveryQueue> _autoDiscoveryQueue;
     Event::Timer _autoDiscoveryRebroadcast;
+    ConnectionState _connState;
 
+#if DEBUG_MQTT_CLIENT
+public:
+    const __FlashStringHelper *_getConnStateStr();
+    const char *_connection();
+    String _connectionStr;
+#endif
+
+private:
     static MQTTClient *_mqttClient;
 };
+
+
+inline void MQTTClient::setAutoReconnect(AutoReconnectType timeout)
+{
+    __LDBG_printf("timeout=%d conn=%s", timeout, _connection());
+    _autoReconnectTimeout = timeout;
+}
+
+inline void MQTTClient::setAutoReconnect()
+{
+    setAutoReconnect(_config.auto_reconnect_min);
+}
+
+inline bool MQTTClient::isConnected() const
+{
+    return _connState == ConnectionState::CONNECTED;
+}
+
+inline size_t MQTTClient::getClientSpace() const
+{
+    return _client->getAsyncClient().space();
+}
+
+inline MQTTClient::ConnectionState MQTTClient::setConnState(ConnectionState newState)
+{
+    auto tmp = _connState;
+    _connState = newState;
+    return tmp;
+}
+
+inline MQTTClient::TopicVector &MQTTClient::getTopics()
+{
+    return _topics;
+}
+
+inline size_t MQTTClient::getQueueSize() const
+{
+    return _queue.size();
+}
+
+inline void MQTTClient::publishAutoDiscoveryCallback(Event::CallbackTimerPtr timer)
+{
+    if (_mqttClient) {
+        _mqttClient->publishAutoDiscovery();
+    }
+}
+
+inline void MQTTClient::handleWiFiEvents(WiFiCallbacks::EventType event, void *payload)
+{
+    if (_mqttClient) {
+        _mqttClient->_handleWiFiEvents(event, payload);
+    }
+}
+
+inline MQTTClient *MQTTClient::getClient()
+{
+    return _mqttClient;
+}
+
+inline void MQTTClient::safePublish(const String &topic, bool retain, const String &payload, QosType qos)
+{
+    if (_mqttClient && _mqttClient->isConnected()) {
+        _mqttClient->publish(topic, retain, payload, qos);
+    }
+}
+
+inline void MQTTClient::safeRegisterComponent(ComponentPtr component)
+{
+    if (_mqttClient) {
+        _mqttClient->registerComponent(component);
+    }
+}
+
+inline bool MQTTClient::safeUnregisterComponent(ComponentPtr component)
+{
+    if (_mqttClient) {
+        return _mqttClient->unregisterComponent(component);
+    }
+    return false;
+}
+
+inline void MQTTClient::safeReRegisterComponent(ComponentPtr component)
+{
+    if (_mqttClient) {
+        _mqttClient->unregisterComponent(component);
+        _mqttClient->registerComponent(component);
+    }
+}
+
+inline void MQTTClient::safePersistantStorage(StorageFrequencyType type, const String &name, const String &data)
+{
+    if (_mqttClient) {
+        _mqttClient->publishPersistantStorage(type, name, data);
+    }
+}
+
+inline MQTTClient::QosType MQTTClient::getDefaultQos(QosType qos)
+{
+    return qos;
+}
+
+inline MQTTClient::QosType MQTTClient::_getDefaultQos(QosType qos)
+{
+    if (qos != QosType::DEFAULT) {
+        return qos;
+    }
+    if (_mqttClient) {
+        return static_cast<QosType>(_mqttClient->_config.qos);
+    }
+    return static_cast<QosType>(ClientConfig::getConfig().qos);
+}
+
+inline uint8_t MQTTClient::_translateQosType(QosType qos)
+{
+    return static_cast<uint8_t>(_getDefaultQos(qos));
+}
+
+#include <debug_helper_disable.h>

@@ -87,6 +87,8 @@ extern const char ___debugPrefix[] PROGMEM;
 // call in setup, after initializing the output stream
 #define DEBUG_HELPER_INIT()                                 DebugContext::__state = DEBUG_HELPER_STATE_DEFAULT;
 #define DEBUG_HELPER_SILENT()                               DebugContext::__state = DEBUG_HELPER_STATE_DISABLED;
+#define DEBUG_HELPER_PUSH_STATE()                           auto __debug_helper_state = DebugContext::__state;
+#define DEBUG_HELPER_POP_STATE()                            DebugContext::__state = __debug_helper_state;
 
 #ifndef DEBUG_HELPER_STATE_DEFAULT
 #define DEBUG_HELPER_STATE_DEFAULT                          DEBUG_HELPER_STATE_ACTIVE

@@ -6,6 +6,7 @@
 
 #include <Arduino_compat.h>
 #include <PrintString.h>
+#include "mqtt_strings.h"
 
 class MQTTClient;
 class MQTTComponent;
@@ -31,45 +32,100 @@ public:
     void create(ComponentTypeEnum_t componentType, const String &componentName, FormatType format);
 
 public:
-    void addParameter(const __FlashStringHelper *name, const String &value);
-    inline void addParameter(const __FlashStringHelper *name, int value) {
-        addParameter(name, String(value));
+    inline void addParameter(const __FlashStringHelper *name, const char *value); // PROGMEM safe
+    inline void addParameter(const __FlashStringHelper *name, const __FlashStringHelper *value);
+    inline void addParameter(const __FlashStringHelper *name, const String &value);
+    inline void addParameter(const __FlashStringHelper *name, char value);
+    inline void addParameter(const __FlashStringHelper *name, int value);
+    inline void addParameter(const __FlashStringHelper *name, unsigned value);
+    inline void addParameter(const __FlashStringHelper *name, int64_t value);
+    inline void addParameter(const __FlashStringHelper *name, uint64_t value);
+    inline void addParameter(const __FlashStringHelper *name, float value);
+    inline void addParameter(const __FlashStringHelper *name, double value);
+
+public:
+    template<typename _T>
+    void addStateTopic(_T value) {
+        addParameter(FSPGM(mqtt_state_topic), value);
+        addPayloadOnOff();
     }
-    inline void addParameter(const __FlashStringHelper *name, char value) {
-        addParameter(name, String(value));
+
+    template<typename _T>
+    void addCommandTopic(_T value) {
+        addParameter(FSPGM(mqtt_command_topic), value);
+    }
+
+    template<typename _T>
+    void addBrightnessStateTopic(_T value) {
+        addParameter(FSPGM(mqtt_brightness_state_topic), value);
+    }
+
+    template<typename _T>
+    void addBrightnessCommandTopic(_T value) {
+        addParameter(FSPGM(mqtt_brightness_command_topic), value);
+    }
+
+    template<typename _T>
+    void addBrightnessScale(_T value) {
+        addParameter(FSPGM(mqtt_brightness_scale), value);
+    }
+
+    template<typename _T>
+    void addColorTempStateTopic(_T value) {
+        addParameter(FSPGM(mqtt_color_temp_state_topic), value);
+    }
+
+    template<typename _T>
+    void addColorTempCommandTopic(_T value) {
+        addParameter(FSPGM(mqtt_color_temp_command_topic), value);
+    }
+
+    template<typename _T>
+    void addRGBStateTopic(_T value) {
+        addParameter(FSPGM(mqtt_rgb_state_topic), value);
+    }
+
+    template<typename _T>
+    void addRGBCommandTopic(_T value) {
+        addParameter(FSPGM(mqtt_rgb_command_topic), value);
+    }
+
+    void addValueTemplate(const char *value) { // PROGMEM safe
+        PrintString value_json(F("{{ value_json.%s }}"), value);
+        addParameter(FSPGM(mqtt_value_template), value_json.c_str());
+    }
+
+    void addValueTemplate(const String &value) {
+        addValueTemplate(value.c_str());
+    }
+
+    template<typename _T>
+    void addExpireAfter(_T seconds)
+    {
+        addParameter(FSPGM(mqtt_expire_after), seconds);
+    }
+
+    template<typename _T>
+    void addPayloadOn(_T value) {
+        addParameter(FSPGM(mqtt_payload_on), value);
+    }
+
+    template<typename _T>
+    void addPayloadOff(_T value) {
+        addParameter(FSPGM(mqtt_payload_on), value);
+    }
+
+    void addPayloadOnOff() {
+        addPayloadOn('1');
+        addPayloadOff('0');
+    }
+
+    template<typename _T>
+    void addUnitOfMeasurement(_T value) {
+        addParameter(FSPGM(mqtt_unit_of_measurement), value);
     }
 
 public:
-    void addStateTopic(const String &value);
-    void addCommandTopic(const String &value);
-    void addPayloadOn(const String &value);
-    void addPayloadOff(const String &value);
-    void addBrightnessStateTopic(const String &value);
-    void addBrightnessCommandTopic(const String &value);
-    void addBrightnessScale(uint32_t brightness);
-    void addColorTempStateTopic(const String &value);
-    void addColorTempCommandTopic(const String &value);
-    void addRGBStateTopic(const String &value);
-    void addRGBCommandTopic(const String &value);
-    void addUnitOfMeasurement(const String &value);
-    void addValueTemplate(const String &value);
-
-    inline void addPayloadOn(int value) {
-        addPayloadOn(String(value));
-    }
-    inline void addPayloadOn(char value) {
-        addPayloadOn(String(value));
-    }
-    inline void addPayloadOff(int value) {
-        addPayloadOff(String(value));
-    }
-    inline void addPayloadOff(char value) {
-        addPayloadOff(String(value));
-    }
-    inline void addUnitOfMeasurement(char value) {
-        addUnitOfMeasurement(String(value));
-    }
-
     void finalize();
     PrintString &getPayload();
     String &getTopic();
@@ -78,6 +134,21 @@ public:
     size_t getMessageSize() const;
 
     static bool isEnabled();
+
+private:
+    void __addParameter(const __FlashStringHelper *name, const char *value); // PROGMEM safe
+
+    inline void __addParameter(const __FlashStringHelper *name, const __FlashStringHelper *value);
+    inline void __addParameter(const __FlashStringHelper *name, const String &value);
+    inline void __addParameter(const __FlashStringHelper *name, char value);
+
+    template<typename _T>
+    void __addParameter(const __FlashStringHelper *name, _T value) {
+        PrintString str;
+        str.print(value);
+        addParameter(name, str);
+    }
+
 
 private:
     void _create(ComponentTypeEnum_t componentType, const String &name, FormatType format);
@@ -90,3 +161,65 @@ private:
     String _baseTopic;
 #endif
 };
+
+
+inline void MQTTAutoDiscovery::addParameter(const __FlashStringHelper *name, const char *value)
+{
+    __addParameter(name, value);
+}
+
+inline void MQTTAutoDiscovery::addParameter(const __FlashStringHelper *name, int value)
+{
+    __addParameter(name, value);
+}
+
+inline void MQTTAutoDiscovery::addParameter(const __FlashStringHelper *name, unsigned value)
+{
+    __addParameter(name, value);
+}
+
+inline void MQTTAutoDiscovery::addParameter(const __FlashStringHelper *name, int64_t value)
+{
+    __addParameter(name, value);
+}
+
+inline void MQTTAutoDiscovery::addParameter(const __FlashStringHelper *name, uint64_t value)
+{
+    __addParameter(name, value);
+}
+
+inline void MQTTAutoDiscovery::addParameter(const __FlashStringHelper *name, float value)
+{
+    __addParameter(name, static_cast<double>(value));
+}
+
+inline void MQTTAutoDiscovery::addParameter(const __FlashStringHelper *name, double value)
+{
+    __addParameter(name, value);
+}
+
+inline void MQTTAutoDiscovery::addParameter(const __FlashStringHelper *name, char value)
+{
+    __addParameter(name, value);
+}
+
+inline void MQTTAutoDiscovery::addParameter(const __FlashStringHelper *name, const __FlashStringHelper *value)
+{
+    __addParameter(name, RFPSTR(value));
+}
+
+inline void MQTTAutoDiscovery::addParameter(const __FlashStringHelper *name, const String &value)
+{
+    __addParameter(name, value);
+}
+
+inline void MQTTAutoDiscovery::__addParameter(const __FlashStringHelper *name, char value)
+{
+    char str[2] = { value, 0 };
+    __addParameter(name, str);
+}
+
+inline void MQTTAutoDiscovery::__addParameter(const __FlashStringHelper *name, const String &value)
+{
+    __addParameter(name, value.c_str());
+}

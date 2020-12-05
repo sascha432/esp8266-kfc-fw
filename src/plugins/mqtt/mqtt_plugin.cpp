@@ -51,7 +51,7 @@ void MQTTPlugin::setup(SetupModeType mode)
 
 void MQTTPlugin::reconfigure(const String &source)
 {
-    __LDBG_printf(PSTR("source=%s"), source.c_str());
+    __LDBG_printf("source=%s", source.c_str());
     // deletes old instance and if enabled, creates new one
     MQTTClient::setupInstance();
 }
@@ -59,6 +59,14 @@ void MQTTPlugin::reconfigure(const String &source)
 void MQTTPlugin::shutdown()
 {
     __LDBG_println();
+#if MQTT_SET_LAST_WILL == 0
+    auto client = MQTTClient::getClient();
+    if (client) {
+        // send last will manually and give system some time to push out the tcp buffer
+        client->disconnect(false);
+        delay(100);
+    }
+#endif
     // crashing sometimes
     // MQTTClient::deleteInstance();
 }
@@ -117,7 +125,7 @@ bool MQTTPlugin::atModeHandler(AtModeArgs &args)
                 case 1: // con
                     if (Plugins::MQTTClient::isEnabled()) {
                         args.printf_P(PSTR("connecting to %s"), client.connectionStatusString().c_str());
-                        client.setAutoReconnect(MQTT_AUTO_RECONNECT_TIMEOUT);
+                        client.setAutoReconnect();
                         client.connect();
                     }
                     else {
@@ -126,7 +134,12 @@ bool MQTTPlugin::atModeHandler(AtModeArgs &args)
                     break;
                 case 2: // disconnect
                 case 3: // dis
-                    client.setAutoReconnect(args.isTrue(1) ? MQTT_AUTO_RECONNECT_TIMEOUT : 0);
+                    if (args.isTrue(1)) {
+                        client.setAutoReconnect();
+                    }
+                    else {
+                        client.setAutoReconnect(0);
+                    }
                     client.disconnect(false);
                     args.print(F("disconnected"));
                     break;

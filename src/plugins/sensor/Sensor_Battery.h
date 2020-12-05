@@ -26,7 +26,7 @@ using KFCConfigurationClasses::Plugins;
 
 // pin for charging detection
 #ifndef IOT_SENSOR_BATTERY_CHARGE_DETECTION
-#define IOT_SENSOR_BATTERY_CHARGE_DETECTION             5
+#define IOT_SENSOR_BATTERY_CHARGE_DETECTION             5       // D1
 #endif
 
 // external function for charge detection

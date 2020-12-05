@@ -12,7 +12,7 @@
         "default": "Set-Cookie"
     },
     "mime_text_plain": {
-        "use_counter": 18,
+        "use_counter": 17,
         "default": "text/plain"
     },
     "null": {
@@ -44,7 +44,7 @@
         "default": "Invalid hostname or IP address"
     },
     "webui_json_id": {
-        "use_counter": 33,
+        "use_counter": 25,
         "default": "id"
     },
     "webui_json_unit": {
@@ -60,11 +60,11 @@
         "default": "offset"
     },
     "webui_json_value": {
-        "use_counter": 33,
+        "use_counter": 25,
         "default": "value"
     },
     "webui_json_state": {
-        "use_counter": 27,
+        "use_counter": 19,
         "default": "state"
     },
     "mime_application_json": {
@@ -292,7 +292,7 @@
         "default": "image/bmp"
     },
     "tcp": {
-        "use_counter": 8,
+        "use_counter": 6,
         "default": "tcp"
     },
     "mime_text_css": {
@@ -347,24 +347,16 @@
         "use_counter": 8,
         "default": "disabled"
     },
-    "mqtt_color_temp_state_topic": {
-        "use_counter": 1,
-        "default": "clr_temp_stat_t"
-    },
-    "mqtt_color_temp_command_topic": {
-        "use_counter": 1,
-        "default": "clr_temp_cmd_t"
-    },
     "iot_blinds_control_state_file": {
         "use_counter": 2,
         "default": "/.pvt/blinds_ctrl.state"
     },
     "Yes": {
-        "use_counter": 1,
+        "use_counter": 4,
         "default": "Yes"
     },
     "No": {
-        "use_counter": 1,
+        "use_counter": 4,
         "default": "No"
     },
     "webui_json_title": {
@@ -444,11 +436,11 @@
         "default": "cmd_t"
     },
     "mqtt_payload_on": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "pl_on"
     },
     "mqtt_payload_off": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "pl_off"
     },
     "mqtt_brightness_state_topic": {
@@ -479,17 +471,18 @@
         "use_counter": 1,
         "default": "val_tpl"
     },
-    "Anonymous": {
-        "use_counter": 2,
-        "default": "Anonymous"
+    "mqtt_color_temp_state_topic": {
+        "use_counter": 1,
+        "default": "clr_temp_stat_t"
     },
-    "Disabled": {
-        "use_counter": 10,
-        "default": "Disabled"
+    "mqtt_color_temp_command_topic": {
+        "use_counter": 1,
+        "default": "clr_temp_cmd_t"
     },
-    "enabled": {
-        "use_counter": 3,
-        "default": "enabled"
+    "mqtt_expire_after": {
+        "use_counter": 1,
+        "auto": "mqtt expire after",
+        "default": "exp_aft"
     },
     "mqtt_component_light": {
         "use_counter": 1,
@@ -506,6 +499,26 @@
     "mqtt_component_switch": {
         "use_counter": 1,
         "default": "switch"
+    },
+    "mqtt_switch_state": {
+        "use_counter": 0,
+        "default": "/switch/state"
+    },
+    "mqtt_switch_set": {
+        "use_counter": 0,
+        "default": "/switch/set"
+    },
+    "Anonymous": {
+        "use_counter": 2,
+        "default": "Anonymous"
+    },
+    "Disabled": {
+        "use_counter": 10,
+        "default": "Disabled"
+    },
+    "enabled": {
+        "use_counter": 3,
+        "default": "enabled"
     },
     "strftime_date_time_zone": {
         "use_counter": 3,
@@ -528,7 +541,7 @@
         "default": "Detected eth address %s"
     },
     "stk500v1_log_file": {
-        "use_counter": 5,
+        "use_counter": 4,
         "default": "/stk500v1/debug.log"
     },
     "stk500v1_sig_file": {
@@ -543,20 +556,12 @@
         "use_counter": 3,
         "default": "Off"
     },
-    "mqtt_switch_state": {
-        "use_counter": 0,
-        "default": "/switch/state"
-    },
-    "mqtt_switch_set": {
-        "use_counter": 0,
-        "default": "/switch/set"
-    },
     "iot_switch_states_file": {
         "use_counter": 2,
         "default": "/.pvt/switch.states"
     },
     "kfcfw": {
-        "use_counter": 3,
+        "use_counter": 4,
         "default": "kfcfw"
     },
     "moon_phase_0": {
@@ -1032,19 +1037,19 @@
         "default": "n/a"
     },
     "stk500v1_tmp_file": {
-        "use_counter": 2,
+        "use_counter": 0,
         "default": "/stk500v1/firmware_tmp.hex"
     },
     "iot_sensor_hlw80xx_state_file": {
-        "use_counter": 2,
+        "use_counter": 0,
         "default": ""
     },
     "seconds": {
-        "use_counter": 11,
+        "use_counter": 10,
         "default": "seconds"
     },
     "milliseconds": {
-        "use_counter": 6,
+        "use_counter": 3,
         "default": "milliseconds"
     },
     "__s_": {
@@ -1076,7 +1081,7 @@
         "default": "storage"
     },
     "image_type": {
-        "use_counter": 3,
+        "use_counter": 2,
         "default": "image_type"
     },
     "id": {
@@ -1084,7 +1089,7 @@
         "default": "id"
     },
     "mqtt": {
-        "use_counter": 10,
+        "use_counter": 9,
         "default": "mqtt"
     },
     "_set": {
@@ -1124,19 +1129,19 @@
         "default": "brightness"
     },
     "_degreeC": {
-        "use_counter": 9,
+        "use_counter": 5,
         "default": "\\u00b0C"
     },
     "vcc": {
-        "use_counter": 4,
+        "use_counter": 0,
         "default": "vcc"
     },
     "frequency": {
-        "use_counter": 4,
+        "use_counter": 0,
         "default": "frequency"
     },
     "Hz": {
-        "use_counter": 2,
+        "use_counter": 0,
         "default": "Hz"
     },
     "light_sensor": {
@@ -1340,7 +1345,7 @@
         "default": "&apos;"
     },
     "address": {
-        "use_counter": 5,
+        "use_counter": 3,
         "default": "address"
     },
     "domain": {
@@ -1796,31 +1801,31 @@
         "default": "Auto"
     },
     "power": {
-        "use_counter": 5,
+        "use_counter": 0,
         "default": "power"
     },
     "energy_total": {
-        "use_counter": 5,
+        "use_counter": 0,
         "default": "energy_total"
     },
     "energy": {
-        "use_counter": 5,
+        "use_counter": 0,
         "default": "energy"
     },
     "kWh": {
-        "use_counter": 6,
+        "use_counter": 0,
         "default": "kWh"
     },
     "voltage": {
-        "use_counter": 5,
+        "use_counter": 0,
         "default": "voltage"
     },
     "current": {
-        "use_counter": 5,
+        "use_counter": 0,
         "default": "current"
     },
     "pf": {
-        "use_counter": 5,
+        "use_counter": 0,
         "default": "pf"
     },
     "Brightness": {
@@ -1984,7 +1989,7 @@
         "default": "- "
     },
     "serial_console_html": {
-        "use_counter": 2,
+        "use_counter": 1,
         "default": "serial-console.html"
     },
     "_serial_console": {
@@ -1996,7 +2001,7 @@
         "default": "Serial Console"
     },
     "alerts_storage_filename": {
-        "use_counter": 16,
+        "use_counter": 17,
         "default": "/.pvt/alerts.json"
     },
     "webui_json_hb": {

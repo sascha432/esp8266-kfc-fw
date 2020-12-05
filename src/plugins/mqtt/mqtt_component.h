@@ -7,38 +7,8 @@
 #include <Arduino_compat.h>
 #include <AsyncMqttClient.h>
 #include <EventScheduler.h>
+#include "mqtt_strings.h"
 #include "mqtt_auto_discovery.h"
-
-// use abbreviations to reduce the size of the auto discovery
-#ifndef MQTT_AUTO_DISCOVERY_USE_ABBREVIATIONS
-#define MQTT_AUTO_DISCOVERY_USE_ABBREVIATIONS   1
-#endif
-
-PROGMEM_STRING_DECL(mqtt_component_switch);
-PROGMEM_STRING_DECL(mqtt_component_light);
-PROGMEM_STRING_DECL(mqtt_component_sensor);
-PROGMEM_STRING_DECL(mqtt_component_binary_sensor);
-PROGMEM_STRING_DECL(mqtt_component_storage);
-PROGMEM_STRING_DECL(mqtt_unique_id);
-PROGMEM_STRING_DECL(mqtt_name);
-PROGMEM_STRING_DECL(mqtt_availability_topic);
-PROGMEM_STRING_DECL(mqtt_topic);
-PROGMEM_STRING_DECL(mqtt_status_topic);
-PROGMEM_STRING_DECL(mqtt_payload_available);
-PROGMEM_STRING_DECL(mqtt_payload_not_available);
-PROGMEM_STRING_DECL(mqtt_state_topic);
-PROGMEM_STRING_DECL(mqtt_command_topic);
-PROGMEM_STRING_DECL(mqtt_payload_on);
-PROGMEM_STRING_DECL(mqtt_payload_off);
-PROGMEM_STRING_DECL(mqtt_brightness_state_topic);
-PROGMEM_STRING_DECL(mqtt_brightness_command_topic);
-PROGMEM_STRING_DECL(mqtt_brightness_scale);
-PROGMEM_STRING_DECL(mqtt_color_temp_state_topic);
-PROGMEM_STRING_DECL(mqtt_color_temp_command_topic);
-PROGMEM_STRING_DECL(mqtt_rgb_state_topic);
-PROGMEM_STRING_DECL(mqtt_rgb_command_topic);
-PROGMEM_STRING_DECL(mqtt_unit_of_measurement);
-PROGMEM_STRING_DECL(mqtt_value_template);
 
 #if MQTT_AUTO_DISCOVERY_USE_ABBREVIATIONS
 

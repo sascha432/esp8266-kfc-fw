@@ -32,9 +32,6 @@ class MQTTClient;
 
 class MQTTAutoDiscoveryQueue {
 public:
-    static constexpr uint8_t kAutoDiscoveryQoS = 1;
-
-public:
     MQTTAutoDiscoveryQueue(MQTTClient &client);
     ~MQTTAutoDiscoveryQueue();
 

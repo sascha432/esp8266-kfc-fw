@@ -142,18 +142,17 @@ uint8_t Driver_4ChDimmer::getAutoDiscoveryCount() const
 
 void Driver_4ChDimmer::_createTopics()
 {
-    if (_data.state.set.length() == 0) {
+    if (_data.channels[0].set.length() == 0) {
         String main = FSPGM(main);
         String lockChannels = FSPGM(lock_channels);
 
-        _data.state.set = MQTTClient::formatTopic(main, FSPGM(_set));
+        // _data.state.set = MQTTClient::formatTopic(main, FSPGM(_set));
         _data.state.state = MQTTClient::formatTopic(main, FSPGM(_state));
-        _data.brightness.set = MQTTClient::formatTopic(main, FSPGM(_brightness_set, "/brightness/set"));
+        // _data.brightness.set = MQTTClient::formatTopic(main, FSPGM(_brightness_set, "/brightness/set"));
         _data.brightness.state = MQTTClient::formatTopic(main, FSPGM(_brightness_state, "/brightness/state"));
-        _data.color.set = MQTTClient::formatTopic(main, FSPGM(_color_set, "/color/set"));
+        // _data.color.set = MQTTClient::formatTopic(main, FSPGM(_color_set, "/color/set"));
         _data.color.state = MQTTClient::formatTopic(main, FSPGM(_color_state, "/color/state"));
-
-        _data.lockChannels.set = MQTTClient::formatTopic(lockChannels, F("/lock/set"));
+        // _data.lockChannels.set = MQTTClient::formatTopic(lockChannels, F("/lock/set"));
         _data.lockChannels.state = MQTTClient::formatTopic(lockChannels, F("/lock/state"));
 
         for(uint8_t i = 0; i < _channels.size(); i++) {
@@ -170,9 +169,13 @@ void Driver_4ChDimmer::onConnect(MQTTClient *client)
 {
     _createTopics();
 
-    client->subscribe(this, _data.state.set);
-    client->subscribe(this, _data.brightness.set);
-    client->subscribe(this, _data.color.set);
+    String main = FSPGM(main);
+    client->subscribeWithGroup(this, MQTTClient::formatTopic(main, FSPGM(_set)));
+    client->subscribeWithGroup(this, MQTTClient::formatTopic(main, FSPGM(_brightness_set, "/brightness/set")));
+    client->subscribeWithGroup(this, MQTTClient::formatTopic(main, FSPGM(_color_set, "/color/set")));
+    // client->subscribeWithGroup(this, _data.state.set);
+    // client->subscribeWithGroup(this, _data.brightness.set);
+    // client->subscribeWithGroup(this, _data.color.set);
     client->subscribe(this, _data.lockChannels.set);
     for(uint8_t i = 0; i < _channels.size(); i++) {
         client->subscribe(this, _data.channels[i].set);
@@ -187,7 +190,51 @@ void Driver_4ChDimmer::onMessage(MQTTClient *client, char *topic, char *payload,
     int value = atoi(payload);
     __LDBG_printf("topic=%s value=%d", topic, value);
 
-    if (_data.state.set.equals(topic)) {
+    // check channels first
+    for(uint8_t i = 0; i < _channels.size(); i++) {
+        auto &channel =_data.channels[i];
+
+        if (channel.brightnessSet.equals(topic)) {
+
+            float fadetime = (_channels[i] && value > 0) ? getFadeTime() : getOnOffFadeTime();
+            _channels[i] = value;
+            _channelsToBrightness();
+            _setChannels(fadetime);
+            publishState(client);
+            return;
+
+        }
+        else if (channel.set.equals(topic)) {
+
+            if (value && _channels[i]) {
+                // already on
+            }
+            else if (value == 0 && _channels[i] == 0) {
+                // already off
+            }
+            else {
+                float fadetime = getOnOffFadeTime();
+                if (value) {
+                    value = _storedChannels[i]; // restore last state
+                    if (value <= MIN_LEVEL) {
+                        value = DEFAULT_LEVEL;
+                    }
+                }
+                else {
+                    // value = 0;
+                }
+
+                _channels[i] = value;
+                _channelsToBrightness();
+                _setChannels(fadetime);
+                publishState(client);
+            }
+            return;
+        }
+    }
+
+    if (strcmp_end_P(topic, strlen(topic), SPGM(_set)) == 0) {
+    // if (_data.state.set.equals(topic)) {
 
         // on/off only changes brightness if the state is different
         bool result;
@@ -202,7 +249,8 @@ void Driver_4ChDimmer::onMessage(MQTTClient *client, char *topic, char *payload,
         }
 
     }
-    else if (_data.brightness.set.equals(topic)) {
+    else if (strcmp_end_P(topic, strlen(topic), SPGM(_brightness_set)) == 0) {
+    //else if (_data.brightness.set.equals(topic)) {
 
         float fadetime;
 
@@ -221,7 +269,8 @@ void Driver_4ChDimmer::onMessage(MQTTClient *client, char *topic, char *payload,
         publishState(client);
 
     }
-    else if (_data.color.set.equals(topic)) {
+    else if (strcmp_end_P(topic, strlen(topic), SPGM(_color_set)) == 0) {
+    // else if (_data.color.set.equals(topic)) {
 
         _data.color.value = value * 100.0;
         if (_data.state.value) {
@@ -231,7 +280,8 @@ void Driver_4ChDimmer::onMessage(MQTTClient *client, char *topic, char *payload,
         publishState(client);
 
     }
-    else if (_data.lockChannels.set.equals(topic)) {
+    else if (strcmp_end_P(topic, strlen(topic), PSTR("/lock/set")) == 0) {
+    // else if (_data.lockChannels.set.equals(topic)) {
 
         _setLockChannels(value);
         _brightnessToChannels();
@@ -239,55 +289,6 @@ void Driver_4ChDimmer::onMessage(MQTTClient *client, char *topic, char *payload,
         publishState(client);
 
     }
-    else {
-
-        for(uint8_t i = 0; i < _channels.size(); i++) {
-            auto &channel =_data.channels[i];
-
-            if (channel.brightnessSet.equals(topic)) {
-
-                float fadetime = (_channels[i] && value > 0) ? getFadeTime() : getOnOffFadeTime();
-                _channels[i] = value;
-                _channelsToBrightness();
-                _setChannels(fadetime);
-                publishState(client);
-                break;
-
-            }
-            else if (channel.set.equals(topic)) {
-
-                if (value && _channels[i]) {
-                    // already on
-                    break;
-                }
-                else if (value == 0 && _channels[i] == 0) {
-                    // already off
-                    break;
-                }
-                else {
-                    float fadetime = getOnOffFadeTime();
-                    if (value) {
-                        value = _storedChannels[i]; // restore last state
-                        if (value <= MIN_LEVEL) {
-                            value = DEFAULT_LEVEL;
-                        }
-                    }
-                    else {
-                        // value = 0;
-                    }
-
-                    _channels[i] = value;
-                    _channelsToBrightness();
-                    _setChannels(fadetime);
-                    publishState(client);
-                    break;
-                }
-
-            }
-
-        }
-    }
-
 }
 
 void Driver_4ChDimmer::_setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)

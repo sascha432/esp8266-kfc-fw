@@ -75,17 +75,17 @@ public:
 
 typedef struct {
     struct {
-        String set;
+        // String set;
         String state;
         bool value;
     } state;
     struct {
-        String set;
+        // String set;
         String state;
         int32_t value;
     } brightness;
     struct {
-        String set;
+        // String set;
         String state;
         float value;
     } color;

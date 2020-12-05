@@ -1134,7 +1134,7 @@ namespace KFCConfigurationClasses {
                 CREATE_UINT32_BITFIELD_MIN_MAX(keepalive, 10, 0, 900, 15, 1);
                 CREATE_UINT32_BITFIELD_MIN_MAX(auto_discovery_rebroadcast_interval, 16, 0, 43200, 24 * 60, 3600);
                 CREATE_UINT32_BITFIELD_MIN_MAX(auto_reconnect_min, 16, 250, 60000, 5000, 500);
-                CREATE_UINT32_BITFIELD_MIN_MAX(auto_reconnect_max, 16, 5000, 60000, 5000, 1000);
+                CREATE_UINT32_BITFIELD_MIN_MAX(auto_reconnect_max, 16, 5000, 60000, 60000, 1000);
                 CREATE_UINT32_BITFIELD_MIN_MAX(auto_reconnect_incr, 7, 0, 100, 10);
                 CREATE_ENUM_BITFIELD(mode, ModeType);
                 CREATE_ENUM_BITFIELD(qos, QosType);
@@ -1167,8 +1167,9 @@ namespace KFCConfigurationClasses {
             CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.mqtt, Username, 0, 32);
             CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.mqtt, Password, 6, 32);
             CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.mqtt, Topic, 4, 64);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.mqtt, GroupTopic, 4, 64);
             CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.mqtt, AutoDiscoveryPrefix, 1, 32);
-            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.mqtt, SharedTopic, 4, 128);
+            // CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.mqtt, SharedTopic, 4, 128);
 
             static const uint8_t *getFingerPrint(uint16_t &size);
             static void setFingerPrint(const uint8_t *fingerprint, uint16_t size);

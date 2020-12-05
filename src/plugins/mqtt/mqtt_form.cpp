@@ -106,6 +106,14 @@ void MQTTPlugin::createConfigureForm(FormCallbackType type, const String &formNa
     ClientConfig::addTopicLengthValidator(form);
     form.addFormUI(FSPGM(Topic));
 
+#if MQTT_GROUP_TOPIC
+
+    form.addStringGetterSetter(F("gt"), ClientConfig::getGroupTopic, ClientConfig::setGroupTopic);
+    ClientConfig::addGroupTopicLengthValidator(form, true);
+    form.addFormUI(F("Group Topic"));
+
+#endif
+
     form.addObjectGetterSetter(F("qos"), cfg, cfg.get_enum_qos, cfg.set_enum_qos);
     form.addFormUI(F("Quality Of Service"), qosItems);
     form.addValidator(FormUI::Validator::EnumRange<ClientConfig::QosType>(F("Invalid value for QoS")));

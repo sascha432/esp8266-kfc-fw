@@ -229,7 +229,7 @@ String MQTTClient::_filterString(const char *str, bool replaceSpace)
     return out;
 }
 
-String MQTTClient::_formatTopic(const String &suffix, const __FlashStringHelper *format, va_list arg)
+String MQTTClient::_getBaseTopic()
 {
     PrintString topic;
     topic = ClientConfig::getTopic();
@@ -241,8 +241,31 @@ String MQTTClient::_formatTopic(const String &suffix, const __FlashStringHelper 
     }
     if (topic.indexOf(F("${device_title_no_space}")) != -1) {
         topic.replace(F("${device_title_no_space}"), _filterString(System::Device::getTitle(), true));
-
     }
+    return topic;
+}
+
+#if MQTT_GROUP_TOPIC
+
+bool MQTTClient::_getGroupTopic(ComponentPtr component, String groupTopic, String &topic)
+{
+    String deviceTopic = ClientConfig::getTopic();
+    if (!topic.startsWith(deviceTopic) || topic.startsWith(groupTopic)) {
+        return false;
+    }
+    if (topic.indexOf(F("${component_name}")) != -1) {
+        topic.replace(F("${component_name}"), component->getName());
+    }
+    groupTopic += &topic.c_str()[deviceTopic.length() - 1];
+    topic = std::move(groupTopic);
+    return true;
+}
+
+#endif
+
+String MQTTClient::_formatTopic(const String &suffix, const __FlashStringHelper *format, va_list arg)
+{
+    PrintString topic = ClientConfig::getTopic();
     topic.print(suffix);
     if (format) {
         auto format_P = RFPSTR(format);
@@ -482,7 +505,6 @@ void MQTTClient::onDisconnect(AsyncMqttClientDisconnectReason reason)
 
 void MQTTClient::subscribe(ComponentPtr component, const String &topic, QosType qos)
 {
-    qos = MQTTClient::getDefaultQos(qos);
     if (!_queue.empty() || subscribeWithId(component, topic, qos) == 0) {
         _addQueue(QueueType::SUBSCRIBE, component, topic, qos, 0, String());
     }
@@ -509,6 +531,42 @@ void MQTTClient::unsubscribe(ComponentPtr component, const String &topic)
         _addQueue(QueueType::UNSUBSCRIBE, component, topic, getDefaultQos(), 0, String());
     }
 }
+
+#if MQTT_GROUP_TOPIC
+
+void MQTTClient::subscribeWithGroup(ComponentPtr component, const String &topic, QosType qos)
+{
+    if (!_queue.empty() || subscribeWithId(component, topic, qos) == 0) {
+        _addQueue(QueueType::SUBSCRIBE, component, topic, qos, 0, String());
+    }
+    auto groupBaseTopic = ClientConfig::getGroupTopic();
+    if (*groupBaseTopic) {
+        String groupTopic;
+        if (_getGroupTopic(component, groupBaseTopic, groupTopic)) {
+            if (!_queue.empty() || subscribeWithId(component, groupTopic, qos) == 0) {
+                _addQueue(QueueType::SUBSCRIBE, component, groupTopic, qos, 0, String());
+            }
+        }
+    }
+}
+
+void MQTTClient::unsubscribeWithGroup(ComponentPtr component, const String &topic)
+{
+    if (!_queue.empty() || unsubscribeWithId(component, topic) == 0) {
+        _addQueue(QueueType::UNSUBSCRIBE, component, topic, getDefaultQos(), 0, String());
+    }
+    auto groupBaseTopic = ClientConfig::getGroupTopic();
+    if (*groupBaseTopic) {
+        String groupTopic;
+        if (_getGroupTopic(component, groupBaseTopic, groupTopic)) {
+            if (!_queue.empty() || unsubscribeWithId(component, groupTopic) == 0) {
+                _addQueue(QueueType::UNSUBSCRIBE, component, groupTopic, getDefaultQos(), 0, String());
+            }
+        }
+    }
+}
+
+#endif
 
 int MQTTClient::unsubscribeWithId(ComponentPtr component, const String &topic)
 {

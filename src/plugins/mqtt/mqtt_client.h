@@ -13,6 +13,11 @@
 #define MQTT_AUTO_DISCOVERY                     1
 #endif
 
+// support for MQTT group topic
+#ifndef MQTT_GROUP_TOPIC
+#define MQTT_GROUP_TOPIC                        0
+#endif
+
 // 0 to disable last will. status is set to offline when disconnect(false) is called
 // useful for devices that go to deep sleep and stay "online"
 #ifndef MQTT_SET_LAST_WILL
@@ -203,6 +208,10 @@ public:
 public:
     void subscribe(ComponentPtr component, const String &topic, QosType qos = QosType::DEFAULT);
     void unsubscribe(ComponentPtr component, const String &topic);
+#if MQTT_GROUP_TOPIC
+    void subscribeWithGroup(ComponentPtr component, const String &topic, QosType qos = QosType::DEFAULT);
+    void unsubscribeWithGroup(ComponentPtr component, const String &topic);
+#endif
     void remove(ComponentPtr component);
     void publish(const String &topic, bool retain, const String &payload, QosType qos = QosType::DEFAULT);
     void publishPersistantStorage(StorageFrequencyType type, const String &name, const String &data);
@@ -261,6 +270,10 @@ public:
     static uint8_t _translateQosType(QosType qos = QosType::DEFAULT);
 
 private:
+    static String _getBaseTopic();
+#if MQTT_GROUP_TOPIC
+    static bool _getGroupTopic(ComponentPtr component, String groupTopic, String &topic);
+#endif
     static String _formatTopic(const String &suffix, const __FlashStringHelper *format, va_list arg);
     static String _filterString(const char *str, bool replaceSpace = false);
 

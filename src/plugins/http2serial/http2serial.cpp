@@ -34,7 +34,8 @@ using KFCConfigurationClasses::System;
 Http2Serial *Http2Serial::_instance = nullptr;
 WsClientAsyncWebSocket *wsSerialConsole = nullptr;
 
-Http2Serial::Http2Serial() : _client(serialHandler.addClient(onData, SerialHandler::EventType::RW))
+Http2Serial::Http2Serial() :
+    _client(serialHandler.addClient(onData, SerialHandler::EventType::RW))
 {
     _locked = false;
 #if defined(HTTP2SERIAL_BAUD) && HTTP2SERIAL_BAUD != KFC_SERIAL_RATE
@@ -155,10 +156,12 @@ void Http2Serial::createInstance()
     if (!_instance) {
         _instance = __LDBG_new(Http2Serial);
     }
+    __DBG_printf("inst=%p", _instance);
 }
 
 void Http2Serial::destroyInstance()
 {
+    __DBG_printf("inst=%p", _instance);
     if (_instance) {
         __LDBG_delete(_instance);
         _instance = nullptr;
@@ -248,6 +251,7 @@ void Http2SerialPlugin::setup(SetupModeType mode)
 {
     auto server = WebServerPlugin::getWebServerObject();
     if (server) {
+        __DBG_printf("server=%p console=%p", server, wsSerialConsole);
         auto ws = __LDBG_new(WsClientAsyncWebSocket, FSPGM(_serial_console), &wsSerialConsole);
         ws->onEvent(http2serial_event_handler);
         server->addHandler(ws);

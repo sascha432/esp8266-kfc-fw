@@ -41,6 +41,9 @@ public:
     static void disableAutoSleepHandler(AsyncWebServerRequest *request);
     static void deepSleepHandler(AsyncWebServerRequest *request);
 
+    // return bitset of pressed keys
+    static uint8_t detectKeyPress();
+
 private:
     virtual void _onShortPress(Button &button);
     virtual void _onLongPress(Button &button);

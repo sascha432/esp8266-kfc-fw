@@ -78,9 +78,9 @@ public:
 
 #include "pop_pack.h"
 
-namespace Config_QuickConnect
+namespace DeepSleep
 {
-    typedef struct  {
+    struct __attribute__packed__ WiFiQuickConnect_t {
         int16_t channel: 15;                    //  0
         int16_t use_static_ip: 1;               // +2 byte
         uint8_t bssid[WL_MAC_ADDR_LENGTH];      // +6 byte
@@ -89,7 +89,61 @@ namespace Config_QuickConnect
         uint32_t dns2;
         uint32_t subnet;
         uint32_t gateway;
-    } WiFiQuickConnect_t;
+    };
+
+    struct __attribute__packed__ DeepSleepParams_t {
+        uint32_t unixtime;                  // unixtime when activating deep sleep. should be set to zero if no real time is available
+        uint32_t lastWakeUpUnixTime;        // unixtime of the last wake up cycle. requires an RTC
+        uint32_t deepSleepTime;             // total sleep time in millis
+        uint32_t currentSleepTime;          // current cycle in millis
+        uint32_t remainingSleepTime;        // remaining time in millis
+        uint32_t cycleRuntime;              // time spent cycling in micros
+        RFMode mode;
+        bool abortOnKeyPress: 1;            // abort deepsleep on keypress
+
+        struct __attribute__packed__ {
+            bool connectWiFi: 1;            // use quick connect to get wifi access
+            bool refreshDHCP: 1;            // refresh WiFi IP address if DHCP is enabled
+            bool waitForNTP: 1;             // wait for NTP
+            bool connectMQTT: 1;            // connect to MQTT and ppublish sensor data
+
+            uint16_t timeLimit;             // time limit before going back to deep sleep even if tasks have not been completed
+            struct __attribute__packed__ {
+                uint8_t count;              // limit the use of errorDeepSleepTime
+                uint8_t reset;              // reset count on success
+                uint32_t time;              // time to sleep before retrying. if 0, deepSleepTime will be used
+            } errorRetry;
+
+            // max. 1048560 millis, ~1048 seconds
+            void setTimeLimit(uint32_t millis) {
+                timeLimit = millis >> 4U;
+            }
+            uint32_t getTimeLimit() const {
+                return timeLimit << 4U;
+            }
+        } tasks;
+
+        void calcSleepTime();
+
+        bool isUnlimited() const {
+            return deepSleepTime == 0;
+        }
+
+        void abortCycles() {
+            currentSleepTime = 0;
+            if (!remainingSleepTime) {
+                remainingSleepTime++;
+            }
+        }
+
+        bool hasBeenAborted() const {
+            return remainingSleepTime != 0 && currentSleepTime == 0;
+        }
+
+        bool cyclesCompeleted() const {
+            return deepSleepTime != 0 && remainingSleepTime == 0 && currentSleepTime == 0;
+        }
+    };
 };
 
 #define _H_IP_VALUE(name, ...) \
@@ -338,6 +392,10 @@ private:
     uint8_t _safeMode : 1;
     unsigned long _wifiUp;
     unsigned long _offlineSince;
+
+#if ENABLE_DEEP_SLEEP
+    DeepSleep::DeepSleepParams_t _deepSleepParams;
+#endif
 
 #if USE_WIFI_SET_EVENT_HANDLER_CB == 0
     WiFiEventHandler _onWiFiConnect;

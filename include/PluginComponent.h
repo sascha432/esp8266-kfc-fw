@@ -97,8 +97,8 @@ public:
         NONE,
         RESET_DETECTOR,
         CONFIG,
+        DEEP_SLEEP,
         SERIAL2TCP,
-        REMOTE,
     };
 
     enum class FormCallbackType {

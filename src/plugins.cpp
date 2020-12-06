@@ -227,6 +227,9 @@ void setup_plugins(PluginComponent::SetupModeType mode)
         if (runSetup) {
             BOOTLOG_PRINTF("setup plugin=%s", plugin->getName_P());
             plugin->setSetupTime();
+#if ENABLE_DEEP_SLEEP
+            ::printf(PSTR("mode=%u plugin=%s\n"), mode, plugin->getName_P());
+#endif
             plugin->setup(mode);
             BOOTLOG_PRINTF("checking dependencies");
             PluginComponent::checkDependencies();
@@ -280,7 +283,7 @@ void setup_plugins(PluginComponent::SetupModeType mode)
 #if ENABLE_DEEP_SLEEP
     if (mode == PluginComponent::SetupModeType::AUTO_WAKE_UP) {
         _Scheduler.add(PLUGIN_DEEP_SLEEP_DELAYED_START_TIME, false, [](Event::CallbackTimerPtr timer) {
-            setup_plugins(PluginComponent::SetupModeType::AUTO_WAKE_UP);
+            setup_plugins(PluginComponent::SetupModeType::DELAYED_AUTO_WAKE_UP);
         });
     }
 #endif

@@ -662,6 +662,7 @@ void WebServerPlugin::handlerUploadUpdate(AsyncWebServerRequest *request, String
 
 void WebServerPlugin::end()
 {
+    __DBG_printf("server=%p", _server);
     if (_server) {
         delete _server;
         _server = nullptr;
@@ -988,14 +989,15 @@ WebServerPlugin::WebServerPlugin() :
 
 void WebServerPlugin::setup(SetupModeType mode)
 {
-    begin();
     if (mode == SetupModeType::DELAYED_AUTO_WAKE_UP) {
         invokeReconfigureNow(getName());
     }
+    begin();
 }
 
 void WebServerPlugin::reconfigure(const String &source)
 {
+    __DBG_printf("server=%p source=%s", _server, source.c_str());
     if (_server) {
         end();
         MDNSService::removeService(FSPGM(http, "http"), FSPGM(tcp));

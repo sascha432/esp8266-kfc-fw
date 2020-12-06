@@ -48,11 +48,11 @@ bool generate_session_for_username(const String &username, String &password)
 
 WsClientAsyncWebSocket::WsClientAsyncWebSocket(const String &url, WsClientAsyncWebSocket **ptr) : AsyncWebSocket(url), _ptr(ptr)
 {
-    // __LDBG_printf("WsClientAsyncWebSocket(): new=%p", this);
+    __DBG_printf("this=%p url=%s ptr=%p *ptr=%p _ptr=%p *_ptr=%p", this, url.c_str(), ptr, ptr ? *ptr : nullptr, _ptr, _ptr ? *_ptr : nullptr);
     WsClient::_webSockets.push_back(this);
     if (_ptr) {
         if (*_ptr) {
-            __DBG_panic("_instance already set ptr=%p this=%p", *_ptr, this);
+            __DBG_panic("_instance already set ptr=%p this=%p url=%s", *_ptr, this, url.c_str());
         }
         *_ptr = this;
     }
@@ -62,7 +62,7 @@ WsClientAsyncWebSocket::WsClientAsyncWebSocket(const String &url, WsClientAsyncW
 
 WsClientAsyncWebSocket::~WsClientAsyncWebSocket()
 {
-    // __LDBG_printf("~WsClientAsyncWebSocket(): delete=%p, clients=%u, connected=%u", this, getClients().length(), count());
+    __DBG_printf("this=%p _ptr=%p *_ptr=%p clients=%u count=%u", this, _ptr, _ptr ? *_ptr : nullptr, getClients().length(), count());
     disableSocket();
     if (_ptr) {
         if (*_ptr != this) {
@@ -80,11 +80,13 @@ void WsClientAsyncWebSocket::shutdown()
 
 void WsClientAsyncWebSocket::disableSocket()
 {
+    __DBG_printf("count=%u", WsClient::_webSockets.size());
     WsClient::_webSockets.erase(std::remove(WsClient::_webSockets.begin(), WsClient::_webSockets.end(), this), WsClient::_webSockets.end());
 }
 
 void WsClientAsyncWebSocket::addWebSocketPtr(WsClientAsyncWebSocket **ptr)
 {
+    __DBG_printf("this=%p ptr=%u *ptr=%p _ptr=%p *_ptr=%p", this, ptr, ptr ? *ptr : nullptr, _ptr, _ptr ? *_ptr : nullptr);
     _ptr = ptr;
     *_ptr = this;
 }
@@ -132,6 +134,8 @@ void WsClient::onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, i
     if (result == WsClient::_webSockets.end()) {
 #if DEBUG_WEB_SOCKETS
         __DBG_panic("websocket %p has been removed, event type %u", server, type);
+#else
+        __DBG_printf("websocket %p has been removed, event type %u", server, type);
 #endif
         return;
     }

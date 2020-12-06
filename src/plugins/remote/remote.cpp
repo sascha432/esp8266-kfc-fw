@@ -57,7 +57,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     "general,buttons,combos,actions",
     "http",             // reconfigure_dependencies
     PluginComponent::PriorityType::MAX,
-    PluginComponent::RTCMemoryId::REMOTE,
+    PluginComponent::RTCMemoryId::DEEP_SLEEP,
     static_cast<uint8_t>(PluginComponent::MenuType::CUSTOM),
     false,              // allow_safe_mode
     true,               // setup_after_deep_sleep
@@ -386,6 +386,22 @@ void RemoteControlPlugin::deepSleepHandler(AsyncWebServerRequest *request)
     else {
         request->send(403);
     }
+}
+
+uint8_t RemoteControlPlugin::detectKeyPress()
+{
+    uint8_t result = 0;
+    for(uint8_t i = 0; i < _buttonPins.size(); i++) {
+        auto pin = _buttonPins[i];
+        ::printf(PSTR("read pin=%u "), pin);
+        pinMode(pin, INPUT);
+        int value;
+        if ((value = ::digitalRead(pin)) != 0) {
+            result |= 1 << i;
+        }
+        ::printf(PSTR("value=%u\n"), value);
+    }
+    return result;
 }
 
 void RemoteControlPlugin::_loop()

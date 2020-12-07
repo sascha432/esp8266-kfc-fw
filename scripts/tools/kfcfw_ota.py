@@ -27,6 +27,8 @@ import kfcfw.configuration
 
 class SimpleProgressBar:
 
+    UnknownLength = 0
+
     def __init__(self, max_value, redirect_stdout=True):
         self.bar = None
         # self.bar = progressbar.ProgressBar(...)
@@ -143,8 +145,8 @@ def flash(url, type, target, sid):
     filesize = os.fstat(args.image.fileno()).st_size
     verbose("Uploading %u Bytes: %s" % (filesize, args.image.name))
 
+    elf_hash = None
     if args.elf:
-        elf_hash = None
         elf_exception = None
         try:
             elf = args.image.name.replace('.bin', '.elf')
@@ -203,7 +205,7 @@ def flash(url, type, target, sid):
         step = 0
         verbose("Waiting for device to reboot...")
         if args.quiet==False:
-            bar = SimpleProgressBar(max_value=progressbar.UnknownLength, redirect_stdout=True)
+            bar = SimpleProgressBar(max_value=SimpleProgressBar.UnknownLength, redirect_stdout=True)
             for i in range(0, 40):
                 bar.update(step)
                 step = step + 1

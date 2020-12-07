@@ -238,7 +238,27 @@ namespace STL_STD_EXT_NAMESPACE_EX {
 
         inline __attribute__((__always_inline__))
         value_type pop_front() {
-            return std::exchange(_values[_read_position++], value_type());
+            auto tmp = std::exchange(front(), value_type());
+            if (_read_position != _write_position) {
+                _read_position++;
+            }
+            return tmp;
+        }
+
+        inline __attribute__((__always_inline__))
+        value_type pop_back() {
+            auto tmp = std::exchange(back(), value_type());
+            if (_write_position == 0) {
+                _write_position = capacity() - 1;
+            }
+            else {
+                _write_position--;
+            }
+            if (--_count - _read_position > capacity()) {
+                _read_position--;
+            }
+
+            return tmp;
         }
 
         inline __attribute__((__always_inline__))
@@ -269,12 +289,13 @@ namespace STL_STD_EXT_NAMESPACE_EX {
 
         inline __attribute__((__always_inline__))
         reference front() {
-            return _values[_read_position];
+            return *begin();
         }
 
         inline __attribute__((__always_inline__))
         reference back() {
-            return _values[_count - 1];
+            return *std::prev(end());
+            //return _values[_count - 1];
         }
 
         inline __attribute__((__always_inline__))
@@ -320,6 +341,11 @@ namespace STL_STD_EXT_NAMESPACE_EX {
         inline __attribute__((__always_inline__))
         size_type size() const {
             return _count - _read_position;
+        }
+
+        inline __attribute__((__always_inline__))
+        bool empty() const {
+            return size() == 0;
         }
 
         inline __attribute__((__always_inline__))

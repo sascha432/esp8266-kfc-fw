@@ -193,6 +193,12 @@ static void create_menu()
 }
 
 static bool enableWebUIMenu = false;
+static uint32_t delayedStartupTime;
+
+void set_delayed_startup_time(uint32_t timeout)
+{
+    delayedStartupTime = timeout;
+}
 
 void setup_plugins(PluginComponent::SetupModeType mode)
 {
@@ -282,8 +288,12 @@ void setup_plugins(PluginComponent::SetupModeType mode)
 #ifndef DISABLE_EVENT_SCHEDULER
 #if ENABLE_DEEP_SLEEP
     if (mode == PluginComponent::SetupModeType::AUTO_WAKE_UP) {
-        _Scheduler.add(PLUGIN_DEEP_SLEEP_DELAYED_START_TIME, false, [](Event::CallbackTimerPtr timer) {
-            setup_plugins(PluginComponent::SetupModeType::DELAYED_AUTO_WAKE_UP);
+        delayedStartupTime = PLUGIN_DEEP_SLEEP_DELAYED_START_TIME;
+        _Scheduler.add(1000, true, [](Event::CallbackTimerPtr timer) {
+            if (millis() > delayedStartupTime) {
+                timer->disarm();
+                setup_plugins(PluginComponent::SetupModeType::DELAYED_AUTO_WAKE_UP);
+            }
         });
     }
 #endif

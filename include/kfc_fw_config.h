@@ -121,7 +121,12 @@ namespace DeepSleep
             uint32_t getTimeLimit() const {
                 return timeLimit << 4U;
             }
+
         } tasks;
+
+        uint64_t getSleepTimeMicros() const {
+            return currentSleepTime * 1000ULL;
+        }
 
         void calcSleepTime();
 
@@ -143,7 +148,36 @@ namespace DeepSleep
         bool cyclesCompeleted() const {
             return deepSleepTime != 0 && remainingSleepTime == 0 && currentSleepTime == 0;
         }
+
+        DeepSleepParams_t() = default;
+        DeepSleepParams_t(uint32_t sleepTimeMillis, RFMode rfMode);
+
+        // return max. deep sleep length (80% of the max. value to be on the safe side)
+        // or the value that has been set with setDeepSleepMaxTime()
+        static uint32_t getDeepSleepMaxMillis();
+        // set millis = 0 to get 80% of ESP.deepSleepMax() from getDeepSleepMaxMillis()
+        static void setDeepSleepMaxTime(uint32_t millis = 0);
+    private:
+        static uint32_t _deepSleepMaxTime;
     };
+
+    inline DeepSleepParams_t::DeepSleepParams_t(uint32_t sleepTimeMillis, RFMode rfMode) :
+        unixtime(0),
+        lastWakeUpUnixTime(0),
+        deepSleepTime(sleepTimeMillis),
+        remainingSleepTime(sleepTimeMillis),
+        cycleRuntime(0),
+        mode(rfMode),
+        abortOnKeyPress(true),
+        tasks({true, true, true, true, (60 * 1000U) >> 4, 5, 5, 3600 * 1000U})
+    {
+        calcSleepTime();
+        if (deepSleepTime < tasks.errorRetry.time) {
+            tasks.errorRetry.time = deepSleepTime;
+        }
+        ::printf(PSTR("deep sleep cycle started: time=%ums rest=%ums total=%ums\n"), currentSleepTime, remainingSleepTime, deepSleepTime);
+    }
+
 };
 
 #define _H_IP_VALUE(name, ...) \

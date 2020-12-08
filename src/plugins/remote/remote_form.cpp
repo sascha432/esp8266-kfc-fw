@@ -20,11 +20,11 @@ void RemoteControlPlugin::createConfigureForm(FormCallbackType type, const Strin
 
     auto &ui = form.createWebUI();
     auto &cfg = Plugins::RemoteControl::getWriteableConfig();
-    ui.setTitle(F("Remote Control Configuration"));
     ui.setStyle(FormUI::WebUI::StyleType::ACCORDION);
 
     if (String_equals(formName, PSTR("general"))) {
 
+        ui.setTitle(F("Remote Control Configuration"));
         ui.setContainerId(F("remotectrl_general"));
 
         auto &mainGroup = form.addCardGroup(F("main"), F("General"), true);
@@ -50,13 +50,33 @@ void RemoteControlPlugin::createConfigureForm(FormCallbackType type, const Strin
         cfg.addRangeValidatorFor_repeatTime(form);
 
         mainGroup.end();
+        auto &udpGroup = form.addCardGroup(F("udp"), F("UDP Packets"), true);
+
+        form.addStringGetterSetter(F("udph"), Plugins::RemoteControl::getUdpHost, Plugins::RemoteControl::setUdpHost);
+        form.addFormUI(F("Host"));
+        form.addValidator(FormUI::Validator::Hostname(FormUI::AllowedType::HOST_OR_IP_OR_EMPTY));
+
+        form.addObjectGetterSetter(F("udpp"), cfg, cfg.get_bits_udpPort, cfg.set_bits_udpPort);
+        form.addFormUI(FormUI::Type::NUMBER, F("Port"), FormUI::PlaceHolder(7881));
+        form.addValidator(FormUI::Validator::NetworkPort(true));
+
+        using UdpActionType = Plugins::RemoteControl::UdpActionType;
+
+        FormUI::Container::List actions(
+            UdpActionType::NONE, F("Disabled"),
+            UdpActionType::INCLUDE_UP_DOWN, F("Including *-down, *-up actions"),
+            UdpActionType::EXCLUDE_UP_DOWN, F("*-press, *-hold, *-long-press only")
+        );
+
+        form.addObjectGetterSetter(F("udpa"), cfg, cfg.get_int_udpAction, cfg.set_int_udpAction);
+        form.addFormUI(F("Action"), actions);
+
+        udpGroup.end();
 
     }
     else if (String_equals(formName, PSTR("combos"))) {
 
         ui.setTitle(F("Remote Control Button Combinations"));
-
-
         ui.setContainerId(F("remotectrl_combos"));
 
         FormUI::Container::List buttons(0, F("None"));
@@ -130,6 +150,7 @@ void RemoteControlPlugin::createConfigureForm(FormCallbackType type, const Strin
     }
     else if (String_equals(formName, PSTR("buttons"))) {
 
+        ui.setTitle(F("Remote Control Buttons"));
         ui.setContainerId(F("remotectrl_buttons"));
 
         FormUI::Container::List actions(0, F("None")
@@ -227,6 +248,7 @@ void RemoteControlPlugin::createConfigureForm(FormCallbackType type, const Strin
     }
     else if (String_equals(formName, PSTR("actions"))) {
 
+        ui.setTitle(F("Remote Control Actions"));
         ui.setContainerId(F("remotectrl_actions"));
 
     }

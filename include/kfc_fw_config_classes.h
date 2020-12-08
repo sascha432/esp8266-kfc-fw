@@ -799,12 +799,19 @@ namespace KFCConfigurationClasses {
         class RemoteControlConfig {
         public:
 
-            enum class ActionProtocolType {
+            enum class ActionProtocolType : uint8_t {
                 NONE = 0,
                 MQTT,
                 REST,
                 TCP,
                 UDP,
+                MAX
+            };
+
+            enum class UdpActionType : uint8_t {
+                NONE = 0,
+                INCLUDE_UP_DOWN,
+                EXCLUDE_UP_DOWN,
                 MAX
             };
 
@@ -864,21 +871,26 @@ namespace KFCConfigurationClasses {
 
             typedef struct __attribute__packed__ Config_t {
                 using Type = Config_t;
+                CREATE_ENUM_BITFIELD(udpAction, UdpActionType);
                 CREATE_UINT32_BITFIELD_MIN_MAX(autoSleepTime, 10, 0, 1000, 2, 1);           // seconds
                 CREATE_UINT32_BITFIELD_MIN_MAX(deepSleepTime, 16, 0, 44640, 0, 1);          // in minutes / max. 31 days, 0 = indefinitely
                 CREATE_UINT32_BITFIELD_MIN_MAX(shortpressTime, 11, 0, 2000, 350, 1);        // millis
                 CREATE_UINT32_BITFIELD_MIN_MAX(longpressTime, 13, 0, 8000, 750, 1);         // millis
                 CREATE_UINT32_BITFIELD_MIN_MAX(repeatTime, 12, 0, 4000, 500, 1);            // millis
+                CREATE_UINT32_BITFIELD_MIN_MAX(udpPort, 16, 0, 65535, 7881, 1);             // port
+
 
                 Action_t actions[IOT_REMOTE_CONTROL_BUTTON_COUNT];
                 ComboAction_t combo[4];
 
                 Config_t() :
+                    udpAction(static_cast<uint8_t>(UdpActionType::NONE)),
                     autoSleepTime(kDefaultValueFor_autoSleepTime),
                     deepSleepTime(kDefaultValueFor_deepSleepTime),
                     shortpressTime(kDefaultValueFor_shortpressTime),
                     longpressTime(kDefaultValueFor_longpressTime),
                     repeatTime(kDefaultValueFor_repeatTime),
+                    udpPort(kDefaultValueFor_udpPort),
                     actions{}
                 {}
 
@@ -890,6 +902,8 @@ namespace KFCConfigurationClasses {
         public:
             static void defaults();
             RemoteControl() {}
+
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.remote, UdpHost, 0, 64);
         };
 
         // --------------------------------------------------------------------

@@ -92,7 +92,7 @@ void setup()
 #endif
     BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::OFF);
 
-    if (resetDetector.getResetCounter() >= 20) {
+    if (resetDetector.getResetCounter() >= 20 && !resetDetector.hasWakeUpDetected()) {
         KFC_SAFE_MODE_SERIAL_PORT.println(F("Reboot continues in 5 seconds..."));
         // stop timer to avoid resetting counters
         resetDetector.disarmTimer();
@@ -129,15 +129,23 @@ void setup()
     disable_at_mode(Serial);
 #endif
 
-    KFC_SAFE_MODE_SERIAL_PORT.println(F("Booting KFC firmware..."));
 
 #if ENABLE_DEEP_SLEEP
     if (resetDetector.hasWakeUpDetected()) {
-        config.wakeUpFromDeepSleep();
+        // no output to speed up the boot process
+        // checking in and going back to sleep can be done in lkess then 70ms with an avg of 16mAh
+        // still a lot if you have to repeat this process every 3 hours and would reduce the lifetime
+        // of a 500mAh battery from 2.5 years (100% deep sleep) to less than 3 months by just updating
+        // the deep sleep timer
         resetDetector.clearCounter();
+        config.wakeUpFromDeepSleep();
     }
+    else
 #endif
-    KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("SAFE MODE %d, reset counter %d, wake up %d\n"), resetDetector.getSafeMode(), resetDetector.getResetCounter(), resetDetector.hasWakeUpDetected());
+    {
+        KFC_SAFE_MODE_SERIAL_PORT.println(F("Booting KFC firmware..."));
+        KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("SAFE MODE %d, reset counter %d, wake up %d\n"), resetDetector.getSafeMode(), resetDetector.getResetCounter(), resetDetector.hasWakeUpDetected());
+    }
 
 #if KFC_RESTORE_FACTORY_SETTINGS_RESET_COUNT
     if (resetDetector.hasResetDetected()) {

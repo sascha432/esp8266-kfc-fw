@@ -69,7 +69,7 @@ void PushButton::loop()
             _repeatCount = repeatCount;
             if (repeatChanged) {
                 __LDBG_printf("%s REPEAT_CHANGED count=%u duration=%u", name(), _repeatCount, _duration);
-                _fireEvent(EventType::REPEAT);
+                _fireEvent(EventType::HELD);
             }
         }
     }
@@ -84,6 +84,7 @@ void PushButton::loop()
                 (_singleClickGroup->getRepeatCount() == 1 && _fireEvent(EventType::SINGLE_CLICK)) ||
                 (_singleClickGroup->getRepeatCount() == 2 && _fireEvent(EventType::DOUBLE_CLICK))
             )) {
+                _repeatCount = _singleClickGroup->getRepeatCount();
                 _fireEvent(EventType::REPEATED_CLICK);
             }
             _singleClickGroup->stopTimer(this);
@@ -103,7 +104,6 @@ void PushButton::_buttonReleased()
 #endif
 
     if (_duration < _clickTime) {
-
         __LDBG_printf("%s CLICK=%u duration=%u repeat=%u", name(), _clickTime, _duration, _repeatCount);
         _fireEvent(EventType::CLICK);
         return;
@@ -134,8 +134,6 @@ const __FlashStringHelper *PushButton::eventTypeToString(EventType eventType)
             return F("LONG_PRESSED");
         case EventType::HELD:
             return F("HELD");
-        case EventType::REPEAT:
-            return F("REPEAT");
         case EventType::REPEATED_CLICK:
             return F("REPEATED_CLICK");
         case EventType::SINGLE_CLICK:

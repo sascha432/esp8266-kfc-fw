@@ -33,9 +33,12 @@
 class Buffer;
 class FileBufferStreamImpl;
 
+// move allocated memory or allocate and copy the string
+// the source string is empty afterwards
 class MoveStringHelper : public String {
 public:
     MoveStringHelper();
+    static char *move(String &&move, int *allocSize);
     static void move(Buffer &buffer, String &&move);
 };
 

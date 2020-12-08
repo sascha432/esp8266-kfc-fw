@@ -15,28 +15,124 @@
 
 using namespace RemoteControl;
 
+const __FlashStringHelper *Button::actionString(EventType eventType, uint8_t buttonNum, uint16_t repeatCount)
+{
+    switch(eventType) {
+        case EventType::REPEATED_CLICK:
+            if (repeatCount != 1) {
+                break;
+            }
+        case EventType::SINGLE_CLICK:
+        case EventType::PRESSED:
+            switch(buttonNum) {
+                case 0:
+                    return F("on-press");
+                case 1:
+                    return F("up-press");
+                case 2:
+                    return F("down-press");
+                case 3:
+                    return F("off-press");
+            }
+            break;
+        case EventType::DOWN:
+            switch(buttonNum) {
+                case 0:
+                    return F("on-down");
+                case 1:
+                    return F("up-down");
+                case 2:
+                    return F("down-down");
+                case 3:
+                    return F("off-down");
+            }
+            break;
+        case EventType::UP:
+            switch(buttonNum) {
+                case 0:
+                    return F("on-release");
+                case 1:
+                    return F("up-release");
+                case 2:
+                    return F("down-release");
+                case 3:
+                    return F("off-release");
+            }
+            break;
+        case EventType::LONG_PRESSED:
+            switch(buttonNum) {
+                case 0:
+                    return F("on-long-press");
+                case 1:
+                    return F("up-long-press");
+                case 2:
+                    return F("down-long-press");
+                case 3:
+                    return F("off-long-press");
+            }
+            break;
+        case EventType::HELD:
+            switch(buttonNum) {
+                case 0:
+                    return F("on-hold");
+                case 1:
+                    return F("up-hold");
+                case 2:
+                    return F("down-hold");
+                case 3:
+                    return F("off-hold");
+            }
+            break;
+        default:
+            break;
+    }
+    return nullptr;
+}
+
 void Button::event(EventType eventType, uint32_t now)
 {
-    ActionIdType actionId = -1;
-    auto &config = getBase()->_getConfig();
+    auto &base = *getBase();
+    auto &config = base._getConfig();
+    base._resetAutoSleep();
 
     switch (eventType) {
         case EventType::DOWN:
-            getBase()->_pressed |= getBase()->_getPressedMask(_button);
+            base._pressed |= base._getPressedMask(_button);
+            base.queueEvent(eventType, _button, _getEventTimeForFirstEvent(), config.actions[_button].pressed);
             break;
         case EventType::UP:
-            getBase()->_pressed &= ~getBase()->_getPressedMask(_button);
+            base._pressed &= ~base._getPressedMask(_button);
+            base.queueEvent(eventType, _button, _getEventTime(), config.actions[_button].released);
             break;
-        case EventType::SINGLE_CLICK:
-            actionId = config.actions[_button].single_click;
+        case EventType::PRESSED:
+            base.queueEvent(eventType, _button, _getEventTime(), config.actions[_button].single_click);
             break;
         case EventType::LONG_PRESSED:
-            actionId = config.actions[_button].double_click;
+            base.queueEvent(eventType, _button, _getEventTime(), config.actions[_button].longpress);
             break;
+        case EventType::HELD:
+            base.queueEvent(eventType, _button, _repeatCount, _getEventTime(), config.actions[_button].held);
+            break;
+#if 0 // send all events as REPEATED_CLICK
+         case EventType::SINGLE_CLICK:
+            base.queueEvent(eventType, _button, _getEventTime(), config.actions[_button].single_click);
+            break;
+        case EventType::DOUBLE_CLICK:
+            base.queueEvent(eventType, _button, _getEventTime(), config.actions[_button].double_click);
+            break;
+#endif
         case EventType::REPEATED_CLICK: {
-                int8_t idx = config.actions[_button].getMultiClickIndex(this->getNum());
-                if (idx != -1) {
-                    actionId = config.actions[_button].multi_click[idx].action;
+                switch(_repeatCount) {
+                    case 1:
+                        base.queueEvent(eventType, _button, _repeatCount, _getEventTime(), config.actions[_button].single_click);
+                        break;
+                    case 2:
+                        base.queueEvent(eventType, _button, _repeatCount, _getEventTime(), config.actions[_button].double_click);
+                        break;
+                    default:
+                        int8_t idx = config.actions[_button].getMultiClickIndex(_repeatCount);
+                        base.queueEvent(eventType, _button, _repeatCount, _getEventTime(), (idx != -1) ? config.actions[_button].multi_click[idx].action : 0);
+                        break;
                 }
             }
             break;
@@ -44,79 +140,29 @@ void Button::event(EventType eventType, uint32_t now)
             break;
     }
 
-    __DBG_printf("%s event_type=%s (%02x) button#=%u now=%u pressed=%s action_id=%d",
+#if 0
+    __LDBG_printf("%s event_type=%s (%02x) button#=%u now=%u pressed=%s",
         name(),
         eventTypeToString(eventType),
         eventType,
         _button,
         now,
-        getBase()->_getPressedButtons(),
-        actionId
+        base._getPressedButtons()
     );
+#endif
 
-    // //auto &config = getBase()->_getConfig();
-    // switch (eventType) {
-    //     case EventType::PRESSED:
-    //         _pressed = true;
-    //         break;
-
-    //     case EventType::RELEASED:
-    //         _pressed = false;
-    //         //getBase()->_onButtonReleased(*this, );
-    //         break;
-
-    //     // case EventType::DOWN:
-    //     //     if (_singleClickGroup->getRepeatCount() == 0) {
-    //     //         _level = _dimmer.getChannel(_channel);
-    //     //         __LDBG_printf("%s READ_LEVEL event=%s sp_count=%u level=%u", name(), eventTypeToString(eventType), _singleClickGroup->getRepeatCount(), _level);
-    //     //     }
-    //     //     else {
-    //     //         __LDBG_printf("%s IGNORED event=%s sp_count=%u", name(), eventTypeToString(eventType), _singleClickGroup->getRepeatCount());
-    //     //     }
-    //     //     break;
-    //     // case EventType::REPEAT:
-    //     //     _changeLevelRepeat(IOT_DIMMER_MODULE_HOLD_REPEAT_TIME, _button == 1);
-    //     //     break;
-    //     // case EventType::CLICK:
-    //     //     if (_dimmer.getChannelState(_channel)) {
-    //     //         // channel is on
-    //     //         _changeLevelSingle(_singleClickSteps, _button == 1);
-    //     //     }
-    //     //     else if (_button == 0) {
-    //     //         __LDBG_printf("%s ON duration=%u", name(), _duration);
-    //     //         // button 0 turns channel on
-    //     //         // button 1 turns channel off, using DOWN and SINGLE_CLICK
-    //     //         _dimmer.on(_channel);
-    //     //     }
-    //     //     else {
-    //     //         __LDBG_printf("%s IGNORED event=%s state=%d", name(), eventTypeToString(eventType), _dimmer.getChannelState(_channel));
-    //     //     }
-    //     //     break;
-    //     // case EventType::LONG_CLICK:
-    //     //     _setLevel(IOT_DIMMER_MODULE_MAX_BRIGHTNESS * (int32_t)(_button == 0 ? config.longpress_max_brightness : config.longpress_min_brightness) / 100, config.lp_fadetime);
-    //     //     break;
-    //     // case EventType::SINGLE_CLICK:
-    //     //     if (_dimmer._channels[_channel].off(&config, _level)) {
-    //     //         __LDBG_printf("%s OFF store_level=%d duration=%u", name(), _level, _duration);
-    //     //         _dimmer._channels[_channel].setStoredBrightness(_level);
-    //     //     }
-    //     //     break;
-    //     default:
-    //         // __LDBG_printf("%s IGNORED event=%s", name(), eventTypeToString(eventType));
-    //         break;
-    // }
-    // __LDBG_printf("%s event=%s", name(), eventTypeToString(eventType));
 }
 
 void Button::updateConfig()
 {
-    auto &config = getBase()->_getConfig();
-    _subscribedEvents = ButtonConfig::_getEventTypes(config.actions[_button], false);
+    auto &base = *getBase();
+    auto &config = base._getConfig();
+    _subscribedEvents = ButtonConfig::kDefaultEvents;
     _clickTime = config.shortpressTime;
     _longpressTime = config.longpressTime;
     _repeatTime = config.repeatTime;
     // reset states
     _reset();
     // reset bit in pressed indicator
-    getBase()->_pressed &= ~getBase()->_getPressedMask(_button);;
+    base._pressed &= ~base._getPressedMask(_button);;
 }

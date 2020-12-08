@@ -53,6 +53,7 @@ namespace PinMonitor {
         void detach(Iterator begin, Iterator end);
         void detach(Pin &pin);
         const Vector &getHandlers() const;
+        const PinVector &getPins() const;
 
     public:
         static void loop();
@@ -113,6 +114,11 @@ namespace PinMonitor {
     inline const Vector &Monitor::getHandlers() const
     {
         return _handlers;
+    }
+
+    inline const PinVector &Monitor::getPins() const
+    {
+        return _pins;
     }
 
 }

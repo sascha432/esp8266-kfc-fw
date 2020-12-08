@@ -3,7 +3,7 @@
 */
 
 #include <Arduino_compat.h>
-#include <WiFiCallbacks.h>
+// #include <WiFiCallbacks.h>
 #include <LoopFunctions.h>
 #include "kfc_fw_config.h"
 #include "web_server.h"
@@ -56,7 +56,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     // config_forms
     "general,buttons,combos,actions",
     "http",             // reconfigure_dependencies
-    PluginComponent::PriorityType::MAX,
+    PluginComponent::PriorityType::REMOTE,
     PluginComponent::RTCMemoryId::DEEP_SLEEP,
     static_cast<uint8_t>(PluginComponent::MenuType::CUSTOM),
     false,              // allow_safe_mode
@@ -71,41 +71,19 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
 
 RemoteControlPlugin::RemoteControlPlugin() :
     PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(RemoteControlPlugin)),
-    Base()
+    Base(),
 #if HOME_ASSISTANT_INTEGRATION
-    ,
-    _hass(HassPlugin::getInstance())
+    _hass(HassPlugin::getInstance()),
 #endif
+    _pressedKeys(0),
+    _pressedKeysTime(0)
 {
     REGISTER_PLUGIN(this, "RemoteControlPlugin");
-    pinMonitor.begin();
-#if DEBUG_IOT_REMOTE_CONTROL == 0
-    _preSetup();
-#endif
 }
 
-// actual code for ctor running in setup once with debug mode enabled
-void RemoteControlPlugin::_preSetup()
+RemoteControlPlugin &RemoteControlPlugin::getInstance()
 {
-    _actions.emplace_back(new ActionUDP(100, Binary::Data(F("test1")), F("!acidpi1.local"), IPAddress(), 7712));
-    _actions.emplace_back(new ActionUDP(200, Binary::Data(F("test2")), F("192.168.0.3"), IPAddress(), 7712));
-    _actions.emplace_back(new ActionUDP(300, Binary::Data(F("test3")), F("acidpi1.local"), IPAddress(), 7712));
-    IPAddress addr;
-    addr.fromString(F("192.168.0.3"));
-    _actions.emplace_back(new ActionUDP(400, Binary::Data(F("test4")), emptyString, addr, 7712));
-    _resolveActionHostnames();
-
-    for(uint8_t n = 0; n < _buttonPins.size(); n++) {
-        auto pin = _buttonPins[n];
-#if DEBUG_PIN_MONITOR_BUTTON_NAME
-        auto &button = pinMonitor.attach<Button>(pin, n, this); // downcast of this is stored, which is a different pointer cause of the multiple inheritence
-        button.setName(PrintString(F(SHORT_POINTER_FMT ":" SHORT_POINTER_FMT "#%u"), SHORT_POINTER(button.getArg()), SHORT_POINTER(&button), n));
-        __LDBG_printf("%s pin=%u arg=%p btn=%p btn#%u", button.name(), pin, button.getArg(), &button, n);
-#else
-        pinMonitor.attach<Button>(pin, n, this);
-#endif
-        pinMode(pin, INPUT);
-    }
+    return plugin;
 }
 
 void RemoteControlPlugin::_updateButtonConfig()
@@ -115,9 +93,9 @@ void RemoteControlPlugin::_updateButtonConfig()
         __LDBG_printf("arg=%p btn=%p pin=%u digital_read=%u inverted=%u owner=%u", button.getArg(), &button, button.getPin(), digitalRead(button.getPin()), button.isInverted(), button.getBase() == this);
         if (button.getBase() == this) { // auto downcast of this
 #if DEBUG_IOT_REMOTE_CONTROL
-            auto &cfg = _getConfig().actions[button.getNum()];
-            __DBG_printf("button#=%u action=%u,%u,%u multi=%u,%u,%u,%u pressed/releassed=%u,%u",
-                button.getNum(),
+            auto &cfg = _getConfig().actions[button.getButtonNum()];
+            __DBG_printf("button#=%u action=%u,%u,%u multi=%u,%u,%u,%u pressed/released=%u,%u",
+                button.getButtonNum(),
                 cfg.single_click, cfg.double_click, cfg.longpress,
                 cfg.multi_click[0].action, cfg.multi_click[1].action, cfg.multi_click[2].action, cfg.multi_click[3].action,
                 cfg.pressed, cfg.released
@@ -130,23 +108,59 @@ void RemoteControlPlugin::_updateButtonConfig()
 
 void RemoteControlPlugin::setup(SetupModeType mode)
 {
-#if DEBUG_IOT_REMOTE_CONTROL
-    if (pinMonitor.getHandlers().size() == 0) {
-        _preSetup();
-    }
+    __LDBG_printf("mode=%u", mode);
+    pinMonitor.begin();
+
+    for(uint8_t n = 0; n < _buttonPins.size(); n++) {
+        auto pin = _buttonPins[n];
+#if DEBUG_PIN_MONITOR_BUTTON_NAME
+        auto &button = pinMonitor.attach<Button>(pin, n, this); // downcast of this is stored, which is a different pointer cause of the multiple inheritence
+        button.setName(PrintString(F(SHORT_POINTER_FMT ":" SHORT_POINTER_FMT "#%u"), SHORT_POINTER(button.getArg()), SHORT_POINTER(&button), n));
+        __DBG_printf("D%08lu %s pin=%u arg=%p btn=%p btn#%u", millis(), button.name(), pin, button.getArg(), &button, n);
+#else
+        pinMonitor.attach<Button>(pin, n, this);
 #endif
+        pinMode(pin, INPUT);
 
-    _readConfig();
-    _updateButtonConfig();
-
-    WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTED, wifiCallback);
-    LoopFunctions::add(loop);
-
-    _installWebhooks();
+        // set state of the pin to the stored value at boot time
+        uint8_t mask = (1 << n);
+        if (_pressedKeys & mask) {
+            _pressedKeys &= ~mask;
+            uint8_t pinNum = button.getPin();
+            auto iterator = std::find_if(pinMonitor.getPins().begin(), pinMonitor.getPins().end(), [pinNum](const HardwarePinPtr &pin) {
+                return pin->getPin() == pinNum;
+            });
+            __LDBG_printf("updating pin=%u state=%u time=%u now=%u exists=%u", pinNum, true, _pressedKeysTime, (uint32_t)micros(), iterator != pinMonitor.getPins().end());
+            if (iterator != pinMonitor.getPins().end()) {
+                iterator->get()->updateState(_pressedKeysTime, HardwarePin::kIncrementCount, true);
+            }
+        }
+    }
 
     pinMode(IOT_REMOTE_CONTROL_AWAKE_PIN, OUTPUT);
     digitalWrite(IOT_REMOTE_CONTROL_AWAKE_PIN, HIGH);
     _buttonsLocked = 0;
+    _readConfig();
+    _updateButtonConfig();
+
+    LoopFunctions::callOnce([this]() {
+
+        __LDBG_printf("delayed setup");
+
+        // WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTED, wifiCallback);
+        LoopFunctions::add(loop);
+
+        _installWebhooks();
+
+        _actions.emplace_back(new ActionUDP(100, Payload::String(F("test1")), F("!acidpi1.local"), IPAddress(), 7712));
+        _actions.emplace_back(new ActionUDP(200, Payload::String(F("test2")), F("192.168.0.3"), IPAddress(), 7712));
+        _actions.emplace_back(new ActionUDP(300, Payload::String(F("test3")), F("acidpi1.local"), IPAddress(), 7712));
+        IPAddress addr;
+        addr.fromString(F("192.168.0.3"));
+        _actions.emplace_back(new ActionUDP(400, Payload::String(F("test4")), emptyString, addr, 7712));
+        _resolveActionHostnames();
+
+    });
 }
 
 void RemoteControlPlugin::reconfigure(const String &source)
@@ -165,7 +179,7 @@ void RemoteControlPlugin::shutdown()
     pinMonitor.detach(this);
 
     LoopFunctions::remove(loop);
-    WiFiCallbacks::remove(WiFiCallbacks::EventType::ANY, wifiCallback);
+    // WiFiCallbacks::remove(WiFiCallbacks::EventType::ANY, wifiCallback);
 }
 
 void RemoteControlPlugin::prepareDeepSleep(uint32_t sleepTimeMillis)
@@ -189,8 +203,8 @@ void RemoteControlPlugin::createMenu()
     bootstrapMenu.addSubMenu(F("Buttons Combinations"), F("remotectrl/combos.html"), navMenu.config);
     bootstrapMenu.addSubMenu(F("Define Actions"), F("remotectrl/actions.html"), navMenu.config);
 
-    bootstrapMenu.addSubMenu(F("Enter Deep Sleep"), F("remote-sleep.html"), navMenu.device);
-    bootstrapMenu.addSubMenu(F("Disable Auto Sleep"), F("remote-nosleep.html"), navMenu.device);
+    // bootstrapMenu.addSubMenu(F("Enter Deep Sleep"), F("remote-sleep.html"), navMenu.device);
+    // bootstrapMenu.addSubMenu(F("Disable Auto Sleep"), F("remote-nosleep.html"), navMenu.device);
 }
 
 
@@ -334,18 +348,12 @@ void RemoteControlPlugin::loop()
     plugin._loop();
 }
 
-void RemoteControlPlugin::wifiCallback(WiFiCallbacks::EventType event, void *payload)
-{
-    if (event == WiFiCallbacks::EventType::CONNECTED) {
-        plugin._wifiConnected();
-    }
-}
-
-void RemoteControlPlugin::disableAutoSleep()
-{
-    __LDBG_printf("disabled");
-    plugin._autoSleepTimeout = kAutoSleepDisabled;
-}
+// void RemoteControlPlugin::wifiCallback(WiFiCallbacks::EventType event, void *payload)
+// {
+//     if (event == WiFiCallbacks::EventType::CONNECTED) {
+//         plugin._wifiConnected();
+//     }
+// }
 
 void RemoteControlPlugin::disableAutoSleepHandler(AsyncWebServerRequest *request)
 {
@@ -390,18 +398,17 @@ void RemoteControlPlugin::deepSleepHandler(AsyncWebServerRequest *request)
 
 uint8_t RemoteControlPlugin::detectKeyPress()
 {
-    uint8_t result = 0;
+    bool value;
+    _pressedKeys = 0;
+    _pressedKeysTime = micros();
     for(uint8_t i = 0; i < _buttonPins.size(); i++) {
         auto pin = _buttonPins[i];
-        ::printf(PSTR("read pin=%u "), pin);
         pinMode(pin, INPUT);
-        int value;
-        if ((value = ::digitalRead(pin)) != 0) {
-            result |= 1 << i;
+        if ((value = digitalRead(pin)) == (PIN_MONITOR_ACTIVE_STATE == PinMonitor::ActiveStateType::PRESSED_WHEN_HIGH)) {
+            _pressedKeys |= (1 << i);
         }
-        ::printf(PSTR("value=%u\n"), value);
     }
-    return result;
+    return _pressedKeys;
 }
 
 void RemoteControlPlugin::_loop()
@@ -425,15 +432,15 @@ void RemoteControlPlugin::_loop()
             __LDBG_printf("auto deep sleep=%u connected=%u", _autoSleepTimeout, config.isWiFiUp());
         }
 #if DEBUG_IOT_REMOTE_CONTROL
-        else if (_events.size() != 0 && _autoSleepTimeout && millis() >= _autoSleepTimeout) {
+        else if (_hasEvents() && _autoSleepTimeout && millis() >= _autoSleepTimeout) {
             static unsigned counter = 0;
             if ((counter++ % 2) == ((millis() / 500) % 2)) { // display every 500ms
-                __DBG_printf("sleep timeout reached but %u events queued. delaying sleep by %ums", _events.size(), millis() - _autoSleepTimeout);
+                __DBG_printf("sleep timeout reached but %u events queued. delaying sleep by %ums", _queue.size(), millis() - _autoSleepTimeout);
             }
         }
 #endif
         // do not sleep until all events have been processed
-        else if (_events.size() == 0 && _autoSleepTimeout && millis() >= _autoSleepTimeout) {
+        else if (!_hasEvents() && _autoSleepTimeout && millis() >= _autoSleepTimeout) {
             __LDBG_printf("entering deep sleep (auto=%d, time=%us)", _config.autoSleepTime, _config.deepSleepTime);
             _autoSleepTimeout = kAutoSleepDisabled;
             config.enterDeepSleep(KFCFWConfiguration::seconds(0), RF_DEFAULT, 1); // TODO implement deep sleep
@@ -444,16 +451,9 @@ void RemoteControlPlugin::_loop()
 
     // buttons are interrupt driven and do not require fast polling
     // call delay to safe energy
-    delay(25);
+    // delay(25);
+    delay(5);
 }
-
-void RemoteControlPlugin::_wifiConnected()
-{
-    __LDBG_printf("events=%u", _events.size());
-    _resetAutoSleep();
-    _scheduleSendEvents();
-}
-
 
 bool RemoteControlPlugin::_isUsbPowered() const
 {
@@ -468,22 +468,25 @@ void RemoteControlPlugin::_readConfig()
 void RemoteControlPlugin::_installWebhooks()
 {
     __LDBG_printf("server=%p", WebServerPlugin::getWebServerObject());
-    WebServerPlugin::addHandler(F("/remote-sleep.html"), deepSleepHandler);
-    WebServerPlugin::addHandler(F("/remote-nosleep.html"), disableAutoSleepHandler);
+    // WebServerPlugin::addHandler(F("/remote-sleep.html"), deepSleepHandler);
+    // WebServerPlugin::addHandler(F("/remote-nosleep.html"), disableAutoSleepHandler);
 }
 
 
-void RemoteControlPlugin::_addButtonEvent(ButtonEvent &&event)
-{
-    _resetAutoSleep();
-    // if (_events.size() > 32) { // discard events
-    //     _events.pop_front();
-    // }
-    _events.emplace_back(std::move(event));
-    __LDBG_printf("event=%s", _events.back().toString().c_str());
-    _scheduleSendEvents();
-}
+// void RemoteControlPlugin::_addButtonEvent(ButtonEvent &&event)
+// {
+//     _resetAutoSleep();
+// #if 0 // container has auto discard
+//     // if (_events.size() > 32) { // discard events
+//     //     _events.pop_front();
+//     // }
+// #endif
+//     _events.emplace_back(std::move(event));
+//     __LDBG_printf("event=%s", _events.back().toString().c_str());
+//     _scheduleSendEvents();
+// }
 
+#if 0
 void RemoteControlPlugin::_sendEvents()
 {
     __LDBG_printf("wifi=%u events=%u locked=%s", config.isWiFiUp(), _events.size(), String(_buttonsLocked & 0b1111, 2).c_str());
@@ -588,15 +591,7 @@ void RemoteControlPlugin::_sendEvents()
         // }), _events.end());
     }
 }
-
-void RemoteControlPlugin::_scheduleSendEvents()
-{
-    if (_events.size()) {
-        LoopFunctions::callOnce([this]() {
-            _sendEvents();
-        });
-    }
-}
+#endif
 
 Action *RemoteControlPlugin::_getAction(ActionIdType id) const
 {

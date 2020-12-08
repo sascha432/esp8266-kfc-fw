@@ -189,6 +189,7 @@ namespace FormUI {
             IPADDRESS = 0x04,
             HOSTNAME = 0x08,
             HOST_OR_IP = HOSTNAME | IPADDRESS,
+            HOST_OR_IP_OR_EMPTY = HOSTNAME | IPADDRESS | EMPTY,
             EMPTY_AND_ZEROCONF = EMPTY | ZEROCONF,
         };
 

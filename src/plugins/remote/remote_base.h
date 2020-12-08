@@ -5,6 +5,7 @@
 #pragma once
 
 #include "remote_def.h"
+#include "remote_event_queue.h"
 
 namespace RemoteControl {
 
@@ -19,28 +20,27 @@ namespace RemoteControl {
             _buttonsLocked(~0),
             _longPress(0),
             _comboButton(-1),
-            _pressed(0)
+            _pressed(0),
+            _testMode(0)
         {}
 
         virtual void _onShortPress(Button &button) = 0;
         virtual void _onLongPress(Button &button) = 0;
         virtual void _onRepeat(Button &button) = 0;
 
-        // void _onButtonPressed(Button& btn);
-        // virtual void _onButtonHeld(Button& btn, uint16_t duration, uint16_t repeatCount) = 0;
-        // virtual void _onButtonReleased(Button& btn, uint16_t duration) = 0;
+        // enable test mode
+        void setTestMode(bool testMode) {
+            _testMode = testMode;
+        }
 
-        // // return if any buttopn is pressed
-        // bool _anyButton(const Button *ignoreButton = nullptr) const {
-        //     for(const auto &buttonPtr: pinMonitor.getVector()) {
-        //         if (buttonPtr.get() != ignoreButton && buttonPtr->getArg() == this && buttonPtr->isEnabled() && buttonPtr->isPressed()) {
-        //             return true;
-        //         }
-        //     }
-        //     return false;
-        // }
-        // void _onButtonHeld(Button& btn, uint16_t duration, uint16_t repeatCount);
-        // void _onButtonReleased(Button& btn, uint16_t duration);
+        bool isTestMode() const {
+            return _testMode;
+        }
+
+        void queueEvent(Button::EventType type, uint8_t buttonNum, uint32_t eventTime, uint16_t actionId);
+        void queueEvent(Button::EventType type, uint8_t buttonNum, uint16_t eventCount, uint32_t eventTime, uint16_t actionId);
+
+        void timerCallback(Event::CallbackTimerPtr timer);
 
     public:
         ConfigType &_getConfig() {
@@ -79,12 +79,22 @@ namespace RemoteControl {
         friend Button;
 
         //ButtonArray _buttons;
-        ButtonEventList _events;
+        // ButtonEventList _events;
+        EventQueue _queue;
+        Queue::Lock _lock;
+        Event::Timer _queueTimer;
         ConfigType _config;
         uint32_t _autoSleepTimeout;
         uint32_t _buttonsLocked;
         uint8_t _longPress;
         int8_t _comboButton;
         uint8_t _pressed;
+        bool _testMode;
     };
+
+    inline void Base::queueEvent(Button::EventType type, uint8_t buttonNum, uint32_t eventTime, uint16_t actionId)
+    {
+        queueEvent(type, buttonNum, 0, eventTime, actionId);
+    }
+
 }

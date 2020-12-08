@@ -106,44 +106,24 @@ namespace PinMonitor {
 
     class HardwarePin {
     public:
-        HardwarePin(uint8_t pin) :
-            _micros(0),
-            _intCount(0),
-            _value(false),
-            _pin(pin),
-            _count(0),
-            _debounce(digitalRead(pin))
-        {
-        }
+        static constexpr uint16_t kIncrementCount = ~0;
 
-        inline Debounce &getDebounce()
-        {
-            return _debounce;
-        }
+        HardwarePin(uint8_t pin);
 
+        Debounce &getDebounce();
+        uint8_t getPin() const;
+        void updateState(uint32_t timeMicros, uint16_t intCount, bool value);
 
     private:
         friend Monitor;
 
-        inline operator bool() const {
-            return _count != 0;
-        }
+        operator bool() const;
+        uint8_t getCount() const;
 
-        inline uint8_t getCount() const {
-            return _count;
-        }
-        inline uint8_t getPin() const {
-            return _pin;
-        }
+    private:
 
-        inline HardwarePin &operator++() {
-            ++_count;
-            return *this;
-        }
-        inline HardwarePin &operator--() {
-            --_count;
-            return *this;
-        }
+        HardwarePin &operator++();
+        HardwarePin &operator--();
 
         static void ICACHE_RAM_ATTR callback(void *arg);
 
@@ -154,5 +134,51 @@ namespace PinMonitor {
         uint8_t _count;
         Debounce _debounce;
     };
+
+    inline HardwarePin::HardwarePin(uint8_t pin) :
+        _micros(0),
+        _intCount(0),
+        _value(false),
+        _pin(pin),
+        _count(0),
+        _debounce(digitalRead(pin))
+    {
+    }
+
+    inline Debounce &HardwarePin::getDebounce()
+    {
+        return _debounce;
+    }
+
+
+    inline HardwarePin::operator bool() const {
+        return _count != 0;
+    }
+
+    inline uint8_t HardwarePin::getCount() const {
+        return _count;
+    }
+
+    inline uint8_t HardwarePin::getPin() const {
+        return _pin;
+    }
+
+    inline HardwarePin &HardwarePin::operator++() {
+        ++_count;
+        return *this;
+    }
+
+    inline HardwarePin &HardwarePin::operator--() {
+        --_count;
+        return *this;
+    }
+
+    inline void HardwarePin::updateState(uint32_t timeMicros, uint16_t intCount, bool value)
+    {
+        _micros = timeMicros;
+        _intCount = (intCount == kIncrementCount) ? (_intCount + 1) : intCount;
+        _value = value;
+        _debounce = Debounce(_value);
+    }
 
 }

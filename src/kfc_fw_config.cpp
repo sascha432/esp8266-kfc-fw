@@ -875,8 +875,6 @@ bool KFCFWConfiguration::hasZeroConf(const String &hostname) const
 
 void KFCFWConfiguration::wifiQuickConnect()
 {
-    __DBG_print("");
-
 #if defined(ESP32)
     WiFi.mode(WIFI_STA); // needs to be called to initialize wifi
     wifi_config_t _config;
@@ -940,6 +938,20 @@ void KFCFWConfiguration::wifiQuickConnect()
 
 #if ENABLE_DEEP_SLEEP
 
+
+uint32_t DeepSleep::DeepSleepParams_t::getDeepSleepMaxMillis()
+{
+    return (_deepSleepMaxTime == 0) ? (ESP.deepSleepMax() * 9ULL / 10000ULL) : _deepSleepMaxTime;
+}
+
+void DeepSleep::DeepSleepParams_t::setDeepSleepMaxTime(uint32_t millis)
+{
+    _deepSleepMaxTime = millis;
+}
+
+uint32_t DeepSleep::DeepSleepParams_t::_deepSleepMaxTime = 0;
+
+
 // update remainingSleepTime and currentSleepTime
 // both will be 0 when the last cycle has completed
 void DeepSleep::DeepSleepParams_t::calcSleepTime()
@@ -950,11 +962,7 @@ void DeepSleep::DeepSleepParams_t::calcSleepTime()
         return;
     }
     // split sleep time up into ~3h cycles
-    // do not use more than 80%.
-    // deepSleepMax() returns µs, we use ms
-    auto maxSleepTime = (ESP.deepSleepMax() << 3) / (10 * 1000U);
-
-maxSleepTime = 15000;//TODO remove
+    auto maxSleepTime = getDeepSleepMaxMillis();
 
     if (remainingSleepTime) {
         if (remainingSleepTime > maxSleepTime * 2) {
@@ -985,9 +993,9 @@ void KFCFWConfiguration::wakeUpFromDeepSleep()
     ::printf(PSTR("wakeUpFromDeepSleep\n"));
 
 #if IOT_REMOTE_CONTROL
-    uint8_t keys;
-    if ((keys = RemoteControlPlugin::detectKeyPress()) != 0) {
-        ::printf(PSTR("deep sleep: key press bitset: %s\n"), String(keys, 2).c_str());
+    auto &remote = RemoteControlPlugin::getInstance();
+    if (remote.detectKeyPress() != 0) {
+        ::printf(PSTR("deep sleep: key press bitset: %s\n"), String(remote.getKeysPressed(), 2).c_str());
     }
 #endif
 
@@ -999,12 +1007,14 @@ void KFCFWConfiguration::wakeUpFromDeepSleep()
             _deepSleepParams.lastWakeUpUnixTime = getRTC();
 #endif
 
-            if (keys && _deepSleepParams.abortOnKeyPress) {
+#if IOT_REMOTE_CONTROL
+            if (remote.getKeysPressed() && _deepSleepParams.abortOnKeyPress) {
                 _deepSleepParams.abortCycles();
             }
+#endif
 
-            auto ms = micros();
-            _deepSleepParams.cycleRuntime += ms;
+            uint32_t ms = micros();
+            _deepSleepParams.cycleRuntime += ms + 3500;
             ::printf(PSTR("cycle_runtime=%uus last=%uus\n"), _deepSleepParams.cycleRuntime, ms);
 
             RTCMemoryManager::write(RTCMemoryManager::RTCMemoryId::DEEP_SLEEP, &_deepSleepParams, sizeof(_deepSleepParams));
@@ -1024,6 +1034,9 @@ void KFCFWConfiguration::wakeUpFromDeepSleep()
                 if (_deepSleepParams.remainingSleepTime < 1000 && _deepSleepParams.mode != RFMode::RF_CAL) {
                     _deepSleepParams.mode = RFMode::RF_CAL;
                     ::printf(PSTR("running RF_CAL\n"));
+                } else {
+                    _deepSleepParams.mode = RFMode::RF_DISABLED;
+                    ::printf(PSTR("running RF_DISABLED\n"));
                 }
 
                 ::printf(PSTR("entering deep sleep: %u\n"), _deepSleepParams.currentSleepTime);
@@ -1083,38 +1096,17 @@ void KFCFWConfiguration::enterDeepSleep(milliseconds time, RFMode mode, uint16_t
 #endif
 
 #if defined(ESP8266)
-    _deepSleepParams = {};
-    _deepSleepParams.deepSleepTime = milliseconds;
-    _deepSleepParams.remainingSleepTime = _deepSleepParams.deepSleepTime;
-    _deepSleepParams.calcSleepTime();
-    ::printf(PSTR("deep sleep cycle started: time=%ums rest=%ums total=%ums\n"), _deepSleepParams.currentSleepTime, _deepSleepParams.remainingSleepTime, _deepSleepParams.deepSleepTime);
-
-    _deepSleepParams.mode = mode;
-    _deepSleepParams.abortOnKeyPress = true;
-    _deepSleepParams.tasks.setTimeLimit(120 * 1000U);
-    _deepSleepParams.tasks.connectWiFi = true;
-    _deepSleepParams.tasks.connectMQTT = true;
-    _deepSleepParams.tasks.refreshDHCP = true;
-    _deepSleepParams.tasks.waitForNTP = true;
-
-    // retry 5 times in a row in 1 hour intervals before returning to _deepSleepParams.deepSleepTime intervals
-    // unless deepSleepTime is less then 1 hour
-    static constexpr uint32_t kErrorDeepSleepTime = 3600 * 1000U; // must not exceed 80% of deepSleepMax() / ~3 hours
-    if (_deepSleepParams.deepSleepTime >= kErrorDeepSleepTime) {
-        _deepSleepParams.tasks.errorRetry.reset = 5;
-        _deepSleepParams.tasks.errorRetry.count = 5;
-        _deepSleepParams.tasks.errorRetry.time = kErrorDeepSleepTime;
-    }
-
+    _deepSleepParams = DeepSleep::DeepSleepParams_t(milliseconds, mode);
     RTCMemoryManager::write(RTCMemoryManager::RTCMemoryId::DEEP_SLEEP, &_deepSleepParams, sizeof(_deepSleepParams));
 
-    if (_deepSleepParams.remainingSleepTime < 1000) {
-        mode = RFMode::RF_CAL;
-        ::printf(PSTR("running RF_CAL\n"));
-    }
-
-    ESP.deepSleep(_deepSleepParams.currentSleepTime * 1000ULL, mode);
-    ESP.deepSleep(0, mode); // go to deep sleep indefinitely if the first call fails
+    ESP.deepSleep(_deepSleepParams.getSleepTimeMicros(), mode);
+    // try again with half of the max. time if first call fails
+    PrintString tmp = F("Deep sleep failed with time_us=");
+    tmp.print(_deepSleepParams.getSleepTimeMicros());
+    Logger_error(tmp);
+    ESP.deepSleep(ESP.deepSleepMax() / 2, mode);
+    // go to deep sleep indefinitely
+    ESP.deepSleep(0, mode);
 #else
     ESP.deepSleep(time.count() * 1000UL);
     ESP.deepSleep(0);

@@ -24,7 +24,7 @@
 
 #if ENABLE_DEEP_SLEEP
 #ifndef PLUGIN_DEEP_SLEEP_DELAYED_START_TIME
-#define PLUGIN_DEEP_SLEEP_DELAYED_START_TIME          30000
+#define PLUGIN_DEEP_SLEEP_DELAYED_START_TIME          60000
 #endif
 #endif
 
@@ -60,3 +60,7 @@ void prepare_plugins();
 
 // setup all plug-ins
 void setup_plugins(PluginComponent::SetupModeType mode);
+
+// reset delayed startup time
+// millis() > timeout starts the procedure
+void set_delayed_startup_time(uint32_t timeout);

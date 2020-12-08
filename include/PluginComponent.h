@@ -65,6 +65,7 @@ public:
         // System
         RESET_DETECTOR,
         CONFIG,
+        REMOTE,
         SAVECRASH,
         SERIAL2TCP,
         BUTTONS,
@@ -77,7 +78,7 @@ public:
         // Plugins
         // highest priority for plugins
         MAX = 0,
-        HASS,
+        // HASS,
         HTTP2SERIAL,
         MQTT,
         // default

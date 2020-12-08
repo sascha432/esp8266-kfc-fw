@@ -16,35 +16,64 @@ MoveStringHelper::MoveStringHelper()
 {
 }
 
-void MoveStringHelper::move(Buffer &buf, String &&_str)
+#if ARDUINO_ESP8266_VERSION_COMBINED >= 0x020603
+#define WSTRING_IS_SSO(s)               s.isSSO()
+#else
+#define WSTRING_IS_SSO(s)               s.sso()
+#endif
+
+char *MoveStringHelper::move(String &&_str, int *allocSize)
 {
     auto &&str = static_cast<MoveStringHelper &&>(_str);
+    char *buf;
+    int _allocSize;
     __LDBG_println();
 #if ESP8266
     if (str.length()) {
-#if ARDUINO_ESP8266_VERSION_COMBINED >= 0x020603
-        if (str.isSSO()) {
-#else
-        if (str.sso()) {
-#endif
-            buf.write(str);
+        if (WSTRING_IS_SSO(str)) {
+            _allocSize = (str.length() + (1 << 3)) & ~0x03;
+            if ((buf = __LDBG_malloc_str(_allocSize)) != nullptr) {
+                strcpy(buf, str.c_str());
+            }
+            else {
+                _allocSize = 0;
+            }
         }
         else {
-            buf.setBuffer((uint8_t *)str.wbuffer(), str.capacity());
-            buf.setLength(str.length());
+            buf = str.wbuffer();
+            _allocSize = str.capacity();
             // register allocated block
-            __LDBG_NOP_malloc(str.wbuffer(), str.capacity());
+            __LDBG_NOP_malloc(buf, _allocSize);
         }
         str.init();
         // str.setSSO(true);
         // str.setLen(0);
         // str.wbuffer()[0] = 0;
     }
+    else {
+        str.invalidate();
+        buf = nullptr;
+        _allocSize = 0;
+    }
 #else
     // move not implemented
-    buf.write(str);
+    buf = strdup(_str.c_str());
+    _allocSize = strlen(buf) + 1;
     str = MoveStringHelper();
 #endif
+    if (allocSize) {
+        *allocSize = _allocSize;
+    }
+    return buf;
+}
+
+void MoveStringHelper::move(Buffer &buf, String &&_str)
+{
+    int capacity;
+    size_t len = _str.length();
+    auto cStr = MoveStringHelper::move(std::move(_str), &capacity);
+    buf.setBuffer(reinterpret_cast<uint8_t *>(cStr), capacity);
+    buf.setLength(len);
 }
 
 

@@ -15,6 +15,17 @@
 
 namespace PinMonitor {
 
+    // Events in order
+    //
+    // DOWN
+    // PRESSED (occurs only if repeated clicks are disabled)
+    // REPEATED_CLICK
+    // SINGLE_CLICK (REPEATED_CLICK with repeat count = 1)
+    // DOUBLE_CLICK (REPEATED_CLICK with repeat count = 2)
+    // HELD (repeated in intervals - if this event occurs, REPEATED_CLICK, SINGLE_CLICK, DOUBLE_CLICK and LONG_PRESSED won't)
+    // LONG_PRESSED
+    // UP
+
     enum class PushButtonEventType : uint16_t {
         NONE                            = 0,
 
@@ -35,14 +46,17 @@ namespace PinMonitor {
         // events fired while the button is pressed
         // after EventType::DOWN before EventType::UP
         HELD                            = _BV(4),
-        REPEAT                          = _BV(5),
 
         // after EventType::UP before EventType::DOWN
-        REPEATED_CLICK                  = _BV(6),
+        REPEATED_CLICK                  = _BV(5),
         // if SINGLE_CLICK is subscribed, REPEATED_CLICK won't be sent for _repeatCount == 1
-        SINGLE_CLICK                    = _BV(7),
+        SINGLE_CLICK                    = _BV(6),
         // if DOUBLE_CLICK is subscribed, REPEATED_CLICK won't be sent for _repeatCount == 2
-        DOUBLE_CLICK                    = _BV(8),
+        DOUBLE_CLICK                    = _BV(7),
+
+
+        // all events without SINGLE_CLICK/DOUBLE_CLICK
+        ALL                             = UP|DOWN|REPEATED_CLICK|PRESSED|LONG_PRESSED|HELD,
 
 
         ANY                             = 0xffff,
@@ -212,15 +226,21 @@ namespace PinMonitor {
         virtual void event(EventType eventType, uint32_t now);
         virtual void loop() override;
 
+        // number of repeats for EventType::HELD and EventType::REPEATED_CLICK
+        uint16_t getRepeatCount() const {
+            return _repeatCount;
+        }
+
 #if DEBUG
         virtual void dumpConfig(Print &output) override;
 #endif
+
+        static const __FlashStringHelper *eventTypeToString(EventType eventType);
 
     protected:
         // event for StateType is final
         virtual void event(StateType state, uint32_t now) final;
 
-        const __FlashStringHelper *eventTypeToString(EventType eventType);
         void _buttonReleased();
         bool _fireEvent(EventType eventType);
         void _reset();

@@ -1049,10 +1049,16 @@ void at_mode_serial_handle_event(String &commandString)
 
 #if ENABLE_DEEP_SLEEP
             if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DSLP))) {
-                KFCFWConfiguration::milliseconds time(args.toMillis(0));
-                RFMode mode = (RFMode)args.toInt(1, RF_DEFAULT);
-                args.print(F("Entering deep sleep..."));
-                config.enterDeepSleep(time, mode, 1);
+                if (args.size() == 2 && args.equalsIgnoreCase(0, F("deep_sleep_max"))) {
+                    DeepSleep::DeepSleepParams_t::setDeepSleepMaxTime(args.toInt(1));
+                    args.printf_P(PSTR("Setting deep_sleep_max to %ums"), DeepSleep::DeepSleepParams_t::getDeepSleepMaxMillis());
+                }
+                else {
+                    KFCFWConfiguration::milliseconds time(args.toMillis(0));
+                    RFMode mode = (RFMode)args.toInt(1, RF_DEFAULT);
+                    args.printf_P(PSTR("Entering deep sleep... time=%ums deep_sleep_max=%ums mode=%u"), time, DeepSleep::DeepSleepParams_t::getDeepSleepMaxMillis(), mode);
+                    config.enterDeepSleep(time, mode, 1);
+                }
             }
             else
 #endif

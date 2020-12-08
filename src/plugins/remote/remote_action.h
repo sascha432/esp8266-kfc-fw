@@ -7,6 +7,8 @@
 #include <Arduino_compat.h>
 #include "remote_def.h"
 #include "../src/plugins/mqtt/mqtt_client.h"
+#include <ArduinoJson.h>
+#include <Buffer.h>
 
 #if DEBUG_IOT_REMOTE_CONTROL
 #include <debug_helper_enable.h>
@@ -18,8 +20,148 @@ using KFCConfigurationClasses::Plugins;
 
 namespace RemoteControl {
 
+    // storage containers for the payload
+    //
+    // constructors are all PROGMEM safe
+    //
+    //   Binary
+    //   String (stored as binary without NUL termination)
+    //   Json (basically String with constructors for ArudinoJson, the ArudinoJson object isn't required after creating)
+
+    namespace Payload {
+        class Binary {
+        public:
+            Binary(const Binary &) = delete;
+            Binary &operator=(const Data &) = delete;
+
+            Binary() : _data(nullptr), _size(0) {}
+
+            // if data is null, the memory is allocated and filled with 0
+            Binary(const uint8_t *data, size_t size) : _data(new uint8_t[size]), _size(size) {
+                if (_data == nullptr) {
+                    _size = 0;
+                }
+                else if (_size) {
+                    if (data) {
+                        memcpy_P(_data, data, _size);
+                    }
+                    else {
+                        std::fill_n(_data, _size, 0);
+                    }
+
+                }
+            }
+
+            Binary(Binary &&move) noexcept :
+                _data(std::exchange(move._data, nullptr)),
+                _size(std::exchange(move._size, 0))
+            {}
+
+            ~Binary() {
+                if (_data) {
+                    delete[] _data;
+                }
+            }
+
+            Binary &operator=(Binary &&move) noexcept {
+                clear();
+                _data = std::exchange(move._data, nullptr);
+                _size = std::exchange(move._size, 0);
+                return *this;
+            }
+
+            void clear() {
+                if (_data) {
+                    delete[] _data;
+                    _data = nullptr;
+                }
+                _size = 0;
+            }
+
+            const uint8_t *data() const {
+                return _data;
+            }
+
+            size_t size() const {
+                return _size;
+            }
+
+            uint8_t *begin() {
+                return _data;
+            }
+
+            uint8_t *end() {
+                return _data + _size;
+            }
+
+        protected:
+            Binary(String &&move) : _data(nullptr), _size(move.length()) {
+                _data = reinterpret_cast<uint8_t *>(MoveStringHelper::move(std::move(move), nullptr));
+                if (!_data) {
+                    _size = 0;
+                }
+            }
+
+        protected:
+            uint8_t *_data;
+            uint8_t _size;
+        };
+
+        class String : public Binary
+        {
+        public:
+            String() {}
+            String(const char *data, size_t size) : Binary(reinterpret_cast<const uint8_t *>(data), size) {}
+            String(const __FlashStringHelper *data) : Binary(reinterpret_cast<const uint8_t *>(data), strlen_P(reinterpret_cast<PGM_P>(data))) {}
+            String(const ::String &str) : String(str.c_str(), str.length()) {}
+            String(::String &&str) : Binary(std::move(str)) {}
+        };
+
+        class Json : public String {
+        public:
+            using String::String;
+
+            Json() {}
+            // Json(const JsonDocument &doc) {
+            //     _size = measureJson(doc);
+            //     _data = new uint8_t[_size];
+            //     if (_data) {
+            //         serializeJson(doc, _data, _size);
+            //     }
+            //     else {
+            //         _data = nullptr;
+            //         _size = 0;
+            //     }
+            // }
+            // Json(const JsonDocument &doc, bool pretty) {
+            //     _size = measureJsonPretty(doc);
+            //     _data = new uint8_t[_size];
+            //     if (_data) {
+            //         serializeJsonPretty(doc, _data, _size);
+            //     }
+            //     else {
+            //         _data = nullptr;
+            //         _size = 0;
+            //     }
+            // }
+
+            static Binary serializeFromJson(const JsonDocument &doc)
+            {
+                Binary payload(nullptr, measureJson(doc));
+                if (payload.size()) {
+                    serializeJson(doc, payload.begin(), payload.size());
+                }
+                return payload;
+            }
+        };
+
+    }
+
+    class Action;
+
     using ActionProtocolType = Plugins::RemoteControl::ActionProtocolType;
     using ActionIdType = Plugins::RemoteControl::ActionIdType;
+    using ActionPtr = Action *;
 
     class Action {
     public:
@@ -81,79 +223,14 @@ namespace RemoteControl {
         QosType _qos;
     };
 
-    namespace Binary {
-
-        class Data {
-        public:
-            Data() : _data(nullptr), _size(0) {}
-            // PROGMEM safe
-            Data(const char *data, size_t size) : Data(reinterpret_cast<const uint8_t *>(data), size) {}
-            Data(const __FlashStringHelper *data) : Data(reinterpret_cast<const uint8_t *>(data), strlen_P(reinterpret_cast<PGM_P>(data))) {}
-            Data(const String &data) : Data(data.c_str(), data.length()) {}
-            ~Data() {
-                if (_data) {
-                    delete[] _data;
-                }
-            }
-
-            Data(Data &&move) noexcept :
-                _data(std::exchange(move._data, nullptr)),
-                _size(std::exchange(move._size, 0))
-            {}
-
-            Data &operator=(Data &move) noexcept {
-                clear();
-                _data = std::exchange(move._data, nullptr);
-                _size = std::exchange(move._size, 0);
-                return *this;
-            }
-
-            // use std::move(Data(copyMe.data(), copyMe.size()) to initialize members with a copy
-
-            Data(const Data &) = delete;
-            Data &operator=(const Data &) = delete;
-
-            // PROGMEM safe
-            Data(const uint8_t *data, size_t size) : _data(new uint8_t[size]), _size(size) {
-                if (_data == nullptr) {
-                    _size = 0;
-                }
-                else if (_size) {
-                    memcpy_P(_data, data, _size);
-                }
-            }
-
-            void clear() {
-                if (_data) {
-                    delete[] _data;
-                    _data = nullptr;
-                }
-                _size = 0;
-            }
-
-            const uint8_t *data() const {
-                return _data;
-            }
-
-            size_t size() const {
-                return _size;
-            }
-
-        private:
-            uint8_t *_data;
-            uint8_t _size;
-        };
-
-    }
-
     class ActionRaw : public Action {
     public:
         ActionRaw(ActionIdType id, ActionProtocolType type) : Action(id, type), _payload(), _port(0) {}
 
         // if hostname is an IP address and address is invalid, hostname is set to String() and the IP is stored in address
-        ActionRaw(ActionIdType id, ActionProtocolType type, const Binary::Data &payload, const String &hostname, const IPAddress &address, uint16_t port) :
+        ActionRaw(ActionIdType id, ActionProtocolType type, Payload::Binary &&payload, const String &hostname, const IPAddress &address, uint16_t port) :
             Action(id, type),
-            _payload(std::move(Binary::Data(payload.data(), payload.size()))),
+            _payload(std::move(payload)),
             _hostname(hostname),
             _address(address),
             _port(port)
@@ -165,6 +242,11 @@ namespace RemoteControl {
                     _hostname = String();
                 }
             }
+        }
+
+        void setPayload(Payload::Binary &&payload)
+        {
+            _payload = std::move(payload);
         }
 
         // set to true to resolve hostname before storing the record
@@ -218,7 +300,7 @@ namespace RemoteControl {
         }
 
     protected:
-        Binary::Data _payload;
+        Payload::Binary _payload;
         String _hostname;
         IPAddress _address;
         uint16_t _port;
@@ -227,20 +309,23 @@ namespace RemoteControl {
     class ActionTCP : public ActionRaw {
     public:
         ActionTCP(ActionIdType id = 0) : ActionRaw(id, ActionProtocolType::TCP) {}
-        ActionTCP(ActionIdType id, const Binary::Data &payload, const Binary::Data &successResponse, const String &hostname, const IPAddress &address, uint16_t port) :
-            ActionRaw(id, ActionProtocolType::TCP, payload, hostname, address, port),
-            _successResponse(std::move(Binary::Data(successResponse.data(), successResponse.size())))
+        ActionTCP(ActionIdType id, Payload::Binary &&payload, const Payload::Binary &successResponse, const String &hostname, const IPAddress &address, uint16_t port) :
+            ActionRaw(id, ActionProtocolType::TCP, std::move(payload), hostname, address, port),
+            _successResponse(std::move(Payload::Binary(successResponse.data(), successResponse.size())))
         {}
 
     private:
-        Binary::Data _successResponse;
+        Payload::Binary _successResponse;
     };
 
     class ActionUDP : public ActionRaw {
     public:
         ActionUDP(ActionIdType id = 0) : ActionRaw(id, ActionProtocolType::UDP) {}
-        ActionUDP(ActionIdType id, const Binary::Data &payload, const String &hostname, const IPAddress &address, uint16_t port) :
-            ActionRaw(id, ActionProtocolType::UDP, payload, hostname, address, port)
+        ActionUDP(ActionIdType id, Payload::Binary &&payload, const String &hostname, const IPAddress &address, uint16_t port) :
+            ActionRaw(id, ActionProtocolType::UDP, std::move(payload), hostname, address, port)
+        {}
+        ActionUDP(ActionIdType id, Payload::Binary &&payload, const IPAddress &address, uint16_t port) :
+            ActionRaw(id, ActionProtocolType::UDP, std::move(payload), String(), address, port)
         {}
 
         virtual void execute(Callback callback) override;

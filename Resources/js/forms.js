@@ -428,6 +428,11 @@ $(function() {
         // update button
         button.trigger('click');
 
+        // disable button if input is disabled
+        if (hiddenInput.is(':disabled')) {
+            button.off('click').addClass('disabled');
+        }
+
     });
 
 

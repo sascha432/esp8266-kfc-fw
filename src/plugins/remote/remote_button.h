@@ -21,9 +21,9 @@ namespace RemoteControl {
         ButtonConfig(ConfigType &config, uint8_t button) :
             PushButtonConfig(
                 kDefaultEvents,
-                config.shortpressTime,
-                config.longpressTime,
-                config.repeatTime
+                config.click_time,
+                config.hold_time,
+                config.hold_repeat_time
             )
         {
         }

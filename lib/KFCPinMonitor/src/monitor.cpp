@@ -113,7 +113,7 @@ Pin &Monitor::_attach(Pin &pin)
         _pins.emplace_back(new HardwarePin(pinNum));
         iterator = _pins.end() - 1;
 
-        type = PSTR("updating pin:");
+        __LDBG_IF(type = PSTR("updating pin:"));
     }
     auto &curPin = *iterator->get();
 

@@ -70,7 +70,7 @@ namespace RemoteControl {
     protected:
         void _resetAutoSleep() {
             if (_autoSleepTimeout && _autoSleepTimeout != kAutoSleepDisabled) {
-                _autoSleepTimeout = millis() + (_config.autoSleepTime * 1000UL);
+                _autoSleepTimeout = millis() + (_config.auto_sleep_time * 1000UL);
                 __LDBG_printf("auto deep sleep set %u", _autoSleepTimeout);
             }
         }

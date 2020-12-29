@@ -808,21 +808,7 @@ namespace KFCConfigurationClasses {
                 MAX
             };
 
-            enum class UdpActionType : uint8_t {
-                NONE = 0,
-                INCLUDE_UP_DOWN,
-                EXCLUDE_UP_DOWN,
-                MAX
-            };
-
             using ActionIdType = uint16_t;
-
-            // typedef struct __attribute__packed__ ComboAction_t {
-            //     using Type = ComboAction_t;
-            //     CREATE_UINT16_BITFIELD_MIN_MAX(shortpress, 16, 0, 65535, 0, 1);
-            //     CREATE_UINT16_BITFIELD_MIN_MAX(longpress, 16, 0, 65535, 0, 1);
-            //     CREATE_UINT16_BITFIELD_MIN_MAX(repeat, 16, 0, 65535, 0, 1);
-            // } ComboAction_t;
 
             typedef struct __attribute__packed__ ComboAction_t {
                 using Type = ComboAction_t;
@@ -839,60 +825,101 @@ namespace KFCConfigurationClasses {
 
             typedef struct __attribute__packed__ Action_t {
                 using Type = Action_t;
+                CREATE_UINT16_BITFIELD_MIN_MAX(down, 16, 0, 65535, 0);
+                CREATE_UINT16_BITFIELD_MIN_MAX(up, 16, 0, 65535, 0);
+                CREATE_UINT16_BITFIELD_MIN_MAX(press, 16, 0, 65535, 0);
                 CREATE_UINT16_BITFIELD_MIN_MAX(single_click, 16, 0, 65535, 0);
                 CREATE_UINT16_BITFIELD_MIN_MAX(double_click, 16, 0, 65535, 0);
-                CREATE_UINT16_BITFIELD_MIN_MAX(longpress, 16, 0, 65535, 0);
-                CREATE_UINT16_BITFIELD_MIN_MAX(held, 16, 0, 65535, 0);
-                CREATE_UINT16_BITFIELD_MIN_MAX(pressed, 16, 0, 65535, 0);
-                CREATE_UINT16_BITFIELD_MIN_MAX(released, 16, 0, 65535, 0);
-                MultiClick_t multi_click[4];
+                CREATE_UINT16_BITFIELD_MIN_MAX(long_press, 16, 0, 65535, 0);
+                CREATE_UINT16_BITFIELD_MIN_MAX(hold, 16, 0, 65535, 0);
+                CREATE_UINT16_BITFIELD_MIN_MAX(hold_released, 16, 0, 65535, 0);
+
+                CREATE_UINT16_BITFIELD_MIN_MAX(udp_down, 1, 0, 1, 0);
+                CREATE_UINT16_BITFIELD_MIN_MAX(udp_up, 1, 0, 1, 0);
+                CREATE_UINT16_BITFIELD_MIN_MAX(udp_press, 1, 0, 1, 0);
+                CREATE_UINT16_BITFIELD_MIN_MAX(udp_single_click, 1, 0, 1, 0);
+                CREATE_UINT16_BITFIELD_MIN_MAX(udp_double_click, 1, 0, 1, 0);
+                CREATE_UINT16_BITFIELD_MIN_MAX(udp_repeated_click, 1, 0, 1, 0);
+                CREATE_UINT16_BITFIELD_MIN_MAX(udp_long_press, 1, 0, 1, 0);
+                CREATE_UINT16_BITFIELD_MIN_MAX(udp_hold, 1, 0, 1, 0);
+                CREATE_UINT16_BITFIELD_MIN_MAX(udp_hold_released, 1, 0, 1, 0);
+
+                uint16_t getUdpBits() const {
+                    uint16_t tmp = 0;
+                    tmp |= udp_down ? (1 << 0) : 0;
+                    tmp |= udp_up ? (1 << 1) : 0;
+                    tmp |= udp_press ? (1 << 2) : 0;
+                    tmp |= udp_single_click ? (1 << 3) : 0;
+                    tmp |= udp_double_click ? (1 << 4) : 0;
+                    tmp |= udp_repeated_click ? (1 << 5) : 0;
+                    tmp |= udp_long_press ? (1 << 6) : 0;
+                    tmp |= udp_hold ? (1 << 7) : 0;
+                    tmp |= udp_hold_released ? (1 << 8) : 0;
+                    return tmp;
+                }
+
+                // MultiClick_t multi_click[4];
 
                 bool hasAction() const {
-                    return single_click || double_click || longpress || held || pressed || released;
+                    return down || up || press || single_click || double_click || long_press || hold || hold_released;
                 }
 
-                bool hasMultiClick() const {
-                    for(uint8_t i = 0; i < 4; i++) {
-                        if (multi_click[i].action && multi_click[i].clicks > 2) {
-                            return true;
-                        }
-                    }
-                    return false;
+                bool hasUdpAction() const {
+                    return udp_down || udp_up || udp_press || udp_single_click || udp_double_click || udp_repeated_click || udp_long_press || udp_hold || udp_hold_released;
                 }
-                int8_t getMultiClickIndex(uint8_t clicks) const {
-                    for(uint8_t i = 0; i < 4; i++) {
-                        if (multi_click[i].action && multi_click[i].clicks == clicks) {
-                            return i;
-                        }
-                    }
-                    return -1;
-                }
+
             } Action_t;
+
+            // struct __attribute__packed__ Button_t {
+            //     using Type = Button_t;
+
+            //     CREATE_UINT32_BITFIELD_MIN_MAX(multi_click_enabled, 1, 0, 1, 0, 1);
+            //     CREATE_UINT32_BITFIELD_MIN_MAX(udp_enabled, 1, 0, 1, 0, 1);
+            //     CREATE_UINT32_BITFIELD_MIN_MAX(press_time, 11, 0, 2000, 350, 50);           // millis
+            //     CREATE_UINT32_BITFIELD_MIN_MAX(hold_time, 13, 0, 8000, 1000, 50);           // millis
+            //     CREATE_UINT32_BITFIELD_MIN_MAX(hold_repeat_time, 12, 0, 4000, 200, 50);     // millis
+            //     CREATE_UINT32_BITFIELD_MIN_MAX(hold_max_value, 16, 0, 65535, 255, 1);
+            //     CREATE_UINT32_BITFIELD_MIN_MAX(hold_step, 16, 0, 65535, 1, 1);
+            //     CREATE_UINT32_BITFIELD_MIN_MAX(action_id, 16, 0, 65535, 0, 1);
+
+            //     Button_t() :
+            //         multi_click_enabled(kDefaultValueFor_multi_click_enabled),
+            //         udp_enabled(kDefaultValueFor_udp_enabled),
+            //         press_time(kDefaultValueFor_press_time),
+            //         hold_time(kDefaultValueFor_hold_time),
+            //         hold_repeat_time(kDefaultValueFor_hold_repeat_time),
+            //         hold_max_value(kDefaultValueFor_hold_max_value),
+            //         hold_step(kDefaultValueFor_hold_step),
+            //         action_id(kDefaultValueFor_action_id)
+            //     {}
+
+            // };
+
+            struct __attribute__packed__ Event_t {
+                using Type = Event_t;
+
+                CREATE_UINT8_BITFIELD_MIN_MAX(enabled, 1, 0, 1, 0, 1);
+
+                Event_t() = default;
+                Event_t(bool aEnabled = false) : enabled(aEnabled) {}
+            };
 
             typedef struct __attribute__packed__ Config_t {
                 using Type = Config_t;
-                CREATE_ENUM_BITFIELD(udpAction, UdpActionType);
-                CREATE_UINT32_BITFIELD_MIN_MAX(autoSleepTime, 10, 0, 1000, 2, 1);           // seconds
-                CREATE_UINT32_BITFIELD_MIN_MAX(deepSleepTime, 16, 0, 44640, 0, 1);          // in minutes / max. 31 days, 0 = indefinitely
-                CREATE_UINT32_BITFIELD_MIN_MAX(shortpressTime, 11, 0, 2000, 350, 1);        // millis
-                CREATE_UINT32_BITFIELD_MIN_MAX(longpressTime, 13, 0, 8000, 750, 1);         // millis
-                CREATE_UINT32_BITFIELD_MIN_MAX(repeatTime, 12, 0, 4000, 500, 1);            // millis
-                CREATE_UINT32_BITFIELD_MIN_MAX(udpPort, 16, 0, 65535, 7881, 1);             // port
-
+                CREATE_UINT32_BITFIELD_MIN_MAX(auto_sleep_time, 10, 0, 1000, 2, 1);                 // seconds
+                CREATE_UINT32_BITFIELD_MIN_MAX(deep_sleep_time, 16, 0, 44640, 0, 1);                // in minutes / max. 31 days, 0 = indefinitely
+                CREATE_UINT32_BITFIELD_MIN_MAX(click_time, 11, 0, 2000, 350, 1);                    // millis
+                CREATE_UINT32_BITFIELD_MIN_MAX(hold_time, 13, 0, 8000, 750, 1);                     // millis
+                CREATE_UINT32_BITFIELD_MIN_MAX(hold_repeat_time, 12, 0, 4000, 500, 1);              // millis
+                CREATE_UINT32_BITFIELD_MIN_MAX(udp_port, 16, 0, 65535, 7881, 1);                    // port
 
                 Action_t actions[IOT_REMOTE_CONTROL_BUTTON_COUNT];
                 ComboAction_t combo[4];
 
-                Config_t() :
-                    udpAction(static_cast<uint8_t>(UdpActionType::NONE)),
-                    autoSleepTime(kDefaultValueFor_autoSleepTime),
-                    deepSleepTime(kDefaultValueFor_deepSleepTime),
-                    shortpressTime(kDefaultValueFor_shortpressTime),
-                    longpressTime(kDefaultValueFor_longpressTime),
-                    repeatTime(kDefaultValueFor_repeatTime),
-                    udpPort(kDefaultValueFor_udpPort),
-                    actions{}
-                {}
+                // Button_t buttons[IOT_REMOTE_CONTROL_BUTTON_COUNT];
+                Event_t events[9];
+
+                Config_t();
 
             } Config_t;
 
@@ -903,7 +930,37 @@ namespace KFCConfigurationClasses {
             static void defaults();
             RemoteControl() {}
 
-            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.remote, UdpHost, 0, 64);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.udp_host, UdpHost, 0, 64);
+
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.name1, Name1, 1, 16);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.name2, Name2, 1, 16);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.name3, Name3, 1, 16);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.name4, Name4, 1, 16);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.name5, Name5, 1, 16);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.name6, Name6, 1, 16);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.name7, Name7, 1, 16);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.name8, Name8, 1, 16);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.name9, Name9, 1, 16);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.name10, Name10, 1, 16);
+
+            static void setName(uint8_t num, const char *);
+            static const char *getName(uint8_t num);
+            static constexpr uint8_t kButtonCount = IOT_REMOTE_CONTROL_BUTTON_COUNT;
+
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.event1, Event1, 1, 16);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.event2, Event2, 1, 16);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.event3, Event3, 1, 16);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.event4, Event4, 1, 16);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.event5, Event5, 1, 16);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.event6, Event6, 1, 16);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.event7, Event7, 1, 16);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.event8, Event8, 1, 16);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.event9, Event9, 1, 16);
+
+            static void setEventName(uint8_t num, const char *);
+            static const char *getEventName(uint8_t num);
+            static constexpr uint8_t kEventCount = 9;
+
         };
 
         // --------------------------------------------------------------------

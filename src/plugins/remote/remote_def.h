@@ -91,7 +91,7 @@ namespace RemoteControl {
 
         // static size_t getUdpQueueSize();
 
-        static const __FlashStringHelper *actionString(EventType eventType, uint8_t buttonNum, uint16_t repeatCount);
+        String actionString(EventType eventType, uint8_t buttonNum, uint16_t repeatCount);
 
     private:
         // void _sendUdpEvent(EventType type, uint8_t num, uint8_t button, uint32_t micros);

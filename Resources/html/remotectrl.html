@@ -30,9 +30,16 @@
             <div class="form-help-block">
                 <div data-target="#ast">When running on batteries, the device will go back to deep sleep after all events have been processed and the time is up</div>
                 <div data-target="#dst">The device wakes up approximately every 3 hours to check if the time has passed to renew the IP address and deliver battery deliver statistics about the battery. Due to hardware/software restrictions, the time is not accurate ~&plusmn;20%<br>To preserve battery life, set the value to 0 to disable auto wake up. If the device is used regularly, the statistics are updated once a day.</div>
-                <div data-target="#spt">A single click is detected when the button is held less than Long Press Time. If the button is repeatedly pressed within Short Press Time in between, a double (or multi) click is detected. This value will increase the initial time before the first event is fired. If only single click is used, it should be set to 0</div>
-                <div data-target="#lpt">If a button is pressed longer then Long Press Time, a long press event is fired when releasing it before Repeat Time has been reached</div>
-                <div data-target="#rt">If the button is held down for longer than Long Press Time + Repeat Time, a button held event is fired repeatedly in intervals of Repeat Time</div>
+                <div data-target="#spt">Pressing a button less than Short Press Time results in a <i>press</i> or <i>(multi-)click</i> event. Otherwise <i>long-press</i> or <i>hold-release</i> is fired</div>
+                <div data-target="#lpt">If a Button is held longer than Long Press Time, the <i>hold</i> event is fired</div>
+                <div data-target="#rt"><i>hold</i> events are repeated in intervals followed by <i>hold-release</i></div>
+
+                <div data-target="#na_2">Enable <i>press</i> if multiple clicks are not used. The button will respond faster.</div>
+                <div data-target="#na_4">This event replaces <i>multi-click</i> with repeat count 1</div>
+                <div data-target="#na_5">This event replaces <i>multi-click</i> with repeat count 2</div>
+                <div data-target="#na_6">If <i>multi-click</i> events are enabled, the <i>press</i> event is omitted<br>Variables: {repeat}</div>
+                <div data-target="#na_7">Variables: {repeat}</div>
+                <div data-target="#na_8"><i>hold-release</i> will be fired without prior <i>hold</i> events if <i>long-press</i> is not enabled</div>
             </div>
         </form>
         <!--%%FOOT-->
@@ -50,6 +57,44 @@
 	<script debug_loader="1" type="text/javascript" src="../js/main.min.js"></script>
 	<script debug_loader="1" type="text/javascript" src="../js/debug.js"></script>
     <!--JAVASCRIPT%%-->
+    <script>
+
+        $(function() {
+            if ($('#remotectrl_events').length) {
+                $('#_en_2').on('click', function() {
+                    var value = parseInt($('#en_2').val());
+                    if (value && parseInt($('#en_4').val())) {
+                        $('#_en_4').trigger('click');
+                    }
+                    if (value && parseInt($('#en_5').val())) {
+                        $('#_en_5').trigger('click');
+                    }
+                    if (value && parseInt($('#en_6').val())) {
+                        $('#_en_6').trigger('click');
+                    }
+                });
+
+                $('#_en_4').on('click', function() {
+                    var value = parseInt($('#en_4').val());
+                    if (value && parseInt($('#en_2').val())) {
+                        $('#_en_2').trigger('click');
+                    }
+                });
+                $('#_en_5').on('click', function() {
+                    var value = parseInt($('#en_5').val());
+                    if (value && parseInt($('#en_2').val())) {
+                        $('#_en_2').trigger('click');
+                    }
+                });
+                $('#_en_6').on('click', function() {
+                    var value = parseInt($('#en_6').val());
+                    if (value && parseInt($('#en_2').val())) {
+                        $('#_en_2').trigger('click');
+                    }
+                });
+            }
+        });
+    </script>
 
     %FORM_VALIDATOR%
 

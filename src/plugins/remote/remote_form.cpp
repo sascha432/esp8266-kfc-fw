@@ -12,6 +12,11 @@
 using KFCConfigurationClasses::MainConfig;
 using KFCConfigurationClasses::Plugins;
 
+static FormUI::Container::List getActions()
+{
+    return FormUI::Container::List(0, F("None")); //, 100, F("100"), 200, F("200"), 300, F("300"), 400, F("400"));
+}
+
 void RemoteControlPlugin::createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
 {
     if (!isCreateFormCallbackType(type)) {
@@ -29,25 +34,25 @@ void RemoteControlPlugin::createConfigureForm(FormCallbackType type, const Strin
 
         auto &mainGroup = form.addCardGroup(F("main"), F("General"), true);
 
-        form.addObjectGetterSetter(F("ast"), cfg, cfg.get_bits_autoSleepTime, cfg.set_bits_autoSleepTime);
+        form.addObjectGetterSetter(F("ast"), cfg, cfg.get_bits_auto_sleep_time, cfg.set_bits_auto_sleep_time);
         form.addFormUI(F("Auto Sleep Time"), FormUI::Suffix(F("seconds")));
-        cfg.addRangeValidatorFor_autoSleepTime(form);
+        cfg.addRangeValidatorFor_auto_sleep_time(form);
 
-        form.addObjectGetterSetter(F("dst"), cfg, cfg.get_bits_deepSleepTime, cfg.set_bits_deepSleepTime);
+        form.addObjectGetterSetter(F("dst"), cfg, cfg.get_bits_deep_sleep_time, cfg.set_bits_deep_sleep_time);
         form.addFormUI(F("Deep Sleep Time"), FormUI::Suffix(F("minutes (0 = indefinitely)")));
-        cfg.addRangeValidatorFor_deepSleepTime(form);
+        cfg.addRangeValidatorFor_deep_sleep_time(form);
 
-        form.addObjectGetterSetter(F("spt"), cfg, cfg.get_bits_shortpressTime, cfg.set_bits_shortpressTime);
-        form.addFormUI(F("Short Press Time"), FormUI::Suffix(F("milliseconds")));
-        cfg.addRangeValidatorFor_shortpressTime(form);
+        form.addObjectGetterSetter(F("spt"), cfg, cfg.get_bits_click_time, cfg.set_bits_click_time);
+        form.addFormUI(F("Short Press/Click Time"), FormUI::Suffix(F("milliseconds")));
+        cfg.addRangeValidatorFor_click_time(form);
 
-        form.addObjectGetterSetter(F("lpt"), cfg, cfg.get_bits_longpressTime, cfg.set_bits_longpressTime);
-        form.addFormUI(F("Long Press Time"), FormUI::Suffix(F("milliseconds")));
-        cfg.addRangeValidatorFor_longpressTime(form);
+        form.addObjectGetterSetter(F("lpt"), cfg, cfg.get_bits_hold_time, cfg.set_bits_hold_time);
+        form.addFormUI(F("Long Press/Hold Time"), FormUI::Suffix(F("milliseconds")));
+        cfg.addRangeValidatorFor_hold_time(form);
 
-        form.addObjectGetterSetter(F("rt"), cfg, cfg.get_bits_repeatTime, cfg.set_bits_repeatTime);
-        form.addFormUI(F("Repeat Time"), FormUI::Suffix(F("milliseconds")));
-        cfg.addRangeValidatorFor_repeatTime(form);
+        form.addObjectGetterSetter(F("rt"), cfg, cfg.get_bits_hold_repeat_time, cfg.set_bits_hold_repeat_time);
+        form.addFormUI(F("Hold Repeat Time"), FormUI::Suffix(F("milliseconds")));
+        cfg.addRangeValidatorFor_hold_repeat_time(form);
 
         mainGroup.end();
         auto &udpGroup = form.addCardGroup(F("udp"), F("UDP Packets"), true);
@@ -56,22 +61,78 @@ void RemoteControlPlugin::createConfigureForm(FormCallbackType type, const Strin
         form.addFormUI(F("Host"));
         form.addValidator(FormUI::Validator::Hostname(FormUI::AllowedType::HOST_OR_IP_OR_EMPTY));
 
-        form.addObjectGetterSetter(F("udpp"), cfg, cfg.get_bits_udpPort, cfg.set_bits_udpPort);
+        form.addObjectGetterSetter(F("udpp"), cfg, cfg.get_bits_udp_port, cfg.set_bits_udp_port);
         form.addFormUI(FormUI::Type::NUMBER, F("Port"), FormUI::PlaceHolder(7881));
         form.addValidator(FormUI::Validator::NetworkPort(true));
 
-        using UdpActionType = Plugins::RemoteControl::UdpActionType;
-
-        FormUI::Container::List actions(
-            UdpActionType::NONE, F("Disabled"),
-            UdpActionType::INCLUDE_UP_DOWN, F("Including *-down, *-up actions"),
-            UdpActionType::EXCLUDE_UP_DOWN, F("*-press, *-hold, *-long-press only")
-        );
-
-        form.addObjectGetterSetter(F("udpa"), cfg, cfg.get_int_udpAction, cfg.set_int_udpAction);
-        form.addFormUI(F("Action"), actions);
-
         udpGroup.end();
+
+    }
+    else if (String_equals(formName, PSTR("events"))) {
+
+        ui.setTitle(F("Remote Control Events"));
+        ui.setContainerId(F("remotectrl_events"));
+
+        {
+            PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, IOT_REMOTE_CONTROL_BUTTON_COUNT, bn);
+
+            auto &nameGroup = form.addCardGroup(F("bn"), F("Button Names"), true);
+
+            for(uint8_t i = 0; i < Plugins::RemoteControl::kButtonCount; i++) {
+
+                form.addCallbackGetterSetter<String>(F_VAR(bn, i), [i](String &str, Field::BaseField &, bool store) {
+                    if (store) {
+                        Plugins::RemoteControl::setName(i, str.c_str());
+                    } else {
+                        str = Plugins::RemoteControl::getName(i);
+                    }
+                    return true;
+                }, InputFieldType::TEXT);
+                form.addFormUI(FormUI::Label(PrintString(F("Button #%u"), i + 1)));
+                Plugins::RemoteControl::addName1LengthValidator(form); // length is the same for all
+
+            }
+
+            nameGroup.end();
+        }
+        {
+            auto &eventGroup = form.addCardGroup(F("en"), F("Event Names"), true);
+
+            PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, 9, en, na);
+
+            const __FlashStringHelper *eventNames[] = {
+                F("Button Down"),
+                F("Button Up"),
+                F("Button Press"),
+                F("Button Long Press"),
+                F("Button Single-Click"),
+                F("Button Double-Click"),
+                F("Button Multi-Click"),
+                F("Button Hold"),
+                F("Button Hold-Release")
+            };
+
+            for(uint8_t i = 0; i < Plugins::RemoteControl::kEventCount; i++) {
+
+                auto &enabled = form.addObjectGetterSetter(F_VAR(en, i), cfg.events[i], cfg.events[0].get_bits_enabled, cfg.events[0].set_bits_enabled);
+                form.addFormUI(FormUI::Type::HIDDEN);
+
+                form.addCallbackGetterSetter<String>(F_VAR(na, i), [i](String &str, Field::BaseField &, bool store) {
+                    if (store) {
+                        Plugins::RemoteControl::setEventName(i, str.c_str());
+                    } else {
+                        str = Plugins::RemoteControl::getEventName(i);
+                    }
+                    return true;
+                }, InputFieldType::TEXT);
+                form.addFormUI(eventNames[i], FormUI::CheckboxButtonSuffix(enabled, F("Enabled")));
+                Plugins::RemoteControl::addEvent1LengthValidator(form); // length is the same for all
+
+            }
+
+            eventGroup.end();
+
+        }
 
     }
     else if (String_equals(formName, PSTR("combos"))) {
@@ -153,31 +214,9 @@ void RemoteControlPlugin::createConfigureForm(FormCallbackType type, const Strin
         ui.setTitle(F("Remote Control Buttons"));
         ui.setContainerId(F("remotectrl_buttons"));
 
-        FormUI::Container::List actions(0, F("None")
-        , 100, F("100"), 200, F("200"), 300, F("300"), 400, F("400")
-        );
+        auto actions = getActions();
 
-#if HOME_ASSISTANT_INTEGRATION
-
-        Plugins::HomeAssistant::ActionVector vector;
-        Plugins::HomeAssistant::getActions(vector);
-
-        for(const auto &action: vector) {
-            auto str = action.getEntityId();
-            str += F(": ");
-            str += action.getActionFStr();
-            //auto str = PrintString(F("%s: %s"), action.getEntityId().c_str(), action.getActionFStr());
-            if (action.getNumValues()) {
-                // str.printf_P(PSTR(" %d"), action.getValue(0));
-                str += ' ';
-                str += String(action.getValue(0));
-            }
-            actions.emplace_back(action.getId(), str);
-        }
-
-#endif
-
-        PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, IOT_REMOTE_CONTROL_BUTTON_COUNT, grp, mgrp, sc, db, lp, hd, pe, re, mc0, mc1, mc2, mc3);
+        PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, IOT_REMOTE_CONTROL_BUTTON_COUNT, grp, dn, up, pe, sc, db, lp, hd, re, udn, uup, upe, usc, udb, ulp, uhd, ure);
 
         for(uint8_t i = 0; i < _buttonPins.size(); i++) {
 
@@ -185,70 +224,70 @@ void RemoteControlPlugin::createConfigureForm(FormCallbackType type, const Strin
                 cfg.actions[i].hasAction()
             );
 
-            form.addObjectGetterSetter(F_VAR(pe, i), cfg.actions[i], cfg.actions[0].get_bits_pressed, cfg.actions[0].set_bits_pressed);
-            form.addFormUI(F("Pressed Event"), actions);
+            auto downEnabled = FormUI::Conditional<FormUI::DisabledAttribute>(!cfg.events[0].enabled, FormUI::DisabledAttribute());
+            auto &udpDown = form.addObjectGetterSetter(F_VAR(udn, i), cfg.actions[i], cfg.actions[0].get_bits_udp_down, cfg.actions[0].set_bits_udp_down);
+            form.addFormUI(FormUI::Type::HIDDEN, downEnabled);
+
+            form.addObjectGetterSetter(F_VAR(dn, i), cfg.actions[i], cfg.actions[0].get_bits_down, cfg.actions[0].set_bits_down);
+            form.addFormUI(F("Down Event"), actions, FormUI::CheckboxButtonSuffix(udpDown, F("Enable UDP")), downEnabled);
+
+            auto upEnabled = FormUI::Conditional<FormUI::DisabledAttribute>(!cfg.events[1].enabled, FormUI::DisabledAttribute());
+            auto &udpUp = form.addObjectGetterSetter(F_VAR(uup, i), cfg.actions[i], cfg.actions[0].get_bits_udp_up, cfg.actions[0].set_bits_udp_up);
+            form.addFormUI(FormUI::Type::HIDDEN, upEnabled);
+
+            form.addObjectGetterSetter(F_VAR(up, i), cfg.actions[i], cfg.actions[0].get_bits_up, cfg.actions[0].set_bits_up);
+            form.addFormUI(F("Up Event"), actions, FormUI::CheckboxButtonSuffix(udpUp, F("Enable UDP")), upEnabled);
+
+            auto pressEnabled = FormUI::Conditional<FormUI::DisabledAttribute>(!cfg.events[2].enabled, FormUI::DisabledAttribute());
+            auto &udpPress = form.addObjectGetterSetter(F_VAR(upe, i), cfg.actions[i], cfg.actions[0].get_bits_udp_press, cfg.actions[0].set_bits_udp_press);
+            form.addFormUI(FormUI::Type::HIDDEN, pressEnabled);
+
+            form.addObjectGetterSetter(F_VAR(pe, i), cfg.actions[i], cfg.actions[0].get_bits_press, cfg.actions[0].set_bits_press);
+            form.addFormUI(F("Press Event"), actions, FormUI::CheckboxButtonSuffix(udpPress, F("Enable UDP")), pressEnabled);
+
+            auto singleClickEnabled = FormUI::Conditional<FormUI::DisabledAttribute>(!cfg.events[3].enabled, FormUI::DisabledAttribute());
+            auto &udpSingleClick = form.addObjectGetterSetter(F_VAR(usc, i), cfg.actions[i], cfg.actions[0].get_bits_udp_single_click, cfg.actions[0].set_bits_udp_single_click);
+            form.addFormUI(FormUI::Type::HIDDEN, singleClickEnabled);
 
             form.addObjectGetterSetter(F_VAR(sc, i), cfg.actions[i], cfg.actions[0].get_bits_single_click, cfg.actions[0].set_bits_single_click);
-            form.addFormUI(F("Single Click Event"), actions);
+            form.addFormUI(F("Single-Click Event"), actions, FormUI::CheckboxButtonSuffix(udpSingleClick, F("Enable UDP")), singleClickEnabled);
+
+            auto doubleClickEnabled = FormUI::Conditional<FormUI::DisabledAttribute>(!cfg.events[4].enabled, FormUI::DisabledAttribute());
+            auto &udpDoubleClick = form.addObjectGetterSetter(F_VAR(udb, i), cfg.actions[i], cfg.actions[0].get_bits_udp_double_click, cfg.actions[0].set_bits_udp_double_click);
+            form.addFormUI(FormUI::Type::HIDDEN, doubleClickEnabled);
 
             form.addObjectGetterSetter(F_VAR(db, i), cfg.actions[i], cfg.actions[0].get_bits_double_click, cfg.actions[0].set_bits_double_click);
-            form.addFormUI(F("Double Click Event"), actions);
+            form.addFormUI(F("Double-Click Event"), actions, FormUI::CheckboxButtonSuffix(udpDoubleClick, F("Enable UDP")), doubleClickEnabled);
 
-            form.addObjectGetterSetter(F_VAR(lp, i), cfg.actions[i], cfg.actions[0].get_bits_longpress, cfg.actions[0].set_bits_longpress);
-            form.addFormUI(F("Long Press Event"), actions);
+            auto longPressEnabled = FormUI::Conditional<FormUI::DisabledAttribute>(!cfg.events[5].enabled, FormUI::DisabledAttribute());
+            auto &udpLongPress = form.addObjectGetterSetter(F_VAR(ulp, i), cfg.actions[i], cfg.actions[0].get_bits_udp_long_press, cfg.actions[0].set_bits_udp_long_press);
+            form.addFormUI(FormUI::Type::HIDDEN, longPressEnabled);
 
-            form.addObjectGetterSetter(F_VAR(hd, i), cfg.actions[i], cfg.actions[0].get_bits_held, cfg.actions[0].set_bits_held);
-            form.addFormUI(F("Held Event"), actions);
+            form.addObjectGetterSetter(F_VAR(lp, i), cfg.actions[i], cfg.actions[0].get_bits_long_press, cfg.actions[0].set_bits_long_press);
+            form.addFormUI(F("Long Press Event"), actions, FormUI::CheckboxButtonSuffix(udpLongPress, F("Enable UDP")), longPressEnabled);
 
-            form.addObjectGetterSetter(F_VAR(re, i), cfg.actions[i], cfg.actions[0].get_bits_pressed, cfg.actions[0].set_bits_pressed);
-            form.addFormUI(F("Released Event"), actions);
+            auto holdEnabled = FormUI::Conditional<FormUI::DisabledAttribute>(!cfg.events[6].enabled, FormUI::DisabledAttribute());
+            auto &udpHold = form.addObjectGetterSetter(F_VAR(uhd, i), cfg.actions[i], cfg.actions[0].get_bits_udp_hold, cfg.actions[0].set_bits_udp_hold);
+            form.addFormUI(FormUI::Type::HIDDEN, holdEnabled);
+
+            form.addObjectGetterSetter(F_VAR(hd, i), cfg.actions[i], cfg.actions[0].get_bits_hold, cfg.actions[0].set_bits_hold);
+            form.addFormUI(F("Hold Event"), actions, FormUI::CheckboxButtonSuffix(udpHold, F("Enable UDP")), holdEnabled);
+
+            auto holdReleaseEnabled = FormUI::Conditional<FormUI::DisabledAttribute>(!cfg.events[7].enabled, FormUI::DisabledAttribute());
+            auto &udpHoldRelease = form.addObjectGetterSetter(F_VAR(ure, i), cfg.actions[i], cfg.actions[0].get_bits_udp_hold_released, cfg.actions[0].set_bits_udp_hold_released);
+            form.addFormUI(FormUI::Type::HIDDEN, holdReleaseEnabled);
+
+            form.addObjectGetterSetter(F_VAR(re, i), cfg.actions[i], cfg.actions[0].get_bits_hold_released, cfg.actions[0].set_bits_hold_released);
+            form.addFormUI(F("Hold-Release Event"), actions, FormUI::CheckboxButtonSuffix(udpHoldRelease, F("Enable UDP")), holdReleaseEnabled);
 
             group.end();
-
-            auto &multiGroup = form.addCardGroup(F_VAR(mgrp, i), PrintString(F("Button %u Multi Click Action"), i + 1),
-                cfg.actions[i].hasMultiClick()
-            );
-
-            form.addObjectGetterSetter(F_VAR(mc0, i), cfg.actions[i].multi_click[0], cfg.actions[0].multi_click[0].get_bits_action, cfg.actions[0].multi_click[0].set_bits_action);
-            form.addFormUI(F("Multi Click Event"), actions);
-
-            form.addObjectGetterSetter(F_VAR(mc0, i), cfg.actions[i].multi_click[0], cfg.actions[0].multi_click[0].get_bits_clicks, cfg.actions[0].multi_click[0].set_bits_clicks);
-            form.addFormUI(F("Number Of Clicks"), actions);
-            cfg.actions[0].multi_click[0].addRangeValidatorFor_clicks(form, true);
-
-
-            form.addObjectGetterSetter(F_VAR(mc1, i), cfg.actions[i].multi_click[1], cfg.actions[0].multi_click[0].get_bits_action, cfg.actions[0].multi_click[0].set_bits_action);
-            form.addFormUI(F("Multi Click Event"), actions);
-
-            form.addObjectGetterSetter(F_VAR(mc1, i), cfg.actions[i].multi_click[1], cfg.actions[0].multi_click[0].get_bits_clicks, cfg.actions[0].multi_click[0].set_bits_clicks);
-            form.addFormUI(F("Number Of Clicks"), actions);
-            cfg.actions[0].multi_click[0].addRangeValidatorFor_clicks(form, true);
-
-
-            form.addObjectGetterSetter(F_VAR(mc2, i), cfg.actions[i].multi_click[2], cfg.actions[0].multi_click[0].get_bits_action, cfg.actions[0].multi_click[0].set_bits_action);
-            form.addFormUI(F("Multi Click Event"), actions);
-
-            form.addObjectGetterSetter(F_VAR(mc2, i), cfg.actions[i].multi_click[2], cfg.actions[0].multi_click[0].get_bits_clicks, cfg.actions[0].multi_click[0].set_bits_clicks);
-            form.addFormUI(F("Number Of Clicks"), actions);
-            cfg.actions[0].multi_click[0].addRangeValidatorFor_clicks(form, true);
-
-
-            form.addObjectGetterSetter(F_VAR(mc3, i), cfg.actions[i].multi_click[3], cfg.actions[0].multi_click[0].get_bits_action, cfg.actions[0].multi_click[0].set_bits_action);
-            form.addFormUI(F("Multi Click Event"), actions);
-
-            form.addObjectGetterSetter(F_VAR(mc3, i), cfg.actions[i].multi_click[3], cfg.actions[0].multi_click[0].get_bits_clicks, cfg.actions[0].multi_click[0].set_bits_clicks);
-            form.addFormUI(F("Number Of Clicks"), actions);
-            cfg.actions[0].multi_click[0].addRangeValidatorFor_clicks(form, true);
-
-
-            multiGroup.end();
 
         }
 
     }
     else if (String_equals(formName, PSTR("actions"))) {
 
-        ui.setTitle(F("Remote Control Actions"));
+        ui.setTitle(F("Remote Control Actions (Currently not implemented)"));
         ui.setContainerId(F("remotectrl_actions"));
 
     }

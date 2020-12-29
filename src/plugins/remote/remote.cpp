@@ -54,7 +54,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     "Remote Control",   // friendly name
     "",                 // web_templates
     // config_forms
-    "general,buttons,combos,actions",
+    "general,events,buttons,combos,actions",
     "http",             // reconfigure_dependencies
     PluginComponent::PriorityType::REMOTE,
     PluginComponent::RTCMemoryId::DEEP_SLEEP,
@@ -94,11 +94,10 @@ void RemoteControlPlugin::_updateButtonConfig()
         if (button.getBase() == this) { // auto downcast of this
 #if DEBUG_IOT_REMOTE_CONTROL
             auto &cfg = _getConfig().actions[button.getButtonNum()];
-            __DBG_printf("button#=%u action=%u,%u,%u multi=%u,%u,%u,%u pressed/released=%u,%u",
+            __DBG_printf("button#=%u action=%u,%u,%u,%u,%u,%u,%u,%u udp=%u,%u,%u,%u,%u,%u,%u,%u",
                 button.getButtonNum(),
-                cfg.single_click, cfg.double_click, cfg.longpress,
-                cfg.multi_click[0].action, cfg.multi_click[1].action, cfg.multi_click[2].action, cfg.multi_click[3].action,
-                cfg.pressed, cfg.released
+                cfg.down, cfg.up, cfg.press, cfg.single_click, cfg.double_click, cfg.long_press, cfg.hold, cfg.hold_released,
+                cfg.udp_down, cfg.udp_up, cfg.udp_press, cfg.udp_single_click, cfg.udp_double_click, cfg.udp_long_press, cfg.udp_hold, cfg.udp_hold_released
             );
 #endif
             button.updateConfig();
@@ -152,13 +151,13 @@ void RemoteControlPlugin::setup(SetupModeType mode)
 
         _installWebhooks();
 
-        _actions.emplace_back(new ActionUDP(100, Payload::String(F("test1")), F("!acidpi1.local"), IPAddress(), 7712));
-        _actions.emplace_back(new ActionUDP(200, Payload::String(F("test2")), F("192.168.0.3"), IPAddress(), 7712));
-        _actions.emplace_back(new ActionUDP(300, Payload::String(F("test3")), F("acidpi1.local"), IPAddress(), 7712));
-        IPAddress addr;
-        addr.fromString(F("192.168.0.3"));
-        _actions.emplace_back(new ActionUDP(400, Payload::String(F("test4")), emptyString, addr, 7712));
-        _resolveActionHostnames();
+        // _actions.emplace_back(new ActionUDP(100, Payload::String(F("test1")), F("!acidpi1.local"), IPAddress(), 7712));
+        // _actions.emplace_back(new ActionUDP(200, Payload::String(F("test2")), F("192.168.0.3"), IPAddress(), 7712));
+        // _actions.emplace_back(new ActionUDP(300, Payload::String(F("test3")), F("acidpi1.local"), IPAddress(), 7712));
+        // IPAddress addr;
+        // addr.fromString(F("192.168.0.3"));
+        // _actions.emplace_back(new ActionUDP(400, Payload::String(F("test4")), emptyString, addr, 7712));
+        // _resolveActionHostnames();
 
     });
 }
@@ -199,6 +198,7 @@ void RemoteControlPlugin::getStatus(Print &output)
 void RemoteControlPlugin::createMenu()
 {
     bootstrapMenu.addSubMenu(getFriendlyName(), F("remotectrl/general.html"), navMenu.config);
+    bootstrapMenu.addSubMenu(F("Buttons Events"), F("remotectrl/events.html"), navMenu.config);
     bootstrapMenu.addSubMenu(F("Buttons Assignments"), F("remotectrl/buttons.html"), navMenu.config);
     bootstrapMenu.addSubMenu(F("Buttons Combinations"), F("remotectrl/combos.html"), navMenu.config);
     bootstrapMenu.addSubMenu(F("Define Actions"), F("remotectrl/actions.html"), navMenu.config);
@@ -387,8 +387,8 @@ void RemoteControlPlugin::deepSleepHandler(AsyncWebServerRequest *request)
         disableAutoSleep();
 
         _Scheduler.add(2000, false, [](Event::CallbackTimerPtr timer) {
-            __LDBG_printf("deep sleep=%us", plugin._config.deepSleepTime);
-            config.enterDeepSleep(KFCFWConfiguration::seconds(plugin._config.deepSleepTime), RF_DEFAULT, 1);
+            __LDBG_printf("deep sleep=%us", plugin._config.deep_sleep_time);
+            config.enterDeepSleep(KFCFWConfiguration::seconds(plugin._config.deep_sleep_time), RF_DEFAULT, 1);
         });
     }
     else {
@@ -423,10 +423,10 @@ void RemoteControlPlugin::_loop()
         else if (_autoSleepTimeout == 0) {
             uint8_t timeout = 0;
             if (config.isWiFiUp()) {
-                timeout = _config.autoSleepTime;
+                timeout = _config.deep_sleep_time;
             }
             else {
-                timeout = std::max<uint8_t>(30, _config.autoSleepTime); // increase auto sleep timeout to at least 30 seconds if wifi is down
+                timeout = std::max<uint8_t>(30, _config.deep_sleep_time); // increase auto sleep timeout to at least 30 seconds if wifi is down
             }
             _autoSleepTimeout = millis() + (timeout * 1000UL);
             __LDBG_printf("auto deep sleep=%u connected=%u", _autoSleepTimeout, config.isWiFiUp());
@@ -441,11 +441,11 @@ void RemoteControlPlugin::_loop()
 #endif
         // do not sleep until all events have been processed
         else if (!_hasEvents() && _autoSleepTimeout && millis() >= _autoSleepTimeout) {
-            __LDBG_printf("entering deep sleep (auto=%d, time=%us)", _config.autoSleepTime, _config.deepSleepTime);
+            __LDBG_printf("entering deep sleep (auto=%d, time=%us)", _config.deep_sleep_time, _config.deep_sleep_time);
             _autoSleepTimeout = kAutoSleepDisabled;
             config.enterDeepSleep(KFCFWConfiguration::seconds(0), RF_DEFAULT, 1); // TODO implement deep sleep
 
-            // config.enterDeepSleep(KFCFWConfiguration::seconds(_config.deepSleepTime), RF_DEFAULT, 1);
+            // config.enterDeepSleep(KFCFWConfiguration::seconds(_config.deep_sleep_time), RF_DEFAULT, 1);
         }
     }
 

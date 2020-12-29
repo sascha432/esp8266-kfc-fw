@@ -13,8 +13,7 @@ namespace KFCConfigurationClasses {
 
     void Plugins::Ping::defaults()
     {
-        PingConfig_t cfg = {};
-        setConfig(cfg);
+        setConfig(PingConfig_t());
         setHost1(FSPGM(_var_gateway));
         setHost2(FSPGM(ip_8_8_8_8, "8.8.8.8"));
         setHost3(FSPGM(www_google_com, "www.google.com"));

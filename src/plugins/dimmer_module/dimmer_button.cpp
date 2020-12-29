@@ -46,7 +46,7 @@ void DimmerButton::event(EventType eventType, uint32_t now)
                 __LDBG_printf("%s IGNORED event=%s sp_count=%u", name(), eventTypeToString(eventType), _singleClickGroup->getRepeatCount());
             }
             break;
-        case EventType::REPEAT:
+        case EventType::REPEATED_CLICK:
             _changeLevelRepeat(IOT_DIMMER_MODULE_HOLD_REPEAT_TIME, _button == 1);
             break;
         case EventType::CLICK:

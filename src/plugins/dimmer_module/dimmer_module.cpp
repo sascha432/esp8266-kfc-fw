@@ -240,10 +240,12 @@ void DimmerModulePlugin::setup(SetupModeType mode)
 {
     setupWebServer();
     _begin();
+#if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
     dependsOn(F("sensor"), [this](const PluginComponent *plugin) {
         __LDBG_printf("sensor=%p loaded", plugin);
         this->_setDimmingLevels();
     });
+#endif
 }
 
 void DimmerModulePlugin::reconfigure(const String &source)

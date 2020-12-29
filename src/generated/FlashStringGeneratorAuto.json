@@ -12,7 +12,7 @@
         "default": "Set-Cookie"
     },
     "mime_text_plain": {
-        "use_counter": 17,
+        "use_counter": 18,
         "default": "text/plain"
     },
     "null": {
@@ -44,7 +44,7 @@
         "default": "Invalid hostname or IP address"
     },
     "webui_json_id": {
-        "use_counter": 25,
+        "use_counter": 27,
         "default": "id"
     },
     "webui_json_unit": {
@@ -60,11 +60,11 @@
         "default": "offset"
     },
     "webui_json_value": {
-        "use_counter": 25,
+        "use_counter": 27,
         "default": "value"
     },
     "webui_json_state": {
-        "use_counter": 19,
+        "use_counter": 21,
         "default": "state"
     },
     "mime_application_json": {
@@ -292,7 +292,7 @@
         "default": "image/bmp"
     },
     "tcp": {
-        "use_counter": 6,
+        "use_counter": 8,
         "default": "tcp"
     },
     "mime_text_css": {
@@ -352,11 +352,11 @@
         "default": "/.pvt/blinds_ctrl.state"
     },
     "Yes": {
-        "use_counter": 4,
+        "use_counter": 1,
         "default": "Yes"
     },
     "No": {
-        "use_counter": 4,
+        "use_counter": 1,
         "default": "No"
     },
     "webui_json_title": {
@@ -541,7 +541,7 @@
         "default": "Detected eth address %s"
     },
     "stk500v1_log_file": {
-        "use_counter": 4,
+        "use_counter": 5,
         "default": "/stk500v1/debug.log"
     },
     "stk500v1_sig_file": {
@@ -1037,7 +1037,7 @@
         "default": "n/a"
     },
     "stk500v1_tmp_file": {
-        "use_counter": 0,
+        "use_counter": 2,
         "default": "/stk500v1/firmware_tmp.hex"
     },
     "iot_sensor_hlw80xx_state_file": {
@@ -1045,11 +1045,11 @@
         "default": ""
     },
     "seconds": {
-        "use_counter": 10,
+        "use_counter": 11,
         "default": "seconds"
     },
     "milliseconds": {
-        "use_counter": 3,
+        "use_counter": 6,
         "default": "milliseconds"
     },
     "__s_": {
@@ -1081,7 +1081,7 @@
         "default": "storage"
     },
     "image_type": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "image_type"
     },
     "id": {
@@ -1089,11 +1089,11 @@
         "default": "id"
     },
     "mqtt": {
-        "use_counter": 9,
+        "use_counter": 10,
         "default": "mqtt"
     },
     "_set": {
-        "use_counter": 12,
+        "use_counter": 13,
         "default": "/set"
     },
     "_state": {
@@ -1101,7 +1101,7 @@
         "default": "/state"
     },
     "_brightness_set": {
-        "use_counter": 6,
+        "use_counter": 7,
         "default": "/brightness/set"
     },
     "_brightness_state": {
@@ -1109,7 +1109,7 @@
         "default": "/brightness/state"
     },
     "_color_set": {
-        "use_counter": 4,
+        "use_counter": 5,
         "default": "/color/set"
     },
     "_color_state": {
@@ -1117,7 +1117,7 @@
         "default": "/color/state"
     },
     "main": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "main"
     },
     "lock_channels": {
@@ -1129,19 +1129,19 @@
         "default": "brightness"
     },
     "_degreeC": {
-        "use_counter": 5,
+        "use_counter": 9,
         "default": "\\u00b0C"
     },
     "vcc": {
-        "use_counter": 0,
+        "use_counter": 4,
         "default": "vcc"
     },
     "frequency": {
-        "use_counter": 0,
+        "use_counter": 4,
         "default": "frequency"
     },
     "Hz": {
-        "use_counter": 0,
+        "use_counter": 2,
         "default": "Hz"
     },
     "light_sensor": {
@@ -1209,7 +1209,7 @@
         "default": "Password"
     },
     "topic": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "topic"
     },
     "Topic": {
@@ -1217,7 +1217,7 @@
         "default": "Topic"
     },
     "keepalive": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "keepalive"
     },
     "Keep_Alive": {
@@ -1225,7 +1225,7 @@
         "default": "Keep Alive"
     },
     "prefix": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "prefix"
     },
     "Software_Serial": {
@@ -1345,7 +1345,7 @@
         "default": "&apos;"
     },
     "address": {
-        "use_counter": 3,
+        "use_counter": 5,
         "default": "address"
     },
     "domain": {
@@ -1989,7 +1989,7 @@
         "default": "- "
     },
     "serial_console_html": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "serial-console.html"
     },
     "_serial_console": {

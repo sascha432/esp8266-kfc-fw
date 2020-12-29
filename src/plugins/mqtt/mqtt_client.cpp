@@ -368,7 +368,7 @@ void MQTTClient::publishLastWill()
 #if MQTT_SET_LAST_WILL
     __LDBG_printf("topic=%s value=%s", _lastWillTopic.c_str(), _lastWillPayload.c_str());
     if (_lastWillTopic.length()) {
-        _client->setWill(_lastWillTopic.c_str(), getDefaultQos(), true, _lastWillPayload.c_str(), _lastWillPayload.length());
+        _client->setWill(_lastWillTopic.c_str(), _translateQosType(getDefaultQos()), true, _lastWillPayload.c_str(), _lastWillPayload.length());
     }
 #else
     __LDBG_printf("topic=%s value=%s (not sent to server)", _lastWillTopic.c_str(), _lastWillPayload.c_str());

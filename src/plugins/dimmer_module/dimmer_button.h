@@ -19,7 +19,7 @@ public:
 
     DimmerButtonConfig(ConfigType &config) :
         PushButtonConfig(
-            EnumHelper::Bitset::all(EventType::REPEAT, EventType::CLICK, EventType::LONG_CLICK),
+            EnumHelper::Bitset::all(EventType::REPEATED_CLICK, EventType::CLICK, EventType::LONG_CLICK),
             config.shortpress_time,
             config.longpress_time,
             IOT_DIMMER_MODULE_HOLD_REPEAT_TIME,

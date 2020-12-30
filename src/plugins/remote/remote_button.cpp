@@ -170,5 +170,5 @@ void Button::updateConfig()
     // reset states
     _reset();
     // reset bit in pressed indicator
-    base._pressed &= ~base._getPressedMask(_button);;
+    base._pressed &= ~base._getPressedMask(_button);
 }

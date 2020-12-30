@@ -57,16 +57,75 @@ namespace RemoteControl {
         return 0;
     }
 
+    static String buttonActionString(Button::EventType eventType, uint8_t buttonNum, uint16_t repeatCount)
+    {
+        PrintString str;
+
+        auto eventNum = buttonEventToEventNum(eventType);
+        if (eventNum) {
+            auto eventName = Plugins::RemoteControl::getEventName(eventNum);
+            if (eventName) {
+                auto name = Plugins::RemoteControl::getName(buttonNum);
+                if (name) {
+                    str = eventName;
+                    str.replace(F("{repeat}"), String(repeatCount));
+                    str.replace(F("{button_name}"), name);
+                }
+            }
+        }
+
+        // str.printf_P(PSTR("%u-%u-%u-"));
+        // auto name = Plugins::RemoteControl::getName(buttonNum);
+        // if (name) {
+        //     str += name;
+        // } else {
+        //     str += F("NULL");
+        // }
+        // str += '-';
+        // auto eventName = Plugins::RemoteControl::getEventName(buttonNum);
+        // if (eventName) {
+        //     str += eventName;
+        // } else {
+        //     str += F("NULL");
+        // }
+        return str;
+    }
+
+
     void Base::queueEvent(Button::EventType type, uint8_t buttonNum, uint16_t eventCount, uint32_t eventTime, uint16_t actionId)
     {
         auto eventNum = buttonEventToEventNum(type);
+        __DBG_printf("queueEvent type=%u button=%u event=%u enabled=%u bits=%u", type, buttonNum, eventNum, _getConfig().events[eventNum].enabled, _getConfig().actions[buttonNum].getUdpBits());
+
+        // if (_getConfig().events[eventNum].enabled) { // global enable flag
+
+            // _getConfig().actions[buttonNum].getUdpBits();
+
+            // auto udpAction = _getConfig().actions[buttonNum].hasUdpAction();
+
+        // }
+
+        auto udpAction = _getConfig().actions[buttonNum].hasUdpAction();
         if (_getConfig().events[eventNum].enabled) { // global enable flag
 
-            _getConfig().actions[buttonNum].getUdpBits();
+            if  (_getConfig().actions[buttonNum].hasUdpAction()) {
+                auto action = buttonActionString(type, buttonNum, eventCount);
+                if (action.length()) {
+                    PrintString json(F("{\"device\":\"%s\",\"action\":\"%s\",\"event\":\"%s\",\"button\":%u,\"repeat\":%u,\"ts\":%u}"), System::Device::getName(), action.c_str(), Button::eventTypeToString(type), buttonNum, eventCount, eventTime);
+#if DEBUG_IOT_REMOTE_CONTROL
+                    String jsonCopy = json;
+#endif
+                    auto action = new ActionUDP(0, Payload::Json(std::move(json)), Plugins::RemoteControl::getUdpHost(), IPAddress(), _getConfig().udp_port);
+                    __LDBG_printf("json=%s udpAction=%u", jsonCopy.c_str(), udpAction);
+                    _queue.emplace_back(type, buttonNum, Queue::Event::LockType::NONE, action);
+                }
+
+            }
 
         }
 
 
+//         if (_getConfig().events[eventNum].enabled) { // global enable flag
 
 //         if (!skip) {
 //             auto action = Button::actionString(type, buttonNum, eventCount);
@@ -83,7 +142,9 @@ namespace RemoteControl {
 
         // TODO add actions to target
 
-        //auto event = Queue::Event(type, buttonNum, eventCount, eventTime, _pressed, target);
+        // auto event = Queue::Event(type, buttonNum, eventCount, eventTime, _pressed, target);
+
+        // __LDBG_printf();
 
         if (_queue.size() && !_queueTimer) {
             _queueTimer.add(25, true, [this](Event::CallbackTimerPtr timer) {
@@ -119,7 +180,7 @@ namespace RemoteControl {
         interrupts();
 #if DEBUG_IOT_REMOTE_CONTROL && 0
         if (count != _queue.size()) {
-            __DBG_printf("%u items removed from queue", count- _queue.size());
+            __DBG_printf("%u items removed from queue", count - _queue.size());
         }
 #endif
 

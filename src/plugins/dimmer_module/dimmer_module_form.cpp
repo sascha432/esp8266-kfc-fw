@@ -124,7 +124,7 @@ void DimmerModuleForm::_createConfigureForm(PluginComponent::FormCallbackType ty
     cfg.addRangeValidatorFor_single_click_time(form);
 
     form.addObjectGetterSetter(F("maxbr"), cfg, cfg.get_bits_max_brightness, cfg.set_bits_max_brightness);
-    form.addFormUI(F("Min. Brightness"), FormUI::Suffix(F("%")), FormUI::PlaceHolder(cfg.kDefaultValueFor_max_brightness));
+    form.addFormUI(F("Max. Brightness"), FormUI::Suffix(F("%")), FormUI::PlaceHolder(cfg.kDefaultValueFor_max_brightness));
     cfg.addRangeValidatorFor_max_brightness(form);
 
     form.addObjectGetterSetter(F("minbr"), cfg, cfg.get_bits_min_brightness, cfg.set_bits_min_brightness);

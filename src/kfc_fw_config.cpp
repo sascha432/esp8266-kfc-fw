@@ -593,9 +593,6 @@ void KFCFWConfiguration::restoreFactorySettings()
 #if MQTT_SUPPORT
     Plugins::MQTTClient::defaults();
 #endif
-#if HOME_ASSISTANT_INTEGRATION
-    Plugins::HomeAssistant::defaults();
-#endif
 #if IOT_REMOTE_CONTROL
     Plugins::RemoteControl::defaults();
 #endif

@@ -25,12 +25,12 @@ Send messages to a syslog server via UDP, TCP and TLS
 
 ### KFCWebBuilder
 
-Framework to build WebUIs with bootstrap and store them mostly compressed in a virtual file system. Combined with server side includes, complex dynamic web pages with a low memory footprint can be created
+Framework to build WebUIs with bootstrap and store them mostly compressed in a virtual file system. Combined with server side includes, complex dynamic web pages/forms with a low memory footprint can be created
 
 ### KFCVirtualFileSystem
 
 ~~Read only file system with long filename support, optimized for low memory environments~~
-Due to constantly changing file system implementations in the Arduno frameworks currently replaced with long filename support on top of SPIFFS/LittleFS, but no transparent access for Dir()/File() anymore. Replacement classes ListDir and SPIFFSWrapper.
+Due to constantly changing file system implementations of the Arduno frameworks currently replaced with long filename support on top of SPIFFS/LittleFS, but no transparent access for Dir()/File() anymore. Replacement classes ListDir and SPIFFSWrapper.
 
 ### KFCJson
 
@@ -160,10 +160,6 @@ Live remote view over WebUI and screenshots in .BMP format
 
 https://easyeda.com/sascha23095123423/iot_weather_station
 https://github.com/sascha432/ESP8266-WiFi-Weather-Station
-
-### Home Assistant
-
-Home Assistant RESTful API
 
 ### File Manager
 

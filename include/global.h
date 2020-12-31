@@ -351,10 +351,6 @@
 #define REST_API_SUPPORT                                    0
 #endif
 
-#ifndef HOME_ASSISTANT_INTEGRATION
-#define HOME_ASSISTANT_INTEGRATION                          0
-#endif
-
 #ifndef I2CSCANNER_PLUGIN
 #define I2CSCANNER_PLUGIN                                   0
 #endif

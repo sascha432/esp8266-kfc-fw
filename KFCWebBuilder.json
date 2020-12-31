@@ -98,7 +98,7 @@
             "#if !REST_API_SUPPORT": [
                 "./Resources/html/rest-api.html"
             ],
-            "#if !HOME_ASSISTANT_INTEGRATION": [
+            "#if 0": [
                 "./Resources/html/hass.html",
                 "./Resources/html/hass-edit.html",
                 "./Resources/html/hass-actions.html"

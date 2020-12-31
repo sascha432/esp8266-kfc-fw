@@ -38,7 +38,9 @@
 - Support for loading javascript and CSS from remote server(s) during development
 - Fixed some environments and adapted changes of the Espressif 8266 2.3.1 framework (Arduino Core 2.7.4)
 - utf-8 support for web sockets
-- Removed support for home assistant plugin
+- Rewrite of the remote control plugin (in progress) for faster response times and longer battery life
+  - Removed support for home assistant Restful API
+  - Option to send UDP packets to minimize latency
 
 ## Version 0.0.3
 

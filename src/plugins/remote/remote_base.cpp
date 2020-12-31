@@ -16,7 +16,6 @@
 using KFCConfigurationClasses::System;
 using KFCConfigurationClasses::Plugins;
 
-
 namespace RemoteControl {
 
     // 0 {button_name}-down
@@ -156,13 +155,20 @@ namespace RemoteControl {
 
     void Base::timerCallback(Event::CallbackTimerPtr timer)
     {
+        if (!WiFi.isConnected()) {
+            __LDBG_printf("WiFi not connected, delaying queue");
+            _resetAutoSleep();
+            return;
+        }
         if (_lock.isAnyLocked(nullptr)) {
+            _resetAutoSleep();
             return;
         }
         for(auto &item: _queue) {
             if (item.canSend()) {
                 if (!_lock.isLocked(item.getButtonNum(), &item.getAction())) {
                     item.send(_lock);
+                    _resetAutoSleep();
                     if (_lock.isAnyLocked(nullptr)) {
                         return;
                     }

@@ -16,82 +16,81 @@
 using namespace RemoteControl;
 
 
-String Button::actionString(EventType eventType, uint8_t buttonNum, uint16_t repeatCount)
-
-//const __FlashStringHelper *actionString(EventType eventType, uint8_t buttonNum, uint16_t repeatCount)
-{
-    // switch(eventType) {
-    //     case EventType::REPEATED_CLICK:
-    //         if (repeatCount != 1) {
-    //             break;
-    //         }
-    //     case EventType::SINGLE_CLICK:
-    //     case EventType::PRESSED:
-    //         switch(buttonNum) {
-    //             case 0:
-    //                 return F("on-press");
-    //             case 1:
-    //                 return F("up-press");
-    //             case 2:
-    //                 return F("down-press");
-    //             case 3:
-    //                 return F("off-press");
-    //         }
-    //         break;
-    //     case EventType::DOWN:
-    //         switch(buttonNum) {
-    //             case 0:
-    //                 return F("on-down");
-    //             case 1:
-    //                 return F("up-down");
-    //             case 2:
-    //                 return F("down-down");
-    //             case 3:
-    //                 return F("off-down");
-    //         }
-    //         break;
-    //     case EventType::UP:
-    //         switch(buttonNum) {
-    //             case 0:
-    //                 return F("on-release");
-    //             case 1:
-    //                 return F("up-release");
-    //             case 2:
-    //                 return F("down-release");
-    //             case 3:
-    //                 return F("off-release");
-    //         }
-    //         break;
-    //     case EventType::LONG_PRESSED:
-    //         switch(buttonNum) {
-    //             case 0:
-    //                 return F("on-long-press");
-    //             case 1:
-    //                 return F("up-long-press");
-    //             case 2:
-    //                 return F("down-long-press");
-    //             case 3:
-    //                 return F("off-long-press");
-    //         }
-    //         break;
-    //     case EventType::HELD:
-    //         switch(buttonNum) {
-    //             case 0:
-    //                 return F("on-hold");
-    //             case 1:
-    //                 return F("up-hold");
-    //             case 2:
-    //                 return F("down-hold");
-    //             case 3:
-    //                 return F("off-hold");
-    //         }
-    //         break;
-    //     default:
-    //         break;
-    // }
-    // return nullptr;
-    return emptyString;
-}
+// String Button::actionString(EventType eventType, uint8_t buttonNum, uint16_t repeatCount)
+// //const __FlashStringHelper *actionString(EventType eventType, uint8_t buttonNum, uint16_t repeatCount)
+// {
+//     // switch(eventType) {
+//     //     case EventType::REPEATED_CLICK:
+//     //         if (repeatCount != 1) {
+//     //             break;
+//     //         }
+//     //     case EventType::SINGLE_CLICK:
+//     //     case EventType::PRESSED:
+//     //         switch(buttonNum) {
+//     //             case 0:
+//     //                 return F("on-press");
+//     //             case 1:
+//     //                 return F("up-press");
+//     //             case 2:
+//     //                 return F("down-press");
+//     //             case 3:
+//     //                 return F("off-press");
+//     //         }
+//     //         break;
+//     //     case EventType::DOWN:
+//     //         switch(buttonNum) {
+//     //             case 0:
+//     //                 return F("on-down");
+//     //             case 1:
+//     //                 return F("up-down");
+//     //             case 2:
+//     //                 return F("down-down");
+//     //             case 3:
+//     //                 return F("off-down");
+//     //         }
+//     //         break;
+//     //     case EventType::UP:
+//     //         switch(buttonNum) {
+//     //             case 0:
+//     //                 return F("on-release");
+//     //             case 1:
+//     //                 return F("up-release");
+//     //             case 2:
+//     //                 return F("down-release");
+//     //             case 3:
+//     //                 return F("off-release");
+//     //         }
+//     //         break;
+//     //     case EventType::LONG_PRESSED:
+//     //         switch(buttonNum) {
+//     //             case 0:
+//     //                 return F("on-long-press");
+//     //             case 1:
+//     //                 return F("up-long-press");
+//     //             case 2:
+//     //                 return F("down-long-press");
+//     //             case 3:
+//     //                 return F("off-long-press");
+//     //         }
+//     //         break;
+//     //     case EventType::HELD:
+//     //         switch(buttonNum) {
+//     //             case 0:
+//     //                 return F("on-hold");
+//     //             case 1:
+//     //                 return F("up-hold");
+//     //             case 2:
+//     //                 return F("down-hold");
+//     //             case 3:
+//     //                 return F("off-hold");
+//     //         }
+//     //         break;
+//     //     default:
+//     //         break;
+//     // }
+//     // return nullptr;
+//     return emptyString;
+// }
 
 void Button::event(EventType eventType, uint32_t now)
 {

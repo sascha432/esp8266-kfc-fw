@@ -81,10 +81,6 @@ private:
         _buttonsLocked &= ~(1 << button);
     }
 
-#if HOME_ASSISTANT_INTEGRATION
-    HassPlugin &_hass;
-#endif
-
 private:
     using ActionPtr = std::unique_ptr<Action>;
     using ActionVector = std::vector<ActionPtr>;

@@ -10,9 +10,6 @@
 #include "blink_led_timer.h"
 #include "remote.h"
 #include "remote_button.h"
-#if HOME_ASSISTANT_INTEGRATION
-#include "../src/plugins/home_assistant/home_assistant.h"
-#endif
 #include "plugins_menu.h"
 
 #if DEBUG_IOT_REMOTE_CONTROL
@@ -72,9 +69,6 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
 RemoteControlPlugin::RemoteControlPlugin() :
     PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(RemoteControlPlugin)),
     Base(),
-#if HOME_ASSISTANT_INTEGRATION
-    _hass(HassPlugin::getInstance()),
-#endif
     _pressedKeys(0),
     _pressedKeysTime(0)
 {
@@ -200,8 +194,10 @@ void RemoteControlPlugin::createMenu()
     bootstrapMenu.addSubMenu(getFriendlyName(), F("remotectrl/general.html"), navMenu.config);
     bootstrapMenu.addSubMenu(F("Buttons Events"), F("remotectrl/events.html"), navMenu.config);
     bootstrapMenu.addSubMenu(F("Buttons Assignments"), F("remotectrl/buttons.html"), navMenu.config);
-    bootstrapMenu.addSubMenu(F("Buttons Combinations"), F("remotectrl/combos.html"), navMenu.config);
-    bootstrapMenu.addSubMenu(F("Define Actions"), F("remotectrl/actions.html"), navMenu.config);
+
+    // not implemented yet
+    // bootstrapMenu.addSubMenu(F("Buttons Combinations"), F("remotectrl/combos.html"), navMenu.config);
+    // bootstrapMenu.addSubMenu(F("Define Actions"), F("remotectrl/actions.html"), navMenu.config);
 
     // bootstrapMenu.addSubMenu(F("Enter Deep Sleep"), F("remote-sleep.html"), navMenu.device);
     // bootstrapMenu.addSubMenu(F("Disable Auto Sleep"), F("remote-nosleep.html"), navMenu.device);
@@ -450,9 +446,8 @@ void RemoteControlPlugin::_loop()
     }
 
     // buttons are interrupt driven and do not require fast polling
-    // call delay to safe energy
-    // delay(25);
-    delay(5);
+    // 5-10ms catches pretty much all events
+    delay(10);
 }
 
 bool RemoteControlPlugin::_isUsbPowered() const
@@ -535,20 +530,6 @@ void RemoteControlPlugin::_sendEvents()
 //                     break;
 //             }
 
-#if HOME_ASSISTANT_INTEGRATION
-            auto action = Plugins::HomeAssistant::getAction(actionId);
-            if (action.getId()) {
-                _lockButton(event.getButton());
-                auto button = event.getButton();
-                event.remove();
-
-                _hass.executeAction(action, [this, button](bool status) {
-                    _unlockButton(button);
-                    _scheduleSendEvents();
-                });
-                return;
-            }
-#else
             auto actionPtr = _getAction(actionId);
             if (actionPtr && *actionPtr) {
                 auto button = event.getButton();
@@ -561,7 +542,6 @@ void RemoteControlPlugin::_sendEvents()
                 });
                 return;
             }
-#endif
 
             __LDBG_printf("removing event with no action");
             event.remove();

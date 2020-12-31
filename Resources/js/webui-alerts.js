@@ -78,8 +78,13 @@
             self.icon = false;
             self.write_cookie();
             self.update();
-        })
-
+        });
+        $('#remove-all-alerts').on('click', function(e) {
+            $.get(self.data_url + '&clear=1', function(text) {
+                //TODO alerts are displayed until the page is reloaded
+            });
+            e.preventDefault();
+        });
         this.read_cookie();
         this.get_json();
     },
@@ -119,7 +124,6 @@
     get_json: function() {
         var self = this;
         $.get(this.data_url + '&poll_id=' + this.next_alert_id, function(text) {
-
             if (text == undefined || text == '') { // text is undefined for response code 204
                 self.schedule_get_json();
                 return;

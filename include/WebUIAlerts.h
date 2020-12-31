@@ -159,6 +159,8 @@ namespace WebAlerts {
         static bool hasOption(OptionsType option) = delete;
         static void dismissAlert(IdType id) {}
 
+        static void dismissAll() = delete;
+
         static void readStorage() {}
         static void writeStorage() {}
     };
@@ -341,6 +343,13 @@ namespace WebAlerts {
 
         static bool hasOption(OptionsType option);
 
+        static void dismissAll() {
+            auto &fs = StorageClass::getInstance();
+            auto file = fs._openAlertStorage(false);
+            file.truncate(0);
+            file.close();
+        }
+
         static void readStorage(RewriteType type = RewriteType::READ_ONLY) {
             auto &fs = StorageClass::getInstance();
             File file = fs._openAlertStorage(type == RewriteType::READ_ONLY);
@@ -409,8 +418,8 @@ namespace WebAlerts {
         }
 
         static void dimiss(IdType id) {
-           dismissAlert(id);
-       }
+            dismissAlert(id);
+        }
 
         static IdType danger(const String &message, ExpiresType type = ExpiresType::PERSISTENT) {
             return add(message, Type::DANGER);

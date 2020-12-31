@@ -311,6 +311,12 @@ void WebServerPlugin::handlerAlerts(AsyncWebServerRequest *request)
 
     headers.addNoCache(true);
 
+    if (request->arg(F("clear")).toInt()) {
+        WebAlerts::Alert::dismissAll();
+        request->send(200);
+        return;
+    }
+
     auto dismiss = request->arg(F("dismiss_id"));
     if (dismiss.length() != 0) {
         WebAlerts::Alert::dismissAlerts(dismiss);

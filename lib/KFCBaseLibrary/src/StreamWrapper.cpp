@@ -13,6 +13,63 @@
 #endif
 
 extern NullStream NullSerial;
+extern StreamCacheVector *debugHistory;
+
+StreamCacheVector::StreamCacheVector(uint16_t size) : _size(size)
+{
+}
+
+void StreamCacheVector::add(String line)
+{
+    if (_lines.size() < _size) {
+        line.trim();
+        if (line.length()) {
+            _lines.push_back(line);
+        }
+    }
+}
+
+void StreamCacheVector::write(const uint8_t *buffer, size_t size)
+{
+    if (_lines.size() >= _size) {
+        return;
+    }
+    auto ptr = buffer;
+    while(size--) {
+        auto byte = pgm_read_byte(ptr++);
+        switch(byte) {
+            case '\r':
+                break;
+            case '\n':
+                if (_buffer.length() < 80) {
+                    _buffer += F("<\\n> ");
+                }
+                else {
+                    if (_buffer.length()) {
+                        _buffer += '\n';
+                        add(_buffer);
+                        _buffer.clear();
+                    }
+                }
+                break;
+            default:
+                _buffer += (char)byte;
+                break;
+        }
+    }
+}
+
+void StreamCacheVector::dump(Stream &output)
+{
+    for(String line: _lines) {
+        line.trim();
+        if (line.length()) {
+            output.println(line);
+            delay(10);
+        }
+    }
+}
+
 
 StreamWrapper::StreamWrapper(Stream *output, Stream *input) : _streams(new StreamWrapperVector()), _freeStreams(true), _input(input)
 {
@@ -34,7 +91,7 @@ StreamWrapper::StreamWrapper(Stream *stream) : StreamWrapper(stream, stream)
 {
 }
 
-StreamWrapper::StreamWrapper() : StreamWrapper(&NullSerial)
+StreamWrapper::StreamWrapper() : StreamWrapper(&NullSerial, nullptr)
 {
 }
 
@@ -123,6 +180,9 @@ size_t StreamWrapper::readBytes(char *buffer, size_t length)
 
 size_t StreamWrapper::write(uint8_t data)
 {
+    if (debugHistory) {
+        debugHistory->write(&data, 1);
+    }
     for(const auto stream: *_streams) {
         if (stream->write(data) != sizeof(data)) {
             delay(1); // 1ms per byte
@@ -135,6 +195,9 @@ size_t StreamWrapper::write(uint8_t data)
 
 size_t StreamWrapper::write(const uint8_t *buffer, size_t size)
 {
+    if (debugHistory) {
+        debugHistory->write(buffer, size);
+    }
     for(const auto stream: *_streams) {
         auto len = size;
         auto ptr = buffer;

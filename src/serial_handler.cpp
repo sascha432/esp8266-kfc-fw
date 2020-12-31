@@ -17,20 +17,31 @@
 #define DEBUG_SERIAL_HANDLER_IO             0
 #endif
 
+// number of lines to keep during the boot face. additional data is discarded
+#ifndef DEBUG_PREBOOT_HISTORY
+#define DEBUG_PREBOOT_HISTORY               0
+#endif
+
 // serial handler
 #if DEBUG_SERIAL_HANDLER_BASE
-#define __DBGSH(fmt,...)          { ::printf(PSTR("SH:" fmt "\n"), ##__VA_ARGS__); }
-#define __IF_DBGSH(...)           __VA_ARGS__
+#define __DBGSH(fmt,...)            { ::printf(PSTR("SH:" fmt "\n"), ##__VA_ARGS__); }
+#define __IF_DBGSH(...)             __VA_ARGS__
 #else
-#define __DBGSH(...)              ;
-#define __IF_DBGSH(...)           ;
+#define __DBGSH(...)                ;
+#define __IF_DBGSH(...)             ;
 #endif
 
 // serial handler I/O
 #if DEBUG_SERIAL_HANDLER_IO
-#define __DBGSHIO(fmt,...)        { ::printf(PSTR("SH:" fmt "\n"), ##__VA_ARGS__); }
+#define __DBGSHIO(fmt,...)          { ::printf(PSTR("SH:" fmt "\n"), ##__VA_ARGS__); }
 #else
-#define __DBGSHIO(...)            ;
+#define __DBGSHIO(...)              ;
+#endif
+
+#if DEBUG_PREBOOT_HISTORY
+StreamCacheVector *debugHistory = new StreamCacheVector(DEBUG_PREBOOT_HISTORY);
+#else
+StreamCacheVector *debugHistory = nullptr;
 #endif
 
 NullStream NullSerial;

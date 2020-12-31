@@ -15,6 +15,35 @@
 #define HAVE_MYSERIAL_AND_DEBUGSERIAL 1
 #endif
 
+class StreamCacheVector {
+public:
+    using LineCacheVector = std::vector<String>;
+
+public:
+    StreamCacheVector(uint16_t size = 128);
+
+    void add(String line);
+    void write(const uint8_t *buffer, size_t size);
+    void dump(Stream &output);
+
+    void setSize(uint16_t size) {
+        _size = size;
+    }
+
+    void clear() {
+        _lines.clear();
+    }
+
+    LineCacheVector &lines() {
+        return _lines;
+    };
+
+private:
+    LineCacheVector _lines;
+    String _buffer;
+    uint16_t _size;
+};
+
 class StreamWrapper : public Stream {
 public:
     typedef std::vector<Stream *> StreamWrapperVector;
@@ -26,7 +55,8 @@ public:
     StreamWrapper(Stream *output, Stream *input);
     StreamWrapper(Stream *output, nullptr_t input);
     StreamWrapper(Stream *stream);
-    // used provided streams and do not delete streams object
+
+    // use provided streams and do not delete streams object
     // can be used to clone a stream wrapper, the original object must not be destroyed
     StreamWrapper(StreamWrapperVector *streams, Stream *input);
     ~StreamWrapper();

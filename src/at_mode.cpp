@@ -303,6 +303,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMPT, "DUMPT", "Dump timers");
 #if DEBUG_CONFIGURATION_GETHANDLE
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPH, "DUMPH", "[<log|panic|clear>]", "Dump configuration handles");
 #endif
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMPD, "DUMPD", "Dump initial debug history");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPM, "DUMPM", "<start>,<length>", "Dump memory");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPA, "DUMPA", "<reset|mark|leak|freed>", "Memory allocation statistics");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMPFS, "DUMPFS", "Display file system information");
@@ -373,6 +374,7 @@ void at_mode_help_commands()
 #if DEBUG && ESP8266
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPT), name);
 #endif
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPD), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPM), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPA), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPFS), name);
@@ -1649,6 +1651,16 @@ void at_mode_serial_handle_event(String &commandString)
                 args.printf_P(PSTR("%d MHz"), ESP.getCpuFreqMHz());
             }
     #endif
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPD))) {
+                if (debugHistory) {
+                    args.printf_P(PSTR("---"));
+                    debugHistory->dump(args.getStream());
+                    args.printf_P(PSTR("---"));
+                }
+                else {
+                    args.printf_P(PSTR("Preboot debug history disabled"));
+                }
+            }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMP))) {
                 if (args.equals(0, F("dirty"))) {
                     config.dump(output, true);

@@ -71,10 +71,15 @@
                 "./Resources/js/ping-console.js",
                 "./Resources/css/ping-console.css"
             ],
-            "#if !IOT_CLOCK": [
-                "./Resources/html/clock.html",
-                "./Resources/js/forms/clock.js",
+            "#if !IOT_CLOCK && !IOT_LED_MATRIX": [
                 "./Resources/images/light.svg"
+            ],
+            "#if !IOT_CLOCK || IOT_LED_MATRIX": [
+                "./Resources/html/clock.html",
+                "./Resources/js/forms/clock.js"
+            ],
+            "#if IOT_CLOCK || !IOT_LED_MATRIX": [
+                "./Resources/html/led_matrix.html"
             ],
             "#if !IOT_ALARM_PLUGIN_ENABLED": [
                 "./Resources/html/alarm.html",

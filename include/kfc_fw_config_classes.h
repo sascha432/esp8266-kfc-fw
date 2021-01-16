@@ -313,7 +313,7 @@ namespace KFCConfigurationClasses {
             storeBinaryConfig(kConfigStructHandle, &params, sizeof(ConfigType));
         }
 
-        static ConfigType &getWriteableConfig()
+        static ConfigType & getWriteableConfig()
         {
             __CDBG_printf("getWriteableConfig=%04x name=%s size=%u", kConfigStructHandle, *handleName, sizeof(ConfigType));
             REGISTER_HANDLE_NAME(*handleName, __DBG__TYPE_W_GET);
@@ -1362,32 +1362,75 @@ namespace KFCConfigurationClasses {
 
         // --------------------------------------------------------------------
         // Sensor
-
         class SensorConfig {
         public:
-            typedef struct __attribute__packed__ SensorConfig_t {
+
 #if IOT_SENSOR_HAVE_BATTERY
-                typedef struct __attribute__packed__ BatteryConfig_t {
-                    float calibration;
-                    uint8_t precision;
-                    float offset;
-                    BatteryConfig_t();
-                } BatteryConfig_t;
-                BatteryConfig_t battery;
+#ifndef __IOT_SENSOR_COMFIG_T
+#define __IOT_SENSOR_COMFIG_T 1
 #endif
+
+            enum class BatteryPins : uint8_t {
+                NONE = 0,
+                CHARGING,
+                STANDBY,
+                RUNNING_ON_EXTERNAL,
+                RUNNING_ON_BATTERY,
+                MAX
+            };
+
+            enum class BatteryPinMode : uint8_t {
+                NONE = 0,
+                ACTIVE_LOW,
+                ACTIVE_HIGH,
+                MAX
+            };
+
+            typedef struct BatteryConfig_t {
+                using Type = BatteryConfig_t;
+
+                float calibration;
+                float offset;
+                uint8_t pins[4];
+                uint8_t pinMode[4];
+                CREATE_UINT8_BITFIELD_MIN_MAX(precision, 4, 0, 7, 2, 1);
+
+                BatteryConfig_t();
+
+            } BatteryConfig_t;
+
+            using SensorConfig_t = BatteryConfig_t;
+#endif
+
 #if (IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032)
-                typedef struct __attribute__packed__ HLW80xxConfig_t {
-                    float calibrationU;
-                    float calibrationI;
-                    float calibrationP;
-                    uint64_t energyCounter;
-                    uint8_t extraDigits;
-                    HLW80xxConfig_t();
-                } HLW80xxConfig_t;
-                HLW80xxConfig_t hlw80xx;
+#ifndef __IOT_SENSOR_COMFIG_T
+#define __IOT_SENSOR_COMFIG_T 1
 #endif
-                SensorConfig_t() = default;
+
+            typedef struct HLW80xxConfig_t {
+
+                using Type = HLW80xxConfig_t;
+                float calibrationU;
+                float calibrationI;
+                float calibrationP;
+                uint64_t energyCounter;
+                CREATE_UINT8_BITFIELD_MIN_MAX(extraDigits, 4, 0, 7, 0, 1);
+                HLW80xxConfig_t();
+
+            } HLW80xxConfig_t;
+
+            using SensorConfig_t = BatteryConfig_t;
+#endif
+
+#ifndef __IOT_SENSOR_COMFIG_T
+#define __IOT_SENSOR_COMFIG_T 1
+
+            typedef struct SensorConfig_t {
+                using Type = SensorConfig_t;
             } SensorConfig_t;
+
+#endif
+
         };
 
         class Sensor : public SensorConfig, public ConfigGetterSetter<SensorConfig::SensorConfig_t, _H(MainConfig().plugins.sensor.cfg) CIF_DEBUG(, &handleNameSensorConfig_t)> {
@@ -1639,7 +1682,7 @@ typedef struct  {
 
         class ClockConfig {
         public:
-            typedef union __attribute__packed__ {
+            typedef union __attribute__packed__ ClockColor_t {
                 uint32_t value: 24;
                 uint8_t bgr[3];
                 struct __attribute__packed__ {
@@ -1647,14 +1690,34 @@ typedef struct  {
                     uint8_t green;
                     uint8_t red;
                 };
+                ClockColor_t(uint32_t val = 0) : value(val) {}
             } ClockColor_t;
+
+            typedef struct __attribute__packed__ RainbowMultiplier_t {
+                float value;
+                float min;
+                float max;
+                float incr;
+                RainbowMultiplier_t();
+            } RainbowMultiplier_t;
+
+            typedef struct __attribute__packed__ RainbowColor_t {
+                ClockColor_t min;
+                ClockColor_t factor;
+                float red_incr;
+                float green_incr;
+                float blue_incr;
+                RainbowColor_t();
+            } RainbowColor_t;
 
             typedef struct __attribute__packed__ ClockConfig_t {
                 using Type = ClockConfig_t;
 
                 ClockColor_t solid_color;
                 CREATE_UINT8_BITFIELD(animation, 7);
+#if !IOT_LED_MATRIX
                 CREATE_UINT8_BITFIELD(time_format_24h, 1);
+#endif
                 uint8_t brightness;
 
                 uint16_t getBrightness() const {
@@ -1665,7 +1728,9 @@ typedef struct  {
                 }
 
                 int16_t auto_brightness;
+#if !IOT_LED_MATRIX
                 uint16_t blink_colon_speed;
+#endif
                 uint16_t flashing_speed;
                 struct __attribute__packed__ {
                     uint8_t temperature_75;
@@ -1673,10 +1738,9 @@ typedef struct  {
                     uint8_t max_temperature;
                 } protection;
                 struct __attribute__packed__ {
-                    float multiplier;
+                    RainbowMultiplier_t multiplier;
+                    RainbowColor_t color;
                     uint16_t speed;
-                    ClockColor_t factor;
-                    ClockColor_t minimum;
                 } rainbow;
                 struct __attribute__packed__ {
                     ClockColor_t color;

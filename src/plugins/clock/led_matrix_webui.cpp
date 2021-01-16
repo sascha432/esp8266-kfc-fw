@@ -2,7 +2,7 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if !IOT_LED_MATRIX
+#if IOT_LED_MATRIX
 
 #include <Arduino_compat.h>
 #include "clock.h"
@@ -18,9 +18,6 @@
 void ClockPlugin::getValues(JsonArray &array)
 {
     auto obj = &array.addObject(3);
-    obj->add(JJ(id), F("btn_colon"));
-    obj->add(JJ(state), true);
-    obj->add(JJ(value), (_config.blink_colon_speed < kMinBlinkColonSpeed) ? 0 : (_config.blink_colon_speed < 750 ? 2 : 1));
 
     obj = &array.addObject(3);
     obj->add(JJ(id), F("btn_animation"));
@@ -51,20 +48,7 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
     if (hasValue) {
         _resetAlarm();
         auto val = (uint8_t)value.toInt();
-        if (String_equals(id, PSTR("btn_colon"))) {
-            switch(val) {
-                case 0:
-                    setBlinkColon(0);
-                    break;
-                case 1:
-                    setBlinkColon(1000);
-                    break;
-                case 2:
-                    setBlinkColon(500);
-                    break;
-            }
-        }
-        else if (String_equals(id, PSTR("btn_animation"))) {
+        if (String_equals(id, PSTR("btn_animation"))) {
             setAnimation(static_cast<AnimationType>(val));
         }
         else if (String_equals(id, PSTR("color"))) {
@@ -79,7 +63,7 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
 void ClockPlugin::createWebUI(WebUIRoot &webUI)
 {
     auto row = &webUI.addRow();
-    row->addGroup(F("Clock"), false);
+    row->addGroup(F("LED Matrix"), false);
 
     row = &webUI.addRow();
     row->addSlider(FSPGM(brightness), FSPGM(brightness), 0, SevenSegmentDisplay::kMaxBrightness, true);
@@ -89,9 +73,10 @@ void ClockPlugin::createWebUI(WebUIRoot &webUI)
 
     row = &webUI.addRow();
     auto height = F("15rem");
-    row->addButtonGroup(F("btn_colon"), F("Colon"), F("Solid,Blink slowly,Blink fast")).add(JJ(height), height);
     row->addButtonGroup(F("btn_animation"), F("Animation"), F("Solid,Rainbow,Flashing,Fading")).add(JJ(height), height);
+#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
     row->addSensor(FSPGM(light_sensor), F("Ambient Light Sensor"), F("<img src=\"/images/light.svg\" width=\"80\" height=\"80\" style=\"margin-top:-20px;margin-bottom:1rem\">"), WebUIComponent::SensorRenderType::COLUMN).add(JJ(height), height);
+#endif
 }
 
 void ClockPlugin::_broadcastWebUI()

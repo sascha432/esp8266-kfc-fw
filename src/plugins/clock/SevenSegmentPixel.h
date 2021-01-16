@@ -36,7 +36,9 @@
 #define IOT_CLOCK_USE_FAST_LED_BRIGHTNESS                           0
 #endif
 
+#if !IOT_LED_MATRIX
 static constexpr char _digits2SegmentsTable[]  = { 0x3f, 0x06, 0x5b, 0x4f, 0x66, 0x6d, 0x7d, 0x07, 0x7f, 0x6f, 0x77, 0x7c, 0x39, 0x5e, 0x79, 0x71 };  // 0-F
+#endif
 
 template<typename PIXEL_TYPE, size_t NUM_DIGITS, size_t NUM_DIGIT_PIXELS, size_t NUM_COLONS, size_t NUM_COLON_PIXELS>
 class SevenSegmentPixel {
@@ -55,6 +57,11 @@ public:
     using GetColorCallback = std::function<ColorType(PixelAddressType addr, ColorType color, const Params_t &params)>;
     using AnimationCallback = GetColorCallback;
 
+#if IOT_LED_MATRIX
+    typedef enum {
+        NUM = 1,
+    } SegmentEnum_t;
+#else
     typedef enum {
         A = 0,
         B,
@@ -65,6 +72,7 @@ public:
         G,
         NUM,
     } SegmentEnum_t;
+#endif
 
     typedef enum {
         NONE = 0,
@@ -75,6 +83,8 @@ public:
 
     static constexpr BrightnessType kMaxBrightness = std::numeric_limits<BrightnessType>::max();
     static constexpr size_t kTotalPixelCount = (NUM_DIGITS * NUM_DIGIT_PIXELS * SevenSegmentPixel::SegmentEnum_t::NUM) + (NUM_COLONS * NUM_COLON_PIXELS * 2);
+
+    static_assert(kTotalPixelCount < 512, "max. number of pixel exceeded");
 
     static constexpr size_t getNumDigits() {
         return NUM_DIGITS;
@@ -96,9 +106,11 @@ public:
         return (NUM_COLONS * NUM_COLON_PIXELS * 2);
     }
 
+#if !IOT_LED_MATRIX
     static constexpr uint8_t getSegmentNumberBits(uint8_t number) {
         return (uint8_t)_digits2SegmentsTable[number & 0xf];
     }
+#endif
 
     // static constexpr ColorType getSegmentColor(uint32_t color, uint8_t segment, uint8_t number) {
     //     return (_digits2SegmentsTable[number & 0xf] & (1 << segment)) ? color : 0;
@@ -121,7 +133,70 @@ public:
 #if IOT_CLOCK_NEOPIXEL
         _pixels.begin();
 #endif
+        reset();
     }
+
+    inline void reset() {
+        _pixels.fill(0);
+        show();
+    }
+
+#if IOT_LED_MATRIX
+
+    inline void clear() {
+        for (uint16_t i = IOT_LED_MATRIX_START_ADDR; i < IOT_LED_MATRIX_START_ADDR + kTotalPixelCount; i++) {
+            _pixels[i] = 0;
+        }
+    }
+
+    void setColor(ColorType color) {
+        _pixels.fill(color);
+    }
+
+    void setPixels(ColorType color) {
+        for(int16_t i = 0; i < kTotalPixelCount; i++) {
+            setPixel(i, color);
+        }
+    }
+
+    void setPixel(int16_t offset, ColorType color) {
+        if (color == 0) {
+            _pixels[offset + IOT_LED_MATRIX_START_ADDR]  = 0;
+        }
+        else {
+            _pixels[offset + IOT_LED_MATRIX_START_ADDR]  = _getColorAlways(offset, color, _params);
+        }
+    }
+
+    void setPixelByAddr(uint16_t addr, ColorType color) {
+        if (color == 0) {
+            _pixels[addr]  = 0;
+        }
+#if IOT_LED_MATRIX_START_ADDR
+        else if (addr < IOT_LED_MATRIX_START_ADDR) {
+            _pixels[addr]  = color;
+        }
+#endif
+        else {
+
+            _pixels[addr]  = _getColorAlways(addr - IOT_LED_MATRIX_START_ADDR, color, _params);
+        }
+    }
+
+    void print(const String &text, ColorType color) {
+    }
+
+    void print(const char *text, ColorType color) {
+    }
+
+    void dump(Print &output) {
+        output.printf_P(PSTR("total pixels: %u\n"), getTotalPixels());
+#if IOT_LED_MATRIX_START_ADDR
+        output.printf_P(PSTR("start address: %u\n"), IOT_LED_MATRIX_START_ADDR);
+#endif
+    }
+
+#else
 
     PixelAddressType setSegments(uint8_t digit, PixelAddressType offset, PGM_P order) {
         if (digit < NUM_DIGITS) {
@@ -144,39 +219,24 @@ public:
         return num;
     }
 
-    // millis is passed to AnimationCallback
-
-    inline void setMillis(uint32_t millis) {
-        _params.brightness = millis;
-    }
-
-    inline void setBrightness(BrightnessType brightness) {
-        _params.brightness = brightness;
-    }
-
-    inline void setParams(uint32_t millis, BrightnessType brightness) {
-        _params.millis = millis;
-        _params.brightness = brightness;
-    }
-
-    inline void show() {
-#if IOT_CLOCK_NEOPIXEL
-        _pixels.show();
-#else
-    #if IOT_CLOCK_USE_FAST_LED_BRIGHTNESS
-        FastLED.setBrightness(_params.brightness >> 8);
-    #endif
-        FastLED.show();
-#endif
-    }
-
     inline void clear() {
         _pixels.fill(0);
     }
 
-    inline void setColor(ColorType color) {
+    inline void setPixels(ColorType color) {
         _pixels.fill(color);
-        show();
+    }
+
+    inline void setColor(ColorType color) {
+        setPixels(color);
+    }
+
+    inline void setPixel(uint16_t addr, ColorType color) {
+        _pixels[addr]  = color;
+    }
+
+    inline void setPixelByAddr(uint16_t addr, ColorType color) {
+        setPixel(addr, color);
     }
 
     void clearDigit(uint8_t digit) {
@@ -345,6 +405,33 @@ public:
         output.printf_P(PSTR("colon pixels: %u\n"), getColonsPixels());
     }
 
+#endif
+
+    // millis is passed to AnimationCallback
+
+    inline void setMillis(uint32_t millis) {
+        _params.brightness = millis;
+    }
+
+    inline void setBrightness(BrightnessType brightness) {
+        _params.brightness = brightness;
+    }
+
+    inline void setParams(uint32_t millis, BrightnessType brightness) {
+        _params.millis = millis;
+        _params.brightness = brightness;
+    }
+
+    inline void show() {
+#if IOT_CLOCK_NEOPIXEL
+        _pixels.show();
+#else
+    #if IOT_CLOCK_USE_FAST_LED_BRIGHTNESS
+        FastLED.setBrightness(_params.brightness >> 8);
+    #endif
+        FastLED.show();
+#endif
+    }
 
 public:
     void setCallback(AnimationCallback callback) {
@@ -412,6 +499,8 @@ private:
     std::array<CRGB, getTotalPixels()> _pixels;
     CLEDController &_controller;
 #endif
+
+#if !IOT_LED_MATRIX
     // std::array<PixelAddressType, getDigitsPixels()> _pixelAddress;
     std::array<PixelAddressType, getColonsPixels()> _colonPixelAddress;
     // std::array<PixelAddressType, getTotalPixels()> _pixelOrder;
@@ -421,5 +510,6 @@ private:
     using DigitsArray = std::array<SegmentArray, NUM_DIGIT_PIXELS>;
 
     DigitsArray _pixelAddress;
+#endif
     Params_t _params;
 };

@@ -107,7 +107,11 @@ void ClockPlugin::_publishState(MQTTClient *client)
     if (!client) {
         client = MQTTClient::getClient();
     }
+#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
     __DBG_printf("client=%p color=%s brightness=%u auto=%d", client, _color.implode(',').c_str(), _targetBrightness, _autoBrightness);
+#else
+    __DBG_printf("client=%p color=%s brightness=%u", client, _color.implode(',').c_str(), _targetBrightness);
+#endif
     if (client && client->isConnected()) {
         client->publish(MQTTClient::formatTopic(FSPGM(_state)), true, String(_color ? 1 : 0));
         client->publish(MQTTClient::formatTopic(FSPGM(_brightness_state)), true, String(_targetBrightness));

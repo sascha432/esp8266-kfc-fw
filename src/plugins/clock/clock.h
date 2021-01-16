@@ -15,6 +15,9 @@
 #if IOT_ALARM_PLUGIN_ENABLED
 #include "./plugins/alarm/alarm.h"
 #endif
+#if IOT_LED_MATRIX
+#include "led_matrix.h"
+#endif
 
 #if SPEED_BOOSTER_ENABLED
 #error The speed booster causes timing issues and should be deactivated
@@ -130,7 +133,9 @@ public:
     void _onButtonReleased(uint16_t duration);
 #endif
     static void loop();
+#if !IOT_LED_MATRIX
     static void ntpCallback(time_t now);
+#endif
 
 #if IOT_ALARM_PLUGIN_ENABLED
 public:
@@ -148,8 +153,10 @@ private:
 
 public:
     void enable(bool enable);
+#if !IOT_LED_MATRIX
     void setSyncing(bool sync);
     void setBlinkColon(uint16_t value);
+#endif
     void setColorAndRefresh(Color color);
     // time represents fading level 0 to max, the fading time is relative to the different between the brightness levels
     void setBrightness(BrightnessType brightness, milliseconds time = milliseconds(2500));
@@ -160,6 +167,8 @@ public:
 
 protected:
     using ConfigStructType = Plugins::Clock::ConfigStructType;
+
+#if !IOT_LED_MATRIX
 
     class LoopOptionsType
     {
@@ -210,13 +219,23 @@ protected:
         struct tm24 _tm;
     };
 
+#else
+
+    friend LEDMatrix::LoopOptionsType;
+
+    using LoopOptionsType = LEDMatrix::LoopOptionsType;
+
+#endif
+
 private:
     bool _loopUpdateButtons(LoopOptionsType &options);
     bool _loopSyncingAnimation(LoopOptionsType &options);
     bool _loopDisplayLightSensor(LoopOptionsType &options);
     void _loop();
 
+#if !IOT_LED_MATRIX
     void _setSevenSegmentDisplay();
+#endif
 
     // set brightness
     // it is updated with the next refresh of the display
@@ -229,18 +248,18 @@ private:
     // while fading between different levels it returns the current level
     BrightnessType _getFadingBrightness() const;
 
-#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
     void _installWebHandlers();
+#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
     void _adjustAutobrightness();
     String _getLightSensorWebUIValue();
     void _updateLightSensorWebUI();
     uint16_t _readLightSensor() const;
     // uint16_t _readLightSensor(uint8_t num, uint8_t delayMillis) const;
-    void _broadcastWebUI();
+#endif
 public:
+    void _broadcastWebUI();
     static void adjustAutobrightness(Event::CallbackTimerPtr timer);
     static void handleWebServer(AsyncWebServerRequest *request);
-#endif
 
 private:
 #if IOT_CLOCK_BUTTON_PIN
@@ -249,14 +268,20 @@ private:
 #endif
 
     SevenSegmentDisplay _display;
+#if !IOT_LED_MATRIX
     std::array<SevenSegmentDisplay::PixelAddressType, IOT_CLOCK_PIXEL_ORDER_LEN * IOT_CLOCK_NUM_DIGITS> _pixelOrder;
+#endif
 
     Color _color;
     uint32_t _lastUpdateTime;
+#if !IOT_LED_MATRIX
     time_t _time;
+#endif
     uint16_t _updateRate;
+#if !IOT_LED_MATRIX
     uint8_t _isSyncing : 1;
     uint8_t _displaySensorValue : 2;
+#endif
     uint8_t _tempProtection : 2;
     uint8_t _schedulePublishState: 1;
     uint8_t _forceUpdate: 1;

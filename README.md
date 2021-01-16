@@ -125,6 +125,10 @@ https://github.com/sascha432/ESP8266-WiFi-Clock
 https://easyeda.com/sascha23095123423/iot_wifi_7segment
 https://easyeda.com/sascha23095123423/iot_wifi_clock_controller
 
+### LED Matrix
+
+Plugin based on the clock plugin to control a WS281x LED matrix or LED string
+
 ### Dimmer
 
 Plugin to control my trailing edge WiFi dimmer with energy monitor

@@ -2,7 +2,7 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if !IOT_LED_MATRIX
+#if IOT_LED_MATRIX
 
 #include <Arduino_compat.h>
 #include "clock.h"
@@ -25,15 +25,11 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
     auto &cfg = Plugins::Clock::getWriteableConfig();
 
     auto &ui = form.createWebUI();
-    ui.setTitle(F("Clock Configuration"));
-    ui.setContainerId(F("clock_settings"));
+    ui.setTitle(F("LED Matrix Configuration"));
+    ui.setContainerId(F("led_matrix_settings"));
     ui.setStyle(FormUI::WebUI::StyleType::ACCORDION);
 
     auto &mainGroup = form.addCardGroup(FSPGM(config));
-
-    form.addObjectGetterSetter(F("timef"), cfg, cfg.get_bits_time_format_24h, cfg.set_bits_time_format_24h);
-
-    form.addFormUI(F("Time Format"), FormUI::BoolItems(F("24h"), F("12h")));
 
     form.addPointerTriviallyCopyable(FSPGM(brightness), &cfg.brightness);
     form.addFormUI(FormUI::Type::RANGE_SLIDER, FSPGM(Brightness), FormUI::MinMax(0, 255));

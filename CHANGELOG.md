@@ -41,6 +41,8 @@
 - Rewrite of the remote control plugin (in progress) for faster response times and longer battery life
   - Removed support for home assistant Restful API
   - Option to send UDP packets to minimize latency
+- LED Matrix plugin
+- Cycling color and animation for rainbow mode (Clock/LED matrix)
 
 ## Version 0.0.3
 

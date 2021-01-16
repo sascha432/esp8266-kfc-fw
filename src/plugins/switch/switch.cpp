@@ -11,6 +11,7 @@
 #include <StreamString.h>
 #include <WebUISocket.h>
 #include "PluginComponent.h"
+#include "Utility/ProgMemHelper.h"
 #include "plugins.h"
 
 #if DEBUG_IOT_SWITCH
@@ -79,7 +80,7 @@ void SwitchPlugin::shutdown()
 #endif
 #if IOT_SWITCH_STORE_STATES
     if (_delayedWrite) {
-        _delayedWrite->__getLoopCallback()(nullptr);
+        _delayedWrite->_invokeCallback(nullptr);
         _delayedWrite.remove(); // stop timer and store now
     }
 #endif
@@ -126,8 +127,11 @@ void SwitchPlugin::createConfigureForm(FormCallbackType type, const String &form
         WebUIEnum::NEW_ROW, F("New row after switch")
     );
 
+    PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, IOT_SWITCH_CHANNEL_NUM, chan, name, state, webui);
+
+
     for (size_t i = 0; i < _pins.size(); i++) {
-        auto &group = form.addCardGroup(PrintString(FSPGM(channel__u), i), PrintString(F("Channel %u"), i), true);
+        auto &group = form.addCardGroup(F_VAR(chan, i), PrintString(F("Channel %u"), i), true);
 
         form.add(PrintString(F("name_%u"), i), _names[i], [this, i](const String &name, FormUI::Field::Base &, bool) {
             _names[i] = name;

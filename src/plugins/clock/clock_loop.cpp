@@ -2,6 +2,8 @@
  * Author: sascha_lammers@gmx.de
  */
 
+#if !IOT_LED_MATRIX
+
 #include <Arduino_compat.h>
 #include <EventScheduler.h>
 #include <ReadADC.h>
@@ -271,3 +273,5 @@ void ClockPlugin::_loop()
         __DBGTM(_displayTime.push_back(mt.getTime()));
     }
 }
+
+#endif

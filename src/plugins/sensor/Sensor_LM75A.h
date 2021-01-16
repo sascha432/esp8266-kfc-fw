@@ -13,6 +13,10 @@
 #include "plugins.h"
 #include "MQTTSensor.h"
 
+#ifndef IOT_SENSOR_LM75A_OFFSET
+#define IOT_SENSOR_LM75A_OFFSET                 0
+#endif
+
 class Sensor_CCS811;
 
 class Sensor_LM75A : public MQTTSensor {

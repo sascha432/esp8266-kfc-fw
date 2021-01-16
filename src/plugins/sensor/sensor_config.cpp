@@ -8,16 +8,21 @@
 namespace KFCConfigurationClasses {
 
 #if IOT_SENSOR_HAVE_BATTERY
-    Plugins::Sensor::SensorConfig_t::BatteryConfig_t::BatteryConfig_t() : calibration(1), precision(1), offset(0)
+    Plugins::Sensor::BatteryConfig_t::BatteryConfig_t() :
+        calibration(1),
+        offset(0),
+        pins{IOT_SENSOR_BATTERY_CHARGE_DETECTION},
+        pinMode{(uint8_t)(IOT_SENSOR_BATTERY_CHARGE_DETECTION == -1 ? BatteryPinMode::NONE : BatteryPinMode::ACTIVE_HIGH)},
+        precision(kDefaultValueFor_precision)
     {
     }
 #endif
 
 #if (IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032)
 #if defined(IOT_SENSOR_HLW8012_U)
-    Plugins::Sensor::SensorConfig_t::HLW80xxConfig_t::HLW80xxConfig_t() : calibrationU(IOT_SENSOR_HLW8012_U), calibrationI(IOT_SENSOR_HLW8012_I), calibrationP(IOT_SENSOR_HLW8012_P), energyCounter(0), extraDigits(0)
+    Plugins::Sensor::SensorConfig_t::HLW80xxConfig_t::HLW80xxConfig_t() : calibrationU(IOT_SENSOR_HLW8012_U), calibrationI(IOT_SENSOR_HLW8012_I), calibrationP(IOT_SENSOR_HLW8012_P), energyCounter(0), extraDigits(kDefaultValueFor_extraDigits)
 #else
-    Plugins::Sensor::SensorConfig_t::HLW80xxConfig_t::HLW80xxConfig_t() : calibrationU(1), calibrationI(1), calibrationP(1), energyCounter(0), extraDigits(0)
+    Plugins::Sensor::SensorConfig_t::HLW80xxConfig_t::HLW80xxConfig_t() : calibrationU(1), calibrationI(1), calibrationP(1), energyCounter(0), extraDigits(kDefaultValueFor_extraDigits)
 #endif
     {
     }

@@ -9,6 +9,7 @@
 #endif
 
 #include <Arduino_compat.h>
+#include <kfc_fw_config.h>
 #include "SevenSegmentPixel.h"
 
 #if DEBUG_IOT_CLOCK
@@ -16,6 +17,18 @@
 #else
 #include <debug_helper_disable.h>
 #endif
+
+#if IOT_LED_MATRIX
+
+#define IOT_CLOCK_NUM_PIXELS                        (IOT_LED_MATRIX_COLS * IOT_LED_MATRIX_ROWS)
+
+// first pixel to use, others can be controlled separately and are reset during reboot only
+#ifndef IOT_LED_MATRIX_START_ADDR
+#define IOT_LED_MATRIX_START_ADDR                   0
+#endif
+
+#else
+
 
 // number of digits
 #ifndef IOT_CLOCK_NUM_DIGITS
@@ -56,6 +69,8 @@
 #define IOT_CLOCK_PIXEL_ORDER                       { 0 }
 #endif
 
+#endif
+
 // update interval in ms, 0 to disable
 #ifndef IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
 #define IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL          125
@@ -68,9 +83,16 @@
 
 class ClockPlugin;
 
+
+using KFCConfigurationClasses::Plugins;
+
 namespace Clock {
 
+#if IOT_LED_MATRIX
+using SevenSegmentDisplay = SevenSegmentPixel<uint16_t, 1, IOT_CLOCK_NUM_PIXELS, 0, 0>;
+#else
     using SevenSegmentDisplay = SevenSegmentPixel<uint8_t, IOT_CLOCK_NUM_DIGITS, IOT_CLOCK_NUM_PIXELS, IOT_CLOCK_NUM_COLONS, IOT_CLOCK_NUM_COLON_PIXELS>;
+#endif
     using PixelAddressType = SevenSegmentDisplay::PixelAddressType;
     using ColorType = SevenSegmentDisplay::ColorType;
     using AnimationCallback = SevenSegmentDisplay::AnimationCallback;
@@ -130,6 +152,10 @@ namespace Clock {
         uint8_t red() const;
         uint8_t green() const;
         uint8_t blue() const;
+
+        uint8_t &red();
+        uint8_t &green();
+        uint8_t &blue();
 
     private:
         uint8_t _getRand(uint8_t mod, uint8_t mul, uint8_t factor = 255);
@@ -252,19 +278,38 @@ namespace Clock {
 
     class RainbowAnimation : public Animation {
     public:
-        RainbowAnimation(ClockPlugin &clock, uint16_t speed, float multiplier, Color factor = 0xffffffU, Color minimum = 0U);
+        using RainbowMultiplier = Plugins::ClockConfig::RainbowMultiplier_t;
+        using RainbowColor = Plugins::ClockConfig::RainbowColor_t;
+    public:
+        RainbowAnimation(ClockPlugin &clock, uint16_t speed, RainbowMultiplier &multiplier, RainbowColor &color);
 
         virtual void begin() override;
         virtual void end() override;
-        virtual void loop(time_t now) {}
+        virtual void loop(time_t now);
 
     private:
-        Color _color(uint8_t red, uint8_t green, uint8_t blue) const;
+        Color _normalizeColor(uint8_t red, uint8_t green, uint8_t blue) const;
+        float _increment(float value, float min, float max, float incr);
 
         uint16_t _speed;
-        Color _factor;
-        Color _minimum;
-        float _multiplier;
+        RainbowMultiplier &_multiplier;
+        RainbowColor &_color;
+        struct ColorFactor {
+            float _red;
+            float _green;
+            float _blue;
+            ColorFactor(uint32 value) : _red(value & 0xff), _green((value >> 8) & 0xff), _blue((value >> 16) & 0xff) {}
+            float red() const {
+                return _red;
+            }
+            float green() const {
+                return _green;
+            }
+            float blue() const {
+                return _blue;
+            }
+        } _factor;
+
         static constexpr uint8_t _mod = 120;
         static constexpr uint8_t _divMul = 40;
     };

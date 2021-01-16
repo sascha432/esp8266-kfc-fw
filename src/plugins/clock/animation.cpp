@@ -172,6 +172,21 @@ uint8_t Clock::Color::blue() const
     return _blue;
 }
 
+uint8_t &Clock::Color::red()
+{
+    return _red;
+}
+
+uint8_t &Clock::Color::green()
+{
+    return _green;
+}
+
+uint8_t &Clock::Color::blue()
+{
+    return _blue;
+}
+
 // ------------------------------------------------------------------------
 // Base Class Animation
 
@@ -339,23 +354,39 @@ void Clock::FadingAnimation::callback(time_t now)
 // ------------------------------------------------------------------------
 // Rainbow Animation
 
-Clock::RainbowAnimation::RainbowAnimation(ClockPlugin &clock, uint16_t speed, float multiplier, Color factor, Color minimum) :
+Clock::RainbowAnimation::RainbowAnimation(ClockPlugin &clock, uint16_t speed, RainbowMultiplier &multiplier, RainbowColor &color) :
     Animation(clock),
     _speed(speed),
-    _factor(factor),
-    _minimum(minimum),
-    _multiplier(multiplier * kTotalPixelCount)
+    _multiplier(multiplier),
+    _color(color),
+    _factor(color.factor.value)
 {
-    __LDBG_printf("speed=%u _multiplier=%f multiplier=%f factor=%s mins=%s", _speed, _multiplier, multiplier, _factor.toString().c_str(), _minimum.toString().c_str());
+    // __LDBG_printf("speed=%u _multiplier=%f multiplier=%f factor=%s mins=%s", _speed, _multiplier, multiplier, _factor.toString().c_str(), _minimum.toString().c_str());
 }
 
-Clock::Color Clock::RainbowAnimation::_color(uint8_t red, uint8_t green, uint8_t blue) const
+Clock::Color Clock::RainbowAnimation::_normalizeColor(uint8_t red, uint8_t green, uint8_t blue) const
 {
     return Color(
-        std::max(red, _minimum.red()),
-        std::max(green, _minimum.green()),
-        std::max(blue, _minimum.blue())
+        std::max(red, _color.min.red),
+        std::max(green, _color.min.green),
+        std::max(blue, _color.min.blue)
     );
+}
+
+float Clock::RainbowAnimation::_increment(float value, float min, float max, float incr)
+{
+    if (incr) {
+        value += incr;
+        if (value < min && incr < 0) {
+            value = min;
+            incr = -incr;
+        }
+        else if (value >= max && incr > 0) {
+            value = max - 0.00001;
+            incr = -incr;
+        }
+    }
+    return value;
 }
 
 void Clock::RainbowAnimation::begin()
@@ -363,7 +394,7 @@ void Clock::RainbowAnimation::begin()
     _finished = false;
     setAnimationCallback([this](PixelAddressType address, ColorType color, const SevenSegmentDisplay::Params_t &params) -> ColorType {
 
-        uint32_t ind = (address * _multiplier) + (params.millis / _speed);
+        uint32_t ind = (address * _multiplier.value) + (params.millis / _speed);
         uint8_t indMod = (ind % _mod);
         uint8_t idx = (indMod / _divMul);
         float factor1 = 1.0f - ((float)(indMod - (idx * _divMul)) / _divMul);
@@ -371,13 +402,13 @@ void Clock::RainbowAnimation::begin()
 
         switch(idx) {
             case 0:
-                color = _color(_factor.red() * factor1, _factor.green() * factor2, 0);
+                color = _normalizeColor(_factor.red() * factor1, _factor.green() * factor2, 0);
                 break;
             case 1:
-                color = _color(0, _factor.green() * factor1, _factor.blue() * factor2);
+                color = _normalizeColor(0, _factor.green() * factor1, _factor.blue() * factor2);
                 break;
             case 2:
-                color = _color(_factor.red() * factor2, 0, _factor.blue() * factor1);
+                color = _normalizeColor(_factor.red() * factor2, 0, _factor.blue() * factor1);
                 break;
         }
         return SevenSegmentDisplay::_adjustBrightnessAlways(color, params.brightness);
@@ -390,6 +421,14 @@ void Clock::RainbowAnimation::end()
 {
     __LDBG_printf("end rate=%u", getUpdateRate());
     Animation::end();
+}
+
+void Clock::RainbowAnimation::loop(time_t now)
+{
+    _multiplier.value = _increment(_multiplier.value, _multiplier.min, _multiplier.max, _multiplier.incr);
+    _factor._red = _increment(_factor._red, _color.min.red, 256, _color.red_incr);
+    _factor._green = _increment(_factor._green, _color.min.green, 256, _color.green_incr);
+    _factor._blue = _increment(_factor._blue, _color.min.blue, 256, _color.blue_incr);
 }
 
 // ------------------------------------------------------------------------

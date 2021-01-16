@@ -7,6 +7,8 @@
 #include <Arduino_compat.h>
 #include "Event.h"
 
+class SwitchPlugin;
+
 namespace Event {
 
     class Scheduler;
@@ -46,6 +48,7 @@ namespace Event {
         friend Timer;
         friend ManangedCallbackTimer;
         friend Scheduler;
+        friend SwitchPlugin;
 
         void _initTimer();
         void _rearm();

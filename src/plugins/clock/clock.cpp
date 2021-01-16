@@ -13,6 +13,7 @@
 #include <async_web_response.h>
 #include "clock.h"
 #include "blink_led_timer.h"
+#include <stl_ext/algorithm.h>
 #include "./plugins/mqtt/mqtt_client.h"
 #include "./plugins/ntp/ntp_plugin.h"
 #include "./plugins/sensor/sensor.h"
@@ -33,18 +34,36 @@ __DBGTM(
 
 static ClockPlugin plugin;
 
+#if IOT_LED_MATRIX
+
+#define PLUGIN_OPTIONS_NAME                             "led_matrix"
+#define PLUGIN_OPTIONS_FRIENDLY_NAME                    "LED Matrix"
+#define PLUGIN_OPTIONS_WEB_TEMPLATES                    ""
+#define PLUGIN_OPTIONS_CONFIG_FORMS                     "led-matrix"
+
+#else
+
+#define PLUGIN_OPTIONS_NAME                             "clock"
+#define PLUGIN_OPTIONS_FRIENDLY_NAME                    "Clock"
+#define PLUGIN_OPTIONS_CONFIG_FORMS                     "clock"
+
+#endif
+
+#define PLUGIN_OPTIONS_WEB_TEMPLATES                    ""
+
+#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
+#define PLUGIN_OPTIONS_RECONFIGURE_DEPENDENCIES         "http,mqtt"
+#else
+#define PLUGIN_OPTIONS_RECONFIGURE_DEPENDENCIES         "mqtt"
+#endif
+
 PROGMEM_DEFINE_PLUGIN_OPTIONS(
     ClockPlugin,
-    "clock",            // name
-    "Clock",            // friendly name
-    "",                 // web_templates
-    "clock",            // config_forms
-    // reconfigure_dependencies
-#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
-    "http,mqtt",
-#else
-    "mqtt",
-#endif
+    PLUGIN_OPTIONS_NAME,
+    PLUGIN_OPTIONS_FRIENDLY_NAME,
+    PLUGIN_OPTIONS_WEB_TEMPLATES,
+    PLUGIN_OPTIONS_CONFIG_FORMS,
+    PLUGIN_OPTIONS_RECONFIGURE_DEPENDENCIES,
     PluginComponent::PriorityType::MIN,
     PluginComponent::RTCMemoryId::NONE,
     static_cast<uint8_t>(PluginComponent::MenuType::AUTO),
@@ -67,10 +86,14 @@ ClockPlugin::ClockPlugin() :
 #endif
     _color(0, 0, 0xff),
     _lastUpdateTime(0),
+#if !IOT_LED_MATRIX
     _time(0),
+#endif
     _updateRate(1000),
+#if !IOT_LED_MATRIX
     _isSyncing(true),
     _displaySensorValue(0),
+#endif
     _tempProtection(ProtectionType::OFF),
     _schedulePublishState(false),
     _forceUpdate(false),
@@ -86,6 +109,7 @@ ClockPlugin::ClockPlugin() :
     _animation(nullptr),
     _nextAnimation(nullptr)
 {
+#if !IOT_LED_MATRIX
     size_t ofs = 0;
     auto ptr = _pixelOrder.data();
     static const char pixel_order[] PROGMEM = IOT_CLOCK_PIXEL_ORDER;
@@ -97,6 +121,7 @@ ClockPlugin::ClockPlugin() :
         ofs += SevenSegmentDisplay::getNumPixelsPerDigit();
         ptr += IOT_CLOCK_PIXEL_ORDER_LEN;
     }
+#endif
 
     REGISTER_PLUGIN(this, "ClockPlugin");
 }
@@ -184,7 +209,9 @@ bool ClockPlugin::_isTemperatureBelowThresholds(float temp) const
 
 void ClockPlugin::_startTempProtectionAnimation()
 {
+#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
     _autoBrightness = kAutoBrightnessOff;
+#endif
     _setBrightness(Clock::kBrightnessTempProtection); // 25% brightness and 20% of the time enabled = 5% power
     _setAnimation(__LDBG_new(Clock::FlashingAnimation, *this, Color(0xff0000), 250, 5));
 }
@@ -194,13 +221,14 @@ void ClockPlugin::setup(SetupModeType mode)
     _debug_println();
 
     readConfig();
+#if !IOT_LED_MATRIX
     _setSevenSegmentDisplay();
+#endif
 
 #if IOT_CLOCK_BUTTON_PIN
     _button.onHoldRepeat(800, 100, onButtonHeld);
     _button.onRelease(onButtonReleased);
 #endif
-
 
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
 
@@ -250,12 +278,16 @@ void ClockPlugin::setup(SetupModeType mode)
                     if (_tempProtection < ProtectionType::MAX) { // send warning once
                         message.printf_P(message1_P, temp, _config.protection.max_temperature);
                         WebAlerts::Alert::error(message);
+#if !IOT_LED_MATRIX
                         _isSyncing = false;
                         _displaySensorValue = 0;
+#endif
                         _startTempProtectionAnimation();
                         _tempProtection = ProtectionType::MAX;
                     }
+#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
                     _autoBrightness = kAutoBrightnessOff;
+#endif
                     if (_targetBrightness > Clock::kBrightnessTempProtection) {
                         _targetBrightness = Clock::kBrightnessTempProtection;
                     }
@@ -264,7 +296,9 @@ void ClockPlugin::setup(SetupModeType mode)
                     // temp. too high, reduce to 50% brightness
                     PGM_P msg;
                     _tempProtection = ProtectionType::B50;
+#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
                     _autoBrightness = kAutoBrightnessOff;
+#endif
                     if (_targetBrightness > Clock::kBrightness50) {
                         _setBrightness(Clock::kBrightness50);
                         msg = message2_P;
@@ -279,7 +313,9 @@ void ClockPlugin::setup(SetupModeType mode)
                     // temp. too high, reduce to 75% brightness
                     PGM_P msg;
                     _tempProtection = ProtectionType::B75;
+#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
                     _autoBrightness = kAutoBrightnessOff;
+#endif
                     if (_targetBrightness > Clock::kBrightness75) {
                         _setBrightness(Clock::kBrightness75);
                         msg = message2_P;
@@ -297,7 +333,9 @@ void ClockPlugin::setup(SetupModeType mode)
                     Logger_notice(message);
                     _tempProtection = ProtectionType::OFF;
                     // restore settings
+#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
                     _autoBrightness = _config.auto_brightness;
+#endif
                     setBrightness(_config.getBrightness());
                 }
                 if (message.length()) {
@@ -315,12 +353,14 @@ void ClockPlugin::setup(SetupModeType mode)
 
     });
 
+#if !IOT_LED_MATRIX
     if (IS_TIME_VALID(time(nullptr))) {
         _isSyncing = false;
     } else {
         setSyncing(true);
     }
     addTimeUpdatedCallback(ntpCallback);
+#endif
 
     MQTTClient::safeRegisterComponent(this);
 
@@ -343,7 +383,9 @@ void ClockPlugin::reconfigure(const String &source)
 #endif
     else {
         readConfig();
+#if !IOT_LED_MATRIX
         _setSevenSegmentDisplay();
+#endif
         _schedulePublishState = true;
     }
 }
@@ -366,7 +408,11 @@ void ClockPlugin::shutdown()
 
 void ClockPlugin::getStatus(Print &output)
 {
+#if IOT_LED_MATRIX
+    output.print(F("LED Matrix Plugin" HTML_S(br)));
+#else
     output.print(F("Clock Plugin" HTML_S(br)));
+#endif
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
     output.print(F("Ambient light sensor"));
     if (_config.protection.max_temperature < 85) {
@@ -378,7 +424,11 @@ void ClockPlugin::getStatus(Print &output)
         output.print(F("Over-temperature protection enabled" HTML_S(br)));
     }
 #endif
+#if IOT_LED_MATRIX
+    output.printf_P(PSTR("Total pixels %u"), SevenSegmentDisplay::getTotalPixels());
+#else
     output.printf_P(PSTR("Total pixels %u, digits pixels %u"), SevenSegmentDisplay::getTotalPixels(), SevenSegmentDisplay::getDigitsPixels());
+#endif
     if (_tempProtection == ProtectionType::MAX) {
         output.printf_P(PSTR("The temperature exceeded %u"));
     }
@@ -387,11 +437,6 @@ void ClockPlugin::getStatus(Print &output)
 void ClockPlugin::loop()
 {
     plugin._loop();
-}
-
-void ClockPlugin::ntpCallback(time_t now)
-{
-    plugin.setSyncing(false);
 }
 
 void ClockPlugin::enable(bool enable)
@@ -404,6 +449,42 @@ void ClockPlugin::enable(bool enable)
     }
     else {
         LoopFunctions::remove(loop);
+    }
+}
+
+#if !IOT_LED_MATRIX
+
+void ClockPlugin::ntpCallback(time_t now)
+{
+    plugin.setSyncing(false);
+}
+
+static const char pgm_digit_order[] PROGMEM = IOT_CLOCK_DIGIT_ORDER;
+static const char pgm_segment_order[] PROGMEM = IOT_CLOCK_SEGMENT_ORDER;
+
+void ClockPlugin::_setSevenSegmentDisplay()
+{
+    SevenSegmentDisplay::PixelAddressType addr = 0;
+    auto ptr = pgm_digit_order;
+    auto endPtr = ptr + sizeof(pgm_digit_order);
+
+    while(ptr < endPtr) {
+        int n = pgm_read_byte(ptr++);
+        if (n >= 30) {
+            n -= 30;
+            __LDBG_printf("address=%u colon=%u", addr, n);
+#if IOT_CLOCK_NUM_PX_PER_COLON == 1
+            _display.setColons(n, addr + IOT_CLOCK_NUM_COLON_PIXELS, addr);
+#else
+            _display.setColons(n, addr, addr + IOT_CLOCK_NUM_COLON_PIXELS);
+
+#endif
+            addr += IOT_CLOCK_NUM_COLON_PIXELS * 2;
+        }
+        else {
+            __LDBG_printf("address=%u digit=%u", addr, n);
+            addr = _display.setSegments(n, addr, pgm_segment_order);
+        }
     }
 }
 
@@ -441,6 +522,8 @@ void ClockPlugin::setBlinkColon(uint16_t value)
     _schedulePublishState = true;
     __LDBG_printf("blinkcolon=%u update_rate=%u", value, _updateRate);
 }
+
+#endif
 
 void ClockPlugin::setBrightness(BrightnessType brightness, milliseconds time)
 {
@@ -487,7 +570,7 @@ void ClockPlugin::setAnimation(AnimationType animation)
             _setAnimation(__LDBG_new(Clock::FadingAnimation, *this, _color, Color().rnd(), _config.fading.speed, _config.fading.delay, _config.fading.factor.value));
             break;
         case AnimationType::RAINBOW:
-            _setAnimation(__LDBG_new(Clock::RainbowAnimation, *this, _config.rainbow.speed, _config.rainbow.multiplier, _config.rainbow.factor.value, _config.rainbow.minimum.value));
+            _setAnimation(__LDBG_new(Clock::RainbowAnimation, *this, _config.rainbow.speed, _config.rainbow.multiplier, _config.rainbow.color));
             break;
         case AnimationType::FLASHING:
             _setAnimation(__LDBG_new(Clock::FlashingAnimation, *this, _color, _config.flashing_speed));
@@ -505,7 +588,11 @@ void ClockPlugin::setAnimation(AnimationType animation)
         case AnimationType::NONE:
             __LDBG_printf("animation NONE animation=%p next=%p", _animation, _nextAnimation);
             _deleteAnimaton(false);
+#if IOT_LED_MATRIX
+            setUpdateRate(kDefaultUpdateRate);
+#else
             setUpdateRate((_config.blink_colon_speed < kMinBlinkColonSpeed) ? kDefaultUpdateRate : _config.blink_colon_speed);
+#endif
             break;
     }
     _schedulePublishState = true;
@@ -545,17 +632,16 @@ ClockPlugin::Color ClockPlugin::getColor() const
 void ClockPlugin::readConfig()
 {
     _config = Plugins::Clock::getConfig();
-    if (!std::isnormal(_config.rainbow.multiplier) || _config.rainbow.multiplier == 0) {
-        _config.rainbow.multiplier = 1.23;
-    }
-
+    _config.rainbow.multiplier.value = std::clamp<float>(_config.rainbow.multiplier.value, 0.1, 100.0);
     _config.protection.max_temperature = std::max((uint8_t)kMinimumTemperatureThreshold, _config.protection.max_temperature);
     _config.protection.temperature_50 = std::max((uint8_t)kMinimumTemperatureThreshold, _config.protection.temperature_50);
     _config.protection.temperature_75 = std::max((uint8_t)kMinimumTemperatureThreshold, _config.protection.temperature_75);
 
     _tempProtection = ProtectionType::OFF;
     _color = Color(_config.solid_color.value);
+#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
     _autoBrightness = _config.auto_brightness;
+#endif
     _setBrightness(_config.getBrightness());
     setAnimation(static_cast<AnimationType>(_config.animation));
 }
@@ -699,35 +785,6 @@ void ClockPlugin::_installWebHandlers()
 
 #endif
 
-static const char pgm_digit_order[] PROGMEM = IOT_CLOCK_DIGIT_ORDER;
-static const char pgm_segment_order[] PROGMEM = IOT_CLOCK_SEGMENT_ORDER;
-
-void ClockPlugin::_setSevenSegmentDisplay()
-{
-    SevenSegmentDisplay::PixelAddressType addr = 0;
-    auto ptr = pgm_digit_order;
-    auto endPtr = ptr + sizeof(pgm_digit_order);
-
-    while(ptr < endPtr) {
-        int n = pgm_read_byte(ptr++);
-        if (n >= 30) {
-            n -= 30;
-            __LDBG_printf("address=%u colon=%u", addr, n);
-#if IOT_CLOCK_NUM_PX_PER_COLON == 1
-            _display.setColons(n, addr + IOT_CLOCK_NUM_COLON_PIXELS, addr);
-#else
-            _display.setColons(n, addr, addr + IOT_CLOCK_NUM_COLON_PIXELS);
-
-#endif
-            addr += IOT_CLOCK_NUM_COLON_PIXELS * 2;
-        }
-        else {
-            __LDBG_printf("address=%u digit=%u", addr, n);
-            addr = _display.setSegments(n, addr, pgm_segment_order);
-        }
-    }
-}
-
 void ClockPlugin::_setBrightness(BrightnessType brightness)
 {
     if (_tempProtection == ProtectionType::MAX) {
@@ -772,6 +829,10 @@ void ClockPlugin::_alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration
     if (_isFading) {
         _setBrightness(_targetBrightness);
     }
+
+#if !IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
+        static int _autoBrightness = 0;
+#endif
 
     // alarm reset function already set?
     if (!_resetAlarmFunc) {

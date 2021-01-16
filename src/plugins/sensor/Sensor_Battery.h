@@ -24,11 +24,6 @@ using KFCConfigurationClasses::Plugins;
 #define IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R2           300.0
 #endif
 
-// pin for charging detection
-#ifndef IOT_SENSOR_BATTERY_CHARGE_DETECTION
-#define IOT_SENSOR_BATTERY_CHARGE_DETECTION             5       // D1
-#endif
-
 // external function for charge detection
 #if IOT_SENSOR_BATTERY_CHARGE_DETECTION == -1
 extern bool Sensor_Battery_charging_detection();
@@ -36,6 +31,8 @@ extern bool Sensor_Battery_charging_detection();
 
 class Sensor_Battery : public MQTTSensor {
 public:
+    using SensorState = Plugins::Sensor::BatteryPins;
+
     enum class BatteryType {
         LEVEL,
         CHARGING
@@ -75,11 +72,15 @@ private:
     String _getTopic(BatteryType type = BatteryType::LEVEL);
 
     float _readSensor();
-    bool _isCharging() const;
+
+    bool _isCharging() const {
+        return _getState() == SensorState::CHARGING;
+    }
+    SensorState _getState() const;
 
     JsonString _name;
     String _topic;
-    Plugins::Sensor::ConfigStructType::BatteryConfig_t _config;
+    Plugins::Sensor::BatteryConfig_t _config;
     Event::Timer _timer;
 };
 

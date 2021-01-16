@@ -120,21 +120,53 @@ void Sensor_Battery::createConfigureForm(AsyncWebServerRequest *request, FormUI:
 #endif
     auto &group = form.addCardGroup(F("spcfg"), name, true);
 
-    form.add(F("sp_uc"), _H_W_STRUCT_VALUE(cfg, battery.calibration));
+    form.addPointerTriviallyCopyable(F("sp_uc"), &cfg.calibration);
     form.addFormUI(F("Calibration"));
 
-    form.add(F("sp_ofs"), _H_W_STRUCT_VALUE(cfg, battery.offset));
+    form.addPointerTriviallyCopyable(F("sp_ofs"), &cfg.offset);
     form.addFormUI(F("Offset"));
 
-    form.add(F("sp_pr"), _H_W_STRUCT_VALUE(cfg, battery.precision));
+    form.addObjectGetterSetter(F("sp_pr"), cfg, cfg.get_bits_precision, cfg.set_bits_precision);
     form.addFormUI(F("Display Precision"));
 
+    FormUI::Container::List pins(KFCConfigurationClasses::createFormPinList());
+    FormUI::Container::List pinModes(
+        Plugins::Sensor::BatteryPinMode::NONE, F("Disabled"),
+        Plugins::Sensor::BatteryPinMode::ACTIVE_LOW, F("Active Low"),
+        Plugins::Sensor::BatteryPinMode::ACTIVE_HIGH, F("Active High")
+    );
+
     group.end();
+
+    auto &pinsGroup = form.addCardGroup(FSPGM(config), F("Pin Configuration"), false);
+
+    auto &pinMode0 = form.addPointerTriviallyCopyable(F("pinm0"), &cfg.pinMode[0]);
+    form.addFormUI(FormUI::Type::HIDDEN);
+    form.addPointerTriviallyCopyable(F("pin0"), &cfg.pins[0]);
+    form.addFormUI(F("Charge Detection"), pins, FormUI::SelectSuffix(pinMode0, pinModes));
+
+    auto &pinMode1 = form.addPointerTriviallyCopyable(F("pinm1"), &cfg.pinMode[1]);
+    form.addFormUI(FormUI::Type::HIDDEN);
+    form.addPointerTriviallyCopyable(F("pin1"), &cfg.pins[1]);
+    form.addFormUI(F("Standby Detection"), pins, FormUI::SelectSuffix(pinMode1, pinModes));
+
+    auto &pinMode2 = form.addPointerTriviallyCopyable(F("pinm2"), &cfg.pinMode[2]);
+    form.addFormUI(FormUI::Type::HIDDEN);
+    form.addPointerTriviallyCopyable(F("pin2"), &cfg.pins[2]);
+    form.addFormUI(F("Running On External Power"), pins, FormUI::SelectSuffix(pinMode2, pinModes));
+
+    auto &pinMode3 = form.addPointerTriviallyCopyable(F("pinm3"), &cfg.pinMode[3]);
+    form.addFormUI(FormUI::Type::HIDDEN);
+    form.addPointerTriviallyCopyable(F("pin3"), &cfg.pins[3]);
+    form.addFormUI(F("Running On Battery Power"), pins, FormUI::SelectSuffix(pinMode3, pinModes));
+
+    pinsGroup.end();
+
 }
 
 void Sensor_Battery::reconfigure(PGM_P source)
 {
-    _config = Plugins::Sensor::getConfig().battery;
+    _config = Plugins::Sensor::getConfig();
     __LDBG_printf("calibration=%f, precision=%u", _config.calibration, _config.precision);
 }
 
@@ -159,14 +191,27 @@ float Sensor_Battery::_readSensor()
     return ((((IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R2 + IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1)) / IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1) * adcVoltage * _config.calibration) + _config.offset;
 }
 
-bool Sensor_Battery::_isCharging() const
+Sensor_Battery::SensorState Sensor_Battery::_getState() const
 {
-#if IOT_SENSOR_BATTERY_CHARGE_DETECTION == -1
-    return Sensor_Battery_charging_detection();
-#else
-    return digitalRead(IOT_SENSOR_BATTERY_CHARGE_DETECTION);
-#endif
+// CHARGING,
+//                 STANDBY,
+//                 RUNNING_ON_EXTERNAL,
+//                 RUNNING_ON_BATTERY,
+
+    if (_config.pinMode[0] && digitalRead(_config.pins[0]) == (bool)(_config.pinMode[0] - 1)) {
+        return SensorState::CHARGING;
+    }
+    return SensorState::NONE;
 }
+
+// bool Sensor_Battery::_isCharging() const
+// {
+// #if IOT_SENSOR_BATTERY_CHARGE_DETECTION == -1
+//     return Sensor_Battery_charging_detection();
+// #else
+//     return digitalRead(IOT_SENSOR_BATTERY_CHARGE_DETECTION);
+// #endif
+// }
 
 String Sensor_Battery::_getId(BatteryType type)
 {

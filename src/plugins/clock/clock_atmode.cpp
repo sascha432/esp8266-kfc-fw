@@ -17,11 +17,16 @@
 #include "at_mode.h"
 
 #undef PROGMEM_AT_MODE_HELP_COMMAND_PREFIX
+#if IOT_LED_MATRIX
+#define PROGMEM_AT_MODE_HELP_COMMAND_PREFIX "LM"
+#else
 #define PROGMEM_AT_MODE_HELP_COMMAND_PREFIX "CLOCK"
+#endif
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKPX, "PX", "<led>,<r>,<g>,<b>", "Set level of a single pixel");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKP, "P", "<00[:.]00[:.]00>", "Display strings");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKC, "C", "<r>,<g>,<b>", "Set color");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKM, "M", "<value>[,<incr>,<min>,<max>]", "Set rainbow animation multiplier");
 // PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKTS, "TS", "<num>,<segment>", "Set segment for digit <num>");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(CLOCKA, "A", "<num>[,<arguments>,...]", "Set animation", "Display available animations");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(CLOCKD, "D", "Dump pixel addresses and other information");
@@ -32,6 +37,7 @@ ATModeCommandHelpArrayPtr ClockPlugin::atModeCommandHelp(size_t &size) const
         PROGMEM_AT_MODE_HELP_COMMAND(CLOCKPX),
         PROGMEM_AT_MODE_HELP_COMMAND(CLOCKP),
         PROGMEM_AT_MODE_HELP_COMMAND(CLOCKC),
+        PROGMEM_AT_MODE_HELP_COMMAND(CLOCKM),
         // PROGMEM_AT_MODE_HELP_COMMAND(CLOCKTS),
         PROGMEM_AT_MODE_HELP_COMMAND(CLOCKA),
         PROGMEM_AT_MODE_HELP_COMMAND(CLOCKD)
@@ -69,33 +75,49 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
         }
         return true;
     }
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKM))) {
+        _config.rainbow.multiplier.value = args.toFloatMinMax(0, 0.1f, 100.0f, _config.rainbow.multiplier.value);
+        args.printf_P(PSTR("Rainbow multiplier=%f increment=%f min=%f max=%f"), _config.rainbow.multiplier.value, _config.rainbow.multiplier.incr, _config.rainbow.multiplier.min, _config.rainbow.multiplier.max);
+        return true;
+    }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKA))) {
         if (args.isQueryMode()) {
             args.printf_P(PSTR("%u - rainbow animation (+CLOCKA=%u,<speed>,<multiplier>,<r>,<g>,<b-factor>)"), AnimationType::RAINBOW, AnimationType::RAINBOW);
             args.printf_P(PSTR("%u - flashing"), AnimationType::FLASHING);
             args.printf_P(PSTR("%u - fade to color (+CLOCKA=%u,<r>,<g>,<b>)"), AnimationType::FADING, AnimationType::FADING);
+#if !IOT_LED_MATRIX
             args.printf_P(PSTR("%u - blink colon speed"), (int)AnimationType::MAX);
+#endif
             args.print(F("100 = disable clock"));
             args.print(F("101 = enable clock"));
             args.print(F("102 = all pixels on"));
             args.print(F("103 = test pixel animation order"));
+#if !IOT_LED_MATRIX
             args.print(F("200 = display ambient light sensor value (+CLOCKA=200,<0|1>)"));
+#endif
             args.print(F("300 = temperature protection animation"));
         }
         else if (args.size() >= 1) {
             int value = args.toInt(0);
+#if !IOT_LED_MATRIX
             if (value == (int)AnimationType::MAX) {
                 setBlinkColon(args.toIntMinMax(1, 50U, 0xffffU, 1000U));
             }
-            else if (value == 100) {
+            else
+#endif
+            if (value == 100) {
                 enable(false);
+                _display.reset();
             }
             else if (value == 101) {
+                _display.reset();
                 enable(true);
             }
             else if (value == 102) {
                 enable(false);
+                _display.reset();
                 _display.setColor(0xffffff);
+                _display.show();
             }
             else if (value == 103) {
                 int interval = args.toInt(1, 500);
@@ -103,19 +125,31 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                 size_t num = 0;
                 _Scheduler.add(interval, true, [num, this](Event::CallbackTimerPtr timer) mutable {
                     __LDBG_printf("pixel=%u", num);
+#if IOT_LED_MATRIX
+                    if (num == _display.getTotalPixels()) {
+#else
                     if (num == _pixelOrder.size()) {
+#endif
                         _display.clear();
                         _display.show();
                         timer->disarm();
                     }
                     else {
+#if IOT_LED_MATRIX
+                        if (num) {
+                            _display._pixels[num - 1] = 0;
+                        }
+                        _display._pixels[num++] = 0x22;
+#else
                         if (num) {
                             _display._pixels[_pixelOrder[num - 1]] = 0;
                         }
                         _display._pixels[_pixelOrder[num++]] = 0x22;
+#endif
                     }
                 });
             }
+#if !IOT_LED_MATRIX
             else if (value == 200) {
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
                 if (args.isTrue(1)) {
@@ -143,6 +177,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                 args.print(F("sensor not supported"));
 #endif
             }
+#endif
             else if (value == 300) {
                 _startTempProtectionAnimation();
             }
@@ -152,11 +187,12 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             else if (value >= 0 && value < (int)AnimationType::MAX) {
                 switch(static_cast<AnimationType>(value)) {
                     case AnimationType::RAINBOW:
-                        _setAnimation(__LDBG_new(Clock::RainbowAnimation, *this,
-                            args.toIntMinMax(1, ClockPlugin::kMinRainbowSpeed, (uint16_t)0xfffe, _config.rainbow.speed),
-                            args.toFloatMinMax(2, 0.1f, 100.0f, _config.rainbow.multiplier),
-                            Color((uint8_t)args.toInt(3, _config.rainbow.factor.red), (uint8_t)args.toInt(4, _config.rainbow.factor.green), (uint8_t)args.toInt(5, _config.rainbow.factor.blue))
-                        ));
+                        _config.rainbow.speed = args.toIntMinMax(1, ClockPlugin::kMinRainbowSpeed, (uint16_t)0xfffe, _config.rainbow.speed);
+                        _config.rainbow.multiplier.value = args.toFloatMinMax(2, 0.1f, 100.0f, _config.rainbow.multiplier.value);
+                        _config.rainbow.color.factor.red = (uint8_t)args.toInt(3, _config.rainbow.color.factor.red);
+                        _config.rainbow.color.factor.green = (uint8_t)args.toInt(4, _config.rainbow.color.factor.green);
+                        _config.rainbow.color.factor.blue = (uint8_t)args.toInt(5, _config.rainbow.color.factor.blue);
+                        _setAnimation(__LDBG_new(Clock::RainbowAnimation, *this, _config.rainbow.speed, _config.rainbow.multiplier, _config.rainbow.color));
                         break;
                     default:
                         setAnimation(static_cast<AnimationType>(value));
@@ -184,9 +220,11 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                 // setAnimation(static_cast<AnimationType>(value));
             }
         }
+#if !IOT_LED_MATRIX
         else {
             setBlinkColon(0);
         }
+#endif
         return true;
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKC))) {
@@ -219,6 +257,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                 args.printf_P(PSTR("pixel=%u, color=#%06x"), num, color.get());
                 _display._pixels[num] = color;
             }
+            _display.show();
         }
         return true;
     }

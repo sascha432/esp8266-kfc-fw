@@ -97,7 +97,7 @@ float Sensor_LM75A::_readSensor()
     if (_wire.endTransmission() == 0 && _wire.requestFrom(_address, (uint8_t)2) == 2) {
         float temp = (((uint8_t)Wire.read() << 8) | (uint8_t)Wire.read()) / 256.0;
         __LDBG_printf("Sensor_LM75A::_readSensor(): address 0x%02x: %.2f", _address, temp);
-        return temp;
+        return temp + IOT_SENSOR_LM75A_OFFSET;
     }
     __LDBG_printf("Sensor_LM75A::_readSensor(): address 0x%02x: error", _address);
     return NAN;

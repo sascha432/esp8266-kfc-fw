@@ -41,7 +41,7 @@ void StreamCacheVector::write(const uint8_t *buffer, size_t size)
             case '\r':
                 break;
             case '\n':
-                if (_buffer.length() < 80) {
+                if (_buffer.length() < 20) {
                     _buffer += F("<\\n> ");
                 }
                 else {

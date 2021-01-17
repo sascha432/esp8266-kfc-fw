@@ -111,6 +111,7 @@ using SevenSegmentDisplay = SevenSegmentPixel<uint16_t, 1, IOT_CLOCK_NUM_PIXELS,
         FLASHING,
         FADING,
 #if IOT_LED_MATRIX
+        FIRE,
         SKIP_ROWS,
 #endif
         MAX,
@@ -175,6 +176,9 @@ using SevenSegmentDisplay = SevenSegmentPixel<uint16_t, 1, IOT_CLOCK_NUM_PIXELS,
     };
 
     static_assert(sizeof(Color) == 3, "Invalid size");
+
+    // ------------------------------------------------------------------------
+    // Animation Base Class
 
     class Animation {
     public:
@@ -242,6 +246,9 @@ using SevenSegmentDisplay = SevenSegmentPixel<uint16_t, 1, IOT_CLOCK_NUM_PIXELS,
         uint8_t _blinkColon : 1;
     };
 
+    // ------------------------------------------------------------------------
+    // FadingAnimation
+
     class FadingAnimation : public Animation {
     public:
         static constexpr uint16_t kNoColorChange = ~0;
@@ -278,6 +285,9 @@ using SevenSegmentDisplay = SevenSegmentPixel<uint16_t, 1, IOT_CLOCK_NUM_PIXELS,
         uint16_t _progress;
         Color _factor;
     };
+
+    // ------------------------------------------------------------------------
+    // RainbowAnimation
 
     class RainbowAnimation : public Animation {
     public:
@@ -317,6 +327,9 @@ using SevenSegmentDisplay = SevenSegmentPixel<uint16_t, 1, IOT_CLOCK_NUM_PIXELS,
         static constexpr uint8_t _divMul = 40;
     };
 
+    // ------------------------------------------------------------------------
+    // FlashingAnimation
+
     class FlashingAnimation : public Animation {
     public:
         FlashingAnimation(ClockPlugin &clock, Color color, uint16_t time, uint8_t mod = 2);
@@ -331,6 +344,10 @@ using SevenSegmentDisplay = SevenSegmentPixel<uint16_t, 1, IOT_CLOCK_NUM_PIXELS,
         uint8_t _mod;
     };
 
+    // ------------------------------------------------------------------------
+    // SkipRowsAnimation
+    // TODO finish SkipRowsAnimation
+
     class SkipRowsAnimation : public Animation {
     public:
         SkipRowsAnimation(ClockPlugin &clock, uint16_t rows, uint16_t cols, uint32_t time);
@@ -344,6 +361,141 @@ using SevenSegmentDisplay = SevenSegmentPixel<uint16_t, 1, IOT_CLOCK_NUM_PIXELS,
         uint16_t _cols;
         uint32_t _time;
     };
+
+    // ------------------------------------------------------------------------
+    // FireAnimation
+    // TODO finish FireAnimation
+
+    class FireAnimation : public Animation {
+    public:
+        // adapted from an example in FastLED, which is adapted from work done by Mark Kriegsman (called “Fire2012”).
+        using FireAnimationConfig = Plugins::ClockConfig::FireAnimation_t;
+        using Orientation = Plugins::ClockConfig::FireAnimation_t::Orientation;
+
+    private:
+        class Line {
+        public:
+
+            Line(const Line &) = delete;
+            Line(Line &&move) : _num(std::exchange(move._num, 0)), _heat(std::exchange(move._heat, nullptr)) {}
+
+            Line &operator==(const Line &) = delete;
+            Line &operator==(Line &&move) {
+                if (_heat) {
+                    delete[] _heat;
+                }
+                _heat = std::exchange(move._heat, nullptr);
+                _num = std::exchange(move._num, 0);
+                return *this;
+            }
+
+            Line() : _num(0), _heat(nullptr) {}
+            Line(uint16_t num) : _num(num), _heat(new uint8_t[_num]()) {
+                if (!_heat) {
+                    _num = 0;
+                }
+            }
+            ~Line() {
+                if (_heat) {
+                    delete[] _heat;
+                }
+            }
+
+            void init(uint16_t num) {
+                this->~Line();
+                _num = num;
+                _heat = new uint8_t[_num]();
+                if (!_heat) {
+                    _num = 0;
+                }
+            }
+
+            void cooldown(uint8_t cooling) {
+                // Step 1.  Cool down every cell a little
+                for (uint16_t i = 0; i < _num; i++) {
+                    uint8_t cooldownValue = rand() % (((cooling * 10) / _num) + 2);
+                    if (cooldownValue > _heat[i]) {
+                        _heat[i] = 0;
+                    }
+                    else {
+                        _heat[i] -= cooldownValue;
+                    }
+                }
+            }
+
+            void heatup()  {
+                // Step 2.  Heat from each cell drifts 'up' and diffuses a little
+                for(uint16_t k = _num - 1; k >= 2; k--) {
+                    _heat[k] = (_heat[k - 1] + _heat[k - 2] + _heat[k - 2]) / 3;
+                }
+            }
+
+            void ignite(uint8_t sparking) {
+                // Step 3.  Randomly ignite new 'sparks' near the bottom
+                auto n = std::max<uint8_t>(_num / 5, 2);
+                if (random(255) < sparking) {
+                    uint8_t y = rand() % n;
+                    _heat[y] += (rand() % (255 - 160)) + 160;
+                    //heat[y] = random(160, 255);
+                }
+            }
+
+            uint16_t getNum() const {
+                return _num;
+            }
+
+            Color getHeatColor(uint16_t num) {
+                if (num >= _num) {
+                    return 0U;
+                }
+                // Step 4.  Convert heat to LED colors
+
+                // Scale 'heat' down from 0-255 to 0-191
+                uint8_t t192 = round((_heat[num] / 255.0) * 191);
+
+                // calculate ramp up from
+                uint8_t heatramp = t192 & 0x3F; // 0..63
+                heatramp <<= 2; // scale up to 0..252
+
+                // figure out which third of the spectrum we're in:
+                if (t192 > 0x80) {                     // hottest
+                    return Color(255, 255, heatramp);
+                }
+                else if (t192 > 0x40) {             // middle
+                    return Color(255, heatramp, 0);
+                }
+                return Color(heatramp, 0, 0);
+            }
+
+        private:
+            uint16_t _num;
+            uint8_t *_heat;
+        };
+
+    public:
+        FireAnimation(ClockPlugin &clock, FireAnimationConfig &cfg);
+        ~FireAnimation();
+
+        virtual void begin() override;
+        virtual void end() override;
+        virtual void loop(time_t now) {
+            // update all lines
+            srand(now);
+            for(uint16_t i = 0; i < _lineCount; i++) {
+                _lines[i].cooldown(_cfg.cooling);
+                _lines[i].heatup();
+                _lines[i].ignite(_cfg.sparking);
+            }
+        }
+
+    private:
+        uint16_t _lineCount;
+        Line *_lines;
+        FireAnimationConfig &_cfg;
+    };
+
+    // ------------------------------------------------------------------------
+    // Callback
 
     class CallbackAnimation : public Animation {
     public:

@@ -12,6 +12,12 @@
 #include <debug_helper_disable.h>
 #endif
 
+#if IOT_LED_MATRIX
+#define MQTT_NAME "rgb_matrix"
+#else
+#define MQTT_NAME "clock"
+#endif
+
 
 MQTTComponent::MQTTAutoDiscoveryPtr ClockPlugin::nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num)
 {
@@ -21,7 +27,7 @@ MQTTComponent::MQTTAutoDiscoveryPtr ClockPlugin::nextAutoDiscovery(MQTTAutoDisco
     auto discovery = __LDBG_new(MQTTAutoDiscovery);
     switch(num) {
         case 0: {
-            discovery->create(this, F("clock"), format);
+            discovery->create(this, MQTT_NAME, format);
             discovery->addStateTopic(MQTTClient::formatTopic(FSPGM(_state)));
             discovery->addCommandTopic(MQTTClient::formatTopic(FSPGM(_set)));
             discovery->addPayloadOn(1);

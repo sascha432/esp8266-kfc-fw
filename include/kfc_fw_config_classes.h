@@ -1710,6 +1710,27 @@ typedef struct  {
                 RainbowColor_t();
             } RainbowColor_t;
 
+            typedef struct __attribute__packed__ FireAnimation_t {
+
+                enum class Orientation {
+                    MIN = 0,
+                    VERTICAL = MIN,
+                    HORIZONTAL,
+                    MAX
+                };
+
+                using Type = FireAnimation_t;
+                uint8_t cooling;
+                uint8_t sparking;
+                uint8_t speed;
+                CREATE_ENUM_BITFIELD(orientation, Orientation);
+                CREATE_BOOL_BITFIELD(invert_direction);
+
+                FireAnimation_t();
+
+            } FireAnimation_t;
+
+
             typedef struct __attribute__packed__ ClockConfig_t {
                 using Type = ClockConfig_t;
 
@@ -1745,11 +1766,14 @@ typedef struct  {
                     uint16_t delay;
                     ClockColor_t factor;
                 } fading;
+#if IOT_LED_MATRIX
+                FireAnimation_t fire;
                 struct __attribute__packed__ {
                     uint8_t rows;
                     uint8_t cols;
                     uint32_t time;
                 } skip_rows;
+#endif
 
                 ClockConfig_t();
 

@@ -22,6 +22,14 @@ namespace KFCConfigurationClasses {
         blue_incr(0.125)
     {}
 
+    Plugins::ClockConfig::FireAnimation_t::FireAnimation_t() :
+        cooling(80),
+        sparking(120),
+        speed(50),
+        orientation(cast_int_orientation(Orientation::VERTICAL)),
+        invert_direction(false)
+    {}
+
     Plugins::ClockConfig::ClockConfig_t::ClockConfig_t() :
         solid_color(0x00ff00),
         animation(0),
@@ -40,6 +48,7 @@ namespace KFCConfigurationClasses {
         fading{ .5f, 2, 0xffffff }
 #if IOT_LED_MATRIX
         ,
+        fire(),
         skip_rows({ 2, 0, 60000 })
 #endif
     {

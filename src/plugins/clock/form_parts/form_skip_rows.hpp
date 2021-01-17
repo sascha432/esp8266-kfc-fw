@@ -15,3 +15,5 @@ form.addValidator(FormUI::Validator::Range(0, IOT_LED_MATRIX_COLS));
 
 form.addPointerTriviallyCopyable(F("sktime"), &cfg.skip_rows.time);
 form.addFormUI(F("Rotate Through Rows And Columns"), FormUI::Suffix(F("milliseconds, 0 = disable")));
+
+skipRowsGroups.end();

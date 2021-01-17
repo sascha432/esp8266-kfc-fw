@@ -37,6 +37,11 @@ void ClockPlugin::getValues(JsonArray &array)
     obj->add(JJ(state), true);
     obj->add(JJ(value), _targetBrightness);
 
+    obj = &array.addObject(3);
+    obj->add(JJ(id), F("temp_prot"));
+    obj->add(JJ(state), true);
+    obj->add(JJ(value), JsonNumber(100 - _tempBrightness * 100.0, 1));
+
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
     obj = &array.addObject(3);
     obj->add(JJ(id), FSPGM(light_sensor));
@@ -92,6 +97,8 @@ void ClockPlugin::createWebUI(WebUIRoot &webUI)
     row->addButtonGroup(F("btn_colon"), F("Colon"), F("Solid,Blink slowly,Blink fast")).add(JJ(height), height);
     row->addButtonGroup(F("btn_animation"), F("Animation"), F("Solid,Rainbow,Flashing,Fading")).add(JJ(height), height);
     row->addSensor(FSPGM(light_sensor), F("Ambient Light Sensor"), F("<img src=\"/images/light.svg\" width=\"80\" height=\"80\" style=\"margin-top:-20px;margin-bottom:1rem\">"), WebUIComponent::SensorRenderType::COLUMN).add(JJ(height), height);
+
+    row->addSensor(F("temp_prot"), F("Temperature Protection"), '%');
 }
 
 void ClockPlugin::_broadcastWebUI()

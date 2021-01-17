@@ -138,6 +138,8 @@ void Sensor_Battery::createConfigureForm(AsyncWebServerRequest *request, FormUI:
 
     group.end();
 
+#if IOT_SENSOR_BATTERY_CHARGE_DETECTION
+
     auto &pinsGroup = form.addCardGroup(FSPGM(config), F("Pin Configuration"), false);
 
     auto &pinMode0 = form.addPointerTriviallyCopyable(F("pinm0"), &cfg.pinMode[0]);
@@ -162,6 +164,8 @@ void Sensor_Battery::createConfigureForm(AsyncWebServerRequest *request, FormUI:
 
     pinsGroup.end();
 
+#endif
+
 }
 
 void Sensor_Battery::reconfigure(PGM_P source)
@@ -180,14 +184,14 @@ float Sensor_Battery::readSensor()
 float Sensor_Battery::_readSensor()
 {
     auto &adc = ADCManager::getInstance();
-    uint32_t sum = adc.readValueWait(10000U, 1000U);
+    uint32_t sum = adc.readValueWait(10000U, 1000U); // TODO check why this returns 1024
     delay(2);
     sum += adc.readValueWait(10000U, 1000U);
     delay(2);
     sum += adc.readValueWait(10000U, 1000U);
 
     double adcVoltage = sum / (3 * 1024.0);
-    __LDBG_printf("raw = %f", (((IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R2 + IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1)) / IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1) * adcVoltage)
+    __LDBG_printf("adc=%f raw=%f sum=%u", adcVoltage, (((IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R2 + IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1)) / IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1) * adcVoltage, sum);
     return ((((IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R2 + IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1)) / IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1) * adcVoltage * _config.calibration) + _config.offset;
 }
 
@@ -249,10 +253,10 @@ bool Sensor_Battery::atModeHandler(AtModeArgs &args)
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SENSORPBV))) {
         _timer.remove();
 
-        auto serial = &args.getStream();
-        auto printVoltage = [serial, this](Event::CallbackTimerPtr timer) {
+        auto &serial = args.getStream();
+        auto printVoltage = [&serial, this](Event::CallbackTimerPtr timer) {
             auto value = Sensor_Battery::readSensor();
-            serial->printf_P(PSTR("+SENSORPBV: %.4fV (calibration %f, offset=%f)\n"),
+            serial.printf_P(PSTR("+SENSORPBV: %.4fV (calibration %f, offset=%f)\n"),
                 value,
                 _config.calibration,
                 _config.offset

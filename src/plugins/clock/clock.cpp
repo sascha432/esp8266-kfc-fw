@@ -565,6 +565,9 @@ void ClockPlugin::setAnimation(AnimationType animation)
             _setAnimation(__LDBG_new(Clock::FlashingAnimation, *this, _color, _config.flashing_speed));
             break;
 #if IOT_LED_MATRIX
+        case  AnimationType::FIRE:
+            _setAnimation(__LDBG_new(Clock::FireAnimation, *this, _config.fire));
+            break;
         case  AnimationType::SKIP_ROWS:
             _setAnimation(__LDBG_new(Clock::SkipRowsAnimation, *this, _config.skip_rows.rows, _config.skip_rows.cols, _config.skip_rows.time));
             break;

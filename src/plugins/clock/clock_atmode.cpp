@@ -87,7 +87,10 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             args.printf_P(PSTR("%u - rainbow animation (+CLOCKA=%u,<speed>,<multiplier>,<r>,<g>,<b-factor>)"), AnimationType::RAINBOW, AnimationType::RAINBOW);
             args.printf_P(PSTR("%u - flashing"), AnimationType::FLASHING);
             args.printf_P(PSTR("%u - fade to color (+CLOCKA=%u,<r>,<g>,<b>)"), AnimationType::FADING, AnimationType::FADING);
-#if !IOT_LED_MATRIX
+#if IOT_LED_MATRIX
+            args.printf_P(PSTR("%u - fire (+CLOCKA=%u)"), AnimationType::FIRE, AnimationType::FIRE);
+            args.printf_P(PSTR("%u - fire (+CLOCKA=%u)"), AnimationType::SKIP_ROWS, AnimationType::SKIP_ROWS);
+#else
             args.printf_P(PSTR("%u - blink colon speed"), (int)AnimationType::MAX);
 #endif
             args.print(F("100 = disable clock"));
@@ -195,6 +198,9 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                         _config.rainbow.color.factor.green = (uint8_t)args.toInt(4, _config.rainbow.color.factor.green);
                         _config.rainbow.color.factor.blue = (uint8_t)args.toInt(5, _config.rainbow.color.factor.blue);
                         _setAnimation(__LDBG_new(Clock::RainbowAnimation, *this, _config.rainbow.speed, _config.rainbow.multiplier, _config.rainbow.color));
+                        break;
+                    case AnimationType::FIRE:
+                        _setAnimation(__LDBG_new(Clock::FireAnimation, *this, _config.fire));
                         break;
                     default:
                         setAnimation(static_cast<AnimationType>(value));

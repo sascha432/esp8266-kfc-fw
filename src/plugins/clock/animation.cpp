@@ -379,6 +379,7 @@ void RainbowAnimation::_increment(float *valuePtr, float min, float max, float *
 {
     float value;
     float incr;
+    // we need to use memcpy in case the pointer is not dword aligned
     memcpy(&value, valuePtr, sizeof(value));
     memcpy(&incr, incrPtr, sizeof(incr));
     if (incr) {
@@ -495,10 +496,73 @@ void SkipRowsAnimation::end()
 }
 
 // ------------------------------------------------------------------------
+// Fire Animation
+
+FireAnimation::FireAnimation(ClockPlugin &clock, FireAnimationConfig &cfg) :
+    Animation(clock),
+    _lineCount((cfg.cast_enum_orientation(cfg.orientation) == Orientation::VERTICAL) ? IOT_LED_MATRIX_COLS : IOT_LED_MATRIX_ROWS),
+    _lines(new Line[_lineCount]),
+    _cfg(cfg)
+{
+    if (!_lines) {
+        _lineCount = 0;
+    }
+    else {
+        for(uint16_t i = 0; i < _lineCount; i++) {
+            _lines[i].init((_cfg.cast_enum_orientation(_cfg.orientation) == Orientation::VERTICAL) ? IOT_LED_MATRIX_ROWS : IOT_LED_MATRIX_COLS);
+        }
+    }
+
+}
+
+FireAnimation::~FireAnimation()
+{
+    if (_lines) {
+        delete[] _lines;
+    }
+}
+
+void FireAnimation::begin()
+{
+    __LDBG_printf("begin lines=%u", _lineCount);
+    setAnimationCallback([this](PixelAddressType address, ColorType color, const SevenSegmentDisplay::Params_t &params) -> ColorType {
+        uint16_t row = address % IOT_LED_MATRIX_ROWS;
+        uint16_t col = address / IOT_LED_MATRIX_ROWS;
+        if (col % 2 != 0) {
+            row = (IOT_LED_MATRIX_ROWS - 1) - row;
+        }
+
+        uint16_t line = (_cfg.cast_enum_orientation(_cfg.orientation) == Orientation::VERTICAL) ? col : row;
+        if (line < _lineCount) {
+            uint16_t pixel;
+            if (_cfg.invert_direction) {
+                pixel = (_cfg.cast_enum_orientation(_cfg.orientation) == Orientation::VERTICAL) ? IOT_LED_MATRIX_ROWS - row : IOT_LED_MATRIX_COLS - col;
+            }
+            else {
+                pixel = (_cfg.cast_enum_orientation(_cfg.orientation) == Orientation::VERTICAL) ? row : col;
+            }
+
+            return SevenSegmentDisplay::_adjustBrightnessAlways(_lines[line].getHeatColor(pixel), params.brightness);
+        }
+        return 0;
+    });
+    setUpdateRate(std::max<uint16_t>(5, _cfg.speed));
+}
+
+void FireAnimation::end()
+{
+    __LDBG_printf("end lines=%u", _lineCount);
+}
+
+
+// ------------------------------------------------------------------------
 // Callback Animation
 
 CallbackAnimation::CallbackAnimation(ClockPlugin &clock, AnimationCallback callback, uint16_t updateRate, bool blinkColon) :
-    Animation(clock), _callback(callback), _updateRate(updateRate), _blinkColon(blinkColon)
+    Animation(clock),
+    _callback(callback),
+    _updateRate(updateRate),
+    _blinkColon(blinkColon)
 {
     __LDBG_printf("callback=%p/%u update_rate=%u blink_colon=%u", &_callback, (bool)_callback, _updateRate, _blinkColon);
 }

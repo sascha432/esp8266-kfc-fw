@@ -94,7 +94,8 @@ ClockPlugin::ClockPlugin() :
     _isSyncing(true),
     _displaySensorValue(0),
 #endif
-    _tempProtection(ProtectionType::OFF),
+    _tempOverride(0),
+    _tempBrightness(1),
     _schedulePublishState(false),
     _forceUpdate(false),
     _isFading(false),
@@ -182,16 +183,19 @@ uint16_t ClockPlugin::_readLightSensor() const
     return ADCManager::getInstance().readValue();
 }
 
-ClockPlugin::BrightnessType ClockPlugin::_getBrightness() const
+ClockPlugin::BrightnessType ClockPlugin::_getBrightness(bool temperatureProtection) const
 {
-    return (_autoBrightness == kAutoBrightnessOff) ? _getFadingBrightness() : _getFadingBrightness() * _autoBrightnessValue;
+    return ((_autoBrightness == kAutoBrightnessOff) ? _getFadingBrightness() : _getFadingBrightness() * _autoBrightnessValue) * (temperatureProtection ? getTempProtectionFactor() : 1);
 }
 
 #else
 
-ClockPlugin::BrightnessType ClockPlugin::_getBrightness() const
+ClockPlugin::BrightnessType ClockPlugin::_getBrightness(bool temperatureProtection) const
 {
-    return _getFadingBrightness();
+    if (!temperatureProtection) {
+        return _getFadingBrightness();
+    }
+    return _getFadingBrightness() * getTempProtectionFactor();
 }
 
 #endif
@@ -199,12 +203,6 @@ ClockPlugin::BrightnessType ClockPlugin::_getBrightness() const
 ClockPlugin::BrightnessType ClockPlugin::_getFadingBrightness() const
 {
     return _fadeTimer.isActive() && _fadeTimer.getDelay() ? _targetBrightness - (((int)_targetBrightness - (int)_startBrightness) / (float)_fadeTimer.getDelay()  * _fadeTimer.getTimeLeft()) : _targetBrightness;
-}
-
-bool ClockPlugin::_isTemperatureBelowThresholds(float temp) const
-{
-    float minThreshold = std::min(std::min(_config.protection.max_temperature, _config.protection.temperature_50), _config.protection.temperature_75) - kTemperatureThresholdDifference;
-    return temp < minThreshold;
 }
 
 void ClockPlugin::_startTempProtectionAnimation()
@@ -243,7 +241,7 @@ void ClockPlugin::setup(SetupModeType mode)
 
         _timerCounter++;
 
-#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
+        #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
             // update light sensor webui
             if (_timerCounter % kUpdateAutobrightnessInterval == 0) {
                 uint8_t tmp = _autoBrightnessValue * 100;
@@ -256,93 +254,74 @@ void ClockPlugin::setup(SetupModeType mode)
                     }
                 }
             }
-#endif
+        #endif
+
         // temperature protection
         if (_timerCounter % kCheckTemperatureInterval == 0) {
-            SensorPlugin::for_each<Sensor_LM75A>(nullptr, [](MQTTSensor &sensor, Sensor_LM75A &) {
-                return (sensor.getType() == MQTTSensor::SensorType::LM75A);
-            }, [this](Sensor_LM75A &sensor) {
-                auto temp = sensor.readSensor();
-                auto message1_P = PSTR("Over temperature protection activated: %.1f°C > %u°C");
-                auto message2_P = PSTR("Temperature exceeded threshold, reducing brightness to %u%%: %.1f°C > %u°C");
-                auto message2b_P = PSTR("Temperature exceeded threshold, brightness already below %u%%: %.1f°C > %u°C");
-                auto message3_P = PSTR("Temperature %u°C below thresholds, restoring brightness");
-                PrintString message;
+            float tempSensor;
+            if (_tempOverride) {
+                tempSensor = _tempOverride;
+            }
+            else {
+                tempSensor = 0;
+                SensorPlugin::for_each<Sensor_LM75A>(nullptr, [](MQTTSensor &sensor, Sensor_LM75A &) {
+                    return (sensor.getType() == MQTTSensor::SensorType::LM75A);
+                }, [this, &tempSensor](Sensor_LM75A &sensor) {
+                    tempSensor = max(tempSensor, sensor.readSensor());
+                });
+            }
 
-                __LDBG_printf("temperature %.1f prot=%u max=%u 75=%u 50=%u min_th=%.1f", temp, _tempProtection, (temp > _config.protection.max_temperature), (temp > _config.protection.temperature_75), (temp > _config.protection.temperature_50), (float)(std::min(std::min(_config.protection.max_temperature, _config.protection.temperature_50), _config.protection.temperature_75) - kTemperatureThresholdDifference));
+            if (tempSensor) {
 
+                #if DEBUG_IOT_CLOCK
+                    if (_timerCounter % 60 == 0) {
+                        __LDBG_printf("temp=%.1f prot=%u range=%u-%u max=%u", tempSensor, isTempProtectionActive(), _config.protection.temperature_reduce_range.min, _config.protection.temperature_reduce_range.max, _config.protection.max_temperature);
+                        __LDBG_printf("reduce=%u val=%f br=%f", _config.protection.temperature_reduce_range.max - _config.protection.temperature_reduce_range.min, _config.protection.temperature_reduce_range.min - tempSensor, std::clamp<float>(1.0 - ((tempSensor - _config.protection.temperature_reduce_range.min) * 0.75 / (float)(_config.protection.temperature_reduce_range.max - _config.protection.temperature_reduce_range.min)), 0.25, 1.0));
+                    }
+                #endif
 
-//todo fix temp protection
-                if (temp > _config.protection.max_temperature) {
-                    // over temp. protection, reduce brightness to 20% and flash red
-                    if (_tempProtection < ProtectionType::MAX) { // send warning once
-                        message.printf_P(message1_P, temp, _config.protection.max_temperature);
-                        WebAlerts::Alert::error(message);
-#if !IOT_LED_MATRIX
+                if (isTempProtectionActive()) {
+                    return;
+                }
+
+                if (tempSensor > _config.protection.max_temperature) {
+                    auto message = PrintString(F("Over temperature protection activated: %.1f°C > %u°C"), tempSensor, _config.protection.max_temperature);
+                    #if !IOT_LED_MATRIX
                         _isSyncing = false;
                         _displaySensorValue = 0;
-#endif
-                        _startTempProtectionAnimation();
-                        _tempProtection = ProtectionType::MAX;
-                    }
-#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
-                    _autoBrightness = kAutoBrightnessOff;
-#endif
-                    if (_targetBrightness > Clock::kBrightnessTempProtection) {
-                        _targetBrightness = Clock::kBrightnessTempProtection;
-                    }
+                    #endif
+                    #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
+                        _autoBrightness = kAutoBrightnessOff;
+                    #endif
+                    _tempBrightness = -1;
+                    _startTempProtectionAnimation();
+                    WebAlerts::Alert::error(message);
                 }
-                else if (temp > _config.protection.temperature_50 && _tempProtection < ProtectionType::B50) {
-                    // temp. too high, reduce to 50% brightness
-                    PGM_P msg;
-                    _tempProtection = ProtectionType::B50;
-#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
-                    _autoBrightness = kAutoBrightnessOff;
-#endif
-                    if (_targetBrightness > Clock::kBrightness50) {
-                        _setBrightness(Clock::kBrightness50);
-                        msg = message2_P;
+                else {
+                    ClockPlugin::BrightnessType oldBrightness = 0, newBrightness = 0;
+                    if (tempSensor > _config.protection.temperature_reduce_range.min) {
+                        // reduce brightness to 25-100% or 50% if the range is invalid
+                        oldBrightness = _getBrightness();
+                        _tempBrightness = (_config.protection.temperature_reduce_range.max - _config.protection.temperature_reduce_range.min > 0) ?
+                            std::clamp<float>(1.0 - ((tempSensor - _config.protection.temperature_reduce_range.min) * 0.75 / (float)(_config.protection.temperature_reduce_range.max - _config.protection.temperature_reduce_range.min)), 0.25, 1.0) :
+                            0.5;
+                        newBrightness = _getBrightness();
                     }
                     else {
-                        msg = message2b_P;
+                        if (_tempBrightness != 1) {
+                            oldBrightness = _getBrightness();
+                            _tempBrightness = 1;
+                            newBrightness = _getBrightness();
+                        }
+                        _tempBrightness = 1;
                     }
-                    message.printf_P(msg, 50, temp, _config.protection.temperature_50);
-                    WebAlerts::Alert::warning(message);
-                }
-                else if (temp > _config.protection.temperature_75 && _tempProtection < ProtectionType::B75) {
-                    // temp. too high, reduce to 75% brightness
-                    PGM_P msg;
-                    _tempProtection = ProtectionType::B75;
-#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
-                    _autoBrightness = kAutoBrightnessOff;
-#endif
-                    if (_targetBrightness > Clock::kBrightness75) {
-                        _setBrightness(Clock::kBrightness75);
-                        msg = message2_P;
+                    if (newBrightness != oldBrightness) {
+                        __LDBG_printf("temp. brightness factor=%.2f%% brightness=%u->%u", _tempBrightness * 100.0, oldBrightness, newBrightness);
+                        // setBrightness(newBrightness, seconds(kCheckTemperatureInterval));
+                        _schedulePublishState = true;
                     }
-                    else {
-                        msg = message2b_P;
-                    }
-                    message.printf_P(msg, 75, temp, _config.protection.temperature_75);
-                    WebAlerts::Alert::warning(message);
                 }
-                // restore if temperature falls 10°C below temperature_75 (or any other if lower)
-                // no recovery if the max temperature had been exceeded
-                else if ((_tempProtection != ProtectionType::OFF) && (_tempProtection != ProtectionType::MAX) && _isTemperatureBelowThresholds(temp)) {
-                    message.printf_P(message3_P, kTemperatureThresholdDifference);
-                    Logger_notice(message);
-                    _tempProtection = ProtectionType::OFF;
-                    // restore settings
-#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
-                    _autoBrightness = _config.auto_brightness;
-#endif
-                    setBrightness(_config.getBrightness());
-                }
-                if (message.length()) {
-                    __LDBG_printf("%s", message.c_str());
-                    _schedulePublishState = true;
-                }
-            });
+            }
         }
 
         // mqtt update / webui update
@@ -415,22 +394,21 @@ void ClockPlugin::getStatus(Print &output)
 #endif
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
     output.print(F("Ambient light sensor"));
-    if (_config.protection.max_temperature < 85) {
+    if (_config.protection.max_temperature > 25 && _config.protection.max_temperature < 85) {
         output.print(F(", over-temperature protection enabled"));
     }
-    output.print(F(HTML_S(br)));
 #else
-    if (_config.protection.max_temperature < 85) {
-        output.print(F("Over-temperature protection enabled" HTML_S(br)));
+    if (_config.protection.max_temperature > 25 && _config.protection.max_temperature < 85) {
+        output.print(F("Over-temperature protection enabled"));
     }
 #endif
 #if IOT_LED_MATRIX
-    output.printf_P(PSTR("Total pixels %u"), SevenSegmentDisplay::getTotalPixels());
+    output.printf_P(PSTR(HTML_S(br) "Total pixels %u"), SevenSegmentDisplay::getTotalPixels());
 #else
-    output.printf_P(PSTR("Total pixels %u, digits pixels %u"), SevenSegmentDisplay::getTotalPixels(), SevenSegmentDisplay::getDigitsPixels());
+    output.printf_P(PSTR(HTML_S(br) "Total pixels %u, digits pixels %u"), SevenSegmentDisplay::getTotalPixels(), SevenSegmentDisplay::getDigitsPixels());
 #endif
-    if (_tempProtection == ProtectionType::MAX) {
-        output.printf_P(PSTR("The temperature exceeded %u"));
+    if (isTempProtectionActive()) {
+        output.printf_P(PSTR(HTML_S(br) "The temperature exceeded %u"), _config.protection.max_temperature);
     }
 }
 
@@ -548,7 +526,7 @@ void ClockPlugin::setBrightness(BrightnessType brightness, milliseconds time)
 void ClockPlugin::setColorAndRefresh(Color color)
 {
     __LDBG_printf("color=%s", color.toString().c_str());
-    if (_tempProtection == ProtectionType::MAX) {
+    if (isTempProtectionActive()) {
         __LDBG_printf("temperature protection active");
         return;
     }
@@ -557,10 +535,21 @@ void ClockPlugin::setColorAndRefresh(Color color)
     _schedulePublishState = true;
 }
 
+void ClockPlugin::_setAnimatonNone()
+{
+    __LDBG_printf("animation NONE animation=%p next=%p", _animation, _nextAnimation);
+    _deleteAnimaton(false);
+#if IOT_LED_MATRIX
+    setUpdateRate(kDefaultUpdateRate);
+#else
+    setUpdateRate((_config.blink_colon_speed < kMinBlinkColonSpeed) ? kDefaultUpdateRate : _config.blink_colon_speed);
+#endif
+}
+
 void ClockPlugin::setAnimation(AnimationType animation)
 {
     __LDBG_printf("animation=%d", animation);
-    if (_tempProtection == ProtectionType::MAX) {
+    if (isTempProtectionActive()) {
         __LDBG_printf("temperature protection active");
         return;
     }
@@ -575,6 +564,11 @@ void ClockPlugin::setAnimation(AnimationType animation)
         case AnimationType::FLASHING:
             _setAnimation(__LDBG_new(Clock::FlashingAnimation, *this, _color, _config.flashing_speed));
             break;
+#if IOT_LED_MATRIX
+        case  AnimationType::SKIP_ROWS:
+            _setAnimation(__LDBG_new(Clock::SkipRowsAnimation, *this, _config.skip_rows.rows, _config.skip_rows.cols, _config.skip_rows.time));
+            break;
+#endif
         case AnimationType::NEXT:
             __LDBG_printf("animation NEXT animation=%p next=%p", _animation, _nextAnimation);
             _deleteAnimaton(true);
@@ -586,13 +580,7 @@ void ClockPlugin::setAnimation(AnimationType animation)
             _config.animation = static_cast<uint8_t>(AnimationType::NONE);
             // fallthrough
         case AnimationType::NONE:
-            __LDBG_printf("animation NONE animation=%p next=%p", _animation, _nextAnimation);
-            _deleteAnimaton(false);
-#if IOT_LED_MATRIX
-            setUpdateRate(kDefaultUpdateRate);
-#else
-            setUpdateRate((_config.blink_colon_speed < kMinBlinkColonSpeed) ? kDefaultUpdateRate : _config.blink_colon_speed);
-#endif
+            _setAnimatonNone();
             break;
     }
     _schedulePublishState = true;
@@ -600,7 +588,7 @@ void ClockPlugin::setAnimation(AnimationType animation)
 
 void ClockPlugin::setAnimationCallback(Clock::AnimationCallback callback)
 {
-    if (_tempProtection == ProtectionType::MAX) {
+    if (isTempProtectionActive()) {
         __LDBG_printf("temperature protection active");
         return;
     }
@@ -634,10 +622,9 @@ void ClockPlugin::readConfig()
     _config = Plugins::Clock::getConfig();
     _config.rainbow.multiplier.value = std::clamp<float>(_config.rainbow.multiplier.value, 0.1, 100.0);
     _config.protection.max_temperature = std::max((uint8_t)kMinimumTemperatureThreshold, _config.protection.max_temperature);
-    _config.protection.temperature_50 = std::max((uint8_t)kMinimumTemperatureThreshold, _config.protection.temperature_50);
-    _config.protection.temperature_75 = std::max((uint8_t)kMinimumTemperatureThreshold, _config.protection.temperature_75);
 
-    _tempProtection = ProtectionType::OFF;
+    // reset temperature protection
+    _tempBrightness = 1;
     _color = Color(_config.solid_color.value);
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
     _autoBrightness = _config.auto_brightness;
@@ -704,7 +691,7 @@ void ClockPlugin::_onButtonReleased(uint16_t duration)
 void ClockPlugin::_setAnimation(Clock::Animation *animation)
 {
     __LDBG_printf("animation=%p", animation);
-    if (_tempProtection == ProtectionType::MAX) {
+    if (isTempProtectionActive()) {
         __LDBG_printf("temperature protection active");
         return;
     }
@@ -726,7 +713,7 @@ void ClockPlugin::_setNextAnimation(Clock::Animation *nextAnimation)
 void ClockPlugin::_deleteAnimaton(bool startNext)
 {
     __LDBG_printf("animation=%p next=%p start_next=%u", _animation, _nextAnimation, startNext);
-    if (_tempProtection == ProtectionType::MAX) {
+    if (isTempProtectionActive()) {
         __LDBG_printf("temperature protection active");
         return;
     }
@@ -787,7 +774,7 @@ void ClockPlugin::_installWebHandlers()
 
 void ClockPlugin::_setBrightness(BrightnessType brightness)
 {
-    if (_tempProtection == ProtectionType::MAX) {
+    if (isTempProtectionActive()) {
         __LDBG_printf("temperature protection active");
         AlarmPlugin::resetAlarm();
         return;
@@ -813,7 +800,7 @@ void ClockPlugin::alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration)
 
 void ClockPlugin::_alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration)
 {
-    if (_tempProtection == ProtectionType::MAX) {
+    if (isTempProtectionActive()) {
         __LDBG_printf("temperature protection active");
         // LoopFunctions::callOnce([]() {
         //     AlarmPlugin::resetAlarm();

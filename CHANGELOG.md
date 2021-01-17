@@ -43,6 +43,7 @@
   - Option to send UDP packets to minimize latency
 - LED Matrix plugin
 - Cycling color and animation for rainbow mode (Clock/LED matrix)
+- Reduce brightness depending on the temperature
 
 ## Version 0.0.3
 

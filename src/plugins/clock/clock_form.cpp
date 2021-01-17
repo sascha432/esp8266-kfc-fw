@@ -23,6 +23,12 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
     }
 
     auto &cfg = Plugins::Clock::getWriteableConfig();
+    auto animationTypeItems = FormUI::Container::List(
+        AnimationType::NONE, FSPGM(Solid_Color),
+        AnimationType::RAINBOW, FSPGM(Rainbow),
+        AnimationType::FLASHING, FSPGM(Flashing),
+        AnimationType::FADING, FSPGM(Fading)
+    );
 
     auto &ui = form.createWebUI();
     ui.setTitle(F("Clock Configuration"));
@@ -49,66 +55,16 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
     mainGroup.end();
 
     // --------------------------------------------------------------------
-    #include "form_rainbow_ani.hpp"
+    #include "form_parts/form_animation.hpp"
 
     // --------------------------------------------------------------------
-    auto &fadingGroup = form.addCardGroup(F("fading"), F("Random Color Fading"), true);
-
-    form.addPointerTriviallyCopyable(F("fade_sp"), &cfg.fading.speed);
-    form.addFormUI(F("Time Between Fading Colors"), FormUI::Suffix(FSPGM(seconds)));
-    form.addValidator(FormUI::Validator::Range(Clock::FadingAnimation::kMinSeconds, Clock::FadingAnimation::kMaxSeconds));
-
-    form.addPointerTriviallyCopyable(F("fade_dy"), &cfg.fading.delay);
-    form.addFormUI(F("Delay Before Start Fading To Next Random Color"), FormUI::Suffix(FSPGM(seconds)));
-    form.addValidator(FormUI::Validator::Range(0, Clock::FadingAnimation::kMaxDelay));
-
-    form.add(F("fade_cf"), Color(cfg.fading.factor.value).toString(), [&cfg](const String &value, FormUI::Field::BaseField &field, bool store) {
-        if (store) {
-            cfg.fading.factor.value = Color::fromString(value);
-        }
-        return false;
-    });
-    form.addFormUI(F("Random Color Factor"));
-
-    fadingGroup.end();
-
-#if IOT_ALARM_PLUGIN_ENABLED
+    #include "form_parts/form_rainbow_ani.hpp"
 
     // --------------------------------------------------------------------
-    auto &alarmGroup = form.addCardGroup(FSPGM(alarm), FSPGM(Alarm), true);
-
-    form.add(F("alrm_col"), Color(cfg.alarm.color.value).toString(), [&cfg](const String &value, FormUI::Field::BaseField &field, bool store) {
-        if (store) {
-            cfg.alarm.color.value = Color::fromString(value);
-        }
-        return false;
-    });
-    form.addFormUI(FSPGM(Color));
-
-    form.addPointerTriviallyCopyable(F("alrm_sp"), &cfg.alarm.speed);
-    form.addFormUI(F("Flashing Speed"), FormUI::Suffix(FSPGM(milliseconds)));
-    form.addValidator(FormUI::Validator::Range(50, 0xffff));
-
-    alarmGroup.end();
-
-#endif
+    #include "form_parts/form_fading.hpp"
 
     // --------------------------------------------------------------------
-    auto &protectionGroup = form.addCardGroup(F("prot"), FSPGM(Protection), true);
-
-    form.addPointerTriviallyCopyable(F("temp_75"), &cfg.protection.temperature_75);
-    form.addFormUI(F("Temperature To Reduce Brightness To 75%"), FormUI::Suffix(FSPGM(_degreeC)));
-    form.addValidator(FormUI::Validator::Range(kMinimumTemperatureThreshold, 90));
-
-    form.addPointerTriviallyCopyable(F("temp_50"), &cfg.protection.temperature_50);
-    form.addFormUI(F("Temperature To Reduce Brightness To 50%"), FormUI::Suffix(FSPGM(_degreeC)));
-    form.addValidator(FormUI::Validator::Range(kMinimumTemperatureThreshold, 90));
-
-    form.addPointerTriviallyCopyable(F("max_temp"), &cfg.protection.max_temperature);
-    form.addFormUI(F("Over Temperature Protection"), FormUI::Suffix(FSPGM(_degreeC)));
-    form.addValidator(FormUI::Validator::Range(kMinimumTemperatureThreshold, 105));
-
-    protectionGroup.end();
+    #include "form_parts/form_rest.hpp"
 
     form.finalize();
 }

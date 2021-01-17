@@ -38,16 +38,10 @@
 #include <Bounce2.h>
 #endif
 
-#if DEBUG_IOT_CLOCK
-#define IOT_CLOCK_MIN_TEMPERATURE_THRESHOLD             20
-#else
-#define IOT_CLOCK_MIN_TEMPERATURE_THRESHOLD             45
-#endif
-
 // number of measurements. 0=disable
 #ifndef IOT_CLOCK_DEBUG_ANIMATION_TIME
-// #define IOT_CLOCK_DEBUG_ANIMATION_TIME                  0
-#define IOT_CLOCK_DEBUG_ANIMATION_TIME                  50
+#define IOT_CLOCK_DEBUG_ANIMATION_TIME                  0
+// #define IOT_CLOCK_DEBUG_ANIMATION_TIME                  50
 #endif
 
 #if IOT_CLOCK_DEBUG_ANIMATION_TIME
@@ -70,30 +64,20 @@ public:
     using AnimationType = Clock::AnimationType;
     using BrightnessType = SevenSegmentDisplay::BrightnessType;
     using milliseconds = std::chrono::duration<uint32_t, std::ratio<1>>;
+    using seconds = std::chrono::duration<uint32_t, std::ratio<1000>>;
 
-    static constexpr uint16_t kDefaultUpdateRate = 1000;
+    static constexpr uint16_t kDefaultUpdateRate = 1000;                                    // milliseconds
     static constexpr uint16_t kMinBlinkColonSpeed = 50;
     static constexpr uint16_t kMinFlashingSpeed = 50;
     static constexpr uint16_t kMinRainbowSpeed = 1;
 
-    static constexpr uint8_t kUpdateAutobrightnessInterval = 2;
-    static constexpr uint8_t kCheckTemperatureInterval = 10;
-    static constexpr uint8_t kUpdateMQTTInterval = 30;
-
-    // restore brightness if temperature is kTemperatureRestoreDifference below any threshold
-    static constexpr uint8_t kTemperatureThresholdDifference = 10;
-    static constexpr uint8_t kMinimumTemperatureThreshold = IOT_CLOCK_MIN_TEMPERATURE_THRESHOLD;
+    static constexpr uint8_t kUpdateAutobrightnessInterval = 2;                             // seconds
+    static constexpr uint8_t kCheckTemperatureInterval = 5;                                 // seconds
+    static constexpr uint8_t kMinimumTemperatureThreshold = 30;                             // °C
+    static constexpr uint8_t kUpdateMQTTInterval = 30;                                      // seconds
 
     static constexpr int16_t kAutoBrightnessOff = -1;
     static constexpr float kAutoBrightnessInterval = IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL;     // milliseconds
-
-    enum ProtectionType {
-        OFF,
-        B75,
-        B50,
-        MAX
-    };
-    static_assert(ProtectionType::MAX <= 3, "stored _tempProtection / 2 bit");
 
 // PluginComponent
 public:
@@ -242,7 +226,7 @@ private:
     void _setBrightness(BrightnessType brightness);
 
     // returns display brightness using current brightness and auto brightness value
-    BrightnessType _getBrightness() const;
+    BrightnessType _getBrightness(bool temperatureProtection = true) const;
 
     // returns current brightness without auto brightness value
     // while fading between different levels it returns the current level
@@ -262,6 +246,17 @@ public:
     static void handleWebServer(AsyncWebServerRequest *request);
 
 private:
+    bool isTempProtectionActive() const {
+        return _tempBrightness == -1;
+    }
+    float getTempProtectionFactor() const {
+        if (isTempProtectionActive()) {
+            return 0;
+        }
+        return _tempBrightness;
+    }
+
+private:
 #if IOT_CLOCK_BUTTON_PIN
     PushButton _button;
     uint8_t _buttonCounter;
@@ -279,13 +274,14 @@ private:
 #endif
     uint16_t _updateRate;
 #if !IOT_LED_MATRIX
-    uint8_t _isSyncing : 1;
+    bool _isSyncing : 1;
     uint8_t _displaySensorValue : 2;
 #endif
-    uint8_t _tempProtection : 2;
-    uint8_t _schedulePublishState: 1;
-    uint8_t _forceUpdate: 1;
-    uint8_t _isFading: 1;
+    uint8_t _tempOverride;
+    float _tempBrightness;
+    bool _schedulePublishState: 1;
+    bool _forceUpdate: 1;
+    bool _isFading: 1;
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
     int16_t _autoBrightness;
     float _autoBrightnessValue;
@@ -302,7 +298,6 @@ private:
     BrightnessType _targetBrightness;
 
 private:
-    bool _isTemperatureBelowThresholds(float temp) const;
     void _startTempProtectionAnimation();
 
 public:
@@ -316,6 +311,7 @@ private:
     void _setAnimation(Clock::Animation *animation);
     void _setNextAnimation(Clock::Animation *animation);
     void _deleteAnimaton(bool startNext);
+    void _setAnimatonNone();
 private:
     Clock::Animation *_animation;
     Clock::Animation *_nextAnimation;

@@ -1,30 +1,6 @@
-
-
-// --------------------------------------------------------------------
-auto &animationGroup = form.addCardGroup(F("anicfg"), FSPGM(Animation), true);
-
-form.addObjectGetterSetter(F("ani"), cfg, cfg.get_bits_animation, cfg.set_bits_animation);
-form.addFormUI(FSPGM(Type), FormUI::Container::List(
-    AnimationType::NONE, FSPGM(Solid_Color),
-    AnimationType::RAINBOW, FSPGM(Rainbow),
-    AnimationType::FLASHING, FSPGM(Flashing),
-    AnimationType::FADING, FSPGM(Fading)
-));
-//form.addValidator(FormUI::Validator::RangeEnum<AnimationType>());
-
-form.add(F("col"), Color(cfg.solid_color.value).toString(), [&cfg](const String &value, FormUI::Field::BaseField &field, bool store) {
-    if (store) {
-        cfg.solid_color.value = Color::fromString(value);
-    }
-    return false;
-}, FormUI::Field::Type::TEXT);
-form.addFormUI(FSPGM(Solid_Color));
-
-form.addPointerTriviallyCopyable(F("flash_sp"), &cfg.flashing_speed);
-form.addFormUI(F("Flashing Speed"), FormUI::Suffix(FSPGM(milliseconds)));
-form.addValidator(FormUI::Validator::Range(kMinFlashingSpeed, 0xffff));
-
-animationGroup.end();
+/**
+ * Author: sascha_lammers@gmx.de
+ */
 
 // --------------------------------------------------------------------
 auto &rainbowGroup = form.addCardGroup(F("rainbow"), F("Rainbow Animation"), true);

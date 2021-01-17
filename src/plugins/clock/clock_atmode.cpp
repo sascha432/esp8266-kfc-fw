@@ -27,6 +27,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKPX, "PX", "<led>,<r>,<g>,<b>", "Set l
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKP, "P", "<00[:.]00[:.]00>", "Display strings");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKC, "C", "<r>,<g>,<b>", "Set color");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKM, "M", "<value>[,<incr>,<min>,<max>]", "Set rainbow animation multiplier");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKT, "T", "<value>", "Overide temperature");
 // PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKTS, "TS", "<num>,<segment>", "Set segment for digit <num>");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(CLOCKA, "A", "<num>[,<arguments>,...]", "Set animation", "Display available animations");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(CLOCKD, "D", "Dump pixel addresses and other information");
@@ -38,6 +39,7 @@ ATModeCommandHelpArrayPtr ClockPlugin::atModeCommandHelp(size_t &size) const
         PROGMEM_AT_MODE_HELP_COMMAND(CLOCKP),
         PROGMEM_AT_MODE_HELP_COMMAND(CLOCKC),
         PROGMEM_AT_MODE_HELP_COMMAND(CLOCKM),
+        PROGMEM_AT_MODE_HELP_COMMAND(CLOCKT),
         // PROGMEM_AT_MODE_HELP_COMMAND(CLOCKTS),
         PROGMEM_AT_MODE_HELP_COMMAND(CLOCKA),
         PROGMEM_AT_MODE_HELP_COMMAND(CLOCKD)
@@ -260,6 +262,15 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             _display.show();
         }
         return true;
+    }
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKT))) {
+        // if (args.size() > 0) {
+            _tempOverride = args.toIntMinMax<uint8_t>(0, kMinimumTemperatureThreshold, 255, 0);
+        // }
+        // else {
+            // _tempOverride = 0;
+        // }
+        args.printf_P(PSTR("temp override %u"), _tempOverride);
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKD))) {
         _display.dump(args.getStream());

@@ -110,6 +110,9 @@ using SevenSegmentDisplay = SevenSegmentPixel<uint16_t, 1, IOT_CLOCK_NUM_PIXELS,
         RAINBOW,
         FLASHING,
         FADING,
+#if IOT_LED_MATRIX
+        SKIP_ROWS,
+#endif
         MAX,
         NEXT,
     };
@@ -289,7 +292,7 @@ using SevenSegmentDisplay = SevenSegmentPixel<uint16_t, 1, IOT_CLOCK_NUM_PIXELS,
 
     private:
         Color _normalizeColor(uint8_t red, uint8_t green, uint8_t blue) const;
-        float _increment(float value, float min, float max, float incr);
+        void _increment(float *valuePtr, float min, float max, float *incrPtr);
 
         uint16_t _speed;
         RainbowMultiplier &_multiplier;
@@ -326,6 +329,20 @@ using SevenSegmentDisplay = SevenSegmentPixel<uint16_t, 1, IOT_CLOCK_NUM_PIXELS,
         Color _color;
         uint16_t _time;
         uint8_t _mod;
+    };
+
+    class SkipRowsAnimation : public Animation {
+    public:
+        SkipRowsAnimation(ClockPlugin &clock, uint16_t rows, uint16_t cols, uint32_t time);
+
+        virtual void begin() override;
+        virtual void end() override;
+        virtual void loop(time_t now) {}
+
+    private:
+        uint16_t _rows;
+        uint16_t _cols;
+        uint32_t _time;
     };
 
     class CallbackAnimation : public Animation {

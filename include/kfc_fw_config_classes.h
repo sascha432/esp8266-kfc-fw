@@ -1719,22 +1719,16 @@ typedef struct  {
                 CREATE_UINT8_BITFIELD(time_format_24h, 1);
 #endif
                 uint8_t brightness;
-
-                uint16_t getBrightness() const {
-                    return brightness << 8;
-                }
-                void setBrightness(uint16_t pBrightness) {
-                    brightness = pBrightness >> 8;
-                }
-
                 int16_t auto_brightness;
 #if !IOT_LED_MATRIX
                 uint16_t blink_colon_speed;
 #endif
                 uint16_t flashing_speed;
                 struct __attribute__packed__ {
-                    uint8_t temperature_75;
-                    uint8_t temperature_50;
+                    struct __attribute__packed__ {
+                        uint8_t min;
+                        uint8_t max;
+                    } temperature_reduce_range;
                     uint8_t max_temperature;
                 } protection;
                 struct __attribute__packed__ {
@@ -1751,8 +1745,20 @@ typedef struct  {
                     uint16_t delay;
                     ClockColor_t factor;
                 } fading;
+                struct __attribute__packed__ {
+                    uint8_t rows;
+                    uint8_t cols;
+                    uint32_t time;
+                } skip_rows;
 
                 ClockConfig_t();
+
+                uint16_t getBrightness() const {
+                    return brightness << 8;
+                }
+                void setBrightness(uint16_t pBrightness) {
+                    brightness = pBrightness >> 8;
+                }
 
             } ClockConfig_t;
         };

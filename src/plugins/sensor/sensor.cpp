@@ -65,6 +65,15 @@ void SensorPlugin::setup(SetupModeType mode)
 #if IOT_SENSOR_HAVE_LM75A
     _sensors.push_back(__LDBG_new(Sensor_LM75A, F(IOT_SENSOR_NAMES_LM75A), config.initTwoWire(), IOT_SENSOR_HAVE_LM75A));
 #endif
+#if IOT_SENSOR_HAVE_LM75A_2
+    _sensors.push_back(__LDBG_new(Sensor_LM75A, F(IOT_SENSOR_NAMES_LM75A_2), config.initTwoWire(), IOT_SENSOR_HAVE_LM75A_2));
+#endif
+#if IOT_SENSOR_HAVE_LM75A_3
+    _sensors.push_back(__LDBG_new(Sensor_LM75A, F(IOT_SENSOR_NAMES_LM75A_3), config.initTwoWire(), IOT_SENSOR_HAVE_LM75A_3));
+#endif
+#if IOT_SENSOR_HAVE_LM75A_4
+    _sensors.push_back(__LDBG_new(Sensor_LM75A, F(IOT_SENSOR_NAMES_LM75A_4), config.initTwoWire(), IOT_SENSOR_HAVE_LM75A_4));
+#endif
 #if IOT_SENSOR_HAVE_BME280
     _sensors.push_back(__LDBG_new(Sensor_BME280, F(IOT_SENSOR_NAMES_BME280), config.initTwoWire(), IOT_SENSOR_HAVE_BME280));
 #endif

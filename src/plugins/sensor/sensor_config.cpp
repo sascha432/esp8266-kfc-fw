@@ -5,11 +5,15 @@
 #include <Configuration.h>
 #include <kfc_fw_config.h>
 
+#ifndef IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_CALIBRATION
+#define IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_CALIBRATION          1.0
+#endif
+
 namespace KFCConfigurationClasses {
 
 #if IOT_SENSOR_HAVE_BATTERY
     Plugins::Sensor::BatteryConfig_t::BatteryConfig_t() :
-        calibration(1),
+        calibration(IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_CALIBRATION),
         offset(0),
         pins{IOT_SENSOR_BATTERY_CHARGE_DETECTION},
         pinMode{(uint8_t)(IOT_SENSOR_BATTERY_CHARGE_DETECTION == -1 ? BatteryPinMode::NONE : BatteryPinMode::ACTIVE_HIGH)},

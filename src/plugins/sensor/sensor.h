@@ -29,6 +29,18 @@
 #define IOT_SENSOR_NAMES_LM75A                  "LM75A Temperature"
 #endif
 
+#ifndef IOT_SENSOR_NAMES_LM75A_2
+#define IOT_SENSOR_NAMES_LM75A_2                "LM75A Temperature"
+#endif
+
+#ifndef IOT_SENSOR_NAMES_LM75A_3
+#define IOT_SENSOR_NAMES_LM75A_3                "LM75A Temperature"
+#endif
+
+#ifndef IOT_SENSOR_NAMES_LM75A_4
+#define IOT_SENSOR_NAMES_LM75A_4                "LM75A Temperature"
+#endif
+
 #ifndef IOT_SENSOR_NAMES_BME280
 #define IOT_SENSOR_NAMES_BME280                 "BME280"
 #endif

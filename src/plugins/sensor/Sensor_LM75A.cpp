@@ -76,6 +76,12 @@ void Sensor_LM75A::publishState(MQTTClient *client)
 void Sensor_LM75A::getStatus(Print &output)
 {
     output.printf_P(PSTR("LM75A @ I2C address 0x%02x" HTML_S(br)), _address);
+#if 0
+    for(uint8_t i = 0x48; i <= 0x4f; i++) {
+        auto val = _readSensor(i);
+        output.printf_P(PSTR("address 0x%02x = %f" HTML_S(br)), i, val);
+    }
+#endif
 }
 
 MQTTSensorSensorType Sensor_LM75A::getType() const
@@ -90,16 +96,19 @@ bool Sensor_LM75A::getSensorData(String &name, StringVector &values)
     return true;
 }
 
-float Sensor_LM75A::_readSensor()
+float Sensor_LM75A::_readSensor(uint8_t address)
 {
-    _wire.beginTransmission(_address);
-    _wire.write(0x00);
-    if (_wire.endTransmission() == 0 && _wire.requestFrom(_address, (uint8_t)2) == 2) {
-        float temp = (((uint8_t)Wire.read() << 8) | (uint8_t)Wire.read()) / 256.0;
-        __LDBG_printf("Sensor_LM75A::_readSensor(): address 0x%02x: %.2f", _address, temp);
-        return temp + IOT_SENSOR_LM75A_OFFSET;
+    if (address == 255) {
+        address = _address;
     }
-    __LDBG_printf("Sensor_LM75A::_readSensor(): address 0x%02x: error", _address);
+    _wire.beginTransmission(address);
+    _wire.write(0x00);
+    if (_wire.endTransmission() == 0 && _wire.requestFrom(address, (uint8_t)2) == 2) {
+        float temp = (((uint8_t)Wire.read() << 8) | (uint8_t)Wire.read()) / 256.0;
+        __LDBG_printf("Sensor_LM75A::_readSensor(): address 0x%02x: %.2f", address, temp);
+        return temp;
+    }
+    __LDBG_printf("Sensor_LM75A::_readSensor(): address 0x%02x: error", address);
     return NAN;
 }
 

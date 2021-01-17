@@ -13,10 +13,6 @@
 #include "plugins.h"
 #include "MQTTSensor.h"
 
-#ifndef IOT_SENSOR_LM75A_OFFSET
-#define IOT_SENSOR_LM75A_OFFSET                 0
-#endif
-
 class Sensor_CCS811;
 
 class Sensor_LM75A : public MQTTSensor {
@@ -34,15 +30,18 @@ public:
     virtual MQTTSensorSensorType getType() const override;
     virtual bool getSensorData(String &name, StringVector &values) override;
 
-    float readSensor() {
-        return _readSensor();
+    float readSensor(uint8_t address = 255) {
+        return _readSensor(address);
+    }
+    uint8_t getAddress() const {
+        return _address;
     }
 
 private:
     friend Sensor_CCS811;
 
     String _getId();
-    float _readSensor();
+    float _readSensor(uint8_t address = 255);
 
     JsonString _name;
     TwoWire &_wire;

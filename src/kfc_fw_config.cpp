@@ -2,6 +2,7 @@
  * Author: sascha_lammers@gmx.de
  */
 
+#include <Arduino_compat.h>
 #include <kfc_fw_config.h>
 #include <kfc_fw_config_plugin.h>
 #include <stl_ext/array.h>
@@ -631,6 +632,10 @@ void KFCFWConfiguration::restoreFactorySettings()
     customSettings();
 #endif
     WebAlerts::Alert::warning(F("Factory settings restored"));
+
+#if SECURITY_LOGIN_ATTEMPTS
+    KFCFS.remove(FSPGM(login_failure_file));
+#endif
 }
 
 #if CUSTOM_CONFIG_PRESET

@@ -7,11 +7,6 @@
 
 #if WEBSERVER_SUPPORT
 
-// web socket replacement for rest calls
-#ifndef WEBSERVER_WS_COMM
-#define WEBSERVER_WS_COMM                   0
-#endif
-
 #ifndef DEBUG_WEB_SERVER
 #define DEBUG_WEB_SERVER                    0
 #endif
@@ -22,11 +17,11 @@
 #include <SpeedBooster.h>
 #include <KFCJson.h>
 #include <HeapStream.h>
-#include "failure_counter.h"
 #include "plugins.h"
 #include "web_socket.h"
 
 class FileMapping;
+class FailureCounterContainer;
 
 #if IOT_WEATHER_STATION
 extern void __weatherStationDetachCanvas(bool release);
@@ -133,7 +128,7 @@ private:
     RestHandler::Vector _restCallbacks;
     AsyncWebServer *_server;
 public:
-    FailureCounterContainer _loginFailures;
+    FailureCounterContainer *_loginFailures;
 
 // AsyncWebServer handlers
 public:
@@ -174,18 +169,6 @@ public:
     bool isAuthenticated(AsyncWebServerRequest *request) const {
         return getAuthenticated(request) > AuthType::NONE;
     }
-
-#if WEBSERVER_WS_COMM
-public:
-    inline AsyncWebSocket *wsGetServerSocket() {
-        return wsMainSocket;
-    }
-    void wsEventHandler(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);
-    void wsSetup();
-
-private:
-    WsClientAsyncWebSocket *wsMainSocket;
-#endif
 };
 
 inline bool operator ==(const WebServerPlugin::AuthType &auth, bool invert) {

@@ -355,7 +355,7 @@ namespace KFCConfigurationClasses {
                 CREATE_BOOL_BITFIELD(is_webalerts_enabled);
                 CREATE_BOOL_BITFIELD(is_ssdp_enabled);
                 CREATE_BOOL_BITFIELD(is_netbios_enabled);
-                CREATE_UINT8_BITFIELD(__reserved, 1);
+                CREATE_BOOL_BITFIELD(is_log_login_failures_enabled);
 
                 uint8_t __reserved2;
 
@@ -376,6 +376,7 @@ namespace KFCConfigurationClasses {
                 static WebServerTypes::ModeType get_webserver_mode(const Type &obj);
                 static void set_webserver_mode(Type &obj, WebServerTypes::ModeType mode);
 
+#if 0
                 template<class T>
                 void dump() {
                     CONFIG_DUMP_STRUCT_INFO(T);
@@ -404,7 +405,9 @@ namespace KFCConfigurationClasses {
                     CONFIG_DUMP_STRUCT_VAR(is_webalerts_enabled);
                     CONFIG_DUMP_STRUCT_VAR(is_ssdp_enabled);
                     CONFIG_DUMP_STRUCT_VAR(is_netbios_enabled);
+                    CONFIG_DUMP_STRUCT_VAR(is_log_login_failures_enabled);
                 }
+#endif
 
                 ConfigFlags_t();
 
@@ -511,11 +514,28 @@ namespace KFCConfigurationClasses {
             AUTO_DEFAULT_PORT_CONST_SECURE(0, 80, 443);
 
             typedef struct __attribute__packed__ WebServerConfig_t {
-                uint8_t is_https: 1;
-                uint8_t __reserved: 7;
+                using Type = WebServerConfig_t;
+
+                CREATE_BOOL_BITFIELD(is_https);
+#if SECURITY_LOGIN_ATTEMPTS
+                CREATE_UINT8_BITFIELD_MIN_MAX(login_attempts, 7, 0, 100, 10, 1);
+                CREATE_UINT16_BITFIELD_MIN_MAX(login_timeframe, 12, 0, 3600, 300, 1);               // seconds
+                CREATE_UINT16_BITFIELD_MIN_MAX(login_rewrite_interval, 7, 1, 120, 5, 1);            // minutes
+                CREATE_UINT16_BITFIELD_MIN_MAX(login_storage_timeframe, 5, 1, 30, 1, 1);            // days
+#endif
                 AUTO_DEFAULT_PORT_GETTER_SETTER_SECURE(__port, is_https);
 
-                WebServerConfig_t() : is_https(false), __port(kPortAuto) {}
+#if SECURITY_LOGIN_ATTEMPTS
+                uint32_t getLoginRewriteInterval() const {
+                    return login_rewrite_interval * 60;
+                }
+
+                uint32_t getLoginStorageTimeframe() const {
+                    return login_storage_timeframe * 86400;
+                }
+#endif
+
+                WebServerConfig_t();
 
             } WebServerConfig_t;
         };
@@ -1303,12 +1323,14 @@ namespace KFCConfigurationClasses {
                 };
                 AUTO_DEFAULT_PORT_GETTER_SETTER_SECURE(__port, protocol_enum == SyslogProtocolType::TCP_TLS);
 
+#if 0
                 template<class T>
                 void dump() {
                     CONFIG_DUMP_STRUCT_INFO(T);
                     CONFIG_DUMP_STRUCT_VAR(protocol);
                     CONFIG_DUMP_STRUCT_VAR(__port);
                 }
+#endif
 
                 SyslogConfig_t() : protocol_enum(SyslogProtocolType::TCP), __port(kPortDefault) {}
 
@@ -1734,9 +1756,33 @@ typedef struct  {
             typedef struct __attribute__packed__ ClockConfig_t {
                 using Type = ClockConfig_t;
 
+                enum class AnimationType : uint8_t {
+                    MIN = 0,
+                    NONE = 0,
+                    RAINBOW,
+                    FLASHING,
+                    FADING,
+#if IOT_LED_MATRIX
+                    FIRE,
+                    SKIP_ROWS,
+#endif
+                    MAX,
+                    NEXT,
+                };
+
+                enum class InitialStateType : uint8_t  {
+                    MIN = 0,
+                    OFF = 0,
+                    ON,
+                    RESTORE,
+                    MAX
+                };
+
                 ClockColor_t solid_color;
-                CREATE_UINT8_BITFIELD(animation, 7);
-#if !IOT_LED_MATRIX
+                CREATE_ENUM_BITFIELD(animation, AnimationType);
+#if IOT_LED_MATRIX
+                CREATE_ENUM_BITFIELD(initial_state, InitialStateType);
+#else
                 CREATE_UINT8_BITFIELD(time_format_24h, 1);
 #endif
                 uint8_t brightness;

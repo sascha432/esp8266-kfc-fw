@@ -56,7 +56,7 @@ namespace KFCConfigurationClasses {
         is_webalerts_enabled(true),
         is_ssdp_enabled(true),
         is_netbios_enabled(true),
-        __reserved(0),
+        is_log_login_failures_enabled(false),
         __reserved2(0)
     {
     }

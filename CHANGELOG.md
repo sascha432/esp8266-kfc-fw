@@ -44,6 +44,8 @@
 - LED Matrix plugin
 - Cycling color and animation for rainbow mode (Clock/LED matrix)
 - Reduce brightness depending on the temperature
+- Added fire animation
+- Configureable login security
 
 ## Version 0.0.3
 

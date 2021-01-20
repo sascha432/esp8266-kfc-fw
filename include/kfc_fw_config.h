@@ -15,7 +15,6 @@
 
 #include <Arduino_compat.h>
 #include <EventScheduler.h>
-#include <Wire.h>
 #include <vector>
 #include <functional>
 #include <bitset>
@@ -24,8 +23,11 @@
 #if SYSLOG_SUPPORT
 #include <Syslog.h>
 #endif
+#if MDNS_PLUGIN
 #include "../src/plugins/mdns/mdns_resolver.h"
+#endif
 #include <SaveCrash.h>
+#include <Wire.h>
 #include "logger.h"
 #include "misc.h"
 #include "at_mode.h"

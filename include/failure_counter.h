@@ -4,7 +4,13 @@
 
 #pragma once
 
+#include <global.h>
+
 #if SECURITY_LOGIN_ATTEMPTS
+
+#ifndef DEBUG_LOGIN_FAILURES
+#define DEBUG_LOGIN_FAILURES                0
+#endif
 
 #include <Arduino_compat.h>
 #include <time.h>
@@ -15,9 +21,11 @@
 typedef struct __attribute__packed__ FailureCounterFileRecordStruct  {
     uint32_t addr;
     uint16_t counter;
-    time_t firstFailure;
-    time_t lastFailure;
+    uint32_t firstFailure;
+    uint32_t lastFailure;
 } FailureCounterFileRecord_t;
+
+class FailureCounterContainer;
 
 class FailureCounter  {
 public:
@@ -26,16 +34,28 @@ public:
         INVALID_DATA = 0xffff
     };
 
-    FailureCounter() {
-        _counter = FailureCounter::INVALID_DATA;
+    FailureCounter(FailureCounterContainer &container);
+    FailureCounter(FailureCounterContainer &container, const FailureCounterFileRecord_t &record);
+    FailureCounter(FailureCounterContainer &container, const IPAddress &addr);
+
+    FailureCounter(FailureCounter &&move) :
+        _addr(move._addr),
+        _counter(move._counter),
+        _firstFailure(move._firstFailure),
+        _lastFailure(move._lastFailure),
+        _container(move._container)
+    {
     }
-    FailureCounter(const FailureCounterFileRecord_t &record);
-    FailureCounter(const IPAddress &addr);
+
+    FailureCounter &operator=(FailureCounter &&move) {
+        ::new(static_cast<void *>(this)) FailureCounter(std::move(move));
+        return *this;
+    }
 
     bool operator !() const;
     operator bool() const;
 
-    time_t getTimeframe() const;
+    uint32_t getTimeframe() const;
     bool isBlocked(const IPAddress &addr) const;
     bool isMatch(const IPAddress &addr) const;
     String getFirstFailure() const;
@@ -48,14 +68,14 @@ public:
 private:
     IPAddress _addr;
     uint16_t _counter;
-    time_t _firstFailure;
-    time_t _lastFailure;
+    uint32_t _firstFailure;
+    uint32_t _lastFailure;
+    FailureCounterContainer &_container;
 };
 
 class FailureCounterContainer {
 public:
-    FailureCounterContainer() : _lastRewrite(0) {
-    }
+    FailureCounterContainer();
     void clear() {
         _failures.clear();
     }
@@ -72,7 +92,11 @@ private:
 
 private:
     std::vector<FailureCounter> _failures;
-    time_t _lastRewrite;
+    uint32_t _lastRewrite;
+    uint32_t _rewriteInterval;
+    uint32_t _storageTimeframe;
+    uint16_t _checkTimeframe;
+    uint8_t _attempts;
 };
 
 #include <pop_pack.h>

@@ -27,6 +27,7 @@
 #include "WebUISocket.h"
 #include "WebUIAlerts.h"
 #include "kfc_fw_config.h"
+#include "failure_counter.h"
 #if STK500V1
 #include "../src/plugins/stk500v1/STK500v1Programmer.h"
 #endif
@@ -73,11 +74,6 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     false,              // has_at_mode
     0                   // __reserved
 );
-
-#if SECURITY_LOGIN_ATTEMPTS
-FailureCounterContainer &loginFailures = plugin._loginFailures;
-#endif
-
 
 #define U_ATMEGA 254
 
@@ -673,6 +669,10 @@ void WebServerPlugin::end()
         delete _server;
         _server = nullptr;
     }
+    if (_loginFailures) {
+        delete _loginFailures;
+        _loginFailures = nullptr;
+    }
 }
 
 void WebServerPlugin::begin()
@@ -695,7 +695,10 @@ void WebServerPlugin::begin()
     _server = new AsyncWebServer(cfg.getPort());
     // server->addHandler(&events);
 
-    _loginFailures.readFromSPIFFS();
+    if (System::Flags::getConfig().is_log_login_failures_enabled) {
+        _loginFailures = new FailureCounterContainer();
+        _loginFailures->readFromSPIFFS();
+    }
 
 #if REST_API_SUPPORT
     // // download /.mappings
@@ -738,10 +741,6 @@ void WebServerPlugin::begin()
 
     _server->begin();
     __LDBG_printf("HTTP running on port %u", System::WebServer::getConfig().getPort());
-
-#if WEBSERVER_WS_COMM
-    wsSetup();
-#endif
 }
 
 bool WebServerPlugin::_sendFile(const FileMapping &mapping, const String &formName, HttpHeaders &httpHeaders, bool client_accepts_gzip, bool isAuthenticated, AsyncWebServerRequest *request, WebTemplate *webTemplate)
@@ -879,7 +878,7 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
 
             __SID(debug_printf_P(PSTR("blocked=%u username=%s match:user=%u pass=%u\n"), _loginFailures.isAddressBlocked(remote_addr), request->arg(FSPGM(username)).c_str(), (request->arg(FSPGM(username)) == username), (request->arg(FSPGM(password)) == password)));
 
-            if (_loginFailures.isAddressBlocked(remote_addr) == false && request->arg(FSPGM(username)) == username && request->arg(FSPGM(password)) == password) {
+            if ((_loginFailures == nullptr || _loginFailures->isAddressBlocked(remote_addr) == false) && request->arg(FSPGM(username)) == username && request->arg(FSPGM(password)) == password) {
 
                 auto &cookie = httpHeaders.add<HttpCookieHeader>(FSPGM(SID), generate_session_id(username, password, nullptr), String('/'));
                 authType = AuthType::PASSWORD;
@@ -899,8 +898,13 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
             }
             else {
                 loginError = FSPGM(Invalid_username_or_password, "Invalid username or password");
-                const FailureCounter &failure = _loginFailures.addFailure(remote_addr);
-                Logger_security(F("Login from %s failed %d times since %s (%s)"), remote_addr.toString().c_str(), failure.getCounter(), failure.getFirstFailure().c_str(), getAuthTypeStr(authType));
+                if (_loginFailures) {
+                    const FailureCounter &failure = _loginFailures->addFailure(remote_addr);
+                    Logger_security(F("Login from %s failed %d times since %s (%s)"), remote_addr.toString().c_str(), failure.getCounter(), failure.getFirstFailure().c_str(), getAuthTypeStr(authType));
+                }
+                else {
+                    Logger_security(F("Login from %s failed (%s)"), remote_addr.toString().c_str(), getAuthTypeStr(authType));
+                }
                 return _sendFile(FSPGM(_login_html, "/login.html"), String(), httpHeaders, client_accepts_gzip, isAuthenticated, request, __LDBG_new(LoginTemplate, loginError));
             }
         }
@@ -984,11 +988,8 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
 WebServerPlugin::WebServerPlugin() :
     PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(WebServerPlugin)),
     _updateFirmwareCallback(nullptr),
-    _server(nullptr)
-#if WEBSERVER_WS_COMM
-    ,
-    wsMainSocket(nullptr)
-#endif
+    _server(nullptr),
+    _loginFailures(nullptr)
 {
     REGISTER_PLUGIN(this, "WebServerPlugin");
 }
@@ -1058,77 +1059,6 @@ void WebServerPlugin::getStatus(Print &output)
     else {
         output.print(FSPGM(disabled));
     }
-}
-
-typedef struct WebServerConfigCombo_t {
-    using Type = WebServerConfigCombo_t;
-    using ModeType = WebServerTypes::ModeType;
-
-    System::FlagsConfig::ConfigFlags_t *flags;
-    System::WebServerConfig::WebServerConfig_t *cfg;
-
-    static ModeType get_webserver_mode(const Type &obj) {
-        return obj.flags->is_web_server_enabled == false ? ModeType::DISABLED : (obj.cfg->is_https ? ModeType::SECURE : ModeType::UNSECURE);
-    }
-    static void set_webserver_mode(Type &obj, ModeType mode) {
-        if (mode == ModeType::DISABLED) {
-            obj.flags->is_web_server_enabled = false;
-        }
-        else {
-            obj.flags->is_web_server_enabled = true;
-            obj.cfg->is_https = (mode == ModeType::SECURE);
-        }
-    }
-
-} WebServerConfigCombo_t;
-
-
-
-void WebServerPlugin::createConfigureForm(PluginComponent::FormCallbackType type, const String &name, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
-{
-    if (type == PluginComponent::FormCallbackType::SAVE) {
-        config.setConfigDirty(true);
-        return;
-    }
-    else if (!isCreateFormCallbackType(type)) {
-        return;
-    }
-
-    auto &flags = System::Flags::getWriteableConfig();
-    auto &cfg = System::WebServer::getWriteableConfig();
-    WebServerConfigCombo_t combo = { &flags, &cfg };
-
-    // form.setFormUI(F("Remote Access Configuration"));
-
-    form.addObjectGetterSetter(FSPGM(httpmode, "httpmode"), combo, combo.get_webserver_mode, combo.set_webserver_mode, FormUI::Field::Type::SELECT);
-    form.addValidator(FormUI::Validator::EnumRange<System::WebServer::ModeType>());
-
-#if WEBSERVER_TLS_SUPPORT
-    form.addValidator(FormUI::Validator::Match(F("There is not enough free RAM for TLS support"), [](FormField &field) {
-        return (field.getValue().toInt() != HTTP_MODE_SECURE) || (ESP.getFreeHeap() > 24000);
-    }));
-#endif
-
-#if defined(ESP8266)
-    form.addObjectGetterSetter(F("httperf"), flags, flags.get_bit_is_webserver_performance_mode_enabled, flags.set_bit_is_webserver_performance_mode_enabled);
-#endif
-
-    form.addCallbackSetter(F("httport"), cfg.getPortAsString(), [&cfg](const String &value, FormField &field) {
-        cfg.setPort(value.toInt(), cfg.isSecure()); // setMode() is executed already and cfg.is_https set
-        field.setValue(cfg.getPortAsString());
-    }); //->setFormUI(new FormUI::UI(FormUI::Type::NUMBER, FSPGM(Port, "Port"))));
-    form.addValidator(FormUI::Validator::NetworkPort(true));
-
-#if WEBSERVER_TLS_SUPPORT
-
-    form.add(new FormObject<File2String>(F("ssl_cert"), File2String(FSPGM(server_crt)), nullptr));
-    form.add(new FormObject<File2String>(F("ssl_key"), File2String(FSPGM(server_key)), nullptr));
-
-#endif
-    form.addStringGetterSetter(F("btok"), System::Device::getToken, System::Device::setToken); //->setFormUI(new FormUI::UI(FormUI::Type::TEXT, F("Token for Web Server, Web Sockets and Tcp2Serial"))));
-    form.addValidator(FormUI::Validator::Length(System::Device::kTokenMinSize, System::Device::kTokenMaxSize));
-
-    form.finalize();
 }
 
 WebServerPlugin &WebServerPlugin::getInstance()

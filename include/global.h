@@ -148,18 +148,18 @@
 #if HTTP2SERIAL_SUPPORT && !WEBSERVER_SUPPORT
 #pragma message("HTTP2SERIAL_SUPPORT requires WEBSERVER_SUPPORT. Automatically disabled!")
 #undef HTTP2SERIAL_SUPPORT
-#define HTTP2SERIAL_SUPPORT                         0
+#define HTTP2SERIAL_SUPPORT                                 0
 #endif
 
 // check http2serial.h for a description
 #ifndef HTTP2SERIAL_SERIAL_BUFFER_FLUSH_DELAY
-#define HTTP2SERIAL_SERIAL_BUFFER_FLUSH_DELAY       75
+#define HTTP2SERIAL_SERIAL_BUFFER_FLUSH_DELAY               75
 #endif
 #ifndef HTTP2SERIAL_SERIAL_BUFFER_MAX_LEN
-#define HTTP2SERIAL_SERIAL_BUFFER_MAX_LEN           512
+#define HTTP2SERIAL_SERIAL_BUFFER_MAX_LEN                   512
 #endif
 #ifndef HTTP2SERIAL_SERIAL_BUFFER_MIN_LEN
-#define HTTP2SERIAL_SERIAL_BUFFER_MIN_LEN           128
+#define HTTP2SERIAL_SERIAL_BUFFER_MIN_LEN                   128
 #endif
 
 #ifndef KFC_SERIAL_PORT
@@ -168,40 +168,34 @@
 
 // disable at mode when a client connects to the serial console via web socket
 #ifndef HTTP2SERIAL_DISABLE_AT_MODE
-#define HTTP2SERIAL_DISABLE_AT_MODE                 0
+#define HTTP2SERIAL_DISABLE_AT_MODE                         0
 #endif
 
 #ifndef NTP_CLIENT
 // NTP client support
-#define NTP_CLIENT                                  1
+#define NTP_CLIENT                                          1
 #endif
 
 #ifndef MQTT_SUPPORT
 // Support for a MQTT broker
-#define MQTT_SUPPORT                                1
+#define MQTT_SUPPORT                                        1
 #endif
 
 #ifndef MQTT_USE_PACKET_CALLBACKS
-#define MQTT_USE_PACKET_CALLBACKS                   0
+#define MQTT_USE_PACKET_CALLBACKS                           0
 #endif
 
 #ifndef MQTT_AUTO_DISCOVERY
-#define MQTT_AUTO_DISCOVERY                         1
+#define MQTT_AUTO_DISCOVERY                                 1
 #endif
 
 #ifndef WEBSERVER_SUPPORT
 // enable embded web server
-#define WEBSERVER_SUPPORT                           1
+#define WEBSERVER_SUPPORT                                   1
 #endif
 
-#if WEBSERVER_SUPPORT
-// maxmimum failed logins within timeframe
-#define SECURITY_LOGIN_ATTEMPTS                             10
-#define SECURITY_LOGIN_TIMEFRAME                            300
-// rewrite file every hour to remove old records
-#define SECURITY_LOGIN_REWRITE_INTERVAL                     3600
-// keep failed attempts stored on SPIFFS
-#define SECURITY_LOGIN_STORE_TIMEFRAME                      86400
+#ifndef SECURITY_LOGIN_ATTEMPTS
+#define SECURITY_LOGIN_ATTEMPTS                             1
 #endif
 
 // time in seconds before the system is in a stable state

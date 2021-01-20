@@ -32,8 +32,10 @@ namespace KFCConfigurationClasses {
 
     Plugins::ClockConfig::ClockConfig_t::ClockConfig_t() :
         solid_color(0x00ff00),
-        animation(0),
-#if !IOT_LED_MATRIX
+        animation(cast_int_animation(AnimationType::NONE)),
+#if IOT_LED_MATRIX
+        initial_state(cast_int_initial_state(InitialStateType::OFF)),
+#else
         time_format_24h(true),
 #endif
         brightness(128),

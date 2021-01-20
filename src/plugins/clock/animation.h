@@ -97,26 +97,14 @@ using SevenSegmentDisplay = SevenSegmentPixel<uint16_t, 1, IOT_CLOCK_NUM_PIXELS,
     using ColorType = SevenSegmentDisplay::ColorType;
     using AnimationCallback = SevenSegmentDisplay::AnimationCallback;
     using LoopCallback = std::function<void(time_t now)>;
+    using AnimationType = Plugins::Clock::ClockConfig_t::AnimationType;
+    using InitialStateType = Plugins::Clock::ClockConfig_t::InitialStateType;
 
     static constexpr auto kTotalPixelCount = SevenSegmentDisplay::kTotalPixelCount;
     static constexpr uint16_t kMaxBrightness = SevenSegmentDisplay::kMaxBrightness;
     static constexpr uint16_t kBrightness75 = kMaxBrightness * 0.75;
     static constexpr uint16_t kBrightness50 = kMaxBrightness * 0.5;
     static constexpr uint16_t kBrightnessTempProtection = kMaxBrightness * 0.25;
-
-    enum class AnimationType : uint8_t {
-        MIN = 0,
-        NONE = 0,
-        RAINBOW,
-        FLASHING,
-        FADING,
-#if IOT_LED_MATRIX
-        FIRE,
-        SKIP_ROWS,
-#endif
-        MAX,
-        NEXT,
-    };
 
     class Color {
     public:

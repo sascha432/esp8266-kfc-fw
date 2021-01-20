@@ -4,7 +4,7 @@
 // --------------------------------------------------------------------
 auto &animationGroup = form.addCardGroup(F("anicfg"), FSPGM(Animation), true);
 
-form.addObjectGetterSetter(F("ani"), cfg, cfg.get_bits_animation, cfg.set_bits_animation);
+form.addObjectGetterSetter(F("ani"), cfg, cfg.get_int_animation, cfg.set_int_animation);
 form.addFormUI(FSPGM(Type), animationTypeItems);
 //form.addValidator(FormUI::Validator::RangeEnum<AnimationType>());
 

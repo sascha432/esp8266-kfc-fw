@@ -32,12 +32,21 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         AnimationType::SKIP_ROWS, F("Skip Rows or Columns")
     );
 
+    auto initialStateItems = FormUI::Container::List(
+        Clock::InitialStateType::OFF, F("Turn Off"),
+        Clock::InitialStateType::ON, F("Turn On"),
+        Clock::InitialStateType::RESTORE, F("Restore Last State")
+    );
+
     auto &ui = form.createWebUI();
     ui.setTitle(F("LED Matrix Configuration"));
     ui.setContainerId(F("led_matrix_settings"));
     ui.setStyle(FormUI::WebUI::StyleType::ACCORDION);
 
     auto &mainGroup = form.addCardGroup(FSPGM(config));
+
+    form.addObjectGetterSetter(F("is"), cfg, cfg.get_int_initial_state, cfg.set_int_initial_state);
+    form.addFormUI(F("After Reset"), initialStateItems);
 
     form.addPointerTriviallyCopyable(FSPGM(brightness), &cfg.brightness);
     form.addFormUI(FormUI::Type::RANGE_SLIDER, FSPGM(Brightness), FormUI::MinMax(0, 255));

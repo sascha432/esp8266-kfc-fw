@@ -15,7 +15,7 @@ namespace KFCConfigurationClasses {
         login_rewrite_interval(kDefaultValueFor_login_rewrite_interval),
         login_storage_timeframe(kDefaultValueFor_login_storage_timeframe),
 #endif
-        __port(kPortAuto)
+        __port(kDefaultValueFor___port)
     {
     }
 

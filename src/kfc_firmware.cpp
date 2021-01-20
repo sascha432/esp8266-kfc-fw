@@ -90,7 +90,7 @@ void setup()
 #if DEBUG_RESET_DETECTOR
     resetDetector._init();
 #endif
-    BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::OFF);
+    BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
 
     if (resetDetector.getResetCounter() >= 20 && !resetDetector.hasWakeUpDetected()) {
         KFC_SAFE_MODE_SERIAL_PORT.println(F("Reboot continues in 5 seconds..."));
@@ -103,7 +103,7 @@ void setup()
 
 #if DEBUG_PRE_INIT_SERIAL2TCP
     #include "../include/retracted/custom_wifi.h"
-    BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::FAST);
+    BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FAST);
     WiFi.setAutoConnect(true);
     WiFi.setAutoReconnect(true);
     WiFi.enableSTA(true);
@@ -117,10 +117,10 @@ void setup()
         auto instance = Serial2TcpBase::createInstance(cfg, CUSTOM_SERIAL2TCP_SERVER);
         instance->begin();
         delay(1000);
-        BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::OFF);
+        BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
     }
     else {
-        BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::SOS);
+        BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SOD);
     }
 #endif
 
@@ -151,12 +151,16 @@ void setup()
     if (resetDetector.hasResetDetected()) {
         if (resetDetector.getResetCounter() >= KFC_RESTORE_FACTORY_SETTINGS_RESET_COUNT) {
             KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("%ux reset detected. Restoring factory defaults in a 5 seconds...\n"), KFC_RESTORE_FACTORY_SETTINGS_RESET_COUNT);
+#if __LED_BUILTIN != -1
             for(uint8_t i = 0; i < (RESET_DETECTOR_TIMEOUT + 500) / (100 + 250); i++) {
-                BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::SOLID);
+                BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SOLID);
                 delay(100);
-                BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::OFF);
+                BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
                 delay(250);
             }
+#else
+            delay(5000);
+#endif
             config.restoreFactorySettings();
             config.write();
             resetDetector.setSafeMode(false);
@@ -200,7 +204,7 @@ void setup()
             KFC_SAFE_MODE_SERIAL_PORT.println(F("Press reset again to start in safe mode."));
             KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("Press reset %ux times to restore factory defaults. A blinking LED indicates success and the normal boot process continues after %u seconds.\n\n"), KFC_RESTORE_FACTORY_SETTINGS_RESET_COUNT, RESET_DETECTOR_TIMEOUT / 1000U);
 
-            BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::SOS);
+            BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SOS);
             resetDetector.setSafeMode(1);
 
             static_assert(KFC_BOOT_MENU_TIMEOUT >= 3, "timeout should be at least 3 seconds");

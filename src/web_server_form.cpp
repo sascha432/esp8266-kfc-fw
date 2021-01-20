@@ -62,7 +62,7 @@ void WebServerPlugin::createConfigureForm(PluginComponent::FormCallbackType type
 #endif
     );
 
-    form.addObjectGetterSetter(FSPGM(httpmode, "mode"), combo, combo.get_webserver_mode, combo.set_webserver_mode);
+    form.addObjectGetterSetter(F("mode"), combo, combo.get_webserver_mode, combo.set_webserver_mode);
     form.addFormUI(F("HTTP Server"), modeItems);
     form.addValidator(FormUI::Validator::EnumRange<System::WebServer::ModeType>());
 
@@ -72,7 +72,7 @@ void WebServerPlugin::createConfigureForm(PluginComponent::FormCallbackType type
     }));
 #endif
 
-#if defined(ESP8266) && 1 || SPEED_BOOSTER_ENABLED
+#if defined(ESP8266) && SPEED_BOOSTER_ENABLED
     auto performanceItems = FormUI::Container::List(
         0, F("80MHz"),
         1, F("160MHz (Recommended for TLS)")
@@ -84,10 +84,10 @@ void WebServerPlugin::createConfigureForm(PluginComponent::FormCallbackType type
 #endif
 
     form.addCallbackSetter(F("port"), cfg.getPortAsString(), [&cfg](const String &value, FormField &field) {
-        cfg.setPort(value.toInt(), cfg.isSecure()); // setMode() is executed already and cfg.is_https set
+        cfg.setPort(value.toInt());
         field.setValue(cfg.getPortAsString());
     });
-    form.addFormUI(FSPGM(Port, "Port"), FormUI::Type::NUMBER);
+    form.addFormUI(FormUI::Type::NUMBER, FSPGM(Port), FormUI::PlaceHolder(System::WebServer::kPortDefault));
     form.addValidator(FormUI::Validator::NetworkPort(true));
 
 #if WEBSERVER_TLS_SUPPORT
@@ -96,7 +96,7 @@ void WebServerPlugin::createConfigureForm(PluginComponent::FormCallbackType type
     form.add(new FormObject<File2String>(F("ssl_key"), File2String(FSPGM(server_key)), nullptr));
 
 #endif
-    form.addStringGetterSetter(F("btok"), System::Device::getToken, System::Device::setToken); //->setFormUI(new FormUI::UI(FormUI::Type::TEXT, F("Token for Web Server, Web Sockets and Tcp2Serial"))));
+    form.addStringGetterSetter(F("btok"), System::Device::getToken, System::Device::setToken);
     form.addValidator(FormUI::Validator::Length(System::Device::kTokenMinSize, System::Device::kTokenMaxSize));
 
     webserverGroup.end();

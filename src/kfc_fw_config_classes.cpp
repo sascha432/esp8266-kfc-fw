@@ -42,7 +42,7 @@ namespace KFCConfigurationClasses {
         is_station_mode_enabled(false),
         is_station_mode_dhcp_enabled(true),
         use_static_ip_during_wakeup(false),
-        is_led_on_when_connected(true),
+        __reserved(false),
         is_at_mode_enabled(true),
         is_mdns_enabled(true),
         is_ntp_client_enabled(true),

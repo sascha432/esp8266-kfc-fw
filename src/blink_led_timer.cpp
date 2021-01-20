@@ -6,6 +6,7 @@
 #include "kfc_fw_config.h"
 
 using KFCConfigurationClasses::System;
+using Device = KFCConfigurationClasses::System::Device;
 
 #if 0
 #include "debug_helper_enable.h"
@@ -80,6 +81,9 @@ void BlinkLEDTimer::run()
 
 void BlinkLEDTimer::set(uint32_t delay, int8_t pin, dynamic_bitset &&pattern)
 {
+    if (_pin == INVALID_PIN || System::Device::getConfig().getStatusLedMode() == System::Device::StatusLEDModeType::OFF) {
+        return;
+    }
     _pattern = std::move(pattern);
     //_on = pattern.size();
     if (_pin != pin) {
@@ -113,6 +117,9 @@ void BlinkLEDTimer::detach()
 
 void BlinkLEDTimer::setPattern(int8_t pin, int delay, dynamic_bitset &&pattern)
 {
+    if (pin == INVALID_PIN || System::Device::getConfig().getStatusLedMode() == System::Device::StatusLEDModeType::OFF) {
+        return;
+    }
     ledTimer->set(delay, pin, std::move(pattern));
 }
 
@@ -123,7 +130,7 @@ void BlinkLEDTimer::setPattern(int8_t pin, int delay, dynamic_bitset &&pattern)
 
 void BlinkLEDTimer::setBlink(int8_t pin, uint16_t delay, int32_t color)
 {
-    if (!System::Flags::getConfig().is_led_on_when_connected) {
+    if (pin == INVALID_PIN || System::Device::getConfig().getStatusLedMode() == System::Device::StatusLEDModeType::OFF) {
         return;
     }
 
@@ -135,7 +142,6 @@ void BlinkLEDTimer::setBlink(int8_t pin, uint16_t delay, int32_t color)
     {
         __LDBG_printf("PIN %d, blink %d", pin, delay);
     }
-
 
     if (ledTimer) {
         __LDBG_delete(ledTimer);

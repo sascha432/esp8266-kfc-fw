@@ -35,7 +35,7 @@ STK500v1Programmer::STK500v1Programmer(Stream &serial) : _serial(serial), _delay
     _fuseBytes[FUSE_HIGH] = 0xda;
     _fuseBytes[FUSE_EXT] = 0xff;
     _pageBuffer = __LDBG_new_array(_pageSize, uint8_t);
-    BlinkLEDTimer::setBlink(__LED_BUILTIN, 500);
+    BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::MEDIUM);
 }
 
 STK500v1Programmer::~STK500v1Programmer()
@@ -140,7 +140,7 @@ void STK500v1Programmer::_loopFunction()
 
 void STK500v1Programmer::_writePage(uint16_t address, uint16_t length, Callback_t success, Callback_t failure)
 {
-    BlinkLEDTimer::setBlink(__LED_BUILTIN, address % 2 == 0 ? BlinkLEDTimer::OFF : BlinkLEDTimer::SOLID);
+    BUILDIN_LED_SET(address % 2 == 0 ? BlinkLEDTimer::BlinkType::OFF : BlinkLEDTimer::BlinkType::SOLID);
     _sendCommandLoadAddress(address);
 
     _updatePosition();
@@ -162,7 +162,7 @@ void STK500v1Programmer::_writePage(uint16_t address, uint16_t length, Callback_
 
 void STK500v1Programmer::_verifyPage(uint16_t address, uint16_t length, Callback_t success, Callback_t failure)
 {
-    BlinkLEDTimer::setBlink(__LED_BUILTIN, address % 2 == 0 ? BlinkLEDTimer::OFF : BlinkLEDTimer::SOLID);
+    BUILDIN_LED_SET(address % 2 == 0 ? BlinkLEDTimer::BlinkType::OFF : BlinkLEDTimer::BlinkType::SOLID);
     _sendCommandLoadAddress(address);
 
     _updatePosition();
@@ -584,7 +584,7 @@ void STK500v1Programmer::_done(bool success)
     _status(str);
     _logPrintf_P(PSTR("%s"), str.c_str());
 
-    BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::SOLID);
+    BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SOLID);
 
     end();
 }

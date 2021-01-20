@@ -5,28 +5,11 @@
 $(function() {
     // network.html
     if ($('#network_settings').length) {
-        function set_items(root, ex_id, state) {
-            root.each(function() {
-                var id = $(this).attr('id');
-                if (id != ex_id) {
-                    var element = $('#' + id);
-                    if (state) {
-                        element.attr('disabled', 'disabled');
-                        element.prop('disabled', true);
-                    } else {
-                        element.removeAttr('disabled');
-                        element.prop('disabled', false);
-                      }
-                }
-            });
-        }
-        $('#ap_dhcpd').on('change', function() {
-            var group = $(this).closest('.card-body');
-            set_items(group.find('input,select,button'), $(this).attr('id'), parseInt($(this).val()) == 0);
+        $('#st_dhcp').off('change').on('change', function() {
+            form_set_disabled($('#st_ip,#st_subnet,#st_gw,#st_dns1,#st_dns2'), parseInt($(this).val()) != 0);
         }).trigger('change');
-        $('#st_dhcp').on('change', function() {
-            var group = $(this).closest('.card-body');
-            set_items(group.find('input,select,button'), $(this).attr('id'), parseInt($(this).val()) == 0);
+        $('#ap_dhcpd').on('change', function() {
+            form_set_disabled($('#ap_dhcpds,#ap_dhcpde'), parseInt($(this).val()) == 0);
         }).trigger('change');
     }
 });

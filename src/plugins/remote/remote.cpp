@@ -275,7 +275,7 @@ void RemoteControlPlugin::_onButtonHeld(Button& btn, uint16_t duration, uint16_t
             if (duration > 5000 && _longPress == 0) {
                 // indicate long press by setting LED to flicker
                 __LDBG_printf("2 buttons held >5 seconds: %u", buttonNum);
-                BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::FLICKER);
+                BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
                 _longPress = 1;
                 __LDBG_printf("longpress=%d combo=%d", _longPress, _comboButton);
             }
@@ -283,7 +283,7 @@ void RemoteControlPlugin::_onButtonHeld(Button& btn, uint16_t duration, uint16_t
                 __LDBG_printf("2 buttons held >8 seconds: %u", buttonNum);
                 _longPress = 2;
                 __LDBG_printf("longpress=%d combo=%d", _longPress, _comboButton);
-                BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::SOLID);
+                BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SOLID);
                 if (buttonNum == 0) {
                     __LDBG_printf("disable auto sleep");
                     disableAutoSleep();
@@ -320,7 +320,7 @@ void RemoteControlPlugin::_onButtonReleased(Button& btn, uint16_t duration)
     if (_longPress) {
         if (!anyButton()) {
             // disable LED after all buttons have been released
-            BlinkLEDTimer::setBlink(__LED_BUILTIN, config.isWiFiUp() ? BlinkLEDTimer::SOLID : BlinkLEDTimer::OFF);
+            BUILDIN_LED_SET(config.isWiFiUp() ? BlinkLEDTimer::BlinkType::SOLID : BlinkLEDTimer::BlinkType::OFF);
             __LDBG_printf("longpress=%d combo=%d", _longPress, _comboButton);
             _longPress = 0;
             _comboButton = -1;
@@ -379,7 +379,7 @@ void RemoteControlPlugin::deepSleepHandler(AsyncWebServerRequest *request)
         httpHeaders.setAsyncWebServerResponseHeaders(response);
         request->send(response);
 
-        BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::FLICKER);
+        BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
         disableAutoSleep();
 
         _Scheduler.add(2000, false, [](Event::CallbackTimerPtr timer) {

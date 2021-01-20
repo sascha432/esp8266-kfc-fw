@@ -41,6 +41,10 @@ using KFCConfigurationClasses::Plugins;
 #include <debug_helper_disable.h>
 #endif
 
+#if IOT_WEATHER_STATION_WS2812_NUM && __LED_BUILTIN == -1
+#error invalid built-in LED
+#endif
+
 static WeatherStationPlugin plugin;
 
 WeatherStationBase &__weatherStationGetPlugin()
@@ -670,7 +674,7 @@ void WeatherStationPlugin::_alarmCallback(Alarm::AlarmModeType mode, uint16_t ma
     if (!_resetAlarmFunc) {
         _resetAlarmFunc = [this](Event::CallbackTimerPtr timer) {
 #if IOT_WEATHER_STATION_WS2812_NUM
-            BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::OFF);
+            BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
 #endif
             _alarmTimer.remove(); // make sure the scheduler is not calling a dangling pointer.. not using the TimerPtr in case it is not called from the scheduler
             _resetAlarmFunc = nullptr;

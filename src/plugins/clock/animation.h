@@ -172,8 +172,59 @@ using SevenSegmentDisplay = SevenSegmentPixel<uint16_t, 1, IOT_CLOCK_NUM_PIXELS,
     public:
         static constexpr uint16_t kDefaultUpdateRate = 100;
 
+        class Point {
+        public:
+#if IOT_LED_MATRIX_ROWS > 255 || IOT_LED_MATRIX_COLS > 255
+            using CoordinateType = uint16_t;
+#else
+            using CoordinateType = uint8_t;
+#endif
+
+        public:
+
+            Point(CoordinateType row = 0, CoordinateType col = 0) : _row(row), _col(col) {}
+
+            void setPoint(CoordinateType row, CoordinateType col) {
+                _row = row;
+                _col = col;
+            }
+
+            CoordinateType getRow() const {
+                return _row;
+            }
+
+            CoordinateType getInvertedRow() const {
+                return IOT_LED_MATRIX_ROWS - _row;
+            }
+
+            void setRow(CoordinateType row) {
+                _row = row;
+            }
+
+            CoordinateType getCol() const {
+                return _col;
+            }
+
+            CoordinateType getInvertedCol() const {
+                return IOT_LED_MATRIX_COLS - _col;
+            }
+
+            void setCol(CoordinateType col) {
+                _col = col;
+            }
+
+            void rotate90() {
+                std::swap(_row, _col);
+            }
+
+        private:
+            CoordinateType _row;
+            CoordinateType _col;
+        };
+
     public:
         Animation(ClockPlugin &clock);
+        Animation(ClockPlugin &clock, uint16_t rows, uint16_t cols);
         virtual ~Animation();
 
         // call to start and end the animation. begin might be called after end again...
@@ -191,6 +242,31 @@ using SevenSegmentDisplay = SevenSegmentPixel<uint16_t, 1, IOT_CLOCK_NUM_PIXELS,
         bool doBlinkColon() const;
         // get update rate set for this animation
         uint16_t getUpdateRate() const;
+
+        static constexpr uint16_t rows() {
+            return IOT_LED_MATRIX_ROWS;
+        }
+        static constexpr uint16_t cols() {
+            return IOT_LED_MATRIX_COLS;
+        }
+
+        Point dimensions() const {
+            return Point(rows(), cols());
+        }
+
+        Point translateAddress(PixelAddressType address) const {
+#if IOT_LED_MATRIX_ROWS == 1
+            auto p = Point(0, address);
+#elif IOT_LED_MATRIX_COLS == 1
+            auto p = Point(address, 0);
+#else
+            auto p = Point(address % rows(), address / rows());
+            if (p.getCol() % 2 != 0) {
+                p.setRow((rows() - 1) - p.getRow());
+            }
+#endif
+            return p;
+        }
 
     protected:
         // set update rate for animation and clock
@@ -338,16 +414,16 @@ using SevenSegmentDisplay = SevenSegmentPixel<uint16_t, 1, IOT_CLOCK_NUM_PIXELS,
 
     class SkipRowsAnimation : public Animation {
     public:
-        SkipRowsAnimation(ClockPlugin &clock, uint16_t rows, uint16_t cols, uint32_t time);
+        SkipRowsAnimation(ClockPlugin &clock, uint16_t row, uint16_t col, uint32_t time);
 
         virtual void begin() override;
         virtual void end() override;
         virtual void loop(time_t now) {}
 
     private:
-        uint16_t _rows;
-        uint16_t _cols;
         uint32_t _time;
+        uint16_t _row;
+        uint16_t _col;
     };
 
     // ------------------------------------------------------------------------

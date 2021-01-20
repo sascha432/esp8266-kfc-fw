@@ -266,7 +266,9 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LSR, "LSR", "[<directory>]", "List files a
 #endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIFI, "WIFI", "[<reset|on|off|ap_on|ap_off>]", "Modify WiFi settings");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(REM, "REM", "Ignore comment");
+#if __LED_BUILTIN != -1
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LED, "LED", "<slow,fast,flicker,off,solid,sos>,[,color=0xff0000][,pin]", "Set LED mode");
+#endif
 #if RTC_SUPPORT
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(RTC, "RTC", "[<set>]", "Set RTC time", "Display RTC time");
 #endif
@@ -347,7 +349,9 @@ void at_mode_help_commands()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(LSR), name);
 #endif
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(WIFI), name);
+#if __LED_BUILTIN != -1
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(LED), name);
+#endif
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(REM), name);
 #if RTC_SUPPORT
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(RTC), name);
@@ -1190,34 +1194,41 @@ void at_mode_serial_handle_event(String &commandString)
                     }
                 }
             }
+#if __LED_BUILTIN != -1
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LED))) {
                 if (args.requireArgs(1, 3)) {
                     String mode = args.toString(0);
                     int32_t color = args.toNumber(1, -1);
                     int8_t pin = (int8_t)args.toInt(2, __LED_BUILTIN);
-                    mode.toUpperCase();
-                    if (args.equalsIgnoreCase(0, F("slow"))) {
-                        BlinkLEDTimer::setBlink(pin, BlinkLEDTimer::SLOW, color);
-                    }
-                    else if (args.equalsIgnoreCase(0, F("fast"))) {
-                        BlinkLEDTimer::setBlink(pin, BlinkLEDTimer::FAST, color);
-                    }
-                    else if (args.equalsIgnoreCase(0, F("flicker"))) {
-                        BlinkLEDTimer::setBlink(pin, BlinkLEDTimer::FLICKER, color);
-                    }
-                    else if (args.equalsIgnoreCase(0, F("solid"))) {
-                        BlinkLEDTimer::setBlink(pin, BlinkLEDTimer::SOLID, color);
-                    }
-                    else if (args.equalsIgnoreCase(0, F("sos"))) {
-                        BlinkLEDTimer::setBlink(pin, BlinkLEDTimer::SOS, color);
+                    if (__LED_BUILTIN == BlinkLEDTimer::INVALID_PIN) {
+                        args.print(F("Invalid PIN"));
                     }
                     else {
-                        mode = F("OFF");
-                        BlinkLEDTimer::setBlink(pin, BlinkLEDTimer::OFF);
+                        mode.toUpperCase();
+                        if (args.equalsIgnoreCase(0, F("slow"))) {
+                            BlinkLEDTimer::setBlink(pin, BlinkLEDTimer::SLOW, color);
+                        }
+                        else if (args.equalsIgnoreCase(0, F("fast"))) {
+                            BlinkLEDTimer::setBlink(pin, BlinkLEDTimer::FAST, color);
+                        }
+                        else if (args.equalsIgnoreCase(0, F("flicker"))) {
+                            BlinkLEDTimer::setBlink(pin, BlinkLEDTimer::FLICKER, color);
+                        }
+                        else if (args.equalsIgnoreCase(0, F("solid"))) {
+                            BlinkLEDTimer::setBlink(pin, BlinkLEDTimer::SOLID, color);
+                        }
+                        else if (args.equalsIgnoreCase(0, F("sos"))) {
+                            BlinkLEDTimer::setBlink(pin, BlinkLEDTimer::SOS, color);
+                        }
+                        else {
+                            mode = F("OFF");
+                            BlinkLEDTimer::setBlink(pin, BlinkLEDTimer::OFF);
+                        }
+                        args.printf_P(PSTR("LED pin=%d, mode=%s, color=0x%06x"), pin, mode.c_str(), color);
                     }
-                    args.printf_P(PSTR("LED pin=%d, mode=%s, color=0x%06x"), pin, mode.c_str(), color);
                 }
             }
+#endif
             else if (args.isCommand(F("I2CT")) || args.isCommand(F("I2CA")) || args.isCommand(F("I2CR"))) {
                 // ignore SerialTwoWire communication
             }

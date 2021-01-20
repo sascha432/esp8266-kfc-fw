@@ -493,7 +493,7 @@ void WebServerPlugin::handlerUpdate(AsyncWebServerRequest *request)
         if (!Update.hasError()) {
             Logger_security(F("Firmware upgrade successful"));
 
-            BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::SLOW);
+            BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SLOW);
             Logger_notice(F("Rebooting after upgrade"));
             executeDelayed(request, []() {
                 config.restartDevice();
@@ -530,7 +530,7 @@ void WebServerPlugin::handlerUpdate(AsyncWebServerRequest *request)
         } else {
             // KFCFS.begin();
 
-            BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::SOS);
+            BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SOS);
             StreamString errorStr;
             Update.printError(errorStr);
             Logger_error(F("Firmware upgrade failed: %s"), errorStr.c_str());
@@ -572,11 +572,10 @@ void WebServerPlugin::handlerUploadUpdate(AsyncWebServerRequest *request, String
         PrintString out;
         bool error = false;
         if (!index) {
-            BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::FLICKER);
+            BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
 
             size_t size;
             uint8_t command;
-
             uint8_t imageType = 0;
 
             if (String_equals(request->arg(FSPGM(image_type)), PSTR("u_flash"))) { // firmware selected

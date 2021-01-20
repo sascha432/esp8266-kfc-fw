@@ -187,8 +187,14 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             form.addFormUI(F("Reboot Delay Running In Safe Mode"), FormUI::Suffix(FSPGM(minutes)));
             cfg.addRangeValidatorFor_safe_mode_reboot_timeout_minutes(form, true);
 
+            auto ledItems = FormUI::List(
+                System::DeviceConfig::StatusLEDModeType::OFF, F("Do not use status LED"),
+                System::DeviceConfig::StatusLEDModeType::SOLID_WHEN_CONNECTED, F("Solid when connected to WiFi"),
+                System::DeviceConfig::StatusLEDModeType::OFF_WHEN_CONNECTED, F("Do not use status LED")
+            );
+
             form.addObjectGetterSetter(F("led_mode"), cfg, System::Device::ConfigStructType::get_int_status_led_mode, System::Device::ConfigStructType::set_int_status_led_mode);
-            form.addFormUI(FSPGM(Status_LED_Mode), FormUI::BoolItems(F("Solid when connected to WiFi"), F("Turn off when connected to WiFi")));
+            form.addFormUI(FSPGM(Status_LED_Mode), ledItems);
 
             form.addStringGetterSetter(F("pbl"), System::Firmware::getPluginBlacklist, System::Firmware::setPluginBlacklist);
             form.addFormUI(F("Plugin Blacklist"), FormUI::Suffix(F("Comma Separated")));

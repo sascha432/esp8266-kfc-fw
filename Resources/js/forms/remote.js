@@ -6,28 +6,26 @@ $(function() {
     // remote.html
     if ($('#remote_settings').length) {
         function httpmode_changed() {
-            var port = parseInt($('#httport').val());
-            var type = parseInt($('#httpmode').val());
+            var port = parseInt($('#port').val());
+            var type = parseInt($('#mode').val());
             if (type == 1) {
-                $('#http_settings').show();
-                $('#ssl_settings').hide();
-                $('#httport').attr('placeholder', '80');
+                form_set_disabled($('#ssl_cert,#ssl_key'), false)
+                form_set_disabled($('#port'), true)
+                $('#port').attr('placeholder', '80');
                 if (port == 443 || port == 80) {
-                    $('#httport').val('');
+                    $('#port').val('');
                 }
             } else if (type == 2) {
-                $('#http_settings').show();
-                $('#ssl_settings').show();
-                $('#httport').attr('placeholder', '443');
+                form_set_disabled($('#ssl_cert,#ssl_key,#port'), true)
+                $('#port').attr('placeholder', '443');
                 if (port == 80 || port == 443) {
-                    $('#httport').val('');
+                    $('#port').val('');
                 }
             } else {
-                $('#http_settings').hide();
+                form_set_disabled($('#ssl_cert,#ssl_key,#port'), false)
             }
         }
-        $('#httpmode').change(httpmode_changed);
-        $('#httport').change(httpmode_changed);
+        $('#mode,#port').change(httpmode_changed);
         httpmode_changed();
     }
 });

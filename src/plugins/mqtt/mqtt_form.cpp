@@ -70,10 +70,10 @@ void MQTTPlugin::createConfigureForm(FormCallbackType type, const String &formNa
     form.addValidator(FormUI::Validator::Length(3, ClientConfig::kHostnameMaxSize));
 
     form.addCallbackSetter(FSPGM(port), cfg.getPortAsString(), [&cfg](const String &value, FormField &field) {
-        cfg.setPort(value.toInt(), cfg.isSecure());
+        cfg.setPort(value.toInt());
         field.setValue(cfg.getPortAsString());
     });
-    form.addFormUI(FormUI::Type::NUMBER, FSPGM(Port), FormUI::PlaceHolder(1883));
+    form.addFormUI(FormUI::Type::NUMBER, FSPGM(Port), FormUI::PlaceHolder(ClientConfig::kPortDefault));
     form.addValidator(FormUI::Validator::NetworkPort(true));
 
     form.addObjectGetterSetter(F("kat"), cfg, cfg.get_bits_keepalive, cfg.set_bits_keepalive);

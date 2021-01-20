@@ -465,19 +465,31 @@ void FlashingAnimation::end()
 }
 
 // ------------------------------------------------------------------------
-SkipRowsAnimation::SkipRowsAnimation(ClockPlugin &clock, uint16_t rows, uint16_t cols, uint32_t time) :
+SkipRowsAnimation::SkipRowsAnimation(ClockPlugin &clock, uint16_t row, uint16_t col, uint32_t time) :
     Animation(clock),
-    _rows(rows),
-    _cols(cols),
-    _time(time)
+    _time(time),
+    _row(row),
+    _col(col)
 {
     setAnimationCallback([this](PixelAddressType address, ColorType color, const SevenSegmentDisplay::Params_t &params) -> ColorType {
-        uint16_t start = _time ? params.millis / _time : 0;
-        if (_rows > 1 && (address / IOT_LED_MATRIX_COLS / _rows) != (start % IOT_LED_MATRIX_ROWS)) {
-            return 0;
+        auto pixel = translateAddress(address);
+        if (_time) {
+            uint32_t position = params.millis / _time;
+            if (_row > 1 && (pixel.getRow() % _row) != (position % _row)) {
+                return 0;
+            }
+            if (_col > 1 && (pixel.getCol() % _col) != (position % _col)) {
+                return 0;
+            }
         }
-        if (_cols > 1 && (address % IOT_LED_MATRIX_COLS / _cols) != (start % IOT_LED_MATRIX_COLS)) {
-            return 0;
+        else {
+            if (_row > 1 && (pixel.getRow() % _row) != 0) {
+                return 0;
+            }
+            if (_col > 1 && (pixel.getCol() % _col) != 0) {
+                return 0;
+            }
+
         }
         return SevenSegmentDisplay::_adjustBrightnessAlways(color, params.brightness);
     });
@@ -486,12 +498,12 @@ SkipRowsAnimation::SkipRowsAnimation(ClockPlugin &clock, uint16_t rows, uint16_t
 
 void SkipRowsAnimation::begin()
 {
-    __LDBG_printf("begin rows=%u cols=%u time=%u", _rows, _cols, _time);
+    __LDBG_printf("begin rows=%u cols=%u time=%u", rows(), cols(), _time);
 }
 
 void SkipRowsAnimation::end()
 {
-    __LDBG_printf("end rows=%u cols=%u time=%u", _rows, _cols, _time);
+    __LDBG_printf("end rows=%u cols=%u time=%u", rows(), cols(), _time);
     Animation::end();
 }
 
@@ -500,7 +512,7 @@ void SkipRowsAnimation::end()
 
 FireAnimation::FireAnimation(ClockPlugin &clock, FireAnimationConfig &cfg) :
     Animation(clock),
-    _lineCount((cfg.cast_enum_orientation(cfg.orientation) == Orientation::VERTICAL) ? IOT_LED_MATRIX_COLS : IOT_LED_MATRIX_ROWS),
+    _lineCount((cfg.cast_enum_orientation(cfg.orientation) == Orientation::VERTICAL) ? cols() : rows()),
     _lines(new Line[_lineCount]),
     _cfg(cfg)
 {
@@ -509,7 +521,7 @@ FireAnimation::FireAnimation(ClockPlugin &clock, FireAnimationConfig &cfg) :
     }
     else {
         for(uint16_t i = 0; i < _lineCount; i++) {
-            _lines[i].init((_cfg.cast_enum_orientation(_cfg.orientation) == Orientation::VERTICAL) ? IOT_LED_MATRIX_ROWS : IOT_LED_MATRIX_COLS);
+            _lines[i].init((_cfg.cast_enum_orientation(_cfg.orientation) == Orientation::VERTICAL) ? rows() : cols());
         }
     }
 
@@ -526,25 +538,11 @@ void FireAnimation::begin()
 {
     __LDBG_printf("begin lines=%u", _lineCount);
     setAnimationCallback([this](PixelAddressType address, ColorType color, const SevenSegmentDisplay::Params_t &params) -> ColorType {
-        uint16_t row = address % IOT_LED_MATRIX_ROWS;
-        uint16_t col = address / IOT_LED_MATRIX_ROWS;
-        if (col % 2 != 0) {
-            row = (IOT_LED_MATRIX_ROWS - 1) - row;
+        auto pixel = translateAddress(address);
+        if (_cfg.cast_enum_orientation(_cfg.orientation) == Orientation::VERTICAL) {
+            pixel.rotate90();
         }
-
-        uint16_t line = (_cfg.cast_enum_orientation(_cfg.orientation) == Orientation::VERTICAL) ? col : row;
-        if (line < _lineCount) {
-            uint16_t pixel;
-            if (_cfg.invert_direction) {
-                pixel = (_cfg.cast_enum_orientation(_cfg.orientation) == Orientation::VERTICAL) ? IOT_LED_MATRIX_ROWS - row : IOT_LED_MATRIX_COLS - col;
-            }
-            else {
-                pixel = (_cfg.cast_enum_orientation(_cfg.orientation) == Orientation::VERTICAL) ? row : col;
-            }
-
-            return SevenSegmentDisplay::_adjustBrightnessAlways(_lines[line].getHeatColor(pixel), params.brightness);
-        }
-        return 0;
+        return SevenSegmentDisplay::_adjustBrightnessAlways(_lines[pixel.getRow()].getHeatColor((_cfg.invert_direction) ? pixel.getInvertedCol() : pixel.getCol()), params.brightness);
     });
     setUpdateRate(std::max<uint16_t>(5, _cfg.speed));
 }

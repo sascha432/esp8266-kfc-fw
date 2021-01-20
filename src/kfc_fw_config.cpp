@@ -251,7 +251,7 @@ void KFCFWConfiguration::_onWiFiDisconnectCb(const WiFiEventStationModeDisconnec
 {
     __LDBG_printf("KFCFWConfiguration::_onWiFiDisconnectCb(%d = %s)", (int)event.reason, WiFi_disconnect_reason(event.reason).c_str());
     if (_wifiConnected) {
-        BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::FAST);
+        BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FAST);
         __LDBG_printf("WiFi disconnected after %.3f seconds, millis = %lu", ((_wifiUp == ~0UL) ? -1.0 : ((millis() - _wifiUp) / 1000.0)), millis());
 
         Logger_notice(F("WiFi disconnected, SSID %s, reason %s"), event.ssid.c_str(), WiFi_disconnect_reason(event.reason).c_str());
@@ -280,7 +280,7 @@ void KFCFWConfiguration::_onWiFiDisconnectCb(const WiFiEventStationModeDisconnec
                 timer->detach();
             }
             else {
-                BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::FAST);
+                BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FAST);
                 _debug_println(F("force WiFi reconnect"));
                 reconfigureWiFi(); // reconfigure wifi, WiFi.begin() does not seem to work
             }
@@ -302,7 +302,19 @@ void KFCFWConfiguration::_onWiFiGotIPCb(const WiFiEventStationModeGotIP &event)
 
     using Device = KFCConfigurationClasses::System::Device;
 
-    BlinkLEDTimer::setBlink(__LED_BUILTIN, (Device::getConfig().getStatusLedMode() == Device::StatusLEDModeType::SOLID_WHEN_CONNECTED) ? BlinkLEDTimer::SOLID : BlinkLEDTimer::OFF);
+#if __LED_BUILTIN != -1
+    switch(Device::getConfig().getStatusLedMode()) {
+        case Device::StatusLEDModeType::OFF_WHEN_CONNECTED:
+            BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
+            break;
+        case Device::StatusLEDModeType::SOLID_WHEN_CONNECTED:
+            BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SOLID);
+            break;
+        default:
+        case Device::StatusLEDModeType::OFF:
+            break;
+    }
+#endif
     _wifiUp = millis();
 #if ENABLE_DEEP_SLEEP
     config.storeStationConfig(event.ip, event.mask, event.gw);
@@ -321,7 +333,7 @@ void KFCFWConfiguration::_onWiFiOnDHCPTimeoutCb()
 #else
     Logger_error(F("DHCP timeout"));
 #endif
-    BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::FLICKER);
+    BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
 }
 
 void KFCFWConfiguration::_softAPModeStationConnectedCb(const WiFiEventSoftAPModeStationConnected &event)
@@ -746,7 +758,7 @@ void KFCFWConfiguration::setup()
 #endif
     {
         Logger_notice(F("Starting KFCFW %s"), version.c_str());
-        BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::FLICKER);
+        BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
     }
 
     // ~5ms
@@ -1094,7 +1106,7 @@ void KFCFWConfiguration::enterDeepSleep(milliseconds time, RFMode mode, uint16_t
     __LDBG_printf("Entering deep sleep for %u milliseconds, RF mode %d", milliseconds, mode);
 
 #if __LED_BUILTIN == -3
-    BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::OFF);
+    BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
 #endif
 
 #if defined(ESP8266)
@@ -1141,7 +1153,7 @@ void KFCFWConfiguration::restartDevice(bool safeMode)
         msg += F(" in SAFE MODE");
     }
     Logger_notice(msg);
-    BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::FLICKER);
+    BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
 
     delay(500);
 
@@ -1427,10 +1439,12 @@ bool KFCFWConfiguration::connectWiFi()
         ap_mode_success = true;
     }
 
+#if __LED_BUILTIN != -1 || ENABLE_BOOT_LOG
     if (!station_mode_success || !ap_mode_success) {
-        BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::FAST);
+        BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FAST);
         BOOTLOG_PRINTF("WiFi error");
     }
+#endif
 
     auto hostname = System::Device::getName();
     BOOTLOG_PRINTF("hostname %p", hostname);
@@ -1640,7 +1654,7 @@ void KFCConfigurationPlugin::setup(SetupModeType mode)
 
     if (WiFi.isConnected()) {
         __DBG_print("WiFi up, skipping init.");
-        BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::OFF);
+        BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
         return;
     }
 

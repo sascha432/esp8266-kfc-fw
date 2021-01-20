@@ -8,6 +8,16 @@ function form_invalid_feedback(selector, message) {
     $(selector).parent().append('<div class="invalid-feedback">' + message + '</div>');
 }
 
+function form_set_disabled(items, state) {
+    if (state) {
+        items.attr('disabled', 'disabled');
+        items.prop('disabled', true);
+    } else {
+        items.removeAttr('disabled');
+        items.prop('disabled', false);
+    }
+}
+
 $.visible_password_options = {};
 
 // ---------------------------------------------------------------------------------

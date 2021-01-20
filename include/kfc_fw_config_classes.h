@@ -184,60 +184,48 @@ namespace ConfigurationHelper {
         return obj.name; \
     }
 
-#define AUTO_DEFAULT_PORT_CONST(auto, default_port) \
-    static constexpr uint16_t kPortAuto = auto; \
+#define AUTO_DEFAULT_PORT_CONST(default_port) \
     static constexpr uint16_t kPortDefault = default_port; \
 
-#define AUTO_DEFAULT_PORT_CONST_SECURE(auto, unsecure, secure) \
-    static constexpr uint16_t kPortAuto = auto; \
+#define AUTO_DEFAULT_PORT_CONST_SECURE(unsecure, secure) \
     static constexpr uint16_t kPortDefault = unsecure; \
     static constexpr uint16_t kPortDefaultSecure = secure;
 
-#define AUTO_DEFAULT_PORT_GETTER_SETTER(port_name) \
+#define AUTO_DEFAULT_PORT_GETTER_SETTER(port_name, unsecure_port) \
+    static constexpr uint16_t kDefaultValueFor_##port_name = 0; \
     uint16_t port_name; \
+    uint16_t getPort() const { \
+        return unsecure_port; \
+    } \
+    String getPortAsString() const { \
+        return port_name == unsecure_port || port_name == 0 ? String() : String(port_name); \
+    } \
+    void setPort(int port) { \
+        port_name = static_cast<uint16_t>(port); \
+        if (port_name == 0) { \
+            port_name = unsecure_port; \
+        } \
+    }
+
+#define AUTO_DEFAULT_PORT_GETTER_SETTER_SECURE(port_name, unsecure_port, secure_port, is_secure) \
+    static constexpr uint16_t kDefaultValueFor_##port_name = 0; \
+    uint16_t port_name; \
+    bool isSecure() const { \
+        return is_secure; \
+    } \
     bool isPortAuto() const { \
-        return (port_name == kPortAuto); \
+        return (port_name == 0 || port_name == secure_port || port_name == unsecure_port); \
     } \
     uint16_t getPort() const { \
-        return isPortAuto() ? kPortDefault : kPortDefault; \
+        return isPortAuto() ? (isSecure() ? secure_port : unsecure_port) : port_name; \
     } \
     String getPortAsString() const { \
         return isPortAuto() ? String() : String(port_name); \
     } \
     void setPort(int port) { \
-        auto tmp = static_cast<uint16_t>(port); \
-        if (tmp == kPortDefault) { \
-            port_name = kPortAuto; \
-        } \
-        else { \
-            port_name =tmp; \
-        } \
-    }
-
-#define AUTO_DEFAULT_PORT_GETTER_SETTER_SECURE(port_name, is_secure) \
-    uint16_t port_name; \
-    bool isSecure() const { \
-        return (is_secure); \
-    } \
-    bool isPortAuto() const { \
-        return (port_name == kPortAuto || (port_name == kPortDefault && !isSecure()) || (port_name == kPortDefaultSecure && isSecure())); \
-    } \
-    uint16_t getPort() const { \
-        return isPortAuto() ? (isSecure() ? kPortDefaultSecure : kPortDefault) : kPortDefault; \
-    } \
-    String getPortAsString() const { \
-        return isPortAuto() ? String() : String(port_name); \
-    } \
-    void setPort(int port, bool secure) { \
-        auto tmp = static_cast<uint16_t>(port); \
-        if (tmp == kPortDefault && !secure) { \
-            port_name = kPortAuto; \
-        } \
-        else if (tmp == kPortDefaultSecure && secure) { \
-            port_name = kPortAuto; \
-        } \
-        else { \
-            port_name = tmp; \
+        port_name = static_cast<uint16_t>(port); \
+        if (isPortAuto()) { \
+            port_name =  0; \
         } \
     }
 
@@ -340,7 +328,7 @@ namespace KFCConfigurationClasses {
                 CREATE_BOOL_BITFIELD(is_station_mode_dhcp_enabled);
 
                 CREATE_BOOL_BITFIELD(use_static_ip_during_wakeup);
-                CREATE_BOOL_BITFIELD(is_led_on_when_connected);
+                bool __reserved: 1;
                 CREATE_BOOL_BITFIELD(is_at_mode_enabled);
                 CREATE_BOOL_BITFIELD(is_mdns_enabled);
                 CREATE_BOOL_BITFIELD(is_ntp_client_enabled);
@@ -390,7 +378,7 @@ namespace KFCConfigurationClasses {
                     CONFIG_DUMP_STRUCT_VAR(is_station_mode_dhcp_enabled);
 
                     CONFIG_DUMP_STRUCT_VAR(use_static_ip_during_wakeup);
-                    CONFIG_DUMP_STRUCT_VAR(is_led_on_when_connected);
+                    CONFIG_DUMP_STRUCT_VAR(__reserved);
                     CONFIG_DUMP_STRUCT_VAR(is_at_mode_enabled);
                     CONFIG_DUMP_STRUCT_VAR(is_mdns_enabled);
                     CONFIG_DUMP_STRUCT_VAR(is_ntp_client_enabled);
@@ -429,6 +417,7 @@ namespace KFCConfigurationClasses {
             enum class StatusLEDModeType : uint8_t {
                 OFF_WHEN_CONNECTED = 0,
                 SOLID_WHEN_CONNECTED = 1,
+                OFF = 2,
                 MAX
             };
 
@@ -511,7 +500,7 @@ namespace KFCConfigurationClasses {
         public:
             using ModeType = WebServerTypes::ModeType;
 
-            AUTO_DEFAULT_PORT_CONST_SECURE(0, 80, 443);
+            AUTO_DEFAULT_PORT_CONST_SECURE(80, 443);
 
             typedef struct __attribute__packed__ WebServerConfig_t {
                 using Type = WebServerConfig_t;
@@ -523,7 +512,11 @@ namespace KFCConfigurationClasses {
                 CREATE_UINT16_BITFIELD_MIN_MAX(login_rewrite_interval, 7, 1, 120, 5, 1);            // minutes
                 CREATE_UINT16_BITFIELD_MIN_MAX(login_storage_timeframe, 5, 1, 30, 1, 1);            // days
 #endif
-                AUTO_DEFAULT_PORT_GETTER_SETTER_SECURE(__port, is_https);
+#if WEBSERVER_TLS_SUPPORT
+                AUTO_DEFAULT_PORT_GETTER_SETTER_SECURE(__port, kPortDefault, kPortDefaultSecure, is_https);
+#else
+                AUTO_DEFAULT_PORT_GETTER_SETTER(__port, kPortDefault);
+#endif
 
 #if SECURITY_LOGIN_ATTEMPTS
                 uint32_t getLoginRewriteInterval() const {
@@ -1256,7 +1249,7 @@ namespace KFCConfigurationClasses {
                 DEFAULT = 0xff,
             };
 
-            AUTO_DEFAULT_PORT_CONST_SECURE(0, 1883, 8883);
+            AUTO_DEFAULT_PORT_CONST_SECURE(1883, 8883);
 
             typedef struct __attribute__packed__ MqttConfig_t {
                 using Type = MqttConfig_t;
@@ -1269,7 +1262,7 @@ namespace KFCConfigurationClasses {
                 CREATE_UINT32_BITFIELD_MIN_MAX(auto_reconnect_incr, 7, 0, 100, 10);
                 CREATE_ENUM_BITFIELD(mode, ModeType);
                 CREATE_ENUM_BITFIELD(qos, QosType);
-                AUTO_DEFAULT_PORT_GETTER_SETTER_SECURE(__port, get_enum_mode(*this) == ModeType::SECURE);
+                AUTO_DEFAULT_PORT_GETTER_SETTER_SECURE(__port, kPortDefault, kPortDefaultSecure, static_cast<ModeType>(mode) == ModeType::SECURE);
 
                 MqttConfig_t() :
                     auto_discovery(kDefaultValueFor_auto_discovery),
@@ -1281,7 +1274,7 @@ namespace KFCConfigurationClasses {
                     auto_reconnect_incr(kDefaultValueFor_auto_reconnect_incr),
                     mode(cast_int_mode(ModeType::UNSECURE)),
                     qos(cast_int_qos(QosType::EXACTLY_ONCE)),
-                    __port(kPortAuto)
+                    __port(kDefaultValueFor___port)
                 {}
 
             } MqttConfig_t;
@@ -1314,14 +1307,14 @@ namespace KFCConfigurationClasses {
         public:
             using SyslogProtocolType = ::SyslogProtocolType;
 
-            AUTO_DEFAULT_PORT_CONST_SECURE(0, 514, 6514);
+            AUTO_DEFAULT_PORT_CONST_SECURE(514, 6514);
 
             typedef struct __attribute__packed__ SyslogConfig_t {
                 union __attribute__packed__ {
                     SyslogProtocolType protocol_enum;
                     uint8_t protocol;
                 };
-                AUTO_DEFAULT_PORT_GETTER_SETTER_SECURE(__port, protocol_enum == SyslogProtocolType::TCP_TLS);
+                AUTO_DEFAULT_PORT_GETTER_SETTER_SECURE(__port, kPortDefault, kPortDefaultSecure, protocol_enum == SyslogProtocolType::TCP_TLS);
 
 #if 0
                 template<class T>
@@ -1332,7 +1325,7 @@ namespace KFCConfigurationClasses {
                 }
 #endif
 
-                SyslogConfig_t() : protocol_enum(SyslogProtocolType::TCP), __port(kPortDefault) {}
+                SyslogConfig_t() : protocol_enum(SyslogProtocolType::TCP), __port(kDefaultValueFor___port) {}
 
             } SyslogConfig_t;
         };

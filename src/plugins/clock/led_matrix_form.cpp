@@ -83,15 +83,13 @@ form.addValidator(FormUI::Validator::Range(0, 255));
 
 form.addPointerTriviallyCopyable(F("firesp"), &cfg.fire.speed);
 form.addFormUI(F("Speed"), FormUI::Suffix("milliseconds"));
-form.addValidator(FormUI::Validator::Range(5, 65535));
+form.addValidator(FormUI::Validator::Range(5, 100));
 
-//TODO add list
+auto &invertHidden = form.addObjectGetterSetter(F("firei"), cfg.fire, cfg.fire.get_bit_invert_direction, cfg.fire.set_bit_invert_direction);
+form.addFormUI(FormUI::Type::HIDDEN);
+
 form.addObjectGetterSetter(F("fireo"), cfg.fire, cfg.fire.get_int_orientation, cfg.fire.set_int_orientation);
-form.addFormUI(F("Orientation"));
-
-// TODO checkboc
-form.addObjectGetterSetter(F("firei"), cfg.fire, cfg.fire.get_bit_invert_direction, cfg.fire.set_bit_invert_direction);
-form.addFormUI(F("Invert direction"));
+form.addFormUI(F("Orientation"), FormUI::BoolItems(F("Horizontal"), F("Vertical")), FormUI::CheckboxButtonSuffix(invertHidden, F("Invert Direction")));
 
 fireGroup.end();
 

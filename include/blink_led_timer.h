@@ -14,9 +14,16 @@
 #define BUILTIN_LED_STATE(state)        state
 #endif
 
+#if __LED_BUILTIN != -1
+#define BUILDIN_LED_SET(mode)        BlinkLEDTimer::setBlink(__LED_BUILTIN, mode);
+#else
+#define BUILDIN_LED_SET(mode)
+#endif
+
+
 class BlinkLEDTimer : public OSTimer {
 public:
-    typedef enum {
+    typedef enum  : uint16_t {
         SLOW = 1000,
         FAST = 250,
         FLICKER = 50,
@@ -24,6 +31,16 @@ public:
         SOLID = 1,
         SOS = 2,
     } BlinkDelayEnum_t;
+
+    enum class BlinkType : uint16_t {
+        SLOW = 1000,
+        MEDIUM = 500,
+        FAST = 250,
+        FLICKER = 50,
+        OFF = 0,
+        SOLID = 1,
+        SOS = 2,
+    };
 
     static const int8_t INVALID_PIN = -1;
 
@@ -36,7 +53,10 @@ public:
     static void setPattern(int8_t pin, int delay, dynamic_bitset &&pattern);
     //static void setPattern(int8_t pin, int delay, const dynamic_bitset &pattern);
     static void setBlink(int8_t pin, BlinkDelayEnum_t delay, int32_t color = -1) {
-        setBlink(pin, (uint16_t)delay, color);
+        setBlink(pin, static_cast<uint16_t>(delay), color);
+    }
+    static void setBlink(int8_t pin, BlinkType delay, int32_t color = -1) {
+        setBlink(pin, static_cast<uint16_t>(delay), color);
     }
     static void setBlink(int8_t pin, uint16_t delay, int32_t color = -1); // predefined values BlinkDelayEnum_t
     // static bool isOn();

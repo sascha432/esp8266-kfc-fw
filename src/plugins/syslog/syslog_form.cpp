@@ -38,7 +38,7 @@ void SyslogPlugin::createConfigureForm(FormCallbackType type, const String &form
     form.addValidator(FormUI::Validator::Hostname(FormUI::AllowedType::EMPTY_AND_ZEROCONF));
 
     form.addCallbackSetter(F("sl_port"), cfg.getPortAsString(), [&cfg](const String &value, FormUI::Field::BaseField &field) {
-        cfg.setPort(value.toInt(), cfg.isSecure());
+        cfg.setPort(value.toInt());
         field.setValue(cfg.getPortAsString());
     });
     form.addValidator(FormUI::Validator::NetworkPort(true));

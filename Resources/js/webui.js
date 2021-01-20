@@ -19,11 +19,12 @@ $.webUIComponent = {
         webui_sensor: '<div class="webuicomponent"><div class="sensor"><{{ht|h4}} class="title">{{title}}</{{hb|h1}}><{{hb|h1}} class="data"><span id="{{id}}" class="value">{{value}}</span> <span class="unit">{{unit}}</span></{{ht|h4}}></div></div>',
         webui_switch: '<div class="webuicomponent"><div class="switch"><input type="range" class="attribute-target"></div></div>',
         webui_named_switch: '<div class="webuicomponent"><div class="switch named-switch"><div class="row"><div class="col"><input type="range" class="attribute-target"></div></div><div class="row"><div class="col title">{{title}}</div></div></div></div>',
-        webui_slider: '<div class="webuicomponent"><div class="{{slider-type}}"><input type="range" class="attribute-target"></div></div>',
+        webui_switch_top: '<div class="webuicomponent"><div class="switch named-switch"><div class="row"><{{ht|h4}} class="col title">{{title}}</{{ht|h4}}></div><div class="row"><div class="col"><input type="range" class="attribute-target"></div></div></div></div>',        webui_slider: '<div class="webuicomponent"><div class="{{slider-type}}"><input type="range" class="attribute-target"></div></div>',
         webui_screen: '<div class="webuicomponent"><div class="screen"><div class="row"><div class="col"><canvas class="attribute-target"></canvas></div></div></div></div>',
         webui_listbox: '<div class="webuicomponent"><div class="listbox"><div class="row"><div class="col title">{{title}}</div></div><div class="row"><div class="col"><select class="attribute-target">{{content}}</select></div></div></div></div>',
-        webui_button_group: '<div class="webuicomponent"><div class="button-group" role="group"><div class="row"><div class="col"><{{th|h4}} class="title">{{title}}</{{th|h4}}><div class="btn-group-vertical btn-group-lg" id="{{id}}">{{content}}</div></div></div></div></div>',
+        webui_button_group: '<div class="webuicomponent"><div class="button-group" role="group"><div class="row"><div class="col"><{{th|h4}} class="title">{{title}}</{{th|h4}}><div id="{{id}}">{{content}}</div></div></div></div></div>',
         webui_button_group_button: '<button class="btn btn-outline-primary" data-value="{{index}}">{{value}}</button>',
+        webui_button_group_col: '<div class="btn-group-vertical btn-group-lg">{{content}}</div>'
     },
 
     defaults: {
@@ -32,14 +33,14 @@ $.webUIComponent = {
         },
         column: {
             group: { columns: 12 },
-            switch: { min: 0, max: 1, columns: 2, zero_off: true, name: false, attributes: [ 'min', 'max', 'value', 'name' ] },
+            switch: { min: 0, max: 1, columns: 2, zero_off: true, name: 0, attributes: [ 'min', 'max', 'value', 'name' ] },
             slider: { slider_type: 'slider', min: 0, max: 255, columns: 12, attributes: [ 'min', 'max', 'value' ] },
             color_slider: { slider_type: 'slider coplor-slider', min: 15300, max: 50000 },
             rgb_slider: { slider_type: 'slider rgb-slider', min: 0, max: 0xffffff },
             sensor: { columns: 3, no_value: '-'},
             screen: { columns: 3, width: 128, height: 32, attributes: [ 'width', 'height' ] },
             binary_sensor: { columns: 2 },
-            button_group: { columns: 3, buttons: [], attributes: [ 'buttons' ] },
+            button_group: { columns: 3, buttons: [], row: 0 /*items per row*/, attributes: [ 'buttons' ] },
         }
     },
     components: {},
@@ -61,7 +62,7 @@ $.webUIComponent = {
         function mix(from, to, frac) {
             return parseInt((to - from) * frac + from);
         }
-        var offset = (this.rgb_slider_colors.length - 1) * (value / 16777215);
+        var offset = (this.rgb_slider_colors.length - 1) * (value / 16777216);
         var index = Math.min(Math.floor(offset), this.rgb_slider_colors.length - 2);
         var next = this.rgb_slider_colors[index + 1];
         var current = this.rgb_slider_colors[index];
@@ -70,7 +71,7 @@ $.webUIComponent = {
         var g = mix(current[1], next[1], offset);
         var b = mix(current[2], next[2], offset);
 
-        var val2 = (r << 16) | (g << 8) | b;
+        // var val2 = (r << 16) | (g << 8) | b;
         // console.log(value, val2, this.get_value_from_color(val2));
         // this.get_value_from_color(val2);
 
@@ -535,9 +536,13 @@ $.webUIComponent = {
     add_element_switch: function(options) {
         var prototype;
         this.components[options.id] = {type: 'switch'};
-        if (options.name) {
+        if (options.name == 2) {
+            prototype = $(this.get_prototype('webui-switch-top', options));
+        }
+        else if (options.name == 1) {
             prototype = $(this.get_prototype('webui-named-switch', options));
-        } else {
+        }
+        else {
             prototype = $(this.get_prototype('webui-switch', options));
         }
         this.add_attributes(prototype.find('.attribute-target'), options);
@@ -578,9 +583,19 @@ $.webUIComponent = {
 
         options.content = '';
         var self = this;
-        $(this.parse_items(options.items)).each(function(key, val) {
-            options.content += $(self.get_prototype('webui-button-group-button', { value: val, index: key }))[0].outerHTML;
+        var count = 0;
+        var items = this.parse_items(options.items);
+        var content = '';
+        $(items).each(function(key, val) {
+            content += $(self.get_prototype('webui-button-group-button', { value: val, index: key }))[0].outerHTML;
+            if (options.row && ++count % options.row == 0) {
+                options.content += $(self.get_prototype('webui-button-group-col', { content: content }))[0].outerHTML;
+                content = '';
+            }
         });
+        if (content != '') {
+            options.content += $(self.get_prototype('webui-button-group-col', { content: content }))[0].outerHTML;
+        }
 
         var prototype = $(this.get_prototype('webui-button-group', $.extend({}, this.defaults.column.button_group, options)));
         var buttons = prototype.find('button');
@@ -593,7 +608,7 @@ $.webUIComponent = {
                 return;
             }
             buttons.removeClass('active');
-            self.queue_publish_state(id, value, 'set', this.queue_default_timeout);
+            self.queue_publish_state(id, $(this).data('value'), 'set', this.queue_default_timeout);
         });
 
         if (options.title.length == 0) {

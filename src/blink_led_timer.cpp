@@ -184,21 +184,23 @@ void BlinkLEDTimer::setBlink(int8_t pin, uint16_t delay, int32_t color)
             digitalWrite(pin, BUILTIN_LED_STATE(false));
 //            ledTimer->_on = false;
 
-            if (delay == BlinkLEDTimer::OFF) {
+            if (delay == static_cast<uint16_t>(BlinkLEDTimer::BlinkType::OFF)) {
                 digitalWrite(pin, BUILTIN_LED_STATE(false));
-            } else if (delay == BlinkLEDTimer::SOLID) {
+            }
+            else if (delay == static_cast<uint16_t>(BlinkLEDTimer::BlinkType::SOLID)) {
                 digitalWrite(pin, BUILTIN_LED_STATE(true));
                 // ledTimer->_on = true;
-            } else {
+            }
+            else {
                 dynamic_bitset pattern;
-                if (delay == BlinkLEDTimer::SOS) {
+                if (delay == static_cast<uint16_t>(BlinkLEDTimer::BlinkType::SOS)) {
                     pattern.setMaxSize(24);
                     pattern.setValue(0xcc1c71d5);
                     delay = 200;
                 } else {
                     pattern.setMaxSize(2);
                     pattern = 0b10;
-                    delay = std::max((uint16_t)50, std::min(delay, (uint16_t)5000));
+                    delay = std::max<uint16_t>(50, std::min<uint16_t>(delay, 5000));
                 }
                 ledTimer->set(delay, pin, std::move(pattern));
             }

@@ -42,6 +42,7 @@ WEBUI_PROGMEM_STRING_DEF(state)
 WEBUI_PROGMEM_STRING_DEF(switch)
 WEBUI_PROGMEM_STRING_DEF(temp)
 WEBUI_PROGMEM_STRING_DEF(title)
+WEBUI_PROGMEM_STRING_DEF(top)
 WEBUI_PROGMEM_STRING_DEF(type)
 WEBUI_PROGMEM_STRING_DEF(unit)
 WEBUI_PROGMEM_STRING_DEF(ue)
@@ -105,14 +106,14 @@ WebUIComponent &WebUIRow::addGroup(const JsonString &name, bool hasSwitch)
     return column;
 }
 
-WebUIComponent &WebUIRow::addSwitch(const String &id, const JsonString &name, bool zeroOff, bool displayName)
+WebUIComponent &WebUIRow::addSwitch(const String &id, const JsonString &name, bool zeroOff, NamePositionType position)
 {
     WebUIComponent &column = addColumn(4);
     column.add(JJ(type), JJ(switch));
     column.setId(id);
     column.setName(name);
     column.add(JJ(zero_off), zeroOff);
-    column.add(JJ(name), displayName);
+    column.add(JJ(name), static_cast<uint8_t>(position));
     return column;
 }
 

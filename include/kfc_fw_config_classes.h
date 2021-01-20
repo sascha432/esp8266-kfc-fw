@@ -1741,6 +1741,10 @@ typedef struct  {
                 CREATE_ENUM_BITFIELD(orientation, Orientation);
                 CREATE_BOOL_BITFIELD(invert_direction);
 
+                Orientation getOrientation() const {
+                    return static_cast<Orientation>(orientation);
+                }
+
                 FireAnimation_t();
 
             } FireAnimation_t;
@@ -1752,6 +1756,7 @@ typedef struct  {
                 enum class AnimationType : uint8_t {
                     MIN = 0,
                     NONE = 0,
+                    SOLID = NONE,
                     RAINBOW,
                     FLASHING,
                     FADING,
@@ -1763,6 +1768,14 @@ typedef struct  {
                     NEXT,
                 };
 
+                static const __FlashStringHelper *getAnimationNames() {
+#if IOT_LED_MATRIX
+                    return F("Solid,Rainbow,Flash,Color Fade,Fire,Skip");
+#else
+                    return F("Solid,Rainbow,Flash,Color Fade");
+#endif
+                }
+
                 enum class InitialStateType : uint8_t  {
                     MIN = 0,
                     OFF = 0,
@@ -1773,11 +1786,8 @@ typedef struct  {
 
                 ClockColor_t solid_color;
                 CREATE_ENUM_BITFIELD(animation, AnimationType);
-#if IOT_LED_MATRIX
                 CREATE_ENUM_BITFIELD(initial_state, InitialStateType);
-#else
                 CREATE_UINT8_BITFIELD(time_format_24h, 1);
-#endif
                 uint8_t brightness;
                 int16_t auto_brightness;
 #if !IOT_LED_MATRIX
@@ -1821,6 +1831,14 @@ typedef struct  {
                 }
                 void setBrightness(uint16_t pBrightness) {
                     brightness = pBrightness >> 8;
+                }
+
+                AnimationType getAnimation() const {
+                    return static_cast<AnimationType>(animation);
+                }
+
+                InitialStateType getInitialState() const {
+                    return static_cast<InitialStateType>(initial_state);
                 }
 
             } ClockConfig_t;

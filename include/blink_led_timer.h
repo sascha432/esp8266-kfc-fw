@@ -23,15 +23,6 @@
 
 class BlinkLEDTimer : public OSTimer {
 public:
-    typedef enum  : uint16_t {
-        SLOW = 1000,
-        FAST = 250,
-        FLICKER = 50,
-        OFF = 0,
-        SOLID = 1,
-        SOS = 2,
-    } BlinkDelayEnum_t;
-
     enum class BlinkType : uint16_t {
         SLOW = 1000,
         MEDIUM = 500,
@@ -52,9 +43,6 @@ public:
 
     static void setPattern(int8_t pin, int delay, dynamic_bitset &&pattern);
     //static void setPattern(int8_t pin, int delay, const dynamic_bitset &pattern);
-    static void setBlink(int8_t pin, BlinkDelayEnum_t delay, int32_t color = -1) {
-        setBlink(pin, static_cast<uint16_t>(delay), color);
-    }
     static void setBlink(int8_t pin, BlinkType delay, int32_t color = -1) {
         setBlink(pin, static_cast<uint16_t>(delay), color);
     }

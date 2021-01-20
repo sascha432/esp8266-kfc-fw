@@ -56,6 +56,7 @@ WEBUI_PROGMEM_STRING_DECL(state)
 WEBUI_PROGMEM_STRING_DECL(switch)
 WEBUI_PROGMEM_STRING_DECL(temp)
 WEBUI_PROGMEM_STRING_DECL(title)
+WEBUI_PROGMEM_STRING_DECL(top)
 WEBUI_PROGMEM_STRING_DECL(type)
 WEBUI_PROGMEM_STRING_DECL(unit)
 WEBUI_PROGMEM_STRING_DECL(ue)
@@ -119,13 +120,19 @@ public:
         DEFAULT_ALIGNMENT = LEFT,
     } AlignmentEnum_t;
 
+    enum class NamePositionType : uint8_t {
+        HIDE = 0,
+        SHOW = 1,
+        TOP = 2,
+    };
+
     WebUIRow();
     void setName(const JsonString &name);
     void setAlignment(AlignmentEnum_t alignment);
     WebUIComponent &addColumn(size_t reserve = 0);
     JsonArray &_getColumns();
     WebUIComponent &addGroup(const JsonString &name, bool hasSwitch);
-    WebUIComponent &addSwitch(const String &id, const JsonString &name, bool zeroOff = true, bool displayName = false);
+    WebUIComponent &addSwitch(const String &id, const JsonString &name, bool zeroOff = true, NamePositionType position = NamePositionType::HIDE);
     WebUIComponent &addSlider(const String &id, const JsonString &name, int min = 0, int max = 0, bool zeroOff = true);
     WebUIComponent &addColorTemperatureSlider(const String &id, const JsonString &name, const JsonString &color = JsonString());
     WebUIComponent &addRGBSlider(const String &id, const JsonString &name);

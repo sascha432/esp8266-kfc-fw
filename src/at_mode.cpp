@@ -1206,23 +1206,23 @@ void at_mode_serial_handle_event(String &commandString)
                     else {
                         mode.toUpperCase();
                         if (args.equalsIgnoreCase(0, F("slow"))) {
-                            BlinkLEDTimer::setBlink(pin, BlinkLEDTimer::SLOW, color);
+                            BlinkLEDTimer::setBlink(pin, BlinkLEDTimer::BlinkType::SLOW, color);
                         }
                         else if (args.equalsIgnoreCase(0, F("fast"))) {
-                            BlinkLEDTimer::setBlink(pin, BlinkLEDTimer::FAST, color);
+                            BlinkLEDTimer::setBlink(pin, BlinkLEDTimer::BlinkType::FAST, color);
                         }
                         else if (args.equalsIgnoreCase(0, F("flicker"))) {
-                            BlinkLEDTimer::setBlink(pin, BlinkLEDTimer::FLICKER, color);
+                            BlinkLEDTimer::setBlink(pin, BlinkLEDTimer::BlinkType::FLICKER, color);
                         }
                         else if (args.equalsIgnoreCase(0, F("solid"))) {
-                            BlinkLEDTimer::setBlink(pin, BlinkLEDTimer::SOLID, color);
+                            BlinkLEDTimer::setBlink(pin, BlinkLEDTimer::BlinkType::SOLID, color);
                         }
                         else if (args.equalsIgnoreCase(0, F("sos"))) {
-                            BlinkLEDTimer::setBlink(pin, BlinkLEDTimer::SOS, color);
+                            BlinkLEDTimer::setBlink(pin, BlinkLEDTimer::BlinkType::SOS, color);
                         }
                         else {
                             mode = F("OFF");
-                            BlinkLEDTimer::setBlink(pin, BlinkLEDTimer::OFF);
+                            BlinkLEDTimer::setBlink(pin, BlinkLEDTimer::BlinkType::OFF);
                         }
                         args.printf_P(PSTR("LED pin=%d, mode=%s, color=0x%06x"), pin, mode.c_str(), color);
                     }

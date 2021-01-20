@@ -77,7 +77,11 @@ void ClockPlugin::onMessage(MQTTClient *client, char *topic, char *payload, size
     _resetAlarm();
 
     if (!strcmp_end_P(topic, SPGM(_brightness_set))) {
+        auto oldBrightness = _targetBrightness;
         setBrightness(atoi(payload));
+        if (oldBrightness == 0 || (_getState() == 0 && _targetBrightness)) { // save state only if turned on or off
+            _saveState(_targetBrightness);
+        }
     }
     else if (!strcmp_end_P(topic, SPGM(_color_set))) {
         char *endptr = nullptr;
@@ -91,20 +95,7 @@ void ClockPlugin::onMessage(MQTTClient *client, char *topic, char *payload, size
         }
     }
     else if (!strcmp_end_P(topic, SPGM(_set))) {
-        auto value = atoi(payload);
-        if (value) {
-            if (_targetBrightness == 0) {
-                if (_savedBrightness) {
-                    setBrightness(_savedBrightness);
-                }
-                else {
-                    setBrightness(_config.getBrightness());
-                }
-            }
-        }
-        else {
-            setBrightness(0);
-        }
+        _setState(atoi(payload));
     }
 }
 

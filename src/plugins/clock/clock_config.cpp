@@ -34,8 +34,9 @@ namespace KFCConfigurationClasses {
         solid_color(0x00ff00),
         animation(cast_int_animation(AnimationType::NONE)),
 #if IOT_LED_MATRIX
-        initial_state(cast_int_initial_state(InitialStateType::OFF)),
+        initial_state(cast_int_initial_state(InitialStateType::RESTORE)),
 #else
+        initial_state(cast_int_initial_state(InitialStateType::ON)),
         time_format_24h(true),
 #endif
         brightness(128),
@@ -46,7 +47,7 @@ namespace KFCConfigurationClasses {
         flashing_speed(150),
         protection( { { 55, 85 }, 75} ),
         rainbow{ RainbowMultiplier_t(), RainbowColor_t(), 30 },
-        alarm{ { 0xff0000 }, 250 },
+        alarm{ { 0xaa0000 }, 250 },
         fading{ .5f, 2, 0xffffff }
 #if IOT_LED_MATRIX
         ,

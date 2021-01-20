@@ -34,6 +34,8 @@ __DBGTM(
 
 static ClockPlugin plugin;
 
+#define DEVICE_STATE_FILE                               "/.pvt/device.state"
+
 #if IOT_LED_MATRIX
 
 #define PLUGIN_OPTIONS_NAME                             "led_matrix"
@@ -219,6 +221,24 @@ void ClockPlugin::setup(SetupModeType mode)
     _debug_println();
 
     readConfig();
+#if IOT_CLOCK_SAVE_STATE
+    auto brightness = _getState();
+    switch(_config.getInitialState()) {
+        case InitialStateType::OFF:
+            _savedBrightness = brightness;
+            _targetBrightness = 0;
+            break;
+        case InitialStateType::ON:
+            _targetBrightness = _config.getBrightness();
+            break;
+        case InitialStateType::RESTORE:
+            _targetBrightness = brightness;
+            break;
+        case InitialStateType::MAX:
+            break;
+    }
+#endif
+
 #if !IOT_LED_MATRIX
     _setSevenSegmentDisplay();
 #endif
@@ -872,3 +892,52 @@ bool ClockPlugin::_resetAlarm()
 
 #endif
 
+#if IOT_CLOCK_SAVE_STATE
+
+void ClockPlugin::_saveState(int32_t brightness)
+{
+    if (brightness == -1) {
+        brightness = _targetBrightness;
+    }
+    if (brightness != _getState()) {
+        auto file = KFCFS.open(DEVICE_STATE_FILE, fs::FileOpenMode::write);
+        if (file) {
+            file.println(brightness);
+        }
+    }
+}
+
+ClockPlugin::BrightnessType ClockPlugin::_getState() const
+{
+    auto file = KFCFS.open(DEVICE_STATE_FILE, fs::FileOpenMode::read);
+    if (file) {
+        auto value = file.readStringUntil('\n');
+        value.trim();
+        if (value.length() != 0) {
+            return value.toInt();
+        }
+    }
+    return _targetBrightness;
+}
+
+#endif
+
+void ClockPlugin::_setState(bool state)
+{
+    if (state) {
+        if (_targetBrightness == 0) {
+            if (_savedBrightness) {
+                setBrightness(_savedBrightness);
+                _saveState(_savedBrightness);
+            }
+            else {
+                setBrightness(_config.getBrightness());
+                _saveState(_config.getBrightness());
+            }
+        }
+    }
+    else {
+        setBrightness(0);
+        _saveState(0);
+    }
+}

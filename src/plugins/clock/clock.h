@@ -28,7 +28,18 @@
 #endif
 
 #ifndef IOT_CLOCK_BUTTON_PIN
+
 #define IOT_CLOCK_BUTTON_PIN                            14
+#ifndef IOT_CLOCK_SAVE_STATE
+#define IOT_CLOCK_SAVE_STATE                            1
+#endif
+
+#else
+
+#ifndef IOT_CLOCK_SAVE_STATE
+#define IOT_CLOCK_SAVE_STATE                            0
+#endif
+
 #endif
 
 #if IOT_CLOCK_BUTTON_PIN
@@ -62,6 +73,7 @@ public:
     using SevenSegmentDisplay = Clock::SevenSegmentDisplay;
     using Color = Clock::Color;
     using AnimationType = Clock::AnimationType;
+    using InitialStateType = Clock::InitialStateType;
     using BrightnessType = SevenSegmentDisplay::BrightnessType;
     using milliseconds = std::chrono::duration<uint32_t, std::ratio<1>>;
     using seconds = std::chrono::duration<uint32_t, std::ratio<1000>>;
@@ -109,6 +121,13 @@ public:
     virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len);
 
     void _publishState(MQTTClient *client = nullptr);
+
+private:
+#if IOT_CLOCK_SAVE_STATE
+    void _saveState(int32_t brightness = -1);
+    BrightnessType _getState() const;
+#endif
+    void _setState(bool state);
 
 public:
 #if IOT_CLOCK_BUTTON_PIN

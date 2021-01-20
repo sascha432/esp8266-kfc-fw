@@ -31,7 +31,7 @@ form.add(F("rb_cf"), Color(cfg.rainbow.color.factor.value).toString(), [&cfg](co
     }
     return false;
 });
-form.addFormUI(F("Color Multiplier Factor"));
+form.addFormUI(F("Color Multiplier"));
 
 form.add(F("rb_mv"), Color(cfg.rainbow.color.min.value).toString(), [&cfg](const String &value, FormUI::Field::BaseField &field, bool store) {
     if (store) {

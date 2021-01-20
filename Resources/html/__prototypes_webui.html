@@ -130,6 +130,19 @@
             </div>
         </div>
 
+        <div id="webui-switch-top" class="__prototypes">
+            <div class="webuicomponent">
+                <div class="switch named-switch">
+                    <div class="row">
+                        <var value="{{ht|h4}}" class="col title">{{title}}</var>
+                    </div>
+                    <div class="row">
+                        <div class="col"><input type="range" class="attribute-target"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div id="webui-slider" class="__prototypes">
             <div class="webuicomponent">
                 <div class="{{slider-type}}">
@@ -169,7 +182,7 @@
                     <div class="row">
                         <div class="col">
                             <var value="{{th|h4}}" class="title">{{title}}</var>
-                            <div class="btn-group-vertical btn-group-lg" id="{{id}}">{{content}}</div>
+                            <div id="{{id}}">{{content}}</div>
                         </div>
                     </div>
                 </div>
@@ -178,6 +191,10 @@
 
         <div id="webui-button-group-button" class="__prototypes">
             <button class="btn btn-outline-primary" data-value="{{index}}">{{value}}</button>
+        </div>
+
+        <div id="webui-button-group-col" class="__prototypes">
+            <div class="btn-group-vertical btn-group-lg">{{content}}</div>
         </div>
 
         <textarea id="prototypes" spellcheck="off"></textarea>

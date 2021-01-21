@@ -11,7 +11,7 @@
 #include "STK500v1Programmer.h"
 #include "blink_led_timer.h"
 #if HTTP2SERIAL_SUPPORT
-#include "plugins/http2serial/http2serial.h"
+#include "../src/plugins/http2serial/http2serial.h"
 #endif
 
 STK500v1Programmer *stk500v1 = nullptr;

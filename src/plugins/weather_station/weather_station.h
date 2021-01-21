@@ -13,7 +13,7 @@
 #include "NeoPixel_esp.h"
 #include "plugins.h"
 #if IOT_ALARM_PLUGIN_ENABLED
-#include "./plugins/alarm/alarm.h"
+#include "../src/plugins/alarm/alarm.h"
 #endif
 
 class WeatherStationPlugin : public PluginComponent, public WeatherStationBase {

@@ -11,8 +11,9 @@
 #include <EventScheduler.h>
 #include <PrintString.h>
 #include <EventScheduler.h>
-#include <FixedCircularBuffer.h>
-#include "plugins/http2serial/http2serial.h"
+#include <stl_ext/fixed_circular_buffer.h>
+
+#include "../src/plugins/http2serial/http2serial.h"
 
 #ifndef DEBUG_TOUCHPAD
 #define DEBUG_TOUCHPAD                      0

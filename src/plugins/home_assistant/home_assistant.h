@@ -10,7 +10,7 @@
 
 #include <Arduino_compat.h>
 #include <vector>
-#include <./plugins/mqtt/mqtt_client.h>
+#include "../src/plugins/mqtt/mqtt_client.h"
 #include "KFCRestApi.h"
 #include "HassJsonReader.h"
 #include "plugins.h"

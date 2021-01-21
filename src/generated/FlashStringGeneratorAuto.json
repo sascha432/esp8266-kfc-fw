@@ -1,18 +1,18 @@
 {
     "Content_Length": {
-        "use_counter": 2,
+        "use_counter": 1,
         "default": "Content-Length"
     },
     "Cache_Control": {
-        "use_counter": 2,
+        "use_counter": 1,
         "default": "Cache-Control"
     },
     "Set_Cookie": {
-        "use_counter": 2,
+        "use_counter": 1,
         "default": "Set-Cookie"
     },
     "mime_text_plain": {
-        "use_counter": 17,
+        "use_counter": 15,
         "default": "text/plain"
     },
     "null": {
@@ -24,11 +24,11 @@
         "default": "This field must be between %min% and %max% characters"
     },
     "FormValidator_min_macro": {
-        "use_counter": 3,
+        "use_counter": 2,
         "default": "%min%"
     },
     "FormValidator_max_macro": {
-        "use_counter": 3,
+        "use_counter": 2,
         "default": "%max%"
     },
     "FormEnumValidator_default_message": {
@@ -36,7 +36,7 @@
         "default": "Invalid value: %allowed%"
     },
     "FormValidator_allowed_macro": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "%allowed%"
     },
     "FormHostValidator_default_message": {
@@ -44,7 +44,7 @@
         "default": "Invalid hostname or IP address"
     },
     "webui_json_id": {
-        "use_counter": 30,
+        "use_counter": 24,
         "default": "id"
     },
     "webui_json_unit": {
@@ -60,15 +60,15 @@
         "default": "offset"
     },
     "webui_json_value": {
-        "use_counter": 30,
+        "use_counter": 24,
         "default": "value"
     },
     "webui_json_state": {
-        "use_counter": 24,
+        "use_counter": 14,
         "default": "state"
     },
     "mime_application_json": {
-        "use_counter": 6,
+        "use_counter": 5,
         "default": "application/json"
     },
     "OK": {
@@ -84,31 +84,31 @@
         "default": "off"
     },
     "crash_counter_file": {
-        "use_counter": 3,
+        "use_counter": 2,
         "default": "/.pvt/crash_counter"
     },
     "Device_is_rebooting": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "Device is rebooting...\\n"
     },
     "safe_mode_enabled": {
-        "use_counter": 2,
+        "use_counter": 1,
         "default": "Device started in SAFE MODE"
     },
     "default_password_warning": {
-        "use_counter": 3,
+        "use_counter": 2,
         "default": "WARNING! Default password has not been changed"
     },
     "__pure_virtual": {
-        "use_counter": 7,
+        "use_counter": 0,
         "default": "pure virtual call: %s\\n"
     },
     "yes": {
-        "use_counter": 3,
+        "use_counter": 2,
         "default": "yes"
     },
     "no": {
-        "use_counter": 2,
+        "use_counter": 1,
         "default": "no"
     },
     "comma_": {
@@ -120,11 +120,11 @@
         "default": " hidden"
     },
     "Not_supported": {
-        "use_counter": 2,
+        "use_counter": 1,
         "default": "Not supported"
     },
     "_selected": {
-        "use_counter": 2,
+        "use_counter": 1,
         "default": " selected"
     },
     "server_crt": {
@@ -136,11 +136,11 @@
         "default": "/server.key"
     },
     "webui_json_type": {
-        "use_counter": 18,
+        "use_counter": 17,
         "default": "type"
     },
     "webui_json_row": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "row"
     },
     "webui_json_align": {
@@ -256,15 +256,15 @@
         "default": "/webui-ws"
     },
     "webui_json_ue": {
-        "use_counter": 7,
+        "use_counter": 6,
         "default": "ue"
     },
     "webui_json_events": {
-        "use_counter": 7,
+        "use_counter": 6,
         "default": "events"
     },
     "http": {
-        "use_counter": 12,
+        "use_counter": 11,
         "default": "http"
     },
     "SID": {
@@ -272,7 +272,7 @@
         "default": "SID"
     },
     "Accept_Encoding": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "Accept-Encoding"
     },
     "slash": {
@@ -280,11 +280,11 @@
         "default": "/"
     },
     "mime_text_html": {
-        "use_counter": 3,
+        "use_counter": 2,
         "default": "text/html"
     },
     "mime_application_zip": {
-        "use_counter": 2,
+        "use_counter": 1,
         "default": "application/zip"
     },
     "mime_image_bmp": {
@@ -296,31 +296,31 @@
         "default": "tcp"
     },
     "mime_text_css": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "text/css"
     },
     "mime_application_javascript": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "application/javascript"
     },
     "mime_image_png": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "image/png"
     },
     "mime_image_gif": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "image/gif"
     },
     "mime_image_jpeg": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "image/jpeg"
     },
     "mime_text_xml": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "text/xml"
     },
     "mime_application_x_gzip": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "application/x-gzip"
     },
     "Expires": {
@@ -328,11 +328,11 @@
         "default": "Expires"
     },
     "Last_Modified": {
-        "use_counter": 3,
+        "use_counter": 2,
         "default": "Last-Modified"
     },
     "Content_Encoding": {
-        "use_counter": 3,
+        "use_counter": 2,
         "default": "Content-Encoding"
     },
     "login_html": {
@@ -352,11 +352,11 @@
         "default": "/.pvt/blinds_ctrl.state"
     },
     "Yes": {
-        "use_counter": 3,
+        "use_counter": 1,
         "default": "Yes"
     },
     "No": {
-        "use_counter": 3,
+        "use_counter": 1,
         "default": "No"
     },
     "webui_json_title": {
@@ -368,7 +368,7 @@
         "default": "upload"
     },
     "file_manager_base_uri": {
-        "use_counter": 2,
+        "use_counter": 1,
         "default": "/file_manager/"
     },
     "dir": {
@@ -376,7 +376,7 @@
         "default": "dir"
     },
     "ERROR_": {
-        "use_counter": 12,
+        "use_counter": 11,
         "default": "ERROR:"
     },
     "success": {
@@ -392,7 +392,7 @@
         "default": "upload_file"
     },
     "file_manager_html_uri": {
-        "use_counter": 2,
+        "use_counter": 1,
         "default": "file-manager.html"
     },
     "filename": {
@@ -557,7 +557,7 @@
         "default": "Off"
     },
     "iot_switch_states_file": {
-        "use_counter": 2,
+        "use_counter": 1,
         "default": "/.pvt/switch.states"
     },
     "kfcfw": {
@@ -733,7 +733,7 @@
         "default": "/webui/"
     },
     "login_failure_file": {
-        "use_counter": 3,
+        "use_counter": 4,
         "default": "/.pvt/login_failures"
     },
     "Form_value_missing_default_message": {
@@ -745,7 +745,7 @@
         "default": "This fields value must be between %min% and %max%"
     },
     "RFC7231_date": {
-        "use_counter": 2,
+        "use_counter": 1,
         "default": "%a, %d %b %Y %H:%M:%S GMT"
     },
     "Pragma": {
@@ -761,7 +761,7 @@
         "default": "Link"
     },
     "no_cache": {
-        "use_counter": 3,
+        "use_counter": 2,
         "default": "no-cache"
     },
     "private": {
@@ -785,7 +785,7 @@
         "default": "close"
     },
     "keep_alive": {
-        "use_counter": 2,
+        "use_counter": 1,
         "default": "keep-alive"
     },
     "status": {
@@ -797,19 +797,19 @@
         "default": "message"
     },
     "ds3231_id_temp": {
-        "use_counter": 5,
+        "use_counter": 0,
         "default": "ds3231_temp"
     },
     "ds3231_id_time": {
-        "use_counter": 5,
+        "use_counter": 0,
         "default": "ds3231_time"
     },
     "ds3231_id_lost_power": {
-        "use_counter": 3,
+        "use_counter": 0,
         "default": "ds3231_lost_power"
     },
     "webui_json_head": {
-        "use_counter": 2,
+        "use_counter": 1,
         "default": "head"
     },
     "fs_mapping_listings": {
@@ -825,7 +825,7 @@
         "default": "Authorization"
     },
     "Bearer_": {
-        "use_counter": 3,
+        "use_counter": 2,
         "default": "Bearer "
     },
     "cfg": {
@@ -845,7 +845,7 @@
         "default": "password"
     },
     "status__u": {
-        "use_counter": 4,
+        "use_counter": 3,
         "default": "status=%u"
     },
     "display": {
@@ -897,7 +897,7 @@
         "default": "password.html"
     },
     "reboot_html": {
-        "use_counter": 3,
+        "use_counter": 2,
         "default": "reboot.html"
     },
     "Configuration": {
@@ -929,11 +929,11 @@
         "default": "Admin"
     },
     "factory_html": {
-        "use_counter": 2,
+        "use_counter": 1,
         "default": "factory.html"
     },
     "crash_dump_file": {
-        "use_counter": 2,
+        "use_counter": 1,
         "default": "/.pvt/crash.%03x"
     },
     "username": {
@@ -953,7 +953,7 @@
         "default": "title"
     },
     "KFC_Firmware": {
-        "use_counter": 3,
+        "use_counter": 2,
         "default": "KFC Firmware"
     },
     "applying_html": {
@@ -977,31 +977,31 @@
         "default": "device"
     },
     "mime_image_icon": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "image/x-icon"
     },
     "mime_image_svg_xml": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "image/svg+xml"
     },
     "mime_font_eot": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "font/eot"
     },
     "mime_font_woff": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "font/woff"
     },
     "mime_font_woff2": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "font/woff2"
     },
     "mime_font_ttf": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "font/ttf"
     },
     "mime_application_pdf": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "application/pdf"
     },
     "gzip": {
@@ -1021,7 +1021,7 @@
         "default": "Success"
     },
     "update_fw_html": {
-        "use_counter": 4,
+        "use_counter": 3,
         "default": "update-fw.html"
     },
     "Invalid_port": {
@@ -1029,7 +1029,7 @@
         "default": "Invalid port"
     },
     "_login_html": {
-        "use_counter": 2,
+        "use_counter": 1,
         "default": "/login.html"
     },
     "n_a": {
@@ -1061,7 +1061,7 @@
         "default": "hPa"
     },
     "channel__u": {
-        "use_counter": 17,
+        "use_counter": 15,
         "default": "channel_%u"
     },
     "temperature": {
@@ -1101,19 +1101,19 @@
         "default": "/state"
     },
     "_brightness_set": {
-        "use_counter": 7,
+        "use_counter": 6,
         "default": "/brightness/set"
     },
     "_brightness_state": {
-        "use_counter": 5,
+        "use_counter": 4,
         "default": "/brightness/state"
     },
     "_color_set": {
-        "use_counter": 5,
+        "use_counter": 4,
         "default": "/color/set"
     },
     "_color_state": {
-        "use_counter": 3,
+        "use_counter": 2,
         "default": "/color/state"
     },
     "main": {
@@ -1129,7 +1129,7 @@
         "default": "brightness"
     },
     "_degreeC": {
-        "use_counter": 9,
+        "use_counter": 7,
         "default": "\\u00b0C"
     },
     "vcc": {
@@ -1145,7 +1145,7 @@
         "default": "Hz"
     },
     "light_sensor": {
-        "use_counter": 6,
+        "use_counter": 0,
         "default": "light_sensor"
     },
     "plugin_name_rd": {
@@ -1161,7 +1161,7 @@
         "default": "Alarm"
     },
     "defaultPassword": {
-        "use_counter": 10,
+        "use_counter": 9,
         "default": "12345678"
     },
     "Enabled": {
@@ -1197,7 +1197,7 @@
         "default": "port"
     },
     "Port": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "Port"
     },
     "Username": {
@@ -1229,7 +1229,7 @@
         "default": "prefix"
     },
     "Software_Serial": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "Software Serial"
     },
     "Server": {
@@ -1273,51 +1273,51 @@
         "default": "string"
     },
     "htmlentities_quot": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "&quot;"
     },
     "htmlentities_lt": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "&lt;"
     },
     "htmlentities_gt": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "&gt;"
     },
     "htmlentities_num": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "&num;"
     },
     "htmlentities_amp": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "&amp;"
     },
     "htmlentities_percnt": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "&percnt;"
     },
     "htmlentities_equals": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "&equals;"
     },
     "htmlentities_quest": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "&quest;"
     },
     "htmlentities_deg": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "&deg;"
     },
     "htmlentities_copy": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "&copy;"
     },
     "htmlentities_micro": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "&plusmn;"
     },
     "htmlentities_acute": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "&acute;"
     },
     "placeholder": {
@@ -1337,11 +1337,11 @@
         "default": "readonly"
     },
     "htmlentities_plusmn": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "&micro;"
     },
     "htmlentities_apos": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "&apos;"
     },
     "address": {
@@ -1353,7 +1353,7 @@
         "default": "domain"
     },
     "_xml": {
-        "use_counter": 2,
+        "use_counter": 0,
         "default": ".xml"
     },
     "size": {
@@ -1361,7 +1361,7 @@
         "default": "size"
     },
     "description_xml": {
-        "use_counter": 3,
+        "use_counter": 2,
         "default": "description.xml"
     },
     "KFCLabs": {
@@ -1441,7 +1441,7 @@
         "default": "Save Changes"
     },
     "Your_session_has_expired": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "Your session has expired"
     },
     "keep": {
@@ -1449,7 +1449,7 @@
         "default": "keep"
     },
     "Invalid_username_or_password": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "Invalid username or password"
     },
     "None": {
@@ -1533,11 +1533,11 @@
         "default": "STA"
     },
     "NTP_Client_Configuration": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "NTP Client Configuration"
     },
     "NTP_Client": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "NTP Client"
     },
     "Timezone": {
@@ -1549,7 +1549,7 @@
         "default": "NTP Server %u"
     },
     "Refresh_Interval": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "Refresh Interval"
     },
     "minutes__": {
@@ -1589,7 +1589,7 @@
         "default": "Zeroconf Logging"
     },
     "httpmode": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "httpmode"
     },
     "FormRangeValidator_invalid_port": {
@@ -1601,7 +1601,7 @@
         "default": "Invalid Port (%min%-%max%)"
     },
     "minutes__5_": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "minutes \\u00b15%"
     },
     "ticks": {
@@ -1613,11 +1613,11 @@
         "default": "Offline"
     },
     "Station_Mode": {
-        "use_counter": 5,
+        "use_counter": 4,
         "default": "Station Mode"
     },
     "Access_Point": {
-        "use_counter": 7,
+        "use_counter": 6,
         "default": "Access Point"
     },
     "DHCP_Client": {
@@ -1629,11 +1629,11 @@
         "default": "DHCP Server"
     },
     "_checked": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": " checked"
     },
     "WiFi_Configuration": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "WiFi Configuration"
     },
     "wifi_mode": {
@@ -1645,7 +1645,7 @@
         "default": "Invalid mode"
     },
     "WiFi_Mode": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "WiFi Mode"
     },
     "station": {
@@ -1701,7 +1701,7 @@
         "default": "sec"
     },
     "_02x": {
-        "use_counter": 3,
+        "use_counter": 0,
         "default": "%02x"
     },
     "0x_08x": {
@@ -1885,7 +1885,7 @@
         "default": "Address"
     },
     "_var_gateway": {
-        "use_counter": 3,
+        "use_counter": 2,
         "default": "${gateway}"
     },
     "_var_zeroconf": {
@@ -1901,11 +1901,11 @@
         "default": "Timeout"
     },
     "ip_8_8_8_8": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "8.8.8.8"
     },
     "www_google_com": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "www.google.com"
     },
     "stopped": {
@@ -1961,7 +1961,7 @@
         "default": "Ping Monitor Service"
     },
     "logger_filename_debug": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "/.logs/debug"
     },
     "logger_filename_access": {
@@ -1969,19 +1969,19 @@
         "default": "/.logs/access"
     },
     "logger_filename_error": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "/.logs/error"
     },
     "logger_filename_security": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "/.logs/security"
     },
     "logger_filename_messags": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "/.logs/messages"
     },
     "logger_filename_warning": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "/.logs/warning"
     },
     "syslog_nil_value": {
@@ -2027,5 +2027,381 @@
     "webui_json_listbox": {
         "use_counter": 1,
         "default": "listbox"
+    },
+    "KFC Firmware": {
+        "use_counter": 1,
+        "auto": "KFC Firmware"
+    },
+    "12345678": {
+        "use_counter": 1,
+        "auto": "12345678"
+    },
+    "Device started in SAFE MODE": {
+        "use_counter": 1,
+        "auto": "Device started in SAFE MODE"
+    },
+    "WARNING! Default password has not been changed": {
+        "use_counter": 1,
+        "auto": "WARNING! Default password has not been changed"
+    },
+    "WiFi Configuration": {
+        "use_counter": 1,
+        "auto": "WiFi Configuration"
+    },
+    "WiFi Mode": {
+        "use_counter": 1,
+        "auto": "WiFi Mode"
+    },
+    "/.logs/debug": {
+        "use_counter": 1,
+        "auto": "/.logs/debug"
+    },
+    "/.logs/error": {
+        "use_counter": 1,
+        "auto": "/.logs/error"
+    },
+    "/.logs/security": {
+        "use_counter": 1,
+        "auto": "/.logs/security"
+    },
+    "/.logs/warning": {
+        "use_counter": 1,
+        "auto": "/.logs/warning"
+    },
+    "/.logs/messages": {
+        "use_counter": 1,
+        "auto": "/.logs/messages"
+    },
+    "%allowed%": {
+        "use_counter": 1,
+        "auto": "%allowed%"
+    },
+    "%min%": {
+        "use_counter": 1,
+        "auto": "%min%"
+    },
+    "%max%": {
+        "use_counter": 1,
+        "auto": "%max%"
+    },
+    "%a, %d %b %Y %H:%M:%S GMT": {
+        "use_counter": 1,
+        "auto": "%a, %d %b %Y %H:%M:%S GMT"
+    },
+    "Cache-Control": {
+        "use_counter": 1,
+        "auto": "Cache-Control"
+    },
+    "Content-Length": {
+        "use_counter": 1,
+        "auto": "Content-Length"
+    },
+    "Content-Encoding": {
+        "use_counter": 1,
+        "auto": "Content-Encoding"
+    },
+    "Set-Cookie": {
+        "use_counter": 1,
+        "auto": "Set-Cookie"
+    },
+    "Last-Modified": {
+        "use_counter": 1,
+        "auto": "Last-Modified"
+    },
+    "no-cache": {
+        "use_counter": 1,
+        "auto": "no-cache"
+    },
+    "keep-alive": {
+        "use_counter": 1,
+        "auto": "keep-alive"
+    },
+    "Bearer ": {
+        "use_counter": 1,
+        "auto": "Bearer "
+    },
+    "pure virtual call: %s\\n": {
+        "use_counter": 7,
+        "auto": "pure virtual call: %s\\n"
+    },
+    "/.pvt/crash_counter": {
+        "use_counter": 1,
+        "auto": "/.pvt/crash counter"
+    },
+    "/.pvt/crash.%03x": {
+        "use_counter": 1,
+        "auto": "/.pvt/crash.%03x"
+    },
+    "Not supported": {
+        "use_counter": 1,
+        "auto": "Not supported"
+    },
+    " selected": {
+        "use_counter": 1,
+        "auto": " selected"
+    },
+    "Station Mode": {
+        "use_counter": 1,
+        "auto": "Station Mode"
+    },
+    "Access Point": {
+        "use_counter": 1,
+        "auto": "Access Point"
+    },
+    "text/html": {
+        "use_counter": 1,
+        "auto": "text/html"
+    },
+    "text/css": {
+        "use_counter": 1,
+        "auto": "text/css"
+    },
+    "application/json": {
+        "use_counter": 1,
+        "auto": "application/json"
+    },
+    "application/javascript": {
+        "use_counter": 1,
+        "auto": "application/javascript"
+    },
+    "image/png": {
+        "use_counter": 1,
+        "auto": "image/png"
+    },
+    "image/gif": {
+        "use_counter": 1,
+        "auto": "image/gif"
+    },
+    "image/jpeg": {
+        "use_counter": 1,
+        "auto": "image/jpeg"
+    },
+    "image/x-icon": {
+        "use_counter": 1,
+        "auto": "image/x-icon"
+    },
+    "image/svg+xml": {
+        "use_counter": 1,
+        "auto": "image/svg+xml"
+    },
+    "font/eot": {
+        "use_counter": 1,
+        "auto": "font/eot"
+    },
+    "font/woff": {
+        "use_counter": 1,
+        "auto": "font/woff"
+    },
+    "font/woff2": {
+        "use_counter": 1,
+        "auto": "font/woff2"
+    },
+    "font/ttf": {
+        "use_counter": 1,
+        "auto": "font/ttf"
+    },
+    ".xml": {
+        "use_counter": 2,
+        "auto": ".xml"
+    },
+    "text/xml": {
+        "use_counter": 1,
+        "auto": "text/xml"
+    },
+    "application/pdf": {
+        "use_counter": 1,
+        "auto": "application/pdf"
+    },
+    "application/zip": {
+        "use_counter": 1,
+        "auto": "application/zip"
+    },
+    "application/x-gzip": {
+        "use_counter": 1,
+        "auto": "application/x-gzip"
+    },
+    "text/plain": {
+        "use_counter": 1,
+        "auto": "text/plain"
+    },
+    "Accept-Encoding": {
+        "use_counter": 1,
+        "auto": "Accept-Encoding"
+    },
+    "update-fw.html": {
+        "use_counter": 1,
+        "auto": "update-fw.html"
+    },
+    "Your session has expired": {
+        "use_counter": 1,
+        "auto": "Your session has expired"
+    },
+    "Invalid username or password": {
+        "use_counter": 1,
+        "auto": "Invalid username or password"
+    },
+    "/login.html": {
+        "use_counter": 1,
+        "auto": "/login.html"
+    },
+    "reboot.html": {
+        "use_counter": 1,
+        "auto": "reboot.html"
+    },
+    "factory.html": {
+        "use_counter": 1,
+        "auto": "factory.html"
+    },
+    "Device is rebooting...\\n": {
+        "use_counter": 1,
+        "auto": "Device is rebooting...\\n"
+    },
+    "channel_%u": {
+        "use_counter": 2,
+        "auto": "channel %u"
+    },
+    "/brightness/state": {
+        "use_counter": 1,
+        "auto": "/brightness/state"
+    },
+    "/color/state": {
+        "use_counter": 1,
+        "auto": "/color/state"
+    },
+    "/brightness/set": {
+        "use_counter": 1,
+        "auto": "/brightness/set"
+    },
+    "/color/set": {
+        "use_counter": 1,
+        "auto": "/color/set"
+    },
+    "/.pvt/device.state": {
+        "use_counter": 1,
+        "auto": "/.pvt/device.state"
+    },
+    "iot_clock_save_state_file": {
+        "use_counter": 3,
+        "auto": "iot clock save state file"
+    },
+    "/file_manager/": {
+        "use_counter": 1,
+        "auto": "/file manager/"
+    },
+    "ERROR:": {
+        "use_counter": 1,
+        "auto": "ERROR:"
+    },
+    "file-manager.html": {
+        "use_counter": 1,
+        "auto": "file-manager.html"
+    },
+    "status=%u": {
+        "use_counter": 1,
+        "auto": "status=%u"
+    },
+    "NTP Client Configuration": {
+        "use_counter": 1,
+        "auto": "NTP Client Configuration"
+    },
+    "NTP Client": {
+        "use_counter": 1,
+        "auto": "NTP Client"
+    },
+    "Refresh Interval": {
+        "use_counter": 1,
+        "auto": "Refresh Interval"
+    },
+    "minutes \\u00b15%": {
+        "use_counter": 1,
+        "auto": "minutes \\u00b15%"
+    },
+    "8.8.8.8": {
+        "use_counter": 1,
+        "auto": "8.8.8.8"
+    },
+    "www.google.com": {
+        "use_counter": 1,
+        "auto": "www.google.com"
+    },
+    "${gateway}": {
+        "use_counter": 1,
+        "auto": "${gateway}"
+    },
+    "Software Serial": {
+        "use_counter": 1,
+        "auto": "Software Serial"
+    },
+    "description.xml": {
+        "use_counter": 1,
+        "auto": "description.xml"
+    },
+    "/.pvt/switch.states": {
+        "use_counter": 1,
+        "auto": "/.pvt/switch.states"
+    },
+    "%02x": {
+        "use_counter": 3,
+        "auto": "%02x"
+    },
+    "&apos;": {
+        "use_counter": 1,
+        "auto": "&apos;"
+    },
+    "&quot;": {
+        "use_counter": 1,
+        "auto": "&quot;"
+    },
+    "&lt;": {
+        "use_counter": 1,
+        "auto": "&lt;"
+    },
+    "&gt;": {
+        "use_counter": 1,
+        "auto": "&gt;"
+    },
+    "&amp;": {
+        "use_counter": 1,
+        "auto": "&amp;"
+    },
+    "&percnt;": {
+        "use_counter": 1,
+        "auto": "&percnt;"
+    },
+    "&equals;": {
+        "use_counter": 1,
+        "auto": "&equals;"
+    },
+    "&quest;": {
+        "use_counter": 1,
+        "auto": "&quest;"
+    },
+    "&num;": {
+        "use_counter": 1,
+        "auto": "&num;"
+    },
+    "&copy;": {
+        "use_counter": 1,
+        "auto": "&copy;"
+    },
+    "&deg;": {
+        "use_counter": 1,
+        "auto": "&deg;"
+    },
+    "&plusmn;": {
+        "use_counter": 1,
+        "auto": "&plusmn;"
+    },
+    "&acute;": {
+        "use_counter": 1,
+        "auto": "&acute;"
+    },
+    "&micro;": {
+        "use_counter": 1,
+        "auto": "&micro;"
+    },
+    " checked": {
+        "use_counter": 1,
+        "auto": " checked"
     }
 }

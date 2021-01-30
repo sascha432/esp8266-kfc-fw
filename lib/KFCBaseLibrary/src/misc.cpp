@@ -814,7 +814,7 @@ void bin2hex_append(String &str, const void *data, size_t length)
     char hex[3];
     auto ptr = reinterpret_cast<const uint8_t *>(data);
     while (length--) {
-        snprintf_P(hex, sizeof(hex), SPGM(_02x, "%02x"), *ptr++);
+        snprintf_P(hex, sizeof(hex), PSTR("%02x"), *ptr++);
         str += hex;
     }
 }

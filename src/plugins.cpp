@@ -126,7 +126,7 @@ void dump_plugin_list(Print &output)
 #if ENABLE_DEEP_SLEEP
             BOOL_STR(plugin->autoSetupAfterDeepSleep()),
 #else
-            SPGM(n_a, "n/a"),
+            PSTR("n/a"),
 #endif
             options.memory_id,
             BOOL_STR(plugin->hasStatus()),

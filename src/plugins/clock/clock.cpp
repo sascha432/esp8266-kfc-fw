@@ -14,9 +14,9 @@
 #include "clock.h"
 #include "blink_led_timer.h"
 #include <stl_ext/algorithm.h>
-#include "./plugins/mqtt/mqtt_client.h"
-#include "./plugins/ntp/ntp_plugin.h"
-#include "./plugins/sensor/sensor.h"
+#include "../src/plugins/mqtt/mqtt_client.h"
+#include "../src/plugins/ntp/ntp_plugin.h"
+#include "../src/plugins/sensor/sensor.h"
 
 #if DEBUG_IOT_CLOCK
 #include <debug_helper_enable.h>
@@ -33,8 +33,6 @@ __DBGTM(
 );
 
 static ClockPlugin plugin;
-
-#define DEVICE_STATE_FILE                               "/.pvt/device.state"
 
 #if IOT_LED_MATRIX
 
@@ -82,6 +80,9 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
 ClockPlugin::ClockPlugin() :
     PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(ClockPlugin)),
     MQTTComponent(ComponentTypeEnum_t::LIGHT),
+#if IOT_CLOCK_SAVE_STATE
+    _saveTimestamp(0),
+#endif
 #if IOT_CLOCK_BUTTON_PIN
     _button(IOT_CLOCK_BUTTON_PIN, PRESSED_WHEN_HIGH),
     _buttonCounter(0),
@@ -222,17 +223,17 @@ void ClockPlugin::setup(SetupModeType mode)
 
     readConfig();
 #if IOT_CLOCK_SAVE_STATE
-    auto brightness = _getState();
+    auto state = _getState();
     switch(_config.getInitialState()) {
         case InitialStateType::OFF:
-            _savedBrightness = brightness;
+            _savedBrightness = state.getBrightness();
             _targetBrightness = 0;
             break;
         case InitialStateType::ON:
             _targetBrightness = _config.getBrightness();
             break;
         case InitialStateType::RESTORE:
-            _targetBrightness = brightness;
+            _copyFromState(state);
             break;
         case InitialStateType::MAX:
             break;
@@ -313,8 +314,8 @@ void ClockPlugin::setup(SetupModeType mode)
                     #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
                         _autoBrightness = kAutoBrightnessOff;
                     #endif
-                    _tempBrightness = -1;
                     _startTempProtectionAnimation();
+                    _tempBrightness = -1;
                     WebAlerts::Alert::error(message);
                 }
                 else {
@@ -392,6 +393,12 @@ void ClockPlugin::reconfigure(const String &source)
 void ClockPlugin::shutdown()
 {
     __LDBG_println();
+#if IOT_CLOCK_SAVE_STATE
+    if (_saveTimer) {
+        _saveTimer.remove();
+        _saveState();
+    }
+#endif
 #if IOT_ALARM_PLUGIN_ENABLED
     _resetAlarm();
     AlarmPlugin::setCallback(nullptr);
@@ -721,6 +728,7 @@ void ClockPlugin::_setAnimation(Clock::Animation *animation)
     _deleteAnimaton(false);
     _animation = animation;
     _animation->begin();
+    _forceUpdate = true;
     _schedulePublishState = true;
 }
 
@@ -892,52 +900,3 @@ bool ClockPlugin::_resetAlarm()
 
 #endif
 
-#if IOT_CLOCK_SAVE_STATE
-
-void ClockPlugin::_saveState(int32_t brightness)
-{
-    if (brightness == -1) {
-        brightness = _targetBrightness;
-    }
-    if (brightness != _getState()) {
-        auto file = KFCFS.open(DEVICE_STATE_FILE, fs::FileOpenMode::write);
-        if (file) {
-            file.println(brightness);
-        }
-    }
-}
-
-ClockPlugin::BrightnessType ClockPlugin::_getState() const
-{
-    auto file = KFCFS.open(DEVICE_STATE_FILE, fs::FileOpenMode::read);
-    if (file) {
-        auto value = file.readStringUntil('\n');
-        value.trim();
-        if (value.length() != 0) {
-            return value.toInt();
-        }
-    }
-    return _targetBrightness;
-}
-
-#endif
-
-void ClockPlugin::_setState(bool state)
-{
-    if (state) {
-        if (_targetBrightness == 0) {
-            if (_savedBrightness) {
-                setBrightness(_savedBrightness);
-                _saveState(_savedBrightness);
-            }
-            else {
-                setBrightness(_config.getBrightness());
-                _saveState(_config.getBrightness());
-            }
-        }
-    }
-    else {
-        setBrightness(0);
-        _saveState(0);
-    }
-}

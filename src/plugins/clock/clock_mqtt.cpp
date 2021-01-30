@@ -4,7 +4,7 @@
 
 #include <Arduino_compat.h>
 #include "clock.h"
-#include "./plugins/sensor/sensor.h"
+#include "../src/plugins/sensor/sensor.h"
 
 #if DEBUG_IOT_CLOCK
 #include <debug_helper_enable.h>
@@ -77,11 +77,8 @@ void ClockPlugin::onMessage(MQTTClient *client, char *topic, char *payload, size
     _resetAlarm();
 
     if (!strcmp_end_P(topic, SPGM(_brightness_set))) {
-        auto oldBrightness = _targetBrightness;
         setBrightness(atoi(payload));
-        if (oldBrightness == 0 || (_getState() == 0 && _targetBrightness)) { // save state only if turned on or off
-            _saveState(_targetBrightness);
-        }
+        _saveStateDelayed();
     }
     else if (!strcmp_end_P(topic, SPGM(_color_set))) {
         char *endptr = nullptr;
@@ -91,6 +88,7 @@ void ClockPlugin::onMessage(MQTTClient *client, char *topic, char *payload, size
             if (endptr && *endptr++ == ',') {
                 auto blue = (uint8_t)strtoul(endptr, nullptr, 10);
                 setColorAndRefresh(Color(red, green, blue));
+                _saveStateDelayed();
             }
         }
     }

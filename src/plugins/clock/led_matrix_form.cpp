@@ -7,7 +7,7 @@
 #include <Arduino_compat.h>
 #include "clock.h"
 #include <KFCForms.h>
-#include "./plugins/sensor/sensor.h"
+#include "../src/plugins/sensor/sensor.h"
 
 #if DEBUG_IOT_CLOCK
 #include <debug_helper_enable.h>
@@ -22,7 +22,12 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         return;
     }
 
+    auto animation = _config.getAnimation();
     auto &cfg = Plugins::Clock::getWriteableConfig();
+    cfg.solid_color = _color.get();
+    cfg.animation = static_cast<uint8_t>(animation);
+    cfg.brightness = _targetBrightness >> 8;
+
     auto animationTypeItems = FormUI::Container::List(
         AnimationType::NONE, FSPGM(Solid_Color),
         AnimationType::RAINBOW, FSPGM(Rainbow),
@@ -32,12 +37,6 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         AnimationType::SKIP_ROWS, F("Skip Rows or Columns")
     );
 
-    auto initialStateItems = FormUI::Container::List(
-        Clock::InitialStateType::OFF, F("Turn Off"),
-        Clock::InitialStateType::ON, F("Turn On"),
-        Clock::InitialStateType::RESTORE, F("Restore Last State")
-    );
-
     auto &ui = form.createWebUI();
     ui.setTitle(F("LED Matrix Configuration"));
     ui.setContainerId(F("led_matrix_settings"));
@@ -45,8 +44,16 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
     auto &mainGroup = form.addCardGroup(FSPGM(config));
 
+#if IOT_CLOCK_SAVE_STATE
+    auto initialStateItems = FormUI::Container::List(
+        Clock::InitialStateType::OFF, F("Turn Off"),
+        Clock::InitialStateType::ON, F("Turn On"),
+        Clock::InitialStateType::RESTORE, F("Restore Last State")
+    );
+
     form.addObjectGetterSetter(F("is"), cfg, cfg.get_int_initial_state, cfg.set_int_initial_state);
     form.addFormUI(F("After Reset"), initialStateItems);
+#endif
 
     form.addPointerTriviallyCopyable(FSPGM(brightness), &cfg.brightness);
     form.addFormUI(FormUI::Type::RANGE_SLIDER, FSPGM(Brightness), FormUI::MinMax(0, 255));

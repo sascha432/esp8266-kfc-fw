@@ -9,6 +9,28 @@
 #include <ESPAsyncWebServer.h>
 #endif
 
+FLASH_STRING_GENERATOR_AUTO_INIT(
+    AUTO_STRING_DEF(Pragma, "Pragma")
+    AUTO_STRING_DEF(Link, "Link")
+    AUTO_STRING_DEF(Location, "Location")
+    AUTO_STRING_DEF(RFC7231_date, "%a, %d %b %Y %H:%M:%S GMT")
+    AUTO_STRING_DEF(Cache_Control, "Cache-Control")
+    AUTO_STRING_DEF(Content_Length, "Content-Length")
+    AUTO_STRING_DEF(Content_Encoding, "Content-Encoding")
+    AUTO_STRING_DEF(Connection, "Connection")
+    AUTO_STRING_DEF(Cookie, "Cookie")
+    AUTO_STRING_DEF(Set_Cookie, "Set-Cookie")
+    AUTO_STRING_DEF(Last_Modified, "Last-Modified")
+    AUTO_STRING_DEF(Expires, "Expires")
+    AUTO_STRING_DEF(no_cache, "no-cache")
+    AUTO_STRING_DEF(close, "close")
+    AUTO_STRING_DEF(keep_alive, "keep-alive")
+    AUTO_STRING_DEF(public, "public")
+    AUTO_STRING_DEF(private, "private")
+    AUTO_STRING_DEF(Authorization, "Authorization")
+    AUTO_STRING_DEF(Bearer_, "Bearer ")
+);
+
 HttpHeaders::HttpHeaders()
 {
     init();

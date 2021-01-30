@@ -85,7 +85,7 @@ DumpBinary &DumpBinary::dump(const uint8_t *data, size_t length, ptrdiff_t offse
         j = 0;
         for (; pos < end && j < perLine; pos++, j++) {
             int ch = pgm_read_byte(data + pos);
-            _output.printf_P(SPGM(_02x, "%02x"), ch);
+            _output.printf_P(PSTR("%02x"), ch);
             if ((pos < end - 1) && ((j % _groupBytes) == 1)) {
                 _output.print(' ');
             }

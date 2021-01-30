@@ -2,7 +2,9 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#include "kfc_fw_config_plugin.h"
+#include <Arduino_compat.h>
+#include <kfc_fw_config.h>
+#include <kfc_fw_config_plugin.h>
 #include <stl_ext/type_traits.h>
 #include <KFCForms.h>
 

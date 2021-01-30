@@ -8,12 +8,13 @@
 #include <MillisTimer.h>
 #include <vector>
 #include "animation.h"
+#include "stored_state.h"
 #include "WebUIComponent.h"
 #include "plugins.h"
 #include "kfc_fw_config.h"
-#include "./plugins/mqtt/mqtt_component.h"
+#include "../src/plugins/mqtt/mqtt_component.h"
 #if IOT_ALARM_PLUGIN_ENABLED
-#include "./plugins/alarm/alarm.h"
+#include "../src/plugins/alarm/alarm.h"
 #endif
 #if IOT_LED_MATRIX
 #include "led_matrix.h"
@@ -40,6 +41,11 @@
 #define IOT_CLOCK_SAVE_STATE                            0
 #endif
 
+#endif
+
+#ifndef IOT_CLOCK_SAVE_STATE_DELAY
+// delay in seconds before any changes get stored except for power on/off
+#define IOT_CLOCK_SAVE_STATE_DELAY                      30
 #endif
 
 #if IOT_CLOCK_BUTTON_PIN
@@ -74,7 +80,8 @@ public:
     using Color = Clock::Color;
     using AnimationType = Clock::AnimationType;
     using InitialStateType = Clock::InitialStateType;
-    using BrightnessType = SevenSegmentDisplay::BrightnessType;
+    using BrightnessType = Clock::BrightnessType;
+    using StoredState = Clock::StoredState;
     using milliseconds = std::chrono::duration<uint32_t, std::ratio<1>>;
     using seconds = std::chrono::duration<uint32_t, std::ratio<1000>>;
 
@@ -124,8 +131,14 @@ public:
 
 private:
 #if IOT_CLOCK_SAVE_STATE
+    void _saveStateDelayed();
     void _saveState(int32_t brightness = -1);
-    BrightnessType _getState() const;
+    StoredState _getState() const;
+    void _copyToState(StoredState &state, BrightnessType brightness);
+    void _copyFromState(const StoredState &state);
+
+    Event::Timer _saveTimer;
+    uint32_t _saveTimestamp;
 #endif
     void _setState(bool state);
 
@@ -331,6 +344,7 @@ private:
     void _setNextAnimation(Clock::Animation *animation);
     void _deleteAnimaton(bool startNext);
     void _setAnimatonNone();
+
 private:
     Clock::Animation *_animation;
     Clock::Animation *_nextAnimation;

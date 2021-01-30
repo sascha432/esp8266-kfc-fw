@@ -772,7 +772,7 @@ bool WebServerPlugin::_sendFile(const FileMapping &mapping, const String &formNa
             }
         }
     }
-    if ((isHtml || String_endsWith(path, SPGM(_xml, ".xml"))) && webTemplate == nullptr) {
+    if ((isHtml || String_endsWith(path, SPGM(_xml))) && webTemplate == nullptr) {
         webTemplate = __LDBG_new(WebTemplate); // default for all .html files
     }
 

@@ -23,8 +23,8 @@ namespace KFCConfigurationClasses {
     {}
 
     Plugins::ClockConfig::FireAnimation_t::FireAnimation_t() :
-        cooling(80),
-        sparking(120),
+        cooling(60),
+        sparking(95),
         speed(50),
         orientation(cast_int_orientation(Orientation::VERTICAL)),
         invert_direction(false)

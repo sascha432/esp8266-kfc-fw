@@ -83,22 +83,23 @@
 
 class ClockPlugin;
 
-
 using KFCConfigurationClasses::Plugins;
 
 namespace Clock {
 
 #if IOT_LED_MATRIX
-using SevenSegmentDisplay = SevenSegmentPixel<uint16_t, 1, IOT_CLOCK_NUM_PIXELS, 0, 0>;
+    using SevenSegmentDisplay = SevenSegmentPixel<uint16_t, 1, IOT_CLOCK_NUM_PIXELS, 0, 0>;
 #else
     using SevenSegmentDisplay = SevenSegmentPixel<uint8_t, IOT_CLOCK_NUM_DIGITS, IOT_CLOCK_NUM_PIXELS, IOT_CLOCK_NUM_COLONS, IOT_CLOCK_NUM_COLON_PIXELS>;
 #endif
+
     using PixelAddressType = SevenSegmentDisplay::PixelAddressType;
     using ColorType = SevenSegmentDisplay::ColorType;
     using AnimationCallback = SevenSegmentDisplay::AnimationCallback;
     using LoopCallback = std::function<void(time_t now)>;
     using AnimationType = Plugins::Clock::ClockConfig_t::AnimationType;
     using InitialStateType = Plugins::Clock::ClockConfig_t::InitialStateType;
+    using BrightnessType = SevenSegmentDisplay::BrightnessType;
 
     static constexpr auto kTotalPixelCount = SevenSegmentDisplay::kTotalPixelCount;
     static constexpr uint16_t kMaxBrightness = SevenSegmentDisplay::kMaxBrightness;
@@ -135,6 +136,8 @@ using SevenSegmentDisplay = SevenSegmentPixel<uint16_t, 1, IOT_CLOCK_NUM_PIXELS,
         bool operator!=(int value) const;
         bool operator==(uint32_t value) const;
         bool operator!=(uint32_t value) const;
+        bool operator==(const Color &value) const;
+        bool operator!=(const Color &value) const;
 
         // set random color
         uint32_t rnd(uint8_t minValue = kRndAnyAbove);
@@ -162,6 +165,93 @@ using SevenSegmentDisplay = SevenSegmentPixel<uint16_t, 1, IOT_CLOCK_NUM_PIXELS,
         };
 
     };
+
+    inline bool Color::operator==(uint32_t value) const
+    {
+        return _value == value;
+    }
+
+    inline bool Color::operator!=(uint32_t value) const
+    {
+        return _value != value;
+    }
+
+    inline bool Color::operator==(int value) const
+    {
+        return _value == value;
+    }
+
+    inline bool Color::operator!=(int value) const
+    {
+        return _value != value;
+    }
+
+    inline bool Color::operator==(const Color &value) const
+    {
+        return value.get() == get();
+    }
+
+    inline bool Color::operator!=(const Color &value) const
+    {
+        return value.get() != get();
+    }
+
+    inline uint32_t Color::get() const
+    {
+        return _value;
+    }
+
+    inline Color &Color::operator=(uint32_t value)
+    {
+        _value = value;
+        return *this;
+    }
+
+    inline Color::operator bool() const
+    {
+        return _value != 0;
+    }
+
+    inline Color::operator int() const
+    {
+        return _value;
+    }
+
+    inline Color::operator uint32_t() const
+    {
+        return _value;
+    }
+
+    inline uint8_t Color::red() const
+    {
+        return _red;
+    }
+
+    inline uint8_t Color::green() const
+    {
+        return _green;
+    }
+
+    inline uint8_t Color::blue() const
+    {
+        return _blue;
+    }
+
+    inline uint8_t &Color::red()
+    {
+        return _red;
+    }
+
+    inline uint8_t &Color::green()
+    {
+        return _green;
+    }
+
+    inline uint8_t &Color::blue()
+    {
+        return _blue;
+    }
+
 
     static_assert(sizeof(Color) == 3, "Invalid size");
 
@@ -432,7 +522,7 @@ using SevenSegmentDisplay = SevenSegmentPixel<uint16_t, 1, IOT_CLOCK_NUM_PIXELS,
 
     class FireAnimation : public Animation {
     public:
-        // adapted from an example in FastLED, which is adapted from work done by Mark Kriegsman (called “Fire2012”).
+        // adapted from an example in FastLED, which is adapted from work done by Mark Kriegsman (called Fire2012).
         using FireAnimationConfig = Plugins::ClockConfig::FireAnimation_t;
         using Orientation = Plugins::ClockConfig::FireAnimation_t::Orientation;
 
@@ -576,3 +666,7 @@ using SevenSegmentDisplay = SevenSegmentPixel<uint16_t, 1, IOT_CLOCK_NUM_PIXELS,
     };
 
 }
+
+#if DEBUG_IOT_CLOCK
+#include <debug_helper_disable.h>
+#endif

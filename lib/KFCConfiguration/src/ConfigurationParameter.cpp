@@ -219,7 +219,7 @@ void ConfigurationParameter::exportAsJson(Print& output)
             auto size = _param.length();
             output.print('"');
             while (size--) {
-                output.printf_P(SPGM(_02x, "%02x"), *ptr);
+                output.printf_P(PSTR("%02x"), *ptr);
                 ptr++;
             }
             output.print('"');

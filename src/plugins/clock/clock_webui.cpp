@@ -5,7 +5,7 @@
 #include <Arduino_compat.h>
 #include "clock.h"
 #include <WebUISocket.h>
-#include "./plugins/sensor/sensor.h"
+#include "../src/plugins/sensor/sensor.h"
 
 #if DEBUG_IOT_CLOCK
 #include <debug_helper_enable.h>
@@ -90,12 +90,15 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
 #endif
         if (String_equals(id, PSTR("btn_animation"))) {
             setAnimation(static_cast<AnimationType>(val));
+            _saveStateDelayed();
         }
         else if (String_equals(id, PSTR("color"))) {
             setColorAndRefresh(val);
+            _saveStateDelayed();
         }
         else if (String_equals(id, SPGM(brightness))) {
             setBrightness(val);
+            _saveStateDelayed();
         }
     }
 }

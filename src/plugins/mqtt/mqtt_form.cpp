@@ -102,8 +102,8 @@ void MQTTPlugin::createConfigureForm(FormCallbackType type, const String &formNa
     form.addFormUI(FormUI::Type::PASSWORD, FSPGM(Password));
     ClientConfig::addPasswordLengthValidator(form, true);
 
-    form.addStringGetterSetter(F("t"), ClientConfig::getTopic, ClientConfig::setTopic);
-    ClientConfig::addTopicLengthValidator(form);
+    form.addStringGetterSetter(F("t"), ClientConfig::getBaseTopic, ClientConfig::setBaseTopic);
+    ClientConfig::addBaseTopicLengthValidator(form);
     form.addFormUI(FSPGM(Topic));
 
 #if MQTT_GROUP_TOPIC

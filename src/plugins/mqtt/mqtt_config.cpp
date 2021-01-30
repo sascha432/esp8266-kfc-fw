@@ -12,7 +12,7 @@ namespace KFCConfigurationClasses {
         System::Flags::getWriteableConfig().is_mqtt_enabled = true;
         setConfig(MqttConfig_t());
         setHostname(CREATE_ZERO_CONF(F("mqtt"), FSPGM(tcp), FSPGM(address), F("192.168.4.1")));
-        setTopic(F("home/${device_name}"));
+        setBaseTopic(F("home/${device_name}"));
         setAutoDiscoveryPrefix(F("homeassistant"));
         // setSharedTopic(F("home/kfcfw/shared"));
     }

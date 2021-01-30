@@ -1404,7 +1404,7 @@ void at_mode_serial_handle_event(String &commandString)
                                         if (flag) {
                                             config.write();
                                         }
-                                        args.printf_P("Blacklist=%s action=%s", PluginComponent::getBlacklist(), flag ? SPGM(success) : SPGM(failure));
+                                        args.printf_P("Blacklist=%s action=%s", PluginComponent::getBlacklist(), flag ? SPGM(success, "success") : SPGM(failure));
                                     } break;
                                 default:
                                     args.printf_P(PSTR("expected <%s>"), cmds);

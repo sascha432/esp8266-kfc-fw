@@ -232,7 +232,7 @@ String MQTTClient::_filterString(const char *str, bool replaceSpace)
 String MQTTClient::_getBaseTopic()
 {
     PrintString topic;
-    topic = ClientConfig::getTopic();
+    topic = ClientConfig::getBaseTopic();
     if (topic.indexOf(F("${device_name}")) != -1) {
         topic.replace(F("${device_name}"), _filterString(System::Device::getName()));
     }
@@ -249,7 +249,7 @@ String MQTTClient::_getBaseTopic()
 
 bool MQTTClient::_getGroupTopic(ComponentPtr component, String groupTopic, String &topic)
 {
-    String deviceTopic = ClientConfig::getTopic();
+    String deviceTopic = MQTTClient::_getBaseTopic();
     if (!topic.startsWith(deviceTopic) || topic.startsWith(groupTopic)) {
         return false;
     }
@@ -265,7 +265,7 @@ bool MQTTClient::_getGroupTopic(ComponentPtr component, String groupTopic, Strin
 
 String MQTTClient::_formatTopic(const String &suffix, const __FlashStringHelper *format, va_list arg)
 {
-    PrintString topic = ClientConfig::getTopic();
+    PrintString topic = MQTTClient::_getBaseTopic();
     topic.print(suffix);
     if (format) {
         auto format_P = RFPSTR(format);

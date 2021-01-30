@@ -22,7 +22,12 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         return;
     }
 
+    auto animation = _config.getAnimation();
     auto &cfg = Plugins::Clock::getWriteableConfig();
+    cfg.solid_color = _color.get();
+    cfg.animation = static_cast<uint8_t>(animation);
+    cfg.brightness = _targetBrightness >> 8;
+
     auto animationTypeItems = FormUI::Container::List(
         AnimationType::NONE, FSPGM(Solid_Color),
         AnimationType::RAINBOW, FSPGM(Rainbow),

@@ -274,7 +274,7 @@ namespace __va_args__
 #define __VA_ARGS_COUNT__(...)                          __va_args__::va_count(__VA_ARGS__)
 
 #if FLASH_STRINGS_AUTO_INIT
-#define AUTO_STRING_DEF(name, value)                    AUTO_INIT_SPGM(name, value),
+#define AUTO_STRING_DEF(...)                            AUTO_INIT_SPGM(__VA_ARGS__),
 #define FLASH_STRING_GENERATOR_AUTO_INIT(...) \
     static bool __flash_string_generator_auto_init_var = []() { \
         SPGM_P strings[] = { \
@@ -284,7 +284,7 @@ namespace __va_args__
     }
 #else
 
-#define AUTO_STRING_DEF(name, value)
+#define AUTO_STRING_DEF(name, ...)                      PROGMEM_STRING_DECL(name);
 #define FLASH_STRING_GENERATOR_AUTO_INIT(...)           __VA_ARGS__
 #endif
 
@@ -292,7 +292,8 @@ extern "C" void __dump_binary(const void *ptr, size_t len, size_t perLine, PGM_P
 extern "C" void __dump_binary_to(Print &output, const void *ptr, size_t len, size_t perLine, PGM_P title = nullptr);
 
 #if _MSC_VER
-#include "../../../src/generated/FlashStringGeneratorAuto.h"
+#include "../../../include/spgm_auto_strings.h"
 #elif defined(HAVE_FLASH_STRING_GENERATOR) && HAVE_FLASH_STRING_GENERATOR
-#include "../src/generated/FlashStringGeneratorAuto.h"
+#include "spgm_auto_strings.h"
+#include "spgm_auto_def.h"
 #endif

@@ -1290,7 +1290,7 @@ namespace KFCConfigurationClasses {
             CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.mqtt, Hostname, 1, 128);
             CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.mqtt, Username, 0, 32);
             CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.mqtt, Password, 6, 32);
-            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.mqtt, Topic, 4, 64);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.mqtt, BaseTopic, 4, 64);
             CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.mqtt, GroupTopic, 4, 64);
             CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.mqtt, AutoDiscoveryPrefix, 1, 32);
             // CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.mqtt, SharedTopic, 4, 128);
@@ -1794,6 +1794,7 @@ typedef struct  {
                 uint16_t blink_colon_speed;
 #endif
                 uint16_t flashing_speed;
+
                 struct __attribute__packed__ {
                     struct __attribute__packed__ {
                         uint8_t min;
@@ -1801,15 +1802,18 @@ typedef struct  {
                     } temperature_reduce_range;
                     uint8_t max_temperature;
                 } protection;
+
                 struct __attribute__packed__ {
                     RainbowMultiplier_t multiplier;
                     RainbowColor_t color;
                     uint16_t speed;
                 } rainbow;
+
                 struct __attribute__packed__ {
                     ClockColor_t color;
                     uint16_t speed;
                 } alarm;
+
                 struct __attribute__packed__ {
                     float speed;
                     uint16_t delay;
@@ -1817,6 +1821,7 @@ typedef struct  {
                 } fading;
 #if IOT_LED_MATRIX
                 FireAnimation_t fire;
+
                 struct __attribute__packed__ {
                     uint8_t rows;
                     uint8_t cols;

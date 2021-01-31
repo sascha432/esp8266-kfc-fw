@@ -861,3 +861,45 @@ bool MQTTClient::_isMessageSizeExceeded(size_t len, const char *topic)
     }
     return false;
 }
+
+int8_t MQTTClient::toBool(const char *str, int8_t invalid)
+{
+    while(isspace(*str)) {
+        str++;
+    }
+    if (!*str) {
+        return invalid;
+    }
+    char *end = nullptr;
+    auto value = strtoll(str, &end, 0);
+    while(isspace(*end)) {
+        end++;
+    }
+    if (end && !*end) {
+        return value != 0;
+    }
+    auto tmp = String(str);
+    String_rtrim(tmp);
+    if (
+        (strcasecmp_P(tmp.c_str(), PSTR("true")) == 0) ||
+        (strcasecmp_P(tmp.c_str(), PSTR("on")) == 0) ||
+        (strcasecmp_P(tmp.c_str(), PSTR("yes")) == 0) ||
+        (strcasecmp_P(tmp.c_str(), PSTR("online")) == 0) ||
+        (strcasecmp_P(tmp.c_str(), PSTR("enable")) == 0) ||
+        (strcasecmp_P(tmp.c_str(), PSTR("enabled")) == 0)
+    ) {
+        return true;
+    }
+    if (
+        (strcasecmp_P(tmp.c_str(), PSTR("false")) == 0) ||
+        (strcasecmp_P(tmp.c_str(), PSTR("off")) == 0) ||
+        (strcasecmp_P(tmp.c_str(), PSTR("no")) == 0) ||
+        (strcasecmp_P(tmp.c_str(), PSTR("offline")) == 0) ||
+        (strcasecmp_P(tmp.c_str(), PSTR("disable")) == 0) ||
+        (strcasecmp_P(tmp.c_str(), PSTR("disabled")) == 0)
+    ) {
+        return false;
+    }
+    return invalid;
+
+}

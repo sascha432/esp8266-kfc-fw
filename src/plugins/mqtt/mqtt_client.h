@@ -246,6 +246,29 @@ public:
     static void safePersistantStorage(StorageFrequencyType type, const String &name, const String &data);
 
 public:
+    // returns 1 for:
+    // any integer != 0
+    // "true"
+    // "on"
+    // "yes"
+    // "online"
+    // "enable"
+    // "enabled"
+
+    // returns 0 for:
+    // 0
+    // "00"...
+    // "false"
+    // "off"
+    // "no"
+    // "offline"
+    // "disable"
+    // "disabled"
+
+    // otherwise it returns -1 or "invalid"
+    // white spaces are stripped and the strings are case insensitive
+    static int8_t toBool(const char *, int8_t invalid = -1);
+
     static QosType getDefaultQos(QosType qos = QosType::DEFAULT);
 
     String connectionDetailsString();

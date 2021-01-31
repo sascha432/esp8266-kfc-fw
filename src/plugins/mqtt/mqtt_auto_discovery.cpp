@@ -68,7 +68,6 @@ void MQTTAutoDiscovery::_create(ComponentType componentType, const String &name,
     addParameter(FSPGM(mqtt_availability_topic), MQTTClient::formatTopic(FSPGM(mqtt_status_topic)));
     addParameter(FSPGM(mqtt_payload_available), 1);
     addParameter(FSPGM(mqtt_payload_not_available), 0);
-
     if (_format == FormatType::JSON) {
         PrintString model;
         WebTemplate::printModel(model);

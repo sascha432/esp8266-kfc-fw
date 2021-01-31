@@ -47,6 +47,11 @@ public:
     template<typename _T>
     void addStateTopic(_T value) {
         addParameter(FSPGM(mqtt_state_topic), value);
+    }
+
+    template<typename _T>
+    void addStateTopicAndPayloadOnOff(_T value) {
+        addParameter(FSPGM(mqtt_state_topic), value);
         addPayloadOnOff();
     }
 
@@ -151,7 +156,7 @@ private:
 
 
 private:
-    void _create(ComponentTypeEnum_t componentType, const String &name, FormatType format);
+    void _create(ComponentType componentType, const String &name, FormatType format);
     const String _getUnqiueId(const String &name);
 
     FormatType _format;

@@ -38,19 +38,16 @@ void MQTTSensor::onConnect(MQTTClient *client)
 }
 
 
-void MQTTSensor::timerEvent(JsonArray &array)
+void MQTTSensor::timerEvent(JsonArray *array, MQTTClient *client)
 {
     auto currentTime = time(nullptr);
-    if (currentTime >= _nextUpdate) {
+    if (array && currentTime >= _nextUpdate) {
         _nextUpdate = currentTime + _updateRate;
-
         _debug_println();
-        getValues(array, true);
+        getValues(*array, true);
     }
-    if (currentTime >=_nextMqttUpdate) {
+    if (client && currentTime >=_nextMqttUpdate) {
         _nextMqttUpdate = currentTime + _mqttUpdateRate;
-
-        _debug_println();
-        publishState(MQTTClient::getClient());
+        publishSta#te(client);
     }
 }

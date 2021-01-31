@@ -200,7 +200,6 @@ void Sensor_SystemMetrics::createWebUI(WebUIRoot &webUI, WebUIRow **row)
     *row = &webUI.addRow();
     (*row)->addSensor(_getId(MetricsType::UPTIME), F("Uptime"), F("")).add(JJ(hb), F("h2"));
     (*row)->addSensor(_getId(MetricsType::MEMORY), F("Free Memory"), F("")).add(JJ(hb), F("h2"));
-
 }
 
 String Sensor_SystemMetrics::_getTopic() const

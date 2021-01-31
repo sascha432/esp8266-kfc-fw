@@ -59,59 +59,63 @@ void SensorPlugin::setValue(const String &id, const String &value, bool hasValue
     __LDBG_printf("setValue(%s)", id.c_str());
 }
 
+
 void SensorPlugin::setup(SetupModeType mode)
 {
     _Timer(_timer).add(Event::milliseconds(1000), true, SensorPlugin::timerEvent);
 #if IOT_SENSOR_HAVE_LM75A
-    _sensors.push_back(__LDBG_new(Sensor_LM75A, F(IOT_SENSOR_NAMES_LM75A), config.initTwoWire(), IOT_SENSOR_HAVE_LM75A));
+    addSensor<Sensor_LM75A>(F(IOT_SENSOR_NAMES_LM75A), config.initTwoWire(), IOT_SENSOR_HAVE_LM75A);
 #endif
 #if IOT_SENSOR_HAVE_LM75A_2
-    _sensors.push_back(__LDBG_new(Sensor_LM75A, F(IOT_SENSOR_NAMES_LM75A_2), config.initTwoWire(), IOT_SENSOR_HAVE_LM75A_2));
+    addSensor<Sensor_LM75A>(F(IOT_SENSOR_NAMES_LM75A_2), config.initTwoWire(), IOT_SENSOR_HAVE_LM75A_2);
 #endif
 #if IOT_SENSOR_HAVE_LM75A_3
-    _sensors.push_back(__LDBG_new(Sensor_LM75A, F(IOT_SENSOR_NAMES_LM75A_3), config.initTwoWire(), IOT_SENSOR_HAVE_LM75A_3));
+    addSensor<Sensor_LM75A>(F(IOT_SENSOR_NAMES_LM75A_3), config.initTwoWire(), IOT_SENSOR_HAVE_LM75A_3);
 #endif
 #if IOT_SENSOR_HAVE_LM75A_4
-    _sensors.push_back(__LDBG_new(Sensor_LM75A, F(IOT_SENSOR_NAMES_LM75A_4), config.initTwoWire(), IOT_SENSOR_HAVE_LM75A_4));
+    addSensor<Sensor_LM75A>(F(IOT_SENSOR_NAMES_LM75A_4), config.initTwoWire(), IOT_SENSOR_HAVE_LM75A_4);
 #endif
 #if IOT_SENSOR_HAVE_BME280
-    _sensors.push_back(__LDBG_new(Sensor_BME280, F(IOT_SENSOR_NAMES_BME280), config.initTwoWire(), IOT_SENSOR_HAVE_BME280));
+    addSensor<Sensor_BME280>(F(IOT_SENSOR_NAMES_BME280), config.initTwoWire(), IOT_SENSOR_HAVE_BME280));
 #endif
 #if IOT_SENSOR_HAVE_BME680
-    _sensors.push_back(__LDBG_new(Sensor_BME680, F(IOT_SENSOR_NAMES_BME680), IOT_SENSOR_HAVE_BME680));
+    addSensor<Sensor_BME680>(F(IOT_SENSOR_NAMES_BME680), IOT_SENSOR_HAVE_BME680));
 #endif
 #if IOT_SENSOR_HAVE_CCS811
-    _sensors.push_back(__LDBG_new(Sensor_CCS811, F(IOT_SENSOR_NAMES_CCS811), IOT_SENSOR_HAVE_CCS811));
+    addSensor<Sensor_CCS811>(F(IOT_SENSOR_NAMES_CCS811), IOT_SENSOR_HAVE_CCS811));
 #endif
 #if IOT_ATOMIC_SUN_V2 || IOT_DIMMER_MODULE
-    _sensors.push_back(__LDBG_new(Sensor_DimmerMetrics, F(IOT_SENSOR_NAMES_DIMMER_METRICS)));
+    addSensor<Sensor_DimmerMetrics>(F(IOT_SENSOR_NAMES_DIMMER_METRICS));
 #endif
 #if IOT_SENSOR_HAVE_HLW8012
-    _sensors.push_back(__LDBG_new(Sensor_HLW8012, F(IOT_SENSOR_NAMES_HLW8012), IOT_SENSOR_HLW8012_SEL, IOT_SENSOR_HLW8012_CF, IOT_SENSOR_HLW8012_CF1));
+    addSensor<Sensor_HLW8012>(F(IOT_SENSOR_NAMES_HLW8012), IOT_SENSOR_HLW8012_SEL, IOT_SENSOR_HLW8012_CF, IOT_SENSOR_HLW8012_CF1));
 #endif
 #if IOT_SENSOR_HAVE_HLW8032
-    _sensors.push_back(__LDBG_new(Sensor_HLW8032, F(IOT_SENSOR_NAMES_HLW8032), IOT_SENSOR_HLW8032_RX, IOT_SENSOR_HLW8032_TX, IOT_SENSOR_HLW8032_PF));
+    addSensor<Sensor_HLW8032>(F(IOT_SENSOR_NAMES_HLW8032), IOT_SENSOR_HLW8032_RX, IOT_SENSOR_HLW8032_TX, IOT_SENSOR_HLW8032_PF));
 #endif
 #if IOT_SENSOR_HAVE_BATTERY
-    _sensors.push_back(__LDBG_new(Sensor_Battery, F(IOT_SENSOR_NAMES_BATTERY)));
+    addSensor<Sensor_Battery>(F(IOT_SENSOR_NAMES_BATTERY));
 #endif
 #if IOT_SENSOR_HAVE_DS3231
-    _sensors.push_back(__LDBG_new(Sensor_DS3231, F(IOT_SENSOR_NAMES_DS3231)));
+    addSensor<Sensor_DS3231>(F(IOT_SENSOR_NAMES_DS3231));
 #endif
 #if IOT_SENSOR_HAVE_INA219
-    _sensors.push_back(__LDBG_new(Sensor_INA219, F(IOT_SENSOR_NAMES_INA219), config.initTwoWire(), IOT_SENSOR_HAVE_INA219));
+    addSensor<Sensor_INA219>(    F(IOT_SENSOR_NAMES_INA219), config.initTwoWire(), IOT_SENSOR_HAVE_INA219));
 #endif
 #if IOT_SENSOR_HAVE_DHTxx
-    _sensors.push_back(__LDBG_new(Sensor_DHTxx, F(IOT_SENSOR_NAMES_DHTxx), IOT_SENSOR_HAVE_DHTxx_PIN));
+    addSensor<Sensor_DHTxx>(F(IOT_SENSOR_NAMES_DHTxx), IOT_SENSOR_HAVE_DHTxx_PIN));
 #endif
 #if IOT_SENSOR_HAVE_SYSTEM_METRICS
-    _sensors.push_back(__LDBG_new(Sensor_SystemMetrics));
+    addSensor<Sensor_SystemMetrics>();
 #endif
 }
 
 void SensorPlugin::reconfigure(const String &source)
 {
     for(const auto sensor: _sensors) {
+        // if (sensor->getAutoDiscoveryCount()) {
+        //     MQTTClient::safeReRegisterComponent(sensor);
+        // }
         sensor->reconfigure(source.c_str());
     }
 }
@@ -139,16 +143,27 @@ void SensorPlugin::timerEvent(Event::CallbackTimerPtr timer)
 // low priority timer executed in main loop()
 void SensorPlugin::_timerEvent()
 {
+    auto client = MQTTClient ::getClient();
+    if (!client->isConnected()) {
+        client = nullptr;
+    }
+
     if (WsWebUISocket::getWsWebUI() && WsWebUISocket::hasClients(WsWebUISocket::getWsWebUI())) {
         JsonUnnamedObject json(2);
         json.add(JJ(type), JJ(ue));
         auto &events = json.addArray(JJ(events));
         for(auto sensor: _sensors) {
-            sensor->timerEvent(events);
+            sensor->timerEvent(&events, client);
         }
         // __DBG_printf("events=%u", events.size());
         if (events.size()) {
             WsWebUISocket::broadcast(WsWebUISocket::getSender(), json);
+        }
+    }
+    else if (client) {
+        JsonUnnamedObject tmp;
+        for(auto sensor: _sensors) {
+            sensor->timerEvent(nullptr, client);
         }
     }
 }
@@ -160,6 +175,7 @@ void SensorPlugin::shutdown()
         __LDBG_printf("type=%u", sensor->getType());
         sensor->shutdown();
         __LDBG_delete(sensor);
+
     }
     _sensors.clear();
 }

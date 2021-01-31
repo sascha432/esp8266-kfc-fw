@@ -118,6 +118,16 @@ public:
     virtual bool atModeHandler(AtModeArgs &args) override;
 #endif
 
+protected:
+    template<class _Sensor, typename... _Args>
+    void addSensor(_Args &&... args) {
+        auto sensor = new _Sensor(std::forward<_Args>(args)...);
+        _sensors.push_back(sensor);
+        // if (sensor->getAutoDiscoveryCount()) {
+        //     MQTTClient::safeRegisterComponent(sensor);
+        // }
+    }
+
 private:
     bool _hasConfigureForm() const;
     void _timerEvent();

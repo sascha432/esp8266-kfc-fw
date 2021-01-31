@@ -211,6 +211,15 @@ String MQTTClient::formatTopic(const String &componentName, const __FlashStringH
     return topic;
 }
 
+String MQTTClient::formatTopic(const __FlashStringHelper *format, ...)
+{
+    va_list arg;
+    va_start(arg, format);
+    String topic = _formatTopic(String(), format, arg);
+    va_end(arg);
+    return topic;
+}
+
 String MQTTClient::_filterString(const char *str, bool replaceSpace)
 {
     String out;

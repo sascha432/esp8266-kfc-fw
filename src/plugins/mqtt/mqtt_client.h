@@ -67,6 +67,7 @@
 #include <debug_helper_disable.h>
 #endif
 
+
 class MQTTPersistantStorageComponent;
 class MQTTPlugin;
 class MQTTClient {
@@ -204,6 +205,8 @@ public:
     // <mqtt_topic=home/${device_name}>/component_name><format>
     // NOTE: there is no slash between the component name and format
     static String formatTopic(const String &componentName, const __FlashStringHelper *format = nullptr, ...);
+
+    static String formatTopic(const __FlashStringHelper *format = nullptr, ...);
 
 public:
     void subscribe(ComponentPtr component, const String &topic, QosType qos = QosType::DEFAULT);

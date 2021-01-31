@@ -514,3 +514,5 @@ PROGMEM_STRING_DEF(__pure_virtual, "pure virtual call: %s\n"); // default
 PROGMEM_STRING_DEF(FormEnumValidator_default_message, "FormEnumValidator default message"); // default
 // lib/KFCWebFramework/include/Validator/Host.h:24 (SPGM)
 PROGMEM_STRING_DEF(FormHostValidator_default_message, "FormHostValidator default message"); // default
+
+

@@ -52,19 +52,13 @@ public:
     // REGISTER_SENSOR_CLIENT(this) must be called in the constructor of the sensor
     template <class T>
     void registerClient(T sensor) {
-        auto client = MQTTClient::getClient();
-        if (client) {
-            client->registerComponent(sensor);
-        }
+        MQTTClient::safeRegisterComponent(sensor);
     }
 
     // UNREGISTER_SENSOR_CLIENT(this) must be called in the destructor of the sensor
     template <class T>
     void unregisterClient(T sensor) {
-        auto client = MQTTClient::getClient();
-        if (client) {
-            client->unregisterComponent(sensor);
-        }
+        MQTTClient::safeUnregisterComponent(sensor);
     }
 
     virtual void onConnect(MQTTClient *client) override;
@@ -91,10 +85,13 @@ public:
 
     virtual void createConfigureForm(AsyncWebServerRequest *request, FormUI::Form::BaseForm &form) {
     }
+
     virtual void configurationSaved(FormUI::Form::BaseForm *form) {
     }
+
     virtual void reconfigure(PGM_P source) {
     }
+
     virtual void shutdown() {
     }
 
@@ -106,7 +103,7 @@ public:
     }
 #endif
 
-    void timerEvent(JsonArray &array);
+    void timerEvent(JsonArray *array, MQTTClient *client);
 
     void setUpdateRate(uint16_t updateRate) {
         _updateRate = updateRate;

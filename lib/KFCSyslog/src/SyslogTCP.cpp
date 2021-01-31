@@ -241,7 +241,7 @@ void SyslogTCP::_status(bool success __LDBG_IF(, const char *reason))
     __LDBG_printf("success=%u id=%u ack=%u reason=%s queue=%s state=%s error=%s", success, _queueId, _ack, __S(reason), _queueId ? PSTR("busy") : PSTR("idle"), _client->stateToString(), success ? PSTR("null") : _client->errorToString(_client->getCloseError()));
     if (_queueId) {
         if (!success) {
-            __DBG_printf("failed to send syslog message %u", _queueId);
+            __LDBG_printf("failed to send syslog message %u", _queueId);
         }
         _queue.remove(_queueId, success);
         _queueId = 0;

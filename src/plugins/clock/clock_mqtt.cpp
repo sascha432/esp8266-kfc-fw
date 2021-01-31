@@ -28,10 +28,8 @@ MQTTComponent::MQTTAutoDiscoveryPtr ClockPlugin::nextAutoDiscovery(MQTTAutoDisco
     switch(num) {
         case 0: {
             discovery->create(this, MQTT_NAME, format);
-            discovery->addStateTopic(MQTTClient::formatTopic(FSPGM(_state)));
+            discovery->addStateTopicAndPayloadOnOff(MQTTClient::formatTopic(FSPGM(_state)));
             discovery->addCommandTopic(MQTTClient::formatTopic(FSPGM(_set)));
-            discovery->addPayloadOn(1);
-            discovery->addPayloadOff(0);
             discovery->addBrightnessStateTopic(MQTTClient::formatTopic(FSPGM(_brightness_state)));
             discovery->addBrightnessCommandTopic(MQTTClient::formatTopic(FSPGM(_brightness_set)));
             discovery->addBrightnessScale(SevenSegmentDisplay::kMaxBrightness);
@@ -77,23 +75,37 @@ void ClockPlugin::onMessage(MQTTClient *client, char *topic, char *payload, size
     _resetAlarm();
 
     if (!strcmp_end_P(topic, SPGM(_brightness_set))) {
-        setBrightness(atoi(payload));
-        _saveStateDelayed();
+        if (len) {
+            auto value = strtoul(payload, nullptr, 0);
+            setBrightness(value);
+            _saveStateDelayed();
+        }
     }
     else if (!strcmp_end_P(topic, SPGM(_color_set))) {
-        char *endptr = nullptr;
-        auto red = (uint8_t)strtoul(payload, &endptr, 10);
-        if (endptr && *endptr++ == ',') {
-            auto green = (uint8_t)strtoul(endptr, &endptr, 10);
+        if (*payload == '#') {
+            // rgb color code #FFEECC
+            setColorAndRefresh(Color::fromString(payload));
+            _saveStateDelayed();
+        }
+        else {
+            // red,green,blue
+            char *endptr = nullptr;
+            auto red = (uint8_t)strtoul(payload, &endptr, 10);
             if (endptr && *endptr++ == ',') {
-                auto blue = (uint8_t)strtoul(endptr, nullptr, 10);
-                setColorAndRefresh(Color(red, green, blue));
-                _saveStateDelayed();
+                auto green = (uint8_t)strtoul(endptr, &endptr, 10);
+                if (endptr && *endptr++ == ',') {
+                    auto blue = (uint8_t)strtoul(endptr, nullptr, 10);
+                    setColorAndRefresh(Color(red, green, blue));
+                    _saveStateDelayed();
+                }
             }
         }
     }
     else if (!strcmp_end_P(topic, SPGM(_set))) {
-        _setState(atoi(payload));
+        auto res = MQTTClient::toBool(payload);
+        if (res >= 0) {
+            _setState(res);
+        }
     }
 }
 
@@ -108,7 +120,7 @@ void ClockPlugin::_publishState(MQTTClient *client)
     __DBG_printf("client=%p color=%s brightness=%u", client, _color.implode(',').c_str(), _targetBrightness);
 #endif
     if (client && client->isConnected()) {
-        client->publish(MQTTClient::formatTopic(FSPGM(_state)), true, String(_color ? 1 : 0));
+        client->publish(MQTTClient::formatTopic(FSPGM(_state)), true, String(_targetBrightness != 0));
         client->publish(MQTTClient::formatTopic(FSPGM(_brightness_state)), true, String(_targetBrightness));
         client->publish(MQTTClient::formatTopic(FSPGM(_color_state)), true, _color.implode(','));
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL

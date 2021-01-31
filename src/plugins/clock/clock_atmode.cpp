@@ -31,6 +31,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKT, "T", "<value>", "Overide temperatu
 // PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKTS, "TS", "<num>,<segment>", "Set segment for digit <num>");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(CLOCKA, "A", "<num>[,<arguments>,...]", "Set animation", "Display available animations");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(CLOCKD, "D", "Dump pixel addresses and other information");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(CLOCKBR, "BR", "Set brightness (0-65535)");
 
 ATModeCommandHelpArrayPtr ClockPlugin::atModeCommandHelp(size_t &size) const
 {
@@ -42,7 +43,8 @@ ATModeCommandHelpArrayPtr ClockPlugin::atModeCommandHelp(size_t &size) const
         PROGMEM_AT_MODE_HELP_COMMAND(CLOCKT),
         // PROGMEM_AT_MODE_HELP_COMMAND(CLOCKTS),
         PROGMEM_AT_MODE_HELP_COMMAND(CLOCKA),
-        PROGMEM_AT_MODE_HELP_COMMAND(CLOCKD)
+        PROGMEM_AT_MODE_HELP_COMMAND(CLOCKD),
+        PROGMEM_AT_MODE_HELP_COMMAND(CLOCKBR)
     };
     size = sizeof(tmp) / sizeof(tmp[0]);
     return tmp;
@@ -63,7 +65,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
     // }
     // else
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKP))) {
-        enable(false);
+        enableLoop(false);
         if (args.size() < 1) {
             args.print(F("clear"));
             _display.clear();
@@ -100,7 +102,6 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
 #if !IOT_LED_MATRIX
             args.print(F("200 = display ambient light sensor value (+CLOCKA=200,<0|1>)"));
 #endif
-            args.print(F("300 = temperature protection animation"));
         }
         else if (args.size() >= 1) {
             int value = args.toInt(0);
@@ -111,22 +112,22 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             else
 #endif
             if (value == 100) {
-                enable(false);
+                enableLoop(false);
                 _display.reset();
             }
             else if (value == 101) {
                 _display.reset();
-                enable(true);
+                enableLoop(true);
             }
             else if (value == 102) {
-                enable(false);
+                enableLoop(false);
                 _display.reset();
                 _display.setColor(0xffffff);
                 _display.show();
             }
             else if (value == 103) {
                 int interval = args.toInt(1, 500);
-                enable(false);
+                enableLoop(false);
                 size_t num = 0;
                 _Scheduler.add(interval, true, [num, this](Event::CallbackTimerPtr timer) mutable {
                     __LDBG_printf("pixel=%u", num);
@@ -183,9 +184,6 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
 #endif
             }
 #endif
-            else if (value == 300) {
-                _startTempProtectionAnimation();
-            }
             else if (value == 400) {
                 _updateRate = args.toInt(1);
             }
@@ -235,6 +233,15 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
 #endif
         return true;
     }
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKBR))) {
+        if (args.requireArgs(1, 2)) {
+            auto brightness = args.toIntMinMax<uint16_t>(0, 0, Clock::kMaxBrightness);
+            auto time = args.toMillis(1, 0, 32768, 2500);
+            setBrightness(brightness, time);
+            args.printf_P("fading brightness to %.2f%% (%u) in %.3f seconds", brightness / (float)Clock::kMaxBrightness * 100.0, time / 1000.0);
+        }
+        return true;
+    }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKC))) {
         if (args.size() == 1) {
             _color = Color::fromBGR(args.toNumber(0, 0xff0000));
@@ -242,18 +249,20 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
         else if (args.requireArgs(3, 3)) {
             _color = Color(args.toNumber(0, 0), args.toNumber(1, 0), args.toNumber(2, 0x80));
         }
-        args.printf_P(PSTR("color=#%06x"), _color.get());
-        for(size_t i = 0; i  < SevenSegmentDisplay::getTotalPixels(); i++) {
-            if (_display._pixels[i]) {
-                _display._pixels[i] = _color;
-            }
-        }
-        _display.show();
+        // args.printf_P(PSTR("color=#%06x"), _color.get());
+        // for(size_t i = 0; i  < SevenSegmentDisplay::getTotalPixels(); i++) {
+        //     if (_display._pixels[i]) {
+        //         _display._pixels[i] = _color;
+        //     }
+        // }
+        _forceUpdate = true;
+        _schedulePublishState = true;
+        // _display.show();
         return true;
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKPX))) {
         if (args.requireArgs(4, 4)) {
-            enable(false);
+            enableLoop(false);
 
             int num = args.toInt(0);
             Color color(args.toIntT<uint8_t>(1), args.toIntT<uint8_t>(2), args.toIntT<uint8_t>(3));

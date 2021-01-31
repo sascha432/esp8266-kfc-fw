@@ -80,6 +80,9 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
 ClockPlugin::ClockPlugin() :
     PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(ClockPlugin)),
     MQTTComponent(ComponentTypeEnum_t::LIGHT),
+#if IOT_CLOCK_HAVE_ENABLE_PINxxx
+    _isEnabled(false),
+#endif
 #if IOT_CLOCK_SAVE_STATE
     _saveTimestamp(0),
 #endif
@@ -208,18 +211,12 @@ ClockPlugin::BrightnessType ClockPlugin::_getFadingBrightness() const
     return _fadeTimer.isActive() && _fadeTimer.getDelay() ? _targetBrightness - (((int)_targetBrightness - (int)_startBrightness) / (float)_fadeTimer.getDelay()  * _fadeTimer.getTimeLeft()) : _targetBrightness;
 }
 
-void ClockPlugin::_startTempProtectionAnimation()
-{
-#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
-    _autoBrightness = kAutoBrightnessOff;
-#endif
-    _setBrightness(Clock::kBrightnessTempProtection); // 25% brightness and 20% of the time enabled = 5% power
-    _setAnimation(__LDBG_new(Clock::FlashingAnimation, *this, Color(0xff0000), 250, 5));
-}
-
 void ClockPlugin::setup(SetupModeType mode)
 {
-    _debug_println();
+#if IOT_CLOCK_HAVE_ENABLE_PIN
+    _disable();
+    pinMode(IOT_CLOCK_EN_PIN, OUTPUT);
+#endif
 
     readConfig();
 #if IOT_CLOCK_SAVE_STATE
@@ -314,7 +311,9 @@ void ClockPlugin::setup(SetupModeType mode)
                     #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
                         _autoBrightness = kAutoBrightnessOff;
                     #endif
-                    _startTempProtectionAnimation();
+                    setBrightness(0);
+                    _disable();
+                    enableLoop(false);
                     _tempBrightness = -1;
                     WebAlerts::Alert::error(message);
                 }
@@ -368,11 +367,19 @@ void ClockPlugin::setup(SetupModeType mode)
 #if IOT_ALARM_PLUGIN_ENABLED
     AlarmPlugin::setCallback(alarmCallback);
 #endif
+
+#if IOT_CLOCK_HAVE_ENABLE_PIN
+    _enable();
+#endif
+
 }
 
 void ClockPlugin::reconfigure(const String &source)
 {
     __LDBG_printf("source=%s", source.c_str());
+#if IOT_CLOCK_HAVE_ENABLE_PIN
+    _disable();
+#endif
     if (String_equals(source, SPGM(mqtt))) {
         MQTTClient::safeReRegisterComponent(this);
     }
@@ -388,11 +395,20 @@ void ClockPlugin::reconfigure(const String &source)
 #endif
         _schedulePublishState = true;
     }
+#if IOT_CLOCK_HAVE_ENABLE_PIN
+    _enable();
+#endif
 }
 
 void ClockPlugin::shutdown()
 {
     __LDBG_println();
+
+#if IOT_CLOCK_HAVE_ENABLE_PIN
+    _disable();
+    pinMode(IOT_CLOCK_EN_PIN, INPUT);
+#endif
+
 #if IOT_CLOCK_SAVE_STATE
     if (_saveTimer) {
         _saveTimer.remove();
@@ -444,9 +460,9 @@ void ClockPlugin::loop()
     plugin._loop();
 }
 
-void ClockPlugin::enable(bool enable)
+void ClockPlugin::enableLoop(bool enable)
 {
-    __LDBG_printf("enable=%u", enable);
+    __LDBG_printf("enable loop=%u", enable);
     _display.clear();
     _display.show();
     if (enable) {
@@ -530,22 +546,30 @@ void ClockPlugin::setBlinkColon(uint16_t value)
 
 #endif
 
-void ClockPlugin::setBrightness(BrightnessType brightness, milliseconds time)
+void ClockPlugin::setBrightness(BrightnessType brightness, int ms)
 {
-    __LDBG_printf("brightness=%u fading=%u time=%u", brightness, _isFading, time.count());
-    if (time.count() == 0) {
+    __LDBG_printf("brightness=%u fading=%u time=%u", brightness, _isFading, ms);
+    if (ms < 0) {
+        ms = _config.getFadingTimeMillis();
+    }
+    if (ms == 0) {
         _setBrightness(brightness);
     }
     else {
+#if IOT_CLOCK_HAVE_ENABLE_PIN
+        if (brightness != 0) {
+            _enable();
+        }
+#endif
         _startBrightness = _getFadingBrightness();
         _targetBrightness = brightness;
         int diff = (int)_startBrightness - (int)_targetBrightness;
         if (diff < 0) {
             diff = -diff;
         }
-        __LDBG_printf("from=%u to=%u time=%u partial=%u", _startBrightness, _targetBrightness, time.count(), time.count() * diff / Clock::kMaxBrightness);
+        __LDBG_printf("from=%u to=%u time=%u partial=%u", _startBrightness, _targetBrightness, ms, ms * diff / Clock::kMaxBrightness);
         // calculate time relative to the level change
-        _fadeTimer.set(time.count() * diff / Clock::kMaxBrightness);
+        _fadeTimer.set(ms / Clock::kMaxBrightness);
         _isFading = true;
     }
 }
@@ -553,10 +577,6 @@ void ClockPlugin::setBrightness(BrightnessType brightness, milliseconds time)
 void ClockPlugin::setColorAndRefresh(Color color)
 {
     __LDBG_printf("color=%s", color.toString().c_str());
-    if (isTempProtectionActive()) {
-        __LDBG_printf("temperature protection active");
-        return;
-    }
     _color = color;
     _forceUpdate = true;
     _schedulePublishState = true;
@@ -576,10 +596,6 @@ void ClockPlugin::_setAnimatonNone()
 void ClockPlugin::setAnimation(AnimationType animation)
 {
     __LDBG_printf("animation=%d", animation);
-    if (isTempProtectionActive()) {
-        __LDBG_printf("temperature protection active");
-        return;
-    }
     _config.animation = static_cast<uint8_t>(animation);
     switch(animation) {
         case AnimationType::FADING:
@@ -618,10 +634,6 @@ void ClockPlugin::setAnimation(AnimationType animation)
 
 void ClockPlugin::setAnimationCallback(Clock::AnimationCallback callback)
 {
-    if (isTempProtectionActive()) {
-        __LDBG_printf("temperature protection active");
-        return;
-    }
     _display.setCallback(callback);
 }
 
@@ -721,10 +733,6 @@ void ClockPlugin::_onButtonReleased(uint16_t duration)
 void ClockPlugin::_setAnimation(Clock::Animation *animation)
 {
     __LDBG_printf("animation=%p", animation);
-    if (isTempProtectionActive()) {
-        __LDBG_printf("temperature protection active");
-        return;
-    }
     _deleteAnimaton(false);
     _animation = animation;
     _animation->begin();
@@ -744,10 +752,6 @@ void ClockPlugin::_setNextAnimation(Clock::Animation *nextAnimation)
 void ClockPlugin::_deleteAnimaton(bool startNext)
 {
     __LDBG_printf("animation=%p next=%p start_next=%u", _animation, _nextAnimation, startNext);
-    if (isTempProtectionActive()) {
-        __LDBG_printf("temperature protection active");
-        return;
-    }
     if (_animation) {
         __LDBG_delete(_animation);
         _animation = nullptr;
@@ -820,7 +824,42 @@ void ClockPlugin::_setBrightness(BrightnessType brightness)
     _forceUpdate = true;
     _isFading = false;
     _schedulePublishState = true;
+#if IOT_CLOCK_HAVE_ENABLE_PIN
+    if (_targetBrightness == 0) {
+        _disable();
+    }
+    else {
+        _enable();
+    }
+#endif
 }
+
+#if IOT_CLOCK_HAVE_ENABLE_PIN
+
+void ClockPlugin::_enable()
+{
+    if (_isEnabled) {
+        return;
+    }
+    if (isTempProtectionActive()) {
+        __LDBG_printf("temperature protection active");
+        return;
+    }
+    __LDBG_printf("enable LED pin %u state %u (is_enabled=%u)", IOT_CLOCK_EN_PIN, enablePinState(true), _isEnabled);
+    digitalWrite(IOT_CLOCK_EN_PIN, enablePinState(true));
+    _isEnabled = true;
+}
+
+void ClockPlugin::_disable()
+{
+    __LDBG_printf("disable LED pin %u state %u (is_enabled=%u)", IOT_CLOCK_EN_PIN, enablePinState(false), _isEnabled);
+    _isEnabled = false;
+    digitalWrite(IOT_CLOCK_EN_PIN, enablePinState(false));
+    delay(100);
+}
+
+#endif
+
 
 #if IOT_ALARM_PLUGIN_ENABLED
 

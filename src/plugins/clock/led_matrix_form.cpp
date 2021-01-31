@@ -33,7 +33,7 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         AnimationType::RAINBOW, FSPGM(Rainbow),
         AnimationType::FIRE, F("Fire"),
         AnimationType::FLASHING, FSPGM(Flashing),
-        AnimationType::FADING, FSPGM(Fading),
+        AnimationType::FADING, F("Color Fading"),
         AnimationType::SKIP_ROWS, F("Skip Rows or Columns")
     );
 
@@ -65,6 +65,10 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
     form.addValidator(FormUI::Validator::Range(-1, 1023));
 
 #endif
+
+    form.addObjectGetterSetter(F("ft"), cfg, cfg.get_bits_fading_time, cfg.set_bits_fading_time);
+    form.addFormUI(F("Fading Time From 0 To 100%"), FormUI::SuffixHtml(F("milliseconds")));
+    cfg.addRangeValidatorFor_fading_time(form, true);
 
     mainGroup.end();
 

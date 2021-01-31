@@ -47,17 +47,18 @@ protected:
 class AsyncJsonResponse : public AsyncBaseResponse {
 public:
     AsyncJsonResponse();
+    ~AsyncJsonResponse();
 
     virtual bool _sourceValid() const override;
     virtual size_t _fillBuffer(uint8_t *data, size_t len) override;
 
     JsonUnnamedObject &getJsonObject();
-    void updateLength();
+    // void updateLength();
 
-    inline AsyncJsonResponse *finalize() {
-        updateLength();
-        return this;
-    }
+    // inline AsyncJsonResponse *finalize() {
+    //     updateLength();
+    //     return this;
+    // }
 
 private:
     JsonUnnamedObject _json;

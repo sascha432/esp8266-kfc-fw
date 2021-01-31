@@ -40,6 +40,7 @@ namespace KFCConfigurationClasses {
         time_format_24h(true),
 #endif
         brightness(128),
+        fading_time(kDefaultValueFor_fading_time),
         auto_brightness(-1),
 #if !IOT_LED_MATRIX
         blink_colon_speed(1000),

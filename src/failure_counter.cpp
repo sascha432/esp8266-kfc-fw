@@ -206,6 +206,10 @@ void FailureCounterContainer::rewriteSPIFFSFile()
 
 void FailureCounterContainer::_removeOldRecords()
 {
+    // if (this == nullptr) {
+    //     __DBG_printf("_removeOldRecords: self=nullptr");
+    //     return;
+    // }
     _failures.erase(std::remove_if(_failures.begin(), _failures.end(), [this](const FailureCounter &failure) {
         return failure.getTimeframe() > _storageTimeframe;
     }), _failures.end());

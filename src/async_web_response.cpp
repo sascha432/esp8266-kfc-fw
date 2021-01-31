@@ -160,12 +160,17 @@ size_t AsyncBaseResponse::_ack(AsyncWebServerRequest* request, size_t len, uint3
     return 0;
 }
 
-AsyncJsonResponse::AsyncJsonResponse() : AsyncBaseResponse(false), _jsonBuffer(_json)
+AsyncJsonResponse::AsyncJsonResponse() : AsyncBaseResponse(true), _jsonBuffer(_json)
 {
+    __DBG_println();
     _code = 200;
     _contentType = FSPGM(mime_application_json);
-    _sendContentLength = true;
-    _chunked = false;
+    // _sendContentLength = false;
+    // _chunked = false;
+}
+
+AsyncJsonResponse::~AsyncJsonResponse() {
+    __DBG_println();
 }
 
 bool AsyncJsonResponse::_sourceValid() const
@@ -175,6 +180,7 @@ bool AsyncJsonResponse::_sourceValid() const
 
 size_t AsyncJsonResponse::_fillBuffer(uint8_t *data, size_t len)
 {
+    // __DBG_printf("data=%p size=%u", data, len);
     return _jsonBuffer.fillBuffer(data, len);
 }
 
@@ -183,10 +189,10 @@ JsonUnnamedObject &AsyncJsonResponse::getJsonObject()
     return _json;
 }
 
-void AsyncJsonResponse::updateLength()
-{
-    _contentLength = _json.length();
-}
+// void AsyncJsonResponse::updateLength()
+// {
+//     _contentLength = _json.length();
+// }
 
 
 #if ESP32

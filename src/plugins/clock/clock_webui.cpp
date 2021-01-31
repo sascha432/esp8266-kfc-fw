@@ -21,13 +21,13 @@ void ClockPlugin::getValues(JsonArray &array)
     obj->add(JJ(value), _config.animation); //static_cast<int>(_config.animation));
 
 #if !IOT_LED_MATRIX
-    obj = &array.addObject(3);
+    obj = &array.addObject(2);
     obj->add(JJ(id), F("btn_colon"));
     // obj->add(JJ(state), true);
     obj->add(JJ(value), (_config.blink_colon_speed < kMinBlinkColonSpeed) ? 0 : (_config.blink_colon_speed < 750 ? 2 : 1));
 #endif
 
-    obj = &array.addObject(3);
+    obj = &array.addObject(2);
     obj->add(JJ(id), F("color"));
 #if IOT_LED_MATRIX
     obj->add(JJ(state), _config.getAnimation() != AnimationType::RAINBOW && _config.getAnimation() != AnimationType::FIRE);
@@ -36,18 +36,18 @@ void ClockPlugin::getValues(JsonArray &array)
 #endif
     obj->add(JJ(value), _color.get());
 
-    obj = &array.addObject(3);
+    obj = &array.addObject(2);
     obj->add(JJ(id), FSPGM(brightness));
     // obj->add(JJ(state), true);
     obj->add(JJ(value), _targetBrightness);
 
-    obj = &array.addObject(3);
+    obj = &array.addObject(2);
     obj->add(JJ(id), F("temp_prot"));
     // obj->add(JJ(state), true);
     obj->add(JJ(value), JsonNumber(100 - _tempBrightness * 100.0, 1));
 
 #if IOT_CLOCK_SAVE_STATE
-    obj = &array.addObject(3);
+    obj = &array.addObject(2);
     obj->add(JJ(id), F("power"));
     obj->add(JJ(value), _targetBrightness);
 #endif

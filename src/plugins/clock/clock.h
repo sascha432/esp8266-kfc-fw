@@ -48,6 +48,21 @@
 #define IOT_CLOCK_SAVE_STATE_DELAY                      30
 #endif
 
+// pin to enable to disable all LEDs
+#ifndef IOT_CLOCK_HAVE_ENABLE_PIN
+#define IOT_CLOCK_HAVE_ENABLE_PIN                       0
+#endif
+
+// pin to enable LEDs
+#ifndef IOT_CLOCK_EN_PIN
+#define IOT_CLOCK_EN_PIN                                15
+#endif
+
+// IOT_CLOCK_EN_PIN_INVERTED=1 sets IOT_CLOCK_EN_PIN to active low
+#ifndef IOT_CLOCK_EN_PIN_INVERTED
+#define IOT_CLOCK_EN_PIN_INVERTED                       0
+#endif
+
 #if IOT_CLOCK_BUTTON_PIN
 #include <Button.h>
 #include <ButtonEventCallback.h>
@@ -98,6 +113,16 @@ public:
     static constexpr int16_t kAutoBrightnessOff = -1;
     static constexpr float kAutoBrightnessInterval = IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL;     // milliseconds
 
+    constexpr static uint8_t enablePinState(bool active) {
+        return (active ?
+#if IOT_CLOCK_EN_PIN_INVERTED
+            LOW : HIGH
+#else
+            HIGH : LOW
+#endif
+        );
+    }
+
 // PluginComponent
 public:
 
@@ -130,11 +155,16 @@ public:
     void _publishState(MQTTClient *client = nullptr);
 
 private:
+#if IOT_CLOCK_HAVE_ENABLE_PIN
+    void _enable();
+    void _disable();
+#endif
+
 #if IOT_CLOCK_SAVE_STATE
     void _saveStateDelayed();
     void _saveState(int32_t brightness = -1);
     StoredState _getState() const;
-    void _copyToState(StoredState &state, BrightnessType brightness);
+    void _copyToState(StoredState &state, BrightnessType brightness, Color color);
     void _copyFromState(const StoredState &state);
 
     Event::Timer _saveTimer;
@@ -168,14 +198,18 @@ private:
 #endif
 
 public:
-    void enable(bool enable);
+    void enableLoop(bool enable);
+
 #if !IOT_LED_MATRIX
     void setSyncing(bool sync);
     void setBlinkColon(uint16_t value);
 #endif
     void setColorAndRefresh(Color color);
     // time represents fading level 0 to max, the fading time is relative to the different between the brightness levels
-    void setBrightness(BrightnessType brightness, milliseconds time = milliseconds(2500));
+    // void setBrightness(BrightnessType brightness, milliseconds time = milliseconds(2500)) {
+    //     setBrightness(brightness, time.count());
+    // }
+    void setBrightness(BrightnessType brightness, int32_t millis = -1);
     // use NONE to remove all animations
     // use NEXT to remove the current animation and start the next one. if next animation isnt set, animation is set to NONE
     void setAnimation(AnimationType animation);
@@ -314,6 +348,9 @@ private:
     bool _schedulePublishState: 1;
     bool _forceUpdate: 1;
     bool _isFading: 1;
+#if IOT_CLOCK_HAVE_ENABLE_PIN
+    bool _isEnabled: 1;
+#endif
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
     int16_t _autoBrightness;
     float _autoBrightnessValue;
@@ -328,9 +365,6 @@ private:
     BrightnessType _savedBrightness;
     BrightnessType _startBrightness;
     BrightnessType _targetBrightness;
-
-private:
-    void _startTempProtectionAnimation();
 
 public:
     void setAnimationCallback(Clock::AnimationCallback callback);

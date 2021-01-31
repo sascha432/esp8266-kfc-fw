@@ -227,8 +227,10 @@ WebUIRow &WebUI::addRow()
 
 void WebUI::addValues()
 {
+    __DBG_println();
     auto &array = _json.addArray(F("values"));
     for(auto plugin: plugins) {
+        __LDBG_printf("plugin=%s webui=%u", plugin->getName_P(), plugin->hasWebUI());
         if (plugin->hasWebUI()) {
             plugin->getValues(array);
         }

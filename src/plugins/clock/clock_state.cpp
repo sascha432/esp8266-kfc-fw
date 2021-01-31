@@ -42,7 +42,7 @@ void ClockPlugin::_saveState(int32_t brightness)
 
             __LDBG_printf("saving state brightness=%u animation=%u color=%s blink_colon=%u", brightness, _config.animation, _color.toString().c_str(), IF_IOT_CLOCK(_config.blink_colon_speed) IF_IOT_LED_MATRIX(0));
 
-            _copyToState(state, brightness);
+            _copyToState(state, brightness, _color);
             if (!state.store(file)) {
                 __LDBG_printf("failed to store state %s", SPGM(iot_clock_save_state_file));
             }
@@ -68,11 +68,11 @@ ClockPlugin::StoredState ClockPlugin::_getState() const
     return StoredState();
 }
 
-void ClockPlugin::_copyToState(StoredState &state, BrightnessType brightness)
+void ClockPlugin::_copyToState(StoredState &state, BrightnessType brightness, Color color)
 {
     state.setBrightness(brightness);
     state.setAnimation(_config.animation);
-    state.setColor(_color);
+    state.setColor((uint32_t)color ? (uint32_t)color : _config.solid_color.value);
 #if !IOT_LED_MATRIX
     state.setBlinkColonSpeed(_config.blink_colon_speed);
 #endif

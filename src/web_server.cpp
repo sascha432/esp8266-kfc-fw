@@ -236,6 +236,7 @@ void WebServerPlugin::handlerZeroconf(AsyncWebServerRequest *request)
     httpHeaders.addNoCache();
     auto response = new AsyncResolveZeroconfResponse(request->arg(FSPGM(value)));
     httpHeaders.setAsyncBaseResponseHeaders(response);
+    httpHeaders.replace<HttpConnectionHeader>(HttpConnectionHeader::CLOSE);
     request->send(response);
 }
 
@@ -284,9 +285,10 @@ void WebServerPlugin::handlerWebUI(AsyncWebServerRequest *request)
     WebServerSetCPUSpeedHelper setCPUSpeed;
     auto response = new AsyncJsonResponse();
     WsWebUISocket::createWebUIJSON(response->getJsonObject());
-    response->updateLength();
+    // response->updateLength();
     HttpHeaders httpHeaders;
     httpHeaders.addNoCache();
+    httpHeaders.add<HttpConnectionHeader>(HttpConnectionHeader::CLOSE);
     httpHeaders.setAsyncBaseResponseHeaders(response);
     request->send(response);
 }
@@ -875,9 +877,12 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
             auto username = System::Device::getUsername();
             auto password = System::Device::getPassword();
 
-            __SID(debug_printf_P(PSTR("blocked=%u username=%s match:user=%u pass=%u\n"), _loginFailures.isAddressBlocked(remote_addr), request->arg(FSPGM(username)).c_str(), (request->arg(FSPGM(username)) == username), (request->arg(FSPGM(password)) == password)));
+            __SID(debug_printf_P(PSTR("blocked=%u username=%s match:user=%u pass=%u\n"), _loginFailures && _loginFailures->isAddressBlocked(remote_addr), request->arg(FSPGM(username)).c_str(), (request->arg(FSPGM(username)) == username), (request->arg(FSPGM(password)) == password)));
 
-            if ((_loginFailures == nullptr || _loginFailures->isAddressBlocked(remote_addr) == false) && request->arg(FSPGM(username)) == username && request->arg(FSPGM(password)) == password) {
+            if (
+                ((!_loginFailures) || (_loginFailures && _loginFailures->isAddressBlocked(remote_addr) == false)) &&
+                (request->arg(FSPGM(username)) == username && request->arg(FSPGM(password)) == password)
+            ) {
 
                 auto &cookie = httpHeaders.add<HttpCookieHeader>(FSPGM(SID), generate_session_id(username, password, nullptr), String('/'));
                 authType = AuthType::PASSWORD;
@@ -1209,7 +1214,7 @@ AsyncWebServerResponse *WebServerPlugin::RestRequest::createResponse(AsyncWebSer
         json.add(FSPGM(status), 400);
         json.add(FSPGM(message), _reader.getLastErrorMessage());
     }
-    return response->finalize();
+    return response; //->finalize();
 }
 
 WebServerPlugin::RestHandler &WebServerPlugin::RestRequest::getHandler()

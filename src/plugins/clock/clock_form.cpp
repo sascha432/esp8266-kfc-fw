@@ -32,7 +32,7 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         AnimationType::NONE, FSPGM(Solid_Color),
         AnimationType::RAINBOW, FSPGM(Rainbow),
         AnimationType::FLASHING, FSPGM(Flashing),
-        AnimationType::FADING, FSPGM(Fading)
+        AnimationType::FADING, F("Color Fading")
     );
 
     auto &ui = form.createWebUI();
@@ -56,6 +56,10 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
     form.addValidator(FormUI::Validator::Range(-1, 1023));
 
 #endif
+
+    form.addObjectGetterSetter(F("ft"), cfg, cfg.get_bits_fading_time, cfg.set_bits_fading_time);
+    form.addFormUI(F("Fading Time From 0 To 100%"), FormUI::SuffixHtml(F("milliseconds")));
+    cfg.addRangeValidatorFor_fading_time(form, true);
 
     mainGroup.end();
 

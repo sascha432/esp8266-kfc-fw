@@ -1788,6 +1788,7 @@ typedef struct  {
                 CREATE_ENUM_BITFIELD(animation, AnimationType);
                 CREATE_ENUM_BITFIELD(initial_state, InitialStateType);
                 CREATE_UINT8_BITFIELD(time_format_24h, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(fading_time, 19, 0, 250000, 5000, 250)
                 uint8_t brightness;
                 int16_t auto_brightness;
 #if !IOT_LED_MATRIX
@@ -1836,6 +1837,13 @@ typedef struct  {
                 }
                 void setBrightness(uint16_t pBrightness) {
                     brightness = pBrightness >> 8;
+                }
+
+                uint32_t getFadingTimeMillis() const {
+                    return fading_time;
+                }
+                void setFadingTimeMillis(uint32_t time) {
+                    fading_time = time;
                 }
 
                 AnimationType getAnimation() const {

@@ -42,12 +42,13 @@ void WsWebUISocket::setup()
         auto ws = __LDBG_new(WsClientAsyncWebSocket, FSPGM(webui_socket_uri), &wsWebUI);
         ws->onEvent(webui_socket_event_handler);
         server->addHandler(ws);
-        __LDBG_printf("Web socket for UI running on port %u", System::WebServer::getConfig().port);
+        __LDBG_printf("Web socket for UI running on port %u", System::WebServer::getConfig().getPort());
     }
 }
 
 void WsWebUISocket::send(AsyncWebSocketClient *client, const JsonUnnamedObject &json)
 {
+    __LDBG_printf("send json");
     auto server = client->server();
     auto buffer = server->makeBuffer(json.length());
     assert(JsonBuffer(json).fillBuffer(buffer->get(), buffer->length()) == buffer->length());
@@ -56,6 +57,7 @@ void WsWebUISocket::send(AsyncWebSocketClient *client, const JsonUnnamedObject &
 
 void WsWebUISocket::broadcast(WsWebUISocket *sender, const JsonUnnamedObject &json)
 {
+    __LDBG_printf("broadcast sender=%p json", sender);
     if (wsWebUI) {
         auto buffer = wsWebUI->makeBuffer(json.length());
         assert(JsonBuffer(json).fillBuffer(buffer->get(), buffer->length()) == buffer->length());
@@ -153,10 +155,10 @@ void WsWebUISocket::sendValues(AsyncWebSocketClient *client)
 
     for(const auto plugin: plugins) {
         if (plugin->hasWebUI()) {
+            __LDBG_printf("plugin=%s array_size=%u", plugin->getName_P(), array.size());
             plugin->getValues(array);
         }
     }
-
     send(client, json);
 }
 
@@ -165,6 +167,7 @@ void WsWebUISocket::createWebUIJSON(JsonUnnamedObject &json)
     WebUIRoot webUI(json);
 
     for( const auto plugin: plugins) {
+        __DBG_printf("plugin=%s webui=%u", plugin->getName_P(), plugin->hasWebUI());
         if (plugin->hasWebUI()) {
             plugin->createWebUI(webUI);
         }

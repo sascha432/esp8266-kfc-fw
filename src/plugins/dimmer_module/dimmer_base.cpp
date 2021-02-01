@@ -157,7 +157,7 @@ void Dimmer_Base::_onReceive(size_t length)
     else if (type == DIMMER_EVENT_TEMPERATURE_ALERT && length == 3) {
         dimmer_over_temperature_event_t event;
         _wire.read(event);
-        WebAlerts::Alert::error(PrintString(F("Dimmer temperature alarm triggered: %u°C > %u°C"), event.current_temp, event.max_temp));
+        WebAlerts::Alert::error(PrintString(F("Dimmer temperature alarm triggered: %u&deg;C > %u&deg;C"), event.current_temp, event.max_temp));
     }
 }
 

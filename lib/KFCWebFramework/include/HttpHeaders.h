@@ -328,6 +328,7 @@ public:
 
     HttpHeaders();
     HttpHeaders(bool addDefault);
+    HttpHeaders(HttpHeadersVector &&headers);
     virtual ~HttpHeaders();
 
     static const String getRFC7231Date(const time_t *time);
@@ -346,7 +347,9 @@ public:
         return reinterpret_cast<Th &>(add(new Th(std::forward<Args &&>(args)...)));
     }
 
-    void add(const String& name, const String& value);
+    void add(const String& name, const String& value) {
+        add(new HttpSimpleHeader(name, value));
+    }
 
     HttpHeader &replace(HttpHeader *header) {
         remove(*header);
@@ -366,9 +369,18 @@ public:
         _headers.erase(std::remove_if(_headers.begin(), _headers.end(), compareHeader(header)), _headers.end());
     }
 
-    HttpHeadersVector &getHeaders();
-    HttpHeadersIterator begin();
-    HttpHeadersIterator end();
+    HttpHeadersVector &getHeaders() {
+        return _headers;
+    }
+    void setHeaders(HttpHeadersVector &&headers) {
+        _headers = std::move(headers);
+    }
+    HttpHeadersIterator begin() {
+        return _headers.begin();
+    }
+    HttpHeadersIterator end() {
+        return _headers.end();
+    }
 
     void addNoCache(bool noStore = false);
     void addDefaultHeaders();
@@ -379,7 +391,7 @@ public:
     template <class __AsyncBaseResponse>
     void setAsyncBaseResponseHeaders(__AsyncBaseResponse *response)
     {
-        response->_httpHeaders = std::move(_headers);
+        response->setHttpHeaders(std::move(_headers));
     }
 #endif
 

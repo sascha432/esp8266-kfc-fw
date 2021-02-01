@@ -236,7 +236,6 @@ void WebServerPlugin::handlerZeroconf(AsyncWebServerRequest *request)
     httpHeaders.addNoCache();
     auto response = new AsyncResolveZeroconfResponse(request->arg(FSPGM(value)));
     httpHeaders.setAsyncBaseResponseHeaders(response);
-    httpHeaders.replace<HttpConnectionHeader>(HttpConnectionHeader::CLOSE);
     request->send(response);
 }
 
@@ -285,10 +284,8 @@ void WebServerPlugin::handlerWebUI(AsyncWebServerRequest *request)
     WebServerSetCPUSpeedHelper setCPUSpeed;
     auto response = new AsyncJsonResponse();
     WsWebUISocket::createWebUIJSON(response->getJsonObject());
-    // response->updateLength();
     HttpHeaders httpHeaders;
     httpHeaders.addNoCache();
-    httpHeaders.add<HttpConnectionHeader>(HttpConnectionHeader::CLOSE);
     httpHeaders.setAsyncBaseResponseHeaders(response);
     request->send(response);
 }

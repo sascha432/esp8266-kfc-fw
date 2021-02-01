@@ -11,7 +11,7 @@
 #endif
 
 
-JsonPrint::JsonPrint(uint8_t * buffer, size_t size) {
+JsonPrint::JsonPrint(uint8_t *buffer, size_t size) {
     _buffer = buffer;
     _ptr = buffer;
     _size = size;
@@ -34,7 +34,7 @@ size_t JsonPrint::write(uint8_t data) {
     return 0;
 }
 
-size_t JsonPrint::write(const uint8_t * buffer, size_t size) {
+size_t JsonPrint::write(const uint8_t *buffer, size_t size) {
     if (_overflow) {
         return 0;
     }

@@ -43,6 +43,10 @@ HttpHeaders::HttpHeaders(bool addDefault)
     }
 }
 
+HttpHeaders::HttpHeaders(HttpHeadersVector &&headers) : _headers(std::move(headers))
+{
+}
+
 HttpHeaders::~HttpHeaders()
 {
     clear(-1);
@@ -270,36 +274,16 @@ HttpConnectionHeader::HttpConnectionHeader(ConnectionEnum_t type) : HttpSimpleHe
 {
 }
 
-void  HttpHeaders::clear(uint8_t reserveItems)
+void HttpHeaders::clear(uint8_t reserveItems)
 {
     _headers.clear();
     _headers.reserve(reserveItems);
 }
 
-void  HttpHeaders::init()
+void HttpHeaders::init()
 {
     clear(5);
     addDefaultHeaders();
-}
-
-void  HttpHeaders::add(const String &name, const String &value)
-{
-    add(new HttpSimpleHeader(name, value));
-}
-
-HttpHeadersVector  &HttpHeaders::getHeaders()
-{
-    return _headers;
-}
-
-HttpHeadersIterator  HttpHeaders::begin()
-{
-    return _headers.begin();
-}
-
-HttpHeadersIterator  HttpHeaders::end()
-{
-    return _headers.end();
 }
 
 void HttpHeaders::addNoCache(bool noStore)

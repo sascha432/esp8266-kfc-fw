@@ -161,7 +161,6 @@ void SensorPlugin::_timerEvent()
         }
     }
     else if (client) {
-        JsonUnnamedObject tmp;
         for(auto sensor: _sensors) {
             sensor->timerEvent(nullptr, client);
         }

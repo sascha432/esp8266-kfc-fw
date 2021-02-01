@@ -167,7 +167,7 @@ void WsWebUISocket::createWebUIJSON(JsonUnnamedObject &json)
     WebUIRoot webUI(json);
 
     for( const auto plugin: plugins) {
-        __DBG_printf("plugin=%s webui=%u", plugin->getName_P(), plugin->hasWebUI());
+        __LDBG_printf("plugin=%s webui=%u", plugin->getName_P(), plugin->hasWebUI());
         if (plugin->hasWebUI()) {
             plugin->createWebUI(webUI);
         }

@@ -65,7 +65,7 @@ void DimmerModuleForm::_createConfigureForm(PluginComponent::FormCallbackType ty
 
     form.addReference(F("maxtmp"), cfg.cfg.max_temp);
     // form.add<uint8_t>(F("max_temp"), _H_W_STRUCT_VALUE(cfg, cfg.max_temp));
-    form.addFormUI(F("Max. Temperature"), configValidAttr, FormUI::PlaceHolder(75), FormUI::Suffix(FSPGM(_degreeC)));
+    form.addFormUI(F("Max. Temperature"), configValidAttr, FormUI::PlaceHolder(75), FormUI::Suffix(FSPGM(degree_Celsius_utf8)));
     form.addValidator(FormUI::Validator::Range(F("Temperature out of range: %min%-%max%"), 55, 125));
 
     form.addReference(F("meint"), cfg.cfg.report_metrics_interval);
@@ -241,13 +241,13 @@ void DimmerModuleForm::_createConfigureForm(PluginComponent::FormCallbackType ty
         cfg.fw.ntc_temp_offset = value * DIMMER_TEMP_OFFSET_DIVIDER;
         return false;
     });
-    form.addFormUI(F("Temperature Offset (NTC)"), configValidAttr, FormUI::PlaceHolder(0), FormUI::Suffix(FSPGM(_degreeC)));
+    form.addFormUI(F("Temperature Offset (NTC)"), configValidAttr, FormUI::PlaceHolder(0), FormUI::Suffix(FSPGM(degree_Celsius_utf8)));
 
     form.add<float>(F("temp2_ofs"), (cfg.fw.int_temp_offset / DIMMER_TEMP_OFFSET_DIVIDER), [&cfg](const float &value, FormField &, bool) {
         cfg.fw.int_temp_offset = value * DIMMER_TEMP_OFFSET_DIVIDER;
         return false;
     });
-    form.addFormUI(F("Temperature Offset 2 (ATmega)"), configValidAttr, FormUI::PlaceHolder(0), FormUI::Suffix(FSPGM(_degreeC)));
+    form.addFormUI(F("Temperature Offset 2 (ATmega)"), configValidAttr, FormUI::PlaceHolder(0), FormUI::Suffix(FSPGM(degree_Celsius_utf8)));
 
 #else
 
@@ -255,7 +255,7 @@ void DimmerModuleForm::_createConfigureForm(PluginComponent::FormCallbackType ty
         cfg.cfg.ntc_temp_cal_offset = value;
         return false;
     });
-    form.addFormUI(F("Temperature Offset (NTC)"), configValidAttr, FormUI::PlaceHolder(0), FormUI::Suffix(FSPGM(_degreeC)));
+    form.addFormUI(F("Temperature Offset (NTC)"), configValidAttr, FormUI::PlaceHolder(0), FormUI::Suffix(FSPGM(degree_Celsius_utf8)));
 
     form.addPointerTriviallyCopyable(F("tsofs"), &cfg.cfg.internal_temp_calibration.ts_offset);
     form.addFormUI(F("TS Offset (ATmega Sensor)"), configValidAttr, FormUI::PlaceHolder(0), FormUI::Suffix(F("temperature sensor offset correction")));

@@ -871,7 +871,7 @@ int8_t MQTTClient::toBool(const char *str, int8_t invalid)
         return invalid;
     }
     char *end = nullptr;
-    auto value = strtoll(str, &end, 0);
+    auto value = strtol(str, &end, 0);
     while(isspace(*end)) {
         end++;
     }

@@ -34,31 +34,29 @@ public:
     virtual size_t _ack(AsyncWebServerRequest* request, size_t len, uint32_t time);
     virtual size_t _fillBuffer(uint8_t* buf, size_t maxLen) = 0;
 
-protected:
-    friend HttpHeaders;
+    void setHttpHeaders(HttpHeadersVector &&headers) {
+        _httpHeaders.setHeaders(std::move(headers));
+    }
 
-    void __assembleHead(uint8_t version);
+protected:
+    virtual void __assembleHead(uint8_t version);
 
     WebServerSetCPUSpeedHelper _setCPUSpeed;
-    HttpHeadersVector _httpHeaders;
+    HttpHeaders _httpHeaders;
     String _head;
 };
 
 class AsyncJsonResponse : public AsyncBaseResponse {
 public:
     AsyncJsonResponse();
-    ~AsyncJsonResponse();
 
     virtual bool _sourceValid() const override;
     virtual size_t _fillBuffer(uint8_t *data, size_t len) override;
 
     JsonUnnamedObject &getJsonObject();
-    // void updateLength();
 
-    // inline AsyncJsonResponse *finalize() {
-    //     updateLength();
-    //     return this;
-    // }
+protected:
+    virtual void __assembleHead(uint8_t version) override;
 
 private:
     JsonUnnamedObject _json;
@@ -86,7 +84,11 @@ public:
 
 class AsyncMDNSResponse : public AsyncJsonResponse {
 public:
-    AsyncMDNSResponse(MDNSResponder::hMDNSServiceQuery serviceQuery, MDNSPlugin::ServiceInfoVector *services, int timeout) : _serviceQuery(serviceQuery), _services(services), _timeout(millis() + timeout) {
+    AsyncMDNSResponse(MDNSResponder::hMDNSServiceQuery serviceQuery, MDNSPlugin::ServiceInfoVector *services, int timeout) :
+        _serviceQuery(serviceQuery),
+        _services(services),
+        _timeout(millis() + timeout)
+    {
         _contentLength = 0;
         _sendContentLength = false;
         _chunked = true;

@@ -35,7 +35,7 @@ void Sensor_DHTxx::createAutoDiscovery(MQTTAutoDiscovery::FormatType format, MQT
     auto discovery = __LDBG_new(MQTTAutoDiscovery);
     discovery->create(this, _getId(FSPGM(temperature)), format);
     discovery->addStateTopic(topic);
-    discovery->addUnitOfMeasurement(FSPGM(_degreeC));
+    discovery->addUnitOfMeasurement(FSPGM(degree_Celsius_unicode));
     discovery->addValueTemplate(FSPGM(temperature));
     discovery->finalize();
     vector.emplace_back(discovery);
@@ -71,7 +71,7 @@ void Sensor_DHTxx::getValues(JsonArray &array, bool timer)
 
 void Sensor_DHTxx::createWebUI(WebUIRoot &webUI, WebUIRow **row)
 {
-    (*row)->addSensor(_getId(FSPGM(temperature)), _name + F(" Temperature"), FSPGM(_degreeC));
+    (*row)->addSensor(_getId(FSPGM(temperature)), _name + F(" Temperature"), FSPGM(degree_Celsius_html));
     (*row)->addSensor(_getId(FSPGM(humidity)), _name + F(" Humidity"), '%');
 }
 
@@ -90,7 +90,7 @@ bool Sensor_DHTxx::getSensorData(String &name, StringVector &values)
     name = F(IOT_SENSOR_NAMES_DHTxx);
     SensorData_t sensor;
     _readSensor(sensor);
-    values.emplace_back(PrintString(F("%.2f °C"), sensor.temperature));
+    values.emplace_back(PrintString(F("%.2f &deg;C"), sensor.temperature));
     values.emplace_back(PrintString(F("%.2f %%"), sensor.humidity));
     return true;
 }

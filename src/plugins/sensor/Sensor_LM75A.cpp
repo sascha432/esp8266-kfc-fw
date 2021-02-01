@@ -35,7 +35,7 @@ MQTTComponent::MQTTAutoDiscoveryPtr Sensor_LM75A::nextAutoDiscovery(MQTTAutoDisc
         case 0:
             discovery->create(this, _getId(), format);
             discovery->addStateTopic(MQTTClient::formatTopic(_getId()));
-            discovery->addUnitOfMeasurement(FSPGM(_degreeC));
+            discovery->addUnitOfMeasurement(FSPGM(degree_Celsius_unicode));
             break;
     }
     discovery->finalize();
@@ -49,7 +49,6 @@ uint8_t Sensor_LM75A::getAutoDiscoveryCount() const
 
 void Sensor_LM75A::getValues(JsonArray &array, bool timer)
 {
-    _debug_println();
     auto &obj = array.addObject(3);
     auto temp = _readSensor();
     obj.add(JJ(id), _getId());
@@ -59,11 +58,10 @@ void Sensor_LM75A::getValues(JsonArray &array, bool timer)
 
 void Sensor_LM75A::createWebUI(WebUIRoot &webUI, WebUIRow **row)
 {
-    _debug_println();
     // if ((*row)->size() > 3) {
     //     *row = &webUI.addRow();
     // }
-    (*row)->addSensor(_getId(), _name, FSPGM(_degreeC));
+    (*row)->addSensor(_getId(), _name, FSPGM(degree_Celsius_html));
 }
 
 void Sensor_LM75A::publishState(MQTTClient *client)
@@ -89,8 +87,8 @@ MQTTSensorSensorType Sensor_LM75A::getType() const
 
 bool Sensor_LM75A::getSensorData(String &name, StringVector &values)
 {
-    name = F("LM75A");
-    values.emplace_back(PrintString(F("%.2f °C"), _readSensor()));
+    name = std::move(_name.toString());
+    values.emplace_back(PrintString(F("%.2f &deg;C"), _readSensor()));
     return true;
 }
 

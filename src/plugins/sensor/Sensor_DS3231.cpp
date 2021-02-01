@@ -42,7 +42,7 @@ MQTTComponent::MQTTAutoDiscoveryPtr Sensor_DS3231::nextAutoDiscovery(MQTTAutoDis
         case 0:
             discovery->create(this, FSPGM(ds3231_id_temp), format);
             discovery->addStateTopic(MQTTClient::formatTopic(FSPGM(ds3231_id_temp)));
-            discovery->addUnitOfMeasurement(FSPGM(_degreeC));
+            discovery->addUnitOfMeasurement(FSPGM(degree_Celsius_unicode));
             break;
         case 1:
             discovery->create(this, FSPGM(ds3231_id_time), format);
@@ -82,7 +82,7 @@ void Sensor_DS3231::getValues(JsonArray &array, bool timer)
 void Sensor_DS3231::createWebUI(WebUIRoot &webUI, WebUIRow **row)
 {
     _debug_println();
-    (*row)->addSensor(FSPGM(ds3231_id_temp), _name, FSPGM(_degreeC));
+    (*row)->addSensor(FSPGM(ds3231_id_temp), _name, PrintHt);
     auto &clock = (*row)->addSensor(FSPGM(ds3231_id_time), F("RTC Clock"), JsonString());
     clock.add(JJ(head), F("h4"));
 }
@@ -117,7 +117,7 @@ bool Sensor_DS3231::getSensorData(String &name, StringVector &values)
     strftime_P(buf, sizeof(buf), PSTR("RTC %Y-%m-%d %H:%M:%S"), tm);
     name = F("DS3231");
     values.emplace_back(buf);
-    values.emplace_back(PrintString(F("%.2f °C"), _readSensorTemp()));
+    values.emplace_back(PrintString(F("%.2f &deg;C"), _readSensorTemp()));
     values.emplace_back(PrintString(F("Lost Power: %s"), _readSensorLostPower() ? SPGM(Yes) : SPGM(No)));
     return true;
 }

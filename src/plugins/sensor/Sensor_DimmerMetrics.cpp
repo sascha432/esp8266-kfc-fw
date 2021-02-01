@@ -35,12 +35,12 @@ Sensor_DimmerMetrics::MQTTAutoDiscoveryPtr Sensor_DimmerMetrics::nextAutoDiscove
         case 0:
             discovery->create(this, F("temp"), format);
             discovery->addStateTopic(_getMetricsTopics(TopicType::TEMPERATURE));
-            discovery->addUnitOfMeasurement(FSPGM(_degreeC, "\u00b0C"));
+            discovery->addUnitOfMeasurement(FSPGM(degree_Celsius_unicode));
             break;
         case 1:
             discovery->create(this, F("temp2"), format);
             discovery->addStateTopic(_getMetricsTopics(TopicType::TEMPERATURE2));
-            discovery->addUnitOfMeasurement(FSPGM(_degreeC));
+            discovery->addUnitOfMeasurement(FSPGM(degree_Celsius_unicode));
             break;
         case 2:
             discovery->create(this, FSPGM(vcc), format);
@@ -91,8 +91,8 @@ void Sensor_DimmerMetrics::_createWebUI(WebUIRoot &webUI, WebUIRow **row)
 {
     (*row)->addBadgeSensor(FSPGM(vcc), _name, 'V');
     (*row)->addBadgeSensor(FSPGM(frequency), F("Frequency"), FSPGM(Hz));
-    (*row)->addBadgeSensor(F("int_temp"), F("ATmega"), FSPGM(_degreeC));
-    (*row)->addBadgeSensor(F("ntc_temp"), F("NTC"), FSPGM(_degreeC));
+    (*row)->addBadgeSensor(F("int_temp"), F("ATmega"), FSPGM(degree_Celsius_html));
+    (*row)->addBadgeSensor(F("ntc_temp"), F("NTC"), FSPGM(degree_Celsius_html));
     _webUIinitialized = true;
 }
 

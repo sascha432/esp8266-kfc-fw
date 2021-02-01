@@ -38,7 +38,7 @@ MQTTComponent::MQTTAutoDiscoveryPtr Sensor_BME280::nextAutoDiscovery(MQTTAutoDis
         case 0:
             discovery->create(this, _getId(FSPGM(temperature, "temperature")), format);
             discovery->addStateTopic(topic);
-            discovery->addUnitOfMeasurement(FSPGM(_degreeC));
+            discovery->addUnitOfMeasurement(FSPGM(degree_Celsius_unicode));
             discovery->addValueTemplate(FSPGM(temperature));
             break;
         case 1:
@@ -90,7 +90,7 @@ void Sensor_BME280::createWebUI(WebUIRoot &webUI, WebUIRow **row)
     // if ((*row)->size() > 1) {
         // *row = &webUI.addRow();
     // }
-    (*row)->addSensor(_getId(FSPGM(temperature)), _name + F(" Temperature"), FSPGM(_degreeC));
+    (*row)->addSensor(_getId(FSPGM(temperature)), _name + F(" Temperature"), FSPGM(degree_Celsius_html));
     (*row)->addSensor(_getId(FSPGM(humidity)), _name + F(" Humidity"), '%');
     (*row)->addSensor(_getId(FSPGM(pressure)), _name + F(" Pressure"), FSPGM(hPa));
 }
@@ -110,7 +110,7 @@ bool Sensor_BME280::getSensorData(String &name, StringVector &values)
     name = F("BME280");
     SensorData_t sensor;
     _readSensor(sensor);
-    values.emplace_back(PrintString(F("%.2f °C"), sensor.temperature));
+    values.emplace_back(PrintString(F("%.2f &deg;C"), sensor.temperature));
     values.emplace_back(PrintString(F("%.2f %%"), sensor.humidity));
     values.emplace_back(PrintString(F("%.2f hPa"), sensor.pressure));
     return true;

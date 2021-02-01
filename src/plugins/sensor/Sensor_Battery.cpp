@@ -20,6 +20,8 @@ Sensor_Battery::Sensor_Battery(const JsonString &name) : MQTTSensor(), _name(nam
 {
     REGISTER_SENSOR_CLIENT(this);
     reconfigure(nullptr);
+    // read ADC every 5 seconds and store the average of 64 samples over a period of ~320ms
+    ADCManager::getInstance().addAutoReadTimer(Event::milliseconds(5000), 5, 64);
 }
 
 Sensor_Battery::~Sensor_Battery()
@@ -62,7 +64,7 @@ void Sensor_Battery::getValues(JsonArray &array, bool timer)
     auto obj = &array.addObject(3);
     obj->add(JJ(id), _getId(BatteryType::LEVEL));
     obj->add(JJ(state), true);
-    obj->add(JJ(value), String(_readSensor(), _config.precision));
+    obj->add(JJ(value), JsonNumber(_readSensor(), _config.precision));
 
 #if IOT_SENSOR_BATTERY_CHARGE_DETECTION
     obj = &array.addObject(3);
@@ -184,15 +186,14 @@ float Sensor_Battery::readSensor()
 float Sensor_Battery::_readSensor()
 {
     auto &adc = ADCManager::getInstance();
-    uint32_t sum = adc.readValueWait(10000U, 1000U); // TODO check why this returns 1024
-    delay(2);
-    sum += adc.readValueWait(10000U, 1000U);
-    delay(2);
-    sum += adc.readValueWait(10000U, 1000U);
+    auto result = adc.getAutoReadValue();
+    if (result.isInvalid()) {
+        return NAN;
+    }
+    auto voltage = result.getFloatValue() / ADCManager::kMaxADCValue;
 
-    double adcVoltage = sum / (3 * 1024.0);
-    __LDBG_printf("adc=%f raw=%f sum=%u", adcVoltage, (((IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R2 + IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1)) / IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1) * adcVoltage, sum);
-    return ((((IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R2 + IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1)) / IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1) * adcVoltage * _config.calibration) + _config.offset;
+    __LDBG_printf("adc=%f raw=%f sum=%u", voltage, (((IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R2 + IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1)) / IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1) * voltage, sum);
+    return ((((IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R2 + IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1)) / IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1) * voltage * _config.calibration) + _config.offset;
 }
 
 Sensor_Battery::SensorState Sensor_Battery::_getState() const

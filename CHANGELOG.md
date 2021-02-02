@@ -46,6 +46,8 @@
 - Reduce brightness depending on the temperature
 - Added fire animation
 - Configureable login security
+- Fixed crash during login with login security disabled
+- Option to save and restore brightness/other settings after reboot (Clock/LED Matrix plugin)
 
 ## Version 0.0.3
 

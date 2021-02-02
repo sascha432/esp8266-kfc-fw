@@ -27,32 +27,37 @@ void ClockPlugin::getValues(JsonArray &array)
     obj->add(JJ(value), (_config.blink_colon_speed < kMinBlinkColonSpeed) ? 0 : (_config.blink_colon_speed < 750 ? 2 : 1));
 #endif
 
-    obj = &array.addObject(2);
+    obj = &array.addObject(3);
     obj->add(JJ(id), F("color"));
 #if IOT_LED_MATRIX
     obj->add(JJ(state), _config.getAnimation() != AnimationType::RAINBOW && _config.getAnimation() != AnimationType::FIRE);
 #else
     obj->add(JJ(state), _config.getAnimation() != AnimationType::RAINBOW);
 #endif
-    obj->add(JJ(value), _color.get());
+    obj->add(JJ(value), _getColor());
 
     obj = &array.addObject(2);
     obj->add(JJ(id), FSPGM(brightness));
     // obj->add(JJ(state), true);
-    obj->add(JJ(value), _targetBrightness);
+    obj->add(JJ(value), _targetBrightness == 0 ? _savedBrightness : _targetBrightness);
 
     obj = &array.addObject(2);
     obj->add(JJ(id), F("temp_prot"));
     // obj->add(JJ(state), true);
-    obj->add(JJ(value), JsonNumber(100 - _tempBrightness * 100.0, 1));
+    if (_tempBrightness == -1) {
+        obj->add(JJ(value), F("OVERHEATED"));
+    }
+    else {
+        obj->add(JJ(value), JsonNumber(100 - _tempBrightness * 100.0, 1));
+    }
 
 #if IOT_CLOCK_SAVE_STATE
     obj = &array.addObject(2);
     obj->add(JJ(id), F("power"));
-    obj->add(JJ(value), _targetBrightness);
+    obj->add(JJ(value), _targetBrightness != 0);
 #endif
 
-#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
+#if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
     obj = &array.addObject(3);
     obj->add(JJ(id), FSPGM(light_sensor));
     obj->add(JJ(value), _getLightSensorWebUIValue());
@@ -135,7 +140,7 @@ void ClockPlugin::createWebUI(WebUIRoot &webUI)
     col.add(JJ(row), 3);
 #endif
 
-#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
+#if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
     row->addSensor(FSPGM(light_sensor), F("Ambient Light Sensor"), F("<img src=\"/images/light.svg\" width=\"80\" height=\"80\" style=\"margin-top:-20px;margin-bottom:1rem\">"), WebUIComponent::SensorRenderType::COLUMN).add(JJ(height), height);
 #endif
 

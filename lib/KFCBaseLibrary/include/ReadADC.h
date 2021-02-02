@@ -13,16 +13,53 @@
 // ESP8266
 // Singleton to read ADC values safely without WiFi to drop the connection
 
+// read the ADC directly
+// ------------------------------------------------------------------------
+// the minimum time between each call has to be longer than kMinDelayMicros or the
+// last value will be returned. the function might block for kMaxDelayMicros (25 milliseconds
+// by default). use readValueWait() with maxWaitMicros 0 if the function needs to return
+// immediately
+//
+// uint16_t readValue();
+//
+// read ADC and wait up to maxWaitMicros for a new result. maxAgeMicros tell if the last
+// result can be used. if lastUpdate is not null, the time of the update will be stored
+// and can be used to detect if and when the value was updated
+//
+// uint16_t readValueWait(uint16_t maxWaitMicros, uint16_t maxAgeMicros = 0, uint32_t *lastUpdate = nullptr);
+//
+//
+// Using callbacks
+// ------------------------------------------------------------------------
+// request an average value for "numSamples" sent to a callback function
+// the readInterval is microseconds but varies depending if it is possible to read
+// the ADC or not. it might take significantly longer to get the result than (numSamples * readInterval)
+// returns false if numSamples is 0 or readIntervalMicros less than kMinDelayMicros
+//
+// bool requestAverage(uint8_t numSamples, uint32_t readIntervalMicros, Callback callback);
+//
+//
+// Continuous readings
+// ------------------------------------------------------------------------
+// for slower continous readings with an averaging period of "sampleInterval" milliseconds, the auto read
+// timer can be used. by default it requests an average of 10 samples with an interval of 5 milliseconds
+// every "interval" milliseconds. interval must exceed (numSamples + 1) * sampleInterval + (kMaxDelayMicros / 500)
+//
+// start continuous readings
+// if the timer is already installed, it will return an error. use removeAutoReadTimer() before to cancel it
+// AutoReadTimerResultType addAutoReadTimer(Event::milliseconds interval, Event::milliseconds sampleIntervalMillis = 5, uint8_t count = 10);
+//
+// stop continuous readings
+// void removeAutoReadTimer();
+//
+// returns the result of the last average reading
+// if there is no result, ADCResult.isValid() returns false
+// the result also stores the number of samples, min./max./avg values and the time of the last update
+// ADCResult getAutoReadValue() const;
+
+
 class ADCManager {
-private:
-    ADCManager();
-    ~ADCManager();
-
-    class ResultQueue;
 public:
-
-    class ADCResult {
-    public:
         static constexpr size_t kADCValueMaxBits = 12;
         static constexpr size_t kNumSampleMaxBits = 8;
 #if defined(ESP8266)
@@ -30,14 +67,33 @@ public:
 #else
         static constexpr size_t kMaxADCValue = 1023;        // 0-1023, 10bit
 #endif
+
+private:
+    ADCManager();
+    ~ADCManager();
+
+    class ResultQueue;
+public:
+    enum class AutoReadTimerResultType {
+        SUCCESS = 0,
+        ALREADY_RUNNING = 1,
+        INTERVAL_TOO_SHORT = 2,
+        NUM_SAMPLES_INVALID = 3,
+        SAMPLE_INTERVAL_TOO_SHORT = 4,
+    };
+
+    class ADCResult {
+    public:
     public:
         ADCResult();
         ADCResult(uint16_t value);
 
+        void update(uint16_t value, uint32_t timestampMicros);
         uint16_t getValue() const;
         float getFloatValue() const;
         uint16_t getMinValue() const;
         uint16_t getMaxValue() const;
+        uint32_t getLastUpdateMicros() const;
         bool isValid() const;
         bool isInvalid() const;
 
@@ -45,6 +101,7 @@ public:
         friend ResultQueue;
         friend ADCManager;
 
+        uint32_t _lastUpdate;
         uint32_t _valueSum: (kNumSampleMaxBits + kADCValueMaxBits);
         uint32_t _samples: kNumSampleMaxBits;
         uint32_t _min: kADCValueMaxBits;
@@ -55,7 +112,7 @@ public:
     };
 
     static constexpr size_t ADCResultSize = sizeof(ADCResult);
-    static_assert(ADCResultSize == sizeof(uint32_t) * 2, "Size does not match");
+    static_assert(ADCResultSize == sizeof(uint32_t) * 3, "Size does not match");
 
     using Callback = std::function<void(const ADCResult &result)>;
 
@@ -72,25 +129,55 @@ public:
 private:
     class ResultQueue {
     public:
-        ResultQueue(uint8_t numSamples, uint16_t delayMillis, Callback callback);
-        bool needsUpdate(uint32_t millis) const;
-        void setLastUpdate(uint32_t millis);
-        bool finished() const;
-        ADCResult &getResult();
+        ResultQueue(uint8_t numSamples, uint32_t intervalMicros, Callback callback);
+        bool needsUpdate(uint32_t time) const {
+            return (get_time_diff(_result._lastUpdate, time) >= _interval);
+        }
+        bool finished() const {
+            return (_result._samples == _samples);
+        }
+        ADCResult &getResult() {
+            return _result;
+        }
         void invokeCallback();
 
     private:
         uint8_t _samples;
-        uint16_t _delay;
+        uint32_t _interval;
         ADCResult _result;
         Callback _callback;
-        uint32_t _lastUpdate;
     };
 
     using ResultQueueList = std::list<ResultQueue>;
 
+    class ReadTimer {
+    public:
+        ReadTimer(Event::milliseconds interval, Event::milliseconds sampleInterval, uint8_t numSamples) : _sampleInterval(sampleInterval.count()), _numSamples(numSamples) {
+            _Timer(_timer).add(interval, true, [](Event::CallbackTimerPtr timer) {
+                ReadTimer::readTimerCallback(timer);
+            });
+        }
+        ~ReadTimer() {
+            _timer.remove();
+        }
+
+        void timerCallback(ADCManager &adc, Event::CallbackTimerPtr timer);
+        static ADCManager *getADCInstance();
+        static void readTimerCallback(Event::CallbackTimerPtr timer);
+        const ADCResult &getResult() const {
+            return _result;
+        }
+
+    private:
+        Event::Timer _timer;
+        ADCResult _result;
+        uint16_t _sampleInterval;
+        uint8_t _numSamples;
+    };
+
 public:
     // get instance... can be stored since the returned reference won't change
+    static ADCManager *hasInstance();
     static ADCManager &getInstance();
     // terminate queue
     // invokeCallbacks=true invokes the result callback for each queued entry sending 0 as result
@@ -108,10 +195,9 @@ public:
     // read value and set lastUpdate
     uint16_t readValue(uint32_t &lastUpdate);
 
-    // request num samples every delay milliseconds and submit result to callback
-    // returns false if values are not valid
-    // if the delay is shorter than kMinDelayMicros / 1000, the same value might be used twice
-    bool requestAverage(uint8_t numSamples, uint16_t delayMillis, Callback callback);
+    // request average
+    // details are at the top of the file
+    bool requestAverage(uint8_t numSamples, uint32_t readIntervalMicros, Callback callback);
 
     // return lower 32bit part
     uint32_t getLastUpdate() const;
@@ -124,6 +210,12 @@ public:
     void setMaxDelayMicros(uint16_t maxDelayMicros);
     void setRepeatMaxDelayPerSecond(uint8_t repeatMaxDelayPerSecond);
     void setMaxDelayYieldTimeMicros(uint16_t maxDelayYieldTimeMicros);
+
+    // install auto read timer
+    // details are at the top of the file
+    AutoReadTimerResultType addAutoReadTimer(Event::milliseconds interval, Event::milliseconds sampleInterval = Event::milliseconds(5), uint8_t count = 10);
+    void removeAutoReadTimer();
+    ADCResult getAutoReadValue() const;
 
 private:
     uint16_t __readAndNormalizeADCValue();
@@ -143,6 +235,147 @@ private:
 
     uint16_t _minDelayMicros;
     uint16_t _maxDelayMicros;
-    uint8_t _repeatMaxDelayPerSecond;
     uint16_t _maxDelayYieldTimeMicros;
+    uint8_t _repeatMaxDelayPerSecond;
+
+    ReadTimer *_readTimer;
 };
+
+
+// ------------------------------------------------------------------------
+
+inline void ADCManager::setOffset(int16_t offset)
+{
+    _offset = offset;
+}
+
+inline void ADCManager::setMinDelayMicros(uint16_t minDelayMicros)
+{
+    _minDelayMicros = std::min(20000, std::max(500, (int)minDelayMicros));
+}
+
+inline void ADCManager::setMaxDelayMicros(uint16_t maxDelayMicros)
+{
+    _maxDelayMicros = std::min(50000, std::max(2000, (int)maxDelayMicros));
+}
+
+inline void ADCManager::setRepeatMaxDelayPerSecond(uint8_t repeatMaxDelayPerSecond)
+{
+    _repeatMaxDelayPerSecond = std::min(20, std::max(1, (int)repeatMaxDelayPerSecond));
+}
+
+inline void ADCManager::setMaxDelayYieldTimeMicros(uint16_t maxDelayYieldTimeMicros)
+{
+    _maxDelayYieldTimeMicros = std::min(ADCManager::kMaxDelayYieldTimeMicros * 2, std::max(ADCManager::kMaxDelayYieldTimeMicros, (int)maxDelayYieldTimeMicros));
+}
+
+inline ADCManager::AutoReadTimerResultType ADCManager::addAutoReadTimer(Event::milliseconds interval, Event::milliseconds sampleInterval, uint8_t numSamples)
+{
+    if (numSamples == 0) {
+        return AutoReadTimerResultType::NUM_SAMPLES_INVALID;
+    }
+    if (sampleInterval.count() == 0) {
+        return AutoReadTimerResultType::SAMPLE_INTERVAL_TOO_SHORT;
+    }
+    if (interval.count() < (numSamples + 1) * sampleInterval.count() + (kMaxDelayMicros / 500)) {
+        return AutoReadTimerResultType::INTERVAL_TOO_SHORT;
+    }
+    if (_readTimer) {
+        return AutoReadTimerResultType::ALREADY_RUNNING;
+    }
+    _readTimer = new ReadTimer(interval, sampleInterval, numSamples);
+    return AutoReadTimerResultType::SUCCESS;
+}
+
+inline void ADCManager::removeAutoReadTimer() {
+    if (_readTimer) {
+        delete _readTimer;
+        _readTimer = nullptr;
+    }
+}
+
+inline ADCManager::ADCResult ADCManager::getAutoReadValue() const {
+    if (_readTimer) {
+        return _readTimer->getResult();
+    }
+    return ADCResult();
+}
+
+// ------------------------------------------------------------------------
+
+inline void ADCManager::ADCResult::update(uint16_t value, uint32_t timestampMicros)
+{
+    _min = std::min<uint16_t>(_min, value);
+    _max = std::max<uint16_t>(_max, value);
+    _valueSum += value;
+    _samples++;
+    _lastUpdate = timestampMicros;
+}
+
+inline uint16_t ADCManager::ADCResult::getValue() const
+{
+    return _valueSum / _samples;
+}
+
+inline float ADCManager::ADCResult::getFloatValue() const
+{
+    return _valueSum / (float)_samples;
+}
+
+inline uint16_t ADCManager::ADCResult::getMinValue() const
+{
+    return _min;
+}
+
+inline uint16_t ADCManager::ADCResult::getMaxValue() const
+{
+    return _max;
+}
+
+inline uint32_t ADCManager::ADCResult::getLastUpdateMicros() const
+{
+    return _lastUpdate;
+}
+
+inline bool ADCManager::ADCResult::isValid() const
+{
+    return !_invalid;
+}
+
+inline bool ADCManager::ADCResult::isInvalid() const
+{
+    return _invalid;
+}
+
+// ------------------------------------------------------------------------
+
+inline void ADCManager::ReadTimer::timerCallback(ADCManager &adc, Event::CallbackTimerPtr timer)
+{
+    adc.requestAverage(_numSamples, _sampleInterval * 1000, [this](const ADCResult &result) {
+        // check if the adc manager and readTimer still exist
+        auto adc = getADCInstance();
+        if (adc && adc->_readTimer == this) {
+            _result = result;
+        }
+    });
+}
+
+inline ADCManager *ADCManager::ReadTimer::getADCInstance()
+{
+    auto adc = ADCManager::hasInstance();
+    if (!adc || !adc->_readTimer) {
+        return nullptr;
+    }
+    return adc;
+}
+
+inline void ADCManager::ReadTimer::readTimerCallback(Event::CallbackTimerPtr timer)
+{
+    auto adc = getADCInstance();
+    if (!adc) {
+        __LDBG_printf("adc manager or read_timer=null");
+        timer->disarm();
+        return;
+    }
+    adc->_readTimer->timerCallback(*adc, timer);
+}

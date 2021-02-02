@@ -49,31 +49,17 @@ bool LoopOptionsType::doRedraw()
 }
 
 
-
-
-bool ClockPlugin::_loopSyncingAnimation(LoopOptionsType &options)
-{
-    return false;
-}
-
-bool ClockPlugin::_loopDisplayLightSensor(LoopOptionsType &options)
-{
-    return false;
-}
-
-bool ClockPlugin::_loopUpdateButtons(LoopOptionsType &options)
-{
-    return false;
-}
-
 void ClockPlugin::_loop()
 {
     LoopOptionsType options(*this);
 
+#if IOT_CLOCK_BUTTON_PIN
     // check buttons
     if (_loopUpdateButtons(options)) {
         return;
     }
+#endif
+
     if (!options.doUpdate()) {
         return;
     }
@@ -85,12 +71,11 @@ void ClockPlugin::_loop()
     );
     _lastUpdateTime = millis();
 
+#if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
     if (_loopDisplayLightSensor(options)) {
         return;
     }
-    else if (_loopSyncingAnimation(options)) {
-        return;
-    }
+#endif
 
     if (_animation) {
         __DBGTM(mt.start());
@@ -104,7 +89,7 @@ void ClockPlugin::_loop()
 
     if (options.doRedraw()) {
 
-        uint32_t color = _color;
+        auto color = _getColor();
 
         if (_isFading && _fadeTimer.reached()) {
             __LDBG_printf("fading=done brightness=%u", _targetBrightness);

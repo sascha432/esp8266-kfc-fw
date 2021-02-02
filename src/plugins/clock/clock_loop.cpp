@@ -69,7 +69,7 @@ bool ClockPlugin::LoopOptionsType::doRedraw()
 }
 
 
-
+#if IOT_CLOCK_PIXEL_SYNC_ANIMATION
 
 bool ClockPlugin::_loopSyncingAnimation(LoopOptionsType &options)
 {
@@ -115,40 +115,41 @@ bool ClockPlugin::_loopSyncingAnimation(LoopOptionsType &options)
     _display.setDigit(1, 8, color);
     _display.setDigit(2, 8, color);
     _display.setDigit(3, 8, color);
-#if IOT_CLOCK_NUM_DIGITS == 6
+#        if IOT_CLOCK_NUM_DIGITS == 6
     _display.setDigit(4, 8, color);
     _display.setDigit(5, 8, color);
-#endif
+#        endif
     _display.setColon(0, SevenSegmentDisplay::BOTH, color);
-#if IOT_CLOCK_NUM_COLONS == 2
+#        if IOT_CLOCK_NUM_COLONS == 2
     _display.setColon(1, SevenSegmentDisplay::BOTH, color);
-#endif
+#        endif
     _display.show();
     return true;
 }
 
+#endif
+
+#if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
 bool ClockPlugin::_loopDisplayLightSensor(LoopOptionsType &options)
 {
-#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
-    if (_displaySensorValue == 0) {
+    if (_displaySensor == DisplaySensorType::OFF) {
         return false;
     }
-
     _forceUpdate = false;
-    if (_displaySensorValue == 1) {
-        _displaySensorValue++; // set to 2 and make sure it is not called again before finished
+    if (_displaySensor == DisplaySensorType::SHOW) {
+        _displaySensor = DisplaySensorType::BUSY;
 
         // request to read the ADC 10 times every 25ms ~ 250ms
-        ADCManager::getInstance().requestAverage(10, 25, [this](const ADCManager::ADCResult &result) {
+        ADCManager::getInstance().requestAverage(10, 25000, [this](const ADCManager::ADCResult &result) {
 
             if (
                 result.isInvalid() ||           // adc queue has been aborted
-                _displaySensorValue != 2        // disabled or something went wrong
+                _displaySensor != DisplaySensorType::BUSY        // disabled or something went wrong
             ) {
-                __LDBG_printf("ADC callback: display sensor value=%u result=%u", _displaySensorValue, result.isValid());
+                __LDBG_printf("ADC callback: display sensor value=%u result=%u", _displaySensor, result.isValid());
                 return;
             }
-            _displaySensorValue = 1;
+            _displaySensor = DisplaySensorType::SHOW; // set back from BUSY to SHOW
 
             auto str = PrintString(F("% " __STRINGIFY(IOT_CLOCK_NUM_DIGITS) "u"), result.getValue()); // left padded with spaces
             // replace space with #
@@ -169,41 +170,37 @@ bool ClockPlugin::_loopDisplayLightSensor(LoopOptionsType &options)
         });
     }
     return true;
-#else
-    return false;
+}
 #endif
-}
-
-bool ClockPlugin::_loopUpdateButtons(LoopOptionsType &options)
-{
-    return false;
-}
 
 void ClockPlugin::_loop()
 {
     LoopOptionsType options(*this);
 
+#    if IOT_CLOCK_BUTTON_PIN
     // check buttons
     if (_loopUpdateButtons(options)) {
         return;
     }
+#    endif
     if (!options.doUpdate()) {
         return;
     }
 
     // start update process
-    __DBGTM(
-        MicrosTimer mt;
-        _timerDiff.push_back(options.getTimeSinceLastUpdate())
-    );
+    __DBGTM(MicrosTimer mt; _timerDiff.push_back(options.getTimeSinceLastUpdate()));
     _lastUpdateTime = millis();
 
+#    if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
     if (_loopDisplayLightSensor(options)) {
         return;
     }
-    else if (_loopSyncingAnimation(options)) {
+#    endif
+#    if IOT_CLOCK_PIXEL_SYNC_ANIMATION
+    if (_loopSyncingAnimation(options)) {
         return;
     }
+#    endif
 
     if (_animation) {
         __DBGTM(mt.start());
@@ -227,20 +224,6 @@ void ClockPlugin::_loop()
         uint32_t color = _color;
         auto &tm = options.getLocalTime();
 
-#if 0
-        tm.tm_hour = 13;
-        tm.tm_min = 58;
-        displayColon = false;
-#endif
-
-#if 0
-        static unsigned counter = 0;
-        if (_isFading && (millis() / 250) % 2 == counter % 2) {
-            counter++;
-            __LDBG_printf("left=%u fading=%u brightness=%u", _fadeTimer.getTimeLeft(), _getFadingBrightness(), _getBrightness());
-        }
-#endif
-
         if (_isFading && _fadeTimer.reached()) {
             __LDBG_printf("fading=done brightness=%u", _targetBrightness);
             _isFading = false;
@@ -254,18 +237,18 @@ void ClockPlugin::_loop()
         _display.setDigit(1, tm.tm_hour_format() % 10, color);
         _display.setDigit(2, tm.tm_min / 10, color);
         _display.setDigit(3, tm.tm_min % 10, color);
-        #if IOT_CLOCK_NUM_DIGITS == 6
-            _display.setDigit(4, tm.tm_sec / 10, color);
-            _display.setDigit(5, tm.tm_sec % 10, color);
-        #endif
+#    if IOT_CLOCK_NUM_DIGITS == 6
+        _display.setDigit(4, tm.tm_sec / 10, color);
+        _display.setDigit(5, tm.tm_sec % 10, color);
+#    endif
 
         if (!displayColon) {
             color = 0;
         }
         _display.setColon(0, SevenSegmentDisplay::BOTH, color);
-        #if IOT_CLOCK_NUM_COLONS == 2
-            _display.setColon(1, SevenSegmentDisplay::BOTH, color);
-        #endif
+#    if IOT_CLOCK_NUM_COLONS == 2
+        _display.setColon(1, SevenSegmentDisplay::BOTH, color);
+#    endif
         __DBGTM(_animationRenderTime.push_back(mt.getTime()));
 
         __DBGTM(mt.start());

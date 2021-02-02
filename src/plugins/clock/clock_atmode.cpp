@@ -23,19 +23,20 @@
 #define PROGMEM_AT_MODE_HELP_COMMAND_PREFIX "CLOCK"
 #endif
 
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKPX, "PX", "<led>,<r>,<g>,<b>", "Set level of a single pixel");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(CLOCKBR, "BR", "Set brightness (0-65535). 0 disables the LEDs, > 0 enables them");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKPX, "PX", "[<number|-1=all>,<#RGB>|<r>,<g>,<b>]", "Set level of a single pixel. No arguments turns all off");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKP, "P", "<00[:.]00[:.]00>", "Display strings");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKC, "C", "<r>,<g>,<b>", "Set color");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKC, "C", "<#RGB>|<r>,<g>,<b>", "Set color");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKM, "M", "<value>[,<incr>,<min>,<max>]", "Set rainbow animation multiplier");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKT, "T", "<value>", "Overide temperature");
 // PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKTS, "TS", "<num>,<segment>", "Set segment for digit <num>");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(CLOCKA, "A", "<num>[,<arguments>,...]", "Set animation", "Display available animations");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(CLOCKD, "D", "Dump pixel addresses and other information");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(CLOCKBR, "BR", "Set brightness (0-65535)");
 
 ATModeCommandHelpArrayPtr ClockPlugin::atModeCommandHelp(size_t &size) const
 {
     static ATModeCommandHelpArray tmp PROGMEM = {
+        PROGMEM_AT_MODE_HELP_COMMAND(CLOCKBR),
         PROGMEM_AT_MODE_HELP_COMMAND(CLOCKPX),
         PROGMEM_AT_MODE_HELP_COMMAND(CLOCKP),
         PROGMEM_AT_MODE_HELP_COMMAND(CLOCKC),
@@ -43,8 +44,7 @@ ATModeCommandHelpArrayPtr ClockPlugin::atModeCommandHelp(size_t &size) const
         PROGMEM_AT_MODE_HELP_COMMAND(CLOCKT),
         // PROGMEM_AT_MODE_HELP_COMMAND(CLOCKTS),
         PROGMEM_AT_MODE_HELP_COMMAND(CLOCKA),
-        PROGMEM_AT_MODE_HELP_COMMAND(CLOCKD),
-        PROGMEM_AT_MODE_HELP_COMMAND(CLOCKBR)
+        PROGMEM_AT_MODE_HELP_COMMAND(CLOCKD)
     };
     size = sizeof(tmp) / sizeof(tmp[0]);
     return tmp;
@@ -67,14 +67,14 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKP))) {
         enableLoop(false);
         if (args.size() < 1) {
-            args.print(F("clear"));
             _display.clear();
             _display.show();
+            args.print(F("display cleared"));
         }
         else {
             auto text = args.get(0);
-            args.printf_P(PSTR("'%s'"), text);
-            _display.print(text, _color);
+            args.printf_P(PSTR("display '%s'"), text);
+            _display.print(text, _getColor());
             _display.show();
         }
         return true;
@@ -94,14 +94,12 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             args.printf_P(PSTR("%u - fire (+CLOCKA=%u)"), AnimationType::SKIP_ROWS, AnimationType::SKIP_ROWS);
 #else
             args.printf_P(PSTR("%u - blink colon speed"), (int)AnimationType::MAX);
-#endif
             args.print(F("100 = disable clock"));
             args.print(F("101 = enable clock"));
-            args.print(F("102 = all pixels on"));
-            args.print(F("103 = test pixel animation order"));
-#if !IOT_LED_MATRIX
             args.print(F("200 = display ambient light sensor value (+CLOCKA=200,<0|1>)"));
 #endif
+            args.print(F("300 = test pixel animation order"));
+            args.print(F("400 = get/set update rate"));
         }
         else if (args.size() >= 1) {
             int value = args.toInt(0);
@@ -116,16 +114,10 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                 _display.reset();
             }
             else if (value == 101) {
-                _display.reset();
                 enableLoop(true);
-            }
-            else if (value == 102) {
-                enableLoop(false);
                 _display.reset();
-                _display.setColor(0xffffff);
-                _display.show();
             }
-            else if (value == 103) {
+            else if (value == 300) {
                 int interval = args.toInt(1, 500);
                 enableLoop(false);
                 size_t num = 0;
@@ -155,21 +147,20 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                     }
                 });
             }
-#if !IOT_LED_MATRIX
+#if !IOT_LED_MATRIX && IOT_CLOCK_AMBIENT_LIGHT_SENSOR
             else if (value == 200) {
-#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
                 if (args.isTrue(1)) {
-                    if (_displaySensorValue == 0) {
+                    if (_displaySensor == DisplaySensorType::OFF) {
                         _autoBrightness = kAutoBrightnessOff;
-                        _displaySensorValue = 1;
+                        _displaySensor = DisplaySensorType::SHOW;
                         _display.clear();
                         _display.show();
                         setUpdateRate(500);
                         args.print(F("displaying sensor value"));
                     }
                 }
-                else if (_displaySensorValue != 0) {
-                    _displaySensorValue = 0;
+                else if (_displaySensor == DisplaySensorType::SHOW) {
+                    _displaySensor = DisplaySensorType::OFF;
                     _autoBrightness = _config.auto_brightness;
                     if (_animation) {
                         setUpdateRate(_animation->getUpdateRate());
@@ -179,13 +170,11 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                     }
                     args.print(F("displaying time"));
                 }
-#else
-                args.print(F("sensor not supported"));
-#endif
             }
 #endif
             else if (value == 400) {
-                _updateRate = args.toInt(1);
+                _updateRate = args.toIntMinMax<uint16_t>(0, 5, 1000, _updateRate);
+                args.printf_P(PSTR("update rate: %u"), _updateRate);
             }
             else if (value >= 0 && value < (int)AnimationType::MAX) {
                 switch(static_cast<AnimationType>(value)) {
@@ -244,101 +233,109 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKC))) {
         if (args.size() == 1) {
-            _color = Color::fromBGR(args.toNumber(0, 0xff0000));
+            setColor(Color::fromString(args.toString(0)));
         }
         else if (args.requireArgs(3, 3)) {
-            _color = Color(args.toNumber(0, 0), args.toNumber(1, 0), args.toNumber(2, 0x80));
+            setColor(Color(args.toNumber(0, 0), args.toNumber(1, 0), args.toNumber(2, 0x80)));
         }
-        // args.printf_P(PSTR("color=#%06x"), _color.get());
-        // for(size_t i = 0; i  < SevenSegmentDisplay::getTotalPixels(); i++) {
-        //     if (_display._pixels[i]) {
-        //         _display._pixels[i] = _color;
-        //     }
-        // }
-        _forceUpdate = true;
-        _schedulePublishState = true;
-        // _display.show();
+        args.printf_P(PSTR("set color %s"), getColor().toString().c_str());
         return true;
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKPX))) {
-        if (args.requireArgs(4, 4)) {
+        if (args.size() == 0) {
             enableLoop(false);
-
+            _display.clear();
+            _display.show();
+            args.print(F("display cleared"));
+        }
+        else if (args.size() == 2 || args.requireArgs(4, 4)) {
+            enableLoop(false);
             int num = args.toInt(0);
-            Color color(args.toIntT<uint8_t>(1), args.toIntT<uint8_t>(2), args.toIntT<uint8_t>(3));
-            if (num < 0) {
-                args.printf_P(PSTR("pixel=0-%u, color=#%06x"), _display.getTotalPixels(), color.get());
-                _display.setColor(color);
+            Color color;
+            if (args.size() == 2) {
+                color = Color::fromString(args.toString(1));
             }
             else {
-                args.printf_P(PSTR("pixel=%u, color=#%06x"), num, color.get());
-                _display._pixels[num] = color;
+                color = Color(args.toNumber(1, 0), args.toNumber(2, 0), args.toNumber(3, 0x80));
             }
-            _display.show();
+            if (num == -1) {
+                args.printf_P(PSTR("pixel=0-%u, color=%s"), _display.getTotalPixels(), color.toString().c_str());
+                _display.setColor(color);
+                _display.show();
+            }
+            else if (num >= 0) {
+                args.printf_P(PSTR("pixel=%u, color=%s"), num, color.toString().c_str());
+                _display._pixels[num] = color;
+                _display.show();
+            }
+            else {
+                args.print(F("invalid pixel number"));
+            }
         }
         return true;
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKT))) {
-        // if (args.size() > 0) {
-            _tempOverride = args.toIntMinMax<uint8_t>(0, kMinimumTemperatureThreshold, 255, 0);
-        // }
-        // else {
-            // _tempOverride = 0;
-        // }
-        args.printf_P(PSTR("temp override %u"), _tempOverride);
+        _tempOverride = args.toIntMinMax<uint8_t>(0, kMinimumTemperatureThreshold, 255, 0);
+        if (_tempOverride) {
+            args.printf_P(PSTR("temperature override %u°C"), _tempOverride);
+        }
+        else {
+            args.print(F("temperature override disabled"));
+        }
+        return true;
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKD))) {
         _display.dump(args.getStream());
-        __DBGTM(
-            args.print(F("animation loop times (microseconds):"));
-            PrintString str;
-            uint8_t n = 0;
-            for(const auto time: _anmationTime) {
-                str.printf_P(PSTR("%05u "), time);
-                if (++n % 5 == 0) {
-                    str.print('\n');
-                }
+#if IOT_CLOCK_DEBUG_ANIMATION_TIME
+        args.print(F("animation loop times (microseconds):"));
+        PrintString str;
+        uint8_t n = 0;
+        for(const auto time: _anmationTime) {
+            str.printf_P(PSTR("%05u "), time);
+            if (++n % 5 == 0) {
+                str.print('\n');
             }
-            str.rtrim();
-            args.print(str);
+        }
+        str.rtrim();
+        args.print(str);
 
-            args.print(F("animation render times (microseconds):"));
-            str = PrintString();
-            n = 0;
-            for(const auto time: _animationRenderTime) {
-                str.printf_P(PSTR("%05u "), time);
-                if (++n % 5 == 0) {
-                    str.print('\n');
-                }
+        args.print(F("animation render times (microseconds):"));
+        str = PrintString();
+        n = 0;
+        for(const auto time: _animationRenderTime) {
+            str.printf_P(PSTR("%05u "), time);
+            if (++n % 5 == 0) {
+                str.print('\n');
             }
-            str.rtrim();
-            args.print(str);
+        }
+        str.rtrim();
+        args.print(str);
 
-            args.print(F("display times (microseconds):"));
-            str = PrintString();
-            n = 0;
-            for(const auto time: _displayTime) {
+        args.print(F("display times (microseconds):"));
+        str = PrintString();
+        n = 0;
+        for(const auto time: _displayTime) {
 
-                str.printf_P(PSTR("%05u "), time);
-                if (++n % 5 == 0) {
-                    str.print('\n');
-                }
+            str.printf_P(PSTR("%05u "), time);
+            if (++n % 5 == 0) {
+                str.print('\n');
             }
-            str.rtrim();
-            args.print(str);
+        }
+        str.rtrim();
+        args.print(str);
 
-            args.printf_P(PSTR("timer update rate %u (milliseconds):"), _updateRate);
-            str = PrintString();
-            n = 0;
-            for(const auto time: _timerDiff) {
-                str.printf_P(PSTR("%05u "), time);
-                if (++n % 5 == 0) {
-                    str.print('\n');
-                }
+        args.printf_P(PSTR("timer update rate %u (milliseconds):"), _updateRate);
+        str = PrintString();
+        n = 0;
+        for(const auto time: _timerDiff) {
+            str.printf_P(PSTR("%05u "), time);
+            if (++n % 5 == 0) {
+                str.print('\n');
             }
-            str.rtrim();
-            args.print(str);
-        );
+        }
+        str.rtrim();
+        args.print(str);
+#endif
         return true;
     }
     return false;

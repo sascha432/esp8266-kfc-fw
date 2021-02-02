@@ -5,7 +5,7 @@
 #pragma once
 
 #ifndef DEBUG_WEBUI
-#define DEBUG_WEBUI 1
+#define DEBUG_WEBUI                             0
 #endif
 
 #include <Arduino_compat.h>

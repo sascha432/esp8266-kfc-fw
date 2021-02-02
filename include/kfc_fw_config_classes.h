@@ -1073,7 +1073,7 @@ namespace KFCConfigurationClasses {
         #define IOT_ALARM_PLUGIN_MAX_ALERTS                         10
         #endif
         #ifndef IOT_ALARM_PLUGIN_DEFAULT_MAX_DURATION
-        #define IOT_ALARM_PLUGIN_DEFAULT_MAX_DURATION               300
+        #define IOT_ALARM_PLUGIN_DEFAULT_MAX_DURATION               900
         #endif
 
         class AlarmConfig
@@ -1706,6 +1706,9 @@ typedef struct  {
                     uint8_t red;
                 };
                 ClockColor_t(uint32_t val = 0) : value(val) {}
+                operator uint32_t() const {
+                    return value;
+                }
             } ClockColor_t;
 
             typedef struct __attribute__packed__ RainbowMultiplier_t {
@@ -1742,7 +1745,7 @@ typedef struct  {
                 CREATE_BOOL_BITFIELD(invert_direction);
 
                 Orientation getOrientation() const {
-                    return static_cast<Orientation>(orientation);
+                    return get_enum_orientation(*this);
                 }
 
                 FireAnimation_t();
@@ -1755,8 +1758,7 @@ typedef struct  {
 
                 enum class AnimationType : uint8_t {
                     MIN = 0,
-                    NONE = 0,
-                    SOLID = NONE,
+                    SOLID = 0,
                     RAINBOW,
                     FLASHING,
                     FADING,
@@ -1847,11 +1849,17 @@ typedef struct  {
                 }
 
                 AnimationType getAnimation() const {
-                    return static_cast<AnimationType>(animation);
+                    return get_enum_animation(*this);
+                }
+                void setAnimation(AnimationType animation) {
+                    set_enum_animation(*this, animation);
                 }
 
                 InitialStateType getInitialState() const {
-                    return static_cast<InitialStateType>(initial_state);
+                    return get_enum_initial_state(*this);
+                }
+                void setInitialState(InitialStateType state) {
+                    set_enum_initial_state(*this, state);
                 }
 
             } ClockConfig_t;

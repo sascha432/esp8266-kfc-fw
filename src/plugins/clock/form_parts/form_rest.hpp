@@ -27,15 +27,15 @@ alarmGroup.end();
 auto &protectionGroup = form.addCardGroup(F("prot"), FSPGM(Protection), true);
 
 form.addPointerTriviallyCopyable(F("trmin"), &cfg.protection.temperature_reduce_range.min);
-form.addFormUI(F("Minimum Temperature To Reduce Brightness"), FormUI::Suffix(FSPGM(_degreeC)));
+form.addFormUI(F("Minimum Temperature To Reduce Brightness"), FormUI::Suffix(FSPGM(degree_Celsius_utf8)));
 form.addValidator(FormUI::Validator::Range(kMinimumTemperatureThreshold, 90));
 
 form.addPointerTriviallyCopyable(F("trmax"), &cfg.protection.temperature_reduce_range.max);
-form.addFormUI(F("Maximum. Temperature To Reduce Brightness To 25%"), FormUI::Suffix(FSPGM(_degreeC)));
+form.addFormUI(F("Maximum. Temperature To Reduce Brightness To 25%"), FormUI::Suffix(FSPGM(degree_Celsius_utf8)));
 form.addValidator(FormUI::Validator::Range(kMinimumTemperatureThreshold, 90));
 
 form.addPointerTriviallyCopyable(F("tpmax"), &cfg.protection.max_temperature);
-form.addFormUI(F("Over Temperature Protection"), FormUI::Suffix(FSPGM(_degreeC)));
+form.addFormUI(F("Over Temperature Protection"), FormUI::Suffix(FSPGM(degree_Celsius_utf8)));
 form.addValidator(FormUI::Validator::Range(kMinimumTemperatureThreshold, 105));
 
 protectionGroup.end();

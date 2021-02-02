@@ -3,6 +3,7 @@
  */
 
 #include <Arduino_compat.h>
+#include <WebUIAlerts.h>
 #include "clock.h"
 
 #if DEBUG_IOT_CLOCK
@@ -29,22 +30,19 @@ void ClockPlugin::_saveStateDelayed()
 
 void ClockPlugin::_saveState(int32_t brightness)
 {
-    if (brightness == -1) {
-        brightness = _targetBrightness;
-    }
     auto state = _getState();
-    auto newState = StoredState(brightness, _config.getAnimation(), _color IF_IOT_CLOCK(_config.blink_colon_speed));
+    auto newState = StoredState(_config, brightness);
     if (state != newState) {
         auto file = KFCFS.open(FSPGM(iot_clock_save_state_file, "/.pvt/device.state"), fs::FileOpenMode::write);
         if (file) {
             _saveTimer.remove();
             _saveTimestamp = millis();
 
-            __LDBG_printf("saving state brightness=%u animation=%u color=%s blink_colon=%u", brightness, _config.animation, _color.toString().c_str(), IF_IOT_CLOCK(_config.blink_colon_speed) IF_IOT_LED_MATRIX(0));
+            __LDBG_printf("saving state brightness=%u animation=%u solid_color=%s blink_colon=%u", newState.getConfig().getBrightness(), newState.getConfig().animation, Color(newState.getConfig().solid_color).toString().c_str(), IF_IOT_CLOCK(newState.getConfig().blink_colon_speed) IF_IOT_LED_MATRIX(0));
 
-            _copyToState(state, brightness, _color);
-            if (!state.store(file)) {
+            if (!newState.store(file)) {
                 __LDBG_printf("failed to store state %s", SPGM(iot_clock_save_state_file));
+                WebAlerts::Alert::error(F("Failed to store state"), WebAlerts::ExpiresType::REBOOT);
             }
         }
     }
@@ -60,32 +58,13 @@ ClockPlugin::StoredState ClockPlugin::_getState() const
     if (file) {
         auto state = StoredState::load(file);
         if (state.hasValidData()) {
-            __LDBG_printf("loaded state brightness=%u animation=%u color=%s blink_colon=%u", state.getBrightness(), state.getAnimation(), state.getColor().toString().c_str(), IF_IOT_CLOCK(state.getBlinkColonSpeed()) IF_IOT_LED_MATRIX(0));
+            auto &cfg = state.getConfig();
+            __LDBG_printf("loaded state brightness=%u animation=%u solid_color=%s blink_colon=%u", cfg.getBrightness(), cfg.getAnimation(), Color(cfg.solid_color).toString().c_str(), IF_IOT_CLOCK(cfg.blink_colon_speed) IF_IOT_LED_MATRIX(0));
             return state;
         }
     }
     __LDBG_printf("failed to load state %s", SPGM(iot_clock_save_state_file));
     return StoredState();
-}
-
-void ClockPlugin::_copyToState(StoredState &state, BrightnessType brightness, Color color)
-{
-    state.setBrightness(brightness);
-    state.setAnimation(_config.animation);
-    state.setColor((uint32_t)color ? (uint32_t)color : _config.solid_color.value);
-#if !IOT_LED_MATRIX
-    state.setBlinkColonSpeed(_config.blink_colon_speed);
-#endif
-}
-
-void ClockPlugin::_copyFromState(const StoredState &state)
-{
-    _targetBrightness = state.getBrightness();
-    _config.animation = state.getAnimationInt();
-    _color = state.getColor();
-#if !IOT_LED_MATRIX
-    setBlinkColon(state.getBlinkColonSpeed());
-#endif
 }
 
 #endif
@@ -103,7 +82,7 @@ void ClockPlugin::_setState(bool state)
             else {
                 setBrightness(_config.getBrightness());
 #if IOT_CLOCK_SAVE_STATE
-                _saveState(_config.getBrightness());
+                _saveState();
 #endif
             }
         }
@@ -111,7 +90,7 @@ void ClockPlugin::_setState(bool state)
     else {
         setBrightness(0);
 #if IOT_CLOCK_SAVE_STATE
-        _saveState(0);
+        _saveState();
 #endif
     }
 }

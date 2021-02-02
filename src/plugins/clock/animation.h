@@ -71,16 +71,6 @@
 
 #endif
 
-// update interval in ms, 0 to disable
-#ifndef IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
-#define IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL          125
-#endif
-
-// show rotating animation while time is invalid
-#ifndef IOT_CLOCK_PIXEL_SYNC_ANIMATION
-#define IOT_CLOCK_PIXEL_SYNC_ANIMATION              0
-#endif
-
 class ClockPlugin;
 
 using KFCConfigurationClasses::Plugins;
@@ -93,13 +83,24 @@ namespace Clock {
     using SevenSegmentDisplay = SevenSegmentPixel<uint8_t, IOT_CLOCK_NUM_DIGITS, IOT_CLOCK_NUM_PIXELS, IOT_CLOCK_NUM_COLONS, IOT_CLOCK_NUM_COLON_PIXELS>;
 #endif
 
+    using Config_t = Plugins::Clock::ConfigStructType;
     using PixelAddressType = SevenSegmentDisplay::PixelAddressType;
     using ColorType = SevenSegmentDisplay::ColorType;
+    using ClockColor_t = Plugins::Clock::ClockColor_t;
     using AnimationCallback = SevenSegmentDisplay::AnimationCallback;
     using LoopCallback = std::function<void(time_t now)>;
-    using AnimationType = Plugins::Clock::ClockConfig_t::AnimationType;
-    using InitialStateType = Plugins::Clock::ClockConfig_t::InitialStateType;
+    using AnimationType = Config_t::AnimationType;
+    using InitialStateType = Config_t::InitialStateType;
     using BrightnessType = SevenSegmentDisplay::BrightnessType;
+#if IOT_LED_MATRIX
+#if IOT_LED_MATRIX_ROWS > 255 || IOT_LED_MATRIX_COLS > 255
+    using CoordinateType = uint16_t;
+#else
+    using CoordinateType = uint8_t;
+#endif
+#else
+    using CoordinateType = PixelAddressType;
+#endif
 
     static constexpr auto kTotalPixelCount = SevenSegmentDisplay::kTotalPixelCount;
     static constexpr uint16_t kMaxBrightness = SevenSegmentDisplay::kMaxBrightness;
@@ -116,6 +117,7 @@ namespace Clock {
         static constexpr uint8_t kRndAnyAbove = 127;
         static_assert((kRndMod - 1) * kRndMul == 255, "invalid mod or mul");
 
+
     public:
         Color();
         Color(uint8_t *values);
@@ -129,9 +131,11 @@ namespace Clock {
         String implode(char sep) const;
 
         Color &operator=(uint32_t value);
+        Color &operator=(ClockColor_t value);
         operator bool() const;
         operator int() const;
         operator uint32_t() const;
+        operator ClockColor_t() const;
         bool operator==(int value) const;
         bool operator!=(int value) const;
         bool operator==(uint32_t value) const;
@@ -207,6 +211,12 @@ namespace Clock {
         return *this;
     }
 
+    inline Color &Color::operator=(ClockColor_t value)
+    {
+        _value = value.value;
+        return *this;
+    }
+
     inline Color::operator bool() const
     {
         return _value != 0;
@@ -220,6 +230,11 @@ namespace Clock {
     inline Color::operator uint32_t() const
     {
         return _value;
+    }
+
+    inline Color::operator ClockColor_t() const
+    {
+        return ClockColor_t(_value);
     }
 
     inline uint8_t Color::red() const
@@ -264,14 +279,6 @@ namespace Clock {
 
         class Point {
         public:
-#if IOT_LED_MATRIX_ROWS > 255 || IOT_LED_MATRIX_COLS > 255
-            using CoordinateType = uint16_t;
-#else
-            using CoordinateType = uint8_t;
-#endif
-
-        public:
-
             Point(CoordinateType row = 0, CoordinateType col = 0) : _row(row), _col(col) {}
 
             void setPoint(CoordinateType row, CoordinateType col) {

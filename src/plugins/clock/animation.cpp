@@ -51,7 +51,7 @@ String Color::toString() const
 {
     char buf[8];
     //snprintf_P(buf, sizeof(buf), PSTR("#%02X%02X%02X"), _red, _green, _blue);
-    snprintf_P(buf, sizeof(buf), PSTR("#%06X"), static_cast<int>(_value));
+    snprintf_P(buf, sizeof(buf), PSTR("#%06X"), _value);
     return buf;
 }
 

@@ -37,7 +37,7 @@ MQTTComponent::MQTTAutoDiscoveryPtr ClockPlugin::nextAutoDiscovery(MQTTAutoDisco
             discovery->addRGBCommandTopic(MQTTClient::formatTopic(FSPGM(_color_set)));
         }
         break;
-#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
+#if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
         case 1: {
             discovery->create(MQTTComponent::ComponentType::SENSOR, FSPGM(light_sensor), format);
             discovery->addStateTopic(MQTTClient::formatTopic(FSPGM(light_sensor)));
@@ -52,7 +52,7 @@ MQTTComponent::MQTTAutoDiscoveryPtr ClockPlugin::nextAutoDiscovery(MQTTAutoDisco
 
 uint8_t ClockPlugin::getAutoDiscoveryCount() const
 {
-#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
+#if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
     return 2;
 #else
     return 1;
@@ -114,16 +114,16 @@ void ClockPlugin::_publishState(MQTTClient *client)
     if (!client) {
         client = MQTTClient::getClient();
     }
-#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
-    __DBG_printf("client=%p color=%s brightness=%u auto=%d", client, _color.implode(',').c_str(), _targetBrightness, _autoBrightness);
+#if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
+    __DBG_printf("client=%p color=%s brightness=%u auto=%d", client, getColor().implode(',').c_str(), _targetBrightness, _autoBrightness);
 #else
-    __DBG_printf("client=%p color=%s brightness=%u", client, _color.implode(',').c_str(), _targetBrightness);
+    __DBG_printf("client=%p color=%s brightness=%u", client, getColor().implode(',').c_str(), _targetBrightness);
 #endif
     if (client && client->isConnected()) {
         client->publish(MQTTClient::formatTopic(FSPGM(_state)), true, String(_targetBrightness != 0));
         client->publish(MQTTClient::formatTopic(FSPGM(_brightness_state)), true, String(_targetBrightness));
-        client->publish(MQTTClient::formatTopic(FSPGM(_color_state)), true, _color.implode(','));
-#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
+        client->publish(MQTTClient::formatTopic(FSPGM(_color_state)), true, getColor().implode(','));
+#if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
         client->publish(MQTTClient::formatTopic(FSPGM(light_sensor)), true, String(_autoBrightnessValue * 100, 0));
 #endif
     }

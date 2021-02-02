@@ -22,7 +22,7 @@
 AsyncBaseResponse::AsyncBaseResponse(bool chunked)
 {
     if (chunked) {
-        _contentLength = 0;
+        // change those 2 values for chunked
         _sendContentLength = false;
         _chunked = true;
     }
@@ -34,16 +34,18 @@ void AsyncBaseResponse::__assembleHead(uint8_t version)
     out.printf_P(PSTR("HTTP/1.%d %d %s\r\n"), version, _code, _responseCodeToString(_code));
 
     if (_sendContentLength) {
-        HttpContentLengthHeader(_contentLength).printTo(out);
-        //out.printf_P(PSTR("Content-Length: %d\r\n"), _contentLength);
+        _httpHeaders.replace<HttpContentLengthHeader>(_contentLength);
+        // out.printf_P(PSTR("Content-Length: %d\r\n"), _contentLength);
+    }
+    else {
+        _httpHeaders.remove(F("Content-Length"));
     }
     if (_contentType.length()) {
-        HttpContentType(_contentType).printTo(out);
+        _httpHeaders.replace<HttpContentType>(_contentType);
         //out.printf_P(PSTR("Content-Type: %s\r\n"), _contentType.c_str());
     }
 
-    HttpConnectionHeader().printTo(out);
-    //addHeader(F("Connection"), F("close"));
+    _httpHeaders.replace<HttpConnectionHeader>(HttpConnectionHeader::CLOSE);
 
     for(const auto &header : _headers) {
         out.printf_P(PSTR("%s: %s\r\n"), header->name().c_str(), header->value().c_str());
@@ -160,17 +162,12 @@ size_t AsyncBaseResponse::_ack(AsyncWebServerRequest* request, size_t len, uint3
     return 0;
 }
 
-AsyncJsonResponse::AsyncJsonResponse() : AsyncBaseResponse(true), _jsonBuffer(_json)
+AsyncJsonResponse::AsyncJsonResponse() :
+    AsyncBaseResponse(false),
+    _jsonBuffer(_json)
 {
-    __DBG_println();
     _code = 200;
     _contentType = FSPGM(mime_application_json);
-    // _sendContentLength = false;
-    // _chunked = false;
-}
-
-AsyncJsonResponse::~AsyncJsonResponse() {
-    __DBG_println();
 }
 
 bool AsyncJsonResponse::_sourceValid() const
@@ -180,8 +177,22 @@ bool AsyncJsonResponse::_sourceValid() const
 
 size_t AsyncJsonResponse::_fillBuffer(uint8_t *data, size_t len)
 {
-    // __DBG_printf("data=%p size=%u", data, len);
+#if DEBUG
+    auto size = _jsonBuffer.fillBuffer(data, len);
+    if (size == 0) {
+        auto diff = _contentLength - _sentLength;
+        if (diff > len) {
+            diff = len;
+        }
+        memset(data, ' ', diff);
+        // debug code below in __assembleHead()
+        __DBG_printf("_json.length()=%u _jsonBuffer.fillBuffer()=%u filling missing data with spaces. check for utf-8/unicode issues", _json.length(), _sentLength);
+        return diff;
+    }
+    return size;
+#else
     return _jsonBuffer.fillBuffer(data, len);
+#endif
 }
 
 JsonUnnamedObject &AsyncJsonResponse::getJsonObject()
@@ -189,10 +200,33 @@ JsonUnnamedObject &AsyncJsonResponse::getJsonObject()
     return _json;
 }
 
-// void AsyncJsonResponse::updateLength()
-// {
-//     _contentLength = _json.length();
-// }
+void AsyncJsonResponse::__assembleHead(uint8_t version)
+{
+#if 0
+    __DBG_printf("__assembleHead _sendContentLength=%u _contentLength=%u json=%u/%u", _sendContentLength, _contentLength, _json.length(), _json.toString().length());
+    Serial.println(F("------ _json.toString() ------"));
+    Serial.println(_json.toString());
+    Serial.println(F("------ JsonBuffer(_json).fillBuffer(); ------"));
+    uint8_t buffer[81];
+    JsonBuffer b(_json);
+    PrintString c(F("chunks "));
+    int res = 0;
+    do {
+        res = b.fillBuffer(buffer, 80);
+        buffer[80] = 0;
+        c.printf("%d ", res);
+        Serial.print((char *)buffer);
+    }
+    while(res);
+    Serial.println(F("------"));
+    Serial.println(c);
+    Serial.println(F("------"));
+#endif
+    if (_sendContentLength) {
+        _contentLength = _json.length();
+    }
+    AsyncBaseResponse::__assembleHead(version);
+};
 
 
 #if ESP32
@@ -300,13 +334,15 @@ size_t AsyncProgmemFileResponse::_fillBuffer(uint8_t *data, size_t len)
 #include <debug_helper_enable.h>
 #endif
 
-AsyncDirResponse::AsyncDirResponse(const ListDir &dir, const String &dirName) : AsyncBaseResponse(true), _state(0), _dir(dir), _next(_dir.next()), _dirName(dirName)
+AsyncDirResponse::AsyncDirResponse(const ListDir &dir, const String &dirName) :
+    AsyncBaseResponse(true),
+    _state(0),
+    _dir(dir),
+    _next(_dir.next()),
+    _dirName(dirName)
 {
     _code = 200;
-    _contentLength = 0;
-    _sendContentLength = false;
     _contentType = FSPGM(mime_application_json);
-    _chunked = true;
     append_slash(_dirName);
     __LDBG_printf("dir=%s hiddenFiles=%u", _dirName.c_str(), _dir.showHiddenFiles());
 
@@ -613,7 +649,7 @@ void AsyncNetworkScanResponse::setLocked(bool locked)
     _locked = locked;
 }
 
-// AsyncBufferResponse::AsyncBufferResponse(const String & contentType, Buffer * buffer, AwsTemplateProcessor templateCallback) : AsyncBaseResponse(true)
+// AsyncBufferResponse::AsyncBufferResponse(const String & contentType, Buffer * buffer, AwsTemplateProcessor templateCallback) : AsyncBaseResponse(false)
 // {
 //     _code = 200;
 //     _position = 0;
@@ -659,7 +695,10 @@ AsyncTemplateResponse::~AsyncTemplateResponse()
     __LDBG_delete(_webTemplate);
 }
 
-AsyncSpeedTestResponse::AsyncSpeedTestResponse(const String &contentType, uint32_t size) : AsyncBaseResponse(true), _size(sizeof(_header)), _header({})
+AsyncSpeedTestResponse::AsyncSpeedTestResponse(const String &contentType, uint32_t size) :
+    AsyncBaseResponse(false),
+    _size(sizeof(_header)),
+    _header({})
 {
     uint16_t width = sqrt(size / 2);
     _size += width * width * 2;
@@ -703,13 +742,14 @@ size_t AsyncSpeedTestResponse::_fillBuffer(uint8_t *buf, size_t maxLen)
 }
 
 
-AsyncFillBufferCallbackResponse::AsyncFillBufferCallbackResponse(Callback callback) : AsyncBaseResponse(true), _callback(callback), _finished(false), _async(new bool())
+AsyncFillBufferCallbackResponse::AsyncFillBufferCallbackResponse(Callback callback) :
+    AsyncBaseResponse(true),
+    _callback(callback),
+    _finished(false),
+    _async(new bool())
 {
     _code = 200;
-    _contentLength = 0;
-    _sendContentLength = false;
     _contentType = FSPGM(mime_text_html);
-    _chunked = true;
     *_async = true; // mark this as alive
     _callback(_async, false, this);
 }

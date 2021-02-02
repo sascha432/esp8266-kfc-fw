@@ -21,7 +21,7 @@ Sensor_Battery::Sensor_Battery(const JsonString &name) : MQTTSensor(), _name(nam
     REGISTER_SENSOR_CLIENT(this);
     reconfigure(nullptr);
     // read ADC every 5 seconds and store the average of 64 samples over a period of ~320ms
-    ADCManager::getInstance().addAutoReadTimer(Event::milliseconds(5000), 5, 64);
+    ADCManager::getInstance().addAutoReadTimer(Event::seconds(5), Event::milliseconds(5), 64);
 }
 
 Sensor_Battery::~Sensor_Battery()
@@ -188,6 +188,7 @@ float Sensor_Battery::_readSensor()
     auto &adc = ADCManager::getInstance();
     auto result = adc.getAutoReadValue();
     if (result.isInvalid()) {
+        __LDBG_printf("adc_get_auto_read_value is invalid");
         return NAN;
     }
     auto voltage = result.getFloatValue() / ADCManager::kMaxADCValue;

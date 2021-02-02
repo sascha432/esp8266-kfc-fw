@@ -7,7 +7,18 @@
 #include "ReadADC.h"
 
 #ifndef DEBUG_READ_ADC
-#define DEBUG_READ_ADC 1
+#define DEBUG_READ_ADC                          0
+#endif
+
+// #define DEBUG_READ_ADC_PRINT_INTERVAL           5000
+
+// display interval of how often the ADC has been read per second
+#ifndef DEBUG_READ_ADC_PRINT_INTERVAL
+#if DEBUG_READ_ADC
+#define DEBUG_READ_ADC_PRINT_INTERVAL           10000
+#else
+#define DEBUG_READ_ADC_PRINT_INTERVAL           0
+#endif
 #endif
 
 #if DEBUG_READ_ADC
@@ -19,13 +30,17 @@
 #undef _min
 #undef _max
 
-#if DEBUG_READ_ADC && 0
-static uint32_t count = 0;
-static inline uint16 ___system_adc_read() {
-    count++;
-    if (count%10000==0) {
-        __DBG_printf("read_adc: #%u", count);
+#if DEBUG_READ_ADC || 1
+static uint16 ___system_adc_read() {
+    static uint32_t last = 0;
+    static uint32_t count = 0;
+    auto diff = get_time_diff(last, millis());
+    if (diff > DEBUG_READ_ADC_PRINT_INTERVAL) {
+        last = millis();
+        __DBG_printf("system_adc_read() called %.3f/second (#%u)", count / (diff / 1000.0), count);
+        count = 0;
     }
+    count++;
     return system_adc_read();
 }
 #else
@@ -34,68 +49,12 @@ static inline uint16 ___system_adc_read() {
 }
 #endif
 
-ADCManager::ADCResult::ADCResult() : _valueSum(0), _samples(1), _min(0), _max(0), _invalid(true)
+ADCManager::ResultQueue::ResultQueue(uint8_t numSamples, uint32_t intervalMicros, Callback callback) :
+    _samples(numSamples),
+    _interval(intervalMicros),
+    _callback(callback)
 {
-}
-
-ADCManager::ADCResult::ADCResult(uint16_t value) : _valueSum(value), _samples(1), _min(value), _max(value), _invalid(false)
-{
-}
-
-uint16_t ADCManager::ADCResult::getValue() const
-{
-    return _valueSum / _samples;
-}
-
-float ADCManager::ADCResult::getFloatValue() const
-{
-    return _valueSum / (float)_samples;
-}
-
-uint16_t ADCManager::ADCResult::getMinValue() const
-{
-    return _min;
-}
-
-uint16_t ADCManager::ADCResult::getMaxValue() const
-{
-    return _max;
-}
-
-bool ADCManager::ADCResult::isValid() const
-{
-    return _invalid == 0;
-}
-
-bool ADCManager::ADCResult::isInvalid() const
-{
-    return _invalid != 0;
-}
-
-
-ADCManager::ResultQueue::ResultQueue(uint8_t numSamples, uint16_t delayMillis, Callback callback) : _samples(numSamples), _delay(delayMillis), _callback(callback), _lastUpdate(0)
-{
-    __LDBG_printf("samples=%u delay=%u callback=%p", _samples, _delay, &_callback);
-}
-
-bool ADCManager::ResultQueue::needsUpdate(uint32_t millis) const
-{
-    return get_time_diff(_lastUpdate, millis) >= _delay;
-}
-
-void ADCManager::ResultQueue::setLastUpdate(uint32_t millis)
-{
-    _lastUpdate = millis;
-}
-
-bool ADCManager::ResultQueue::finished() const
-{
-    return _result._samples == _samples;
-}
-
-ADCManager::ADCResult &ADCManager::ResultQueue::getResult()
-{
-    return _result;
+    __LDBG_printf("samples=%u delay=%u callback=%p", _samples, _interval, &_callback);
 }
 
 void ADCManager::ResultQueue::invokeCallback()
@@ -104,16 +63,55 @@ void ADCManager::ResultQueue::invokeCallback()
     _callback(_result);
 }
 
+ADCManager::ADCResult::ADCResult() :
+    _lastUpdate(0),
+    _valueSum(0),
+    _samples(1),
+    _min(kMaxADCValue),
+    _max(0),
+    _invalid(true)
+{
+}
+
+ADCManager::ADCResult::ADCResult(uint16_t value) :
+    _lastUpdate(0),
+    _valueSum(value),
+    _samples(1),
+    _min(value),
+    _max(value),
+    _invalid(false)
+{
+}
 
 static ADCManager *adc = nullptr;
 
-ADCManager::ADCManager() : _value(__readAndNormalizeADCValue()), _offset(0), _nextDelay(kMinDelayMicros), _lastUpdated(micros64()), _lastMaxDelay(_lastUpdated), _minDelayMicros(kMinDelayMicros), _maxDelayMicros(kMaxDelayMicros), _repeatMaxDelayPerSecond(kRepeatMaxDelayPerSecond), _maxDelayYieldTimeMicros(kMaxDelayYieldTimeMicros)
+ADCManager::ADCManager() :
+    _value(__readAndNormalizeADCValue()),
+    _offset(0),
+    _nextDelay(kMinDelayMicros),
+    _lastUpdated(micros64()),
+    _lastMaxDelay(_lastUpdated),
+    _minDelayMicros(kMinDelayMicros),
+    _maxDelayMicros(kMaxDelayMicros),
+    _maxDelayYieldTimeMicros(kMaxDelayYieldTimeMicros),
+    _repeatMaxDelayPerSecond(kRepeatMaxDelayPerSecond),
+    _readTimer(nullptr)
+
 {
 }
 
 ADCManager::~ADCManager()
 {
     LoopFunctions::remove(loop);
+    if (_readTimer) {
+        delete _readTimer;
+    }
+}
+
+
+ADCManager *ADCManager::hasInstance()
+{
+    return adc;
 }
 
 ADCManager &ADCManager::getInstance()
@@ -154,15 +152,12 @@ void ADCManager::_terminate(bool invokeCallbacks)
 
 void ADCManager::_loop()
 {
-    uint32_t ms = millis();
+    uint32_t ms = micros();
     for(auto &queue: _queue) {
         if (queue.needsUpdate(ms)) {
             auto value = readValue();
             auto &result = queue.getResult();
-            result._min = std::min((uint16_t)result._min, value);
-            result._max = std::max((uint16_t)result._max, value);
-            result._valueSum += value;
-            result._samples++;
+            queue.getResult().update(value, ms);
             if (queue.finished()) {
                 result._invalid = false;
                 queue.invokeCallback();
@@ -172,6 +167,7 @@ void ADCManager::_loop()
     _queue.erase(std::remove_if(_queue.begin(), _queue.end(), [](const ResultQueue &result) {
         return result.finished();
     }), _queue.end());
+
     if (_queue.empty()) {
         LoopFunctions::remove(loop);
     }
@@ -183,8 +179,8 @@ uint16_t ADCManager::__readAndNormalizeADCValue()
     if (value < 0) {
         return 0;
     }
-    else if (value >= (int32_t)ADCResult::kMaxADCValue)  {
-        return ADCResult::kMaxADCValue;
+    else if (value >= (int32_t)kMaxADCValue)  {
+        return kMaxADCValue;
     }
     return value;
 }
@@ -279,40 +275,16 @@ uint32_t ADCManager::getLastUpdate() const
     return (uint32_t)_lastUpdated;
 }
 
-bool ADCManager::requestAverage(uint8_t numSamples, uint16_t delayMillis, Callback callback)
+bool ADCManager::requestAverage(uint8_t numSamples, uint32_t readIntervalMicros, Callback callback)
 {
-    if (numSamples == 0 || delayMillis == 0) {
-        __LDBG_printf("invalid values: samples=%u delay=%u", numSamples, delayMillis);
+    __LDBG_printf("numSamples=%u read_interval=%u callback=%p", numSamples, readIntervalMicros, lambda_target(callback));
+    if (numSamples == 0 || readIntervalMicros == 0) {
+        __LDBG_printf("invalid values: samples=%u delay=%u", numSamples, readIntervalMicros);
         return false;
     }
     if (_queue.empty()) {
         LoopFunctions::add(loop);
     }
-    _queue.emplace_back(numSamples, delayMillis, callback);
+    _queue.emplace_back(numSamples, readIntervalMicros, callback);
     return true;
-}
-
-void ADCManager::setOffset(int16_t offset)
-{
-    _offset = offset;
-}
-
-void ADCManager::setMinDelayMicros(uint16_t minDelayMicros)
-{
-    _minDelayMicros = std::min(20000, std::max(500, (int)minDelayMicros));
-}
-
-void ADCManager::setMaxDelayMicros(uint16_t maxDelayMicros)
-{
-    _maxDelayMicros = std::min(50000, std::max(2000, (int)maxDelayMicros));
-}
-
-void ADCManager::setRepeatMaxDelayPerSecond(uint8_t repeatMaxDelayPerSecond)
-{
-    _repeatMaxDelayPerSecond = std::min(20, std::max(1, (int)repeatMaxDelayPerSecond));
-}
-
-void ADCManager::setMaxDelayYieldTimeMicros(uint16_t maxDelayYieldTimeMicros)
-{
-    _maxDelayYieldTimeMicros = std::min(ADCManager::kMaxDelayYieldTimeMicros * 2, std::max(ADCManager::kMaxDelayYieldTimeMicros, (int)maxDelayYieldTimeMicros));
 }

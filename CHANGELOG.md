@@ -48,6 +48,7 @@
 - Configureable login security
 - Fixed crash during login with login security disabled
 - Option to save and restore brightness/other settings after reboot (Clock/LED Matrix plugin)
+- Limit maximum power of the LEDs
 
 ## Version 0.0.3
 

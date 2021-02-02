@@ -110,7 +110,135 @@ extern stdex::fixed_circular_buffer<uint16_t, IOT_CLOCK_DEBUG_ANIMATION_TIME> _t
 
 using KFCConfigurationClasses::Plugins;
 
-#define CLOCK_PLUG_CONSTRUCTOR_INIT_VALUES
+class ClockPlugin;
+
+namespace Clock {
+
+    class LoopOptionsBase
+    {
+    public:
+        LoopOptionsBase(ClockPlugin &plugin);
+
+        uint32_t getTimeSinceLastUpdate() const;
+        uint32_t getMillis() const;
+        uint8_t getBrightness() const;
+        bool doUpdate() const;
+        bool doRefresh() const;
+        bool doRedraw();
+        time_t getNow() const;
+
+    protected:
+        uint16_t _updateRate;
+        bool &_forceUpdate;
+        uint8_t _brightness;
+        bool _doRefresh;
+        uint32_t _millis;
+        uint32_t _millisSinceLastUpdate;
+    };
+
+    inline uint32_t LoopOptionsBase::getTimeSinceLastUpdate() const
+    {
+        return _millisSinceLastUpdate;
+    }
+
+    inline uint32_t LoopOptionsBase::getMillis() const
+    {
+        return _millis;
+    }
+
+    inline uint8_t LoopOptionsBase::getBrightness() const
+    {
+        return _brightness;
+    }
+
+    inline bool LoopOptionsBase::doUpdate() const
+    {
+        return (_millisSinceLastUpdate >= _updateRate);
+    }
+
+    inline bool LoopOptionsBase::doRefresh() const
+    {
+        return _forceUpdate || _doRefresh;
+    }
+
+    inline bool LoopOptionsBase::doRedraw()
+    {
+        if (_forceUpdate || doUpdate()) {
+            _forceUpdate = false;
+            return true;
+        }
+        return false;
+    }
+
+    inline time_t LoopOptionsBase::getNow() const
+    {
+        return time(nullptr);
+    }
+
+    using LEDMatrixLoopOptions = LoopOptionsBase;
+
+    class ClockLoopOptions : public LoopOptionsBase {
+    public:
+        struct tm24 : tm {
+            using tm::tm;
+            int tm_hour_format() const {
+                return tm_format_24h ? tm_hour : ((tm_hour + 23) % 12) + 1;
+            }
+            void set_format_24h(bool format_24h) {
+                tm_format_24h = format_24h;
+            }
+            bool tm_format_24h{true};
+            tm24 &operator=(struct tm *_tm) {
+                static_cast<struct tm &>(*this) = *_tm;
+                return *this;
+            }
+            tm24 &operator=(const struct tm &_tm) {
+                static_cast<struct tm &>(*this) = _tm;
+                return *this;
+            }
+        } tm24;
+
+    public:
+        ClockLoopOptions(ClockPlugin &plugin);
+
+        time_t getNow() const;
+        struct tm24 &getLocalTime(time_t *nowPtr = nullptr);
+        bool hasTimeChanged() const;
+        bool doRedraw();
+
+    protected:
+        time_t &_time;
+        time_t _now;
+        struct tm24 _tm;
+    };
+
+    inline time_t ClockLoopOptions::getNow() const
+    {
+        return _now;
+    }
+
+    inline bool ClockLoopOptions::hasTimeChanged() const
+    {
+        return _now != _time;
+    }
+
+    inline bool ClockLoopOptions::doRedraw()
+    {
+        if (_forceUpdate || doUpdate() || hasTimeChanged()) {
+            _forceUpdate = false;
+            _time = _now;
+            return true;
+        }
+        return false;
+    }
+
+#if IOT_LED_MATRIX
+    using LoopOptionsType = LEDMatrixLoopOptions;
+#else
+    using LoopOptionsType = ClockLoopOptions;
+#endif
+
+}
 
 class ClockPlugin : public PluginComponent, public MQTTComponent {
 public:
@@ -118,8 +246,8 @@ public:
     using Color               = Clock::Color;
     using AnimationType       = Clock::AnimationType;
     using InitialStateType    = Clock::InitialStateType;
-    using BrightnessType      = Clock::BrightnessType;
     using StoredState         = Clock::StoredState;
+    using LoopOptionsType     = Clock::LoopOptionsType;
     using milliseconds        = std::chrono::duration<uint32_t, std::ratio<1>>;
     using seconds             = std::chrono::duration<uint32_t, std::ratio<1000>>;
 
@@ -132,6 +260,8 @@ public:
     static constexpr uint8_t kCheckTemperatureInterval     = 5;  // seconds
     static constexpr uint8_t kMinimumTemperatureThreshold  = 30;  // °C
     static constexpr uint8_t kUpdateMQTTInterval           = 30;  // seconds
+
+    static constexpr uint8_t kMaxBrightness = Clock::kMaxBrightness;
 
     static constexpr int16_t kAutoBrightnessOff = -1;
 #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
@@ -195,6 +325,9 @@ public:
 
 private:
     void _loop();
+#if IOT_CLOCK_USE_DITHERING
+    void _dithering();
+#endif
     void _setupTimer();
 
 public:
@@ -202,7 +335,7 @@ public:
 
     void setColorAndRefresh(Color color);
     // time represents fading level 0 to max, the fading time is relative to the different between the brightness levels
-    void setBrightness(BrightnessType brightness, int32_t millis = -1);
+    void setBrightness(uint8_t brightness, int32_t millis = -1);
     // use NONE to remove all animations
     // use NEXT to remove the current animation and start the next one. if next animation isnt set, animation is set to NONE
     void setAnimation(AnimationType animation);
@@ -212,15 +345,11 @@ public:
     // get stored configuration and update it with local storage
     Clock::Config_t &getWriteableConfig();
 
+
 // ------------------------------------------------------------------------
 // Enable/disable LED pin
 // ------------------------------------------------------------------------
 #if IOT_CLOCK_HAVE_ENABLE_PIN
-
-#    define __TMP CLOCK_PLUG_CONSTRUCTOR_INIT_VALUES
-#    undef CLOCK_PLUG_CONSTRUCTOR_INIT_VALUES
-#    define CLOCK_PLUG_CONSTRUCTOR_INIT_VALUES __TMP _isEnabled(false),
-#    undef __TMP
 
 private:
     void _enable();
@@ -236,17 +365,10 @@ private:
 
 #if IOT_CLOCK_SAVE_STATE
 
-#    define __TMP CLOCK_PLUG_CONSTRUCTOR_INIT_VALUES
-#    undef CLOCK_PLUG_CONSTRUCTOR_INIT_VALUES
-#    define CLOCK_PLUG_CONSTRUCTOR_INIT_VALUES __TMP _saveTimestamp(0),
-#    undef __TMP
-
 public:
-    void _saveStateDelayed();
-    void _saveState(int32_t brightness = -1);
+    void _saveStateDelayed(uint8_t brightness);
+    void _saveState(uint8_t brightness);
     StoredState _getState() const;
-    void _copyToState(StoredState &state, BrightnessType brightness, Color color);
-    void _copyFromState(const StoredState &state);
 
     Event::Timer _saveTimer;
     uint32_t _saveTimestamp{0};
@@ -257,11 +379,6 @@ public:
     // ------------------------------------------------------------------------
 
 #if IOT_CLOCK_BUTTON_PIN
-
-#    define __TMP CLOCK_PLUG_CONSTRUCTOR_INIT_VALUES
-#    undef CLOCK_PLUG_CONSTRUCTOR_INIT_VALUES
-#    define CLOCK_PLUG_CONSTRUCTOR_INIT_VALUES __TMP _buttonCounter(0),
-#    undef __TMP
 
 public:
     static void onButtonHeld(Button &btn, uint16_t duration, uint16_t repeatCount);
@@ -294,79 +411,16 @@ private:
     Event::Callback _resetAlarmFunc;
 #endif
 
-#if IOT_LED_MATRIX
-    // ------------------------------------------------------------------------
-    // LED Matrix
-    // ------------------------------------------------------------------------
-
-private:
-    friend LEDMatrix::LoopOptionsType;
-    using LoopOptionsType = LEDMatrix::LoopOptionsType;
-
-#else
+#if !IOT_LED_MATRIX
     // ------------------------------------------------------------------------
     // Clock
     // ------------------------------------------------------------------------
-
-private:
-    class LoopOptionsType {
- public:
-        struct tm24 : tm {
-            using tm::tm;
-            int tm_hour_format() const {
-                return tm_format_24h ? tm_hour : ((tm_hour + 23) % 12) + 1;
-            }
-            void set_format_24h(bool format_24h) {
-                tm_format_24h = format_24h;
-            }
-            bool tm_format_24h{true};
-            tm24 &operator=(struct tm *_tm) {
-                static_cast<struct tm &>(*this) = *_tm;
-                return *this;
-            }
-            tm24 &operator=(const struct tm &_tm) {
-                static_cast<struct tm &>(*this) = _tm;
-                return *this;
-            }
-        } tm24;
-
- public:
-        LoopOptionsType(ClockPlugin &plugin);
-
-        // time since the display was updated
-        uint32_t getTimeSinceLastUpdate() const;
-        // returns the value of millis() when the object was created
-        uint32_t getMillis() const;
-        // returns the value of time(nullptr) when the object was created
-        time_t getNow() const;
-        // return localtime struct tm which provides tm_hour_format() returning the hour in 12 or 24h format
-        struct tm24 &getLocalTime(time_t *nowPtr = nullptr);
-        // returns true if _updateRate milliseconds have been passed since last update
-        bool doUpdate() const;
-        // time has changed by one second since last update
-        bool hasTimeChanged() const;
-        // returns true that the display needs to be redrawn
-        // call once per object instance/loop, a second call returns false
-        bool doRedraw();
-
- private:
-        ClockPlugin &_plugin;
-        uint32_t _millis;
-        uint32_t _millisSinceLastUpdate;
-        time_t _now;
-        struct tm24 _tm;
-    };
 
 private:
     void _setSevenSegmentDisplay();
 
 public:
     void setBlinkColon(uint16_t value);
-
-#    define __TMP CLOCK_PLUG_CONSTRUCTOR_INIT_VALUES
-#    undef CLOCK_PLUG_CONSTRUCTOR_INIT_VALUES
-#    define CLOCK_PLUG_CONSTRUCTOR_INIT_VALUES __TMP _time(0), _isSyncing(false), _displaySensor(DisplaySensorType::OFF),
-#    undef __TMP
 
 private:
     std::array<SevenSegmentDisplay::PixelAddressType, IOT_CLOCK_PIXEL_ORDER_LEN * IOT_CLOCK_NUM_DIGITS> _pixelOrder;
@@ -403,16 +457,10 @@ private:
 public:
     static void adjustAutobrightness(Event::CallbackTimerPtr timer);
 
-#    define __TMP CLOCK_PLUG_CONSTRUCTOR_INIT_VALUES
-#    undef CLOCK_PLUG_CONSTRUCTOR_INIT_VALUES
-#    define CLOCK_PLUG_CONSTRUCTOR_INIT_VALUES __TMP _autoBrightnessValue(1023), _autoBrightness(0), _autoBrightnessLastValue(0),
-#    undef __TMP
-
-
 private:
-    float _autoBrightnessValue{1023.0};
+    float _autoBrightnessValue{1.0};
     Event::Timer _autoBrightnessTimer;
-    int16_t _autoBrightness{0};
+    int16_t _autoBrightness{ADCManager::kMaxADCValue};
     uint8_t _autoBrightnessLastValue{0};
     DisplaySensorType _displaySensor{DisplaySensorType::OFF};
 #endif
@@ -445,14 +493,14 @@ private:
     // set brightness
     // enable LEDs if disabled
     // store new level in config
-    void _setBrightness(BrightnessType brightness);
+    void _setBrightness(uint8_t brightness);
 
     // returns display brightness using current brightness and auto brightness value
-    BrightnessType _getBrightness(bool temperatureProtection = true) const;
+    uint8_t _getBrightness(bool temperatureProtection = true) const;
 
     // returns current brightness without auto brightness value
     // while fading between different levels it returns the current level
-    BrightnessType _getFadingBrightness() const;
+    float _getFadingBrightness() const;
 
     // set current color
     // store color in config as solid_color if no animation is active
@@ -471,10 +519,13 @@ private:
     // ------------------------------------------------------------------------
 
 private:
+    friend Clock::LEDMatrixLoopOptions;
+    friend Clock::ClockLoopOptions;
+
     SevenSegmentDisplay _display;
     bool _schedulePublishState : 1;
-    bool _forceUpdate : 1;
     bool _isFading : 1;
+    bool _forceUpdate;
 
     Color __color;
     uint32_t _lastUpdateTime;
@@ -482,15 +533,43 @@ private:
     uint8_t _tempOverride;
     float _tempBrightness;
 
-    Plugins::Clock::ConfigStructType _config;
+    Clock::Config_t _config;
     Event::Timer _timer;
     uint32_t _timerCounter;
 
     MillisTimer _fadeTimer;
-    BrightnessType _savedBrightness;
-    BrightnessType _startBrightness;
-    BrightnessType _targetBrightness;
+    uint8_t _savedBrightness;
+    uint8_t _startBrightness;
+    uint8_t _fadingBrightness;
+    uint8_t _targetBrightness;
 
     Clock::Animation *_animation;
     Clock::Animation *_nextAnimation;
 };
+
+inline void ClockPlugin::setAnimationCallback(Clock::AnimationCallback callback)
+{
+    _display.setCallback(callback);
+}
+
+inline void ClockPlugin::setUpdateRate(uint16_t updateRate)
+{
+    _updateRate = updateRate;
+    _forceUpdate = true;
+}
+
+inline uint16_t ClockPlugin::getUpdateRate() const
+{
+    return _updateRate;
+}
+
+inline void ClockPlugin::setColor(Color color)
+{
+    _setColor(color);
+}
+
+inline ClockPlugin::Color ClockPlugin::getColor() const
+{
+    return _getColor();
+}
+

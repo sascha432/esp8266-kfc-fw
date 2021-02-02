@@ -39,12 +39,10 @@ namespace Clock {
         StoredState() : _storage()
         {}
 
-        StoredState(const Config_t &config, int32_t brightnessOverride = -1) :
+        StoredState(const Config_t &config, uint8_t brightness) :
             _storage({0, config})
         {
-            if (brightnessOverride >= 0) {
-                _storage._config.setBrightness(brightnessOverride);
-            }
+            _storage._config.setBrightness(brightness);
             _updateCrc();
         }
 

@@ -31,7 +31,7 @@ namespace KFCConfigurationClasses {
     {}
 
     Plugins::ClockConfig::ClockConfig_t::ClockConfig_t() :
-        solid_color(0x00ff00),
+        solid_color(0xff00ff),
         animation(cast_int_animation(AnimationType::SOLID)),
 #if IOT_LED_MATRIX
         initial_state(cast_int_initial_state(InitialStateType::RESTORE)),
@@ -39,17 +39,17 @@ namespace KFCConfigurationClasses {
         initial_state(cast_int_initial_state(InitialStateType::ON)),
         time_format_24h(true),
 #endif
+        dithering(false),
         fading_time(kDefaultValueFor_fading_time),
-        brightness(128),
-        auto_brightness(-1),
-#if !IOT_LED_MATRIX
-        blink_colon_speed(1000),
-#endif
-        flashing_speed(150),
-        protection( { { 55, 85 }, 75} ),
+        power_limit(kDefaultValueFor_power_limit),
+        brightness(kDefaultValueFor_brightness),
+        auto_brightness(kDefaultValueFor_auto_brightness),
+        blink_colon_speed(kDefaultValueFor_blink_colon_speed),
+        flashing_speed(kDefaultValueFor_flashing_speed),
+        protection( { { 55, 70 }, 75} ),
         rainbow{ RainbowMultiplier_t(), RainbowColor_t(), 30 },
         alarm{ { 0xaa0000 }, 250 },
-        fading{ .5f, 2, 0xffffff }
+        fading{ .75f, 3, 0xffffff }
 #if IOT_LED_MATRIX
         ,
         fire(),
@@ -62,6 +62,7 @@ namespace KFCConfigurationClasses {
     {
         ClockConfig_t cfg = {};
         setConfig(cfg);
+        KFCFS.remove(FSPGM(iot_clock_save_state_file));
     }
 
 }

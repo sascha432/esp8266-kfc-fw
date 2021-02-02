@@ -42,12 +42,12 @@
 // Continuous readings
 // ------------------------------------------------------------------------
 // for slower continous readings with an averaging period of "sampleInterval" milliseconds, the auto read
-// timer can be used. by default it requests an average of 10 samples with an interval of 5 milliseconds
+// timer can be used. by default it requests an average of 10 samples with an interval of 50 milliseconds
 // every "interval" milliseconds. interval must exceed (numSamples + 1) * sampleInterval + (kMaxDelayMicros / 500)
 //
 // start continuous readings
 // if the timer is already installed, it will return an error. use removeAutoReadTimer() before to cancel it
-// AutoReadTimerResultType addAutoReadTimer(Event::milliseconds interval, Event::milliseconds sampleIntervalMillis = 5, uint8_t count = 10);
+// AutoReadTimerResultType addAutoReadTimer(Event::milliseconds interval, Event::milliseconds sampleIntervalMillis = 50, uint8_t count = 10);
 //
 // stop continuous readings
 // void removeAutoReadTimer();
@@ -213,7 +213,7 @@ public:
 
     // install auto read timer
     // details are at the top of the file
-    AutoReadTimerResultType addAutoReadTimer(Event::milliseconds interval, Event::milliseconds sampleInterval = Event::milliseconds(5), uint8_t count = 10);
+    AutoReadTimerResultType addAutoReadTimer(Event::milliseconds interval, Event::milliseconds sampleInterval = Event::milliseconds(50), uint8_t count = 10);
     void removeAutoReadTimer();
     ADCResult getAutoReadValue() const;
 

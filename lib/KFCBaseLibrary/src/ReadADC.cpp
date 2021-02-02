@@ -30,7 +30,7 @@
 #undef _min
 #undef _max
 
-#if DEBUG_READ_ADC || 1
+#if DEBUG_READ_ADC_PRINT_INTERVAL
 static uint16 ___system_adc_read() {
     static uint32_t last = 0;
     static uint32_t count = 0;

@@ -23,7 +23,7 @@ Sensor_CCS811::Sensor_CCS811(const String &name, uint8_t address) : MQTTSensor()
     REGISTER_SENSOR_CLIENT(this);
     config.initTwoWire();
     _ccs811.beg
-    setUpdateRate(10); // faster update rate until valid data is available
+    setUpdateRate(max<uint16_t>(1, DEFAULT_UPDATE_RATE / 3)); // faster update rate until valid data is available
     _sensor.eCO2 = 0;
     _sensor.TVOC = 0;
     _sensor.available = false;

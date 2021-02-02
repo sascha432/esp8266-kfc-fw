@@ -20,8 +20,8 @@ Sensor_Battery::Sensor_Battery(const JsonString &name) : MQTTSensor(), _name(nam
 {
     REGISTER_SENSOR_CLIENT(this);
     reconfigure(nullptr);
-    // read ADC every 5 seconds and store the average of 64 samples over a period of ~320ms
-    ADCManager::getInstance().addAutoReadTimer(Event::seconds(5), Event::milliseconds(5), 64);
+    // read ADC every 2 seconds and store the average of 64 samples over a period of ~1.6s
+    ADCManager::getInstance().addAutoReadTimer(Event::seconds(2), Event::milliseconds(50), 32);
 }
 
 Sensor_Battery::~Sensor_Battery()

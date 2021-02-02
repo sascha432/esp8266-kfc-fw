@@ -1790,13 +1790,13 @@ typedef struct  {
                 CREATE_ENUM_BITFIELD(animation, AnimationType);
                 CREATE_ENUM_BITFIELD(initial_state, InitialStateType);
                 CREATE_UINT8_BITFIELD(time_format_24h, 1);
-                CREATE_UINT32_BITFIELD_MIN_MAX(fading_time, 19, 0, 250000, 5000, 250)
-                uint8_t brightness;
-                int16_t auto_brightness;
-#if !IOT_LED_MATRIX
-                uint16_t blink_colon_speed;
-#endif
-                uint16_t flashing_speed;
+                CREATE_UINT8_BITFIELD(dithering, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(fading_time, 6, 0, 60, 10, 1)
+                CREATE_UINT32_BITFIELD_MIN_MAX(power_limit, 8, 0, 255, 0, 1)
+                CREATE_UINT32_BITFIELD_MIN_MAX(brightness, 8, 0, 255, 255 / 4, 1)
+                CREATE_INT32_BITFIELD_MIN_MAX(auto_brightness, 11, -1, 1023, -1, 1)
+                CREATE_UINT32_BITFIELD_MIN_MAX(blink_colon_speed, 13, 50, 8000, 1000, 100)
+                CREATE_UINT32_BITFIELD_MIN_MAX(flashing_speed, 13, 50, 8000, 150, 100)
 
                 struct __attribute__packed__ {
                     struct __attribute__packed__ {
@@ -1835,17 +1835,17 @@ typedef struct  {
                 ClockConfig_t();
 
                 uint16_t getBrightness() const {
-                    return brightness << 8;
+                    return brightness;
                 }
-                void setBrightness(uint16_t pBrightness) {
-                    brightness = pBrightness >> 8;
+                void setBrightness(uint8_t pBrightness) {
+                    brightness = pBrightness;
                 }
 
                 uint32_t getFadingTimeMillis() const {
-                    return fading_time;
+                    return fading_time * 1000;
                 }
                 void setFadingTimeMillis(uint32_t time) {
-                    fading_time = time;
+                    fading_time = time / 1000;
                 }
 
                 AnimationType getAnimation() const {

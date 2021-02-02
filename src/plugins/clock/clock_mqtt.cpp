@@ -4,6 +4,7 @@
 
 #include <Arduino_compat.h>
 #include "clock.h"
+#include <stl_ext/algorithm.h>
 #include "../src/plugins/sensor/sensor.h"
 
 #if DEBUG_IOT_CLOCK
@@ -77,15 +78,15 @@ void ClockPlugin::onMessage(MQTTClient *client, char *topic, char *payload, size
     if (!strcmp_end_P(topic, SPGM(_brightness_set))) {
         if (len) {
             auto value = strtoul(payload, nullptr, 0);
-            setBrightness(value);
-            _saveStateDelayed();
+            setBrightness(std::clamp<uint8_t>(value, 0, kMaxBrightness));
+            _saveStateDelayed(_targetBrightness ? _targetBrightness : _savedBrightness);
         }
     }
     else if (!strcmp_end_P(topic, SPGM(_color_set))) {
         if (*payload == '#') {
             // rgb color code #FFEECC
             setColorAndRefresh(Color::fromString(payload));
-            _saveStateDelayed();
+            _saveStateDelayed(_targetBrightness);
         }
         else {
             // red,green,blue
@@ -96,7 +97,7 @@ void ClockPlugin::onMessage(MQTTClient *client, char *topic, char *payload, size
                 if (endptr && *endptr++ == ',') {
                     auto blue = (uint8_t)strtoul(endptr, nullptr, 10);
                     setColorAndRefresh(Color(red, green, blue));
-                    _saveStateDelayed();
+                    _saveStateDelayed(_targetBrightness);
                 }
             }
         }
@@ -121,7 +122,7 @@ void ClockPlugin::_publishState(MQTTClient *client)
 #endif
     if (client && client->isConnected()) {
         client->publish(MQTTClient::formatTopic(FSPGM(_state)), true, String(_targetBrightness != 0));
-        client->publish(MQTTClient::formatTopic(FSPGM(_brightness_state)), true, String(_targetBrightness));
+        client->publish(MQTTClient::formatTopic(FSPGM(_brightness_state)), true, String(static_cast<uint32_t>(_targetBrightness)));
         client->publish(MQTTClient::formatTopic(FSPGM(_color_state)), true, getColor().implode(','));
 #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
         client->publish(MQTTClient::formatTopic(FSPGM(light_sensor)), true, String(_autoBrightnessValue * 100, 0));

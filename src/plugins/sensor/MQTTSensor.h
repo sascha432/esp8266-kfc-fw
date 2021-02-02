@@ -41,7 +41,7 @@ DECLARE_ENUM(MQTTSensorSensorType, uint8_t,
 
 class MQTTSensor : public MQTTComponent {
 public:
-    static constexpr uint16_t DEFAULT_UPDATE_RATE = 10;
+    static constexpr uint16_t DEFAULT_UPDATE_RATE = 5;
     static constexpr uint16_t DEFAULT_MQTT_UPDATE_RATE = 30;
 
     using SensorType = MQTTSensorSensorType;

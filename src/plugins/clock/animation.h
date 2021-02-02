@@ -83,15 +83,14 @@ namespace Clock {
     using SevenSegmentDisplay = SevenSegmentPixel<uint8_t, IOT_CLOCK_NUM_DIGITS, IOT_CLOCK_NUM_PIXELS, IOT_CLOCK_NUM_COLONS, IOT_CLOCK_NUM_COLON_PIXELS>;
 #endif
 
-    using Config_t = Plugins::Clock::ConfigStructType;
+    using Config_t = Plugins::Clock::ClockConfig_t;
     using PixelAddressType = SevenSegmentDisplay::PixelAddressType;
     using ColorType = SevenSegmentDisplay::ColorType;
     using ClockColor_t = Plugins::Clock::ClockColor_t;
     using AnimationCallback = SevenSegmentDisplay::AnimationCallback;
-    using LoopCallback = std::function<void(time_t now)>;
+    using LoopCallback = std::function<void(uint32_t millisValue)>;
     using AnimationType = Config_t::AnimationType;
     using InitialStateType = Config_t::InitialStateType;
-    using BrightnessType = SevenSegmentDisplay::BrightnessType;
 #if IOT_LED_MATRIX
 #if IOT_LED_MATRIX_ROWS > 255 || IOT_LED_MATRIX_COLS > 255
     using CoordinateType = uint16_t;
@@ -103,10 +102,10 @@ namespace Clock {
 #endif
 
     static constexpr auto kTotalPixelCount = SevenSegmentDisplay::kTotalPixelCount;
-    static constexpr uint16_t kMaxBrightness = SevenSegmentDisplay::kMaxBrightness;
-    static constexpr uint16_t kBrightness75 = kMaxBrightness * 0.75;
-    static constexpr uint16_t kBrightness50 = kMaxBrightness * 0.5;
-    static constexpr uint16_t kBrightnessTempProtection = kMaxBrightness * 0.25;
+    static constexpr uint8_t kMaxBrightness = SevenSegmentDisplay::kMaxBrightness;
+    static constexpr uint8_t kBrightness75 = kMaxBrightness * 0.75;
+    static constexpr uint8_t kBrightness50 = kMaxBrightness * 0.5;
+    static constexpr uint8_t kBrightnessTempProtection = kMaxBrightness * 0.25;
 
     class Color {
     public:
@@ -330,7 +329,7 @@ namespace Clock {
 
         // loop function
         // can be overriden otherwise it calls _callback @ _updateRate milliseconds
-        virtual void loop(time_t now);
+        virtual void loop(uint32_t millisValue);
 
         // animation has finsihed
         // can be restarted with begin
@@ -381,7 +380,9 @@ namespace Clock {
         // this callback is used during the refresh of the display, and the callback is invoked for
         // every single pixel. the pixel address, color and milliseconds are passed as arguments and the
         // return value is the color that will be set. make sure that calling this function kTotalPixelCount
-        // times fits into the update rate interval. millis is usally set once before the rendering starts
+        // times fits into the update rate interval. millis is set once before the rendering starts
+        // the same value for millis must produce the same result. srand() is set to millis before rendering
+        // a new frame
         //
         // _display.setMillis(millis());
         // _display.setDigit(0, 8, color);
@@ -389,7 +390,7 @@ namespace Clock {
         // ...
         // _display.show();
         //
-        // std::function<ColorType(PixelAddressType address, ColorType color, uint32_t millis)>
+        // std::function<ColorType(PixelAddressType address, ColorType color, uint32_t millisValue)>
         void setAnimationCallback(AnimationCallback callback);
         void removeAnimationCallback();
 
@@ -435,7 +436,7 @@ namespace Clock {
         virtual void begin() override;
 
     private:
-        void callback(time_t now);
+        void callback(uint32_t millisValue);
         uint16_t _secondsToSpeed(float seconds) const;
 
     private:
@@ -459,7 +460,7 @@ namespace Clock {
 
         virtual void begin() override;
         virtual void end() override;
-        virtual void loop(time_t now);
+        virtual void loop(uint32_t millisValue);
 
     private:
         Color _normalizeColor(uint8_t red, uint8_t green, uint8_t blue) const;
@@ -483,6 +484,7 @@ namespace Clock {
                 return _blue;
             }
         } _factor;
+        uint32_t _lastUpdate;
 
         static constexpr uint8_t _mod = 120;
         static constexpr uint8_t _divMul = 40;
@@ -497,7 +499,7 @@ namespace Clock {
 
         virtual void begin() override;
         virtual void end() override;
-        virtual void loop(time_t now) {}
+        virtual void loop(uint32_t millisValue) {}
 
     private:
         Color _color;
@@ -515,7 +517,7 @@ namespace Clock {
 
         virtual void begin() override;
         virtual void end() override;
-        virtual void loop(time_t now) {}
+        virtual void loop(uint32_t millisValue) {}
 
     private:
         uint32_t _time;
@@ -639,9 +641,9 @@ namespace Clock {
 
         virtual void begin() override;
         virtual void end() override;
-        virtual void loop(time_t now) {
+        virtual void loop(uint32_t millisValue) {
             // update all lines
-            srand(now);
+            srand(millisValue);
             for(uint16_t i = 0; i < _lineCount; i++) {
                 _lines[i].cooldown(_cfg.cooling);
                 _lines[i].heatup();
@@ -664,7 +666,7 @@ namespace Clock {
 
         virtual void begin() override;
         virtual void end() override;
-        virtual void loop(time_t now) {}
+        virtual void loop(uint32_t millisValue) {}
 
     private:
         AnimationCallback _callback;

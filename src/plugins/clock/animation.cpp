@@ -158,10 +158,10 @@ uint16_t Animation::getUpdateRate() const
     return _updateRate;
 }
 
-void Animation::loop(time_t now)
+void Animation::loop(uint32_t millisValue)
 {
     if (_callback) {
-        _callback(now);
+        _callback(millisValue);
     }
 }
 
@@ -224,8 +224,8 @@ void FadingAnimation::begin()
     setUpdateRate(kUpdateRate);
     __LDBG_printf("begin from=%s to=%s time=%u speed=%u update_rate=%u", _from.toString().c_str(), _to.toString().c_str(), _time, _speed, getUpdateRate());
 
-    setLoopCallback([this](time_t now) {
-        this->callback(now);
+    setLoopCallback([this](uint32_t millisValue) {
+        this->callback(millisValue);
         // no code here, the lambda function might be destroyed already
     });
 }
@@ -235,7 +235,7 @@ uint16_t FadingAnimation::_secondsToSpeed(float seconds) const
     return (kProgressPerSecond / seconds) + 0.5;
 }
 
-void FadingAnimation::callback(time_t now)
+void FadingAnimation::callback(uint32_t millisValue)
 {
     if (_progress < kMaxProgress) {
         _progress = std::min((uint32_t)kMaxProgress, (uint32_t)(_progress + _speed));
@@ -262,10 +262,10 @@ void FadingAnimation::callback(time_t now)
                 __LDBG_printf("next from=%s to=%s time=%u speed=%u update_rate=%u", _from.toString().c_str(), _to.toString().c_str(), _time, _speed, getUpdateRate());
             } else {
                 // wait for _time seconds
-                uint32_t endTime = now + _time;
+                uint32_t endTime = millisValue + _time;
                 __LDBG_printf("delay=%u time=%u", _time, endTime);
-                _callback = [this, endTime](time_t now) {
-                    if ((uint32_t)now > endTime) {
+                _callback = [this, endTime](uint32_t millisValue) {
+                    if (millisValue > endTime) {
                         // get current color and a random new color
                         _from = getColor();
                         _to.rnd();
@@ -285,7 +285,8 @@ RainbowAnimation::RainbowAnimation(ClockPlugin &clock, uint16_t speed, RainbowMu
     _speed(speed),
     _multiplier(multiplier),
     _color(color),
-    _factor(color.factor.value)
+    _factor(color.factor.value),
+    _lastUpdate(0)
 {
     // __LDBG_printf("speed=%u _multiplier=%f multiplier=%f factor=%s mins=%s", _speed, _multiplier, multiplier, _factor.toString().c_str(), _minimum.toString().c_str());
 }
@@ -343,7 +344,7 @@ void RainbowAnimation::begin()
                 color = _normalizeColor(_factor.red() * factor2, 0, _factor.blue() * factor1);
                 break;
         }
-        return SevenSegmentDisplay::_adjustBrightnessAlways(color, params.brightness);
+        return SevenSegmentDisplay::_adjustBrightnessAlways(color, params.brightness());
     });
     setUpdateRate(25);
     __LDBG_printf("begin rate=%u", getUpdateRate());
@@ -355,8 +356,16 @@ void RainbowAnimation::end()
     Animation::end();
 }
 
-void RainbowAnimation::loop(time_t now)
+void RainbowAnimation::loop(uint32_t millisValue)
 {
+    if (_lastUpdate == 0) {
+        _lastUpdate = millisValue;
+        return;
+    }
+    if (get_time_diff(_lastUpdate, millisValue) < 25) {
+        return;
+    }
+
     _increment(&_multiplier.value, _multiplier.min, _multiplier.max, &_multiplier.incr);
     _increment(&_factor._red, _color.min.red, 256, &_color.red_incr);
     _increment(&_factor._green, _color.min.green, 256, &_color.green_incr);
@@ -377,7 +386,7 @@ void FlashingAnimation::begin()
     _finished = false;
     _blinkColon = false;
     setAnimationCallback([this](PixelAddressType address, ColorType color, const SevenSegmentDisplay::Params_t &params) -> ColorType {
-        return (params.millis / _time) % _mod == 0 ? SevenSegmentDisplay::_adjustBrightnessAlways(_color, params.brightness) : 0;
+        return (params.millis / _time) % _mod == 0 ? SevenSegmentDisplay::_adjustBrightnessAlways(_color, params.brightness()) : 0;
     });
     setUpdateRate(std::max((uint16_t)(ClockPlugin::kMinFlashingSpeed / _mod), (uint16_t)(_time / _mod)));
 }
@@ -415,7 +424,7 @@ SkipRowsAnimation::SkipRowsAnimation(ClockPlugin &clock, uint16_t row, uint16_t 
             }
 
         }
-        return SevenSegmentDisplay::_adjustBrightnessAlways(color, params.brightness);
+        return SevenSegmentDisplay::_adjustBrightnessAlways(color, params.brightness());
     });
     setUpdateRate(std::min<uint32_t>(std::max(5U, _time), ClockPlugin::kDefaultUpdateRate));
 }
@@ -466,7 +475,7 @@ void FireAnimation::begin()
         if (_cfg.cast_enum_orientation(_cfg.orientation) == Orientation::VERTICAL) {
             pixel.rotate90();
         }
-        return SevenSegmentDisplay::_adjustBrightnessAlways(_lines[pixel.getRow()].getHeatColor((_cfg.invert_direction) ? pixel.getInvertedCol() : pixel.getCol()), params.brightness);
+        return SevenSegmentDisplay::_adjustBrightnessAlways(_lines[pixel.getRow()].getHeatColor((_cfg.invert_direction) ? pixel.getInvertedCol() : pixel.getCol()), params.brightness());
     });
     setUpdateRate(std::max<uint16_t>(5, _cfg.speed));
 }

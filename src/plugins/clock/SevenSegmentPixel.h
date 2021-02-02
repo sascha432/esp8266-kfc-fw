@@ -32,27 +32,105 @@
 #define IOT_CLOCK_LED_PIN                                           12
 #endif
 
-#ifndef IOT_CLOCK_USE_FAST_LED_BRIGHTNESS
-#define IOT_CLOCK_USE_FAST_LED_BRIGHTNESS                           0
+#ifndef IOT_CLOCK_USE_DITHERING
+#define IOT_CLOCK_USE_DITHERING                                     1
 #endif
+
+#ifndef IOT_CLOCK_USE_FAST_LED_BRIGHTNESS
+#define IOT_CLOCK_USE_FAST_LED_BRIGHTNESS                           1
+#endif
+
+#if (IOT_CLOCK_USE_DITHERING || IOT_CLOCK_USE_FAST_LED_BRIGHTNESS) && IOT_CLOCK_NEOPIXEL
+#error IOT_CLOCK_USE_DITHERING and IOT_CLOCK_USE_FAST_LED_BRIGHTNESS not supported with IOT_CLOCK_NEOPIXEL
+#endif
+
 
 #if !IOT_LED_MATRIX
 static constexpr char _digits2SegmentsTable[]  = { 0x3f, 0x06, 0x5b, 0x4f, 0x66, 0x6d, 0x7d, 0x07, 0x7f, 0x6f, 0x77, 0x7c, 0x39, 0x5e, 0x79, 0x71 };  // 0-F
 #endif
 
+#if IOT_CLOCK_USE_DITHERING && IOT_CLOCK_USE_FAST_LED_BRIGHTNESS == 0
+
+// use normal brightness and FastLED brightness if dithering is enabled
+
+class SevenSegmentPixelParams {
+public:
+    static constexpr uint8_t kMaxBrightness = 0xff;
+
+public:
+    SevenSegmentPixelParams() : millis(0), fastLEDBrightness(kMaxBrightness / 4), _brightness(kMaxBrightness / 4) {}
+
+    uint8_t brightness() const {
+        return _brightness;
+    }
+    void setBrightness(uint8_t brightness, bool dithering) {
+        brightness = dithering ? kMaxBrightness : _brightness;
+        fastLEDBrightness = brightness;
+    }
+public:
+    uint32_t millis;
+    uint8_t fastLEDBrightness;
+private:
+    uint8_t _brightness;
+};
+
+#elif IOT_CLOCK_USE_FAST_LED_BRIGHTNESS
+
+// use FastLED brightness only
+
+class SevenSegmentPixelParams {
+public:
+    static constexpr uint8_t kMaxBrightness = 0xff;
+
+public:
+    SevenSegmentPixelParams() : millis(0), fastLEDBrightness(kMaxBrightness / 4) {}
+
+    static constexpr uint8_t brightness() {
+        return kMaxBrightness;
+    }
+
+    void setBrightness(uint8_t brightness, bool dithering) {
+        fastLEDBrightness = brightness;
+    }
+
+public:
+    uint32_t millis;
+    uint8_t fastLEDBrightness;
+};
+
+#else
+
+// use normal brightness only
+
+class SevenSegmentPixelParams {
+public:
+    static constexpr uint8_t kMaxBrightness = 0xff;
+
+public:
+    SevenSegmentPixelParams() : millis(0), _brightness(kMaxBrightness / 4) {}
+
+    uint8_t brightness() const {
+        return _brightness;
+    }
+    void setBrightness(uint8_t brightness, bool dithering) {
+        brightness = brightness;
+    }
+public:
+    uint32_t millis;
+private:
+    uint8_t _brightness;
+};
+
+#endif
+
 template<typename PIXEL_TYPE, size_t NUM_DIGITS, size_t NUM_DIGIT_PIXELS, size_t NUM_COLONS, size_t NUM_COLON_PIXELS>
 class SevenSegmentPixel {
 public:
+    using Params_t = SevenSegmentPixelParams;
     using PixelAddressType = PIXEL_TYPE;
     using ColorType = uint32_t;
-    using BrightnessType = uint16_t;
-    using FadingRefreshCallback = std::function<void(BrightnessType brightness)>;
+    using FadingRefreshCallback = std::function<void(uint8_t brightness)>;
     using FadingFinishedCallback = FadingRefreshCallback;
-
-    typedef struct {
-        uint32_t millis;
-        BrightnessType brightness;
-    } Params_t;
 
     using GetColorCallback = std::function<ColorType(PixelAddressType addr, ColorType color, const Params_t &params)>;
     using AnimationCallback = GetColorCallback;
@@ -81,7 +159,7 @@ public:
         BOTH = LOWER|UPPER,
     } ColonEnum_t;
 
-    static constexpr BrightnessType kMaxBrightness = std::numeric_limits<BrightnessType>::max();
+    static constexpr uint8_t kMaxBrightness = Params_t::kMaxBrightness;
     static constexpr size_t kTotalPixelCount = (NUM_DIGITS * NUM_DIGIT_PIXELS * SevenSegmentPixel::SegmentEnum_t::NUM) + (NUM_COLONS * NUM_COLON_PIXELS * 2);
 
     static_assert(kTotalPixelCount < 512, "max. number of pixel exceeded");
@@ -128,7 +206,8 @@ public:
 #else
         _controller( FastLED.addLeds<IOT_CLOCK_FASTLED_CHIPSET, IOT_CLOCK_LED_PIN>(_pixels.data(), _pixels.size()) ),
 #endif
-        _params({0, kMaxBrightness / 3})
+        _dithering(false),
+        _canRefresh(false)
     {
 #if IOT_CLOCK_NEOPIXEL
         _pixels.begin();
@@ -408,29 +487,64 @@ public:
 #endif
 
     // millis is passed to AnimationCallback
+    // the animation should produce the same result for the same value of millis
 
-    inline void setMillis(uint32_t millis) {
-        _params.brightness = millis;
-    }
-
-    inline void setBrightness(BrightnessType brightness) {
-        _params.brightness = brightness;
-    }
-
-    inline void setParams(uint32_t millis, BrightnessType brightness) {
+    void setMillis(uint32_t millis) {
         _params.millis = millis;
-        _params.brightness = brightness;
+        srand(millis);
+    }
+
+private:
+    void _applyBrightness() {
+        #if IOT_CLOCK_USE_FAST_LED_BRIGHTNESS
+            _canRefresh = true;
+            FastLED.setBrightness(_params.fastLEDBrightness);
+        #elif IOT_CLOCK_USE_DITHERING
+            if (_dithering) {
+                _canRefresh = true;
+                FastLED.setBrightness(_params.fastLEDBrightness);
+            }
+            else {
+                _canRefresh = false;
+                FastLED.setBrightness(255);
+            }
+        #endif
+    }
+
+public:
+    void setBrightness(uint8_t brightness) {
+        _params.setBrightness(brightness, _dithering);
+        _applyBrightness();
+    }
+
+    void setParams(uint32_t millis, uint8_t brightness) {
+        _params.millis = millis;
+        srand(millis);
+        setBrightness(brightness);
+    }
+
+    void setDithering(bool dithering) {
+#if IOT_CLOCK_USE_DITHERING
+        clear();
+        _dithering = dithering;
+        _params.setBrightness(_params.fastLEDBrightness, _dithering);
+        if (_dithering) {
+            FastLED.setDither(BINARY_DITHER);
+        }
+        else {
+            FastLED.setDither(DISABLE_DITHER);
+        }
+        _applyBrightness();
+#endif
     }
 
     inline void show() {
-#if IOT_CLOCK_NEOPIXEL
-        _pixels.show();
-#else
-    #if IOT_CLOCK_USE_FAST_LED_BRIGHTNESS
-        FastLED.setBrightness(_params.brightness >> 8);
-    #endif
-        FastLED.show();
-#endif
+        #if IOT_CLOCK_NEOPIXEL
+            _pixels.show();
+        #else
+            _applyBrightness();
+            FastLED.show();
+        #endif
     }
 
 public:
@@ -455,7 +569,7 @@ private:
                 return _callback(addr, color, params);
             }
             else {
-                return _adjustBrightnessAlways(color, params.brightness);
+                return _adjustBrightnessAlways(color, params.brightness());
             }
         }
         return color;
@@ -467,25 +581,38 @@ private:
             return _callback(addr, color, params);
         }
         else {
-            return _adjustBrightnessAlways(color, params.brightness);
+            return _adjustBrightnessAlways(color, params.brightness());
         }
     }
 
 public:
 
-    static inline ColorType _adjustBrightness(ColorType color, BrightnessType brightness) {
+    static inline ColorType _adjustBrightness(ColorType color, uint8_t brightness) {
         if (color) {
             return _adjustBrightnessAlways(color, brightness);
         }
         return color;
     }
 
-    static inline ColorType _adjustBrightnessAlways(ColorType color, BrightnessType brightness) {
+    static inline ColorType _adjustBrightnessAlways(ColorType color, uint16_t brightness) {
         auto ptr = reinterpret_cast<uint8_t *>(&color);
-        *ptr = *ptr * brightness / kMaxBrightness; ptr++;
-        *ptr = *ptr * brightness / kMaxBrightness; ptr++;
-        *ptr = *ptr * brightness / kMaxBrightness;
+        if (*ptr) {
+            *ptr = *ptr * brightness / kMaxBrightness;
+        }
+            ptr++;
+        if (*ptr) {
+            *ptr = *ptr * brightness / kMaxBrightness;
+        }
+        ptr++;
+        if (*ptr) {
+            *ptr = *ptr * brightness / kMaxBrightness;
+        }
         return color;
+    }
+
+    // returns true if settings like gamma correction, brightness, dithering etc.. can be changed without redrawing the animation
+    bool canRefreshWithoutRedraw() const {
+        return _canRefresh;
     }
 
 private:
@@ -512,4 +639,6 @@ private:
     DigitsArray _pixelAddress;
 #endif
     Params_t _params;
+    bool _dithering;
+    bool _canRefresh;
 };

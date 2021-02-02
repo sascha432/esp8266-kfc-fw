@@ -14,21 +14,21 @@
 
 #if IOT_CLOCK_SAVE_STATE
 
-void ClockPlugin::_saveStateDelayed()
+void ClockPlugin::_saveStateDelayed(uint8_t brightness)
 {
     if (get_time_diff(_saveTimestamp, millis()) > IOT_CLOCK_SAVE_STATE_DELAY * 1000U) {
         __LDBG_printf("save state delay skipped");
-        _saveState();
+        _saveState(brightness);
     }
     else {
-        _Timer(_saveTimer).add(Event::seconds(IOT_CLOCK_SAVE_STATE_DELAY), false, [this](Event::CallbackTimerPtr) {
+        _Timer(_saveTimer).add(Event::seconds(IOT_CLOCK_SAVE_STATE_DELAY), false, [this, brightness](Event::CallbackTimerPtr) {
             __LDBG_printf("executing save state delay");
-            _saveState();
+            _saveState(brightness);
         });
     }
 }
 
-void ClockPlugin::_saveState(int32_t brightness)
+void ClockPlugin::_saveState(uint8_t brightness)
 {
     auto state = _getState();
     auto newState = StoredState(_config, brightness);
@@ -82,7 +82,7 @@ void ClockPlugin::_setState(bool state)
             else {
                 setBrightness(_config.getBrightness());
 #if IOT_CLOCK_SAVE_STATE
-                _saveState();
+                _saveState(_targetBrightness);
 #endif
             }
         }
@@ -90,7 +90,7 @@ void ClockPlugin::_setState(bool state)
     else {
         setBrightness(0);
 #if IOT_CLOCK_SAVE_STATE
-        _saveState();
+        _saveState(_savedBrightness);
 #endif
     }
 }

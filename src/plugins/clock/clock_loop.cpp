@@ -4,6 +4,8 @@
 
 #if !IOT_LED_MATRIX
 
+#error TODO merge with led_matrix_loop
+
 #include <Arduino_compat.h>
 #include <EventScheduler.h>
 #include <ReadADC.h>
@@ -15,26 +17,24 @@
 #include <debug_helper_disable.h>
 #endif
 
-ClockPlugin::LoopOptionsType::LoopOptionsType(ClockPlugin &plugin) :
-    _plugin(plugin),
+#if IOT_CLOCK_USE_DITHERING == 0
+#define _dithering()
+#endif
+
+Clock::ClockLoopOptions::ClockLoopOptions(ClockPlugin &plugin) :
+    LoopOptionsBase(plguin),
+    _updateRate(plugin.getUpdateRate()),
+    _forceUpdate(plugin._forceUpdate),
+    _isFading(plugin._isFading),
+    _time(plugin._time),
     _millis(millis()),
-    _millisSinceLastUpdate(get_time_diff(_plugin._lastUpdateTime, _millis)),
+    _millisSinceLastUpdate(get_time_diff(plugin._lastUpdateTime, _millis)),
     _now(time(nullptr)),
     _tm({})
 {
 }
 
-uint32_t ClockPlugin::LoopOptionsType::getTimeSinceLastUpdate() const
-{
-    return _millisSinceLastUpdate;
-}
-
-uint32_t ClockPlugin::LoopOptionsType::getMillis() const
-{
-    return _millis;
-}
-
-struct ClockPlugin::LoopOptionsType::tm24 &ClockPlugin::LoopOptionsType::getLocalTime(time_t *nowPtr)
+struct Clock::ClockLoopOptions::tm24 &Clock::ClockLoopOptions::getLocalTime(time_t *nowPtr)
 {
     if (!nowPtr) {
         nowPtr = &_now;
@@ -42,30 +42,6 @@ struct ClockPlugin::LoopOptionsType::tm24 &ClockPlugin::LoopOptionsType::getLoca
     _tm = localtime(nowPtr);
     _tm.set_format_24h(_plugin._config.time_format_24h);
     return _tm;
-}
-
-time_t ClockPlugin::LoopOptionsType::getNow() const {
-    return _now;
-}
-
-bool ClockPlugin::LoopOptionsType::doUpdate() const
-{
-    return (_millisSinceLastUpdate >= (_plugin._isFading ? (1000 / 50/*Hz*/) : _plugin._updateRate));
-}
-
-bool ClockPlugin::LoopOptionsType::hasTimeChanged() const
-{
-    return _now != _plugin._time;
-}
-
-bool ClockPlugin::LoopOptionsType::doRedraw()
-{
-    if (_plugin._forceUpdate || doUpdate() || hasTimeChanged()) {
-        _plugin._forceUpdate = false;
-        _plugin._time = _now;
-        return true;
-    }
-    return false;
 }
 
 
@@ -180,10 +156,12 @@ void ClockPlugin::_loop()
 #    if IOT_CLOCK_BUTTON_PIN
     // check buttons
     if (_loopUpdateButtons(options)) {
+        _dithering();
         return;
     }
 #    endif
     if (!options.doUpdate()) {
+        _dithering();
         return;
     }
 
@@ -193,11 +171,13 @@ void ClockPlugin::_loop()
 
 #    if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
     if (_loopDisplayLightSensor(options)) {
+        _dithering();
         return;
     }
 #    endif
 #    if IOT_CLOCK_PIXEL_SYNC_ANIMATION
     if (_loopSyncingAnimation(options)) {
+        _dithering();
         return;
     }
 #    endif
@@ -254,6 +234,9 @@ void ClockPlugin::_loop()
         __DBGTM(mt.start());
         _display.show();
         __DBGTM(_displayTime.push_back(mt.getTime()));
+    }
+    else {
+        _dithering();
     }
 }
 

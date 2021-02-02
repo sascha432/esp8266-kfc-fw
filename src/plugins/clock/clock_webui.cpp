@@ -5,6 +5,7 @@
 #include <Arduino_compat.h>
 #include "clock.h"
 #include <WebUISocket.h>
+#include <stl_ext/algorithm.h>
 #include "../src/plugins/sensor/sensor.h"
 
 #if DEBUG_IOT_CLOCK
@@ -17,7 +18,7 @@ void ClockPlugin::getValues(JsonArray &array)
 {
     auto obj = &array.addObject(3);
     obj->add(JJ(id), F("btn_animation"));
-    // obj->add(JJ(state), true);
+    obj->add(JJ(state), true);
     obj->add(JJ(value), _config.animation); //static_cast<int>(_config.animation));
 
 #if !IOT_LED_MATRIX
@@ -36,14 +37,13 @@ void ClockPlugin::getValues(JsonArray &array)
 #endif
     obj->add(JJ(value), _getColor());
 
-    obj = &array.addObject(2);
+    obj = &array.addObject(3);
     obj->add(JJ(id), FSPGM(brightness));
-    // obj->add(JJ(state), true);
-    obj->add(JJ(value), _targetBrightness == 0 ? _savedBrightness : _targetBrightness);
+    obj->add(JJ(state), _targetBrightness != 0);
+    obj->add(JJ(value), static_cast<uint32_t>(_targetBrightness ? _targetBrightness : _savedBrightness));
 
     obj = &array.addObject(2);
     obj->add(JJ(id), F("temp_prot"));
-    // obj->add(JJ(state), true);
     if (_tempBrightness == -1) {
         obj->add(JJ(value), F("OVERHEATED"));
     }
@@ -52,16 +52,17 @@ void ClockPlugin::getValues(JsonArray &array)
     }
 
 #if IOT_CLOCK_SAVE_STATE
-    obj = &array.addObject(2);
+    obj = &array.addObject(3);
     obj->add(JJ(id), F("power"));
-    obj->add(JJ(value), _targetBrightness != 0);
+    obj->add(JJ(state), true);
+    obj->add(JJ(value), static_cast<bool>(_targetBrightness));
 #endif
 
 #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
     obj = &array.addObject(3);
     obj->add(JJ(id), FSPGM(light_sensor));
-    obj->add(JJ(value), _getLightSensorWebUIValue());
     obj->add(JJ(state), true);
+    obj->add(JJ(value), _getLightSensorWebUIValue());
 #endif
 }
 
@@ -95,15 +96,15 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
 #endif
         if (String_equals(id, PSTR("btn_animation"))) {
             setAnimation(static_cast<AnimationType>(val));
-            _saveStateDelayed();
+            _saveStateDelayed(_targetBrightness);
         }
         else if (String_equals(id, PSTR("color"))) {
             setColorAndRefresh(val);
-            _saveStateDelayed();
+            _saveStateDelayed(_targetBrightness);
         }
         else if (String_equals(id, SPGM(brightness))) {
-            setBrightness(val);
-            _saveStateDelayed();
+            setBrightness(std::clamp<uint8_t>(val, 0, kMaxBrightness));
+            _saveStateDelayed(_targetBrightness ? _targetBrightness : _savedBrightness);
         }
     }
 }

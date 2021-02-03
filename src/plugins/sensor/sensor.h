@@ -87,7 +87,9 @@
 
 class SensorPlugin : public PluginComponent {
 public:
-    typedef std::vector<MQTTSensor *> SensorVector;
+    using SensorType = MQTTSensor::SensorType;
+    using SensorVector = std::vector<MQTTSensor *>;
+    using AddCustomSensorCallback = std::function<void(WebUIRoot &webUI, WebUIRow **row, SensorType nextType)>;
 
 // WebUI
 public:
@@ -113,6 +115,18 @@ public:
 
     static SensorPlugin &getInstance();
 
+    // the callback is invoked before a sensor is added
+    // the last type is SensorType::MAX for appending a new sensor at the end
+    void setAddCustomSensorsCallback(AddCustomSensorCallback callback) {
+        _addCustomSensors = callback;
+    }
+    // to use multiple callbacks, get the previous callback and call it from the new callback function
+    // a copy, std:swap() or std::move() must be used
+    AddCustomSensorCallback &getAddCustomSensorsCallback() {
+        return _addCustomSensors;
+    }
+
+
 #if AT_MODE_SUPPORTED
     virtual void atModeHelpGenerator() override;
     virtual bool atModeHandler(AtModeArgs &args) override;
@@ -134,6 +148,7 @@ private:
 
     SensorVector _sensors;
     Event::Timer _timer;
+    AddCustomSensorCallback _addCustomSensors;
 
 public:
     template <class T>

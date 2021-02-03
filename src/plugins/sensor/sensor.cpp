@@ -196,13 +196,13 @@ void SensorPlugin::createConfigureForm(FormCallbackType type, const String &form
             sensor->configurationSaved(&form);
         }
     }
-    else if (!isCreateFormCallbackType(type)) {
+    if (!isCreateFormCallbackType(type)) {
         return;
     }
 
     auto &ui = form.createWebUI();
     ui.setTitle(F("Sensor Configuration"));
-    ui.setContainerId(F("sensor_settings"));
+    ui.setContainerId(F("sensors"));
     ui.setStyle(FormUI::WebUI::StyleType::ACCORDION);
 
     for(auto sensor: _sensors) {
@@ -229,7 +229,13 @@ void SensorPlugin::createWebUI(WebUIRoot &webUI)
     }
 
     for(auto sensor: _sensors) {
+        if (_addCustomSensors) {
+            _addCustomSensors(webUI, &row, sensor->getType());
+        }
         sensor->createWebUI(webUI, &row);
+    }
+    if (_addCustomSensors) {
+        _addCustomSensors(webUI, &row, SensorType::MAX);
     }
 }
 

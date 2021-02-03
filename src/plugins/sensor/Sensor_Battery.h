@@ -60,12 +60,12 @@ public:
 
     virtual void reconfigure(PGM_P source) override;
 
-#if AT_MODE_SUPPORTED
-    virtual void atModeHelpGenerator() override;
-    virtual bool atModeHandler(AtModeArgs &args) override;
-#endif
+// #if AT_MODE_SUPPORTED
+//     virtual void atModeHelpGenerator() override;
+//     virtual bool atModeHandler(AtModeArgs &args) override;
+// #endif
 
-    static float readSensor();
+    // static float readSensor();
 
 private:
     String _getId(BatteryType type = BatteryType::LEVEL);

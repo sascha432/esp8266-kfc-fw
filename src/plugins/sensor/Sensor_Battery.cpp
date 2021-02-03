@@ -131,16 +131,16 @@ void Sensor_Battery::createConfigureForm(AsyncWebServerRequest *request, FormUI:
     form.addObjectGetterSetter(F("sp_pr"), cfg, cfg.get_bits_precision, cfg.set_bits_precision);
     form.addFormUI(F("Display Precision"));
 
+    group.end();
+
+#if IOT_SENSOR_BATTERY_CHARGE_DETECTION
+
     FormUI::Container::List pins(KFCConfigurationClasses::createFormPinList());
     FormUI::Container::List pinModes(
         Plugins::Sensor::BatteryPinMode::NONE, F("Disabled"),
         Plugins::Sensor::BatteryPinMode::ACTIVE_LOW, F("Active Low"),
         Plugins::Sensor::BatteryPinMode::ACTIVE_HIGH, F("Active High")
     );
-
-    group.end();
-
-#if IOT_SENSOR_BATTERY_CHARGE_DETECTION
 
     auto &pinsGroup = form.addCardGroup(FSPGM(config), F("Pin Configuration"), false);
 
@@ -176,12 +176,12 @@ void Sensor_Battery::reconfigure(PGM_P source)
     __LDBG_printf("calibration=%f, precision=%u", _config.calibration, _config.precision);
 }
 
-float Sensor_Battery::readSensor()
-{
-    return SensorPlugin::for_each<Sensor_Battery, float>(nullptr, NAN, [](Sensor_Battery &sensor) {
-        return sensor._readSensor();
-    });
-}
+// float Sensor_Battery::readSensor()
+// {
+//     return SensorPlugin::for_each<Sensor_Battery, float>(nullptr, NAN, [](Sensor_Battery &sensor) {
+//         return sensor._readSensor();
+//     });
+// }
 
 float Sensor_Battery::_readSensor()
 {
@@ -239,41 +239,41 @@ String Sensor_Battery::_getTopic(BatteryType type)
     return MQTTClient::formatTopic(_getId(type));
 }
 
-#if AT_MODE_SUPPORTED
+// #if AT_MODE_SUPPORTED
 
-#include "at_mode.h"
+// #include "at_mode.h"
 
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(SENSORPBV, "SENSORPBV", "<interval in ms>", "Print battery voltage");
+// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(SENSORPBV, "SENSORPBV", "<interval in ms>", "Print battery voltage");
 
-void Sensor_Battery::atModeHelpGenerator()
-{
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(SENSORPBV), SensorPlugin::getInstance().getName_P());
-}
+// void Sensor_Battery::atModeHelpGenerator()
+// {
+//     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(SENSORPBV), SensorPlugin::getInstance().getName_P());
+// }
 
-bool Sensor_Battery::atModeHandler(AtModeArgs &args)
-{
-    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SENSORPBV))) {
-        _timer.remove();
+// bool Sensor_Battery::atModeHandler(AtModeArgs &args)
+// {
+//     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SENSORPBV))) {
+//         _timer.remove();
 
-        auto &serial = args.getStream();
-        auto printVoltage = [&serial, this](Event::CallbackTimerPtr timer) {
-            auto value = Sensor_Battery::readSensor();
-            serial.printf_P(PSTR("+SENSORPBV: %.4fV (calibration %f, offset=%f)\n"),
-                value,
-                _config.calibration,
-                _config.offset
-            );
-        };
-        printVoltage(nullptr);
-        auto repeat = args.toMillis(AtModeArgs::FIRST, 500, ~0, 0, String('s'));
-        if (repeat) {
-            _Timer(_timer).add(repeat, true, printVoltage);
-        }
-        return true;
-    }
-    return false;
-}
+//         auto &serial = args.getStream();
+//         auto printVoltage = [&serial, this](Event::CallbackTimerPtr timer) {
+//             auto value = readSensor();
+//             serial.printf_P(PSTR("+SENSORPBV: %.4fV (calibration %f, offset=%f)\n"),
+//                 value,
+//                 _config.calibration,
+//                 _config.offset
+//             );
+//         };
+//         printVoltage(nullptr);
+//         auto repeat = args.toMillis(AtModeArgs::FIRST, 500, ~0, 0, String('s'));
+//         if (repeat) {
+//             _Timer(_timer).add(repeat, true, printVoltage);
+//         }
+//         return true;
+//     }
+//     return false;
+// }
 
-#endif
+// #endif
 
 #endif

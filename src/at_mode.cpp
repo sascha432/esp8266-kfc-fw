@@ -1897,11 +1897,16 @@ void at_mode_serial_handle_event(String &commandString)
 void at_mode_serial_input_handler(Stream &client)
 {
     static String line;
+    static bool lastWasCR = false;
 
     if (System::Flags::getConfig().is_at_mode_enabled) {
         auto serial = StreamWrapper(serialHandler.getStreams(), serialHandler.getInput()); // local output online
         while(client.available()) {
             int ch = client.read();
+            if (lastWasCR == true && ch == '\n') {
+                lastWasCR = false;
+                continue;
+            }
             switch(ch) {
                 case 9:
                     if (!line.length()) {
@@ -1917,11 +1922,12 @@ void at_mode_serial_input_handler(Stream &client)
                     break;
                 case '\n':
                     serial.write('\n');
-                    at_mode_serial_handle_event(line);
-                    line = String();
                     break;
                 case '\r':
-                    serial.write('\r');
+                    lastWasCR = true;
+                    serial.print(F("\r\n"));
+                    at_mode_serial_handle_event(line);
+                    line = String();
                     break;
                 default:
                     line += (char)ch;

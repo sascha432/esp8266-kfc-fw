@@ -57,6 +57,11 @@ bool PluginComponent::nameEquals(const String &name) const
     return strcmp_P(name.c_str(), getName_P()) == 0;
 }
 
+void PluginComponent::preSetup(SetupModeType mode)
+{
+
+}
+
 void PluginComponent::setup(SetupModeType mode)
 {
 }

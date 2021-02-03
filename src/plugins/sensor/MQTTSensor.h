@@ -29,7 +29,8 @@ DECLARE_ENUM(MQTTSensorSensorType, uint8_t,
     INA219,
     DHTxx,
     DIMMER_METRICS,
-    SYSTEM_METRICS
+    SYSTEM_METRICS,
+    MAX
 );
 
 #if DEBUG_IOT_SENSOR

@@ -220,6 +220,16 @@ void setup_plugins(PluginComponent::SetupModeType mode)
             __DBG_printf("plugin=%s blacklist=%s", plugin->getName_P(), blacklist);
             continue;
         }
+        if ((mode != PluginComponent::SetupModeType::SAFE_MODE) || (mode == PluginComponent::SetupModeType::SAFE_MODE && plugin->allowSafeMode())) {
+            plugin->preSetup(mode);
+        }
+    }
+
+    for(const auto plugin : plugins) {
+        if (stringlist_find_P_P(blacklist, plugin->getName_P()) != -1) {
+            __DBG_printf("plugin=%s blacklist=%s", plugin->getName_P(), blacklist);
+            continue;
+        }
         bool runSetup = (
             (mode == PluginComponent::SetupModeType::DEFAULT) ||
             (mode == PluginComponent::SetupModeType::SAFE_MODE && plugin->allowSafeMode())

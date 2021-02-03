@@ -270,6 +270,9 @@ public:
 
 // Virtual methods
 public:
+    // executed after all plugins have been registered
+    virtual void preSetup(SetupModeType mode);
+
     // executed during boot
     virtual void setup(SetupModeType mode);
 

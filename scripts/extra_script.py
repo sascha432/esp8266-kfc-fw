@@ -5,10 +5,14 @@ try:
     import configparser
 except ImportError:
     import ConfigParser as configparser
+from SCons.Script import ARGUMENTS
 import subprocess
 import shutil
 import os.path
+from os import path
 import sys
+import click
+import re
 
 def new_build(source, target, env):
     env.Execute(env['PYTHONEXE'] + " \"${PROJECT_DIR}/scripts/build_number.py\" -v \"${PROJECT_DIR}/include/build.h\"");
@@ -127,6 +131,32 @@ def mem_analyzer(source, target, env):
     p = subprocess.Popen(args, text=True)
     p.wait()
 
+def disassemble(source, target, env):
+
+    verbose = int(ARGUMENTS.get("PIOVERBOSE", 0))
+
+    source = path.abspath(env.subst('$PIOMAINPROG'))
+    target = env.subst(env.GetProjectOption('custom_disassemble_target', '$BUILD_DIR/${PROGNAME}.lst'))
+    target = path.abspath(target)
+
+    command = env.subst(env.GetProjectOption('custom_disassemble_bin', env['CC'].replace('gcc', 'objdump')))
+
+    options = re.split(r'[\s]', env.subst(env.GetProjectOption('custom_disassemble_options', '-S -C')))
+
+    args = [ command ] + options + [source, '>', target]
+    if verbose:
+        click.echo(' '.join(args))
+
+    return_code = subprocess.run(args, shell=True).returncode
+    if return_code!=0:
+        click.secho('failed to run: %s' % ' '.join(args))
+        print(env.Dump())
+        env.Exit(1)
+
+    click.echo('-' * click.get_terminal_size()[0])
+    click.secho('Created: ', fg='yellow', nl=False)
+    click.secho(target)
+
 
 env.AddPreAction("upload", modify_upload_command)
 env.AddPreAction("uploadota", modify_upload_command)
@@ -135,6 +165,16 @@ env.AddPreAction("uploadfsota", modify_upload_command_fs)
 
 env.AlwaysBuild(env.Alias("newbuild", None, new_build))
 
-env.AddPostAction("$BUILD_DIR/${PROGNAME}.elf", mem_analyzer)
+env.AddPostAction(env['PIOMAINPROG'], mem_analyzer)
 # env.AddPostAction("$BUILD_DIR/${PROGNAME}.bin", copy_firmware)
 
+env.AlwaysBuild(env.Alias("disasm", None, disassemble))
+env.AlwaysBuild(env.Alias("disassemble", [env['PIOMAINPROG']], disassemble))
+
+env.AddCustomTarget("disassemble", None, [], title="disassemble main prog", description="run objdump to create disassembly", always_build=True)
+
+
+def skip_node(node):
+    return None
+
+env.AddBuildMiddleware(skip_node, '$PROJECT_INCLUDE_DIR/build.h')

@@ -191,6 +191,8 @@ namespace FormUI {
             HOST_OR_IP = HOSTNAME | IPADDRESS,
             HOST_OR_IP_OR_EMPTY = HOSTNAME | IPADDRESS | EMPTY,
             EMPTY_AND_ZEROCONF = EMPTY | ZEROCONF,
+            HOST_OR_IP_OR_ZEROCONF = HOST_OR_IP | ZEROCONF,
+            HOST_OR_IP_OR_ZEROCONF_OR_EMPTY = HOST_OR_IP | ZEROCONF | EMPTY,
         };
 
     }

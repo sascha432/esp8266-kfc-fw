@@ -66,7 +66,7 @@ void MQTTPlugin::createConfigureForm(FormCallbackType type, const String &formNa
 
     form.addStringGetterSetter(FSPGM(host), ClientConfig::getHostname, ClientConfig::setHostname);
     form.addFormUI(FSPGM(Hostname), FormUI::ZeroconfSuffix());
-    form.addValidator(FormUI::Validator::Hostname(FormUI::AllowedType::ZEROCONF));
+    form.addValidator(FormUI::Validator::Hostname(FormUI::AllowedType::HOST_OR_IP_OR_ZEROCONF));
     form.addValidator(FormUI::Validator::Length(3, ClientConfig::kHostnameMaxSize));
 
     form.addCallbackSetter(FSPGM(port), cfg.getPortAsString(), [&cfg](const String &value, FormField &field) {

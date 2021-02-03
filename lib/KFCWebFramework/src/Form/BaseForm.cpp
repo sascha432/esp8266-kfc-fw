@@ -38,6 +38,7 @@ Field::BaseField *Form::BaseForm::getField(const __FlashStringHelper *name) cons
 
 bool Form::BaseForm::validate()
 {
+    __LDBG_printf("validate form");
     validateOnly();
     if (_hasChanged) {
         copyValidatedData();
@@ -56,7 +57,7 @@ bool Form::BaseForm::validateOnly()
     clearErrors();
     for (const auto &_field: _fields) {
         auto field = _field.get();
-        // __DBG_printf("name=%s disabled=%u", field->getName().c_str(), field->isDisabled());
+        __LDBG_printf("name=%s disabled=%u", field->getName(), field->isDisabled());
 
         if (field->getType() == Field::Type::GROUP || field->isDisabled()) {
             // field ist a group or disabled
@@ -76,6 +77,7 @@ bool Form::BaseForm::validateOnly()
 
             auto iterator = _validatorFind(_validators, field);
             while (iterator) {
+                __LDBG_printf("iterator %p", iterator);
                 if (!iterator->validate()) {
                     _addError(field, iterator->getMessage());
                     restoreUserValue = true;

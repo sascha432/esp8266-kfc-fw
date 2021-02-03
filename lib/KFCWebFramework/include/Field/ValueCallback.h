@@ -36,26 +36,31 @@ namespace FormUI {
         public:
             ValueCallback(const char *name, const VarType &value, GetterSetterCallback callback, Type type = Type::SELECT) :
                 ValueTemplate<Ta>(name, type),
-                _callback(callback)
+                _callback(callback),
+                _insideCallback(false)
             {
                 _initValue(static_cast<VarType>(value));
             }
 
             ValueCallback(const char *name, const _VarType &value, SetterCallback callback, Type type = Type::SELECT) :
                 ValueTemplate<Ta>(name, type),
-                _callback([callback](_VarType &value, Field::BaseField &field, bool store) {
+                _callback([this, callback](_VarType &value, Field::BaseField &field, bool store) {
+                    _insideCallback++;
                     if (store) {
                         callback(value, field);
                     }
+                    _insideCallback--;
                     return false;
-                })
+                }),
+                _insideCallback(false)
             {
                 _initValue(static_cast<VarType>(value));
             }
 
             ValueCallback(const char *name, GetterSetterCallback callback, Type type = Type::SELECT) :
                 ValueTemplate<Ta>(name, type),
-                _callback(callback)
+                _callback(callback),
+                _insideCallback(false)
             {
                 _initValue();
             }
@@ -68,15 +73,19 @@ namespace FormUI {
             virtual void copyValue() override {
                 VarType tmp;
                 _stringToValue(tmp, Field::BaseField::getValue());
+                _insideCallback++;
                 _callback(reinterpret_cast<_VarType &>(tmp), *this, true);
+                _insideCallback--;
             }
 
             virtual bool setValue(const String &value) override {
                 VarType tmp;
                 _stringToValue(tmp, value);
-                if (!(_callback(reinterpret_cast<_VarType &>(tmp), *this, true) && _callback(reinterpret_cast<_VarType &>(tmp), *this, false))) { // convert from user input and back to compare values
-                    // callback failed
-                    _stringToValue(tmp, value);
+                if (_insideCallback == 0) {
+                    if (!(_callback(reinterpret_cast<_VarType &>(tmp), *this, true) && _callback(reinterpret_cast<_VarType &>(tmp), *this, false))) { // convert from user input and back to compare values
+                        // callback failed
+                        _stringToValue(tmp, value);
+                    }
                 }
                 return Field::BaseField::setValue(_valueToString(tmp));
             }
@@ -85,12 +94,15 @@ namespace FormUI {
             void _initValue(VarType value = VarType())
             {
                 VarType tmp;
+                _insideCallback++;
                 if (_callback(reinterpret_cast<_VarType &>(tmp), *this, false)) { // we have a callback, check if it supports getting the value
                     // replace on success
                     value = tmp;
                 }
+                _insideCallback--;
                 Field::BaseField::initValue(_valueToString(value));
             }
+            uint8_t _insideCallback;
         };
 
 #ifndef _MSC_VER

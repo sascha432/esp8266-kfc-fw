@@ -47,18 +47,18 @@ void NTPPlugin::createConfigureForm(FormCallbackType type, const String &formNam
 
     form.addStringGetterSetter(F("ntpsvr1"), Plugins::NTPClient::getServer1, Plugins::NTPClient::setServer1);
     form.addFormUI(F("NTP Server 1"));
-    form.addValidator(FormUI::Validator::Hostname(FormUI::AllowedType::EMPTY));
+    form.addValidator(FormUI::Validator::Hostname(FormUI::AllowedType::HOST_OR_IP_OR_EMPTY));
 
     form.addStringGetterSetter(F("ntpsvr2"), Plugins::NTPClient::getServer2, Plugins::NTPClient::setServer2);
     form.addFormUI(F("NTP Server 2"));
-    form.addValidator(FormUI::Validator::Hostname(FormUI::AllowedType::EMPTY));
+    form.addValidator(FormUI::Validator::Hostname(FormUI::AllowedType::HOST_OR_IP_OR_EMPTY));
 
     form.addStringGetterSetter(F("ntpsvr3"), Plugins::NTPClient::getServer3, Plugins::NTPClient::setServer3);
     form.addFormUI(F("NTP Server 3"));
-    form.addValidator(FormUI::Validator::Hostname(FormUI::AllowedType::EMPTY));
+    form.addValidator(FormUI::Validator::Hostname(FormUI::AllowedType::HOST_OR_IP_OR_EMPTY));
 
     form.addObjectGetterSetter(F("ntpri"), ntp, ntp.get_bits_refreshInterval, ntp.set_bits_refreshInterval);
-    form.addFormUI(FormUI::Type::NUMBER, FSPGM(Refresh_Interval, "Refresh Interval"), FormUI::Suffix(FSPGM(minutes__5_, "minutes \u00b15%")));
+    form.addFormUI(FormUI::Type::NUMBER, FSPGM(Refresh_Interval, "Refresh Interval"), FormUI::Suffix(FSPGM(minutes__5_, "minutes ±5%")));
     ntp.addRangeValidatorFor_refreshInterval(form);
 
     group.end();

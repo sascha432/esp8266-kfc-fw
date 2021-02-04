@@ -20,27 +20,41 @@
 // initial delay after connect
 // +-10%
 #ifndef MQTT_AUTO_DISCOVERY_QUEUE_INITIAL_DELAY
-#define MQTT_AUTO_DISCOVERY_QUEUE_INITIAL_DELAY                 5000
+#define MQTT_AUTO_DISCOVERY_QUEUE_INITIAL_DELAY                 30000
 #endif
 
 // delay between sending auto discovery
 #ifndef MQTT_AUTO_DISCOVERY_QUEUE_DELAY
-#define MQTT_AUTO_DISCOVERY_QUEUE_DELAY                         1000
+#define MQTT_AUTO_DISCOVERY_QUEUE_DELAY                         5000
 #endif
 
 class MQTTClient;
 
 class MQTTAutoDiscoveryQueue {
+private:
+    struct __attribute__((packed)) StateFileType {
+        bool _valid;
+        uint16_t _crc;
+        uint32_t _lastAutoDiscoveryTimestamp;
+        StateFileType(uint16_t crc = 0, uint32_t lastAutoDiscoveryTimestamp = 0) : _valid(IS_TIME_VALID(lastAutoDiscoveryTimestamp) && crc && crc != ~0U), _crc(crc), _lastAutoDiscoveryTimestamp(lastAutoDiscoveryTimestamp) {}
+    };
+
 public:
     MQTTAutoDiscoveryQueue(MQTTClient &client);
     ~MQTTAutoDiscoveryQueue();
 
+    // clear queue and set last state to invalid
     void clear();
-    void publish();
+
+    // publish queue
+    void publish(bool force = false);
 
 private:
     void _timerCallback(Event::CallbackTimerPtr timer);
-    void _publishDone();
+    void _publishDone(bool success = true, uint32_t delay = 0);
+
+    static void _setState(const StateFileType &state);
+    static StateFileType _getState();
 
 private:
     friend MQTTClient;
@@ -48,9 +62,11 @@ private:
     MQTTClient &_client;
     Event::Timer _timer;
     MQTTComponent::Vector::iterator _next;
-    uint16_t _counter;
+    uint32_t _counter;
     uint32_t _size;
     uint32_t _discoveryCount;
+    uint16_t _crc;
+    bool _lastFailed;
 #if DEBUG_MQTT_AUTO_DISCOVERY_QUEUE
     uint32_t _start;
     size_t _maxQueue;

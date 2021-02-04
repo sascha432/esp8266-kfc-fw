@@ -97,11 +97,6 @@ uint8_t MQTTComponent::rewindAutoDiscovery()
     return false;
 }
 
-uint8_t MQTTComponent::getAutoDiscoveryNumber()
-{
-    return _autoDiscoveryNum++;
-}
-
 #endif
 
 MQTTComponent::NameType MQTTComponent::getNameByType(ComponentType type)

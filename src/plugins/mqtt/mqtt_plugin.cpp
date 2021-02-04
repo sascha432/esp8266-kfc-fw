@@ -165,7 +165,7 @@ bool MQTTPlugin::atModeHandler(AtModeArgs &args)
                     break;
                 case 7: // autodiscovery
                 case 8: // auto
-                    if (client.isConnected() && client.publishAutoDiscovery()) {
+                    if (client.isConnected() && client.publishAutoDiscovery(true)) {
                         args.print(F("auto discovery started"));
                     }
                     else {

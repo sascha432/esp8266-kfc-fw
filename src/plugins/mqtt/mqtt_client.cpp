@@ -154,7 +154,7 @@ void MQTTClient::_setupClient()
         __LDBG_printf("packet_id=%u", packetId);
     });
     _client->onSubscribe([this](uint16_t packetId, uint8_t qos) {
-        __LDBG_printf("packet_id=%u qos=%u", packetId, qos);
+        __LDBG_printf("packet_id=%u qos=%d", packetId, qos);
     });
     _client->onUnsubscribe([this](uint16_t packetId) {
         __LDBG_printf("packet_id=%u", packetId);
@@ -526,7 +526,7 @@ int MQTTClient::subscribeWithId(ComponentPtr component, const String &topic, Qos
         __DBG_panic("subscribeWithId: topic is empty");
     }
 #endif
-    __LDBG_printf("component=%p topic=%s qos=%u conn=%s", component, topic.c_str(), qos, _connection());
+    __LDBG_printf("component=%p topic=%s qos=%d conn=%s", component, topic.c_str(), qos, _connection());
     auto result = _client->subscribe(topic.c_str(), MQTTClient::_translateQosType(qos));
     if (result && component) {
         _topics.emplace_back(topic, component);
@@ -650,7 +650,7 @@ void MQTTClient::publishPersistantStorage(StorageFrequencyType type, const Strin
     publish(formatTopic(str), true, data, QosType::PERSISTENT_STORAGE);
 }
 
-bool MQTTClient::publishAutoDiscovery()
+bool MQTTClient::publishAutoDiscovery(bool force)
 {
 #if MQTT_AUTO_DISCOVERY
     _autoDiscoveryRebroadcast.remove();
@@ -661,7 +661,7 @@ bool MQTTClient::publishAutoDiscovery()
         }
         else {
             _autoDiscoveryQueue.reset(new MQTTAutoDiscoveryQueue(*this));
-            _autoDiscoveryQueue->publish();
+            _autoDiscoveryQueue->publish(force);
             return true;
         }
     }
@@ -671,13 +671,17 @@ bool MQTTClient::publishAutoDiscovery()
 
 int MQTTClient::publishWithId(const String &topic, bool retain, const String &payload, QosType qos)
 {
-    __LDBG_printf("topic=%s qos=%u retain=%d payload=%s conn=%s", topic.c_str(), qos, retain, printable_string(payload.c_str(), payload.length(), DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str(), _connection());
+    __LDBG_printf("topic=%s qos=%d retain=%d payload=%s conn=%s", topic.c_str(), qos, retain, printable_string(payload.c_str(), payload.length(), DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str(), _connection());
+    if (topic.length() == 0) {
+        Logger_error(F("Emtpy topic publish to MQTT server"));
+        return 0;
+    }
     return _client->publish(topic.c_str(), MQTTClient::_translateQosType(qos), retain, payload.c_str(), payload.length());
 }
 
 void MQTTClient::onMessageRaw(char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total)
 {
-    __LDBG_printf("topic=%s payload=%s idx:len:total=%d:%d:%d qos=%u dup=%d retain=%d", topic, printable_string(payload, len, DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str(), index, len, total, properties.qos, properties.dup, properties.retain);
+    __LDBG_printf("topic=%s payload=%s idx:len:total=%d:%d:%d qos=%d dup=%d retain=%d", topic, printable_string(payload, len, DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str(), index, len, total, properties.qos, properties.dup, properties.retain);
     if (total > MQTT_RECV_MAX_MESSAGE_SIZE) {
         __LDBG_printf("discarding message, size exceeded %d/%d", (unsigned)total, MQTT_RECV_MAX_MESSAGE_SIZE);
         return;
@@ -704,7 +708,7 @@ void MQTTClient::onMessageRaw(char *topic, char *payload, AsyncMqttClientMessage
 
 void MQTTClient::onMessage(char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len)
 {
-    __LDBG_printf("topic=%s payload=%s len=%d qos=%u dup=%d retain=%d", topic, printable_string(payload, len, DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str(), len, properties.qos, properties.dup, properties.retain);
+    __LDBG_printf("topic=%s payload=%s len=%d qos=%d dup=%d retain=%d", topic, printable_string(payload, len, DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str(), len, properties.qos, properties.dup, properties.retain);
     for(const auto &mqttTopic : _topics) {
         if (_isTopicMatch(topic, mqttTopic.getTopic().c_str())) {
             mqttTopic.getComponent()->onMessage(this, topic, payload, len);

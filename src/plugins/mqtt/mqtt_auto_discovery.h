@@ -26,10 +26,12 @@ public:
     enum class FormatType : uint8_t {
         JSON,
         YAML,
+        TOPIC,
     };
 
-    void create(MQTTComponent *component, const String &componentName, FormatType format);
-    void create(ComponentTypeEnum_t componentType, const String &componentName, FormatType format);
+    // returns true to continue, false to stop (format TOPIC)
+    bool create(MQTTComponent *component, const String &componentName, FormatType format);
+    bool create(ComponentTypeEnum_t componentType, const String &componentName, FormatType format);
 
 public:
     inline void addParameter(const __FlashStringHelper *name, const char *value); // PROGMEM safe
@@ -95,6 +97,26 @@ public:
         addParameter(FSPGM(mqtt_rgb_command_topic), value);
     }
 
+    template<typename _T>
+    void addEffectCommandTopic(_T value) {
+        addParameter(FSPGM(mqtt_effect_command_topic), value);
+    }
+
+    template<typename _T>
+    void addEffectStateTopic(_T value) {
+        addParameter(FSPGM(mqtt_effect_state_topic), value);
+    }
+
+    template<typename _T>
+    void addEffectList(_T value) {
+        addParameter(FSPGM(mqtt_effect_list), value);
+    }
+
+    template<typename _T>
+    void addExpireAfter(_T value) {
+        addParameter(FSPGM(mqtt_expire_after), value);
+    }
+
     void addValueTemplate(const char *value) { // PROGMEM safe
         PrintString value_json(F("{{ value_json.%s }}"), value);
         addParameter(FSPGM(mqtt_value_template), value_json.c_str());
@@ -102,12 +124,6 @@ public:
 
     void addValueTemplate(const String &value) {
         addValueTemplate(value.c_str());
-    }
-
-    template<typename _T>
-    void addExpireAfter(_T seconds)
-    {
-        addParameter(FSPGM(mqtt_expire_after), seconds);
     }
 
     template<typename _T>
@@ -156,7 +172,7 @@ private:
 
 
 private:
-    void _create(ComponentType componentType, const String &name, FormatType format);
+    bool _create(ComponentType componentType, const String &name, FormatType format);
     const String _getUnqiueId(const String &name);
 
     FormatType _format;

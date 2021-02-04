@@ -50,7 +50,15 @@ public:
     virtual uint8_t getAutoDiscoveryCount() const = 0;
 
     uint8_t rewindAutoDiscovery();
-    uint8_t getAutoDiscoveryNumber();
+    uint8_t getAutoDiscoveryNumber() const {
+        return _autoDiscoveryNum;
+    }
+    void nextAutoDiscovery() {
+        _autoDiscoveryNum++;
+    }
+    void retryAutoDiscovery() {
+        _autoDiscoveryNum--;
+    }
 #endif
 
     virtual void onConnect(MQTTClient *client);

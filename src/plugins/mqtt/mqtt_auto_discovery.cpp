@@ -21,22 +21,22 @@
 
 using KFCConfigurationClasses::System;
 
-void MQTTAutoDiscovery::create(MQTTComponent *component, const String &componentName, FormatType format)
+bool MQTTAutoDiscovery::create(MQTTComponent *component, const String &componentName, FormatType format)
 {
-    create(component->getType(), componentName, format);
+    return create(component->getType(), componentName, format);
 }
 
-void MQTTAutoDiscovery::create(ComponentType componentType, const String &componentName, FormatType format)
+bool MQTTAutoDiscovery::create(ComponentType componentType, const String &componentName, FormatType format)
 {
     String suffix = System::Device::getName();
     if (componentName.length()) {
         suffix += '/';
         suffix += componentName;
     }
-    _create(componentType, suffix, format);
+    return _create(componentType, suffix, format);
 }
 
-void MQTTAutoDiscovery::_create(ComponentType componentType, const String &name, FormatType format)
+bool MQTTAutoDiscovery::_create(ComponentType componentType, const String &name, FormatType format)
 {
     String uniqueId;
 
@@ -49,6 +49,11 @@ void MQTTAutoDiscovery::_create(ComponentType componentType, const String &name,
     _topic += F("/config");
 
     _discovery = PrintString();
+    if (format == FormatType::TOPIC) {
+        __LDBG_printf("MQTT auto discovery topic only '%s'", _topic.c_str());
+        return false;
+    }
+
     if (_format == FormatType::JSON) {
         _discovery += '{';
 #if MQTT_AUTO_DISCOVERY_USE_ABBREVIATIONS
@@ -98,11 +103,15 @@ void MQTTAutoDiscovery::_create(ComponentType componentType, const String &name,
     }
 
     __LDBG_printf("MQTT auto discovery topic '%s'", _topic.c_str());
+    return true;
 }
 
 void MQTTAutoDiscovery::__addParameter(const __FlashStringHelper *name, const char *str)
 {
-    if (_format == FormatType::JSON) {
+    if (_format == FormatType::TOPIC) {
+        return;
+    }
+    else if (_format == FormatType::JSON) {
         _discovery.printf_P(PSTR("\"%s\":\""), name);
 #if MQTT_AUTO_DISCOVERY_USE_ABBREVIATIONS
         auto len = strlen_P(RFPSTR(name));
@@ -181,6 +190,10 @@ void MQTTAutoDiscovery::__addParameter(const __FlashStringHelper *name, const ch
 
 void MQTTAutoDiscovery::finalize()
 {
+    if (!_discovery.length()) {
+        __LDBG_printf("MQTT auto discovery payload empty");
+        return;
+    }
     if (_format == FormatType::JSON) {
         _discovery.remove(_discovery.length() - 1);
         _discovery += '}';

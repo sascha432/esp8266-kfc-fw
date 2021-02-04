@@ -220,8 +220,9 @@ public:
     void publishPersistantStorage(StorageFrequencyType type, const String &name, const String &data);
 
 public:
+    // force starts to send the auto discovery ignoring the delay between each run
     // returns false if running
-    bool publishAutoDiscovery();
+    bool publishAutoDiscovery(bool force = false);
     static void publishAutoDiscoveryCallback(Event::CallbackTimerPtr timer);
 
 public:

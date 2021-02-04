@@ -40,6 +40,22 @@ void WsConsoleClient::onText(uint8_t *data, size_t len)
 {
     auto http2serial = Http2Serial::getInstance();
     if (http2serial) {
+        String tmp;
+        if (len > 10) {
+            auto str = reinterpret_cast<const char *>(data);
+            if (*str == '+' || strncmp_P(str, PSTR("AT+"), 3) == 0) {
+                tmp.concat(str, len);
+                auto pos1 = tmp.indexOf('=');
+                if (pos1 != -1) {
+                    auto pos2 = tmp.indexOf(F("$clientid"));
+                    if (pos2 > pos1) {
+                        tmp.replace(F("$clientid"), PrintString(F("%p"), this->getClient()));
+                        data = reinterpret_cast<uint8_t *>(tmp.begin());
+                        len = tmp.length();
+                    }
+                }
+            }
+        }
         WsClient::broadcast(nullptr, this, reinterpret_cast<const char *>(data), len);
         http2serial->write(data, len);
     }

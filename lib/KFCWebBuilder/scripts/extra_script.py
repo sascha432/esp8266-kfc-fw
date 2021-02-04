@@ -34,7 +34,7 @@ def build_webui(source, target, env, force = False):
         click.secho('cannot find %s' % json_file, fg='yellow')
         env.Exit(1)
 
-    args = [ php_bin, php_file, json_file, '--branch', 'spiffs', '--env', 'env:%s' % env.subst('$PIOENV') ]
+    args = [ php_bin, php_file, json_file, '--branch', 'spiffs', '--env', 'env:%s' % env.subst('$PIOENV'), '--clean-exit-code', '0', '--dirty-exit-code', '0' ]
     if force:
         args.append('--force')
 

@@ -812,13 +812,6 @@ $.webUIComponent = {
         });
     },
 
-    _____rgb565_to_888: function (color) {
-        var b5 = (color & 0x1f);
-        var g6 = (color >> 5) & 0x3f;
-        var r5 = (color >> 11);
-        return [(r5 * 527 + 23) >> 6, (g6 * 259 + 33) >> 6, (b5 * 527 + 23) >> 6];
-    },
-
     handleRLECompressedBitmap: function(data, pos) {
 
         var x, y, width, height, ctx, image, palette = [], paletteCount, writePos = 0, maxWritePos;
@@ -852,7 +845,7 @@ $.webUIComponent = {
                 var palettergb565 = new Uint16Array(data, pos, paletteCount);
                 pos += palettergb565.byteLength;
                 for (var i = 0; i < palettergb565.length; i++) {
-                    palette.push(this._____rgb565_to_888(palettergb565[i]));
+                    palette.push($._____rgb565_to_888(palettergb565[i]));
                 }
             }
             image = ctx.createImageData(width, height);
@@ -902,7 +895,7 @@ $.webUIComponent = {
                     }
                     var tmp = new Uint8Array(data, pos, 2); // 16bit color rgb565
                     pos += tmp.byteLength;
-                    copy_rle_color(this._____rgb565_to_888((tmp[1] << 8) | tmp[0]));
+                    copy_rle_color($._____rgb565_to_888((tmp[1] << 8) | tmp[0]));
                 }
             }
 
@@ -966,11 +959,6 @@ $.webUIComponent = {
 dbg_console.register('$.webUIComponent', $.webUIComponent);
 
 if ($('#webui').length) {
-    // enable alert icons for webui
-    if ($.WebUIAlerts !== undefined) {
-        $.WebUIAlerts.icon = true;
-        $.WebUIAlerts.ignore_cookie = true;
-    }
     $(function() {
         $.webUIComponent.init();
     });

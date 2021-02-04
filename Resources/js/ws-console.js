@@ -171,11 +171,20 @@ WS_Console.prototype.connect = function(authenticated_callback) {
                 if (authenticated_callback != undefined) {
                     authenticated_callback();
                 }
+                if ($.WebUIAlerts !== undefined && $.WebUIAlerts.enabled) {
+                    $.WebUIAlerts.alert_poll_time == 0;
+                }
             }
             else if (e.data == "+AUTH_ERROR") {
                 ws_console.console_log("Authentication failed");
                 ws_console.callback({type: 'auth', success: false, socket: ws_console});
                 ws_console.disconnect();
+            }
+            else if (e.data == "+WEBUIALERT") {
+                ws_console.console_log("WebUI Alert, enabled=" + $.WebUIAlerts.enabled);
+                if ($.WebUIAlerts !== undefined && $.WebUIAlerts.enabled && $.WebUIAlerts.alert_poll_time == 0) {
+                    $.WebUIAlerts.get_json();
+                }
             }
             else {
                 ws_console.callback({type: 'data', data: e.data, socket: ws_console});
@@ -230,6 +239,11 @@ WS_Console.prototype.disconnect = function(reconnect) {
         this.socket.close();
         this.socket = null;
     }
+
+    if ($.WebUIAlerts !== undefined && $.WebUIAlerts.enabled && $.WebUIAlerts.alert_poll_time == 0) {
+        $.WebUIAlerts.alert_poll_time == $.WebUIAlerts.default_alert_poll_time;
+    }
+
     if (reconnect) {
         if (this.reconnect_timeout == null && this.auto_reconnect) {
             $.wsConsole.console.debug('reconnecting in ' + this.auto_reconnect + ' seconds')

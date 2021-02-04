@@ -40,6 +40,9 @@ public:
     // client id is sent during authentication: +CLIENT_ID=0x12345678
     // nullptr will return first client
     static AsyncWebSocketClient *getClientById(const void *clientId);
+    static AsyncWebSocketClient *getClientById(nullptr_t) {
+        return getClientById(reinterpret_cast<void *>(0));
+    }
     static AsyncWebSocketClient *getClientById(AsyncWebSocketClient *clientId) {
         return getClientById(reinterpret_cast<const void *>(clientId));
     }

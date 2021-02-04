@@ -84,17 +84,7 @@
         }
     },
 
-    dataHandler: function(event) {
-        $.http2serialPlugin.console.log("dataHandler", event);
-        if (event.type == 'data') {
-            if (event.data.substring(0, 25) == "+ATMODE_CMDS_HTTP2SERIAL=") {
-                this.addCommands(event.data.substring(25).split('\t'));
-            } else {
-                this.write(event.data);
-                this.runFilter();
-            }
-        }
-    },
+    dataHandler: null,
 
     runFilter: function() {
         if (this.filter) {
@@ -245,6 +235,159 @@
 
         this.connect();
     },
+
+    ledMatrix: {
+        'pixel_size': 0.75,
+        'alpha1': 0.9,
+        'alpha2': 0,
+        'inner_size': 0,
+        'outer_size': 0,
+        'rows': 0,
+        'cols': 0,
+    },
+
+};
+
+http2serialPlugin.appendLedMatrix = function(rows, cols, reverse_rows, reverse_cols, rotate, interleaved) {
+    this.ledMatrix.rows = rows;
+    this.ledMatrix.cols = cols;
+    var _pixel_size = this.ledMatrix.pixel_size;
+    var unit = 'rem';
+    var pixel_size = _pixel_size + unit;
+    var inner_size = (_pixel_size * 1) + unit;
+    var outer_size = (_pixel_size * 7) + unit;
+    var border_radius = _pixel_size + unit;
+
+    this.ledMatrix.inner_size = inner_size;
+    this.ledMatrix.outer_size = outer_size;
+    $('body').append('<div id="led-matrix"><div id="pixel-container"></div></div><style type="text/css"> \
+#pixel-container { \
+    position: absolute; \
+    right: 0; \
+    bottom: 0; \
+    padding: 7rem; \
+    background: rgba(0, 0, 0); \
+    z-index: 999; \
+    padding: 7rem; \
+    background: rgba(0, 0, 0); \
+    min-height: 1rem; \
+    min-width: 1rem; \
+    overflow: hidden; \
+} \
+#pixel-container .row { \
+    display: block; \
+} \
+#pixel-container .px { \
+    mix-blend-mode: lighten; \
+    margin: ' + inner_size + '; \
+    width: ' + pixel_size + '; \
+    height: ' + pixel_size + '; \
+    display: inline-block; \
+    border-radius: ' + border_radius +  '; \
+} \
+#pixel-container .ipx { \
+    mix-blend-mode: lighten; \
+    margin: 0px; \
+    width: 0px; \
+    height: 0px; \
+    display: inline; \
+    border-radius: 0px; \
+    color: white; \
+} \
+</style></div>');
+    var container = $('#pixel-container');
+    var contents = '';
+
+    function to_address(row, col) {
+        if (rotate) {
+            var tmp = row;
+            row = col;
+            col = tmp;
+        }
+        if (reverse_rows) {
+            row = (rows - 1) - row;
+        }
+        if (reverse_cols) {
+            col = (cols - 1) - col;
+        }
+        if (interleaved) {
+            if (col % 2 == 1) {
+                row = (rows - 1) - row;
+            }
+        }
+        return col * rows + row;
+    }
+
+    for (var i = 0; i < rows; i++) {
+        contents += '<div class="row">';
+        for (var j = 0; j < cols; j++) {
+            var px_id = to_address(i, j);
+            contents += '<div id="px' + px_id + '" class="px"><div class="ipx">'+px_id+'</div></div>';
+        }
+        contents += '</div>';
+    }
+    container.html(contents);
+
+    var n = 0;
+    for (var i = 0; i <rows; i++) {
+        for (var j = 0; j < cols; j++) {
+            var name = 'px' + n;
+            n++;
+            this.ledMatrixSetColor('#' + name, 0x10, 0x10, 0x10, 0.2, 0.1);
+        }
+    }
+    container.width(container.height());
+
+    return container;
+};
+
+http2serialPlugin.ledMatrixSetColor = function(selector, r, g, b, a1, a2) {
+    if (a1 === undefined) {
+        a1 = this.ledMatrix.alpha1;
+        a2 = this.ledMatrix.alpha2;
+       }
+    $(selector).
+        css('box-shadow', '0px 0px ' + this.ledMatrix.inner_size + ' ' + this.ledMatrix.inner_size + ' rgba(' + r + ', ' + g + ', ' + b + ', ' + a1 + ')').
+        css('background', 'rgba(' + r + ', ' + g + ', ' + b + ', ' + a1 + ')').
+        css('border-color', 'rgba(' + r + ', ' + g + ', ' + b + ', ' + a1 + ')');
+    $(selector).find('.ipx').
+        css('box-shadow', '0px 0px ' + this.ledMatrix.outer_size + ' ' + this.ledMatrix.outer_size + ' rgba(' + r + ', ' + g + ', ' + b + ', ' + a2 + ')').
+        css('background', 'rgba(' + r + ', ' + g + ', ' + b + ', ' + a2 + ')').
+        css('border-color', 'rgba(' + r + ', ' + g + ', ' + b + ' ' + a2 + ')');
+};
+
+$._____rgb565_to_888 = function(color) {
+    var b5 = (color & 0x1f);
+    var g6 = (color >> 5) & 0x3f;
+    var r5 = (color >> 11);
+    return [(r5 * 527 + 23) >> 6, (g6 * 259 + 33) >> 6, (b5 * 527 + 23) >> 6];
+}
+
+http2serialPlugin.dataHandler = function(event) {
+    $.http2serialPlugin.console.log("dataHandler", event);
+    if (event.data instanceof ArrayBuffer) {
+        var packetId = new Uint16Array(event.data, 0, 1);
+        if (packetId == 0x0004) {// WsClient::BinaryPacketType::LED_MATRIX_DATA
+            var container = $('#pixel-container');
+            if (container.length) {
+                var num_pixels = this.ledMatrix.rows * this.ledMatrix.cols;
+                var pixels = new Uint16Array(event.data, 2, num_pixels);
+                for (var i = 0; i < num_pixels; i++)  {
+                    var pixel = $._____rgb565_to_888(pixels[i]);
+                    this.ledMatrixSetColor('#px' + i, pixel[0], pixel[1], pixel[2]);
+                }
+            }
+        }
+    }
+    else if (event.type == 'data') {
+        if (event.data.startsWith("+ATMODE_CMDS_HTTP2SERIAL=")) {
+            this.addCommands(event.data.substring(25).split('\t'));
+        }
+        else {
+            this.write(event.data);
+            this.runFilter();
+        }
+    }
 };
 
 $.http2serialPlugin = http2serialPlugin;

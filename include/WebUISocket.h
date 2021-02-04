@@ -26,6 +26,11 @@ public:
     // buf is an allocated (new uint8_t[len + 1]) null terminated string
     // len = strlen(buf)
     static void broadcast(WsWebUISocket *sender, uint8_t *buf, size_t len);
+    static void broadcast(WsWebUISocket *sender, const __FlashStringHelper *str) {
+        auto message = reinterpret_cast<uint8_t *>(const_cast<__FlashStringHelper *>(str));
+        size_t len = strlen(reinterpret_cast<PGM_P>(str));
+        broadcast(sender, message, len);
+    }
     static void setup();
 
     static void createWebUIJSON(JsonUnnamedObject &json);

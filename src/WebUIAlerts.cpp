@@ -10,8 +10,12 @@
 #include <PrintHtmlEntitiesString.h>
 #include <JsonTools.h>
 #include <cerrno>
-#include "WebUIAlerts.h"
+#include <WebUISocket.h>
+#include <WebUIAlerts.h>
 #include "kfc_fw_config.h"
+#if HTTP2SERIAL_SUPPORT
+#include "../src/plugins/http2serial/http2serial.h"
+#endif
 
 #if DEBUG_WEBUI_ALERTS
 #include <debug_helper_enable.h>
@@ -363,6 +367,16 @@ IdType FileStorage::addAlert(const String &message, Type type, ExpiresType expir
         }
         file.print(F("}]\n"));
         _closeAlertStorage(file);
+
+        auto wwebUIAlertMsg = F("+WEBUIALERT");
+#if HTTP2SERIAL_SUPPORT
+        // check if any client is connected and authenticated
+        auto client = Http2Serial::getClientById(nullptr);
+        if (client && client->server()->availableForWriteAll()) {
+            client->server()->textAll(wwebUIAlertMsg);
+        }
+#endif
+        WsWebUISocket::broadcast(nullptr, reinterpret_cast<uint8_t *>(const_cast<__FlashStringHelper *>(wwebUIAlertMsg)), strlen_P(reinterpret_cast<PGM_P>(wwebUIAlertMsg)));
     }
     //  __LDBG_printf("id=%u,msg=%s,type=%s,time=%lu,exp=%u,dismissable=%d,persistent=%d",
     //     alert.getId(), alert.getMessage().c_str(), alert.getTypeStr(), alert.getTime(), alert.getExpires(), alert.isDismissable(), alert.isPersistent()

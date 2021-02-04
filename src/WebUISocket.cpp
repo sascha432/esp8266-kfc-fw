@@ -49,16 +49,18 @@ void WsWebUISocket::setup()
 void WsWebUISocket::send(AsyncWebSocketClient *client, const JsonUnnamedObject &json)
 {
     __LDBG_printf("send json");
-    auto server = client->server();
-    auto buffer = server->makeBuffer(json.length());
-    assert(JsonBuffer(json).fillBuffer(buffer->get(), buffer->length()) == buffer->length());
-    client->text(buffer);
+    if (client->canSend()) {
+        auto server = client->server();
+        auto buffer = server->makeBuffer(json.length());
+        assert(JsonBuffer(json).fillBuffer(buffer->get(), buffer->length()) == buffer->length());
+        client->text(buffer);
+    }
 }
 
 void WsWebUISocket::broadcast(WsWebUISocket *sender, const JsonUnnamedObject &json)
 {
     __LDBG_printf("broadcast sender=%p json", sender);
-    if (wsWebUI) {
+    if (wsWebUI && !wsWebUI->getClients().isEmpty() && wsWebUI->availableForWriteAll()) {
         auto buffer = wsWebUI->makeBuffer(json.length());
         assert(JsonBuffer(json).fillBuffer(buffer->get(), buffer->length()) == buffer->length());
         __LDBG_printf("buffer=%s", buffer->get());
@@ -68,7 +70,7 @@ void WsWebUISocket::broadcast(WsWebUISocket *sender, const JsonUnnamedObject &js
 
 void WsWebUISocket::broadcast(WsWebUISocket *sender, uint8_t *buf, size_t len)
 {
-    if (wsWebUI) {
+    if (wsWebUI && !wsWebUI->getClients().isEmpty() && wsWebUI->availableForWriteAll()) {
         auto buffer = wsWebUI->makeBuffer(buf, len, false);
         __LDBG_printf("buffer=%s", buffer->get());
         WsClient::broadcast(wsWebUI, sender, buffer);

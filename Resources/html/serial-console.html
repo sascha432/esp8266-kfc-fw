@@ -75,8 +75,7 @@ Available commands: /disconnect /reconnect /clear
 
     <script>
         if ($.WebUIAlerts !== undefined) {
-            $.WebUIAlerts.icon = true;
-            $.WebUIAlerts.ignore_cookie = true;
+            $.WebUIAlerts.iconize();
         }
 		$(function() {
 			http2serialPlugin.init();

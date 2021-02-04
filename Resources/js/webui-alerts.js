@@ -3,6 +3,8 @@
  */
 
  $.WebUIAlerts = {
+    enabled: $('#webui-alerts-enabled').length!=0,
+    locked: false,
     console: window.console,
     count: 0,
     icon: false,
@@ -11,8 +13,15 @@
     container: null,
     alert_html: null,
     next_alert_id: 1,
-    alert_poll_time: 5000,
+    default_alert_poll_time: 15000,
+    alert_poll_time: 15000,
     alert_poll_time_on_error: 30000,
+    iconize = function() {
+        if (this.enabled) {
+            this.icon = true;
+            this.ignore_cookie = true;
+        }
+    },
     update: function() {
         this.count = this.container.find('.alert').length;
         var icons = $('nav').find('.alerts-count')
@@ -41,6 +50,9 @@
         }
     },
     init_container: function() {
+        if (!this.enabled) {
+            return;
+        }
         this.container = $('#alert-container');
         if (this.container.length == 0) {
             this.console.error('#alert-container missing');
@@ -116,14 +128,26 @@
         if (timeout === undefined) {
             timeout = this.alert_poll_time;
         }
+        if (timeout == 0) {
+            return;
+        }
         var self = this
         window.setTimeout(function() {
             self.get_json();
         }, timeout);
     },
     get_json: function() {
+        if (!this.enabled) {
+            return;
+        }
+        if (this.locked) {
+            window.setTimeout(this.schedule_get_json, this.alert_poll_time_on_error * 2);
+            return;
+        }
+        this.locked = true;
         var self = this;
         $.get(this.data_url + '&poll_id=' + this.next_alert_id, function(text) {
+            self.locked = false;
             if (text == undefined || text == '') { // text is undefined for response code 204
                 self.schedule_get_json();
                 return;
@@ -196,11 +220,11 @@
                         $(this).css('color','');
                     }
                 );
-
             }
             self.schedule_get_json();
 
         }, 'text').fail(function(error) {
+            self.locked = false;
             if (error.status == 503) {
                 console.log("WebUIAlerts disabled");
             }

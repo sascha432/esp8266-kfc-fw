@@ -150,7 +150,6 @@ def disassemble(source, target, env):
     return_code = subprocess.run(args, shell=True).returncode
     if return_code!=0:
         click.secho('failed to run: %s' % ' '.join(args))
-        print(env.Dump())
         env.Exit(1)
 
     click.echo('-' * click.get_terminal_size()[0])

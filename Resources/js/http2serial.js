@@ -1,4 +1,4 @@
-/**
+1/**
  * Author: sascha_lammers@gmx.de
  */
 
@@ -237,26 +237,33 @@
     },
 
     ledMatrix: {
-        'pixel_size': 0.75,
+        'pixel_size': 0.6,
         'alpha1': 0.9,
         'alpha2': 0,
         'inner_size': 0,
         'outer_size': 0,
-        'rows': 0,
-        'cols': 0,
+        'args': [0, 0],
+        'fps_time': 0,
+        'fps_value': 0,
     },
+
+    zoomLedMatrix: function(dir) {
+        this.ledMatrix.pixel_size += dir * 0.15;
+        this.appendLedMatrix.apply(this, this.ledMatrix.args)
+    }
 
 };
 
 http2serialPlugin.appendLedMatrix = function(rows, cols, reverse_rows, reverse_cols, rotate, interleaved) {
-    this.ledMatrix.rows = rows;
-    this.ledMatrix.cols = cols;
+    this.ledMatrix.args = arguments
     var _pixel_size = this.ledMatrix.pixel_size;
     var unit = 'rem';
     var pixel_size = _pixel_size + unit;
     var inner_size = (_pixel_size * 1) + unit;
     var outer_size = (_pixel_size * 7) + unit;
     var border_radius = _pixel_size + unit;
+
+    $('#led-matrix').remove();
 
     this.ledMatrix.inner_size = inner_size;
     this.ledMatrix.outer_size = outer_size;
@@ -267,12 +274,16 @@ http2serialPlugin.appendLedMatrix = function(rows, cols, reverse_rows, reverse_c
     bottom: 0; \
     padding: 7rem; \
     background: rgba(0, 0, 0); \
-    z-index: 999; \
+    z-index: 9998; \
     padding: 7rem; \
     background: rgba(0, 0, 0); \
     min-height: 1rem; \
     min-width: 1rem; \
     overflow: hidden; \
+} \
+#pixel-container:hover .ipx { \
+    font-size: 0.75rem; \
+    mix-blend-mode: difference; \
 } \
 #pixel-container .row { \
     display: block; \
@@ -293,6 +304,27 @@ http2serialPlugin.appendLedMatrix = function(rows, cols, reverse_rows, reverse_c
     display: inline; \
     border-radius: 0px; \
     color: white; \
+    font-size: 0; \
+} \
+#pixel-container .fps-container { \
+    position: relative; \
+    left: -90px; \
+    bottom: -90px; \
+    z-index: 9999; \
+    color: #ccc; \
+    font-size: 1rem; \
+} \
+#fps-number { \
+    color: #aaa; \
+    font-size: 1.25rem; \
+} \
+#pixel-container .zoom .oi { \
+    padding: 0.25rem; \
+    font-size: 1.25rem; \
+    color: #bbb; \
+} \
+#pixel-container .oi-zoom .oi:hover { \
+    color: #fff; \
 } \
 </style></div>');
     var container = $('#pixel-container');
@@ -322,21 +354,25 @@ http2serialPlugin.appendLedMatrix = function(rows, cols, reverse_rows, reverse_c
         contents += '<div class="row">';
         for (var j = 0; j < cols; j++) {
             var px_id = to_address(i, j);
-            contents += '<div id="px' + px_id + '" class="px"><div class="ipx">'+px_id+'</div></div>';
+            contents += '<div id="px' + px_id + '" class="px"><div class="ipx">' + px_id + '</div></div>';
         }
         contents += '</div>';
     }
-    container.html(contents);
-
+    container.html(contents + '<div class="fps-container"><span id="fps-number">-</span> fps <div class="zoom"><span class="oi oi-zoom-in"></span><span class="oi oi-zoom-out"></span></div></div>');
     var n = 0;
     for (var i = 0; i <rows; i++) {
         for (var j = 0; j < cols; j++) {
             var name = 'px' + n;
             n++;
-            this.ledMatrixSetColor('#' + name, 0x10, 0x10, 0x10, 0.2, 0.1);
+            this.ledMatrixSetColor('#' + name, 0x30, 0x30, 0x30, 0.4, 0.1);
         }
     }
-    container.width(container.height());
+
+    var self = this;
+    container.find('.oi.oi-zoom-in').on('click', function() { self.zoomLedMatrix(1); });
+    container.find('.oi.oi-zoom-out').on('click', function() { self.zoomLedMatrix(-1); });
+
+    this.ledMatrix.fps_time = 0;
 
     return container;
 };
@@ -356,11 +392,21 @@ http2serialPlugin.ledMatrixSetColor = function(selector, r, g, b, a1, a2) {
         css('border-color', 'rgba(' + r + ', ' + g + ', ' + b + ' ' + a2 + ')');
 };
 
-$._____rgb565_to_888 = function(color) {
-    var b5 = (color & 0x1f);
-    var g6 = (color >> 5) & 0x3f;
-    var r5 = (color >> 11);
-    return [(r5 * 527 + 23) >> 6, (g6 * 259 + 33) >> 6, (b5 * 527 + 23) >> 6];
+http2serialPlugin.countFps = function() {
+    var t = new Date().getTime();
+    if (this.ledMatrix.fps_time == 0) {
+        this.ledMatrix.fps_value = 0;
+    }
+    else if (this.ledMatrix.fps_value == 0) {
+        this.ledMatrix.fps_value = t - this.ledMatrix.fps_time;
+    }
+    else {
+        var diff = (t - this.ledMatrix.fps_time) + 0.001;
+        var itg = 3000.0 / diff;
+        this.ledMatrix.fps_value = ((this.ledMatrix.fps_value * itg) + diff) / (itg + 1);
+        $('#fps-number').html(Math.round(1000 / this.ledMatrix.fps_value * 100) / 100.0);
+    }
+    this.ledMatrix.fps_time = t;
 }
 
 http2serialPlugin.dataHandler = function(event) {
@@ -370,7 +416,8 @@ http2serialPlugin.dataHandler = function(event) {
         if (packetId == 0x0004) {// WsClient::BinaryPacketType::LED_MATRIX_DATA
             var container = $('#pixel-container');
             if (container.length) {
-                var num_pixels = this.ledMatrix.rows * this.ledMatrix.cols;
+                this.countFps();
+                var num_pixels = this.ledMatrix.args[0] * this.ledMatrix.args[1];
                 var pixels = new Uint16Array(event.data, 2, num_pixels);
                 for (var i = 0; i < num_pixels; i++)  {
                     var pixel = $._____rgb565_to_888(pixels[i]);
@@ -380,7 +427,17 @@ http2serialPlugin.dataHandler = function(event) {
         }
     }
     else if (event.type == 'data') {
-        if (event.data.startsWith("+ATMODE_CMDS_HTTP2SERIAL=")) {
+        if (event.data.startsWith('+LED_MATRIX=')) {
+            $('#led-matrix').remove();
+            args = event.data.substring(12).split(',');
+            if (args.length >= 2) {
+                while(args.lenth < 6) {
+                    args.push(0);
+                }
+                this.appendLedMatrix(parseInt(args[0]), parseInt(args[1]), parseInt(args[2]), parseInt(args[3]), parseInt(args[4]), parseInt(args[5]));
+            }
+        }
+        else if (event.data.startsWith("+ATMODE_CMDS_HTTP2SERIAL=")) {
             this.addCommands(event.data.substring(25).split('\t'));
         }
         else {

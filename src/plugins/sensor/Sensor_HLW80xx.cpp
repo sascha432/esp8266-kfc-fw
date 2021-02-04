@@ -10,7 +10,9 @@
 #include "MicrosTimer.h"
 #include "Sensor_HLW8012.h"
 #include "Sensor_HLW8032.h"
+#if HTTP2SERIAL_SUPPORT
 #include "plugins/http2serial/http2serial.h"
+#endif
 
 #if DEBUG_IOT_SENSOR
 #include <debug_helper_enable.h>

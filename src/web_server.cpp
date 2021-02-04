@@ -282,11 +282,27 @@ void WebServerPlugin::handlerWebUI(AsyncWebServerRequest *request)
         return;
     }
     WebServerSetCPUSpeedHelper setCPUSpeed;
-    auto response = new AsyncJsonResponse();
-    WsWebUISocket::createWebUIJSON(response->getJsonObject());
+    String str;
+    {
+        JsonUnnamedObject json;
+        WsWebUISocket::createWebUIJSON(json);
+        str = json.toString();
+    }
+    auto response = new AsyncBasicResponse(200, FSPGM(mime_application_json), str);
     HttpHeaders httpHeaders;
     httpHeaders.addNoCache();
-    httpHeaders.setAsyncBaseResponseHeaders(response);
+
+    // PrintHtmlEntitiesString timeStr;
+    // WebTemplate::printSystemTime(time(nullptr), timeStr);
+    // httpHeaders.add<HttpSimpleHeader>('device-time', timeStr);
+
+    httpHeaders.setAsyncWebServerResponseHeaders(response);
+    //TODO fix
+    // auto response = new AsyncJsonResponse();
+    // WsWebUISocket::createWebUIJSON(response->getJsonObject());
+    // HttpHeaders httpHeaders;
+    // httpHeaders.addNoCache();
+    // httpHeaders.setAsyncBaseResponseHeaders(response);
     request->send(response);
 }
 
@@ -929,8 +945,11 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
 
         if (path.charAt(0) == '/' && String_endsWith(path, SPGM(_html))) {
             // auto name = path.substring(1, path.length() - 5);
+
+            __LDBG_printf("get_form=%s", formName.c_str());
             auto plugin = PluginComponent::getForm(formName);
             if (plugin) {
+                __LDBG_printf("found=%p", plugin);
 #if IOT_WEATHER_STATION
                 __weatherStationDetachCanvas(true);
 #endif

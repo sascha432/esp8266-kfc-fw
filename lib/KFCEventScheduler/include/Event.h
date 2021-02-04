@@ -124,6 +124,8 @@ namespace Event {
         RepeatType(int repeat);
         RepeatType(uint32_t repeat);
 
+        uint32_t getRepeatsLeft() const;
+
     private:
         friend Scheduler;
         friend CallbackTimer;
@@ -158,6 +160,11 @@ namespace Event {
             return true;
         }
         return false;
+    }
+
+    inline uint32_t RepeatType::getRepeatsLeft() const
+    {
+        return _repeat - kNoRepeat;
     }
 
     inline bool RepeatType::_hasRepeat() const

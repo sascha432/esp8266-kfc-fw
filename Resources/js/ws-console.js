@@ -160,28 +160,28 @@ WS_Console.prototype.connect = function(authenticated_callback) {
             if (e.data.match(/^\+iPONG /)) {
                 // ignore
             }
-            else if (e.data == "+REQ_AUTH") {
+            else if (e.data.startsWith('+REQ_AUTH')) {
                 ws_console.authenticated = false;
                 ws_console.send("+SID " + ws_console.get_sid());
             }
-            else if (e.data == "+AUTH_OK") {
-                ws_console.console_log("Authentication successful");
+            else if (e.data.startsWith('+AUTH_OK')) {
+                ws_console.console_log('Authentication successful');
                 ws_console.callback({type: 'auth', success: true, socket: ws_console});
                 ws_console.authenticated = true;
                 if (authenticated_callback != undefined) {
                     authenticated_callback();
                 }
                 if ($.WebUIAlerts !== undefined && $.WebUIAlerts.enabled) {
-                    $.WebUIAlerts.alert_poll_time == 0;
+                    $.WebUIAlerts.alert_poll_time = 0;
                 }
             }
-            else if (e.data == "+AUTH_ERROR") {
-                ws_console.console_log("Authentication failed");
+            else if (e.data.startsWith('+AUTH_ERROR')) {
+                ws_console.console_log('Authentication failed');
                 ws_console.callback({type: 'auth', success: false, socket: ws_console});
                 ws_console.disconnect();
             }
-            else if (e.data == "+WEBUIALERT") {
-                ws_console.console_log("WebUI Alert, enabled=" + $.WebUIAlerts.enabled);
+            else if (e.data.startsWith('+WEBUIALERT')) {
+                ws_console.console_log('WebUI Alert, enabled=' + $.WebUIAlerts.enabled);
                 if ($.WebUIAlerts !== undefined && $.WebUIAlerts.enabled && $.WebUIAlerts.alert_poll_time == 0) {
                     $.WebUIAlerts.get_json();
                 }
@@ -200,7 +200,7 @@ WS_Console.prototype.connect = function(authenticated_callback) {
 
     this.socket.onopen = function(e) {
         $.wsConsole.console.debug('WS_Console.socket.onopen', arguments, ws_console);
-        ws_console.console_log("Connection has been established...");
+        ws_console.console_log('Connection has been established...');
         ws_console.connect_counter = 0;
         ws_console.callback({type: 'open', event: e});
         ws_console.reset_ping_interval(true);
@@ -241,7 +241,7 @@ WS_Console.prototype.disconnect = function(reconnect) {
     }
 
     if ($.WebUIAlerts !== undefined && $.WebUIAlerts.enabled && $.WebUIAlerts.alert_poll_time == 0) {
-        $.WebUIAlerts.alert_poll_time == $.WebUIAlerts.default_alert_poll_time;
+        $.WebUIAlerts.alert_poll_time = $.WebUIAlerts.default_alert_poll_time;
     }
 
     if (reconnect) {

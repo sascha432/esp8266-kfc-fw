@@ -16,7 +16,7 @@
     default_alert_poll_time: 15000,
     alert_poll_time: 15000,
     alert_poll_time_on_error: 30000,
-    iconize = function() {
+    iconize: function() {
         if (this.enabled) {
             this.icon = true;
             this.ignore_cookie = true;

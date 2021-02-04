@@ -566,7 +566,7 @@ void WeatherStationPlugin::canvasUpdatedEvent(int16_t x, int16_t y, int16_t w, i
         SpeedBooster speedBooster;
         Buffer buffer;
 
-        WSClient::BinaryPacketType packetIdentifier = WSClient::BinaryPacketType::RGB565_RLE_COMPRESSED_BITMAP;
+        WsClient::BinaryPacketType packetIdentifier = WsClient::BinaryPacketType::RGB565_RLE_COMPRESSED_BITMAP;
         buffer.write(reinterpret_cast<uint8_t *>(&packetIdentifier), sizeof(packetIdentifier));
 
         size_t len = strlen_P(SPGM(weather_station_webui_id));

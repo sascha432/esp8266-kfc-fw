@@ -40,10 +40,11 @@ function system_time_attach_handler() {
     system_time_interval = window.setInterval(function() {
         if (++s == 60) {
             s = 0;
-            sync_system_date();
+            if (m % 15 == 0) {
+                sync_system_date(); // sync date/time every 15min.
+            }
             if (++m == 60) {
                 m = 0;
-                sync_system_date(); // sync date/time once an hour
                 if (++h == 24) {
                     h = 0;
                 }

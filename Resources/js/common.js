@@ -391,3 +391,10 @@ $.matchReverse = function(str, regexp_str, options) {
 	} while(match);
 	return results;
 }
+
+$._____rgb565_to_888 = function(color) {
+    var b5 = (color & 0x1f);
+    var g6 = (color >> 5) & 0x3f;
+    var r5 = (color >> 11);
+    return [(r5 * 527 + 23) >> 6, (g6 * 259 + 33) >> 6, (b5 * 527 + 23) >> 6];
+}

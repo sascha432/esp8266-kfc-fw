@@ -54,8 +54,7 @@ class HttpSimpleHeader : public HttpHeader {
 public:
     HttpSimpleHeader(const String &name) : HttpHeader(name) {
     }
-    HttpSimpleHeader(const String &name, const String &header) : HttpHeader(name) {
-        _header = header;
+    HttpSimpleHeader(const String &name, const String &header) : HttpHeader(name), _header(header) {
     }
 
     void setHeader(const String &header) {
@@ -90,7 +89,7 @@ public:
     HttpLinkHeader(const String &location);
 };
 
-class HttpConnectionHeader : public HttpSimpleHeader {
+class HttpConnectionHeader : public HttpHeader {
 public:
     typedef enum {
         CLOSE = 1,
@@ -98,7 +97,13 @@ public:
     } ConnectionEnum_t;
 
 public:
-    HttpConnectionHeader(ConnectionEnum_t type = CLOSE);
+    HttpConnectionHeader(ConnectionEnum_t type = CLOSE) : HttpHeader(FSPGM(Connection)), _type(type) {
+    }
+    virtual const String getValue() const override {
+        return _type == CLOSE ? FSPGM(close) : FSPGM(keep_alive);
+    }
+private:
+    ConnectionEnum_t _type;
 };
 
 class HttpDateHeader : public HttpSimpleHeader {

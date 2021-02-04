@@ -350,7 +350,7 @@ static bool __get_server(AsyncWebSocket **server,  WsClient *sender)
         }
         *server = sender->getClient()->server();
     }
-    return true;
+    return (*server)->availableForWriteAll();
 }
 
 void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, AsyncWebSocketMessageBuffer *buffer)
@@ -409,14 +409,16 @@ void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, co
     auto len = message.length();
     for(auto socket: server->getClients()) {
         if (client == socket && socket->status() == WS_CONNECTED && socket->_tempObject && reinterpret_cast<WsClient *>(socket->_tempObject)->isAuthenticated()) {
-            __LDBG_printf("server=%p client=%p message=%s", server, client, message.c_str());
-            size_t buflen = len;
-            stdex::conv::utf8::strlen<stdex::conv::utf8::DefaultReplacement>(message.c_str(), buflen, len);
-            auto buffer = server->makeBuffer(buflen);
-            stdex::conv::utf8::strcpy<stdex::conv::utf8::DefaultReplacement>(reinterpret_cast<char *>(buffer->get()), message.c_str(), buflen, len);
-            buffer->get()[buflen] = 0;
-            client->text(buffer);
-            delay(getQeueDelay());
+            __LDBG_printf("server=%p client=%p message=%s can_send=%u", server, client, message.c_str(), client->canSend());
+            if (client->canSend()) {
+                size_t buflen = len;
+                stdex::conv::utf8::strlen<stdex::conv::utf8::DefaultReplacement>(message.c_str(), buflen, len);
+                auto buffer = server->makeBuffer(buflen);
+                stdex::conv::utf8::strcpy<stdex::conv::utf8::DefaultReplacement>(reinterpret_cast<char *>(buffer->get()), message.c_str(), buflen, len);
+                buffer->get()[buflen] = 0;
+                client->text(buffer);
+                delay(getQeueDelay());
+            }
             return;
         }
     }

@@ -41,6 +41,7 @@ public:
         HLW8012_PLOT_DATA,
         TOUCHPAD_DATA,
         ADC_READINGS,
+        LED_MATRIX_DATA,
     };
 
     WsClient(AsyncWebSocketClient *client);

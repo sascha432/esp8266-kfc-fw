@@ -270,10 +270,6 @@ bool HttpCookieHeader::parseCookie(const String &cookies, const String &name, St
 
 
 
-HttpConnectionHeader::HttpConnectionHeader(ConnectionEnum_t type) : HttpSimpleHeader(FSPGM(Connection), type == CLOSE ? FSPGM(close) : FSPGM(keep_alive))
-{
-}
-
 void HttpHeaders::clear(uint8_t reserveItems)
 {
     _headers.clear();

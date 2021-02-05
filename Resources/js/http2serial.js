@@ -358,7 +358,7 @@ http2serialPlugin.appendLedMatrix = function(rows, cols, reverse_rows, reverse_c
         }
         contents += '</div>';
     }
-    container.html(contents + '<div class="fps-container"><span id="fps-number">-</span> fps <div class="zoom"><span class="oi oi-zoom-in"></span><span class="oi oi-zoom-out"></span></div></div>');
+    container.html(contents + '<div class="fps-container"><span id="fps-number">-</span> fps <span id="dqueue"></span> <div class="zoom"><span class="oi oi-zoom-in"></span><span class="oi oi-zoom-out"></span></div></div>');
     var n = 0;
     for (var i = 0; i <rows; i++) {
         for (var j = 0; j < cols; j++) {
@@ -417,8 +417,15 @@ http2serialPlugin.dataHandler = function(event) {
             var container = $('#pixel-container');
             if (container.length) {
                 this.countFps();
+                if (window.display_dqueue) {
+                    var tmp = new Uint16Array(event.data, 2, 1);
+                    var queue_size = tmp & 0xf;
+                    var queue_mem_size = (tmp & 0xfff0) << 1;
+                    $('#dqueue').html('<br>' + queue_size + ' ' + queue_mem_size);
+                }
+
                 var num_pixels = this.ledMatrix.args[0] * this.ledMatrix.args[1];
-                var pixels = new Uint16Array(event.data, 2, num_pixels);
+                var pixels = new Uint16Array(event.data, 4, num_pixels);
                 for (var i = 0; i < num_pixels; i++)  {
                     var pixel = $._____rgb565_to_888(pixels[i]);
                     this.ledMatrixSetColor('#px' + i, pixel[0], pixel[1], pixel[2]);

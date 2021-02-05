@@ -13,6 +13,7 @@
 #include "kfc_fw_config.h"
 #include "plugins.h"
 #include "stored_state.h"
+#include "../src/plugins/sensor/sensor.h"
 #if IOT_ALARM_PLUGIN_ENABLED
 #    include "../src/plugins/alarm/alarm.h"
 #endif
@@ -66,6 +67,15 @@
 // disable ambient light sensor by default
 #ifndef IOT_CLOCK_AMBIENT_LIGHT_SENSOR
 #    define IOT_CLOCK_AMBIENT_LIGHT_SENSOR 0
+#endif
+
+// add sensor for calculated power level
+#ifndef IOT_CLOCK_DISPLAY_CALC_POWER_CONSUMPTION
+#   define IOT_CLOCK_DISPLAY_CALC_POWER_CONSUMPTION 0
+#endif
+
+#ifndef IOT_CLOCK_CALC_POWER_CONSUMPTION_UPDATE_RATE
+#   define IOT_CLOCK_CALC_POWER_CONSUMPTION_UPDATE_RATE 2
 #endif
 
 #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
@@ -128,7 +138,7 @@ namespace Clock {
         time_t getNow() const;
 
     protected:
-        uint16_t _updateRate;
+        // uint16_t _updateRate;
         bool &_forceUpdate;
         uint8_t _brightness;
         bool _doRefresh;
@@ -153,7 +163,7 @@ namespace Clock {
 
     inline bool LoopOptionsBase::doUpdate() const
     {
-        return (_millisSinceLastUpdate >= _updateRate);
+        return (_millisSinceLastUpdate >= Clock::kUpdateRate);
     }
 
     inline bool LoopOptionsBase::doRefresh() const
@@ -242,7 +252,7 @@ namespace Clock {
 
 class ClockPlugin : public PluginComponent, public MQTTComponent {
 public:
-    using SevenSegmentDisplay = Clock::SevenSegmentDisplay;
+    // using SevenSegmentDisplay = Clock::SevenSegmentDisplay;
     using Color               = Clock::Color;
     using AnimationType       = Clock::AnimationType;
     using InitialStateType    = Clock::InitialStateType;
@@ -290,6 +300,9 @@ public:
 public:
     ClockPlugin();
 
+#if IOT_CLOCK_DISPLAY_CALC_POWER_CONSUMPTION
+    virtual void preSetup(SetupModeType mode) override;
+#endif
     virtual void setup(SetupModeType mode) override;
     virtual void reconfigure(const String &source) override;
     virtual void shutdown() override;
@@ -297,6 +310,25 @@ public:
     virtual void createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request) override;
 
 #if AT_MODE_SUPPORTED
+
+private:
+#if HTTP2SERIAL_SUPPORT && IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
+    struct LedMatrixDisplayTimer {
+        Event::Timer timer;
+        void *clientId;
+        LedMatrixDisplayTimer(void *pClientId) : clientId(pClientId) {
+        }
+        ~LedMatrixDisplayTimer() {
+            timer.remove();
+            clientId = nullptr;
+        }
+    };
+    LedMatrixDisplayTimer *_displayLedTimer{nullptr};
+
+    void _removeDisplayLedTimer();
+#endif
+
+public:
     virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const override;
     virtual bool atModeHandler(AtModeArgs &args) override;
 #endif
@@ -325,9 +357,6 @@ public:
 
 private:
     void _loop();
-#if IOT_CLOCK_USE_DITHERING
-    void _dithering();
-#endif
     void _setupTimer();
 
 public:
@@ -345,6 +374,21 @@ public:
     // get stored configuration and update it with local storage
     Clock::Config_t &getWriteableConfig();
 
+
+// ------------------------------------------------------------------------
+// Power consumption sensor
+// ------------------------------------------------------------------------
+
+#if IOT_CLOCK_DISPLAY_CALC_POWER_CONSUMPTION
+
+public:
+    static void addPowerSensor(WebUIRoot &webUI, WebUIRow **row, SensorPlugin::SensorType type);
+
+private:
+    void _updatePowerLevelWebUI();
+    void _powerLevelCallback(uint32_t total_mW, uint32_t requested_mW, uint32_t max_mW, uint8_t target_brightness, uint8_t recommended_brightness);
+
+#endif
 
 // ------------------------------------------------------------------------
 // Enable/disable LED pin
@@ -483,9 +527,9 @@ private:
     }
 
 public:
-    void setAnimationCallback(Clock::AnimationCallback callback);
-    void setUpdateRate(uint16_t updateRate);
-    uint16_t getUpdateRate() const;
+    // void setAnimationCallback(Clock::AnimationCallback callback);
+    // void setUpdateRate(uint16_t updateRate);
+    // uint16_t getUpdateRate() const;
     void setColor(Color color);
     Color getColor() const;
 
@@ -510,9 +554,9 @@ private:
     uint32_t _getColor() const;
 
     void _setAnimation(Clock::Animation *animation);
-    void _setNextAnimation(Clock::Animation *animation);
-    void _deleteAnimaton(bool startNext);
-    void _setAnimatonNone();
+    void _setBlendAnimation(Clock::Animation *animation);
+    // void _deleteAnimaton();
+    // void _setAnimatonNone();
 
     // ------------------------------------------------------------------------
     // private variables
@@ -522,14 +566,18 @@ private:
     friend Clock::LEDMatrixLoopOptions;
     friend Clock::ClockLoopOptions;
 
-    SevenSegmentDisplay _display;
+    // SevenSegmentDisplay _display;
     bool _schedulePublishState : 1;
     bool _isFading : 1;
     bool _forceUpdate;
 
+    using Animation = Clock::Animation;
+    friend Animation;
+
+    Clock::DisplayType _display;
+
     Color __color;
     uint32_t _lastUpdateTime;
-    uint16_t _updateRate;
     uint8_t _tempOverride;
     float _tempBrightness;
 
@@ -544,24 +592,25 @@ private:
     uint8_t _targetBrightness;
 
     Clock::Animation *_animation;
-    Clock::Animation *_nextAnimation;
+    Clock::Animation *_blendAnimation;
+    uint32_t _blendTimer;
 };
 
-inline void ClockPlugin::setAnimationCallback(Clock::AnimationCallback callback)
-{
-    _display.setCallback(callback);
-}
+// inline void ClockPlugin::setAnimationCallback(Clock::AnimationCallback callback)
+// {
+//     // _display.setCallback(callback);
+// }
 
-inline void ClockPlugin::setUpdateRate(uint16_t updateRate)
-{
-    _updateRate = updateRate;
-    _forceUpdate = true;
-}
+// inline void ClockPlugin::setUpdateRate(uint16_t updateRate)
+// {
+//     // _updateRate = updateRate;
+//     _forceUpdate = true;
+// }
 
-inline uint16_t ClockPlugin::getUpdateRate() const
-{
-    return _updateRate;
-}
+// inline uint16_t ClockPlugin::getUpdateRate() const
+// {
+//     return Clock::kUpdateRate; //_updateRate;
+// }
 
 inline void ClockPlugin::setColor(Color color)
 {
@@ -573,3 +622,6 @@ inline ClockPlugin::Color ClockPlugin::getColor() const
     return _getColor();
 }
 
+#if DEBUG_IOT_CLOCK
+#include <debug_helper_disable.h>
+#endif

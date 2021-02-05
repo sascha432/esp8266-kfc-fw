@@ -43,7 +43,7 @@ void ClockPlugin::getValues(JsonArray &array)
     obj->add(JJ(value), static_cast<uint32_t>(_targetBrightness ? _targetBrightness : _savedBrightness));
 
     obj = &array.addObject(2);
-    obj->add(JJ(id), F("temp_prot"));
+    obj->add(JJ(id), F("tempp"));
     if (_tempBrightness == -1) {
         obj->add(JJ(value), F("OVERHEATED"));
     }
@@ -63,6 +63,13 @@ void ClockPlugin::getValues(JsonArray &array)
     obj->add(JJ(id), FSPGM(light_sensor));
     obj->add(JJ(state), true);
     obj->add(JJ(value), _getLightSensorWebUIValue());
+#endif
+
+#if IOT_CLOCK_DISPLAY_CALC_POWER_CONSUMPTION
+    obj = &array.addObject(3);
+    obj->add(JJ(id), F("pwrlvl"));
+    obj->add(JJ(state), true);
+    // obj->add(JJ(value), JsonNumber(get_power_level_mW() / 1000.0, 2));
 #endif
 }
 
@@ -109,6 +116,36 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
     }
 }
 
+#if IOT_CLOCK_DISPLAY_CALC_POWER_CONSUMPTION
+
+void ClockPlugin::addPowerSensor(WebUIRoot &webUI, WebUIRow **row, SensorPlugin::SensorType type)
+{
+    if (type == SensorPlugin::SensorType::SYSTEM_METRICS) {
+        (*row)->addSensor(F("pwrlvl"), F("Power"), 'W');
+    }
+}
+
+void ClockPlugin::_updatePowerLevelWebUI()
+{
+    if (WsWebUISocket::getWsWebUI() && WsWebUISocket::hasClients(WsWebUISocket::getWsWebUI())) {
+        JsonUnnamedObject json(2);
+        json.add(JJ(type), JJ(ue));
+        auto &events = json.addArray(JJ(events), 1);
+        auto &obj = events.addObject(3);
+        obj.add(JJ(id), F("pwrlvl"));
+        obj.add(JJ(state), true);
+        // obj.add(JJ(value), JsonNumber(get_power_level_mW() / 1000.0, 2));
+        WsWebUISocket::broadcast(WsWebUISocket::getSender(), json);
+    }
+}
+
+void ClockPlugin::_powerLevelCallback(uint32_t total_mW, uint32_t requested_mW, uint32_t max_mW, uint8_t target_brightness, uint8_t recommended_brightness)
+{
+
+}
+
+#endif
+
 void ClockPlugin::createWebUI(WebUIRoot &webUI)
 {
     auto row = &webUI.addRow();
@@ -119,7 +156,7 @@ void ClockPlugin::createWebUI(WebUIRoot &webUI)
 #endif
 
     row = &webUI.addRow();
-    row->addSlider(FSPGM(brightness), FSPGM(brightness), 0, SevenSegmentDisplay::kMaxBrightness, true);
+    row->addSlider(FSPGM(brightness), FSPGM(brightness), 0, kMaxBrightness, true);
 
     row = &webUI.addRow();
     row->addRGBSlider(F("color"), F("Color"));
@@ -145,7 +182,7 @@ void ClockPlugin::createWebUI(WebUIRoot &webUI)
     row->addSensor(FSPGM(light_sensor), F("Ambient Light Sensor"), F("<img src=\"/images/light.svg\" width=\"80\" height=\"80\" style=\"margin-top:-20px;margin-bottom:1rem\">"), WebUIComponent::SensorRenderType::COLUMN).add(JJ(height), height);
 #endif
 
-    row->addSensor(F("temp_prot"), F("Temperature Protection"), '%').add(JJ(height), height);
+    row->addSensor(F("tempp"), F("Temperature Protection"), '%').add(JJ(height), height);
 }
 
 void ClockPlugin::_broadcastWebUI()

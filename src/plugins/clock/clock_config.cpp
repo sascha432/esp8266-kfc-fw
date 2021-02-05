@@ -27,7 +27,8 @@ namespace KFCConfigurationClasses {
         sparking(95),
         speed(50),
         orientation(cast_int_orientation(Orientation::VERTICAL)),
-        invert_direction(false)
+        invert_direction(false),
+        factor(0xffff00)
     {}
 
     Plugins::ClockConfig::ClockConfig_t::ClockConfig_t() :
@@ -46,6 +47,7 @@ namespace KFCConfigurationClasses {
         auto_brightness(kDefaultValueFor_auto_brightness),
         blink_colon_speed(kDefaultValueFor_blink_colon_speed),
         flashing_speed(kDefaultValueFor_flashing_speed),
+        power({static_cast<uint16_t>(16.3 * 5 * kPowerNumLeds), static_cast<uint16_t>(16.4 * 5 * kPowerNumLeds), static_cast<uint16_t>(16.3 * 5 * kPowerNumLeds), static_cast<uint16_t>(0.83 * 5 * kPowerNumLeds)}),
         protection( { { 55, 70 }, 75} ),
         rainbow{ RainbowMultiplier_t(), RainbowColor_t(), 30 },
         alarm{ { 0xaa0000 }, 250 },
@@ -53,7 +55,7 @@ namespace KFCConfigurationClasses {
 #if IOT_LED_MATRIX
         ,
         fire(),
-        skip_rows({ 2, 0, 60000 })
+        interleaved({ 2, 0, 60000 })
 #endif
     {
     }

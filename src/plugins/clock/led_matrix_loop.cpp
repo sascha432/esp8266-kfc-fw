@@ -15,10 +15,6 @@
 #include <debug_helper_disable.h>
 #endif
 
-#if IOT_CLOCK_USE_DITHERING == 0
-#define _dithering()
-#endif
-
 void ClockPlugin::_loop()
 {
 #if IOT_CLOCK_HAVE_ENABLE_PIN
@@ -30,92 +26,99 @@ void ClockPlugin::_loop()
 #endif
 
     LoopOptionsType options(*this);
+    _display.setBrightness(_getBrightness());
+
+    if (_animation) {
+        _animation->loop(options.getMillis());
+    }
+    if (_blendAnimation) {
+        _blendAnimation->loop(options.getMillis());
+    }
+
 
     while(true) {
 
         #if IOT_CLOCK_BUTTON_PIN
             // check buttons
             if (_loopUpdateButtons(options)) {
-                if (options.doRefresh()) {
-                    break;
-                }
-                _dithering();
-                return;
+                break;
             }
         #endif
 
         if (!options.doUpdate()) {
-            if (options.doRefresh()) {
-                break;
-            }
-            _dithering();
-            return;
+            break;
         }
 
         // start update process
-        #if IOT_CLOCK_DEBUG_ANIMATION_TIME
-            MicrosTimer mt;
-            _timerDiff.push_back(options.getTimeSinceLastUpdate())
-        #endif
         _lastUpdateTime = millis();
 
         #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
             if (_loopDisplayLightSensor(options)) {
-                _dithering();
-                return;
+                break;
+
             }
         #endif
 
         #if IOT_CLOCK_PIXEL_SYNC_ANIMATION
             if (_loopSyncingAnimation(options)) {
-                _dithering();
-                return;
+                break;
             }
         #endif
 
-        if (_animation) {
-            #if IOT_CLOCK_DEBUG_ANIMATION_TIME
-                mt.start()
-                _animation->loop(options.getMillis());
-                _anmationTime.push_back(mt.getTime());
-            #else
-                _animation->loop(options.getMillis());
-            #endif
-            if (_animation->finished()) {
-                __LDBG_printf("animation loop has finished");
-                setAnimation(AnimationType::NEXT);
-            }
-        }
-
         if (options.doRedraw()) {
-            #if IOT_CLOCK_DEBUG_ANIMATION_TIME
-                mt.start()
-                _display.setParams(options.getMillis(), options.getBrightness());
-                _display.setPixels(_getColor());
-                _animationRenderTime.push_back(mt.getTime());
 
-                mt.start();
-                _display.show();
-                _displayTime.push_back(mt.getTime());
-            #else
-                _display.setParams(options.getMillis(), options.getBrightness());
-                _display.setPixels(_getColor());
-                _display.show();
-            #endif
-        }
-        else {
-            if (options.doRefresh()) {
-                break;
+            if (_blendAnimation) {
+
+                if (!_animation) {
+                    __LDBG_panic("_animation is null");
+                }
+
+                _animation->nextFrame(options.getMillis());
+                _blendAnimation->nextFrame(options.getMillis());
+
+                if (_blendAnimation->blend(_animation, _display, get_time_diff(_blendTimer, options.getMillis()), options.getMillis())) {
+                    // display mixed state
+                    _display.show();
+                }
+                else {
+                    // blending done, delete animation and use blendAnimation instead
+                    __LDBG_printf("blending done");
+                    std::swap(_blendAnimation, _animation);
+                    delete _blendAnimation;
+                    _blendAnimation = nullptr;
+                    _blendTimer = 0;
+                    _animation->copyTo(_display, options.getMillis());
+                    _display.show();
+                }
+
             }
-            _dithering();
+            else if (_animation) {
+
+                // render single frame
+                _animation->nextFrame(options.getMillis());
+                _animation->copyTo(_display, options.getMillis());
+                _display.show();
+
+            }
+            else {
+
+                // no animation object available
+                // display plain color
+                _display.fill(_getColor());
+                _display.show();
+            }
+
+            return;
         }
 
-        return;
+        break;
     }
 
-    _display.setBrightness(_fadingBrightness = options.getBrightness());
-    _display.setPixels(_getColor());
-    _display.show();
+    if (options.doRefresh() || _config.dithering) {
+        // refresh display brightness
+        _display.show();
+        delayMicroseconds(750);
+    }
 
     // __LDBG_printf("refresh fading_brightness=%u color=%s fps=%u", _fadingBrightness, getColor().toString().c_str(), FastLED.getFPS());
 }

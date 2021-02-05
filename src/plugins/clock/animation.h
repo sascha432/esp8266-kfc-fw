@@ -4,13 +4,9 @@
 
 #pragma once
 
-#ifndef DEBUG_IOT_CLOCK
-#define DEBUG_IOT_CLOCK                         1
-#endif
-
 #include <Arduino_compat.h>
-#include <kfc_fw_config.h>
-#include "SevenSegmentPixel.h"
+#include "color.h"
+#include "pixel_display.h"
 
 #if DEBUG_IOT_CLOCK
 #include <debug_helper_enable.h>
@@ -18,394 +14,257 @@
 #include <debug_helper_disable.h>
 #endif
 
-#if IOT_LED_MATRIX
-
-#define IOT_CLOCK_NUM_PIXELS                        (IOT_LED_MATRIX_COLS * IOT_LED_MATRIX_ROWS)
-
-// first pixel to use, others can be controlled separately and are reset during reboot only
-#ifndef IOT_LED_MATRIX_START_ADDR
-#define IOT_LED_MATRIX_START_ADDR                   0
-#endif
-
-#else
-
-
-// number of digits
-#ifndef IOT_CLOCK_NUM_DIGITS
-#define IOT_CLOCK_NUM_DIGITS                        4
-#endif
-
-// pixels per segment
-#ifndef IOT_CLOCK_NUM_PIXELS
-#define IOT_CLOCK_NUM_PIXELS                        2
-#endif
-
-// number of colons
-#ifndef IOT_CLOCK_NUM_COLONS
-#if IOT_CLOCK_NUM_DIGITS == 4
-#define IOT_CLOCK_NUM_COLONS                        1
-#else
-#define IOT_CLOCK_NUM_COLONS                        2
-#endif
-#endif
-
-// pixels per dot
-#ifndef IOT_CLOCK_NUM_COLON_PIXELS
-#define IOT_CLOCK_NUM_COLON_PIXELS                  2
-#endif
-
-// order of the segments (a-g)
-#ifndef IOT_CLOCK_SEGMENT_ORDER
-#define IOT_CLOCK_SEGMENT_ORDER                     { 0, 1, 3, 4, 5, 6, 2 }
-#endif
-
-// digit order, 30=colon #1,31=#2, etc...
-#ifndef IOT_CLOCK_DIGIT_ORDER
-#define IOT_CLOCK_DIGIT_ORDER                       { 0, 1, 30, 2, 3, 31, 4, 5 }
-#endif
-
-// pixel order of pixels that belong to digits, 0 to use pixel addresses of the 7 segment class
-#ifndef IOT_CLOCK_PIXEL_ORDER
-#define IOT_CLOCK_PIXEL_ORDER                       { 0 }
-#endif
-
-#endif
-
-class ClockPlugin;
-
 using KFCConfigurationClasses::Plugins;
 
 namespace Clock {
 
+    using DisplayBufferType = Clock::PixelDisplayBuffer<0, IOT_LED_MATRIX_ROWS, IOT_LED_MATRIX_COLS, true, false, true, true>;
+
 #if IOT_LED_MATRIX
-    using SevenSegmentDisplay = SevenSegmentPixel<uint16_t, 1, IOT_CLOCK_NUM_PIXELS, 0, 0>;
+
+    using DisplayType = Clock::PixelDisplay<
+            Clock::NeoPixelController<IOT_CLOCK_LED_PIN>,
+            Clock::PixelDisplayBuffer<IOT_LED_MATRIX_START_ADDR, IOT_LED_MATRIX_ROWS, IOT_LED_MATRIX_COLS, true, false, true, true>
+        >;
+
 #else
-    using SevenSegmentDisplay = SevenSegmentPixel<uint8_t, IOT_CLOCK_NUM_DIGITS, IOT_CLOCK_NUM_PIXELS, IOT_CLOCK_NUM_COLONS, IOT_CLOCK_NUM_COLON_PIXELS>;
+
+#error TODO
+
 #endif
 
-    using Config_t = Plugins::Clock::ClockConfig_t;
-    using PixelAddressType = SevenSegmentDisplay::PixelAddressType;
-    using ColorType = SevenSegmentDisplay::ColorType;
-    using ClockColor_t = Plugins::Clock::ClockColor_t;
-    using AnimationCallback = SevenSegmentDisplay::AnimationCallback;
-    using LoopCallback = std::function<void(uint32_t millisValue)>;
-    using AnimationType = Config_t::AnimationType;
-    using InitialStateType = Config_t::InitialStateType;
-#if IOT_LED_MATRIX
-#if IOT_LED_MATRIX_ROWS > 255 || IOT_LED_MATRIX_COLS > 255
-    using CoordinateType = uint16_t;
-#else
-    using CoordinateType = uint8_t;
-#endif
-#else
-    using CoordinateType = PixelAddressType;
-#endif
-
-    static constexpr auto kTotalPixelCount = SevenSegmentDisplay::kTotalPixelCount;
-    static constexpr uint8_t kMaxBrightness = SevenSegmentDisplay::kMaxBrightness;
-    static constexpr uint8_t kBrightness75 = kMaxBrightness * 0.75;
-    static constexpr uint8_t kBrightness50 = kMaxBrightness * 0.5;
-    static constexpr uint8_t kBrightnessTempProtection = kMaxBrightness * 0.25;
-
-    class Color {
-    public:
-        // possible pairs
-        // (4, 85), (6, 51), (16, 17), (18, 15), (52, 5), (86, 3)
-        static constexpr uint8_t kRndMod = 6;
-        static constexpr uint8_t kRndMul = 51;
-        static constexpr uint8_t kRndAnyAbove = 127;
-        static_assert((kRndMod - 1) * kRndMul == 255, "invalid mod or mul");
-
-
-    public:
-        Color();
-        Color(uint8_t *values);
-        Color(uint8_t red, uint8_t green, uint8_t blue);
-        Color(uint32_t value);
-
-        static Color fromString(const String &value);
-        static Color fromBGR(uint32_t value);
-
-        String toString() const;
-        String implode(char sep) const;
-
-        Color &operator=(uint32_t value);
-        Color &operator=(ClockColor_t value);
-        operator bool() const;
-        operator int() const;
-        operator uint32_t() const;
-        operator ClockColor_t() const;
-        bool operator==(int value) const;
-        bool operator!=(int value) const;
-        bool operator==(uint32_t value) const;
-        bool operator!=(uint32_t value) const;
-        bool operator==(const Color &value) const;
-        bool operator!=(const Color &value) const;
-
-        // set random color
-        uint32_t rnd(uint8_t minValue = kRndAnyAbove);
-        // uint32_t rnd(Color factor, uint8_t minValue = kRndAnyAbove);
-
-        uint32_t get() const;
-        uint8_t red() const;
-        uint8_t green() const;
-        uint8_t blue() const;
-
-        uint8_t &red();
-        uint8_t &green();
-        uint8_t &blue();
-
-    private:
-        uint8_t _getRand(uint8_t mod, uint8_t mul, uint8_t factor = 255);
-
-        union __attribute__packed__ {
-            struct __attribute__packed__ {
-                uint8_t _blue;
-                uint8_t _green;
-                uint8_t _red;
-            };
-            uint32_t _value: 24;
-        };
-
-    };
-
-    inline bool Color::operator==(uint32_t value) const
-    {
-        return _value == value;
-    }
-
-    inline bool Color::operator!=(uint32_t value) const
-    {
-        return _value != value;
-    }
-
-    inline bool Color::operator==(int value) const
-    {
-        return _value == value;
-    }
-
-    inline bool Color::operator!=(int value) const
-    {
-        return _value != value;
-    }
-
-    inline bool Color::operator==(const Color &value) const
-    {
-        return value.get() == get();
-    }
-
-    inline bool Color::operator!=(const Color &value) const
-    {
-        return value.get() != get();
-    }
-
-    inline uint32_t Color::get() const
-    {
-        return _value;
-    }
-
-    inline Color &Color::operator=(uint32_t value)
-    {
-        _value = value;
-        return *this;
-    }
-
-    inline Color &Color::operator=(ClockColor_t value)
-    {
-        _value = value.value;
-        return *this;
-    }
-
-    inline Color::operator bool() const
-    {
-        return _value != 0;
-    }
-
-    inline Color::operator int() const
-    {
-        return _value;
-    }
-
-    inline Color::operator uint32_t() const
-    {
-        return _value;
-    }
-
-    inline Color::operator ClockColor_t() const
-    {
-        return ClockColor_t(_value);
-    }
-
-    inline uint8_t Color::red() const
-    {
-        return _red;
-    }
-
-    inline uint8_t Color::green() const
-    {
-        return _green;
-    }
-
-    inline uint8_t Color::blue() const
-    {
-        return _blue;
-    }
-
-    inline uint8_t &Color::red()
-    {
-        return _red;
-    }
-
-    inline uint8_t &Color::green()
-    {
-        return _green;
-    }
-
-    inline uint8_t &Color::blue()
-    {
-        return _blue;
-    }
-
-
-    static_assert(sizeof(Color) == 3, "Invalid size");
+    using CoordinateType = DisplayType::CoordinateType;
+    using PixelAddressType = DisplayType::PixelAddressType;
+    using PixelCoordinatesType = DisplayType::PixelCoordinatesType;
 
     // ------------------------------------------------------------------------
     // Animation Base Class
+    //
+    // method to override
+    //
+    // begin
+    //
+    // gets called once the object is assigned to the clock
+    //
+    // loop
+    //
+    // gets called every loop, ~1ms
+    //
+    // copyTo
+    //
+    // copy buffered frame to display or create frame inside display directly
+    // copies buffer into display by default
+    //
+    // blend
+    //
+    // blend two animations into a single frame and copy it to the display
+    //
+    // nextFrame
+    //
+    // create next frame in buffer
+    // gets called before blend and copyTo
+    //
+    //
+    //
+
 
     class Animation {
     public:
-        static constexpr uint16_t kDefaultUpdateRate = 100;
-
-        class Point {
-        public:
-            Point(CoordinateType row = 0, CoordinateType col = 0) : _row(row), _col(col) {}
-
-            void setPoint(CoordinateType row, CoordinateType col) {
-                _row = row;
-                _col = col;
-            }
-
-            CoordinateType getRow() const {
-                return _row;
-            }
-
-            CoordinateType getInvertedRow() const {
-                return IOT_LED_MATRIX_ROWS - _row;
-            }
-
-            void setRow(CoordinateType row) {
-                _row = row;
-            }
-
-            CoordinateType getCol() const {
-                return _col;
-            }
-
-            CoordinateType getInvertedCol() const {
-                return IOT_LED_MATRIX_COLS - _col;
-            }
-
-            void setCol(CoordinateType col) {
-                _col = col;
-            }
-
-            void rotate90() {
-                std::swap(_row, _col);
-            }
-
-        private:
-            CoordinateType _row;
-            CoordinateType _col;
-        };
+        static constexpr uint16_t kDefaultBlendTime = 4000;
+        static constexpr bool kDefaultDisableBlinkColon = true;
+        static constexpr CoordinateType kRows = IOT_LED_MATRIX_ROWS;
+        static constexpr CoordinateType kCols = IOT_LED_MATRIX_COLS;
+        static constexpr PixelAddressType kNumPixels = kRows * kCols;
 
     public:
-        Animation(ClockPlugin &clock);
-        Animation(ClockPlugin &clock, uint16_t rows, uint16_t cols);
-        virtual ~Animation();
-
-        // call to start and end the animation. begin might be called after end again...
-        virtual void begin();
-        virtual void end();
-
-        // loop function
-        // can be overriden otherwise it calls _callback @ _updateRate milliseconds
-        virtual void loop(uint32_t millisValue);
-
-        // animation has finsihed
-        // can be restarted with begin
-        bool finished() const;
-        // does the animation want the colons to blink, if that is enabled
-        bool doBlinkColon() const;
-        // get update rate set for this animation
-        uint16_t getUpdateRate() const;
-
-        static constexpr uint16_t rows() {
-            return IOT_LED_MATRIX_ROWS;
-        }
-        static constexpr uint16_t cols() {
-            return IOT_LED_MATRIX_COLS;
+        Animation(ClockPlugin &clock) :
+            _parent(clock),
+            _display(nullptr),
+            _buffer(nullptr),
+            _blendTime(kDefaultBlendTime),
+            _disableBlinkColon(kDefaultDisableBlinkColon)
+        {
         }
 
-        Point dimensions() const {
-            return Point(rows(), cols());
+        Animation(ClockPlugin &clock, DisplayBufferType *buffer) :
+            _parent(clock),
+            _display(nullptr),
+            _buffer(buffer),
+            _blendTime(kDefaultBlendTime),
+            _disableBlinkColon(kDefaultDisableBlinkColon)
+        {
         }
 
-        Point translateAddress(PixelAddressType address) const {
-#if IOT_LED_MATRIX_ROWS == 1
-            auto p = Point(0, address);
-#elif IOT_LED_MATRIX_COLS == 1
-            auto p = Point(address, 0);
-#else
-            auto p = Point(address % rows(), address / rows());
-            if (p.getCol() % 2 != 0) {
-                p.setRow((rows() - 1) - p.getRow());
+        Animation(ClockPlugin &clock, DisplayType &display) :
+            _parent(clock),
+            _display(&display),
+            _buffer(nullptr),
+            _blendTime(kDefaultBlendTime),
+            _disableBlinkColon(kDefaultDisableBlinkColon)
+        {
+        }
+
+        virtual ~Animation()
+        {
+            _freeBuffer();
+        }
+
+        virtual void begin()
+        {
+        }
+
+        virtual bool blend(Animation *animation, DisplayType &display, uint16_t timeLeft, uint32_t millisValue)
+        {
+            if (timeLeft >= _blendTime) {
+                _freeBuffer();
+                return false;
             }
-#endif
-            return p;
+            // __LDBG_printf("blend buf=%p ani=%p display=%p time=%u/%u", _buffer, animation, &display, timeLeft, _blendTime);
+            if (!hasBuffer()) {
+                _buffer = new DisplayBufferType();
+                if (_buffer) {
+                    copyTo(*_buffer, millisValue);
+                }
+            }
+            if (animation) {
+                if (!animation->blend(nullptr, display, timeLeft, millisValue)) {
+                    _freeBuffer();
+                    return false;
+                }
+                fract8 amount = ((timeLeft * 255) / _blendTime);
+                ::blend(animation->getBuffer()->begin(), _buffer->begin(), display.begin(), display.kNumPixels, amount);
+            }
+            return true;
+        }
+
+        virtual void copyTo(DisplayType &display, uint32_t millisValue)
+        {
+            __LDBG_printf("_buffer=%p display=%u", _buffer, &display);
+            if (hasBuffer()) {
+                display.copy(*_buffer, display);
+            }
+        }
+
+        virtual void copyTo(DisplayBufferType &buffer, uint32_t millisValue)
+        {
+            __LDBG_printf("_buffer=%p buffer=%u", _buffer, &buffer);
+            if (hasBuffer()) {
+                buffer.copy(*_buffer, buffer);
+            }
+        }
+
+        virtual void loop(uint32_t millisValue)
+        {
+        }
+
+        virtual void nextFrame(uint32_t millis)
+        {
+        }
+        // void Animation::nextFrame(uint32_t time)
+        // {
+        //     SevenSegmentPixelParams params;
+        //     params.setBrightness(0xff, 0);
+        //     params.millis = time;
+        //     for(uint16_t i = 0; i < kCols * rows(); i++) {
+        //         _renderer._clock->_display.setPixel(i, _renderer._callback(i, _renderer._clock->_display.getPixel(i), params));
+        //     }
+        // }
+
+//         Point translateAddress(PixelAddressType address) const {
+// #if IOT_LED_MATRIX_ROWS == 1
+//             auto p = Point(0, address);
+// #elif IOT_LED_MATRIX_COLS == 1
+//             auto p = Point(address, 0);
+// #else
+//             auto p = Point(address % rows(), address / rows());
+//             if (p.getCol() % 2 != 0) {
+//                 p.setRow((rows() - 1) - p.getRow());
+//             }
+// #endif
+//             return p;
+//         }
+
+        Color _getColor() const;
+        void _setColor(Color color);
+
+        bool hasDisplay() const {
+            return _display != nullptr;
+        }
+
+        bool hasBuffer() const {
+            return _buffer != nullptr;
+        }
+
+        void setDisplay(DisplayType *display) {
+            _freeBuffer();
+            _display = display;
+        }
+
+        void setBuffer(DisplayBufferType *buffer) {
+            _freeBuffer(buffer);
+            _display = nullptr;
+        }
+
+        DisplayBufferType *getBuffer() {
+            return _buffer;
+        }
+
+        void setBlendTime(uint16_t blendTime)
+        {
+            __LDBG_printf("blend_time=%u", blendTime);
+            _blendTime = blendTime;
+        }
+
+        bool isBlinkColonDisabled() const
+        {
+            return _disableBlinkColon;
         }
 
     protected:
-        // set update rate for animation and clock
-        void setUpdateRate(uint16_t updateRate);
-        // get update rate for the clock
-        uint16_t getClockUpdateRate() const;
+        void _freeBuffer(DisplayBufferType *newBuffer = nullptr) {
+            if (_buffer) {
+                __LDBG_printf("delete _buffer=%p", _buffer);
+                delete _buffer;
+            }
+            _buffer = newBuffer;
+        }
 
-        // set current color
-        void setColor(Color color);
-        // get current color
-        Color getColor() const;
+        ClockPlugin &_parent;
+        DisplayType *_display;
+        DisplayBufferType *_buffer;
 
-        // set pixel animation callback
-        //
-        // this callback is used during the refresh of the display, and the callback is invoked for
-        // every single pixel. the pixel address, color and milliseconds are passed as arguments and the
-        // return value is the color that will be set. make sure that calling this function kTotalPixelCount
-        // times fits into the update rate interval. millis is set once before the rendering starts
-        // the same value for millis must produce the same result. srand() is set to millis before rendering
-        // a new frame
-        //
-        // _display.setMillis(millis());
-        // _display.setDigit(0, 8, color);
-        // _display.setDigit(1, 8, color);
-        // ...
-        // _display.show();
-        //
-        // std::function<ColorType(PixelAddressType address, ColorType color, uint32_t millisValue)>
-        void setAnimationCallback(AnimationCallback callback);
-        void removeAnimationCallback();
+    protected:
+        uint16_t _blendTime;
+        bool _disableBlinkColon;
+    };
 
-        // set loop callback
-        // it is invoked at the current update rate
-        void setLoopCallback(LoopCallback callback);
-        void removeLoopCallback();
+    // ------------------------------------------------------------------------
+    // FadingAnimation
+
+    class SolidColorAnimation : public Animation {
+    public:
+        SolidColorAnimation(ClockPlugin &clock, Color color) :
+            Animation(clock),
+            _color(color)
+        {
+        }
+
+        virtual void copyTo(DisplayType &display, uint32_t millisValue) override
+        {
+            display.fill(_color.get());
+        }
+
+        virtual void copyTo(DisplayBufferType &buffer, uint32_t millisValue) override
+        {
+            buffer.fill(_color.get());
+        }
+
+        void setColor(Color color) {
+            _color = color;
+        }
 
     private:
-        ClockPlugin &_clock;
-    protected:
-        LoopCallback _callback;
-        uint16_t _updateRate;
-        uint8_t _finished : 1;
-        uint8_t _blinkColon : 1;
+        Color _color;
     };
 
     // ------------------------------------------------------------------------
@@ -413,8 +272,8 @@ namespace Clock {
 
     class FadingAnimation : public Animation {
     public:
-        static constexpr uint16_t kNoColorChange = ~0;
-        static constexpr uint16_t kMaxDelay = kNoColorChange - 1;
+        static constexpr uint32_t kNoColorChange = ~0;
+        static constexpr uint16_t kMaxDelay = static_cast<uint16_t>(~0) - 1;
         static constexpr float kFloatMaxProgress = std::numeric_limits<uint16_t>::max() - 1;
         static constexpr uint16_t kMaxProgress = kFloatMaxProgress;
         static constexpr uint16_t kUpdateRateHz = 50;
@@ -431,21 +290,108 @@ namespace Clock {
         }
 
     public:
-        FadingAnimation(ClockPlugin &clock, Color from, Color to, float speed, uint16_t time = kNoColorChange, Color factor = 0xffffffU);
+        FadingAnimation(ClockPlugin &clock, Color from, Color to, float speed, uint32_t time = kNoColorChange, Color factor = 0xffffffU) :
+            Animation(clock),
+            _color(_from),
+            _from(from),
+            _to(to),
+            _factor(factor),
+            _time(time),
+            _waitTimer(0),
+            _speed(_secondsToSpeed(speed)),
+            _progress(0),
+            _finished(false),
+            _waiting(false)
+        {
+        }
 
-        virtual void begin() override;
+        virtual void begin() override
+        {
+            _loopTimer = millis();
+        }
+
+        virtual void loop(uint32_t millisValue)
+        {
+            if (_finished) {
+                return;
+            }
+            if (_waiting) {
+                if (get_time_diff(_waitTimer, millis()) >= _time) {
+                    _color = _getColor();
+                    _from = _color;
+                    _to.rnd();
+                    _progress = 0;
+                    _waiting = false;
+                    _loopTimer = millis();
+                }
+            }
+            else if (get_time_diff(_loopTimer, millis()) >= kUpdateRate) {
+                _loopTimer = millis();
+
+                srand(millisValue);
+                if (_progress < kMaxProgress) {
+                    _progress = std::min<uint32_t>(kMaxProgress, _progress + _speed);
+                    float stepRed = (_to.red() - _from.red()) / kFloatMaxProgress;
+                    float stepGreen = (_to.green() - _from.green()) / kFloatMaxProgress;
+                    float stepBlue = (_to.blue() - _from.blue()) / kFloatMaxProgress;
+                    _color = Color(
+                        _from.red() + static_cast<uint8_t>(stepRed * _progress),
+                        _from.green() + static_cast<uint8_t>(stepGreen * _progress),
+                        _from.blue() + static_cast<uint8_t>(stepBlue * _progress)
+                    );
+                    if (_progress >= kMaxProgress) {
+                        _color = _to;
+                        if (_time == kNoColorChange) {
+                            _finished = true;
+                            __LDBG_printf("end no color change");
+                            return; // make sure to return after destroying the lambda function
+                        }
+                        else if (_time == 0) {
+                            _from = _to;
+                            _to.rnd();
+                            _progress = 0;
+                            __LDBG_printf("next from=%s to=%s time=%u speed=%u", _from.toString().c_str(), _to.toString().c_str(), _time, _speed);
+                        }
+                        else {
+                            // wait for _time seconds
+                            __LDBG_printf("delay=%u wait_timer=%u", _time, _waitTimer + _time);
+                            _waiting = true;
+                            _waitTimer = millisValue;
+                            _setColor(_to);
+                        }
+                    }
+                }
+            }
+        }
+
+        virtual void copyTo(DisplayType &display, uint32_t millisValue) override
+        {
+            display.fill(_color.get());
+        }
+
+        virtual void copyTo(DisplayBufferType &buffer, uint32_t millisValue) override
+        {
+            buffer.fill(_color.get());
+        }
 
     private:
-        void callback(uint32_t millisValue);
-        uint16_t _secondsToSpeed(float seconds) const;
+        uint16_t _secondsToSpeed(float seconds) const
+        {
+            return (kProgressPerSecond / seconds) + 0.5;
+        }
 
     private:
+        Color _color;
         Color _from;
         Color _to;
-        uint16_t _time;
+        Color _factor;
+        uint32_t _time;
+        uint32_t _loopTimer;
+        uint32_t _waitTimer;
         uint16_t _speed;
         uint16_t _progress;
-        Color _factor;
+        bool _finished: 1;
+        bool _waiting: 1;
     };
 
     // ------------------------------------------------------------------------
@@ -456,19 +402,97 @@ namespace Clock {
         using RainbowMultiplier = Plugins::ClockConfig::RainbowMultiplier_t;
         using RainbowColor = Plugins::ClockConfig::RainbowColor_t;
     public:
-        RainbowAnimation(ClockPlugin &clock, uint16_t speed, RainbowMultiplier &multiplier, RainbowColor &color);
+        RainbowAnimation(ClockPlugin &clock, uint16_t speed, RainbowMultiplier multiplier, RainbowColor color) :
+            Animation(clock),
+            _speed(speed),
+            _multiplier(multiplier),
+            _color(color),
+            _factor(color.factor.value),
+            _lastUpdate(0)
+        {
+            _disableBlinkColon = false;
+        }
 
-        virtual void begin() override;
-        virtual void end() override;
-        virtual void loop(uint32_t millisValue);
+        void begin()
+        {
+            _lastUpdate = 0;
+            // setAnimationCallback([this](PixelAddressType address, ColorType color, const SevenSegmentDisplay::Params_t &params) -> ColorType {
+
+            // });
+        }
+
+        virtual void loop(uint32_t millisValue) override
+        {
+            if (_lastUpdate == 0) {
+                _lastUpdate = millisValue;
+                return;
+            }
+            if (get_time_diff(_lastUpdate, millisValue) < 25) {
+                return;
+            }
+            _lastUpdate = millisValue;
+
+            _increment(&_multiplier.value, _multiplier.min, _multiplier.max, &_multiplier.incr);
+            _increment(&_factor._red, _color.min.red, 256, &_color.red_incr);
+            _increment(&_factor._green, _color.min.green, 256, &_color.green_incr);
+            _increment(&_factor._blue, _color.min.blue, 256, &_color.blue_incr);
+        }
+
+        virtual void copyTo(DisplayType &display, uint32_t millisValue) override
+        {
+            _copyTo(display, millisValue);
+        }
+
+        virtual void copyTo(DisplayBufferType &buffer, uint32_t millisValue) override
+        {
+            _copyTo(buffer, millisValue);
+        }
+
+        template<typename _Ta>
+        void _copyTo(_Ta &display, uint32_t millisValue)
+        {
+            Color color;
+            for (PixelAddressType i = 0; i < display.kNumPixels; i++) {
+                uint32_t ind = (i * _multiplier.value) + (millisValue / _speed);
+                uint8_t indMod = (ind % _mod);
+                uint8_t idx = (indMod / _divMul);
+                float factor1 = 1.0f - ((float)(indMod - (idx * _divMul)) / _divMul);
+                float factor2 = (float)((int)(ind - (idx * _divMul)) % _mod) / _divMul;
+                switch(idx) {
+                    case 0:
+                        color = _normalizeColor(_factor.red() * factor1, _factor.green() * factor2, 0);
+                        break;
+                    case 1:
+                        color = _normalizeColor(0, _factor.green() * factor1, _factor.blue() * factor2);
+                        break;
+                    case 2:
+                        color = _normalizeColor(_factor.red() * factor2, 0, _factor.blue() * factor1);
+                        break;
+                }
+                CoordinateType row = i % kRows;
+                CoordinateType col = i / kRows;
+                if (i % 2 == 1) {
+                    row = (kRows - 1) - row;
+                }
+                display.setPixel(display.getAddress(row,col), color.get());
+            }
+        }
+
+        void update(uint16_t speed, RainbowMultiplier multiplier, RainbowColor color)
+        {
+            _speed = speed;
+            _multiplier = multiplier;
+            _color = color;
+        }
 
     private:
         Color _normalizeColor(uint8_t red, uint8_t green, uint8_t blue) const;
         void _increment(float *valuePtr, float min, float max, float *incrPtr);
 
         uint16_t _speed;
-        RainbowMultiplier &_multiplier;
-        RainbowColor &_color;
+        RainbowMultiplier _multiplier;
+        RainbowColor _color;
+
         struct ColorFactor {
             float _red;
             float _green;
@@ -490,16 +514,67 @@ namespace Clock {
         static constexpr uint8_t _divMul = 40;
     };
 
+    inline Color RainbowAnimation::_normalizeColor(uint8_t red, uint8_t green, uint8_t blue) const
+    {
+        return Color(
+            std::max(red, _color.min.red),
+            std::max(green, _color.min.green),
+            std::max(blue, _color.min.blue)
+        );
+    }
+
+    inline void RainbowAnimation::_increment(float *valuePtr, float min, float max, float *incrPtr)
+    {
+        float value;
+        float incr;
+        // we need to use memcpy in case the pointer is not dword aligned
+        memcpy(&value, valuePtr, sizeof(value));
+        memcpy(&incr, incrPtr, sizeof(incr));
+        if (incr) {
+            value += incr;
+            if (value < min && incr < 0) {
+                value = min;
+                incr = -incr;
+            }
+            else if (value >= max && incr > 0) {
+                incr = -incr;
+                value = max + incr;
+            }
+        }
+        memcpy(valuePtr, &value, sizeof(*valuePtr));
+        memcpy(incrPtr, &incr, sizeof(*incrPtr));
+    }
+
     // ------------------------------------------------------------------------
     // FlashingAnimation
 
     class FlashingAnimation : public Animation {
     public:
-        FlashingAnimation(ClockPlugin &clock, Color color, uint16_t time, uint8_t mod = 2);
+        FlashingAnimation(ClockPlugin &clock, Color color, uint16_t time, uint8_t mod = 2) :
+            Animation(clock),
+            _color(color),
+            _time(time),
+            _mod(mod)
+        {
+            __LDBG_printf("color=%s time=%u", _color.toString().c_str(), _time);
+            _disableBlinkColon = true;
+        }
 
-        virtual void begin() override;
-        virtual void end() override;
-        virtual void loop(uint32_t millisValue) {}
+        virtual void copyTo(DisplayType &display, uint32_t millisValue) override
+        {
+            _copyTo(display, millisValue);
+        }
+
+        virtual void copyTo(DisplayBufferType &buffer, uint32_t millisValue) override
+        {
+            _copyTo(buffer, millisValue);
+        }
+
+        template<typename _Ta>
+        void _copyTo(_Ta &display, uint32_t millisValue)
+        {
+            display.fill(((millisValue / _time) % _mod == 0) ? _color.get() : 0U);
+        }
 
     private:
         Color _color;
@@ -508,16 +583,27 @@ namespace Clock {
     };
 
     // ------------------------------------------------------------------------
-    // SkipRowsAnimation
-    // TODO finish SkipRowsAnimation
+    // InterleavedAnimation
+    // TODO finish InterleavedAnimation
 
-    class SkipRowsAnimation : public Animation {
+    class InterleavedAnimation : public Animation {
     public:
-        SkipRowsAnimation(ClockPlugin &clock, uint16_t row, uint16_t col, uint32_t time);
+        InterleavedAnimation(ClockPlugin &clock, uint16_t row, uint16_t col, uint32_t time) :
+            Animation(clock),
+            _time(time),
+            _row(row),
+            _col(col)
+        {
+        }
 
-        virtual void begin() override;
-        virtual void end() override;
-        virtual void loop(uint32_t millisValue) {}
+        virtual bool blend(Animation *animation, DisplayType &display, uint16_t timeLeft, uint32_t millisValue) override
+        {
+            return false;
+        }
+
+        // virtual void begin() override;
+        // virtual void end() override;
+        // virtual void loop(uint32_t millisValue) {}
 
     private:
         uint32_t _time;
@@ -540,40 +626,41 @@ namespace Clock {
         public:
 
             Line(const Line &) = delete;
-            Line(Line &&move) : _num(std::exchange(move._num, 0)), _heat(std::exchange(move._heat, nullptr)) {}
-
             Line &operator==(const Line &) = delete;
-            Line &operator==(Line &&move) {
-                if (_heat) {
-                    delete[] _heat;
-                }
+
+            Line(Line &&move) :
+                _num(std::exchange(move._num, 0)),
+                _heat(std::exchange(move._heat, nullptr))
+            {
+            }
+
+            Line &operator==(Line &&move)
+            {
                 _heat = std::exchange(move._heat, nullptr);
                 _num = std::exchange(move._num, 0);
                 return *this;
             }
 
-            Line() : _num(0), _heat(nullptr) {}
-            Line(uint16_t num) : _num(num), _heat(new uint8_t[_num]()) {
+            Line() : _num(0), _heat(nullptr)
+            {
+            }
+
+            Line(CoordinateType num, uint8_t *heat) : _num(num), _heat(heat)
+            {
                 if (!_heat) {
                     _num = 0;
                 }
             }
-            ~Line() {
-                if (_heat) {
-                    delete[] _heat;
-                }
-            }
 
-            void init(uint16_t num) {
-                this->~Line();
+            void init(uint8_t *buffer, CoordinateType num)
+            {
+                _heat = buffer;
                 _num = num;
-                _heat = new uint8_t[_num]();
-                if (!_heat) {
-                    _num = 0;
-                }
+                std::fill_n(_heat, _num, 0);
             }
 
-            void cooldown(uint8_t cooling) {
+            void cooldown(uint8_t cooling)
+            {
                 // Step 1.  Cool down every cell a little
                 for (uint16_t i = 0; i < _num; i++) {
                     uint8_t cooldownValue = rand() % (((cooling * 10) / _num) + 2);
@@ -586,14 +673,16 @@ namespace Clock {
                 }
             }
 
-            void heatup()  {
+            void heatup()
+            {
                 // Step 2.  Heat from each cell drifts 'up' and diffuses a little
                 for(uint16_t k = _num - 1; k >= 2; k--) {
                     _heat[k] = (_heat[k - 1] + _heat[k - 2] + _heat[k - 2]) / 3;
                 }
             }
 
-            void ignite(uint8_t sparking) {
+            void ignite(uint8_t sparking)
+            {
                 // Step 3.  Randomly ignite new 'sparks' near the bottom
                 auto n = std::max<uint8_t>(_num / 5, 2);
                 if (random(255) < sparking) {
@@ -603,18 +692,21 @@ namespace Clock {
                 }
             }
 
-            uint16_t getNum() const {
+            uint16_t getNum() const
+            {
                 return _num;
             }
 
-            Color getHeatColor(uint16_t num) {
+            Color getHeatColor(uint16_t num, ColorType factor)
+            {
                 if (num >= _num) {
                     return 0U;
                 }
                 // Step 4.  Convert heat to LED colors
 
                 // Scale 'heat' down from 0-255 to 0-191
-                uint8_t t192 = round((_heat[num] / 255.0) * 191);
+                uint8_t t192 = _heat[num] * (uint16_t)191 / 255;
+                // uint8_t t192 = round((_heat[num] / 255.0) * 191);
 
                 // calculate ramp up from
                 uint8_t heatramp = t192 & 0x3F; // 0..63
@@ -631,48 +723,147 @@ namespace Clock {
             }
 
         private:
-            uint16_t _num;
+            CoordinateType _num;
             uint8_t *_heat;
         };
 
     public:
-        FireAnimation(ClockPlugin &clock, FireAnimationConfig &cfg);
-        ~FireAnimation();
+        FireAnimation(ClockPlugin &clock, FireAnimationConfig &cfg) :
+            Animation(clock),
+            _lineCount((cfg.cast_enum_orientation(cfg.orientation) == Orientation::VERTICAL) ? kCols : kRows),
+            _lines(new Line[_lineCount]),
+            _lineBuffer(new uint8_t[kNumPixels]),
+            _cfg(cfg)
+        {
+            _disableBlinkColon = false;
+            if (!_lines || !_lineBuffer) {
+                _lineCount = 0;
+            }
+            else {
+                for(uint16_t i = 0; i < _lineCount; i++) {
+                    if (_cfg.cast_enum_orientation(_cfg.orientation) == Orientation::VERTICAL) {
+                        _lines[i].init(&_lineBuffer[i * kRows], kRows);
+                    }
+                    else {
+                        _lines[i].init(&_lineBuffer[i * kCols], kCols);
 
-        virtual void begin() override;
-        virtual void end() override;
-        virtual void loop(uint32_t millisValue) {
-            // update all lines
-            srand(millisValue);
-            for(uint16_t i = 0; i < _lineCount; i++) {
-                _lines[i].cooldown(_cfg.cooling);
-                _lines[i].heatup();
-                _lines[i].ignite(_cfg.sparking);
+                    }
+                    // _lines[i].init(_lineBuffer[] (_cfg.cast_enum_orientation(_cfg.orientation) == Orientation::VERTICAL) ? kRows : kCols);
+                }
             }
         }
 
+        ~FireAnimation() {
+            __LDBG_printf("end lines=%u", _lineCount);
+            if (_lines) {
+                delete[] _lines;
+            }
+            if (_lineBuffer) {
+                delete[] _lineBuffer;
+            }
+        }
+
+        virtual void begin() override
+        {
+            _loopTimer = millis();
+            _updateRate = std::max<uint16_t>(5, _cfg.speed);
+            __LDBG_printf("begin lines=%u update_rate=%u", _lineCount, _updateRate);
+        }
+
+        virtual void loop(uint32_t millisValue) override
+        {
+            if (get_time_diff(_loopTimer, millisValue) >= _updateRate) {
+                _loopTimer = millisValue;
+                // update all lines
+                srand(millisValue);
+                for(uint16_t i = 0; i < _lineCount; i++) {
+                    _lines[i].cooldown(_cfg.cooling);
+                    _lines[i].heatup();
+                    _lines[i].ignite(_cfg.sparking);
+                }
+            }
+        }
+
+        virtual bool blend(Animation *animation, DisplayType &display, uint16_t timeLeft, uint32_t millisValue) override
+        {
+            return Animation::blend(animation, display, timeLeft, millisValue);
+        }
+
+        virtual void nextFrame(uint32_t millis) override {}
+
+        virtual void copyTo(DisplayType &display, uint32_t millisValue) override
+        {
+            _copyTo(display, millisValue);
+        }
+
+        virtual void copyTo(DisplayBufferType &buffer, uint32_t millisValue) override
+        {
+            _copyTo(buffer, millisValue);
+        }
+
+        template<typename _Ta>
+        void _copyTo(_Ta &output, uint32_t millisValue) override
+        {
+            uint8_t mapping = ((_cfg.cast_enum_orientation(_cfg.orientation) == Orientation::VERTICAL ? 2 : 0) + (_cfg.invert_direction ? 1 : 0));
+            for(CoordinateType i = 0; i < kRows; i++) {
+                auto &line = _lines[i];
+                for(CoordinateType j = 0; j < kCols; j++) {
+                    auto color = line.getHeatColor(j, _cfg.factor);
+                    auto coords = PixelCoordinatesType(i, j);
+                    switch(mapping) {
+                        case 1:
+                            coords.invertColumn();
+                            break;
+                        case 2:
+                            coords.rotate();
+                            break;
+                        case 3:
+                            coords.rotate();
+                            coords.invertColumn();
+                            break;
+                        case 0:
+                        default:
+                            break;
+                    }
+                    output.setPixel(coords, color.get());
+                }
+            }
+
+            // setAnimationCallback([this](PixelAddressType address, ColorType color, const SevenSegmentDisplay::Params_t &params) -> ColorType {
+            //     auto pixel = translateAddress(address);
+            //     if (_cfg.cast_enum_orientation(_cfg.orientation) == Orientation::VERTICAL) {
+            //         pixel.rotate90();
+            //     }
+            //     return SevenSegmentDisplay::_adjustBrightnessAlways(_lines[pixel.getRow()].getHeatColor((_cfg.invert_direction) ? pixel.getInvertedCol() : pixel.getCol()), params.brightness());
+            // });
+
+        }
+
     private:
+        uint32_t _loopTimer;
+        uint16_t _updateRate;
         uint16_t _lineCount;
         Line *_lines;
+        uint8_t *_lineBuffer;
         FireAnimationConfig &_cfg;
     };
 
-    // ------------------------------------------------------------------------
-    // Callback
+    // // ------------------------------------------------------------------------
+    // // Callback
 
-    class CallbackAnimation : public Animation {
-    public:
-        CallbackAnimation(ClockPlugin &clock, AnimationCallback callback, uint16_t updateRate = 20, bool blinkColon = true);
+    // class CallbackAnimation : public Animation {
+    // public:
+    //     CallbackAnimation(ClockPlugin &clock, AnimationCallback callback, uint16_t updateRate = 20, bool blinkColon = true);
 
-        virtual void begin() override;
-        virtual void end() override;
-        virtual void loop(uint32_t millisValue) {}
+    //     virtual void begin() override;
+    //     virtual void end() override;
+    //     virtual void loop(uint32_t millisValue) {}
 
-    private:
-        AnimationCallback _callback;
-        uint16_t _updateRate;
-        bool _blinkColon;
-    };
+    // private:
+    //     AnimationCallback _callback;
+    //     uint16_t _updateRate;
+    //     bool _blinkColon;
+    // };
 
 }
 

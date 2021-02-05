@@ -35,7 +35,7 @@ MQTTComponent::MQTTAutoDiscoveryPtr ClockPlugin::nextAutoDiscovery(MQTTAutoDisco
             discovery->addCommandTopic(MQTTClient::formatTopic(FSPGM(_set)));
             discovery->addBrightnessStateTopic(MQTTClient::formatTopic(FSPGM(_brightness_state)));
             discovery->addBrightnessCommandTopic(MQTTClient::formatTopic(FSPGM(_brightness_set)));
-            discovery->addBrightnessScale(SevenSegmentDisplay::kMaxBrightness);
+            discovery->addBrightnessScale(kMaxBrightness);
             discovery->addRGBStateTopic(MQTTClient::formatTopic(FSPGM(_color_state)));
             discovery->addRGBCommandTopic(MQTTClient::formatTopic(FSPGM(_color_set)));
             discovery->addEffectStateTopic(MQTTClient::formatTopic(F("/effect/state")));
@@ -95,7 +95,7 @@ void ClockPlugin::onConnect(MQTTClient *client)
     client->subscribe(this, MQTTClient::formatTopic(FSPGM(_set)));
     client->subscribe(this, MQTTClient::formatTopic(FSPGM(_color_set)));
     client->subscribe(this, MQTTClient::formatTopic(FSPGM(_brightness_set)));
-    client->subscribe(this, MQTTClient::formatTopic(F("/effect/set")));
+    client->subscribe(this, MQTTClient::formatTopic(FSPGM(_effect_set)));
     _publishState(client);
 }
 
@@ -105,7 +105,7 @@ void ClockPlugin::onMessage(MQTTClient *client, char *topic, char *payload, size
 
     _resetAlarm();
 
-    if (!strcmp_end_P(topic, PSTR("/effect/set"))) {
+    if (!strcmp_end_P(topic, SPGM(_effect_set))) {
         int8_t animation = stringlist_find_P_P(Clock::Config_t::getAnimationNames(), topic, ',');
         if (animation >= 0) {
             setAnimation(static_cast<AnimationType>(animation));
@@ -161,6 +161,7 @@ void ClockPlugin::_publishState(MQTTClient *client)
         client->publish(MQTTClient::formatTopic(FSPGM(_state)), true, String(_targetBrightness != 0));
         client->publish(MQTTClient::formatTopic(FSPGM(_brightness_state)), true, String(static_cast<uint32_t>(_targetBrightness)));
         client->publish(MQTTClient::formatTopic(FSPGM(_color_state)), true, getColor().implode(','));
+        client->publish(MQTTClient::formatTopic(FSPGM(_effect_state)), true, Clock::Config_t::getAnimationName(_config.getAnimation()));
 #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
         client->publish(MQTTClient::formatTopic(FSPGM(light_sensor)), true, String(_autoBrightnessValue * 100, 0));
 #endif

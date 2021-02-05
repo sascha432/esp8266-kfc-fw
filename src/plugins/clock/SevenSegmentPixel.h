@@ -224,7 +224,7 @@ public:
 
     inline void clear() {
         for (uint16_t i = IOT_LED_MATRIX_START_ADDR; i < IOT_LED_MATRIX_START_ADDR + kTotalPixelCount; i++) {
-            _pixels[i] = 0;
+            setPixel(i, 0);
         }
     }
 
@@ -238,28 +238,34 @@ public:
         }
     }
 
-    void setPixel(int16_t offset, ColorType color) {
-        if (color == 0) {
-            _pixels[offset + IOT_LED_MATRIX_START_ADDR]  = 0;
-        }
-        else {
-            _pixels[offset + IOT_LED_MATRIX_START_ADDR]  = _getColorAlways(offset, color, _params);
-        }
+    ColorType getPixel(int16_t offset) {
+        auto px = _pixels.at(offset + IOT_LED_MATRIX_START_ADDR);
+        return (px.red<<16)|(px.green<<8)|(px.blue);
     }
 
-    void setPixelByAddr(uint16_t addr, ColorType color) {
-        if (color == 0) {
-            _pixels[addr]  = 0;
+    void __setPixel(int16_t offset, ColorType color) {
+#if DEBUG
+        if (offset >= 0 && offset < _pixels.size()) {
+            _pixels[offset]  = color;
         }
-#if IOT_LED_MATRIX_START_ADDR
-        else if (addr < IOT_LED_MATRIX_START_ADDR) {
-            _pixels[addr]  = color;
-        }
-#endif
         else {
-
-            _pixels[addr]  = _getColorAlways(addr - IOT_LED_MATRIX_START_ADDR, color, _params);
+            __DBG_printf("address out of bounds: %u", offset);
         }
+
+#else
+        _pixels[offset]  = color;
+#endif
+    }
+
+    void _setPixel(int16_t offset, ColorType color) {
+        if (color) {
+            color = _getColorAlways(offset, color, _params);
+        }
+        __setPixel(offset, color);
+    }
+
+    void setPixel(uint16_t addr, ColorType color) {
+        _setPixel(addr + IOT_LED_MATRIX_START_ADDR, color);
     }
 
     void print(const String &text, ColorType color) {
@@ -306,12 +312,16 @@ public:
         _pixels.fill(color);
     }
 
+    inline void fill(ColorType color) {
+        setPixels(color);
+    }
+
     inline void setColor(ColorType color) {
         setPixels(color);
     }
 
     inline void setPixel(uint16_t addr, ColorType color) {
-        _pixels[addr]  = color;
+        _pixels.operatror[addr]  = color;
     }
 
     inline void setPixelByAddr(uint16_t addr, ColorType color) {
@@ -623,7 +633,11 @@ private:
     Adafruit_NeoPixel _pixels;
     #error TODO add [] operator to Adafruit_NeoPixel
 #else
-    std::array<CRGB, getTotalPixels()> _pixels;
+    using PixelArray = std::array<CRGB, getTotalPixels()>;
+
+    friend class ClockPlugin;
+
+    PixelArray _pixels;
     CLEDController &_controller;
 #endif
 

@@ -202,20 +202,21 @@ JsonUnnamedObject &AsyncJsonResponse::getJsonObject()
 
 void AsyncJsonResponse::__assembleHead(uint8_t version)
 {
-#if 0
+#if 1
     __DBG_printf("__assembleHead _sendContentLength=%u _contentLength=%u json=%u/%u", _sendContentLength, _contentLength, _json.length(), _json.toString().length());
     Serial.println(F("------ _json.toString() ------"));
     Serial.println(_json.toString());
     Serial.println(F("------ JsonBuffer(_json).fillBuffer(); ------"));
-    uint8_t buffer[81];
+    uint8_t buffer[101];
     JsonBuffer b(_json);
     PrintString c(F("chunks "));
     int res = 0;
     do {
-        res = b.fillBuffer(buffer, 80);
-        buffer[80] = 0;
+        res = b.fillBuffer(buffer, 100);
+        buffer[100] = 0;
+        buffer[res] = 0;
         c.printf("%d ", res);
-        Serial.print((char *)buffer);
+        Serial.println((char *)buffer);
     }
     while(res);
     Serial.println(F("------"));

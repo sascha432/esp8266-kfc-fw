@@ -1743,6 +1743,7 @@ typedef struct  {
                 uint8_t speed;
                 CREATE_ENUM_BITFIELD(orientation, Orientation);
                 CREATE_BOOL_BITFIELD(invert_direction);
+                ClockColor_t factor;
 
                 Orientation getOrientation() const {
                     return get_enum_orientation(*this);
@@ -1762,20 +1763,36 @@ typedef struct  {
                     RAINBOW,
                     FLASHING,
                     FADING,
-#if IOT_LED_MATRIX
                     FIRE,
-                    SKIP_ROWS,
-#endif
+                    INTERLEAVED,
                     MAX,
-                    NEXT,
                 };
+
 
                 static const __FlashStringHelper *getAnimationNames() {
 #if IOT_LED_MATRIX
-                    return F("Solid,Rainbow,Flash,Color Fade,Fire,Skip");
+                    return F("Solid,Rainbow,Flash,Color Fade,Fire,Interleaved");
 #else
                     return F("Solid,Rainbow,Flash,Color Fade");
 #endif
+                }
+                static const __FlashStringHelper *getAnimationName(AnimationType type) {
+                    switch(type) {
+                        case AnimationType::RAINBOW:
+                            return F("Rainbow");
+                        case AnimationType::FLASHING:
+                            return F("Flash");
+                        case AnimationType::FADING:
+                            return F("Color Fade");
+                        case AnimationType::FIRE:
+                            return F("Fire");
+                        case AnimationType::INTERLEAVED:
+                            return F("Interleaved");
+                        default:
+                        case AnimationType::SOLID:
+                            break;
+                    }
+                    return F("Solid");
                 }
 
                 enum class InitialStateType : uint8_t  {
@@ -1797,6 +1814,15 @@ typedef struct  {
                 CREATE_INT32_BITFIELD_MIN_MAX(auto_brightness, 11, -1, 1023, -1, 1)
                 CREATE_UINT32_BITFIELD_MIN_MAX(blink_colon_speed, 13, 50, 8000, 1000, 100)
                 CREATE_UINT32_BITFIELD_MIN_MAX(flashing_speed, 13, 50, 8000, 150, 100)
+
+                static const uint16_t kPowerNumLeds = 256;
+
+                struct __attribute__packed__ {
+                    uint16_t red;
+                    uint16_t green;
+                    uint16_t blue;
+                    uint16_t idle;
+                } power;
 
                 struct __attribute__packed__ {
                     struct __attribute__packed__ {
@@ -1822,15 +1848,14 @@ typedef struct  {
                     uint16_t delay;
                     ClockColor_t factor;
                 } fading;
-#if IOT_LED_MATRIX
+
                 FireAnimation_t fire;
 
                 struct __attribute__packed__ {
                     uint8_t rows;
                     uint8_t cols;
                     uint32_t time;
-                } skip_rows;
-#endif
+                } interleaved;
 
                 ClockConfig_t();
 

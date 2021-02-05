@@ -80,7 +80,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
 );
 
 Clock::LoopOptionsBase::LoopOptionsBase(ClockPlugin &plugin) :
-    _updateRate(plugin._updateRate),
+    // _updateRate(plugin._updateRate),
     _forceUpdate(plugin._forceUpdate),
     _brightness(plugin._getBrightness()),
     _doRefresh(plugin._isFading && _brightness != plugin._fadingBrightness),
@@ -103,14 +103,14 @@ ClockPlugin::ClockPlugin() :
     _forceUpdate(false),
     __color(0, 0, 0xff),
     _lastUpdateTime(0),
-    _updateRate(1000),
+    // _updateRate(1000),
     _tempOverride(0),
     _tempBrightness(1.0),
     _timerCounter(0),
     _savedBrightness(0),
     _targetBrightness(0),
     _animation(nullptr),
-    _nextAnimation(nullptr)
+    _blendAnimation(nullptr)
 {
 #if !IOT_LED_MATRIX
     size_t ofs = 0;
@@ -228,6 +228,13 @@ void ClockPlugin::_setupTimer()
             }
         #endif
 
+        #if IOT_CLOCK_DISPLAY_CALC_POWER_CONSUMPTION
+            // update power level sensor of the webui
+            if (_timerCounter % IOT_CLOCK_CALC_POWER_CONSUMPTION_UPDATE_RATE == 0) {
+                _updatePowerLevelWebUI();
+            }
+        #endif
+
         // temperature protection
         if (_timerCounter % kCheckTemperatureInterval == 0) {
             float tempSensor;
@@ -307,6 +314,21 @@ void ClockPlugin::_setupTimer()
     });
 }
 
+
+#if IOT_CLOCK_DISPLAY_CALC_POWER_CONSUMPTION
+
+void ClockPlugin::preSetup(SetupModeType mode)
+{
+    if (mode == SetupModeType::DEFAULT) {
+        auto sensorPlugin = PluginComponent::getPlugin<SensorPlugin>(F("sensor"), false);
+        if (sensorPlugin) {
+            sensorPlugin->getInstance().setAddCustomSensorsCallback(addPowerSensor);
+        }
+    }
+}
+
+#endif
+
 void ClockPlugin::setup(SetupModeType mode)
 {
 #if IOT_CLOCK_HAVE_ENABLE_PIN
@@ -377,11 +399,16 @@ void ClockPlugin::setup(SetupModeType mode)
         }
     }
 #endif
+
+    _setupTimer();
 }
 
 void ClockPlugin::reconfigure(const String &source)
 {
     __LDBG_printf("source=%s", source.c_str());
+#if HTTP2SERIAL_SUPPORT && IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
+    _removeDisplayLedTimer();
+#endif
 #if IOT_CLOCK_HAVE_ENABLE_PIN
     _disable();
 #endif
@@ -408,6 +435,14 @@ void ClockPlugin::reconfigure(const String &source)
 void ClockPlugin::shutdown()
 {
     __LDBG_println();
+
+#if HTTP2SERIAL_SUPPORT && IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
+    if (_displayLedTimer) {
+        _removeDisplayLedTimer();
+        delay(250);
+    }
+#endif
+
 
 #if IOT_CLOCK_SAVE_STATE
     if (_saveTimer) {
@@ -451,7 +486,7 @@ void ClockPlugin::getStatus(Print &output)
     }
 #endif
 #if IOT_LED_MATRIX
-    output.printf_P(PSTR(HTML_S(br) "Total pixels %u"), SevenSegmentDisplay::getTotalPixels());
+    output.printf_P(PSTR(HTML_S(br) "Total pixels %u"), Clock::DisplayType::kNumPixels);
 #else
     output.printf_P(PSTR(HTML_S(br) "Total pixels %u, digits pixels %u"), SevenSegmentDisplay::getTotalPixels(), SevenSegmentDisplay::getDigitsPixels());
 #endif
@@ -464,19 +499,6 @@ void ClockPlugin::loop()
 {
     plugin._loop();
 }
-
-#if IOT_CLOCK_USE_DITHERING
-
-void ClockPlugin::_dithering()
-{
-    if (_config.dithering) {
-        _display.setBrightness(_getBrightness());
-        FastLED.show();
-        delay(1);
-    }
-}
-
-#endif
 
 void ClockPlugin::enableLoop(bool enable)
 {
@@ -610,52 +632,31 @@ void ClockPlugin::setColorAndRefresh(Color color)
     _schedulePublishState = true;
 }
 
-void ClockPlugin::_setAnimatonNone()
-{
-    __LDBG_printf("animation NONE animation=%p next=%p", _animation, _nextAnimation);
-    _deleteAnimaton(false);
-#if IOT_LED_MATRIX
-    setUpdateRate(kDefaultUpdateRate);
-#else
-    setUpdateRate((_config.blink_colon_speed < kMinBlinkColonSpeed) ? kDefaultUpdateRate : _config.blink_colon_speed);
-#endif
-}
-
 void ClockPlugin::setAnimation(AnimationType animation)
 {
     __LDBG_printf("animation=%d", animation);
     _config.animation = static_cast<uint8_t>(animation);
     switch(animation) {
         case AnimationType::FADING:
-            _setAnimation(__LDBG_new(Clock::FadingAnimation, *this, _getColor(), Color().rnd(), _config.fading.speed, _config.fading.delay, _config.fading.factor.value));
+            _setAnimation(new Clock::FadingAnimation(*this, _getColor(), Color().rnd(), _config.fading.speed, _config.fading.delay * 1000, _config.fading.factor.value));
             break;
         case AnimationType::RAINBOW:
-            _setAnimation(__LDBG_new(Clock::RainbowAnimation, *this, _config.rainbow.speed, _config.rainbow.multiplier, _config.rainbow.color));
+            _setAnimation(new Clock::RainbowAnimation(*this, _config.rainbow.speed, _config.rainbow.multiplier, _config.rainbow.color));
             break;
         case AnimationType::FLASHING:
-            _setAnimation(__LDBG_new(Clock::FlashingAnimation, *this, _getColor(), _config.flashing_speed));
+            _setAnimation(new Clock::FlashingAnimation(*this, _getColor(), _config.flashing_speed));
             break;
-#if IOT_LED_MATRIX
         case  AnimationType::FIRE:
-            _setAnimation(__LDBG_new(Clock::FireAnimation, *this, _config.fire));
+            _setAnimation(new Clock::FireAnimation(*this, _config.fire));
             break;
-        case  AnimationType::SKIP_ROWS:
-            _setAnimation(__LDBG_new(Clock::SkipRowsAnimation, *this, _config.skip_rows.rows, _config.skip_rows.cols, _config.skip_rows.time));
+        case  AnimationType::INTERLEAVED:
+            _setAnimation(new Clock::InterleavedAnimation(*this, _config.interleaved.rows, _config.interleaved.cols, _config.interleaved.time));
             break;
-#endif
-        case AnimationType::NEXT:
-            __LDBG_printf("animation NEXT animation=%p next=%p", _animation, _nextAnimation);
-            _deleteAnimaton(true);
-            if (_animation) {
-                break;
-            }
-            // fallthrough
+        case AnimationType::SOLID:
         default:
             _config.animation = static_cast<uint8_t>(AnimationType::SOLID);
-            // fallthrough
-        case AnimationType::SOLID:
             _setColor(_config.solid_color);
-            _setAnimatonNone();
+            _setAnimation(new Clock::SolidColorAnimation(*this, Color(_config.solid_color)));
             break;
     }
     _schedulePublishState = true;
@@ -679,15 +680,13 @@ void ClockPlugin::readConfig()
     _config = Plugins::Clock::getConfig();
     _config.rainbow.multiplier.value = std::clamp<float>(_config.rainbow.multiplier.value, 0.1, 100.0);
     _config.protection.max_temperature = std::max((uint8_t)kMinimumTemperatureThreshold, _config.protection.max_temperature);
-    _display.setDithering(_config.dithering);
+    _display.setDither(_config.dithering);
 
-#if 0
-    FastLED.setMaxPowerInMilliWatts(_config.power_limit ? _config.power_limit * 1000 : 1000000);
-#else
-    if (FastLED.m_pPowerFunc) { // setting power to zero causes a crash with the default version
-        ; // do nothing, just a test if it has been patched
-    }
+    __LDBG_printf("config read");
+
     FastLED.setMaxPowerInMilliWatts(_config.power_limit * 1000);
+#if IOT_CLOCK_DISPLAY_CALC_POWER_CONSUMPTION
+    set_power_consumption(_config.power.red, _config.power.green, _config.power.blue, _config.power.idle);
 #endif
 
     // reset temperature protection
@@ -719,7 +718,7 @@ void ClockPlugin::onButtonHeld(Button& btn, uint16_t duration, uint16_t repeatCo
     if (repeatCount == 12) {    // start flashing after 2 seconds, hard reset occurs ~2.5s
         plugin._autoBrightness = kAutoBrightnessOff;
         plugin._display.setBrightness(SevenSegmentDisplay::kMaxBrightness);
-        plugin._setAnimation(__LDBG_new(Clock::FlashingAnimation, *this, Color(255, 0, 0), 150));
+        plugin._setAnimation(new Clock::FlashingAnimation, *this, Color(255, 0, 0), 150));
 
         _Scheduler.add(2000, false, [](Event::CallbackTimerPtr timer) {   // call restart if no reset occured
             __LDBG_printf("restarting device\n"));
@@ -764,43 +763,53 @@ void ClockPlugin::_onButtonReleased(uint16_t duration)
 
 void ClockPlugin::_setAnimation(Clock::Animation *animation)
 {
-    __LDBG_printf("animation=%p", animation);
-    _deleteAnimaton(false);
-    _animation = animation;
-    _animation->begin();
-    _forceUpdate = true;
+    __LDBG_printf("animation=%p _ani=%p _blend_ani=%p", animation, _animation, _blendAnimation);
+    if (_animation) {
+        _setBlendAnimation(animation);
+    }
+    else {
+        _animation = animation;
+        _animation->begin();
+    }
     _schedulePublishState = true;
 }
 
-void ClockPlugin::_setNextAnimation(Clock::Animation *nextAnimation)
+void ClockPlugin::_setBlendAnimation(Clock::Animation *blendAnimation)
 {
-    __LDBG_printf("next=%p", nextAnimation);
-    if (_nextAnimation) {
-        __LDBG_delete(_nextAnimation);
+    __LDBG_printf("blend=%p", blendAnimation);
+    if (_blendAnimation) {
+        __LDBG_delete(_blendAnimation);
     }
-    _nextAnimation = nextAnimation;
+    _blendAnimation = blendAnimation;
+    if (!_blendAnimation) {
+        _blendTimer = 0;
+        return;
+    }
+    _blendAnimation->begin();
+    _blendAnimation->setBlendTime(_blendAnimation->kDefaultBlendTime);
+    _blendTimer = millis();
 }
 
-void ClockPlugin::_deleteAnimaton(bool startNext)
-{
-    __LDBG_printf("animation=%p next=%p start_next=%u", _animation, _nextAnimation, startNext);
-    if (_animation) {
-        __LDBG_delete(_animation);
-        _animation = nullptr;
-    }
-    if (_nextAnimation) {
-        if (startNext) {
-            _animation = _nextAnimation;
-            _nextAnimation = nullptr;
-            __LDBG_printf("begin next animation=%p", _animation);
-            _animation->begin();
-        }
-        else {
-            __LDBG_delete(_nextAnimation);
-            _nextAnimation = nullptr;
-        }
-    }
-}
+// void ClockPlugin::_deleteAnimaton()
+// {
+//     __LDBG_printf("animation=%p next=%p start_next=%u", _animation, _nextAnimation, startNext);
+//     if (_animation) {
+//         __LDBG_delete(_animation);
+//         _animation = nullptr;
+//     }
+//     if (_nextAnimation) {
+//         if (startNext) {
+//             _animation = _nextAnimation;
+//             _nextAnimation = nullptr;
+//             __LDBG_printf("begin next animation=%p", _animation);
+//             _animation->begin();
+//         }
+//         else {
+//             __LDBG_delete(_nextAnimation);
+//             _nextAnimation = nullptr;
+//         }
+//     }
+// }
 
 #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
 
@@ -956,8 +965,8 @@ void ClockPlugin::_alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration
 #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
         _autoBrightness = kAutoBrightnessOff;
 #endif
-        _targetBrightness = SevenSegmentDisplay::kMaxBrightness;
-        _setAnimation(__LDBG_new(Clock::FlashingAnimation, *this, _config.alarm.color.value, _config.alarm.speed));
+        _targetBrightness = kMaxBrightness;
+        _setAnimation(new Clock::FlashingAnimation(*this, _config.alarm.color.value, _config.alarm.speed));
     }
 
     if (maxDuration == 0) {

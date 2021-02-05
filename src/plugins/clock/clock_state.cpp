@@ -16,6 +16,9 @@
 
 void ClockPlugin::_saveStateDelayed(uint8_t brightness)
 {
+    if (brightness == 0 && _savedBrightness) {//TODO remove brightness arg
+        brightness = _savedBrightness;
+    }
     if (get_time_diff(_saveTimestamp, millis()) > IOT_CLOCK_SAVE_STATE_DELAY * 1000U) {
         __LDBG_printf("save state delay skipped");
         _saveState(brightness);
@@ -30,6 +33,9 @@ void ClockPlugin::_saveStateDelayed(uint8_t brightness)
 
 void ClockPlugin::_saveState(uint8_t brightness)
 {
+    if (brightness == 0 && _savedBrightness) {//TODO remove brightness arg
+        brightness = _savedBrightness;
+    }
     auto state = _getState();
     auto newState = StoredState(_config, brightness);
     if (state != newState) {

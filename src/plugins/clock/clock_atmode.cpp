@@ -5,6 +5,10 @@
 #include <Arduino_compat.h>
 #include <EventScheduler.h>
 #include "clock.h"
+#include <web_socket.h>
+#if HTTP2SERIAL_SUPPORT
+#include "../src/plugins/http2serial/http2serial.h"
+#endif
 
 #if DEBUG_IOT_CLOCK
 #include <debug_helper_enable.h>
@@ -25,26 +29,51 @@
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(CLOCKBR, "BR", "Set brightness (0-65535). 0 disables the LEDs, > 0 enables them");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKPX, "PX", "[<number|-1=all>,<#RGB>|<r>,<g>,<b>]", "Set level of a single pixel. No arguments turns all off");
+#if !IOT_LED_MATRIX
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKP, "P", "<00[:.]00[:.]00>", "Display strings");
+#endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKC, "C", "<#RGB>|<r>,<g>,<b>", "Set color");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKM, "M", "<value>[,<incr>,<min>,<max>]", "Set rainbow animation multiplier");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKT, "T", "<value>", "Override temperature");
 // PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKTS, "TS", "<num>,<segment>", "Set segment for digit <num>");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(CLOCKA, "A", "<num>[,<arguments>,...]", "Set animation", "Display available animations");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(CLOCKD, "D", "Dump pixel addresses and other information");
+// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(CLOCKD, "D", "Dump pixel addresses and other information");
+#if HTTP2SERIAL_SUPPORT && IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKVIEW, "VIEW", "<interval in ms|0=disable>,<client_id>", "Display Leds over http2serial");
+#endif
+
+#if HTTP2SERIAL_SUPPORT && IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
+
+void ClockPlugin::_removeDisplayLedTimer()
+{
+    if (_displayLedTimer) {
+        auto client = Http2Serial::getClientById(_displayLedTimer->clientId);
+        client->text(F("+LED_MATRIX=0"));
+
+        delete _displayLedTimer;
+        _displayLedTimer = nullptr;
+    }
+}
+
+#endif
 
 ATModeCommandHelpArrayPtr ClockPlugin::atModeCommandHelp(size_t &size) const
 {
     static ATModeCommandHelpArray tmp PROGMEM = {
         PROGMEM_AT_MODE_HELP_COMMAND(CLOCKBR),
         PROGMEM_AT_MODE_HELP_COMMAND(CLOCKPX),
+#if !IOT_LED_MATRIX
         PROGMEM_AT_MODE_HELP_COMMAND(CLOCKP),
+#endif
         PROGMEM_AT_MODE_HELP_COMMAND(CLOCKC),
         PROGMEM_AT_MODE_HELP_COMMAND(CLOCKM),
         PROGMEM_AT_MODE_HELP_COMMAND(CLOCKT),
         // PROGMEM_AT_MODE_HELP_COMMAND(CLOCKTS),
         PROGMEM_AT_MODE_HELP_COMMAND(CLOCKA),
-        PROGMEM_AT_MODE_HELP_COMMAND(CLOCKD)
+        // PROGMEM_AT_MODE_HELP_COMMAND(CLOCKD),
+#if HTTP2SERIAL_SUPPORT && IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
+        PROGMEM_AT_MODE_HELP_COMMAND(CLOCKVIEW)
+#endif
     };
     size = sizeof(tmp) / sizeof(tmp[0]);
     return tmp;
@@ -64,6 +93,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
     //     return true;
     // }
     // else
+#if !IOT_LED_MATRIX
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKP))) {
         enableLoop(false);
         if (args.size() < 1) {
@@ -79,7 +109,9 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
         }
         return true;
     }
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKM))) {
+    else
+#endif
+    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKM))) {
         _config.rainbow.multiplier.value = args.toFloatMinMax(0, 0.1f, 100.0f, _config.rainbow.multiplier.value);
         args.printf_P(PSTR("Rainbow multiplier=%f increment=%f min=%f max=%f"), _config.rainbow.multiplier.value, _config.rainbow.multiplier.incr, _config.rainbow.multiplier.min, _config.rainbow.multiplier.max);
         return true;
@@ -89,17 +121,15 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             args.printf_P(PSTR("%u - rainbow animation (+CLOCKA=%u,<speed>,<multiplier>,<r>,<g>,<b-factor>)"), AnimationType::RAINBOW, AnimationType::RAINBOW);
             args.printf_P(PSTR("%u - flashing"), AnimationType::FLASHING);
             args.printf_P(PSTR("%u - fade to color (+CLOCKA=%u,<r>,<g>,<b>)"), AnimationType::FADING, AnimationType::FADING);
-#if IOT_LED_MATRIX
             args.printf_P(PSTR("%u - fire (+CLOCKA=%u)"), AnimationType::FIRE, AnimationType::FIRE);
-            args.printf_P(PSTR("%u - fire (+CLOCKA=%u)"), AnimationType::SKIP_ROWS, AnimationType::SKIP_ROWS);
-#else
+            args.printf_P(PSTR("%u - fire (+CLOCKA=%u)"), AnimationType::INTERLEAVED, AnimationType::INTERLEAVED);
+#if !IOT_LED_MATRIX
             args.printf_P(PSTR("%u - blink colon speed"), (int)AnimationType::MAX);
             args.print(F("100 = disable clock"));
             args.print(F("101 = enable clock"));
             args.print(F("200 = display ambient light sensor value (+CLOCKA=200,<0|1>)"));
 #endif
             args.print(F("300 = test pixel animation order"));
-            args.print(F("400 = get/set update rate"));
         }
         else if (args.size() >= 1) {
             int value = args.toInt(0);
@@ -124,7 +154,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                 _Scheduler.add(interval, true, [num, this](Event::CallbackTimerPtr timer) mutable {
                     __LDBG_printf("pixel=%u", num);
 #if IOT_LED_MATRIX
-                    if (num == _display.getTotalPixels()) {
+                    if (num == _display.kNumPixels) {
 #else
                     if (num == _pixelOrder.size()) {
 #endif
@@ -135,9 +165,9 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                     else {
 #if IOT_LED_MATRIX
                         if (num) {
-                            _display._pixels[num - 1] = 0;
+                            _display.setPixel(num - 1, 0);
                         }
-                        _display._pixels[num++] = 0x22;
+                        _display.setPixel(num++, 0x000022);
 #else
                         if (num) {
                             _display._pixels[_pixelOrder[num - 1]] = 0;
@@ -172,10 +202,6 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                 }
             }
 #endif
-            else if (value == 400) {
-                _updateRate = args.toIntMinMax<uint16_t>(0, 5, 1000, _updateRate);
-                args.printf_P(PSTR("update rate: %u"), _updateRate);
-            }
             else if (value >= 0 && value < (int)AnimationType::MAX) {
                 switch(static_cast<AnimationType>(value)) {
                     case AnimationType::RAINBOW:
@@ -259,13 +285,13 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                 color = Color(args.toNumber(1, 0), args.toNumber(2, 0), args.toNumber(3, 0x80));
             }
             if (num == -1) {
-                args.printf_P(PSTR("pixel=0-%u, color=%s"), _display.getTotalPixels(), color.toString().c_str());
-                _display.setColor(color);
+                args.printf_P(PSTR("pixel=0-%u, color=%s"), _display.kNumPixels, color.toString().c_str());
+                _display.fill(color.get());
                 _display.show();
             }
             else if (num >= 0) {
                 args.printf_P(PSTR("pixel=%u, color=%s"), num, color.toString().c_str());
-                _display._pixels[num] = color;
+                _display.setPixel(num, color.get());
                 _display.show();
             }
             else {
@@ -284,60 +310,68 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
         }
         return true;
     }
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKD))) {
-        _display.dump(args.getStream());
-#if IOT_CLOCK_DEBUG_ANIMATION_TIME
-        args.print(F("animation loop times (microseconds):"));
-        PrintString str;
-        uint8_t n = 0;
-        for(const auto time: _anmationTime) {
-            str.printf_P(PSTR("%05u "), time);
-            if (++n % 5 == 0) {
-                str.print('\n');
+#if HTTP2SERIAL_SUPPORT && IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKVIEW))) {
+        auto interval = static_cast<uint32_t>(args.toInt(0));
+        auto clientId = (void *)args.toNumber(1, 0);
+        if (clientId && interval) {
+            interval = std::max(25U, interval);
+            if (_displayLedTimer) {
+                _displayLedTimer->timer->setInterval(Event::milliseconds(interval));
+                args.printf_P(PSTR("changed interval to %ums"), interval);
+            }
+            else {
+                auto client = Http2Serial::getClientById(clientId);
+                if (client) {
+                    // rows,cols,reverse rows,reverse cols,rotate,interleaved
+                    client->text(PrintString(F("+LED_MATRIX=%u,%u,1,0,0,1"), IOT_LED_MATRIX_ROWS, IOT_LED_MATRIX_COLS));
+                    _displayLedTimer = new LedMatrixDisplayTimer(clientId);
+                    _Timer(_displayLedTimer->timer).add(Event::milliseconds(interval), true, [this](Event::CallbackTimerPtr timer) {
+                        auto client = Http2Serial::getClientById(_displayLedTimer->clientId);
+                        if (!client) {
+                            timer->disarm();
+                            return;
+                        }
+                        auto server = client->server();
+                        if (server->getQueuedMessageCount() < 5 && client->canSend()) {
+                            constexpr size_t frameSize = IOT_LED_MATRIX_ROWS * IOT_LED_MATRIX_COLS * sizeof(uint16_t);
+                            auto sBuf = server->makeBuffer(frameSize + sizeof(uint16_t) * 2);
+                            auto buf = reinterpret_cast<uint16_t *>(sBuf->get());
+                            *buf++ = (uint16_t)WsClient::BinaryPacketType::LED_MATRIX_DATA;
+                            // 4 / 12 bit
+                            *buf++ = (server->getQueuedMessageCount() & 0x0f) | ((server->getQueuedMessageSize() >> 1) & 0xfff0);
+
+                            for(uint16_t i = IOT_LED_MATRIX_START_ADDR; i < (IOT_LED_MATRIX_ROWS * IOT_LED_MATRIX_COLS) + IOT_LED_MATRIX_START_ADDR; i++) {
+                                auto color = _display._pixels[i];
+                                // 888 to 565
+                                *buf++ = ((color.red & 0b11111000) << 8) | ((color.green & 0b11111100) << 3) | (color.blue >> 3);
+                            }
+                            client->binary(sBuf);
+                        }
+                    });
+                    args.printf_P(PSTR("sending LED colors every %ums to %p"), interval, clientId);
+                }
+                else {
+                    args.printf_P(PSTR("client_id %p not found"), clientId);
+                }
             }
         }
-        str.rtrim();
-        args.print(str);
-
-        args.print(F("animation render times (microseconds):"));
-        str = PrintString();
-        n = 0;
-        for(const auto time: _animationRenderTime) {
-            str.printf_P(PSTR("%05u "), time);
-            if (++n % 5 == 0) {
-                str.print('\n');
+        else {
+            if (_displayLedTimer) {
+                args.printf_P(PSTR("stopped sending LED colors to %p"), _displayLedTimer->clientId);
+                _removeDisplayLedTimer();
+            }
+            else {
+                args.printf_P(PSTR("not sending LED colors"));
             }
         }
-        str.rtrim();
-        args.print(str);
-
-        args.print(F("display times (microseconds):"));
-        str = PrintString();
-        n = 0;
-        for(const auto time: _displayTime) {
-
-            str.printf_P(PSTR("%05u "), time);
-            if (++n % 5 == 0) {
-                str.print('\n');
-            }
-        }
-        str.rtrim();
-        args.print(str);
-
-        args.printf_P(PSTR("timer update rate %u (milliseconds):"), _updateRate);
-        str = PrintString();
-        n = 0;
-        for(const auto time: _timerDiff) {
-            str.printf_P(PSTR("%05u "), time);
-            if (++n % 5 == 0) {
-                str.print('\n');
-            }
-        }
-        str.rtrim();
-        args.print(str);
-#endif
         return true;
     }
+#endif
+    // else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKD))) {
+    //     _display.dump(args.getStream());
+    //     return true;
+    // }
     return false;
 }
 

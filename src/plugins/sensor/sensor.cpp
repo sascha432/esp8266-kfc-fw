@@ -144,7 +144,7 @@ void SensorPlugin::timerEvent(Event::CallbackTimerPtr timer)
 void SensorPlugin::_timerEvent()
 {
     auto client = MQTTClient ::getClient();
-    if (!client->isConnected()) {
+    if (client && !client->isConnected()) {
         client = nullptr;
     }
 

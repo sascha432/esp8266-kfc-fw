@@ -28,9 +28,9 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
             AnimationType::SOLID, FSPGM(Solid_Color),
             AnimationType::RAINBOW, FSPGM(Rainbow),
             AnimationType::FIRE, F("Fire"),
-            AnimationType::FLASHING, FSPGM(Flashing),
-            AnimationType::FADING, F("Color Fading"),
-            AnimationType::SKIP_ROWS, F("Skip Rows or Columns")
+            AnimationType::FLASHING, F("Flash"),
+            AnimationType::FADING, F("Color Fade"),
+            AnimationType::INTERLEAVED, F("Interleaved")
         );
 
         auto &ui = form.createWebUI();
@@ -42,7 +42,7 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         auto animationTypeItems = FormUI::Container::List(
             AnimationType::SOLID, FSPGM(Solid_Color),
             AnimationType::RAINBOW, FSPGM(Rainbow),
-            AnimationType::FLASHING, FSPGM(Flashing),
+            AnimationType::FLASHING, F("Flash"),
             AnimationType::FADING, F("Color Fade")
         );
 
@@ -90,10 +90,6 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
     form.addObjectGetterSetter(F("ft"), cfg, cfg.get_bits_fading_time, cfg.set_bits_fading_time);
     form.addFormUI(F("Fading Time From 0 To 100%"), FormUI::Suffix(FSPGM(seconds)));
-    cfg.addRangeValidatorFor_fading_time(form, true);
-
-    form.addObjectGetterSetter(F("pl"), cfg, cfg.get_bits_power_limit, cfg.set_bits_power_limit);
-    form.addFormUI(F("Limit Maximum Power"), FormUI::Suffix(F("Watt, 0 = Disable")));
     cfg.addRangeValidatorFor_fading_time(form, true);
 
     #if IOT_CLOCK_USE_DITHERING
@@ -207,6 +203,14 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         form.addObjectGetterSetter(F("fio"), cfg.fire, cfg.fire.get_int_orientation, cfg.fire.set_int_orientation);
         form.addFormUI(F("Orientation"), orientationItems, FormUI::CheckboxButtonSuffix(invertHidden, F("Invert Direction")));
 
+        form.add(F("fif"), Color(cfg.fire.factor.value).toString(), [&cfg](const String &value, FormUI::Field::BaseField &field, bool store) {
+            if (store) {
+                cfg.fire.factor.value = Color::fromString(value);
+            }
+            return false;
+        });
+        form.addFormUI(F("Color Factor"));
+
         fireGroup.end();
 
     #endif
@@ -214,17 +218,17 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
     // --------------------------------------------------------------------
     #if IOT_LED_MATRIX
 
-        auto &skipRowsGroups = form.addCardGroup(F("src"), F("Skip Rows Or Columns"), true);
+        auto &skipRowsGroups = form.addCardGroup(F("ild"), F("Interleaved"), true);
 
-        form.addPointerTriviallyCopyable(F("skr"), &cfg.skip_rows.rows);
+        form.addPointerTriviallyCopyable(F("ilr"), &cfg.interleaved.rows);
         form.addFormUI(F("Display every nth row"));
         form.addValidator(FormUI::Validator::Range(0, IOT_LED_MATRIX_ROWS));
 
-        form.addPointerTriviallyCopyable(F("skc"), &cfg.skip_rows.cols);
+        form.addPointerTriviallyCopyable(F("ilc"), &cfg.interleaved.cols);
         form.addFormUI(F("Display every nth column"));
         form.addValidator(FormUI::Validator::Range(0, IOT_LED_MATRIX_COLS));
 
-        form.addPointerTriviallyCopyable(F("skt"), &cfg.skip_rows.time);
+        form.addPointerTriviallyCopyable(F("ilt"), &cfg.interleaved.time);
         form.addFormUI(F("Rotate Through Rows And Columns"), FormUI::Suffix(F("milliseconds, 0 = disable")));
 
         skipRowsGroups.end();
@@ -232,7 +236,7 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
     #endif
 
     // --------------------------------------------------------------------
-    auto &fadingGroup = form.addCardGroup(F("fading"), F("Random Color Fading"), true);
+    auto &fadingGroup = form.addCardGroup(F("fade"), F("Color Fade"), true);
 
     form.addPointerTriviallyCopyable(F("fse"), &cfg.fading.speed);
     form.addFormUI(F("Time Between Fading Colors"), FormUI::Suffix(FSPGM(seconds)));
@@ -289,6 +293,30 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
     form.addValidator(FormUI::Validator::Range(kMinimumTemperatureThreshold, 105));
 
     protectionGroup.end();
+
+    auto &powerGroup = form.addCardGroup(F("pow"), F("Power"), true);
+
+    form.addObjectGetterSetter(F("pl"), cfg, cfg.get_bits_power_limit, cfg.set_bits_power_limit);
+    form.addFormUI(F("Limit Maximum Power"), FormUI::Suffix(F("Watt, 0 = Disable")));
+    cfg.addRangeValidatorFor_fading_time(form, true);
+
+    form.addPointerTriviallyCopyable(F("plr"), &cfg.power.red);
+    form.addFormUI(F("Power Consumption For 256 LEDs at 100% Red"), FormUI::Suffix(F("mW")));
+    form.addValidator(FormUI::Validator::Range(0, 65535));
+
+    form.addPointerTriviallyCopyable(F("plg"), &cfg.power.green);
+    form.addFormUI(F("Power Consumption 100% Green"), FormUI::Suffix(F("mW")));
+    form.addValidator(FormUI::Validator::Range(0, 65535));
+
+    form.addPointerTriviallyCopyable(F("plb"), &cfg.power.blue);
+    form.addFormUI(F("Power Consumption 100% Blue"), FormUI::Suffix(F("mW")));
+    form.addValidator(FormUI::Validator::Range(0, 65535));
+
+    form.addPointerTriviallyCopyable(F("pli"), &cfg.power.idle);
+    form.addFormUI(F("Power Consumption While Idle"), FormUI::Suffix(F("mW")));
+    form.addValidator(FormUI::Validator::Range(0, 65535));
+
+    powerGroup.end();
 
     form.finalize();
 }

@@ -214,11 +214,11 @@ void MQTTAutoDiscoveryQueue::_publishDone(bool success, uint32_t delay)
 
 void MQTTAutoDiscoveryQueue::_setState(const StateFileType &state)
 {
-    if (state._valid) {
-        KFCFS.remove(F("/.pvt/mqtt.state"));
+    if (!state._valid) {
+        KFCFS.remove(FSPGM(mqtt_state_file));
     }
     else {
-        auto file = KFCFS.open(F("/.pvt/mqtt.state"), fs::FileOpenMode::write);
+        auto file = KFCFS.open(FSPGM(mqtt_state_file), fs::FileOpenMode::write);
         if (file) {
             file.write(reinterpret_cast<const uint8_t *>(&state), sizeof(state));
             file.close();
@@ -229,7 +229,7 @@ void MQTTAutoDiscoveryQueue::_setState(const StateFileType &state)
 MQTTAutoDiscoveryQueue::StateFileType MQTTAutoDiscoveryQueue::_getState()
 {
     auto state = StateFileType();
-    auto file = KFCFS.open(F("/.pvt/mqtt.state"), fs::FileOpenMode::read);
+    auto file = KFCFS.open(FSPGM(mqtt_state_file), fs::FileOpenMode::read);
     if (file) {
         if (file.read(reinterpret_cast<uint8_t *>(&state), sizeof(state)) != sizeof(state)) {
             state = StateFileType();

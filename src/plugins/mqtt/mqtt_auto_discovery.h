@@ -107,9 +107,10 @@ public:
         addParameter(FSPGM(mqtt_effect_state_topic), value);
     }
 
-    template<typename _T>
-    void addEffectList(_T value) {
-        addParameter(FSPGM(mqtt_effect_list), value);
+    // JSON array
+    // ["Efect1","Effect2",...]
+    void addEffectList(String json) {
+        __addParameter(FSPGM(mqtt_effect_list), json.c_str(), true);
     }
 
     template<typename _T>
@@ -133,7 +134,7 @@ public:
 
     template<typename _T>
     void addPayloadOff(_T value) {
-        addParameter(FSPGM(mqtt_payload_on), value);
+        addParameter(FSPGM(mqtt_payload_off), value);
     }
 
     void addPayloadOnOff() {
@@ -157,7 +158,7 @@ public:
     static bool isEnabled();
 
 private:
-    void __addParameter(const __FlashStringHelper *name, const char *value); // PROGMEM safe
+    void __addParameter(const __FlashStringHelper *name, const char *value, bool list = false); // PROGMEM safe
 
     inline void __addParameter(const __FlashStringHelper *name, const __FlashStringHelper *value);
     inline void __addParameter(const __FlashStringHelper *name, const String &value);
@@ -170,6 +171,7 @@ private:
         addParameter(name, str);
     }
 
+    static String getWildcardTopic();
 
 private:
     bool _create(ComponentType componentType, const String &name, FormatType format);

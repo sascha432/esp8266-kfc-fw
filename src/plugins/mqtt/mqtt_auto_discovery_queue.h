@@ -25,7 +25,7 @@
 
 // delay between sending auto discovery
 #ifndef MQTT_AUTO_DISCOVERY_QUEUE_DELAY
-#define MQTT_AUTO_DISCOVERY_QUEUE_DELAY                         5000
+#define MQTT_AUTO_DISCOVERY_QUEUE_DELAY                         1500
 #endif
 
 class MQTTClient;

@@ -63,7 +63,7 @@ void MQTTAutoDiscoveryQueue::publish(bool force)
             (MQTT_AUTO_DISCOVERY_QUEUE_INITIAL_DELAY + (rand() %
                     ((MQTT_AUTO_DISCOVERY_QUEUE_INITIAL_DELAY / 10) > 5 ? (MQTT_AUTO_DISCOVERY_QUEUE_INITIAL_DELAY / 10) : 5)
                 ));
-        _Timer(_timer).add(intialDelay, true, [this](Event::CallbackTimerPtr timer) {
+        _Timer(_timer).add(Event::milliseconds(std::max(250, intialDelay)), true, [this](Event::CallbackTimerPtr timer) {
             _timerCallback(timer);
         });
     }

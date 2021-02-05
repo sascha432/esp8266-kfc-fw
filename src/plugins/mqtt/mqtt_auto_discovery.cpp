@@ -36,6 +36,11 @@ bool MQTTAutoDiscovery::create(ComponentType componentType, const String &compon
     return _create(componentType, suffix, format);
 }
 
+String MQTTAutoDiscovery::getWildcardTopic()
+{
+    return PrintString(F("%s/+/%s/#"), MQTTClient::ClientConfig::getAutoDiscoveryPrefix(), System::Device::getName());
+}
+
 bool MQTTAutoDiscovery::_create(ComponentType componentType, const String &name, FormatType format)
 {
     String uniqueId;
@@ -106,13 +111,17 @@ bool MQTTAutoDiscovery::_create(ComponentType componentType, const String &name,
     return true;
 }
 
-void MQTTAutoDiscovery::__addParameter(const __FlashStringHelper *name, const char *str)
+void MQTTAutoDiscovery::__addParameter(const __FlashStringHelper *name, const char *str, bool list)
 {
     if (_format == FormatType::TOPIC) {
         return;
     }
     else if (_format == FormatType::JSON) {
-        _discovery.printf_P(PSTR("\"%s\":\""), name);
+        _discovery.printf_P(PSTR("\"%s\":"), name);
+        if (!list) {
+            _discovery.print('"');
+        }
+        // _discovery.printf_P(PSTR("\"%s\":\""), name);
 #if MQTT_AUTO_DISCOVERY_USE_ABBREVIATIONS
         auto len = strlen_P(RFPSTR(name));
         if (len > 2 && pgm_read_word(RFPSTR(name) + len - 2) == (('_') | ('t' << 8))) { // check if the name ends with "_t"
@@ -122,7 +131,11 @@ void MQTTAutoDiscovery::__addParameter(const __FlashStringHelper *name, const ch
             }
         }
 #endif
-        _discovery.printf_P(PSTR("%s\","), str);
+        _discovery.print(FPSTR(str));
+        if (!list) {
+            _discovery.print('"');
+        }
+        _discovery.print(',');
     }
     else {
         _discovery.printf_P(PSTR("%s: %s\n    "), name, str);

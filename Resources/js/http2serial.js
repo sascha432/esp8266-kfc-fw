@@ -2,6 +2,8 @@
  * Author: sascha_lammers@gmx.de
  */
 
+
+
  var http2serialPlugin = {
 
     output: $("#serial_console"),
@@ -358,7 +360,18 @@ http2serialPlugin.appendLedMatrix = function(rows, cols, reverse_rows, reverse_c
         }
         contents += '</div>';
     }
-    container.html(contents + '<div class="fps-container"><span id="fps-number">-</span> fps <span id="dqueue"></span> <div class="zoom"><span class="oi oi-zoom-in"></span><span class="oi oi-zoom-out"></span></div></div>');
+    container.html(contents + '<div class="row"> \
+        <div class="col"> \
+            <div class="fps-container"><span id="fps-number">-</span> fps <span id="dqueue"></span> \
+                <div class="zoom"><span class="oi oi-zoom-in"></span><span class="oi oi-zoom-out"></span></div> \
+            </div> \
+        </div> \
+        <div class="col"> \
+            Brightness<br><input type="range" id="led_brightness" min="0" max="255" value="0"> \
+        </div> \
+    </div>'
+    );
+
     var n = 0;
     for (var i = 0; i <rows; i++) {
         for (var j = 0; j < cols; j++) {
@@ -386,10 +399,10 @@ http2serialPlugin.ledMatrixSetColor = function(selector, r, g, b, a1, a2) {
         css('box-shadow', '0px 0px ' + this.ledMatrix.inner_size + ' ' + this.ledMatrix.inner_size + ' rgba(' + r + ', ' + g + ', ' + b + ', ' + a1 + ')').
         css('background', 'rgba(' + r + ', ' + g + ', ' + b + ', ' + a1 + ')').
         css('border-color', 'rgba(' + r + ', ' + g + ', ' + b + ', ' + a1 + ')');
-    $(selector).find('.ipx').
-        css('box-shadow', '0px 0px ' + this.ledMatrix.outer_size + ' ' + this.ledMatrix.outer_size + ' rgba(' + r + ', ' + g + ', ' + b + ', ' + a2 + ')').
-        css('background', 'rgba(' + r + ', ' + g + ', ' + b + ', ' + a2 + ')').
-        css('border-color', 'rgba(' + r + ', ' + g + ', ' + b + ' ' + a2 + ')');
+    // $(selector).find('.ipx').
+    //     css('box-shadow', '0px 0px ' + this.ledMatrix.outer_size + ' ' + this.ledMatrix.outer_size + ' rgba(' + r + ', ' + g + ', ' + b + ', ' + a2 + ')').
+    //     css('background', 'rgba(' + r + ', ' + g + ', ' + b + ', ' + a2 + ')').
+    //     css('border-color', 'rgba(' + r + ', ' + g + ', ' + b + ' ' + a2 + ')');
 };
 
 http2serialPlugin.countFps = function() {
@@ -417,11 +430,17 @@ http2serialPlugin.dataHandler = function(event) {
             var container = $('#pixel-container');
             if (container.length) {
                 this.countFps();
-                if (window.display_dqueue) {
-                    var tmp = new Uint16Array(event.data, 2, 1);
-                    var queue_size = tmp & 0xf;
-                    var queue_mem_size = (tmp & 0xfff0) << 1;
-                    $('#dqueue').html('<br>' + queue_size + ' ' + queue_mem_size);
+                if (1) { //window.display_dqueue) {
+                    if (event.type && event.type == 'udp') {
+                        var tmp = new Uint16Array(event.data, 2, 1);
+                        $('#dqueue').html('<br>dropped ' + (tmp >> 4));
+                    }
+                    else {
+                        var tmp = new Uint16Array(event.data, 2, 1);
+                        var queue_size = tmp & 0xf;
+                        var queue_mem_size = (tmp & 0xfff0) << 1;
+                        $('#dqueue').html('<br>queue ' + queue_size + ' ' + queue_mem_size);
+                    }
                 }
 
                 var num_pixels = this.ledMatrix.args[0] * this.ledMatrix.args[1];
@@ -434,7 +453,12 @@ http2serialPlugin.dataHandler = function(event) {
         }
     }
     else if (event.type == 'data') {
-        if (event.data.startsWith('+LED_MATRIX=')) {
+
+        if (event.data.startsWith('+LED_MATRIX_BRIGHTNESS=')) {
+            var br = parseInt(event.data.substring(23));
+            $('#led_brightness').val(br);
+        }
+        else if (event.data.startsWith('+LED_MATRIX=')) {
             $('#led-matrix').remove();
             args = event.data.substring(12).split(',');
             if (args.length >= 2) {
@@ -442,6 +466,37 @@ http2serialPlugin.dataHandler = function(event) {
                     args.push(0);
                 }
                 this.appendLedMatrix(parseInt(args[0]), parseInt(args[1]), parseInt(args[2]), parseInt(args[3]), parseInt(args[4]), parseInt(args[5]));
+            }
+        }
+        else if (event.data.startsWith('+LED_MATRIX_SERVER=')) {
+            $('#led-matrix').remove();
+            self = this
+            args = event.data.substring(19).split(',');
+            if (args.length >= 3) {
+                while(args.lenth < 7) {
+                    args.push(0);
+                }
+                var ws = new WebSocket(args[0]);
+                ws.onopen = function(e) {
+                    self.appendLedMatrix(parseInt(args[1]), parseInt(args[2]), parseInt(args[3]), parseInt(args[4]), parseInt(args[5]), parseInt(args[6]));
+                    self.write('web socket connected: ' + args[0] + '\n');
+                };
+                ws.onerror = ws.onclose = function(e) {
+                    $('#led-matrix').remove();
+                    self.write('web socket closed: ' + args[0] + '\n');
+                    try {
+                        ws.close();
+                    } catch(e) {
+                    }
+                    ws = null;
+                };
+                ws.onmessage = function(e) {
+                    if (e.data instanceof Blob) {
+                        e.data.arrayBuffer().then(function(arr) {
+                            self.dataHandler({'data': arr, 'type': 'udp'});
+                        });
+                    }
+                };
             }
         }
         else if (event.data.startsWith("+ATMODE_CMDS_HTTP2SERIAL=")) {

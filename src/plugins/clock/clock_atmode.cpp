@@ -47,9 +47,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKVIEW, "VIEW", "<interval in ms|0=disa
 void ClockPlugin::_removeDisplayLedTimer()
 {
     if (_displayLedTimer) {
-        auto client = Http2Serial::getClientById(_displayLedTimer->clientId);
-        client->text(F("+LED_MATRIX=0"));
-
+        _displayLedTimer->print(F("+LED_MATRIX=0"));
         delete _displayLedTimer;
         _displayLedTimer = nullptr;
     }
@@ -313,56 +311,136 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
 #if HTTP2SERIAL_SUPPORT && IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKVIEW))) {
         auto interval = static_cast<uint32_t>(args.toInt(0));
-        auto clientId = (void *)args.toNumber(1, 0);
-        if (clientId && interval) {
-            interval = std::max(25U, interval);
+        if (interval != 0) {
+            interval = std::max(5U, interval);
+        }
+        auto serverStr = args.toString(1);
+        if (serverStr.startsWith(F("udp")) && interval) {
             if (_displayLedTimer) {
                 _displayLedTimer->timer->setInterval(Event::milliseconds(interval));
                 args.printf_P(PSTR("changed interval to %ums"), interval);
             }
             else {
-                auto client = Http2Serial::getClientById(clientId);
-                if (client) {
-                    // rows,cols,reverse rows,reverse cols,rotate,interleaved
-                    client->text(PrintString(F("+LED_MATRIX=%u,%u,1,0,0,1"), IOT_LED_MATRIX_ROWS, IOT_LED_MATRIX_COLS));
-                    _displayLedTimer = new LedMatrixDisplayTimer(clientId);
-                    _Timer(_displayLedTimer->timer).add(Event::milliseconds(interval), true, [this](Event::CallbackTimerPtr timer) {
-                        auto client = Http2Serial::getClientById(_displayLedTimer->clientId);
-                        if (!client) {
-                            timer->disarm();
-                            return;
-                        }
-                        auto server = client->server();
-                        if (server->getQueuedMessageCount() < 5 && client->canSend()) {
-                            constexpr size_t frameSize = IOT_LED_MATRIX_ROWS * IOT_LED_MATRIX_COLS * sizeof(uint16_t);
-                            auto sBuf = server->makeBuffer(frameSize + sizeof(uint16_t) * 2);
-                            auto buf = reinterpret_cast<uint16_t *>(sBuf->get());
-                            *buf++ = (uint16_t)WsClient::BinaryPacketType::LED_MATRIX_DATA;
-                            // 4 / 12 bit
-                            *buf++ = (server->getQueuedMessageCount() & 0x0f) | ((server->getQueuedMessageSize() >> 1) & 0xfff0);
-
-                            for(uint16_t i = IOT_LED_MATRIX_START_ADDR; i < (IOT_LED_MATRIX_ROWS * IOT_LED_MATRIX_COLS) + IOT_LED_MATRIX_START_ADDR; i++) {
-                                auto color = _display._pixels[i];
-                                // 888 to 565
-                                *buf++ = ((color.red & 0b11111000) << 8) | ((color.green & 0b11111100) << 3) | (color.blue >> 3);
+                StringVector parts;
+                explode(serverStr.c_str(), ':', parts, 4);
+                if (parts.size() >= 4) {
+                    _displayLedTimer = new LedMatrixDisplayTimer(nullptr, 5000 / interval);
+                    _displayLedTimer->host = parts[1];
+                    _displayLedTimer->udpPort = parts[2].toInt();
+                    _displayLedTimer->wsPort = parts[3].toInt();
+                    auto &output = args.getStream();
+                    output.printf_P(PSTR("+LED_MATRIX_SERVER=ws://%s:%u,%u,%u,1,0,0,1\n"), _displayLedTimer->host.c_str(), _displayLedTimer->wsPort, IOT_LED_MATRIX_ROWS, IOT_LED_MATRIX_COLS);
+                    _Timer(_displayLedTimer->timer).add(Event::milliseconds(interval), true, [this, &output](Event::CallbackTimerPtr timer) {
+                        WiFiUDP udp;
+                        uint16_t tmp;
+                        if (udp.beginPacket(_displayLedTimer->host.c_str(), _displayLedTimer->udpPort)) {
+                            bool error = true;
+                            tmp = (uint16_t)WsClient::BinaryPacketType::LED_MATRIX_DATA;
+                            if (udp.write((const uint8_t *)&tmp, sizeof(tmp)) == sizeof(tmp)) {
+                                tmp = _displayLedTimer->errors << 4;
+                                if (udp.write((const uint8_t *)&tmp, sizeof(tmp)) == sizeof(tmp)) {
+                                    error = false;
+                                    for(uint16_t i = IOT_LED_MATRIX_START_ADDR; i < (IOT_LED_MATRIX_ROWS * IOT_LED_MATRIX_COLS) + IOT_LED_MATRIX_START_ADDR; i++) {
+                                        auto color = _display._pixels[i];
+                                        // 888 to 565
+                                        tmp = ((color.red & 0b11111000) << 8) | ((color.green & 0b11111100) << 3) | (color.blue >> 3);
+                                        if (udp.write((const uint8_t *)&tmp, sizeof(tmp)) != sizeof(tmp)) {
+                                            error = true;
+                                            break;
+                                        }
+                                    }
+                                    if (!error) {
+                                        error = !udp.endPacket();
+                                    }
+                                }
                             }
-                            client->binary(sBuf);
+                            if (error) {
+                                _displayLedTimer->errors++;
+                                if (_displayLedTimer->errors > _displayLedTimer->maxErrors) {
+                                    __LDBG_printf("failed to send udp packet");
+                                    timer->disarm();
+                                    LoopFunctions::callOnce([this]() {
+                                        delay(50);
+                                        _removeDisplayLedTimer();
+                                    });
+                                    return;
+                                }
+                            }
+                            else {
+                                _displayLedTimer->errors = 0;
+                            }
                         }
                     });
-                    args.printf_P(PSTR("sending LED colors every %ums to %p"), interval, clientId);
                 }
                 else {
-                    args.printf_P(PSTR("client_id %p not found"), clientId);
+                    args.printf_P(PSTR("arguments: <interval>,udp:<host>:<udp-port>:<web-socket port>"));
                 }
             }
         }
         else {
-            if (_displayLedTimer) {
-                args.printf_P(PSTR("stopped sending LED colors to %p"), _displayLedTimer->clientId);
-                _removeDisplayLedTimer();
+            auto clientId = (void *)args.toNumber(1, 0);
+            if (clientId && interval) {
+                if (_displayLedTimer) {
+                    _displayLedTimer->timer->setInterval(Event::milliseconds(interval));
+                    args.printf_P(PSTR("changed interval to %ums"), interval);
+                }
+                else {
+                    auto client = Http2Serial::getClientById(clientId);
+                    if (client) {
+                        // rows,cols,reverse rows,reverse cols,rotate,interleaved
+                        client->text(PrintString(F("+LED_MATRIX=%u,%u,1,0,0,1"), IOT_LED_MATRIX_ROWS, IOT_LED_MATRIX_COLS));
+                        _displayLedTimer = new LedMatrixDisplayTimer(clientId, 2000 / interval);
+                        _Timer(_displayLedTimer->timer).add(Event::milliseconds(interval), true, [this](Event::CallbackTimerPtr timer) {
+                            auto client = Http2Serial::getClientById(_displayLedTimer->clientId);
+                            if (client) {
+                                auto server = client->server();
+                                if (server->getQueuedMessageCount() < 5 && client->canSend()) {
+                                    constexpr size_t frameSize = IOT_LED_MATRIX_ROWS * IOT_LED_MATRIX_COLS * sizeof(uint16_t);
+                                    auto sBuf = server->makeBuffer(frameSize + sizeof(uint16_t) * 2);
+                                    auto buf = reinterpret_cast<uint16_t *>(sBuf->get());
+                                    *buf++ = (uint16_t)WsClient::BinaryPacketType::LED_MATRIX_DATA;
+                                    // 4 / 12 bit
+                                    *buf++ = (server->getQueuedMessageCount() & 0x0f) | ((server->getQueuedMessageSize() >> 1) & 0xfff0);
+
+                                    for(uint16_t i = IOT_LED_MATRIX_START_ADDR; i < (IOT_LED_MATRIX_ROWS * IOT_LED_MATRIX_COLS) + IOT_LED_MATRIX_START_ADDR; i++) {
+                                        auto color = _display._pixels[i];
+                                        // 888 to 565
+                                        *buf++ = ((color.red & 0b11111000) << 8) | ((color.green & 0b11111100) << 3) | (color.blue >> 3);
+                                    }
+                                    client->binary(sBuf);
+                                    _displayLedTimer->errors = 0;
+                                }
+                                else {
+                                    _displayLedTimer->errors++;
+                                    if (_displayLedTimer->errors > _displayLedTimer->maxErrors) {
+                                        client = nullptr;
+                                    }
+                                }
+                            }
+                            if (!client) {
+                                timer->disarm();
+                                LoopFunctions::callOnce([this]() {
+                                    delay(50);
+                                    _removeDisplayLedTimer();
+                                });
+                                return;
+                            }
+                        });
+                        args.printf_P(PSTR("sending LED colors every %ums to %p"), interval, clientId);
+                    }
+                    else {
+                        args.printf_P(PSTR("client_id %p not found"), clientId);
+                    }
+                }
             }
             else {
-                args.printf_P(PSTR("not sending LED colors"));
+                if (_displayLedTimer) {
+                    args.printf_P(PSTR("stopped sending LED colors to %p"), _displayLedTimer->clientId);
+                    _removeDisplayLedTimer();
+                }
+                else {
+                    args.printf_P(PSTR("not sending LED colors"));
+                }
             }
         }
         return true;

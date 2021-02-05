@@ -38,9 +38,9 @@ MQTTComponent::MQTTAutoDiscoveryPtr ClockPlugin::nextAutoDiscovery(MQTTAutoDisco
             discovery->addBrightnessScale(kMaxBrightness);
             discovery->addRGBStateTopic(MQTTClient::formatTopic(FSPGM(_color_state)));
             discovery->addRGBCommandTopic(MQTTClient::formatTopic(FSPGM(_color_set)));
-            discovery->addEffectStateTopic(MQTTClient::formatTopic(F("/effect/state")));
-            discovery->addEffectCommandTopic(MQTTClient::formatTopic(F("/effect/set")));
-            discovery->addEffectList(Clock::Config_t::getAnimationNames());
+            discovery->addEffectStateTopic(MQTTClient::formatTopic(FSPGM(_effect_state)));
+            discovery->addEffectCommandTopic(MQTTClient::formatTopic(FSPGM(_effect_set)));
+            discovery->addEffectList(Clock::Config_t::getAnimationNamesJsonArray());
         }
         break;
 #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
@@ -106,7 +106,12 @@ void ClockPlugin::onMessage(MQTTClient *client, char *topic, char *payload, size
     _resetAlarm();
 
     if (!strcmp_end_P(topic, SPGM(_effect_set))) {
-        int8_t animation = stringlist_find_P_P(Clock::Config_t::getAnimationNames(), topic, ',');
+        String list = Clock::Config_t::getAnimationNames();
+        list.toLowerCase();
+        String name;
+        name.concat(payload, len);
+        name.toLowerCase();
+        int8_t animation = stringlist_find_P_P(list.c_str(), name.c_str(), ',');
         if (animation >= 0) {
             setAnimation(static_cast<AnimationType>(animation));
             _saveStateDelayed(_targetBrightness);

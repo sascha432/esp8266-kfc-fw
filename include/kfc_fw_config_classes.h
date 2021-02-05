@@ -1770,12 +1770,31 @@ typedef struct  {
 
 
                 static const __FlashStringHelper *getAnimationNames() {
+                    return F( \
+                        "Solid," \
+                        "Rainbow," \
+                        "Flash," \
+                        "Color Fade,"
 #if IOT_LED_MATRIX
-                    return F("Solid,Rainbow,Flash,Color Fade,Fire,Interleaved");
-#else
-                    return F("Solid,Rainbow,Flash,Color Fade");
+                        "Fire," \
+                        "Interleaved"
 #endif
+                    );
                 }
+
+                static const __FlashStringHelper *getAnimationNamesJsonArray() {
+                    return F("[" \
+                        "\042Solid\042," \
+                        "\042Rainbow\042," \
+                        "\042Flash\042," \
+                        "\042Color Fade\042,"
+#if IOT_LED_MATRIX
+                        "\042Fire\042," \
+                        "\042Interleaved\042"
+#endif
+                        "]");
+                }
+
                 static const __FlashStringHelper *getAnimationName(AnimationType type) {
                     switch(type) {
                         case AnimationType::RAINBOW:

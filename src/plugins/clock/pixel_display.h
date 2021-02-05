@@ -268,12 +268,12 @@ namespace Clock {
         }
 
         ColorType &pixels(PixelAddressType address) {
-            __DBG_assert_printf(address >= 0 && address, "address out of bounds: %d", address);
+            __DBG_assert_printf(address >= 0 && address < _pixels.size(), "address out of bounds: %d", address);
             return _pixels[address];
         }
 
         ColorType pixels(PixelAddressType address) const {
-            __DBG_assert_printf(address >= 0 && address, "address out of bounds: %d", address);
+            __DBG_assert_printf(address >= 0 && address < _pixels.size(), "address out of bounds: %d", address);
             return _pixels[address];
         }
 

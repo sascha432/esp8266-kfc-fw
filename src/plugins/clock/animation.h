@@ -76,33 +76,42 @@ namespace Clock {
         static constexpr CoordinateType kCols = IOT_LED_MATRIX_COLS;
         static constexpr PixelAddressType kNumPixels = kRows * kCols;
 
+        enum class ModeType {
+            NONE,
+            ACTIVE,
+            BLEND_IN,
+            BLEND_OUT,
+        };
+
     public:
-        Animation(ClockPlugin &clock) :
+        Animation(ClockPlugin &clock, Color color = 0U) :
             _parent(clock),
             _display(nullptr),
             _buffer(nullptr),
             _blendTime(kDefaultBlendTime),
-            _disableBlinkColon(kDefaultDisableBlinkColon)
+            _disableBlinkColon(kDefaultDisableBlinkColon),
+            _mode(ModeType::NONE),
+            _color(color)
         {
         }
 
-        Animation(ClockPlugin &clock, DisplayBufferType *buffer) :
-            _parent(clock),
-            _display(nullptr),
-            _buffer(buffer),
-            _blendTime(kDefaultBlendTime),
-            _disableBlinkColon(kDefaultDisableBlinkColon)
-        {
-        }
+        // Animation(ClockPlugin &clock, DisplayBufferType *buffer) :
+        //     _parent(clock),
+        //     _display(nullptr),
+        //     _buffer(buffer),
+        //     _blendTime(kDefaultBlendTime),
+        //     _disableBlinkColon(kDefaultDisableBlinkColon)
+        // {
+        // }
 
-        Animation(ClockPlugin &clock, DisplayType &display) :
-            _parent(clock),
-            _display(&display),
-            _buffer(nullptr),
-            _blendTime(kDefaultBlendTime),
-            _disableBlinkColon(kDefaultDisableBlinkColon)
-        {
-        }
+        // Animation(ClockPlugin &clock, DisplayType &display) :
+        //     _parent(clock),
+        //     _display(&display),
+        //     _buffer(nullptr),
+        //     _blendTime(kDefaultBlendTime),
+        //     _disableBlinkColon(kDefaultDisableBlinkColon)
+        // {
+        // }
 
         virtual ~Animation()
         {
@@ -160,38 +169,14 @@ namespace Clock {
         virtual void nextFrame(uint32_t millis)
         {
         }
-        // void Animation::nextFrame(uint32_t time)
-        // {
-        //     SevenSegmentPixelParams params;
-        //     params.setBrightness(0xff, 0);
-        //     params.millis = time;
-        //     for(uint16_t i = 0; i < kCols * rows(); i++) {
-        //         _renderer._clock->_display.setPixel(i, _renderer._callback(i, _renderer._clock->_display.getPixel(i), params));
-        //     }
-        // }
 
-//         Point translateAddress(PixelAddressType address) const {
-// #if IOT_LED_MATRIX_ROWS == 1
-//             auto p = Point(0, address);
-// #elif IOT_LED_MATRIX_COLS == 1
-//             auto p = Point(address, 0);
-// #else
-//             auto p = Point(address % rows(), address / rows());
-//             if (p.getCol() % 2 != 0) {
-//                 p.setRow((rows() - 1) - p.getRow());
-//             }
-// #endif
-//             return p;
-//         }
-
-        Color _getColor() const;
-        void _setColor(Color color);
-
-        bool hasDisplay() const {
+        bool hasDisplay() const
+        {
             return _display != nullptr;
         }
 
-        bool hasBuffer() const {
+        bool hasBuffer() const
+        {
             return _buffer != nullptr;
         }
 
@@ -220,7 +205,20 @@ namespace Clock {
             return _disableBlinkColon;
         }
 
+        virtual void setColor(Color color)
+        {
+            _color = color;
+        }
+
+        void setMode(ModeType mode)
+        {
+            _mode = mode;
+        }
+
     protected:
+        Color _getColor() const;
+        void _setColor(Color color);
+
         void _freeBuffer(DisplayBufferType *newBuffer = nullptr) {
             if (_buffer) {
                 __LDBG_printf("delete _buffer=%p", _buffer);
@@ -236,40 +234,12 @@ namespace Clock {
     protected:
         uint16_t _blendTime;
         bool _disableBlinkColon;
-    };
-
-    // ------------------------------------------------------------------------
-    // FadingAnimation
-
-    class SolidColorAnimation : public Animation {
-    public:
-        SolidColorAnimation(ClockPlugin &clock, Color color) :
-            Animation(clock),
-            _color(color)
-        {
-        }
-
-        virtual void copyTo(DisplayType &display, uint32_t millisValue) override
-        {
-            display.fill(_color.get());
-        }
-
-        virtual void copyTo(DisplayBufferType &buffer, uint32_t millisValue) override
-        {
-            buffer.fill(_color.get());
-        }
-
-        void setColor(Color color) {
-            _color = color;
-        }
-
-    private:
+        ModeType _mode;
         Color _color;
     };
 
     // ------------------------------------------------------------------------
     // FadingAnimation
-
     class FadingAnimation : public Animation {
     public:
         static constexpr uint32_t kNoColorChange = ~0;
@@ -291,8 +261,7 @@ namespace Clock {
 
     public:
         FadingAnimation(ClockPlugin &clock, Color from, Color to, float speed, uint32_t time = kNoColorChange, Color factor = 0xffffffU) :
-            Animation(clock),
-            _color(_from),
+            Animation(clock, from),
             _from(from),
             _to(to),
             _factor(factor),
@@ -307,6 +276,15 @@ namespace Clock {
 
         virtual void begin() override
         {
+            _loopTimer = millis();
+        }
+
+        virtual void setColor(Color color) override
+        {
+            _to = color;
+            _progress = 0;
+            _waiting = false;
+            _finished = false;
             _loopTimer = millis();
         }
 
@@ -343,7 +321,7 @@ namespace Clock {
                         _color = _to;
                         if (_time == kNoColorChange) {
                             _finished = true;
-                            __LDBG_printf("end no color change");
+                            __LDBG_printf("no color change, waiting");
                             return; // make sure to return after destroying the lambda function
                         }
                         else if (_time == 0) {
@@ -394,6 +372,23 @@ namespace Clock {
         bool _waiting: 1;
     };
 
+    class SolidColorAnimation : public FadingAnimation {
+    public:
+        using FadingAnimation::loop;
+        using FadingAnimation::copyTo;
+        using FadingAnimation::setColor;
+
+        SolidColorAnimation(ClockPlugin &clock, Color color) : FadingAnimation(clock, color, color, 0.75)
+        {
+        }
+
+        virtual void begin() override
+        {
+            FadingAnimation::begin();
+            _disableBlinkColon = false;
+        }
+    };
+
     // ------------------------------------------------------------------------
     // RainbowAnimation
 
@@ -410,11 +405,11 @@ namespace Clock {
             _factor(color.factor.value),
             _lastUpdate(0)
         {
-            _disableBlinkColon = false;
         }
 
         void begin()
         {
+            _disableBlinkColon = false;
             _lastUpdate = 0;
             // setAnimationCallback([this](PixelAddressType address, ColorType color, const SevenSegmentDisplay::Params_t &params) -> ColorType {
 
@@ -551,8 +546,7 @@ namespace Clock {
     class FlashingAnimation : public Animation {
     public:
         FlashingAnimation(ClockPlugin &clock, Color color, uint16_t time, uint8_t mod = 2) :
-            Animation(clock),
-            _color(color),
+            Animation(clock, color),
             _time(time),
             _mod(mod)
         {
@@ -573,11 +567,15 @@ namespace Clock {
         template<typename _Ta>
         void _copyTo(_Ta &display, uint32_t millisValue)
         {
-            display.fill(((millisValue / _time) % _mod == 0) ? _color.get() : 0U);
+            display.fill(((millisValue / _time) % _mod == 0) ? _color : CRGB(0));
+        }
+
+        virtual void setColor(Color color) override
+        {
+            _color = color;
         }
 
     private:
-        Color _color;
         uint16_t _time;
         uint8_t _mod;
     };
@@ -588,8 +586,8 @@ namespace Clock {
 
     class InterleavedAnimation : public Animation {
     public:
-        InterleavedAnimation(ClockPlugin &clock, uint16_t row, uint16_t col, uint32_t time) :
-            Animation(clock),
+        InterleavedAnimation(ClockPlugin &clock, Color color, uint16_t row, uint16_t col, uint32_t time) :
+            Animation(clock, color),
             _time(time),
             _row(row),
             _col(col)
@@ -600,10 +598,6 @@ namespace Clock {
         {
             return false;
         }
-
-        // virtual void begin() override;
-        // virtual void end() override;
-        // virtual void loop(uint32_t millisValue) {}
 
     private:
         uint32_t _time;
@@ -783,13 +777,6 @@ namespace Clock {
                 }
             }
         }
-
-        virtual bool blend(Animation *animation, DisplayType &display, uint16_t timeLeft, uint32_t millisValue) override
-        {
-            return Animation::blend(animation, display, timeLeft, millisValue);
-        }
-
-        virtual void nextFrame(uint32_t millis) override {}
 
         virtual void copyTo(DisplayType &display, uint32_t millisValue) override
         {

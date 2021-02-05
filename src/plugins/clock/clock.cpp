@@ -650,13 +650,13 @@ void ClockPlugin::setAnimation(AnimationType animation)
             _setAnimation(new Clock::FireAnimation(*this, _config.fire));
             break;
         case  AnimationType::INTERLEAVED:
-            _setAnimation(new Clock::InterleavedAnimation(*this, _config.interleaved.rows, _config.interleaved.cols, _config.interleaved.time));
+            _setAnimation(new Clock::InterleavedAnimation(*this, _getColor(), _config.interleaved.rows, _config.interleaved.cols, _config.interleaved.time));
             break;
         case AnimationType::SOLID:
         default:
             _config.animation = static_cast<uint8_t>(AnimationType::SOLID);
             _setColor(_config.solid_color);
-            _setAnimation(new Clock::SolidColorAnimation(*this, Color(_config.solid_color)));
+            _setAnimation(new Clock::SolidColorAnimation(*this, _getColor()));
             break;
     }
     _schedulePublishState = true;
@@ -667,6 +667,9 @@ void ClockPlugin::_setColor(uint32_t color)
     __color = color;
     if (_config.getAnimation() == AnimationType::SOLID) {
         _config.solid_color = __color;
+    }
+    if (_animation) {
+        _animation->setColor(__color);
     }
 }
 
@@ -872,6 +875,11 @@ void ClockPlugin::_setBrightness(uint8_t brightness)
     }
     else {
         _disable();
+    }
+#endif
+#if HTTP2SERIAL_SUPPORT && IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
+    if (_displayLedTimer) {
+        _displayLedTimer->print(PrintString(F("+LED_MATRIX_BRIGHTNESS=%u"), _getBrightness()));
     }
 #endif
 }

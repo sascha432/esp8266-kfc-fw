@@ -17,6 +17,9 @@
 #if IOT_ALARM_PLUGIN_ENABLED
 #    include "../src/plugins/alarm/alarm.h"
 #endif
+#if HTTP2SERIAL_SUPPORT
+#include "../src/plugins/http2serial/http2serial.h"
+#endif
 #if IOT_LED_MATRIX
 #    include "led_matrix.h"
 #endif
@@ -316,11 +319,25 @@ private:
     struct LedMatrixDisplayTimer {
         Event::Timer timer;
         void *clientId;
-        LedMatrixDisplayTimer(void *pClientId) : clientId(pClientId) {
+        String host;
+        uint16_t udpPort;
+        uint16_t wsPort;
+        uint32_t errors;
+        uint32_t maxErrors;
+        LedMatrixDisplayTimer(void *pClientId, uint32_t pMaxErrors) : clientId(pClientId), udpPort(0), wsPort(0), errors(0), maxErrors(pMaxErrors) {
         }
         ~LedMatrixDisplayTimer() {
             timer.remove();
             clientId = nullptr;
+        }
+        void print(const String &str) {
+            auto client = Http2Serial::getClientById(clientId);
+            if (client) {
+                client->text(str);
+            }
+            else {
+                Serial.println(str);
+            }
         }
     };
     LedMatrixDisplayTimer *_displayLedTimer{nullptr};

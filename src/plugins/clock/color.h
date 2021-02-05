@@ -42,11 +42,13 @@ namespace Clock {
         // static void printResetAnsiCode(Print &stream);
         String implode(char sep) const;
 
+        Color &operator=(CRGB value);
         Color &operator=(uint32_t value);
         Color &operator=(ClockColor_t value);
         operator bool() const;
         operator int() const;
         operator uint32_t() const;
+        operator CRGB() const;
         operator ClockColor_t() const;
         bool operator==(int value) const;
         bool operator!=(int value) const;
@@ -117,6 +119,14 @@ namespace Clock {
         return _value;
     }
 
+    inline Color &Color::operator=(CRGB value)
+    {
+        _blue = value.blue;
+        _green = value.green;
+        _red = value.red;
+        return *this;
+    }
+
     inline Color &Color::operator=(uint32_t value)
     {
         _value = value;
@@ -134,14 +144,14 @@ namespace Clock {
         return _value != 0;
     }
 
-    inline Color::operator int() const
+    inline Color::operator uint32_t() const
     {
         return _value;
     }
 
-    inline Color::operator uint32_t() const
+    inline Color::operator CRGB() const
     {
-        return _value;
+        return CRGB(_red, _green, _blue);
     }
 
     inline Color::operator ClockColor_t() const

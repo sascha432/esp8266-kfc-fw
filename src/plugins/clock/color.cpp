@@ -18,7 +18,7 @@ Color::Color() : _value(0)
 {
 }
 
-Color::Color(uint8_t *values) : _blue(values[0]), _green(values[1]), _red(values[2])
+Color::Color(uint8_t values[]) : _blue(values[0]), _green(values[1]), _red(values[2])
 {
 }
 

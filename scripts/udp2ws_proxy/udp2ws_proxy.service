@@ -1,0 +1,11 @@
+[Unit]
+Description=UDP to WebSocket proxy
+After=network-online.target
+
+[Service]
+Type=simple
+User=<.....>
+ExecStart=/usr/bin/node <.....>/udp2ws/index.js
+
+[Install]
+WantedBy=multi-user.target

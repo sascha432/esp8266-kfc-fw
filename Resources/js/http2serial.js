@@ -235,13 +235,22 @@
             self.filterModal.modal('hide');
         });
 
+        if ($('#open_led_matrix').length == 0) {
+            $('#sendbutton').parent().append('<button class="btn btn-outline-secondary" type="button" id="open_led_matrix">LED Matrix</button>');
+            $('#open_led_matrix').on('click', function() {
+                cmd = '+LMVIEW=33,udp:192.168.0.3:5001:5002';
+                self.write(cmd + '\n');
+                self.socket.send(cmd + '\r\n');
+            })
+        }
+
         this.connect();
     },
 
     ledMatrix: {
         'pixel_size': 0.6,
-        'alpha1': 0.9,
-        'alpha2': 0,
+        'alpha1': 1.0,
+        'alpha2': 0.1,
         'inner_size': 0,
         'outer_size': 0,
         'args': [0, 0],
@@ -264,34 +273,43 @@ http2serialPlugin.appendLedMatrix = function(rows, cols, reverse_rows, reverse_c
     var inner_size = (_pixel_size * 1) + unit;
     var outer_size = (_pixel_size * 7) + unit;
     var border_radius = _pixel_size + unit;
+    var bg = '0, 0, 0';
+    var mode = 'lighten';
+    var mode2 = 'lighten';
+    // var bg = '240, 240, 240';
+    // var mode = 'normal';
+    // var mode2 = 'lighten';
 
     $('#led-matrix').remove();
+
+    // #pixel-container background: black
+    // mix-blend-mode: lighten
+
+    // #pixel-container background: white
+    // mix-blend-mode: multiply
 
     this.ledMatrix.inner_size = inner_size;
     this.ledMatrix.outer_size = outer_size;
     $('body').append('<div id="led-matrix"><div id="pixel-container"></div></div><style type="text/css"> \
 #pixel-container { \
     position: absolute; \
-    right: 0; \
+    right: -18rem; \
     bottom: 0; \
-    padding: 7rem; \
-    background: rgba(0, 0, 0); \
+    padding: 7rem 7rem 0 7rem !important; \
     z-index: 9998; \
-    padding: 7rem; \
-    background: rgba(0, 0, 0); \
+    background: rgba(' + bg + '); \
     min-height: 1rem; \
     min-width: 1rem; \
     overflow: hidden; \
 } \
 #pixel-container:hover .ipx { \
     font-size: 0.75rem; \
-    mix-blend-mode: difference; \
 } \
 #pixel-container .row { \
     display: block; \
 } \
 #pixel-container .px { \
-    mix-blend-mode: lighten; \
+    mix-blend-mode: ' + mode + '; \
     margin: ' + inner_size + '; \
     width: ' + pixel_size + '; \
     height: ' + pixel_size + '; \
@@ -299,7 +317,7 @@ http2serialPlugin.appendLedMatrix = function(rows, cols, reverse_rows, reverse_c
     border-radius: ' + border_radius +  '; \
 } \
 #pixel-container .ipx { \
-    mix-blend-mode: lighten; \
+    mix-blend-mode: ' + mode2 + '; \
     margin: 0px; \
     width: 0px; \
     height: 0px; \
@@ -308,13 +326,19 @@ http2serialPlugin.appendLedMatrix = function(rows, cols, reverse_rows, reverse_c
     color: white; \
     font-size: 0; \
 } \
-#pixel-container .fps-container { \
+#pixel-container .toolbar { \
+    width: 100%; \
     position: relative; \
-    left: -90px; \
-    bottom: -90px; \
+    padding: 1rem; \
+    left: -7rem; \
+    bottom: 0; \
     z-index: 9999; \
     color: #ccc; \
     font-size: 1rem; \
+} \
+#pixel-container .toolbar .row { \
+    display: flex; \
+    align-items: flex-end; \
 } \
 #fps-number { \
     color: #aaa; \
@@ -327,6 +351,12 @@ http2serialPlugin.appendLedMatrix = function(rows, cols, reverse_rows, reverse_c
 } \
 #pixel-container .oi-zoom .oi:hover { \
     color: #fff; \
+} \
+#pixel-container .col.brightness { \
+    font-size: 1rem; \
+} \
+#close_led_matrix { \
+    padding: 0.25rem; \
 } \
 </style></div>');
     var container = $('#pixel-container');
@@ -360,30 +390,61 @@ http2serialPlugin.appendLedMatrix = function(rows, cols, reverse_rows, reverse_c
         }
         contents += '</div>';
     }
-    container.html(contents + '<div class="row"> \
-        <div class="col"> \
-            <div class="fps-container"><span id="fps-number">-</span> fps <span id="dqueue"></span> \
+    container.html(contents + '<div class="toolbar"> \
+        <div class="row"> \
+            <div class="col"> \
+                <div class="fps-container"><span id="fps-number">-</span> fps <span id="dqueue"></span></div> \
                 <div class="zoom"><span class="oi oi-zoom-in"></span><span class="oi oi-zoom-out"></span></div> \
             </div> \
+            <div class="col"> \
+                <div>Brightness</div> \
+                <div><input type="range" id="led_brightness" min="0" max="255" value="0"></div> \
+            </div> \
+            <div class="col"> \
+                <div>Center alpha</div> \
+                <input class="form-control" type="text" value="1.0" id="input-center-alpha"> \
+            </div> \
+            <div class="col"> \
+                <div>Diffusion alpha</div> \
+                <input class="form-control" type="text" value="0.1" id="input-diff-alpha"> \
+            </div> \
+            <div class="col"> \
+                <button class="btn btn-primary"><span class="oi oi-circle-x" id="close_led_matrix"></button> \
+            </div> \
         </div> \
-        <div class="col"> \
-            Brightness<br><input type="range" id="led_brightness" min="0" max="255" value="0"> \
-        </div> \
-    </div>'
-    );
-
+    </div>');
     var n = 0;
     for (var i = 0; i <rows; i++) {
         for (var j = 0; j < cols; j++) {
             var name = 'px' + n;
             n++;
-            this.ledMatrixSetColor('#' + name, 0x30, 0x30, 0x30, 0.4, 0.1);
+            this.ledMatrixSetColor('#' + name, 89, 123, 234, 1.0, 0);
         }
     }
 
     var self = this;
     container.find('.oi.oi-zoom-in').on('click', function() { self.zoomLedMatrix(1); });
     container.find('.oi.oi-zoom-out').on('click', function() { self.zoomLedMatrix(-1); });
+    $('#close_led_matrix').on('click', function() {
+        cmd = '+LMVIEW=0,0';
+        self.write(cmd + '\n');
+        self.socket.send(cmd + '\r\n');
+        $('#led-matrix').remove();
+    });
+
+    self=http2serialPlugin;
+    $('#input-center-alpha').off('change');
+    $('#input-diff-alpha').off('change');
+    $('#input-center-alpha').val(self.ledMatrix.alpha1).on('change', function() {
+        self.ledMatrix.alpha1 = parseFloat($(this).val());
+        $('.px').css('box-shadow', '');
+        $('.ipx').css('box-shadow', '');
+    });
+    $('#input-diff-alpha').val(self.ledMatrix.alpha2).on('change', function() {
+        self.ledMatrix.alpha2 = parseFloat($(this).val());
+        $('.px').css('box-shadow', '');
+        $('.ipx').css('box-shadow', '');
+    });
 
     this.ledMatrix.fps_time = 0;
 
@@ -391,18 +452,17 @@ http2serialPlugin.appendLedMatrix = function(rows, cols, reverse_rows, reverse_c
 };
 
 http2serialPlugin.ledMatrixSetColor = function(selector, r, g, b, a1, a2) {
-    if (a1 === undefined) {
-        a1 = this.ledMatrix.alpha1;
-        a2 = this.ledMatrix.alpha2;
-       }
-    $(selector).
-        css('box-shadow', '0px 0px ' + this.ledMatrix.inner_size + ' ' + this.ledMatrix.inner_size + ' rgba(' + r + ', ' + g + ', ' + b + ', ' + a1 + ')').
-        css('background', 'rgba(' + r + ', ' + g + ', ' + b + ', ' + a1 + ')').
-        css('border-color', 'rgba(' + r + ', ' + g + ', ' + b + ', ' + a1 + ')');
-    // $(selector).find('.ipx').
-    //     css('box-shadow', '0px 0px ' + this.ledMatrix.outer_size + ' ' + this.ledMatrix.outer_size + ' rgba(' + r + ', ' + g + ', ' + b + ', ' + a2 + ')').
-    //     css('background', 'rgba(' + r + ', ' + g + ', ' + b + ', ' + a2 + ')').
-    //     css('border-color', 'rgba(' + r + ', ' + g + ', ' + b + ' ' + a2 + ')');
+    var is = this.ledMatrix.inner_size;
+    var os = this.ledMatrix.outer_size;
+    var tmp = $(selector);
+    tmp.css('background', 'rgba(' + r + ',' + g + ',' + b + ',' + a1 + ')');
+    tmp.css('border-color', 'rgba(' + r + ',' + g + ',' + b + ',' + a1 + ')');
+    if (a1) {
+        tmp.css('box-shadow', '0 0 ' + is + ' ' + is + ' rgba(' + r + ',' + g + ',' + b + ',' + a1 + ')');
+    }
+    if (a2) {
+        tmp.find('.ipx').css('box-shadow', '0 0 ' + os + ' ' + os + ' rgba(' + r + ',' + g + ',' + b + ',' + a2 + ')');
+    }
 };
 
 http2serialPlugin.countFps = function() {
@@ -447,7 +507,7 @@ http2serialPlugin.dataHandler = function(event) {
                 var pixels = new Uint16Array(event.data, 4, num_pixels);
                 for (var i = 0; i < num_pixels; i++)  {
                     var pixel = $._____rgb565_to_888(pixels[i]);
-                    this.ledMatrixSetColor('#px' + i, pixel[0], pixel[1], pixel[2]);
+                    this.ledMatrixSetColor('#px' + i, pixel[0], pixel[1], pixel[2], this.ledMatrix.alpha1, this.ledMatrix.alpha2);
                 }
             }
         }

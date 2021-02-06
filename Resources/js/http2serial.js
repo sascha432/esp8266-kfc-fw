@@ -52,9 +52,9 @@
     },
 
     historySave: function() {
-        if (this.history.data.length > self.history_limit) {
-            this.history.data = this.history.data.slice(this.history.data.length - self.history_limit);
-            if (this.history.position > self.history_limit) {
+        if (this.history.data.length > this.history_limit) {
+            this.history.data = this.history.data.slice(this.history.data.length - this.history_limit);
+            if (this.history.position > this.history_limit) {
                 this.history.position = this.history.data.length;
             }
 
@@ -76,29 +76,29 @@
     historyKeyupEvent: function(event) {
         if (event.key === 'ArrowUp') {
             event.preventDefault();
-            if (self.history.position > 0) {
-                if (self.history.data.length == self.history.position) {
-                    self.history_input = self.input.val(); // store current input if not from history
+            if (this.history.position > 0) {
+                if (this.history.data.length == this.history.position) {
+                    this.history_input = this.input.val(); // store current input if not from history
                 }
-                self.history.position--;
+                this.history.position--;
             }
             try {
-                self.input.val(self.history.data[self.history.position]);
-                self.historySave();
+                this.input.val(this.history.data[this.history.position]);
+                this.historySave();
             } catch(e) {
-                self.historyClear(); // clear invalid data
+                this.historyClear(); // clear invalid data
             }
         }
         else if (event.key === 'ArrowDown') {
             event.preventDefault();
-            if (self.history.position < self.history.data.length - 1) {
-                self.history.position++;
-                self.input.val(self.history.data[self.history.position]);
-                self.historySave();
+            if (this.history.position < this.history.data.length - 1) {
+                this.history.position++;
+                this.input.val(this.history.data[this.history.position]);
+                this.historySave();
             }
-            else if (self.history_input) {
-                self.input.val(self.history_input); // restore saved input
-                self.history_input = null;
+            else if (this.history_input) {
+                this.input.val(this.history_input); // restore saved input
+                this.history_input = null;
                 this.history.position = this.history.data.length; // marker for input is not from history
             }
         }
@@ -258,7 +258,6 @@
             this.removeFilter(filter.value);
         }
 
-        var self = this;
         this.filterModal.find('.filter-remove').on('click', function() {
             self.removeFilter(self.filterInput.val());
             self.filterModal.modal('hide');

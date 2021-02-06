@@ -49,6 +49,31 @@ extern float load_avg[3]; // 1min, 5min, 15min
 
 #define HASH_SIZE                   64
 
+#if HAVE_PCF8574
+#include <PCF8574.h>
+extern PCF8574 _PCF8574;
+// these functions must be implemented and exported
+extern void initialize_pcf8574();
+extern void print_status_pcf8574(Print &output);
+#endif
+
+#if HAVE_PCF8575
+#include <PCF8575.h>
+extern PCF8575 _PCF8575;
+extern void initialize_pcf8575();
+extern void print_status_pcf8575(Print &output);
+#endif
+
+#if HAVE_PCA9685
+extern void initialize_pca9785();
+extern void print_status_pca9785(Print &output);
+#endif
+#if HAVE_MCP23017
+extern void initialize_mcp23017();
+extern void print_status_mcp23017(Print &output);
+#endif
+
+
 #include "push_pack.h"
 
 // NOTE: any member of an packed structure (__attribute__packed__ ) cannot be passed to forms as reference, otherwise it might cause an unaligned exception

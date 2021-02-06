@@ -66,6 +66,14 @@ RTC_DS3231 rtc;
 
 KFCFWConfiguration config;
 
+#if HAVE_PCF8574
+PCF8574 _PCF8574(PCF8574_I2C_ADDRESS, &Wire);
+#endif
+
+#if HAVE_PCF8575
+PCF8575 _PCF8575;
+#endif
+
 using KFCConfigurationClasses::MainConfig;
 using KFCConfigurationClasses::Network;
 using KFCConfigurationClasses::System;

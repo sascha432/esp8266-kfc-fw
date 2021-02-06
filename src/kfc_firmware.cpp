@@ -359,6 +359,19 @@ void setup()
         }
 #endif
 
+#if HAVE_PCF8574
+        initialize_pcf8574();
+#endif
+#if HAVE_PCF8575
+        initialize_pcf8575();
+#endif
+#if HAVE_PCA9685
+        initialize_pca9785();
+#endif
+#if HAVE_MCP23017
+        initialize_mcp23017();
+#endif
+
         prepare_plugins();
 
         setup_plugins(

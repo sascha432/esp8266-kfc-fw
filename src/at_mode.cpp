@@ -29,6 +29,10 @@
 #include "plugins.h"
 #include "WebUIAlerts.h"
 #include "PinMonitor.h"
+#if HAVE_PCF8574
+#include <PCF8574.h>
+extern PCF8574 _PCF8574;
+#endif
 #include "../src/plugins/http2serial/http2serial.h"
 #if IOT_DIMMER_MODULE || IOT_ATOMIC_SUN_V2
 #include "../src/plugins/dimmer_module/dimmer_base.h"
@@ -64,6 +68,87 @@ void __kfcfw_queue_monitor(AsyncWebSocketMessage *dataMessage, AsyncClient *_cli
     Serial.println();
 #endif
 }
+
+#if HAVE_I2CSCANNER
+
+static const char portArray_defaults[] PROGMEM = { 0, 4, 5, 12, 13, 14, 15, 16 };
+char portArray[sizeof(portArray_defaults) + 1 > 17 ? sizeof(portArray_defaults) + 1 : 17];
+
+void check_if_exist_I2C(TwoWire &wire, Print &output)
+{
+    uint8_t error, address;
+    int nDevices;
+
+    nDevices = 0;
+    for (address = 1; address < 127; address++ )  {
+
+        // The i2c_scanner uses the return value of
+        // the Write.endTransmisstion to see if
+        // a device did acknowledge to the address.
+        wire.beginTransmission(address);
+        error = wire.endTransmission();
+
+        if (error == 0 || error == 3) { // 0=ACK, 3=NACK for data
+            output.printf_P(PSTR("I2C device found at address 0x%02x\n"), address);
+            nDevices++;
+        }
+        else if (error == 4) {
+            output.printf_P(PSTR("Unknown error at address 0x%02x\n"), address);
+        }
+    } //for loop
+    if (nDevices == 0) {
+        output.println(F("No I2C devices found"));
+    }
+    else {
+        output.println(F("**********************************\n"));
+    }
+    //delay(1000);           // wait 1 seconds for next scan, did not find it necessary
+}
+
+static String getGPIONames(int8_t sda, int8_t scl) {
+    if (sda == -1 || scl == -1) {
+        sda = KFC_TWOWIRE_SDA;
+        scl = KFC_TWOWIRE_SCL;
+    }
+    return PrintString(F("GPIO%u : GPIO%u"), sda, scl);
+}
+
+void scanI2C(Print &output, int8_t sda, int8_t scl, bool print)
+{
+    auto name = getGPIONames(sda, scl);
+    auto cStrName = name.c_str();
+    if (print) {
+        output.printf_P(PSTR("Scan order (SDA : SCL) - %s\n"), cStrName);
+    }
+    else {
+        TwoWire *wire;
+        output.printf_P(PSTR("Scanning (SDA : SCL) - %s - "), cStrName, cStrName);
+        if (sda == -1 || scl == -1) {
+            wire = &config.initTwoWire(true, print ? &output : nullptr);
+        } else {
+            Wire.begin(sda, scl);
+            wire = &Wire;
+        }
+        check_if_exist_I2C(*wire, output);
+    }
+}
+
+void scanPorts(Print &output, bool print)
+{
+    output.println(F("\n\nI2C Scanner to scan for devices on each port pair D0 to D7"));
+    for (uint8_t i = 0; portArray[i] != 0xff; i++) {
+        for (uint8_t j = 0; portArray[j] != 0xff; j++) {
+            if (i != j) {
+                scanI2C(output, portArray[i], portArray[j], print);
+            }
+        }
+    }
+}
+
+
+
+#endif
+
 
 typedef std::vector<ATModeCommandHelp> ATModeHelpVector;
 
@@ -290,7 +375,11 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HEAP, "HEAP", "[interval in seconds|0=disa
 #endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RSSI, "RSSI", "[interval in seconds|0=disable]", "Display WiFi RSSI");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(GPIO, "GPIO", "[interval in seconds|0=disable]", "Display GPIO states");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PWM, "PWM", "<pin>,<input|waveform|level=0-" __STRINGIFY(PWMRANGE) ">[,<frequency=100-40000Hz>[,<duration/ms>]]", "PWM output on PIN, min./max. level set it to LOW/HIGH");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PWM, "PWM", "<pin>,<input|waveform|level=0-" __STRINGIFY(PWMRANGE) ">[,<frequency=100-40000Hz>[,<duration/ms>]]", "PWM output on PIN, min./max. level set it to LOW/HIGH"
+#if HAVE_PCF8574
+    "\nPCF8574 can be addressed using pin 80-87. PWM is not supported."
+#endif
+);
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(ADC, "ADC", "<off|display interval=1s>[,<period=1s>,<multiplier=1.0>,<unit=mV>,<read delay=5000us>]", "Read the ADC and display values");
 #if defined(ESP8266)
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(CPU, "CPU", "<80|160>", "Set CPU speed", "Display CPU speed");
@@ -322,6 +411,9 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LOGDBG, "LOGDBG", "<1|0>", "Enable/disable
 #endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(PANIC, "PANIC", "Cause an exception by calling panic()");
 
+#endif
+#if HAVE_I2CSCANNER
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CSCAN, "I2CSCAN", "[<offset>[,<length>]", "Dump EEPROM");
 #endif
 
 void at_mode_help_commands()
@@ -397,6 +489,9 @@ void at_mode_help_commands()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(LOGDBG), name);
 #endif
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(PANIC), name);
+#endif
+#if HAVE_I2CSCANNER
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(I2CSCAN), name);
 #endif
 
 }
@@ -1229,6 +1324,12 @@ void at_mode_serial_handle_event(String &commandString)
                 }
             }
 #endif
+#if HAVE_I2CSCANNER
+            else if (args.isCommand(F("I2CSCAN"))) {
+                scanI2C(args.getStream(), -1, -1, false);
+                // scanPorts(args.getStream(), false);
+            }
+#endif
             else if (args.isCommand(F("I2CT")) || args.isCommand(F("I2CA")) || args.isCommand(F("I2CR"))) {
                 // ignore SerialTwoWire communication
             }
@@ -1526,9 +1627,20 @@ void at_mode_serial_handle_event(String &commandString)
                     }
                     else if (args.equalsIgnoreCase(1, F("input"))) {
 
-                        digitalWrite(pin, LOW);
-                        pinMode(pin, INPUT);
-                        args.printf_P(PSTR("set pin=%u to INPUT"), pin);
+#if HAVE_PCF8574
+                        if (pin >= 80 && pin < 88) {
+                            pin -= 80;
+                            _PCF8574.write(pin, LOW);
+                            args.printf_P(PSTR("set PCF8574 pin=%u to INPUT"), pin);
+                        }
+                        else
+#endif
+                        {
+                            digitalWrite(pin, LOW);
+                            pinMode(pin, INPUT);
+                            args.printf_P(PSTR("set pin=%u to INPUT"), pin);
+                        }
+
                     }
                     else {
 
@@ -1549,45 +1661,77 @@ void at_mode_serial_handle_event(String &commandString)
                         if (duration > 0 && duration < 10) {
                             duration = 10;
                         }
-                        pinMode(pin, OUTPUT);
-#if defined(ESP8266)
-                        analogWriteFreq(freq);
-                        analogWriteRange(PWMRANGE);
-#else
-                        freq = 0;
-#endif
+
+                        auto orgPin = pin;
                         auto type = PSTR("digitalWrite");
-                        if (level == 0)  {
-                            digitalWrite(pin, LOW);
+#if HAVE_PCF8574
+                        if (pin >= 80 && pin < 88) {
+                            type = PSTR("PCF8574 digitalWrite");
+                            pin -= 80;
+                            // _PCF8574.pinMode(pin, OUTPUT);
+
+                            if (level == 0)  {
+                                _PCF8574.write(pin, LOW);
+                                freq = 0;
+                            }
+                            else {
+                                _PCF8574.write(pin, HIGH);
+                                level = 1;
+                                freq = 0;
+                            }
+                        }
+                        else
+#endif
+                        {
+
+                            pinMode(pin, OUTPUT);
+#if defined(ESP8266)
+                            analogWriteFreq(freq);
+                            analogWriteRange(PWMRANGE);
+#else
                             freq = 0;
-                        }
-                        else if (level >= PWMRANGE - 1) {
-                            digitalWrite(pin, HIGH);
-                            level = 1;
-                            freq = 0;
-                        }
-                        else {
-                            type = PSTR("analogWrite");
-                            analogWrite(pin, level);
-                        }
-                        if (duration) {
-                            durationStr = PrintString(F(" for %ums"), duration);
-                        }
-                        if (freq == 0) {
-                            args.printf_P(PSTR("%s(%u, %u)%s"), type, pin, level, durationStr.c_str());
-                        }
-                        else {
-                            float cycle = (1000000 / (float)freq);
-                            float dc = cycle * (level / (float)PWMRANGE);
-                            args.printf_P(PSTR("%s(%u, %u) duty cycle=%.2f cycle=%.2fµs f=%uHz%s"), type, pin, level, dc, cycle, freq, durationStr.c_str());
-                        }
-                        if (duration) {
-                            auto &stream = args.getStream();
-                            _Scheduler.add(duration, false, [pin, &stream](Event::CallbackTimerPtr) mutable {
-                                stream.printf_P(PSTR("+PWM: digitalWrite(%u, 0)\n"), pin);
+#endif
+                            if (level == 0)  {
                                 digitalWrite(pin, LOW);
-                            }, Event::PriorityType::TIMER);
+                                freq = 0;
+                            }
+                            else if (level >= PWMRANGE - 1) {
+                                digitalWrite(pin, HIGH);
+                                level = 1;
+                                freq = 0;
+                            }
+                            else {
+                                type = PSTR("analogWrite");
+                                analogWrite(pin, level);
+                            }
                         }
+                            if (duration) {
+                                durationStr = PrintString(F(" for %ums"), duration);
+                            }
+                            if (freq == 0) {
+                                args.printf_P(PSTR("%s(%u, %u)%s"), type, pin, level, durationStr.c_str());
+                            }
+                            else {
+                                float cycle = (1000000 / (float)freq);
+                                float dc = cycle * (level / (float)PWMRANGE);
+                                args.printf_P(PSTR("%s(%u, %u) duty cycle=%.2f cycle=%.2fµs f=%uHz%s"), type, pin, level, dc, cycle, freq, durationStr.c_str());
+                            }
+                            if (duration) {
+                                auto &stream = args.getStream();
+                                _Scheduler.add(duration, false, [pin, orgPin, &stream](Event::CallbackTimerPtr) mutable {
+#if HAVE_PCF8574
+                                    if (orgPin >= 80 && orgPin < 88) {
+                                        stream.printf_P(PSTR("+PWM: PCF8574 digitalWrite(%u, 0)\n"), pin);
+                                        _PCF8574.write(pin, LOW);
+                                    }
+                                    else
+#endif
+                                    {
+                                        stream.printf_P(PSTR("+PWM: digitalWrite(%u, 0)\n"), orgPin);
+                                        digitalWrite(pin, LOW);
+                                    }
+                                }, Event::PriorityType::TIMER);
+                            }
                     }
                 }
             }

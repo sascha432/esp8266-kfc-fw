@@ -402,6 +402,14 @@
 #define IOT_ALARM_PLUGIN_ENABLED                            0
 #endif
 
+#ifndef HAVE_PCF8574
+#define HAVE_PCF8574                                        0
+#endif
+
+#ifndef PCF8574_I2C_ADDRESS
+#define PCF8574_I2C_ADDRESS                                 0x20
+#endif
+
 class Stream;
 class HardwareSerial;
 

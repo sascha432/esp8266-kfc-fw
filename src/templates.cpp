@@ -180,6 +180,38 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
             output.printf_P(PSTR(HTML_S(br) HTML_S(strong) "%s" HTML_E(strong)), SPGM(default_password_warning));
         }
     }
+#if HAVE_PCF8574
+    else if (String_equals(key, PSTR("PCF8574_STATUS"))) {
+        print_status_pcf8574(output);
+    }
+#else
+    else if (String_equals(key, PSTR("PCF8574_STATUS"))) {
+    }
+#endif
+#if HAVE_PCF8575
+    else if (String_equals(key, PSTR("PCF8575_STATUS"))) {
+        print_status_pcf8575(output);
+    }
+#else
+    else if (String_equals(key, PSTR("PCF8575_STATUS"))) {
+    }
+#endif
+#if HAVE_PCA9685
+    else if (String_equals(key, PSTR("PCA9685_STATUS"))) {
+        print_status_pca9685(output);
+    }
+#else
+    else if (String_equals(key, PSTR("PCA9685_STATUS"))) {
+    }
+#endif
+#if HAVE_MCP23017
+    else if (String_equals(key, PSTR("MCP23017_STATUS"))) {
+        print_status_mcp23017(output);
+    }
+#else
+    else if (String_equals(key, PSTR("MCP23017_STATUS"))) {
+    }
+#endif
 #if RTC_SUPPORT
     else if (String_equals(key, PSTR("RTC_STATUS"))) {
         config.printRTCStatus(output, false);

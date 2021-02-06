@@ -140,6 +140,20 @@
                         </div>
                     </div>
 
+                    <!--#if (defined(HAVE_PCF8574) && HAVE_PCF8574) || (defined(HAVE_PCF8575) && HAVE_PCF8575) || (defined(HAVE_PCA9685) && HAVE_PCA9685) || (defined(HAVE_MCP23017) && HAVE_MCP23017) -->
+                    <div class="row">
+                        <div class="col-lg-3 col-lg-auto">
+                            I/O Expander
+                        </div>
+                        <div class="col">
+                            %PCF8574_STATUS%
+                            %PCF8575_STATUS%
+                            %PCA9685_STATUS%
+                            %MCP23017_STATUS%
+                        </div>
+                    </div>
+                    <!--#endif-->
+
                     <div class="row">
                         <div class="col-lg-3 col-lg-auto">
                             WebUI Alerts

@@ -87,29 +87,11 @@ using KFCConfigurationClasses::Plugins;
 
 namespace Clock {
 
-// #if IOT_LED_MATRIX
-//     using SevenSegmentDisplay = SevenSegmentPixel<uint16_t, 1, IOT_CLOCK_NUM_PIXELS, 0, 0>;
-// #else
-//     using SevenSegmentDisplay = SevenSegmentPixel<uint8_t, IOT_CLOCK_NUM_DIGITS, IOT_CLOCK_NUM_PIXELS, IOT_CLOCK_NUM_COLONS, IOT_CLOCK_NUM_COLON_PIXELS>;
-// #endif
-
     using Config_t = Plugins::Clock::ClockConfig_t;
-    // using PixelAddressType = SevenSegmentDisplay::PixelAddressType;
     using ColorType = uint32_t;
     using ClockColor_t = Plugins::Clock::ClockColor_t;
-    // using AnimationCallback = SevenSegmentDisplay::AnimationCallback;
-    // using LoopCallback = std::function<void(uint32_t millisValue)>;
     using AnimationType = Config_t::AnimationType;
     using InitialStateType = Config_t::InitialStateType;
-// #if IOT_LED_MATRIX
-// #if IOT_LED_MATRIX_ROWS > 255 || IOT_LED_MATRIX_COLS > 255
-//     using CoordinateType = uint16_t;
-// #else
-//     using CoordinateType = uint8_t;
-// #endif
-// #else
-//     using CoordinateType = PixelAddressType;
-// #endif
 
     // static constexpr auto kTotalPixelCount = SevenSegmentDisplay::kTotalPixelCount;
     static constexpr uint8_t kMaxBrightness = 0xff;
@@ -118,6 +100,28 @@ namespace Clock {
     static constexpr uint8_t kBrightness50 = kMaxBrightness * 0.5;
     static constexpr uint8_t kBrightnessTempProtection = kMaxBrightness * 0.25;
 
+    template<class _CoordinateType, _CoordinateType _Rows, _CoordinateType _Columns> class PixelCoordinates;
+
+    template<size_t _StartAddress, size_t _Rows, size_t _Columns>
+    class Types {
+    protected:
+        static constexpr size_t kTotalPixelCount = _Rows * _Columns + _StartAddress;
+
+    private:
+        static constexpr size_t _kCols = _Columns;
+        static constexpr size_t _kRows = _Rows;
+
+    public:
+        using PixelAddressType = typename std::conditional<(kTotalPixelCount > 255), uint16_t, uint8_t>::type;
+        using CoordinateType = typename std::conditional<(_kRows > 255 || _kCols > 255), uint16_t, uint8_t>::type;
+        using PixelCoordinatesType = PixelCoordinates<CoordinateType, _Rows, _Columns>;
+
+    public:
+        static constexpr CoordinateType kCols = _Columns;
+        static constexpr CoordinateType kRows = _Rows;
+        static constexpr PixelAddressType kStartAddress = _StartAddress;
+        static constexpr PixelAddressType kNumPixels = kRows * kCols;
+    };
 }
 
 #if DEBUG_IOT_CLOCK

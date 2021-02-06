@@ -18,13 +18,13 @@ using KFCConfigurationClasses::Plugins;
 
 namespace Clock {
 
-    using DisplayBufferType = Clock::PixelDisplayBuffer<0, IOT_LED_MATRIX_ROWS, IOT_LED_MATRIX_COLS, true, false, true, true>;
+    using DisplayBufferType = Clock::PixelDisplayBuffer<0, IOT_LED_MATRIX_ROWS, IOT_LED_MATRIX_COLS, true, false, false, true>;
 
 #if IOT_LED_MATRIX
 
     using DisplayType = Clock::PixelDisplay<
             Clock::NeoPixelController<IOT_CLOCK_LED_PIN>,
-            Clock::PixelDisplayBuffer<IOT_LED_MATRIX_START_ADDR, IOT_LED_MATRIX_ROWS, IOT_LED_MATRIX_COLS, true, false, true, true>
+            Clock::PixelDisplayBuffer<IOT_LED_MATRIX_START_ADDR, IOT_LED_MATRIX_ROWS, IOT_LED_MATRIX_COLS, true, false, false, true>
         >;
 
 #else

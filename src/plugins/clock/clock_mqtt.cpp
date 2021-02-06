@@ -106,13 +106,8 @@ void ClockPlugin::onMessage(MQTTClient *client, char *topic, char *payload, size
     _resetAlarm();
 
     if (!strcmp_end_P(topic, SPGM(_effect_set))) {
-        String list = Clock::Config_t::getAnimationNames();
-        list.toLowerCase();
-        String name;
-        name.concat(payload, len);
-        name.toLowerCase();
-        int8_t animation = stringlist_find_P_P(list.c_str(), name.c_str(), ',');
-        if (animation >= 0) {
+        auto animation = _getAnimationType(payload);
+        if (animation != AnimationType::MAX) {
             setAnimation(static_cast<AnimationType>(animation));
             _saveStateDelayed(_targetBrightness);
         }

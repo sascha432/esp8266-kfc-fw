@@ -376,6 +376,9 @@ private:
     void _loop();
     void _setupTimer();
 
+    // returns AnimationType::MAX if the name is invalid
+    AnimationType _getAnimationType(String name);
+
 public:
     void enableLoop(bool enable);
 

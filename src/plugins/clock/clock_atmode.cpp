@@ -116,21 +116,28 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKA))) {
         if (args.isQueryMode()) {
-            args.printf_P(PSTR("%u - rainbow animation (+CLOCKA=%u,<speed>,<multiplier>,<r>,<g>,<b-factor>)"), AnimationType::RAINBOW, AnimationType::RAINBOW);
-            args.printf_P(PSTR("%u - flashing"), AnimationType::FLASHING);
-            args.printf_P(PSTR("%u - fade to color (+CLOCKA=%u,<r>,<g>,<b>)"), AnimationType::FADING, AnimationType::FADING);
-            args.printf_P(PSTR("%u - fire (+CLOCKA=%u)"), AnimationType::FIRE, AnimationType::FIRE);
-            args.printf_P(PSTR("%u - fire (+CLOCKA=%u)"), AnimationType::INTERLEAVED, AnimationType::INTERLEAVED);
+            for(uint8_t i = 0; i < static_cast<int>(AnimationType::MAX); i++) {
+                auto name = String(_config.getAnimationName(static_cast<AnimationType>(i)));
+                name.toLowerCase();
+                args.printf_P(PSTR("%s - %s animation (+" PROGMEM_AT_MODE_HELP_COMMAND_PREFIX "A=%s[,<options>])"), name.c_str(), _config.getAnimationName(static_cast<AnimationType>(i)), _config.getAnimationName(static_cast<AnimationType>(i)));
+            }
+            args.printf_P(PSTR("%u - rainbow animation (+" PROGMEM_AT_MODE_HELP_COMMAND_PREFIX "A=%u,<speed>,<multiplier>,<r>,<g>,<b-factor>)"), AnimationType::RAINBOW, AnimationType::RAINBOW);
+            args.printf_P(PSTR("%u - fade to color (+" PROGMEM_AT_MODE_HELP_COMMAND_PREFIX "A=%u,<r>,<g>,<b>)"), AnimationType::FADING, AnimationType::FADING);
 #if !IOT_LED_MATRIX
             args.printf_P(PSTR("%u - blink colon speed"), (int)AnimationType::MAX);
             args.print(F("100 = disable clock"));
             args.print(F("101 = enable clock"));
-            args.print(F("200 = display ambient light sensor value (+CLOCKA=200,<0|1>)"));
+            args.print(F("200 = display ambient light sensor value (+" PROGMEM_AT_MODE_HELP_COMMAND_PREFIX "A=200,<0|1>)"));
 #endif
             args.print(F("300 = test pixel animation order"));
         }
         else if (args.size() >= 1) {
-            int value = args.toInt(0);
+            auto animation = _getAnimationType(args.toString(0));
+            int value = static_cast<int>(animation);
+            if (animation == AnimationType::MAX) {
+                value = args.toInt(0);
+            }
+
 #if !IOT_LED_MATRIX
             if (value == (int)AnimationType::MAX) {
                 setBlinkColon(args.toIntMinMax(1, 50U, 0xffffU, 1000U));
@@ -208,35 +215,10 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                         _config.rainbow.color.factor.red = (uint8_t)args.toInt(3, _config.rainbow.color.factor.red);
                         _config.rainbow.color.factor.green = (uint8_t)args.toInt(4, _config.rainbow.color.factor.green);
                         _config.rainbow.color.factor.blue = (uint8_t)args.toInt(5, _config.rainbow.color.factor.blue);
-                        _setAnimation(__LDBG_new(Clock::RainbowAnimation, *this, _config.rainbow.speed, _config.rainbow.multiplier, _config.rainbow.color));
-                        break;
-                    case AnimationType::FIRE:
-                        _setAnimation(__LDBG_new(Clock::FireAnimation, *this, _config.fire));
-                        break;
                     default:
-                        setAnimation(static_cast<AnimationType>(value));
                         break;
                 }
-                // if (value == AnimationType::FADE) {
-                //     _animationData.fade.speed = args.toIntMinMax(1, 5U, 1000U, 10U);
-                //     if (args.size() >= 5) {
-                //         _animationData.fade.toColor = Color(args.toInt(2, rand()), args.toInt(3, rand()), args.toInt(4, rand()));
-                //     }
-                //     else {
-                //         _animationData.fade.toColor = ~_color & 0xffffff;
-                //     }
-                // }
-                // else if (value == AnimationType::RAINBOW) {
-                //     if (args.size() >= 2) {
-                //         _config.rainbow.multiplier = args.toFloatMinMax(1, 0.01f, 100.0f);
-                //         if (args.size() >= 3) {
-                //             _config.rainbow.speed = args.toIntMinMax(2, 5, 255);
-                //         }
-                //     }
-                // }
-                // else if (value == AnimationType::FLASHING) {
-                // }
-                // setAnimation(static_cast<AnimationType>(value));
+                setAnimation(static_cast<AnimationType>(value));
             }
         }
 #if !IOT_LED_MATRIX

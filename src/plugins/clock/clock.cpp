@@ -207,6 +207,18 @@ float ClockPlugin::_getFadingBrightness() const
     return _fadeTimer.isActive() && _fadeTimer.getDelay() ? _targetBrightness - (((int16_t)_targetBrightness - (int16_t)_startBrightness) / (float)_fadeTimer.getDelay()  * _fadeTimer.getTimeLeft()) : _targetBrightness;
 }
 
+ClockPlugin::AnimationType ClockPlugin::_getAnimationType(String name)
+{
+    String list = Clock::Config_t::getAnimationNames();
+    list.toLowerCase();
+    name.toLowerCase();
+    uint32_t animation = stringlist_find_P_P(list.c_str(), name.c_str(), ',');
+    if (animation < static_cast<uint32_t>(AnimationType::MAX)) {
+        return static_cast<AnimationType>(animation);
+    }
+    return AnimationType::MAX;
+}
+
 void ClockPlugin::_setupTimer()
 {
     _Timer(_timer).add(Event::seconds(1), true, [this](Event::CallbackTimerPtr timer) {

@@ -1862,11 +1862,13 @@ typedef struct  {
                     uint16_t speed;
                 } alarm;
 
-                struct __attribute__packed__ {
-                    float speed;
-                    uint16_t delay;
+                typedef struct __attribute__packed__ fading_t {
+                    using Type = fading_t;
+                    CREATE_UINT32_BITFIELD_MIN_MAX(speed, 17, 100, 100000, 1000, 100)
+                    CREATE_UINT32_BITFIELD_MIN_MAX(delay, 12, 0, 3600, 3, 1)
                     ClockColor_t factor;
-                } fading;
+                } fading_t;
+                fading_t fading;
 
                 FireAnimation_t fire;
 

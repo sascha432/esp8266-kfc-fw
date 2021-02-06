@@ -51,7 +51,7 @@ namespace KFCConfigurationClasses {
         protection( { { 55, 70 }, 75} ),
         rainbow{ RainbowMultiplier_t(), RainbowColor_t(), 30 },
         alarm{ { 0xaa0000 }, 250 },
-        fading{ .75f, 3, 0xffffff }
+        fading{ fading.kDefaultValueFor_speed, fading.kDefaultValueFor_delay, 0xffffff }
 #if IOT_LED_MATRIX
         ,
         fire(),

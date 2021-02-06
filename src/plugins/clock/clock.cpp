@@ -36,6 +36,30 @@ __DBGTM(
 
 static ClockPlugin plugin;
 
+#if HAVE_PCF8574
+
+void initialize_pcf8574()
+{
+    _PCF8574.begin(0xff);
+}
+
+void print_status_pcf8574(Print &output)
+{
+    output.printf_P(PSTR("PCF8574 @ I2C address 0x%02x"), PCF8574_I2C_ADDRESS);
+    output.print(F(HTML_S(br) "All pins configured as OUTPUT, interrupt disabled" HTML_S(br)));
+    if (_PCF8574.isConnected()) {
+        auto state = _PCF8574.read8();
+        for(uint8_t i = 0; i < 8; i++) {
+            output.printf_P(PSTR("%u=%s "), i, (state & _BV(i)) ? PSTR("HIGH") : PSTR("LOW"));
+        }
+    }
+    else {
+        output.print(F(HTML_S(br) "ERROR - Device not found!"));
+    }
+}
+
+#endif
+
 #if IOT_LED_MATRIX
 
 #define PLUGIN_OPTIONS_NAME                             "led_matrix"
@@ -363,9 +387,13 @@ void ClockPlugin::setup(SetupModeType mode)
 #endif
 #endif
 
+    pinMode(0, INPUT);
+    pinMode(2, INPUT);
+    pinMode(14, INPUT);
 #if IOT_CLOCK_BUTTON_PIN
-    _button.onHoldRepeat(800, 100, onButtonHeld);
-    _button.onRelease(onButtonReleased);
+    //pinMonitor.begin();
+    // _button.onHoldRepeat(800, 100, onButtonHeld);
+    // _button.onRelease(onButtonReleased);
 #endif
 
 #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
@@ -792,39 +820,19 @@ void ClockPlugin::_setAnimation(Clock::Animation *animation)
 void ClockPlugin::_setBlendAnimation(Clock::Animation *blendAnimation)
 {
     __LDBG_printf("blend=%p", blendAnimation);
+    // we do not support blending more than 2 animations
+    // if switched to quickly it will stop and continue with the new one
     if (_blendAnimation) {
-        __LDBG_delete(_blendAnimation);
+        delete _blendAnimation;
     }
-    _blendAnimation = blendAnimation;
+    _blendAnimation = new Clock::BlendAnimation(_animation, blendAnimation, _display, Clock::BlendAnimation::kDefaultTime);
     if (!_blendAnimation) {
-        _blendTimer = 0;
+        delete _animation;
+        _animation = blendAnimation;
         return;
     }
     _blendAnimation->begin();
-    _blendAnimation->setBlendTime(_blendAnimation->kDefaultBlendTime);
-    _blendTimer = millis();
 }
-
-// void ClockPlugin::_deleteAnimaton()
-// {
-//     __LDBG_printf("animation=%p next=%p start_next=%u", _animation, _nextAnimation, startNext);
-//     if (_animation) {
-//         __LDBG_delete(_animation);
-//         _animation = nullptr;
-//     }
-//     if (_nextAnimation) {
-//         if (startNext) {
-//             _animation = _nextAnimation;
-//             _nextAnimation = nullptr;
-//             __LDBG_printf("begin next animation=%p", _animation);
-//             _animation->begin();
-//         }
-//         else {
-//             __LDBG_delete(_nextAnimation);
-//             _nextAnimation = nullptr;
-//         }
-//     }
-// }
 
 #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
 

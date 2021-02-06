@@ -25,6 +25,19 @@ void ClockPlugin::_loop()
     }
 #endif
 
+    if (digitalRead(14) == 0) {
+        __LDBG_printf("PIN 14 low");
+        delay(100);
+    }
+    if (digitalRead(0) == 0) {
+        __LDBG_printf("PIN 0 low");
+        delay(100);
+    }
+    if (digitalRead(2) == 0) {
+        __LDBG_printf("PIN 2 low");
+        delay(100);
+    }
+
     LoopOptionsType options(*this);
     _display.setBrightness(_getBrightness());
 
@@ -69,25 +82,18 @@ void ClockPlugin::_loop()
 
             if (_blendAnimation) {
 
-                if (!_animation) {
-                    __LDBG_panic("_animation is null");
-                }
-
                 _animation->nextFrame(options.getMillis());
                 _blendAnimation->nextFrame(options.getMillis());
 
-                if (_blendAnimation->blend(_animation, _display, get_time_diff(_blendTimer, options.getMillis()), options.getMillis())) {
+                if (_blendAnimation->blend(_display, options.getMillis())) {
                     // display mixed state
                     _display.show();
                 }
                 else {
-                    // blending done, delete animation and use blendAnimation instead
+                    // blending done, delete _blendAnimation
                     __LDBG_printf("blending done");
-                    std::swap(_blendAnimation, _animation);
                     delete _blendAnimation;
                     _blendAnimation = nullptr;
-                    _blendTimer = 0;
-                    _animation->copyTo(_display, options.getMillis());
                     _display.show();
                 }
 

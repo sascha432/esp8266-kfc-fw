@@ -3,6 +3,7 @@
  */
 
  $(function() {
+    var self = http2serialPlugin;
     if ($('#open_led_matrix').length == 0) {
         $('#sendbutton').parent().append('<button class="btn btn-outline-secondary" type="button" id="open_led_matrix">LED Matrix</button>');
         $('#open_led_matrix').on('click', function() {

@@ -53,11 +53,6 @@ namespace Clock {
     // copyTo
     //
     // copy buffered frame to display or create frame inside display directly
-    // copies buffer into display by default
-    //
-    // blend
-    //
-    // blend two animations into a single frame and copy it to the display
     //
     // nextFrame
     //
@@ -70,7 +65,6 @@ namespace Clock {
 
     class Animation {
     public:
-        static constexpr uint16_t kDefaultBlendTime = 4000;
         static constexpr bool kDefaultDisableBlinkColon = true;
         static constexpr CoordinateType kRows = IOT_LED_MATRIX_ROWS;
         static constexpr CoordinateType kCols = IOT_LED_MATRIX_COLS;
@@ -86,32 +80,12 @@ namespace Clock {
     public:
         Animation(ClockPlugin &clock, Color color = 0U) :
             _parent(clock),
-            _display(nullptr),
             _buffer(nullptr),
-            _blendTime(kDefaultBlendTime),
             _disableBlinkColon(kDefaultDisableBlinkColon),
-            _mode(ModeType::NONE),
+            // _mode(ModeType::NONE),
             _color(color)
         {
         }
-
-        // Animation(ClockPlugin &clock, DisplayBufferType *buffer) :
-        //     _parent(clock),
-        //     _display(nullptr),
-        //     _buffer(buffer),
-        //     _blendTime(kDefaultBlendTime),
-        //     _disableBlinkColon(kDefaultDisableBlinkColon)
-        // {
-        // }
-
-        // Animation(ClockPlugin &clock, DisplayType &display) :
-        //     _parent(clock),
-        //     _display(&display),
-        //     _buffer(nullptr),
-        //     _blendTime(kDefaultBlendTime),
-        //     _disableBlinkColon(kDefaultDisableBlinkColon)
-        // {
-        // }
 
         virtual ~Animation()
         {
@@ -122,45 +96,26 @@ namespace Clock {
         {
         }
 
-        virtual bool blend(Animation *animation, DisplayType &display, uint16_t timeLeft, uint32_t millisValue)
-        {
-            if (timeLeft >= _blendTime) {
-                _freeBuffer();
-                return false;
-            }
-            // __LDBG_printf("blend buf=%p ani=%p display=%p time=%u/%u", _buffer, animation, &display, timeLeft, _blendTime);
-            if (!hasBuffer()) {
-                _buffer = new DisplayBufferType();
-                if (_buffer) {
-                    copyTo(*_buffer, millisValue);
-                }
-            }
-            if (animation) {
-                if (!animation->blend(nullptr, display, timeLeft, millisValue)) {
-                    _freeBuffer();
-                    return false;
-                }
-                fract8 amount = ((timeLeft * 255) / _blendTime);
-                ::blend(animation->getBuffer()->begin(), _buffer->begin(), display.begin(), display.kNumPixels, amount);
-            }
-            return true;
-        }
+        // copy frame into display/buffer
+        // if the target buffer is the own _buffer, this step can be skipped
+        virtual void copyTo(DisplayType &display, uint32_t millisValue) = 0;
+        virtual void copyTo(DisplayBufferType &buffer, uint32_t millisValue) = 0;
 
-        virtual void copyTo(DisplayType &display, uint32_t millisValue)
-        {
-            __LDBG_printf("_buffer=%p display=%u", _buffer, &display);
-            if (hasBuffer()) {
-                display.copy(*_buffer, display);
-            }
-        }
+        // virtual void copyTo(DisplayType &display, uint32_t millisValue)
+        // {
+        //     __LDBG_printf("_buffer=%p display=%u", _buffer, &display);
+        //     if (hasBuffer()) {
+        //         display.copy(*_buffer, display, display.kNumPixels);
+        //     }
+        // }
 
-        virtual void copyTo(DisplayBufferType &buffer, uint32_t millisValue)
-        {
-            __LDBG_printf("_buffer=%p buffer=%u", _buffer, &buffer);
-            if (hasBuffer()) {
-                buffer.copy(*_buffer, buffer);
-            }
-        }
+        // virtual void copyTo(DisplayBufferType &buffer, uint32_t millisValue)
+        // {
+        //     __LDBG_printf("_buffer=%p buffer=%u", _buffer, &buffer);
+        //     if (hasBuffer()) {
+        //         buffer.copy(*_buffer, buffer, buffer.kNumPixels);
+        //     }
+        // }
 
         virtual void loop(uint32_t millisValue)
         {
@@ -170,34 +125,44 @@ namespace Clock {
         {
         }
 
-        bool hasDisplay() const
-        {
-            return _display != nullptr;
-        }
+        // bool hasDisplay() const
+        // {
+        //     return _display != nullptr;
+        // }
 
         bool hasBuffer() const
         {
             return _buffer != nullptr;
         }
 
-        void setDisplay(DisplayType *display) {
-            _freeBuffer();
-            _display = display;
+        // void setDisplay(DisplayType *display) {
+        //     _freeBuffer();
+        //     _display = display;
+        // }
+
+        // void setBuffer(DisplayBufferType *buffer) {
+        //     _freeBuffer(buffer);
+        //     _display = nullptr;
+        // }
+
+        // DisplayBufferType *getBuffer() {
+        //     return _buffer;
+        // }
+
+        // return the buffer or create a new one
+        // to avoid allocating another one, at least one frame must be created before calling the method
+        DisplayBufferType *getBlendBuffer() {
+            if (_buffer) {
+                return _buffer;
+            }
+            return new DisplayBufferType();
         }
 
-        void setBuffer(DisplayBufferType *buffer) {
-            _freeBuffer(buffer);
-            _display = nullptr;
-        }
-
-        DisplayBufferType *getBuffer() {
-            return _buffer;
-        }
-
-        void setBlendTime(uint16_t blendTime)
-        {
-            __LDBG_printf("blend_time=%u", blendTime);
-            _blendTime = blendTime;
+        // check if the buffer is _buffer and delete it, if not
+        void removeBlendBuffer(DisplayBufferType *buffer) {
+            if (buffer != _buffer) {
+                delete buffer;
+            }
         }
 
         bool isBlinkColonDisabled() const
@@ -210,10 +175,10 @@ namespace Clock {
             _color = color;
         }
 
-        void setMode(ModeType mode)
-        {
-            _mode = mode;
-        }
+        // void setMode(ModeType mode)
+        // {
+        //     _mode = mode;
+        // }
 
     protected:
         Color _getColor() const;
@@ -228,14 +193,92 @@ namespace Clock {
         }
 
         ClockPlugin &_parent;
-        DisplayType *_display;
         DisplayBufferType *_buffer;
 
     protected:
-        uint16_t _blendTime;
         bool _disableBlinkColon;
-        ModeType _mode;
+        // ModeType _mode;
         Color _color;
+    };
+
+    class BlendAnimation {
+    public:
+        static constexpr uint16_t kDefaultTime = 4000;
+
+    public:
+        // source       variable of current animation
+        // target       object of new animation
+        // display      blend both animations into display
+        // duration     time in milliseconds
+        BlendAnimation(Animation *&source, Animation *target, DisplayType &display, uint16_t duration) :
+            _source(source),
+            _target(target),
+            _sourceBuffer(source->getBlendBuffer()),
+            _targetBuffer(nullptr),
+            _display(display),
+            _timer(0),
+            _duration(duration)
+        {
+        }
+
+        ~BlendAnimation() {
+            _source->removeBlendBuffer(_sourceBuffer);
+            _target->removeBlendBuffer(_targetBuffer);
+            // make target the new animation and delete the source
+            std::swap(_source, _target);
+            delete _target;
+        }
+
+        void begin() {
+            _timer = millis();
+            // create first frame to get the buffer
+            _target->begin();
+            uint32_t ms = millis();
+            _target->loop(ms);
+            _target->nextFrame(ms);
+            _targetBuffer = _target->getBlendBuffer();
+        }
+
+        void loop(uint32_t millis) {
+            _target->loop(millis);
+        }
+
+        void nextFrame(uint32_t millis) {
+            _target->nextFrame(millis);
+        }
+
+        void copyTo(DisplayType &display, uint32_t millis) {
+            _target->copyTo(display, millis);
+        }
+
+        void copyTo(DisplayBufferType &buffer, uint32_t millis) {
+            _target->copyTo(buffer, millis);
+        }
+
+        bool blend(DisplayType &display, uint32_t millisValue)
+        {
+            auto timeLeft = get_time_diff(_timer, millisValue);
+            if (timeLeft >= _duration) {
+                _target->copyTo(_display, millisValue);
+                return false;
+            }
+
+            _source->copyTo(*_sourceBuffer, millisValue);
+            _target->copyTo(*_targetBuffer, millisValue);
+
+            fract8 amount = ((timeLeft * 255) / _duration);
+            ::blend(_sourceBuffer->begin(), _targetBuffer->begin(), display.begin(), display.kNumPixels, amount);
+            return true;
+        }
+
+    private:
+        Animation *&_source;
+        Animation *_target;
+        DisplayBufferType *_sourceBuffer;
+        DisplayBufferType *_targetBuffer;
+        DisplayType &_display;
+        uint32_t _timer;
+        uint16_t _duration;
     };
 
     // ------------------------------------------------------------------------
@@ -243,32 +286,15 @@ namespace Clock {
     class FadingAnimation : public Animation {
     public:
         static constexpr uint32_t kNoColorChange = ~0;
-        static constexpr uint16_t kMaxDelay = static_cast<uint16_t>(~0) - 1;
-        static constexpr float kFloatMaxProgress = std::numeric_limits<uint16_t>::max() - 1;
-        static constexpr uint16_t kMaxProgress = kFloatMaxProgress;
-        static constexpr uint16_t kUpdateRateHz = 50;
-        static constexpr uint16_t kUpdateRate = 1000 / kUpdateRateHz;
-        static constexpr float kProgressPerSecond = kFloatMaxProgress / kUpdateRateHz;
-        static constexpr float kMaxSeconds = kProgressPerSecond;
-        static constexpr float kMinSeconds = kProgressPerSecond / kFloatMaxProgress + 0.00001;
-
-        static constexpr float kSpeedToSeconds(uint16_t speed) {
-            return kProgressPerSecond / speed;
-        }
-        static constexpr uint16_t kSecondsToSpeed(float seconds) {
-            return (kProgressPerSecond / seconds) + 0.5;
-        }
 
     public:
-        FadingAnimation(ClockPlugin &clock, Color from, Color to, float speed, uint32_t time = kNoColorChange, Color factor = 0xffffffU) :
+        FadingAnimation(ClockPlugin &clock, Color from, Color to, uint16_t durationMillis = 1000, uint32_t holdTimeMillis = kNoColorChange, Color factor = 0xffffffU) :
             Animation(clock, from),
-            _from(from),
             _to(to),
             _factor(factor),
-            _time(time),
             _waitTimer(0),
-            _speed(_secondsToSpeed(speed)),
-            _progress(0),
+            _holdTime(holdTimeMillis),
+            _duration(durationMillis),
             _finished(false),
             _waiting(false)
         {
@@ -276,86 +302,70 @@ namespace Clock {
 
         virtual void begin() override
         {
+            _from = _color;
+            _waiting = false;
+            _finished = false;
+            __LDBG_printf("fading from %s to %s in %ums", _from.toString().c_str(), _to.toString().c_str(), _duration);
             _loopTimer = millis();
         }
 
         virtual void setColor(Color color) override
         {
+            __LDBG_printf("set color=%s current=%s", color.toString().c_str(), _color.toString().c_str());
             _to = color;
-            _progress = 0;
-            _waiting = false;
-            _finished = false;
-            _loopTimer = millis();
+            begin();
         }
 
         virtual void loop(uint32_t millisValue)
         {
-            if (_finished) {
+            if (_waiting && get_time_diff(_waitTimer, millis()) >= _holdTime) {
+                __LDBG_printf("waiting period is over");
+                _color = _getColor();
+                srand(millisValue);
+                _to.rnd();
+                begin();
+            }
+        }
+
+        void _updateColor() {
+
+            if (_waiting || _finished) {
                 return;
             }
-            if (_waiting) {
-                if (get_time_diff(_waitTimer, millis()) >= _time) {
-                    _color = _getColor();
-                    _from = _color;
-                    _to.rnd();
-                    _progress = 0;
-                    _waiting = false;
-                    _loopTimer = millis();
-                }
-            }
-            else if (get_time_diff(_loopTimer, millis()) >= kUpdateRate) {
-                _loopTimer = millis();
 
-                srand(millisValue);
-                if (_progress < kMaxProgress) {
-                    _progress = std::min<uint32_t>(kMaxProgress, _progress + _speed);
-                    float stepRed = (_to.red() - _from.red()) / kFloatMaxProgress;
-                    float stepGreen = (_to.green() - _from.green()) / kFloatMaxProgress;
-                    float stepBlue = (_to.blue() - _from.blue()) / kFloatMaxProgress;
-                    _color = Color(
-                        _from.red() + static_cast<uint8_t>(stepRed * _progress),
-                        _from.green() + static_cast<uint8_t>(stepGreen * _progress),
-                        _from.blue() + static_cast<uint8_t>(stepBlue * _progress)
-                    );
-                    if (_progress >= kMaxProgress) {
-                        _color = _to;
-                        if (_time == kNoColorChange) {
-                            _finished = true;
-                            __LDBG_printf("no color change, waiting");
-                            return; // make sure to return after destroying the lambda function
-                        }
-                        else if (_time == 0) {
-                            _from = _to;
-                            _to.rnd();
-                            _progress = 0;
-                            __LDBG_printf("next from=%s to=%s time=%u speed=%u", _from.toString().c_str(), _to.toString().c_str(), _time, _speed);
-                        }
-                        else {
-                            // wait for _time seconds
-                            __LDBG_printf("delay=%u wait_timer=%u", _time, _waitTimer + _time);
-                            _waiting = true;
-                            _waitTimer = millisValue;
-                            _setColor(_to);
-                        }
-                    }
+            auto duration = get_time_diff(_loopTimer, millis());
+            if (duration >= _duration) {
+                _color = _to;
+                if (_holdTime == kNoColorChange) {
+                    __LDBG_printf("no color change activated");
+                    // no automatic color change enabled
+                    _finished = true;
+                    _waiting = false;
+                    return;
                 }
+                __LDBG_printf("entering waiting period time=%u", _holdTime);
+                // wait for next color change
+                _waitTimer = millis();
+                _waiting = true;
+                _finished = false;
+                _setColor(_to);
+                return;
             }
+
+            fract8 amount = duration * 255 / _duration;
+            _color = blend(_from, _to, amount);
         }
 
         virtual void copyTo(DisplayType &display, uint32_t millisValue) override
         {
-            display.fill(_color.get());
+            _updateColor();
+            display.fill(_color);
         }
 
         virtual void copyTo(DisplayBufferType &buffer, uint32_t millisValue) override
         {
-            buffer.fill(_color.get());
-        }
-
-    private:
-        uint16_t _secondsToSpeed(float seconds) const
-        {
-            return (kProgressPerSecond / seconds) + 0.5;
+            _updateColor();
+            buffer.fill(_color);
         }
 
     private:
@@ -363,11 +373,10 @@ namespace Clock {
         Color _from;
         Color _to;
         Color _factor;
-        uint32_t _time;
         uint32_t _loopTimer;
         uint32_t _waitTimer;
-        uint16_t _speed;
-        uint16_t _progress;
+        uint32_t _holdTime;
+        uint16_t _duration;
         bool _finished: 1;
         bool _waiting: 1;
     };
@@ -378,7 +387,7 @@ namespace Clock {
         using FadingAnimation::copyTo;
         using FadingAnimation::setColor;
 
-        SolidColorAnimation(ClockPlugin &clock, Color color) : FadingAnimation(clock, color, color, 0.75)
+        SolidColorAnimation(ClockPlugin &clock, Color color) : FadingAnimation(clock, color, color)
         {
         }
 
@@ -466,10 +475,10 @@ namespace Clock {
                 }
                 CoordinateType row = i % kRows;
                 CoordinateType col = i / kRows;
-                if (i % 2 == 1) {
-                    row = (kRows - 1) - row;
-                }
-                display.setPixel(display.getAddress(row,col), color.get());
+                // if (i % 2 == 1) {
+                //     row = (kRows - 1) - row;
+                // }
+                display.setPixel(row, col, color);
             }
         }
 
@@ -567,7 +576,7 @@ namespace Clock {
         template<typename _Ta>
         void _copyTo(_Ta &display, uint32_t millisValue)
         {
-            display.fill(((millisValue / _time) % _mod == 0) ? _color : CRGB(0));
+            display.fill(((millisValue / _time) % _mod == 0) ? _color : Color());
         }
 
         virtual void setColor(Color color) override
@@ -591,18 +600,57 @@ namespace Clock {
             _time(time),
             _row(row),
             _col(col)
+        //     _loopTimer(0)
         {
         }
 
-        virtual bool blend(Animation *animation, DisplayType &display, uint16_t timeLeft, uint32_t millisValue) override
+        virtual void begin() override {
+            // _loopTimer = millis();
+            _disableBlinkColon = true;
+        }
+
+        virtual void copyTo(DisplayType &display, uint32_t millisValue) override
         {
-            return false;
+            _copyTo(display, millisValue);
+        }
+
+        virtual void copyTo(DisplayBufferType &buffer, uint32_t millisValue) override
+        {
+            _copyTo(buffer, millisValue);
+        }
+
+        template<typename _Ta>
+        void _copyTo(_Ta &display, uint32_t millisValue)
+        {
+            Color color;
+            CoordinateType rPos;
+            CoordinateType cPos;
+            if (_time) {
+                rPos = (millisValue / _time) % kRows;
+                cPos = (millisValue / _time) % kCols;
+            }
+            else {
+                rPos = 0;
+                cPos = 0;
+            }
+            for(CoordinateType i = 0; i < kRows; i++) {
+                Color rowColor = (_row > 1) ?
+                    (i % _row == rPos ? Color() : _color) :
+                    (_color);
+                for(CoordinateType j = 0; j < kCols; j++) {
+                    display.setPixel(i, j, (_col > 1) ?
+                        (i % _col == cPos ? Color() : rowColor) :
+                        (rowColor)
+                    );
+                }
+            }
         }
 
     private:
         uint32_t _time;
         uint16_t _row;
         uint16_t _col;
+        // uint32_t _loopTimer;
     };
 
     // ------------------------------------------------------------------------
@@ -815,15 +863,6 @@ namespace Clock {
                     output.setPixel(coords, color.get());
                 }
             }
-
-            // setAnimationCallback([this](PixelAddressType address, ColorType color, const SevenSegmentDisplay::Params_t &params) -> ColorType {
-            //     auto pixel = translateAddress(address);
-            //     if (_cfg.cast_enum_orientation(_cfg.orientation) == Orientation::VERTICAL) {
-            //         pixel.rotate90();
-            //     }
-            //     return SevenSegmentDisplay::_adjustBrightnessAlways(_lines[pixel.getRow()].getHeatColor((_cfg.invert_direction) ? pixel.getInvertedCol() : pixel.getCol()), params.brightness());
-            // });
-
         }
 
     private:
@@ -834,23 +873,6 @@ namespace Clock {
         uint8_t *_lineBuffer;
         FireAnimationConfig &_cfg;
     };
-
-    // // ------------------------------------------------------------------------
-    // // Callback
-
-    // class CallbackAnimation : public Animation {
-    // public:
-    //     CallbackAnimation(ClockPlugin &clock, AnimationCallback callback, uint16_t updateRate = 20, bool blinkColon = true);
-
-    //     virtual void begin() override;
-    //     virtual void end() override;
-    //     virtual void loop(uint32_t millisValue) {}
-
-    // private:
-    //     AnimationCallback _callback;
-    //     uint16_t _updateRate;
-    //     bool _blinkColon;
-    // };
 
 }
 

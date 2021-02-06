@@ -96,12 +96,8 @@
 #    error not supported, set IOT_CLOCK_PIXEL_SYNC_ANIMATION=0
 #endif
 
-
 #if IOT_CLOCK_BUTTON_PIN
-#    include <Bounce2.h>
-#    include <Button.h>
-#    include <ButtonEventCallback.h>
-#    include <PushButton.h>
+#include <PinMonitor.h>
 #endif
 
 // number of measurements. 0=disable
@@ -612,8 +608,7 @@ private:
     uint8_t _targetBrightness;
 
     Clock::Animation *_animation;
-    Clock::Animation *_blendAnimation;
-    uint32_t _blendTimer;
+    Clock::BlendAnimation *_blendAnimation;
 };
 
 // inline void ClockPlugin::setAnimationCallback(Clock::AnimationCallback callback)

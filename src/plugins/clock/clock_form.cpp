@@ -238,13 +238,13 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
     // --------------------------------------------------------------------
     auto &fadingGroup = form.addCardGroup(F("fade"), F("Color Fade"), true);
 
-    form.addPointerTriviallyCopyable(F("fse"), &cfg.fading.speed);
-    form.addFormUI(F("Time Between Fading Colors"), FormUI::Suffix(FSPGM(seconds)));
-    form.addValidator(FormUI::Validator::Range(Clock::FadingAnimation::kMinSeconds, Clock::FadingAnimation::kMaxSeconds));
+    form.addObjectGetterSetter(F("fse"), cfg.fading, cfg.fading.get_bits_speed, cfg.fading.set_bits_speed);
+    form.addFormUI(F("Time Between Fading Colors"), FormUI::Suffix(FSPGM(milliseconds)));
+    cfg.fading.addRangeValidatorFor_speed(form);
 
-    form.addPointerTriviallyCopyable(F("fdy"), &cfg.fading.delay);
+    form.addObjectGetterSetter(F("fdy"), cfg.fading, cfg.fading.get_bits_delay, cfg.fading.set_bits_delay);
     form.addFormUI(F("Delay Before Start Fading To Next Random Color"), FormUI::Suffix(FSPGM(seconds)));
-    form.addValidator(FormUI::Validator::Range(0, Clock::FadingAnimation::kMaxDelay));
+    cfg.fading.addRangeValidatorFor_delay(form);
 
     form.add(F("fcf"), Color(cfg.fading.factor.value).toString(), [&cfg](const String &value, FormUI::Field::BaseField &field, bool store) {
         if (store) {

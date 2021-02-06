@@ -300,9 +300,8 @@ namespace Clock {
         }
 
         void setPixel(CoordinateType row, CoordinateType col, ColorType color) {
-            __DBG_assert_printf(getAddress(row, col) + kStartAddress >= 0 && getAddress(row, col) + kStartAddress < kTotalPixelCount,
-                "address out of bounds: %d for %d:%d", getAddress(row, col) + kStartAddress, row, col);
-            _pixels[getAddress(row, col) + kStartAddress] = color;
+            // _pixels[getAddress(row, col) + kStartAddress] = color;
+            (*this)[getAddress(row, col)] = color;
         }
 
         void setPixel(PixelCoordinatesType point, ColorType color) {
@@ -310,13 +309,12 @@ namespace Clock {
         }
 
         void setPixel(PixelAddressType numPixel, ColorType color) {
-            pixels(getAddress(getPoint(numPixel))) = color;
+            (*this)[getAddress(getPoint(numPixel))] = color;
+            // pixels(getAddress(getPoint(numPixel)) + kStartAddress) = color;
         }
 
         ColorType getPixel(CoordinateType row, CoordinateType col) const {
-            __DBG_assert_printf(getAddress(row, col) + kStartAddress >= 0 && getAddress(row, col) + kStartAddress < kTotalPixelCount,
-                "address out of bounds: %d for %d:%d", getAddress(row, col) + kStartAddress, row, col);
-            return _pixels[getAddress(row, col) + kStartAddress];
+            return (*this)[getAddress(row, col)];
         }
 
         ColorType getPixel(PixelCoordinatesType point) const {
@@ -324,9 +322,24 @@ namespace Clock {
         }
 
         ColorType getPixel(PixelAddressType numPixel) const {
-            return pixels(getAddress(getPoint(numPixel)));
+            return (*this)[getAddress(getPoint(numPixel))];
+            // return pixels(getAddress(getPoint(numPixel)) + kStartAddress);
         }
 
+        template<typename _Ta, typename _Tb, typename std::enable_if<_Ta::kMappingTypeId == _Tb::kMappingTypeId, int>::type = 0>
+        static void copy(_Ta src, _Tb dst, PixelAddressType numPixel) {
+            std::copy(src.begin(), src.begin() + numPixel, dst.begin());
+        }
+
+        template<typename _Ta, typename _Tb, typename std::enable_if<_Ta::kMappingTypeId != _Tb::kMappingTypeId, int>::type = 0>
+        static void copy(_Ta src, _Tb dst, PixelAddressType numPixel) {
+            for (typename _Ta::PixelAddressType i = 0; i < numPixel; i++) {
+                // translate the address of each pixel if the mapping is different
+                dst[dst.getAddress(src.getPoint(i))] = src[i];
+            }
+        }
+
+        // access to all pixels, starting with first LED
         ColorType &pixels(PixelAddressType address) {
             __DBG_assert_printf(address >= 0 && address < _pixels.size(), "address out of bounds: %d", address);
             return _pixels[address];
@@ -337,18 +350,13 @@ namespace Clock {
             return _pixels[address];
         }
 
-        template<typename _Ta, typename _Tb, typename std::enable_if<_Ta::kMappingTypeId == _Tb::kMappingTypeId, int>::type = 0>
-        static void copy(_Ta src, _Tb dst) {
-            static_assert(_Ta::kNumPixels == _Tb::kNumPixels, "number of pixels does not match");
-            std::copy(src._pixels.begin() + src.kStartAddress, src._pixels.end(), dst._pixels.begin() + dst.kStartAddress);
+        // access to LEDs after the start address
+        ColorType &operator [](PixelAddressType idx) {
+            return pixels(kStartAddress + idx);
         }
 
-        template<typename _Ta, typename _Tb, typename std::enable_if<_Ta::kMappingTypeId != _Tb::kMappingTypeId, int>::type = 0>
-        static void copy(_Ta src, _Tb dst) {
-            static_assert(_Ta::kNumPixels == _Tb::kNumPixels, "number of pixels does not match");
-            for (typename _Ta::PixelAddressType i = 0; i < _Ta::kNumPixels; i++) {
-                dst._pixels[dst.getAddress(src.getPoint(i)) + dst.kStartAddress] = src._pixels[i + src.kStartAddress];
-            }
+        ColorType operator [](PixelAddressType idx) const {
+            return pixels(kStartAddress + idx);
         }
 
         ColorType *begin() {
@@ -357,6 +365,10 @@ namespace Clock {
 
         ColorType *begin() const {
             return &_pixels.data()[kStartAddress];
+        }
+
+        ColorType *end() {
+            return &_pixels.data()[_pixels.size()];
         }
 
         ColorType *end() const {
@@ -381,6 +393,9 @@ namespace Clock {
     public:
         using PixelBufferType = _PixelDisplayBufferType;
         using PixelBufferType::_pixels;
+        using PixelBufferType::begin;
+        using PixelBufferType::end;
+        using PixelBufferType::operator[];
 
     public:
         PixelDisplay() :

@@ -142,7 +142,7 @@ class WebSocket(BaseConnection):
         BaseConnection.on_connect(self)
 
     def url(self):
-        return 'ws://' + self.hostname + '/serial-console'
+        return 'ws://' + self.hostname + '/serial_console'
 
     def connect(self, hostname, sid):
         if self.is_connected():

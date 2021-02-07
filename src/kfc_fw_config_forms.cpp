@@ -189,7 +189,7 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             form.addFormUI(F("Reboot Delay Running In Safe Mode"), FormUI::Suffix(FSPGM(minutes)));
             cfg.addRangeValidatorFor_safe_mode_reboot_timeout_minutes(form, true);
 
-#if __LED_BUILTIN != -1
+#if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID
             auto ledItems = FormUI::List(
                 System::DeviceConfig::StatusLEDModeType::OFF, F("Disable status LED"),
                 System::DeviceConfig::StatusLEDModeType::SOLID_WHEN_CONNECTED, F("Solid when connected to WiFi"),

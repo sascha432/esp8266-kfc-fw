@@ -22,7 +22,7 @@ Color Animation::_getColor() const
 
 void Animation::_setColor(Color color)
 {
-    _parent._setColor(color);
+    _parent._setColor(color, false);
 }
 
 // Renderer::Renderer(ClockPlugin &clock, AnimationType type) :

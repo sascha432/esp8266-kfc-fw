@@ -41,6 +41,7 @@ namespace KFCConfigurationClasses {
         time_format_24h(true),
 #endif
         dithering(false),
+        standby_led(true),
         fading_time(kDefaultValueFor_fading_time),
         power_limit(kDefaultValueFor_power_limit),
         brightness(kDefaultValueFor_brightness),

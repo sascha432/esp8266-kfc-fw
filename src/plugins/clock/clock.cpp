@@ -24,13 +24,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-#include <stl_ext/fixed_circular_buffer.h>
-__DBGTM(
-    stdex::fixed_circular_buffer<uint16_t, IOT_CLOCK_DEBUG_ANIMATION_TIME> _anmationTime;
-    stdex::fixed_circular_buffer<uint16_t, IOT_CLOCK_DEBUG_ANIMATION_TIME> _animationRenderTime;
-    stdex::fixed_circular_buffer<uint16_t, IOT_CLOCK_DEBUG_ANIMATION_TIME> _displayTime;
-    stdex::fixed_circular_buffer<uint16_t, IOT_CLOCK_DEBUG_ANIMATION_TIME> _timerDiff;
-);
+// #include <stl_ext/fixed_circular_buffer.h>
 
 #define GET_COLOR_STRING()          getColor().toString().c_str()
 
@@ -40,7 +34,7 @@ static ClockPlugin plugin;
 
 void initialize_pcf8574()
 {
-    _PCF8574.begin(0xff);
+    _PCF8574.write8(0xff);
 }
 
 void print_status_pcf8574(Print &output)
@@ -375,6 +369,11 @@ void ClockPlugin::setup(SetupModeType mode)
     readConfig();
     _targetBrightness = 0;
 
+#if IOT_LED_MATRIX_STANDBY_PIN != -1
+    _digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(false));
+    _pinMode(IOT_LED_MATRIX_STANDBY_PIN, OUTPUT);
+#endif
+
 #if !IOT_LED_MATRIX
     _setSevenSegmentDisplay();
 #if IOT_CLOCK_PIXEL_SYNC_ANIMATION
@@ -702,13 +701,13 @@ void ClockPlugin::setAnimation(AnimationType animation)
     _schedulePublishState = true;
 }
 
-void ClockPlugin::_setColor(uint32_t color)
+void ClockPlugin::_setColor(uint32_t color, bool updateAnimation)
 {
     __color = color;
     if (_config.getAnimation() == AnimationType::SOLID) {
         _config.solid_color = __color;
     }
-    if (_animation) {
+    if (updateAnimation && _animation) {
         _animation->setColor(__color);
     }
 }
@@ -918,6 +917,11 @@ void ClockPlugin::_enable()
     }
     __LDBG_printf("enable LED pin %u state %u (is_enabled=%u)", IOT_CLOCK_EN_PIN, enablePinState(true), _isEnabled);
     digitalWrite(IOT_CLOCK_EN_PIN, enablePinState(true));
+#if IOT_LED_MATRIX_STANDBY_PIN != -1
+    if (_config.standby_led) {
+        _digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(false));
+    }
+#endif
     _isEnabled = true;
 }
 
@@ -926,6 +930,11 @@ void ClockPlugin::_disable()
     __LDBG_printf("disable LED pin %u state %u (is_enabled=%u)", IOT_CLOCK_EN_PIN, enablePinState(false), _isEnabled);
     _isEnabled = false;
     digitalWrite(IOT_CLOCK_EN_PIN, enablePinState(false));
+#if IOT_LED_MATRIX_STANDBY_PIN != -1
+    if (_config.standby_led) {
+        _digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(true));
+    }
+#endif
     delay(100);
 }
 

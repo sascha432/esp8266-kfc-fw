@@ -73,6 +73,113 @@ extern void initialize_mcp23017();
 extern void print_status_mcp23017(Print &output);
 #endif
 
+static inline void _digitalWrite(uint8_t pin, uint8_t value) {
+#if HAVE_PCF8574
+    if (pin >= PCF8574_PORT_RANGE_START && pin < PCF8574_PORT_RANGE_END) {
+        _PCF8574.write(pin - PCF8574_PORT_RANGE_START, value);
+    }
+    else
+#endif
+    {
+        digitalWrite(pin, value);
+    }
+}
+
+static inline uint8_t _digitalRead(uint8_t pin) {
+#if HAVE_PCF8574
+    if (pin >= PCF8574_PORT_RANGE_START && pin < PCF8574_PORT_RANGE_END) {
+        return _PCF8574.read(pin - PCF8574_PORT_RANGE_START);
+    }
+    else
+#endif
+    {
+        return digitalRead(pin);
+    }
+}
+
+static inline void _analogWrite(uint8_t pin, uint16_t value) {
+#if HAVE_PCF8574
+    if (pin >= PCF8574_PORT_RANGE_START && pin < PCF8574_PORT_RANGE_END) {
+        _PCF8574.write(pin - PCF8574_PORT_RANGE_START, value ? HIGH : LOW);
+    }
+    else
+#endif
+    {
+        analogWrite(pin, value);
+    }
+}
+
+static inline uint16_t _analogRead(uint8_t pin) {
+#if HAVE_PCF8574
+    if (pin >= PCF8574_PORT_RANGE_START && pin < PCF8574_PORT_RANGE_END) {
+        return _PCF8574.read(pin - PCF8574_PORT_RANGE_START) ? 1023 : 0;
+    }
+    else
+#endif
+    {
+        return analogRead(pin);
+    }
+
+}
+
+static inline void _pinMode(uint8_t pin, uint8_t mode) {
+#if HAVE_PCF8574
+    if (pin >= PCF8574_PORT_RANGE_START && pin < PCF8574_PORT_RANGE_END) {
+        return;
+    }
+    else
+#endif
+    {
+        pinMode(pin, mode);
+    }
+}
+
+static inline size_t _pinName(uint8_t pin, char *buf, size_t size) {
+#if HAVE_PCF8574
+    if (pin >= PCF8574_PORT_RANGE_START && pin < PCF8574_PORT_RANGE_END) {
+        return snprintf_P(buf, size - 1, PSTR("%u (PCF8574 pin %u)"), pin, pin - PCF8574_PORT_RANGE_START);
+    }
+    else
+#endif
+    {
+        return snprintf_P(buf, size - 1, PSTR("%u"), pin);
+    }
+}
+
+static inline bool _pinHasAnalogRead(uint8_t pin) {
+#if HAVE_PCF8574
+    if (pin >= PCF8574_PORT_RANGE_START && pin < PCF8574_PORT_RANGE_END) {
+        return false;
+    }
+    else
+#endif
+    {
+#if ESP8266
+        return (pin == A0);
+#else
+#error missing
+#endif
+    }
+
+}
+
+static inline bool _pinHasAnalogWrite(uint8_t pin) {
+#if HAVE_PCF8574
+    if (pin >= PCF8574_PORT_RANGE_START && pin < PCF8574_PORT_RANGE_END) {
+        return false;
+    }
+    else
+#endif
+    {
+#if ESP8266
+        return pin < A0;
+#else
+#error missing
+#endif
+    }
+
+}
+
 
 #include "push_pack.h"
 

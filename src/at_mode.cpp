@@ -351,7 +351,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LSR, "LSR", "[<directory>]", "List files a
 #endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIFI, "WIFI", "[<reset|on|off|ap_on|ap_off>]", "Modify WiFi settings");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(REM, "REM", "Ignore comment");
-#if __LED_BUILTIN != -1
+#if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LED, "LED", "<slow,fast,flicker,off,solid,sos>,[,color=0xff0000][,pin]", "Set LED mode");
 #endif
 #if RTC_SUPPORT
@@ -441,7 +441,7 @@ void at_mode_help_commands()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(LSR), name);
 #endif
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(WIFI), name);
-#if __LED_BUILTIN != -1
+#if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(LED), name);
 #endif
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(REM), name);
@@ -1289,13 +1289,13 @@ void at_mode_serial_handle_event(String &commandString)
                     }
                 }
             }
-#if __LED_BUILTIN != -1
+#if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LED))) {
                 if (args.requireArgs(1, 3)) {
                     String mode = args.toString(0);
                     int32_t color = args.toNumber(1, -1);
-                    int8_t pin = (int8_t)args.toInt(2, __LED_BUILTIN);
-                    if (__LED_BUILTIN == BlinkLEDTimer::INVALID_PIN) {
+                    uint8_t pin = (uint8_t)args.toInt(2, __LED_BUILTIN);
+                    if (__LED_BUILTIN == pin && !BlinkLEDTimer::isPinValid(pin)) {
                         args.print(F("Invalid PIN"));
                     }
                     else {
@@ -1319,7 +1319,7 @@ void at_mode_serial_handle_event(String &commandString)
                             mode = F("OFF");
                             BlinkLEDTimer::setBlink(pin, BlinkLEDTimer::BlinkType::OFF);
                         }
-                        args.printf_P(PSTR("LED pin=%d, mode=%s, color=0x%06x"), pin, mode.c_str(), color);
+                        args.printf_P(PSTR("LED pin=%u, mode=%s, color=0x%06x"), pin, mode.c_str(), color);
                     }
                 }
             }
@@ -1589,57 +1589,56 @@ void at_mode_serial_handle_event(String &commandString)
                 if (args.requireArgs(2, 7)) {
                     auto pin = (uint8_t)args.toInt(0);
                     if (args.equalsIgnoreCase(1, F("waveform"))) {
-                        uint32_t timeHighUS = args.toInt(2, ~0U);
-                        uint32_t timeLowUS = args.toInt(3, ~0U);
-                        uint32_t runTimeUS = args.toInt(4, 0);
-                        uint32_t increment = args.toInt(5, 0);
-                        uint32_t delayTime = args.toInt(6);
-                        if (timeHighUS == ~0U || timeLowUS == ~0U) {
-                            digitalWrite(pin, LOW);
-                            stopWaveform(pin);
-                            pinMode(pin, INPUT);
-                            args.print(F("usage: <pin>,waveform,<high-time cycles>,<low-time cycles>[,<run-time cycles|0=unlimited>,<increment>,<delay ms>]"));
+                        if (pin > 16) {
+                            char buf[32];
+                            _pinName(pin, buf, sizeof(buf));
+                            args.printf_P(PSTR("%s does not support waveform"), buf);
                         }
                         else {
-                            digitalWrite(pin, LOW);
-                            pinMode(pin, OUTPUT);
-                            if (increment) {
-                                args.printf_P(PSTR("pin=%u high=%u low=%u runtime=%u increment=%u delay=%u"), pin, timeHighUS, timeLowUS, runTimeUS, increment, delayTime);
-                                uint32_t start = 0;
-                                _Scheduler.add(Event::milliseconds(delayTime), true, [args, delayTime, pin, timeHighUS, timeLowUS, runTimeUS, increment, start](Event::CallbackTimerPtr timer) mutable {
-                                    start += increment;
-                                    if (start >= timeHighUS) {
-                                        start = timeHighUS;
-                                        timer->disarm();
-                                    }
-                                    startWaveformClockCycles(pin, start, timeLowUS, runTimeUS);
-                                    if (delayTime > 20) {
-                                        args.printf_P(PSTR("pin=%u high=%u low=%u runtime=%u"), pin, start, timeLowUS, runTimeUS);
-                                    }
-                                }, Event::PriorityType::TIMER);
-
-                            } else {
-                                args.printf_P(PSTR("pin=%u high=%u low=%u runtime=%u"), pin, timeHighUS, timeLowUS, runTimeUS);
-                                startWaveformClockCycles(pin, timeHighUS, timeLowUS, runTimeUS);
+                            uint32_t timeHighUS = args.toInt(2, ~0U);
+                            uint32_t timeLowUS = args.toInt(3, ~0U);
+                            uint32_t runTimeUS = args.toInt(4, 0);
+                            uint32_t increment = args.toInt(5, 0);
+                            uint32_t delayTime = args.toInt(6);
+                            if (timeHighUS == ~0U || timeLowUS == ~0U) {
+                                digitalWrite(pin, LOW);
+                                stopWaveform(pin);
+                                pinMode(pin, INPUT);
+                                args.print(F("usage: <pin>,waveform,<high-time cycles>,<low-time cycles>[,<run-time cycles|0=unlimited>,<increment>,<delay ms>]"));
                             }
+                            else {
+                                digitalWrite(pin, LOW);
+                                pinMode(pin, OUTPUT);
+                                if (increment) {
+                                    args.printf_P(PSTR("pin=%u high=%u low=%u runtime=%u increment=%u delay=%u"), pin, timeHighUS, timeLowUS, runTimeUS, increment, delayTime);
+                                    uint32_t start = 0;
+                                    _Scheduler.add(Event::milliseconds(delayTime), true, [args, delayTime, pin, timeHighUS, timeLowUS, runTimeUS, increment, start](Event::CallbackTimerPtr timer) mutable {
+                                        start += increment;
+                                        if (start >= timeHighUS) {
+                                            start = timeHighUS;
+                                            timer->disarm();
+                                        }
+                                        startWaveformClockCycles(pin, start, timeLowUS, runTimeUS);
+                                        if (delayTime > 20) {
+                                            args.printf_P(PSTR("pin=%u high=%u low=%u runtime=%u"), pin, start, timeLowUS, runTimeUS);
+                                        }
+                                    }, Event::PriorityType::TIMER);
 
+                                } else {
+                                    args.printf_P(PSTR("pin=%u high=%u low=%u runtime=%u"), pin, timeHighUS, timeLowUS, runTimeUS);
+                                    startWaveformClockCycles(pin, timeHighUS, timeLowUS, runTimeUS);
+                                }
+
+                            }
                         }
                     }
                     else if (args.equalsIgnoreCase(1, F("input"))) {
 
-#if HAVE_PCF8574
-                        if (pin >= 80 && pin < 88) {
-                            pin -= 80;
-                            _PCF8574.write(pin, LOW);
-                            args.printf_P(PSTR("set PCF8574 pin=%u to INPUT"), pin);
-                        }
-                        else
-#endif
-                        {
-                            digitalWrite(pin, LOW);
-                            pinMode(pin, INPUT);
-                            args.printf_P(PSTR("set pin=%u to INPUT"), pin);
-                        }
+                        _digitalWrite(pin, LOW);
+                        _pinMode(pin, INPUT);
+                        char buf[32];
+                        _pinName(pin, buf, sizeof(buf));
+                        args.printf_P(PSTR("set pin=%s to INPUT"), buf);
 
                     }
                     else {
@@ -1662,76 +1661,48 @@ void at_mode_serial_handle_event(String &commandString)
                             duration = 10;
                         }
 
-                        auto orgPin = pin;
                         auto type = PSTR("digitalWrite");
-#if HAVE_PCF8574
-                        if (pin >= 80 && pin < 88) {
-                            type = PSTR("PCF8574 digitalWrite");
-                            pin -= 80;
-                            // _PCF8574.pinMode(pin, OUTPUT);
 
-                            if (level == 0)  {
-                                _PCF8574.write(pin, LOW);
-                                freq = 0;
-                            }
-                            else {
-                                _PCF8574.write(pin, HIGH);
-                                level = 1;
-                                freq = 0;
-                            }
-                        }
-                        else
-#endif
-                        {
-
-                            pinMode(pin, OUTPUT);
+                        _pinMode(pin, OUTPUT);
 #if defined(ESP8266)
-                            analogWriteFreq(freq);
-                            analogWriteRange(PWMRANGE);
+                        analogWriteFreq(freq);
+                        analogWriteRange(PWMRANGE);
 #else
+                        freq = 0;
+#endif
+                        if (level == 0)  {
+                            _digitalWrite(pin, LOW);
                             freq = 0;
-#endif
-                            if (level == 0)  {
-                                digitalWrite(pin, LOW);
-                                freq = 0;
-                            }
-                            else if (level >= PWMRANGE - 1) {
-                                digitalWrite(pin, HIGH);
-                                level = 1;
-                                freq = 0;
-                            }
-                            else {
-                                type = PSTR("analogWrite");
-                                analogWrite(pin, level);
-                            }
                         }
-                            if (duration) {
-                                durationStr = PrintString(F(" for %ums"), duration);
-                            }
-                            if (freq == 0) {
-                                args.printf_P(PSTR("%s(%u, %u)%s"), type, pin, level, durationStr.c_str());
-                            }
-                            else {
-                                float cycle = (1000000 / (float)freq);
-                                float dc = cycle * (level / (float)PWMRANGE);
-                                args.printf_P(PSTR("%s(%u, %u) duty cycle=%.2f cycle=%.2fµs f=%uHz%s"), type, pin, level, dc, cycle, freq, durationStr.c_str());
-                            }
-                            if (duration) {
-                                auto &stream = args.getStream();
-                                _Scheduler.add(duration, false, [pin, orgPin, &stream](Event::CallbackTimerPtr) mutable {
-#if HAVE_PCF8574
-                                    if (orgPin >= 80 && orgPin < 88) {
-                                        stream.printf_P(PSTR("+PWM: PCF8574 digitalWrite(%u, 0)\n"), pin);
-                                        _PCF8574.write(pin, LOW);
-                                    }
-                                    else
-#endif
-                                    {
-                                        stream.printf_P(PSTR("+PWM: digitalWrite(%u, 0)\n"), orgPin);
-                                        digitalWrite(pin, LOW);
-                                    }
-                                }, Event::PriorityType::TIMER);
-                            }
+                        else if (level >= PWMRANGE - 1 || !_pinHasAnalogWrite(pin)) {
+                            _digitalWrite(pin, HIGH);
+                            level = 1;
+                            freq = 0;
+                        }
+                        else {
+                            type = PSTR("analogWrite");
+                            _analogWrite(pin, level);
+                        }
+                        if (duration) {
+                            durationStr = PrintString(F(" for %ums"), duration);
+                        }
+                        if (freq == 0) {
+                            char buf[32];
+                            _pinName(pin, buf, sizeof(buf));
+                            args.printf_P(PSTR("%s(%s, %u)%s"), type, buf, level, durationStr.c_str());
+                        }
+                        else {
+                            float cycle = (1000000 / (float)freq);
+                            float dc = cycle * (level / (float)PWMRANGE);
+                            args.printf_P(PSTR("%s(%u, %u) duty cycle=%.2f cycle=%.2fµs f=%uHz%s"), type, pin, level, dc, cycle, freq, durationStr.c_str());
+                        }
+                        if (duration) {
+                            auto &stream = args.getStream();
+                            _Scheduler.add(duration, false, [pin, &stream](Event::CallbackTimerPtr) mutable {
+                                stream.printf_P(PSTR("+PWM: digitalWrite(%u, 0)\n"), pin);
+                                _digitalWrite(pin, LOW);
+                            }, Event::PriorityType::TIMER);
+                        }
                     }
                 }
             }

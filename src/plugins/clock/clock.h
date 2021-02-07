@@ -100,23 +100,6 @@
 #include <PinMonitor.h>
 #endif
 
-// number of measurements. 0=disable
-#ifndef IOT_CLOCK_DEBUG_ANIMATION_TIME
-#    define IOT_CLOCK_DEBUG_ANIMATION_TIME 0
-// #define IOT_CLOCK_DEBUG_ANIMATION_TIME                  50
-#endif
-
-#if IOT_CLOCK_DEBUG_ANIMATION_TIME
-#    define __DBGTM(...) __VA_ARGS__
-#    include <stl_ext/fixed_circular_buffer.h>
-extern stdex::fixed_circular_buffer<uint16_t, IOT_CLOCK_DEBUG_ANIMATION_TIME> _anmationTime;
-extern stdex::fixed_circular_buffer<uint16_t, IOT_CLOCK_DEBUG_ANIMATION_TIME> _animationRenderTime;
-extern stdex::fixed_circular_buffer<uint16_t, IOT_CLOCK_DEBUG_ANIMATION_TIME> _displayTime;
-extern stdex::fixed_circular_buffer<uint16_t, IOT_CLOCK_DEBUG_ANIMATION_TIME> _timerDiff;
-#else
-#    define __DBGTM(...)
-#endif
-
 using KFCConfigurationClasses::Plugins;
 
 class ClockPlugin;
@@ -564,7 +547,7 @@ private:
 
     // set current color
     // store color in config as solid_color if no animation is active
-    void _setColor(uint32_t color);
+    void _setColor(uint32_t color, bool updateAnimation = true);
 
     // get current color
     uint32_t _getColor() const;

@@ -87,6 +87,19 @@ void setup()
     serialHandler.begin();
     DEBUG_HELPER_INIT();
 
+#if HAVE_PCF8574
+        initialize_pcf8574();
+#endif
+#if HAVE_PCF8575
+        initialize_pcf8575();
+#endif
+#if HAVE_PCA9685
+        initialize_pca9785();
+#endif
+#if HAVE_MCP23017
+        initialize_mcp23017();
+#endif
+
 #if DEBUG_RESET_DETECTOR
     resetDetector._init();
 #endif
@@ -151,7 +164,7 @@ void setup()
     if (resetDetector.hasResetDetected()) {
         if (resetDetector.getResetCounter() >= KFC_RESTORE_FACTORY_SETTINGS_RESET_COUNT) {
             KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("%ux reset detected. Restoring factory defaults in a 5 seconds...\n"), KFC_RESTORE_FACTORY_SETTINGS_RESET_COUNT);
-#if __LED_BUILTIN != -1
+#if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID
             for(uint8_t i = 0; i < (RESET_DETECTOR_TIMEOUT + 500) / (100 + 250); i++) {
                 BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SOLID);
                 delay(100);
@@ -357,19 +370,6 @@ void setup()
             Serial.printf_P(PSTR("CPU frequency %d\n"), system_get_cpu_freq());
 #endif
         }
-#endif
-
-#if HAVE_PCF8574
-        initialize_pcf8574();
-#endif
-#if HAVE_PCF8575
-        initialize_pcf8575();
-#endif
-#if HAVE_PCA9685
-        initialize_pca9785();
-#endif
-#if HAVE_MCP23017
-        initialize_mcp23017();
 #endif
 
         prepare_plugins();

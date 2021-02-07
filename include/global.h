@@ -410,6 +410,12 @@
 #define PCF8574_I2C_ADDRESS                                 0x20
 #endif
 
+#ifndef PCF8574_PORT_RANGE_START
+#define PCF8574_PORT_RANGE_START                            128
+#define PCF8574_PORT_RANGE_END                              (PCF8574_PORT_RANGE_START + 8)
+#endif
+
+
 class Stream;
 class HardwareSerial;
 

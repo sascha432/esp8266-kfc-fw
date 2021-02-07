@@ -67,7 +67,7 @@ RTC_DS3231 rtc;
 KFCFWConfiguration config;
 
 #if HAVE_PCF8574
-PCF8574 _PCF8574(PCF8574_I2C_ADDRESS, &Wire);
+PCF8574 _PCF8574(PCF8574_I2C_ADDRESS, &config.initTwoWire());
 #endif
 
 #if HAVE_PCF8575
@@ -310,7 +310,7 @@ void KFCFWConfiguration::_onWiFiGotIPCb(const WiFiEventStationModeGotIP &event)
 
     using Device = KFCConfigurationClasses::System::Device;
 
-#if __LED_BUILTIN != -1
+#if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID
     switch(Device::getConfig().getStatusLedMode()) {
         case Device::StatusLEDModeType::OFF_WHEN_CONNECTED:
             BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
@@ -1113,7 +1113,7 @@ void KFCFWConfiguration::enterDeepSleep(milliseconds time, RFMode mode, uint16_t
     }
     __LDBG_printf("Entering deep sleep for %u milliseconds, RF mode %d", milliseconds, mode);
 
-#if __LED_BUILTIN == -3
+#if __LED_BUILTIN == NEOPIXEL_PIN_ID
     BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
 #endif
 
@@ -1139,7 +1139,7 @@ void KFCFWConfiguration::enterDeepSleep(milliseconds time, RFMode mode, uint16_t
 
 static void invoke_ESP_restart()
 {
-#if __LED_BUILTIN == -3
+#if __LED_BUILTIN == NEOPIXEL_PIN_ID
     BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::OFF);
 #endif
     ESP.restart();
@@ -1447,7 +1447,7 @@ bool KFCFWConfiguration::connectWiFi()
         ap_mode_success = true;
     }
 
-#if __LED_BUILTIN != -1 || ENABLE_BOOT_LOG
+#if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID || ENABLE_BOOT_LOG
     if (!station_mode_success || !ap_mode_success) {
         BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FAST);
         BOOTLOG_PRINTF("WiFi error");

@@ -99,6 +99,13 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
     #endif
 
+    #if IOT_LED_MATRIX_STANDBY_PIN != -1
+
+        form.addObjectGetterSetter(F("sbl"), cfg, cfg.get_bits_standby_led, cfg.set_bits_standby_led);
+        form.addFormUI(F("Standby LED"), FormUI::BoolItems(F("Enable"), F("Disable")));
+
+    #endif
+
     mainGroup.end();
 
     // --------------------------------------------------------------------

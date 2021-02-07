@@ -14,7 +14,7 @@ using Device = KFCConfigurationClasses::System::Device;
 
 BlinkLEDTimer *ledTimer = nullptr;
 
-#if __LED_BUILTIN == -3
+#if __LED_BUILTIN == NEOPIXEL_PIN_ID
 
 #include <LoopFunctions.h>
 #include <reset_detector.h>
@@ -24,8 +24,8 @@ BlinkLEDTimer *ledTimer = nullptr;
 class WS2812LEDTimer : public BlinkLEDTimer {
 public:
     WS2812LEDTimer() : BlinkLEDTimer()  {
-        pinMode(__LED_BUILTIN_WS2812_PIN, OUTPUT);
         digitalWrite(__LED_BUILTIN_WS2812_PIN, LOW);
+        pinMode(__LED_BUILTIN_WS2812_PIN, OUTPUT);
     }
 
     void off() {
@@ -37,7 +37,7 @@ public:
         NeoPixel_espShow(__LED_BUILTIN_WS2812_PIN, _pixels, sizeof(_pixels), true);
     }
 
-    void set(uint32_t delay, int8_t pin, dynamic_bitset &pattern)
+    void set(uint32_t delay, uint8_t pin, dynamic_bitset &pattern)
     {
         off();
         _pattern = pattern;
@@ -76,12 +76,12 @@ BlinkLEDTimer::BlinkLEDTimer() : _pin(INVALID_PIN)//, _on(false)
 
 void BlinkLEDTimer::run()
 {
-    digitalWrite(_pin, BUILTIN_LED_STATE(_pattern.test(_counter++ % _pattern.size())));
+    _digitalWrite(_pin, BUILTIN_LED_STATE(_pattern.test(_counter++ % _pattern.size())));
 }
 
-void BlinkLEDTimer::set(uint32_t delay, int8_t pin, dynamic_bitset &&pattern)
+void BlinkLEDTimer::set(uint32_t delay, uint8_t pin, dynamic_bitset &&pattern)
 {
-    if (_pin == INVALID_PIN || System::Device::getConfig().getStatusLedMode() == System::Device::StatusLEDModeType::OFF) {
+    if (!isPinValid(_pin) || System::Device::getConfig().getStatusLedMode() == System::Device::StatusLEDModeType::OFF) {
         return;
     }
     _pattern = std::move(pattern);
@@ -89,35 +89,29 @@ void BlinkLEDTimer::set(uint32_t delay, int8_t pin, dynamic_bitset &&pattern)
     if (_pin != pin) {
         // set PIN as output
         _pin = pin;
-        pinMode(_pin, OUTPUT);
-        analogWrite(pin, 0);
-        digitalWrite(pin, BUILTIN_LED_STATE(false));
+        _analogWrite(_pin, 0);
+        _digitalWrite(_pin, BUILTIN_LED_STATE(false));
+        _pinMode(_pin, OUTPUT);
     }
-    if (_pin != INVALID_PIN) {
-        _counter = 0;
-        startTimer(delay, true);
-    } else {
-        detach();
-    }
+    _counter = 0;
+    startTimer(delay, true);
 }
 
 void BlinkLEDTimer::detach()
 {
-    if (_pin <= INVALID_PIN) {
-        analogWrite(_pin, 0);
-        digitalWrite(_pin, BUILTIN_LED_STATE(false));
-    }
+    _analogWrite(_pin, 0);
+    _digitalWrite(_pin, BUILTIN_LED_STATE(false));
     OSTimer::detach();
 }
 
-// void setPattern(int8_t pin, int delay, const dynamic_bitset &pattern)
+// void setPattern(uint8_t pin, int delay, const dynamic_bitset &pattern)
 // {
 //     ledTimer->set(delay, pin, std::move(dynamic_bitset(pattern)));
 // }
 
-void BlinkLEDTimer::setPattern(int8_t pin, int delay, dynamic_bitset &&pattern)
+void BlinkLEDTimer::setPattern(uint8_t pin, int delay, dynamic_bitset &&pattern)
 {
-    if (pin == INVALID_PIN || System::Device::getConfig().getStatusLedMode() == System::Device::StatusLEDModeType::OFF) {
+    if (!isPinValid(pin) || System::Device::getConfig().getStatusLedMode() == System::Device::StatusLEDModeType::OFF) {
         return;
     }
     ledTimer->set(delay, pin, std::move(pattern));
@@ -128,19 +122,19 @@ void BlinkLEDTimer::setPattern(int8_t pin, int delay, dynamic_bitset &&pattern)
 // }
 
 
-void BlinkLEDTimer::setBlink(int8_t pin, uint16_t delay, int32_t color)
+void BlinkLEDTimer::setBlink(uint8_t pin, uint16_t delay, int32_t color)
 {
-    if (pin == INVALID_PIN || System::Device::getConfig().getStatusLedMode() == System::Device::StatusLEDModeType::OFF) {
+    if (!isPinValid(pin) || System::Device::getConfig().getStatusLedMode() == System::Device::StatusLEDModeType::OFF) {
         return;
     }
 
-#if __LED_BUILTIN == -3
-    if (pin == -3) {
+#if __LED_BUILTIN == NEOPIXEL_PIN_ID
+    if (pin == NEOPIXEL_PIN) {
         __LDBG_printf("WS2812 pin=%u, num=%u, delay=%u", __LED_BUILTIN_WS2812_PIN, __LED_BUILTIN_WS2812_NUM_LEDS, delay);
     } else
 #endif
     {
-        __LDBG_printf("PIN %d, blink %d", pin, delay);
+        __LDBG_printf("PIN %u, blink %d", pin, delay);
     }
 
     if (ledTimer) {
@@ -148,8 +142,8 @@ void BlinkLEDTimer::setBlink(int8_t pin, uint16_t delay, int32_t color)
         ledTimer = nullptr;
     }
 
-#if __LED_BUILTIN == -3
-    if (pin == -3) {
+#if __LED_BUILTIN == NEOPIXEL_PIN_ID
+    if (pin == NEOPIXEL_PIN) {
         auto timer = __LDBG_new(WS2812LEDTimer);
         if (delay == BlinkLEDTimer::OFF) {
             timer->off();
@@ -178,17 +172,17 @@ void BlinkLEDTimer::setBlink(int8_t pin, uint16_t delay, int32_t color)
 #endif
     {
         ledTimer = __LDBG_new(BlinkLEDTimer);
-        if (pin >= 0) {
+        if (isPinValid(pin)) {
             // reset pin
-            analogWrite(pin, 0);
-            digitalWrite(pin, BUILTIN_LED_STATE(false));
+            _analogWrite(pin, 0);
+            _digitalWrite(pin, BUILTIN_LED_STATE(false));
 //            ledTimer->_on = false;
 
             if (delay == static_cast<uint16_t>(BlinkLEDTimer::BlinkType::OFF)) {
-                digitalWrite(pin, BUILTIN_LED_STATE(false));
+                _digitalWrite(pin, BUILTIN_LED_STATE(false));
             }
             else if (delay == static_cast<uint16_t>(BlinkLEDTimer::BlinkType::SOLID)) {
-                digitalWrite(pin, BUILTIN_LED_STATE(true));
+                _digitalWrite(pin, BUILTIN_LED_STATE(true));
                 // ledTimer->_on = true;
             }
             else {
@@ -202,6 +196,8 @@ void BlinkLEDTimer::setBlink(int8_t pin, uint16_t delay, int32_t color)
                     pattern = 0b10;
                     delay = std::max<uint16_t>(50, std::min<uint16_t>(delay, 5000));
                 }
+
+                __LDBG_printf("PIN %u, delay %u, pattern %s", pin, delay, pattern.getBytesAsString().c_str());
                 ledTimer->set(delay, pin, std::move(pattern));
             }
         }

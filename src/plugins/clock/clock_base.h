@@ -23,6 +23,21 @@
 #define IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL         1
 #endif
 
+// -1 to disable
+#ifndef IOT_LED_MATRIX_STANDBY_PIN
+#define IOT_LED_MATRIX_STANDBY_PIN                  -1
+#endif
+
+#ifndef IOT_LED_MATRIX_STANDBY_PIN_INVERTED
+#define IOT_LED_MATRIX_STANDBY_PIN_INVERTED         0
+#endif
+
+#if IOT_LED_MATRIX_STANDBY_PIN_INVERTED
+#define IOT_LED_MATRIX_STANDBY_PIN_STATE(value)     (value ? LOW : HIGH)
+#else
+#define IOT_LED_MATRIX_STANDBY_PIN_STATE(value)     (value ? HIGH : LOW)
+#endif
+
 #if IOT_LED_MATRIX
 
 #define IOT_CLOCK_NUM_PIXELS                        (IOT_LED_MATRIX_COLS * IOT_LED_MATRIX_ROWS)

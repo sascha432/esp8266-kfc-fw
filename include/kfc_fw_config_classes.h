@@ -1827,6 +1827,7 @@ typedef struct  {
                 CREATE_ENUM_BITFIELD(initial_state, InitialStateType);
                 CREATE_UINT8_BITFIELD(time_format_24h, 1);
                 CREATE_UINT8_BITFIELD(dithering, 1);
+                CREATE_UINT8_BITFIELD(standby_led, 1);
                 CREATE_UINT32_BITFIELD_MIN_MAX(fading_time, 6, 0, 60, 10, 1)
                 CREATE_UINT32_BITFIELD_MIN_MAX(power_limit, 8, 0, 255, 0, 1)
                 CREATE_UINT32_BITFIELD_MIN_MAX(brightness, 8, 0, 255, 255 / 4, 1)

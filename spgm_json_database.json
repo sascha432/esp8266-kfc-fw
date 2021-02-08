@@ -18,7 +18,7 @@
     },
     "Access_Point": {
         "default": "Access Point",
-        "locations": "src/kfc_fw_config_forms.cpp:20 (SPGM),src/kfc_fw_config_forms.cpp:93 (SPGM),src/kfc_fw_config_forms.cpp:156 (SPGM),src/templates.cpp:471 (SPGM),src/templates.cpp:475 (SPGM),src/templates.cpp:478 (SPGM),src/templates.cpp:492 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:20 (SPGM),src/kfc_fw_config_forms.cpp:93 (SPGM),src/kfc_fw_config_forms.cpp:156 (SPGM),src/templates.cpp:503 (SPGM),src/templates.cpp:507 (SPGM),src/templates.cpp:510 (SPGM),src/templates.cpp:524 (SPGM)",
         "type": "source",
         "use_counter": 7
     },
@@ -40,13 +40,13 @@
     },
     "Alarm": {
         "default": "Alarm",
-        "locations": "src/plugins/clock/clock_form.cpp:254 (SPGM)",
+        "locations": "src/plugins/clock/clock_form.cpp:269 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
     "Animation": {
         "default": "Animation",
-        "locations": "src/plugins/clock/clock_form.cpp:105 (SPGM)",
+        "locations": "src/plugins/clock/clock_form.cpp:112 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
@@ -116,7 +116,7 @@
     },
     "Color": {
         "default": "Color",
-        "locations": "src/plugins/clock/clock_form.cpp:262 (SPGM)",
+        "locations": "src/plugins/clock/clock_form.cpp:277 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
@@ -206,7 +206,7 @@
     },
     "Disabled": {
         "default": "Disabled",
-        "locations": "include/spgm_auto_def.h:51 (AUTO_INIT),lib/KFCWebFramework/include/WebUI/Containers.h:711 (SPGM),src/kfc_fw_config_forms.cpp:18 (SPGM),src/plugins/mqtt/mqtt_form.cpp:35 (SPGM),src/plugins/mqtt/mqtt_plugin.cpp:82 (SPGM),src/plugins/ntp/ntp_plugin.cpp:146 (SPGM),src/plugins/ssdp/ssdp.cpp:114 (SPGM),src/plugins/syslog/syslog_plugin.cpp:187 (SPGM),src/plugins/syslog/syslog_plugin.cpp:211 (SPGM)",
+        "locations": "lib/KFCWebFramework/include/WebUI/Containers.h:711 (SPGM),src/kfc_fw_config_forms.cpp:18 (SPGM),src/plugins/mqtt/mqtt_form.cpp:35 (SPGM),src/plugins/mqtt/mqtt_plugin.cpp:82 (SPGM),src/plugins/ntp/ntp_plugin.cpp:146 (SPGM),src/plugins/ssdp/ssdp.cpp:114 (SPGM),src/plugins/syslog/syslog_plugin.cpp:187 (SPGM),src/plugins/syslog/syslog_plugin.cpp:211 (SPGM)",
         "type": "source",
         "use_counter": 8
     },
@@ -222,7 +222,7 @@
     },
     "Enabled": {
         "default": "Enabled",
-        "locations": "include/spgm_auto_def.h:54 (AUTO_INIT),lib/KFCWebFramework/include/WebUI/Containers.h:711 (SPGM),src/kfc_fw_config_forms.cpp:212 (SPGM),src/plugins/mqtt/mqtt_form.cpp:36 (SPGM)",
+        "locations": "lib/KFCWebFramework/include/WebUI/Containers.h:711 (SPGM),src/kfc_fw_config_forms.cpp:212 (SPGM),src/plugins/mqtt/mqtt_form.cpp:36 (SPGM)",
         "type": "source",
         "use_counter": 3
     },
@@ -248,19 +248,19 @@
     },
     "FormEnumValidator_default_message": {
         "default": "Invalid value: %allowed%",
-        "locations": "include/spgm_auto_def.h:59 (AUTO_INIT),lib/KFCWebFramework/include/Validator/Enum.h:26 (SPGM)",
+        "locations": "lib/KFCWebFramework/include/Validator/Enum.h:26 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
     "FormHostValidator_default_message": {
         "default": "Invalid hostname or IP address",
-        "locations": "include/spgm_auto_def.h:60 (AUTO_INIT),lib/KFCWebFramework/include/Validator/Host.h:24 (SPGM)",
+        "locations": "lib/KFCWebFramework/include/Validator/Host.h:24 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
     "FormLengthValidator_default_message": {
         "default": "This field must be between %min% and %max% characters",
-        "locations": "include/spgm_auto_def.h:61 (AUTO_INIT),lib/KFCWebFramework/include/Validator/Length.h:19 (SPGM),lib/KFCWebFramework/include/Validator/Length.h:26 (SPGM)",
+        "locations": "lib/KFCWebFramework/include/Validator/Length.h:19 (SPGM),lib/KFCWebFramework/include/Validator/Length.h:26 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
@@ -290,13 +290,13 @@
     },
     "FormValidator_max_macro": {
         "default": "%max%",
-        "locations": "include/spgm_auto_def.h:67 (AUTO_INIT),lib/KFCWebFramework/include/Validator/Range.h:65 (SPGM),lib/KFCWebFramework/src/Validator/Length.cpp:36 (SPGM)",
+        "locations": "lib/KFCWebFramework/include/Validator/Range.h:65 (SPGM),lib/KFCWebFramework/src/Validator/Length.cpp:36 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
     "FormValidator_min_macro": {
         "default": "%min%",
-        "locations": "include/spgm_auto_def.h:68 (AUTO_INIT),lib/KFCWebFramework/include/Validator/Range.h:64 (SPGM),lib/KFCWebFramework/src/Validator/Length.cpp:35 (SPGM)",
+        "locations": "lib/KFCWebFramework/include/Validator/Range.h:64 (SPGM),lib/KFCWebFramework/src/Validator/Length.cpp:35 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
@@ -374,13 +374,13 @@
     },
     "KFCLabs": {
         "default": "KFCLabs",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.cpp:101 (SPGM),src/plugins/ssdp/ssdp.cpp:73 (SPGM)",
+        "locations": "src/plugins/mqtt/mqtt_auto_discovery.cpp:106 (SPGM),src/plugins/ssdp/ssdp.cpp:73 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
     "KFC_Firmware": {
         "default": "KFC Firmware",
-        "locations": "src/kfc_fw_config.cpp:596 (SPGM),src/kfc_fw_config_classes.cpp:225 (SPGM),src/plugins/mqtt/mqtt_auto_discovery.cpp:84 (SPGM)",
+        "locations": "src/kfc_fw_config.cpp:604 (SPGM),src/kfc_fw_config_classes.cpp:225 (SPGM),src/plugins/mqtt/mqtt_auto_discovery.cpp:89 (SPGM)",
         "type": "source",
         "use_counter": 3
     },
@@ -420,7 +420,7 @@
     },
     "Multiplier": {
         "default": "Multiplier",
-        "locations": "src/plugins/clock/clock_form.cpp:129 (SPGM)",
+        "locations": "src/plugins/clock/clock_form.cpp:136 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
@@ -468,25 +468,25 @@
     },
     "Not_supported": {
         "default": "Not supported",
-        "locations": "src/templates.cpp:339 (SPGM),src/templates.cpp:463 (SPGM)",
+        "locations": "src/templates.cpp:371 (SPGM),src/templates.cpp:495 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
     "OK": {
         "default": "OK",
-        "locations": "include/spgm_auto_def.h:101 (AUTO_INIT),src/AtModeArgs.cpp:190 (SPGM),src/plugins/file_manager/file_manager.cpp:374 (SPGM),src/plugins/file_manager/file_manager.cpp:420 (SPGM)",
+        "locations": "src/AtModeArgs.cpp:190 (SPGM),src/plugins/file_manager/file_manager.cpp:374 (SPGM),src/plugins/file_manager/file_manager.cpp:420 (SPGM)",
         "type": "source",
         "use_counter": 3
     },
     "Off": {
         "default": "Off",
-        "locations": "src/templates.cpp:481 (SPGM)",
+        "locations": "src/templates.cpp:513 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
     "Offline": {
         "default": "Offline",
-        "locations": "src/templates.cpp:210 (SPGM)",
+        "locations": "src/templates.cpp:242 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
@@ -524,7 +524,7 @@
     },
     "Protection": {
         "default": "Protection",
-        "locations": "src/plugins/clock/clock_form.cpp:273 (SPGM)",
+        "locations": "src/plugins/clock/clock_form.cpp:288 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
@@ -612,19 +612,19 @@
     },
     "Solid_Color": {
         "default": "Solid Color",
-        "locations": "src/plugins/clock/clock_form.cpp:28 (SPGM),src/plugins/clock/clock_form.cpp:117 (SPGM)",
+        "locations": "src/plugins/clock/clock_form.cpp:28 (SPGM),src/plugins/clock/clock_form.cpp:124 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
     "Speed": {
         "default": "Speed",
-        "locations": "src/plugins/clock/clock_form.cpp:145 (SPGM)",
+        "locations": "src/plugins/clock/clock_form.cpp:152 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
     "Station_Mode": {
         "default": "Station Mode",
-        "locations": "src/kfc_fw_config_forms.cpp:19 (SPGM),src/kfc_fw_config_forms.cpp:83 (SPGM),src/kfc_fw_config_forms.cpp:140 (SPGM),src/templates.cpp:469 (SPGM),src/templates.cpp:478 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:19 (SPGM),src/kfc_fw_config_forms.cpp:83 (SPGM),src/kfc_fw_config_forms.cpp:140 (SPGM),src/templates.cpp:501 (SPGM),src/templates.cpp:510 (SPGM)",
         "type": "source",
         "use_counter": 5
     },
@@ -684,7 +684,7 @@
     },
     "Type": {
         "default": "Type",
-        "locations": "src/plugins/clock/clock_form.cpp:108 (SPGM)",
+        "locations": "src/plugins/clock/clock_form.cpp:115 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
@@ -792,19 +792,19 @@
     },
     "_effect_set": {
         "default": "/effect/set",
-        "locations": "src/plugins/clock/clock_mqtt.cpp:98 (SPGM),src/plugins/clock/clock_mqtt.cpp:108 (SPGM)",
+        "locations": "src/plugins/clock/clock_mqtt.cpp:42 (SPGM),src/plugins/clock/clock_mqtt.cpp:98 (SPGM),src/plugins/clock/clock_mqtt.cpp:108 (SPGM)",
         "type": "source",
-        "use_counter": 2
+        "use_counter": 3
     },
     "_effect_state": {
         "default": "/effect/state",
-        "locations": "src/plugins/clock/clock_mqtt.cpp:164 (SPGM)",
+        "locations": "src/plugins/clock/clock_mqtt.cpp:41 (SPGM),src/plugins/clock/clock_mqtt.cpp:164 (SPGM)",
         "type": "source",
-        "use_counter": 1
+        "use_counter": 2
     },
     "_hidden": {
         "default": " hidden",
-        "locations": "src/templates.cpp:252 (SPGM),src/templates.cpp:269 (SPGM),src/templates.cpp:273 (SPGM),src/templates.cpp:370 (SPGM),src/templates.cpp:518 (SPGM)",
+        "locations": "src/templates.cpp:284 (SPGM),src/templates.cpp:301 (SPGM),src/templates.cpp:305 (SPGM),src/templates.cpp:402 (SPGM),src/templates.cpp:550 (SPGM)",
         "type": "source",
         "use_counter": 5
     },
@@ -822,7 +822,7 @@
     },
     "_selected": {
         "default": " selected",
-        "locations": "lib/KFCWebFramework/src/Form/BaseForm.cpp:245 (SPGM),src/templates.cpp:416 (SPGM)",
+        "locations": "lib/KFCWebFramework/src/Form/BaseForm.cpp:245 (SPGM),src/templates.cpp:448 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
@@ -850,7 +850,7 @@
     },
     "_var_zeroconf": {
         "default": "${zeroconf:",
-        "locations": "include/spgm_auto_def.h:172 (AUTO_INIT),lib/KFCWebFramework/include/Validator/Host.h:50 (SPGM),src/async_web_response.cpp:851 (SPGM),src/kfc_fw_config.cpp:826 (SPGM),src/kfc_fw_config.cpp:882 (SPGM),src/kfc_fw_config_classes.cpp:122 (SPGM)",
+        "locations": "lib/KFCWebFramework/include/Validator/Host.h:50 (SPGM),src/async_web_response.cpp:851 (SPGM),src/kfc_fw_config.cpp:834 (SPGM),src/kfc_fw_config.cpp:890 (SPGM),src/kfc_fw_config_classes.cpp:122 (SPGM)",
         "type": "source",
         "use_counter": 5
     },
@@ -862,13 +862,13 @@
     },
     "address": {
         "default": "address",
-        "locations": "include/retracted/custom_config.h:337 (SPGM),include/retracted/custom_config.h:376 (SPGM),src/plugins/mdns/mdns_resolver.cpp:74 (SPGM),src/plugins/mqtt/mqtt_config.cpp:14 (SPGM),src/plugins/syslog/syslog_config.cpp:21 (SPGM)",
+        "locations": "include/retracted/custom_config.h:338 (SPGM),include/retracted/custom_config.h:377 (SPGM),src/plugins/mdns/mdns_resolver.cpp:74 (SPGM),src/plugins/mqtt/mqtt_config.cpp:14 (SPGM),src/plugins/syslog/syslog_config.cpp:21 (SPGM)",
         "type": "source",
         "use_counter": 5
     },
     "alarm": {
         "default": "alarm",
-        "locations": "src/plugins/alarm/alarm.cpp:86 (SPGM),src/plugins/alarm/alarm.cpp:360 (SPGM),src/plugins/clock/clock_form.cpp:254 (SPGM)",
+        "locations": "src/plugins/alarm/alarm.cpp:86 (SPGM),src/plugins/alarm/alarm.cpp:360 (SPGM),src/plugins/clock/clock_form.cpp:269 (SPGM)",
         "type": "source",
         "use_counter": 3
     },
@@ -878,7 +878,7 @@
     },
     "alerts_storage_filename": {
         "default": "/.pvt/alerts.json",
-        "locations": "src/WebUIAlerts.cpp:50 (DEFINE),src/WebUIAlerts.cpp:399 (SPGM),src/WebUIAlerts.cpp:401 (SPGM),src/WebUIAlerts.cpp:403 (SPGM),src/WebUIAlerts.cpp:580 (SPGM),src/WebUIAlerts.cpp:583 (SPGM),src/WebUIAlerts.cpp:620 (SPGM),src/WebUIAlerts.cpp:625 (SPGM),src/WebUIAlerts.cpp:627 (SPGM),src/WebUIAlerts.cpp:638 (SPGM),src/WebUIAlerts.cpp:639 (SPGM),src/WebUIAlerts.cpp:641 (SPGM),src/WebUIAlerts.cpp:642 (SPGM),src/WebUIAlerts.cpp:651 (SPGM),src/WebUIAlerts.cpp:654 (SPGM),src/templates.cpp:306 (SPGM),src/web_server.cpp:341 (SPGM)",
+        "locations": "src/WebUIAlerts.cpp:50 (DEFINE),src/WebUIAlerts.cpp:399 (SPGM),src/WebUIAlerts.cpp:401 (SPGM),src/WebUIAlerts.cpp:403 (SPGM),src/WebUIAlerts.cpp:580 (SPGM),src/WebUIAlerts.cpp:583 (SPGM),src/WebUIAlerts.cpp:620 (SPGM),src/WebUIAlerts.cpp:625 (SPGM),src/WebUIAlerts.cpp:627 (SPGM),src/WebUIAlerts.cpp:638 (SPGM),src/WebUIAlerts.cpp:639 (SPGM),src/WebUIAlerts.cpp:641 (SPGM),src/WebUIAlerts.cpp:642 (SPGM),src/WebUIAlerts.cpp:651 (SPGM),src/WebUIAlerts.cpp:654 (SPGM),src/templates.cpp:338 (SPGM),src/web_server.cpp:341 (SPGM)",
         "type": "static",
         "use_counter": 16
     },
@@ -948,7 +948,7 @@
     },
     "comma_": {
         "default": ", ",
-        "locations": "lib/KFCWebFramework/src/HttpHeaders.cpp:155 (SPGM),lib/KFCWebFramework/src/HttpHeaders.cpp:161 (SPGM),lib/KFCWebFramework/src/HttpHeaders.cpp:167 (SPGM),lib/KFCWebFramework/src/HttpHeaders.cpp:173 (SPGM),lib/KFCWebFramework/src/HttpHeaders.cpp:179 (SPGM),src/plugins/ntp/ntp_plugin.cpp:139 (SPGM),src/templates.cpp:451 (SPGM)",
+        "locations": "lib/KFCWebFramework/src/HttpHeaders.cpp:155 (SPGM),lib/KFCWebFramework/src/HttpHeaders.cpp:161 (SPGM),lib/KFCWebFramework/src/HttpHeaders.cpp:167 (SPGM),lib/KFCWebFramework/src/HttpHeaders.cpp:173 (SPGM),lib/KFCWebFramework/src/HttpHeaders.cpp:179 (SPGM),src/plugins/ntp/ntp_plugin.cpp:139 (SPGM),src/templates.cpp:483 (SPGM)",
         "type": "source",
         "use_counter": 7
     },
@@ -1012,13 +1012,13 @@
     },
     "defaultPassword": {
         "default": "12345678",
-        "locations": "src/kfc_firmware.cpp:224 (SPGM),src/kfc_firmware.cpp:325 (SPGM),src/kfc_fw_config.cpp:536 (SPGM),src/kfc_fw_config.cpp:537 (SPGM),src/kfc_fw_config.cpp:540 (SPGM),src/kfc_fw_config.cpp:543 (SPGM),src/kfc_fw_config.cpp:597 (SPGM),src/kfc_fw_config.cpp:600 (SPGM),src/kfc_fw_config.cpp:602 (SPGM),src/kfc_fw_config_forms.cpp:33 (SPGM)",
+        "locations": "src/kfc_firmware.cpp:237 (SPGM),src/kfc_firmware.cpp:338 (SPGM),src/kfc_fw_config.cpp:544 (SPGM),src/kfc_fw_config.cpp:545 (SPGM),src/kfc_fw_config.cpp:548 (SPGM),src/kfc_fw_config.cpp:551 (SPGM),src/kfc_fw_config.cpp:605 (SPGM),src/kfc_fw_config.cpp:608 (SPGM),src/kfc_fw_config.cpp:610 (SPGM),src/kfc_fw_config_forms.cpp:33 (SPGM)",
         "type": "source",
         "use_counter": 10
     },
     "default_password_warning": {
         "default": "WARNING! Default password has not been changed",
-        "locations": "src/kfc_fw_config.cpp:1485 (SPGM),src/kfc_fw_config.cpp:1486 (SPGM),src/templates.cpp:180 (SPGM)",
+        "locations": "src/kfc_fw_config.cpp:1493 (SPGM),src/kfc_fw_config.cpp:1494 (SPGM),src/templates.cpp:180 (SPGM)",
         "type": "source",
         "use_counter": 3
     },
@@ -1042,7 +1042,7 @@
     },
     "degree_Celsius_utf8": {
         "default": "\u00c2\u00b0C",
-        "locations": "src/plugins/clock/clock_form.cpp:276 (SPGM),src/plugins/clock/clock_form.cpp:280 (SPGM),src/plugins/clock/clock_form.cpp:284 (SPGM)",
+        "locations": "src/plugins/clock/clock_form.cpp:291 (SPGM),src/plugins/clock/clock_form.cpp:295 (SPGM),src/plugins/clock/clock_form.cpp:299 (SPGM)",
         "type": "source",
         "use_counter": 3
     },
@@ -1088,7 +1088,7 @@
     },
     "disabled": {
         "default": "disabled",
-        "locations": "include/spgm_auto_def.h:213 (AUTO_INIT),lib/KFCWebFramework/include/WebUI/Containers.h:705 (SPGM),src/plugins/mqtt/mqtt_plugin.cpp:114 (SPGM),src/plugins/ntp/ntp_atmode.cpp:44 (SPGM),src/web_server.cpp:1080 (SPGM)",
+        "locations": "lib/KFCWebFramework/include/WebUI/Containers.h:705 (SPGM),src/plugins/mqtt/mqtt_plugin.cpp:114 (SPGM),src/plugins/ntp/ntp_atmode.cpp:44 (SPGM),src/web_server.cpp:1080 (SPGM)",
         "type": "source",
         "use_counter": 4
     },
@@ -1154,9 +1154,9 @@
     },
     "failure": {
         "default": "failure",
-        "locations": "src/at_mode.cpp:1407 (SPGM),src/plugins/file_manager/file_manager.cpp:249 (SPGM),src/plugins/file_manager/file_manager.cpp:377 (SPGM),src/plugins/file_manager/file_manager.cpp:423 (SPGM)",
+        "locations": "src/at_mode.cpp:1502 (SPGM),src/at_mode.cpp:1510 (SPGM),src/plugins/file_manager/file_manager.cpp:249 (SPGM),src/plugins/file_manager/file_manager.cpp:377 (SPGM),src/plugins/file_manager/file_manager.cpp:423 (SPGM)",
         "type": "source",
-        "use_counter": 4
+        "use_counter": 5
     },
     "false": {
         "default": "false",
@@ -1226,7 +1226,7 @@
     },
     "hidden": {
         "default": "hidden",
-        "locations": "src/templates.cpp:255 (SPGM),src/templates.cpp:280 (SPGM),src/web_server.cpp:223 (SPGM)",
+        "locations": "src/templates.cpp:287 (SPGM),src/templates.cpp:312 (SPGM),src/web_server.cpp:223 (SPGM)",
         "type": "source",
         "use_counter": 3
     },
@@ -1356,7 +1356,7 @@
     },
     "index_html": {
         "default": "index.html",
-        "locations": "src/plugins.cpp:162 (SPGM),src/plugins.cpp:165 (SPGM),src/templates.cpp:237 (SPGM),src/web_server.cpp:844 (SPGM)",
+        "locations": "src/plugins.cpp:162 (SPGM),src/plugins.cpp:165 (SPGM),src/templates.cpp:269 (SPGM),src/web_server.cpp:844 (SPGM)",
         "type": "source",
         "use_counter": 4
     },
@@ -1380,7 +1380,7 @@
     },
     "iot_clock_save_state_file": {
         "default": "/.pvt/device.state",
-        "locations": "src/plugins/clock/clock_config.cpp:66 (SPGM),src/plugins/clock/clock_state.cpp:42 (SPGM),src/plugins/clock/clock_state.cpp:50 (SPGM),src/plugins/clock/clock_state.cpp:63 (SPGM),src/plugins/clock/clock_state.cpp:72 (SPGM)",
+        "locations": "src/plugins/clock/clock_config.cpp:68 (SPGM),src/plugins/clock/clock_state.cpp:42 (SPGM),src/plugins/clock/clock_state.cpp:50 (SPGM),src/plugins/clock/clock_state.cpp:63 (SPGM),src/plugins/clock/clock_state.cpp:72 (SPGM)",
         "type": "source",
         "use_counter": 5
     },
@@ -1426,7 +1426,7 @@
     },
     "kfcfw": {
         "default": "kfcfw",
-        "locations": "src/plugins/mqtt/mqtt_client.cpp:64 (SPGM),src/plugins/ssdp/ssdp.cpp:62 (SPGM),src/plugins/syslog/syslog_plugin.cpp:124 (SPGM),src/templates.cpp:261 (SPGM)",
+        "locations": "src/plugins/mqtt/mqtt_client.cpp:64 (SPGM),src/plugins/ssdp/ssdp.cpp:62 (SPGM),src/plugins/syslog/syslog_plugin.cpp:124 (SPGM),src/templates.cpp:293 (SPGM)",
         "type": "source",
         "use_counter": 4
     },
@@ -1516,7 +1516,7 @@
     },
     "login_failure_file": {
         "default": "/.pvt/login_failures",
-        "locations": "src/failure_counter.cpp:98 (SPGM),src/failure_counter.cpp:162 (SPGM),src/failure_counter.cpp:192 (SPGM),src/kfc_fw_config.cpp:649 (SPGM)",
+        "locations": "src/failure_counter.cpp:98 (SPGM),src/failure_counter.cpp:162 (SPGM),src/failure_counter.cpp:192 (SPGM),src/kfc_fw_config.cpp:657 (SPGM)",
         "type": "source",
         "use_counter": 4
     },
@@ -1552,9 +1552,9 @@
     },
     "milliseconds": {
         "default": "milliseconds",
-        "locations": "src/kfc_fw_config_forms.cpp:220 (SPGM),src/plugins/clock/clock_form.cpp:120 (SPGM),src/plugins/clock/clock_form.cpp:265 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:220 (SPGM),src/plugins/clock/clock_form.cpp:127 (SPGM),src/plugins/clock/clock_form.cpp:249 (SPGM),src/plugins/clock/clock_form.cpp:280 (SPGM)",
         "type": "source",
-        "use_counter": 3
+        "use_counter": 4
     },
     "mime_application_javascript": {
         "default": "application/javascript",
@@ -1730,7 +1730,7 @@
     },
     "mqtt": {
         "default": "mqtt",
-        "locations": "include/retracted/custom_config.h:337 (SPGM),src/plugins/alarm/alarm.cpp:54 (SPGM),src/plugins/alarm/alarm.cpp:62 (SPGM),src/plugins/clock/clock.cpp:415 (SPGM),src/plugins/mqtt/mqtt_auto_discovery.cpp:68 (SPGM),src/plugins/mqtt/mqtt_form.cpp:95 (SPGM)",
+        "locations": "include/retracted/custom_config.h:338 (SPGM),src/plugins/alarm/alarm.cpp:54 (SPGM),src/plugins/alarm/alarm.cpp:62 (SPGM),src/plugins/clock/clock.cpp:454 (SPGM),src/plugins/mqtt/mqtt_auto_discovery.cpp:73 (SPGM),src/plugins/mqtt/mqtt_form.cpp:95 (SPGM)",
         "type": "source",
         "use_counter": 6
     },
@@ -1768,7 +1768,7 @@
     },
     "mqtt_availability_topic": {
         "default": "avty_t",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.cpp:73 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:21 (DEFINE)",
+        "locations": "src/plugins/mqtt/mqtt_auto_discovery.cpp:78 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:21 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
@@ -1950,7 +1950,7 @@
     },
     "mqtt_effect_list": {
         "default": "fx_list",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:112 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:62 (DEFINE)",
+        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:113 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:62 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
@@ -1978,7 +1978,7 @@
     },
     "mqtt_expire_after": {
         "default": "exp_aft",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:117 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:66 (DEFINE)",
+        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:118 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:66 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
@@ -2140,7 +2140,7 @@
     },
     "mqtt_payload_available": {
         "default": "pl_avail",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.cpp:74 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:101 (DEFINE)",
+        "locations": "src/plugins/mqtt/mqtt_auto_discovery.cpp:79 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:101 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
@@ -2182,7 +2182,7 @@
     },
     "mqtt_payload_not_available": {
         "default": "pl_not_avail",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.cpp:75 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:111 (DEFINE)",
+        "locations": "src/plugins/mqtt/mqtt_auto_discovery.cpp:80 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:111 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
@@ -2192,7 +2192,9 @@
     },
     "mqtt_payload_off": {
         "default": "pl_off",
-        "use_counter": 0
+        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:137 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:113 (DEFINE)",
+        "type": "static",
+        "use_counter": 1
     },
     "mqtt_payload_off_speed": {
         "default": "pl_off_spd",
@@ -2200,9 +2202,9 @@
     },
     "mqtt_payload_on": {
         "default": "pl_on",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:131 (SPGM),src/plugins/mqtt/mqtt_auto_discovery.h:136 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:115 (DEFINE)",
+        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:132 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:115 (DEFINE)",
         "type": "static",
-        "use_counter": 2
+        "use_counter": 1
     },
     "mqtt_payload_open": {
         "default": "pl_open",
@@ -2394,7 +2396,7 @@
     },
     "mqtt_status_topic": {
         "default": "/status",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.cpp:73 (SPGM),src/plugins/mqtt/mqtt_client.h:190 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:12 (DEFINE)",
+        "locations": "src/plugins/mqtt/mqtt_auto_discovery.cpp:78 (SPGM),src/plugins/mqtt/mqtt_client.h:190 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:12 (DEFINE)",
         "type": "static",
         "use_counter": 2
     },
@@ -2508,19 +2510,19 @@
     },
     "mqtt_unique_id": {
         "default": "uniq_id",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.cpp:71 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:185 (DEFINE)",
+        "locations": "src/plugins/mqtt/mqtt_auto_discovery.cpp:76 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:185 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
     "mqtt_unit_of_measurement": {
         "default": "unit_of_meas",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:146 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:186 (DEFINE)",
+        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:147 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:186 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
     "mqtt_value_template": {
         "default": "val_tpl",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:122 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:187 (DEFINE)",
+        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:123 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:187 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
@@ -2562,13 +2564,13 @@
     },
     "name": {
         "default": "name",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.cpp:67 (SPGM)",
+        "locations": "src/plugins/mqtt/mqtt_auto_discovery.cpp:72 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
     "network": {
         "default": "network",
-        "locations": "src/kfc_fw_config.cpp:1678 (SPGM),src/kfc_fw_config_forms.cpp:120 (SPGM)",
+        "locations": "src/kfc_fw_config.cpp:1686 (SPGM),src/kfc_fw_config_forms.cpp:120 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
@@ -2586,9 +2588,9 @@
     },
     "no": {
         "default": "no",
-        "locations": "src/at_mode.cpp:1265 (SPGM)",
+        "locations": "src/at_mode.cpp:1360 (SPGM),src/at_mode.cpp:1368 (SPGM)",
         "type": "source",
-        "use_counter": 1
+        "use_counter": 2
     },
     "no_cache": {
         "default": "no-cache",
@@ -2618,15 +2620,15 @@
     },
     "off": {
         "default": "off",
-        "locations": "src/at_mode.cpp:1243 (SPGM),src/at_mode.cpp:1262 (SPGM),src/at_mode.cpp:1263 (SPGM),src/at_mode.cpp:1269 (SPGM),src/at_mode.cpp:1270 (SPGM)",
+        "locations": "src/at_mode.cpp:1338 (SPGM),src/at_mode.cpp:1346 (SPGM),src/at_mode.cpp:1357 (SPGM),src/at_mode.cpp:1358 (SPGM),src/at_mode.cpp:1364 (SPGM),src/at_mode.cpp:1365 (SPGM),src/at_mode.cpp:1366 (SPGM),src/at_mode.cpp:1372 (SPGM),src/at_mode.cpp:1373 (SPGM)",
         "type": "source",
-        "use_counter": 5
+        "use_counter": 9
     },
     "on": {
         "default": "on",
-        "locations": "src/at_mode.cpp:1238 (SPGM),src/at_mode.cpp:1262 (SPGM),src/at_mode.cpp:1263 (SPGM),src/at_mode.cpp:1269 (SPGM),src/at_mode.cpp:1270 (SPGM)",
+        "locations": "src/at_mode.cpp:1333 (SPGM),src/at_mode.cpp:1341 (SPGM),src/at_mode.cpp:1357 (SPGM),src/at_mode.cpp:1358 (SPGM),src/at_mode.cpp:1364 (SPGM),src/at_mode.cpp:1365 (SPGM),src/at_mode.cpp:1366 (SPGM),src/at_mode.cpp:1372 (SPGM),src/at_mode.cpp:1373 (SPGM)",
         "type": "source",
-        "use_counter": 5
+        "use_counter": 9
     },
     "open": {
         "default": "open",
@@ -2714,7 +2716,7 @@
     },
     "port": {
         "default": "port",
-        "locations": "src/kfc_fw_config.cpp:860 (SPGM),src/plugins/mdns/mdns_resolver.cpp:75 (SPGM),src/plugins/mqtt/mqtt_form.cpp:72 (SPGM)",
+        "locations": "src/kfc_fw_config.cpp:868 (SPGM),src/plugins/mdns/mdns_resolver.cpp:75 (SPGM),src/plugins/mqtt/mqtt_form.cpp:72 (SPGM)",
         "type": "source",
         "use_counter": 3
     },
@@ -2748,7 +2750,7 @@
     },
     "readonly": {
         "default": "readonly",
-        "locations": "include/spgm_auto_def.h:405 (AUTO_INIT),lib/KFCWebFramework/include/WebUI/Containers.h:699 (SPGM)",
+        "locations": "lib/KFCWebFramework/include/WebUI/Containers.h:699 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
@@ -2786,7 +2788,7 @@
     },
     "safe_mode_enabled": {
         "default": "Device started in SAFE MODE",
-        "locations": "src/kfc_fw_config.cpp:1465 (SPGM),src/kfc_fw_config.cpp:1466 (SPGM)",
+        "locations": "src/kfc_fw_config.cpp:1473 (SPGM),src/kfc_fw_config.cpp:1474 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
@@ -2796,9 +2798,9 @@
     },
     "seconds": {
         "default": "seconds",
-        "locations": "src/plugins/clock/clock_form.cpp:92 (SPGM),src/plugins/clock/clock_form.cpp:234 (SPGM),src/plugins/clock/clock_form.cpp:238 (SPGM),src/plugins/mqtt/mqtt_form.cpp:80 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:58 (SPGM)",
+        "locations": "src/plugins/clock/clock_form.cpp:92 (SPGM),src/plugins/clock/clock_form.cpp:253 (SPGM),src/plugins/mqtt/mqtt_form.cpp:80 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:58 (SPGM)",
         "type": "source",
-        "use_counter": 5
+        "use_counter": 4
     },
     "secure": {
         "default": "secure",
@@ -2916,7 +2918,7 @@
     },
     "strftime_date_time_zone": {
         "default": "%FT%T %Z",
-        "locations": "lib/KFCBaseLibrary/src/debug_helper.cpp:210 (SPGM),src/plugins/alarm/alarm.cpp:124 (SPGM),src/plugins/ntp/ntp_atmode.cpp:47 (SPGM),src/plugins/ntp/ntp_atmode.cpp:50 (SPGM),src/templates.cpp:322 (SPGM)",
+        "locations": "lib/KFCBaseLibrary/src/debug_helper.cpp:210 (SPGM),src/plugins/alarm/alarm.cpp:124 (SPGM),src/plugins/ntp/ntp_atmode.cpp:47 (SPGM),src/plugins/ntp/ntp_atmode.cpp:50 (SPGM),src/templates.cpp:354 (SPGM)",
         "type": "source",
         "use_counter": 5
     },
@@ -2928,9 +2930,9 @@
     },
     "success": {
         "default": "success",
-        "locations": "src/at_mode.cpp:1407 (SPGM),src/plugins/file_manager/file_manager.cpp:249 (SPGM),src/plugins/file_manager/file_manager.cpp:377 (SPGM),src/plugins/file_manager/file_manager.cpp:423 (SPGM)",
+        "locations": "src/at_mode.cpp:1502 (SPGM),src/at_mode.cpp:1510 (SPGM),src/plugins/file_manager/file_manager.cpp:249 (SPGM),src/plugins/file_manager/file_manager.cpp:377 (SPGM),src/plugins/file_manager/file_manager.cpp:423 (SPGM)",
         "type": "source",
-        "use_counter": 4
+        "use_counter": 5
     },
     "sys": {
         "default": "sys",
@@ -2950,7 +2952,7 @@
     },
     "tcp": {
         "default": "tcp",
-        "locations": "include/retracted/custom_config.h:337 (SPGM),include/retracted/custom_config.h:376 (SPGM),src/plugins/mqtt/mqtt_config.cpp:14 (SPGM),src/plugins/syslog/syslog_config.cpp:21 (SPGM),src/web_server.cpp:705 (SPGM),src/web_server.cpp:1038 (SPGM),src/web_server.cpp:1039 (SPGM)",
+        "locations": "include/retracted/custom_config.h:338 (SPGM),include/retracted/custom_config.h:377 (SPGM),src/plugins/mqtt/mqtt_config.cpp:14 (SPGM),src/plugins/syslog/syslog_config.cpp:21 (SPGM),src/web_server.cpp:705 (SPGM),src/web_server.cpp:1038 (SPGM),src/web_server.cpp:1039 (SPGM)",
         "type": "source",
         "use_counter": 7
     },
@@ -3136,8 +3138,8 @@
     },
     "webui_json_hb": {
         "auto": "webui json hb",
-        "locations": "src/WebUIComponent.cpp:56 (DEFINE),src/plugins/sensor/Sensor_SystemMetrics.cpp:201 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:202 (SPGM)",
-        "type": "static",
+        "locations": "src/plugins/sensor/Sensor_SystemMetrics.cpp:201 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:202 (SPGM)",
+        "type": "source",
         "use_counter": 2
     },
     "webui_json_height": {
@@ -3326,7 +3328,7 @@
     },
     "wifi": {
         "default": "wifi",
-        "locations": "src/kfc_fw_config.cpp:1678 (SPGM),src/kfc_fw_config_forms.cpp:45 (SPGM)",
+        "locations": "src/kfc_fw_config.cpp:1686 (SPGM),src/kfc_fw_config_forms.cpp:45 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
@@ -3354,8 +3356,8 @@
     },
     "yes": {
         "default": "yes",
-        "locations": "src/at_mode.cpp:1265 (SPGM),src/web_server.cpp:981 (SPGM)",
+        "locations": "src/at_mode.cpp:1360 (SPGM),src/at_mode.cpp:1368 (SPGM),src/web_server.cpp:981 (SPGM)",
         "type": "source",
-        "use_counter": 2
+        "use_counter": 3
     }
 }

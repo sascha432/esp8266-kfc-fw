@@ -16,15 +16,6 @@
 
 using KFCConfigurationClasses::Plugins;
 
-#if IOT_LED_MATRIX
-#define IF_IOT_LED_MATRIX(...)      __VA_ARGS__
-#define IF_IOT_CLOCK(...)
-#else
-#define IF_IOT_LED_MATRIX(...)
-#define IF_IOT_CLOCK(...)           __VA_ARGS__
-#endif
-
-
 namespace Clock {
 
     class StoredState {
@@ -62,6 +53,10 @@ namespace Clock {
 
         const Config_t &getConfig() const {
             return _storage._config;
+        }
+
+        void setEnabled(bool enabled) {
+            _storage._config.enabled = enabled;
         }
 
         bool store(Stream &stream) {

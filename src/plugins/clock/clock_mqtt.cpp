@@ -53,12 +53,12 @@ MQTTComponent::MQTTAutoDiscoveryPtr ClockPlugin::nextAutoDiscovery(MQTTAutoDisco
         }
         break;
 #endif
-#if IOT_CLOCK_DISPLAY_CALC_POWER_CONSUMPTION
-#if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
+#if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
+    #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
         case 2: {
-#else
+    #else
         case 1: {
-#endif
+    #endif
             if (!discovery->create(MQTTComponent::ComponentType::SENSOR, F("power"), format)) {
                 return discovery;
             }
@@ -75,13 +75,13 @@ MQTTComponent::MQTTAutoDiscoveryPtr ClockPlugin::nextAutoDiscovery(MQTTAutoDisco
 uint8_t ClockPlugin::getAutoDiscoveryCount() const
 {
     #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
-        #if IOT_CLOCK_DISPLAY_CALC_POWER_CONSUMPTION
+        #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
             return 3;
         #else
             return 2;
         #endif
     #else
-        #if IOT_CLOCK_DISPLAY_CALC_POWER_CONSUMPTION
+        #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
             return 2;
         #else
             return 1;
@@ -109,21 +109,21 @@ void ClockPlugin::onMessage(MQTTClient *client, char *topic, char *payload, size
         auto animation = _getAnimationType(payload);
         if (animation != AnimationType::MAX) {
             setAnimation(static_cast<AnimationType>(animation));
-            _saveStateDelayed(_targetBrightness);
+            _saveStateDelayed();
         }
     }
     else if (!strcmp_end_P(topic, SPGM(_brightness_set))) {
         if (len) {
             auto value = strtoul(payload, nullptr, 0);
             setBrightness(std::clamp<uint8_t>(value, 0, kMaxBrightness));
-            _saveStateDelayed(_targetBrightness ? _targetBrightness : _savedBrightness);
+            _saveStateDelayed();
         }
     }
     else if (!strcmp_end_P(topic, SPGM(_color_set))) {
         if (*payload == '#') {
             // rgb color code #FFEECC
             setColorAndRefresh(Color::fromString(payload));
-            _saveStateDelayed(_targetBrightness);
+            _saveStateDelayed();
         }
         else {
             // red,green,blue
@@ -134,7 +134,7 @@ void ClockPlugin::onMessage(MQTTClient *client, char *topic, char *payload, size
                 if (endptr && *endptr++ == ',') {
                     auto blue = (uint8_t)strtoul(endptr, nullptr, 10);
                     setColorAndRefresh(Color(red, green, blue));
-                    _saveStateDelayed(_targetBrightness);
+                    _saveStateDelayed();
                 }
             }
         }
@@ -165,8 +165,8 @@ void ClockPlugin::_publishState(MQTTClient *client)
 #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
         client->publish(MQTTClient::formatTopic(FSPGM(light_sensor)), true, String(_autoBrightnessValue * 100, 0));
 #endif
-#if IOT_CLOCK_DISPLAY_CALC_POWER_CONSUMPTION
-        // client->publish(MQTTClient::formatTopic(F("power")), true, String(get_power_level_mW() / 1000.0, 2));
+#if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
+        client->publish(MQTTClient::formatTopic(F("power")), true, String(_getPowerLevelmW() / 1000.0, 2));
 #endif
     }
 

@@ -402,6 +402,13 @@
 #define IOT_ALARM_PLUGIN_ENABLED                            0
 #endif
 
+#if IOT_ALARM_PLUGIN_ENABLED
+#define IF_IOT_ALARM_PLUGIN_ENABLED(...) __VA_ARGS__
+#else
+#define IF_IOT_ALARM_PLUGIN_ENABLED(...)
+#endif
+
+
 #ifndef HAVE_PCF8574
 #define HAVE_PCF8574                                        0
 #endif

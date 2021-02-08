@@ -153,7 +153,7 @@ void ClockPlugin::_loop()
 {
     LoopOptionsType options(*this);
 
-#    if IOT_CLOCK_BUTTON_PIN
+#    if IOT_CLOCK_BUTTON_PIN!=-1
     // check buttons
     if (_loopUpdateButtons(options)) {
         _dithering();

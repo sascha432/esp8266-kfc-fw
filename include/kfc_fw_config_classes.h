@@ -1695,6 +1695,10 @@ typedef struct  {
         // --------------------------------------------------------------------
         // Clock
 
+#if IOT_CLOCK
+        #include "../src/plugins/clock/clock_def.h"
+#endif
+
         class ClockConfig {
         public:
             typedef union __attribute__packed__ ClockColor_t {
@@ -1753,7 +1757,6 @@ typedef struct  {
 
             } FireAnimation_t;
 
-
             typedef struct __attribute__packed__ ClockConfig_t {
                 using Type = ClockConfig_t;
 
@@ -1765,54 +1768,17 @@ typedef struct  {
                     FADING,
                     FIRE,
                     INTERLEAVED,
+#if !IOT_LED_MATRIX
+                    COLON_SOLID,
+                    COLON_BLINK_FAST,
+                    COLON_BLINK_SLOWLY,
+#endif
                     MAX,
                 };
 
-
-                static const __FlashStringHelper *getAnimationNames() {
-                    return F( \
-                        "Solid," \
-                        "Rainbow," \
-                        "Flash," \
-                        "Color Fade,"
-#if IOT_LED_MATRIX
-                        "Fire," \
-                        "Interleaved"
-#endif
-                    );
-                }
-
-                static const __FlashStringHelper *getAnimationNamesJsonArray() {
-                    return F("[" \
-                        "\042Solid\042," \
-                        "\042Rainbow\042," \
-                        "\042Flash\042," \
-                        "\042Color Fade\042,"
-#if IOT_LED_MATRIX
-                        "\042Fire\042," \
-                        "\042Interleaved\042"
-#endif
-                        "]");
-                }
-
-                static const __FlashStringHelper *getAnimationName(AnimationType type) {
-                    switch(type) {
-                        case AnimationType::RAINBOW:
-                            return F("Rainbow");
-                        case AnimationType::FLASHING:
-                            return F("Flash");
-                        case AnimationType::FADING:
-                            return F("Color Fade");
-                        case AnimationType::FIRE:
-                            return F("Fire");
-                        case AnimationType::INTERLEAVED:
-                            return F("Interleaved");
-                        default:
-                        case AnimationType::SOLID:
-                            break;
-                    }
-                    return F("Solid");
-                }
+                static const __FlashStringHelper *getAnimationNames();
+                static const __FlashStringHelper *getAnimationNamesJsonArray();
+                static const __FlashStringHelper *getAnimationName(AnimationType type);
 
                 enum class InitialStateType : uint8_t  {
                     MIN = 0,
@@ -1828,21 +1794,28 @@ typedef struct  {
                 CREATE_UINT8_BITFIELD(time_format_24h, 1);
                 CREATE_UINT8_BITFIELD(dithering, 1);
                 CREATE_UINT8_BITFIELD(standby_led, 1);
+                CREATE_UINT8_BITFIELD(enabled, 1);
                 CREATE_UINT32_BITFIELD_MIN_MAX(fading_time, 6, 0, 60, 10, 1)
+#if IOT_CLOCK_HAVE_POWER_LIMIT
                 CREATE_UINT32_BITFIELD_MIN_MAX(power_limit, 8, 0, 255, 0, 1)
+#endif
                 CREATE_UINT32_BITFIELD_MIN_MAX(brightness, 8, 0, 255, 255 / 4, 1)
                 CREATE_INT32_BITFIELD_MIN_MAX(auto_brightness, 11, -1, 1023, -1, 1)
+#if !IOT_LED_MATRIX
                 CREATE_UINT32_BITFIELD_MIN_MAX(blink_colon_speed, 13, 50, 8000, 1000, 100)
+#endif
                 CREATE_UINT32_BITFIELD_MIN_MAX(flashing_speed, 13, 50, 8000, 150, 100)
 
                 static const uint16_t kPowerNumLeds = 256;
 
+#if IOT_CLOCK_HAVE_POWER_LIMIT
                 struct __attribute__packed__ {
                     uint16_t red;
                     uint16_t green;
                     uint16_t blue;
                     uint16_t idle;
                 } power;
+#endif
 
                 struct __attribute__packed__ {
                     struct __attribute__packed__ {

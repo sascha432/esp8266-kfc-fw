@@ -7,97 +7,22 @@
 #include <MicrosTimer.h>
 #include <MillisTimer.h>
 #include <vector>
-#include "../src/plugins/mqtt/mqtt_component.h"
 #include "WebUIComponent.h"
 #include "animation.h"
+#include "clock_button.h"
 #include "kfc_fw_config.h"
 #include "plugins.h"
 #include "stored_state.h"
+#include "../src/plugins/mqtt/mqtt_component.h"
 #include "../src/plugins/sensor/sensor.h"
 #if IOT_ALARM_PLUGIN_ENABLED
-#    include "../src/plugins/alarm/alarm.h"
+#include "../src/plugins/alarm/alarm.h"
 #endif
 #if HTTP2SERIAL_SUPPORT
 #include "../src/plugins/http2serial/http2serial.h"
 #endif
 #if IOT_LED_MATRIX
-#    include "led_matrix.h"
-#endif
-
-#if SPEED_BOOSTER_ENABLED
-#    error The speed booster causes timing issues and should be deactivated
-#endif
-
-#if !NTP_CLIENT || !NTP_HAVE_CALLBACKS
-#    error NTP_CLIENT=1 and NTP_HAVE_CALLBACKS=1 required
-#endif
-
-#ifndef IOT_CLOCK_BUTTON_PIN
-
-#    define IOT_CLOCK_BUTTON_PIN 14
-#    ifndef IOT_CLOCK_SAVE_STATE
-#        define IOT_CLOCK_SAVE_STATE 1
-#    endif
-
-#else
-
-#    ifndef IOT_CLOCK_SAVE_STATE
-#        define IOT_CLOCK_SAVE_STATE 0
-#    endif
-
-#endif
-
-#ifndef IOT_CLOCK_SAVE_STATE_DELAY
-// delay in seconds before any changes get stored except for power on/off
-#    define IOT_CLOCK_SAVE_STATE_DELAY 30
-#endif
-
-// pin to enable to disable all LEDs
-#ifndef IOT_CLOCK_HAVE_ENABLE_PIN
-#    define IOT_CLOCK_HAVE_ENABLE_PIN 0
-#endif
-
-// pin to enable LEDs
-#ifndef IOT_CLOCK_EN_PIN
-#    define IOT_CLOCK_EN_PIN 15
-#endif
-
-// IOT_CLOCK_EN_PIN_INVERTED=1 sets IOT_CLOCK_EN_PIN to active low
-#ifndef IOT_CLOCK_EN_PIN_INVERTED
-#    define IOT_CLOCK_EN_PIN_INVERTED 0
-#endif
-
-// disable ambient light sensor by default
-#ifndef IOT_CLOCK_AMBIENT_LIGHT_SENSOR
-#    define IOT_CLOCK_AMBIENT_LIGHT_SENSOR 0
-#endif
-
-// add sensor for calculated power level
-#ifndef IOT_CLOCK_DISPLAY_CALC_POWER_CONSUMPTION
-#   define IOT_CLOCK_DISPLAY_CALC_POWER_CONSUMPTION 0
-#endif
-
-#ifndef IOT_CLOCK_CALC_POWER_CONSUMPTION_UPDATE_RATE
-#   define IOT_CLOCK_CALC_POWER_CONSUMPTION_UPDATE_RATE 2
-#endif
-
-#if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
-#    ifndef IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
-// update interval in ms, 0 to disable
-#        define IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL 125
-#    endif
-#endif
-
-// show rotating animation while time is invalid
-#ifndef IOT_CLOCK_PIXEL_SYNC_ANIMATION
-#    define IOT_CLOCK_PIXEL_SYNC_ANIMATION 0
-#endif
-#if IOT_LED_MATRIX && IOT_CLOCK_PIXEL_SYNC_ANIMATION
-#    error not supported, set IOT_CLOCK_PIXEL_SYNC_ANIMATION=0
-#endif
-
-#if IOT_CLOCK_BUTTON_PIN
-#include <PinMonitor.h>
+#include "led_matrix.h"
 #endif
 
 using KFCConfigurationClasses::Plugins;
@@ -276,13 +201,14 @@ public:
         BUSY = 2  // waiting for ADC results
     };
 
-    // ------------------------------------------------------------------------
-    // PluginComponent
-    // ------------------------------------------------------------------------
+// ------------------------------------------------------------------------
+// PluginComponent
+// ------------------------------------------------------------------------
+
 public:
     ClockPlugin();
 
-#if IOT_CLOCK_DISPLAY_CALC_POWER_CONSUMPTION
+#if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
     virtual void preSetup(SetupModeType mode) override;
 #endif
     virtual void setup(SetupModeType mode) override;
@@ -329,17 +255,19 @@ public:
     virtual bool atModeHandler(AtModeArgs &args) override;
 #endif
 
-    // ------------------------------------------------------------------------
-    // WebUI
-    // ------------------------------------------------------------------------
+// ------------------------------------------------------------------------
+// WebUI
+// ------------------------------------------------------------------------
+
 public:
     virtual void createWebUI(WebUIRoot &webUI) override;
     virtual void getValues(JsonArray &array) override;
     virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) override;
 
-    // ------------------------------------------------------------------------
-    // MQTT
-    // ------------------------------------------------------------------------
+// ------------------------------------------------------------------------
+// MQTT
+// ------------------------------------------------------------------------
+
 public:
     virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const;
@@ -350,6 +278,9 @@ public:
 
 public:
     static void loop();
+    static void standbyLoop() {
+        delay(25); // energy saving mode
+    }
 
 private:
     void _loop();
@@ -363,7 +294,7 @@ public:
 
     void setColorAndRefresh(Color color);
     // time represents fading level 0 to max, the fading time is relative to the different between the brightness levels
-    void setBrightness(uint8_t brightness, int32_t millis = -1);
+    void setBrightness(uint8_t brightness, int32_t millis = -1, uint32_t maxTime = ~0U);
     // use NONE to remove all animations
     // use NEXT to remove the current animation and start the next one. if next animation isnt set, animation is set to NONE
     void setAnimation(AnimationType animation);
@@ -378,67 +309,67 @@ public:
 // Power consumption sensor
 // ------------------------------------------------------------------------
 
-#if IOT_CLOCK_DISPLAY_CALC_POWER_CONSUMPTION
+#if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
 
 public:
     static void addPowerSensor(WebUIRoot &webUI, WebUIRow **row, SensorPlugin::SensorType type);
+    static void powerLevelCallback(uint32_t total_mW, uint32_t requested_mW, uint32_t max_mW, uint8_t target_brightness, uint8_t recommended_brightness);
+    static void webSocketCallback(WsClient::ClientCallbackType type, WsClient *client, AsyncWebSocket *server, WsClient::ClientCallbackId id);
 
 private:
     void _updatePowerLevelWebUI();
     void _powerLevelCallback(uint32_t total_mW, uint32_t requested_mW, uint32_t max_mW, uint8_t target_brightness, uint8_t recommended_brightness);
+    void _webSocketCallback(WsClient::ClientCallbackType type, WsClient *client, AsyncWebSocket *server, WsClient::ClientCallbackId id);
+    void _calcPowerLevel();
+    float _getPowerLevelmW();
+
+private:
+    float _powerLevelAvg;
+    uint32_t _powerLevelUpdateTimer{0};
+    uint32_t _powerLevelCurrentmW{0};
+    uint32_t _powerLevelUpdateRate{kUpdateMQTTInterval * 1000};
 
 #endif
 
 // ------------------------------------------------------------------------
-// Enable/disable LED pin
+// Enable/disable LEDs
 // ------------------------------------------------------------------------
-#if IOT_CLOCK_HAVE_ENABLE_PIN
 
 private:
     void _enable();
-    void _disable();
+    void _disable(uint8_t delayMillis = 100);
 
-private:
-    bool _isEnabled{false};
-#endif
-
-    // ------------------------------------------------------------------------
-    // Save state
-    // ------------------------------------------------------------------------
+// ------------------------------------------------------------------------
+// Save state
+// ------------------------------------------------------------------------
 
 #if IOT_CLOCK_SAVE_STATE
 
 public:
-    void _saveStateDelayed(uint8_t brightness);
-    void _saveState(uint8_t brightness);
+    void _saveStateDelayed();
+    void _saveState();
     StoredState _getState() const;
 
     Event::Timer _saveTimer;
     uint32_t _saveTimestamp{0};
 #endif
     void _setState(bool state);
-    // ------------------------------------------------------------------------
-    // Button
-    // ------------------------------------------------------------------------
 
-#if IOT_CLOCK_BUTTON_PIN
+// ------------------------------------------------------------------------
+// Button
+// ------------------------------------------------------------------------
+
+#if IOT_CLOCK_BUTTON_PIN!=-1
 
 public:
-    static void onButtonHeld(Button &btn, uint16_t duration, uint16_t repeatCount);
-    static void onButtonReleased(Button &btn, uint16_t duration);
-    void _onButtonReleased(uint16_t duration);
+    using EventType = Clock::Button::EventType;
+    void buttonCallback(uint8_t button, EventType eventType, uint16_t repeatCount);
 
-private:
-    bool _loopUpdateButtons(LoopOptionsType &options);
-
-private:
-    PushButton _button;
-    uint8_t _buttonCounter;
 #endif
 
-    // ------------------------------------------------------------------------
-    // Alarm Plugin
-    // ------------------------------------------------------------------------
+// ------------------------------------------------------------------------
+// Alarm Plugin
+// ------------------------------------------------------------------------
 
 #if IOT_ALARM_PLUGIN_ENABLED
 public:
@@ -455,9 +386,10 @@ private:
 #endif
 
 #if !IOT_LED_MATRIX
-    // ------------------------------------------------------------------------
-    // Clock
-    // ------------------------------------------------------------------------
+
+// ------------------------------------------------------------------------
+// Clock
+// ------------------------------------------------------------------------
 
 private:
     void _setSevenSegmentDisplay();
@@ -483,9 +415,9 @@ private:
 
 #endif
 
-    // ------------------------------------------------------------------------
-    // Light sensor
-    // ------------------------------------------------------------------------
+// ------------------------------------------------------------------------
+// Light sensor
+// ------------------------------------------------------------------------
 
 #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
 private:
@@ -508,7 +440,7 @@ private:
     DisplaySensorType _displaySensor{DisplaySensorType::OFF};
 #endif
 
-    // ------------------------------------------------------------------------
+// ------------------------------------------------------------------------
 
 public:
     void _broadcastWebUI();
@@ -538,6 +470,9 @@ private:
     // store new level in config
     void _setBrightness(uint8_t brightness);
 
+    // update brightness settings savedBrightmess, config.brightness and config.enabled
+    void _updateBrightnessSettings();
+
     // returns display brightness using current brightness and auto brightness value
     uint8_t _getBrightness(bool temperatureProtection = true) const;
 
@@ -554,12 +489,10 @@ private:
 
     void _setAnimation(Clock::Animation *animation);
     void _setBlendAnimation(Clock::Animation *animation);
-    // void _deleteAnimaton();
-    // void _setAnimatonNone();
 
-    // ------------------------------------------------------------------------
-    // private variables
-    // ------------------------------------------------------------------------
+// ------------------------------------------------------------------------
+// private variables
+// ------------------------------------------------------------------------
 
 private:
     friend Clock::LEDMatrixLoopOptions;
@@ -593,22 +526,6 @@ private:
     Clock::Animation *_animation;
     Clock::BlendAnimation *_blendAnimation;
 };
-
-// inline void ClockPlugin::setAnimationCallback(Clock::AnimationCallback callback)
-// {
-//     // _display.setCallback(callback);
-// }
-
-// inline void ClockPlugin::setUpdateRate(uint16_t updateRate)
-// {
-//     // _updateRate = updateRate;
-//     _forceUpdate = true;
-// }
-
-// inline uint16_t ClockPlugin::getUpdateRate() const
-// {
-//     return Clock::kUpdateRate; //_updateRate;
-// }
 
 inline void ClockPlugin::setColor(Color color)
 {

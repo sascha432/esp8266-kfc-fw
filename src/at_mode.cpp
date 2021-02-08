@@ -330,9 +330,7 @@ void at_mode_display_help(Stream &output, StringVector *findText = nullptr)
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_NNPP(AT, "Print OK", "Show help");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HELP, "HELP", "[single][,word][,or entire phrase]", "Search help");
-#if ENABLE_DEEP_SLEEP
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DSLP, "DSLP", "[<milliseconds>[,<mode>]]", "Enter deep sleep");
-#endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RST, "RST", "[<s>]", "Soft reset. 's' enables safe mode");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(CMDS, "CMDS", "Send a list of available AT commands");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(LOAD, "LOAD", "Discard changes and load settings from EEPROM");
@@ -421,9 +419,7 @@ void at_mode_help_commands()
     auto name = PSTR("at_mode");
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(AT), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(HELP), name);
-#if ENABLE_DEEP_SLEEP
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DSLP), name);
-#endif
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(RST), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(CMDS), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(LOAD), name);
@@ -1148,21 +1144,30 @@ void at_mode_serial_handle_event(String &commandString)
 
             args.setCommand(command);
 
-#if ENABLE_DEEP_SLEEP
             if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DSLP))) {
+#if ENABLE_DEEP_SLEEP
                 if (args.size() == 2 && args.equalsIgnoreCase(0, F("deep_sleep_max"))) {
                     DeepSleep::DeepSleepParams_t::setDeepSleepMaxTime(args.toInt(1));
                     args.printf_P(PSTR("Setting deep_sleep_max to %ums"), DeepSleep::DeepSleepParams_t::getDeepSleepMaxMillis());
+                    args.printf_P(PSTR("Setting deep_sleep_max to %ums"), (uint32_t)(ESP.deepSleepMax() / 1000));
                 }
-                else {
+                else
+#endif
+                {
                     KFCFWConfiguration::milliseconds time(args.toMillis(0));
                     RFMode mode = (RFMode)args.toInt(1, RF_DEFAULT);
+#if ENABLE_DEEP_SLEEP
                     args.printf_P(PSTR("Entering deep sleep... time=%ums deep_sleep_max=%ums mode=%u"), time, DeepSleep::DeepSleepParams_t::getDeepSleepMaxMillis(), mode);
                     config.enterDeepSleep(time, mode, 1);
+#else
+                    args.printf_P(PSTR("Entering deep sleep... time=%ums deep_sleep_max=%ums mode=%u"), time, (uint32_t)(ESP.deepSleepMax() / 1000), mode);
+                    ESP.deepSleep(time.count() * 1000ULL, mode);
+                    ESP.deepSleep(ESP.deepSleepMax() / 2, mode);
+                    ESP.deepSleep(0, mode);
+#endif
                 }
             }
             else
-#endif
             if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(HELP))) {
                 String plugin;
                 StringVector findItems;

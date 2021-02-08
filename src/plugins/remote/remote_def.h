@@ -46,8 +46,9 @@
 
 class HassPlugin;
 
-using namespace PinMonitor;
 using KFCConfigurationClasses::Plugins;
+
+using namespace PinMonitor;
 
 namespace RemoteControl {
 

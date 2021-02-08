@@ -58,6 +58,8 @@ namespace PinMonitor {
         // all events without SINGLE_CLICK/DOUBLE_CLICK
         ALL                             = UP|DOWN|REPEATED_CLICK|PRESSED|LONG_PRESSED|HELD,
 
+        PRESSED_LONG_HELD_SINGLE_DOUBLE_CLICK = PRESSED|LONG_PRESSED|HELD|SINGLE_CLICK|DOUBLE_CLICK,
+
 
         ANY                             = 0xffff,
         MAX_BITS                        = 8
@@ -220,7 +222,6 @@ namespace PinMonitor {
             setName(String((uint32_t)arg, 16) + ':' + String((uint32_t)this, 16));
 #endif
         }
-        ~PushButton() {}
 
     public:
         virtual void event(EventType eventType, uint32_t now);

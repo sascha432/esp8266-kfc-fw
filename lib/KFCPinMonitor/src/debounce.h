@@ -65,7 +65,7 @@ namespace PinMonitor {
     class Debounce {
     public:
 
-        Debounce(bool value) :
+        Debounce(bool value, bool enabled = true) :
 #if DEBUG_PIN_MONITOR_EVENTS
             _bounceCounter(0),
             _startDebounce(0),
@@ -74,7 +74,8 @@ namespace PinMonitor {
             _debounceTimer(0),
             _state(value),
             _value(value),
-            _debounceTimerRunning(false)
+            _debounceTimerRunning(false),
+            _enabled(enabled)
         {
         }
 
@@ -92,6 +93,7 @@ namespace PinMonitor {
         bool _state: 1;
         bool _value: 1;
         bool _debounceTimerRunning: 1;
+        bool _enabled: 1;
     };
 
 }

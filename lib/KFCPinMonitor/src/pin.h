@@ -108,7 +108,7 @@ namespace PinMonitor {
     public:
         static constexpr uint16_t kIncrementCount = ~0;
 
-        HardwarePin(uint8_t pin);
+        HardwarePin(uint8_t pin, bool debounce = true);
 
         Debounce &getDebounce();
         uint8_t getPin() const;
@@ -135,13 +135,13 @@ namespace PinMonitor {
         Debounce _debounce;
     };
 
-    inline HardwarePin::HardwarePin(uint8_t pin) :
+    inline HardwarePin::HardwarePin(uint8_t pin, bool debounce) :
         _micros(0),
         _intCount(0),
         _value(false),
         _pin(pin),
         _count(0),
-        _debounce(digitalRead(pin))
+        _debounce(digitalRead(pin), debounce)
     {
     }
 

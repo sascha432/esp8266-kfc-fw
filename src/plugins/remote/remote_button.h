@@ -9,6 +9,7 @@
 #include "remote_base.h"
 
 using namespace PinMonitor;
+
 namespace RemoteControl {
 
     class ButtonConfig : public PushButtonConfig

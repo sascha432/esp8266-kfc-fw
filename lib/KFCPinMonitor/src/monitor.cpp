@@ -21,7 +21,12 @@ using namespace PinMonitor;
 
 Monitor pinMonitor;
 
-Monitor::Monitor() : _lastRun(0), _loopTimer(nullptr), __DBG_IF(_debugTimer(nullptr),) _pinMode(INPUT), _debounceTime(kDebounceTimeDefault)
+Monitor::Monitor() :
+    _lastRun(0),
+    _loopTimer(nullptr),
+    __DBG_IF(_debugTimer(nullptr),)
+    _pinMode(INPUT),
+    _debounceTime(kDebounceTimeDefault)
 {
 }
 
@@ -99,7 +104,7 @@ Pin &Monitor::attach(Pin *handler)
     return _attach(*_handlers.back().get());
 }
 
-Pin &Monitor::_attach(Pin &pin)
+Pin &Monitor::_attach(Pin &pin, bool debounce)
 {
     __LDBG_IF(auto type = PSTR("new pin:"));
     auto pinNum = pin.getPin();
@@ -110,7 +115,7 @@ Pin &Monitor::_attach(Pin &pin)
     if (iterator == _pins.end()) {
 
         pinMode(pinNum, _pinMode);
-        _pins.emplace_back(new HardwarePin(pinNum));
+        _pins.emplace_back(new HardwarePin(pinNum, debounce));
         iterator = _pins.end() - 1;
 
         __LDBG_IF(type = PSTR("updating pin:"));

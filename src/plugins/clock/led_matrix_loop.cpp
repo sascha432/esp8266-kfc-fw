@@ -17,27 +17,6 @@
 
 void ClockPlugin::_loop()
 {
-#if IOT_CLOCK_HAVE_ENABLE_PIN
-    // save energy if the LEDs are disabled
-    if (!_isEnabled) {
-        delay(5);
-        return;
-    }
-#endif
-
-    if (digitalRead(14) == 0) {
-        __LDBG_printf("PIN 14 low");
-        delay(100);
-    }
-    if (digitalRead(0) == 0) {
-        __LDBG_printf("PIN 0 low");
-        delay(100);
-    }
-    if (digitalRead(2) == 0) {
-        __LDBG_printf("PIN 2 low");
-        delay(100);
-    }
-
     LoopOptionsType options(*this);
     _display.setBrightness(_getBrightness());
 
@@ -48,15 +27,7 @@ void ClockPlugin::_loop()
         _blendAnimation->loop(options.getMillis());
     }
 
-
     while(true) {
-
-        #if IOT_CLOCK_BUTTON_PIN
-            // check buttons
-            if (_loopUpdateButtons(options)) {
-                break;
-            }
-        #endif
 
         if (!options.doUpdate()) {
             break;

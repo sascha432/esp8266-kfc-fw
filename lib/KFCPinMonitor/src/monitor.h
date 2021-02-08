@@ -65,7 +65,7 @@ namespace PinMonitor {
         static const __FlashStringHelper *stateType2Level(StateType state);
 
     private:
-        Pin &_attach(Pin &pin);
+        Pin &_attach(Pin &pin, bool debounce = true);
         void _detach(Iterator begin, Iterator end, bool clear);
         void _attachLoop();
         void _detachLoop();

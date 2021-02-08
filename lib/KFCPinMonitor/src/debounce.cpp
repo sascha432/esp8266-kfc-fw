@@ -15,6 +15,10 @@ using namespace PinMonitor;
 
 StateType Debounce::debounce(bool lastValue, uint16_t interruptCount, uint32_t last, uint32_t now)
 {
+    if (!_enabled) {
+        return lastValue ? StateType::IS_HIGH : StateType::IS_LOW;
+    }
+
     if (interruptCount) {
 
         // set start to time when we received the last pin change interrupt

@@ -105,16 +105,38 @@ public:
     static bool hasClients(AsyncWebSocket *server);
 
 public:
-    typedef enum {
+    enum class ClientCallbackType {
         CONNECT,
         AUTHENTICATED,
         DISCONNECT,
-    } ClientCallbackTypeEnum_t;
+        ON_START,
+        ON_END,
+    };
 
-    typedef std::function<void(ClientCallbackTypeEnum_t type, WsClient *client)> ClientCallback_t;
-    typedef std::vector<ClientCallback_t> ClientCallbackVector_t;
+    using ClientCallbackId = const void *;
+    using ClientCallback = std::function<void(ClientCallbackType type, WsClient *client, AsyncWebSocket *server, ClientCallbackId id)>;
+    using ClientCallbackPair = std::pair<ClientCallback, ClientCallbackId>;
+    using ClientCallbackVector = std::vector<ClientCallbackPair>;
 
-    static void addClientCallback(ClientCallback_t callback);
+    static ClientCallbackVector::iterator findClientCallback(ClientCallbackId id) {
+        return std::find_if(_clientCallback.begin(), _clientCallback.end(), [id](const ClientCallbackPair &pair) {
+            return pair.second == id;
+        });
+    }
+
+    // to remove a callback later, set id to a unique id
+    static void addClientCallback(ClientCallback callback, ClientCallbackId id = nullptr) {
+        if (id == nullptr || findClientCallback(id) == _clientCallback.end()) {
+            _clientCallback.emplace_back(callback, id);
+        }
+    }
+    static void removeClientCallback(ClientCallbackId id) {
+        if (id) {
+            _clientCallback.erase(std::remove_if(_clientCallback.begin(), _clientCallback.end(), [id](const ClientCallbackPair &pair) {
+                return pair.second == id;
+            }), _clientCallback.end());
+        }
+    }
 
 protected:
     static void invokeStartOrEndCallback(WsClient *wsClient, bool isStart);
@@ -124,7 +146,7 @@ private:
 
     bool _authenticated;
     AsyncWebSocketClient *_client;
-    static ClientCallbackVector_t _clientCallback;
+    static ClientCallbackVector _clientCallback;
 
 private:
     friend WsClientAsyncWebSocket;
@@ -144,10 +166,21 @@ public:
     void disableSocket();
     void addWebSocketPtr(WsClientAsyncWebSocket **ptr);
 
+    bool hasAuthenticatedClients() const {
+        return _authenticatedClients;
+    }
+
+    uint16_t getAuthtenticatedClients() const {
+        return _authenticatedClients;
+    }
+
 private:
+    friend WsClient;
+
     void _enableAuthentication();
 
     WsClientAsyncWebSocket **_ptr;
+    uint16_t _authenticatedClients;
 };
 
 #include <debug_helper_disable.h>

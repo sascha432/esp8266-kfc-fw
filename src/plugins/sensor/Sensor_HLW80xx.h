@@ -285,7 +285,6 @@ protected:
         CONVERT_UNIT = 0x8000,
     } WebSocketDataTypeEnum_t;
 
-    AsyncWebSocketClient *_getWebSocketClient() const;
     WebSocketDataTypeEnum_t _getWebSocketPlotData() const {
         return _webSocketPlotData;
     }

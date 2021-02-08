@@ -190,7 +190,7 @@ bool Sensor_HLW8012::_processInterruptBuffer(InterruptBuffer &buffer, SensorInpu
     if (size >= 2) {
 
 #if IOT_SENSOR_HLW80xx_DATA_PLOT
-        auto client = _getWebSocketClient();
+        auto client = Http2Serial::getClientById(_webSocketClient);
         bool convertUnits = false;
         uint16_t dataType = 0;
         if (client) {

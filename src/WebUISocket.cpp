@@ -9,13 +9,6 @@
 #include "session.h"
 #include "WebUISocket.h"
 
-// #if IOT_ATOMIC_SUN_V2
-// #include "../src/plugins/atomic_sun/atomic_sun_v2.h"
-// #elif IOT_DIMMER_MODULE
-// #include "../src/plugins/dimmer_module/dimmer_plugin.h"
-// #endif
-
-
 #if DEBUG_WEBUI
 #include <debug_helper_enable.h>
 #include <debug_helper_enable_mem.h>
@@ -32,7 +25,7 @@ WsWebUISocket *WsWebUISocket::_sender = nullptr;
 
 void webui_socket_event_handler(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len)
 {
-    WsWebUISocket::onWsEvent(server, client, (int)type, data, len, arg, WsWebUISocket::getInstance);
+    WsWebUISocket::onWsEvent(server, client, (int)type, data, len, arg, WsWebUISocket::createInstance);
 }
 
 void WsWebUISocket::setup()
@@ -60,7 +53,7 @@ void WsWebUISocket::send(AsyncWebSocketClient *client, const JsonUnnamedObject &
 void WsWebUISocket::broadcast(WsWebUISocket *sender, const JsonUnnamedObject &json)
 {
     __LDBG_printf("broadcast sender=%p json", sender);
-    if (wsWebUI && !wsWebUI->getClients().isEmpty() && wsWebUI->availableForWriteAll()) {
+    if (wsWebUI && wsWebUI->hasAuthenticatedClients() && wsWebUI->availableForWriteAll()) {
         auto buffer = wsWebUI->makeBuffer(json.length());
         assert(JsonBuffer(json).fillBuffer(buffer->get(), buffer->length()) == buffer->length());
         __LDBG_printf("buffer=%s", buffer->get());
@@ -70,7 +63,7 @@ void WsWebUISocket::broadcast(WsWebUISocket *sender, const JsonUnnamedObject &js
 
 void WsWebUISocket::broadcast(WsWebUISocket *sender, uint8_t *buf, size_t len)
 {
-    if (wsWebUI && !wsWebUI->getClients().isEmpty() && wsWebUI->availableForWriteAll()) {
+    if (wsWebUI && wsWebUI->hasAuthenticatedClients() && wsWebUI->availableForWriteAll()) {
         auto buffer = wsWebUI->makeBuffer(buf, len, false);
         __LDBG_printf("buffer=%s", buffer->get());
         WsClient::broadcast(wsWebUI, sender, buffer);
@@ -87,7 +80,7 @@ WsClientAsyncWebSocket *WsWebUISocket::getWsWebUI()
     return wsWebUI;
 }
 
-WsClient *WsWebUISocket::getInstance(AsyncWebSocketClient *socket)
+WsClient *WsWebUISocket::createInstance(AsyncWebSocketClient *socket)
 {
     __LDBG_println();
     return __LDBG_new(WsWebUISocket, socket);
@@ -168,7 +161,7 @@ void WsWebUISocket::createWebUIJSON(JsonUnnamedObject &json)
 {
     WebUIRoot webUI(json);
 
-    for( const auto plugin: plugins) {
+    for(const auto plugin: plugins) {
         __LDBG_printf("plugin=%s webui=%u", plugin->getName_P(), plugin->hasWebUI());
         if (plugin->hasWebUI()) {
             plugin->createWebUI(webUI);

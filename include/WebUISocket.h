@@ -17,10 +17,12 @@ public:
     using WsClient::WsClient;
     using WsClient::hasClients;
 
-    static WsClient *getInstance(AsyncWebSocketClient *socket);
+public:
+    static WsClient *createInstance(AsyncWebSocketClient *socket);
 
     virtual void onText(uint8_t *data, size_t len) override;
 
+public:
     static void send(AsyncWebSocketClient *client, const JsonUnnamedObject &json);
     static void broadcast(WsWebUISocket *sender, const JsonUnnamedObject &json);
     // buf is an allocated (new uint8_t[len + 1]) null terminated string

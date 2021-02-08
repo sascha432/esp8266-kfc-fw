@@ -30,7 +30,7 @@
 
 using KFCConfigurationClasses::System;
 
- WsClient::ClientCallbackVector_t WsClient::_clientCallback;
+ WsClient::ClientCallbackVector WsClient::_clientCallback;
  WsClient::AsyncWebSocketVector WsClient::_webSockets;
 
 extern bool generate_session_for_username(const String &username, String &password);
@@ -46,7 +46,10 @@ bool generate_session_for_username(const String &username, String &password)
     return true;
 }
 
-WsClientAsyncWebSocket::WsClientAsyncWebSocket(const String &url, WsClientAsyncWebSocket **ptr) : AsyncWebSocket(url), _ptr(ptr)
+WsClientAsyncWebSocket::WsClientAsyncWebSocket(const String &url, WsClientAsyncWebSocket **ptr) :
+    AsyncWebSocket(url),
+    _ptr(ptr),
+    _authenticatedClients(0)
 {
     __DBG_printf("this=%p url=%s ptr=%p *ptr=%p _ptr=%p *_ptr=%p", this, url.c_str(), ptr, ptr ? *ptr : nullptr, _ptr, _ptr ? *_ptr : nullptr);
     WsClient::_webSockets.push_back(this);
@@ -80,7 +83,8 @@ void WsClientAsyncWebSocket::shutdown()
 
 void WsClientAsyncWebSocket::disableSocket()
 {
-    __DBG_printf("count=%u", WsClient::_webSockets.size());
+    __DBG_printf("count=%u authenticated=%u", WsClient::_webSockets.size(), _authenticatedClients);
+    _authenticatedClients = 0;
     WsClient::_webSockets.erase(std::remove(WsClient::_webSockets.begin(), WsClient::_webSockets.end(), this), WsClient::_webSockets.end());
 }
 
@@ -165,7 +169,7 @@ void WsClient::onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, i
         wsClient->onConnect(data, len);
 
         for(const auto &callback: _clientCallback) {
-            callback(ClientCallbackTypeEnum_t::CONNECT, wsClient);
+            callback.first(ClientCallbackType::CONNECT, wsClient, server, callback.second);
         }
 
     } else if (type == WS_EVT_DISCONNECT) {
@@ -176,7 +180,7 @@ void WsClient::onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, i
         WsClient::invokeStartOrEndCallback(wsClient, false);
 
         for(const auto &callback: _clientCallback) {
-            callback(ClientCallbackTypeEnum_t::DISCONNECT, wsClient);
+            callback.first(ClientCallbackType::DISCONNECT, wsClient, server, callback.second);
         }
 
         // WS_EVT_DISCONNECT is called in the destructor of AsyncWebSocketClient
@@ -242,7 +246,7 @@ void WsClient::onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, i
                 wsClient->onAuthenticated(data, len);
 
                 for(const auto &callback: _clientCallback) {
-                    callback(ClientCallbackTypeEnum_t::AUTHENTICATED, wsClient);
+                    callback.first(ClientCallbackType::AUTHENTICATED, wsClient, server, callback.second);
                 }
 
             }
@@ -283,11 +287,6 @@ void WsClient::onData(AwsFrameType type, uint8_t *data, size_t len)
     }
 }
 
-void WsClient::addClientCallback(ClientCallback_t callback)
-{
-    _clientCallback.push_back(callback);
-}
-
 void WsClient::invokeStartOrEndCallback(WsClient *wsClient, bool isStart)
 {
     uint16_t authenticatedClients = 0;
@@ -297,17 +296,28 @@ void WsClient::invokeStartOrEndCallback(WsClient *wsClient, bool isStart)
             authenticatedClients++;
         }
     }
+    // if the pointers do not match, the object is derived from AsyncWebSocket not WsClientAsyncWebSocket
+    __DBG_assert_printf(*reinterpret_cast<WsClientAsyncWebSocket *>(client->server())->_ptr == client->server(), "WsClientAsyncWebSocket::_ptr does not match AsyncWebSocket");
+
+    reinterpret_cast<WsClientAsyncWebSocket *>(client->server())->_authenticatedClients = authenticatedClients;
+
     __LDBG_printf("client=%p isStart=%u authenticatedClients=%u", wsClient, isStart, authenticatedClients);
     if (isStart) {
         if (authenticatedClients == 1) { // first client has been authenticated
             __LDBG_print("invoking onStart()");
             wsClient->onStart();
+            for(const auto &callback: _clientCallback) {
+                callback.first(ClientCallbackType::ON_START, wsClient, wsClient->getClient()->server(), callback.second);
+            }
         }
     }
     else {
         if (authenticatedClients == 0) { // last client disconnected
             __LDBG_print("invoking onEnd()");
             wsClient->onEnd();
+            for(const auto &callback: _clientCallback) {
+                callback.first(ClientCallbackType::ON_END, wsClient, wsClient->getClient()->server(), callback.second);
+            }
         }
     }
 }
@@ -350,7 +360,7 @@ static bool __get_server(AsyncWebSocket **server,  WsClient *sender)
         }
         *server = sender->getClient()->server();
     }
-    return (*server)->availableForWriteAll();
+    return WsClient::hasClients(*server) && (*server)->availableForWriteAll();
 }
 
 void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, AsyncWebSocketMessageBuffer *buffer)
@@ -395,17 +405,24 @@ void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, const __Flash
 bool WsClient::hasClients(AsyncWebSocket *server)
 {
     if (server) {
-        for(auto socket: server->getClients()) {
-            if (socket->status() == WS_CONNECTED && socket->_tempObject && reinterpret_cast<WsClient *>(socket->_tempObject)->isAuthenticated()) {
-                return true;
-            }
-        }
+        __DBG_assert_printf(*reinterpret_cast<WsClientAsyncWebSocket *>(server)->_ptr == server, "WsClientAsyncWebSocket::_ptr does not match AsyncWebSocket");
+        return reinterpret_cast<WsClientAsyncWebSocket *>(server)->hasAuthenticatedClients();
+
+        // for(auto socket: server->getClients()) {
+        //     if (socket->status() == WS_CONNECTED && socket->_tempObject && reinterpret_cast<WsClient *>(socket->_tempObject)->isAuthenticated()) {
+        //         return true;
+        //     }
+        // }
     }
     return false;
 }
 
 void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, const String &message)
 {
+    if (!hasClients(server)) {
+        __LDBG_printf("no clients connected: server=%p client=%p message=%s", server, client, message.c_str());
+        return;
+    }
     auto len = message.length();
     for(auto socket: server->getClients()) {
         if (client == socket && socket->status() == WS_CONNECTED && socket->_tempObject && reinterpret_cast<WsClient *>(socket->_tempObject)->isAuthenticated()) {
@@ -422,5 +439,5 @@ void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, co
             return;
         }
     }
-    __LDBG_printf("server=%p client NOT found=%p message=%s", server, client, message.c_str());
+    __LDBG_printf("client not found: server=%p client=%p message=%s", server, client, message.c_str());
 }

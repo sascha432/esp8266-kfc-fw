@@ -378,26 +378,6 @@ void Sensor_HLW80xx::setExtraDigits(uint8_t digits)
 }
 
 
-#if IOT_SENSOR_HLW80xx_DATA_PLOT
-
-AsyncWebSocketClient *Sensor_HLW80xx::_getWebSocketClient() const
-{
-    // if we have a pointer, we need to verify it still exists
-    if (_webSocketClient) {
-        auto wsSerialConsole = Http2Serial::getConsoleServer();
-        if (wsSerialConsole) {
-            for(auto client: wsSerialConsole->getClients()) {
-                if (_webSocketClient == client && client->status() && client->_tempObject && reinterpret_cast<WsClient *>(client->_tempObject)->isAuthenticated()) {
-                     return _webSocketClient;
-                }
-            }
-        }
-    }
-    return nullptr;
-}
-
-#endif
-
 #if AT_MODE_SUPPORTED
 
 #include "at_mode.h"

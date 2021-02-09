@@ -33,7 +33,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     "Blinds Controller",// friendly name
     "",                 // web_templates
     // config_forms
-    "channels,controller",
+    "channels,controller,automation",
     "mqtt",             // reconfigure_dependencies
     PluginComponent::PriorityType::BLINDS,
     PluginComponent::RTCMemoryId::NONE,
@@ -105,6 +105,7 @@ void BlindsControlPlugin::getStatus(Print &output)
 void BlindsControlPlugin::createMenu()
 {
     bootstrapMenu.addSubMenu(F("Blinds Channels"), F("blinds/channels.html"), navMenu.config);
+    bootstrapMenu.addSubMenu(F("Blinds Automation"), F("blinds/automation.html"), navMenu.config);
     bootstrapMenu.addSubMenu(getFriendlyName(), F("blinds/controller.html"), navMenu.config);
 }
 
@@ -114,16 +115,24 @@ void BlindsControlPlugin::createWebUI(WebUIRoot &webUI) {
     row->addGroup(F("Blinds"), false);
 
     row = &webUI.addRow();
-    row->addSwitch(FSPGM(set_all), String(F("Both Channels")));
+    row->addSwitch(FSPGM(set_all), String(F("Both Channels")), true, WebUIRow::NamePositionType::TOP).setColumns(4);
 
+    row = &webUI.addRow();
     for(const auto channel: _states.channels()) {
 
         String prefix = PrintString(FSPGM(channel__u), channel);
 
-        row = &webUI.addRow();
+        // row = &webUI.addRow();
         row->addBadgeSensor(prefix + F("_state"), Plugins::Blinds::getChannelName(*channel), JsonString()).add(JJ(head), F("h5"));
 
-        row = &webUI.addRow();
+        // row = &webUI.addRow();
+        // row->addSwitch(prefix + F("_set"), String(F("Channel ")) + String(*channel));
+    }
+    row = &webUI.addRow();
+    for(const auto channel: _states.channels()) {
+
+        String prefix = PrintString(FSPGM(channel__u), channel);
+
         row->addSwitch(prefix + F("_set"), String(F("Channel ")) + String(*channel));
     }
 }

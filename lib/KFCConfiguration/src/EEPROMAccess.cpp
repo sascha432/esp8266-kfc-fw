@@ -139,7 +139,7 @@ uint16_t EEPROMAccess::read(uint8_t *dst, uint16_t offset, uint16_t size, uint16
     // if the EEPROM is not intialized, copy data from flash directly
     if (_isInitialized) {
         // memcpy(dst, EEPROM.getConstDataPtr() + offset, length); // data is already in RAM
-        __DBG_assert(dst + size <= dst + maxSize);
+        __LDBG_assert_printf(dst + size <= dst + maxSize, "dst + size <= dst + maxSize");
         std::copy_n(EEPROM.getConstDataPtr() + offset, size, dst);
         return size;
     }

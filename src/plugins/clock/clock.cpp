@@ -384,12 +384,12 @@ void ClockPlugin::setup(SetupModeType mode)
         pinMonitor.attach<Clock::Button>(IOT_CLOCK_BUTTON_PIN, 0, *this);
         pinMode(IOT_CLOCK_BUTTON_PIN, INPUT);
 
-        // IF_IOT_CLOCK_HAVE_ROTARY_ENCODER(
-        //     auto encoder = new RotaryEncoder();
-        //     encoder->attachPins(IOT_CLOCK_ROTARY_ENC_PINA, PIN_MONITOR_ACTIVE_STATE, IOT_CLOCK_ROTARY_ENC_PINB, PIN_MONITOR_ACTIVE_STATE);
-        //     pinMode(IOT_CLOCK_ROTARY_ENC_PINA, INPUT);
-        //     pinMode(IOT_CLOCK_ROTARY_ENC_PINB, INPUT);
-        // )
+        IF_IOT_CLOCK_HAVE_ROTARY_ENCODER(
+            auto encoder = new RotaryEncoder();
+            encoder->attachPins(IOT_CLOCK_ROTARY_ENC_PINA, PIN_MONITOR_ACTIVE_STATE, IOT_CLOCK_ROTARY_ENC_PINB, PIN_MONITOR_ACTIVE_STATE);
+            pinMode(IOT_CLOCK_ROTARY_ENC_PINA, INPUT);
+            pinMode(IOT_CLOCK_ROTARY_ENC_PINB, INPUT);
+        )
     )
 
     IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(

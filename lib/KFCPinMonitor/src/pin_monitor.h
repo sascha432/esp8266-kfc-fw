@@ -59,4 +59,12 @@ namespace PinMonitor {
     using PinVector = std::vector<HardwarePinPtr>;
     using Predicate = std::function<bool(const PinPtr &pin)>;
 
+    enum class HardwarePinType : uint8_t {
+        BASE,
+        SIMPLE,
+        DEBOUNCE,
+        ROTARY,
+        _DEFAULT = DEBOUNCE,
+    };
+
 }

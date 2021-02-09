@@ -187,7 +187,7 @@ void AtModeArgs::ok()
         _output.println(F("OK - SAFE MODE"));
     }
     else {
-        _output.println(FSPGM(OK, "OK"));
+        _output.println(FSPGM(OK));
     }
 }
 

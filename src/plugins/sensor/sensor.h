@@ -145,6 +145,15 @@ protected:
 private:
     bool _hasConfigureForm() const;
     void _timerEvent();
+    size_t _count() {
+        size_t n = 0;
+        for(auto sensor: SensorPlugin::getSensors()) {
+            if (sensor->getType() != SensorType::SYSTEM_METRICS) {
+                n++;
+            }
+        }
+        return n;
+    }
 
     SensorVector _sensors;
     Event::Timer _timer;

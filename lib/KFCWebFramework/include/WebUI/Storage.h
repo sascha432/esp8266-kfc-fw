@@ -15,7 +15,7 @@
 #include "Utility/Debug.h"
 
 #ifndef DEBUG_STORAGE_VECTOR
-#define DEBUG_STORAGE_VECTOR                                1
+#define DEBUG_STORAGE_VECTOR                                0
 #endif
 
 #if DEBUG_STORAGE_VECTOR

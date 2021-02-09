@@ -37,42 +37,7 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
 
     if (String_equals(formName, PSTR("channels"))) {
 
-        // FormUI::Container::List currentLimitItems(
-        //      500, F("Extra Fast (500µs)"),
-        //     1250, F("Fast (1250µs)"),
-        //     2500, F("Medium (1250µs)"),
-        //     5000, F("Slow (5000µs)"),
-        //    10000, F("Extra Slow (10000µs)")
-        // );
-
-        FormUI::Container::List operationTypeItems(
-            OperationType::NONE, FSPGM(None),
-            OperationType::OPEN_CHANNEL0, F("Open Channel 0"),
-            OperationType::OPEN_CHANNEL1, F("Open Channel 1"),
-            OperationType::CLOSE_CHANNEL0, F("Close Channel 0"),
-            OperationType::CLOSE_CHANNEL1, F("Close Channel 1"),
-            OperationType::OPEN_CHANNEL0_FOR_CHANNEL1, F("Open Channel 0 For Channel 1"),
-            OperationType::OPEN_CHANNEL1_FOR_CHANNEL0, F("Open Channel 1 For Channel 0"),
-            OperationType::CLOSE_CHANNEL0_FOR_CHANNEL1, F("Close Channel 0 For Channel 1"),
-            OperationType::CLOSE_CHANNEL1_FOR_CHANNEL0, F("Close Channel 1 For Channel 0"),
-            OperationType::DO_NOTHING, F("Do nothing")
-        );
-
-        FormUI::Container::List delayTypeItems(
-            0, F("Relative to the start of the automation"),
-            1, F("Relative to the start of the action")
-        );
-
-        FormUI::Container::List playToneItems(
-            PlayToneType::NONE, F("None"),
-            PlayToneType::INTERVAL, F("short tone, 2 second interval"),
-#if HAVE_IMPERIAL_MARCH
-            PlayToneType::IMPERIAL_MARCH, F("Imperial March")
-#endif
-        );
-
         PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, 2, grp, n0, n1, otl, ctl, il, ip, dac, pwm);
-        PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, BLINDS_CONFIG_MAX_OPERATIONS, ot, od, or, op, ct, cd, cr, cp);
 
         const __FlashStringHelper *names[2] = { F("Channel 0"), F("Channel 1") };
         for (uint8_t i = 0; i < kChannelCount; i++) {
@@ -116,6 +81,46 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
 
             channelGroup.end();
         }
+
+
+    }
+    else if (String_equals(formName, PSTR("automation"))) {
+
+        // FormUI::Container::List currentLimitItems(
+        //      500, F("Extra Fast (500µs)"),
+        //     1250, F("Fast (1250µs)"),
+        //     2500, F("Medium (1250µs)"),
+        //     5000, F("Slow (5000µs)"),
+        //    10000, F("Extra Slow (10000µs)")
+        // );
+
+        FormUI::Container::List operationTypeItems(
+            OperationType::NONE, FSPGM(None),
+            OperationType::OPEN_CHANNEL0, F("Open Channel 0"),
+            OperationType::OPEN_CHANNEL1, F("Open Channel 1"),
+            OperationType::CLOSE_CHANNEL0, F("Close Channel 0"),
+            OperationType::CLOSE_CHANNEL1, F("Close Channel 1"),
+            OperationType::OPEN_CHANNEL0_FOR_CHANNEL1, F("Open Channel 0 For Channel 1"),
+            OperationType::OPEN_CHANNEL1_FOR_CHANNEL0, F("Open Channel 1 For Channel 0"),
+            OperationType::CLOSE_CHANNEL0_FOR_CHANNEL1, F("Close Channel 0 For Channel 1"),
+            OperationType::CLOSE_CHANNEL1_FOR_CHANNEL0, F("Close Channel 1 For Channel 0"),
+            OperationType::DO_NOTHING, F("Do nothing")
+        );
+
+        FormUI::Container::List delayTypeItems(
+            0, F("Relative to the start of the automation"),
+            1, F("Relative to the start of the action")
+        );
+
+        FormUI::Container::List playToneItems(
+            PlayToneType::NONE, F("None"),
+            PlayToneType::INTERVAL, F("short tone, 2 second interval"),
+#if HAVE_IMPERIAL_MARCH
+            PlayToneType::IMPERIAL_MARCH, F("Imperial March")
+#endif
+        );
+
+        PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, BLINDS_CONFIG_MAX_OPERATIONS, ot, od, or, op, ct, cd, cr, cp);
 
         auto &autoGroup = form.addCardGroup(FSPGM(open, "open"), F("Open Automation"), false);
 

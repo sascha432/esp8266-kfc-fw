@@ -43,7 +43,9 @@ public:
     static void printVersion(Print &output);
     static void printWebInterfaceUrl(Print &output);
     static void printModel(Print &output);
+#if IOT_SSDP_SUPPORT
     static void printSSDPUUID(Print &output);
+#endif
 
 public:
     static String _aliveRedirection;

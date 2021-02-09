@@ -162,15 +162,22 @@ protected:
 
     class ChannelAction {
     public:
-        ChannelAction() : _delay(0), _state(ActionStateType::NONE), _action(ActionType::NONE), _channel(ChannelType::NONE), _open(false), _relativeDelay(false) {
+        ChannelAction() :
+            _delay(0),
+            _state(ActionStateType::NONE),
+            _action(ActionType::NONE),
+            _channel(ChannelType::NONE),
+            _relativeDelay(false),
+            _open(false)
+        {
         }
         ChannelAction(ActionType state, ChannelType channel, uint16_t delay, bool relativeDelay, PlayToneType playTone) :
+            _delay(delay ? ((relativeDelay ? 0 : millis()) + (delay * 1000U)) : 0),
             _state(ActionStateType::NONE),
             _action(state),
             _channel(channel),
-            _delay(delay ? ((relativeDelay ? 0 : millis()) + (delay * 1000U)) : 0),
-            _open(false),
             _relativeDelay(relativeDelay),
+            _open(false),
             _playTone(playTone)
         {
         }

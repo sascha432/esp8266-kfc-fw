@@ -221,10 +221,10 @@ void SensorPlugin::createMenu()
 
 void SensorPlugin::createWebUI(WebUIRoot &webUI)
 {
-    auto row = &webUI.addRow();
-    row->addGroup(F("Sensors"), false);
+    WebUIRow *row = &webUI.addRow();
 
-    if (_sensors.size()) {
+    if (_count()) {
+        row->addGroup(F("Sensors"), false);
         row = &webUI.addRow();
     }
 
@@ -235,6 +235,10 @@ void SensorPlugin::createWebUI(WebUIRoot &webUI)
         sensor->createWebUI(webUI, &row);
     }
     if (_addCustomSensors) {
+        if (!_count()) {
+            row->addGroup(F("Sensors"), false);
+            row = &webUI.addRow();
+        }
         _addCustomSensors(webUI, &row, SensorType::MAX);
     }
 }

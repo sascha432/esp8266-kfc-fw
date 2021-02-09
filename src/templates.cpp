@@ -145,11 +145,15 @@ void WebTemplate::printModel(Print &output)
 #endif
 }
 
+#if IOT_SSDP_SUPPORT
+
 void WebTemplate::printSSDPUUID(Print &output)
 {
     auto &ssdp = static_cast<SSDPClassEx &>(SSDP);
     output.print(ssdp.getUUID());
 }
+
+#endif
 
 void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 {
@@ -293,7 +297,11 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         WebTemplate::printUniqueId(output, FSPGM(kfcfw), -1);
     }
     else if (String_equals(key, PSTR("SSDP_UUID"))) {
+#if IOT_SSDP_SUPPORT
         WebTemplate::printSSDPUUID(output);
+#else
+        output.print(F("<SSDP support disabled>"));
+#endif
     }
     else if (String_equals(key, PSTR("FIRMWARE_UPGRADE_FAILURE"))) {
     }

@@ -11,6 +11,8 @@
 #include <stl_ext/memory.h>
 #include <MicrosTimer.h>
 
+#include "FunctionalInterrupt.h"
+
 #if DEBUG_PIN_MONITOR
 #include <debug_helper_enable.h>
 #else
@@ -117,10 +119,15 @@ Pin &Monitor::_attach(Pin &pin, HardwarePinType type)
         pinMode(pinNum, _pinMode);
         switch(type) {
             case HardwarePinType::SIMPLE:
-                _pins.emplace_back(new HardwarePin(pinNum));
+                _pins.emplace_back(new SimpleHardwarePin(pinNum));
                 break;
             case HardwarePinType::DEBOUNCE:
                 _pins.emplace_back(new DebouncedHardwarePin(pinNum));
+                break;
+            case HardwarePinType::ROTARY:
+                _pins.emplace_back(new RotaryHardwarePin(pinNum, pin));
+                break;
+            case HardwarePinType::BASE:
                 break;
         }
         iterator = _pins.end() - 1;
@@ -227,8 +234,6 @@ void Monitor::_detachLoop()
     }
 }
 
-
-
 void Monitor::_loop()
 {
     uint32_t now = millis();
@@ -238,9 +243,9 @@ void Monitor::_loop()
     _lastRun = now;
 
     for(auto &pinPtr: _pins) {
-        auto &pin = *pinPtr;
-        auto debounce = pin.getDebounce();
+        auto debounce = pinPtr->getDebounce();
         if (debounce) {
+            auto &pin = *reinterpret_cast<DebouncedHardwarePin *>(pinPtr.get());
 
             noInterrupts();
             auto micros = pin._micros;
@@ -268,13 +273,13 @@ void Monitor::_loop()
             _event(pin.getPin(), debounce->debounce(value, intCount, micros, now), now);
 #endif
         }
-        else {
-            noInterrupts();
-            StateType state = pin._value ? StateType::UP : StateType::DOWN;
-            interrupts();
+        // else {
+            // noInterrupts();
+            // bool value = pin._value;
+            // interrupts();
 
-            _event(pin.getPin(), state, now);
-        }
+            // _event(pin.getPin(), value ? StateType::IS_HIGH : StateType::IS_LOW, now);
+        // }
     }
     for(const auto &handler: _handlers) {
         handler->loop();

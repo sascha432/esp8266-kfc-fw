@@ -432,7 +432,9 @@ void BlindsControl::_executeAction(ChannelType channel, bool open)
             if (action != ActionType::NONE) {
                 uint16_t delay = automation[i].delay;
                 __LDBG_printf("queue action=%u channel=%u delay=%u", action, channel, delay);
-                _queue.emplace_back(action, channel, delay);
+                auto playTone = (PlayToneType)automation[i].play_tone;
+                bool relativeDelay = automation[i].relative_delay;
+                _queue.emplace_back(action, channel, delay, relativeDelay, playTone);
             }
         }
     }

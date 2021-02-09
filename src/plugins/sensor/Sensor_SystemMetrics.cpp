@@ -194,6 +194,10 @@ void Sensor_SystemMetrics::createWebUI(WebUIRoot &webUI, WebUIRow **row)
     using ::JsonString;
     __LDBG_println();
 
+
+
+    __DBG_printf("size=%u", (*row)->length());
+
     *row = &webUI.addRow();
     (*row)->addGroup(PrintString(F("System Metrics<div class=\"version d-md-inline\">%s</div>"), config.getFirmwareVersion().c_str()), false);
 

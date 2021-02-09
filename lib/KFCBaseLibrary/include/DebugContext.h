@@ -39,7 +39,7 @@ public:
         getOutput().print(FPSTR(___debugPrefix));
     }
     String getPrefix() const {
-        return String;
+        return String();
     }
 #endif
 

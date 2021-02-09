@@ -39,12 +39,12 @@ namespace PinMonitor {
         ~RotaryEncoderPin();
 
     public:
-        virtual void event(EventType eventType, uint32_t now);
+        // virtual void event(EventType eventType, uint32_t now) {}
         virtual void loop() override;
 
     protected:
         // event for StateType is final
-        virtual void event(StateType state, uint32_t now) final;
+        virtual void event(StateType state, uint32_t now) final {}
 
         void _buttonReleased();
         bool _fireEvent(EventType eventType);
@@ -59,16 +59,28 @@ namespace PinMonitor {
         using EventType = RotaryEncoderEventType;
 
     public:
-        RotaryEncoder() {}
+        RotaryEncoder() :
+            _counter(0),
+            _pin1(255),
+            _pin2(255)
+        {}
 
         void attachPins(uint8_t pin1, ActiveStateType state1, uint8_t pin2, ActiveStateType state2);
         void loop();
 
     private:
+        friend RotaryHardwarePin;
+        friend HardwarePin;
+
         uint8_t _lastState: 2;
-        stdex::fixed_circular_buffer<PinToggleState, 32> _states;
-        HardwarePin *_pin1;
-        HardwarePin *_pin2;
+        stdex::fixed_circular_buffer<uint8_t, 64> _states;
+        uint32_t _counter;
+        RotaryEncoderPin *_rPin1;
+        RotaryEncoderPin *_rPin2;
+        HardwarePin *_hPin1;
+        HardwarePin *_hPin2;
+        uint8_t _pin1;
+        uint8_t _pin2;
     };
 }
 

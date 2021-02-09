@@ -10,12 +10,6 @@
 
 namespace PinMonitor {
 
-    enum class HardwarePinType : uint8_t {
-        SIMPLE,
-        DEBOUNCE,
-        _DEFAULT = DEBOUNCE,
-    };
-
     class Monitor
     {
     public:

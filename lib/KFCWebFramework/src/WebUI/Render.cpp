@@ -217,7 +217,7 @@ void WebUI::BaseUI::_printOptionsTo(PrintInterface &output) const
 
 void WebUI::BaseUI::renderInputField(Type type, PrintInterface &output, const char *name, const String &value)
 {
-    //__LDBG_printf("type=%u", _type);
+    // __DBG_printf("type=%u name=%s", _type, __S(name));
     switch (type) {
         // ---------------------------------------------------------------
         // Select field

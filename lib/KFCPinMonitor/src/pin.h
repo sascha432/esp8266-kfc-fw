@@ -5,8 +5,11 @@
 #pragma once
 
 #include "pin_monitor.h"
+#include <stl_ext/fixed_circular_buffer.h>
 
 namespace PinMonitor {
+
+    class RotaryEncoder;
 
     class Pin
     {
@@ -87,6 +90,7 @@ namespace PinMonitor {
 
     private:
         friend Monitor;
+        friend RotaryEncoder;
 
         // return state if state is enabled and invert if _activeLow is true
         inline StateType _getStateIfEnabled(StateType state) const {
@@ -106,21 +110,26 @@ namespace PinMonitor {
 
     class HardwarePin {
     public:
-        static constexpr uint16_t kIncrementCount = ~0;
+        HardwarePin(uint8_t pin);
+        virtual ~HardwarePin() {}
 
-        HardwarePin(uint8_t pin, bool debounce = true);
+        virtual Debounce *getDebounce() const;
 
-        Debounce &getDebounce();
-        uint8_t getPin() const;
+        bool hasDebounce() const {
+            return const_cast<HardwarePin *>(this)->getDebounce() != nullptr;
+        }
+
         void updateState(uint32_t timeMicros, uint16_t intCount, bool value);
+        void updateState(uint32_t timeMicros, bool value);
+        uint8_t getPin() const;
 
-    private:
+    protected:
         friend Monitor;
 
         operator bool() const;
         uint8_t getCount() const;
 
-    private:
+    protected:
 
         HardwarePin &operator++();
         HardwarePin &operator--();
@@ -132,24 +141,67 @@ namespace PinMonitor {
         volatile uint16_t _value: 1;
         uint8_t _pin;
         uint8_t _count;
+    };
+
+    class DebouncedHardwarePin : public HardwarePin {
+    public:
+        static constexpr uint16_t kIncrementCount = ~0;
+
+        DebouncedHardwarePin(uint8_t pin);
+
+        virtual Debounce *getDebounce() const override {
+            return const_cast<Debounce *>(&_debounce);
+            // return const_cast<Debounce *>(&const_cast<const Debounce &>(_debounce));
+        }
+
+    protected:
         Debounce _debounce;
     };
 
-    inline HardwarePin::HardwarePin(uint8_t pin, bool debounce) :
+    class PinToggleState {
+    public:
+        PinToggleState(uint32_t micros = 0, bool state = 0) : _micros(micros), _state(state) {}
+
+        uint32_t getTime() const {
+            return _micros;
+        }
+
+        bool getState() const {
+            return _state;
+        }
+
+        void set(uint32_t micros, bool state) {
+            _micros = micros;
+            _state = state;
+        }
+
+    private:
+        uint32_t _micros;
+        bool _state;
+    };
+
+    // class MultiHardwarePin : public HardwarePin {
+    // public:
+    //     MultiHardwarePin(uint8_t pin) : HardwarePin(pin) {}
+
+    //     virtual void reset();
+    //     virtual void ICACHE_RAM_ATTR interruptCallback(uint32_t time);
+
+
+    // private:
+    //
+    // };
+
+    inline HardwarePin::HardwarePin(uint8_t pin) :
         _micros(0),
         _intCount(0),
         _value(false),
         _pin(pin),
-        _count(0),
-        _debounce(digitalRead(pin), debounce)
-    {
-    }
+        _count(0)
 
-    inline Debounce &HardwarePin::getDebounce()
     {
-        return _debounce;
+        __DBG_printf("pin=%u debounce=%u", pin, false);
     }
-
 
     inline HardwarePin::operator bool() const {
         return _count != 0;
@@ -176,9 +228,29 @@ namespace PinMonitor {
     inline void HardwarePin::updateState(uint32_t timeMicros, uint16_t intCount, bool value)
     {
         _micros = timeMicros;
-        _intCount = (intCount == kIncrementCount) ? (_intCount + 1) : intCount;
+        _intCount = intCount;
         _value = value;
-        _debounce = Debounce(_value);
+        auto debounce = getDebounce();
+        if (debounce) {
+            debounce->setState(_value);
+        }
+    }
+
+    inline void HardwarePin::updateState(uint32_t timeMicros, bool value)
+    {
+        _micros = timeMicros;
+        _intCount++;
+        _value = value;
+        auto debounce = getDebounce();
+        if (debounce) {
+            debounce->setState(_value);
+        }
+    }
+
+    inline DebouncedHardwarePin::DebouncedHardwarePin(uint8_t pin) :
+        HardwarePin(pin),
+        _debounce(digitalRead(pin))
+    {
     }
 
 }

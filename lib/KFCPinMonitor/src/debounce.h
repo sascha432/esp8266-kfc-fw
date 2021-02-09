@@ -65,7 +65,7 @@ namespace PinMonitor {
     class Debounce {
     public:
 
-        Debounce(bool value, bool enabled = true) :
+        Debounce(bool value) :
 #if DEBUG_PIN_MONITOR_EVENTS
             _bounceCounter(0),
             _startDebounce(0),
@@ -74,12 +74,12 @@ namespace PinMonitor {
             _debounceTimer(0),
             _state(value),
             _value(value),
-            _debounceTimerRunning(false),
-            _enabled(enabled)
+            _debounceTimerRunning(false)
         {
         }
 
         StateType debounce(bool lastValue, uint16_t interruptCount, uint32_t last, uint32_t now);
+        void setState(bool state);
 
     private:
         friend Monitor;
@@ -93,7 +93,14 @@ namespace PinMonitor {
         bool _state: 1;
         bool _value: 1;
         bool _debounceTimerRunning: 1;
-        bool _enabled: 1;
     };
+
+    inline void Debounce::setState(bool state)
+    {
+        _state = state;
+        _value = state;
+        _debounceTimerRunning = false;
+    }
+
 
 }

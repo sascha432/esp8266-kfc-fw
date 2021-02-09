@@ -125,7 +125,7 @@ void RemoteControlPlugin::setup(SetupModeType mode)
             });
             __LDBG_printf("updating pin=%u state=%u time=%u now=%u exists=%u", pinNum, true, _pressedKeysTime, (uint32_t)micros(), iterator != pinMonitor.getPins().end());
             if (iterator != pinMonitor.getPins().end()) {
-                iterator->get()->updateState(_pressedKeysTime, HardwarePin::kIncrementCount, true);
+                iterator->get()->updateState(_pressedKeysTime, true);
             }
         }
     }

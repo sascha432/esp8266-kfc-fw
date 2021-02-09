@@ -114,6 +114,7 @@ ClockPlugin::ClockPlugin() :
     MQTTComponent(ComponentTypeEnum_t::LIGHT),
     _schedulePublishState(false),
     _isFading(false),
+    _isEnabled(false),
     _forceUpdate(false),
     __color(0, 0, 0xff),
     _lastUpdateTime(0),
@@ -255,6 +256,7 @@ void ClockPlugin::_setupTimer()
 
         IF_IOT_CLOCK_DISPLAY_POWER_CONSUMPTION(
             _calcPowerLevel();
+            // __LDBG_printf("current power %.3fW", _powerLevelAvg / 1000.0);
             // update power level sensor of the webui
             if (_timerCounter % IOT_CLOCK_CALC_POWER_CONSUMPTION_UPDATE_RATE == 0) {
                 _updatePowerLevelWebUI();
@@ -347,7 +349,7 @@ void ClockPlugin::preSetup(SetupModeType mode)
 
 void ClockPlugin::setup(SetupModeType mode)
 {
-    _disable();
+    _disable(10);
     IF_IOT_CLOCK_HAVE_ENABLE_PIN(
         pinMode(IOT_CLOCK_EN_PIN, OUTPUT);
     )
@@ -382,14 +384,12 @@ void ClockPlugin::setup(SetupModeType mode)
         pinMonitor.attach<Clock::Button>(IOT_CLOCK_BUTTON_PIN, 0, *this);
         pinMode(IOT_CLOCK_BUTTON_PIN, INPUT);
 
-        IF_IOT_CLOCK_HAVE_ROTARY_ENCODER(
-            auto encoder = new RotaryEncoder();
-            pinMonitor.attach<RotaryEncoderPin>(IOT_CLOCK_ROTARY_ENC_PINA, 0, encoder, PIN_MONITOR_ACTIVE_STATE);
-            pinMonitor.attach<RotaryEncoderPin>(IOT_CLOCK_ROTARY_ENC_PINB, 1, encoder, PIN_MONITOR_ACTIVE_STATE);
-
-            pinMode(IOT_CLOCK_ROTARY_ENC_PINA, INPUT);
-            pinMode(IOT_CLOCK_ROTARY_ENC_PINB, INPUT);
-        )
+        // IF_IOT_CLOCK_HAVE_ROTARY_ENCODER(
+        //     auto encoder = new RotaryEncoder();
+        //     encoder->attachPins(IOT_CLOCK_ROTARY_ENC_PINA, PIN_MONITOR_ACTIVE_STATE, IOT_CLOCK_ROTARY_ENC_PINB, PIN_MONITOR_ACTIVE_STATE);
+        //     pinMode(IOT_CLOCK_ROTARY_ENC_PINA, INPUT);
+        //     pinMode(IOT_CLOCK_ROTARY_ENC_PINB, INPUT);
+        // )
     )
 
     IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(
@@ -413,11 +413,13 @@ void ClockPlugin::setup(SetupModeType mode)
                 case InitialStateType::OFF:
                     // start with clock turned off and the power button sets the configured brightness and animation
                     _savedBrightness = _config.getBrightness();
+                    _config.enabled = false;
                     _setBrightness(0);
                     break;
                 case InitialStateType::ON:
                     // start with clock turned on using default settings
                     _savedBrightness = _config.getBrightness();
+                    _config.enabled = true;
                     setBrightness(_savedBrightness);
                     break;
                 case InitialStateType::RESTORE:
@@ -443,10 +445,10 @@ void ClockPlugin::setup(SetupModeType mode)
 void ClockPlugin::reconfigure(const String &source)
 {
     __LDBG_printf("source=%s", source.c_str());
-// #if HTTP2SERIAL_SUPPORT && IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
-//     _removeDisplayLedTimer();
-// #endif
-//     _disable();
+#if HTTP2SERIAL_SUPPORT && IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
+    _removeDisplayLedTimer();
+#endif
+    _disable(10);
     if (String_equals(source, SPGM(mqtt))) {
         MQTTClient::safeReRegisterComponent(this);
     }
@@ -457,12 +459,15 @@ void ClockPlugin::reconfigure(const String &source)
     )
     else {
         readConfig();
+        _saveState();
         IF_IOT_CLOCK(
             _setSevenSegmentDisplay();
         )
         _schedulePublishState = true;
     }
-    // _enable();
+    if (_targetBrightness) {
+        _enable();
+    }
 }
 
 void ClockPlugin::shutdown()
@@ -749,14 +754,11 @@ void ClockPlugin::readConfig()
 
     __LDBG_printf("config read");
 
-    IF_IOT_CLOCK_HAVE_POWER_LIMIT(
-        FastLED.setMaxPowerInMilliWatts(_config.power_limit * 1000);
-        set_power_consumption(_config.power.red, _config.power.green, _config.power.blue, _config.power.idle);
-    )
-
-    IF_IOT_CLOCK_DISPLAY_POWER_CONSUMPTION(
-        set_power_calc_callback(powerLevelCallback);
-    )
+    #if IOT_CLOCK_HAVE_POWER_LIMIT || IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
+        __LDBG_printf("limit=%u/%u r/g/b/idle=%u/%u/%u/%u", _config.power_limit, _getPowerLevelLimit(_config.power_limit), _config.power.red, _config.power.green, _config.power.blue, _config.power.idle);
+        FastLED.setMaxPowerInMilliWatts(_getPowerLevelLimit(_config.power_limit) IF_IOT_CLOCK_DISPLAY_POWER_CONSUMPTION(, &calcPowerFunction));
+        FastLED.setPowerConsumptionInMilliwattsPer256(_config.power.red, _config.power.green, _config.power.blue, _config.power.idle);
+    #endif
 
     // reset temperature protection
     _tempBrightness = 1.0;
@@ -885,8 +887,8 @@ void ClockPlugin::_updateBrightnessSettings()
 
 void ClockPlugin::_enable()
 {
-    if (_config.enabled) {
-        __LDBG_printf("enable LED pin %u state %u (is_enabled=%u) SKIPPED", IOT_CLOCK_EN_PIN, enablePinState(true), _config.enabled);
+    if (_isEnabled) {
+        __LDBG_printf("enable LED pin %u state %u (is_enabled=%u, config=%u) SKIPPED", IOT_CLOCK_EN_PIN, enablePinState(true), _isEnabled, _config.enabled);
         return;
     }
     if (isTempProtectionActive()) {
@@ -895,42 +897,46 @@ void ClockPlugin::_enable()
     }
 
     IF_IOT_CLOCK_HAVE_ENABLE_PIN(
-        __LDBG_printf("enable LED pin %u state %u (is_enabled=%u)", IOT_CLOCK_EN_PIN, enablePinState(true), _config.enabled);
         digitalWrite(IOT_CLOCK_EN_PIN, enablePinState(true));
-        IF_IOT_LED_MATRIX_STANDBY_PIN(
-            if (_config.standby_led) {
-                _digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(false));
-            }
-        )
+        __LDBG_printf("enable LED pin %u state %u (is_enabled=%u, config=%u)", IOT_CLOCK_EN_PIN, enablePinState(true), _isEnabled, _config.enabled);
+    )
+    IF_IOT_LED_MATRIX_STANDBY_PIN(
+        if (_config.standby_led) {
+            _digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(false));
+        }
     )
 
     LoopFunctions::remove(standbyLoop);
     LoopFunctions::add(loop);
 
     _config.enabled = true;
+    _isEnabled = true;
 }
 
 void ClockPlugin::_disable(uint8_t delayMillis)
 {
-    __LDBG_printf("disable LED pin %u state %u (is_enabled=%u)", IOT_CLOCK_EN_PIN, enablePinState(false), _config.enabled);
+    __LDBG_printf("disable LED pin %u state %u (is_enabled=%u, config=%u)", IOT_CLOCK_EN_PIN, enablePinState(false), _isEnabled, _config.enabled);
 
     // turn all leds off and set brightness to 0
     _display.clear();
     _display.show(0);
 
     _config.enabled = false;
+    _isEnabled = false;
+
     IF_IOT_CLOCK_DISPLAY_POWER_CONSUMPTION(
         _powerLevelCurrentmW = 0;
         _powerLevelUpdateTimer = 0;
+        _powerLevelAvg = 0;
     )
 
     IF_IOT_CLOCK_HAVE_ENABLE_PIN(
         digitalWrite(IOT_CLOCK_EN_PIN, enablePinState(false));
-        IF_IOT_LED_MATRIX_STANDBY_PIN(
-            if (_config.standby_led) {
-                _digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(true));
-            }
-        )
+    )
+    IF_IOT_LED_MATRIX_STANDBY_PIN(
+        if (_config.standby_led) {
+            _digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(true));
+        }
     )
 
     LoopFunctions::remove(loop);
@@ -970,25 +976,21 @@ void ClockPlugin::_alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration
         struct {
             AnimationType animation;
             uint8_t targetBrightness;
-            int16_t autoBrightness;
+            IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(int16_t autoBrightness);
         } saved = {
             _config.getAnimation(),
             _targetBrightness,
-#if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
-            _autoBrightness,
-#else
-            0
-#endif
+            IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(_autoBrightness)
         };
 
-        __LDBG_printf("storing parameters brightness=%u auto=%d color=%s animation=%u", saved.targetBrightness, saved.autoBrightness, getColor().toString().c_str(), saved.animation);
+        __LDBG_printf("storing parameters brightness=%u auto=%d color=%s animation=%u", saved.targetBrightness, IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(saved.autoBrightness) -1, getColor().toString().c_str(), saved.animation);
         _resetAlarmFunc = [this, saved](Event::CallbackTimerPtr timer) {
             IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(
                 _autoBrightness = saved.autoBrightness;
             )
             _targetBrightness = saved.targetBrightness;
             setAnimation(saved.animation);
-            __LDBG_printf("restored parameters brightness=%u auto=%d color=%s animation=%u timer=%u", saved.targetBrightness, saved.autoBrightness, getColor().toString().c_str(), saved.animation, (bool)timer);
+            __LDBG_printf("restored parameters brightness=%u auto=%d color=%s animation=%u timer=%u", saved.targetBrightness, IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(saved.autoBrightness) -1, getColor().toString().c_str(), saved.animation, (bool)timer);
             timer->disarm();
             _resetAlarmFunc = nullptr;
         };
@@ -1030,14 +1032,19 @@ bool ClockPlugin::_resetAlarm()
 
 #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
 
-void ClockPlugin::powerLevelCallback(uint32_t total_mW, uint32_t requested_mW, uint32_t max_mW, uint8_t target_brightness, uint8_t recommended_brightness)
+uint8_t ClockPlugin::calcPowerFunction(uint8_t scale, uint32_t data)
 {
-    plugin._powerLevelCallback(total_mW, requested_mW, max_mW, target_brightness, recommended_brightness);
+    return plugin._calcPowerFunction(scale, data);
 }
 
 void ClockPlugin::webSocketCallback(WsClient::ClientCallbackType type, WsClient *client, AsyncWebSocket *server, WsClient::ClientCallbackId id)
 {
     plugin._webSocketCallback(type, client, server, id);
+}
+
+float ClockPlugin::__getPowerLevel(float P, float min) const
+{
+    return std::max<float>(min, -0.133437 + (0.990644 * P) + (0.015165 * P * P));
 }
 
 #endif

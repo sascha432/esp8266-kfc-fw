@@ -22,25 +22,21 @@ void ClockPlugin::getValues(JsonArray &array)
     obj->add(JJ(value), _config.animation); //static_cast<int>(_config.animation));
 
     IF_IOT_CLOCK(
-        obj = &array.addObject(2);
+        obj = &array.addObject(3);
         obj->add(JJ(id), F("btn_colon"));
-        // obj->add(JJ(state), true);
+        obj->add(JJ(state), _tempBrightness != -1);
         obj->add(JJ(value), (_config.blink_colon_speed < kMinBlinkColonSpeed) ? 0 : (_config.blink_colon_speed < 750 ? 2 : 1));
     )
 
     obj = &array.addObject(3);
     obj->add(JJ(id), F("color"));
-    #if IOT_LED_MATRIX
-        obj->add(JJ(state), _config.getAnimation() != AnimationType::RAINBOW && _config.getAnimation() != AnimationType::FIRE);
-    #else
-        obj->add(JJ(state), _config.getAnimation() != AnimationType::RAINBOW);
-    #endif
+    obj->add(JJ(state), _config.getAnimation() == AnimationType::FADING || _config.getAnimation() == AnimationType::SOLID);
     obj->add(JJ(value), _getColor());
 
     obj = &array.addObject(3);
     obj->add(JJ(id), FSPGM(brightness));
-    obj->add(JJ(state), _targetBrightness != 0);
-    obj->add(JJ(value), static_cast<uint32_t>(_targetBrightness ? _targetBrightness : _savedBrightness));
+    obj->add(JJ(state), _tempBrightness != -1);
+    obj->add(JJ(value), static_cast<uint8_t>(_targetBrightness ? _targetBrightness : _savedBrightness));
 
     obj = &array.addObject(2);
     obj->add(JJ(id), F("tempp"));
@@ -54,8 +50,8 @@ void ClockPlugin::getValues(JsonArray &array)
     IF_IOT_CLOCK_SAVE_STATE(
         obj = &array.addObject(3);
         obj->add(JJ(id), F("power"));
-        obj->add(JJ(state), _config.enabled && _targetBrightness);
-        obj->add(JJ(value), _config.enabled && _targetBrightness);
+        obj->add(JJ(state), _getEnabledState());
+        obj->add(JJ(value), static_cast<uint8_t>(_getEnabledState()));
     )
 
     IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(
@@ -69,7 +65,7 @@ void ClockPlugin::getValues(JsonArray &array)
         obj = &array.addObject(3);
         obj->add(JJ(id), F("pwrlvl"));
         obj->add(JJ(state), true);
-        // obj->add(JJ(value), JsonNumber(get_power_level_mW() / 1000.0, 2));
+        obj->add(JJ(value), JsonNumber(_getPowerLevel(), 2));
     )
 }
 
@@ -135,21 +131,24 @@ void ClockPlugin::_updatePowerLevelWebUI()
         auto &obj = events.addObject(3);
         obj.add(JJ(id), F("pwrlvl"));
         obj.add(JJ(state), true);
-        // obj.add(JJ(value), JsonNumber(get_power_level_mW() / 1000.0, 2));
+        obj.add(JJ(value), JsonNumber(_getPowerLevel(), 2));
         WsWebUISocket::broadcast(WsWebUISocket::getSender(), json);
     }
 }
 
-void ClockPlugin::_powerLevelCallback(uint32_t total_mW, uint32_t requested_mW, uint32_t max_mW, uint8_t target_brightness, uint8_t recommended_brightness)
+uint8_t ClockPlugin::_calcPowerFunction(uint8_t targetBrightness, uint32_t maxPower_mW)
 {
-    __LDBG_printf("mW=%u reqmW=%u maxmW=%u brightness=%u recommended=%u currentmW=%u", total_mW, requested_mW, max_mW, target_brightness, recommended_brightness, _powerLevelCurrentmW);
+    uint32_t requestedPower_mW;
+    uint8_t newBrightness = _calculate_max_brightness_for_power_mW(targetBrightness, maxPower_mW, requestedPower_mW);
     if (_config.enabled) {
+        _powerLevelCurrentmW = (targetBrightness == newBrightness) ? requestedPower_mW : maxPower_mW;
         _calcPowerLevel();
     }
     else {
         _powerLevelCurrentmW = 0;
         _powerLevelUpdateTimer = 0;
     }
+    return newBrightness;
 }
 
 void ClockPlugin::_webSocketCallback(WsClient::ClientCallbackType type, WsClient *client, AsyncWebSocket *server, WsClient::ClientCallbackId id)
@@ -159,33 +158,27 @@ void ClockPlugin::_webSocketCallback(WsClient::ClientCallbackType type, WsClient
     }
     // adjust update rate if a client connects to the webui
     if (type == WsClient::ClientCallbackType::ON_START) {
-        _powerLevelUpdateRate = (IOT_CLOCK_CALC_POWER_CONSUMPTION_UPDATE_RATE * 1000);
+        _powerLevelUpdateRate = (IOT_CLOCK_CALC_POWER_CONSUMPTION_UPDATE_RATE * kPowerLevelUpdateRateMultiplier);
         _calcPowerLevel();
     }
     else if (type == WsClient::ClientCallbackType::ON_END) {
-        _powerLevelUpdateRate = (kUpdateMQTTInterval * 1000);
+        _powerLevelUpdateRate = (kUpdateMQTTInterval * kPowerLevelUpdateRateMultiplier);
     }
 }
 
 void ClockPlugin::_calcPowerLevel()
 {
     if (_powerLevelUpdateTimer == 0) {
-        _powerLevelUpdateTimer = millis();
+        _powerLevelUpdateTimer = micros();
         _powerLevelAvg = _powerLevelCurrentmW;
-        __LDBG_printf("currentmW=%u reset", _powerLevelCurrentmW);
     }
     else {
-        auto ms = millis();
-        auto diff = _powerLevelUpdateRate / get_time_diff(_powerLevelUpdateTimer, ms);
+        auto ms = micros();
+        auto diff = _powerLevelUpdateRate / (float)get_time_diff(_powerLevelUpdateTimer, ms);
         _powerLevelAvg = ((_powerLevelAvg * diff) + _powerLevelCurrentmW) / (diff + 1.0);
-        __LDBG_printf("currentmW=%u diff=%u avgmW=%.3f", _powerLevelCurrentmW, diff, _powerLevelAvg);
+        // __LDBG_printf("currentmW=%u diff=%f avgmW=%.3f", _powerLevelCurrentmW, diff, _powerLevelAvg);
         _powerLevelUpdateTimer = ms;
     }
-}
-
-float ClockPlugin::_getPowerLevelmW()
-{
-    return _powerLevelAvg;
 }
 
 #endif

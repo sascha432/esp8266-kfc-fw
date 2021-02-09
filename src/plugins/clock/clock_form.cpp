@@ -16,6 +16,7 @@
 void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
 {
     __LDBG_printf("type=%u name=%s", type, formName.c_str());
+
     if (!isCreateFormCallbackType(type)) {
         return;
     }

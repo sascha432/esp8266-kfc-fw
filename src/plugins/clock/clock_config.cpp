@@ -90,7 +90,7 @@ namespace KFCConfigurationClasses {
             "\042Flash\042," \
             "\042Color Fade\042,"
             "\042Fire\042," \
-            "\042Interleaved\042" IF_IOT_LED_MATRIX(
+            "\042Interleaved\042" IF_IOT_CLOCK(
             ",\042Colon: Solid\042," \
             "\042Colon: Blink Slowly\042," \
             "\042Colon: Blink Fast\042") \

@@ -98,13 +98,13 @@ void Monitor::endDebug()
 
 #endif
 
-Pin &Monitor::attach(Pin *handler)
+Pin &Monitor::attach(Pin *handler, HardwarePinType type)
 {
     _handlers.emplace_back(handler);
-    return _attach(*_handlers.back().get());
+    return _attach(*_handlers.back().get(), type);
 }
 
-Pin &Monitor::_attach(Pin &pin, bool debounce)
+Pin &Monitor::_attach(Pin &pin, HardwarePinType type)
 {
     __LDBG_IF(auto type = PSTR("new pin:"));
     auto pinNum = pin.getPin();
@@ -115,7 +115,14 @@ Pin &Monitor::_attach(Pin &pin, bool debounce)
     if (iterator == _pins.end()) {
 
         pinMode(pinNum, _pinMode);
-        _pins.emplace_back(new HardwarePin(pinNum, debounce));
+        switch(type) {
+            case HardwarePinType::SIMPLE:
+                _pins.emplace_back(new HardwarePin(pinNum));
+                break;
+            case HardwarePinType::DEBOUNCE:
+                _pins.emplace_back(new DebouncedHardwarePin(pinNum));
+                break;
+        }
         iterator = _pins.end() - 1;
 
         __LDBG_IF(type = PSTR("updating pin:"));
@@ -232,33 +239,42 @@ void Monitor::_loop()
 
     for(auto &pinPtr: _pins) {
         auto &pin = *pinPtr;
-        auto &debounce = pin.getDebounce();
+        auto debounce = pin.getDebounce();
+        if (debounce) {
 
-        noInterrupts();
-        auto micros = pin._micros;
-        auto intCount = pin._intCount;
-        bool value = pin._value;
-        pin._intCount = 0;
-        interrupts();
+            noInterrupts();
+            auto micros = pin._micros;
+            auto intCount = pin._intCount;
+            bool value = pin._value;
+            pin._intCount = 0;
+            interrupts();
 
 #if DEBUG_PIN_MONITOR_EVENTS
-        auto state = debounce.debounce(value, intCount, micros, now);
-        if (state != StateType::NONE) {
-            __LDBG_printf("EVENT: pin=%u state=%s time=%u bounced=%u", pin.getPin(), stateType2Level(state), get_time_diff(debounce._startDebounce, now), std::max(0, debounce._bounceCounter - 1));
-            // print --- of the state does not change for 1 second
-            static Event::Timer timer;
-            static uint32_t counter;
-            auto tmp = ++counter;
-            _Timer(timer).add(Event::milliseconds(1000), false, [tmp](Event::CallbackTimerPtr) {
-                if (tmp == counter) {
-                    __LDBG_print("---");
-                }
-            });
-        }
-        _event(pin.getPin(), state, now);
+            auto state = debounce->debounce(value, intCount, micros, now);
+            if (state != StateType::NONE) {
+                __LDBG_printf("EVENT: pin=%u state=%s time=%u bounced=%u", pin.getPin(), stateType2Level(state), get_time_diff(debounce->_startDebounce, now), std::max(0, debounce->_bounceCounter - 1));
+                // print --- of the state does not change for 1 second
+                static Event::Timer timer;
+                static uint32_t counter;
+                auto tmp = ++counter;
+                _Timer(timer).add(Event::milliseconds(1000), false, [tmp](Event::CallbackTimerPtr) {
+                    if (tmp == counter) {
+                        __LDBG_print("---");
+                    }
+                });
+            }
+            _event(pin.getPin(), state, now);
 #else
-        _event(pin.getPin(), debounce.debounce(value, intCount, micros, now), now);
+            _event(pin.getPin(), debounce->debounce(value, intCount, micros, now), now);
 #endif
+        }
+        else {
+            noInterrupts();
+            StateType state = pin._value ? StateType::UP : StateType::DOWN;
+            interrupts();
+
+            _event(pin.getPin(), state, now);
+        }
     }
     for(const auto &handler: _handlers) {
         handler->loop();

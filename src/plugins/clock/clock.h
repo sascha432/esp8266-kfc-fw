@@ -313,21 +313,37 @@ public:
 
 public:
     static void addPowerSensor(WebUIRoot &webUI, WebUIRow **row, SensorPlugin::SensorType type);
-    static void powerLevelCallback(uint32_t total_mW, uint32_t requested_mW, uint32_t max_mW, uint8_t target_brightness, uint8_t recommended_brightness);
+    static uint8_t calcPowerFunction(uint8_t scale, uint32_t data);
     static void webSocketCallback(WsClient::ClientCallbackType type, WsClient *client, AsyncWebSocket *server, WsClient::ClientCallbackId id);
 
 private:
     void _updatePowerLevelWebUI();
+    uint8_t _calcPowerFunction(uint8_t scale, uint32_t data);
     void _powerLevelCallback(uint32_t total_mW, uint32_t requested_mW, uint32_t max_mW, uint8_t target_brightness, uint8_t recommended_brightness);
     void _webSocketCallback(WsClient::ClientCallbackType type, WsClient *client, AsyncWebSocket *server, WsClient::ClientCallbackId id);
     void _calcPowerLevel();
-    float _getPowerLevelmW();
+    float __getPowerLevel(float P_W, float min) const;
+    uint32_t _getPowerLevelLimit(uint32_t P_mW) const {
+        auto res = __getPowerLevel(P_mW / 1000.0, 0);
+        if (res > 3)  {
+            res *= 0.935;
+        }
+        return res * 1000;
+    }
+    float _getPowerLevel() const {
+        if (!_isEnabled || _tempBrightness == -1) {
+            return NAN;
+        }
+        return __getPowerLevel(_powerLevelAvg / 1000.0, 0.54);
+    }
 
 private:
+    static constexpr uint32_t kPowerLevelUpdateRateMultiplier = 500000U;
+
     float _powerLevelAvg;
     uint32_t _powerLevelUpdateTimer{0};
     uint32_t _powerLevelCurrentmW{0};
-    uint32_t _powerLevelUpdateRate{kUpdateMQTTInterval * 1000};
+    uint32_t _powerLevelUpdateRate{kUpdateMQTTInterval * kPowerLevelUpdateRateMultiplier};
 
 #endif
 
@@ -338,6 +354,9 @@ private:
 private:
     void _enable();
     void _disable(uint8_t delayMillis = 100);
+    bool _getEnabledState() const {
+        return _config.enabled && _isEnabled && _targetBrightness && _tempBrightness != -1;
+    }
 
 // ------------------------------------------------------------------------
 // Save state
@@ -501,6 +520,7 @@ private:
     // SevenSegmentDisplay _display;
     bool _schedulePublishState : 1;
     bool _isFading : 1;
+    bool _isEnabled : 1;
     bool _forceUpdate;
 
     using Animation = Clock::Animation;

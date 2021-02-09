@@ -158,15 +158,15 @@ void ClockPlugin::_publishState(MQTTClient *client)
     __DBG_printf("client=%p animation=%u (%p) color=%s brightness=%u", client, _config.animation, _animation, getColor().implode(',').c_str(), _targetBrightness);
 #endif
     if (client && client->isConnected()) {
-        client->publish(MQTTClient::formatTopic(FSPGM(_state)), true, String(_targetBrightness != 0));
-        client->publish(MQTTClient::formatTopic(FSPGM(_brightness_state)), true, String(static_cast<uint32_t>(_targetBrightness)));
+        client->publish(MQTTClient::formatTopic(FSPGM(_state)), true, String(_getEnabledState()));
+        client->publish(MQTTClient::formatTopic(FSPGM(_brightness_state)), true, String(_targetBrightness == 0 ? _savedBrightness : _targetBrightness));
         client->publish(MQTTClient::formatTopic(FSPGM(_color_state)), true, getColor().implode(','));
         client->publish(MQTTClient::formatTopic(FSPGM(_effect_state)), true, Clock::Config_t::getAnimationName(_config.getAnimation()));
 #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
         client->publish(MQTTClient::formatTopic(FSPGM(light_sensor)), true, String(_autoBrightnessValue * 100, 0));
 #endif
 #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
-        client->publish(MQTTClient::formatTopic(F("power")), true, String(_getPowerLevelmW() / 1000.0, 2));
+        client->publish(MQTTClient::formatTopic(F("power")), true, String(_getPowerLevel(), 2));
 #endif
     }
 

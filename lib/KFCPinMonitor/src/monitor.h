@@ -10,6 +10,12 @@
 
 namespace PinMonitor {
 
+    enum class HardwarePinType : uint8_t {
+        SIMPLE,
+        DEBOUNCE,
+        _DEFAULT = DEBOUNCE,
+    };
+
     class Monitor
     {
     public:
@@ -38,11 +44,16 @@ namespace PinMonitor {
 #endif
 
         // add a pin object
-        Pin &attach(Pin *pin);
+        Pin &attach(Pin *pin, HardwarePinType type = HardwarePinType::_DEFAULT);
 
         template<class T, class ...Args>
         T &attach(Args&&... args) {
             return static_cast<T &>(attach(new T(std::forward<Args>(args)...)));
+        }
+
+        template<class T, class ...Args>
+        T &attachPinType(HardwarePinType type, Args&&... args) {
+            return static_cast<T &>(attach(new T(std::forward<Args>(args)...), type));
         }
 
         // remove one or more pins
@@ -65,7 +76,7 @@ namespace PinMonitor {
         static const __FlashStringHelper *stateType2Level(StateType state);
 
     private:
-        Pin &_attach(Pin &pin, bool debounce = true);
+        Pin &_attach(Pin &pin, HardwarePinType type = HardwarePinType::_DEFAULT);
         void _detach(Iterator begin, Iterator end, bool clear);
         void _attachLoop();
         void _detachLoop();
@@ -84,6 +95,7 @@ namespace PinMonitor {
         uint8_t _pinMode;
         uint8_t _debounceTime;
     };
+
 
     inline void Monitor::setDebounceTime(uint8_t debounceTime)
     {

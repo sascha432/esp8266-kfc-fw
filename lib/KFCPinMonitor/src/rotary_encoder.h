@@ -50,21 +50,6 @@ namespace PinMonitor {
         bool _fireEvent(EventType eventType);
         void _reset();
 
-#if DEBUG_PIN_MONITOR_BUTTON_NAME
-    public:
-        void setName(const String &name) {
-            _name = String(F("name=<")) + name + '>';
-        }
-
-        const char *name() const {
-            return _name.c_str();
-        }
-
-    private:
-        String _name;
-#endif
-
-
     protected:
         uint8_t _direction: 1;
     };
@@ -75,9 +60,16 @@ namespace PinMonitor {
 
     public:
         RotaryEncoder() {}
+
+        void attachPins(uint8_t pin1, ActiveStateType state1, uint8_t pin2, ActiveStateType state2);
+        void loop();
+
+    private:
+        uint8_t _lastState: 2;
+        stdex::fixed_circular_buffer<PinToggleState, 32> _states;
+        HardwarePin *_pin1;
+        HardwarePin *_pin2;
     };
-
-
 }
 
 #include <debug_helper_disable.h>

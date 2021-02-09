@@ -13,9 +13,22 @@
 
 using namespace PinMonitor;
 
+void ICACHE_RAM_ATTR HardwarePin::callback(void *arg)
+{
+    HardwarePin &pin = *reinterpret_cast<HardwarePin *>(arg);
+    pin._micros = micros();
+    pin._intCount++;
+    pin._value = digitalRead(pin._pin);
+}
+
 #if DEBUG
 void Pin::dumpConfig(Print &output)
 {
     output.printf_P(PSTR("pin=%u"), _pin);
 }
 #endif
+
+Debounce *HardwarePin::getDebounce() const
+{
+    return nullptr;
+}

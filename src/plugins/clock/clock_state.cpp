@@ -34,9 +34,8 @@ void ClockPlugin::_saveState()
         _config.setBrightness(_savedBrightness);
     }
     auto state = _getState();
-    // __LDBG_assert_printf((_targetBrightness != 0) == _config.enabled, "state mismatch target_brighness=%u _config.enabled=%u", _targetBrightness, _config.enabled);
+    __LDBG_printf("target_brighness=%u _config.enabled=%u is_enabled=%u", _targetBrightness, _config.enabled, _isEnabled);
     auto newState = StoredState(_config, _config.getBrightness());
-    newState.setEnabled((_targetBrightness != 0));
     if (state != newState) {
         auto file = KFCFS.open(FSPGM(iot_clock_save_state_file, "/.pvt/device.state"), fs::FileOpenMode::write);
         if (file) {
@@ -97,13 +96,12 @@ void ClockPlugin::_setState(bool state)
 #endif
             }
         }
-        _enable();
     }
     else {
         if (_targetBrightness != 0) {
             _savedBrightness = _targetBrightness;
-            setBrightness(0);
         }
+        setBrightness(0);
 #if IOT_CLOCK_SAVE_STATE
         _saveState();
 #endif

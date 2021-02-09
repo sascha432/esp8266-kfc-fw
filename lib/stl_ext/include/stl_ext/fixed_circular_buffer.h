@@ -261,12 +261,22 @@ namespace STL_STD_EXT_NAMESPACE_EX {
             return tmp;
         }
 
+        template<typename _Ta = value_type, typename std::enable_if<!std::is_trivially_destructible<_Ta>::value, int>::type = 0>
         inline __attribute__((__always_inline__))
-        void clear() {
+        void clear(_Ta value = value_type()) {
             _count = 0;
             _write_position = 0;
             _read_position = 0;
-            std::fill(_values.begin(), _values.end(), value_type());
+            std::fill(_values.begin(), _values.end(), value);
+        }
+
+
+        template<typename _Ta = value_type, typename std::enable_if<std::is_trivially_destructible<_Ta>::value, int>::type = 0>
+        inline __attribute__((__always_inline__))
+        void clear(_Ta value = value_type()) {
+            _count = 0;
+            _write_position = 0;
+            _read_position = 0;
         }
 
         inline __attribute__((__always_inline__))

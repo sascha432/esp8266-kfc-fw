@@ -88,9 +88,9 @@ namespace PinMonitor {
             return ((uint8_t)tmp & (uint8_t)StateType::DOWN) != (uint8_t)StateType::NONE;
         }
 
-    private:
-        friend Monitor;
-        friend RotaryEncoder;
+    // protected:
+    // public for friend void HardwarePin_callback(void *arg);
+    public:
 
         // return state if state is enabled and invert if _activeLow is true
         inline StateType _getStateIfEnabled(StateType state) const {
@@ -132,9 +132,9 @@ namespace PinMonitor {
             return _pin;
         }
 
-    protected:
-        friend Monitor;
-        friend RotaryEncoder;
+    // protected:
+    // public for friend void HardwarePin_callback(void *arg);
+    public:
 
         operator bool() const;
         uint8_t getCount() const;
@@ -173,10 +173,9 @@ namespace PinMonitor {
             _value = value;
         }
 
-    protected:
-        friend Monitor;
-        friend RotaryEncoder;
-        friend HardwarePin;
+    // protected:
+    // public for friend void HardwarePin_callback(void *arg);
+    public:
 
         volatile uint32_t _micros;
         volatile uint16_t _intCount: 15;
@@ -217,8 +216,9 @@ namespace PinMonitor {
 
         // virtual void handle() override;
 
-    private:
-        friend HardwarePin;
+    // protected:
+    // public for friend void HardwarePin_callback(void *arg);
+    public:
 
         RotaryEncoder &_encoder;
     };

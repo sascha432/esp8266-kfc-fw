@@ -45,6 +45,8 @@ void RotaryEncoder::attachPins(uint8_t pin1, ActiveStateType state1, uint8_t pin
     }
 }
 
+//https://github.com/buxtronix/arduino/blob/master/libraries/Rotary/Rotary.cpp
+
 /* Rotary encoder handler for arduino. v1.1
  *
  * Copyright 2011 Ben Buxton. Licenced under the GNU GPL Version 3.

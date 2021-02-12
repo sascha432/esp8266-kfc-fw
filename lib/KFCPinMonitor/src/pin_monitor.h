@@ -8,6 +8,9 @@
 #include <EventScheduler.h>
 #include <vector>
 
+// requires 276/360 or 508/592 byte IRAM
+// see PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS for details
+
 #ifndef DEBUG_PIN_MONITOR
 #define DEBUG_PIN_MONITOR                                       0
 #endif
@@ -23,6 +26,17 @@
 #else
 #undef DEBUG_PIN_MONITOR_EVENTS
 #define DEBUG_PIN_MONITOR_EVENTS                                0
+#endif
+
+// use attachInterruptArg()/detachInterrupt() for interrupt callbacks
+// attachInterruptArg() requires 72 byte IRAM
+// detachInterrupt() requires 160 byte IRAM
+// = 232 byte IRAM
+// if the arduino interrupt functions are not used anywhere else,
+// set it 0. the custom implementation saves those 232 byte IRAM but
+// is not compatible with arduino functional interrupts
+#ifndef PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS
+#define PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS                   1
 #endif
 
 // milliseconds

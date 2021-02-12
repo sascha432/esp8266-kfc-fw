@@ -61,16 +61,24 @@ namespace PinMonitor {
     public:
         RotaryEncoder() :
             _counter(0),
+            _rPin1(nullptr),
+            _rPin2(nullptr),
+            _hPin1(nullptr),
+            _hPin2(nullptr),
             _pin1(255),
             _pin2(255)
-        {}
+        {
+#if !defined(PIN_MONITOR_HAVE_ROTARY_ENCODER) || PIN_MONITOR_HAVE_ROTARY_ENCODER == 0
+            __DBG_panic("PIN_MONITOR_HAVE_ROTARY_ENCODER=1 not set");
+#endif
+        }
 
         void attachPins(uint8_t pin1, ActiveStateType state1, uint8_t pin2, ActiveStateType state2);
         void loop();
 
-    private:
-        friend RotaryHardwarePin;
-        friend HardwarePin;
+    // protected:
+    // public for friend void HardwarePin_callback(void *arg);
+    public:
 
         uint8_t _lastState: 2;
         stdex::fixed_circular_buffer<uint8_t, 64> _states;

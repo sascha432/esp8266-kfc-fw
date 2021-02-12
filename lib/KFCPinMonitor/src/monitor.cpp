@@ -11,12 +11,86 @@
 #include <stl_ext/memory.h>
 #include <MicrosTimer.h>
 
-#include "FunctionalInterrupt.h"
+#if PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS
+#include <FunctionalInterrupt.h>
+#endif
 
 #if DEBUG_PIN_MONITOR
 #include <debug_helper_enable.h>
 #else
 #include <debug_helper_disable.h>
+#endif
+
+#if PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS == 0
+
+#include <interrupts.h>
+
+typedef struct {
+  voidFuncPtrArg fn;
+  void *arg;
+} interrupt_handler_t;
+
+static interrupt_handler_t interrupt_handlers[15];
+static uint32_t interrupt_reg;
+
+static void set_interrupt_handlers(uint8_t pin, voidFuncPtrArg userFunc, void* arg)
+{
+    interrupt_handlers[pin].fn = userFunc;
+    interrupt_handlers[pin].arg = arg;
+}
+
+void ICACHE_RAM_ATTR interrupt_handler(void *)
+{
+    uint32_t status = GPIE;
+    GPIEC = status; //clear them interrupts
+    if (status == 0 || interrupt_reg == 0) {
+        return;
+    }
+    ETS_GPIO_INTR_DISABLE();
+    uint8_t i = 0;
+    uint32_t changedbits = status & interrupt_reg;
+    while (changedbits) {
+        while (!(changedbits & (1 << i))) {
+            i++;
+        }
+        changedbits &= ~(1 << i);
+        if (interrupt_handlers[i].fn) {
+            esp8266::InterruptLock irqLock; // stop other interrupts
+            interrupt_handlers[i].fn(interrupt_handlers[i].arg);
+        }
+    }
+    ETS_GPIO_INTR_ENABLE();
+}
+
+// mode is CHANGE
+void ___attachInterruptArg(uint8_t pin, voidFuncPtrArg userFunc, void *arg)
+{
+    if ((uint32_t)userFunc >= 0x40200000) {
+        __DBG_panic("ISR not in IRAM!");
+    }
+    ETS_GPIO_INTR_DISABLE();
+    set_interrupt_handlers(pin, userFunc, arg);
+    interrupt_reg |= (1 << pin);
+    GPC(pin) &= ~(0xF << GPCI);  // INT mode disabled
+    GPIEC = (1 << pin);  // Clear Interrupt for this pin
+    GPC(pin) |= ((CHANGE & 0xF) << GPCI);  // INT mode "mode"
+    ETS_GPIO_INTR_ATTACH(interrupt_handler, &interrupt_reg);
+    ETS_GPIO_INTR_ENABLE();
+}
+
+// this function must not be called from inside the interrupt handler
+void ___detachInterrupt(uint8_t pin)
+{
+    ETS_GPIO_INTR_DISABLE();
+    GPC(pin) &= ~(0xF << GPCI);  // INT mode disabled
+    GPIEC = (1 << pin);  // Clear Interrupt for this pin
+    interrupt_reg &= ~(1 << pin);
+    set_interrupt_handlers(pin, nullptr, nullptr);
+    if (interrupt_reg) {
+        ETS_GPIO_INTR_ENABLE();
+    }
+}
+
 #endif
 
 using namespace PinMonitor;
@@ -108,7 +182,7 @@ Pin &Monitor::attach(Pin *handler, HardwarePinType type)
 
 Pin &Monitor::_attach(Pin &pin, HardwarePinType type)
 {
-    __LDBG_IF(auto type = PSTR("new pin:"));
+    __LDBG_IF(auto typeStr = PSTR("new pin:"));
     auto pinNum = pin.getPin();
     bool pinsEmpty = _pins.empty();
     auto iterator = std::find_if(_pins.begin(), _pins.end(), [pinNum](const HardwarePinPtr &pin) {
@@ -132,13 +206,19 @@ Pin &Monitor::_attach(Pin &pin, HardwarePinType type)
         }
         iterator = _pins.end() - 1;
 
-        __LDBG_IF(type = PSTR("updating pin:"));
+        __LDBG_IF(typeStr = PSTR("updating pin:"));
     }
     auto &curPin = *iterator->get();
 
-    __LDBG_printf("%s attaching pin=%u usage=%u arg=%p", type, curPin.getPin(), curPin.getCount() + 1, pin.getArg());
+    __LDBG_printf("%s attaching pin=%u usage=%u arg=%p", typeStr, curPin.getPin(), curPin.getCount() + 1, pin.getArg());
     if (++curPin) {
-        attachInterruptArg(digitalPinToInterrupt(pinNum), HardwarePin::callback, &curPin, CHANGE);
+#if PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS
+        // +72 byte IRAM
+       attachInterruptArg(digitalPinToInterrupt(pinNum), HardwarePin::callback, &curPin, CHANGE);
+#else
+        // 0 byte IRAM
+        ___attachInterruptArg(digitalPinToInterrupt(pinNum), HardwarePin::callback, &curPin);
+#endif
     }
     if (pinsEmpty) {
         _attachLoop();
@@ -169,7 +249,13 @@ void Monitor::_detach(Iterator begin, Iterator end, bool clear)
             __LDBG_printf("detaching pin=%u usage=%u remove=%u", pin->getPin(), curPin.getCount(), curPin.getCount() == 1);
             if (!--curPin) {
                 __LDBG_printf("detaching interrupt pin=%u", pinNum);
-                detachInterrupt(digitalPinToInterrupt(pinNum));
+#if PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS
+                // +160 byte IRAM
+               detachInterrupt(digitalPinToInterrupt(pinNum));
+#else
+                // 0 byte IRAM
+                ___detachInterrupt(digitalPinToInterrupt(pinNum));
+#endif
                 pinMode(pinNum, INPUT);
 
                 if (clear == false) {

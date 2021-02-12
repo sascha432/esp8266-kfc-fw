@@ -24,7 +24,7 @@ void ICACHE_RAM_ATTR HardwarePin::callback(void *arg)
         case HardwarePinType::ROTARY: {
                 auto &pin = *reinterpret_cast<RotaryHardwarePin *>(arg);
                 auto &ref = pin._encoder._states.get_write_ref();
-                ref = digitalRead(pin._encoder._pin1) | (digitalRead(pin._encoder._pin1) << 1);
+                ref = digitalRead(pin._encoder._pin1) | (digitalRead(pin._encoder._pin2) << 1);
             }
             break;
 #endif

@@ -35,6 +35,9 @@
 #if IOT_REMOTE_CONTROL
 #include "./plugins/remote/remote.h"
 #endif
+#if IOT_CLOCK
+#include "./plugins/clock/clock.h"
+#endif
 
 #if DEBUG_WEB_SERVER
 #include <debug_helper_enable.h>
@@ -507,6 +510,10 @@ void WebServerPlugin::handlerUpdate(AsyncWebServerRequest *request)
 #endif
         if (!Update.hasError()) {
             Logger_security(F("Firmware upgrade successful"));
+
+#if IOT_CLOCK
+            ClockPlugin::getInstance()._setBrightness(0);
+#endif
 
             BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SLOW);
             Logger_notice(F("Rebooting after upgrade"));

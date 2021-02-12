@@ -4,6 +4,24 @@
 
 #pragma once
 
+//
+//
+//
+// button:
+//  short/long press while off = turn on
+//  short press = toggle rotary encoder action (goes back to default action after 5 seconds)
+//  long press = turn off
+//  long press >5s = software reset (starts to blink red for 2 seconds)
+//  long press >8.2s = hardware reset (this works even if the software is not responding anymore)
+//
+// rotary encoder:
+//  default action (with acceleration):
+//      clock wise = increase brightness
+//      counter clock wise = decrease brightness
+//  action 1 (once per second):
+//      change animation
+//
+
 #if IOT_CLOCK_BUTTON_PIN != -1
 
 #include <Arduino_compat.h>
@@ -60,6 +78,17 @@ namespace Clock {
     {
         return *reinterpret_cast<ClockPlugin *>(const_cast<void *>(getArg()));
     }
+
+#if IOT_CLOCK_HAVE_ROTARY_ENCODER
+
+    class RotaryEncoder : public PinMonitor::RotaryEncoder {
+        using PinMonitor::RotaryEncoder::RotaryEncoder;
+        using PinMonitor::RotaryEncoder::EventType;
+
+        virtual void event(EventType eventType, uint32_t now) override;
+    };
+
+#endif
 
 }
 

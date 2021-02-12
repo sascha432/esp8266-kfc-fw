@@ -22,6 +22,54 @@ void Button::event(EventType eventType, uint32_t now)
     getBase().buttonCallback(_button, eventType, _repeatCount);
 }
 
+#if IOT_CLOCK_HAVE_ROTARY_ENCODER
+
+void Clock::RotaryEncoder::event(EventType eventType, uint32_t now)
+{
+    // __LDBG_printf("event_type=%u now=%u decrease=%u", eventType, now, eventType == EventType::COUNTER_CLOCK_WISE);
+    ClockPlugin::getInstance().rotaryCallback(eventType == EventType::COUNTER_CLOCK_WISE, now);
+}
+
+void ClockPlugin::rotaryCallback(bool decrease, uint32_t now)
+{
+    auto diff = get_time_diff(_lastRotaryUpdate, now) / 1000;
+    if (_rotaryAction == 0) {
+        _lastRotaryUpdate = now;
+        if (diff > 500) {
+            _rotaryAcceleration = kRotaryAccelerationDivider;
+        }
+        else {
+            _rotaryAcceleration = std::min<uint8_t>(kRotaryMaxAcceleration, _rotaryAcceleration + 1);
+        }
+
+        // __LDBG_printf("diff=%u decrease=%u acceleration=%u", diff, decrease, _rotaryAcceleration);
+
+        if (_isEnabled) {
+            auto brightness = _targetBrightness;
+            if (decrease) {
+                _setBrightness(std::max<int16_t>(1, brightness - (_rotaryAcceleration / kRotaryAccelerationDivider)));
+            }
+            else {
+                _setBrightness(std::min<int16_t>(255, brightness + (_rotaryAcceleration / kRotaryAccelerationDivider)));
+            }
+            _schedulePublishState = true;
+            IF_IOT_CLOCK_SAVE_STATE(
+                _saveStateDelayed();
+            )
+        }
+    }
+    else if (_rotaryAction == 1) {
+        if (diff > 1000) { // limit input frequency to once per second
+            uint8_t animation = (_config.animation + (decrease ? 1 : 4)) % 5; // limit values to 0-5
+            setAnimation(static_cast<AnimationType>(animation), 750);
+        }
+        setRotaryAction(_rotaryAction); // reset timer
+    }
+}
+
+
+#endif
+
 void ClockPlugin::buttonCallback(uint8_t button, EventType eventType, uint16_t repeatCount)
 {
     switch (eventType) {
@@ -29,6 +77,11 @@ void ClockPlugin::buttonCallback(uint8_t button, EventType eventType, uint16_t r
             if (!_config.enabled) {
                 _setState(true);
             }
+            IF_IOT_CLOCK_HAVE_ROTARY_ENCODER(
+                else {
+                    setRotaryAction((_rotaryAction + 1) % 2); // toggle rotary encoder action
+                }
+            )
             break;
         case EventType::LONG_PRESSED:
             if (_config.enabled) {
@@ -136,3 +189,4 @@ void ClockPlugin::buttonCallback(uint8_t button, EventType eventType, uint16_t r
 #endif
 
 #endif
+

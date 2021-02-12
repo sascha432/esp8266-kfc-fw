@@ -16,36 +16,39 @@ using namespace PinMonitor;
 
 
 RotaryEncoderPin::~RotaryEncoderPin() {
-    if (_direction == 1) {
+    if (_direction == RotaryEncoderDirection::LAST) {
         delete reinterpret_cast<RotaryEncoder *>(const_cast<void *>(getArg()));
     }
 }
 
 void RotaryEncoderPin::loop()
 {
-    if (_direction == 1) {
+    if (_direction == RotaryEncoderDirection::LAST) {
         reinterpret_cast<RotaryEncoder *>(const_cast<void *>(getArg()))->loop();
     }
 }
 
-void RotaryEncoder::attachPins(uint8_t pin1, ActiveStateType state1, uint8_t pin2, ActiveStateType state2)
+void RotaryEncoder::attachPins(uint8_t pin1, uint8_t pin2)
 {
-    _rPin1 = &pinMonitor.attachPinType<RotaryEncoderPin>(HardwarePinType::SIMPLE, pin1, 0, this, state1);
-    _rPin2 = &pinMonitor.attachPinType<RotaryEncoderPin>(HardwarePinType::SIMPLE, pin2, 1, this, state2);
-    for(const auto &pin: pinMonitor.getPins()) {
-        auto pinNum = pin->getPin();
-        if (pinNum == pin1) {
-            _hPin1 = pin.get();
-            _pin1 = pin1;
-        }
-        else if (pinNum == pin2) {
-            _hPin2 = pin.get();
-            _pin2 = pin2;
-        }
-    }
+    // _rPin1 = &
+    pinMonitor.attachPinType<RotaryEncoderPin>(HardwarePinType::ROTARY, pin1, RotaryEncoderDirection::LEFT, this, _activeState);
+    // _rPin2 = &
+    pinMonitor.attachPinType<RotaryEncoderPin>(HardwarePinType::ROTARY, pin2, RotaryEncoderDirection::RIGHT, this, _activeState);
+    static_assert(RotaryEncoderDirection::RIGHT == RotaryEncoderDirection::LAST, "LAST must be added last");
+    _pin1 = pin1;
+    _pin2 = pin2;
+    // for(const auto &pin: pinMonitor.getPins()) {
+    //     auto pinNum = pin->getPin();
+    //     if (pinNum == pin1) {
+    //         _hPin1 = pin.get();
+    //     }
+    //     else if (pinNum == pin2) {
+    //         _hPin2 = pin.get();
+    //     }
+    // }
 }
 
-//https://github.com/buxtronix/arduino/blob/master/libraries/Rotary/Rotary.cpp
+// https://github.com/buxtronix/arduino/blob/master/libraries/Rotary/Rotary.cpp
 
 /* Rotary encoder handler for arduino. v1.1
  *
@@ -138,7 +141,7 @@ void RotaryEncoder::attachPins(uint8_t pin1, ActiveStateType state1, uint8_t pin
 #define R_START_M 0x3
 #define R_CW_BEGIN_M 0x4
 #define R_CCW_BEGIN_M 0x5
-const unsigned char ttable[6][4] = {
+constexpr uint8_t ttable[6][4] = {
   // R_START (00)
   {R_START_M,            R_CW_BEGIN,     R_CCW_BEGIN,  R_START},
   // R_CCW_BEGIN
@@ -161,7 +164,7 @@ const unsigned char ttable[6][4] = {
 #define R_CCW_FINAL 0x5
 #define R_CCW_NEXT 0x6
 
-const unsigned char ttable[7][4] = {
+constexpr uint8_t ttable[7][4] = {
   // R_START
   {R_START,    R_CW_BEGIN,  R_CCW_BEGIN, R_START},
   // R_CW_FINAL
@@ -179,79 +182,42 @@ const unsigned char ttable[7][4] = {
 };
 #endif
 
-// /*
-//  * Constructor. Each arg is the pin number for each encoder contact.
-//  */
-// Rotary::Rotary(char _pin1, char _pin2) {
-//   // Assign variables.
-//   pin1 = _pin1;
-//   pin2 = _pin2;
-//   // Set pins to input.
-//   pinMode(pin1, INPUT);
-//   pinMode(pin2, INPUT);
-// #ifdef ENABLE_PULLUPS
-//   digitalWrite(pin1, HIGH);
-//   digitalWrite(pin2, HIGH);
-// #endif
-//   // Initialise state.
-//   state = R_START;
-// }
-
-static uint8_t state = R_START;
-
-static unsigned char process(unsigned char pinstate) {
-  // Determine new state from the pins and state table.
-  state = ttable[state & 0xf][pinstate];
-  // Return emit bits, ie the generated event.
-  return state & 0x30;
+uint8_t RotaryEncoder::_process(uint8_t pinState)
+{
+    // Determine new state from the pins and state table.
+    _state = ttable[_state & 0xf][pinState];
+    // Return emit bits, ie the generated event.
+    return _state & 0x30;
 }
-
 
 void RotaryEncoder::loop()
 {
-    if (_states.count() != _counter) {
+    if (_states.begin() != _states.end()) {
 
         uint32_t time = micros();
         noInterrupts();
         auto iterator = _states.begin();
-        // auto lastValue = *iterator;
-        while(++iterator != _states.end()) {
+        while(iterator != _states.end()) {
             auto state = *iterator;
             interrupts();
 
-            __DBG_printf("pin_state=%u%u time=%u staste=%u", state>>1, state&1, time, process(state));
+            if (_activeState == ActiveStateType::ACTIVE_LOW) {
+                state ^= 0x03;
+            }
+
+            auto result = _process(state);
+            __LDBG_printf("pin_state=%u%u time=%u state=%u", state>>1, state&1, time, result);
+            if (result >= DIR_CW) {
+                event(static_cast<EventType>(result), time);
+            }
 
             noInterrupts();
+            ++iterator;
         }
         // copy items that have not been processed
         _states.shrink(iterator, _states.end());
         interrupts();
 
     }
-
-    // noInterrupts();
-    // uint8_t currentState = _pin1->_value | (_pin2->_value << 1);
-    // interrupts();
-
-    // if (_lastState != currentState) {
-    //     auto savedState = currentState;
-    //     __DBG_printf("initial_state=%u%u time=%u int1=%u int2=%u state=%u", savedState>>1, savedState&1, micros(), _pin1->_intCount, _pin2->_intCount, process(savedState));
-
-    //     poolEnd micros() + 10000
-    //     for(uint i = 0; i < 100; i++) {
-    //         currentState = digitalRead(_pin1->getPin()) | (digitalRead(_pin2->getPin()) << 1);
-    //         if (currentState != savedState) {
-    //             savedState = currentState;
-    //             __DBG_printf("new_state=%u%u time=%u int1=%u int2=%u state=%u", savedState>>1, savedState&1, micros(), _pin1->_intCount, _pin2->_intCount, process(savedState));
-    //         }
-    //     }
-    //     _lastState = currentState;
-
-    //     noInterrupts();
-    //     _pin1->_value = _lastState & 1;
-    //     _pin2->_value = _lastState >> 1;
-    //     _pin1->_intCount = 0;
-    //     _pin2->_intCount = 0;
-    //     interrupts();
 
 }

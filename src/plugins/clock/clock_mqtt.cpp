@@ -19,7 +19,6 @@
 #define MQTT_NAME "clock"
 #endif
 
-
 MQTTComponent::MQTTAutoDiscoveryPtr ClockPlugin::nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num)
 {
     if (num >= getAutoDiscoveryCount()) {
@@ -74,24 +73,14 @@ MQTTComponent::MQTTAutoDiscoveryPtr ClockPlugin::nextAutoDiscovery(MQTTAutoDisco
 
 uint8_t ClockPlugin::getAutoDiscoveryCount() const
 {
-    #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
-        #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
-            return 3;
-        #else
-            return 2;
-        #endif
-    #else
-        #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
-            return 2;
-        #else
-            return 1;
-        #endif
-    #endif
+    return 1
+        IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR( + 1)
+        IF_IOT_CLOCK_DISPLAY_POWER_CONSUMPTION( + 1);
 }
 
 void ClockPlugin::onConnect(MQTTClient *client)
 {
-    __LDBG_println();
+    __LDBG_printf("client=%p", client);
     client->subscribe(this, MQTTClient::formatTopic(FSPGM(_set)));
     client->subscribe(this, MQTTClient::formatTopic(FSPGM(_color_set)));
     client->subscribe(this, MQTTClient::formatTopic(FSPGM(_brightness_set)));
@@ -161,9 +150,9 @@ void ClockPlugin::_publishState(MQTTClient *client)
         client = MQTTClient::getClient();
     }
 #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
-    __DBG_printf("client=%p color=%s brightness=%u auto=%d", client, getColor().implode(',').c_str(), _targetBrightness, _autoBrightness);
+    // __LDBG_printf("client=%p color=%s brightness=%u auto=%d", client, getColor().implode(',').c_str(), _targetBrightness, _autoBrightness);
 #else
-    __DBG_printf("client=%p animation=%u (%p) color=%s brightness=%u", client, _config.animation, _animation, getColor().implode(',').c_str(), _targetBrightness);
+    // __LDBG_printf("client=%p animation=%u (%p) color=%s brightness=%u", client, _config.animation, _animation, getColor().implode(',').c_str(), _targetBrightness);
 #endif
     if (client && client->isConnected()) {
         client->publish(MQTTClient::formatTopic(FSPGM(_state)), true, String(_getEnabledState()));

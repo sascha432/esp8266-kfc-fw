@@ -235,24 +235,27 @@ uint16_t ClockPlugin::_readLightSensor() const
 
 uint8_t ClockPlugin::_getBrightness(bool temperatureProtection) const
 {
-    return ((_autoBrightness == kAutoBrightnessOff) ? _getFadingBrightness() : _getFadingBrightness() * _autoBrightnessValue) * (temperatureProtection ? getTempProtectionFactor() : 1);
+    return (_autoBrightness == kAutoBrightnessOff) ?
+        _getFadingBrightness() :
+        (_getFadingBrightness() * _autoBrightnessValue * (temperatureProtection ? getTempProtectionFactor() : 1.0f));
 }
 
 #else
 
 uint8_t ClockPlugin::_getBrightness(bool temperatureProtection) const
 {
-    if (!temperatureProtection) {
-        return _getFadingBrightness();
-    }
-    return _getFadingBrightness() * getTempProtectionFactor();
+    return temperatureProtection ?
+        (_getFadingBrightness() * getTempProtectionFactor()) :
+        _getFadingBrightness();
 }
 
 #endif
 
 float ClockPlugin::_getFadingBrightness() const
 {
-    return _fadeTimer.isActive() && _fadeTimer.getDelay() ? _targetBrightness - (((int16_t)_targetBrightness - (int16_t)_startBrightness) / (float)_fadeTimer.getDelay()  * _fadeTimer.getTimeLeft()) : _targetBrightness;
+    return (_fadeTimer.isActive() && _fadeTimer.getDelay()) ?
+        (_targetBrightness - (((int16_t)_targetBrightness - (int16_t)_startBrightness) / (float)_fadeTimer.getDelay()  * _fadeTimer.getTimeLeft())) :
+        _targetBrightness;
 }
 
 ClockPlugin::AnimationType ClockPlugin::_getAnimationType(String name)
@@ -415,12 +418,14 @@ void ClockPlugin::setup(SetupModeType mode)
     IF_IOT_CLOCK_BUTTON_PIN(
         pinMonitor.begin();
 
+        __LDBG_printf("button at pin %u", IOT_CLOCK_BUTTON_PIN);
         pinMonitor.attach<Clock::Button>(IOT_CLOCK_BUTTON_PIN, 0, *this);
         pinMode(IOT_CLOCK_BUTTON_PIN, INPUT);
 
         IF_IOT_CLOCK_HAVE_ROTARY_ENCODER(
-            auto encoder = new RotaryEncoder();
-            encoder->attachPins(IOT_CLOCK_ROTARY_ENC_PINA, PIN_MONITOR_ACTIVE_STATE, IOT_CLOCK_ROTARY_ENC_PINB, PIN_MONITOR_ACTIVE_STATE);
+            __LDBG_printf("rotary encoder at pin %u,%u active_low=%u", IOT_CLOCK_ROTARY_ENC_PINA, IOT_CLOCK_ROTARY_ENC_PINB, PIN_MONITOR_ACTIVE_STATE == ActiveStateType::ACTIVE_LOW);
+            auto encoder = new Clock::RotaryEncoder(PIN_MONITOR_ACTIVE_STATE);
+            encoder->attachPins(IOT_CLOCK_ROTARY_ENC_PINA, IOT_CLOCK_ROTARY_ENC_PINB);
             pinMode(IOT_CLOCK_ROTARY_ENC_PINA, INPUT);
             pinMode(IOT_CLOCK_ROTARY_ENC_PINB, INPUT);
         )
@@ -507,12 +512,12 @@ void ClockPlugin::shutdown()
 {
     __LDBG_println();
 
-    #if IOT_CLOCK_SAVE_STATE
+    IF_IOT_CLOCK_SAVE_STATE(
         if (_saveTimer) {
             _saveTimer.remove();
             _saveState();
         }
-    #endif
+    )
 
     #if HTTP2SERIAL_SUPPORT && IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
         if (_displayLedTimer) {
@@ -521,6 +526,33 @@ void ClockPlugin::shutdown()
                 delay(250);
             }
         }
+    #endif
+
+    #if HAVE_PCF8574
+        _PCF8574.write8(0xff);
+    #endif
+
+    IF_IOT_CLOCK_HAVE_ROTARY_ENCODER(
+        _rotaryActionTimer.remove();
+    )
+
+    IF_IOT_CLOCK_BUTTON_PIN(
+        pinMonitor.detach(this);
+    )
+
+    #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
+        _autoBrightnessTimer.remove();
+    #endif
+
+    IF_IOT_CLOCK_DISPLAY_POWER_CONSUMPTION(
+        WsClient::removeClientCallback(this);
+    )
+
+    _timer.remove();
+
+    #if IOT_ALARM_PLUGIN_ENABLED
+        _resetAlarm();
+        AlarmPlugin::setCallback(nullptr);
     #endif
 
     if (_targetBrightness && _config.enabled) {
@@ -536,27 +568,8 @@ void ClockPlugin::shutdown()
 
     LoopFunctions::remove(loop);
 
-    IF_IOT_CLOCK_DISPLAY_POWER_CONSUMPTION(
-        WsClient::removeClientCallback(this);
-    )
-
     // turn all LEDs off
     _disable(10);
-
-    IF_IOT_CLOCK_BUTTON_PIN(
-        pinMonitor.detach(this);
-    )
-
-    _timer.remove();
-
-    #if IOT_ALARM_PLUGIN_ENABLED
-        _resetAlarm();
-        AlarmPlugin::setCallback(nullptr);
-    #endif
-
-    #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
-        _autoBrightnessTimer.remove();
-    #endif
 }
 
 void ClockPlugin::getStatus(Print &output)
@@ -580,6 +593,13 @@ void ClockPlugin::getStatus(Print &output)
     output.printf_P(PSTR(HTML_S(br) "Total pixels %u"), Clock::DisplayType::kNumPixels);
 #else
     output.printf_P(PSTR(HTML_S(br) "Total pixels %u, digits pixels %u"), Clock::DisplayType::kNumPixels, Clock::SevenSegment::kNumPixelsDigits);
+#endif
+#if IOT_CLOCK_BUTTON_PIN != -1
+#if IOT_CLOCK_HAVE_ROTARY_ENCODER
+    output.printf_P(PSTR(HTML_S(br) "Rotary encoder with button"));
+#else
+    output.printf_P(PSTR(HTML_S(br) "Single button"));
+#endif
 #endif
     if (isTempProtectionActive()) {
         output.printf_P(PSTR(HTML_S(br) "The temperature exceeded %u"), _config.protection.max_temperature);
@@ -713,9 +733,10 @@ void ClockPlugin::setColorAndRefresh(Color color)
     _schedulePublishState = true;
 }
 
-void ClockPlugin::setAnimation(AnimationType animation)
+void ClockPlugin::setAnimation(AnimationType animation, uint16_t blendTime)
 {
-    __LDBG_printf("animation=%d", animation);
+    __LDBG_printf("animation=%d blend_time=%u", animation, blendTime);
+    _blendTime = blendTime;
     IF_IOT_CLOCK(
         switch(animation) {
             case AnimationType::COLON_SOLID:
@@ -826,7 +847,7 @@ void ClockPlugin::_setBlendAnimation(Clock::Animation *blendAnimation)
     if (_blendAnimation) {
         delete _blendAnimation;
     }
-    _blendAnimation = new Clock::BlendAnimation(_animation, blendAnimation, _display, Clock::BlendAnimation::kDefaultTime);
+    _blendAnimation = new Clock::BlendAnimation(_animation, blendAnimation, _display, _blendTime);
     if (!_blendAnimation) {
         delete _animation;
         _animation = blendAnimation;
@@ -972,6 +993,11 @@ void ClockPlugin::_disable(uint8_t delayMillis)
     LoopFunctions::add(standbyLoop);
 
     delay(delayMillis);
+}
+
+ClockPlugin &ClockPlugin::getInstance()
+{
+    return plugin;
 }
 
 #if IOT_ALARM_PLUGIN_ENABLED

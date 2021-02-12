@@ -24,6 +24,7 @@
 
 using KFCConfigurationClasses::Plugins;
 
+class WebServerPlugin;
 class ClockPlugin;
 
 namespace Clock {
@@ -295,7 +296,9 @@ public:
     void setBrightness(uint8_t brightness, int32_t millis = -1, uint32_t maxTime = ~0U);
     // use NONE to remove all animations
     // use NEXT to remove the current animation and start the next one. if next animation isnt set, animation is set to NONE
-    void setAnimation(AnimationType animation);
+    void setAnimation(AnimationType animation, uint16_t blendTime = Clock::BlendAnimation::kDefaultTime);
+
+    uint16_t _blendTime{Clock::BlendAnimation::kDefaultTime};
 
     // read defaults and copy to local storage
     void readConfig();
@@ -381,6 +384,45 @@ public:
 public:
     using EventType = Clock::Button::EventType;
     void buttonCallback(uint8_t button, EventType eventType, uint16_t repeatCount);
+
+#if IOT_CLOCK_HAVE_ROTARY_ENCODER
+    void rotaryCallback(bool decrease, uint32_t now);
+
+    void setRotaryAction(uint8_t action) {
+        _rotaryAction = action;
+        if (action != 0) {
+            _Timer(_rotaryActionTimer).add(Event::milliseconds(5000), false, [this](Event::CallbackTimerPtr) {
+                setRotaryAction(0);
+            });
+        }
+        else {
+            _rotaryActionTimer.remove();
+        }
+        switch(action) {
+            case 0:
+                _digitalWrite(132, HIGH); // green LED left side
+                _digitalWrite(128, HIGH); // blue LED
+                _digitalWrite(129, HIGH); // red LED
+                _digitalWrite(130, HIGH); // green LED right side
+                break;
+            case 1:
+                _digitalWrite(128, LOW);
+                _digitalWrite(129, LOW);
+                break;
+        }
+    }
+
+private:
+    // acceleration per step
+    static constexpr uint8_t kRotaryAccelerationDivider = 1;
+    // max. acceleration
+    static constexpr uint8_t kRotaryMaxAcceleration = 10 * kRotaryAccelerationDivider;
+
+    uint32_t _lastRotaryUpdate{0};
+    uint8_t _rotaryAcceleration{kRotaryAccelerationDivider};
+    uint8_t _rotaryAction{0};
+    Event::Timer _rotaryActionTimer;
+#endif
 
 #endif
 
@@ -482,6 +524,8 @@ public:
     Color getColor() const;
 
 private:
+    friend WebServerPlugin;
+
     // set brightness
     // enable LEDs if disabled
     // store new level in config
@@ -506,6 +550,12 @@ private:
 
     void _setAnimation(Clock::Animation *animation);
     void _setBlendAnimation(Clock::Animation *animation);
+
+// ------------------------------------------------------------------------
+// Singleton getter
+// ------------------------------------------------------------------------
+public:
+    static ClockPlugin &getInstance();
 
 // ------------------------------------------------------------------------
 // private variables

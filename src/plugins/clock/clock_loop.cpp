@@ -37,6 +37,8 @@ struct Clock::ClockLoopOptions::tm24 &Clock::ClockLoopOptions::getLocalTime(time
 
 #if IOT_CLOCK_PIXEL_SYNC_ANIMATION
 
+#error NOT UP TO DATE
+
 bool ClockPlugin::_loopSyncingAnimation(LoopOptionsType &options)
 {
     if (!_isSyncing) {

@@ -18,10 +18,18 @@ namespace PinMonitor {
 
     enum class RotaryEncoderEventType : uint8_t {
         NONE                            = 0,
-        LEFT                            = _BV(0),
-        RIGHT                           = _BV(1),
+        RIGHT                           = 0x10,
+        CLOCK_WISE                      = RIGHT,
+        LEFT                            = 0x20,
+        COUNTER_CLOCK_WISE              = LEFT,
         ANY                             = 0xff,
         MAX_BITS                        = 8
+    };
+
+    enum class RotaryEncoderDirection : uint8_t {
+        LEFT = 0,
+        RIGHT = 1,
+        LAST = RIGHT
     };
 
     class RotaryEncoder;
@@ -31,15 +39,14 @@ namespace PinMonitor {
         using EventType = RotaryEncoderEventType;
 
     public:
-        RotaryEncoderPin(uint8_t pin, uint8_t direction, RotaryEncoder *encoder, ActiveStateType state) :
+        RotaryEncoderPin(uint8_t pin, RotaryEncoderDirection direction, RotaryEncoder *encoder, ActiveStateType state) :
             Pin(pin, encoder, StateType::UP_DOWN, state),
             _direction(direction)
         {
         }
-        ~RotaryEncoderPin();
+        virtual ~RotaryEncoderPin();
 
     public:
-        // virtual void event(EventType eventType, uint32_t now) {}
         virtual void loop() override;
 
     protected:
@@ -51,7 +58,7 @@ namespace PinMonitor {
         void _reset();
 
     protected:
-        uint8_t _direction: 1;
+        RotaryEncoderDirection _direction;
     };
 
     class RotaryEncoder {
@@ -59,34 +66,32 @@ namespace PinMonitor {
         using EventType = RotaryEncoderEventType;
 
     public:
-        RotaryEncoder() :
-            _counter(0),
-            _rPin1(nullptr),
-            _rPin2(nullptr),
-            _hPin1(nullptr),
-            _hPin2(nullptr),
-            _pin1(255),
-            _pin2(255)
+        RotaryEncoder(ActiveStateType state) :
+            _activeState(state),
+            _state(0)
         {
 #if !defined(PIN_MONITOR_HAVE_ROTARY_ENCODER) || PIN_MONITOR_HAVE_ROTARY_ENCODER == 0
             __DBG_panic("PIN_MONITOR_HAVE_ROTARY_ENCODER=1 not set");
 #endif
         }
+        virtual ~RotaryEncoder() {}
 
-        void attachPins(uint8_t pin1, ActiveStateType state1, uint8_t pin2, ActiveStateType state2);
+        virtual void event(EventType eventType, uint32_t now) {
+            __LDBG_printf("event_type=%u now=%u", eventType, now);
+        }
+
+        void attachPins(uint8_t pin1, uint8_t pin2);
         void loop();
 
-    // protected:
-    // public for friend void HardwarePin_callback(void *arg);
-    public:
+    protected:
+        uint8_t _process(uint8_t pinState);
 
-        uint8_t _lastState: 2;
-        stdex::fixed_circular_buffer<uint8_t, 64> _states;
-        uint32_t _counter;
-        RotaryEncoderPin *_rPin1;
-        RotaryEncoderPin *_rPin2;
-        HardwarePin *_hPin1;
-        HardwarePin *_hPin2;
+    protected:
+        friend HardwarePin;
+
+        stdex::fixed_circular_buffer<uint8_t, 128> _states;
+        ActiveStateType _activeState;
+        uint8_t _state;
         uint8_t _pin1;
         uint8_t _pin2;
     };

@@ -55,13 +55,13 @@ void print_status_pcf8574(Print &output)
 #define PLUGIN_OPTIONS_NAME                             "led_matrix"
 #define PLUGIN_OPTIONS_FRIENDLY_NAME                    "LED Matrix"
 #define PLUGIN_OPTIONS_WEB_TEMPLATES                    ""
-#define PLUGIN_OPTIONS_CONFIG_FORMS                     "led-matrix"
+#define PLUGIN_OPTIONS_CONFIG_FORMS                     "settings,animations,protection"
 
 #else
 
 #define PLUGIN_OPTIONS_NAME                             "clock"
 #define PLUGIN_OPTIONS_FRIENDLY_NAME                    "Clock"
-#define PLUGIN_OPTIONS_CONFIG_FORMS                     "clock"
+#define PLUGIN_OPTIONS_CONFIG_FORMS                     "settings,animations,protection"
 
 #endif
 
@@ -82,7 +82,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     PLUGIN_OPTIONS_RECONFIGURE_DEPENDENCIES,
     PluginComponent::PriorityType::MIN,
     PluginComponent::RTCMemoryId::NONE,
-    static_cast<uint8_t>(PluginComponent::MenuType::AUTO),
+    static_cast<uint8_t>(PluginComponent::MenuType::CUSTOM),
     false,              // allow_safe_mode
     false,              // setup_after_deep_sleep
     true,               // has_get_status
@@ -126,21 +126,20 @@ ClockPlugin::ClockPlugin() :
     _animation(nullptr),
     _blendAnimation(nullptr)
 {
-    // IF_IOT_CLOCK(
-    //     size_t ofs = 0;
-    //     auto ptr = _pixelOrder.data();
-    //     static const char pixel_order[] PROGMEM = IOT_CLOCK_PIXEL_ORDER;
-    //     for(int i = 0; i < IOT_CLOCK_NUM_DIGITS; i++) {
-    //         memcpy_P(ptr, pixel_order, IOT_CLOCK_PIXEL_ORDER_LEN);
-    //         for (int j = 0; j < IOT_CLOCK_PIXEL_ORDER_LEN; j++) {
-    //             ptr[j] += ofs;
-    //         }
-    //         ofs += SevenSegmentDisplay::getNumPixelsPerDigit();
-    //         ptr += IOT_CLOCK_PIXEL_ORDER_LEN;
-    //     }
-    // )
-
     REGISTER_PLUGIN(this, "ClockPlugin");
+}
+
+void ClockPlugin::createMenu()
+{
+#if IOT_LED_MATROX
+    bootstrapMenu.addSubMenu(F("LED Matrix Settings"), F("led-matrix/settings.html"), navMenu.config);
+    bootstrapMenu.addSubMenu(F("LED Matrix Animations"), F("led-matrix/animations.html"), navMenu.config);
+    bootstrapMenu.addSubMenu(F("LED Matrix Protection"), F("led-matrix/protection.html"), navMenu.config);
+#else
+    bootstrapMenu.addSubMenu(F("Clock Settings"), F("clock/settings.html"), navMenu.config);
+    bootstrapMenu.addSubMenu(F("Clock Animations"), F("clock/animations.html"), navMenu.config);
+    bootstrapMenu.addSubMenu(F("Clock Protection"), F("clock/protection.html"), navMenu.config);
+#endif
 }
 
 #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
@@ -625,35 +624,6 @@ void ClockPlugin::enableLoop(bool enable)
 }
 
 #if !IOT_LED_MATRIX
-
-// static const char pgm_digit_order[] PROGMEM = IOT_CLOCK_DIGIT_ORDER;
-// static const char pgm_segment_order[] PROGMEM = IOT_CLOCK_SEGMENT_ORDER;
-
-// void ClockPlugin::_setSevenSegmentDisplay()
-// {
-//     SevenSegmentDisplay::PixelAddressType addr = 0;
-//     auto ptr = pgm_digit_order;
-//     auto endPtr = ptr + sizeof(pgm_digit_order);
-
-//     while(ptr < endPtr) {
-//         int n = pgm_read_byte(ptr++);
-//         if (n >= 30) {
-//             n -= 30;
-//             __LDBG_printf("address=%u colon=%u", addr, n);
-// #if IOT_CLOCK_NUM_PX_PER_COLON == 1
-//             _display.setColons(n, addr + IOT_CLOCK_NUM_COLON_PIXELS, addr);
-// #else
-//             _display.setColons(n, addr, addr + IOT_CLOCK_NUM_COLON_PIXELS);
-
-// #endif
-//             addr += IOT_CLOCK_NUM_COLON_PIXELS * 2;
-//         }
-//         else {
-//             __LDBG_printf("address=%u digit=%u", addr, n);
-//             addr = _display.setSegments(n, addr, pgm_segment_order);
-//         }
-//     }
-// }
 
 void ClockPlugin::setBlinkColon(uint16_t value)
 {

@@ -70,6 +70,157 @@ Available commands: /disconnect /reconnect /clear /clear-history|/ch
         </div>
     </div>
 
+    <!--#if (defined(IOT_CLOCK) && IOT_CLOCK && IOT_LED_MATRIX == 0)-->
+
+    <!--#if (defined(IOT_CLOCK_DISPLAY_INCLUDE) && IOT_CLOCK_DISPLAY_INCLUDE == 1)-->
+    <script>window.clock_display_type = 1;</script>
+    <!--#endif-->
+    <!--#if (defined(IOT_CLOCK_DISPLAY_INCLUDE) && IOT_CLOCK_DISPLAY_INCLUDE == 2)-->
+    <script>window.clock_display_type = 2;</script>
+    <!--#endif-->
+
+    <div id="digits" style="display: none;">
+        <div class="digits-container">
+            <div class="digit-container" id="digit-prototype">
+                <div class="row horizontal">
+                    <div class="digit-horizontal">
+                        <div class="pixels">
+                            <div class="pixels-horizontal">
+                                <div class="pixel A">A</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row vertical">
+                    <div class="digit-vertical">
+                        <div class="pixels">
+                            <div class="pixels-vertical">
+                                <div class="pixel F">F</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="spacer"></div>
+                    <div class="digit-vertical">
+                        <div class="pixels">
+                            <div class="pixels-vertical">
+                                <div class="pixel B">B</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row horizontal">
+                    <div class="digit-horizontal">
+                        <div class="pixels">
+                            <div class="pixels-horizontal">
+                                <div class="pixel G">G</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row vertical">
+                    <div class="digit-vertical">
+                        <div class="pixels">
+                            <div class="pixels-vertical">
+                                <div class="pixel E">E</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="spacer"></div>
+                    <div class="digit-vertical">
+                        <div class="pixels">
+                            <div class="pixels-vertical">
+                                <div class="pixel C">C</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row horizontal">
+                    <div class="digit-horizontal">
+                        <div class="pixels">
+                            <div class="pixels-horizontal">
+                                <div class="pixel D">D</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="colon-container" id="colon-prototype">
+                <div class="colon">
+                    <div class="pixels-top">
+                        <div class="pixel T">T</div>
+                    </div>
+                    <div class="pixels-bottom">
+                        <div class="pixel B">B</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        window.populate_clock_digits = function() {
+
+            function add(pxid) {
+                return '<div class="px" id="px' + pxid + '"><div class="ipx">' + pxid + '</div></div>';
+            }
+            function ss(digit, name) {
+                var segment = digit.find('.pixel.' + name).parent();
+                var pixels = '';
+                for(var i = 2; i < arguments.length; i++) {
+                    pixels += add(arguments[i]);
+                }
+                segment.html(pixels);
+            }
+
+            if (window.clock_display_type == 1) {
+                var d = $('<div class="digit-container" id="digit_0">' + $('#digit-prototype').html() + '</div>');
+                ss(d, 'A', 0, 1); ss(d, 'B', 2, 3); ss(d, 'C', 6, 7); ss(d, 'D', 8, 9); ss(d, 'E', 10, 11); ss(d, 'F', 12, 13); ss(d, 'G', 4, 5);
+                $('.digits-container').append(d);
+                var d = $('<div class="digit-container" id="digit_1">' + $('#digit-prototype').html() + '</div>');
+                ss(d, 'A', 14, 15); ss(d, 'B', 16, 17); ss(d, 'C', 20, 21); ss(d, 'D', 22, 23); ss(d, 'E', 24, 25); ss(d, 'F', 26, 27); ss(d, 'G', 18, 19);
+                $('.digits-container').append(d);
+                var c = $('<div class="colon-container" id="colon_0">' + $('#colon-prototype').html() + '</div>');
+                ss(c, 'T', 28); ss(c, 'B', 30);
+                $('.digits-container').append(c);
+                var d = $('<div class="digit-container" id="digit_2">' + $('#digit-prototype').html() + '</div>');
+                ss(d, 'A', 30, 31); ss(d, 'B', 32, 33); ss(d, 'C', 36, 37); ss(d, 'D', 38, 39); ss(d, 'E', 40, 41); ss(d, 'F', 42, 43); ss(d, 'G', 34, 35);
+                $('.digits-container').append(d);
+                var d = $('<div class="digit-container" id="digit_3">' + $('#digit-prototype').html() + '</div>');
+                ss(d, 'A', 44, 45); ss(d, 'B', 46, 47); ss(d, 'C', 50, 51); ss(d, 'D', 52, 53); ss(d, 'E', 54, 55); ss(d, 'F', 56, 57); ss(d, 'G', 48, 49);
+                $('.digits-container').append(d);
+                var c = $('<div class="colon-container" id="colon_1">' + $('#colon-prototype').html() + '</div>');
+                ss(c, 'T', 58); ss(c, 'B', 60);
+                $('.digits-container').append(c);
+                var d = $('<div class="digit-container" id="digit_4">' + $('#digit-prototype').html() + '</div>');
+                ss(d, 'A', 60, 61); ss(d, 'B', 62, 63); ss(d, 'C', 66, 67); ss(d, 'D', 68, 69); ss(d, 'E', 70, 71); ss(d, 'F', 72, 73); ss(d, 'G', 64, 65);
+                $('.digits-container').append(d);
+                var d = $('<div class="digit-container" id="digit_5">' + $('#digit-prototype').html() + '</div>');
+                ss(d, 'A', 74, 75); ss(d, 'B', 76, 77); ss(d, 'C', 80, 81); ss(d, 'D', 82, 83); ss(d, 'E', 84, 85); ss(d, 'F', 86, 87); ss(d, 'G', 78, 79);
+                $('.digits-container').append(d);
+            } else if (window.clock_display_type == 2) {
+                var d = $('<div class="digit-container" id="digit_0">' + $('#digit-prototype').html() + '</div>');
+                ss(d, 'A', 112, 113, 114, 115); ss(d, 'B', 108, 109, 110, 111); ss(d, 'C', 96, 97, 98, 99); ss(d, 'D', 100, 101, 102, 103); ss(d, 'E', 104, 105, 106, 107); ss(d, 'F', 88, 89, 90, 91); ss(d, 'G', 92, 93, 94, 95);
+                $('.digits-container').append(d);
+                var d = $('<div class="digit-container" id="digit_1">' + $('#digit-prototype').html() + '</div>');
+                ss(d, 'A', 84, 85, 86, 87); ss(d, 'B', 80, 81, 82, 83); ss(d, 'C', 68, 69, 70, 71); ss(d, 'D', 72, 73, 74, 75); ss(d, 'E', 76, 77, 78, 79); ss(d, 'F', 60, 61, 62, 63); ss(d, 'G', 64, 65, 66, 67);
+                $('.digits-container').append(d);
+                var c = $('<div class="colon-container" id="colon_0">' + $('#colon-prototype').html() + '</div>');
+                ss(c, 'T', 0, 1); ss(c, 'B', 4, 5);
+                $('.digits-container').append(c);
+                var d = $('<div class="digit-container" id="digit_2">' + $('#digit-prototype').html() + '</div>');
+                ss(d, 'A', 28, 29, 30, 31); ss(d, 'B', 24, 25, 26, 27); ss(d, 'C', 12, 13, 14, 15); ss(d, 'D', 16, 17, 18, 19); ss(d, 'E', 20, 21, 22, 23); ss(d, 'F', 4, 5, 6, 7); ss(d, 'G', 8, 9, 10, 11);
+                $('.digits-container').append(d);
+                var d = $('<div class="digit-container" id="digit_3">' + $('#digit-prototype').html() + '</div>');
+                ss(d, 'A', 56, 57, 58, 59); ss(d, 'B', 52, 53, 54, 55); ss(d, 'C', 40, 41, 42, 43); ss(d, 'D', 44, 45, 46, 47); ss(d, 'E', 48, 49, 50, 51); ss(d, 'F', 32, 33, 34, 35); ss(d, 'G', 36, 37, 38, 39);
+                $('.digits-container').append(d);
+            }
+            $('#digit-prototype').remove();
+            $('#digit-prototype').remove();
+        };
+
+    </script>
+
+    <!--#endif-->
+
     <!--%%JAVASCRIPT-->
     <script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/jquery-3.5.2-dist/jquery.js"></script>
     <!--JAVASCRIPT%%-->

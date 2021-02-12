@@ -127,34 +127,44 @@ http2serialPlugin.appendLedMatrix = function(rows, cols, reverse_rows, reverse_c
     var container = $('#pixel-container');
     var contents = '';
 
-    function to_address(row, col) {
-        if (rotate) {
-            var tmp = row;
-            row = col;
-            col = tmp;
-        }
-        if (reverse_rows) {
-            row = (rows - 1) - row;
-        }
-        if (reverse_cols) {
-            col = (cols - 1) - col;
-        }
-        if (interleaved) {
-            if (col % 2 == 1) {
+    if ($('#digits').length) {
+
+        contents = $('#digits').html()
+        $('#digits').remove();
+
+    }
+    else {
+        function to_address(row, col) {
+            if (rotate) {
+                var tmp = row;
+                row = col;
+                col = tmp;
+            }
+            if (reverse_rows) {
                 row = (rows - 1) - row;
             }
+            if (reverse_cols) {
+                col = (cols - 1) - col;
+            }
+            if (interleaved) {
+                if (col % 2 == 1) {
+                    row = (rows - 1) - row;
+                }
+            }
+            return col * rows + row;
         }
-        return col * rows + row;
+
+        for (var i = 0; i < rows; i++) {
+            contents += '<div class="row">';
+            for (var j = 0; j < cols; j++) {
+                var px_id = to_address(i, j);
+                contents += '<div id="px' + px_id + '" class="px"><div class="ipx">' + px_id + '</div></div>';
+            }
+            contents += '</div>';
+        }
+
     }
 
-    for (var i = 0; i < rows; i++) {
-        contents += '<div class="row">';
-        for (var j = 0; j < cols; j++) {
-            var px_id = to_address(i, j);
-            contents += '<div id="px' + px_id + '" class="px"><div class="ipx">' + px_id + '</div></div>';
-        }
-        contents += '</div>';
-    }
     container.html(contents + '<div class="toolbar"> \
         <div class="row"> \
             <div class="col"> \
@@ -178,6 +188,12 @@ http2serialPlugin.appendLedMatrix = function(rows, cols, reverse_rows, reverse_c
             </div> \
         </div> \
     </div>');
+
+
+    if (window.populate_clock_digits) {
+        window.populate_clock_digits();
+    }
+
     var n = 0;
     for (var i = 0; i <rows; i++) {
         for (var j = 0; j < cols; j++) {

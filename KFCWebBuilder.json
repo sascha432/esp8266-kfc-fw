@@ -78,7 +78,8 @@
             ],
             "#if !IOT_CLOCK || IOT_LED_MATRIX": [
                 "./Resources/html/clock.html",
-                "./Resources/js/forms/clock.js"
+                "./Resources/js/forms/clock.js",
+                "./Resources/css/clock-led-matrix.css"
             ],
             "#if IOT_CLOCK || !IOT_LED_MATRIX": [
                 "./Resources/html/led_matrix.html"
@@ -195,6 +196,7 @@
                         "./Resources/css/rangeslider.css",
                         "./Resources/css/form-help-block.css",
                         "./Resources/css/input-text-range.css",
+                        "./Resources/css/clock-led-matrix.css",
                         "./lib/KFCWebBuilder/Resources/charts-js-2.9.3-dist/Chart.css"
                     ]
                 },

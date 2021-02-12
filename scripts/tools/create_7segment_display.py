@@ -324,3 +324,33 @@ elif args.action=='dumpcode':
         file.write('static constexpr auto kPixelAnimationOrder = AnimationOrderArray({%s});\n' % display.animation_order_array_str)
         file.write('\n')
 
+    filename = 'display.js'
+    print('Output: %s' % filename)
+
+    with open(filename, 'wt') as file:
+
+        def write_digit(i):
+            address = display.get_digit_start(i)
+            file.write("var d = $('<div class=\"digit-container\" id=\"digit_%u\">' + $('#digit-prototype').html() + '</div>');\n" % i)
+            for j in range(0, display.segments_len):
+                px = display.get_digit_pixels(address, SEGMENTS_LIST[j])
+                file.write("ss(d, '%s', %s); " % (SEGMENTS_LIST[j].value.upper(), str(px)[1:-1]))
+            file.write("\n$('.digits-container').append(d);\n")
+
+        def write_colon(i):
+            address = display.get_colon_start(i)
+            file.write("var c = $('<div class=\"colon-container\" id=\"colon_%u\">' + $('#colon-prototype').html() + '</div>');\n" % i)
+            for j in range(0, display.colons_len):
+                px = display.get_colon_pixels(address, COLONS_LIST[j])[0:display.colons_pixels]
+                file.write("ss(c, '%s', %s); " % (COLONS_LIST[j].value[0].upper(), str(px)[1:-1]))
+            file.write("\n$('.digits-container').append(c);\n")
+
+        write_digit(0)
+        write_digit(1)
+        write_colon(0)
+        write_digit(2)
+        write_digit(3)
+        if display.num_digits>4:
+            write_colon(1)
+            write_digit(4)
+            write_digit(5)

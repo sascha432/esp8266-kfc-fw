@@ -82,7 +82,6 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
             channelGroup.end();
         }
 
-
     }
     else if (String_equals(formName, PSTR("automation"))) {
 

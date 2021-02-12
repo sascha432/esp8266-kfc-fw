@@ -53,6 +53,14 @@ Library to handle configurations stored in the EEPROM, read on demand to save me
 
 Library to handle RESTful APIs using asyncHTTPrequest/KFCJson
 
+### PinMonitor
+
+Support for push buttons with debouncing and rotary encoders using interrupts
+
+### Mpr121Touchpad
+
+Support for capacitive touchpads using the MPR121 sensor. With gestures detection
+
 ## Plugins
 
 ### AT Mode
@@ -125,9 +133,11 @@ https://github.com/sascha432/ESP8266-WiFi-Clock
 https://easyeda.com/sascha23095123423/iot_wifi_7segment
 https://easyeda.com/sascha23095123423/iot_wifi_clock_controller
 
+It includes a python tool to generate a translation table to address any 7 segment display.
+
 ### LED Matrix
 
-Plugin based on the clock plugin to control a WS281x LED matrix or LED string
+Plugin based on the clock plugin to control a WS2812 LED matrix or LED string. The plugin is using FastLED and supports all the available LED types.
 
 ### Dimmer
 

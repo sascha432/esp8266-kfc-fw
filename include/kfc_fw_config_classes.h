@@ -1721,6 +1721,7 @@ typedef struct  {
                 float max;
                 float incr;
                 RainbowMultiplier_t();
+                RainbowMultiplier_t(float value, float min, float max, float incr);
             } RainbowMultiplier_t;
 
             typedef struct __attribute__packed__ RainbowColor_t {

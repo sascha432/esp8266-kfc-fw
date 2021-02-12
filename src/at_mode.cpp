@@ -622,7 +622,7 @@ static void heap_timer_callback(Event::CallbackTimerPtr timer)
 static void create_heap_timer(float seconds, DisplayTimer::DisplayTypeEnum_t type = DisplayTimer::HEAP)
 {
     displayTimer._type = type;
-    _Timer(displayTimer._timer).add(Event::seconds(seconds), true, heap_timer_callback);
+    _Timer(displayTimer._timer).add(Event::milliseconds(static_cast<uint32_t>(seconds * 1000)), true, heap_timer_callback);
 }
 
 void at_mode_create_heap_timer(float seconds)
@@ -1563,7 +1563,7 @@ void at_mode_serial_handle_event(String &commandString)
 #endif
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RSSI)) || args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(HEAP)) || args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(GPIO))) {
                 if (args.requireArgs(0, 1)) {
-                    auto interval = args.toMillis(0, 250, 3600 * 1000, 0, String('s'));
+                    auto interval = args.toMillis(0, 0, 3600 * 1000, 0, String('s'));
                     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RSSI))) {
                         displayTimer._type = DisplayTimer::RSSI;
                     }
@@ -1575,7 +1575,7 @@ void at_mode_serial_handle_event(String &commandString)
                     }
                     displayTimer._rssiMin = -10000;
                     displayTimer._rssiMax = 0;
-                    if (interval == 0) {
+                    if (interval < 250) {
                         if (displayTimer.removeTimer()) {
                             args.print(F("Interval disabled"));
                         }
@@ -1633,7 +1633,6 @@ void at_mode_serial_handle_event(String &commandString)
                                     args.printf_P(PSTR("pin=%u high=%u low=%u runtime=%u"), pin, timeHighUS, timeLowUS, runTimeUS);
                                     startWaveformClockCycles(pin, timeHighUS, timeLowUS, runTimeUS);
                                 }
-
                             }
                         }
                     }
@@ -1647,8 +1646,6 @@ void at_mode_serial_handle_event(String &commandString)
 
                     }
                     else {
-
-                        // +PWM=4,512,40000,2000
 
                         auto level = (uint16_t)args.toIntMinMax(1, 0, PWMRANGE, 0);
                         if (level == 0) {

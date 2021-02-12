@@ -23,6 +23,7 @@
 #    define IF_IOT_LED_MATRIX_STANDBY_PIN(...)
 #endif
 
+// standby LED is inverted/active low
 #ifndef IOT_LED_MATRIX_STANDBY_PIN_INVERTED
 #    define IOT_LED_MATRIX_STANDBY_PIN_INVERTED 0
 #endif
@@ -34,66 +35,21 @@
 #endif
 
 // first pixel to use, others can be controlled separately and are reset during reboot only
-#    ifndef IOT_LED_MATRIX_START_ADDR
-#        define IOT_LED_MATRIX_START_ADDR 0
-#    endif
+#ifndef IOT_LED_MATRIX_START_ADDR
+#    define IOT_LED_MATRIX_START_ADDR 0
+#endif
 
+// enable LED matrix mode instead of clock mode
 #if IOT_LED_MATRIX
-
 #    define IF_IOT_LED_MATRIX(...) __VA_ARGS__
 #    define IF_IOT_CLOCK(...)
-
-// #    define IOT_CLOCK_NUM_PIXELS (IOT_LED_MATRIX_COLS * IOT_LED_MATRIX_ROWS)
-
 #else
-
 #    define IF_IOT_LED_MATRIX(...)
 #    define IF_IOT_CLOCK(...) __VA_ARGS__
-
-// // number of digits
-// #    ifndef IOT_CLOCK_NUM_DIGITS
-// #        define IOT_CLOCK_NUM_DIGITS 4
-// #    endif
-
-// // pixels per segment
-// #    ifndef IOT_CLOCK_NUM_PIXELS
-// #        define IOT_CLOCK_NUM_PIXELS 2
-// #    endif
-
-// // number of colons
-// #    ifndef IOT_CLOCK_NUM_COLONS
-// #        if IOT_CLOCK_NUM_DIGITS == 4
-// #            define IOT_CLOCK_NUM_COLONS 1
-// #        else
-// #            define IOT_CLOCK_NUM_COLONS 2
-// #        endif
-// #    endif
-
-// // pixels per dot
-// #    ifndef IOT_CLOCK_NUM_COLON_PIXELS
-// #        define IOT_CLOCK_NUM_COLON_PIXELS 2
-// #    endif
-
-// // order of the segments (a-g)
-// #    ifndef IOT_CLOCK_SEGMENT_ORDER
-// #        define IOT_CLOCK_SEGMENT_ORDER { 0, 1, 3, 4, 5, 6, 2 }
-// #    endif
-
-// // digit order, 30=colon #1,31=#2, etc...
-// #    ifndef IOT_CLOCK_DIGIT_ORDER
-// #        define IOT_CLOCK_DIGIT_ORDER { 0, 1, 30, 2, 3, 31, 4, 5 }
-// #    endif
-
-// // pixel order of pixels that belong to digits, 0 to use pixel addresses of the 7 segment class
-// #    ifndef IOT_CLOCK_PIXEL_ORDER
-// #        define IOT_CLOCK_PIXEL_ORDER { 0 }
-// #    endif
-
 #    ifndef IOT_LED_MATRIX_COLS
 #        define IOT_LED_MATRIX_COLS IOT_CLOCK_NUM_PIXELS
 #        define IOT_LED_MATRIX_ROWS 1
 #    endif
-
 #endif
 
 #if SPEED_BOOSTER_ENABLED
@@ -104,23 +60,22 @@
 #    error NTP_CLIENT=1 and NTP_HAVE_CALLBACKS=1 required
 #endif
 
+// pin for the button
 #ifndef IOT_CLOCK_BUTTON_PIN
-
 #    define IOT_CLOCK_BUTTON_PIN 14
-#    ifndef IOT_CLOCK_SAVE_STATE
-#        define IOT_CLOCK_SAVE_STATE 1
-#    endif
+#endif
 
-#else
-
-#    ifndef IOT_CLOCK_SAVE_STATE
-#        define IOT_CLOCK_SAVE_STATE 0
-#    endif
-
+// save animation and brightness state
+// if disabled, the configuration defaults are loaded if the device is restarted
+#ifndef IOT_CLOCK_SAVE_STATE
+#    define IOT_CLOCK_SAVE_STATE 1
 #endif
 
 #if IOT_CLOCK_BUTTON_PIN != -1
 #    define IF_IOT_CLOCK_BUTTON_PIN(...) __VA_ARGS__
+#    if !defined(PIN_MONITOR) || PIN_MONITOR == 0
+#        error requires PIN_MONITOR=1
+#    endif
 #else
 #    define IF_IOT_CLOCK_BUTTON_PIN(...)
 #endif
@@ -136,7 +91,6 @@
 #ifndef IOT_CLOCK_SAVE_STATE_DELAY
 #    define IOT_CLOCK_SAVE_STATE_DELAY 30
 #endif
-
 
 // enable support for a rotary encoder
 #ifndef IOT_CLOCK_HAVE_ROTARY_ENCODER
@@ -154,6 +108,10 @@
 
 #ifndef IOT_CLOCK_ROTARY_ENC_PINB
 #    define IOT_CLOCK_ROTARY_ENC_PINB -1
+#endif
+
+#if IOT_CLOCK_HAVE_ROTARY_ENCODER && (IOT_CLOCK_ROTARY_ENC_PINA == -1 || IOT_CLOCK_ROTARY_ENC_PINB == -1)
+#    error IOT_CLOCK_ROTARY_ENC_PINA and IOT_CLOCK_ROTARY_ENC_PINB must be defined
 #endif
 
 #if IOT_CLOCK_HAVE_ROTARY_ENCODER
@@ -194,18 +152,19 @@
 #    define IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(...)
 #endif
 
+// update interval in ms, 0 to disable
 #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
 #    ifndef IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
-// update interval in ms, 0 to disable
 #        define IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL 125
 #    endif
 #endif
 
-// add sensor for calculated power level
+// add sensor for calculated power level to webui/mqtt
 #ifndef IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
 #   define IOT_CLOCK_DISPLAY_POWER_CONSUMPTION 1
 #endif
 
+// update rate for webui
 #ifndef IOT_CLOCK_CALC_POWER_CONSUMPTION_UPDATE_RATE
 #   define IOT_CLOCK_CALC_POWER_CONSUMPTION_UPDATE_RATE 2
 #endif
@@ -227,10 +186,11 @@
 #   define IF_IOT_CLOCK_HAVE_POWER_LIMIT(...)
 #endif
 
-// show rotating animation while time is invalid
+// show rotating animation while the time is invalid
 #ifndef IOT_CLOCK_PIXEL_SYNC_ANIMATION
 #    define IOT_CLOCK_PIXEL_SYNC_ANIMATION 0
 #endif
+
 #if IOT_LED_MATRIX && IOT_CLOCK_PIXEL_SYNC_ANIMATION
 #    error not supported, set IOT_CLOCK_PIXEL_SYNC_ANIMATION=0
 #endif

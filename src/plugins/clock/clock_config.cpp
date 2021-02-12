@@ -5,6 +5,14 @@
 #include <Configuration.h>
 #include <kfc_fw_config.h>
 
+#ifndef IOT_CLOCK_ALARM_COLOR
+#define IOT_CLOCK_ALARM_COLOR 0x880000
+#endif
+
+#ifndef IOT_CLOCK_ALARM_FLASHING_SPEED
+#define IOT_CLOCK_ALARM_FLASHING_SPEED 250
+#endif
+
 namespace KFCConfigurationClasses {
 
     Plugins::ClockConfig::RainbowMultiplier_t::RainbowMultiplier_t() :
@@ -12,6 +20,13 @@ namespace KFCConfigurationClasses {
         min(0.1),
         max(16.0),
         incr(0.001)
+    {}
+
+    Plugins::ClockConfig::RainbowMultiplier_t::RainbowMultiplier_t(float a, float b, float c, float d) :
+        value(a),
+        min(b),
+        max(c),
+        incr(d)
     {}
 
     Plugins::ClockConfig::RainbowColor_t::RainbowColor_t() :
@@ -56,7 +71,7 @@ namespace KFCConfigurationClasses {
         power({static_cast<uint16_t>(16.3 * 5 * kPowerNumLeds), static_cast<uint16_t>(16.4 * 5 * kPowerNumLeds), static_cast<uint16_t>(16.3 * 5 * kPowerNumLeds), static_cast<uint16_t>(0.83 * 5 * kPowerNumLeds)}),
         protection( { { 55, 70 }, 75} ),
         rainbow{ RainbowMultiplier_t(), RainbowColor_t(), 30 },
-        alarm{ { 0xaa0000 }, 250 },
+        alarm{ { IOT_CLOCK_ALARM_COLOR }, IOT_CLOCK_ALARM_FLASHING_SPEED },
         fading{ fading.kDefaultValueFor_speed, fading.kDefaultValueFor_delay, 0xffffff },
         fire(),
         interleaved({ 2, 0, 60000 })

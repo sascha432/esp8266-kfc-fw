@@ -938,7 +938,7 @@ void ClockPlugin::_updateBrightnessSettings()
 void ClockPlugin::_enable()
 {
     if (_isEnabled) {
-        __LDBG_printf("enable LED pin %u state %u (is_enabled=%u, config=%u) SKIPPED", IOT_CLOCK_EN_PIN, enablePinState(true), _isEnabled, _config.enabled);
+        // __LDBG_printf("enable LED pin %u state %u (is_enabled=%u, config=%u) SKIPPED", IOT_CLOCK_EN_PIN, enablePinState(true), _isEnabled, _config.enabled);
         return;
     }
     if (isTempProtectionActive()) {
@@ -992,6 +992,7 @@ void ClockPlugin::_disable(uint8_t delayMillis)
     LoopFunctions::remove(loop);
     LoopFunctions::add(standbyLoop);
 
+    // artificial delay to avoid switching on/off too quickly
     delay(delayMillis);
 }
 

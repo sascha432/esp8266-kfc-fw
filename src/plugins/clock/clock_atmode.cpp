@@ -39,7 +39,9 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKT, "T", "<value>", "Override temperat
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(CLOCKA, "A", "<num>[,<arguments>,...]", "Set animation", "Display available animations");
 // PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(CLOCKD, "D", "Dump pixel addresses and other information");
 #if HTTP2SERIAL_SUPPORT && IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKVIEW, "VIEW", "<interval in ms|0=disable>,<client_id>", "Display Leds over http2serial");
+#undef PROGMEM_AT_MODE_HELP_COMMAND_PREFIX
+#define PROGMEM_AT_MODE_HELP_COMMAND_PREFIX "LM"
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LMVIEW, "VIEW", "<interval in ms|0=disable>,<client_id>", "Display Leds over http2serial");
 #endif
 
 #if HTTP2SERIAL_SUPPORT && IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
@@ -70,7 +72,7 @@ ATModeCommandHelpArrayPtr ClockPlugin::atModeCommandHelp(size_t &size) const
         PROGMEM_AT_MODE_HELP_COMMAND(CLOCKA),
         // PROGMEM_AT_MODE_HELP_COMMAND(CLOCKD),
 #if HTTP2SERIAL_SUPPORT && IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
-        PROGMEM_AT_MODE_HELP_COMMAND(CLOCKVIEW)
+        PROGMEM_AT_MODE_HELP_COMMAND(LMVIEW)
 #endif
     };
     size = sizeof(tmp) / sizeof(tmp[0]);
@@ -102,7 +104,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
         else {
             auto text = args.get(0);
             args.printf_P(PSTR("display '%s'"), text);
-            _display.print(text, _getColor());
+            _display.print(text);
             _display.show();
         }
         return true;
@@ -129,7 +131,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             args.print(F("101 = enable clock"));
             args.print(F("200 = display ambient light sensor value (+" PROGMEM_AT_MODE_HELP_COMMAND_PREFIX "A=200,<0|1>)"));
 #endif
-            args.print(F("300 = test pixel animation order"));
+            args.print(F("300 = test pixel order"));
         }
         else if (args.size() >= 1) {
             auto animation = _getAnimationType(args.toString(0));
@@ -156,6 +158,9 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                 int interval = args.toInt(1, 500);
                 enableLoop(false);
                 size_t num = 0;
+                if (interval < 50) {
+                    interval = 50;
+                }
                 _Scheduler.add(interval, true, [num, this](Event::CallbackTimerPtr timer) mutable {
                     __LDBG_printf("pixel=%u", num);
                     if (num == _display.kNumPixels) {
@@ -273,7 +278,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
         return true;
     }
 #if HTTP2SERIAL_SUPPORT && IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKVIEW))) {
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LMVIEW))) {
         auto interval = static_cast<uint32_t>(args.toInt(0));
         if (interval != 0) {
             interval = std::max(5U, interval);

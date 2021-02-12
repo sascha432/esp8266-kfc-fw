@@ -219,9 +219,9 @@ void ClockPlugin::createWebUI(WebUIRoot &webUI)
 
     auto &col = row->addButtonGroup(F("btn_animation"), F("Animation"), Plugins::ClockConfig::ClockConfig_t::getAnimationNames());
     col.add(JJ(height), height);
-    IF_IOT_LED_MATRIX(
-        col.add(JJ(row), 3);
-    )
+    col.add(JJ(row), 3);
+    // IF_IOT_LED_MATRIX(
+    // )
 
     IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(
        row->addSensor(FSPGM(light_sensor), F("Ambient Light Sensor"), F("<img src=\"/images/light.svg\" width=\"80\" height=\"80\" style=\"margin-top:-20px;margin-bottom:1rem\">"), WebUIComponent::SensorRenderType::COLUMN).add(JJ(height), height);

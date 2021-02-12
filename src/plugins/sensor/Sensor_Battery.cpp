@@ -193,8 +193,8 @@ float Sensor_Battery::_readSensor()
     }
     auto voltage = result.getFloatValue() / ADCManager::kMaxADCValue;
 
-    __LDBG_printf("adc=%f raw=%f sum=%u", voltage, (((IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R2 + IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1)) / IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1) * voltage, sum);
-    return ((((IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R2 + IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1)) / IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1) * voltage * _config.calibration) + _config.offset;
+    __LDBG_printf("adc=%f raw=%f sum=%u", voltage, (((IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R2 + IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1)) / (float)IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1) * voltage, sum);
+    return ((((IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R2 + IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1)) / (float)IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1) * voltage * _config.calibration) + _config.offset;
 }
 
 Sensor_Battery::SensorState Sensor_Battery::_getState() const

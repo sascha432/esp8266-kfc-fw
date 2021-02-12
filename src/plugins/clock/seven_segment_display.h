@@ -80,13 +80,13 @@ namespace SevenSegment {
          * "12:00"="12:00", "#1.1#""=" 1.1 ", "## 00"="   00", ...
          *
          * */
-        void print(const String &text, ColorType color) {
-            print(text.c_str(), color);
+        void print(const String &text) {
+            print(text.c_str());
         }
 
-        void print(const char *text, ColorType color) {
+        void print(const char *text) {
             if (!text || !*text) {
-                clear();
+                clearState();
             }
             uint8_t digit = 0;
             uint8_t colon = 0;
@@ -99,7 +99,7 @@ namespace SevenSegment {
                         clearDigit(digit);
                     }
                     else {
-                        setDigit(digit, *text - '0', color);
+                        setDigit(digit, *text - '0', true);
                     }
                     digit++;
                 }
@@ -110,12 +110,12 @@ namespace SevenSegment {
                             clearColon(colon, ColonType::BOTTOM);
                         }
                         else if (*text == ':') {
-                            setColon(colon, ColonType::TOP, color);
-                            setColon(colon, ColonType::BOTTOM, color);
+                            setColon(colon, ColonType::TOP, true);
+                            setColon(colon, ColonType::BOTTOM, true);
                         }
                         else if (*text == '.') {
                             clearColon(colon, ColonType::TOP);
-                            setColon(colon, ColonType::BOTTOM, color);
+                            setColon(colon, ColonType::BOTTOM, true);
                         }
                         colon++;
                     }
@@ -125,19 +125,19 @@ namespace SevenSegment {
             }
         }
 
-        void setColon(uint8_t num, ColonType colon, ColorType color) {
+        void setColon(uint8_t num, ColonType colon, bool state) {
             for(const auto &pixels: kColonTranslationTable[static_cast<uint8_t>(colon)]) {
                 for(const auto pixel: pixels) {
-                    setPixel(pixel, color);
+                    setPixelState(pixel, state);
                 }
             }
         }
 
         void clearColon(uint8_t num, ColonType colon) {
-            setColon(num, colon, ColorType());
+            setColon(num, colon, false);
         }
 
-        void setDigit(uint8_t num, uint8_t number, ColorType color) {
+        void setDigit(uint8_t num, uint8_t number, bool state) {
             #if DEBUG_IOT_CLOCK
                 if (number > static_cast<uint8_t>(SegmentType::MAX_DIGIT)) {
                     __DBG_panic("number %u out of range [0;%u]", number, static_cast<uint8_t>(SegmentType::MAX_DIGIT));
@@ -147,8 +147,8 @@ namespace SevenSegment {
             uint8_t n = 0;
             for(const auto &segments: kDigitsTranslationTable[num]) {
                 for (const auto pixel: segments) {
-                    setPixel(pixel, (numberSegments == n) ? color : ColorType());
-                    // setPixel(pixel, (static_cast<uint8_t>(numberSegments) & _BV(n)) ? color : ColorType());
+                    setPixelState(pixel, (numberSegments == n) ? state : false);
+                    // setPixel(pixel, (static_cast<uint8_t>(numberSegments) & _BV(n)) ? state : false);
                 }
                 n++;
             }
@@ -157,11 +157,41 @@ namespace SevenSegment {
         void clearDigit(uint8_t num) {
             for(const auto &segments: kDigitsTranslationTable[num]) {
                 for (const auto pixel: segments) {
-                    setPixel(pixel, ColorType());
+                    setPixelState(pixel, false);
                 }
             }
         }
 
+        void setPixelState(PixelAddressType address, bool state) {
+            _state[address] = state;
+        }
+
+        void clearState() {
+            std::fill(_state.begin(), _state.end(), 0);
+        }
+
+        void clear() {
+            clearState();
+            DisplayType::clear();
+        }
+
+        void show() {
+            show(FastLED.getBrightness());
+        }
+
+        void show(uint8_t brightness) {
+            PixelAddressType address = 0;
+            for(auto state: _state) {
+                if (!state) {
+                    setPixel(address, ColorType());
+                }
+                address++;
+            }
+            FastLED.show(brightness);
+        }
+
+    private:
+        std::array<bool, BaseDisplayType::kNumPixels> _state;
     };
 
 }

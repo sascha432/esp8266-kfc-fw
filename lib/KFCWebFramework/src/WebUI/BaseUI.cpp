@@ -59,6 +59,17 @@ void WebUI::BaseUI::_addItem(const Container::SelectSuffix &suffix)
         Storage::Value::SuffixHtml(attachString(item.getValue())).push_back(target);
     }
 
+    //TODO
+    // for(const auto &item: suffix._options) {
+    //     const char *value = _attachMixedContainer(item.second, AttachStringAsType::HTML_ENTITIES);
+    //     if (item.first.isInt()) {
+    //         _storage.push_back(Storage::Value::SuffixOptionNumKey(item.first.getInt(), value));
+    //     }
+    //     else {
+    //         _storage.push_back(Storage::Value::SuffixOption(_attachMixedContainer(item.first, AttachStringAsType::HTML_ATTRIBUTE), value));
+    //     }
+    // }
+
     _storage.push_back(Storage::Value::SuffixHtml(attachString(F("</select>"))));
 }
 

@@ -1,7 +1,5 @@
-//
-// AUTO GENERATED FILE. DO NOT MODIFY
-//
-// python ./scripts/tools/create_mqtt_strings.py
+// AUTOMATICALLY GENERATED FILE. DO NOT MODIFY
+// GENERATOR: ./scripts/tools/create_mqtt_strings.py
 //
 #pragma once
 #include <Arduino_compat.h>

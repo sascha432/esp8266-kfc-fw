@@ -1,7 +1,5 @@
-//
-// AUTO GENERATED FILE. DO NOT MODIFY
-//
-// python ./scripts/tools/create_mqtt_strings.py
+// AUTOMATICALLY GENERATED FILE. DO NOT MODIFY
+// GENERATOR: ./scripts/tools/create_mqtt_strings.py
 //
 #include "mqtt_strings.h"
 PROGMEM_STRING_DEF(mqtt_component_switch, "switch");
@@ -93,7 +91,7 @@ PROGMEM_STRING_DEF(mqtt_optimistic, "opt");
 PROGMEM_STRING_DEF(mqtt_oscillation_command_topic, "osc_cmd_t");
 PROGMEM_STRING_DEF(mqtt_oscillation_state_topic, "osc_stat_t");
 PROGMEM_STRING_DEF(mqtt_oscillation_value_template, "osc_val_tpl");
-PROGMEM_STRING_DEF(mqtt_ , "pl");
+PROGMEM_STRING_DEF(mqtt_payload, "pl");
 PROGMEM_STRING_DEF(mqtt_payload_arm_away, "pl_arm_away");
 PROGMEM_STRING_DEF(mqtt_payload_arm_home, "pl_arm_home");
 PROGMEM_STRING_DEF(mqtt_payload_arm_custom_bypass, "pl_arm_custom_b");

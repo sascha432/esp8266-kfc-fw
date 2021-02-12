@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 #
 # Author: sascha_lammers@gmx.de
 #
@@ -11,8 +12,8 @@ import os
 import sys
 
 project_dir = '../..'
-mqtt_plugin_dir = path.realpath(path.join(path.dirname(__file__), project_dir, 'src/plugins/mqtt'))
-mqtt_plugin_client_h = path.realpath(path.join(mqtt_plugin_dir, 'mqtt_client.h'))
+mqtt_plugin_dir = path.abspath(path.join(path.dirname(__file__), project_dir, 'src/plugins/mqtt'))
+mqtt_plugin_client_h = path.abspath(path.join(mqtt_plugin_dir, 'mqtt_client.h'))
 
 if not path.exists(mqtt_plugin_dir):
     print('No such file or directory: %s' % mqtt_plugin_dir)
@@ -206,9 +207,9 @@ strings = {
     'xy_val_tpl':          'xy_value_template',
 }
 
-header = '//\n// AUTO GENERATED FILE. DO NOT MODIFY\n//\n// python ./scripts/tools/create_mqtt_strings.py\n//\n'
+header = '// AUTOMATICALLY GENERATED FILE. DO NOT MODIFY\n// GENERATOR: ./scripts/tools/create_mqtt_strings.py\n//\n'
 
-with open(path.realpath(path.join(mqtt_plugin_dir, 'mqtt_strings.h')), 'w') as f:
+with open(path.abspath(path.join(mqtt_plugin_dir, 'mqtt_strings.h')), 'w') as f:
 
     f.write(header)
     f.write('#pragma once\n')
@@ -226,7 +227,7 @@ with open(path.realpath(path.join(mqtt_plugin_dir, 'mqtt_strings.h')), 'w') as f
     for key, val in strings.items():
         f.write('PROGMEM_STRING_DECL(mqtt_%s);\n' % val)
 
-with open(path.realpath(path.join(mqtt_plugin_dir, 'mqtt_strings.cpp')), 'w') as f:
+with open(path.abspath(path.join(mqtt_plugin_dir, 'mqtt_strings.cpp')), 'w') as f:
 
     f.write(header)
     f.write('#include "mqtt_strings.h"\n')

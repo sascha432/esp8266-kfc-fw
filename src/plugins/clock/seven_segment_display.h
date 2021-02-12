@@ -59,14 +59,12 @@ namespace SevenSegment {
 
     static constexpr auto kSegmentTypeTranslationTable = SegmentTypeArray({ SegmentType::DIGIT_0, SegmentType::DIGIT_1, SegmentType::DIGIT_2, SegmentType::DIGIT_3, SegmentType::DIGIT_4, SegmentType::DIGIT_5, SegmentType::DIGIT_6, SegmentType::DIGIT_7, SegmentType::DIGIT_8, SegmentType::DIGIT_9, SegmentType::DIGIT_A, SegmentType::DIGIT_B, SegmentType::DIGIT_C, SegmentType::DIGIT_D, SegmentType::DIGIT_E, SegmentType::DIGIT_F });
 
-    #if IOT_CLOCK_DISPLAY_INCLUDE == 2
-
+    #if IOT_CLOCK_DISPLAY_INCLUDE == 1
+        #include "display_clock.h"
+    #elif IOT_CLOCK_DISPLAY_INCLUDE == 2
         #include "display_clockv2.h"
-
     #else
-
         #error "no translation table available"
-
     #endif
 
     class Display : public BaseDisplayType {

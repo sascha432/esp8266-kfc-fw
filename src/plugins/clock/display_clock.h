@@ -1,5 +1,5 @@
 // AUTOMATICALLY GENERATED FILE. DO NOT MODIFY
-// GENERATOR: scripts/tools/create_7segment_display.py dumpcode --name clock
+// GENERATOR: ./scripts/tools/create_7segment_display.py dumpcode --name clock
 
 #pragma once
 

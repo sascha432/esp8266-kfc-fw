@@ -1,11 +1,16 @@
+#!/usr/bin/env python3
+#
+# Author: sascha_lammers@gmx.de
+#
+#
 
 import sys
 import argparse
 import enum
 from os import path
 
-root_dir = path.abspath(path.join(path.dirname(__file__), '..', '..'))
-header_dir = path.abspath(path.join(root_dir, 'src/plugins/clock'))
+project_dir = path.abspath(path.join(path.dirname(__file__), '..', '..'))
+header_dir = path.abspath(path.join(project_dir, 'src/plugins/clock'))
 
 parser = argparse.ArgumentParser(description='OTA for KFC Firmware')
 parser.add_argument('action', help='action to execute', choices=['list', 'dump', 'dumpcode'])
@@ -236,7 +241,7 @@ elif args.action=='dumpcode':
     with open(filename, 'wt') as file:
 
         file.write('// AUTOMATICALLY GENERATED FILE. DO NOT MODIFY\n')
-        file.write('// GENERATOR: scripts/tools/create_7segment_display.py dumpcode --name %s\n' % args.name)
+        file.write('// GENERATOR: ./scripts/tools/create_7segment_display.py dumpcode --name %s\n' % args.name)
         file.write('\n')
         file.write('#pragma once\n')
         file.write('\n')

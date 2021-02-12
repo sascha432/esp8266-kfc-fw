@@ -126,24 +126,58 @@ ClockPlugin::ClockPlugin() :
     _animation(nullptr),
     _blendAnimation(nullptr)
 {
-    IF_IOT_CLOCK(
-        size_t ofs = 0;
-        auto ptr = _pixelOrder.data();
-        static const char pixel_order[] PROGMEM = IOT_CLOCK_PIXEL_ORDER;
-        for(int i = 0; i < IOT_CLOCK_NUM_DIGITS; i++) {
-            memcpy_P(ptr, pixel_order, IOT_CLOCK_PIXEL_ORDER_LEN);
-            for (int j = 0; j < IOT_CLOCK_PIXEL_ORDER_LEN; j++) {
-                ptr[j] += ofs;
-            }
-            ofs += SevenSegmentDisplay::getNumPixelsPerDigit();
-            ptr += IOT_CLOCK_PIXEL_ORDER_LEN;
-        }
-    )
+    // IF_IOT_CLOCK(
+    //     size_t ofs = 0;
+    //     auto ptr = _pixelOrder.data();
+    //     static const char pixel_order[] PROGMEM = IOT_CLOCK_PIXEL_ORDER;
+    //     for(int i = 0; i < IOT_CLOCK_NUM_DIGITS; i++) {
+    //         memcpy_P(ptr, pixel_order, IOT_CLOCK_PIXEL_ORDER_LEN);
+    //         for (int j = 0; j < IOT_CLOCK_PIXEL_ORDER_LEN; j++) {
+    //             ptr[j] += ofs;
+    //         }
+    //         ofs += SevenSegmentDisplay::getNumPixelsPerDigit();
+    //         ptr += IOT_CLOCK_PIXEL_ORDER_LEN;
+    //     }
+    // )
 
     REGISTER_PLUGIN(this, "ClockPlugin");
 }
 
 #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
+
+bool ClockPlugin::_loopDisplayLightSensor(LoopOptionsType &options)
+{
+    if (_displaySensor == DisplaySensorType::OFF) {
+        return false;
+    }
+    _forceUpdate = false;
+    if (_displaySensor == DisplaySensorType::SHOW) {
+        _displaySensor = DisplaySensorType::BUSY;
+
+        // request to read the ADC 10 times every 25ms ~ 250ms
+        ADCManager::getInstance().requestAverage(10, 25000, [this](const ADCManager::ADCResult &result) {
+
+            if (
+                result.isInvalid() ||                               // adc queue has been aborted
+                _displaySensor != DisplaySensorType::BUSY           // disabled or something went wrong
+            ) {
+                __LDBG_printf("ADC callback: display sensor value=%u result=%u", _displaySensor, result.isValid());
+                return;
+            }
+            _displaySensor = DisplaySensorType::SHOW; // set back from BUSY to SHOW
+
+            auto str = PrintString(F("% " __STRINGIFY(IOT_CLOCK_NUM_DIGITS) "u"), result.getValue()); // left padded with spaces
+            // replace space with #
+            String_replace(str, ' ', '#');
+            // disable any animation, set color to green and brightness to 50%
+
+            _display.clear();
+            _display.print(str, Color(0, 0xff, 0));
+            _display.show(kMaxBrightness / 2);
+        });
+    }
+    return true;
+}
 
 void ClockPlugin::adjustAutobrightness(Event::CallbackTimerPtr timer)
 {
@@ -367,7 +401,7 @@ void ClockPlugin::setup(SetupModeType mode)
     )
 
     IF_IOT_CLOCK(
-        _setSevenSegmentDisplay();
+        // _setSevenSegmentDisplay();
         IF_IOT_CLOCK_PIXEL_SYNC_ANIMATION(
             if (IS_TIME_VALID(time(nullptr))) {
                 _isSyncing = false;
@@ -459,9 +493,8 @@ void ClockPlugin::reconfigure(const String &source)
     )
     else {
         readConfig();
-        _saveState();
-        IF_IOT_CLOCK(
-            _setSevenSegmentDisplay();
+        IF_IOT_CLOCK_SAVE_STATE(
+            _saveState();
         )
         _schedulePublishState = true;
     }
@@ -510,7 +543,9 @@ void ClockPlugin::shutdown()
     // turn all LEDs off
     _disable(10);
 
-    pinMonitor.detach(this);
+    IF_IOT_CLOCK_BUTTON_PIN(
+        pinMonitor.detach(this);
+    )
 
     _timer.remove();
 
@@ -544,7 +579,7 @@ void ClockPlugin::getStatus(Print &output)
 #if IOT_LED_MATRIX
     output.printf_P(PSTR(HTML_S(br) "Total pixels %u"), Clock::DisplayType::kNumPixels);
 #else
-    output.printf_P(PSTR(HTML_S(br) "Total pixels %u, digits pixels %u"), SevenSegmentDisplay::getTotalPixels(), SevenSegmentDisplay::getDigitsPixels());
+    output.printf_P(PSTR(HTML_S(br) "Total pixels %u, digits pixels %u"), Clock::DisplayType::kNumPixels, Clock::SevenSegment::kNumPixelsDigits);
 #endif
     if (isTempProtectionActive()) {
         output.printf_P(PSTR(HTML_S(br) "The temperature exceeded %u"), _config.protection.max_temperature);
@@ -571,51 +606,43 @@ void ClockPlugin::enableLoop(bool enable)
 
 #if !IOT_LED_MATRIX
 
-static const char pgm_digit_order[] PROGMEM = IOT_CLOCK_DIGIT_ORDER;
-static const char pgm_segment_order[] PROGMEM = IOT_CLOCK_SEGMENT_ORDER;
+// static const char pgm_digit_order[] PROGMEM = IOT_CLOCK_DIGIT_ORDER;
+// static const char pgm_segment_order[] PROGMEM = IOT_CLOCK_SEGMENT_ORDER;
 
-void ClockPlugin::_setSevenSegmentDisplay()
-{
-    SevenSegmentDisplay::PixelAddressType addr = 0;
-    auto ptr = pgm_digit_order;
-    auto endPtr = ptr + sizeof(pgm_digit_order);
+// void ClockPlugin::_setSevenSegmentDisplay()
+// {
+//     SevenSegmentDisplay::PixelAddressType addr = 0;
+//     auto ptr = pgm_digit_order;
+//     auto endPtr = ptr + sizeof(pgm_digit_order);
 
-    while(ptr < endPtr) {
-        int n = pgm_read_byte(ptr++);
-        if (n >= 30) {
-            n -= 30;
-            __LDBG_printf("address=%u colon=%u", addr, n);
-#if IOT_CLOCK_NUM_PX_PER_COLON == 1
-            _display.setColons(n, addr + IOT_CLOCK_NUM_COLON_PIXELS, addr);
-#else
-            _display.setColons(n, addr, addr + IOT_CLOCK_NUM_COLON_PIXELS);
+//     while(ptr < endPtr) {
+//         int n = pgm_read_byte(ptr++);
+//         if (n >= 30) {
+//             n -= 30;
+//             __LDBG_printf("address=%u colon=%u", addr, n);
+// #if IOT_CLOCK_NUM_PX_PER_COLON == 1
+//             _display.setColons(n, addr + IOT_CLOCK_NUM_COLON_PIXELS, addr);
+// #else
+//             _display.setColons(n, addr, addr + IOT_CLOCK_NUM_COLON_PIXELS);
 
-#endif
-            addr += IOT_CLOCK_NUM_COLON_PIXELS * 2;
-        }
-        else {
-            __LDBG_printf("address=%u digit=%u", addr, n);
-            addr = _display.setSegments(n, addr, pgm_segment_order);
-        }
-    }
-}
+// #endif
+//             addr += IOT_CLOCK_NUM_COLON_PIXELS * 2;
+//         }
+//         else {
+//             __LDBG_printf("address=%u digit=%u", addr, n);
+//             addr = _display.setSegments(n, addr, pgm_segment_order);
+//         }
+//     }
+// }
 
 void ClockPlugin::setBlinkColon(uint16_t value)
 {
-    uint16_t updateRate = value;
     if (value < kMinBlinkColonSpeed) {
-        updateRate = kDefaultUpdateRate;
         value = 0;
-    }
-    if (_animation) {
-        _updateRate = std::min(updateRate, _updateRate);
-    }
-    else {
-        _updateRate = updateRate;
     }
     _config.blink_colon_speed = value;
     _schedulePublishState = true;
-    __LDBG_printf("blinkcolon=%u update_rate=%u", value, _updateRate);
+    __LDBG_printf("blinkcolon=%u update_rate=%u", value, value);
 }
 
 #endif
@@ -693,13 +720,15 @@ void ClockPlugin::setAnimation(AnimationType animation)
         switch(animation) {
             case AnimationType::COLON_SOLID:
                 setBlinkColon(0);
-                return
+                return;
             case AnimationType::COLON_BLINK_SLOWLY:
                 setBlinkColon(1000);
-                return
+                return;
             case AnimationType::COLON_BLINK_FAST:
                 setBlinkColon(0);
-                return
+                return;
+            default:
+                break;
         }
     )
     _config.animation = static_cast<uint8_t>(animation);

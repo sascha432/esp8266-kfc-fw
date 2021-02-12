@@ -4,7 +4,7 @@
 
 #pragma once
 
-#if IOT_CLOCK_BUTTON_PIN!=-1
+#if IOT_CLOCK_BUTTON_PIN != -1
 
 #include <Arduino_compat.h>
 #include "clock_base.h"

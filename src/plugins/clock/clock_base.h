@@ -6,7 +6,7 @@
 
 #include <Arduino_compat.h>
 #include <kfc_fw_config.h>
-#include "SevenSegmentPixel.h"
+#include <ReadADC.h>
 #include "clock_def.h"
 
 #if DEBUG_IOT_CLOCK
@@ -20,6 +20,15 @@
 #include <push_button.h>
 #include <rotary_encoder.h>
 #endif
+
+// #ifndef FASTLED_ALLOW_INTERRUPTS
+// #define FASTLED_ALLOW_INTERRUPTS                                0
+// #endif
+// #ifndef FASTLED_INTERRUPT_RETRY_COUNT
+// #define FASTLED_INTERRUPT_RETRY_COUNT                           1
+// #endif
+#define FASTLED_INTERNAL
+#include <FastLED.h>
 
 class ClockPlugin;
 

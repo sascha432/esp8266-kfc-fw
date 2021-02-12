@@ -88,7 +88,9 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
                         setBlinkColon(500);
                         break;
                 }
-                _saveStateDelayed();
+                IF_IOT_CLOCK_SAVE_STATE(
+                    _saveStateDelayed();
+                )
             }
             else
         )
@@ -100,15 +102,21 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
         )
         if (String_equals(id, PSTR("btn_animation"))) {
             setAnimation(static_cast<AnimationType>(val));
-            _saveStateDelayed();
+            IF_IOT_CLOCK_SAVE_STATE(
+                _saveStateDelayed();
+            )
         }
         else if (String_equals(id, PSTR("color"))) {
             setColorAndRefresh(val);
-            _saveStateDelayed();
+            IF_IOT_CLOCK_SAVE_STATE(
+                _saveStateDelayed();
+            )
         }
         else if (String_equals(id, SPGM(brightness))) {
             setBrightness(std::clamp<uint8_t>(val, 0, kMaxBrightness));
-            _saveStateDelayed();
+            IF_IOT_CLOCK_SAVE_STATE(
+                _saveStateDelayed();
+            )
         }
     }
 }

@@ -21,9 +21,6 @@
 #if HTTP2SERIAL_SUPPORT
 #include "../src/plugins/http2serial/http2serial.h"
 #endif
-#if IOT_LED_MATRIX
-#include "led_matrix.h"
-#endif
 
 using KFCConfigurationClasses::Plugins;
 
@@ -70,7 +67,7 @@ namespace Clock {
 
     inline bool LoopOptionsBase::doUpdate() const
     {
-        return (_millisSinceLastUpdate >= Clock::kUpdateRate);
+        return (_millisSinceLastUpdate >= kUpdateRate);
     }
 
     inline bool LoopOptionsBase::doRefresh() const
@@ -127,6 +124,7 @@ namespace Clock {
         time_t &_time;
         time_t _now;
         struct tm24 _tm;
+        bool format_24h;
     };
 
     inline time_t ClockLoopOptions::getNow() const
@@ -378,7 +376,7 @@ public:
 // Button
 // ------------------------------------------------------------------------
 
-#if IOT_CLOCK_BUTTON_PIN!=-1
+#if IOT_CLOCK_BUTTON_PIN != -1
 
 public:
     using EventType = Clock::Button::EventType;
@@ -410,14 +408,14 @@ private:
 // Clock
 // ------------------------------------------------------------------------
 
-private:
-    void _setSevenSegmentDisplay();
+// private:
+//     void _setSevenSegmentDisplay();
 
 public:
     void setBlinkColon(uint16_t value);
 
 private:
-    std::array<SevenSegmentDisplay::PixelAddressType, IOT_CLOCK_PIXEL_ORDER_LEN * IOT_CLOCK_NUM_DIGITS> _pixelOrder;
+    // std::array<SevenSegmentDisplay::PixelAddressType, IOT_CLOCK_PIXEL_ORDER_LEN * IOT_CLOCK_NUM_DIGITS> _pixelOrder;
     time_t _time{0};
 
 #    if IOT_CLOCK_PIXEL_SYNC_ANIMATION

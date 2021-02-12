@@ -33,66 +33,65 @@
 #    define IOT_LED_MATRIX_STANDBY_PIN_STATE(value) (value ? HIGH : LOW)
 #endif
 
+// first pixel to use, others can be controlled separately and are reset during reboot only
+#    ifndef IOT_LED_MATRIX_START_ADDR
+#        define IOT_LED_MATRIX_START_ADDR 0
+#    endif
+
 #if IOT_LED_MATRIX
 
 #    define IF_IOT_LED_MATRIX(...) __VA_ARGS__
 #    define IF_IOT_CLOCK(...)
 
-
-#    define IOT_CLOCK_NUM_PIXELS (IOT_LED_MATRIX_COLS * IOT_LED_MATRIX_ROWS)
-
-// first pixel to use, others can be controlled separately and are reset during reboot only
-#    ifndef IOT_LED_MATRIX_START_ADDR
-#        define IOT_LED_MATRIX_START_ADDR 0
-#    endif
+// #    define IOT_CLOCK_NUM_PIXELS (IOT_LED_MATRIX_COLS * IOT_LED_MATRIX_ROWS)
 
 #else
 
 #    define IF_IOT_LED_MATRIX(...)
 #    define IF_IOT_CLOCK(...) __VA_ARGS__
 
-// number of digits
-#    ifndef IOT_CLOCK_NUM_DIGITS
-#        define IOT_CLOCK_NUM_DIGITS 4
-#    endif
+// // number of digits
+// #    ifndef IOT_CLOCK_NUM_DIGITS
+// #        define IOT_CLOCK_NUM_DIGITS 4
+// #    endif
 
-// pixels per segment
-#    ifndef IOT_CLOCK_NUM_PIXELS
-#        define IOT_CLOCK_NUM_PIXELS 2
-#    endif
+// // pixels per segment
+// #    ifndef IOT_CLOCK_NUM_PIXELS
+// #        define IOT_CLOCK_NUM_PIXELS 2
+// #    endif
+
+// // number of colons
+// #    ifndef IOT_CLOCK_NUM_COLONS
+// #        if IOT_CLOCK_NUM_DIGITS == 4
+// #            define IOT_CLOCK_NUM_COLONS 1
+// #        else
+// #            define IOT_CLOCK_NUM_COLONS 2
+// #        endif
+// #    endif
+
+// // pixels per dot
+// #    ifndef IOT_CLOCK_NUM_COLON_PIXELS
+// #        define IOT_CLOCK_NUM_COLON_PIXELS 2
+// #    endif
+
+// // order of the segments (a-g)
+// #    ifndef IOT_CLOCK_SEGMENT_ORDER
+// #        define IOT_CLOCK_SEGMENT_ORDER { 0, 1, 3, 4, 5, 6, 2 }
+// #    endif
+
+// // digit order, 30=colon #1,31=#2, etc...
+// #    ifndef IOT_CLOCK_DIGIT_ORDER
+// #        define IOT_CLOCK_DIGIT_ORDER { 0, 1, 30, 2, 3, 31, 4, 5 }
+// #    endif
+
+// // pixel order of pixels that belong to digits, 0 to use pixel addresses of the 7 segment class
+// #    ifndef IOT_CLOCK_PIXEL_ORDER
+// #        define IOT_CLOCK_PIXEL_ORDER { 0 }
+// #    endif
 
 #    ifndef IOT_LED_MATRIX_COLS
 #        define IOT_LED_MATRIX_COLS IOT_CLOCK_NUM_PIXELS
 #        define IOT_LED_MATRIX_ROWS 1
-#    endif
-
-// number of colons
-#    ifndef IOT_CLOCK_NUM_COLONS
-#        if IOT_CLOCK_NUM_DIGITS == 4
-#            define IOT_CLOCK_NUM_COLONS 1
-#        else
-#            define IOT_CLOCK_NUM_COLONS 2
-#        endif
-#    endif
-
-// pixels per dot
-#    ifndef IOT_CLOCK_NUM_COLON_PIXELS
-#        define IOT_CLOCK_NUM_COLON_PIXELS 2
-#    endif
-
-// order of the segments (a-g)
-#    ifndef IOT_CLOCK_SEGMENT_ORDER
-#        define IOT_CLOCK_SEGMENT_ORDER { 0, 1, 3, 4, 5, 6, 2 }
-#    endif
-
-// digit order, 30=colon #1,31=#2, etc...
-#    ifndef IOT_CLOCK_DIGIT_ORDER
-#        define IOT_CLOCK_DIGIT_ORDER { 0, 1, 30, 2, 3, 31, 4, 5 }
-#    endif
-
-// pixel order of pixels that belong to digits, 0 to use pixel addresses of the 7 segment class
-#    ifndef IOT_CLOCK_PIXEL_ORDER
-#        define IOT_CLOCK_PIXEL_ORDER { 0 }
 #    endif
 
 #endif
@@ -144,8 +143,8 @@
 #    define IOT_CLOCK_HAVE_ROTARY_ENCODER 0
 #endif
 
-#if IOT_CLOCK_BUTTON_PIN == -1
-#    error requires IOT_CLOCK_BUTTON_PIN
+#if IOT_CLOCK_BUTTON_PIN == -1 && IOT_CLOCK_HAVE_ROTARY_ENCODER
+#    error IOT_CLOCK_HAVE_ROTARY_ENCODER requires IOT_CLOCK_BUTTON_PIN
 #endif
 
 // pins for the rotary encoder
@@ -240,4 +239,10 @@
 #    define IF_IOT_CLOCK_PIXEL_SYNC_ANIMATION(...) __VA_ARGS__
 #else
 #    define IF_IOT_CLOCK_PIXEL_SYNC_ANIMATION(...)
+#endif
+
+#if defined(ESP8266)
+#    ifndef FASTLED_ESP8266_RAW_PIN_ORDER
+#        define FASTLED_ESP8266_RAW_PIN_ORDER 1
+#    endif
 #endif

@@ -27,15 +27,29 @@ namespace Clock {
             Clock::PixelDisplayBuffer<IOT_LED_MATRIX_START_ADDR, IOT_LED_MATRIX_ROWS, IOT_LED_MATRIX_COLS, true, false, false, true>
         >;
 
-#else
-
-#error TODO
-
-#endif
-
     using CoordinateType = DisplayType::CoordinateType;
     using PixelAddressType = DisplayType::PixelAddressType;
     using PixelCoordinatesType = DisplayType::PixelCoordinatesType;
+
+#else
+
+    using BaseDisplayType = Clock::PixelDisplay<
+            Clock::NeoPixelController<IOT_CLOCK_LED_PIN>,
+            Clock::PixelDisplayBuffer<IOT_LED_MATRIX_START_ADDR, IOT_LED_MATRIX_ROWS, IOT_LED_MATRIX_COLS, true, false, false, true>
+        >;
+
+    using CoordinateType = BaseDisplayType::CoordinateType;
+    using PixelAddressType = BaseDisplayType::PixelAddressType;
+    using PixelCoordinatesType = BaseDisplayType::PixelCoordinatesType;
+
+    #include "seven_segment_display.h"
+
+    using DisplayType = SevenSegment::Display;
+
+    static_assert(IOT_CLOCK_NUM_PIXELS == SevenSegment::kNumPixels, "total pixels do not match");
+
+#endif
+
 
     // ------------------------------------------------------------------------
     // Animation Base Class

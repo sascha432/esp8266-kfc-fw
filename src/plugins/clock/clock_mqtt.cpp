@@ -109,21 +109,27 @@ void ClockPlugin::onMessage(MQTTClient *client, char *topic, char *payload, size
         auto animation = _getAnimationType(payload);
         if (animation != AnimationType::MAX) {
             setAnimation(static_cast<AnimationType>(animation));
-            _saveStateDelayed();
+            IF_IOT_CLOCK_SAVE_STATE(
+                _saveStateDelayed();
+            )
         }
     }
     else if (!strcmp_end_P(topic, SPGM(_brightness_set))) {
         if (len) {
             auto value = strtoul(payload, nullptr, 0);
             setBrightness(std::clamp<uint8_t>(value, 0, kMaxBrightness));
-            _saveStateDelayed();
+            IF_IOT_CLOCK_SAVE_STATE(
+                _saveStateDelayed();
+            )
         }
     }
     else if (!strcmp_end_P(topic, SPGM(_color_set))) {
         if (*payload == '#') {
             // rgb color code #FFEECC
             setColorAndRefresh(Color::fromString(payload));
-            _saveStateDelayed();
+            IF_IOT_CLOCK_SAVE_STATE(
+                _saveStateDelayed();
+            )
         }
         else {
             // red,green,blue
@@ -134,7 +140,9 @@ void ClockPlugin::onMessage(MQTTClient *client, char *topic, char *payload, size
                 if (endptr && *endptr++ == ',') {
                     auto blue = (uint8_t)strtoul(endptr, nullptr, 10);
                     setColorAndRefresh(Color(red, green, blue));
-                    _saveStateDelayed();
+                    IF_IOT_CLOCK_SAVE_STATE(
+                        _saveStateDelayed();
+                    )
                 }
             }
         }
@@ -162,12 +170,12 @@ void ClockPlugin::_publishState(MQTTClient *client)
         client->publish(MQTTClient::formatTopic(FSPGM(_brightness_state)), true, String(_targetBrightness == 0 ? _savedBrightness : _targetBrightness));
         client->publish(MQTTClient::formatTopic(FSPGM(_color_state)), true, getColor().implode(','));
         client->publish(MQTTClient::formatTopic(FSPGM(_effect_state)), true, Clock::Config_t::getAnimationName(_config.getAnimation()));
-#if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
-        client->publish(MQTTClient::formatTopic(FSPGM(light_sensor)), true, String(_autoBrightnessValue * 100, 0));
-#endif
-#if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
-        client->publish(MQTTClient::formatTopic(F("power")), true, String(_getPowerLevel(), 2));
-#endif
+        IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(
+            client->publish(MQTTClient::formatTopic(FSPGM(light_sensor)), true, String(_autoBrightnessValue * 100, 0));
+        )
+        IF_IOT_CLOCK_DISPLAY_POWER_CONSUMPTION(
+            client->publish(MQTTClient::formatTopic(F("power")), true, String(_getPowerLevel(), 2));
+        )
     }
 
     _broadcastWebUI();

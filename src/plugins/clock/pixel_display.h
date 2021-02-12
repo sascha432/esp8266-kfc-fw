@@ -8,22 +8,6 @@
 #include <type_traits>
 #include "color.h"
 
-#if defined(ESP8266)
-#ifndef FASTLED_ESP8266_RAW_PIN_ORDER
-#define FASTLED_ESP8266_RAW_PIN_ORDER                           1
-#endif
-#endif
-
-// #ifndef FASTLED_ALLOW_INTERRUPTS
-// #define FASTLED_ALLOW_INTERRUPTS                                0
-// #endif
-// #ifndef FASTLED_INTERRUPT_RETRY_COUNT
-// #define FASTLED_INTERRUPT_RETRY_COUNT                           1
-// #endif
-#define FASTLED_INTERNAL
-#include <FastLED.h>
-
-
 #if DEBUG_IOT_CLOCK
 #include <debug_helper_enable.h>
 #else

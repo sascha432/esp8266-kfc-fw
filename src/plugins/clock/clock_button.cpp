@@ -14,6 +14,8 @@
 
 using namespace Clock;
 
+#if IOT_CLOCK_BUTTON_PIN != -1
+
 void Button::event(EventType eventType, uint32_t now)
 {
     __LDBG_printf("event_type=%s (%02x) repeat=%u button#=%u now=%u", eventTypeToString(eventType), eventType, _repeatCount, _button, now);
@@ -130,5 +132,7 @@ void ClockPlugin::buttonCallback(uint8_t button, EventType eventType, uint16_t r
 //     }
 //     _buttonCounter++;
 // }
+
+#endif
 
 #endif

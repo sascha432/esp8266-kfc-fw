@@ -24,9 +24,7 @@
     },
     "Action": {
         "default": "Action",
-        "locations": "src/plugins/blinds_ctrl/blinds_form.cpp:124 (SPGM),src/plugins/blinds_ctrl/blinds_form.cpp:142 (SPGM)",
-        "type": "source",
-        "use_counter": 2
+        "use_counter": 0
     },
     "Address": {
         "default": "Address",
@@ -42,11 +40,15 @@
     },
     "Alarm": {
         "default": "Alarm",
-        "use_counter": 0
+        "locations": "src/plugins/clock/clock_form.cpp:270 (SPGM)",
+        "type": "source",
+        "use_counter": 1
     },
     "Animation": {
         "default": "Animation",
-        "use_counter": 0
+        "locations": "src/plugins/clock/clock_form.cpp:113 (SPGM)",
+        "type": "source",
+        "use_counter": 1
     },
     "Anonymous": {
         "default": "Anonymous",
@@ -78,13 +80,13 @@
     },
     "Brightness": {
         "default": "Brightness",
-        "use_counter": 0
+        "locations": "src/plugins/clock/clock_form.cpp:83 (SPGM)",
+        "type": "source",
+        "use_counter": 1
     },
     "Busy": {
         "default": "Busy",
-        "locations": "src/plugins/blinds_ctrl/BlindsControl.cpp:736 (SPGM),src/plugins/blinds_ctrl/BlindsControl.cpp:738 (SPGM)",
-        "type": "source",
-        "use_counter": 2
+        "use_counter": 0
     },
     "Cache_Control": {
         "default": "Cache-Control",
@@ -110,13 +112,13 @@
     },
     "Closed": {
         "default": "Closed",
-        "locations": "src/plugins/blinds_ctrl/BlindsControl.h:109 (SPGM)",
-        "type": "source",
-        "use_counter": 1
+        "use_counter": 0
     },
     "Color": {
         "default": "Color",
-        "use_counter": 0
+        "locations": "src/plugins/clock/clock_form.cpp:278 (SPGM)",
+        "type": "source",
+        "use_counter": 1
     },
     "Configuration": {
         "default": "Configuration",
@@ -204,7 +206,7 @@
     },
     "Disabled": {
         "default": "Disabled",
-        "locations": "include/spgm_auto_def.h:51 (AUTO_INIT),lib/KFCWebFramework/include/WebUI/Containers.h:711 (SPGM),src/kfc_fw_config_forms.cpp:18 (SPGM),src/plugins/mqtt/mqtt_form.cpp:35 (SPGM),src/plugins/mqtt/mqtt_plugin.cpp:82 (SPGM),src/plugins/ntp/ntp_plugin.cpp:146 (SPGM),src/plugins/ssdp/ssdp.cpp:114 (SPGM),src/plugins/syslog/syslog_plugin.cpp:187 (SPGM),src/plugins/syslog/syslog_plugin.cpp:211 (SPGM)",
+        "locations": "include/spgm_auto_def.h:51 (AUTO_INIT),lib/KFCWebFramework/include/WebUI/Containers.h:713 (SPGM),src/kfc_fw_config_forms.cpp:18 (SPGM),src/plugins/mqtt/mqtt_form.cpp:35 (SPGM),src/plugins/mqtt/mqtt_plugin.cpp:82 (SPGM),src/plugins/ntp/ntp_plugin.cpp:146 (SPGM),src/plugins/ssdp/ssdp.cpp:114 (SPGM),src/plugins/syslog/syslog_plugin.cpp:187 (SPGM),src/plugins/syslog/syslog_plugin.cpp:211 (SPGM)",
         "type": "source",
         "use_counter": 8
     },
@@ -220,7 +222,7 @@
     },
     "Enabled": {
         "default": "Enabled",
-        "locations": "include/spgm_auto_def.h:54 (AUTO_INIT),lib/KFCWebFramework/include/WebUI/Containers.h:711 (SPGM),src/kfc_fw_config_forms.cpp:212 (SPGM),src/plugins/mqtt/mqtt_form.cpp:36 (SPGM)",
+        "locations": "include/spgm_auto_def.h:54 (AUTO_INIT),lib/KFCWebFramework/include/WebUI/Containers.h:713 (SPGM),src/kfc_fw_config_forms.cpp:212 (SPGM),src/plugins/mqtt/mqtt_form.cpp:36 (SPGM)",
         "type": "source",
         "use_counter": 3
     },
@@ -414,13 +416,13 @@
     },
     "Move": {
         "default": "Move",
-        "locations": "src/plugins/blinds_ctrl/blinds_config.cpp:55 (SPGM)",
-        "type": "source",
-        "use_counter": 1
+        "use_counter": 0
     },
     "Multiplier": {
         "default": "Multiplier",
-        "use_counter": 0
+        "locations": "src/plugins/clock/clock_form.cpp:137 (SPGM)",
+        "type": "source",
+        "use_counter": 1
     },
     "NTP_Client": {
         "default": "NTP Client",
@@ -440,9 +442,7 @@
     },
     "Name": {
         "default": "Name",
-        "locations": "src/plugins/blinds_ctrl/blinds_form.cpp:91 (SPGM)",
-        "type": "source",
-        "use_counter": 1
+        "use_counter": 0
     },
     "Network": {
         "default": "Network",
@@ -458,13 +458,15 @@
     },
     "No": {
         "default": "No",
-        "use_counter": 0
+        "locations": "src/plugins/sensor/Sensor_DS3231.cpp:121 (SPGM),src/plugins/sensor/Sensor_DS3231.cpp:166 (SPGM)",
+        "type": "source",
+        "use_counter": 2
     },
     "None": {
         "default": "None",
-        "locations": "lib/KFCWebFramework/src/Form/BaseForm.cpp:308 (SPGM),src/plugins/blinds_ctrl/blinds_form.cpp:49 (SPGM)",
+        "locations": "lib/KFCWebFramework/src/Form/BaseForm.cpp:308 (SPGM)",
         "type": "source",
-        "use_counter": 2
+        "use_counter": 1
     },
     "Not_supported": {
         "default": "Not supported",
@@ -496,9 +498,7 @@
     },
     "Open": {
         "default": "Open",
-        "locations": "src/plugins/blinds_ctrl/BlindsControl.h:107 (SPGM)",
-        "type": "source",
-        "use_counter": 1
+        "use_counter": 0
     },
     "Passphrase": {
         "default": "Passphrase",
@@ -526,7 +526,9 @@
     },
     "Protection": {
         "default": "Protection",
-        "use_counter": 0
+        "locations": "src/plugins/clock/clock_form.cpp:289 (SPGM)",
+        "type": "source",
+        "use_counter": 1
     },
     "RFC7231_date": {
         "default": "%a, %d %b %Y %H:%M:%S GMT",
@@ -536,7 +538,9 @@
     },
     "Rainbow": {
         "default": "Rainbow",
-        "use_counter": 0
+        "locations": "src/plugins/clock/clock_form.cpp:45 (SPGM)",
+        "type": "source",
+        "use_counter": 1
     },
     "Reboot_Device": {
         "default": "Reboot Device",
@@ -552,9 +556,7 @@
     },
     "Running": {
         "default": "Running",
-        "locations": "src/plugins/blinds_ctrl/BlindsControl.cpp:731 (SPGM),src/plugins/blinds_ctrl/BlindsControl.cpp:733 (SPGM)",
-        "type": "source",
-        "use_counter": 2
+        "use_counter": 0
     },
     "SID": {
         "default": "SID",
@@ -612,11 +614,15 @@
     },
     "Solid_Color": {
         "default": "Solid Color",
-        "use_counter": 0
+        "locations": "src/plugins/clock/clock_form.cpp:44 (SPGM),src/plugins/clock/clock_form.cpp:125 (SPGM)",
+        "type": "source",
+        "use_counter": 2
     },
     "Speed": {
         "default": "Speed",
-        "use_counter": 0
+        "locations": "src/plugins/clock/clock_form.cpp:153 (SPGM)",
+        "type": "source",
+        "use_counter": 1
     },
     "Station_Mode": {
         "default": "Station Mode",
@@ -638,9 +644,7 @@
     },
     "Stopped": {
         "default": "Stopped",
-        "locations": "src/plugins/blinds_ctrl/BlindsControl.h:111 (SPGM)",
-        "type": "source",
-        "use_counter": 1
+        "use_counter": 0
     },
     "Subnet": {
         "default": "Subnet",
@@ -678,13 +682,13 @@
     },
     "Turn": {
         "default": "Turn",
-        "locations": "src/plugins/blinds_ctrl/blinds_config.cpp:54 (SPGM)",
-        "type": "source",
-        "use_counter": 1
+        "use_counter": 0
     },
     "Type": {
         "default": "Type",
-        "use_counter": 0
+        "locations": "src/plugins/clock/clock_form.cpp:116 (SPGM)",
+        "type": "source",
+        "use_counter": 1
     },
     "Username": {
         "default": "Username",
@@ -724,7 +728,9 @@
     },
     "Yes": {
         "default": "Yes",
-        "use_counter": 0
+        "locations": "src/plugins/sensor/Sensor_DS3231.cpp:121 (SPGM),src/plugins/sensor/Sensor_DS3231.cpp:166 (SPGM)",
+        "type": "source",
+        "use_counter": 2
     },
     "Your_session_has_expired": {
         "default": "Your session has expired",
@@ -760,11 +766,15 @@
     },
     "_brightness_set": {
         "default": "/brightness/set",
-        "use_counter": 0
+        "locations": "src/plugins/clock/clock_mqtt.cpp:37 (SPGM),src/plugins/clock/clock_mqtt.cpp:97 (SPGM),src/plugins/clock/clock_mqtt.cpp:117 (SPGM)",
+        "type": "source",
+        "use_counter": 3
     },
     "_brightness_state": {
         "default": "/brightness/state",
-        "use_counter": 0
+        "locations": "src/plugins/clock/clock_mqtt.cpp:36 (SPGM),src/plugins/clock/clock_mqtt.cpp:170 (SPGM)",
+        "type": "source",
+        "use_counter": 2
     },
     "_checked": {
         "default": " checked",
@@ -774,19 +784,27 @@
     },
     "_color_set": {
         "default": "/color/set",
-        "use_counter": 0
+        "locations": "src/plugins/clock/clock_mqtt.cpp:40 (SPGM),src/plugins/clock/clock_mqtt.cpp:96 (SPGM),src/plugins/clock/clock_mqtt.cpp:126 (SPGM)",
+        "type": "source",
+        "use_counter": 3
     },
     "_color_state": {
         "default": "/color/state",
-        "use_counter": 0
+        "locations": "src/plugins/clock/clock_mqtt.cpp:39 (SPGM),src/plugins/clock/clock_mqtt.cpp:171 (SPGM)",
+        "type": "source",
+        "use_counter": 2
     },
     "_effect_set": {
         "default": "/effect/set",
-        "use_counter": 0
+        "locations": "src/plugins/clock/clock_mqtt.cpp:42 (SPGM),src/plugins/clock/clock_mqtt.cpp:98 (SPGM),src/plugins/clock/clock_mqtt.cpp:108 (SPGM)",
+        "type": "source",
+        "use_counter": 3
     },
     "_effect_state": {
         "default": "/effect/state",
-        "use_counter": 0
+        "locations": "src/plugins/clock/clock_mqtt.cpp:41 (SPGM),src/plugins/clock/clock_mqtt.cpp:172 (SPGM)",
+        "type": "source",
+        "use_counter": 2
     },
     "_hidden": {
         "default": " hidden",
@@ -820,15 +838,15 @@
     },
     "_set": {
         "default": "/set",
-        "locations": "src/plugins/blinds_ctrl/BlindsControl.cpp:867 (SPGM),src/plugins/blinds_ctrl/BlindsControl.cpp:869 (SPGM)",
+        "locations": "src/plugins/alarm/alarm.cpp:88 (SPGM),src/plugins/alarm/alarm.cpp:98 (SPGM),src/plugins/clock/clock_mqtt.cpp:35 (SPGM),src/plugins/clock/clock_mqtt.cpp:95 (SPGM),src/plugins/clock/clock_mqtt.cpp:150 (SPGM)",
         "type": "source",
-        "use_counter": 2
+        "use_counter": 5
     },
     "_state": {
         "default": "/state",
-        "locations": "src/plugins/blinds_ctrl/BlindsControl.cpp:871 (SPGM),src/plugins/blinds_ctrl/BlindsControl.cpp:873 (SPGM)",
+        "locations": "src/plugins/alarm/alarm.cpp:87 (SPGM),src/plugins/alarm/alarm.cpp:355 (SPGM),src/plugins/clock/clock_mqtt.cpp:34 (SPGM),src/plugins/clock/clock_mqtt.cpp:169 (SPGM)",
         "type": "source",
-        "use_counter": 2
+        "use_counter": 4
     },
     "_var_gateway": {
         "default": "${gateway}",
@@ -854,7 +872,9 @@
     },
     "alarm": {
         "default": "alarm",
-        "use_counter": 0
+        "locations": "src/plugins/alarm/alarm.cpp:86 (SPGM),src/plugins/alarm/alarm.cpp:360 (SPGM),src/plugins/clock/clock_form.cpp:270 (SPGM)",
+        "type": "source",
+        "use_counter": 3
     },
     "alert": {
         "default": "alert",
@@ -884,9 +904,7 @@
     },
     "binary": {
         "default": "binary",
-        "locations": "src/plugins/blinds_ctrl/BlindsControl.cpp:68 (SPGM),src/plugins/blinds_ctrl/BlindsControl.cpp:70 (SPGM),src/plugins/blinds_ctrl/BlindsControl.cpp:137 (SPGM)",
-        "type": "source",
-        "use_counter": 3
+        "use_counter": 0
     },
     "boolean": {
         "default": "boolean",
@@ -896,13 +914,13 @@
     },
     "brightness": {
         "default": "brightness",
-        "use_counter": 0
+        "locations": "src/plugins/clock/clock_webui.cpp:37 (SPGM),src/plugins/clock/clock_webui.cpp:115 (SPGM),src/plugins/clock/clock_webui.cpp:204 (SPGM)",
+        "type": "source",
+        "use_counter": 3
     },
     "busy": {
         "default": "busy",
-        "locations": "src/plugins/blinds_ctrl/BlindsControl.cpp:73 (SPGM),src/plugins/blinds_ctrl/BlindsControl.cpp:75 (SPGM),src/plugins/blinds_ctrl/BlindsControl.cpp:138 (SPGM)",
-        "type": "source",
-        "use_counter": 3
+        "use_counter": 0
     },
     "bytes": {
         "default": "bytes",
@@ -916,15 +934,11 @@
     },
     "channel__u": {
         "default": "channel_%u",
-        "locations": "src/plugins/blinds_ctrl/BlindsControl.cpp:56 (SPGM),src/plugins/blinds_ctrl/BlindsControl.cpp:79 (SPGM),src/plugins/blinds_ctrl/BlindsControl.cpp:81 (SPGM),src/plugins/blinds_ctrl/BlindsControl.cpp:102 (SPGM),src/plugins/blinds_ctrl/BlindsControl.cpp:135 (SPGM),src/plugins/blinds_ctrl/BlindsControl.cpp:877 (SPGM),src/plugins/blinds_ctrl/BlindsControl.cpp:879 (SPGM),src/plugins/blinds_ctrl/blinds_plugin.cpp:121 (SPGM)",
-        "type": "source",
-        "use_counter": 8
+        "use_counter": 0
     },
     "channels": {
         "default": "channels",
-        "locations": "src/plugins/blinds_ctrl/BlindsControl.cpp:62 (SPGM),src/plugins/blinds_ctrl/BlindsControl.cpp:862 (SPGM),src/plugins/blinds_ctrl/BlindsControl.cpp:864 (SPGM)",
-        "type": "source",
-        "use_counter": 3
+        "use_counter": 0
     },
     "client": {
         "default": "client",
@@ -932,9 +946,9 @@
     },
     "close": {
         "default": "close",
-        "locations": "lib/KFCWebFramework/include/HttpHeaders.h:103 (SPGM),lib/KFCWebFramework/src/HttpHeaders.cpp:26 (AUTO_INIT),src/plugins/blinds_ctrl/blinds_form.cpp:138 (SPGM)",
+        "locations": "lib/KFCWebFramework/include/HttpHeaders.h:103 (SPGM),lib/KFCWebFramework/src/HttpHeaders.cpp:26 (AUTO_INIT)",
         "type": "source",
-        "use_counter": 2
+        "use_counter": 1
     },
     "comma_": {
         "default": ", ",
@@ -944,7 +958,7 @@
     },
     "config": {
         "auto": "config",
-        "locations": "lib/KFCConfiguration/src/JsonConfigReader.cpp:30 (SPGM),src/kfc_fw_config_forms.cpp:254 (SPGM),src/plugins/blinds_ctrl/blinds_form.cpp:168 (SPGM),src/plugins/mqtt/mqtt_form.cpp:59 (SPGM),src/plugins/ntp/ntp_form.cpp:36 (SPGM),src/web_server.cpp:421 (SPGM)",
+        "locations": "lib/KFCConfiguration/src/JsonConfigReader.cpp:30 (SPGM),src/kfc_fw_config_forms.cpp:254 (SPGM),src/plugins/clock/clock_form.cpp:57 (SPGM),src/plugins/mqtt/mqtt_form.cpp:59 (SPGM),src/plugins/ntp/ntp_form.cpp:36 (SPGM),src/web_server.cpp:421 (SPGM)",
         "type": "source",
         "use_counter": 6
     },
@@ -1020,15 +1034,21 @@
     },
     "degree_Celsius_html": {
         "default": "&deg;C",
-        "use_counter": 0
+        "locations": "src/plugins/sensor/Sensor_LM75A.cpp:64 (SPGM)",
+        "type": "source",
+        "use_counter": 1
     },
     "degree_Celsius_unicode": {
         "default": "\\u00b0C",
-        "use_counter": 0
+        "locations": "src/plugins/sensor/Sensor_DS3231.cpp:45 (SPGM),src/plugins/sensor/Sensor_LM75A.cpp:38 (SPGM)",
+        "type": "source",
+        "use_counter": 2
     },
     "degree_Celsius_utf8": {
         "default": "\u00c2\u00b0C",
-        "use_counter": 0
+        "locations": "src/plugins/clock/clock_form.cpp:292 (SPGM),src/plugins/clock/clock_form.cpp:296 (SPGM),src/plugins/clock/clock_form.cpp:300 (SPGM)",
+        "type": "source",
+        "use_counter": 3
     },
     "degree_html": {
         "default": "&deg;",
@@ -1072,7 +1092,7 @@
     },
     "disabled": {
         "default": "disabled",
-        "locations": "include/spgm_auto_def.h:213 (AUTO_INIT),lib/KFCWebFramework/include/WebUI/Containers.h:705 (SPGM),src/plugins/mqtt/mqtt_plugin.cpp:114 (SPGM),src/plugins/ntp/ntp_atmode.cpp:44 (SPGM),src/web_server.cpp:1080 (SPGM)",
+        "locations": "include/spgm_auto_def.h:213 (AUTO_INIT),lib/KFCWebFramework/include/WebUI/Containers.h:707 (SPGM),src/plugins/mqtt/mqtt_plugin.cpp:114 (SPGM),src/plugins/ntp/ntp_atmode.cpp:44 (SPGM),src/web_server.cpp:1080 (SPGM)",
         "type": "source",
         "use_counter": 4
     },
@@ -1086,15 +1106,21 @@
     },
     "ds3231_id_lost_power": {
         "default": "ds3231_lost_power",
-        "use_counter": 0
+        "locations": "src/plugins/sensor/Sensor_DS3231.cpp:23 (DEFINE),src/plugins/sensor/Sensor_DS3231.cpp:52 (SPGM),src/plugins/sensor/Sensor_DS3231.cpp:95 (SPGM)",
+        "type": "static",
+        "use_counter": 2
     },
     "ds3231_id_temp": {
         "default": "ds3231_temp",
-        "use_counter": 0
+        "locations": "src/plugins/sensor/Sensor_DS3231.cpp:21 (DEFINE),src/plugins/sensor/Sensor_DS3231.cpp:43 (SPGM),src/plugins/sensor/Sensor_DS3231.cpp:44 (SPGM),src/plugins/sensor/Sensor_DS3231.cpp:71 (SPGM),src/plugins/sensor/Sensor_DS3231.cpp:85 (SPGM),src/plugins/sensor/Sensor_DS3231.cpp:93 (SPGM)",
+        "type": "static",
+        "use_counter": 5
     },
     "ds3231_id_time": {
         "default": "ds3231_time",
-        "use_counter": 0
+        "locations": "src/plugins/sensor/Sensor_DS3231.cpp:22 (DEFINE),src/plugins/sensor/Sensor_DS3231.cpp:48 (SPGM),src/plugins/sensor/Sensor_DS3231.cpp:49 (SPGM),src/plugins/sensor/Sensor_DS3231.cpp:77 (SPGM),src/plugins/sensor/Sensor_DS3231.cpp:86 (SPGM),src/plugins/sensor/Sensor_DS3231.cpp:94 (SPGM)",
+        "type": "static",
+        "use_counter": 5
     },
     "emerg": {
         "default": "emerg",
@@ -1204,7 +1230,7 @@
     },
     "heap": {
         "default": "heap",
-        "locations": "src/plugins/sensor/Sensor_SystemMetrics.cpp:28 (AUTO_INIT),src/plugins/sensor/Sensor_SystemMetrics.cpp:63 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:66 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:244 (SPGM)",
+        "locations": "src/plugins/sensor/Sensor_SystemMetrics.cpp:28 (AUTO_INIT),src/plugins/sensor/Sensor_SystemMetrics.cpp:63 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:66 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:248 (SPGM)",
         "type": "source",
         "use_counter": 3
     },
@@ -1310,9 +1336,9 @@
     },
     "http": {
         "default": "http",
-        "locations": "src/plugins/file_manager/file_manager.cpp:465 (SPGM),src/plugins/http2serial/http2serial.cpp:265 (SPGM),src/plugins/mdns/mdns_plugin.cpp:171 (SPGM),src/plugins/mdns/mdns_plugin.cpp:186 (SPGM),src/templates.cpp:112 (SPGM),src/web_server.cpp:701 (SPGM),src/web_server.cpp:1038 (SPGM)",
+        "locations": "src/plugins/clock/clock.cpp:489 (SPGM),src/plugins/file_manager/file_manager.cpp:465 (SPGM),src/plugins/http2serial/http2serial.cpp:265 (SPGM),src/plugins/mdns/mdns_plugin.cpp:171 (SPGM),src/plugins/mdns/mdns_plugin.cpp:186 (SPGM),src/templates.cpp:112 (SPGM),src/web_server.cpp:701 (SPGM),src/web_server.cpp:1038 (SPGM)",
         "type": "source",
-        "use_counter": 7
+        "use_counter": 8
     },
     "httpmode": {
         "default": "httpmode",
@@ -1360,13 +1386,13 @@
     },
     "iot_blinds_control_state_file": {
         "default": "/.pvt/blinds_ctrl.state",
-        "locations": "src/plugins/blinds_ctrl/BlindsControl.cpp:883 (SPGM),src/plugins/blinds_ctrl/BlindsControl.cpp:885 (SPGM),src/plugins/blinds_ctrl/BlindsControl.cpp:894 (SPGM),src/plugins/blinds_ctrl/BlindsControl.cpp:896 (SPGM)",
-        "type": "source",
-        "use_counter": 4
+        "use_counter": 0
     },
     "iot_clock_save_state_file": {
-        "default": "/.pvt/device.state",
-        "use_counter": 0
+        "auto": "iot clock save state file",
+        "locations": "src/plugins/clock/clock_config.cpp:70 (SPGM)",
+        "type": "source",
+        "use_counter": 1
     },
     "iot_sensor_hlw80xx_state_file": {
         "default": "",
@@ -1426,7 +1452,9 @@
     },
     "light_sensor": {
         "default": "light_sensor",
-        "use_counter": 0
+        "locations": "src/plugins/clock/clock.cpp:223 (SPGM),src/plugins/clock/clock_mqtt.cpp:48 (SPGM),src/plugins/clock/clock_mqtt.cpp:51 (SPGM),src/plugins/clock/clock_mqtt.cpp:173 (SPGM),src/plugins/clock/clock_webui.cpp:57 (SPGM),src/plugins/clock/clock_webui.cpp:226 (SPGM)",
+        "type": "source",
+        "use_counter": 6
     },
     "local0": {
         "default": "local0",
@@ -1510,9 +1538,7 @@
     },
     "mA": {
         "default": "mA",
-        "locations": "src/plugins/blinds_ctrl/blinds_form.cpp:102 (SPGM)",
-        "type": "source",
-        "use_counter": 1
+        "use_counter": 0
     },
     "mail": {
         "default": "mail",
@@ -1534,15 +1560,13 @@
     },
     "metrics": {
         "default": "metrics",
-        "locations": "src/plugins/blinds_ctrl/BlindsControl.cpp:859 (SPGM),src/plugins/blinds_ctrl/BlindsControl.cpp:861 (SPGM)",
-        "type": "source",
-        "use_counter": 2
+        "use_counter": 0
     },
     "milliseconds": {
         "default": "milliseconds",
-        "locations": "src/kfc_fw_config_forms.cpp:220 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:220 (SPGM),src/plugins/clock/clock_form.cpp:128 (SPGM),src/plugins/clock/clock_form.cpp:250 (SPGM),src/plugins/clock/clock_form.cpp:281 (SPGM)",
         "type": "source",
-        "use_counter": 1
+        "use_counter": 4
     },
     "mime_application_javascript": {
         "default": "application/javascript",
@@ -1648,9 +1672,9 @@
     },
     "mime_text_plain": {
         "default": "text/plain",
-        "locations": "src/async_web_handler.cpp:35 (SPGM),src/async_web_handler.cpp:50 (SPGM),src/async_web_handler.cpp:53 (SPGM),src/plugins/file_manager/file_manager.cpp:250 (SPGM),src/plugins/file_manager/file_manager.cpp:330 (SPGM),src/plugins/file_manager/file_manager.cpp:343 (SPGM),src/plugins/file_manager/file_manager.cpp:380 (SPGM),src/plugins/file_manager/file_manager.cpp:415 (SPGM),src/plugins/file_manager/file_manager.cpp:428 (SPGM),src/web_server.cpp:163 (SPGM),src/web_server.cpp:256 (SPGM),src/web_server.cpp:443 (SPGM),src/web_server.cpp:561 (SPGM),src/web_server.cpp:868 (SPGM)",
+        "locations": "src/async_web_handler.cpp:35 (SPGM),src/async_web_handler.cpp:50 (SPGM),src/async_web_handler.cpp:53 (SPGM),src/plugins/clock/clock.cpp:844 (SPGM),src/plugins/file_manager/file_manager.cpp:250 (SPGM),src/plugins/file_manager/file_manager.cpp:330 (SPGM),src/plugins/file_manager/file_manager.cpp:343 (SPGM),src/plugins/file_manager/file_manager.cpp:380 (SPGM),src/plugins/file_manager/file_manager.cpp:415 (SPGM),src/plugins/file_manager/file_manager.cpp:428 (SPGM),src/web_server.cpp:163 (SPGM),src/web_server.cpp:256 (SPGM),src/web_server.cpp:443 (SPGM),src/web_server.cpp:561 (SPGM),src/web_server.cpp:868 (SPGM)",
         "type": "source",
-        "use_counter": 14
+        "use_counter": 15
     },
     "mime_text_xml": {
         "default": "text/xml",
@@ -1718,9 +1742,9 @@
     },
     "mqtt": {
         "default": "mqtt",
-        "locations": "include/retracted/custom_config.h:350 (SPGM),src/plugins/blinds_ctrl/blinds_plugin.cpp:65 (SPGM),src/plugins/mqtt/mqtt_auto_discovery.cpp:73 (SPGM),src/plugins/mqtt/mqtt_form.cpp:95 (SPGM)",
+        "locations": "include/retracted/custom_config.h:350 (SPGM),src/plugins/alarm/alarm.cpp:54 (SPGM),src/plugins/alarm/alarm.cpp:62 (SPGM),src/plugins/clock/clock.cpp:486 (SPGM),src/plugins/mqtt/mqtt_auto_discovery.cpp:73 (SPGM),src/plugins/mqtt/mqtt_form.cpp:95 (SPGM)",
         "type": "source",
-        "use_counter": 4
+        "use_counter": 6
     },
     "mqtt_": {
         "default": "pl",
@@ -2544,15 +2568,11 @@
     },
     "ms": {
         "default": "ms",
-        "locations": "src/plugins/blinds_ctrl/blinds_form.cpp:94 (SPGM),src/plugins/blinds_ctrl/blinds_form.cpp:98 (SPGM)",
-        "type": "source",
-        "use_counter": 2
+        "use_counter": 0
     },
     "n_a": {
         "default": "n/a",
-        "locations": "src/plugins/blinds_ctrl/BlindsControl.h:115 (SPGM)",
-        "type": "source",
-        "use_counter": 1
+        "use_counter": 0
     },
     "name": {
         "default": "name",
@@ -2580,9 +2600,9 @@
     },
     "no": {
         "default": "no",
-        "locations": "src/at_mode.cpp:1371 (SPGM)",
+        "locations": "src/at_mode.cpp:1371 (SPGM),src/kfc_fw_config.cpp:1603 (SPGM)",
         "type": "source",
-        "use_counter": 1
+        "use_counter": 2
     },
     "no_cache": {
         "default": "no-cache",
@@ -2624,9 +2644,7 @@
     },
     "open": {
         "default": "open",
-        "locations": "src/plugins/blinds_ctrl/blinds_form.cpp:120 (SPGM)",
-        "type": "source",
-        "use_counter": 1
+        "use_counter": 0
     },
     "openweathermap_api_url": {
         "default": "http://api.openweathermap.org/data/2.5/{api_type}?q={query}&appid={api_key}",
@@ -2744,7 +2762,7 @@
     },
     "readonly": {
         "default": "readonly",
-        "locations": "include/spgm_auto_def.h:405 (AUTO_INIT),lib/KFCWebFramework/include/WebUI/Containers.h:699 (SPGM)",
+        "locations": "include/spgm_auto_def.h:405 (AUTO_INIT),lib/KFCWebFramework/include/WebUI/Containers.h:701 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
@@ -2792,9 +2810,9 @@
     },
     "seconds": {
         "default": "seconds",
-        "locations": "src/plugins/mqtt/mqtt_form.cpp:80 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:58 (SPGM)",
+        "locations": "src/plugins/clock/clock_form.cpp:93 (SPGM),src/plugins/clock/clock_form.cpp:254 (SPGM),src/plugins/mqtt/mqtt_form.cpp:80 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:58 (SPGM)",
         "type": "source",
-        "use_counter": 2
+        "use_counter": 4
     },
     "secure": {
         "default": "secure",
@@ -2828,9 +2846,7 @@
     },
     "set_all": {
         "default": "set_all",
-        "locations": "src/plugins/blinds_ctrl/BlindsControl.cpp:97 (SPGM),src/plugins/blinds_ctrl/BlindsControl.cpp:199 (SPGM),src/plugins/blinds_ctrl/blinds_plugin.cpp:117 (SPGM)",
-        "type": "source",
-        "use_counter": 3
+        "use_counter": 0
     },
     "size": {
         "default": "size",
@@ -2914,9 +2930,9 @@
     },
     "strftime_date_time_zone": {
         "default": "%FT%T %Z",
-        "locations": "lib/KFCBaseLibrary/src/debug_helper.cpp:210 (SPGM),src/plugins/ntp/ntp_atmode.cpp:47 (SPGM),src/plugins/ntp/ntp_atmode.cpp:50 (SPGM)",
+        "locations": "lib/KFCBaseLibrary/src/debug_helper.cpp:210 (SPGM),src/plugins/alarm/alarm.cpp:124 (SPGM),src/plugins/ntp/ntp_atmode.cpp:47 (SPGM),src/plugins/ntp/ntp_atmode.cpp:50 (SPGM),src/templates.cpp:362 (SPGM)",
         "type": "source",
-        "use_counter": 3
+        "use_counter": 5
     },
     "string": {
         "default": "string",
@@ -2932,7 +2948,7 @@
     },
     "sys": {
         "default": "sys",
-        "locations": "src/plugins/sensor/Sensor_SystemMetrics.cpp:207 (SPGM)",
+        "locations": "src/plugins/sensor/Sensor_SystemMetrics.cpp:211 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
@@ -3008,7 +3024,7 @@
     },
     "uptime": {
         "default": "uptime",
-        "locations": "src/plugins/sensor/Sensor_SystemMetrics.cpp:27 (AUTO_INIT),src/plugins/sensor/Sensor_SystemMetrics.cpp:56 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:59 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:243 (SPGM)",
+        "locations": "src/plugins/sensor/Sensor_SystemMetrics.cpp:27 (AUTO_INIT),src/plugins/sensor/Sensor_SystemMetrics.cpp:56 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:59 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:247 (SPGM)",
         "type": "source",
         "use_counter": 3
     },
@@ -3038,7 +3054,7 @@
     },
     "version": {
         "default": "version",
-        "locations": "src/plugins/sensor/Sensor_SystemMetrics.cpp:30 (AUTO_INIT),src/plugins/sensor/Sensor_SystemMetrics.cpp:70 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:72 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:246 (SPGM)",
+        "locations": "src/plugins/sensor/Sensor_SystemMetrics.cpp:30 (AUTO_INIT),src/plugins/sensor/Sensor_SystemMetrics.cpp:70 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:72 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:250 (SPGM)",
         "type": "source",
         "use_counter": 3
     },
@@ -3068,87 +3084,87 @@
     },
     "webui_json_align": {
         "default": "align",
-        "locations": "src/WebUIComponent.cpp:14 (DEFINE),src/WebUIComponent.cpp:73 (SPGM),src/WebUIComponent.cpp:76 (SPGM),src/WebUIComponent.cpp:79 (SPGM)",
+        "locations": "src/WebUIComponent.cpp:14 (DEFINE),src/WebUIComponent.cpp:74 (SPGM),src/WebUIComponent.cpp:77 (SPGM),src/WebUIComponent.cpp:80 (SPGM)",
         "type": "static",
         "use_counter": 3
     },
     "webui_json_badge": {
         "default": "badge",
-        "locations": "src/WebUIComponent.cpp:15 (DEFINE),src/WebUIComponent.cpp:156 (SPGM)",
+        "locations": "src/WebUIComponent.cpp:15 (DEFINE),src/WebUIComponent.cpp:157 (SPGM)",
         "type": "static",
         "use_counter": 1
     },
     "webui_json_binary_sensor": {
         "default": "binary_sensor",
-        "locations": "src/WebUIComponent.cpp:16 (DEFINE),src/WebUIComponent.cpp:178 (SPGM)",
+        "locations": "src/WebUIComponent.cpp:16 (DEFINE),src/WebUIComponent.cpp:179 (SPGM)",
         "type": "static",
         "use_counter": 1
     },
     "webui_json_button_group": {
         "default": "button_group",
-        "locations": "src/WebUIComponent.cpp:17 (DEFINE),src/WebUIComponent.cpp:195 (SPGM)",
+        "locations": "src/WebUIComponent.cpp:17 (DEFINE),src/WebUIComponent.cpp:196 (SPGM)",
         "type": "static",
         "use_counter": 1
     },
     "webui_json_center": {
         "default": "center",
-        "locations": "src/WebUIComponent.cpp:18 (DEFINE),src/WebUIComponent.cpp:73 (SPGM)",
+        "locations": "src/WebUIComponent.cpp:18 (DEFINE),src/WebUIComponent.cpp:74 (SPGM)",
         "type": "static",
         "use_counter": 1
     },
     "webui_json_color": {
         "default": "color",
-        "locations": "src/WebUIComponent.cpp:19 (DEFINE),src/WebUIComponent.cpp:138 (SPGM)",
+        "locations": "src/WebUIComponent.cpp:19 (DEFINE),src/WebUIComponent.cpp:139 (SPGM)",
         "type": "static",
         "use_counter": 1
     },
     "webui_json_columns": {
         "auto": "webui json columns",
-        "locations": "include/WebUIComponent.h:96 (SPGM),src/WebUIComponent.cpp:20 (DEFINE),src/WebUIComponent.cpp:93 (SPGM),src/WebUIComponent.cpp:95 (SPGM),src/WebUIComponent.cpp:164 (SPGM)",
+        "locations": "include/WebUIComponent.h:97 (SPGM),src/WebUIComponent.cpp:20 (DEFINE),src/WebUIComponent.cpp:94 (SPGM),src/WebUIComponent.cpp:96 (SPGM),src/WebUIComponent.cpp:165 (SPGM)",
         "type": "static",
         "use_counter": 4
     },
     "webui_json_data": {
         "default": "data",
-        "locations": "src/WebUIComponent.cpp:22 (DEFINE),src/WebUIComponent.cpp:218 (SPGM)",
+        "locations": "src/WebUIComponent.cpp:22 (DEFINE),src/WebUIComponent.cpp:219 (SPGM)",
         "type": "static",
         "use_counter": 1
     },
     "webui_json_events": {
         "auto": "webui json events",
-        "locations": "src/WebUIComponent.cpp:21 (DEFINE),src/WebUISocket.cpp:149 (SPGM),src/plugins/blinds_ctrl/BlindsControl.cpp:155 (SPGM),src/plugins/sensor/sensor.cpp:154 (SPGM)",
+        "locations": "src/WebUIComponent.cpp:21 (DEFINE),src/WebUISocket.cpp:149 (SPGM),src/plugins/clock/clock.cpp:221 (SPGM),src/plugins/clock/clock_webui.cpp:138 (SPGM),src/plugins/clock/clock_webui.cpp:238 (SPGM),src/plugins/sensor/sensor.cpp:154 (SPGM)",
         "type": "static",
-        "use_counter": 3
+        "use_counter": 5
     },
     "webui_json_group": {
         "default": "group",
-        "locations": "src/WebUIComponent.cpp:23 (DEFINE),src/WebUIComponent.cpp:103 (SPGM)",
+        "locations": "src/WebUIComponent.cpp:23 (DEFINE),src/WebUIComponent.cpp:104 (SPGM)",
         "type": "static",
         "use_counter": 1
     },
     "webui_json_has_switch": {
         "default": "has_switch",
-        "locations": "src/WebUIComponent.cpp:24 (DEFINE),src/WebUIComponent.cpp:105 (SPGM)",
+        "locations": "src/WebUIComponent.cpp:24 (DEFINE),src/WebUIComponent.cpp:106 (SPGM)",
         "type": "static",
         "use_counter": 1
     },
     "webui_json_hb": {
         "auto": "webui json hb",
-        "locations": "src/plugins/sensor/Sensor_SystemMetrics.cpp:201 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:202 (SPGM)",
+        "locations": "src/plugins/sensor/Sensor_SystemMetrics.cpp:205 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:206 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
     "webui_json_head": {
         "auto": "webui json head",
-        "locations": "src/plugins/blinds_ctrl/blinds_plugin.cpp:124 (SPGM)",
+        "locations": "src/plugins/sensor/Sensor_DS3231.cpp:87 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
     "webui_json_height": {
-        "default": "height",
-        "locations": "src/WebUIComponent.cpp:25 (DEFINE),src/WebUIComponent.cpp:188 (SPGM)",
+        "auto": "webui json height",
+        "locations": "src/WebUIComponent.cpp:26 (DEFINE),src/WebUIComponent.cpp:189 (SPGM),src/plugins/clock/clock_webui.cpp:216 (SPGM),src/plugins/clock/clock_webui.cpp:221 (SPGM),src/plugins/clock/clock_webui.cpp:226 (SPGM)",
         "type": "static",
-        "use_counter": 1
+        "use_counter": 4
     },
     "webui_json_ht": {
         "default": "ht",
@@ -3156,31 +3172,31 @@
     },
     "webui_json_id": {
         "auto": "webui json id",
-        "locations": "include/WebUIComponent.h:83 (SPGM),src/WebUIComponent.cpp:26 (DEFINE),src/plugins/blinds_ctrl/BlindsControl.cpp:97 (SPGM),src/plugins/blinds_ctrl/BlindsControl.cpp:105 (SPGM),src/plugins/blinds_ctrl/BlindsControl.cpp:110 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:149 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:154 (SPGM)",
+        "locations": "include/WebUIComponent.h:84 (SPGM),src/WebUIComponent.cpp:27 (DEFINE),src/plugins/clock/clock.cpp:223 (SPGM),src/plugins/clock/clock_webui.cpp:20 (SPGM),src/plugins/clock/clock_webui.cpp:24 (SPGM),src/plugins/clock/clock_webui.cpp:32 (SPGM),src/plugins/clock/clock_webui.cpp:37 (SPGM),src/plugins/clock/clock_webui.cpp:42 (SPGM),src/plugins/clock/clock_webui.cpp:57 (SPGM),src/plugins/clock/clock_webui.cpp:64 (SPGM),src/plugins/clock/clock_webui.cpp:140 (SPGM),src/plugins/sensor/Sensor_DS3231.cpp:71 (SPGM),src/plugins/sensor/Sensor_DS3231.cpp:77 (SPGM),src/plugins/sensor/Sensor_INA219.cpp:82 (SPGM),src/plugins/sensor/Sensor_INA219.cpp:88 (SPGM),src/plugins/sensor/Sensor_INA219.cpp:94 (SPGM),src/plugins/sensor/Sensor_INA219.cpp:100 (SPGM),src/plugins/sensor/Sensor_LM75A.cpp:54 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:149 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:154 (SPGM)",
         "type": "static",
-        "use_counter": 6
+        "use_counter": 19
     },
     "webui_json_items": {
         "default": "items",
-        "locations": "src/WebUIComponent.cpp:27 (DEFINE),src/WebUIComponent.cpp:198 (SPGM),src/WebUIComponent.cpp:208 (SPGM)",
+        "locations": "src/WebUIComponent.cpp:28 (DEFINE),src/WebUIComponent.cpp:199 (SPGM),src/WebUIComponent.cpp:209 (SPGM)",
         "type": "static",
         "use_counter": 2
     },
     "webui_json_left": {
         "default": "left",
-        "locations": "src/WebUIComponent.cpp:28 (DEFINE),src/WebUIComponent.cpp:79 (SPGM)",
+        "locations": "src/WebUIComponent.cpp:29 (DEFINE),src/WebUIComponent.cpp:80 (SPGM)",
         "type": "static",
         "use_counter": 1
     },
     "webui_json_listbox": {
         "default": "listbox",
-        "locations": "src/WebUIComponent.cpp:29 (DEFINE),src/WebUIComponent.cpp:205 (SPGM)",
+        "locations": "src/WebUIComponent.cpp:30 (DEFINE),src/WebUIComponent.cpp:206 (SPGM)",
         "type": "static",
         "use_counter": 1
     },
     "webui_json_max": {
         "default": "max",
-        "locations": "src/WebUIComponent.cpp:30 (DEFINE),src/WebUIComponent.cpp:127 (SPGM)",
+        "locations": "src/WebUIComponent.cpp:31 (DEFINE),src/WebUIComponent.cpp:128 (SPGM)",
         "type": "static",
         "use_counter": 1
     },
@@ -3190,85 +3206,85 @@
     },
     "webui_json_min": {
         "default": "min",
-        "locations": "src/WebUIComponent.cpp:32 (DEFINE),src/WebUIComponent.cpp:126 (SPGM)",
+        "locations": "src/WebUIComponent.cpp:33 (DEFINE),src/WebUIComponent.cpp:127 (SPGM)",
         "type": "static",
         "use_counter": 1
     },
     "webui_json_name": {
         "default": "name",
-        "locations": "src/WebUIComponent.cpp:54 (DEFINE),src/WebUIComponent.cpp:116 (SPGM)",
+        "locations": "src/WebUIComponent.cpp:55 (DEFINE),src/WebUIComponent.cpp:117 (SPGM)",
         "type": "static",
         "use_counter": 1
     },
     "webui_json_offset": {
         "auto": "webui json offset",
-        "locations": "include/WebUIComponent.h:101 (SPGM),src/WebUIComponent.cpp:33 (DEFINE)",
+        "locations": "include/WebUIComponent.h:102 (SPGM),src/WebUIComponent.cpp:34 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
     "webui_json_render_type": {
         "default": "render_type",
-        "locations": "src/WebUIComponent.cpp:34 (DEFINE),src/WebUIComponent.cpp:156 (SPGM),src/WebUIComponent.cpp:164 (SPGM)",
+        "locations": "src/WebUIComponent.cpp:35 (DEFINE),src/WebUIComponent.cpp:157 (SPGM),src/WebUIComponent.cpp:165 (SPGM)",
         "type": "static",
         "use_counter": 2
     },
     "webui_json_rgb": {
         "default": "rgb",
-        "locations": "src/WebUIComponent.cpp:36 (DEFINE),src/WebUIComponent.cpp:144 (SPGM)",
+        "locations": "src/WebUIComponent.cpp:37 (DEFINE),src/WebUIComponent.cpp:145 (SPGM)",
         "type": "static",
         "use_counter": 1
     },
     "webui_json_right": {
         "default": "right",
-        "locations": "src/WebUIComponent.cpp:35 (DEFINE),src/WebUIComponent.cpp:76 (SPGM)",
+        "locations": "src/WebUIComponent.cpp:36 (DEFINE),src/WebUIComponent.cpp:77 (SPGM)",
         "type": "static",
         "use_counter": 1
     },
     "webui_json_row": {
         "default": "row",
-        "locations": "src/WebUIComponent.cpp:37 (DEFINE),src/WebUIComponent.cpp:61 (SPGM),src/WebUIComponent.cpp:160 (SPGM)",
+        "locations": "src/WebUIComponent.cpp:38 (DEFINE),src/WebUIComponent.cpp:62 (SPGM),src/WebUIComponent.cpp:161 (SPGM)",
         "type": "static",
         "use_counter": 2
     },
     "webui_json_screen": {
         "default": "screen",
-        "locations": "src/WebUIComponent.cpp:38 (DEFINE),src/WebUIComponent.cpp:185 (SPGM)",
+        "locations": "src/WebUIComponent.cpp:39 (DEFINE),src/WebUIComponent.cpp:186 (SPGM)",
         "type": "static",
         "use_counter": 1
     },
     "webui_json_sensor": {
         "default": "sensor",
-        "locations": "src/WebUIComponent.cpp:39 (DEFINE),src/WebUIComponent.cpp:150 (SPGM)",
+        "locations": "src/WebUIComponent.cpp:40 (DEFINE),src/WebUIComponent.cpp:151 (SPGM)",
         "type": "static",
         "use_counter": 1
     },
     "webui_json_slider": {
         "default": "slider",
-        "locations": "src/WebUIComponent.cpp:40 (DEFINE),src/WebUIComponent.cpp:123 (SPGM),src/WebUIComponent.cpp:135 (SPGM)",
+        "locations": "src/WebUIComponent.cpp:41 (DEFINE),src/WebUIComponent.cpp:124 (SPGM),src/WebUIComponent.cpp:136 (SPGM)",
         "type": "static",
         "use_counter": 2
     },
     "webui_json_state": {
         "auto": "webui json state",
-        "locations": "include/WebUIComponent.h:109 (SPGM),src/WebUIComponent.cpp:41 (DEFINE),src/plugins/blinds_ctrl/BlindsControl.cpp:99 (SPGM),src/plugins/blinds_ctrl/BlindsControl.cpp:107 (SPGM),src/plugins/blinds_ctrl/BlindsControl.cpp:112 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:150 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:155 (SPGM)",
+        "locations": "include/WebUIComponent.h:110 (SPGM),src/WebUIComponent.cpp:42 (DEFINE),src/plugins/clock/clock.cpp:225 (SPGM),src/plugins/clock/clock_webui.cpp:21 (SPGM),src/plugins/clock/clock_webui.cpp:24 (SPGM),src/plugins/clock/clock_webui.cpp:33 (SPGM),src/plugins/clock/clock_webui.cpp:38 (SPGM),src/plugins/clock/clock_webui.cpp:57 (SPGM),src/plugins/clock/clock_webui.cpp:64 (SPGM),src/plugins/clock/clock_webui.cpp:141 (SPGM),src/plugins/sensor/Sensor_DS3231.cpp:72 (SPGM),src/plugins/sensor/Sensor_DS3231.cpp:78 (SPGM),src/plugins/sensor/Sensor_INA219.cpp:84 (SPGM),src/plugins/sensor/Sensor_INA219.cpp:90 (SPGM),src/plugins/sensor/Sensor_INA219.cpp:96 (SPGM),src/plugins/sensor/Sensor_INA219.cpp:101 (SPGM),src/plugins/sensor/Sensor_LM75A.cpp:55 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:150 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:155 (SPGM)",
         "type": "static",
-        "use_counter": 6
+        "use_counter": 18
     },
     "webui_json_switch": {
         "default": "switch",
-        "locations": "src/WebUIComponent.cpp:42 (DEFINE),src/WebUIComponent.cpp:112 (SPGM)",
+        "locations": "src/WebUIComponent.cpp:43 (DEFINE),src/WebUIComponent.cpp:113 (SPGM)",
         "type": "static",
         "use_counter": 1
     },
     "webui_json_temp": {
         "default": "temp",
-        "locations": "src/WebUIComponent.cpp:43 (DEFINE),src/WebUIComponent.cpp:138 (SPGM)",
+        "locations": "src/WebUIComponent.cpp:44 (DEFINE),src/WebUIComponent.cpp:139 (SPGM)",
         "type": "static",
         "use_counter": 1
     },
     "webui_json_title": {
         "auto": "webui json title",
-        "locations": "include/WebUIComponent.h:87 (SPGM),src/WebUIComponent.cpp:44 (DEFINE),src/WebUIComponent.cpp:66 (SPGM)",
+        "locations": "include/WebUIComponent.h:88 (SPGM),src/WebUIComponent.cpp:45 (DEFINE),src/WebUIComponent.cpp:67 (SPGM)",
         "type": "static",
         "use_counter": 2
     },
@@ -3278,33 +3294,33 @@
     },
     "webui_json_type": {
         "auto": "webui json type",
-        "locations": "src/WebUIComponent.cpp:46 (DEFINE),src/WebUIComponent.cpp:61 (SPGM),src/WebUIComponent.cpp:103 (SPGM),src/WebUIComponent.cpp:112 (SPGM),src/WebUIComponent.cpp:123 (SPGM),src/WebUIComponent.cpp:135 (SPGM),src/WebUIComponent.cpp:150 (SPGM),src/WebUIComponent.cpp:178 (SPGM),src/WebUIComponent.cpp:185 (SPGM),src/WebUIComponent.cpp:195 (SPGM),src/WebUIComponent.cpp:217 (SPGM),src/WebUISocket.cpp:148 (SPGM),src/plugins/blinds_ctrl/BlindsControl.cpp:154 (SPGM),src/plugins/sensor/sensor.cpp:153 (SPGM)",
+        "locations": "src/WebUIComponent.cpp:47 (DEFINE),src/WebUIComponent.cpp:62 (SPGM),src/WebUIComponent.cpp:104 (SPGM),src/WebUIComponent.cpp:113 (SPGM),src/WebUIComponent.cpp:124 (SPGM),src/WebUIComponent.cpp:136 (SPGM),src/WebUIComponent.cpp:151 (SPGM),src/WebUIComponent.cpp:179 (SPGM),src/WebUIComponent.cpp:186 (SPGM),src/WebUIComponent.cpp:196 (SPGM),src/WebUIComponent.cpp:218 (SPGM),src/WebUISocket.cpp:148 (SPGM),src/plugins/clock/clock.cpp:220 (SPGM),src/plugins/clock/clock_webui.cpp:137 (SPGM),src/plugins/clock/clock_webui.cpp:237 (SPGM),src/plugins/sensor/sensor.cpp:153 (SPGM)",
         "type": "static",
-        "use_counter": 13
+        "use_counter": 15
     },
     "webui_json_ue": {
         "auto": "webui json ue",
-        "locations": "src/WebUIComponent.cpp:48 (DEFINE),src/WebUISocket.cpp:148 (SPGM),src/plugins/blinds_ctrl/BlindsControl.cpp:154 (SPGM),src/plugins/sensor/sensor.cpp:153 (SPGM)",
+        "locations": "src/WebUIComponent.cpp:49 (DEFINE),src/WebUISocket.cpp:148 (SPGM),src/plugins/clock/clock.cpp:220 (SPGM),src/plugins/clock/clock_webui.cpp:137 (SPGM),src/plugins/clock/clock_webui.cpp:237 (SPGM),src/plugins/sensor/sensor.cpp:153 (SPGM)",
         "type": "static",
-        "use_counter": 3
+        "use_counter": 5
     },
     "webui_json_ui": {
         "default": "ui",
-        "locations": "src/WebUIComponent.cpp:49 (DEFINE),src/WebUIComponent.cpp:217 (SPGM)",
+        "locations": "src/WebUIComponent.cpp:50 (DEFINE),src/WebUIComponent.cpp:218 (SPGM)",
         "type": "static",
         "use_counter": 1
     },
     "webui_json_unit": {
         "auto": "webui json unit",
-        "locations": "include/WebUIComponent.h:91 (SPGM),src/WebUIComponent.cpp:47 (DEFINE)",
+        "locations": "include/WebUIComponent.h:92 (SPGM),src/WebUIComponent.cpp:48 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
     "webui_json_value": {
         "auto": "webui json value",
-        "locations": "include/WebUIComponent.h:105 (SPGM),src/WebUIComponent.cpp:50 (DEFINE),src/plugins/blinds_ctrl/BlindsControl.cpp:98 (SPGM),src/plugins/blinds_ctrl/BlindsControl.cpp:106 (SPGM),src/plugins/blinds_ctrl/BlindsControl.cpp:111 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:151 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:156 (SPGM)",
+        "locations": "include/WebUIComponent.h:106 (SPGM),src/WebUIComponent.cpp:51 (DEFINE),src/plugins/clock/clock.cpp:224 (SPGM),src/plugins/clock/clock_webui.cpp:22 (SPGM),src/plugins/clock/clock_webui.cpp:24 (SPGM),src/plugins/clock/clock_webui.cpp:34 (SPGM),src/plugins/clock/clock_webui.cpp:39 (SPGM),src/plugins/clock/clock_webui.cpp:44 (SPGM),src/plugins/clock/clock_webui.cpp:47 (SPGM),src/plugins/clock/clock_webui.cpp:57 (SPGM),src/plugins/clock/clock_webui.cpp:64 (SPGM),src/plugins/clock/clock_webui.cpp:142 (SPGM),src/plugins/sensor/Sensor_DS3231.cpp:73 (SPGM),src/plugins/sensor/Sensor_DS3231.cpp:79 (SPGM),src/plugins/sensor/Sensor_INA219.cpp:85 (SPGM),src/plugins/sensor/Sensor_INA219.cpp:91 (SPGM),src/plugins/sensor/Sensor_INA219.cpp:97 (SPGM),src/plugins/sensor/Sensor_INA219.cpp:102 (SPGM),src/plugins/sensor/Sensor_LM75A.cpp:56 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:151 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:156 (SPGM)",
         "type": "static",
-        "use_counter": 6
+        "use_counter": 20
     },
     "webui_json_vcc": {
         "default": "vcc",
@@ -3312,13 +3328,13 @@
     },
     "webui_json_width": {
         "default": "width",
-        "locations": "src/WebUIComponent.cpp:52 (DEFINE),src/WebUIComponent.cpp:187 (SPGM)",
+        "locations": "src/WebUIComponent.cpp:53 (DEFINE),src/WebUIComponent.cpp:188 (SPGM)",
         "type": "static",
         "use_counter": 1
     },
     "webui_json_zero_off": {
         "default": "zero_off",
-        "locations": "src/WebUIComponent.cpp:53 (DEFINE),src/WebUIComponent.cpp:115 (SPGM),src/WebUIComponent.cpp:128 (SPGM)",
+        "locations": "src/WebUIComponent.cpp:54 (DEFINE),src/WebUIComponent.cpp:116 (SPGM),src/WebUIComponent.cpp:129 (SPGM)",
         "type": "static",
         "use_counter": 2
     },
@@ -3358,8 +3374,8 @@
     },
     "yes": {
         "default": "yes",
-        "locations": "src/at_mode.cpp:1371 (SPGM),src/web_server.cpp:981 (SPGM)",
+        "locations": "src/at_mode.cpp:1371 (SPGM),src/kfc_fw_config.cpp:1603 (SPGM),src/web_server.cpp:981 (SPGM)",
         "type": "source",
-        "use_counter": 2
+        "use_counter": 3
     }
 }

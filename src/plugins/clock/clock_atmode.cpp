@@ -158,27 +158,16 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                 size_t num = 0;
                 _Scheduler.add(interval, true, [num, this](Event::CallbackTimerPtr timer) mutable {
                     __LDBG_printf("pixel=%u", num);
-#if IOT_LED_MATRIX
                     if (num == _display.kNumPixels) {
-#else
-                    if (num == _pixelOrder.size()) {
-#endif
                         _display.clear();
                         _display.show();
                         timer->disarm();
                     }
                     else {
-#if IOT_LED_MATRIX
                         if (num) {
                             _display.setPixel(num - 1, 0);
                         }
                         _display.setPixel(num++, 0x000022);
-#else
-                        if (num) {
-                            _display._pixels[_pixelOrder[num - 1]] = 0;
-                        }
-                        _display._pixels[_pixelOrder[num++]] = 0x22;
-#endif
                     }
                 });
             }
@@ -190,19 +179,12 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                         _displaySensor = DisplaySensorType::SHOW;
                         _display.clear();
                         _display.show();
-                        setUpdateRate(500);
                         args.print(F("displaying sensor value"));
                     }
                 }
                 else if (_displaySensor == DisplaySensorType::SHOW) {
                     _displaySensor = DisplaySensorType::OFF;
                     _autoBrightness = _config.auto_brightness;
-                    if (_animation) {
-                        setUpdateRate(_animation->getUpdateRate());
-                    }
-                    else {
-                        setAnimation(AnimationType::NONE);
-                    }
                     args.print(F("displaying time"));
                 }
             }

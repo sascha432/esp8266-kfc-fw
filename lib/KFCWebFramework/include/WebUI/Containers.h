@@ -579,6 +579,8 @@ namespace FormUI {
             }
 
         protected:
+            friend WebUI::BaseUI;
+
             void initSelect(const FormField &hiddenField);
 
             List _options;

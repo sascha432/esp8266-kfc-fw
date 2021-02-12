@@ -82,7 +82,7 @@ void Sensor_DS3231::getValues(JsonArray &array, bool timer)
 void Sensor_DS3231::createWebUI(WebUIRoot &webUI, WebUIRow **row)
 {
     _debug_println();
-    (*row)->addSensor(FSPGM(ds3231_id_temp), _name, PrintHt);
+    (*row)->addSensor(FSPGM(ds3231_id_temp), _name, JsonString());
     auto &clock = (*row)->addSensor(FSPGM(ds3231_id_time), F("RTC Clock"), JsonString());
     clock.add(JJ(head), F("h4"));
 }

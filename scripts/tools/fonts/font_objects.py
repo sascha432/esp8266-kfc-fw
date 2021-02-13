@@ -209,27 +209,37 @@ class Fonts(object):
             except:
                 font_size_pt = 0
             font_id = font_id[0:-len(m_font_size.group(0))]
+        if font_data.verbose:
+            print('fullname=%s font-name=%s size=%u' % (fullname, font_id, font_size_pt))
 
         if font_id in Fonts.FONTS:
-            raise RuntimeWarning('%s already exists' % font_id)
+            raise RuntimeError('%s already exists' % font_id)
         expr = bitmap_expr +  r'([^\}]+)\};'
         m_bitmap = re.search(expr, contents, re.I|re.M)
         if not m_bitmap:
             if font_data.verbose:
                 print(expr)
-            raise RuntimeWarning('bitmap incomplete')
+            raise RuntimeError('bitmap incomplete')
+
         bitmap = eval('(' + m_bitmap.group(2) + ')')
-        expr = r'const\s+GFXglyph\s+%sGlyphs\s*\[\s*\][^=]*=[^\{]*(\{.+?\})\s*;' % re.escape(fullname)
+
+        if font_data.verbose:
+            print("bitmap size=%u" % len(bitmap))
+
+        expr = r'const\s+GFXglyph\s+%sGlyphs\s*\[\s*\].*?=.*?(\{.+?\})\s*;' % re.escape(fullname)
         m_glyphs = re.search(expr, contents, re.I|re.M|re.DOTALL)
         if not m_glyphs:
-            raise RuntimeWarning('glyphs not found')
+            raise RuntimeError('glyphs not found')
         glyphs = m_glyphs.group(1)
         for comment in re.finditer(r'(//.*?)$', glyphs, re.I|re.M):
             glyphs = glyphs.replace(comment.group(1), '')
         glyphs = glyphs.replace('{', '(').replace('}', ')')
         glyphs = eval(glyphs);
 
-        m_info = re.search('const\s+GFXfont\s+%s[^=]*=[^\{]*\{.*?GFXglyph.*?,([^,]+),([^,]+),([^\},]+)' % re.escape(fullname), contents, re.I|re.M|re.DOTALL)
+        if font_data.verbose:
+            print("glyphs size=%u" % len(glyphs))
+
+        m_info = re.search(r'GFXglyph.{1,100}Glyphs\s*,\s*([^,]+?),([^,]+?),(.+?)\}', contents, re.I|re.M|re.DOTALL)
         first = eval(m_info.group(1).strip())
         last = eval(m_info.group(2).strip())
         advance = eval(m_info.group(3).strip())
@@ -239,6 +249,12 @@ class Fonts(object):
             if idx==0 or not re.match(r'(bold|italic|pixel|small)', part, re.I):
                 name.append(part)
         name = ' '.join(name)
+
+        if font_size_pt==0:
+            font_size_pt = int(advance / 1.33)
+
+
+        font_id += '_%upt' % font_size_pt
 
         styles = []
         tmp = path.basename(filename).lower() + ':' + font_id.lower()
@@ -254,6 +270,10 @@ class Fonts(object):
             styles.append(FontStyle.PIXEL)
         if 'lcd' in tmp:
             styles.append(FontStyle.LCD)
+
+
+        if font_data.verbose:
+            print("styles=%s first=0x%02x last=0x%02x advance=%u" % (FontStyles(styles), first, last, advance))
 
 
         filename, modified = FontData.update_cached_files(filename)
@@ -290,7 +310,7 @@ class Fonts(object):
                 contents = file.read()
                 try:
                     Fonts._read_font_header(filename, contents)
-                except RuntimeWarning as e:
+                except RuntimeError as e:
                     print('Warning: %s' % e)
 
         # else:
@@ -359,14 +379,17 @@ class Font(object):
     def draw_char(self, x, y, c, color, bg, size_x, size_y=None):
         size_y = size_y or size_x
 
+        x = int(x)
+        y = int(y)
+
         glyth = self.get_glyph(c)
         if glyth:
             bitmap = self.font.bitmap.get(glyth.bitmapOffset, glyth.next_offset)
 
             bits = bit = 0
             if size_x>1 or size_y>1:
-                xo16 = glyth.xOffset
-                yo16 = glyth.yOffset
+                xo16 = int(glyth.xOffset)
+                yo16 = int(glyth.yOffset)
             else:
                 xo16 = yo16 = 0
 

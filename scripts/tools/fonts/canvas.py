@@ -44,8 +44,8 @@ class AbstractCanvas(object):
     def __init__(self, width, height):
         global Font
         from . import Font
-        self._width = width
-        self._height = height
+        self._width = int(width)
+        self._height = int(height)
         self._color = 0xffffff
         self._background = 0
         self._font = Font(0)
@@ -99,8 +99,8 @@ class AbstractCanvas(object):
         pass
 
     def fill_rect(self, x, y, w, h, color):
-        for xx in range(x, x + w + 1):
-            for yy in range(y, y + h + 1):
+        for xx in range(x, x + w):
+            for yy in range(y, y + h):
                 self.set_pixel(xx, yy, color)
 
 class ConsoleCanvas(AbstractCanvas):

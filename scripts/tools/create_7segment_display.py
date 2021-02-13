@@ -271,13 +271,29 @@ elif args.action=='fonts':
 
 elif args.action=='testgfx':
 
-    canvas = ConsoleCanvas(32, 8, '██', True)
+    canvas = ConsoleCanvas(50, 11, '██', True)
 
-    cfg = ('Tiny3x3a', 1, 5)
-    cfg = ('Picopixel', 2, 6)
+    cfg = ('Tiny3x3a_2pt', 1, 5, None)
+    cfg = ('Picopixel_5pt', 2, 6, None)
+    cfg = ('simple_small_pixels_4pt', 0, 8, 0)
+    cfg = ('Dialog_8pt', 2, 6, 0)
+    cfg = ('digital_7_mono_8pt', 0, 6, 6)
+
+    cfg=list(cfg)
+
+
 
     font = Font(cfg[0], canvas)
+    font.wrap = False
     font.set_text_size(1)
+    glyph = font.get_glyph('0')
+    cfg[2] = glyph.height
+    if cfg[3]==None:
+        xAdvance = 0
+    elif cfg[3]:
+        xAdvance = cfg[3]
+    else:
+        xAdvance = glyph.xAdvance
 
     canvas.font = font
     canvas.font.set_text_size(1)
@@ -290,7 +306,15 @@ elif args.action=='testgfx':
         canvas.clear()
         # canvas.set_pixel(n % canvas.width, n % canvas.height, 0xff0000)
         # n+=1
-        font.print(cfg[1], cfg[2], time.strftime('%H:%M:%S'))
+        if True:
+            s = time.strftime('%H:%M:%S')
+            if xAdvance:
+                x = cfg[1]
+                for c in s:
+                    font.print(x, cfg[2], c)
+                    x += xAdvance
+            else:
+                font.print(cfg[1], cfg[2], s)
         canvas.flush()
         print('\n%s' % font.font)
         time.sleep(0.5)

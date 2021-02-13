@@ -2,9 +2,11 @@
 # Author: sascha_lammers@gmx.de
 #
 
+from json.encoder import JSONEncoder
 from os import path
 import os
 import json
+import sys
 from . import font_data
 
 font_data.verbose = False
@@ -68,12 +70,20 @@ class FontData:
         return 'source' in val and 'modified' in val
 
     def write_cache():
+
+        from . import FontStyle, FontStyles
+
+        class Encode(JSONEncoder):
+            def default(self, obj):
+                if isinstance(obj, (FontStyle, FontStyles)):
+                    return str(obj)
+
         filename = FontData.get_cache_filename()
         try:
             with open(filename, 'wt') as file:
                 # print('writing cache: %s' % file.name)
                 file.write('class FontDataCache(object):\n    FONT_DATA = ')
-                file.write(json.dumps({key:val for key, val in filter(lambda data: FontData.is_cacheable(data[0], data[1]), FontData.FONT_DATA.items())}, indent=None, separators=(',', ':')))
+                file.write(json.dumps({key:val for key, val in filter(lambda data: FontData.is_cacheable(data[0], data[1]), FontData.FONT_DATA.items())}, indent=None, separators=(',', ':'), cls=Encode))
                 file.write('\n\n')
                 file.write('    CACHED_FILES = ')
                 file.write(json.dumps(FontData.CACHED_FILES, indent=None, separators=(',', ':')))
@@ -103,12 +113,18 @@ class FontData:
                         # merge data with cache
                         cached_data.update(FontData.FONT_DATA[font_id])
                     FontData.FONT_DATA[font_id] = cached_data
-                    cached_data['createFontObject'][3] = FontStyles([FontStyle(style) for style in cached_data['createFontObject'][3].strip('[()],').split(',') if style])
+                    if isinstance(cached_data['createFontObject'][3], (tuple, list)):
+                        cached_data['createFontObject'][3] = FontStyles(cached_data['createFontObject'][3])
+                    else:
+                        cached_data['createFontObject'][3] = FontStyles([FontStyle(style) for style in cached_data['createFontObject'][3].strip('[()],').split(',') if style])
                     try:
-                        cached_data['createFontObject'][7] = eval(cached_data['createFontObject'][7])
-                        cached_data['createFontObject'][8] = eval(cached_data['createFontObject'][8])
+                        if not isinstance(cached_data['createFontObject'][7], (list, tuple)):
+                            cached_data['createFontObject'][7] = eval(cached_data['createFontObject'][7])
+                        if not isinstance(cached_data['createFontObject'][8], (list, tuple)):
+                            cached_data['createFontObject'][8] = eval(cached_data['createFontObject'][8])
                     except Exception as e:
-                        raise e
+                        print("Failed to create %s: %s" % (cached_data['createFontObject'][0], e))
+                        continue
                     # print('creating new FontObject for cache: %s' % font_id)
                     fonts[font_id] = FontObject(*cached_data['createFontObject'])
 

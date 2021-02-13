@@ -2,26 +2,34 @@
 #
 # Author: sascha_lammers@gmx.de
 #
-#
 
-import sys
+import json
 import argparse
 import enum
+import re
+import sys
+import time
 from os import path
+from fonts import font_data, Font, ConsoleCanvas
 
 project_dir = path.abspath(path.join(path.dirname(__file__), '..', '..'))
 header_dir = path.abspath(path.join(project_dir, 'src/plugins/clock'))
 
 parser = argparse.ArgumentParser(description='OTA for KFC Firmware')
-parser.add_argument('action', help='action to execute', choices=['list', 'dump', 'dumpcode'])
+parser.add_argument('action', help='action to execute', choices=['list', 'dump', 'dumpcode', 'json', 'fonts', 'testgfx'])
 parser.add_argument('-n', '--name', help='name of the display to create', type=str)
 parser.add_argument('-O', '--output', help='export to header file', default=path.join(header_dir, 'display_{name}.h'))
+parser.add_argument('--verbose', help='Enable verbose output', action="store_true", default=False)
+parser.add_argument('--clear-font-cache', help='Clear fonts cache', action="store_true", default=False)
 args = parser.parse_args()
+
+font_data.verbose = args.verbose
+font_data.clear_font_cache = args.clear_font_cache
 
 if args.action in ('dump', 'dumpcode') and not args.name:
     parser.error('dump requires --name')
 
-class Segments(enum.Enum):
+class Segments(str, enum.Enum):
     A = 'a'
     B = 'b'
     C = 'c'
@@ -30,11 +38,17 @@ class Segments(enum.Enum):
     F = 'f'
     G = 'g'
 
+    def __str__(self):
+        return str(self.value).upper()
+
 SEGMENTS_LIST = [Segments.A, Segments.B, Segments.C, Segments.D, Segments.E, Segments.F, Segments.G]
 
-class Colons(enum.Enum):
+class Colons(str, enum.Enum):
     TOP = 'top'
     BOTTOM = 'bottom'
+
+    def __str__(self):
+        return str(self.value)[0].upper()
 
 COLONS_LIST =[Colons.TOP, Colons.BOTTOM]
 
@@ -56,6 +70,19 @@ class SevenSegmentDisplay(object):
             ),
             'pixel_animation_order': list(range(0, 7 * 2)),
         },
+        'clock_4': {
+            'digits': (4, 2),
+            'colons': (1, 1),
+            'segment_order': { Segments.A: 0, Segments.B: 1, Segments.C: 3, Segments.D: 4, Segments.E: 5, Segments.F: 6, Segments.G: 2 },
+            'order': (
+                ('digit', 0),
+                ('digit', 1),
+                ('colon', 0),
+                ('digit', 2),
+                ('digit', 3),
+            ),
+            'pixel_animation_order': list(range(0, 7 * 2)),
+        },
         'clockv2': {
             'digits': (4, 4),
             'colons': (1, 2),
@@ -68,7 +95,32 @@ class SevenSegmentDisplay(object):
                 ('digit', 0),
             ),
             'pixel_animation_order': (28, 29, 30, 31, 24, 25, 26, 27, 11, 10, 9, 8, 20, 21, 22, 23, 16, 17, 18, 19, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4),
-        }
+        },
+        'matrix_clock': {
+            'digits': (6, 1),
+            'colons': (2, 1),
+            'segment_order': { Segments.A: 0, Segments.B: 1, Segments.C: 2, Segments.D: 3, Segments.E: 4, Segments.F: 5, Segments.G: 6 },
+            'order': (
+                ('digit', 0),
+                ('digit', 1),
+                ('colon', 0),
+                ('digit', 2),
+                ('digit', 3),
+                ('colon', 1),
+                ('digit', 4),
+                ('digit', 5),
+            ),
+            'pixel_mapping': (
+                {'000': ' ', '001': ' ', '002': ' ', '003': ' ', '004': ' ', '005': ' ', '006': ' ', '007': ' ', '008': ' ', '009': ' ', '010': ' ', '011': ' ', '012': ' ', '013': ' ', '014': ' ', '015': ' ', '016': ' ', '017': ' ', '018': ' ', '019': ' ',  '020': ' ', '021': ' ', '022': ' ', '023': ' ', '024': ' ', '025': ' ', '026': ' ', '027': ' ', '028': ' ', '029': ' ', '030': ' ', '031': ' ', },
+                {'063': ' ', '062': ' ', '061': ' ', '060': ' ', '059': ' ', '058': ' ', '057': ' ', '056': ' ', '055': ' ', '054': ' ', '053': ' ', '052': ' ', '051': ' ', '050': ' ', '049': ' ', '048': ' ', '047': ' ', '046': ' ', '045': ' ', '044': ' ',  '043': ' ', '042': ' ', '041': ' ', '040': ' ', '039': ' ', '038': ' ', '037': ' ', '036': ' ', '035': ' ', '034': ' ', '033': ' ', '032': ' ', },
+                {'064': ' ', '065': ' ', '066': ' ', '067': ' ', '068': ' ', '069': ' ', '070': ' ', '071': ' ', '072': ' ', '073': ' ', '074': ' ', '075': ' ', '076': ' ', '077': ' ', '078': ' ', '079': ' ', '080': ' ', '081': ' ', '082': ' ', '083': ' ',  '084': ' ', '085': ' ', '086': ' ', '087': ' ', '088': ' ', '089': ' ', '090': ' ', '091': ' ', '092': ' ', '093': ' ', '094': ' ', '095': ' ', },
+                {'127': ' ', '126': ' ', '125': ' ', '124': ' ', '123': ' ', '122': ' ', '121': ' ', '120': ' ', '119': ' ', '118': ' ', '117': ' ', '116': ' ', '115': ' ', '114': ' ', '113': ' ', '112': ' ', '111': ' ', '110': ' ', '109': ' ', '108': ' ',  '107': ' ', '106': ' ', '105': ' ', '104': ' ', '103': ' ', '102': ' ', '101': ' ', '100': ' ', '099': ' ', '098': ' ', '097': ' ', '096': ' ', },
+                {'128': ' ', '129': ' ', '130': ' ', '131': ' ', '132': ' ', '133': ' ', '134': ' ', '135': ' ', '136': ' ', '137': ' ', '138': ' ', '139': ' ', '140': ' ', '141': ' ', '142': ' ', '143': ' ', '144': ' ', '145': ' ', '146': ' ', '147': ' ',  '148': ' ', '149': ' ', '150': ' ', '151': ' ', '152': ' ', '153': ' ', '154': ' ', '155': ' ', '156': ' ', '157': ' ', '158': ' ', '159': ' ', },
+                {'191': ' ', '190': ' ', '189': ' ', '188': ' ', '187': ' ', '186': ' ', '185': ' ', '184': ' ', '183': ' ', '182': ' ', '181': ' ', '180': ' ', '179': ' ', '178': ' ', '177': ' ', '176': ' ', '175': ' ', '174': ' ', '173': ' ', '172': ' ',  '171': ' ', '170': ' ', '169': ' ', '168': ' ', '167': ' ', '166': ' ', '165': ' ', '164': ' ', '163': ' ', '162': ' ', '161': ' ', '160': ' ', },
+                {'192': ' ', '193': ' ', '194': ' ', '195': ' ', '196': ' ', '197': ' ', '198': ' ', '199': ' ', '200': ' ', '201': ' ', '202': ' ', '203': ' ', '204': ' ', '205': ' ', '206': ' ', '207': ' ', '208': ' ', '209': ' ', '210': ' ', '211': ' ',  '212': ' ', '213': ' ', '214': ' ', '215': ' ', '216': ' ', '217': ' ', '218': ' ', '219': ' ', '220': ' ', '221': ' ', '222': ' ', '223': ' ', },
+                {'255': ' ', '254': ' ', '253': ' ', '252': ' ', '251': ' ', '250': ' ', '249': ' ', '248': ' ', '247': ' ', '246': ' ', '245': ' ', '244': ' ', '243': ' ', '242': ' ', '241': ' ', '240': ' ', '239': ' ', '238': ' ', '237': ' ', '236': ' ',  '235': ' ', '234': ' ', '233': ' ', '232': ' ', '231': ' ', '230': ' ', '229': ' ', '228': ' ', '227': ' ', '226': ' ', '225': ' ', '224': ' ', },
+            )
+        },
     }
 
     def names():
@@ -196,8 +248,6 @@ class SevenSegmentDisplay(object):
                 return list(range(start, end))
 
 
-    def get_segment(self, digit, segment):
-        pass
 
 
 
@@ -214,6 +264,57 @@ if args.action=='list':
         print('colon pixels: %u' % display.num_pixels_colons)
         print('total pixels: %u' % display.num_pixels)
 
+elif args.action=='fonts':
+
+    for idx, font in enumerate(Font.get_available_fonts().values()):
+        print('#%u %s' % (idx, font))
+
+elif args.action=='testgfx':
+
+    canvas = ConsoleCanvas(32, 8, '██', True)
+
+    cfg = ('Tiny3x3a', 1, 5)
+    cfg = ('Picopixel', 2, 6)
+
+    font = Font(cfg[0], canvas)
+    font.set_text_size(1)
+
+    canvas.font = font
+    canvas.font.set_text_size(1)
+    canvas.bgcolor = 0
+    canvas.color = 0x0000ff
+    canvas.cursor(False)
+    n=0
+    canvas.clear(True)
+    while True:
+        canvas.clear()
+        # canvas.set_pixel(n % canvas.width, n % canvas.height, 0xff0000)
+        # n+=1
+        font.print(cfg[1], cfg[2], time.strftime('%H:%M:%S'))
+        canvas.flush()
+        print('\n%s' % font.font)
+        time.sleep(0.5)
+
+elif args.action=='json':
+
+    display = SevenSegmentDisplay(args.name)
+
+    def json_dumps(obj, indent=None, cls=None):
+        sout = json.dumps(obj, indent=indent, cls=cls)
+        if indent==None:
+            return sout
+        sre = r'( [\[\{])[\r\n]+([^\[\{]+)([\]\}],{0,1}[\r\n]+)'
+        g = re.search(sre, sout, re.I|re.M|re.DOTALL)
+        while g:
+            i = re.match(r'(\s+)%s' % indent, g.group(2), re.DOTALL)
+            sout = sout.replace(g.group(0), \
+                re.sub(r'([\]\}])\s+([\]\}])', '\\1\n' + (i and i.group(1)[0:-len(indent)] or '') + '\\2', g.group(1) + re.sub(r'((^)?\s+(\Z)?)', ' ', g.group(2), re.DOTALL) + \
+                g.group(3)))
+            g = re.search(sre, sout, re.I|re.M|re.DOTALL)
+        return sout;
+
+    print(json_dumps({args.name: display.display}, indent=' '*2))
+
 elif args.action=='dump':
 
     display = SevenSegmentDisplay(args.name)
@@ -228,7 +329,6 @@ elif args.action=='dump':
             print('colon %u: %u-%u' % (j, n, n + display.num_pixels_colon - 1))
             for type in COLONS_LIST:
                 print('  %s: %s' % (type, display.get_colon_pixels(n, type)))
-
             j += 1
 
 elif args.action=='dumpcode':

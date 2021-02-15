@@ -98,6 +98,7 @@ namespace FormUI {
             NONE,
             SELECT,
             TEXT,
+            TEXTAREA,
             NUMBER,
             NUMBER_RANGE,
             RANGE,

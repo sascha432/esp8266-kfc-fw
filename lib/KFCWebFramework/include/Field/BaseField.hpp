@@ -18,6 +18,12 @@ const String &Field::BaseField::getValue() const
     return _value;
 }
 
+__KFC_FORMS_INLINE_METHOD__
+String &Field::BaseField::getValue()
+{
+    return _value;
+}
+
 
 __KFC_FORMS_INLINE_METHOD__
 void Field::BaseField::setForm(Form::BaseForm *form)

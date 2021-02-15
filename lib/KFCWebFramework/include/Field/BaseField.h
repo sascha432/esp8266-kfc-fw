@@ -77,6 +77,9 @@ namespace FormUI {
             // return value stored in base field
             const String &getValue() const;
 
+            // return value stored in base field
+            String &getValue();
+
             // set value of the field and return true, if it has changed
             // children may call this method to assign the value rather than setting it directly (though its protected not private)
             virtual bool setValue(const String &value);

@@ -237,6 +237,12 @@ void WebUI::BaseUI::renderInputField(Type type, PrintInterface &output, const ch
             _printAttributeTo(output);
             break;
 
+        case Type::TEXTAREA:
+            output.printf_P(PrintArgs::FormatType::HTML_OPEN_TEXTAREA, name, name);
+            _printAttributeTo(output);
+            output.printf_P(PrintArgs::FormatType::HTML_CLOSE_TEXTAREA, encodeHtmlEntities(value));
+            break;
+
         case Type::NUMBER:
             output.printf_P(PrintArgs::FormatType::HTML_OPEN_NUMBER_INPUT, name, name, encodeHtmlEntities(value));
             _printAttributeTo(output);

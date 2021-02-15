@@ -74,64 +74,79 @@ void ClockPlugin::rotaryCallback(bool decrease, uint32_t now)
 
 void ClockPlugin::buttonCallback(uint8_t button, EventType eventType, uint16_t repeatCount)
 {
-    switch (eventType) {
-        case EventType::PRESSED:
-            if (!_config.enabled) {
-                _setState(true);
-            }
-            IF_IOT_CLOCK_HAVE_ROTARY_ENCODER(
-                else {
-                    setRotaryAction((_rotaryAction + 1) % 2); // toggle rotary encoder action
+    if (button == 0) {
+        switch (eventType) {
+            case EventType::PRESSED:
+                if (!_config.enabled) {
+                    _setState(true);
                 }
-            )
-            break;
-        case EventType::LONG_PRESSED:
-            if (_config.enabled) {
-                _setState(false);
-            }
-            else {
-                _setState(true);
-            }
-            break;
-        case EventType::HELD:
-            // start flashing red after 5 seconds and reboot 2 seconds later
-            // if the button is pressed for 8.2 seconds a hard reset is performed
-            if (repeatCount * 250 + 1500 > 5000) {
-                // disable animation blending and start flashing red
-                delete _animation;
-                _animation = nullptr;
-                _setAnimation(new Clock::FlashingAnimation(*this, Color(255, 0, 0), 250));
-                _targetBrightness = 255 / 4; // 25%
-                _fadeTimer.disable();
-                _forceUpdate = true;
-                _isFading = false;
-                _Timer(_timer).remove();
+                IF_IOT_CLOCK_HAVE_ROTARY_ENCODER(
+                    else {
+                        setRotaryAction((_rotaryAction + 1) % 2); // toggle rotary encoder action
+                    }
+                )
+                break;
+            case EventType::LONG_PRESSED:
+                if (_config.enabled) {
+                    _setState(false);
+                }
+                else {
+                    _setState(true);
+                }
+                break;
+            case EventType::HELD:
+                // start flashing red after 5 seconds and reboot 2 seconds later
+                // if the button is pressed for 8.2 seconds a hard reset is performed
+                if (repeatCount * 250 + 1500 > 5000) {
+                    // disable animation blending and start flashing red
+                    delete _animation;
+                    _animation = nullptr;
+                    _setAnimation(new Clock::FlashingAnimation(*this, Color(255, 0, 0), 250));
+                    _targetBrightness = 255 / 4; // 25%
+                    _fadeTimer.disable();
+                    _forceUpdate = true;
+                    _isFading = false;
+                    _Timer(_timer).remove();
 
-                // disable buttons
-                pinMonitor.detach(this);
+                    // disable buttons
+                    pinMonitor.detach(this);
 
-                _Scheduler.add(2000, false, [this](Event::CallbackTimerPtr timer) {
-                    __LDBG_printf("restarting device");
-                    config.restartDevice();
-                });
-            }
-            break;
-        //  case EventType::SINGLE_CLICK:
-        //     if (!_config.enabled) {
-        //         _setState(false);
-        //     }
-        //     else {
-        //         _setState(true);
-        //     }
-        //     // base.queueEvent(eventType, _button, _getEventTime(), config.actions[_button].single_click);
-        //     break;
-        // case EventType::DOUBLE_CLICK:
-        //     // queueEvent(eventType, _button, _getEventTime(), config.actions[_button].double_click);
-        //     break;
-        default:
-            break;
+                    _Scheduler.add(2000, false, [this](Event::CallbackTimerPtr timer) {
+                        __LDBG_printf("restarting device");
+                        config.restartDevice();
+                    });
+                }
+                break;
+            //  case EventType::SINGLE_CLICK:
+            //     if (!_config.enabled) {
+            //         _setState(false);
+            //     }
+            //     else {
+            //         _setState(true);
+            //     }
+            //     // base.queueEvent(eventType, _button, _getEventTime(), config.actions[_button].single_click);
+            //     break;
+            // case EventType::DOUBLE_CLICK:
+            //     // queueEvent(eventType, _button, _getEventTime(), config.actions[_button].double_click);
+            //     break;
+            default:
+                break;
+        }
     }
-
+#if IOT_CLOCK_TOUCH_PIN != -1
+    else if (button == 1) {
+        switch (eventType) {
+            case EventType::PRESSED:
+            case EventType::SINGLE_CLICK:
+                if (!_config.enabled) {
+                    _setState(true);
+                }
+                break;
+            default:
+                break;
+        }
+    }
+#endif
 }
 
 

@@ -71,6 +71,14 @@ namespace SevenSegment {
     public:
         using DisplayType = BaseDisplayType;
 
+
+        // Display() :
+        //     BaseDisplayType(),
+        //     _state(BaseDisplayType::kNumPixels)
+        // {
+        //     clearState();
+        // }
+
         /**
          * Format: 12:34.56
          *
@@ -191,6 +199,7 @@ namespace SevenSegment {
         }
 
     private:
+        // std::vector<bool> _state;
         std::array<bool, BaseDisplayType::kNumPixels> _state;
     };
 

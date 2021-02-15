@@ -53,16 +53,22 @@ MQTTComponent::MQTTAutoDiscoveryPtr ClockPlugin::nextAutoDiscovery(MQTTAutoDisco
         break;
 #endif
 #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
-    #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
-        case 2: {
-    #else
-        case 1: {
-    #endif
+        case 1 IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR( + 1): {
             if (!discovery->create(MQTTComponent::ComponentType::SENSOR, F("power"), format)) {
                 return discovery;
             }
             discovery->addStateTopic(MQTTClient::formatTopic(F("power")));
             discovery->addUnitOfMeasurement(String('W'));
+        }
+        break;
+#endif
+#if IOT_CLOCK_HAVE_MOTION_SENSOR
+    case 1 IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR( + 1) IF_IOT_CLOCK_DISPLAY_POWER_CONSUMPTION( + 1): {
+            if (!discovery->create(MQTTComponent::ComponentType::BINARY_SENSOR, F("motion"), format)) {
+                return discovery;
+            }
+            discovery->addStateTopic(MQTTClient::formatTopic(F("motion")));
+            discovery->addPayloadOnOff();
         }
         break;
 #endif
@@ -74,6 +80,7 @@ MQTTComponent::MQTTAutoDiscoveryPtr ClockPlugin::nextAutoDiscovery(MQTTAutoDisco
 uint8_t ClockPlugin::getAutoDiscoveryCount() const
 {
     return 1
+        IF_IOT_CLOCK_HAVE_MOTION_SENSOR( + 1)
         IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR( + 1)
         IF_IOT_CLOCK_DISPLAY_POWER_CONSUMPTION( + 1);
 }

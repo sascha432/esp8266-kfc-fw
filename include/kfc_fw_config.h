@@ -20,6 +20,7 @@
 #include <bitset>
 #include <chrono>
 #include <Configuration.h>
+#include <IOExpander.h>
 #if SYSLOG_SUPPORT
 #include <Syslog.h>
 #endif
@@ -50,8 +51,9 @@ extern float load_avg[3]; // 1min, 5min, 15min
 #define HASH_SIZE                   64
 
 #if HAVE_PCF8574
-#include <PCF8574.h>
-extern PCF8574 _PCF8574;
+#include <IOExpander.h>
+using _PCF8574Range = IOExpander::PCF8574_Range<PCF8574_PORT_RANGE_START, PCF8574_PORT_RANGE_END>;
+extern IOExpander::PCF8574 _PCF8574;
 // these functions must be implemented and exported
 extern void initialize_pcf8574();
 extern void print_status_pcf8574(Print &output);
@@ -75,8 +77,9 @@ extern void print_status_mcp23017(Print &output);
 
 static inline void _digitalWrite(uint8_t pin, uint8_t value) {
 #if HAVE_PCF8574
-    if (pin >= PCF8574_PORT_RANGE_START && pin < PCF8574_PORT_RANGE_END) {
-        _PCF8574.write(pin - PCF8574_PORT_RANGE_START, value);
+
+    if (_PCF8574Range::inRange(pin)) {
+        _PCF8574.digitalWrite(_PCF8574Range::digitalPin2Pin(pin), value);
     }
     else
 #endif
@@ -87,8 +90,8 @@ static inline void _digitalWrite(uint8_t pin, uint8_t value) {
 
 static inline uint8_t _digitalRead(uint8_t pin) {
 #if HAVE_PCF8574
-    if (pin >= PCF8574_PORT_RANGE_START && pin < PCF8574_PORT_RANGE_END) {
-        return _PCF8574.read(pin - PCF8574_PORT_RANGE_START);
+    if (_PCF8574Range::inRange(pin)) {
+        return _PCF8574.digitalRead(_PCF8574Range::digitalPin2Pin(pin));
     }
     else
 #endif
@@ -99,8 +102,8 @@ static inline uint8_t _digitalRead(uint8_t pin) {
 
 static inline void _analogWrite(uint8_t pin, uint16_t value) {
 #if HAVE_PCF8574
-    if (pin >= PCF8574_PORT_RANGE_START && pin < PCF8574_PORT_RANGE_END) {
-        _PCF8574.write(pin - PCF8574_PORT_RANGE_START, value ? HIGH : LOW);
+    if (_PCF8574Range::inRange(pin)) {
+        _PCF8574.digitalWrite(_PCF8574Range::digitalPin2Pin(pin), value ? HIGH : LOW);
     }
     else
 #endif
@@ -111,8 +114,8 @@ static inline void _analogWrite(uint8_t pin, uint16_t value) {
 
 static inline uint16_t _analogRead(uint8_t pin) {
 #if HAVE_PCF8574
-    if (pin >= PCF8574_PORT_RANGE_START && pin < PCF8574_PORT_RANGE_END) {
-        return _PCF8574.read(pin - PCF8574_PORT_RANGE_START) ? 1023 : 0;
+    if (_PCF8574Range::inRange(pin)) {
+        return _PCF8574.digitalRead(_PCF8574Range::digitalPin2Pin(pin)) ? 1023 : 0;
     }
     else
 #endif
@@ -124,8 +127,8 @@ static inline uint16_t _analogRead(uint8_t pin) {
 
 static inline void _pinMode(uint8_t pin, uint8_t mode) {
 #if HAVE_PCF8574
-    if (pin >= PCF8574_PORT_RANGE_START && pin < PCF8574_PORT_RANGE_END) {
-        return;
+    if (_PCF8574Range::inRange(pin)) {
+        _PCF8574.pinMode(_PCF8574Range::digitalPin2Pin(pin), mode);
     }
     else
 #endif
@@ -136,8 +139,8 @@ static inline void _pinMode(uint8_t pin, uint8_t mode) {
 
 static inline size_t _pinName(uint8_t pin, char *buf, size_t size) {
 #if HAVE_PCF8574
-    if (pin >= PCF8574_PORT_RANGE_START && pin < PCF8574_PORT_RANGE_END) {
-        return snprintf_P(buf, size - 1, PSTR("%u (PCF8574 pin %u)"), pin, pin - PCF8574_PORT_RANGE_START);
+    if (_PCF8574Range::inRange(pin)) {
+        return snprintf_P(buf, size - 1, PSTR("%u (PCF8574 pin %u)"), pin, _PCF8574Range::digitalPin2Pin(pin));
     }
     else
 #endif
@@ -148,7 +151,7 @@ static inline size_t _pinName(uint8_t pin, char *buf, size_t size) {
 
 static inline bool _pinHasAnalogRead(uint8_t pin) {
 #if HAVE_PCF8574
-    if (pin >= PCF8574_PORT_RANGE_START && pin < PCF8574_PORT_RANGE_END) {
+    if (_PCF8574Range::inRange(pin)) {
         return false;
     }
     else
@@ -165,7 +168,7 @@ static inline bool _pinHasAnalogRead(uint8_t pin) {
 
 static inline bool _pinHasAnalogWrite(uint8_t pin) {
 #if HAVE_PCF8574
-    if (pin >= PCF8574_PORT_RANGE_START && pin < PCF8574_PORT_RANGE_END) {
+    if (_PCF8574Range::inRange(pin)) {
         return false;
     }
     else

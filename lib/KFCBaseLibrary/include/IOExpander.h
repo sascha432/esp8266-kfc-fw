@@ -96,6 +96,20 @@ namespace IOExpander {
 
     };
 
+    template<uint8_t _PinRangeStart, uint8_t _PinRangeEnd>
+    class PCF8574_Range {
+    public:
+        static bool inRange(uint8_t pin) {
+            return pin >= _PinRangeStart && pin < _PinRangeEnd;
+        }
+        static uint8_t pin2DigitalPin(uint8_t pin) {
+            return _PinRangeStart + pin;
+        }
+        static uint8_t digitalPin2Pin(uint8_t pin) {
+            return pin - _PinRangeStart;
+        }
+    };
+
     class PCF8574 {
     public:
         static constexpr uint8_t kDefaultAddress = 0x21;

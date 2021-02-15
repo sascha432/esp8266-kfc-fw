@@ -306,12 +306,24 @@ public:
     // get stored configuration and update it with local storage
     Clock::Config_t &getWriteableConfig();
 
+// ------------------------------------------------------------------------
+// Motion sensor
+// ------------------------------------------------------------------------
+#if IOT_CLOCK_HAVE_MOTION_SENSOR
+
+
+private:
+    uint8_t _motionState{0xff};
+    uint32_t _motionLastUpdate{0};
+
+
+#endif
 
 // ------------------------------------------------------------------------
 // Power consumption sensor
 // ------------------------------------------------------------------------
 
-#if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
+#if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION || IOT_CLOCK_HAVE_POWER_LIMIT
 
 public:
     static void addPowerSensor(WebUIRoot &webUI, WebUIRow **row, SensorPlugin::SensorType type);
@@ -325,13 +337,10 @@ private:
     void _webSocketCallback(WsClient::ClientCallbackType type, WsClient *client, AsyncWebSocket *server, WsClient::ClientCallbackId id);
     void _calcPowerLevel();
     float __getPowerLevel(float P_W, float min) const;
-    uint32_t _getPowerLevelLimit(uint32_t P_mW) const {
-        auto res = __getPowerLevel(P_mW / 1000.0, 0);
-        if (res > 3)  {
-            res *= 0.935;
-        }
-        return res * 1000;
-    }
+    uint32_t _getPowerLevelLimit(uint32_t P_mW) const;
+
+#if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
+
     float _getPowerLevel() const {
         if (!_isEnabled || _tempBrightness == -1) {
             return NAN;
@@ -346,6 +355,7 @@ private:
     uint32_t _powerLevelUpdateTimer{0};
     uint32_t _powerLevelCurrentmW{0};
     uint32_t _powerLevelUpdateRate{kUpdateMQTTInterval * kPowerLevelUpdateRateMultiplier};
+#endif
 
 #endif
 

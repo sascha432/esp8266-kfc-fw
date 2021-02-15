@@ -30,13 +30,15 @@ typedef struct {
   void *arg;
 } interrupt_handler_t;
 
-static interrupt_handler_t interrupt_handlers[15];
+static interrupt_handler_t interrupt_handlers[16];
 static uint32_t interrupt_reg;
 
 static void set_interrupt_handlers(uint8_t pin, voidFuncPtrArg userFunc, void* arg)
 {
-    interrupt_handlers[pin].fn = userFunc;
-    interrupt_handlers[pin].arg = arg;
+    if (pin < 16) {
+        interrupt_handlers[pin].fn = userFunc;
+        interrupt_handlers[pin].arg = arg;
+    }
 }
 
 void ICACHE_RAM_ATTR interrupt_handler(void *)

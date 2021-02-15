@@ -144,14 +144,23 @@ public:
     virtual void process(const String &key, PrintHtmlEntitiesString &output) override;
 };
 
+template<typename _Ta = const __FlashStringHelper *>
 class File2String {
 public:
-    File2String(const String &filename);
-    String toString();
-    void fromString(const String &value);
+    File2String(_Ta filename) : _filename(filename) {
+    }
+    String toString() {
+        return KFCFS.open(_filename, fs::FileOpenMode::read).readString();
+    }
+    void fromString(const String &value) {
+        KFCFS.open(_filename, fs::FileOpenMode::write).print(value);
+    }
+    void fromString(const __FlashStringHelper *value) {
+        KFCFS.open(_filename, fs::FileOpenMode::write).print(value);
+    }
 
 private:
-    String _filename;
+    _Ta _filename;
 };
 
 class SettingsForm : public FormUI::Form::BaseForm {

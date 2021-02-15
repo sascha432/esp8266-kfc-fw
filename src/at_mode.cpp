@@ -30,8 +30,8 @@
 #include "WebUIAlerts.h"
 #include "PinMonitor.h"
 #if HAVE_PCF8574
-#include <PCF8574.h>
-extern PCF8574 _PCF8574;
+#include <IOExpander.h>
+extern IOExpander::PCF8574 _PCF8574;
 #endif
 #include "../src/plugins/http2serial/http2serial.h"
 #if IOT_DIMMER_MODULE || IOT_ATOMIC_SUN_V2
@@ -375,7 +375,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RSSI, "RSSI", "[interval in seconds|0=disa
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(GPIO, "GPIO", "[interval in seconds|0=disable]", "Display GPIO states");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PWM, "PWM", "<pin>,<input|waveform|level=0-" __STRINGIFY(PWMRANGE) ">[,<frequency=100-40000Hz>[,<duration/ms>]]", "PWM output on PIN, min./max. level set it to LOW/HIGH"
 #if HAVE_PCF8574
-    "\nPCF8574 can be addressed using pin 80-87. PWM is not supported."
+    "\nPCF8574 can be addressed using pin 128-135. PWM is not supported."
 #endif
 );
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(ADC, "ADC", "<off|display interval=1s>[,<period=1s>,<multiplier=1.0>,<unit=mV>,<read delay=5000us>]", "Read the ADC and display values");
@@ -555,6 +555,11 @@ String at_mode_print_command_string(Stream &output, char separator)
     return commands;
 }
 
+
+class DisplayTimer;
+
+extern DisplayTimer *displayTimer;
+
 #if DEBUG
 
 class DisplayTimer {
@@ -565,38 +570,75 @@ public:
         GPIO = 3,
     } DisplayTypeEnum_t;
 
-    DisplayTimer() : _type(HEAP) {
+    DisplayTimer() :
+        _type(HEAP),
+        _maxHeap(0),
+        _maxHeapTime(0)
+    {
+        __DBG_assert_printf(displayTimer == nullptr, "displayTimer not null");
+        if (displayTimer) {
+            delete displayTimer;
+        }
+        displayTimer = this;
+    }
+    ~DisplayTimer() {
+        if (this == displayTimer) {
+            displayTimer = nullptr;
+        }
     }
 
     bool removeTimer() {
         return _timer.remove();
     }
 
+    void remove() {
+        _timer.remove();
+        delete this;
+    }
+
 public:
     Event::Timer _timer;
-    DisplayTypeEnum_t _type = HEAP;
-    int32_t _rssiMin, _rssiMax;
+    DisplayTypeEnum_t _type;
+    int16_t _rssiMin;
+    int16_t _rssiMax;
+    uint16_t _maxHeap;
+    uint32_t _maxHeapTime;
 };
 
-DisplayTimer displayTimer;
+DisplayTimer *displayTimer;
 
 static void print_heap()
 {
-    Serial.printf_P(PSTR("+HEAP: free=%u cpu=%dMHz frag=%u"), ESP.getFreeHeap(), ESP.getCpuFreqMHz(), ESP.getHeapFragmentation());
+    if (displayTimer) {
+        auto heap = ESP.getFreeHeap();
+        if (heap > displayTimer->_maxHeap) {
+            displayTimer->_maxHeap = heap;
+            displayTimer->_maxHeapTime = getSystemUptime();
+        }
+
+        Serial.printf_P(PSTR("+HEAP: free=%u(%u@%us) cpu=%dMHz frag=%u uptime=%us"), ESP.getFreeHeap(), displayTimer->_maxHeap, displayTimer->_maxHeapTime, ESP.getCpuFreqMHz(), ESP.getHeapFragmentation(), getSystemUptime());
+    }
+    else {
+        Serial.printf_P(PSTR("+HEAP: free=%u cpu=%dMHz frag=%u"), ESP.getFreeHeap(), ESP.getCpuFreqMHz(), ESP.getHeapFragmentation());
+    }
 #if HAVE_MEM_DEBUG
     KFCMemoryDebugging::dumpShort(Serial);
 #endif
 }
 static void heap_timer_callback(Event::CallbackTimerPtr timer)
 {
-    if (displayTimer._type == DisplayTimer::HEAP) {
+    if (displayTimer == nullptr) {
+        timer->disarm();
+        return;
+    }
+    if (displayTimer->_type == DisplayTimer::HEAP) {
         print_heap();
 #if LOAD_STATISTICS
         Serial.printf_P(PSTR(" load avg=%.2f %.2f %.2f"), LOOP_COUNTER_LOAD(load_avg[0]), LOOP_COUNTER_LOAD(load_avg[1]), LOOP_COUNTER_LOAD(load_avg[2]));
 #endif
         Serial.println();
     }
-    else if (displayTimer._type == DisplayTimer::GPIO) {
+    else if (displayTimer->_type == DisplayTimer::GPIO) {
         Serial.printf_P(PSTR("+GPIO: "));
 #if defined(ESP8266)
         for(uint8_t i = 0; i < NUM_DIGITAL_PINS; i++) {
@@ -610,27 +652,39 @@ static void heap_timer_callback(Event::CallbackTimerPtr timer)
 #else
 // #warning not implemented
 #endif
+#if HAVE_PCF8574
+        Serial.printf_P(PSTR("+PCF8574@0x%02x: "), _PCF8574.getAddress());
+        for(uint8_t i = PCF8574_PORT_RANGE_START; i < PCF8574_PORT_RANGE_END; i++) {
+            Serial.printf_P(PSTR("%u(%i)=%u "), i, i - PCF8574_PORT_RANGE_START,  _digitalRead(i));
+        }
+        Serial.printf_P(PSTR("\n"));
+#endif
     }
     else {
         int32_t rssi = WiFi.RSSI();
-        displayTimer._rssiMin = std::max(displayTimer._rssiMin, rssi);
-        displayTimer._rssiMax = std::min(displayTimer._rssiMax, rssi);
-        Serial.printf_P(PSTR("+RSSI: %d dBm (min/max %d/%d)\n"), rssi, displayTimer._rssiMin, displayTimer._rssiMax);
+        displayTimer->_rssiMin = std::max<int16_t>(displayTimer->_rssiMin, rssi);
+        displayTimer->_rssiMax = std::min<int16_t>(displayTimer->_rssiMax, rssi);
+        Serial.printf_P(PSTR("+RSSI: %d dBm (min/max %d/%d)\n"), rssi, displayTimer->_rssiMin, displayTimer->_rssiMax);
     }
 }
 
-static void create_heap_timer(float seconds, DisplayTimer::DisplayTypeEnum_t type = DisplayTimer::HEAP)
+static void create_heap_timer(Event::milliseconds ms, DisplayTimer::DisplayTypeEnum_t type = DisplayTimer::HEAP)
 {
-    displayTimer._type = type;
-    _Timer(displayTimer._timer).add(Event::milliseconds(static_cast<uint32_t>(seconds * 1000)), true, heap_timer_callback);
+    if (!displayTimer) {
+        new DisplayTimer();
+    }
+    displayTimer->_type = type;
+    displayTimer->_maxHeap = 0;
+    _Timer(displayTimer->_timer).add(ms, true, heap_timer_callback);
 }
 
-void at_mode_create_heap_timer(float seconds)
+void at_mode_create_heap_timer(Event::milliseconds ms)
 {
-    if (seconds) {
-        create_heap_timer(seconds, DisplayTimer::HEAP);
-    } else {
-        displayTimer.removeTimer();
+    if (ms.count() > 50) {
+        create_heap_timer(ms, DisplayTimer::HEAP);
+    }
+    else if (displayTimer) {
+        displayTimer->remove();
     }
 }
 
@@ -671,7 +725,9 @@ void disable_at_mode(Stream &output)
         _client->stop();
         output.println(F("Disabling AT MODE."));
 #if DEBUG
-        displayTimer.removeTimer();
+        if (displayTimer) {
+            displayTimer->remove();
+        }
 #endif
         System::Flags::getWriteableConfig().is_at_mode_enabled = false;
     }
@@ -1006,7 +1062,7 @@ private:
     AsyncWebSocketClient *_client;
 };
 
-AtModeADC *atModeADC = nullptr;
+AtModeADC *atModeADC;
 
 static void at_mode_adc_delete_object()
 {
@@ -1564,29 +1620,31 @@ void at_mode_serial_handle_event(String &commandString)
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RSSI)) || args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(HEAP)) || args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(GPIO))) {
                 if (args.requireArgs(0, 1)) {
                     auto interval = args.toMillis(0, 0, 3600 * 1000, 0, String('s'));
-                    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RSSI))) {
-                        displayTimer._type = DisplayTimer::RSSI;
-                    }
-                    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(GPIO))) {
-                        displayTimer._type = DisplayTimer::GPIO;
-                    }
-                    else {
-                        displayTimer._type = DisplayTimer::HEAP;
-                    }
-                    displayTimer._rssiMin = -10000;
-                    displayTimer._rssiMax = 0;
                     if (interval < 250) {
-                        if (displayTimer.removeTimer()) {
+                        if (displayTimer) {
+                            displayTimer->remove();
                             args.print(F("Interval disabled"));
                         }
-                        else {
                             print_heap();
                             Serial.println();
+                    }
+                    else {
+                        if (!displayTimer) {
+                            new DisplayTimer();
                         }
-                    } else {
-                        float fInterval = interval / 1000.0;
-                        args.printf_P(PSTR("Interval set to %.3f seconds"), fInterval);
-                        create_heap_timer(fInterval, displayTimer._type);
+                        if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RSSI))) {
+                            displayTimer->_type = DisplayTimer::RSSI;
+                        }
+                        else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(GPIO))) {
+                            displayTimer->_type = DisplayTimer::GPIO;
+                        }
+                        else {
+                            displayTimer->_type = DisplayTimer::HEAP;
+                        }
+                        displayTimer->_rssiMin = std::numeric_limits<decltype(displayTimer->_rssiMin)>::min();
+                        displayTimer->_rssiMax = 0;
+                        args.printf_P(PSTR("Interval set to %ums"), interval);
+                        create_heap_timer(Event::milliseconds(interval), displayTimer->_type);
                     }
                 }
             }

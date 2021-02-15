@@ -568,22 +568,6 @@ SettingsForm::SettingsForm(AsyncWebServerRequest *request) : BaseForm(static_cas
 }
 
 
-File2String::File2String(const String &filename)
-{
-    _filename = filename;
-}
-
-String File2String::toString()
-{
-    return KFCFS.open(_filename, fs::FileOpenMode::read).readString();
-}
-
-void File2String::fromString(const String &value)
-{
-    KFCFS.open(_filename, fs::FileOpenMode::write).print(value);
-    //write((const uint8_t *)value.c_str(), value.length());
-}
-
 // void EmptyTemplate::process(const String &key, PrintHtmlEntitiesString &output) {
 // }
 

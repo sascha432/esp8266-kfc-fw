@@ -30,17 +30,21 @@ static ClockPlugin plugin;
 
 void initialize_pcf8574()
 {
-    _PCF8574.write8(0xff);
+    _PCF8574.begin(PCF8574_I2C_ADDRESS);
+    _PCF8574.DDR = 0b00111111;
+    _pinMode(_PCF8574Range::pin2DigitalPin(6), INPUT);
+    _pinMode(_PCF8574Range::pin2DigitalPin(7), INPUT);
 }
 
 void print_status_pcf8574(Print &output)
 {
     output.printf_P(PSTR("PCF8574 @ I2C address 0x%02x"), PCF8574_I2C_ADDRESS);
-    output.print(F(HTML_S(br) "All pins configured as OUTPUT, interrupt disabled" HTML_S(br)));
+    output.print(F(HTML_S(br) "Interrupt disabled" HTML_S(br)));
     if (_PCF8574.isConnected()) {
-        auto state = _PCF8574.read8();
+        uint8_t ddr = _PCF8574.DDR;
+        uint8_t state = _PCF8574.PIN;
         for(uint8_t i = 0; i < 8; i++) {
-            output.printf_P(PSTR("%u=%s "), i, (state & _BV(i)) ? PSTR("HIGH") : PSTR("LOW"));
+            output.printf_P(PSTR("%u(%s)=%s "), i, (ddr & _BV(i) ? PSTR("OUTPUT") : PSTR("INPUT")), (state & _BV(i)) ? PSTR("HIGH") : PSTR("LOW"));
         }
     }
     else {
@@ -131,15 +135,17 @@ ClockPlugin::ClockPlugin() :
 
 void ClockPlugin::createMenu()
 {
-#if IOT_LED_MATROX
-    bootstrapMenu.addSubMenu(F("LED Matrix Settings"), F("led-matrix/settings.html"), navMenu.config);
-    bootstrapMenu.addSubMenu(F("LED Matrix Animations"), F("led-matrix/animations.html"), navMenu.config);
-    bootstrapMenu.addSubMenu(F("LED Matrix Protection"), F("led-matrix/protection.html"), navMenu.config);
+#if IOT_LED_MATRIX
+    #define MENU_PREFIX "LED Matrix"
+    #define MENU_URI_PREFIX "led-matrix/"
 #else
-    bootstrapMenu.addSubMenu(F("Clock Settings"), F("clock/settings.html"), navMenu.config);
-    bootstrapMenu.addSubMenu(F("Clock Animations"), F("clock/animations.html"), navMenu.config);
-    bootstrapMenu.addSubMenu(F("Clock Protection"), F("clock/protection.html"), navMenu.config);
+    #define MENU_NAME "Clock"
+    #define MENU_URI_PREFIX "clock/"
 #endif
+
+    bootstrapMenu.addSubMenu(F(MENU_PREFIX " Settings"), F(MENU_URI_PREFIX "settings.html"), navMenu.config);
+    bootstrapMenu.addSubMenu(F(MENU_PREFIX " Animations"), F(MENU_URI_PREFIX "animations.html"), navMenu.config);
+    bootstrapMenu.addSubMenu(F(MENU_PREFIX " Protection"), F(MENU_URI_PREFIX "protection.html"), navMenu.config);
 }
 
 #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
@@ -170,8 +176,8 @@ bool ClockPlugin::_loopDisplayLightSensor(LoopOptionsType &options)
             String_replace(str, ' ', '#');
             // disable any animation, set color to green and brightness to 50%
 
-            _display.clear();
-            _display.print(str, Color(0, 0xff, 0));
+            _display.fill(Color(0, 0xff, 0));
+            _display.print(str);
             _display.show(kMaxBrightness / 2);
         });
     }
@@ -274,6 +280,20 @@ void ClockPlugin::_setupTimer()
     _Timer(_timer).add(Event::seconds(1), true, [this](Event::CallbackTimerPtr timer) {
 
         _timerCounter++;
+
+        IF_IOT_CLOCK_HAVE_MOTION_SENSOR(
+            auto state = _digitalRead(IOT_CLOCK_HAVE_MOTION_SENSOR_PIN);
+            if (state != _motionState) {
+                MQTTClient::safePublish(MQTTClient::formatTopic(F("motion")), true, String(_motionState ? 0 : 1));
+
+                _motionState = state;
+                if (_motionState) {
+                    __LDBG_printf("motion detected: last update %u ms ago", _motionLastUpdate ? millis() - _motionLastUpdate : 0);
+                    _motionLastUpdate = millis();
+                }
+            }
+            _digitalWrite(_PCF8574Range::pin2DigitalPin(5), !state);
+        )
 
         IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(
             // update light sensor webui
@@ -421,6 +441,12 @@ void ClockPlugin::setup(SetupModeType mode)
         pinMonitor.attach<Clock::Button>(IOT_CLOCK_BUTTON_PIN, 0, *this);
         pinMode(IOT_CLOCK_BUTTON_PIN, INPUT);
 
+        #if IOT_CLOCK_TOUCH_PIN != -1
+            __LDBG_printf("touch sensor at pin %u", IOT_CLOCK_TOUCH_PIN);
+            pinMonitor.attach<Clock::TouchButton>(IOT_CLOCK_TOUCH_PIN, 1, *this);
+            pinMode(IOT_CLOCK_TOUCH_PIN, INPUT);
+        #endif
+
         IF_IOT_CLOCK_HAVE_ROTARY_ENCODER(
             __LDBG_printf("rotary encoder at pin %u,%u active_low=%u", IOT_CLOCK_ROTARY_ENC_PINA, IOT_CLOCK_ROTARY_ENC_PINB, PIN_MONITOR_ACTIVE_STATE == ActiveStateType::ACTIVE_LOW);
             auto encoder = new Clock::RotaryEncoder(PIN_MONITOR_ACTIVE_STATE);
@@ -528,7 +554,7 @@ void ClockPlugin::shutdown()
     #endif
 
     #if HAVE_PCF8574
-        _PCF8574.write8(0xff);
+        _PCF8574.PORT = 0xff;
     #endif
 
     IF_IOT_CLOCK_HAVE_ROTARY_ENCODER(
@@ -594,11 +620,15 @@ void ClockPlugin::getStatus(Print &output)
     output.printf_P(PSTR(HTML_S(br) "Total pixels %u, digits pixels %u"), Clock::DisplayType::kNumPixels, Clock::SevenSegment::kNumPixelsDigits);
 #endif
 #if IOT_CLOCK_BUTTON_PIN != -1
-#if IOT_CLOCK_HAVE_ROTARY_ENCODER
+#    if IOT_CLOCK_HAVE_ROTARY_ENCODER
+#        if IOT_CLOCK_TOUCH_PIN
+    output.printf_P(PSTR(HTML_S(br) "Rotary encoder with capacitive touch sensor and button"));
+#        else
     output.printf_P(PSTR(HTML_S(br) "Rotary encoder with button"));
-#else
+#        endif
+#    else
     output.printf_P(PSTR(HTML_S(br) "Single button"));
-#endif
+#    endif
 #endif
     if (isTempProtectionActive()) {
         output.printf_P(PSTR(HTML_S(br) "The temperature exceeded %u"), _config.protection.max_temperature);
@@ -1056,7 +1086,7 @@ bool ClockPlugin::_resetAlarm()
 
 #endif
 
-#if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
+#if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION || IOT_CLOCK_HAVE_POWER_LIMIT
 
 uint8_t ClockPlugin::calcPowerFunction(uint8_t scale, uint32_t data)
 {
@@ -1070,7 +1100,13 @@ void ClockPlugin::webSocketCallback(WsClient::ClientCallbackType type, WsClient 
 
 float ClockPlugin::__getPowerLevel(float P, float min) const
 {
-    return std::max<float>(min, -0.133437 + (0.990644 * P) + (0.015165 * P * P));
+    return std::max<float>(IOT_CLOCK_POWER_CORRECTION_OUTPUT);
+}
+
+uint32_t ClockPlugin::_getPowerLevelLimit(uint32_t P_mW) const
+{
+    float P = P_mW / 1000.0;
+    return std::max<float>(0, IOT_CLOCK_POWER_CORRECTION_LIMIT);
 }
 
 #endif

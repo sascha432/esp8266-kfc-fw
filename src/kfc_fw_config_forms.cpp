@@ -7,6 +7,7 @@
 #include <kfc_fw_config_plugin.h>
 #include <stl_ext/type_traits.h>
 #include <KFCForms.h>
+#include <templates.h>
 
 using KFCConfigurationClasses::MainConfig;
 using KFCConfigurationClasses::System;
@@ -25,6 +26,21 @@ static FormUI::Container::List createWifiModes()
 
 void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
 {
+    // auto scheduledTasks = File2String<const __FlashStringHelper *>(FSPGM(scheduler_config_file));
+    // if (type == FormCallbackType::CREATE_POST) {
+    //     if (String_equals(formName, SPGM(device))) {
+    //         auto field = form.getField(F("schet"));
+    //         if (field && field->hasChanged()) {
+    //             auto crc = crc16_update(field->getValue().c_str(), field->getValue().length());
+    //             _formatSchedulerList(field->getValue());
+    //             if (crc != crc16_update(field->getValue().c_str(), field->getValue().length())) {
+    //                 __DBG_print("scheduler changed on createpost");
+    //                 field->setChanged(true);
+    //             }
+    //         }
+    //     }
+    // }
+    // else
     if (type == FormCallbackType::SAVE) {
         if (String_equals(formName, SPGM(password))) {
             auto field = form.getField(FSPGM(npwd));
@@ -36,6 +52,11 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
         }
         else if (String_equals(formName, SPGM(device))) {
             config.setConfigDirty(true);
+            // auto field = form.getField(F("schet"));
+            // if (field && field->hasChanged()) {
+            //     __DBG_print("saving scheduler");
+            //     scheduledTasks.fromString(field->getValue());
+            // }
         }
     }
     else if (isCreateFormCallbackType(type)) {
@@ -243,6 +264,13 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
 
             webUIGroup.end();
 
+            auto &schedulerGroup = form.addCardGroup(F("scheduler"), F("Task Scheduler"), true);
+
+            // form.add(F("schet"), scheduledTasks.toString(), FormUI::InputFieldType::TEXTAREA);
+            // form.addFormUI(F("Scheduler"), FormUI::Type::TEXTAREA, FormUI::IntAttribute(F("rows"), 8));
+
+            schedulerGroup.end();
+
         }
         else if (String_equals(formName, SPGM(password))) {
 
@@ -278,5 +306,48 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             return;
         }
         form.finalize();
+    }
+}
+
+void KFCConfigurationPlugin::_formatSchedulerList(String &items)
+{
+    //TODO
+    StringVector list;
+    explode(items.c_str(), '\n', list);
+    items.remove(0);
+    for(auto &item: list) {
+        item.trim();
+        if (item.length()) {
+            auto sep = item.indexOf(',');
+            if (sep == -1) {
+                items += F("!INVALID,");
+                items += item;
+                items += '\n';
+            }
+            else {
+                auto col1 = item.begin();
+                auto col2 = col1 + sep;
+                *col2++ = 0;
+                while(isspace(*col2)) {
+                    col2++;
+                }
+                if (strchr(col1, '!')) {
+                }
+                else {
+                    char *endptr = nullptr;
+                    auto value = strtof(col1, &endptr);
+                    if (value < 1) {
+                        items += F("!INVALID ");
+                    }
+                    if (!*col2) {
+                        items += F("!INVALID ");
+                    }
+                }
+                items += col1;
+                items += ',';
+                items += col2;
+                items += '\n';
+            }
+        }
     }
 }

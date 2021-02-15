@@ -30,7 +30,9 @@ bool MQTTAutoDiscovery::create(ComponentType componentType, const String &compon
 {
     String suffix = System::Device::getName();
     if (componentName.length()) {
-        suffix += '/';
+        if (!String_startsWith(componentName, '/')) {
+            suffix += '/';
+        }
         suffix += componentName;
     }
     return _create(componentType, suffix, format);
@@ -49,9 +51,14 @@ bool MQTTAutoDiscovery::_create(ComponentType componentType, const String &name,
     _topic = MQTTClient::ClientConfig::getAutoDiscoveryPrefix();
     _topic += '/';
     _topic += MQTTComponent::getNameByType(componentType);
-    _topic += '/';
+    if (!String_startsWith(name, '/')) {
+        _topic += '/';
+    }
     _topic += name;
-    _topic += F("/config");
+    if (!String_endsWith(_topic, '/')) {
+        _topic += '/';
+    }
+    _topic += F("config");
 
     _discovery = PrintString();
     if (format == FormatType::TOPIC) {
@@ -141,65 +148,6 @@ void MQTTAutoDiscovery::__addParameter(const __FlashStringHelper *name, const ch
         _discovery.printf_P(PSTR("%s: %s\n    "), name, str);
     }
 }
-
-// void MQTTAutoDiscovery::addStateTopic(const String &value)
-// {
-//     addParameter(FSPGM(mqtt_state_topic), value);
-// }
-
-// void MQTTAutoDiscovery::addCommandTopic(const String &value)
-// {
-//     addParameter(FSPGM(mqtt_command_topic), value);
-// }
-
-// void MQTTAutoDiscovery::addBrightnessStateTopic(const String &value)
-// {
-//     addParameter(FSPGM(mqtt_brightness_state_topic), value);
-// }
-
-// void MQTTAutoDiscovery::addBrightnessCommandTopic(const String &value)
-// {
-//     addParameter(FSPGM(mqtt_brightness_command_topic), value);
-// }
-
-// void MQTTAutoDiscovery::addBrightnessScale(uint32_t brightness)
-// {
-//     addParameter(FSPGM(mqtt_brightness_scale), String(brightness));
-// }
-
-// void MQTTAutoDiscovery::addColorTempStateTopic(const String &value)
-// {
-//     addParameter(FSPGM(mqtt_color_temp_state_topic), value);
-// }
-
-// void MQTTAutoDiscovery::addColorTempCommandTopic(const String &value)
-// {
-//     addParameter(FSPGM(mqtt_color_temp_command_topic), value);
-// }
-
-// void MQTTAutoDiscovery::addRGBStateTopic(const String &value)
-// {
-//     addParameter(FSPGM(mqtt_rgb_state_topic), value);
-// }
-
-// void MQTTAutoDiscovery::addRGBCommandTopic(const String &value)
-// {
-//     addParameter(FSPGM(mqtt_rgb_command_topic), value);
-// }
-
-
-// void MQTTAutoDiscovery::addValueTemplate(const String &value)
-// {
-//     PrintString value_json(F("{{ value_json.%s }}"), value.c_str());
-//     addParameter(FSPGM(mqtt_value_template), value_json);
-// }
-
-// void MQTTAutoDiscovery::addExpireAfter(uint32_t seconds)
-// {
-
-//     addParameter(FSPGM(mqtt_expire_after), seconds);
-// }
-
 
 void MQTTAutoDiscovery::finalize()
 {

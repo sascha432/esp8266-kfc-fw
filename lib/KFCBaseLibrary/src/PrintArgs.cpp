@@ -33,6 +33,8 @@ const __FlashStringHelper *PrintArgsHelper::getFormatByType(FormatType type)
             return F("</div></div></div>");
         case FormatType::HTML_CLOSE_SELECT:
             return F("</select>");
+        case FormatType::HTML_CLOSE_TEXTAREA:
+            return F("%s</textarea>");
         case FormatType::HTML_LABEL_FOR:
             return F("<label for=\"%s\">%s</label>");
         case FormatType::HTML_LABEL_FOR_COLON:
@@ -41,6 +43,8 @@ const __FlashStringHelper *PrintArgsHelper::getFormatByType(FormatType type)
             return F(" %s=\"%s\"");
         case FormatType::HTML_ATTRIBUTE_STR_INT:
             return F(" %s=\"%d\"");
+        case FormatType::HTML_OPEN_TEXTAREA:
+        return F("<textarea class=\"form-control\" name=\"%s\" id=\"%s\"");
         case FormatType::HTML_OPEN_SELECT:
             return F("<select class=\"form-control\" name=\"%s\" id=\"%s\"");
         case FormatType::HTML_OPEN_TEXT_INPUT:

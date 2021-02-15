@@ -453,6 +453,7 @@ FLASH_STRING_GENERATOR_AUTO_INIT(
     AUTO_STRING_DEF(www_google_com, "www.google.com")
     AUTO_STRING_DEF(yes, "yes")
     AUTO_STRING_DEF(mqtt_state_file, "/.pvt/mqtt.state")
+    AUTO_STRING_DEF(scheduler_config_file, "/.pvt/.scheduler")
 );
 
 #ifdef __cplusplus

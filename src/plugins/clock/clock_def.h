@@ -110,6 +110,11 @@
 #    define IOT_CLOCK_ROTARY_ENC_PINB -1
 #endif
 
+// additional capacitive touch sensor for the rotary encoder
+#ifndef IOT_CLOCK_TOUCH_PIN
+#    define IOT_CLOCK_TOUCH_PIN -1
+#endif
+
 #if IOT_CLOCK_HAVE_ROTARY_ENCODER && (IOT_CLOCK_ROTARY_ENC_PINA == -1 || IOT_CLOCK_ROTARY_ENC_PINB == -1)
 #    error IOT_CLOCK_ROTARY_ENC_PINA and IOT_CLOCK_ROTARY_ENC_PINB must be defined
 #endif
@@ -180,10 +185,51 @@
 #   define IOT_CLOCK_HAVE_POWER_LIMIT 1
 #endif
 
+// since the power level is not linear, a correction formula can be applied
+// float P = calculated power in watt
+// <remarks>
+// For further details check <see cref="./POWER_CALIBRATION.md" />
+// </remarks>
+//
+// #define IOT_CLOCK_POWER_CORRECTION_OUTPUT <min_output_watt>, <formula>
+// #define IOT_CLOCK_POWER_CORRECTION_OUTPUT 0.54, -0.131491 + 0.990507 * P + 0.015167 * P * P
+//
+// if IOT_CLOCK_POWER_CORRECTION_LIMIT is not defined, it uses IOT_CLOCK_POWER_CORRECTION_OUTPUT * 0.975
+//
+// #define IOT_CLOCK_POWER_CORRECTION_LIMIT <formula>
+// #define IOT_CLOCK_POWER_CORRECTION_LIMIT -0.063393 + 0.920029 * P + 0.014318 * P * P
+//
+// for build_flags:
+// -D IOT_CLOCK_POWER_CORRECTION_OUTPUT=0.54,-0.133437+0.990644*P+0.015165*P*P
+// -D IOT_CLOCK_POWER_CORRECTION_LIMIT=-0.063393+0.920029*P+0.014318*P*P
+#ifndef IOT_CLOCK_POWER_CORRECTION_OUTPUT
+#    define IOT_CLOCK_POWER_CORRECTION_OUTPUT 0.5, P
+#endif
+
+#ifndef IOT_CLOCK_POWER_CORRECTION_LIMIT
+#    define IOT_CLOCK_POWER_CORRECTION_LIMIT_GET_ARG_2(a, b) b
+#    define IOT_CLOCK_POWER_CORRECTION_LIMIT (IOT_CLOCK_POWER_CORRECTION_LIMIT_GET_ARG_2(IOT_CLOCK_POWER_CORRECTION_OUTPUT) * 0.975)
+#endif
+
 #if IOT_CLOCK_HAVE_POWER_LIMIT
 #   define IF_IOT_CLOCK_HAVE_POWER_LIMIT(...) __VA_ARGS__
 #else
 #   define IF_IOT_CLOCK_HAVE_POWER_LIMIT(...)
+#endif
+
+// support for motion sensor
+#ifndef IOT_CLOCK_HAVE_MOTION_SENSOR
+#    define IOT_CLOCK_HAVE_MOTION_SENSOR 0
+#endif
+
+#if IOT_CLOCK_HAVE_MOTION_SENSOR
+#    define IF_IOT_CLOCK_HAVE_MOTION_SENSOR(...) __VA_ARGS__
+#else
+#    define IF_IOT_CLOCK_HAVE_MOTION_SENSOR(...)
+#endif
+
+#ifndef IOT_CLOCK_HAVE_MOTION_SENSOR_PIN
+#    define IOT_CLOCK_HAVE_MOTION_SENSOR_PIN -1
 #endif
 
 // show rotating animation while the time is invalid

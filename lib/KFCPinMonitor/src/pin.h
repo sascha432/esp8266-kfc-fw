@@ -161,12 +161,6 @@ namespace PinMonitor {
         {
         }
 
-        // virtual void handle() override {
-        //     _micros = micros();
-        //     _value = digitalRead(_pin);
-        //     _intCount++;
-        // }
-
         virtual void updateState(uint32_t timeMicros, bool value) override {
             _micros = timeMicros;
             _intCount++;
@@ -193,8 +187,6 @@ namespace PinMonitor {
         virtual Debounce *getDebounce() const override {
             return const_cast<Debounce *>(&_debounce);
         }
-
-        // void handle();
 
         virtual void updateState(uint32_t timeMicros, bool value) override {
             _micros = timeMicros;

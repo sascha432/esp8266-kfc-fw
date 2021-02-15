@@ -50,7 +50,7 @@ namespace Clock {
 
         ClockPlugin &getBase() const;
 
-    private:
+    protected:
         uint8_t _button;
     };
 
@@ -78,6 +78,23 @@ namespace Clock {
     {
         return *reinterpret_cast<ClockPlugin *>(const_cast<void *>(getArg()));
     }
+
+    class TouchButton : public Button {
+    public:
+        using Button::getButtonNum;
+        using Button::getBase;
+
+        TouchButton() : Button() {}
+        TouchButton(uint8_t pin, uint8_t button, ClockPlugin &clock) :
+            Button(pin, button, clock)
+        {
+            _activeState = true; //ActiveStateType::PRESSED_WHEN_HIGH;
+            _subscribedEvents = PushButtonConfig::EventType::REPEATED_CLICK;
+            _longpressTime = ~0;
+            _clickTime = 350;
+            _repeatTime = ~0;
+        }
+    };
 
 #if IOT_CLOCK_HAVE_ROTARY_ENCODER
 

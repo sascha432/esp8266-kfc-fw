@@ -12,13 +12,13 @@
     },
     "Accept_Encoding": {
         "default": "Accept-Encoding",
-        "locations": "src/web_server.cpp:198 (SPGM)",
+        "locations": "src/web_server.cpp:201 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
     "Access_Point": {
         "default": "Access Point",
-        "locations": "src/kfc_fw_config_forms.cpp:20 (SPGM),src/kfc_fw_config_forms.cpp:93 (SPGM),src/kfc_fw_config_forms.cpp:156 (SPGM),src/templates.cpp:511 (SPGM),src/templates.cpp:515 (SPGM),src/templates.cpp:518 (SPGM),src/templates.cpp:532 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:21 (SPGM),src/kfc_fw_config_forms.cpp:113 (SPGM),src/kfc_fw_config_forms.cpp:176 (SPGM),src/templates.cpp:511 (SPGM),src/templates.cpp:515 (SPGM),src/templates.cpp:518 (SPGM),src/templates.cpp:532 (SPGM)",
         "type": "source",
         "use_counter": 7
     },
@@ -40,13 +40,13 @@
     },
     "Alarm": {
         "default": "Alarm",
-        "locations": "src/plugins/clock/clock_form.cpp:270 (SPGM)",
+        "locations": "src/plugins/clock/clock_form.cpp:205 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
     "Animation": {
         "default": "Animation",
-        "locations": "src/plugins/clock/clock_form.cpp:113 (SPGM)",
+        "locations": "src/plugins/clock/clock_form.cpp:54 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
@@ -62,25 +62,25 @@
     },
     "Authorization": {
         "default": "Authorization",
-        "locations": "lib/KFCWebFramework/include/HttpHeaders.h:305 (SPGM),lib/KFCWebFramework/src/HttpHeaders.cpp:30 (AUTO_INIT),src/web_server.cpp:1142 (SPGM),src/web_server.cpp:1287 (SPGM)",
+        "locations": "lib/KFCWebFramework/include/HttpHeaders.h:305 (SPGM),lib/KFCWebFramework/src/HttpHeaders.cpp:30 (AUTO_INIT),src/web_server.cpp:1149 (SPGM),src/web_server.cpp:1294 (SPGM)",
         "type": "source",
         "use_counter": 3
     },
     "Auto": {
         "default": "Auto",
-        "locations": "src/kfc_fw_config_forms.cpp:50 (SPGM),src/kfc_fw_config_forms.cpp:60 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:70 (SPGM),src/kfc_fw_config_forms.cpp:80 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
     "Bearer_": {
         "default": "Bearer ",
-        "locations": "lib/KFCWebFramework/include/HttpHeaders.h:313 (SPGM),lib/KFCWebFramework/src/HttpHeaders.cpp:31 (AUTO_INIT),src/web_server.cpp:1146 (SPGM)",
+        "locations": "lib/KFCWebFramework/include/HttpHeaders.h:313 (SPGM),lib/KFCWebFramework/src/HttpHeaders.cpp:31 (AUTO_INIT),src/web_server.cpp:1153 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
     "Brightness": {
         "default": "Brightness",
-        "locations": "src/plugins/clock/clock_form.cpp:83 (SPGM)",
+        "locations": "src/plugins/clock/clock_form.cpp:285 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
@@ -96,13 +96,13 @@
     },
     "Change_Password": {
         "default": "Change Password",
-        "locations": "src/kfc_fw_config_forms.cpp:251 (SPGM),src/plugins.cpp:169 (SPGM),src/plugins.cpp:185 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:278 (SPGM),src/plugins.cpp:169 (SPGM),src/plugins.cpp:185 (SPGM)",
         "type": "source",
         "use_counter": 3
     },
     "Channel": {
         "default": "Channel",
-        "locations": "src/kfc_fw_config_forms.cpp:111 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:131 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
@@ -116,7 +116,7 @@
     },
     "Color": {
         "default": "Color",
-        "locations": "src/plugins/clock/clock_form.cpp:278 (SPGM)",
+        "locations": "src/plugins/clock/clock_form.cpp:213 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
@@ -134,7 +134,7 @@
     },
     "Content_Encoding": {
         "default": "Content-Encoding",
-        "locations": "src/web_server.cpp:817 (SPGM),src/web_server.cpp:825 (SPGM)",
+        "locations": "src/web_server.cpp:824 (SPGM),src/web_server.cpp:832 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
@@ -156,25 +156,25 @@
     },
     "DHCP_Client": {
         "default": "DHCP Client",
-        "locations": "src/kfc_fw_config_forms.cpp:143 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:163 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
     "DHCP_Server": {
         "default": "DHCP Server",
-        "locations": "src/kfc_fw_config_forms.cpp:159 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:179 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
     "DNS_1": {
         "default": "DNS 1",
-        "locations": "src/kfc_fw_config_forms.cpp:152 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:172 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
     "DNS_2": {
         "default": "DNS 2",
-        "locations": "src/kfc_fw_config_forms.cpp:154 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:174 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
@@ -188,13 +188,13 @@
     },
     "Device": {
         "default": "Device",
-        "locations": "src/kfc_fw_config_forms.cpp:130 (SPGM),src/kfc_fw_config_forms.cpp:182 (SPGM),src/plugins.cpp:179 (SPGM),src/plugins.cpp:182 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:150 (SPGM),src/kfc_fw_config_forms.cpp:202 (SPGM),src/plugins.cpp:179 (SPGM),src/plugins.cpp:182 (SPGM)",
         "type": "source",
         "use_counter": 4
     },
     "Device_Configuration": {
         "default": "Device Configuration",
-        "locations": "src/kfc_fw_config_forms.cpp:179 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:199 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
@@ -206,7 +206,7 @@
     },
     "Disabled": {
         "default": "Disabled",
-        "locations": "include/spgm_auto_def.h:51 (AUTO_INIT),lib/KFCWebFramework/include/WebUI/Containers.h:713 (SPGM),src/kfc_fw_config_forms.cpp:18 (SPGM),src/plugins/mqtt/mqtt_form.cpp:35 (SPGM),src/plugins/mqtt/mqtt_plugin.cpp:82 (SPGM),src/plugins/ntp/ntp_plugin.cpp:146 (SPGM),src/plugins/ssdp/ssdp.cpp:114 (SPGM),src/plugins/syslog/syslog_plugin.cpp:187 (SPGM),src/plugins/syslog/syslog_plugin.cpp:211 (SPGM)",
+        "locations": "include/spgm_auto_def.h:51 (AUTO_INIT),lib/KFCWebFramework/include/WebUI/Containers.h:713 (SPGM),src/kfc_fw_config_forms.cpp:19 (SPGM),src/plugins/mqtt/mqtt_form.cpp:35 (SPGM),src/plugins/mqtt/mqtt_plugin.cpp:82 (SPGM),src/plugins/ntp/ntp_plugin.cpp:146 (SPGM),src/plugins/ssdp/ssdp.cpp:114 (SPGM),src/plugins/syslog/syslog_plugin.cpp:187 (SPGM),src/plugins/syslog/syslog_plugin.cpp:211 (SPGM)",
         "type": "source",
         "use_counter": 8
     },
@@ -222,19 +222,19 @@
     },
     "Enabled": {
         "default": "Enabled",
-        "locations": "include/spgm_auto_def.h:54 (AUTO_INIT),lib/KFCWebFramework/include/WebUI/Containers.h:713 (SPGM),src/kfc_fw_config_forms.cpp:212 (SPGM),src/plugins/mqtt/mqtt_form.cpp:36 (SPGM)",
+        "locations": "include/spgm_auto_def.h:54 (AUTO_INIT),lib/KFCWebFramework/include/WebUI/Containers.h:713 (SPGM),src/kfc_fw_config_forms.cpp:232 (SPGM),src/plugins/mqtt/mqtt_form.cpp:36 (SPGM)",
         "type": "source",
         "use_counter": 3
     },
     "Encryption": {
         "default": "Encryption",
-        "locations": "src/kfc_fw_config_forms.cpp:115 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:135 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
     "Expires": {
         "default": "Expires",
-        "locations": "lib/KFCWebFramework/src/HttpHeaders.cpp:24 (AUTO_INIT),lib/KFCWebFramework/src/HttpHeaders.cpp:289 (SPGM),src/web_server.cpp:806 (SPGM)",
+        "locations": "lib/KFCWebFramework/src/HttpHeaders.cpp:24 (AUTO_INIT),lib/KFCWebFramework/src/HttpHeaders.cpp:289 (SPGM),src/web_server.cpp:813 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
@@ -308,13 +308,13 @@
     },
     "Gateway": {
         "default": "Gateway",
-        "locations": "src/kfc_fw_config_forms.cpp:150 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:170 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
     "HIDDEN": {
         "default": "HIDDEN",
-        "locations": "src/kfc_fw_config_forms.cpp:103 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:123 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
@@ -330,7 +330,7 @@
     },
     "Hostname": {
         "default": "Hostname",
-        "locations": "src/async_web_response.cpp:837 (SPGM),src/kfc_fw_config_forms.cpp:133 (SPGM),src/plugins/mqtt/mqtt_form.cpp:68 (SPGM)",
+        "locations": "src/async_web_response.cpp:837 (SPGM),src/kfc_fw_config_forms.cpp:153 (SPGM),src/plugins/mqtt/mqtt_form.cpp:68 (SPGM)",
         "type": "source",
         "use_counter": 3
     },
@@ -340,7 +340,7 @@
     },
     "IP_Address": {
         "default": "IP Address",
-        "locations": "src/kfc_fw_config_forms.cpp:146 (SPGM),src/kfc_fw_config_forms.cpp:162 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:166 (SPGM),src/kfc_fw_config_forms.cpp:182 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
@@ -354,7 +354,7 @@
     },
     "Invalid_mode": {
         "default": "Invalid mode",
-        "locations": "src/kfc_fw_config_forms.cpp:80 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:100 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
@@ -368,7 +368,7 @@
     },
     "Invalid_username_or_password": {
         "default": "Invalid username or password",
-        "locations": "src/web_server.cpp:917 (SPGM)",
+        "locations": "src/web_server.cpp:924 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
@@ -392,7 +392,7 @@
     },
     "Last_Modified": {
         "default": "Last-Modified",
-        "locations": "lib/KFCWebFramework/src/HttpHeaders.cpp:23 (AUTO_INIT),lib/KFCWebFramework/src/HttpHeaders.cpp:290 (SPGM),src/web_server.cpp:807 (SPGM)",
+        "locations": "lib/KFCWebFramework/src/HttpHeaders.cpp:23 (AUTO_INIT),lib/KFCWebFramework/src/HttpHeaders.cpp:290 (SPGM),src/web_server.cpp:814 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
@@ -420,7 +420,7 @@
     },
     "Multiplier": {
         "default": "Multiplier",
-        "locations": "src/plugins/clock/clock_form.cpp:137 (SPGM)",
+        "locations": "src/plugins/clock/clock_form.cpp:78 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
@@ -452,7 +452,7 @@
     },
     "Network_Configuration": {
         "default": "Network Configuration",
-        "locations": "src/kfc_fw_config_forms.cpp:127 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:147 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
@@ -502,7 +502,7 @@
     },
     "Passphrase": {
         "default": "Passphrase",
-        "locations": "src/kfc_fw_config_forms.cpp:91 (SPGM),src/kfc_fw_config_forms.cpp:107 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:111 (SPGM),src/kfc_fw_config_forms.cpp:127 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
@@ -526,7 +526,7 @@
     },
     "Protection": {
         "default": "Protection",
-        "locations": "src/plugins/clock/clock_form.cpp:289 (SPGM)",
+        "locations": "src/plugins/clock/clock_form.cpp:227 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
@@ -538,7 +538,7 @@
     },
     "Rainbow": {
         "default": "Rainbow",
-        "locations": "src/plugins/clock/clock_form.cpp:45 (SPGM)",
+        "locations": "src/plugins/clock/clock_form.cpp:28 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
@@ -560,7 +560,7 @@
     },
     "SID": {
         "default": "SID",
-        "locations": "src/web_server.cpp:106 (SPGM),src/web_server.cpp:880 (SPGM),src/web_server.cpp:900 (SPGM),src/web_server.cpp:1158 (SPGM),src/web_server.cpp:1159 (SPGM)",
+        "locations": "src/web_server.cpp:109 (SPGM),src/web_server.cpp:887 (SPGM),src/web_server.cpp:907 (SPGM),src/web_server.cpp:1165 (SPGM),src/web_server.cpp:1166 (SPGM)",
         "type": "source",
         "use_counter": 5
     },
@@ -574,13 +574,13 @@
     },
     "SSDP_Discovery": {
         "default": "SSDP Discovery",
-        "locations": "src/kfc_fw_config_forms.cpp:229 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:249 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
     "SSID": {
         "default": "SSID",
-        "locations": "src/kfc_fw_config_forms.cpp:87 (SPGM),src/kfc_fw_config_forms.cpp:103 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:107 (SPGM),src/kfc_fw_config_forms.cpp:123 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
@@ -614,19 +614,19 @@
     },
     "Solid_Color": {
         "default": "Solid Color",
-        "locations": "src/plugins/clock/clock_form.cpp:44 (SPGM),src/plugins/clock/clock_form.cpp:125 (SPGM)",
+        "locations": "src/plugins/clock/clock_form.cpp:27 (SPGM),src/plugins/clock/clock_form.cpp:66 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
     "Speed": {
         "default": "Speed",
-        "locations": "src/plugins/clock/clock_form.cpp:153 (SPGM)",
+        "locations": "src/plugins/clock/clock_form.cpp:94 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
     "Station_Mode": {
         "default": "Station Mode",
-        "locations": "src/kfc_fw_config_forms.cpp:19 (SPGM),src/kfc_fw_config_forms.cpp:83 (SPGM),src/kfc_fw_config_forms.cpp:140 (SPGM),src/templates.cpp:509 (SPGM),src/templates.cpp:518 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:20 (SPGM),src/kfc_fw_config_forms.cpp:103 (SPGM),src/kfc_fw_config_forms.cpp:160 (SPGM),src/templates.cpp:509 (SPGM),src/templates.cpp:518 (SPGM)",
         "type": "source",
         "use_counter": 5
     },
@@ -638,7 +638,7 @@
     },
     "Status_LED_Mode": {
         "default": "Status LED Mode",
-        "locations": "src/kfc_fw_config_forms.cpp:200 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:220 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
@@ -648,13 +648,13 @@
     },
     "Subnet": {
         "default": "Subnet",
-        "locations": "src/kfc_fw_config_forms.cpp:148 (SPGM),src/kfc_fw_config_forms.cpp:164 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:168 (SPGM),src/kfc_fw_config_forms.cpp:184 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
     "Success": {
         "default": "Success",
-        "locations": "src/web_server.cpp:434 (SPGM)",
+        "locations": "src/web_server.cpp:437 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
@@ -670,7 +670,7 @@
     },
     "Title": {
         "default": "Title",
-        "locations": "src/kfc_fw_config_forms.cpp:137 (SPGM),src/kfc_fw_config_forms.cpp:185 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:157 (SPGM),src/kfc_fw_config_forms.cpp:205 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
@@ -686,7 +686,7 @@
     },
     "Type": {
         "default": "Type",
-        "locations": "src/plugins/clock/clock_form.cpp:116 (SPGM)",
+        "locations": "src/plugins/clock/clock_form.cpp:57 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
@@ -698,13 +698,13 @@
     },
     "WebUI": {
         "default": "Web UI",
-        "locations": "src/kfc_fw_config_forms.cpp:232 (SPGM),src/kfc_fw_config_forms.cpp:235 (SPGM),src/plugins.cpp:289 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:252 (SPGM),src/kfc_fw_config_forms.cpp:255 (SPGM),src/plugins.cpp:289 (SPGM)",
         "type": "source",
         "use_counter": 3
     },
     "Web_Alerts": {
         "default": "Web Alerts",
-        "locations": "src/kfc_fw_config_forms.cpp:242 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:262 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
@@ -716,13 +716,13 @@
     },
     "WiFi_Configuration": {
         "default": "WiFi Configuration",
-        "locations": "src/kfc_fw_config_forms.cpp:74 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:94 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
     "WiFi_Mode": {
         "default": "WiFi Mode",
-        "locations": "src/kfc_fw_config_forms.cpp:81 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:101 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
@@ -734,19 +734,19 @@
     },
     "Your_session_has_expired": {
         "default": "Your session has expired",
-        "locations": "src/web_server.cpp:878 (SPGM)",
+        "locations": "src/web_server.cpp:885 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
     "Zeroconf_Logging": {
         "default": "Zeroconf Logging",
-        "locations": "src/kfc_fw_config_forms.cpp:224 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:244 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
     "Zeroconf_Timeout": {
         "default": "Zeroconf Timeout",
-        "locations": "src/kfc_fw_config_forms.cpp:220 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:240 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
@@ -766,13 +766,13 @@
     },
     "_brightness_set": {
         "default": "/brightness/set",
-        "locations": "src/plugins/clock/clock_mqtt.cpp:37 (SPGM),src/plugins/clock/clock_mqtt.cpp:97 (SPGM),src/plugins/clock/clock_mqtt.cpp:117 (SPGM)",
+        "locations": "src/plugins/clock/clock_mqtt.cpp:36 (SPGM),src/plugins/clock/clock_mqtt.cpp:86 (SPGM),src/plugins/clock/clock_mqtt.cpp:106 (SPGM)",
         "type": "source",
         "use_counter": 3
     },
     "_brightness_state": {
         "default": "/brightness/state",
-        "locations": "src/plugins/clock/clock_mqtt.cpp:36 (SPGM),src/plugins/clock/clock_mqtt.cpp:170 (SPGM)",
+        "locations": "src/plugins/clock/clock_mqtt.cpp:35 (SPGM),src/plugins/clock/clock_mqtt.cpp:159 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
@@ -784,25 +784,25 @@
     },
     "_color_set": {
         "default": "/color/set",
-        "locations": "src/plugins/clock/clock_mqtt.cpp:40 (SPGM),src/plugins/clock/clock_mqtt.cpp:96 (SPGM),src/plugins/clock/clock_mqtt.cpp:126 (SPGM)",
+        "locations": "src/plugins/clock/clock_mqtt.cpp:39 (SPGM),src/plugins/clock/clock_mqtt.cpp:85 (SPGM),src/plugins/clock/clock_mqtt.cpp:115 (SPGM)",
         "type": "source",
         "use_counter": 3
     },
     "_color_state": {
         "default": "/color/state",
-        "locations": "src/plugins/clock/clock_mqtt.cpp:39 (SPGM),src/plugins/clock/clock_mqtt.cpp:171 (SPGM)",
+        "locations": "src/plugins/clock/clock_mqtt.cpp:38 (SPGM),src/plugins/clock/clock_mqtt.cpp:160 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
     "_effect_set": {
         "default": "/effect/set",
-        "locations": "src/plugins/clock/clock_mqtt.cpp:42 (SPGM),src/plugins/clock/clock_mqtt.cpp:98 (SPGM),src/plugins/clock/clock_mqtt.cpp:108 (SPGM)",
+        "locations": "src/plugins/clock/clock_mqtt.cpp:41 (SPGM),src/plugins/clock/clock_mqtt.cpp:87 (SPGM),src/plugins/clock/clock_mqtt.cpp:97 (SPGM)",
         "type": "source",
         "use_counter": 3
     },
     "_effect_state": {
         "default": "/effect/state",
-        "locations": "src/plugins/clock/clock_mqtt.cpp:41 (SPGM),src/plugins/clock/clock_mqtt.cpp:172 (SPGM)",
+        "locations": "src/plugins/clock/clock_mqtt.cpp:40 (SPGM),src/plugins/clock/clock_mqtt.cpp:161 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
@@ -814,13 +814,13 @@
     },
     "_html": {
         "default": ".html",
-        "locations": "src/plugins.cpp:274 (SPGM),src/web_server.cpp:111 (SPGM),src/web_server.cpp:770 (SPGM),src/web_server.cpp:851 (SPGM),src/web_server.cpp:853 (SPGM),src/web_server.cpp:929 (SPGM),src/web_server.cpp:946 (SPGM)",
+        "locations": "src/plugins.cpp:274 (SPGM),src/web_server.cpp:114 (SPGM),src/web_server.cpp:777 (SPGM),src/web_server.cpp:858 (SPGM),src/web_server.cpp:860 (SPGM),src/web_server.cpp:936 (SPGM),src/web_server.cpp:953 (SPGM)",
         "type": "source",
         "use_counter": 7
     },
     "_login_html": {
         "default": "/login.html",
-        "locations": "src/web_server.cpp:925 (SPGM),src/web_server.cpp:931 (SPGM)",
+        "locations": "src/web_server.cpp:932 (SPGM),src/web_server.cpp:938 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
@@ -838,13 +838,13 @@
     },
     "_set": {
         "default": "/set",
-        "locations": "src/plugins/alarm/alarm.cpp:88 (SPGM),src/plugins/alarm/alarm.cpp:98 (SPGM),src/plugins/clock/clock_mqtt.cpp:35 (SPGM),src/plugins/clock/clock_mqtt.cpp:95 (SPGM),src/plugins/clock/clock_mqtt.cpp:150 (SPGM)",
+        "locations": "src/plugins/alarm/alarm.cpp:88 (SPGM),src/plugins/alarm/alarm.cpp:98 (SPGM),src/plugins/clock/clock_mqtt.cpp:34 (SPGM),src/plugins/clock/clock_mqtt.cpp:84 (SPGM),src/plugins/clock/clock_mqtt.cpp:139 (SPGM)",
         "type": "source",
         "use_counter": 5
     },
     "_state": {
         "default": "/state",
-        "locations": "src/plugins/alarm/alarm.cpp:87 (SPGM),src/plugins/alarm/alarm.cpp:355 (SPGM),src/plugins/clock/clock_mqtt.cpp:34 (SPGM),src/plugins/clock/clock_mqtt.cpp:169 (SPGM)",
+        "locations": "src/plugins/alarm/alarm.cpp:87 (SPGM),src/plugins/alarm/alarm.cpp:355 (SPGM),src/plugins/clock/clock_mqtt.cpp:33 (SPGM),src/plugins/clock/clock_mqtt.cpp:158 (SPGM)",
         "type": "source",
         "use_counter": 4
     },
@@ -860,19 +860,19 @@
     },
     "_xml": {
         "default": ".xml",
-        "locations": "src/web_server.cpp:150 (SPGM),src/web_server.cpp:790 (SPGM)",
+        "locations": "src/web_server.cpp:153 (SPGM),src/web_server.cpp:797 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
     "address": {
         "default": "address",
-        "locations": "include/retracted/custom_config.h:350 (SPGM),include/retracted/custom_config.h:389 (SPGM),src/plugins/mdns/mdns_resolver.cpp:74 (SPGM),src/plugins/mqtt/mqtt_config.cpp:14 (SPGM),src/plugins/syslog/syslog_config.cpp:21 (SPGM)",
+        "locations": "include/retracted/custom_config.h:354 (SPGM),include/retracted/custom_config.h:393 (SPGM),src/plugins/mdns/mdns_resolver.cpp:74 (SPGM),src/plugins/mqtt/mqtt_config.cpp:14 (SPGM),src/plugins/syslog/syslog_config.cpp:21 (SPGM)",
         "type": "source",
         "use_counter": 5
     },
     "alarm": {
         "default": "alarm",
-        "locations": "src/plugins/alarm/alarm.cpp:86 (SPGM),src/plugins/alarm/alarm.cpp:360 (SPGM),src/plugins/clock/clock_form.cpp:270 (SPGM)",
+        "locations": "src/plugins/alarm/alarm.cpp:86 (SPGM),src/plugins/alarm/alarm.cpp:360 (SPGM),src/plugins/clock/clock_form.cpp:205 (SPGM)",
         "type": "source",
         "use_counter": 3
     },
@@ -882,19 +882,19 @@
     },
     "alerts_storage_filename": {
         "default": "/.pvt/alerts.json",
-        "locations": "src/WebUIAlerts.cpp:50 (DEFINE),src/WebUIAlerts.cpp:399 (SPGM),src/WebUIAlerts.cpp:401 (SPGM),src/WebUIAlerts.cpp:403 (SPGM),src/WebUIAlerts.cpp:580 (SPGM),src/WebUIAlerts.cpp:583 (SPGM),src/WebUIAlerts.cpp:620 (SPGM),src/WebUIAlerts.cpp:625 (SPGM),src/WebUIAlerts.cpp:627 (SPGM),src/WebUIAlerts.cpp:638 (SPGM),src/WebUIAlerts.cpp:639 (SPGM),src/WebUIAlerts.cpp:641 (SPGM),src/WebUIAlerts.cpp:642 (SPGM),src/WebUIAlerts.cpp:651 (SPGM),src/WebUIAlerts.cpp:654 (SPGM),src/templates.cpp:346 (SPGM),src/web_server.cpp:341 (SPGM)",
+        "locations": "src/WebUIAlerts.cpp:50 (DEFINE),src/WebUIAlerts.cpp:399 (SPGM),src/WebUIAlerts.cpp:401 (SPGM),src/WebUIAlerts.cpp:403 (SPGM),src/WebUIAlerts.cpp:580 (SPGM),src/WebUIAlerts.cpp:583 (SPGM),src/WebUIAlerts.cpp:620 (SPGM),src/WebUIAlerts.cpp:625 (SPGM),src/WebUIAlerts.cpp:627 (SPGM),src/WebUIAlerts.cpp:638 (SPGM),src/WebUIAlerts.cpp:639 (SPGM),src/WebUIAlerts.cpp:641 (SPGM),src/WebUIAlerts.cpp:642 (SPGM),src/WebUIAlerts.cpp:651 (SPGM),src/WebUIAlerts.cpp:654 (SPGM),src/templates.cpp:346 (SPGM),src/web_server.cpp:344 (SPGM)",
         "type": "static",
         "use_counter": 16
     },
     "ap_mode": {
         "default": "ap_mode",
-        "locations": "src/kfc_fw_config_forms.cpp:156 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:176 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
     "applying_html": {
         "default": "applying.html",
-        "locations": "src/web_server.cpp:966 (SPGM)",
+        "locations": "src/web_server.cpp:973 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
@@ -958,7 +958,7 @@
     },
     "config": {
         "auto": "config",
-        "locations": "lib/KFCConfiguration/src/JsonConfigReader.cpp:30 (SPGM),src/kfc_fw_config_forms.cpp:254 (SPGM),src/plugins/clock/clock_form.cpp:57 (SPGM),src/plugins/mqtt/mqtt_form.cpp:59 (SPGM),src/plugins/ntp/ntp_form.cpp:36 (SPGM),src/web_server.cpp:421 (SPGM)",
+        "locations": "lib/KFCConfiguration/src/JsonConfigReader.cpp:30 (SPGM),src/kfc_fw_config_forms.cpp:281 (SPGM),src/plugins/clock/clock_form.cpp:270 (SPGM),src/plugins/mqtt/mqtt_form.cpp:59 (SPGM),src/plugins/ntp/ntp_form.cpp:36 (SPGM),src/web_server.cpp:424 (SPGM)",
         "type": "source",
         "use_counter": 6
     },
@@ -1006,7 +1006,7 @@
     },
     "days": {
         "default": "days",
-        "locations": "src/kfc_fw_config_forms.cpp:238 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:258 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
@@ -1016,7 +1016,7 @@
     },
     "defaultPassword": {
         "default": "12345678",
-        "locations": "src/kfc_firmware.cpp:237 (SPGM),src/kfc_firmware.cpp:338 (SPGM),src/kfc_fw_config.cpp:544 (SPGM),src/kfc_fw_config.cpp:545 (SPGM),src/kfc_fw_config.cpp:548 (SPGM),src/kfc_fw_config.cpp:551 (SPGM),src/kfc_fw_config.cpp:605 (SPGM),src/kfc_fw_config.cpp:608 (SPGM),src/kfc_fw_config.cpp:610 (SPGM),src/kfc_fw_config_forms.cpp:33 (SPGM)",
+        "locations": "src/kfc_firmware.cpp:237 (SPGM),src/kfc_firmware.cpp:338 (SPGM),src/kfc_fw_config.cpp:544 (SPGM),src/kfc_fw_config.cpp:545 (SPGM),src/kfc_fw_config.cpp:548 (SPGM),src/kfc_fw_config.cpp:551 (SPGM),src/kfc_fw_config.cpp:605 (SPGM),src/kfc_fw_config.cpp:608 (SPGM),src/kfc_fw_config.cpp:610 (SPGM),src/kfc_fw_config_forms.cpp:48 (SPGM)",
         "type": "source",
         "use_counter": 10
     },
@@ -1028,7 +1028,7 @@
     },
     "deflate": {
         "default": "deflate",
-        "locations": "src/web_server.cpp:203 (SPGM)",
+        "locations": "src/web_server.cpp:206 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
@@ -1046,7 +1046,7 @@
     },
     "degree_Celsius_utf8": {
         "default": "\u00c2\u00b0C",
-        "locations": "src/plugins/clock/clock_form.cpp:292 (SPGM),src/plugins/clock/clock_form.cpp:296 (SPGM),src/plugins/clock/clock_form.cpp:300 (SPGM)",
+        "locations": "src/plugins/clock/clock_form.cpp:230 (SPGM),src/plugins/clock/clock_form.cpp:234 (SPGM),src/plugins/clock/clock_form.cpp:238 (SPGM)",
         "type": "source",
         "use_counter": 3
     },
@@ -1056,27 +1056,27 @@
     },
     "description_xml": {
         "default": "description.xml",
-        "locations": "src/plugins/ssdp/ssdp.cpp:58 (SPGM),src/plugins/ssdp/ssdp.cpp:109 (SPGM),src/web_server.cpp:186 (SPGM)",
+        "locations": "src/plugins/ssdp/ssdp.cpp:58 (SPGM),src/plugins/ssdp/ssdp.cpp:109 (SPGM),src/web_server.cpp:189 (SPGM)",
         "type": "source",
         "use_counter": 3
     },
     "dev_hostn": {
         "default": "dev_hostn",
-        "locations": "src/kfc_fw_config_forms.cpp:132 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:152 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
     "dev_title": {
         "default": "dev_title",
-        "locations": "src/kfc_fw_config_forms.cpp:136 (SPGM),src/kfc_fw_config_forms.cpp:184 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:156 (SPGM),src/kfc_fw_config_forms.cpp:204 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
     "device": {
         "default": "device",
-        "locations": "src/kfc_fw_config_forms.cpp:37 (SPGM),src/kfc_fw_config_forms.cpp:130 (SPGM),src/kfc_fw_config_forms.cpp:173 (SPGM),src/kfc_fw_config_forms.cpp:182 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:31 (SPGM),src/kfc_fw_config_forms.cpp:52 (SPGM),src/kfc_fw_config_forms.cpp:150 (SPGM),src/kfc_fw_config_forms.cpp:193 (SPGM),src/kfc_fw_config_forms.cpp:202 (SPGM)",
         "type": "source",
-        "use_counter": 4
+        "use_counter": 5
     },
     "device_html": {
         "default": "device.html",
@@ -1092,7 +1092,7 @@
     },
     "disabled": {
         "default": "disabled",
-        "locations": "include/spgm_auto_def.h:213 (AUTO_INIT),lib/KFCWebFramework/include/WebUI/Containers.h:707 (SPGM),src/plugins/mqtt/mqtt_plugin.cpp:114 (SPGM),src/plugins/ntp/ntp_atmode.cpp:44 (SPGM),src/web_server.cpp:1080 (SPGM)",
+        "locations": "include/spgm_auto_def.h:213 (AUTO_INIT),lib/KFCWebFramework/include/WebUI/Containers.h:707 (SPGM),src/plugins/mqtt/mqtt_plugin.cpp:114 (SPGM),src/plugins/ntp/ntp_atmode.cpp:44 (SPGM),src/web_server.cpp:1087 (SPGM)",
         "type": "source",
         "use_counter": 4
     },
@@ -1158,13 +1158,13 @@
     },
     "factory_html": {
         "default": "factory.html",
-        "locations": "src/plugins.cpp:187 (SPGM),src/web_server.cpp:979 (SPGM)",
+        "locations": "src/plugins.cpp:187 (SPGM),src/web_server.cpp:986 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
     "failure": {
         "default": "failure",
-        "locations": "src/at_mode.cpp:1513 (SPGM),src/plugins/file_manager/file_manager.cpp:249 (SPGM),src/plugins/file_manager/file_manager.cpp:377 (SPGM),src/plugins/file_manager/file_manager.cpp:423 (SPGM)",
+        "locations": "src/at_mode.cpp:1562 (SPGM),src/plugins/file_manager/file_manager.cpp:249 (SPGM),src/plugins/file_manager/file_manager.cpp:377 (SPGM),src/plugins/file_manager/file_manager.cpp:423 (SPGM)",
         "type": "source",
         "use_counter": 4
     },
@@ -1220,7 +1220,7 @@
     },
     "gzip": {
         "default": "gzip",
-        "locations": "src/web_server.cpp:203 (SPGM),src/web_server.cpp:817 (SPGM),src/web_server.cpp:825 (SPGM)",
+        "locations": "src/web_server.cpp:206 (SPGM),src/web_server.cpp:824 (SPGM),src/web_server.cpp:832 (SPGM)",
         "type": "source",
         "use_counter": 3
     },
@@ -1236,7 +1236,7 @@
     },
     "hidden": {
         "default": "hidden",
-        "locations": "src/templates.cpp:291 (SPGM),src/templates.cpp:320 (SPGM),src/web_server.cpp:223 (SPGM)",
+        "locations": "src/templates.cpp:291 (SPGM),src/templates.cpp:320 (SPGM),src/web_server.cpp:226 (SPGM)",
         "type": "source",
         "use_counter": 3
     },
@@ -1336,7 +1336,7 @@
     },
     "http": {
         "default": "http",
-        "locations": "src/plugins/clock/clock.cpp:489 (SPGM),src/plugins/file_manager/file_manager.cpp:465 (SPGM),src/plugins/http2serial/http2serial.cpp:265 (SPGM),src/plugins/mdns/mdns_plugin.cpp:171 (SPGM),src/plugins/mdns/mdns_plugin.cpp:186 (SPGM),src/templates.cpp:112 (SPGM),src/web_server.cpp:701 (SPGM),src/web_server.cpp:1038 (SPGM)",
+        "locations": "src/plugins/clock/clock.cpp:493 (SPGM),src/plugins/file_manager/file_manager.cpp:465 (SPGM),src/plugins/http2serial/http2serial.cpp:265 (SPGM),src/plugins/mdns/mdns_plugin.cpp:171 (SPGM),src/plugins/mdns/mdns_plugin.cpp:186 (SPGM),src/templates.cpp:112 (SPGM),src/web_server.cpp:708 (SPGM),src/web_server.cpp:1045 (SPGM)",
         "type": "source",
         "use_counter": 8
     },
@@ -1346,7 +1346,7 @@
     },
     "https": {
         "default": "https",
-        "locations": "src/templates.cpp:112 (SPGM),src/web_server.cpp:1039 (SPGM)",
+        "locations": "src/templates.cpp:112 (SPGM),src/web_server.cpp:1046 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
@@ -1360,13 +1360,13 @@
     },
     "image_type": {
         "default": "image_type",
-        "locations": "src/web_server.cpp:596 (SPGM),src/web_server.cpp:599 (SPGM)",
+        "locations": "src/web_server.cpp:603 (SPGM),src/web_server.cpp:606 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
     "index_html": {
         "default": "index.html",
-        "locations": "src/plugins.cpp:162 (SPGM),src/plugins.cpp:165 (SPGM),src/templates.cpp:273 (SPGM),src/web_server.cpp:844 (SPGM)",
+        "locations": "src/plugins.cpp:162 (SPGM),src/plugins.cpp:165 (SPGM),src/templates.cpp:273 (SPGM),src/web_server.cpp:851 (SPGM)",
         "type": "source",
         "use_counter": 4
     },
@@ -1389,10 +1389,10 @@
         "use_counter": 0
     },
     "iot_clock_save_state_file": {
-        "auto": "iot clock save state file",
-        "locations": "src/plugins/clock/clock_config.cpp:70 (SPGM)",
+        "default": "/.pvt/device.state",
+        "locations": "src/plugins/clock/clock_config.cpp:85 (SPGM),src/plugins/clock/clock_state.cpp:40 (SPGM),src/plugins/clock/clock_state.cpp:54 (SPGM),src/plugins/clock/clock_state.cpp:67 (SPGM),src/plugins/clock/clock_state.cpp:76 (SPGM)",
         "type": "source",
-        "use_counter": 1
+        "use_counter": 5
     },
     "iot_sensor_hlw80xx_state_file": {
         "default": "",
@@ -1416,7 +1416,7 @@
     },
     "keep": {
         "default": "keep",
-        "locations": "src/web_server.cpp:902 (SPGM)",
+        "locations": "src/web_server.cpp:909 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
@@ -1452,7 +1452,7 @@
     },
     "light_sensor": {
         "default": "light_sensor",
-        "locations": "src/plugins/clock/clock.cpp:223 (SPGM),src/plugins/clock/clock_mqtt.cpp:48 (SPGM),src/plugins/clock/clock_mqtt.cpp:51 (SPGM),src/plugins/clock/clock_mqtt.cpp:173 (SPGM),src/plugins/clock/clock_webui.cpp:57 (SPGM),src/plugins/clock/clock_webui.cpp:226 (SPGM)",
+        "locations": "src/plugins/clock/clock.cpp:222 (SPGM),src/plugins/clock/clock_mqtt.cpp:47 (SPGM),src/plugins/clock/clock_mqtt.cpp:50 (SPGM),src/plugins/clock/clock_mqtt.cpp:162 (SPGM),src/plugins/clock/clock_webui.cpp:57 (SPGM),src/plugins/clock/clock_webui.cpp:226 (SPGM)",
         "type": "source",
         "use_counter": 6
     },
@@ -1554,7 +1554,7 @@
     },
     "message": {
         "default": "message",
-        "locations": "src/web_server.cpp:1227 (SPGM),src/web_server.cpp:1231 (SPGM)",
+        "locations": "src/web_server.cpp:1234 (SPGM),src/web_server.cpp:1238 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
@@ -1564,121 +1564,121 @@
     },
     "milliseconds": {
         "default": "milliseconds",
-        "locations": "src/kfc_fw_config_forms.cpp:220 (SPGM),src/plugins/clock/clock_form.cpp:128 (SPGM),src/plugins/clock/clock_form.cpp:250 (SPGM),src/plugins/clock/clock_form.cpp:281 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:240 (SPGM),src/plugins/clock/clock_form.cpp:69 (SPGM),src/plugins/clock/clock_form.cpp:185 (SPGM),src/plugins/clock/clock_form.cpp:216 (SPGM)",
         "type": "source",
         "use_counter": 4
     },
     "mime_application_javascript": {
         "default": "application/javascript",
-        "locations": "src/web_server.cpp:121 (SPGM)",
+        "locations": "src/web_server.cpp:124 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
     "mime_application_json": {
         "default": "application/json",
-        "locations": "src/async_web_response.cpp:170 (SPGM),src/async_web_response.cpp:346 (SPGM),src/async_web_response.cpp:515 (SPGM),src/web_server.cpp:118 (SPGM),src/web_server.cpp:291 (SPGM),src/web_server.cpp:468 (SPGM)",
+        "locations": "src/async_web_response.cpp:170 (SPGM),src/async_web_response.cpp:346 (SPGM),src/async_web_response.cpp:515 (SPGM),src/web_server.cpp:121 (SPGM),src/web_server.cpp:294 (SPGM),src/web_server.cpp:471 (SPGM)",
         "type": "source",
         "use_counter": 6
     },
     "mime_application_pdf": {
         "default": "application/pdf",
-        "locations": "src/web_server.cpp:154 (SPGM)",
+        "locations": "src/web_server.cpp:157 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
     "mime_application_x_gzip": {
         "default": "application/x-gzip",
-        "locations": "src/web_server.cpp:160 (SPGM)",
+        "locations": "src/web_server.cpp:163 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
     "mime_application_zip": {
         "default": "application/zip",
-        "locations": "src/web_server.cpp:157 (SPGM),src/web_server.cpp:386 (SPGM)",
+        "locations": "src/web_server.cpp:160 (SPGM),src/web_server.cpp:389 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
     "mime_font_eot": {
         "default": "font/eot",
-        "locations": "src/web_server.cpp:139 (SPGM)",
+        "locations": "src/web_server.cpp:142 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
     "mime_font_ttf": {
         "default": "font/ttf",
-        "locations": "src/web_server.cpp:148 (SPGM)",
+        "locations": "src/web_server.cpp:151 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
     "mime_font_woff": {
         "default": "font/woff",
-        "locations": "src/web_server.cpp:142 (SPGM)",
+        "locations": "src/web_server.cpp:145 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
     "mime_font_woff2": {
         "default": "font/woff2",
-        "locations": "src/web_server.cpp:145 (SPGM)",
+        "locations": "src/web_server.cpp:148 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
     "mime_image_bmp": {
         "default": "image/bmp",
-        "locations": "src/web_server.cpp:389 (SPGM)",
+        "locations": "src/web_server.cpp:392 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
     "mime_image_gif": {
         "default": "image/gif",
-        "locations": "src/web_server.cpp:127 (SPGM)",
+        "locations": "src/web_server.cpp:130 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
     "mime_image_icon": {
         "default": "image/x-icon",
-        "locations": "src/web_server.cpp:133 (SPGM)",
+        "locations": "src/web_server.cpp:136 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
     "mime_image_jpeg": {
         "default": "image/jpeg",
-        "locations": "src/web_server.cpp:130 (SPGM)",
+        "locations": "src/web_server.cpp:133 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
     "mime_image_png": {
         "default": "image/png",
-        "locations": "src/web_server.cpp:124 (SPGM)",
+        "locations": "src/web_server.cpp:127 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
     "mime_image_svg_xml": {
         "default": "image/svg+xml",
-        "locations": "src/web_server.cpp:136 (SPGM)",
+        "locations": "src/web_server.cpp:139 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
     "mime_text_css": {
         "default": "text/css",
-        "locations": "src/web_server.cpp:115 (SPGM)",
+        "locations": "src/web_server.cpp:118 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
     "mime_text_html": {
         "default": "text/html",
-        "locations": "src/async_web_response.cpp:753 (SPGM),src/web_server.cpp:112 (SPGM),src/web_server.cpp:273 (SPGM)",
+        "locations": "src/async_web_response.cpp:753 (SPGM),src/web_server.cpp:115 (SPGM),src/web_server.cpp:276 (SPGM)",
         "type": "source",
         "use_counter": 3
     },
     "mime_text_plain": {
         "default": "text/plain",
-        "locations": "src/async_web_handler.cpp:35 (SPGM),src/async_web_handler.cpp:50 (SPGM),src/async_web_handler.cpp:53 (SPGM),src/plugins/clock/clock.cpp:844 (SPGM),src/plugins/file_manager/file_manager.cpp:250 (SPGM),src/plugins/file_manager/file_manager.cpp:330 (SPGM),src/plugins/file_manager/file_manager.cpp:343 (SPGM),src/plugins/file_manager/file_manager.cpp:380 (SPGM),src/plugins/file_manager/file_manager.cpp:415 (SPGM),src/plugins/file_manager/file_manager.cpp:428 (SPGM),src/web_server.cpp:163 (SPGM),src/web_server.cpp:256 (SPGM),src/web_server.cpp:443 (SPGM),src/web_server.cpp:561 (SPGM),src/web_server.cpp:868 (SPGM)",
+        "locations": "src/async_web_handler.cpp:35 (SPGM),src/async_web_handler.cpp:50 (SPGM),src/async_web_handler.cpp:53 (SPGM),src/plugins/clock/clock.cpp:835 (SPGM),src/plugins/file_manager/file_manager.cpp:250 (SPGM),src/plugins/file_manager/file_manager.cpp:330 (SPGM),src/plugins/file_manager/file_manager.cpp:343 (SPGM),src/plugins/file_manager/file_manager.cpp:380 (SPGM),src/plugins/file_manager/file_manager.cpp:415 (SPGM),src/plugins/file_manager/file_manager.cpp:428 (SPGM),src/web_server.cpp:166 (SPGM),src/web_server.cpp:259 (SPGM),src/web_server.cpp:446 (SPGM),src/web_server.cpp:568 (SPGM),src/web_server.cpp:875 (SPGM)",
         "type": "source",
         "use_counter": 15
     },
     "mime_text_xml": {
         "default": "text/xml",
-        "locations": "src/web_server.cpp:151 (SPGM)",
+        "locations": "src/web_server.cpp:154 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
@@ -1688,7 +1688,7 @@
     },
     "minutes": {
         "default": "minutes",
-        "locations": "src/kfc_fw_config_forms.cpp:189 (SPGM),src/plugins/mqtt/mqtt_form.cpp:136 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:209 (SPGM),src/plugins/mqtt/mqtt_form.cpp:136 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
@@ -1704,7 +1704,7 @@
     },
     "mode": {
         "default": "mode",
-        "locations": "src/kfc_fw_config_forms.cpp:77 (SPGM),src/plugins/mqtt/mqtt_form.cpp:61 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:97 (SPGM),src/plugins/mqtt/mqtt_form.cpp:61 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
@@ -1742,7 +1742,7 @@
     },
     "mqtt": {
         "default": "mqtt",
-        "locations": "include/retracted/custom_config.h:350 (SPGM),src/plugins/alarm/alarm.cpp:54 (SPGM),src/plugins/alarm/alarm.cpp:62 (SPGM),src/plugins/clock/clock.cpp:486 (SPGM),src/plugins/mqtt/mqtt_auto_discovery.cpp:73 (SPGM),src/plugins/mqtt/mqtt_form.cpp:95 (SPGM)",
+        "locations": "include/retracted/custom_config.h:354 (SPGM),src/plugins/alarm/alarm.cpp:54 (SPGM),src/plugins/alarm/alarm.cpp:62 (SPGM),src/plugins/clock/clock.cpp:490 (SPGM),src/plugins/mqtt/mqtt_auto_discovery.cpp:73 (SPGM),src/plugins/mqtt/mqtt_form.cpp:95 (SPGM)",
         "type": "source",
         "use_counter": 6
     },
@@ -1780,7 +1780,7 @@
     },
     "mqtt_availability_topic": {
         "default": "avty_t",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.cpp:78 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:21 (DEFINE)",
+        "locations": "src/plugins/mqtt/mqtt_auto_discovery.cpp:78 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:19 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
@@ -1810,19 +1810,19 @@
     },
     "mqtt_brightness_command_topic": {
         "default": "bri_cmd_t",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:72 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:26 (DEFINE)",
+        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:72 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:24 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
     "mqtt_brightness_scale": {
         "default": "bri_scl",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:77 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:27 (DEFINE)",
+        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:77 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:25 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
     "mqtt_brightness_state_topic": {
         "default": "bri_stat_t",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:67 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:28 (DEFINE)",
+        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:67 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:26 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
@@ -1864,13 +1864,13 @@
     },
     "mqtt_color_temp_command_topic": {
         "default": "clr_temp_cmd_t",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:87 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:36 (DEFINE)",
+        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:87 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:34 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
     "mqtt_color_temp_state_topic": {
         "default": "clr_temp_stat_t",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:82 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:37 (DEFINE)",
+        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:82 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:35 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
@@ -1896,37 +1896,37 @@
     },
     "mqtt_command_topic": {
         "default": "cmd_t",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:62 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:44 (DEFINE)",
+        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:62 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:42 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
     "mqtt_component_binary_sensor": {
         "default": "binary_sensor",
-        "locations": "src/plugins/mqtt/mqtt_component.cpp:110 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:10 (DEFINE)",
+        "locations": "src/plugins/mqtt/mqtt_component.cpp:110 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:8 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
     "mqtt_component_light": {
         "default": "light",
-        "locations": "src/plugins/mqtt/mqtt_component.cpp:106 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:8 (DEFINE)",
+        "locations": "src/plugins/mqtt/mqtt_component.cpp:106 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:6 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
     "mqtt_component_sensor": {
         "default": "sensor",
-        "locations": "src/plugins/mqtt/mqtt_component.cpp:108 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:9 (DEFINE)",
+        "locations": "src/plugins/mqtt/mqtt_component.cpp:108 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:7 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
     "mqtt_component_storage": {
         "default": "storage",
-        "locations": "src/plugins/mqtt/mqtt_component.cpp:112 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:11 (DEFINE)",
+        "locations": "src/plugins/mqtt/mqtt_component.cpp:112 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:9 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
     "mqtt_component_switch": {
         "default": "switch",
-        "locations": "src/plugins/mqtt/mqtt_component.cpp:115 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:7 (DEFINE)",
+        "locations": "src/plugins/mqtt/mqtt_component.cpp:115 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:5 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
@@ -1956,19 +1956,19 @@
     },
     "mqtt_effect_command_topic": {
         "default": "fx_cmd_t",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:102 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:61 (DEFINE)",
+        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:102 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:59 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
     "mqtt_effect_list": {
         "default": "fx_list",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:113 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:62 (DEFINE)",
+        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:113 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:60 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
     "mqtt_effect_state_topic": {
         "default": "fx_stat_t",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:107 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:63 (DEFINE)",
+        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:107 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:61 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
@@ -1990,7 +1990,7 @@
     },
     "mqtt_expire_after": {
         "default": "exp_aft",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:118 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:66 (DEFINE)",
+        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:118 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:64 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
@@ -2152,7 +2152,7 @@
     },
     "mqtt_payload_available": {
         "default": "pl_avail",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.cpp:79 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:101 (DEFINE)",
+        "locations": "src/plugins/mqtt/mqtt_auto_discovery.cpp:79 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:99 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
@@ -2194,7 +2194,7 @@
     },
     "mqtt_payload_not_available": {
         "default": "pl_not_avail",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.cpp:80 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:111 (DEFINE)",
+        "locations": "src/plugins/mqtt/mqtt_auto_discovery.cpp:80 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:109 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
@@ -2204,7 +2204,7 @@
     },
     "mqtt_payload_off": {
         "default": "pl_off",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:137 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:113 (DEFINE)",
+        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:137 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:111 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
@@ -2214,7 +2214,7 @@
     },
     "mqtt_payload_on": {
         "default": "pl_on",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:132 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:115 (DEFINE)",
+        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:132 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:113 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
@@ -2300,13 +2300,13 @@
     },
     "mqtt_rgb_command_topic": {
         "default": "rgb_cmd_t",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:97 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:135 (DEFINE)",
+        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:97 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:133 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
     "mqtt_rgb_state_topic": {
         "default": "rgb_stat_t",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:92 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:136 (DEFINE)",
+        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:92 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:134 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
@@ -2394,7 +2394,7 @@
     },
     "mqtt_state_topic": {
         "default": "stat_t",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:51 (SPGM),src/plugins/mqtt/mqtt_auto_discovery.h:56 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:157 (DEFINE)",
+        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:51 (SPGM),src/plugins/mqtt/mqtt_auto_discovery.h:56 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:155 (DEFINE)",
         "type": "static",
         "use_counter": 2
     },
@@ -2408,7 +2408,7 @@
     },
     "mqtt_status_topic": {
         "default": "/status",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.cpp:78 (SPGM),src/plugins/mqtt/mqtt_client.h:190 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:12 (DEFINE)",
+        "locations": "src/plugins/mqtt/mqtt_auto_discovery.cpp:78 (SPGM),src/plugins/mqtt/mqtt_client.h:190 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:10 (DEFINE)",
         "type": "static",
         "use_counter": 2
     },
@@ -2522,19 +2522,19 @@
     },
     "mqtt_unique_id": {
         "default": "uniq_id",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.cpp:76 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:185 (DEFINE)",
+        "locations": "src/plugins/mqtt/mqtt_auto_discovery.cpp:76 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:183 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
     "mqtt_unit_of_measurement": {
         "default": "unit_of_meas",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:147 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:186 (DEFINE)",
+        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:147 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:184 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
     "mqtt_value_template": {
         "default": "val_tpl",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:123 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:187 (DEFINE)",
+        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:123 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:185 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
@@ -2582,7 +2582,7 @@
     },
     "network": {
         "default": "network",
-        "locations": "src/kfc_fw_config.cpp:1689 (SPGM),src/kfc_fw_config_forms.cpp:120 (SPGM)",
+        "locations": "src/kfc_fw_config.cpp:1689 (SPGM),src/kfc_fw_config_forms.cpp:140 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
@@ -2594,13 +2594,13 @@
     },
     "network_settings": {
         "default": "network_settings",
-        "locations": "src/kfc_fw_config_forms.cpp:128 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:148 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
     "no": {
         "default": "no",
-        "locations": "src/at_mode.cpp:1371 (SPGM),src/kfc_fw_config.cpp:1603 (SPGM)",
+        "locations": "src/at_mode.cpp:1420 (SPGM),src/kfc_fw_config.cpp:1603 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
@@ -2616,7 +2616,7 @@
     },
     "npwd": {
         "default": "npwd",
-        "locations": "src/kfc_fw_config_forms.cpp:30 (SPGM),src/kfc_fw_config_forms.cpp:264 (SPGM),src/kfc_fw_config_forms.cpp:271 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:45 (SPGM),src/kfc_fw_config_forms.cpp:291 (SPGM),src/kfc_fw_config_forms.cpp:298 (SPGM)",
         "type": "source",
         "use_counter": 3
     },
@@ -2626,19 +2626,19 @@
     },
     "null": {
         "auto": "null",
-        "locations": "include/spgm_auto_def.h:375 (AUTO_INIT),lib/KFCBaseLibrary/include/misc.h:625 (SPGM),lib/KFCBaseLibrary/include/misc.h:626 (SPGM),lib/KFCBaseLibrary/include/misc.h:627 (SPGM),lib/KFCConfiguration/src/ConfigurationParameter.cpp:208 (SPGM),lib/KFCConfiguration/src/ConfigurationParameter.cpp:252 (SPGM),lib/KFCJson/include/JsonVariant.h:82 (SPGM),lib/KFCJson/src/JsonBaseReader.cpp:109 (SPGM),lib/KFCJson/src/JsonBaseReader.cpp:168 (SPGM),lib/KFCJson/src/JsonNumber.cpp:69 (SPGM),lib/KFCJson/src/JsonVar.cpp:55 (SPGM)",
+        "locations": "include/spgm_auto_def.h:351 (AUTO_INIT),lib/KFCBaseLibrary/include/misc.h:625 (SPGM),lib/KFCBaseLibrary/include/misc.h:626 (SPGM),lib/KFCBaseLibrary/include/misc.h:627 (SPGM),lib/KFCConfiguration/src/ConfigurationParameter.cpp:208 (SPGM),lib/KFCConfiguration/src/ConfigurationParameter.cpp:252 (SPGM),lib/KFCJson/include/JsonVariant.h:82 (SPGM),lib/KFCJson/src/JsonBaseReader.cpp:109 (SPGM),lib/KFCJson/src/JsonBaseReader.cpp:168 (SPGM),lib/KFCJson/src/JsonNumber.cpp:69 (SPGM),lib/KFCJson/src/JsonVar.cpp:55 (SPGM)",
         "type": "source",
         "use_counter": 10
     },
     "off": {
         "default": "off",
-        "locations": "src/at_mode.cpp:1349 (SPGM),src/at_mode.cpp:1368 (SPGM),src/at_mode.cpp:1369 (SPGM),src/at_mode.cpp:1375 (SPGM),src/at_mode.cpp:1376 (SPGM)",
+        "locations": "src/at_mode.cpp:1398 (SPGM),src/at_mode.cpp:1417 (SPGM),src/at_mode.cpp:1418 (SPGM),src/at_mode.cpp:1424 (SPGM),src/at_mode.cpp:1425 (SPGM)",
         "type": "source",
         "use_counter": 5
     },
     "on": {
         "default": "on",
-        "locations": "src/at_mode.cpp:1344 (SPGM),src/at_mode.cpp:1368 (SPGM),src/at_mode.cpp:1369 (SPGM),src/at_mode.cpp:1375 (SPGM),src/at_mode.cpp:1376 (SPGM)",
+        "locations": "src/at_mode.cpp:1393 (SPGM),src/at_mode.cpp:1417 (SPGM),src/at_mode.cpp:1418 (SPGM),src/at_mode.cpp:1424 (SPGM),src/at_mode.cpp:1425 (SPGM)",
         "type": "source",
         "use_counter": 5
     },
@@ -2652,7 +2652,7 @@
     },
     "password": {
         "default": "password",
-        "locations": "src/kfc_fw_config_forms.cpp:29 (SPGM),src/kfc_fw_config_forms.cpp:247 (SPGM),src/kfc_fw_config_forms.cpp:258 (SPGM),src/web_server.cpp:888 (SPGM),src/web_server.cpp:897 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:44 (SPGM),src/kfc_fw_config_forms.cpp:274 (SPGM),src/kfc_fw_config_forms.cpp:285 (SPGM),src/web_server.cpp:895 (SPGM),src/web_server.cpp:904 (SPGM)",
         "type": "source",
         "use_counter": 5
     },
@@ -2762,7 +2762,7 @@
     },
     "readonly": {
         "default": "readonly",
-        "locations": "include/spgm_auto_def.h:405 (AUTO_INIT),lib/KFCWebFramework/include/WebUI/Containers.h:701 (SPGM)",
+        "locations": "include/spgm_auto_def.h:381 (AUTO_INIT),lib/KFCWebFramework/include/WebUI/Containers.h:701 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
@@ -2772,13 +2772,13 @@
     },
     "reboot_html": {
         "default": "reboot.html",
-        "locations": "src/plugins.cpp:170 (SPGM),src/plugins.cpp:186 (SPGM),src/web_server.cpp:978 (SPGM)",
+        "locations": "src/plugins.cpp:170 (SPGM),src/plugins.cpp:186 (SPGM),src/web_server.cpp:985 (SPGM)",
         "type": "source",
         "use_counter": 3
     },
     "rebooting_html": {
         "default": "rebooting.html",
-        "locations": "src/web_server.cpp:530 (SPGM),src/web_server.cpp:535 (SPGM),src/web_server.cpp:995 (SPGM)",
+        "locations": "src/web_server.cpp:537 (SPGM),src/web_server.cpp:542 (SPGM),src/web_server.cpp:1002 (SPGM)",
         "type": "source",
         "use_counter": 3
     },
@@ -2794,7 +2794,7 @@
     },
     "safe_mode": {
         "default": "safe_mode",
-        "locations": "src/web_server.cpp:984 (SPGM)",
+        "locations": "src/web_server.cpp:991 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
@@ -2804,13 +2804,19 @@
         "type": "source",
         "use_counter": 2
     },
+    "scheduler_config_file": {
+        "default": "/.pvt/.scheduler",
+        "locations": "src/kfc_fw_config_forms.cpp:29 (SPGM)",
+        "type": "source",
+        "use_counter": 1
+    },
     "sec": {
         "default": "sec",
         "use_counter": 0
     },
     "seconds": {
         "default": "seconds",
-        "locations": "src/plugins/clock/clock_form.cpp:93 (SPGM),src/plugins/clock/clock_form.cpp:254 (SPGM),src/plugins/mqtt/mqtt_form.cpp:80 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:58 (SPGM)",
+        "locations": "src/plugins/clock/clock_form.cpp:189 (SPGM),src/plugins/clock/clock_form.cpp:294 (SPGM),src/plugins/mqtt/mqtt_form.cpp:80 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:58 (SPGM)",
         "type": "source",
         "use_counter": 4
     },
@@ -2850,7 +2856,7 @@
     },
     "size": {
         "default": "size",
-        "locations": "src/web_server.cpp:384 (SPGM)",
+        "locations": "src/web_server.cpp:387 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
@@ -2888,7 +2894,7 @@
     },
     "station": {
         "default": "station",
-        "locations": "src/kfc_fw_config_forms.cpp:83 (SPGM),src/kfc_fw_config_forms.cpp:140 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:103 (SPGM),src/kfc_fw_config_forms.cpp:160 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
@@ -2898,7 +2904,7 @@
     },
     "status": {
         "default": "status",
-        "locations": "src/web_server.cpp:1226 (SPGM),src/web_server.cpp:1230 (SPGM)",
+        "locations": "src/web_server.cpp:1233 (SPGM),src/web_server.cpp:1237 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
@@ -2908,7 +2914,7 @@
     },
     "status_html": {
         "default": "status.html",
-        "locations": "src/plugins.cpp:166 (SPGM),src/plugins.cpp:174 (SPGM),src/plugins.cpp:291 (SPGM),src/web_server.cpp:994 (SPGM)",
+        "locations": "src/plugins.cpp:166 (SPGM),src/plugins.cpp:174 (SPGM),src/plugins.cpp:291 (SPGM),src/web_server.cpp:1001 (SPGM)",
         "type": "source",
         "use_counter": 4
     },
@@ -2942,7 +2948,7 @@
     },
     "success": {
         "default": "success",
-        "locations": "src/at_mode.cpp:1513 (SPGM),src/plugins/file_manager/file_manager.cpp:249 (SPGM),src/plugins/file_manager/file_manager.cpp:377 (SPGM),src/plugins/file_manager/file_manager.cpp:423 (SPGM)",
+        "locations": "src/at_mode.cpp:1562 (SPGM),src/plugins/file_manager/file_manager.cpp:249 (SPGM),src/plugins/file_manager/file_manager.cpp:377 (SPGM),src/plugins/file_manager/file_manager.cpp:423 (SPGM)",
         "type": "source",
         "use_counter": 4
     },
@@ -2958,13 +2964,13 @@
     },
     "syslog_nil_value": {
         "default": "- ",
-        "locations": "include/spgm_auto_def.h:446 (AUTO_INIT),lib/KFCSyslog/src/Syslog.cpp:83 (DEFINE),lib/KFCSyslog/src/Syslog.cpp:131 (SPGM)",
+        "locations": "include/spgm_auto_def.h:422 (AUTO_INIT),lib/KFCSyslog/src/Syslog.cpp:83 (DEFINE),lib/KFCSyslog/src/Syslog.cpp:131 (SPGM)",
         "type": "static",
         "use_counter": 1
     },
     "tcp": {
         "default": "tcp",
-        "locations": "include/retracted/custom_config.h:350 (SPGM),include/retracted/custom_config.h:389 (SPGM),src/plugins/mqtt/mqtt_config.cpp:14 (SPGM),src/plugins/syslog/syslog_config.cpp:21 (SPGM),src/web_server.cpp:705 (SPGM),src/web_server.cpp:1038 (SPGM),src/web_server.cpp:1039 (SPGM)",
+        "locations": "include/retracted/custom_config.h:354 (SPGM),include/retracted/custom_config.h:393 (SPGM),src/plugins/mqtt/mqtt_config.cpp:14 (SPGM),src/plugins/syslog/syslog_config.cpp:21 (SPGM),src/web_server.cpp:712 (SPGM),src/web_server.cpp:1045 (SPGM),src/web_server.cpp:1046 (SPGM)",
         "type": "source",
         "use_counter": 7
     },
@@ -2994,7 +3000,7 @@
     },
     "true": {
         "default": "true",
-        "locations": "include/spgm_auto_def.h:454 (AUTO_INIT),lib/KFCJson/include/JsonVariant.h:79 (SPGM),lib/KFCJson/src/JsonBaseReader.cpp:164 (SPGM),lib/KFCJson/src/JsonTools.cpp:16 (SPGM),lib/KFCJson/src/JsonVar.cpp:38 (SPGM),lib/KFCJson/src/JsonVar.cpp:58 (SPGM),lib/KFCJson/src/JsonVar.cpp:65 (SPGM),src/WebUISocket.cpp:125 (SPGM)",
+        "locations": "include/spgm_auto_def.h:430 (AUTO_INIT),lib/KFCJson/include/JsonVariant.h:79 (SPGM),lib/KFCJson/src/JsonBaseReader.cpp:164 (SPGM),lib/KFCJson/src/JsonTools.cpp:16 (SPGM),lib/KFCJson/src/JsonVar.cpp:38 (SPGM),lib/KFCJson/src/JsonVar.cpp:58 (SPGM),lib/KFCJson/src/JsonVar.cpp:65 (SPGM),src/WebUISocket.cpp:125 (SPGM)",
         "type": "source",
         "use_counter": 7
     },
@@ -3006,7 +3012,7 @@
     },
     "update_fw_html": {
         "default": "update-fw.html",
-        "locations": "src/plugins.cpp:189 (SPGM),src/web_server.cpp:528 (SPGM),src/web_server.cpp:533 (SPGM),src/web_server.cpp:559 (SPGM)",
+        "locations": "src/plugins.cpp:189 (SPGM),src/web_server.cpp:535 (SPGM),src/web_server.cpp:540 (SPGM),src/web_server.cpp:566 (SPGM)",
         "type": "source",
         "use_counter": 4
     },
@@ -3034,13 +3040,13 @@
     },
     "username": {
         "default": "username",
-        "locations": "src/web_server.cpp:888 (SPGM),src/web_server.cpp:897 (SPGM)",
+        "locations": "src/web_server.cpp:895 (SPGM),src/web_server.cpp:904 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
     "value": {
         "default": "value",
-        "locations": "src/web_server.cpp:237 (SPGM)",
+        "locations": "src/web_server.cpp:240 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
@@ -3132,8 +3138,8 @@
     },
     "webui_json_events": {
         "auto": "webui json events",
-        "locations": "src/WebUIComponent.cpp:21 (DEFINE),src/WebUISocket.cpp:149 (SPGM),src/plugins/clock/clock.cpp:221 (SPGM),src/plugins/clock/clock_webui.cpp:138 (SPGM),src/plugins/clock/clock_webui.cpp:238 (SPGM),src/plugins/sensor/sensor.cpp:154 (SPGM)",
-        "type": "static",
+        "locations": "src/WebUISocket.cpp:149 (SPGM),src/plugins/clock/clock.cpp:220 (SPGM),src/plugins/clock/clock_webui.cpp:138 (SPGM),src/plugins/clock/clock_webui.cpp:238 (SPGM),src/plugins/sensor/sensor.cpp:154 (SPGM)",
+        "type": "source",
         "use_counter": 5
     },
     "webui_json_group": {
@@ -3162,9 +3168,9 @@
     },
     "webui_json_height": {
         "auto": "webui json height",
-        "locations": "src/WebUIComponent.cpp:26 (DEFINE),src/WebUIComponent.cpp:189 (SPGM),src/plugins/clock/clock_webui.cpp:216 (SPGM),src/plugins/clock/clock_webui.cpp:221 (SPGM),src/plugins/clock/clock_webui.cpp:226 (SPGM)",
+        "locations": "src/WebUIComponent.cpp:26 (DEFINE),src/WebUIComponent.cpp:189 (SPGM),src/plugins/clock/clock_webui.cpp:212 (SPGM),src/plugins/clock/clock_webui.cpp:216 (SPGM),src/plugins/clock/clock_webui.cpp:221 (SPGM),src/plugins/clock/clock_webui.cpp:226 (SPGM)",
         "type": "static",
-        "use_counter": 4
+        "use_counter": 5
     },
     "webui_json_ht": {
         "default": "ht",
@@ -3172,9 +3178,9 @@
     },
     "webui_json_id": {
         "auto": "webui json id",
-        "locations": "include/WebUIComponent.h:84 (SPGM),src/WebUIComponent.cpp:27 (DEFINE),src/plugins/clock/clock.cpp:223 (SPGM),src/plugins/clock/clock_webui.cpp:20 (SPGM),src/plugins/clock/clock_webui.cpp:24 (SPGM),src/plugins/clock/clock_webui.cpp:32 (SPGM),src/plugins/clock/clock_webui.cpp:37 (SPGM),src/plugins/clock/clock_webui.cpp:42 (SPGM),src/plugins/clock/clock_webui.cpp:57 (SPGM),src/plugins/clock/clock_webui.cpp:64 (SPGM),src/plugins/clock/clock_webui.cpp:140 (SPGM),src/plugins/sensor/Sensor_DS3231.cpp:71 (SPGM),src/plugins/sensor/Sensor_DS3231.cpp:77 (SPGM),src/plugins/sensor/Sensor_INA219.cpp:82 (SPGM),src/plugins/sensor/Sensor_INA219.cpp:88 (SPGM),src/plugins/sensor/Sensor_INA219.cpp:94 (SPGM),src/plugins/sensor/Sensor_INA219.cpp:100 (SPGM),src/plugins/sensor/Sensor_LM75A.cpp:54 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:149 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:154 (SPGM)",
+        "locations": "include/WebUIComponent.h:84 (SPGM),src/WebUIComponent.cpp:27 (DEFINE),src/plugins/clock/clock.cpp:222 (SPGM),src/plugins/clock/clock_webui.cpp:20 (SPGM),src/plugins/clock/clock_webui.cpp:24 (SPGM),src/plugins/clock/clock_webui.cpp:32 (SPGM),src/plugins/clock/clock_webui.cpp:37 (SPGM),src/plugins/clock/clock_webui.cpp:42 (SPGM),src/plugins/clock/clock_webui.cpp:50 (SPGM),src/plugins/clock/clock_webui.cpp:57 (SPGM),src/plugins/clock/clock_webui.cpp:64 (SPGM),src/plugins/clock/clock_webui.cpp:140 (SPGM),src/plugins/sensor/Sensor_DS3231.cpp:71 (SPGM),src/plugins/sensor/Sensor_DS3231.cpp:77 (SPGM),src/plugins/sensor/Sensor_INA219.cpp:82 (SPGM),src/plugins/sensor/Sensor_INA219.cpp:88 (SPGM),src/plugins/sensor/Sensor_INA219.cpp:94 (SPGM),src/plugins/sensor/Sensor_INA219.cpp:100 (SPGM),src/plugins/sensor/Sensor_LM75A.cpp:54 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:149 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:154 (SPGM)",
         "type": "static",
-        "use_counter": 19
+        "use_counter": 20
     },
     "webui_json_items": {
         "default": "items",
@@ -3241,10 +3247,10 @@
         "use_counter": 1
     },
     "webui_json_row": {
-        "default": "row",
-        "locations": "src/WebUIComponent.cpp:38 (DEFINE),src/WebUIComponent.cpp:62 (SPGM),src/WebUIComponent.cpp:161 (SPGM)",
+        "auto": "webui json row",
+        "locations": "src/WebUIComponent.cpp:38 (DEFINE),src/WebUIComponent.cpp:62 (SPGM),src/WebUIComponent.cpp:161 (SPGM),src/plugins/clock/clock_webui.cpp:222 (SPGM)",
         "type": "static",
-        "use_counter": 2
+        "use_counter": 3
     },
     "webui_json_screen": {
         "default": "screen",
@@ -3266,9 +3272,9 @@
     },
     "webui_json_state": {
         "auto": "webui json state",
-        "locations": "include/WebUIComponent.h:110 (SPGM),src/WebUIComponent.cpp:42 (DEFINE),src/plugins/clock/clock.cpp:225 (SPGM),src/plugins/clock/clock_webui.cpp:21 (SPGM),src/plugins/clock/clock_webui.cpp:24 (SPGM),src/plugins/clock/clock_webui.cpp:33 (SPGM),src/plugins/clock/clock_webui.cpp:38 (SPGM),src/plugins/clock/clock_webui.cpp:57 (SPGM),src/plugins/clock/clock_webui.cpp:64 (SPGM),src/plugins/clock/clock_webui.cpp:141 (SPGM),src/plugins/sensor/Sensor_DS3231.cpp:72 (SPGM),src/plugins/sensor/Sensor_DS3231.cpp:78 (SPGM),src/plugins/sensor/Sensor_INA219.cpp:84 (SPGM),src/plugins/sensor/Sensor_INA219.cpp:90 (SPGM),src/plugins/sensor/Sensor_INA219.cpp:96 (SPGM),src/plugins/sensor/Sensor_INA219.cpp:101 (SPGM),src/plugins/sensor/Sensor_LM75A.cpp:55 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:150 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:155 (SPGM)",
+        "locations": "include/WebUIComponent.h:110 (SPGM),src/WebUIComponent.cpp:42 (DEFINE),src/plugins/clock/clock.cpp:224 (SPGM),src/plugins/clock/clock_webui.cpp:21 (SPGM),src/plugins/clock/clock_webui.cpp:24 (SPGM),src/plugins/clock/clock_webui.cpp:33 (SPGM),src/plugins/clock/clock_webui.cpp:38 (SPGM),src/plugins/clock/clock_webui.cpp:50 (SPGM),src/plugins/clock/clock_webui.cpp:57 (SPGM),src/plugins/clock/clock_webui.cpp:64 (SPGM),src/plugins/clock/clock_webui.cpp:141 (SPGM),src/plugins/sensor/Sensor_DS3231.cpp:72 (SPGM),src/plugins/sensor/Sensor_DS3231.cpp:78 (SPGM),src/plugins/sensor/Sensor_INA219.cpp:84 (SPGM),src/plugins/sensor/Sensor_INA219.cpp:90 (SPGM),src/plugins/sensor/Sensor_INA219.cpp:96 (SPGM),src/plugins/sensor/Sensor_INA219.cpp:101 (SPGM),src/plugins/sensor/Sensor_LM75A.cpp:55 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:150 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:155 (SPGM)",
         "type": "static",
-        "use_counter": 18
+        "use_counter": 19
     },
     "webui_json_switch": {
         "default": "switch",
@@ -3294,14 +3300,14 @@
     },
     "webui_json_type": {
         "auto": "webui json type",
-        "locations": "src/WebUIComponent.cpp:47 (DEFINE),src/WebUIComponent.cpp:62 (SPGM),src/WebUIComponent.cpp:104 (SPGM),src/WebUIComponent.cpp:113 (SPGM),src/WebUIComponent.cpp:124 (SPGM),src/WebUIComponent.cpp:136 (SPGM),src/WebUIComponent.cpp:151 (SPGM),src/WebUIComponent.cpp:179 (SPGM),src/WebUIComponent.cpp:186 (SPGM),src/WebUIComponent.cpp:196 (SPGM),src/WebUIComponent.cpp:218 (SPGM),src/WebUISocket.cpp:148 (SPGM),src/plugins/clock/clock.cpp:220 (SPGM),src/plugins/clock/clock_webui.cpp:137 (SPGM),src/plugins/clock/clock_webui.cpp:237 (SPGM),src/plugins/sensor/sensor.cpp:153 (SPGM)",
+        "locations": "src/WebUIComponent.cpp:47 (DEFINE),src/WebUIComponent.cpp:62 (SPGM),src/WebUIComponent.cpp:104 (SPGM),src/WebUIComponent.cpp:113 (SPGM),src/WebUIComponent.cpp:124 (SPGM),src/WebUIComponent.cpp:136 (SPGM),src/WebUIComponent.cpp:151 (SPGM),src/WebUIComponent.cpp:179 (SPGM),src/WebUIComponent.cpp:186 (SPGM),src/WebUIComponent.cpp:196 (SPGM),src/WebUIComponent.cpp:218 (SPGM),src/WebUISocket.cpp:148 (SPGM),src/plugins/clock/clock.cpp:219 (SPGM),src/plugins/clock/clock_webui.cpp:137 (SPGM),src/plugins/clock/clock_webui.cpp:237 (SPGM),src/plugins/sensor/sensor.cpp:153 (SPGM)",
         "type": "static",
         "use_counter": 15
     },
     "webui_json_ue": {
         "auto": "webui json ue",
-        "locations": "src/WebUIComponent.cpp:49 (DEFINE),src/WebUISocket.cpp:148 (SPGM),src/plugins/clock/clock.cpp:220 (SPGM),src/plugins/clock/clock_webui.cpp:137 (SPGM),src/plugins/clock/clock_webui.cpp:237 (SPGM),src/plugins/sensor/sensor.cpp:153 (SPGM)",
-        "type": "static",
+        "locations": "src/WebUISocket.cpp:148 (SPGM),src/plugins/clock/clock.cpp:219 (SPGM),src/plugins/clock/clock_webui.cpp:137 (SPGM),src/plugins/clock/clock_webui.cpp:237 (SPGM),src/plugins/sensor/sensor.cpp:153 (SPGM)",
+        "type": "source",
         "use_counter": 5
     },
     "webui_json_ui": {
@@ -3318,9 +3324,9 @@
     },
     "webui_json_value": {
         "auto": "webui json value",
-        "locations": "include/WebUIComponent.h:106 (SPGM),src/WebUIComponent.cpp:51 (DEFINE),src/plugins/clock/clock.cpp:224 (SPGM),src/plugins/clock/clock_webui.cpp:22 (SPGM),src/plugins/clock/clock_webui.cpp:24 (SPGM),src/plugins/clock/clock_webui.cpp:34 (SPGM),src/plugins/clock/clock_webui.cpp:39 (SPGM),src/plugins/clock/clock_webui.cpp:44 (SPGM),src/plugins/clock/clock_webui.cpp:47 (SPGM),src/plugins/clock/clock_webui.cpp:57 (SPGM),src/plugins/clock/clock_webui.cpp:64 (SPGM),src/plugins/clock/clock_webui.cpp:142 (SPGM),src/plugins/sensor/Sensor_DS3231.cpp:73 (SPGM),src/plugins/sensor/Sensor_DS3231.cpp:79 (SPGM),src/plugins/sensor/Sensor_INA219.cpp:85 (SPGM),src/plugins/sensor/Sensor_INA219.cpp:91 (SPGM),src/plugins/sensor/Sensor_INA219.cpp:97 (SPGM),src/plugins/sensor/Sensor_INA219.cpp:102 (SPGM),src/plugins/sensor/Sensor_LM75A.cpp:56 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:151 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:156 (SPGM)",
+        "locations": "include/WebUIComponent.h:106 (SPGM),src/WebUIComponent.cpp:51 (DEFINE),src/plugins/clock/clock.cpp:223 (SPGM),src/plugins/clock/clock_webui.cpp:22 (SPGM),src/plugins/clock/clock_webui.cpp:24 (SPGM),src/plugins/clock/clock_webui.cpp:34 (SPGM),src/plugins/clock/clock_webui.cpp:39 (SPGM),src/plugins/clock/clock_webui.cpp:44 (SPGM),src/plugins/clock/clock_webui.cpp:47 (SPGM),src/plugins/clock/clock_webui.cpp:50 (SPGM),src/plugins/clock/clock_webui.cpp:57 (SPGM),src/plugins/clock/clock_webui.cpp:64 (SPGM),src/plugins/clock/clock_webui.cpp:142 (SPGM),src/plugins/sensor/Sensor_DS3231.cpp:73 (SPGM),src/plugins/sensor/Sensor_DS3231.cpp:79 (SPGM),src/plugins/sensor/Sensor_INA219.cpp:85 (SPGM),src/plugins/sensor/Sensor_INA219.cpp:91 (SPGM),src/plugins/sensor/Sensor_INA219.cpp:97 (SPGM),src/plugins/sensor/Sensor_INA219.cpp:102 (SPGM),src/plugins/sensor/Sensor_LM75A.cpp:56 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:151 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:156 (SPGM)",
         "type": "static",
-        "use_counter": 20
+        "use_counter": 21
     },
     "webui_json_vcc": {
         "default": "vcc",
@@ -3346,7 +3352,7 @@
     },
     "wifi": {
         "default": "wifi",
-        "locations": "src/kfc_fw_config.cpp:1689 (SPGM),src/kfc_fw_config_forms.cpp:45 (SPGM)",
+        "locations": "src/kfc_fw_config.cpp:1689 (SPGM),src/kfc_fw_config_forms.cpp:65 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
@@ -3358,13 +3364,13 @@
     },
     "wifi_mode": {
         "default": "wifi_mode",
-        "locations": "src/kfc_fw_config_forms.cpp:79 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:99 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
     "wifi_settings": {
         "default": "wifi_settings",
-        "locations": "src/kfc_fw_config_forms.cpp:75 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:95 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
@@ -3374,7 +3380,7 @@
     },
     "yes": {
         "default": "yes",
-        "locations": "src/at_mode.cpp:1371 (SPGM),src/kfc_fw_config.cpp:1603 (SPGM),src/web_server.cpp:981 (SPGM)",
+        "locations": "src/at_mode.cpp:1420 (SPGM),src/kfc_fw_config.cpp:1603 (SPGM),src/web_server.cpp:988 (SPGM)",
         "type": "source",
         "use_counter": 3
     }

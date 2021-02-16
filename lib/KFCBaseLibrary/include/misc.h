@@ -652,6 +652,8 @@ constexpr const SafeStringWrapper __safeCString(nullptr_t ptr) {
     return SafeStringWrapper();
 }
 
+uint8_t numberOfSetBits(uint32_t i);
+uint8_t numberOfSetBits(uint16_t i);
 
 constexpr size_t kNumBitsRequired(int value, int n = 0) {
 	return value ? kNumBitsRequired(value >> 1, n + 1) : n;

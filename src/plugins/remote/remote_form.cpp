@@ -9,6 +9,12 @@
 #include "remote_form.h"
 #include "remote.h"
 
+#if DEBUG_IOT_REMOTE_CONTROL
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
 using KFCConfigurationClasses::MainConfig;
 using KFCConfigurationClasses::Plugins;
 
@@ -19,6 +25,13 @@ static FormUI::Container::List getActions()
 
 void RemoteControlPlugin::createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
 {
+    if (type == FormCallbackType::SAVE) {
+        auto client = MQTTClient::getClient();
+        if (client) {
+            client->publishAutoDiscovery(true);
+        }
+        return;
+    }
     if (!isCreateFormCallbackType(type)) {
         return;
     }
@@ -57,6 +70,9 @@ void RemoteControlPlugin::createConfigureForm(FormCallbackType type, const Strin
         mainGroup.end();
         auto &udpGroup = form.addCardGroup(F("udp"), F("UDP Packets"), true);
 
+        form.addObjectGetterSetter(F("udpe"), cfg, cfg.get_bits_udp_enable, cfg.set_bits_udp_enable);
+        form.addFormUI(F("UDP Support"), FormUI::BoolItems());
+
         form.addStringGetterSetter(F("udph"), Plugins::RemoteControl::getUdpHost, Plugins::RemoteControl::setUdpHost);
         form.addFormUI(F("Host"));
         form.addValidator(FormUI::Validator::Hostname(FormUI::AllowedType::HOST_OR_IP_OR_EMPTY));
@@ -66,6 +82,13 @@ void RemoteControlPlugin::createConfigureForm(FormCallbackType type, const Strin
         form.addValidator(FormUI::Validator::NetworkPort(true));
 
         udpGroup.end();
+
+        auto &mqttGroup = form.addCardGroup(F("mqtt"), F("MQTT"), true);
+
+        form.addObjectGetterSetter(F("mqtte"), cfg, cfg.get_bits_mqtt_enable, cfg.set_bits_mqtt_enable);
+        form.addFormUI(F("MQTT Device Triggers"), FormUI::BoolItems());
+
+        mqttGroup.end();
 
     }
     else if (String_equals(formName, PSTR("events"))) {
@@ -209,76 +232,81 @@ void RemoteControlPlugin::createConfigureForm(FormCallbackType type, const Strin
         comboGroup->end();
 
     }
-    else if (String_equals(formName, PSTR("buttons"))) {
+    else if (String_startsWith(formName, PSTR("buttons"))) {
+
+        auto start = formName.c_str() + 7;
+        if (*start == '-') {
+            start++;
+        }
+        uint8_t i = atoi(start) - 1;
+        if (i >= _buttonPins.size()) {
+            i = 0;
+        }
 
         ui.setTitle(F("Remote Control Buttons"));
         ui.setContainerId(F("remotectrl_buttons"));
 
         auto actions = getActions();
 
-        PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, IOT_REMOTE_CONTROL_BUTTON_COUNT, grp, dn, up, pe, sc, db, lp, hd, re, udn, uup, upe, usc, udb, ulp, uhd, ure);
+        PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, 1, grp, ulp, mlp, dn, uup, mup, up, upe, mpe, pe, usc, msc, sc, udb, mdb, db, lpu, mlpu, lp, uhd, mhd, hd, ure, mre, re);
 
-        for(uint8_t i = 0; i < _buttonPins.size(); i++) {
+        #define CUSTOM_CHECKBOX_BUTTONS_SUFFIX(name) \
+            FormUI::CheckboxButtonSuffix(udp##name, FSPGM(Enable_UDP)), \
+            FormUI::CheckboxButtonSuffix(mqtt##name, FSPGM(Enable_MQTT))
 
-            auto &group = form.addCardGroup(F_VAR(grp, i), PrintString(F("Button %u Action"), i + 1),
-                cfg.actions[i].hasAction()
-            );
+        #define CUSTOM_CHECKBOX_SUFFIX_HIDDEN_FIELDS(var_udp, var_mqtt, var_suffix, var_name, conditional) \
+            auto &udp##var_name = form.addObjectGetterSetter(var_udp, cfg.actions[i], cfg.actions[0].get_bits_udp_##var_suffix, cfg.actions[0].set_bits_udp_##var_suffix); \
+            form.addFormUI(FormUI::Type::HIDDEN, conditional); \
+            auto &mqtt##var_name = form.addObjectGetterSetter(var_mqtt, cfg.actions[i], cfg.actions[0].get_bits_mqtt_##var_suffix, cfg.actions[0].set_bits_mqtt_##var_suffix); \
+            form.addFormUI(FormUI::Type::HIDDEN, conditional);
+
+
+        // for(uint8_t i = 0; i < _buttonPins.size(); i++)
+        {
+
+            auto &group = form.addCardGroup(F_VAR(grp, i), PrintString(F("Button %u Action"), i + 1), true);
+            //     cfg.actions[i].hasAction()
+            // );
 
             auto downEnabled = FormUI::Conditional<FormUI::DisabledAttribute>(!cfg.events[0].enabled, FormUI::DisabledAttribute());
-            auto &udpDown = form.addObjectGetterSetter(F_VAR(udn, i), cfg.actions[i], cfg.actions[0].get_bits_udp_down, cfg.actions[0].set_bits_udp_down);
-            form.addFormUI(FormUI::Type::HIDDEN, downEnabled);
-
+            CUSTOM_CHECKBOX_SUFFIX_HIDDEN_FIELDS(F_VAR(ulp, i), F_VAR(mlp, i), down, Down, downEnabled);
             form.addObjectGetterSetter(F_VAR(dn, i), cfg.actions[i], cfg.actions[0].get_bits_down, cfg.actions[0].set_bits_down);
-            form.addFormUI(F("Down Event"), actions, FormUI::CheckboxButtonSuffix(udpDown, F("Enable UDP")), downEnabled);
+            form.addFormUI(F("Down Event"), actions, CUSTOM_CHECKBOX_BUTTONS_SUFFIX(Down), downEnabled);
 
             auto upEnabled = FormUI::Conditional<FormUI::DisabledAttribute>(!cfg.events[1].enabled, FormUI::DisabledAttribute());
-            auto &udpUp = form.addObjectGetterSetter(F_VAR(uup, i), cfg.actions[i], cfg.actions[0].get_bits_udp_up, cfg.actions[0].set_bits_udp_up);
-            form.addFormUI(FormUI::Type::HIDDEN, upEnabled);
-
+            CUSTOM_CHECKBOX_SUFFIX_HIDDEN_FIELDS(F_VAR(uup, i), F_VAR(mup, i), up, Up, upEnabled);
             form.addObjectGetterSetter(F_VAR(up, i), cfg.actions[i], cfg.actions[0].get_bits_up, cfg.actions[0].set_bits_up);
-            form.addFormUI(F("Up Event"), actions, FormUI::CheckboxButtonSuffix(udpUp, F("Enable UDP")), upEnabled);
+            form.addFormUI(F("Up Event"), actions, CUSTOM_CHECKBOX_BUTTONS_SUFFIX(Up), upEnabled);
 
             auto pressEnabled = FormUI::Conditional<FormUI::DisabledAttribute>(!cfg.events[2].enabled, FormUI::DisabledAttribute());
-            auto &udpPress = form.addObjectGetterSetter(F_VAR(upe, i), cfg.actions[i], cfg.actions[0].get_bits_udp_press, cfg.actions[0].set_bits_udp_press);
-            form.addFormUI(FormUI::Type::HIDDEN, pressEnabled);
-
+            CUSTOM_CHECKBOX_SUFFIX_HIDDEN_FIELDS(F_VAR(upe, i), F_VAR(mpe, i), press, Press, pressEnabled);
             form.addObjectGetterSetter(F_VAR(pe, i), cfg.actions[i], cfg.actions[0].get_bits_press, cfg.actions[0].set_bits_press);
-            form.addFormUI(F("Press Event"), actions, FormUI::CheckboxButtonSuffix(udpPress, F("Enable UDP")), pressEnabled);
+            form.addFormUI(F("Press Event"), actions, CUSTOM_CHECKBOX_BUTTONS_SUFFIX(Press), pressEnabled);
 
             auto singleClickEnabled = FormUI::Conditional<FormUI::DisabledAttribute>(!cfg.events[3].enabled, FormUI::DisabledAttribute());
-            auto &udpSingleClick = form.addObjectGetterSetter(F_VAR(usc, i), cfg.actions[i], cfg.actions[0].get_bits_udp_single_click, cfg.actions[0].set_bits_udp_single_click);
-            form.addFormUI(FormUI::Type::HIDDEN, singleClickEnabled);
-
+            CUSTOM_CHECKBOX_SUFFIX_HIDDEN_FIELDS(F_VAR(usc, i), F_VAR(msc, i), single_click, SingleClick, singleClickEnabled);
             form.addObjectGetterSetter(F_VAR(sc, i), cfg.actions[i], cfg.actions[0].get_bits_single_click, cfg.actions[0].set_bits_single_click);
-            form.addFormUI(F("Single-Click Event"), actions, FormUI::CheckboxButtonSuffix(udpSingleClick, F("Enable UDP")), singleClickEnabled);
+            form.addFormUI(F("Single-Click Event"), actions, CUSTOM_CHECKBOX_BUTTONS_SUFFIX(SingleClick), singleClickEnabled);
 
             auto doubleClickEnabled = FormUI::Conditional<FormUI::DisabledAttribute>(!cfg.events[4].enabled, FormUI::DisabledAttribute());
-            auto &udpDoubleClick = form.addObjectGetterSetter(F_VAR(udb, i), cfg.actions[i], cfg.actions[0].get_bits_udp_double_click, cfg.actions[0].set_bits_udp_double_click);
-            form.addFormUI(FormUI::Type::HIDDEN, doubleClickEnabled);
-
+            CUSTOM_CHECKBOX_SUFFIX_HIDDEN_FIELDS(F_VAR(udb, i), F_VAR(mdb, i), double_click, DoubleClick, doubleClickEnabled);
             form.addObjectGetterSetter(F_VAR(db, i), cfg.actions[i], cfg.actions[0].get_bits_double_click, cfg.actions[0].set_bits_double_click);
-            form.addFormUI(F("Double-Click Event"), actions, FormUI::CheckboxButtonSuffix(udpDoubleClick, F("Enable UDP")), doubleClickEnabled);
+            form.addFormUI(F("Double-Click Event"), actions, CUSTOM_CHECKBOX_BUTTONS_SUFFIX(DoubleClick), doubleClickEnabled);
 
             auto longPressEnabled = FormUI::Conditional<FormUI::DisabledAttribute>(!cfg.events[5].enabled, FormUI::DisabledAttribute());
-            auto &udpLongPress = form.addObjectGetterSetter(F_VAR(ulp, i), cfg.actions[i], cfg.actions[0].get_bits_udp_long_press, cfg.actions[0].set_bits_udp_long_press);
-            form.addFormUI(FormUI::Type::HIDDEN, longPressEnabled);
-
+            CUSTOM_CHECKBOX_SUFFIX_HIDDEN_FIELDS(F_VAR(lpu, i), F_VAR(mlpu, i), long_press, LongPress, longPressEnabled);
             form.addObjectGetterSetter(F_VAR(lp, i), cfg.actions[i], cfg.actions[0].get_bits_long_press, cfg.actions[0].set_bits_long_press);
-            form.addFormUI(F("Long Press Event"), actions, FormUI::CheckboxButtonSuffix(udpLongPress, F("Enable UDP")), longPressEnabled);
+            form.addFormUI(F("Long Press Event"), actions, CUSTOM_CHECKBOX_BUTTONS_SUFFIX(LongPress), longPressEnabled);
 
             auto holdEnabled = FormUI::Conditional<FormUI::DisabledAttribute>(!cfg.events[6].enabled, FormUI::DisabledAttribute());
-            auto &udpHold = form.addObjectGetterSetter(F_VAR(uhd, i), cfg.actions[i], cfg.actions[0].get_bits_udp_hold, cfg.actions[0].set_bits_udp_hold);
-            form.addFormUI(FormUI::Type::HIDDEN, holdEnabled);
-
+            CUSTOM_CHECKBOX_SUFFIX_HIDDEN_FIELDS(F_VAR(uhd, i), F_VAR(mhd, i), hold, Hold, holdEnabled);
             form.addObjectGetterSetter(F_VAR(hd, i), cfg.actions[i], cfg.actions[0].get_bits_hold, cfg.actions[0].set_bits_hold);
-            form.addFormUI(F("Hold Event"), actions, FormUI::CheckboxButtonSuffix(udpHold, F("Enable UDP")), holdEnabled);
+            form.addFormUI(F("Hold Event"), actions, CUSTOM_CHECKBOX_BUTTONS_SUFFIX(Hold), holdEnabled);
 
             auto holdReleaseEnabled = FormUI::Conditional<FormUI::DisabledAttribute>(!cfg.events[7].enabled, FormUI::DisabledAttribute());
-            auto &udpHoldRelease = form.addObjectGetterSetter(F_VAR(ure, i), cfg.actions[i], cfg.actions[0].get_bits_udp_hold_released, cfg.actions[0].set_bits_udp_hold_released);
-            form.addFormUI(FormUI::Type::HIDDEN, holdReleaseEnabled);
-
+            CUSTOM_CHECKBOX_SUFFIX_HIDDEN_FIELDS(F_VAR(ure, i), F_VAR(mre, i), hold_released, HoldRelease, holdReleaseEnabled);
             form.addObjectGetterSetter(F_VAR(re, i), cfg.actions[i], cfg.actions[0].get_bits_hold_released, cfg.actions[0].set_bits_hold_released);
-            form.addFormUI(F("Hold-Release Event"), actions, FormUI::CheckboxButtonSuffix(udpHoldRelease, F("Enable UDP")), holdReleaseEnabled);
+            form.addFormUI(F("Hold-Release Event"), actions, CUSTOM_CHECKBOX_BUTTONS_SUFFIX(HoldRelease), holdReleaseEnabled);
 
             group.end();
 

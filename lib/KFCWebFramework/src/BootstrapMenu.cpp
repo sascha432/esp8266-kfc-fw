@@ -33,32 +33,6 @@
 // 	{ nullptr, nullptr, 0, 0  }
 // };
 
-BootstrapMenu::BootstrapMenu() : _unqiueId(0) {
-}
-
-BootstrapMenu::~BootstrapMenu() {
-}
-
-BootstrapMenu::menu_item_parent_id_t BootstrapMenu::addMenu(StaticString &&label, menu_item_id_t afterId)
-{
-	return _add(std::move(Item(*this, std::move(label), std::move(StaticString()))), afterId);
-}
-
-BootstrapMenu::menu_item_id_t BootstrapMenu::addSubMenu(StaticString &&label, StaticString &&uri, menu_item_parent_id_t parentMenuId, menu_item_id_t afterId)
-{
-	return _add(std::move(Item(*this, std::move(label), std::move(uri), parentMenuId)), afterId);
-}
-
-BootstrapMenu::ItemsVectorIterator BootstrapMenu::findMenuByLabel(const String &label, menu_item_parent_id_t menuId)
-{
-	return std::find(_items.begin(), _items.end(), FindHelper(label, menuId, FindHelper::LabelType()));
-}
-
-BootstrapMenu::ItemsVectorIterator BootstrapMenu::findMenuByURI(const String &uri, menu_item_parent_id_t menuId)
-{
-	return std::find(_items.begin(), _items.end(), FindHelper(uri, menuId, FindHelper::UriType()));
-}
-
 //BootstrapMenu::menu_item_id_t BootstrapMenu::getItemCount(menu_item_id_t menuId) const
 //{
 //	uint8_t count = 0;
@@ -71,32 +45,50 @@ BootstrapMenu::ItemsVectorIterator BootstrapMenu::findMenuByURI(const String &ur
 //	return count;
 //}
 
-void BootstrapMenu::html(PrintInterface &output, ItemsVectorIterator top)
+void BootstrapMenu::html(PrintInterface &output, ItemsVectorIterator top, uint8_t level)
 {
 	if (isValid(top)) {
 		auto menuId = top->getId();
-		__LDBG_printf("menu_id=%d", menuId);
-		if (top->hashURI()) {
+		if (top->hasURI() && level == 0) {
+		    __LDBG_printf("menubar menu_id=%d", menuId);
 			// menu bar only
 			output.printf_P(PSTR("<li class=\"nav-item\">" "<a class=\"nav-link\" href=\"/%s\">%s</a></li>" BOOTSTRAP_MENU_CRLF), top->getUri().c_str(), top->getLabel().c_str());
 		}
 		else if (isValid(std::find(_items.begin(), _items.end(), FindHelper(top->getId(), FindHelper::ParentMenuIdType())))) {
-			// drop down menu
-            output.print(F("<li class=\"nav-item dropdown\">" BOOTSTRAP_MENU_CRLF "<a class=\"nav-link dropdown-toggle\" href=\"#\" id=\"navbarDropdown"));
-			output.printf_P(PSTR(
-				"%u\" role=\"button\" data-toggle=\"dropdown\" aria-haspopup=\"true\" aria-expanded=\"false\">%s</a>" BOOTSTRAP_MENU_CRLF
-				"<div class=\"dropdown-menu\" aria-labelledby=\"navbarDropdownConfig\">" BOOTSTRAP_MENU_CRLF
-			), menuId, top->getLabel().c_str());
+		    __LDBG_printf("menu level=%u menu_id=%d", level, menuId);
+            if (level == 0) {
+                // drop down menu
+                output.printf_P(PSTR("<li class=\"nav-item dropdown\">" BOOTSTRAP_MENU_CRLF "<a class=\"nav-link dropdown-toggle\" href=\"#\" id=\"navbarDropdown"
+                    "%u\" role=\"button\" data-toggle=\"dropdown\" aria-haspopup=\"true\" aria-expanded=\"false\">%s</a>" BOOTSTRAP_MENU_CRLF
+                    "<ul class=\"dropdown-menu\">" BOOTSTRAP_MENU_CRLF
+                ), menuId, top->getLabel().c_str());
+            }
+            else {
+                // sub menu
+                output.printf_P(PSTR("<li class=\"dropdown-submenu\">" BOOTSTRAP_MENU_CRLF
+                    "<a class=\"dropdown-item dropdown-toggle\" href=\"/#\">%s</a>" BOOTSTRAP_MENU_CRLF
+                    "<ul class=\"dropdown-menu\">" BOOTSTRAP_MENU_CRLF
+                    ), top->getLabel().c_str());
 
+            }
 			for (auto dropdown = top + 1; dropdown != _items.end(); ++dropdown) {
-				if (dropdown->getParentMenuId() == menuId) {
-					output.printf_P(PSTR("<a class=\"dropdown-item\" href=\"/%s\">%s</a>" BOOTSTRAP_MENU_CRLF), dropdown->getUri().c_str(), dropdown->getLabel().c_str());
-				}
+                if (dropdown->getParentMenuId() == menuId) {
+                    if (!dropdown->hasLabel()) {
+                        output.printf_P(PSTR("<li><div class=\"dropdown-divider\"></div>"));
+                    }
+                    else if (dropdown->hasURI()) {
+                        output.printf_P(PSTR("<li><a class=\"dropdown-item\" href=\"/%s\">%s</a></li>" BOOTSTRAP_MENU_CRLF), dropdown->getUri().c_str(), dropdown->getLabel().c_str());
+                    }
+                    else {
+                        html(output, dropdown, level + 1);
+                    }
+                }
 			}
-			output.print(F("</div></li>" BOOTSTRAP_MENU_CRLF));
+			output.print(F("</ul></li>" BOOTSTRAP_MENU_CRLF));
 		}
 		else {
 			// empty drop down, do not display
+            __LDBG_printf("empty=%d", menuId);
 		}
 	}
 }

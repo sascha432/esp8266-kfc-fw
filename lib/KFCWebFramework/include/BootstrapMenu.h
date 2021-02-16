@@ -36,6 +36,32 @@ public:
     typedef uint8_t menu_item_id_t;
     typedef uint8_t menu_item_parent_id_t;
 
+    class MenuItem {
+    public:
+
+        MenuItem(uint8_t id, BootstrapMenu &menu) : _id(id), _menu(menu) {}
+
+        operator menu_item_id_t() const {
+            return _id;
+        }
+
+        MenuItem addSubMenu(StaticString &&label, menu_item_id_t afterId = menu_item_id_t()) {
+            return MenuItem(_menu.addSubMenu(std::move(label), _id, afterId), _menu);
+        }
+
+        MenuItem addMenuItem(StaticString &&label, StaticString &&uri, menu_item_id_t afterId = menu_item_id_t()) {
+            return MenuItem(_menu.addMenuItem(std::move(label), std::move(uri), _id, afterId), _menu);
+        }
+
+        MenuItem addDivider(menu_item_id_t afterId = menu_item_id_t()) {
+            return MenuItem(_menu.addDivider(_id, afterId), _menu);
+        }
+
+    private:
+        menu_item_id_t _id;
+        BootstrapMenu &_menu;
+    };
+
     static const uint8_t InvalidMenuId = ~0;
 
     class Item;
@@ -85,7 +111,7 @@ public:
             return _label != false;
         }
 
-        bool hashURI() const {
+        bool hasURI() const {
             return _uri;
         }
 
@@ -130,8 +156,8 @@ public:
     typedef std::vector<Item>::iterator ItemsVectorIterator;
 
 public:
-    BootstrapMenu();
-    ~BootstrapMenu();
+    BootstrapMenu() : _unqiueId(0) {}
+    ~BootstrapMenu() {}
 
     inline bool isValid(ItemsVectorIterator iterator) const {
         return iterator != _items.end();
@@ -148,11 +174,32 @@ public:
         _items.erase(iterator);
     }
 
-    menu_item_parent_id_t addMenu(StaticString &&label, menu_item_id_t afterId = menu_item_id_t());
-    menu_item_id_t addSubMenu(StaticString &&label, StaticString &&uri, menu_item_parent_id_t parentMenuId, menu_item_id_t afterId = menu_item_id_t());
+    MenuItem getMenuItem(menu_item_id_t id) {
+        return MenuItem(id, *this);
+    }
 
-    ItemsVectorIterator findMenuByLabel(const String &label, menu_item_parent_id_t menuId = InvalidMenuId);
-    ItemsVectorIterator findMenuByURI(const String &uri, menu_item_parent_id_t menuId = InvalidMenuId);
+    MenuItem addMenu(StaticString &&label, menu_item_id_t afterId = menu_item_id_t()) {
+	    return MenuItem(_add(std::move(Item(*this, std::move(label), std::move(StaticString()))), afterId), *this);
+    }
+
+    MenuItem addSubMenu(StaticString &&label, menu_item_parent_id_t parentMenuId, menu_item_id_t afterId = menu_item_id_t()) {
+	    return MenuItem(addMenuItem(std::move(label), std::move(StaticString()), parentMenuId, afterId), *this);
+    }
+
+    MenuItem addMenuItem(StaticString &&label, StaticString &&uri, menu_item_parent_id_t parentMenuId, menu_item_id_t afterId = menu_item_id_t()) {
+	    return MenuItem(_add(std::move(Item(*this, std::move(label), std::move(uri), parentMenuId)), afterId), *this);
+    }
+
+    MenuItem addDivider(menu_item_parent_id_t parentMenuId, menu_item_id_t afterId = menu_item_id_t()) {
+	    return MenuItem(_add(std::move(Item(*this, std::move(StaticString()), std::move(StaticString()), parentMenuId)), afterId), *this);
+    }
+
+    ItemsVectorIterator findMenuByLabel(const String &label, menu_item_parent_id_t menuId = InvalidMenuId) {
+	    return std::find(_items.begin(), _items.end(), FindHelper(label, menuId, FindHelper::LabelType()));
+    }
+    ItemsVectorIterator findMenuByURI(const String &uri, menu_item_parent_id_t menuId = InvalidMenuId) {
+    	return std::find(_items.begin(), _items.end(), FindHelper(uri, menuId, FindHelper::UriType()));
+    }
 
     // get number of menu items
     //menu_item_id_t getItemCount(menu_item_id_t menuId) const;
@@ -162,7 +209,7 @@ public:
     }
 
     // create menu item
-    void html(PrintInterface &output, ItemsVectorIterator top);
+    void html(PrintInterface &output, ItemsVectorIterator top, uint8_t level = 0);
 
     // create main menu
     void html(PrintInterface &output);

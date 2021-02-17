@@ -46,6 +46,13 @@ namespace PinMonitor {
         // events fired while the button is pressed
         // after EventType::DOWN before EventType::UP
         HELD                            = _BV(4),
+        HOLD                            = _BV(4),
+        HOLD_REPEAT                     = _BV(4),
+
+        // the first HOLD_REPEAT is HOLD_START
+        HOLD_START                      = _BV(8),
+        // if HOLD_START was sent, HOLD_RELEASE will be sent before UP/RELASED
+        HOLD_RELEASE                    = _BV(9),
 
         // after EventType::UP before EventType::DOWN
         REPEATED_CLICK                  = _BV(5),
@@ -56,13 +63,13 @@ namespace PinMonitor {
 
 
         // all events without SINGLE_CLICK/DOUBLE_CLICK
-        ALL                             = UP|DOWN|REPEATED_CLICK|PRESSED|LONG_PRESSED|HELD,
+        ALL                             = UP|DOWN|REPEATED_CLICK|PRESSED|LONG_PRESSED|HOLD|HOLD_START|HOLD_RELEASE,
 
         PRESSED_LONG_HELD_SINGLE_DOUBLE_CLICK = PRESSED|LONG_PRESSED|HELD|SINGLE_CLICK|DOUBLE_CLICK,
 
 
         ANY                             = 0xffff,
-        MAX_BITS                        = 8
+        MAX_BITS                        = 10
     };
 
     class PushButton;
@@ -132,8 +139,8 @@ namespace PinMonitor {
         using PtrType = std::shared_ptr<SingleClickGroup>;
         using PtrType::reset;
 
-        SingleClickGroupPtr() : std::shared_ptr<SingleClickGroup>() {}
-        SingleClickGroupPtr(PtrType ptr) : std::shared_ptr<SingleClickGroup>(ptr) {}
+        SingleClickGroupPtr() : PtrType() {}
+        SingleClickGroupPtr(PtrType ptr) : PtrType(ptr) {}
         SingleClickGroupPtr(uint16_t singleClickTimeout) : PtrType(new SingleClickGroup(singleClickTimeout)) {}
         SingleClickGroupPtr(PushButton &button);
 
@@ -215,13 +222,20 @@ namespace PinMonitor {
             _startTimer(0),
             _duration(0),
             _repeatCount(0),
-            _startTimerRunning(false)
+            _startTimerRunning(false),
+            _holdRepeat(false)
 
         {
 #if DEBUG_PIN_MONITOR_BUTTON_NAME
             setName(String((uint32_t)arg, 16) + ':' + String((uint32_t)this, 16));
 #endif
         }
+
+#if PIN_MONITOR_BUTTON_GROUPS
+        void setSingleClickGroup(SingleClickGroupPtr singleClickGroup) {
+            _singleClickGroup = singleClickGroup;
+        }
+#endif
 
     public:
         virtual void event(EventType eventType, uint32_t now);
@@ -270,8 +284,9 @@ namespace PinMonitor {
 
         uint32_t _startTimer;
         uint32_t _duration;
-        uint16_t _repeatCount: 15;
+        uint16_t _repeatCount: 14;
         uint16_t _startTimerRunning: 1;
+        uint16_t _holdRepeat: 1;
     };
 
     inline bool PushButton::_fireEvent(EventType eventType)

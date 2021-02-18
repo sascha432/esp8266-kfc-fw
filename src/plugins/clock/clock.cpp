@@ -115,7 +115,7 @@ Clock::LoopOptionsBase::LoopOptionsBase(ClockPlugin &plugin) :
 
 ClockPlugin::ClockPlugin() :
     PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(ClockPlugin)),
-    MQTTComponent(ComponentTypeEnum_t::LIGHT),
+    MQTTComponent(ComponentType::LIGHT),
     _schedulePublishState(false),
     _isFading(false),
     _isEnabled(false),
@@ -136,16 +136,16 @@ ClockPlugin::ClockPlugin() :
 void ClockPlugin::createMenu()
 {
 #if IOT_LED_MATRIX
-    #define MENU_PREFIX "LED Matrix"
     #define MENU_URI_PREFIX "led-matrix/"
 #else
-    #define MENU_NAME "Clock"
     #define MENU_URI_PREFIX "clock/"
 #endif
 
-    bootstrapMenu.addSubMenu(F(MENU_PREFIX " Settings"), F(MENU_URI_PREFIX "settings.html"), navMenu.config);
-    bootstrapMenu.addSubMenu(F(MENU_PREFIX " Animations"), F(MENU_URI_PREFIX "animations.html"), navMenu.config);
-    bootstrapMenu.addSubMenu(F(MENU_PREFIX " Protection"), F(MENU_URI_PREFIX "protection.html"), navMenu.config);
+    auto configMenu = bootstrapMenu.getMenuItem(navMenu.config);
+    auto subMenu = configMenu.addSubMenu(getFriendlyName());
+    subMenu.addMenuItem(F("Settings"), F(MENU_URI_PREFIX "settings.html"));
+    subMenu.addMenuItem(F("Animations"), F(MENU_URI_PREFIX "animations.html"));
+    subMenu.addMenuItem(F("Protection"), F(MENU_URI_PREFIX "protection.html"));
 }
 
 #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
@@ -285,6 +285,7 @@ void ClockPlugin::_setupTimer()
             auto state = _digitalRead(IOT_CLOCK_HAVE_MOTION_SENSOR_PIN);
             if (state != _motionState) {
                 MQTTClient::safePublish(MQTTClient::formatTopic(F("motion")), true, String(_motionState ? 0 : 1));
+                // _digitalWrite(_PCF8574Range::pin2DigitalPin(5), !_motionState);
 
                 _motionState = state;
                 if (_motionState) {
@@ -292,7 +293,6 @@ void ClockPlugin::_setupTimer()
                     _motionLastUpdate = millis();
                 }
             }
-            _digitalWrite(_PCF8574Range::pin2DigitalPin(5), !state);
         )
 
         IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(
@@ -330,7 +330,8 @@ void ClockPlugin::_setupTimer()
                 SensorPlugin::for_each<Sensor_LM75A>(nullptr, [](MQTTSensor &sensor, Sensor_LM75A &) {
                     return (sensor.getType() == MQTTSensor::SensorType::LM75A);
                 }, [this, &tempSensor](Sensor_LM75A &sensor) {
-                    tempSensor = max(tempSensor, sensor.readSensor());
+
+                    tempSensor = max(tempSensor, sensor.readSensor() - (sensor.getAddress() == IOT_CLOCK_VOLTAGE_REGULATOR_LM75A_ADDRESS ? _config.protection.regulator_margin : 0));
                 });
             }
 

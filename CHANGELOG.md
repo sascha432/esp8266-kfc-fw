@@ -50,6 +50,7 @@
 - Option to save and restore brightness/other settings after reboot (Clock/LED Matrix plugin)
 - Limit maximum power of the LEDs
 - Support for rotary encoders with pushbutton and capacitive touch sensor
+- MQTT device triggers for remote control
 
 ## Version 0.0.3
 

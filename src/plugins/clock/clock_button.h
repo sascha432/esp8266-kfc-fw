@@ -64,9 +64,6 @@ namespace Clock {
         PushButton(pin, &clock, std::move(ButtonConfig(button))),
         _button(button)
     {
-#if DEBUG_PIN_MONITOR_BUTTON_NAME
-        setName(PrintString(F("BUTTON:%u arg=%p btn=%p"), button, getArg(), this));
-#endif
     }
 
     inline uint8_t Button::getButtonNum() const

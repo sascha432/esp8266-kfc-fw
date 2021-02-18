@@ -247,6 +247,11 @@
 #    define IF_IOT_CLOCK_PIXEL_SYNC_ANIMATION(...)
 #endif
 
+// address of the LM75A sensor for the voltage regulator
+#ifndef IOT_CLOCK_VOLTAGE_REGULATOR_LM75A_ADDRESS
+#    define IOT_CLOCK_VOLTAGE_REGULATOR_LM75A_ADDRESS -1
+#endif
+
 #if defined(ESP8266)
 #    ifndef FASTLED_ESP8266_RAW_PIN_ORDER
 #        define FASTLED_ESP8266_RAW_PIN_ORDER 1

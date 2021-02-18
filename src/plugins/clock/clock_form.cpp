@@ -238,6 +238,10 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         form.addFormUI(F("Over Temperature Protection"), FormUI::Suffix(FSPGM(degree_Celsius_utf8)));
         form.addValidator(FormUI::Validator::Range(kMinimumTemperatureThreshold, 105));
 
+        form.addPointerTriviallyCopyable(F("tpv"), &cfg.protection.regulator_margin);
+        form.addFormUI(F("Extra Margin For Voltage Regulator"), FormUI::Suffix(FSPGM(degree_Celsius_utf8)));
+        form.addValidator(FormUI::Validator::Range(-50, 50));
+
         protectionGroup.end();
 
         auto &powerGroup = form.addCardGroup(F("pow"), F("Power"), true);

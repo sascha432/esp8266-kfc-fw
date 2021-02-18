@@ -55,7 +55,7 @@
 // returns the result of the last average reading
 // if there is no result, ADCResult.isValid() returns false
 // the result also stores the number of samples, min./max./avg values and the time of the last update
-// ADCResult getAutoReadValue() const;
+// ADCResult getAutoReadValue();
 
 
 class ADCManager {
@@ -86,16 +86,22 @@ public:
     public:
     public:
         ADCResult();
-        ADCResult(uint16_t value);
+        ADCResult(uint16_t value, uint32_t lastUpdate);
 
         void update(uint16_t value, uint32_t timestampMicros);
-        uint16_t getValue() const;
-        float getFloatValue() const;
+        uint16_t getValue() const; // returns rounded mean value as int
+        float getMeanValue() const;
+
+        float getMedianValue() const;
         uint16_t getMinValue() const;
         uint16_t getMaxValue() const;
+        uint32_t getValuesSum() const;
         uint32_t getLastUpdateMicros() const;
+        uint16_t numSamples() const;
         bool isValid() const;
         bool isInvalid() const;
+
+        void dump(Print &print);
 
     private:
         friend ResultQueue;
@@ -129,19 +135,30 @@ public:
 private:
     class ResultQueue {
     public:
-        ResultQueue(uint8_t numSamples, uint32_t intervalMicros, Callback callback);
+        ResultQueue(uint8_t numSamples, uint32_t intervalMicros, Callback callback, uint16_t id = 0);
         bool needsUpdate(uint32_t time) const {
             return (get_time_diff(_result._lastUpdate, time) >= _interval);
         }
         bool finished() const {
-            return (_result._samples == _samples);
+            return (_result._samples >= _samples);
+        }
+        uint16_t getId() const {
+            return _id;
         }
         ADCResult &getResult() {
             return _result;
         }
+        ADCResult getResult() const {
+            return _result;
+        }
         void invokeCallback();
 
+        bool operator==(uint16_t id) const {
+            return _id == id;
+        }
+
     private:
+        uint16_t _id;
         uint8_t _samples;
         uint32_t _interval;
         ADCResult _result;
@@ -189,15 +206,18 @@ public:
     uint16_t readValue();
     // get value and wait for micros if current value older than maxAge
     uint16_t readValueWait(uint16_t maxWaitMicros, uint16_t maxAgeMicros = 0, uint32_t *lastUpdate = nullptr);
-    uint16_t readValueWait(uint16_t maxWaitMicros, uint16_t maxAgeMicros, uint32_t &lastUpdate) {
+    inline uint16_t readValueWait(uint16_t maxWaitMicros, uint16_t maxAgeMicros, uint32_t &lastUpdate) {
         return readValueWait(maxWaitMicros, maxAgeMicros, &lastUpdate);
     }
     // read value and set lastUpdate
     uint16_t readValue(uint32_t &lastUpdate);
 
+    static constexpr uint16_t kQueueIdNone = 0;
+    static constexpr uint16_t kQueueIdAutoReadValue = 0xfff7;
+
     // request average
     // details are at the top of the file
-    bool requestAverage(uint8_t numSamples, uint32_t readIntervalMicros, Callback callback);
+    bool requestAverage(uint8_t numSamples, uint32_t readIntervalMicros, Callback callback, uint16_t queueId = kQueueIdNone);
 
     // return lower 32bit part
     uint32_t getLastUpdate() const;
@@ -215,7 +235,11 @@ public:
     // details are at the top of the file
     AutoReadTimerResultType addAutoReadTimer(Event::milliseconds interval, Event::milliseconds sampleInterval = Event::milliseconds(50), uint8_t count = 10);
     void removeAutoReadTimer();
-    ADCResult getAutoReadValue() const;
+
+    // allowIncomplete
+    // false: if the required number of samples has not been reached and no previous result is available, the result will be invalid
+    // true: returns at least one sample reading before the first read cycle is complete
+    ADCResult getAutoReadValue(bool allowIncomplete = true);
 
 private:
     uint16_t __readAndNormalizeADCValue();
@@ -294,9 +318,27 @@ inline void ADCManager::removeAutoReadTimer() {
     }
 }
 
-inline ADCManager::ADCResult ADCManager::getAutoReadValue() const {
+inline ADCManager::ADCResult ADCManager::getAutoReadValue(bool allowIncomplete) {
     if (_readTimer) {
-        return _readTimer->getResult();
+        auto result = _readTimer->getResult(); // stores the last complete result
+        if (result.isValid()) {
+            return result;
+        }
+    }
+    if (allowIncomplete) {
+        auto iterator = std::find(_queue.begin(), _queue.end(), kQueueIdAutoReadValue); // search queue for result
+        if (iterator != _queue.end()) {
+            auto result = iterator->getResult();
+            if (result.isValid()) {
+                return result;
+            }
+            else {
+                // no valid result in queue, read single value
+                uint32_t lastUpdate = 0;
+                auto value = readValueWait(50, ~0, lastUpdate);
+                return ADCResult(value, lastUpdate);
+            }
+        }
     }
     return ADCResult();
 }
@@ -312,14 +354,24 @@ inline void ADCManager::ADCResult::update(uint16_t value, uint32_t timestampMicr
     _lastUpdate = timestampMicros;
 }
 
-inline uint16_t ADCManager::ADCResult::getValue() const
+inline void ADCManager::ADCResult::dump(Print &print)
 {
-    return _valueSum / _samples;
+    print.printf_P(PSTR("ADC result\nmin: %u\nmax: %u\nsamples: %u\nsum: %u\navg: %f\nmedian: %f\n"), _min, _max, _samples, _valueSum, getMeanValue(), getMedianValue());
 }
 
-inline float ADCManager::ADCResult::getFloatValue() const
+inline uint16_t ADCManager::ADCResult::getValue() const
+{
+    return (_valueSum + (_samples - 1)) / _samples;
+}
+
+inline float ADCManager::ADCResult::getMeanValue() const
 {
     return _valueSum / (float)_samples;
+}
+
+inline float ADCManager::ADCResult::getMedianValue() const
+{
+    return (_min + _max) / 2;
 }
 
 inline uint16_t ADCManager::ADCResult::getMinValue() const
@@ -332,9 +384,19 @@ inline uint16_t ADCManager::ADCResult::getMaxValue() const
     return _max;
 }
 
+inline uint32_t ADCManager::ADCResult::getValuesSum() const
+{
+    return _valueSum;
+}
+
 inline uint32_t ADCManager::ADCResult::getLastUpdateMicros() const
 {
     return _lastUpdate;
+}
+
+inline uint16_t ADCManager::ADCResult::numSamples() const
+{
+    return _samples;
 }
 
 inline bool ADCManager::ADCResult::isValid() const
@@ -357,7 +419,7 @@ inline void ADCManager::ReadTimer::timerCallback(ADCManager &adc, Event::Callbac
         if (adc && adc->_readTimer == this) {
             _result = result;
         }
-    });
+    }, kQueueIdAutoReadValue);
 }
 
 inline ADCManager *ADCManager::ReadTimer::getADCInstance()

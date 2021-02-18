@@ -655,6 +655,8 @@ constexpr const SafeStringWrapper __safeCString(nullptr_t ptr) {
 uint8_t numberOfSetBits(uint32_t i);
 uint8_t numberOfSetBits(uint16_t i);
 
+// #include "BitsToStr.h"
+
 constexpr size_t kNumBitsRequired(int value, int n = 0) {
 	return value ? kNumBitsRequired(value >> 1, n + 1) : n;
 }
@@ -710,6 +712,15 @@ inline uint32_t createIPv4Address(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
 
 #define CREATE_BITFIELD_TYPE(name, size, type, prefix) \
     type name: size; \
+    static constexpr size_t kBitCountFor_##name = size; \
+    static void set_##prefix##_##name(Type &obj, type value) { \
+        obj.name = value; \
+    } \
+    static type get_##prefix##_##name(const Type &obj) { \
+        return obj.name; \
+    }
+
+#define CREATE_GETTER_SETTER_TYPE(name, size, type, prefix) \
     static constexpr size_t kBitCountFor_##name = size; \
     static void set_##prefix##_##name(Type &obj, type value) { \
         obj.name = value; \

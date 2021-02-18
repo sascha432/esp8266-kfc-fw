@@ -1170,3 +1170,39 @@ uint8_t numberOfSetBits(uint16_t i)
      i = (i & 0x3333) + ((i >> 2) & 0x3333);
      return (((i + (i >> 4)) & 0x0F0F) * 0x0101) >> 8;
 }
+
+// class _bitsToStr_String : public String {
+// public:
+//     using String::String;
+
+//     char *reserve(size_t len, char *&begin, char *&end) {
+//         if (String::reserve(len)) {
+//             setLen(len);
+//             begin = wbuffer();
+//             end = begin + len;
+//             *end = 0;
+//             return begin;
+//         }
+//         return nullptr;
+//     }
+// };
+
+// String _bitsToStr(const uint8_t *data, uint8_t bits, bool reverse)
+// {
+//     _bitsToStr_String str;
+//     char *begin, *end;
+//     if (str.reserve(bits, begin, end)) {
+//         if (!reverse) {
+//             begin = end - 1;
+//         }
+//         for(uint8_t i = 0; i < bits; i++) {
+//             uint8_t bit = i & 0x07;
+//             *begin = (*data & _BV(bit)) ? '1' : '0';
+//             reverse ? ++begin : --begin;
+//             if (bit == 7) {
+//                 data++;
+//             }
+//         }
+//     }
+//     return str;
+// }

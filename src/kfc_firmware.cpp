@@ -20,6 +20,9 @@
 #if PRINTF_WRAPPER_ENABLED
 #include <printf_wrapper.h>
 #endif
+#if IOT_REMOTE_CONTROL
+#include "../src/plugins/remote/remote.h"
+#endif
 #if HAVE_GDBSTUB
 #error uncomment the line below
 // #include <GDBStub.h>
@@ -83,6 +86,9 @@ void setup()
 #if KFC_DEBUG_USE_SERIAL1
     Serial1.begin(KFC_DEBUG_USE_SERIAL1);
     static_assert(KFC_DEBUG_USE_SERIAL1 >= 300, "must be set to the baud rate");
+#endif
+#if IOT_REMOTE_CONTROL
+    RemoteControlPlugin::getInstance().readPinState();
 #endif
     serialHandler.begin();
     DEBUG_HELPER_INIT();

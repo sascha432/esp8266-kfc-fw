@@ -211,7 +211,7 @@ public:
     virtual void shutdown() override;
 
     virtual void createMenu() override {
-        bootstrapMenu.addSubMenu(FSPGM(Serial_Console), FSPGM(serial_console_html), navMenu.util);
+        bootstrapMenu.addMenuItem(FSPGM(Serial_Console), FSPGM(serial_console_html), navMenu.util);
     }
 
 #if AT_MODE_SUPPORTED

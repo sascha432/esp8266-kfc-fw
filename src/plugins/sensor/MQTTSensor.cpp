@@ -13,7 +13,7 @@
 #endif
 
 MQTTSensor::MQTTSensor() :
-    MQTTComponent(ComponentTypeEnum_t::SENSOR),
+    MQTTComponent(ComponentType::SENSOR),
     _updateRate(DEFAULT_UPDATE_RATE),
     _mqttUpdateRate(DEFAULT_MQTT_UPDATE_RATE),
     _nextUpdate(0),

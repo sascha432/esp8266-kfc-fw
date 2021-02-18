@@ -34,7 +34,7 @@ public:
     virtual void getStatus(Print &output) override;
 
     virtual void createMenu() override {
-        bootstrapMenu.addSubMenu(getFriendlyName(), F("pin-debugger.html"), navMenu.util);
+        bootstrapMenu.addMenuItem(getFriendlyName(), F("pin-debugger.html"), navMenu.util);
     }
 
     // virtual PGM_P getConfigureForm() const override {

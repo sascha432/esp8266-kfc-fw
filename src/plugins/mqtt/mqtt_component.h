@@ -36,7 +36,6 @@ class MQTTAutoDiscoveryQueue;
 class MQTTComponent {
 public:
     using MQTTAutoDiscoveryPtr = MQTTAutoDiscovery *;
-    using ComponentTypeEnum_t = MQTTAutoDiscovery::ComponentTypeEnum_t;
     using ComponentType = MQTTAutoDiscovery::ComponentType;
     using Ptr = MQTTComponent *;
     using Vector = std::vector<Ptr>;

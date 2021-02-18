@@ -15,8 +15,6 @@ namespace KFCConfigurationClasses {
     Plugins::Sensor::BatteryConfig_t::BatteryConfig_t() :
         calibration(IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_CALIBRATION),
         offset(0),
-        pins{IOT_SENSOR_BATTERY_CHARGE_DETECTION},
-        pinMode{(uint8_t)(IOT_SENSOR_BATTERY_CHARGE_DETECTION == -1 ? BatteryPinMode::NONE : BatteryPinMode::ACTIVE_HIGH)},
         precision(kDefaultValueFor_precision)
     {
     }

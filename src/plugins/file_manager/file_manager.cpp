@@ -468,7 +468,7 @@ public:
     }
 
     virtual void createMenu() override {
-        bootstrapMenu.addSubMenu(getFriendlyName(), FSPGM(file_manager_html_uri), navMenu.util);
+        bootstrapMenu.addMenuItem(getFriendlyName(), FSPGM(file_manager_html_uri), navMenu.util);
     }
 };
 

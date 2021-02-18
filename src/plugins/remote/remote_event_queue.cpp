@@ -5,6 +5,12 @@
 #include <Arduino_compat.h>
 #include "remote_event_queue.h"
 
+#if DEBUG_IOT_REMOTE_CONTROL
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
 namespace RemoteControl {
 
     namespace Queue {

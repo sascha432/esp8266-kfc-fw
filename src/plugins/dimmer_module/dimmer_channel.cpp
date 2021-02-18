@@ -13,7 +13,7 @@
 #endif
 
 DimmerChannel::DimmerChannel() :
-    MQTTComponent(ComponentTypeEnum_t::LIGHT),
+    MQTTComponent(ComponentType::LIGHT),
     _data(),
     _storedBrightness(0),
     _publishFlag(0)

@@ -68,6 +68,7 @@
 #endif
 
 
+class MQTTComponentProxy;
 class MQTTPersistantStorageComponent;
 class MQTTPlugin;
 class MQTTClient {
@@ -81,6 +82,49 @@ public:
     using ModeType = KFCConfigurationClasses::Plugins::MQTTClient::ModeType;
     using QosType = KFCConfigurationClasses::Plugins::MQTTClient::QosType;
     using ClientConfig = KFCConfigurationClasses::Plugins::MQTTClient;
+    using ResultCallback = std::function<void(ComponentPtr component, MQTTClient *client, bool result)>;
+    using ComponentProxyPtr = std::unique_ptr<MQTTComponentProxy>;
+
+    // class RemoveTopicsType {
+    // public:
+    //     RemoveTopicsType(ComponentPtr component, const String &wildcard, ResultCallback callback) :
+    //         _component(component),
+    //         _wildcard(wildcard),
+    //         _callback(callback)
+    //     {
+    //     }
+    //     ~RemoveTopicsType() {
+    //         if (_callback) {
+    //             invoke(false, nullptr);
+    //         }
+    //     }
+
+    //     RemoveTopicsType(RemoveTopicsType &&move) :
+    //         _component(std::exchange(move._component, nullptr)),
+    //         _wildcard(std::exchange(move._wildcard, String())),
+    //         _callback(std::exchange(move._callback, nullptr))
+    //     {}
+
+    //     RemoveTopicsType &operator=(RemoveTopicsType &&move) {
+    //         _component = std::exchange(move._component, nullptr);
+    //         _wildcard = std::exchange(move._wildcard, String());
+    //         _callback = std::exchange(move._callback, nullptr);
+    //         return *this;
+    //     }
+
+    //     void invoke(bool result, MQTTClient *client) {
+    //         if (_callback) {
+    //             _callback(_component, client, result);
+    //             _callback = nullptr;
+    //         }
+    //     }
+
+    //     ComponentPtr _component;
+    //     String _wildcard;
+    //     ResultCallback _callback;
+    // };
+
+    using RemoveTopicsVector = std::vector<ComponentProxyPtr>;
 
     using AutoReconnectType = uint16_t;
     using TopicVector = std::vector<MQTTTopic>;
@@ -219,11 +263,17 @@ public:
     void publish(const String &topic, bool retain, const String &payload, QosType qos = QosType::DEFAULT);
     void publishPersistantStorage(StorageFrequencyType type, const String &name, const String &data);
 
+    void removeTopicsRequest(ComponentPtr component, const String &wildcard, ResultCallback callback);
+    void removeTopicsEndRequest(ComponentPtr component);
+
 public:
     // force starts to send the auto discovery ignoring the delay between each run
     // returns false if running
     bool publishAutoDiscovery(bool force = false);
     static void publishAutoDiscoveryCallback(Event::CallbackTimerPtr timer);
+    bool isAutoDiscoveryRunning() const {
+        return _autoDiscoveryQueue.get() != nullptr;
+    }
 
 public:
     // return values
@@ -245,6 +295,7 @@ public:
     static bool safeUnregisterComponent(ComponentPtr component);
     static void safeReRegisterComponent(ComponentPtr component);
     static void safePersistantStorage(StorageFrequencyType type, const String &name, const String &data);
+    static bool safeIsAutoDiscoveryRunning();
 
 public:
     // returns 1 for:
@@ -311,8 +362,11 @@ private:
 
     const __FlashStringHelper *_reasonToString(AsyncMqttClientDisconnectReason reason) const;
 
+public:
     // match wild cards
     bool _isTopicMatch(const char *topic, const char *match) const;
+
+private:
     // check if the topic is in use by another component
     bool _topicInUse(ComponentPtr component, const String &topic);
 
@@ -339,6 +393,12 @@ private:
     static bool _isMessageSizeExceeded(size_t len, const char *topic);
     ConnectionState setConnState(ConnectionState newState);
 
+public:
+    std::unique_ptr<MQTTAutoDiscoveryQueue> &getAutoDiscoveryQueue() {
+        return _autoDiscoveryQueue;
+    }
+
+private:
     String _hostname;
     IPAddress _address;
     String _username;
@@ -357,6 +417,7 @@ private:
     std::unique_ptr<MQTTAutoDiscoveryQueue> _autoDiscoveryQueue;
     Event::Timer _autoDiscoveryRebroadcast;
     ConnectionState _connState;
+    std::unique_ptr<RemoveTopicsVector> _removeTopics;
 
 #if DEBUG_MQTT_CLIENT
 public:
@@ -462,6 +523,14 @@ inline void MQTTClient::safePersistantStorage(StorageFrequencyType type, const S
     if (_mqttClient) {
         _mqttClient->publishPersistantStorage(type, name, data);
     }
+}
+
+inline bool MQTTClient::safeIsAutoDiscoveryRunning()
+{
+    if (_mqttClient) {
+        _mqttClient->isAutoDiscoveryRunning();
+    }
+    return false;
 }
 
 inline MQTTClient::QosType MQTTClient::getDefaultQos(QosType qos)

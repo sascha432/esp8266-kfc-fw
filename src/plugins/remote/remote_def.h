@@ -8,7 +8,9 @@
 #include <EventScheduler.h>
 #include <PinMonitor.h>
 #include <stl_ext/fixed_circular_buffer.h>
-#include <kfc_fw_config_classes.h>
+#include <kfc_fw_config.h>
+
+// https://www.home-assistant.io/integrations/device_trigger.mqtt/
 
 #ifndef DEBUG_IOT_REMOTE_CONTROL
 #define DEBUG_IOT_REMOTE_CONTROL                                0

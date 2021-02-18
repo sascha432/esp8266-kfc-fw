@@ -13,15 +13,13 @@ class MQTTComponent;
 
 class MQTTAutoDiscovery {
 public:
-    typedef enum {
+    enum class ComponentType : uint8_t {
         SWITCH = 1,
         LIGHT,
         SENSOR,
         BINARY_SENSOR,
-        STORAGE,
-    } ComponentTypeEnum_t;
-
-    using ComponentType = ComponentTypeEnum_t;
+        DEVICE_AUTOMATION
+    };
 
     enum class FormatType : uint8_t {
         JSON,
@@ -31,7 +29,7 @@ public:
 
     // returns true to continue, false to stop (format TOPIC)
     bool create(MQTTComponent *component, const String &componentName, FormatType format);
-    bool create(ComponentTypeEnum_t componentType, const String &componentName, FormatType format);
+    bool create(ComponentType componentType, const String &componentName, FormatType format);
 
 public:
     inline void addParameter(const __FlashStringHelper *name, const char *value); // PROGMEM safe
@@ -114,6 +112,21 @@ public:
     }
 
     template<typename _T>
+    void addTopic(_T value) {
+        addParameter(FSPGM(mqtt_topic), value);
+    }
+
+    template<typename _T>
+    void addType(_T value) {
+        addParameter(FSPGM(mqtt_type), value);
+    }
+
+    template<typename _T>
+    void addubType(_T value) {
+        addParameter(FSPGM(mqtt_subtype), value);
+    }
+
+    template<typename _T>
     void addExpireAfter(_T value) {
         addParameter(FSPGM(mqtt_expire_after), value);
     }
@@ -145,6 +158,19 @@ public:
     template<typename _T>
     void addUnitOfMeasurement(_T value) {
         addParameter(FSPGM(mqtt_unit_of_measurement), value);
+    }
+
+    void addAutomationType() {
+        addParameter(FSPGM(mqtt_automation_type), F("trigger"));
+    }
+
+    void addSubType(const String &buttonName) {
+        addParameter(FSPGM(mqtt_subtype), buttonName);
+    }
+
+    void addPayloadAndType(const String &buttonName, const __FlashStringHelper *type) {
+        addParameter(FSPGM(mqtt_type), String(F("button_")) + String(type));
+        addParameter(FSPGM(mqtt_payload), buttonName + '_' + String(type));
     }
 
 public:

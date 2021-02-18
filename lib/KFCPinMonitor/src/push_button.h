@@ -203,9 +203,6 @@ namespace PinMonitor {
             _repeatCount(0),
             _startTimerRunning(false)
         {
-#if DEBUG_PIN_MONITOR_BUTTON_NAME
-            setName(F("invalid"));
-#endif
         }
 
         PushButton(uint8_t pin, const void *arg, const PushButtonConfig &config,
@@ -226,9 +223,6 @@ namespace PinMonitor {
             _holdRepeat(false)
 
         {
-#if DEBUG_PIN_MONITOR_BUTTON_NAME
-            setName(String((uint32_t)arg, 16) + ':' + String((uint32_t)this, 16));
-#endif
         }
 
 #if PIN_MONITOR_BUTTON_GROUPS
@@ -259,21 +253,6 @@ namespace PinMonitor {
         void _buttonReleased();
         bool _fireEvent(EventType eventType);
         void _reset();
-
-#if DEBUG_PIN_MONITOR_BUTTON_NAME
-    public:
-        void setName(const String &name) {
-            _name = String(F("name=<")) + name + '>';
-        }
-
-        const char *name() const {
-            return _name.c_str();
-        }
-
-    private:
-        String _name;
-#endif
-
 
     protected:
 #if PIN_MONITOR_BUTTON_GROUPS

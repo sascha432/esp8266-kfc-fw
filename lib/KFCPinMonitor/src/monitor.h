@@ -84,11 +84,18 @@ namespace PinMonitor {
         static const __FlashStringHelper *stateType2String(StateType state);
         static const __FlashStringHelper *stateType2Level(StateType state);
 
+        // values: 1 bit per pin, 0-17
+        // pins: 0 = pin not read, 1 = pin read @ time
+        // active low is set to trie
+        void feed(uint32_t time, uint32_t values, uint32_t pins, bool activeLow);
+
     private:
         Pin &_attach(Pin &pin, HardwarePinType type = HardwarePinType::_DEFAULT);
         void _detach(Iterator begin, Iterator end, bool clear);
+    public:
         void _attachLoop();
         void _detachLoop();
+    private:
         void _loop();
         void _event(uint8_t pin, StateType state, uint32_t now);
 

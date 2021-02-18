@@ -144,6 +144,9 @@ namespace PinMonitor {
 
         static void ICACHE_RAM_ATTR callback(void *arg);
 
+        // static void enableAll();
+        // static void disableAll();
+
         uint8_t _pin;
         uint8_t _count;
         HardwarePinType _type;

@@ -113,29 +113,31 @@ void Button::event(EventType eventType, uint32_t now)
         case EventType::LONG_PRESSED:
             base.queueEvent(eventType, _button, _getEventTime(), config.actions[_button].long_press);
             break;
-        case EventType::HELD:
+        case EventType::HOLD_REPEAT:
             base.queueEvent(eventType, _button, _repeatCount, _getEventTime(), config.actions[_button].hold);
             break;
-#if 1
+        case EventType::HOLD_RELEASE:
+            base.queueEvent(eventType, _button, _getEventTime(), config.actions[_button].hold);
+            break;
          case EventType::SINGLE_CLICK:
             base.queueEvent(eventType, _button, _getEventTime(), config.actions[_button].single_click);
             break;
         case EventType::DOUBLE_CLICK:
             base.queueEvent(eventType, _button, _getEventTime(), config.actions[_button].double_click);
             break;
-#endif
-#if 0
+#if 1
         case EventType::REPEATED_CLICK: {
                 switch(_repeatCount) {
                     case 1:
-                        base.queueEvent(eventType, _button, _repeatCount, _getEventTime(), config.actions[_button].single_click);
+                        base.queueEvent(EventType::SINGLE_CLICK, _button, _getEventTime(), config.actions[_button].single_click);
                         break;
                     case 2:
-                        base.queueEvent(eventType, _button, _repeatCount, _getEventTime(), config.actions[_button].double_click);
+                        base.queueEvent(EventType::DOUBLE_CLICK, _button, _getEventTime(), config.actions[_button].double_click);
                         break;
                     default:
-                        int8_t idx = config.actions[_button].getMultiClickIndex(_repeatCount);
-                        base.queueEvent(eventType, _button, _repeatCount, _getEventTime(), (idx != -1) ? config.actions[_button].multi_click[idx].action : 0);
+                        base.queueEvent(eventType, _button, _repeatCount, _getEventTime(), 0);
+                        // int8_t idx = config.actions[_button].getMultiClickIndex(_repeatCount);
+                        // base.queueEvent(eventType, _button, _repeatCount, _getEventTime(), (idx != -1) ? config.actions[_button].multi_click[idx].action : 0);
                         break;
                 }
             }
@@ -146,8 +148,7 @@ void Button::event(EventType eventType, uint32_t now)
     }
 
 #if 1
-    __LDBG_printf("%s event_type=%s (%02x) button#=%u now=%u pressed=%s",
-        name(),
+    __LDBG_printf("event_type=%s (%02x) button#=%u now=%u pressed=%s",
         eventTypeToString(eventType),
         eventType,
         _button,

@@ -16,7 +16,7 @@
 
 using KFCConfigurationClasses::Plugins;
 
-Driver_DimmerModule::Driver_DimmerModule() : MQTTComponent(ComponentTypeEnum_t::SENSOR)
+Driver_DimmerModule::Driver_DimmerModule() : MQTTComponent(ComponentType::SENSOR)
 {
 }
 

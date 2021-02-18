@@ -222,19 +222,27 @@ String MQTTClient::formatTopic(const __FlashStringHelper *format, ...)
 
 String MQTTClient::_filterString(const char *str, bool replaceSpace)
 {
-    String out;
-    out.reserve(strlen(str));
-    while(*str) {
-        if (*str == '#' || *str == '+' || *str == '/') {
+    String out = str;
+    for(size_t i = 0; i < out.length(); i++) {
+        auto ch = out.charAt(i);
+        if (ch == '#' || ch == '+' || ch == '/' || !isprint(ch)) {
+            out.remove(i--, 1);
         }
-        else if (replaceSpace && *str == ' ') {
-            out += '_';
+        else if (replaceSpace && ch == ' ') {
+            out.setCharAt(i, '_');
         }
-        else if (isprint(*str)) {
-            out += *str;
-        }
-        str++;
     }
+    // while(*str) {
+    //     if (*str == '#' || *str == '+' || *str == '/') {
+    //     }
+    //     else if (replaceSpace && *str == ' ') {
+    //         out += '_';
+    //     }
+    //     else if (isprint(*str)) {
+    //         out += *str;
+    //     }
+    //     str++;
+    // }
     return out;
 }
 
@@ -624,6 +632,121 @@ void MQTTClient::publish(const String &topic, bool retain, const String &payload
 {
     if (publishWithId(topic, retain, payload, qos) == 0) {
         _addQueue(QueueType::PUBLISH, nullptr, topic, qos, retain, payload);
+    }
+}
+
+class MQTTComponentProxy : public MQTTComponent {
+public:
+    MQTTComponentProxy(MQTTClient *client, MQTTComponent *component, const String &wildcard, MQTTClient::ResultCallback callback) :
+        MQTTComponent(MQTTComponent::ComponentType::DEVICE_AUTOMATION),
+        _client(client),
+        _component(component),
+        _wildcard(wildcard),
+        _callback(callback)
+    {
+    }
+    ~MQTTComponentProxy() {
+        if (_callback) {
+            _callback(_component, MQTTClient::getClient(), false);
+        }
+    }
+
+    MQTTComponent *get() const {
+        return _component;
+    }
+
+    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num) { return nullptr; }
+    virtual uint8_t getAutoDiscoveryCount() const { return 0; }
+
+    // this method will destroy the object, do not access this afterwards
+    void invokeEnd(MQTTClient *client, bool result) {
+        _timeout.remove();
+        if (_callback) {
+            _callback(_component, client, true);
+            _callback = nullptr;
+        }
+        client->remove(this);
+        client->removeTopicsEndRequest(_component);
+    }
+
+    virtual void onConnect(MQTTClient *client) {
+        begin();
+    }
+
+    virtual void onDisconnect(MQTTClient *client, AsyncMqttClientDisconnectReason reason) {
+        end();
+    }
+
+    virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len) {
+        __LDBG_printf("component=%p topic=%s payload=%s len=%u", _component, topic, payload, len);
+        if (len != 0) {
+            if (_testPayload.equals(payload)) {
+                _testPayload = String();
+                invokeEnd(client, true);
+                return;
+            }
+            __DBG_printf("remove topic=%s", topic);
+            _client->publish(topic, false, String(), MQTTClient::QosType::AT_MODE_ONCE);
+        }
+    }
+
+    void begin(uint16_t timeout_seconds = 30) {
+        __LDBG_printf("begin topic=%s", _wildcard.c_str());
+        _Timer(_timeout).add(Event::seconds(timeout_seconds), false, [this](Event::CallbackTimerPtr timer) {
+            __LDBG_printf("timeout=%s", _wildcard.c_str());
+            invokeEnd(_client, false);
+        });
+        _client->subscribe(this, _wildcard, MQTTClient::QosType::EXACTLY_ONCE);
+        auto tmp = String(_wildcard);
+        tmp.replace(F("+"), PrintString(F("test_%08x%06x"), micros(), this));
+
+        srand(micros());
+        char buf[32];
+        char *ptr = buf;
+        uint8_t count = sizeof(buf);
+        while(count--) {
+            *ptr++ = rand();
+            delayMicroseconds(rand() % 10 + 1);
+        }
+        _testPayload = String();
+        bin2hex_append(_testPayload, buf, sizeof(buf));
+
+        _client->publish(tmp, false, _testPayload, MQTTClient::QosType::AT_MODE_ONCE);
+
+    }
+    void end() {
+        __LDBG_printf("end topic=%s", _wildcard.c_str());
+        _client->unsubscribe(this, _wildcard);
+        _timeout.remove();
+    }
+
+
+    MQTTClient *_client;
+    MQTTComponent *_component;
+    String _wildcard;
+    String _testPayload;
+    MQTTClient::ResultCallback _callback;
+    Event::Timer _timeout;
+};
+
+void MQTTClient::removeTopicsRequest(ComponentPtr component, const String &wildcard, ResultCallback callback)
+{
+    if (!_removeTopics) {
+        _removeTopics.reset(new RemoveTopicsVector());
+    }
+    _removeTopics->emplace_back(new MQTTComponentProxy(this, component, wildcard, callback));
+    _removeTopics->back()->begin();
+}
+
+void MQTTClient::removeTopicsEndRequest(MQTTComponent *component)
+{
+    if (_removeTopics) {
+        _removeTopics->erase(std::remove_if(_removeTopics->begin(), _removeTopics->end(), [component, this](const ComponentProxyPtr &item) {
+            return (item.get() == component || item->get() == component);
+        }), _removeTopics->end());
+        if (_removeTopics->empty()) {
+            _removeTopics.reset();
+        }
     }
 }
 

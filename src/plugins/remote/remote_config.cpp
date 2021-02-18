@@ -7,6 +7,8 @@
 
 namespace KFCConfigurationClasses {
 
+    using EventNameType = Plugins::RemoteControl::EventNameType;
+
     Plugins::RemoteControl::Config_t::Config_t() :
         auto_sleep_time(kDefaultValueFor_auto_sleep_time),
         deep_sleep_time(kDefaultValueFor_deep_sleep_time),
@@ -14,9 +16,11 @@ namespace KFCConfigurationClasses {
         hold_time(kDefaultValueFor_hold_time),
         hold_repeat_time(kDefaultValueFor_hold_repeat_time),
         udp_port(kDefaultValueFor_udp_port),
+        udp_enable(true),
+        mqtt_enable(true),
         actions{},
         combo{},
-        events({{false}, {false}, {true}, {true}, {false}, {false}, {false}, {true}, {false}})
+        enabled()
     {}
 
 

@@ -76,15 +76,17 @@ bool MQTTAutoDiscovery::_create(ComponentType componentType, const String &name,
         _discovery += MQTTComponent::getNameByType(componentType);
         _discovery += F(":\n  - ");
     }
-    addParameter(FSPGM(name), name);
-    addParameter(F("platform"), FSPGM(mqtt));
+    if (componentType != ComponentType::DEVICE_AUTOMATION) {
+        addParameter(FSPGM(name), name);
+        addParameter(F("platform"), FSPGM(mqtt));
     if (format == FormatType::JSON) {
-        uniqueId = _getUnqiueId(name);
-        addParameter(FSPGM(mqtt_unique_id), uniqueId);
+            uniqueId = _getUnqiueId(name);
+            addParameter(FSPGM(mqtt_unique_id), uniqueId);
+        }
+        addParameter(FSPGM(mqtt_availability_topic), MQTTClient::formatTopic(FSPGM(mqtt_status_topic)));
+        addParameter(FSPGM(mqtt_payload_available), 1);
+        addParameter(FSPGM(mqtt_payload_not_available), 0);
     }
-    addParameter(FSPGM(mqtt_availability_topic), MQTTClient::formatTopic(FSPGM(mqtt_status_topic)));
-    addParameter(FSPGM(mqtt_payload_available), 1);
-    addParameter(FSPGM(mqtt_payload_not_available), 0);
     if (_format == FormatType::JSON) {
         PrintString model;
         WebTemplate::printModel(model);

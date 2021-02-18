@@ -24,7 +24,7 @@
 #endif
 
 Driver_4ChDimmer::Driver_4ChDimmer() :
-    MQTTComponent(ComponentTypeEnum_t::LIGHT),
+    MQTTComponent(ComponentType::LIGHT),
     Dimmer_Base(),
     channel_ww1(IOT_ATOMIC_SUN_CHANNEL_WW1),
     channel_ww2(IOT_ATOMIC_SUN_CHANNEL_WW2),

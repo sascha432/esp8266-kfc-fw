@@ -216,10 +216,16 @@ namespace RemoteControl {
         using QosType = MQTTClient::QosType;
 
     public:
-        ActionMQTT(ActionIdType id = 0) : Action(id, ActionProtocolType::MQTT), _qos(QosType::EXACTLY_ONCE) {}
+        ActionMQTT(ActionIdType id , const String &payload) : Action(id, ActionProtocolType::MQTT), _payload(payload), _qos(QosType::EXACTLY_ONCE) {}
+
+        virtual void execute(Callback callback) override;
+
+        const String &getPayload() const {
+            return _payload;
+        }
 
     private:
-        String _topic;
+        String _payload;
         QosType _qos;
     };
 

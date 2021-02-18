@@ -23,7 +23,7 @@ int8_t operator *(const BlindsControl::ChannelType type) {
 }
 
 BlindsControl::BlindsControl() :
-    MQTTComponent(ComponentTypeEnum_t::SWITCH), _queue(*this),
+    MQTTComponent(ComponentType::SWITCH), _queue(*this),
     _activeChannel(ChannelType::NONE),
     _adcIntegralMultiplier(2500 / kAdcIntegralMultiplierDivider),
     _adc(ADCManager::getInstance())

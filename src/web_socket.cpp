@@ -51,7 +51,7 @@ WsClientAsyncWebSocket::WsClientAsyncWebSocket(const String &url, WsClientAsyncW
     _ptr(ptr),
     _authenticatedClients(0)
 {
-    __DBG_printf("this=%p url=%s ptr=%p *ptr=%p _ptr=%p *_ptr=%p", this, url.c_str(), ptr, ptr ? *ptr : nullptr, _ptr, _ptr ? *_ptr : nullptr);
+    __LDBG_printf("this=%p url=%s ptr=%p *ptr=%p _ptr=%p *_ptr=%p", this, url.c_str(), ptr, ptr ? *ptr : nullptr, _ptr, _ptr ? *_ptr : nullptr);
     WsClient::_webSockets.push_back(this);
     if (_ptr) {
         if (*_ptr) {

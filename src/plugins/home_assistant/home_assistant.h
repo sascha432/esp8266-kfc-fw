@@ -29,7 +29,7 @@ public:
     typedef std::function<void(HassJsonReader::GetState *state, KFCRestAPI::HttpRequest &request, StatusCallback_t statusCallback)> GetStateCallback_t;
     typedef std::function<void(HassJsonReader::CallService *service, KFCRestAPI::HttpRequest &request, StatusCallback_t statusCallback)> ServiceCallback_t;
 
-    HassPlugin() : MQTTComponent(MQTTComponent::ComponentTypeEnum_t::BINARY_SENSOR) {
+    HassPlugin() : MQTTComponent(MQTTComponent::ComponentType::BINARY_SENSOR) {
         REGISTER_PLUGIN(this, "HassPlugin");
     }
 

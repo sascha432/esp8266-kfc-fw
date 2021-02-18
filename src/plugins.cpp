@@ -162,34 +162,34 @@ static void create_menu()
     bootstrapMenu.getItem(navMenu.home)->setUri(FSPGM(index_html));
 
     // since "home" has an URI, this menu is hidden
-    bootstrapMenu.addSubMenu(FSPGM(Home), FSPGM(index_html), navMenu.home);
-    bootstrapMenu.addSubMenu(FSPGM(Status), FSPGM(status_html), navMenu.home);
-    bootstrapMenu.addSubMenu(F("Manage WiFi"), FSPGM(wifi_html), navMenu.home);
-    bootstrapMenu.addSubMenu(F("Configure Network"), FSPGM(network_html), navMenu.home);
-    bootstrapMenu.addSubMenu(FSPGM(Change_Password), FSPGM(password_html), navMenu.home);
-    bootstrapMenu.addSubMenu(FSPGM(Reboot_Device), FSPGM(reboot_html), navMenu.home);
-    bootstrapMenu.addSubMenu(F("About"), F("about.html"), navMenu.home);
+    bootstrapMenu.addMenuItem(FSPGM(Home), FSPGM(index_html), navMenu.home);
+    bootstrapMenu.addMenuItem(FSPGM(Status), FSPGM(status_html), navMenu.home);
+    bootstrapMenu.addMenuItem(F("Manage WiFi"), FSPGM(wifi_html), navMenu.home);
+    bootstrapMenu.addMenuItem(F("Configure Network"), FSPGM(network_html), navMenu.home);
+    bootstrapMenu.addMenuItem(FSPGM(Change_Password), FSPGM(password_html), navMenu.home);
+    bootstrapMenu.addMenuItem(FSPGM(Reboot_Device), FSPGM(reboot_html), navMenu.home);
+    bootstrapMenu.addMenuItem(F("About"), F("about.html"), navMenu.home);
 
     navMenu.status = bootstrapMenu.addMenu(FSPGM(Status));
     bootstrapMenu.getItem(navMenu.status)->setUri(FSPGM(status_html));
 
     navMenu.config = bootstrapMenu.addMenu(FSPGM(Configuration));
-    bootstrapMenu.addSubMenu(FSPGM(WiFi), FSPGM(wifi_html), navMenu.config);
-    bootstrapMenu.addSubMenu(FSPGM(Network), FSPGM(network_html), navMenu.config);
-    bootstrapMenu.addSubMenu(FSPGM(Device), FSPGM(device_html), navMenu.config);
-    bootstrapMenu.addSubMenu(F("Remote Access"), FSPGM(remote_html), navMenu.config);
+    bootstrapMenu.addMenuItem(FSPGM(WiFi), FSPGM(wifi_html), navMenu.config);
+    bootstrapMenu.addMenuItem(FSPGM(Network), FSPGM(network_html), navMenu.config);
+    bootstrapMenu.addMenuItem(FSPGM(Device), FSPGM(device_html), navMenu.config);
+    bootstrapMenu.addMenuItem(F("Remote Access"), FSPGM(remote_html), navMenu.config);
 
     navMenu.device = bootstrapMenu.addMenu(FSPGM(Device));
 
     navMenu.admin = bootstrapMenu.addMenu(FSPGM(Admin));
-    bootstrapMenu.addSubMenu(FSPGM(Change_Password), FSPGM(password_html), navMenu.admin);
-    bootstrapMenu.addSubMenu(FSPGM(Reboot_Device), FSPGM(reboot_html), navMenu.admin);
-    bootstrapMenu.addSubMenu(F("Restore Factory Defaults"), FSPGM(factory_html), navMenu.admin);
-    bootstrapMenu.addSubMenu(F("Export Settings"), F("export-settings"), navMenu.admin);
-    bootstrapMenu.addSubMenu(F("Update Firmware"), FSPGM(update_fw_html), navMenu.admin);
+    bootstrapMenu.addMenuItem(FSPGM(Change_Password), FSPGM(password_html), navMenu.admin);
+    bootstrapMenu.addMenuItem(FSPGM(Reboot_Device), FSPGM(reboot_html), navMenu.admin);
+    bootstrapMenu.addMenuItem(F("Restore Factory Defaults"), FSPGM(factory_html), navMenu.admin);
+    bootstrapMenu.addMenuItem(F("Export Settings"), F("export-settings"), navMenu.admin);
+    bootstrapMenu.addMenuItem(F("Update Firmware"), FSPGM(update_fw_html), navMenu.admin);
 
     navMenu.util = bootstrapMenu.addMenu(F("Utilities"));
-    bootstrapMenu.addSubMenu(F("Speed Test"), F("speed-test.html"), navMenu.util);
+    bootstrapMenu.addMenuItem(F("Speed Test"), F("speed-test.html"), navMenu.util);
 }
 
 static bool enableWebUIMenu = false;
@@ -243,9 +243,9 @@ void setup_plugins(PluginComponent::SetupModeType mode)
         if (runSetup) {
             BOOTLOG_PRINTF("setup plugin=%s", plugin->getName_P());
             plugin->setSetupTime();
-#if ENABLE_DEEP_SLEEP
-            ::printf(PSTR("mode=%u plugin=%s\n"), mode, plugin->getName_P());
-#endif
+// #if ENABLE_DEEP_SLEEP
+//             ::printf(PSTR("mode=%u plugin=%s\n"), mode, plugin->getName_P());
+// #endif
             plugin->setup(mode);
             BOOTLOG_PRINTF("checking dependencies");
             PluginComponent::checkDependencies();
@@ -271,7 +271,7 @@ void setup_plugins(PluginComponent::SetupModeType mode)
                         for(const auto &str: list) {
                             if (plugin->canHandleForm(str)) {
                                 __LDBG_printf("menu=auto form=%s can_handle=true", str.c_str());
-                                bootstrapMenu.addSubMenu(plugin->getFriendlyName(), str + FSPGM(_html), navMenu.config);
+                                bootstrapMenu.addMenuItem(plugin->getFriendlyName(), str + FSPGM(_html), navMenu.config);
                             }
                         }
                     } break;
@@ -287,8 +287,8 @@ void setup_plugins(PluginComponent::SetupModeType mode)
         auto url = F("webui.html");
         if (!bootstrapMenu.isValid(bootstrapMenu.findMenuByURI(url, navMenu.device))) {
             auto webUi = FSPGM(WebUI);
-            bootstrapMenu.addSubMenu(webUi, url, navMenu.device);
-            bootstrapMenu.addSubMenu(webUi, url, navMenu.home, bootstrapMenu.getId(bootstrapMenu.findMenuByURI(FSPGM(status_html), navMenu.home)));
+            bootstrapMenu.addMenuItem(webUi, url, navMenu.device);
+            bootstrapMenu.addMenuItem(webUi, url, navMenu.home, bootstrapMenu.getId(bootstrapMenu.findMenuByURI(FSPGM(status_html), navMenu.home)));
         }
     }
 

@@ -66,7 +66,7 @@
 #endif
 
 #ifndef IOT_SENSOR_NAMES_BATTERY
-#define IOT_SENSOR_NAMES_BATTERY                "Battery"
+#define IOT_SENSOR_NAMES_BATTERY                "Battery Voltage"
 #endif
 
 #ifndef IOT_SENSOR_NAMES_DS3231

@@ -202,7 +202,6 @@ bool PluginComponent::atModeHandler(AtModeArgs &args)
 
 bool PluginComponent::dependsOn(NameType name, DependencyCallback callback)
 {
-    __DBG_printf("name=%s callback=%s", name, lambda_target(callback));
     auto plugin = findPlugin(name, false);
     if (plugin) {
         if (plugin->_setupTime) {
@@ -220,11 +219,7 @@ bool PluginComponent::dependsOn(NameType name, DependencyCallback callback)
 
 void PluginComponent::checkDependencies()
 {
-    __LDBG_printf("checkDependencies=%p", _dependencies);
-    __LDBG_printf("size=%u", _dependencies->size());
-
     _dependencies->erase(std::remove_if(_dependencies->begin(), _dependencies->end(), [](const Dependency &dep) {
-        __DBG_printf("findPlugin %s", __S(dep._name));
         auto plugin = findPlugin(dep._name, true);
         if (plugin) {
             __LDBG_printf("dependecy callback type=call_delayed name=%s callback=%p", (PGM_P)dep._name, lambda_target<DependencyCallback>(dep._callback));

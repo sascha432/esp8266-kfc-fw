@@ -6,6 +6,7 @@
 #include <kfc_fw_config.h>
 #include "remote_base.h"
 #include "remote_event_queue.h"
+#include "remote.h"
 
 #if DEBUG_IOT_REMOTE_CONTROL
 #include <debug_helper_enable.h>
@@ -30,26 +31,26 @@ namespace RemoteControl {
 
     static uint8_t buttonEventToEventNum(Button::EventType type)
     {
+        using EventNameType = Plugins::RemoteControl::RemoteControl::EventNameType;
         switch(type) {
             case Button::EventType::DOWN:
-                return 0;
+                return static_cast<uint8_t>(EventNameType::BUTTON_DOWN);
             case Button::EventType::UP:
-                return 1;
+                return static_cast<uint8_t>(EventNameType::BUTTON_UP);
             case Button::EventType::PRESSED:
-                return 2;
+                return static_cast<uint8_t>(EventNameType::BUTTON_PRESS);
             case Button::EventType::LONG_PRESSED:
-                return 3;
+                return static_cast<uint8_t>(EventNameType::BUTTON_LONG_PRESS);
             case Button::EventType::SINGLE_CLICK:
-                return 4;
+                return static_cast<uint8_t>(EventNameType::BUTTON_SINGLE_CLICK);
             case Button::EventType::DOUBLE_CLICK:
-                return 5;
+                return static_cast<uint8_t>(EventNameType::BUTTON_DOUBLE_CLICK);
             case Button::EventType::REPEATED_CLICK:
-                return 6;
-            case Button::EventType::HELD:
-                return 7;
-            //TODO
-            // case Button::EventType::HOLD_RELEASE:
-            //     return 8;
+                return static_cast<uint8_t>(EventNameType::BUTTON_MULTI_CLICK);
+            case Button::EventType::HOLD_REPEAT:
+                return static_cast<uint8_t>(EventNameType::BUTTON_HOLD_REPEAT);
+            case Button::EventType::HOLD_RELEASE:
+                return static_cast<uint8_t>(EventNameType::BUTTON_HOLD_RELEASE);
             default:
                 break;
         }
@@ -94,7 +95,7 @@ namespace RemoteControl {
     void Base::queueEvent(Button::EventType type, uint8_t buttonNum, uint16_t eventCount, uint32_t eventTime, uint16_t actionId)
     {
         auto eventNum = buttonEventToEventNum(type);
-        __DBG_printf("queueEvent type=%u button=%u event=%u enabled=%u bits=%u", type, buttonNum, eventNum, _getConfig().events[eventNum].enabled, _getConfig().actions[buttonNum].getUdpBits());
+        __DBG_printf("queueEvent type=%u button=%u event=%u enabled=%u bits=%u", type, buttonNum, eventNum, _getConfig().enabled[eventNum], _getConfig().actions[buttonNum].udp.event_bits);
 
         // if (_getConfig().events[eventNum].enabled) { // global enable flag
 
@@ -104,10 +105,10 @@ namespace RemoteControl {
 
         // }
 
-        auto udpAction = _getConfig().actions[buttonNum].hasUdpAction();
-        if (_getConfig().events[eventNum].enabled) { // global enable flag
+        if (_getConfig().enabled[eventNum]) { // global enable flag
 
-            if  (_getConfig().actions[buttonNum].hasUdpAction()) {
+            auto button = _getConfig().actions[buttonNum];
+            if (_getConfig().udp_enable && button.hasUdpAction()) {
                 auto action = buttonActionString(type, buttonNum, eventCount);
                 if (action.length()) {
                     PrintString json(F("{\"device\":\"%s\",\"action\":\"%s\",\"event\":\"%s\",\"button\":%u,\"repeat\":%u,\"ts\":%u}"), System::Device::getName(), action.c_str(), Button::eventTypeToString(type), buttonNum, eventCount, eventTime);
@@ -115,7 +116,44 @@ namespace RemoteControl {
                     String jsonCopy = json;
 #endif
                     auto action = new ActionUDP(0, Payload::Json(std::move(json)), Plugins::RemoteControl::getUdpHost(), IPAddress(), _getConfig().udp_port);
-                    __LDBG_printf("json=%s udpAction=%u", jsonCopy.c_str(), udpAction);
+                    __LDBG_printf("json=%s udpAction", jsonCopy.c_str());
+                    _queue.emplace_back(type, buttonNum, Queue::Event::LockType::NONE, action);
+                }
+            }
+            if (_getConfig().mqtt_enable && button.hasMQTTAction()) {
+                PrintString str;
+                PGM_P eventStr = nullptr;
+                if (type == Button::EventType::DOWN && button.mqtt.event_down) {
+                    eventStr = PSTR("down");
+                }
+                if (type == Button::EventType::UP && button.mqtt.event_up) {
+                    eventStr = PSTR("up");
+                }
+                if (type == Button::EventType::PRESSED && button.mqtt.event_press) {
+                    eventStr = PSTR("short_press");
+                }
+                if (type == Button::EventType::SINGLE_CLICK && button.mqtt.event_single_click) {
+                    eventStr = PSTR("single_click");
+                }
+                if (type == Button::EventType::DOUBLE_CLICK && button.mqtt.event_double_click) {
+                    eventStr = PSTR("double_click");
+                }
+                if (type == Button::EventType::REPEATED_CLICK && button.mqtt.event_multi_click) {
+                    str = PrintString(F("repeated_%u_click"), eventCount);
+                    eventStr = str.c_str();
+                }
+                if (type == Button::EventType::LONG_PRESSED && button.mqtt.event_long_press) {
+                    eventStr = PSTR("long_press");
+                }
+                if (type == Button::EventType::HOLD_REPEAT && button.mqtt.event_hold) {
+                    eventStr = PSTR("hold_repeat");
+                }
+                if (type == Button::EventType::HOLD_RELEASE && button.mqtt.event_hold_released) {
+                    eventStr = PSTR("hold_release");
+                }
+                if (eventStr) {
+                    auto action = new ActionMQTT(0, PrintString(F("button_%u_%s"), buttonNum + 1, eventStr));
+                    __LDBG_printf("payload=%s mqttAction", action->getPayload().c_str());
                     _queue.emplace_back(type, buttonNum, Queue::Event::LockType::NONE, action);
                 }
 
@@ -156,7 +194,7 @@ namespace RemoteControl {
     void Base::timerCallback(Event::CallbackTimerPtr timer)
     {
         if (!WiFi.isConnected()) {
-            __LDBG_printf("WiFi not connected, delaying queue");
+            // __LDBG_printf("WiFi not connected, delaying queue");
             _resetAutoSleep();
             return;
         }

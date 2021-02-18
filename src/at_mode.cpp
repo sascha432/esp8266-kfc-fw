@@ -10,6 +10,7 @@
 #include <EventScheduler.h>
 #include <MicrosTimer.h>
 #include <StreamString.h>
+#include <BitsToStr.h>
 #include <Cat.h>
 #include <vector>
 #include <queue>
@@ -40,6 +41,9 @@ extern IOExpander::PCF8574 _PCF8574;
 #if IOT_BLINDS_CTRL
 #include "../src/plugins/blinds_ctrl/blinds_plugin.h"
 #endif
+// #if IOT_REMOTE_CONTROL
+// #include "../src/plugins/remote/remote.h"
+// #endif
 #include "umm_malloc/umm_malloc_cfg.h"
 
 #include "core_esp8266_waveform.h"
@@ -564,14 +568,14 @@ extern DisplayTimer *displayTimer;
 
 class DisplayTimer {
 public:
-    typedef enum {
+    enum class DisplayType {
         HEAP = 1,
         RSSI = 2,
         GPIO = 3,
-    } DisplayTypeEnum_t;
+    };
 
     DisplayTimer() :
-        _type(HEAP),
+        _type(DisplayType::HEAP),
         _maxHeap(0),
         _maxHeapTime(0)
     {
@@ -587,58 +591,41 @@ public:
         }
     }
 
-    bool removeTimer() {
-        return _timer.remove();
-    }
-
-    void remove() {
-        _timer.remove();
-        delete this;
-    }
-
-public:
-    Event::Timer _timer;
-    DisplayTypeEnum_t _type;
-    int16_t _rssiMin;
-    int16_t _rssiMax;
-    uint16_t _maxHeap;
-    uint32_t _maxHeapTime;
-};
-
-DisplayTimer *displayTimer;
-
-static void print_heap()
-{
-    if (displayTimer) {
-        auto heap = ESP.getFreeHeap();
-        if (heap > displayTimer->_maxHeap) {
-            displayTimer->_maxHeap = heap;
-            displayTimer->_maxHeapTime = getSystemUptime();
+    void setType(DisplayType type, Event::milliseconds interval) {
+        _type = type;
+        if (_type == DisplayType::HEAP) {
+            LoopFunctions::add(loop);
         }
+        else {
+            LoopFunctions::remove(loop);
+        }
+        _Timer(_timer).add(interval, true, DisplayTimer::printTimerCallback);
+        _maxHeap = 0;
+        _minHeap = 0;
+        _rssiMin = std::numeric_limits<decltype(_rssiMin)>::min();
+        _rssiMax = 0;
+    }
 
-        Serial.printf_P(PSTR("+HEAP: free=%u(%u@%us) cpu=%dMHz frag=%u uptime=%us"), ESP.getFreeHeap(), displayTimer->_maxHeap, displayTimer->_maxHeapTime, ESP.getCpuFreqMHz(), ESP.getHeapFragmentation(), getSystemUptime());
+    DisplayType getType() const {
+        return _type;
     }
-    else {
-        Serial.printf_P(PSTR("+HEAP: free=%u cpu=%dMHz frag=%u"), ESP.getFreeHeap(), ESP.getCpuFreqMHz(), ESP.getHeapFragmentation());
-    }
-#if HAVE_MEM_DEBUG
-    KFCMemoryDebugging::dumpShort(Serial);
-#endif
-}
-static void heap_timer_callback(Event::CallbackTimerPtr timer)
-{
-    if (displayTimer == nullptr) {
-        timer->disarm();
-        return;
-    }
-    if (displayTimer->_type == DisplayTimer::HEAP) {
-        print_heap();
+
+    void printHeap() {
+        auto heap = ESP.getFreeHeap();
+        if (heap > _maxHeap) {
+            _maxHeap = heap;
+            _maxHeapTime = getSystemUptime();
+        }
+        Serial.printf_P(PSTR("+HEAP: free=%u(%u/%u@%us) cpu=%dMHz frag=%u uptime=%us"), heap, _minHeap, _maxHeap, _maxHeapTime, ESP.getCpuFreqMHz(), ESP.getHeapFragmentation(), getSystemUptime());
+        _minHeap = heap;
+
 #if LOAD_STATISTICS
         Serial.printf_P(PSTR(" load avg=%.2f %.2f %.2f"), LOOP_COUNTER_LOAD(load_avg[0]), LOOP_COUNTER_LOAD(load_avg[1]), LOOP_COUNTER_LOAD(load_avg[2]));
 #endif
         Serial.println();
     }
-    else if (displayTimer->_type == DisplayTimer::GPIO) {
+
+    void printGPIO() {
         Serial.printf_P(PSTR("+GPIO: "));
 #if defined(ESP8266)
         for(uint8_t i = 0; i < NUM_DIGITAL_PINS; i++) {
@@ -649,8 +636,6 @@ static void heap_timer_callback(Event::CallbackTimerPtr timer)
         }
         // pinMode(A0, INPUT);
         Serial.printf_P(PSTR(" A0=%u\n"), analogRead(A0));
-#else
-// #warning not implemented
 #endif
 #if HAVE_PCF8574
         Serial.printf_P(PSTR("+PCF8574@0x%02x: "), _PCF8574.getAddress());
@@ -660,32 +645,80 @@ static void heap_timer_callback(Event::CallbackTimerPtr timer)
         Serial.printf_P(PSTR("\n"));
 #endif
     }
-    else {
+
+    void printRSSI() {
         int32_t rssi = WiFi.RSSI();
-        displayTimer->_rssiMin = std::max<int16_t>(displayTimer->_rssiMin, rssi);
-        displayTimer->_rssiMax = std::min<int16_t>(displayTimer->_rssiMax, rssi);
-        Serial.printf_P(PSTR("+RSSI: %d dBm (min/max %d/%d)\n"), rssi, displayTimer->_rssiMin, displayTimer->_rssiMax);
+        _rssiMin = std::max<int16_t>(_rssiMin, rssi);
+        _rssiMax = std::min<int16_t>(_rssiMax, rssi);
+        Serial.printf_P(PSTR("+RSSI: %d dBm (min/max %d/%d)\n"), rssi, _rssiMin, _rssiMax);
     }
-}
 
-static void create_heap_timer(Event::milliseconds ms, DisplayTimer::DisplayTypeEnum_t type = DisplayTimer::HEAP)
-{
-    if (!displayTimer) {
-        new DisplayTimer();
+    void print() {
+        switch(_type) {
+            case DisplayType::HEAP:
+                printHeap();
+                break;
+            case DisplayType::GPIO:
+                printGPIO();
+                break;
+            case DisplayType::RSSI:
+                printRSSI();
+            default:
+                break;
+        }
     }
-    displayTimer->_type = type;
-    displayTimer->_maxHeap = 0;
-    _Timer(displayTimer->_timer).add(ms, true, heap_timer_callback);
-}
 
-void at_mode_create_heap_timer(Event::milliseconds ms)
+    static void printTimerCallback(Event::CallbackTimerPtr timer) {
+        if (displayTimer == nullptr) {
+            timer->disarm();
+            return;
+        }
+        displayTimer->print();
+    }
+
+    bool removeTimer() {
+        return _timer.remove();
+    }
+
+    void remove() {
+        _timer.remove();
+        LoopFunctions::remove(loop);
+        delete this;
+    }
+
+    void _loop() {
+        _minHeap = std::min<uint16_t>(ESP.getFreeHeap(), _minHeap);
+    }
+
+    static void loop() {
+        if (displayTimer) {
+            displayTimer->_loop();
+        }
+    }
+
+private:
+    Event::Timer _timer;
+    DisplayType _type;
+    int16_t _rssiMin;
+    int16_t _rssiMax;
+    uint16_t _maxHeap;
+    uint16_t _minHeap;
+    uint16_t _maxHeapTime;
+};
+
+DisplayTimer *displayTimer;
+
+static void print_heap()
 {
-    if (ms.count() > 50) {
-        create_heap_timer(ms, DisplayTimer::HEAP);
+    if (displayTimer) {
+        displayTimer->printHeap();
     }
-    else if (displayTimer) {
-        displayTimer->remove();
+    else {
+        Serial.printf_P(PSTR("+HEAP: free=%u cpu=%dMHz frag=%u"), ESP.getFreeHeap(), ESP.getCpuFreqMHz(), ESP.getHeapFragmentation());
     }
+#if HAVE_MEM_DEBUG
+    KFCMemoryDebugging::dumpShort(Serial);
+#endif
 }
 
 #endif
@@ -1633,18 +1666,15 @@ void at_mode_serial_handle_event(String &commandString)
                             new DisplayTimer();
                         }
                         if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RSSI))) {
-                            displayTimer->_type = DisplayTimer::RSSI;
+                            displayTimer->setType(DisplayTimer::DisplayType::RSSI, Event::milliseconds(interval));
                         }
                         else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(GPIO))) {
-                            displayTimer->_type = DisplayTimer::GPIO;
+                            displayTimer->setType(DisplayTimer::DisplayType::GPIO, Event::milliseconds(interval));
                         }
                         else {
-                            displayTimer->_type = DisplayTimer::HEAP;
+                            displayTimer->setType(DisplayTimer::DisplayType::HEAP, Event::milliseconds(interval));
                         }
-                        displayTimer->_rssiMin = std::numeric_limits<decltype(displayTimer->_rssiMin)>::min();
-                        displayTimer->_rssiMax = 0;
                         args.printf_P(PSTR("Interval set to %ums"), interval);
-                        create_heap_timer(Event::milliseconds(interval), displayTimer->_type);
                     }
                 }
             }
@@ -1973,6 +2003,12 @@ void at_mode_serial_handle_event(String &commandString)
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPRTC))) {
                 RTCMemoryManager::dump(Serial);
+// #if IOT_REMOTE_CONTROL
+//                 RemoteControlPlugin::PinState state;
+//                 RTCMemoryManager::read(RTCMemoryManager::RTCMemoryId::REMOTE_INIT_PIN_STATE, &state, sizeof(state));
+//                 args.printf_P(PSTR("Remote pin state time=%u valid=%u keys=%s"), state._time, state.isValid(), BitsToStr<RemoteControl::_buttonPins.size(), true>(state._pressed).c_str());
+
+// #endif
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RTCCLR))) {
                 RTCMemoryManager::clear();

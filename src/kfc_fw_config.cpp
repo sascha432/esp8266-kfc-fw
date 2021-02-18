@@ -11,6 +11,7 @@
 #include <PrintString.h>
 #include <HardwareSerial.h>
 #include <EventScheduler.h>
+#include <BitsToStr.h>
 #include <session.h>
 #include <misc.h>
 #include "SaveCrash.h"
@@ -1013,13 +1014,6 @@ void KFCFWConfiguration::wakeUpFromDeepSleep()
 {
     ::printf(PSTR("wakeUpFromDeepSleep\n"));
 
-#if IOT_REMOTE_CONTROL
-    auto &remote = RemoteControlPlugin::getInstance();
-    if (remote.detectKeyPress() != 0) {
-        ::printf(PSTR("deep sleep: key press bitset: %s\n"), String(remote.getKeysPressed(), 2).c_str());
-    }
-#endif
-
     if (RTCMemoryManager::read(RTCMemoryManager::RTCMemoryId::DEEP_SLEEP, &_deepSleepParams, sizeof(_deepSleepParams)) && _deepSleepParams.deepSleepTime) {
         if (_deepSleepParams.remainingSleepTime) {
             _deepSleepParams.calcSleepTime();
@@ -1029,7 +1023,9 @@ void KFCFWConfiguration::wakeUpFromDeepSleep()
 #endif
 
 #if IOT_REMOTE_CONTROL
-            if (remote.getKeysPressed() && _deepSleepParams.abortOnKeyPress) {
+            auto state = RemoteControlPlugin::getInstance().readPinState();
+
+            if (state.anyPressed() && _deepSleepParams.abortOnKeyPress) {
                 _deepSleepParams.abortCycles();
             }
 #endif

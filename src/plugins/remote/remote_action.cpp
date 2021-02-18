@@ -6,6 +6,7 @@
 #include <kfc_fw_config.h>
 #include <WiFiUdp.h>
 #include "remote_action.h"
+#include "remote.h"
 
 #if DEBUG_IOT_REMOTE_CONTROL
 #include <debug_helper_enable.h>
@@ -25,6 +26,20 @@ void ActionUDP::execute(Callback callback)
                 callback(true);
                 return;
             }
+        }
+    }
+    callback(false);
+}
+
+void ActionMQTT::execute(Callback callback)
+{
+    auto client = MQTTClient::getClient();
+    if (client) {
+        if (client->isConnected()) {
+            client->publish(MqttRemote::getMQTTTopic(), false, _payload, _qos);
+            callback(true);
+            return;
+
         }
     }
     callback(false);

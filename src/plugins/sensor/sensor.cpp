@@ -215,7 +215,7 @@ void SensorPlugin::createConfigureForm(FormCallbackType type, const String &form
 void SensorPlugin::createMenu()
 {
     if (_hasConfigureForm()) {
-        bootstrapMenu.addSubMenu(getFriendlyName(), F("sensor.html"), navMenu.config);
+        bootstrapMenu.addMenuItem(getFriendlyName(), F("sensor.html"), navMenu.config);
     }
 }
 

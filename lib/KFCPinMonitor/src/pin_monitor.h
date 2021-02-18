@@ -15,10 +15,6 @@
 #define DEBUG_PIN_MONITOR                                       0
 #endif
 
-#ifndef DEBUG_PIN_MONITOR_BUTTON_NAME
-#define DEBUG_PIN_MONITOR_BUTTON_NAME                           DEBUG_PIN_MONITOR
-#endif
-
 #if DEBUG_PIN_MONITOR
 #ifndef DEBUG_PIN_MONITOR_EVENTS
 #define DEBUG_PIN_MONITOR_EVENTS                                0

@@ -15,9 +15,28 @@
 
 using namespace PinMonitor;
 
+// static volatile bool pin_interrupt_enabled = true;
+
+// void HardwarePin::enableAll()
+// {
+//     noInterrupts();
+//     pin_interrupt_enabled = true;
+//     interrupts();
+// }
+
+// void HardwarePin::disableAll()
+// {
+//     noInterrupts();
+//     pin_interrupt_enabled = false;
+//     interrupts();
+// }
+
 // 84-168 byte IRAM
 void ICACHE_RAM_ATTR HardwarePin::callback(void *arg)
 {
+    // if (!pin_interrupt_enabled) {
+    //     return;
+    // }
     switch(reinterpret_cast<HardwarePin *>(arg)->_type) {
 #if PIN_MONITOR_HAVE_ROTARY_ENCODER
         // +84 byte IRAM

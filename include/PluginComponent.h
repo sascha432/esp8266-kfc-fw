@@ -100,6 +100,7 @@ public:
         CONFIG,
         DEEP_SLEEP,
         SERIAL2TCP,
+        // REMOTE_INIT_PIN_STATE
     };
 
     enum class FormCallbackType {

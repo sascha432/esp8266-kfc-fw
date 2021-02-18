@@ -11,6 +11,8 @@
 #include <stl_ext/memory.h>
 #include <MicrosTimer.h>
 
+#include "logger.h"
+
 #if PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS
 #include <FunctionalInterrupt.h>
 #endif
@@ -322,6 +324,35 @@ void Monitor::_detachLoop()
     }
 }
 
+void Monitor::feed(uint32_t micros1, uint32_t values1, uint32_t pins, bool activeLow)
+{
+    for(auto &pinPtr: _pins) {
+        auto debounce = pinPtr->getDebounce();
+        if (debounce) {
+            debounce->setState(activeLow);
+
+            auto &pin = *reinterpret_cast<DebouncedHardwarePin *>(pinPtr.get());
+            uint8_t mask = _BV(pin.getPin());
+            bool value = (pins & mask) ? ((values1 & mask) != 0) : activeLow;
+            uint32_t now = micros1 / 1000;
+
+            if (value != activeLow) {
+                _event(pin.getPin(), debounce->debounce(value, 1, micros1, now), now);
+            }
+
+            bool _value = digitalRead(pin.getPin());
+            noInterrupts();
+            // fake interrupt to update state
+            pin._micros = micros();
+            pin._value = _value;
+            pin._intCount = (_value != value) ? 1 : 0;
+            interrupts();
+
+        }
+    }
+    _lastRun = millis();
+}
+
 void Monitor::_loop()
 {
     uint32_t now = millis();
@@ -342,32 +373,8 @@ void Monitor::_loop()
             pin._intCount = 0;
             interrupts();
 
-#if DEBUG_PIN_MONITOR_EVENTS
-            auto state = debounce->debounce(value, intCount, micros, now);
-            if (state != StateType::NONE) {
-                __LDBG_printf("EVENT: pin=%u state=%s time=%u bounced=%u", pin.getPin(), stateType2Level(state), get_time_diff(debounce->_startDebounce, now), std::max(0, debounce->_bounceCounter - 1));
-                // print --- of the state does not change for 1 second
-                static Event::Timer timer;
-                static uint32_t counter;
-                auto tmp = ++counter;
-                _Timer(timer).add(Event::milliseconds(1000), false, [tmp](Event::CallbackTimerPtr) {
-                    if (tmp == counter) {
-                        __LDBG_print("---");
-                    }
-                });
-            }
-            _event(pin.getPin(), state, now);
-#else
             _event(pin.getPin(), debounce->debounce(value, intCount, micros, now), now);
-#endif
         }
-        // else {
-            // noInterrupts();
-            // bool value = pin._value;
-            // interrupts();
-
-            // _event(pin.getPin(), value ? StateType::IS_HIGH : StateType::IS_LOW, now);
-        // }
     }
     for(const auto &handler: _handlers) {
         handler->loop();

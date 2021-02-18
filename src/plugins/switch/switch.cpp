@@ -44,7 +44,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     0                   // __reserved
 );
 
-SwitchPlugin::SwitchPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(SwitchPlugin)), MQTTComponent(ComponentTypeEnum_t::SWITCH), _states(0), _pins({IOT_SWITCH_CHANNEL_PINS})
+SwitchPlugin::SwitchPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(SwitchPlugin)), MQTTComponent(ComponentType::SWITCH), _states(0), _pins({IOT_SWITCH_CHANNEL_PINS})
 {
     REGISTER_PLUGIN(this, "SwitchPlugin");
 }

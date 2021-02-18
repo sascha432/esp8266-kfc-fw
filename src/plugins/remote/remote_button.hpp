@@ -9,6 +9,12 @@
 #include "remote_base.h"
 #include "remote_button.h"
 
+#if DEBUG_IOT_REMOTE_CONTROL
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
 using namespace PinMonitor;
 
  namespace RemoteControl {
@@ -25,9 +31,6 @@ using namespace PinMonitor;
         _button(button),
         _timeOffset(0)
     {
-#if DEBUG_PIN_MONITOR_BUTTON_NAME
-        setName(PrintString(F("BUTTON:%u arg=%p btn=%p"), button, getArg(), this));
-#endif
     }
 
     inline uint8_t Button::getButtonNum() const
@@ -58,3 +61,4 @@ using namespace PinMonitor;
 
 }
 
+#include <debug_helper_disable.h>

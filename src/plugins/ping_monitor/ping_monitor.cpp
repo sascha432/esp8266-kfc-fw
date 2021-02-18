@@ -261,7 +261,7 @@ void PingMonitorPlugin::getStatus(Print &output)
 
 void PingMonitorPlugin::createMenu()
 {
-    bootstrapMenu.addSubMenu(getFriendlyName(), F("ping-monitor.html"), navMenu.config);
+    bootstrapMenu.addMenuItem(getFriendlyName(), F("ping-monitor.html"), navMenu.config);
     _setPingConsoleMenu(Plugins::Ping::getConfig().console);
 }
 
@@ -278,7 +278,7 @@ void PingMonitorPlugin::_setPingConsoleMenu(bool enable)
         return;
     }
     // add entry
-    bootstrapMenu.addSubMenu(label, F("ping.html"), navMenu.util);
+    bootstrapMenu.addMenuItem(label, F("ping.html"), navMenu.util);
 }
 
 void PingMonitorPlugin::createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)

@@ -94,17 +94,15 @@ public:
     void setValue(uint32_t value);
     const uint32_t getValue() const;
 
-#if defined(__int64_t_defined)
-    void setValueInt64(uint64_t value) {
-        memcpy(_buffer, &value, std::min((int)sizeof(value), ((_maxSize + 7) >> 3)));
+    void setValue64(uint64_t value) {
+        memcpy(_buffer, &value, std::min<size_t>(sizeof(value), ((_maxSize + 7) >> 3)));
     }
 
-    uint64_t getValueInt64() {
+    uint64_t getValue64() {
         uint64_t value;
-        memcpy(&value, _buffer, std::min((int)sizeof(value), ((_maxSize + 7) >> 3)));
+        memcpy(&value, _buffer, std::min<size_t>(sizeof(value), ((_maxSize + 7) >> 3)));
         return value;
     }
-#endif
 
     inline __attribute__((__always_inline__))
     void setString(const String &str) {
@@ -140,6 +138,12 @@ private:
     uint8_t *_buffer;
 };
 
+inline dynamic_bitset::dynamic_bitset() :
+    _size(0),
+    _maxSize(0),
+    _buffer(nullptr)
+{
+}
 
 inline dynamic_bitset::dynamic_bitset(uint8_t maxSize) :
     dynamic_bitset((uint32_t)0, maxSize, maxSize)

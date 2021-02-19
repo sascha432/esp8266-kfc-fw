@@ -17,13 +17,13 @@ String dynamic_bitset::getBytesAsString() const
 
 void dynamic_bitset::setValue(uint32_t value)
 {
-    memcpy(_buffer, &value, std::min((int)sizeof(value), ((_maxSize + 7) >> 3)));
+    memcpy(_buffer, &value, std::min<size_t>(sizeof(value), ((_maxSize + 7) >> 3)));
 }
 
 const uint32_t dynamic_bitset::getValue() const
 {
     uint32_t value = 0;
-    memcpy(&value, _buffer, std::min((int)sizeof(value), ((_maxSize + 7) >> 3)));
+    memcpy(&value, _buffer, std::min<size_t>(sizeof(value), ((_maxSize + 7) >> 3)));
     return value;
 }
 

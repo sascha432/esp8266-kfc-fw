@@ -43,10 +43,17 @@ public:
     static const uint8_t IGNORE_BUILTIN_LED_PIN = IGNORE_BUILTIN_LED_PIN_ID;
     static const uint8_t NEOPIXEL_PIN = NEOPIXEL_PIN_ID;
 
-    BlinkLEDTimer();
+    BlinkLEDTimer(uint8_t pin = INVALID_PIN) : _pin(pin) {}
+
+    void set(uint32_t delay, dynamic_bitset &&pattern);
+
+    inline __attribute__((__always_inline__))
+    void set(uint32_t delay, uint8_t pin, dynamic_bitset &&pattern) {
+        _pin = pin;
+        set(delay, std::move(pattern));
+    }
 
     virtual void run() override;
-    void set(uint32_t delay, uint8_t pin, dynamic_bitset &&pattern);
     virtual void detach() override;
 
     static void setPattern(uint8_t pin, int delay, dynamic_bitset &&pattern);

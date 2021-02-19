@@ -70,36 +70,27 @@ private:
 
 #endif
 
-BlinkLEDTimer::BlinkLEDTimer() : _pin(INVALID_PIN)//, _on(false)
-{
-}
-
 void BlinkLEDTimer::run()
 {
     _digitalWrite(_pin, BUILTIN_LED_STATE(_pattern.test(_counter++ % _pattern.size())));
 }
 
-void BlinkLEDTimer::set(uint32_t delay, uint8_t pin, dynamic_bitset &&pattern)
+void BlinkLEDTimer::set(uint32_t delay, dynamic_bitset &&pattern)
 {
     if (!isPinValid(_pin) || System::Device::getConfig().getStatusLedMode() == System::Device::StatusLEDModeType::OFF) {
         return;
     }
     _pattern = std::move(pattern);
-    //_on = pattern.size();
-    if (_pin != pin) {
-        // set PIN as output
-        _pin = pin;
-        _analogWrite(_pin, 0);
-        _digitalWrite(_pin, BUILTIN_LED_STATE(false));
-        _pinMode(_pin, OUTPUT);
-    }
+    // reset pin
+    _digitalWrite(_pin, BUILTIN_LED_STATE(false));
+    _pinMode(_pin, OUTPUT);
     _counter = 0;
+    __LDBG_printf("start timer=%u", delay);
     startTimer(delay, true);
 }
 
 void BlinkLEDTimer::detach()
 {
-    _analogWrite(_pin, 0);
     _digitalWrite(_pin, BUILTIN_LED_STATE(false));
     OSTimer::detach();
 }
@@ -113,6 +104,9 @@ void BlinkLEDTimer::setPattern(uint8_t pin, int delay, dynamic_bitset &&pattern)
 {
     if (!isPinValid(pin) || System::Device::getConfig().getStatusLedMode() == System::Device::StatusLEDModeType::OFF) {
         return;
+    }
+    if (!ledTimer) {
+        ledTimer = __LDBG_new(BlinkLEDTimer);
     }
     ledTimer->set(delay, pin, std::move(pattern));
 }
@@ -171,35 +165,32 @@ void BlinkLEDTimer::setBlink(uint8_t pin, uint16_t delay, int32_t color)
     else
 #endif
     {
-        ledTimer = __LDBG_new(BlinkLEDTimer);
-        if (isPinValid(pin)) {
-            // reset pin
-            _analogWrite(pin, 0);
-            _digitalWrite(pin, BUILTIN_LED_STATE(false));
-//            ledTimer->_on = false;
+        // reset pin
+        _digitalWrite(pin, BUILTIN_LED_STATE(false));
+        _pinMode(pin, OUTPUT);
 
-            if (delay == static_cast<uint16_t>(BlinkLEDTimer::BlinkType::OFF)) {
-                _digitalWrite(pin, BUILTIN_LED_STATE(false));
+        if (delay == static_cast<uint16_t>(BlinkLEDTimer::BlinkType::OFF)) {
+            // already off
+            // _digitalWrite(pin, BUILTIN_LED_STATE(false));
+        }
+        else if (delay == static_cast<uint16_t>(BlinkLEDTimer::BlinkType::SOLID)) {
+            _digitalWrite(pin, BUILTIN_LED_STATE(true));
+        }
+        else {
+            ledTimer = __LDBG_new(BlinkLEDTimer, pin);
+            dynamic_bitset pattern;
+            if (delay == static_cast<uint16_t>(BlinkLEDTimer::BlinkType::SOS)) {
+                pattern.setMaxSize(42);
+                pattern.setValue64(0b000000010101000011110000111100001111010101ULL);
+                delay = 200;
+            } else {
+                pattern.setMaxSize(2);
+                pattern = 0b10;
+                delay = std::max<uint16_t>(50, std::min<uint16_t>(delay, 5000));
             }
-            else if (delay == static_cast<uint16_t>(BlinkLEDTimer::BlinkType::SOLID)) {
-                _digitalWrite(pin, BUILTIN_LED_STATE(true));
-                // ledTimer->_on = true;
-            }
-            else {
-                dynamic_bitset pattern;
-                if (delay == static_cast<uint16_t>(BlinkLEDTimer::BlinkType::SOS)) {
-                    pattern.setMaxSize(24);
-                    pattern.setValue(0xcc1c71d5);
-                    delay = 200;
-                } else {
-                    pattern.setMaxSize(2);
-                    pattern = 0b10;
-                    delay = std::max<uint16_t>(50, std::min<uint16_t>(delay, 5000));
-                }
 
-                __LDBG_printf("PIN %u, delay %u, pattern %s", pin, delay, pattern.getBytesAsString().c_str());
-                ledTimer->set(delay, pin, std::move(pattern));
-            }
+            __LDBG_printf("PIN %u, delay %u, pattern %s", pin, delay, pattern.toString().c_str());
+            ledTimer->set(delay, std::move(pattern));
         }
     }
 }

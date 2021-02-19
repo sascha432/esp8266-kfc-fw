@@ -41,6 +41,9 @@ extern IOExpander::PCF8574 _PCF8574;
 #if IOT_BLINDS_CTRL
 #include "../src/plugins/blinds_ctrl/blinds_plugin.h"
 #endif
+#if IOT_SENSOR_BATTERY_DISPLAY_LEVEL
+#include "../src/plugins/sensor/sensor.h"
+#endif
 // #if IOT_REMOTE_CONTROL
 // #include "../src/plugins/remote/remote.h"
 // #endif
@@ -389,6 +392,9 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF(CPU, "CPU", "<80|160>", "Set CPU speed", "Displ
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PSTORE, "PSTORE", "[<clear|remove|add>[,<key>[,<value>]]]", "Display/modify persistant storage");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(METRICS, "METRICS", "Display system metrics");
+#if IOT_SENSOR_BATTERY_DISPLAY_LEVEL
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(BCAP, "BCAP", "<voltage,[true=charging]>", "Calculate battery capacity for given voltage");
+#endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMP, "DUMP", "[<dirty|config.name>]", "Display settings");
 #if DEBUG && ESP8266
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMPT, "DUMPT", "Dump timers");
@@ -466,6 +472,9 @@ void at_mode_help_commands()
 #endif
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(PSTORE), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(METRICS), name);
+#if IOT_SENSOR_BATTERY_DISPLAY_LEVEL
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(BCAP), name);
+#endif
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMP), name);
 #if DEBUG && ESP8266
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPT), name);
@@ -629,7 +638,7 @@ public:
         Serial.printf_P(PSTR("+GPIO: "));
 #if defined(ESP8266)
         for(uint8_t i = 0; i < NUM_DIGITAL_PINS; i++) {
-            if (i != 1 && i != 3 && !isFlashInterfacePin(i)) { // do not display RX/TX and flash SPI
+            if (i != 1 && !isFlashInterfacePin(i)) { // do not display TX and flash SPI
                 // pinMode(i, INPUT);
                 Serial.printf_P(PSTR("%u=%u "), i, digitalRead(i));
             }
@@ -1268,6 +1277,14 @@ void at_mode_serial_handle_event(String &commandString)
                 }
                 at_mode_generate_help(output, &findItems);
             }
+#if IOT_SENSOR_BATTERY_DISPLAY_LEVEL
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(BCAP))) {
+                auto voltage = args.toFloat(0);
+                auto charging = args.isTrue(1);
+                float capacity = Sensor_Battery::calcLipoCapacity(voltage, 1, charging);
+                args.printf_P(PSTR("voltage=%.4fV capacity=%.1f%% charging=%u"), voltage, capacity, charging);
+            }
+#endif
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(METRICS))) {
 
                 args.printf_P(PSTR("Device name: %s"), System::Device::getName());
@@ -1387,33 +1404,35 @@ void at_mode_serial_handle_event(String &commandString)
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LED))) {
                 if (args.requireArgs(1, 3)) {
                     String mode = args.toString(0);
-                    int32_t color = args.toNumber(1, -1);
+                    int32_t color = args.toNumber(1, 0xff00ff);
                     uint8_t pin = (uint8_t)args.toInt(2, __LED_BUILTIN);
                     if (__LED_BUILTIN == pin && !BlinkLEDTimer::isPinValid(pin)) {
                         args.print(F("Invalid PIN"));
                     }
                     else {
+                        BlinkLEDTimer::BlinkType type;
                         mode.toUpperCase();
-                        if (args.equalsIgnoreCase(0, F("slow"))) {
-                            BlinkLEDTimer::setBlink(pin, BlinkLEDTimer::BlinkType::SLOW, color);
+                        if (String_equals(mode, F("SLOW"))) {
+                            BlinkLEDTimer::setBlink(pin, type = BlinkLEDTimer::BlinkType::SLOW, color);
                         }
-                        else if (args.equalsIgnoreCase(0, F("fast"))) {
-                            BlinkLEDTimer::setBlink(pin, BlinkLEDTimer::BlinkType::FAST, color);
+                        else if (String_equals(mode, F("FAST"))) {
+                            BlinkLEDTimer::setBlink(pin, type = BlinkLEDTimer::BlinkType::FAST, color);
                         }
-                        else if (args.equalsIgnoreCase(0, F("flicker"))) {
-                            BlinkLEDTimer::setBlink(pin, BlinkLEDTimer::BlinkType::FLICKER, color);
+                        else if (String_equals(mode, F("FLICKER"))) {
+                            BlinkLEDTimer::setBlink(pin, type = BlinkLEDTimer::BlinkType::FLICKER, color);
                         }
-                        else if (args.equalsIgnoreCase(0, F("solid"))) {
-                            BlinkLEDTimer::setBlink(pin, BlinkLEDTimer::BlinkType::SOLID, color);
+                        else if (String_equals(mode, F("SOLID"))) {
+                            BlinkLEDTimer::setBlink(pin, type = BlinkLEDTimer::BlinkType::SOLID, color);
                         }
-                        else if (args.equalsIgnoreCase(0, F("sos"))) {
-                            BlinkLEDTimer::setBlink(pin, BlinkLEDTimer::BlinkType::SOS, color);
+                        else if (String_equals(mode, F("SOS"))) {
+                            BlinkLEDTimer::setBlink(pin, type = BlinkLEDTimer::BlinkType::SOS, color);
                         }
                         else {
                             mode = F("OFF");
-                            BlinkLEDTimer::setBlink(pin, BlinkLEDTimer::BlinkType::OFF);
+                            color = 0;
+                            BlinkLEDTimer::setBlink(pin, type = BlinkLEDTimer::BlinkType::OFF);
                         }
-                        args.printf_P(PSTR("LED pin=%u, mode=%s, color=0x%06x"), pin, mode.c_str(), color);
+                        args.printf_P(PSTR("LED pin=%u mode=%s type=%u color=0x%06x"), pin, mode.c_str(), type, color);
                     }
                 }
             }

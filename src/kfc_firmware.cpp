@@ -81,7 +81,7 @@ void check_flash_size()
 
 void setup()
 {
-
+    _startupTimings.setSetupFunc(millis());
     KFC_SAFE_MODE_SERIAL_PORT.begin(KFC_SERIAL_RATE);
 #if KFC_DEBUG_USE_SERIAL1
     Serial1.begin(KFC_DEBUG_USE_SERIAL1);
@@ -428,6 +428,8 @@ void setup()
         // reset crash counter
         BOOTLOG_PRINTF("installing safecrash crash recovery");
         SaveCrash::installRemoveCrashCounter(KFC_CRASH_RECOVERY_TIME);
+
+        _startupTimings.setLoopFunc(millis());
     }
 
 #if LOAD_STATISTICS

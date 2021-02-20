@@ -226,7 +226,13 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             form.addFormUI(F("Plugin Blacklist"), FormUI::Suffix(F("Comma Separated")));
 
             deviceGroup.end();
-            auto &discoveryGroup = form.addCardGroup(F("ndo"), F("Network Discovery"), true);
+            auto &discoveryGroup = form.addCardGroup(F("ndo"), F("Network"), true);
+
+#if ENABLE_DEEP_SLEEP
+
+            form.addObjectGetterSetter(F("dslpsip"), flags, System::Flags::ConfigStructType::get_bit_use_static_ip_during_wakeup, System::Flags::ConfigStructType::set_bit_use_static_ip_during_wakeup);
+            form.addFormUI(F("DHCP during wakeup"), FormUI::BoolItems(F("Use static IP address if possible"), F("Always use DHCP if enabled")));
+#endif
 
 #if MDNS_PLUGIN
 

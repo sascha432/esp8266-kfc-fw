@@ -117,6 +117,95 @@ private:
 extern ResetDetector resetDetector;
 
 #if HAVE_KFC_PLUGINS
+
+class StartupTimings {
+public:
+
+    void dump(Print &output);
+    void log();
+
+    void setWiFiGotIP(uint32_t millis) {
+        if (_wifiGotIP == 0) {
+            _wifiGotIP = millis;
+        }
+    }
+    uint32_t getWiFiGotIP() const {
+        return _wifiGotIP;
+    }
+
+
+#if IOT_REMOTE_CONTROL
+
+public:
+    StartupTimings() :
+        _setup(0),
+        _loop(0),
+        _wifiConnected(0),
+        _wifiGotIP(0),
+        _ntp(0),
+        _mqtt(0),
+        _deepSleep(0)
+    {}
+
+    void setSetupFunc(uint32_t millis) {
+        _setup = millis;
+    }
+
+    void setLoopFunc(uint32_t millis) {
+        _loop = millis;
+    }
+
+    void setWiFiConnected(uint32_t millis) {
+        if (_wifiConnected == 0) {
+            _wifiConnected = millis;
+        }
+    }
+
+    void setNtp(uint32_t millis) {
+        if (_ntp == 0) {
+            _ntp = millis;
+        }
+    }
+
+    void setMqtt(uint32_t millis) {
+        if (_mqtt == 0) {
+            _mqtt = millis;
+        }
+    }
+
+    void setDeepSleep(uint32_t millis) {
+        _deepSleep = millis;
+    }
+
+private:
+    uint32_t _setup;
+    uint32_t _loop;
+    uint32_t _wifiConnected;
+    uint32_t _wifiGotIP;
+    uint32_t _ntp;
+    uint32_t _mqtt;
+    uint32_t _deepSleep;
+
+#else
+
+public:
+    StartupTimings() : _wifiGotIP({0}) {}
+
+    void setSetupFunc(uint32_t millis) {}
+    void setLoopFunc(uint32_t millis) {}
+    void setWiFiConnected(uint32_t millis) {}
+    void setNtp(uint32_t millis) {}
+    void setMqtt(uint32_t millis) {}
+    void setDeepSleep(uint32_t millis) {}
+
+private:
+    uint32_t _wifiGotIP;
+
+#endif
+};
+
+extern StartupTimings _startupTimings;
+
 class ResetDetectorPlugin : public PluginComponent {
 public:
     ResetDetectorPlugin();
@@ -129,9 +218,6 @@ public:
     void atModeHelpGenerator() override;
     bool atModeHandler(AtModeArgs &args) override;
 #endif
-
-public:
-    static uint32_t _wifiFirstConnect;
 };
 
 inline uint8_t ResetDetector::getResetCounter() const

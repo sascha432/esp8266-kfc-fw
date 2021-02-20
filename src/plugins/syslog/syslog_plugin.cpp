@@ -158,6 +158,23 @@ void SyslogPlugin::_end()
     }
 }
 
+void SyslogPlugin::waitForQueue(uint32_t maxMillis)
+{
+    plugin._waitForQueue(plugin._stream, maxMillis);
+}
+
+void SyslogPlugin::_waitForQueue(SyslogStream *stream, uint32_t timeout)
+{
+    if (stream) {
+        stream->setTimeout(timeout);
+        timeout += millis();
+        while(millis() < timeout && stream->hasQueuedMessages()) {
+            stream->deliverQueue();
+            delay(10); // let system process tcp buffers etc...
+        }
+    }
+}
+
 void SyslogPlugin::_kill(uint32_t timeout)
 {
     if (_stream) {
@@ -166,12 +183,7 @@ void SyslogPlugin::_kill(uint32_t timeout)
         _stream = nullptr;
         _timer.remove();
 
-        stream->setTimeout(timeout);
-        timeout += millis();
-        while(millis() < timeout && stream->hasQueuedMessages()) {
-            stream->deliverQueue();
-            delay(10); // let system process tcp buffers etc...
-        }
+        _waitForQueue(stream, timeout);
         stream->clearQueue();
 
         // __LDBG_delete(stream);

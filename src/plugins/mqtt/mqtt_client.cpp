@@ -499,6 +499,7 @@ void MQTTClient::onConnect(bool sessionPresent)
 #if IOT_REMOTE_CONTROL == 0
     publishAutoDiscovery();
 #endif
+    _startupTimings.setMqtt(millis());
 }
 
 void MQTTClient::onDisconnect(AsyncMqttClientDisconnectReason reason)

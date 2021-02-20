@@ -41,7 +41,7 @@ namespace KFCConfigurationClasses {
         is_softap_dhcpd_enabled(true),
         is_station_mode_enabled(false),
         is_station_mode_dhcp_enabled(true),
-        use_static_ip_during_wakeup(false),
+        use_static_ip_during_wakeup(true),
         __reserved(false),
         is_at_mode_enabled(true),
         is_mdns_enabled(true),

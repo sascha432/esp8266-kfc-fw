@@ -222,19 +222,13 @@ void KFCFWConfiguration::_onWiFiConnectCb(const WiFiEventStationModeConnected &e
     __LDBG_printf("ssid=%s channel=%u bssid=%s wifi_connected=%u is_connected=%u ip=%u/%s", event.ssid.c_str(), event.channel, mac2String(event.bssid).c_str(), _wifiConnected, WiFi.isConnected(), WiFi.localIP().isSet(), WiFi.localIP().toString().c_str());
     if (!_wifiConnected) {
 
-        if (!ResetDetectorPlugin::_wifiFirstConnect && WiFi.localIP().isSet()) {
-            ResetDetectorPlugin::_wifiFirstConnect = millis();
-            Logger_notice(F("WiFi quick connect to %s after %u ms"), event.ssid.c_str(), ResetDetectorPlugin::_wifiFirstConnect);
-        }
-        else {
-            Logger_notice(F("WiFi connected to %s"), event.ssid.c_str());
-        }
-
+        Logger_notice(F("WiFi connected to %s"), event.ssid.c_str());
         _wifiConnected = millis();
+        _startupTimings.setWiFiConnected(_wifiConnected);
         if (_wifiConnected == 0) {
             _wifiConnected++;
         }
- #if ENABLE_DEEP_SLEEP
+#if ENABLE_DEEP_SLEEP
         config.storeQuickConnect(event.bssid, event.channel);
 #endif
 
@@ -297,25 +291,18 @@ void KFCFWConfiguration::_onWiFiGotIPCb(const WiFiEventStationModeGotIP &event)
     auto dns1 = WiFi.dnsIP().toString();
     auto dns2 = WiFi.dnsIP(1).toString();
     _wifiUp = millis();
+    _startupTimings.setWiFiGotIP(_wifiUp);
     if (_wifiUp == 0) {
         _wifiUp++;
     }
-    String str;
-    if (!ResetDetectorPlugin::_wifiFirstConnect) {
-        ResetDetectorPlugin::_wifiFirstConnect = _wifiUp;
-        if (resetDetector.hasWakeUpDetected()) {
-            str = PrintString(F(" (Quick connect %ums)"), ResetDetectorPlugin::_wifiFirstConnect);
-        }
-    }
     __LDBG_printf("ip=%s/%s gw=%s dns=%s/%s wifi_connected=%u wifi_up=%u is_connected=%u ip=%s", ip.c_str(), mask.c_str(), gw.c_str(), dns1.c_str(), dns2.c_str(), _wifiConnected, _wifiUp, WiFi.isConnected(), WiFi.localIP().toString().c_str());
 
-    Logger_notice(F("%s(%ums): IP/Net %s/%s GW %s DNS: %s, %s%s"),
+    Logger_notice(F("%s: IP/Net %s/%s GW %s DNS: %s, %s"),
         System::Flags::getConfig().is_station_mode_dhcp_enabled ? PSTR("DHCP") : PSTR("Static configuration"),
-        _wifiUp - _wifiConnected,
         ip.c_str(), mask.c_str(),
         gw.c_str(),
-        dns1.c_str(), dns2.c_str(),
-        str.c_str());
+        dns1.c_str(), dns2.c_str()
+    );
 
     using Device = KFCConfigurationClasses::System::Device;
 
@@ -914,12 +901,15 @@ bool KFCFWConfiguration::hasZeroConf(const String &hostname) const
 
 void KFCFWConfiguration::wifiQuickConnect()
 {
+    __DBG_printf("quick connect");
+
 #if defined(ESP32)
     WiFi.mode(WIFI_STA); // needs to be called to initialize wifi
     wifi_config_t _config;
     wifi_sta_config_t &config = _config.sta;
     if (esp_wifi_get_config(ESP_IF_WIFI_STA, &_config) == ESP_OK) {
 #elif defined(ESP8266)
+
     struct station_config config;
     if (wifi_station_get_config_default(&config)) {
 #endif
@@ -935,6 +925,7 @@ void KFCFWConfiguration::wifiQuickConnect()
             channel = 0;
             // bssidPtr = nullptr;
         }
+
 
         if (channel <= 0 || !bssidPtr) {
 
@@ -955,8 +946,9 @@ void KFCFWConfiguration::wifiQuickConnect()
                 Logger_error(F("Failed to start WiFi"));
             }
 
-            __LDBG_printf("WiFi.begin() = %d, channel %d, bssid %s, config: static ip %d, %s/%s gateway %s, dns %s, %s",
+            __DBG_printf("WiFi.begin() = %d, ssid %.32s, channel %d, bssid %s, config: static ip %d, %s/%s gateway %s, dns %s, %s",
                 result,
+                config.ssid,
                 channel,
                 mac2String(bssidPtr).c_str(),
                 quickConnect.use_static_ip ? 1 : 0,

@@ -272,9 +272,9 @@ void WiFi_get_status(Print &out)
 #error Platform not supported
 #endif
 
-    if (resetDetector.hasWakeUpDetected() && ResetDetectorPlugin::_wifiFirstConnect) {
+    if (resetDetector.hasWakeUpDetected() && _startupTimings.getWiFiGotIP()) {
         out.print(F(HTML_S(br) HTML_S(br) HTML_S(strong) "Quick connect:" HTML_E(strong) HTML_S(br)));
-        out.printf_P(PSTR("WiFi connected established after %ums" HTML_S(br)), ResetDetectorPlugin::_wifiFirstConnect);
+        out.printf_P(PSTR("WiFi connection established after %ums" HTML_S(br)), _startupTimings.getWiFiGotIP());
     }
 }
 

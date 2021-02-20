@@ -395,6 +395,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(METRICS, "METRICS", "Display system metric
 #if IOT_SENSOR_BATTERY_DISPLAY_LEVEL
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(BCAP, "BCAP", "<voltage>", "Calculate battery capacity for given voltage");
 #endif
+
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMP, "DUMP", "[<dirty|config.name>]", "Display settings");
 #if DEBUG && ESP8266
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMPT, "DUMPT", "Dump timers");
@@ -407,6 +408,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPM, "DUMPM", "<start>,<length>", "Dump 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPA, "DUMPA", "<reset|mark|leak|freed>", "Memory allocation statistics");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMPFS, "DUMPFS", "Display file system information");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPEE, "DUMPEE", "[<offset>[,<length>]", "Dump EEPROM");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMPST, "DUMPST", "Dump Startup timings");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WRTC, "WRTC", "<id,data>", "Write uint32 to RTC memory");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMPRTC, "DUMPRTC", "Dump RTC memory");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(RTCCLR, "RTCCLR", "Clear RTC memory");
@@ -485,6 +487,7 @@ void at_mode_help_commands()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPFS), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPEE), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPRTC), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPST), name);
 #if DEBUG_CONFIGURATION_GETHANDLE
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPH), name);
 #endif
@@ -2060,6 +2063,9 @@ void at_mode_serial_handle_event(String &commandString)
                 }
             }
 #endif
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPST))) {
+                _startupTimings.dump(args.getStream());
+            }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(WIMO))) {
                 if (args.requireArgs(1, 1)) {
                     args.print(F("Setting WiFi mode and restarting device..."));

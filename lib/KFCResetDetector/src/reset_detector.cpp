@@ -213,7 +213,38 @@ void ResetDetector::_writeData()
 
 #if HAVE_KFC_PLUGINS
 
-uint32_t ResetDetectorPlugin::_wifiFirstConnect = 0;
+#include "logger.h"
+
+StartupTimings _startupTimings;
+
+#if IOT_REMOTE_CONTROL
+
+void StartupTimings::dump(Print &output)
+{
+    output.printf_P(PSTR("setup() call: %ums\n"), _setup);
+    output.printf_P(PSTR("first loop() call: %ums\n"), _loop);
+    output.printf_P(PSTR("Wifi connected: %ums\n"), _wifiConnected);
+    output.printf_P(PSTR("WiFi (DHCP/IP stack) ready: %ums\n"), _wifiGotIP);
+    output.printf_P(PSTR("NTP time received: %ums\n"), _ntp);
+    output.printf_P(PSTR("MQTT connection established: %ums\n"), _mqtt);
+    output.printf_P(PSTR("Deep Sleep: %ums\n"), _deepSleep);
+}
+
+void StartupTimings::log()
+{
+    Logger_notice(F("WiFi connected/ready %ums/%ums; NTP %ums; MQTT %ums, Deep Sleep %ums"), _wifiConnected, _wifiGotIP, _ntp, _mqtt, _deepSleep);
+}
+
+#else
+
+void StartupTimings::dump(Print &output)
+{
+    output.printf_P(PSTR("WiFi ready: %ums\n"), _wifiGotIP);
+}
+
+void StartupTimings::log() {}
+
+#endif
 
 static ResetDetectorPlugin plugin;
 

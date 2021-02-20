@@ -49,6 +49,8 @@ public:
     virtual void queueSize(uint32_t size, bool isAvailable);
     static NameType protocolToString(SyslogProtocol proto);
 
+    static void waitForQueue(uint32_t maxMillis);
+
 private:
     void _zeroConfCallback(const SyslogStream *stream, const String &hostname, const IPAddress &address, uint16_t port, MDNSResolver::ResponseType type);
 
@@ -59,6 +61,7 @@ private:
     // does not free all memory
     void _kill(uint32_t timeout);
     void _timerCallback(Event::CallbackTimerPtr timer);
+    void _waitForQueue(SyslogStream *stream, uint32_t maxMillis);
 
 private:
     SyslogStream *_stream;

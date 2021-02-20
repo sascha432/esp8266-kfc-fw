@@ -20,6 +20,9 @@
 #else
 #define IF_HTTP2SERIAL_SUPPORT(...)
 #endif
+#if SYSLOG_SUPPORT
+#include "../src/plugins/syslog/syslog_plugin.h"
+#endif
 
 #if DEBUG_IOT_REMOTE_CONTROL
 #include <debug_helper_enable.h>
@@ -427,7 +430,7 @@ void RemoteControlPlugin::_loop()
         _autoSleepTimeout == kAutoSleepDefault &&
         !_hasEvents() &&
         !MQTTClient::safeIsAutoDiscoveryRunning() &&
-        // IF_HTTP2SERIAL_SUPPORT(!Http2Serial::hasAuthenticatedClients() &&)
+        IF_HTTP2SERIAL_SUPPORT(!Http2Serial::hasAuthenticatedClients() &&)
         (config.getWiFiUp() > 250)
     ) {
         __LDBG_printf("enabling auto sleep time=%us", _config.auto_sleep_time);
@@ -435,6 +438,14 @@ void RemoteControlPlugin::_loop()
         _autoSleepTimeout = millis() + (_config.auto_sleep_time * 1000UL);
     }
     else if (_autoSleepTimeout != kAutoSleepDefault && millis() > _autoSleepTimeout) {
+
+        _startupTimings.setDeepSleep(millis());
+        _startupTimings.log();
+
+#if SYSLOG_SUPPORT
+        SyslogPlugin::waitForQueue(std::max<uint16_t>(500, std::min<uint16_t>(_config.auto_sleep_time / 10, 1500)));
+#endif
+
         __LDBG_printf("entering deep sleep (auto=%d, time=%us)", _config.deep_sleep_time, _config.deep_sleep_time);
         _autoSleepTimeout = kAutoSleepDisabled;
         config.enterDeepSleep(KFCFWConfiguration::seconds(_config.deep_sleep_time), RF_DEFAULT, 1);

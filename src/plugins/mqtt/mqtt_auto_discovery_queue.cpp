@@ -34,6 +34,20 @@ void MQTTAutoDiscoveryQueue::clear()
     _timer.remove();
 }
 
+bool MQTTAutoDiscoveryQueue::isUpdateScheduled()
+{
+    uint32_t now  = time(nullptr);
+    if (!IS_TIME_VALID(now)) {
+        return false;
+    }
+    auto state = _getState();
+    if (!state._valid) {
+        return true;
+    }
+    auto delay = Plugins::MQTTClient::getConfig().auto_discovery_rebroadcast_interval;
+    return (delay && now > state._lastAutoDiscoveryTimestamp + delay);
+}
+
 void MQTTAutoDiscoveryQueue::publish(bool force)
 {
     __LDBG_printf("components=%u delay=%u force=%u", _client._components.size(), MQTT_AUTO_DISCOVERY_QUEUE_INITIAL_DELAY, force);

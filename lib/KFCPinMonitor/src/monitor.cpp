@@ -332,25 +332,44 @@ void Monitor::feed(uint32_t micros1, uint32_t values1, uint32_t pins, bool activ
             debounce->setState(activeLow);
 
             auto &pin = *reinterpret_cast<DebouncedHardwarePin *>(pinPtr.get());
-            uint8_t mask = _BV(pin.getPin());
-            bool value = (pins & mask) ? ((values1 & mask) != 0) : activeLow;
+            uint32_t mask = _BV(pin.getPin());
             uint32_t now = micros1 / 1000;
-
-            if (value != activeLow) {
-                _event(pin.getPin(), debounce->debounce(value, 1, micros1, now), now);
+            uint8_t intCount = (pins & mask) ? 1 : 0; // has pin been read?
+            bool value = intCount == 0 ? activeLow : (values1 & mask); // if read get the value
+            if (value == activeLow) { // set intterupt to zero if the button is not pressed
+                intCount = 0;
             }
 
-            bool _value = digitalRead(pin.getPin());
+#if 0
+            auto dval = debounce->debounce(value, intCount, micros1, now, micros1);
+            __DBG_printf("feed pin=%u value=%u int_count=%u micros=%u debounce=%s", pin.getPin(), value, intCount, micros1, stateType2Level(dval));
+            _event(pin.getPin(), dval, now);
+
+            uint32_t micros2 = micros1 += 25000;
+
+            dval = debounce->debounce(value, 0, micros2, now + 25, micros2);
+            __DBG_printf("feed pin=%u value=%u int_count=%u micros=%u debounce=%s", pin.getPin(), value, 0, micros1, stateType2Level(dval));
+            _event(pin.getPin(), dval, now + 25);
+#endif
+
+            _event(pin.getPin(), debounce->debounce(value, intCount, micros1, now, micros1), now);
+            _event(pin.getPin(), debounce->debounce(value, 0, micros1, now + 25, micros1 + 25000), now + 25);
+
             noInterrupts();
-            // fake interrupt to update state
-            pin._micros = micros();
-            pin._value = _value;
-            pin._intCount = (_value != value) ? 1 : 0;
+            bool _value = digitalRead(pin.getPin());
+            if (_value != value) {
+                // fake interrupt if the value has changd
+                pin._micros = micros() - 25000;
+                pin._value = _value;
+                pin._intCount++;
+            }
             interrupts();
+            // __DBG_printf("feed int pin=%u new=%u value=%u int_count=%u micros=%u", pin.getPin(), (_value != value), pin._value, pin._intCount, pin._micros);
 
         }
     }
     _lastRun = millis();
+    // delay(pinMonitor.getDebounceTime() + 5);
 }
 
 void Monitor::_loop()
@@ -359,7 +378,6 @@ void Monitor::_loop()
     if (now == _lastRun) { // runs up to 10-15x per millisecond
         return;
     }
-    _lastRun = now;
 
     for(auto &pinPtr: _pins) {
         auto debounce = pinPtr->getDebounce();
@@ -367,18 +385,28 @@ void Monitor::_loop()
             auto &pin = *reinterpret_cast<DebouncedHardwarePin *>(pinPtr.get());
 
             noInterrupts();
-            auto micros = pin._micros;
+            auto micros1 = pin._micros;
             auto intCount = pin._intCount;
             bool value = pin._value;
             pin._intCount = 0;
             interrupts();
 
-            _event(pin.getPin(), debounce->debounce(value, intCount, micros, now), now);
+#if 0
+            auto dval = debounce->debounce(value, intCount, micros1, now, micros());
+            if (intCount || _lastRun == 0 || dval != StateType::NONE) {
+                __DBG_printf("pin=%u value=%u int_count=%u micros=%u debounce=%s last=%u", pin.getPin(), value, intCount, micros1, stateType2Level(dval), _lastRun);
+            }
+            _event(pin.getPin(), dval, now);
+#else
+            _event(pin.getPin(), debounce->debounce(value, intCount, micros1, now, micros()), now);
+#endif
+
         }
     }
     for(const auto &handler: _handlers) {
         handler->loop();
     }
+    _lastRun = millis();
 }
 
 void Monitor::_event(uint8_t pinNum, StateType state, uint32_t now)

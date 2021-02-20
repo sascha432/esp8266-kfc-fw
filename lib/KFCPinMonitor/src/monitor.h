@@ -92,11 +92,12 @@ namespace PinMonitor {
     private:
         Pin &_attach(Pin &pin, HardwarePinType type = HardwarePinType::_DEFAULT);
         void _detach(Iterator begin, Iterator end, bool clear);
-    public:
+    private:
         void _attachLoop();
         void _detachLoop();
-    private:
+    public:
         void _loop();
+    private:
         void _event(uint8_t pin, StateType state, uint32_t now);
 
     private:

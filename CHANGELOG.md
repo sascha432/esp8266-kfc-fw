@@ -51,6 +51,7 @@
 - Limit maximum power of the LEDs
 - Support for rotary encoders with pushbutton and capacitive touch sensor
 - MQTT device triggers for remote control
+- Battery level indicator in % with charging detection
 
 ## Version 0.0.3
 

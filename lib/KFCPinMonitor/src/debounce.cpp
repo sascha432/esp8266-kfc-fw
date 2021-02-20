@@ -13,12 +13,12 @@
 
 using namespace PinMonitor;
 
-StateType Debounce::debounce(bool lastValue, uint16_t interruptCount, uint32_t last, uint32_t now)
+StateType Debounce::debounce(bool lastValue, uint16_t interruptCount, uint32_t last, uint32_t now, uint32_t _micros)
 {
     if (interruptCount) {
 
         // set start to time when we received the last pin change interrupt
-        _debounceTimer = now - (get_time_diff(last, micros()) / 1000U);
+        _debounceTimer = now - (get_time_diff(last, _micros) / 1000U);
 
         // debounce timer running?
         if (_debounceTimerRunning == false) {

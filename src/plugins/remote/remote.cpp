@@ -14,6 +14,12 @@
 #include "remote_button.h"
 #include "push_button.h"
 #include "plugins_menu.h"
+#if HTTP2SERIAL_SUPPORT
+#include "../src/plugins/http2serial/http2serial.h"
+#define IF_HTTP2SERIAL_SUPPORT(...) __VA_ARGS__
+#else
+#define IF_HTTP2SERIAL_SUPPORT(...)
+#endif
 
 #if DEBUG_IOT_REMOTE_CONTROL
 #include <debug_helper_enable.h>
@@ -40,6 +46,8 @@ String RemoteControlPlugin::PinState::toString()
         activeLow(),
         BitsToStr<17, true>(activeLow() ? _state ^ _read : _state).merge(_read)
     );
+    for(uint8_t n = 0; n < _buttonPins.size(); n++) {
+    }
 }
 
 #if DEBUG_IOT_REMOTE_CONTROL
@@ -95,11 +103,11 @@ void RemoteControlPlugin::_updateButtonConfig()
 {
     for(const auto &buttonPtr: pinMonitor.getHandlers()) {
         auto &button = static_cast<Button &>(*buttonPtr);
-        __LDBG_printf("arg=%p btn=%p pin=%u digital_read=%u inverted=%u owner=%u", button.getArg(), &button, button.getPin(), digitalRead(button.getPin()), button.isInverted(), button.getBase() == this);
+        // __LDBG_printf("arg=%p btn=%p pin=%u digital_read=%u inverted=%u owner=%u", button.getArg(), &button, button.getPin(), digitalRead(button.getPin()), button.isInverted(), button.getBase() == this);
         if (button.getBase() == this) { // auto downcast of this
-#if DEBUG_IOT_REMOTE_CONTROL
+#if DEBUG_IOT_REMOTE_CONTROL && 0
             auto &cfg = _getConfig().actions[button.getButtonNum()];
-            __DBG_printf("button#=%u action=%u,%u,%u,%u,%u,%u,%u,%u udp=%s mqtt=%s",
+            __LDBG_printf("button#=%u action=%u,%u,%u,%u,%u,%u,%u,%u udp=%s mqtt=%s",
                 button.getButtonNum(),
                 cfg.down, cfg.up, cfg.press, cfg.single_click, cfg.double_click, cfg.long_press, cfg.hold, cfg.hold_released,
                 BitsToStr<9, true>(cfg.udp.event_bits).c_str(), BitsToStr<9, true>(cfg.udp.event_bits).c_str()
@@ -114,9 +122,6 @@ void RemoteControlPlugin::setup(SetupModeType mode)
 {
     __LDBG_printf("mode=%u", mode);
     pinMonitor.begin();
-
-
-    PrintString stateStr = F("Pin state: ");
 
 #if PIN_MONITOR_BUTTON_GROUPS
     SingleClickGroupPtr group1;
@@ -156,19 +161,20 @@ void RemoteControlPlugin::setup(SetupModeType mode)
     _readConfig();
     _updateButtonConfig();
 
+    __LDBG_printf("feed time=%u state=%u read=%u active_low=%u %s", _pinState._time, _pinState._state, _pinState._read, _pinState.activeLow(), _pinState.toString().c_str());
+
     // reset state and feed debouncer with initial values and state
     pinMonitor.feed(_pinState._time, _pinState._state, _pinState._read, _pinState.activeLow());
-    pinMonitor.loop();
+    // pinMonitor._loop();
 
     LoopFunctions::callOnce([this]() {
 
-        __LDBG_printf("delayed mqtt setup");
         _setup();
 
-        // WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTED, wifiCallback);
+        WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTED, wifiCallback);
         LoopFunctions::add(loop);
 
-        __LDBG_printf("initial %s", _pinState.toString().c_str());
+        _resetAutoSleep();
 
         // _actions.emplace_back(new ActionUDP(100, Payload::String(F("test1")), F("!acidpi1.local"), IPAddress(), 7712));
         // _actions.emplace_back(new ActionUDP(200, Payload::String(F("test2")), F("192.168.0.3"), IPAddress(), 7712));
@@ -202,7 +208,7 @@ void RemoteControlPlugin::shutdown()
     pinMonitor.detach(this);
 
     LoopFunctions::remove(loop);
-    // WiFiCallbacks::remove(WiFiCallbacks::EventType::ANY, wifiCallback);
+    WiFiCallbacks::remove(WiFiCallbacks::EventType::ANY, wifiCallback);
 }
 
 void RemoteControlPlugin::prepareDeepSleep(uint32_t sleepTimeMillis)
@@ -236,24 +242,26 @@ void RemoteControlPlugin::createMenu()
 
 #if AT_MODE_SUPPORTED
 
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(RMNOSLP, "RMNOSLP", "Disable auto sleep");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(RMNPUB, "RMNPUB", "Publish auto discovery");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RCDSLP, "RCDSLP", "[<time in seconds>]", "Set or disable auto sleep");
 
 void RemoteControlPlugin::atModeHelpGenerator()
 {
     auto name = getName_P();
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(RMNOSLP), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(RCDSLP), name);
 }
 
 bool RemoteControlPlugin::atModeHandler(AtModeArgs &args)
 {
-    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RMNOSLP))) {
-        args.printf_P(PSTR("Auto sleep disabled. timeout=%u"), _autoSleepTimeout);
-        _autoSleepTimeout = kAutoSleepDisabled;
-        return true;
-    }
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RMNPUB))) {
-        publishAutoDiscovery();
+    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RCDSLP))) {
+        int time = args.toInt(0);
+        if (time < 1) {
+            _autoSleepTimeout = kAutoSleepDisabled;
+            args.printf_P(PSTR("Auto sleep disabled"));
+        }
+        else {
+            _autoSleepTimeout = time * 1000UL;
+            args.printf_P(PSTR("Auto sleep timeout %us"), time);
+        }
         return true;
     }
     return false;
@@ -262,20 +270,20 @@ bool RemoteControlPlugin::atModeHandler(AtModeArgs &args)
 
 #endif
 
-void RemoteControlPlugin::_onShortPress(Button &button)
-{
-    __LDBG_printf("%u SHORT PRESS", button.getButtonNum());
-}
+// void RemoteControlPlugin::_onShortPress(Button &button)
+// {
+//     __LDBG_printf("%u SHORT PRESS", button.getButtonNum());
+// }
 
-void RemoteControlPlugin::_onLongPress(Button &button)
-{
-    __LDBG_printf("%u LONG PRESS", button.getButtonNum());
-}
+// void RemoteControlPlugin::_onLongPress(Button &button)
+// {
+//     __LDBG_printf("%u LONG PRESS", button.getButtonNum());
+// }
 
-void RemoteControlPlugin::_onRepeat(Button &button)
-{
-    __LDBG_printf("%u REPEAT", button.getButtonNum());
-}
+// void RemoteControlPlugin::_onRepeat(Button &button)
+// {
+//     __LDBG_printf("%u REPEAT", button.getButtonNum());
+// }
 
 
 #if 0
@@ -356,7 +364,7 @@ void RemoteControlPlugin::_onButtonReleased(Button& btn, uint16_t duration)
     if (_longPress) {
         if (!anyButton()) {
             // disable LED after all buttons have been released
-            BUILDIN_LED_SET(config.isWiFiUp() ? BlinkLEDTimer::BlinkType::SOLID : BlinkLEDTimer::BlinkType::OFF);
+            BUILDIN_LED_SET(WiFi.isConnected() ? BlinkLEDTimer::BlinkType::SOLID : BlinkLEDTimer::BlinkType::OFF);
             __LDBG_printf("longpress=%d combo=%d", _longPress, _comboButton);
             _longPress = 0;
             _comboButton = -1;
@@ -380,53 +388,12 @@ void RemoteControlPlugin::loop()
     plugin._loop();
 }
 
-// void RemoteControlPlugin::wifiCallback(WiFiCallbacks::EventType event, void *payload)
-// {
-//     if (event == WiFiCallbacks::EventType::CONNECTED) {
-//         plugin._wifiConnected();
-//     }
-// }
-
-// void RemoteControlPlugin::disableAutoSleepHandler(AsyncWebServerRequest *request)
-// {
-//     __LDBG_printf("is_authenticated=%u", WebServerPlugin::getInstance().isAuthenticated(request) == true);
-//     if (WebServerPlugin::getInstance().isAuthenticated(request) == true) {
-//         disableAutoSleep();
-//         AsyncWebServerResponse *response = request->beginResponse(302);
-//         HttpHeaders httpHeaders;
-//         httpHeaders.addNoCache(true);
-//         httpHeaders.add<HttpLocationHeader>(F("/status.html"));
-//         httpHeaders.setAsyncWebServerResponseHeaders(response);
-//         request->send(response);
-//     }
-//     else {
-//         request->send(403);
-//     }
-// }
-
-// void RemoteControlPlugin::deepSleepHandler(AsyncWebServerRequest *request)
-// {
-//     __LDBG_printf("is_authenticated=%u", WebServerPlugin::getInstance().isAuthenticated(request) == true);
-//     if (WebServerPlugin::getInstance().isAuthenticated(request) == true) {
-//         AsyncWebServerResponse *response = request->beginResponse(302);
-//         HttpHeaders httpHeaders;
-//         httpHeaders.addNoCache(true);
-//         httpHeaders.add<HttpLocationHeader>(F("/status.html"));
-//         httpHeaders.setAsyncWebServerResponseHeaders(response);
-//         request->send(response);
-
-//         BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
-//         disableAutoSleep();
-
-//         _Scheduler.add(2000, false, [](Event::CallbackTimerPtr timer) {
-//             __LDBG_printf("deep sleep=%us", plugin._config.deep_sleep_time);
-//             config.enterDeepSleep(KFCFWConfiguration::seconds(plugin._config.deep_sleep_time), RF_DEFAULT, 1);
-//         });
-//     }
-//     else {
-//         request->send(403);
-//     }
-// }
+void RemoteControlPlugin::wifiCallback(WiFiCallbacks::EventType event, void *payload)
+{
+    if (event == WiFiCallbacks::EventType::CONNECTED) {
+        plugin._resetAutoSleep();
+    }
+}
 
 RemoteControlPlugin::PinState RemoteControlPlugin::readPinState()
 {
@@ -436,39 +403,58 @@ RemoteControlPlugin::PinState RemoteControlPlugin::readPinState()
             auto pin = _buttonPins[i];
             pinMode(pin, INPUT);
             _pinState.setPin(pin, digitalRead(pin));
+
         }
+        __LDBG_printf("read pin state %s", _pinState.toString().c_str());
     }
     return _pinState;
 }
 
 void RemoteControlPlugin::_loop()
 {
-    if (_autoSleepTimeout != kAutoSleepDisabled && _config.auto_sleep_time != 0) {
-        if (_isUsbPowered()) {
-            if (_autoSleepTimeout) {
-                __LDBG_printf("usb power detected, disabling auto sleep");
-                _autoSleepTimeout = 0;
-            }
-        }
-        else if (_autoSleepTimeout == 0) {
-            uint16_t timeout = _config.auto_sleep_time;
-            if (!config.isWiFiUp()) {
-                timeout = std::max<uint16_t>(30, timeout); // increase auto sleep timeout to at least 30 seconds if wifi is down
-            }
-            _autoSleepTimeout = millis() + (timeout * 1000UL);
-            __LDBG_printf("auto deep sleep=%u connected=%u", _autoSleepTimeout, config.isWiFiUp());
-        }
-        // do not sleep until all events have been processed
-        else if (!_hasEvents() && _autoSleepTimeout && millis() >= _autoSleepTimeout && !MQTTClient::safeIsAutoDiscoveryRunning()) {
-            __LDBG_printf("entering deep sleep (auto=%d, time=%us)", _config.deep_sleep_time, _config.deep_sleep_time);
-            _autoSleepTimeout = kAutoSleepDisabled;
-            config.enterDeepSleep(KFCFWConfiguration::seconds(_config.deep_sleep_time), RF_DEFAULT, 1);
+    if (_autoSleepTimeout == kAutoSleepDisabled) {
+        // ...
+    }
+    else if (_isUsbPowered()) {
+        _resetAutoSleep();
+        if (_autoDiscoveryRunOnce && MQTTClient::safeIsConnected() && IS_TIME_VALID(time(nullptr))) {
+            __LDBG_printf("usb power detected, running auto discovery");
+            _autoDiscoveryRunOnce = false;
+            // publishAutoDiscovery();
         }
     }
+    else if (
+        _autoSleepTimeout == kAutoSleepDefault &&
+        !_hasEvents() &&
+        !MQTTClient::safeIsAutoDiscoveryRunning() &&
+        // IF_HTTP2SERIAL_SUPPORT(!Http2Serial::hasAuthenticatedClients() &&)
+        (config.getWiFiUp() > 250)
+    ) {
+        __LDBG_printf("enabling auto sleep time=%us", _config.auto_sleep_time);
+        // start timeout once ready
+        _autoSleepTimeout = millis() + (_config.auto_sleep_time * 1000UL);
+    }
+    else if (_autoSleepTimeout != kAutoSleepDefault && millis() > _autoSleepTimeout) {
+        __LDBG_printf("entering deep sleep (auto=%d, time=%us)", _config.deep_sleep_time, _config.deep_sleep_time);
+        _autoSleepTimeout = kAutoSleepDisabled;
+        config.enterDeepSleep(KFCFWConfiguration::seconds(_config.deep_sleep_time), RF_DEFAULT, 1);
+    }
+    else {
+#if 1
+        static bool counter = false;
+        if ((millis() / 1000) % 2 == counter) {
+            counter = !counter;
+            __LDBG_printf("has_events=%u run_auto_sleep=%u auto_discovery=%u http2serial_clients=%u wifi=%u", _hasEvents(), millis() >= _autoSleepTimeout, MQTTClient::safeIsAutoDiscoveryRunning(), Http2Serial::hasAuthenticatedClients(), (config.getWiFiUp() > 250));
+        }
+#endif
+    }
 
-    // buttons are interrupt driven and do not require fast polling
-    // 5-10ms catches pretty much all events
-    // delay(10);
+    if (!_hasEvents()) {
+        delay(10);
+    }
+    else {
+        delay(1);
+    }
 }
 
 bool RemoteControlPlugin::_isUsbPowered() const
@@ -481,13 +467,12 @@ void RemoteControlPlugin::_readConfig()
     _config = Plugins::RemoteControl::getConfig();
 }
 
-
 #if 0
 void RemoteControlPlugin::_sendEvents()
 {
-    __LDBG_printf("wifi=%u events=%u locked=%s", config.isWiFiUp(), _events.size(), String(_buttonsLocked & 0b1111, 2).c_str());
+    __LDBG_printf("wifi=%u events=%u locked=%s", WiFi.isConnected(), _events.size(), String(_buttonsLocked & 0b1111, 2).c_str());
 
-    if (config.isWiFiUp() && _events.size()) {
+    if (WiFi.isConnected() && _events.size()) {
         for(auto iterator = _events.begin(); iterator != _events.end(); ++iterator) {
             if (iterator->getType() == EventType::NONE) {
                 continue;

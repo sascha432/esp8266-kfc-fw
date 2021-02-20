@@ -370,6 +370,7 @@ namespace WebAlerts {
     public:
         static IdType addAlert(const String &message, Type type, ExpiresType expires) {
             logger(message, type);
+            return 1;
         }
 
         static bool hasOption(OptionsType option) {

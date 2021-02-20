@@ -87,11 +87,12 @@ void setup()
     Serial1.begin(KFC_DEBUG_USE_SERIAL1);
     static_assert(KFC_DEBUG_USE_SERIAL1 >= 300, "must be set to the baud rate");
 #endif
+    serialHandler.begin();
+    DEBUG_HELPER_INIT();
+
 #if IOT_REMOTE_CONTROL
     RemoteControlPlugin::getInstance().readPinState();
 #endif
-    serialHandler.begin();
-    DEBUG_HELPER_INIT();
 
 #if HAVE_PCF8574
         initialize_pcf8574();
@@ -294,6 +295,25 @@ void setup()
         }
     }
 #endif
+
+// #if defined(KFC_ENABLE_DEBUG_LOG_AT_BOOTTIME) && KFC_ENABLE_DEBUG_LOG_AT_BOOTTIME
+//     if (!safe_mode) {
+//         String logfile;
+//         uint16_t n = 0;
+//         do {
+//             logfile = PrintString(F("/.pvt/debug.%02u.log"), n++);
+//             if (n > 100) {
+//                 n = 0;
+//                 break;
+//             }
+//         }
+//         while(KFCFS.exists(logfile));
+//         static auto debugLog = KFCFS.open(logfile, "w");
+//         if (debugLog) {
+//             debugStreamWrapper.add(&debugLog);
+//         }
+//     }
+// #endif
 
     config.setSafeMode(safe_mode);
 

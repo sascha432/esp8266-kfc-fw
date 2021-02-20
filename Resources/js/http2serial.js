@@ -23,6 +23,7 @@
     filter: null,
 
     autoReconnect: true,
+    isConnected: false,
     socket: null,
 
     addCommands: function(commands) {
@@ -174,19 +175,19 @@
         // this.filterModal.find('.filter-set').removeClass('btn-secondary').addClass('btn-primary');
     },
 
-    sendCommand: function(command) {
+    sendCommand: function() {
         var command = this.input.val();
         $.http2serialPlugin.console.log('send ' + command);
         if (command.trim() != '') {
             this.historyAdd(command);
             cmdlo = command.toLowerCase();
-            if (cmdlo == '/disconnect') {
+            if (cmdlo.startsWith('/dis')) {
                 this.autoReconnect = false;
                 this.socket.disconnect();
                 this.input.val('');
                 this.write('Disconnected...\n');
                 return;
-            } else if (cmdlo == '/reconnect') {
+            } else if (cmdlo.startsWith('/re') || cmdlo.startsWith('/con')) {
                 this.autoReconnect = true;
                 this.socket.disconnect();
                 this.connect();
@@ -196,7 +197,7 @@
                 this.historyClear();
                 this.input.val('');
                 return;
-            } else if (cmdlo == '/clear') {
+            } else if (cmdlo.startsWith('/cl')) {
                 this.output.val('');
                 this.input.val('');
                 return;
@@ -206,7 +207,9 @@
                 this.write(command + '\n');
                 this.input.val('');
             } catch(e) {
-                this.write(e + '\nConnection lost. Reconnecting...\n');
+                this.write('Not connected. Reconnecting...\n');
+                this.autoReconnect = true;
+                this.socket.disconnect();
                 this.connect();
             }
         } else {
@@ -223,6 +226,32 @@
         var SID = $.getSessionId();
         var self = this;
         this.socket = new WS_Console(url, SID, 1, function(event) { self.dataHandler(event); }, this.output.attr('id'));
+        this.socket.__connect = this.socket.connect;
+        this.socket.__disconnect = this.socket.disconnect;
+        $('#connectbutton').on('click', function() {
+            if (self.isConnected) {
+                self.autoReconnect = false;
+                self.socket.disconnect();
+                self.write('Disconnected...\n');
+            }
+            else {
+                self.autoReconnect = true;
+                self.socket.disconnect();
+                self.connect();
+            }
+        });
+        self.socket.connect = function(authenticated_callback) {
+            self.socket.__connect(authenticated_callback);
+            self.isConnected = true;
+            $('#connectbutton').html('Disconnect');
+        };
+        self.socket.disconnect = function(reconnect) {
+            self.socket.__disconnect(reconnect);
+            self.isConnected = false;
+            $('#connectbutton').html('Connect');
+        };
+
+
         $.http2serialPlugin.console.log(this.socket);
         this.socket.connect();
     },

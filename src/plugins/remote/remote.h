@@ -17,6 +17,12 @@
 #include "../src/plugins/mqtt/mqtt_auto_discovery.h"
 #endif
 
+#if DEBUG_IOT_REMOTE_CONTROL
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
 using namespace RemoteControl;
 
 #if MQTT_SUPPORT && MQTT_AUTO_DISCOVERY
@@ -138,9 +144,9 @@ public:
     static RemoteControlPlugin &getInstance();
 
 private:
-    virtual void _onShortPress(Button &button);
-    virtual void _onLongPress(Button &button);
-    virtual void _onRepeat(Button &button);
+    // virtual void _onShortPress(Button &button);
+    // virtual void _onLongPress(Button &button);
+    // virtual void _onRepeat(Button &button);
 
     void _updateButtonConfig();
     void _loop();
@@ -178,7 +184,7 @@ private:
 
 inline bool RemoteControlPlugin::_hasEvents() const
 {
-    return _queue.size() != 0;
+    return !_queue.empty();
 }
 
 inline void RemoteControlPlugin::disableAutoSleep()

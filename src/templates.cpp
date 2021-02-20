@@ -243,7 +243,8 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         output.print(formatTime((long)(millis() / 1000)));
     }
     else if (String_equals(key, PSTR("WIFI_UPTIME"))) {
-        output.print(System::Flags::getConfig().is_station_mode_enabled ? (!KFCFWConfiguration::isWiFiUp() ? FSPGM(Offline, "Offline") : formatTime((millis() - KFCFWConfiguration::getWiFiUp()) / 1000)) : F("Client mode disabled"));
+        auto wifiUp = KFCFWConfiguration::getWiFiUp();
+        output.print(System::Flags::getConfig().is_station_mode_enabled ? (wifiUp == 0 ? FSPGM(Offline, "Offline") : formatTime(wifiUp)) : F("Client mode disabled"));
     }
     else if (String_equals(key, PSTR("IP_ADDRESS"))) {
         WiFi_get_address(output);

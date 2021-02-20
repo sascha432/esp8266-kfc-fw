@@ -49,6 +49,8 @@ public:
     // publish queue
     void publish(bool force = false);
 
+    static bool isUpdateScheduled();
+
 private:
     void _timerCallback(Event::CallbackTimerPtr timer);
     void _publishDone(bool success = true, uint32_t delay = 0);

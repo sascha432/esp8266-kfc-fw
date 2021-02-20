@@ -178,9 +178,14 @@ size_t Http2Serial::write(const uint8_t *buffer, int length)
 //     return _serialHandler;
 // }
 
-AsyncWebSocket *Http2Serial::getConsoleServer()
+WsClientAsyncWebSocket *Http2Serial::getServerSocket()
 {
     return wsSerialConsole;
+}
+
+bool Http2Serial::hasAuthenticatedClients()
+{
+    return wsSerialConsole && wsSerialConsole->hasAuthenticatedClients();
 }
 
 AsyncWebSocketClient *Http2Serial::getClientById(const void *clientId)
@@ -251,7 +256,7 @@ void Http2SerialPlugin::setup(SetupModeType mode)
 {
     auto server = WebServerPlugin::getWebServerObject();
     if (server) {
-        __DBG_printf("server=%p console=%p", server, wsSerialConsole);
+        // __LDBG_printf("server=%p console=%p", server, wsSerialConsole);
         auto ws = __LDBG_new(WsClientAsyncWebSocket, FSPGM(_serial_console), &wsSerialConsole);
         ws->onEvent(http2serial_event_handler);
         server->addHandler(ws);

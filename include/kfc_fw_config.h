@@ -514,7 +514,7 @@ public:
     static void loop();
     void gc();
     static uint8_t getMaxWiFiChannels();
-    static String getWiFiEncryptionType(uint8_t type);
+    static const __FlashStringHelper *getWiFiEncryptionType(uint8_t type);
 
     bool isSafeMode() const {
         return _safeMode;
@@ -542,8 +542,9 @@ public:
     void _softAPModeStationConnectedCb(const WiFiEventSoftAPModeStationConnected &);
     void _softAPModeStationDisconnectedCb(const WiFiEventSoftAPModeStationDisconnected &);
 
-    static bool isWiFiUp();
-    static unsigned long getWiFiUp();
+    // return seconds since WiFi has been connected
+    // 0 = not connected
+    static uint32_t getWiFiUp();
 
     TwoWire &initTwoWire(bool reset = false, Print *output = nullptr);
     bool setRTC(uint32_t unixtime);
@@ -556,17 +557,16 @@ private:
     friend class KFCConfigurationPlugin;
 
     String _lastError;
-    int16_t _garbageCollectionCycleDelay;
-    uint8_t _dirty : 1;
-    uint8_t _wifiConnected : 1;
-    uint8_t _initTwoWire : 1;
-    uint8_t _safeMode : 1;
-    unsigned long _wifiUp;
-    unsigned long _offlineSince;
-
 #if ENABLE_DEEP_SLEEP
     DeepSleep::DeepSleepParams_t _deepSleepParams;
 #endif
+    uint32_t _wifiConnected;        // time of connection
+    uint32_t _wifiUp;               // time of receiving IP address
+    int16_t _garbageCollectionCycleDelay;
+    uint8_t _dirty : 1;
+    uint8_t _initTwoWire : 1;
+    uint8_t _safeMode : 1;
+
 
 #if USE_WIFI_SET_EVENT_HANDLER_CB == 0
     WiFiEventHandler _onWiFiConnect;

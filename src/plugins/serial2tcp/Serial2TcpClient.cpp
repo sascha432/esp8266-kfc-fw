@@ -133,7 +133,7 @@ void Serial2TcpClient::_connect()
     if (result) {
         _startClient();
     } else {
-        _onDisconnect(&client, config.isWiFiUp() ? F("Connection failed") : F("Connection failed: WiFi offline"));
+        _onDisconnect(&client, WiFi.isConnected() ? F("Connection failed") : F("Connection failed: WiFi offline"));
     }
     __DBGS2T("connect conn=%p client=%p\n", _connection, _connection ? _connection->getClient() : nullptr);
 }

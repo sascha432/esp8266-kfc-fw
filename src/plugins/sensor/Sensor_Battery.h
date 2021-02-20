@@ -46,8 +46,11 @@ extern bool Sensor_Battery_charging_detection();
 // #define IOT_SENSOR_BATTERY_CHARGING                             digitalRead()
 #endif
 
-#ifndef IOT_SENSOR_BATTERY_CHARGING_COMPLETE
-// #define IOT_SENSOR_BATTERY_CHARGING_COMPLETE                    digitalRead(5)
+// set pin to detect end of charge cycle.
+// mode is active low and pin gets set to INPUT_PULLUP before reading it with interrupts disabled
+// GPIO3/RX can be used. the pin should be floating while not charging. pulling GPIO3 low with 10K seems to work
+#ifndef IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN
+#define IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN                -1
 #endif
 
 #ifndef IOT_SENSOR_BATTERY_ON_BATTERY
@@ -71,15 +74,23 @@ extern bool Sensor_Battery_charging_detection();
 #endif
 
 // function that returns an integer of the battery level in %
-// see Sensor_Battery::calcLipoCapacity(voltage)
-// set to -1 to disable
+// see Sensor_Battery::calcLipoCapacity(voltage, number_of_cells, is_charging)
+// the functions uses polynomial regression to fit the voltage to the capacity level and probably needs adjustments
+// for different batteries and discharge/charging currents
+// max. voltage and an offset can be configured at the WebUI
+// calibrate the ADC to reach a maximum of 4.26V while charging
 #ifndef IOT_SENSOR_BATTERY_LEVEL_FUNCTION
-#define IOT_SENSOR_BATTERY_LEVEL_FUNCTION(voltage)              Sensor_Battery::calcLipoCapacity(voltage)
+#define IOT_SENSOR_BATTERY_LEVEL_FUNCTION(u, n, c)              Sensor_Battery::calcLipoCapacity(u, n, c)
+#endif
+
+// number of cells
+#ifndef IOT_SENSOR_BATTERY_NUM_CELLS
+#define IOT_SENSOR_BATTERY_NUM_CELLS                            1
 #endif
 
 class Sensor_Battery : public MQTTSensor {
 public:
-    enum class StateType {
+    enum class StateType : uint8_t {
         OFF,
         RUNNING,
         RUNNING_ON_BATTERY,
@@ -87,7 +98,7 @@ public:
         STANDBY
     };
 
-    enum class ChargingType {
+    enum class ChargingType : uint8_t {
         NOT_AVAILABLE,
         NONE,
         CHARGING,
@@ -95,10 +106,11 @@ public:
     };
 
     using ConfigType = Plugins::Sensor::BatteryConfig_t;
+    using RegressFunction = std::function<float(float)>;
 
     class Status {
     public:
-        Status() : _state(StateType::RUNNING), _charging(ChargingType::NOT_AVAILABLE), _updateTime(0) {}
+        Status() : _state(StateType::RUNNING), _charging(ChargingType::NOT_AVAILABLE), _pCharging(ChargingType::NOT_AVAILABLE), _level(100), _updateTime(0) {}
 
         bool isValid() const {
             return (_updateTime != 0) && (get_time_diff(_updateTime, millis()) < 1000);
@@ -111,9 +123,7 @@ public:
         }
 
         uint8_t getLevel() const {
-#if IOT_SENSOR_BATTERY_DISPLAY_LEVEL
-            return IOT_SENSOR_BATTERY_LEVEL_FUNCTION(_voltage);
-#endif
+            return _level;
         }
 
         String getChargingStatus() const {
@@ -154,8 +164,9 @@ public:
     private:
         StateType _state;
         ChargingType _charging;
+        ChargingType _pCharging;
         float _voltage;
-        uint8_t _battery_level;
+        uint8_t _level;
         uint32_t _updateTime;
     };
 
@@ -190,27 +201,22 @@ public:
 
     Status readSensor();
 
-    static constexpr float kRegressMin = 3.490;
-    static constexpr float kRegressMax = 4.120;
-    static constexpr float kLipoMinV = 3.0; // voltage that represents 0-1% capacity
-    static constexpr float kLipoMaxV = 4.15; // 100% charge
-
     // calculate capacity in %
-    // discharge = 0.1C by default. can be used to adjust the discharge curve or adjust to current load
-    static uint8_t calcLipoCapacity(float voltage, uint8_t cells = 1, float discharge = 0.1);
+    static uint8_t calcLipoCapacity(float voltage, uint8_t cells = 1, bool charging = false);
 
 private:
     friend Status;
 
     String _getId(TopicType type);
     String _getTopic(TopicType type);
-    // bool _isCharging() const;
-    // bool _isOnExternalPower() const;
 
     JsonString _name;
     ConfigType _config;
     Event::Timer _timer;
     Status _status;
+
+public:
+    static float maxVoltage;
 };
 
 #endif

@@ -213,9 +213,7 @@ void ResetDetector::_writeData()
 
 #if HAVE_KFC_PLUGINS
 
-#if ENABLE_DEEP_SLEEP
-uint32_t ResetDetectorPlugin::_deepSleepWifiTime = ~0;
-#endif
+uint32_t ResetDetectorPlugin::_wifiFirstConnect = 0;
 
 static ResetDetectorPlugin plugin;
 

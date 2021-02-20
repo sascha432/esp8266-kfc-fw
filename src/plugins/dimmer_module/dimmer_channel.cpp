@@ -215,8 +215,7 @@ void DimmerChannel::publishState(MQTTClient *client, uint8_t publishFlag)
     }
 
     if (publishFlag & kWebUIUpdateFlag) {
-        auto webUi = WsWebUISocket::getWsWebUI();
-        if (webUi && WsWebUISocket::hasClients(webUi)) {
+        if (WsWebUISocket::hasAuthenticatedClients()) {
             static constexpr size_t bufSize = 96;  // max. length 86 + nul byte
             auto buf = new uint8_t[bufSize];
             // snprintf_P((char *)buf, bufSize - 1, PSTR("{\"type\":\"ue\",\"events\":[{\"id\":\"dimmer_channel%u\",\"value\":%d,\"state\":true},{\"id\":\"group-switch-0\",\"value\":%u,\"state\":true}]}"),

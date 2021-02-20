@@ -606,7 +606,7 @@ size_t AsyncNetworkScanResponse::_fillBuffer(uint8_t *data, size_t len)
                 WiFi.channel(_position),
                 WiFi.RSSI(_position),
                 WiFi.BSSIDstr(_position).c_str(),
-                KFCFWConfiguration::getWiFiEncryptionType(WiFi.encryptionType(_position)).c_str()
+                KFCFWConfiguration::getWiFiEncryptionType(WiFi.encryptionType(_position))
                 )) >= space)
             {
                 space = 0;

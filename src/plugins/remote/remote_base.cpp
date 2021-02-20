@@ -8,7 +8,7 @@
 #include "remote_event_queue.h"
 #include "remote.h"
 
-#if DEBUG_IOT_REMOTE_CONTROL
+#if DEBUG_IOT_REMOTE_CONTROL && 0
 #include <debug_helper_enable.h>
 #else
 #include <debug_helper_disable.h>
@@ -95,7 +95,7 @@ namespace RemoteControl {
     void Base::queueEvent(Button::EventType type, uint8_t buttonNum, uint16_t eventCount, uint32_t eventTime, uint16_t actionId)
     {
         auto eventNum = buttonEventToEventNum(type);
-        __DBG_printf("queueEvent type=%u button=%u event=%u enabled=%u bits=%u", type, buttonNum, eventNum, _getConfig().enabled[eventNum], _getConfig().actions[buttonNum].udp.event_bits);
+        __LDBG_printf("queueEvent type=%u button=%u event=%u enabled=%u bits=%u", type, buttonNum, eventNum, _getConfig().enabled[eventNum], _getConfig().actions[buttonNum].udp.event_bits);
 
         // if (_getConfig().events[eventNum].enabled) { // global enable flag
 
@@ -112,11 +112,8 @@ namespace RemoteControl {
                 auto action = buttonActionString(type, buttonNum, eventCount);
                 if (action.length()) {
                     PrintString json(F("{\"device\":\"%s\",\"action\":\"%s\",\"event\":\"%s\",\"button\":%u,\"repeat\":%u,\"ts\":%u}"), System::Device::getName(), action.c_str(), Button::eventTypeToString(type), buttonNum, eventCount, eventTime);
-#if DEBUG_IOT_REMOTE_CONTROL
-                    String jsonCopy = json;
-#endif
-                    auto action = new ActionUDP(0, Payload::Json(std::move(json)), Plugins::RemoteControl::getUdpHost(), IPAddress(), _getConfig().udp_port);
-                    __LDBG_printf("json=%s udpAction", jsonCopy.c_str());
+                    __LDBG_printf("ActionUDP json=%s", json.c_str());
+                    auto action = new ActionUDP(0, std::move(json), Plugins::RemoteControl::getUdpHost(), IPAddress(), _getConfig().udp_port);
                     _queue.emplace_back(type, buttonNum, Queue::Event::LockType::NONE, action);
                 }
             }
@@ -153,7 +150,7 @@ namespace RemoteControl {
                 }
                 if (eventStr) {
                     auto action = new ActionMQTT(0, PrintString(F("button_%u_%s"), buttonNum + 1, eventStr));
-                    __LDBG_printf("payload=%s mqttAction", action->getPayload().c_str());
+                    __LDBG_printf("ActionMQTT payload=%s", action->getPayload().c_str());
                     _queue.emplace_back(type, buttonNum, Queue::Event::LockType::NONE, action);
                 }
 
@@ -184,16 +181,17 @@ namespace RemoteControl {
         // __LDBG_printf();
 
         if (_queue.size() && !_queueTimer) {
+            __LDBG_printf("arming queue timer");
             _queueTimer.add(25, true, [this](Event::CallbackTimerPtr timer) {
                 timerCallback(timer);
-            });
+            }, Event::PriorityType::HIGHEST);
         }
 
     }
 
     void Base::timerCallback(Event::CallbackTimerPtr timer)
     {
-        if (!WiFi.isConnected()) {
+        if (!config.getWiFiUp()) {
             // __LDBG_printf("WiFi not connected, delaying queue");
             _resetAutoSleep();
             return;
@@ -214,7 +212,7 @@ namespace RemoteControl {
             }
         }
 
-#if DEBUG_IOT_REMOTE_CONTROL && 0
+#if DEBUG_IOT_REMOTE_CONTROL
         auto count = _queue.size();
 #endif
         noInterrupts();
@@ -222,13 +220,14 @@ namespace RemoteControl {
             return event.canDelete();
         }), _queue.end());
         interrupts();
-#if DEBUG_IOT_REMOTE_CONTROL && 0
+#if DEBUG_IOT_REMOTE_CONTROL
         if (count != _queue.size()) {
             __DBG_printf("%u items removed from queue", count - _queue.size());
         }
 #endif
 
         if (_queue.empty()) {
+            __LDBG_printf("disarming queue timer");
             timer->disarm();
         }
     }

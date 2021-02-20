@@ -334,7 +334,7 @@ void SwitchPlugin::_publishState(MQTTClient *client, int8_t channel)
         json.printTo(*buffer);
 
         LoopFunctions::callOnce([this, buffer]() {
-            WsClient::broadcast(WsWebUISocket::getWsWebUI(), WsWebUISocket::getSender(), buffer->c_str(), buffer->length());
+            WsClient::broadcast(WsWebUISocket::getServerSocket(), WsWebUISocket::getSender(), buffer->c_str(), buffer->length());
         });
     }
 }

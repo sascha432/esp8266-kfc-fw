@@ -75,10 +75,16 @@ WsWebUISocket *WsWebUISocket::getSender()
     return _sender;
 }
 
-WsClientAsyncWebSocket *WsWebUISocket::getWsWebUI()
+WsClientAsyncWebSocket *WsWebUISocket::getServerSocket()
 {
     return wsWebUI;
 }
+
+bool WsWebUISocket::hasAuthenticatedClients()
+{
+    return wsWebUI && wsWebUI->hasAuthenticatedClients();
+}
+
 
 WsClient *WsWebUISocket::createInstance(AsyncWebSocketClient *socket)
 {

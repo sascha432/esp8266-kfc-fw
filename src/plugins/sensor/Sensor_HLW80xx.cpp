@@ -434,7 +434,7 @@ bool Sensor_HLW80xx::atModeHandler(AtModeArgs &args)
             _plotData.clear();
 
             _webSocketClient = nullptr;
-            auto wsSerialConsole = Http2Serial::getConsoleServer();
+            auto wsSerialConsole = Http2Serial::getServerSocket();
             if (wsSerialConsole) {
                 for(auto client: wsSerialConsole->getClients()) {
                     if (reinterpret_cast<void *>(client) == clientId && client->status() && client->_tempObject && reinterpret_cast<WsClient *>(client->_tempObject)->isAuthenticated()) {

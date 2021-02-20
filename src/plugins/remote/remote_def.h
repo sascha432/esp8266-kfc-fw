@@ -55,6 +55,7 @@ using namespace PinMonitor;
 namespace RemoteControl {
 
     static const uint32_t kAutoSleepDisabled = ~0;
+    static const uint32_t kAutoSleepDefault = 0;
 
     enum class EventType : uint8_t {
         NONE = 0,

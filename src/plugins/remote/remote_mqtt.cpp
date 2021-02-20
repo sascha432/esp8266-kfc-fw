@@ -39,10 +39,12 @@ void MqttRemote::publishAutoDiscovery()
 {
     __LDBG_printf("auto discovery pending=%u", _discoveryPending);
     if (!_discoveryPending) {
+        if (!MQTTAutoDiscoveryQueue::isUpdateScheduled()) {
+            __LDBG_printf("no update scheduled");
+            return;
+        }
         auto client = MQTTClient::getClient();
         if (client) {
-            _discoveryPending = true;
-
             // stop auto dicovery if running
             __LDBG_printf("auto discovery running=%u", (bool)client->getAutoDiscoveryQueue());
             client->getAutoDiscoveryQueue().reset();

@@ -323,7 +323,7 @@ bool Sensor_HLW8012::_processInterruptBuffer(InterruptBuffer &buffer, SensorInpu
                     float level;
                 } header_t;
 
-                auto wsBuffer = Http2Serial::getConsoleServer()->makeBuffer(_plotData.size() * sizeof(*_plotData.data()) + sizeof(header_t));
+                auto wsBuffer = Http2Serial::getServerSocket()->makeBuffer(_plotData.size() * sizeof(*_plotData.data()) + sizeof(header_t));
                 auto buffer = wsBuffer->get();
                 if (buffer) {
                     header_t *header = reinterpret_cast<header_t *>(buffer);

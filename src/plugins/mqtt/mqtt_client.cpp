@@ -496,7 +496,9 @@ void MQTTClient::onConnect(bool sessionPresent)
     for(const auto &component: _components) {
         component->onConnect(this);
     }
+#if IOT_REMOTE_CONTROL == 0
     publishAutoDiscovery();
+#endif
 }
 
 void MQTTClient::onDisconnect(AsyncMqttClientDisconnectReason reason)

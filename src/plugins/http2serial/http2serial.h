@@ -35,7 +35,8 @@ public:
     size_t write(const uint8_t *buffer, int length);
 
 public:
-    static AsyncWebSocket *getConsoleServer();
+    static bool hasAuthenticatedClients();
+    static WsClientAsyncWebSocket *getServerSocket();
     // find client by id that is connected and authenticated
     // client id is sent during authentication: +CLIENT_ID=0x12345678
     // nullptr will return first client

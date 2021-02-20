@@ -20,14 +20,17 @@ void ActionUDP::execute(Callback callback)
 {
     WiFiUDP udp;
 
-    if (udp.beginPacket(getResolved(), _port)) {
+    auto address = getResolved();
+    if (udp.beginPacket(address, _port)) {
         if (udp.write(_payload.data(), _payload.size()) == _payload.size()) {
             if (udp.endPacket()) {
+                __LDBG_printf("execute succeeded udp=%s:%u payload=%s", address.toString().c_str(), _port, printable_string(_payload.data(), _payload.size(), 128, nullptr, true).c_str());
                 callback(true);
                 return;
             }
         }
     }
+    __LDBG_printf("execute failed udp=%s:%u payload=%s", address.toString().c_str(), _port, printable_string(_payload.data(), _payload.size(), 128, nullptr, true).c_str());
     callback(false);
 }
 
@@ -37,10 +40,12 @@ void ActionMQTT::execute(Callback callback)
     if (client) {
         if (client->isConnected()) {
             client->publish(MqttRemote::getMQTTTopic(), false, _payload, _qos);
+            __LDBG_printf("execute succeeded client=%p connected=%u payload=%s", client, client && client->isConnected(), _payload.c_str());
             callback(true);
             return;
 
         }
     }
+    __LDBG_printf("execute failed client=%p connected=%u payload=%s", client, client && client->isConnected(), _payload.c_str());
     callback(false);
 }

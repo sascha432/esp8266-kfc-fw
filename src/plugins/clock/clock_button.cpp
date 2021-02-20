@@ -94,7 +94,7 @@ void ClockPlugin::buttonCallback(uint8_t button, EventType eventType, uint16_t r
                     _setState(true);
                 }
                 break;
-            case EventType::HELD:
+            case EventType::HOLD:
                 // start flashing red after 5 seconds and reboot 2 seconds later
                 // if the button is pressed for 8.2 seconds a hard reset is performed
                 if (repeatCount * 250 + 1500 > 5000) {

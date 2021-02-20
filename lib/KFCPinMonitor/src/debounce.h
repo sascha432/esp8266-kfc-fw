@@ -78,7 +78,7 @@ namespace PinMonitor {
         {
         }
 
-        StateType debounce(bool lastValue, uint16_t interruptCount, uint32_t last, uint32_t now);
+        StateType debounce(bool lastValue, uint16_t interruptCount, uint32_t last, uint32_t now, uint32_t _micros);
         void setState(bool state);
 
     private:

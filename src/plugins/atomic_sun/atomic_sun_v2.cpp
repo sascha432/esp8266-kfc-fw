@@ -408,7 +408,7 @@ void Driver_4ChDimmer::publishState(MQTTClient *client)
     json.printTo(*buffer);
 
     LoopFunctions::callOnce([this, buffer]() {
-        WsClient::broadcast(WsWebUISocket::getWsWebUI(), WsWebUISocket::getSender(), buffer->c_str(), buffer->length());
+        WsClient::broadcast(WsWebUISocket::getServerSocket(), WsWebUISocket::getSender(), buffer->c_str(), buffer->length());
     });
 }
 

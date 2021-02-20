@@ -140,8 +140,8 @@ const __FlashStringHelper *PushButton::eventTypeToString(EventType eventType)
             return F("PRESSED");
         case EventType::LONG_PRESSED:
             return F("LONG_PRESSED");
-        case EventType::HELD:
-            return F("HELD");
+        case EventType::HOLD:
+            return F("HOLD");
         case EventType::HOLD_START:
             return F("HOLD_START");
         case EventType::HOLD_RELEASE:

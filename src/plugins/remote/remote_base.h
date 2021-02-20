@@ -16,17 +16,14 @@ namespace RemoteControl {
 
         Base() :
             _config(),
-            _autoSleepTimeout(15000),
+            _autoSleepTimeout(kAutoSleepDefault),
             _buttonsLocked(~0),
             _longPress(0),
             _comboButton(-1),
             _pressed(0),
-            _testMode(0)
+            _autoDiscoveryRunOnce(true),
+            _testMode(false)
         {}
-
-        virtual void _onShortPress(Button &button) = 0;
-        virtual void _onLongPress(Button &button) = 0;
-        virtual void _onRepeat(Button &button) = 0;
 
         // enable test mode
         void setTestMode(bool testMode) {
@@ -69,17 +66,14 @@ namespace RemoteControl {
 
     protected:
         void _resetAutoSleep() {
-            if (_autoSleepTimeout && _autoSleepTimeout != kAutoSleepDisabled) {
-                _autoSleepTimeout = millis() + (_config.auto_sleep_time * 1000UL);
-                __LDBG_printf("auto deep sleep set %u", _autoSleepTimeout);
+            if (_autoSleepTimeout != kAutoSleepDisabled) {
+                _autoSleepTimeout = kAutoSleepDefault;
             }
         }
 
     protected:
         friend Button;
 
-        //ButtonArray _buttons;
-        // ButtonEventList _events;
         EventQueue _queue;
         Queue::Lock _lock;
         Event::Timer _queueTimer;
@@ -89,6 +83,7 @@ namespace RemoteControl {
         uint8_t _longPress;
         int8_t _comboButton;
         uint8_t _pressed;
+        bool _autoDiscoveryRunOnce;
         bool _testMode;
     };
 

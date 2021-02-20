@@ -321,7 +321,7 @@ void WeatherStationPlugin::setup(SetupModeType mode)
         _fadeStatusLED();
     }, this);
 
-    if (config.isWiFiUp()) {
+    if (WiFi.isConnected()) {
         _fadeStatusLED();
     }
 #endif
@@ -560,7 +560,7 @@ void WeatherStationPlugin::canvasUpdatedEvent(int16_t x, int16_t y, int16_t w, i
         _lockCanvasUpdateEvents = 0;
     )
 
-    auto webSocketUI = WsWebUISocket::getWsWebUI();
+    auto webSocketUI = WsWebUISocket::getServerSocket();
     // __DBG_printf("x=%d y=%d w=%d h=%d ws=%p empty=%u", x, y, w, h, webSocketUI, webSocketUI->getClients().isEmpty());
     if (webSocketUI && isCanvasAttached() && !webSocketUI->getClients().isEmpty()) {
         SpeedBooster speedBooster;

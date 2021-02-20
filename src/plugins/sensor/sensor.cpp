@@ -148,7 +148,7 @@ void SensorPlugin::_timerEvent()
         client = nullptr;
     }
 
-    if (WsWebUISocket::getWsWebUI() && WsWebUISocket::hasClients(WsWebUISocket::getWsWebUI())) {
+    if (WsWebUISocket::hasAuthenticatedClients()) {
         JsonUnnamedObject json(2);
         json.add(JJ(type), JJ(ue));
         auto &events = json.addArray(JJ(events));

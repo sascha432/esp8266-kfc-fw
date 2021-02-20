@@ -45,7 +45,6 @@ namespace PinMonitor {
 
         // events fired while the button is pressed
         // after EventType::DOWN before EventType::UP
-        HELD                            = _BV(4),
         HOLD                            = _BV(4),
         HOLD_REPEAT                     = _BV(4),
 
@@ -65,7 +64,7 @@ namespace PinMonitor {
         // all events without SINGLE_CLICK/DOUBLE_CLICK
         ALL                             = UP|DOWN|REPEATED_CLICK|PRESSED|LONG_PRESSED|HOLD|HOLD_START|HOLD_RELEASE,
 
-        PRESSED_LONG_HELD_SINGLE_DOUBLE_CLICK = PRESSED|LONG_PRESSED|HELD|SINGLE_CLICK|DOUBLE_CLICK,
+        PRESSED_LONG_HOLD_SINGLE_DOUBLE_CLICK = PRESSED|LONG_PRESSED|HOLD|SINGLE_CLICK|DOUBLE_CLICK,
 
 
         ANY                             = 0xffff,
@@ -235,7 +234,7 @@ namespace PinMonitor {
         virtual void event(EventType eventType, uint32_t now);
         virtual void loop() override;
 
-        // number of repeats for EventType::HELD and EventType::REPEATED_CLICK
+        // number of repeats for EventType::HOLD and EventType::REPEATED_CLICK
         uint16_t getRepeatCount() const {
             return _repeatCount;
         }

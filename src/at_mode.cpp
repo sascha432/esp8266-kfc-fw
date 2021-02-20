@@ -380,7 +380,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HEAP, "HEAP", "[interval in seconds|0=disa
 #endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RSSI, "RSSI", "[interval in seconds|0=disable]", "Display WiFi RSSI");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(GPIO, "GPIO", "[interval in seconds|0=disable]", "Display GPIO states");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PWM, "PWM", "<pin>,<input|waveform|level=0-" __STRINGIFY(PWMRANGE) ">[,<frequency=100-40000Hz>[,<duration/ms>]]", "PWM output on PIN, min./max. level set it to LOW/HIGH"
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PWM, "PWM", "<pin>,<input|input_pullup|waveform|level=0-" __STRINGIFY(PWMRANGE) ">[,<frequency=100-40000Hz>[,<duration/ms>]]", "PWM output on PIN, min./max. level set it to LOW/HIGH"
 #if HAVE_PCF8574
     "\nPCF8574 can be addressed using pin 128-135. PWM is not supported."
 #endif
@@ -393,7 +393,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF(CPU, "CPU", "<80|160>", "Set CPU speed", "Displ
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PSTORE, "PSTORE", "[<clear|remove|add>[,<key>[,<value>]]]", "Display/modify persistant storage");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(METRICS, "METRICS", "Display system metrics");
 #if IOT_SENSOR_BATTERY_DISPLAY_LEVEL
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(BCAP, "BCAP", "<voltage,[true=charging]>", "Calculate battery capacity for given voltage");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(BCAP, "BCAP", "<voltage>", "Calculate battery capacity for given voltage");
 #endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMP, "DUMP", "[<dirty|config.name>]", "Display settings");
 #if DEBUG && ESP8266
@@ -1280,9 +1280,9 @@ void at_mode_serial_handle_event(String &commandString)
 #if IOT_SENSOR_BATTERY_DISPLAY_LEVEL
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(BCAP))) {
                 auto voltage = args.toFloat(0);
-                auto charging = args.isTrue(1);
-                float capacity = Sensor_Battery::calcLipoCapacity(voltage, 1, charging);
-                args.printf_P(PSTR("voltage=%.4fV capacity=%.1f%% charging=%u"), voltage, capacity, charging);
+                float capacity = Sensor_Battery::calcLipoCapacity(voltage, 1, false);
+                float charging = Sensor_Battery::calcLipoCapacity(voltage, 1, true);
+                args.printf_P(PSTR("voltage=%.4fV capacity=%.1f%% charging=%.1f%% Umax=%.4f"), voltage, capacity, charging, Sensor_Battery::maxVoltage);
             }
 #endif
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(METRICS))) {
@@ -1750,6 +1750,15 @@ void at_mode_serial_handle_event(String &commandString)
                         char buf[32];
                         _pinName(pin, buf, sizeof(buf));
                         args.printf_P(PSTR("set pin=%s to INPUT"), buf);
+
+                    }
+                    else if (args.equalsIgnoreCase(1, F("input_pullup"))) {
+
+                        _digitalWrite(pin, LOW);
+                        _pinMode(pin, pin == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
+                        char buf[32];
+                        _pinName(pin, buf, sizeof(buf));
+                        args.printf_P(PSTR("set pin=%s to %s"), buf, pin == 16 ? PSTR("INPUT_PULLDOWN_16") : PSTR("INPUT_PULLUP"));
 
                     }
                     else {

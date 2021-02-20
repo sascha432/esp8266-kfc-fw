@@ -16,12 +16,13 @@
 
 #include <debug_helper_enable_mem.h>
 
+float Sensor_Battery::maxVoltage = 0;
+
 Sensor_Battery::Sensor_Battery(const JsonString &name) : MQTTSensor(), _name(name)
 {
     REGISTER_SENSOR_CLIENT(this);
     reconfigure(nullptr);
-    // read ADC every 2 seconds and store the average of 64 samples over a period of ~1.6s
-    ADCManager::getInstance().addAutoReadTimer(Event::seconds(2), Event::milliseconds(50), 32);
+    ADCManager::getInstance().addAutoReadTimer(Event::milliseconds(50 * 64 + 250), Event::milliseconds(50), 64);
 }
 
 Sensor_Battery::~Sensor_Battery()
@@ -64,9 +65,8 @@ MQTTComponent::MQTTAutoDiscoveryPtr Sensor_Battery::nextAutoDiscovery(MQTTAutoDi
 #endif
 #ifdef IOT_SENSOR_BATTERY_CHARGING
         case AutoDiscoveryNumHelperType::CHARGING:
-            discovery->create(MQTTComponent::ComponentType::BINARY_SENSOR, _getId(TopicType::CHARGING), format);
+            discovery->create(MQTTComponent::ComponentType::SENSOR, _getId(TopicType::CHARGING), format);
             discovery->addStateTopic(_getTopic(TopicType::CHARGING));
-            discovery->addPayloadOnOff();
             break;
 #endif
 #if IOT_SENSOR_BATTERY_DSIPLAY_POWER_STATUS
@@ -142,7 +142,7 @@ void Sensor_Battery::publishState(MQTTClient *client)
     client->publish(_getTopic(TopicType::LEVEL), true, String(status.getLevel()));
 #endif
 #ifdef IOT_SENSOR_BATTERY_CHARGING
-        client->publish(_getTopic(TopicType::CHARGING), true, String(status.isCharging()));
+        client->publish(_getTopic(TopicType::CHARGING), true, status.getChargingStatus());
 #endif
 #if IOT_SENSOR_BATTERY_DSIPLAY_POWER_STATUS
         client->publish(_getTopic(TopicType::POWER), true, status.getPowerStatus());
@@ -186,7 +186,7 @@ void Sensor_Battery::createConfigureForm(AsyncWebServerRequest *request, FormUI:
     auto &group = form.addCardGroup(F("spcfg"), F(IOT_SENSOR_NAMES_BATTERY), true);
 
     form.addPointerTriviallyCopyable(F("sp_uc"), &cfg.calibration);
-    form.addFormUI(F("Calibration"));
+    form.addFormUI(F("Calibration"), FormUI::Suffix(PrintString(F("Max. Voltage %.4f"), maxVoltage)));
 
     form.addPointerTriviallyCopyable(F("sp_ofs"), &cfg.offset);
     form.addFormUI(F("Offset"));
@@ -201,7 +201,7 @@ void Sensor_Battery::createConfigureForm(AsyncWebServerRequest *request, FormUI:
 void Sensor_Battery::reconfigure(PGM_P source)
 {
     _config = Plugins::Sensor::getConfig();
-    __LDBG_printf("calibration=%f, precision=%u", _config.calibration, _config.precision);
+    maxVoltage = 0;
 }
 
 // float Sensor_Battery::readSensor()
@@ -218,8 +218,9 @@ void Sensor_Battery::Status::readSensor(Sensor_Battery &sensor)
     float adcVal = result.getMeanValue();
     auto Vout = ((IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1 * adcVal) + (IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R2 * adcVal)) / (IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1 * ADCManager::kMaxADCValue);
     _voltage = Vout * sensor._config.calibration + sensor._config.offset;
+    maxVoltage = std::max(maxVoltage, _voltage);
 
-#if DEBUG
+#if 0
     result.dump(DEBUG_OUTPUT);
 
     __DBG_printf("adc=%u adcval=%f Vout=%f Vcal=%f",
@@ -231,16 +232,49 @@ void Sensor_Battery::Status::readSensor(Sensor_Battery &sensor)
 #endif
 
 #ifdef IOT_SENSOR_BATTERY_CHARGING
-#ifdef IOT_SENSOR_BATTERY_CHARGING_COMPLETE
-    if (IOT_SENSOR_BATTERY_CHARGING_COMPLETE) {
-        _charging = ChargingType::COMPLETE;
+#if IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN != -1
+    if (IOT_SENSOR_BATTERY_CHARGING) {
+        noInterrupts();
+        pinMode(IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN, INPUT_PULLUP);
+        auto value = digitalRead(IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN);
+        interrupts();
+        if (!value) {
+            _charging = ChargingType::COMPLETE;
+        }
+        else {
+            _charging = ChargingType::CHARGING;
+        }
     }
-    else
+    else {
+        _charging = ChargingType::NONE;
+    }
+#else
+    _charging = IOT_SENSOR_BATTERY_CHARGING ? ChargingType::CHARGING : ChargingType::NONE;
 #endif
-    {
-        _charging = IOT_SENSOR_BATTERY_CHARGING ? ChargingType::CHARGING : ChargingType::NONE;
+#endif
+
+#if IOT_SENSOR_BATTERY_DISPLAY_LEVEL
+
+    // make sure that the level decreases only when not charging and increases while charging
+    if (_charging != _pCharging) {
+        _pCharging = _charging;
+        if (_charging == ChargingType::CHARGING) {
+            _level = 0;
+        }
+        else {
+            _level = 100;
+        }
+    }
+
+    uint8_t level = IOT_SENSOR_BATTERY_LEVEL_FUNCTION(_voltage,  IOT_SENSOR_BATTERY_NUM_CELLS, _charging == ChargingType::CHARGING);
+    if (_charging == ChargingType::CHARGING) {
+        _level = std::max(_level, level);
+    }
+    else {
+        _level = std::min(_level, level);
     }
 #endif
+
 
 #if IOT_SENSOR_BATTERY_DSIPLAY_POWER_STATUS
     _state = IOT_SENSOR_BATTERY_ON_EXTERNAL ? StateType::RUNNING_ON_EXTERNAL_POWER : StateType::RUNNING;
@@ -256,27 +290,6 @@ Sensor_Battery::Status Sensor_Battery::readSensor()
     }
     return _status;
 }
-
-
-// bool Sensor_Battery::_isCharging() const
-// {
-// #if IOT_SENSOR_BATTERY_CHARGING_HAVE_FUNCTION
-//     return IOT_SENSOR_BATTERY_CHARGING_FUNCTION;
-// #elif IOT_SENSOR_BATTERY_CHARGING_PIN == -1
-//     return false;
-// #else
-//     return digitalRead(IOT_SENSOR_BATTERY_CHARGING_PIN);
-// #endif
-// }
-
-// bool Sensor_Battery::_isOnExternalPower() const
-// {
-// #if IOT_SENSOR_BATTERY_ON_EXTERNAL_PIN == -1
-//     return true;
-// #else
-//     return digitalRead(IOT_SENSOR_BATTERY_ON_EXTERNAL_PIN);
-// #endif
-// }
 
 String Sensor_Battery::_getId(TopicType type)
 {
@@ -298,18 +311,17 @@ String Sensor_Battery::_getTopic(TopicType type)
     return MQTTClient::formatTopic(_getId(type));
 }
 
-static float __scale(float value)
-{
-    float factor = (value - Sensor_Battery::kLipoMinV) / (Sensor_Battery::kLipoMaxV - Sensor_Battery::kLipoMinV);
-    return (Sensor_Battery::kLipoMaxV - Sensor_Battery::kRegressMin) * factor + Sensor_Battery::kRegressMin;
-}
 
 static float __regress(float x) {
-    static constexpr auto terms = std::array<float, 4>({
-        4.1122660195235891e+004,
-        -3.2838992834749057e+004,
-        8.6906274643468823e+003,
-        -7.6139591374792838e+002
+    static constexpr auto terms = std::array<float, 8>({
+        3.0712731081353914e+000,
+        1.2253735352323229e+001,
+        -9.3462148496129430e+001,
+        3.8661734533561298e+002,
+        -8.9481613881130249e+002,
+        1.1585379334963445e+003,
+        -7.8168640078108967e+002,
+        2.1366643258750511e+002
     });
     float t = 1;
     float r = 0;
@@ -320,24 +332,52 @@ static float __regress(float x) {
     return r;
 }
 
-uint8_t Sensor_Battery::calcLipoCapacity(float voltage, uint8_t cells, float discharge)
+static float __regress_charging(float x) {
+    static constexpr auto terms = std::array<float, 11>({
+        3.2160580311842994e+000,
+        2.1758288145016344e+001,
+        -3.2813311670421581e+002,
+        2.7580268690692337e+003,
+        -1.3643884107267739e+004,
+        4.1846841437876174e+004,
+        -8.1750566367533160e+004,
+        1.0180616101308420e+005,
+        -7.8222156393968166e+004,
+        3.3791053129104359e+004,
+        -6.2780878948850805e+003
+    });
+    float t = 1;
+    float r = 0;
+    for(auto term: terms) {
+        r += term * t;
+        t *= x;
+    }
+    return r;
+}
+
+
+uint8_t Sensor_Battery::calcLipoCapacity(float voltage, uint8_t cells, bool charging)
 {
-    voltage /= cells; // per cell voltage
-    voltage *= std::min<float>(1, (1 - (discharge * 5 / 100.0))); // add an artifical voltage drop
-    if (voltage <= kLipoMinV) {
-        return 0;
+    RegressFunction func = charging ? __regress_charging : __regress;
+    voltage /= cells;
+
+    using IntType = uint8_t;
+    IntType first = 0;
+    IntType last = 100;
+    IntType count = last;
+    while (count > 0) {
+        IntType it = first;
+        IntType step = count / 2;
+        it += step;
+        if (func(it / 100.0f) < voltage) {
+            first = it + 1;
+            count -= step + 1;
+        }
+        else {
+            count = step;
+        }
     }
-    if (voltage >= kLipoMaxV) {
-        return 100;
-    }
-    if (voltage >= kRegressMax) { // show linear drop for the range that isn't covered
-        return 100 - std::max<uint8_t>(0, (kLipoMaxV - voltage) / voltage) * 100;
-    }
-    voltage = __scale(voltage); // scale voltage to fit regress function
-    if (voltage <= kRegressMin) {
-        return 0;
-    }
-    return __regress(voltage);
+    return first;
 }
 
 #endif

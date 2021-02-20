@@ -7,7 +7,7 @@
 #include "remote_button.h"
 #include "remote_action.h"
 
-#if DEBUG_IOT_REMOTE_CONTROL
+#if DEBUG_IOT_REMOTE_CONTROL && 0
 #include <debug_helper_enable.h>
 #else
 #include <debug_helper_disable.h>
@@ -73,7 +73,7 @@ using namespace RemoteControl;
 //     //                 return F("off-long-press");
 //     //         }
 //     //         break;
-//     //     case EventType::HELD:
+//     //     case EventType::HOLD:
 //     //         switch(buttonNum) {
 //     //             case 0:
 //     //                 return F("on-hold");
@@ -125,7 +125,6 @@ void Button::event(EventType eventType, uint32_t now)
         case EventType::DOUBLE_CLICK:
             base.queueEvent(eventType, _button, _getEventTime(), config.actions[_button].double_click);
             break;
-#if 1
         case EventType::REPEATED_CLICK: {
                 switch(_repeatCount) {
                     case 1:
@@ -142,12 +141,11 @@ void Button::event(EventType eventType, uint32_t now)
                 }
             }
             break;
-#endif
         default:
             break;
     }
 
-#if 1
+#if 0
     __LDBG_printf("event_type=%s (%02x) button#=%u now=%u pressed=%s",
         eventTypeToString(eventType),
         eventType,

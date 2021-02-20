@@ -111,7 +111,8 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             Network::WiFi::addPasswordLengthValidator(form);
             form.addFormUI(FormUI::Type::PASSWORD, FSPGM(Passphrase, "Passphrase"));
 
-            auto &apModeGroup = stationGroup.end().addCardGroup(F("softap"), FSPGM(Access_Point), true);
+            stationGroup.end();
+            auto &apModeGroup = form.addCardGroup(F("softap"), FSPGM(Access_Point), true);
 
             form.addObjectGetterSetter(F("ap_standby"), flags, flags.get_bit_is_softap_standby_mode_enabled, flags.set_bit_is_softap_standby_mode_enabled);
             form.addFormUI(F("AP Mode"), FormUI::BoolItems(F("Enable AP Mode if station is disconnected"), F("Enable AP Mode permanently")));
@@ -259,8 +260,10 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             form.addFormUI(F("Allow to store credentials in a cookie to login automatically"), FormUI::Suffix(FSPGM(days)));
             cfg.addRangeValidatorFor_webui_cookie_lifetime_days(form);
 
+#if WEBUI_ALERTS_ENABLED
             form.addObjectGetterSetter(F("walert_en"), flags, System::Flags::ConfigStructType::get_bit_is_webalerts_enabled, System::Flags::ConfigStructType::set_bit_is_webalerts_enabled);
             form.addFormUI(FSPGM(Web_Alerts), FormUI::BoolItems());
+#endif
 
             webUIGroup.end();
 

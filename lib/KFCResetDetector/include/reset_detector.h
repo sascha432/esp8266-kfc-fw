@@ -130,11 +130,8 @@ public:
     bool atModeHandler(AtModeArgs &args) override;
 #endif
 
-#if ENABLE_DEEP_SLEEP
 public:
-    static constexpr uint32_t kDeepSleepDisabled = ~0;
-    static uint32_t _deepSleepWifiTime;
-#endif
+    static uint32_t _wifiFirstConnect;
 };
 
 inline uint8_t ResetDetector::getResetCounter() const

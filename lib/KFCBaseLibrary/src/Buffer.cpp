@@ -33,7 +33,7 @@ char *MoveStringHelper::move(String &&_str, int *allocSize)
         if (WSTRING_IS_SSO(str)) {
             _allocSize = (str.length() + (1 << 3)) & ~0x03;
             if ((buf = __LDBG_malloc_str(_allocSize)) != nullptr) {
-                strcpy(buf, str.c_str());
+                std::fill(std::copy_n(str.c_str(), str.length(), buf), buf + _allocSize, 0);
             }
             else {
                 _allocSize = 0;
@@ -44,6 +44,7 @@ char *MoveStringHelper::move(String &&_str, int *allocSize)
             _allocSize = str.capacity();
             // register allocated block
             __LDBG_NOP_malloc(buf, _allocSize);
+            std::fill(buf + str.length(), buf + _allocSize, 0);
         }
         str.init();
         // str.setSSO(true);
@@ -57,9 +58,10 @@ char *MoveStringHelper::move(String &&_str, int *allocSize)
     }
 #else
     // move not implemented
-    buf = strdup(_str.c_str());
-    _allocSize = strlen(buf) + 1;
-    str = MoveStringHelper();
+    _allocSize = (str.length() + (1 << 3)) & ~0x03;
+    buf = new char[_allocSize]();
+    std::copy_n(_str.c_str() _str.length(), buf);
+    _str = String();
 #endif
     if (allocSize) {
         *allocSize = _allocSize;

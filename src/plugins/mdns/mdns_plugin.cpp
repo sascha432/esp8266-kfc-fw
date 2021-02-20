@@ -172,7 +172,7 @@ void MDNSPlugin::setup(SetupModeType mode)
             _running = false;
             // add wifi handler after all plugins have been initialized
             WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, wifiCallback);
-            if (config.isWiFiUp()) {
+            if (WiFi.isConnected()) {
                 plugin._wifiCallback(WiFiCallbacks::EventType::CONNECTED, nullptr); // simulate event if already connected
             }
             _installWebServerHooks();
@@ -291,7 +291,7 @@ bool MDNSPlugin::_isRunning() const
 bool MDNSPlugin::_MDNS_begin()
 {
 #if ESP8266
-    auto address = config.isWiFiUp() ? WiFi.localIP() : INADDR_ANY;
+    auto address = WiFi.isConnected() ? WiFi.localIP() : INADDR_ANY;
     __LDBG_printf("hostname=%s address=%s", System::Device::getName(), address.toString().c_str());
     auto result = MDNS.begin(System::Device::getName(), address);
     __LDBG_printf("result=%u", result);

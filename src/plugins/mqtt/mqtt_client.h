@@ -296,6 +296,8 @@ public:
     static void safeReRegisterComponent(ComponentPtr component);
     static void safePersistantStorage(StorageFrequencyType type, const String &name, const String &data);
     static bool safeIsAutoDiscoveryRunning();
+    static bool safeIsConnected();
+
 
 public:
     // returns 1 for:
@@ -528,7 +530,15 @@ inline void MQTTClient::safePersistantStorage(StorageFrequencyType type, const S
 inline bool MQTTClient::safeIsAutoDiscoveryRunning()
 {
     if (_mqttClient) {
-        _mqttClient->isAutoDiscoveryRunning();
+        return _mqttClient->isAutoDiscoveryRunning();
+    }
+    return false;
+}
+
+inline bool MQTTClient::safeIsConnected()
+{
+    if (_mqttClient) {
+        return _mqttClient->isConnected();
     }
     return false;
 }

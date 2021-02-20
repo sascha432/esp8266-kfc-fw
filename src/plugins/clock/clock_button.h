@@ -36,7 +36,7 @@ namespace Clock {
     public:
         using PushButtonConfig::PushButtonConfig;
 
-        ButtonConfig(uint8_t button) : PushButtonConfig(EventType::PRESSED_LONG_HELD_SINGLE_DOUBLE_CLICK, 350, 1500, 250) {}
+        ButtonConfig(uint8_t button) : PushButtonConfig(EventType::PRESSED_LONG_HOLD_SINGLE_DOUBLE_CLICK, 350, 1500, 250) {}
     };
 
     class Button : public PushButton {

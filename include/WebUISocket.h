@@ -39,7 +39,10 @@ public:
     static void sendValues(AsyncWebSocketClient *client);
 
     static WsWebUISocket *getSender();
-    static WsClientAsyncWebSocket *getWsWebUI();
+
+    static bool hasAuthenticatedClients();
+    static WsClientAsyncWebSocket *getServerSocket();
+
 
 private:
     static WsWebUISocket *_sender;

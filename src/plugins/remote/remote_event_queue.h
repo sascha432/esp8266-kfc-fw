@@ -259,37 +259,14 @@ namespace RemoteControl
             // apply lock
             void unlock(Lock &lockObj);
 
-            bool canSend() const {
-                return (_state == StateType::QUEUED);
-            }
-
-            bool canDelete() const {
-                return (_state != StateType::QUEUED) && (_state != StateType::SENDING);
-            }
-
-            StateType getState() const {
-                return _state;
-            }
-
-            void setStateType(StateType state) {
-                _state = state;
-            }
-
-            uint8_t getButtonNum() const {
-                return _buttonNum;
-            }
-
-            LockType getLockType() const {
-                return _lockType;
-            }
-
-            void setAction(ActionPtr action) {
-                _action = action;
-            }
-
-            Action &getAction() {
-                return *_action;
-            }
+            bool canSend() const;
+            bool canDelete() const;
+            StateType getState() const;
+            void setStateType(StateType state);
+            uint8_t getButtonNum() const;
+            LockType getLockType() const;
+            void setAction(ActionPtr action);
+            Action &getAction();
 
         private:
             Button::EventType _type;
@@ -298,6 +275,47 @@ namespace RemoteControl
             LockType _lockType;
             ActionPtr _action;
         };
+
+        inline bool Event::canSend() const
+        {
+            return (_state == StateType::QUEUED) && _action->canSend();
+        }
+
+        inline bool Event::canDelete() const
+        {
+            return (_state != StateType::QUEUED) && (_state != StateType::SENDING);
+        }
+
+        inline Event::StateType Event::getState() const
+        {
+            return _state;
+        }
+
+        inline void Event::setStateType(StateType state)
+        {
+            _state = state;
+        }
+
+        inline uint8_t Event::getButtonNum() const
+        {
+            return _buttonNum;
+        }
+
+        inline Event::LockType Event::getLockType() const
+        {
+            return _lockType;
+        }
+
+        inline void Event::setAction(ActionPtr action)
+        {
+            _action = action;
+        }
+
+        inline Action &Event::getAction()
+        {
+            return *_action;
+        }
+
 
         // inline void Lock::release(Event &event)
         // {

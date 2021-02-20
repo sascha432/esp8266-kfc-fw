@@ -741,7 +741,7 @@ void STK500v1Programmer::_reset()
 void STK500v1Programmer::_status(const String &message)
 {
 #if HTTP2SERIAL_SUPPORT
-    auto http2server = Http2Serial::getConsoleServer();
+    auto http2server = Http2Serial::getServerSocket();
     if (http2server) {
         if (http2server->getClients().length()) {
             WsClient::broadcast(http2server, nullptr, message.c_str(), message.length());

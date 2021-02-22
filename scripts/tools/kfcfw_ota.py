@@ -3,7 +3,7 @@
 #
 
 # requires:
-# pip3 install requests-toolbelt progressbar2
+# pip3 install requests-toolbelt progressbar2 websocket
 
 import os
 import time
@@ -21,9 +21,7 @@ import sys
 libs_dir = path.realpath(path.join(path.dirname(__file__), '../libs'))
 sys.path.insert(0, libs_dir)
 
-import kfcfw.session
-import kfcfw.configuration
-
+import kfcfw
 
 class SimpleProgressBar:
 
@@ -46,259 +44,160 @@ class SimpleProgressBar:
             self.bar.finish()
 
 
-def verbose(msg, new_line=True):
-    global args
-    if args.quiet==False:
-        if new_line:
-            print(msg)
+
+
+class OTA(kfcfw.OTAHelpers):
+
+    def __init__(self, args):
+        kfcfw.OTAHelpers.__init__(self)
+        self.args = args
+
+    def verbose(self, msg, new_line=True):
+        if self.args.quiet==False:
+            if new_line:
+                print(msg)
+            else:
+                print(msg, end="", flush=True)
+
+    def error(self, msg, code = 1):
+        self.verbose(msg)
+        sys.exit(code)
+
+
+    def copyfile(self, src, dst):
+        shutil.copyfile(src, dst)
+        self.verbose('Copied: %s => %s' % (src, dst))
+
+    def flash(self, url, type, target, sid):
+
+        if type=="upload":
+            type = "flash"
+        elif type=="uploadfs":
+            type = "spiffs"
+
+        image_type = "u_" + type
+
+        self.is_alive(url, target)
+        if self.args.no_status==False:
+            self.get_status(url, target, sid)
+
+        filesize = os.fstat(self.args.image.fileno()).st_size
+        self.verbose("Uploading %u Bytes: %s" % (filesize, self.args.image.name))
+
+        elf_hash = None
+        if self.args.elf:
+            elf_exception = None
+            try:
+                elf = self.args.image.name.replace('.bin', '.elf')
+                h = hashlib.sha1()
+                with open(elf, 'rb') as file:
+                    while True:
+                        data = file.read(1024)
+                        if not data:
+                            break
+                        h.update(data)
+                elf_hash = h.hexdigest();
+            except Exception as e:
+                elf_exception = e
+
+            try:
+                if type=='flash':
+                    if elf_exception:
+                        raise elf_exception
+                    self.copyfile(elf, os.path.join(self.args.elf, elf_hash + '.elf'))
+                    self.copyfile(self.args.image.name, os.path.join(self.args.elf, elf_hash + '.bin'))
+                elif type=='spiffs' and elf_hash:
+                    self.copyfile(self.args.image.name, os.path.join(self.args.elf, elf_hash + '.spiffs.bin'))
+
+                if elf_hash and self.args.ini:
+                    self.copyfile(self.args.ini, os.path.join(self.args.elf, elf_hash + '.ini'))
+
+            except Exception as e:
+                self.error(str(e), 5);
+
+        bar = SimpleProgressBar(max_value=filesize, redirect_stdout=True)
+        bar.start();
+        encoder = MultipartEncoder(fields={ "image_type": image_type, "SID": sid, "elf_hash": elf_hash, "firmware_image": ("filename", self.args.image, "application/octet-stream") })
+
+        monitor = MultipartEncoderMonitor(encoder, lambda monitor: bar.update(min(monitor.bytes_read, filesize)))
+
+        # resp = requests.post(url + "update", files={ "firmware_image": self.args.image }, data={ "image_type": image_type, "SID": sid }, timeout=30, allow_redirects=False)
+        resp = requests.post(url + "update", data=monitor, timeout=30, allow_redirects=False, headers={ "Content-Type": monitor.content_type })
+        bar.finish();
+
+        if resp.status_code==302:
+            self.verbose("Update successful")
         else:
-            print(msg, end="", flush=True)
+            content = resp.content.decode()
+            error = self.get_h3(content)
+            if error==None:
+                self.verbose("Update failed with unknown response")
+                self.verbose("Response code " + str(resp.status_code))
+                self.verbose(content)
+                sys.exit(2)
+            else:
+                self.verbose("Update failed with: " + error)
+                sys.exit(3)
 
-def error(msg, code = 1):
-    verbose(msg)
-    sys.exit(code)
-
-def get_login_error(content):
-    m = re.search("id=\"login_error_message\">([^<]+)</div", content, flags=re.IGNORECASE|re.DOTALL)
-    try:
-        return m.group(1).strip()
-    except:
-        return None
-
-def get_div(title, content):
-    m = re.search(">\s*" + title + "\s*<\/div>\s*<div[^>]*>([^<]+)<", content, flags=re.IGNORECASE|re.DOTALL)
-    try:
-        return m.group(1).strip()
-    except:
-        return None
-
-def get_h3(content):
-    m = re.search("<h3[^>]*>([^<]+)</h3", content, flags=re.IGNORECASE|re.DOTALL)
-    try:
-        return m.group(1).strip()
-    except:
-        return None
-
-def is_alive(url, target):
-    # verbose("Checking if device is alive "  + target)
-    try:
-        resp = requests.get(url + "is-alive", timeout=1)
-        if resp.status_code==404:
-            resp = requests.get(url + "is_alive", timeout=1)
-        if resp.status_code!=200:
-            return False
-        elif resp.content.decode()!='0':
-            return False
-        return True
-    except:
-        return False
-
-def get_alive(url, target):
-    verbose("Checking if device is alive "  + target)
-    resp = requests.get(url + "is-alive", timeout=30)
-    if resp.status_code!=200:
-        error("Device did not respond", 2)
-    elif resp.content.decode()!='0':
-        error("Invalid response", 2)
-    verbose("Device responded")
-
-def get_status(url, target, sid):
-    verbose("Querying status "  + target)
-    resp = requests.get(url + "status.html", data={"SID": sid}, timeout=30)
-    if resp.status_code==200:
-        content = resp.content.decode()
-        login_error = get_login_error(content)
-        if login_error!=None:
-            error("Login failed: " + login_error + ". Check password or use --sha1 for old authentication method")
-        software = get_div("Software", content)
-        hardware = get_div("Hardware", content)
-        if software!=None:
-            verbose("Software: " + software)
-        if software!=None:
-            verbose("Hardware: " + hardware)
-        if software==None and hardware==None:
-            error("Could not get status from device, use --no-status to skip")
-    elif resp.status_code==403:
-        error("Access denied", 2)
-    elif resp.status_code==404:
-        error("Status page not found. Use -n to skip this check", 2)
-    else:
-        error("Invalid response code " + str(resp.status_code), 2)
-
-def copyfile(src, dst):
-    shutil.copyfile(src, dst)
-    verbose('Copied: %s => %s' % (src, dst))
-
-def flash(url, type, target, sid):
-
-    if type=="upload":
-        type = "flash"
-    elif type=="uploadfs":
-        type = "spiffs"
-
-    image_type = "u_" + type
-
-    is_alive(url, target)
-    if args.no_status==False:
-        get_status(url, target, sid)
-
-    filesize = os.fstat(args.image.fileno()).st_size
-    verbose("Uploading %u Bytes: %s" % (filesize, args.image.name))
-
-    elf_hash = None
-    if args.elf:
-        elf_exception = None
-        try:
-            elf = args.image.name.replace('.bin', '.elf')
-            h = hashlib.sha1()
-            with open(elf, 'rb') as file:
-                while True:
-                    data = file.read(1024)
-                    if not data:
-                        break
-                    h.update(data)
-            elf_hash = h.hexdigest();
-        except Exception as e:
-            elf_exception = e
-
-        try:
-            if type=='flash':
-                if elf_exception:
-                    raise elf_exception
-                copyfile(elf, os.path.join(args.elf, elf_hash + '.elf'))
-                copyfile(args.image.name, os.path.join(args.elf, elf_hash + '.bin'))
-            elif type=='spiffs' and elf_hash:
-                copyfile(args.image.name, os.path.join(args.elf, elf_hash + '.spiffs.bin'))
-
-            if elf_hash and args.ini:
-                copyfile(args.ini, os.path.join(args.elf, elf_hash + '.ini'))
-
-        except Exception as e:
-                error(str(e), 5);
-
-    bar = SimpleProgressBar(max_value=filesize, redirect_stdout=True)
-    bar.start();
-    encoder = MultipartEncoder(fields={ "image_type": image_type, "SID": sid, "elf_hash": elf_hash, "firmware_image": ("filename", args.image, "application/octet-stream") })
-
-    monitor = MultipartEncoderMonitor(encoder, lambda monitor: bar.update(min(monitor.bytes_read, filesize)))
-
-    # resp = requests.post(url + "update", files={ "firmware_image": args.image }, data={ "image_type": image_type, "SID": sid }, timeout=30, allow_redirects=False)
-    resp = requests.post(url + "update", data=monitor, timeout=30, allow_redirects=False, headers={ "Content-Type": monitor.content_type })
-    bar.finish();
-
-    if resp.status_code==302:
-        verbose("Update successful")
-    else:
-        content = resp.content.decode()
-        error = get_h3(content)
-        if error==None:
-            verbose("Update failed with unknown response")
-            verbose("Response code " + str(resp.status_code))
-            verbose(content)
-            sys.exit(2)
-        else:
-            verbose("Update failed with: " + error)
-            sys.exit(3)
-
-    if args.no_wait==False:
-        max_wait = 60
-        step = 0
-        verbose("Waiting for device to reboot...")
-        if args.quiet==False:
-            bar = SimpleProgressBar(max_value=SimpleProgressBar.UnknownLength, redirect_stdout=True)
-            for i in range(0, 40):
-                bar.update(step)
-                step = step + 1
-                time.sleep(0.1)
-        else:
-            time.sleep(4)
-
-        while True:
-            if args.quiet==False:
-                for i in range(10):
+        if self.args.no_wait==False:
+            max_wait = 60
+            step = 0
+            self.verbose("Waiting for device to reboot...")
+            if self.args.quiet==False:
+                bar = SimpleProgressBar(max_value=SimpleProgressBar.UnknownLength, redirect_stdout=True)
+                for i in range(0, 40):
                     bar.update(step)
                     step = step + 1
                     time.sleep(0.1)
             else:
-                time.sleep(1)
-            if is_alive(url, target):
-                if args.no_status==False:
-                    get_status(url, target, sid)
-                break
-            max_wait = max_wait - 1
-            if max_wait==0:
-                if args.quiet==False:
-                    bar.finish();
-                error("Device did not response after update", 4)
-        if args.quiet==False:
-            bar.finish();
-        verbose("Device has been rebooted")
+                time.sleep(4)
 
-def export_settings(url, target, sid, output):
+            while True:
+                if self.args.quiet==False:
+                    for i in range(10):
+                        bar.update(step)
+                        step = step + 1
+                        time.sleep(0.1)
+                else:
+                    time.sleep(1)
+                if self.is_alive(url, target):
+                    if self.args.no_status==False:
+                        self.get_status(url, target, sid)
+                    break
+                max_wait = max_wait - 1
+                if max_wait==0:
+                    if self.args.quiet==False:
+                        bar.finish();
+                    error("Device did not response after update", 4)
+            if self.args.quiet==False:
+                bar.finish();
+            self.verbose("Device has been rebooted")
 
-    if not is_alive(url, target):
-        error("Device did not respond")
+    def export_settings(self, url, target, sid, output):
 
-    resp = requests.get(url + 'export_settings', data={"SID": sid})
-    if resp.status_code==200:
-        if resp.headers['Content-Type']!='application/json':
-            error("Content type not JSON")
-        else:
-            content = resp.content.decode()
-            if output==None:
-                print(content)
+        if not self.is_alive(url, target):
+            self.error("Device did not respond")
+
+        resp = requests.get(url + 'export_settings', data={"SID": sid})
+        if resp.status_code==200:
+            if resp.headers['Content-Type']!='application/json':
+                self.error("Content type not JSON")
             else:
-                with open(output, "wt") as file:
-                    file.write(content)
-                verbose("Settings exported: " + output)
-    else:
-        error("Invalid response status code " + str(resp.status_code))
-
-
-def import_settings(url, target, sid, file, params):
-
-    if not is_alive(url, target):
-        error("Device did not respond")
-
-    try:
-        settings = json.loads(file.read())
-    except Exception as e:
-        error("Failed to read " + file.name + ": " + str(e))
-
-    cfg = kfcfw.configuration.Configuration()
-    data = {}
-    for handle in params:
-        if handle[0:2]!="0x":
-            handle = "0x{:04x}".format(cfg.get_handle("Config()." + handle))
-        if handle in settings['config'].keys():
-            data[handle] = settings['config'][handle]
+                content = resp.content.decode()
+                if output==None:
+                    print(content)
+                else:
+                    with open(output, "wt") as file:
+                        file.write(content)
+                    self.verbose("Settings exported: " + output)
         else:
-            error("Cannot find setting: " + name)
-
-    resp = requests.post(url + "import_settings", data={"SID": sid, "config": json.dumps({"config": data})}, timeout=30, allow_redirects=False)
-    if resp.status_code!=200:
-        error("Invalid response code " + str(resp.status_code))
-
-    content = resp.content.decode()
-    try:
-        resp = json.loads(content)
-    except:
-        error("Invalid json response: " + content)
-
-    if resp["count"]==0:
-        error("No data imported")
-    elif resp['count']>0:
-        verbose(str(resp["count"]) + " configuration setting(s) imported")
-        if resp['count']!=len(data):
-            error("Settings count does not match: %u" % len(data))
-    else:
-        error("Failed to import: " + resp["message"])
+            self.error("Invalid response status code " + str(resp.status_code))
 
 
 # main
 
 parser = argparse.ArgumentParser(description="OTA for KFC Firmware", formatter_class=argparse.RawDescriptionHelpFormatter, epilog="exit codes:\n  0 - success\n  1 - general error\n  2 - device did not respond\n  3 - update failed\n  4 - device did not respond after update\n  5 - copying ELF firmware failed")
-parser.add_argument("action", help="action to execute", choices=["flash", "upload", "spiffs", "uploadfs", "atmega", "status", "alive", "export", "import"])
+parser.add_argument("action", help="action to execute", choices=["flash", "upload", "spiffs", "uploadfs", "atmega", "status", "alive", "export", "import", "factoryreset"])
 parser.add_argument("hostname", help="web server hostname")
 parser.add_argument("-u", "--user", help="username", required=True)
 parser.add_argument("-p", "--pw", "--pass", help="password", required=True)
@@ -315,6 +214,9 @@ parser.add_argument("--ini", help="copy platform.ini to elf directory", type=str
 parser.add_argument("--sha1", help="use sha1 authentication", action="store_true", default=False)
 args = parser.parse_args()
 
+
+ota = OTA(args)
+
 url = "http"
 if args.secure:
     url += "s"
@@ -328,15 +230,27 @@ sid = session.generate(args.user, args.pw)
 target = args.user + ":***@" + args.hostname
 
 if args.action in("flash", "upload", "spiffs", "uploadfs", "atmega"):
-    flash(url, args.action, target, sid)
+    ota.flash(url, args.action, target, sid)
+elif args.action=="factoryreset":
+    payload_sent = False
+    timeout = time.monotonic() + 30
+    socket = kfcfw.OTASerialConsole(args.hostname, sid)
+    while time.monotonic()<timeout and not socket.is_closed:
+        if socket.is_authenticated and payload_sent==False:
+            socket.ws.send('+factory\r\n')
+            socket.ws.send('+store\r\n')
+            socket.ws.send('+rst\r\n')
+            payload_sent = True
+        time.sleep(1)
+
 elif args.action=="status":
-    get_status(url, target, sid)
+    ota.get_status(url, target, sid)
 elif args.action=="alive":
-    get_alive(url, target)
+    ota.get_alive(url, target)
 elif args.action=="export":
-    export_settings(url, target, sid, args.output)
+    ota.export_settings(url, target, sid, args.output)
 elif args.action=="import":
     if len(args.params)==0 or args.image==None:
         parser.print_usage()
     else:
-        import_settings(url, target, sid, args.image, args.params)
+        ota.import_settings(url, target, sid, args.image, args.params)

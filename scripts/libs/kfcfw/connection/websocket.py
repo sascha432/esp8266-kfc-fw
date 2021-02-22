@@ -6,6 +6,7 @@ import websocket
 import _thread as thread
 import struct
 from  .base import BaseConnection
+import time
 
 class WebSocket(BaseConnection):
 
@@ -22,7 +23,12 @@ class WebSocket(BaseConnection):
             if ' ' in arg or '"' in arg or ',' in arg:
                 arg = '"%s"' % arg.replace('\\',  '\\\\').replace('"',  '\\"')
             parts.append(arg)
-        return '+%s=%s' % (command, ','.join(parts))
+        if not command.upper().startswith('AT+') and not command.startswith('+'):
+            command = '+' + command
+
+        if parts:
+            return '%s=%s' % (command, ','.join(parts))
+        return command
 
     def send_cmd(self, command, *args):
         if self.is_connected():
@@ -142,7 +148,7 @@ class WebSocket(BaseConnection):
         BaseConnection.on_connect(self)
 
     def url(self):
-        return 'ws://' + self.hostname + '/serial_console'
+        return 'ws://' + self.hostname + '/serial-console'
 
     def connect(self, hostname, sid):
         if self.is_connected():

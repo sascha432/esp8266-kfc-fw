@@ -21,7 +21,6 @@
 #           see connection class for more info...
 #
 
-import tkinter as tk
 import traceback
 
 class PrintConsole:
@@ -41,17 +40,28 @@ class PrintConsole:
     def exception(self):
         self.log(traceback.format_exc())
 
+    def show_message(self, message, title = 'Error'):
+        self.log('%s: %s' % (title, message))
+
+class PrintConsoleTk(PrintConsole):
+    def __init__(self):
+        PrintConsole.__init__(self)
+
     def show_message(message, title = 'Error'):
+        import tkinter as tk
         tk.messagebox.showerror(title=title, message=message)
 
 class Controller:
-    def __init__(self, debug = True, console = None):
+    def __init__(self, debug=True, console=None, tk=True):
         self.debug = debug
         if console:
             self.console = console
             self.console._debug = debug
         else:
-            self.console = PrintConsole(debug)
+            if tk:
+                self.console = PrintConsoleTk(debug)
+            else:
+                self.console = PrintConsole(debug)
 
     def connection_status(self, connection):
         self.console.log('Connection status: %s' % connection.conn())

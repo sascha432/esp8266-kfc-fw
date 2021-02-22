@@ -14,7 +14,6 @@
 #include <plugins.h>
 #if MQTT_SUPPORT
 #include "../src/plugins/mqtt/mqtt_client.h"
-#include "../src/plugins/mqtt/mqtt_auto_discovery.h"
 #endif
 
 #if DEBUG_IOT_REMOTE_CONTROL
@@ -35,7 +34,7 @@ public:
     {
     }
 
-    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num) override;
+    virtual AutoDiscoveryPtr nextAutoDiscovery(FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;
 
     // virtual void onConnect(MQTTClient *client) override;

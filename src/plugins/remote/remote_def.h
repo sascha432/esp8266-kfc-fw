@@ -42,11 +42,10 @@
 #define IOT_REMOTE_CONTROL_LED_PIN                              2
 #endif
 
+// enable button combinations
 #ifndef IOT_REMOTE_CONTROL_COMBO_BTN
 #define IOT_REMOTE_CONTROL_COMBO_BTN                            1
 #endif
-
-class HassPlugin;
 
 using KFCConfigurationClasses::Plugins;
 

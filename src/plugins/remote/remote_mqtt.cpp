@@ -20,7 +20,7 @@ static inline String get_button_name(uint8_t n)
     return PrintString(F("button_%u"), n + 1);
 }
 
-static void add_subtype_type_payload(MQTTAutoDiscovery *discovery, uint8_t button, const __FlashStringHelper *subType)
+static void add_subtype_type_payload(MQTT::AutoDiscovery *discovery, uint8_t button, const __FlashStringHelper *subType)
 {
     __LDBG_printf("discovery i=%u sub_type=%s", button, subType);
     auto name = get_button_name(button);
@@ -30,8 +30,8 @@ static void add_subtype_type_payload(MQTTAutoDiscovery *discovery, uint8_t butto
 
 String MqttRemote::getAutoDiscoveryTriggersTopic() const
 {
-    MQTTAutoDiscovery discovery;
-    discovery.create(MQTTComponent::ComponentType::DEVICE_AUTOMATION, F("+"), MQTTAutoDiscovery::FormatType::TOPIC);
+    AutoDiscovery discovery;
+    discovery.create(ComponentType::DEVICE_AUTOMATION, F("+"), FormatType::TOPIC);
     return discovery.getTopic();
 }
 
@@ -39,18 +39,18 @@ void MqttRemote::publishAutoDiscovery()
 {
     __LDBG_printf("auto discovery pending=%u", _discoveryPending);
     if (!_discoveryPending) {
-        if (!MQTTAutoDiscoveryQueue::isUpdateScheduled()) {
+        if (!AutoDiscoveryQueue::isUpdateScheduled()) {
             __LDBG_printf("no update scheduled");
             return;
         }
         auto client = MQTTClient::getClient();
         if (client) {
-            // stop auto dicovery if running
+            // stop auto discovery if running
             __LDBG_printf("auto discovery running=%u", (bool)client->getAutoDiscoveryQueue());
             client->getAutoDiscoveryQueue().reset();
 
             __LDBG_printf("requesting removal of=%s", getAutoDiscoveryTriggersTopic().c_str());
-            client->removeTopicsRequest(this, getAutoDiscoveryTriggersTopic(), [this](MQTTClient::ComponentPtr component, MQTTClient *client, bool result) {
+            client->removeTopicsRequest(this, getAutoDiscoveryTriggersTopic(), [this](ComponentPtr component, MQTTClient *client, bool result) {
                 __LDBG_printf("callback component=%p client=%p result=%u", component, client, result);
                 _discoveryPending = false;
                 if (client && result) {
@@ -61,13 +61,13 @@ void MqttRemote::publishAutoDiscovery()
     }
 }
 
-MQTTComponent::MQTTAutoDiscoveryPtr MqttRemote::nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num)
+MqttRemote::AutoDiscoveryPtr MqttRemote::nextAutoDiscovery(FormatType format, uint8_t num)
 {
     if (num >= getAutoDiscoveryCount()) {
         return nullptr;
     }
-    auto discovery = __LDBG_new(MQTTAutoDiscovery);
-    if (!discovery->create(MQTTComponent::ComponentType::DEVICE_AUTOMATION, PrintString(F("remote%02x"), num), format)) {
+    auto discovery = __LDBG_new(AutoDiscovery);
+    if (!discovery->create(ComponentType::DEVICE_AUTOMATION, PrintString(F("remote%02x"), num), format)) {
         return discovery;
     }
     discovery->addAutomationType();

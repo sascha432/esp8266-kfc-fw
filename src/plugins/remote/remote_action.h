@@ -6,7 +6,9 @@
 
 #include <Arduino_compat.h>
 #include "remote_def.h"
+#if MQTT_SUPPORT
 #include "../src/plugins/mqtt/mqtt_client.h"
+#endif
 #include <ArduinoJson.h>
 #include <Buffer.h>
 #include "payload.h"
@@ -84,7 +86,7 @@ namespace RemoteControl {
 
     class ActionMQTT : public Action {
     public:
-        using QosType = MQTTClient::QosType;
+        using QosType = MQTT::QosType;
 
     public:
         ActionMQTT(ActionIdType id , String &&payload, QosType qos = QosType::EXACTLY_ONCE) : Action(id, ActionProtocolType::MQTT), _payload(std::move(payload)), _qos(qos) {}

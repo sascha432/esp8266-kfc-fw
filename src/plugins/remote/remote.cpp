@@ -179,12 +179,6 @@ void RemoteControlPlugin::setup(SetupModeType mode)
 
         _resetAutoSleep();
 
-        // _actions.emplace_back(new ActionUDP(100, Payload::String(F("test1")), F("!acidpi1.local"), IPAddress(), 7712));
-        // _actions.emplace_back(new ActionUDP(200, Payload::String(F("test2")), F("192.168.0.3"), IPAddress(), 7712));
-        // _actions.emplace_back(new ActionUDP(300, Payload::String(F("test3")), F("acidpi1.local"), IPAddress(), 7712));
-        // IPAddress addr;
-        // addr.fromString(F("192.168.0.3"));
-        // _actions.emplace_back(new ActionUDP(400, Payload::String(F("test4")), emptyString, addr, 7712));
         // _resolveActionHostnames();
 
     });
@@ -451,7 +445,7 @@ void RemoteControlPlugin::_loop()
         config.enterDeepSleep(KFCFWConfiguration::seconds(_config.deep_sleep_time), RF_DEFAULT, 1);
     }
     else {
-#if 1
+#if 0
         static bool counter = false;
         if ((millis() / 1000) % 2 == counter) {
             counter = !counter;

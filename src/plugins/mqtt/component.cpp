@@ -2,7 +2,7 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#include "mqtt_component.h"
+#include "component.h"
 #include "mqtt_client.h"
 
 #if DEBUG_MQTT_CLIENT
@@ -11,29 +11,31 @@
 #include <debug_helper_disable.h>
 #endif
 
-MQTTComponent::MQTTComponent(ComponentType type) : _type(type), _autoDiscoveryNum(0)
+using namespace MQTT;
+
+Component::Component(ComponentType type) : _type(type), _autoDiscoveryNum(0)
 {
 }
 
-MQTTComponent::~MQTTComponent()
+Component::~Component()
 {
 }
 
-void MQTTComponent::onConnect(MQTTClient *client)
+void Component::onConnect(Client *client)
 {
 }
 
-void MQTTComponent::onDisconnect(MQTTClient *client, AsyncMqttClientDisconnectReason reason)
+void Component::onDisconnect(Client *client, AsyncMqttClientDisconnectReason reason)
 {
 }
 
-void MQTTComponent::onMessage(MQTTClient *client, char *topic, char *payload, size_t len)
+void Component::onMessage(Client *client, char *topic, char *payload, size_t len)
 {
 }
 
 #if MQTT_AUTO_DISCOVERY
 
-uint8_t MQTTComponent::rewindAutoDiscovery()
+uint8_t Component::rewindAutoDiscovery()
 {
     uint8_t count;
     if ((count = getAutoDiscoveryCount()) != 0) {
@@ -45,7 +47,7 @@ uint8_t MQTTComponent::rewindAutoDiscovery()
 
 #endif
 
-MQTTComponent::NameType MQTTComponent::getNameByType(ComponentType type)
+NameType Component::getNameByType(ComponentType type)
 {
     switch(type) {
         case ComponentType::LIGHT:

@@ -27,7 +27,6 @@
 #include "../src/plugins/ntp/ntp_plugin.h"
 #endif
 #if MQTT_SUPPORT
-#include <AsyncMqttClient.h>
 #include "../src/plugins/mqtt/mqtt_client.h"
 #endif
 #if MDNS_PLUGIN

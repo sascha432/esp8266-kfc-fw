@@ -18,16 +18,73 @@
 
 float Sensor_Battery::maxVoltage = 0;
 
-Sensor_Battery::Sensor_Battery(const JsonString &name) : MQTTSensor(), _name(name)
+using KFCConfigurationClasses::System;
+using SensorRecordType = Plugins::Sensor::SensorRecordType;
+
+uint8_t operator&(SensorRecordType a, SensorRecordType b) {
+    return static_cast<uint8_t>(a) & static_cast<uint8_t>(b);
+}
+
+uint8_t operator&(uint8_t a, SensorRecordType b) {
+    return a & static_cast<uint8_t>(b);
+}
+
+static constexpr uint32_t kReadInterval = 125;
+static constexpr uint32_t kUpdateInterval = 2000;
+
+Sensor_Battery::Sensor_Battery(const JsonString &name) : MQTTSensor(), _name(name), _adcValue(NAN), _adcLastUpdateTime(1U << 31), _timerCounter(0)
 {
     REGISTER_SENSOR_CLIENT(this);
     reconfigure(nullptr);
-    ADCManager::getInstance().addAutoReadTimer(Event::milliseconds(50 * 64 + 250), Event::milliseconds(50), 64);
+
+    _readADC(true);
+    _adcValue = NAN; // discard initial reading
+
+    _Timer(_timer).add(Event::milliseconds(kReadInterval), true, [this](Event::CallbackTimerPtr) {
+        if (++_timerCounter >= kUpdateInterval / kReadInterval) {
+            _timerCounter = 0;
+        }
+        _readADC(_timerCounter == 0);
+    });
 }
 
 Sensor_Battery::~Sensor_Battery()
 {
     UNREGISTER_SENSOR_CLIENT(this);
+}
+
+void Sensor_Battery::_readADC(bool updateSensor)
+{
+    auto value = ADCManager::getInstance().readValue();
+    auto _millis = millis();
+    uint32_t diff;
+    if (isnan(_adcValue)) {
+        diff = 0;
+        _adcValue = value;
+    }
+    else {
+        diff = get_time_diff(_adcLastUpdateTime, _millis);
+        float f = (20 * 1000) / (float)diff;
+        _adcValue = ((_adcValue * f) + value) / (f + 1.0);
+    }
+    _adcLastUpdateTime = _millis;
+
+    if (updateSensor) {
+        _status.updateSensor(*this);
+    }
+
+#if IOT_SENSOR_HAVE_BATTERY_RECORDER
+    if (diff && (_config.record & SensorRecordType::ADC) && _config.address && _config.port && WiFi.isConnected()) {
+        WiFiUDP udp;
+        if (udp.beginPacket(IPAddress(_config.address), _config.port) &&
+            udp.printf_P(PSTR("[\"%s\",\"ADC\",%.3f,%u,%u]"), System::Device::getName(), static_cast<float>(time(nullptr)) + ((millis() % 1000) / 1000.0), value, diff) &&
+            udp.endPacket())
+        {
+            // success
+        }
+    }
+#endif
+
 }
 
 enum class AutoDiscoveryNumHelperType {
@@ -44,28 +101,30 @@ enum class AutoDiscoveryNumHelperType {
     MAX
 };
 
-MQTTComponent::MQTTAutoDiscoveryPtr Sensor_Battery::nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num)
+Sensor_Battery::AutoDiscoveryPtr Sensor_Battery::nextAutoDiscovery(FormatType format, uint8_t num)
 {
     if (num >= getAutoDiscoveryCount()) {
         return nullptr;
     }
-    auto discovery = __LDBG_new(MQTTAutoDiscovery);
+    auto discovery = __LDBG_new(AutoDiscovery);
     switch(static_cast<AutoDiscoveryNumHelperType>(num)) {
         case AutoDiscoveryNumHelperType::VOLTAGE:
             discovery->create(this, _getId(TopicType::VOLTAGE), format);
             discovery->addStateTopic(_getTopic(TopicType::VOLTAGE));
             discovery->addUnitOfMeasurement('V');
+            discovery->addDeviceClass(F("voltage"));
             break;
 #if IOT_SENSOR_BATTERY_DISPLAY_LEVEL
         case AutoDiscoveryNumHelperType::LEVEL:
             discovery->create(this, _getId(TopicType::LEVEL), format);
             discovery->addStateTopic(_getTopic(TopicType::LEVEL));
             discovery->addUnitOfMeasurement('%');
+            discovery->addDeviceClass(F("battery"));
             break;
 #endif
 #ifdef IOT_SENSOR_BATTERY_CHARGING
         case AutoDiscoveryNumHelperType::CHARGING:
-            discovery->create(MQTTComponent::ComponentType::SENSOR, _getId(TopicType::CHARGING), format);
+            discovery->create(ComponentType::SENSOR, _getId(TopicType::CHARGING), format);
             discovery->addStateTopic(_getTopic(TopicType::CHARGING));
             break;
 #endif
@@ -89,25 +148,23 @@ uint8_t Sensor_Battery::getAutoDiscoveryCount() const
 
 void Sensor_Battery::getValues(JsonArray &array, bool timer)
 {
-    auto status = readSensor();
-
     auto obj = &array.addObject(3);
     obj->add(JJ(id), _getId(TopicType::VOLTAGE));
     obj->add(JJ(state), true);
-    obj->add(JJ(value), JsonNumber(status.getVoltage(), _config.precision));
+    obj->add(JJ(value), JsonNumber(_status.getVoltage(), _config.precision));
 
 #if IOT_SENSOR_BATTERY_DISPLAY_LEVEL
     obj = &array.addObject(3);
     obj->add(JJ(id), _getId(TopicType::LEVEL));
     obj->add(JJ(state), true);
-    obj->add(JJ(value), JsonNumber(status.getLevel()));
+    obj->add(JJ(value), JsonNumber(_status.getLevel()));
 #endif
 
 #ifdef IOT_SENSOR_BATTERY_CHARGING
     obj = &array.addObject(3);
     obj->add(JJ(id), _getId(TopicType::CHARGING));
     obj->add(JJ(state), true);
-    obj->add(JJ(value), status.getChargingStatus());
+    obj->add(JJ(value), _status.getChargingStatus());
 #endif
 
 #if IOT_SENSOR_BATTERY_DSIPLAY_POWER_STATUS
@@ -134,18 +191,21 @@ void Sensor_Battery::createWebUI(WebUIRoot &webUI, WebUIRow **row)
 
 void Sensor_Battery::publishState(MQTTClient *client)
 {
-    auto status = readSensor();
+    // auto status = readSensor();
+    // if (!_status.isValid()) {
+    //     return;
+    // }
     __LDBG_printf("client=%p connected=%u", client, client && client->isConnected() ? 1 : 0);
     if (client && client->isConnected()) {
-        client->publish(_getTopic(TopicType::VOLTAGE), true, String(status.getVoltage(), _config.precision));
+        client->publish(_getTopic(TopicType::VOLTAGE), true, String(_status.getVoltage(), _config.precision));
 #if IOT_SENSOR_BATTERY_DISPLAY_LEVEL
-    client->publish(_getTopic(TopicType::LEVEL), true, String(status.getLevel()));
+    client->publish(_getTopic(TopicType::LEVEL), true, String(_status.getLevel()));
 #endif
 #ifdef IOT_SENSOR_BATTERY_CHARGING
-        client->publish(_getTopic(TopicType::CHARGING), true, status.getChargingStatus());
+        client->publish(_getTopic(TopicType::CHARGING), true, _status.getChargingStatus());
 #endif
 #if IOT_SENSOR_BATTERY_DSIPLAY_POWER_STATUS
-        client->publish(_getTopic(TopicType::POWER), true, status.getPowerStatus());
+        client->publish(_getTopic(TopicType::POWER), true, _status.getPowerStatus());
 #endif
     }
 }
@@ -195,6 +255,27 @@ void Sensor_Battery::createConfigureForm(AsyncWebServerRequest *request, FormUI:
     form.addFormUI(F("Display Precision"));
     cfg.addRangeValidatorFor_precision(form);
 
+#if IOT_SENSOR_HAVE_BATTERY_RECORDER
+
+    form.addObjectGetterSetter(F("sp_ra"), cfg, cfg.get_ipv4_address, cfg.set_ipv4_address);
+    form.addFormUI(F("Data Hostname"));
+
+    form.addObjectGetterSetter(F("sp_rp"), cfg, cfg.get_bits_port, cfg.set_bits_port);
+    form.addFormUI(F("Data Port"));
+    cfg.addRangeValidatorFor_port(form);
+
+    auto items = FormUI::List(
+        SensorRecordType::NONE, F("Disabled"),
+        SensorRecordType::ADC, F("Record ADC values"),
+        SensorRecordType::SENSOR, F("Record sensor values"),
+        SensorRecordType::BOTH, F("Record ADC and sensor values")
+    );
+
+    form.addObjectGetterSetter(F("sp_brt"), cfg, cfg.get_int_record, cfg.set_int_record);
+    form.addFormUI(F("Sensor Data"), items);
+
+#endif
+
     group.end();
 }
 
@@ -211,25 +292,11 @@ void Sensor_Battery::reconfigure(PGM_P source)
 //     });
 // }
 
-void Sensor_Battery::Status::readSensor(Sensor_Battery &sensor)
+void Sensor_Battery::Status::updateSensor(Sensor_Battery &sensor)
 {
-    auto &adc = ADCManager::getInstance();
-    auto result = adc.getAutoReadValue(true);
-    float adcVal = result.getMeanValue();
-    auto Vout = ((IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1 * adcVal) + (IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R2 * adcVal)) / (IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1 * ADCManager::kMaxADCValue);
+    float Vout = ((IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1 * sensor._adcValue) + (IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R2 * sensor._adcValue)) / (IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1 * ADCManager::kMaxADCValue);
+    maxVoltage = std::max(maxVoltage, Vout);
     _voltage = Vout * sensor._config.calibration + sensor._config.offset;
-    maxVoltage = std::max(maxVoltage, _voltage);
-
-#if 0
-    result.dump(DEBUG_OUTPUT);
-
-    __DBG_printf("adc=%u adcval=%f Vout=%f Vcal=%f",
-        system_adc_read(),
-        adcVal,
-        Vout,
-        _voltage
-    );
-#endif
 
 #ifdef IOT_SENSOR_BATTERY_CHARGING
 #if IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN != -1
@@ -237,57 +304,66 @@ void Sensor_Battery::Status::readSensor(Sensor_Battery &sensor)
         noInterrupts();
         pinMode(IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN, INPUT_PULLUP);
         auto value = digitalRead(IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN);
+        pinMode(IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN, INPUT);
         interrupts();
-        if (!value) {
-            _charging = ChargingType::COMPLETE;
-        }
-        else {
-            _charging = ChargingType::CHARGING;
-        }
+        _charging = value ? ChargingType::CHARGING : ChargingType::COMPLETE;
     }
     else {
         _charging = ChargingType::NONE;
     }
 #else
-    _charging = IOT_SENSOR_BATTERY_CHARGING ? ChargingType::CHARGING : ChargingType::NONE;
+    _charging = (IOT_SENSOR_BATTERY_CHARGING) ? ChargingType::CHARGING : ChargingType::NONE;
 #endif
 #endif
 
 #if IOT_SENSOR_BATTERY_DISPLAY_LEVEL
-
-    // make sure that the level decreases only when not charging and increases while charging
-    if (_charging != _pCharging) {
-        _pCharging = _charging;
-        if (_charging == ChargingType::CHARGING) {
-            _level = 0;
-        }
-        else {
-            _level = 100;
-        }
-    }
-
-    uint8_t level = IOT_SENSOR_BATTERY_LEVEL_FUNCTION(_voltage,  IOT_SENSOR_BATTERY_NUM_CELLS, _charging == ChargingType::CHARGING);
-    if (_charging == ChargingType::CHARGING) {
-        _level = std::max(_level, level);
-    }
-    else {
-        _level = std::min(_level, level);
-    }
+    _level = IOT_SENSOR_BATTERY_LEVEL_FUNCTION(_voltage,  IOT_SENSOR_BATTERY_NUM_CELLS, _charging == ChargingType::CHARGING);
 #endif
+    // // make sure that the level decreases only when not charging and increases while charging
+    // if (_charging != _pCharging) {
+    //     _pCharging = _charging;
+    //     if (_charging == ChargingType::CHARGING) {
+    //         _level = 0;
+    //     }
+    //     else {
+    //         // _level = 100;
+    //     }
+    // }
+
+    // _level = IOT_SENSOR_BATTERY_LEVEL_FUNCTION(_voltage,  IOT_SENSOR_BATTERY_NUM_CELLS, _charging == ChargingType::CHARGING);
+    // if (_charging == ChargingType::CHARGING) {
+    //     _level = std::max(_level, level);
+    // }
+    // else {
+    //     _level = level;
+    //     // _level = std::min(_level, level);
+    // }
+// #endif
 
 
 #if IOT_SENSOR_BATTERY_DSIPLAY_POWER_STATUS
     _state = IOT_SENSOR_BATTERY_ON_EXTERNAL ? StateType::RUNNING_ON_EXTERNAL_POWER : StateType::RUNNING;
 #endif
 
+#if IOT_SENSOR_HAVE_BATTERY_RECORDER
+    if ((sensor._config.record & SensorRecordType::SENSOR) && sensor._config.address && sensor._config.port && WiFi.isConnected()) {
+        WiFiUDP udp;
+        if (udp.beginPacket(IPAddress(sensor._config.address), sensor._config.port) &&
+            udp.printf_P(PSTR("[\"%s\",\"SEN\",%.3f,%.4f,%.4f,%.4f,%u,%u]"),
+                KFCConfigurationClasses::System::Device::getName(),
+                static_cast<float>(time(nullptr)) + ((millis() % 1000) / 1000.0),
+                _voltage, Vout, sensor._adcValue, _level, _charging == ChargingType::CHARGING) &&
+            udp.endPacket())
+        {
+            // sent
+        }
+    }
+#endif
 
 }
 
 Sensor_Battery::Status Sensor_Battery::readSensor()
 {
-    if (!_status.isValid()) {
-        _status.readSensor(*this);
-    }
     return _status;
 }
 
@@ -379,5 +455,62 @@ uint8_t Sensor_Battery::calcLipoCapacity(float voltage, uint8_t cells, bool char
     }
     return first;
 }
+
+#if AT_MODE_SUPPORTED && (IOT_SENSOR_BATTERY_DISPLAY_LEVEL || IOT_SENSOR_HAVE_BATTERY_RECORDER)
+
+#include "at_mode.h"
+
+#if IOT_SENSOR_BATTERY_DISPLAY_LEVEL
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(BCAP, "BCAP", "<voltage>", "Calculate battery capacity for given voltage");
+#endif
+#if IOT_SENSOR_HAVE_BATTERY_RECORDER
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(BREC, "BREC", "[<host=192.168.0.3>,<port=19523>,<type>]", "Enable sensor data recording");
+#endif
+
+void Sensor_Battery::atModeHelpGenerator()
+{
+    auto name = SensorPlugin::getInstance().getName_P();
+#if IOT_SENSOR_BATTERY_DISPLAY_LEVEL
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(BCAP), name);
+#endif
+#if IOT_SENSOR_HAVE_BATTERY_RECORDER
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(BREC), name);
+#endif
+}
+
+bool Sensor_Battery::atModeHandler(AtModeArgs &args)
+{
+#if IOT_SENSOR_BATTERY_DISPLAY_LEVEL
+    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(BCAP))) {
+        auto voltage = args.toFloat(0);
+        float capacity = Sensor_Battery::calcLipoCapacity(voltage, 1, false);
+        float charging = Sensor_Battery::calcLipoCapacity(voltage, 1, true);
+        args.printf_P(PSTR("voltage=%.4fV capacity=%.1f%% charging=%.1f%% Umax=%.4f"), voltage, capacity, charging, Sensor_Battery::maxVoltage);
+        return true;
+    }
+#endif
+#if IOT_SENSOR_HAVE_BATTERY_RECORDER
+    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(BREC))) {
+        if (args.size() >= 2) {
+            auto address = IPAddress();
+            address.fromString(args.toString(0));
+            _config.address = static_cast<uint32_t>(address);
+            _config.port = args.toIntMinMax<uint16_t>(1, 1, 65535, 19523);
+            _config.record = args.toIntMinMax<uint8_t>(2, 0, 3);
+            config.write();
+            args.printf_P(PSTR("sending sensor data to %s:%u UDP type=%u"), address.toString().c_str(), _config.port, _config.record);
+        }
+        else {
+            _config.record = 0;
+            config.write();
+            args.print(F("battery voltage recording disabled"));
+        }
+        return true;
+    }
+#endif
+    return false;
+}
+
+#endif
 
 #endif

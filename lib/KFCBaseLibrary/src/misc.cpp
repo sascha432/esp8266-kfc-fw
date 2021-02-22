@@ -147,8 +147,9 @@ void printable_string(Print &output, const uint8_t *buffer, size_t length, size_
     }
     auto ptr = buffer;
     while(length--) {
-        if (crlfAsText && (*ptr == '\n' || *ptr == '\r')) {
-            switch(*ptr) {
+        char ch = pgm_read_byte(ptr);
+        if (crlfAsText && (ch == '\n' || ch == '\r')) {
+            switch(ch) {
                 case '\r':
                     output.print(F("<<CR>>"));
                     break;
@@ -157,12 +158,12 @@ void printable_string(Print &output, const uint8_t *buffer, size_t length, size_
                     break;
             }
         }
-        else if (isprint(*ptr) || (extra && strchr_P(extra, *ptr))) {
-            output.print((char)*ptr);
+        else if (isprint(ch) || (extra && strchr_P(extra, ch))) {
+            output.print(ch);
         }
         else {
             output.print('\\');
-            switch(*ptr) {
+            switch(ch) {
             case '\n':
                 output.print('n');
                 break;
@@ -176,7 +177,7 @@ void printable_string(Print &output, const uint8_t *buffer, size_t length, size_
                 output.print('b');
                 break;
             default:
-                output.printf_P(PSTR("x%02x"), (int)(*ptr & 0xff));
+                output.printf_P(PSTR("x%02x"), (uint8_t)ch);
                 break;
             }
         }

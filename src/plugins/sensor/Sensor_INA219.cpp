@@ -49,21 +49,25 @@ MQTTComponent::MQTTAutoDiscoveryPtr Sensor_INA219::nextAutoDiscovery(MQTTAutoDis
             discovery->create(this, _getId(VOLTAGE), format);
             discovery->addStateTopic(MQTTClient::formatTopic(_getId(VOLTAGE)));
             discovery->addUnitOfMeasurement('V');
+            discovery->addDeviceClass(F("voltage"));
             break;
         case 1:
             discovery->create(this, _getId(CURRENT), format);
             discovery->addStateTopic(MQTTClient::formatTopic(_getId(CURRENT)));
             discovery->addUnitOfMeasurement(F("mA"));
+            discovery->addDeviceClass(F("current"));
             break;
         case 2:
             discovery->create(this, _getId(POWER), format);
             discovery->addStateTopic(MQTTClient::formatTopic(_getId(POWER)));
             discovery->addUnitOfMeasurement(F("mW"));
+            discovery->addDeviceClass(F("power"));
             break;
         case 3:
             discovery->create(this, _getId(PEAK_CURRENT), format);
             discovery->addStateTopic(MQTTClient::formatTopic(_getId(PEAK_CURRENT)));
             discovery->addUnitOfMeasurement(F("mA"));
+            discovery->addDeviceClass(F("current"));
             break;
     }
     discovery->finalize();

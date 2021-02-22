@@ -135,14 +135,14 @@ public:
 private:
     class ResultQueue {
     public:
-        ResultQueue(uint8_t numSamples, uint32_t intervalMicros, Callback callback, uint16_t id = 0);
+        ResultQueue(uint8_t numSamples, uint32_t intervalMicros, Callback callback, uint32_t id = 0);
         bool needsUpdate(uint32_t time) const {
             return (get_time_diff(_result._lastUpdate, time) >= _interval);
         }
         bool finished() const {
             return (_result._samples >= _samples);
         }
-        uint16_t getId() const {
+        uint32_t getId() const {
             return _id;
         }
         ADCResult &getResult() {
@@ -153,12 +153,12 @@ private:
         }
         void invokeCallback();
 
-        bool operator==(uint16_t id) const {
+        bool operator==(uint32_t id) const {
             return _id == id;
         }
 
     private:
-        uint16_t _id;
+        uint32_t _id;
         uint8_t _samples;
         uint32_t _interval;
         ADCResult _result;
@@ -211,13 +211,16 @@ public:
     }
     // read value and set lastUpdate
     uint16_t readValue(uint32_t &lastUpdate);
+    uint16_t readValue(uint64_t &lastUpdate);
 
-    static constexpr uint16_t kQueueIdNone = 0;
-    static constexpr uint16_t kQueueIdAutoReadValue = 0xfff7;
+    static constexpr uint32_t kQueueIdNone = 0;
+    static constexpr uint32_t kQueueIdAutoReadValue = 0xfffffff7;
 
     // request average
     // details are at the top of the file
-    bool requestAverage(uint8_t numSamples, uint32_t readIntervalMicros, Callback callback, uint16_t queueId = kQueueIdNone);
+    bool requestAverage(uint8_t numSamples, uint32_t readIntervalMicros, Callback callback, uint32_t queueId = kQueueIdNone);
+
+    void cancelAverageRequest(uint32_t queueId);
 
     // return lower 32bit part
     uint32_t getLastUpdate() const;

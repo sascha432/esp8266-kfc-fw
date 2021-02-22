@@ -49,7 +49,7 @@ static inline uint16 ___system_adc_read() {
 }
 #endif
 
-ADCManager::ResultQueue::ResultQueue(uint8_t numSamples, uint32_t intervalMicros, Callback callback, uint16_t id) :
+ADCManager::ResultQueue::ResultQueue(uint8_t numSamples, uint32_t intervalMicros, Callback callback, uint32_t id) :
     _id(id),
     _samples(numSamples),
     _interval(intervalMicros),
@@ -271,12 +271,24 @@ uint16_t ADCManager::readValue(uint32_t &lastUpdate)
     return (_value = __readAndNormalizeADCValue());
 }
 
+uint16_t ADCManager::readValue(uint64_t &lastUpdate)
+{
+    auto diff = _canRead();
+    if (diff < _nextDelay) {
+        lastUpdate = _lastUpdated;
+        return _value;
+    }
+    _updateTimestamp();
+    lastUpdate = _lastUpdated;
+    return (_value = __readAndNormalizeADCValue());
+}
+
 uint32_t ADCManager::getLastUpdate() const
 {
     return (uint32_t)_lastUpdated;
 }
 
-bool ADCManager::requestAverage(uint8_t numSamples, uint32_t readIntervalMicros, Callback callback, uint16_t queueId)
+bool ADCManager::requestAverage(uint8_t numSamples, uint32_t readIntervalMicros, Callback callback, uint32_t queueId)
 {
     __LDBG_printf("numSamples=%u read_interval=%u callback=%p", numSamples, readIntervalMicros, lambda_target(callback));
     if (numSamples == 0 || readIntervalMicros == 0) {
@@ -288,4 +300,9 @@ bool ADCManager::requestAverage(uint8_t numSamples, uint32_t readIntervalMicros,
     }
     _queue.emplace_back(numSamples, readIntervalMicros, callback, queueId);
     return true;
+}
+
+void ADCManager::cancelAverageRequest(uint32_t queueId)
+{
+    _queue.erase(std::remove(_queue.begin(), _queue.end(), queueId), _queue.end());
 }

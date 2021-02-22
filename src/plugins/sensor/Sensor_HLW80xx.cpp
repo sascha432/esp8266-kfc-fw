@@ -63,30 +63,35 @@ MQTTComponent::MQTTAutoDiscoveryPtr Sensor_HLW80xx::nextAutoDiscovery(MQTTAutoDi
             discovery->addStateTopic(topic);
             discovery->addUnitOfMeasurement('W');
             discovery->addValueTemplate(FSPGM(power));
+            discovery->addDeviceClass(F("power"));
             break;
         case 1:
             discovery->create(this, FSPGM(energy_total), format);
             discovery->addStateTopic(topic);
             discovery->addUnitOfMeasurement(FSPGM(kWh));
             discovery->addValueTemplate(FSPGM(energy_total));
+            discovery->addDeviceClass(F("energy"));
             break;
         case 2:
             discovery->create(this, FSPGM(energy), format);
             discovery->addStateTopic(topic);
             discovery->addUnitOfMeasurement(FSPGM(kWh));
             discovery->addValueTemplate(FSPGM(energy));
+            discovery->addDeviceClass(F("energy"));
             break;
         case 3:
             discovery->create(this, FSPGM(voltage), format);
             discovery->addStateTopic(topic);
             discovery->addUnitOfMeasurement('V');
             discovery->addValueTemplate(FSPGM(voltage));
+            discovery->addDeviceClass(F("voltage"));
             break;
         case 4:
             discovery->create(this, FSPGM(current), format);
             discovery->addStateTopic(topic);
             discovery->addUnitOfMeasurement('A');
             discovery->addValueTemplate(FSPGM(current));
+            discovery->addDeviceClass(F("current"));
             break;
         case 5:
             discovery->create(this, FSPGM(pf), format);
@@ -94,6 +99,7 @@ MQTTComponent::MQTTAutoDiscoveryPtr Sensor_HLW80xx::nextAutoDiscovery(MQTTAutoDi
             discovery->addUnitOfMeasurement('%');
             discovery->addValueTemplate(FSPGM(pf));
             discovery->finalize();
+            discovery->addDeviceClass(F("power_factor"));
             break;
     }
     discovery->finalize();
@@ -433,16 +439,16 @@ bool Sensor_HLW80xx::atModeHandler(AtModeArgs &args)
             _plotDataTime = 0;
             _plotData.clear();
 
-            _webSocketClient = nullptr;
-            auto wsSerialConsole = Http2Serial::getServerSocket();
-            if (wsSerialConsole) {
-                for(auto client: wsSerialConsole->getClients()) {
-                    if (reinterpret_cast<void *>(client) == clientId && client->status() && client->_tempObject && reinterpret_cast<WsClient *>(client->_tempObject)->isAuthenticated()) {
-                        _webSocketClient = client;
-                        break;
-                    }
-                }
-            }
+            _webSocketClient = Http2Serial::getClientById(clientId);
+            // auto wsSerialConsole = Http2Serial::getServerSocket();
+            // if (wsSerialConsole) {
+            //     for(auto client: wsSerialConsole->getClients()) {
+            //         if (reinterpret_cast<void *>(client) == clientId && client->status() && client->_tempObject && reinterpret_cast<WsClient *>(client->_tempObject)->isAuthenticated()) {
+            //             _webSocketClient = client;
+            //             break;
+            //         }
+            //     }
+            // }
 
             if (!_webSocketClient) {
                 args.printf_P(PSTR("Cannot find ClientID %p"), clientId);

@@ -7,20 +7,24 @@
 #include "mqtt_client.h"
 #include "plugins.h"
 
-class MQTTPlugin : public PluginComponent {
-public:
-    MQTTPlugin();
+namespace MQTT {
 
-    virtual void setup(SetupModeType mode) override;
-    virtual void reconfigure(const String &source) override;
-    virtual void shutdown() override;
-    virtual void getStatus(Print &output) override;
-    virtual void createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request) override;
+    class Plugin : public PluginComponent {
+    public:
+        Plugin();
 
-#if AT_MODE_SUPPORTED
-    virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const override;
-    virtual bool atModeHandler(AtModeArgs &args) override;
-#endif
+        virtual void setup(SetupModeType mode) override;
+        virtual void reconfigure(const String &source) override;
+        virtual void shutdown() override;
+        virtual void getStatus(Print &output) override;
+        virtual void createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request) override;
 
-    static MQTTPlugin &getPlugin();
-};
+    #if AT_MODE_SUPPORTED
+        virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const override;
+        virtual bool atModeHandler(AtModeArgs &args) override;
+    #endif
+
+        static Plugin &getPlugin();
+    };
+
+}

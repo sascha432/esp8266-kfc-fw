@@ -15,16 +15,18 @@
 
 using KFCConfigurationClasses::Plugins;
 
-MQTTAutoDiscoveryQueue::MQTTAutoDiscoveryQueue(MQTTClient &client) : _client(client), _crc(~0)
+using namespace MQTT;
+
+AutoDiscoveryQueue::AutoDiscoveryQueue(Client &client) : _client(client), _crc(~0)
 {
 }
 
-MQTTAutoDiscoveryQueue::~MQTTAutoDiscoveryQueue()
+AutoDiscoveryQueue::~AutoDiscoveryQueue()
 {
     clear();
 }
 
-void MQTTAutoDiscoveryQueue::clear()
+void AutoDiscoveryQueue::clear()
 {
    __LDBG_printf("clear size=%u done=%u left=%u", _client._components.size(), _next == _client._components.end(), std::distance(_next, _client._components.end()));
    if (_next != _client._components.end()) {
@@ -34,7 +36,7 @@ void MQTTAutoDiscoveryQueue::clear()
     _timer.remove();
 }
 
-bool MQTTAutoDiscoveryQueue::isUpdateScheduled()
+bool AutoDiscoveryQueue::isUpdateScheduled()
 {
     uint32_t now  = time(nullptr);
     if (!IS_TIME_VALID(now)) {
@@ -48,7 +50,13 @@ bool MQTTAutoDiscoveryQueue::isUpdateScheduled()
     return (delay && now > state._lastAutoDiscoveryTimestamp + delay);
 }
 
-void MQTTAutoDiscoveryQueue::publish(bool force)
+void AutoDiscoveryQueue::list(Print &output, bool crc)
+{
+    auto iterator = _client._components.begin();
+    // MQTTAutoDiscoveryList
+}
+
+void AutoDiscoveryQueue::publish(bool force)
 {
     __LDBG_printf("components=%u delay=%u force=%u", _client._components.size(), MQTT_AUTO_DISCOVERY_QUEUE_INITIAL_DELAY, force);
     if (!_client._components.empty()) {
@@ -83,7 +91,7 @@ void MQTTAutoDiscoveryQueue::publish(bool force)
     }
 }
 
-void MQTTAutoDiscoveryQueue::_timerCallback(Event::CallbackTimerPtr timer)
+void AutoDiscoveryQueue::_timerCallback(Event::CallbackTimerPtr timer)
 {
     __DBG_assert_panic(MQTTClient::getClient() == &_client, "_client address has changed");
 
@@ -140,7 +148,7 @@ void MQTTAutoDiscoveryQueue::_timerCallback(Event::CallbackTimerPtr timer)
     }
 
     auto component = *_next;
-    auto discovery = component->nextAutoDiscovery(MQTTAutoDiscovery::FormatType::JSON, component->getAutoDiscoveryNumber());
+    auto discovery = component->nextAutoDiscovery(FormatType::JSON, component->getAutoDiscoveryNumber());
     component->nextAutoDiscovery();
     if (discovery) {
         // do we have enough space to send?
@@ -152,7 +160,7 @@ void MQTTAutoDiscoveryQueue::_timerCallback(Event::CallbackTimerPtr timer)
             _discoveryCount++;
             _size += msgSize;
 
-            _client.publish(discovery->getTopic(), true, discovery->getPayload(), MQTTClient::QosType::AUTO_DISCOVERY);
+            _client.publish(discovery->getTopic(), true, discovery->getPayload(), QosType::AUTO_DISCOVERY);
 
             if (_lastFailed) {
                 _lastFailed = false;
@@ -166,7 +174,7 @@ void MQTTAutoDiscoveryQueue::_timerCallback(Event::CallbackTimerPtr timer)
         else {
             _lastFailed = true;
             __LDBG_printf("tcp buffer full: %u > %u, queue counter=%u", msgSize, _client.getClientSpace(), _maxQueueSkipCounter++);
-            if (!MQTTClient::_isMessageSizeExceeded(msgSize, discovery->getTopic().c_str())) {
+            if (!Client::_isMessageSizeExceeded(msgSize, discovery->getTopic().c_str())) {
                 // retry if size not exceeded
                 component->retryAutoDiscovery();
             }
@@ -188,7 +196,7 @@ void MQTTAutoDiscoveryQueue::_timerCallback(Event::CallbackTimerPtr timer)
     }
 }
 
-void MQTTAutoDiscoveryQueue::_publishDone(bool success, uint32_t delay)
+void AutoDiscoveryQueue::_publishDone(bool success, uint32_t delay)
 {
     __LDBG_printf("done=%u delay_next=%u components=%u discovery=%u size=%u time=%.4fs max_queue=%u queue_skip=%u iterations=%u crc=%04x old_crc=%04x",
         success,
@@ -206,7 +214,7 @@ void MQTTAutoDiscoveryQueue::_publishDone(bool success, uint32_t delay)
 
 
     if ((delay) || ((delay = Plugins::MQTTClient::getConfig().auto_discovery_rebroadcast_interval) != 0) || (!success && (delay = 15) != 0)) {
-        _Timer(_client._autoDiscoveryRebroadcast).add(Event::minutes(delay), false, MQTTClient::publishAutoDiscoveryCallback);
+        _Timer(_client._autoDiscoveryRebroadcast).add(Event::minutes(delay), false, Client::publishAutoDiscoveryCallback);
     }
     auto message = PrintString(success ? F("MQTT auto discovery published [components=%u, size=") : F("MQTT auto discovery aborted [components=%u, size="), _discoveryCount);
     message.print(formatBytes(_size));
@@ -226,7 +234,7 @@ void MQTTAutoDiscoveryQueue::_publishDone(bool success, uint32_t delay)
     _client._autoDiscoveryQueue.reset(); // deletes itself and the timer
 }
 
-void MQTTAutoDiscoveryQueue::_setState(const StateFileType &state)
+void AutoDiscoveryQueue::_setState(const StateFileType &state)
 {
     if (!state._valid) {
         KFCFS.remove(FSPGM(mqtt_state_file));
@@ -240,7 +248,7 @@ void MQTTAutoDiscoveryQueue::_setState(const StateFileType &state)
     }
 }
 
-MQTTAutoDiscoveryQueue::StateFileType MQTTAutoDiscoveryQueue::_getState()
+StateFileType AutoDiscoveryQueue::_getState()
 {
     auto state = StateFileType();
     auto file = KFCFS.open(FSPGM(mqtt_state_file), fs::FileOpenMode::read);

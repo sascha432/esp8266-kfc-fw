@@ -174,7 +174,7 @@ void Mpr121Touchpad::Event::addMovement()
 void Mpr121Touchpad::Event::broadcastData(const Movement &movement)
 {
     auto wsSerialConsole = Http2Serial::getServerSocket();
-    if (wsSerialConsole && !wsSerialConsole->getClients().isEmpty()) {
+    if (Http2Serial::hasAuthenticatedClients) {
         typedef struct {
             WsClient::BinaryPacketType packetId;
             int16_t x;
@@ -186,13 +186,19 @@ void Mpr121Touchpad::Event::broadcastData(const Movement &movement)
         } Packet_t;
         Packet_t data = { WsClient::BinaryPacketType::TOUCHPAD_DATA, movement.getX(), movement.getY(), _predict.x, _predict.y, movement.getTime(), movement.getType() };
 
-        for(auto client: wsSerialConsole->getClients()) {
-            if (client->status() && client->_tempObject && reinterpret_cast<WsClient *>(client->_tempObject)->isAuthenticated()) {
-                if (client->canSend()) {
-                    client->binary(reinterpret_cast<uint8_t *>(&data), sizeof(data));
-                }
+        WsClient::foreach(Http2Serial::getServerSocket(), nullptr, [&data](AsyncWebSocketClient *client) {
+            if (client->canSend()) {
+                client->binary(reinterpret_cast<uint8_t *>(&data), sizeof(data));
             }
-        }
+        });
+
+        // for(auto client: wsSerialConsole->getClients()) {
+        //     if (client->status() && client->_tempObject && reinterpret_cast<WsClient *>(client->_tempObject)->isAuthenticated()) {
+                // if (client->canSend()) {
+                //     client->binary(reinterpret_cast<uint8_t *>(&data), sizeof(data));
+                // }
+        //     }
+        // }
     }
 }
 

@@ -42,7 +42,7 @@ void MQTTSensor::timerEvent(JsonArray *array, MQTTClient *client)
     if (!array && !client) {
         return;
     }
-    auto currentTime = time(nullptr);
+    uint32_t currentTime = time(nullptr);
     if (array && currentTime >= _nextUpdate) {
         _nextUpdate = currentTime + _updateRate;
         _debug_println();

@@ -36,16 +36,19 @@ Sensor_DimmerMetrics::MQTTAutoDiscoveryPtr Sensor_DimmerMetrics::nextAutoDiscove
             discovery->create(this, F("temp"), format);
             discovery->addStateTopic(_getMetricsTopics(TopicType::TEMPERATURE));
             discovery->addUnitOfMeasurement(FSPGM(degree_Celsius_unicode));
+            discovery->addDeviceClass(F("temperature"));
             break;
         case 1:
             discovery->create(this, F("temp2"), format);
             discovery->addStateTopic(_getMetricsTopics(TopicType::TEMPERATURE2));
             discovery->addUnitOfMeasurement(FSPGM(degree_Celsius_unicode));
+            discovery->addDeviceClass(F("temperature"));
             break;
         case 2:
             discovery->create(this, FSPGM(vcc), format);
             discovery->addStateTopic(_getMetricsTopics(TopicType::VCC));
             discovery->addUnitOfMeasurement('V');
+            discovery->addDeviceClass(F("voltage"));
             break;
         case 3:
             discovery->create(this, FSPGM(frequency), format);

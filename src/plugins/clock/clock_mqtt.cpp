@@ -59,6 +59,7 @@ MQTTComponent::MQTTAutoDiscoveryPtr ClockPlugin::nextAutoDiscovery(MQTTAutoDisco
             }
             discovery->addStateTopic(MQTTClient::formatTopic(F("power")));
             discovery->addUnitOfMeasurement(String('W'));
+            discovery->addDeviceClass(F("power"));
         }
         break;
 #endif

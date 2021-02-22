@@ -964,7 +964,7 @@ namespace KFCConfigurationClasses {
 
             typedef struct __attribute__packed__ Config_t {
                 using Type = Config_t;
-                CREATE_UINT32_BITFIELD_MIN_MAX(auto_sleep_time, 10, 0, 1000, 2, 1);                 // seconds
+                CREATE_UINT32_BITFIELD_MIN_MAX(auto_sleep_time, 16, 0, 3600 * 16, 2, 1);            // seconds / max. 16 hours
                 CREATE_UINT32_BITFIELD_MIN_MAX(deep_sleep_time, 16, 0, 44640, 0, 1);                // in minutes / max. 31 days, 0 = indefinitely
                 CREATE_UINT32_BITFIELD_MIN_MAX(click_time, 11, 0, 2000, 350, 1);                    // millis
                 CREATE_UINT32_BITFIELD_MIN_MAX(hold_time, 13, 0, 8000, 750, 1);                     // millis
@@ -1425,6 +1425,12 @@ namespace KFCConfigurationClasses {
 
         // --------------------------------------------------------------------
         // Sensor
+
+// send recorded data over UDP
+#ifndef IOT_SENSOR_HAVE_BATTERY_RECORDER
+#define IOT_SENSOR_HAVE_BATTERY_RECORDER                        0
+#endif
+
         class SensorConfig {
         public:
 
@@ -1432,6 +1438,14 @@ namespace KFCConfigurationClasses {
 #ifndef __IOT_SENSOR_COMFIG_T
 #define __IOT_SENSOR_COMFIG_T 1
 #endif
+            enum class SensorRecordType : uint8_t {
+                MIN = 0,
+                NONE = MIN,
+                ADC = 0x01,
+                SENSOR = 0x02,
+                BOTH = 0x03,
+                MAX
+            };
 
             typedef struct BatteryConfig_t {
                 using Type = BatteryConfig_t;
@@ -1439,6 +1453,12 @@ namespace KFCConfigurationClasses {
                 float calibration;
                 float offset;
                 CREATE_UINT8_BITFIELD_MIN_MAX(precision, 4, 0, 7, 2, 1);
+
+#if IOT_SENSOR_HAVE_BATTERY_RECORDER
+                CREATE_ENUM_BITFIELD(record, SensorRecordType);
+                CREATE_UINT16_BITFIELD_MIN_MAX(port, 16, 0, 0xffff, 2, 1);
+                CREATE_IPV4_ADDRESS(address);
+#endif
 
                 BatteryConfig_t();
 
@@ -1481,6 +1501,34 @@ namespace KFCConfigurationClasses {
         class Sensor : public SensorConfig, public ConfigGetterSetter<SensorConfig::SensorConfig_t, _H(MainConfig().plugins.sensor.cfg) CIF_DEBUG(, &handleNameSensorConfig_t)> {
         public:
             static void defaults();
+
+#if IOT_SENSOR_HAVE_BATTERY_RECORDER
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.sensor, RecordSensorData, 0, 128);
+
+            static void setRecordHostAndPort(String host, uint16_t port) {
+                if (port) {
+                    host += ':';
+                    host + String(port);
+                }
+                setRecordSensorData(host);
+            }
+            static String getRecordHost() {
+                String str = getRecordSensorData();
+                auto pos = str.lastIndexOf(':');
+                if (pos != -1) {
+                    str.remove(pos);
+                }
+                return str;
+            }
+            static uint16_t getRecordPort() {
+                auto str = getRecordSensorData();
+                auto pos = strrchr(str, ':');
+                if (!pos) {
+                    return 0;
+                }
+                return atoi(pos + 1);
+            }
+#endif
         };
 
         // --------------------------------------------------------------------

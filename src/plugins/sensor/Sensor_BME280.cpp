@@ -40,18 +40,21 @@ MQTTComponent::MQTTAutoDiscoveryPtr Sensor_BME280::nextAutoDiscovery(MQTTAutoDis
             discovery->addStateTopic(topic);
             discovery->addUnitOfMeasurement(FSPGM(degree_Celsius_unicode));
             discovery->addValueTemplate(FSPGM(temperature));
+            discovery->addDeviceClass(F("temperature"));
             break;
         case 1:
             discovery->create(this, _getId(FSPGM(humidity, "humidity")), format);
             discovery->addStateTopic(topic);
             discovery->addUnitOfMeasurement('%');
             discovery->addValueTemplate(FSPGM(humidity));
+            discovery->addDeviceClass(F("humidity"));
             break;
         case 2:
             discovery->create(this, _getId(FSPGM(pressure, "pressure")), format);
             discovery->addStateTopic(topic);
             discovery->addUnitOfMeasurement(FSPGM(hPa, "hPa"));
             discovery->addValueTemplate(FSPGM(pressure));
+            discovery->addDeviceClass(F("pressure"));
             break;
     }
     discovery->finalize();

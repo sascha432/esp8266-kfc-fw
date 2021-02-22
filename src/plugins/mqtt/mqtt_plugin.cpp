@@ -16,10 +16,12 @@
 using KFCConfigurationClasses::System;
 using KFCConfigurationClasses::Plugins;
 
-static MQTTPlugin plugin;
+using namespace MQTT;
+
+static Plugin plugin;
 
 PROGMEM_DEFINE_PLUGIN_OPTIONS(
-    MQTTPlugin,
+    Plugin,
     "mqtt",             // name
     "MQTT",             // friendly name
     "",                 // web_templates
@@ -38,29 +40,29 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     0                   // __reserved
 );
 
-MQTTPlugin::MQTTPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(MQTTPlugin))
+Plugin::Plugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(Plugin))
 {
     REGISTER_PLUGIN(this, "MQTTPlugin");
 }
 
-void MQTTPlugin::setup(SetupModeType mode)
+void Plugin::setup(SetupModeType mode)
 {
     __LDBG_println();
-    MQTTClient::setupInstance();
+    Client::setupInstance();
 }
 
-void MQTTPlugin::reconfigure(const String &source)
+void Plugin::reconfigure(const String &source)
 {
     __LDBG_printf("source=%s", source.c_str());
     // deletes old instance and if enabled, creates new one
-    MQTTClient::setupInstance();
+    Client::setupInstance();
 }
 
-void MQTTPlugin::shutdown()
+void Plugin::shutdown()
 {
     __LDBG_println();
 #if MQTT_SET_LAST_WILL == 0
-    auto client = MQTTClient::getClient();
+    auto client = Client::getClient();
     if (client) {
         // send last will manually and give system some time to push out the tcp buffer
         client->disconnect(false);
@@ -71,9 +73,9 @@ void MQTTPlugin::shutdown()
     // MQTTClient::deleteInstance();
 }
 
-void MQTTPlugin::getStatus(Print &output)
+void Plugin::getStatus(Print &output)
 {
-    auto client = MQTTClient::getClient();
+    auto client = Client::getClient();
     if (client) {
         output.print(client->connectionStatusString());
         output.printf_P(PSTR(HTML_S(br) "%u components, %u entities" HTML_S(br)), client->_components.size(), client->_componentsEntityCount);
@@ -99,17 +101,17 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF(MQTT, "MQTT", "<connect|disconnect|set|topics|a
     "Display MQTT status"
 );
 
-ATModeCommandHelpArrayPtr MQTTPlugin::atModeCommandHelp(size_t &size) const
+ATModeCommandHelpArrayPtr Plugin::atModeCommandHelp(size_t &size) const
 {
     static ATModeCommandHelpArray tmp PROGMEM = { PROGMEM_AT_MODE_HELP_COMMAND(MQTT), PROGMEM_AT_MODE_HELP_COMMAND(MQTT) };
     size = sizeof(tmp) / sizeof(tmp[0]);
     return tmp;
 }
 
-bool MQTTPlugin::atModeHandler(AtModeArgs &args)
+bool Plugin::atModeHandler(AtModeArgs &args)
 {
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(MQTT))) {
-        auto clientPtr = MQTTClient::getClient();
+        auto clientPtr = Client::getClient();
         if (!clientPtr) {
             args.print(FSPGM(disabled));
         }
@@ -185,7 +187,7 @@ bool MQTTPlugin::atModeHandler(AtModeArgs &args)
 
 #endif
 
-MQTTPlugin &MQTTPlugin::getPlugin()
+Plugin &Plugin::getPlugin()
 {
     return plugin;
 }

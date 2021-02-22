@@ -43,68 +43,67 @@ Sensor_SystemMetrics::~Sensor_SystemMetrics()
     UNREGISTER_SENSOR_CLIENT(this);
 }
 
-MQTTComponent::MQTTAutoDiscoveryPtr Sensor_SystemMetrics::nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num)
+Sensor_SystemMetrics::AutoDiscoveryPtr Sensor_SystemMetrics::nextAutoDiscovery(FormatType format, uint8_t num)
 {
     if (num >= getAutoDiscoveryCount()) {
         return nullptr;
     }
-    MQTTAutoDiscovery* discovery = nullptr;
+    AutoDiscoveryPtr discovery = nullptr;
     switch(num) {
         case 0:
-            discovery = __LDBG_new(MQTTAutoDiscovery);
-            discovery = __LDBG_new(MQTTAutoDiscovery);
+            discovery = __LDBG_new(AutoDiscovery);
             discovery->create(this, FSPGM(uptime), format);
             discovery->addStateTopic(_getTopic());
             discovery->addUnitOfMeasurement(FSPGM(seconds));
             discovery->addValueTemplate(FSPGM(uptime));
             break;
         case 1:
-            discovery = __LDBG_new(MQTTAutoDiscovery);
+            discovery = __LDBG_new(AutoDiscovery);
             discovery->create(this, FSPGM(heap), format);
             discovery->addStateTopic(_getTopic());
             discovery->addUnitOfMeasurement(FSPGM(bytes));
             discovery->addValueTemplate(FSPGM(heap));
             break;
         case 2:
-            discovery = __LDBG_new(MQTTAutoDiscovery);
+            discovery = __LDBG_new(AutoDiscovery);
             discovery->create(this, FSPGM(version), format);
             discovery->addStateTopic(_getTopic());
             discovery->addValueTemplate(FSPGM(version));
             break;
         case 3:
-            discovery = __LDBG_new(MQTTAutoDiscovery);
+            discovery = __LDBG_new(AutoDiscovery);
             discovery->create(this, F("heap_frag"), format);
             discovery->addStateTopic(_getTopic());
             discovery->addValueTemplate(F("heap_frag"));
             break;
 #if PING_MONITOR_SUPPORT
         case 4:
-            discovery = __LDBG_new(MQTTAutoDiscovery);
+            discovery = __LDBG_new(AutoDiscovery);
             discovery->create(this, F("ping_monitor_success"), format);
             discovery->addStateTopic(_getTopic());
             discovery->addValueTemplate(F("ping_monitor_success"));
             break;
         case 5:
-            discovery = __LDBG_new(MQTTAutoDiscovery);
+            discovery = __LDBG_new(AutoDiscovery);
             discovery->create(this, F("ping_monitor_failure"), format);
             discovery->addStateTopic(_getTopic());
             discovery->addValueTemplate(F("ping_monitor_failure"));
             break;
         case 6:
-            discovery = __LDBG_new(MQTTAutoDiscovery);
+            discovery = __LDBG_new(AutoDiscovery);
             discovery->create(this, F("ping_monitor_avg_resp_time"), format);
             discovery->addStateTopic(_getTopic());
             discovery->addValueTemplate(F("ping_monitor_avg_resp_time"));
             discovery->addUnitOfMeasurement(F("ms"));
             break;
         case 7:
-            discovery = __LDBG_new(MQTTAutoDiscovery);
+            discovery = __LDBG_new(AutoDiscovery);
             discovery->create(this, F("ping_monitor_rcvd_pkts"), format);
             discovery->addStateTopic(_getTopic());
             discovery->addValueTemplate(F("ping_monitor_rcvd_pkts"));
             break;
         case 8:
-            discovery = __LDBG_new(MQTTAutoDiscovery);
+            discovery = __LDBG_new(AutoDiscovery);
             discovery->create(this, F("ping_monitor_lost_pkts"), format);
             discovery->addStateTopic(_getTopic());
             discovery->addValueTemplate(F("ping_monitor_lost_pkts"));
@@ -193,10 +192,7 @@ void Sensor_SystemMetrics::createWebUI(WebUIRoot &webUI, WebUIRow **row)
 {
     using ::JsonString;
     __LDBG_println();
-
-
-
-    __DBG_printf("size=%u", (*row)->length());
+    // __DBG_printf("size=%u", (*row)->length());
 
     *row = &webUI.addRow();
     (*row)->addGroup(PrintString(F("System Metrics<div class=\"version d-md-inline\">%s</div>"), config.getFirmwareVersion().c_str()), false);
@@ -208,7 +204,7 @@ void Sensor_SystemMetrics::createWebUI(WebUIRoot &webUI, WebUIRow **row)
 
 String Sensor_SystemMetrics::_getTopic() const
 {
-    return MQTTClient::formatTopic(FSPGM(sys));
+    return MQTTClient::formatTopic(F("/sys"));
 }
 
 void Sensor_SystemMetrics::_getMetricsJson(Print &json) const

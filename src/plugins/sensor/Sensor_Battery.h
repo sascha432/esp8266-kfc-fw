@@ -88,6 +88,25 @@ extern bool Sensor_Battery_charging_detection();
 #define IOT_SENSOR_BATTERY_NUM_CELLS                            1
 #endif
 
+// allows to configure host and port to receive battery sensor data over UDP to create a charge/discharge curve
+// raw ADC values are sent multiple times per second
+//
+// data records
+//
+// ["<device-name>","<data type>",<unixtime>,<voltage>,<voltage without calibration>,<ADC average value>,<battery level>,<charging indicator>]
+// ["KFCDB1DE7","SEN",1613926400.217,4.2507,4.3324,821.5605,100,0]
+// ["KFCDB1DE7","SEN",1613931008.875,4.015,4.0922,776.0072,81,0]
+//
+// ["<device-name>","<data type>",<unixtime>,<ADC value>,<time since last read in milliseconds>]
+// ["KFCDB1DE7","ADC",1613924992.606,792,122]
+// ["KFCDB1DE7","ADC",1613924992.683,792,76]
+// ["KFCDB1DE7","ADC",1613924992.861,792,179]
+// ["KFCDB1DE7","ADC",1613924992.936,792,75]
+
+#ifndef IOT_SENSOR_HAVE_BATTERY_RECORDER
+#define IOT_SENSOR_HAVE_BATTERY_RECORDER                        0
+#endif
+
 class Sensor_Battery : public MQTTSensor {
 public:
     enum class StateType : uint8_t {
@@ -110,13 +129,13 @@ public:
 
     class Status {
     public:
-        Status() : _state(StateType::RUNNING), _charging(ChargingType::NOT_AVAILABLE), _pCharging(ChargingType::NOT_AVAILABLE), _level(100), _updateTime(0) {}
+        Status() :
+            _state(StateType::RUNNING),
+            _charging(ChargingType::NOT_AVAILABLE),
+            _level(100)
+        {}
 
-        bool isValid() const {
-            return (_updateTime != 0) && (get_time_diff(_updateTime, millis()) < 1000);
-        }
-
-        void readSensor(Sensor_Battery &sensor);
+        void updateSensor(Sensor_Battery &sensor);
 
         float getVoltage() const {
             return _voltage;
@@ -162,12 +181,10 @@ public:
         }
 
     private:
+        float _voltage;
         StateType _state;
         ChargingType _charging;
-        ChargingType _pCharging;
-        float _voltage;
         uint8_t _level;
-        uint32_t _updateTime;
     };
 
     enum class TopicType {
@@ -180,7 +197,7 @@ public:
     Sensor_Battery(const JsonString &name);
     virtual ~Sensor_Battery();
 
-    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num) override;
+    virtual AutoDiscoveryPtr nextAutoDiscovery(FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;
 
     virtual void publishState(MQTTClient *client) override;
@@ -204,8 +221,15 @@ public:
     // calculate capacity in %
     static uint8_t calcLipoCapacity(float voltage, uint8_t cells = 1, bool charging = false);
 
+#if AT_MODE_SUPPORTED && (IOT_SENSOR_BATTERY_DISPLAY_LEVEL || IOT_SENSOR_HAVE_BATTERY_RECORDER)
+    virtual void atModeHelpGenerator() override;
+    virtual bool atModeHandler(AtModeArgs &args) override;
+#endif
+
 private:
     friend Status;
+
+    void _readADC(bool updateSensor);
 
     String _getId(TopicType type);
     String _getTopic(TopicType type);
@@ -213,6 +237,9 @@ private:
     JsonString _name;
     ConfigType _config;
     Event::Timer _timer;
+    float _adcValue;
+    uint32_t _adcLastUpdateTime;
+    uint16_t _timerCounter;
     Status _status;
 
 public:

@@ -172,7 +172,8 @@ void WsClient::onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, i
             callback.first(ClientCallbackType::CONNECT, wsClient, server, callback.second);
         }
 
-    } else if (type == WS_EVT_DISCONNECT) {
+    }
+    else if (type == WS_EVT_DISCONNECT) {
 
         Logger_notice(F(WS_PREFIX "Client disconnected"), WS_PREFIX_ARGS);
         wsClient->onDisconnect(data, len);
@@ -187,7 +188,8 @@ void WsClient::onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, i
         __LDBG_delete(wsClient);
         client->_tempObject = nullptr;
 
-    } else if (type == WS_EVT_ERROR) {
+    }
+    else if (type == WS_EVT_ERROR) {
 
         __LDBG_printf("WS_EVT_ERROR wsClient %p", wsClient);
 
@@ -196,12 +198,14 @@ void WsClient::onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, i
         Logger_notice(F(WS_PREFIX "Error(%u): data=%s"), WS_PREFIX_ARGS, *reinterpret_cast<uint16_t *>(arg), str.c_str());
         wsClient->onError(WsClient::ERROR_FROM_SERVER, data, len);
 
-    } else if (type == WS_EVT_PONG) {
+    }
+    else if (type == WS_EVT_PONG) {
 
         __LDBG_printf("WS_EVT_PONG wsClient %p", wsClient);
         wsClient->onPong(data, len);
 
-    } else if (type == WS_EVT_DATA) {
+    }
+    else if (type == WS_EVT_DATA) {
 
 
         // #if DEBUG_WEB_SOCKETS
@@ -226,7 +230,8 @@ void WsClient::onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, i
 
             wsClient->onData(static_cast<AwsFrameType>(reinterpret_cast<AwsFrameInfo *>(arg)->opcode), data, len);
 
-        } else if (len > 10 && strncmp_P((const char *)data, PSTR("+SID "), sidLen) == 0) {          // client sent authentication
+        }
+        else if (len > 10 && strncmp_P((const char *)data, PSTR("+SID "), sidLen) == 0) {          // client sent authentication
 
             Buffer buffer = Buffer();
             auto dataPtr = reinterpret_cast<const char *>(data);
@@ -280,9 +285,11 @@ void WsClient::onData(AwsFrameType type, uint8_t *data, size_t len)
 {
     if (type == WS_TEXT) {
         onText(data, len);
-    } else if (type == WS_BINARY) {
+    }
+    else if (type == WS_BINARY) {
         onBinary(data, len);
-    } else {
+    }
+    else {
         __LDBG_printf("type=%d", (int)type);
     }
 }
@@ -291,11 +298,14 @@ void WsClient::invokeStartOrEndCallback(WsClient *wsClient, bool isStart)
 {
     uint16_t authenticatedClients = 0;
     auto client = wsClient->getClient();
-    for(auto socket: client->server()->getClients()) {
-        if (socket->status() == WS_CONNECTED && socket->_tempObject && reinterpret_cast<WsClient *>(socket->_tempObject)->isAuthenticated()) {
-            authenticatedClients++;
-        }
-    }
+    WsClient::foreach(client->server(), nullptr, [&authenticatedClients](AsyncWebSocketClient *) {
+        authenticatedClients++;
+    });
+    // for(auto socket: client->server()->getClients()) {
+    //     if (socket->status() == WS_CONNECTED && socket->_tempObject && reinterpret_cast<WsClient *>(socket->_tempObject)->isAuthenticated()) {
+    //         authenticatedClients++;
+    //     }
+    // }
     // if the pointers do not match, the object is derived from AsyncWebSocket not WsClientAsyncWebSocket
     __DBG_assert_printf(*reinterpret_cast<WsClientAsyncWebSocket *>(client->server())->_ptr == client->server(), "WsClientAsyncWebSocket::_ptr does not match AsyncWebSocket");
 
@@ -369,12 +379,21 @@ void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, AsyncWebSocke
         // __LDBG_printf("sender=%p, clients=%u, message=%s", sender, server->getClients().length(), buffer->get());
         auto qDelay = getQeueDelay();
         buffer->lock();
-        for(auto socket: server->getClients()) {
-            if (socket->status() == WS_CONNECTED && socket->_tempObject && socket->_tempObject != sender && reinterpret_cast<WsClient *>(socket->_tempObject)->isAuthenticated()) {
-                socket->text(buffer);
-                delay(qDelay); // let the device work on its tcp buffers
+        WsClient::foreach(server, sender, [buffer, qDelay](AsyncWebSocketClient *client) {
+            if (client->canSend()) {
+                client->text(buffer);
+                if (can_yield()) {
+                    delay(qDelay); // let the device work on its tcp buffers
+                }
             }
-        }
+        });
+
+        // for(auto socket: server->getClients()) {
+        //     if (socket->status() == WS_CONNECTED && socket->_tempObject && socket->_tempObject != sender && reinterpret_cast<WsClient *>(socket->_tempObject)->isAuthenticated()) {
+        //         socket->text(buffer);
+        //         delay(qDelay); // let the device work on its tcp buffers
+        //     }
+        // }
         buffer->unlock();
         server->_cleanBuffers();
     }
@@ -386,6 +405,7 @@ void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, const char *s
         size_t buflen = length;
         stdex::conv::utf8::strlen<stdex::conv::utf8::DefaultReplacement>(str, buflen, length);
         auto buffer = server->makeBuffer(buflen);
+        buffer->_len = buflen;
         stdex::conv::utf8::strcpy<stdex::conv::utf8::DefaultReplacement>(reinterpret_cast<char *>(buffer->get()), str, buflen, length);
         buffer->get()[buflen] = 0;
         broadcast(server, sender, buffer);
@@ -402,20 +422,20 @@ void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, const __Flash
 }
 
 
-bool WsClient::hasClients(AsyncWebSocket *server)
-{
-    if (server) {
-        __DBG_assert_printf(*reinterpret_cast<WsClientAsyncWebSocket *>(server)->_ptr == server, "WsClientAsyncWebSocket::_ptr does not match AsyncWebSocket");
-        return reinterpret_cast<WsClientAsyncWebSocket *>(server)->hasAuthenticatedClients();
+// bool WsClient::hasClients(AsyncWebSocket *server)
+// {
+//     if (server) {
+//         __DBG_assert_printf(*reinterpret_cast<WsClientAsyncWebSocket *>(server)->_ptr == server, "WsClientAsyncWebSocket::_ptr does not match AsyncWebSocket");
+//         return reinterpret_cast<WsClientAsyncWebSocket *>(server)->hasAuthenticatedClients();
 
-        // for(auto socket: server->getClients()) {
-        //     if (socket->status() == WS_CONNECTED && socket->_tempObject && reinterpret_cast<WsClient *>(socket->_tempObject)->isAuthenticated()) {
-        //         return true;
-        //     }
-        // }
-    }
-    return false;
-}
+//         // for(auto socket: server->getClients()) {
+//         //     if (socket->status() == WS_CONNECTED && socket->_tempObject && reinterpret_cast<WsClient *>(socket->_tempObject)->isAuthenticated()) {
+//         //         return true;
+//         //     }
+//         // }
+//     }
+//     return false;
+// }
 
 void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, const String &message)
 {
@@ -434,7 +454,9 @@ void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, co
                 stdex::conv::utf8::strcpy<stdex::conv::utf8::DefaultReplacement>(reinterpret_cast<char *>(buffer->get()), message.c_str(), buflen, len);
                 buffer->get()[buflen] = 0;
                 client->text(buffer);
-                delay(getQeueDelay());
+                if (can_yield()) {
+                    delay(getQeueDelay());
+                }
             }
             return;
         }

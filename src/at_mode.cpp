@@ -41,9 +41,9 @@ extern IOExpander::PCF8574 _PCF8574;
 #if IOT_BLINDS_CTRL
 #include "../src/plugins/blinds_ctrl/blinds_plugin.h"
 #endif
-#if IOT_SENSOR_BATTERY_DISPLAY_LEVEL
-#include "../src/plugins/sensor/sensor.h"
-#endif
+// #if IOT_SENSOR_BATTERY_DISPLAY_LEVEL
+// #include "../src/plugins/sensor/sensor.h"
+// #endif
 // #if IOT_REMOTE_CONTROL
 // #include "../src/plugins/remote/remote.h"
 // #endif
@@ -392,9 +392,6 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF(CPU, "CPU", "<80|160>", "Set CPU speed", "Displ
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PSTORE, "PSTORE", "[<clear|remove|add>[,<key>[,<value>]]]", "Display/modify persistant storage");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(METRICS, "METRICS", "Display system metrics");
-#if IOT_SENSOR_BATTERY_DISPLAY_LEVEL
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(BCAP, "BCAP", "<voltage>", "Calculate battery capacity for given voltage");
-#endif
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMP, "DUMP", "[<dirty|config.name>]", "Display settings");
 #if DEBUG && ESP8266
@@ -474,9 +471,6 @@ void at_mode_help_commands()
 #endif
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(PSTORE), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(METRICS), name);
-#if IOT_SENSOR_BATTERY_DISPLAY_LEVEL
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(BCAP), name);
-#endif
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMP), name);
 #if DEBUG && ESP8266
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPT), name);
@@ -1280,14 +1274,6 @@ void at_mode_serial_handle_event(String &commandString)
                 }
                 at_mode_generate_help(output, &findItems);
             }
-#if IOT_SENSOR_BATTERY_DISPLAY_LEVEL
-            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(BCAP))) {
-                auto voltage = args.toFloat(0);
-                float capacity = Sensor_Battery::calcLipoCapacity(voltage, 1, false);
-                float charging = Sensor_Battery::calcLipoCapacity(voltage, 1, true);
-                args.printf_P(PSTR("voltage=%.4fV capacity=%.1f%% charging=%.1f%% Umax=%.4f"), voltage, capacity, charging, Sensor_Battery::maxVoltage);
-            }
-#endif
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(METRICS))) {
 
                 args.printf_P(PSTR("Device name: %s"), System::Device::getName());

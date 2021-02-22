@@ -9,7 +9,7 @@
 #include <JsonTools.h>
 #include <kfc_fw_config.h>
 #include "mqtt_strings.h"
-#include "mqtt_auto_discovery.h"
+#include "auto_discovery.h"
 #include "mqtt_client.h"
 #include "templates.h"
 
@@ -21,12 +21,14 @@
 
 using KFCConfigurationClasses::System;
 
-bool MQTTAutoDiscovery::create(MQTTComponent *component, const String &componentName, FormatType format)
+using namespace MQTT;
+
+bool AutoDiscovery::create(ComponentPtr component, const String &componentName, FormatType format)
 {
     return create(component->getType(), componentName, format);
 }
 
-bool MQTTAutoDiscovery::create(ComponentType componentType, const String &componentName, FormatType format)
+bool AutoDiscovery::create(ComponentType componentType, const String &componentName, FormatType format)
 {
     String suffix = System::Device::getName();
     if (componentName.length()) {
@@ -38,19 +40,19 @@ bool MQTTAutoDiscovery::create(ComponentType componentType, const String &compon
     return _create(componentType, suffix, format);
 }
 
-String MQTTAutoDiscovery::getWildcardTopic()
+String AutoDiscovery::getWildcardTopic()
 {
-    return PrintString(F("%s/+/%s/#"), MQTTClient::ClientConfig::getAutoDiscoveryPrefix(), System::Device::getName());
+    return PrintString(F("%s/+/%s/#"), ClientConfig::getAutoDiscoveryPrefix(), System::Device::getName());
 }
 
-bool MQTTAutoDiscovery::_create(ComponentType componentType, const String &name, FormatType format)
+bool AutoDiscovery::_create(ComponentType componentType, const String &name, FormatType format)
 {
     String uniqueId;
 
     _format = format;
-    _topic = MQTTClient::ClientConfig::getAutoDiscoveryPrefix();
+    _topic = ClientConfig::getAutoDiscoveryPrefix();
     _topic += '/';
-    _topic += MQTTComponent::getNameByType(componentType);
+    _topic += Component::getNameByType(componentType);
     if (!String_startsWith(name, '/')) {
         _topic += '/';
     }
@@ -73,7 +75,7 @@ bool MQTTAutoDiscovery::_create(ComponentType componentType, const String &name,
         addParameter(F("~"), _baseTopic);
 #endif
     } else {
-        _discovery += MQTTComponent::getNameByType(componentType);
+        _discovery += Component::getNameByType(componentType);
         _discovery += F(":\n  - ");
     }
     if (componentType != ComponentType::DEVICE_AUTOMATION) {
@@ -120,7 +122,7 @@ bool MQTTAutoDiscovery::_create(ComponentType componentType, const String &name,
     return true;
 }
 
-void MQTTAutoDiscovery::__addParameter(const __FlashStringHelper *name, const char *str, bool list)
+void AutoDiscovery::__addParameter(NameType name, const char *str, bool list)
 {
     if (_format == FormatType::TOPIC) {
         return;
@@ -151,7 +153,7 @@ void MQTTAutoDiscovery::__addParameter(const __FlashStringHelper *name, const ch
     }
 }
 
-void MQTTAutoDiscovery::finalize()
+void AutoDiscovery::finalize()
 {
     if (!_discovery.length()) {
         __LDBG_printf("MQTT auto discovery payload empty");
@@ -166,22 +168,22 @@ void MQTTAutoDiscovery::finalize()
     __LDBG_printf("MQTT auto discovery payload '%s'", printable_string(_discovery.c_str(), _discovery.length(), DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str());
 }
 
-PrintString &MQTTAutoDiscovery::getPayload()
+PrintString &AutoDiscovery::getPayload()
 {
     return _discovery;
 }
 
-String &MQTTAutoDiscovery::getTopic()
+String &AutoDiscovery::getTopic()
 {
     return _topic;
 }
 
-size_t MQTTAutoDiscovery::getMessageSize() const
+size_t AutoDiscovery::getMessageSize() const
 {
     return _discovery.length() + _topic.length() + 16;
 }
 
-bool MQTTAutoDiscovery::isEnabled()
+bool AutoDiscovery::isEnabled()
 {
 #if MQTT_AUTO_DISCOVERY
     return
@@ -194,7 +196,7 @@ bool MQTTAutoDiscovery::isEnabled()
 #endif
 }
 
-const String MQTTAutoDiscovery::_getUnqiueId(const String &name)
+const String AutoDiscovery::_getUnqiueId(const String &name)
 {
     PrintString tmp;
     WebTemplate::printUniqueId(tmp, name);

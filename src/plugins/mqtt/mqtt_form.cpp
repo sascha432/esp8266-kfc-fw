@@ -16,10 +16,10 @@
 
 using KFCConfigurationClasses::System;
 
-void MQTTPlugin::createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
-{
-    using ClientConfig = MQTTClient::ClientConfig;
+using namespace MQTT;
 
+void Plugin::createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
+{
     if (type == FormCallbackType::SAVE) {
         // update flags
         System::Flags::getWriteableConfig().is_mqtt_enabled = (ClientConfig::ConfigStructType::get_enum_mode(ClientConfig::getWriteableConfig()) != ClientConfig::ModeType::DISABLED);

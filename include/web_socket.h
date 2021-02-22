@@ -104,6 +104,16 @@ public:
 
     static bool hasClients(AsyncWebSocket *server);
 
+    // call function for each client that is connected, authenticated and is not sender
+    static void foreach(AsyncWebSocket *server, WsClient *sender, std::function<void(AsyncWebSocketClient *)> func) {
+        for(auto client: server->getClients()) {
+            if (client->status() == WS_CONNECTED && client->_tempObject && client->_tempObject != sender && reinterpret_cast<WsClient *>(client->_tempObject)->isAuthenticated()) {
+                func(client);
+            }
+        }
+    }
+
+
 public:
     enum class ClientCallbackType {
         CONNECT,
@@ -182,5 +192,12 @@ private:
     WsClientAsyncWebSocket **_ptr;
     uint16_t _authenticatedClients;
 };
+
+
+inline bool WsClient::hasClients(AsyncWebSocket *server)
+{
+    return server && reinterpret_cast<WsClientAsyncWebSocket *>(server)->hasAuthenticatedClients();
+}
+
 
 #include <debug_helper_disable.h>

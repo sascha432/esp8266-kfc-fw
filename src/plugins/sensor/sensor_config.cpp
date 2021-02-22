@@ -16,6 +16,12 @@ namespace KFCConfigurationClasses {
         calibration(IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_CALIBRATION),
         offset(0),
         precision(kDefaultValueFor_precision)
+#if IOT_SENSOR_HAVE_BATTERY_RECORDER
+        ,
+        record(static_cast<uint8_t>(SensorRecordType::NONE)),
+        port(kDefaultValueFor_port),
+        address(IPADDR4_INIT_BYTES(192, 168, 0, 3))
+#endif
     {
     }
 #endif

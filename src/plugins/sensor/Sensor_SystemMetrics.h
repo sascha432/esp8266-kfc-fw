@@ -18,7 +18,7 @@ public:
     Sensor_SystemMetrics();
     virtual ~Sensor_SystemMetrics();
 
-    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num) override;
+    virtual AutoDiscoveryPtr nextAutoDiscovery(FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;
 
     virtual void publishState(MQTTClient *client) override;

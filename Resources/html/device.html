@@ -16,8 +16,8 @@
     <!--%%NAV-->
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
         <a class="navbar-brand" href="index.html">KFC FW</a>
-        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
-            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false"
+                aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
@@ -28,13 +28,17 @@
         <form method="POST" action="%SELF_URI%">
             %FORM_HTML%
             <div class="form-help-block">
-                <div data-target="#scookie_lt"><span class="oi oi-shield p-2"></span>If the cookie is stolen, it is not going to expire and changing the password is the only options to invalidate it.</div>
+                <div data-target="#scookie_lt"><span class="oi oi-shield p-2"></span>If the cookie is stolen, it is not going to expire and changing the password is the only options to invalidate it.
+                </div>
                 <!--#if (defined(WEBUI_ALERTS_USE_MQTT) && WEBUI_ALERTS_USE_MQTT)-->
-                <div data-target="#walert_en"><span class="oi oi-shield p-2"></span>WebUI alerts over MQTT are enabled. MQTT credentials are exposed over the (unencrypted) web interface and the browser requires direct access to the MQTT server</div>
+                <div data-target="#walert_en"><span class="oi oi-shield p-2"></span>WebUI alerts over MQTT are enabled. MQTT credentials are exposed over the (unencrypted) web interface and the
+                    browser requires direct access to the MQTT server</div>
                 <!--#endif-->
                 <div data-target="#dev_title">Set friendly name for the WebUI, MQTT auto discovery and SSDP</div>
                 <div data-target="#safem_to">Reboot device automatically after entering safe mode</div>
-                <div data-target="#schet">The task scheduler executes AT commands at a given time or in intervals. To disable a task, add "!"" as prefix or change the time to 0 or "off". Time format: [amount unit] [amount unit] [&lt;"now"|"startup"|"every" [amount unit]&gt;]</div>
+                <div data-target="#schet">The task scheduler executes AT commands at a given time or in intervals. To disable a task, add "!" as prefix or change the time to 0 or "off". Time format:
+                    [amount unit] [amount unit] [&lt;"now"|"startup"|"every" [amount unit]&gt;]</div>
+                <div data-target="#dslpsip">Using a static IP address during wakeup reduces the time to connect to WiFi significantly. The first data can be sent out after ~270ms, while obtaining an IP address from DHCP may take several seconds</div>
             </div>
         </form>
 

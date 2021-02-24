@@ -27,6 +27,7 @@ using namespace fs;
 
 #include <push_pack.h>
 
+// CRC32 PHP (tested with 7.2.9) is using
 uint32_t crc32b(const void *message, size_t length, uint32_t crc = ~0);
 
 class FileMapping {

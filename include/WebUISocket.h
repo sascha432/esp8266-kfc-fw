@@ -47,3 +47,5 @@ public:
 private:
     static WsWebUISocket *_sender;
 };
+
+using WebUISocket = WsWebUISocket;

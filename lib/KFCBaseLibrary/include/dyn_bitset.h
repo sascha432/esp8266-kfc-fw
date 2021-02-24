@@ -6,25 +6,48 @@
 
 #include <Arduino_compat.h>
 #include <algorithm>
+#include <type_traits>
 
+// bitset with dynamic size and predefined max. bits up to 65535 bits
+// default object size is 4 byte and stores up to 24bit
+// 32bit is 5 (or 8 byte depending on the alignment)
+// 56bit is 8 byte
+template<size_t _MaxBits = 24>
 class dynamic_bitset {
-private:
+public:
+    using SizeType = typename std::conditional<(_MaxBits > 255), uint16_t, uint8_t>::type;
+    using BytesSizeType = typename std::conditional<((_MaxBits / 8) > 255), uint16_t, uint8_t>::type;
 
+    // max. capacity in bits
+    static constexpr size_t kMaxSize = _MaxBits;
+    static constexpr size_t kMaxBits = _MaxBits;
+    // max capacity in bytes
+    static constexpr size_t kCapacity = (_MaxBits + 7) / 8;
+    static constexpr size_t kMaxBytes = kCapacity;
+
+private:
+    // template<size_t _HelperMaxBits = _MaxBits>
     class bit_helper {
     private:
         friend dynamic_bitset;
 
-        bit_helper(dynamic_bitset *bitset, uint8_t index);
+        bit_helper(dynamic_bitset *bitset, SizeType index)
+        {
+            _index = index;
+            _bitset = bitset;
+        }
 
     public:
-        bit_helper &operator=(unsigned int value) {
-            _bitset->set(_index, (bool)value);
+        bit_helper &operator=(bool value) {
+            _bitset->set(_index, value);
             return *this;
         }
+
         bit_helper &operator=(const bit_helper &helper) {
-            _bitset->set(_index, (bool)helper);
+            _bitset->set(_index, static_cast<bool>(helper));
             return *this;
         }
+
         operator bool() const {
             return _bitset->test(_index);
         }
@@ -35,73 +58,175 @@ private:
     };
 
 public:
-    static const uint8_t defaultSize = sizeof(int32_t) << 3;
+    dynamic_bitset(SizeType size = 0) : _size(size), _buffer{} {}
 
-    dynamic_bitset();
-    dynamic_bitset(uint8_t maxSize);
-    dynamic_bitset(uint8_t size, uint8_t maxSize);
-    dynamic_bitset(uint32_t value, uint8_t size, uint8_t maxSize);
-    dynamic_bitset(const char *fromBytes, uint8_t length, uint8_t size);
-    ~dynamic_bitset();
-
-    dynamic_bitset(const dynamic_bitset &bits);
-    dynamic_bitset(dynamic_bitset &&bits);
-
-#pragma push_macro("new")
-#undef new
-
-    dynamic_bitset &operator =(dynamic_bitset &&bits) {
-        if (_buffer) {
-            delete[] _buffer;
-        }
-        ::new(static_cast<void *>(this)) dynamic_bitset(std::move(bits));
-        return *this;
+    dynamic_bitset(uint8_t value, SizeType size) : _size(size), _buffer{} {
+        set(value);
     }
 
-#pragma pop_macro("new")
+    dynamic_bitset(uint16_t value, SizeType size) : _size(size), _buffer{} {
+        set(value);
+    }
 
-    dynamic_bitset &operator =(const dynamic_bitset &bitset)
+    dynamic_bitset(uint32_t value, SizeType size) : _size(size), _buffer{} {
+        set(value);
+    }
+
+    dynamic_bitset(uint64_t value, SizeType size) : _size(size), _buffer{} {
+        set(value);
+    }
+
+    // size in bits must not exceed the size of data
+    dynamic_bitset(const char *data, SizeType size) : dynamic_bitset(reinterpret_cast<const uint8_t *>(data), size) {}
+    dynamic_bitset(const uint8_t *data, SizeType size) : _size(size) {
+        setBytes(data, size);
+    }
+
+    template<size_t _FromMaxBits>
+    dynamic_bitset(const dynamic_bitset<_FromMaxBits> &bits) {
+        *this = bits;
+    }
+
+    // dynamic_bitset(dynamic_bitset &&bits) {
+    //     *this = std::move(bits);
+    // }
+
+// #pragma push_macro("new")
+// #undef new
+
+//     dynamic_bitset &operator =(dynamic_bitset &&bits) {
+//         ~dynamic_bitset();
+//         ::new(static_cast<void *>(this)) dynamic_bitset(std::move(bits));
+//         return *this;
+//     }
+
+// #pragma pop_macro("new")
+
+    // dynamic_bitset &operator =(const dynamic_bitset &bitset)
+    // {
+    //     setSize(bitset._size);
+    //     std::copy_n(bitset.data(), capacity(), data());
+    //     return *this;
+    // }
+
+    // copy from another dynamic bitset with different capacity
+    // size is trucated at capacity()
+    template<size_t _FromMaxBits>
+    dynamic_bitset &operator =(const dynamic_bitset<_FromMaxBits> &bitset)
     {
-		setMaxSize(bitset._maxSize); // frees _buffer
-        setSize(bitset._size);
-        memcpy(_buffer, bitset._buffer, ((_maxSize + 7) >> 3));
+        _size = std::min<size_t>(bitset.size(), kMaxSize);
+        std::copy_n(bitset.data(), std::min<size_t>(capacity(), bitset.capacity()), data());
         return *this;
     }
 
-    dynamic_bitset &operator =(unsigned int value) {
-        setValue(value);
+    // size does not change using the = operator
+    // use setSize() before
+    inline __attribute__((__always_inline__))
+	dynamic_bitset &operator=(const char * str) {
+		setString(str);
+		return *this;
+    }
+
+    // size does not change using the = operator
+    // use setSize() before
+    inline __attribute__((__always_inline__))
+	dynamic_bitset &operator=(const String &str) {
+		setString(str);
+		return *this;
+    }
+
+    // size does not change using the = operator
+    // use setSize() before
+    inline __attribute__((__always_inline__))
+	dynamic_bitset &operator=(const __FlashStringHelper *str) {
+        setString(str);
+		return *this;
+    }
+
+    // size does not change using the = operator
+    // use setSize() before or the set() method directly
+    template<typename _Ta>
+    inline __attribute__((__always_inline__))
+    dynamic_bitset &operator=(_Ta value) {
+        set<_Ta>(value, _size);
         return *this;
     }
-	dynamic_bitset &operator =(const char * str) {
-		setString(str);
-		return *this;
+
+    inline __attribute__((__always_inline__))
+    operator int() const {
+        return get<int>();
     }
-	dynamic_bitset &operator =(const String &str) {
-		setString(str);
-		return *this;
+
+    inline __attribute__((__always_inline__))
+    explicit operator uint8_t() const {
+        return get<uint8_t>();
     }
-    bit_helper operator [](unsigned int index) {
+
+    inline __attribute__((__always_inline__))
+    explicit operator uint16_t() const {
+        return get<uint16_t>();
+    }
+
+    inline __attribute__((__always_inline__))
+    explicit operator uint32_t() const {
+        return get<uint32_t>();
+    }
+
+    inline __attribute__((__always_inline__))
+    explicit operator uint64_t() const {
+        return get<uint64_t>();
+    }
+
+    bit_helper operator [](SizeType index) {
         return bit_helper(this, index);
     }
-    bool operator [](unsigned int index) const {
+
+    bool operator [](SizeType index) const {
         return test(index);
     }
 
-    void setBytes(uint8_t *bytes, uint8_t len);
-    const uint8_t *getBytes() const;
-    String getBytesAsString() const;
-
-    void setValue(uint32_t value);
-    const uint32_t getValue() const;
-
-    void setValue64(uint64_t value) {
-        memcpy(_buffer, &value, std::min<size_t>(sizeof(value), ((_maxSize + 7) >> 3)));
+    inline __attribute__((__always_inline__))
+    bool operator==(int value) const {
+        return get<int>() == value;
     }
 
-    uint64_t getValue64() {
-        uint64_t value;
-        memcpy(&value, _buffer, std::min<size_t>(sizeof(value), ((_maxSize + 7) >> 3)));
-        return value;
+    inline __attribute__((__always_inline__))
+    bool operator!=(int value) const {
+        return get<int>() != value;
+    }
+
+    template<typename _Ta>
+    inline __attribute__((__always_inline__))
+    bool operator==(std::pair<SizeType, _Ta> value) const {
+        return value.first == _size && value.second == get<_Ta>();
+    }
+
+    template<typename _Ta>
+    inline __attribute__((__always_inline__))
+    bool operator!=(std::pair<SizeType, _Ta> value) const {
+        return value.first != _size || value.second != get<_Ta>();
+    }
+
+    // PROGMEM safe
+    inline __attribute__((__always_inline__))
+    void setBytes(const char *buffer, SizeType size) {
+        setBytes(reinterpret_cast<const uint8_t *>(buffer), size);
+    }
+
+    // size in bits must not exceed sizeof(buffer)
+    // PROGMEM safe
+    void setBytes(const uint8_t *buffer, SizeType size) {
+        memcpy_P(data(), buffer, _size_limit(size));
+    }
+
+    inline __attribute__((__always_inline__))
+    const uint8_t *data() const {
+        return _buffer;
+    }
+
+    inline __attribute__((__always_inline__))
+    uint8_t *data() {
+        return _buffer;
     }
 
     inline __attribute__((__always_inline__))
@@ -109,123 +234,186 @@ public:
         setString(str.c_str(), str.length());
     }
 
+    // PROGMEM safe
     inline __attribute__((__always_inline__))
 	void setString(const char *str) {
         setString(str, strlen(str));
     }
 
-    void setString(const char *str, size_t len);
+    inline __attribute__((__always_inline__))
+	void setString(const __FlashStringHelper *str) {
+		setString(reinterpret_cast<PGM_P>(str), strlen_P(reinterpret_cast<PGM_P>(str)));
+    }
 
-    void setSize(uint8_t size);
-    const uint8_t size() const;
-    void setMaxSize(uint8_t maxSize);
-    const uint8_t getMaxSize() const;
+    // set bits from string, '1' = set
+    // first byte in the string is the highest bit
+    // if bigger, the upper bits are truncated (first bytes of the string)
+    // if smaller, the upper bits are zero filled (left side zero padded)
+    // PROGMEM safe
+    void setString(const char *str, size_t len) {
+        zero_fill();
+        if (len > kMaxSize) {
+            // "100100" -> 4 bit 0b0100
+            //                     3210 (len inside loop)
+            // strlen() 6, kMaxSize 4, offset 2, len 4
+            int offset = len - kMaxSize;
+            len -= offset;
+            str += offset;
+        }
+        // filling in reverse does not require any offset if equal or smaller
+        // "110" -> 5 bit 0b00110
+        //                    210 (len inside loop)
+        while (len--) {
+            set(len, pgm_read_byte(str++) == '1');
+        }
+    }
 
-    void fromString(const char *pattern, bool reverse = false);
-    String toString() const;
+    // buffer capacity in bytes
+    static constexpr SizeType capacity() {
+        return kCapacity;
+    }
 
-    void set(uint8_t pos, bool value = true);
-    bool test(uint8_t pos) const;
+    void setSize(SizeType bits) {
+        auto newSize = _size_limit(bits, kMaxSize);
+        if (newSize > _size) {
+            zero_fill_unused(); // fill unused space before resizing
+            _size = newSize;
+        }
+    }
 
-    String generateCode(const char *variable = "pattern", bool setBytes = false) const;
+    SizeType size() const {
+        return _size;
+    }
+
+    // requires size in bytes to store bitset
+    BytesSizeType minSize() const {
+        return ((_size + 7) >> 3);
+    }
+
+    // PROGMEM safe
+    void fromString(const char *pattern, bool reverse = false) {
+        zero_fill();
+        _size = _size_limit(strlen(pattern));
+        auto endPtr = pattern + _size;
+        uint8_t pos = reverse ? _size - 1 : 0;
+        while (pattern < endPtr) {
+            set(pos, pgm_read_byte(pattern++) == '1');
+            reverse ? --pos : ++pos;
+        }
+    }
+
+    String toString() const {
+        String output;
+        output.reserve(_size);
+        for (int i = _size - 1; i >= 0; i--) {
+            output += (test(i) ? '1' : '0');
+        }
+        return output;
+    }
+
+    // returns bits as C string
+    // unused bits in the last byte are zero filled
+    // 0b0010100000 (size=10) = "\x0a\x00"
+    String getBytesAsString() const {
+        String output;
+        for (int i = minSize() - 1; i >= 0; i--) {
+            char buf[4];
+            snprintf_P(buf, sizeof(buf), PSTR("\\x%02x"), static_cast<uint8_t>(_buffer[i]));
+            output += buf;
+        }
+        return output;
+    }
+
+    void set(SizeType pos, bool value = true) {
+        if (pos < kMaxBits) {
+            uint8_t mask = (1 << (pos & 0x03));
+            if (value) {
+                data()[pos >> 3] |= mask;
+            }
+            else {
+                data()[pos >> 3] &= ~mask;
+            }
+        }
+    }
+
+    bool test(SizeType pos) const {
+        return (pos < kMaxBits) ? data()[pos >> 3] & (1 << (pos & 0x03)) : false;
+    }
+
+    void dumpCode(Print &output, const char *variable = "pattern", bool setBytes = false) const {
+        auto numBytes = minSize();
+        if (setBytes) {
+            if (numBytes > 8) {
+                output.printf_P(PSTR("%s.setBytes<%u>("), variable, kMaxSize);
+            }
+            else {
+                output.printf_P(PSTR("%s.set("), variable);
+            }
+        }
+        else {
+            output.printf_P(PSTR("auto %s = dynamic_bitset<%u>("), variable, kMaxSize);
+
+            if (numBytes > 8) {
+                output.print('\\');
+                output.print('"');
+                output.print(getBytesAsString());
+                output.printf_P(PSTR("\", %u);\n"), _size);
+            }
+            else if (numBytes > 4) {
+                auto split = static_cast<uint64_t>(this);
+                output.printf_P(PSTR("static_cast<uint64_t>(0x%08x%08x)"), static_cast<uint32_t>(split >> 32), static_cast<uint32_t>(split & 0xffffffff));
+            } else {
+                output.printf_P(PSTR("static_cast<uint32_t>(0x%08x)"), static_cast<uint32_t>(this));
+            }
+
+            output.printf_P(PSTR(", %u);\n"), _size);
+        }
+    }
+
+    template<typename _Ta>
+    inline __attribute__((__always_inline__))
+    void set(_Ta value, SizeType size) {
+        zero_fill();
+        _size = std::min<size_t>(std::min<size_t>(sizeof(value) * 8, kMaxBits), size);
+        memcpy_P(data(), &value, minSize());
+        // std::copy_n(reinterpret_cast<uint8_t *>(&value), minSize(), data());
+    }
+
+    template<typename _Ta>
+    inline __attribute__((__always_inline__))
+    _Ta get() const {
+        auto value = _Ta();
+        std::copy_n(data(), _size_limit(sizeof(value)), reinterpret_cast<uint8_t *>(&value));
+        return value;
+    }
 
 private:
-    void _init();
+    // returns size or capacity, depending on which is msaller
+    inline __attribute__((__always_inline__))
+    BytesSizeType _size_limit(size_t size) const {
+        return std::min<size_t>(size, capacity());
+    }
+
+    inline __attribute__((__always_inline__))
+    void zero_fill() {
+        std::fill_n(data(), capacity(), 0);
+    }
+
+    void zero_fill_unused() {
+        BytesSizeType lastByte = (_size >> 3);
+        // keep bits of the last byte
+        _buffer[lastByte++] &= (1 << (size & 0x03)) - 1;
+        std::fill(_buffer + lastByte, _buffer + capacity(), 0);
+    }
+
 
 private:
-    uint8_t _size;
-    uint8_t _maxSize;
-    uint8_t *_buffer;
+    struct __attribute__((packed)) {
+        SizeType _size;
+        uint8_t _buffer[kCapacity];
+    };
 };
 
-inline dynamic_bitset::dynamic_bitset() :
-    _size(0),
-    _maxSize(0),
-    _buffer(nullptr)
-{
-}
-
-inline dynamic_bitset::dynamic_bitset(uint8_t maxSize) :
-    dynamic_bitset((uint32_t)0, maxSize, maxSize)
-{
-}
-
-inline dynamic_bitset::dynamic_bitset(uint8_t size, uint8_t maxSize) :
-    dynamic_bitset((uint32_t)0, size, maxSize)
-{
-}
-
-inline dynamic_bitset::dynamic_bitset(uint32_t value, uint8_t size, uint8_t maxSize) :
-    _size(size),
-    _maxSize(maxSize),
-    _buffer(nullptr)
-{
-    if (_maxSize) {
-        _init();
-        setValue(value);
-    }
-}
-
-inline dynamic_bitset::dynamic_bitset(const dynamic_bitset &bits) :
-    _buffer(nullptr)
-{
-    *this = bits;
-}
-
-inline dynamic_bitset::dynamic_bitset(dynamic_bitset &&bits) :
-    _size(std::exchange(bits._size, 0)),
-    _maxSize(std::exchange(bits._maxSize, 0)),
-    _buffer(std::exchange(bits._buffer, nullptr))
-{
-}
-
-inline dynamic_bitset::dynamic_bitset(const char *fromBytes, uint8_t length, uint8_t size)
-{
-    setMaxSize(size);
-    setBytes((uint8_t *)fromBytes, length);
-}
-
-inline dynamic_bitset::~dynamic_bitset()
-{
-    if (_buffer) {
-        delete[] _buffer;
-    }
-}
-
-inline void dynamic_bitset::setBytes(uint8_t *bytes, uint8_t len)
-{
-    memcpy(_buffer, bytes, std::min(len, (uint8_t)((_maxSize + 7) >> 3)));
-}
-
-inline const uint8_t * dynamic_bitset::getBytes() const
-{
-    return _buffer;
-}
-
-inline void dynamic_bitset::setSize(uint8_t size)
-{
-    _size = size;
-    if (_size > _maxSize) {
-        _size = _maxSize;
-    }
-}
-
-inline const uint8_t dynamic_bitset::size() const
-{
-    return _size;
-}
-
-inline const uint8_t dynamic_bitset::getMaxSize() const
-{
-    return _maxSize;
-}
-
-
-inline dynamic_bitset::bit_helper::bit_helper(dynamic_bitset *bitset, uint8_t index)
-{
-    _index = index;
-    _bitset = bitset;
-}
-
-/*
-*/
+static constexpr size_t kSize24 = sizeof(dynamic_bitset<24>);
+static constexpr size_t kSize32 = sizeof(dynamic_bitset<32>);
+static constexpr size_t kSize56 = sizeof(dynamic_bitset<56>);

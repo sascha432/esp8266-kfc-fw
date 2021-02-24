@@ -1288,7 +1288,7 @@ namespace KFCConfigurationClasses {
 
             enum class QosType : uint8_t {
                 MIN = 0,
-                AT_MODE_ONCE = 0,
+                AT_MOST_ONCE = 0,
                 AT_LEAST_ONCE = 1,
                 EXACTLY_ONCE = 2,
                 MAX,
@@ -1296,6 +1296,8 @@ namespace KFCConfigurationClasses {
                 AUTO_DISCOVERY = AT_LEAST_ONCE,
                 DEFAULT = 0xff,
             };
+
+            static_assert(QosType::AUTO_DISCOVERY != QosType::AT_MOST_ONCE, "QoS 1 or 2 required");
 
             AUTO_DEFAULT_PORT_CONST_SECURE(1883, 8883);
 

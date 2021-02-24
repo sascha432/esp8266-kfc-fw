@@ -14,8 +14,10 @@
 
 #if INVERT_BUILTIN_LED
 #define BUILTIN_LED_STATE(state)        (state ? LOW : HIGH)
+#define BUILTIN_LED_STATEI(state)       (state)
 #else
 #define BUILTIN_LED_STATE(state)        state
+#define BUILTIN_LED_STATEI(state)       (state ? LOW : HIGH)
 #endif
 
 #if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID
@@ -23,7 +25,6 @@
 #else
 #define BUILDIN_LED_SET(mode)
 #endif
-
 
 class BlinkLEDTimer : public OSTimer {
 private:
@@ -37,42 +38,64 @@ public:
         OFF = 0,
         SOLID = 1,
         SOS = 2,
+        PATTERN = 0xfffe,
+        INVALID = 0xffff
     };
+
+    using Bitset = dynamic_bitset<56>;
+    static constexpr size_t kBitsetSize = sizeof(Bitset);
 
     static const uint8_t INVALID_PIN = INVALID_PIN_ID;
     static const uint8_t IGNORE_BUILTIN_LED_PIN = IGNORE_BUILTIN_LED_PIN_ID;
     static const uint8_t NEOPIXEL_PIN = NEOPIXEL_PIN_ID;
 
-    BlinkLEDTimer(uint8_t pin = INVALID_PIN) : _pin(pin) {}
-
-    void set(uint32_t delay, dynamic_bitset &&pattern);
+    BlinkLEDTimer(uint8_t pin = INVALID_PIN) : _pin(pin), _delay(BlinkType::INVALID) {}
 
     inline __attribute__((__always_inline__))
-    void set(uint32_t delay, uint8_t pin, dynamic_bitset &&pattern) {
-        _pin = pin;
-        set(delay, std::move(pattern));
+    void set(uint16_t delay, Bitset &&pattern) {
+        set(delay, _pin, std::move(pattern));
     }
+
+    void set(uint16_t delay, uint8_t pin, Bitset &&pattern);
 
     virtual void run() override;
     virtual void detach() override;
 
-    static void setPattern(uint8_t pin, int delay, dynamic_bitset &&pattern);
-    //static void setPattern(int8_t pin, int delay, const dynamic_bitset &pattern);
+    // currently only one LED can blink at a time
+    // if a different pin is used, the previously used pin is turned off
+    static void setPattern(uint8_t pin, uint16_t delay, Bitset &&pattern);
+
+    static void setBlink(uint8_t pin, uint16_t delay, int32_t color = -1);
+
     static void setBlink(uint8_t pin, BlinkType delay, int32_t color = -1) {
         setBlink(pin, static_cast<uint16_t>(delay), color);
     }
-    static void setBlink(uint8_t pin, uint16_t delay, int32_t color = -1); // predefined values BlinkDelayEnum_t
-    // static bool isOn();
+
+    static bool isPattern(uint8_t pin, uint16_t delay, const Bitset &pattern);
+    static bool isBlink(uint8_t pin, BlinkType delay);
 
     static bool isPinValid(uint8_t pin) {;
-        return pin != IGNORE_BUILTIN_LED_PIN && pin != NEOPIXEL_PIN;
+        return pin != IGNORE_BUILTIN_LED_PIN && pin != NEOPIXEL_PIN && pin != INVALID_PIN;
+    }
+
+protected:
+    static constexpr bool high() {
+        return BUILTIN_LED_STATE(true);
+    }
+
+    static constexpr bool low() {
+        return BUILTIN_LED_STATE(false);
+    }
+
+    bool state(bool state) const {
+        return state ? high() : low();
     }
 
 protected:
     uint8_t _pin;
     uint16_t _counter;
-    dynamic_bitset _pattern;
-    // bool _on;
+    Bitset _pattern;
+    BlinkType _delay;
 };
 
 extern BlinkLEDTimer *ledTimer;

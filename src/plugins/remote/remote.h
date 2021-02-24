@@ -37,14 +37,16 @@ public:
     virtual AutoDiscoveryPtr nextAutoDiscovery(FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;
 
-    // virtual void onConnect(MQTTClient *client) override;
-    // virtual void onDisconnect(MQTTClient *client, AsyncMqttClientDisconnectReason reason);
-    // virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len);
-
     static String getMQTTTopic();
 
-    String getAutoDiscoveryTriggersTopic() const;
-    void publishAutoDiscovery();
+    void publishAutoDiscovery() {
+        auto client = MQTTClient::getClient();
+        if (!_discoveryPending && client && !client->isAutoDiscoveryRunning()) {
+            _discoveryPending = true;
+            client->publishAutoDiscovery(true);
+
+        }
+    }
 
     void _setup() {
         MQTTClient::safeRegisterComponent(this);
@@ -179,6 +181,7 @@ private:
     ActionVector _actions;
     // Event::Timer _loopTimer;
     PinState _pinState;
+    bool _signalWarning;
 };
 
 inline bool RemoteControlPlugin::_hasEvents() const

@@ -16,6 +16,7 @@
 #include "component.h"
 #include "auto_discovery.h"
 #include "auto_discovery_queue.h"
+#include "component_proxy.h"
 
 #if DEBUG_MQTT_CLIENT
 #include <debug_helper_enable.h>
@@ -25,119 +26,420 @@
 
 namespace MQTT {
 
+    class QueueVector : public std::vector<ClientQueue>
+    {
+    public:
+        using std::vector<ClientQueue>::vector;
+
+        void clear() {
+            vector::clear();
+            _timer.remove();
+        }
+
+        iterator erase(iterator first, iterator last) {
+            auto result = vector::erase(first, last);
+            if (empty()) {
+                removeTimer();
+            }
+            return result;
+        }
+
+        // erase all elements before the iterator (begin - prev(after))
+        void eraseBefore(iterator after) {
+            if (after == begin()) {
+                return;
+            }
+            erase(begin(), prev(after));
+        }
+
+        void removeTimer() {
+            _timer.remove();
+        }
+
+        Event::Timer &getTimer() {
+            return _timer;
+        }
+
+    private:
+        Event::Timer _timer;
+    };
+
+    class PacketQueueVector : public std::vector<PacketQueue>
+    {
+    public:
+        using std::vector<PacketQueue>::vector;
+
+        void clear() {
+            vector::clear();
+            _timer.remove();
+            _internalPacketQueueId = 1;
+        }
+
+        template<typename _Ta>
+        PacketQueue *find(_Ta value) {
+            auto iterator = std::find(begin(), end(), value);
+            if (iterator == end()) {
+                return nullptr;
+            }
+            return &(*iterator);
+        }
+
+        bool setTimeout(uint16_t internalId, uint16_t timeout);
+
+        iterator erase(iterator first, iterator last) {
+            auto result = vector::erase(first, last);
+            if (empty()) {
+                removeTimer();
+            }
+            return result;
+        }
+
+        void removeTimer() {
+            _timer.remove();
+        }
+
+        Event::Timer &getTimer() {
+            return _timer;
+        }
+
+        uint16_t getNextPacketId() {
+            if (++_internalPacketQueueId == (1U << 15)) { // ids are 15bit, 1-32767. 0 = invalid
+                _internalPacketQueueId = 1;
+            }
+            return _internalPacketQueueId;
+        }
+
+    private:
+        Event::Timer _timer;
+        uint16_t _internalPacketQueueId;
+    };
+
     class ClientTopic {
     public:
-        ClientTopic(const String &topic, ComponentPtr component) : _topic(topic), _component(component) {
-        }
-        inline const String &getTopic() const {
-            return _topic;
-        }
-        inline Component *getComponent() const {
-            return _component;
-        }
-        inline bool match(Component *component, const String &topic) const {
-            return (component == _component) && (topic == _topic);
-        }
+        ClientTopic(const String &topic, ComponentPtr component);
+
+        const String &getTopic() const;
+        ComponentPtr getComponent() const;
+        bool match(ComponentPtr component, const String &topic) const;
+        bool match(const String &topic) const;
+
     private:
         String _topic;
-        Component *_component;
+        ComponentPtr _component;
     };
+
+    inline ClientTopic::ClientTopic(const String &topic, ComponentPtr component) :
+        _topic(topic),
+        _component(component)
+    {
+    }
+
+    inline const String &ClientTopic::getTopic() const
+    {
+        return _topic;
+    }
+
+    inline ComponentPtr ClientTopic::getComponent() const
+    {
+        return _component;
+    }
+
+    inline bool ClientTopic::match(ComponentPtr component, const String &topic) const
+    {
+        return (component == _component) && (topic == _topic);
+    }
+
+    inline bool ClientTopic::match(const String &topic) const
+    {
+        return (topic == _topic);
+    }
 
     class ClientQueue {
     public:
-        ClientQueue(QueueType type, ComponentPtr component, const String &topic, QosType qos, bool retain, const String &payload) :
-            _component(component),
-            _topic(topic),
-            _payload(payload),
-            _type(type),
-            _qos(qos),
-            _retain(retain)
-        {
-        }
+        ClientQueue(QueueType type, ComponentPtr component, uint16_t internalPacketId, const String &topic, QosType qos, bool retain, const String &payload, uint32_t time, uint16_t timeout);
 
-        inline QueueType getType() const {
-            return _type;
-        }
-        inline Component *getComponent() const {
-            return _component;
-        }
-        inline const String &getTopic() const {
-            return _topic;
-        }
-        inline QosType getQos() const {
-            return _qos;
-        }
-        inline bool getRetain() const {
-            return _retain;
-        }
-        inline const String &getPayload() const {
-            return _payload;
-        }
+        QueueType getType() const;
+        ComponentPtr getComponent() const;
+        const String &getTopic() const;
+        QosType getQos() const;
+        bool getRetain() const;
+        const String &getPayload() const;
+
+        bool isExpired() const;
+        uint16_t getTimeout() const;
+
+        uint16_t getInternalPacketId() const;
+        void setInternalPacketId(uint16_t id);
+        size_t getRequiredSize() const;
+
     private:
-        Component *_component;
+        ComponentPtr _component;
         String _topic;
         String _payload;
+        uint32_t _time;
+        uint16_t _timeout;
+        uint16_t _internalPacketId;
         QueueType _type;
         QosType _qos;
-        bool _retain: 1;
+        bool _retain;
     };
+
+    static constexpr size_t ClientQueueSize = sizeof(ClientQueue);
+
+    inline ClientQueue::ClientQueue(QueueType type, ComponentPtr component, uint16_t internalPacketId, const String &topic, QosType qos, bool retain, const String &payload, uint32_t time, uint16_t timeout) :
+        _component(component),
+        _topic(topic),
+        _payload(payload),
+        _time(time),
+        _timeout(timeout),
+        _internalPacketId(internalPacketId),
+        _type(type),
+        _qos(qos),
+        _retain(retain)
+    {
+    }
+
+    inline size_t ClientQueue::getRequiredSize() const
+    {
+        return _topic.length() + _payload.length() + 64;
+    }
+
+    inline QueueType ClientQueue::getType() const
+    {
+        return _type;
+    }
+
+    inline ComponentPtr ClientQueue::getComponent() const
+    {
+        return _component;
+    }
+
+    inline const String &ClientQueue::getTopic() const
+    {
+        return _topic;
+    }
+
+    inline QosType ClientQueue::getQos() const
+    {
+        return _qos;
+    }
+
+    inline bool ClientQueue::getRetain() const
+    {
+        return _retain;
+    }
+
+    inline const String &ClientQueue::getPayload() const
+    {
+        return _payload;
+    }
+
+    inline bool ClientQueue::isExpired() const
+    {
+        return get_time_diff(_time, millis()) > _timeout;
+    }
+
+    inline uint16_t ClientQueue::getTimeout() const
+    {
+        return _timeout;
+    }
+
+    inline uint16_t ClientQueue::getInternalPacketId() const
+    {
+        return _internalPacketId;
+    }
+
+    inline void ClientQueue::setInternalPacketId(uint16_t id)
+    {
+        _internalPacketId = id;
+    }
+
+    // helper for std::find
+    class PacketQueueId {
+    public:
+        inline __attribute__((__always_inline__))
+        PacketQueueId(uint16_t id) : _id(id) {}
+
+        inline __attribute__((__always_inline__))
+        uint16_t getId() const {
+            return _id;
+        }
+    private:
+        uint16_t _id;
+    };
+
+    // helper for std::find
+    class PacketQueueInternalId {
+    public:
+        inline __attribute__((__always_inline__))
+        PacketQueueInternalId(uint16_t id) : _id(id) {}
+
+        inline __attribute__((__always_inline__))
+        uint16_t getId() const {
+            return _id;
+        }
+    private:
+        uint16_t _id;
+    };
+
+    class PacketQueue {
+    public:
+        PacketQueue() : _packetId(0), _internalId(0), _delivered(false), _time(0), _timeout(kDefaultAckTimeout) {}
+        // internalPacketId = generate id automatically
+        PacketQueue(uint16_t packetId, uint32_t time, bool delivered = false, uint16_t internalPacketId = 0);
+
+        inline __attribute__((__always_inline__))
+        bool operator==(PacketQueueId packetId) const {
+            return _packetId == packetId.getId();
+        }
+
+        inline __attribute__((__always_inline__))
+        bool operator==(PacketQueueInternalId internalId) const {
+            return _internalId == internalId.getId();
+        }
+
+        // alias for isValid()
+        operator bool() const;
+
+        // invalid packet, discard
+        bool isValid() const;
+        // packet was sent to the TCP stack
+        bool isSent() const;
+
+        void setDelivered();
+        bool isDelivered() const;
+        // check if the packet has been delivered in time
+        bool isTimeout() const;
+        uint16_t getInternalId() const;
+
+        void update(uint16_t packetId, uint32_t time);
+        void setTimeout(uint16_t timeout);
+        uint16_t getTimeout() const;
+
+        // debug
+        String toString() const {
+            return PrintString(F("packet_id=%u internal=%u delivered=%u timeout=%u/%u can_delete=%u"), _packetId, _internalId, isDelivered(), isTimeout(), getTimeout(), canDelete());
+        }
+
+    private:
+        friend MQTTClient;
+
+        // remove packet from packet queue
+        // packets are kept 5 times longer than the ack. timeout
+        // after that they report as not found instead of timeout
+        bool canDelete() const;
+        uint16_t getPacketId() const;
+
+        // sending failed, add to queue
+        bool _addToLocalQueue() const;
+
+    private:
+        struct __attribute__((packed)) {
+            uint16_t _packetId;
+            uint16_t _internalId: 15;
+            uint16_t _delivered: 1;
+            uint32_t _time;
+            uint16_t _timeout;
+        };
+    };
+
+    static constexpr size_t PacketQueueSize = sizeof(PacketQueue);
+
+    inline __attribute__((__always_inline__))
+    PacketQueue::operator bool() const
+    {
+        return _internalId != 0;
+    }
+
+    inline __attribute__((__always_inline__))
+    bool PacketQueue::isValid() const
+    {
+        return _internalId != 0;
+    }
+
+    inline __attribute__((__always_inline__))
+    bool PacketQueue::isSent() const
+    {
+        return _internalId && _packetId;
+    }
+
+    inline __attribute__((__always_inline__))
+    void PacketQueue::setDelivered()
+    {
+        _delivered = true;
+    }
+
+    inline __attribute__((__always_inline__))
+    bool PacketQueue::isDelivered() const
+    {
+        return _delivered;
+    }
+
+    inline bool PacketQueue::isTimeout() const
+    {
+        return !isDelivered() && get_time_diff(_time, millis()) >= _timeout;
+    }
+
+    inline __attribute__((__always_inline__))
+    void PacketQueue::update(uint16_t packetId, uint32_t time)
+    {
+        _packetId = packetId;
+        _time = time;
+    }
+
+    inline __attribute__((__always_inline__))
+    void PacketQueue::setTimeout(uint16_t timeout)
+    {
+        _timeout = timeout;
+    }
+
+    inline __attribute__((__always_inline__))
+    uint16_t PacketQueue::getTimeout() const
+    {
+        return _timeout;
+    }
+
+    inline bool PacketQueue::canDelete() const
+    {
+        auto diff = get_time_diff(_time, millis());
+        return isDelivered() && (diff >= _timeout) && (diff >= kDefaultCanDeleteTimeout);
+    }
+
+    inline __attribute__((__always_inline__))
+    uint16_t PacketQueue::getPacketId() const
+    {
+        return _packetId;
+    }
+
+    inline __attribute__((__always_inline__))
+    uint16_t PacketQueue::getInternalId() const
+    {
+        return _internalId;
+    }
+
+    inline __attribute__((__always_inline__))
+    bool PacketQueue::_addToLocalQueue() const
+    {
+        return !_packetId && _internalId && !isDelivered();
+    }
 
     class Client {
     public:
-        // class RemoveTopicsType {
-        // public:
-        //     RemoveTopicsType(ComponentPtr component, const String &wildcard, ResultCallback callback) :
-        //         _component(component),
-        //         _wildcard(wildcard),
-        //         _callback(callback)
-        //     {
-        //     }
-        //     ~RemoveTopicsType() {
-        //         if (_callback) {
-        //             invoke(false, nullptr);
-        //         }
-        //     }
-
-        //     RemoveTopicsType(RemoveTopicsType &&move) :
-        //         _component(std::exchange(move._component, nullptr)),
-        //         _wildcard(std::exchange(move._wildcard, String())),
-        //         _callback(std::exchange(move._callback, nullptr))
-        //     {}
-
-        //     RemoveTopicsType &operator=(RemoveTopicsType &&move) {
-        //         _component = std::exchange(move._component, nullptr);
-        //         _wildcard = std::exchange(move._wildcard, String());
-        //         _callback = std::exchange(move._callback, nullptr);
-        //         return *this;
-        //     }
-
-        //     void invoke(bool result, Client *client) {
-        //         if (_callback) {
-        //             _callback(_component, client, result);
-        //             _callback = nullptr;
-        //         }
-        //     }
-
-        //     ComponentPtr _component;
-        //     String _wildcard;
-        //     ResultCallback _callback;
-        // };
-
-        using RemoveTopicsVector = std::vector<ComponentProxyPtr>;
-        using TopicVector = std::vector<ClientTopic>;
-        using QueueVector = std::vector<ClientQueue>; // this is not used for QoS at the moment
-
-
         Client();
         virtual ~Client();
 
         static void setupInstance();
         static void deleteInstance();
 
+        // a component must be registered to receive events
         void registerComponent(ComponentPtr component);
+        // unregistering removes all queued messages and unsubscribes from any topics
         bool unregisterComponent(ComponentPtr component);
         bool isComponentRegistered(ComponentPtr component);
+private:
+        void remove(ComponentPtr component);
 
+public:
         // connect to server if not connected/connecting
         void connect();
         // disconnect from server
@@ -162,25 +464,21 @@ namespace MQTT {
         // timeout = minimum value or 0
         void setAutoReconnect();
 
-        // <mqtt_topic=home/${device_name}>/component_name><format>
-        // NOTE: there is no slash between the component name and format
+        // <base_topic=home/${device_name}>/<component_name><format>
+        // NOTE: there is no slash added between the component name and format
         static String formatTopic(const String &componentName, const __FlashStringHelper *format = nullptr, ...);
-
+        // <base_topic=home/${device_name}>/<format>
         static String formatTopic(const __FlashStringHelper *format = nullptr, ...);
 
     public:
-        void subscribe(ComponentPtr component, const String &topic, QosType qos = QosType::DEFAULT);
-        void unsubscribe(ComponentPtr component, const String &topic);
     #if MQTT_GROUP_TOPIC
+    #error out of date
         void subscribeWithGroup(ComponentPtr component, const String &topic, QosType qos = QosType::DEFAULT);
         void unsubscribeWithGroup(ComponentPtr component, const String &topic);
     #endif
-        void remove(ComponentPtr component);
-        void publish(const String &topic, bool retain, const String &payload, QosType qos = QosType::DEFAULT);
         void publishPersistantStorage(StorageFrequencyType type, const String &name, const String &data);
 
-        void removeTopicsRequest(ComponentPtr component, const String &wildcard, ResultCallback callback);
-        void removeTopicsEndRequest(ComponentPtr component);
+#if MQTT_AUTO_DISCOVERY
 
     public:
         // force starts to send the auto discovery ignoring the delay between each run
@@ -188,18 +486,47 @@ namespace MQTT {
         bool publishAutoDiscovery(bool force = false);
         static void publishAutoDiscoveryCallback(Event::CallbackTimerPtr timer);
         bool isAutoDiscoveryRunning() const {
-            return _autoDiscoveryQueue.get() != nullptr;
+            return static_cast<bool>(_autoDiscoveryQueue);
         }
 
+        // returns a list of all auto discovery components
+        AutoDiscovery::List getAutoDiscoveryList(FormatType format = FormatType::JSON) {
+            return AutoDiscovery::List(_components, format);
+        }
+
+        AutoDiscovery::QueuePtr &getAutoDiscoveryQueue();
+        // additional information about the current message
+        // must not be called outside onMessage()
+        const AsyncMqttClientMessageProperties &getMessageProperties() const {
+            if (!_messageProperties) {
+                __DBG_panic("getMessageProperties() must not be called outside onMessage()");
+            }
+            return *_messageProperties;
+        }
+
+#endif
+
     public:
-        // return values
-        // 0: failed to send
-        // -1: success, but nothing was sent (in particular for unsubscribe if another component is still subscribed to the same topic)
-        // for qos 1 and 2: >= 1 packet id, confirmation will be received by callbacks once delivered
-        // for qos 0: 1 = successfully delivered to tcp stack
-        int subscribeWithId(ComponentPtr component, const String &topic, QosType qos = QosType::DEFAULT);
-        int unsubscribeWithId(ComponentPtr component, const String &topic);
-        int publishWithId(const String &topic, bool retain, const String &payload, QosType qos = QosType::DEFAULT);
+        // returns internal packet id for tracking
+        // if QoS == 0, the internal id cannot be used to track the message
+        // the message might be queued and not sent yet (TCP buffers full...)
+        // 0 = failed to send (queue full, max. message size exceeded)
+        uint16_t subscribe(ComponentPtr component, const String &topic, QosType qos = QosType::DEFAULT);
+        // unsubscribe will mute the topic for the component even if the unsubscribe message cannot be delivered
+        uint16_t unsubscribe(ComponentPtr component, const String &topic);
+        uint16_t publish(ComponentPtr component, const String &topic, bool retain, const String &payload, QosType qos = QosType::DEFAULT);
+        // publishing without component will keep the data in the queue when a component gets removed
+        uint16_t publish(const String &topic, bool retain, const String &payload, QosType qos = QosType::DEFAULT);
+
+        PacketQueue subscribeWithId(ComponentPtr component, const String &topic, QosType qos = QosType::DEFAULT, uint16_t internalPacketId = 0);
+        // unsubscribe will mute the topic for the component even if the unsubscribe message cannot be delivered
+        PacketQueue unsubscribeWithId(ComponentPtr component, const String &topic, uint16_t internalPacketId = 0);
+        // component may be nullptr see publish()
+        PacketQueue publishWithId(ComponentPtr component, const String &topic, bool retain, const String &payload, QosType qos = QosType::DEFAULT, uint16_t internalPacketId = 0);
+
+        PacketQueue recordId(int packetId, QosType qos, uint16_t internalPacketId = 0);
+        PacketQueue getQueueStatus(int packetId);
+        static uint16_t getNextInternalPacketId();
 
         static void handleWiFiEvents(WiFiCallbacks::EventType event, void *payload);
 
@@ -211,31 +538,16 @@ namespace MQTT {
         static bool safeUnregisterComponent(ComponentPtr component);
         static void safeReRegisterComponent(ComponentPtr component);
         static void safePersistantStorage(StorageFrequencyType type, const String &name, const String &data);
+#if MQTT_AUTO_DISCOVERY
         static bool safeIsAutoDiscoveryRunning();
+#endif
         static bool safeIsConnected();
 
 
     public:
-        // returns 1 for:
-        // any integer != 0
-        // "true"
-        // "on"
-        // "yes"
-        // "online"
-        // "enable"
-        // "enabled"
-
-        // returns 0 for:
-        // 0
-        // "00"...
-        // "false"
-        // "off"
-        // "no"
-        // "offline"
-        // "disable"
-        // "disabled"
-
-        // otherwise it returns -1 or "invalid"
+        // returns 1 for: [ any integer != 0, "true", "on", "yes", "online", "enable", "enabled" ]
+        // returns 0 for: [ 0, "00"..., "false", "off", "no", "offline", "disable", "disabled" ]
+        // otherwise it returns -1 or the value of "invalid"
         // white spaces are stripped and the strings are case insensitive
         static int8_t toBool(const char *, int8_t invalid = -1);
 
@@ -245,16 +557,13 @@ namespace MQTT {
         String connectionStatusString();
 
         void _handleWiFiEvents(WiFiCallbacks::EventType event, void *payload);
+
+        // there is no session or any data keep between reconnects
         void onConnect(bool sessionPresent);
         void onDisconnect(AsyncMqttClientDisconnectReason reason);
+
         void onMessageRaw(char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total);
         void onMessage(char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len);
-
-    #if MQTT_USE_PACKET_CALLBACKS
-        void onPublish(uint16_t packetId);
-        void onSubscribe(uint16_t packetId, uint8_t qos);
-        void onUnsubscribe(uint16_t packetId);
-    #endif
 
         TopicVector &getTopics();
         size_t getQueueSize() const;
@@ -270,6 +579,8 @@ namespace MQTT {
     #if MQTT_GROUP_TOPIC
         static bool _getGroupTopic(ComponentPtr component, String groupTopic, String &topic);
     #endif
+        // a slash is inserted between base topic and suffix or format, if there is none
+        // there is no slash inserted between suffix and format
         static String _formatTopic(const String &suffix, const __FlashStringHelper *format, va_list arg);
         static String _filterString(const char *str, bool replaceSpace = false);
 
@@ -278,7 +589,8 @@ namespace MQTT {
         void _setupClient();
         void autoReconnect(AutoReconnectType timeout);
 
-        const __FlashStringHelper *_reasonToString(AsyncMqttClientDisconnectReason reason) const;
+        NameType _reasonToString(AsyncMqttClientDisconnectReason reason) const;
+        StringVector _createAutoDiscoveryTopics() const;
 
     public:
         // match wild cards
@@ -286,35 +598,48 @@ namespace MQTT {
 
     private:
         // check if the topic is in use by another component
+        inline __attribute__((__always_inline__))
+        bool _topicInUse(ComponentPtr component, const ClientTopic &topic) {
+            return _topicInUse(component, topic.getTopic());
+        }
         bool _topicInUse(ComponentPtr component, const String &topic);
 
     private:
-        // if subscribe/unsubscribe/publish fails cause of the tcp client's buffer being full, retry later
-        // the payload can be quite large for auto discovery for example
-        // messages might be delivered in a different sequence. use subscribe/unsubscribe/publishWithId for full control
-        // to deliver messages in sequence, use QoS and callbacks (onPublish() etc... requires MQTT_USE_PACKET_CALLBACKS=1)
-        void _addQueue(QueueType type, ComponentPtr component, const String &topic, QosType qos, bool retain, const String &payload);
-        // stop timer and clear queue
-        void _clearQueue();
-        // process queue
-        void _queueTimerCallback();
-
-        QueueVector _queue;
-        Event::Timer _queueTimer;
+        void _resetClient();
 
     private:
-        friend AutoDiscoveryQueue;
+        // delivery and packet queue
+
+        // if subscribe/unsubscribe/publish fails cause of the tcp client's buffer being full, the message is added to the local queue
+        // messages are sent in order and discarded after a timeout
+        void _addQueue(QueueType type, ComponentPtr component, PacketQueue &queue, const String &topic, QosType qos, bool retain = false, const String &payload = String(), uint16_t timeout = kDefaultQueueTimeout);
+        // start timer for the delivery queue
+        void _queueStartTimer();
+        // process delivery queue
+        void _queueTimerCallback();
+        // subscribe, unsubscribe, publish
+        void _onPacketAck(uint16_t packetId, PacketAckType type);
+        // timeout, error
+        void _onErrorPacketAck(uint16_t internalId, PacketAckType type);
+        // start timer for the packet queue
+        void _packetQueueStartTimer();
+        // process timeouts of the packet queue
+        void _packetQueueTimerCallback();
+
+    private:
+        friend ComponentProxy;
+
+        QueueVector _queue;
+        PacketQueueVector _packetQueue;
+
+    private:
+        friend AutoDiscovery::Queue;
         friend PersistantStorageComponent;
         friend Plugin;
 
         size_t getClientSpace() const;
         static bool _isMessageSizeExceeded(size_t len, const char *topic);
         ConnectionState setConnState(ConnectionState newState);
-
-    public:
-        AutoDiscoveryQueuePtr &getAutoDiscoveryQueue() {
-            return _autoDiscoveryQueue;
-        }
 
     private:
         String _hostname;
@@ -325,23 +650,27 @@ namespace MQTT {
         AsyncMqttClient *_client;
         Event::Timer _timer;
         uint16_t _port;
-        uint16_t _componentsEntityCount;
         FixedString<1> _lastWillPayload;
         AutoReconnectType _autoReconnectTimeout;
         ComponentVector _components;
         TopicVector _topics;
         Buffer _buffer;
         String _lastWillTopic;
-        AutoDiscoveryQueuePtr _autoDiscoveryQueue;
-        Event::Timer _autoDiscoveryRebroadcast;
         ConnectionState _connState;
-        std::unique_ptr<RemoveTopicsVector> _removeTopics;
+#if MQTT_AUTO_DISCOVERY
+        AutoDiscovery::QueuePtr _autoDiscoveryQueue;
+        Event::Timer _autoDiscoveryRebroadcast;
+        bool _startAutoDiscovery;
+#endif
+        AsyncMqttClientMessageProperties *_messageProperties;
 
     #if DEBUG_MQTT_CLIENT
     public:
-        const __FlashStringHelper *_getConnStateStr();
+        NameType _getConnStateStr();
         const char *_connection();
         String _connectionStr;
+    #else
+    const char *_connection() { return PSTR("NO_DEBUG"); }
     #endif
 
     private:
@@ -355,17 +684,20 @@ namespace MQTT {
         _autoReconnectTimeout = timeout;
     }
 
-    inline void Client::setAutoReconnect()
+    inline __attribute__((__always_inline__))
+    void Client::setAutoReconnect()
     {
         setAutoReconnect(_config.auto_reconnect_min);
     }
 
-    inline bool Client::isConnected() const
+    inline __attribute__((__always_inline__))
+    bool Client::isConnected() const
     {
         return _connState == ConnectionState::CONNECTED;
     }
 
-    inline size_t Client::getClientSpace() const
+    inline __attribute__((__always_inline__))
+    size_t Client::getClientSpace() const
     {
         return _client->getAsyncClient().space();
     }
@@ -377,12 +709,14 @@ namespace MQTT {
         return tmp;
     }
 
-    inline Client::TopicVector &Client::getTopics()
+    inline __attribute__((__always_inline__))
+    TopicVector &Client::getTopics()
     {
         return _topics;
     }
 
-    inline size_t Client::getQueueSize() const
+    inline __attribute__((__always_inline__))
+    size_t Client::getQueueSize() const
     {
         return _queue.size();
     }
@@ -401,7 +735,8 @@ namespace MQTT {
         }
     }
 
-    inline Client *Client::getClient()
+    inline __attribute__((__always_inline__))
+    Client *Client::getClient()
     {
         return _mqttClient;
     }
@@ -459,7 +794,8 @@ namespace MQTT {
         return false;
     }
 
-    inline QosType Client::getDefaultQos(QosType qos)
+    inline __attribute__((__always_inline__))
+    QosType Client::getDefaultQos(QosType qos)
     {
         return qos;
     }
@@ -475,9 +811,15 @@ namespace MQTT {
         return static_cast<QosType>(ClientConfig::getConfig().qos);
     }
 
-    inline uint8_t Client::_translateQosType(QosType qos)
+    inline __attribute__((__always_inline__))
+    uint8_t Client::_translateQosType(QosType qos)
     {
         return static_cast<uint8_t>(_getDefaultQos(qos));
+    }
+
+    inline __attribute__((__always_inline__))
+    AutoDiscovery::QueuePtr &Client::getAutoDiscoveryQueue() {
+        return _autoDiscoveryQueue;
     }
 
 }

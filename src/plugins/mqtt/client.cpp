@@ -7,13 +7,10 @@
 #include <EventScheduler.h>
 #include <kfc_fw_config.h>
 #include <PrintHtmlEntitiesString.h>
+#include "mqtt_plugin.h"
 #include "mqtt_strings.h"
-#include "mqtt_client.h"
-#include "component_proxy.h"
 #include "auto_discovery.h"
 #include "logger.h"
-#include "plugins.h"
-#include "mqtt_plugin.h"
 #include "templates.h"
 
 #if DEBUG_MQTT_CLIENT
@@ -26,7 +23,28 @@
 
 using KFCConfigurationClasses::System;
 
+using namespace MQTT;
+
 MQTTClient *MQTTClient::_mqttClient = nullptr;
+
+PacketQueue::PacketQueue(uint16_t packetId, uint32_t time, bool delivered, uint16_t internalPacketId) :
+    _packetId(packetId),
+    _internalId(internalPacketId == 0 ? MQTTClient::getNextInternalPacketId() : internalPacketId),
+    _delivered(delivered),
+    _time(time),
+    _timeout(kDefaultAckTimeout)
+{
+}
+
+bool PacketQueueVector::setTimeout(uint16_t internalId, uint16_t timeout)
+{
+    auto queue = find(PacketQueueInternalId(internalId));
+    if (queue) {
+        queue->setTimeout(timeout);
+        return true;
+    }
+    return false;
+}
 
 void MQTTClient::setupInstance()
 {
@@ -55,9 +73,16 @@ MQTTClient::Client() :
     _config(ClientConfig::getConfig()),
     _client(__LDBG_new(AsyncMqttClient)),
     _port(_config.getPort()),
-    _componentsEntityCount(0),
     _lastWillPayload('0'),
-    _connState(ConnectionState::NONE)
+    _connState(ConnectionState::NONE),
+#if MQTT_AUTO_DISCOVERY
+#if IOT_REMOTE_CONTROL
+    _startAutoDiscovery(false),
+#else
+    _startAutoDiscovery(true),
+#endif
+#endif
+    _messageProperties(nullptr)
 {
     constexpr size_t clientIdLength = 18;
     char *clientIdBuffer = const_cast<char *>(_client->getClientId()); // reuse the existing buffer that is declared private
@@ -82,13 +107,22 @@ MQTTClient::~Client()
 {
     __LDBG_printf("conn=%s", _connection());
     WiFiCallbacks::remove(WiFiCallbacks::EventType::CONNECTION, MQTTClient::handleWiFiEvents);
-    _clearQueue();
+    _resetClient();
     _timer.remove();
 
     _autoReconnectTimeout = kAutoReconnectDisabled;
     disconnect(true);
     onDisconnect(AsyncMqttClientDisconnectReason::TCP_DISCONNECTED);
     __LDBG_delete(_client);
+}
+
+void MQTTClient::_resetClient()
+{
+    __LDBG_printf("queue=%p rebroadcast_timer=%u queue_timer=%u queue_size=%u conn=%s", _autoDiscoveryQueue.get(), (bool)_autoDiscoveryRebroadcast, (bool)_queueTimer, _queue.size(), _connection());
+    _autoDiscoveryQueue.reset();
+    _autoDiscoveryRebroadcast.remove();
+    _queue.clear();
+    _packetQueue.clear();
 }
 
 void MQTTClient::_zeroConfCallback(const String &hostname, const IPAddress &address, uint16_t port, MDNSResolver::ResponseType type)
@@ -108,8 +142,8 @@ void MQTTClient::_zeroConfCallback(const String &hostname, const IPAddress &addr
 
 void MQTTClient::_setupClient()
 {
-    _debug_println();
-    _clearQueue();
+    __LDBG_printf("hostname=%s port=%u", _hostname.c_str(), _port);
+    _resetClient();
 
     _autoReconnectTimeout = _config.auto_reconnect_min;
 
@@ -141,55 +175,49 @@ void MQTTClient::_setupClient()
     _client->onMessage([this](char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) {
         onMessageRaw(topic, payload, properties, len, index, total);
     });
-#if MQTT_USE_PACKET_CALLBACKS
     _client->onPublish([this](uint16_t packetId) {
-        onPublish(packetId);
+        _onPacketAck(packetId, PacketAckType::PUBLISH);
     });
     _client->onSubscribe([this](uint16_t packetId, uint8_t qos) {
-        onSubscribe(packetId, static_cast<QosType>(qos));
+        _onPacketAck(packetId, PacketAckType::SUBSCRIBE);
     });
     _client->onUnsubscribe([this](uint16_t packetId) {
-        onUnsubscribe(packetId);
+        _onPacketAck(packetId, PacketAckType::UNSUBCRIBE);
     });
-#elif DEBUG_MQTT_CLIENT
-    _client->onPublish([this](uint16_t packetId) {
-        __LDBG_printf("packet_id=%u", packetId);
-    });
-    _client->onSubscribe([this](uint16_t packetId, uint8_t qos) {
-        __LDBG_printf("packet_id=%u qos=%d", packetId, qos);
-    });
-    _client->onUnsubscribe([this](uint16_t packetId) {
-        __LDBG_printf("packet_id=%u", packetId);
-    });
-#endif
 }
+
+//
+// Components
+//
 
 void MQTTClient::registerComponent(ComponentPtr component)
 {
-    __LDBG_printf("component=%p", component);
-    if (unregisterComponent(component)) {
-        debug_printf_P(PSTR("component registered multiple times: name=%s component=%p\n"), component->getName(), component);
+    if (!component) {
+        __DBG_assert_printf(false, "registerComponent(nullptr)");
+        return;
+    }
+    __LDBG_printf("component=%p type=%s", component, component->getName());
+    if (isComponentRegistered(component)) {
+        __DBG_assert_printf(false, "component=%p type=%s already registered", component, component->getName());
+        return;
     }
     _components.emplace_back(component);
-    _componentsEntityCount += component->getAutoDiscoveryCount();
-    __LDBG_printf("components=%u entities=%u", _components.size(), _componentsEntityCount);
+    __LDBG_printf("components=%u entities=%u", _components.size(), AutoDiscovery::List::size(_components));
 }
 
 bool MQTTClient::unregisterComponent(ComponentPtr component)
 {
-    __LDBG_printf("component=%p components=%u entities=%u", component, _components.size(), _componentsEntityCount);
-    bool removed = false;
-    if (_components.size()) {
-        remove(component);
-        auto iterator = std::remove(_components.begin(), _components.end(), component);
-        if (iterator != _components.end()) {
-            _componentsEntityCount -= component->getAutoDiscoveryCount();
-            _components.erase(iterator, _components.end());
-            removed = true;
-        }
+    if (!component) {
+        __DBG_assert_printf(false, "unregisterComponent(nullptr)");
+        return false;
     }
-    __LDBG_printf("components=%u entities=%u removed=%u", _components.size(), _componentsEntityCount, removed);
-    return removed;
+    auto size = _components.size();
+    if (size) {
+        remove(component);
+        _components.erase(std::remove(_components.begin(), _components.end(), component), _components.end());
+    }
+    __LDBG_printf("components=%u entities=%u removed=%u", _components.size(), AutoDiscovery::List::size(_components), _components.size() != size);
+    return _components.size() != size;
 }
 
 bool MQTTClient::isComponentRegistered(ComponentPtr component)
@@ -197,18 +225,34 @@ bool MQTTClient::isComponentRegistered(ComponentPtr component)
     return std::find(_components.begin(), _components.end(), component) != _components.end();
 }
 
+void MQTTClient::remove(ComponentPtr component)
+{
+    __LDBG_printf("component=%p topics=%u", component, _topics.size());
+    _topics.erase(std::remove_if(_topics.begin(), _topics.end(), [this, component](const ClientTopic &topic) {
+        if (topic.getComponent() == component) {
+            __LDBG_printf("topic=%s in_use=%d", topic.getTopic().c_str(), _topicInUse(component, topic));
+            if (!_topicInUse(component, topic)) {
+                unsubscribe(nullptr, topic.getTopic().c_str());
+            }
+            return true;
+        }
+        return false;
+    }), _topics.end());
+    _queue.erase(std::remove_if(_queue.begin(), _queue.end(), [this, component](const ClientQueue &queue) {
+        return (queue.getComponent() == component);
+    }), _queue.end());
+}
+
+//
+// Topics
+//
+
 String MQTTClient::formatTopic(const String &componentName, const __FlashStringHelper *format, ...)
 {
     String suffix;
-    if (componentName.length()) {
-        if (componentName.charAt(0) != '/') { // avoid double slash
-            suffix = '/';
-        }
-        suffix += componentName;
-    }
     va_list arg;
     va_start(arg, format);
-    String topic = _formatTopic(suffix, format, arg);
+    String topic = _formatTopic(componentName, format, arg);
     va_end(arg);
     return topic;
 }
@@ -248,6 +292,38 @@ String MQTTClient::_filterString(const char *str, bool replaceSpace)
     return out;
 }
 
+bool MQTTClient::_isTopicMatch(const char *topic, const char *match) const
+{
+    while(*topic) {
+        switch(*match) {
+            case 0:
+                return false;
+            case '#':
+                return true;
+            case '+':
+                match++;
+                while(*topic && *topic != '/') {
+                    topic++;
+                }
+                if (!*topic && !*match) {
+                    return true;
+                }
+                else if (*topic != *match) {
+                    return false;
+                }
+                break;
+            default:
+                if (*topic != *match) {
+                    return false;
+                }
+                break;
+        }
+        topic++;
+        match++;
+    }
+    return true;
+}
+
 String MQTTClient::_getBaseTopic()
 {
     PrintString topic;
@@ -261,6 +337,7 @@ String MQTTClient::_getBaseTopic()
     if (topic.indexOf(F("${device_title_no_space}")) != -1) {
         topic.replace(F("${device_title_no_space}"), _filterString(System::Device::getTitle(), true));
     }
+    String_rtrim(topic, '/');
     return topic;
 }
 
@@ -277,6 +354,7 @@ bool MQTTClient::_getGroupTopic(ComponentPtr component, String groupTopic, Strin
     }
     groupTopic += &topic.c_str()[deviceTopic.length() - 1];
     topic = std::move(groupTopic);
+    String_rtrim(topic, '/');
     return true;
 }
 
@@ -284,15 +362,20 @@ bool MQTTClient::_getGroupTopic(ComponentPtr component, String groupTopic, Strin
 
 String MQTTClient::_formatTopic(const String &suffix, const __FlashStringHelper *format, va_list arg)
 {
-    PrintString topic = MQTTClient::_getBaseTopic();
-    topic.print(suffix);
-    if (format) {
-        auto format_P = RFPSTR(format);
-        // if (pgm_read_byte(format_P) == '/' && String_endsWith(topic, '/')) { // avoid double slash
-        //     format_P++;
-        // }
-        topic.vprintf_P(format_P, arg);
+    PrintString topic = MQTTClient::_getBaseTopic(); // any trailing slashes are stripped
+    if (suffix.length()) {
+        if (suffix.charAt(0) != '/') { // add slash if missing
+            topic += '/';
+        }
+        topic.print(suffix);
     }
+    if (format) {
+        if (!suffix.length() && pgm_read_byte(RFPSTR(format)) != '/') { // add slash if missing
+            topic += '/';
+        }
+        topic.vprintf_P(RFPSTR(format), arg);
+    }
+    __DBG_assert_printf(topic.indexOf(F("//")) == -1, "topic '%s' contains //", topic.c_str());
     __LDBG_printf("topic=%s", topic.c_str());
     return topic;
 }
@@ -373,8 +456,8 @@ void MQTTClient::disconnect(bool forceDisconnect)
         // for example for clients that go to deep sleep
         // when reconfiguring or stopping mqtt, the device is marked offline manually
         __LDBG_printf("marking device as offline manually conn=%s", _connection());
-        _clearQueue();
-        publishWithId(_lastWillTopic, true, String(0));
+        _resetClient();
+        publishWithId(nullptr, _lastWillTopic, true, String(0));
     }
 #else
     _connState = ConnectionState::DISCONNECTING;
@@ -428,58 +511,6 @@ void MQTTClient::autoReconnect(AutoReconnectType timeout)
     }
 }
 
-String MQTTClient::connectionDetailsString()
-{
-    auto message = PrintString(F("%s@%s:%u"), _username.length() ? _username.c_str() : SPGM(Anonymous), (_address.isSet() ? _address.toString().c_str() : _hostname.c_str()), _port);
-#if ASYNC_TCP_SSL_ENABLED
-    if (ConfigType::cast_enum_mode(_config.mode) == ModeType::SECURE) {
-        message += F(", Secure MQTT");
-    }
-#endif
-    return message;
-}
-
-String MQTTClient::connectionStatusString()
-{
-    String message = connectionDetailsString();
-    switch(_connState) {
-        case ConnectionState::AUTO_RECONNECT_DELAY:
-            message += F(", waiting to reconnect, ");
-            break;
-        case ConnectionState::IDLE:
-            message += F(", idle, ");
-            break;
-        case ConnectionState::PRE_CONNECT:
-        case ConnectionState::CONNECTING:
-            message += F(", connecting, ");
-            break;
-        case ConnectionState::CONNECTED:
-            message += F(", connected, ");
-            break;
-        case ConnectionState::DISCONNECTED:
-        case ConnectionState::DISCONNECTING:
-        default:
-            message += F(", disconnected, ");
-            break;
-
-    }
-    // if (isConnected()) {
-    //     message += F(", connected, ");
-    // } else {
-    //     message += F(", disconnected, ");
-    // }
-    message += F("topic ");
-
-    message += formatTopic(emptyString);
-#if MQTT_AUTO_DISCOVERY
-    if (_config.auto_discovery) {
-        message += F(HTML_S(br) "Auto discovery prefix '");
-        message += ClientConfig::getAutoDiscoveryPrefix();
-        message += '\'';
-    }
-#endif
-    return message;
-}
 
 void MQTTClient::onConnect(bool sessionPresent)
 {
@@ -487,7 +518,7 @@ void MQTTClient::onConnect(bool sessionPresent)
     Logger_notice(F("Connected to MQTT server %s"), connectionDetailsString().c_str());
     _connState = ConnectionState::CONNECTED;
 
-    _clearQueue();
+    _resetClient();
 
     // set online status
     publish(_lastWillTopic, true, String(1));
@@ -498,15 +529,20 @@ void MQTTClient::onConnect(bool sessionPresent)
     for(const auto &component: _components) {
         component->onConnect(this);
     }
-#if IOT_REMOTE_CONTROL == 0
-    publishAutoDiscovery();
-#endif
+    if (_startAutoDiscovery) {
+        _startAutoDiscovery = false;
+        publishAutoDiscovery();
+    }
     _startupTimings.setMqtt(millis());
 }
 
 void MQTTClient::onDisconnect(AsyncMqttClientDisconnectReason reason)
 {
     __LDBG_printf("reason=%d auto_reconnect=%d conn=%s", (int)reason, _autoReconnectTimeout, _connection());
+
+    // onDisconnect() sets _startAutoDiscovery
+    // _startAutoDiscovery = _startAutoDiscovery || isAutoDiscoveryRunning();
+
     // check if the connection was established
     if (setConnState(ConnectionState::DISCONNECTED) == ConnectionState::CONNECTED) {
         PrintString str;
@@ -519,146 +555,20 @@ void MQTTClient::onDisconnect(AsyncMqttClientDisconnectReason reason)
         }
     }
     _topics.clear();
-    _clearQueue();
+    _resetClient();
 
     // reconnect automatically
     autoReconnect(_autoReconnectTimeout);
 }
 
-void MQTTClient::subscribe(ComponentPtr component, const String &topic, QosType qos)
-{
-    if (!_queue.empty() || subscribeWithId(component, topic, qos) == 0) {
-        _addQueue(QueueType::SUBSCRIBE, component, topic, qos, 0, String());
-    }
-}
-
-int MQTTClient::subscribeWithId(ComponentPtr component, const String &topic, QosType qos)
-{
-#if DEBUG
-    if (topic.length() == 0) {
-        __DBG_panic("subscribeWithId: topic is empty");
-    }
-#endif
-    __LDBG_printf("component=%p topic=%s qos=%d conn=%s", component, topic.c_str(), qos, _connection());
-    auto result = _client->subscribe(topic.c_str(), MQTTClient::_translateQosType(qos));
-    if (result && component) {
-        _topics.emplace_back(topic, component);
-    }
-    return result;
-}
-
-void MQTTClient::unsubscribe(ComponentPtr component, const String &topic)
-{
-    if (!_queue.empty() || unsubscribeWithId(component, topic) == 0) {
-        _addQueue(QueueType::UNSUBSCRIBE, component, topic, getDefaultQos(), 0, String());
-    }
-}
-
-#if MQTT_GROUP_TOPIC
-
-void MQTTClient::subscribeWithGroup(ComponentPtr component, const String &topic, QosType qos)
-{
-    if (!_queue.empty() || subscribeWithId(component, topic, qos) == 0) {
-        _addQueue(QueueType::SUBSCRIBE, component, topic, qos, 0, String());
-    }
-    auto groupBaseTopic = ClientConfig::getGroupTopic();
-    if (*groupBaseTopic) {
-        String groupTopic;
-        if (_getGroupTopic(component, groupBaseTopic, groupTopic)) {
-            if (!_queue.empty() || subscribeWithId(component, groupTopic, qos) == 0) {
-                _addQueue(QueueType::SUBSCRIBE, component, groupTopic, qos, 0, String());
-            }
-        }
-    }
-}
-
-void MQTTClient::unsubscribeWithGroup(ComponentPtr component, const String &topic)
-{
-    if (!_queue.empty() || unsubscribeWithId(component, topic) == 0) {
-        _addQueue(QueueType::UNSUBSCRIBE, component, topic, getDefaultQos(), 0, String());
-    }
-    auto groupBaseTopic = ClientConfig::getGroupTopic();
-    if (*groupBaseTopic) {
-        String groupTopic;
-        if (_getGroupTopic(component, groupBaseTopic, groupTopic)) {
-            if (!_queue.empty() || unsubscribeWithId(component, groupTopic) == 0) {
-                _addQueue(QueueType::UNSUBSCRIBE, component, groupTopic, getDefaultQos(), 0, String());
-            }
-        }
-    }
-}
-
-#endif
-
-int MQTTClient::unsubscribeWithId(ComponentPtr component, const String &topic)
-{
-    int result = -1;
-    __LDBG_printf("component=%p topic=%s in_use=%d conn=%s", component, topic.c_str(), _topicInUse(component, topic), _connection());
-    if (!_topicInUse(component, topic)) {
-        result = _client->unsubscribe(topic.c_str());
-    }
-    if (result && component) {
-        _topics.erase(std::remove_if(_topics.begin(), _topics.end(), [component, topic](const ClientTopic &mqttTopic) {
-            if (mqttTopic.match(component, topic)) {
-                return true;
-            }
-            return false;
-        }), _topics.end());
-    }
-    return result;
-}
-
-void MQTTClient::remove(ComponentPtr component)
-{
-    __LDBG_printf("component=%p topics=%u", component, _topics.size());
-    _topics.erase(std::remove_if(_topics.begin(), _topics.end(), [this, component](const ClientTopic &mqttTopic) {
-        if (mqttTopic.getComponent() == component) {
-            __LDBG_printf("topic=%s in_use=%d", mqttTopic.getTopic().c_str(), _topicInUse(component, mqttTopic.getTopic()));
-            if (!_topicInUse(component, mqttTopic.getTopic())) {
-                unsubscribe(nullptr, mqttTopic.getTopic().c_str());
-            }
-            return true;
-        }
-        return false;
-    }), _topics.end());
-}
-
 bool MQTTClient::_topicInUse(ComponentPtr component, const String &topic)
 {
     for(const auto &mqttTopic: _topics) {
-        if (mqttTopic.match(component, topic)) {
+        if ((component != mqttTopic.getComponent()) && mqttTopic.match(topic)) {
             return true;
         }
     }
     return false;
-}
-
-void MQTTClient::publish(const String &topic, bool retain, const String &payload, QosType qos)
-{
-    if (publishWithId(topic, retain, payload, qos) == 0) {
-        _addQueue(QueueType::PUBLISH, nullptr, topic, qos, retain, payload);
-    }
-}
-
-void MQTTClient::removeTopicsRequest(ComponentPtr component, const String &wildcard, ResultCallback callback)
-{
-    if (!_removeTopics) {
-        _removeTopics.reset(new RemoveTopicsVector());
-    }
-    _removeTopics->emplace_back(new ComponentProxy(this, component, wildcard, callback));
-    _removeTopics->back()->begin();
-}
-
-void MQTTClient::removeTopicsEndRequest(ComponentPtr component)
-{
-    if (_removeTopics) {
-        _removeTopics->erase(std::remove_if(_removeTopics->begin(), _removeTopics->end(), [component, this](const ComponentProxyPtr &item) {
-            return (item.get() == component || item->get() == component);
-        }), _removeTopics->end());
-        if (_removeTopics->empty()) {
-            _removeTopics.reset();
-        }
-    }
 }
 
 void MQTTClient::publishPersistantStorage(StorageFrequencyType type, const String &name, const String &data)
@@ -689,28 +599,18 @@ bool MQTTClient::publishAutoDiscovery(bool force)
 #if MQTT_AUTO_DISCOVERY
     _autoDiscoveryRebroadcast.remove();
 
-    if (AutoDiscovery::isEnabled() && !_components.empty()) {
+    if (AutoDiscovery::Queue::isEnabled() && !_components.empty()) {
         if (_autoDiscoveryQueue) {
-            __DBG_printf("auto discovery running count=%u size=%u", _autoDiscoveryQueue->_discoveryCount, _autoDiscoveryQueue->_size);
+            __LDBG_printf("auto discovery running count=%u size=%u", _autoDiscoveryQueue->_discoveryCount, _autoDiscoveryQueue->_size);
         }
         else {
-            _autoDiscoveryQueue.reset(new AutoDiscoveryQueue(*this));
+            _autoDiscoveryQueue.reset(new AutoDiscovery::Queue(*this));
             _autoDiscoveryQueue->publish(force);
             return true;
         }
     }
 #endif
     return false;
-}
-
-int MQTTClient::publishWithId(const String &topic, bool retain, const String &payload, QosType qos)
-{
-    __LDBG_printf("topic=%s qos=%d retain=%d payload=%s conn=%s", topic.c_str(), qos, retain, printable_string(payload.c_str(), payload.length(), DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str(), _connection());
-    if (topic.length() == 0) {
-        Logger_error(F("Emtpy topic publish to MQTT server"));
-        return 0;
-    }
-    return _client->publish(topic.c_str(), MQTTClient::_translateQosType(qos), retain, payload.c_str(), payload.length());
 }
 
 void MQTTClient::onMessageRaw(char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total)
@@ -743,84 +643,13 @@ void MQTTClient::onMessageRaw(char *topic, char *payload, AsyncMqttClientMessage
 void MQTTClient::onMessage(char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len)
 {
     __LDBG_printf("topic=%s payload=%s len=%d qos=%d dup=%d retain=%d", topic, printable_string(payload, len, DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str(), len, properties.qos, properties.dup, properties.retain);
+    _messageProperties = &properties;
     for(const auto &mqttTopic : _topics) {
         if (_isTopicMatch(topic, mqttTopic.getTopic().c_str())) {
             mqttTopic.getComponent()->onMessage(this, topic, payload, len);
         }
     }
-}
-
-#if MQTT_USE_PACKET_CALLBACKS
-
-void MQTTClient::onPublish(uint16_t packetId)
-{
-    __LDBG_printf("MQTTClient::onPublish(%u)", packetId);
-}
-
-void MQTTClient::onSubscribe(uint16_t packetId, QosType qos)
-{
-    __LDBG_printf("MQTTClient::onSubscribe(%u, %u)", packetId, qos);
-}
-
-void MQTTClient::onUnsubscribe(uint16_t packetId)
-{
-    __LDBG_printf("MQTTClient::onUnsubscribe(%u)", packetId);
-}
-
-#endif
-
-bool MQTTClient::_isTopicMatch(const char *topic, const char *match) const
-{
-    while(*topic) {
-        switch(*match) {
-            case 0:
-                return false;
-            case '#':
-                return true;
-            case '+':
-                match++;
-                while(*topic && *topic != '/') {
-                    topic++;
-                }
-                if (!*topic && !*match) {
-                    return true;
-                } else if (*topic != *match) {
-                    return false;
-                }
-                break;
-            default:
-                if (*topic != *match) {
-                    return false;
-                }
-                break;
-        }
-        topic++;
-        match++;
-    }
-    return true;
-}
-
-const __FlashStringHelper *MQTTClient::_reasonToString(AsyncMqttClientDisconnectReason reason) const
-{
-    switch(reason) {
-        case AsyncMqttClientDisconnectReason::TCP_DISCONNECTED:
-            return F("Network disconnect");
-        case AsyncMqttClientDisconnectReason::MQTT_UNACCEPTABLE_PROTOCOL_VERSION:
-            return F("Unacceptable protocol version");
-        case AsyncMqttClientDisconnectReason::MQTT_IDENTIFIER_REJECTED:
-            return F("Identifier rejected");
-        case AsyncMqttClientDisconnectReason::MQTT_SERVER_UNAVAILABLE:
-            return F("Server unavailable");
-        case AsyncMqttClientDisconnectReason::MQTT_MALFORMED_CREDENTIALS:
-            return F("Malformed credentials");
-        case AsyncMqttClientDisconnectReason::MQTT_NOT_AUTHORIZED:
-            return F("Not authorized");
-        case AsyncMqttClientDisconnectReason::ESP8266_NOT_ENOUGH_SPACE:
-            return F("ESP8266 not enough space");
-        case AsyncMqttClientDisconnectReason::TLS_BAD_FINGERPRINT:
-            return F("Bad fingerprint");
-    }
-    return F("Unknown");
+    _messageProperties = nullptr;
 }
 
 void MQTTClient::_handleWiFiEvents(WiFiCallbacks::EventType event, void *payload)
@@ -831,8 +660,9 @@ void MQTTClient::_handleWiFiEvents(WiFiCallbacks::EventType event, void *payload
             setAutoReconnect(_config.auto_reconnect_min);
             connect();
         }
-    } else if (event == WiFiCallbacks::EventType::DISCONNECTED) {
-        // force a quick disconnect if WiFi is down
+    }
+    else if (event == WiFiCallbacks::EventType::DISCONNECTED) {
+        // force a quick disconnect if WiFi is down and do not reconnect until it is back
         if (isConnected()) {
             _client->setKeepAlive(5);
             setAutoReconnect(0);
@@ -840,104 +670,3 @@ void MQTTClient::_handleWiFiEvents(WiFiCallbacks::EventType event, void *payload
     }
 }
 
-void MQTTClient::_addQueue(QueueType type, ComponentPtr component, const String &topic, QosType qos, bool retain, const String &payload)
-{
-    __LDBG_printf("type=%u topic=%s", type, topic.c_str());
-
-    if (MQTTClient::_isMessageSizeExceeded(topic.length() + payload.length(), topic.c_str())) {
-        return;
-    }
-
-    _queue.emplace_back(type, component, topic, qos, retain, payload);
-    _Timer(_queueTimer).add(MQTT_QUEUE_RETRY_DELAY, (MQTT_QUEUE_TIMEOUT / MQTT_QUEUE_RETRY_DELAY), [this](Event::CallbackTimerPtr timer) {
-        _queueTimerCallback();
-    });
-}
-
-void MQTTClient::_queueTimerCallback()
-{
-    // process queue
-    while(_queue.size()) {
-        int result = -1;
-        auto queue = _queue.front();
-        __LDBG_printf("queue=%u topic=%s space=%u", _queue.size(), queue.getTopic().c_str(), getClientSpace());
-        switch(queue.getType()) {
-            case QueueType::SUBSCRIBE:
-                result = subscribeWithId(queue.getComponent(), queue.getTopic(), queue.getQos());
-                break;
-            case QueueType::UNSUBSCRIBE:
-                result = unsubscribeWithId(queue.getComponent(), queue.getTopic());
-                break;
-            case QueueType::PUBLISH:
-                result = publishWithId(queue.getTopic(), queue.getRetain(), queue.getPayload(), queue.getQos());
-                break;
-        }
-        if (result == 0) {
-            return; // failure, retry again later
-        }
-        _queue.erase(_queue.begin());
-    }
-
-    __LDBG_print("queue done");
-    _queueTimer.remove();
-}
-
-void MQTTClient::_clearQueue()
-{
-    __LDBG_printf("queue=%p rebroadcast_timer=%u queue_timer=%u queue_size=%u conn=%s", _autoDiscoveryQueue.get(), (bool)_autoDiscoveryRebroadcast, (bool)_queueTimer, _queue.size(), _connection());
-    _autoDiscoveryQueue.reset();
-    _autoDiscoveryRebroadcast.remove();
-    _queueTimer.remove();
-    _queue.clear();
-}
-
-bool MQTTClient::_isMessageSizeExceeded(size_t len, const char *topic)
-{
-    if (len > MQTT_MAX_MESSAGE_SIZE) {
-        Logger_error(F("MQTT maximum message size exceeded: %u/%u: %s"), len, MQTT_MAX_MESSAGE_SIZE, topic);
-        return true;
-    }
-    return false;
-}
-
-int8_t MQTTClient::toBool(const char *str, int8_t invalid)
-{
-    while(isspace(*str)) {
-        str++;
-    }
-    if (!*str) {
-        return invalid;
-    }
-    char *end = nullptr;
-    auto value = strtol(str, &end, 0);
-    while(isspace(*end)) {
-        end++;
-    }
-    if (end && !*end) {
-        return value != 0;
-    }
-    auto tmp = String(str);
-    String_rtrim(tmp);
-    if (
-        (strcasecmp_P(tmp.c_str(), PSTR("true")) == 0) ||
-        (strcasecmp_P(tmp.c_str(), PSTR("on")) == 0) ||
-        (strcasecmp_P(tmp.c_str(), PSTR("yes")) == 0) ||
-        (strcasecmp_P(tmp.c_str(), PSTR("online")) == 0) ||
-        (strcasecmp_P(tmp.c_str(), PSTR("enable")) == 0) ||
-        (strcasecmp_P(tmp.c_str(), PSTR("enabled")) == 0)
-    ) {
-        return true;
-    }
-    if (
-        (strcasecmp_P(tmp.c_str(), PSTR("false")) == 0) ||
-        (strcasecmp_P(tmp.c_str(), PSTR("off")) == 0) ||
-        (strcasecmp_P(tmp.c_str(), PSTR("no")) == 0) ||
-        (strcasecmp_P(tmp.c_str(), PSTR("offline")) == 0) ||
-        (strcasecmp_P(tmp.c_str(), PSTR("disable")) == 0) ||
-        (strcasecmp_P(tmp.c_str(), PSTR("disabled")) == 0)
-    ) {
-        return false;
-    }
-    return invalid;
-
-}

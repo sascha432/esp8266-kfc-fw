@@ -21,14 +21,14 @@
 
 using KFCConfigurationClasses::System;
 
-using namespace MQTT;
+using namespace MQTT::AutoDiscovery;
 
-bool AutoDiscovery::create(ComponentPtr component, const String &componentName, FormatType format)
+bool Entity::create(ComponentPtr component, const String &componentName, FormatType format)
 {
     return create(component->getType(), componentName, format);
 }
 
-bool AutoDiscovery::create(ComponentType componentType, const String &componentName, FormatType format)
+bool Entity::create(ComponentType componentType, const String &componentName, FormatType format)
 {
     String suffix = System::Device::getName();
     if (componentName.length()) {
@@ -40,12 +40,22 @@ bool AutoDiscovery::create(ComponentType componentType, const String &componentN
     return _create(componentType, suffix, format);
 }
 
-String AutoDiscovery::getWildcardTopic()
+String Entity::getWildcardTopic()
 {
     return PrintString(F("%s/+/%s/#"), ClientConfig::getAutoDiscoveryPrefix(), System::Device::getName());
 }
 
-bool AutoDiscovery::_create(ComponentType componentType, const String &name, FormatType format)
+String Entity::getConfigWildcardTopic()
+{
+    return PrintString(F("%s/+/%s/config"), ClientConfig::getAutoDiscoveryPrefix(), System::Device::getName());
+}
+
+String Entity::getConfig2ndLevelWildcardTopic()
+{
+    return PrintString(F("%s/+/%s/+/config"), ClientConfig::getAutoDiscoveryPrefix(), System::Device::getName());
+}
+
+bool Entity::_create(ComponentType componentType, const String &name, FormatType format)
 {
     String uniqueId;
 
@@ -122,7 +132,7 @@ bool AutoDiscovery::_create(ComponentType componentType, const String &name, For
     return true;
 }
 
-void AutoDiscovery::__addParameter(NameType name, const char *str, bool list)
+void Entity::__addParameter(NameType name, const char *str, bool list)
 {
     if (_format == FormatType::TOPIC) {
         return;
@@ -153,7 +163,7 @@ void AutoDiscovery::__addParameter(NameType name, const char *str, bool list)
     }
 }
 
-void AutoDiscovery::finalize()
+void Entity::finalize()
 {
     if (!_discovery.length()) {
         __LDBG_printf("MQTT auto discovery payload empty");
@@ -168,35 +178,7 @@ void AutoDiscovery::finalize()
     __LDBG_printf("MQTT auto discovery payload '%s'", printable_string(_discovery.c_str(), _discovery.length(), DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str());
 }
 
-PrintString &AutoDiscovery::getPayload()
-{
-    return _discovery;
-}
-
-String &AutoDiscovery::getTopic()
-{
-    return _topic;
-}
-
-size_t AutoDiscovery::getMessageSize() const
-{
-    return _discovery.length() + _topic.length() + 16;
-}
-
-bool AutoDiscovery::isEnabled()
-{
-#if MQTT_AUTO_DISCOVERY
-    return
-#if ENABLE_DEEP_SLEEP
-        !resetDetector.hasWakeUpDetected() &&
-#endif
-        System::Flags::getConfig().is_mqtt_enabled;
-#else
-    return false;
-#endif
-}
-
-const String AutoDiscovery::_getUnqiueId(const String &name)
+const String Entity::_getUnqiueId(const String &name)
 {
     PrintString tmp;
     WebTemplate::printUniqueId(tmp, name);

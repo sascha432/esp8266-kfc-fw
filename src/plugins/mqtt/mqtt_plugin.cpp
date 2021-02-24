@@ -78,7 +78,7 @@ void Plugin::getStatus(Print &output)
     auto client = Client::getClient();
     if (client) {
         output.print(client->connectionStatusString());
-        output.printf_P(PSTR(HTML_S(br) "%u components, %u entities" HTML_S(br)), client->_components.size(), client->_componentsEntityCount);
+        output.printf_P(PSTR(HTML_S(br) "%u components, %u entities" HTML_S(br)), client->_components.size(), AutoDiscovery::List::size(client->_components));
     }
     else {
         output.print(FSPGM(Disabled));
@@ -90,13 +90,14 @@ void Plugin::getStatus(Print &output)
 
 #include "at_mode.h"
 
-PROGMEM_AT_MODE_HELP_COMMAND_DEF(MQTT, "MQTT", "<connect|disconnect|set|topics|autodiscovery>", "Manage MQTT\n"
+PROGMEM_AT_MODE_HELP_COMMAND_DEF(MQTT, "MQTT", "<connect|disconnect|set|topics|autodiscovery|list>", "Manage MQTT\n"
     "\n"
     "    connect or con                              Connect to server\n"
     "    disconnect or dis[,<true|false>]            Disconnect from server and enalbe/disable auto reconnect\n"
     "    set,<enable,disable>                        Enable or disable MQTT\n"
     "    topics or top                               List subscribed topics\n"
     "    autodiscovery or auto                       Publish auto discovery\n"
+    "    list[,<full|crc>]                           List auto discovery\n"
     "\n",
     "Display MQTT status"
 );
@@ -120,7 +121,7 @@ bool Plugin::atModeHandler(AtModeArgs &args)
         }
         else if (args.requireArgs(1, 2)) {
             auto &client = *clientPtr;
-            auto actionsStr = PSTR("connect|con|disconnect|dis|set|topics|top|autodiscovery|auto");
+            auto actionsStr = PSTR("connect|con|disconnect|dis|set|topics|top|autodiscovery|auto|list");
             auto action = stringlist_find_P_P(actionsStr, args.get(0), '|');
             switch(action) {
                 case 0: // connext
@@ -172,6 +173,36 @@ bool Plugin::atModeHandler(AtModeArgs &args)
                     }
                     else {
                         args.print(F("not connected, auto discovery running or not available"));
+                    }
+                    break;
+                case 9: {
+                        auto &stream = args.getStream();
+                        if (args.equalsIgnoreCase(1, F("crc"))) {
+                            auto list = client.getAutoDiscoveryList(FormatType::JSON);
+                            for(auto crc: list.crc()) {
+                                stream.printf_P(PSTR("%08x\n"), crc);
+                            }
+                        }
+                        else {
+                            FormatType format = args.equalsIgnoreCase(1, F("full")) ? FormatType::JSON : FormatType::TOPIC;
+                            auto &stream = args.getStream();
+                            auto list = client.getAutoDiscoveryList(format);
+                            if (list.empty()) {
+                                args.printf_P(PSTR("No components available"));
+                            }
+                            else {
+                                for(auto entity: list) {
+                                    if (format == FormatType::TOPIC) {
+                                        stream.println(entity->getTopic());
+                                    }
+                                    else {
+                                        stream.print(entity->getTopic());
+                                        stream.print(':');
+                                        stream.println(entity->getPayload());
+                                    }
+                                }
+                            }
+                        }
                     }
                     break;
                 default:

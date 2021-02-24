@@ -13,51 +13,80 @@
 
 namespace MQTT {
 
-    struct __attribute__((packed)) StateFileType {
-        bool _valid;
-        uint16_t _crc;
-        uint32_t _lastAutoDiscoveryTimestamp;
-        StateFileType(uint16_t crc = 0, uint32_t lastAutoDiscoveryTimestamp = 0) : _valid(IS_TIME_VALID(lastAutoDiscoveryTimestamp) && crc && crc != ~0U), _crc(crc), _lastAutoDiscoveryTimestamp(lastAutoDiscoveryTimestamp) {}
-    };
+    namespace AutoDiscovery {
 
-    class AutoDiscoveryQueue {
-    public:
-        AutoDiscoveryQueue(Client &client);
-        ~AutoDiscoveryQueue();
+        struct __attribute__((packed)) StateFileType {
+            bool _valid;
+            uint32_t _crc32b;
+            uint32_t _lastAutoDiscoveryTimestamp;
 
-        // clear queue and set last state to invalid
-        void clear();
+            StateFileType() :
+                _valid(false),
+                _crc32b(0),
+                _lastAutoDiscoveryTimestamp(0)
+            {}
 
-        // publish queue
-        void publish(bool force = false);
+            StateFileType(uint32_t crc32, uint32_t lastAutoDiscoveryTimestamp = 0) :
+                _valid(IS_TIME_VALID(lastAutoDiscoveryTimestamp) && crc32 != 0 && crc32 != 0xffffffff),
+                _crc32b(crc32),
+                _lastAutoDiscoveryTimestamp(lastAutoDiscoveryTimestamp)
+            {}
 
-        void list(Print &output, bool crc);
+            StateFileType(const AutoDiscovery::CrcVector &crcs, uint32_t lastAutoDiscoveryTimestamp = 0) :
+                StateFileType(crcs.crc32b(), lastAutoDiscoveryTimestamp)
+            {}
 
-        static bool isUpdateScheduled();
+        };
 
-    private:
-        void _timerCallback(Event::CallbackTimerPtr timer);
-        void _publishDone(bool success = true, uint32_t delay = 0);
+        class Queue : public Component {
+        public:
+            Queue(Client &client);
+            ~Queue();
 
-        static void _setState(const StateFileType &state);
-        static StateFileType _getState();
+            virtual AutoDiscovery::EntityPtr nextAutoDiscovery(FormatType format, uint8_t num);
+            virtual uint8_t getAutoDiscoveryCount() const;
 
-    private:
-        friend Client;
+            // virtual void onConnect(Client *client) override;
+            virtual void onDisconnect(Client *client, AsyncMqttClientDisconnectReason reason) override;
+            // virtual void onMessage(Client *client, char *topic, char *payload, size_t len) override;
+            virtual void onPacketAck(uint16_t packetId, PacketAckType type) override;
 
-        Client &_client;
-        Event::Timer _timer;
-        ComponentVector::iterator _next;
-        uint32_t _counter;
-        uint32_t _size;
-        uint32_t _discoveryCount;
-        uint16_t _crc;
-        bool _lastFailed;
-    #if DEBUG_MQTT_AUTO_DISCOVERY_QUEUE
-        uint32_t _start;
-        size_t _maxQueue;
-        uint32_t _maxQueueSkipCounter;
-    #endif
-    };
+            // clear queue and set last state to invalid
+            void clear();
+
+            // publish queue
+            static constexpr uint32_t kPublishDefaultDelay = ~0;
+            static constexpr uint32_t kPublishForce = true;
+
+            void publish(bool force = false) {
+                publish(force ? Event::milliseconds(0) : Event::milliseconds(kAutoDiscoveryInitialDelay));
+            }
+
+            void publish(Event::milliseconds delay);
+
+            static bool isUpdateScheduled();
+            static bool isEnabled();
+
+        private:
+            void _publishNextMessage();
+            void _publishDone(bool success = true, uint16_t onErrorDelay = 15);
+
+            static void _setState(const StateFileType &state);
+            static StateFileType _getState();
+
+        private:
+            friend Client;
+
+            Client &_client;
+            Event::Timer _timer;
+            uint32_t _size;
+            uint32_t _discoveryCount;
+            CrcVector _crcs;
+            List _entities;
+            List::iterator _iterator;
+            uint16_t _packetId;
+        };
+
+    }
 
 }

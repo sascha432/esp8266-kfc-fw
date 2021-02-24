@@ -32,3 +32,28 @@ namespace STL_STD_EXT_NAMESPACE_EX {
     }
 
 }
+
+#if __HAS_CPP14 == 0
+
+namespace STL_STD_EXT_NAMESPACE {
+
+    template<class _Ta, class... _Args>
+    std::enable_if_t<!std::is_array<_Ta>::value, std::unique_ptr<_Ta>>
+    make_unique(_Args&&... args)
+    {
+        return std::unique_ptr<_Ta>(new _Ta(std::forward<_Args>(args)...));
+    }
+
+    template<class _Ta>
+    std::enable_if_t<is_unbounded_array<_Ta>::value, std::unique_ptr<_Ta>>
+    make_unique(std::size_t n)
+    {
+        return std::unique_ptr<_Ta>(new std::remove_extent_t<_Ta>[n]());
+    }
+
+    template<class _Ta, class... _Args>
+    std::enable_if_t<is_bounded_array<_Ta>::value> make_unique(_Args&&...) = delete;
+
+}
+
+#endif

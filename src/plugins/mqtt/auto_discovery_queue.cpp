@@ -5,7 +5,11 @@
 #include <Arduino_compat.h>
 #include <EventScheduler.h>
 #include <MicrosTimer.h>
+#include <stl_ext/utility.h>
+#include <stl_ext/memory.h>
 #include "mqtt_client.h"
+#include "component_proxy.h"
+#include "auto_discovery_list.h"
 
 #if DEBUG_MQTT_AUTO_DISCOVERY_QUEUE
 #include <debug_helper_enable.h>
@@ -14,29 +18,85 @@
 #endif
 
 using KFCConfigurationClasses::Plugins;
+using KFCConfigurationClasses::System;
 
-using namespace MQTT;
+using namespace MQTT::AutoDiscovery;
 
-AutoDiscoveryQueue::AutoDiscoveryQueue(Client &client) : _client(client), _crc(~0)
+Queue::Queue(Client &client) :
+    Component(ComponentType::AUTO_DISCOVERY),
+    _client(client),
+    _packetId(0)
 {
+    _client.registerComponent(this);
 }
 
-AutoDiscoveryQueue::~AutoDiscoveryQueue()
+Queue::~Queue()
 {
     clear();
+    _client.unregisterComponent(this);
 }
 
-void AutoDiscoveryQueue::clear()
+EntityPtr Queue::nextAutoDiscovery(FormatType format, uint8_t num)
 {
-   __LDBG_printf("clear size=%u done=%u left=%u", _client._components.size(), _next == _client._components.end(), std::distance(_next, _client._components.end()));
-   if (_next != _client._components.end()) {
+    return nullptr;
+}
+
+uint8_t Queue::getAutoDiscoveryCount() const
+{
+    return 0;
+}
+
+void Queue::onDisconnect(Client *client, AsyncMqttClientDisconnectReason reason)
+{
+    _client._startAutoDiscovery = true;
+}
+
+void Queue::onPacketAck(uint16_t packetId, PacketAckType type)
+{
+    __LDBG_printf("packet=%u<->%u type=%u", _packetId, packetId, type);
+    if (_packetId == packetId) {
+        __LDBG_printf("packet=%u type=%u", packetId, type);
+        _packetId = 0;
+        if (type == PacketAckType::TIMEOUT) {
+            _publishDone(false);
+            return;
+        }
+        else {
+            _discoveryCount++;
+            _size += _iterator->getMessageSize();
+            _crcs.update(_iterator->getTopic(), _iterator->getPayload());
+            ++_iterator;
+            _publishNextMessage();
+        }
+    }
+}
+
+
+bool Queue::isEnabled()
+{
+#if MQTT_AUTO_DISCOVERY
+    return
+#if ENABLE_DEEP_SLEEP
+        !resetDetector.hasWakeUpDetected() &&
+#endif
+        System::Flags::getConfig().is_mqtt_enabled;
+#else
+    return false;
+#endif
+}
+
+void Queue::clear()
+{
+   __LDBG_printf("clear size=%u done=%u left=%u", _entities.size(), _iterator == _entities.end(), std::distance(_entities.begin(), _iterator));
+   if (_iterator != _entities.end()) {
        // clear last state on error
-       _setState(StateFileType(0));
+       _setState(StateFileType());
    }
     _timer.remove();
+    _crcs.clear();
 }
 
-bool AutoDiscoveryQueue::isUpdateScheduled()
+bool Queue::isUpdateScheduled()
 {
     uint32_t now  = time(nullptr);
     if (!IS_TIME_VALID(now)) {
@@ -50,182 +110,169 @@ bool AutoDiscoveryQueue::isUpdateScheduled()
     return (delay && now > state._lastAutoDiscoveryTimestamp + delay);
 }
 
-void AutoDiscoveryQueue::list(Print &output, bool crc)
+void Queue::publish(Event::milliseconds delay)
 {
-    auto iterator = _client._components.begin();
-    // MQTTAutoDiscoveryList
-}
-
-void AutoDiscoveryQueue::publish(bool force)
-{
-    __LDBG_printf("components=%u delay=%u force=%u", _client._components.size(), MQTT_AUTO_DISCOVERY_QUEUE_INITIAL_DELAY, force);
+    __LDBG_printf("components=%u delay=%u", _client._components.size(), delay);
     if (!_client._components.empty()) {
+        uint32_t initialDelay;
 
         // remove state
-        if (force) {
-            _setState(StateFileType(0));
+        if (delay.count() == 0) {
+            _setState(StateFileType());
+            initialDelay = 0; // use min. value
+        }
+        else {
+            // add +-10%
+            srand(micros());
+            initialDelay = stdex::randint(delay.count() * 0.9, delay.count() * 1.1);
         }
 
-#if DEBUG_MQTT_AUTO_DISCOVERY_QUEUE
-        _maxQueue = 0;
-        _maxQueueSkipCounter = 0;
-        _start = millis();
-#endif
-        _crc = static_cast<uint16_t>(~0U);
-        _lastFailed = false;
         _size = 0;
-        _counter = 0;
         _discoveryCount = 0;
-        _next = _client._components.begin();
-        (*_next)->rewindAutoDiscovery();
+        _crcs.clear();
+        _entities = List(_client._components, FormatType::JSON);
 
-        // no delay if forced
-        auto intialDelay = force ?
-            (0) :
-            (MQTT_AUTO_DISCOVERY_QUEUE_INITIAL_DELAY + (rand() %
-                    ((MQTT_AUTO_DISCOVERY_QUEUE_INITIAL_DELAY / 10) > 5 ? (MQTT_AUTO_DISCOVERY_QUEUE_INITIAL_DELAY / 10) : 5)
-                ));
-        _Timer(_timer).add(Event::milliseconds(std::max(1000, intialDelay)), true, [this](Event::CallbackTimerPtr timer) {
-            _timerCallback(timer);
+        _Timer(_timer).add(Event::milliseconds(std::max<uint32_t>(1000, initialDelay)), false, [this](Event::CallbackTimerPtr timer) {
+
+            // get all topics that belong to this device
+            auto collect = std::make_shared<CollectTopicsComponent>(&_client, std::move(_client._createAutoDiscoveryTopics()));
+            collect->begin([this, collect](ComponentProxy::ErrorType error, AutoDiscovery::CrcVector &crcs) mutable {
+                __LDBG_printf("collect callback error=%u", error);
+                if (error == ComponentProxy::ErrorType::SUCCESS) {
+                    // compare with current auto discovery
+                    auto currentCrcs = _entities.crc();
+                    __LDBG_printf("crc32 %08x==%08x", crcs.crc32b(), currentCrcs.crc32b());
+                    if (currentCrcs == crcs) {
+                        __LDBG_printf("auto discovery matches current version");
+                        _publishDone(true);
+                        return;
+                    }
+                    else {
+                        __LDBG_printf("collect=%p", collect.get());
+                        // discovery has changed, remove all topics that are not updated/old and start broadcasting
+                        // recycle _wildcards and currentCrcs
+                        auto remove = std::make_shared<RemoveTopicsComponent>(&_client, std::move(collect->_wildcards), std::move(currentCrcs));
+                        // destroy object. the callback was moved onto the stack and _wildcards to RemoveTopicsComponent
+                        collect.reset();
+
+                        remove->begin([this, remove](ComponentProxy::ErrorType error) mutable {
+                            __LDBG_printf("collect callback error=%u remove=%p", error, remove.get());
+                            remove->_wildcards.clear(); // remove wildcards to avoid unsubscribing twice
+                            remove.reset();
+
+                            if (error == ComponentProxy::ErrorType::SUCCESS) {
+                                __LDBG_printf("starting to broadcast auto discovery");
+                                _packetId = 0;
+                                _iterator = _entities.begin();
+                                _publishNextMessage();
+                            }
+                            else {
+                                __LDBG_printf("error %u occurred during remove topics", error);
+                                _publishDone(true);
+                                return;
+                            }
+                        });
+                    }
+                }
+                else {
+                    __LDBG_printf("error %u occurred during collect topics", error);
+                    _publishDone(true);
+                    return;
+                }
+            });
         });
     }
 }
 
-void AutoDiscoveryQueue::_timerCallback(Event::CallbackTimerPtr timer)
+void Queue::_publishNextMessage()
 {
-    __DBG_assert_panic(MQTTClient::getClient() == &_client, "_client address has changed");
-
-    if (_counter++ == 0 && _next == _client._components.begin()) {
-        uint32_t now = time(nullptr);
-        uint32_t delay = 0;
-        auto state = StateFileType();
-        if (IS_TIME_VALID(now)) {
-            state = _getState();
-            if (state._valid) {
-                delay = Plugins::MQTTClient::getConfig().auto_discovery_rebroadcast_interval;
-                if (delay && now < state._lastAutoDiscoveryTimestamp + delay) {
-                    __LDBG_printf("state=%u now=%u last_update=%u delay=%u", state._valid, now, state._lastAutoDiscoveryTimestamp, delay);
-                    _publishDone(false, delay);
-                    return;
-                }
-            }
+    do {
+        if (_iterator == _entities.end()) {
+            __LDBG_printf("auto discovery published");
+            _publishDone(true);
+            return;
         }
-
-        __LDBG_printf("state=%u now=%u last_update=%u crc=%04x delay=%u update_interval=%u", state._valid, now, state._lastAutoDiscoveryTimestamp, state._crc, delay, MQTT_AUTO_DISCOVERY_QUEUE_DELAY);
-
-        // rearm timer after the first call
-        timer->updateInterval(Event::milliseconds(MQTT_AUTO_DISCOVERY_QUEUE_DELAY));
-    }
-
-    if (!_client.isConnected()) {
-        __LDBG_print("not connected to MQTT server, defering auto discovery");
-        return;
-    }
-
-#if DEBUG_MQTT_AUTO_DISCOVERY_QUEUE
-    _maxQueue = std::max(_maxQueue, _client._queue.size());
-#endif
-
-    // check client's queue
-    if (!_client._queue.empty()) {
-        __LDBG_printf("client queue %u, skipping max=%u", _client._queue.size(), _maxQueueSkipCounter++);
-        return;
-    }
-
-    __LDBG_printf("component #%u count=%u queue=%u counter=%u", std::distance(_client._components.begin(), _next), (*_next)->getAutoDiscoveryCount() + 1, _client._queue.size(), _counter);
-    __DBG_assert_panic((_next != _client._components.end()), "_next must not be equal _client._components.end()");
-
-    // skip components without auto discovery
-    if ((*_next)->getAutoDiscoveryCount() == 0) {
-        do {
-            if (++_next == _client._components.end()) {
-                _publishDone(true);
-                return;
-            }
-            __LDBG_printf("component #%u count=%u", std::distance(_client._components.begin(), _next), (*_next)->getAutoDiscoveryCount());
+        if (!_client.isConnected()) {
+            __LDBG_printf("lost connection: auto discovery aborted");
+            // _client._startAutoDiscovery = true;
+            _publishDone(false);
+            return;
         }
-        while((*_next)->rewindAutoDiscovery() == false);
-    }
-
-    auto component = *_next;
-    auto discovery = component->nextAutoDiscovery(FormatType::JSON, component->getAutoDiscoveryNumber());
-    component->nextAutoDiscovery();
-    if (discovery) {
-        // do we have enough space to send?
-        auto msgSize = discovery->getMessageSize();
-        if (msgSize < _client.getClientSpace()) {
-            __LDBG_printf("topic=%s size=%u/%u", discovery->getTopic().c_str(), msgSize, _client.getClientSpace());
-            __LDBG_printf("%s", printable_string(discovery->getPayload().c_str(), discovery->getPayload().length(), DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str());
-
-            _discoveryCount++;
-            _size += msgSize;
-
-            _client.publish(discovery->getTopic(), true, discovery->getPayload(), QosType::AUTO_DISCOVERY);
-
-            if (_lastFailed) {
-                _lastFailed = false;
-            }
-            else {
-                _crc = crc16_update(_crc, discovery->getPayload().c_str(), discovery->getPayload().length());
-                __LDBG_printf("crc=%04x topic=%s", _crc, discovery->getTopic().c_str());
-            }
-
+        auto entitiy = *_iterator;
+        if (!entitiy) {
+            __LDBG_printf_E("entity nullptr");
+            ++_iterator;
+            continue;
         }
-        else {
-            _lastFailed = true;
-            __LDBG_printf("tcp buffer full: %u > %u, queue counter=%u", msgSize, _client.getClientSpace(), _maxQueueSkipCounter++);
-            if (!Client::_isMessageSizeExceeded(msgSize, discovery->getTopic().c_str())) {
-                // retry if size not exceeded
-                component->retryAutoDiscovery();
-            }
-            else {
-                _crc = 0;
-            }
+        auto topic = entitiy->getTopic().c_str();
+        auto size = entitiy->getMessageSize();
+        if (Client::_isMessageSizeExceeded(size, topic)) {
+            // skip message that does not fit into the tcp buffer
+            ++_iterator;
+            __LDBG_printf_E("max size exceeded topic=%s payload=%u size=%u", topic, entitiy->getPayload().length(), size);
+            __LDBG_printf("%s", printable_string(entitiy->getPayload().c_str(), entitiy->getPayload().length(), DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str());
+            continue;
         }
-        __LDBG_delete(discovery);
-        return;
-    }
+        if (size >= _client.getClientSpace()) {
+            __LDBG_printf_W("topic=%s size=%u/%u delay=%u", topic, size, _client.getClientSpace(), kAutoDiscoveryErrorDelay);
+            _Timer(_timer).add(Event::milliseconds(kAutoDiscoveryErrorDelay), false, [this](Event::CallbackTimerPtr) {
+                _publishNextMessage();
+            });
+            break;
+        }
+        __LDBG_printf("topic=%s size=%u/%u", topic, size, _client.getClientSpace());
+        __LDBG_printf("%s", printable_string(entitiy->getPayload().c_str(), entitiy->getPayload().length(), DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str());
 
-    if (++_next == _client._components.end()) {
-        _publishDone(true);
-        return;
+        // we can assign a packet id before in case the acknowledgment arrives before setting _packetId after the call
+        // pretty unlikely with WiFI a a few ms lag, but with enough debug code in between it is possible ;)
+        _packetId = _client.getNextInternalPacketId();
+        __LDBG_printf("auto discovery packet id=%u", _packetId);
+        auto queue = _client.publishWithId(nullptr, entitiy->getTopic(), true, entitiy->getPayload(), QosType::AUTO_DISCOVERY, _packetId);
+        if (!queue) {
+            __LDBG_printf("failed to publish topic=%s", topic);
+            _publishDone(false);
+            return;
+        }
+        // _packetId = queue.getInternalId();
+        // __LDBG_printf("auto discovery packet id=%u", _packetId);
     }
-    else {
-        // move to next component
-        (*_next)->rewindAutoDiscovery();
-    }
+    while(false);
 }
 
-void AutoDiscoveryQueue::_publishDone(bool success, uint32_t delay)
+// make sure to exit any method after calling done
+// the method deletes the object and this becomes invalid
+void Queue::_publishDone(bool success, uint16_t onErrorDelay)
 {
-    __LDBG_printf("done=%u delay_next=%u components=%u discovery=%u size=%u time=%.4fs max_queue=%u queue_skip=%u iterations=%u crc=%04x old_crc=%04x",
+    __LDBG_printf("success=%u error_delay=%u entities=%u published=%u size=%u crc=%08x",
         success,
-        delay,
-        _client._components.size(),
+        onErrorDelay,
+        _entities.size(),
         _discoveryCount,
         _size,
-        get_time_diff(_start, millis()) / 1000.0,
-        _maxQueue,
-        _maxQueueSkipCounter,
-        _counter,
-        _crc,
-        _getState()._crc
+        _crcs.crc32b()
     );
 
-
-    if ((delay) || ((delay = Plugins::MQTTClient::getConfig().auto_discovery_rebroadcast_interval) != 0) || (!success && (delay = 15) != 0)) {
-        _Timer(_client._autoDiscoveryRebroadcast).add(Event::minutes(delay), false, Client::publishAutoDiscoveryCallback);
+    Event::milliseconds delay;
+    if (success) {
+        delay = Event::minutes(Plugins::MQTTClient::getConfig().auto_discovery_rebroadcast_interval);
+    }
+    else if (onErrorDelay) {
+        delay = Event::minutes(onErrorDelay);
+    }
+    else {
+        delay = Event::milliseconds::zero();
     }
     auto message = PrintString(success ? F("MQTT auto discovery published [components=%u, size=") : F("MQTT auto discovery aborted [components=%u, size="), _discoveryCount);
     message.print(formatBytes(_size));
-    if (delay) {
-        message.printf_P(PSTR(", rebroadcast in %s"), formatTime(delay * 60U).c_str());
+    if (delay.count()) {
+        message.printf_P(PSTR(", rebroadcast in %s"), formatTime(delay.count() / 1000U).c_str());
+        _Timer(_client._autoDiscoveryRebroadcast).add(delay, false, Client::publishAutoDiscoveryCallback);
     }
     message.print(']');
 
     Logger_notice(message);
     if (success) {
-        _setState(StateFileType(_crc, time(nullptr)));
+        _setState(StateFileType(_crcs, time(nullptr)));
     }
     else {
         _setState(StateFileType());
@@ -234,7 +281,7 @@ void AutoDiscoveryQueue::_publishDone(bool success, uint32_t delay)
     _client._autoDiscoveryQueue.reset(); // deletes itself and the timer
 }
 
-void AutoDiscoveryQueue::_setState(const StateFileType &state)
+void Queue::_setState(const StateFileType &state)
 {
     if (!state._valid) {
         KFCFS.remove(FSPGM(mqtt_state_file));
@@ -248,7 +295,7 @@ void AutoDiscoveryQueue::_setState(const StateFileType &state)
     }
 }
 
-StateFileType AutoDiscoveryQueue::_getState()
+StateFileType Queue::_getState()
 {
     auto state = StateFileType();
     auto file = KFCFS.open(FSPGM(mqtt_state_file), fs::FileOpenMode::read);

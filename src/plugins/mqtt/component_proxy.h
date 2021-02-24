@@ -2,103 +2,142 @@
  * Author: sascha_lammers@gmx.de
  */
 
+#pragma once
+
 #include <Arduino_compat.h>
+#include "mqtt_base.h"
 #include "mqtt_client.h"
+#include "auto_discovery_list.h"
+
+#if DEBUG_MQTT_CLIENT
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
 
 namespace MQTT {
 
+    // base class that subscribes to a list of topics
     class ComponentProxy : public Component {
     public:
-        ComponentProxy(Client *client, ComponentPtr component, const String &wildcard, ResultCallback callback) :
-            Component(ComponentType::DEVICE_AUTOMATION),
+        enum class ErrorType : uint8_t {
+            SUCCESS = 0,
+            NONE,
+            UNKNOWN,
+            TIMEOUT,
+            DISCONNECT,
+            ABORTED,
+            PUBLISH,
+            SUBSCRIBE,
+        };
+
+    public:
+        ComponentProxy(ComponentType type, Client *client, const StringVector &wildcards) :
+            Component(type),
             _client(client),
-            _component(component),
-            _wildcard(wildcard),
-            _callback(callback)
+            _wildcards(wildcards),
+            _iterator(_wildcards.begin()),
+            _packetId(0),
+            _subscribe(true)
         {
-        }
-        ~ComponentProxy() {
-            if (_callback) {
-                _callback(_component, Client::getClient(), false);
-            }
+            init();
         }
 
-        Component *get() const {
-            return _component;
+        ComponentProxy(ComponentType type, Client *client, StringVector &&wildcards) :
+            Component(type),
+            _client(client),
+            _wildcards(std::move(wildcards)),
+            _iterator(_wildcards.begin()),
+            _packetId(0),
+            _subscribe(true)
+        {
+            init();
         }
 
-        virtual AutoDiscoveryPtr nextAutoDiscovery(FormatType format, uint8_t num) { return nullptr; }
-        virtual uint8_t getAutoDiscoveryCount() const { return 0; }
+        virtual ~ComponentProxy();
 
-        // this method will destroy the object, do not access this afterwards
-        void invokeEnd(MQTTClient *client, bool result) {
-            _timeout.remove();
-            if (_callback) {
-                _callback(_component, client, true);
-                _callback = nullptr;
-            }
-            client->remove(this);
-            client->removeTopicsEndRequest(_component);
-        }
+        void init();
 
-        virtual void onConnect(MQTTClient *client) {
-            begin();
-        }
+        virtual AutoDiscovery::EntityPtr nextAutoDiscovery(FormatType format, uint8_t num);
+        virtual uint8_t getAutoDiscoveryCount() const;
 
-        virtual void onDisconnect(MQTTClient *client, AsyncMqttClientDisconnectReason reason) {
-            end();
-        }
+        virtual void onDisconnect(Client *client, AsyncMqttClientDisconnectReason reason);
+        virtual void onMessage(Client *client, char *topic, char *payload, size_t len) final;
+        virtual void onPacketAck(uint16_t packetId, PacketAckType type) override;
 
-        virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len) {
-            __LDBG_printf("component=%p topic=%s payload=%s len=%u", _component, topic, payload, len);
-            if (len != 0) {
-                if (_testPayload.equals(payload)) {
-                    _testPayload = String();
-                    invokeEnd(client, true);
-                    return;
-                }
-                __DBG_printf("remove topic=%s", topic);
-                _client->publish(topic, false, String(), QosType::AT_MODE_ONCE);
-            }
-        }
+        // abort does not execute end() and onEnd() in the same context but inside the main loop
+        // code running directly after abort will be executed before end()/onEnd()
+        // if executed inside a timer, the timer should be disarmed to avoid getting called again
+        void abort(ErrorType error);
+        void begin();
+        void end();
 
-        void begin(uint16_t timeout_seconds = 30) {
-            __LDBG_printf("begin topic=%s", _wildcard.c_str());
-            _Timer(_timeout).add(Event::seconds(timeout_seconds), false, [this](Event::CallbackTimerPtr timer) {
-                __LDBG_printf("timeout=%s", _wildcard.c_str());
-                invokeEnd(_client, false);
-            });
-            _client->subscribe(this, _wildcard, QosType::EXACTLY_ONCE);
-            auto tmp = String(_wildcard);
-            tmp.replace(F("+"), PrintString(F("test_%08x%06x"), micros(), this));
+        virtual void onBegin();
+        virtual void onEnd(ErrorType error);
+        virtual void onMessage(char *topic, char *payload, size_t len);
 
-            srand(micros());
-            char buf[32];
-            char *ptr = buf;
-            uint8_t count = sizeof(buf);
-            while(count--) {
-                *ptr++ = rand();
-                delayMicroseconds(rand() % 10 + 1);
-            }
-            _testPayload = String();
-            bin2hex_append(_testPayload, buf, sizeof(buf));
-
-            _client->publish(tmp, false, _testPayload, QosType::AT_MODE_ONCE);
-
-        }
-        void end() {
-            __LDBG_printf("end topic=%s", _wildcard.c_str());
-            _client->unsubscribe(this, _wildcard);
-            _timeout.remove();
-        }
-
+    protected:
+        friend AutoDiscovery::Queue;
 
         Client *_client;
-        Component *_component;
-        String _wildcard;
-        String _testPayload;
-        ResultCallback _callback;
-        Event::Timer _timeout;
+        StringVector _wildcards;
+    private:
+        void _runNext();
+
+        StringVector::iterator _iterator;
+        uint16_t _packetId;
+        bool _subscribe; // _runNext(): true = subscribe, false = unsubscribe
+    };
+
+    // class that collects (retained) messages for wildcard topics
+    class CollectTopicsComponent : public ComponentProxy {
+    public:
+        // wait after subscribing to the last topic to give the network time to transfer all retained messages
+        static constexpr uint32_t kSubscribeWaitTime = 30000;   // milliseconds
+
+        using Callback = std::function<void(ErrorType error, AutoDiscovery::CrcVector &crcs)>;
+
+        CollectTopicsComponent(Client *client, StringVector &&wildcards, Callback callback = nullptr);
+
+        void begin(Callback callback) {
+            __LDBG_printf("collect topics");
+            _callback = callback;
+            ComponentProxy::begin();
+        }
+
+        virtual void onBegin() override;
+        virtual void onEnd(ErrorType error) override;
+        virtual void onMessage(char *topic, char *payload, size_t payloadLength) override;
+
+    private:
+        AutoDiscovery::CrcVector _crcs;
+        Callback _callback;
+        Event::Timer _timer;
+    };
+
+    class RemoveTopicsComponent : public ComponentProxy {
+    public:
+        using Callback = std::function<void(ErrorType error)>;
+
+        RemoveTopicsComponent(Client *client, StringVector &&wildcards, AutoDiscovery::CrcVector &&crcs, Callback callback = nullptr);
+
+        void begin(Callback callback) {
+            __LDBG_printf("remove topics");
+            _callback = callback;
+            ComponentProxy::begin();
+        }
+
+        virtual void onEnd(ErrorType error) override;
+        virtual void onMessage(char *topic, char *payload, size_t len) override;
+        virtual void onPacketAck(uint16_t packetId, PacketAckType type) override;
+
+    private:
+        AutoDiscovery::CrcVector _crcs;
+        Callback _callback;
+        std::vector<uint16_t> _packets;
+        Event::Timer _timer;
     };
 
 }
+
+#include <debug_helper_disable.h>

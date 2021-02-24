@@ -36,7 +36,7 @@ void Plugin::createConfigureForm(FormCallbackType type, const String &formName, 
         ClientConfig::ModeType::UNSECURE, FSPGM(Enabled)
     );
     FormUI::Container::List qosItems(
-        ClientConfig::QosType::AT_MODE_ONCE, F("At most once (0)"),
+        ClientConfig::QosType::AT_MOST_ONCE, F("At most once (0)"),
         ClientConfig::QosType::AT_LEAST_ONCE, F("At least once (1)"),
         ClientConfig::QosType::EXACTLY_ONCE, F("Exactly once (2)")
 #if ASYNC_TCP_SSL_ENABLED

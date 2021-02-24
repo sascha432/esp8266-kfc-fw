@@ -10,22 +10,13 @@
 
 namespace MQTT {
 
-    class Component;
-    class ComponentProxy;
-    class PersistantStorageComponent;
-    class AutoDiscoveryQueue;
-    class AutoDiscovery;
-    class Topic;
-    class Queue;
-    class Plugin;
-    class Client;
-
     enum class ComponentType : uint8_t {
         SWITCH = 1,
         LIGHT,
         SENSOR,
         BINARY_SENSOR,
-        DEVICE_AUTOMATION
+        DEVICE_AUTOMATION,
+        AUTO_DISCOVERY
     };
 
     enum class FormatType : uint8_t {
@@ -38,6 +29,13 @@ namespace MQTT {
         SUBSCRIBE,
         UNSUBSCRIBE,
         PUBLISH
+    };
+
+    enum class PacketAckType : uint8_t {
+        SUBSCRIBE,
+        UNSUBCRIBE,
+        PUBLISH,
+        TIMEOUT,
     };
 
     enum class StorageFrequencyType : uint8_t {
@@ -57,10 +55,34 @@ namespace MQTT {
         DISCONNECTED                    // disconnect callback received
     };
 
-    using AutoDiscoveryPtr = AutoDiscovery *;
+    class Component;
+    class ComponentProxy;
+    class ComponentIterator;
+    class PersistantStorageComponent;
+    class Plugin;
+    class Client;
+    class ClientTopic;
+    class ClientQueue;
+    class PacketQueue;
+    class QueueVector;
+    class PacketQueueVector;
+
+    namespace AutoDiscovery {
+
+        class Entity;
+        class Queue;
+        class List;
+        class ListIterator;
+        class ConstListIterator;
+
+        using EntityPtr = Entity *;
+        using EntitySharedPtr = std::shared_ptr<Entity>;
+        using QueuePtr = std::unique_ptr<Queue>;
+    };
+
     using AutoReconnectType = uint16_t;
-    using AutoDiscoveryQueuePtr = std::unique_ptr<AutoDiscoveryQueue>;
     using ComponentPtr = Component *;
+    using NameType = const __FlashStringHelper *;
     using ComponentVector = std::vector<ComponentPtr>;
     using ConfigType = KFCConfigurationClasses::Plugins::MQTTClient::MqttConfig_t;
     using ModeType = KFCConfigurationClasses::Plugins::MQTTClient::ModeType;
@@ -68,9 +90,32 @@ namespace MQTT {
     using ClientConfig = KFCConfigurationClasses::Plugins::MQTTClient;
     using ResultCallback = std::function<void(ComponentPtr component, Client *client, bool result)>;
     using ComponentProxyPtr = std::unique_ptr<ComponentProxy>;
-    using NameType = const __FlashStringHelper *;
+    using TopicVector = std::vector<ClientTopic>;
+    // using QueueVector = std::vector<ClientQueue>;
+    // using PacketQueueList = std::vector<PacketQueue>;
 
     static constexpr AutoReconnectType kAutoReconnectDisabled = 0;
+
+    // reduce timeouts if the queue reqiures too much RAM
+
+    // packets in the local queue are discarded after 7.5 seconds
+    // the timeout can be changed after sending a packet
+    // _packetQueue.setTimeout(internalid, timeout);
+    static constexpr uint16_t kDefaultQueueTimeout = MQTT_QUEUE_TIMEOUT;            // milliseconds
+    // if a packet does not get acknowledged within 10 seconds, it times out
+    static constexpr uint16_t kDefaultAckTimeout = MQTT_DEFAULT_TIMEOUT;            // milliseconds
+    // if the packet is in the delivery queue, the timeout increase by kDefaultAckTimeout
+    static constexpr uint16_t kDefaultCanDeleteTimeout = kDefaultAckTimeout;        // milliseconds
+
+
+    // delay after calling publish() without force = true
+    static constexpr uint32_t kAutoDiscoveryInitialDelay = MQTT_AUTO_DISCOVERY_QUEUE_INITIAL_DELAY; // milliseconds
+
+    static constexpr uint32_t kAutoDiscoveryErrorDelay = MQTT_AUTO_DISCOVERY_ERROR_DELAY; // milliseconds
+
+
+    static constexpr uint32_t kDeliveryQueueRetryDelay = MQTT_QUEUE_RETRY_DELAY; // milliseconds
+
 
 }
 

@@ -34,6 +34,11 @@
 #define MQTT_QUEUE_TIMEOUT                                      7500
 #endif
 
+// default timeout waiting for the acknowledgement packet
+#ifndef MQTT_DEFAULT_TIMEOUT
+#define MQTT_DEFAULT_TIMEOUT                                    10000
+#endif
+
 // delay before retrying subscribe/unsubcribe/publish
 #ifndef MQTT_QUEUE_RETRY_DELAY
 #define MQTT_QUEUE_RETRY_DELAY                                  250
@@ -77,8 +82,7 @@
 #define DEBUG_MQTT_CLIENT_PAYLOAD_LEN                           128
 #endif
 
-// initial delay after connect
-// +-10%
+// initial delay after connect +-10%
 #ifndef MQTT_AUTO_DISCOVERY_QUEUE_INITIAL_DELAY
 #define MQTT_AUTO_DISCOVERY_QUEUE_INITIAL_DELAY                 30000
 #endif
@@ -86,4 +90,9 @@
 // delay between sending auto discovery
 #ifndef MQTT_AUTO_DISCOVERY_QUEUE_DELAY
 #define MQTT_AUTO_DISCOVERY_QUEUE_DELAY                         1500
+#endif
+
+// delay before retrying to send
+#ifndef MQTT_AUTO_DISCOVERY_ERROR_DELAY
+#define MQTT_AUTO_DISCOVERY_ERROR_DELAY                         5000
 #endif

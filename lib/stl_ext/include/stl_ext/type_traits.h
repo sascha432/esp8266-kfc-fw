@@ -63,6 +63,23 @@ namespace STL_STD_EXT_NAMESPACE {
 
 #endif
 
+#if __HAS_CPP14 == 0
+
+    template<class T>
+    struct is_unbounded_array: std::false_type {};
+
+    template<class T>
+    struct is_unbounded_array<T[]> : std::true_type {};
+
+
+    template<class T>
+    struct is_bounded_array: std::false_type {};
+
+    template<class T, std::size_t N>
+    struct is_bounded_array<T[N]> : std::true_type {};
+
+#endif
+
 #if __HAS_CPP17 == 0
 
     // template<typename _Ta>
@@ -223,7 +240,7 @@ namespace STL_STD_EXT_NAMESPACE_EX {
         using signed_max_type = signed_integral_type_helper_t<_MaxValue>;
     public:
         static constexpr bool is_min_value_signed = _MinValue <= -1;
-        static constexpr bool is_max_value_signed = is_min_value_signed && _MaxValue <= -1;     
+        static constexpr bool is_max_value_signed = is_min_value_signed && _MaxValue <= -1;
         static constexpr bool is_signed = is_min_value_signed || is_max_value_signed;
 
         static_assert((_MinValue >= 0) || (!(_MinValue >= 0) && _MaxValue <= static_cast<uint64_t>(std::numeric_limits<int64_t>::max())), "no common type available for signed _MinValue and uint64_t _MaxValue");
@@ -236,7 +253,7 @@ namespace STL_STD_EXT_NAMESPACE_EX {
         using common_unsigned_type = std::conditional_t<is_max_value_signed,
             std::conditional_t<sizeof(unsigned_max_type) >= sizeof(unsigned_min_type), unsigned_min_type, unsigned_max_type>,
             std::conditional_t<sizeof(unsigned_max_type) >= sizeof(unsigned_min_type), unsigned_max_type, unsigned_min_type>
-            
+
         >;
         using type = std::conditional_t<is_signed, common_signed_type, common_unsigned_type>;
     };
@@ -261,7 +278,7 @@ namespace STL_STD_EXT_NAMESPACE_EX {
         using signed_max_type = signed_type_helper_t<_MaxValue>;
     public:
         static constexpr bool is_min_value_signed = _MinValue <= -1;
-        static constexpr bool is_max_value_signed = is_min_value_signed && _MaxValue <= -1;     
+        static constexpr bool is_max_value_signed = is_min_value_signed && _MaxValue <= -1;
         static constexpr bool is_signed = is_min_value_signed || is_max_value_signed;
 
         static_assert((_MinValue >= 0) || (!(_MinValue >= 0) && _MaxValue <= static_cast<uint64_t>(std::numeric_limits<int64_t>::max())), "no common type available for signed _MinValue and uint64_t _MaxValue");
@@ -274,7 +291,7 @@ namespace STL_STD_EXT_NAMESPACE_EX {
         using common_unsigned_type = std::conditional_t<is_max_value_signed,
             std::conditional_t<sizeof(unsigned_max_type) >= sizeof(unsigned_min_type), unsigned_min_type, unsigned_max_type>,
             std::conditional_t<sizeof(unsigned_max_type) >= sizeof(unsigned_min_type), unsigned_max_type, unsigned_min_type>
-            
+
         >;
         using type = std::conditional_t<is_signed, common_signed_type, common_unsigned_type>;
     };

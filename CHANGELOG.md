@@ -52,6 +52,8 @@
 - Support for rotary encoders with pushbutton and capacitive touch sensor
 - MQTT device triggers for remote control
 - Battery level indicator in % with charging detection
+- MQTT callbacks for QoS
+- Fully asynchronous MQTT auto discovery with deletion of unknown/unused entries
 
 ## Version 0.0.3
 

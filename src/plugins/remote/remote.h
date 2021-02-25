@@ -29,22 +29,32 @@ using namespace RemoteControl;
 class MqttRemote : public MQTTComponent {
 public:
     MqttRemote() :
-        MQTTComponent(ComponentType::DEVICE_AUTOMATION),
-        _discoveryPending(false)
+        MQTTComponent(ComponentType::DEVICE_AUTOMATION)
     {
     }
 
     virtual AutoDiscoveryPtr nextAutoDiscovery(FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;
 
-    static String getMQTTTopic();
+    virtual void onConnect(MQTTClient *client) {
+        if (_autoDiscoveryPending) {
+            _autoDiscoveryPending = false;
+            client->publishAutoDiscovery(true, true);
+        }
+
+    }
 
     void publishAutoDiscovery() {
         auto client = MQTTClient::getClient();
-        if (!_discoveryPending && client && !client->isAutoDiscoveryRunning()) {
-            _discoveryPending = true;
-            client->publishAutoDiscovery(true);
-
+        if (client) {
+            __DBG_printf("connected=%u running=%u registered=%u", client->isConnected(), client->isAutoDiscoveryRunning(), client->isComponentRegistered(this));
+            if (client->isConnected()) {
+                _autoDiscoveryPending = false;
+                client->publishAutoDiscovery(true, true);
+            }
+            else {
+                _autoDiscoveryPending = true;
+            }
         }
     }
 
@@ -54,14 +64,18 @@ public:
 
     void _reconfigure() {
         MQTTClient::safeReRegisterComponent(this);
-        _discoveryPending = false;
     }
+
     void _shutdown() {
         MQTTClient::safeUnregisterComponent(this);
     }
 
+    static String getMQTTTopic() {
+        return MQTTClient::formatTopic(F("/triggers"));
+    }
+
 private:
-    bool _discoveryPending;
+    bool _autoDiscoveryPending;
 };
 
 #else
@@ -71,6 +85,7 @@ public:
     void _setup() {}
     void _reconfigure() {}
     void _shutdown() {}
+    void publishAutoDiscovery() {}
 };
 
 #endif

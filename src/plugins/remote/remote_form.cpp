@@ -26,10 +26,9 @@ static FormUI::Container::List getActions()
 
 void RemoteControlPlugin::createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
 {
-    if (type == FormCallbackType::SAVE) {
-        publishAutoDiscovery();
-        return;
-    }
+    // if (type == FormCallbackType::SAVE) {
+    //     return;
+    // }
     if (!isCreateFormCallbackType(type)) {
         return;
     }

@@ -219,7 +219,7 @@ public:
     Status readSensor();
 
     // calculate capacity in %
-    static uint8_t calcLipoCapacity(float voltage, uint8_t cells = 1, bool charging = false);
+    static float calcLipoCapacity(float voltage, uint8_t cells = 1, bool charging = false, float precision = 1.0);
 
 #if AT_MODE_SUPPORTED && (IOT_SENSOR_BATTERY_DISPLAY_LEVEL || IOT_SENSOR_HAVE_BATTERY_RECORDER)
     virtual void atModeHelpGenerator() override;

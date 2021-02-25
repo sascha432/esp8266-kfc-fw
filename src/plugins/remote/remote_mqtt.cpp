@@ -116,8 +116,3 @@ uint8_t MqttRemote::getAutoDiscoveryCount() const
     }
     return count;
 }
-
-String MqttRemote::getMQTTTopic()
-{
-    return MQTTClient::formatTopic(F("/triggers"));
-}

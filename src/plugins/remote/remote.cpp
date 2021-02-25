@@ -14,6 +14,7 @@
 #include "remote_button.h"
 #include "push_button.h"
 #include "plugins_menu.h"
+#include "WebUISocket.h"
 #if HTTP2SERIAL_SUPPORT
 #include "../src/plugins/http2serial/http2serial.h"
 #define IF_HTTP2SERIAL_SUPPORT(...) __VA_ARGS__
@@ -76,7 +77,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     "",                 // web_templates
     // config_forms
     "general,events,combos,actions,buttons-1,buttons-2,buttons-3,buttons-4",
-    "http,mqtt",             // reconfigure_dependencies
+    "mqtt",             // reconfigure_dependencies
     PluginComponent::PriorityType::REMOTE,
     PluginComponent::RTCMemoryId::DEEP_SLEEP,
     static_cast<uint8_t>(PluginComponent::MenuType::CUSTOM),
@@ -92,9 +93,12 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
 
 RemoteControlPlugin::RemoteControlPlugin() :
     PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(RemoteControlPlugin)),
-    Base()
+    Base(),
+    _signalWarning(false)
 {
     REGISTER_PLUGIN(this, "RemoteControlPlugin");
+    pinMode(IOT_REMOTE_CONTROL_AWAKE_PIN, OUTPUT);
+    digitalWrite(IOT_REMOTE_CONTROL_AWAKE_PIN, HIGH);
 }
 
 RemoteControlPlugin &RemoteControlPlugin::getInstance()
@@ -123,7 +127,7 @@ void RemoteControlPlugin::_updateButtonConfig()
 
 void RemoteControlPlugin::setup(SetupModeType mode)
 {
-    __LDBG_printf("mode=%u", mode);
+    // __LDBG_printf("mode=%u", mode);
     pinMonitor.begin();
 
 #if PIN_MONITOR_BUTTON_GROUPS
@@ -158,30 +162,26 @@ void RemoteControlPlugin::setup(SetupModeType mode)
         pinMode(pin, INPUT);
     }
 
-    pinMode(IOT_REMOTE_CONTROL_AWAKE_PIN, OUTPUT);
-    digitalWrite(IOT_REMOTE_CONTROL_AWAKE_PIN, HIGH);
     _buttonsLocked = 0;
     _readConfig();
     _updateButtonConfig();
 
-    __LDBG_printf("feed time=%u state=%u read=%u active_low=%u %s", _pinState._time, _pinState._state, _pinState._read, _pinState.activeLow(), _pinState.toString().c_str());
+    // __LDBG_printf("feed time=%u state=%u read=%u active_low=%u %s", _pinState._time, _pinState._state, _pinState._read, _pinState.activeLow(), _pinState.toString().c_str());
 
     // reset state and feed debouncer with initial values and state
     pinMonitor.feed(_pinState._time, _pinState._state, _pinState._read, _pinState.activeLow());
     // pinMonitor._loop();
 
-    LoopFunctions::callOnce([this]() {
+    WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTED, wifiCallback);
+    LoopFunctions::add(loop);
 
+    dependsOn(F("mqtt"), [this](const PluginComponent *plugin) {
+        __LDBG_printf("mqtt setup");
         _setup();
-
-        WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTED, wifiCallback);
-        LoopFunctions::add(loop);
-
         _resetAutoSleep();
-
-        // _resolveActionHostnames();
-
     });
+
+    // _resolveActionHostnames();
 }
 
 void RemoteControlPlugin::reconfigure(const String &source)
@@ -189,13 +189,11 @@ void RemoteControlPlugin::reconfigure(const String &source)
     _readConfig();
     if (String_equals(source, F("mqtt"))) {
         _reconfigure();
-    }
-    else if (String_equals(source, F("http"))) {
-        _reconfigure();
+        publishAutoDiscovery();
     }
     else {
         _updateButtonConfig();
-        _reconfigure();
+        publishAutoDiscovery();
     }
 }
 
@@ -402,7 +400,7 @@ RemoteControlPlugin::PinState RemoteControlPlugin::readPinState()
             _pinState.setPin(pin, digitalRead(pin));
 
         }
-        __LDBG_printf("read pin state %s", _pinState.toString().c_str());
+        // __LDBG_printf("read pin state %s", _pinState.toString().c_str());
     }
     return _pinState;
 }
@@ -424,12 +422,20 @@ void RemoteControlPlugin::_loop()
         _autoSleepTimeout == kAutoSleepDefault &&
         !_hasEvents() &&
         !MQTTClient::safeIsAutoDiscoveryRunning() &&
-        IF_HTTP2SERIAL_SUPPORT(!Http2Serial::hasAuthenticatedClients() &&)
         (config.getWiFiUp() > 250)
     ) {
-        __LDBG_printf("enabling auto sleep time=%us", _config.auto_sleep_time);
-        // start timeout once ready
-        _autoSleepTimeout = millis() + (_config.auto_sleep_time * 1000UL);
+        if (IF_HTTP2SERIAL_SUPPORT(Http2Serial::hasAuthenticatedClients() ||) WebUISocket::hasAuthenticatedClients()) {
+            if (!_signalWarning) {
+                BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SLOW);
+                _signalWarning = true;
+            }
+            goto DebugGotoElse;
+        }
+        else {
+            __LDBG_printf("enabling auto sleep time=%us", _config.auto_sleep_time);
+            // start timeout once ready
+            _autoSleepTimeout = millis() + (_config.auto_sleep_time * 1000UL);
+        }
     }
     else if (_autoSleepTimeout != kAutoSleepDefault && millis() > _autoSleepTimeout) {
 
@@ -445,6 +451,7 @@ void RemoteControlPlugin::_loop()
         config.enterDeepSleep(KFCFWConfiguration::seconds(_config.deep_sleep_time), RF_DEFAULT, 1);
     }
     else {
+DebugGotoElse: ;
 #if 0
         static bool counter = false;
         if ((millis() / 1000) % 2 == counter) {

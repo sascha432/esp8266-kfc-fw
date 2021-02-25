@@ -9,34 +9,12 @@
 #include <lwipopts.h>
 #include "mqtt_base.h"
 #include "component.h"
+#include "component_proxy.h"
 #include "auto_discovery_list.h"
 
 namespace MQTT {
 
     namespace AutoDiscovery {
-
-        struct __attribute__((packed)) StateFileType {
-            bool _valid;
-            uint32_t _crc32b;
-            uint32_t _lastAutoDiscoveryTimestamp;
-
-            StateFileType() :
-                _valid(false),
-                _crc32b(0),
-                _lastAutoDiscoveryTimestamp(0)
-            {}
-
-            StateFileType(uint32_t crc32, uint32_t lastAutoDiscoveryTimestamp = 0) :
-                _valid(IS_TIME_VALID(lastAutoDiscoveryTimestamp) && crc32 != 0 && crc32 != 0xffffffff),
-                _crc32b(crc32),
-                _lastAutoDiscoveryTimestamp(lastAutoDiscoveryTimestamp)
-            {}
-
-            StateFileType(const AutoDiscovery::CrcVector &crcs, uint32_t lastAutoDiscoveryTimestamp = 0) :
-                StateFileType(crcs.crc32b(), lastAutoDiscoveryTimestamp)
-            {}
-
-        };
 
         class Queue : public Component {
         public:
@@ -64,6 +42,10 @@ namespace MQTT {
 
             void publish(Event::milliseconds delay);
 
+            void setForceUpdate(bool forceUpdate) {
+                _forceUpdate = forceUpdate;
+            }
+
             static bool isUpdateScheduled();
             static bool isEnabled();
 
@@ -71,20 +53,22 @@ namespace MQTT {
             void _publishNextMessage();
             void _publishDone(bool success = true, uint16_t onErrorDelay = 15);
 
-            static void _setState(const StateFileType &state);
-            static StateFileType _getState();
-
         private:
             friend Client;
 
             Client &_client;
             Event::Timer _timer;
-            uint32_t _size;
-            uint32_t _discoveryCount;
+            CrcVector::Diff _diff;
             CrcVector _crcs;
+            std::unique_ptr<CollectTopicsComponent> _collect;
+            std::unique_ptr<RemoveTopicsComponent> _remove;
             List _entities;
             List::iterator _iterator;
             uint16_t _packetId;
+            bool _forceUpdate;
+#if MQTT_AUTO_DISCOVERY_LOG2FILE
+            File _log;
+#endif
         };
 
     }

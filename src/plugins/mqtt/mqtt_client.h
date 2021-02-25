@@ -483,7 +483,9 @@ public:
     public:
         // force starts to send the auto discovery ignoring the delay between each run
         // returns false if running
-        bool publishAutoDiscovery(bool force = false);
+        // abort = true aborts it if running
+        // forceUpdate = true deletes all retained messages and sends new ones
+        bool publishAutoDiscovery(bool force = false, bool abort = false, bool forceUpdate = false);
         static void publishAutoDiscoveryCallback(Event::CallbackTimerPtr timer);
         bool isAutoDiscoveryRunning() const {
             return static_cast<bool>(_autoDiscoveryQueue);

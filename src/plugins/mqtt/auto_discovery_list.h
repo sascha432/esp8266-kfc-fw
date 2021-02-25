@@ -20,26 +20,53 @@ namespace MQTT {
             using std::vector<uint32_t>::vector;
             using Type = std::vector<uint32_t>;
 
+            struct Diff {
+                uint16_t add;
+                uint16_t remove;
+                uint16_t modify;
+                uint16_t unchanged;
+                bool equal;
+            };
+
+            struct Data {
+                union {
+                    uint32_t value;
+                    struct {
+                        uint16_t payload;
+                        uint16_t topic;
+                    };
+                };
+                Data(uint32_t aCrc) : value(aCrc) {}
+                Data(uint16_t aTopic, uint16_t aPayload) : payload(aPayload), topic(aTopic) {}
+            };
+
+            static_assert(sizeof(Data) == sizeof(uint32_t), "size does not match");
+
             uint32_t insertSorted(const char *topic, size_t topicLength, const char *payload, size_t payloadLength) {
-                uint32_t crc =(crc16_update(topic, topicLength) << 16) | (crc16_update(payload, payloadLength));
-                auto iterator = std::upper_bound(begin(), end(), crc);
-                insert(iterator, crc);
-                return crc;
+                //uint32_t crc = (crc16_update(topic, topicLength) << 16) | (crc16_update(payload, payloadLength));
+                auto crc = Data(crc16_update(topic, topicLength), crc16_update(payload, payloadLength));
+                auto iterator = std::upper_bound(begin(), end(), crc.value);
+                insert(iterator, crc.value);
+                return crc.value;
             }
 
             uint32_t insertSorted(const String &topic, const String &payload) {
                 return insertSorted(topic.c_str(), topic.length(), payload.c_str(), payload.length());
             }
 
-            iterator findTopic(const char *topic, size_t length)
+            iterator findTopic(uint16_t crc16)
             {
-                auto crc16 = crc16_update(topic, length);
                 for(auto iterator = begin(); iterator != end(); ++iterator) {
-                    if (*iterator >> 16 == crc16) {
+                    if (reinterpret_cast<Data &>(*iterator).topic == crc16) {
                         return iterator;
                     }
                 }
                 return end();
+            }
+
+            iterator findTopic(const char *topic, size_t length)
+            {
+                return findTopic(crc16_update(topic, length));
             }
 
             iterator findTopic(const String &topic)
@@ -54,7 +81,9 @@ namespace MQTT {
                 auto iterator = findTopic(topic, topicLength);
                 if (iterator != end()) {
                     if (payloadLength) {
-                        *iterator = (*iterator & 0xffff0000) | crc16_update(payload, payloadLength);
+                        // *reinterpret_cast<uint16_t *>(&(*iterator)) = crc16_update(payload, payloadLength);
+                        // *iterator = (*iterator & 0xffff0000) | crc16_update(payload, payloadLength);
+                        reinterpret_cast<Data &>(*iterator).payload = crc16_update(payload, payloadLength);
                         return true;
                     }
                     else {
@@ -78,6 +107,41 @@ namespace MQTT {
                 return size() == list.size() && memcmp(data(), list.data(), size() * sizeof(*data())) == 0;
             }
 
+            bool operator!=(const CrcVector &list) const
+            {
+                return !operator==(list);
+            }
+
+            Diff difference(const CrcVector &list) const {
+                Diff diff = {};
+                if (*this == list) {
+                    diff.unchanged = size();
+                    diff.equal = true;
+                    return diff;
+                }
+                for(auto iterator1 = begin(); iterator1 != end(); ++iterator1) {
+                    auto iterator2 = const_cast<CrcVector &>(list).findTopic(reinterpret_cast<const Data &>(*iterator1).topic);
+                    if (iterator2 != list.end()) {
+                        if (*iterator1 == *iterator2) { // same
+                            diff.unchanged++;
+                        }
+                        else { // payload changed
+                            diff.modify++;
+                        }
+                    }
+                    else { // not found
+                        diff.add++;
+                    }
+
+                }
+                for(auto iterator = list.begin(); iterator != list.end(); ++iterator) {
+                    if (const_cast<CrcVector *>(this)->findTopic(reinterpret_cast<const Data &>(*iterator).topic) == end()) {
+                        diff.remove++;
+                    }
+                }
+                return diff;
+            }
+
             uint32_t crc32b() const
             {
                 return ::crc32b(data(), size() * sizeof(*data()));
@@ -89,8 +153,8 @@ namespace MQTT {
         public:
             using iterator = ComponentIterator;
 
-            List() : _components(nullptr) {}
-            List(ComponentVector &components, FormatType format) : _components(&components), _format(format) {}
+            List() : _components(nullptr), _payloadSize(0) {}
+            List(ComponentVector &components, FormatType format) : _components(&components), _format(format), _payloadSize(0) {}
 
             ComponentIterator begin();
             ComponentIterator end();
@@ -101,10 +165,12 @@ namespace MQTT {
                 return const_cast<List *>(this)->end();
             }
 
-            CrcVector crc() const {
+            CrcVector crc() {
                 CrcVector list;
+                _payloadSize = 0;
                 for(auto entity: *this) {
                     list.insertSorted(entity->getTopic(), entity->getPayload());
+                    _payloadSize += entity->getPayload().length();
                 }
                 return list;
             }
@@ -115,6 +181,10 @@ namespace MQTT {
 
             size_t size() const {
                 return _components ? size(*_components) : 0;
+            }
+
+            size_t payloadSize() const {
+                return _payloadSize;
             }
 
             static size_t size(ComponentVector &components) {
@@ -128,6 +198,7 @@ namespace MQTT {
         private:
             ComponentVector *_components;
             FormatType _format;
+            size_t _payloadSize;
         };
     }
 

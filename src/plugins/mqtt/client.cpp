@@ -201,7 +201,9 @@ void MQTTClient::registerComponent(ComponentPtr component)
         __DBG_assert_printf(false, "component=%p type=%s already registered", component, component->getName());
         return;
     }
+    noInterrupts();
     _components.emplace_back(component);
+    interrupts();
     __LDBG_printf("components=%u entities=%u", _components.size(), AutoDiscovery::List::size(_components));
 }
 
@@ -214,7 +216,9 @@ bool MQTTClient::unregisterComponent(ComponentPtr component)
     auto size = _components.size();
     if (size) {
         remove(component);
+        noInterrupts();
         _components.erase(std::remove(_components.begin(), _components.end(), component), _components.end());
+        interrupts();
     }
     __LDBG_printf("components=%u entities=%u removed=%u", _components.size(), AutoDiscovery::List::size(_components), _components.size() != size);
     return _components.size() != size;
@@ -529,10 +533,11 @@ void MQTTClient::onConnect(bool sessionPresent)
     for(const auto &component: _components) {
         component->onConnect(this);
     }
+#if MQTT_AUTO_DISCOVERY
     if (_startAutoDiscovery) {
-        _startAutoDiscovery = false;
         publishAutoDiscovery();
     }
+#endif
     _startupTimings.setMqtt(millis());
 }
 
@@ -594,17 +599,24 @@ void MQTTClient::publishPersistantStorage(StorageFrequencyType type, const Strin
     publish(formatTopic(str), true, data, QosType::PERSISTENT_STORAGE);
 }
 
-bool MQTTClient::publishAutoDiscovery(bool force)
+bool MQTTClient::publishAutoDiscovery(bool force, bool abort, bool forceUpdate)
 {
 #if MQTT_AUTO_DISCOVERY
+    _startAutoDiscovery = false;
     _autoDiscoveryRebroadcast.remove();
 
     if (AutoDiscovery::Queue::isEnabled() && !_components.empty()) {
+        if (abort && _autoDiscoveryQueue) {
+            _autoDiscoveryQueue.reset();
+        }
         if (_autoDiscoveryQueue) {
             __LDBG_printf("auto discovery running count=%u size=%u", _autoDiscoveryQueue->_discoveryCount, _autoDiscoveryQueue->_size);
         }
         else {
             _autoDiscoveryQueue.reset(new AutoDiscovery::Queue(*this));
+            if (forceUpdate) {
+                _autoDiscoveryQueue->setForceUpdate(true);
+            }
             _autoDiscoveryQueue->publish(force);
             return true;
         }

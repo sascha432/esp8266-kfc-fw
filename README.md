@@ -2,7 +2,7 @@
 
 Firmware for ESP8266/ESP32 and IoT devices
 
-The firmware offers a plugin interface to easily extend its functionality. The plugins can be configured via web interface and have access to the network, file system, logging, serial console, I2C bus, GPIO, EEPROM, RTC memory, event/task scheduler etc... via API functions. Support for deep sleep and WiFi quick connect (~250ms) after wake up.
+The firmware offers a plugin interface to easily extend its functionality. The plugins can be configured via web interface and have access to the network, file system, logging, serial console, I2C bus, GPIO, EEPROM, RTC memory, event/task scheduler etc... via API functions. Support for deep sleep and WiFi Quick Connect (<250ms) after wake up
 
 ## Required flash size
 
@@ -160,9 +160,9 @@ Plugin for my 2 channel blinds controller
 https://github.com/sascha432/ESP8266-WiFi-Blinds
 https://easyeda.com/sascha23095123423/iot_blinds_controller
 
-### Remote Control
+### WiFi Remote Control
 
-Plugin for my 4 button ultra low power WiFi remote control
+Plugin for my 4 button ultra low power WiFi remote control. 16.5µA standby, 250ms wakeup time to send first UDP packets and 375ms for a fully established MQTT session with QoS.
 
 https://github.com/sascha432/ESP8266-WiFi-Remote-Control
 https://easyeda.com/sascha23095123423/iot_4ch_remote

@@ -119,7 +119,7 @@ bool Plugin::atModeHandler(AtModeArgs &args)
         else if (args.isQueryMode()) {
             args.printf_P(PSTR("status: %s"), clientPtr->connectionStatusString().c_str());
         }
-        else if (args.requireArgs(1, 2)) {
+        else if (args.requireArgs(1, 3)) {
             auto &client = *clientPtr;
             auto actionsStr = PSTR("connect|con|disconnect|dis|set|topics|top|autodiscovery|auto|list");
             auto action = stringlist_find_P_P(actionsStr, args.get(0), '|');
@@ -167,14 +167,22 @@ bool Plugin::atModeHandler(AtModeArgs &args)
                     }
                     break;
                 case 7: // autodiscovery
-                case 8: // auto
-                    if (client.isConnected() && client.publishAutoDiscovery(true)) {
-                        args.print(F("auto discovery started"));
-                    }
-                    else {
-                        args.print(F("not connected, auto discovery running or not available"));
-                    }
-                    break;
+                case 8: { // auto
+                        bool abort = args.isTrue(1) || args.equalsIgnoreCase(1, F("abort"));
+                        bool update = args.equalsIgnoreCase(1, F("force")) || args.equalsIgnoreCase(2, F("force"));
+                        if (!client.isConnected()) {
+                            args.print(F("mqtt not connected"));
+                        }
+                        else if (!abort && client.isAutoDiscoveryRunning()) {
+                            args.print(F("auto discovery already running"));
+                        }
+                        else if (client.publishAutoDiscovery(true, abort, update)) {
+                            args.print(F("auto discovery started"));
+                        }
+                        else {
+                            args.print(F("auto discovery not available"));
+                        }
+                    } break;
                 case 9: {
                         auto &stream = args.getStream();
                         if (args.equalsIgnoreCase(1, F("crc"))) {

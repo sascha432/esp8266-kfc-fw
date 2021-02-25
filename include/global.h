@@ -215,11 +215,6 @@
 #define KFC_CRASH_SAFE_MODE_COUNT                           3
 #endif
 
-// report flash size to serial port during boot
-#ifndef HAVE_KFC_BOOT_CHECK_FLASHSIZE
-#define HAVE_KFC_BOOT_CHECK_FLASHSIZE                       1
-#endif
-
 // resets are counted with RESET_DETECTOR_TIMEOUT (default=5sec). if the device is running
 // for a longer period of time, the counter is set to 0. the counter starts with 1 after
 // the first reset

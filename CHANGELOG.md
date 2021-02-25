@@ -53,7 +53,8 @@
 - MQTT device triggers for remote control
 - Battery level indicator in % with charging detection
 - MQTT callbacks for QoS
-- Fully asynchronous MQTT auto discovery with deletion of unknown/unused entries
+- Fully asynchronous MQTT auto discovery with incremental or full updates
+- Upgrade to arduinoespressif8266 3.20704.0 including patch files for the platform
 
 ## Version 0.0.3
 

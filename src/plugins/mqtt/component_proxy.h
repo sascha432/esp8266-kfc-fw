@@ -9,7 +9,7 @@
 #include "mqtt_client.h"
 #include "auto_discovery_list.h"
 
-#if DEBUG_MQTT_CLIENT
+#if DEBUG_MQTT_AUTO_DISCOVERY_QUEUE
 #include <debug_helper_enable.h>
 #else
 #include <debug_helper_disable.h>
@@ -32,10 +32,13 @@ namespace MQTT {
         };
 
     public:
-        ComponentProxy(ComponentType type, Client *client, const StringVector &wildcards) :
+        ComponentProxy(ComponentType type, Client *client, IF_MQTT_AUTO_DISCOVERY_LOG2FILE(File &log, )const StringVector &wildcards) :
             Component(type),
             _client(client),
             _wildcards(wildcards),
+#if MQTT_AUTO_DISCOVERY_LOG2FILE
+            _log(log),
+#endif
             _iterator(_wildcards.begin()),
             _packetId(0),
             _subscribe(true)
@@ -43,10 +46,13 @@ namespace MQTT {
             init();
         }
 
-        ComponentProxy(ComponentType type, Client *client, StringVector &&wildcards) :
+        ComponentProxy(ComponentType type, Client *client, IF_MQTT_AUTO_DISCOVERY_LOG2FILE(File &log, )StringVector &&wildcards) :
             Component(type),
             _client(client),
             _wildcards(std::move(wildcards)),
+#if MQTT_AUTO_DISCOVERY_LOG2FILE
+            _log(log),
+#endif
             _iterator(_wildcards.begin()),
             _packetId(0),
             _subscribe(true)
@@ -74,13 +80,16 @@ namespace MQTT {
 
         virtual void onBegin();
         virtual void onEnd(ErrorType error);
-        virtual void onMessage(char *topic, char *payload, size_t len);
+        virtual void onMessage(const char *topic, const char *payload, size_t len);
 
     protected:
         friend AutoDiscovery::Queue;
 
         Client *_client;
         StringVector _wildcards;
+#if MQTT_AUTO_DISCOVERY_LOG2FILE
+        File &_log;
+#endif
     private:
         void _runNext();
 
@@ -92,12 +101,19 @@ namespace MQTT {
     // class that collects (retained) messages for wildcard topics
     class CollectTopicsComponent : public ComponentProxy {
     public:
-        // wait after subscribing to the last topic to give the network time to transfer all retained messages
-        static constexpr uint32_t kSubscribeWaitTime = 30000;   // milliseconds
+        // timeout for the first message
+        static constexpr uint32_t kInitialWaitTime = 20000;   // milliseconds
+        // timeout after receiving the last message
+        static constexpr uint32_t kOnMessageWaitTime = 5000;   // milliseconds
 
         using Callback = std::function<void(ErrorType error, AutoDiscovery::CrcVector &crcs)>;
 
-        CollectTopicsComponent(Client *client, StringVector &&wildcards, Callback callback = nullptr);
+        CollectTopicsComponent(Client *client, StringVector &&wildcards, IF_MQTT_AUTO_DISCOVERY_LOG2FILE(File &log, )Callback callback = nullptr);
+        virtual ~CollectTopicsComponent() {
+            if (_callback) {
+                abort(ErrorType::ABORTED);
+            }
+        }
 
         void begin(Callback callback) {
             __LDBG_printf("collect topics");
@@ -107,7 +123,7 @@ namespace MQTT {
 
         virtual void onBegin() override;
         virtual void onEnd(ErrorType error) override;
-        virtual void onMessage(char *topic, char *payload, size_t payloadLength) override;
+        virtual void onMessage(const char *topic, const char *payload, size_t payloadLength) override;
 
     private:
         AutoDiscovery::CrcVector _crcs;
@@ -119,7 +135,17 @@ namespace MQTT {
     public:
         using Callback = std::function<void(ErrorType error)>;
 
-        RemoveTopicsComponent(Client *client, StringVector &&wildcards, AutoDiscovery::CrcVector &&crcs, Callback callback = nullptr);
+        // timeout for the first message
+        static constexpr uint32_t kInitialTimeout = CollectTopicsComponent::kInitialWaitTime + CollectTopicsComponent::kOnMessageWaitTime;   // milliseconds
+        // timeout per messaeg
+        static constexpr uint32_t kOnMessageTimeout = CollectTopicsComponent::kOnMessageWaitTime;   // milliseconds
+
+        RemoveTopicsComponent(Client *client, StringVector &&wildcards, AutoDiscovery::CrcVector &&crcs, IF_MQTT_AUTO_DISCOVERY_LOG2FILE(File &log, )Callback callback = nullptr);
+        virtual ~RemoveTopicsComponent() {
+            if (_callback) {
+                abort(ErrorType::ABORTED);
+            }
+        }
 
         void begin(Callback callback) {
             __LDBG_printf("remove topics");
@@ -127,8 +153,9 @@ namespace MQTT {
             ComponentProxy::begin();
         }
 
+        virtual void onBegin() override;
         virtual void onEnd(ErrorType error) override;
-        virtual void onMessage(char *topic, char *payload, size_t len) override;
+        virtual void onMessage(const char *topic, const char *payload, size_t len) override;
         virtual void onPacketAck(uint16_t packetId, PacketAckType type) override;
 
     private:

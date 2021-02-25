@@ -323,7 +323,7 @@ public:
     static void deleteDependencies() {
 #if DEBUG
         for(const auto &dep: *_dependencies) {
-            debug_printf_P(PSTR("unresolved dependency name=%s callback=%p\n"), dep._name, &dep._callback);
+            __DBG_printf_E("unresolved dependency name=%s callback=%p", dep._name, &dep._callback);
         }
 #endif
         delete _dependencies;

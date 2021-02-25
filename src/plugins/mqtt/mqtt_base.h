@@ -55,6 +55,15 @@ namespace MQTT {
         DISCONNECTED                    // disconnect callback received
     };
 
+    // enum class AutoDiscoveryFlags : uint8_t {
+    //     FORCE_RUN    = 0x01,
+    //     ABORT_RUN    = 0x02,
+    //     FORCE_UPDATE = 0x04,
+    //     REMOVE_ALL   = 0x08,
+    //     UPDATE_ALL   = 0x10,
+    //     _DEFAULT     = UPDATE_ALL,
+    // };
+
     class Component;
     class ComponentProxy;
     class ComponentIterator;

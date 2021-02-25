@@ -88,11 +88,11 @@ bool Entity::_create(ComponentType componentType, const String &name, FormatType
         _discovery += Component::getNameByType(componentType);
         _discovery += F(":\n  - ");
     }
+    uniqueId = _getUnqiueId(name);
     if (componentType != ComponentType::DEVICE_AUTOMATION) {
         addParameter(FSPGM(name), name);
         addParameter(F("platform"), FSPGM(mqtt));
-    if (format == FormatType::JSON) {
-            uniqueId = _getUnqiueId(name);
+        if (format == FormatType::JSON) {
             addParameter(FSPGM(mqtt_unique_id), uniqueId);
         }
         addParameter(FSPGM(mqtt_availability_topic), MQTTClient::formatTopic(FSPGM(mqtt_status_topic)));

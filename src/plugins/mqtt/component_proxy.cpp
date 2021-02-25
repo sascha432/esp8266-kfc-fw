@@ -7,7 +7,7 @@
 #include "mqtt_client.h"
 #include "component_proxy.h"
 
-#if DEBUG_MQTT_CLIENT
+#if DEBUG_MQTT_AUTO_DISCOVERY_QUEUE
 #include <debug_helper_enable.h>
 #else
 #include <debug_helper_disable.h>
@@ -17,14 +17,15 @@ using namespace MQTT;
 
 void ComponentProxy::init()
 {
+    __LDBG_printf("ctor this=%p", this);
     _client->registerComponent(this);
 }
 
 ComponentProxy::~ComponentProxy()
 {
     __LDBG_printf("dtor this=%p", this);
-    end();
     _client->unregisterComponent(this);
+    end();
 }
 
 void ComponentProxy::onDisconnect(Client *client, AsyncMqttClientDisconnectReason reason)
@@ -41,15 +42,20 @@ void ComponentProxy::onMessage(Client *client, char *topic, char *payload, size_
 
 void ComponentProxy::onPacketAck(uint16_t packetId, PacketAckType type)
 {
+    // __DBG_printf("this=%p", this);
     __LDBG_printf("packet=%u<->%u type=%u can_yield=%u", _packetId, packetId, type, can_yield());
     if (_packetId == packetId) {
         __LDBG_printf("packet=%u type=%u", packetId, type);
         if (type == PacketAckType::TIMEOUT) {
-            abort(ErrorType::TIMEOUT);
+            LoopFunctions::callOnce([this]() {
+                abort(ErrorType::TIMEOUT);
+            });
         }
         else {
             ++_iterator;
-            _runNext();
+            LoopFunctions::callOnce([this]() {
+                _runNext();
+            });
         }
     }
 }
@@ -71,9 +77,11 @@ void ComponentProxy::abort(ErrorType error)
     // unsubscribe
     _packetId = 0;
     for(const auto &wildcard: _wildcards) {
-        _client->unsubscribe(this, wildcard);
+        _client->unsubscribe(nullptr, wildcard);
     }
     _wildcards.clear();
+
+    _client->unregisterComponent(this);
 
     LoopFunctions::callOnce([this, error]() {
         if (error != ErrorType::NONE) {
@@ -137,22 +145,21 @@ void ComponentProxy::onEnd(ErrorType error)
 {
 }
 
-void ComponentProxy::onMessage(char *topic, char *payload, size_t len)
+void ComponentProxy::onMessage(const char *topic, const char *payload, size_t len)
 {
 }
 
-
-CollectTopicsComponent::CollectTopicsComponent(Client *client, StringVector &&wildcards, Callback callback) :
-    ComponentProxy(ComponentType::AUTO_DISCOVERY, client, std::move(wildcards)),
+CollectTopicsComponent::CollectTopicsComponent(Client *client, StringVector &&wildcards, IF_MQTT_AUTO_DISCOVERY_LOG2FILE(File &log, )Callback callback) :
+    ComponentProxy(ComponentType::AUTO_DISCOVERY, client, IF_MQTT_AUTO_DISCOVERY_LOG2FILE(log, )std::move(wildcards)),
     _callback(callback)
 {
 }
 
 void CollectTopicsComponent::onBegin()
 {
-    __LDBG_printf("waiting for messages. delay=%u", kSubscribeWaitTime);
+    __LDBG_printf("waiting for messages. delay=%u", kInitialWaitTime);
     // add delay after subscribing
-    _Timer(_timer).add(Event::milliseconds(kSubscribeWaitTime), false, [this](Event::CallbackTimerPtr timer) {
+    _Timer(_timer).add(Event::milliseconds(kInitialWaitTime), false, [this](Event::CallbackTimerPtr timer) {
         end();
     });
 }
@@ -168,21 +175,53 @@ void CollectTopicsComponent::onEnd(ErrorType error)
     }
 }
 
-void CollectTopicsComponent::onMessage(char *topic, char *payload, size_t payloadLength)
+void CollectTopicsComponent::onMessage(const char *topic, const char *payload, size_t payloadLength)
 {
-    // __LDBG_printf("topic=%s payload=%u retain=%u", topic, payloadLength, _client->getMessageProperties().retain);
+    __LDBG_printf("topic=%s payload=%u retain=%u", topic, payloadLength, _client->getMessageProperties().retain);
     if (!_client->getMessageProperties().retain) { // ignore all messages that are not retained
         return;
     }
+#if MQTT_AUTO_DISCOVERY_LOG2FILE
+    if (_log) {
+        _log.print(F("collect topic="));
+        _log.print(topic);
+        _log.print(F(" payload="));
+        _log.print(payload);
+        _log.print('\n');
+    }
+#endif
     _crcs.update(topic, strlen(topic), payload, payloadLength);
+    if (_timer) {
+        __LDBG_IF( auto result = )
+        _timer->updateInterval(Event::milliseconds(kOnMessageWaitTime));
+        __LDBG_IF(
+            if (result) {
+                __DBG_printf("changed timeout to %u", kOnMessageWaitTime);
+            }
+        )
+    }
 }
 
 
-RemoveTopicsComponent::RemoveTopicsComponent(Client *client, StringVector &&wildcards, AutoDiscovery::CrcVector &&crcs, Callback callback) :
-    ComponentProxy(ComponentType::AUTO_DISCOVERY, client, std::move(wildcards)),
+RemoveTopicsComponent::RemoveTopicsComponent(Client *client, StringVector &&wildcards, AutoDiscovery::CrcVector &&crcs, IF_MQTT_AUTO_DISCOVERY_LOG2FILE(File &log, )Callback callback) :
+    ComponentProxy(ComponentType::AUTO_DISCOVERY, client, IF_MQTT_AUTO_DISCOVERY_LOG2FILE(log, )std::move(wildcards)),
     _crcs(std::move(crcs)),
     _callback(callback)
 {
+}
+
+void RemoveTopicsComponent::onBegin()
+{
+    __LDBG_printf("waiting for messages. timeout=%u", kInitialTimeout);
+    // add delay after subscribing
+    _Timer(_timer).add(Event::milliseconds(kInitialTimeout), false, [this](Event::CallbackTimerPtr timer) {
+        end();
+#if MQTT_AUTO_DISCOVERY_LOG2FILE
+        if (_log) {
+            _log.printf_P(PSTR("no messages received within %u milliseconds\n"), kInitialTimeout);
+        }
+#endif
+    });
 }
 
 void RemoveTopicsComponent::onEnd(ErrorType error)
@@ -198,43 +237,79 @@ void RemoveTopicsComponent::onEnd(ErrorType error)
 
 void RemoveTopicsComponent::onPacketAck(uint16_t packetId, PacketAckType type)
 {
+    // __DBG_printf("this=%p", this);
     ComponentProxy::onPacketAck(packetId, type);
 
     auto iterator = std::find(_packets.begin(), _packets.end(), packetId);
     if (iterator != _packets.end()) {
         __LDBG_printf("packetid=%u type=%u", packetId, type);
         if (type == PacketAckType::TIMEOUT) {
-            abort(ErrorType::TIMEOUT);
+#if MQTT_AUTO_DISCOVERY_LOG2FILE
+            if (_log) {
+                _log.printf_P(PSTR("timeout [%u]\n"), packetId);
+            }
+#endif
+            LoopFunctions::callOnce([this]() {
+                abort(ErrorType::TIMEOUT);
+            });
             return;
         }
         else {
             _packets.erase(iterator);
-            _Timer(_timer).add(Event::seconds(5), false, [this](Event::CallbackTimerPtr timer) {
+            // wait additional 5 seconds after the last message
+            _Timer(_timer).add(Event::milliseconds(kOnMessageTimeout), false, [this](Event::CallbackTimerPtr timer) {
                 if (_packets.empty()) {
-                    end();
+                    LoopFunctions::callOnce([this]() {
+                        end();
+                    });
                 }
             });
         }
     }
 }
 
-void RemoveTopicsComponent::onMessage(char *topic, char *payload, size_t len)
+void RemoveTopicsComponent::onMessage(const char *topic, const char *payload, size_t len)
 {
-    // __LDBG_printf("remove topic=%s payload=%s len=%u retained=%u", topic, printable_string(payload, len, 32).c_str(), len, _client->getMessageProperties().retain);
+    if (_timer) {
+        _timer->updateInterval(Event::milliseconds(kOnMessageTimeout));
+    }
+    __LDBG_printf("remove topic=%s payload=%s len=%u retained=%u", topic, printable_string(payload, len, 32).c_str(), len, _client->getMessageProperties().retain);
     if (!_client->getMessageProperties().retain || len == 0) { // ignore all messages that are not retained or empty
         return;
     }
     auto topicStr = String(topic);
     auto iterator = _crcs.findTopic(topicStr);
     if (iterator != _crcs.end()) {
-        __LDBG_printf("topic found crc=%04x", (*iterator) >> 16);
+        __LDBG_printf("topic found crc=%04x topc=%s", (*iterator) >> 16, topic);
+#if MQTT_AUTO_DISCOVERY_LOG2FILE
+        if (_log) {
+            _log.print(F("remove [skipped] topic="));
+            _log.print(topic);
+            _log.print('\n');
+        }
+#endif
         return;
     }
-    auto packetId = _client->publish(nullptr, topicStr, false, String(), QosType::AUTO_DISCOVERY);
-    if (!packetId) {
+    auto packetId = _client->getNextInternalPacketId();
+    _packets.emplace_back(packetId);
+    __LDBG_printf("packetid=%u topic=%u", packetId, topic);
+#if MQTT_AUTO_DISCOVERY_LOG2FILE
+    if (_log) {
+        _log.printf_P(PSTR("remove [%u] topic="), packetId);
+        _log.print(topic);
+        _log.print(F(" payload="));
+        _log.print(payload);
+        _log.print('\n');
+    }
+#endif
+    auto queue = _client->publishWithId(nullptr, topicStr, true, String(), QosType::AUTO_DISCOVERY, packetId);
+    if (!queue) {
+#if MQTT_AUTO_DISCOVERY_LOG2FILE
+        if (_log) {
+            _log.printf_P(PSTR("error [%u]\n"), packetId);
+        }
+#endif
         abort(ErrorType::PUBLISH);
         return;
     }
-    // collect packet ids
-    _packets.emplace_back(packetId);
 }

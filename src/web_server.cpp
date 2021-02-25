@@ -859,7 +859,7 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
             formName = path.substring(pos + 1, path.length() - 5);
             String path2 = path.substring(0, pos) + FSPGM(_html);
             mapping = FileMapping(path2.c_str());
-            __DBG_printf("path=%s path2=%s form=%s mapping=%u name=%s", path.c_str(), path2.c_str(), formName.c_str(), mapping.exists(), mapping.getFilenameString().c_str());
+            __LDBG_printf("path=%s path2=%s form=%s mapping=%u name=%s", path.c_str(), path2.c_str(), formName.c_str(), mapping.exists(), mapping.getFilenameString().c_str());
         }
         else {
             formName = path.substring(1, path.length() - 5);
@@ -965,6 +965,7 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
                 webTemplate = __LDBG_new(ConfigTemplate, form);
                 if (form->validate()) {
                     plugin->createConfigureForm(PluginComponent::FormCallbackType::SAVE, formName, *form, request);
+                    System::Flags::getWriteableConfig().is_factory_settings = false;
                     config.write();
                     executeDelayed(request, [plugin, formName]() {
                         plugin->invokeReconfigure(formName);

@@ -212,7 +212,6 @@ void setup_plugins(PluginComponent::SetupModeType mode)
     auto blacklist = System::Firmware::getPluginBlacklist();
     BOOTLOG_PRINTF("blacklist=%s", __S(blacklist));
 
-
     PluginComponent::createDependencies();
 
     for(const auto plugin : plugins) {

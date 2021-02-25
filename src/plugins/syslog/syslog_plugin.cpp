@@ -47,7 +47,7 @@ SyslogPlugin::SyslogPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(Syslog
 
 void SyslogPlugin::setup(SetupModeType mode)
 {
-    __DBG_printf("mode %u", mode);
+    __LDBG_printf("mode %u", mode);
     _begin();
 }
 

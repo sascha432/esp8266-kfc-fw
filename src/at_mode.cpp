@@ -742,7 +742,7 @@ SerialHandler::Client *_client;
 
 void at_mode_setup()
 {
-    __DBG_printf("AT_MODE_ENABLED=%u", System::Flags::getConfig().is_at_mode_enabled);
+    __LDBG_printf("AT_MODE_ENABLED=%u", System::Flags::getConfig().is_at_mode_enabled);
 
     _client = &serialHandler.addClient(at_mode_serial_input_handler, SerialHandler::EventType::READ);
 
@@ -1143,7 +1143,6 @@ public:
     void loop() {
         if (!_timer) {
             if (_queue.empty()) {
-                __DBG_printf("SELF DELETE queue %p %p", commandQueue, this);
                 if (commandQueue == this) {
                     commandQueue = nullptr;
                     LoopFunctions::callOnce([this]() {
@@ -1218,12 +1217,7 @@ void at_mode_serial_handle_event(String &commandString)
             at_mode_generate_help(output);
         }
         else {
-#if defined(ESP8266)
-            auto command = commandString.begin();
-#else
-            std::unique_ptr<char []> __command(new char[commandString.length() + 1]);
-            auto command = strcpy(__command.get(), commandString.c_str());
-#endif
+            auto command = const_cast<char *>(commandString.begin());
             command++;
 
             char *ptr = strchr(command, '?');
@@ -1299,6 +1293,11 @@ void at_mode_serial_handle_event(String &commandString)
                 args.printf_P(PSTR("sizeof(AsyncClient): %u"), sizeof(AsyncClient));
                 args.printf_P(PSTR("sizeof(CallbackTimer): %u"), sizeof(Event::CallbackTimer));
                 // args.printf_P(PSTR("sizeof(SerialTwoWire): %u"), sizeof(SerialTwoWire));
+
+                String test = F(" test ");
+                if (test.ltrim() == F("test ")) {
+                    Serial.println("Y");
+                }
 
 #if DEBUG
                 String hash;

@@ -272,6 +272,7 @@ namespace DeepSleep
         }
 
         void abortCycles() {
+            tasks.connectWiFi = true;
             currentSleepTime = 0;
             if (!remainingSleepTime) {
                 remainingSleepTime++;
@@ -483,7 +484,7 @@ public:
     void setup();
     bool reconfigureWiFi();
     bool connectWiFi();
-    void read();
+    void read(bool wakeup = false);
     void write();
 
     // support for zeroconf
@@ -504,7 +505,8 @@ public:
     void enterDeepSleep(milliseconds time, RFMode mode, uint16_t delayAfterPrepare = 0);
 
 #endif
-    void wifiQuickConnect();
+public:
+    static void wifiQuickConnect();
 
     void restartDevice(bool safeMode = false);
 

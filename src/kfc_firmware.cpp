@@ -49,35 +49,33 @@ extern "C" void gdbstub_do_break();
 using KFCConfigurationClasses::System;
 using KFCConfigurationClasses::Network;
 
-#if HAVE_KFC_BOOT_CHECK_FLASHSIZE
-void check_flash_size()
+void delayedSetup(bool delayed)
 {
-#if defined(ESP8266)
-    uint32_t realSize = ESP.getFlashChipRealSize();
-#endif
-    uint32_t ideSize = ESP.getFlashChipSize();
-    FlashMode_t ideMode = ESP.getFlashChipMode();
-
-#if defined(ESP32)
-    Serial.printf_P(PSTR("Flash chip rev.: %08X\n"), ESP.getChipRevision());
-#endif
-#if defined(ESP8266)
-    Serial.printf_P(PSTR("Flash real id:   %08X\n"), ESP.getFlashChipId());
-    Serial.printf_P(PSTR("Flash real size: %u\n"), realSize);
-#endif
-    Serial.printf_P(PSTR("Flash ide  size: %u\n"), ideSize);
-    Serial.printf_P(PSTR("Flash ide speed: %u\n"), ESP.getFlashChipSpeed());
-    Serial.printf_P(PSTR("Flash ide mode:  %s\n"), (ideMode == FM_QIO ? PSTR("QIO") : ideMode == FM_QOUT ? PSTR("QOUT") : ideMode == FM_DIO ? PSTR("DIO") : ideMode == FM_DOUT ? PSTR("DOUT") : PSTR("UNKNOWN")));
-
-#if defined(ESP8266)
-    if (ideSize != realSize) {
-        Serial.printf_P(PSTR("Flash Chip configuration wrong!\n\n"));
-    } else {
-        Serial.printf_P(PSTR("Flash Chip configuration ok.\n\n"));
+    if (delayed) {
+        KFCFS.begin();
     }
-#endif
+
+    // check if wifi is up
+    BOOTLOG_PRINTF("adding wifi check");
+    _Scheduler.add(Event::seconds(60), true, [](Event::CallbackTimerPtr timer) {
+        if (System::Flags::getConfig().is_station_mode_enabled) {
+            if (!WiFi.isConnected()) {
+                if (timer->updateInterval(Event::seconds(60)) == false) {
+                    timer->setInterval(Event::seconds(30)); // change interval to 30 seconds if it is 60
+                }
+                else {
+                    // restart entire wifi subsystem. the interval was reset back to 60 seconds
+                    config.reconfigureWiFi();
+                    Logger_notice(F("WiFi subsystem restarted"));
+                }
+            }
+        }
+    });
+
+    // reset crash counter
+    BOOTLOG_PRINTF("installing safecrash crash recovery");
+    SaveCrash::installRemoveCrashCounter(KFC_CRASH_RECOVERY_TIME);
 }
-#endif
 
 void setup()
 {
@@ -110,191 +108,196 @@ void setup()
 #if DEBUG_RESET_DETECTOR
     resetDetector._init();
 #endif
-    BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
-
-    if (resetDetector.getResetCounter() >= 20 && !resetDetector.hasWakeUpDetected()) {
-        KFC_SAFE_MODE_SERIAL_PORT.println(F("Reboot continues in 5 seconds..."));
-        // stop timer to avoid resetting counters
-        resetDetector.disarmTimer();
-        // delay boot if too many resets are detected
-        delay(5000);
-        resetDetector.armTimer();
-    }
-
-#if DEBUG_PRE_INIT_SERIAL2TCP
-    #include "../include/retracted/custom_wifi.h"
-    BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FAST);
-    WiFi.setAutoConnect(true);
-    WiFi.setAutoReconnect(true);
-    WiFi.enableSTA(true);
-    Serial.printf_P(PSTR("WiFi.begin=%u\n"), WiFi.begin(CUSTOM_WIFI_SSID, CUSTOM_WIFI_PASSWORD));
-    Serial.printf_P(PSTR("WiFi.reconnect=%u\n"), WiFi.reconnect());
-    Serial.printf_P(PSTR("WiFi.waitForConnectResult=%u\n"), WiFi.waitForConnectResult());
-    Serial.printf_P(PSTR("WiFi.connected=%u\n"), WiFi.isConnected());
-    if (WiFi.isConnected()) {
-        using Serial2TCP = KFCConfigurationClasses::Plugins::Serial2TCP;
-        Serial2TCP::Serial2Tcp_t cfg = CUSTOM_SERIAL2TCP_CFG;
-        auto instance = Serial2TcpBase::createInstance(cfg, CUSTOM_SERIAL2TCP_SERVER);
-        instance->begin();
-        delay(1000);
-        BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
-    }
-    else {
-        BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SOD);
-    }
-#endif
-
-#if HAVE_GDBSTUB
-    gdbstub_do_break();
-    disable_at_mode(Serial);
-#endif
-
-
-#if ENABLE_DEEP_SLEEP
-    if (resetDetector.hasWakeUpDetected()) {
-        // no output to speed up the boot process
-        // checking in and going back to sleep can be done in lkess then 70ms with an avg of 16mAh
-        // still a lot if you have to repeat this process every 3 hours and would reduce the lifetime
-        // of a 500mAh battery from 2.5 years (100% deep sleep) to less than 3 months by just updating
-        // the deep sleep timer
-        resetDetector.clearCounter();
-        config.wakeUpFromDeepSleep();
-    }
-    else
-#endif
-    {
-        KFC_SAFE_MODE_SERIAL_PORT.println(F("Booting KFC firmware..."));
-        KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("SAFE MODE %d, reset counter %d, wake up %d\n"), resetDetector.getSafeMode(), resetDetector.getResetCounter(), resetDetector.hasWakeUpDetected());
-    }
-
-#if KFC_RESTORE_FACTORY_SETTINGS_RESET_COUNT
-    if (resetDetector.hasResetDetected()) {
-        if (resetDetector.getResetCounter() >= KFC_RESTORE_FACTORY_SETTINGS_RESET_COUNT) {
-            KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("%ux reset detected. Restoring factory defaults in a 5 seconds...\n"), KFC_RESTORE_FACTORY_SETTINGS_RESET_COUNT);
-#if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID
-            for(uint8_t i = 0; i < (RESET_DETECTOR_TIMEOUT + 500) / (100 + 250); i++) {
-                BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SOLID);
-                delay(100);
-                BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
-                delay(250);
-            }
-#else
-            delay(5000);
-#endif
-            config.restoreFactorySettings();
-            config.write();
-            resetDetector.setSafeMode(false);
-            resetDetector.clearCounter();
-        }
-    }
-#endif
 
     bool safe_mode = false;
     bool increaseCrashCounter = false;
-    if (resetDetector.getSafeMode()) {
-
-        KFC_SAFE_MODE_SERIAL_PORT.println(F("Starting in safe mode..."));
-        delay(2000);
-        // normal boot after safe mode
-        resetDetector.setSafeModeAndClearCounter(false);
-        // activate safe mode
-        safe_mode = true;
-
+    // skip boot menu and file system on wakeup
+    bool wakeup = resetDetector.hasWakeUpDetected();
+    if (wakeup) {
+        config.wakeUpFromDeepSleep();
     }
-#if KFC_SHOW_BOOT_MENU_RESET_COUNT
     else {
 
-        if (resetDetector.getResetCounter() > KFC_SHOW_BOOT_MENU_RESET_COUNT) {
+        BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
 
-            KFC_SAFE_MODE_SERIAL_PORT.println();
-            for(uint8_t i = 0; i < 76; i++) {
-                KFC_SAFE_MODE_SERIAL_PORT.print('=');
-            }
-            KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("\nCrashs detected: %u\nReset counter: %u\n"), resetDetector.hasCrashDetected(), resetDetector.getResetCounter());
-            KFC_SAFE_MODE_SERIAL_PORT.println(F("\nAvailable keys:\n"));
-            KFC_SAFE_MODE_SERIAL_PORT.println(F(
-                "    t: disable boot menu timeout\n"
-                "    s: reboot in safe mode\n"
-                "    r: continue to boot normally\n"
-                "    f: restore factory settings\n"
-                "    c: clear RTC memory\n"
-                "    p: enable AP mode and set passwords to default\n"
-            ));
-            KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("Multiple resets detected. Reboot continues in %u seconds...\n"), KFC_BOOT_MENU_TIMEOUT);
-            KFC_SAFE_MODE_SERIAL_PORT.println(F("Press reset again to start in safe mode."));
-            KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("Press reset %ux times to restore factory defaults. A blinking LED indicates success and the normal boot process continues after %u seconds.\n\n"), KFC_RESTORE_FACTORY_SETTINGS_RESET_COUNT, RESET_DETECTOR_TIMEOUT / 1000U);
-
-            BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SOS);
-            resetDetector.setSafeMode(1);
-
-            static_assert(KFC_BOOT_MENU_TIMEOUT >= 3, "timeout should be at least 3 seconds");
-            auto endTimeout = millis() + (KFC_BOOT_MENU_TIMEOUT * 1000UL);
-
-            while(millis() < endTimeout) {
-                if (KFC_SAFE_MODE_SERIAL_PORT.available()) {
-                    auto ch = KFC_SAFE_MODE_SERIAL_PORT.read();
-                    switch(ch) {
-                        case 'p':
-                            config.read();
-                            config.recoveryMode();
-                            config.write();
-                            KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("AP mode with DHCPD enabled (SSID %s)\nUsername '%s', passwords set to '%s'\nWeb server running on port 80\n\nPress r to reboot...\n"),
-                                Network::WiFi::getSoftApSSID(),
-                                System::Device::getUsername(),
-                                SPGM(defaultPassword)
-                            );
-                            endTimeout = 0;
-                            break;
-                        case 'c':
-                            RTCMemoryManager::clear();
-                            SaveCrash::removeCrashCounter();
-                            KFC_SAFE_MODE_SERIAL_PORT.println(F("RTC memory cleared"));
-                            break;
-                        case 't':
-                            endTimeout = std::numeric_limits<decltype(endTimeout)>::max();
-                            KFC_SAFE_MODE_SERIAL_PORT.println(F("Boot menu timeout disabled"));
-                            break;
-                        case 'f':
-                            config.restoreFactorySettings();
-                            config.write();
-                            KFC_SAFE_MODE_SERIAL_PORT.println(F("Factory settings restored"));
-                            // fallthrough
-                        case 'r':
-                            SaveCrash::removeCrashCounter();
-                            // fallthrough
-                        case 's':
-                            resetDetector.setSafeModeAndClearCounter(false);
-                            safe_mode = (ch == 's');
-                            endTimeout = 0;
-                            break;
-                    }
-                }
-            }
-            if (endTimeout) {
-                // timeout occured, count as crash
-                // safe_mode should be false
-                increaseCrashCounter = true;
-            }
-            delay(100);
-#if defined(ESP8266)
-            ESP.wdtFeed();
-#endif
+        if (resetDetector.getResetCounter() >= 20/* && !resetDetector.hasWakeUpDetected()*/) {
+            KFC_SAFE_MODE_SERIAL_PORT.println(F("Reboot continues in 5 seconds..."));
+            // stop timer to avoid resetting counters
+            resetDetector.disarmTimer();
+            // delay boot if too many resets are detected
+            delay(5000);
+            resetDetector.armTimer();
         }
-    }
+
+    #if DEBUG_PRE_INIT_SERIAL2TCP
+        #include "../include/retracted/custom_wifi.h"
+        BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FAST);
+        WiFi.setAutoConnect(true);
+        WiFi.setAutoReconnect(true);
+        WiFi.enableSTA(true);
+        Serial.printf_P(PSTR("WiFi.begin=%u\n"), WiFi.begin(CUSTOM_WIFI_SSID, CUSTOM_WIFI_PASSWORD));
+        Serial.printf_P(PSTR("WiFi.reconnect=%u\n"), WiFi.reconnect());
+        Serial.printf_P(PSTR("WiFi.waitForConnectResult=%u\n"), WiFi.waitForConnectResult());
+        Serial.printf_P(PSTR("WiFi.connected=%u\n"), WiFi.isConnected());
+        if (WiFi.isConnected()) {
+            using Serial2TCP = KFCConfigurationClasses::Plugins::Serial2TCP;
+            Serial2TCP::Serial2Tcp_t cfg = CUSTOM_SERIAL2TCP_CFG;
+            auto instance = Serial2TcpBase::createInstance(cfg, CUSTOM_SERIAL2TCP_SERVER);
+            instance->begin();
+            delay(1000);
+            BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
+        }
+        else {
+            BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SOD);
+        }
+    #endif
+
+    #if HAVE_GDBSTUB
+        gdbstub_do_break();
+        disable_at_mode(Serial);
+    #endif
+
+
+        // if (resetDetector.hasWakeUpDetected()) {
+        //     resetDetector.clearCounter();
+        //     config.wakeUpFromDeepSleep();
+        // }
+        // else {
+        KFC_SAFE_MODE_SERIAL_PORT.println(F("Booting KFC firmware..."));
+        KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("SAFE MODE %d, reset counter %d, wake up %d\n"), resetDetector.getSafeMode(), resetDetector.getResetCounter(), resetDetector.hasWakeUpDetected());
+        // }
+
+#if KFC_RESTORE_FACTORY_SETTINGS_RESET_COUNT
+        if (resetDetector.hasResetDetected()) {
+            if (resetDetector.getResetCounter() >= KFC_RESTORE_FACTORY_SETTINGS_RESET_COUNT) {
+                KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("%ux reset detected. Restoring factory defaults in a 5 seconds...\n"), KFC_RESTORE_FACTORY_SETTINGS_RESET_COUNT);
+#if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID
+                for(uint8_t i = 0; i < (RESET_DETECTOR_TIMEOUT + 500) / (100 + 250); i++) {
+                    BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SOLID);
+                    delay(100);
+                    BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
+                    delay(250);
+                }
+#else
+                delay(5000);
+#endif
+                config.restoreFactorySettings();
+                config.write();
+                resetDetector.setSafeMode(false);
+                resetDetector.clearCounter();
+            }
+        }
 #endif
 
-    // start FS, we need it for getCrashCounter()
-    KFCFS.begin();
+        if (resetDetector.getSafeMode()) {
 
-#if KFC_AUTO_SAFE_MODE_CRASH_COUNT
-    if (resetDetector.hasCrashDetected() || increaseCrashCounter) {
-        uint8_t counter = SaveCrash::getCrashCounter();
-        if (counter >= KFC_AUTO_SAFE_MODE_CRASH_COUNT) {  // boot in safe mode if there were 3 (KFC_AUTO_SAFE_MODE_CRASH_COUNT) crashes within the 5 minutes (KFC_CRASH_RECOVERY_TIME)
+            KFC_SAFE_MODE_SERIAL_PORT.println(F("Starting in safe mode..."));
+            delay(2000);
+            // normal boot after safe mode
             resetDetector.setSafeModeAndClearCounter(false);
+            // activate safe mode
             safe_mode = true;
         }
-    }
+
+#if KFC_SHOW_BOOT_MENU_RESET_COUNT
+        else {
+
+            if (resetDetector.getResetCounter() > KFC_SHOW_BOOT_MENU_RESET_COUNT) {
+
+                KFC_SAFE_MODE_SERIAL_PORT.println();
+                for(uint8_t i = 0; i < 76; i++) {
+                    KFC_SAFE_MODE_SERIAL_PORT.print('=');
+                }
+                KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("\nCrashs detected: %u\nReset counter: %u\n"), resetDetector.hasCrashDetected(), resetDetector.getResetCounter());
+                KFC_SAFE_MODE_SERIAL_PORT.println(F("\nAvailable keys:\n"));
+                KFC_SAFE_MODE_SERIAL_PORT.println(F(
+                    "    t: disable boot menu timeout\n"
+                    "    s: reboot in safe mode\n"
+                    "    r: continue to boot normally\n"
+                    "    f: restore factory settings\n"
+                    "    c: clear RTC memory\n"
+                    "    p: enable AP mode and set passwords to default\n"
+                ));
+                KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("Multiple resets detected. Reboot continues in %u seconds...\n"), KFC_BOOT_MENU_TIMEOUT);
+                KFC_SAFE_MODE_SERIAL_PORT.println(F("Press reset again to start in safe mode."));
+                KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("Press reset %ux times to restore factory defaults. A blinking LED indicates success and the normal boot process continues after %u seconds.\n\n"), KFC_RESTORE_FACTORY_SETTINGS_RESET_COUNT, RESET_DETECTOR_TIMEOUT / 1000U);
+
+                BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SOS);
+                resetDetector.setSafeMode(1);
+
+                static_assert(KFC_BOOT_MENU_TIMEOUT >= 3, "timeout should be at least 3 seconds");
+                auto endTimeout = millis() + (KFC_BOOT_MENU_TIMEOUT * 1000UL);
+
+                while(millis() < endTimeout) {
+                    if (KFC_SAFE_MODE_SERIAL_PORT.available()) {
+                        auto ch = KFC_SAFE_MODE_SERIAL_PORT.read();
+                        switch(ch) {
+                            case 'p':
+                                config.read();
+                                config.recoveryMode();
+                                config.write();
+                                KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("AP mode with DHCPD enabled (SSID %s)\nUsername '%s', passwords set to '%s'\nWeb server running on port 80\n\nPress r to reboot...\n"),
+                                    Network::WiFi::getSoftApSSID(),
+                                    System::Device::getUsername(),
+                                    SPGM(defaultPassword)
+                                );
+                                endTimeout = 0;
+                                break;
+                            case 'c':
+                                RTCMemoryManager::clear();
+                                SaveCrash::removeCrashCounter();
+                                KFC_SAFE_MODE_SERIAL_PORT.println(F("RTC memory cleared"));
+                                break;
+                            case 't':
+                                endTimeout = std::numeric_limits<decltype(endTimeout)>::max();
+                                KFC_SAFE_MODE_SERIAL_PORT.println(F("Boot menu timeout disabled"));
+                                break;
+                            case 'f':
+                                config.restoreFactorySettings();
+                                config.write();
+                                KFC_SAFE_MODE_SERIAL_PORT.println(F("Factory settings restored"));
+                                // fallthrough
+                            case 'r':
+                                SaveCrash::removeCrashCounter();
+                                // fallthrough
+                            case 's':
+                                resetDetector.setSafeModeAndClearCounter(false);
+                                safe_mode = (ch == 's');
+                                endTimeout = 0;
+                                break;
+                        }
+                    }
+                }
+                if (endTimeout) {
+                    // timeout occured, count as crash
+                    // safe_mode should be false
+                    increaseCrashCounter = true;
+                }
+                delay(100);
+#if defined(ESP8266)
+                ESP.wdtFeed();
 #endif
+            }
+        }
+#endif
+
+        // start FS, we need it for getCrashCounter()
+        KFCFS.begin();
+
+#if KFC_AUTO_SAFE_MODE_CRASH_COUNT
+        if (resetDetector.hasCrashDetected() || increaseCrashCounter) {
+            uint8_t counter = SaveCrash::getCrashCounter();
+            if (counter >= KFC_AUTO_SAFE_MODE_CRASH_COUNT) {  // boot in safe mode if there were 3 (KFC_AUTO_SAFE_MODE_CRASH_COUNT) crashes within the 5 minutes (KFC_CRASH_RECOVERY_TIME)
+                resetDetector.setSafeModeAndClearCounter(false);
+                safe_mode = true;
+            }
+        }
+#endif
+
+        config.setSafeMode(safe_mode);
+
+    }
+
 
 // #if defined(KFC_ENABLE_DEBUG_LOG_AT_BOOTTIME) && KFC_ENABLE_DEBUG_LOG_AT_BOOTTIME
 //     if (!safe_mode) {
@@ -315,7 +318,7 @@ void setup()
 //     }
 // #endif
 
-    config.setSafeMode(safe_mode);
+
 
 #if WEBUI_ALERTS_ENABLED
     // read only mode in safe mode
@@ -381,20 +384,9 @@ void setup()
             at_mode_setup();
         #endif
 
+#if WEBUI_ALERTS_ENABLED
         if (resetDetector.hasCrashDetected()) {
             WebAlerts::Alert::error(PrintString(F("System crash detected.<br>%s"), resetDetector.getResetInfo().c_str()));
-        }
-
-#if DEBUG && HAVE_KFC_BOOT_CHECK_FLASHSIZE
-#if ENABLE_DEEP_SLEEP
-        if (!resetDetector.hasWakeUpDetected())
-#endif
-        {
-            check_flash_size();
-            Serial.printf_P(PSTR("Free Sketch Space %u\n"), ESP.getFreeSketchSpace());
-#if defined(ESP8266)
-            Serial.printf_P(PSTR("CPU frequency %d\n"), system_get_cpu_freq());
-#endif
         }
 #endif
 
@@ -402,32 +394,20 @@ void setup()
 
         setup_plugins(
 #if ENABLE_DEEP_SLEEP
-            resetDetector.hasWakeUpDetected() ?
+            wakeup ?
                 PluginComponent::SetupModeType::AUTO_WAKE_UP :
 #endif
                 PluginComponent::SetupModeType::DEFAULT
         );
 
-        // check if wifi is up
-        BOOTLOG_PRINTF("adding wifi check");
-        _Scheduler.add(Event::seconds(60), true, [](Event::CallbackTimerPtr timer) {
-            if (System::Flags::getConfig().is_station_mode_enabled) {
-                if (!WiFi.isConnected()) {
-                    if (timer->updateInterval(Event::seconds(60)) == false) {
-                        timer->setInterval(Event::seconds(30)); // change interval to 30 seconds if it is 60
-                    }
-                    else {
-                        // restart entire wifi subsystem. the interval was reset back to 60 seconds
-                        config.reconfigureWiFi();
-                        Logger_notice(F("WiFi subsystem restarted"));
-                    }
-                }
-            }
-        });
-
-        // reset crash counter
-        BOOTLOG_PRINTF("installing safecrash crash recovery");
-        SaveCrash::installRemoveCrashCounter(KFC_CRASH_RECOVERY_TIME);
+        if (wakeup) {
+            _Scheduler.add(250, false, [](Event::CallbackTimerPtr) {
+                delayedSetup(true);
+            });
+        }
+        else {
+            delayedSetup(false);
+        }
 
         _startupTimings.setLoopFunc(millis());
     }
@@ -436,7 +416,6 @@ void setup()
     load_avg_timer = millis() + 30000;
 #endif
 
-    _debug_println(F("end"));
     BOOTLOG_PRINTF("setup done");
 }
 

@@ -782,19 +782,17 @@ void KFCFWConfiguration::setup()
 
 #include "build.h"
 
-void KFCFWConfiguration::read()
+void KFCFWConfiguration::read(bool wakeup)
 {
-    __LDBG_println();
-
     BOOTLOG_PRINTF("read config");
-
     if (!Configuration::read()) {
         BOOTLOG_PRINTF("failed");
 
         Logger_error(F("Failed to read configuration, restoring factory settings"));
         config.restoreFactorySettings();
         Configuration::write();
-    } else {
+    }
+    else if (wakeup == false) {
         auto version = System::Device::getConfig().config_version;
         BOOTLOG_PRINTF("version %08x", version);
         uint32_t currentVersion = (FIRMWARE_VERSION << 16) | (uint16_t)String(F(__BUILD_NUMBER)).toInt();
@@ -812,10 +810,6 @@ void KFCFWConfiguration::read()
 
 void KFCFWConfiguration::write()
 {
-    __LDBG_println();
-
-    System::Flags::getWriteableConfig().is_factory_settings = false;
-
     if (!Configuration::write()) {
         Logger_error(F("Failure to write settings to EEPROM"));
     }
@@ -900,7 +894,7 @@ bool KFCFWConfiguration::hasZeroConf(const String &hostname) const
 
 void KFCFWConfiguration::wifiQuickConnect()
 {
-    __DBG_printf("quick connect");
+    __LDBG_printf("quick connect");
 
 #if defined(ESP32)
     WiFi.mode(WIFI_STA); // needs to be called to initialize wifi
@@ -945,7 +939,7 @@ void KFCFWConfiguration::wifiQuickConnect()
                 Logger_error(F("Failed to start WiFi"));
             }
 
-            __DBG_printf("WiFi.begin() = %d, ssid %.32s, channel %d, bssid %s, config: static ip %d, %s/%s gateway %s, dns %s, %s",
+            __LDBG_printf("WiFi.begin() = %d, ssid %.32s, channel %d, bssid %s, config: static ip %d, %s/%s gateway %s, dns %s, %s",
                 result,
                 config.ssid,
                 channel,
@@ -958,19 +952,11 @@ void KFCFWConfiguration::wifiQuickConnect()
                 inet_ntoString(quickConnect.dns2).c_str()
             );
 
-            // // call manually, the callback is not invoked all the time. calling it multiple times is ignored
-            // WiFiEventStationModeConnected event;
-            // event.ssid = reinterpret_cast<char *>(config.ssid);
-            // memcpy(event.bssid, bssidPtr, sizeof(event.bssid));
-            // event.channel = channel;
-            // _onWiFiConnectCb(event);
-
         }
 
     } else {
         Logger_error(F("Failed to load WiFi configuration"));
     }
-
 }
 
 #if ENABLE_DEEP_SLEEP
@@ -1027,10 +1013,11 @@ void DeepSleep::DeepSleepParams_t::calcSleepTime()
 
 void KFCFWConfiguration::wakeUpFromDeepSleep()
 {
-    ::printf(PSTR("wakeUpFromDeepSleep\n"));
+    // ::printf(PSTR("wakeUpFromDeepSleep\n"));
 
     BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
 
+    // TODO deep sleep should be move into user_init
     if (RTCMemoryManager::read(RTCMemoryManager::RTCMemoryId::DEEP_SLEEP, &_deepSleepParams, sizeof(_deepSleepParams)) && _deepSleepParams.deepSleepTime) {
         if (_deepSleepParams.remainingSleepTime) {
             _deepSleepParams.calcSleepTime();
@@ -1049,50 +1036,55 @@ void KFCFWConfiguration::wakeUpFromDeepSleep()
 
             uint32_t ms = micros();
             _deepSleepParams.cycleRuntime += ms + 3500;
-            ::printf(PSTR("cycle_runtime=%uus last=%uus\n"), _deepSleepParams.cycleRuntime, ms);
+            // ::printf(PSTR("cycle_runtime=%uus last=%uus\n"), _deepSleepParams.cycleRuntime, ms);
 
-            RTCMemoryManager::write(RTCMemoryManager::RTCMemoryId::DEEP_SLEEP, &_deepSleepParams, sizeof(_deepSleepParams));
-
-            auto dur = micros() - ms;
-            ::printf(PSTR("additional time: %u\n"), (unsigned)dur);
+            // auto dur = micros() - ms;
+            // ::printf(PSTR("additional time: %u\n"), (unsigned)dur);
 
             if (_deepSleepParams.hasBeenAborted()) {
                 // deep sleep aborted by a keypress
             }
             else if (_deepSleepParams.isUnlimited()) {
-                ::printf(PSTR("entering deep sleep: %u\n"), 0);
+                // ::printf(PSTR("entering deep sleep: %u\n"), 0);
+                resetDetector.clearCounter();
+                RTCMemoryManager::write(RTCMemoryManager::RTCMemoryId::DEEP_SLEEP, &_deepSleepParams, sizeof(_deepSleepParams));
                 ESP.deepSleepInstant(0, _deepSleepParams.mode);
             }
             else if (!_deepSleepParams.cyclesCompeleted()) {
 
                 if (_deepSleepParams.remainingSleepTime < 1000 && _deepSleepParams.mode != RFMode::RF_CAL) {
                     _deepSleepParams.mode = RFMode::RF_CAL;
-                    ::printf(PSTR("running RF_CAL\n"));
+                    // ::printf(PSTR("running RF_CAL\n"));
                 } else {
                     _deepSleepParams.mode = RFMode::RF_DISABLED;
-                    ::printf(PSTR("running RF_DISABLED\n"));
+                    // ::printf(PSTR("running RF_DISABLED\n"));
                 }
 
-                ::printf(PSTR("entering deep sleep: %u\n"), _deepSleepParams.currentSleepTime);
+                // ::printf(PSTR("entering deep sleep: %u\n"), _deepSleepParams.currentSleepTime);
+
+                resetDetector.clearCounter();
+                RTCMemoryManager::write(RTCMemoryManager::RTCMemoryId::DEEP_SLEEP, &_deepSleepParams, sizeof(_deepSleepParams));
 
                 ESP.deepSleepInstant(_deepSleepParams.currentSleepTime * 1000ULL, _deepSleepParams.mode);
-                ::printf(PSTR("entering deep sleep: %u\n"), 0);
+                // ::printf(PSTR("entering deep sleep: %u\n"), 0);
                 ESP.deepSleepInstant(0, _deepSleepParams.mode); // go to deep sleep indefinitely if the first call fails
             }
             else {
-                ::printf(PSTR("executing full wakeup\n"));
+                // ::printf(PSTR("executing full wakeup\n"));
             }
         }
         if (_deepSleepParams.tasks.connectWiFi == false) {
-            ::printf(PSTR("wifi quick connect disabled\n"));
+            // ::printf(PSTR("wifi quick connect disabled\n"));
             return;
         }
+        wifiQuickConnect();
     }
     else {
+        wifiQuickConnect();
         _deepSleepParams = {};
     }
-
-    wifiQuickConnect();
+    resetDetector.clearCounter();
+    RTCMemoryManager::write(RTCMemoryManager::RTCMemoryId::DEEP_SLEEP, &_deepSleepParams, sizeof(_deepSleepParams));
 }
 
 void KFCFWConfiguration::enterDeepSleep(milliseconds time, RFMode mode, uint16_t delayAfterPrepare)

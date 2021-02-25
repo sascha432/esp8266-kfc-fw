@@ -160,46 +160,25 @@ size_t str_replace(char *src, int from, int to, size_t maxLen = ~0);
 // case insensitive comparision of from
 size_t str_case_replace(char *src, int from, int to, size_t maxLen = ~0);
 
-inline size_t String_replace(String &str, int from, int to) {
+inline size_t String_replace(String &str, int from, int to)
+{
     return str_replace(str.begin(), from, to, str.length());
 }
 
-inline size_t String_replaceIgnoreCase(String &str, int from, int to) {
+inline size_t String_replaceIgnoreCase(String &str, int from, int to)
+{
     return str_case_replace(str.begin(), from, to, str.length());
 }
 
-size_t String_rtrim(String &str);
-size_t String_ltrim(String &str);
-size_t String_trim(String &str);
-
-size_t String_rtrim(String &str, const char *chars, size_t minLength = ~0);
-size_t String_ltrim(String &str, const char *chars);
-size_t String_trim(String &str, const char *chars);
-
-size_t String_rtrim(String &str, char chars, size_t minLength = ~0);
-size_t String_ltrim(String &str, char chars);
-size_t String_trim(String &str, char chars);
-
-size_t String_rtrim_P(String &str, PGM_P chars, size_t minLength = ~0);
-size_t String_ltrim_P(String &str, PGM_P chars);
-size_t String_trim_P(String &str, PGM_P chars);
-
-inline size_t String_rtrim_P(String &str, const __FlashStringHelper *chars, size_t minLength = ~0) {
-    return String_rtrim_P(str, reinterpret_cast<PGM_P>(chars), minLength);
-}
-inline size_t String_ltrim_P(String &str, const __FlashStringHelper *chars) {
-    return String_ltrim_P(str, reinterpret_cast<PGM_P>(chars));
-}
-inline size_t String_trim_P(String &str, const __FlashStringHelper *chars) {
-    return String_trim_P(str, reinterpret_cast<PGM_P>(chars));
-}
+#include "misc_string.h"
+#include "misc_string_inline.h"
 
 // trim trailing zeros
 // return length of the string
 // output can be nullptr to get the length
 size_t printTrimmedDouble(Print *output, double value, int digits = 6);
 
-inline bool String_startsWith(const String &str1, char ch) {
+static inline bool String_startsWith(const String &str1, char ch) {
     return str1.charAt(0) == ch;
 }
 bool String_endsWith(const String &str1, char ch);
@@ -211,25 +190,7 @@ bool String_endsWith(const String &str1, PGM_P str2);
 // bool String_equals(const String &str1, PGM_P str2);
 // bool String_equalsIgnoreCase(const String &str1, PGM_P str2);
 
-inline bool String_equals(const String &str1, PGM_P str2) {
-    return !strcmp_P(str1.c_str(), str2);
-}
-inline bool String_equalsIgnoreCase(const String &str1, PGM_P str2) {
-    return !strcasecmp_P(str1.c_str(), str2);
-}
 
-inline bool String_equals(const String &str1, const __FlashStringHelper *str2) {
-    return String_equals(str1, reinterpret_cast<PGM_P>(str2));
-}
-inline bool String_equalsIgnoreCase(const String &str1, const __FlashStringHelper *str2) {
-    return String_equalsIgnoreCase(str1, reinterpret_cast<PGM_P>(str2));
-}
-inline bool String_startsWith(const String &str1, const __FlashStringHelper *str2) {
-    return String_startsWith(str1, reinterpret_cast<PGM_P>(str2));
-}
-inline bool String_endsWith(const String &str1, const __FlashStringHelper *str2) {
-    return String_endsWith(str1, reinterpret_cast<PGM_P>(str2));
-}
 
 #if defined(ESP8266)
 

@@ -1,0 +1,166 @@
+diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/FS.h ./framework-arduinoespressif8266/cores/esp8266/FS.h
+269c269
+< extern fs::FS SPIFFS __attribute__((deprecated("SPIFFS has been deprecated. Please consider moving to LittleFS or other filesystems.")));
+---
+> extern fs::FS SPIFFS; // __attribute__((deprecated("SPIFFS has been deprecated. Please consider moving to LittleFS or other filesystems.")));
+diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/HardwareSerial.h ./framework-arduinoespressif8266/cores/esp8266/HardwareSerial.h
+206a207,209
+> #ifdef HAVE_KFC_FIRMWARE_VERSION
+> extern Stream &Serial;
+> #else
+207a211
+> #endif
+diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.cpp ./framework-arduinoespressif8266/cores/esp8266/WString.cpp
+814a815,836
+> 
+> #ifdef HAVE_KFC_FIRMWARE_VERSION
+> 
+> String &String::trim(void) {
+>     if (!buffer() || len() == 0)
+>         return *this;
+>     char *begin = wbuffer();
+>     while (isspace(*begin))
+>         begin++;
+>     char *end = wbuffer() + len() - 1;
+>     while (isspace(*end) && end >= begin)
+>         end--;
+>     unsigned int newlen = end + 1 - begin;
+>     setLen(newlen);
+>     if (begin > buffer())
+>         memmove_P(wbuffer(), begin, newlen);
+>     wbuffer()[newlen] = 0;
+>     return *this;
+> }
+> 
+> #else
+> 
+829a852,853
+> 
+> #endif
+diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./framework-arduinoespressif8266/cores/esp8266/WString.h
+30a31
+> 
+40a42,45
+> #ifdef HAVE_KFC_FIRMWARE_VERSION
+> #include "KFCBaseLibrary/include/misc_string.h"
+> #endif
+> 
+186a192,196
+> #ifdef HAVE_KFC_FIRMWARE_VERSION
+>         unsigned char equals(const __FlashStringHelper *fstr) const {
+>             return String_equals(*this, fstr);
+>         }
+> #endif
+192a203,207
+> #ifdef HAVE_KFC_FIRMWARE_VERSION
+>         unsigned char operator ==(const __FlashStringHelper *fstr) const {
+>             return String_equals(*this, fstr);
+>         }
+> #endif
+198a214,218
+> #ifdef HAVE_KFC_FIRMWARE_VERSION
+>         unsigned char operator !=(const __FlashStringHelper *fstr) const {
+>             return !String_equals(*this, fstr);
+>         }
+> #endif
+203a224,232
+> #ifdef HAVE_KFC_FIRMWARE_VERSION
+>         unsigned char equalsIgnoreCase(const char *cstr) const {
+>             return String_equalsIgnoreCase(*this, cstr);
+>         }
+>         unsigned char equalsIgnoreCase(const __FlashStringHelper *fstr) const {
+>             return String_equalsIgnoreCase(*this, fstr);
+>         }
+> #endif
+> 
+205a235,242
+> #ifdef HAVE_KFC_FIRMWARE_VERSION
+>         unsigned char startsWith(const __FlashStringHelper *prefix) const {
+>             return String_startsWith(*this, prefix);
+>         }
+>         unsigned char startsWith(const char * prefix) const {
+>             return String_startsWith(*this, prefix);
+>         }
+> #else
+211a249
+> #endif
+213a252,259
+> #ifdef HAVE_KFC_FIRMWARE_VERSION
+>         unsigned char endsWith(const char * suffix) const {
+>             return String_endsWith(*this, suffix);
+>         }
+>         unsigned char endsWith(const __FlashStringHelper * suffix) const {
+>             return String_endsWith(*this, suffix);
+>         }
+> #else
+219a266
+> #endif
+272a320,366
+> #ifdef HAVE_KFC_FIRMWARE_VERSION
+>         String &trim(void);
+>         String &rtrim() {
+>             String_rtrim(*this);
+>             return *this;
+>         }
+>         String &ltrim() {
+>             String_rtrim(*this);
+>             return *this;
+>         }
+>         String &trim(const char *characters) {
+>             String_trim(*this, characters);
+>             return *this;
+>         }
+>         String &trim(const String &characters) {
+>             String_trim(*this, characters.c_str());
+>             return *this;
+>         }
+>         String &rtrim(const char *characters) {
+>             String_rtrim(*this, characters);
+>             return *this;
+>         }
+>         String &rtrim(const String &characters) {
+>             String_rtrim(*this, characters.c_str());
+>             return *this;
+>         }
+>         String &ltrim(const char *characters) {
+>             String_ltrim(*this, characters);
+>             return *this;
+>         }
+>         String &ltrim(const String &characters) {
+>             String_ltrim(*this, characters.c_str());
+>             return *this;
+>         }
+>         String &trim(const __FlashStringHelper *fchars) {
+>             String_trim(*this, fchars);
+>             return *this;
+>         }
+>         String &rtrim(const __FlashStringHelper *fchars) {
+>             String_rtrim(*this, fchars);
+>             return *this;
+>         }
+>         String &ltrim(const __FlashStringHelper *fchars) {
+>             String_ltrim(*this, fchars);
+>             return *this;
+>         }
+> #else
+273a368
+> #endif
+278c373
+< 	double toDouble(void) const;
+---
+> 	    double toDouble(void) const;
+358a454,458
+> 
+> #ifdef HAVE_KFC_FIRMWARE_VERSION
+> #include "KFCBaseLibrary/include/misc_string_inline.h"
+> #endif
+> 
+diff -r -Z -P4 ./framework-arduinoespressif8266_orig/libraries/ESP8266mDNS/src/LEAmDNS.h ./framework-arduinoespressif8266/libraries/ESP8266mDNS/src/LEAmDNS.h
+523a524,526
+> #ifdef HAVE_KFC_FIRMWARE_VERSION
+>     public:
+> #endif
+1440a1444,1446
+> #ifdef HAVE_KFC_FIRMWARE_VERSION
+>     public:
+> #endif

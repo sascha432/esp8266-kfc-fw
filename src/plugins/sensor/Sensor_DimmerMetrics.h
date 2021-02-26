@@ -20,7 +20,7 @@ public:
     Sensor_DimmerMetrics(const String &name);
     virtual ~Sensor_DimmerMetrics();
 
-    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num) override;
+    virtual MQTT::AutoDiscovery::EntityPtr nextAutoDiscovery(MQTT::FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;
 
     virtual void publishState(MQTTClient *client) override;
@@ -34,14 +34,17 @@ private:
     friend class DimmerModulePlugin;
     friend class Dimmer_Base;
 
-    enum class TopicType : uint8_t {
-        TEMPERATURE,
-        TEMPERATURE2,
-        VCC,
-        FREQUENCY
-    };
+    // enum class TopicType : uint8_t {
+    //     TEMPERATURE,
+    //     TEMPERATURE2,
+    //     VCC,
+    //     FREQUENCY
+    // };
 
-    String _getMetricsTopics(TopicType num) const;
+    // String _getMetricsTopics(TopicType num) const;
+    String _getMetricsTopics() const {
+        return MQTTClient::formatTopic(F("metrics"));
+    }
     MetricsType &_updateMetrics(const MetricsType &metrics);
     void _createWebUI(WebUIRoot &webUI, WebUIRow **row);
 

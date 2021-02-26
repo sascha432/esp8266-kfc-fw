@@ -189,7 +189,7 @@ private:
 #else
 
 public:
-    StartupTimings() : _wifiGotIP({0}) {}
+    StartupTimings() : _wifiGotIP(0) {}
 
     void setSetupFunc(uint32_t millis) {}
     void setLoopFunc(uint32_t millis) {}

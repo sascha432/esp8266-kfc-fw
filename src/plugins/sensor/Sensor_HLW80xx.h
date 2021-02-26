@@ -178,12 +178,12 @@ class Sensor_HLW8032;
 class Sensor_HLW80xx : public MQTTSensor {
 public:
     using EnergyCounterArray = std::array<uint64_t, IOT_SENSOR_HLW80xx_NUM_ENERGY_COUNTERS>;
-    using ConfigType = KFCConfigurationClasses::Plugins::Sensor::SensorConfig_t::HLW80xxConfig_t;
+    using ConfigType = KFCConfigurationClasses::Plugins::SensorConfig::SensorConfig_t;
 
 public:
     Sensor_HLW80xx(const String &name);
 
-    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num) override;
+    virtual MQTT::AutoDiscovery::EntityPtr nextAutoDiscovery(MQTT::FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;
 
     virtual void publishState(MQTTClient *client) override;
@@ -296,5 +296,39 @@ private:
     WebSocketDataTypeEnum_t _webSocketPlotData;
 #endif
 };
+
+inline void Sensor_HLW80xx::resetEnergyCounter()
+{
+    _energyCounter = {};
+    _saveEnergyCounter();
+}
+
+inline void Sensor_HLW80xx::_incrEnergyCounters(uint32_t count)
+{
+    for(uint8_t i = 0; i < _energyCounter.size(); i++) {
+        _energyCounter[i] += count;
+    }
+}
+
+inline JsonNumber Sensor_HLW80xx::_powerToNumber(float power) const
+{
+    return JsonNumber(power, ((power < 10) ? 2 : 1) + _extraDigits);
+}
+
+inline float Sensor_HLW80xx::_getPowerFactor() const
+{
+    return (isnan(_power) || isnan(_voltage) || isnan(_current) || _current == 0) ? 0 : std::min(_power / (_voltage * _current), 1.0f);
+}
+
+inline float Sensor_HLW80xx::_getEnergy(uint8_t num) const
+{
+    return (num >= IOT_SENSOR_HLW80xx_NUM_ENERGY_COUNTERS) ? NAN : IOT_SENSOR_HLW80xx_PULSE_TO_KWH(_energyCounter[num]);
+}
+
+inline String Sensor_HLW80xx::_getTopic()
+{
+    return MQTTClient::formatTopic(_getId());
+}
+
 
 #endif

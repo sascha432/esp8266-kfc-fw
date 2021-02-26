@@ -204,7 +204,7 @@ void Sensor_SystemMetrics::createWebUI(WebUIRoot &webUI, WebUIRow **row)
 
 String Sensor_SystemMetrics::_getTopic() const
 {
-    return MQTTClient::formatTopic(F("/sys"));
+    return MQTTClient::formatTopic(F("sys"));
 }
 
 void Sensor_SystemMetrics::_getMetricsJson(Print &json) const

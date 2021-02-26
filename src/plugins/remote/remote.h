@@ -47,7 +47,7 @@ public:
     void publishAutoDiscovery() {
         auto client = MQTTClient::getClient();
         if (client) {
-            __DBG_printf("connected=%u running=%u registered=%u", client->isConnected(), client->isAutoDiscoveryRunning(), client->isComponentRegistered(this));
+            __LDBG_printf("connected=%u running=%u registered=%u", client->isConnected(), client->isAutoDiscoveryRunning(), client->isComponentRegistered(this));
             if (client->isConnected()) {
                 _autoDiscoveryPending = false;
                 client->publishAutoDiscovery(true, true);
@@ -90,40 +90,65 @@ public:
 
 #endif
 
+class RemoteControlPlugin;
+
+struct __attribute__((packed)) PinState {
+public:
+    static constexpr uint32_t _time = 15000;     // micros() is not available when called inside preinit
+    uint32_t _state;
+    uint32_t _read: 31;
+    uint32_t _valid: 1;
+
+    PinState(bool valid = false) : _state(0), _read(0), _valid(valid) {
+        if (_valid) {
+            _readStates();
+        }
+    }
+
+    inline __attribute__((__always_inline__))
+    bool isValid() const {
+        return _valid;
+    }
+
+    static constexpr bool activeLow() {
+        return PIN_MONITOR_ACTIVE_STATE == PinMonitor::ActiveStateType::PRESSED_WHEN_LOW;
+    }
+
+    static constexpr bool activeHigh() {
+        return PIN_MONITOR_ACTIVE_STATE == PinMonitor::ActiveStateType::PRESSED_WHEN_HIGH;
+    }
+
+    inline __attribute__((__always_inline__))
+    bool anyPressed() const {
+        return isValid() && ((activeLow() ? _state ^ _read : _state) & _read);
+    }
+
+    inline __attribute__((__always_inline__))
+    bool getPin(uint8_t pin) const {
+        return _state & _BV(pin);
+    }
+
+    inline __attribute__((__always_inline__))
+    void _readStates() {
+        for(const auto pin: _buttonPins) {
+            setPin(_BV(pin), digitalRead(pin));
+        }
+    }
+
+private:
+    friend RemoteControlPlugin;
+
+    inline __attribute__((__always_inline__))
+    void setPin(uint32_t mask, bool value) {
+        _read |= mask;
+        _state = value ? (_state | mask) : (_state & ~mask);
+    }
+
+    String toString();
+};
+
 class RemoteControlPlugin : public PluginComponent, public Base, public MqttRemote {
 public:
-    struct PinState {
-        uint32_t _time;
-        uint32_t _state: 17;
-        uint32_t _read: 17;
-        PinState(uint32_t time = ~0U) : _time(time), _state(0), _read(0) {}
-        bool isValid() const {
-            return _time != ~0U;
-        }
-        static constexpr bool activeLow() {
-            return PIN_MONITOR_ACTIVE_STATE == PinMonitor::ActiveStateType::PRESSED_WHEN_LOW;
-        }
-        static constexpr bool activeHigh() {
-            return PIN_MONITOR_ACTIVE_STATE == PinMonitor::ActiveStateType::PRESSED_WHEN_HIGH;
-        }
-        bool anyPressed() const {
-            return isValid() && ((activeLow() ? _state ^ _read : _state) & _read);
-        }
-        bool getPin(uint8_t pin) const {
-            return _state & _BV(pin);
-        }
-        void setPin(uint8_t pin, bool value) {
-            _read |= _BV(pin);
-            if (value) {
-                _state |= _BV(pin);
-            }
-            else {
-                _state &= ~_BV(pin);
-            }
-        }
-        String toString();
-    };
-
 public:
     RemoteControlPlugin();
 
@@ -148,14 +173,6 @@ public:
     static void disableAutoSleep();
     static void disableAutoSleepHandler(AsyncWebServerRequest *request);
     static void deepSleepHandler(AsyncWebServerRequest *request);
-
-    // store and return keys that are pressed
-    // this is for reading the initial state directly after booting and feed it
-    // into the pinMonitor
-    PinState readPinState();
-    PinState getPinState() const {
-        return _pinState;
-    }
 
     static RemoteControlPlugin &getInstance();
 
@@ -195,8 +212,6 @@ private:
 
     ActionVector _actions;
     // Event::Timer _loopTimer;
-    PinState _pinState;
-    bool _signalWarning;
 };
 
 inline bool RemoteControlPlugin::_hasEvents() const
@@ -209,5 +224,7 @@ inline void RemoteControlPlugin::disableAutoSleep()
     __LDBG_printf("disabled");
     getInstance()._autoSleepTimeout = kAutoSleepDisabled;
 }
+
+extern "C" PinState _pinState;
 
 #include <debug_helper_disable.h>

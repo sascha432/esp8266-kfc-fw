@@ -266,7 +266,7 @@ FLASH_STRING_GENERATOR_AUTO_INIT(
     AUTO_STRING_DEF(int, "int")
     AUTO_STRING_DEF(interval, "interval")
     AUTO_STRING_DEF(iot_blinds_control_state_file, "/.pvt/blinds_ctrl.state")
-    AUTO_STRING_DEF(iot_sensor_hlw80xx_state_file, "")
+    AUTO_STRING_DEF(iot_sensor_hlw80xx_state_file, "/.pvt/hlw80xx.state")
     AUTO_STRING_DEF(iot_switch_states_file, "/.pvt/switch.states")
     AUTO_STRING_DEF(ip_8_8_8_8, "8.8.8.8")
     AUTO_STRING_DEF(is_, "is_")

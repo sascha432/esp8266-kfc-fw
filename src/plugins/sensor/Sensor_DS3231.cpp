@@ -32,7 +32,7 @@ Sensor_DS3231::~Sensor_DS3231()
     UNREGISTER_SENSOR_CLIENT(this);
 }
 
-MQTTComponent::MQTTAutoDiscoveryPtr Sensor_DS3231::nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num)
+MQTTComponent::MQTTAutoDiscoveryPtr Sensor_DS3231::nextAutoDiscovery(MQTT::FormatType format, uint8_t num)
 {
     if (num >= getAutoDiscoveryCount()) {
         return nullptr;

@@ -52,9 +52,9 @@ void Configuration::clear()
 void Configuration::discard()
 {
     __LDBG_printf("discard params=%u", _params.size());
-    std::for_each(_params.begin(), _params.end(), [](ConfigurationParameter &parameter) {
+    for(auto &parameter: _params) {
         ConfigurationHelper::_allocator.deallocate(parameter);
-    });
+    }
     ConfigurationHelper::_allocator.release();
     _eeprom.discard();
     _readAccess = 0;
@@ -66,14 +66,14 @@ void Configuration::release()
 #if DEBUG_CONFIGURATION_STATS
     DebugMeasureTime::dump(DEBUG_OUTPUT);
 #endif
-    std::for_each(_params.begin(), _params.end(), [this](ConfigurationParameter &parameter) {
+    for(auto &parameter: _params) {
         if (!parameter.isWriteable()) {
             ConfigurationHelper::_allocator.deallocate(parameter);
         }
         else if (parameter.hasDataChanged(*this) == false) {
             ConfigurationHelper::_allocator.deallocate(parameter);
         }
-    });
+    }
     _eeprom.discard();
     _readAccess = 0;
 }

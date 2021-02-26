@@ -71,6 +71,7 @@ namespace RemoteControl {
     using ActionType = Plugins::RemoteControl::Action_t;
 
     class Base;
+
     namespace Queue {
         class Event;
         class Target;

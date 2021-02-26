@@ -41,45 +41,53 @@ void run_scheduled_functions()
 
 #endif
 
-static LoopFunctions::FunctionsVector _functions;
+LoopFunctions::FunctionsVector LoopFunctions::_functions;
+
 
 void LoopFunctions::add(Callback callback, CallbackPtr callbackPtr)
 {
-    __SLDBG_printf("callbackPtr=%p callback=%p", callbackPtr, lambda_target(callback));
-    for(auto &entry: _functions) {
-        if (entry.callbackPtr == callbackPtr) {
-            __SLDBG_printf("callbackPtr=%p already exists, deleted state %d", callbackPtr, entry.deleteCallback);
-            entry.deleteCallback = false; // restore if deleted
-            return;
-        }
+    auto iterator = std::find(_functions.begin(), _functions.end(), callbackPtr);
+    if (iterator == _functions.end()) {
+        _functions.emplace_back(callback, callbackPtr, false);
+        return;
     }
-    _functions.emplace_back(callback, callbackPtr, false);
+    iterator->deleteCallback = false;
+    // __SLDBG_printf("callbackPtr=%p callback=%p", callbackPtr, lambda_target(callback));
+    // for(auto &entry: _functions) {
+    //     if (entry.callbackPtr == callbackPtr) {
+    //         __SLDBG_printf("callbackPtr=%p already exists, deleted state %d", callbackPtr, entry.deleteCallback);
+    //         entry.deleteCallback = false; // restore if deleted
+    //         return;
+    //     }
+    // }
+    // _functions.emplace_back(callback, callbackPtr, false);
 }
 
-void LoopFunctions::remove(CallbackPtr callbackPtr)
-{
-    __SLDBG_printf("callbackPtr=%p", callbackPtr);
-    for(auto &entry: _functions) {
-        if (entry.callbackPtr == callbackPtr) {
-            entry.deleteCallback = true;
-            return;
-        }
-    }
-    __SLDBG_printf("cannot find callbackPtr=%p", callbackPtr);
-}
+// void LoopFunctions::remove(CallbackPtr callbackPtr)
+// {
+    // __SLDBG_printf("callbackPtr=%p", callbackPtr);
+    // for(auto &entry: _functions) {
+    //     if (entry.callbackPtr == callbackPtr) {
+    //         entry.deleteCallback = true;
+    //         return;
+    //     }
+    // }
+    // __SLDBG_printf("cannot find callbackPtr=%p", callbackPtr);
+// }
 
-LoopFunctions::FunctionsVector &LoopFunctions::getVector()
-{
-    return _functions;
-}
+// LoopFunctions::FunctionsVector &LoopFunctions::getVector()
+// {
+//     return _functions;
+// }
 
-size_t LoopFunctions::size()
-{
-    size_t count = 0;
-    for(auto &entry: _functions) {
-        if (!entry.deleteCallback) {
-            count++;
-        }
-    }
-    return count;
-}
+// size_t LoopFunctions::size()
+// {
+
+//     size_t count = 0;
+//     for(auto &entry: _functions) {
+//         if (!entry.deleteCallback) {
+//             count++;
+//         }
+//     }
+//     return count;
+// }

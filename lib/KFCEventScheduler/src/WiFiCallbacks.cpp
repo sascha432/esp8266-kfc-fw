@@ -88,8 +88,3 @@ void WiFiCallbacks::callEvent(EventType event, void *payload)
     _callbacks.shrink_to_fit();
     _locked = false;
 }
-
-WiFiCallbacks::CallbackVector &WiFiCallbacks::getVector()
-{
-    return _callbacks;
-}

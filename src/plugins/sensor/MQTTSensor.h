@@ -65,6 +65,7 @@ public:
     virtual void onConnect(MQTTClient *client) override;
 
     // using MQTT update rate
+    // client is valid and connected
     virtual void publishState(MQTTClient *client) = 0;
     // using update rate
     virtual void getValues(JsonArray &json, bool timer) = 0;

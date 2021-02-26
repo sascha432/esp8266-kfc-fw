@@ -303,21 +303,8 @@ void KFCFWConfiguration::_onWiFiGotIPCb(const WiFiEventStationModeGotIP &event)
         dns1.c_str(), dns2.c_str()
     );
 
-    using Device = KFCConfigurationClasses::System::Device;
+    setWiFiConnectLedMode();
 
-#if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID
-    switch(Device::getConfig().getStatusLedMode()) {
-        case Device::StatusLEDModeType::OFF_WHEN_CONNECTED:
-            BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
-            break;
-        case Device::StatusLEDModeType::SOLID_WHEN_CONNECTED:
-            BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SOLID);
-            break;
-        default:
-        case Device::StatusLEDModeType::OFF:
-            break;
-    }
-#endif
 #if ENABLE_DEEP_SLEEP
     config.storeStationConfig(event.ip, event.mask, event.gw);
 #endif
@@ -325,6 +312,21 @@ void KFCFWConfiguration::_onWiFiGotIPCb(const WiFiEventStationModeGotIP &event)
     LoopFunctions::callOnce([event]() {
         WiFiCallbacks::callEvent(WiFiCallbacks::EventType::CONNECTED, (void *)&event);
     });
+}
+
+void KFCFWConfiguration::setWiFiConnectLedMode()
+{
+#if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID
+    auto mode = System::Device::getConfig().getStatusLedMode();
+    if (mode != System::Device::StatusLEDModeType::OFF) {
+        if (WiFi.isConnected()) {
+            BUILDIN_LED_SET(mode == System::Device::StatusLEDModeType::OFF_WHEN_CONNECTED ? BlinkLEDTimer::BlinkType::OFF : BlinkLEDTimer::BlinkType::SOLID);
+        }
+        else {
+            BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FAST);
+        }
+    }
+#endif
 }
 
 void KFCFWConfiguration::_onWiFiOnDHCPTimeoutCb()
@@ -1027,9 +1029,7 @@ void KFCFWConfiguration::wakeUpFromDeepSleep()
 #endif
 
 #if IOT_REMOTE_CONTROL
-            auto state = RemoteControlPlugin::getInstance().readPinState();
-
-            if (state.anyPressed() && _deepSleepParams.abortOnKeyPress) {
+            if (_pinState.anyPressed() && _deepSleepParams.abortOnKeyPress) {
                 _deepSleepParams.abortCycles();
             }
 #endif
@@ -1662,9 +1662,9 @@ void KFCConfigurationPlugin::setup(SetupModeType mode)
     }
 #endif
 
-    if (WiFi.isConnected()) {
-        __DBG_print("WiFi up, skipping init.");
-        BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
+    if (WiFi.isConnected() && !resetDetector.hasWakeUpDetected()) {
+        __DBG_assert_printf(false, "WiFi up, skipping init.");
+        BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SOS);
         return;
     }
 
@@ -1685,7 +1685,7 @@ void KFCConfigurationPlugin::setup(SetupModeType mode)
 
 void KFCConfigurationPlugin::reconfigure(const String &source)
 {
-    if (String_equals(source, SPGM(network)) || String_equals(source, SPGM(wifi))) {
+    if (source == FSPGM(network) || source == FSPGM(wifi)) {
         config.reconfigureWiFi();
     }
 }

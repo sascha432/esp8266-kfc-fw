@@ -21,9 +21,11 @@
 #endif
 
 #if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID
-#define BUILDIN_LED_SET(mode)        BlinkLEDTimer::setBlink(__LED_BUILTIN, mode);
+#define BUILDIN_LED_SET(mode)           BlinkLEDTimer::setBlink(__LED_BUILTIN, mode);
+#define BUILDIN_LED_SETP(delay, patt)   BlinkLEDTimer::setPattern(__LED_BUILTIN, delay, patt);
 #else
-#define BUILDIN_LED_SET(mode)
+#define BUILDIN_LED_SET(...)
+#define BUILDIN_LED_SETP(...)
 #endif
 
 class BlinkLEDTimer : public OSTimer {
@@ -38,7 +40,6 @@ public:
         OFF = 0,
         SOLID = 1,
         SOS = 2,
-        PATTERN = 0xfffe,
         INVALID = 0xffff
     };
 

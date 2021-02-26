@@ -162,7 +162,8 @@ https://easyeda.com/sascha23095123423/iot_blinds_controller
 
 ### WiFi Remote Control
 
-Plugin for my 4 button ultra low power WiFi remote control. 16.5µA standby, 250ms wakeup time to send first UDP packets and 375ms for a fully established MQTT session with QoS.
+Plugin for my 4 button ultra low power WiFi remote control. 16.5µA standby, 250ms wakeup time to send first UDP packets and 300ms for a fully established MQTT session with QoS.
+Supports MQTT / Homeassistant Device Triggers and UDP packets.
 
 https://github.com/sascha432/ESP8266-WiFi-Remote-Control
 https://easyeda.com/sascha23095123423/iot_4ch_remote

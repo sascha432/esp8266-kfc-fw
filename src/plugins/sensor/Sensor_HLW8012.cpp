@@ -85,6 +85,7 @@ Sensor_HLW8012::Sensor_HLW8012(const String &name, uint8_t pinSel, uint8_t pinCF
     _inputCF1 = &_inputCFI;
     _toggleOutputMode();
 
+    // singleton
     sensor = this;
     LoopFunctions::add(Sensor_HLW8012::loop);
     attachInterrupt(digitalPinToInterrupt(_pinCF), Sensor_HLW8012_callbackCF, CHANGE);
@@ -103,9 +104,7 @@ Sensor_HLW8012::~Sensor_HLW8012()
 
 void Sensor_HLW8012::loop()
 {
-    if (sensor) {
-        sensor->_loop();
-    }
+    sensor->_loop();
 }
 
 void Sensor_HLW8012::_loop()
@@ -480,7 +479,7 @@ bool Sensor_HLW8012::atModeHandler(AtModeArgs &args)
                     _dumpTimer.remove();
 
                     float value = (args.toFloat(2) * args.toFloat(3, 1.0f)) / args.toFloat(1);
-                    auto &sensor = Plugins::Sensor::getWriteableConfig().hlw80xx;
+                    auto &sensor = Plugins::Sensor::getWriteableConfig();
                     if (ch == 'u') {
                         _calibrationU = value;
                         sensor.calibrationU = _calibrationU;
@@ -518,7 +517,7 @@ bool Sensor_HLW8012::atModeHandler(AtModeArgs &args)
                             if (_voltage) {
                                 if (data.max-- == 0) {
                                     timer->disarm();
-                                    _calibrationU = Plugins::Sensor::getConfig().hlw80xx.calibrationU;
+                                    _calibrationU = Plugins::Sensor::getConfig().calibrationU;
                                 }
                                 data.sum += _voltage;
                                 data.count++;
@@ -540,7 +539,7 @@ bool Sensor_HLW8012::atModeHandler(AtModeArgs &args)
                             if (_current) {
                                 if (data.max-- == 0) {
                                     timer->disarm();
-                                    _calibrationI = Plugins::Sensor::getConfig().hlw80xx.calibrationI;
+                                    _calibrationI = Plugins::Sensor::getConfig().calibrationI;
 #if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
                                     _dimmingLevel = dimmingLevel;
 #endif
@@ -560,7 +559,7 @@ bool Sensor_HLW8012::atModeHandler(AtModeArgs &args)
                             if (_power) {
                                 if (data.max-- == 0) {
                                     timer->disarm();
-                                    _calibrationP = Plugins::Sensor::getConfig().hlw80xx.calibrationP;
+                                    _calibrationP = Plugins::Sensor::getConfig().calibrationP;
                                 }
                                 data.sum += _power;
                                 data.count++;

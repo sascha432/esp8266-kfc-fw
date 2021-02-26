@@ -285,13 +285,6 @@ void Sensor_Battery::reconfigure(PGM_P source)
     maxVoltage = 0;
 }
 
-// float Sensor_Battery::readSensor()
-// {
-//     return SensorPlugin::for_each<Sensor_Battery, float>(nullptr, NAN, [](Sensor_Battery &sensor) {
-//         return sensor._readSensor();
-//     });
-// }
-
 void Sensor_Battery::Status::updateSensor(Sensor_Battery &sensor)
 {
     float Vout = ((IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1 * sensor._adcValue) + (IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R2 * sensor._adcValue)) / (IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1 * ADCManager::kMaxADCValue);

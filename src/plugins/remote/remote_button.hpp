@@ -50,13 +50,13 @@ using namespace PinMonitor;
 
     inline uint32_t Button::_getEventTimeForFirstEvent()
     {
-        _timeOffset = micros();
+        _timeOffset = millis();
         return 0;
     }
 
     inline uint32_t Button::_getEventTime()
     {
-        return micros() - _timeOffset;
+        return millis() - _timeOffset;
     }
 
 }

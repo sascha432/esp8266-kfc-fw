@@ -202,11 +202,14 @@ bool Plugin::atModeHandler(AtModeArgs &args)
                                 for(auto entity: list) {
                                     if (format == FormatType::TOPIC) {
                                         stream.println(entity->getTopic());
+                                        delay(5);
                                     }
                                     else {
                                         stream.print(entity->getTopic());
+                                        delay(5);
                                         stream.print(':');
                                         stream.println(entity->getPayload());
+                                        delay(10);
                                     }
                                 }
                             }

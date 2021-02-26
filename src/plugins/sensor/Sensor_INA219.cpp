@@ -38,7 +38,7 @@ Sensor_INA219::~Sensor_INA219()
     UNREGISTER_SENSOR_CLIENT(this);
 }
 
-MQTTComponent::MQTTAutoDiscoveryPtr Sensor_INA219::nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num)
+MQTTComponent::MQTTAutoDiscoveryPtr Sensor_INA219::nextAutoDiscovery(MQTT::FormatType format, uint8_t num)
 {
     if (num >= getAutoDiscoveryCount()) {
         return nullptr;
@@ -181,20 +181,22 @@ bool Sensor_INA219::atModeHandler(AtModeArgs &args)
 
         auto &serial = args.getStream();
         auto timerPrintFunc = [this, &serial](Event::CallbackTimerPtr timer) {
-            return SensorPlugin::for_each<Sensor_INA219>(this, [&serial](Sensor_INA219 &sensor) {
-                auto &ina219 = sensor.getSensor();
-                serial.printf_P(PSTR("+SENSORINA219: raw: U=%d, Vshunt=%d, I=%d, current: P=%d: %.3fV, %.1fmA, %.1fmW, average: %.3fV, %.1fmA, %.1fmW\n"),
-                    ina219.getBusVoltage_raw(),
-                    ina219.getShuntVoltage_raw(),
-                    ina219.getCurrent_raw(),
-                    ina219.getPower_raw(),
-                    ina219.getBusVoltage_V(),
-                    ina219.getCurrent_mA(),
-                    ina219.getBusVoltage_V() * ina219.getCurrent_mA(),
-                    sensor.getVoltage(),
-                    sensor.getCurrent(),
-                    sensor.getPower()
-                );
+            return std::count_if(SensorPlugin::begin(), SensorPlugin::end(), [this, &serial](MQTTSensorPtr sensor) {
+                if ( sensor->getType() == SensorType::INA219) {
+                    auto &ina219 = *reinterpret_cast<Sensor_INA219 *>(sensor);
+                    serial.printf_P(PSTR("+SENSORINA219: raw: U=%d, Vshunt=%d, I=%d, current: P=%d: %.3fV, %.1fmA, %.1fmW, average: %.3fV, %.1fmA, %.1fmW\n"),
+                        ina219.getBusVoltage_raw(),
+                        ina219.getShuntVoltage_raw(),
+                        ina219.getCurrent_raw(),
+                        ina219.getPower_raw(),
+                        ina219.getBusVoltage_V(),
+                        ina219.getCurrent_mA(),
+                        ina219.getBusVoltage_V() * ina219.getCurrent_mA(),
+                        sensor.getVoltage(),
+                        sensor.getCurrent(),
+                        sensor.getPower()
+                    );
+                }
             });
         };
 

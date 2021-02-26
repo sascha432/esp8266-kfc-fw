@@ -32,7 +32,7 @@ void DimmerChannel::setup(Driver_DimmerModule *dimmer, uint8_t channel)
     _channel = channel;
 }
 
-MQTTComponent::MQTTAutoDiscoveryPtr DimmerChannel::nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num)
+MQTTComponent::MQTTAutoDiscoveryPtr DimmerChannel::nextAutoDiscovery(MQTT::FormatType format, uint8_t num)
 {
     if (num > 0) {
         return nullptr;

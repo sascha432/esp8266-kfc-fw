@@ -25,7 +25,7 @@ Sensor_DimmerMetrics::~Sensor_DimmerMetrics()
     UNREGISTER_SENSOR_CLIENT(this);
 }
 
-Sensor_DimmerMetrics::MQTTAutoDiscoveryPtr Sensor_DimmerMetrics::nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num)
+Sensor_DimmerMetrics::MQTTAutoDiscoveryPtr Sensor_DimmerMetrics::nextAutoDiscovery(MQTT::FormatType format, uint8_t num)
 {
     if (num >= getAutoDiscoveryCount()) {
         return nullptr;
@@ -33,26 +33,30 @@ Sensor_DimmerMetrics::MQTTAutoDiscoveryPtr Sensor_DimmerMetrics::nextAutoDiscove
     auto discovery = __LDBG_new(MQTTAutoDiscovery);
     switch(num) {
         case 0:
-            discovery->create(this, F("temp"), format);
-            discovery->addStateTopic(_getMetricsTopics(TopicType::TEMPERATURE));
+            discovery->create(this, F("int_temp"), format);
+            discovery->addStateTopic(_getMetricsTopics());
             discovery->addUnitOfMeasurement(FSPGM(degree_Celsius_unicode));
+            discovery->addValueTemplate(F("int_temp"));
             discovery->addDeviceClass(F("temperature"));
             break;
         case 1:
-            discovery->create(this, F("temp2"), format);
-            discovery->addStateTopic(_getMetricsTopics(TopicType::TEMPERATURE2));
+            discovery->create(this, F("ntc_temp"), format);
+            discovery->addStateTopic(_getMetricsTopics());
             discovery->addUnitOfMeasurement(FSPGM(degree_Celsius_unicode));
+            discovery->addValueTemplate(F("ntc_temp"));
             discovery->addDeviceClass(F("temperature"));
             break;
         case 2:
             discovery->create(this, FSPGM(vcc), format);
-            discovery->addStateTopic(_getMetricsTopics(TopicType::VCC));
+            discovery->addStateTopic(_getMetricsTopics());
             discovery->addUnitOfMeasurement('V');
+            discovery->addValueTemplate(F("vcc"));
             discovery->addDeviceClass(F("voltage"));
             break;
         case 3:
             discovery->create(this, FSPGM(frequency), format);
-            discovery->addStateTopic(_getMetricsTopics(TopicType::FREQUENCY));
+            discovery->addStateTopic(_getMetricsTopics());
+            discovery->addValueTemplate(FSPGM(frequency));
             discovery->addUnitOfMeasurement(FSPGM(Hz, "Hz"));
             break;
     }
@@ -109,10 +113,12 @@ void Sensor_DimmerMetrics::createWebUI(WebUIRoot &webUI, WebUIRow **row)
 void Sensor_DimmerMetrics::publishState(MQTTClient *client)
 {
     if (client && client->isConnected()) {
-        client->publish(_getMetricsTopics(TopicType::TEMPERATURE2), true, String(_metrics.metrics.int_temp));
-        client->publish(_getMetricsTopics(TopicType::TEMPERATURE), true, String(_metrics.metrics.ntc_temp, 2));
-        client->publish(_getMetricsTopics(TopicType::VCC), true, String(_metrics.metrics.vcc, 3));
-        client->publish(_getMetricsTopics(TopicType::FREQUENCY), true, String(_metrics.metrics.frequency, 2));
+        String payload = PrintString(F("{\"int_temp\":%u,\"ntc_temp\":%.2f,\"vcc\":%.3f,\"frequency\":%.2f}"),
+            _metrics.metrics.int_temp,
+            _metrics.metrics.ntc_temp,
+            _metrics.metrics.vcc / 1000.0,
+            _metrics.metrics.frequency);
+        client->publish(_getMetricsTopics(), true, payload);
     }
 }
 
@@ -123,23 +129,6 @@ void Sensor_DimmerMetrics::getStatus(Print &output)
 MQTTSensorSensorType Sensor_DimmerMetrics::getType() const
 {
     return MQTTSensorSensorType::DIMMER_METRICS;
-}
-
-
-String Sensor_DimmerMetrics::_getMetricsTopics(TopicType num) const
-{
-    String topic = MQTTClient::formatTopic(F("metrics/"), nullptr);
-    switch(num) {
-        case TopicType::TEMPERATURE2:
-            return topic + F("int_temp");
-        case TopicType::TEMPERATURE:
-            return topic + F("ntc_temp");
-        case TopicType::VCC:
-            return topic + FSPGM(vcc);
-        case TopicType::FREQUENCY:
-            return topic + FSPGM(frequency);
-    }
-    return topic;
 }
 
 Sensor_DimmerMetrics::MetricsType &Sensor_DimmerMetrics::_updateMetrics(const MetricsType &metrics)

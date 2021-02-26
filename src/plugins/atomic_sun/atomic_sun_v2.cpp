@@ -91,7 +91,7 @@ void AtomicSunPlugin::createConfigureForm(PluginComponent::FormCallbackType type
 }
 
 
-MQTTComponent::MQTTAutoDiscoveryPtr Driver_4ChDimmer::nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num)
+MQTTComponent::MQTTAutoDiscoveryPtr Driver_4ChDimmer::nextAutoDiscovery(MQTT::FormatType format, uint8_t num)
 {
     if (num >= getAutoDiscoveryCount()) {
         return nullptr;

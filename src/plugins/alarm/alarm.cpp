@@ -75,7 +75,7 @@ void AlarmPlugin::shutdown()
     _removeAlarms();
 }
 
-AlarmPlugin::MQTTAutoDiscoveryPtr AlarmPlugin::nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num)
+AlarmPlugin::MQTTAutoDiscoveryPtr AlarmPlugin::nextAutoDiscovery(MQTT::FormatType format, uint8_t num)
 {
     if (num >= getAutoDiscoveryCount()) {
         return nullptr;

@@ -327,12 +327,12 @@ void ClockPlugin::_setupTimer()
             }
             else {
                 tempSensor = 0;
-                SensorPlugin::for_each<Sensor_LM75A>(nullptr, [](MQTTSensor &sensor, Sensor_LM75A &) {
-                    return (sensor.getType() == MQTTSensor::SensorType::LM75A);
-                }, [this, &tempSensor](Sensor_LM75A &sensor) {
-
-                    tempSensor = max(tempSensor, sensor.readSensor() - (sensor.getAddress() == IOT_CLOCK_VOLTAGE_REGULATOR_LM75A_ADDRESS ? _config.protection.regulator_margin : 0));
-                });
+                for(auto sensor: SensorPlugin.getSensors()) {
+                    if (sensor->getType() == MQTTSensor::SensorType::LM75A) {
+                        auto &lm75a = *reinterpret_cast<Sensor_LM75A *>(sensor);
+                        tempSensor = max(tempSensor, lm75a.readSensor() - (lm75a.getAddress() == IOT_CLOCK_VOLTAGE_REGULATOR_LM75A_ADDRESS ? _config.protection.regulator_margin : 0));
+                    }
+                }
             }
 
             if (tempSensor) {

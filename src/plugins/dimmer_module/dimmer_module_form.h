@@ -8,7 +8,7 @@
 #include <Form.h>
 #include <PluginComponent.h>
 #include <kfc_fw_config.h>
-#include "../src/plugins/mqtt/mqtt_component.h"
+#include "../src/plugins/mqtt/component.h"
 
 class DimmerModuleForm {
 protected:

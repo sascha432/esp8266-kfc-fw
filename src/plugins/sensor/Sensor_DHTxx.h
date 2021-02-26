@@ -50,7 +50,7 @@ public:
     Sensor_DHTxx(const String &name, uint8_t pin/*, uint8_t type*/);
     virtual ~Sensor_DHTxx();
 
-    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num) override;
+    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTT::FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;
 
     virtual void publishState(MQTTClient *client) override;

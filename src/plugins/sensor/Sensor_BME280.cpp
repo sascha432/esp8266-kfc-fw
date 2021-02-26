@@ -27,7 +27,7 @@ Sensor_BME280::~Sensor_BME280()
 }
 
 
-MQTTComponent::MQTTAutoDiscoveryPtr Sensor_BME280::nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num)
+MQTTComponent::MQTTAutoDiscoveryPtr Sensor_BME280::nextAutoDiscovery(MQTT::FormatType format, uint8_t num)
 {
     if (num >= getAutoDiscoveryCount()) {
         return nullptr;

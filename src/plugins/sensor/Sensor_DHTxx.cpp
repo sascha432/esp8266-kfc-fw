@@ -27,7 +27,7 @@ Sensor_DHTxx::~Sensor_DHTxx()
     UNREGISTER_SENSOR_CLIENT(this);
 }
 
-void Sensor_DHTxx::createAutoDiscovery(MQTTAutoDiscovery::FormatType format, MQTTAutoDiscoveryVector &vector)
+void Sensor_DHTxx::createAutoDiscovery(MQTT::FormatType format, MQTTAutoDiscoveryVector &vector)
 {
     _debug_println();
     String topic = MQTTClient::formatTopic(_getId());

@@ -20,7 +20,7 @@ public:
     Sensor_LM75A(const JsonString &name, TwoWire &wire, uint8_t address = 0x48);
     virtual ~Sensor_LM75A();
 
-    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num) override;
+    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTT::FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;
 
     virtual void publishState(MQTTClient *client) override;

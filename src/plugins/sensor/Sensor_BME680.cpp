@@ -24,7 +24,7 @@ Sensor_BME680::~Sensor_BME680()
 }
 
 
-void Sensor_BME680::createAutoDiscovery(MQTTAutoDiscovery::FormatType format, MQTTAutoDiscoveryVector &vector)
+void Sensor_BME680::createAutoDiscovery(MQTT::FormatType format, MQTTAutoDiscoveryVector &vector)
 {
     String topic = MQTTClient::formatTopic(_getId());
 

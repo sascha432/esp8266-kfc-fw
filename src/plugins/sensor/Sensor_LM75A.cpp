@@ -25,7 +25,7 @@ Sensor_LM75A::~Sensor_LM75A()
     UNREGISTER_SENSOR_CLIENT(this);
 }
 
-MQTTComponent::MQTTAutoDiscoveryPtr Sensor_LM75A::nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num)
+MQTTComponent::MQTTAutoDiscoveryPtr Sensor_LM75A::nextAutoDiscovery(MQTT::FormatType format, uint8_t num)
 {
     if (num >= getAutoDiscoveryCount()) {
         return nullptr;

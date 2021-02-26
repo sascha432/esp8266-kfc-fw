@@ -35,7 +35,7 @@ Sensor_CCS811::~Sensor_CCS811()
 }
 
 
-void Sensor_CCS811::createAutoDiscovery(MQTTAutoDiscovery::FormatType format, MQTTAutoDiscoveryVector &vector)
+void Sensor_CCS811::createAutoDiscovery(MQTT::FormatType format, MQTTAutoDiscoveryVector &vector)
 {
     String topic = MQTTClient::formatTopic(_getId());
 

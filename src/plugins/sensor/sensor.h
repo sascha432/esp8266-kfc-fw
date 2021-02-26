@@ -88,7 +88,8 @@
 class SensorPlugin : public PluginComponent {
 public:
     using SensorType = MQTTSensor::SensorType;
-    using SensorVector = std::vector<MQTTSensor *>;
+    using MQTTSensorPtr = MQTTSensor *;
+    using SensorVector = std::vector<MQTTSensorPtr>;
     using AddCustomSensorCallback = std::function<void(WebUIRoot &webUI, WebUIRow **row, SensorType nextType)>;
 
 // WebUI
@@ -110,8 +111,25 @@ public:
 
     static void timerEvent(Event::CallbackTimerPtr timer);
 
-    static SensorVector &getSensors();
-    static size_t getSensorCount();
+    static SensorVector &getSensors()
+    {
+        return getInstance()._sensors;
+    }
+
+    static size_t getSensorCount()
+    {
+        return getInstance()._sensors.size();
+    }
+
+    static SensorVector::iterator begin()
+    {
+        return getInstance()._sensors.begin();
+    }
+
+    static SensorVector::iterator end()
+    {
+        return getInstance()._sensors.end();
+    }
 
     static SensorPlugin &getInstance();
 
@@ -145,52 +163,14 @@ protected:
 private:
     bool _hasConfigureForm() const;
     void _timerEvent();
-    size_t _count() {
-        size_t n = 0;
-        for(auto sensor: SensorPlugin::getSensors()) {
-            if (sensor->getType() != SensorType::SYSTEM_METRICS) {
-                n++;
-            }
-        }
-        return n;
+
+    size_t _count() const {
+        return std::count_if(_sensors.begin(), _sensors.end(), [](const MQTTSensorPtr sensor) {
+            return sensor->getType() != SensorType::SYSTEM_METRICS;
+        });
     }
 
     SensorVector _sensors;
     Event::Timer _timer;
     AddCustomSensorCallback _addCustomSensors;
-
-public:
-    template <class T>
-    static uint8_t for_each(T *self, std::function<void(T &sensor)> callback) {
-        uint8_t count = 0;
-        for(auto sensor: SensorPlugin::getSensors()) {
-            if (self->getType() == sensor->getType()) {
-                callback(*reinterpret_cast<T *>(sensor));
-                count++;
-            }
-        }
-        return count;
-    }
-
-    template <class T, class R>
-    static R for_each(T *self, R defaultValue, std::function<R(T &sensor)> callback) {
-        for(auto sensor: SensorPlugin::getSensors()) {
-            if (self->getType() == sensor->getType()) {
-                return callback(*reinterpret_cast<T *>(sensor));
-            }
-        }
-        return defaultValue;
-    }
-
-    template <class T>
-    static uint8_t for_each(T *self, std::function<bool(MQTTSensor &sensor, T &self)> compareCallback, std::function<void(T &sensor)> callback) {
-        uint8_t count = 0;
-        for(auto sensor: SensorPlugin::getSensors()) {
-            if (compareCallback(*sensor, *self)) {
-                callback(*reinterpret_cast<T *>(sensor));
-                count++;
-            }
-        }
-        return count;
-    }
 };

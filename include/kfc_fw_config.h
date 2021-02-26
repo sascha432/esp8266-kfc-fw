@@ -544,6 +544,9 @@ public:
     void _softAPModeStationConnectedCb(const WiFiEventSoftAPModeStationConnected &);
     void _softAPModeStationDisconnectedCb(const WiFiEventSoftAPModeStationDisconnected &);
 
+    // if the LED is not disabled, set LED to solid or off when connected and to fast blink if not
+    static void setWiFiConnectLedMode();
+
     // return seconds since WiFi has been connected
     // 0 = not connected
     static uint32_t getWiFiUp();

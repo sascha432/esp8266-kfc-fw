@@ -826,7 +826,7 @@ namespace KFCConfigurationClasses {
             #define MAX_ACTION_BITS 4
             #define MAX_ACTION_VAL ((1 << MAX_ACTION_BITS) - 1)
 
-            enum class EventNameType {
+            enum class EventNameType : uint16_t {
                 BUTTON_DOWN = 0,
                 BUTTON_UP,
                 BUTTON_PRESS,
@@ -837,7 +837,18 @@ namespace KFCConfigurationClasses {
                 BUTTON_HOLD_REPEAT,
                 BUTTON_HOLD_RELEASE,
                 MAX,
-                _BV_DEFAULT = _BV(BUTTON_PRESS)|_BV(BUTTON_LONG_PRESS)|_BV(BUTTON_HOLD_REPEAT)
+                BV_NONE = 0,
+                BV_BUTTON_DOWN = _BV(BUTTON_DOWN),
+                BV_BUTTON_UP = _BV(BUTTON_UP),
+                BV_BUTTON_PRESS = _BV(BUTTON_PRESS),
+                BV_BUTTON_LONG_PRESS = _BV(BUTTON_LONG_PRESS),
+                BV_BUTTON_SINGLE_CLICK = _BV(BUTTON_SINGLE_CLICK),
+                BV_BUTTON_DOUBLE_CLICK = _BV(BUTTON_DOUBLE_CLICK),
+                BV_BUTTON_MULTI_CLICK = _BV(BUTTON_MULTI_CLICK),
+                BV_BUTTON_HOLD_REPEAT = _BV(BUTTON_HOLD_REPEAT),
+                BV_BUTTON_HOLD_RELEASE = _BV(BUTTON_HOLD_RELEASE),
+                _BV_DEFAULT = BV_BUTTON_PRESS|BV_BUTTON_LONG_PRESS|BV_BUTTON_HOLD_REPEAT,
+                ANY = 0xffff,
             };
 
             struct __attribute__packed__ Events {

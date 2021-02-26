@@ -89,7 +89,7 @@ namespace RemoteControl {
         using QosType = MQTT::QosType;
 
     public:
-        ActionMQTT(ActionIdType id , String &&payload, QosType qos = QosType::EXACTLY_ONCE) : Action(id, ActionProtocolType::MQTT), _payload(std::move(payload)), _qos(qos) {}
+        ActionMQTT(ActionIdType id, String &&payload, QosType qos = QosType::EXACTLY_ONCE) : Action(id, ActionProtocolType::MQTT), _payload(std::move(payload)), _qos(qos) {}
 
         virtual void execute(Callback callback) override;
 

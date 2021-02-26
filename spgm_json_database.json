@@ -2,7 +2,7 @@
 {
     "0x_08x": {
         "default": "0x%08x",
-        "locations": "include/spgm_auto_def.h:14 (AUTO_INIT),lib/KFCBaseLibrary/include/misc.h:619 (SPGM)",
+        "locations": "include/spgm_auto_def.h:14 (AUTO_INIT),lib/KFCBaseLibrary/include/misc.h:580 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
@@ -48,7 +48,7 @@
     },
     "Anonymous": {
         "default": "Anonymous",
-        "locations": "src/plugins/mqtt/mqtt_client.cpp:431 (SPGM),src/plugins/mqtt/mqtt_form.cpp:98 (SPGM)",
+        "locations": "src/plugins/mqtt/client_misc.cpp:25 (SPGM),src/plugins/mqtt/mqtt_form.cpp:98 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
@@ -58,7 +58,7 @@
     },
     "Authorization": {
         "default": "Authorization",
-        "locations": "lib/KFCWebFramework/include/HttpHeaders.h:305 (SPGM),lib/KFCWebFramework/src/HttpHeaders.cpp:30 (AUTO_INIT),src/web_server.cpp:1149 (SPGM),src/web_server.cpp:1294 (SPGM)",
+        "locations": "lib/KFCWebFramework/include/HttpHeaders.h:305 (SPGM),lib/KFCWebFramework/src/HttpHeaders.cpp:30 (AUTO_INIT),src/web_server.cpp:1150 (SPGM),src/web_server.cpp:1295 (SPGM)",
         "type": "source",
         "use_counter": 3
     },
@@ -70,7 +70,7 @@
     },
     "Bearer_": {
         "default": "Bearer ",
-        "locations": "lib/KFCWebFramework/include/HttpHeaders.h:313 (SPGM),lib/KFCWebFramework/src/HttpHeaders.cpp:31 (AUTO_INIT),src/web_server.cpp:1153 (SPGM)",
+        "locations": "lib/KFCWebFramework/include/HttpHeaders.h:313 (SPGM),lib/KFCWebFramework/src/HttpHeaders.cpp:31 (AUTO_INIT),src/web_server.cpp:1154 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
@@ -198,7 +198,7 @@
     },
     "Disabled": {
         "default": "Disabled",
-        "locations": "lib/KFCWebFramework/include/WebUI/Containers.h:713 (SPGM),src/kfc_fw_config_forms.cpp:19 (SPGM),src/plugins/mqtt/mqtt_form.cpp:35 (SPGM),src/plugins/mqtt/mqtt_plugin.cpp:82 (SPGM),src/plugins/ntp/ntp_plugin.cpp:146 (SPGM),src/plugins/ssdp/ssdp.cpp:114 (SPGM),src/plugins/syslog/syslog_plugin.cpp:199 (SPGM),src/plugins/syslog/syslog_plugin.cpp:223 (SPGM)",
+        "locations": "lib/KFCWebFramework/include/WebUI/Containers.h:713 (SPGM),src/kfc_fw_config_forms.cpp:19 (SPGM),src/plugins/mqtt/mqtt_form.cpp:35 (SPGM),src/plugins/mqtt/mqtt_plugin.cpp:84 (SPGM),src/plugins/ntp/ntp_plugin.cpp:146 (SPGM),src/plugins/ssdp/ssdp.cpp:114 (SPGM),src/plugins/syslog/syslog_plugin.cpp:199 (SPGM),src/plugins/syslog/syslog_plugin.cpp:223 (SPGM)",
         "type": "source",
         "use_counter": 8
     },
@@ -214,15 +214,11 @@
     },
     "Enable_MQTT": {
         "default": "Enable MQTT",
-        "locations": "src/plugins/remote/remote_form.cpp:274 (SPGM),src/plugins/remote/remote_form.cpp:275 (SPGM),src/plugins/remote/remote_form.cpp:276 (SPGM),src/plugins/remote/remote_form.cpp:277 (SPGM),src/plugins/remote/remote_form.cpp:278 (SPGM),src/plugins/remote/remote_form.cpp:279 (SPGM),src/plugins/remote/remote_form.cpp:281 (SPGM),src/plugins/remote/remote_form.cpp:282 (SPGM)",
-        "type": "source",
-        "use_counter": 8
+        "use_counter": 0
     },
     "Enable_UDP": {
         "default": "Enable UDP",
-        "locations": "src/plugins/remote/remote_form.cpp:274 (SPGM),src/plugins/remote/remote_form.cpp:275 (SPGM),src/plugins/remote/remote_form.cpp:276 (SPGM),src/plugins/remote/remote_form.cpp:277 (SPGM),src/plugins/remote/remote_form.cpp:278 (SPGM),src/plugins/remote/remote_form.cpp:279 (SPGM),src/plugins/remote/remote_form.cpp:280 (SPGM),src/plugins/remote/remote_form.cpp:281 (SPGM),src/plugins/remote/remote_form.cpp:282 (SPGM)",
-        "type": "source",
-        "use_counter": 9
+        "use_counter": 0
     },
     "Enabled": {
         "default": "Enabled",
@@ -340,7 +336,9 @@
     },
     "Hz": {
         "default": "Hz",
-        "use_counter": 0
+        "locations": "src/plugins/sensor/Sensor_DimmerMetrics.cpp:60 (SPGM),src/plugins/sensor/Sensor_DimmerMetrics.cpp:100 (SPGM)",
+        "type": "source",
+        "use_counter": 2
     },
     "IP_Address": {
         "default": "IP Address",
@@ -378,13 +376,13 @@
     },
     "KFCLabs": {
         "default": "KFCLabs",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.cpp:115 (SPGM),src/plugins/ssdp/ssdp.cpp:73 (SPGM)",
+        "locations": "src/plugins/mqtt/auto_discovery.cpp:127 (SPGM),src/plugins/ssdp/ssdp.cpp:73 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
     "KFC_Firmware": {
         "default": "KFC Firmware",
-        "locations": "src/kfc_fw_config.cpp:605 (SPGM),src/kfc_fw_config_classes.cpp:225 (SPGM),src/plugins/mqtt/mqtt_auto_discovery.cpp:98 (SPGM)",
+        "locations": "src/kfc_fw_config.cpp:606 (SPGM),src/kfc_fw_config_classes.cpp:225 (SPGM),src/plugins/mqtt/auto_discovery.cpp:110 (SPGM)",
         "type": "source",
         "use_counter": 3
     },
@@ -460,9 +458,7 @@
     },
     "No": {
         "default": "No",
-        "locations": "src/plugins/sensor/Sensor_Battery.cpp:180 (SPGM)",
-        "type": "source",
-        "use_counter": 1
+        "use_counter": 0
     },
     "None": {
         "default": "None",
@@ -478,9 +474,9 @@
     },
     "OK": {
         "default": "OK",
-        "locations": "src/AtModeArgs.cpp:190 (SPGM),src/plugins/file_manager/file_manager.cpp:374 (SPGM),src/plugins/file_manager/file_manager.cpp:420 (SPGM)",
+        "locations": "src/AtModeArgs.cpp:190 (SPGM),src/plugins/dimmer_module/dimmer_base.cpp:445 (SPGM),src/plugins/file_manager/file_manager.cpp:374 (SPGM),src/plugins/file_manager/file_manager.cpp:420 (SPGM)",
         "type": "source",
-        "use_counter": 3
+        "use_counter": 4
     },
     "Off": {
         "default": "Off",
@@ -558,7 +554,7 @@
     },
     "SID": {
         "default": "SID",
-        "locations": "src/web_server.cpp:109 (SPGM),src/web_server.cpp:887 (SPGM),src/web_server.cpp:907 (SPGM),src/web_server.cpp:1165 (SPGM),src/web_server.cpp:1166 (SPGM)",
+        "locations": "src/web_server.cpp:109 (SPGM),src/web_server.cpp:887 (SPGM),src/web_server.cpp:907 (SPGM),src/web_server.cpp:1166 (SPGM),src/web_server.cpp:1167 (SPGM)",
         "type": "source",
         "use_counter": 5
     },
@@ -620,9 +616,9 @@
     },
     "Station_Mode": {
         "default": "Station Mode",
-        "locations": "src/kfc_fw_config_forms.cpp:20 (SPGM),src/kfc_fw_config_forms.cpp:104 (SPGM),src/kfc_fw_config_forms.cpp:162 (SPGM),src/templates.cpp:510 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:20 (SPGM),src/kfc_fw_config_forms.cpp:104 (SPGM),src/kfc_fw_config_forms.cpp:162 (SPGM),src/templates.cpp:510 (SPGM),src/templates.cpp:519 (SPGM)",
         "type": "source",
-        "use_counter": 4
+        "use_counter": 5
     },
     "Status": {
         "default": "Status",
@@ -690,13 +686,15 @@
     },
     "WebUI": {
         "default": "Web UI",
-        "locations": "src/kfc_fw_config_forms.cpp:260 (SPGM),src/kfc_fw_config_forms.cpp:263 (SPGM),src/plugins.cpp:289 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:260 (SPGM),src/kfc_fw_config_forms.cpp:263 (SPGM),src/plugins.cpp:288 (SPGM)",
         "type": "source",
         "use_counter": 3
     },
     "Web_Alerts": {
         "default": "Web Alerts",
-        "use_counter": 0
+        "locations": "src/kfc_fw_config_forms.cpp:271 (SPGM)",
+        "type": "source",
+        "use_counter": 1
     },
     "WiFi": {
         "default": "WiFi",
@@ -718,9 +716,7 @@
     },
     "Yes": {
         "default": "Yes",
-        "locations": "src/plugins/sensor/Sensor_Battery.cpp:180 (SPGM)",
-        "type": "source",
-        "use_counter": 1
+        "use_counter": 0
     },
     "Your_session_has_expired": {
         "default": "Your session has expired",
@@ -756,11 +752,15 @@
     },
     "_brightness_set": {
         "default": "/brightness/set",
-        "use_counter": 0
+        "locations": "src/plugins/dimmer_module/dimmer_channel.cpp:72 (SPGM)",
+        "type": "source",
+        "use_counter": 1
     },
     "_brightness_state": {
         "default": "/brightness/state",
-        "use_counter": 0
+        "locations": "src/plugins/dimmer_module/dimmer_channel.cpp:73 (SPGM)",
+        "type": "source",
+        "use_counter": 1
     },
     "_checked": {
         "default": " checked",
@@ -792,7 +792,7 @@
     },
     "_html": {
         "default": ".html",
-        "locations": "src/plugins.cpp:274 (SPGM),src/web_server.cpp:114 (SPGM),src/web_server.cpp:777 (SPGM),src/web_server.cpp:858 (SPGM),src/web_server.cpp:860 (SPGM),src/web_server.cpp:936 (SPGM),src/web_server.cpp:953 (SPGM)",
+        "locations": "src/plugins.cpp:273 (SPGM),src/web_server.cpp:114 (SPGM),src/web_server.cpp:777 (SPGM),src/web_server.cpp:858 (SPGM),src/web_server.cpp:860 (SPGM),src/web_server.cpp:936 (SPGM),src/web_server.cpp:953 (SPGM)",
         "type": "source",
         "use_counter": 7
     },
@@ -816,11 +816,15 @@
     },
     "_set": {
         "default": "/set",
-        "use_counter": 0
+        "locations": "src/plugins/dimmer_module/dimmer_channel.cpp:70 (SPGM)",
+        "type": "source",
+        "use_counter": 1
     },
     "_state": {
         "default": "/state",
-        "use_counter": 0
+        "locations": "src/plugins/dimmer_module/dimmer_channel.cpp:71 (SPGM)",
+        "type": "source",
+        "use_counter": 1
     },
     "_var_gateway": {
         "default": "${gateway}",
@@ -828,7 +832,7 @@
     },
     "_var_zeroconf": {
         "default": "${zeroconf:",
-        "locations": "lib/KFCWebFramework/include/Validator/Host.h:50 (SPGM),src/async_web_response.cpp:851 (SPGM),src/kfc_fw_config.cpp:829 (SPGM),src/kfc_fw_config.cpp:894 (SPGM),src/kfc_fw_config_classes.cpp:122 (SPGM)",
+        "locations": "lib/KFCWebFramework/include/Validator/Host.h:50 (SPGM),src/async_web_response.cpp:851 (SPGM),src/kfc_fw_config.cpp:824 (SPGM),src/kfc_fw_config.cpp:889 (SPGM),src/kfc_fw_config_classes.cpp:122 (SPGM)",
         "type": "source",
         "use_counter": 5
     },
@@ -840,9 +844,9 @@
     },
     "address": {
         "default": "address",
-        "locations": "src/plugins/mdns/mdns_resolver.cpp:74 (SPGM),src/plugins/mqtt/mqtt_config.cpp:14 (SPGM),src/plugins/syslog/syslog_config.cpp:21 (SPGM)",
+        "locations": "include/retracted/custom_config.h:329 (SPGM),include/retracted/custom_config.h:367 (SPGM),src/plugins/mdns/mdns_resolver.cpp:74 (SPGM),src/plugins/mqtt/mqtt_config.cpp:14 (SPGM),src/plugins/syslog/syslog_config.cpp:21 (SPGM)",
         "type": "source",
-        "use_counter": 3
+        "use_counter": 5
     },
     "alarm": {
         "default": "alarm",
@@ -854,7 +858,9 @@
     },
     "alerts_storage_filename": {
         "default": "/.pvt/alerts.json",
-        "use_counter": 0
+        "locations": "src/WebUIAlerts.cpp:50 (DEFINE),src/WebUIAlerts.cpp:399 (SPGM),src/WebUIAlerts.cpp:401 (SPGM),src/WebUIAlerts.cpp:403 (SPGM),src/WebUIAlerts.cpp:580 (SPGM),src/WebUIAlerts.cpp:583 (SPGM),src/WebUIAlerts.cpp:620 (SPGM),src/WebUIAlerts.cpp:625 (SPGM),src/WebUIAlerts.cpp:627 (SPGM),src/WebUIAlerts.cpp:638 (SPGM),src/WebUIAlerts.cpp:639 (SPGM),src/WebUIAlerts.cpp:641 (SPGM),src/WebUIAlerts.cpp:642 (SPGM),src/WebUIAlerts.cpp:651 (SPGM),src/WebUIAlerts.cpp:654 (SPGM),src/templates.cpp:347 (SPGM),src/web_server.cpp:344 (SPGM)",
+        "type": "static",
+        "use_counter": 16
     },
     "ap_mode": {
         "default": "ap_mode",
@@ -864,7 +870,7 @@
     },
     "applying_html": {
         "default": "applying.html",
-        "locations": "src/web_server.cpp:973 (SPGM)",
+        "locations": "src/web_server.cpp:974 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
@@ -902,7 +908,9 @@
     },
     "channel__u": {
         "default": "channel_%u",
-        "use_counter": 0
+        "locations": "src/plugins/dimmer_module/dimmer_channel.cpp:44 (SPGM)",
+        "type": "source",
+        "use_counter": 1
     },
     "channels": {
         "default": "channels",
@@ -926,9 +934,9 @@
     },
     "config": {
         "auto": "config",
-        "locations": "lib/KFCConfiguration/src/JsonConfigReader.cpp:30 (SPGM),src/kfc_fw_config_forms.cpp:291 (SPGM),src/plugins/mqtt/mqtt_form.cpp:59 (SPGM),src/plugins/ntp/ntp_form.cpp:36 (SPGM),src/web_server.cpp:424 (SPGM)",
+        "locations": "lib/KFCConfiguration/src/JsonConfigReader.cpp:30 (SPGM),src/kfc_fw_config_forms.cpp:291 (SPGM),src/plugins/dimmer_module/dimmer_module_form.cpp:39 (SPGM),src/plugins/mqtt/mqtt_form.cpp:59 (SPGM),src/plugins/ntp/ntp_form.cpp:36 (SPGM),src/web_server.cpp:424 (SPGM)",
         "type": "source",
-        "use_counter": 5
+        "use_counter": 6
     },
     "config_object_name": {
         "auto": "config object name",
@@ -962,7 +970,9 @@
     },
     "current": {
         "default": "current",
-        "use_counter": 0
+        "locations": "src/plugins/sensor/Sensor_HLW80xx.cpp:90 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:93 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:141 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:164 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:263 (SPGM)",
+        "type": "source",
+        "use_counter": 5
     },
     "daemon": {
         "default": "daemon",
@@ -984,13 +994,13 @@
     },
     "defaultPassword": {
         "default": "12345678",
-        "locations": "src/kfc_firmware.cpp:244 (SPGM),src/kfc_firmware.cpp:364 (SPGM),src/kfc_fw_config.cpp:540 (SPGM),src/kfc_fw_config.cpp:541 (SPGM),src/kfc_fw_config.cpp:544 (SPGM),src/kfc_fw_config.cpp:547 (SPGM),src/kfc_fw_config.cpp:606 (SPGM),src/kfc_fw_config.cpp:609 (SPGM),src/kfc_fw_config.cpp:611 (SPGM),src/kfc_fw_config_forms.cpp:49 (SPGM)",
+        "locations": "src/kfc_firmware.cpp:244 (SPGM),src/kfc_firmware.cpp:369 (SPGM),src/kfc_fw_config.cpp:541 (SPGM),src/kfc_fw_config.cpp:542 (SPGM),src/kfc_fw_config.cpp:545 (SPGM),src/kfc_fw_config.cpp:548 (SPGM),src/kfc_fw_config.cpp:607 (SPGM),src/kfc_fw_config.cpp:610 (SPGM),src/kfc_fw_config.cpp:612 (SPGM),src/kfc_fw_config_forms.cpp:49 (SPGM)",
         "type": "source",
         "use_counter": 10
     },
     "default_password_warning": {
         "default": "WARNING! Default password has not been changed",
-        "locations": "src/kfc_fw_config.cpp:1506 (SPGM),src/kfc_fw_config.cpp:1507 (SPGM),src/templates.cpp:184 (SPGM)",
+        "locations": "src/kfc_fw_config.cpp:1497 (SPGM),src/kfc_fw_config.cpp:1498 (SPGM),src/templates.cpp:184 (SPGM)",
         "type": "source",
         "use_counter": 3
     },
@@ -1002,15 +1012,21 @@
     },
     "degree_Celsius_html": {
         "default": "&deg;C",
-        "use_counter": 0
+        "locations": "src/plugins/sensor/Sensor_DimmerMetrics.cpp:101 (SPGM),src/plugins/sensor/Sensor_DimmerMetrics.cpp:102 (SPGM)",
+        "type": "source",
+        "use_counter": 2
     },
     "degree_Celsius_unicode": {
         "default": "\\u00b0C",
-        "use_counter": 0
+        "locations": "src/plugins/sensor/Sensor_DimmerMetrics.cpp:38 (SPGM),src/plugins/sensor/Sensor_DimmerMetrics.cpp:45 (SPGM)",
+        "type": "source",
+        "use_counter": 2
     },
     "degree_Celsius_utf8": {
         "default": "\u00c2\u00b0C",
-        "use_counter": 0
+        "locations": "src/plugins/dimmer_module/dimmer_module_form.cpp:68 (SPGM),src/plugins/dimmer_module/dimmer_module_form.cpp:258 (SPGM)",
+        "type": "source",
+        "use_counter": 2
     },
     "degree_html": {
         "default": "&deg;",
@@ -1054,7 +1070,7 @@
     },
     "disabled": {
         "default": "disabled",
-        "locations": "lib/KFCWebFramework/include/WebUI/Containers.h:707 (SPGM),src/plugins/mqtt/mqtt_plugin.cpp:114 (SPGM),src/plugins/ntp/ntp_atmode.cpp:44 (SPGM),src/web_server.cpp:1087 (SPGM)",
+        "locations": "lib/KFCWebFramework/include/WebUI/Containers.h:707 (SPGM),src/plugins/mqtt/mqtt_plugin.cpp:117 (SPGM),src/plugins/ntp/ntp_atmode.cpp:44 (SPGM),src/web_server.cpp:1088 (SPGM)",
         "type": "source",
         "use_counter": 4
     },
@@ -1098,11 +1114,15 @@
     },
     "energy": {
         "default": "energy",
-        "use_counter": 0
+        "locations": "src/plugins/sensor/Sensor_HLW80xx.cpp:76 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:79 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:130 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:162 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:261 (SPGM)",
+        "type": "source",
+        "use_counter": 5
     },
     "energy_total": {
         "default": "energy_total",
-        "use_counter": 0
+        "locations": "src/plugins/sensor/Sensor_HLW80xx.cpp:69 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:72 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:124 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:161 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:260 (SPGM)",
+        "type": "source",
+        "use_counter": 5
     },
     "err": {
         "default": "err",
@@ -1114,13 +1134,13 @@
     },
     "factory_html": {
         "default": "factory.html",
-        "locations": "src/plugins.cpp:187 (SPGM),src/web_server.cpp:986 (SPGM)",
+        "locations": "src/plugins.cpp:187 (SPGM),src/web_server.cpp:987 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
     "failure": {
         "default": "failure",
-        "locations": "src/at_mode.cpp:1624 (SPGM),src/plugins/file_manager/file_manager.cpp:249 (SPGM),src/plugins/file_manager/file_manager.cpp:377 (SPGM),src/plugins/file_manager/file_manager.cpp:423 (SPGM)",
+        "locations": "src/at_mode.cpp:1609 (SPGM),src/plugins/file_manager/file_manager.cpp:249 (SPGM),src/plugins/file_manager/file_manager.cpp:377 (SPGM),src/plugins/file_manager/file_manager.cpp:423 (SPGM)",
         "type": "source",
         "use_counter": 4
     },
@@ -1156,7 +1176,9 @@
     },
     "frequency": {
         "default": "frequency",
-        "use_counter": 0
+        "locations": "src/plugins/sensor/Sensor_DimmerMetrics.cpp:57 (SPGM),src/plugins/sensor/Sensor_DimmerMetrics.cpp:59 (SPGM),src/plugins/sensor/Sensor_DimmerMetrics.cpp:92 (SPGM),src/plugins/sensor/Sensor_DimmerMetrics.cpp:100 (SPGM)",
+        "type": "source",
+        "use_counter": 4
     },
     "fs_mapping_dir": {
         "default": "/webui/",
@@ -1292,9 +1314,9 @@
     },
     "http": {
         "default": "http",
-        "locations": "src/plugins/file_manager/file_manager.cpp:465 (SPGM),src/plugins/http2serial/http2serial.cpp:270 (SPGM),src/plugins/mdns/mdns_plugin.cpp:171 (SPGM),src/plugins/mdns/mdns_plugin.cpp:186 (SPGM),src/templates.cpp:112 (SPGM),src/web_server.cpp:708 (SPGM),src/web_server.cpp:1045 (SPGM)",
+        "locations": "src/plugins/dimmer_module/dimmer_module.cpp:254 (SPGM),src/plugins/file_manager/file_manager.cpp:465 (SPGM),src/plugins/http2serial/http2serial.cpp:270 (SPGM),src/plugins/mdns/mdns_plugin.cpp:171 (SPGM),src/plugins/mdns/mdns_plugin.cpp:186 (SPGM),src/templates.cpp:112 (SPGM),src/web_server.cpp:708 (SPGM),src/web_server.cpp:1046 (SPGM)",
         "type": "source",
-        "use_counter": 7
+        "use_counter": 8
     },
     "httpmode": {
         "default": "httpmode",
@@ -1302,7 +1324,7 @@
     },
     "https": {
         "default": "https",
-        "locations": "src/templates.cpp:112 (SPGM),src/web_server.cpp:1046 (SPGM)",
+        "locations": "src/templates.cpp:112 (SPGM),src/web_server.cpp:1047 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
@@ -1316,9 +1338,9 @@
     },
     "image_type": {
         "default": "image_type",
-        "locations": "src/web_server.cpp:603 (SPGM),src/web_server.cpp:606 (SPGM)",
+        "locations": "src/web_server.cpp:603 (SPGM),src/web_server.cpp:606 (SPGM),src/web_server.cpp:610 (SPGM)",
         "type": "source",
-        "use_counter": 2
+        "use_counter": 3
     },
     "index_html": {
         "default": "index.html",
@@ -1349,8 +1371,10 @@
         "use_counter": 0
     },
     "iot_sensor_hlw80xx_state_file": {
-        "default": "",
-        "use_counter": 0
+        "default": "/.pvt/hlw80xx.state",
+        "locations": "src/plugins/sensor/Sensor_HLW80xx.cpp:27 (DEFINE),src/plugins/sensor/Sensor_HLW80xx.cpp:288 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:304 (SPGM)",
+        "type": "static",
+        "use_counter": 2
     },
     "iot_switch_states_file": {
         "default": "/.pvt/switch.states",
@@ -1366,7 +1390,9 @@
     },
     "kWh": {
         "default": "kWh",
-        "use_counter": 0
+        "locations": "src/plugins/sensor/Sensor_HLW80xx.cpp:71 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:78 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:161 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:162 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:209 (SPGM)",
+        "type": "source",
+        "use_counter": 5
     },
     "keep": {
         "default": "keep",
@@ -1390,7 +1416,7 @@
     },
     "kfcfw": {
         "default": "kfcfw",
-        "locations": "src/plugins/mqtt/mqtt_client.cpp:64 (SPGM),src/plugins/ssdp/ssdp.cpp:62 (SPGM),src/plugins/syslog/syslog_plugin.cpp:124 (SPGM),src/templates.cpp:298 (SPGM)",
+        "locations": "src/plugins/mqtt/client.cpp:91 (SPGM),src/plugins/ssdp/ssdp.cpp:62 (SPGM),src/plugins/syslog/syslog_plugin.cpp:124 (SPGM),src/templates.cpp:298 (SPGM)",
         "type": "source",
         "use_counter": 4
     },
@@ -1480,7 +1506,7 @@
     },
     "login_failure_file": {
         "default": "/.pvt/login_failures",
-        "locations": "src/failure_counter.cpp:98 (SPGM),src/failure_counter.cpp:162 (SPGM),src/failure_counter.cpp:192 (SPGM),src/kfc_fw_config.cpp:658 (SPGM)",
+        "locations": "src/failure_counter.cpp:98 (SPGM),src/failure_counter.cpp:162 (SPGM),src/failure_counter.cpp:192 (SPGM),src/kfc_fw_config.cpp:659 (SPGM)",
         "type": "source",
         "use_counter": 4
     },
@@ -1506,7 +1532,7 @@
     },
     "message": {
         "default": "message",
-        "locations": "src/web_server.cpp:1234 (SPGM),src/web_server.cpp:1238 (SPGM)",
+        "locations": "src/web_server.cpp:1235 (SPGM),src/web_server.cpp:1239 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
@@ -1516,9 +1542,9 @@
     },
     "milliseconds": {
         "default": "milliseconds",
-        "locations": "src/kfc_fw_config_forms.cpp:248 (SPGM)",
+        "locations": "src/kfc_fw_config_forms.cpp:248 (SPGM),src/plugins/dimmer_module/dimmer_module_form.cpp:107 (SPGM),src/plugins/dimmer_module/dimmer_module_form.cpp:111 (SPGM),src/plugins/dimmer_module/dimmer_module_form.cpp:123 (SPGM)",
         "type": "source",
-        "use_counter": 1
+        "use_counter": 4
     },
     "mime_application_javascript": {
         "default": "application/javascript",
@@ -1624,9 +1650,9 @@
     },
     "mime_text_plain": {
         "default": "text/plain",
-        "locations": "src/async_web_handler.cpp:35 (SPGM),src/async_web_handler.cpp:50 (SPGM),src/async_web_handler.cpp:53 (SPGM),src/plugins/file_manager/file_manager.cpp:250 (SPGM),src/plugins/file_manager/file_manager.cpp:330 (SPGM),src/plugins/file_manager/file_manager.cpp:343 (SPGM),src/plugins/file_manager/file_manager.cpp:380 (SPGM),src/plugins/file_manager/file_manager.cpp:415 (SPGM),src/plugins/file_manager/file_manager.cpp:428 (SPGM),src/web_server.cpp:166 (SPGM),src/web_server.cpp:259 (SPGM),src/web_server.cpp:446 (SPGM),src/web_server.cpp:568 (SPGM),src/web_server.cpp:875 (SPGM)",
+        "locations": "src/async_web_handler.cpp:35 (SPGM),src/async_web_handler.cpp:50 (SPGM),src/async_web_handler.cpp:53 (SPGM),src/plugins/dimmer_module/dimmer_base.cpp:445 (SPGM),src/plugins/file_manager/file_manager.cpp:250 (SPGM),src/plugins/file_manager/file_manager.cpp:330 (SPGM),src/plugins/file_manager/file_manager.cpp:343 (SPGM),src/plugins/file_manager/file_manager.cpp:380 (SPGM),src/plugins/file_manager/file_manager.cpp:415 (SPGM),src/plugins/file_manager/file_manager.cpp:428 (SPGM),src/web_server.cpp:166 (SPGM),src/web_server.cpp:259 (SPGM),src/web_server.cpp:446 (SPGM),src/web_server.cpp:485 (SPGM),src/web_server.cpp:568 (SPGM),src/web_server.cpp:875 (SPGM)",
         "type": "source",
-        "use_counter": 14
+        "use_counter": 16
     },
     "mime_text_xml": {
         "default": "text/xml",
@@ -1694,9 +1720,9 @@
     },
     "mqtt": {
         "default": "mqtt",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.cpp:81 (SPGM),src/plugins/mqtt/mqtt_form.cpp:95 (SPGM)",
+        "locations": "include/retracted/custom_config.h:329 (SPGM),src/plugins/dimmer_module/dimmer_module.cpp:257 (SPGM),src/plugins/mqtt/auto_discovery.cpp:94 (SPGM),src/plugins/mqtt/mqtt_form.cpp:95 (SPGM)",
         "type": "source",
-        "use_counter": 2
+        "use_counter": 4
     },
     "mqtt_": {
         "default": "pl",
@@ -1712,7 +1738,7 @@
     },
     "mqtt_automation_type": {
         "default": "atype",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:164 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:14 (DEFINE)",
+        "locations": "src/plugins/mqtt/auto_discovery.h:153 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:14 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
@@ -1734,7 +1760,7 @@
     },
     "mqtt_availability_topic": {
         "default": "avty_t",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.cpp:86 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:19 (DEFINE)",
+        "locations": "src/plugins/mqtt/auto_discovery.cpp:98 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:19 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
@@ -1764,19 +1790,19 @@
     },
     "mqtt_brightness_command_topic": {
         "default": "bri_cmd_t",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:70 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:24 (DEFINE)",
+        "locations": "src/plugins/mqtt/auto_discovery.h:59 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:24 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
     "mqtt_brightness_scale": {
         "default": "bri_scl",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:75 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:25 (DEFINE)",
+        "locations": "src/plugins/mqtt/auto_discovery.h:64 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:25 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
     "mqtt_brightness_state_topic": {
         "default": "bri_stat_t",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:65 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:26 (DEFINE)",
+        "locations": "src/plugins/mqtt/auto_discovery.h:54 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:26 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
@@ -1818,13 +1844,13 @@
     },
     "mqtt_color_temp_command_topic": {
         "default": "clr_temp_cmd_t",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:85 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:34 (DEFINE)",
+        "locations": "src/plugins/mqtt/auto_discovery.h:74 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:34 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
     "mqtt_color_temp_state_topic": {
         "default": "clr_temp_stat_t",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:80 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:35 (DEFINE)",
+        "locations": "src/plugins/mqtt/auto_discovery.h:69 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:35 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
@@ -1850,31 +1876,31 @@
     },
     "mqtt_command_topic": {
         "default": "cmd_t",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:60 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:42 (DEFINE)",
+        "locations": "src/plugins/mqtt/auto_discovery.h:49 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:42 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
     "mqtt_component_binary_sensor": {
         "default": "binary_sensor",
-        "locations": "src/plugins/mqtt/mqtt_component.cpp:56 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:8 (DEFINE)",
+        "locations": "src/plugins/mqtt/component.cpp:133 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:8 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
     "mqtt_component_device_automation": {
         "default": "device_automation",
-        "locations": "src/plugins/mqtt/mqtt_component.cpp:58 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:9 (DEFINE)",
+        "locations": "src/plugins/mqtt/component.cpp:135 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:9 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
     "mqtt_component_light": {
         "default": "light",
-        "locations": "src/plugins/mqtt/mqtt_component.cpp:52 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:6 (DEFINE)",
+        "locations": "src/plugins/mqtt/component.cpp:129 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:6 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
     "mqtt_component_sensor": {
         "default": "sensor",
-        "locations": "src/plugins/mqtt/mqtt_component.cpp:54 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:7 (DEFINE)",
+        "locations": "src/plugins/mqtt/component.cpp:131 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:7 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
@@ -1884,7 +1910,7 @@
     },
     "mqtt_component_switch": {
         "default": "switch",
-        "locations": "src/plugins/mqtt/mqtt_component.cpp:61 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:5 (DEFINE)",
+        "locations": "src/plugins/mqtt/component.cpp:140 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:5 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
@@ -1906,7 +1932,7 @@
     },
     "mqtt_device_class": {
         "default": "dev_cla",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:168 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:49 (DEFINE)",
+        "locations": "src/plugins/mqtt/auto_discovery.h:157 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:49 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
@@ -1920,19 +1946,19 @@
     },
     "mqtt_effect_command_topic": {
         "default": "fx_cmd_t",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:100 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:59 (DEFINE)",
+        "locations": "src/plugins/mqtt/auto_discovery.h:89 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:59 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
     "mqtt_effect_list": {
         "default": "fx_list",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:111 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:60 (DEFINE)",
+        "locations": "src/plugins/mqtt/auto_discovery.h:100 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:60 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
     "mqtt_effect_state_topic": {
         "default": "fx_stat_t",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:105 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:61 (DEFINE)",
+        "locations": "src/plugins/mqtt/auto_discovery.h:94 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:61 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
@@ -1954,7 +1980,7 @@
     },
     "mqtt_expire_after": {
         "default": "exp_aft",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:131 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:64 (DEFINE)",
+        "locations": "src/plugins/mqtt/auto_discovery.h:120 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:64 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
@@ -2096,7 +2122,7 @@
     },
     "mqtt_payload": {
         "default": "pl",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:177 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:94 (DEFINE)",
+        "locations": "src/plugins/mqtt/auto_discovery.h:166 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:94 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
@@ -2118,7 +2144,7 @@
     },
     "mqtt_payload_available": {
         "default": "pl_avail",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.cpp:87 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:99 (DEFINE)",
+        "locations": "src/plugins/mqtt/auto_discovery.cpp:99 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:99 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
@@ -2160,7 +2186,7 @@
     },
     "mqtt_payload_not_available": {
         "default": "pl_not_avail",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.cpp:88 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:109 (DEFINE)",
+        "locations": "src/plugins/mqtt/auto_discovery.cpp:100 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:109 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
@@ -2170,7 +2196,7 @@
     },
     "mqtt_payload_off": {
         "default": "pl_off",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:150 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:111 (DEFINE)",
+        "locations": "src/plugins/mqtt/auto_discovery.h:139 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:111 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
@@ -2180,7 +2206,7 @@
     },
     "mqtt_payload_on": {
         "default": "pl_on",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:145 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:113 (DEFINE)",
+        "locations": "src/plugins/mqtt/auto_discovery.h:134 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:113 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
@@ -2266,13 +2292,13 @@
     },
     "mqtt_rgb_command_topic": {
         "default": "rgb_cmd_t",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:95 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:133 (DEFINE)",
+        "locations": "src/plugins/mqtt/auto_discovery.h:84 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:133 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
     "mqtt_rgb_state_topic": {
         "default": "rgb_stat_t",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:90 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:134 (DEFINE)",
+        "locations": "src/plugins/mqtt/auto_discovery.h:79 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:134 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
@@ -2330,9 +2356,7 @@
     },
     "mqtt_state_file": {
         "default": "/.pvt/mqtt.state",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery_queue.cpp:232 (SPGM),src/plugins/mqtt/mqtt_auto_discovery_queue.cpp:235 (SPGM),src/plugins/mqtt/mqtt_auto_discovery_queue.cpp:246 (SPGM)",
-        "type": "source",
-        "use_counter": 3
+        "use_counter": 0
     },
     "mqtt_state_locked": {
         "default": "stat_locked",
@@ -2360,7 +2384,7 @@
     },
     "mqtt_state_topic": {
         "default": "stat_t",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:49 (SPGM),src/plugins/mqtt/mqtt_auto_discovery.h:54 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:155 (DEFINE)",
+        "locations": "src/plugins/mqtt/auto_discovery.h:38 (SPGM),src/plugins/mqtt/auto_discovery.h:43 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:155 (DEFINE)",
         "type": "static",
         "use_counter": 2
     },
@@ -2374,13 +2398,13 @@
     },
     "mqtt_status_topic": {
         "default": "/status",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.cpp:86 (SPGM),src/plugins/mqtt/mqtt_client.h:234 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:10 (DEFINE)",
+        "locations": "src/plugins/mqtt/auto_discovery.cpp:98 (SPGM),src/plugins/mqtt/mqtt_client.h:452 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:10 (DEFINE)",
         "type": "static",
         "use_counter": 2
     },
     "mqtt_subtype": {
         "default": "stype",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:126 (SPGM),src/plugins/mqtt/mqtt_auto_discovery.h:172 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:159 (DEFINE)",
+        "locations": "src/plugins/mqtt/auto_discovery.h:115 (SPGM),src/plugins/mqtt/auto_discovery.h:161 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:159 (DEFINE)",
         "type": "static",
         "use_counter": 2
     },
@@ -2486,31 +2510,31 @@
     },
     "mqtt_topic": {
         "default": "t",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:116 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:183 (DEFINE)",
+        "locations": "src/plugins/mqtt/auto_discovery.h:105 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:183 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
     "mqtt_type": {
         "default": "type",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:121 (SPGM),src/plugins/mqtt/mqtt_auto_discovery.h:176 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:158 (DEFINE)",
+        "locations": "src/plugins/mqtt/auto_discovery.h:110 (SPGM),src/plugins/mqtt/auto_discovery.h:165 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:158 (DEFINE)",
         "type": "static",
         "use_counter": 2
     },
     "mqtt_unique_id": {
         "default": "uniq_id",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.cpp:84 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:184 (DEFINE)",
+        "locations": "src/plugins/mqtt/auto_discovery.cpp:96 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:184 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
     "mqtt_unit_of_measurement": {
         "default": "unit_of_meas",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:160 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:185 (DEFINE)",
+        "locations": "src/plugins/mqtt/auto_discovery.h:149 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:185 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
     "mqtt_value_template": {
         "default": "val_tpl",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.h:136 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:186 (DEFINE)",
+        "locations": "src/plugins/mqtt/auto_discovery.h:125 (SPGM),src/plugins/mqtt/mqtt_strings.cpp:186 (DEFINE)",
         "type": "static",
         "use_counter": 1
     },
@@ -2552,13 +2576,13 @@
     },
     "name": {
         "default": "name",
-        "locations": "src/plugins/mqtt/mqtt_auto_discovery.cpp:80 (SPGM)",
+        "locations": "src/plugins/mqtt/auto_discovery.cpp:93 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
     "network": {
         "default": "network",
-        "locations": "src/kfc_fw_config.cpp:1697 (SPGM),src/kfc_fw_config_forms.cpp:142 (SPGM)",
+        "locations": "src/kfc_fw_config.cpp:1688 (SPGM),src/kfc_fw_config_forms.cpp:142 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
@@ -2576,7 +2600,7 @@
     },
     "no": {
         "default": "no",
-        "locations": "src/at_mode.cpp:1482 (SPGM)",
+        "locations": "src/at_mode.cpp:1467 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
@@ -2602,19 +2626,19 @@
     },
     "null": {
         "auto": "null",
-        "locations": "include/spgm_auto_def.h:351 (AUTO_INIT),lib/KFCBaseLibrary/include/misc.h:625 (SPGM),lib/KFCBaseLibrary/include/misc.h:626 (SPGM),lib/KFCBaseLibrary/include/misc.h:627 (SPGM),lib/KFCConfiguration/src/ConfigurationParameter.cpp:208 (SPGM),lib/KFCConfiguration/src/ConfigurationParameter.cpp:252 (SPGM),lib/KFCJson/include/JsonVariant.h:82 (SPGM),lib/KFCJson/src/JsonBaseReader.cpp:109 (SPGM),lib/KFCJson/src/JsonBaseReader.cpp:168 (SPGM),lib/KFCJson/src/JsonNumber.cpp:69 (SPGM),lib/KFCJson/src/JsonVar.cpp:55 (SPGM)",
+        "locations": "include/spgm_auto_def.h:351 (AUTO_INIT),lib/KFCBaseLibrary/include/misc.h:586 (SPGM),lib/KFCBaseLibrary/include/misc.h:587 (SPGM),lib/KFCBaseLibrary/include/misc.h:588 (SPGM),lib/KFCConfiguration/src/ConfigurationParameter.cpp:208 (SPGM),lib/KFCConfiguration/src/ConfigurationParameter.cpp:252 (SPGM),lib/KFCJson/include/JsonVariant.h:82 (SPGM),lib/KFCJson/src/JsonBaseReader.cpp:109 (SPGM),lib/KFCJson/src/JsonBaseReader.cpp:168 (SPGM),lib/KFCJson/src/JsonNumber.cpp:69 (SPGM),lib/KFCJson/src/JsonVar.cpp:55 (SPGM)",
         "type": "source",
         "use_counter": 10
     },
     "off": {
         "default": "off",
-        "locations": "src/at_mode.cpp:1460 (SPGM),src/at_mode.cpp:1479 (SPGM),src/at_mode.cpp:1480 (SPGM),src/at_mode.cpp:1486 (SPGM),src/at_mode.cpp:1487 (SPGM)",
+        "locations": "src/at_mode.cpp:1445 (SPGM),src/at_mode.cpp:1464 (SPGM),src/at_mode.cpp:1465 (SPGM),src/at_mode.cpp:1471 (SPGM),src/at_mode.cpp:1472 (SPGM)",
         "type": "source",
         "use_counter": 5
     },
     "on": {
         "default": "on",
-        "locations": "src/at_mode.cpp:1455 (SPGM),src/at_mode.cpp:1479 (SPGM),src/at_mode.cpp:1480 (SPGM),src/at_mode.cpp:1486 (SPGM),src/at_mode.cpp:1487 (SPGM)",
+        "locations": "src/at_mode.cpp:1440 (SPGM),src/at_mode.cpp:1464 (SPGM),src/at_mode.cpp:1465 (SPGM),src/at_mode.cpp:1471 (SPGM),src/at_mode.cpp:1472 (SPGM)",
         "type": "source",
         "use_counter": 5
     },
@@ -2652,7 +2676,9 @@
     },
     "pf": {
         "default": "pf",
-        "use_counter": 0
+        "locations": "src/plugins/sensor/Sensor_HLW80xx.cpp:97 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:100 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:146 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:165 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:265 (SPGM)",
+        "type": "source",
+        "use_counter": 5
     },
     "ping_monitor": {
         "default": "ping_monitor",
@@ -2704,13 +2730,15 @@
     },
     "port": {
         "default": "port",
-        "locations": "src/kfc_fw_config.cpp:863 (SPGM),src/plugins/mdns/mdns_resolver.cpp:75 (SPGM),src/plugins/mqtt/mqtt_form.cpp:72 (SPGM)",
+        "locations": "src/kfc_fw_config.cpp:858 (SPGM),src/plugins/mdns/mdns_resolver.cpp:75 (SPGM),src/plugins/mqtt/mqtt_form.cpp:72 (SPGM)",
         "type": "source",
         "use_counter": 3
     },
     "power": {
         "default": "power",
-        "use_counter": 0
+        "locations": "src/plugins/sensor/Sensor_HLW80xx.cpp:62 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:65 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:119 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:160 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:259 (SPGM)",
+        "type": "source",
+        "use_counter": 5
     },
     "prefix": {
         "default": "prefix",
@@ -2748,13 +2776,13 @@
     },
     "reboot_html": {
         "default": "reboot.html",
-        "locations": "src/plugins.cpp:170 (SPGM),src/plugins.cpp:186 (SPGM),src/web_server.cpp:985 (SPGM)",
+        "locations": "src/plugins.cpp:170 (SPGM),src/plugins.cpp:186 (SPGM),src/web_server.cpp:986 (SPGM)",
         "type": "source",
         "use_counter": 3
     },
     "rebooting_html": {
         "default": "rebooting.html",
-        "locations": "src/web_server.cpp:537 (SPGM),src/web_server.cpp:542 (SPGM),src/web_server.cpp:1002 (SPGM)",
+        "locations": "src/web_server.cpp:537 (SPGM),src/web_server.cpp:542 (SPGM),src/web_server.cpp:1003 (SPGM)",
         "type": "source",
         "use_counter": 3
     },
@@ -2770,13 +2798,13 @@
     },
     "safe_mode": {
         "default": "safe_mode",
-        "locations": "src/web_server.cpp:991 (SPGM)",
+        "locations": "src/web_server.cpp:992 (SPGM)",
         "type": "source",
         "use_counter": 1
     },
     "safe_mode_enabled": {
         "default": "Device started in SAFE MODE",
-        "locations": "src/kfc_fw_config.cpp:1486 (SPGM),src/kfc_fw_config.cpp:1487 (SPGM)",
+        "locations": "src/kfc_fw_config.cpp:1477 (SPGM),src/kfc_fw_config.cpp:1478 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
@@ -2790,9 +2818,9 @@
     },
     "seconds": {
         "default": "seconds",
-        "locations": "src/plugins/mqtt/mqtt_form.cpp:80 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:57 (SPGM)",
+        "locations": "src/plugins/dimmer_module/dimmer_module_form.cpp:43 (SPGM),src/plugins/dimmer_module/dimmer_module_form.cpp:48 (SPGM),src/plugins/dimmer_module/dimmer_module_form.cpp:55 (SPGM),src/plugins/dimmer_module/dimmer_module_form.cpp:73 (SPGM),src/plugins/dimmer_module/dimmer_module_form.cpp:115 (SPGM),src/plugins/mqtt/mqtt_form.cpp:80 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:57 (SPGM)",
         "type": "source",
-        "use_counter": 2
+        "use_counter": 7
     },
     "secure": {
         "default": "secure",
@@ -2804,9 +2832,9 @@
     },
     "serial_console_html": {
         "default": "serial-console.html",
-        "locations": "src/plugins/http2serial/http2serial.cpp:27 (AUTO_INIT),src/plugins/http2serial/http2serial.cpp:219 (SPGM)",
+        "locations": "src/plugins/http2serial/http2serial.cpp:27 (AUTO_INIT),src/plugins/http2serial/http2serial.cpp:219 (SPGM),src/web_server.cpp:504 (SPGM)",
         "type": "source",
-        "use_counter": 1
+        "use_counter": 2
     },
     "server": {
         "default": "server",
@@ -2878,7 +2906,7 @@
     },
     "status": {
         "default": "status",
-        "locations": "src/web_server.cpp:1233 (SPGM),src/web_server.cpp:1237 (SPGM)",
+        "locations": "src/web_server.cpp:1234 (SPGM),src/web_server.cpp:1238 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
@@ -2888,13 +2916,15 @@
     },
     "status_html": {
         "default": "status.html",
-        "locations": "src/plugins.cpp:166 (SPGM),src/plugins.cpp:174 (SPGM),src/plugins.cpp:291 (SPGM),src/web_server.cpp:1001 (SPGM)",
+        "locations": "src/plugins.cpp:166 (SPGM),src/plugins.cpp:174 (SPGM),src/plugins.cpp:290 (SPGM),src/web_server.cpp:1002 (SPGM)",
         "type": "source",
         "use_counter": 4
     },
     "stk500v1_log_file": {
         "default": "/stk500v1/debug.log",
-        "use_counter": 0
+        "locations": "src/plugins/stk500v1/STK500v1Programmer.h:107 (SPGM)",
+        "type": "source",
+        "use_counter": 1
     },
     "stk500v1_sig_file": {
         "default": "/stk500v1/atmega.csv",
@@ -2902,7 +2932,9 @@
     },
     "stk500v1_tmp_file": {
         "default": "/stk500v1/firmware_tmp.hex",
-        "use_counter": 0
+        "locations": "src/web_server.cpp:492 (SPGM)",
+        "type": "source",
+        "use_counter": 1
     },
     "stopped": {
         "default": "stopped",
@@ -2922,7 +2954,7 @@
     },
     "success": {
         "default": "success",
-        "locations": "src/at_mode.cpp:1624 (SPGM),src/plugins/file_manager/file_manager.cpp:249 (SPGM),src/plugins/file_manager/file_manager.cpp:377 (SPGM),src/plugins/file_manager/file_manager.cpp:423 (SPGM)",
+        "locations": "src/at_mode.cpp:1609 (SPGM),src/plugins/file_manager/file_manager.cpp:249 (SPGM),src/plugins/file_manager/file_manager.cpp:377 (SPGM),src/plugins/file_manager/file_manager.cpp:423 (SPGM)",
         "type": "source",
         "use_counter": 4
     },
@@ -2942,9 +2974,9 @@
     },
     "tcp": {
         "default": "tcp",
-        "locations": "src/plugins/mqtt/mqtt_config.cpp:14 (SPGM),src/plugins/syslog/syslog_config.cpp:21 (SPGM),src/web_server.cpp:712 (SPGM),src/web_server.cpp:1045 (SPGM),src/web_server.cpp:1046 (SPGM)",
+        "locations": "include/retracted/custom_config.h:329 (SPGM),include/retracted/custom_config.h:367 (SPGM),src/plugins/mqtt/mqtt_config.cpp:14 (SPGM),src/plugins/syslog/syslog_config.cpp:21 (SPGM),src/web_server.cpp:712 (SPGM),src/web_server.cpp:1046 (SPGM),src/web_server.cpp:1047 (SPGM)",
         "type": "source",
-        "use_counter": 5
+        "use_counter": 7
     },
     "temperature": {
         "default": "temperature",
@@ -2952,7 +2984,9 @@
     },
     "ticks": {
         "default": "ticks",
-        "use_counter": 0
+        "locations": "src/plugins/dimmer_module/dimmer_module_form.cpp:194 (SPGM),src/plugins/dimmer_module/dimmer_module_form.cpp:208 (SPGM),src/plugins/dimmer_module/dimmer_module_form.cpp:213 (SPGM)",
+        "type": "source",
+        "use_counter": 3
     },
     "timeout": {
         "default": "timeout",
@@ -3028,7 +3062,9 @@
     },
     "vcc": {
         "default": "vcc",
-        "use_counter": 0
+        "locations": "src/plugins/sensor/Sensor_DimmerMetrics.cpp:50 (SPGM),src/plugins/sensor/Sensor_DimmerMetrics.cpp:87 (SPGM),src/plugins/sensor/Sensor_DimmerMetrics.cpp:99 (SPGM)",
+        "type": "source",
+        "use_counter": 3
     },
     "version": {
         "default": "version",
@@ -3038,7 +3074,9 @@
     },
     "voltage": {
         "default": "voltage",
-        "use_counter": 0
+        "locations": "src/plugins/sensor/Sensor_HLW80xx.cpp:83 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:86 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:136 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:163 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:262 (SPGM)",
+        "type": "source",
+        "use_counter": 5
     },
     "warn": {
         "default": "warn",
@@ -3110,9 +3148,9 @@
     },
     "webui_json_events": {
         "auto": "webui json events",
-        "locations": "src/WebUISocket.cpp:155 (SPGM),src/plugins/sensor/sensor.cpp:154 (SPGM)",
-        "type": "source",
-        "use_counter": 2
+        "locations": "src/WebUIComponent.cpp:21 (DEFINE),src/WebUISocket.cpp:155 (SPGM),src/plugins/sensor/sensor.cpp:144 (SPGM),src/plugins/sensor/sensor.cpp:154 (SPGM)",
+        "type": "static",
+        "use_counter": 3
     },
     "webui_json_group": {
         "default": "group",
@@ -3128,8 +3166,8 @@
     },
     "webui_json_hb": {
         "auto": "webui json hb",
-        "locations": "src/plugins/sensor/Sensor_SystemMetrics.cpp:201 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:202 (SPGM)",
-        "type": "source",
+        "locations": "src/WebUIComponent.cpp:57 (DEFINE),src/plugins/sensor/Sensor_SystemMetrics.cpp:201 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:202 (SPGM)",
+        "type": "static",
         "use_counter": 2
     },
     "webui_json_head": {
@@ -3148,9 +3186,9 @@
     },
     "webui_json_id": {
         "auto": "webui json id",
-        "locations": "include/WebUIComponent.h:84 (SPGM),src/WebUIComponent.cpp:27 (DEFINE),src/plugins/sensor/Sensor_Battery.cpp:97 (SPGM),src/plugins/sensor/Sensor_Battery.cpp:103 (SPGM),src/plugins/sensor/Sensor_Battery.cpp:110 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:148 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:153 (SPGM)",
+        "locations": "include/WebUIComponent.h:84 (SPGM),src/WebUIComponent.cpp:27 (DEFINE),src/plugins/dimmer_module/dimmer_base.cpp:382 (SPGM),src/plugins/dimmer_module/dimmer_base.cpp:393 (SPGM),src/plugins/sensor/Sensor_DimmerMetrics.cpp:77 (SPGM),src/plugins/sensor/Sensor_DimmerMetrics.cpp:82 (SPGM),src/plugins/sensor/Sensor_DimmerMetrics.cpp:87 (SPGM),src/plugins/sensor/Sensor_DimmerMetrics.cpp:92 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:119 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:124 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:130 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:136 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:141 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:146 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:148 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:153 (SPGM)",
         "type": "static",
-        "use_counter": 6
+        "use_counter": 15
     },
     "webui_json_items": {
         "default": "items",
@@ -3242,9 +3280,9 @@
     },
     "webui_json_state": {
         "auto": "webui json state",
-        "locations": "include/WebUIComponent.h:110 (SPGM),src/WebUIComponent.cpp:42 (DEFINE),src/plugins/sensor/Sensor_Battery.cpp:98 (SPGM),src/plugins/sensor/Sensor_Battery.cpp:104 (SPGM),src/plugins/sensor/Sensor_Battery.cpp:111 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:149 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:154 (SPGM)",
+        "locations": "include/WebUIComponent.h:110 (SPGM),src/WebUIComponent.cpp:42 (DEFINE),src/plugins/dimmer_module/dimmer_base.cpp:386 (SPGM),src/plugins/dimmer_module/dimmer_base.cpp:395 (SPGM),src/plugins/sensor/Sensor_DimmerMetrics.cpp:78 (SPGM),src/plugins/sensor/Sensor_DimmerMetrics.cpp:83 (SPGM),src/plugins/sensor/Sensor_DimmerMetrics.cpp:88 (SPGM),src/plugins/sensor/Sensor_DimmerMetrics.cpp:93 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:120 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:126 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:132 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:137 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:142 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:148 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:149 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:154 (SPGM)",
         "type": "static",
-        "use_counter": 6
+        "use_counter": 15
     },
     "webui_json_switch": {
         "default": "switch",
@@ -3270,15 +3308,15 @@
     },
     "webui_json_type": {
         "auto": "webui json type",
-        "locations": "src/WebUIComponent.cpp:47 (DEFINE),src/WebUIComponent.cpp:62 (SPGM),src/WebUIComponent.cpp:104 (SPGM),src/WebUIComponent.cpp:113 (SPGM),src/WebUIComponent.cpp:124 (SPGM),src/WebUIComponent.cpp:136 (SPGM),src/WebUIComponent.cpp:151 (SPGM),src/WebUIComponent.cpp:179 (SPGM),src/WebUIComponent.cpp:186 (SPGM),src/WebUIComponent.cpp:196 (SPGM),src/WebUIComponent.cpp:218 (SPGM),src/WebUISocket.cpp:154 (SPGM),src/plugins/sensor/sensor.cpp:153 (SPGM)",
+        "locations": "src/WebUIComponent.cpp:47 (DEFINE),src/WebUIComponent.cpp:62 (SPGM),src/WebUIComponent.cpp:104 (SPGM),src/WebUIComponent.cpp:113 (SPGM),src/WebUIComponent.cpp:124 (SPGM),src/WebUIComponent.cpp:136 (SPGM),src/WebUIComponent.cpp:151 (SPGM),src/WebUIComponent.cpp:179 (SPGM),src/WebUIComponent.cpp:186 (SPGM),src/WebUIComponent.cpp:196 (SPGM),src/WebUIComponent.cpp:218 (SPGM),src/WebUISocket.cpp:154 (SPGM),src/plugins/sensor/sensor.cpp:143 (SPGM),src/plugins/sensor/sensor.cpp:153 (SPGM)",
         "type": "static",
-        "use_counter": 12
+        "use_counter": 13
     },
     "webui_json_ue": {
         "auto": "webui json ue",
-        "locations": "src/WebUISocket.cpp:154 (SPGM),src/plugins/sensor/sensor.cpp:153 (SPGM)",
-        "type": "source",
-        "use_counter": 2
+        "locations": "src/WebUIComponent.cpp:49 (DEFINE),src/WebUISocket.cpp:154 (SPGM),src/plugins/sensor/sensor.cpp:143 (SPGM),src/plugins/sensor/sensor.cpp:153 (SPGM)",
+        "type": "static",
+        "use_counter": 3
     },
     "webui_json_ui": {
         "default": "ui",
@@ -3294,9 +3332,9 @@
     },
     "webui_json_value": {
         "auto": "webui json value",
-        "locations": "include/WebUIComponent.h:106 (SPGM),src/WebUIComponent.cpp:51 (DEFINE),src/plugins/sensor/Sensor_Battery.cpp:99 (SPGM),src/plugins/sensor/Sensor_Battery.cpp:105 (SPGM),src/plugins/sensor/Sensor_Battery.cpp:112 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:150 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:155 (SPGM)",
+        "locations": "include/WebUIComponent.h:106 (SPGM),src/WebUIComponent.cpp:51 (DEFINE),src/plugins/dimmer_module/dimmer_base.cpp:384 (SPGM),src/plugins/dimmer_module/dimmer_base.cpp:394 (SPGM),src/plugins/sensor/Sensor_DimmerMetrics.cpp:79 (SPGM),src/plugins/sensor/Sensor_DimmerMetrics.cpp:84 (SPGM),src/plugins/sensor/Sensor_DimmerMetrics.cpp:89 (SPGM),src/plugins/sensor/Sensor_DimmerMetrics.cpp:94 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:121 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:127 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:133 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:138 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:143 (SPGM),src/plugins/sensor/Sensor_HLW80xx.cpp:149 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:150 (SPGM),src/plugins/sensor/Sensor_SystemMetrics.cpp:155 (SPGM)",
         "type": "static",
-        "use_counter": 6
+        "use_counter": 15
     },
     "webui_json_vcc": {
         "default": "vcc",
@@ -3322,7 +3360,7 @@
     },
     "wifi": {
         "default": "wifi",
-        "locations": "src/kfc_fw_config.cpp:1697 (SPGM),src/kfc_fw_config_forms.cpp:66 (SPGM)",
+        "locations": "src/kfc_fw_config.cpp:1688 (SPGM),src/kfc_fw_config_forms.cpp:66 (SPGM)",
         "type": "source",
         "use_counter": 2
     },
@@ -3350,7 +3388,7 @@
     },
     "yes": {
         "default": "yes",
-        "locations": "src/at_mode.cpp:1482 (SPGM),src/web_server.cpp:988 (SPGM)",
+        "locations": "src/at_mode.cpp:1467 (SPGM),src/web_server.cpp:989 (SPGM)",
         "type": "source",
         "use_counter": 2
     }

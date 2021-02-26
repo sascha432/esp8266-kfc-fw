@@ -78,6 +78,11 @@
     padding-left: 1rem;
 }
 
+.webuicomponent.title .webuicomponent.group-switch > .switch {
+    padding: 0  !important;
+    margin: -.375rem -.75rem -.25rem 0 !important;
+}
+
 /* webui-button-group */
 
 .webuicomponent > .button-group .col {

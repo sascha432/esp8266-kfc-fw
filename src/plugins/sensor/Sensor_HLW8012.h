@@ -135,11 +135,16 @@ public:
     virtual MQTTSensorSensorType getType() const override;
     virtual String _getId(const __FlashStringHelper *type = nullptr);
 
-    static void loop();
-
     virtual void dump(Print &output) override;
 
+#if AT_MODE_SUPPORTED
+    virtual void atModeHelpGenerator() override;
+    virtual bool atModeHandler(AtModeArgs &args) override;
+#endif
+
+public:
     void _setOutputMode(OutputTypeEnum_t outputMode = CYCLE, int delay = -1);
+    static void loop();
 
 private:
     friend Sensor_HLW80xx;
@@ -181,10 +186,6 @@ private:
         return '?';
     }
 
-#if AT_MODE_SUPPORTED
-    virtual void atModeHelpGenerator() override;
-    virtual bool atModeHandler(AtModeArgs &args) override;
-#endif
 };
 
 #endif

@@ -40,10 +40,11 @@ public:
         CallbackPtr callbackPtr;
     };
 
-    typedef std::vector<Entry> CallbackVector;
+    using CallbackVector = std::vector<Entry> ;
 
+    inline __attribute__((__always_inline__))
     static void clear() {
-        getVector().clear();
+        _callbacks.clear();
     }
 
     static EventType add(EventType events, Callback callback, CallbackPtr callbackPtr);
@@ -54,7 +55,11 @@ public:
     static EventType remove(EventType events, void *callbackPtr);
 
     static void callEvent(EventType event, void *payload);
-    static CallbackVector &getVector();
+
+    inline __attribute__((__always_inline__))
+    static CallbackVector &getVector() {
+        return _callbacks;
+    }
 
 private:
     static CallbackVector _callbacks;

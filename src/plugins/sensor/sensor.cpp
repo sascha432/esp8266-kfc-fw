@@ -120,16 +120,6 @@ void SensorPlugin::reconfigure(const String &source)
     }
 }
 
-SensorPlugin::SensorVector &SensorPlugin::getSensors()
-{
-    return plugin._sensors;
-}
-
-size_t SensorPlugin::getSensorCount()
-{
-    return plugin._sensors.size();
-}
-
 SensorPlugin &SensorPlugin::getInstance()
 {
     return plugin;

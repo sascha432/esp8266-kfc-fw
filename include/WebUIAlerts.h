@@ -242,7 +242,7 @@ namespace WebAlerts {
         MQTTStorage();
 
 #if MQTT_AUTO_DISCOVERY
-        virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num) {
+        virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTT::FormatType format, uint8_t num) {
             return nullptr;
         }
         virtual uint8_t getAutoDiscoveryCount() const {

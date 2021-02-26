@@ -269,7 +269,7 @@ public:
 // ------------------------------------------------------------------------
 
 public:
-    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num) override;
+    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTT::FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const;
     virtual void onConnect(MQTTClient *client);
     virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len);

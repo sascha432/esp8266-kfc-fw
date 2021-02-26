@@ -24,7 +24,7 @@
 
 using KFCConfigurationClasses::Plugins;
 
-PROGMEM_STRING_DEF(iot_sensor_hlw80xx_state_file, );
+PROGMEM_STRING_DEF(iot_sensor_hlw80xx_state_file, "/.pvt/hlw80xx.state");
 
 Sensor_HLW80xx::Sensor_HLW80xx(const String &name) : MQTTSensor(), _name(name), _power(NAN), _voltage(NAN), _current(NAN)
 {
@@ -50,13 +50,13 @@ Sensor_HLW80xx::Sensor_HLW80xx(const String &name) : MQTTSensor(), _name(name), 
 #endif
 }
 
-MQTTComponent::MQTTAutoDiscoveryPtr Sensor_HLW80xx::nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num)
+MQTT::AutoDiscovery::EntityPtr Sensor_HLW80xx::nextAutoDiscovery(MQTT::FormatType format, uint8_t num)
 {
     if (num >= getAutoDiscoveryCount()) {
         return nullptr;
     }
     String topic = _getTopic();
-    auto discovery = __LDBG_new(MQTTAutoDiscovery);
+    auto discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
     switch(num) {
         case 0:
             discovery->create(this, FSPGM(power), format);
@@ -98,7 +98,6 @@ MQTTComponent::MQTTAutoDiscoveryPtr Sensor_HLW80xx::nextAutoDiscovery(MQTTAutoDi
             discovery->addStateTopic(topic);
             discovery->addUnitOfMeasurement('%');
             discovery->addValueTemplate(FSPGM(pf));
-            discovery->finalize();
             discovery->addDeviceClass(F("power_factor"));
             break;
     }
@@ -167,7 +166,7 @@ void Sensor_HLW80xx::createWebUI(WebUIRoot &webUI, WebUIRow **row)
 
 void Sensor_HLW80xx::reconfigure(PGM_P source)
 {
-    auto sensor = Plugins::Sensor::getConfig().hlw80xx;
+    auto sensor = Plugins::Sensor::getConfig();
     _calibrationU = sensor.calibrationU;
     _calibrationI = sensor.calibrationI;
     _calibrationP = sensor.calibrationP;
@@ -182,7 +181,7 @@ void Sensor_HLW80xx::shutdown()
 
     // update energy counter in EEPROM
     auto &cfg = Plugins::Sensor::getWriteableConfig();
-    cfg.hlw80xx.energyCounter = _energyCounter[0];
+    cfg.energyCounter = _energyCounter[0];
     config.write();
 }
 
@@ -192,18 +191,18 @@ void Sensor_HLW80xx::createConfigureForm(AsyncWebServerRequest *request, FormUI:
 
     auto &group = form.addCardGroup(F("hlw80xx_cf"), F("HLW8012"), true);
 
-    form.add<float>(F("hlw80xx_u"), _H_W_STRUCT_VALUE(cfg, hlw80xx.calibrationU));
+    form.addPointerTriviallyCopyable(F("hlw80xx_u"), &cfg.calibrationU);
     form.addFormUI(F("Voltage Calibration"));
 
-    form.add<float>(F("hlw80xx_i"), _H_W_STRUCT_VALUE(cfg, hlw80xx.calibrationI));
+    form.addPointerTriviallyCopyable(F("hlw80xx_i"), &cfg.calibrationI);
     form.addFormUI(F("Current Calibration"));
 
-    form.add<float>(F("hlw80xx_p"), _H_W_STRUCT_VALUE(cfg, hlw80xx.calibrationP));
+    form.addPointerTriviallyCopyable(F("hlw80xx_p"), &cfg.calibrationP);
     form.addFormUI(F("Power Calibration"));
 
-    form.add<uint8_t>(F("hlw80xx_xd"), _H_W_STRUCT_VALUE(cfg, hlw80xx.extraDigits));
+    form.addObjectGetterSetter(F("hlw80xx_xd"), cfg, cfg.get_bits_extraDigits, cfg.set_bits_extraDigits);
     form.addFormUI(F("Extra Digits/Precision"));
-    form.addValidator(FormUI::Validator::Range(0, 4));
+    cfg.addRangeValidatorFor_extraDigits(form);
 
     form.add(F("hlw80xx_e1"), String(), FormUI::Field::Type::TEXT);
     form.addFormUI(F("Total Energy"), FormUI::Suffix(FSPGM(kWh)), FormUI::PlaceHolder(IOT_SENSOR_HLW80xx_PULSE_TO_KWH(getEnergyPrimaryCounter()), 3));
@@ -233,22 +232,22 @@ void Sensor_HLW80xx::_publishPersistantStorage(ConfigType *cfgPtr)
 {
     auto client = MQTTClient::getClient();
     if (client && client->isConnected()) {
-        ConfigType cfg = cfgPtr ? *cfgPtr : Plugins::Sensor::getConfig().hlw80xx;
+        ConfigType cfg = cfgPtr ? *cfgPtr : Plugins::Sensor::getConfig();
         PrintString data;
         data.printf_P(PSTR("U=%f,I=%f,P=%f,e1="), cfg.calibrationU, cfg.calibrationI, cfg.calibrationP);
         data.print(getEnergyPrimaryCounter());
         data.print(F(",e2="));
         data.print(getEnergySecondaryCounter());
 
-        client->publishPersistantStorage(MQTTClient::StorageFrequencyType::DAILY, F("hlw80xx"), data);
+        client->publishPersistantStorage(MQTT::StorageFrequencyType::DAILY, F("hlw80xx"), data);
     }
 }
 
 void Sensor_HLW80xx::configurationSaved(FormUI::Form::BaseForm *form)
 {
     auto &cfg = Plugins::Sensor::getWriteableConfig();
-    getEnergyPrimaryCounter() = cfg.hlw80xx.energyCounter;
-    _publishPersistantStorage(&cfg.hlw80xx);
+    getEnergyPrimaryCounter() = cfg.energyCounter;
+    _publishPersistantStorage(&cfg);
 }
 
 void Sensor_HLW80xx::publishState(MQTTClient *client)
@@ -268,25 +267,11 @@ void Sensor_HLW80xx::publishState(MQTTClient *client)
     }
 }
 
-void Sensor_HLW80xx::resetEnergyCounter()
-{
-    _energyCounter = {};
-    _saveEnergyCounter();
-}
-
-void Sensor_HLW80xx::_incrEnergyCounters(uint32_t count)
-{
-    for(uint8_t i = 0; i < _energyCounter.size(); i++) {
-        _energyCounter[i] += count;
-    }
-}
-
 void Sensor_HLW80xx::_saveEnergyCounter()
 {
-    __LDBG_println();
-
 #if IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT
-    auto file = KFCFS.open(FSPGM(iot_sensor_hlw80xx_state_file, "/.pvt/hlw80xx.state"), fs::FileOpenMode::write);
+    __LDBG_printf("file=%s", FSPGM(iot_sensor_hlw80xx_state_file));
+    auto file = KFCFS.open(FSPGM(iot_sensor_hlw80xx_state_file), fs::FileOpenMode::write);
     if (file) {
         file.write(reinterpret_cast<const uint8_t *>(_energyCounter.data()), sizeof(_energyCounter));
         file.close();
@@ -300,13 +285,12 @@ void Sensor_HLW80xx::_saveEnergyCounter()
 
 void Sensor_HLW80xx::_loadEnergyCounter()
 {
-    __LDBG_println();
-
 #if IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT
+    __LDBG_printf("file=%s", FSPGM(iot_sensor_hlw80xx_state_file));
     auto file = KFCFS.open(FSPGM(iot_sensor_hlw80xx_state_file), fs::FileOpenMode::read);
     if (!file || file.read(reinterpret_cast<uint8_t *>(_energyCounter.data()), sizeof(_energyCounter)) != sizeof(_energyCounter)) {
         resetEnergyCounter();
-        _energyCounter[0] = Plugins::Sensor::getConfig().hlw80xx.energyCounter; // restore data from EEPROM in case SPIFFS was updated
+        _energyCounter[0] = Plugins::Sensor::getConfig().energyCounter; // restore data from EEPROM in case SPIFFS was updated
     }
     _saveEnergyCounterTimeout = millis() + IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT;
 #else
@@ -335,34 +319,9 @@ JsonNumber Sensor_HLW80xx::_energyToNumber(float energy) const
     return JsonNumber(energy, 3 - digits + _extraDigits);
 }
 
-JsonNumber Sensor_HLW80xx::_powerToNumber(float power) const
+void Sensor_HLW80xx::setExtraDigits(uint8_t digits)
 {
-    uint8_t digits = 1;
-    if (power < 10) {
-        digits = 2;
-    }
-    return JsonNumber(power, digits + _extraDigits);
-}
-
-float Sensor_HLW80xx::_getPowerFactor() const
-{
-    if (isnan(_power) || isnan(_voltage) || isnan(_current) || _current == 0) {
-        return 0;
-    }
-    return std::min(_power / (_voltage * _current), 1.0f);
-}
-
-float Sensor_HLW80xx::_getEnergy(uint8_t num) const
-{
-    if (num >= IOT_SENSOR_HLW80xx_NUM_ENERGY_COUNTERS) {
-        return NAN;
-    }
-    return IOT_SENSOR_HLW80xx_PULSE_TO_KWH(_energyCounter[num]);
-}
-
-String Sensor_HLW80xx::_getTopic()
-{
-    return MQTTClient::formatTopic(_getId());
+    Plugins::Sensor::getWriteableConfig().extraDigits = std::min((uint8_t)6, digits);
 }
 
 void Sensor_HLW80xx::dump(Print &output)
@@ -377,12 +336,6 @@ void Sensor_HLW80xx::dump(Print &output)
         _getPowerFactor()
     );
 }
-
-void Sensor_HLW80xx::setExtraDigits(uint8_t digits)
-{
-    Plugins::Sensor::getWriteableConfig().hlw80xx.extraDigits = std::min((uint8_t)6, digits);
-}
-
 
 #if AT_MODE_SUPPORTED
 
@@ -408,8 +361,13 @@ bool Sensor_HLW80xx::atModeHandler(AtModeArgs &args)
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(HLWXD))) {
         if (args.requireArgs(1)) {
             uint8_t digits = args.toIntMinMax(AtModeArgs::FIRST, 0, 4);
-            auto count = SensorPlugin::for_each<Sensor_HLW80xx>(this, Sensor_HLW80xx::_compareFunc, [digits](Sensor_HLW80xx &sensor) {
-                sensor.setExtraDigits(digits);
+
+            auto count = std::count_if(SensorPlugin::begin(), SensorPlugin::end(), [digits](MQTTSensor *sensor) {
+                if (sensor->getType() == MQTTSensor::SensorType::HLW8012 || sensor->getType() == MQTTSensor::SensorType::HLW8032) {
+                    reinterpret_cast<Sensor_HLW80xx *>(sensor)->setExtraDigits(digits);
+                    return true;
+                }
+                return false;
             });
             args.printf_P(PSTR("Set extra digits to %d for %u sensors"), digits, count);
         }
@@ -470,9 +428,11 @@ bool Sensor_HLW80xx::atModeHandler(AtModeArgs &args)
         if (interval) {
             auto &serial = args.getStream();
             _Timer(_dumpTimer).add(interval, true, [this, &serial](Event::CallbackTimerPtr timer) {
-                SensorPlugin::for_each<Sensor_HLW80xx>(this, Sensor_HLW80xx::_compareFunc, [&serial](Sensor_HLW80xx &sensor) {
-                    sensor.dump(serial);
-                });
+                for(auto sensor: SensorPlugin::getSensors()) {
+                    if (sensor->getType() == MQTTSensor::SensorType::HLW8012 || sensor->getType() == MQTTSensor::SensorType::HLW8032) {
+                        reinterpret_cast<Sensor_HLW80xx *>(sensor)->dump(serial);
+                    }
+                }
             });
         }
         return true;

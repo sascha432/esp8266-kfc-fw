@@ -129,26 +129,16 @@ void SwitchPlugin::createConfigureForm(FormCallbackType type, const String &form
 
     PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, IOT_SWITCH_CHANNEL_NUM, chan, name, state, webui);
 
-
     for (size_t i = 0; i < _pins.size(); i++) {
         auto &group = form.addCardGroup(F_VAR(chan, i), PrintString(F("Channel %u"), i), true);
 
-        form.add(PrintString(F("name_%u"), i), _names[i], [this, i](const String &name, FormUI::Field::Base &, bool) {
-            _names[i] = name;
-            return false;
-        }, FormField::Type::TEXT);
+        form.add(F_VAR(name, i),  _names[i]);
         form.addFormUI(F("Name"));
 
-        form.add<SwitchStateEnum>(PrintString(F("state_%u"), i), _configs[i].state, [this, i](SwitchStateEnum state, FormUI::Field::Base &, bool) {
-            _configs[i].state = state;
-            return false;
-        }, FormField::Type::SELECT);
+        form.addPointerTriviallyCopyable(F_VAR(state, i), &_configs[i].state);
         form.addFormUI(F("Default State"), states);
 
-        form.add<WebUIEnum>(PrintString(F("webui_%u"), i), _configs[i].webUI, [this, i](WebUIEnum webUI, FormUI::Field::Base &, bool) {
-            _configs[i].webUI = webUI;
-            return false;
-        }, FormField::Type::SELECT);
+        form.addPointerTriviallyCopyable(F_VAR(webui, i), &_configs[i].webUI);
         form.addFormUI(F("WebUI"), webUI);
 
         group.end();
@@ -172,7 +162,7 @@ void SwitchPlugin::createWebUI(WebUIRoot &webUI)
             else {
                 name = PrintString(F("Channel %u"), i);
             }
-            row->addSwitch(PrintString(FSPGM(channel__u), i), name, true, true);
+            row->addSwitch(PrintString(FSPGM(channel__u), i), name, true, WebUIRow::NamePositionType::HIDE);
         }
         if (_configs[i].webUI == WebUIEnum::NEW_ROW) {
             row = &webUI.addRow();
@@ -208,7 +198,7 @@ void SwitchPlugin::setValue(const String &id, const String &value, bool hasValue
     }
 }
 
-MQTTComponent::MQTTAutoDiscoveryPtr SwitchPlugin::nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num)
+MQTTComponent::MQTTAutoDiscoveryPtr SwitchPlugin::nextAutoDiscovery(MQTT::FormatType format, uint8_t num)
 {
     if (num >= getAutoDiscoveryCount()) {
         return nullptr;
@@ -308,7 +298,7 @@ void SwitchPlugin::_writeStates()
 void SwitchPlugin::_publishState(MQTTClient *client, int8_t channel)
 {
     __DBG_println();
-    if (client) {
+    if (client && client->isConnected()) {
         for (size_t i = 0; i < _pins.size(); i++) {
             if (channel == -1 || (uint8_t)channel == i) {
                 __LDBG_printf("pin=%u state=%u", _pins[i], _getChannel(i));
@@ -317,24 +307,29 @@ void SwitchPlugin::_publishState(MQTTClient *client, int8_t channel)
         }
     }
 
-    JsonUnnamedObject json(2);
-    json.add(JJ(type), JJ(ue));
-    auto &events = json.addArray(JJ(events));
-    JsonUnnamedObject *obj;
-    for (size_t i = 0; i < _pins.size(); i++) {
-        if (channel == -1 || (uint8_t)channel == i) {
-            obj = &events.addObject(2);
-            obj->add(JJ(id), PrintString(FSPGM(channel__u), i));
-            obj->add(JJ(value), (int)_getChannel(i));
-            obj->add(JJ(state), true);
+    if (WebUISocket::hasAuthenticatedClients()) {
+        JsonUnnamedObject json(2);
+        json.add(JJ(type), JJ(ue));
+        auto &events = json.addArray(JJ(events));
+        JsonUnnamedObject *obj;
+        for (size_t i = 0; i < _pins.size(); i++) {
+            if (channel == -1 || (uint8_t)channel == i) {
+                obj = &events.addObject(2);
+                obj->add(JJ(id), PrintString(FSPGM(channel__u), i));
+                obj->add(JJ(value), (int)_getChannel(i));
+                obj->add(JJ(state), true);
+            }
         }
-    }
-    if (events.size()) {
-        auto buffer = std::shared_ptr<StreamString>(new StreamString());
-        json.printTo(*buffer);
+        if (events.size()) {
+            WebUISocket::broadcast(WebUISocket::getSender(), json);
+            // WsClient::broadcast(WebUISocket::getServerSocket(), WsWebUISocket::getSender(), buffer->c_str(), buffer->length());
 
-        LoopFunctions::callOnce([this, buffer]() {
-            WsClient::broadcast(WsWebUISocket::getServerSocket(), WsWebUISocket::getSender(), buffer->c_str(), buffer->length());
-        });
+            // auto buffer = std::shared_ptr<StreamString>(new StreamString());
+            // json.printTo(*buffer);
+
+            // LoopFunctions::callOnce([this, buffer]() {
+            //     WsClient::broadcast(WsWebUISocket::getServerSocket(), WsWebUISocket::getSender(), buffer->c_str(), buffer->length());
+            // });
+        }
     }
 }

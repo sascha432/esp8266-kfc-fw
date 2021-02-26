@@ -80,6 +80,7 @@ void delayedSetup(bool delayed)
 void setup()
 {
     _startupTimings.setSetupFunc(millis());
+
     KFC_SAFE_MODE_SERIAL_PORT.begin(KFC_SERIAL_RATE);
 #if KFC_DEBUG_USE_SERIAL1
     Serial1.begin(KFC_DEBUG_USE_SERIAL1);
@@ -87,10 +88,6 @@ void setup()
 #endif
     serialHandler.begin();
     DEBUG_HELPER_INIT();
-
-#if IOT_REMOTE_CONTROL
-    RemoteControlPlugin::getInstance().readPinState();
-#endif
 
 #if HAVE_PCF8574
         initialize_pcf8574();
@@ -111,12 +108,17 @@ void setup()
 
     bool safe_mode = false;
     bool increaseCrashCounter = false;
+#if ENABLE_DEEP_SLEEP
     // skip boot menu and file system on wakeup
     bool wakeup = resetDetector.hasWakeUpDetected();
     if (wakeup) {
         config.wakeUpFromDeepSleep();
     }
-    else {
+    else
+#else
+    bool wakeup = resetDetector.hasWakeUpDetected();
+#endif
+    {
 
         BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
 
@@ -430,22 +432,18 @@ float load_avg[3] = {0, 0, 0};
 void loop()
 {
     auto &loopFunctions = LoopFunctions::getVector();
-    bool cleanup = false;
+    bool cleanUp = false;
     for(uint8_t i = 0; i < loopFunctions.size(); i++) { // do not use iterators since the vector can be modifed inside the callback
         if (loopFunctions[i].deleteCallback) {
-            cleanup = true;
-        } else {
+            cleanUp = true;
+        }
+        else {
             __Scheduler.run(Event::PriorityType::NORMAL); // check priority above NORMAL after every loop function
-            if (loopFunctions[i].callback) {
-                loopFunctions[i].callback();
-            }
-            else {
-                loopFunctions[i].callbackPtr();
-            }
+            loopFunctions[i].callback();
         }
     }
-    if (cleanup) {
-        loopFunctions.erase(std::remove(loopFunctions.begin(), loopFunctions.end(), LoopFunctions::Entry::Type::DELETED), loopFunctions.end());
+    if (cleanUp) {
+        loopFunctions.erase(std::remove_if(loopFunctions.begin(), loopFunctions.end(), [](const LoopFunctions::Entry &entry) { return entry.deleteCallback == true; }), loopFunctions.end());
         loopFunctions.shrink_to_fit();
     }
     __Scheduler.run(); // check all events

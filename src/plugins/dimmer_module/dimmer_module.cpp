@@ -2,8 +2,9 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#include "../include/templates.h"
 #include <plugins.h>
+#include <plugins_menu.h>
+#include "../include/templates.h"
 #include "dimmer_module.h"
 #include "dimmer_plugin.h"
 #include "firmware_protocol.h"
@@ -65,24 +66,24 @@ void Driver_DimmerModule::_endButtons() {}
 
 void Driver_DimmerModule::_beginMqtt()
 {
-    auto mqttClient = MQTTClient::getClient();
-    if (mqttClient) {
+    auto client = MQTTClient::getClient();
+    if (client) {
         for (uint8_t i = 0; i < _channels.size(); i++) {
             _channels[i].setup(this, i);
-            mqttClient->registerComponent(&_channels[i]);
+            client->registerComponent(&_channels[i]);
         }
-        mqttClient->registerComponent(this);
+        client->registerComponent(this);
     }
 }
 
 void Driver_DimmerModule::_endMqtt()
 {
     _debug_println();
-    auto mqttClient = MQTTClient::getClient();
-    if (mqttClient) {
-        mqttClient->unregisterComponent(this);
+    auto client = MQTTClient::getClient();
+    if (client) {
+        client->unregisterComponent(this);
         for(uint8_t i = 0; i < _channels.size(); i++) {
-            mqttClient->unregisterComponent(&_channels[i]);
+            client->unregisterComponent(&_channels[i]);
         }
     }
 }
@@ -215,11 +216,11 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     "dimmer",           // name
     "Dimmer",           // friendly name
     "",                 // web_templates
-    "dimmer-cfg",       // config_forms
+    "general,buttons,advanced", // forms
     "mqtt,http",        // reconfigure_dependencies
     PluginComponent::PriorityType::DIMMER_MODULE,
     PluginComponent::RTCMemoryId::NONE,
-    static_cast<uint8_t>(PluginComponent::MenuType::AUTO),
+    static_cast<uint8_t>(PluginComponent::MenuType::CUSTOM),
     false,              // allow_safe_mode
     false,              // setup_after_deep_sleep
     true,               // has_get_status
@@ -251,10 +252,10 @@ void DimmerModulePlugin::setup(SetupModeType mode)
 void DimmerModulePlugin::reconfigure(const String &source)
 {
     _readConfig(_config);
-    if (String_equals(source, SPGM(http))) {
+    if (source == FSPGM(http)) {
         setupWebServer();
     }
-    else if (String_equals(source, SPGM(mqtt))) {
+    else if (source == FSPGM(mqtt)) {
         _endMqtt();
         _beginMqtt();
     }
@@ -338,3 +339,12 @@ void DimmerModulePlugin::createWebUI(WebUIRoot &webUI)
 #endif
 }
 
+void DimmerModulePlugin::createMenu()
+{
+    auto root = bootstrapMenu.getMenuItem(navMenu.config);
+
+    auto subMenu = root.addSubMenu(getFriendlyName());
+    subMenu.addMenuItem(F("General"), F("dimmer/general.html"));
+    subMenu.addMenuItem(F("Button Configuration"), F("dimmer/buttons.html"));
+    subMenu.addMenuItem(F("Advanced Firmware Configuration"), F("dimmer/advanced.html"));
+}

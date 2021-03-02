@@ -28,16 +28,10 @@ ComponentProxy::~ComponentProxy()
     end();
 }
 
-void ComponentProxy::onDisconnect(Client *client, AsyncMqttClientDisconnectReason reason)
+void ComponentProxy::onDisconnect(AsyncMqttClientDisconnectReason reason)
 {
     __LDBG_printf("onDisconnect=%p", this);
     abort(ErrorType::DISCONNECT);
-}
-
-void ComponentProxy::onMessage(Client *client, char *topic, char *payload, size_t payloadLength)
-{
-    // __LDBG_printf("topic=%s payload=%s len=%u queue=%u", topic, printable_string(payload, payloadLength, 32).c_str(), payloadLength, _packetId);
-    onMessage(topic, payload, payloadLength);
 }
 
 void ComponentProxy::onPacketAck(uint16_t packetId, PacketAckType type)
@@ -58,16 +52,6 @@ void ComponentProxy::onPacketAck(uint16_t packetId, PacketAckType type)
             });
         }
     }
-}
-
-AutoDiscovery::EntityPtr ComponentProxy::nextAutoDiscovery(FormatType format, uint8_t num)
-{
-    return nullptr;
-}
-
-uint8_t ComponentProxy::getAutoDiscoveryCount() const
-{
-    return 0;
 }
 
 void ComponentProxy::abort(ErrorType error)
@@ -142,10 +126,6 @@ void ComponentProxy::onBegin()
 }
 
 void ComponentProxy::onEnd(ErrorType error)
-{
-}
-
-void ComponentProxy::onMessage(const char *topic, const char *payload, size_t len)
 {
 }
 

@@ -25,7 +25,8 @@ using KFCConfigurationClasses::System;
 
 using namespace MQTT;
 
-MQTTClient *MQTTClient::_mqttClient = nullptr;
+MQTT::ComponentVector MQTT::Client::_components;
+MQTT::Client *MQTT::Client::_mqttClient;
 
 PacketQueue::PacketQueue(uint16_t packetId, uint32_t time, bool delivered, uint16_t internalPacketId) :
     _packetId(packetId),
@@ -49,7 +50,11 @@ bool PacketQueueVector::setTimeout(uint16_t internalId, uint16_t timeout)
 void MQTTClient::setupInstance()
 {
     __LDBG_printf("enabled=%u", System::Flags::getConfig().is_mqtt_enabled);
-    deleteInstance();
+#if DEBUG
+    if (_mqttClient) {
+        __DBG_panic("MQTT client already exists");
+    }
+#endif
     if (System::Flags::getConfig().is_mqtt_enabled) {
         _mqttClient = __LDBG_new(MQTTClient);
     }
@@ -91,8 +96,14 @@ MQTTClient::Client() :
     WebTemplate::printUniqueId(clientId, FSPGM(kfcfw));
     clientIdBuffer[clientIdLength] = 0;
 
-    __LDBG_printf("hostname=%s port=%u client_id=%s", _hostname.c_str(), _port, clientIdBuffer);
+    // add client to all components and call onStartup
+    for(auto component: _components) {
+        component->setClient(this);
+        component->onStartup();
+    }
 
+    // connect to server
+    __LDBG_printf("hostname=%s port=%u client_id=%s", _hostname.c_str(), _port, clientIdBuffer);
     if (config.hasZeroConf(_hostname)) {
         config.resolveZeroConf(MQTTPlugin::getPlugin().getFriendlyName(), _hostname, _port, [this](const String &hostname, const IPAddress &address, uint16_t port, const String &resolved, MDNSResolver::ResponseType type) {
             this->_zeroConfCallback(hostname, address, port, type);
@@ -101,9 +112,10 @@ MQTTClient::Client() :
     else {
         _zeroConfCallback(_hostname, convertToIPAddress(_hostname), _port, MDNSResolver::ResponseType::NONE);
     }
+
 }
 
-MQTTClient::~Client()
+MQTT::Client::~Client()
 {
     __LDBG_printf("conn=%s", _connection());
     WiFiCallbacks::remove(WiFiCallbacks::EventType::CONNECTION, MQTTClient::handleWiFiEvents);
@@ -111,8 +123,17 @@ MQTTClient::~Client()
     _timer.remove();
 
     _autoReconnectTimeout = kAutoReconnectDisabled;
+    auto state = setConnState(ConnectionState::DISCONNECTED);
+
+    // call onDisconnect() and remove client from all components to avoid being called without a client
+    for(auto component: _components) {
+        if (state == ConnectionState::CONNECTED) {
+            component->onDisconnect(AsyncMqttClientDisconnectReason::TCP_DISCONNECTED);
+        }
+        component->onShutdown();
+        component->setClient(nullptr);
+    }
     disconnect(true);
-    onDisconnect(AsyncMqttClientDisconnectReason::TCP_DISCONNECTED);
     __LDBG_delete(_client);
 }
 
@@ -166,23 +187,41 @@ void MQTTClient::_setupClient()
     _client->setCredentials(_username.c_str(), _password.c_str());
     _client->setKeepAlive(_config.keepalive);
 
-    _client->onConnect([this](bool sessionPresent) {
-        onConnect(sessionPresent);
+    _client->onConnect([](bool sessionPresent) {
+        MQTT::Client *client;
+        if ((client = MQTT::Client::getClient()) != nullptr) {
+            client->onConnect(sessionPresent);
+        }
     });
-    _client->onDisconnect([this](AsyncMqttClientDisconnectReason reason) {
-        onDisconnect(reason);
+    _client->onDisconnect([](AsyncMqttClientDisconnectReason reason) {
+        MQTT::Client *client;
+        if ((client = MQTT::Client::getClient()) != nullptr) {
+            client->onDisconnect(reason);;
+        }
     });
-    _client->onMessage([this](char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) {
-        onMessageRaw(topic, payload, properties, len, index, total);
+    _client->onMessage([](char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) {
+        MQTT::Client *client;
+        if ((client = MQTT::Client::getClient()) != nullptr) {
+            client->onMessageRaw(topic, payload, properties, len, index, total);
+        }
     });
-    _client->onPublish([this](uint16_t packetId) {
-        _onPacketAck(packetId, PacketAckType::PUBLISH);
+    _client->onPublish([](uint16_t packetId) {
+        MQTT::Client *client;
+        if ((client = MQTT::Client::getClient()) != nullptr) {
+            client->_onPacketAck(packetId, PacketAckType::PUBLISH);
+        }
     });
-    _client->onSubscribe([this](uint16_t packetId, uint8_t qos) {
-        _onPacketAck(packetId, PacketAckType::SUBSCRIBE);
+    _client->onSubscribe([](uint16_t packetId, uint8_t qos) {
+        MQTT::Client *client;
+        if ((client = MQTT::Client::getClient()) != nullptr) {
+            client->_onPacketAck(packetId, PacketAckType::SUBSCRIBE);
+        }
     });
-    _client->onUnsubscribe([this](uint16_t packetId) {
-        _onPacketAck(packetId, PacketAckType::UNSUBCRIBE);
+    _client->onUnsubscribe([](uint16_t packetId) {
+        MQTT::Client *client;
+        if ((client = MQTT::Client::getClient()) != nullptr) {
+            client->_onPacketAck(packetId, PacketAckType::UNSUBCRIBE);
+        }
     });
 }
 
@@ -190,7 +229,37 @@ void MQTTClient::_setupClient()
 // Components
 //
 
-void MQTTClient::registerComponent(ComponentPtr component)
+void MQTT::Client::registerComponent(ComponentPtr component)
+{
+    if (_mqttClient) {
+        _mqttClient->_registerComponent(component);
+    }
+    else {
+        if (!isComponentRegistered(component)) {
+            _components.push_back(component);
+        }
+    }
+}
+
+bool MQTT::Client::unregisterComponent(ComponentPtr component)
+{
+    auto size = _components.size();
+    if (_mqttClient) {
+        return _mqttClient->unregisterComponent(component);
+    }
+    else {
+        _components.erase(std::remove(_components.begin(), _components.end(), component), _components.end());
+
+    }
+    return size != _components.size();
+}
+
+bool MQTTClient::isComponentRegistered(ComponentPtr component)
+{
+    return std::find(_components.begin(), _components.end(), component) != _components.end();
+}
+
+void MQTT::Client::_registerComponent(ComponentPtr component)
 {
     if (!component) {
         __DBG_assert_printf(false, "registerComponent(nullptr)");
@@ -201,13 +270,14 @@ void MQTTClient::registerComponent(ComponentPtr component)
         __DBG_assert_printf(false, "component=%p type=%s already registered", component, component->getName());
         return;
     }
+    // turn off interrupts to avoid issues with running auto discovery
     noInterrupts();
-    _components.emplace_back(component);
+    _components.push_back(component);
     interrupts();
     __LDBG_printf("components=%u entities=%u", _components.size(), AutoDiscovery::List::size(_components));
 }
 
-bool MQTTClient::unregisterComponent(ComponentPtr component)
+bool MQTT::Client::_unregisterComponent(ComponentPtr component)
 {
     if (!component) {
         __DBG_assert_printf(false, "unregisterComponent(nullptr)");
@@ -224,10 +294,6 @@ bool MQTTClient::unregisterComponent(ComponentPtr component)
     return _components.size() != size;
 }
 
-bool MQTTClient::isComponentRegistered(ComponentPtr component)
-{
-    return std::find(_components.begin(), _components.end(), component) != _components.end();
-}
 
 void MQTTClient::remove(ComponentPtr component)
 {
@@ -531,7 +597,7 @@ void MQTTClient::onConnect(bool sessionPresent)
     setAutoReconnect(_config.auto_reconnect_min);
 
     for(const auto &component: _components) {
-        component->onConnect(this);
+        component->onConnect();
     }
 #if MQTT_AUTO_DISCOVERY
     if (_startAutoDiscovery) {
@@ -556,7 +622,7 @@ void MQTTClient::onDisconnect(AsyncMqttClientDisconnectReason reason)
         }
         Logger_notice(F("Disconnected from MQTT server, reason: %s%s"), _reasonToString(reason), str.c_str());
         for(const auto &component: _components) {
-            component->onDisconnect(this, reason);
+            component->onDisconnect(reason);
         }
     }
     _topics.clear();
@@ -658,7 +724,7 @@ void MQTTClient::onMessage(char *topic, char *payload, AsyncMqttClientMessagePro
     _messageProperties = &properties;
     for(const auto &mqttTopic : _topics) {
         if (_isTopicMatch(topic, mqttTopic.getTopic().c_str())) {
-            mqttTopic.getComponent()->onMessage(this, topic, payload, len);
+            mqttTopic.getComponent()->onMessage(topic, payload, len);
         }
     }
     _messageProperties = nullptr;

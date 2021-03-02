@@ -21,11 +21,11 @@ namespace MQTT {
             Queue(Client &client);
             ~Queue();
 
-            virtual AutoDiscovery::EntityPtr nextAutoDiscovery(FormatType format, uint8_t num);
+            virtual AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num);
             virtual uint8_t getAutoDiscoveryCount() const;
 
-            // virtual void onConnect(Client *client) override;
-            virtual void onDisconnect(Client *client, AsyncMqttClientDisconnectReason reason) override;
+            // virtual void onConnect() override;
+            virtual void onDisconnect(AsyncMqttClientDisconnectReason reason) override;
             // virtual void onMessage(Client *client, char *topic, char *payload, size_t len) override;
             virtual void onPacketAck(uint16_t packetId, PacketAckType type) override;
 

@@ -64,7 +64,7 @@ Queue::~Queue()
 
 }
 
-EntityPtr Queue::nextAutoDiscovery(FormatType format, uint8_t num)
+EntityPtr Queue::getAutoDiscovery(FormatType format, uint8_t num)
 {
     return nullptr;
 }
@@ -74,9 +74,9 @@ uint8_t Queue::getAutoDiscoveryCount() const
     return 0;
 }
 
-void Queue::onDisconnect(Client *client, AsyncMqttClientDisconnectReason reason)
+void Queue::onDisconnect(AsyncMqttClientDisconnectReason reason)
 {
-    _client._startAutoDiscovery = true;
+    client()._startAutoDiscovery = true;
 }
 
 void Queue::onPacketAck(uint16_t packetId, PacketAckType type)

@@ -54,7 +54,7 @@ void Plugin::setup(SetupModeType mode)
 void Plugin::reconfigure(const String &source)
 {
     __LDBG_printf("source=%s", source.c_str());
-    // deletes old instance and if enabled, creates new one
+    Client::deleteInstance();
     Client::setupInstance();
 }
 

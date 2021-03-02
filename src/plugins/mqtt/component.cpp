@@ -15,20 +15,22 @@ using namespace MQTT;
 
 ComponentIterator::ComponentIterator() :
     _component(nullptr),
+    _iterator(static_cast<ComponentListIterator *>(nullptr)),
     _index(0),
-    _iterator(static_cast<ComponentListIterator *>(nullptr))
+    _size(0)
 {
 }
 
 ComponentIterator::ComponentIterator(ComponentPtr component, uint8_t index, ComponentListIterator *iterator) :
     _component(component),
+    _iterator(iterator),
     _index(index),
-    _iterator(iterator)
+    _size(component->getAutoDiscoveryCount())
 {
     // find first component that is not empty
     while(!_iterator.isEnd() && _iterator->empty()) {
         ++_iterator;
-        _index = 0;
+        _index = 0; // reset index if the iterator changes
     }
 
     if (_iterator.isEnd()) {
@@ -36,12 +38,13 @@ ComponentIterator::ComponentIterator(ComponentPtr component, uint8_t index, Comp
     }
     else {
         _component = *_iterator;
+        _size = component->getAutoDiscoveryCount(); // update size
     }
 }
 
 ComponentIterator::pointer ComponentIterator::get(FormatType format) const
 {
-    return AutoDiscovery::EntitySharedPtr(_component->nextAutoDiscovery(format, _index));
+    return AutoDiscovery::EntitySharedPtr(_component->_getAutoDiscovery(format, _index));
 }
 
 ComponentIterator &ComponentIterator::operator++()
@@ -50,8 +53,7 @@ ComponentIterator &ComponentIterator::operator++()
         if (_iterator.isEnd()) {
             __DBG_panic("cannot increment beyond end()");
         }
-        if (_index >= _iterator->getAutoDiscoveryCount() - 1) {
-            _index = 0;
+        if (_index >= _size - 1) {
             do {
                 ++_iterator;
                 if (_iterator.isEnd()) {
@@ -59,8 +61,11 @@ ComponentIterator &ComponentIterator::operator++()
                     break;
                 }
                 _component = *_iterator;
+                // update size after changing _iterator
+                _size = _iterator->getAutoDiscoveryCount();
             }
-            while (_iterator->getAutoDiscoveryCount() == 0);
+            while (_size == 0);
+            _index = 0;
             return *this;
         }
     }
@@ -77,48 +82,31 @@ ComponentIterator &ComponentIterator::operator--()
             }
             do {
                 --_iterator;
-                _index = _iterator->getAutoDiscoveryCount();
+                // update size after changing _iterator
+                _size = _iterator->getAutoDiscoveryCount();
             }
-            while (!_iterator.isBegin() && _index);
+            while (!_iterator.isBegin() && _size);
             _component = *_iterator;
+            _index = _size;
         }
     }
     --_index;
     return *this;
 }
 
+#if DEBUG
 size_t ComponentIterator::size() const
 {
-    return _component->size();
+    __DBG_assert_printf(_size == _component->size(), "_size=%u == _component->size()=%u mismatch", _size, _component->size());
+    return _size;
+    // return _component->size();
 }
-
-bool ComponentIterator::empty() const
-{
-    return size() == 0;
-}
+#endif
 
 
-Component::Component(ComponentType type) : _type(type)
-{
-}
-
-Component::~Component()
-{
-}
-
-void Component::onConnect(Client *client)
-{
-}
-
-void Component::onDisconnect(Client *client, AsyncMqttClientDisconnectReason reason)
-{
-}
-
-void Component::onMessage(Client *client, char *topic, char *payload, size_t len)
-{
-}
-
-void Component::onPacketAck(uint16_t packetId, PacketAckType type)
+Component::Component(ComponentType type) :
+    ComponentBase(),
+    _type(type)
 {
 }
 

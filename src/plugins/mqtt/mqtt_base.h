@@ -91,6 +91,7 @@ namespace MQTT {
 
     using AutoReconnectType = uint16_t;
     using ComponentPtr = Component *;
+    using ClientPtr = Client *;
     using NameType = const __FlashStringHelper *;
     using ComponentVector = std::vector<ComponentPtr>;
     using ConfigType = KFCConfigurationClasses::Plugins::MQTTClient::MqttConfig_t;

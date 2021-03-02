@@ -242,7 +242,8 @@ void MQTTClient::_queueTimerCallback()
     __LDBG_print("delivery queue done");
     _queue.clear();
 }
-void MQTTClient::_onPacketAck(uint16_t packetId, PacketAckType type)
+
+void MQTT::Client::_onPacketAck(uint16_t packetId, PacketAckType type)
 {
     auto queue = _packetQueue.find(PacketQueueId(packetId));
     // __LDBG_printf("type=%u packet=%u queue=%s", type, packetId, (queue ? queue->toString() : emptyString).c_str());
@@ -254,7 +255,7 @@ void MQTTClient::_onPacketAck(uint16_t packetId, PacketAckType type)
     }
 }
 
-void MQTTClient::_onErrorPacketAck(uint16_t internalId, PacketAckType type)
+void MQTT::Client::_onErrorPacketAck(uint16_t internalId, PacketAckType type)
 {
 #if DEBUG_MQTT_CLIENT
     auto queue = _packetQueue.find(PacketQueueInternalId(internalId));

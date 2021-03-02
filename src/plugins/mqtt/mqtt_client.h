@@ -322,7 +322,7 @@ namespace MQTT {
         }
 
     private:
-        friend MQTTClient;
+        friend Client;
 
         // remove packet from packet queue
         // packets are kept 5 times longer than the ack. timeout
@@ -425,18 +425,38 @@ namespace MQTT {
 
     class Client {
     public:
+        friend ComponentProxy;
+        friend AutoDiscovery::Queue;
+        friend PersistantStorageComponent;
+        friend Plugin;
+
         Client();
         virtual ~Client();
 
         static void setupInstance();
         static void deleteInstance();
 
-        // a component must be registered to receive events
-        void registerComponent(ComponentPtr component);
+        // components must be registered to receive events and publish auto discovery
+        static void registerComponent(ComponentPtr component);
         // unregistering removes all queued messages and unsubscribes from any topics
-        bool unregisterComponent(ComponentPtr component);
-        bool isComponentRegistered(ComponentPtr component);
+        static bool unregisterComponent(ComponentPtr component);
+        // check if a component is registered
+        static bool isComponentRegistered(ComponentPtr component);
+
+        // return current client or nullptr if it does not exist
+        static Client *getClient();
+
+        // the safe methods verify that the client exists
+        static void safePublish(const String &topic, bool retain, const String &payload, QosType qos = QosType::DEFAULT);
+        static void safePersistantStorage(StorageFrequencyType type, const String &name, const String &data);
+#if MQTT_AUTO_DISCOVERY
+        static bool safeIsAutoDiscoveryRunning();
+#endif
+        static bool safeIsConnected();
+
 private:
+        void _registerComponent(ComponentPtr component);
+        bool _unregisterComponent(ComponentPtr component);
         void remove(ComponentPtr component);
 
 public:
@@ -533,20 +553,6 @@ public:
         static void handleWiFiEvents(WiFiCallbacks::EventType event, void *payload);
 
     public:
-        // methods that can be called without verifying getClient() is not nullptr
-        static Client *getClient();
-        static void safePublish(const String &topic, bool retain, const String &payload, QosType qos = QosType::DEFAULT);
-        static void safeRegisterComponent(ComponentPtr component);
-        static bool safeUnregisterComponent(ComponentPtr component);
-        static void safeReRegisterComponent(ComponentPtr component);
-        static void safePersistantStorage(StorageFrequencyType type, const String &name, const String &data);
-#if MQTT_AUTO_DISCOVERY
-        static bool safeIsAutoDiscoveryRunning();
-#endif
-        static bool safeIsConnected();
-
-
-    public:
         // returns 1 for: [ any integer != 0, "true", "on", "yes", "online", "enable", "enabled" ]
         // returns 0 for: [ 0, "00"..., "false", "off", "no", "offline", "disable", "disabled" ]
         // otherwise it returns -1 or the value of "invalid"
@@ -631,16 +637,11 @@ public:
         void _packetQueueTimerCallback();
 
     private:
-        friend ComponentProxy;
 
         QueueVector _queue;
         PacketQueueVector _packetQueue;
 
     private:
-        friend AutoDiscovery::Queue;
-        friend PersistantStorageComponent;
-        friend Plugin;
-
         size_t getClientSpace() const;
         static bool _isMessageSizeExceeded(size_t len, const char *topic);
         ConnectionState setConnState(ConnectionState newState);
@@ -656,7 +657,6 @@ public:
         uint16_t _port;
         FixedString<7> _lastWillPayload;
         AutoReconnectType _autoReconnectTimeout;
-        ComponentVector _components;
         TopicVector _topics;
         Buffer _buffer;
         String _lastWillTopic;
@@ -678,6 +678,7 @@ public:
     #endif
 
     private:
+        static ComponentVector _components;
         static Client *_mqttClient;
     };
 
@@ -752,29 +753,6 @@ public:
         }
     }
 
-    inline void Client::safeRegisterComponent(ComponentPtr component)
-    {
-        if (_mqttClient) {
-            _mqttClient->registerComponent(component);
-        }
-    }
-
-    inline bool Client::safeUnregisterComponent(ComponentPtr component)
-    {
-        if (_mqttClient) {
-            return _mqttClient->unregisterComponent(component);
-        }
-        return false;
-    }
-
-    inline void Client::safeReRegisterComponent(ComponentPtr component)
-    {
-        if (_mqttClient) {
-            _mqttClient->unregisterComponent(component);
-            _mqttClient->registerComponent(component);
-        }
-    }
-
     inline void Client::safePersistantStorage(StorageFrequencyType type, const String &name, const String &data)
     {
         if (_mqttClient) {
@@ -837,6 +815,12 @@ public:
     {
         return value ? F("ON") : F("OFF");
     }
+
+    inline __attribute__((__always_inline__))
+    bool ComponentBase::isConnected() const {
+        return _client != nullptr && _client->isConnected();
+    }
+
 
 
 }

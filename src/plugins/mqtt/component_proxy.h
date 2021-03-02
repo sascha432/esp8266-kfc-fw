@@ -64,12 +64,18 @@ namespace MQTT {
 
         void init();
 
-        virtual AutoDiscovery::EntityPtr nextAutoDiscovery(FormatType format, uint8_t num);
-        virtual uint8_t getAutoDiscoveryCount() const;
+        virtual AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num) {
+            return nullptr;
+        }
+        virtual uint8_t getAutoDiscoveryCount() const {
+            return 0;
+        }
 
-        virtual void onDisconnect(Client *client, AsyncMqttClientDisconnectReason reason);
-        virtual void onMessage(Client *client, char *topic, char *payload, size_t len) final;
-        virtual void onPacketAck(uint16_t packetId, PacketAckType type) override;
+        virtual void onDisconnect(AsyncMqttClientDisconnectReason reason);
+
+        virtual void onBegin();
+        virtual void onEnd(ErrorType error);
+        virtual void onPacketAck(uint16_t packetId, PacketAckType type);
 
         // abort does not execute end() and onEnd() in the same context but inside the main loop
         // code running directly after abort will be executed before end()/onEnd()
@@ -77,10 +83,6 @@ namespace MQTT {
         void abort(ErrorType error);
         void begin();
         void end();
-
-        virtual void onBegin();
-        virtual void onEnd(ErrorType error);
-        virtual void onMessage(const char *topic, const char *payload, size_t len);
 
     protected:
         friend AutoDiscovery::Queue;

@@ -142,23 +142,116 @@ namespace MQTT {
 
     private:
         ComponentPtr _component;
-        uint8_t _index;
         ComponentListIterator _iterator;
+        uint8_t _index;
+        uint8_t _size;
     };
 
+    #if !DEBUG
+    inline __attribute__((__always_inline__))
+    size_t ComponentIterator::size() const
+    {
+        return _size;
+    }
+    #endif
 
-    class Component {
+    inline __attribute__((__always_inline__))
+    bool ComponentIterator::empty() const
+    {
+        return size() == 0;
+    }
+
+    class ComponentBase {
+    public:
+        ComponentBase() : _timerInterval(0) {
+        }
+        virtual ~ComponentBase() {}
+
+        inline __attribute__((__always_inline__))
+        bool hasClient() const {
+            return _client != nullptr;
+        }
+
+        bool isConnected() const;
+
+        // check return value for nullptr before using
+        // inside callbacks the client is always valid
+        inline __attribute__((__always_inline__))
+        MQTT::Client *getClient() {
+            return _client;
+        }
+
+        // before using client() check if hasClient() is true
+        // inside callbacks the client is always valid
+        inline __attribute__((__always_inline__))
+        MQTT::Client &client() {
+            return *_client;
+        }
+
+    protected:
+        void registerTimer(uint32_t intervalMillis) {
+            _timerCounter = 0;
+            _lastTimerCallback = 0;
+            _timerInterval = intervalMillis;
+        }
+
+        void unregisterTimer() {
+            _timerInterval = 0;
+        }
+
+    private:
+        friend MQTT::Client;
+
+        void setClient(MQTT::ClientPtr client) {
+            _client = client;
+        }
+
+        MQTT::ClientPtr _client;
+        uint32_t _timerCounter;
+        uint32_t _timerInterval;
+        uint32_t _lastTimerCallback;
+    };
+
+    class Component : public ComponentBase {
     public:
         Component(ComponentType type);
-        virtual ~Component();
+
+        // inside any on*** callback, client() can be used to call the client
+        // if the MQTT client needs to be called outside, hasClient() or getClient() != nullptr must be checked before
+
+        // startup is called when a new client has been setup
+        virtual void onStartup() {}
+        // shutdown is called when the client is destroyed
+        //
+        // if the client is reconfigured following events occur in sequence
+        // onDisconnect() (if connected, reason TCP_DISCONNECTED)
+        // onShutdown()
+        // onStartup()
+        // onConnect() (after connecting)
+        virtual void onShutdown() {}
 
         // subscribe to all topics in the onConnect callback
-        virtual void onConnect(Client *client);
+        virtual void onConnect() {}
         // after a disconnect, all subscribed topics and messages in the queue are discarded
-        virtual void onDisconnect(Client *client, AsyncMqttClientDisconnectReason reason);
-        virtual void onMessage(Client *client, char *topic, char *payload, size_t len);
+        virtual void onDisconnect(AsyncMqttClientDisconnectReason reason) {}
+        // subscribing to a topic will enable the onMessage callback
+        virtual void onMessage(const char *topic, const char *payload, size_t len) {}
+        // any message that is sent with QoS != 0 receives an ack packet with the id the publish/subscribe/unsubscribe method returned
+        virtual void onPacketAck(uint16_t packetId, PacketAckType type) {}
+        // registering a timer to update topics avoids terminating it onShutdown/onStartup and checking if the client is valid
+        // the timer is not accurate, expect +-250ms depending how many timers are running and if they are sending any data
+        // this prevents the TCP buffers from being filled up, which results in messages being queued and consuming much more memory/CPU power
+        virtual void onTimer(uint32_t time, uint32_t timeMillis, uint32_t callCounter, Event::CallbackTimerPtr timer) {}
 
-        virtual void onPacketAck(uint16_t packetId, PacketAckType type);
+#if MQTT_AUTO_DISCOVERY
+        // return auto discovery entity, num = 0 - (getAutoDiscoveryCount() - 1)
+        virtual AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num) {
+            return nullptr;
+        }
+        // this method should return quickly
+        virtual uint8_t getAutoDiscoveryCount() const {
+            return 0;
+        }
 
         inline __attribute__((__always_inline__))
         ComponentIterator begin() {
@@ -180,28 +273,25 @@ namespace MQTT {
             return ComponentIterator(*(*iterator), size(), iterator);
         }
 
+        inline __attribute__((__always_inline__))
         size_t size() const {
             return getAutoDiscoveryCount();
         }
 
+        inline __attribute__((__always_inline__))
         bool empty() const {
             return size() == 0;
         }
 
-#if MQTT_AUTO_DISCOVERY
-        virtual AutoDiscovery::EntityPtr nextAutoDiscovery(FormatType format, uint8_t num) = 0;
-        virtual uint8_t getAutoDiscoveryCount() const = 0;
-
-        // uint8_t rewindAutoDiscovery();
-        // uint8_t getAutoDiscoveryNumber() const {
-        //     return _autoDiscoveryNum;
-        // }
-        // void nextAutoDiscovery() {
-        //     _autoDiscoveryNum++;
-        // }
-        // void retryAutoDiscovery() {
-        //     _autoDiscoveryNum--;
-        // }
+#elif DEBUG
+        // if the code does not compile, remove the methods that cause the error
+        // auto discovery is not available in this case
+        virtual AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num) final {
+            return nullptr;
+        }
+        virtual uint8_t getAutoDiscoveryCount() const final {
+            return 0;
+        }
 #endif
 
         inline __attribute__((__always_inline__))
@@ -216,12 +306,21 @@ namespace MQTT {
 
         static NameType getNameByType(ComponentType type);
 
+#if MQTT_AUTO_DISCOVERY
+    private:
+        friend ComponentIterator;
+
+        AutoDiscovery::EntityPtr _getAutoDiscovery(FormatType format, uint8_t num) {
+            auto discovery = getAutoDiscovery(format, num);
+            if (discovery) {
+                discovery->finalize();
+            }
+            return discovery;
+        }
+#endif
+
     private:
         ComponentType _type;
-// #if MQTT_AUTO_DISCOVERY
-//         friend AutoDiscovery::Queue;
-//         uint8_t _autoDiscoveryNum;
-// #endif
     };
 
 }
@@ -239,4 +338,14 @@ public:
 
     using MQTTAutoDiscovery = MQTT::AutoDiscovery::Entity;
     using MQTTAutoDiscoveryPtr = MQTT::AutoDiscovery::EntityPtr;
+
+    using Component::getAutoDiscoveryCount;
+    using Component::getAutoDiscovery;
+    using Component::onStartup;
+    using Component::onShutdown;
+    using Component::onConnect;
+    using Component::onDisconnect;
+    using Component::onMessage;
+    using Component::onPacketAck;
+    using Component::onTimer;
 };

@@ -29,11 +29,11 @@ public:
     PrintString(const char *format, va_list arg);
     PrintString(const __FlashStringHelper *format, ...);
     PrintString(const __FlashStringHelper *format, va_list arg);
-    PrintString(double n, int digits, bool trimTrailingZeros);
+    PrintString(double n, uint8_t digits, bool trimTrailingZeros);
     PrintString(const uint8_t* buffer, size_t len);
     PrintString(const __FlashBufferHelper *buffer, size_t len);
 
-    size_t print(double n, int digits, bool trimTrailingZeros);
+    size_t print(double n, uint8_t digits, bool trimTrailingZeros);
     size_t vprintf(const char *format, va_list arg);
     size_t vprintf_P(PGM_P format, va_list arg);
     size_t write_P(PGM_P buf, size_t size);
@@ -62,21 +62,6 @@ public:
     PrintString &operator+=(int64_t);
     using String::operator+=;
 
-    size_t ltrim() {
-        return String_ltrim(*this);
-    }
-    size_t rtrim() {
-        return String_rtrim(*this);
-    }
-    size_t trim() {
-        String::trim();
-        return length();
-    }
-
-    bool endsWith(char ch) {
-        return String_endsWith(*this, ch);
-    }
-
     virtual size_t write(uint8_t data) override;
     virtual size_t write(const uint8_t* buf, size_t size) override;
     size_t write(const char *buf, size_t size) {
@@ -95,5 +80,6 @@ public:
 #endif
 
 private:
-    size_t _setLength(char *buf, size_t size, size_t len);
+    // returns old length() before increasing
+    size_t _increaseLength(size_t newLen);
 };

@@ -11,7 +11,14 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/HardwareSeria
 207a211
 > #endif
 diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.cpp ./framework-arduinoespressif8266/cores/esp8266/WString.cpp
-662,697d661
+584,589d583
+< unsigned char String::endsWith(const String &s2) const {
+<     if(len() < s2.len() || !buffer() || !s2.buffer())
+<         return 0;
+<     return strcmp(&buffer()[len() - s2.len()], s2.buffer()) == 0;
+< }
+< 
+662,697d655
 < int String::lastIndexOf(char theChar) const {
 <     return lastIndexOf(theChar, len() - 1);
 < }
@@ -48,114 +55,299 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.cpp .
 <     return found;
 < }
 < 
-719a684,698
-> bool String::insert(size_t pos, const char *insert, size_t insertLen) {
->     if (pos >= length()) {
+720,725c678,681
+< void String::replace(char find, char replace) {
+<     if (!buffer())
+<         return;
+<     for (char *p = wbuffer(); *p; p++) {
+<         if (*p == find)
+<             *p = replace;
+---
+> bool String::insert(size_t pos, PGM_P insert, size_t insertLen) {
+>     size_t len;
+>     if (insertLen == 0 || (len = length()) == 0 || pos >= len) {
 >         return false;
->     }
->     auto requiredLen = length() + insertLen;
+726a683,691
+>     auto requiredLen = len + insertLen;
 >     if (!reserve(requiredLen)) {
 >         return false;
 >     }
 >     setLen(requiredLen);
->     memmove(wbuffer() + pos + insertLen, wbuffer() + pos, length() - pos + 1);
+>     memmove(wbuffer() + pos + insertLen, wbuffer() + pos, len - pos/* + 1 NUL byte*/);
 >     memmove_P(wbuffer() + pos, insert, insertLen);
+>     wbuffer()[requiredLen] = 0;
 >     return true;
+729,732c694,711
+< void String::replace(const String& find, const String& replace) {
+<     if (len() == 0 || find.len() == 0)
+<         return;
+<     int diff = replace.len() - find.len();
+---
+> 
+> bool String::replace(char find, char replace)
+> {
+>     if (!buffer()) {
+>         return false;
+>     }
+>     for (char *p = strchr(wbuffer(), find); *p; p = strchr(p + 1, find)) {
+>         *p = replace;
+>     }
+>     return  true;
+> }
+> 
+> bool String::replace(PGM_P find, size_t findLen, PGM_P replace, size_t replaceLen)
+> {
+>     if (length() == 0 || findLen == 0 || !find) {
+>         return false;
+>     }
+>     int diff = replaceLen - findLen;
+736,738c715,717
+<         while ((foundAt = strstr(readFrom, find.buffer())) != NULL) {
+<             memmove_P(foundAt, replace.buffer(), replace.len());
+<             readFrom = foundAt + replace.len();
+---
+>         while ((foundAt = strstr_P(readFrom, find)) != nullptr) {
+>             memmove_P(foundAt, replace, replaceLen);
+>             readFrom = foundAt + replaceLen;
+742c721
+<         while ((foundAt = strstr(readFrom, find.buffer())) != NULL) {
+---
+>         while ((foundAt = strstr_P(readFrom, find)) != nullptr) {
+744c723
+<             memmove_P(writeTo, readFrom, n);
+---
+>             memmove(writeTo, readFrom, n);
+746,748c725,727
+<             memmove_P(writeTo, replace.buffer(), replace.len());
+<             writeTo += replace.len();
+<             readFrom = foundAt + find.len();
+---
+>             memmove_P(writeTo, replace, replaceLen);
+>             writeTo += replaceLen;
+>             readFrom = foundAt + findLen;
+751c730
+<         memmove_P(writeTo, readFrom, strlen(readFrom)+1);
+---
+>         memmove(writeTo, readFrom, strlen(readFrom) + 1);
+754,755c733,734
+<         while ((foundAt = strstr(readFrom, find.buffer())) != NULL) {
+<             readFrom = foundAt + find.len();
+---
+>         while ((foundAt = strstr_P(readFrom, find)) != nullptr) {
+>             readFrom = foundAt + findLen;
+758,761c737,742
+<         if (size == len())
+<             return;
+<         if (size > capacity() && !changeBuffer(size))
+<             return; // XXX: tell user!
+---
+>         if (size == len()) {
+>             return true;
+>         }
+>         if (size > capacity() && !changeBuffer(size)) {
+>             return false;
+>         }
+764,765c745,746
+<             readFrom = wbuffer() + index + find.len();
+<             memmove_P(readFrom + diff, readFrom, len() - (readFrom - buffer()));
+---
+>             readFrom = wbuffer() + index + findLen;
+>             memmove(readFrom + diff, readFrom, len() - (readFrom - buffer()));
+767c748
+<             memmove_P(wbuffer() + index, replace.buffer(), replace.len());
+---
+>             memmove_P(wbuffer() + index, replace, replaceLen);
+772a754
+>     return true;
+799,801c781,785
+< void String::toLowerCase(void) {
+<     if (!buffer())
+<         return;
+---
+> String &String::toLowerCase(void)
+> {
+>     if (!buffer()) {
+>         return *this;
+>     }
+804a789
+>     return *this;
+807,809c792,796
+< void String::toUpperCase(void) {
+<     if (!buffer())
+<         return;
+---
+> String &String::toUpperCase(void)
+> {
+>     if (!buffer()) {
+>         return *this;
+>     }
+812a800
+>     return *this;
+815,817c803,809
+< void String::trim(void) {
+<     if (!buffer() || len() == 0)
+<         return;
+---
+> 
+> String &String::trim(TrimType type)
+> {
+>     auto len = length();
+>     if (len == 0) {
+>         return *this;
+>     }
+819,823c811,821
+<     while (isspace(*begin))
+<         begin++;
+<     char *end = wbuffer() + len() - 1;
+<     while (isspace(*end) && end >= begin)
+<         end--;
+---
+>     if (static_cast<uint8_t>(type) & static_cast<uint8_t>(TrimType::LEFT)) {
+>         while (isspace(*begin)) {
+>             begin++;
+>         }
+>     }
+>     char *end = wbuffer() + len - 1;
+>     if (static_cast<uint8_t>(type) & static_cast<uint8_t>(TrimType::RIGHT)) {
+>         while (isspace(*end) && end >= begin) {
+>             end--;
+>         }
+>     }
+824a823,825
+>     if (begin > buffer()) {
+>         memmove(wbuffer(), begin, newlen);
+>     }
+826,827d826
+<     if (begin > buffer())
+<         memmove_P(wbuffer(), begin, newlen);
+828a828
+>     return *this;
+830a831,858
+> String &String::trim(TrimType type, PGM_P characters, size_t charLen)
+> {
+>     auto len = length();
+>     if (!len || !characters || !charLen) {
+>         return *this;
+>     }
+>     charLen++; // use memchr instead of strchr to avoid additional NUL byte check
+>     if (static_cast<uint8_t>(type) & static_cast<uint8_t>(TrimType::RIGHT)) {
+>         while (len && memchr_P(characters, buffer()[len - 1], charLen)) {
+>             len--;
+>         }
+>         setLen(len);
+>     }
+> 
+>     if (static_cast<uint8_t>(type) & static_cast<uint8_t>(TrimType::LEFT)) {
+>         size_t remove = 0;
+>         while (memchr_P(characters, buffer()[remove], charLen)) {
+>             remove++;
+>         }
+>         this->remove(0, remove); // remove adds NUL byte
+>     }
+>     else {
+>         wbuffer()[len] = 0;
+>     }
+>     return *this;
 > }
 > 
 > 
-799c778
-< void String::toLowerCase(void) {
+835,836c863,865
+< long String::toInt(void) const {
+<     if (buffer())
 ---
-> String &String::toLowerCase(void) {
-801c780
-<         return;
+> long String::toInt(void) const
+> {
+>     if (buffer()) {
+837a867
+>     }
+841,847c871
+< float String::toFloat(void) const {
+<     if (buffer())
+<         return atof(buffer());
+<     return 0;
+< }
+< 
+< double String::toDouble(void) const
 ---
->         return *this;
-804a784
->     return *this;
-807c787
-< void String::toUpperCase(void) {
+> float String::toFloat(void) const
+849c873
+<     if (buffer())
 ---
-> String &String::toUpperCase(void) {
-809c789
-<         return;
+>     if (buffer()) {
+851c875,876
+<     return 0.0;
 ---
->         return *this;
-812a793
->     return *this;
-815c796,797
-< void String::trim(void) {
----
-> 
-> String &String::trim(void) {
-817c799
-<         return;
----
->         return *this;
-828a811
->     return *this;
-829a813
-> 
+>     }
+>     return 0;
 diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./framework-arduinoespressif8266/cores/esp8266/WString.h
 30a31
 > 
-40a42,45
-> #ifdef HAVE_KFC_FIRMWARE_VERSION
+40a42,43
 > #include "KFCBaseLibrary/include/misc_string.h"
-> #endif
 > 
-186a192,196
-> #ifdef HAVE_KFC_FIRMWARE_VERSION
+186a190,192
 >         unsigned char equals(const __FlashStringHelper *fstr) const {
 >             return String_equals(*this, fstr);
 >         }
-> #endif
-192a203,207
-> #ifdef HAVE_KFC_FIRMWARE_VERSION
+192a199,201
 >         unsigned char operator ==(const __FlashStringHelper *fstr) const {
 >             return String_equals(*this, fstr);
 >         }
-> #endif
-198a214,218
-> #ifdef HAVE_KFC_FIRMWARE_VERSION
+198a208,211
 >         unsigned char operator !=(const __FlashStringHelper *fstr) const {
 >             return !String_equals(*this, fstr);
 >         }
-> #endif
-203a224,232
-> #ifdef HAVE_KFC_FIRMWARE_VERSION
+> 
+203a217,223
 >         unsigned char equalsIgnoreCase(const char *cstr) const {
 >             return String_equalsIgnoreCase(*this, cstr);
 >         }
 >         unsigned char equalsIgnoreCase(const __FlashStringHelper *fstr) const {
 >             return String_equalsIgnoreCase(*this, fstr);
 >         }
-> #endif
 > 
-205a235,242
-> #ifdef HAVE_KFC_FIRMWARE_VERSION
+206,207c226,227
+<         unsigned char startsWith(const char * prefix) const {
+<             return this->startsWith(String(prefix));
+---
 >         unsigned char startsWith(const __FlashStringHelper *prefix) const {
 >             return String_startsWith(*this, prefix);
->         }
+209,210c229,230
+<         unsigned char startsWith(const __FlashStringHelper * prefix) const {
+<             return this->startsWith(String(prefix));
+---
 >         unsigned char startsWith(const char * prefix) const {
 >             return String_startsWith(*this, prefix);
+213,215c233,240
+<         unsigned char endsWith(const String &suffix) const;
+<         unsigned char endsWith(const char * suffix) const {
+<             return this->endsWith(String(suffix));
+---
+> 
+>         // PROGMEM safe
+>         unsigned char endsWith(PGM_P suffix, size_t suffixLen) const {
+>             if (!suffix || !suffixLen) {
+>                 return false;
+>             }
+>             auto len = length();
+>             return (len >= suffixLen) && !strcmp_P(buffer() + len - suffixLen, suffix);
+217,218c242,253
+<         unsigned char endsWith(const __FlashStringHelper * suffix) const {
+<             return this->endsWith(String(suffix));
+---
+>         unsigned char endsWith(const String &suffix) const {
+>             return endsWith(suffix.buffer(), suffix.length());
 >         }
-> #else
-211a249
-> #endif
-213a252,259
-> #ifdef HAVE_KFC_FIRMWARE_VERSION
->         unsigned char endsWith(const char * suffix) const {
->             return String_endsWith(*this, suffix);
+>         unsigned char endsWith(const char *suffix) const {
+>             return endsWith(suffix, strlen(suffix));
 >         }
->         unsigned char endsWith(const __FlashStringHelper * suffix) const {
->             return String_endsWith(*this, suffix);
+>         unsigned char endsWith(const __FlashStringHelper *suffix) const {
+>             return endsWith(reinterpret_cast<PGM_P>(suffix), strlen_P(reinterpret_cast<PGM_P>(suffix)));
 >         }
-> #else
-219a266
-> #endif
-241,244c288,307
+>         unsigned char endsWith(char ch) const {
+>             auto len = length();
+>             return (len != 0) && (buffer()[len - 1] == ch);
+241,244c276,296
 <         int lastIndexOf(char ch) const;
 <         int lastIndexOf(char ch, unsigned int fromIndex) const;
 <         int lastIndexOf(const String &str) const;
@@ -175,87 +367,160 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >             return String_lastIndexOf(*this, ch, fromIndex);
 >         }
 >         int lastIndexOf(const String &str) const {
->             return String_lastIndexOf(*this, str.c_str(), length() - str.length(), str.length());
+>             auto strLen = str.length();
+>             return String_lastIndexOf(*this, str.buffer(), length() - strLen, strLen);
 >         }
 >         int lastIndexOf(const String &str, unsigned int fromIndex) const {
->             return String_lastIndexOf(*this, str.c_str(), fromIndex, str.length());
+>             return String_lastIndexOf(*this, str.buffer(), fromIndex, str.length());
 >         }
 > 
-248d310
+248d299
 <         ;
-250a313,323
->         bool insert(size_t pos, const char *insert, size_t insertLen);
->         inline bool insert(size_t pos, const char *str) {
+250a302,315
+>         // PROGMEM safe
+>         // returns false on failure
+>         bool insert(size_t pos, PGM_P insert, size_t insertLen);
+> 
+>         inline bool insert(size_t pos, PGM_P str) {
 >             return insert(pos, str, strlen_P(str));
 >         }
 >         inline bool insert(size_t pos, const __FlashStringHelper *fstr) {
 >             return insert(pos, reinterpret_cast<PGM_P>(fstr), strlen_P(reinterpret_cast<PGM_P>(fstr)));
 >         }
 >         inline bool insert(size_t pos, const String &str) {
->             return insert(pos, str.c_str(), str.length());
+>             return insert(pos, str.buffer(), str.length());
 >         }
 > 
-271,273c344,390
+252,258c317,331
+<         void replace(char find, char replace);
+<         void replace(const String& find, const String& replace);
+<         void replace(const char * find, const String& replace) {
+<             this->replace(String(find), replace);
+<         }
+<         void replace(const __FlashStringHelper * find, const String& replace) {
+<             this->replace(String(find), replace);
+---
+>         bool replace(char find, char replace);
+>         // PROGMEM safe
+>         bool replace(PGM_P find, size_t findLen, PGM_P replace, size_t replaceLen);
+> 
+>         inline bool replace(const char *find, const char *replace) {
+>             return this->replace(find, strlen(find), replace, strlen(replace));
+>         }
+>         inline bool replace(const char *find, const __FlashStringHelper *replace) {
+>             return this->replace(find, strlen(find), reinterpret_cast<PGM_P>(replace), strlen_P(reinterpret_cast<PGM_P>(replace)));
+>         }
+>         inline bool replace(const char *find, const String& replace) {
+>             return this->replace(find, strlen(find), replace.buffer(), replace.length());
+>         }
+>         inline bool replace(const String& find, const String& replace) {
+>             return this->replace(find.buffer(), find.length(), replace.buffer(), replace.length());
+260,261c333,334
+<         void replace(const char * find, const char * replace) {
+<             this->replace(String(find), String(replace));
+---
+>         inline bool replace(const String& find, const char *replace) {
+>             return this->replace(find.buffer(), find.length(), replace, strlen(replace));
+263,264c336,337
+<         void replace(const __FlashStringHelper * find, const char * replace) {
+<             this->replace(String(find), String(replace));
+---
+>         inline bool replace(const String& find, const __FlashStringHelper *replace) {
+>             return this->replace(find.buffer(), find.length(), reinterpret_cast<PGM_P>(replace), strlen_P(reinterpret_cast<PGM_P>(replace)));
+266,267c339,340
+<         void replace(const __FlashStringHelper * find, const __FlashStringHelper * replace) {
+<             this->replace(String(find), String(replace));
+---
+>         inline bool replace(const __FlashStringHelper * find, const String& replace) {
+>             return this->replace(reinterpret_cast<PGM_P>(find), strlen_P(reinterpret_cast<PGM_P>(find)), replace.buffer(), replace.length());
+268a342,348
+>         inline bool replace(const __FlashStringHelper *find, const char *replace) {
+>             return this->replace(reinterpret_cast<PGM_P>(find), strlen_P(reinterpret_cast<PGM_P>(find)), replace, strlen(replace));
+>         }
+>         inline bool replace(const __FlashStringHelper *find, const __FlashStringHelper *replace) {
+>             return this->replace(reinterpret_cast<PGM_P>(find), strlen_P(reinterpret_cast<PGM_P>(find)), reinterpret_cast<PGM_P>(replace), strlen_P(reinterpret_cast<PGM_P>(replace)));
+>         }
+> 
+271,273c351,415
 <         void toLowerCase(void);
 <         void toUpperCase(void);
 <         void trim(void);
 ---
+> 
 >         String &toLowerCase(void);
 >         String &toUpperCase(void);
->         String &trim(void);
->         String &rtrim() {
->             String_rtrim(*this);
->             return *this;
+> 
+>         enum class TrimType : uint8_t {
+>             LEFT = 0x01,
+>             RIGHT = 0x02,
+>             BOTH = LEFT|RIGHT
+>         };
+> 
+>         String &trim(TrimType type);
+> 
+>         inline String &trim() {
+>             return trim(TrimType::BOTH);
 >         }
->         String &ltrim() {
->             String_rtrim(*this);
->             return *this;
+>         inline String &rtrim() {
+>             return trim(TrimType::RIGHT);
 >         }
->         String &trim(const char *characters) {
->             String_trim(*this, characters);
->             return *this;
+>         inline String &ltrim() {
+>             return trim(TrimType::LEFT);
 >         }
->         String &trim(const String &characters) {
->             String_trim(*this, characters.c_str());
->             return *this;
+> 
+>         // PROGMEM safe
+>         String &trim(TrimType type, PGM_P characters, size_t charLen);
+> 
+>         inline String &trim(TrimType type, const char *characters) {
+>             return trim(type, characters, strlen(characters));
 >         }
->         String &rtrim(const char *characters) {
->             String_rtrim(*this, characters);
->             return *this;
+>         inline String &trim(TrimType type, const __FlashStringHelper *characters) {
+>             return trim(type, reinterpret_cast<PGM_P>(characters), strlen_P(reinterpret_cast<PGM_P>(characters)));
 >         }
->         String &rtrim(const String &characters) {
->             String_rtrim(*this, characters.c_str());
->             return *this;
+>         inline String &trim(TrimType type, const String &characters) {
+>             return trim(type, characters.c_str(), characters.length());
 >         }
->         String &ltrim(const char *characters) {
->             String_ltrim(*this, characters);
->             return *this;
+> 
+> 
+>         inline String &trim(const char *characters) {
+>             return trim(TrimType::BOTH, characters);
 >         }
->         String &ltrim(const String &characters) {
->             String_ltrim(*this, characters.c_str());
->             return *this;
+>         inline String &trim(const String &characters) {
+>             return trim(TrimType::BOTH, characters);
 >         }
->         String &trim(const __FlashStringHelper *fchars) {
->             String_trim(*this, fchars);
->             return *this;
+>         inline String &trim(const __FlashStringHelper *characters) {
+>             return trim(TrimType::BOTH, characters);
 >         }
->         String &rtrim(const __FlashStringHelper *fchars) {
->             String_rtrim(*this, fchars);
->             return *this;
+> 
+>         inline String &rtrim(const char *characters) {
+>             return trim(TrimType::RIGHT, characters);
 >         }
->         String &ltrim(const __FlashStringHelper *fchars) {
->             String_ltrim(*this, fchars);
->             return *this;
+>         inline String &rtrim(const String &characters) {
+>             return trim(TrimType::RIGHT, characters);
 >         }
-278c395
+>         inline String &rtrim(const __FlashStringHelper *characters) {
+>             return trim(TrimType::RIGHT, characters);
+>         }
+> 
+>         inline String &ltrim(const char *characters) {
+>             return trim(TrimType::LEFT, characters);
+>         }
+>         inline String &ltrim(const String &characters) {
+>             return trim(TrimType::LEFT, characters);
+>         }
+>         inline String &ltrim(const __FlashStringHelper *characters) {
+>             return trim(TrimType::LEFT, characters);
+>         }
+278c420,423
 < 	double toDouble(void) const;
 ---
-> 	    double toDouble(void) const;
-358a476,480
 > 
-> #ifdef HAVE_KFC_FIRMWARE_VERSION
+> 	    inline double toDouble(void) const {
+>             return toFloat();
+>         }
+358a504,506
+> 
 > #include "KFCBaseLibrary/include/misc_string_inline.h"
-> #endif
 > 
 diff -r -Z -P4 ./framework-arduinoespressif8266_orig/libraries/ESP8266mDNS/src/LEAmDNS.h ./framework-arduinoespressif8266/libraries/ESP8266mDNS/src/LEAmDNS.h
 523a524,526

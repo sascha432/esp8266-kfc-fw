@@ -15,7 +15,7 @@
 
 class Sensor_CCS811;
 
-class Sensor_BME280 : public MQTTSensor {
+class Sensor_BME280 : public MQTT::Sensor {
 public:
     typedef struct {
         float temperature;  // °C
@@ -28,14 +28,13 @@ public:
     Sensor_BME280(const String &name, TwoWire &wire, uint8_t address = 0x76);
     virtual ~Sensor_BME280();
 
-    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTT::FormatType format, uint8_t num) override;
+    virtual MQTT::AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;
 
-    virtual void publishState(MQTTClient *client) override;
+    virtual void publishState() override;
     virtual void getValues(JsonArray &json, bool timer) override;
     virtual void createWebUI(WebUIRoot &webUI, WebUIRow **row) override;
     virtual void getStatus(Print &output) override;
-    virtual MQTTSensorSensorType getType() const override;
     virtual bool getSensorData(String &name, StringVector &values) override;
 
     inline void readSensor(SensorData_t &data) {

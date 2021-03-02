@@ -15,7 +15,7 @@
 
 #include <debug_helper_enable_mem.h>
 
-Sensor_DHTxx::Sensor_DHTxx(const String &name, uint8_t pin/*, uint8_t type*/) : MQTTSensor(), _name(name), _pin(pin), _dht(pin)
+Sensor_DHTxx::Sensor_DHTxx(const String &name, uint8_t pin/*, uint8_t type*/) : MQTT::Sensor(MQTT::SensorType::DHTxx), _name(name), _pin(pin), _dht(pin)
 //_type(type), _dht(_pin, _type)
 {
     REGISTER_SENSOR_CLIENT(this);
@@ -27,26 +27,24 @@ Sensor_DHTxx::~Sensor_DHTxx()
     UNREGISTER_SENSOR_CLIENT(this);
 }
 
-void Sensor_DHTxx::createAutoDiscovery(MQTT::FormatType format, MQTTAutoDiscoveryVector &vector)
+MQTT::AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num)
 {
-    _debug_println();
-    String topic = MQTTClient::formatTopic(_getId());
-
-    auto discovery = __LDBG_new(MQTTAutoDiscovery);
-    discovery->create(this, _getId(FSPGM(temperature)), format);
-    discovery->addStateTopic(topic);
-    discovery->addUnitOfMeasurement(FSPGM(degree_Celsius_unicode));
-    discovery->addValueTemplate(FSPGM(temperature));
-    discovery->finalize();
-    vector.emplace_back(discovery);
-
-    discovery = __LDBG_new(MQTTAutoDiscovery);
-    discovery->create(this, _getId(FSPGM(humidity)), format);
-    discovery->addStateTopic(topic);
-    discovery->addUnitOfMeasurement(F("%"));
-    discovery->addValueTemplate(FSPGM(humidity));
-    discovery->finalize();
-    vector.emplace_back(discovery);
+    auto discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
+    switch(num) {
+        case 0:
+            discovery->create(this, _getId(FSPGM(temperature)), format);
+            discovery->addStateTopic(MQTTClient::formatTopic(_getId()));
+            discovery->addUnitOfMeasurement(FSPGM(degree_Celsius_unicode));
+            discovery->addValueTemplate(FSPGM(temperature));
+            break;
+        case 1:
+            discovery->create(this, _getId(FSPGM(humidity)), format);
+            discovery->addStateTopic(MQTTClient::formatTopic(_getId()));
+            discovery->addUnitOfMeasurement(F("%"));
+            discovery->addValueTemplate(FSPGM(humidity));
+            break;
+    }
+    return discovery;
 }
 
 uint8_t Sensor_DHTxx::getAutoDiscoveryCount() const
@@ -78,11 +76,6 @@ void Sensor_DHTxx::createWebUI(WebUIRoot &webUI, WebUIRow **row)
 void Sensor_DHTxx::getStatus(Print &output)
 {
     output.printf_P(PSTR(IOT_SENSOR_NAMES_DHTxx " @ pin %d" HTML_S(br)), _pin);
-}
-
-MQTTSensorSensorType Sensor_DHTxx::getType() const
-{
-    return MQTTSensorSensorType::DHTxx;
 }
 
 bool Sensor_DHTxx::getSensorData(String &name, StringVector &values)

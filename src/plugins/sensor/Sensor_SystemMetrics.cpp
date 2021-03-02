@@ -30,7 +30,7 @@ FLASH_STRING_GENERATOR_AUTO_INIT(
     AUTO_STRING_DEF(version, "version")
 );
 
-Sensor_SystemMetrics::Sensor_SystemMetrics() : MQTTSensor()
+Sensor_SystemMetrics::Sensor_SystemMetrics() : MQTT::Sensor(MQTT::SensorType::SYSTEM_METRICS)
 {
     REGISTER_SENSOR_CLIENT(this);
     setUpdateRate(10);
@@ -43,76 +43,72 @@ Sensor_SystemMetrics::~Sensor_SystemMetrics()
     UNREGISTER_SENSOR_CLIENT(this);
 }
 
-Sensor_SystemMetrics::AutoDiscoveryPtr Sensor_SystemMetrics::nextAutoDiscovery(FormatType format, uint8_t num)
+MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::FormatType format, uint8_t num)
 {
-    if (num >= getAutoDiscoveryCount()) {
-        return nullptr;
-    }
-    AutoDiscoveryPtr discovery = nullptr;
+    MQTT::AutoDiscovery::EntityPtr discovery = nullptr;
     switch(num) {
         case 0:
-            discovery = __LDBG_new(AutoDiscovery);
+            discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
             discovery->create(this, FSPGM(uptime), format);
             discovery->addStateTopic(_getTopic());
             discovery->addUnitOfMeasurement(FSPGM(seconds));
             discovery->addValueTemplate(FSPGM(uptime));
             break;
         case 1:
-            discovery = __LDBG_new(AutoDiscovery);
+            discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
             discovery->create(this, FSPGM(heap), format);
             discovery->addStateTopic(_getTopic());
             discovery->addUnitOfMeasurement(FSPGM(bytes));
             discovery->addValueTemplate(FSPGM(heap));
             break;
         case 2:
-            discovery = __LDBG_new(AutoDiscovery);
+            discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
             discovery->create(this, FSPGM(version), format);
             discovery->addStateTopic(_getTopic());
             discovery->addValueTemplate(FSPGM(version));
             break;
         case 3:
-            discovery = __LDBG_new(AutoDiscovery);
+            discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
             discovery->create(this, F("heap_frag"), format);
             discovery->addStateTopic(_getTopic());
             discovery->addValueTemplate(F("heap_frag"));
             break;
 #if PING_MONITOR_SUPPORT
         case 4:
-            discovery = __LDBG_new(AutoDiscovery);
+            discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
             discovery->create(this, F("ping_monitor_success"), format);
             discovery->addStateTopic(_getTopic());
             discovery->addValueTemplate(F("ping_monitor_success"));
             break;
         case 5:
-            discovery = __LDBG_new(AutoDiscovery);
+            discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
             discovery->create(this, F("ping_monitor_failure"), format);
             discovery->addStateTopic(_getTopic());
             discovery->addValueTemplate(F("ping_monitor_failure"));
             break;
         case 6:
-            discovery = __LDBG_new(AutoDiscovery);
+            discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
             discovery->create(this, F("ping_monitor_avg_resp_time"), format);
             discovery->addStateTopic(_getTopic());
             discovery->addValueTemplate(F("ping_monitor_avg_resp_time"));
             discovery->addUnitOfMeasurement(F("ms"));
             break;
         case 7:
-            discovery = __LDBG_new(AutoDiscovery);
+            discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
             discovery->create(this, F("ping_monitor_rcvd_pkts"), format);
             discovery->addStateTopic(_getTopic());
             discovery->addValueTemplate(F("ping_monitor_rcvd_pkts"));
             break;
         case 8:
-            discovery = __LDBG_new(AutoDiscovery);
+            discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
             discovery->create(this, F("ping_monitor_lost_pkts"), format);
             discovery->addStateTopic(_getTopic());
             discovery->addValueTemplate(F("ping_monitor_lost_pkts"));
             break;
 #endif
         default:
-            return nullptr;
+            __DBG_panic("getAutoDiscovery(%u) does not exist", num);
     }
-    discovery->finalize();
     return discovery;
 }
 
@@ -130,12 +126,12 @@ void Sensor_SystemMetrics::getStatus(Print &output)
     output.printf_P(PSTR("System Metrics" HTML_S(br)));
 }
 
-void Sensor_SystemMetrics::publishState(MQTTClient *client)
+void Sensor_SystemMetrics::publishState()
 {
-    if (client && client->isConnected()) {
+    if (isConnected()) {
         PrintString json;
         _getMetricsJson(json);
-        client->publish(_getTopic(), true, json);
+        client().publish(_getTopic(), true, json);
     }
 }
 

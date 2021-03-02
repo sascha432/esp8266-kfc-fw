@@ -50,7 +50,7 @@
 #define IN219_WEBUI_UPDATE_RATE             5
 #endif
 
-class Sensor_INA219 : public MQTTSensor {
+class Sensor_INA219 : public MQTT::Sensor {
 public:
     typedef enum : char {
         VOLTAGE =       'u',
@@ -62,14 +62,13 @@ public:
     Sensor_INA219(const JsonString &name, TwoWire &wire, uint8_t address = IOT_SENSOR_HAVE_INA219);
     virtual ~Sensor_INA219();
 
-    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTT::FormatType format, uint8_t num) override;
+    virtual MQTT::AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;
 
-    virtual void publishState(MQTTClient *client) override;
+    virtual void publishState() override;
     virtual void getValues(JsonArray &json, bool timer) override;
     virtual void createWebUI(WebUIRoot &webUI, WebUIRow **row) override;
     virtual void getStatus(Print &output) override;
-    virtual MQTTSensorSensorType getType() const override;
 
 #if AT_MODE_SUPPORTED
     virtual void atModeHelpGenerator() override;

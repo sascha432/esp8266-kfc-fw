@@ -87,9 +87,8 @@
 
 class SensorPlugin : public PluginComponent {
 public:
-    using SensorType = MQTTSensor::SensorType;
-    using MQTTSensorPtr = MQTTSensor *;
-    using SensorVector = std::vector<MQTTSensorPtr>;
+    using SensorType = MQTT::SensorType;
+    using SensorVector = std::vector<MQTT::SensorPtr>;
     using AddCustomSensorCallback = std::function<void(WebUIRoot &webUI, WebUIRow **row, SensorType nextType)>;
 
 // WebUI
@@ -165,7 +164,7 @@ private:
     void _timerEvent();
 
     size_t _count() const {
-        return std::count_if(_sensors.begin(), _sensors.end(), [](const MQTTSensorPtr sensor) {
+        return std::count_if(_sensors.begin(), _sensors.end(), [](const MQTT::SensorPtr sensor) {
             return (sensor->getType() != SensorType::SYSTEM_METRICS && sensor->getType() != SensorType::DIMMER_METRICS);
         });
     }

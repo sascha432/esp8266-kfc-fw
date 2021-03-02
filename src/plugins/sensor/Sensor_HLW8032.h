@@ -79,7 +79,6 @@ public:
     virtual ~Sensor_HLW8032();
 
     void getStatus(Print &output) override;
-    virtual MQTTSensorSensorType getType() const override;
 
     static void loop();
 

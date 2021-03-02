@@ -107,7 +107,7 @@ extern bool Sensor_Battery_charging_detection();
 #define IOT_SENSOR_HAVE_BATTERY_RECORDER                        0
 #endif
 
-class Sensor_Battery : public MQTTSensor {
+class Sensor_Battery : public MQTT::Sensor {
 public:
     enum class StateType : uint8_t {
         OFF,
@@ -197,16 +197,13 @@ public:
     Sensor_Battery(const JsonString &name);
     virtual ~Sensor_Battery();
 
-    virtual AutoDiscoveryPtr nextAutoDiscovery(FormatType format, uint8_t num) override;
+    virtual MQTT::AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;
 
-    virtual void publishState(MQTTClient *client) override;
+    virtual void publishState() override;
     virtual void getValues(JsonArray &json, bool timer) override;
     virtual void createWebUI(WebUIRoot &webUI, WebUIRow **row) override;
     virtual void getStatus(Print &output) override;
-    virtual MQTTSensorSensorType getType() const override {
-        return MQTTSensorSensorType::BATTERY;
-    }
     virtual bool getSensorData(String &name, StringVector &values) override;
 
     virtual bool hasForm() const {

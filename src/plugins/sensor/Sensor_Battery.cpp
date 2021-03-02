@@ -32,7 +32,12 @@ uint8_t operator&(uint8_t a, SensorRecordType b) {
 static constexpr uint32_t kReadInterval = 125;
 static constexpr uint32_t kUpdateInterval = 2000;
 
-Sensor_Battery::Sensor_Battery(const JsonString &name) : MQTTSensor(), _name(name), _adcValue(NAN), _adcLastUpdateTime(1U << 31), _timerCounter(0)
+Sensor_Battery::Sensor_Battery(const JsonString &name) :
+    MQTT::Sensor(MQTT::SensorType::BATTERY),
+    _name(name),
+    _adcValue(NAN),
+    _adcLastUpdateTime(1U << 31),
+    _timerCounter(0)
 {
     REGISTER_SENSOR_CLIENT(this);
     reconfigure(nullptr);
@@ -101,12 +106,9 @@ enum class AutoDiscoveryNumHelperType {
     MAX
 };
 
-Sensor_Battery::AutoDiscoveryPtr Sensor_Battery::nextAutoDiscovery(FormatType format, uint8_t num)
+MQTT::AutoDiscovery::EntityPtr Sensor_Battery::getAutoDiscovery(FormatType format, uint8_t num)
 {
-    if (num >= getAutoDiscoveryCount()) {
-        return nullptr;
-    }
-    auto discovery = __LDBG_new(AutoDiscovery);
+    auto discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
     switch(static_cast<AutoDiscoveryNumHelperType>(num)) {
         case AutoDiscoveryNumHelperType::VOLTAGE:
             discovery->create(this, _getId(TopicType::VOLTAGE), format);
@@ -135,9 +137,8 @@ Sensor_Battery::AutoDiscoveryPtr Sensor_Battery::nextAutoDiscovery(FormatType fo
             break;
 #endif
         case AutoDiscoveryNumHelperType::MAX:
-            break;
+            __DBG_panic("getAutoDiscovery() out of range");
     }
-    discovery->finalize();
     return discovery;
 }
 

@@ -18,7 +18,14 @@
 
 #include <debug_helper_enable_mem.h>
 
-Sensor_INA219::Sensor_INA219(const JsonString &name, TwoWire &wire, uint8_t address) : MQTTSensor(), _name(name), _address(address), _updateTimer(0), _holdPeakTimer(0), _Ipeak(NAN), _ina219(address)
+Sensor_INA219::Sensor_INA219(const JsonString &name, TwoWire &wire, uint8_t address) :
+    MQTT::Sensor(MQTT::SensorType::INA219),
+    _name(name),
+    _address(address),
+    _updateTimer(0),
+    _holdPeakTimer(0),
+    _Ipeak(NAN),
+    _ina219(address)
 {
     REGISTER_SENSOR_CLIENT(this);
     _ina219.begin(&config.initTwoWire());
@@ -38,11 +45,8 @@ Sensor_INA219::~Sensor_INA219()
     UNREGISTER_SENSOR_CLIENT(this);
 }
 
-MQTTComponent::MQTTAutoDiscoveryPtr Sensor_INA219::nextAutoDiscovery(MQTT::FormatType format, uint8_t num)
+MQTTComponent::MQTTAutoDiscoveryPtr Sensor_INA219::getAutoDiscovery(MQTT::FormatType format, uint8_t num)
 {
-    if (num >= getAutoDiscoveryCount()) {
-        return nullptr;
-    }
     auto discovery = __LDBG_new(MQTTAutoDiscovery);
     switch(num) {
         case 0:
@@ -70,7 +74,6 @@ MQTTComponent::MQTTAutoDiscoveryPtr Sensor_INA219::nextAutoDiscovery(MQTT::Forma
             discovery->addDeviceClass(F("current"));
             break;
     }
-    discovery->finalize();
     return discovery;
 }
 
@@ -133,11 +136,6 @@ void Sensor_INA219::publishState(MQTTClient *client)
 void Sensor_INA219::getStatus(Print &output)
 {
     output.printf_P(PSTR("INA219 @ I2C address 0x%02x" HTML_S(br)), _address);
-}
-
-MQTTSensorSensorType Sensor_INA219::getType() const
-{
-    return MQTTSensorSensorType::INA219;
 }
 
 String Sensor_INA219::_getId(SensorTypeEnum_t type)

@@ -26,7 +26,7 @@ using KFCConfigurationClasses::Plugins;
 
 PROGMEM_STRING_DEF(iot_sensor_hlw80xx_state_file, "/.pvt/hlw80xx.state");
 
-Sensor_HLW80xx::Sensor_HLW80xx(const String &name) : MQTTSensor(), _name(name), _power(NAN), _voltage(NAN), _current(NAN)
+Sensor_HLW80xx::Sensor_HLW80xx(const String &name, MQTT::SensorType type) : MQTT::Sensor(type), _name(name), _power(NAN), _voltage(NAN), _current(NAN)
 {
 #if DEBUG_MQTT_CLIENT
     debug_printf_P(PSTR("Sensor_HLW80xx(): component=%p\n"), this);
@@ -50,11 +50,8 @@ Sensor_HLW80xx::Sensor_HLW80xx(const String &name) : MQTTSensor(), _name(name), 
 #endif
 }
 
-MQTT::AutoDiscovery::EntityPtr Sensor_HLW80xx::nextAutoDiscovery(MQTT::FormatType format, uint8_t num)
+MQTT::AutoDiscovery::EntityPtr Sensor_HLW80xx::getAutoDiscovery(MQTT::FormatType format, uint8_t num)
 {
-    if (num >= getAutoDiscoveryCount()) {
-        return nullptr;
-    }
     String topic = _getTopic();
     auto discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
     switch(num) {
@@ -101,7 +98,6 @@ MQTT::AutoDiscovery::EntityPtr Sensor_HLW80xx::nextAutoDiscovery(MQTT::FormatTyp
             discovery->addDeviceClass(F("power_factor"));
             break;
     }
-    discovery->finalize();
     return discovery;
 }
 
@@ -363,7 +359,7 @@ bool Sensor_HLW80xx::atModeHandler(AtModeArgs &args)
             uint8_t digits = args.toIntMinMax(AtModeArgs::FIRST, 0, 4);
 
             auto count = std::count_if(SensorPlugin::begin(), SensorPlugin::end(), [digits](MQTTSensor *sensor) {
-                if (sensor->getType() == MQTTSensor::SensorType::HLW8012 || sensor->getType() == MQTTSensor::SensorType::HLW8032) {
+                if (sensor->getType() == MQTT::SensorType::HLW8012 || sensor->getType() == MQTT::SensorType::HLW8032) {
                     reinterpret_cast<Sensor_HLW80xx *>(sensor)->setExtraDigits(digits);
                     return true;
                 }
@@ -429,7 +425,7 @@ bool Sensor_HLW80xx::atModeHandler(AtModeArgs &args)
             auto &serial = args.getStream();
             _Timer(_dumpTimer).add(interval, true, [this, &serial](Event::CallbackTimerPtr timer) {
                 for(auto sensor: SensorPlugin::getSensors()) {
-                    if (sensor->getType() == MQTTSensor::SensorType::HLW8012 || sensor->getType() == MQTTSensor::SensorType::HLW8032) {
+                    if (sensor->getType() == MQTT::SensorType::HLW8012 || sensor->getType() == MQTT::SensorType::HLW8032) {
                         reinterpret_cast<Sensor_HLW80xx *>(sensor)->dump(serial);
                     }
                 }

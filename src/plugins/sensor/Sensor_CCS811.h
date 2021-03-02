@@ -27,14 +27,13 @@ public:
     Sensor_CCS811(const String &name, uint8_t address = CCS811_ADDRESS);
     virtual ~Sensor_CCS811();
 
-    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTT::FormatType format, uint8_t num) override;
+    virtual MQTT::AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;
 
-    virtual void publishState(MQTTClient *client) override;
+    virtual void publishState() override;
     virtual void getValues(JsonArray &json, bool timer) override;
     virtual void createWebUI(WebUIRoot &webUI, WebUIRow **row) override;
     virtual void getStatus(Print &output) override;
-    virtual MQTTSensorSensorType getType() const override;
 
 private:
     String _getId(const __FlashStringHelper *type = nullptr);

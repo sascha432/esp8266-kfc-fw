@@ -16,8 +16,6 @@
 
 #include <debug_helper_enable_mem.h>
 
-DEFINE_ENUM(MQTTSensorSensorType);
-
 static SensorPlugin plugin;
 
 PROGMEM_DEFINE_PLUGIN_OPTIONS(
@@ -133,26 +131,23 @@ void SensorPlugin::timerEvent(Event::CallbackTimerPtr timer)
 // low priority timer executed in main loop()
 void SensorPlugin::_timerEvent()
 {
-    auto client = MQTTClient ::getClient();
-    if (client && !client->isConnected()) {
-        client = nullptr;
-    }
+    auto mqttIsConnected = MQTTClient::safeIsConnected();
 
     if (WebUISocket::hasAuthenticatedClients()) {
         JsonUnnamedObject json(2);
         json.add(JJ(type), JJ(ue));
         auto &events = json.addArray(JJ(events));
         for(auto sensor: _sensors) {
-            sensor->timerEvent(&events, client);
+            sensor->timerEvent(&events, mqttIsConnected);
         }
         // __DBG_printf("events=%u", events.size());
         if (events.size()) {
             WebUISocket::broadcast(WebUISocket::getSender(), json);
         }
     }
-    else if (client) {
+    else if (mqttIsConnected) {
         for(auto sensor: _sensors) {
-            sensor->timerEvent(nullptr, client);
+            sensor->timerEvent(nullptr, true);
         }
     }
 }

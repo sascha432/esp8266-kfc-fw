@@ -44,7 +44,7 @@ extern "C" void ICACHE_RAM_ATTR Sensor_HLW8012_callbackCF1()
 // ------------------------------------------------------------------------
 
 Sensor_HLW8012::Sensor_HLW8012(const String &name, uint8_t pinSel, uint8_t pinCF, uint8_t pinCF1) :
-    Sensor_HLW80xx(name),
+    Sensor_HLW80xx(name, SensorType::HLW8012),
     _pinSel(pinSel),
     _pinCF(pinCF),
     _pinCF1(pinCF1),
@@ -371,11 +371,6 @@ void Sensor_HLW8012::getStatus(Print &output)
     output.printf_P(PSTR(HTML_S(br) "PINS: sel=%u cf=%u cf1=%u"), _pinSel, _pinCF, _pinCF1);
 #endif
 
-}
-
-MQTTSensor::SensorType Sensor_HLW8012::getType() const
-{
-    return SensorType::HLW8012;
 }
 
 String Sensor_HLW8012::_getId(const __FlashStringHelper *type)

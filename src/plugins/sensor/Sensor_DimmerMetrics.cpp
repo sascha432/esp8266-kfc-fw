@@ -15,7 +15,7 @@
 
 #include <debug_helper_enable_mem.h>
 
-Sensor_DimmerMetrics::Sensor_DimmerMetrics(const String &name) : MQTTSensor(), _name(name), _webUIinitialized(false)
+Sensor_DimmerMetrics::Sensor_DimmerMetrics(const String &name) : MQTT::Sensor(MQTT::SensorType::DIMMER_METRICS), _name(name), _webUIinitialized(false)
 {
     REGISTER_SENSOR_CLIENT(this);
 }
@@ -25,12 +25,9 @@ Sensor_DimmerMetrics::~Sensor_DimmerMetrics()
     UNREGISTER_SENSOR_CLIENT(this);
 }
 
-Sensor_DimmerMetrics::MQTTAutoDiscoveryPtr Sensor_DimmerMetrics::nextAutoDiscovery(MQTT::FormatType format, uint8_t num)
+MQTT::AutoDiscovery::EntityPtr Sensor_DimmerMetrics::getAutoDiscovery(MQTT::FormatType format, uint8_t num)
 {
-    if (num >= getAutoDiscoveryCount()) {
-        return nullptr;
-    }
-    auto discovery = __LDBG_new(MQTTAutoDiscovery);
+    auto discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
     switch(num) {
         case 0:
             discovery->create(this, F("int_temp"), format);
@@ -60,7 +57,6 @@ Sensor_DimmerMetrics::MQTTAutoDiscoveryPtr Sensor_DimmerMetrics::nextAutoDiscove
             discovery->addUnitOfMeasurement(FSPGM(Hz, "Hz"));
             break;
     }
-    discovery->finalize();
     return discovery;
 }
 
@@ -114,25 +110,20 @@ void Sensor_DimmerMetrics::createWebUI(WebUIRoot &webUI, WebUIRow **row)
     }
 }
 
-void Sensor_DimmerMetrics::publishState(MQTTClient *client)
+void Sensor_DimmerMetrics::publishState()
 {
-    if (client && client->isConnected()) {
+    if (isConnected()) {
         String payload = PrintString(F("{\"int_temp\":%u,\"ntc_temp\":%.2f,\"vcc\":%.3f,\"frequency\":%.2f}"),
             _metrics.metrics.int_temp,
             _metrics.metrics.ntc_temp,
             _metrics.metrics.vcc / 1000.0,
             _metrics.metrics.frequency);
-        client->publish(_getMetricsTopics(), true, payload);
+        client().publish(_getMetricsTopics(), true, payload);
     }
 }
 
 void Sensor_DimmerMetrics::getStatus(Print &output)
 {
-}
-
-MQTTSensorSensorType Sensor_DimmerMetrics::getType() const
-{
-    return MQTTSensorSensorType::DIMMER_METRICS;
 }
 
 Sensor_DimmerMetrics::MetricsType &Sensor_DimmerMetrics::_updateMetrics(const MetricsType &metrics)

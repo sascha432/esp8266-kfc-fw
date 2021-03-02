@@ -22,7 +22,7 @@ PROGMEM_STRING_DEF(ds3231_id_temp, "ds3231_temp");
 PROGMEM_STRING_DEF(ds3231_id_time, "ds3231_time");
 PROGMEM_STRING_DEF(ds3231_id_lost_power, "ds3231_lost_power");
 
-Sensor_DS3231::Sensor_DS3231(const JsonString &name) : MQTTSensor(), _name(name), _wire(&config.initTwoWire())
+Sensor_DS3231::Sensor_DS3231(const JsonString &name) : MQTT::Sensor(MQTT::SensorType::DS3231), _name(name), _wire(&config.initTwoWire())
 {
     REGISTER_SENSOR_CLIENT(this);
 }
@@ -32,12 +32,9 @@ Sensor_DS3231::~Sensor_DS3231()
     UNREGISTER_SENSOR_CLIENT(this);
 }
 
-MQTTComponent::MQTTAutoDiscoveryPtr Sensor_DS3231::nextAutoDiscovery(MQTT::FormatType format, uint8_t num)
+MQTT::AutoDiscovery::EntityPtr Sensor_DS3231::gettAutoDiscovery(MQTT::FormatType format, uint8_t num)
 {
-    if (num >= getAutoDiscoveryCount()) {
-        return nullptr;
-    }
-    auto discovery = __LDBG_new(MQTTAutoDiscovery);
+    auto discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
     switch(num) {
         case 0:
             discovery->create(this, FSPGM(ds3231_id_temp), format);
@@ -53,7 +50,6 @@ MQTTComponent::MQTTAutoDiscoveryPtr Sensor_DS3231::nextAutoDiscovery(MQTT::Forma
             discovery->addStateTopic(MQTTClient::formatTopic(FSPGM(ds3231_id_lost_power)));
             break;
     }
-    discovery->finalize();
     return discovery;
 }
 
@@ -99,11 +95,6 @@ void Sensor_DS3231::publishState(MQTTClient *client)
 void Sensor_DS3231::getStatus(Print &output)
 {
     output.printf_P(PSTR("DS3231 @ I2C address 0x68" HTML_S(br)));
-}
-
-MQTTSensorSensorType Sensor_DS3231::getType() const
-{
-    return MQTTSensorSensorType::DS3231;
 }
 
 bool Sensor_DS3231::getSensorData(String &name, StringVector &values)

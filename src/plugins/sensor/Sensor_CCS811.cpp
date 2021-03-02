@@ -18,7 +18,10 @@
 
 #include <debug_helper_enable_mem.h>
 
-Sensor_CCS811::Sensor_CCS811(const String &name, uint8_t address) : MQTTSensor(), _name(name), _address(address)
+Sensor_CCS811::Sensor_CCS811(const String &name, uint8_t address) :
+    MQTT::Sensor(MQTT::SensorType::CCS811),
+    _name(name),
+    _address(address)
 {
     REGISTER_SENSOR_CLIENT(this);
     config.initTwoWire();
@@ -34,26 +37,25 @@ Sensor_CCS811::~Sensor_CCS811()
     UNREGISTER_SENSOR_CLIENT(this);
 }
 
-
-void Sensor_CCS811::createAutoDiscovery(MQTT::FormatType format, MQTTAutoDiscoveryVector &vector)
+MQTT::AutoDiscovery::EntityPtr Sensor_CCS811::getAutoDiscovery(FormatType format, uint8_t num)
 {
-    String topic = MQTTClient::formatTopic(_getId());
+    discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
+    switch(num) {
+        case 0:
+            discovery->create(this, _getId(F("eco2")), format);
+            discovery->addStateTopic(MQTTClient::formatTopic(_getId()));
+            discovery->addUnitOfMeasurement(F("ppm"));
+            discovery->addValueTemplate(F("eCO2"));
+            break;
+        case 1:
+            discovery->create(this, _getId(F("tvoc")), format);
+            discovery->addStateTopic(MQTTClient::formatTopic(_getId()));
+            discovery->addUnitOfMeasurement(F("ppb"));
+            discovery->addValueTemplate(F("TVOC"));
+            brewak;
+    }
 
-    auto discovery = __LDBG_newMQTTAutoDiscovery);
-    discovery->create(this, _getId(F("eco2")), format);
-    discovery->addStateTopic(topic);
-    discovery->addUnitOfMeasurement(F("ppm"));
-    discovery->addValueTemplate(F("eCO2"));
-    discovery->finalize();
-    vector.emplace_back(discovery);
-
-    discovery = __LDBG_new(MQTTAutoDiscovery);
-    discovery->create(this, _getId(F("tvoc")), format);
-    discovery->addStateTopic(topic);
-    discovery->addUnitOfMeasurement(F("ppb"));
-    discovery->addValueTemplate(F("TVOC"));
-    discovery->finalize();
-    vector.emplace_back(discovery);
+    return discovery;
 }
 
 uint8_t Sensor_CCS811::getAutoDiscoveryCount() const
@@ -91,11 +93,6 @@ void Sensor_CCS811::createWebUI(WebUIRoot &webUI, WebUIRow **row)
 void Sensor_CCS811::getStatus(Print &output)
 {
     output.printf_P(PSTR("CCS811 @ I2C address 0x%02x" HTML_S(br)), _address);
-}
-
-MQTTSensorSensorType Sensor_CCS811::getType() const
-{
-    return MQTTSensorSensorType::CCS811;
 }
 
 void Sensor_CCS811::publishState(MQTTClient *client)

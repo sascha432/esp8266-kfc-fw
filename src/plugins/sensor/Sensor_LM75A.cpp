@@ -14,7 +14,7 @@
 
 #include <debug_helper_enable_mem.h>
 
-Sensor_LM75A::Sensor_LM75A(const JsonString &name, TwoWire &wire, uint8_t address) : MQTTSensor(), _name(name), _wire(wire), _address(address)
+Sensor_LM75A::Sensor_LM75A(const JsonString &name, TwoWire &wire, uint8_t address) : MQTT::Sensor(SensorType::LM75A), _name(name), _wire(wire), _address(address)
 {
     REGISTER_SENSOR_CLIENT(this);
     config.initTwoWire();
@@ -25,12 +25,9 @@ Sensor_LM75A::~Sensor_LM75A()
     UNREGISTER_SENSOR_CLIENT(this);
 }
 
-MQTTComponent::MQTTAutoDiscoveryPtr Sensor_LM75A::nextAutoDiscovery(MQTT::FormatType format, uint8_t num)
+MQTT::AutoDiscovery::EntityPtr Sensor_LM75A::getAutoDiscovery(MQTT::FormatType format, uint8_t num)
 {
-    if (num >= getAutoDiscoveryCount()) {
-        return nullptr;
-    }
-    auto discovery = __LDBG_new(MQTTAutoDiscovery);
+    auto discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
     switch(num) {
         case 0:
             discovery->create(this, _getId(), format);
@@ -38,7 +35,6 @@ MQTTComponent::MQTTAutoDiscoveryPtr Sensor_LM75A::nextAutoDiscovery(MQTT::Format
             discovery->addUnitOfMeasurement(FSPGM(degree_Celsius_unicode));
             break;
     }
-    discovery->finalize();
     return discovery;
 }
 
@@ -78,11 +74,6 @@ void Sensor_LM75A::getStatus(Print &output)
         output.printf_P(PSTR("address 0x%02x = %f" HTML_S(br)), i, val);
     }
 #endif
-}
-
-MQTTSensorSensorType Sensor_LM75A::getType() const
-{
-    return MQTTSensorSensorType::LM75A;
 }
 
 bool Sensor_LM75A::getSensorData(String &name, StringVector &values)

@@ -13,22 +13,18 @@
 #include "plugins.h"
 #include "MQTTSensor.h"
 
-class Sensor_SystemMetrics : public MQTTSensor {
+class Sensor_SystemMetrics : public MQTT::Sensor {
 public:
     Sensor_SystemMetrics();
     virtual ~Sensor_SystemMetrics();
 
-    virtual MQTT::AutoDiscovery::EntityPtr nextAutoDiscovery(FormatType format, uint8_t num) override;
+    virtual MQTT::AutoDiscovery::EntityPtr getAutoDiscovery(MQTT::FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;
 
-    virtual void publishState(MQTTClient *client) override;
+    virtual void publishState() override;
     virtual void getValues(::JsonArray &json, bool timer) override;
     virtual void createWebUI(WebUIRoot &webUI, WebUIRow **row) override;
     virtual void getStatus(Print &output) override;
-
-    virtual MQTTSensorSensorType getType() const override {
-        return MQTTSensorSensorType::SYSTEM_METRICS;
-    }
 
 private:
     enum class MetricsType {

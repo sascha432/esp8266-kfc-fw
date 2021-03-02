@@ -12,38 +12,36 @@
 #include <debug_helper_disable.h>
 #endif
 
-MQTTSensor::MQTTSensor() :
-    MQTTComponent(ComponentType::SENSOR),
+using namespace MQTT;
+
+Sensor::Sensor(SensorType type) :
+    Component(ComponentType::SENSOR),
     _updateRate(DEFAULT_UPDATE_RATE),
     _mqttUpdateRate(DEFAULT_MQTT_UPDATE_RATE),
     _nextUpdate(0),
-    _nextMqttUpdate(0)
+    _nextMqttUpdate(0),
+    _type(type)
 {
     __LDBG_printf("ctor this=%p", this);
 }
 
-MQTTSensor::~MQTTSensor()
+Sensor::~Sensor()
 {
     __LDBG_printf("dtor this=%p", this);
 #if DEBUG
-    auto client = MQTTClient::getClient();
-    if (client && client->isComponentRegistered(this)) {
+    if (hasClient() && client().isComponentRegistered(this)) {
         __DBG_panic("component=%p type=%d is still registered", this, (int)getType());
     }
 #endif
 }
 
-void MQTTSensor::onConnect(MQTTClient *client)
+void Sensor::onConnect()
 {
     setNextMqttUpdate(2);
 }
 
-void MQTTSensor::timerEvent(JsonArray *array, MQTTClient *client)
+void Sensor::timerEvent(JsonArray *array, bool mqttIsConnected)
 {
-    if (!array && !client) {
-        return;
-    }
-
     uint32_t now = time(nullptr);
     if (array && now >= _nextUpdate) {
         _nextUpdate = now + _updateRate;
@@ -51,8 +49,8 @@ void MQTTSensor::timerEvent(JsonArray *array, MQTTClient *client)
         getValues(*array, true);
     }
 
-    if (client && client->isConnected() && now >=_nextMqttUpdate) {
+    if (mqttIsConnected && isConnected() && now >=_nextMqttUpdate) {
         _nextMqttUpdate = now + _mqttUpdateRate;
-        publishState(client);
+        publishState();
     }
 }

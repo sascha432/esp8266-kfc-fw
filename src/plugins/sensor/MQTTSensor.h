@@ -16,23 +16,6 @@
 #include "../mqtt/mqtt_client.h"
 #include "EnumBitset.h"
 
-DECLARE_ENUM(MQTTSensorSensorType, uint8_t,
-    UNKNOWN = 0,
-    LM75A,
-    BME280,
-    BME680,
-    CCS811,
-    HLW8012,
-    HLW8032,
-    BATTERY,
-    DS3231,
-    INA219,
-    DHTxx,
-    DIMMER_METRICS,
-    SYSTEM_METRICS,
-    MAX
-);
-
 #if DEBUG_IOT_SENSOR
 #define REGISTER_SENSOR_CLIENT(sensor)                  { ::printf(PSTR("registerClient " __FUNCTION__ " "__FILE__ ":" __LINE__ "\n"); registerClient(sensor); }
 #else
@@ -40,90 +23,116 @@ DECLARE_ENUM(MQTTSensorSensorType, uint8_t,
 #endif
 #define UNREGISTER_SENSOR_CLIENT(sensor)                unregisterClient(sensor);
 
-class MQTTSensor : public MQTTComponent {
-public:
-    static constexpr uint16_t DEFAULT_UPDATE_RATE = 5;
-    static constexpr uint16_t DEFAULT_MQTT_UPDATE_RATE = 30;
+namespace MQTT {
 
-    using SensorType = MQTTSensorSensorType;
+    enum class SensorType : uint8_t {
+        UNKNOWN = 0,
+        LM75A,
+        BME280,
+        BME680,
+        CCS811,
+        HLW8012,
+        HLW8032,
+        BATTERY,
+        DS3231,
+        INA219,
+        DHTxx,
+        DIMMER_METRICS,
+        SYSTEM_METRICS,
+        MAX
+    };
 
-    MQTTSensor();
-    virtual ~MQTTSensor();
+    class Sensor : public Component {
+    public:
+        static constexpr uint16_t DEFAULT_UPDATE_RATE = 5;
+        static constexpr uint16_t DEFAULT_MQTT_UPDATE_RATE = 30;
 
-    // REGISTER_SENSOR_CLIENT(this) must be called in the constructor of the sensor
-    template <class T>
-    void registerClient(T sensor) {
-        MQTTClient::safeRegisterComponent(sensor);
-    }
+        using FormatType = MQTT::FormatType;
+        using SensorType = MQTT::SensorType;
 
-    // UNREGISTER_SENSOR_CLIENT(this) must be called in the destructor of the sensor
-    template <class T>
-    void unregisterClient(T sensor) {
-        MQTTClient::safeUnregisterComponent(sensor);
-    }
+        Sensor(SensorType type);
+        virtual ~Sensor();
 
-    virtual void onConnect(MQTTClient *client) override;
+        // REGISTER_SENSOR_CLIENT(this) must be called in the constructor of the sensor
+        template <class T>
+        void registerClient(T sensor) {
+            Client::registerComponent(sensor);
+        }
 
-    // using MQTT update rate
-    // client is valid and connected
-    virtual void publishState(MQTTClient *client) = 0;
-    // using update rate
-    virtual void getValues(JsonArray &json, bool timer) = 0;
+        // UNREGISTER_SENSOR_CLIENT(this) must be called in the destructor of the sensor
+        template <class T>
+        void unregisterClient(T sensor) {
+            MQTT::Client::unregisterComponent(sensor);
+        }
 
-    virtual void createWebUI(WebUIRoot &webUI, WebUIRow **row) = 0;
-    virtual void getStatus(Print &output) = 0;
+        virtual void onConnect() override;
 
-    virtual SensorType getType() const {
-        return SensorType::UNKNOWN;
-    }
+        // using MQTT update rate
+        // client is valid and connected
+        virtual void publishState() = 0;
+        // using update rate
+        virtual void getValues(JsonArray &json, bool timer) = 0;
+        // create webUI for sensor
+        virtual void createWebUI(WebUIRoot &webUI, WebUIRow **row) = 0;
+        // return status of the sensor for status.html
+        virtual void getStatus(Print &output) = 0;
 
-    virtual bool getSensorData(String &name, StringVector &values) {
-        return false;
-    }
+        virtual bool getSensorData(String &name, StringVector &values) {
+            return false;
+        }
 
-    virtual bool hasForm() const {
-        return false;
-    }
+        virtual bool hasForm() const {
+            return false;
+        }
 
-    virtual void createConfigureForm(AsyncWebServerRequest *request, FormUI::Form::BaseForm &form) {
-    }
+        virtual void createConfigureForm(AsyncWebServerRequest *request, FormUI::Form::BaseForm &form) {
+        }
 
-    virtual void configurationSaved(FormUI::Form::BaseForm *form) {
-    }
+        virtual void configurationSaved(FormUI::Form::BaseForm *form) {
+        }
 
-    virtual void reconfigure(PGM_P source) {
-    }
+        virtual void reconfigure(PGM_P source) {
+        }
 
-    virtual void shutdown() {
-    }
+        virtual void shutdown() {
+        }
 
-#if AT_MODE_SUPPORTED
-    virtual void atModeHelpGenerator() {
-    }
-    virtual bool atModeHandler(AtModeArgs &args) {
-        return false;
-    }
-#endif
+    #if AT_MODE_SUPPORTED
+        virtual void atModeHelpGenerator() {
+        }
+        virtual bool atModeHandler(AtModeArgs &args) {
+            return false;
+        }
+    #endif
 
-    void timerEvent(JsonArray *array, MQTTClient *client);
+        void timerEvent(JsonArray *array, bool mqttIsConnected);
 
-    void setUpdateRate(uint16_t updateRate) {
-        _updateRate = updateRate;
-        _nextUpdate = 0;
-    }
+        inline void setUpdateRate(uint16_t updateRate) {
+            _updateRate = updateRate;
+            _nextUpdate = 0;
+        }
 
-    void setMqttUpdateRate(uint16_t updateRate) {
-        _mqttUpdateRate = updateRate;
-        _nextMqttUpdate = 0;
-    }
+        inline void setMqttUpdateRate(uint16_t updateRate) {
+            _mqttUpdateRate = updateRate;
+            _nextMqttUpdate = 0;
+        }
 
-    void setNextMqttUpdate(uint16_t delay) {
-        _nextMqttUpdate = time(nullptr) + delay;
-    }
+        inline void setNextMqttUpdate(uint16_t delay) {
+            _nextMqttUpdate = time(nullptr) + delay;
+        }
 
-private:
-    uint16_t _updateRate;
-    uint16_t _mqttUpdateRate;
-    uint32_t _nextUpdate;
-    uint32_t _nextMqttUpdate;
-};
+        inline SensorType getType() const {
+            return _type;
+        }
+
+    private:
+        uint16_t _updateRate;
+        uint16_t _mqttUpdateRate;
+        uint32_t _nextUpdate;
+        uint32_t _nextMqttUpdate;
+        SensorType _type;
+    };
+
+    using SensorPtr = Sensor *;
+
+}

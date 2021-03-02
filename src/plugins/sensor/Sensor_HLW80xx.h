@@ -175,18 +175,18 @@
 class Sensor_HLW8012;
 class Sensor_HLW8032;
 
-class Sensor_HLW80xx : public MQTTSensor {
+class Sensor_HLW80xx : public MQTT::Sensor {
 public:
     using EnergyCounterArray = std::array<uint64_t, IOT_SENSOR_HLW80xx_NUM_ENERGY_COUNTERS>;
     using ConfigType = KFCConfigurationClasses::Plugins::SensorConfig::SensorConfig_t;
 
 public:
-    Sensor_HLW80xx(const String &name);
+    Sensor_HLW80xx(const String &name, MQTT::SensorType type);
 
-    virtual MQTT::AutoDiscovery::EntityPtr nextAutoDiscovery(MQTT::FormatType format, uint8_t num) override;
+    virtual MQTT::AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;
 
-    virtual void publishState(MQTTClient *client) override;
+    virtual void publishState() override;
     virtual void getValues(JsonArray &json, bool timer) override;
     virtual void createWebUI(WebUIRoot &webUI, WebUIRow **row) override;
 
@@ -236,14 +236,14 @@ protected:
 
     String _getTopic();
 
-    static bool _compareFuncHLW8012(MQTTSensor &sensor, Sensor_HLW8012 &) {
-        return sensor.getType() == MQTTSensor::SensorType::HLW8012;
+    static bool _compareFuncHLW8012(MQTT::Sensor &sensor, Sensor_HLW8012 &) {
+        return sensor.getType() == MQTT::SensorType::HLW8012;
     }
-    static bool _compareFuncHLW8032(MQTTSensor &sensor, Sensor_HLW8032 &) {
-        return sensor.getType() == MQTTSensor::SensorType::HLW8032;
+    static bool _compareFuncHLW8032(MQTT::Sensor &sensor, Sensor_HLW8032 &) {
+        return sensor.getType() == MQTT::SensorType::HLW8032;
     }
-    static bool _compareFunc(MQTTSensor &sensor, Sensor_HLW80xx &) {
-        return (sensor.getType() == MQTTSensor::SensorType::HLW8012 || sensor.getType() == MQTTSensor::SensorType::HLW8032);
+    static bool _compareFunc(MQTT::Sensor &sensor, Sensor_HLW80xx &) {
+        return (sensor.getType() == MQTT::SensorType::HLW8012 || sensor.getType() == MQTT::SensorType::HLW8032);
     }
 
     String _name;

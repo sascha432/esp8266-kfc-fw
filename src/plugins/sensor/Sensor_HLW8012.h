@@ -132,7 +132,6 @@ public:
     virtual ~Sensor_HLW8012();
 
     void getStatus(Print &output) override;
-    virtual MQTTSensorSensorType getType() const override;
     virtual String _getId(const __FlashStringHelper *type = nullptr);
 
     virtual void dump(Print &output) override;

@@ -26,7 +26,11 @@ extern "C" void ICACHE_RAM_ATTR Sensor_HLW8032_callbackPF()
 
 #endif
 
-Sensor_HLW8032::Sensor_HLW8032(const String &name, uint8_t pinRx, uint8_t pinTx, uint8_t pinPF) : Sensor_HLW80xx(name), _pinPF(pinPF), _serial(pinTx, pinRx), _lastData(0)
+Sensor_HLW8032::Sensor_HLW8032(const String &name, uint8_t pinRx, uint8_t pinTx, uint8_t pinPF) :
+    Sensor_HLW80xx(name, SensorType::HLW8032),
+    _pinPF(pinPF),
+    _serial(pinTx, pinRx),
+    _lastData(0)
 {
     REGISTER_SENSOR_CLIENT(this);
 
@@ -55,11 +59,6 @@ Sensor_HLW8032::~Sensor_HLW8032()
 void Sensor_HLW8032::getStatus(Print &output)
 {
     output.printf_P(PSTR("Power Monitor HLW8032" HTML_S(br)));
-}
-
-MQTTSensorSensorType Sensor_HLW8032::getType() const
-{
-    return MQTTSensorSensorType::HLW8032;
 }
 
 String Sensor_HLW8032::_getId(const __FlashStringHelper *type)

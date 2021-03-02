@@ -11,32 +11,92 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/HardwareSeria
 207a211
 > #endif
 diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.cpp ./framework-arduinoespressif8266/cores/esp8266/WString.cpp
-814a815,836
-> 
-> #ifdef HAVE_KFC_FIRMWARE_VERSION
-> 
-> String &String::trim(void) {
->     if (!buffer() || len() == 0)
->         return *this;
->     char *begin = wbuffer();
->     while (isspace(*begin))
->         begin++;
->     char *end = wbuffer() + len() - 1;
->     while (isspace(*end) && end >= begin)
->         end--;
->     unsigned int newlen = end + 1 - begin;
->     setLen(newlen);
->     if (begin > buffer())
->         memmove_P(wbuffer(), begin, newlen);
->     wbuffer()[newlen] = 0;
->     return *this;
+662,697d661
+< int String::lastIndexOf(char theChar) const {
+<     return lastIndexOf(theChar, len() - 1);
+< }
+< 
+< int String::lastIndexOf(char ch, unsigned int fromIndex) const {
+<     if (fromIndex >= len())
+<         return -1;
+<     char tempchar = buffer()[fromIndex + 1];
+<     wbuffer()[fromIndex + 1] = '\0';
+<     char* temp = strrchr(wbuffer(), ch);
+<     wbuffer()[fromIndex + 1] = tempchar;
+<     if (temp == NULL)
+<         return -1;
+<     return temp - buffer();
+< }
+< 
+< int String::lastIndexOf(const String &s2) const {
+<     return lastIndexOf(s2, len() - s2.len());
+< }
+< 
+< int String::lastIndexOf(const String &s2, unsigned int fromIndex) const {
+<     if (s2.len() == 0 || len() == 0 || s2.len() > len())
+<         return -1;
+<     if (fromIndex >= len())
+<         fromIndex = len() - 1;
+<     int found = -1;
+<     for (char *p = wbuffer(); p <= wbuffer() + fromIndex; p++) {
+<         p = strstr(p, s2.buffer());
+<         if (!p)
+<             break;
+<         if ((unsigned int) (p - wbuffer()) <= fromIndex)
+<             found = p - buffer();
+<     }
+<     return found;
+< }
+< 
+719a684,698
+> bool String::insert(size_t pos, const char *insert, size_t insertLen) {
+>     if (pos >= length()) {
+>         return false;
+>     }
+>     auto requiredLen = length() + insertLen;
+>     if (!reserve(requiredLen)) {
+>         return false;
+>     }
+>     setLen(requiredLen);
+>     memmove(wbuffer() + pos + insertLen, wbuffer() + pos, length() - pos + 1);
+>     memmove_P(wbuffer() + pos, insert, insertLen);
+>     return true;
 > }
 > 
-> #else
 > 
-829a852,853
+799c778
+< void String::toLowerCase(void) {
+---
+> String &String::toLowerCase(void) {
+801c780
+<         return;
+---
+>         return *this;
+804a784
+>     return *this;
+807c787
+< void String::toUpperCase(void) {
+---
+> String &String::toUpperCase(void) {
+809c789
+<         return;
+---
+>         return *this;
+812a793
+>     return *this;
+815c796,797
+< void String::trim(void) {
+---
 > 
-> #endif
+> String &String::trim(void) {
+817c799
+<         return;
+---
+>         return *this;
+828a811
+>     return *this;
+829a813
+> 
 diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./framework-arduinoespressif8266/cores/esp8266/WString.h
 30a31
 > 
@@ -95,8 +155,53 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 > #else
 219a266
 > #endif
-272a320,366
-> #ifdef HAVE_KFC_FIRMWARE_VERSION
+241,244c288,307
+<         int lastIndexOf(char ch) const;
+<         int lastIndexOf(char ch, unsigned int fromIndex) const;
+<         int lastIndexOf(const String &str) const;
+<         int lastIndexOf(const String &str, unsigned int fromIndex) const;
+---
+> 
+>         int indexOf(const char *str, unsigned int fromIndex = 0) const {
+>             return String_indexOf(*this, reinterpret_cast<const __FlashStringHelper *>(str), fromIndex);
+>         }
+>         int indexOf(const __FlashStringHelper *fstr, unsigned int fromIndex = 0) const {
+>             return String_indexOf(*this, fstr, fromIndex);
+>         }
+>         int lastIndexOf(char ch) const {
+>             return String_lastIndexOf(*this, ch);
+>         }
+>         int lastIndexOf(char ch, unsigned int fromIndex) const {
+>             return String_lastIndexOf(*this, ch, fromIndex);
+>         }
+>         int lastIndexOf(const String &str) const {
+>             return String_lastIndexOf(*this, str.c_str(), length() - str.length(), str.length());
+>         }
+>         int lastIndexOf(const String &str, unsigned int fromIndex) const {
+>             return String_lastIndexOf(*this, str.c_str(), fromIndex, str.length());
+>         }
+> 
+248d310
+<         ;
+250a313,323
+>         bool insert(size_t pos, const char *insert, size_t insertLen);
+>         inline bool insert(size_t pos, const char *str) {
+>             return insert(pos, str, strlen_P(str));
+>         }
+>         inline bool insert(size_t pos, const __FlashStringHelper *fstr) {
+>             return insert(pos, reinterpret_cast<PGM_P>(fstr), strlen_P(reinterpret_cast<PGM_P>(fstr)));
+>         }
+>         inline bool insert(size_t pos, const String &str) {
+>             return insert(pos, str.c_str(), str.length());
+>         }
+> 
+271,273c344,390
+<         void toLowerCase(void);
+<         void toUpperCase(void);
+<         void trim(void);
+---
+>         String &toLowerCase(void);
+>         String &toUpperCase(void);
 >         String &trim(void);
 >         String &rtrim() {
 >             String_rtrim(*this);
@@ -142,14 +247,11 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >             String_ltrim(*this, fchars);
 >             return *this;
 >         }
-> #else
-273a368
-> #endif
-278c373
+278c395
 < 	double toDouble(void) const;
 ---
 > 	    double toDouble(void) const;
-358a454,458
+358a476,480
 > 
 > #ifdef HAVE_KFC_FIRMWARE_VERSION
 > #include "KFCBaseLibrary/include/misc_string_inline.h"

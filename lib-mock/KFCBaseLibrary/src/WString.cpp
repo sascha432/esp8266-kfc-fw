@@ -161,7 +161,7 @@ String::String(const char ch) {
     assign(1, ch);
 }
 
-String::String(const char *str) {
+ String::String(const char *str) {
     if (str) {
         assign(str);
     }

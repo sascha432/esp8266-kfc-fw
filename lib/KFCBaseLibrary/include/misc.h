@@ -141,11 +141,6 @@ static inline bool str_endswith_P(const char *str, char ch) {
 #endif
 
 // compare two PROGMEM strings
-int strcmp_P_P(PGM_P str1, PGM_P str2);
-
-// compare two PROGMEM strings case insensitive
-int strcasecmp_P_P(PGM_P str1, PGM_P str2);
-
 int strcmp_end_P(const char *str1, size_t len1, PGM_P str2, size_t len2);
 inline int strcmp_end_P(const char *str1, size_t len1, PGM_P str2) {
     return strcmp_end_P(str1, len1, str2, strlen_P(str2));

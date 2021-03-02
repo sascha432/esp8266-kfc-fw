@@ -1,7 +1,11 @@
+/**
+  Author: sascha_lammers@gmx.de
+*/
+
 #pragma once
 
 #include <stdint.h>
-#include <strings.h>
+#include <string.h>
 #include <pgmspace.h>
 
 class String;
@@ -9,6 +13,179 @@ class __FlashStringHelper;
 #ifndef PGM_P
 #define PGM_P const char *
 #endif
+
+
+#if defined(_MSC_VER)
+inline void *memrchr(const void *s, int c, size_t n)
+{
+    const unsigned char *cp;
+    if (!n) {
+        return NULL;
+    }
+    cp = (unsigned char *)s + n;
+    do {
+        if (*(--cp) == (unsigned char)c) {
+            return (void *)cp;
+        }
+    } while (--n != 0);
+    return NULL;
+}
+inline void *memrchr_P(const void *s, int c, size_t n) {
+    return memrchr(s, c, n);
+}
+#endif
+
+inline char *strrstr(char *string, const char *find)
+{
+    if (!string || !find) {
+        return nullptr;
+    }
+    return __strrstr(string, strlen(string), find, strlen(find));
+}
+
+inline char *strrstr_P(char *string, const char *find)
+{
+    if (!string || !find) {
+        return nullptr;
+    }
+    return __strrstr_P(string, strlen(string), find, strlen_P(find));
+}
+
+inline const char *strrstr_P_P(const char *string, const char *find)
+{
+    if (!string || !find) {
+        return nullptr;
+    }
+    return __strrstr_P_P(string, strlen_P(string), find, strlen_P(find));
+}
+
+inline char *__strrstr(char *string, size_t stringLen, const char *find, size_t findLen)
+{
+	if (findLen > stringLen)
+		return nullptr;
+
+	for (auto ptr = string + stringLen - findLen; ptr >= string; ptr--) {
+		if (strncmp(ptr, find, findLen) == 0) {
+			return ptr;
+        }
+    }
+	return nullptr;
+}
+
+inline char *__strrstr_P(char *string, size_t stringLen, const char *find, size_t findLen)
+{
+	if (findLen > stringLen) {
+        return nullptr;
+    }
+
+	for (auto ptr = string + stringLen - findLen; ptr >= string; ptr--) {
+		if (strncmp_P(ptr, find, findLen) == 0) {
+			return ptr;
+        }
+    }
+	return nullptr;
+}
+
+inline const char *__strrstr_P_P(const char *string, size_t stringLen, const char *find, size_t findLen)
+{
+	if (findLen > stringLen) {
+        return nullptr;
+    }
+
+	for (auto ptr = string + stringLen - findLen; ptr >= string; ptr--) {
+		if (strncmp_P_P(ptr, find, findLen) == 0) {
+			return ptr;
+        }
+    }
+	return nullptr;
+}
+
+
+inline int String_indexOf(const String &str, const __FlashStringHelper *find, size_t fromIndex)
+{
+    if (!find) {
+        return -1;
+    }
+    auto ptr = str.c_str();
+    if (fromIndex >= str.length()) {
+        return -1;
+    }
+    auto idxPtr = strstr_P(ptr + fromIndex, reinterpret_cast<PGM_P>(find));
+    if (!idxPtr) {
+        return -1;
+
+    }
+    return idxPtr - ptr;
+}
+
+inline int String_lastIndexOf(const String &str, char find)
+{
+    auto ptr = strrchr(str.c_str(), find);
+    if (!ptr) {
+        return -1;
+    }
+    return ptr - str.c_str();
+}
+
+inline int String_lastIndexOf(const String &str, char find, size_t fromIndex)
+{
+    if (!find || fromIndex > str.length() || fromIndex < 1) {
+        return -1;
+    }
+    auto ptr = reinterpret_cast<const char *>(memrchr(str.c_str(), find, fromIndex));
+    if (!ptr) {
+        return -1;
+    }
+    return ptr - str.c_str();
+}
+
+inline int String_lastIndexOf(const String &str, const __FlashStringHelper *find)
+{
+    if (!find || !str.length()) {
+        return -1;
+    }
+    auto findLen = strlen_P(reinterpret_cast<PGM_P>(find));
+    if (!findLen) {
+        return -1;
+    }
+    auto ptr = __strrstr_P(const_cast<char *>(str.c_str()), str.length() - findLen, reinterpret_cast<PGM_P>(find), findLen);
+    if (!ptr) {
+        return -1;
+    }
+    return ptr - str.c_str();
+}
+
+inline int String_lastIndexOf(const String &str, const __FlashStringHelper *find, size_t fromIndex)
+{
+    if (!find) {
+        return -1;
+    }
+    return String_lastIndexOf(str, find, fromIndex, strlen_P(reinterpret_cast<PGM_P>(find)));
+}
+
+inline int String_lastIndexOf(const String &str, const __FlashStringHelper *find, size_t fromIndex, size_t findLen)
+{
+    if (!find || !findLen || !str.length()) {
+        return -1;
+    }
+    auto ptr = __strrstr_P(const_cast<char *>(str.c_str()), fromIndex + findLen, reinterpret_cast<PGM_P>(find), findLen);
+    if (!ptr) {
+        return -1;
+    }
+    return ptr - str.c_str();
+}
+
+inline int String_lastIndexOf(const String &str, const char *find, size_t fromIndex, size_t findLen)
+{
+    if (!find || !str.length()) {
+        return -1;
+    }
+    auto ptr = __strrstr(const_cast<char *>(str.c_str()), fromIndex + findLen, find, findLen);
+    if (!ptr) {
+        return -1;
+    }
+    return ptr - str.c_str();
+}
 
 inline size_t String_rtrim(String &str, const __FlashStringHelper *chars, size_t minLength)
 {

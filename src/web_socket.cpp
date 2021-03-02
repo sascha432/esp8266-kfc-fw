@@ -407,17 +407,9 @@ void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, AsyncWebSocke
     }
 }
 
-static AsyncWebSocketMessageBuffer *jsonToBuffer(AsyncWebSocket *server, const JsonUnnamedObject &json)
+AsyncWebSocketMessageBuffer *WsClient::jsonToBuffer(AsyncWebSocket *server, const JsonUnnamedObject &json)
 {
-#if 0
-    // JsonBuffer() is currently broken and might be less efficient than json.toString()
-    auto buffer = server->makeBuffer(json.length());
-    if (buffer) {
-        JsonBuffer(json).fillBuffer(buffer->get(), buffer->length());
-    }
-#else
-    // create json with toString() and move allocate block of memory
-    // might be more efficient than JsonBuffer
+    // more efficient than JsonBuffer
     String str = json.toString();
     size_t len = str.length();
     auto cStr = MoveStringHelper::move(std::move(str), nullptr);
@@ -425,8 +417,19 @@ static AsyncWebSocketMessageBuffer *jsonToBuffer(AsyncWebSocket *server, const J
         return nullptr;
     }
     __LDBG_NOP_free(cStr);
-    auto buffer = server->makeBuffer(reinterpret_cast<uint8_t *>(cStr), len, false);
-#endif
+    return server->makeBuffer(reinterpret_cast<uint8_t *>(cStr), len, false/* use cStr instead of allocating new memory and copying */);
+}
+
+AsyncWebSocketMessageBuffer *WsClient::utf8ToBuffer(AsyncWebSocket *server, const char *str, size_t length)
+{
+    size_t buflen = length;
+    stdex::conv::utf8::strlen<stdex::conv::utf8::DefaultReplacement>(str, buflen, length);
+    auto buffer = server->makeBuffer(buflen);
+    if (buffer) {
+        buffer->_len = buflen;
+        stdex::conv::utf8::strcpy<stdex::conv::utf8::DefaultReplacement>(reinterpret_cast<char *>(buffer->get()), str, buflen, length);
+        buffer->get()[buflen] = 0;
+    }
     return buffer;
 }
 
@@ -458,13 +461,8 @@ void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, const char *s
     if (!__get_server(server, sender)) {
         return;
     }
-    size_t buflen = length;
-    stdex::conv::utf8::strlen<stdex::conv::utf8::DefaultReplacement>(str, buflen, length);
-    auto buffer = server->makeBuffer(buflen);
+    auto buffer = utf8ToBuffer(server, str, length);
     if (buffer) {
-        buffer->_len = buflen;
-        stdex::conv::utf8::strcpy<stdex::conv::utf8::DefaultReplacement>(reinterpret_cast<char *>(buffer->get()), str, buflen, length);
-        buffer->get()[buflen] = 0;
         _broadcast(server, sender, buffer);
     }
 }
@@ -487,24 +485,17 @@ void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, co
         __LDBG_printf("no clients connected: server=%p client=%p message=%s", server, client, message.c_str());
         return;
     }
-    auto len = message.length();
-    if (len) {
-        WsClient::forsocket(server, client, [len, server, &message](AsyncWebSocketClient *socket) {
-            if (socket->canSend()) {
-                size_t buflen = len;
-                stdex::conv::utf8::strlen<stdex::conv::utf8::DefaultReplacement>(message.c_str(), buflen, len);
-                auto buffer = server->makeBuffer(buflen);
-                if (buffer) {
-                    stdex::conv::utf8::strcpy<stdex::conv::utf8::DefaultReplacement>(reinterpret_cast<char *>(buffer->get()), message.c_str(), buflen, len);
-                    buffer->get()[buflen] = 0;
-                    socket->text(buffer);
-                    if (can_yield()) {
-                        delay(WsClient::getQeueDelay());
-                    }
+    WsClient::forsocket(server, client, [server, &message](AsyncWebSocketClient *socket) {
+        if (socket->canSend()) {
+            auto buffer = utf8ToBuffer(server, message.c_str(), message.length());
+            if (buffer) {
+                socket->text(buffer);
+                if (can_yield()) {
+                    delay(WsClient::getQeueDelay());
                 }
             }
-        });
-    }
+        }
+    });
 }
 
 void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, const JsonUnnamedObject &json)

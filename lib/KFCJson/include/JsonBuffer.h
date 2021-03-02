@@ -55,10 +55,9 @@ class JsonObject;
 class JsonUnnamedArray;
 class JsonUnnamedObject;
 
+// TODO this does not create correct output in some cases
 class JsonBuffer {
 public:
-//    typedef int16_t Stack;      // save some RAM
-
     class Stack {
     public:
         Stack(AbstractJsonValue &object) {
@@ -82,25 +81,6 @@ public:
     private:
         int16_t _position;
     };
-//class Stack {
-//public:
-//    Stack(AbstractJsonValue &object) : _value(&object) {
-//            vectorPosition = object.hasName() ? -1 : 0;
-//    }
-//    inline AbstractJsonValue &value() {
-//        return *_value;
-//    }
-//    Stack &operator ++() {
-//        vectorPosition++;
-//        return *this;
-//    }
-//    inline int position() const {
-//        return vectorPosition;
-//    }
-//private:
-//    AbstractJsonValue *_value;
-//    int vectorPosition;
-//};
 
     typedef std::vector<JsonBuffer::Stack> JsonPrintStack;
 

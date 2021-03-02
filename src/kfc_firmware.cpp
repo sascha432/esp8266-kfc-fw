@@ -14,6 +14,7 @@
 #include "blink_led_timer.h"
 #include "at_mode.h"
 #include "serial_handler.h"
+#include "serial2udp.h"
 #include "reset_detector.h"
 #include "plugins.h"
 #include "WebUIAlerts.h"
@@ -88,6 +89,11 @@ void setup()
 #endif
     serialHandler.begin();
     DEBUG_HELPER_INIT();
+
+#if 0
+    #include "../include/retracted/custom_wifi.h"
+    Serial2Udp::initWiFi(F(CUSTOM_WIFI_SSID), F(CUSTOM_WIFI_PASSWORD), IPAddress(192, 168, 0, 3), 6577);
+#endif
 
 #if HAVE_PCF8574
         initialize_pcf8574();
@@ -375,7 +381,8 @@ void setup()
             });
         }
 
-    } else {
+    }
+    else {
 
 #if WEBUI_ALERTS_ENABLED && WEBUI_ALERTS_USE_MQTT
         WebAlerts::AbstractStorage::changeStorageToMQTT();

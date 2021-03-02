@@ -57,6 +57,7 @@
 - Upgrade to arduinoespressif8266 3.20704.0 including patch files for the platform
 - JSON schema support for MQTT light
 - Colored sub ranges for rangeslider.js
+- Class to send Serial output over UDP
 
 ## Version 0.0.3
 

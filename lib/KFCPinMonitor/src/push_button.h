@@ -164,12 +164,13 @@ namespace PinMonitor {
         // {
         // }
 
-        PushButtonConfig(EventType subscribedEvents = EventType::NONE, uint16_t clickTime = 250, uint16_t longpressTime = 600, uint16_t repeatTime = 100, uint16_t singleClickSteps = 15) :
+        PushButtonConfig(EventType subscribedEvents = EventType::NONE, uint16_t clickTime = 250, uint16_t longpressTime = 600, uint16_t repeatTime = 100, uint16_t singleClickSteps = 15, uint16_t singleClickTime = 750) :
             _subscribedEvents(subscribedEvents),
             _clickTime(clickTime),
             _singleClickSteps(singleClickSteps),
             _longpressTime(longpressTime),
-            _repeatTime(repeatTime)
+            _repeatTime(repeatTime),
+            _singleClickTime(singleClickTime)
         {
         }
 
@@ -187,6 +188,8 @@ namespace PinMonitor {
         uint16_t _longpressTime;
         // button held >= longpressTime, repeated event every _repeatTime milliseconds
         uint16_t _repeatTime;
+        // timeout for detecting single and repeated clkicks
+        uint16_t _singleClickTime;
     };
 
     class PushButton : public Pin, public PushButtonConfig {

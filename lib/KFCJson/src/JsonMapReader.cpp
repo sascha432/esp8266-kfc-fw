@@ -30,7 +30,7 @@ bool JsonMapReader::processElement() {
 void JsonMapReader::dump(Print &out) {
 	for (auto &element : _map) {
 		auto &var = element.second;
-		out.printf_P(PSTR("%s=%s (%s)\n"), element.first.c_str(), JsonVar::formatValue(var.getValue().c_str(), var.getType()).c_str(), jsonType2String(var.getType()).c_str());
+		out.printf_P(PSTR("%s=%s (%s)\n"), element.first.c_str(), JsonVar::formatValue(var.getValue().c_str(), var.getType()).c_str(), jsonType2String(var.getType()));
 	}
 }
 

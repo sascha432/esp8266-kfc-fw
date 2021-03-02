@@ -167,7 +167,7 @@ public:
 	}
 
 	// return type of JSON value as String
-	String jsonType2String(JsonType_t type);
+	const __FlashStringHelper * jsonType2String(JsonType_t type);
 
 	void error(const String &message, JsonErrorEnum_t type);
 	void clearLastError();

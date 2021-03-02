@@ -55,7 +55,7 @@ String Entity::getConfig2ndLevelWildcardTopic()
     return PrintString(F("%s/+/%s/+/config"), ClientConfig::getAutoDiscoveryPrefix(), System::Device::getName());
 }
 
-bool Entity::_create(ComponentType componentType, const String &name, FormatType format)
+bool Entity::_create(ComponentType componentType, const String &name, FormatType format, NameType platform)
 {
     String uniqueId;
 
@@ -91,13 +91,13 @@ bool Entity::_create(ComponentType componentType, const String &name, FormatType
     uniqueId = _getUnqiueId(name);
     if (componentType != ComponentType::DEVICE_AUTOMATION) {
         addParameter(FSPGM(name), name);
-        addParameter(F("platform"), FSPGM(mqtt));
+        addParameter(F("platform"), platform);
         if (format == FormatType::JSON) {
             addParameter(FSPGM(mqtt_unique_id), uniqueId);
         }
         addParameter(FSPGM(mqtt_availability_topic), MQTTClient::formatTopic(FSPGM(mqtt_status_topic)));
-        addParameter(FSPGM(mqtt_payload_available), 1);
-        addParameter(FSPGM(mqtt_payload_not_available), 0);
+        // addParameter(FSPGM(mqtt_payload_available), F("online"));
+        // addParameter(FSPGM(mqtt_payload_not_available), F("offline"));
     }
     if (_format == FormatType::JSON) {
         PrintString model;
@@ -132,14 +132,15 @@ bool Entity::_create(ComponentType componentType, const String &name, FormatType
     return true;
 }
 
-void Entity::__addParameter(NameType name, const char *str, bool list)
+void Entity::__addParameter(NameType name, const char *str, bool quotes)
 {
     if (_format == FormatType::TOPIC) {
         return;
     }
     else if (_format == FormatType::JSON) {
         _discovery.printf_P(PSTR("\"%s\":"), name);
-        if (!list) {
+        // bool isBool = strcmp_P_P(str, PSTR("true")) == 0 || strcmp_P_P(str, PSTR("false")) == 0;
+        if (quotes) {
             _discovery.print('"');
         }
         // _discovery.printf_P(PSTR("\"%s\":\""), name);
@@ -153,7 +154,7 @@ void Entity::__addParameter(NameType name, const char *str, bool list)
         }
 #endif
         _discovery.print(FPSTR(str));
-        if (!list) {
+        if (quotes) {
             _discovery.print('"');
         }
         _discovery.print(',');

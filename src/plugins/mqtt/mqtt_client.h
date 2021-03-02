@@ -552,6 +552,8 @@ public:
         // otherwise it returns -1 or the value of "invalid"
         // white spaces are stripped and the strings are case insensitive
         static int8_t toBool(const char *, int8_t invalid = -1);
+        static const __FlashStringHelper *toBoolStr(bool value);
+        static const __FlashStringHelper *toBoolOnOff(bool value);
 
         static QosType getDefaultQos(QosType qos = QosType::DEFAULT);
 
@@ -652,7 +654,7 @@ public:
         AsyncMqttClient *_client;
         Event::Timer _timer;
         uint16_t _port;
-        FixedString<1> _lastWillPayload;
+        FixedString<7> _lastWillPayload;
         AutoReconnectType _autoReconnectTimeout;
         ComponentVector _components;
         TopicVector _topics;
@@ -823,6 +825,19 @@ public:
     AutoDiscovery::QueuePtr &Client::getAutoDiscoveryQueue() {
         return _autoDiscoveryQueue;
     }
+
+    inline __attribute__((__always_inline__))
+    const __FlashStringHelper *Client::toBoolStr(bool value)
+    {
+        return value ? F("true") : F("false");
+    }
+
+    inline __attribute__((__always_inline__))
+    const __FlashStringHelper *Client::toBoolOnOff(bool value)
+    {
+        return value ? F("ON") : F("OFF");
+    }
+
 
 }
 

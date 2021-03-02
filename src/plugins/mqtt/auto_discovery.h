@@ -21,16 +21,41 @@ namespace MQTT {
             bool create(ComponentType componentType, const String &componentName, FormatType format);
 
         public:
-            inline void addParameter(NameType name, const char *value); // PROGMEM safe
-            inline void addParameter(NameType name, NameType value);
-            inline void addParameter(NameType name, const String &value);
-            inline void addParameter(NameType name, char value);
-            inline void addParameter(NameType name, int value);
-            inline void addParameter(NameType name, unsigned value);
-            inline void addParameter(NameType name, int64_t value);
-            inline void addParameter(NameType name, uint64_t value);
-            inline void addParameter(NameType name, float value);
-            inline void addParameter(NameType name, double value);
+            inline void addParameter(NameType name, const char *value) { // PROGMEM safe
+                __addParameter(name, value, true);
+            }
+
+            inline void addParameter(NameType name, NameType value) {
+                __addParameter(name, value, true);
+            }
+
+            inline void addParameter(NameType name, const String &value) {
+                __addParameter(name, value, true);
+            }
+
+            inline void addParameter(NameType name, char value) {
+                __addParameter(name, String(value), true);
+            }
+
+            inline void addParameter(NameType name, int value) {
+                __addParameter(name, String(value), false);
+            }
+
+            inline void addParameter(NameType name, double value) {
+                __addParameter(name, String(value), false);
+            }
+
+            template<typename _Ta, typename std::enable_if<!std::is_same<_Ta, bool>::value && std::is_arithmetic<_Ta>::value, int>::type = 0>
+            void addParameter(NameType name, _Ta value) {
+                PrintString str; // support for uint64_t
+                str.print(value);
+                __addParameter(name, static_cast<String &>(str), false);
+            }
+
+            template<typename _Ta, typename std::enable_if<std::is_same<_Ta, bool>::value, int>::type = 0>
+            void addParameter(NameType name, _Ta value) {
+                __addParameter(name, value ? PSTR("true") : PSTR("false"), false);
+            }
 
         public:
             template<typename _T>
@@ -97,7 +122,7 @@ namespace MQTT {
             // JSON array
             // ["Efect1","Effect2",...]
             void addEffectList(String json) {
-                __addParameter(FSPGM(mqtt_effect_list), json.c_str(), true);
+                __addParameter(FSPGM(mqtt_effect_list), json.c_str(), false);
             }
 
             template<typename _T>
@@ -140,8 +165,8 @@ namespace MQTT {
             }
 
             void addPayloadOnOff() {
-                addPayloadOn('1');
-                addPayloadOff('0');
+                addPayloadOn(1);
+                addPayloadOff(0);
             }
 
             template<typename _T>
@@ -151,6 +176,10 @@ namespace MQTT {
 
             void addAutomationType() {
                 addParameter(FSPGM(mqtt_automation_type), F("trigger"));
+            }
+
+            void addSchemaJson() {
+                addParameter(F("schema"), F("json"));
             }
 
             void addDeviceClass(NameType deviceClass) {
@@ -179,21 +208,18 @@ namespace MQTT {
             static String getConfig2ndLevelWildcardTopic();
 
         private:
-            void __addParameter(NameType name, const char *value, bool list = false); // PROGMEM safe
+            void __addParameter(NameType name, const char *value, bool quotes = true); // PROGMEM safe
 
-            inline void __addParameter(NameType name, NameType value);
-            inline void __addParameter(NameType name, const String &value);
-            inline void __addParameter(NameType name, char value);
+            inline void __addParameter(NameType name, NameType value, bool quotes = true) {
+                __addParameter(name, reinterpret_cast<const char *>(value), quotes);
+            }
 
-            template<typename _T>
-            void __addParameter(NameType name, _T value) {
-                PrintString str;
-                str.print(value);
-                addParameter(name, str);
+            inline void __addParameter(NameType name, const String &value, bool quotes = true) {
+                __addParameter(name, value.c_str(), quotes);
             }
 
         private:
-            bool _create(ComponentType componentType, const String &name, FormatType format);
+            bool _create(ComponentType componentType, const String &name, FormatType format, NameType platform = FSPGM(mqtt));
             const String _getUnqiueId(const String &name);
 
             FormatType _format;
@@ -203,68 +229,6 @@ namespace MQTT {
             String _baseTopic;
         #endif
         };
-
-
-        inline void Entity::addParameter(NameType name, const char *value)
-        {
-            __addParameter(name, value);
-        }
-
-        inline void Entity::addParameter(NameType name, int value)
-        {
-            __addParameter(name, value);
-        }
-
-        inline void Entity::addParameter(NameType name, unsigned value)
-        {
-            __addParameter(name, value);
-        }
-
-        inline void Entity::addParameter(NameType name, int64_t value)
-        {
-            __addParameter(name, value);
-        }
-
-        inline void Entity::addParameter(NameType name, uint64_t value)
-        {
-            __addParameter(name, value);
-        }
-
-        inline void Entity::addParameter(NameType name, float value)
-        {
-            __addParameter(name, static_cast<double>(value));
-        }
-
-        inline void Entity::addParameter(NameType name, double value)
-        {
-            __addParameter(name, value);
-        }
-
-        inline void Entity::addParameter(NameType name, char value)
-        {
-            __addParameter(name, value);
-        }
-
-        inline void Entity::addParameter(NameType name, NameType value)
-        {
-            __addParameter(name, RFPSTR(value));
-        }
-
-        inline void Entity::addParameter(NameType name, const String &value)
-        {
-            __addParameter(name, value);
-        }
-
-        inline void Entity::__addParameter(NameType name, char value)
-        {
-            char str[2] = { value, 0 };
-            __addParameter(name, str);
-        }
-
-        inline void Entity::__addParameter(NameType name, const String &value)
-        {
-            __addParameter(name, value.c_str());
-        }
 
         inline String &Entity::getPayload()
         {

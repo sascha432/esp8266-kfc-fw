@@ -94,7 +94,7 @@ bool JsonBaseReader::recoverableError(JsonErrorEnum_t errorType)
     return true;
 }
 
-String JsonBaseReader::jsonType2String(JsonType_t type)
+const __FlashStringHelper *JsonBaseReader::jsonType2String(JsonType_t type)
 {
 	switch (type) {
 	case JSON_TYPE_BOOLEAN:

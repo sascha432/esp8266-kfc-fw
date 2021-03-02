@@ -20,7 +20,9 @@
 #include <debug_helper_disable.h>
 #endif
 
-Dimmer_Base::Dimmer_Base() :
+using namespace Dimmer;
+
+Base::Base() :
 #if IOT_DIMMER_MODULE_INTERFACE_UART
     _wire(Serial)
 #else
@@ -29,7 +31,7 @@ Dimmer_Base::Dimmer_Base() :
 {
 }
 
-void Dimmer_Base::_begin()
+void Base::_begin()
 {
     // MQTTClient::safeRegisterComponent(this);
 
@@ -45,7 +47,7 @@ void Dimmer_Base::_begin()
     // delay between request and response is ~25ms + ~450us per raw byte
     _wire.setTimeout(500);
     _wire.begin(DIMMER_I2C_MASTER_ADDRESS);
-    _wire.onReceive(Dimmer_Base::onReceive);
+    _wire.onReceive(Base::onReceive);
 #else
 #endif
 
@@ -61,7 +63,7 @@ void Dimmer_Base::_begin()
 #endif
 }
 
-void Dimmer_Base::_end()
+void Base::_end()
 {
     // MQTTClient::safeUnregisterComponent(this);
 
@@ -86,7 +88,7 @@ void Dimmer_Base::_end()
 // configuration and I2C handling
 // ------------------------------------------------------------------------
 
-void Dimmer_Base::_updateConfig(ConfigType &config, Dimmer::ConfigReaderWriter &reader, bool status)
+void Base::_updateConfig(ConfigType &config, Dimmer::ConfigReaderWriter &reader, bool status)
 {
     if (status) {
         config.version = reader.config().version;
@@ -113,25 +115,25 @@ void Dimmer_Base::_updateConfig(ConfigType &config, Dimmer::ConfigReaderWriter &
 
 #if IOT_DIMMER_MODULE_INTERFACE_UART
 
-void Dimmer_Base::onData(Stream &client)
+void Base::onData(Stream &client)
 {
     while(client.available()) {
         dimmer_plugin._wire.feed(client.read());
     }
 }
 
-void Dimmer_Base::onReceive(int length)
+void Base::onReceive(int length)
 {
     dimmer_plugin._onReceive(length);
 }
 
-void Dimmer_Base::_onReceive(size_t length)
+void Base::_onReceive(size_t length)
 {
     auto type = _wire.read();
 #ifdef DIMMER_EVENT_RESTART
     if (type == DIMMER_EVENT_RESTART) {
-        auto reader = std::shared_ptr<Dimmer::ConfigReaderWriter>(new Dimmer::ConfigReaderWriter(_wire, DIMMER_I2C_ADDRESS));
-        reader->readConfig(10, 500, [this, reader](Dimmer::ConfigReaderWriter &config, bool status) {
+        auto reader = std::shared_ptr<ConfigReaderWriter>(new ConfigReaderWriter(_wire, DIMMER_I2C_ADDRESS));
+        reader->readConfig(10, 500, [this, reader](ConfigReaderWriter &config, bool status) {
             if (status) {
                 _config.version = config.config().version;
                 _config.cfg = config.config().config;
@@ -157,14 +159,14 @@ void Dimmer_Base::_onReceive(size_t length)
 
 #else
 
-void Dimmer_Base::fetchMetrics(Event::CallbackTimerPtr timer)
+void Base::fetchMetrics(Event::CallbackTimerPtr timer)
 {
     timer->updateInterval(Event::milliseconds(METRICS_DEFAULT_UPDATE_RATE));
-    // using dimmer_plugin avoids adding extra static variable to Dimmer_Base
+    // using dimmer_plugin avoids adding extra static variable to Base
     dimmer_plugin._fetchMetrics();
 }
 
-void Dimmer_Base::_fetchMetrics()
+void Base::_fetchMetrics()
 {
     auto metrics = _wire.getMetrics();
     if (metrics) {
@@ -174,7 +176,7 @@ void Dimmer_Base::_fetchMetrics()
 
 #endif
 
-void Dimmer_Base::_readConfig(ConfigType &config)
+void Base::_readConfig(ConfigType &config)
 {
     auto reader = _wire.getConfigReader();
     _updateConfig(config, reader, reader.readConfig(5, 100));
@@ -184,7 +186,7 @@ void Dimmer_Base::_readConfig(ConfigType &config)
     }
 }
 
-void Dimmer_Base::_writeConfig(ConfigType &config)
+void Base::_writeConfig(ConfigType &config)
 {
     if (!config.version) {
         WebAlerts::Alert::error(F("Cannot store invalid firmware configuration"), WebAlerts::ExpiresType::REBOOT);
@@ -203,7 +205,7 @@ void Dimmer_Base::_writeConfig(ConfigType &config)
 }
 
 
-void Dimmer_Base::_fade(uint8_t channel, int16_t toLevel, float fadeTime)
+void Base::_fade(uint8_t channel, int16_t toLevel, float fadeTime)
 {
     __LDBG_printf("channel=%u toLevel=%u fadeTime=%f", channel, toLevel, fadeTime);
 
@@ -224,7 +226,7 @@ void Base::_setDimmingLevels()
     }
     level = level / (float)(IOT_DIMMER_MODULE_MAX_BRIGHTNESS * getChannelCount());
     for(auto sensor: SensorPlugin::getSensors()) {
-        if (sensor->getType() == MQTTSensor::SensorType::HLW8012 || sensor->getType() == MQTTSensor::SensorType::HLW8032) {
+        if (sensor->getType() == MQTT::SensorType::HLW8012 || sensor->getType() == MQTT::SensorType::HLW8032) {
             reinterpret_cast<Sensor_HLW80xx *>(sensor)->setDimmingLevel(level);
         }
     }
@@ -236,22 +238,22 @@ void Base::_setDimmingLevels()
 // status information
 // ------------------------------------------------------------------------
 
-void Dimmer_Base::_printStatus(Print &output)
+void Base::_printStatus(Print &output)
 {
     auto &out = static_cast<PrintHtmlEntitiesString &>(output);
     bool written = false;
-    if (Dimmer::isValidTemperature(_metrics.metrics.int_temp)) {
+    if (isValidTemperature(_metrics.metrics.int_temp)) {
         out.printf_P(PSTR("Internal temperature %.1f" PRINTHTMLENTITIES_DEGREE "C"), static_cast<float>(_metrics.metrics.int_temp));
         written = true;
     }
-    if (Dimmer::isValidTemperature(_metrics.metrics.ntc_temp)) {
+    if (isValidTemperature(_metrics.metrics.ntc_temp)) {
         if (written) {
             out.print(F(", "));
         }
         written = true;
         out.printf_P(PSTR("NTC %.2f" PRINTHTMLENTITIES_DEGREE "C"), _metrics.metrics.ntc_temp);
     }
-    if (Dimmer::isValidVoltage(_metrics.metrics.vcc)) {
+    if (isValidVoltage(_metrics.metrics.vcc)) {
         if (written) {
             out.print(F(", "));
         }
@@ -268,7 +270,7 @@ void Dimmer_Base::_printStatus(Print &output)
     }
 }
 
-void Dimmer_Base::_updateMetrics(const MetricsType &metrics)
+void Base::_updateMetrics(const MetricsType &metrics)
 {
     auto sensor = getMetricsSensor();
     if (sensor) {
@@ -276,28 +278,28 @@ void Dimmer_Base::_updateMetrics(const MetricsType &metrics)
     }
 }
 
-void Dimmer_Base::_forceMetricsUpdate(uint8_t delay)
+void Base::_forceMetricsUpdate(uint8_t delay)
 {
 #if IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032
     for(auto sensor: SensorPlugin::getSensors()) {
-        if (sensor->getType() == MQTTSensor::SensorType::HLW8012 || sensor->getType() == MQTTSensor::SensorType::HLW8032) {
+        if (sensor->getType() == MQTT::SensorType::HLW8012 || sensor->getType() == MQTT::SensorType::HLW8032) {
             reinterpret_cast<Sensor_HLW80xx *>(sensor)->setNextMqttUpdate(delay);
         }
     }
 #endif
 }
 
-Sensor_DimmerMetrics *Dimmer_Base::getMetricsSensor() const
+Sensor_DimmerMetrics *Base::getMetricsSensor() const
 {
     for(auto sensor: SensorPlugin::getSensors()) {
-        if (sensor->getType() == MQTTSensor::SensorType::DIMMER_METRICS) {
+        if (sensor->getType() == MQTT::SensorType::DIMMER_METRICS) {
             return reinterpret_cast<Sensor_DimmerMetrics *>(sensor);
         }
     }
     return nullptr;
 }
 
-float Dimmer_Base::getTransitionTime(int fromLevel, int toLevel, float transitionTimeOverride)
+float Base::getTransitionTime(int fromLevel, int toLevel, float transitionTimeOverride)
 {
     if (!isnan(transitionTimeOverride)) {
         auto time = transitionTimeOverride / (abs(fromLevel - toLevel) / (float)DIMMER_MAX_LEVEL); // calculate how much time it takes to dim from 0-100%
@@ -321,7 +323,7 @@ float Dimmer_Base::getTransitionTime(int fromLevel, int toLevel, float transitio
 // WebUI/MQTT
 // ------------------------------------------------------------------------
 
-void Dimmer_Base::_getValues(JsonArray &array)
+void Base::_getValues(JsonArray &array)
 {
     __LDBG_println();
     JsonUnnamedObject *obj;
@@ -345,7 +347,7 @@ void Dimmer_Base::_getValues(JsonArray &array)
     obj->add(JJ(state), true);
 }
 
-void Dimmer_Base::_setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
+void Base::_setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
 {
     __LDBG_printf("id=%s", id.c_str());
 
@@ -390,13 +392,13 @@ void Dimmer_Base::_setValue(const String &id, const String &value, bool hasValue
 // web server and AT mode
 // ------------------------------------------------------------------------
 
-void Dimmer_Base::setupWebServer()
+void Base::setupWebServer()
 {
     __LDBG_printf("server=%p", WebServerPlugin::getWebServerObject());
-    WebServerPlugin::addHandler(F("/dimmer-reset-fw"), Dimmer_Base::handleWebServer);
+    WebServerPlugin::addHandler(F("/dimmer-reset-fw"), Base::handleWebServer);
 }
 
-void Dimmer_Base::handleWebServer(AsyncWebServerRequest *request)
+void Base::handleWebServer(AsyncWebServerRequest *request)
 {
     if (WebServerPlugin::getInstance().isAuthenticated(request) == true) {
         resetDimmerMCU();
@@ -410,7 +412,7 @@ void Dimmer_Base::handleWebServer(AsyncWebServerRequest *request)
     }
 }
 
-void Dimmer_Base::resetDimmerMCU()
+void Base::resetDimmerMCU()
 {
     digitalWrite(STK500V1_RESET_PIN, LOW);
     pinMode(STK500V1_RESET_PIN, OUTPUT);
@@ -428,7 +430,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DIMS, "DIMS", "<channel>,<level>[,<time>]"
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIMW, "DIMW", "Write EEPROM");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIMR, "DIMR", "Reset ATmega");
 
-void Dimmer_Base::_atModeHelpGenerator(PGM_P name)
+void Base::_atModeHelpGenerator(PGM_P name)
 {
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DIMG), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DIMS), name);
@@ -436,7 +438,7 @@ void Dimmer_Base::_atModeHelpGenerator(PGM_P name)
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DIMR), name);
 }
 
-bool Dimmer_Base::_atModeHandler(AtModeArgs &args, const Dimmer_Base &dimmer, int32_t maxLevel)
+bool Base::_atModeHandler(AtModeArgs &args, const Base &dimmer, int32_t maxLevel)
 {
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DIMW))) {
         _wire.writeEEPROM();

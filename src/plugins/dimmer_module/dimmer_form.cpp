@@ -2,11 +2,8 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if IOT_ATOMIC_SUN_V2
-#include "../src/plugins/atomic_sun/atomic_sun_v2.h"
-#else
-#include "dimmer_plugin.h"
-#endif
+#include "dimmer_base.h"
+#include "dimmer_form.h"
 
 #if DEBUG_IOT_DIMMER_MODULE
 #include <debug_helper_enable.h>
@@ -14,7 +11,9 @@
 #include <debug_helper_disable.h>
 #endif
 
-void DimmerModuleForm::_createConfigureForm(PluginComponent::FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form)
+using Plugins = KFCConfigurationClasses::Plugins;
+
+void Dimmer::Form::_createConfigureForm(PluginComponent::FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form)
 {
     if (type == PluginComponent::FormCallbackType::SAVE) {
         if (formName == F("advanced") || formName == F("general")) {

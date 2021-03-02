@@ -6,7 +6,7 @@
 
 #include  <Arduino_compat.h>
 #include "dimmer_def.h"
-#include "DimmerTwoWireEx.h"
+#include "dimmer_twowire.h"
 
 #ifndef DIMMER_FIRMWARE_VERSION
 #define DIMMER_FIRMWARE_VERSION                     0x020200

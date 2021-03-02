@@ -14,7 +14,9 @@
 #include <debug_helper_disable.h>
 #endif
 
-DimmerChannel::DimmerChannel(Driver_DimmerModule *dimmer, uint8_t channel) :
+using namespace Dimmer;
+
+Channel::Channel(Module *dimmer, uint8_t channel) :
     MQTTComponent(ComponentType::LIGHT),
     _dimmer(dimmer),
     _publishLastTime(0),
@@ -30,12 +32,9 @@ DimmerChannel::DimmerChannel(Driver_DimmerModule *dimmer, uint8_t channel) :
 
 
 
-MQTTComponent::MQTTAutoDiscoveryPtr DimmerChannel::nextAutoDiscovery(MQTT::FormatType format, uint8_t num)
+MQTT::AutoDiscovery::EntityPtr Channel::getAutoDiscovery(MQTT::FormatType format, uint8_t num)
 {
-    if (num > 0) {
-        return nullptr;
-    }
-    auto discovery = __LDBG_new(MQTTAutoDiscovery);
+    auto discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
     switch(num) {
         case 0:
             discovery->create(this, PrintString(FSPGM(channel__u), _channel), format);
@@ -46,16 +45,15 @@ MQTTComponent::MQTTAutoDiscoveryPtr DimmerChannel::nextAutoDiscovery(MQTT::Forma
             discovery->addParameter(F("brightness"), true);
             break;
     }
-    discovery->finalize();
     return discovery;
 }
 
-uint8_t DimmerChannel::getAutoDiscoveryCount() const
+uint8_t Channel::getAutoDiscoveryCount() const
 {
     return 1;
 }
 
-String DimmerChannel::_createTopics(TopicType type, bool full) const
+String Channel::_createTopics(TopicType type, bool full) const
 {
 #if IOT_DIMMER_MODULE_CHANNELS > 1
     String value = PrintString(FSPGM(channel__u), _channel);
@@ -82,23 +80,23 @@ String DimmerChannel::_createTopics(TopicType type, bool full) const
     return String();
 }
 
-void DimmerChannel::onConnect(MQTTClient *client)
+void Channel::onConnect()
 {
-    client->subscribe(this, _createTopics(TopicType::COMMAND_SET));
+    client().subscribe(this, _createTopics(TopicType::COMMAND_SET));
     _publishLastTime = 0;
     _publishTimer.remove();
     publishState();
 }
 
-void DimmerChannel::onMessage(MQTTClient *client, char *topic, char *payload, size_t len)
+void Channel::onMessage(const char *topic, const char *payload, size_t len)
 {
     if (strcmp_end_P(topic, _topic.c_str())) {
         return;
     }
     auto stream = HeapStream(payload, len);
-    auto reader = MQTT::JsonReader(&stream);
+    auto reader = MQTT::Json::Reader(&stream);
     if (reader.parse()) {
-        onMessage(client, reader);
+        onJsonMessage(reader);
     }
     else {
         __DBG_printf("parsing json failed=%s payload=%s", reader.getLastErrorMessage().c_str(), payload);
@@ -106,27 +104,27 @@ void DimmerChannel::onMessage(MQTTClient *client, char *topic, char *payload, si
 
 }
 
-void DimmerChannel::onMessage(MQTTClient *client, const MQTT::JsonReader &json)
+void Channel::onJsonMessage(const MQTT::Json::Reader &json)
 {
-    if (json._state != -1) {
-        if (json._state && !_brightness) {
+    if (json.state != -1) {
+        if (json.state && !_brightness) {
             on();
         }
-        else if (!json._state && _brightness) {
+        else if (!json.state && _brightness) {
             off();
         }
     }
-    if (json._brightness != -1) {
-        if (json._brightness == 0 && _brightness) {
+    if (json.brightness != -1) {
+        if (json.brightness == 0 && _brightness) {
             off();
         }
-        else if (json._brightness) {
-            _set(json._brightness);
+        else if (json.brightness) {
+            _set(json.brightness);
         }
     }
 }
 
-bool DimmerChannel::on(float transition)
+bool Channel::on(float transition)
 {
 // #if IOT_DIMMER_MODULE_HAS_BUTTONS
 //     // returns -1 for abort with false, 1 for abort with true and 0 for continue
@@ -141,7 +139,7 @@ bool DimmerChannel::on(float transition)
     return false;
 }
 
-bool DimmerChannel::off(ConfigType *config, float transition, int32_t level)
+bool Channel::off(ConfigType *config, float transition, int32_t level)
 {
 // #if IOT_DIMMER_MODULE_HAS_BUTTONS
 //     // returns -1 for abort with false, 1 for abort with true and 0 for continue
@@ -156,7 +154,7 @@ bool DimmerChannel::off(ConfigType *config, float transition, int32_t level)
     return false;
 }
 
-void DimmerChannel::setLevel(int32_t level, float transition)
+void Channel::setLevel(int32_t level, float transition)
 {
 // #if IOT_DIMMER_MODULE_HAS_BUTTONS
 //     _offDelayPrecheck(level, nullptr);
@@ -170,7 +168,7 @@ void DimmerChannel::setLevel(int32_t level, float transition)
     }
 }
 
-bool DimmerChannel::_set(int32_t level, float transition)
+bool Channel::_set(int32_t level, float transition)
 {
     if (level == 0) {
         if (_brightness != 0) {
@@ -197,7 +195,7 @@ bool DimmerChannel::_set(int32_t level, float transition)
 
 #if IOT_DIMMER_MODULE_HAS_BUTTONS
 
-int DimmerChannel::_offDelayPrecheck(int16_t level, ConfigType *config, int16_t storeLevel)
+int Channel::_offDelayPrecheck(int16_t level, ConfigType *config, int16_t storeLevel)
 {
     __LDBG_printf("timer=%p level=%d config=%p store=%d", _delayTimer, level, config, storeLevel);
     if (_delayTimer) {
@@ -267,12 +265,15 @@ int DimmerChannel::_offDelayPrecheck(int16_t level, ConfigType *config, int16_t 
 }
 
 
-void DimmerChannel::_publishMQTT()
+void Channel::_publishMQTT()
 {
-    MQTTClient::safePublish(_createTopics(TopicType::COMMAND_STATE), true, PrintString(F("{\"state\":\"%s\",\"brightness\":%u,\"transition\":%.2f}"), MQTTClient::toBoolOnOff(_brightness), _brightness, _dimmer->_getConfig().lp_fadetime));
+    using namespace MQTT::Json;
+
+    auto payload = Writer(State(_brightness != 0), Brightness(_brightness), Transition(_dimmer->_getConfig().lp_fadetime, Transition::TRIMMED(2))).toString();
+    MQTT::Client::safePublish(_createTopics(TopicType::COMMAND_STATE), true, payload);
 }
 
-void DimmerChannel::_publishWebUI()
+void Channel::_publishWebUI()
 {
     if (WebUISocket::hasAuthenticatedClients()) {
     //     F("{\"type\":\"ue\",\"events\":[{\"id\":\"d_chan%u\",\"value\":%d,\"state\":true},{\"id\":\"group-switch-0\",\"value\":%u,\"state\":true}]}"),
@@ -280,24 +281,19 @@ void DimmerChannel::_publishWebUI()
         auto json = PrintString(F("{\"type\":\"ue\",\"events\":[{\"id\":\"d_chan%u\",\"value\":%u,\"state\":true,\"group\":%u}]}"),
             _channel, _brightness, _dimmer->isAnyOn()
         );
-
-        __DBG_printf("%s", json.c_str());
-
-         WsClient::broadcast(WebUISocket::getServerSocket(), WebUISocket::getSender(), json.c_str(), json.length());
-        // WebUISocket::broadcast(WebUISocket::getSender(), json);
+        WebUISocket::broadcast(WebUISocket::getSender(), json);
     }
-
 }
 
-void DimmerChannel::_publish()
+void Channel::_publish()
 {
-    __DBG_printf("publish");
+    __DBG_printf("publish channel=%u", _channel);
     _publishMQTT();
     _publishWebUI();
     _publishLastTime = millis();
 }
 
-void DimmerChannel::publishState()
+void Channel::publishState()
 {
     if (_publishTimer) {
         __DBG_printf("timer running");

@@ -21,9 +21,9 @@ namespace Dimmer {
     class ConfigReaderWriter;
     using ConfigReaderWriterPtr = std::unique_ptr<ConfigReaderWriter>;
 
-    class TwoWire : public DimmerTwoWireEx {
+    class TwoWire : public TwoWireEx {
     public:
-        using DimmerTwoWireEx::DimmerTwoWireEx;
+        using TwoWireEx::TwoWireEx;
 
         void fadeTo(uint8_t channel, int16_t fromLevel, int16_t toLevel, float fadeTime, uint8_t address = kDefaultSlaveAddress) {
             if (lock()) {

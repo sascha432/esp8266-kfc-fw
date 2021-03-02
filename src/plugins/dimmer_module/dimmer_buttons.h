@@ -8,43 +8,48 @@
 #include "dimmer_channel.h"
 
 //
-// DimmerButtons -> DimmerButtonsImpl/DimmerNoButtonsImpl -> Dimmer_Base
+// Dimmer::Buttons -> Dimmer::ButtonsImpl/Dimmer::NoButtonsImpl -> Dimmer::Base
 //
 
+namespace Dimmer {
 
-// ------------------------------------------------------------------------
-// DimmerNoButtonsImpl
-// ------------------------------------------------------------------------
+    // ------------------------------------------------------------------------
+    // DimmerNoButtonsImpl
+    // ------------------------------------------------------------------------
 
-class DimmerNoButtonsImpl : public Dimmer_Base {
-public:
-    using Dimmer_Base::Dimmer_Base;
+    class NoButtonsImpl : public Base {
+    public:
+        using Base::Base;
 
-    void _beginButtons() {}
-    void _endButtons() {}
+        void _begin() {}
+        void _end() {}
 
-protected:
-    std::array<DimmerChannel, IOT_DIMMER_MODULE_CHANNELS> _channels;
-};
+    protected:
+        std::array<Channel, IOT_DIMMER_MODULE_CHANNELS> _channels;
+    };
 
-#if IOT_DIMMER_MODULE_HAS_BUTTONS
+    #if IOT_DIMMER_MODULE_HAS_BUTTONS
 
-// ------------------------------------------------------------------------
-// DimmerButtonsImpl
-// ------------------------------------------------------------------------
+    // ------------------------------------------------------------------------
+    // DimmerButtonsImpl
+    // ------------------------------------------------------------------------
 
-class DimmerButtonsImpl : public Dimmer_Base {
-public:
-    using Dimmer_Base::Dimmer_Base;
-    using DimmerChannelsArray = std::array<DimmerChannel, IOT_DIMMER_MODULE_CHANNELS>;
+    class ButtonsImpl : public Base {
+    public:
+        using Base::Base;
+        using ChannelsArray = std::array<Channel, IOT_DIMMER_MODULE_CHANNELS>;
 
-    void _beginButtons();
-    void _endButtons();
+        // ButtonsImpl();
 
-protected:
-    friend DimmerButton;
+        void _begin();
+        void _end();
 
-    DimmerChannelsArray _channels;
-};
+    protected:
+        friend Button;
 
-#endif
+        ChannelsArray _channels;
+    };
+
+    #endif
+
+}

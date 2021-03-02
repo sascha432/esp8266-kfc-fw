@@ -184,7 +184,8 @@ bool WebServerPlugin::_isPublic(const String &pathString) const
     auto path = pathString.c_str();
     if (strstr_P(path, PSTR(".."))) {
         return false;
-    } else if (*path++ == '/') {
+    }
+    else if (*path++ == '/') {
         return (
             !strcmp_P(path, SPGM(description_xml)) ||
             !strncmp_P(path, PSTR("css/"), 4) ||
@@ -600,21 +601,21 @@ void WebServerPlugin::handlerUploadUpdate(AsyncWebServerRequest *request, String
             uint8_t command;
             uint8_t imageType = 0;
 
-            if (String_equals(request->arg(FSPGM(image_type)), PSTR("u_flash"))) { // firmware selected
+            if (request->arg(FSPGM(image_type)) == F("u_flash")) { // firmware selected
                 imageType = 0;
             }
-            else if (String_equals(request->arg(FSPGM(image_type)), PSTR("u_spiffs"))) { // spiffs selected
+            else if (request->arg(FSPGM(image_type)) == F("u_spiffs")) { // spiffs selected
                 imageType = 1;
             }
 #if STK500V1
-            else if (String_equals(request->arg(FSPGM(image_type)), PSTR("u_atmega"))) { // atmega selected
+            else if (request->arg(FSPGM(image_type)) == F("u_atmega")) { // atmega selected
                 imageType = 3;
             }
-            else if (strstr_P(filename.c_str(), PSTR(".hex"))) { // auto select
+            else if (filename.indexOf(F(".hex")) != -1) { // auto select
                 imageType = 3;
             }
 #endif
-            else if (strstr_P(filename.c_str(), PSTR("spiffs"))) { // auto select
+            else if (filename.indexOf(F("spiffs")) != -1) { // auto select
                 imageType = 2;
             }
 

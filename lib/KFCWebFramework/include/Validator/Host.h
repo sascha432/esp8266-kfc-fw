@@ -45,9 +45,8 @@ namespace FormUI {
                     if (EnumHelper::Bitset::has(_allowedTypes, AllowedType::EMPTY) && tmpStr.length() == 0) {
                         return true;
                     }
-                    const char *str = tmpStr.c_str();
                     if (EnumHelper::Bitset::has(_allowedTypes, AllowedType::ZEROCONF)) {
-                        if (strstr_P(str, SPGM(_var_zeroconf))) { //TODO parse and validate zeroconf
+                        if (tmpStr.indexOf(FSPGM(_var_zeroconf)) != -1) { //TODO parse and validate zeroconf
                             return true;
                         }
                     }
@@ -58,6 +57,7 @@ namespace FormUI {
                         }
                     }
                     if (EnumHelper::Bitset::has(_allowedTypes, AllowedType::HOSTNAME)) {
+                        const char *str = tmpStr.c_str();
                         while(*str) {
                             if (!(isalnum(*str) || *str == '_' || *str == '-' || *str == '.')) {
                                 return false;

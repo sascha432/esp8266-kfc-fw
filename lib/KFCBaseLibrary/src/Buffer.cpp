@@ -59,8 +59,8 @@ char *MoveStringHelper::move(String &&_str, int *allocSize)
 #else
     // move not implemented
     _allocSize = (str.length() + (1 << 3)) & ~0x03;
-    buf = new char[_allocSize]();
-    std::copy_n(_str.c_str() _str.length(), buf);
+    buf = new char[_allocSize];
+    std::fill(std::copy_n(_str.c_str(), _str.length(), buf), buf + _allocSize, 0);
     _str = String();
 #endif
     if (allocSize) {

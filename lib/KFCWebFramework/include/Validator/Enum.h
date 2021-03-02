@@ -45,7 +45,7 @@ namespace FormUI {
             virtual String getMessage() override
             {
                 String message = BaseValidator::getMessage();
-                if (strstr_P(message.c_str(), PSTR("%allowed%"))) {
+                if (message.indexOf(F("%allowed%")) != -1) {
                     String allowed = String('[');
                     auto last = _values.size();
                     for(auto value: _values) {

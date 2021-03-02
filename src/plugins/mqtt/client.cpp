@@ -73,7 +73,7 @@ MQTTClient::Client() :
     _config(ClientConfig::getConfig()),
     _client(__LDBG_new(AsyncMqttClient)),
     _port(_config.getPort()),
-    _lastWillPayload('0'),
+    _lastWillPayload(F("offline")),
     _connState(ConnectionState::NONE),
 #if MQTT_AUTO_DISCOVERY
 #if IOT_REMOTE_CONTROL
@@ -525,7 +525,7 @@ void MQTTClient::onConnect(bool sessionPresent)
     _resetClient();
 
     // set online status
-    publish(_lastWillTopic, true, String(1));
+    publish(_lastWillTopic, true, F("online"));
 
     // reset reconnect timer if connection was successful
     setAutoReconnect(_config.auto_reconnect_min);

@@ -34,21 +34,12 @@ private:
     friend class DimmerModulePlugin;
     friend class Dimmer_Base;
 
-    // enum class TopicType : uint8_t {
-    //     TEMPERATURE,
-    //     TEMPERATURE2,
-    //     VCC,
-    //     FREQUENCY
-    // };
-
-    // String _getMetricsTopics(TopicType num) const;
     String _getMetricsTopics() const {
         return MQTTClient::formatTopic(F("metrics"));
     }
     MetricsType &_updateMetrics(const MetricsType &metrics);
     void _createWebUI(WebUIRoot &webUI, WebUIRow **row);
 
-    // String _getId(const __FlashStringHelper *type = nullptr);
     String _name;
     MetricsType _metrics;
     bool _webUIinitialized;

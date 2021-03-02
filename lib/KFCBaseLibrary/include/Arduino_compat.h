@@ -127,6 +127,7 @@ class __FlashStringHelper;
 #define PSPGM(name, ...)                                (PGM_P)(SPGM(name))
 
 #ifndef __attribute__packed__
+#define __attribute_packed__                            __attribute__((packed))
 #define __attribute__packed__                           __attribute__((packed))
 #define __attribute__unaligned__                        __attribute__((__aligned__(1)))
 #define PSTR1(str)                                      PSTRN(str, 1)

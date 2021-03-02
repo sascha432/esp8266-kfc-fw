@@ -15,8 +15,7 @@
 class StaticString {
 public:
 
-    StaticString(StaticString &&str) noexcept {
-        *this = std::move(str);
+    StaticString(StaticString &&str) noexcept : _ptr(std::exchange(str._ptr, nullptr)) {
     }
     StaticString(const String &str) : StaticString(str.c_str(), (uint16_t)str.length()) {
     }
@@ -92,8 +91,8 @@ public:
     }
 
     StaticString &operator=(StaticString &&str) {
-        _ptr = str._ptr;
-        str._ptr = nullptr;
+        this->~StaticString();
+        _ptr = std::exchange(str._ptr, nullptr);
         return *this;
     }
 
@@ -109,12 +108,10 @@ private:
     }
 
     StaticString &operator=(StaticString &&str) noexcept {
-        _ptr = str._ptr;
-        _length = str._length;
-        _progmem = str._progmem;
-        str._ptr = nullptr;
-        str._length = 0;
-        str._progmem = 0;
+        ~StaticString();
+        _ptr = std::exchange(str._ptr, nullptr);
+        _length = std::exchange(str._length, 0);
+        _progmem = std::exchange(str._progmem, 0);
         return *this;
     }
 

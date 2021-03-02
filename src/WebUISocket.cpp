@@ -61,10 +61,10 @@ void WsWebUISocket::broadcast(WsWebUISocket *sender, const JsonUnnamedObject &js
     }
 }
 
-void WsWebUISocket::broadcast(WsWebUISocket *sender, uint8_t *buf, size_t len)
+void WsWebUISocket::broadcast(WsWebUISocket *sender, const uint8_t *buf, size_t len)
 {
     if (wsWebUI && wsWebUI->hasAuthenticatedClients() && wsWebUI->availableForWriteAll()) {
-        auto buffer = wsWebUI->makeBuffer(buf, len, false);
+        auto buffer = wsWebUI->makeBuffer(const_cast<uint8_t *>(buf), len, false);
         __LDBG_printf("buffer=%s", buffer->get());
         WsClient::broadcast(wsWebUI, sender, buffer);
     }

@@ -36,6 +36,7 @@ namespace Event {
         CallbackTimerPtr operator->() const noexcept;
         CallbackTimerPtr operator*() const noexcept;
 
+        // Timer(Timer &&timer) : _managedTimer(std::move(timer._managedTimer)) {}
     private:
         friend CallbackTimer;
         friend ManangedCallbackTimer;

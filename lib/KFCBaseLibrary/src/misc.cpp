@@ -455,6 +455,30 @@ int strcmp_P_P(PGM_P str1, PGM_P str2)
     } while (true);
 }
 
+int strncmp_P_P(PGM_P str1, PGM_P str2, size_t size)
+{
+    if (!str1 || !str2 || !size) {
+#if DEBUG_STRING_CHECK_NULLPTR
+        debug_printf_P(PSTR("str1=%p str2=%p\n"), str1, str2);
+#endif
+        return -1;
+    }
+    uint8_t ch1, ch2;
+    do {
+        ch1 = pgm_read_byte(str1++);
+        ch2 = pgm_read_byte(str2++);
+        if (ch1 < ch2) {
+            return -1;
+        }
+        else if (ch1 > ch2) {
+            return 1;
+        }
+        else if (ch1 == 0 || --size == 0) {
+            return 0;
+        }
+    } while (true);
+}
+
 int strcasecmp_P_P(PGM_P str1, PGM_P str2)
 {
     if (!str1 || !str2) {
@@ -478,6 +502,61 @@ int strcasecmp_P_P(PGM_P str1, PGM_P str2)
         }
     } while (true);
 }
+
+int strncasecmp_P_P(PGM_P str1, PGM_P str2, size_t size)
+{
+    if (!str1 || !str2 || !size) {
+#if DEBUG_STRING_CHECK_NULLPTR
+        debug_printf_P(PSTR("str1=%p str2=%p\n"), str1, str2);
+#endif
+        return -1;
+    }
+    uint8_t ch1, ch2;
+    do {
+        ch1 = tolower(pgm_read_byte(str1++));
+        ch2 = tolower(pgm_read_byte(str2++));
+        if (ch1 < ch2) {
+            return -1;
+        }
+        else if (ch1 > ch2) {
+            return 1;
+        }
+        else if (ch1 == 0 || --size == 0) {
+            return 0;
+        }
+    } while (true);
+}
+
+const char *strstr_P_P(const char *str, const char *find) {
+    if (str && find) {
+        size_t findLen = strlen_P(find);
+        size_t strLen =  strlen_P(str);
+        while (strLen >= findLen) {
+            if (strncmp_P_P(find, str, findLen) == 0) {
+                return str;
+            }
+            strLen--;
+            str++;
+        }
+    }
+    return nullptr;
+}
+
+const char *strcasestr_P_P(const char *str, const char *find) {
+    if (str && find) {
+        size_t findLen = strlen_P(find);
+        size_t strLen =  strlen_P(str);
+        while (strLen >= findLen) {
+            if (strncasecmp_P_P(find, str, findLen) == 0) {
+                return str;
+            }
+            strLen--;
+            str++;
+        }
+    }
+    return nullptr;
+}
+
 
 size_t str_replace(char *src, int from, int to, size_t maxLen)
 {

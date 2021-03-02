@@ -53,6 +53,7 @@ DebugHandle::DebugHandle(DebugHandle &&handle) noexcept :
 
 DebugHandle &DebugHandle::operator=(DebugHandle &&handle) noexcept
 {
+    ~DebugHandle();
     ::new(static_cast<void *>(this)) DebugHandle(std::move(handle));
     return *this;
 }

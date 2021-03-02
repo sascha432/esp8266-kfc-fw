@@ -87,28 +87,6 @@ public:
         *this = bits;
     }
 
-    // dynamic_bitset(dynamic_bitset &&bits) {
-    //     *this = std::move(bits);
-    // }
-
-// #pragma push_macro("new")
-// #undef new
-
-//     dynamic_bitset &operator =(dynamic_bitset &&bits) {
-//         ~dynamic_bitset();
-//         ::new(static_cast<void *>(this)) dynamic_bitset(std::move(bits));
-//         return *this;
-//     }
-
-// #pragma pop_macro("new")
-
-    // dynamic_bitset &operator =(const dynamic_bitset &bitset)
-    // {
-    //     setSize(bitset._size);
-    //     std::copy_n(bitset.data(), capacity(), data());
-    //     return *this;
-    // }
-
     // copy from another dynamic bitset with different capacity
     // size is trucated at capacity()
     template<size_t _FromMaxBits>

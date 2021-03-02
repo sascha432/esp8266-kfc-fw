@@ -25,13 +25,15 @@ public:
 public:
     static void send(AsyncWebSocketClient *client, const JsonUnnamedObject &json);
     static void broadcast(WsWebUISocket *sender, const JsonUnnamedObject &json);
-    // buf is an allocated (new uint8_t[len + 1]) null terminated string
-    // len = strlen(buf)
-    static void broadcast(WsWebUISocket *sender, uint8_t *buf, size_t len);
-    static void broadcast(WsWebUISocket *sender, const __FlashStringHelper *str) {
-        auto message = reinterpret_cast<uint8_t *>(const_cast<__FlashStringHelper *>(str));
-        size_t len = strlen(reinterpret_cast<PGM_P>(str));
-        broadcast(sender, message, len);
+    static void broadcast(WsWebUISocket *sender, const uint8_t *buf, size_t len);
+    inline static void broadcast(WsWebUISocket *sender, const char *str) {
+        broadcast(sender, reinterpret_cast<const uint8_t *>(str), strlen(str));
+    }
+    inline static void broadcast(WsWebUISocket *sender, const String &str) {
+        broadcast(sender, reinterpret_cast<const uint8_t *>(str.c_str()), str.length());
+    }
+    inline static void broadcast(WsWebUISocket *sender, const __FlashStringHelper *str) {
+        broadcast(sender, reinterpret_cast<const uint8_t *>(str), strlen(reinterpret_cast<PGM_P>(str)));
     }
     static void setup();
 

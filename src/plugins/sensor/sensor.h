@@ -166,7 +166,7 @@ private:
 
     size_t _count() const {
         return std::count_if(_sensors.begin(), _sensors.end(), [](const MQTTSensorPtr sensor) {
-            return sensor->getType() != SensorType::SYSTEM_METRICS;
+            return (sensor->getType() != SensorType::SYSTEM_METRICS && sensor->getType() != SensorType::DIMMER_METRICS);
         });
     }
 

@@ -91,7 +91,7 @@ void __ets_post_loop_exec_loop_functions()
         }
     }
     if (cleanup) {
-        loopFunctions.erase(std::remove(loopFunctions.begin(), loopFunctions.end(), LoopFunctions::Entry::Type::DELETED), loopFunctions.end());
+        loopFunctions.erase(std::remove_if(loopFunctions.begin(), loopFunctions.end(), [](const LoopFunctions::Entry &entry) { return entry.deleteCallback == true; }), loopFunctions.end());
         loopFunctions.shrink_to_fit();
     }
     _Scheduler.run(); // check all events

@@ -327,4 +327,9 @@ namespace SerialHandler {
         _transmitClientsTx();
     }
 
+    Wrapper &getInstance() {
+        return serialHandler;
+    }
+
+
 };

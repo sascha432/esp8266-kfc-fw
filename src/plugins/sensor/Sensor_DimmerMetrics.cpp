@@ -80,8 +80,12 @@ void Sensor_DimmerMetrics::getValues(JsonArray &array, bool timer)
 
     obj = &array.addObject(3);
     obj->add(JJ(id), F("int_temp"));
-    obj->add(JJ(state), !isnan(_metrics.metrics.int_temp));
+    obj->add(JJ(state), Dimmer::isValidTemperature(_metrics.metrics.int_temp));
+#if DIMMER_FIRMWARE_VERSION < 0x020200
+    obj->add(JJ(value), JsonNumber(_metrics.metrics.int_temp, 2));
+#else
     obj->add(JJ(value), JsonNumber(_metrics.metrics.int_temp));
+#endif
 
     obj = &array.addObject(3);
     obj->add(JJ(id), FSPGM(vcc));

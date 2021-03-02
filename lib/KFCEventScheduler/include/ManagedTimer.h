@@ -34,6 +34,10 @@ namespace Event {
         void clear();
 
     private:
+        // friend Timer;
+
+        // ManangedCallbackTimer(ManangedCallbackTimer &&move) noexcept : _callbackTimer(move._callbackTimer) {}
+
         CallbackTimerPtr _callbackTimer;
     };
 

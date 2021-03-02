@@ -18,7 +18,7 @@
 #include <EventScheduler.h>
 #include <HardwareSerial.h>
 #include <EnumHelper.h>
-#include <cbuf.h>
+#include <cbuf_ex.h>
 
 
 #ifndef SERIAL_HANDLER_INPUT_BUFFER_MAX
@@ -26,6 +26,8 @@
 #endif
 
 namespace SerialHandler {
+
+    using cbuf = cbuf_ex::cbuf;
 
     enum class EventType : uint8_t {
         NONE =          0,
@@ -42,6 +44,27 @@ namespace SerialHandler {
     class Client : public Stream {
     public:
         Client(const Client &) = delete;
+        Client &operator=(const Client &) = delete;
+
+        Client(Client &&client) noexcept :
+            _cb(std::exchange(client._cb, nullptr)),
+            _events(std::move(client._events)),
+            _rx(std::move(client._rx)),
+            _tx(std::move(client._tx))
+        {
+        }
+        ~Client() {}
+
+#pragma push_macro("new")
+#undef new
+
+        Client &operator=(Client &&client) noexcept {
+            this->~Client();
+            ::new(static_cast<void *>(this)) Client(std::move(client));
+            return *this;
+        }
+
+#pragma pop_macro("new")
 
         Client(Callback cb, EventType events);
 

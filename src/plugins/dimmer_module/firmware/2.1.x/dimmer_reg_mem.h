@@ -36,11 +36,11 @@ typedef struct __attribute__packed__ {
     float linear_correction_factor;
     uint8_t zero_crossing_delay_ticks;
     uint16_t minimum_on_time_ticks;
-    uint16_t adjust_halfwave_time_ticks;
+    uint16_t minimum_off_time_ticks;
     float internal_1_1v_ref;
     int8_t int_temp_offset;
     int8_t ntc_temp_offset;
-    uint8_t report_metrics_max_interval;
+    uint8_t report_metrics_interval;
 } register_mem_cfg_t;
 
 typedef struct __attribute__packed__ {
@@ -70,12 +70,17 @@ typedef union __attribute__packed__ {
 } register_mem_union_t;
 
 typedef struct __attribute__packed__ {
-    uint8_t temp_check_value;
     uint16_t vcc;
     float frequency;
     float ntc_temp;
-    float internal_temp;
-} dimmer_metrics_t;
+    float int_temp;
+} register_mem_metrics_t;
+
+struct __attribute_packed__ dimmer_metrics_t
+{
+    uint8_t temp_check_value;
+    register_mem_metrics_t metrics;
+};
 
 typedef struct __attribute__packed__ {
     uint32_t write_cycle;
@@ -87,4 +92,59 @@ typedef struct __attribute__packed__ {
     uint8_t channel;
     uint16_t level;
 } dimmer_fading_complete_event_t;
+
+struct __attribute_packed__ dimmer_version_t {
+    union __attribute_packed__ {
+        uint16_t _word;
+        struct __attribute_packed__ {
+            uint16_t revision: 5;
+            uint16_t minor: 5;
+            uint16_t major: 6;
+        };
+    };
+    operator uint16_t() const {
+        return _word;
+    }
+    operator bool() const {
+        return _word != 0;
+    }
+
+    dimmer_version_t() = default;
+    dimmer_version_t(uint16_t version) : _word(version) {}
+    dimmer_version_t(const uint8_t _major, const uint8_t _minor, const uint8_t _revision) : revision(_revision), minor(_minor), major(_major) {}
+};
+
+struct __attribute_packed__ dimmer_config_info_t
+{
+    uint16_t max_levels;
+    uint8_t channel_count;
+    uint8_t cfg_start_address;
+    uint8_t length;
+};
+
+struct __attribute_packed__ dimmer_command_fade_t {
+    uint8_t register_address;
+    int16_t from_level;
+    int8_t channel;
+    int16_t to_level;
+    float time;
+    uint8_t command;
+
+    dimmer_command_fade_t() = default;
+
+    dimmer_command_fade_t(uint8_t p_channel, int16_t p_from_level, int16_t p_to_level, float time) :
+        register_address(DIMMER_REGISTER_FROM_LEVEL),
+        from_level(p_from_level),
+        channel(p_channel),
+        to_level(p_to_level),
+        time(time),
+        command(DIMMER_COMMAND_FADE)
+    {}
+};
+
+struct __attribute_packed__ dimmer_over_temperature_event_t
+{
+    uint8_t current_temp;
+    uint8_t max_temp;
+};
 

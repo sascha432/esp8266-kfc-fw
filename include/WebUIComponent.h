@@ -43,8 +43,10 @@ WEBUI_PROGMEM_STRING_DECL(items)
 WEBUI_PROGMEM_STRING_DECL(left)
 WEBUI_PROGMEM_STRING_DECL(listbox)
 WEBUI_PROGMEM_STRING_DECL(max)
+WEBUI_PROGMEM_STRING_DECL(rmax)
 WEBUI_PROGMEM_STRING_DECL(medium)
 WEBUI_PROGMEM_STRING_DECL(min)
+WEBUI_PROGMEM_STRING_DECL(rmin)
 WEBUI_PROGMEM_STRING_DECL(offset)
 WEBUI_PROGMEM_STRING_DECL(render_type)
 WEBUI_PROGMEM_STRING_DECL(right)
@@ -134,7 +136,8 @@ public:
     JsonArray &_getColumns();
     WebUIComponent &addGroup(const JsonString &name, bool hasSwitch);
     WebUIComponent &addSwitch(const String &id, const JsonString &name, bool zeroOff = true, NamePositionType position = NamePositionType::HIDE);
-    WebUIComponent &addSlider(const String &id, const JsonString &name, int min = 0, int max = 0, bool zeroOff = true);
+    WebUIComponent &addSlider(const String &id, const JsonString &name, bool zeroOff = true);
+    WebUIComponent &addSlider(const String &id, const JsonString &name, int min, int max, bool zeroOff = true);
     WebUIComponent &addColorTemperatureSlider(const String &id, const JsonString &name, const JsonString &color = JsonString());
     WebUIComponent &addRGBSlider(const String &id, const JsonString &name);
     WebUIComponent &addSensor(const String &id, const JsonString &name, const JsonString &unit, WebUIComponent::SensorRenderType render = WebUIComponent::SensorRenderType::ROW);

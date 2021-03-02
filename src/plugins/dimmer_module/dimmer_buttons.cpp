@@ -15,15 +15,11 @@
 #endif
 
 
-DimmerButtonsImpl::DimmerButtonsImpl()
-{
-    pinMonitor.begin();
-}
-
 void DimmerButtons::_beginButtons()
 {
     static_assert(IOT_DIMMER_MODULE_CHANNELS <= 8, "max. channels exceeded");
 
+    pinMonitor.begin();
     SingleClickGroupPtr group;
 
     for(uint8_t i = 0; i < _channels.size() * 2; i++) {
@@ -37,11 +33,13 @@ void DimmerButtons::_beginButtons()
             pinMode(pinNum, IOT_DIMMER_MODULE_PINMODE);
         }
     }
+
 }
 
 void DimmerButtons::_endButtons()
 {
-    pinMonitor.detach(static_cast<const void *>(this));
+    // pinMonitor.detach(static_cast<const void *>(this));
+    pinMonitor.end();
 }
 
 #endif

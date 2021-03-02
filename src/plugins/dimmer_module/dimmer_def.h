@@ -13,6 +13,10 @@
 #define IOT_DIMMER_MODULE_CHANNELS          1
 #endif
 
+#ifndef DIMMER_CHANNEL_COUNT
+#define DIMMER_CHANNEL_COUNT                IOT_DIMMER_MODULE_CHANNELS
+#endif
+
 // enable or disable buttons
 #ifndef IOT_DIMMER_MODULE_HAS_BUTTONS
 #define IOT_DIMMER_MODULE_HAS_BUTTONS       0
@@ -25,7 +29,11 @@
 
 // max. brightness level
 #ifndef IOT_DIMMER_MODULE_MAX_BRIGHTNESS
-#define IOT_DIMMER_MODULE_MAX_BRIGHTNESS    16666
+#define IOT_DIMMER_MODULE_MAX_BRIGHTNESS    8192
+#endif
+
+#ifndef DIMMER_MAX_LEVEL
+#define DIMMER_MAX_LEVEL                    IOT_DIMMER_MODULE_MAX_BRIGHTNESS
 #endif
 
 #ifndef IOT_DIMMER_MODULE_HOLD_REPEAT_TIME
@@ -60,3 +68,4 @@
 #ifndef IOT_SWITCH_PRESSED_STATE
 #define IOT_SWITCH_PRESSED_STATE            PinMonitor::ActiveStateType::PRESSED_WHEN_LOW
 #endif
+

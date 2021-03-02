@@ -17,7 +17,8 @@
 
 using KFCConfigurationClasses::Plugins;
 
-Driver_DimmerModule::Driver_DimmerModule() : MQTTComponent(ComponentType::SENSOR)
+Driver_DimmerModule::Driver_DimmerModule() :
+    MQTTComponent(ComponentType::SENSOR)
 {
 }
 
@@ -44,7 +45,9 @@ void Driver_DimmerModule::_begin()
     Dimmer_Base::_begin();
     _beginMqtt();
     _beginButtons();
-    _getChannels();
+    _Scheduler.add(900, false, [this](Event::CallbackTimerPtr) {
+        _getChannels();
+    });
 }
 
 void Driver_DimmerModule::_end()
@@ -88,12 +91,12 @@ void Driver_DimmerModule::_endMqtt()
     }
 }
 
+#if !IOT_DIMMER_MODULE_INTERFACE_UART
 void Driver_DimmerModule::onConnect(MQTTClient *client)
 {
-#if !IOT_DIMMER_MODULE_INTERFACE_UART
     _fetchMetrics();
-#endif
 }
+#endif
 
 void Driver_DimmerModule::_printStatus(Print &out)
 {
@@ -110,17 +113,18 @@ void Driver_DimmerModule::_printStatus(Print &out)
 }
 
 
-bool Driver_DimmerModule::on(uint8_t channel)
+bool Driver_DimmerModule::on(uint8_t channel, float transition)
 {
-    return _channels[channel].on();
+    return _channels[channel].on(transition);
 }
 
-bool Driver_DimmerModule::off(uint8_t channel)
+bool Driver_DimmerModule::off(uint8_t channel, float transition)
 {
-    return _channels[channel].off();
+    return _channels[channel].off(&_config, transition);
 }
 
-bool Driver_DimmerModule::isAnyOn() const {
+bool Driver_DimmerModule::isAnyOn() const
+{
     for(uint8_t i = 0; i < getChannelCount(); i++) {
         if (_channels[i].getOnState()) {
             return true;
@@ -132,8 +136,6 @@ bool Driver_DimmerModule::isAnyOn() const {
 // get brightness values from dimmer
 void Driver_DimmerModule::_getChannels()
 {
-    __LDBG_println();
-
     if (_wire.lock()) {
         _wire.beginTransmission(DIMMER_I2C_ADDRESS);
         _wire.write(DIMMER_REGISTER_COMMAND);
@@ -144,7 +146,7 @@ void Driver_DimmerModule::_getChannels()
         if (_wire.endTransmission() == 0 && _wire.requestFrom(DIMMER_I2C_ADDRESS, len) == len) {
             for(uint8_t i = 0; i < _channels.size(); i++) {
                 _wire.read(level);
-                _channels[i].setLevel(level);
+                setChannel(i, level);
             }
 #if DEBUG_IOT_DIMMER_MODULE
             String str;
@@ -169,16 +171,14 @@ bool Driver_DimmerModule::getChannelState(uint8_t channel) const
     return _channels[channel].getOnState();
 }
 
-void Driver_DimmerModule::setChannel(uint8_t channel, int16_t level, float time)
+void Driver_DimmerModule::setChannel(uint8_t channel, int16_t level, float transition)
 {
-    if (time == -1) {
-        time = getFadeTime(_channels[channel].getLevel(), level);
-    }
+    _channels[channel].setLevel(level, transition);
+}
 
-    _channels[channel].setLevel(level);
-    _fade(channel, level, time);
-    writeEEPROM();
-    _channels[channel].publishState();
+uint8_t Driver_DimmerModule::getChannelCount() const
+{
+    return _channels.size();
 }
 
 void Driver_DimmerModule::_onReceive(size_t length)
@@ -194,7 +194,6 @@ void Driver_DimmerModule::_onReceive(size_t length)
             if (event.channel < _channels.size()) {
                 if (_channels[event.channel].getLevel() != event.level) {  // update level if out of sync
                     _channels[event.channel].setLevel(event.level);
-                    _channels[event.channel].publishState();
                 }
             }
         }
@@ -279,7 +278,10 @@ void DimmerModulePlugin::createWebUI(WebUIRoot &webUI)
 
     for (uint8_t i = 0; i < _channels.size(); i++) {
         row = &webUI.addRow();
-        row->addSlider(PrintString(F("dimmer_channel%u"), i), PrintString(F("dimmer_channel%u"), i), 0, IOT_DIMMER_MODULE_MAX_BRIGHTNESS, true);
+        String name = PrintString(F("d_chan%u"), i);
+        auto &obj = row->addSlider(name, name, 0, IOT_DIMMER_MODULE_MAX_BRIGHTNESS);
+        obj.add(JJ(rmin), IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config.min_brightness / 100);
+        obj.add(JJ(rmax), IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config.max_brightness / 100);
     }
 
 #if DEBUG_ASSETS == 0
@@ -333,7 +335,7 @@ void DimmerModulePlugin::createWebUI(WebUIRoot &webUI)
 
     for(uint8_t j = 0; j < 4; j++) {
         row = &webUI.addRow();
-        row->addSlider(PrintString(F("dimmer_channel%u"), 0), PrintString(F("Channel %u"), j + 1), 0, 8192);
+        row->addSlider(PrintString(F("d_chan%u"), 0), PrintString(F("Channel %u"), j + 1), 0, 8192);
     }
 
 #endif

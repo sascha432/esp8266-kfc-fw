@@ -4,4 +4,4 @@
 
 #pragma once
 
-#include "../../../trailing_edge_dimmer/src/dimmer_protocol.h"
+#include "dimmer_commands.h"

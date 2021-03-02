@@ -16,6 +16,7 @@ public:
     virtual void shutdown() override;
     virtual void getStatus(Print &output) override;
     virtual void createWebUI(WebUIRoot &webUI) override;
+    virtual void createMenu() override;
 
     virtual void readConfig(DimmerModuleForm::ConfigType &cfg) {
         _readConfig(cfg);
@@ -34,6 +35,10 @@ public:
     }
     virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) override {
         _setValue(id, value, hasValue, state, hasState);
+    }
+
+    DimmerChannelsArray &getChannels() {
+        return _channels;
     }
 
 #if AT_MODE_SUPPORTED

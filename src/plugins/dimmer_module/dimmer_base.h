@@ -10,8 +10,6 @@
 #include <serial_handler.h>
 #include <kfc_fw_config.h>
 #include "../src/plugins/sensor/Sensor_DimmerMetrics.h"
-#include "dimmer_def.h"
-
 #include "firmware_protocol.h"
 
 #ifndef STK500V1_RESET_PIN
@@ -69,20 +67,20 @@ public:
     static void fetchMetrics(Event::CallbackTimerPtr timer);
 #endif
 
-    virtual bool on(uint8_t channel = -1) = 0;
-    virtual bool off(uint8_t channel = -1) = 0;
+    virtual bool on(uint8_t channel = -1, float transition = NAN) = 0;
+    virtual bool off(uint8_t channel = -1, float transition = NAN) = 0;
+#if IOT_DIMMER_MODULE_HAS_BUTTONS
     virtual bool isAnyOn() const = 0;
+#endif
     virtual int16_t getChannel(uint8_t channel) const = 0;
     virtual bool getChannelState(uint8_t channel) const = 0;
-    virtual void setChannel(uint8_t channel, int16_t level, float time = -1) = 0;
+    virtual void setChannel(uint8_t channel, int16_t level, float transition = NAN) = 0;
     virtual uint8_t getChannelCount() const = 0;
 
     // read config from dimmer
     void _readConfig(ConfigType &config);
     // write config to dimmer
     void _writeConfig(ConfigType &config);
-    // store dimmer config in EEPROM
-    void writeEEPROM(bool noLocking = false);
 
 protected:
     friend DimmerChannel;
@@ -91,7 +89,7 @@ protected:
     void _end();
 
     void _printStatus(Print &out);
-    void _updateMetrics(const dimmer_metrics_t &metrics);
+    void _updateMetrics(const MetricsType &metrics);
 
     void _fade(uint8_t channel, int16_t toLevel, float fadeTime);
 #if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
@@ -101,19 +99,11 @@ protected:
     Sensor_DimmerMetrics *getMetricsSensor() const;
 
     // return fade time for changing to another level
-    float getFadeTime(int curLevel, int newLevel) {
-        if (newLevel == 0) {
-            return _config.off_fadetime;
-        }
-        if (curLevel == 0 && newLevel) {
-            return _config.on_fadetime;
-        }
-        return _config.lp_fadetime;
-    }
+    float getTransitionTime(int fromLevel, int toLevel, float transitionTimeOverride);
 
 protected:
     String _getMetricsTopics(uint8_t num) const;
-    void _updateConfig(ConfigType &config, Dimmer::GetConfig &reader, bool status);
+    void _updateConfig(ConfigType &config, Dimmer::ConfigReaderWriter &reader, bool status);
     uint8_t _endTransmission();
 
     inline bool _isEnabled() const {
@@ -124,19 +114,19 @@ protected:
         return _config;
     }
 
-
+protected:
     MetricsType _metrics;
     ConfigType _config;
 
 protected:
 #if IOT_DIMMER_MODULE_INTERFACE_UART
-    DimmerTwoWireEx _wire;
+    Dimmer::TwoWire _wire;
     SerialHandler::Client *_client;
 
 public:
     virtual void _onReceive(size_t length);
 #else
-    DimmerTwoWireEx &_wire;
+    Dimmer::TwoWire &_wire;
     Event::Timer _timer;
 
     void _fetchMetrics();

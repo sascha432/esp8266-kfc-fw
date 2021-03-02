@@ -55,6 +55,8 @@
 - MQTT callbacks for QoS
 - Fully asynchronous MQTT auto discovery with incremental or full updates
 - Upgrade to arduinoespressif8266 3.20704.0 including patch files for the platform
+- JSON schema support for MQTT light
+- Colored sub ranges for rangeslider.js
 
 ## Version 0.0.3
 

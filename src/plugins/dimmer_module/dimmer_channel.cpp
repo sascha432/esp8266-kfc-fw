@@ -5,6 +5,8 @@
 #include "dimmer_channel.h"
 #include "dimmer_module.h"
 #include <WebUISocket.h>
+#include <stl_ext/algorithm.h>
+#include <stl_ext/utility.h>
 
 #if DEBUG_IOT_DIMMER_MODULE
 #include <debug_helper_enable.h>
@@ -12,25 +14,21 @@
 #include <debug_helper_disable.h>
 #endif
 
-DimmerChannel::DimmerChannel() :
+DimmerChannel::DimmerChannel(Driver_DimmerModule *dimmer, uint8_t channel) :
     MQTTComponent(ComponentType::LIGHT),
-    _data(),
-    _storedBrightness(0),
-    _publishFlag(0)
+    _dimmer(dimmer),
+    _publishLastTime(0),
 #if IOT_DIMMER_MODULE_HAS_BUTTONS
-    ,_delayTimer(nullptr)
+    _delayTimer(nullptr),
 #endif
+    _storedBrightness(0),
+    _brightness(0),
+    _channel(channel),
+    _publishFlag(0)
 {
-#if DEBUG_MQTT_CLIENT
-    debug_printf_P(PSTR("DimmerChannel(): component=%p\n"), this);
-#endif
 }
 
-void DimmerChannel::setup(Driver_DimmerModule *dimmer, uint8_t channel)
-{
-    _dimmer = dimmer;
-    _channel = channel;
-}
+
 
 MQTTComponent::MQTTAutoDiscoveryPtr DimmerChannel::nextAutoDiscovery(MQTT::FormatType format, uint8_t num)
 {
@@ -40,13 +38,12 @@ MQTTComponent::MQTTAutoDiscoveryPtr DimmerChannel::nextAutoDiscovery(MQTT::Forma
     auto discovery = __LDBG_new(MQTTAutoDiscovery);
     switch(num) {
         case 0:
-            _createTopics();
             discovery->create(this, PrintString(FSPGM(channel__u), _channel), format);
-            discovery->addStateTopic(_data.state.state);
-            discovery->addCommandTopic(_data.state.set);
-            discovery->addBrightnessStateTopic(_data.brightness.state);
-            discovery->addBrightnessCommandTopic(_data.brightness.set);
+            discovery->addSchemaJson();
+            discovery->addStateTopic(_createTopics(TopicType::COMMAND_STATE));
+            discovery->addCommandTopic(_createTopics(TopicType::COMMAND_SET));
             discovery->addBrightnessScale(MAX_LEVEL);
+            discovery->addParameter(F("brightness"), true);
             break;
     }
     discovery->finalize();
@@ -58,185 +55,144 @@ uint8_t DimmerChannel::getAutoDiscoveryCount() const
     return 1;
 }
 
-void DimmerChannel::_createTopics()
+String DimmerChannel::_createTopics(TopicType type, bool full) const
 {
 #if IOT_DIMMER_MODULE_CHANNELS > 1
     String value = PrintString(FSPGM(channel__u), _channel);
     #define VALUE value,
+    #define VALUEP value +
 #else
     #define VALUE
+    #define VALUEP
 #endif
-
-    _data.state.set = MQTTClient::formatTopic(VALUE FSPGM(_set));
-    _data.state.state = MQTTClient::formatTopic(VALUE FSPGM(_state));
-    _data.brightness.set = MQTTClient::formatTopic(VALUE FSPGM(_brightness_set));
-    _data.brightness.state = MQTTClient::formatTopic(VALUE FSPGM(_brightness_state));
+    switch(type) {
+        case TopicType::COMMAND_SET:
+            if (!full) {
+                return VALUEP FSPGM(_set);
+            }
+            return MQTTClient::formatTopic(VALUE FSPGM(_set));
+        case TopicType::COMMAND_STATE:
+            if (!full) {
+                return VALUEP FSPGM(_state);
+            }
+            return MQTTClient::formatTopic(VALUE FSPGM(_state));
+        default:
+            break;
+    }
+    return String();
 }
 
 void DimmerChannel::onConnect(MQTTClient *client)
 {
-    _createTopics();
-
-    __LDBG_printf("DimmerChannel[%u]::subscribe(%s)", _channel, _data.state.set.c_str());
-    __LDBG_printf("DimmerChannel[%u]::subscribe(%s)", _channel, _data.brightness.set.c_str());
-
-    client->subscribe(this, _data.state.set);
-    client->subscribe(this, _data.brightness.set);
-
-    publishState(client, kUpdateAllFlag);
+    client->subscribe(this, _createTopics(TopicType::COMMAND_SET));
+    _publishLastTime = 0;
+    _publishTimer.remove();
+    publishState();
 }
 
 void DimmerChannel::onMessage(MQTTClient *client, char *topic, char *payload, size_t len)
 {
-    __LDBG_printf("DimmerChannel[%u]::onMessage(%s)", _channel, topic);
+    if (strcmp_end_P(topic, _topic.c_str())) {
+        return;
+    }
+    auto stream = HeapStream(payload, len);
+    auto reader = MQTT::JsonReader(&stream);
+    if (reader.parse()) {
+        onMessage(client, reader);
+    }
+    else {
+        __DBG_printf("parsing json failed=%s payload=%s", reader.getLastErrorMessage().c_str(), payload);
+    }
 
-    int value = atoi(payload);
-    if (_data.state.set.equals(topic)) {
+}
 
-        // on/off only changes brightness if the state is different
-        bool result;
-        if (value) {
-            result = on();
-        } else {
-            result = off();
+void DimmerChannel::onMessage(MQTTClient *client, const MQTT::JsonReader &json)
+{
+    if (json._state != -1) {
+        if (json._state && !_brightness) {
+            on();
         }
-        if (!result) {
-            publishState(client, kUpdateAllFlag); // publish state again even if it has not been turned on or off
+        else if (!json._state && _brightness) {
+            off();
         }
-
-    } else if (_data.brightness.set.equals(topic)) {
-
-        // if brightness changes, also turn dimmer on or off
-        auto tmp = _data.brightness.value;
-        if (value > 0) {
-            _data.state.value = true;
-            _data.brightness.value = std::min(value, (int)MAX_LEVEL);
-            setStoredBrightness(_data.brightness.value);
-        } else {
-            _data.state.value = false;
-            _data.brightness.value = 0;
+    }
+    if (json._brightness != -1) {
+        if (json._brightness == 0 && _brightness) {
+            off();
         }
-        _dimmer->_fade(_channel, _data.brightness.value, _dimmer->getFadeTime(tmp, _data.brightness.value));
-        publishState(client, kUpdateAllFlag);
+        else if (json._brightness) {
+            _set(json._brightness);
+        }
     }
 }
 
-bool DimmerChannel::on()
+bool DimmerChannel::on(float transition)
 {
-#if IOT_DIMMER_MODULE_HAS_BUTTONS
-    // returns -1 for abort with false, 1 for abort with true and 0 for continue
-    int result = _offDelayPrecheck(DEFAULT_LEVEL);
-    if (result != 0) {
-        return result != -1;
-    }
-#endif
-    if (!_data.state.value) {
-        auto tmp = _data.brightness.value;
-        _data.brightness.value = _storedBrightness;
-        if (_data.brightness.value <= MIN_LEVEL) {
-            _data.brightness.value = DEFAULT_LEVEL;
-        }
-        _data.state.value = true;
-        _dimmer->_fade(_channel, _data.brightness.value, _dimmer->getFadeTime(tmp, _data.brightness.value));
-        _dimmer->writeEEPROM();
-
-        publishState();
-        return true;
+// #if IOT_DIMMER_MODULE_HAS_BUTTONS
+//     // returns -1 for abort with false, 1 for abort with true and 0 for continue
+//     int result = _offDelayPrecheck(DEFAULT_LEVEL);
+//     if (result != 0) {
+//         return result != -1;
+//     }
+// #endif
+    if (!_brightness) {
+        return _set(_storedBrightness, transition);
     }
     return false;
 }
 
-bool DimmerChannel::off(ConfigType *config, int16_t level)
+bool DimmerChannel::off(ConfigType *config, float transition, int32_t level)
 {
-#if IOT_DIMMER_MODULE_HAS_BUTTONS
-    // returns -1 for abort with false, 1 for abort with true and 0 for continue
-    int result = _offDelayPrecheck(0, config, level);
-    if (result != 0) {
-        return result != -1;
-    }
-#endif
-    if (_data.state.value) {
-        auto tmp = _data.brightness.value;
-        setStoredBrightness(level == -1 ? _data.brightness.value : level);
-        _data.brightness.value = 0;
-        _data.state.value = false;
-        _dimmer->_fade(_channel, 0, _dimmer->getFadeTime(tmp, _data.brightness.value));
-        _dimmer->writeEEPROM();
-
-        publishState();
-        return true;
+// #if IOT_DIMMER_MODULE_HAS_BUTTONS
+//     // returns -1 for abort with false, 1 for abort with true and 0 for continue
+//     int result = _offDelayPrecheck(0, config, level);
+//     if (result != 0) {
+//         return result != -1;
+//     }
+// #endif
+    if (_brightness) {
+        return _set(0, transition);
     }
     return false;
 }
 
-void DimmerChannel::publishState(MQTTClient *client, uint8_t publishFlag)
+void DimmerChannel::setLevel(int32_t level, float transition)
 {
-    if (publishFlag == 0) { // no updates
-        return;
+// #if IOT_DIMMER_MODULE_HAS_BUTTONS
+//     _offDelayPrecheck(level, nullptr);
+// #endif
+    if (level == 0) {
+        setStoredBrightness(_brightness);
+        _set(0, transition);
     }
-    else if (publishFlag == kStartTimerFlag) { // start timer
-
-        _publishFlag |= kWebUIUpdateFlag|kMQTTUpdateFlag;
-        if (_publishTimer) { // timer already running
-            return;
-        }
-        // start timer to limit update rate
-        _mqttCounter = 0;
-        _Timer(_publishTimer).add(Event::milliseconds(kWebUIMaxUpdateRate), true, [this](Event::CallbackTimerPtr timer) {
-            auto flag = _publishFlag;
-            if (flag == 0) { // no updates, end timer
-                timer->disarm();
-                return;
-            }
-            if (_mqttCounter < kMQTTUpdateRateMultiplier) {
-                // once the counter reached its max. it is reset by the publishState() method
-                _mqttCounter++;
-                // remove MQTT flag
-                flag &= ~kMQTTUpdateFlag;
-            }
-            publishState(nullptr, flag);
-        });
-        return;
-    }
-
-    if (publishFlag & kMQTTUpdateFlag) {
-        if (!client) {
-            client = MQTTClient::getClient();
-        }
-        if (client && client->isConnected()) {
-
-            // __LDBG_printf("channel=%u brightness=%d state=%u client=%p", _channel, _data.brightness.value, _data.state.value, client);
-
-            client->publish(_data.state.state, true, String(_data.state.value));
-            client->publish(_data.brightness.state, true, String(_data.brightness.value));
-        }
-        _publishFlag &= ~kMQTTUpdateFlag;
-        _mqttCounter = 0;
-    }
-
-    if (publishFlag & kWebUIUpdateFlag) {
-        if (WsWebUISocket::hasAuthenticatedClients()) {
-            static constexpr size_t bufSize = 96;  // max. length 86 + nul byte
-            auto buf = new uint8_t[bufSize];
-            // snprintf_P((char *)buf, bufSize - 1, PSTR("{\"type\":\"ue\",\"events\":[{\"id\":\"dimmer_channel%u\",\"value\":%d,\"state\":true},{\"id\":\"group-switch-0\",\"value\":%u,\"state\":true}]}"),
-            snprintf_P((char *)buf, bufSize - 1, PSTR("{\"type\":\"ue\",\"events\":[{\"id\":\"dimmer_channel%u\",\"value\":%d,\"state\":true,\"group\":%u}]}"),
-                _channel, _data.brightness.value, _dimmer->isAnyOn()
-            );
-            buf[bufSize - 1] = 0;
-            WsWebUISocket::broadcast(WsWebUISocket::getSender(), buf, strlen((const char *)buf));
-        }
-        _publishFlag &= ~kWebUIUpdateFlag;
+    else {
+        _set(level, transition);
     }
 }
 
-void DimmerChannel::setLevel(int16_t level)
+bool DimmerChannel::_set(int32_t level, float transition)
 {
-#if IOT_DIMMER_MODULE_HAS_BUTTONS
-    _offDelayPrecheck(level, nullptr);
-#endif
-    _data.brightness.value = level;
-    _data.state.value = (level != 0);
-    setStoredBrightness(level);
+    if (level == 0) {
+        if (_brightness != 0) {
+            auto tmp = _brightness;
+            setStoredBrightness(_brightness);
+            _brightness = 0;
+            _dimmer->_fade(_channel, 0, _dimmer->getTransitionTime(tmp, _brightness, transition));
+            _dimmer->_wire.writeEEPROM();
+            publishState();
+            return true;
+        }
+    }
+    else if (level != _brightness) {
+        auto tmp = _brightness;
+        _brightness = std::clamp<int32_t>(level, _dimmer->_getConfig().min_brightness * MAX_LEVEL / 100, _dimmer->_getConfig().max_brightness * MAX_LEVEL / 100);
+        __DBG_printf("level=%u min=%u max=%u brightness=%u", level, _dimmer->_getConfig().min_brightness * MAX_LEVEL / 100, _dimmer->_getConfig().max_brightness * MAX_LEVEL / 100, _brightness);
+        _dimmer->_fade(_channel, _brightness, _dimmer->getTransitionTime(tmp, _brightness, transition));
+        _dimmer->_wire.writeEEPROM();
+        publishState();
+        return true;
+    }
+    return false;
 }
 
 #if IOT_DIMMER_MODULE_HAS_BUTTONS
@@ -259,7 +215,7 @@ int DimmerChannel::_offDelayPrecheck(int16_t level, ConfigType *config, int16_t 
         // continue
         return 0;
     }
-    if (_data.state.value == false || config->off_delay == 0) {
+    if (_brightness == 0 || config->off_delay == 0) {
         // no delay, continue
         return 0;
     }
@@ -308,6 +264,95 @@ int DimmerChannel::_offDelayPrecheck(int16_t level, ConfigType *config, int16_t 
         // abort command
     }
     return 1;
+}
+
+
+void DimmerChannel::_publishMQTT()
+{
+    MQTTClient::safePublish(_createTopics(TopicType::COMMAND_STATE), true, PrintString(F("{\"state\":\"%s\",\"brightness\":%u,\"transition\":%.2f}"), MQTTClient::toBoolOnOff(_brightness), _brightness, _dimmer->_getConfig().lp_fadetime));
+}
+
+void DimmerChannel::_publishWebUI()
+{
+    if (WebUISocket::hasAuthenticatedClients()) {
+    //     F("{\"type\":\"ue\",\"events\":[{\"id\":\"d_chan%u\",\"value\":%d,\"state\":true},{\"id\":\"group-switch-0\",\"value\":%u,\"state\":true}]}"),
+
+        auto json = PrintString(F("{\"type\":\"ue\",\"events\":[{\"id\":\"d_chan%u\",\"value\":%u,\"state\":true,\"group\":%u}]}"),
+            _channel, _brightness, _dimmer->isAnyOn()
+        );
+
+        __DBG_printf("%s", json.c_str());
+
+         WsClient::broadcast(WebUISocket::getServerSocket(), WebUISocket::getSender(), json.c_str(), json.length());
+        // WebUISocket::broadcast(WebUISocket::getSender(), json);
+    }
+
+}
+
+void DimmerChannel::_publish()
+{
+    __DBG_printf("publish");
+    _publishMQTT();
+    _publishWebUI();
+    _publishLastTime = millis();
+}
+
+void DimmerChannel::publishState()
+{
+    if (_publishTimer) {
+        __DBG_printf("timer running");
+        return;
+    }
+    auto diff = get_time_diff(_publishLastTime, millis());
+    if (diff < 250 - 10) {
+        __DBG_printf("starting timer %u", 250 - diff);
+        _Timer(_publishTimer).add(Event::milliseconds(250 - diff), false, [this](Event::CallbackTimerPtr) {
+            _publish();
+        });
+    }
+    else {
+        _publish();
+    }
+
+
+
+    // if (publishFlag == 0) { // no updates
+    //     return;
+    // }
+    // else if (publishFlag == kStartTimerFlag) { // start timer
+
+    //     _publishFlag |= kWebUIUpdateFlag|kMQTTUpdateFlag;
+    //     if (_publishTimer) { // timer already running
+    //         return;
+    //     }
+    //     // start timer to limit update rate
+    //     _mqttCounter = 0;
+    //     _Timer(_publishTimer).add(Event::milliseconds(kWebUIMaxUpdateRate), true, [this](Event::CallbackTimerPtr timer) {
+    //         auto flag = _publishFlag;
+    //         if (flag == 0) { // no updates, end timer
+    //             timer->disarm();
+    //             return;
+    //         }
+    //         if (_mqttCounter < kMQTTUpdateRateMultiplier) {
+    //             // once the counter reached its max. it is reset by the publishState() method
+    //             _mqttCounter++;
+    //             // remove MQTT flag
+    //             flag &= ~kMQTTUpdateFlag;
+    //         }
+    //         publishState(nullptr, flag);
+    //     });
+    //     return;
+    // }
+
+    // if (publishFlag & kMQTTUpdateFlag) {
+    //     MQTTClient::safePublish(_createTopics(TopicType::COMMAND_STATE), true, PrintString(F("{\"state\":\"%s\",\"brightness\":%u}"), MQTTClient::toBoolOnOff(_brightness), _brightness));
+    //     _publishFlag &= ~kMQTTUpdateFlag;
+    //     _mqttCounter = 0;
+    // }
+
+    // if (publishFlag & kWebUIUpdateFlag) {
+    //     _publishFlag &= ~kWebUIUpdateFlag;
+    // }
 }
 
 #endif

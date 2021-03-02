@@ -6,31 +6,64 @@
 
 #include "dimmer_protocol.h"
 #include "dimmer_reg_mem.h"
-#include "../dimmer_commands.h"
 
+#ifndef DIMMER_I2C_MASTER_ADDRESS
+#define DIMMER_I2C_MASTER_ADDRESS           (DIMMER_I2C_ADDRESS + 1)
+#endif
 
-// #define DIMMER_REGISTER_CONFIG_OFS                  (DIMMER_REGISTER_START_ADDR + offsetof(register_mem_t, cfg))
-// #define DIMMER_REGISTER_CONFIG_SZ                   sizeof(register_mem_cfg_t)
-// #define DIMMER_VERSION_SPLIT(version)               version.getMajor(), version.getMinor(), version.getRevision()
+#define DIMMER_EVENT_METRICS_REPORT         DIMMER_METRICS_REPORT
+#define DIMMER_EVENT_TEMPERATURE_ALERT      DIMMER_TEMPERATURE_ALERT
+#define DIMMER_EVENT_FADING_COMPLETE        DIMMER_FADING_COMPLETE
+#define DIMMER_EVENT_EEPROM_WRITTEN         DIMMER_EEPROM_WRITTEN
+#define DIMMER_EVENT_FREQUENCY_WARNING      DIMMER_FREQUENCY_WARNING
 
+namespace Dimmer {
 
-// class DimmerFadeCommand {
-// public:
-//     typedef struct __attribute__packed__ {
-//         uint8_t reg_mem_address;
-//         int16_t from_level;
-//         int8_t channel;
-//         int16_t to_level;
-//         float time;
-//         uint8_t command;
-//     } DimmerFadeCommand_t;
+    using VersionType = dimmer_version_t;
 
-//     DimmerFadeCommand(int8_t channel, int16_t fromLevel, int16_t toLevel, float time) : _fade({DIMMER_REGISTER_FROM_LEVEL, fromLevel, channel, toLevel, time, DIMMER_COMMAND_FADE}) {}
+    struct MetricsType : dimmer_metrics_t {
+        MetricsType() : dimmer_metrics_t({}) {
+            invalidate();
+        }
+        operator bool() const {
+            return temp_check_value == 0;
+        }
+        void invalidate() {
+            temp_check_value = 0xff;
+        }
+        void validate() {
+            temp_check_value = 0;
+        }
+    };
 
-//     DimmerFadeCommand_t &data() {
-//         return _fade;
-//     }
+    struct __attribute_packed__ Config
+    {
+        dimmer_version_t version;
+        dimmer_config_info_t info;
+        register_mem_cfg_t config;
+        static constexpr size_t kVersionSize = sizeof(dimmer_version_t);
 
-// private:
-//     DimmerFadeCommand_t _fade;
-// };
+        Config() : version(), info({DIMMER_MAX_LEVEL, IOT_DIMMER_MODULE_CHANNELS, DIMMER_REGISTER_OPTIONS, sizeof(register_mem_cfg_t)}), config() {}
+    };
+
+    static constexpr const uint8_t kRequestVersion[] = { DIMMER_REGISTER_READ_LENGTH, 0x02, DIMMER_REGISTER_VERSION };
+
+    static constexpr int16_t kInvalidTemperature = INT16_MIN;
+
+    inline static bool isValidVoltage(uint16_t value) {
+        return value != 0;
+    }
+
+    inline static bool isValidTemperature(float value) {
+        return !isnan(value);
+    }
+
+    inline static bool isValidTemperature(int16_t value) {
+        return value != kInvalidTemperature;
+    }
+
+    inline static bool isValidTemperature(uint8_t value) {
+        return value != UINT8_MAX;
+    }
+
+};

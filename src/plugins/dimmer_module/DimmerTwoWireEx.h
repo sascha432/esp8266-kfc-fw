@@ -48,7 +48,7 @@ public:
         noInterrupts();
         if (_locked) {
             interrupts();
-            __DBG_print("Wire locked");
+            __DBG_printf_E("wire locked");
             return false;
         }
         interrupts();
@@ -63,7 +63,8 @@ public:
     }
 
 private:
-    volatile bool _locked;
+    // static because the class is used with reinterpreting the Wire object
+    static volatile bool _locked;
 #else
 
     using DimmerTwoWireClass::DimmerTwoWireClass;

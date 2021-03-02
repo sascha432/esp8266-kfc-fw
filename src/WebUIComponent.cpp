@@ -29,8 +29,10 @@ WEBUI_PROGMEM_STRING_DEF(items)
 WEBUI_PROGMEM_STRING_DEF(left)
 WEBUI_PROGMEM_STRING_DEF(listbox)
 WEBUI_PROGMEM_STRING_DEF(max)
+WEBUI_PROGMEM_STRING_DEF(rmax)
 WEBUI_PROGMEM_STRING_DEF(medium)
 WEBUI_PROGMEM_STRING_DEF(min)
+WEBUI_PROGMEM_STRING_DEF(rmin)
 WEBUI_PROGMEM_STRING_DEF(offset)
 WEBUI_PROGMEM_STRING_DEF(render_type)
 WEBUI_PROGMEM_STRING_DEF(right)
@@ -118,15 +120,21 @@ WebUIComponent &WebUIRow::addSwitch(const String &id, const JsonString &name, bo
     return column;
 }
 
-WebUIComponent &WebUIRow::addSlider(const String &id, const JsonString &name, int min, int max, bool zeroOff)
+WebUIComponent &WebUIRow::addSlider(const String &id, const JsonString &name, bool zeroOff)
 {
     WebUIComponent &column = addColumn(6);
     column.add(JJ(type), JJ(slider));
     column.setId(id);
     column.setName(name);
+    column.add(JJ(zero_off), zeroOff);
+    return column;
+}
+
+WebUIComponent &WebUIRow::addSlider(const String &id, const JsonString &name, int min, int max, bool zeroOff)
+{
+    auto &column = addSlider(id, name, zeroOff);
     column.add(JJ(min), min);
     column.add(JJ(max), max);
-    column.add(JJ(zero_off), zeroOff);
     return column;
 }
 

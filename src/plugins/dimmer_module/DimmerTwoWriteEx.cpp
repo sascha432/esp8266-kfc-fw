@@ -7,10 +7,11 @@
 
 #if IOT_DIMMER_MODULE_INTERFACE_UART
 
-DimmerTwoWireEx::DimmerTwoWireEx(Stream &stream) :
-    DimmerTwoWireClass(stream, SerialHandler::Wrapper::pollSerial), _locked(false)
-{
+volatile bool DimmerTwoWireEx::_locked = false;
 
+DimmerTwoWireEx::DimmerTwoWireEx(Stream &stream) :
+    DimmerTwoWireClass(stream, SerialHandler::Wrapper::pollSerial)
+{
 }
 
 #endif

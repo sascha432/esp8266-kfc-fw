@@ -19,11 +19,12 @@ public:
 
     DimmerButtonConfig(ConfigType &config) :
         PushButtonConfig(
-            EnumHelper::Bitset::all(EventType::REPEATED_CLICK, EventType::CLICK, EventType::LONG_CLICK),
+            EnumHelper::Bitset::all(EventType::DOWN, EventType::LONG_PRESSED, EventType::HOLD),
             config.shortpress_time,
             config.longpress_time,
             IOT_DIMMER_MODULE_HOLD_REPEAT_TIME,
-            config.shortpress_steps
+            config.shortpress_steps,
+            config.single_click_time
         )
     {
     }
@@ -42,7 +43,7 @@ private:
     void _setLevel(int32_t newLevel, int16_t curLevel, float fadeTime);
     void _setLevel(int32_t newLevel, float fadeTime);
     void _changeLevel(int32_t changeLevel, float fadeTime);
-    void _changeLevelSingle(uint16_t steps, bool invert);
+    void _changeLevelSingle(uint16_t steps, bool invert, float time);
     void _changeLevelRepeat(uint16_t repeatTime, bool invert);
 
 private:

@@ -8,32 +8,23 @@
 #include "dimmer_channel.h"
 
 //
-// DimmerButtons -> DimmerButtonsImpl/DimmerNoButtonsImpl -> DimmerChannels -> Dimmer_Base
+// DimmerButtons -> DimmerButtonsImpl/DimmerNoButtonsImpl -> Dimmer_Base
 //
 
-// ------------------------------------------------------------------------
-// DimmerChannels
-// ------------------------------------------------------------------------
-
-class DimmerChannels : public Dimmer_Base {
-public:
-    using Dimmer_Base::Dimmer_Base;
-
-protected:
-    std::array<DimmerChannel, IOT_DIMMER_MODULE_CHANNELS> _channels;
-};
 
 // ------------------------------------------------------------------------
 // DimmerNoButtonsImpl
 // ------------------------------------------------------------------------
 
-class DimmerNoButtonsImpl : public DimmerChannels
-{
+class DimmerNoButtonsImpl : public Dimmer_Base {
 public:
-    using DimmerChannels::DimmerChannels;
+    using Dimmer_Base::Dimmer_Base;
 
     void _beginButtons() {}
     void _endButtons() {}
+
+protected:
+    std::array<DimmerChannel, IOT_DIMMER_MODULE_CHANNELS> _channels;
 };
 
 #if IOT_DIMMER_MODULE_HAS_BUTTONS
@@ -42,18 +33,18 @@ public:
 // DimmerButtonsImpl
 // ------------------------------------------------------------------------
 
-class DimmerButtonsImpl : public DimmerChannels {
+class DimmerButtonsImpl : public Dimmer_Base {
 public:
-    using DimmerChannels::DimmerChannels;
-
-public:
-    DimmerButtonsImpl();
+    using Dimmer_Base::Dimmer_Base;
+    using DimmerChannelsArray = std::array<DimmerChannel, IOT_DIMMER_MODULE_CHANNELS>;
 
     void _beginButtons();
     void _endButtons();
 
 protected:
     friend DimmerButton;
+
+    DimmerChannelsArray _channels;
 };
 
 #endif

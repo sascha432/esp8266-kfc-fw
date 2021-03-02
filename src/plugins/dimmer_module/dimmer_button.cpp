@@ -25,8 +25,11 @@ DimmerButton::DimmerButton(uint8_t pin, uint8_t channel, uint8_t button, DimmerB
     _channel(channel),
     _button(button)
 {
+    if (dimmer._getConfig().longpress_time == 0) {
+        _subscribedEvents = EnumHelper::Bitset::removeBits(_subscribedEvents, EventType::LONG_PRESSED);
+    }
     if (_button == 1) {
-        _subscribedEvents = EnumHelper::Bitset::addBits(_subscribedEvents, EventType::DOWN, EventType::SINGLE_CLICK);
+        _subscribedEvents = EnumHelper::Bitset::addBits(_subscribedEvents, EventType::SINGLE_CLICK);
     }
 #if DEBUG_PIN_MONITOR
     setName(PrintString(F("%s:%u"), _button == 0 ? PSTR("BUTTON-UP") : PSTR("BUTTON-DOWN"), _channel));
@@ -35,48 +38,51 @@ DimmerButton::DimmerButton(uint8_t pin, uint8_t channel, uint8_t button, DimmerB
 
 void DimmerButton::event(EventType eventType, uint32_t now)
 {
+    __DBG_IF(
+        auto oldLevel = _dimmer.getChannel(_channel);
+    );
     auto &config = _dimmer._getConfig();
+    auto repeatCount = _singleClickGroup->getRepeatCount();
     switch (eventType) {
         case EventType::DOWN:
+            // store level first
             if (_singleClickGroup->getRepeatCount() == 0) {
                 _level = _dimmer.getChannel(_channel);
-                __LDBG_printf("%s READ_LEVEL event=%s sp_count=%u level=%u", name(), eventTypeToString(eventType), _singleClickGroup->getRepeatCount(), _level);
             }
-            else {
-                __LDBG_printf("%s IGNORED event=%s sp_count=%u", name(), eventTypeToString(eventType), _singleClickGroup->getRepeatCount());
-            }
-            break;
-        case EventType::REPEATED_CLICK:
-            _changeLevelRepeat(IOT_DIMMER_MODULE_HOLD_REPEAT_TIME, _button == 1);
-            break;
-        case EventType::CLICK:
             if (_dimmer.getChannelState(_channel)) {
-                // channel is on
-                _changeLevelSingle(_singleClickSteps, _button == 1);
+                _changeLevelSingle(_singleClickSteps, _button == 1, config.lp_fadetime); //125 * _singleClickSteps / 1000.0);
             }
             else if (_button == 0) {
-                __LDBG_printf("%s ON duration=%u", name(), _duration);
-                // button 0 turns channel on
-                // button 1 turns channel off, using DOWN and SINGLE_CLICK
                 _dimmer.on(_channel);
             }
-            else {
-                __LDBG_printf("%s IGNORED event=%s state=%d", name(), eventTypeToString(eventType), _dimmer.getChannelState(_channel));
-            }
             break;
-        case EventType::LONG_CLICK:
-            _setLevel(IOT_DIMMER_MODULE_MAX_BRIGHTNESS * (int32_t)(_button == 0 ? config.longpress_max_brightness : config.longpress_min_brightness) / 100, config.lp_fadetime);
+        case EventType::HOLD_REPEAT:
+            _changeLevelRepeat(IOT_DIMMER_MODULE_HOLD_REPEAT_TIME, _button == 1);
             break;
         case EventType::SINGLE_CLICK:
+            // button 1 only
             if (_dimmer._channels[_channel].off(&config, _level)) {
                 __LDBG_printf("%s OFF store_level=%d duration=%u", name(), _level, _duration);
-                _dimmer._channels[_channel].setStoredBrightness(_level);
+            }
+            break;
+        case EventType::LONG_CLICK: {
+                int32_t level = _button == 0 ? config.longpress_max_brightness : config.longpress_min_brightness;
+                if (level != 0) {
+                    level = IOT_DIMMER_MODULE_MAX_BRIGHTNESS * level / 100;
+                    if (!_dimmer.getChannelState(_channel)) {
+                        _dimmer.on(_channel);
+                    }
+                    _setLevel(level, config.lp_fadetime);
+                }
             }
             break;
         default:
             __LDBG_printf("%s IGNORED event=%s", name(), eventTypeToString(eventType));
             break;
     }
+    __DBG_IF(
+        __DBG_printf("type=%s (%02x) repeat=%u btn=%u dur=%u level=%u new=%u", eventTypeToString(eventType), eventType, repeatCount, _button, _duration, oldLevel, _dimmer.getChannel(_channel));
+    );
 }
 
 void DimmerButton::_changeLevel(int32_t change, float fadeTime)
@@ -85,7 +91,7 @@ void DimmerButton::_changeLevel(int32_t change, float fadeTime)
     _setLevel(curLevel + change, curLevel, fadeTime);
 }
 
-void DimmerButton::_changeLevelSingle(uint16_t steps, bool invert)
+void DimmerButton::_changeLevelSingle(uint16_t steps, bool invert, float time)
 {
     int16_t levelChange = (IOT_DIMMER_MODULE_MAX_BRIGHTNESS / steps);
     __LDBG_printf("fadetime=%f/%f step=%u%% level=%d", _dimmer._config.lp_fadetime, _dimmer._config.lp_fadetime * 1.048, steps, invert ? -levelChange : levelChange);
@@ -110,10 +116,11 @@ void DimmerButton::_setLevel(int32_t newLevel, float fadeTime)
 
 void DimmerButton::_setLevel(int32_t newLevel, int16_t curLevel, float fadeTime)
 {
+    auto &config = _dimmer._getConfig();
     newLevel = std::clamp<int32_t>(
         newLevel,
-        IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _dimmer._getConfig().min_brightness / 100,
-        IOT_DIMMER_MODULE_MAX_BRIGHTNESS
+        IOT_DIMMER_MODULE_MAX_BRIGHTNESS * config.min_brightness / 100,
+        IOT_DIMMER_MODULE_MAX_BRIGHTNESS * config.max_brightness / 100
     );
     if (curLevel != newLevel) {
         _dimmer.setChannel(_channel, newLevel, fadeTime);

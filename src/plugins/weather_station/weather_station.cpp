@@ -560,7 +560,7 @@ void WeatherStationPlugin::canvasUpdatedEvent(int16_t x, int16_t y, int16_t w, i
         _lockCanvasUpdateEvents = 0;
     )
 
-    auto webSocketUI = WsWebUISocket::getServerSocket();
+    auto webSocketUI = WebUISocket::getServerSocket();
     // __DBG_printf("x=%d y=%d w=%d h=%d ws=%p empty=%u", x, y, w, h, webSocketUI, webSocketUI->getClients().isEmpty());
     if (webSocketUI && isCanvasAttached() && !webSocketUI->getClients().isEmpty()) {
         SpeedBooster speedBooster;

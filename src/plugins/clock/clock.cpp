@@ -220,7 +220,7 @@ String ClockPlugin::_getLightSensorWebUIValue()
 
 void ClockPlugin::_updateLightSensorWebUI()
 {
-    if (WsWebUISocket::hasAuthenticatedClients()) {
+    if (WebUISocket::hasAuthenticatedClients()) {
         JsonUnnamedObject json(2);
         json.add(JJ(type), JJ(ue));
         auto &events = json.addArray(JJ(events), 1);
@@ -229,7 +229,7 @@ void ClockPlugin::_updateLightSensorWebUI()
         obj.add(JJ(value), _getLightSensorWebUIValue());
         obj.add(JJ(state), true);
 
-        WsWebUISocket::broadcast(WsWebUISocket::getSender(), json);
+        WebUISocket::broadcast(WebUISocket::getSender(), json);
     }
 }
 

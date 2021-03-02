@@ -322,13 +322,13 @@ void SwitchPlugin::_publishState(MQTTClient *client, int8_t channel)
         }
         if (events.size()) {
             WebUISocket::broadcast(WebUISocket::getSender(), json);
-            // WsClient::broadcast(WebUISocket::getServerSocket(), WsWebUISocket::getSender(), buffer->c_str(), buffer->length());
+            // WsClient::broadcast(WebUISocket::getServerSocket(), WebUISocket::getSender(), buffer->c_str(), buffer->length());
 
             // auto buffer = std::shared_ptr<StreamString>(new StreamString());
             // json.printTo(*buffer);
 
             // LoopFunctions::callOnce([this, buffer]() {
-            //     WsClient::broadcast(WsWebUISocket::getServerSocket(), WsWebUISocket::getSender(), buffer->c_str(), buffer->length());
+            //     WsClient::broadcast(WebUISocket::getServerSocket(), WebUISocket::getSender(), buffer->c_str(), buffer->length());
             // });
         }
     }

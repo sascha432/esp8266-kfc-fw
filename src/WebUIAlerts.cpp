@@ -376,7 +376,7 @@ IdType FileStorage::addAlert(const String &message, Type type, ExpiresType expir
             client->server()->textAll(wwebUIAlertMsg);
         }
 #endif
-        WsWebUISocket::broadcast(nullptr, reinterpret_cast<uint8_t *>(const_cast<__FlashStringHelper *>(wwebUIAlertMsg)), strlen_P(reinterpret_cast<PGM_P>(wwebUIAlertMsg)));
+        WebUISocket::broadcast(nullptr, reinterpret_cast<uint8_t *>(const_cast<__FlashStringHelper *>(wwebUIAlertMsg)), strlen_P(reinterpret_cast<PGM_P>(wwebUIAlertMsg)));
     }
     //  __LDBG_printf("id=%u,msg=%s,type=%s,time=%lu,exp=%u,dismissable=%d,persistent=%d",
     //     alert.getId(), alert.getMessage().c_str(), alert.getTypeStr(), alert.getTime(), alert.getExpires(), alert.isDismissable(), alert.isPersistent()

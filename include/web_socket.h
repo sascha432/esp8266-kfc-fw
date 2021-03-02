@@ -25,6 +25,7 @@
 class WsClient;
 class WsClientAsyncWebSocket;
 class WebServerPlugin;
+class JsonUnnamedObject;
 
 //typedef std::function<WsClient *(WsClient *wsSClient, WsAwsEventType type, AsyncWebSocket *server, AsyncWebSocketClient *client, uint8_t *data, size_t len, void *arg)> WsEventHandlerCallback;
 typedef std::function<WsClient *(AsyncWebSocketClient *client)> WsGetInstance;
@@ -95,20 +96,54 @@ public:
 
 public:
     // broadcast to all clients except sender, if not null
+    // no encoding, PROGMEM safe
+    static void broadcast(AsyncWebSocket *server, WsClient *sender, const uint8_t *str, size_t length);
+    // UTF-8 encoding
     static void broadcast(AsyncWebSocket *server, WsClient *sender, AsyncWebSocketMessageBuffer *buffer);
     static void broadcast(AsyncWebSocket *server, WsClient *sender, const char *str, size_t length);
+
+    // no encoding
     static void broadcast(AsyncWebSocket *server, WsClient *sender, const __FlashStringHelper *str, size_t length);
+    static void broadcast(AsyncWebSocket *server, WsClient *sender, const JsonUnnamedObject &json);
 
-    // verify that the client is attached to the server
+    // validate server and client before sending
     static void safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, const String &message);
+    static void safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, const JsonUnnamedObject &json);
 
-    static bool hasClients(AsyncWebSocket *server);
+    // use hasAuthenticatedClients() instead
+    static bool hasClients(AsyncWebSocket *server) {
+        return hasAuthenticatedClients(server);
+    }
+    static bool hasAuthenticatedClients(AsyncWebSocket *server);
+
 
     // call function for each client that is connected, authenticated and is not sender
+    // the clients sockets are passed to the function
     static void foreach(AsyncWebSocket *server, WsClient *sender, std::function<void(AsyncWebSocketClient *)> func) {
         for(auto client: server->getClients()) {
             if (client->status() == WS_CONNECTED && client->_tempObject && client->_tempObject != sender && reinterpret_cast<WsClient *>(client->_tempObject)->isAuthenticated()) {
                 func(client);
+            }
+        }
+    }
+
+    // call function for "client" if connected and authenticated
+    // the clients socket is passed to the function
+    static void forclient(AsyncWebSocket *server, WsClient *client, std::function<void(AsyncWebSocketClient *)> func) {
+        for(auto client: server->getClients()) {
+            if (client->status() == WS_CONNECTED && client->_tempObject && client->_tempObject == client && reinterpret_cast<WsClient *>(client->_tempObject)->isAuthenticated()) {
+                func(client);
+                return;
+            }
+        }
+    }
+
+    // call function for "client" if connected and authenticated
+    static void forsocket(AsyncWebSocket *server, AsyncWebSocketClient *socket, std::function<void(AsyncWebSocketClient *)> func) {
+        for(auto client: server->getClients()) {
+            if (socket == client && client->status() == WS_CONNECTED && client->_tempObject && reinterpret_cast<WsClient *>(client->_tempObject)->isAuthenticated()) {
+                func(socket);
+                return;
             }
         }
     }
@@ -149,6 +184,8 @@ public:
     }
 
 protected:
+    // does not validate server or sender
+    static void _broadcast(AsyncWebSocket *server, WsClient *sender, AsyncWebSocketMessageBuffer *buffer);
     static void invokeStartOrEndCallback(WsClient *wsClient, bool isStart);
 
 private:
@@ -194,7 +231,7 @@ private:
 };
 
 
-inline bool WsClient::hasClients(AsyncWebSocket *server)
+inline bool WsClient::hasAuthenticatedClients(AsyncWebSocket *server)
 {
     return server && reinterpret_cast<WsClientAsyncWebSocket *>(server)->hasAuthenticatedClients();
 }

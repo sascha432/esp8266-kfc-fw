@@ -83,7 +83,6 @@ public:
         MQTT,
         // default
         DEFAULT = std::numeric_limits<int8_t>::max() / 2,
-        ATOMIC_SUN,
         DIMMER_MODULE,
         SWITCH,
         BLINDS,

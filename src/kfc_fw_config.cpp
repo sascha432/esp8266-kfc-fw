@@ -1192,7 +1192,7 @@ void KFCFWConfiguration::restartDevice(bool safeMode)
     ::printf(PSTR("scheduled tasks %u, WiFi callbacks %u, Loop Functions %u\n"), _Scheduler.size(), WiFiCallbacks::getVector().size(), LoopFunctions::size());
 #endif
 
-    auto webUiSocket = WsWebUISocket::getServerSocket();
+    auto webUiSocket = WebUISocket::getServerSocket();
     if (webUiSocket) {
 #if DEBUG_SHUTDOWN_SEQUENCE
         ::printf(PSTR("terminating webui websocket=%p\n"), webUiSocket);

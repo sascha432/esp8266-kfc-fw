@@ -301,12 +301,6 @@ void WsClient::invokeStartOrEndCallback(WsClient *wsClient, bool isStart)
     WsClient::foreach(client->server(), nullptr, [&authenticatedClients](AsyncWebSocketClient *) {
         authenticatedClients++;
     });
-    // for(auto socket: client->server()->getClients()) {
-    //     if (socket->status() == WS_CONNECTED && socket->_tempObject && reinterpret_cast<WsClient *>(socket->_tempObject)->isAuthenticated()) {
-    //         authenticatedClients++;
-    //     }
-    // }
-    // if the pointers do not match, the object is derived from AsyncWebSocket not WsClientAsyncWebSocket
     __DBG_assert_printf(*reinterpret_cast<WsClientAsyncWebSocket *>(client->server())->_ptr == client->server(), "WsClientAsyncWebSocket::_ptr does not match AsyncWebSocket");
 
     reinterpret_cast<WsClientAsyncWebSocket *>(client->server())->_authenticatedClients = authenticatedClients;
@@ -357,109 +351,177 @@ uint16_t WsClient::getQeueDelay()
     return qDelay;
 }
 
-static bool __get_server(AsyncWebSocket **server,  WsClient *sender)
+// validate server and sender
+// server may be nullptr if sender is not nullptr
+// sender may be nullptr for broadcasts
+static bool __get_server(AsyncWebSocket *&server, WsClient *sender)
 {
-    if (*server == nullptr) {
+    if (!server) {
         if (!sender) {
-            __DBG_printf("sender=%p", sender);
+            __DBG_printf("sender is nullptr");
             return false;
         }
         if (!sender->getClient()) {
-            __DBG_printf("sender=%p getClient=%p", sender, sender->getClient());
+            __DBG_printf("sender=%p get_client=%p", sender, sender->getClient());
             return false;
         }
-        *server = sender->getClient()->server();
+        server = sender->getClient()->server();
     }
-    return WsClient::hasClients(*server) && (*server)->availableForWriteAll();
+    return WsClient::hasAuthenticatedClients(server) && (server)->availableForWriteAll();
+}
+
+// validate server and client
+// server may be nullptr
+static bool __get_server(AsyncWebSocket *&server, AsyncWebSocketClient *client)
+{
+    if (!client) {
+        __DBG_printf("cleint is nullptr");
+        return false;
+    }
+    if (!server) {
+        server = client->server();
+    }
+    return WsClient::hasAuthenticatedClients(server) && server->availableForWriteAll();
+}
+
+void WsClient::_broadcast(AsyncWebSocket *server, WsClient *sender, AsyncWebSocketMessageBuffer *buffer)
+{
+    auto qDelay = getQeueDelay();
+    buffer->lock();
+    WsClient::foreach(server, sender, [buffer, qDelay](AsyncWebSocketClient *client) {
+        if (client->canSend()) {
+            client->text(buffer);
+            if (can_yield()) {
+                delay(qDelay); // let the device work on its tcp buffers
+            }
+        }
+    });
+    buffer->unlock();
+    server->_cleanBuffers();
 }
 
 void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, AsyncWebSocketMessageBuffer *buffer)
 {
-    if (__get_server(&server, sender)) {
-        // __LDBG_printf("sender=%p, clients=%u, message=%s", sender, server->getClients().length(), buffer->get());
-        auto qDelay = getQeueDelay();
-        buffer->lock();
-        WsClient::foreach(server, sender, [buffer, qDelay](AsyncWebSocketClient *client) {
-            if (client->canSend()) {
-                client->text(buffer);
-                if (can_yield()) {
-                    delay(qDelay); // let the device work on its tcp buffers
-                }
-            }
-        });
+    if (__get_server(server, sender)) {
+        broadcast(server, sender, buffer);
+    }
+}
 
-        // for(auto socket: server->getClients()) {
-        //     if (socket->status() == WS_CONNECTED && socket->_tempObject && socket->_tempObject != sender && reinterpret_cast<WsClient *>(socket->_tempObject)->isAuthenticated()) {
-        //         socket->text(buffer);
-        //         delay(qDelay); // let the device work on its tcp buffers
-        //     }
-        // }
-        buffer->unlock();
-        server->_cleanBuffers();
+static AsyncWebSocketMessageBuffer *jsonToBuffer(AsyncWebSocket *server, const JsonUnnamedObject &json)
+{
+#if 0
+    // JsonBuffer() is currently broken and might be less efficient than json.toString()
+    auto buffer = server->makeBuffer(json.length());
+    if (buffer) {
+        JsonBuffer(json).fillBuffer(buffer->get(), buffer->length());
+    }
+#else
+    // create json with toString() and move allocate block of memory
+    // might be more efficient than JsonBuffer
+    String str = json.toString();
+    size_t len = str.length();
+    auto cStr = MoveStringHelper::move(std::move(str), nullptr);
+    if (!cStr) {
+        return nullptr;
+    }
+    __LDBG_NOP_free(cStr);
+    auto buffer = server->makeBuffer(reinterpret_cast<uint8_t *>(cStr), len, false);
+#endif
+    return buffer;
+}
+
+void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, const JsonUnnamedObject &json)
+{
+    if (!__get_server(server, sender)) {
+        return;
+    }
+    auto buffer = jsonToBuffer(server, json);
+    if (buffer) {
+        _broadcast(server, sender, buffer);
+    }
+}
+
+void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, const uint8_t *str, size_t length)
+{
+    if (!__get_server(server, sender)) {
+        return;
+    }
+    auto buffer = server->makeBuffer(length);
+    if (buffer) {
+        reinterpret_cast<uint8_t *>(memcpy_P(buffer->get(), str, length))[length] = 0;
+        _broadcast(server, sender, buffer);
     }
 }
 
 void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, const char *str, size_t length)
 {
-    if (__get_server(&server, sender)) {
-        size_t buflen = length;
-        stdex::conv::utf8::strlen<stdex::conv::utf8::DefaultReplacement>(str, buflen, length);
-        auto buffer = server->makeBuffer(buflen);
+    if (!__get_server(server, sender)) {
+        return;
+    }
+    size_t buflen = length;
+    stdex::conv::utf8::strlen<stdex::conv::utf8::DefaultReplacement>(str, buflen, length);
+    auto buffer = server->makeBuffer(buflen);
+    if (buffer) {
         buffer->_len = buflen;
         stdex::conv::utf8::strcpy<stdex::conv::utf8::DefaultReplacement>(reinterpret_cast<char *>(buffer->get()), str, buflen, length);
         buffer->get()[buflen] = 0;
-        broadcast(server, sender, buffer);
+        _broadcast(server, sender, buffer);
     }
 }
 
 void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, const __FlashStringHelper *str, size_t length)
 {
-    if (__get_server(&server, sender)) {
-        auto buffer = server->makeBuffer(length);
+    if (!__get_server(server, sender)) {
+        return;
+    }
+    auto buffer = server->makeBuffer(length);
+    if (buffer) {
         memcpy_P(buffer->get(), str, length);
-        broadcast(server, sender, buffer);
+        _broadcast(server, sender, buffer);
     }
 }
 
-
-// bool WsClient::hasClients(AsyncWebSocket *server)
-// {
-//     if (server) {
-//         __DBG_assert_printf(*reinterpret_cast<WsClientAsyncWebSocket *>(server)->_ptr == server, "WsClientAsyncWebSocket::_ptr does not match AsyncWebSocket");
-//         return reinterpret_cast<WsClientAsyncWebSocket *>(server)->hasAuthenticatedClients();
-
-//         // for(auto socket: server->getClients()) {
-//         //     if (socket->status() == WS_CONNECTED && socket->_tempObject && reinterpret_cast<WsClient *>(socket->_tempObject)->isAuthenticated()) {
-//         //         return true;
-//         //     }
-//         // }
-//     }
-//     return false;
-// }
-
 void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, const String &message)
 {
-    if (!hasClients(server)) {
+    if (!__get_server(server, client)) {
         __LDBG_printf("no clients connected: server=%p client=%p message=%s", server, client, message.c_str());
         return;
     }
     auto len = message.length();
-    for(auto socket: server->getClients()) {
-        if (client == socket && socket->status() == WS_CONNECTED && socket->_tempObject && reinterpret_cast<WsClient *>(socket->_tempObject)->isAuthenticated()) {
-            __LDBG_printf("server=%p client=%p message=%s can_send=%u", server, client, message.c_str(), client->canSend());
-            if (client->canSend()) {
+    if (len) {
+        WsClient::forsocket(server, client, [len, server, &message](AsyncWebSocketClient *socket) {
+            if (socket->canSend()) {
                 size_t buflen = len;
                 stdex::conv::utf8::strlen<stdex::conv::utf8::DefaultReplacement>(message.c_str(), buflen, len);
                 auto buffer = server->makeBuffer(buflen);
-                stdex::conv::utf8::strcpy<stdex::conv::utf8::DefaultReplacement>(reinterpret_cast<char *>(buffer->get()), message.c_str(), buflen, len);
-                buffer->get()[buflen] = 0;
-                client->text(buffer);
-                if (can_yield()) {
-                    delay(getQeueDelay());
+                if (buffer) {
+                    stdex::conv::utf8::strcpy<stdex::conv::utf8::DefaultReplacement>(reinterpret_cast<char *>(buffer->get()), message.c_str(), buflen, len);
+                    buffer->get()[buflen] = 0;
+                    socket->text(buffer);
+                    if (can_yield()) {
+                        delay(WsClient::getQeueDelay());
+                    }
                 }
             }
-            return;
-        }
+        });
     }
-    __LDBG_printf("client not found: server=%p client=%p message=%s", server, client, message.c_str());
+}
+
+void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, const JsonUnnamedObject &json)
+{
+    if (!__get_server(server, client)) {
+        __LDBG_printf("no clients connected: server=%p client=%p message=%s", server, client, json.toString().c_str());
+        return;
+    }
+    WsClient::forsocket(server, client, [server, &json](AsyncWebSocketClient *socket) {
+        if (socket->canSend()) {
+            auto buffer = jsonToBuffer(server, json);
+            if (buffer) {
+                socket->text(buffer);
+                if (can_yield()) {
+                    delay(WsClient::getQeueDelay());
+                }
+            }
+        }
+    });
 }

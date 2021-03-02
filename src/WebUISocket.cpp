@@ -20,79 +20,26 @@ using KFCConfigurationClasses::System;
 
 PROGMEM_STRING_DEF(webui_socket_uri, "/webui-ws");
 
-WsClientAsyncWebSocket *wsWebUI = nullptr;
-WsWebUISocket *WsWebUISocket::_sender = nullptr;
+WsClientAsyncWebSocket *WebUISocket::_server;
+WebUISocket *WebUISocket::_sender;
 
 void webui_socket_event_handler(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len)
 {
-    WsWebUISocket::onWsEvent(server, client, (int)type, data, len, arg, WsWebUISocket::createInstance);
+    WebUISocket::onWsEvent(server, client, (int)type, data, len, arg, WebUISocket::createInstance);
 }
 
-void WsWebUISocket::setup()
+void WebUISocket::setup()
 {
     auto server = WebServerPlugin::getWebServerObject();
     if (server) {
-        auto ws = __LDBG_new(WsClientAsyncWebSocket, FSPGM(webui_socket_uri), &wsWebUI);
+        auto ws = __LDBG_new(WsClientAsyncWebSocket, FSPGM(webui_socket_uri), &_server);
         ws->onEvent(webui_socket_event_handler);
         server->addHandler(ws);
         __LDBG_printf("Web socket for UI running on port %u", System::WebServer::getConfig().getPort());
     }
 }
 
-void WsWebUISocket::send(AsyncWebSocketClient *client, const JsonUnnamedObject &json)
-{
-    __LDBG_printf("send json");
-    if (client->canSend()) {
-        auto server = client->server();
-        auto buffer = server->makeBuffer(json.length());
-        assert(JsonBuffer(json).fillBuffer(buffer->get(), buffer->length()) == buffer->length());
-        client->text(buffer);
-    }
-}
-
-void WsWebUISocket::broadcast(WsWebUISocket *sender, const JsonUnnamedObject &json)
-{
-    __LDBG_printf("broadcast sender=%p json", sender);
-    if (wsWebUI && wsWebUI->hasAuthenticatedClients() && wsWebUI->availableForWriteAll()) {
-        auto buffer = wsWebUI->makeBuffer(json.length());
-        assert(JsonBuffer(json).fillBuffer(buffer->get(), buffer->length()) == buffer->length());
-        __LDBG_printf("buffer=%s", buffer->get());
-        WsClient::broadcast(wsWebUI, sender, buffer);
-    }
-}
-
-void WsWebUISocket::broadcast(WsWebUISocket *sender, const uint8_t *buf, size_t len)
-{
-    if (wsWebUI && wsWebUI->hasAuthenticatedClients() && wsWebUI->availableForWriteAll()) {
-        auto buffer = wsWebUI->makeBuffer(const_cast<uint8_t *>(buf), len, false);
-        __LDBG_printf("buffer=%s", buffer->get());
-        WsClient::broadcast(wsWebUI, sender, buffer);
-    }
-}
-
-WsWebUISocket *WsWebUISocket::getSender()
-{
-    return _sender;
-}
-
-WsClientAsyncWebSocket *WsWebUISocket::getServerSocket()
-{
-    return wsWebUI;
-}
-
-bool WsWebUISocket::hasAuthenticatedClients()
-{
-    return wsWebUI && wsWebUI->hasAuthenticatedClients();
-}
-
-
-WsClient *WsWebUISocket::createInstance(AsyncWebSocketClient *socket)
-{
-    __LDBG_println();
-    return __LDBG_new(WsWebUISocket, socket);
-}
-
-void WsWebUISocket::onText(uint8_t *data, size_t len)
+void WebUISocket::onText(uint8_t *data, size_t len)
 {
     __LDBG_printf("data=%p len=%d", data, len);
     if (isAuthenticated()) {
@@ -147,7 +94,7 @@ void WsWebUISocket::onText(uint8_t *data, size_t len)
     }
 }
 
-void WsWebUISocket::sendValues(AsyncWebSocketClient *client)
+void WebUISocket::sendValues(AsyncWebSocketClient *client)
 {
     JsonUnnamedObject json(1);
 
@@ -163,7 +110,7 @@ void WsWebUISocket::sendValues(AsyncWebSocketClient *client)
     send(client, json);
 }
 
-void WsWebUISocket::createWebUIJSON(JsonUnnamedObject &json)
+void WebUISocket::createWebUIJSON(JsonUnnamedObject &json)
 {
     WebUIRoot webUI(json);
 

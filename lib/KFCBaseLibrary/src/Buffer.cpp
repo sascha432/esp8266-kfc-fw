@@ -28,12 +28,13 @@ char *MoveStringHelper::move(String &&_str, int *allocSize)
     char *buf;
     int _allocSize;
     __LDBG_println();
+    auto len = str.length();
 #if ESP8266
-    if (str.length()) {
+    if (len) {
         if (WSTRING_IS_SSO(str)) {
-            _allocSize = (str.length() + (1 << 3)) & ~0x03;
+            _allocSize = (len + (1 << 3)) & ~0x03;
             if ((buf = __LDBG_malloc_str(_allocSize)) != nullptr) {
-                std::fill(std::copy_n(str.c_str(), str.length(), buf), buf + _allocSize, 0);
+                std::fill(std::copy_n(str.c_str(), len, buf), buf + _allocSize, 0);
             }
             else {
                 _allocSize = 0;
@@ -44,7 +45,7 @@ char *MoveStringHelper::move(String &&_str, int *allocSize)
             _allocSize = str.capacity();
             // register allocated block
             __LDBG_NOP_malloc(buf, _allocSize);
-            std::fill(buf + str.length(), buf + _allocSize, 0);
+            std::fill(buf + len, buf + _allocSize, 0);
         }
         str.init();
         // str.setSSO(true);
@@ -57,11 +58,18 @@ char *MoveStringHelper::move(String &&_str, int *allocSize)
         _allocSize = 0;
     }
 #else
-    // move not implemented
-    _allocSize = (str.length() + (1 << 3)) & ~0x03;
-    buf = new char[_allocSize];
-    std::fill(std::copy_n(_str.c_str(), _str.length(), buf), buf + _allocSize, 0);
-    _str = String();
+    if (len) {
+        // move not implemented
+        _allocSize = (len + (1 << 3)) & ~0x03;
+        buf = new char[_allocSize];
+        std::fill(std::copy_n(_str.c_str(), len, buf), buf + _allocSize, 0);
+        _str = String();
+    }
+    else {
+        _str = String();
+        buf = nullptr;
+        _allocSize = 0;
+    }
 #endif
     if (allocSize) {
         *allocSize = _allocSize;

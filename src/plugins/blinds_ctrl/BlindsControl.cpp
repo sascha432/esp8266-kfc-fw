@@ -149,11 +149,11 @@ void BlindsControl::_publishState(MQTTClient *client)
         client->publish(_getTopic(ChannelType::NONE, TopicType::CHANNELS), true, buffer);
     }
 
-    if (WsWebUISocket::hasAuthenticatedClients()) {
+    if (WebUISocket::hasAuthenticatedClients()) {
         JsonUnnamedObject webUI(2);
         webUI.add(JJ(type), JJ(ue));
         getValues(webUI.addArray(JJ(events), kChannelCount * 2));
-        WsWebUISocket::broadcast(WsWebUISocket::getSender(), webUI);
+        WebUISocket::broadcast(WebUISocket::getSender(), webUI);
     }
 }
 

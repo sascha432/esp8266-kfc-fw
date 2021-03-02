@@ -289,7 +289,7 @@ void WebServerPlugin::handlerWebUI(AsyncWebServerRequest *request)
     String str;
     {
         JsonUnnamedObject json;
-        WsWebUISocket::createWebUIJSON(json);
+        WebUISocket::createWebUIJSON(json);
         str = json.toString();
     }
     auto response = new AsyncBasicResponse(200, FSPGM(mime_application_json), str);
@@ -303,7 +303,7 @@ void WebServerPlugin::handlerWebUI(AsyncWebServerRequest *request)
     httpHeaders.setAsyncWebServerResponseHeaders(response);
     //TODO fix
     // auto response = new AsyncJsonResponse();
-    // WsWebUISocket::createWebUIJSON(response->getJsonObject());
+    // WebUISocket::createWebUIJSON(response->getJsonObject());
     // HttpHeaders httpHeaders;
     // httpHeaders.addNoCache();
     // httpHeaders.setAsyncBaseResponseHeaders(response);
@@ -743,7 +743,7 @@ void WebServerPlugin::begin()
     _server->onNotFound(handlerNotFound);
 
     if (System::Flags::getConfig().is_webui_enabled) {
-        WsWebUISocket::setup();
+        WebUISocket::setup();
         WebServerPlugin::addHandler(F("/webui-handler"), handlerWebUI);
     }
 

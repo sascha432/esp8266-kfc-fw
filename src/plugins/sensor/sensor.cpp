@@ -138,7 +138,7 @@ void SensorPlugin::_timerEvent()
         client = nullptr;
     }
 
-    if (WsWebUISocket::hasAuthenticatedClients()) {
+    if (WebUISocket::hasAuthenticatedClients()) {
         JsonUnnamedObject json(2);
         json.add(JJ(type), JJ(ue));
         auto &events = json.addArray(JJ(events));
@@ -147,7 +147,7 @@ void SensorPlugin::_timerEvent()
         }
         // __DBG_printf("events=%u", events.size());
         if (events.size()) {
-            WsWebUISocket::broadcast(WsWebUISocket::getSender(), json);
+            WebUISocket::broadcast(WebUISocket::getSender(), json);
         }
     }
     else if (client) {

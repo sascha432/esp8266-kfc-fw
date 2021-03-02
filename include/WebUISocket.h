@@ -12,42 +12,62 @@
 #include "web_socket.h"
 #include "templates.h"
 
-class WsWebUISocket : public WsClient {
+class WebUISocket : public WsClient {
 public:
     using WsClient::WsClient;
     using WsClient::hasClients;
 
 public:
-    static WsClient *createInstance(AsyncWebSocketClient *socket);
+    inline static WsClient *createInstance(AsyncWebSocketClient *socket) {
+        return __LDBG_new(WebUISocket, socket);
+    }
 
     virtual void onText(uint8_t *data, size_t len) override;
 
 public:
-    static void send(AsyncWebSocketClient *client, const JsonUnnamedObject &json);
-    static void broadcast(WsWebUISocket *sender, const JsonUnnamedObject &json);
-    static void broadcast(WsWebUISocket *sender, const uint8_t *buf, size_t len);
-    inline static void broadcast(WsWebUISocket *sender, const char *str) {
-        broadcast(sender, reinterpret_cast<const uint8_t *>(str), strlen(str));
+    static void send(AsyncWebSocketClient *client, const JsonUnnamedObject &json) {
+        WsClient::safeSend(getServerSocket(), client, json);
     }
-    inline static void broadcast(WsWebUISocket *sender, const String &str) {
-        broadcast(sender, reinterpret_cast<const uint8_t *>(str.c_str()), str.length());
+
+    // text message with no encoding
+    inline static void broadcast(WebUISocket *sender, const uint8_t *str, size_t len) {
+        WsClient::broadcast(getServerSocket(), sender, str, len);
     }
-    inline static void broadcast(WsWebUISocket *sender, const __FlashStringHelper *str) {
-        broadcast(sender, reinterpret_cast<const uint8_t *>(str), strlen(reinterpret_cast<PGM_P>(str)));
+
+    inline static void broadcast(WebUISocket *sender, const JsonUnnamedObject &json) {
+        WsClient::broadcast(getServerSocket(), sender, json);
     }
+
+    // text message UTF-8
+    inline static void broadcast(WebUISocket *sender, const char *str) {
+        WsClient::broadcast(getServerSocket(), sender, str, strlen(str));
+    }
+    inline static void broadcast(WebUISocket *sender, const String &str) {
+        WsClient::broadcast(getServerSocket(), sender, str.c_str(), str.length());
+    }
+    // text message with no encoding
+    inline static void broadcast(WebUISocket *sender, const __FlashStringHelper *str) {
+        WsClient::broadcast(getServerSocket(), sender, str, strlen(reinterpret_cast<PGM_P>(str)));
+    }
+
     static void setup();
 
     static void createWebUIJSON(JsonUnnamedObject &json);
     static void sendValues(AsyncWebSocketClient *client);
 
-    static WsWebUISocket *getSender();
+    inline static WebUISocket *getSender() {
+        return _sender;
+    }
 
-    static bool hasAuthenticatedClients();
-    static WsClientAsyncWebSocket *getServerSocket();
+    inline static bool hasAuthenticatedClients() {
+        return _server && _server->hasAuthenticatedClients();
+    }
+    inline static WsClientAsyncWebSocket *getServerSocket() {
+        return _server;
+    }
 
 
 private:
-    static WsWebUISocket *_sender;
+    static WebUISocket *_sender;
+    static WsClientAsyncWebSocket *_server;
 };
-
-using WebUISocket = WsWebUISocket;

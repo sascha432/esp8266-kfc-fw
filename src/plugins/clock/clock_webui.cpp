@@ -132,7 +132,7 @@ void ClockPlugin::addPowerSensor(WebUIRoot &webUI, WebUIRow **row, SensorPlugin:
 
 void ClockPlugin::_updatePowerLevelWebUI()
 {
-    if (WsWebUISocket::hasAuthenticatedClients()) {
+    if (WebUISocket::hasAuthenticatedClients()) {
         JsonUnnamedObject json(2);
         json.add(JJ(type), JJ(ue));
         auto &events = json.addArray(JJ(events), 1);
@@ -140,7 +140,7 @@ void ClockPlugin::_updatePowerLevelWebUI()
         obj.add(JJ(id), F("pwrlvl"));
         obj.add(JJ(state), true);
         obj.add(JJ(value), JsonNumber(_getPowerLevel(), 2));
-        WsWebUISocket::broadcast(WsWebUISocket::getSender(), json);
+        WebUISocket::broadcast(WebUISocket::getSender(), json);
     }
 }
 
@@ -161,7 +161,7 @@ uint8_t ClockPlugin::_calcPowerFunction(uint8_t targetBrightness, uint32_t maxPo
 
 void ClockPlugin::_webSocketCallback(WsClient::ClientCallbackType type, WsClient *client, AsyncWebSocket *server, WsClient::ClientCallbackId id)
 {
-    if (server != WsWebUISocket::getServerSocket()) {
+    if (server != WebUISocket::getServerSocket()) {
         return;
     }
     // adjust update rate if a client connects to the webui
@@ -232,10 +232,10 @@ void ClockPlugin::createWebUI(WebUIRoot &webUI)
 
 void ClockPlugin::_broadcastWebUI()
 {
-    if (WsWebUISocket::hasAuthenticatedClients()) {
+    if (WebUISocket::hasAuthenticatedClients()) {
         JsonUnnamedObject json(2);
         json.add(JJ(type), JJ(ue));
         getValues(json.addArray(JJ(events)));
-        WsWebUISocket::broadcast(WsWebUISocket::getSender(), json);
+        WebUISocket::broadcast(WebUISocket::getSender(), json);
     }
 }

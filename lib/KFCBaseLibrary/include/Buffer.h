@@ -38,6 +38,8 @@ class FileBufferStreamImpl;
 class MoveStringHelper : public String {
 public:
     MoveStringHelper();
+    // returns nullptr if the string "move" is empty or if it cannot allocate memory
+    // otherwise the allocated block of memory (malloc()!)
     static char *move(String &&move, int *allocSize);
     static void move(Buffer &buffer, String &&move);
 };

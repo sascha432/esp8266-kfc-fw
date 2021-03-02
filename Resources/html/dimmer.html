@@ -29,15 +29,15 @@
             %FORM_HTML%
             <div class="form-help-block">
                 <div data-target="#sptime">If pressed less than this, a click is detected</div>
-                <div data-target="#lptime">If pressed less than this but longer than click time, a long press is detected. Holding a button for longer will start to increase or decrease the brightness</div>
+                <div data-target="#lptime">If pressed less than this but longer than click time, a long press is detected. Holding a button for longer will start to increase or decrease the brightness. Enter 0 to disable</div>
                 <div data-target="#sstep">Number of steps to change the brightness from 0-100%. Holding a button can be used to fine adjust the brightness</div>
                 <div data-target="#snrt">Time between clicks to detect it as multiple clicks. A single click down turns the dimmer off. Increase value if dimmer turns off while adjusting the brightness</div>
                 <div data-target="#lpft">Time to change brightness from 0-100% while the dimmer is on</div>
                 <div data-target="#onft">Time to change brightness from 0-100% when turning the dimmer on</div>
                 <div data-target="#offft">Time to change brightness from 0-100% when turning the dimmer off</div>
                 <div data-target="#minbr">Minimum brightness that can be set using the buttons</div>
-                <div data-target="#lpmaxb">Change brightness to this value and turn dimmer on if it is off</div>
-                <div data-target="#lpminb">Change brightness to this value and turn dimmer on if it is off</div>
+                <div data-target="#lpmaxb">Change brightness to this value and turn dimmer on if it is off. Enter 0 to disable</div>
+                <div data-target="#lpminb">Change brightness to this value and turn dimmer on if it is off. Enter 0 to disable</div>
                 <div data-target="#offdly">Delay turning off after single click down. When Confirm Signal is enabled, the lights will flash after receiving the click. A second single click down turns the dimmer off right away</div>
                 <div data-target="#tsofs">Equation for internal ATmega Temperature Sensor  <div class="math"><span class="frac"><sup>((ADC value - (273 + 100 - TS_OFFSET)) * 128)</sup> <span>/</span> <sub>TS_GAIN</sub></span><span class="middle"> + 25</span></div></div>
             </div>
@@ -58,7 +58,7 @@
 	<!--JAVASCRIPT%%-->
 	<script>
 		$(function() {
-            if ($('#restore,#nzcd,#vref11').length()) {
+            if ($('#restore,#nzcd,#vref11').length) {
                 $('#dimmer_settings').find('button[type=submit]').parent().append('<button type="button" class="btn btn-secondary ml-3" id="reset_firmware">Reset Firmware...</button>');
                 $('#reset_firmware').on('click', function(event) {
                     event.preventDefault();

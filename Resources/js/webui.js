@@ -34,7 +34,7 @@ $.webUIComponent = {
         column: {
             group: { columns: 12 },
             switch: { min: 0, max: 1, columns: 2, zero_off: true, name: 0, attributes: [ 'min', 'max', 'value', 'name' ] },
-            slider: { slider_type: 'slider', min: 0, max: 255, columns: 12, attributes: [ 'min', 'max', 'value' ] },
+            slider: { slider_type: 'slider', min: 0, max: 255, columns: 12, rmin: false, rmax: false, attributes: [ 'min', 'max', 'rmin', 'rmax', 'value' ] },
             color_slider: { slider_type: 'slider coplor-slider', min: 15300, max: 50000 },
             rgb_slider: { slider_type: 'slider rgb-slider', min: 0, max: 0xffffff },
             sensor: { columns: 3, no_value: '-'},
@@ -100,6 +100,29 @@ $.webUIComponent = {
     }
         // console.log('#', r, g, b, 'index', start, end);
         return 0;
+    },
+
+    create_slider_gradient: function(min, max, rmin, rmax) {
+        min = parseFloat(min);
+        max = parseFloat(max);
+        rmin = (rmin === false) ? rmin = min : parseFloat(rmin);
+        rmax = (rmax === false) ? rmax = max : parseFloat(rmax);
+        range = max - min;
+        start = Math.round(rmin * 10000  / range) / 100;
+        end = Math.round(rmax * 10000  / range) / 100;
+        var grad = 'linear-gradient(to right';
+        if (start > 1) {
+            grad += ', rgba(0,0,0,0.2) 0% ' + start + '%,'
+        }
+        else {
+            start = 0
+        }
+        grad += ' rgba(0,0,0,0) ' + start + '%';
+        if (end < 100) {
+            grad += ' ' + end + '%, rgba(0,0,0,0.2) ' + end + '%';
+        }
+        grad += ' 100%';
+        return grad + ')';
     },
 
     //
@@ -736,6 +759,9 @@ $.webUIComponent = {
             var range_slider = { element: input, handle: next.find('.rangeslider__handle'), fill: next.find('.rangeslider__fill') };
             self.components[$(this).attr('id')].range_slider = range_slider;
             self.slider_update_css(range_slider);
+            if (input.attr('rmin') || input.attr('rmax')) {
+                next.css('background-image', self.create_slider_gradient(input.attr('min'), input.attr('max'), input.attr('rmin'), input.attr('rmax')));
+            }
         });
 
         if (this.container.find('#system_time').length) {

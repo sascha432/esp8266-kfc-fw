@@ -337,13 +337,18 @@ starting with fb-0=1.125 going up to fb-11=2.5rem */
     background-image: linear-gradient(to right, rgb(76, 125, 241), rgb(255, 255, 255), rgb(255, 170, 40)) !important;
 }
 
+.webuicomponent > .slider .rangeslider__fill {
+    mix-blend-mode: color;
+}
+
 .webuicomponent > .slider.color-slider .rangeslider__fill {
     background-color: transparent;
 }
 
-.xwebuicomponent > .slider.rgb-slider .rangeslider--horizontal {
+/*
+.webuicomponent > .slider.rgb-slider .rangeslider--horizontal {
     background-image: linear-gradient(to right,red, orange, yellow, green, blue, purple ) !important;
-}
+} */
 
 .webuicomponent > .slider.rgb-slider .rangeslider__fill {
     background-color: transparent;

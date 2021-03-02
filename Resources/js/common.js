@@ -255,6 +255,14 @@ $.__global_templates = window.__global_templates = {
 
 $(function() {
     $.dbg_console.ready();
+
+    $('.dropdown-submenu .dropdown-menu .dropdown-item:first').each(function() {
+        var submenu = $(this).closest('.dropdown-submenu');
+        var parent = submenu.find('a:first');
+        var href = $(this).attr('href');
+        parent.attr('href', href);
+    });
+
 });
 
 function config_init(show_ids, update_form) {

@@ -13,25 +13,9 @@ PrintString::PrintString(const String &str) : String(str)
 {
 }
 
-PrintString::PrintString(const char *format, ...)
-{
-    va_list arg;
-    va_start(arg, format);
-    vprintf(format, arg);
-    va_end(arg);
-}
-
 PrintString::PrintString(const char *format, va_list arg)
 {
     vprintf(format, arg);
-}
-
-PrintString::PrintString(const __FlashStringHelper *format, ...)
-{
-    va_list arg;
-    va_start(arg, format);
-    vprintf_P(RFPSTR(format), arg);
-    va_end(arg);
 }
 
 PrintString::PrintString(const __FlashStringHelper *format, va_list arg)
@@ -163,7 +147,6 @@ size_t PrintString::write_P(PGM_P buf, size_t size)
     reinterpret_cast<char *>(memcpy_P(wbuffer() + len, buf, size))[size] = 0;
     setLen(len + size);
 #elif 1
-    char temp[16];
     memcpy_P(begin() + _increaseLength(len + size), buf, size);
 #else
     size_t count = size;

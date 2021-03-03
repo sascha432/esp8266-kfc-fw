@@ -25,13 +25,43 @@ public:
     PrintString();
     PrintString(const String &str);
 
-    PrintString(const char *format, ...);
     PrintString(const char *format, va_list arg);
-    PrintString(const __FlashStringHelper *format, ...);
+
     PrintString(const __FlashStringHelper *format, va_list arg);
     PrintString(double n, uint8_t digits, bool trimTrailingZeros);
     PrintString(const uint8_t* buffer, size_t len);
     PrintString(const __FlashBufferHelper *buffer, size_t len);
+
+
+    // PrintString(const char *str)
+    // PrintString(const char *format, ...) with at least one argument, otherwise it is not using printf but print
+
+    template<typename ..._Args>
+    PrintString(const char *format, _Args&& ...args) {
+        printFormatted(format, std::forward<_Args>(args)...);
+    }
+    void printFormatted(const char *format) {
+        print(format);
+    }
+    template<typename _Ta, typename ..._Args>
+    void printFormatted(const char *format, _Ta &&arg, _Args && ...args) {
+        Print::printf_P(format, std::forward<_Ta>(arg), std::forward<_Args>(args)...);
+    }
+
+    // PrintString(const __FlashStringHelper *format)
+    // PrintString(const __FlashStringHelper *format, ...) with at least one argument, otherwise it is not using printf but print
+
+    template<typename ..._Args>
+    PrintString(const __FlashStringHelper *format, _Args&& ...args) {
+        printFormatted(format, std::forward<_Args>(args)...);
+    }
+    void printFormatted(const __FlashStringHelper *format) {
+        print(format);
+    }
+    template<typename _Ta, typename ..._Args>
+    void printFormatted(const __FlashStringHelper *format, _Ta &&arg, _Args && ...args) {
+        Print::printf_P(reinterpret_cast<PGM_P>(format), std::forward<_Ta>(arg), std::forward<_Args>(args)...);
+    }
 
     size_t print(double n, uint8_t digits, bool trimTrailingZeros);
     size_t vprintf(const char *format, va_list arg);
@@ -58,9 +88,9 @@ public:
         return strftime(format, localtime(&now));
     }
 
+    using String::operator+=;
     PrintString &operator+=(uint64_t);
     PrintString &operator+=(int64_t);
-    using String::operator+=;
 
     virtual size_t write(uint8_t data) override;
     virtual size_t write(const uint8_t* buf, size_t size) override;

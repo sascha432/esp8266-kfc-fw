@@ -23,6 +23,7 @@
 class PrintString : public String, public Print {
 public:
     PrintString();
+    PrintString(char ch) : String(ch) {}
     PrintString(const String &str);
 
     PrintString(const char *format, va_list arg);
@@ -37,30 +38,30 @@ public:
     // PrintString(const char *format, ...) with at least one argument, otherwise it is not using printf but print
 
     template<typename ..._Args>
-    PrintString(const char *format, _Args&& ...args) {
-        printFormatted(format, std::forward<_Args>(args)...);
+    PrintString(const char *format, _Args ...args) {
+        printFormatted(format, args...);
     }
     void printFormatted(const char *format) {
         print(format);
     }
     template<typename _Ta, typename ..._Args>
-    void printFormatted(const char *format, _Ta &&arg, _Args && ...args) {
-        Print::printf_P(format, std::forward<_Ta>(arg), std::forward<_Args>(args)...);
+    void printFormatted(const char *format, _Ta arg, _Args ...args) {
+        Print::printf_P(format, arg, args...);
     }
 
     // PrintString(const __FlashStringHelper *format)
     // PrintString(const __FlashStringHelper *format, ...) with at least one argument, otherwise it is not using printf but print
 
     template<typename ..._Args>
-    PrintString(const __FlashStringHelper *format, _Args&& ...args) {
-        printFormatted(format, std::forward<_Args>(args)...);
+    PrintString(const __FlashStringHelper *format, _Args ...args) {
+        printFormatted(format, args...);
     }
     void printFormatted(const __FlashStringHelper *format) {
         print(format);
     }
     template<typename _Ta, typename ..._Args>
-    void printFormatted(const __FlashStringHelper *format, _Ta &&arg, _Args && ...args) {
-        Print::printf_P(reinterpret_cast<PGM_P>(format), std::forward<_Ta>(arg), std::forward<_Args>(args)...);
+    void printFormatted(const __FlashStringHelper *format, _Ta arg, _Args ...args) {
+        Print::printf_P(reinterpret_cast<PGM_P>(format), arg, args...);
     }
 
     size_t print(double n, uint8_t digits, bool trimTrailingZeros);

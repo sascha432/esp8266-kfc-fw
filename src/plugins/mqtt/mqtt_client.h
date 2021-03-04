@@ -486,7 +486,6 @@ public:
         void subscribeWithGroup(ComponentPtr component, const String &topic, QosType qos = QosType::DEFAULT);
         void unsubscribeWithGroup(ComponentPtr component, const String &topic);
     #endif
-        void publishPersistantStorage(StorageFrequencyType type, const String &name, const String &data);
 
 #if MQTT_AUTO_DISCOVERY
 
@@ -734,13 +733,6 @@ public:
     Client *Client::getClient()
     {
         return _mqttClient;
-    }
-
-    inline void Client::safePersistantStorage(StorageFrequencyType type, const String &name, const String &data)
-    {
-        if (_mqttClient) {
-            _mqttClient->publishPersistantStorage(type, name, data);
-        }
     }
 
     inline bool Client::safeIsAutoDiscoveryRunning()

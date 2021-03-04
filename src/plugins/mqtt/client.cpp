@@ -247,7 +247,7 @@ bool MQTT::Client::unregisterComponent(ComponentPtr component)
 {
     auto size = _components.size();
     if (_mqttClient) {
-        auto result = _mqttClient->unregisterComponent(component);
+        auto result = _mqttClient->_unregisterComponent(component);
         component->setClient(nullptr);
         return result;
     }
@@ -645,36 +645,13 @@ bool MQTTClient::_topicInUse(ComponentPtr component, const String &topic)
     return false;
 }
 
-void MQTTClient::publishPersistantStorage(StorageFrequencyType type, const String &name, const String &data)
-{
-    time_t now = time(nullptr);
-    if (!IS_TIME_VALID(now)) {
-        return;
-    }
-    PrintString str = F("persistant_storage/");
-    str += name;
-    str += '/';
-    switch(type) {
-        case StorageFrequencyType::DAILY:
-            str.strftime_P(PSTR("%Y%m%d"), now);
-            break;
-        case StorageFrequencyType::WEEKLY:
-            str.strftime_P(PSTR("%Y%m-%W"), now);
-            break;
-        case StorageFrequencyType::MONTHLY:
-            str.strftime_P(PSTR("%Y%m"), now);
-            break;
-    }
-    publish(formatTopic(str), true, data, QosType::PERSISTENT_STORAGE);
-}
-
 bool MQTTClient::publishAutoDiscovery(bool force, bool abort, bool forceUpdate)
 {
 #if MQTT_AUTO_DISCOVERY
     _startAutoDiscovery = false;
     _autoDiscoveryRebroadcast.remove();
 
-    if (AutoDiscovery::Queue::isEnabled() && !_components.empty()) {
+    if (AutoDiscovery::Queue::isEnabled(force) && !_components.empty()) {
         if (abort && _autoDiscoveryQueue) {
             _autoDiscoveryQueue.reset();
         }

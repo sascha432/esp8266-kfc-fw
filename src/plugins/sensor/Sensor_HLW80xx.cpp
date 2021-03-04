@@ -229,26 +229,10 @@ void Sensor_HLW80xx::createConfigureForm(AsyncWebServerRequest *request, FormUI:
 
 }
 
-void Sensor_HLW80xx::_publishPersistantStorage(ConfigType *cfgPtr)
-{
-    auto client = MQTTClient::getClient();
-    if (client && client->isConnected()) {
-        ConfigType cfg = cfgPtr ? *cfgPtr : Plugins::Sensor::getConfig();
-        PrintString data;
-        data.printf_P(PSTR("U=%f,I=%f,P=%f,e1="), cfg.calibrationU, cfg.calibrationI, cfg.calibrationP);
-        data.print(getEnergyPrimaryCounter());
-        data.print(F(",e2="));
-        data.print(getEnergySecondaryCounter());
-
-        client->publishPersistantStorage(MQTT::StorageFrequencyType::DAILY, F("hlw80xx"), data);
-    }
-}
-
 void Sensor_HLW80xx::configurationSaved(FormUI::Form::BaseForm *form)
 {
     auto &cfg = Plugins::Sensor::getWriteableConfig();
     getEnergyPrimaryCounter() = cfg.energyCounter;
-    _publishPersistantStorage(&cfg);
 }
 
 void Sensor_HLW80xx::publishState(MQTTClient *client)
@@ -278,7 +262,6 @@ void Sensor_HLW80xx::_saveEnergyCounter()
         file.close();
     }
     _saveEnergyCounterTimeout = millis() + IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT;
-    _publishPersistantStorage(nullptr);
 #else
     _saveEnergyCounterTimeout = ~0;
 #endif

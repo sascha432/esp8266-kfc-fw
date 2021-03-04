@@ -226,7 +226,6 @@ protected:
     void _saveEnergyCounter();
     void _loadEnergyCounter();
     void _incrEnergyCounters(uint32_t count);
-    void _publishPersistantStorage(ConfigType *cfg);
 
     JsonNumber _currentToNumber(float current) const;
     JsonNumber _energyToNumber(float energy) const;

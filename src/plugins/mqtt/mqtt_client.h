@@ -496,24 +496,48 @@ public:
         // forceUpdate = true deletes all retained messages and sends new ones
         bool publishAutoDiscovery(bool force = false, bool abort = false, bool forceUpdate = false);
         static void publishAutoDiscoveryCallback(Event::CallbackTimerPtr timer);
-        bool isAutoDiscoveryRunning() const {
+
+        inline bool isAutoDiscoveryRunning() const {
             return static_cast<bool>(_autoDiscoveryQueue);
         }
 
         // returns a list of all auto discovery components
-        AutoDiscovery::List getAutoDiscoveryList(FormatType format = FormatType::JSON) {
+        inline AutoDiscovery::List getAutoDiscoveryList(FormatType format = FormatType::JSON) {
             return AutoDiscovery::List(_components, format);
         }
 
         AutoDiscovery::QueuePtr &getAutoDiscoveryQueue();
         // additional information about the current message
         // must not be called outside onMessage()
-        const AsyncMqttClientMessageProperties &getMessageProperties() const {
+
+        inline const AsyncMqttClientMessageProperties &getMessageProperties() const {
+#if DEBUG_MQTT_CLIENT
             if (!_messageProperties) {
                 __DBG_panic("getMessageProperties() must not be called outside onMessage()");
             }
+#endif
             return *_messageProperties;
         }
+
+        static inline String _getAutoDiscoveryStatusTopic() {
+            return formatTopic(F("/auto_discovery/state"));
+        }
+
+        void updateAutoDiscoveryTimestamps(bool success);
+
+        // once set, the time is not updated from MQTT anymore
+        inline void _resetAutoDiscoveryInitialState() {
+            if (_autoDiscoveryLastSuccess == ~0U) {
+                _autoDiscoveryLastSuccess = 0;
+            }
+            if (_autoDiscoveryLastFailure == ~0U) {
+                _autoDiscoveryLastFailure = 0;
+            }
+        }
+
+        String  _autoDiscoveryStatusTopic;
+        uint32_t _autoDiscoveryLastFailure{~0U};
+        uint32_t _autoDiscoveryLastSuccess{~0U};
 
 #endif
 

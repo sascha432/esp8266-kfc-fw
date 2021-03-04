@@ -27,7 +27,7 @@ namespace STL_STD_EXT_NAMESPACE {
 namespace STL_STD_EXT_NAMESPACE_EX {
 
     inline static int randint(int from, int to) {
-        return (rand() % (to - from)) - from;
+        return from + (rand() % (to - from));
     }
 
     template<typename _Ta, typename _Tb, typename _Tret = std::common_type_t<std::make_unsigned_t<_Ta>, std::make_unsigned_t<_Tb>>>

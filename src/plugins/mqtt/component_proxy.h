@@ -32,13 +32,10 @@ namespace MQTT {
         };
 
     public:
-        ComponentProxy(ComponentType type, Client *client, IF_MQTT_AUTO_DISCOVERY_LOG2FILE(File &log, )const StringVector &wildcards) :
+        ComponentProxy(ComponentType type, Client *client, const StringVector &wildcards) :
             Component(type),
             _client(client),
             _wildcards(wildcards),
-#if MQTT_AUTO_DISCOVERY_LOG2FILE
-            _log(log),
-#endif
             _iterator(_wildcards.begin()),
             _packetId(0),
             _subscribe(true),
@@ -47,13 +44,10 @@ namespace MQTT {
             init();
         }
 
-        ComponentProxy(ComponentType type, Client *client, IF_MQTT_AUTO_DISCOVERY_LOG2FILE(File &log, )StringVector &&wildcards) :
+        ComponentProxy(ComponentType type, Client *client, StringVector &&wildcards) :
             Component(type),
             _client(client),
             _wildcards(std::move(wildcards)),
-#if MQTT_AUTO_DISCOVERY_LOG2FILE
-            _log(log),
-#endif
             _iterator(_wildcards.begin()),
             _packetId(0),
             _subscribe(true),
@@ -94,9 +88,6 @@ namespace MQTT {
 
         Client *_client;
         StringVector _wildcards;
-#if MQTT_AUTO_DISCOVERY_LOG2FILE
-        File &_log;
-#endif
     private:
         void _runNext();
 
@@ -116,7 +107,7 @@ namespace MQTT {
 
         using Callback = std::function<void(ErrorType error, AutoDiscovery::CrcVector &crcs)>;
 
-        CollectTopicsComponent(Client *client, StringVector &&wildcards, IF_MQTT_AUTO_DISCOVERY_LOG2FILE(File &log, )Callback callback = nullptr);
+        CollectTopicsComponent(Client *client, StringVector &&wildcards, Callback callback = nullptr);
         virtual ~CollectTopicsComponent() {
             if (_callback) {
                 abort(ErrorType::ABORTED);
@@ -155,7 +146,7 @@ namespace MQTT {
         // timeout per messaeg
         static constexpr uint32_t kOnMessageTimeout = CollectTopicsComponent::kOnMessageWaitTime;   // milliseconds
 
-        RemoveTopicsComponent(Client *client, StringVector &&wildcards, AutoDiscovery::CrcVector &&crcs, IF_MQTT_AUTO_DISCOVERY_LOG2FILE(File &log, )Callback callback = nullptr);
+        RemoveTopicsComponent(Client *client, StringVector &&wildcards, AutoDiscovery::CrcVector &&crcs, Callback callback = nullptr);
         virtual ~RemoveTopicsComponent() {
             if (_callback) {
                 abort(ErrorType::ABORTED);

@@ -91,14 +91,3 @@
 #ifndef MQTT_AUTO_DISCOVERY_ERROR_DELAY
 #define MQTT_AUTO_DISCOVERY_ERROR_DELAY                         5000
 #endif
-
-// store auto discovery debug information in a file
-#ifndef MQTT_AUTO_DISCOVERY_LOG2FILE
-#define MQTT_AUTO_DISCOVERY_LOG2FILE                            0
-#endif
-
-#if MQTT_AUTO_DISCOVERY_LOG2FILE
-#define IF_MQTT_AUTO_DISCOVERY_LOG2FILE(...) __VA_ARGS__
-#else
-#define IF_MQTT_AUTO_DISCOVERY_LOG2FILE(...)
-#endif

@@ -168,10 +168,8 @@ namespace MQTT {
 
             CrcVector crc() {
                 CrcVector list;
-                __DBG_printf("creating crc list");
                 _payloadSize = 0;
                 for(auto entity: *this) {
-                    __DBG_printf("topic %s", entity->getTopic().c_str());
                     list.insertSorted(entity->getTopic(), entity->getPayload());
                     _payloadSize += entity->getPayload().length();
                 }

@@ -21,8 +21,8 @@ namespace MQTT {
             Queue(Client &client);
             ~Queue();
 
-            virtual AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num);
-            virtual uint8_t getAutoDiscoveryCount() const;
+            // virtual AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num);
+            // virtual uint8_t getAutoDiscoveryCount() const;
 
             // virtual void onConnect() override;
             virtual void onDisconnect(AsyncMqttClientDisconnectReason reason) override;
@@ -33,11 +33,8 @@ namespace MQTT {
             void clear();
 
             // publish queue
-            static constexpr uint32_t kPublishDefaultDelay = ~0;
-            static constexpr uint32_t kPublishForce = true;
-
             void publish(bool force = false) {
-                publish(force ? Event::milliseconds(0) : Event::milliseconds(kAutoDiscoveryInitialDelay));
+                publish(force ? Event::milliseconds(1000) : Event::milliseconds(KFCConfigurationClasses::Plugins::MQTTClient::getConfig().auto_discovery_delay) * 1000U);
             }
 
             void publish(Event::milliseconds delay);
@@ -47,7 +44,7 @@ namespace MQTT {
             }
 
             static bool isUpdateScheduled();
-            static bool isEnabled();
+            static bool isEnabled(bool force = false);
 
         private:
             void _publishNextMessage();

@@ -25,10 +25,11 @@ ComponentIterator::ComponentIterator(ComponentPtr component, uint8_t index, Comp
     _component(component),
     _iterator(iterator),
     _index(index),
-    _size(component->getAutoDiscoveryCount())
+    _size(0)
 {
+    size_t size = 0;
     // find first component that is not empty
-    while(!_iterator.isEnd() && _iterator->empty()) {
+    while(!_iterator.isEnd() && (size = _iterator->size()) != 0) {
         ++_iterator;
         _index = 0; // reset index if the iterator changes
     }
@@ -38,7 +39,7 @@ ComponentIterator::ComponentIterator(ComponentPtr component, uint8_t index, Comp
     }
     else {
         _component = *_iterator;
-        _size = component->getAutoDiscoveryCount(); // update size
+        _size = size; // update size
     }
 }
 

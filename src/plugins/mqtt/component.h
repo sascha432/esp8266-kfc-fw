@@ -167,6 +167,7 @@ namespace MQTT {
         }
         virtual ~ComponentBase() {}
 
+    protected:
         inline __attribute__((__always_inline__))
         bool hasClient() const {
             return _client != nullptr;
@@ -195,6 +196,7 @@ namespace MQTT {
             _timerInterval = intervalMillis;
         }
 
+        inline __attribute__((__always_inline__))
         void unregisterTimer() {
             _timerInterval = 0;
         }
@@ -202,6 +204,7 @@ namespace MQTT {
     private:
         friend MQTT::Client;
 
+        inline __attribute__((__always_inline__))
         void setClient(MQTT::ClientPtr client) {
             _client = client;
         }
@@ -306,6 +309,12 @@ namespace MQTT {
 
         static NameType getNameByType(ComponentType type);
 
+    protected:
+        // before calling, check if isConnected() is true
+        uint16_t subscribe(const String &topic, QosType qos = QosType::DEFAULT);
+        uint16_t unsubscribe(const String &topic);
+        uint16_t publish(const String &topic, bool retain, const String &payload, QosType qos = QosType::DEFAULT);
+
 #if MQTT_AUTO_DISCOVERY
     private:
         friend ComponentIterator;
@@ -325,6 +334,7 @@ namespace MQTT {
 
 }
 
+// class for compatiblity
 class MQTTComponent : public MQTT::Component {
 public:
     using MQTT::Component::Component;
@@ -332,12 +342,10 @@ public:
     using ComponentPtr = MQTT::ComponentPtr;
     using ComponentType = MQTT::ComponentType;
     using FormatType = MQTT::FormatType;
-    using AutoDiscoveryPtr = MQTT::AutoDiscovery::EntityPtr;
-    using AutoDiscovery = MQTT::AutoDiscovery::Entity;
-    using AutoDiscoveryQueue = MQTT::AutoDiscovery::Queue;
-
-    using MQTTAutoDiscovery = MQTT::AutoDiscovery::Entity;
-    using MQTTAutoDiscoveryPtr = MQTT::AutoDiscovery::EntityPtr;
+    struct  AutoDiscovery {
+        using EntityPtr = MQTT::AutoDiscovery::EntityPtr;
+        using Entity = MQTT::AutoDiscovery::Entity;
+    };
 
     using Component::getAutoDiscoveryCount;
     using Component::getAutoDiscovery;
@@ -348,4 +356,8 @@ public:
     using Component::onMessage;
     using Component::onPacketAck;
     using Component::onTimer;
+    using ComponentBase::isConnected;
+    using Component::subscribe;
+    using Component::unsubscribe;
+    using Component::publish;
 };

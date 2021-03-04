@@ -242,17 +242,17 @@ namespace WebAlerts {
         MQTTStorage();
 
 #if MQTT_AUTO_DISCOVERY
-        virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTT::FormatType format, uint8_t num) {
+        virtual AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num) override {
             return nullptr;
         }
-        virtual uint8_t getAutoDiscoveryCount() const {
+        virtual uint8_t getAutoDiscoveryCount() const override {
             return 0;
         }
 #endif
 
-        virtual void onConnect(MQTTClient *client);
-        virtual void onDisconnect(MQTTClient *client, AsyncMqttClientDisconnectReason reason);
-        virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len);
+        virtual void onConnect() override;
+        virtual void onDisconnect(AsyncMqttClientDisconnectReason reason) override;
+        virtual void onMessage(const char *topic, const char *payload, size_t len) override;
 
         virtual IdType addAlert(const String &message, Type type, ExpiresType expires, AddAlertActionType action = AddAlertActionType::ADD);
         virtual void dismissAlert(IdType id);

@@ -34,7 +34,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     "",                 // web_templates
     // config_forms
     "channels,controller,automation",
-    "mqtt",             // reconfigure_dependencies
+    "",                 // reconfigure_dependencies
     PluginComponent::PriorityType::BLINDS,
     PluginComponent::RTCMemoryId::NONE,
     static_cast<uint8_t>(PluginComponent::MenuType::CUSTOM),
@@ -56,22 +56,17 @@ BlindsControlPlugin::BlindsControlPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_
 void BlindsControlPlugin::setup(SetupModeType mode)
 {
     _setup();
-    MQTTClient::safeRegisterComponent(this);
+    MQTT::Client::registerComponent(this);
     LoopFunctions::add(loopMethod);
 }
 
 void BlindsControlPlugin::reconfigure(const String &source)
 {
-    if (String_equals(source, FSPGM(mqtt))) {
-        MQTTClient::safeReRegisterComponent(this);
-    }
-    else {
-        _stop();
-        _readConfig();
-        for(auto pin : _config.pins) {
-            digitalWrite(pin, LOW);
-            pinMode(pin, OUTPUT);
-        }
+    _stop();
+    _readConfig();
+    for(auto pin : _config.pins) {
+        digitalWrite(pin, LOW);
+        pinMode(pin, OUTPUT);
     }
 }
 
@@ -79,7 +74,7 @@ void BlindsControlPlugin::shutdown()
 {
     _stop();
     LoopFunctions::add(loopMethod);
-    MQTTClient::safeUnregisterComponent(this);
+    MQTT::Client::unregisterComponent(this);
 }
 
 void BlindsControlPlugin::getStatus(Print &output)

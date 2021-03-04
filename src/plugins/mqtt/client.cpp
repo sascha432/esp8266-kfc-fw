@@ -79,6 +79,7 @@ MQTTClient::Client() :
     _client(__LDBG_new(AsyncMqttClient)),
     _port(_config.getPort()),
     _lastWillPayload(F("offline")),
+    _lastWillTopic(formatTopic(FSPGM(mqtt_status_topic))),
     _connState(ConnectionState::NONE),
 #if MQTT_AUTO_DISCOVERY
 #if IOT_REMOTE_CONTROL
@@ -232,6 +233,7 @@ void MQTTClient::_setupClient()
 void MQTT::Client::registerComponent(ComponentPtr component)
 {
     if (_mqttClient) {
+        component->setClient(_mqttClient);
         _mqttClient->_registerComponent(component);
     }
     else {
@@ -245,7 +247,9 @@ bool MQTT::Client::unregisterComponent(ComponentPtr component)
 {
     auto size = _components.size();
     if (_mqttClient) {
-        return _mqttClient->unregisterComponent(component);
+        auto result = _mqttClient->unregisterComponent(component);
+        component->setClient(nullptr);
+        return result;
     }
     else {
         _components.erase(std::remove(_components.begin(), _components.end(), component), _components.end());
@@ -510,7 +514,6 @@ void MQTTClient::connect()
     _client->setCleanSession(true);
     _client->setKeepAlive(_config.keepalive);
 
-    setLastWillPayload('0');
     publishLastWill();
 
     _connState = ConnectionState::CONNECTING;

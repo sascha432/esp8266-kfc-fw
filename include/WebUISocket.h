@@ -42,6 +42,9 @@ public:
     inline static void broadcast(WebUISocket *sender, const char *str) {
         WsClient::broadcast(getServerSocket(), sender, str, strlen(str));
     }
+    inline static void broadcast(WebUISocket *sender, String &&str) {
+        WsClient::broadcast(getServerSocket(), sender, std::move(str));
+    }
     inline static void broadcast(WebUISocket *sender, const String &str) {
         WsClient::broadcast(getServerSocket(), sender, str.c_str(), str.length());
     }

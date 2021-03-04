@@ -14,7 +14,7 @@
 #include "MQTTSensor.h"
 #include <Adafruit_CCS811.h>
 
-class Sensor_CCS811 : public MQTTSensor {
+class Sensor_CCS811 : public MQTT::Sensor {
 public:
     typedef struct {
         bool available;
@@ -22,16 +22,17 @@ public:
         uint16_t TVOC;      // ppb
     } SensorData_t;
 
-    const uint8_t DEFAULT_UPDATE_RATE = MQTTSensor::DEFAULT_UPDATE_RATE;
+    const uint8_t DEFAULT_UPDATE_RATE = MQTT::Sensor::DEFAULT_UPDATE_RATE;
 
     Sensor_CCS811(const String &name, uint8_t address = CCS811_ADDRESS);
     virtual ~Sensor_CCS811();
 
-    virtual MQTT::AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num) override;
+    virtual AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;
 
     virtual void publishState() override;
     virtual void getValues(JsonArray &json, bool timer) override;
+    virtual void getValues(NamedJsonArray &array, bool timer) override;
     virtual void createWebUI(WebUIRoot &webUI, WebUIRow **row) override;
     virtual void getStatus(Print &output) override;
 

@@ -25,10 +25,11 @@ public:
     Sensor_DimmerMetrics(const String &name);
     virtual ~Sensor_DimmerMetrics();
 
-    virtual MQTT::AutoDiscovery::EntityPtr getAutoDiscovery(MQTT::FormatType format, uint8_t num) override;
+    virtual AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;
 
     virtual void publishState() override;
+    virtual void getValues(NamedJsonArray &array, bool timer) override;
     virtual void getValues(JsonArray &json, bool timer) override;
     virtual void createWebUI(WebUIRoot &webUI, WebUIRow **row) override;
     virtual void getStatus(Print &output) override;

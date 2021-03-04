@@ -173,7 +173,7 @@
     <ClCompile Include="..\..\..\..\..\lib-mock\KFCBaseLibrary\src\WiFi.cpp" />
     <ClCompile Include="..\..\..\..\..\lib-mock\KFCBaseLibrary\src\WiFiUDP.cpp" />
     <ClCompile Include="..\..\..\..\..\lib-mock\KFCBaseLibrary\src\WString.cpp" />
-    <ClCompile Include="..\..\..\..\..\src\generated\FlashStringGeneratorAuto.cpp" />
+    <ClCompile Include="..\..\..\..\..\src\spgm_auto_strings.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\AllocPointerList.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\Arduino_compat.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\Buffer.cpp" />
@@ -216,6 +216,8 @@
     <ClCompile Include="..\..\..\src\JsonConfigReader.cpp" />
     <ClCompile Include="..\..\..\src\WriteableData.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="test_mqtt_json.cpp" />
+    <ClCompile Include="test_strings.cpp" />
     <ClCompile Include="test_int24.cpp" />
     <ClCompile Include="tests.cpp" />
     <ClCompile Include="test_fixed_circular_buffer.cpp" />

@@ -82,6 +82,11 @@ uint8_t Sensor_INA219::getAutoDiscoveryCount() const
     return 4;
 }
 
+void Sensor_INA219::getValues(NamedJsonArray &array, bool timer)
+{
+
+}
+
 void Sensor_INA219::getValues(JsonArray &array, bool timer)
 {
     __LDBG_printf("Sensor_INA219::getValues()");

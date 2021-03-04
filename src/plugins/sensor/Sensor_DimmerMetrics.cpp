@@ -15,7 +15,7 @@
 
 #include <debug_helper_enable_mem.h>
 
-Sensor_DimmerMetrics::Sensor_DimmerMetrics(const String &name) : MQTT::Sensor(MQTT::SensorType::DIMMER_METRICS), _name(name), _webUIinitialized(false)
+Sensor_DimmerMetrics::Sensor_DimmerMetrics(const String &name) : MQTT::Sensor(SensorType::DIMMER_METRICS), _name(name), _webUIinitialized(false)
 {
     REGISTER_SENSOR_CLIENT(this);
 }
@@ -25,36 +25,40 @@ Sensor_DimmerMetrics::~Sensor_DimmerMetrics()
     UNREGISTER_SENSOR_CLIENT(this);
 }
 
-MQTT::AutoDiscovery::EntityPtr Sensor_DimmerMetrics::getAutoDiscovery(MQTT::FormatType format, uint8_t num)
+MQTT::AutoDiscovery::EntityPtr Sensor_DimmerMetrics::getAutoDiscovery(FormatType format, uint8_t num)
 {
-    auto discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
+    auto discovery = __LDBG_new(AutoDiscovery::Entity);
     switch(num) {
         case 0:
-            discovery->create(this, F("int_temp"), format);
-            discovery->addStateTopic(_getMetricsTopics());
-            discovery->addUnitOfMeasurement(FSPGM(degree_Celsius_unicode));
-            discovery->addValueTemplate(F("int_temp"));
-            discovery->addDeviceClass(F("temperature"));
+            if (discovery->create(this, F("int_temp"), format)) {
+                discovery->addStateTopic(_getMetricsTopics());
+                discovery->addUnitOfMeasurement(FSPGM(degree_Celsius_unicode));
+                discovery->addValueTemplate(F("int_temp"));
+                discovery->addDeviceClass(F("temperature"));
+            }
             break;
         case 1:
-            discovery->create(this, F("ntc_temp"), format);
-            discovery->addStateTopic(_getMetricsTopics());
-            discovery->addUnitOfMeasurement(FSPGM(degree_Celsius_unicode));
-            discovery->addValueTemplate(F("ntc_temp"));
-            discovery->addDeviceClass(F("temperature"));
+            if (discovery->create(this, F("ntc_temp"), format)) {
+                discovery->addStateTopic(_getMetricsTopics());
+                discovery->addUnitOfMeasurement(FSPGM(degree_Celsius_unicode));
+                discovery->addValueTemplate(F("ntc_temp"));
+                discovery->addDeviceClass(F("temperature"));
+            }
             break;
         case 2:
-            discovery->create(this, FSPGM(vcc), format);
-            discovery->addStateTopic(_getMetricsTopics());
-            discovery->addUnitOfMeasurement('V');
-            discovery->addValueTemplate(F("vcc"));
-            discovery->addDeviceClass(F("voltage"));
+            if (discovery->create(this, FSPGM(vcc), format)) {
+                discovery->addStateTopic(_getMetricsTopics());
+                discovery->addUnitOfMeasurement('V');
+                discovery->addValueTemplate(F("vcc"));
+                discovery->addDeviceClass(F("voltage"));
+            }
             break;
         case 3:
-            discovery->create(this, FSPGM(frequency), format);
-            discovery->addStateTopic(_getMetricsTopics());
-            discovery->addValueTemplate(FSPGM(frequency));
-            discovery->addUnitOfMeasurement(FSPGM(Hz, "Hz"));
+            if (discovery->create(this, FSPGM(frequency), format)) {
+                discovery->addStateTopic(_getMetricsTopics());
+                discovery->addValueTemplate(FSPGM(frequency));
+                discovery->addUnitOfMeasurement(FSPGM(Hz, "Hz"));
+            }
             break;
     }
     return discovery;
@@ -63,6 +67,33 @@ MQTT::AutoDiscovery::EntityPtr Sensor_DimmerMetrics::getAutoDiscovery(MQTT::Form
 uint8_t Sensor_DimmerMetrics::getAutoDiscoveryCount() const
 {
     return 4;
+}
+
+void Sensor_DimmerMetrics::getValues(NamedJsonArray &array, bool timer)
+{
+    using namespace MQTT::Json;
+    array.append(
+        UnnamedObject(
+            NamedString(F("id"), F("ntc_temp")),
+            NamedBool(F("state"), _metrics.metrics.has_ntc_temp()),
+            NamedDouble(F("value"), FormattedDouble(_metrics.metrics.get_ntc_temp(), FormattedDouble::TRIMMED(1)))
+        ),
+        UnnamedObject(
+            NamedString(F("id"), F("int_temp")),
+            NamedBool(F("state"), _metrics.metrics.has_int_temp()),
+            NamedDouble(F("value"), FormattedDouble(_metrics.metrics.get_int_temp(), FormattedDouble::TRIMMED_ALL(1)))
+        ),
+        UnnamedObject(
+            NamedString(F("id"), F("vcc")),
+            NamedBool(F("state"), _metrics.metrics.has_vcc()),
+            NamedDouble(F("value"), FormattedDouble(_metrics.metrics.get_vcc(), FormattedDouble::TRIMMED(3)))
+        ),
+        UnnamedObject(
+            NamedString(F("id"), F("frequency")),
+            NamedBool(F("state"), _metrics.metrics.has_frequency()),
+            NamedDouble(F("value"), FormattedDouble(_metrics.metrics.get_freqency(), 2))
+        )
+    );
 }
 
 void Sensor_DimmerMetrics::getValues(JsonArray &array, bool timer)

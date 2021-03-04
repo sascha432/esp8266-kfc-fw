@@ -62,13 +62,13 @@ public:
 
 // MQTTComponent
 public:
-    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTT::FormatType format, uint8_t num) override;
+    virtual AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;
-    virtual void onConnect(MQTTClient *client) override;
-    virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len) override;
+    virtual void onConnect() override;
+    virtual void onMessage(const char *topic, const char *payload, size_t len) override;
 
 private:
-    void _publishState(MQTTClient *client, int8_t channel = -1);
+    void _publishState(int8_t channel = -1);
 
 #if IOT_SWITCH_PUBLISH_MQTT_INTERVAL
     Event::Timer _updateTimer;

@@ -45,42 +45,43 @@ void BlindsControl::_setup()
 #endif
 }
 
-MQTTComponent::MQTTAutoDiscoveryPtr BlindsControl::nextAutoDiscovery(MQTT::FormatType format, uint8_t num)
+MQTT::AutoDiscovery::EntityPtr BlindsControl::getAutoDiscovery(FormatType format, uint8_t num)
 {
-    if (num >= getAutoDiscoveryCount()) {
-        return nullptr;
-    }
-    auto discovery = __LDBG_new(MQTTAutoDiscovery);
+    auto discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
     if (num < kChannelCount) {
         ChannelType channel = (ChannelType)num;
-        discovery->create(this, PrintString(FSPGM(channel__u, "channel_%u"), channel), format);
-        discovery->addStateTopic(_getTopic(channel, TopicType::STATE));
-        discovery->addCommandTopic(_getTopic(channel, TopicType::SET));
-        discovery->addPayloadOnOff();
+        if (discovery->create(this, PrintString(FSPGM(channel__u, "channel_%u"), channel), format)) {
+            discovery->addStateTopic(_getTopic(channel, TopicType::STATE));
+            discovery->addCommandTopic(_getTopic(channel, TopicType::SET));
+            discovery->addPayloadOnOff();
+        }
     }
     else if (num == kChannelCount) {
-        discovery->create(this, FSPGM(channels), format);
-        discovery->addStateTopic(_getTopic(ChannelType::ALL, TopicType::STATE));
-        discovery->addCommandTopic(_getTopic(ChannelType::ALL, TopicType::SET));
-        discovery->addPayloadOnOff();
+        if (discovery->create(this, FSPGM(channels), format)) {
+            discovery->addStateTopic(_getTopic(ChannelType::ALL, TopicType::STATE));
+            discovery->addCommandTopic(_getTopic(ChannelType::ALL, TopicType::SET));
+            discovery->addPayloadOnOff();
+        }
     }
     else if (num == kChannelCount + 1) {
-        discovery->create(MQTTComponent::ComponentType::SENSOR, FSPGM(binary), format);
-        discovery->addStateTopic(_getTopic(ChannelType::NONE, TopicType::METRICS));
-        discovery->addValueTemplate(FSPGM(binary));
+        if (discovery->create(MQTTComponent::ComponentType::SENSOR, FSPGM(binary), format)) {
+            discovery->addStateTopic(_getTopic(ChannelType::NONE, TopicType::METRICS));
+            discovery->addValueTemplate(FSPGM(binary));
+        }
     }
     else if (num == kChannelCount + 2) {
-        discovery->create(MQTTComponent::ComponentType::SENSOR, FSPGM(busy, "busy"), format);
-        discovery->addStateTopic(_getTopic(ChannelType::NONE, TopicType::METRICS));
-        discovery->addValueTemplate(FSPGM(busy));
+        if (discovery->create(MQTTComponent::ComponentType::SENSOR, FSPGM(busy, "busy"), format)) {
+            discovery->addStateTopic(_getTopic(ChannelType::NONE, TopicType::METRICS));
+            discovery->addValueTemplate(FSPGM(busy));
+        }
     }
     else if (num >= kChannelCount + 3) {
         ChannelType channel = (ChannelType)(num - (kChannelCount + 3));
-        discovery->create(MQTTComponent::ComponentType::SENSOR, PrintString(FSPGM(channel__u), channel), format);
-        discovery->addStateTopic(_getTopic(ChannelType::NONE, TopicType::CHANNELS));
-        discovery->addValueTemplate(PrintString(FSPGM(channel__u), channel));
+        if (discovery->create(MQTTComponent::ComponentType::SENSOR, PrintString(FSPGM(channel__u), channel), format)) {
+            discovery->addStateTopic(_getTopic(ChannelType::NONE, TopicType::CHANNELS));
+            discovery->addValueTemplate(PrintString(FSPGM(channel__u), channel));
+        }
     }
-    discovery->finalize();
     return discovery;
 }
 
@@ -113,25 +114,25 @@ void BlindsControl::getValues(JsonArray &array)
     }
 }
 
-void BlindsControl::_publishState(MQTTClient *client)
+void BlindsControl::_publishState()
 {
-    if (!client) {
-        client = MQTTClient::getClient();
+    if (!isConnected()) {
+        return;
     }
-    __LDBG_printf("state %s/%s, client %p", _getStateStr(ChannelType::CHANNEL0), _getStateStr(ChannelType::CHANNEL1), client);
+    __LDBG_printf("state %s/%s", _getStateStr(ChannelType::CHANNEL0), _getStateStr(ChannelType::CHANNEL1));
 
     if (client) {
         JsonUnnamedObject metrics(2);
         JsonUnnamedObject channels(kChannelCount);
         String binaryState = String('b');
 
-        client->publish(_getTopic(ChannelType::ALL, TopicType::STATE), true, String(_states[0].isOpen() || _states[1].isOpen() ? 1 : 0));
+        client().publish(_getTopic(ChannelType::ALL, TopicType::STATE), true, String(_states[0].isOpen() || _states[1].isOpen() ? 1 : 0));
 
         for(const auto channel: _states.channels()) {
             auto &state = _states[channel];
             auto isOpen = state.getCharState();
             binaryState += isOpen;
-            client->publish(_getTopic(channel, TopicType::STATE), true, String(isOpen));
+            client().publish(_getTopic(channel, TopicType::STATE), true, String(isOpen));
             channels.add(PrintString(FSPGM(channel__u), channel), _getStateStr(channel));
         }
         metrics.add(FSPGM(binary), binaryState);
@@ -141,12 +142,12 @@ void BlindsControl::_publishState(MQTTClient *client)
         buffer.reserve(metrics.length());
         metrics.printTo(buffer);
 
-        client->publish(_getTopic(ChannelType::NONE, TopicType::METRICS), true, buffer);
+        client().publish(_getTopic(ChannelType::NONE, TopicType::METRICS), true, buffer);
 
         buffer = PrintString();
         buffer.reserve(channels.length());
         channels.printTo(buffer);
-        client->publish(_getTopic(ChannelType::NONE, TopicType::CHANNELS), true, buffer);
+        client().publish(_getTopic(ChannelType::NONE, TopicType::CHANNELS), true, buffer);
     }
 
     if (WebUISocket::hasAuthenticatedClients()) {
@@ -157,17 +158,17 @@ void BlindsControl::_publishState(MQTTClient *client)
     }
 }
 
-void BlindsControl::onConnect(MQTTClient *client)
+void BlindsControl::onConnect()
 {
     __LDBG_printf("client=%p", client);
-    _publishState(client);
-    client->subscribe(this, _getTopic(ChannelType::ALL, TopicType::SET));
+    _publishState();
+    client().subscribe(this, _getTopic(ChannelType::ALL, TopicType::SET));
     for(const auto channel: _states.channels()) {
-        client->subscribe(this, _getTopic(channel, TopicType::SET));
+        client().subscribe(this, _getTopic(channel, TopicType::SET));
     }
 }
 
-void BlindsControl::onMessage(MQTTClient *client, char *topic, char *payload, size_t len)
+void BlindsControl::onMessage(const char *topic, const char *payload, size_t len)
 {
     ChannelType channel;
     if (strstr_P(topic, PSTR("/channel_0/"))) {

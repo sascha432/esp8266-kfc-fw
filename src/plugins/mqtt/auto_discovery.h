@@ -16,9 +16,18 @@ namespace MQTT {
         class Entity {
         public:
 
-            // returns true to continue, false to stop (format TOPIC)
+            // returns true to continue, false to stop (format FormatType::TOPIC)
             bool create(ComponentPtr component, const String &componentName, FormatType format);
             bool create(ComponentType componentType, const String &componentName, FormatType format);
+
+            template<typename _Ta>
+            bool createJsonSchema(_Ta component, const String &componentName, FormatType format) {
+                if (!create(component, componentName, format)) {
+                    return false;
+                }
+                addSchemaJson();
+                return true;
+            }
 
         public:
             inline void addParameter(NameType name, const char *value) { // PROGMEM safe

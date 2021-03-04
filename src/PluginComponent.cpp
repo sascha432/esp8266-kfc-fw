@@ -166,6 +166,12 @@ void PluginComponent::getValues(JsonArray &array)
     __DBG_panic_pure_virtual();
 }
 
+void PluginComponent::getValues(NamedJsonArray &array)
+{
+    //TODO remove comment
+    // __DBG_panic_pure_virtual();
+}
+
 void PluginComponent::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
 {
     __DBG_panic_pure_virtual();

@@ -279,10 +279,10 @@ protected:
 public:
     BlindsControl();
 
-    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTT::FormatType format, uint8_t num) override;
+    virtual AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;
-    virtual void onConnect(MQTTClient *client) override;
-    virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len) override;
+    virtual void onConnect() override;
+    virtual void onMessage(const char *topic, const char *payload, size_t len) override;
 
     void getValues(JsonArray &array);
     void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState);
@@ -317,7 +317,7 @@ protected:
     void _readConfig();
     void _setup();
 
-    void _publishState(MQTTClient *client = nullptr);
+    void _publishState();
     void _executeAction(ChannelType channel, bool open);
     void _startMotor(ChannelType channel, bool open);
     void _monitorMotor(ChannelAction &action);

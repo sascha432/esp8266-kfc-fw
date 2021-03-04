@@ -447,7 +447,6 @@ namespace MQTT {
         static Client *getClient();
 
         // the safe methods verify that the client exists
-        static void safePublish(const String &topic, bool retain, const String &payload, QosType qos = QosType::DEFAULT);
         static void safePersistantStorage(StorageFrequencyType type, const String &name, const String &data);
 #if MQTT_AUTO_DISCOVERY
         static bool safeIsAutoDiscoveryRunning();
@@ -464,16 +463,7 @@ public:
         void connect();
         // disconnect from server
         void disconnect(bool forceDisconnect = false);
-        // set last will to mark component as offline on disconnect
-        // sets payload and topic
-        template<typename _T>
-        void setLastWillPayload(_T str) {
-            // last will topic and payload pointer must be valid until the connection has been closed
-            _lastWillTopic = formatTopic(FSPGM(mqtt_status_topic));
-            _lastWillPayload = str;
-        }
         // publish last will
-        // setLastWillPayload must be called before
         void publishLastWill();
         // returns true for ConnectionState::CONNECTED,
         bool isConnected() const;
@@ -656,10 +646,10 @@ public:
         Event::Timer _timer;
         uint16_t _port;
         FixedString<7> _lastWillPayload;
+        String _lastWillTopic;
         AutoReconnectType _autoReconnectTimeout;
         TopicVector _topics;
         Buffer _buffer;
-        String _lastWillTopic;
         ConnectionState _connState;
 #if MQTT_AUTO_DISCOVERY
         AutoDiscovery::QueuePtr _autoDiscoveryQueue;
@@ -746,13 +736,6 @@ public:
         return _mqttClient;
     }
 
-    inline void Client::safePublish(const String &topic, bool retain, const String &payload, QosType qos)
-    {
-        if (_mqttClient && _mqttClient->isConnected()) {
-            _mqttClient->publish(topic, retain, payload, qos);
-        }
-    }
-
     inline void Client::safePersistantStorage(StorageFrequencyType type, const String &name, const String &data)
     {
         if (_mqttClient) {
@@ -817,12 +800,40 @@ public:
     }
 
     inline __attribute__((__always_inline__))
-    bool ComponentBase::isConnected() const {
-        return _client != nullptr && _client->isConnected();
+    uint16_t Component::subscribe(const String& topic, QosType qos)
+    {
+        if (!isConnected()) {
+            __DBG_assert_printf(isConnected() == true, "isConnected() == false: subscribe(%s) client=%p", __S(topic), getClient());
+            return 0;
+        }
+        return client().subscribe(this, topic, qos);
     }
 
+    inline __attribute__((__always_inline__))
+    uint16_t Component::unsubscribe(const String& topic)
+    {
+        if (!isConnected()) {
+            __DBG_assert_printf(isConnected() == true, "isConnected() == false: unsubscribe(%s) client=%p", __S(topic), getClient());
+            return 0;
+        }
+        return client().unsubscribe(this, topic);
+    }
 
+    inline __attribute__((__always_inline__))
+    uint16_t Component::publish(const String& topic, bool retain, const String& payload, QosType qos)
+    {
+        if (!isConnected()) {
+            __DBG_assert_printf(isConnected() == true, "isConnected() == false: publish(%s) client=%p", __S(topic), getClient());
+            return 0;
+        }
+        return client().publish(this, topic, retain, payload, qos);
+    }
 
+    inline __attribute__((__always_inline__))
+    bool ComponentBase::isConnected() const
+    {
+        return _client != nullptr && _client->isConnected();
+    }
 }
 
 #include <debug_helper_disable.h>

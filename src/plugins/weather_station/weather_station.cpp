@@ -309,7 +309,7 @@ void WeatherStationPlugin::setup(SetupModeType mode)
 #endif
     };
     for(auto sensor: SensorPlugin::getSensors()) {
-        if (sensor->getType() == MQTTSensorSensorType::ENUM::BME280) {
+        if (sensor->getType() == MQTT::SensorType::ENUM::BME280) {
             reinterpret_cast<Sensor_BME280 *>(sensor)->setCompensationCallback(compensationCallback);
         }
     }
@@ -464,7 +464,7 @@ void WeatherStationPlugin::_drawEnvironmentalSensor(GFXCanvasCompressed& canvas,
 
     Sensor_BME280::SensorData_t values = { NAN, NAN, NAN };
     for(auto sensor: SensorPlugin::getSensors()) {
-        if (sensor->getType() == MQTTSensorSensorType::ENUM::BME280) {
+        if (sensor->getType() == MQTT::SensorType::ENUM::BME280) {
             auto &bme280 = *(reinterpret_cast<Sensor_BME280 *>(sensor));
             bme280.readSensor(values);
             break;
@@ -481,7 +481,7 @@ void WeatherStationPlugin::_getIndoorValues(float *data)
 {
     Sensor_BME280::SensorData_t values = { NAN, NAN, NAN };
     for(auto sensor: SensorPlugin::getSensors()) {
-        if (sensor->getType() == MQTTSensorSensorType::ENUM::BME280) {
+        if (sensor->getType() == MQTT::SensorType::ENUM::BME280) {
             auto &bme280 = *(reinterpret_cast<Sensor_BME280 *>(sensor));
             bme280.readSensor(values);
             break;

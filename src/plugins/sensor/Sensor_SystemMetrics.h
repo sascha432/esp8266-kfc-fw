@@ -18,10 +18,11 @@ public:
     Sensor_SystemMetrics();
     virtual ~Sensor_SystemMetrics();
 
-    virtual MQTT::AutoDiscovery::EntityPtr getAutoDiscovery(MQTT::FormatType format, uint8_t num) override;
+    virtual AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;
 
     virtual void publishState() override;
+    virtual void getValues(NamedJsonArray &array, bool timer) override;
     virtual void getValues(::JsonArray &json, bool timer) override;
     virtual void createWebUI(WebUIRoot &webUI, WebUIRow **row) override;
     virtual void getStatus(Print &output) override;
@@ -35,16 +36,9 @@ private:
     String _getTopic() const;
     String _getUptime() const;
 
-    void _getMetricsJson(Print &json) const;
-    const __FlashStringHelper *_getId(MetricsType type) const {
-        switch(type) {
-            case MetricsType::UPTIME:
-                return F("metricsuptime");
-            case MetricsType::MEMORY:
-                return F("metricsmem");
-        }
-        return F("kfcfwmetrics");
-    }
+    void _getMetricsJson(PrintString &json) const;
+
+    const __FlashStringHelper *_getId(MetricsType type) const;
 };
 
 #endif

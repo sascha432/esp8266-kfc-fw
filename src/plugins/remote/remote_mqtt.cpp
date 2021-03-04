@@ -27,12 +27,9 @@ static void add_subtype_type_payload(MQTT::AutoDiscovery::EntityPtr discovery, u
     discovery->addPayloadAndType(name, subType);
 }
 
-MqttRemote::AutoDiscoveryPtr MqttRemote::nextAutoDiscovery(FormatType format, uint8_t num)
+MQTT::AutoDiscovery::EntityPtr MqttRemote::getAutoDiscovery(FormatType format, uint8_t num)
 {
-    if (num >= getAutoDiscoveryCount()) {
-        return nullptr;
-    }
-    auto discovery = __LDBG_new(AutoDiscovery);
+    auto discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
     if (!discovery->create(ComponentType::DEVICE_AUTOMATION, PrintString(F("remote%02x"), num), format)) {
         return discovery;
     }
@@ -99,20 +96,23 @@ MqttRemote::AutoDiscoveryPtr MqttRemote::nextAutoDiscovery(FormatType format, ui
             }
         }
     }
-    discovery->finalize();
     return discovery;
+}
+
+void MqttRemote::_updateAutoDiscoveryCount()
+{
+    _autoDiscoveryCount = 0;
+    auto cfg = Plugins::RemoteControl::getConfig();
+    if (!cfg.mqtt_enable) {
+        return;
+    }
+    for(uint8_t i = 0; i < Plugins::RemoteControl::kButtonCount; i++) {
+        _autoDiscoveryCount += numberOfSetBits(static_cast<uint16_t>(cfg.actions[i].mqtt.event_bits & cfg.enabled.event_bits));
+        // __LDBG_printf("button=%u event=%s mqtt=%s num=%u sum=%u", i, BitsToStr<9, true>(cfg.enabled.event_bits).c_str(), BitsToStr<9, true>(cfg.actions[i].mqtt.event_bits).c_str(), numberOfSetBits(static_cast<uint16_t>(cfg.actions[i].mqtt.event_bits & cfg.enabled.event_bits)),count);
+    }
 }
 
 uint8_t MqttRemote::getAutoDiscoveryCount() const
 {
-    auto cfg = Plugins::RemoteControl::getConfig();
-    if (!cfg.mqtt_enable) {
-        return 0;
-    }
-    uint8_t count = 0;
-    for(uint8_t i = 0; i < Plugins::RemoteControl::kButtonCount; i++) {
-        count += numberOfSetBits(static_cast<uint16_t>(cfg.actions[i].mqtt.event_bits & cfg.enabled.event_bits));
-        // __LDBG_printf("button=%u event=%s mqtt=%s num=%u sum=%u", i, BitsToStr<9, true>(cfg.enabled.event_bits).c_str(), BitsToStr<9, true>(cfg.actions[i].mqtt.event_bits).c_str(), numberOfSetBits(static_cast<uint16_t>(cfg.actions[i].mqtt.event_bits & cfg.enabled.event_bits)),count);
-    }
-    return count;
+    return _autoDiscoveryCount;
 }

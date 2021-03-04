@@ -9,6 +9,7 @@
 #include <array>
 #include <EnumHelper.h>
 #include "WebUIComponent.h"
+#include "../src/plugins/mqtt/mqtt_json.h"
 
 #ifdef DEFAULT
 // framework-arduinoespressif8266\cores\esp8266\Arduino.h
@@ -59,6 +60,7 @@ __LDBG_printf("source=%s", source.c_str());
 class PluginComponent {
 public:
     using NameType = const __FlashStringHelper *;
+    using NamedJsonArray = MQTT::Json::NamedArray;
 
     enum class PriorityType : int8_t {
         NONE = std::numeric_limits<int8_t>::min(),
@@ -303,6 +305,7 @@ public:
     // webui.html
     virtual void createWebUI(WebUIRoot &webUI);
     virtual void getValues(JsonArray &array);
+    virtual void getValues(NamedJsonArray &array);
     virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState);
 
 #if AT_MODE_SUPPORTED

@@ -38,7 +38,7 @@
 #include "plugins.h"
 #include "MQTTSensor.h"
 
-class Sensor_DHTxx : public MQTTSensor {
+class Sensor_DHTxx : public MQTT::Sensor {
 public:
     typedef struct {
         float temperature;  // °C
@@ -50,11 +50,12 @@ public:
     Sensor_DHTxx(const String &name, uint8_t pin/*, uint8_t type*/);
     virtual ~Sensor_DHTxx();
 
-    virtual MQTT::AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num) override;
+    virtual AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;
 
     virtual void publishState() override;
     virtual void getValues(JsonArray &json, bool timer) override;
+    virtual void getValues(NamedJsonArray &array, bool timer) override;
     virtual void createWebUI(WebUIRoot &webUI, WebUIRow **row) override;
     virtual void getStatus(Print &output) override;
     virtual bool getSensorData(String &name, StringVector &values) override;

@@ -26,7 +26,7 @@ namespace MQTT {
 
             // virtual void onConnect() override;
             virtual void onDisconnect(AsyncMqttClientDisconnectReason reason) override;
-            // virtual void onMessage(Client *client, char *topic, char *payload, size_t len) override;
+            // virtual void onMessage(const char *topic, const char *payload, size_t len) override;
             virtual void onPacketAck(uint16_t packetId, PacketAckType type) override;
 
             // clear queue and set last state to invalid

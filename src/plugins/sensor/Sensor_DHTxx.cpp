@@ -32,16 +32,18 @@ MQTT::AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num)
     auto discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
     switch(num) {
         case 0:
-            discovery->create(this, _getId(FSPGM(temperature)), format);
-            discovery->addStateTopic(MQTTClient::formatTopic(_getId()));
-            discovery->addUnitOfMeasurement(FSPGM(degree_Celsius_unicode));
-            discovery->addValueTemplate(FSPGM(temperature));
+            if (discovery->create(this, _getId(FSPGM(temperature)), format)) {
+                discovery->addStateTopic(MQTTClient::formatTopic(_getId()));
+                discovery->addUnitOfMeasurement(FSPGM(degree_Celsius_unicode));
+                discovery->addValueTemplate(FSPGM(temperature));
+            }
             break;
         case 1:
-            discovery->create(this, _getId(FSPGM(humidity)), format);
-            discovery->addStateTopic(MQTTClient::formatTopic(_getId()));
-            discovery->addUnitOfMeasurement(F("%"));
-            discovery->addValueTemplate(FSPGM(humidity));
+            if (discovery->create(this, _getId(FSPGM(humidity)), format)) {
+                discovery->addStateTopic(MQTTClient::formatTopic(_getId()));
+                discovery->addUnitOfMeasurement(F("%"));
+                discovery->addValueTemplate(FSPGM(humidity));
+            }
             break;
     }
     return discovery;
@@ -50,6 +52,11 @@ MQTT::AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num)
 uint8_t Sensor_DHTxx::getAutoDiscoveryCount() const
 {
     return 2;
+}
+
+void Sensor_DHTxx::getValues(NamedJsonArray &array, bool timer)
+{
+
 }
 
 void Sensor_DHTxx::getValues(JsonArray &array, bool timer)

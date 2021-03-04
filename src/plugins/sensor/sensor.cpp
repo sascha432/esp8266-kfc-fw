@@ -5,6 +5,7 @@
 #include "sensor.h"
 #include <PrintHtmlEntitiesString.h>
 #include <KFCJson.h>
+#include "../src/plugins/mqtt/mqtt_json.h"
 #include <plugins_menu.h>
 #include <WebUISocket.h>
 
@@ -111,9 +112,6 @@ void SensorPlugin::setup(SetupModeType mode)
 void SensorPlugin::reconfigure(const String &source)
 {
     for(const auto sensor: _sensors) {
-        // if (sensor->getAutoDiscoveryCount()) {
-        //     MQTTClient::safeReRegisterComponent(sensor);
-        // }
         sensor->reconfigure(source.c_str());
     }
 }
@@ -134,15 +132,21 @@ void SensorPlugin::_timerEvent()
     auto mqttIsConnected = MQTTClient::safeIsConnected();
 
     if (WebUISocket::hasAuthenticatedClients()) {
-        JsonUnnamedObject json(2);
-        json.add(JJ(type), JJ(ue));
-        auto &events = json.addArray(JJ(events));
-        for(auto sensor: _sensors) {
-            sensor->timerEvent(&events, mqttIsConnected);
+        PrintString jsonStr;
+        {
+            using namespace MQTT::Json;
+            auto json = UnnamedObjectWriter(jsonStr);
+            auto events = NamedArray(F("events"));
+            for(auto sensor: _sensors) {
+                sensor->timerEvent(&events, mqttIsConnected);
+            }
+            if (events.length() > 2) {
+                json.append(NamedString(F("type"), F("ue")), events);
+            }
         }
-        // __DBG_printf("events=%u", events.size());
-        if (events.size()) {
-            WebUISocket::broadcast(WebUISocket::getSender(), json);
+        if (jsonStr.length() > 2) {
+            __DBG_printf("timer: %s", jsonStr.c_str());
+            WebUISocket::broadcast(WebUISocket::getSender(), std::move(jsonStr));
         }
     }
     else if (mqttIsConnected) {

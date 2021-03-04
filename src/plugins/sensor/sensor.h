@@ -154,9 +154,6 @@ protected:
     void addSensor(_Args &&... args) {
         auto sensor = new _Sensor(std::forward<_Args>(args)...);
         _sensors.push_back(sensor);
-        // if (sensor->getAutoDiscoveryCount()) {
-        //     MQTTClient::safeRegisterComponent(sensor);
-        // }
     }
 
 private:

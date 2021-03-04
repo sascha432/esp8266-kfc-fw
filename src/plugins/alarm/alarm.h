@@ -50,12 +50,12 @@ public:
 
 // MQTTComponent
 public:
-    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTT::FormatType format, uint8_t num) override;
+    virtual AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override {
         return 1;
     }
-    virtual void onConnect(MQTTClient *client) override;
-    virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len);
+    virtual void onConnect() override;
+    virtual void onMessage(const char *topic, const char *payload, size_t len);
 
 public:
     static void resetAlarm();

@@ -2,13 +2,12 @@
  * Author: sascha_lammers@gmx.de
  */
 
-
 #if IOT_SENSOR_HAVE_SYSTEM_METRICS
 
-#include <JsonTools.h>
 #include "Sensor_SystemMetrics.h"
-#include <ArduinoJson.h>
 #include "WebUIComponent.h"
+#include "../src/plugins/mqtt/mqtt_json.h"
+
 
 #if PING_MONITOR_SUPPORT
 #include "../src/plugins/ping_monitor/ping_monitor.h"
@@ -45,62 +44,53 @@ Sensor_SystemMetrics::~Sensor_SystemMetrics()
 
 MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::FormatType format, uint8_t num)
 {
-    MQTT::AutoDiscovery::EntityPtr discovery = nullptr;
+    MQTT::AutoDiscovery::EntityPtr discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
     switch(num) {
         case 0:
-            discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
             discovery->create(this, FSPGM(uptime), format);
             discovery->addStateTopic(_getTopic());
             discovery->addUnitOfMeasurement(FSPGM(seconds));
             discovery->addValueTemplate(FSPGM(uptime));
             break;
         case 1:
-            discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
             discovery->create(this, FSPGM(heap), format);
             discovery->addStateTopic(_getTopic());
             discovery->addUnitOfMeasurement(FSPGM(bytes));
             discovery->addValueTemplate(FSPGM(heap));
             break;
         case 2:
-            discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
             discovery->create(this, FSPGM(version), format);
             discovery->addStateTopic(_getTopic());
             discovery->addValueTemplate(FSPGM(version));
             break;
         case 3:
-            discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
             discovery->create(this, F("heap_frag"), format);
             discovery->addStateTopic(_getTopic());
             discovery->addValueTemplate(F("heap_frag"));
             break;
 #if PING_MONITOR_SUPPORT
         case 4:
-            discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
             discovery->create(this, F("ping_monitor_success"), format);
             discovery->addStateTopic(_getTopic());
             discovery->addValueTemplate(F("ping_monitor_success"));
             break;
         case 5:
-            discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
             discovery->create(this, F("ping_monitor_failure"), format);
             discovery->addStateTopic(_getTopic());
             discovery->addValueTemplate(F("ping_monitor_failure"));
             break;
         case 6:
-            discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
             discovery->create(this, F("ping_monitor_avg_resp_time"), format);
             discovery->addStateTopic(_getTopic());
             discovery->addValueTemplate(F("ping_monitor_avg_resp_time"));
             discovery->addUnitOfMeasurement(F("ms"));
             break;
         case 7:
-            discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
             discovery->create(this, F("ping_monitor_rcvd_pkts"), format);
             discovery->addStateTopic(_getTopic());
             discovery->addValueTemplate(F("ping_monitor_rcvd_pkts"));
             break;
         case 8:
-            discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
             discovery->create(this, F("ping_monitor_lost_pkts"), format);
             discovery->addStateTopic(_getTopic());
             discovery->addValueTemplate(F("ping_monitor_lost_pkts"));
@@ -131,8 +121,25 @@ void Sensor_SystemMetrics::publishState()
     if (isConnected()) {
         PrintString json;
         _getMetricsJson(json);
-        client().publish(_getTopic(), true, json);
+        publish(_getTopic(), true, json);
     }
+}
+
+void Sensor_SystemMetrics::getValues(NamedJsonArray &array, bool timer)
+{
+    using namespace MQTT::Json;
+    array.append(
+        UnnamedObject(
+            NamedString(F("id"), _getId(MetricsType::UPTIME)),
+            NamedBool(F("state"), true),
+            NamedString(F("value"), _getUptime())
+        ),
+        UnnamedObject(
+            NamedString(F("id"), _getId(MetricsType::MEMORY)),
+            NamedBool(F("state"), true),
+            NamedString(F("value"), PrintString(F("%.3f KB<br>%u%%"), ESP.getFreeHeap() / 1024.0, ESP.getHeapFragmentation()))
+        )
+    );
 }
 
 void Sensor_SystemMetrics::getValues(::JsonArray &array, bool timer)
@@ -186,10 +193,6 @@ String Sensor_SystemMetrics::_getUptime() const
 
 void Sensor_SystemMetrics::createWebUI(WebUIRoot &webUI, WebUIRow **row)
 {
-    using ::JsonString;
-    __LDBG_println();
-    // __DBG_printf("size=%u", (*row)->length());
-
     *row = &webUI.addRow();
     (*row)->addGroup(PrintString(F("System Metrics<div class=\"version d-md-inline\">%s</div>"), config.getFirmwareVersion().c_str()), false);
 
@@ -203,50 +206,32 @@ String Sensor_SystemMetrics::_getTopic() const
     return MQTTClient::formatTopic(F("sys"));
 }
 
-void Sensor_SystemMetrics::_getMetricsJson(Print &json) const
+void Sensor_SystemMetrics::_getMetricsJson(PrintString &json) const
 {
-#if 0
-    __DBG_print("before");
-    {
-    JsonUnnamedObject obj;
+    using namespace MQTT::Json;
 
-    obj.add(FSPGM(uptime), getSystemUptime());
-    obj.add(FSPGM(heap), (int)ESP.getFreeHeap());
-    obj.add(F("heap_frag"), (int)ESP.getHeapFragmentation());
-    obj.add(FSPGM(version), FPSTR(config.getShortFirmwareVersion_P()));
+    UnnamedObjectWriter(json,
+        NamedUint32(FSPGM(uptime), getSystemUptime()),
+        NamedUint32(FSPGM(heap), ESP.getFreeHeap()),
+        NamedShort(F("heap_frag"), ESP.getHeapFragmentation()),
+        NamedString(FSPGM(version), FPSTR(config.getShortFirmwareVersion_P()))
+    );
 
 #if PING_MONITOR_SUPPORT
-    PingMonitorTask::addToJson(obj);
+    PingMonitorTask::addToJson(json);
 #endif
 
-    __DBG_print("after");
+}
 
-    obj.printTo(json);
-
-    __DBG_print("after printto");
-
-
+const __FlashStringHelper *Sensor_SystemMetrics::_getId(MetricsType type) const
+{
+    switch(type) {
+        case MetricsType::UPTIME:
+            return F("metricsuptime");
+        case MetricsType::MEMORY:
+            return F("metricsmem");
     }
-    __DBG_print("return");
-#else
-
-#if PING_MONITOR_SUPPORT
-    DynamicJsonDocument doc(316);
-#else
-    DynamicJsonDocument doc(128);
-#endif
-
-    doc[FSPGM(uptime)] = getSystemUptime();
-    doc[FSPGM(heap)] = (int)ESP.getFreeHeap();
-    doc[F("heap_frag")] = ESP.getHeapFragmentation();
-    doc[FSPGM(version)] = FPSTR(config.getShortFirmwareVersion_P());
-
-#if PING_MONITOR_SUPPORT
-    PingMonitorTask::addToJson(doc);
-#endif
-
-    serializeJson(doc, json);
-#endif
+    return F("kfcfwmetrics");
 }
 
 #endif

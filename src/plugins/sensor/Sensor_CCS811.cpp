@@ -42,25 +42,31 @@ MQTT::AutoDiscovery::EntityPtr Sensor_CCS811::getAutoDiscovery(FormatType format
     discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
     switch(num) {
         case 0:
-            discovery->create(this, _getId(F("eco2")), format);
-            discovery->addStateTopic(MQTTClient::formatTopic(_getId()));
-            discovery->addUnitOfMeasurement(F("ppm"));
-            discovery->addValueTemplate(F("eCO2"));
+            if (discovery->create(this, _getId(F("eco2")), format)) {
+                discovery->addStateTopic(MQTTClient::formatTopic(_getId()));
+                discovery->addUnitOfMeasurement(F("ppm"));
+                discovery->addValueTemplate(F("eCO2"));
+            }
             break;
         case 1:
-            discovery->create(this, _getId(F("tvoc")), format);
-            discovery->addStateTopic(MQTTClient::formatTopic(_getId()));
-            discovery->addUnitOfMeasurement(F("ppb"));
-            discovery->addValueTemplate(F("TVOC"));
-            brewak;
+            if (discovery->create(this, _getId(F("tvoc")), format)) {
+                discovery->addStateTopic(MQTTClient::formatTopic(_getId()));
+                discovery->addUnitOfMeasurement(F("ppb"));
+                discovery->addValueTemplate(F("TVOC"));
+            }
+            break;
     }
-
     return discovery;
 }
 
 uint8_t Sensor_CCS811::getAutoDiscoveryCount() const
 {
     return 2;
+}
+
+void Sensor_CCS811::getValues(NamedJsonArray &array, bool timer)
+{
+
 }
 
 void Sensor_CCS811::getValues(JsonArray &array, bool timer)
@@ -95,18 +101,19 @@ void Sensor_CCS811::getStatus(Print &output)
     output.printf_P(PSTR("CCS811 @ I2C address 0x%02x" HTML_S(br)), _address);
 }
 
-void Sensor_CCS811::publishState(MQTTClient *client)
+void Sensor_CCS811::publishState()
 {
-    if (client) {
+    if (isConnected()) {
         auto &sensor = _readSensor();
         if (sensor.available) {
-            PrintString str;
-            JsonUnnamedObject json;
-            json.add(F("eCO2"), sensor.eCO2);
-            json.add(F("TVOC"), sensor.TVOC);
-            json.printTo(str);
+            using namespace MQTT::Json;
+            // PrintString str;
+            // JsonUnnamedObject json;
+            // json.add(F("eCO2"), sensor.eCO2);
+            // json.add(F("TVOC"), sensor.TVOC);
+            // json.printTo(str);
 
-            client->publish(MQTTClient::formatTopic(_getId()), _qos, true, str);
+            publish(MQTTClient::formatTopic(_getId()), _qos, true, Writer(NamedUnsignedShort(F("eCO2"), sensor.eCO2), NamedUnsignedShort(F("TVOC"), sensor.TVOC)).toString());
         }
     }
 }

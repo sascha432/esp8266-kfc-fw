@@ -15,7 +15,7 @@
 using namespace MQTT;
 
 Sensor::Sensor(SensorType type) :
-    Component(ComponentType::SENSOR),
+    MQTTComponent(ComponentType::SENSOR),
     _updateRate(DEFAULT_UPDATE_RATE),
     _mqttUpdateRate(DEFAULT_MQTT_UPDATE_RATE),
     _nextUpdate(0),
@@ -23,11 +23,13 @@ Sensor::Sensor(SensorType type) :
     _type(type)
 {
     __LDBG_printf("ctor this=%p", this);
+    setup();
 }
 
 Sensor::~Sensor()
 {
     __LDBG_printf("dtor this=%p", this);
+    shutdown();
 #if DEBUG
     if (hasClient() && client().isComponentRegistered(this)) {
         __DBG_panic("component=%p type=%d is still registered", this, (int)getType());
@@ -40,15 +42,14 @@ void Sensor::onConnect()
     setNextMqttUpdate(2);
 }
 
-void Sensor::timerEvent(JsonArray *array, bool mqttIsConnected)
+void Sensor::timerEvent(MQTT::Json::NamedArray *array, bool mqttIsConnected)
 {
     uint32_t now = time(nullptr);
     if (array && now >= _nextUpdate) {
         _nextUpdate = now + _updateRate;
-        _debug_println();
         getValues(*array, true);
+        __DBG_printf("%s", array->toString().c_str());
     }
-
     if (mqttIsConnected && isConnected() && now >=_nextMqttUpdate) {
         _nextMqttUpdate = now + _mqttUpdateRate;
         publishState();

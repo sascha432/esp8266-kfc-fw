@@ -72,9 +72,9 @@ void print_status_pcf8574(Print &output)
 #define PLUGIN_OPTIONS_WEB_TEMPLATES                    ""
 
 #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
-#define PLUGIN_OPTIONS_RECONFIGURE_DEPENDENCIES         "http,mqtt"
+#define PLUGIN_OPTIONS_RECONFIGURE_DEPENDENCIES         "http"
 #else
-#define PLUGIN_OPTIONS_RECONFIGURE_DEPENDENCIES         "mqtt"
+#define PLUGIN_OPTIONS_RECONFIGURE_DEPENDENCIES         ""
 #endif
 
 PROGMEM_DEFINE_PLUGIN_OPTIONS(
@@ -284,7 +284,9 @@ void ClockPlugin::_setupTimer()
         IF_IOT_CLOCK_HAVE_MOTION_SENSOR(
             auto state = _digitalRead(IOT_CLOCK_HAVE_MOTION_SENSOR_PIN);
             if (state != _motionState) {
-                MQTTClient::safePublish(MQTTClient::formatTopic(F("motion")), true, String(_motionState ? 0 : 1));
+                if (isConnected()) {
+                    publish(MQTTClient::formatTopic(F("motion")), true, String(_motionState ? 0 : 1));
+                }
                 // _digitalWrite(_PCF8574Range::pin2DigitalPin(5), !_motionState);
 
                 _motionState = state;
@@ -328,7 +330,7 @@ void ClockPlugin::_setupTimer()
             else {
                 tempSensor = 0;
                 for(auto sensor: SensorPlugin.getSensors()) {
-                    if (sensor->getType() == MQTTSensor::SensorType::LM75A) {
+                    if (sensor->getType() == MQTT::SensorType::LM75A) {
                         auto &lm75a = *reinterpret_cast<Sensor_LM75A *>(sensor);
                         tempSensor = max(tempSensor, lm75a.readSensor() - (lm75a.getAddress() == IOT_CLOCK_VOLTAGE_REGULATOR_LM75A_ADDRESS ? _config.protection.regulator_margin : 0));
                     }
@@ -464,7 +466,7 @@ void ClockPlugin::setup(SetupModeType mode)
         _installWebHandlers();
     )
 
-    MQTTClient::safeRegisterComponent(this);
+    MQTT::Client::registerComponent(this);
 
     LoopFunctions::add(ClockPlugin::loop);
     IF_IOT_ALARM_PLUGIN_ENABLED(
@@ -514,15 +516,13 @@ void ClockPlugin::reconfigure(const String &source)
     _removeDisplayLedTimer();
 #endif
     _disable(10);
-    if (String_equals(source, SPGM(mqtt))) {
-        MQTTClient::safeReRegisterComponent(this);
-    }
     IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(
-        else if (String_equals(source, SPGM(http))) {
+        if (String_equals(source, SPGM(http))) {
             _installWebHandlers();
         }
+        else
     )
-    else {
+    {
         readConfig();
         IF_IOT_CLOCK_SAVE_STATE(
             _saveState();

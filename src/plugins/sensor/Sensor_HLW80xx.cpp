@@ -106,6 +106,11 @@ uint8_t Sensor_HLW80xx::getAutoDiscoveryCount() const
     return 6;
 }
 
+void Sensor_HLW80xx::getValues(NamedJsonArray &array, bool timer)
+{
+
+}
+
 void Sensor_HLW80xx::getValues(JsonArray &array, bool timer)
 {
     __LDBG_println();

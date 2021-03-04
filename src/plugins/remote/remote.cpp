@@ -61,7 +61,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     "",                 // web_templates
     // config_forms
     "general,events,combos,actions,buttons-1,buttons-2,buttons-3,buttons-4",
-    "mqtt",             // reconfigure_dependencies
+    "",                 // reconfigure_dependencies
     PluginComponent::PriorityType::REMOTE,
     PluginComponent::RTCMemoryId::DEEP_SLEEP,
     static_cast<uint8_t>(PluginComponent::MenuType::CUSTOM),
@@ -160,6 +160,31 @@ void RemoteControlPlugin::setup(SetupModeType mode)
     _readConfig();
     _updateButtonConfig();
 
+    uint8_t count = 0;
+    do {
+        bool reset = (digitalRead(_buttonPins[0]) == PinState::activeHigh()) && (digitalRead(_buttonPins[3]) == PinState::activeHigh()); // check if button 0 und 3 are down
+        if (count == 0) {
+            if (!reset) { // if not continue
+                break;
+            }
+            BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
+        }
+        // set counter to 10 for debouncing
+        if (reset) {
+            count = 10;
+        }
+        // count down if reset is not pressed
+        count--;
+        if (count == 0) { // set LED back to solid, reset button states and start..
+            BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SOLID);
+            _pinState = PinState();
+            _autoSleepTimeout = kAutoSleepDisabled;
+            break;
+        }
+        delay(5);
+    }
+    while(true);
+
     __DBG_printf("feed time=%u state=%u read=%u active_low=%u %s", _pinState._time, _pinState._state, _pinState._read, _pinState.activeLow(), _pinState.toString().c_str());
 
     // reset state and feed debouncer with initial values and state
@@ -169,26 +194,17 @@ void RemoteControlPlugin::setup(SetupModeType mode)
     WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTED, wifiCallback);
     LoopFunctions::add(loop);
 
-    dependsOn(F("mqtt"), [this](const PluginComponent *plugin) {
-        __LDBG_printf("mqtt setup");
-        _setup();
-        _resetAutoSleep();
-    });
-
+    _setup();
+    _resetAutoSleep();
     // _resolveActionHostnames();
 }
 
 void RemoteControlPlugin::reconfigure(const String &source)
 {
     _readConfig();
-    if (String_equals(source, F("mqtt"))) {
-        _reconfigure();
-        publishAutoDiscovery();
-    }
-    else {
-        _updateButtonConfig();
-        publishAutoDiscovery();
-    }
+    _reconfigure();
+    _updateButtonConfig();
+    publishAutoDiscovery();
 }
 
 void RemoteControlPlugin::shutdown()
@@ -216,9 +232,8 @@ void RemoteControlPlugin::getStatus(Print &output)
 
 void RemoteControlPlugin::createMenu()
 {
-    auto root = bootstrapMenu.getMenuItem(navMenu.config);
-
-    auto subMenu = root.addSubMenu(getFriendlyName());
+    auto config = bootstrapMenu.getMenuItem(navMenu.config);
+    auto subMenu = config.addSubMenu(getFriendlyName());
     subMenu.addMenuItem(F("General"), F("remotectrl/general.html"));
     subMenu.addDivider();
     subMenu.addMenuItem(F("Button Events"), F("remotectrl/events.html"));
@@ -226,6 +241,12 @@ void RemoteControlPlugin::createMenu()
     subMenu.addMenuItem(F("Button 2"), F("remotectrl/buttons-2.html"));
     subMenu.addMenuItem(F("Button 3"), F("remotectrl/buttons-3.html"));
     subMenu.addMenuItem(F("Button 4"), F("remotectrl/buttons-4.html"));
+
+    auto device = bootstrapMenu.getMenuItem(navMenu.device);
+    device.addDivider();
+    subMenu.addMenuItem(F("Enable Auto Sleep"), F("#"));
+    subMenu.addMenuItem(F("Disable Auto Sleep"), F("#"));
+    subMenu.addMenuItem(F("Enable Deep Sleep"), F("#"));
 }
 
 

@@ -19,11 +19,8 @@
 #define MQTT_NAME "clock"
 #endif
 
-MQTTComponent::MQTTAutoDiscoveryPtr ClockPlugin::nextAutoDiscovery(MQTT::FormatType format, uint8_t num)
+MQTT::AutoDiscovery::EntityPtr ClockPlugin::getAutoDiscovery(FormatType format, uint8_t num)
 {
-    if (num >= getAutoDiscoveryCount()) {
-        return nullptr;
-    }
     auto discovery = __LDBG_new(MQTTAutoDiscovery);
     switch(num) {
         case 0: {
@@ -74,7 +71,6 @@ MQTTComponent::MQTTAutoDiscoveryPtr ClockPlugin::nextAutoDiscovery(MQTT::FormatT
         break;
 #endif
     }
-    discovery->finalize();
     return discovery;
 }
 

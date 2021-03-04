@@ -33,24 +33,22 @@ public:
     {
     }
 
-    virtual AutoDiscoveryPtr nextAutoDiscovery(FormatType format, uint8_t num) override;
+    virtual AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;
 
-    virtual void onConnect(MQTTClient *client) {
+    virtual void onConnect() {
         if (_autoDiscoveryPending) {
             _autoDiscoveryPending = false;
-            client->publishAutoDiscovery(true, true);
+            client().publishAutoDiscovery(true, true);
         }
-
     }
 
     void publishAutoDiscovery() {
-        auto client = MQTTClient::getClient();
-        if (client) {
-            __LDBG_printf("connected=%u running=%u registered=%u", client->isConnected(), client->isAutoDiscoveryRunning(), client->isComponentRegistered(this));
-            if (client->isConnected()) {
+        if (hasClient()) {
+            __LDBG_printf("connected=%u running=%u registered=%u", client().isConnected(), client().isAutoDiscoveryRunning(), client().isComponentRegistered(this));
+            if (client().isConnected()) {
                 _autoDiscoveryPending = false;
-                client->publishAutoDiscovery(true, true);
+                client().publishAutoDiscovery(true, true);
             }
             else {
                 _autoDiscoveryPending = true;
@@ -59,15 +57,16 @@ public:
     }
 
     void _setup() {
-        MQTTClient::safeRegisterComponent(this);
+        _updateAutoDiscoveryCount();
+        MQTTClient::registerComponent(this);
     }
 
     void _reconfigure() {
-        MQTTClient::safeReRegisterComponent(this);
+        _updateAutoDiscoveryCount();
     }
 
     void _shutdown() {
-        MQTTClient::safeUnregisterComponent(this);
+        MQTTClient::unregisterComponent(this);
     }
 
     static String getMQTTTopic() {
@@ -75,7 +74,11 @@ public:
     }
 
 private:
+    void _updateAutoDiscoveryCount();
+
+private:
     bool _autoDiscoveryPending;
+    uint8_t _autoDiscoveryCount;
 };
 
 #else

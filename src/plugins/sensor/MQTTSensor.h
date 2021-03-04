@@ -14,6 +14,7 @@
 #include <KFCJson.h>
 #include <KFCForms.h>
 #include "../mqtt/mqtt_client.h"
+#include "../mqtt/mqtt_json.h"
 #include "EnumBitset.h"
 
 #if DEBUG_IOT_SENSOR
@@ -42,13 +43,13 @@ namespace MQTT {
         MAX
     };
 
-    class Sensor : public Component {
+    class Sensor : public MQTTComponent {
     public:
         static constexpr uint16_t DEFAULT_UPDATE_RATE = 5;
         static constexpr uint16_t DEFAULT_MQTT_UPDATE_RATE = 30;
 
-        using FormatType = MQTT::FormatType;
         using SensorType = MQTT::SensorType;
+        using NamedJsonArray = PluginComponent::NamedJsonArray;
 
         Sensor(SensorType type);
         virtual ~Sensor();
@@ -72,6 +73,8 @@ namespace MQTT {
         virtual void publishState() = 0;
         // using update rate
         virtual void getValues(JsonArray &json, bool timer) = 0;
+
+        virtual void getValues(NamedJsonArray &array, bool timer) = 0;
         // create webUI for sensor
         virtual void createWebUI(WebUIRoot &webUI, WebUIRow **row) = 0;
         // return status of the sensor for status.html
@@ -85,17 +88,11 @@ namespace MQTT {
             return false;
         }
 
-        virtual void createConfigureForm(AsyncWebServerRequest *request, FormUI::Form::BaseForm &form) {
-        }
-
-        virtual void configurationSaved(FormUI::Form::BaseForm *form) {
-        }
-
-        virtual void reconfigure(PGM_P source) {
-        }
-
-        virtual void shutdown() {
-        }
+        virtual void createConfigureForm(AsyncWebServerRequest *request, FormUI::Form::BaseForm &form) {}
+        virtual void configurationSaved(FormUI::Form::BaseForm *form) {}
+        virtual void setup() {}
+        virtual void reconfigure(PGM_P source) {}
+        virtual void shutdown() {}
 
     #if AT_MODE_SUPPORTED
         virtual void atModeHelpGenerator() {
@@ -105,7 +102,7 @@ namespace MQTT {
         }
     #endif
 
-        void timerEvent(JsonArray *array, bool mqttIsConnected);
+        void timerEvent(MQTT::Json::NamedArray *array, bool mqttIsConnected);
 
         inline void setUpdateRate(uint16_t updateRate) {
             _updateRate = updateRate;

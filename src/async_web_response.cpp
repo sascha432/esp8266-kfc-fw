@@ -142,7 +142,7 @@ size_t AsyncBaseResponse::_ack(AsyncWebServerRequest* request, size_t len, uint3
 
         if (headLen) {
             memcpy(buf, _head.c_str(), headLen);
-            _head = String();
+            _head.~String();
         }
         _writtenLength += request->client()->write(reinterpret_cast<char *>(buf), outLen);
 

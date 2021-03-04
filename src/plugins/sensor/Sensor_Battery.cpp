@@ -45,6 +45,8 @@ Sensor_Battery::Sensor_Battery(const JsonString &name) :
     _readADC(true);
     _adcValue = NAN; // discard initial reading
 
+    ADCManager::getInstance().addAutoReadTimer(Event::seconds(1), Event::milliseconds(100), 10);
+
     _Timer(_timer).add(Event::milliseconds(kReadInterval), true, [this](Event::CallbackTimerPtr) {
         if (++_timerCounter >= kUpdateInterval / kReadInterval) {
             _timerCounter = 0;
@@ -111,29 +113,33 @@ MQTT::AutoDiscovery::EntityPtr Sensor_Battery::getAutoDiscovery(FormatType forma
     auto discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
     switch(static_cast<AutoDiscoveryNumHelperType>(num)) {
         case AutoDiscoveryNumHelperType::VOLTAGE:
-            discovery->create(this, _getId(TopicType::VOLTAGE), format);
-            discovery->addStateTopic(_getTopic(TopicType::VOLTAGE));
-            discovery->addUnitOfMeasurement('V');
-            discovery->addDeviceClass(F("voltage"));
+            if (discovery->create(this, _getId(TopicType::VOLTAGE), format)) {
+                discovery->addStateTopic(_getTopic(TopicType::VOLTAGE));
+                discovery->addUnitOfMeasurement('V');
+                discovery->addDeviceClass(F("voltage"));
+            }
             break;
 #if IOT_SENSOR_BATTERY_DISPLAY_LEVEL
         case AutoDiscoveryNumHelperType::LEVEL:
-            discovery->create(this, _getId(TopicType::LEVEL), format);
-            discovery->addStateTopic(_getTopic(TopicType::LEVEL));
-            discovery->addUnitOfMeasurement('%');
-            discovery->addDeviceClass(F("battery"));
+            if (discovery->create(this, _getId(TopicType::LEVEL), format)) {
+                discovery->addStateTopic(_getTopic(TopicType::LEVEL));
+                discovery->addUnitOfMeasurement('%');
+                discovery->addDeviceClass(F("battery"));
+            }
             break;
 #endif
 #ifdef IOT_SENSOR_BATTERY_CHARGING
         case AutoDiscoveryNumHelperType::CHARGING:
-            discovery->create(ComponentType::SENSOR, _getId(TopicType::CHARGING), format);
-            discovery->addStateTopic(_getTopic(TopicType::CHARGING));
+            if (discovery->create(ComponentType::SENSOR, _getId(TopicType::CHARGING), format)) {
+                discovery->addStateTopic(_getTopic(TopicType::CHARGING));
+            }
             break;
 #endif
 #if IOT_SENSOR_BATTERY_DSIPLAY_POWER_STATUS
         case AutoDiscoveryNumHelperType::POWER:
-            discovery->create(this, _getId(TopicType::POWER), format);
-            discovery->addStateTopic(_getTopic(TopicType::POWER));
+            if (discovery->create(this, _getId(TopicType::POWER), format)) {
+                discovery->addStateTopic(_getTopic(TopicType::POWER));
+            }
             break;
 #endif
         case AutoDiscoveryNumHelperType::MAX:
@@ -145,6 +151,39 @@ MQTT::AutoDiscovery::EntityPtr Sensor_Battery::getAutoDiscovery(FormatType forma
 uint8_t Sensor_Battery::getAutoDiscoveryCount() const
 {
     return static_cast<uint8_t>(AutoDiscoveryNumHelperType::MAX);
+}
+
+void Sensor_Battery::getValues(NamedJsonArray &array, bool timer)
+{
+    using namespace MQTT::Json;
+    array.append(
+        UnnamedObject(
+            NamedString(F("id"), _getId(TopicType::VOLTAGE)),
+            NamedBool(F("state"), true),
+            NamedDouble(F("value"), FormattedDouble(_status.getVoltage(), _config.precision))
+        )
+#if IOT_SENSOR_BATTERY_DISPLAY_LEVEL
+        ,UnnamedObject(
+            NamedString(F("id"), _getId(TopicType::LEVEL)),
+            NamedBool(F("state"), true),
+            NamedShort(F("value"), _status.getLevel())
+        )
+#endif
+#ifdef IOT_SENSOR_BATTERY_CHARGING
+        ,UnnamedObject(
+            NamedString(F("id"), _getId(TopicType::CHARGING)),
+            NamedBool(F("state"), true),
+            NamedString(F("value"), _status.getChargingStatus())
+        )
+#endif
+#if IOT_SENSOR_BATTERY_DSIPLAY_POWER_STATUS
+        ,UnnamedObject(
+            NamedString(F("id"), _getId(TopicType::POWER)),
+            NamedBool(F("state"), true),
+            NamedString(F("value"), tatus.getPowerStatus())
+        )
+#endif
+    );
 }
 
 void Sensor_Battery::getValues(JsonArray &array, bool timer)
@@ -190,23 +229,23 @@ void Sensor_Battery::createWebUI(WebUIRoot &webUI, WebUIRow **row)
 #endif
 }
 
-void Sensor_Battery::publishState(MQTTClient *client)
+void Sensor_Battery::publishState()
 {
     // auto status = readSensor();
     // if (!_status.isValid()) {
     //     return;
     // }
     __LDBG_printf("client=%p connected=%u", client, client && client->isConnected() ? 1 : 0);
-    if (client && client->isConnected()) {
-        client->publish(_getTopic(TopicType::VOLTAGE), true, String(_status.getVoltage(), _config.precision));
+    if (isConnected()) {
+        publish(_getTopic(TopicType::VOLTAGE), true, String(_status.getVoltage(), _config.precision));
 #if IOT_SENSOR_BATTERY_DISPLAY_LEVEL
-    client->publish(_getTopic(TopicType::LEVEL), true, String(_status.getLevel()));
+        publish(_getTopic(TopicType::LEVEL), true, String(_status.getLevel()));
 #endif
 #ifdef IOT_SENSOR_BATTERY_CHARGING
-        client->publish(_getTopic(TopicType::CHARGING), true, _status.getChargingStatus());
+        publish(_getTopic(TopicType::CHARGING), true, _status.getChargingStatus());
 #endif
 #if IOT_SENSOR_BATTERY_DSIPLAY_POWER_STATUS
-        client->publish(_getTopic(TopicType::POWER), true, _status.getPowerStatus());
+        publish(_getTopic(TopicType::POWER), true, _status.getPowerStatus());
 #endif
     }
 }

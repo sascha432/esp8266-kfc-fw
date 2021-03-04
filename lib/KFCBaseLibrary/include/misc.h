@@ -174,7 +174,7 @@ inline size_t String_replaceIgnoreCase(String &str, int from, int to)
 size_t printTrimmedDouble(Print *output, double value, int digits = 6);
 
 static inline bool String_startsWith(const String &str1, char ch) {
-    return str1.charAt(0) == ch;
+    return str1.length() != 0 && str1.charAt(0) == ch;
 }
 bool String_endsWith(const String &str1, char ch);
 

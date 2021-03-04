@@ -28,28 +28,32 @@ MQTT::AutoDiscovery::EntityPtr Sensor_BME680::getAutoDiscovery(FormatType format
     auto discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
     switch(num) {
     case 0:
-        discovery->create(this, _getId(FSPGM(temperature)), format);
-        discovery->addStateTopic(MQTTClient::formatTopic(_getId()));
-        discovery->addUnitOfMeasurement(FSPGM(degree_Celsius_unicode));
-        discovery->addValueTemplate(FSPGM(temperature));
+        if (discovery->create(this, _getId(FSPGM(temperature)), format)) {
+            discovery->addStateTopic(MQTTClient::formatTopic(_getId()));
+            discovery->addUnitOfMeasurement(FSPGM(degree_Celsius_unicode));
+            discovery->addValueTemplate(FSPGM(temperature));
+        }
         break;
     case 1:
-        discovery->create(this, _getId(FSPGM(humidity)), format);
-        discovery->addStateTopic(MQTTClient::formatTopic(_getId()));
-        discovery->addUnitOfMeasurement('%');
-        discovery->addValueTemplate(FSPGM(humidity));
+        if (discovery->create(this, _getId(FSPGM(humidity)), format)) {
+            discovery->addStateTopic(MQTTClient::formatTopic(_getId()));
+            discovery->addUnitOfMeasurement('%');
+            discovery->addValueTemplate(FSPGM(humidity));
+        }
         break;
     case 2:
-        discovery->create(this, _getId(FSPGM(pressure)), format);
-        discovery->addStateTopic(MQTTClient::formatTopic(_getId()));
-        discovery->addUnitOfMeasurement(FSPGM(hPa));
-        discovery->addValueTemplate(FSPGM(pressure));
+        if (discovery->create(this, _getId(FSPGM(pressure)), format)) {
+            discovery->addStateTopic(MQTTClient::formatTopic(_getId()));
+            discovery->addUnitOfMeasurement(FSPGM(hPa));
+            discovery->addValueTemplate(FSPGM(pressure));
+        }
         break;
     case 3:
-        discovery->create(this, _getId(F("gas")), format);
-        discovery->addStateTopic(MQTTClient::formatTopic(_getId()));
-        discovery->addUnitOfMeasurement(F("ppm"));
-        discovery->addValueTemplate(F("gas"));
+        if (discovery->create(this, _getId(F("gas")), format)) {
+            discovery->addStateTopic(MQTTClient::formatTopic(_getId()));
+            discovery->addUnitOfMeasurement(F("ppm"));
+            discovery->addValueTemplate(F("gas"));
+        }
         break;
     }
     return discovery;

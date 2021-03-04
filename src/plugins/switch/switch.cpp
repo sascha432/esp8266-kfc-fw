@@ -44,7 +44,11 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     0                   // __reserved
 );
 
-SwitchPlugin::SwitchPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(SwitchPlugin)), MQTTComponent(ComponentType::SWITCH), _states(0), _pins({IOT_SWITCH_CHANNEL_PINS})
+SwitchPlugin::SwitchPlugin() :
+    PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(SwitchPlugin)),
+    MQTTComponent(ComponentType::SWITCH),
+    _states(0),
+    _pins({IOT_SWITCH_CHANNEL_PINS})
 {
     REGISTER_PLUGIN(this, "SwitchPlugin");
 }
@@ -198,18 +202,14 @@ void SwitchPlugin::setValue(const String &id, const String &value, bool hasValue
     }
 }
 
-MQTTComponent::MQTTAutoDiscoveryPtr SwitchPlugin::nextAutoDiscovery(MQTT::FormatType format, uint8_t num)
+MQTT::AutoDiscovery::EntityPtr SwitchPlugin::gettAutoDiscovery(MQTT::FormatType format, uint8_t num)
 {
-    if (num >= getAutoDiscoveryCount()) {
-        return nullptr;
-    }
-    auto discovery =__LDBG_new(MQTTAutoDiscovery);
+    auto discovery =__LDBG_new(MQTT::AutoDiscovery::Entity);
     auto channel = PrintString(FSPGM(channel__u), num);
     discovery->create(this, channel, format);
     discovery->addStateTopic(MQTTClient::formatTopic(channel, FSPGM(_state)));
     discovery->addCommandTopic(MQTTClient::formatTopic(channel, FSPGM(_set)));
     discovery->addPayloadOnOff();
-    discovery->finalize();
     return discovery;
 }
 
@@ -218,24 +218,22 @@ uint8_t SwitchPlugin::getAutoDiscoveryCount() const
     return _pins.size();
 }
 
-void SwitchPlugin::onConnect(MQTTClient *client)
+void SwitchPlugin::onConnect()
 {
-    _debug_println();
-    MQTTComponent::onConnect(client);
     for (size_t i = 0; i < _pins.size(); i++) {
-        client->subscribe(this, MQTTClient::formatTopic(PrintString(FSPGM(channel__u), i), FSPGM(_set)));
+        client().subscribe(this, MQTTClient::formatTopic(PrintString(FSPGM(channel__u), i), FSPGM(_set)));
     }
-    _publishState(client);
+    _publishState();
 }
 
-void SwitchPlugin::onMessage(MQTTClient *client, char *topic, char *payload, size_t len)
+void SwitchPlugin::onMessage(const char *topic, const char *payload, size_t len)
 {
     __LDBG_printf("topic=%s payload=%s", topic, payload);
     for (size_t i = 0; i < _pins.size(); i++) {
         if (MQTTClient::formatTopic(PrintString(FSPGM(channel__u), i), FSPGM(_set)).equals(topic)) {
             bool state = atoi(payload);
             _setChannel(i, state);
-            _publishState(client, i);
+            _publishState(i);
         }
     }
 }

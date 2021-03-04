@@ -283,7 +283,7 @@ void RemoteControlPlugin::createConfigureForm(FormCallbackType type, const Strin
         group.end();
 
     }
-    else if (formName = F("actions"))) {
+    else if (formName == F("actions")) {
 
         ui.setTitle(F("Remote Control Actions (Currently not implemented)"));
         ui.setContainerId(F("remotectrl_actions"));

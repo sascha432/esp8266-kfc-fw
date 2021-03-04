@@ -179,7 +179,7 @@ void Queue::publish(Event::milliseconds delay)
                     auto currentCrcs = _entities.crc();
                     __LDBG_printf("crc32 %08x==%08x", crcs.crc32b(), currentCrcs.crc32b());
                     if (_forceUpdate) {
-                        std::fill(crcs.begin(), crcs.end(), 0xffffffff);
+                        std::fill(crcs.begin(), crcs.end(), ~0U);
                     }
                     _diff = currentCrcs.difference(crcs);
                     if (_forceUpdate) {

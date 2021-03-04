@@ -5,7 +5,6 @@ TabWidth: 4
 UseTab: Never
 CompactNamespaces: false
 ContinuationIndentWidth: 4
-AllowShortEnumsOnASingleLine: false
 NamespaceIndentation: All
 BreakConstructorInitializers: AfterColon
 AllowAllConstructorInitializersOnNextLine: false

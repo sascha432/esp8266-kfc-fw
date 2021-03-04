@@ -26,7 +26,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     "Alarm",            // friendly name
     "",                 // web_templates
     "alarm",            // config_forms
-    "mqtt",             // reconfigure_dependencies
+    "",                 // reconfigure_dependencies
     PluginComponent::PriorityType::ALARM,
     PluginComponent::RTCMemoryId::NONE,
     static_cast<uint8_t>(PluginComponent::MenuType::AUTO),
@@ -41,7 +41,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
 );
 
 
-AlarmPlugin::AlarmPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(AlarmPlugin)), MQTTComponent(ComponentTypeEnum_t::SWITCH), _nextAlarm(0), _alarmState(false)
+AlarmPlugin::AlarmPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(AlarmPlugin)), MQTTComponent(MQTT::ComponentType::SWITCH), _nextAlarm(0), _alarmState(false)
 {
     REGISTER_PLUGIN(this, "AlarmPlugin");
 }
@@ -51,36 +51,25 @@ void AlarmPlugin::setup(SetupModeType mode)
     _debug_println();
     _installAlarms(*_timer);
     addTimeUpdatedCallback(ntpCallback);
-    dependsOn(FSPGM(mqtt), [this](const PluginComponent *plugin) {
-        MQTTClient::safeRegisterComponent(this);
-    });
+    MQTTClient::registerComponent(this);
 }
 
 void AlarmPlugin::reconfigure(const String &source)
 {
-    _debug_println();
-    if (String_equals(source, SPGM(mqtt))) {
-        MQTTClient::safeReRegisterComponent(this);
-    }
-    else {
-        _removeAlarms();
-        _installAlarms(*_timer);
-    }
+    _removeAlarms();
+    _installAlarms(*_timer);
 }
 
 void AlarmPlugin::shutdown()
 {
    _debug_println();
-     MQTTClient::safeUnregisterComponent(this);
+     MQTTClient::unregisterComponent(this);
     _removeAlarms();
 }
 
-AlarmPlugin::MQTTAutoDiscoveryPtr AlarmPlugin::nextAutoDiscovery(MQTT::FormatType format, uint8_t num)
+MQTT::AutoDiscovery::EntityPtr AlarmPlugin::getAutoDiscovery(FormatType format, uint8_t num)
 {
-    if (num >= getAutoDiscoveryCount()) {
-        return nullptr;
-    }
-    auto discovery = __LDBG_new(MQTTAutoDiscovery);
+    auto discovery = __LDBG_new(AutoDiscovery::Entity);
     switch(num) {
         case 0:
             discovery->create(this, FSPGM(alarm), format);
@@ -89,17 +78,16 @@ AlarmPlugin::MQTTAutoDiscoveryPtr AlarmPlugin::nextAutoDiscovery(MQTT::FormatTyp
             discovery->addPayloadOnOff();
             break;
     }
-    discovery->finalize();
     return discovery;
 }
 
-void AlarmPlugin::onConnect(MQTTClient *client)
+void AlarmPlugin::onConnect()
 {
-    client->subscribe(this, _formatTopic(FSPGM(_set)));
+    client().subscribe(this, _formatTopic(FSPGM(_set)));
     _publishState();
 }
 
-void AlarmPlugin::onMessage(MQTTClient *client, char *topic, char *payload, size_t len)
+void AlarmPlugin::onMessage(const char *topic, const char *payload, size_t len)
 {
     __LDBG_printf("client=%p topic=%s payload=%s alarm_state=%u callback=%u", client, topic, payload, _alarmState, (bool)_callback);
 
@@ -352,7 +340,9 @@ void AlarmPlugin::_timerCallback(Event::CallbackTimerPtr timer)
 void AlarmPlugin::_publishState()
 {
     __LDBG_printf("publish state=%s", String((int)_alarmState).c_str());
-     MQTTClient::safePublish(_formatTopic(FSPGM(_state)), true, String(_alarmState));
+    if (isConnected()) {
+        publish(_formatTopic(FSPGM(_state)), true, String(_alarmState));
+    }
 }
 
 String AlarmPlugin::_formatTopic(const __FlashStringHelper *topic)

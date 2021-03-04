@@ -42,6 +42,17 @@ uint8_t Sensor_LM75A::getAutoDiscoveryCount() const
 {
     return 1;
 }
+void Sensor_LM75A::getValues(NamedJsonArray &array, bool timer)
+{
+    using namespace MQTT::Json;
+    auto temp = _readSensor();
+    array.append(UnnamedObject(
+            NamedString(F("id"), _getId()),
+            NamedBool(F("state"), !isnan(temp)),
+            NamedDouble(F("value"), FormattedDouble(temp, FormattedDouble::TRIMMED(2)))
+        )
+    );
+}
 
 void Sensor_LM75A::getValues(JsonArray &array, bool timer)
 {
@@ -60,9 +71,11 @@ void Sensor_LM75A::createWebUI(WebUIRoot &webUI, WebUIRow **row)
     (*row)->addSensor(_getId(), _name, FSPGM(degree_Celsius_html));
 }
 
-void Sensor_LM75A::publishState(MQTTClient *client)
+void Sensor_LM75A::publishState()
 {
-    MQTTClient::safePublish(MQTTClient::formatTopic(_getId()), true, String(_readSensor(), 2));
+    if (isConnected()) {
+        publish(MQTTClient::formatTopic(_getId()), true, String(_readSensor(), 2));
+    }
 }
 
 void Sensor_LM75A::getStatus(Print &output)

@@ -22,7 +22,10 @@ PROGMEM_STRING_DEF(ds3231_id_temp, "ds3231_temp");
 PROGMEM_STRING_DEF(ds3231_id_time, "ds3231_time");
 PROGMEM_STRING_DEF(ds3231_id_lost_power, "ds3231_lost_power");
 
-Sensor_DS3231::Sensor_DS3231(const JsonString &name) : MQTT::Sensor(MQTT::SensorType::DS3231), _name(name), _wire(&config.initTwoWire())
+Sensor_DS3231::Sensor_DS3231(const JsonString& name) :
+    MQTT::Sensor(MQTT::SensorType::DS3231),
+    _name(name),
+    _wire(&config.initTwoWire())
 {
     REGISTER_SENSOR_CLIENT(this);
 }
@@ -32,23 +35,26 @@ Sensor_DS3231::~Sensor_DS3231()
     UNREGISTER_SENSOR_CLIENT(this);
 }
 
-MQTT::AutoDiscovery::EntityPtr Sensor_DS3231::gettAutoDiscovery(MQTT::FormatType format, uint8_t num)
+MQTT::AutoDiscovery::EntityPtr Sensor_DS3231::gettAutoDiscovery(FormatType format, uint8_t num)
 {
-    auto discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
-    switch(num) {
-        case 0:
-            discovery->create(this, FSPGM(ds3231_id_temp), format);
+    auto discovery = __LDBG_new(AutoDiscovery::Entity);
+    switch (num) {
+    case 0:
+        if (discovery->create(this, FSPGM(ds3231_id_temp), format)) {
             discovery->addStateTopic(MQTTClient::formatTopic(FSPGM(ds3231_id_temp)));
             discovery->addUnitOfMeasurement(FSPGM(degree_Celsius_unicode));
-            break;
-        case 1:
-            discovery->create(this, FSPGM(ds3231_id_time), format);
+        }
+        break;
+    case 1:
+        if (discovery->create(this, FSPGM(ds3231_id_time), format)) {
             discovery->addStateTopic(MQTTClient::formatTopic(FSPGM(ds3231_id_time)));
-            break;
-        case 2:
-            discovery->create(this, FSPGM(ds3231_id_lost_power), format);
+        }
+        break;
+    case 2:
+        if (discovery->create(this, FSPGM(ds3231_id_lost_power), format)) {
             discovery->addStateTopic(MQTTClient::formatTopic(FSPGM(ds3231_id_lost_power)));
-            break;
+        }
+        break;
     }
     return discovery;
 }
@@ -56,6 +62,11 @@ MQTT::AutoDiscovery::EntityPtr Sensor_DS3231::gettAutoDiscovery(MQTT::FormatType
 uint8_t Sensor_DS3231::getAutoDiscoveryCount() const
 {
     return 3;
+}
+
+void Sensor_DS3231::getValues(NamedJsonArray &array, bool timer) override
+{
+
 }
 
 void Sensor_DS3231::getValues(JsonArray &array, bool timer)
@@ -83,12 +94,12 @@ void Sensor_DS3231::createWebUI(WebUIRoot &webUI, WebUIRow **row)
     clock.add(JJ(head), F("h4"));
 }
 
-void Sensor_DS3231::publishState(MQTTClient *client)
+void Sensor_DS3231::publishState()
 {
-    if (client && client->isConnected()) {
-        client->publish(MQTTClient::formatTopic(FSPGM(ds3231_id_temp)), true, String(_readSensorTemp(), 2));
-        client->publish(MQTTClient::formatTopic(FSPGM(ds3231_id_time)), true, String((uint32_t)_readSensorTime()));
-        client->publish(MQTTClient::formatTopic(FSPGM(ds3231_id_lost_power)), true, String(_readSensorLostPower()));
+    if (isConnected()) {
+        client().publish(MQTTClient::formatTopic(FSPGM(ds3231_id_temp)), true, String(_readSensorTemp(), 2));
+        client().publish(MQTTClient::formatTopic(FSPGM(ds3231_id_time)), true, String((uint32_t)_readSensorTime()));
+        publish(MQTTClient::formatTopic(FSPGM(ds3231_id_lost_power)), true, String(_readSensorLostPower()));
     }
 }
 

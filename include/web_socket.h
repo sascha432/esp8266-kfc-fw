@@ -103,6 +103,7 @@ public:
     static void broadcast(AsyncWebSocket *server, WsClient *sender, const char *str, size_t length);
 
     // no encoding
+    static void broadcast(AsyncWebSocket *server, WsClient *sender, String &&str);
     static void broadcast(AsyncWebSocket *server, WsClient *sender, const __FlashStringHelper *str, size_t length);
     static void broadcast(AsyncWebSocket *server, WsClient *sender, const JsonUnnamedObject &json);
 
@@ -190,6 +191,9 @@ protected:
 
 private:
     static uint16_t getQeueDelay();
+    static AsyncWebSocketMessageBuffer *jsonToBuffer(AsyncWebSocket *server, const JsonUnnamedObject &json);
+    static AsyncWebSocketMessageBuffer *utf8ToBuffer(AsyncWebSocket *server, const char *str, size_t length);
+    static AsyncWebSocketMessageBuffer *moveStringToBuffer(AsyncWebSocket *server, String &&str);
 
     bool _authenticated;
     AsyncWebSocketClient *_client;

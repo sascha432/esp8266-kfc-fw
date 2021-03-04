@@ -762,27 +762,15 @@ bool String_equalsIgnoreCase(const String &str1, PGM_P str2)
 
 bool String_startsWith(const String &str1, PGM_P str2)
 {
-    if (!str2) {
-#if DEBUG_STRING_CHECK_NULLPTR
-        debug_printf_P(PSTR("str1=%s str2=%p\n"), str1.c_str(), str2);
-#endif
-        return false;
-    }
-    const size_t strlen2 = strlen_P(str2);
-    return (str1.length() >= strlen2) && !strncmp_P(str1.c_str(), str2, strlen2);
+    size_t strlen2;
+    return str2 && (str1.length() >= (strlen2 = strlen_P(str2))) && !strncmp_P(str1.c_str(), str2, strlen2);
 }
 
 bool String_endsWith(const String &str1, PGM_P str2)
 {
-    if (!str2) {
-#if DEBUG_STRING_CHECK_NULLPTR
-        debug_printf_P(PSTR("str1=%s str2=%p\n"), str1.c_str(), str2);
-#endif
-        return false;
-    }
-    const size_t strlen2 = strlen_P(str2);
-    auto len = str1.length();
-    return (len >= strlen2) && !strcmp_P(str1.c_str() + len - strlen2, str2);
+    size_t len;
+    size_t strlen2;
+    return str2 && ((len = str1.length()) >= (strlen2 = strlen_P(str2))) && !strcmp_P(str1.c_str() + len - strlen2, str2);
 }
 
 bool String_endsWith(const String &str1, char ch)

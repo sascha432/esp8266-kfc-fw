@@ -79,6 +79,9 @@ public:
     bool endsWith(const String str) const;
 
     char charAt(size_t idx) const;
+    void setCharAt(size_t idx, char ch) {
+        at(idx) = ch;
+    }
 
     String &operator =(String &&str) noexcept;
     String &operator =(const String &str);

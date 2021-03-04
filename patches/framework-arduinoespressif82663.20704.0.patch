@@ -11,13 +11,36 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/HardwareSeria
 207a211
 > #endif
 diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.cpp ./framework-arduinoespressif8266/cores/esp8266/WString.cpp
-584,589d583
+572,588c572,582
+< unsigned char String::startsWith(const String &s2) const {
+<     if(len() < s2.len())
+<         return 0;
+<     return startsWith(s2, 0);
+< }
+< 
+< unsigned char String::startsWith(const String &s2, unsigned int offset) const {
+<     if(offset > (unsigned)(len() - s2.len()) || !buffer() || !s2.buffer())
+<         return 0;
+<     return strncmp(&buffer()[offset], s2.buffer(), s2.len()) == 0;
+< }
+< 
 < unsigned char String::endsWith(const String &s2) const {
 <     if(len() < s2.len() || !buffer() || !s2.buffer())
 <         return 0;
 <     return strcmp(&buffer()[len() - s2.len()], s2.buffer()) == 0;
 < }
-< 
+---
+> // unsigned char String::startsWith(const String &s2) const {
+> //     if(len() < s2.len())
+> //         return 0;
+> //     return startsWith(s2, 0);
+> // }
+> 
+> // unsigned char String::startsWith(const String &s2, unsigned int offset) const {
+> //     if(offset > (unsigned)(len() - s2.len()) || !buffer() || !s2.buffer())
+> //         return 0;
+> //     return strncmp(&buffer()[offset], s2.buffer(), s2.len()) == 0;
+> // }
 662,697d655
 < int String::lastIndexOf(char theChar) const {
 <     return lastIndexOf(theChar, len() - 1);
@@ -55,7 +78,7 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.cpp .
 <     return found;
 < }
 < 
-720,725c678,681
+720,725c678,685
 < void String::replace(char find, char replace) {
 <     if (!buffer())
 <         return;
@@ -67,11 +90,11 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.cpp .
 >     size_t len;
 >     if (insertLen == 0 || (len = length()) == 0 || pos >= len) {
 >         return false;
-726a683,691
+>     }
 >     auto requiredLen = len + insertLen;
 >     if (!reserve(requiredLen)) {
 >         return false;
->     }
+726a687,691
 >     setLen(requiredLen);
 >     memmove(wbuffer() + pos + insertLen, wbuffer() + pos, len - pos/* + 1 NUL byte*/);
 >     memmove_P(wbuffer() + pos, insert, insertLen);
@@ -95,7 +118,7 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.cpp .
 >     return  true;
 > }
 > 
-> bool String::replace(PGM_P find, size_t findLen, PGM_P replace, size_t replaceLen)
+> bool String::_replace(PGM_P find, size_t findLen, PGM_P replace, size_t replaceLen)
 > {
 >     if (length() == 0 || findLen == 0 || !find) {
 >         return false;
@@ -189,7 +212,7 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.cpp .
 <         return;
 ---
 > 
-> String &String::trim(TrimType type)
+> String &String::_trim(TrimType type)
 > {
 >     auto len = length();
 >     if (len == 0) {
@@ -223,7 +246,7 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.cpp .
 828a828
 >     return *this;
 830a831,858
-> String &String::trim(TrimType type, PGM_P characters, size_t charLen)
+> String &String::_trim(TrimType type, PGM_P characters, size_t charLen)
 > {
 >     auto len = length();
 >     if (!len || !characters || !charLen) {
@@ -306,48 +329,68 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >             return String_equalsIgnoreCase(*this, fstr);
 >         }
 > 
-206,207c226,227
+205,215c225,266
+<         unsigned char startsWith(const String &prefix) const;
 <         unsigned char startsWith(const char * prefix) const {
 <             return this->startsWith(String(prefix));
----
->         unsigned char startsWith(const __FlashStringHelper *prefix) const {
->             return String_startsWith(*this, prefix);
-209,210c229,230
+<         }
 <         unsigned char startsWith(const __FlashStringHelper * prefix) const {
 <             return this->startsWith(String(prefix));
----
->         unsigned char startsWith(const char * prefix) const {
->             return String_startsWith(*this, prefix);
-213,215c233,240
+<         }
+<         unsigned char startsWith(const String &prefix, unsigned int offset) const;
 <         unsigned char endsWith(const String &suffix) const;
 <         unsigned char endsWith(const char * suffix) const {
 <             return this->endsWith(String(suffix));
 ---
 > 
->         // PROGMEM safe
->         unsigned char endsWith(PGM_P suffix, size_t suffixLen) const {
->             if (!suffix || !suffixLen) {
->                 return false;
->             }
->             auto len = length();
->             return (len >= suffixLen) && !strcmp_P(buffer() + len - suffixLen, suffix);
-217,218c242,253
-<         unsigned char endsWith(const __FlashStringHelper * suffix) const {
-<             return this->endsWith(String(suffix));
----
->         unsigned char endsWith(const String &suffix) const {
->             return endsWith(suffix.buffer(), suffix.length());
+>     protected:
+>         unsigned char _startsWith(const char *prefix, size_t prefixLen, size_t offset) const {
+>             return prefixLen && (length() >= prefixLen + offset) && !strncmp_P(c_str() + offset, prefix, prefixLen);
 >         }
->         unsigned char endsWith(const char *suffix) const {
->             return endsWith(suffix, strlen(suffix));
+>         unsigned char _startsWith_P(PGM_P prefix, size_t prefixLen, size_t offset) const {
+>             return prefixLen && (length() >= prefixLen + offset) && !strncmp_P(c_str() + offset, prefix, prefixLen);
 >         }
->         unsigned char endsWith(const __FlashStringHelper *suffix) const {
->             return endsWith(reinterpret_cast<PGM_P>(suffix), strlen_P(reinterpret_cast<PGM_P>(suffix)));
+>     public:
+>         unsigned char startsWith(char ch) const {
+>             return (length() != 0) && (buffer()[0] == ch);
 >         }
+>         unsigned char startsWith(const char *prefix, size_t offset = 0) const {
+>             return prefix && _startsWith(prefix, strlen(prefix), offset);
+>         }
+>         unsigned char startsWith(const String &prefix, size_t offset = 0) const {
+>             size_t len;
+>             return ((len = prefix.length())) != 0 && _startsWith(prefix.buffer(), len, offset);
+>         }
+>         unsigned char startsWith(const __FlashStringHelper *prefix, size_t offset = 0) const {
+>             return prefix && _startsWith_P(reinterpret_cast<PGM_P>(prefix), strlen_P(reinterpret_cast<PGM_P>(prefix)), offset);
+>         }
+> 
+>     protected:
+>         unsigned char _endsWith_P(PGM_P suffix, size_t suffixLen) const {
+>             size_t len;
+>             return suffixLen && ((len = length()) >= suffixLen) && !strcmp_P(buffer() + len - suffixLen, suffix);
+>         }
+>         unsigned char _endsWith(const char *suffix, size_t suffixLen) const {
+>             size_t len;
+>             return suffixLen && ((len = length()) >= suffixLen) && !strcmp(buffer() + len - suffixLen, suffix);
+>         }
+>     public:
 >         unsigned char endsWith(char ch) const {
 >             auto len = length();
 >             return (len != 0) && (buffer()[len - 1] == ch);
-241,244c276,296
+>         }
+>         unsigned char endsWith(const String &suffix) const {
+>             return _endsWith(suffix.buffer(), suffix.length());
+>         }
+>         unsigned char endsWith(const char *suffix) const {
+>             return suffix && _endsWith(suffix, strlen(suffix));
+217,218c268,269
+<         unsigned char endsWith(const __FlashStringHelper * suffix) const {
+<             return this->endsWith(String(suffix));
+---
+>         unsigned char endsWith(const __FlashStringHelper *suffix) const {
+>             return suffix && _endsWith_P(reinterpret_cast<PGM_P>(suffix), strlen_P(reinterpret_cast<PGM_P>(suffix)));
+241,244c292,312
 <         int lastIndexOf(char ch) const;
 <         int lastIndexOf(char ch, unsigned int fromIndex) const;
 <         int lastIndexOf(const String &str) const;
@@ -374,9 +417,9 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >             return String_lastIndexOf(*this, str.buffer(), fromIndex, str.length());
 >         }
 > 
-248d299
+248d315
 <         ;
-250a302,315
+250a318,331
 >         // PROGMEM safe
 >         // returns false on failure
 >         bool insert(size_t pos, PGM_P insert, size_t insertLen);
@@ -391,7 +434,7 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >             return insert(pos, str.buffer(), str.length());
 >         }
 > 
-252,258c317,331
+252,258c333,346
 <         void replace(char find, char replace);
 <         void replace(const String& find, const String& replace);
 <         void replace(const char * find, const String& replace) {
@@ -401,47 +444,49 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 <             this->replace(String(find), replace);
 ---
 >         bool replace(char find, char replace);
->         // PROGMEM safe
->         bool replace(PGM_P find, size_t findLen, PGM_P replace, size_t replaceLen);
 > 
+>     protected:
+>         bool _replace(PGM_P find, size_t findLen, PGM_P replace, size_t replaceLen);
+> 
+>     public:
 >         inline bool replace(const char *find, const char *replace) {
->             return this->replace(find, strlen(find), replace, strlen(replace));
+>             return _replace(find, strlen(find), replace, strlen(replace));
 >         }
 >         inline bool replace(const char *find, const __FlashStringHelper *replace) {
->             return this->replace(find, strlen(find), reinterpret_cast<PGM_P>(replace), strlen_P(reinterpret_cast<PGM_P>(replace)));
+>             return _replace(find, strlen(find), reinterpret_cast<PGM_P>(replace), strlen_P(reinterpret_cast<PGM_P>(replace)));
 >         }
 >         inline bool replace(const char *find, const String& replace) {
->             return this->replace(find, strlen(find), replace.buffer(), replace.length());
->         }
->         inline bool replace(const String& find, const String& replace) {
->             return this->replace(find.buffer(), find.length(), replace.buffer(), replace.length());
-260,261c333,334
+>             return _replace(find, strlen(find), replace.buffer(), replace.length());
+260,261c348,349
 <         void replace(const char * find, const char * replace) {
 <             this->replace(String(find), String(replace));
 ---
->         inline bool replace(const String& find, const char *replace) {
->             return this->replace(find.buffer(), find.length(), replace, strlen(replace));
-263,264c336,337
+>         inline bool replace(const String& find, const String& replace) {
+>             return _replace(find.buffer(), find.length(), replace.buffer(), replace.length());
+263,264c351,352
 <         void replace(const __FlashStringHelper * find, const char * replace) {
 <             this->replace(String(find), String(replace));
 ---
->         inline bool replace(const String& find, const __FlashStringHelper *replace) {
->             return this->replace(find.buffer(), find.length(), reinterpret_cast<PGM_P>(replace), strlen_P(reinterpret_cast<PGM_P>(replace)));
-266,267c339,340
+>         inline bool replace(const String& find, const char *replace) {
+>             return _replace(find.buffer(), find.length(), replace, strlen(replace));
+266,267c354,355
 <         void replace(const __FlashStringHelper * find, const __FlashStringHelper * replace) {
 <             this->replace(String(find), String(replace));
 ---
+>         inline bool replace(const String& find, const __FlashStringHelper *replace) {
+>             return _replace(find.buffer(), find.length(), reinterpret_cast<PGM_P>(replace), strlen_P(reinterpret_cast<PGM_P>(replace)));
+268a357,366
 >         inline bool replace(const __FlashStringHelper * find, const String& replace) {
->             return this->replace(reinterpret_cast<PGM_P>(find), strlen_P(reinterpret_cast<PGM_P>(find)), replace.buffer(), replace.length());
-268a342,348
+>             return _replace(reinterpret_cast<PGM_P>(find), strlen_P(reinterpret_cast<PGM_P>(find)), replace.buffer(), replace.length());
+>         }
 >         inline bool replace(const __FlashStringHelper *find, const char *replace) {
->             return this->replace(reinterpret_cast<PGM_P>(find), strlen_P(reinterpret_cast<PGM_P>(find)), replace, strlen(replace));
+>             return _replace(reinterpret_cast<PGM_P>(find), strlen_P(reinterpret_cast<PGM_P>(find)), replace, strlen(replace));
 >         }
 >         inline bool replace(const __FlashStringHelper *find, const __FlashStringHelper *replace) {
->             return this->replace(reinterpret_cast<PGM_P>(find), strlen_P(reinterpret_cast<PGM_P>(find)), reinterpret_cast<PGM_P>(replace), strlen_P(reinterpret_cast<PGM_P>(replace)));
+>             return _replace(reinterpret_cast<PGM_P>(find), strlen_P(reinterpret_cast<PGM_P>(find)), reinterpret_cast<PGM_P>(replace), strlen_P(reinterpret_cast<PGM_P>(replace)));
 >         }
 > 
-271,273c351,415
+271,273c369,431
 <         void toLowerCase(void);
 <         void toUpperCase(void);
 <         void trim(void);
@@ -450,75 +495,73 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >         String &toLowerCase(void);
 >         String &toUpperCase(void);
 > 
+>     protected:
 >         enum class TrimType : uint8_t {
 >             LEFT = 0x01,
 >             RIGHT = 0x02,
 >             BOTH = LEFT|RIGHT
 >         };
 > 
->         String &trim(TrimType type);
+>         String &_trim(TrimType type);
+>         String &_trim(TrimType type, PGM_P characters, size_t charLen);
+>         inline String &_trim(TrimType type, const char *characters) {
+>             return _trim(type, characters, strlen(characters));
+>         }
+>         inline String &_trim(TrimType type, const __FlashStringHelper *characters) {
+>             return _trim(type, reinterpret_cast<PGM_P>(characters), strlen_P(reinterpret_cast<PGM_P>(characters)));
+>         }
+>         inline String &_trim(TrimType type, const String &characters) {
+>             return _trim(type, characters.c_str(), characters.length());
+>         }
 > 
+>     public:
 >         inline String &trim() {
->             return trim(TrimType::BOTH);
+>             return _trim(TrimType::BOTH);
 >         }
 >         inline String &rtrim() {
->             return trim(TrimType::RIGHT);
+>             return _trim(TrimType::RIGHT);
 >         }
 >         inline String &ltrim() {
->             return trim(TrimType::LEFT);
+>             return _trim(TrimType::LEFT);
 >         }
-> 
->         // PROGMEM safe
->         String &trim(TrimType type, PGM_P characters, size_t charLen);
-> 
->         inline String &trim(TrimType type, const char *characters) {
->             return trim(type, characters, strlen(characters));
->         }
->         inline String &trim(TrimType type, const __FlashStringHelper *characters) {
->             return trim(type, reinterpret_cast<PGM_P>(characters), strlen_P(reinterpret_cast<PGM_P>(characters)));
->         }
->         inline String &trim(TrimType type, const String &characters) {
->             return trim(type, characters.c_str(), characters.length());
->         }
-> 
 > 
 >         inline String &trim(const char *characters) {
->             return trim(TrimType::BOTH, characters);
+>             return _trim(TrimType::BOTH, characters);
 >         }
 >         inline String &trim(const String &characters) {
->             return trim(TrimType::BOTH, characters);
+>             return _trim(TrimType::BOTH, characters);
 >         }
 >         inline String &trim(const __FlashStringHelper *characters) {
->             return trim(TrimType::BOTH, characters);
+>             return _trim(TrimType::BOTH, characters);
 >         }
 > 
 >         inline String &rtrim(const char *characters) {
->             return trim(TrimType::RIGHT, characters);
+>             return _trim(TrimType::RIGHT, characters);
 >         }
 >         inline String &rtrim(const String &characters) {
->             return trim(TrimType::RIGHT, characters);
+>             return _trim(TrimType::RIGHT, characters);
 >         }
 >         inline String &rtrim(const __FlashStringHelper *characters) {
->             return trim(TrimType::RIGHT, characters);
+>             return _trim(TrimType::RIGHT, characters);
 >         }
 > 
 >         inline String &ltrim(const char *characters) {
->             return trim(TrimType::LEFT, characters);
+>             return _trim(TrimType::LEFT, characters);
 >         }
 >         inline String &ltrim(const String &characters) {
->             return trim(TrimType::LEFT, characters);
+>             return _trim(TrimType::LEFT, characters);
 >         }
 >         inline String &ltrim(const __FlashStringHelper *characters) {
->             return trim(TrimType::LEFT, characters);
+>             return _trim(TrimType::LEFT, characters);
 >         }
-278c420,423
+278c436,439
 < 	double toDouble(void) const;
 ---
 > 
 > 	    inline double toDouble(void) const {
 >             return toFloat();
 >         }
-358a504,506
+358a520,522
 > 
 > #include "KFCBaseLibrary/include/misc_string_inline.h"
 > 

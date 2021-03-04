@@ -58,6 +58,7 @@
 - JSON schema support for MQTT light
 - Colored sub ranges for rangeslider.js
 - Class to send Serial output over UDP
+- Registered MQTT components are stored separately and do not require re-registering
 
 ## Version 0.0.3
 

@@ -34,10 +34,10 @@ namespace MQTT {
 
             // publish queue
             void publish(bool force = false) {
-                publish(force ? Event::milliseconds(1000) : Event::milliseconds(KFCConfigurationClasses::Plugins::MQTTClient::getConfig().auto_discovery_delay) * 1000U);
+                runPublish(force ? 1000 : (KFCConfigurationClasses::Plugins::MQTTClient::getConfig().auto_discovery_delay * 1000U);
             }
 
-            void publish(Event::milliseconds delay);
+            void runPublish(uint32_t delayMillis);
 
             void setForceUpdate(bool forceUpdate) {
                 _forceUpdate = forceUpdate;
@@ -63,9 +63,6 @@ namespace MQTT {
             List::iterator _iterator;
             uint16_t _packetId;
             bool _forceUpdate;
-#if MQTT_AUTO_DISCOVERY_LOG2FILE
-            File _log;
-#endif
         };
 
     }

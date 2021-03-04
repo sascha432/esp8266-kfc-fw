@@ -33,13 +33,7 @@ Queue::Queue(Client &client) :
 
 Queue::~Queue()
 {
-#if MQTT_AUTO_DISCOVERY_LOG2FILE
-    if (_log) {
-        _log.flush();
-    }
-#endif
-
-    __DBG_printf("dtor collect=%p remove=%p timer=%u", _collect.get(), _remove.get(), (bool)_timer);
+    __LDBG_printf("dtor collect=%p remove=%p timer=%u", _collect.get(), _remove.get(), (bool)_timer);
     clear();
 
     // if the component is still registered, publish done has not been called
@@ -47,17 +41,11 @@ Queue::~Queue()
         _publishDone(false);
     }
 
-#if MQTT_AUTO_DISCOVERY_LOG2FILE
-    if (_log) {
-        _log.close();
-    }
-#endif
-
-    __DBG_printf("--- callbacks");
+    __LDBG_printf("--- callbacks");
     for(const auto &topic: _client.getTopics()) {
-        __DBG_printf("topic=%s component=%p name=%s", topic.getTopic().c_str(), topic.getComponent(), topic.getComponent()->getName());
+        __LDBG_printf("topic=%s component=%p name=%s", topic.getTopic().c_str(), topic.getComponent(), topic.getComponent()->getName());
     }
-    __DBG_printf("--- end callbacks");
+    __LDBG_printf("--- end callbacks");
 
 }
 
@@ -84,11 +72,6 @@ void Queue::onPacketAck(uint16_t packetId, PacketAckType type)
         __LDBG_printf("packet=%u type=%u", packetId, type);
         _packetId = 0;
         if (type == PacketAckType::TIMEOUT) {
-#if MQTT_AUTO_DISCOVERY_LOG2FILE
-            if (_log) {
-                _log.printf_P(PSTR("timeout [%u]\n"), packetId);
-            }
-#endif
             LoopFunctions::callOnce([this]() {
                 _publishDone(false);
             });
@@ -145,48 +128,36 @@ bool Queue::isUpdateScheduled()
     return client->_autoDiscoveryRebroadcast;
 }
 
-void Queue::publish(Event::milliseconds delay)
+void Queue::runPublish(uint32_t delayMillis)
 {
-    __LDBG_printf("components=%u delay=%u", _client._components.size(), delay);
-    if (!_client._components.empty() && delay.count()) {
+    __LDBG_printf("components=%u delay=%u", _client._components.size(), delayMillis);
+    if (!_client._components.empty() && delayMillis) {
         uint32_t initialDelay;
 
         // add +-10%
         srand(micros());
-        initialDelay = stdex::randint((delay.count() * 90) / 100, (delay.count() * 110) / 100);
+        initialDelay = stdex::randint((delayMillis * 90) / 100, (delayMillis * 110) / 100);
 
         clear();
         _diff = {};
         _entities = List(_client._components, FormatType::JSON);
-#if MQTT_AUTO_DISCOVERY_LOG2FILE
-        String filename = PrintString(F("/.pvt/mqtt-ad.%u.log"), time(nullptr));
-        _log = KFCFS.open(filename, fs::FileOpenMode::write);
-#endif
 
-        __LDBG_printf("starting broadcast in %.3f seconds", std::max<uint32_t>(1000, initialDelay) / 1000.0);
+        __LDBG_printf("starting broadcast in %u ms", std::max<uint32_t>(1000, initialDelay));
 
         _Timer(_timer).add(Event::milliseconds(std::max<uint32_t>(1000, initialDelay)), false, [this](Event::CallbackTimerPtr timer) {
 
             // get all topics that belong to this device
-            __DBG_printf("starting CollectTopicsComponent");
-            _collect.reset(new CollectTopicsComponent(&_client, IF_MQTT_AUTO_DISCOVERY_LOG2FILE(_log, )std::move(_client._createAutoDiscoveryTopics())));
+            __LDBG_printf("starting CollectTopicsComponent");
+            _collect.reset(new CollectTopicsComponent(&_client, std::move(_client._createAutoDiscoveryTopics())));
 
             _collect->begin([this](ComponentProxy::ErrorType error, AutoDiscovery::CrcVector &crcs) {
-                __DBG_printf("collect callback error=%u", error);
-#if MQTT_AUTO_DISCOVERY_LOG2FILE
-                if (_log) {
-                    _log.printf_P(PSTR("---\n"));
-                    _log.flush();
-                }
-#endif
+                __LDBG_printf("collect callback error=%u", error);
                 if (error == ComponentProxy::ErrorType::SUCCESS) {
                     // compare with current auto discovery
                     auto currentCrcs = _entities.crc();
-                    __DBG_printf("crc32 %08x==%08x", crcs.crc32b(), currentCrcs.crc32b());
                     if (_forceUpdate) {
                         crcs.clear();
                     }
-                    __DBG_printf("comparing auto discovery");
                     _diff = currentCrcs.difference(crcs);
                     if (_forceUpdate) {
                         currentCrcs = {};
@@ -202,32 +173,24 @@ void Queue::publish(Event::milliseconds delay)
                         __LDBG_printf("add=%u modified=%u removed=%u unchanged=%u force_update=%u", _diff.add, _diff.modify, _diff.remove, _diff.unchanged, _forceUpdate);
                         // discovery has changed, remove all topics that are not updated/old and start broadcasting
                         // recycle _wildcards and currentCrcs
-                        _remove.reset(new RemoveTopicsComponent(&_client, std::move(_collect->_wildcards), IF_MQTT_AUTO_DISCOVERY_LOG2FILE(_log, )std::move(currentCrcs)));
+                        _remove.reset(new RemoveTopicsComponent(&_client, std::move(_collect->_wildcards), std::move(currentCrcs)));
                         // destroy object. the callback was moved onto the stack and _wildcards to RemoveTopicsComponent
-                        __DBG_printf("destroy CollectTopicsComponent");
+                        __LDBG_printf("destroy CollectTopicsComponent");
                         _collect.reset();
 
                         _remove->begin([this](ComponentProxy::ErrorType error) {
-                            __DBG_printf("collect callback error=%u remove=%p", error, _remove.get());
-#if MQTT_AUTO_DISCOVERY_LOG2FILE
-                            if (_log) {
-                                _log.printf_P(PSTR("---\n"));
-                                _log.flush();
-                            }
-#endif
-                            __DBG_printf("clear wildcards");
+                            __LDBG_printf("collect callback error=%u remove=%p", error, _remove.get());
                             _remove->_wildcards.clear(); // remove wildcards to avoid unsubscribing twice
-                            __DBG_printf("destroy RemoveTopicsComponent");
                             _remove.reset();
 
                             if (error == ComponentProxy::ErrorType::SUCCESS) {
-                                __DBG_printf("starting to broadcast auto discovery");
+                                __LDBG_printf("starting to broadcast auto discovery");
                                 _packetId = 0;
                                 _iterator = _entities.begin();
                                 _publishNextMessage();
                             }
                             else {
-                                __DBG_printf("error %u occurred during remove topics", error);
+                                __LDBG_printf("error %u occurred during remove topics", error);
                                 _publishDone(false);
                                 return;
                             }
@@ -274,15 +237,6 @@ void Queue::_publishNextMessage()
             ++_iterator;
             __LDBG_printf_E("max size exceeded topic=%s payload=%u size=%u", topic, entitiy->getPayload().length(), size);
             __LDBG_printf("%s", printable_string(entitiy->getPayload().c_str(), entitiy->getPayload().length(), DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str());
-#if MQTT_AUTO_DISCOVERY_LOG2FILE
-            if (_log) {
-                _log.printf_P(PSTR("publish [error: size %u limit %u exceeded] topic="), size, MQTT_MAX_MESSAGE_SIZE);
-                _log.print(entitiy->getTopic());
-                _log.print(F(" payload="));
-                _log.print(entitiy->getPayload());
-                _log.print('\n');
-            }
-#endif
             continue;
         }
         if (size >= _client.getClientSpace()) {
@@ -300,23 +254,9 @@ void Queue::_publishNextMessage()
         // pretty unlikely with WiFI a a few ms lag, but with enough debug code in between it is possible ;)
         _packetId = _client.getNextInternalPacketId();
         __LDBG_printf("auto discovery packet id=%u", _packetId);
-#if MQTT_AUTO_DISCOVERY_LOG2FILE
-        if (_log) {
-            _log.printf_P(PSTR("publish [%u] topic="), _packetId);
-            _log.print(entitiy->getTopic());
-            _log.print(F(" payload="));
-            _log.print(entitiy->getPayload());
-            _log.print('\n');
-        }
-#endif
         auto queue = _client.publishWithId(nullptr, entitiy->getTopic(), true, entitiy->getPayload(), QosType::AUTO_DISCOVERY, _packetId);
         if (!queue) {
             __LDBG_printf("failed to publish topic=%s", topic);
-#if MQTT_AUTO_DISCOVERY_LOG2FILE
-            if (_log) {
-                _log.printf_P(PSTR("error [%u]\n"), _packetId);
-            }
-#endif
             _publishDone(false);
             return;
         }
@@ -380,50 +320,4 @@ void Queue::_publishDone(bool success, uint16_t onErrorDelay)
     clear();
     _client._autoDiscoveryQueue.reset(); // deletes itself and the timer
     return;
-
-/*
-    // make sure
-    if (_remove) {
-        if (_remove->canDestroy()) {
-            __DBG_printf("destroy remove");
-            _remove.reset();
-        }
-        else {
-            __DBG_printf("remove abort, waiting for end");
-            auto removePtr = _remove.release();
-            removePtr->abort(ComponentProxy::ErrorType::ABORTED);
-            _Scheduler.add(Event::seconds(1), true, [removePtr](Event::CallbackTimerPtr timer) {
-                if (removePtr->canDestroy()) {
-                    __DBG_printf("delete remove");
-                    delete removePtr;
-                    timer->disarm();
-                }
-            });
-        }
-    }
-    if (_collect) {
-        if (_collect->canDestroy()) {
-            __DBG_printf("destroy collect");
-            _collect.reset();
-        }
-        else {
-            __DBG_printf("collect abort, waiting for end");
-            auto collectPtr = _collect.release();
-            collectPtr->abort(ComponentProxy::ErrorType::ABORTED);
-            _Scheduler.add(Event::seconds(1), true, [collectPtr](Event::CallbackTimerPtr timer) {
-                if (collectPtr->canDestroy()) {
-                    __DBG_printf("delete collect");
-                    delete collectPtr;
-                    timer->disarm();
-                }
-            });
-        }
-    }
-*/
-
-    // auto client = &_client;
-    // LoopFunctions::callOnce([client]() {
-    //     client->_autoDiscoveryQueue.reset(); // deletes itself and the timer
-    // });
-    //+mqtt=auto
 }

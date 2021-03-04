@@ -132,7 +132,6 @@ namespace MQTT {
         }
 
         bool operator==(const iterator &iter) const {
-            // __DBG_printf("compare index=%u %u component=%p %p", _index, iter._index, _component, iter._component);
             return _index == iter._index && _component == iter._component;
         }
 

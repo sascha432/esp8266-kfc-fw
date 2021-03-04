@@ -41,7 +41,8 @@ namespace MQTT {
 #endif
             _iterator(_wildcards.begin()),
             _packetId(0),
-            _subscribe(true)
+            _subscribe(true),
+            _canDestroy(true)
         {
             init();
         }
@@ -55,7 +56,8 @@ namespace MQTT {
 #endif
             _iterator(_wildcards.begin()),
             _packetId(0),
-            _subscribe(true)
+            _subscribe(true),
+            _canDestroy(true)
         {
             init();
         }
@@ -63,6 +65,7 @@ namespace MQTT {
         virtual ~ComponentProxy();
 
         void init();
+        void unsubscribe();
 
         virtual AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num) {
             return nullptr;
@@ -83,6 +86,8 @@ namespace MQTT {
         void abort(ErrorType error);
         void begin();
         void end();
+        bool canDestroy() const;
+        void stop(ComponentProxy *ptr);
 
     protected:
         friend AutoDiscovery::Queue;
@@ -98,6 +103,7 @@ namespace MQTT {
         StringVector::iterator _iterator;
         uint16_t _packetId;
         bool _subscribe; // _runNext(): true = subscribe, false = unsubscribe
+        bool _canDestroy;
     };
 
     // class that collects (retained) messages for wildcard topics
@@ -121,6 +127,13 @@ namespace MQTT {
             __LDBG_printf("collect topics");
             _callback = callback;
             ComponentProxy::begin();
+        }
+
+        void stop(std::unique_ptr<CollectTopicsComponent> &uniquePtr) {
+            auto ptr = uniquePtr.release();
+            if (ptr) {
+                ComponentProxy::stop(ptr);
+            }
         }
 
         virtual void onBegin() override;
@@ -153,6 +166,13 @@ namespace MQTT {
             __LDBG_printf("remove topics");
             _callback = callback;
             ComponentProxy::begin();
+        }
+
+        void stop(std::unique_ptr<RemoveTopicsComponent> &uniquePtr) {
+            auto ptr = uniquePtr.release();
+            if (ptr)  {
+                ComponentProxy::stop(ptr);
+            }
         }
 
         virtual void onBegin() override;

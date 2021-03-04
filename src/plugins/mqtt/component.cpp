@@ -15,7 +15,7 @@ using namespace MQTT;
 
 ComponentIterator::ComponentIterator() :
     _component(nullptr),
-    _iterator(static_cast<ComponentListIterator *>(nullptr)),
+    _iterator(nullptr),
     _index(0),
     _size(0)
 {

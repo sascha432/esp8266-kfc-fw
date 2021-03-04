@@ -153,6 +153,7 @@ namespace MQTT {
         public:
             using iterator = ComponentIterator;
 
+            // NOTE: std:distance(end(), begin()) / std:distance(begin(), <invalid iterator>) crashes
             List() : _components(nullptr), _payloadSize(0) {}
             List(ComponentVector &components, FormatType format) : _components(&components), _format(format), _payloadSize(0) {}
 
@@ -167,8 +168,10 @@ namespace MQTT {
 
             CrcVector crc() {
                 CrcVector list;
+                __DBG_printf("creating crc list");
                 _payloadSize = 0;
                 for(auto entity: *this) {
+                    __DBG_printf("topic %s", entity->getTopic().c_str());
                     list.insertSorted(entity->getTopic(), entity->getPayload());
                     _payloadSize += entity->getPayload().length();
                 }

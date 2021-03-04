@@ -15,13 +15,16 @@ namespace MQTT {
 
     class ComponentListIterator : public non_std::iterator<std::bidirectional_iterator_tag, Component, int8_t> {
     public:
-        ComponentListIterator(ComponentListIterator *iterator, FormatType format = FormatType::JSON) : _components(nullptr), _format(format)
+        ComponentListIterator(nullptr_t, FormatType format = FormatType::JSON) : _components(nullptr), _format(format) {}
+
+        ComponentListIterator(ComponentListIterator *iterator, FormatType format = FormatType::JSON) : ComponentListIterator(nullptr, format)
         {
             if (iterator) {
                 _components = iterator->_components;
                 _iterator = iterator->_iterator;
             }
         }
+
         ComponentListIterator(const ComponentVector &components, const ComponentVector::iterator &iterator, FormatType format = FormatType::JSON) :
             _components(const_cast<ComponentVector *>(&components)),
             _iterator(iterator),
@@ -287,8 +290,8 @@ namespace MQTT {
         }
 
 #elif DEBUG
-        // if the code does not compile, remove the methods that cause the error
-        // auto discovery is not available in this case
+        // if the code does not compile, put an #if arround the methods that cause the error
+        // auto discovery is not available in this case+mqtt
         virtual AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num) final {
             return nullptr;
         }

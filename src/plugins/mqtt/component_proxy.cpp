@@ -17,15 +17,27 @@ using namespace MQTT;
 
 void ComponentProxy::init()
 {
-    __LDBG_printf("ctor this=%p", this);
-    _client->registerComponent(this);
+    __LDBG_printf("ctor this=%p client=%p", this, _client);
+    MQTTClient::registerComponent(this);
+}
+
+void ComponentProxy::unsubscribe()
+{
+    // unsubscribe
+    _packetId = 0;
+    for(const auto &wildcard: _wildcards) {
+        _client->unsubscribe(nullptr, wildcard);
+    }
+    _wildcards.clear();
 }
 
 ComponentProxy::~ComponentProxy()
 {
     __LDBG_printf("dtor this=%p", this);
-    _client->unregisterComponent(this);
-    end();
+    if (!_canDestroy) {
+        __DBG_panic("object removed before clean");
+    }
+    MQTTClient::unregisterComponent(this);
 }
 
 void ComponentProxy::onDisconnect(AsyncMqttClientDisconnectReason reason)
@@ -54,20 +66,33 @@ void ComponentProxy::onPacketAck(uint16_t packetId, PacketAckType type)
     }
 }
 
+bool ComponentProxy::canDestroy() const
+{
+    return _canDestroy;
+}
+
+void ComponentProxy::stop(ComponentProxy *proxy)
+{
+    __DBG_printf("waiting for proxy to end %p", proxy);
+    proxy->abort(ComponentProxy::ErrorType::ABORTED);
+    _Scheduler.add(Event::seconds(1), true, [proxy](Event::CallbackTimerPtr timer) {
+        if (proxy->canDestroy()) {
+            __DBG_printf("delete proxy %p", proxy);
+            delete proxy;
+            timer->disarm();
+        }
+    });
+}
+
 void ComponentProxy::abort(ErrorType error)
 {
     __LDBG_printf("abort=%u", error);
 
-    // unsubscribe
-    _packetId = 0;
-    for(const auto &wildcard: _wildcards) {
-        _client->unsubscribe(nullptr, wildcard);
-    }
-    _wildcards.clear();
-
+    unsubscribe();
     _client->unregisterComponent(this);
 
     LoopFunctions::callOnce([this, error]() {
+        _canDestroy = true;
         if (error != ErrorType::NONE) {
             onEnd(error);
         }
@@ -80,9 +105,11 @@ void ComponentProxy::_runNext()
     if (_iterator == _wildcards.end()) {
         __LDBG_printf("topic=<end>");
         if (_subscribe) {
+            _canDestroy = false;
             onBegin();
         }
         else {
+            _canDestroy = true;
             onEnd(ErrorType::SUCCESS);
         }
         return;
@@ -91,7 +118,6 @@ void ComponentProxy::_runNext()
     __LDBG_printf("%ssubscribe topic=%s packet=%u", _subscribe ? PSTR("") : PSTR("un"), _iterator->c_str(), _packetId);
     auto queue = _subscribe ? _client->subscribeWithId(this, *_iterator, QosType::AUTO_DISCOVERY, _packetId) : _client->unsubscribeWithId(this, *_iterator, _packetId);
     if (!queue) {
-        _packetId = 0;
         __LDBG_printf_E("queue is invalid queue=%s", queue.toString().c_str());
         abort(ErrorType::SUBSCRIBE);
         return;
@@ -103,6 +129,7 @@ void ComponentProxy::_runNext()
 void ComponentProxy::begin()
 {
     __LDBG_printf("begin topics=%u", _wildcards.size());
+    _canDestroy = false;
     _runNext();
 }
 
@@ -110,6 +137,7 @@ void ComponentProxy::end()
 {
     if (!_wildcards.empty()) {
         __LDBG_printf("end topics=%u", _wildcards.size());
+        _canDestroy = false;
 
         // switch to unsubscribe
         _iterator = _wildcards.begin();
@@ -118,6 +146,7 @@ void ComponentProxy::end()
     }
     else {
         __LDBG_printf("end");
+        _canDestroy = true;
     }
 }
 

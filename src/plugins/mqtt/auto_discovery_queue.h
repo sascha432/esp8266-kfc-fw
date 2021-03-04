@@ -34,7 +34,7 @@ namespace MQTT {
 
             // publish queue
             void publish(bool force = false) {
-                runPublish(force ? 1000 : (KFCConfigurationClasses::Plugins::MQTTClient::getConfig().auto_discovery_delay * 1000U);
+                runPublish(force ? 1000 : (KFCConfigurationClasses::Plugins::MQTTClient::getConfig().auto_discovery_delay * 1000U));
             }
 
             void runPublish(uint32_t delayMillis);

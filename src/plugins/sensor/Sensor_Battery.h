@@ -130,8 +130,10 @@ public:
     class Status {
     public:
         Status() :
+            _lockLevelTime(0),
             _state(StateType::RUNNING),
             _charging(ChargingType::NOT_AVAILABLE),
+            _chargingBefore(ChargingType::NOT_AVAILABLE),
             _level(100)
         {}
 
@@ -181,9 +183,11 @@ public:
         }
 
     private:
+        uint32_t _lockLevelTime;
         float _voltage;
         StateType _state;
         ChargingType _charging;
+        ChargingType _chargingBefore;
         uint8_t _level;
     };
 
@@ -237,7 +241,7 @@ private:
     Event::Timer _timer;
     float _adcValue;
     uint32_t _adcLastUpdateTime;
-    uint16_t _timerCounter;
+    uint32_t _timerCounter;
     Status _status;
 
 public:

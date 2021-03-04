@@ -37,21 +37,16 @@ Sensor_Battery::Sensor_Battery(const JsonString &name) :
     _name(name),
     _adcValue(NAN),
     _adcLastUpdateTime(1U << 31),
-    _timerCounter(0)
+    _timerCounter(std::max<int>(0, (kUpdateInterval - 600) / kReadInterval))
 {
     REGISTER_SENSOR_CLIENT(this);
     reconfigure(nullptr);
 
-    _readADC(true);
-    _adcValue = NAN; // discard initial reading
-
     ADCManager::getInstance().addAutoReadTimer(Event::seconds(1), Event::milliseconds(100), 10);
 
     _Timer(_timer).add(Event::milliseconds(kReadInterval), true, [this](Event::CallbackTimerPtr) {
-        if (++_timerCounter >= kUpdateInterval / kReadInterval) {
-            _timerCounter = 0;
-        }
-        _readADC(_timerCounter == 0);
+        // the sensor will be updated at kUpdateInterval and the first time ~600ms after the timer has been started
+        _readADC((++_timerCounter % (kUpdateInterval / kReadInterval)) == 0);
     });
 }
 
@@ -63,6 +58,11 @@ Sensor_Battery::~Sensor_Battery()
 void Sensor_Battery::_readADC(bool updateSensor)
 {
     auto value = ADCManager::getInstance().readValue();
+    if (value >= ADCManager::kMaxADCValue - 10) {
+        // skip unusual high values
+        __DBG_printf_N("ADC value %u", value);
+        return;
+    }
     auto _millis = millis();
     uint32_t diff;
     if (isnan(_adcValue)) {
@@ -327,6 +327,12 @@ void Sensor_Battery::reconfigure(PGM_P source)
 
 void Sensor_Battery::Status::updateSensor(Sensor_Battery &sensor)
 {
+    if (isnan(sensor._adcValue) || sensor._timerCounter < 5) {
+        // no (enough) data available yet
+        return;
+    }
+    // do not update the voltage when the ADC is at maximum
+    // could be a bug or ADC issue with deep sleep
     float Vout = ((IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1 * sensor._adcValue) + (IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R2 * sensor._adcValue)) / (IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1 * ADCManager::kMaxADCValue);
     maxVoltage = std::max(maxVoltage, Vout);
     _voltage = Vout * sensor._config.calibration + sensor._config.offset;
@@ -350,7 +356,22 @@ void Sensor_Battery::Status::updateSensor(Sensor_Battery &sensor)
 #endif
 
 #if IOT_SENSOR_BATTERY_DISPLAY_LEVEL
-    _level = IOT_SENSOR_BATTERY_LEVEL_FUNCTION(_voltage,  IOT_SENSOR_BATTERY_NUM_CELLS, _charging == ChargingType::CHARGING);
+    // do not update the level for 30 seconds if the charging state changes
+    // it needs some time to settle or the values will be quite different
+    // do not lock the level until 5 seconds after the reboot
+    if (_chargingBefore != _charging) {
+        _chargingBefore = _charging;
+        auto ms = millis();
+        if (ms > 5000) {
+            _lockLevelTime = ms + 30000;
+        }
+    }
+    if (_lockLevelTime == 0) {
+        _level = IOT_SENSOR_BATTERY_LEVEL_FUNCTION(_voltage,  IOT_SENSOR_BATTERY_NUM_CELLS, _charging == ChargingType::CHARGING);
+    }
+    else if (millis() > _lockLevelTime) {
+        _lockLevelTime = 0;
+    }
 #endif
     // // make sure that the level decreases only when not charging and increases while charging
     // if (_charging != _pCharging) {

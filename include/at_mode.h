@@ -336,6 +336,8 @@ public:
         return str;
     }
 
+    bool has(const __FlashStringHelper *str, bool ignoreCase = true) const;
+
     bool equalsIgnoreCase(uint16_t num, const __FlashStringHelper *str) const {
         ArgumentPtr arg;
         if (nullptr == (arg = get(num))) {

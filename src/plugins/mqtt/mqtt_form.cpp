@@ -7,6 +7,7 @@
 #include <kfc_fw_config.h>
 #include <PrintHtmlEntitiesString.h>
 #include "mqtt_plugin.h"
+#include "plugins_menu.h"
 
 #if DEBUG_MQTT_CLIENT
 #include <debug_helper_enable.h>
@@ -17,6 +18,18 @@
 using KFCConfigurationClasses::System;
 
 using namespace MQTT;
+
+#if MQTT_AUTO_DISCOVERY
+void Plugin::createMenu()
+{
+    bootstrapMenu.getMenuItem(navMenu.config).addMenuItem(getFriendlyName(), F("mqtt.html"));
+
+    auto device = bootstrapMenu.getMenuItem(navMenu.device);
+    device.addDivider();
+    device.addMenuItem(F("Publish MQTT Auto Discovery"), F("#"));
+}
+#endif
+
 
 void Plugin::createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
 {
@@ -81,7 +94,7 @@ void Plugin::createConfigureForm(FormCallbackType type, const String &formName, 
     cfg.addRangeValidatorFor_keepalive(form);
 
     form.addObjectGetterSetter(F("ami"), cfg, cfg.get_bits_auto_reconnect_min, cfg.set_bits_auto_reconnect_min);
-    form.addFormUI(F("Minimum Auto Reconnect Time:"), FormUI::Suffix(F("milliseconds, 0 = disable")));
+    form.addFormUI(F("Minimum Auto Reconnect Time:"), FormUI::Suffix(F("milliseconds")), FormUI::IntAttribute(F("disabled-value"), 0));
     cfg.addRangeValidatorFor_auto_reconnect_min(form, true);
 
     form.addObjectGetterSetter(F("amx"), cfg, cfg.get_bits_auto_reconnect_max, cfg.set_bits_auto_reconnect_max);
@@ -126,15 +139,19 @@ void Plugin::createConfigureForm(FormCallbackType type, const String &formName, 
     form.addObjectGetterSetter(F("ade"), cfg, cfg.get_bits_auto_discovery, cfg.set_bits_auto_discovery);
     form.addFormUI(F("Auto Discovery"), FormUI::BoolItems());
 
-    auto &autoDiscoveryGroup = form.addDivGroup(F("adp"), F("{'i':'#aden','m':'$T.hide()','s':{'1':'$T.show()'}}"));
+    auto &autoDiscoveryGroup = form.addDivGroup(F("adp"), F("{'i':'#ade','m':'$T.hide()','s':{'1':'$T.show()'}}"));
 
     form.addStringGetterSetter(F("pf"), ClientConfig::getAutoDiscoveryPrefix, ClientConfig::setAutoDiscoveryPrefix);
     form.addFormUI(F("Auto Discovery Prefix"));
     form.addValidator(FormUI::Validator::Length(0, ClientConfig::kAutoDiscoveryPrefixMaxSize));
 
+    form.addObjectGetterSetter(F("add"), cfg, cfg.get_bits_auto_discovery_delay, cfg.set_bits_auto_discovery_delay);
+    form.addFormUI(F("Auto Discovery Delay"), FormUI::Suffix(FSPGM(seconds)), FormUI::IntAttribute(F("disabled-value"), 0), FormUI::FPStringAttribute(F("disabled-value-targets"), F("#adi")));
+    cfg.addRangeValidatorFor_auto_discovery_delay(form, true);
+
     form.addObjectGetterSetter(F("adi"), cfg, cfg.get_bits_auto_discovery_rebroadcast_interval, cfg.set_bits_auto_discovery_rebroadcast_interval);
-    form.addFormUI(F("Auto Discovery Rebroadcast"), FormUI::Suffix(FSPGM(minutes)));
-    cfg.addRangeValidatorFor_auto_discovery_rebroadcast_interval(form);
+    form.addFormUI(F("Auto Discovery Rebroadcast"), FormUI::Suffix(FSPGM(minutes)), FormUI::IntAttribute(F("disabled-value"), 0));
+    cfg.addRangeValidatorFor_auto_discovery_rebroadcast_interval(form, true);
 
     autoDiscoveryGroup.end();
     hassGroup.end();

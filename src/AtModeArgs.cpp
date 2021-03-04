@@ -55,6 +55,22 @@ int AtModeArgs::toChar(uint16_t num, int defaultValue) const
     return *str;
 }
 
+bool AtModeArgs::has(const __FlashStringHelper *str, bool ignoreCase) const
+{
+    for (auto arg:_args) {
+        if (ignoreCase) {
+            if (strcasecmp_P(arg, reinterpret_cast<PGM_P>(str)) == 0) {
+                return true;
+            }
+        }
+        else if (strcmp_P(arg, reinterpret_cast<PGM_P>(str)) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+
 long AtModeArgs::toInt(uint16_t num, long defaultValue) const
 {
     ArgumentPtr arg;

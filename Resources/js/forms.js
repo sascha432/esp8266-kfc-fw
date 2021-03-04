@@ -263,6 +263,50 @@ $(function() {
         });
     })();
 
+    function getIntFloatValue(value) {
+        if (value === undefined) {
+            return undefined;
+        }
+        if (value == parseInt(value)) {
+            value = parseInt(value);
+        }
+        else if (value == parseFloat(value)) {
+            value = parseFloat(value);
+        }
+        return value;
+    }
+
+    // ---------------------------------------------------------------------------------
+    // Adds a placeholder Disabled to the field when it matches the value of the
+    // attribute. for example disabled-value="0". if the value is an integer or float,
+    // "0" will match "" and "0", as well as "0.0"
+    // The placeholder can be set with disabled-value-placeholder and defauls to
+    // "Disabled"
+    // disabled-value-targets can be a selector of additional input fields to disable
+    // Works with .input-text-range
+    // ---------------------------------------------------------------------------------
+    $('[disabled-value]').each(function() {
+        var self = $(this);
+        var value = getIntFloatValue(self.attr('disabled-value'));
+        var place_holder = self.attr('disabled-value-placeholder') || 'Disabled';
+        var targets = self.attr('disabled-value-targets');
+        self.on('change', function() {
+            var val = self.val();
+            if (value == val) {
+                self.attr('placeholder', place_holder).val('');
+                if (targets) {
+                    form_set_disabled($(targets), true);
+                }
+            }
+            else if (self.attr('placeholder')) {
+                self.removeAttr('placeholder');
+                if (targets) {
+                    form_set_disabled($(targets), false);
+                }
+            }
+        }).trigger('change');
+    });
+
     // ---------------------------------------------------------------------------------
     // adds an input-group-append button to the field to test resolving zeroconf
     // ---------------------------------------------------------------------------------
@@ -530,6 +574,13 @@ $(function() {
         function validate_range(value, child) {
             if (value < minVal || value > maxVal) {
                 console.debug(value, child, parent, minVal, maxVal);
+                var dval = getIntFloatValue(text.attr('disabled-value'));
+                if (dval !== undefined) {
+                    if (dval == value) {
+                        parent.removeClass('is-invalid');
+                        return;
+                    }
+                }
                 parent.addClass('is-invalid').removeClass('is-valid');
             }
             else {

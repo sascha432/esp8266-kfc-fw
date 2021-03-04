@@ -174,7 +174,7 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         form.addValidator(FormUI::Validator::Range(0, IOT_LED_MATRIX_COLS));
 
         form.addPointerTriviallyCopyable(F("ilt"), &cfg.interleaved.time);
-        form.addFormUI(F("Rotate Through Rows And Columns"), FormUI::Suffix(F("milliseconds, 0 = disable")));
+        form.addFormUI(F("Rotate Through Rows And Columns"), FormUI::Suffix(F("milliseconds")), FormUI::IntAttribute(F("disabled-value"), 0));
 
         interleavedGroup.end();
 
@@ -247,7 +247,7 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         auto &powerGroup = form.addCardGroup(F("pow"), F("Power"), true);
 
         form.addObjectGetterSetter(F("pl"), cfg, cfg.get_bits_power_limit, cfg.set_bits_power_limit);
-        form.addFormUI(F("Limit Maximum Power"), FormUI::Suffix(F("Watt, 0 = Disable")));
+        form.addFormUI(F("Limit Maximum Power"), FormUI::Suffix(F("Watt")), FormUI::IntAttribute(F("disabled-value"), 0));
         cfg.addRangeValidatorFor_fading_time(form, true);
 
         form.addPointerTriviallyCopyable(F("plr"), &cfg.power.red);
@@ -303,7 +303,7 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
             form.addFormUI(F("Time Format"), FormUI::BoolItems(F("24h"), F("12h")));
 
             form.addObjectGetterSetter(F("csp"), cfg, cfg.get_bits_blink_colon_speed, cfg.set_bits_blink_colon_speed);
-            form.addFormUI(F("Colon Blink Speed"), FormUI::Suffix(F("milliseconds, 0 = solid")));
+            form.addFormUI(F("Colon Blink Speed"), FormUI::Suffix(F("milliseconds")), FormUI::IntAttribute(F("disabled-value"), 0), FormUI::FPStringAttribute(F("disabled-value-placeholder"), F("Solid")));
             cfg.addRangeValidatorFor_blink_colon_speed(form, true);
         )
 

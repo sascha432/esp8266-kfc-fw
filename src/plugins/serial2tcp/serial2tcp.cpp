@@ -140,6 +140,7 @@ void Serial2TcpPlugin::createConfigureForm(FormCallbackType type, const String &
 
     auto &idleGroup = form.addDivGroup(F("idle_group"));
     form.add<uint16_t>(F("idltimeout"), _H_W_STRUCT_VALUE(cfg, idle_timeout))->setFormUI(new FormUI::UI(FormUI::Type::TEXT, F("Idle Timeout")))->setSuffix(F("seconds, 0 = disable")));
+    //FormUI::IntAttribute(F("disabled-value"), 0)
     form.addValidator(FormUI::Validator::Range(0, 65535));
     idleGroup.end();
 

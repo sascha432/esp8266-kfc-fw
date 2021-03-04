@@ -29,7 +29,11 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     "network",          // reconfigure_dependencies
     PluginComponent::PriorityType::MQTT,
     PluginComponent::RTCMemoryId::NONE,
+#if MQTT_AUTO_DISCOVERY
+    static_cast<uint8_t>(PluginComponent::MenuType::CUSTOM),
+#else
     static_cast<uint8_t>(PluginComponent::MenuType::AUTO),
+#endif
     false,              // allow_safe_mode
     true,               // setup_after_deep_sleep
     true,               // has_get_status
@@ -96,7 +100,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF(MQTT, "MQTT", "<connect|disconnect|set|topics|a
     "    disconnect or dis[,<true|false>]            Disconnect from server and enalbe/disable auto reconnect\n"
     "    set,<enable,disable>                        Enable or disable MQTT\n"
     "    topics or top                               List subscribed topics\n"
-    "    autodiscovery or auto                       Publish auto discovery\n"
+    "    autodiscovery or auto[,restart][,force]     Publish auto discovery\n"
     "    list[,<full|crc>]                           List auto discovery\n"
     "\n",
     "Display MQTT status"
@@ -168,15 +172,15 @@ bool Plugin::atModeHandler(AtModeArgs &args)
                     break;
                 case 7: // autodiscovery
                 case 8: { // auto
-                        bool abort = args.isTrue(1) || args.equalsIgnoreCase(1, F("abort"));
-                        bool update = args.equalsIgnoreCase(1, F("force")) || args.equalsIgnoreCase(2, F("force"));
+                        bool abort = args.isTrue(1) || args.has(F("restart"));
+                        bool force_update = args.has(F("force"));
                         if (!client.isConnected()) {
                             args.print(F("mqtt not connected"));
                         }
                         else if (!abort && client.isAutoDiscoveryRunning()) {
                             args.print(F("auto discovery already running"));
                         }
-                        else if (client.publishAutoDiscovery(true, abort, update)) {
+                        else if (client.publishAutoDiscovery(true, abort, force_update)) {
                             args.print(F("auto discovery started"));
                         }
                         else {
@@ -220,7 +224,6 @@ bool Plugin::atModeHandler(AtModeArgs &args)
                     args.invalidArgument(0, FPSTR(actionsStr), '|');
                     break;
             }
-
         }
         return true;
     }

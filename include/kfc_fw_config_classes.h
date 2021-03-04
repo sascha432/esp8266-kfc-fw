@@ -1317,13 +1317,20 @@ namespace KFCConfigurationClasses {
                 CREATE_UINT32_BITFIELD_MIN_MAX(auto_discovery, 1, 0, 1, 1);
                 CREATE_UINT32_BITFIELD_MIN_MAX(enable_shared_topic, 1, 0, 1, 1);
                 CREATE_UINT32_BITFIELD_MIN_MAX(keepalive, 10, 0, 900, 15, 1);
-                CREATE_UINT32_BITFIELD_MIN_MAX(auto_discovery_rebroadcast_interval, 16, 0, 43200, 24 * 60, 3600);
+                CREATE_UINT32_BITFIELD_MIN_MAX(auto_discovery_rebroadcast_interval, 16, 15, 43200, 24 * 60, 3600); // minutes
                 CREATE_UINT32_BITFIELD_MIN_MAX(auto_reconnect_min, 16, 250, 60000, 5000, 500);
                 CREATE_UINT32_BITFIELD_MIN_MAX(auto_reconnect_max, 16, 5000, 60000, 60000, 1000);
                 CREATE_UINT32_BITFIELD_MIN_MAX(auto_reconnect_incr, 7, 0, 100, 10);
+                CREATE_UINT32_BITFIELD_MIN_MAX(auto_discovery_delay, 10, 10, 900, 30, 1); // seconds
+                uint32_t _free2 : 7; // avoid warning
                 CREATE_ENUM_BITFIELD(mode, ModeType);
                 CREATE_ENUM_BITFIELD(qos, QosType);
                 AUTO_DEFAULT_PORT_GETTER_SETTER_SECURE(__port, kPortDefault, kPortDefaultSecure, static_cast<ModeType>(mode) == ModeType::SECURE);
+
+                // minutes
+                uint32_t getAutoDiscoveryRebroadcastInterval() const {
+                    return auto_discovery && auto_discovery_delay ? auto_discovery_rebroadcast_interval : 0;
+                }
 
                 MqttConfig_t() :
                     auto_discovery(kDefaultValueFor_auto_discovery),
@@ -1333,6 +1340,7 @@ namespace KFCConfigurationClasses {
                     auto_reconnect_min(kDefaultValueFor_auto_reconnect_min),
                     auto_reconnect_max(kDefaultValueFor_auto_reconnect_max),
                     auto_reconnect_incr(kDefaultValueFor_auto_reconnect_incr),
+                    auto_discovery_delay(kDefaultValueFor_auto_discovery_delay),
                     mode(cast_int_mode(ModeType::UNSECURE)),
                     qos(cast_int_qos(QosType::EXACTLY_ONCE)),
                     __port(kDefaultValueFor___port)

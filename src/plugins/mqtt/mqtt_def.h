@@ -75,7 +75,7 @@
 #endif
 
 #ifndef DEBUG_MQTT_AUTO_DISCOVERY_QUEUE
-#define DEBUG_MQTT_AUTO_DISCOVERY_QUEUE                         0
+#define DEBUG_MQTT_AUTO_DISCOVERY_QUEUE                         1
 #endif
 
 #ifndef DEBUG_MQTT_CLIENT_PAYLOAD_LEN

@@ -18,6 +18,9 @@ namespace MQTT {
         virtual void shutdown() override;
         virtual void getStatus(Print &output) override;
         virtual void createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request) override;
+    #if MQTT_AUTO_DISCOVERY
+        virtual void createMenu() override;
+    #endif
 
     #if AT_MODE_SUPPORTED
         virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const override;

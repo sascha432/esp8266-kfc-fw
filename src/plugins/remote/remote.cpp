@@ -244,9 +244,9 @@ void RemoteControlPlugin::createMenu()
 
     auto device = bootstrapMenu.getMenuItem(navMenu.device);
     device.addDivider();
-    subMenu.addMenuItem(F("Enable Auto Sleep"), F("#"));
-    subMenu.addMenuItem(F("Disable Auto Sleep"), F("#"));
-    subMenu.addMenuItem(F("Enable Deep Sleep"), F("#"));
+    device.addMenuItem(F("Enable Auto Sleep"), F("#"));
+    device.addMenuItem(F("Disable Auto Sleep"), F("#"));
+    device.addMenuItem(F("Enable Deep Sleep"), F("#"));
 }
 
 

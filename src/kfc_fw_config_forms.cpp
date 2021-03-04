@@ -208,7 +208,7 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             System::Device::addTitleLengthValidator(form);
 
             form.addObjectGetterSetter(F("safem_to"), cfg, cfg.get_bits_safe_mode_reboot_timeout_minutes, cfg.set_bits_safe_mode_reboot_timeout_minutes);
-            form.addFormUI(F("Reboot Delay Running In Safe Mode"), FormUI::Suffix(FSPGM(minutes)));
+            form.addFormUI(F("Reboot Delay Running In Safe Mode"), FormUI::Suffix(FSPGM(minutes)), FormUI::IntAttribute(F("disabled-value"), 0));
             cfg.addRangeValidatorFor_safe_mode_reboot_timeout_minutes(form, true);
 
 #if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID

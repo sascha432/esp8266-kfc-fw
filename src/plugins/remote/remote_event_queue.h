@@ -245,7 +245,7 @@ namespace RemoteControl
                 // __LDBG_printf("~action=%p", _action);
             }
 
-            bool operator==(const Event &event) const {
+            inline bool operator==(const Event &event) const {
                 return this == std::addressof(event);
             }
 

@@ -29,11 +29,12 @@
             %FORM_HTML%
             <div class="form-help-block">
                 <div data-target="#ast">When running on batteries, the device will go back to deep sleep after all events have been processed and the time is up. To configure the device, connect it to USB and turn it on. It will take up to 30 seconds until the webUI is available</div>
+                <div data-target="#mwt">If any tasks are peformed or a client is connected to the Web UI or Serial Console, the Sleep Timeout is ignored. This is the maximum time the device runs on batteries, before going to deep sleep</div>
                 <div data-target="#dst">The device wakes up approximately every 3 hours to check if the time has passed to renew the IP address and deliver battery deliver statistics about the battery. Due to hardware/software restrictions, the time is not accurate ~&plusmn;20%<br>To preserve battery life, set the value to 0 to disable auto wake up. If the device is used regularly, the statistics are updated once a day.</div>
                 <div data-target="#spt">Pressing a button less than Short Press Time results in a <i>press</i> or <i>(multi-)click</i> event. Otherwise <i>long-press</i> or <i>hold-release</i> is fired</div>
                 <div data-target="#lpt">If a Button is held longer than Long Press Time, the <i>hold</i> event is fired</div>
                 <div data-target="#rt"><i>hold</i> events are repeated in intervals followed by <i>hold-release</i></div>
-                <div data-target="#na_2">Enable <i>press</i> if multiple clicks are not used. The button will respond faster.</div>
+                <div data-target="#na_2">Enable <i>press</i> if multiple clicks are not used. The buttons will respond faster</div>
                 <div data-target="#na_4">This event replaces <i>multi-click</i> with repeat count 1</div>
                 <div data-target="#na_5">This event replaces <i>multi-click</i> with repeat count 2</div>
                 <div data-target="#na_6">If <i>multi-click</i> events are enabled, the <i>press</i> event is omitted<br>Variables: {repeat}</div>

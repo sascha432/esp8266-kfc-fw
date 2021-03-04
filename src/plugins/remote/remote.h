@@ -38,21 +38,19 @@ public:
 
     virtual void onConnect() {
         if (_autoDiscoveryPending) {
-            _autoDiscoveryPending = false;
-            client().publishAutoDiscovery(true, true);
+            publishAutoDiscovery();
         }
     }
 
     void publishAutoDiscovery() {
-        if (hasClient()) {
-            __LDBG_printf("connected=%u running=%u registered=%u", client().isConnected(), client().isAutoDiscoveryRunning(), client().isComponentRegistered(this));
-            if (client().isConnected()) {
+        if (isConnected()) {
+            __LDBG_printf("auto discovery running=%u registered=%u", client().isAutoDiscoveryRunning(), MQTTClient::isComponentRegistered(this));
+            if (client().publishAutoDiscovery()) {
                 _autoDiscoveryPending = false;
-                client().publishAutoDiscovery(true, true);
             }
-            else {
-                _autoDiscoveryPending = true;
-            }
+        }
+        else {
+            _autoDiscoveryPending = true;
         }
     }
 
@@ -133,7 +131,7 @@ public:
 
     inline __attribute__((__always_inline__))
     void _readStates() {
-        for(const auto pin: _buttonPins) {
+        for(const auto pin: kButtonPins) {
             setPin(_BV(pin), digitalRead(pin));
         }
     }
@@ -179,6 +177,8 @@ public:
 
     static RemoteControlPlugin &getInstance();
 
+    void systemButtonComboEvent(bool state);
+
 private:
     // virtual void _onShortPress(Button &button);
     // virtual void _onLongPress(Button &button);
@@ -209,11 +209,15 @@ private:
         _buttonsLocked &= ~(1 << button);
     }
 
+    void _enterDeepSleep();
+
 private:
     using ActionPtr = std::unique_ptr<Action>;
     using ActionVector = std::vector<ActionPtr>;
 
     ActionVector _actions;
+    uint32_t _systemButtonComboTime;
+    uint32_t _readUsbPinTimeout;
     // Event::Timer _loopTimer;
 };
 
@@ -225,7 +229,7 @@ inline bool RemoteControlPlugin::_hasEvents() const
 inline void RemoteControlPlugin::disableAutoSleep()
 {
     __LDBG_printf("disabled");
-    getInstance()._autoSleepTimeout = kAutoSleepDisabled;
+    getInstance()._disableAutoSleepTimeout();
 }
 
 extern "C" PinState _pinState;

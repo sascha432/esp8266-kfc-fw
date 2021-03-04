@@ -20,7 +20,8 @@ namespace KFCConfigurationClasses {
         mqtt_enable(true),
         actions{},
         combo{},
-        enabled()
+        enabled(),
+        max_awake_time(kDefaultValueFor_max_awake_time)
     {}
 
 

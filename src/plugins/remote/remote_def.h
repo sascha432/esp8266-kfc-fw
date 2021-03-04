@@ -53,8 +53,7 @@ using namespace PinMonitor;
 
 namespace RemoteControl {
 
-    static const uint32_t kAutoSleepDisabled = ~0;
-    static const uint32_t kAutoSleepDefault = 0;
+    static const uint32_t kAutoSleepDisabled = ~0; // disable auto sleep
 
     enum class EventType : uint8_t {
         NONE = 0,
@@ -150,5 +149,4 @@ namespace RemoteControl {
     using ConfigType = Plugins::RemoteControl::Config_t;
     using ButtonPinsArray = std::array<const uint8_t, IOT_REMOTE_CONTROL_BUTTON_COUNT>;
     using EventQueue = std::list<Queue::Event>;
-    //using EventQueue = stdex::fixed_circular_buffer<Queue::Event, 32>;
 }

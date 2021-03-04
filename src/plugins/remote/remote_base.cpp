@@ -8,6 +8,7 @@
 #include "remote_base.h"
 #include "remote_event_queue.h"
 #include "remote.h"
+#include "blink_led_timer.h"
 
 #if DEBUG_IOT_REMOTE_CONTROL && 0
 #include <debug_helper_enable.h>
@@ -167,6 +168,228 @@ namespace RemoteControl {
         if (_queue.empty()) {
             __LDBG_printf("disarming queue timer");
             timer->disarm();
+        }
+    }
+
+    //
+    // press first and last button to activate the system button combination
+    //
+    // holding both buttons for more than 5 seconds restarts the system. if kept pressed during reboot, it will
+    // go into the same mode again and repeat...
+    //
+    // once the buttons have been released, the menu is active, the LED stops flickering and starts blinking slowly.
+    // the menu is active for 10 seconds after the last button press
+    //
+    // 1st button short press: enable auto sleep and exit menu - confirmed by 1x blink
+    // 1st button long press: disable auto sleep for remote access and exit menu - confirmed by 2x blink
+    // 4th button click: exit menu - confirmed by flickerung
+
+
+    void Base::systemButtonComboEvent(bool state, EventType eventType, uint8_t button, uint16_t repeatCount, uint32_t eventTime)
+    {
+        if (state) {
+            _systemButtonComboTime = millis();
+            _systemButtonComboTimeout = _systemButtonComboTime + kSystemComboRebootTimeout;
+            __DBG_printf("PRESSED");
+            _systemComboNextState(ComboButtonStateType::PRESSED);
+        }
+        else {
+            bool acceptEvent = (_systemButtonComboState != ComboButtonStateType::PRESSED) && (millis() > _systemButtonComboTime);
+#if 1
+            if (acceptEvent) {
+                __DBG_printf("event_type=%s (%ux) button#=%u pressed=%s time=%u",
+                    PinMonitor::PushButton::eventTypeToString(eventType),
+                    repeatCount,
+                    button,
+                    BitsToStr<kButtonPins.size(), true>(_pressed).c_str(),
+                    eventTime
+                );
+
+            }
+#endif
+            switch(eventType) {
+                case EventType::DOWN:
+                    if (acceptEvent && _systemButtonComboState == ComboButtonStateType::TIMEOUT) {
+                        _systemComboNextState(ComboButtonStateType::RESET_MENU_TIMEOUT);
+                    }
+                    _pressed |= _getPressedMask(button);
+                    break;
+                case EventType::UP:
+                    _pressed &= ~_getPressedMask(button);
+                    break;
+                case EventType::PRESSED:
+                    break;
+                case EventType::LONG_PRESSED:
+                    break;
+                case EventType::HOLD_REPEAT:
+                    break;
+                case EventType::HOLD_RELEASE:
+                    if (acceptEvent) {
+                        if (button == 0) {
+                            _systemComboNextState(ComboButtonStateType::CONFIRM_AUTO_SLEEP_OFF);
+                        }
+                        else if (button == 3) {
+                            _systemComboNextState(ComboButtonStateType::CONFIRM_DEEP_SLEEP);
+                        }
+                    }
+                    break;
+                // case EventType::SINGLE_CLICK:
+                //     break;
+                // case EventType::DOUBLE_CLICK:
+                //     break;
+                case EventType::REPEATED_CLICK: {
+                        switch(repeatCount) {
+                            case 1: // EventType::SINGLE_CLICK
+                                if (acceptEvent) {
+                                    if (button == 0) {
+                                        _systemComboNextState(ComboButtonStateType::CONFIRM_AUTO_SLEEP_ON);
+                                    }
+                                    else  if (button == 3) {
+                                        _systemComboNextState(ComboButtonStateType::CONFIRM_EXIT);
+                                    }
+                                }
+                                break;
+                            case 2: // EventType::DOUBLE_CLICK
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                    break;
+                default:
+                    break;
+            }
+            if ((_pressed & kButtonSystemComboBitMask) == 0 && _systemButtonComboState == ComboButtonStateType::PRESSED) { // wait until the last button has been released
+                __DBG_printf("released");
+                _systemComboNextState(ComboButtonStateType::RELEASED);
+                _systemButtonComboTime = millis() + 750; // ignore all events
+                // reset state and debouncer
+                // _resetButtonState();
+                // _pressed = 0;
+                // delay(10);
+            }
+        }
+    }
+
+    void Base::_resetButtonState()
+    {
+        for(const auto &pin: pinMonitor.getPins()) {
+            if (std::find(kButtonPins.begin(), kButtonPins.end(), pin->getPin()) != kButtonPins.end()) {
+                auto debounce = pin->getDebounce();
+                if (debounce) {
+                    noInterrupts();
+                    *pin.get() = DebouncedHardwarePin(pin->getPin());
+                    interrupts();
+                }
+            }
+        }
+    }
+
+    void Base::_systemComboNextState(ComboButtonStateType state)
+    {
+        _systemButtonComboState = state;
+        BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
+    }
+
+    void Base::_updateSystemComboButton()
+    {
+        if (_isSystemComboActive()) {
+            if (millis() >= _systemButtonComboTimeout) {
+                // buttons still down, restart
+                if (_systemButtonComboState == ComboButtonStateType::PRESSED) {
+                    __DBG_printf_E("rebooting system");
+                    BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
+                    delay(750);
+                    config.restartDevice();
+                }
+                _systemButtonComboTimeout = 0;
+                _systemButtonComboState = ComboButtonStateType::NONE;
+                __DBG_printf("timeout, ending menu");
+                BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
+                KFCFWConfiguration::setWiFiConnectLedMode();
+                return;
+            }
+            switch(_systemButtonComboState) {
+                case ComboButtonStateType::RELEASED:
+                case ComboButtonStateType::RESET_MENU_TIMEOUT:
+                    // update menu timeout
+                    __DBG_printf("menu timeout=%.2fs", kSystemComboMenuTimeout / 1000.0);
+                    BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::MEDIUM);
+                    _systemButtonComboTimeout = millis() + kSystemComboMenuTimeout;
+                    _systemButtonComboState = ComboButtonStateType::TIMEOUT;
+                    break;
+                case ComboButtonStateType::CONFIRM_EXIT:
+                    __DBG_printf("confirming exit");
+                    _updateSystemComboButtonLED();
+                    _systemButtonComboTimeout = millis() + kSystemComboConfirmTimeout;
+                    _systemButtonComboState = ComboButtonStateType::EXIT_MENU_TIMEOUT;
+                    break;
+                case ComboButtonStateType::CONFIRM_AUTO_SLEEP_OFF:
+                    __DBG_printf("confirming auto sleep off exit");
+                    _updateSystemComboButtonLED();
+                    _systemButtonComboTimeout = millis() + kSystemComboConfirmTimeout;
+                    _systemButtonComboState = ComboButtonStateType::EXIT_MENU_TIMEOUT;
+                    _disableAutoSleepTimeout();
+                    break;
+                case ComboButtonStateType::CONFIRM_AUTO_SLEEP_ON:
+                    __DBG_printf("confirming auto sleep on exit");
+                    _updateSystemComboButtonLED();
+                    _systemButtonComboTimeout = millis() + kSystemComboConfirmTimeout;
+                    _systemButtonComboState = ComboButtonStateType::EXIT_MENU_TIMEOUT;
+                    _setAutoSleepTimeout(true);
+                    break;
+                case ComboButtonStateType::CONFIRM_DEEP_SLEEP:
+                    __DBG_printf("confirming deep sleep on exit");
+                    _updateSystemComboButtonLED();
+                    _systemButtonComboTimeout = millis() + kSystemComboConfirmTimeout;
+                    _systemButtonComboState = ComboButtonStateType::EXIT_MENU_TIMEOUT;
+                    _Scheduler.add(Event::milliseconds(750), false, [](Event::CallbackTimerPtr) {
+                        RemoteControlPlugin::getInstance()._enterDeepSleep();
+                    });
+                    break;
+                case ComboButtonStateType::PRESSED:
+                case ComboButtonStateType::TIMEOUT:
+                case ComboButtonStateType::EXIT_MENU_TIMEOUT:
+                    // wait for action
+                    break;
+                case ComboButtonStateType::NONE:
+                    break;
+            }
+        }
+    }
+
+    void Base::_updateSystemComboButtonLED()
+    {
+        switch(_systemButtonComboState) {
+            case ComboButtonStateType::PRESSED:
+            case ComboButtonStateType::CONFIRM_EXIT:
+            case ComboButtonStateType::CONFIRM_AUTO_SLEEP_OFF:
+            case ComboButtonStateType::CONFIRM_DEEP_SLEEP:
+            case ComboButtonStateType::CONFIRM_AUTO_SLEEP_ON:
+                if (!BUILDIN_LED_GET(BlinkLEDTimer::BlinkType::FLICKER)) {
+                    BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
+                }
+                break;
+            case ComboButtonStateType::RELEASED:
+                // BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
+                // break;
+            case ComboButtonStateType::RESET_MENU_TIMEOUT:
+            case ComboButtonStateType::TIMEOUT:
+                if (!BUILDIN_LED_GET(BlinkLEDTimer::BlinkType::MEDIUM)) {
+                    BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::MEDIUM);
+                }
+                break;
+                // if (!BUILDIN_LED_GET(BlinkLEDTimer::BlinkType::FAST)) { // fast blinks twice until kSystemComboConfirmTimeout is reached
+                //     BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FAST);
+                // }
+                // break;
+                // if (!BUILDIN_LED_GET(BlinkLEDTimer::BlinkType::MEDIUM)) { // medium blinks once until kSystemComboConfirmTimeout is reached
+                //     BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::MEDIUM);
+                // }
+                break;
+            case ComboButtonStateType::EXIT_MENU_TIMEOUT:
+            case ComboButtonStateType::NONE:
+                break;
         }
     }
 

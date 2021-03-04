@@ -23,27 +23,18 @@ void Button::event(EventType eventType, uint32_t now)
     auto &config = base._getConfig();
     base._resetAutoSleep();
 
-    if (base._pressed & kButtonSystemComboBitMask) {
-        // only update pressed states
-        if (eventType == EventType::DOWN) {
-            base._pressed |= base._getPressedMask(_button);
-        }
-        else if (eventType == EventType::UP) {
-            base._pressed &= ~base._getPressedMask(_button);
-        }
-        if ((base._pressed & kButtonSystemComboBitMask) == 0) {
-            RemoteControlPlugin::getInstance().systemButtonComboEvent(false);
-            //TODO reset states of the two buttons
-        }
+    if (base._isSystemComboActive()) {
+        base.systemButtonComboEvent(false, eventType, _button, _repeatCount, eventType == EventType::DOWN ? _getEventTimeForFirstEvent(): _getEventTime()); // forward events
         return;
     }
 
     switch (eventType) {
         case EventType::DOWN:
             base._pressed |= base._getPressedMask(_button);
-            if (base._pressed & kButtonSystemComboBitMask) {
-                RemoteControlPlugin::getInstance().systemButtonComboEvent(true);
+            if ((base._pressed & kButtonSystemComboBitMask) == kButtonSystemComboBitMask) { // wait for all buttons
                 // once the buttons are down, events are suppressed
+                _getEventTimeForFirstEvent();
+                base.systemButtonComboEvent(true); // enable combo
                 return;
             }
             base.queueEvent(eventType, _button, 0, _getEventTimeForFirstEvent(), config.actions[_button].down);
@@ -90,10 +81,10 @@ void Button::event(EventType eventType, uint32_t now)
             break;
     }
 
-#if 1
-    __LDBG_printf("event_type=%s (%02x) button#=%u first_time=%u time=%u pressed=%s",
+#if 0
+    __LDBG_printf("event_type=%s (%ux) button#=%u first_time=%u time=%u pressed=%s",
         eventTypeToString(eventType),
-        eventType,
+        _repeatCount,
         _button,
         _getEventTimeForFirstEvent(),
         _getEventTime(),

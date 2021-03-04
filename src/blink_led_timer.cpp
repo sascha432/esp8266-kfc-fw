@@ -205,3 +205,20 @@ void BlinkLEDTimer::setBlink(uint8_t pin, uint16_t delay, int32_t color)
         }
     }
 }
+
+bool BlinkLEDTimer::isBlink(uint8_t pin, BlinkType delay)
+{
+    if (!isPinValid(pin) || System::Device::getConfig().getStatusLedMode() == System::Device::StatusLEDModeType::OFF) {
+        return true;
+    }
+    if (!ledTimer) {
+        return false;
+    }
+    if (ledTimer->_pin != pin) {
+        return false;
+    }
+    if (ledTimer->_pattern.size() != 2 || static_cast<uint8_t>(ledTimer->_pattern) != 0b10) {
+        return false;
+    }
+    return ledTimer->_delay == delay;
+}

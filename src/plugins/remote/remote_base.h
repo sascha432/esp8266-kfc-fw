@@ -110,6 +110,9 @@ namespace RemoteControl {
             __autoSleepTimeout(0),
             _maxAwakeTimeout(0),
             _buttonsLocked(~0),
+            _systemButtonComboTime(0),
+            _systemButtonComboTimeout(0),
+            _systemButtonComboState(ComboButtonStateType::NONE),
             _longPress(0),
             _comboButton(-1),
             _pressed(0),
@@ -204,6 +207,38 @@ namespace RemoteControl {
             _maxAwakeTimeout = _config.max_awake_time * (60U * 1000U);
         }
 
+
+public:
+    enum class ComboButtonStateType {
+        NONE = 0,
+        PRESSED,
+        RELEASED,
+        RESET_MENU_TIMEOUT,
+        CONFIRM_EXIT,
+        CONFIRM_AUTO_SLEEP_OFF,
+        CONFIRM_AUTO_SLEEP_ON,
+        CONFIRM_DEEP_SLEEP,
+        TIMEOUT,
+        EXIT_MENU_TIMEOUT,
+    };
+
+    static constexpr uint32_t kSystemComboRebootTimeout = 5000;
+    static constexpr uint32_t kSystemComboMenuTimeout = 10000;
+    static constexpr uint32_t kSystemComboConfirmTimeout = 850;
+
+    void systemButtonComboEvent(bool state, EventType type = EventType::DOWN, uint8_t button = 0, uint16_t repeatCount = 0, uint32_t eventTime = 0);
+
+private:
+    void _systemComboNextState(ComboButtonStateType state);
+    void _updateSystemComboButton();
+    void _updateSystemComboButtonLED();
+    void _resetButtonState();
+
+    inline bool _isSystemComboActive() const {
+        return _systemButtonComboTimeout != 0;
+    }
+
+
     protected:
         friend Button;
         friend RemoteControlPlugin;
@@ -215,6 +250,9 @@ namespace RemoteControl {
         uint32_t __autoSleepTimeout;
         uint32_t _maxAwakeTimeout;
         uint32_t _buttonsLocked;
+        uint32_t _systemButtonComboTime;
+        uint32_t _systemButtonComboTimeout;
+        ComboButtonStateType _systemButtonComboState;
         uint8_t _longPress;
         int8_t _comboButton;
         uint8_t _pressed;

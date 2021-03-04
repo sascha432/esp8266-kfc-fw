@@ -80,8 +80,9 @@ PinState _pinState;
 extern "C" void preinit (void)
 {
     // store states of buttons
+    // all pins are reset to input before
     _pinState._readStates();
-    // settings the awake pin will clear all buffers and key presses might be lostrr
+    // settings the awake pin will clear all buffers and key presses might be lost
     pinMode(IOT_REMOTE_CONTROL_AWAKE_PIN, OUTPUT);
     digitalWrite(IOT_REMOTE_CONTROL_AWAKE_PIN, HIGH);
 }
@@ -89,7 +90,6 @@ extern "C" void preinit (void)
 RemoteControlPlugin::RemoteControlPlugin() :
     PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(RemoteControlPlugin)),
     Base(),
-    _systemButtonComboTime(0),
     _readUsbPinTimeout(0)
 {
     REGISTER_PLUGIN(this, "RemoteControlPlugin");
@@ -100,21 +100,6 @@ RemoteControlPlugin::RemoteControlPlugin() :
 RemoteControlPlugin &RemoteControlPlugin::getInstance()
 {
     return plugin;
-}
-
-void RemoteControlPlugin::systemButtonComboEvent(bool state)
-{
-    if (state) {
-        _systemButtonComboTime = millis();
-        BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
-        __DBG_printf_W("SYSTEM BUTTON COMBO PRESSED");
-    }
-    else {
-        KFCFWConfiguration::setWiFiConnectLedMode();
-        __DBG_printf_N("SYSTEM BUTTON COMBO RELEASED duration=%u", get_time_diff(_systemButtonComboTime, millis()));
-        _systemButtonComboTime = 0;
-    }
-
 }
 
 void RemoteControlPlugin::_updateButtonConfig()
@@ -147,6 +132,19 @@ void RemoteControlPlugin::setup(SetupModeType mode)
     SingleClickGroupPtr group2;
     group2.reset(_config.click_time);
 #endif
+
+    // get handlers ...
+    // for(const auto &handler: pinMonitor.getHandlers()) {
+    //     switch(handler->getPin()) {
+    //         case kButtonSystemComboPins[0]:
+    //         case kButtonSystemComboPins[1]:
+    //             if (handler->getArg() == this) {
+    //                 handler->setDisabled();
+
+    //             }
+    //             break;
+    //     }
+    // }
 
     // disable interrupts during setup
     for(uint8_t n = 0; n < kButtonPins.size(); n++) {
@@ -208,12 +206,14 @@ void RemoteControlPlugin::setup(SetupModeType mode)
     pinMonitor.feed(_pinState._time, _pinState._state, _pinState._read, _pinState.activeLow());
     // pinMonitor._loop();
 
-    WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTED, wifiCallback);
+    WiFiCallbacks::add(WiFiCallbacks::EventType::ANY, wifiCallback);
     LoopFunctions::add(loop);
 
     _setup();
     _resetAutoSleep();
     // _resolveActionHostnames();
+
+    _updateSystemComboButtonLED();
 }
 
 void RemoteControlPlugin::reconfigure(const String &source)
@@ -424,6 +424,7 @@ void RemoteControlPlugin::loop()
 
 void RemoteControlPlugin::wifiCallback(WiFiCallbacks::EventType event, void *payload)
 {
+    plugin._updateSystemComboButtonLED();
     if (event == WiFiCallbacks::EventType::CONNECTED) {
         plugin._resetAutoSleep();
     }
@@ -450,6 +451,7 @@ void RemoteControlPlugin::_loop()
         if (_millis >= __autoSleepTimeout) {
             if (
                 _hasEvents() ||
+                _isSystemComboActive() ||
 #if MQTT_AUTO_DISCOVERY
                 MQTTClient::safeIsAutoDiscoveryRunning() ||
 #endif
@@ -472,6 +474,8 @@ void RemoteControlPlugin::_loop()
             }
         }
     }
+
+    _updateSystemComboButton();
 
     delay(_hasEvents() ? 1 : 10);
 }

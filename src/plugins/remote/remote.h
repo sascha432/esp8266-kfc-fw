@@ -177,14 +177,13 @@ public:
 
     static RemoteControlPlugin &getInstance();
 
-    void systemButtonComboEvent(bool state);
-
 private:
     // virtual void _onShortPress(Button &button);
     // virtual void _onLongPress(Button &button);
     // virtual void _onRepeat(Button &button);
 
     void _updateButtonConfig();
+    // reset buttons states to remove all events. if buttons are pressed the debouncer will filter the events when released
     void _loop();
     bool _isUsbPowered() const;
     void _readConfig();
@@ -209,6 +208,7 @@ private:
         _buttonsLocked &= ~(1 << button);
     }
 
+public:
     void _enterDeepSleep();
 
 private:
@@ -216,7 +216,6 @@ private:
     using ActionVector = std::vector<ActionPtr>;
 
     ActionVector _actions;
-    uint32_t _systemButtonComboTime;
     uint32_t _readUsbPinTimeout;
     // Event::Timer _loopTimer;
 };

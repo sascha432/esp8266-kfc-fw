@@ -129,7 +129,7 @@ extern const char ___debugPrefix[] PROGMEM;
 #define __DBG_printf(fmt, ...)                              debug_printf(PSTR(fmt __DBG_newline), ##__VA_ARGS__)
 #define __DBG_printf_E(fmt, ...)                            debug_printf(PSTR(_VT100(bold_red) fmt _VT100(reset) __DBG_newline), ##__VA_ARGS__)
 #define __DBG_printf_W(fmt, ...)                            debug_printf(PSTR(_VT100(yellow) fmt _VT100(reset) __DBG_newline), ##__VA_ARGS__)
-#define __DBG_printf_N(fmt, ...)                            debug_printf(PSTR(_VT100(green) fmt _VT100(reset) __DBG_newline), ##__VA_ARGS__)
+#define __DBG_printf_N(fmt, ...)                            debug_printf(PSTR(_VT100(bold_green) fmt _VT100(reset) __DBG_newline), ##__VA_ARGS__)
 #define __DBG_println()                                     debug_print(F(__DBG_newline))
 #define __DBG_panic(fmt, ...)                               (DEBUG_OUTPUT.printf_P(PSTR(fmt __DBG_newline), ## __VA_ARGS__) && __debugbreak_and_panic())
 #define __DBG_assert(cond)                                  (!(cond) ? (__DBG_print(_VT100(bold_red) "assert( " _STRINGIFY(cond) ") FAILED" _VT100(reset)) && DebugContext::reportAssert(DebugContext_ctor(), F(_STRINGIFY(cond)))) : false)

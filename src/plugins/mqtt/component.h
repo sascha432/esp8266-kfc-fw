@@ -15,7 +15,12 @@ namespace MQTT {
 
     class ComponentListIterator : public non_std::iterator<std::bidirectional_iterator_tag, Component, int8_t> {
     public:
-        ComponentListIterator(nullptr_t, FormatType format = FormatType::JSON) : _components(nullptr), _format(format) {}
+        ComponentListIterator(nullptr_t, FormatType format = FormatType::JSON) :
+            _components(nullptr),
+            _component(nullptr),
+            _format(format)
+        {
+        }
 
         ComponentListIterator(ComponentListIterator *iterator, FormatType format = FormatType::JSON) : ComponentListIterator(nullptr, format)
         {
@@ -66,8 +71,9 @@ namespace MQTT {
         }
 
         ComponentPtr operator->() const {
-            // return _components ? *_iterator : _component;
-            return _components ? (isEnd() ? nullptr : *_iterator) : _component;
+            return _components ?
+                (isEnd() ? nullptr : *_iterator) :      // return *iterator if components are attached
+                _component;
         }
 
         inline __attribute__((__always_inline__))
@@ -98,6 +104,8 @@ namespace MQTT {
         }
 
     private:
+        friend ComponentIterator;
+
         ComponentVector *_components;
         ComponentVector::iterator _iterator;
         ComponentPtr _component;
@@ -128,7 +136,7 @@ namespace MQTT {
 
         inline __attribute__((__always_inline__))
         operator ComponentPtr() const {
-            return static_cast<ComponentPtr>(_component);
+            return _component;
         }
 
         bool operator==(const iterator &iter) const {
@@ -138,6 +146,8 @@ namespace MQTT {
         bool operator!=(const iterator &iter) const {
             return _index != iter._index || _component != iter._component;
         }
+
+        bool isValid() const;
 
         size_t size() const;
         bool empty() const;
@@ -149,18 +159,21 @@ namespace MQTT {
         uint8_t _size;
     };
 
-    #if !DEBUG
+    inline __attribute__((__always_inline__))
+    bool ComponentIterator::isValid() const {
+        return _component != nullptr;
+    }
+
     inline __attribute__((__always_inline__))
     size_t ComponentIterator::size() const
     {
         return _size;
     }
-    #endif
 
     inline __attribute__((__always_inline__))
     bool ComponentIterator::empty() const
     {
-        return size() == 0;
+        return _size == 0;
     }
 
     class ComponentBase {
@@ -323,6 +336,7 @@ namespace MQTT {
 
         AutoDiscovery::EntityPtr _getAutoDiscovery(FormatType format, uint8_t num) {
             auto discovery = getAutoDiscovery(format, num);
+            __DBG_assert_printf(discovery != nullptr, "discovery=nullptr");
             if (discovery) {
                 discovery->finalize();
             }

@@ -41,12 +41,13 @@ Queue::~Queue()
         _publishDone(false);
     }
 
+#if DEBUG_MQTT_AUTO_DISCOVERY_QUEUE
     __LDBG_printf("--- callbacks");
     for(const auto &topic: _client.getTopics()) {
         __LDBG_printf("topic=%s component=%p name=%s", topic.getTopic().c_str(), topic.getComponent(), topic.getComponent()->getName());
     }
     __LDBG_printf("--- end callbacks");
-
+#endif
 }
 
 // EntityPtr Queue::getAutoDiscovery(FormatType format, uint8_t num)
@@ -156,7 +157,7 @@ void Queue::runPublish(uint32_t delayMillis)
                     // compare with current auto discovery
                     auto currentCrcs = _entities.crc();
                     if (_forceUpdate) {
-                        crcs.clear();
+                        crcs.invalidate();
                     }
                     _diff = currentCrcs.difference(crcs);
                     if (_forceUpdate) {
@@ -224,7 +225,7 @@ void Queue::_publishNextMessage()
             _publishDone(false);
             return;
         }
-        auto entitiy = *_iterator;
+        const auto &entitiy = *_iterator;
         if (!entitiy) {
             __LDBG_printf_E("entity nullptr");
             ++_iterator;
@@ -290,6 +291,8 @@ void Queue::_publishDone(bool success, uint16_t onErrorDelay)
     else {
         delay = Event::milliseconds::zero();
     }
+
+    _client.updateAutoDiscoveryTimestamps(success);
 
     auto message = PrintString(success ? F("MQTT auto discovery published [entities=%u") : F("MQTT auto discovery aborted [entities=%u"), _entities.size());
     if (_entities.payloadSize()) {

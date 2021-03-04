@@ -42,6 +42,10 @@ namespace MQTT {
 
             static_assert(sizeof(Data) == sizeof(uint32_t), "size does not match");
 
+            void invalidate() {
+                std::fill(begin(), end(), ~0U);
+            }
+
             uint32_t insertSorted(const char *topic, size_t topicLength, const char *payload, size_t payloadLength) {
                 //uint32_t crc = (crc16_update(topic, topicLength) << 16) | (crc16_update(payload, payloadLength));
                 auto crc = Data(crc16_update(topic, topicLength), crc16_update(payload, payloadLength));
@@ -50,7 +54,8 @@ namespace MQTT {
                 return crc.value;
             }
 
-            uint32_t insertSorted(const String &topic, const String &payload) {
+            inline uint32_t insertSorted(const String &topic, const String &payload)
+            {
                 return insertSorted(topic.c_str(), topic.length(), payload.c_str(), payload.length());
             }
 
@@ -64,12 +69,12 @@ namespace MQTT {
                 return end();
             }
 
-            iterator findTopic(const char *topic, size_t length)
+            inline iterator findTopic(const char *topic, size_t length)
             {
                 return findTopic(crc16_update(topic, length));
             }
 
-            iterator findTopic(const String &topic)
+            inline iterator findTopic(const String &topic)
             {
                 return findTopic(topic.c_str(), topic.length());
             }
@@ -97,17 +102,17 @@ namespace MQTT {
                 return false;
             }
 
-            bool update(const String &topic, const String &payload)
+            inline bool update(const String &topic, const String &payload)
             {
                 return update(topic.c_str(), topic.length(), payload.c_str(), payload.length());
             }
 
-            bool operator==(const CrcVector &list) const
+            inline bool operator==(const CrcVector &list) const
             {
                 return size() == list.size() && memcmp(data(), list.data(), size() * sizeof(*data())) == 0;
             }
 
-            bool operator!=(const CrcVector &list) const
+            inline bool operator!=(const CrcVector &list) const
             {
                 return !operator==(list);
             }
@@ -142,7 +147,7 @@ namespace MQTT {
                 return diff;
             }
 
-            uint32_t crc32b() const
+            inline uint32_t crc32b() const
             {
                 return ::crc32b(data(), size() * sizeof(*data()));
             }
@@ -169,22 +174,28 @@ namespace MQTT {
             CrcVector crc() {
                 CrcVector list;
                 _payloadSize = 0;
-                for(auto entity: *this) {
-                    list.insertSorted(entity->getTopic(), entity->getPayload());
-                    _payloadSize += entity->getPayload().length();
+                for(const auto &entity: *this) {
+                    if (!entity) {
+                        __DBG_printf_E("entity=nullptr components=%p size=%u num=%u", _components, _components ? _components->size() : 0, list.size() + 1);
+                        list.push_back(~0U);
+                    }
+                    else {
+                        list.insertSorted(entity->getTopic(), entity->getPayload());
+                        _payloadSize += entity->getPayload().length();
+                    }
                 }
                 return list;
             }
 
-            bool empty() const {
+            inline bool empty() const {
                 return _components ? _components->empty() : true;
             }
 
-            size_t size() const {
+            inline size_t size() const {
                 return _components ? size(*_components) : 0;
             }
 
-            size_t payloadSize() const {
+            inline size_t payloadSize() const {
                 return _payloadSize;
             }
 

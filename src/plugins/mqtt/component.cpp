@@ -27,19 +27,21 @@ ComponentIterator::ComponentIterator(ComponentPtr component, uint8_t index, Comp
     _index(index),
     _size(0)
 {
-    size_t size = 0;
     // find first component that is not empty
-    while(!_iterator.isEnd() && (size = _iterator->size()) != 0) {
+    while (_iterator.isValid() && !_iterator.isEnd() && (_size = _iterator->size()) == 0) {
         ++_iterator;
         _index = 0; // reset index if the iterator changes
     }
 
-    if (_iterator.isEnd()) {
-        _component = nullptr;
+    if (_iterator.isValid() && !_iterator.isEnd()) {
+        // _size and _index were updated in the loop
+        _component = *_iterator;
     }
     else {
-        _component = *_iterator;
-        _size = size; // update size
+        // reset index, size and component ptr
+        _component = nullptr;
+        _index = 0;
+        _size = 0;
     }
 }
 
@@ -50,6 +52,7 @@ ComponentIterator::pointer ComponentIterator::get(FormatType format) const
 
 ComponentIterator &ComponentIterator::operator++()
 {
+    __DBG_assert_printf(_iterator.isValid(), "iterator invalid component=%p index=%u size=%u components=%p (%u)", _iterator._component, _index, _size, _iterator._components, _iterator._components ? _iterator._components->size() : 0);
     if (_iterator.isValid()) {
         if (_iterator.isEnd()) {
             __DBG_panic("cannot increment beyond end()");
@@ -57,13 +60,14 @@ ComponentIterator &ComponentIterator::operator++()
         if (_index >= _size - 1) {
             do {
                 ++_iterator;
-                if (_iterator.isEnd()) {
+                if (!_iterator.isValid() || _iterator.isEnd()) {
                     _component = nullptr;
+                    _size = 0;
                     break;
                 }
                 _component = *_iterator;
                 // update size after changing _iterator
-                _size = _iterator->getAutoDiscoveryCount();
+                _size = _iterator->size();
             }
             while (_size == 0);
             _index = 0;
@@ -76,6 +80,7 @@ ComponentIterator &ComponentIterator::operator++()
 
 ComponentIterator &ComponentIterator::operator--()
 {
+    __DBG_assert_printf(_iterator.isValid(), "iterator invalid component=%p index=%u size=%u components=%p (%u)", _iterator._component, _index, _size, _iterator._components, _iterator._components ? _iterator._components->size() : 0);
     if (_iterator.isValid()) {
         if (_index == 0) {
             if (_iterator.isBegin()) {
@@ -83,27 +88,26 @@ ComponentIterator &ComponentIterator::operator--()
             }
             do {
                 --_iterator;
+                if (!_iterator.isValid()) {
+                    _size = 0;
+                    _index = 0;
+                    _component = nullptr;
+                    return *this;
+                }
                 // update size after changing _iterator
-                _size = _iterator->getAutoDiscoveryCount();
+                _size = _iterator->size();
+                if (_iterator.isBegin()) {
+                    break;
+                }
             }
-            while (!_iterator.isBegin() && _size);
+            while (_size == 0);
             _component = *_iterator;
-            _index = _size;
+            _index = _size; // gets decremented at the end of the method
         }
     }
     --_index;
     return *this;
 }
-
-#if DEBUG
-size_t ComponentIterator::size() const
-{
-    __DBG_assert_printf(_size == _component->size(), "_size=%u == _component->size()=%u mismatch", _size, _component->size());
-    return _size;
-    // return _component->size();
-}
-#endif
-
 
 Component::Component(ComponentType type) :
     ComponentBase(),

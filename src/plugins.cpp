@@ -286,7 +286,7 @@ void setup_plugins(PluginComponent::SetupModeType mode)
         auto url = F("webui.html");
         if (!bootstrapMenu.isValid(bootstrapMenu.findMenuByURI(url, navMenu.device))) {
             auto webUi = FSPGM(WebUI);
-            bootstrapMenu.addMenuItem(webUi, url, navMenu.device);
+            bootstrapMenu.addMenuItem(webUi, url, navMenu.device, navMenu.device/*insert at the top*/);
             bootstrapMenu.addMenuItem(webUi, url, navMenu.home, bootstrapMenu.getId(bootstrapMenu.findMenuByURI(FSPGM(status_html), navMenu.home)));
         }
     }

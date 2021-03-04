@@ -7,8 +7,9 @@
 #include <BitsToStr.h>
 #include "remote_button.h"
 #include "remote_action.h"
+#include "remote.h"
 
-#if DEBUG_IOT_REMOTE_CONTROL && 0
+#if DEBUG_IOT_REMOTE_CONTROL
 #include <debug_helper_enable.h>
 #else
 #include <debug_helper_disable.h>
@@ -22,9 +23,29 @@ void Button::event(EventType eventType, uint32_t now)
     auto &config = base._getConfig();
     base._resetAutoSleep();
 
+    if (base._pressed & kButtonSystemComboBitMask) {
+        // only update pressed states
+        if (eventType == EventType::DOWN) {
+            base._pressed |= base._getPressedMask(_button);
+        }
+        else if (eventType == EventType::UP) {
+            base._pressed &= ~base._getPressedMask(_button);
+        }
+        if ((base._pressed & kButtonSystemComboBitMask) == 0) {
+            RemoteControlPlugin::getInstance().systemButtonComboEvent(false);
+            //TODO reset states of the two buttons
+        }
+        return;
+    }
+
     switch (eventType) {
         case EventType::DOWN:
             base._pressed |= base._getPressedMask(_button);
+            if (base._pressed & kButtonSystemComboBitMask) {
+                RemoteControlPlugin::getInstance().systemButtonComboEvent(true);
+                // once the buttons are down, events are suppressed
+                return;
+            }
             base.queueEvent(eventType, _button, 0, _getEventTimeForFirstEvent(), config.actions[_button].down);
             break;
         case EventType::UP:
@@ -69,14 +90,14 @@ void Button::event(EventType eventType, uint32_t now)
             break;
     }
 
-#if 0
-    __DBG_printf("event_type=%s (%02x) button#=%u first_time=%u time=%u pressed=%s",
+#if 1
+    __LDBG_printf("event_type=%s (%02x) button#=%u first_time=%u time=%u pressed=%s",
         eventTypeToString(eventType),
         eventType,
         _button,
         _getEventTimeForFirstEvent(),
         _getEventTime(),
-        BitsToStr<_buttonPins.size(), true>(base._pressed).c_str()
+        BitsToStr<kButtonPins.size(), true>(base._pressed).c_str()
     );
 #endif
 

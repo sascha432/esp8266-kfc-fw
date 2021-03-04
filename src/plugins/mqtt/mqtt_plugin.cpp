@@ -203,17 +203,25 @@ bool Plugin::atModeHandler(AtModeArgs &args)
                                 args.printf_P(PSTR("No components available"));
                             }
                             else {
-                                for(auto entity: list) {
-                                    if (format == FormatType::TOPIC) {
-                                        stream.println(entity->getTopic());
-                                        delay(5);
+                                for(auto iterator = list.begin(); iterator != list.end(); ++iterator) {
+                                    const auto &entity = *iterator;
+                                // for(const auto &entity: list) {
+                                    if (entity) {
+                                        if (format == FormatType::TOPIC) {
+                                            stream.println(entity->getTopic());
+                                            delay(5);
+                                        }
+                                        else {
+                                            stream.print(entity->getTopic());
+                                            delay(5);
+                                            stream.print(':');
+                                            stream.println(entity->getPayload());
+                                            delay(10);
+                                        }
                                     }
                                     else {
-                                        stream.print(entity->getTopic());
-                                        delay(5);
-                                        stream.print(':');
-                                        stream.println(entity->getPayload());
-                                        delay(10);
+                                        stream.println(F("entity=nullptr"));
+                                        // stream.printf_P(PSTR("entity=nullptr component=%p index=%u size=%u\n"), iterator._component, iterator._index, iterator._size);
                                     }
                                 }
                             }

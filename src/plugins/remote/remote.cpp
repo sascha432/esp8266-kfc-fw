@@ -88,7 +88,9 @@ extern "C" void preinit (void)
 
 RemoteControlPlugin::RemoteControlPlugin() :
     PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(RemoteControlPlugin)),
-    Base()
+    Base(),
+    _systemButtonComboTime(0),
+    _readUsbPinTimeout(0)
 {
     REGISTER_PLUGIN(this, "RemoteControlPlugin");
     // pinMode(IOT_REMOTE_CONTROL_AWAKE_PIN, OUTPUT);
@@ -98,6 +100,21 @@ RemoteControlPlugin::RemoteControlPlugin() :
 RemoteControlPlugin &RemoteControlPlugin::getInstance()
 {
     return plugin;
+}
+
+void RemoteControlPlugin::systemButtonComboEvent(bool state)
+{
+    if (state) {
+        _systemButtonComboTime = millis();
+        BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
+        __DBG_printf_W("SYSTEM BUTTON COMBO PRESSED");
+    }
+    else {
+        KFCFWConfiguration::setWiFiConnectLedMode();
+        __DBG_printf_N("SYSTEM BUTTON COMBO RELEASED duration=%u", get_time_diff(_systemButtonComboTime, millis()));
+        _systemButtonComboTime = 0;
+    }
+
 }
 
 void RemoteControlPlugin::_updateButtonConfig()
@@ -132,8 +149,8 @@ void RemoteControlPlugin::setup(SetupModeType mode)
 #endif
 
     // disable interrupts during setup
-    for(uint8_t n = 0; n < _buttonPins.size(); n++) {
-        auto pin = _buttonPins[n];
+    for(uint8_t n = 0; n < kButtonPins.size(); n++) {
+        auto pin = kButtonPins[n];
 #if PIN_MONITOR_BUTTON_GROUPS
         auto &button = pinMonitor.attach<Button>(pin, n, this);
         using EventNameType = Plugins::RemoteControlConfig::EventNameType;
@@ -160,30 +177,30 @@ void RemoteControlPlugin::setup(SetupModeType mode)
     _readConfig();
     _updateButtonConfig();
 
-    uint8_t count = 0;
-    do {
-        bool reset = (digitalRead(_buttonPins[0]) == PinState::activeHigh()) && (digitalRead(_buttonPins[3]) == PinState::activeHigh()); // check if button 0 und 3 are down
-        if (count == 0) {
-            if (!reset) { // if not continue
-                break;
-            }
-            BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
-        }
-        // set counter to 10 for debouncing
-        if (reset) {
-            count = 10;
-        }
-        // count down if reset is not pressed
-        count--;
-        if (count == 0) { // set LED back to solid, reset button states and start..
-            BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SOLID);
-            _pinState = PinState();
-            _autoSleepTimeout = kAutoSleepDisabled;
-            break;
-        }
-        delay(5);
-    }
-    while(true);
+    // uint8_t count = 0;
+    // do {
+    //     bool reset = (digitalRead(_buttonSystemCombo[0]) == PinState::activeHigh()) && (digitalRead(_buttonSystemCombo[1]) == PinState::activeHigh()); // check if button 0 und 3 are down
+    //     if (count == 0) {
+    //         if (!reset) { // if not continue
+    //             break;
+    //         }
+    //         BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
+    //     }
+    //     // set counter to 10 for debouncing
+    //     if (reset) {
+    //         count = 10;
+    //     }
+    //     // count down if reset is not pressed
+    //     count--;
+    //     if (count == 0) { // set LED back to solid, reset button states and start..
+    //         KFCFWConfiguration::setWiFiConnectLedMode();
+    //         _pinState = PinState();
+    //         _autoSleepTimeout = kAutoSleepDisabled;
+    //         break;
+    //     }
+    //     delay(5);
+    // }
+    // while(true);
 
     __DBG_printf("feed time=%u state=%u read=%u active_low=%u %s", _pinState._time, _pinState._state, _pinState._read, _pinState.activeLow(), _pinState.toString().c_str());
 
@@ -219,15 +236,20 @@ void RemoteControlPlugin::shutdown()
 void RemoteControlPlugin::prepareDeepSleep(uint32_t sleepTimeMillis)
 {
     __LDBG_printf("time=%u", sleepTimeMillis);
+    ADCManager::getInstance().terminate(false);
     digitalWrite(IOT_REMOTE_CONTROL_AWAKE_PIN, LOW);
 }
 
 void RemoteControlPlugin::getStatus(Print &output)
 {
-    output.printf_P(PSTR("%u Button Remote Control"), _buttonPins.size());
-    if (_autoSleepTimeout == 0 || _autoSleepTimeout == kAutoSleepDisabled) {
+    output.printf_P(PSTR("%u Button Remote Control"), kButtonPins.size());
+    if (isAutoSleepEnabled()) {
+        output.print(F(", auto sleep enabled"));
+    }
+    else {
         output.print(F(", auto sleep disabled"));
     }
+    output.printf_P(PSTR(", force deep sleep after %u minutes"), _config.max_awake_time);
 }
 
 void RemoteControlPlugin::createMenu()
@@ -265,12 +287,14 @@ bool RemoteControlPlugin::atModeHandler(AtModeArgs &args)
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RCDSLP))) {
         int time = args.toInt(0);
         if (time < 1) {
-            _autoSleepTimeout = kAutoSleepDisabled;
+            _disableAutoSleepTimeout();
+            _updateMaxAwakeTimeout();
             args.printf_P(PSTR("Auto sleep disabled"));
         }
         else {
-            _autoSleepTimeout = time * 1000UL;
-            args.printf_P(PSTR("Auto sleep timeout %us"), time);
+            static constexpr uint32_t kMaxAwakeExtratime = 300; // seconds
+            _setAutoSleepTimeout(millis() + (time * 1000U), kMaxAwakeExtratime);
+            args.printf_P(PSTR("Auto sleep timeout in %u seconds, deep sleep timeout in %.1f minutes"), time, (time + kMaxAwakeExtratime) / 60.0);
         }
         return true;
     }
@@ -407,10 +431,14 @@ void RemoteControlPlugin::wifiCallback(WiFiCallbacks::EventType event, void *pay
 
 void RemoteControlPlugin::_loop()
 {
-    if (_autoSleepTimeout == kAutoSleepDisabled) {
-        // ...
+    auto _millis = millis();
+    if (_maxAwakeTimeout && _millis >= _maxAwakeTimeout) {
+        __LDBG_printf("forcing deep sleep @ max awake timeout=%u", _maxAwakeTimeout);
+        _enterDeepSleep();
     }
-    else if (_isUsbPowered()) {
+
+    if (_millis >= _readUsbPinTimeout && _isUsbPowered()) {
+        _readUsbPinTimeout = _millis + 100;
         _resetAutoSleep();
         if (_autoDiscoveryRunOnce && MQTTClient::safeIsConnected() && IS_TIME_VALID(time(nullptr))) {
             __LDBG_printf("usb power detected, publishing auto discovery");
@@ -418,37 +446,48 @@ void RemoteControlPlugin::_loop()
             publishAutoDiscovery();
         }
     }
-    else if (
-        _autoSleepTimeout == kAutoSleepDefault &&
-        !_hasEvents() &&
-        !MQTTClient::safeIsAutoDiscoveryRunning() &&
-        (config.getWiFiUp() > 250) &&
-        (IF_HTTP2SERIAL_SUPPORT(!Http2Serial::hasAuthenticatedClients() &&)
-        !WebUISocket::hasAuthenticatedClients())
-    ) {
-        __LDBG_printf("enabling auto sleep time=%us", _config.auto_sleep_time);
-        _autoSleepTimeout = millis() + (_config.auto_sleep_time * 1000U);
-    }
-    else if (!_signalWarning && _autoSleepTimeout == kAutoSleepDefault && millis() > std::max((_config.auto_sleep_time * 1000U), 60000U)) {
-        // if sleep timeout has expired and the device is still online, start to blink slowly
-        BUILDIN_LED_SETP(200, BlinkLEDTimer::Bitset(0b000000000000000001010101U, 24U));
-        _signalWarning = true;
-    }
-    else if (_autoSleepTimeout != kAutoSleepDefault && millis() > _autoSleepTimeout) {
-
-        _startupTimings.setDeepSleep(millis());
-        _startupTimings.log();
-
-#if SYSLOG_SUPPORT
-        SyslogPlugin::waitForQueue(std::max<uint16_t>(500, std::min<uint16_t>(_config.auto_sleep_time / 10, 1500)));
+    else if (isAutoSleepEnabled()) {
+        if (_millis >= __autoSleepTimeout) {
+            if (
+                _hasEvents() ||
+#if MQTT_AUTO_DISCOVERY
+                MQTTClient::safeIsAutoDiscoveryRunning() ||
 #endif
+#if HTTP2SERIAL_SUPPORT
+                Http2Serial::hasAuthenticatedClients() ||
+#endif
+                WebUISocket::hasAuthenticatedClients()
+            ) {
+                // check again in 500ms
+                __autoSleepTimeout = _millis + 500;
 
-        __LDBG_printf("entering deep sleep (auto=%d, time=%us)", _config.deep_sleep_time, _config.deep_sleep_time);
-        _autoSleepTimeout = kAutoSleepDisabled;
-        config.enterDeepSleep(KFCFWConfiguration::seconds(_config.deep_sleep_time), WAKE_NO_RFCAL, 1);
+                // start blinking after the timeout or 10 seconds
+                if (!_signalWarning && (_millis > std::max((_config.auto_sleep_time * 1000U), 10000U))) {
+                    BUILDIN_LED_SETP(200, BlinkLEDTimer::Bitset(0b000000000000000001010101U, 24U));
+                    _signalWarning = true;
+                }
+            }
+            else {
+                _enterDeepSleep();
+            }
+        }
     }
 
     delay(_hasEvents() ? 1 : 10);
+}
+
+void RemoteControlPlugin::_enterDeepSleep()
+{
+    _startupTimings.setDeepSleep(millis());
+    _startupTimings.log();
+    _disableAutoSleepTimeout();
+
+#if SYSLOG_SUPPORT
+    SyslogPlugin::waitForQueue(std::max<uint16_t>(500, std::min<uint16_t>(_config.auto_sleep_time / 10, 1500)));
+#endif
+
+    __LDBG_printf("entering deep sleep (auto=%d, time=%us)", _config.deep_sleep_time, _config.deep_sleep_time);
+    config.enterDeepSleep(KFCFWConfiguration::seconds(_config.deep_sleep_time), WAKE_NO_RFCAL, 1);
 }
 
 bool RemoteControlPlugin::_isUsbPowered() const
@@ -459,6 +498,7 @@ bool RemoteControlPlugin::_isUsbPowered() const
 void RemoteControlPlugin::_readConfig()
 {
     _config = Plugins::RemoteControl::getConfig();
+    _updateMaxAwakeTimeout();
 }
 
 #if 0

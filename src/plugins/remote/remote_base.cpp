@@ -101,7 +101,7 @@ namespace RemoteControl {
                     eventCount,
                     eventTime,
                     (type == EventType::RELEASED || type == EventType::HOLD_RELEASE),
-                    BitsToStr<_buttonPins.size(), true>(_pressed).c_str()
+                    BitsToStr<kButtonPins.size(), true>(_pressed).c_str()
                 );
                 __LDBG_assert_printf(json.length() != 0, "json payload empty, type %u, eventNum %u", type, eventNum);
 

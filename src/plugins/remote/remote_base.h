@@ -8,9 +8,21 @@
 #include "remote_event_queue.h"
 #include <kfc_fw_config.h>
 
+class RemoteControlPlugin;
+
 namespace RemoteControl {
 
-    static constexpr auto _buttonPins  = ButtonPinsArray(IOT_REMOTE_CONTROL_BUTTON_PINS);
+    static constexpr auto kButtonPins = ButtonPinsArray(IOT_REMOTE_CONTROL_BUTTON_PINS);
+
+    static inline constexpr size_t getButtonBit(uint8_t pin, size_t index = 0) {
+        return pin == kButtonPins[index] ? index : getButtonBit(pin, index + 1);
+    }
+
+    // button combination used for maintenance mode
+    static constexpr uint8_t kButtonSystemComboPins[2] = { kButtonPins.front(), kButtonPins.back() };
+    static constexpr uint8_t kButtonSystemComboNum[2] = { getButtonBit(kButtonSystemComboPins[0]), getButtonBit(kButtonSystemComboPins[1]) };
+    static constexpr uint8_t kButtonSystemComboBitMask = _BV(getButtonBit(kButtonSystemComboPins[0])) | _BV(getButtonBit(kButtonSystemComboPins[1]));
+
 
     using EventNameType = Plugins::RemoteControl::RemoteControl::EventNameType;
 
@@ -95,7 +107,8 @@ namespace RemoteControl {
 
         Base() :
             _config(),
-            _autoSleepTimeout(kAutoSleepDefault),
+            __autoSleepTimeout(0),
+            _maxAwakeTimeout(0),
             _buttonsLocked(~0),
             _longPress(0),
             _comboButton(-1),
@@ -145,24 +158,62 @@ namespace RemoteControl {
 #endif
 
     protected:
+        // reser auto sleep timer and disable warning LED
         void _resetAutoSleep() {
-            if (_autoSleepTimeout != kAutoSleepDisabled) {
-                _autoSleepTimeout = kAutoSleepDefault;
-            }
+            _setAutoSleepTimeout();
             if (_signalWarning) {
                 KFCFWConfiguration::setWiFiConnectLedMode();
                 _signalWarning = false;
             }
         }
 
+        // reset auto sleep if auto sleep is not disabled
+        // forceTime = 1 resets it even if disabled
+        // forceTime > 1 sets the timeout to "forceTime"
+        // if maxAwakeExtratimeSeconds is not 0, _maxAwakeTimeout gets updated to n seconds after
+        // autoDeepSleep *if* the new value exceeds the previous _maxAwakeTimeout
+        void _setAutoSleepTimeout(uint32_t forceTime = 0, uint32_t maxAwakeExtratimeSeconds = 0) {
+            if (isAutoSleepEnabled() || forceTime) {
+                if (forceTime <= 1) {
+                    forceTime = millis() + (_config.auto_sleep_time * 1000U);
+                }
+                __autoSleepTimeout = forceTime;
+                if (maxAwakeExtratimeSeconds) {
+                    _maxAwakeTimeout = std::max<uint32_t>(_maxAwakeTimeout, __autoSleepTimeout + (maxAwakeExtratimeSeconds * 1000U));
+                }
+            }
+        }
+
+        inline __attribute__((__always_inline__))
+        bool isAutoSleepEnabled() const {
+            return __autoSleepTimeout != kAutoSleepDisabled;
+        }
+
+        inline __attribute__((__always_inline__))
+        bool isAutoSleepDisabled() const {
+            return __autoSleepTimeout == kAutoSleepDisabled;
+        }
+
+        // disable auto sleep
+        inline __attribute__((__always_inline__))
+        void _disableAutoSleepTimeout() {
+            __autoSleepTimeout = kAutoSleepDisabled;
+        }
+
+        void _updateMaxAwakeTimeout() {
+            _maxAwakeTimeout = _config.max_awake_time * (60U * 1000U);
+        }
+
     protected:
         friend Button;
+        friend RemoteControlPlugin;
 
         EventQueue _queue;
         Queue::Lock _lock;
         Event::Timer _queueTimer;
         ConfigType _config;
-        uint32_t _autoSleepTimeout;
+        uint32_t __autoSleepTimeout;
+        uint32_t _maxAwakeTimeout;
         uint32_t _buttonsLocked;
         uint8_t _longPress;
         int8_t _comboButton;

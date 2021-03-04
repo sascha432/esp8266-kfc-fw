@@ -596,6 +596,11 @@ void MQTTClient::onConnect(bool sessionPresent)
     // set online status
     publish(_lastWillTopic, true, F("online"));
 
+#if MQTT_AUTO_DISCOVERY
+    _autoDiscoveryStatusTopic = _getAutoDiscoveryStatusTopic();
+    subscribe(nullptr, _autoDiscoveryStatusTopic, QosType::AT_LEAST_ONCE);
+#endif
+
     // reset reconnect timer if connection was successful
     setAutoReconnect(_config.auto_reconnect_min);
 
@@ -671,6 +676,35 @@ bool MQTTClient::publishAutoDiscovery(bool force, bool abort, bool forceUpdate)
     return false;
 }
 
+#if MQTT_AUTO_DISCOVERY
+
+void MQTTClient::updateAutoDiscoveryTimestamps(bool success)
+{
+    using namespace MQTT::Json;
+
+    _resetAutoDiscoveryInitialState();
+
+    auto now = time(nullptr);
+    if (!IS_TIME_VALID(now)) {
+        now = std::max(_autoDiscoveryLastSuccess, _autoDiscoveryLastFailure) + 1;
+    }
+
+    if (success) {
+        _autoDiscoveryLastSuccess = now;
+    }
+    else {
+        _autoDiscoveryLastFailure = now;
+    }
+
+    auto json = UnnamedObject(
+        NamedUint32(F("last_success"), _autoDiscoveryLastSuccess),
+        NamedUint32(F("last_failure"), _autoDiscoveryLastFailure)
+    ).toString();
+    publish(_autoDiscoveryStatusTopic, true, json, QosType::AT_LEAST_ONCE);
+}
+
+#endif
+
 void MQTTClient::onMessageRaw(char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total)
 {
     __LDBG_printf("topic=%s payload=%s idx:len:total=%d:%d:%d qos=%d dup=%d retain=%d", topic, printable_string(payload, len, DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str(), index, len, total, properties.qos, properties.dup, properties.retain);
@@ -702,6 +736,26 @@ void MQTTClient::onMessage(char *topic, char *payload, AsyncMqttClientMessagePro
 {
     __LDBG_printf("topic=%s payload=%s len=%d qos=%d dup=%d retain=%d", topic, printable_string(payload, len, DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str(), len, properties.qos, properties.dup, properties.retain);
     _messageProperties = &properties;
+    if ((_autoDiscoveryLastFailure == ~0U || _autoDiscoveryLastSuccess == ~0U) && _autoDiscoveryStatusTopic == topic) {
+        _resetAutoDiscoveryInitialState();
+        char *ptr;
+        ptr = strstr_P(payload, PSTR("failure\":"));
+        if (ptr) {
+            ptr += 9;
+            uint32_t time = atol(ptr);
+            if (time) {
+                _autoDiscoveryLastFailure = time;
+            }
+        }
+        ptr = strstr_P(payload, PSTR("success\":"));
+        if (ptr) {
+            ptr += 9;
+            uint32_t time = atol(ptr);
+            if (time) {
+                _autoDiscoveryLastSuccess = time;
+            }
+        }
+    }
     for(const auto &mqttTopic : _topics) {
         if (_isTopicMatch(topic, mqttTopic.getTopic().c_str())) {
             mqttTopic.getComponent()->onMessage(topic, payload, len);

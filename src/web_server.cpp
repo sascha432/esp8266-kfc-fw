@@ -111,55 +111,55 @@ HttpCookieHeader *createRemoveSessionIdCookie()
 
 const __FlashStringHelper *getContentType(const String &path)
 {
-    if (String_endsWith(path, SPGM(_html)) || String_endsWith(path, PSTR(".htm"))) {
+    if (path.endsWith(FSPGM(_html)) || path.endsWith(F(".htm"))) {
         return FSPGM(mime_text_html, "text/html");
     }
-    else if (String_endsWith(path, PSTR(".css"))) {
+    else if (path.endsWith(F(".css"))) {
         return FSPGM(mime_text_css, "text/css");
     }
-    else if (String_endsWith(path, PSTR(".json"))) {
+    else if (path.endsWith(F(".json"))) {
         return FSPGM(mime_application_json, "application/json");
     }
-    else if (String_endsWith(path, PSTR(".js"))) {
+    else if (path.endsWith(F(".js"))) {
         return FSPGM(mime_application_javascript, "application/javascript");
     }
-    else if (String_endsWith(path, PSTR(".png"))) {
+    else if (path.endsWith(F(".png"))) {
         return FSPGM(mime_image_png, "image/png");
     }
-    else if (String_endsWith(path, PSTR(".gif"))) {
+    else if (path.endsWith(F(".gif"))) {
         return FSPGM(mime_image_gif, "image/gif");
     }
-    else if (String_endsWith(path, PSTR(".jpg"))) {
+    else if (path.endsWith(F(".jpg"))) {
         return FSPGM(mime_image_jpeg, "image/jpeg");
     }
-    else if (String_endsWith(path, PSTR(".ico"))) {
+    else if (path.endsWith(F(".ico"))) {
         return FSPGM(mime_image_icon, "image/x-icon");
     }
-    else if (String_endsWith(path, PSTR(".svg"))) {
+    else if (path.endsWith(F(".svg"))) {
         return FSPGM(mime_image_svg_xml, "image/svg+xml");
     }
-    else if (String_endsWith(path, PSTR(".eot"))) {
+    else if (path.endsWith(F(".eot"))) {
         return FSPGM(mime_font_eot, "font/eot");
     }
-    else if (String_endsWith(path, PSTR(".woff"))) {
+    else if (path.endsWith(F(".woff"))) {
         return FSPGM(mime_font_woff, "font/woff");
     }
-    else if (String_endsWith(path, PSTR(".woff2"))) {
+    else if (path.endsWith(F(".woff2"))) {
         return FSPGM(mime_font_woff2, "font/woff2");
     }
-    else if (String_endsWith(path, PSTR(".ttf"))) {
+    else if (path.endsWith(F(".ttf"))) {
         return FSPGM(mime_font_ttf, "font/ttf");
     }
-    else if (String_endsWith(path, SPGM(_xml, ".xml"))) {
+    else if (path.endsWith(FSPGM(_xml, ".xml"))) {
         return FSPGM(mime_text_xml, "text/xml");
     }
-    else if (String_endsWith(path, PSTR(".pdf"))) {
+    else if (path.endsWith(F(".pdf"))) {
         return FSPGM(mime_application_pdf, "application/pdf");
     }
-    else if (String_endsWith(path, PSTR(".zip"))) {
+    else if (path.endsWith(F(".zip"))) {
         return FSPGM(mime_application_zip, "application/zip");
     }
-    else if (String_endsWith(path, PSTR(".gz"))) {
+    else if (path.endsWith(F(".gz"))) {
         return FSPGM(mime_application_x_gzip, "application/x-gzip");
     }
     else {
@@ -775,7 +775,7 @@ bool WebServerPlugin::_sendFile(const FileMapping &mapping, const String &formNa
     }
 
     auto &path = mapping.getFilenameString();
-    bool isHtml = String_endsWith(path, SPGM(_html));
+    bool isHtml = path.endsWith(FSPGM(_html));
     if (isAuthenticated && webTemplate == nullptr) {
         if (path.charAt(0) == '/' && formName.length()) {
             __LDBG_printf("template=%s", formName.c_str());
@@ -795,7 +795,7 @@ bool WebServerPlugin::_sendFile(const FileMapping &mapping, const String &formNa
             }
         }
     }
-    if ((isHtml || String_endsWith(path, SPGM(_xml))) && webTemplate == nullptr) {
+    if ((isHtml || path.endsWith(FSPGM(_xml))) && webTemplate == nullptr) {
         webTemplate = __LDBG_new(WebTemplate); // default for all .html files
     }
 
@@ -856,7 +856,7 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
     auto mapping = FileMapping(path.c_str());
     if (path.charAt(0) == '/') {
         int pos;
-        if (!mapping.exists() && (pos = path.indexOf('/', 3)) != -1 && String_endsWith(path, SPGM(_html))) {
+        if (!mapping.exists() && (pos = path.indexOf('/', 3)) != -1 && path.endsWith(FSPGM(_html))) {
             formName = path.substring(pos + 1, path.length() - 5);
             String path2 = path.substring(0, pos) + FSPGM(_html);
             mapping = FileMapping(path2.c_str());
@@ -934,7 +934,7 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
             }
         }
         else {
-            if (String_endsWith(path, SPGM(_html))) {
+            if (path.endsWith(FSPGM(_html))) {
                 httpHeaders.add(createRemoveSessionIdCookie());
                 return _sendFile(FSPGM(_login_html), String(), httpHeaders, client_accepts_gzip, isAuthenticated, request, __LDBG_new(LoginTemplate, loginError));
             }
@@ -951,7 +951,7 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
 
         httpHeaders.addNoCache(true);
 
-        if (path.charAt(0) == '/' && String_endsWith(path, SPGM(_html))) {
+        if (path.charAt(0) == '/' && path.endsWith(FSPGM(_html))) {
             // auto name = path.substring(1, path.length() - 5);
 
             __LDBG_printf("get_form=%s", formName.c_str());

@@ -2022,7 +2022,7 @@ void at_mode_serial_handle_event(String &commandString)
 // #if IOT_REMOTE_CONTROL
 //                 RemoteControlPlugin::PinState state;
 //                 RTCMemoryManager::read(RTCMemoryManager::RTCMemoryId::REMOTE_INIT_PIN_STATE, &state, sizeof(state));
-//                 args.printf_P(PSTR("Remote pin state time=%u valid=%u keys=%s"), state._time, state.isValid(), BitsToStr<RemoteControl::_buttonPins.size(), true>(state._pressed).c_str());
+//                 args.printf_P(PSTR("Remote pin state time=%u valid=%u keys=%s"), state._time, state.isValid(), BitsToStr<RemoteControl::kButtonPins.size(), true>(state._pressed).c_str());
 
 // #endif
             }

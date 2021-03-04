@@ -62,7 +62,7 @@ void Module::_endMqtt()
 }
 
 #if !IOT_DIMMER_MODULE_INTERFACE_UART
-void Driver_DimmerModule::onConnect(MQTTClient *client)
+void Driver_DimmerModule::onConnect()
 {
     _fetchMetrics();
 }

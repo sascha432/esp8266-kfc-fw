@@ -33,8 +33,6 @@ Base::Base() :
 
 void Base::_begin()
 {
-    // MQTTClient::safeRegisterComponent(this);
-
 #if IOT_DIMMER_MODULE_INTERFACE_UART
     _client = &serialHandler.addClient(onData, SerialHandler::EventType::READ);
     #if AT_MODE_SUPPORTED
@@ -65,8 +63,6 @@ void Base::_begin()
 
 void Base::_end()
 {
-    // MQTTClient::safeUnregisterComponent(this);
-
     _config.version = {};
 
 #if IOT_DIMMER_MODULE_INTERFACE_UART

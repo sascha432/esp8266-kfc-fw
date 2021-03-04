@@ -23,7 +23,7 @@ namespace Dimmer {
         Module();
 
     #if !IOT_DIMMER_MODULE_INTERFACE_UART
-        virtual void onConnect(MQTT::Client *client) override;
+        virtual void onConnect() override;
     #endif
 
         virtual bool on(uint8_t channel = -1, float transition = NAN) override;

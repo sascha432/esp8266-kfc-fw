@@ -8,10 +8,14 @@
 #include <PrintString.h>
 #include <PrintHtmlEntitiesString.h>
 #include <WebUIComponent.h>
+#include "../mqtt/mqtt_json.h"
 #include "../mqtt/mqtt_client.h"
+#include "../mqtt/mqtt_json.h"
 #include "serial_handler.h"
 #include "../dimmer_module/dimmer_base.h"
 #include "../dimmer_module/dimmer_module_form.h"
+
+#if IOT_ATOMIC_SUN
 
 #ifndef DEBUG_4CH_DIMMER
 #define DEBUG_4CH_DIMMER                    0
@@ -31,6 +35,8 @@
 #define IOT_ATOMIC_SUN_CHANNEL_WW2          1
 #define IOT_ATOMIC_SUN_CHANNEL_CW1          2
 #define IOT_ATOMIC_SUN_CHANNEL_CW2          3
+#endif
+
 #endif
 
 #ifndef STK500V1_RESET_PIN
@@ -105,16 +111,26 @@ typedef struct {
 class Driver_4ChDimmer : public MQTTComponent, public Dimmer_Base, public DimmerModuleForm
 {
 public:
-    Driver_4ChDimmer();
+    using ConfigType = Plugins::DimmerConfig::DimmerConfig_t;
 
-    virtual void readConfig() override;
+    enum class TopicType : uint8_t {
+        MAIN_SET,
+        MAIN_STATE,
+        LOCK_SET,
+        LOCK_STATE,
+        CHANNEL_SET,
+        CHANNEL_STATE,
+    };
+
+public:
+    Driver_4ChDimmer();
 
 // MQTT
 public:
-    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTT::FormatType format, uint8_t num) override;
+    virtual AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;
-    virtual void onConnect(MQTTClient *client) override;
-    virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len) override;
+    virtual void onConnect() override;
+    virtual void onMessage(const char *topic, const char *payload, size_t len) final;
 
 // WebUI
 public:
@@ -128,13 +144,11 @@ public:
     virtual int16_t getChannel(uint8_t channel) const override;
     virtual bool getChannelState(uint8_t channel) const override;
     virtual void setChannel(uint8_t channel, int16_t level, float time) override;
-    virtual uint8_t getChannelCount() const override {
-        return _channels.size();
-    }
-
-   void publishState(MQTTClient *client = nullptr);
+    virtual uint8_t getChannelCount() const override;
 
     virtual void _onReceive(size_t length) override;
+
+   void publishState(MQTTClient *client = nullptr);
 
 protected:
     void _begin();
@@ -142,7 +156,8 @@ protected:
     void _printStatus(Print &out);
 
 private:
-    void _createTopics();
+    void onJsonMessage(MQTTClient *client, MQTT::Json::Reader json, uint8_t index);
+    String _createTopics(TopicType type, uint8_t channel = -1);
     void _publishState(MQTTClient *client);
 
     void _setChannels(float fadetime);
@@ -160,6 +175,7 @@ protected:
     ChannelsArray _storedChannels;
     ChannelsArray _channels;
     float _ratio[2];
+    std::array<uint16_t, 6> _topics;
 
 public:
     // channels are displayed in this order in the web ui
@@ -189,8 +205,18 @@ public:
     virtual void reconfigure(const String &source) override;
     virtual void shutdown() override;
     virtual void getStatus(Print &output) override;
-    virtual void createConfigureForm(PluginComponent::FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request) override;
 
+    virtual void readConfig(DimmerModuleForm::ConfigType &cfg) {
+        _readConfig(cfg);
+    }
+
+    virtual void writeConfig(DimmerModuleForm::ConfigType &cfg) {
+        _writeConfig(cfg);
+    }
+
+    virtual void createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request) override {
+        DimmerModuleForm::_createConfigureForm(type, formName, form);
+    }
 // WebUI
 public:
     virtual void createWebUI(WebUIRoot &webUI) override;

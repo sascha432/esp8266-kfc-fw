@@ -50,7 +50,7 @@ void Driver_4ChDimmer::_begin()
     Dimmer_Base::_begin();
     _channels = ChannelsArray();
     _storedChannels = ChannelsArray();
-    MQTTClient::safeRegisterComponent(this);
+    MQTT::Client::registerComponent(this);
     _data.state.value = false;
     _data.brightness.value = 0;
     _data.color.value = 0;
@@ -61,7 +61,7 @@ void Driver_4ChDimmer::_begin()
 
 void Driver_4ChDimmer::_end()
 {
-    MQTTClient::safeUnregisterComponent(this);
+    MQTT::Client::unregisterComponent(this);
     Dimmer_Base::_end();
 }
 
@@ -82,39 +82,28 @@ void AtomicSunPlugin::getStatus(Print &output)
     }
 }
 
-void AtomicSunPlugin::createConfigureForm(PluginComponent::FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
+MQTT::AutoDiscovery::EntityPtr Driver_4ChDimmer::getAutoDiscovery(FormatType format, uint8_t num)
 {
-    if (isCreateFormCallbackType(type)) {
-        readConfig();
-        DimmerModuleForm::_createConfigureForm(type, formName, form, request);
-    }
-}
-
-
-MQTTComponent::MQTTAutoDiscoveryPtr Driver_4ChDimmer::nextAutoDiscovery(MQTT::FormatType format, uint8_t num)
-{
-    if (num >= getAutoDiscoveryCount()) {
-        return nullptr;
-    }
-    auto discovery = __LDBG_new(MQTTAutoDiscovery);
+    auto discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
     switch(num) {
         case 0:
-            _createTopics();
-            discovery->create(this, FSPGM(main), format);
-            discovery->addStateTopic(_data.state.state);
-            discovery->addCommandTopic(_data.state.set);
-            discovery->addPayloadOnOff();
-            discovery->addBrightnessStateTopic(_data.brightness.state);
-            discovery->addBrightnessCommandTopic(_data.brightness.set);
+            discovery->createJsonShema(this, FSPGM(main), format);
+            discovery->addStateTopic(_createTopics(TopicType::MAIN_STATE));
+            discovery->addCommandTopic(_createTopics(TopicType::MAIN_SET));
             discovery->addBrightnessScale(MAX_LEVEL_ALL_CHANNELS);
-            discovery->addColorTempStateTopic(_data.color.state);
-            discovery->addColorTempCommandTopic(_data.color.set);
+            discovery->addParameter(F("brightness"), true);
+            discovery->addParameter(F("white"), true);
+            // discovery->addPayloadOnOff();
+            // discovery->addBrightnessStateTopic(_data.brightness.state);
+            // discovery->addBrightnessCommandTopic(_data.brightness.set);
+            // discovery->addBrightnessScale(MAX_LEVEL_ALL_CHANNELS);
+            // discovery->addColorTempStateTopic(_data.color.state);
+            // discovery->addColorTempCommandTopic(_data.color.set);
             break;
         case 1:
             discovery->create(this, FSPGM(lock_channels, "lock_channels"), format);
-            discovery->addStateTopic(_data.lockChannels.state);
-            discovery->addCommandTopic(_data.lockChannels.set);
-            discovery->addPayloadOnOff();
+            discovery->addStateTopic(_createTopics(TopicType::LOCK_STATE));
+            discovery->addCommandTopic(_createTopics(TopicType::LOCK_SET));
             break;
         case 2:
         case 3:
@@ -122,16 +111,17 @@ MQTTComponent::MQTTAutoDiscoveryPtr Driver_4ChDimmer::nextAutoDiscovery(MQTT::Fo
         case 5: {
             uint8_t i = num - 2;
             discovery->create(this, PrintString(FSPGM(channel__u, "channel_%u"), i), format);
-            discovery->addStateTopic(_data.channels[i].state);
-            discovery->addCommandTopic(_data.channels[i].set);
-            discovery->addPayloadOnOff();
-            discovery->addBrightnessStateTopic(_data.channels[i].brightnessState);
-            discovery->addBrightnessCommandTopic(_data.channels[i].brightnessSet);
+            discovery->addSchemaJson();
+            discovery->addStateTopic(_createTopics(TopicType::CHANNEL_STATE, i));
+            discovery->addCommandTopic(_createTopics(TopicType::CHANNEL_SET, i));
             discovery->addBrightnessScale(MAX_LEVEL);
+            discovery->addParameter(F("brightness"), true);
+            // discovery->addPayloadOnOff();
+            // discovery->addBrightnessStateTopic();
+            // discovery->addBrightnessCommandTopic();
         }
         break;
     }
-    discovery->finalize();
     return discovery;
 }
 
@@ -140,155 +130,182 @@ uint8_t Driver_4ChDimmer::getAutoDiscoveryCount() const
     return 6;
 }
 
-void Driver_4ChDimmer::_createTopics()
+String Driver_4ChDimmer::_createTopics(TopicType type, uint8_t channel)
 {
-    if (_data.channels[0].set.length() == 0) {
-        String main = FSPGM(main);
-        String lockChannels = FSPGM(lock_channels);
-
-        // _data.state.set = MQTTClient::formatTopic(main, FSPGM(_set));
-        _data.state.state = MQTTClient::formatTopic(main, FSPGM(_state));
-        // _data.brightness.set = MQTTClient::formatTopic(main, FSPGM(_brightness_set, "/brightness/set"));
-        _data.brightness.state = MQTTClient::formatTopic(main, FSPGM(_brightness_state, "/brightness/state"));
-        // _data.color.set = MQTTClient::formatTopic(main, FSPGM(_color_set, "/color/set"));
-        _data.color.state = MQTTClient::formatTopic(main, FSPGM(_color_state, "/color/state"));
-        // _data.lockChannels.set = MQTTClient::formatTopic(lockChannels, F("/lock/set"));
-        _data.lockChannels.state = MQTTClient::formatTopic(lockChannels, F("/lock/state"));
-
-        for(uint8_t i = 0; i < _channels.size(); i++) {
-            auto channel = PrintString(FSPGM(channel__u), i);
-            _data.channels[i].set = MQTTClient::formatTopic(channel, FSPGM(_set));
-            _data.channels[i].state = MQTTClient::formatTopic(channel, FSPGM(_state));
-            _data.channels[i].brightnessSet = MQTTClient::formatTopic(channel, FSPGM(_brightness_set));
-            _data.channels[i].brightnessState = MQTTClient::formatTopic(channel, FSPGM(_brightness_state));
-        }
+    String str;
+    uint8_t index = 0xff;
+    switch(type) {
+        case TopicType::MAIN_SET:
+            str = MQTTClient::formatTopic(String(FSPGM(main)), FSPGM(_set));
+            index = 4;
+            break;
+        case TopicType::MAIN_STATE:
+            str = MQTTClient::formatTopic(String(FSPGM(main)), FSPGM(_state));
+            break;
+        case TopicType::CHANNEL_SET:
+            str = MQTTClient::formatTopic(PrintString(FSPGM(channel__u), channel), FSPGM(_set));
+            index = 5;
+            break;
+        case TopicType::CHANNEL_STATE:
+            str = MQTTClient::formatTopic(PrintString(FSPGM(channel__u), channel), FSPGM(_state));
+            break;
+        case TopicType::LOCK_SET:
+            str = MQTTClient::formatTopic(String(FSPGM(lock_channels)), F("/lock/set"));
+            index = channel;
+            break;
+        case TopicType::LOCK_STATE:
+            str = MQTTClient::formatTopic(String(FSPGM(lock_channels)), F("/lock/state"));
+            break;
+        default:
+            break;
     }
+    if (index != 0xff) {
+        _topics[index] = crc16_update(str.c_str(), str.length());
+    }
+    return str;
 }
 
 void Driver_4ChDimmer::onConnect(MQTTClient *client)
 {
-    _createTopics();
-
-    String main = FSPGM(main);
-    client->subscribeWithGroup(this, MQTTClient::formatTopic(main, FSPGM(_set)));
-    client->subscribeWithGroup(this, MQTTClient::formatTopic(main, FSPGM(_brightness_set, "/brightness/set")));
-    client->subscribeWithGroup(this, MQTTClient::formatTopic(main, FSPGM(_color_set, "/color/set")));
-    // client->subscribeWithGroup(this, _data.state.set);
-    // client->subscribeWithGroup(this, _data.brightness.set);
-    // client->subscribeWithGroup(this, _data.color.set);
-    client->subscribe(this, _data.lockChannels.set);
+    client->subscribe(this, _createTopics(TopicType::MAIN_SET));
+    client->subscribe(this, _createTopics(TopicType::LOCK_SET));
     for(uint8_t i = 0; i < _channels.size(); i++) {
-        client->subscribe(this, _data.channels[i].set);
-        client->subscribe(this, _data.channels[i].brightnessSet);
+        client->subscribe(this, _createTopics(TopicType::CHANNEL_SET, i));
     }
-
     publishState(client);
 }
 
 void Driver_4ChDimmer::onMessage(MQTTClient *client, char *topic, char *payload, size_t len)
 {
-    int value = atoi(payload);
-    __LDBG_printf("topic=%s value=%d", topic, value);
-
-    // check channels first
-    for(uint8_t i = 0; i < _channels.size(); i++) {
-        auto &channel =_data.channels[i];
-
-        if (channel.brightnessSet.equals(topic)) {
-
-            float fadetime = (_channels[i] && value > 0) ? getFadeTime() : getOnOffFadeTime();
-            _channels[i] = value;
-            _channelsToBrightness();
-            _setChannels(fadetime);
-            publishState(client);
-            return;
-
-        }
-        else if (channel.set.equals(topic)) {
-
-            if (value && _channels[i]) {
-                // already on
-            }
-            else if (value == 0 && _channels[i] == 0) {
-                // already off
-            }
-            else {
-                float fadetime = getOnOffFadeTime();
-                if (value) {
-                    value = _storedChannels[i]; // restore last state
-                    if (value <= MIN_LEVEL) {
-                        value = DEFAULT_LEVEL;
-                    }
-                }
-                else {
-                    // value = 0;
-                }
-
-                _channels[i] = value;
-                _channelsToBrightness();
-                _setChannels(fadetime);
-                publishState(client);
-            }
-            return;
-        }
+    auto crc = crc16_update(topic, strlen(topic));
+    auto iterator = std::find(_topics.begin(), _topics.end(), crc);
+    if (iterator == _topics.end()) {
+        return;
     }
+    auto stream = HeapStream(payload, len);
+    auto reader = MQTT::Json::Reader(&stream);
+    if (reader.parse()) {
+        onJsonMessage(client, reader, index);
+    }
+}
 
-    if (strcmp_end_P(topic, strlen(topic), SPGM(_set)) == 0) {
-    // if (_data.state.set.equals(topic)) {
-
-        // on/off only changes brightness if the state is different
-        bool result;
-        if (value) {
-            result = on();
-        }
-        else {
-            result = off();
-        }
-        if (!result) { // publish state of device state has not been changed
-            publishState(client);
-        }
+void Driver_4ChDimmer::onJsonMessage(MQTTClient *client, const MQTT::Json::Reader &json, uint8_t index)
+{
+    if (index < _channels.size()) {
 
     }
-    else if (strcmp_end_P(topic, strlen(topic), SPGM(_brightness_set)) == 0) {
-    //else if (_data.brightness.set.equals(topic)) {
-
-        float fadetime;
-
-        // if brightness changes, also turn dimmer on or off
-        if (value > 0) {
-            fadetime = _data.state.value ? getFadeTime() : getOnOffFadeTime();
-            _data.state.value = true;
-            _data.brightness.value = std::min(value, MAX_LEVEL_ALL_CHANNELS);
-        } else {
-            fadetime = _data.state.value ? getOnOffFadeTime() : getFadeTime();
-            _data.state.value = false;
-            _data.brightness.value = 0;
-        }
-        _brightnessToChannels();
-        _setChannels(fadetime);
-        publishState(client);
+    else if (index == 4) { // MAIN_SET
 
     }
-    else if (strcmp_end_P(topic, strlen(topic), SPGM(_color_set)) == 0) {
-    // else if (_data.color.set.equals(topic)) {
+    else if (index == 5) { // LOCK_SET
 
-        _data.color.value = value * 100.0;
-        if (_data.state.value) {
-            _brightnessToChannels();
-            _setChannels(getFadeTime());
-        }
-        publishState(client);
+
 
     }
-    else if (strcmp_end_P(topic, strlen(topic), PSTR("/lock/set")) == 0) {
-    // else if (_data.lockChannels.set.equals(topic)) {
+    // // Dimmer_Base::onMessage(client, json);
 
-        _setLockChannels(value);
-        _brightnessToChannels();
-        _setChannels(getFadeTime());
-        publishState(client);
+    // int value = atoi(payload);
+    // __LDBG_printf("topic=%s value=%d", topic, value);
 
-    }
+    // // check channels first
+    // for(uint8_t i = 0; i < _channels.size(); i++) {
+    //     auto &channel =_data.channels[i];
+
+    //     if (channel.brightnessSet.equals(topic)) {
+
+    //         float fadetime = (_channels[i] && value > 0) ? getFadeTime() : getOnOffFadeTime();
+    //         _channels[i] = value;
+    //         _channelsToBrightness();
+    //         _setChannels(fadetime);
+    //         publishState(client);
+    //         return;
+
+    //     }
+    //     else if (channel.set.equals(topic)) {
+
+    //         if (value && _channels[i]) {
+    //             // already on
+    //         }
+    //         else if (value == 0 && _channels[i] == 0) {
+    //             // already off
+    //         }
+    //         else {
+    //             float fadetime = getOnOffFadeTime();
+    //             if (value) {
+    //                 value = _storedChannels[i]; // restore last state
+    //                 if (value <= MIN_LEVEL) {
+    //                     value = DEFAULT_LEVEL;
+    //                 }
+    //             }
+    //             else {
+    //                 // value = 0;
+    //             }
+
+    //             _channels[i] = value;
+    //             _channelsToBrightness();
+    //             _setChannels(fadetime);
+    //             publishState(client);
+    //         }
+    //         return;
+    //     }
+    // }
+
+    // if (strcmp_end_P(topic, strlen(topic), SPGM(_set)) == 0) {
+    // // if (_data.state.set.equals(topic)) {
+
+    //     // on/off only changes brightness if the state is different
+    //     bool result;
+    //     if (value) {
+    //         result = on();
+    //     }
+    //     else {
+    //         result = off();
+    //     }
+    //     if (!result) { // publish state of device state has not been changed
+    //         publishState(client);
+    //     }
+
+    // }
+    // else if (strcmp_end_P(topic, strlen(topic), SPGM(_brightness_set)) == 0) {
+    // //else if (_data.brightness.set.equals(topic)) {
+
+    //     float fadetime;
+
+    //     // if brightness changes, also turn dimmer on or off
+    //     if (value > 0) {
+    //         fadetime = _data.state.value ? getFadeTime() : getOnOffFadeTime();
+    //         _data.state.value = true;
+    //         _data.brightness.value = std::min(value, MAX_LEVEL_ALL_CHANNELS);
+    //     } else {
+    //         fadetime = _data.state.value ? getOnOffFadeTime() : getFadeTime();
+    //         _data.state.value = false;
+    //         _data.brightness.value = 0;
+    //     }
+    //     _brightnessToChannels();
+    //     _setChannels(fadetime);
+    //     publishState(client);
+
+    // }
+    // else if (strcmp_end_P(topic, strlen(topic), SPGM(_color_set)) == 0) {
+    // // else if (_data.color.set.equals(topic)) {
+
+    //     _data.color.value = value * 100.0;
+    //     if (_data.state.value) {
+    //         _brightnessToChannels();
+    //         _setChannels(getFadeTime());
+    //     }
+    //     publishState(client);
+
+    // }
+    // else if (strcmp_end_P(topic, strlen(topic), PSTR("/lock/set")) == 0) {
+    // // else if (_data.lockChannels.set.equals(topic)) {
+
+    //     _setLockChannels(value);
+    //     _brightnessToChannels();
+    //     _setChannels(getFadeTime());
+    //     publishState(client);
+
+    // }
 }
 
 void Driver_4ChDimmer::_setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
@@ -379,37 +396,42 @@ void Driver_4ChDimmer::publishState(MQTTClient *client)
         client->publish(_data.lockChannels.state, true, String(_data.lockChannels.value));
     }
 
-    JsonUnnamedObject json(2);
-    json.add(JJ(type), JJ(ue));
-    auto &events = json.addArray(JJ(events));
-    JsonUnnamedObject *obj;
+    if (WebUISocket::hasAuthenticatedClients()) {
+        JsonUnnamedObject json(2);
+        json.add(JJ(type), JJ(ue));
+        auto &events = json.addArray(JJ(events));
+        JsonUnnamedObject *obj;
 
-    obj = &events.addObject(3);
-    obj->add(JJ(id), F("dimmer_brightness"));
-    obj->add(JJ(value), _data.brightness.value);
-    obj->add(JJ(state), _data.state.value);
+        obj = &events.addObject(3);
+        obj->add(JJ(id), F("dimmer_brightness"));
+        obj->add(JJ(value), _data.brightness.value);
+        obj->add(JJ(state), _data.state.value);
 
-    obj = &events.addObject(2);
-    obj->add(JJ(id), F("dimmer_color"));
-    obj->add(JJ(value), _data.color.value);
-
-    obj = &events.addObject(2);
-    obj->add(JJ(id), F("dimmer_lock"));
-    obj->add(JJ(value), (int)_data.lockChannels.value);
-
-    for(uint8_t i = 0; i < MAX_CHANNELS; i++) {
         obj = &events.addObject(2);
-        obj->add(JJ(id), PrintString(F("dimmer_channel%u"), i));
-        obj->add(JJ(value), _channels[i]);
-        // obj->add(JJ(state), _channels[i] > 0);
+        obj->add(JJ(id), F("dimmer_color"));
+        obj->add(JJ(value), _data.color.value);
+
+        obj = &events.addObject(2);
+        obj->add(JJ(id), F("dimmer_lock"));
+        obj->add(JJ(value), (int)_data.lockChannels.value);
+
+        for(uint8_t i = 0; i < MAX_CHANNELS; i++) {
+            obj = &events.addObject(2);
+            obj->add(JJ(id), PrintString(F("dimmer_channel%u"), i));
+            obj->add(JJ(value), _channels[i]);
+            // obj->add(JJ(state), _channels[i] > 0);
+        }
+
+        WebUISocket::broadcast(WebUISocket::getSender(), json);
+
+        // auto buffer = std::shared_ptr<StreamString>(new StreamString());
+        // json.printTo(*buffer);
+
+        // LoopFunctions::callOnce([this, buffer]() {
+        //     WsClient::broadcast(WebUISocket::getServerSocket(), WebUISocket::getSender(), buffer->c_str(), buffer->length());
+        // });
+
     }
-
-    auto buffer = std::shared_ptr<StreamString>(new StreamString());
-    json.printTo(*buffer);
-
-    LoopFunctions::callOnce([this, buffer]() {
-        WsClient::broadcast(WsWebUISocket::getServerSocket(), WsWebUISocket::getSender(), buffer->c_str(), buffer->length());
-    });
 }
 
 void Driver_4ChDimmer::_printStatus(Print &out)
@@ -585,6 +607,11 @@ void Driver_4ChDimmer::setChannel(uint8_t channel, int16_t level, float time)
     _setChannels(time);
 }
 
+uint8_t Driver_4ChDimmer::getChannelCount() const
+{
+    return _channels.size();
+}
+
 void Driver_4ChDimmer::_setChannels(float fadetime)
 {
     if (fadetime == -1) {
@@ -628,7 +655,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     "Atomic Sun v2",    // friendly name
     "",                 // web_templates
     "dimmer-cfg",       // config_forms
-    "mqtt,http",        // reconfigure_dependencies
+    "http",        // reconfigure_dependencies
     PluginComponent::PriorityType::ATOMIC_SUN,
     PluginComponent::RTCMemoryId::NONE,
     static_cast<uint8_t>(PluginComponent::MenuType::CUSTOM),
@@ -663,9 +690,6 @@ void AtomicSunPlugin::reconfigure(const String &source)
     if (String_equals(source, SPGM(http))) {
         setupWebServer();
     }
-    else if (String_equals(source, SPGM(mqtt))) {
-        MQTTClient::safeReRegisterComponent(this);
-    }
     else {
         writeConfig();
     }
@@ -692,7 +716,7 @@ void AtomicSunPlugin::createWebUI(WebUIRoot &webUI)
     if (sensor) {
         sensor->_createWebUI(webUI, &row);
     }
-    row->addSwitch(F("dimmer_lock"), F("Lock Channels"), false, true);
+    row->addSwitch(F("dimmer_lock"), F("Lock Channels"), false, WebUIRow::NamePositionType::TOP);
 
     row->addGroup(F("Channels"), false);
 

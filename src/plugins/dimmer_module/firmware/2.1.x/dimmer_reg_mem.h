@@ -74,6 +74,14 @@ typedef struct __attribute__packed__ {
     float frequency;
     float ntc_temp;
     float int_temp;
+    bool has_vcc() const;
+    bool has_int_temp() const;
+    bool has_ntc_temp() const;
+    bool has_frequency() const;
+    float get_vcc() const;
+    float get_int_temp() const;
+    float get_ntc_temp() const;
+    float get_freqency() const;
 } register_mem_metrics_t;
 
 struct __attribute_packed__ dimmer_metrics_t
@@ -148,3 +156,47 @@ struct __attribute_packed__ dimmer_over_temperature_event_t
     uint8_t max_temp;
 };
 
+inline bool register_mem_metrics_t::has_vcc() const {
+    return Dimmer::isValidVoltage(vcc);
+}
+
+inline bool register_mem_metrics_t::has_int_temp() const {
+    return Dimmer::isValidTemperature(int_temp);
+}
+
+inline bool register_mem_metrics_t::has_ntc_temp() const {
+    return Dimmer::isValidTemperature(ntc_temp);
+}
+
+inline bool register_mem_metrics_t::has_frequency() const {
+    return Dimmer::isValidFrequency(frequency);
+}
+
+inline float register_mem_metrics_t::get_vcc() const {
+    if (has_vcc()) {
+        return vcc / 1000.0;
+    }
+    return NAN;
+}
+
+inline float register_mem_metrics_t::get_int_temp() const {
+    if (has_int_temp()) {
+        return int_temp;
+    }
+    return NAN;
+}
+
+inline float register_mem_metrics_t::get_ntc_temp() const {
+    if (has_ntc_temp()) {
+        return ntc_temp;
+    }
+    return NAN;
+}
+
+inline float register_mem_metrics_t::get_freqency() const {
+    if (has_frequency()) {
+        return frequency;
+    }
+    return NAN;
+
+}

@@ -7,6 +7,7 @@
 #include <WebUISocket.h>
 #include <stl_ext/algorithm.h>
 #include <stl_ext/utility.h>
+#include <ArduinoJson.h>
 
 #if DEBUG_IOT_DIMMER_MODULE
 #include <debug_helper_enable.h>
@@ -30,19 +31,17 @@ Channel::Channel(Module *dimmer, uint8_t channel) :
 {
 }
 
-
-
-MQTT::AutoDiscovery::EntityPtr Channel::getAutoDiscovery(MQTT::FormatType format, uint8_t num)
+MQTT::AutoDiscovery::EntityPtr Channel::getAutoDiscovery(FormatType format, uint8_t num)
 {
-    auto discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
+    auto discovery = __LDBG_new(AutoDiscovery::Entity);
     switch(num) {
         case 0:
-            discovery->create(this, PrintString(FSPGM(channel__u), _channel), format);
-            discovery->addSchemaJson();
-            discovery->addStateTopic(_createTopics(TopicType::COMMAND_STATE));
-            discovery->addCommandTopic(_createTopics(TopicType::COMMAND_SET));
-            discovery->addBrightnessScale(MAX_LEVEL);
-            discovery->addParameter(F("brightness"), true);
+            if (discovery->createJsonSchema(this, PrintString(FSPGM(channel__u), _channel), format)) {
+                discovery->addStateTopic(_createTopics(TopicType::COMMAND_STATE));
+                discovery->addCommandTopic(_createTopics(TopicType::COMMAND_SET));
+                discovery->addBrightnessScale(MAX_LEVEL);
+                discovery->addParameter(F("brightness"), true);
+            }
             break;
     }
     return discovery;
@@ -82,7 +81,7 @@ String Channel::_createTopics(TopicType type, bool full) const
 
 void Channel::onConnect()
 {
-    client().subscribe(this, _createTopics(TopicType::COMMAND_SET));
+    subscribe(_createTopics(TopicType::COMMAND_SET));
     _publishLastTime = 0;
     _publishTimer.remove();
     publishState();
@@ -267,21 +266,37 @@ int Channel::_offDelayPrecheck(int16_t level, ConfigType *config, int16_t storeL
 
 void Channel::_publishMQTT()
 {
-    using namespace MQTT::Json;
-
-    auto payload = Writer(State(_brightness != 0), Brightness(_brightness), Transition(_dimmer->_getConfig().lp_fadetime, Transition::TRIMMED(2))).toString();
-    MQTT::Client::safePublish(_createTopics(TopicType::COMMAND_STATE), true, payload);
+    if (isConnected()) {
+        using namespace MQTT::Json;
+        auto payload = std::move(StringWriter(State(_brightness != 0), Brightness(_brightness), Transition(_dimmer->_getConfig().lp_fadetime)).toString());
+        publish(_createTopics(TopicType::COMMAND_STATE), true, payload);
+    }
 }
 
 void Channel::_publishWebUI()
 {
     if (WebUISocket::hasAuthenticatedClients()) {
-    //     F("{\"type\":\"ue\",\"events\":[{\"id\":\"d_chan%u\",\"value\":%d,\"state\":true},{\"id\":\"group-switch-0\",\"value\":%u,\"state\":true}]}"),
 
-        auto json = PrintString(F("{\"type\":\"ue\",\"events\":[{\"id\":\"d_chan%u\",\"value\":%u,\"state\":true,\"group\":%u}]}"),
-            _channel, _brightness, _dimmer->isAnyOn()
-        );
-        WebUISocket::broadcast(WebUISocket::getSender(), json);
+        using namespace MQTT::Json;
+
+        // auto json = PrintString(F("{\"type\":\"ue\",\"events\":[{\"id\":\"d_chan%u\",\"value\":%u,\"state\":true,\"group\":%u}]}"),
+        //     _channel, _brightness, _dimmer->isAnyOn()
+        // );
+        WebUISocket::broadcast(WebUISocket::getSender(), std::move(StringWriter(
+            NamedString(F("type"), F("ue")),
+            NamedArray(F("events"),
+                UnnamedObject(
+                    NamedString(F("id"), PrintString(F("d_chan%u"), _channel)),
+                    NamedShort(F("value"), _brightness),
+                    NamedBool(F("state"), true)
+                ),
+                UnnamedObject(
+                    NamedString(F("id"), F("group-switch-0")),
+                    NamedShort(F("value"), _dimmer->isAnyOn()),
+                    NamedBool(F("state"), true)
+                )
+            )
+        ).toString()));
     }
 }
 
@@ -341,7 +356,7 @@ void Channel::publishState()
     // }
 
     // if (publishFlag & kMQTTUpdateFlag) {
-    //     MQTTClient::safePublish(_createTopics(TopicType::COMMAND_STATE), true, PrintString(F("{\"state\":\"%s\",\"brightness\":%u}"), MQTTClient::toBoolOnOff(_brightness), _brightness));
+    //     publish(_createTopics(TopicType::COMMAND_STATE), true, PrintString(F("{\"state\":\"%s\",\"brightness\":%u}"), MQTTClient::toBoolOnOff(_brightness), _brightness));
     //     _publishFlag &= ~kMQTTUpdateFlag;
     //     _mqttCounter = 0;
     // }

@@ -11,8 +11,7 @@
 
 namespace Dimmer {
 
-    class Channel : public MQTTComponent
-    {
+    class Channel : public MQTTComponent {
     public:
         static constexpr int16_t MAX_LEVEL = IOT_DIMMER_MODULE_MAX_BRIGHTNESS;
         static constexpr int16_t MIN_LEVEL = MAX_LEVEL / 100;
@@ -53,10 +52,10 @@ namespace Dimmer {
         }
     #endif
 
-        virtual MQTT::AutoDiscovery::EntityPtr getAutoDiscovery(MQTT::FormatType format, uint8_t num) override;
+        virtual AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num) override;
         virtual uint8_t getAutoDiscoveryCount() const override;
         virtual void onConnect() override;
-        virtual void onMessage(const char *topic, const char *payload, size_t len) final;
+        virtual void onMessage(const char *topic, const char *payload, size_t len) override final;
 
         bool on(float transition = NAN);
         bool off(ConfigType *config = nullptr, float transition = NAN, int32_t level = -1);

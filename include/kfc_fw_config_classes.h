@@ -983,6 +983,7 @@ namespace KFCConfigurationClasses {
                 CREATE_UINT32_BITFIELD_MIN_MAX(udp_port, 16, 0, 65535, 7881, 1);                    // port
                 CREATE_UINT32_BITFIELD_MIN_MAX(udp_enable, 1, 0, 1, 1, 1);                          // flag
                 CREATE_UINT32_BITFIELD_MIN_MAX(mqtt_enable, 1, 0, 1, 1, 1);                         // flag
+                CREATE_UINT32_BITFIELD_MIN_MAX(max_awake_time, 10, 5, 900, 30, 5);                  // minutes
 
                 Action_t actions[IOT_REMOTE_CONTROL_BUTTON_COUNT];
                 ComboAction_t combo[4];

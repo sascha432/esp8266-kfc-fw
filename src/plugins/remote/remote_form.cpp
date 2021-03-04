@@ -48,6 +48,10 @@ void RemoteControlPlugin::createConfigureForm(FormCallbackType type, const Strin
         form.addFormUI(F("Auto Sleep Time"), FormUI::Suffix(F("seconds")));
         cfg.addRangeValidatorFor_auto_sleep_time(form);
 
+        form.addObjectGetterSetter(F("mwt"), cfg, cfg.get_bits_max_awake_time, cfg.set_bits_max_awake_time);
+        form.addFormUI(F("Max. Time Awake On Batteries"), FormUI::Suffix(F("minutes")));
+        cfg.addRangeValidatorFor_max_awake_time(form);
+
         form.addObjectGetterSetter(F("dst"), cfg, cfg.get_bits_deep_sleep_time, cfg.set_bits_deep_sleep_time);
         form.addFormUI(F("Deep Sleep Time"), FormUI::Suffix(F("minutes (0 = indefinitely)")));
         cfg.addRangeValidatorFor_deep_sleep_time(form);
@@ -174,7 +178,7 @@ void RemoteControlPlugin::createConfigureForm(FormCallbackType type, const Strin
         ui.setContainerId(F("remotectrl_combos"));
 
         FormUI::Container::List buttons(0, F("None"));
-        for(uint8_t i = 1; i <= _buttonPins.size(); i++) {
+        for(uint8_t i = 1; i <= kButtonPins.size(); i++) {
             buttons.emplace_back(i, PrintString(F("Button %u"), i));
         }
 
@@ -249,7 +253,7 @@ void RemoteControlPlugin::createConfigureForm(FormCallbackType type, const Strin
             start++;
         }
         uint8_t i = atoi(start) - 1;
-        if (i >= _buttonPins.size()) {
+        if (i >= kButtonPins.size()) {
             i = 0;
         }
 

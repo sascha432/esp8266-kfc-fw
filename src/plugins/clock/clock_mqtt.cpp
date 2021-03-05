@@ -21,7 +21,7 @@
 
 MQTT::AutoDiscovery::EntityPtr ClockPlugin::getAutoDiscovery(FormatType format, uint8_t num)
 {
-    auto discovery = __LDBG_new(MQTTAutoDiscovery);
+    auto discovery = __LDBG_new(AutoDiscovery::Entity);
     switch(num) {
         case 0: {
             if (!discovery->create(this, MQTT_NAME, format)) {
@@ -82,19 +82,18 @@ uint8_t ClockPlugin::getAutoDiscoveryCount() const
         IF_IOT_CLOCK_DISPLAY_POWER_CONSUMPTION( + 1);
 }
 
-void ClockPlugin::onConnect(MQTTClient *client)
+void ClockPlugin::onConnect()
 {
-    __LDBG_printf("client=%p", client);
-    client->subscribe(this, MQTTClient::formatTopic(FSPGM(_set)));
-    client->subscribe(this, MQTTClient::formatTopic(FSPGM(_color_set)));
-    client->subscribe(this, MQTTClient::formatTopic(FSPGM(_brightness_set)));
-    client->subscribe(this, MQTTClient::formatTopic(FSPGM(_effect_set)));
-    _publishState(client);
+    subscribe(MQTTClient::formatTopic(FSPGM(_set)));
+    subscribe(MQTTClient::formatTopic(FSPGM(_color_set)));
+    subscribe(MQTTClient::formatTopic(FSPGM(_brightness_set)));
+    subscribe(MQTTClient::formatTopic(FSPGM(_effect_set)));
+    _publishState();
 }
 
-void ClockPlugin::onMessage(MQTTClient *client, char *topic, char *payload, size_t len)
+void ClockPlugin::onMessage(const char *topic, const  char *payload, size_t len)
 {
-    __LDBG_printf("client=%p topic=%s payload=%s", client, topic, payload);
+    __LDBG_printf("topic=%s payload=%s", topic, payload);
 
     _resetAlarm();
 
@@ -148,26 +147,23 @@ void ClockPlugin::onMessage(MQTTClient *client, char *topic, char *payload, size
     }
 }
 
-void ClockPlugin::_publishState(MQTTClient *client)
+void ClockPlugin::_publishState()
 {
-    if (!client) {
-        client = MQTTClient::getClient();
-    }
+    if (isConnected()) {
 #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
     // __LDBG_printf("client=%p color=%s brightness=%u auto=%d", client, getColor().implode(',').c_str(), _targetBrightness, _autoBrightness);
 #else
     // __LDBG_printf("client=%p animation=%u (%p) color=%s brightness=%u", client, _config.animation, _animation, getColor().implode(',').c_str(), _targetBrightness);
 #endif
-    if (client && client->isConnected()) {
-        client->publish(MQTTClient::formatTopic(FSPGM(_state)), true, String(_getEnabledState()));
-        client->publish(MQTTClient::formatTopic(FSPGM(_brightness_state)), true, String(_targetBrightness == 0 ? _savedBrightness : _targetBrightness));
-        client->publish(MQTTClient::formatTopic(FSPGM(_color_state)), true, getColor().implode(','));
-        client->publish(MQTTClient::formatTopic(FSPGM(_effect_state)), true, Clock::Config_t::getAnimationName(_config.getAnimation()));
+        publish(MQTTClient::formatTopic(FSPGM(_state)), true, String(_getEnabledState()));
+        publish(MQTTClient::formatTopic(FSPGM(_brightness_state)), true, String(_targetBrightness == 0 ? _savedBrightness : _targetBrightness));
+        publish(MQTTClient::formatTopic(FSPGM(_color_state)), true, getColor().implode(','));
+        publish(MQTTClient::formatTopic(FSPGM(_effect_state)), true, Clock::Config_t::getAnimationName(_config.getAnimation()));
         IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(
-            client->publish(MQTTClient::formatTopic(FSPGM(light_sensor)), true, String(_autoBrightnessValue * 100, 0));
+            publish(MQTTClient::formatTopic(FSPGM(light_sensor)), true, String(_autoBrightnessValue * 100, 0));
         )
         IF_IOT_CLOCK_DISPLAY_POWER_CONSUMPTION(
-            client->publish(MQTTClient::formatTopic(F("power")), true, String(_getPowerLevel(), 2));
+            publish(MQTTClient::formatTopic(F("power")), true, String(_getPowerLevel(), 2));
         )
     }
 

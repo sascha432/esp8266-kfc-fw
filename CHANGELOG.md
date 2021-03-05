@@ -59,6 +59,7 @@
 - Colored sub ranges for rangeslider.js
 - Class to send Serial output over UDP
 - Registered MQTT components are stored separately and do not require re-registering
+- Added min. and max. range limits to reduce the dimmable range (Dimmer Plugin)
 
 ## Version 0.0.3
 

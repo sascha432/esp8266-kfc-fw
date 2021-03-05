@@ -329,7 +329,7 @@ void ClockPlugin::_setupTimer()
             }
             else {
                 tempSensor = 0;
-                for(auto sensor: SensorPlugin.getSensors()) {
+                for(auto sensor: SensorPlugin::getInstance().getSensors()) {
                     if (sensor->getType() == MQTT::SensorType::LM75A) {
                         auto &lm75a = *reinterpret_cast<Sensor_LM75A *>(sensor);
                         tempSensor = max(tempSensor, lm75a.readSensor() - (lm75a.getAddress() == IOT_CLOCK_VOLTAGE_REGULATOR_LM75A_ADDRESS ? _config.protection.regulator_margin : 0));

@@ -23,6 +23,7 @@
 #include "build.h"
 #include <JsonBaseReader.h>
 #include <Form/Types.h>
+#include "deep_sleep.h"
 #if NTP_CLIENT
 #include "../src/plugins/ntp/ntp_plugin.h"
 #endif
@@ -166,23 +167,24 @@ const uint16_t note_to_frequency[NOTE_TO_FREQUENCY_COUNT] PROGMEM = {
 
 // Config_Button
 
-void Config_Button::getButtons(ButtonVector &buttons)
-{
-    uint16_t length;
-    auto ptr = config.getBinary(_H(Config().buttons), length);
-    if (ptr) {
-        auto items = length / sizeof(Button_t);
-        buttons.resize(items);
-        memcpy(buttons.data(), ptr, items * sizeof(Button_t));
-    }
-}
+// void Config_Button::getButtons(ButtonVector &buttons)
+// {
+//     uint16_t length;
+//     auto ptr = config.getBinary(_H(Config().buttons), length);
+//     if (ptr) {
+//         auto items = length / sizeof(Button_t);
+//         buttons.resize(items);
+//         memcpy(buttons.data(), ptr, items * sizeof(Button_t));
+//     }
+// }
 
-void Config_Button::setButtons(ButtonVector &buttons)
-{
-    config.setBinary(_H(Config().buttons), buttons.data(), buttons.size() * sizeof(Button_t));
-}
+// void Config_Button::setButtons(ButtonVector &buttons)
+// {
+//     config.setBinary(_H(Config().buttons), buttons.data(), buttons.size() * sizeof(Button_t));
+// }
 
 // KFCFWConfiguration
+
 
 static_assert(CONFIG_EEPROM_SIZE >= 1024 && (CONFIG_EEPROM_OFFSET + CONFIG_EEPROM_SIZE) <= 4096, "invalid EEPROM size");
 
@@ -725,12 +727,14 @@ void KFCFWConfiguration::storeQuickConnect(const uint8_t *bssid, int8_t channel)
 {
     __LDBG_printf("bssid=%s channel=%d", mac2String(bssid).c_str(), channel);
 
-    DeepSleep::WiFiQuickConnect_t quickConnect;
+    using namespace DeepSleep;
+
+    WiFiQuickConnect quickConnect;
     if (!RTCMemoryManager::read(RTCMemoryManager::RTCMemoryId::CONFIG, &quickConnect, sizeof(quickConnect))) {
-        quickConnect = {};
+        quickConnect = WiFiQuickConnect();
     }
     quickConnect.channel = channel;
-    memcpy(quickConnect.bssid, bssid, WL_MAC_ADDR_LENGTH);
+    quickConnect.bssid = bssid;
     RTCMemoryManager::write(RTCMemoryManager::RTCMemoryId::CONFIG, &quickConnect, sizeof(quickConnect));
 }
 
@@ -743,13 +747,15 @@ void KFCFWConfiguration::storeStationConfig(uint32_t ip, uint32_t netmask, uint3
         (wifi_station_dhcpc_status() == DHCP_STARTED)
     );
 
-    DeepSleep::WiFiQuickConnect_t quickConnect = {};
+    using namespace DeepSleep;
+
+    auto quickConnect = WiFiQuickConnect();
     if (RTCMemoryManager::read(RTCMemoryManager::RTCMemoryId::CONFIG, &quickConnect, sizeof(quickConnect))) {
         quickConnect.local_ip = ip;
         quickConnect.subnet = netmask;
         quickConnect.gateway = gateway;
-        quickConnect.dns1 = (uint32_t)WiFi.dnsIP();
-        quickConnect.dns2 = (uint32_t)WiFi.dnsIP(1);
+        quickConnect.dns1 = WiFi.dnsIP();
+        quickConnect.dns2 = WiFi.dnsIP(1);
         auto flags = System::Flags::getConfig();
         quickConnect.use_static_ip = flags.use_static_ip_during_wakeup || !flags.is_station_mode_dhcp_enabled;
         RTCMemoryManager::write(RTCMemoryManager::RTCMemoryId::CONFIG, &quickConnect, sizeof(quickConnect));
@@ -910,7 +916,7 @@ void KFCFWConfiguration::wifiQuickConnect()
 #endif
         int32_t channel;
         uint8_t *bssidPtr;
-        DeepSleep::WiFiQuickConnect_t quickConnect;
+        DeepSleep::WiFiQuickConnect quickConnect;
 
         if (RTCMemoryManager::read(PluginComponent::RTCMemoryId::CONFIG, &quickConnect, sizeof(quickConnect))) {
             channel = quickConnect.channel;
@@ -964,127 +970,197 @@ void KFCFWConfiguration::wifiQuickConnect()
 #if ENABLE_DEEP_SLEEP
 
 
-uint32_t DeepSleep::DeepSleepParams_t::getDeepSleepMaxMillis()
+// uint32_t DeepSleep::DeepSleepParameter::getDeepSleepMaxMillis()
+// {
+//     return (_deepSleepMaxTime == 0) ? (ESP.deepSleepMax() * 9ULL / 10000ULL) : _deepSleepMaxTime;
+// }
+
+// void DeepSleep::DeepSleepParameter::setDeepSleepMaxTime(uint32_t millis)
+// {
+//     _deepSleepMaxTime = millis;
+// }
+
+// uint32_t DeepSleep::DeepSleepParameter::_deepSleepMaxTime = 0;
+
+
+// // update remainingSleepTime and currentSleepTime
+// // both will be 0 when the last cycle has completed
+// void DeepSleep::DeepSleepParameter::calcSleepTime()
+// {
+//     if (isUnlimited()) {
+//         remainingSleepTime = 0;
+//         currentSleepTime = 0;
+//         return;
+//     }
+//     // split sleep time up into ~3h cycles
+//     auto maxSleepTime = getDeepSleepMaxMillis();
+
+//     if (remainingSleepTime) {
+//         if (remainingSleepTime > maxSleepTime * 2) {
+//             // use max. sleep time
+//             remainingSleepTime -= maxSleepTime;
+//             currentSleepTime = maxSleepTime;
+//         }
+//         else if (remainingSleepTime < maxSleepTime) {
+//             // wait for the remaining time
+//             currentSleepTime = remainingSleepTime;
+//             remainingSleepTime = 0;
+//         }
+//         else {
+//             // split 50:50
+//             remainingSleepTime = maxSleepTime / 2;
+//             currentSleepTime = remainingSleepTime;
+//         }
+//     }
+//     else {
+//         currentSleepTime = 0;
+//     }
+//     ::printf(PSTR("deep sleep cycle: time=%ums rest=%ums total=%ums max=%u/%.0f\n"), currentSleepTime, remainingSleepTime, deepSleepTime, maxSleepTime, ESP.deepSleepMax() / 1000.0);
+
+// }
+
+
+extern "C" void preinit (void)
 {
-    return (_deepSleepMaxTime == 0) ? (ESP.deepSleepMax() * 9ULL / 10000ULL) : _deepSleepMaxTime;
-}
-
-void DeepSleep::DeepSleepParams_t::setDeepSleepMaxTime(uint32_t millis)
-{
-    _deepSleepMaxTime = millis;
-}
-
-uint32_t DeepSleep::DeepSleepParams_t::_deepSleepMaxTime = 0;
+    DeepSleep::DeepSleepParam params;
 
 
-// update remainingSleepTime and currentSleepTime
-// both will be 0 when the last cycle has completed
-void DeepSleep::DeepSleepParams_t::calcSleepTime()
-{
-    if (isUnlimited()) {
-        remainingSleepTime = 0;
-        currentSleepTime = 0;
+#if IOT_REMOTE_CONTROL
+    // store states of buttons
+    // all pins are reset to input before
+    _pinState._readStates();
+    if (_pinState.anyPressed()) {
+        ::printf(PSTR("keyress detected, starting sytem...\n"));
+        remotectrl_preinit_function();
         return;
     }
-    // split sleep time up into ~3h cycles
-    auto maxSleepTime = getDeepSleepMaxMillis();
+#endif
 
-    if (remainingSleepTime) {
-        if (remainingSleepTime > maxSleepTime * 2) {
-            // use max. sleep time
-            remainingSleepTime -= maxSleepTime;
-            currentSleepTime = maxSleepTime;
-        }
-        else if (remainingSleepTime < maxSleepTime) {
-            // wait for the remaining time
-            currentSleepTime = remainingSleepTime;
-            remainingSleepTime = 0;
+    if (RTCMemoryManager::read(RTCMemoryManager::RTCMemoryId::DEEP_SLEEP, &params, sizeof(params))) {
+        ::printf(PSTR("micros=%u total=%u remaining=%u"), micros(), params._totalSleepTime, params._remainingSleepTime);
+        if (!params.isUnlimited()) {
+            auto nextSleepTime = params.updateRemainingTime();
+            ::printf(PSTR("new remaining=%u next=%u ttoal=%u\n"), micros(), params._remainingSleepTime, nextSleepTime, params._totalSleepTime);
+            if (nextSleepTime == 0) {
+                params._remainingSleepTime = params._totalSleepTime;
+                params._currentSleepTime = 0;
+            }
+            else {
+                params._currentSleepTime = nextSleepTime;
+            }
+
+            resetDetector.clearCounter();
+            params._counter++;
+            params._runtime += micros();
+            ::printf("saving data micros=%u", (uint32_t)micros());
+            RTCMemoryManager::write(RTCMemoryManager::RTCMemoryId::DEEP_SLEEP, &params, sizeof(params));
+            ::printf("micros=%u", (uint32_t)micros());
+
+            if (nextSleepTime == 0) {
+                ::printf(PSTR("booting system after the total deep sleep cycle has been completed\n"));
+                ::printf(PSTR("executing wifi quick connect\n"));
+                ::printf(PSTR("runtime %u counter %u"), params._runtime, params._counter);
+                RemoteControlPlugin::getInstance()._minAwakeTimeout = 15000;
+            }
+            else {
+                ::printf(PSTR("going back to deep sleep\n"));
+                ESP.deepSleepInstant(params._currentSleepTime * 1000ULL, params._mode);
+                ESP.deepSleepInstant(0, params._mode);
+            }
         }
         else {
-            // split 50:50
-            remainingSleepTime = maxSleepTime / 2;
-            currentSleepTime = remainingSleepTime;
+            ::printf(PSTR("sleep time set to unlimited, booting system to find the reason\n"));
         }
     }
     else {
-        currentSleepTime = 0;
+        ::printf(PSTR("failed to read RTC memory\n"));
     }
-    ::printf(PSTR("deep sleep cycle: time=%ums rest=%ums total=%ums max=%u/%.0f\n"), currentSleepTime, remainingSleepTime, deepSleepTime, maxSleepTime, ESP.deepSleepMax() / 1000.0);
 
+#if IOT_REMOTE_CONTROL
+    remotectrl_preinit_function();
+#endif
 }
+
 
 void KFCFWConfiguration::wakeUpFromDeepSleep()
 {
-    // ::printf(PSTR("wakeUpFromDeepSleep\n"));
-
     BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
+    wifiQuickConnect();
 
-    // TODO deep sleep should be move into user_init
-    if (RTCMemoryManager::read(RTCMemoryManager::RTCMemoryId::DEEP_SLEEP, &_deepSleepParams, sizeof(_deepSleepParams)) && _deepSleepParams.deepSleepTime) {
-        if (_deepSleepParams.remainingSleepTime) {
-            _deepSleepParams.calcSleepTime();
 
-#if RTC_SUPPORT
-            _deepSleepParams.lastWakeUpUnixTime = getRTC();
-#endif
 
-#if IOT_REMOTE_CONTROL
-            if (_pinState.anyPressed() && _deepSleepParams.abortOnKeyPress) {
-                _deepSleepParams.abortCycles();
-            }
-#endif
+//     // ::printf(PSTR("wakeUpFromDeepSleep\n"));
 
-            uint32_t ms = micros();
-            _deepSleepParams.cycleRuntime += ms + 3500;
-            // ::printf(PSTR("cycle_runtime=%uus last=%uus\n"), _deepSleepParams.cycleRuntime, ms);
+//     // TODO deep sleep should be move into user_init
+//     if (RTCMemoryManager::read(RTCMemoryManager::RTCMemoryId::DEEP_SLEEP, &_deepSleepParams, sizeof(_deepSleepParams)) && _deepSleepParams.deepSleepTime) {
+//         if (_deepSleepParams.remainingSleepTime) {
+//             _deepSleepParams.calcSleepTime();
 
-            // auto dur = micros() - ms;
-            // ::printf(PSTR("additional time: %u\n"), (unsigned)dur);
+// #if RTC_SUPPORT
+//             _deepSleepParams.lastWakeUpUnixTime = getRTC();
+// #endif
 
-            if (_deepSleepParams.hasBeenAborted()) {
-                // deep sleep aborted by a keypress
-            }
-            else if (_deepSleepParams.isUnlimited()) {
-                // ::printf(PSTR("entering deep sleep: %u\n"), 0);
-                resetDetector.clearCounter();
-                RTCMemoryManager::write(RTCMemoryManager::RTCMemoryId::DEEP_SLEEP, &_deepSleepParams, sizeof(_deepSleepParams));
-                ESP.deepSleepInstant(0, _deepSleepParams.mode);
-            }
-            else if (!_deepSleepParams.cyclesCompeleted()) {
+// #if IOT_REMOTE_CONTROL
+//             if (_pinState.anyPressed() && _deepSleepParams.abortOnKeyPress) {
+//                 _deepSleepParams.abortCycles();
+//             }
+// #endif
 
-                if (_deepSleepParams.remainingSleepTime < 1000 && _deepSleepParams.mode != RFMode::RF_CAL) {
-                    _deepSleepParams.mode = RFMode::RF_CAL;
-                    // ::printf(PSTR("running RF_CAL\n"));
-                } else {
-                    _deepSleepParams.mode = RFMode::RF_DISABLED;
-                    // ::printf(PSTR("running RF_DISABLED\n"));
-                }
+//             uint32_t ms = micros();
+//             _deepSleepParams.cycleRuntime += ms + 3500;
+//             ::printf(PSTR("cycle_runtime=%uus last=%uus\n"), _deepSleepParams.cycleRuntime, ms);
 
-                // ::printf(PSTR("entering deep sleep: %u\n"), _deepSleepParams.currentSleepTime);
+//             // auto dur = micros() - ms;
+//             ::printf(PSTR("additional time: %u\n"), (unsigned)3600);
 
-                resetDetector.clearCounter();
-                RTCMemoryManager::write(RTCMemoryManager::RTCMemoryId::DEEP_SLEEP, &_deepSleepParams, sizeof(_deepSleepParams));
+//             if (_deepSleepParams.hasBeenAborted()) {
+//                 // deep sleep aborted by a keypress
+//                 ::printf(PSTR("deep sleep aborted by a keypress\n"));
+//             }
+//             else if (_deepSleepParams.isUnlimited()) {
+//                 ::printf(PSTR("entering deep sleep: %u\n"), 0);
+//                 resetDetector.clearCounter();
+//                 RTCMemoryManager::write(RTCMemoryManager::RTCMemoryId::DEEP_SLEEP, &_deepSleepParams, sizeof(_deepSleepParams));
+//                 ESP.deepSleepInstant(0, _deepSleepParams.mode);
+//             }
+//             else if (!_deepSleepParams.cyclesCompeleted()) {
 
-                ESP.deepSleepInstant(_deepSleepParams.currentSleepTime * 1000ULL, _deepSleepParams.mode);
-                // ::printf(PSTR("entering deep sleep: %u\n"), 0);
-                ESP.deepSleepInstant(0, _deepSleepParams.mode); // go to deep sleep indefinitely if the first call fails
-            }
-            else {
-                // ::printf(PSTR("executing full wakeup\n"));
-            }
-        }
-        if (_deepSleepParams.tasks.connectWiFi == false) {
-            // ::printf(PSTR("wifi quick connect disabled\n"));
-            return;
-        }
-        wifiQuickConnect();
-    }
-    else {
-        wifiQuickConnect();
-        _deepSleepParams = {};
-    }
-    resetDetector.clearCounter();
-    RTCMemoryManager::write(RTCMemoryManager::RTCMemoryId::DEEP_SLEEP, &_deepSleepParams, sizeof(_deepSleepParams));
+//                 if (_deepSleepParams.remainingSleepTime < 1000 && _deepSleepParams.mode != RFMode::RF_CAL) {
+//                     _deepSleepParams.mode = RFMode::RF_CAL;
+//                     ::printf(PSTR("running RF_CAL\n"));
+//                 } else {
+//                     _deepSleepParams.mode = RFMode::RF_DISABLED;
+//                     ::printf(PSTR("running RF_DISABLED\n"));
+//                 }
+
+//                 ::printf(PSTR("entering deep sleep: %u\n"), _deepSleepParams.currentSleepTime);
+
+//                 resetDetector.clearCounter();
+//                 RTCMemoryManager::write(RTCMemoryManager::RTCMemoryId::DEEP_SLEEP, &_deepSleepParams, sizeof(_deepSleepParams));
+
+//                 ESP.deepSleepInstant(_deepSleepParams.currentSleepTime * 1000ULL, _deepSleepParams.mode);
+//                 ::printf(PSTR("entering deep sleep: %u\n"), 0);
+//                 ESP.deepSleepInstant(0, _deepSleepParams.mode); // go to deep sleep indefinitely if the first call fails
+//             }
+//             else {
+//                 ::printf(PSTR("executing full wakeup\n"));
+    //             RemoteControlPlugin::getInstance()._minAwakeTimeout = 15000;
+    //         }
+    //     }
+    //     if (_deepSleepParams.tasks.connectWiFi == false) {
+    //         // ::printf(PSTR("wifi quick connect disabled\n"));
+    //         return;
+    //     }
+    //     BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
+    //     wifiQuickConnect();
+    // }
+    // else {
+    //     BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
+    //     wifiQuickConnect();
+    //     _deepSleepParams = {};
+    // }
+    // resetDetector.clearCounter();
+    // RTCMemoryManager::write(RTCMemoryManager::RTCMemoryId::DEEP_SLEEP, &_deepSleepParams, sizeof(_deepSleepParams));
 }
 
 void KFCFWConfiguration::enterDeepSleep(milliseconds time, RFMode mode, uint16_t delayAfterPrepare)
@@ -1096,7 +1172,7 @@ void KFCFWConfiguration::enterDeepSleep(milliseconds time, RFMode mode, uint16_t
 #else
     time_t now = ::time(nullptr);
     if (IS_TIME_VALID(now)) {
-        _deepSleepParams.unixtime = now;
+        // _deepSleepParams.unixtime = now;
     }
 #endif
 
@@ -1115,26 +1191,25 @@ void KFCFWConfiguration::enterDeepSleep(milliseconds time, RFMode mode, uint16_t
     if (delayAfterPrepare) {
         delay(delayAfterPrepare);
     }
-    __LDBG_printf("Entering deep sleep for %u milliseconds, RF mode %d", milliseconds, mode);
+    __LDBG_printf("Entering deep sleep for %u milliseconds, RF mode %d", time.count(), mode);
 
 #if __LED_BUILTIN == NEOPIXEL_PIN_ID
     BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
 #endif
 
 #if defined(ESP8266)
-    _deepSleepParams = DeepSleep::DeepSleepParams_t(milliseconds, mode);
+    auto param = DeepSleep::DeepSleepParam(time);
+    param._currentSleepTime = param.updateRemainingTime();
     RTCMemoryManager::write(RTCMemoryManager::RTCMemoryId::DEEP_SLEEP, &_deepSleepParams, sizeof(_deepSleepParams));
 
-    ESP.deepSleep(_deepSleepParams.getSleepTimeMicros(), mode);
+    ESP.deepSleep(param.getDeepSleepTimeMicros(), param._mode);
     // try again with half of the max. time if first call fails
-    PrintString tmp = F("Deep sleep failed with time_us=");
-    tmp.print(_deepSleepParams.getSleepTimeMicros());
-    Logger_error(tmp);
+    __DBG_printf("Deep sleep failed with time=%.0f ms", param.getDeepSleepTimeMicros() / 1000.0);
     ESP.deepSleep(ESP.deepSleepMax() / 2, mode);
     // go to deep sleep indefinitely
     ESP.deepSleep(0, mode);
 #else
-    ESP.deepSleep(time.count() * 1000UL);
+    ESP.deepSleep(time.count() * 1000UL);+
     ESP.deepSleep(0);
 #endif
 }

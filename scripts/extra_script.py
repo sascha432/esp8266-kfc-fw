@@ -20,6 +20,7 @@ import re
 import sys
 import time
 import argparse
+import click
 
 sys.path.insert(0, path.abspath(path.join(env.subst("$PROJECT_DIR"), 'scripts', 'libs')))
 import kfcfw
@@ -30,27 +31,40 @@ def new_build(source, target, env):
 def modify_upload_command(source, target, env, fs = False):
     if fs==False:
         new_build(source, target, env)
-    if env["UPLOAD_PROTOCOL"]=='espota':
-        (login, host) = env["UPLOAD_PORT"].split('@', 2)
-        (username, password) = login.split(':', 2)
 
-        args = [ '--user', username, '--pass', password, '--image', str(source[0]) ]
-        if fs:
-            args.append('uploadfs')
-            args.append(host)
-        else:
-            args.append('upload')
-            args.append(host)
+    upload_command = env.GetProjectOption('custom_upload_command', '');
+    if not upload_command:
+        click.secho('custom_upload_command is not defined', fg='yellow')
+        return
+    if env['UPLOAD_PROTOCOL']!='espota':
+        click.echo('protocol is not espota')
+        return
 
-        args.append('--elf')
-        args.append(os.path.abspath(os.path.join(env.subst("$PROJECT_DIR"), 'elf')))
-        args.append('--ini')
-        args.append(env.subst("$PROJECT_CONFIG"))
+    m = re.match(r'(?P<username>[^:]+):(?P<password>[^@]+)@(?P<hostname>.+)', env.subst(env.GetProjectOption('upload_port')))
+    if not m:
+        click.echo('upload_port must be <username>:<password>@<hostname>')
+        return
+    device = m.groupdict()
 
-        env.Replace(UPLOAD_FLAGS=' '.join(args))
+    args = [ '--user', device['username'], '--pass', device['password'], '--image', str(source[0]) ]
+    if fs:
+        args.append('uploadfs')
+        args.append(device['hostname'])
+    else:
+        args.append('upload')
+        args.append(device['hostname'])
+
+    args.append('--elf')
+    args.append(os.path.abspath(os.path.join(env.subst("$PROJECT_DIR"), 'elf')))
+    args.append('--ini')
+    args.append(env.subst("$PROJECT_CONFIG"))
+
+    env.Replace(UPLOAD_FLAGS=' '.join(args), UPLOAD_COMMAND=upload_command)
+
 
 def modify_upload_command_fs(source, target, env):
     modify_upload_command(source, target, env, True)
+
 
 def git_get_head():
     p = subprocess.Popen(["%GITEXE%", "rev-parse", "HEAD"], stdout=subprocess.PIPE, text=True)

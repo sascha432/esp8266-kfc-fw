@@ -1236,9 +1236,10 @@ void at_mode_serial_handle_event(String &commandString)
             if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DSLP))) {
 #if ENABLE_DEEP_SLEEP
                 if (args.size() == 2 && args.equalsIgnoreCase(0, F("deep_sleep_max"))) {
-                    DeepSleep::DeepSleepParams_t::setDeepSleepMaxTime(args.toInt(1));
-                    args.printf_P(PSTR("Setting deep_sleep_max to %ums"), DeepSleep::DeepSleepParams_t::getDeepSleepMaxMillis());
-                    args.printf_P(PSTR("Setting deep_sleep_max to %ums"), (uint32_t)(ESP.deepSleepMax() / 1000));
+                    //TODO
+                    // DeepSleep::DeepSleepParam::setDeepSleepMaxTime(args.toInt(1));
+                    // args.printf_P(PSTR("Setting deep_sleep_max to %ums"), DeepSleep::DeepSleepParam::getDeepSleepMaxMillis());
+                    // args.printf_P(PSTR("Setting deep_sleep_max to %ums"), (uint32_t)(ESP.deepSleepMax() / 1000));
                 }
                 else
 #endif
@@ -1246,7 +1247,7 @@ void at_mode_serial_handle_event(String &commandString)
                     KFCFWConfiguration::milliseconds time(args.toMillis(0));
                     RFMode mode = (RFMode)args.toInt(1, RF_DEFAULT);
 #if ENABLE_DEEP_SLEEP
-                    args.printf_P(PSTR("Entering deep sleep... time=%ums deep_sleep_max=%ums mode=%u"), time, DeepSleep::DeepSleepParams_t::getDeepSleepMaxMillis(), mode);
+                    // args.printf_P(PSTR("Entering deep sleep... time=%ums deep_sleep_max=%ums mode=%u"), time, DeepSleep::DeepSleepParameter::getDeepSleepMaxMillis(), mode);
                     config.enterDeepSleep(time, mode, 1);
 #else
                     args.printf_P(PSTR("Entering deep sleep... time=%ums deep_sleep_max=%ums mode=%u"), time, (uint32_t)(ESP.deepSleepMax() / 1000), mode);
@@ -2035,8 +2036,7 @@ void at_mode_serial_handle_event(String &commandString)
                 if (args.requireArgs(1, 1)) {
                     int num = args.toInt(0);
                     if (num == 0) {
-                        uint8_t bssid[6];
-                        memset(bssid, 0, sizeof(bssid));
+                        uint8_t bssid[6] = {};
                         config.storeQuickConnect(bssid, -1);
                         args.print(F("BSSID and channel removed"));
                     } else if (num == 1) {

@@ -13,7 +13,7 @@
 #include "kfc_fw_config.h"
 #include "plugins.h"
 #include "stored_state.h"
-#include "../src/plugins/mqtt/mqtt_component.h"
+#include "../src/plugins/mqtt/component.h"
 #include "../src/plugins/sensor/sensor.h"
 #if IOT_ALARM_PLUGIN_ENABLED
 #include "../src/plugins/alarm/alarm.h"
@@ -271,10 +271,10 @@ public:
 public:
     virtual AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const;
-    virtual void onConnect();
-    virtual void onMessage(const char *topic, const char *payload, size_t len);
+    virtual void onConnect() override;
+    virtual void onMessage(const char *topic, const char *payload, size_t len) override;
 
-    void _publishState(MQTTClient *client = nullptr);
+    void _publishState();
 
 public:
     static void loop();

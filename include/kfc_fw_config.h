@@ -1,4 +1,4 @@
-   /**
+/**
  * Author: sascha_lammers@gmx.de
  */
 
@@ -32,6 +32,7 @@
 #include "logger.h"
 #include "misc.h"
 #include "at_mode.h"
+
 #include "reset_detector.h"
 #include "dyn_bitset.h"
 
@@ -184,139 +185,37 @@ static inline bool _pinHasAnalogWrite(uint8_t pin) {
 }
 
 
-#include "push_pack.h"
+// #include "push_pack.h"
 
-// NOTE: any member of an packed structure (__attribute__packed__ ) cannot be passed to forms as reference, otherwise it might cause an unaligned exception
-// marking integers as bitset prevents using it as reference, i.e. uint8_t value: 8;
-// use _H_STRUCT_VALUE() or suitable macro
+// // NOTE: any member of an packed structure (__attribute__packed__ ) cannot be passed to forms as reference, otherwise it might cause an unaligned exception
+// // marking integers as bitset prevents using it as reference, i.e. uint8_t value: 8;
+// // use _H_STRUCT_VALUE() or suitable macro
 
-class Config_Button {
-public:
-    typedef struct __attribute__packed__ {
-        uint16_t time;
-        uint16_t actionId;
-    } ButtonAction_t;
+// class Config_Button {
+// public:
+//     typedef struct __attribute__packed__ {
+//         uint16_t time;
+//         uint16_t actionId;
+//     } ButtonAction_t;
 
-    typedef struct __attribute__packed__ {
-        ButtonAction_t shortpress;
-        ButtonAction_t longpress;
-        ButtonAction_t repeat;
-        ButtonAction_t singleClick;
-        ButtonAction_t doubleClick;
-        uint8_t pin: 8;
-        uint8_t pinMode: 8;
-    } Button_t;
+//     typedef struct __attribute__packed__ {
+//         ButtonAction_t shortpress;
+//         ButtonAction_t longpress;
+//         ButtonAction_t repeat;
+//         ButtonAction_t singleClick;
+//         ButtonAction_t doubleClick;
+//         uint8_t pin: 8;
+//         uint8_t pinMode: 8;
+//     } Button_t;
 
-    typedef std::vector<Button_t> ButtonVector;
+//     typedef std::vector<Button_t> ButtonVector;
 
-    static void getButtons(ButtonVector &buttons);
-    static void setButtons(ButtonVector &buttons);
-};
+//     static void getButtons(ButtonVector &buttons);
+//     static void setButtons(ButtonVector &buttons);
+// };
 
-#include "pop_pack.h"
+// #include "pop_pack.h"
 
-namespace DeepSleep
-{
-    struct __attribute__packed__ WiFiQuickConnect_t {
-        int16_t channel: 15;                    //  0
-        int16_t use_static_ip: 1;               // +2 byte
-        uint8_t bssid[WL_MAC_ADDR_LENGTH];      // +6 byte
-        uint32_t local_ip;
-        uint32_t dns1;
-        uint32_t dns2;
-        uint32_t subnet;
-        uint32_t gateway;
-    };
-
-    struct __attribute__packed__ DeepSleepParams_t {
-        uint32_t unixtime;                  // unixtime when activating deep sleep. should be set to zero if no real time is available
-        uint32_t lastWakeUpUnixTime;        // unixtime of the last wake up cycle. requires an RTC
-        uint32_t deepSleepTime;             // total sleep time in millis
-        uint32_t currentSleepTime;          // current cycle in millis
-        uint32_t remainingSleepTime;        // remaining time in millis
-        uint32_t cycleRuntime;              // time spent cycling in micros
-        RFMode mode;
-        bool abortOnKeyPress: 1;            // abort deepsleep on keypress
-
-        struct __attribute__packed__ {
-            bool connectWiFi: 1;            // use quick connect to get wifi access
-            bool refreshDHCP: 1;            // refresh WiFi IP address if DHCP is enabled
-            bool waitForNTP: 1;             // wait for NTP
-            bool connectMQTT: 1;            // connect to MQTT and ppublish sensor data
-
-            uint16_t timeLimit;             // time limit before going back to deep sleep even if tasks have not been completed
-            struct __attribute__packed__ {
-                uint8_t count;              // limit the use of errorDeepSleepTime
-                uint8_t reset;              // reset count on success
-                uint32_t time;              // time to sleep before retrying. if 0, deepSleepTime will be used
-            } errorRetry;
-
-            // max. 1048560 millis, ~1048 seconds
-            void setTimeLimit(uint32_t millis) {
-                timeLimit = millis >> 4U;
-            }
-            uint32_t getTimeLimit() const {
-                return timeLimit << 4U;
-            }
-
-        } tasks;
-
-        uint64_t getSleepTimeMicros() const {
-            return currentSleepTime * 1000ULL;
-        }
-
-        void calcSleepTime();
-
-        bool isUnlimited() const {
-            return deepSleepTime == 0;
-        }
-
-        void abortCycles() {
-            tasks.connectWiFi = true;
-            currentSleepTime = 0;
-            if (!remainingSleepTime) {
-                remainingSleepTime++;
-            }
-        }
-
-        bool hasBeenAborted() const {
-            return remainingSleepTime != 0 && currentSleepTime == 0;
-        }
-
-        bool cyclesCompeleted() const {
-            return deepSleepTime != 0 && remainingSleepTime == 0 && currentSleepTime == 0;
-        }
-
-        DeepSleepParams_t() = default;
-        DeepSleepParams_t(uint32_t sleepTimeMillis, RFMode rfMode);
-
-        // return max. deep sleep length (80% of the max. value to be on the safe side)
-        // or the value that has been set with setDeepSleepMaxTime()
-        static uint32_t getDeepSleepMaxMillis();
-        // set millis = 0 to get 80% of ESP.deepSleepMax() from getDeepSleepMaxMillis()
-        static void setDeepSleepMaxTime(uint32_t millis = 0);
-    private:
-        static uint32_t _deepSleepMaxTime;
-    };
-
-    inline DeepSleepParams_t::DeepSleepParams_t(uint32_t sleepTimeMillis, RFMode rfMode) :
-        unixtime(0),
-        lastWakeUpUnixTime(0),
-        deepSleepTime(sleepTimeMillis),
-        remainingSleepTime(sleepTimeMillis),
-        cycleRuntime(0),
-        mode(rfMode),
-        abortOnKeyPress(true),
-        tasks({true, true, true, true, (60 * 1000U) >> 4, 5, 5, 3600 * 1000U})
-    {
-        calcSleepTime();
-        if (deepSleepTime < tasks.errorRetry.time) {
-            tasks.errorRetry.time = deepSleepTime;
-        }
-        ::printf(PSTR("deep sleep cycle started: time=%ums rest=%ums total=%ums\n"), currentSleepTime, remainingSleepTime, deepSleepTime);
-    }
-
-};
 
 #define _H_IP_VALUE(name, ...) \
     IPAddress(config._H_GET_IP(name)), [__VA_ARGS__](const IPAddress &addr, FormUI::Field::BaseField &, bool store) { \
@@ -458,6 +357,9 @@ class KFCFWConfiguration : public Configuration {
 public:
     using milliseconds = std::chrono::duration<uint32_t, std::milli>;
     using seconds = std::chrono::duration<uint32_t, std::ratio<1>>;
+    using minutes = std::chrono::duration<uint32_t, std::ratio<60>>;
+
+    static constexpr auto test1 = std::chrono::duration_cast<seconds>(KFCFWConfiguration::minutes(300)).count();
 
     KFCFWConfiguration();
     ~KFCFWConfiguration();
@@ -563,7 +465,7 @@ private:
 
     String _lastError;
 #if ENABLE_DEEP_SLEEP
-    DeepSleep::DeepSleepParams_t _deepSleepParams;
+    DeepSleep::DeepSleepParam _deepSleepParams;
 #endif
     uint32_t _wifiConnected;        // time of connection
     uint32_t _wifiUp;               // time of receiving IP address

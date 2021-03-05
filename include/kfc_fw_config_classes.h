@@ -1730,8 +1730,12 @@ namespace KFCConfigurationClasses {
                 dimmer_version_t version;
                 register_mem_cfg_t cfg;
             #if IOT_ATOMIC_SUN_V2
-                int8_t channel_mapping[4];
+                int8_t channel_mapping[IOT_DIMMER_MODULE_CHANNELS];
             #endif
+                struct __attribute__packed__ {
+                    uint16_t from[IOT_DIMMER_MODULE_CHANNELS];
+                    uint16_t to[IOT_DIMMER_MODULE_CHANNELS];
+                } level;
                 float on_fadetime;
                 float off_fadetime;
                 float lp_fadetime;

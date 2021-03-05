@@ -156,6 +156,33 @@ struct __attribute_packed__ dimmer_over_temperature_event_t
     uint8_t max_temp;
 };
 
+namespace Dimmer {
+
+    static constexpr int16_t kInvalidTemperature = INT16_MIN;
+
+    inline static bool isValidVoltage(uint16_t value) {
+        return value != 0;
+    }
+
+    inline static bool isValidTemperature(float value) {
+        return !isnan(value);
+    }
+
+    inline static bool isValidTemperature(int16_t value) {
+        return value != kInvalidTemperature;
+    }
+
+    inline static bool isValidTemperature(uint8_t value) {
+        return value != UINT8_MAX;
+    }
+
+    inline static bool isValidFrequency(float frequency) {
+        return !isnan(frequency) && frequency != 0;
+    }
+
+};
+
+
 inline bool register_mem_metrics_t::has_vcc() const {
     return Dimmer::isValidVoltage(vcc);
 }

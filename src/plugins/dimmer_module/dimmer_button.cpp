@@ -97,7 +97,7 @@ void Button::_changeLevelSingle(uint16_t steps, bool invert, float time)
 {
     int16_t levelChange = (IOT_DIMMER_MODULE_MAX_BRIGHTNESS / steps);
     __LDBG_printf("fadetime=%f/%f step=%u%% level=%d", _dimmer._config.lp_fadetime, _dimmer._config.lp_fadetime * 1.048, steps, invert ? -levelChange : levelChange);
-    _changeLevel(invert ? -levelChange : levelChange, _dimmer._config.lp_fadetime * 1.048);
+    _changeLevel(invert ? -levelChange : levelChange, _dimmer._config.lp_fadetime * -1.048);
 }
 
 void Button::_changeLevelRepeat(uint16_t repeatTime, bool invert)
@@ -125,7 +125,7 @@ void Button::_setLevel(int32_t newLevel, int16_t curLevel, float fadeTime)
         IOT_DIMMER_MODULE_MAX_BRIGHTNESS * config.max_brightness / 100
     );
     if (curLevel != newLevel) {
-        _dimmer.setChannel(_channel, newLevel, fadeTime);
+        _dimmer.setChannel(_channel, newLevel, -fadeTime);
     }
 }
 

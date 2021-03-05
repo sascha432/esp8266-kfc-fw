@@ -49,7 +49,7 @@ void Sensor_LM75A::getValues(NamedJsonArray &array, bool timer)
     array.append(UnnamedObject(
             NamedString(F("id"), _getId()),
             NamedBool(F("state"), !isnan(temp)),
-            NamedDouble(F("value"), FormattedDouble(temp, FormattedDouble::TRIMMED(2)))
+            NamedVariant<FStr, TrimmedDouble>(F("value"), TrimmedDouble(temp, 2))
         )
     );
 }

@@ -48,7 +48,7 @@ void Sensor::timerEvent(MQTT::Json::NamedArray *array, bool mqttIsConnected)
     if (array && now >= _nextUpdate) {
         _nextUpdate = now + _updateRate;
         getValues(*array, true);
-        __DBG_printf("%s", array->toString().c_str());
+        // __DBG_printf("%s", array->toString().c_str());
     }
     if (mqttIsConnected && isConnected() && now >=_nextMqttUpdate) {
         _nextMqttUpdate = now + _mqttUpdateRate;

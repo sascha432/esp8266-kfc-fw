@@ -39,7 +39,7 @@ MQTT::AutoDiscovery::EntityPtr Channel::getAutoDiscovery(FormatType format, uint
             if (discovery->createJsonSchema(this, PrintString(FSPGM(channel__u), _channel), format)) {
                 discovery->addStateTopic(_createTopics(TopicType::COMMAND_STATE));
                 discovery->addCommandTopic(_createTopics(TopicType::COMMAND_SET));
-                discovery->addBrightnessScale(MAX_LEVEL);
+                discovery->addBrightnessScale(getMaxLevel());
                 discovery->addParameter(F("brightness"), true);
             }
             break;
@@ -153,21 +153,21 @@ bool Channel::off(ConfigType *config, float transition, int32_t level)
     return false;
 }
 
-void Channel::setLevel(int32_t level, float transition)
+void Channel::setLevel(int32_t level, float transition, bool publish)
 {
 // #if IOT_DIMMER_MODULE_HAS_BUTTONS
 //     _offDelayPrecheck(level, nullptr);
 // #endif
     if (level == 0) {
         setStoredBrightness(_brightness);
-        _set(0, transition);
+        _set(0, transition, publish);
     }
     else {
-        _set(level, transition);
+        _set(level, transition, publish);
     }
 }
 
-bool Channel::_set(int32_t level, float transition)
+bool Channel::_set(int32_t level, float transition, bool publish)
 {
     if (level == 0) {
         if (_brightness != 0) {
@@ -176,17 +176,21 @@ bool Channel::_set(int32_t level, float transition)
             _brightness = 0;
             _dimmer->_fade(_channel, 0, _dimmer->getTransitionTime(tmp, _brightness, transition));
             _dimmer->_wire.writeEEPROM();
-            publishState();
+            if (publish) {
+                publishState();
+            }
             return true;
         }
     }
     else if (level != _brightness) {
         auto tmp = _brightness;
-        _brightness = std::clamp<int32_t>(level, _dimmer->_getConfig().min_brightness * MAX_LEVEL / 100, _dimmer->_getConfig().max_brightness * MAX_LEVEL / 100);
-        __DBG_printf("level=%u min=%u max=%u brightness=%u", level, _dimmer->_getConfig().min_brightness * MAX_LEVEL / 100, _dimmer->_getConfig().max_brightness * MAX_LEVEL / 100, _brightness);
+        _brightness = std::clamp<int32_t>(level, _dimmer->_getConfig().min_brightness * getMaxLevel() / 100, _dimmer->_getConfig().max_brightness * getMaxLevel() / 100);
+        __DBG_printf("level=%u min=%u max=%u brightness=%u", level, _dimmer->_getConfig().min_brightness * getMaxLevel() / 100, _dimmer->_getConfig().max_brightness * getMaxLevel() / 100, _brightness);
         _dimmer->_fade(_channel, _brightness, _dimmer->getTransitionTime(tmp, _brightness, transition));
         _dimmer->_wire.writeEEPROM();
-        publishState();
+        if (publish) {
+            publishState();
+        }
         return true;
     }
     return false;
@@ -222,7 +226,7 @@ int Channel::_offDelayPrecheck(int16_t level, ConfigType *config, int16_t storeL
 
     if (config->off_delay >= 5 && config->off_delay_signal) {
         auto delay = config->off_delay - 4;
-        int16_t brightness = storeLevel + (storeLevel * 100 / MAX_LEVEL > 70 ? MAX_LEVEL * -0.3 : MAX_LEVEL * 0.3);
+        int16_t brightness = storeLevel + (storeLevel * 100 / getMaxLevel() > 70 ? getMaxLevel() * -0.3 : getMaxLevel() * 0.3);
         // flash once to signal confirmation
         _Timer(_delayTimer)->add(Event::milliseconds(1900), true, [this, delay, brightness, storeLevel](Event::CallbackTimerPtr timer) {
             if (timer == nullptr) {
@@ -268,7 +272,7 @@ void Channel::_publishMQTT()
 {
     if (isConnected()) {
         using namespace MQTT::Json;
-        auto payload = std::move(StringWriter(State(_brightness != 0), Brightness(_brightness), Transition(_dimmer->_getConfig().lp_fadetime)).toString());
+        auto payload = std::move(UnnamedObject(State(_brightness != 0), Brightness(_brightness), Transition(_dimmer->_getConfig().lp_fadetime)).toString());
         publish(_createTopics(TopicType::COMMAND_STATE), true, payload);
     }
 }
@@ -282,7 +286,7 @@ void Channel::_publishWebUI()
         // auto json = PrintString(F("{\"type\":\"ue\",\"events\":[{\"id\":\"d_chan%u\",\"value\":%u,\"state\":true,\"group\":%u}]}"),
         //     _channel, _brightness, _dimmer->isAnyOn()
         // );
-        WebUISocket::broadcast(WebUISocket::getSender(), std::move(StringWriter(
+        WebUISocket::broadcast(WebUISocket::getSender(), std::move(UnnamedObject(
             NamedString(F("type"), F("ue")),
             NamedArray(F("events"),
                 UnnamedObject(

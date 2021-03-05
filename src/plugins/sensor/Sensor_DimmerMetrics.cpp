@@ -76,17 +76,17 @@ void Sensor_DimmerMetrics::getValues(NamedJsonArray &array, bool timer)
         UnnamedObject(
             NamedString(F("id"), F("ntc_temp")),
             NamedBool(F("state"), _metrics.metrics.has_ntc_temp()),
-            NamedDouble(F("value"), FormattedDouble(_metrics.metrics.get_ntc_temp(), FormattedDouble::TRIMMED(1)))
+            NamedVariant<FStr, TrimmedDouble>(F("value"), TrimmedDouble(_metrics.metrics.get_ntc_temp(), 1))
         ),
         UnnamedObject(
             NamedString(F("id"), F("int_temp")),
             NamedBool(F("state"), _metrics.metrics.has_int_temp()),
-            NamedDouble(F("value"), FormattedDouble(_metrics.metrics.get_int_temp(), FormattedDouble::TRIMMED_ALL(1)))
+            NamedVariant<FStr, TrimmedDouble>(F("value"), TrimmedDouble(_metrics.metrics.get_int_temp(), 1))
         ),
         UnnamedObject(
             NamedString(F("id"), F("vcc")),
             NamedBool(F("state"), _metrics.metrics.has_vcc()),
-            NamedDouble(F("value"), FormattedDouble(_metrics.metrics.get_vcc(), FormattedDouble::TRIMMED(3)))
+            NamedVariant<FStr, TrimmedDouble>(F("value"), TrimmedDouble(_metrics.metrics.get_vcc(), 3))
         ),
         UnnamedObject(
             NamedString(F("id"), F("frequency")),
@@ -102,27 +102,23 @@ void Sensor_DimmerMetrics::getValues(JsonArray &array, bool timer)
 
     obj = &array.addObject(3);
     obj->add(JJ(id), F("ntc_temp"));
-    obj->add(JJ(state), !isnan(_metrics.metrics.ntc_temp));
-    obj->add(JJ(value), JsonNumber(_metrics.metrics.ntc_temp, 2));
+    obj->add(JJ(state), _metrics.metrics.has_ntc_temp());
+    obj->add(JJ(value), JsonNumber(_metrics.metrics.get_ntc_temp(), 2));
 
     obj = &array.addObject(3);
     obj->add(JJ(id), F("int_temp"));
-    obj->add(JJ(state), Dimmer::isValidTemperature(_metrics.metrics.int_temp));
-#if DIMMER_FIRMWARE_VERSION < 0x020200
-    obj->add(JJ(value), JsonNumber(_metrics.metrics.int_temp, 2));
-#else
-    obj->add(JJ(value), JsonNumber(_metrics.metrics.int_temp));
-#endif
+    obj->add(JJ(state), _metrics.metrics.has_int_temp());
+    obj->add(JJ(value), JsonNumber(_metrics.metrics.get_int_temp(), 2));
 
     obj = &array.addObject(3);
     obj->add(JJ(id), FSPGM(vcc));
-    obj->add(JJ(state), _metrics.metrics.vcc != 0);
-    obj->add(JJ(value), JsonNumber(_metrics.metrics.vcc / 1000.0, 3));
+    obj->add(JJ(state), _metrics.metrics.has_vcc());
+    obj->add(JJ(value), JsonNumber(_metrics.metrics.get_vcc(), 3));
 
     obj = &array.addObject(3);
     obj->add(JJ(id), FSPGM(frequency));
-    obj->add(JJ(state), !isnan(_metrics.metrics.frequency) && _metrics.metrics.frequency != 0);
-    obj->add(JJ(value), JsonNumber(_metrics.metrics.frequency, 2));
+    obj->add(JJ(state), !_metrics.metrics.has_frequency());
+    obj->add(JJ(value), JsonNumber(_metrics.metrics.get_freqency(), 2));
 }
 
 void Sensor_DimmerMetrics::_createWebUI(WebUIRoot &webUI, WebUIRow **row)
@@ -144,12 +140,13 @@ void Sensor_DimmerMetrics::createWebUI(WebUIRoot &webUI, WebUIRow **row)
 void Sensor_DimmerMetrics::publishState()
 {
     if (isConnected()) {
-        String payload = PrintString(F("{\"int_temp\":%u,\"ntc_temp\":%.2f,\"vcc\":%.3f,\"frequency\":%.2f}"),
-            _metrics.metrics.int_temp,
-            _metrics.metrics.ntc_temp,
-            _metrics.metrics.vcc / 1000.0,
-            _metrics.metrics.frequency);
-        client().publish(_getMetricsTopics(), true, payload);
+        using namespace MQTT::Json;
+        publish(_getMetricsTopics(), true, UnnamedObject(
+            NamedDouble(F("int_temp"), FormattedDouble(_metrics.metrics.get_int_temp(), 2)),
+            NamedDouble(F("ntc_temp"), FormattedDouble(_metrics.metrics.get_ntc_temp(), 2)),
+            NamedDouble(F("vcc"), FormattedDouble(_metrics.metrics.get_vcc(), 3)),
+            NamedDouble(F("frequency"), FormattedDouble(_metrics.metrics.get_freqency(), 2))
+        ).toString());
     }
 }
 

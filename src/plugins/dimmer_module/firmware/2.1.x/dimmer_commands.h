@@ -48,22 +48,4 @@ namespace Dimmer {
 
     static constexpr const uint8_t kRequestVersion[] = { DIMMER_REGISTER_READ_LENGTH, 0x02, DIMMER_REGISTER_VERSION };
 
-    static constexpr int16_t kInvalidTemperature = INT16_MIN;
-
-    inline static bool isValidVoltage(uint16_t value) {
-        return value != 0;
-    }
-
-    inline static bool isValidTemperature(float value) {
-        return !isnan(value);
-    }
-
-    inline static bool isValidTemperature(int16_t value) {
-        return value != kInvalidTemperature;
-    }
-
-    inline static bool isValidTemperature(uint8_t value) {
-        return value != UINT8_MAX;
-    }
-
 };

@@ -18,10 +18,10 @@ namespace KFCConfigurationClasses {
         udp_port(kDefaultValueFor_udp_port),
         udp_enable(true),
         mqtt_enable(true),
+        max_awake_time(kDefaultValueFor_max_awake_time),
         actions{},
         combo{},
-        enabled(),
-        max_awake_time(kDefaultValueFor_max_awake_time)
+        enabled()
     {}
 
 

@@ -151,6 +151,17 @@ uint8_t Module::getChannelCount() const
     return _channels.size();
 }
 
+int16_t Module::getRange(uint8_t channel) const
+{
+    return 0;
+}
+
+int16_t Module::getOffset(uint8_t channel) const
+{
+    return 0;
+}
+
+
 void Module::_onReceive(size_t length)
 {
     // __LDBG_printf("length=%u type=%02x", length, _wire.peek());
@@ -162,8 +173,11 @@ void Module::_onReceive(size_t length)
         while(length >= sizeof(event)) {
             length -= _wire.read(event);
             if (event.channel < _channels.size()) {
-                if (_channels[event.channel].getLevel() != event.level) {  // update level if out of sync
-                    _channels[event.channel].setLevel(event.level);
+                auto level = _calcLevelReverse(event.level, event.channel);
+                auto curLevel = _channels[event.channel].getLevel();
+                if (curLevel != level) {  // update level if out of sync
+                    auto publish = (event.level == _calcLevel(curLevel, event.channel)); // check if the error comes from up or downsampling and do not publish in those cases
+                    _channels[event.channel].setLevel(level, NAN, publish);
                 }
             }
         }

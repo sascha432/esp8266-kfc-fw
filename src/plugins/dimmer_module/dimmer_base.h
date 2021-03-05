@@ -57,6 +57,27 @@ namespace Dimmer {
         using Buttons = NoButtonsImpl;
     #endif
 
+    // class MinMaxLevel {
+    // public:
+    //     MinMaxLevel(uint16_t minLevel, uint16_t maxLevel) : _minLevel(minLevel), _maxLevel(maxLevel) {
+    //     }
+    //     inline int16_t getMin() const {
+    //         return _minLevel;
+    //     }
+    //     inline int16_t getMax() const {
+    //         return _maxLevel;
+    //     }
+    //     inline int16_t getRange() {
+    //         return _maxLevel - _minLevel;
+    //     }
+
+    // private:
+    //     uint16_t _minLevel;
+    //     uint16_t _maxLevel;
+    // };
+
+    // using MinMaxLevelArray = std::array<MinMaxLevel, IOT_DIMMER_MODULE_CHANNELS>;
+
 
     class Base {
     public:
@@ -87,6 +108,9 @@ namespace Dimmer {
         virtual void setChannel(uint8_t channel, int16_t level, float transition = NAN) = 0;
         virtual uint8_t getChannelCount() const = 0;
 
+        virtual int16_t getRange(uint8_t channel) const = 0;
+        virtual int16_t getOffset(uint8_t channel) const = 0;
+
         // read config from dimmer
         void _readConfig(ConfigType &config);
         // write config to dimmer
@@ -108,8 +132,21 @@ namespace Dimmer {
         void _forceMetricsUpdate(uint8_t delay);
         Sensor_DimmerMetrics *getMetricsSensor() const;
 
-        // return fade time for changing to another level
+        // return absoluate fade time for changing to another level
         float getTransitionTime(int fromLevel, int toLevel, float transitionTimeOverride);
+
+        int16_t _calcLevel(int16_t level, uint8_t channel) const {
+            auto min = _config.level.from[channel];
+            auto max = _config.level.to[channel];
+            return (level * (max - min) + (IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 2)) / IOT_DIMMER_MODULE_MAX_BRIGHTNESS + min;
+       }
+
+       int16_t _calcLevelReverse(int16_t level, uint8_t channel) const {
+            auto min = _config.level.from[channel];
+            auto max = _config.level.to[channel];
+            auto range = max - min;
+            return ((level - min) * IOT_DIMMER_MODULE_MAX_BRIGHTNESS + (range / 2)) / range;
+       }
 
     protected:
         String _getMetricsTopics(uint8_t num) const;
@@ -127,6 +164,7 @@ namespace Dimmer {
     protected:
         MetricsType _metrics;
         ConfigType _config;
+        // MinMaxLevelArray _minMaxLevel;
 
     protected:
     #if IOT_DIMMER_MODULE_INTERFACE_UART

@@ -13,9 +13,9 @@ namespace Dimmer {
 
     class Channel : public MQTTComponent {
     public:
-        static constexpr int16_t MAX_LEVEL = IOT_DIMMER_MODULE_MAX_BRIGHTNESS;
-        static constexpr int16_t MIN_LEVEL = MAX_LEVEL / 100;
-        static constexpr int16_t DEFAULT_LEVEL = MAX_LEVEL / 2;
+        static constexpr int16_t MAX_LEVEL = 16383;
+        // static constexpr int16_t MIN_LEVEL = MAX_LEVEL / 100;
+        // static constexpr int16_t DEFAULT_LEVEL = MAX_LEVEL / 2;
         static constexpr uint16_t kWebUIMaxUpdateRate = 150;
         static constexpr uint16_t kMQTTMaxUpdateRate = 600;
         static constexpr uint8_t kMQTTUpdateRateMultiplier = kMQTTMaxUpdateRate / kWebUIMaxUpdateRate;
@@ -61,9 +61,13 @@ namespace Dimmer {
         bool off(ConfigType *config = nullptr, float transition = NAN, int32_t level = -1);
         void publishState();
 
+        static constexpr int16_t getMaxLevel() {
+            return MAX_LEVEL;
+        }
+
         bool getOnState() const;
         int16_t getLevel() const;
-        void setLevel(int32_t level, float transition = NAN);
+        void setLevel(int32_t level, float transition = NAN, bool publish = true);
         void setStoredBrightness(int32_t store);
         uint16_t getStorededBrightness() const;
 
@@ -78,7 +82,7 @@ namespace Dimmer {
 
     private:
         void _publish();
-        bool _set(int32_t level, float transition = NAN);
+        bool _set(int32_t level, float transition = NAN, bool publish = true);
         String _createTopics(TopicType type, bool full = true) const;
 
         Module *_dimmer;
@@ -94,6 +98,10 @@ namespace Dimmer {
         uint8_t _publishFlag;
         uint8_t _mqttCounter;
     };
+
+    // inline int16_t Channel::getMaxLevel() const {
+    //     return _maxLevel;
+    // }
 
     inline bool Channel::getOnState() const
     {

@@ -53,8 +53,8 @@ void RemoteControlPlugin::createConfigureForm(FormCallbackType type, const Strin
         cfg.addRangeValidatorFor_max_awake_time(form);
 
         form.addObjectGetterSetter(F("dst"), cfg, cfg.get_bits_deep_sleep_time, cfg.set_bits_deep_sleep_time);
-        form.addFormUI(F("Deep Sleep Time"), FormUI::Suffix(F("minutes (0 = indefinitely)")));
-        cfg.addRangeValidatorFor_deep_sleep_time(form);
+        form.addFormUI(F("Deep Sleep Time"), FormUI::Suffix(F("minutes")), FormUI::IntAttribute(F("disabled-value"), 0), FormUI::FPStringAttribute(F("disabled-value-placeholder"), F("Indefinitely")));
+        cfg.addRangeValidatorFor_deep_sleep_time(form, true);
 
         form.addObjectGetterSetter(F("spt"), cfg, cfg.get_bits_click_time, cfg.set_bits_click_time);
         form.addFormUI(F("Short Press/Click Time"), FormUI::Suffix(F("milliseconds")));

@@ -233,4 +233,6 @@ inline void RemoteControlPlugin::disableAutoSleep()
 
 extern "C" PinState _pinState;
 
+void remotectrl_preinit_function();
+
 #include <debug_helper_disable.h>

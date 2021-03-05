@@ -77,11 +77,12 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
 
 PinState _pinState;
 
-extern "C" void preinit (void)
+void remotectrl_preinit_function()
 {
-    // store states of buttons
-    // all pins are reset to input before
-    _pinState._readStates();
+    // // store states of buttons
+    // // all pins are reset to input before
+    // _pinState._readStates();
+
     // settings the awake pin will clear all buffers and key presses might be lost
     pinMode(IOT_REMOTE_CONTROL_AWAKE_PIN, OUTPUT);
     digitalWrite(IOT_REMOTE_CONTROL_AWAKE_PIN, HIGH);
@@ -450,6 +451,7 @@ void RemoteControlPlugin::_loop()
     else if (isAutoSleepEnabled()) {
         if (_millis >= __autoSleepTimeout) {
             if (
+                (_minAwakeTimeout && (millis() <_minAwakeTimeout)) ||
                 _hasEvents() ||
                 _isSystemComboActive() ||
 #if MQTT_AUTO_DISCOVERY
@@ -491,8 +493,10 @@ void RemoteControlPlugin::_enterDeepSleep()
 #endif
 
     __LDBG_printf("entering deep sleep (auto=%d, time=%us)", _config.deep_sleep_time, _config.deep_sleep_time);
-    config.enterDeepSleep(KFCFWConfiguration::seconds(_config.deep_sleep_time), WAKE_NO_RFCAL, 1);
+    config.enterDeepSleep(std::chrono::duration_cast<KFCFWConfiguration::milliseconds>(KFCFWConfiguration::minutes(_config.deep_sleep_time)), WAKE_NO_RFCAL, 1);
 }
+
+
 
 bool RemoteControlPlugin::_isUsbPowered() const
 {

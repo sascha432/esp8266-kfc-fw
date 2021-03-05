@@ -18,9 +18,11 @@ namespace KFCConfigurationClasses {
         #else
             channel_mapping{ 0, 1, 2, 3 },
         #endif
+            level{},
             on_fadetime(12.5),
             off_fadetime(12.5),
         #else
+            level{},
             on_fadetime(4.5),
             off_fadetime(4.5),
         #endif
@@ -47,6 +49,13 @@ namespace KFCConfigurationClasses {
     void Plugins::Dimmer::defaults()
     {
         DimmerConfig_t cfg = {};
+        // std::fill(std::begin(cfg.level.to), std::end(cfg.level.to), IOT_DIMMER_MODULE_MAX_BRIGHTNESS);
+        // for(auto &value: cfg.level.to) {
+        //     value = IOT_DIMMER_MODULE_MAX_BRIGHTNESS;
+        // }
+        for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
+            cfg.level.to[i] = IOT_DIMMER_MODULE_MAX_BRIGHTNESS;
+        }
         setConfig(cfg);
     }
 

@@ -135,17 +135,16 @@ void SensorPlugin::_timerEvent()
         PrintString jsonStr;
         {
             using namespace MQTT::Json;
-            auto json = UnnamedObjectWriter(jsonStr);
             auto events = NamedArray(F("events"));
             for(auto sensor: _sensors) {
                 sensor->timerEvent(&events, mqttIsConnected);
             }
             if (events.length() > 2) {
-                json.append(NamedString(F("type"), F("ue")), events);
+                UnnamedObjectWriter(jsonStr, NamedString(F("type"), F("ue")), events);
             }
         }
         if (jsonStr.length() > 2) {
-            __DBG_printf("timer: %s", jsonStr.c_str());
+            // __DBG_printf("timer: %s", jsonStr.c_str());
             WebUISocket::broadcast(WebUISocket::getSender(), std::move(jsonStr));
         }
     }

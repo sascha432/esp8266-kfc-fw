@@ -105,6 +105,56 @@ void Dimmer::Form::_createConfigureForm(PluginComponent::FormCallbackType type, 
 #endif
 
     }
+    else if (formName == F("channels")) {
+
+        auto &channelGroup = form.addCardGroup(F("chcfg"), F("Channel Configuration"), false);
+
+        const __FlashStringHelper *vars[IOT_DIMMER_MODULE_CHANNELS][2] = {
+#if IOT_DIMMER_MODULE_CHANNELS >= 1
+            {F("ch0o"), F("ch0r")},
+#endif
+#if IOT_DIMMER_MODULE_CHANNELS >= 2
+            {F("ch1o"), F("ch1r")},
+#endif
+#if IOT_DIMMER_MODULE_CHANNELS >= 3
+            {F("ch2o"), F("ch2r")},
+#endif
+#if IOT_DIMMER_MODULE_CHANNELS >= 4
+            {F("ch3o"), F("ch3r")},
+#endif
+#if IOT_DIMMER_MODULE_CHANNELS >= 5
+            {F("ch4o"), F("ch4r")},
+#endif
+#if IOT_DIMMER_MODULE_CHANNELS >= 6
+            {F("ch5o"), F("ch5r")},
+#endif
+#if IOT_DIMMER_MODULE_CHANNELS >= 7
+            {F("ch6o"), F("ch6r")},
+#endif
+#if IOT_DIMMER_MODULE_CHANNELS >= 8
+            {F("ch7o"), F("ch7r")},
+#endif
+        };
+
+        for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
+            form.addPointerTriviallyCopyable(vars[i][0], &cfg.level.from[i]);
+            form.addFormUI(FormUI::Label(PrintString(F("Channel %u Minimum Level Limit"), i + 1)));
+            form.addValidator(FormUI::Validator::Range(0, IOT_DIMMER_MODULE_MAX_BRIGHTNESS - ((IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 100 + 3))));
+
+            form.addPointerTriviallyCopyable(vars[i][1], &cfg.level.to[i]);
+            form.addFormUI(FormUI::Label(PrintString(F("Channel %u Maximum Level Limit"), i + 1)));
+            form.addValidator(FormUI::Validator::Range((IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 100 + 3), IOT_DIMMER_MODULE_MAX_BRIGHTNESS));
+
+            // form.addValidator(FormUI::Validator::Callback([i, &vars](const String &to, FormUI::Field::BaseField &field) -> bool {
+            //     auto from = field.getForm().getField(vars[i][0])->getValue().toInt();
+            //     return (from < to.toInt());
+            // }));
+
+        }
+
+        channelGroup.end();
+
+    }
 #if IOT_DIMMER_MODULE_HAS_BUTTONS
     else if (formName == F("buttons")) {
 
@@ -115,8 +165,8 @@ void Dimmer::Form::_createConfigureForm(PluginComponent::FormCallbackType type, 
         cfg.addRangeValidatorFor_longpress_time(form);
 
         form.addObjectGetterSetter(F("lptime"), cfg, cfg.get_bits_longpress_time, cfg.set_bits_longpress_time);
-        form.addFormUI(F("Long Press Time"), FormUI::Suffix(FSPGM(milliseconds)), FormUI::PlaceHolder(cfg.kDefaultValueFor_longpress_time));
-        cfg.addRangeValidatorFor_longpress_time(form);
+        form.addFormUI(F("Long Press Time"), FormUI::Suffix(FSPGM(milliseconds)), FormUI::IntAttribute(F("disabled-value"), 0));
+        cfg.addRangeValidatorFor_longpress_time(form, true);
 
         form.addPointerTriviallyCopyable<float>(F("lpft"), &cfg.lp_fadetime);
         form.addFormUI(F("Button Hold Fade Time"), FormUI::Suffix(FSPGM(seconds)), FormUI::PlaceHolder(3.5, 1));
@@ -139,12 +189,12 @@ void Dimmer::Form::_createConfigureForm(PluginComponent::FormCallbackType type, 
         cfg.addRangeValidatorFor_min_brightness(form);
 
         form.addObjectGetterSetter(F("lpmaxb"), cfg, cfg.get_bits_longpress_max_brightness, cfg.set_bits_longpress_max_brightness);
-        form.addFormUI(F("Long Press Up/Max. Brightness"), FormUI::Suffix(F("%")), FormUI::PlaceHolder(cfg.kDefaultValueFor_longpress_max_brightness));
-        cfg.addRangeValidatorFor_longpress_max_brightness(form);
+        form.addFormUI(F("Long Press Up/Max. Brightness"), FormUI::Suffix(F("%")), FormUI::IntAttribute(F("disabled-value"), 0));
+        cfg.addRangeValidatorFor_longpress_max_brightness(form, true);
 
         form.addObjectGetterSetter(F("lpminb"), cfg, cfg.get_bits_longpress_min_brightness, cfg.set_bits_longpress_min_brightness);
-        form.addFormUI(F("Long Press Down/Min. Brightness"), FormUI::Suffix(F("%")), FormUI::PlaceHolder(cfg.kDefaultValueFor_longpress_min_brightness));
-        cfg.addRangeValidatorFor_longpress_min_brightness(form);
+        form.addFormUI(F("Long Press Down/Min. Brightness"), FormUI::Suffix(F("%")), FormUI::IntAttribute(F("disabled-value"), 0));
+        cfg.addRangeValidatorFor_longpress_min_brightness(form, true);
 
         buttonGroup.end();
 

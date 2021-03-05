@@ -218,20 +218,26 @@ namespace RemoteControl {
                     _pressed &= ~_getPressedMask(button);
                     break;
                 case EventType::PRESSED:
+                    if (acceptEvent) {
+                        if (button == 0) {
+                            _systemComboNextState(ComboButtonStateType::CONFIRM_AUTO_SLEEP_OFF);
+                        }
+                        else  if (button == 1) {
+                            _systemComboNextState(ComboButtonStateType::CONFIRM_AUTO_SLEEP_ON);
+                        }
+                        else  if (button == 2) {
+                            _systemComboNextState(ComboButtonStateType::CONFIRM_DEEP_SLEEP);
+                        }
+                        else  if (button == 3) {
+                            _systemComboNextState(ComboButtonStateType::CONFIRM_EXIT);
+                        }
+                    }
                     break;
                 case EventType::LONG_PRESSED:
                     break;
                 case EventType::HOLD_REPEAT:
                     break;
                 case EventType::HOLD_RELEASE:
-                    if (acceptEvent) {
-                        if (button == 0) {
-                            _systemComboNextState(ComboButtonStateType::CONFIRM_AUTO_SLEEP_OFF);
-                        }
-                        else if (button == 3) {
-                            _systemComboNextState(ComboButtonStateType::CONFIRM_DEEP_SLEEP);
-                        }
-                    }
                     break;
                 // case EventType::SINGLE_CLICK:
                 //     break;
@@ -240,14 +246,6 @@ namespace RemoteControl {
                 case EventType::REPEATED_CLICK: {
                         switch(repeatCount) {
                             case 1: // EventType::SINGLE_CLICK
-                                if (acceptEvent) {
-                                    if (button == 0) {
-                                        _systemComboNextState(ComboButtonStateType::CONFIRM_AUTO_SLEEP_ON);
-                                    }
-                                    else  if (button == 3) {
-                                        _systemComboNextState(ComboButtonStateType::CONFIRM_EXIT);
-                                    }
-                                }
                                 break;
                             case 2: // EventType::DOUBLE_CLICK
                                 break;

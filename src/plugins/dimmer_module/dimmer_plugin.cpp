@@ -13,7 +13,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     IOT_DIMMER_PLUGIN_NAME,
     IOT_DIMMER_PLUGIN_FRIENDLY_NAME,
     "",                 // web_templates
-    "general,buttons,advanced", // forms
+    "general,channels,buttons,advanced", // forms
     "mqtt,http",        // reconfigure_dependencies
     PluginComponent::PriorityType::DIMMER_MODULE,
     PluginComponent::RTCMemoryId::NONE,
@@ -189,6 +189,7 @@ void Plugin::createMenu()
 
     auto subMenu = root.addSubMenu(getFriendlyName());
     subMenu.addMenuItem(F("General"), F("dimmer/general.html"));
+    subMenu.addMenuItem(F("Channel Configuration"), F("dimmer/channels.html"));
 #if IOT_DIMMER_MODULE_HAS_BUTTONS
     subMenu.addMenuItem(F("Button Configuration"), F("dimmer/buttons.html"));
 #endif

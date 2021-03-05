@@ -109,6 +109,7 @@ namespace RemoteControl {
             _config(),
             __autoSleepTimeout(0),
             _maxAwakeTimeout(0),
+            _minAwakeTimeout(0),
             _buttonsLocked(~0),
             _systemButtonComboTime(0),
             _systemButtonComboTimeout(0),
@@ -222,8 +223,8 @@ public:
         EXIT_MENU_TIMEOUT,
     };
 
-    static constexpr uint32_t kSystemComboRebootTimeout = 5000;
-    static constexpr uint32_t kSystemComboMenuTimeout = 10000;
+    static constexpr uint32_t kSystemComboRebootTimeout = 3500;
+    static constexpr uint32_t kSystemComboMenuTimeout = 30000;
     static constexpr uint32_t kSystemComboConfirmTimeout = 850;
 
     void systemButtonComboEvent(bool state, EventType type = EventType::DOWN, uint8_t button = 0, uint16_t repeatCount = 0, uint32_t eventTime = 0);
@@ -249,6 +250,8 @@ private:
         ConfigType _config;
         uint32_t __autoSleepTimeout;
         uint32_t _maxAwakeTimeout;
+public://TODO
+        uint32_t _minAwakeTimeout;
         uint32_t _buttonsLocked;
         uint32_t _systemButtonComboTime;
         uint32_t _systemButtonComboTimeout;

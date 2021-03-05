@@ -611,6 +611,14 @@ namespace MQTT {
                 arg.printTo(_output);
             }
 
+            inline void appendValue(const TrimmedDouble &arg) {
+                arg.printTo(_output);
+            }
+
+            inline void appendValue(const FullyTrimmedDouble &arg) {
+                arg.printTo(_output);
+            }
+
             inline void appendValue(nullptr_t) {
                 _output.print(F("null"));
             }

@@ -420,8 +420,12 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(PANIC, "PANIC", "Cause an exception by cal
 
 #endif
 #if HAVE_I2CSCANNER
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CSCAN, "I2CSCAN", "[<offset>[,<length>]", "Dump EEPROM");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CSCAN, "I2CSCAN", "[<offset>[,<length>]", "Scan I2C bus");
 #endif
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CS, "I2CS", "<pin-sda>,<pin-scl>[,<speed=100000>,<clock-stretch=45000>,<start|stop>]", "Configure I2C");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CTM, "I2CTM", "<address>,<data,...>", "Transmsit data to slave");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CRQ, "I2CRQ", "<address>,<length>", "Request data from slave");
+
 
 void at_mode_help_commands()
 {
@@ -499,6 +503,10 @@ void at_mode_help_commands()
 #if HAVE_I2CSCANNER
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(I2CSCAN), name);
 #endif
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(I2CS), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(I2CTM), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(I2CRQ), name);
+
 
 }
 
@@ -1427,11 +1435,71 @@ void at_mode_serial_handle_event(String &commandString)
             }
 #endif
 #if HAVE_I2CSCANNER
-            else if (args.isCommand(F("I2CSCAN"))) {
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CSCAN))) {
                 scanI2C(args.getStream(), -1, -1, false);
                 // scanPorts(args.getStream(), false);
             }
 #endif
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CS))) {
+                if (args.requireArgs(2)) {
+                    uint8_t sda = args.toIntMinMax(0, 0, 16, KFC_TWOWIRE_SDA);
+                    uint8_t scl = args.toIntMinMax(1, 0, 16, KFC_TWOWIRE_SCL);
+                    uint32_t speed = args.toInt(2, KFC_TWOWIRE_CLOCK_SPEED);
+                    uint32_t stretch = args.toInt(3, KFC_TWOWIRE_CLOCK_STRETCH);
+                    bool stop = args.has(F("stop"));
+                    if (isFlashInterfacePin(sda) || isFlashInterfacePin(scl)) {
+                        args.printf_P(PSTR("Pins 6, 7, 8, 9, 10 and 11 cannot be used"));
+                    }
+                    else if (stop) {
+                        pinMode(sda, INPUT);
+                        pinMode(scl, INPUT);
+                        Wire.begin(255, 255);
+                        args.print(F("I2C stopped"));
+                    }
+                    else {
+                        Wire.begin(sda, scl);
+                        Wire.setClockStretchLimit(stretch);
+                        Wire.setClock(speed);
+                        args.printf_P(PSTR("I2C started on %u:%u (sda:scl), speed %u, clock stretch %u"), sda, scl, speed, stretch);
+                    }
+                }
+            }
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CTM))) {
+                if (args.requireArgs(1)) {
+                    uint8_t address = args.toNumber(0, 0x48);
+                    Wire.beginTransmission(address);
+                    for(uint8_t i = 1; i < args.size(); i++) {
+                        Wire.write(args.toNumber(i, 0xff));
+                    }
+                    if (Wire.endTransmission() == 0) {
+                        args.printf_P(PSTR("slave 0x%02X: transmitted %u bytes"), address, args.size() - 1);
+                    }
+                    else {
+                        args.printf_P(PSTR("slave 0x%02X: transmission failed"), address);
+                    }
+                }
+            }
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CRQ))) {
+                if (args.requireArgs(1, 2)) {
+                    uint8_t address = args.toNumber(0, 0x48);
+                    uint8_t length = args.toNumber(1, 0);
+                    if (Wire.requestFrom(address, length) == length) {
+                        uint8_t *buf = new uint8_t[length + 1]();
+                        if (buf) {
+                            delete[] buf;
+                        }
+                        else {
+                            args.printf_P(PSTR("failed to allocate memory. %u bytes"), length);
+                        }
+                        auto read = Wire.readBytes(buf, length);
+                        args.printf_P(PSTR("slave 0x%02X: requested %u byte. data:"), address, read);
+                        printable_string(args.getStream(), buf, read, 0);
+                    }
+                    else {
+                        args.printf_P(PSTR("slave 0x%02X: requesting data failed"), address);
+                    }
+                }
+            }
             else if (args.isCommand(F("I2CT")) || args.isCommand(F("I2CA")) || args.isCommand(F("I2CR"))) {
                 // ignore SerialTwoWire communication
             }
@@ -2133,11 +2201,15 @@ void at_mode_serial_input_handler(Stream &client)
         auto serial = StreamWrapper(serialHandler.getStreams(), serialHandler.getInput()); // local output online
         while(client.available()) {
             int ch = client.read();
+            // __DBG_printf("read %u (%c)", (unsigned)((uint8_t)ch), isprint(ch) ? ch : '-');
             if (lastWasCR == true && ch == '\n') {
                 lastWasCR = false;
                 continue;
             }
             switch(ch) {
+                case -1:
+                case 0:
+                    break;
                 case 9:
                     if (!line.length()) {
                         line = F("AT+");

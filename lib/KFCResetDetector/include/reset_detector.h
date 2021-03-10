@@ -138,6 +138,8 @@ public:
 
 public:
     StartupTimings() :
+        _preInit(0),
+        _preSetup(0),
         _setup(0),
         _loop(0),
         _wifiConnected(0),
@@ -146,6 +148,14 @@ public:
         _mqtt(0),
         _deepSleep(0)
     {}
+
+    void preInit(uint32_t millis) {
+        _preInit = millis;
+    }
+
+    void preSetup(uint32_t millis) {
+        _preSetup = millis;
+    }
 
     void setSetupFunc(uint32_t millis) {
         _setup = millis;
@@ -178,6 +188,8 @@ public:
     }
 
 private:
+    uint32_t _preInit;
+    uint32_t _preSetup;
     uint32_t _setup;
     uint32_t _loop;
     uint32_t _wifiConnected;

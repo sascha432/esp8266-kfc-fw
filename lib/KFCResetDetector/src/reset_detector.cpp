@@ -221,6 +221,8 @@ StartupTimings _startupTimings;
 
 void StartupTimings::dump(Print &output)
 {
+    output.printf_P(PSTR("preInit() call: %ums\n"), _preInit);
+    output.printf_P(PSTR("preSetup() call: %ums\n"), _preSetup);
     output.printf_P(PSTR("setup() call: %ums\n"), _setup);
     output.printf_P(PSTR("first loop() call: %ums\n"), _loop);
     output.printf_P(PSTR("Wifi connected: %ums\n"), _wifiConnected);

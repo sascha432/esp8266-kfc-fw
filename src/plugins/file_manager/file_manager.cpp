@@ -31,7 +31,7 @@ void FileManagerWebHandler::onRequestHandler(AsyncWebServerRequest *request)
         fm.handleRequest();
     }
     else {
-        request->send(403);
+    WebServer::Plugin::send(403, request);
     }
 }
 
@@ -476,11 +476,17 @@ public:
 
     virtual void setup(SetupModeType mode) override
     {
-        auto server = WebServer::Plugin::getWebServerObject();
-        if (server) {
-            server->addHandler(new AsyncFileUploadWebHandler(String(FSPGM(file_manager_base_uri, "/file_manager/")) + FSPGM(upload), FileManagerWebHandler::onRequestHandler));
-            server->addHandler(new FileManagerWebHandler(FSPGM(file_manager_base_uri)));
-        }
+        dependsOn(F("http"), [](const PluginComponent *plugin) {
+            auto server = WebServer::Plugin::getWebServerObject();
+            if (server) {
+                server->addHandler(new AsyncFileUploadWebHandler(String(FSPGM(file_manager_base_uri, "/file_manager/")) + FSPGM(upload), FileManagerWebHandler::onRequestHandler));
+                server->addHandler(new FileManagerWebHandler(FSPGM(file_manager_base_uri)));
+            }
+            else {
+                // remove menu
+                bootstrapMenu.remove(bootstrapMenu.findMenuByURI(FSPGM(file_manager_html_uri)));
+            }
+        });
     }
 
     // virtual void reconfigure(const String &source) override
@@ -490,10 +496,7 @@ public:
 
     virtual void createMenu() override
     {
-        // check if the web server is running
-        if (WebServer::Plugin::getWebServerObject()) {
-            bootstrapMenu.addMenuItem(getFriendlyName(), FSPGM(file_manager_html_uri), navMenu.util);
-        }
+        bootstrapMenu.addMenuItem(getFriendlyName(), FSPGM(file_manager_html_uri), navMenu.util);
     }
 };
 

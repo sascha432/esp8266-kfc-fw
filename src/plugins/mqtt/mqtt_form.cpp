@@ -26,7 +26,7 @@ void Plugin::createMenu()
 
     auto device = bootstrapMenu.getMenuItem(navMenu.device);
     device.addDivider();
-    device.addMenuItem(F("Publish MQTT Auto Discovery"), F("#"));
+    device.addMenuItem(F("Publish MQTT Auto Discovery"), F("mqtt-publish-ad.html"));
 }
 #endif
 

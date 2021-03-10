@@ -333,8 +333,14 @@ public:
 
     HttpHeaders();
     HttpHeaders(bool addDefault);
-    HttpHeaders(HttpHeadersVector &&headers);
+    HttpHeaders(HttpHeadersVector &&headers) noexcept : _headers(std::move(headers)) {}
     virtual ~HttpHeaders();
+
+    HttpHeaders &operator=(HttpHeaders &&headers) noexcept {
+        _headers = std::move(headers._headers);
+        return *this;
+    }
+
 
     static const String getRFC7231Date(const time_t *time);
     static HttpHeaders &getInstance();
@@ -380,11 +386,27 @@ public:
     void setHeaders(HttpHeadersVector &&headers) {
         _headers = std::move(headers);
     }
-    HttpHeadersIterator begin() {
+    inline HttpHeadersIterator begin() {
         return _headers.begin();
     }
-    HttpHeadersIterator end() {
+    inline HttpHeadersIterator end() {
         return _headers.end();
+    }
+
+    HttpHeader *find(const String &name) const {
+        return find(name.c_str());
+    }
+    HttpHeader *find(const __FlashStringHelper *name) const {
+        return find(reinterpret_cast<PGM_P>(name));
+    }
+    HttpHeader *find(PGM_P name) const {
+        auto iterator = std::find_if(_headers.begin(), _headers.end(), [name](const HttpHeaderPtr &header) {
+            return strcasecmp_P(header->getName().c_str(), name) == 0;
+        });
+        if (iterator == _headers.end()) {
+            return nullptr;
+        }
+        return (*iterator).get();
     }
 
     void addNoCache(bool noStore = false);

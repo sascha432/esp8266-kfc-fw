@@ -161,8 +161,13 @@ public:
     class Dependency {
     public:
         Dependency(NameType name, DependencyCallback callback) : _name(name), _callback(callback) {}
+
         NameType _name;
         DependencyCallback _callback;
+
+        bool operator==(NameType name) const {
+            return strcmp_P_P(reinterpret_cast<PGM_P>(_name), reinterpret_cast<PGM_P>(name)) == 0;
+        }
     };
 
     using DependencyVector = std::vector<Dependency>;
@@ -318,9 +323,12 @@ public:
 
 public:
     bool dependsOn(NameType name, DependencyCallback callback);
+    static void invokeDependencies(NameType name, const PluginComponent *plugin);
     static void checkDependencies();
     static void createDependencies() {
-        _dependencies = new DependencyVector();
+        if (!_dependencies) {
+            _dependencies = new DependencyVector();
+        }
     }
     static void deleteDependencies() {
 #if DEBUG
@@ -329,6 +337,7 @@ public:
         }
 #endif
         delete _dependencies;
+        _dependencies = nullptr;
     }
     static DependencyVector &_getDependencies() {
         return *_dependencies;

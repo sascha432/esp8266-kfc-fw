@@ -139,7 +139,9 @@ namespace WebServer {
         using AsyncWebHandler::AsyncWebHandler;
 
         virtual bool canHandle(AsyncWebServerRequest *request) override;
-//        virtual void handleBody(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) override;
+        virtual void handleBody(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) override {
+            __DBG_printf("handle body len=%u index=%u total=%u", len, index, total);
+        }
         virtual void handleRequest(AsyncWebServerRequest *request) override;
         virtual void handleUpload(AsyncWebServerRequest *request, const String& filename, size_t index, uint8_t *data, size_t len, bool final) override;
         virtual bool isRequestHandlerTrivial() override {
@@ -168,14 +170,22 @@ namespace WebServer {
 
         // AsyncWebServer custom handlers
         static void handlerNotFound(AsyncWebServerRequest *request);
-        static void handlerUpdate(AsyncWebServerRequest *request);
-        static void handlerUploadUpdate(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final);
+
+        // if webTemplate is not nullptr, the object will be destroyed even if an error occurs
+        // returns false on error
+        static bool sendFileResponse(uint16_t code, const String &path, AsyncWebServerRequest *request, HttpHeaders &headers, WebTemplate *webTemplate = nullptr);
+
+        static void send(uint16_t httpCode, AsyncWebServerRequest *request, const String &message = String());
+        // returns true for any html page
+        static bool isHtmlContentType(AsyncWebServerRequest *request, HttpHeaders *headers = nullptr);
 
         // install a callback to display the progress of the update
         void setUpdateFirmwareCallback(UpdateFirmwareCallback callback);
 
     public:
         static FailureCounterContainer *getLoginFailureContainer();
+
+        static void executeDelayed(AsyncWebServerRequest *request, std::function<void()> callback);
 
     public:
         static const __FlashStringHelper *getAuthTypeStr(AuthType type) {
@@ -214,6 +224,7 @@ namespace WebServer {
 
         bool _handleFileRead(String path, bool client_accepts_gzip, AsyncWebServerRequest *request, HttpHeaders &httpHeaders);
         bool _sendFile(const FileMapping &mapping, const String &formName, HttpHeaders &httpHeaders, bool client_accepts_gzip, bool isAuthenticated, AsyncWebServerRequest *request, WebTemplate *webTemplate = nullptr);
+        AsyncWebServerResponse *_beginFileResponse(const FileMapping &mapping, const String &formName, HttpHeaders &httpHeaders, bool client_accepts_gzip, bool isAuthenticated, AsyncWebServerRequest *request, WebTemplate *webTemplate = nullptr);
 
         void _handlerSpeedTest(AsyncWebServerRequest *request, bool zip, HttpHeaders &headers);
         void _handlerWebUI(AsyncWebServerRequest *request, HttpHeaders &httpHeaders);

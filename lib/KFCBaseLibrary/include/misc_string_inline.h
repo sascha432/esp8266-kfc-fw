@@ -129,7 +129,13 @@ inline int String_lastIndexOf(const String &str, char find)
 
 inline int String_lastIndexOf(const String &str, char find, size_t fromIndex)
 {
-    if (!find || fromIndex > str.length() || fromIndex < 1) {
+    if (!find) {
+        return -1;
+    }
+    if (fromIndex == ~0U) {
+        fromIndex = str.length();
+    }
+    else if (fromIndex > str.length() || fromIndex < 1) {
         return -1;
     }
     auto ptr = reinterpret_cast<const char *>(memrchr(str.c_str(), find, fromIndex));
@@ -165,7 +171,14 @@ inline int String_lastIndexOf(const String &str, const __FlashStringHelper *find
 
 inline int String_lastIndexOf(const String &str, const __FlashStringHelper *find, size_t fromIndex, size_t findLen)
 {
-    if (!find || !findLen || !str.length()) {
+    size_t len;
+    if (!find || !(len = str.length())) {
+        return -1;
+    }
+    if (fromIndex == ~0U) {
+        fromIndex = len;
+    }
+    else if (fromIndex < findLen || fromIndex > len) {
         return -1;
     }
     auto ptr = __strrstr_P(const_cast<char *>(str.c_str()), fromIndex + findLen, reinterpret_cast<PGM_P>(find), findLen);
@@ -177,7 +190,14 @@ inline int String_lastIndexOf(const String &str, const __FlashStringHelper *find
 
 inline int String_lastIndexOf(const String &str, const char *find, size_t fromIndex, size_t findLen)
 {
-    if (!find || !str.length()) {
+    size_t len;
+    if (!find || !(len = str.length())) {
+        return -1;
+    }
+    if (fromIndex == ~0U) {
+        fromIndex = len;
+    }
+    else if (fromIndex < findLen || fromIndex > len) {
         return -1;
     }
     auto ptr = __strrstr(const_cast<char *>(str.c_str()), fromIndex + findLen, find, findLen);

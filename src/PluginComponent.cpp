@@ -206,16 +206,30 @@ bool PluginComponent::atModeHandler(AtModeArgs &args)
 
 #endif
 
+void PluginComponent::invokeDependencies(NameType name, const PluginComponent *plugin)
+{
+    _dependencies->erase(std::remove_if(_dependencies->begin(), _dependencies->end(), [name, plugin](const Dependency &dep) {
+        if (dep == name) {
+            __LDBG_printf("dependency callback type=previously delayed name=%s callback=%p", (PGM_P)name, &dep.callback);
+            dep._callback(plugin);
+            return true;
+        }
+        return false;
+    }), _dependencies->end());
+}
+
 bool PluginComponent::dependsOn(NameType name, DependencyCallback callback)
 {
     auto plugin = findPlugin(name, false);
     if (plugin) {
         if (plugin->_setupTime) {
-            __LDBG_printf("dependecy callback type=call name=%s callback=%p", (PGM_P)name, &callback);
+            // invoke dependencies in order
+            invokeDependencies(name, plugin);
+            __LDBG_printf("dependency callback type=call name=%s callback=%p", (PGM_P)name, &callback);
             callback(plugin);
         }
         else {
-            __LDBG_printf("dependecy callback type=delayed name=%s callback=%p", (PGM_P)name, &callback);
+            __LDBG_printf("dependency callback type=delayed name=%s callback=%p", (PGM_P)name, &callback);
             _dependencies->emplace_back(name, callback);
         }
         return true;
@@ -228,7 +242,7 @@ void PluginComponent::checkDependencies()
     _dependencies->erase(std::remove_if(_dependencies->begin(), _dependencies->end(), [](const Dependency &dep) {
         auto plugin = findPlugin(dep._name, true);
         if (plugin) {
-            __LDBG_printf("dependecy callback type=call_delayed name=%s callback=%p", (PGM_P)dep._name, lambda_target<DependencyCallback>(dep._callback));
+            __LDBG_printf("dependency callback type=call_delayed name=%s callback=%p", (PGM_P)dep._name, &dep._callback);
             dep._callback(plugin);
             return true;
         }

@@ -5,6 +5,7 @@
 #pragma once
 
 #include <PrintString.h>
+#include <JsonTools.h>
 
 #define MQTT_JSON_WRITER_DEBUG 1
 

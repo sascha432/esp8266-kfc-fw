@@ -607,6 +607,28 @@ public:
         static String _formatTopic(const String &suffix, const __FlashStringHelper *format, va_list arg);
         static String _filterString(const char *str, bool replaceSpace = false);
 
+    public:
+        inline const __FlashStringHelper *getConnectionState()
+        {
+            switch(_connState) {
+                case ConnectionState::AUTO_RECONNECT_DELAY:
+                    return F("waiting for reconnect timeout");
+                case ConnectionState::PRE_CONNECT:
+                case ConnectionState::CONNECTING:
+                    return F("connecting...");
+                case ConnectionState::CONNECTED:
+                    return F("connected");
+                case ConnectionState::DISCONNECTING:
+                    return F("disconnecting...");
+                case ConnectionState::DISCONNECTED:
+                case ConnectionState::IDLE:
+                case ConnectionState::NONE:
+                default:
+                    break;
+            }
+            return F("disconnected");
+        }
+
     private:
         void _zeroConfCallback(const String &hostname, const IPAddress &address, uint16_t port, MDNSResolver::ResponseType type);
         void _setupClient();

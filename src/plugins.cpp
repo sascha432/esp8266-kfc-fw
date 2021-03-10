@@ -291,20 +291,24 @@ void setup_plugins(PluginComponent::SetupModeType mode)
         }
     }
 
-    BOOTLOG_PRINTF("deleting dependencies");
-    PluginComponent::deleteDependencies();
-
-#ifndef DISABLE_EVENT_SCHEDULER
 #if ENABLE_DEEP_SLEEP
     if (mode == PluginComponent::SetupModeType::AUTO_WAKE_UP) {
+        __DBG_printf("unresolved dependencies=%u", PluginComponent::_getDependencies().size());
         delayedStartupTime = PLUGIN_DEEP_SLEEP_DELAYED_START_TIME;
         _Scheduler.add(1000, true, [](Event::CallbackTimerPtr timer) {
             if (millis() > delayedStartupTime) {
                 timer->disarm();
                 setup_plugins(PluginComponent::SetupModeType::DELAYED_AUTO_WAKE_UP);
+                PluginComponent::deleteDependencies();
             }
         });
     }
-#endif
+    else {
+        BOOTLOG_PRINTF("deleting dependencies");
+        PluginComponent::deleteDependencies();
+    }
+#else
+    BOOTLOG_PRINTF("deleting dependencies");
+    PluginComponent::deleteDependencies();
 #endif
 }

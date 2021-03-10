@@ -43,9 +43,6 @@ HttpHeaders::HttpHeaders(bool addDefault)
     }
 }
 
-HttpHeaders::HttpHeaders(HttpHeadersVector &&headers) : _headers(std::move(headers))
-{
-}
 
 HttpHeaders::~HttpHeaders()
 {
@@ -215,8 +212,9 @@ const String HttpCookieHeader::getValue() const
 bool HttpCookieHeader::parseCookie(AsyncWebServerRequest *request, const String &name, String &value)
 {
     // find all cookie headers
-    for(const auto header: request->_headers) {
-        if (String_equalsIgnoreCase(header->name(), SPGM(Cookie))) {
+    for(const auto header: request->getHeaders()) {
+        // __DBG_printf("header key=% val=%s", header->name().c_str(), header->value().c_str());
+        if (header->name().equalsIgnoreCase(FSPGM(Cookie))) {
             // find name in this cookie collection
            if (parseCookie(header->value(), name, value)) {
                return true;

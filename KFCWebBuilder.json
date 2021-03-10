@@ -228,7 +228,7 @@
                     },
                     "processors": {
                         "remove_dot_files": {
-                            "filename_pattern": "/^\\.[^.]+\\.html$/",
+                            "filename_pattern": "/^\\.[^.]+(?<!(message))\\.html$/",
                             "command": "@remove-file"
                         },
                         "template2html": {

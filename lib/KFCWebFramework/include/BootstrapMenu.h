@@ -171,7 +171,9 @@ public:
     }
 
     inline void remove(ItemsVectorIterator iterator) {
-        _items.erase(iterator);
+        if (iterator != _items.end()) {
+            _items.erase(iterator);
+        }
     }
 
     MenuItem getMenuItem(menu_item_id_t id) {

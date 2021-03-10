@@ -139,6 +139,63 @@ protected:
     String _errorMessage;
 };
 
+class MessageTemplate : public WebTemplate {
+public:
+    static constexpr uint8_t kHtmlNone = 0x00;
+    static constexpr uint8_t kHtmlMessage = 0x01;
+    static constexpr uint8_t kHtmlTitle = 0x02;
+
+public:
+    // the message and title may contain html code
+    MessageTemplate(const String &message, const String &title = String()) : _title(title), _message(message), _titleClass(nullptr), _messageClass(nullptr), _containsHtml(kHtmlNone) {
+        checkForHtml();
+    }
+
+    void setTitle(const String &title) {
+        _title = title;
+    }
+    void setMessage(const String &message) {
+        _message = message;
+    }
+
+    void setTitleClass(const __FlashStringHelper *titleClass) {
+        _titleClass = titleClass;
+    }
+    void setMessageClass(const __FlashStringHelper *messageClass) {
+        _messageClass = messageClass;
+    }
+
+    virtual void process(const String &key, PrintHtmlEntitiesString &output) override;
+
+    inline bool containsHtml() const {
+        return _containsHtml != kHtmlNone;
+    }
+
+    inline static const __FlashStringHelper *getDefaultAlertClass() {
+        return F("success");
+    }
+
+private:
+    void checkForHtml();
+
+protected:
+    String _title;
+    String _message;
+    const __FlashStringHelper *_titleClass;
+    const __FlashStringHelper *_messageClass;
+    uint8_t _containsHtml;
+};
+
+class NotFoundTemplate : public MessageTemplate {
+public:
+    NotFoundTemplate(uint16_t code, const String &message, const String &title = String()) : MessageTemplate(message, title), _code(code) {}
+
+    virtual void process(const String &key, PrintHtmlEntitiesString &output) override;
+
+protected:
+    uint16_t _code;
+};
+
 class PasswordTemplate : public LoginTemplate {
 public:
     virtual void process(const String &key, PrintHtmlEntitiesString &output) override;

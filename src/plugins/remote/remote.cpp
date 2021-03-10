@@ -206,17 +206,32 @@ void RemoteControlPlugin::setup(SetupModeType mode)
         auto server = WebServer::Plugin::getWebServerObject();
         if (server) {
             WebServer::Plugin::addHandler(F("/rc/*"), [](AsyncWebServerRequest *request) {
+                String message;
                 __DBG_printf("remote control web server handler url=%s", request->url().c_str());
                 if (request->url().endsWith(F("/deep_sleep.html"))) {
+                    message = F("Device entering deep sleep...");
                     request->onDisconnect([]() {
-                        RemoteControlPlugin::enterDeepSleep();
+                        // cannot be called from ISRs
+                        LoopFunctions::callOnce([]() {
+                            RemoteControlPlugin::enterDeepSleep();
+                        });
                     });
                 }
                 else if (request->url().endsWith(F("/disable_auto_sleep.html"))) {
+                    message = F("Auto sleep has been disabled");
                     RemoteControlPlugin::disableAutoSleep();
                 }
                 else if (request->url().endsWith(F("/enable_auto_sleep.html"))) {
+                    message = F("Auto sleep has been enabled");
                     RemoteControlPlugin::enableAutoSleep();
+                }
+                else {
+                    WebServer::Plugin::send(404, request);
+                    return;
+                }
+                HttpHeaders headers;
+                if (!WebServer::Plugin::sendFileResponse(200, F("/.message.html"), request, headers, new MessageTemplate(message))) {
+                    __DBG_printf("failed to send /.message.html");
                 }
             });
         }
@@ -274,9 +289,9 @@ void RemoteControlPlugin::createMenu()
 
     auto device = bootstrapMenu.getMenuItem(navMenu.device);
     device.addDivider();
-    device.addMenuItem(F("Enable Auto Sleep"), F("/rc/enable_auto_sleep.html"));
-    device.addMenuItem(F("Disable Auto Sleep"), F("/rc/disable_auto_sleep.html"));
-    device.addMenuItem(F("Enable Deep Sleep"), F("/rc/deep_sleep.html"));
+    device.addMenuItem(F("Enable Auto Sleep"), F("rc/enable_auto_sleep.html"));
+    device.addMenuItem(F("Disable Auto Sleep"), F("rc/disable_auto_sleep.html"));
+    device.addMenuItem(F("Enable Deep Sleep"), F("rc/deep_sleep.html"));
 }
 
 
@@ -335,6 +350,8 @@ void RemoteControlPlugin::_loop()
     if (_millis >= _readUsbPinTimeout && _isUsbPowered()) {
         _readUsbPinTimeout = _millis + 100;
         _resetAutoSleep();
+        // start delayed plugins
+        set_delayed_startup_time(0);
         if (_autoDiscoveryRunOnce && MQTTClient::safeIsConnected() && IS_TIME_VALID(time(nullptr))) {
             __LDBG_printf("usb power detected, publishing auto discovery");
             _autoDiscoveryRunOnce = false;

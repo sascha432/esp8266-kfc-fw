@@ -22,8 +22,14 @@ namespace FormUI {
         class Data : public AsyncWebServerRequest {
         public:
             using AsyncWebServerRequest::AsyncWebServerRequest;
+            bool hasArg(const __FlashStringHelper *name) const {
+                return AsyncWebServerRequest::hasArg(name);
+            }
             bool hasArg(const String &name) const {
-            return AsyncWebServerRequest::hasArg(name.c_str());
+                return AsyncWebServerRequest::hasArg(name);
+            }
+            bool hasArg(PGM_P name) const {
+                return AsyncWebServerRequest::hasArg(name);
             }
         };
 

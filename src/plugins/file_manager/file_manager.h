@@ -4,6 +4,8 @@
 
 #pragma once
 
+#if FILE_MANAGER
+
 #ifndef DEBUG_FILE_MANAGER
 #define DEBUG_FILE_MANAGER              0
 #endif
@@ -27,6 +29,8 @@ public:
     uint16_t view(bool isDownload = false);
     uint16_t remove();
     uint16_t rename();
+
+    static void addHandler(AsyncWebServer *server);
 
  private:
 
@@ -65,6 +69,10 @@ public:
     virtual bool canHandle(AsyncWebServerRequest *request) override;
     virtual void handleRequest(AsyncWebServerRequest *request) override;
 
+    static void onRequestHandler(AsyncWebServerRequest *request);
+
 private:
     const __FlashStringHelper *_uri;
 };
+
+#endif

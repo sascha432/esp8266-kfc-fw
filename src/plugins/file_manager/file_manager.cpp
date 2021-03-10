@@ -2,6 +2,8 @@
  * Author: sascha_lammers@gmx.de
  */
 
+#if FILE_MANAGER
+
 #include <Arduino_compat.h>
 #include "file_manager.h"
 #include <Buffer.h>
@@ -22,45 +24,39 @@
 #include <debug_helper_disable.h>
 #endif
 
-void file_manager_upload_handler(AsyncWebServerRequest *request)
+void FileManagerWebHandler::onRequestHandler(AsyncWebServerRequest *request)
 {
-    if (request->_tempObject) {
-        FileManager fm(request, WebServerPlugin::getInstance().isAuthenticated(request) == true, FSPGM(upload, "upload"));
+    if (WebServer::Plugin::getInstance().isAuthenticated(request) == true) {
+        FileManager fm(request, true, FSPGM(upload, "upload"));
         fm.handleRequest();
-    } else {
+    }
+    else {
         request->send(403);
     }
 }
 
-void file_manager_install_web_server_hook()
+
+FileManager::FileManager() :
+    _isAuthenticated(false),
+    _errors(0),
+    _request(nullptr),
+    _response(nullptr)
 {
-    if (WebServerPlugin::getWebServerObject()) {
-        String uploadDir = FSPGM(file_manager_base_uri, "/file_manager/");
-        uploadDir += FSPGM(upload);
-        WebServerPlugin::addHandler(new AsyncFileUploadWebHandler(uploadDir, file_manager_upload_handler));
-        WebServerPlugin::addHandler(new FileManagerWebHandler(FSPGM(file_manager_base_uri)));
-    }
 }
 
-void file_manager_reconfigure(PGM_P source)
+FileManager::FileManager(AsyncWebServerRequest *request, bool isAuthenticated, const String &uri) :
+    _isAuthenticated(isAuthenticated),
+    _errors(isAuthenticated ? 0 : 1),
+    _uri(uri),
+    _request(request),
+    _response(nullptr)
 {
-    file_manager_install_web_server_hook();
 }
 
-FileManager::FileManager()
+void FileManager::addHandler(AsyncWebServer *server)
 {
-    _request = nullptr;
-    _response = nullptr;
-    _isAuthenticated = false;
-    _errors = 0;
-}
-
-FileManager::FileManager(AsyncWebServerRequest *request, bool isAuthenticated, const String &uri) : FileManager()
-{
-    _uri = uri;
-    _request = request;
-    _isAuthenticated = isAuthenticated;
-    _errors = _isAuthenticated ? 0 : 1;
+    server->addHandler(new AsyncFileUploadWebHandler(String(FSPGM(file_manager_base_uri, "/file_manager/")) + FSPGM(upload), FileManagerWebHandler::onRequestHandler));
+    server->addHandler(new FileManagerWebHandler(FSPGM(file_manager_base_uri)));
 }
 
 void FileManager::_sendResponse(uint16_t httpStatusCode)
@@ -258,10 +254,10 @@ uint16_t FileManager::upload()
     auto success = false;
     auto uploadDir = _requireDir(F("upload_current_dir"));
     auto filename = _request->arg(F("upload_filename"));
-    if (!_request->_tempObject) {
-        __LDBG_printf("_tempObject is null");
-        return httpCode;
-    }
+    // if (!_request->_tempFile) {
+    //     __LDBG_printf("_temFile is closed");
+    //     return httpCode;
+    // }
 
     httpCode = 200;
     if (_request->hasParam(FSPGM(upload_file, "upload_file"), true, true)) {
@@ -281,16 +277,27 @@ uint16_t FileManager::upload()
             message = FSPGM(ERROR_);
             message.printf_P(PSTR("File %s already exists"), filename.c_str());
 
-        } else if (SPIFFSWrapper::rename((char *)_request->_tempObject, filename)) {
-
-            __LDBG_printf("Renamed upload %s to %s", (char *)_request->_tempObject, filename.c_str());
-            AsyncFileUploadWebHandler::markTemporaryFileAsProcessed(_request);
-
-            success = true;
-            message = F("Upload successful");
         } else {
-            message = FSPGM(ERROR_);
-            message += F("Could not rename temporary file");
+            if (_request->_tempFile && _request->_tempFile.fullName()) {
+                // get filename before closing the file
+                String fullname = _request->_tempFile.fullName();
+                _request->_tempFile.close();
+
+                if (SPIFFSWrapper::rename(fullname, filename)) {
+                    __LDBG_printf("Renamed upload %s to %s", fullname.c_str(), filename.c_str());
+                    success = true;
+                    message = F("Upload successful");
+                }
+                else {
+                    // remove temporary file if it cannot be renamed
+                    KFCFS.remove(fullname);
+                }
+            }
+
+            if (!success) {
+                message = FSPGM(ERROR_);
+                message += F("Could not rename temporary file");
+            }
         }
 
     } else {
@@ -305,7 +312,8 @@ uint16_t FileManager::upload()
 
     if (success) {
         Logger_notice(F("File upload successful. Filename %s, size %d"), filename.c_str(), SPIFFSWrapper::open(filename, fs::FileOpenMode::read).size());
-    } else {
+    }
+    else {
         Logger_warning(F("File upload failed: %s"), message.c_str());
     }
 
@@ -314,7 +322,8 @@ uint16_t FileManager::upload()
         url += url_encode(message);
         if (success) {
             url += F("&_type=success&_title=Information");
-        } else {
+        }
+        else {
             url += F("&_title=ERROR%20");
             url += String(httpCode);
         }
@@ -342,7 +351,8 @@ uint16_t FileManager::view(bool isDownload)
         message += requestFilename;
         _response = _request->beginResponse(httpCode, FSPGM(mime_text_plain), message);
         __LDBG_print(message);
-    } else {
+    }
+    else {
         String filename = file.name();
         __LDBG_printf("%s %s (request %s)", isDownload ? PSTR("Downloading") : PSTR("Viewing"), filename.c_str(), requestFilename.c_str());
         _response = _request->beginResponse(file, filename, String(), isDownload);
@@ -362,7 +372,8 @@ uint16_t FileManager::remove()
         message = FSPGM(ERROR_);
         message += F("Cannot open ");
         message += requestFilename;
-    } else {
+    }
+    else {
         String filename = file.name();
         file.close();
 
@@ -370,13 +381,14 @@ uint16_t FileManager::remove()
             message = FSPGM(ERROR_);
             message += F("Cannot remove ");
             message += filename;
-        } else {
+        }
+        else {
             message = FSPGM(OK);
             success = true;
         }
         Logger_notice(F("Removing %s (request %s) - %s"), filename.c_str(), requestFilename.c_str(), success ? SPGM(success) : SPGM(failure));
     }
-    _debug_println(message);
+    __DBG_printf("%s", message.c_str());
     _response = _request->beginResponse(httpCode, FSPGM(mime_text_plain), message);
     return httpCode;
 }
@@ -395,7 +407,8 @@ uint16_t FileManager::rename()
         message = FSPGM(ERROR_);
         message += F("Cannot open ");
         message += requestFilename;
-    } else {
+    }
+    else {
         FSInfo info;
         SPIFFS_info(info);
         String renameFrom = file.name();
@@ -409,14 +422,17 @@ uint16_t FileManager::rename()
 
         if (renameTo.length() >= info.maxPathLength) {
             message = PrintString(F("%sFilename %s exceeds %d characters"), SPGM(ERROR_), renameTo.c_str(), info.maxPathLength - 1);
-        } else {
+        }
+        else {
             if (SPIFFSWrapper::exists(renameTo)) {
                 message = PrintString(F("%sFile %s already exists"), SPGM(ERROR_), renameTo.c_str());
                 _response = _request->beginResponse(httpCode, FSPGM(mime_text_plain), message);
-            } else {
+            }
+            else {
                 if (!SPIFFSWrapper::rename(renameFrom, renameTo)) {
                     message = PrintString(F("%sCannot rename %s to %s"), SPGM(ERROR_), renameFrom.c_str(), renameTo.c_str());
-                } else {
+                }
+                else {
                     message = FSPGM(OK);
                     success = true;
                 }
@@ -424,22 +440,21 @@ uint16_t FileManager::rename()
             }
         }
     }
-    _debug_println(message);
+    __DBG_printf("%s", message.c_str());
     _response = _request->beginResponse(httpCode, FSPGM(mime_text_plain), message);
     return httpCode;
 }
 
 void FileManager::normalizeFilename(String &filename)
 {
-    auto doubleSlash = String(F("//"));
-    while(filename.indexOf(doubleSlash) != -1) {
-        filename.replace(doubleSlash, String('/'));
+    while(filename.indexOf(F("//")) != -1) {
+        filename.replace(F("//"), F("/"));
     }
 }
 
 bool FileManagerWebHandler::canHandle(AsyncWebServerRequest *request)
 {
-    if (String_startsWith(request->url(), _uri)) {
+    if (request->url().startsWith(_uri)) {
         request->addInterestingHeader(F("ANY"));
         return true;
     }
@@ -448,9 +463,10 @@ bool FileManagerWebHandler::canHandle(AsyncWebServerRequest *request)
 
 void FileManagerWebHandler::handleRequest(AsyncWebServerRequest *request)
 {
-    auto uri = request->url().substring(strlen_P(RFPSTR(_uri)));
-    __LDBG_printf("file manager %s (%s)", uri.c_str(), request->url().c_str())
-    FileManager fm(request, WebServerPlugin::getInstance().isAuthenticated(request) == true, uri);
+    // request->url() starts with _uri
+    auto uri = request->url().c_str() + strlen_P(RFPSTR(_uri));
+    __LDBG_printf("file manager %s (%s)", uri, request->url().c_str())
+    FileManager fm(request, WebServer::Plugin::getInstance().isAuthenticated(request) == true, uri);
     fm.handleRequest();
 }
 
@@ -458,17 +474,26 @@ class FileManagerPlugin : public PluginComponent {
 public:
     FileManagerPlugin();
 
-    virtual void setup(SetupModeType mode) override {
-        file_manager_install_web_server_hook();
-    }
-    virtual void reconfigure(const String &source) override {
-        if (String_equals(source, SPGM(http))) {
-            file_manager_install_web_server_hook();
+    virtual void setup(SetupModeType mode) override
+    {
+        auto server = WebServer::Plugin::getWebServerObject();
+        if (server) {
+            server->addHandler(new AsyncFileUploadWebHandler(String(FSPGM(file_manager_base_uri, "/file_manager/")) + FSPGM(upload), FileManagerWebHandler::onRequestHandler));
+            server->addHandler(new FileManagerWebHandler(FSPGM(file_manager_base_uri)));
         }
     }
 
-    virtual void createMenu() override {
-        bootstrapMenu.addMenuItem(getFriendlyName(), FSPGM(file_manager_html_uri), navMenu.util);
+    // virtual void reconfigure(const String &source) override
+    // {
+    //     setup(SetupModeType::DEFAULT);
+    // }
+
+    virtual void createMenu() override
+    {
+        // check if the web server is running
+        if (WebServer::Plugin::getWebServerObject()) {
+            bootstrapMenu.addMenuItem(getFriendlyName(), FSPGM(file_manager_html_uri), navMenu.util);
+        }
     }
 };
 
@@ -480,7 +505,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     "File Manager",     // friendly name
     "",                 // web_templates
     "",                 // config_forms
-    "http",             // reconfigure_dependencies
+    "",                 // reconfigure_dependencies
     PluginComponent::PriorityType::MAX,
     PluginComponent::RTCMemoryId::NONE,
     static_cast<uint8_t>(PluginComponent::MenuType::CUSTOM),
@@ -498,3 +523,5 @@ FileManagerPlugin::FileManagerPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTI
 {
     REGISTER_PLUGIN(this, "FileManagerPlugin");
 }
+
+#endif

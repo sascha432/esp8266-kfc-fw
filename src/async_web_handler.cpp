@@ -8,7 +8,9 @@
 #include "web_server.h"
 #include "misc.h"
 
- AsyncFileUploadWebHandler::AsyncFileUploadWebHandler(const String &uri, ArRequestHandlerFunction _onRequest) : AsyncCallbackWebHandler() {
+ AsyncFileUploadWebHandler::AsyncFileUploadWebHandler(const String &uri, ArRequestHandlerFunction _onRequest) :
+    AsyncCallbackWebHandler()
+ {
     setUri(uri);
     setMethod(HTTP_POST);
     onRequest(_onRequest);
@@ -17,62 +19,49 @@
     });
 }
 
-void AsyncFileUploadWebHandler::markTemporaryFileAsProcessed(AsyncWebServerRequest *request) {
-    *(char *)request->_tempObject = 0;
-}
-
-void AsyncFileUploadWebHandler::_handleUpload(AsyncWebServerRequest *request, const String& filename, size_t index, uint8_t *data, size_t len, bool final) {
-    if (index == 0 && !request->_tempObject) {
-        if (WebServerPlugin::getInstance().isAuthenticated(request) == false) {
+void AsyncFileUploadWebHandler::_handleUpload(AsyncWebServerRequest *request, const String& filename, size_t index, uint8_t *data, size_t len, bool final)
+{
+    if (WebServer::Plugin::getInstance().isAuthenticated(request) == false) {
+        if (index == 0) {
             request->send(403);
-        } else {
-            request->_tempFile = tmpfile(sys_get_temp_dir(), F("_fm_tmp_upload"));
-            if (request->_tempFile) {
-                request->_tempObject = strdup(request->_tempFile.name());
-                if (!request->_tempObject) {
-                    request->_tempFile.close();
-                    KFCFS.remove(request->_tempFile.name());
-                    request->send(500, FSPGM(mime_text_plain), F("Out of memory"));
-                } else {
-                    request->onDisconnect([this, request]() {
-                        this->_cleanUp(request);
-                    });
-                }
-            } else {
-                request->send(500);
-                request->client()->abort();
-            }
+        }
+        request->client()->close();
+        return;
+    }
+
+    if (index == 0) {
+        request->_tempFile = tmpfile(sys_get_temp_dir(), F("_fm_tmp_upload"));
+        request->onDisconnect([this, request]() {
+            _cleanUp(request);
+        });
+        if (!request->_tempFile) {
+            _cleanUp(request);
+            request->send(503);
+            request->client()->close();
+            return;
         }
     }
-    if (request->_tempObject) {
-        if (!request->_tempFile) {
-            this->_cleanUp(request);
-            request->send(503, FSPGM(mime_text_plain), F("Failed to create temporary file"));
-        } else if (request->_tempFile.write(data, len) != len) {
-            this->_cleanUp(request);
-            request->send(507, FSPGM(mime_text_plain), F("Not enough space available"));
-        } else if (final) {
-            debug_printf_P(PSTR("AsyncFileUploadWebHandler::_handleUpload(%s, index %d, len %d, final %d): temp. file %s size %d\n"), filename.c_str(), index, len, final, request->_tempFile.name(), request->_tempFile.size());
-            request->_tempFile.close();
-            // todo rename
-        }
+
+    if (!request->_tempFile || request->_tempFile.write(data, len) != len) {
+        _cleanUp(request);
+        request->send(507);
+        request->client()->close();
+        return;
+    }
+    else if (final) {
+        __DBG_printf("filename=%s index=%d len=%d final=%d tmp_file=%s size=%u", filename.c_str(), index, len, final, __S(request->_tempFile.fullName()), request->_tempFile.size());
     }
 }
 
-void AsyncFileUploadWebHandler::_cleanUp(AsyncWebServerRequest *request) {
-    if (request->_tempObject) {
-
+void AsyncFileUploadWebHandler::_cleanUp(AsyncWebServerRequest *request)
+{
+    if (request->_tempFile && request->_tempFile.fullName()) {
+        String filename = request->_tempFile.fullName();
+        __DBG_printf("removing temporary file %s", filename.c_str());
         request->_tempFile.close();
-
-        auto tmpFile = reinterpret_cast<char *>(request->_tempObject);
-        if (*tmpFile) {
-            debug_printf_P(PSTR("AsyncFileUploadWebHandler::_cleanUp(): Deleting %s\n"), tmpFile);
-            KFCFS.remove(tmpFile);
-        } else {
-            debug_println(F("AsyncFileUploadWebHandler::_cleanUp(): Temporary file already removed"));
-        }
-
-        free(tmpFile);
-        request->_tempObject = nullptr;
+        KFCFS.remove(filename);
+    }
+    else {
+        __DBG_printf("temporary file closed");
     }
 }

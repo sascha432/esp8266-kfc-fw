@@ -32,6 +32,7 @@
 #include "logger.h"
 #include "misc.h"
 #include "at_mode.h"
+#include "blink_led_timer.h"
 
 #include "reset_detector.h"
 #include "dyn_bitset.h"
@@ -403,7 +404,10 @@ public:
     void storeQuickConnect(const uint8_t *bssid, int8_t channel);
     void storeStationConfig(uint32_t ip, uint32_t netmask, uint32_t gateway);
 
-    void wakeUpFromDeepSleep();
+    inline static void wakeUpFromDeepSleep() {
+        BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
+        wifiQuickConnect();
+    }
     void enterDeepSleep(milliseconds time, RFMode mode, uint16_t delayAfterPrepare = 0);
 
 #endif
@@ -464,9 +468,6 @@ private:
     friend class KFCConfigurationPlugin;
 
     String _lastError;
-#if ENABLE_DEEP_SLEEP
-    DeepSleep::DeepSleepParam _deepSleepParams;
-#endif
     uint32_t _wifiConnected;        // time of connection
     uint32_t _wifiUp;               // time of receiving IP address
     int16_t _garbageCollectionCycleDelay;

@@ -20,10 +20,10 @@ namespace STL_STD_EXT_NAMESPACE {
     }
 
     // copy initializer list into target without checking target size
-    //
+
     // uint8_t test2[4];
     // uint8_t *test = &test2[0];
-    //
+
     // std::copy_array<uint8_t>({ 1, 2, 3, 4 }, test2);
     // std::copy_array<uint8_t>({ 1, 2, 3, 4 }, test);
 

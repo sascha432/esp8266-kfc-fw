@@ -43,6 +43,10 @@ namespace MQTT {
         MAX
     };
 
+    class Sensor;
+
+    using SensorPtr = Sensor *;
+
     class Sensor : public MQTTComponent {
     public:
         static constexpr uint16_t DEFAULT_UPDATE_RATE = 5;
@@ -50,6 +54,7 @@ namespace MQTT {
 
         using SensorType = MQTT::SensorType;
         using NamedJsonArray = PluginComponent::NamedJsonArray;
+        using SensorPtr = MQTT::SensorPtr;
 
         Sensor(SensorType type);
         virtual ~Sensor();
@@ -129,7 +134,5 @@ namespace MQTT {
         uint32_t _nextMqttUpdate;
         SensorType _type;
     };
-
-    using SensorPtr = Sensor *;
 
 }

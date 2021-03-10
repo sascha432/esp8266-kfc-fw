@@ -78,8 +78,21 @@ namespace PinMonitor {
         {
         }
 
-        StateType debounce(bool lastValue, uint16_t interruptCount, uint32_t last, uint32_t now, uint32_t _micros);
+        inline StateType debounce(bool lastValue, uint16_t interruptCount, uint32_t last, uint32_t now, uint32_t _micros) {
+#if 1
+            auto tmp = _debounce(lastValue, interruptCount, last,now, _micros);
+            if (interruptCount) {
+                __DBG_printf("debounce=%u value=%u int_count=%u last=%u now=%u micros=%u", tmp, lastValue, interruptCount, last, now, _micros);
+            }
+            return tmp;
+#else
+            return _debounce(lastValue, interruptCount, last,now, _micros);
+#endif
+        }
         void setState(bool state);
+
+    private:
+        StateType _debounce(bool lastValue, uint16_t interruptCount, uint32_t last, uint32_t now, uint32_t _micros);
 
     private:
         friend Monitor;

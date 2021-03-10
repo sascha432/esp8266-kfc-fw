@@ -161,23 +161,23 @@ const __FlashStringHelper *PushButton::eventTypeToString(EventType eventType)
     return F("NONE");
 }
 
-#if DEBUG
-void PushButton::dumpConfig(Print &output)
-{
-    Pin::dumpConfig(output);
+// #if DEBUG
+// void PushButton::dumpConfig(Print &output)
+// {
+//     Pin::dumpConfig(output);
 
-    output.print(F(" events="));
-    for(int i = 0; i < (int)EventType::MAX_BITS; i++) {
-        if (i > 0) {
-            output.print('|');
-        }
-        output.print(eventTypeToString((EventType)((int)_subscribedEvents & (1 << i))));
-    }
+//     output.print(F(" events="));
+//     for(int i = 0; i < (int)EventType::MAX_BITS; i++) {
+//         if (i > 0) {
+//             output.print('|');
+//         }
+//         output.print(eventTypeToString((EventType)((int)_subscribedEvents & (1 << i))));
+//     }
 
-#if PIN_MONITOR_BUTTON_GROUPS
-    output.printf_P(PSTR(" sp_time=%u lp_time=%u rep_time=%u steps=%u sp_group=%p(%u) timeout=%u"), _clickTime, _longpressTime, _repeatTime, _singleClickSteps, _singleClickGroup.get(), _singleClickGroup.use_count(), _singleClickGroup->getTimeout());
-#else
-    output.printf_P(PSTR(" sp_time=%u lp_time=%u rep_time=%u steps=%u"), _clickTime, _longpressTime, _repeatTime, _singleClickSteps);
-#endif
-}
-#endif
+// #if PIN_MONITOR_BUTTON_GROUPS
+//     output.printf_P(PSTR(" sp_time=%u lp_time=%u rep_time=%u steps=%u sp_group=%p(%u) timeout=%u"), _clickTime, _longpressTime, _repeatTime, _singleClickSteps, _singleClickGroup.get(), _singleClickGroup.use_count(), _singleClickGroup->getTimeout());
+// #else
+//     output.printf_P(PSTR(" sp_time=%u lp_time=%u rep_time=%u steps=%u"), _clickTime, _longpressTime, _repeatTime, _singleClickSteps);
+// #endif
+// }
+// #endif

@@ -5,11 +5,9 @@
 #pragma once
 
 #include "pin_monitor.h"
-#include <stl_ext/fixed_circular_buffer.h>
+#include "interrupt_impl.h"
 
 namespace PinMonitor {
-
-    class RotaryEncoder;
 
     class Pin
     {
@@ -38,11 +36,6 @@ namespace PinMonitor {
 
         // loop is called even if events are disabled
         virtual void loop() {}
-
-#if DEBUG
-        virtual void dumpConfig(Print &output);
-#endif
-
 
     public:
         inline const void *getArg() const {
@@ -88,8 +81,17 @@ namespace PinMonitor {
             return ((uint8_t)tmp & (uint8_t)StateType::DOWN) != (uint8_t)StateType::NONE;
         }
 
-    // protected:
-    // public for friend void HardwarePin_callback(void *arg);
+#if DEBUG_PIN_MONITOR
+        char *name() {
+            snprintf_P(name_buffer, sizeof(name_buffer), PSTR("btn pin=%u"), _pin);
+            return name_buffer;
+        }
+
+        virtual const char *name() const {
+            return const_cast<Pin *>(this)->name();
+        }
+#endif
+
     public:
 
         // return state if state is enabled and invert if _activeLow is true
@@ -103,9 +105,13 @@ namespace PinMonitor {
         const void *_arg;
         uint32_t _eventCounter;
         StateType _states;
-        uint8_t _pin: 6;
+        uint8_t _pin: 4;
         bool _disabled: 1;
         bool _activeState: 1;
+
+#if DEBUG_PIN_MONITOR
+        char name_buffer[16]{};
+#endif
     };
 
     class HardwarePin {
@@ -125,15 +131,14 @@ namespace PinMonitor {
             return false;
         }
 
-        // void updateState(uint32_t timeMicros, uint16_t intCount, bool value);
-        virtual void updateState(uint32_t timeMicros, bool value) {}
-
         uint8_t getPin() const {
             return _pin;
         }
 
+        // static void push_back(uint32_t time, uint8_t pin, bool value);
+        // static void push_back(uint32_t time, uint8_t pin);
+
     // protected:
-    // public for friend void HardwarePin_callback(void *arg);
     public:
 
         operator bool() const;
@@ -142,48 +147,31 @@ namespace PinMonitor {
         HardwarePin &operator++();
         HardwarePin &operator--();
 
-        static void ICACHE_RAM_ATTR callback(void *arg);
+        bool operator==(const uint8_t pin) const {
+            return pin == _pin;
+        }
 
-        // static void enableAll();
-        // static void disableAll();
+        bool operator!=(const uint8_t pin) const {
+            return pin != _pin;
+        }
 
         uint8_t _pin;
         uint8_t _count;
         HardwarePinType _type;
     };
 
-
     class SimpleHardwarePin : public HardwarePin {
     public:
-        SimpleHardwarePin(uint8_t pin, HardwarePinType type = HardwarePinType::SIMPLE) :
-            HardwarePin(pin, type),
-            _micros(0),
-            _intCount(0),
-            _value(false)
-            // _count(0)
-        {
-        }
+        SimpleHardwarePin(uint8_t pin,  HardwarePinType type = HardwarePinType::SIMPLE) : HardwarePin(pin, type) {}
 
-        virtual void updateState(uint32_t timeMicros, bool value) override {
-            _micros = timeMicros;
-            _intCount++;
-            _value = value;
-        }
-
-    // protected:
-    // public for friend void HardwarePin_callback(void *arg);
-    public:
-
-        volatile uint32_t _micros;
-        volatile uint16_t _intCount: 15;
-        volatile uint16_t _value: 1;
+        // virtual void addEvent(uint32_t time, bool value);
     };
 
     class DebouncedHardwarePin : public SimpleHardwarePin {
     public:
-        DebouncedHardwarePin(uint8_t pin) :
+        DebouncedHardwarePin(uint8_t pin, bool debounceValue) :
             SimpleHardwarePin(pin, HardwarePinType::DEBOUNCE),
-            _debounce(digitalRead(pin))
+            _debounce(debounceValue)
         {
         }
 
@@ -191,16 +179,10 @@ namespace PinMonitor {
             return const_cast<Debounce *>(&_debounce);
         }
 
-        virtual void updateState(uint32_t timeMicros, bool value) override {
-            _micros = timeMicros;
-            _intCount++;
-            _value = value;
-            _debounce.setState(_value);
-        }
-
     protected:
         Debounce _debounce;
     };
+
 
     class RotaryHardwarePin : public HardwarePin {
     public:
@@ -209,25 +191,9 @@ namespace PinMonitor {
             _encoder(*reinterpret_cast<RotaryEncoder *>(const_cast<void *>(handler.getArg())))
         {}
 
-        // virtual void handle() override;
-
-    // protected:
-    // public for friend void HardwarePin_callback(void *arg);
     public:
-
         RotaryEncoder &_encoder;
     };
-
-    // inline HardwarePin::HardwarePin(uint8_t pin) :
-    //     _micros(0),
-    //     _intCount(0),
-    //     _value(false),
-    //     _pin(pin),
-    //     _count(0)
-
-    // {
-    //     __DBG_printf("pin=%u debounce=%u", pin, false);
-    // }
 
     inline HardwarePin::operator bool() const {
         return _count != 0;
@@ -247,19 +213,16 @@ namespace PinMonitor {
         return *this;
     }
 
-    // inline void HardwarePin::updateState(uint32_t timeMicros, uint16_t intCount, bool value)
+    // inline __attribute__((__always_inline__))
+    // void HardwarePin::push_back(uint32_t time, uint8_t pin, bool value)
     // {
-    //     _micros = timeMicros;
-    //     _intCount = intCount;
-    //     _value = value;
-    //     auto debounce = getDebounce();
-    //     if (debounce) {
-    //         debounce->setState(_value);
-    //     }
+    //     eventBuffer.emplace_back(time, pin, value);
     // }
 
-    // inline void HardwarePin::updateState(uint32_t timeMicros, bool value)
+    // inline __attribute__((__always_inline__))
+    // void HardwarePin::push_back(uint32_t time, uint8_t pin)
     // {
+    //     eventBuffer.emplace_back(time, pin, GPI & _BV(pin));
     // }
 
 }

@@ -93,60 +93,6 @@ public:
 
 class RemoteControlPlugin;
 
-struct __attribute__((packed)) PinState {
-public:
-    static constexpr uint32_t _time = 15000;     // micros() is not available when called inside preinit
-    uint32_t _state;
-    uint32_t _read: 31;
-    uint32_t _valid: 1;
-
-    PinState(bool valid = false) : _state(0), _read(0), _valid(valid) {
-        if (_valid) {
-            _readStates();
-        }
-    }
-
-    inline __attribute__((__always_inline__))
-    bool isValid() const {
-        return _valid;
-    }
-
-    static constexpr bool activeLow() {
-        return PIN_MONITOR_ACTIVE_STATE == PinMonitor::ActiveStateType::PRESSED_WHEN_LOW;
-    }
-
-    static constexpr bool activeHigh() {
-        return PIN_MONITOR_ACTIVE_STATE == PinMonitor::ActiveStateType::PRESSED_WHEN_HIGH;
-    }
-
-    inline __attribute__((__always_inline__))
-    bool anyPressed() const {
-        return isValid() && ((activeLow() ? _state ^ _read : _state) & _read);
-    }
-
-    inline __attribute__((__always_inline__))
-    bool getPin(uint8_t pin) const {
-        return _state & _BV(pin);
-    }
-
-    inline __attribute__((__always_inline__))
-    void _readStates() {
-        for(const auto pin: kButtonPins) {
-            setPin(_BV(pin), digitalRead(pin));
-        }
-    }
-
-private:
-    friend RemoteControlPlugin;
-
-    inline __attribute__((__always_inline__))
-    void setPin(uint32_t mask, bool value) {
-        _read |= mask;
-        _state = value ? (_state | mask) : (_state & ~mask);
-    }
-
-    String toString();
-};
 
 class RemoteControlPlugin : public PluginComponent, public Base, public MqttRemote {
 public:
@@ -167,11 +113,14 @@ public:
     virtual bool atModeHandler(AtModeArgs &args) override;
 #endif
 
+    void enterDeepSleep();
+
 public:
     static void loop();
     static void wifiCallback(WiFiCallbacks::EventType event, void *payload);
 
     static void disableAutoSleep();
+    static void prepareForUpdate();
     static void disableAutoSleepHandler(AsyncWebServerRequest *request);
     static void deepSleepHandler(AsyncWebServerRequest *request);
 
@@ -196,19 +145,19 @@ private:
     // resolve all hostnames that are marked as resolve once and store them as IP
     void _resolveActionHostnames();
 
-    bool _isButtonLocked(uint8_t button) const {
-        return _buttonsLocked & (1 << button);
-    }
-    void _lockButton(uint8_t button) {
-        __LDBG_printf("btn %u locked", button);
-        _buttonsLocked |= (1 << button);
-    }
-    void _unlockButton(uint8_t button) {
-        __LDBG_printf("btn %u unlocked", button);
-        _buttonsLocked &= ~(1 << button);
-    }
+    // bool _isButtonLocked(uint8_t button) const {
+    //     return _buttonsLocked & (1 << button);
+    // }
+    // void _lockButton(uint8_t button) {
+    //     __LDBG_printf("btn %u locked", button);
+    //     _buttonsLocked |= (1 << button);
+    // }
+    // void _unlockButton(uint8_t button) {
+    //     __LDBG_printf("btn %u unlocked", button);
+    //     _buttonsLocked &= ~(1 << button);
+    // }
 
-public:
+    void _prepareForUpdate();
     void _enterDeepSleep();
 
 private:
@@ -219,6 +168,11 @@ private:
     uint32_t _readUsbPinTimeout;
     // Event::Timer _loopTimer;
 };
+
+inline void RemoteControlPlugin::_prepareForUpdate()
+{
+    _setAutoSleepTimeout(millis() + (300U * 1000U), _config.max_awake_time * 60U);
+}
 
 inline bool RemoteControlPlugin::_hasEvents() const
 {
@@ -231,8 +185,16 @@ inline void RemoteControlPlugin::disableAutoSleep()
     getInstance()._disableAutoSleepTimeout();
 }
 
-extern "C" PinState _pinState;
+inline void RemoteControlPlugin::prepareForUpdate()
+{
+    __LDBG_printf("prepare for update");
+    getInstance()._prepareForUpdate();
+}
 
-void remotectrl_preinit_function();
+inline void RemoteControlPlugin::enterDeepSleep()
+{
+    __LDBG_printf("enter deep sleep");
+    _enterDeepSleep();
+}
 
 #include <debug_helper_disable.h>

@@ -53,7 +53,7 @@ void Button::event(EventType eventType, uint32_t now)
             base.queueEvent(eventType, _button, _repeatCount, _getEventTime(), config.actions[_button].hold);
             break;
         case EventType::HOLD_RELEASE:
-            base.queueEvent(eventType, _button, 0, _getEventTime(), config.actions[_button].hold);
+            base.queueEvent(eventType, _button, 0, _getEventTime(), config.actions[_button].hold_released);
             break;
          case EventType::SINGLE_CLICK:
             base.queueEvent(eventType, _button, 0, _getEventTime(), config.actions[_button].single_click);

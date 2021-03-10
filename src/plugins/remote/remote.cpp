@@ -15,6 +15,7 @@
 #include "push_button.h"
 #include "plugins_menu.h"
 #include "WebUISocket.h"
+#include "deep_sleep.h"
 #if HTTP2SERIAL_SUPPORT
 #include "../src/plugins/http2serial/http2serial.h"
 #define IF_HTTP2SERIAL_SUPPORT(...) __VA_ARGS__
@@ -42,16 +43,6 @@
 using KFCConfigurationClasses::Plugins;
 using namespace RemoteControl;
 
-String PinState::toString()
-{
-    return PrintString(F("pin state=%s time=%u actve_low=%u active=%s"),
-        BitsToStr<17, true>(_state).merge(_read),
-        _time,
-        activeLow(),
-        BitsToStr<17, true>(activeLow() ? _state ^ _read : _state).merge(_read)
-    );
- }
-
 static RemoteControlPlugin plugin;
 
 PROGMEM_DEFINE_PLUGIN_OPTIONS(
@@ -75,27 +66,12 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     0                   // __reserved
 );
 
-PinState _pinState;
-
-void remotectrl_preinit_function()
-{
-    // // store states of buttons
-    // // all pins are reset to input before
-    // _pinState._readStates();
-
-    // settings the awake pin will clear all buffers and key presses might be lost
-    pinMode(IOT_REMOTE_CONTROL_AWAKE_PIN, OUTPUT);
-    digitalWrite(IOT_REMOTE_CONTROL_AWAKE_PIN, HIGH);
-}
-
 RemoteControlPlugin::RemoteControlPlugin() :
     PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(RemoteControlPlugin)),
     Base(),
     _readUsbPinTimeout(0)
 {
     REGISTER_PLUGIN(this, "RemoteControlPlugin");
-    // pinMode(IOT_REMOTE_CONTROL_AWAKE_PIN, OUTPUT);
-    // digitalWrite(IOT_REMOTE_CONTROL_AWAKE_PIN, HIGH);
 }
 
 RemoteControlPlugin &RemoteControlPlugin::getInstance()
@@ -109,9 +85,9 @@ void RemoteControlPlugin::_updateButtonConfig()
         auto &button = static_cast<Button &>(*buttonPtr);
         // __LDBG_printf("arg=%p btn=%p pin=%u digital_read=%u inverted=%u owner=%u", button.getArg(), &button, button.getPin(), digitalRead(button.getPin()), button.isInverted(), button.getBase() == this);
         if (button.getBase() == this) { // auto downcast of this
-#if DEBUG_IOT_REMOTE_CONTROL && 0
+#if DEBUG_IOT_REMOTE_CONTROL
             auto &cfg = _getConfig().actions[button.getButtonNum()];
-            __LDBG_printf("button#=%u action=%u,%u,%u,%u,%u,%u,%u,%u udp=%s mqtt=%s",
+            __LDBG_printf("button#=%u on_action.id=%u,%u,%u,%u,%u,%u,%u,%u udp.enabled=%s mqtt.enabled=%s",
                 button.getButtonNum(),
                 cfg.down, cfg.up, cfg.press, cfg.single_click, cfg.double_click, cfg.long_press, cfg.hold, cfg.hold_released,
                 BitsToStr<9, true>(cfg.udp.event_bits).c_str(), BitsToStr<9, true>(cfg.udp.event_bits).c_str()
@@ -125,6 +101,7 @@ void RemoteControlPlugin::_updateButtonConfig()
 void RemoteControlPlugin::setup(SetupModeType mode)
 {
     // __LDBG_printf("mode=%u", mode);
+    deepSleepPinState.merge();
     pinMonitor.begin();
 
 #if PIN_MONITOR_BUTTON_GROUPS
@@ -133,19 +110,6 @@ void RemoteControlPlugin::setup(SetupModeType mode)
     SingleClickGroupPtr group2;
     group2.reset(_config.click_time);
 #endif
-
-    // get handlers ...
-    // for(const auto &handler: pinMonitor.getHandlers()) {
-    //     switch(handler->getPin()) {
-    //         case kButtonSystemComboPins[0]:
-    //         case kButtonSystemComboPins[1]:
-    //             if (handler->getArg() == this) {
-    //                 handler->setDisabled();
-
-    //             }
-    //             break;
-    //     }
-    // }
 
     // disable interrupts during setup
     for(uint8_t n = 0; n < kButtonPins.size(); n++) {
@@ -169,43 +133,64 @@ void RemoteControlPlugin::setup(SetupModeType mode)
 #else
         pinMonitor.attach<Button>(pin, n, this);
 #endif
+        // for(const auto &pinPtr: pinMonitor.getPins()) {
+        //     if (pinPtr->getPin() == pin) { {
+        //         lookupTable.set(pin, Interrupt::LookupType::HARDWARE_PIN, pinPtr.get());
+        //     }
+        // }
         pinMode(pin, INPUT);
     }
 
-    _buttonsLocked = 0;
+#if PIN_MONITOR_USE_GPIO_INTERRUPT
+    // for some reason, pin 12 gets a on change interrupt
+    if (GPI & kButtonPinsMask) {
+        __LDBG_printf("buttons down gpi=%s mask=%s", BitsToStr<16, true>(GPI).c_str(), BitsToStr<16, true>(kButtonPinsMask).c_str());
+    }
+    PinMonitor::GPIOInterruptsEnable();
+#endif
+
+    // _buttonsLocked = 0;
     _readConfig();
     _updateButtonConfig();
 
-    // uint8_t count = 0;
-    // do {
-    //     bool reset = (digitalRead(_buttonSystemCombo[0]) == PinState::activeHigh()) && (digitalRead(_buttonSystemCombo[1]) == PinState::activeHigh()); // check if button 0 und 3 are down
-    //     if (count == 0) {
-    //         if (!reset) { // if not continue
-    //             break;
-    //         }
-    //         BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
-    //     }
-    //     // set counter to 10 for debouncing
-    //     if (reset) {
-    //         count = 10;
-    //     }
-    //     // count down if reset is not pressed
-    //     count--;
-    //     if (count == 0) { // set LED back to solid, reset button states and start..
-    //         KFCFWConfiguration::setWiFiConnectLedMode();
-    //         _pinState = PinState();
-    //         _autoSleepTimeout = kAutoSleepDisabled;
-    //         break;
-    //     }
-    //     delay(5);
-    // }
-    // while(true);
+   // reset state and add buttons to the queue that were pressed when the device rebooted
+    __LDBG_printf("disabling GPIO interrupts");
+    ETS_GPIO_INTR_DISABLE();
 
-    __DBG_printf("feed time=%u state=%u read=%u active_low=%u %s", _pinState._time, _pinState._state, _pinState._read, _pinState.activeLow(), _pinState.toString().c_str());
+   __LDBG_printf("reset button state");
+    PinMonitor::eventBuffer.clear();
+    auto states = deepSleepPinState.getStates();
+    interrupt_levels = deepSleepPinState.getValues();
 
-    // reset state and feed debouncer with initial values and state
-    pinMonitor.feed(_pinState._time, _pinState._state, _pinState._read, _pinState.activeLow());
-    // pinMonitor._loop();
+    for(auto &pinPtr: pinMonitor.getPins()) {
+        uint8_t pin = pinPtr->getPin();
+        auto debounce = pinPtr->getDebounce();
+        if (debounce) {
+            // debounce
+            debounce->setState(deepSleepPinState.activeHigh() == false);
+        }
+        if (states & _BV(pin)) {
+            PinMonitor::eventBuffer.emplace_back(2000, pin, interrupt_levels); // place them at 2ms
+        }
+        __LDBG_printf("pin=%02u init debouncer=%d queued=%u states=%s interrupt_levels=%s mask=%s", debounce ? (deepSleepPinState.activeHigh()) == false : -1, pin, (states & _BV(pin)) != 0, BitsToStr<16, true>(states).c_str(), BitsToStr<16, true>(interrupt_levels).c_str(), BitsToStr<16, true>(_BV(pin)).c_str());
+    }
+
+    __LDBG_printf("feeding queue size=%u", PinMonitor::eventBuffer.size());
+    pinMonitor._loop();
+
+    __LDBG_printf("enabling GPIO interrupts");
+    ETS_GPIO_INTR_ENABLE();
+
+#if DEBUG_PIN_STATE
+    LoopFunctions::callOnce([]() {
+        // display button states @boot and @now
+        deepSleepPinState.merge();
+        __LDBG_printf("boot pin states: ");
+        for(uint8_t i = 0; i < deepSleepPinState._count; i++) {
+            __LDBG_printf("state %u: %s", i, deepSleepPinState.toString(deepSleepPinState._states[i], deepSleepPinState._times[i]).c_str());
+        }
+    });
+#endif
 
     WiFiCallbacks::add(WiFiCallbacks::EventType::ANY, wifiCallback);
     LoopFunctions::add(loop);
@@ -215,6 +200,7 @@ void RemoteControlPlugin::setup(SetupModeType mode)
     // _resolveActionHostnames();
 
     _updateSystemComboButtonLED();
+    __LDBG_printf("setup() done");
 }
 
 void RemoteControlPlugin::reconfigure(const String &source)
@@ -239,6 +225,7 @@ void RemoteControlPlugin::prepareDeepSleep(uint32_t sleepTimeMillis)
     __LDBG_printf("time=%u", sleepTimeMillis);
     ADCManager::getInstance().terminate(false);
     digitalWrite(IOT_REMOTE_CONTROL_AWAKE_PIN, LOW);
+    pinMode(IOT_REMOTE_CONTROL_AWAKE_PIN, INPUT);
 }
 
 void RemoteControlPlugin::getStatus(Print &output)
@@ -300,120 +287,6 @@ bool RemoteControlPlugin::atModeHandler(AtModeArgs &args)
         return true;
     }
     return false;
-}
-
-
-#endif
-
-// void RemoteControlPlugin::_onShortPress(Button &button)
-// {
-//     __LDBG_printf("%u SHORT PRESS", button.getButtonNum());
-// }
-
-// void RemoteControlPlugin::_onLongPress(Button &button)
-// {
-//     __LDBG_printf("%u LONG PRESS", button.getButtonNum());
-// }
-
-// void RemoteControlPlugin::_onRepeat(Button &button)
-// {
-//     __LDBG_printf("%u REPEAT", button.getButtonNum());
-// }
-
-
-#if 0
-
-// void Base::onButtonHeld(Button& btn, uint16_t duration, uint16_t repeatCount)
-// {
-//     __LDBG_printf("btn=%d duration=%d repeat=%d", plugin._getButtonNum(btn), duration, repeatCount);
-//     plugin._onButtonHeld(btn, duration, repeatCount);
-// }
-
-// void RemoteControlPlugin::onButtonReleased(Button& btn, uint16_t duration)
-// {
-//     __LDBG_printf("btn=%d duration=%d", plugin._getButtonNum(btn), duration);
-//     plugin._onButtonReleased(btn, duration);
-// }
-
-void RemoteControlPlugin::_onButtonHeld(Button& btn, uint16_t duration, uint16_t repeatCount)
-{
-    auto buttonNum = btn.getNum();
-#if IOT_REMOTE_CONTROL_COMBO_BTN
-    if (anyButton(getPressedMask(buttonNum))) { // is any button pressed except btn?
-        _resetAutoSleep();
-        if (duration < 5000 || _comboButton != 3) {
-            if (_comboButton == -1) {
-                _comboButton = buttonNum; // store first button held
-                __LDBG_printf("longpress=%d combo=%d", _longPress, _comboButton);
-            }
-            if (buttonNum != _comboButton) { // fire event for any other button that is held except first one
-                _addButtonEvent(ButtonEvent(buttonNum, EventType::COMBO_REPEAT, duration, repeatCount, _comboButton));
-            }
-        }
-        else if (_comboButton == 3) { // button 4 has special functions
-            if (duration > 5000 && _longPress == 0) {
-                // indicate long press by setting LED to flicker
-                __LDBG_printf("2 buttons held >5 seconds: %u", buttonNum);
-                BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
-                _longPress = 1;
-                __LDBG_printf("longpress=%d combo=%d", _longPress, _comboButton);
-            }
-            else if (duration > 8000 && _longPress == 1) {
-                __LDBG_printf("2 buttons held >8 seconds: %u", buttonNum);
-                _longPress = 2;
-                __LDBG_printf("longpress=%d combo=%d", _longPress, _comboButton);
-                BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SOLID);
-                if (buttonNum == 0) {
-                    __LDBG_printf("disable auto sleep");
-                    disableAutoSleep();
-                }
-                else if (buttonNum == 1) {
-                    __LDBG_printf("restart");
-                    shutdown();
-                    _Scheduler.add(3000, false, [](Event::CallbackTimerPtr timer) {
-                        config.restartDevice();
-                    });
-                }
-                else if (buttonNum == 2) {
-                    __LDBG_printf("restore factory settings");
-                    shutdown();
-                    _Scheduler.add(3000, false, [](Event::CallbackTimerPtr timer) {
-                        config.restoreFactorySettings();
-                        config.write();
-                        config.restartDevice();
-                    });
-                }
-            }
-        }
-    }
-    else
-#endif
-    {
-        _addButtonEvent(ButtonEvent(buttonNum, EventType::REPEAT, duration, repeatCount));
-    }
-}
-
-void RemoteControlPlugin::_onButtonReleased(Button& btn, uint16_t duration)
-{
-#if IOT_REMOTE_CONTROL_COMBO_BTN
-    if (_longPress) {
-        if (!anyButton()) {
-            // disable LED after all buttons have been released
-            BUILDIN_LED_SET(WiFi.isConnected() ? BlinkLEDTimer::BlinkType::SOLID : BlinkLEDTimer::BlinkType::OFF);
-            __LDBG_printf("longpress=%d combo=%d", _longPress, _comboButton);
-            _longPress = 0;
-            _comboButton = -1;
-        }
-    }
-    else if (_comboButton != -1) {
-        _addButtonEvent(ButtonEvent(btn.getNum(), EventType::COMBO_RELEASE, duration, _comboButton));
-        _comboButton = -1;
-    }
-    else
-#endif
-    {
-        _addButtonEvent(ButtonEvent(btn.getNum(), EventType::RELEASE, duration));
-    }
 }
 
 #endif
@@ -511,8 +384,7 @@ void RemoteControlPlugin::_readConfig()
 
 #if 0
 void RemoteControlPlugin::_sendEvents()
-{
-    __LDBG_printf("wifi=%u events=%u locked=%s", WiFi.isConnected(), _events.size(), String(_buttonsLocked & 0b1111, 2).c_str());
+{xxxxxx_LDBG_printf("wifi=%u events=%u locked=%s", WiFi.isConnected(), _events.size(), String(_buttonsLocked & 0b1111, 2).c_str());
 
     if (WiFi.isConnected() && _events.size()) {
         for(auto iterator = _events.begin(); iterator != _events.end(); ++iterator) {
@@ -618,3 +490,4 @@ void RemoteControlPlugin::_resolveActionHostnames()
         action->resolve();
     }
 }
+

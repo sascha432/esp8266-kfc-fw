@@ -242,10 +242,6 @@ namespace PinMonitor {
             return _repeatCount;
         }
 
-#if DEBUG
-        virtual void dumpConfig(Print &output) override;
-#endif
-
         static const __FlashStringHelper *eventTypeToString(EventType eventType);
 
     protected:

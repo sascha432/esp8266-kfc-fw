@@ -14,6 +14,14 @@ namespace RemoteControl {
 
     static constexpr auto kButtonPins = ButtonPinsArray(IOT_REMOTE_CONTROL_BUTTON_PINS);
 
+    constexpr uint32_t generatePinMask(uint32_t mask = 0, size_t index = 0)
+    {
+        return index < kButtonPins.size() ? generatePinMask(mask | _BV(kButtonPins[index]), index + 1) : mask;
+    }
+
+    static constexpr uint32_t kButtonPinsMask = generatePinMask();
+
+
     static inline constexpr size_t getButtonBit(uint8_t pin, size_t index = 0) {
         return pin == kButtonPins[index] ? index : getButtonBit(pin, index + 1);
     }
@@ -110,7 +118,7 @@ namespace RemoteControl {
             __autoSleepTimeout(0),
             _maxAwakeTimeout(0),
             _minAwakeTimeout(0),
-            _buttonsLocked(~0),
+            // _buttonsLocked(~0),
             _systemButtonComboTime(0),
             _systemButtonComboTimeout(0),
             _systemButtonComboState(ComboButtonStateType::NONE),
@@ -252,7 +260,7 @@ private:
         uint32_t _maxAwakeTimeout;
 public://TODO
         uint32_t _minAwakeTimeout;
-        uint32_t _buttonsLocked;
+        // uint32_t _buttonsLocked;
         uint32_t _systemButtonComboTime;
         uint32_t _systemButtonComboTimeout;
         ComboButtonStateType _systemButtonComboState;

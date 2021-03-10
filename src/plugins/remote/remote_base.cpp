@@ -10,7 +10,7 @@
 #include "remote.h"
 #include "blink_led_timer.h"
 
-#if DEBUG_IOT_REMOTE_CONTROL && 0
+#if DEBUG_IOT_REMOTE_CONTROL
 #include <debug_helper_enable.h>
 #else
 #include <debug_helper_disable.h>
@@ -276,7 +276,7 @@ namespace RemoteControl {
                 auto debounce = pin->getDebounce();
                 if (debounce) {
                     noInterrupts();
-                    *pin.get() = DebouncedHardwarePin(pin->getPin());
+                    *pin.get() = DebouncedHardwarePin(pin->getPin(), digitalRead(pin->getPin()));
                     interrupts();
                 }
             }
@@ -342,7 +342,7 @@ namespace RemoteControl {
                     _systemButtonComboTimeout = millis() + kSystemComboConfirmTimeout;
                     _systemButtonComboState = ComboButtonStateType::EXIT_MENU_TIMEOUT;
                     _Scheduler.add(Event::milliseconds(750), false, [](Event::CallbackTimerPtr) {
-                        RemoteControlPlugin::getInstance()._enterDeepSleep();
+                        RemoteControlPlugin::getInstance().enterDeepSleep();
                     });
                     break;
                 case ComboButtonStateType::PRESSED:

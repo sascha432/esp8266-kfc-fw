@@ -10,5 +10,6 @@
 #include "./pin.h"
 #include "./monitor.h"
 #include "./push_button.h"
+#include "./rotary_encoder.h"
 
 #endif

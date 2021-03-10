@@ -12,7 +12,7 @@
 // see PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS for details
 
 #ifndef DEBUG_PIN_MONITOR
-#define DEBUG_PIN_MONITOR                                       0
+#define DEBUG_PIN_MONITOR                                       1
 #endif
 
 #if DEBUG_PIN_MONITOR
@@ -24,6 +24,11 @@
 #define DEBUG_PIN_MONITOR_EVENTS                                0
 #endif
 
+// use custom interrupt handler for push buttons only
+// other GPIO pins cannot be used
+#ifndef PIN_MONITOR_USE_GPIO_INTERRUPT
+#define PIN_MONITOR_USE_GPIO_INTERRUPT                            0
+#endif
 // use attachInterruptArg()/detachInterrupt() for interrupt callbacks
 // attachInterruptArg() requires 72 byte IRAM
 // detachInterrupt() requires 160 byte IRAM
@@ -32,7 +37,15 @@
 // set it 0. the custom implementation saves those 232 byte IRAM but
 // is not compatible with arduino functional interrupts
 #ifndef PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS
-#define PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS                   1
+#if PIN_MONITOR_USE_GPIO_INTERRUPT
+#define PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS                    0
+#else
+#define PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS                    1
+#endif
+#endif
+
+#if PIN_MONITOR_USE_GPIO_INTERRUPT && PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS
+#error PIN_MONITOR_USE_GPIO_INTERRUPT=1 and PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS=1 cannot be combined
 #endif
 
 // milliseconds
@@ -50,6 +63,12 @@
 #define PIN_MONITOR_ACTIVE_STATE                                ActiveStateType::PRESSED_WHEN_HIGH
 #endif
 
+#if DEBUG_PIN_MONITOR
+#define IF_DEBUG_PIN_MONITOR(...) __VA_ARGS__
+#else
+#define IF_DEBUG_PIN_MONITOR()
+#endif
+
 #include "debounce.h"
 
 namespace PinMonitor {
@@ -58,9 +77,13 @@ namespace PinMonitor {
     static constexpr uint8_t kDebounceTimeDefault = PIN_MONITOR_DEBOUNCE_TIME; // milliseconds
 
     class Pin;
-    class HardwarePin;
     class Debounce;
     class Monitor;
+    class HardwarePin;
+    class SimpleHardwarePin;
+    class DebouncedHardwarePin;
+    class RotaryEncoder;
+    class RotaryHardwarePin;
 
     using PinPtr = std::unique_ptr<Pin>;
     using Vector = std::vector<PinPtr>;
@@ -70,6 +93,7 @@ namespace PinMonitor {
     using Predicate = std::function<bool(const PinPtr &pin)>;
 
     enum class HardwarePinType : uint8_t {
+        NONE = 0,
         BASE,
         SIMPLE,
         DEBOUNCE,
@@ -77,4 +101,21 @@ namespace PinMonitor {
         _DEFAULT = DEBOUNCE,
     };
 
+    enum class RotaryEncoderEventType : uint8_t {
+        NONE                            = 0,
+        RIGHT                           = 0x10,
+        CLOCK_WISE                      = RIGHT,
+        LEFT                            = 0x20,
+        COUNTER_CLOCK_WISE              = LEFT,
+        ANY                             = 0xff,
+        MAX_BITS                        = 8
+    };
+
+    enum class RotaryEncoderDirection : uint8_t {
+        LEFT = 0,
+        RIGHT = 1,
+        LAST = RIGHT
+    };
+
 }
+

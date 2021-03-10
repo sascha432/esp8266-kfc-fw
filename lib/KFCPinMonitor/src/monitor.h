@@ -4,7 +4,10 @@
 
 #pragma once
 
+#include <Arduino_compat.h>
+#include <EventScheduler.h>
 #include "pin_monitor.h"
+#include "interrupt_event.h"
 
 #if PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS == 0
 
@@ -14,9 +17,9 @@
 typedef void (*voidFuncPtrArg)(void*);
 
 // mode is CHANGE
-void ___attachInterruptArg(uint8_t pin, voidFuncPtrArg userFunc, void *arg);
+void attachInterruptArg(uint8_t pin, voidFuncPtrArg userFunc, void *arg);
 // this function must not be called from inside the interrupt handler
-void ___detachInterrupt(uint8_t pin);
+void detachInterrupt(uint8_t pin);
 
 #endif
 
@@ -84,10 +87,11 @@ namespace PinMonitor {
         static const __FlashStringHelper *stateType2String(StateType state);
         static const __FlashStringHelper *stateType2Level(StateType state);
 
-        // values: 1 bit per pin, 0-17
-        // pins: 0 = pin not read, 1 = pin read @ time
-        // active low is set to trie
-        void feed(uint32_t time, uint32_t values, uint32_t pins, bool activeLow);
+        // reset debouncer and feed the pin states
+        // an active state means the button is pressed, the read value would be true for
+        // active high and false for active low
+        // if activeHigh == false, the states are inverted to ressemble the values
+        void feed(uint32_t time, uint32_t states, bool activeHigh);
 
     private:
         Pin &_attach(Pin &pin, HardwarePinType type = HardwarePinType::_DEFAULT);

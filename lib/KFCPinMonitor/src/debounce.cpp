@@ -13,7 +13,7 @@
 
 using namespace PinMonitor;
 
-StateType Debounce::debounce(bool lastValue, uint16_t interruptCount, uint32_t last, uint32_t now, uint32_t _micros)
+StateType Debounce::_debounce(bool lastValue, uint16_t interruptCount, uint32_t last, uint32_t now, uint32_t _micros)
 {
     if (interruptCount) {
 

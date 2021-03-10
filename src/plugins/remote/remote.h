@@ -113,13 +113,14 @@ public:
     virtual bool atModeHandler(AtModeArgs &args) override;
 #endif
 
-    void enterDeepSleep();
 
 public:
     static void loop();
     static void wifiCallback(WiFiCallbacks::EventType event, void *payload);
 
+    static void enterDeepSleep();
     static void disableAutoSleep();
+    static void enableAutoSleep();
     static void prepareForUpdate();
     static void disableAutoSleepHandler(AsyncWebServerRequest *request);
     static void deepSleepHandler(AsyncWebServerRequest *request);
@@ -181,8 +182,14 @@ inline bool RemoteControlPlugin::_hasEvents() const
 
 inline void RemoteControlPlugin::disableAutoSleep()
 {
-    __LDBG_printf("disabled");
+    __LDBG_printf("auto sleep disabled");
     getInstance()._disableAutoSleepTimeout();
+}
+
+inline void RemoteControlPlugin::enableAutoSleep()
+{
+    __LDBG_printf("auto sleep enabled");
+    getInstance()._setAutoSleepTimeout(1, ~0U);
 }
 
 inline void RemoteControlPlugin::prepareForUpdate()
@@ -194,7 +201,7 @@ inline void RemoteControlPlugin::prepareForUpdate()
 inline void RemoteControlPlugin::enterDeepSleep()
 {
     __LDBG_printf("enter deep sleep");
-    _enterDeepSleep();
+    getInstance()._enterDeepSleep();
 }
 
 #include <debug_helper_disable.h>

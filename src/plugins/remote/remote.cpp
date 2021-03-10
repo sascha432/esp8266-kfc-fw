@@ -201,6 +201,26 @@ void RemoteControlPlugin::setup(SetupModeType mode)
 
     _updateSystemComboButtonLED();
     __LDBG_printf("setup() done");
+
+    dependsOn(F("http"), [](const PluginComponent *plugin) {
+        auto server = WebServer::Plugin::getWebServerObject();
+        if (server) {
+            WebServer::Plugin::addHandler(F("/rc/*"), [](AsyncWebServerRequest *request) {
+                __DBG_printf("remote control web server handler url=%s", request->url().c_str());
+                if (request->url().endsWith(F("/deep_sleep.html"))) {
+                    request->onDisconnect([]() {
+                        RemoteControlPlugin::enterDeepSleep();
+                    });
+                }
+                else if (request->url().endsWith(F("/disable_auto_sleep.html"))) {
+                    RemoteControlPlugin::disableAutoSleep();
+                }
+                else if (request->url().endsWith(F("/enable_auto_sleep.html"))) {
+                    RemoteControlPlugin::enableAutoSleep();
+                }
+            });
+        }
+    });
 }
 
 void RemoteControlPlugin::reconfigure(const String &source)
@@ -254,9 +274,9 @@ void RemoteControlPlugin::createMenu()
 
     auto device = bootstrapMenu.getMenuItem(navMenu.device);
     device.addDivider();
-    device.addMenuItem(F("Enable Auto Sleep"), F("#"));
-    device.addMenuItem(F("Disable Auto Sleep"), F("#"));
-    device.addMenuItem(F("Enable Deep Sleep"), F("#"));
+    device.addMenuItem(F("Enable Auto Sleep"), F("/rc/enable_auto_sleep.html"));
+    device.addMenuItem(F("Disable Auto Sleep"), F("/rc/disable_auto_sleep.html"));
+    device.addMenuItem(F("Enable Deep Sleep"), F("/rc/deep_sleep.html"));
 }
 
 

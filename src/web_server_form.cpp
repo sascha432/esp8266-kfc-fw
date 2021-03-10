@@ -10,12 +10,14 @@
 
 using KFCConfigurationClasses::System;
 
-typedef struct WebServerConfigCombo_t {
-    using Type = WebServerConfigCombo_t;
+struct WebServerConfigCombo {
+    using Type = WebServerConfigCombo;
     using ModeType = WebServerTypes::ModeType;
 
     System::FlagsConfig::ConfigFlags_t *flags;
     System::WebServerConfig::WebServerConfig_t *cfg;
+
+    WebServerConfigCombo(System::FlagsConfig::ConfigFlags_t *_flags, System::WebServerConfig::WebServerConfig_t *_cfg) : flags(_flags), cfg(_cfg) {}
 
     static ModeType get_webserver_mode(const Type &obj) {
         return obj.flags->is_web_server_enabled == false ? ModeType::DISABLED : (obj.cfg->is_https ? ModeType::SECURE : ModeType::UNSECURE);
@@ -31,11 +33,13 @@ typedef struct WebServerConfigCombo_t {
         }
     }
 
-} WebServerConfigCombo_t;
+};
 
-void WebServerPlugin::createConfigureForm(PluginComponent::FormCallbackType type, const String &name, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
+using namespace WebServer;
+
+void Plugin::createConfigureForm(FormCallbackType type, const String &name, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
 {
-    if (type == PluginComponent::FormCallbackType::SAVE) {
+    if (type == FormCallbackType::SAVE) {
         config.setConfigDirty(true);
         return;
     }
@@ -45,7 +49,7 @@ void WebServerPlugin::createConfigureForm(PluginComponent::FormCallbackType type
 
     auto &flags = System::Flags::getWriteableConfig();
     auto &cfg = System::WebServer::getWriteableConfig();
-    WebServerConfigCombo_t combo = { &flags, &cfg };
+    WebServerConfigCombo combo(&flags, &cfg);
 
     auto &ui = form.createWebUI();
     ui.setTitle(F("Remote Access Configuration"));

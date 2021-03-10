@@ -25,7 +25,10 @@
     </nav>
     <!--NAV%%-->
     <div class="container">
-        <form method="POST" action="%SELF_URI%">
+        <form method="POST" action="%SELF_URI%" id="remote_settings">
+            <div class="alert alert-danger mt-3 mb-0 hidden" id="disable-warning">
+                Re-enabling the remote access requires serial access or a factory reset
+            </div>
             %FORM_HTML%
         </form>
         <!--%%FOOT-->

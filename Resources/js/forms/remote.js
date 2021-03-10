@@ -9,20 +9,22 @@ $(function() {
             var port = parseInt($('#port').val());
             var type = parseInt($('#mode').val());
             if (type == 1) {
-                form_set_disabled($('#ssl_cert,#ssl_key'), false)
-                form_set_disabled($('#port'), true)
+                $('#disable-warning').addClass('hidden');
+                form_set_disabled($('#ssl_cert,#ssl_key,#port'), false)
                 $('#port').attr('placeholder', '80');
-                if (port == 443 || port == 80) {
+                if (port == 443 || port == 80 || port == 0) {
                     $('#port').val('');
                 }
             } else if (type == 2) {
-                form_set_disabled($('#ssl_cert,#ssl_key,#port'), true)
+                $('#disable-warning').addClass('hidden');
+                form_set_disabled($('#ssl_cert,#ssl_key,#port'), false)
                 $('#port').attr('placeholder', '443');
-                if (port == 80 || port == 443) {
+                if (port == 80 || port == 443 || port == 0) {
                     $('#port').val('');
                 }
             } else {
-                form_set_disabled($('#ssl_cert,#ssl_key,#port'), false)
+                $('#disable-warning').removeClass('hidden');
+                form_set_disabled($('#ssl_cert,#ssl_key,#port'), true)
             }
         }
         $('#mode,#port').change(httpmode_changed);

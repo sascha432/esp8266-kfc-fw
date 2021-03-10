@@ -10,6 +10,10 @@
 	display: none !important;
 }
 
+.hide-empty:empty {
+    display: none;
+ }
+
 .custom-pin-row label {
 	display: none;
 }

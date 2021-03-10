@@ -25,12 +25,20 @@
     </nav>
     <!--NAV%%-->
     <div class="container">
-        <form method="POST" action="%SELF_URI%" id="remote_settings">
-            <div class="alert alert-danger mt-3 mb-0 hidden" id="disable-warning">
-                Re-enabling remote access requires serial access or a factory reset
+        <h5 class="mt-3">%TITLE% - %HOSTNAME%%SAFEMODE% - %IP_ADDRESS%</h5>
+        <h5>%TIME%</h5>
+        <div class="accordion pt-3">
+            <div class="card">
+                <div class="card-header%TPL_TITLE_CLASS%">
+                    <h2 class="mb-0 hide-empty">%TPL_TITLE%</h2>
+                </div>
             </div>
-            %FORM_HTML%
-        </form>
+            <div class="card">
+                <div class="card-body%TPL_MESSAGE_CLASS%">
+                    <h4 class="p-3 m-3">%TPL_MESSAGE%</h4>
+                </div>
+            </div>
+        </div>
         <!--%%FOOT-->
         <div class="row">
             <div class="col footer">&nbsp;</div>
@@ -45,9 +53,6 @@
 	<script debug_loader="1" type="text/javascript" src="../js/main.min.js"></script>
 	<script debug_loader="1" type="text/javascript" src="../js/debug.js"></script>
     <!--JAVASCRIPT%%-->
-
-    %FORM_VALIDATOR%
-
 </body>
 
 </html>

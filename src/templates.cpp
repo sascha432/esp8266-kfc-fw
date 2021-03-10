@@ -369,7 +369,7 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     else if (_form) {
         _form->process(key, output);
     }
-    else if (String_endsWith(key, PSTR("_STATUS"))) {
+    else if (key.endsWith(F("_STATUS"))) {
         uint8_t cmp_length = key.length() - 7;
         for(auto plugin: plugins) {
             if (plugin->hasStatus() && strncasecmp_P(key.c_str(), plugin->getName_P(), cmp_length) == 0) {
@@ -386,9 +386,9 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 
 void UpgradeTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 {
-    if (String_equals(key, F("FIRMWARE_UPGRADE_FAILURE_CLASS"))) {
+    if (key == F("FIRMWARE_UPGRADE_FAILURE_CLASS")) {
     }
-    else if (String_equals(key, F("FIRMWARE_UPGRADE_FAILURE"))) {
+    else if (key == F("FIRMWARE_UPGRADE_FAILURE")) {
         output.printRaw(_errorMessage);
     }
     else {
@@ -403,15 +403,15 @@ void UpgradeTemplate::setErrorMessage(const String &errorMessage)
 
 void LoginTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 {
-    if (String_equals(key, F("LOGIN_ERROR_MESSAGE"))) {
+    if (key == F("LOGIN_ERROR_MESSAGE")) {
         output.print(_errorMessage);
     }
-    else if (String_equals(key, F("LOGIN_ERROR_CLASS"))) {
+    else if (key == F("LOGIN_ERROR_CLASS")) {
         if (_errorMessage.length() == 0) {
             output.print(FSPGM(_hidden));
         }
     }
-    else if (String_equals(key, F("LOGIN_KEEP_DAYS"))) {
+    else if (key == F("LOGIN_KEEP_DAYS")) {
         output.print(System::Device::getConfig().getWebUICookieLifetime());
     }
     else {
@@ -422,6 +422,89 @@ void LoginTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 void LoginTemplate::setErrorMessage(const String &errorMessage)
 {
     _errorMessage = errorMessage;
+}
+
+void MessageTemplate::process(const String &key, PrintHtmlEntitiesString &output)
+{
+    if (key == F("TPL_MESSAGE")) {
+        if (_containsHtml & kHtmlMessage) {
+            auto mode = output.setMode(PrintHtmlEntities::Mode::RAW);
+            output.print(_message);
+            output.setMode(mode);
+        }
+        else {
+            output.print(_message);
+        }
+    }
+    else if (key == F("TPL_TITLE")) {
+        if (_containsHtml & kHtmlTitle) {
+            auto mode = output.setMode(PrintHtmlEntities::Mode::RAW);
+            output.print(_title);
+            output.setMode(mode);
+        }
+        else {
+            output.print(_title);
+        }
+    }
+    else if (key == F("%TPL_TITLE_CLASS%")) {
+        if (_titleClass) {
+            output.print(' ');
+            output.print(_titleClass);
+        }
+        else {
+            output.print(F(" text-white bg-primary"));
+        }
+    }
+    else if (key == F("%TPL_MESSAGE_CLASS%")) {
+        if (_messageClass) {
+            output.print(' ');
+            output.print(_messageClass);
+        }
+    }
+    else {
+        WebTemplate::process(key, output);
+    }
+}
+
+void MessageTemplate::checkForHtml()
+{
+    auto pos = _title.indexOf('<');
+    if (pos != -1) {
+        if (_title.indexOf('>') > pos) {
+            _containsHtml |= kHtmlTitle;
+        }
+    }
+    pos = _message.indexOf('<');
+    if (pos != -1) {
+        if (_message.indexOf('>') > pos) {
+            _containsHtml |= kHtmlMessage;
+        }
+    }
+}
+
+void NotFoundTemplate::process(const String &key, PrintHtmlEntitiesString &output)
+{
+    if (key == F("STATUS_CODE")) {
+        if (_code >= 200 && _code < 600) {
+            output.print(_code);
+        }
+    }
+    else if (key == F("TPL_TITLE")) {
+        if (_code >= 200 && _code < 600) {
+            output.printf_P("Status Code: %u", _code);
+        }
+    }
+    else if (_titleClass == nullptr && key == F("TPL_TITLE_CLASS")) {
+        if (_code >= 400 && _code < 600) {
+            output.print(F(" text-white bg-danger"));
+        }
+        else {
+            return MessageTemplate::process(key, output);
+        }
+    }
+    else {
+        return MessageTemplate::process(key, output);
+    }
 }
 
 void ConfigTemplate::process(const String &key, PrintHtmlEntitiesString &output)
@@ -435,7 +518,7 @@ void ConfigTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         }
     }
 
-    if (String_equals(key, F("NETWORK_MODE"))) {
+    if (key ==  F("NETWORK_MODE")) {
         bool m = false;
         auto flags = System::Flags::getConfig();
         if (flags.is_softap_enabled) {
@@ -449,15 +532,15 @@ void ConfigTemplate::process(const String &key, PrintHtmlEntitiesString &output)
             output.print(F("#station_mode"));
         }
     }
-    else if (String_startsWith(key, F("MAX_CHANNELS"))) {
+    else if (key.startsWith(F("MAX_CHANNELS"))) {
         output.print(config.getMaxWiFiChannels());
     }
-    else if (String_startsWith(key, F("MODE_"))) {
+    else if (key.startsWith(F("MODE_"))) {
         if (System::Flags::getConfig().getWifiMode() == key.substring(5).toInt()) {
             output.print(FSPGM(_selected, " selected"));
         }
     }
-    else if (String_equals(key, F("SSL_CERT"))) {
+    else if (key == F("SSL_CERT")) {
 #if WEBSERVER_TLS_SUPPORT
         File file = KFCFS.open(FSPGM(server_crt, "/.pvt/server.crt"), fs::FileOpenMode::read);
         if (file) {
@@ -465,7 +548,7 @@ void ConfigTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         }
 #endif
     }
-    else if (String_equals(key, F("SSL_KEY"))) {
+    else if (key == F("SSL_KEY")) {
 #if WEBSERVER_TLS_SUPPORT
         File file = KFCFS.open(FSPGM(server_key, "/.pvt/server.key"), fs::FileOpenMode::read);
         if (file) {
@@ -483,17 +566,17 @@ void StatusTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     // if (!_isAuthenticated) {
     //     return;
     // }
-    if (String_equals(key, F("GATEWAY"))) {
+    if (key == F("GATEWAY")) {
         WiFi.gatewayIP().printTo(output);
     }
-    else if (String_equals(key, F("DNS"))) {
+    else if (key == F("DNS")) {
         WiFi.dnsIP().printTo(output);
         if (WiFi.dnsIP(1)) {
             output.print(FSPGM(comma_));
             WiFi.dnsIP(1).printTo(output);
         }
     }
-    else if (String_equals(key, F("SSL_STATUS"))) {
+    else if (key == F("SSL_STATUS")) {
         #if ASYNC_TCP_SSL_ENABLED
             #if WEBSERVER_TLS_SUPPORT
                 output.printf_P(PSTR("TLS enabled, HTTPS %s"), _Config.getOptions().isHttpServerTLS() ? SPGM(enabled, "enabled") : SPGM(Disabled));
@@ -504,7 +587,7 @@ void StatusTemplate::process(const String &key, PrintHtmlEntitiesString &output)
             output.print(FSPGM(Not_supported));
         #endif
     }
-    else if (String_equals(key, F("WIFI_MODE"))) {
+    else if (key == F("WIFI_MODE")) {
         switch (WiFi.getMode()) {
             case WIFI_STA: {
                     output.print(FSPGM(Station_Mode, "Station Mode"));
@@ -526,7 +609,7 @@ void StatusTemplate::process(const String &key, PrintHtmlEntitiesString &output)
                 break;
         }
     }
-    else if (String_equals(key, F("WIFI_SSID"))) {
+    else if (key == F("WIFI_SSID")) {
         if (WiFi.getMode() == WIFI_AP_STA) {
             output.print(F("Station connected to " HTML_S(strong)));
             WiFi_Station_SSID(output);
@@ -541,7 +624,7 @@ void StatusTemplate::process(const String &key, PrintHtmlEntitiesString &output)
             WiFi_SoftAP_SSID(output);
         }
     }
-    else if (String_equals(key, F("WIFI_STATUS"))) {
+    else if (key == F("WIFI_STATUS")) {
         WiFi_get_status(output);
     }
     else {
@@ -551,10 +634,10 @@ void StatusTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 
 void PasswordTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 {
-    if (String_equals(key, F("PASSWORD_ERROR_MESSAGE"))) {
+    if (key == F("PASSWORD_ERROR_MESSAGE")) {
         output.print(_errorMessage);
     }
-    else if (String_equals(key, F("PASSWORD_ERROR_CLASS"))) {
+    else if (key == F("PASSWORD_ERROR_CLASS")) {
         if (_errorMessage.length() == 0) {
             output.print(FSPGM(_hidden));
         }

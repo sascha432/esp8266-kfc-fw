@@ -26,7 +26,7 @@ Queue::Queue(Client &client) :
     Component(ComponentType::AUTO_DISCOVERY),
     _client(client),
     _packetId(0),
-    _forceUpdate(false)
+    _runFlags(RunFlags::DEFAULTS)
 {
     MQTTClient::registerComponent(this);
 }
@@ -135,6 +135,10 @@ void Queue::runPublish(uint32_t delayMillis)
     if (!_client._components.empty() && delayMillis) {
         uint32_t initialDelay;
 
+        if (_runFlags & RunFlags::FORCE_NOW) {
+            delayMillis = 1;
+        }
+
         // add +-10%
         srand(micros());
         initialDelay = stdex::randint((delayMillis * 90) / 100, (delayMillis * 110) / 100);
@@ -147,6 +151,27 @@ void Queue::runPublish(uint32_t delayMillis)
 
         _Timer(_timer).add(Event::milliseconds(std::max<uint32_t>(1000, initialDelay)), false, [this](Event::CallbackTimerPtr timer) {
 
+            // check if we have real time
+            if (!(_runFlags & RunFlags::FORCE_NOW)) {
+                auto now = time(nullptr);
+                if (IS_TIME_VALID(now)) {
+                    // check when the next auto discovery is supposed to run
+                    auto cfg = Plugins::MQTTClient::getConfig();
+                    if (_client._autoDiscoveryLastSuccess > _client._autoDiscoveryLastFailure) {
+                        uint32_t next = _client._autoDiscoveryLastSuccess + (cfg.getAutoDiscoveryRebroadcastInterval() * 60);
+                        int32_t diff = next - time(nullptr);
+                        __DBG_printf_E("last published=%u wait_time=%d minutes", (diff / 60) + 1);
+                        // not within 2 minutes... report error and delay next run by the time that has been left
+                        if (diff > 120) {
+                            _publishDone(false, (next / 60) + 1);
+                            return;
+                        }
+                    }
+                }
+            }
+
+
+
             // get all topics that belong to this device
             __LDBG_printf("starting CollectTopicsComponent");
             _collect.reset(new CollectTopicsComponent(&_client, std::move(_client._createAutoDiscoveryTopics())));
@@ -156,11 +181,11 @@ void Queue::runPublish(uint32_t delayMillis)
                 if (error == ComponentProxy::ErrorType::SUCCESS) {
                     // compare with current auto discovery
                     auto currentCrcs = _entities.crc();
-                    if (_forceUpdate) {
+                    if (_runFlags & RunFlags::FORCE_UPDATE) {
                         crcs.invalidate();
                     }
                     _diff = currentCrcs.difference(crcs);
-                    if (_forceUpdate) {
+                    if (_runFlags & RunFlags::FORCE_UPDATE) {
                         currentCrcs = {};
                         crcs.clear();
                     }

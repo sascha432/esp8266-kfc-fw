@@ -72,7 +72,7 @@ void print_status_pcf8574(Print &output)
 #define PLUGIN_OPTIONS_WEB_TEMPLATES                    ""
 
 #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
-#define PLUGIN_OPTIONS_RECONFIGURE_DEPENDENCIES         "http"
+#define PLUGIN_OPTIONS_RECONFIGURE_DEPENDENCIES         ""
 #else
 #define PLUGIN_OPTIONS_RECONFIGURE_DEPENDENCIES         ""
 #endif
@@ -516,19 +516,11 @@ void ClockPlugin::reconfigure(const String &source)
     _removeDisplayLedTimer();
 #endif
     _disable(10);
-    IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(
-        if (String_equals(source, SPGM(http))) {
-            _installWebHandlers();
-        }
-        else
+    readConfig();
+    IF_IOT_CLOCK_SAVE_STATE(
+        _saveState();
     )
-    {
-        readConfig();
-        IF_IOT_CLOCK_SAVE_STATE(
-            _saveState();
-        )
-        _schedulePublishState = true;
-    }
+    _schedulePublishState = true;
     if (_targetBrightness) {
         _enable();
     }
@@ -537,6 +529,10 @@ void ClockPlugin::reconfigure(const String &source)
 void ClockPlugin::shutdown()
 {
     __LDBG_println();
+
+#if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
+    _displaySensor = DisplaySensorType::DESTROYED;
+    #endif
 
     IF_IOT_CLOCK_SAVE_STATE(
         if (_saveTimer) {

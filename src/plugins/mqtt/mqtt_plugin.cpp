@@ -172,20 +172,26 @@ bool Plugin::atModeHandler(AtModeArgs &args)
                     break;
                 case 7: // autodiscovery
                 case 8: { // auto
-                        bool abort = args.isTrue(1) || args.has(F("restart"));
-                        bool force_update = args.has(F("force"));
-                        if (!client.isConnected()) {
-                            args.print(F("mqtt not connected"));
-                        }
-                        else if (!abort && client.isAutoDiscoveryRunning()) {
-                            args.print(F("auto discovery already running"));
-                        }
-                        else if (client.publishAutoDiscovery(true, abort, force_update)) {
-                            args.print(F("auto discovery started"));
-                        }
-                        else {
-                            args.print(F("auto discovery not available"));
-                        }
+                        // bool abort = args.isTrue(1) || args.has(F("restart"));
+                        // bool force_update = args.has(F("force"));
+
+
+                        // RunFlags flags = RunFlags::FORCE_NOW;
+                        // //TODO
+
+                        // if (!client.isConnected()) {
+
+                        //     args.print(F("mqtt not connected"));
+                        // }
+                        // else if (!abort && client.isAutoDiscoveryRunning()) {
+                        //     args.print(F("auto discovery already running"));
+                        // }
+                        // else if (client.publishAutoDiscovery(true, abort, force_update)) {
+                        //     args.print(F("auto discovery started"));
+                        // }
+                        // else {
+                        //     args.print(F("auto discovery not available"));
+                        // }
                     } break;
                 case 9: {
                         auto &stream = args.getStream();

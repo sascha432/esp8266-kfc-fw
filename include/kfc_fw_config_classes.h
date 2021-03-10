@@ -1732,10 +1732,12 @@ namespace KFCConfigurationClasses {
             #if IOT_ATOMIC_SUN_V2
                 int8_t channel_mapping[IOT_DIMMER_MODULE_CHANNELS];
             #endif
+            #if IOT_DIMMER_MODULE_CHANNELS
                 struct __attribute__packed__ {
                     uint16_t from[IOT_DIMMER_MODULE_CHANNELS];
                     uint16_t to[IOT_DIMMER_MODULE_CHANNELS];
                 } level;
+            #endif
                 float on_fadetime;
                 float off_fadetime;
                 float lp_fadetime;
@@ -1898,7 +1900,7 @@ namespace KFCConfigurationClasses {
                 CREATE_UINT8_BITFIELD(standby_led, 1);
                 CREATE_UINT8_BITFIELD(enabled, 1);
                 CREATE_UINT32_BITFIELD_MIN_MAX(fading_time, 6, 0, 60, 10, 1)
-#if IOT_CLOCK_HAVE_POWER_LIMIT
+#if IOT_CLOCK_HAVE_POWER_LIMIT || IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
                 CREATE_UINT32_BITFIELD_MIN_MAX(power_limit, 8, 0, 255, 0, 1)
 #endif
                 CREATE_UINT32_BITFIELD_MIN_MAX(brightness, 8, 0, 255, 255 / 4, 1)
@@ -1910,7 +1912,7 @@ namespace KFCConfigurationClasses {
 
                 static const uint16_t kPowerNumLeds = 256;
 
-#if IOT_CLOCK_HAVE_POWER_LIMIT
+#if IOT_CLOCK_HAVE_POWER_LIMIT  || IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
                 struct __attribute__packed__ {
                     uint16_t red;
                     uint16_t green;

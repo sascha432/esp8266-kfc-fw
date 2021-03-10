@@ -74,7 +74,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     // config_forms
     "weather",
     // reconfigure_dependencies
-    "http",
+    "",
     PluginComponent::PriorityType::WEATHER_STATION,
     PluginComponent::RTCMemoryId::NONE,
     static_cast<uint8_t>(PluginComponent::MenuType::AUTO),
@@ -140,7 +140,10 @@ void WeatherStationPlugin::_installWebhooks()
     __LDBG_printf("server=%p", WebServerPlugin::getWebServerObject());
     WebServerPlugin::addHandler(F("/images/screen_capture.bmp"), _sendScreenCaptureBMP);
 
-    WebServerPlugin::addRestHandler(WebServerPlugin::RestHandler(F(KFC_RESTAPI_ENDPOINT "ws"), [this](AsyncWebServerRequest *request, WebServerPlugin::RestRequest &rest) -> AsyncWebServerResponse * {
+    WebServerPlugin::addRestHandler(std::move(WebServerPlugin::RestHandler(F("/api/ws"), [this](AsyncWebServerRequest *request, WebServerPlugin::RestRequest &rest) -> AsyncWebServerResponse * {
+        // TODO replace AsyncJsonResponse
+        // add no cache no store headers
+        #error read TODO
         auto response = __DBG_new(AsyncJsonResponse);
         auto &json = response->getJsonObject();
         auto &reader = rest.getJsonReader();
@@ -220,7 +223,7 @@ void WeatherStationPlugin::_installWebhooks()
         }
 
         return response->finalize();
-    }));
+    })));
 }
 
 void WeatherStationPlugin::_readConfig()
@@ -344,10 +347,11 @@ void WeatherStationPlugin::setup(SetupModeType mode)
 
 void WeatherStationPlugin::reconfigure(const String &source)
 {
-    if (String_equals(source, SPGM(http))) {
-        _installWebhooks();
-    }
-    else {
+    // if (String_equals(source, SPGM(http))) {
+    //     _installWebhooks();
+    // }
+    // else
+    {
         auto oldLevel = _backlightLevel;
         _readConfig();
 

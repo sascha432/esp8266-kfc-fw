@@ -650,25 +650,23 @@ bool MQTTClient::_topicInUse(ComponentPtr component, const String &topic)
     return false;
 }
 
-bool MQTTClient::publishAutoDiscovery(bool force, bool abort, bool forceUpdate)
+bool MQTTClient::publishAutoDiscovery(RunFlags flags)
 {
 #if MQTT_AUTO_DISCOVERY
     _startAutoDiscovery = false;
     _autoDiscoveryRebroadcast.remove();
 
-    if (AutoDiscovery::Queue::isEnabled(force) && !_components.empty()) {
-        if (abort && _autoDiscoveryQueue) {
+    if (AutoDiscovery::Queue::isEnabled() && !_components.empty()) {
+        if (_autoDiscoveryQueue && (flags & RunFlags::ABORT_RUNNING)) { // abort running auto discovery if flag is set
             _autoDiscoveryQueue.reset();
         }
         if (_autoDiscoveryQueue) {
+            // auto discovery is running, do not start...
             __LDBG_printf("auto discovery running count=%u size=%u", _autoDiscoveryQueue->_discoveryCount, _autoDiscoveryQueue->_size);
         }
         else {
             _autoDiscoveryQueue.reset(new AutoDiscovery::Queue(*this));
-            if (forceUpdate) {
-                _autoDiscoveryQueue->setForceUpdate(true);
-            }
-            _autoDiscoveryQueue->publish(force);
+            _autoDiscoveryQueue->publish(flags);
             return true;
         }
     }

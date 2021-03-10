@@ -197,7 +197,8 @@ public:
     enum class DisplaySensorType : uint8_t {
         OFF  = 0,
         SHOW = 1,
-        BUSY = 2  // waiting for ADC results
+        BUSY = 2,  // waiting for ADC results
+        DESTROYED = 3,
     };
 
 // ------------------------------------------------------------------------

@@ -53,7 +53,7 @@ public:
         WsClient::broadcast(getServerSocket(), sender, str, strlen(reinterpret_cast<PGM_P>(str)));
     }
 
-    static void setup();
+    static void setup(AsyncWebServer *server);
 
     static void createWebUIJSON(JsonUnnamedObject &json);
     static void sendValues(AsyncWebSocketClient *client);

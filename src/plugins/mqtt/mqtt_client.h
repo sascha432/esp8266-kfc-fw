@@ -494,7 +494,7 @@ public:
         // returns false if running
         // abort = true aborts it if running
         // forceUpdate = true deletes all retained messages and sends new ones
-        bool publishAutoDiscovery(bool force = false, bool abort = false, bool forceUpdate = false);
+        bool publishAutoDiscovery(RunFlags runFLags = RunFlags::DEFAULTS);
         static void publishAutoDiscoveryCallback(Event::CallbackTimerPtr timer);
 
         inline bool isAutoDiscoveryRunning() const {

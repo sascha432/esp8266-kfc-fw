@@ -35,7 +35,7 @@ Sensor_DS3231::~Sensor_DS3231()
     UNREGISTER_SENSOR_CLIENT(this);
 }
 
-MQTT::AutoDiscovery::EntityPtr Sensor_DS3231::gettAutoDiscovery(FormatType format, uint8_t num)
+MQTT::AutoDiscovery::EntityPtr Sensor_DS3231::getAutoDiscovery(FormatType format, uint8_t num)
 {
     auto discovery = __LDBG_new(AutoDiscovery::Entity);
     switch (num) {
@@ -64,9 +64,9 @@ uint8_t Sensor_DS3231::getAutoDiscoveryCount() const
     return 3;
 }
 
-void Sensor_DS3231::getValues(NamedJsonArray &array, bool timer) override
+void Sensor_DS3231::getValues(NamedJsonArray &array, bool timer)
 {
-
+//TODO
 }
 
 void Sensor_DS3231::getValues(JsonArray &array, bool timer)

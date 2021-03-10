@@ -16,6 +16,7 @@
 #include "serial_handler.h"
 #include "serial2udp.h"
 #include "reset_detector.h"
+#include "deep_sleep.h"
 #include "plugins.h"
 #include "WebUIAlerts.h"
 #if PRINTF_WRAPPER_ENABLED
@@ -80,51 +81,62 @@ void delayedSetup(bool delayed)
 
 void setup()
 {
+    // PinMonitor::GPIOInterruptsEnable();
+    _startupTimings.preSetup(millis());
+    #if ENABLE_DEEP_SLEEP
+        deepSleepPinState.merge();
+        bool wakeup = resetDetector.hasWakeUpDetected();
+        // #if IOT_REMOTE_CONTROL
+        //     // read the button states once more
+        //     // setting the awake pin high will clear the button hardware buffer
+        //     // this code is executed ~60ms after the reset has been invoked and even fast
+        //     // double clicks can be detected
+        //     pinMode(IOT_REMOTE_CONTROL_AWAKE_PIN, OUTPUT);
+        //     digitalWrite(IOT_REMOTE_CONTROL_AWAKE_PIN, HIGH);
+        // #endif
+        if (wakeup) {
+            KFCFWConfiguration::wakeUpFromDeepSleep();
+        }
+    #endif
     _startupTimings.setSetupFunc(millis());
+    _startupTimings.preInit(deepSleepPinState.getMillis());
 
     KFC_SAFE_MODE_SERIAL_PORT.begin(KFC_SERIAL_RATE);
-#if KFC_DEBUG_USE_SERIAL1
-    Serial1.begin(KFC_DEBUG_USE_SERIAL1);
-    static_assert(KFC_DEBUG_USE_SERIAL1 >= 300, "must be set to the baud rate");
-#endif
+    #if KFC_DEBUG_USE_SERIAL1
+        Serial1.begin(KFC_DEBUG_USE_SERIAL1);
+        static_assert(KFC_DEBUG_USE_SERIAL1 >= 300, "must be set to the baud rate");
+    #endif
     serialHandler.begin();
     DEBUG_HELPER_INIT();
 
-#if 0
-    #include "../include/retracted/custom_wifi.h"
-    Serial2Udp::initWiFi(F(CUSTOM_WIFI_SSID), F(CUSTOM_WIFI_PASSWORD), IPAddress(192, 168, 0, 3), 6577);
-#endif
+    #if 0
+        #include "../include/retracted/custom_wifi.h"
+        Serial2Udp::initWiFi(F(CUSTOM_WIFI_SSID), F(CUSTOM_WIFI_PASSWORD), IPAddress(192, 168, 0, 3), 6577);
+    #endif
 
-#if HAVE_PCF8574
+    #if HAVE_PCF8574
         initialize_pcf8574();
-#endif
-#if HAVE_PCF8575
+    #endif
+    #if HAVE_PCF8575
         initialize_pcf8575();
-#endif
-#if HAVE_PCA9685
+    #endif
+    #if HAVE_PCA9685
         initialize_pca9785();
-#endif
-#if HAVE_MCP23017
+    #endif
+    #if HAVE_MCP23017
         initialize_mcp23017();
-#endif
+    #endif
 
-#if DEBUG_RESET_DETECTOR
-    resetDetector._init();
-#endif
+    #if DEBUG_RESET_DETECTOR
+        resetDetector._init();
+    #endif
 
     bool safe_mode = false;
     bool increaseCrashCounter = false;
-#if ENABLE_DEEP_SLEEP
-    // skip boot menu and file system on wakeup
-    bool wakeup = resetDetector.hasWakeUpDetected();
-    if (wakeup) {
-        config.wakeUpFromDeepSleep();
-    }
-    else
-#else
-    bool wakeup = resetDetector.hasWakeUpDetected();
-#endif
-    {
+    #if !ENABLE_DEEP_SLEEP
+        bool wakeup = resetDetector.hasWakeUpDetected();
+    #endif
+    if (!wakeup) {
 
         BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
 
@@ -160,20 +172,14 @@ void setup()
         }
     #endif
 
-    #if HAVE_GDBSTUB
+    #if HAVE_GDBSTUBGPR
         gdbstub_do_break();
         disable_at_mode(Serial);
     #endif
 
 
-        // if (resetDetector.hasWakeUpDetected()) {
-        //     resetDetector.clearCounter();
-        //     config.wakeUpFromDeepSleep();
-        // }
-        // else {
         KFC_SAFE_MODE_SERIAL_PORT.println(F("Booting KFC firmware..."));
         KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("SAFE MODE %d, reset counter %d, wake up %d\n"), resetDetector.getSafeMode(), resetDetector.getResetCounter(), resetDetector.hasWakeUpDetected());
-        // }
 
 #if KFC_RESTORE_FACTORY_SETTINGS_RESET_COUNT
         if (resetDetector.hasResetDetected()) {

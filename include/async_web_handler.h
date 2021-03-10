@@ -7,13 +7,13 @@
 #include <Arduino_compat.h>
 #include <ESPAsyncWebServer.h>
 
-// handle authentication and upload file into temporary directory until it has been processed or can be discarded
+// handle authentication and upload file into temporary directory
+// close and delete the file when done
+// if the file is left open, it will be deleted automatically on disconnect
 
 class AsyncFileUploadWebHandler : public AsyncCallbackWebHandler {
 public:
     AsyncFileUploadWebHandler(const String &uri, ArRequestHandlerFunction _onRequest = nullptr);
-
-    static void markTemporaryFileAsProcessed(AsyncWebServerRequest *request);
 
 private:
     void _cleanUp(AsyncWebServerRequest *request);

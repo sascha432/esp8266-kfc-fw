@@ -77,11 +77,11 @@
 #endif
 
 #ifndef KFC_TWOWIRE_SDA
-#define KFC_TWOWIRE_SDA                             SDA
+#define KFC_TWOWIRE_SDA                             4
 #endif
 
 #ifndef KFC_TWOWIRE_SCL
-#define KFC_TWOWIRE_SCL                             SCL
+#define KFC_TWOWIRE_SCL                             5
 #endif
 
 #ifndef KFC_TWOWIRE_CLOCK_STRETCH

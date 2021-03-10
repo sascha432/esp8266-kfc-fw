@@ -85,6 +85,10 @@ Sensor_HLW8012::Sensor_HLW8012(const String &name, uint8_t pinSel, uint8_t pinCF
     _inputCF1 = &_inputCFI;
     _toggleOutputMode();
 
+#if PIN_MONITOR_USE_GPIO_INTERRUPT
+#error interrupt mode not compatible with arduino attachInterrupt
+#endif
+
     // singleton
     sensor = this;
     LoopFunctions::add(Sensor_HLW8012::loop);

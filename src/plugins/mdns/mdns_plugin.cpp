@@ -36,7 +36,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     "MDNS",                 // friendly name
     "",                     // web_templates
     "",                     // config_forms
-    "wifi,network,http",    // reconfigure_dependencies
+    "wifi,network",    // reconfigure_dependencies
     PluginComponent::PriorityType::MDNS,
     PluginComponent::RTCMemoryId::NONE,
     static_cast<uint8_t>(PluginComponent::MenuType::CUSTOM),
@@ -68,10 +68,10 @@ void MDNSService::announce()
 void MDNSPlugin::_installWebServerHooks()
 {
 #if ESP8266
-    auto server = WebServerPlugin::getWebServerObject();
+    auto server = WebServer::Plugin::getWebServerObject();
     if (server) {
         __LDBG_println();
-        WebServerPlugin::addHandler(F("/mdns_discovery"), mdnsDiscoveryHandler);
+        WebServer::Plugin::addHandler(F("/mdns_discovery"), mdnsDiscoveryHandler);
     }
 #endif
 }
@@ -82,7 +82,7 @@ void MDNSPlugin::mdnsDiscoveryHandler(AsyncWebServerRequest *request)
 {
     __LDBG_printf("running=%u", plugin._isRunning());
     if (plugin._isRunning()) {
-        if (WebServerPlugin::getInstance().isAuthenticated(request) == true) {
+        if (WebServer::Plugin::getInstance().isAuthenticated(request) == true) {
             auto timeout = request->arg(F("timeout")).toInt();
             if (timeout == 0) {
                 timeout = 2000;
@@ -183,13 +183,13 @@ void MDNSPlugin::setup(SetupModeType mode)
 void MDNSPlugin::reconfigure(const String &source)
 {
     __LDBG_printf("running=%u source=%s", _running, source.c_str());
-    if (String_equals(source, SPGM(http))) {
-        _installWebServerHooks();
-    }
-    else {
+    // if (String_equals(source, SPGM(http))) {
+    //     _installWebServerHooks();
+    // }
+    // else {
         _end();
         _begin();
-    }
+    // }
 }
 
 void MDNSPlugin::shutdown()

@@ -45,33 +45,37 @@ Sensor_INA219::~Sensor_INA219()
     UNREGISTER_SENSOR_CLIENT(this);
 }
 
-MQTTComponent::MQTTAutoDiscoveryPtr Sensor_INA219::getAutoDiscovery(MQTT::FormatType format, uint8_t num)
+MQTT::AutoDiscovery::EntityPtr Sensor_INA219::getAutoDiscovery(FormatType format, uint8_t num)
 {
-    auto discovery = __LDBG_new(MQTTAutoDiscovery);
+    auto discovery = __LDBG_new(AutoDiscovery::Entity);
     switch(num) {
         case 0:
-            discovery->create(this, _getId(VOLTAGE), format);
-            discovery->addStateTopic(MQTTClient::formatTopic(_getId(VOLTAGE)));
-            discovery->addUnitOfMeasurement('V');
-            discovery->addDeviceClass(F("voltage"));
+            if (discovery->create(this, _getId(VOLTAGE), format)) {
+                discovery->addStateTopic(MQTTClient::formatTopic(_getId(VOLTAGE)));
+                discovery->addUnitOfMeasurement('V');
+                discovery->addDeviceClass(F("voltage"));
+            }
             break;
         case 1:
-            discovery->create(this, _getId(CURRENT), format);
-            discovery->addStateTopic(MQTTClient::formatTopic(_getId(CURRENT)));
-            discovery->addUnitOfMeasurement(F("mA"));
-            discovery->addDeviceClass(F("current"));
+            if (discovery->create(this, _getId(CURRENT), format)) {
+                discovery->addStateTopic(MQTTClient::formatTopic(_getId(CURRENT)));
+                discovery->addUnitOfMeasurement(F("mA"));
+                discovery->addDeviceClass(F("current"));
+            }
             break;
         case 2:
-            discovery->create(this, _getId(POWER), format);
-            discovery->addStateTopic(MQTTClient::formatTopic(_getId(POWER)));
-            discovery->addUnitOfMeasurement(F("mW"));
-            discovery->addDeviceClass(F("power"));
+            if (discovery->create(this, _getId(POWER), format)) {
+                discovery->addStateTopic(MQTTClient::formatTopic(_getId(POWER)));
+                discovery->addUnitOfMeasurement(F("mW"));
+                discovery->addDeviceClass(F("power"));
+            }
             break;
         case 3:
-            discovery->create(this, _getId(PEAK_CURRENT), format);
-            discovery->addStateTopic(MQTTClient::formatTopic(_getId(PEAK_CURRENT)));
-            discovery->addUnitOfMeasurement(F("mA"));
-            discovery->addDeviceClass(F("current"));
+            if (discovery->create(this, _getId(PEAK_CURRENT), format)) {
+                discovery->addStateTopic(MQTTClient::formatTopic(_getId(PEAK_CURRENT)));
+                discovery->addUnitOfMeasurement(F("mA"));
+                discovery->addDeviceClass(F("current"));
+            }
             break;
     }
     return discovery;
@@ -84,7 +88,7 @@ uint8_t Sensor_INA219::getAutoDiscoveryCount() const
 
 void Sensor_INA219::getValues(NamedJsonArray &array, bool timer)
 {
-
+//TOPDO
 }
 
 void Sensor_INA219::getValues(JsonArray &array, bool timer)
@@ -127,13 +131,13 @@ void Sensor_INA219::createWebUI(WebUIRoot &webUI, WebUIRow **row)
     (*row)->addSensor(_getId(PEAK_CURRENT), F("Peak Current"), F("mA"));
 }
 
-void Sensor_INA219::publishState(MQTTClient *client)
+void Sensor_INA219::publishState()
 {
-    if (client && client->isConnected()) {
-        client->publish(MQTTClient::formatTopic(_getId(VOLTAGE)), true, String(_mqttData.U(), 2));
-        client->publish(MQTTClient::formatTopic(_getId(CURRENT)), true, String(_mqttData.I(), 0));
-        client->publish(MQTTClient::formatTopic(_getId(POWER)), true, String(_mqttData.P(), 0));
-        client->publish(MQTTClient::formatTopic(_getId(PEAK_CURRENT)), true, String(_Ipeak, 0));
+    if (isConnected()) {
+        publish(MQTTClient::formatTopic(_getId(VOLTAGE)), true, String(_mqttData.U(), 2));
+        publish(MQTTClient::formatTopic(_getId(CURRENT)), true, String(_mqttData.I(), 0));
+        publish(MQTTClient::formatTopic(_getId(POWER)), true, String(_mqttData.P(), 0));
+        publish(MQTTClient::formatTopic(_getId(PEAK_CURRENT)), true, String(_Ipeak, 0));
         _mqttData = SensorData();
     }
 }
@@ -184,7 +188,7 @@ bool Sensor_INA219::atModeHandler(AtModeArgs &args)
 
         auto &serial = args.getStream();
         auto timerPrintFunc = [this, &serial](Event::CallbackTimerPtr timer) {
-            return std::count_if(SensorPlugin::begin(), SensorPlugin::end(), [this, &serial](MQTTSensorPtr sensor) {
+            return std::count_if(SensorPlugin::begin(), SensorPlugin::end(), [this, &serial](SensorPtr sensor) {
                 if ( sensor->getType() == SensorType::INA219) {
                     auto &ina219 = *reinterpret_cast<Sensor_INA219 *>(sensor);
                     serial.printf_P(PSTR("+SENSORINA219: raw: U=%d, Vshunt=%d, I=%d, current: P=%d: %.3fV, %.1fmA, %.1fmW, average: %.3fV, %.1fmA, %.1fmW\n"),

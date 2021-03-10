@@ -178,7 +178,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     "Ping Monitor",     // friendly name
     "",                 // web_templates
     "ping_monitor",     // config_forms
-    "http",             // reconfigure_dependencies
+    "",             // reconfigure_dependencies
     PluginComponent::PriorityType::PING_MONITOR,
     PluginComponent::RTCMemoryId::NONE,
     static_cast<uint8_t>(PluginComponent::MenuType::CUSTOM),
@@ -232,10 +232,11 @@ void PingMonitorPlugin::setup(SetupModeType mode)
 
 void PingMonitorPlugin::reconfigure(const String &source)
 {
-    if (String_equals(source, SPGM(http))) {
-        _setupWebHandler();
-    }
-    else {
+    // if (String_equals(source, SPGM(http))) {
+    //     _setupWebHandler();
+    // }
+    // else
+    {
         _setup();
     }
 }

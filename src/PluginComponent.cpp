@@ -126,7 +126,7 @@ void PluginComponent::invokeReconfigureNow(const String &source)
 //         }
 //     }
 
-    ADCManager::terminate(true);
+    // ADCManager::terminate(true);
 
     reconfigure(source);
     for(auto plugin: plugins) {

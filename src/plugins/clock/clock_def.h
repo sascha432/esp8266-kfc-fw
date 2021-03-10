@@ -166,7 +166,7 @@
 
 // add sensor for calculated power level to webui/mqtt
 #ifndef IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
-#   define IOT_CLOCK_DISPLAY_POWER_CONSUMPTION 1
+#   define IOT_CLOCK_DISPLAY_POWER_CONSUMPTION 0
 #endif
 
 // update rate for webui
@@ -182,7 +182,7 @@
 
 // option to set a power limit
 #ifndef IOT_CLOCK_HAVE_POWER_LIMIT
-#   define IOT_CLOCK_HAVE_POWER_LIMIT 1
+#   define IOT_CLOCK_HAVE_POWER_LIMIT 0
 #endif
 
 // since the power level is not linear, a correction formula can be applied

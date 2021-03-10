@@ -56,6 +56,10 @@ PROGMEM_STRING_DECL(Device_is_rebooting);
 PROGMEM_STRING_DECL(Disabled);
 // src/plugins/file_manager/file_manager.cpp:236 (SPGM), src/plugins/file_manager/file_manager.cpp:244 (SPGM), src/plugins/file_manager/file_manager.cpp:281 (SPGM), src/plugins/file_manager/file_manager.cpp:292 (SPGM), src/plugins/file_manager/file_manager.cpp:297 (SPGM), src/plugins/file_manager/file_manager.cpp:340 (SPGM), src/plugins/file_manager/file_manager.cpp:362 (SPGM), src/plugins/file_manager/file_manager.cpp:370 (SPGM), src/plugins/file_manager/file_manager.cpp:395 (SPGM), src/plugins/file_manager/file_manager.cpp:411 (SPGM), src/plugins/file_manager/file_manager.cpp:414 (SPGM), src/plugins/file_manager/file_manager.cpp:418 (SPGM)
 PROGMEM_STRING_DECL(ERROR_);
+// src/plugins/remote/remote_form.cpp:283 (SPGM)
+PROGMEM_STRING_DECL(Enable_MQTT);
+// src/plugins/remote/remote_form.cpp:277 (SPGM), src/plugins/remote/remote_form.cpp:278 (SPGM), src/plugins/remote/remote_form.cpp:279 (SPGM), src/plugins/remote/remote_form.cpp:280 (SPGM), src/plugins/remote/remote_form.cpp:281 (SPGM), src/plugins/remote/remote_form.cpp:282 (SPGM), src/plugins/remote/remote_form.cpp:283 (SPGM), src/plugins/remote/remote_form.cpp:284 (SPGM), src/plugins/remote/remote_form.cpp:285 (SPGM)
+PROGMEM_STRING_DECL(Enable_UDP);
 // lib/KFCWebFramework/include/WebUI/Containers.h:713 (SPGM), src/kfc_fw_config_forms.cpp:240 (SPGM), src/plugins/mqtt/mqtt_form.cpp:49 (SPGM)
 PROGMEM_STRING_DECL(Enabled);
 // src/kfc_fw_config_forms.cpp:137 (SPGM)
@@ -86,8 +90,6 @@ PROGMEM_STRING_DECL(HIDDEN);
 PROGMEM_STRING_DECL(Home);
 // src/async_web_response.cpp:837 (SPGM), src/kfc_fw_config_forms.cpp:155 (SPGM), src/plugins/mqtt/mqtt_form.cpp:81 (SPGM)
 PROGMEM_STRING_DECL(Hostname);
-// src/plugins/sensor/Sensor_DimmerMetrics.cpp:60 (SPGM), src/plugins/sensor/Sensor_DimmerMetrics.cpp:127 (SPGM)
-PROGMEM_STRING_DECL(Hz);
 // src/kfc_fw_config_forms.cpp:168 (SPGM), src/kfc_fw_config_forms.cpp:184 (SPGM)
 PROGMEM_STRING_DECL(IP_Address);
 // src/kfc_fw_config_forms.cpp:101 (SPGM)
@@ -116,11 +118,13 @@ PROGMEM_STRING_DECL(NTP_Client_Configuration);
 PROGMEM_STRING_DECL(Network);
 // src/kfc_fw_config_forms.cpp:149 (SPGM)
 PROGMEM_STRING_DECL(Network_Configuration);
+// src/plugins/sensor/Sensor_Battery.cpp:275 (SPGM)
+PROGMEM_STRING_DECL(No);
 // lib/KFCWebFramework/src/Form/BaseForm.cpp:308 (SPGM)
 PROGMEM_STRING_DECL(None);
 // src/templates.cpp:380 (SPGM), src/templates.cpp:504 (SPGM)
 PROGMEM_STRING_DECL(Not_supported);
-// src/AtModeArgs.cpp:206 (SPGM), src/plugins/dimmer_module/dimmer_base.cpp:403 (SPGM), src/plugins/file_manager/file_manager.cpp:374 (SPGM), src/plugins/file_manager/file_manager.cpp:420 (SPGM)
+// src/AtModeArgs.cpp:206 (SPGM), src/plugins/file_manager/file_manager.cpp:374 (SPGM), src/plugins/file_manager/file_manager.cpp:420 (SPGM)
 PROGMEM_STRING_DECL(OK);
 // src/templates.cpp:522 (SPGM)
 PROGMEM_STRING_DECL(Off);
@@ -150,7 +154,7 @@ PROGMEM_STRING_DECL(SSID);
 PROGMEM_STRING_DECL(Serial_Console);
 // lib/KFCWebFramework/include/HttpHeaders.h:203 (SPGM), lib/KFCWebFramework/src/HttpHeaders.cpp:22 (AUTO_INIT)
 PROGMEM_STRING_DECL(Set_Cookie);
-// src/kfc_fw_config_forms.cpp:20 (SPGM), src/kfc_fw_config_forms.cpp:104 (SPGM), src/kfc_fw_config_forms.cpp:162 (SPGM), src/templates.cpp:510 (SPGM), src/templates.cpp:519 (SPGM)
+// src/kfc_fw_config_forms.cpp:20 (SPGM), src/kfc_fw_config_forms.cpp:104 (SPGM), src/kfc_fw_config_forms.cpp:162 (SPGM)
 PROGMEM_STRING_DECL(Station_Mode);
 // src/plugins.cpp:166 (SPGM), src/plugins.cpp:173 (SPGM)
 PROGMEM_STRING_DECL(Status);
@@ -170,16 +174,12 @@ PROGMEM_STRING_DECL(Topic);
 PROGMEM_STRING_DECL(Username);
 // src/kfc_fw_config_forms.cpp:260 (SPGM), src/kfc_fw_config_forms.cpp:263 (SPGM), src/plugins.cpp:288 (SPGM)
 PROGMEM_STRING_DECL(WebUI);
-// src/kfc_fw_config_forms.cpp:271 (SPGM)
-PROGMEM_STRING_DECL(Web_Alerts);
 // src/plugins.cpp:177 (SPGM)
 PROGMEM_STRING_DECL(WiFi);
 // src/kfc_fw_config_forms.cpp:95 (SPGM)
 PROGMEM_STRING_DECL(WiFi_Configuration);
 // src/kfc_fw_config_forms.cpp:102 (SPGM)
 PROGMEM_STRING_DECL(WiFi_Mode);
-// src/web_server.cpp:886 (SPGM)
-PROGMEM_STRING_DECL(Your_session_has_expired);
 // src/kfc_fw_config_forms.cpp:252 (SPGM)
 PROGMEM_STRING_DECL(Zeroconf_Logging);
 // src/kfc_fw_config_forms.cpp:248 (SPGM)
@@ -198,18 +198,12 @@ PROGMEM_STRING_DECL(_login_html);
 PROGMEM_STRING_DECL(_selected);
 // src/plugins/http2serial/http2serial.cpp:28 (AUTO_INIT), src/plugins/http2serial/http2serial.cpp:260 (SPGM)
 PROGMEM_STRING_DECL(_serial_console);
-// src/plugins/dimmer_module/dimmer_channel.cpp:68 (SPGM), src/plugins/dimmer_module/dimmer_channel.cpp:70 (SPGM), src/plugins/dimmer_module/dimmer_channel.cpp:72 (SPGM)
-PROGMEM_STRING_DECL(_set);
-// src/plugins/dimmer_module/dimmer_channel.cpp:73 (SPGM), src/plugins/dimmer_module/dimmer_channel.cpp:75 (SPGM), src/plugins/dimmer_module/dimmer_channel.cpp:77 (SPGM)
-PROGMEM_STRING_DECL(_state);
-// lib/KFCWebFramework/include/Validator/Host.h:49 (SPGM), src/async_web_response.cpp:851 (SPGM), src/kfc_fw_config.cpp:830 (SPGM), src/kfc_fw_config.cpp:895 (SPGM), src/kfc_fw_config_classes.cpp:122 (SPGM)
+// lib/KFCWebFramework/include/Validator/Host.h:49 (SPGM), src/async_web_response.cpp:851 (SPGM), src/kfc_fw_config.cpp:827 (SPGM), src/kfc_fw_config.cpp:892 (SPGM), src/kfc_fw_config_classes.cpp:122 (SPGM)
 PROGMEM_STRING_DECL(_var_zeroconf);
 // src/web_server.cpp:153 (SPGM), src/web_server.cpp:798 (SPGM)
 PROGMEM_STRING_DECL(_xml);
-// include/retracted/custom_config.h:348 (SPGM), include/retracted/custom_config.h:386 (SPGM), src/plugins/mdns/mdns_resolver.cpp:74 (SPGM), src/plugins/mqtt/mqtt_config.cpp:14 (SPGM), src/plugins/syslog/syslog_config.cpp:21 (SPGM)
+// src/plugins/mdns/mdns_resolver.cpp:74 (SPGM), src/plugins/mqtt/mqtt_config.cpp:14 (SPGM), src/plugins/syslog/syslog_config.cpp:21 (SPGM)
 PROGMEM_STRING_DECL(address);
-// src/WebUIAlerts.cpp:595 (SPGM), src/templates.cpp:347 (SPGM), src/web_server.cpp:345 (SPGM)
-PROGMEM_STRING_DECL(alerts_storage_filename);
 // src/kfc_fw_config_forms.cpp:178 (SPGM)
 PROGMEM_STRING_DECL(ap_mode);
 // src/web_server.cpp:975 (SPGM)
@@ -218,13 +212,11 @@ PROGMEM_STRING_DECL(applying_html);
 PROGMEM_STRING_DECL(boolean);
 // src/plugins/sensor/Sensor_SystemMetrics.cpp:28 (AUTO_INIT), src/plugins/sensor/Sensor_SystemMetrics.cpp:58 (SPGM)
 PROGMEM_STRING_DECL(bytes);
-// src/plugins/dimmer_module/dimmer_channel.cpp:39 (SPGM), src/plugins/dimmer_module/dimmer_channel.cpp:41 (SPGM)
-PROGMEM_STRING_DECL(channel__u);
 // lib/KFCWebFramework/include/HttpHeaders.h:103 (SPGM), lib/KFCWebFramework/src/HttpHeaders.cpp:26 (AUTO_INIT)
 PROGMEM_STRING_DECL(close);
 // lib/KFCWebFramework/src/HttpHeaders.cpp:155 (SPGM), lib/KFCWebFramework/src/HttpHeaders.cpp:161 (SPGM), lib/KFCWebFramework/src/HttpHeaders.cpp:167 (SPGM), lib/KFCWebFramework/src/HttpHeaders.cpp:173 (SPGM), lib/KFCWebFramework/src/HttpHeaders.cpp:179 (SPGM), src/plugins/ntp/ntp_plugin.cpp:139 (SPGM), src/templates.cpp:492 (SPGM)
 PROGMEM_STRING_DECL(comma_);
-// lib/KFCConfiguration/src/JsonConfigReader.cpp:30 (SPGM), src/kfc_fw_config_forms.cpp:291 (SPGM), src/plugins/dimmer_module/dimmer_form.cpp:44 (SPGM), src/plugins/mqtt/mqtt_form.cpp:72 (SPGM), src/plugins/ntp/ntp_form.cpp:36 (SPGM), src/web_server.cpp:425 (SPGM)
+// lib/KFCConfiguration/src/JsonConfigReader.cpp:30 (SPGM), src/kfc_fw_config_forms.cpp:291 (SPGM), src/plugins/mqtt/mqtt_form.cpp:72 (SPGM), src/plugins/ntp/ntp_form.cpp:36 (SPGM), src/web_server.cpp:425 (SPGM)
 PROGMEM_STRING_DECL(config);
 // lib/KFCConfiguration/src/JsonConfigReader.cpp:117 (SPGM)
 PROGMEM_STRING_DECL(config_object_name);
@@ -234,18 +226,12 @@ PROGMEM_STRING_DECL(crash_counter_file);
 PROGMEM_STRING_DECL(crash_dump_file);
 // src/kfc_fw_config_forms.cpp:266 (SPGM)
 PROGMEM_STRING_DECL(days);
-// src/kfc_firmware.cpp:250 (SPGM), src/kfc_firmware.cpp:375 (SPGM), src/kfc_fw_config.cpp:543 (SPGM), src/kfc_fw_config.cpp:544 (SPGM), src/kfc_fw_config.cpp:547 (SPGM), src/kfc_fw_config.cpp:550 (SPGM), src/kfc_fw_config.cpp:609 (SPGM), src/kfc_fw_config.cpp:612 (SPGM), src/kfc_fw_config.cpp:614 (SPGM), src/kfc_fw_config_forms.cpp:49 (SPGM)
+// src/kfc_firmware.cpp:250 (SPGM), src/kfc_firmware.cpp:375 (SPGM), src/kfc_fw_config.cpp:540 (SPGM), src/kfc_fw_config.cpp:541 (SPGM), src/kfc_fw_config.cpp:544 (SPGM), src/kfc_fw_config.cpp:547 (SPGM), src/kfc_fw_config.cpp:606 (SPGM), src/kfc_fw_config.cpp:609 (SPGM), src/kfc_fw_config.cpp:611 (SPGM), src/kfc_fw_config_forms.cpp:49 (SPGM)
 PROGMEM_STRING_DECL(defaultPassword);
-// src/kfc_fw_config.cpp:1572 (SPGM), src/kfc_fw_config.cpp:1573 (SPGM), src/templates.cpp:184 (SPGM)
+// src/kfc_fw_config.cpp:1571 (SPGM), src/kfc_fw_config.cpp:1572 (SPGM), src/templates.cpp:184 (SPGM)
 PROGMEM_STRING_DECL(default_password_warning);
 // src/web_server.cpp:207 (SPGM)
 PROGMEM_STRING_DECL(deflate);
-// src/plugins/sensor/Sensor_DimmerMetrics.cpp:128 (SPGM), src/plugins/sensor/Sensor_DimmerMetrics.cpp:129 (SPGM)
-PROGMEM_STRING_DECL(degree_Celsius_html);
-// src/plugins/sensor/Sensor_DimmerMetrics.cpp:35 (SPGM), src/plugins/sensor/Sensor_DimmerMetrics.cpp:43 (SPGM)
-PROGMEM_STRING_DECL(degree_Celsius_unicode);
-// src/plugins/dimmer_module/dimmer_form.cpp:73 (SPGM), src/plugins/dimmer_module/dimmer_form.cpp:249 (SPGM), src/plugins/dimmer_module/dimmer_form.cpp:255 (SPGM)
-PROGMEM_STRING_DECL(degree_Celsius_utf8);
 // src/plugins/ssdp/ssdp.cpp:58 (SPGM), src/plugins/ssdp/ssdp.cpp:109 (SPGM), src/web_server.cpp:190 (SPGM)
 PROGMEM_STRING_DECL(description_xml);
 // src/kfc_fw_config_forms.cpp:154 (SPGM)
@@ -276,8 +262,6 @@ PROGMEM_STRING_DECL(file_manager_html_uri);
 PROGMEM_STRING_DECL(filename);
 // lib/KFCJson/src/JsonBaseReader.cpp:103 (SPGM)
 PROGMEM_STRING_DECL(float);
-// src/plugins/sensor/Sensor_DimmerMetrics.cpp:57 (SPGM), src/plugins/sensor/Sensor_DimmerMetrics.cpp:59 (SPGM), src/plugins/sensor/Sensor_DimmerMetrics.cpp:119 (SPGM), src/plugins/sensor/Sensor_DimmerMetrics.cpp:127 (SPGM)
-PROGMEM_STRING_DECL(frequency);
 // include/spgm_auto_def.h:235 (AUTO_INIT), lib/KFCWebBuilder/src/ListDir.cpp:189 (SPGM), lib/KFCWebBuilder/src/fs_mapping.cpp:63 (SPGM), lib/KFCWebBuilder/src/fs_mapping.cpp:83 (SPGM)
 PROGMEM_STRING_DECL(fs_mapping_dir);
 // include/spgm_auto_def.h:236 (AUTO_INIT), lib/KFCWebBuilder/src/ListDir.cpp:21 (SPGM), lib/KFCWebBuilder/src/ListDir.cpp:262 (SPGM)
@@ -318,11 +302,11 @@ PROGMEM_STRING_DECL(htmlentities_plusmn);
 PROGMEM_STRING_DECL(htmlentities_quest);
 // lib/KFCBaseLibrary/src/PrintHtmlEntities.cpp:82 (SPGM)
 PROGMEM_STRING_DECL(htmlentities_quot);
-// src/plugins/dimmer_module/dimmer_plugin.cpp:51 (SPGM), src/plugins/file_manager/file_manager.cpp:465 (SPGM), src/plugins/http2serial/http2serial.cpp:270 (SPGM), src/plugins/mdns/mdns_plugin.cpp:171 (SPGM), src/plugins/mdns/mdns_plugin.cpp:186 (SPGM), src/templates.cpp:112 (SPGM), src/web_server.cpp:709 (SPGM), src/web_server.cpp:1047 (SPGM)
+// src/plugins/file_manager/file_manager.cpp:465 (SPGM), src/plugins/http2serial/http2serial.cpp:270 (SPGM), src/plugins/mdns/mdns_plugin.cpp:171 (SPGM), src/plugins/mdns/mdns_plugin.cpp:186 (SPGM), src/templates.cpp:112 (SPGM), src/web_server.cpp:709 (SPGM), src/web_server.cpp:1047 (SPGM)
 PROGMEM_STRING_DECL(http);
 // src/templates.cpp:112 (SPGM), src/web_server.cpp:1048 (SPGM)
 PROGMEM_STRING_DECL(https);
-// src/web_server.cpp:604 (SPGM), src/web_server.cpp:607 (SPGM), src/web_server.cpp:611 (SPGM)
+// src/web_server.cpp:604 (SPGM), src/web_server.cpp:607 (SPGM)
 PROGMEM_STRING_DECL(image_type);
 // src/plugins.cpp:162 (SPGM), src/plugins.cpp:165 (SPGM), src/templates.cpp:274 (SPGM), src/web_server.cpp:852 (SPGM)
 PROGMEM_STRING_DECL(index_html);
@@ -346,11 +330,11 @@ PROGMEM_STRING_DECL(logger_filename_messags);
 PROGMEM_STRING_DECL(logger_filename_security);
 // src/logger.cpp:288 (SPGM)
 PROGMEM_STRING_DECL(logger_filename_warning);
-// src/failure_counter.cpp:98 (SPGM), src/failure_counter.cpp:162 (SPGM), src/failure_counter.cpp:192 (SPGM), src/kfc_fw_config.cpp:661 (SPGM)
+// src/failure_counter.cpp:98 (SPGM), src/failure_counter.cpp:162 (SPGM), src/failure_counter.cpp:192 (SPGM), src/kfc_fw_config.cpp:658 (SPGM)
 PROGMEM_STRING_DECL(login_failure_file);
 // src/web_server.cpp:1236 (SPGM), src/web_server.cpp:1240 (SPGM)
 PROGMEM_STRING_DECL(message);
-// src/kfc_fw_config_forms.cpp:248 (SPGM), src/plugins/dimmer_module/dimmer_form.cpp:114 (SPGM), src/plugins/dimmer_module/dimmer_form.cpp:118 (SPGM), src/plugins/dimmer_module/dimmer_form.cpp:130 (SPGM)
+// src/kfc_fw_config_forms.cpp:248 (SPGM)
 PROGMEM_STRING_DECL(milliseconds);
 // src/web_server.cpp:124 (SPGM)
 PROGMEM_STRING_DECL(mime_application_javascript);
@@ -386,7 +370,7 @@ PROGMEM_STRING_DECL(mime_image_svg_xml);
 PROGMEM_STRING_DECL(mime_text_css);
 // src/web_server.cpp:115 (SPGM), src/web_server.cpp:277 (SPGM)
 PROGMEM_STRING_DECL(mime_text_html);
-// src/async_web_handler.cpp:35 (SPGM), src/async_web_handler.cpp:50 (SPGM), src/async_web_handler.cpp:53 (SPGM), src/plugins/dimmer_module/dimmer_base.cpp:403 (SPGM), src/plugins/file_manager/file_manager.cpp:250 (SPGM), src/plugins/file_manager/file_manager.cpp:330 (SPGM), src/plugins/file_manager/file_manager.cpp:343 (SPGM), src/plugins/file_manager/file_manager.cpp:380 (SPGM), src/plugins/file_manager/file_manager.cpp:415 (SPGM), src/plugins/file_manager/file_manager.cpp:428 (SPGM), src/web_server.cpp:166 (SPGM), src/web_server.cpp:260 (SPGM), src/web_server.cpp:447 (SPGM), src/web_server.cpp:486 (SPGM), src/web_server.cpp:569 (SPGM), src/web_server.cpp:876 (SPGM)
+// src/async_web_handler.cpp:35 (SPGM), src/async_web_handler.cpp:50 (SPGM), src/async_web_handler.cpp:53 (SPGM), src/plugins/file_manager/file_manager.cpp:250 (SPGM), src/plugins/file_manager/file_manager.cpp:330 (SPGM), src/plugins/file_manager/file_manager.cpp:343 (SPGM), src/plugins/file_manager/file_manager.cpp:380 (SPGM), src/plugins/file_manager/file_manager.cpp:415 (SPGM), src/plugins/file_manager/file_manager.cpp:428 (SPGM), src/web_server.cpp:166 (SPGM), src/web_server.cpp:260 (SPGM), src/web_server.cpp:447 (SPGM), src/web_server.cpp:569 (SPGM), src/web_server.cpp:876 (SPGM)
 PROGMEM_STRING_DECL(mime_text_plain);
 // src/web_server.cpp:154 (SPGM)
 PROGMEM_STRING_DECL(mime_text_xml);
@@ -396,11 +380,11 @@ PROGMEM_STRING_DECL(minutes);
 PROGMEM_STRING_DECL(minutes__5_);
 // src/kfc_fw_config_forms.cpp:98 (SPGM), src/plugins/mqtt/mqtt_form.cpp:74 (SPGM)
 PROGMEM_STRING_DECL(mode);
-// include/retracted/custom_config.h:348 (SPGM), src/plugins/mqtt/auto_discovery.h:231 (SPGM), src/plugins/mqtt/mqtt_form.cpp:108 (SPGM)
+// src/plugins/mqtt/auto_discovery.h:231 (SPGM), src/plugins/mqtt/mqtt_form.cpp:108 (SPGM)
 PROGMEM_STRING_DECL(mqtt);
 // src/plugins/mqtt/auto_discovery.cpp:93 (SPGM)
 PROGMEM_STRING_DECL(name);
-// src/kfc_fw_config.cpp:1763 (SPGM), src/kfc_fw_config_forms.cpp:142 (SPGM)
+// src/kfc_fw_config.cpp:1762 (SPGM), src/kfc_fw_config_forms.cpp:142 (SPGM)
 PROGMEM_STRING_DECL(network);
 // src/plugins.cpp:168 (SPGM), src/plugins.cpp:178 (SPGM)
 PROGMEM_STRING_DECL(network_html);
@@ -422,7 +406,7 @@ PROGMEM_STRING_DECL(on);
 PROGMEM_STRING_DECL(password);
 // src/plugins.cpp:169 (SPGM), src/plugins.cpp:185 (SPGM)
 PROGMEM_STRING_DECL(password_html);
-// src/kfc_fw_config.cpp:864 (SPGM), src/plugins/mdns/mdns_resolver.cpp:75 (SPGM), src/plugins/mqtt/mqtt_form.cpp:85 (SPGM)
+// src/kfc_fw_config.cpp:861 (SPGM), src/plugins/mdns/mdns_resolver.cpp:75 (SPGM), src/plugins/mqtt/mqtt_form.cpp:85 (SPGM)
 PROGMEM_STRING_DECL(port);
 // lib/KFCWebFramework/src/HttpHeaders.cpp:29 (AUTO_INIT), lib/KFCWebFramework/src/HttpHeaders.cpp:169 (SPGM)
 PROGMEM_STRING_DECL(private);
@@ -438,11 +422,11 @@ PROGMEM_STRING_DECL(rebooting_html);
 PROGMEM_STRING_DECL(remote_html);
 // src/web_server.cpp:993 (SPGM)
 PROGMEM_STRING_DECL(safe_mode);
-// src/kfc_fw_config.cpp:1552 (SPGM), src/kfc_fw_config.cpp:1553 (SPGM)
+// src/kfc_fw_config.cpp:1551 (SPGM), src/kfc_fw_config.cpp:1552 (SPGM)
 PROGMEM_STRING_DECL(safe_mode_enabled);
-// src/plugins/dimmer_module/dimmer_form.cpp:48 (SPGM), src/plugins/dimmer_module/dimmer_form.cpp:53 (SPGM), src/plugins/dimmer_module/dimmer_form.cpp:60 (SPGM), src/plugins/dimmer_module/dimmer_form.cpp:78 (SPGM), src/plugins/dimmer_module/dimmer_form.cpp:122 (SPGM), src/plugins/mqtt/mqtt_form.cpp:93 (SPGM), src/plugins/mqtt/mqtt_form.cpp:149 (SPGM), src/plugins/sensor/Sensor_SystemMetrics.cpp:52 (SPGM)
+// src/plugins/mqtt/mqtt_form.cpp:93 (SPGM), src/plugins/mqtt/mqtt_form.cpp:149 (SPGM), src/plugins/sensor/Sensor_SystemMetrics.cpp:52 (SPGM)
 PROGMEM_STRING_DECL(seconds);
-// src/plugins/http2serial/http2serial.cpp:27 (AUTO_INIT), src/plugins/http2serial/http2serial.cpp:219 (SPGM), src/web_server.cpp:505 (SPGM)
+// src/plugins/http2serial/http2serial.cpp:27 (AUTO_INIT), src/plugins/http2serial/http2serial.cpp:219 (SPGM)
 PROGMEM_STRING_DECL(serial_console_html);
 // src/web_server.cpp:388 (SPGM)
 PROGMEM_STRING_DECL(size);
@@ -458,10 +442,8 @@ PROGMEM_STRING_DECL(strftime_date_time_zone);
 PROGMEM_STRING_DECL(string);
 // src/at_mode.cpp:1610 (SPGM), src/plugins/file_manager/file_manager.cpp:249 (SPGM), src/plugins/file_manager/file_manager.cpp:377 (SPGM), src/plugins/file_manager/file_manager.cpp:423 (SPGM)
 PROGMEM_STRING_DECL(success);
-// include/retracted/custom_config.h:348 (SPGM), include/retracted/custom_config.h:386 (SPGM), src/plugins/mqtt/mqtt_config.cpp:14 (SPGM), src/plugins/syslog/syslog_config.cpp:21 (SPGM), src/web_server.cpp:713 (SPGM), src/web_server.cpp:1047 (SPGM), src/web_server.cpp:1048 (SPGM)
+// src/plugins/mqtt/mqtt_config.cpp:14 (SPGM), src/plugins/syslog/syslog_config.cpp:21 (SPGM), src/web_server.cpp:713 (SPGM), src/web_server.cpp:1047 (SPGM), src/web_server.cpp:1048 (SPGM)
 PROGMEM_STRING_DECL(tcp);
-// src/plugins/dimmer_module/dimmer_form.cpp:196 (SPGM), src/plugins/dimmer_module/dimmer_form.cpp:219 (SPGM), src/plugins/dimmer_module/dimmer_form.cpp:223 (SPGM)
-PROGMEM_STRING_DECL(ticks);
 // include/spgm_auto_def.h:430 (AUTO_INIT), lib/KFCJson/include/JsonVariant.h:79 (SPGM), lib/KFCJson/src/JsonBaseReader.cpp:164 (SPGM), lib/KFCJson/src/JsonTools.cpp:16 (SPGM), lib/KFCJson/src/JsonVar.cpp:38 (SPGM), lib/KFCJson/src/JsonVar.cpp:58 (SPGM), lib/KFCJson/src/JsonVar.cpp:65 (SPGM), src/WebUISocket.cpp:78 (SPGM)
 PROGMEM_STRING_DECL(true);
 // src/plugins/mdns/mdns_plugin.cpp:94 (SPGM), src/plugins/mdns/mdns_plugin.cpp:217 (SPGM), src/plugins/mdns/mdns_plugin.cpp:218 (SPGM), src/plugins/mdns/mdns_plugin.cpp:219 (SPGM), src/plugins/mdns/mdns_plugin.cpp:220 (SPGM), src/plugins/mdns/mdns_plugin.cpp:229 (SPGM)
@@ -478,13 +460,17 @@ PROGMEM_STRING_DECL(uptime);
 PROGMEM_STRING_DECL(username);
 // src/web_server.cpp:241 (SPGM)
 PROGMEM_STRING_DECL(value);
-// src/plugins/sensor/Sensor_DimmerMetrics.cpp:49 (SPGM), src/plugins/sensor/Sensor_DimmerMetrics.cpp:114 (SPGM), src/plugins/sensor/Sensor_DimmerMetrics.cpp:126 (SPGM)
-PROGMEM_STRING_DECL(vcc);
 // src/plugins/sensor/Sensor_SystemMetrics.cpp:29 (AUTO_INIT), src/plugins/sensor/Sensor_SystemMetrics.cpp:62 (SPGM), src/plugins/sensor/Sensor_SystemMetrics.cpp:64 (SPGM), src/plugins/sensor/Sensor_SystemMetrics.cpp:217 (SPGM)
 PROGMEM_STRING_DECL(version);
+// src/WebUISocket.cpp:102 (SPGM)
+PROGMEM_STRING_DECL(webui_json_events);
+// src/plugins/sensor/Sensor_SystemMetrics.cpp:200 (SPGM), src/plugins/sensor/Sensor_SystemMetrics.cpp:201 (SPGM)
+PROGMEM_STRING_DECL(webui_json_hb);
 // src/WebUIComponent.cpp:214 (SPGM), src/WebUISocket.cpp:101 (SPGM)
 PROGMEM_STRING_DECL(webui_json_type);
-// src/kfc_fw_config.cpp:1763 (SPGM), src/kfc_fw_config_forms.cpp:66 (SPGM)
+// src/WebUISocket.cpp:101 (SPGM)
+PROGMEM_STRING_DECL(webui_json_ue);
+// src/kfc_fw_config.cpp:1762 (SPGM), src/kfc_fw_config_forms.cpp:66 (SPGM)
 PROGMEM_STRING_DECL(wifi);
 // src/plugins.cpp:167 (SPGM), src/plugins.cpp:177 (SPGM)
 PROGMEM_STRING_DECL(wifi_html);

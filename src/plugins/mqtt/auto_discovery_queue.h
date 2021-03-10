@@ -32,16 +32,15 @@ namespace MQTT {
             // clear queue and set last state to invalid
             void clear();
 
+            static constexpr uint32_t kDefaultDelay = ~0;
+
             // publish queue
-            void publish(bool force = false) {
-                runPublish(force ? 1000 : (KFCConfigurationClasses::Plugins::MQTTClient::getConfig().auto_discovery_delay * 1000U));
+            void publish(RunFlags flags = RunFlags::DEFAULTS, uint32_t startDelay = kDefaultDelay) {
+                _runFlags = flags;
+                runPublish(startDelay);
             }
 
             void runPublish(uint32_t delayMillis);
-
-            void setForceUpdate(bool forceUpdate) {
-                _forceUpdate = forceUpdate;
-            }
 
             static bool isUpdateScheduled();
             static bool isEnabled(bool force = false);
@@ -62,7 +61,7 @@ namespace MQTT {
             List _entities;
             List::iterator _iterator;
             uint16_t _packetId;
-            bool _forceUpdate;
+            RunFlags _runFlags;
         };
 
     }

@@ -24,8 +24,11 @@
 
 class WsClient;
 class WsClientAsyncWebSocket;
-class WebServerPlugin;
 class JsonUnnamedObject;
+
+namespace WebServer {
+    class Plugin;
+}
 
 //typedef std::function<WsClient *(WsClient *wsSClient, WsAwsEventType type, AsyncWebSocket *server, AsyncWebSocketClient *client, uint8_t *data, size_t len, void *arg)> WsEventHandlerCallback;
 typedef std::function<WsClient *(AsyncWebSocketClient *client)> WsGetInstance;
@@ -201,7 +204,7 @@ private:
 
 private:
     friend WsClientAsyncWebSocket;
-    friend WebServerPlugin;
+    friend WebServer::Plugin;
 
     using AsyncWebSocketVector = std::vector<AsyncWebSocket *>;
 

@@ -14,7 +14,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     IOT_DIMMER_PLUGIN_FRIENDLY_NAME,
     "",                 // web_templates
     "general,channels,buttons,advanced", // forms
-    "mqtt,http",        // reconfigure_dependencies
+    "mqtt",        // reconfigure_dependencies
     PluginComponent::PriorityType::DIMMER_MODULE,
     PluginComponent::RTCMemoryId::NONE,
     static_cast<uint8_t>(PluginComponent::MenuType::CUSTOM),
@@ -48,13 +48,13 @@ void Plugin::setup(SetupModeType mode)
 void Plugin::reconfigure(const String &source)
 {
     _readConfig(_config);
-    if (source == FSPGM(http)) {
-        setupWebServer();
-    }
-    else {
+    // if (source == FSPGM(http)) {
+    //     setupWebServer();
+    // }
+    // else {
         _end();
         _begin();
-    }
+    // }
 }
 
 void Plugin::shutdown()

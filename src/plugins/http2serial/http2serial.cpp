@@ -156,12 +156,12 @@ void Http2Serial::createInstance()
     if (!_instance) {
         _instance = __LDBG_new(Http2Serial);
     }
-    __DBG_printf("inst=%p", _instance);
+    __LDBG_printf("inst=%p", _instance);
 }
 
 void Http2Serial::destroyInstance()
 {
-    __DBG_printf("inst=%p", _instance);
+    __LDBG_printf("inst=%p", _instance);
     if (_instance) {
         __LDBG_delete(_instance);
         _instance = nullptr;
@@ -212,11 +212,12 @@ public:
     Http2SerialPlugin();
 
     virtual void setup(SetupModeType mode) override;
-    virtual void reconfigure(const String &source) override;
+    // virtual void reconfigure(const String &source) override;
     virtual void shutdown() override;
 
     virtual void createMenu() override {
         bootstrapMenu.addMenuItem(FSPGM(Serial_Console), FSPGM(serial_console_html), navMenu.util);
+        bootstrapMenu.addMenuItem(FSPGM(Serial_Console), FSPGM(serial_console_html), navMenu.home, bootstrapMenu.findMenuByURI(FSPGM(password_html), navMenu.home)->getId());
     }
 
 #if AT_MODE_SUPPORTED
@@ -254,7 +255,7 @@ Http2SerialPlugin::Http2SerialPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTI
 
 void Http2SerialPlugin::setup(SetupModeType mode)
 {
-    auto server = WebServerPlugin::getWebServerObject();
+    auto server = WebServer::Plugin::getWebServerObject();
     if (server) {
         // __LDBG_printf("server=%p console=%p", server, wsSerialConsole);
         auto ws = __LDBG_new(WsClientAsyncWebSocket, FSPGM(_serial_console), &wsSerialConsole);
@@ -264,13 +265,13 @@ void Http2SerialPlugin::setup(SetupModeType mode)
     }
 }
 
-void Http2SerialPlugin::reconfigure(const String &source)
-{
-    __LDBG_printf("source=%s", source.c_str());
-    if (String_equals(source, SPGM(http))) {
-        setup(SetupModeType::DEFAULT);
-    }
-}
+// void Http2SerialPlugin::reconfigure(const String &source)
+// {
+//     __LDBG_printf("source=%s", source.c_str());
+//     if (String_equals(source, SPGM(http))) {
+//         setup(SetupModeType::DEFAULT);
+//     }
+// }
 
 void Http2SerialPlugin::shutdown()
 {

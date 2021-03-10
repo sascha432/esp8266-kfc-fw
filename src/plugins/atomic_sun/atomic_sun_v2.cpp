@@ -655,7 +655,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     "Atomic Sun v2",    // friendly name
     "",                 // web_templates
     "dimmer-cfg",       // config_forms
-    "http",        // reconfigure_dependencies
+    "",        // reconfigure_dependencies
     PluginComponent::PriorityType::ATOMIC_SUN,
     PluginComponent::RTCMemoryId::NONE,
     static_cast<uint8_t>(PluginComponent::MenuType::CUSTOM),
@@ -687,12 +687,12 @@ void AtomicSunPlugin::setup(SetupModeType mode)
 
 void AtomicSunPlugin::reconfigure(const String &source)
 {
-    if (String_equals(source, SPGM(http))) {
-        setupWebServer();
-    }
-    else {
+    // if (String_equals(source, SPGM(http))) {
+    //     setupWebServer();
+    // }
+    // else {
         writeConfig();
-    }
+    // }
 }
 
 void AtomicSunPlugin::shutdown()

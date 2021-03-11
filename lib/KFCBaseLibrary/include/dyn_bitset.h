@@ -268,11 +268,19 @@ public:
         return ((_size + 7) >> 3);
     }
 
+    void fromString(const String &str, bool reverse = true) {
+        fromString(str.c_str(), reverse, str.length());
+    }
+
     // PROGMEM safe
     void fromString(const char *pattern, bool reverse = true) {
+        fromString(pattern, reverse, strlen_P(pattern));
+    }
+
+    // PROGMEM safe
+    void fromString(const char *pattern, bool reverse, size_t len) {
         zero_fill();
-        auto len = strlen(pattern);
-        _size = std::min<SizeType>(len, kMaxBits);
+        _size = std::min<SizeType>(static_cast<SizeType>(len), kMaxBits);
         auto endPtr = pattern + _size;
         auto startPtr = reverse ? pattern : &pattern[len - _size];
         uint8_t pos = 0;

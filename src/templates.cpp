@@ -5,13 +5,13 @@
 #include "../include/templates.h"
 #include <PrintString.h>
 #include <PrintHtmlEntitiesString.h>
+#include "PluginComponent.h"
 #include "kfc_fw_config.h"
 #include "build.h"
 #include "misc.h"
 #include "web_server.h"
 #include "status.h"
 #include "reset_detector.h"
-#include "plugins.h"
 #include "plugins_menu.h"
 #include "WebUIAlerts.h"
 #if IOT_ALARM_PLUGIN_ENABLED
@@ -188,32 +188,20 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     else if (String_equals(key, PSTR("PCF8574_STATUS"))) {
         print_status_pcf8574(output);
     }
-#else
-    else if (String_equals(key, PSTR("PCF8574_STATUS"))) {
-    }
 #endif
 #if HAVE_PCF8575
     else if (String_equals(key, PSTR("PCF8575_STATUS"))) {
         print_status_pcf8575(output);
-    }
-#else
-    else if (String_equals(key, PSTR("PCF8575_STATUS"))) {
     }
 #endif
 #if HAVE_PCA9685
     else if (String_equals(key, PSTR("PCA9685_STATUS"))) {
         print_status_pca9685(output);
     }
-#else
-    else if (String_equals(key, PSTR("PCA9685_STATUS"))) {
-    }
 #endif
 #if HAVE_MCP23017
     else if (String_equals(key, PSTR("MCP23017_STATUS"))) {
         print_status_mcp23017(output);
-    }
-#else
-    else if (String_equals(key, PSTR("MCP23017_STATUS"))) {
     }
 #endif
 #if RTC_SUPPORT
@@ -304,8 +292,8 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         output.print(F("<SSDP support disabled>"));
 #endif
     }
-    else if (String_equals(key, PSTR("FIRMWARE_UPGRADE_FAILURE"))) {
-    }
+    // else if (String_equals(key, PSTR("FIRMWARE_UPGRADE_FAILURE"))) {
+    // }
     else if (String_equals(key, PSTR("FIRMWARE_UPGRADE_FAILURE_CLASS"))) {
         output.print(FSPGM(_hidden));
     }
@@ -371,13 +359,17 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     }
     else if (key.endsWith(F("_STATUS"))) {
         uint8_t cmp_length = key.length() - 7;
-        for(auto plugin: plugins) {
+        for(auto plugin: PluginComponents::Register::getPlugins()) {
             if (plugin->hasStatus() && strncasecmp_P(key.c_str(), plugin->getName_P(), cmp_length) == 0) {
                 plugin->getStatus(output);
                 return;
             }
         }
         output.print(FSPGM(Not_supported, "Not supported"));
+    }
+    else if (stringlist_find_P_P(PSTR("FIRMWARE_UPGRADE_FAILURE,PCF8574_STATUS,PCF8575_STATUS,PCA9685_STATUS,MCP23017_STATUS,RTC_STATUS"), key.c_str(), ',')) {
+        // strings that have not been replaced yet
+        return;
     }
     else {
         __DBG_assert_printf(F("key not found") == nullptr, "key not found '%s'", key.c_str());
@@ -659,7 +651,7 @@ SettingsForm::SettingsForm(AsyncWebServerRequest *request) : BaseForm(static_cas
 
 class PluginStatusStream {
 public:
-    PluginStatusStream() : _iterator(plugins.begin()) {
+    PluginStatusStream() : _iterator(PluginComponents::RegisterEx::getPlugins().begin()) {
         _fillBuffer();
     }
 
@@ -679,7 +671,7 @@ public:
 
 private:
     size_t _fillBuffer() {
-        while (_iterator != plugins.end()) {
+        while (_iterator != PluginComponents::RegisterEx::getPlugins().end()) {
             auto &plugin = **_iterator;
             if (plugin.hasStatus()) {
                 _buffer += F("<div class=\"row\"><div class=\"col-lg-3 col-lg-auto\">");
@@ -697,7 +689,7 @@ private:
 
 private:
     PrintHtmlEntitiesString _buffer;
-    PluginsVector::iterator _iterator;
+    PluginComponents::PluginsVector::iterator _iterator;
 };
 
 

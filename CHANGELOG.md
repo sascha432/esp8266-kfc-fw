@@ -61,6 +61,7 @@
 - Registered MQTT components are stored separately and do not require re-registering
 - Added min. and max. range limits to reduce the dimmable range (Dimmer Plugin)
 - Web server does not require re-registering web handlers and web sockets on reconfigure anymore
+- Support for ArduinoOTA
 
 ## Version 0.0.3
 

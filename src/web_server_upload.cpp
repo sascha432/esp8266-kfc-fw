@@ -37,7 +37,7 @@ using namespace WebServer;
 
 bool AsyncUpdateWebHandler::canHandle(AsyncWebServerRequest *request)
 {
-    __DBG_printf("update handler method_post=%u url=%s", (request->method() & WebRequestMethod::HTTP_POST), request->url().c_str());
+    __LDBG_printf("update handler method_post=%u url=%s", (request->method() & WebRequestMethod::HTTP_POST), request->url().c_str());
     if (!(request->method() & WebRequestMethod::HTTP_POST)) {
         return false;
     }
@@ -52,21 +52,36 @@ bool AsyncUpdateWebHandler::canHandle(AsyncWebServerRequest *request)
             request->_tempObject = nullptr;
         }
     });
+    request->addInterestingHeader(F("Cookie"));
     return true;
+}
+
+UploadStatus *AsyncUpdateWebHandler::_validateSession(AsyncWebServerRequest *request)
+{
+    auto status = reinterpret_cast<UploadStatus *>(request->_tempObject);
+    if (status && status->authenticated) {
+        return status;
+    }
+    if (!status) {
+        __LDBG_printf("upload status=nullptr");
+        Plugin::send(500, request);
+        request->client()->close();
+        return nullptr;
+    }
+    if (!Plugin::getInstance().isAuthenticated(request)) {
+        __LDBG_printf("authentication failed");
+        Plugin::send(403, request);
+        request->client()->close();
+        return nullptr;
+    }
+    status->authenticated = true;
+    return status;
 }
 
 void AsyncUpdateWebHandler::handleRequest(AsyncWebServerRequest *request)
 {
-    if (!Plugin::getInstance().isAuthenticated(request)) {
-        __DBG_printf("auth. failed");
-        Plugin::send(403, request);
-        return;
-    }
-
-    auto status = reinterpret_cast<UploadStatus *>(request->_tempObject);
+    auto status = _validateSession(request);
     if (!status) {
-        __DBG_printf("upload status=nullptr");
-        Plugin::send(500, request);
         return;
     }
 
@@ -204,15 +219,8 @@ errorResponse: ;
 
 void AsyncUpdateWebHandler::handleUpload(AsyncWebServerRequest *request, const String& filename, size_t index, uint8_t *data, size_t len, bool final)
 {
-    if (!Plugin::getInstance().isAuthenticated(request)) {
-        __DBG_printf("auth. failed");
-        Plugin::send(403, request);
-        return;
-    }
-    UploadStatus *status = reinterpret_cast<UploadStatus *>(request->_tempObject);
+    auto status = _validateSession(request);
     if (!status) {
-        __DBG_printf("stastus=nullptr");
-        Plugin::send(500, request);
         return;
     }
 
@@ -224,8 +232,18 @@ void AsyncUpdateWebHandler::handleUpload(AsyncWebServerRequest *request, const S
     }
 
     auto &plugin = Plugin::getInstance();
-    if (plugin._updateFirmwareCallback) {
-        plugin._updateFirmwareCallback(index + len, request->contentLength());
+    uint16_t progress = (index +  len) * 1000 / request->contentLength(); //send update every per mil
+    if (status->progress != progress || final) {
+        status->progress = progress;
+        __DBG_printf("progress=%u state=%u/%u%u done=%u remaining=%u size=%u clen=%u args=%u/%u/%u",
+            progress, Update.isFinished(), Update.isRunning(), Update.getError(),
+            Update.progress(), Update.remaining(), Update.size(), request->contentLength(),
+            index, len, final
+        );
+
+        if (plugin._updateFirmwareCallback) {
+            plugin._updateFirmwareCallback(index + len, request->contentLength());
+        }
     }
 
     if (status && !status->error) {
@@ -314,7 +332,9 @@ void AsyncUpdateWebHandler::handleUpload(AsyncWebServerRequest *request, const S
                 }
             }
 
-            __DBG_printf("is_finished=%u is_running=%u error=%u progress=%u remaining=%u size=%u", Update.isFinished(), Update.isRunning(), Update.getError(), Update.progress(), Update.remaining(), Update.size());
+            // NOTE!: Update.size()/remaining() display the uncompressed size, but progress() only counts the compressed size
+
+            // __LDBG_printf("is_finished=%u is_running=%u error=%u progress=%u remaining=%u size=%u", Update.isFinished(), Update.isRunning(), Update.getError(), Update.progress(), Update.remaining(), Update.size());
 
             if (final) {
                 if (Update.end(true)) {

@@ -17,22 +17,25 @@ struct WebServerConfigCombo {
     System::FlagsConfig::ConfigFlags_t *flags;
     System::WebServerConfig::WebServerConfig_t *cfg;
 
-    WebServerConfigCombo(System::FlagsConfig::ConfigFlags_t *_flags, System::WebServerConfig::WebServerConfig_t *_cfg) : flags(_flags), cfg(_cfg) {}
+    WebServerConfigCombo(System::FlagsConfig::ConfigFlags_t *_flags, System::WebServerConfig::WebServerConfig_t *_cfg) :
+        flags(_flags),
+        cfg(_cfg)
+    {}
 
-    static ModeType get_webserver_mode(const Type &obj) {
+    static ModeType get_webserver_mode(const Type &obj)
+    {
         return obj.flags->is_web_server_enabled == false ? ModeType::DISABLED : (obj.cfg->is_https ? ModeType::SECURE : ModeType::UNSECURE);
     }
 
-    static void set_webserver_mode(Type &obj, ModeType mode) {
+    static void set_webserver_mode(Type &obj, ModeType mode)
+    {
         if (mode == ModeType::DISABLED) {
             obj.flags->is_web_server_enabled = false;
-        }
-        else {
+        } else {
             obj.flags->is_web_server_enabled = true;
             obj.cfg->is_https = (mode == ModeType::SECURE);
         }
     }
-
 };
 
 using namespace WebServer;

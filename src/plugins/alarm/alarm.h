@@ -42,7 +42,7 @@ public:
 public:
     AlarmPlugin();
 
-    virtual void setup(SetupModeType mode) override;
+    virtual void setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies) override;
     virtual void reconfigure(const String &source) override;
     virtual void shutdown() override;
     virtual void createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request);

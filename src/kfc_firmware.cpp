@@ -17,7 +17,7 @@
 #include "serial2udp.h"
 #include "reset_detector.h"
 #include "deep_sleep.h"
-#include "plugins.h"
+#include "plugins_menu.h"
 #include "WebUIAlerts.h"
 #if PRINTF_WRAPPER_ENABLED
 #include <printf_wrapper.h>
@@ -58,7 +58,6 @@ void delayedSetup(bool delayed)
     }
 
     // check if wifi is up
-    BOOTLOG_PRINTF("adding wifi check");
     _Scheduler.add(Event::seconds(60), true, [](Event::CallbackTimerPtr timer) {
         if (System::Flags::getConfig().is_station_mode_enabled) {
             if (!WiFi.isConnected()) {
@@ -75,28 +74,29 @@ void delayedSetup(bool delayed)
     });
 
     // reset crash counter
-    BOOTLOG_PRINTF("installing safecrash crash recovery");
     SaveCrash::installRemoveCrashCounter(KFC_CRASH_RECOVERY_TIME);
 }
 
 void setup()
 {
-    // PinMonitor::GPIOInterruptsEnable();
+    PinMonitor::GPIOInterruptsEnable();
     _startupTimings.preSetup(millis());
     #if ENABLE_DEEP_SLEEP
         deepSleepPinState.merge();
         bool wakeup = resetDetector.hasWakeUpDetected();
-        // #if IOT_REMOTE_CONTROL
-        //     // read the button states once more
-        //     // setting the awake pin high will clear the button hardware buffer
-        //     // this code is executed ~60ms after the reset has been invoked and even fast
-        //     // double clicks can be detected
-        //     pinMode(IOT_REMOTE_CONTROL_AWAKE_PIN, OUTPUT);
-        //     digitalWrite(IOT_REMOTE_CONTROL_AWAKE_PIN, HIGH);
-        // #endif
+        #if IOT_REMOTE_CONTROL
+            // read the button states once more
+            // setting the awake pin high will clear the button hardware buffer
+            // this code is executed ~60ms after the reset has been invoked and even fast
+            // double clicks can be detected
+            pinMode(IOT_REMOTE_CONTROL_AWAKE_PIN, OUTPUT);
+            digitalWrite(IOT_REMOTE_CONTROL_AWAKE_PIN, HIGH);
+        #endif
+        deepSleepPinState.merge();
         if (wakeup) {
             KFCFWConfiguration::wakeUpFromDeepSleep();
         }
+        deepSleepPinState.merge();
     #endif
     _startupTimings.setSetupFunc(millis());
     _startupTimings.preInit(deepSleepPinState.getMillis());
@@ -355,8 +355,9 @@ void setup()
             at_mode_setup();
         #endif
 
-        prepare_plugins();
-        setup_plugins(PluginComponent::SetupModeType::SAFE_MODE);
+        auto &componentRegister = PluginComponents::RegisterEx::getInstance();
+        componentRegister.prepare();
+        componentRegister.setup(PluginComponent::SetupModeType::SAFE_MODE);
 
         // check if wifi is up
         _Scheduler.add(Event::seconds(1), true, [](Event::CallbackTimerPtr timer) {
@@ -395,7 +396,6 @@ void setup()
 #endif
 
         #if AT_MODE_SUPPORTED
-            BOOTLOG_PRINTF("at_mode_setup");
             at_mode_setup();
         #endif
 
@@ -405,9 +405,10 @@ void setup()
         }
 #endif
 
-        prepare_plugins();
+        auto &componentRegister = PluginComponents::RegisterEx::getInstance();
 
-        setup_plugins(
+        componentRegister.prepare();
+        componentRegister.setup(
 #if ENABLE_DEEP_SLEEP
             wakeup ?
                 PluginComponent::SetupModeType::AUTO_WAKE_UP :
@@ -431,7 +432,6 @@ void setup()
     load_avg_timer = millis() + 30000;
 #endif
 
-    BOOTLOG_PRINTF("setup done");
 }
 
 #if LOAD_STATISTICS

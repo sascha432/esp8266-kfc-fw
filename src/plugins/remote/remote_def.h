@@ -47,8 +47,6 @@
 #define IOT_REMOTE_CONTROL_COMBO_BTN                            1
 #endif
 
-using KFCConfigurationClasses::Plugins;
-
 using namespace PinMonitor;
 
 namespace RemoteControl {
@@ -66,8 +64,8 @@ namespace RemoteControl {
     };
 
     //using ComboActionType = Plugins::RemoteControl::ComboAction_t;
-    using MultiClickType = Plugins::RemoteControl::MultiClick_t;
-    using ActionType = Plugins::RemoteControl::Action_t;
+    using MultiClickType = KFCConfigurationClasses::Plugins::RemoteControl::MultiClick_t;
+    using ActionType = KFCConfigurationClasses::Plugins::RemoteControl::Action_t;
 
     class Base;
 

@@ -96,7 +96,7 @@ uint32_t sntp_update_delay_MS_rfc_not_less_than_15000()
     return NTPPlugin::_ntpRefreshTimeMillis;
 }
 
-void NTPPlugin::setup(SetupModeType mode)
+void NTPPlugin::setup(SetupModeType mode, const DependenciesPtr &dependencies)
 {
     if (System::Flags::getConfig().is_ntp_client_enabled) {
         execConfigTime();
@@ -107,10 +107,10 @@ void NTPPlugin::setup(SetupModeType mode)
     }
 }
 
-void NTPPlugin::reconfigure(const String & source)
+void NTPPlugin::reconfigure(const String &source)
 {
     _checkTimer.remove();
-    setup(SetupModeType::DEFAULT);
+    setup(SetupModeType::DEFAULT, nullptr);
 }
 
 void NTPPlugin::shutdown()

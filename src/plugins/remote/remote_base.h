@@ -189,6 +189,9 @@ namespace RemoteControl {
         // maxAwakeExtratimeSeconds is only set *if* the new value exceeds the previous _maxAwakeTimeout
         void _setAutoSleepTimeout(uint32_t forceTime = 0, uint32_t maxAwakeExtratimeSeconds = 0) {
             if (isAutoSleepEnabled() || forceTime) {
+                if (forceTime) {
+                    __DBG_printf("__autoSleepTimeout=%u _config.auto_sleep_time=%u forceTime=%d", __autoSleepTimeout, _config.auto_sleep_time, forceTime);
+                }
                 if (forceTime <= 1) {
                     forceTime = millis() + (_config.auto_sleep_time * 1000U);
                 }

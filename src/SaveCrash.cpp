@@ -7,6 +7,7 @@
 #include <EventScheduler.h>
 #include <ListDir.h>
 #include "SaveCrash.h"
+#include "plugins_menu.h"
 #include "kfc_fw_config.h"
 #include "WebUIAlerts.h"
 

@@ -675,14 +675,14 @@ AtomicSunPlugin::AtomicSunPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(
 }
 
 
-void AtomicSunPlugin::setup(SetupModeType mode)
+void AtomicSunPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
     _begin();
     setupWebServer();
-    dependsOn(F("sensor"), [this](const PluginComponent *plugin) {
+    Dependencies->dependsOn(F("sensor"), [this](const PluginComponent *plugin) {
         __LDBG_printf("sensor=%p loaded", plugin);
         _setDimmingLevels();
-    });
+    }, this);
 }
 
 void AtomicSunPlugin::reconfigure(const String &source)

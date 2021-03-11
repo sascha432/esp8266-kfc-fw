@@ -98,9 +98,8 @@ void RemoteControlPlugin::_updateButtonConfig()
     }
 }
 
-void RemoteControlPlugin::setup(SetupModeType mode)
+void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
-    // __LDBG_printf("mode=%u", mode);
     deepSleepPinState.merge();
     pinMonitor.begin();
 
@@ -173,13 +172,38 @@ void RemoteControlPlugin::setup(SetupModeType mode)
             PinMonitor::eventBuffer.emplace_back(2000, pin, interrupt_levels); // place them at 2ms
         }
         __LDBG_printf("pin=%02u init debouncer=%d queued=%u states=%s interrupt_levels=%s mask=%s", debounce ? (deepSleepPinState.activeHigh()) == false : -1, pin, (states & _BV(pin)) != 0, BitsToStr<16, true>(states).c_str(), BitsToStr<16, true>(interrupt_levels).c_str(), BitsToStr<16, true>(_BV(pin)).c_str());
+
     }
 
     __LDBG_printf("feeding queue size=%u", PinMonitor::eventBuffer.size());
     pinMonitor._loop();
 
+
     __LDBG_printf("enabling GPIO interrupts");
+
+    // read pins again
+    auto currentStates = deepSleepPinState._readStates();
+    // update interrupt levels
+    interrupt_levels = deepSleepPinState.getValues(currentStates);
+
+    __DBG_printf("final states %s %s ", BitsToStr<16, true>(states&kButtonPinsMask).c_str(), BitsToStr<16, true>(currentStates&kButtonPinsMask).c_str());
+
+    // and compare if another state must be pushed
+    for(auto pin: kButtonPins) {
+        if ((states & _BV(pin)) ^ (currentStates & _BV(pin))) {
+            PinMonitor::eventBuffer.emplace_back(micros(), pin, interrupt_levels); // add final state
+            __LDBG_printf("pin=%02u final queued=%u states=%s interrupt_levels=%s mask=%s", pin, (currentStates & _BV(pin)) != 0, BitsToStr<16, true>(currentStates).c_str(), BitsToStr<16, true>(interrupt_levels).c_str(), BitsToStr<16, true>(_BV(pin)).c_str());
+        }
+    }
+
+    // clear all interrupts now
+    GPIEC = GPIE;
     ETS_GPIO_INTR_ENABLE();
+
+    __DBG_printf("---");
+    for(auto &event: PinMonitor::eventBuffer) {
+        __DBG_printf("pin=%u value=%u time=%u", event.pin(), event.value(), event.getTime());
+    }
 
 #if DEBUG_PIN_STATE
     LoopFunctions::callOnce([]() {
@@ -202,7 +226,7 @@ void RemoteControlPlugin::setup(SetupModeType mode)
     _updateSystemComboButtonLED();
     __LDBG_printf("setup() done");
 
-    dependsOn(F("http"), [](const PluginComponent *plugin) {
+    dependencies->dependsOn(F("http"), [](const PluginComponent *plugin) {
         auto server = WebServer::Plugin::getWebServerObject();
         if (server) {
             WebServer::Plugin::addHandler(F("/rc/*"), [](AsyncWebServerRequest *request) {
@@ -235,7 +259,7 @@ void RemoteControlPlugin::setup(SetupModeType mode)
                 }
             });
         }
-    });
+    }, this);
 }
 
 void RemoteControlPlugin::reconfigure(const String &source)
@@ -351,7 +375,7 @@ void RemoteControlPlugin::_loop()
         _readUsbPinTimeout = _millis + 100;
         _resetAutoSleep();
         // start delayed plugins
-        set_delayed_startup_time(0);
+        PluginComponents::Register::setDelayedStartupTime(0);
         if (_autoDiscoveryRunOnce && MQTTClient::safeIsConnected() && IS_TIME_VALID(time(nullptr))) {
             __LDBG_printf("usb power detected, publishing auto discovery");
             _autoDiscoveryRunOnce = false;
@@ -377,8 +401,10 @@ void RemoteControlPlugin::_loop()
 
                 // start blinking after the timeout or 10 seconds
                 if (!_signalWarning && (_millis > std::max((_config.auto_sleep_time * 1000U), 10000U))) {
-                    BUILDIN_LED_SETP(200, BlinkLEDTimer::Bitset(0b000000000000000001010101U, 24U));
+                    // BUILDIN_LED_SETP(200, BlinkLEDTimer::Bitset(0b000000000000000001010101U, 24U));
+                    BlinkLEDTimer::setPattern(__LED_BUILTIN, 100, BlinkLEDTimer::Bitset(0b000000000000000001010101U, 24U));
                     _signalWarning = true;
+                    __DBG_printf("signal warning");
                 }
             }
             else {

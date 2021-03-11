@@ -73,7 +73,7 @@ void WebUISocket::onText(uint8_t *data, size_t len)
         }
         else if (strcasecmp_P(command.c_str(), PSTR("+set_state")) == 0) {
             bool state = args[1].toInt() || (strcasecmp_P(args[1].c_str(), SPGM(true)) == 0);
-            for(auto plugin: plugins) {
+            for(auto plugin: PluginComponents::Register::getPlugins()) {
                 if (plugin->hasWebUI()) {
                     plugin->setValue(args[0], String(), false, state, true);
                 }
@@ -81,7 +81,7 @@ void WebUISocket::onText(uint8_t *data, size_t len)
         }
         else if (strcasecmp_P(command.c_str(), PSTR("+set")) == 0) {
             _sender = this;
-            for(auto plugin: plugins) {
+            for(auto plugin: PluginComponents::Register::getPlugins()) {
                 if (plugin->hasWebUI()) {
                     plugin->setValue(args[0], args[1], true, false, false);
                 }
@@ -98,7 +98,7 @@ void WebUISocket::sendValues(AsyncWebSocketClient *client)
     json.add(JJ(type), JJ(ue));
     auto &array = json.addArray(JJ(events));
 
-    for(const auto plugin: plugins) {
+    for(const auto plugin: PluginComponents::Register::getPlugins()) {
         if (plugin->hasWebUI()) {
             __LDBG_printf("plugin=%s array_size=%u", plugin->getName_P(), array.size());
             plugin->getValues(array);
@@ -111,7 +111,7 @@ void WebUISocket::createWebUIJSON(JsonUnnamedObject &json)
 {
     WebUIRoot webUI(json);
 
-    for(const auto plugin: plugins) {
+    for(const auto plugin: PluginComponents::Register::getPlugins()) {
         __LDBG_printf("plugin=%s webui=%u", plugin->getName_P(), plugin->hasWebUI());
         if (plugin->hasWebUI()) {
             plugin->createWebUI(webUI);

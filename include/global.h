@@ -403,6 +403,14 @@
 #define IF_IOT_ALARM_PLUGIN_ENABLED(...)
 #endif
 
+#ifndef ENABLE_ARDUINO_OTA
+#define ENABLE_ARDUINO_OTA                                  0
+#endif
+
+#ifndef ENABLE_ARDUINO_OTA_AUTOSTART
+#define ENABLE_ARDUINO_OTA_AUTOSTART                        0
+#endif
+
 
 #ifndef HAVE_PCF8574
 #define HAVE_PCF8574                                        0

@@ -12,55 +12,98 @@
 #define DEBUG_PLUGINS                                 0
 #endif
 
-#define PLUGIN_PRIO_RESET_DETECTOR                    -127
-#define PLUGIN_PRIO_CONFIG                            -126
-#define PLUGIN_PRIO_MDNS                              -90
-#define PLUGIN_PRIO_SYSLOG                            -80
-#define PLUGIN_PRIO_NTP                               -70
-#define PLUGIN_PRIO_HTTP                              -60
-#define PLUGIN_MAX_PRIORITY                           0           // highest prio, -127 to -1 is reserved for the system
-#define PLUGIN_DEFAULT_PRIORITY                       64
-#define PLUGIN_MIN_PRIORITY                           127         // lowest
-
 #if ENABLE_DEEP_SLEEP
 #ifndef PLUGIN_DEEP_SLEEP_DELAYED_START_TIME
 #define PLUGIN_DEEP_SLEEP_DELAYED_START_TIME          7500
 #endif
 #endif
 
-typedef std::vector<PluginComponent *> PluginsVector;
+namespace PluginComponents {
 
-extern PluginsVector plugins;
+    class Register {
+    public:
+        Register() :
+            _delayedStartupTime(PLUGIN_DEEP_SLEEP_DELAYED_START_TIME),
+            _enableWebUIMenu(false)
+        {
+        }
 
-#ifndef ENABLE_BOOT_LOG
-#define ENABLE_BOOT_LOG                                 0
-#endif
+        static Register *getInstance();
+        static void add(PluginComponent *plugin);
+        static void setDelayedStartupTime(uint32_t delayedStartupTime);
+        static PluginsVector &getPlugins();
 
-#if ENABLE_BOOT_LOG
-void bootlog_printf(PGM_P fmt, ...);
-#define BOOTLOG_PRINTF(fmt, ...)                        bootlog_printf(PSTR(fmt), ##__VA_ARGS__)
-#else
-#define BOOTLOG_PRINTF(fmt, ...)
-#endif
+    public:
+        void prepare();
+        void setup(SetupModeType mode, DependenciesPtr dependencies = nullptr);
+        void dumpList(Print &output);
+
+    protected:
+        void _add(PluginComponent *plugin);
+        void _setDelayedStartupTime(uint32_t delayedStartupTime);
+        PluginsVector &_getPlugins();
+
+    protected:
+        PluginsVector _plugins;
+        uint32_t _delayedStartupTime;
+        bool _enableWebUIMenu;
+    };
+
+    extern void PluginComponentInitRegisterEx();
+
+    inline __attribute__((__always_inline__))
+    void Register::add(PluginComponent *plugin)
+    {
+        getInstance()->_add(plugin);
+    }
+
+    inline __attribute__((__always_inline__))
+    PluginsVector &Register::getPlugins()
+    {
+        return getInstance()->_getPlugins();
+    }
+
+    inline __attribute__((__always_inline__))
+    void Register::setDelayedStartupTime(uint32_t delayedStartupTime)
+    {
+        getInstance()->_setDelayedStartupTime(delayedStartupTime);
+    }
+
+    inline __attribute__((__always_inline__))
+    void Register::_setDelayedStartupTime(uint32_t delayedStartupTime)
+    {
+        _delayedStartupTime = delayedStartupTime;
+    }
+
+    inline __attribute__((__always_inline__))
+    PluginsVector &Register::_getPlugins()
+    {
+        return _plugins;
+    }
+
+}
 
 // dump list of plug-ins and some details
-void dump_plugin_list(Print &output);
+// void dump_plugin_list(Print &output);
 
 // register plug in
 #if DEBUG_PLUGINS
-#define REGISTER_PLUGIN(plugin, name)                   register_plugin(plugin, name)
+#define REGISTER_PLUGIN(plugin, name)                   PluginComponents::Register::add(plugin, name)
 void register_plugin(PluginComponent *plugin, const char *name);
 #else
-#define REGISTER_PLUGIN(plugin, name)                   register_plugin(plugin)
-void register_plugin(PluginComponent *plugin);
+#define REGISTER_PLUGIN(plugin, name)                   PluginComponents::Register::add(plugin)
 #endif
 
+//#define plugins
+//PluginComponents::Register::getPlugins()
+
 // prepare plug-ins, must be called once before setup_plugins
-void prepare_plugins();
+// void prepare_plugins();
 
 // setup all plug-ins
-void setup_plugins(PluginComponent::SetupModeType mode);
+// void setup_plugins(PluginComponent::SetupModeType mode, PluginComponents::DependenciesPtr dependencies = nullptr);
 
 // reset delayed startup time
 // millis() > timeout starts the procedure
-void set_delayed_startup_time(uint32_t timeout);
+// void set_delayed_startup_time(uint32_t timeout);
+

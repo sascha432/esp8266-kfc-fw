@@ -249,6 +249,8 @@ void StartupTimings::log() {}
 #endif
 
 static ResetDetectorPlugin plugin;
+extern void PluginComponentInitRegisterEx();
+
 
 #define ALWAYS_RUN_SETUP   (DEBUG_RESET_DETECTOR ? true : false)
 
@@ -274,6 +276,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
 
 ResetDetectorPlugin::ResetDetectorPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(ResetDetectorPlugin))
 {
+    PluginComponentInitRegisterEx();
     REGISTER_PLUGIN(this, "ResetDetectorPlugin");
 }
 

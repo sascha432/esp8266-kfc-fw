@@ -45,7 +45,7 @@ SyslogPlugin::SyslogPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(Syslog
     REGISTER_PLUGIN(this, "SyslogPlugin");
 }
 
-void SyslogPlugin::setup(SetupModeType mode)
+void SyslogPlugin::setup(SetupModeType mode, const DependenciesPtr &dependencies)
 {
     __LDBG_printf("mode %u", mode);
     _begin();

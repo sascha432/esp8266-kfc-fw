@@ -211,7 +211,7 @@ class Http2SerialPlugin : public PluginComponent
 public:
     Http2SerialPlugin();
 
-    virtual void setup(SetupModeType mode) override;
+    virtual void setup(SetupModeType mode, const DependenciesPtr &dependencies) override;
     // virtual void reconfigure(const String &source) override;
     virtual void shutdown() override;
 
@@ -253,7 +253,7 @@ Http2SerialPlugin::Http2SerialPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTI
     REGISTER_PLUGIN(this, "Http2SerialPlugin");
 }
 
-void Http2SerialPlugin::setup(SetupModeType mode)
+void Http2SerialPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
     auto server = WebServer::Plugin::getWebServerObject();
     if (server) {

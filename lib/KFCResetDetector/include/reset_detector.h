@@ -223,7 +223,7 @@ public:
     ResetDetectorPlugin();
 
 #if DEBUG_RESET_DETECTOR
-    virtual void setup(SetupModeType mode) override;
+    virtual void setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies) override;
 #endif
 
 #if AT_MODE_SUPPORTED

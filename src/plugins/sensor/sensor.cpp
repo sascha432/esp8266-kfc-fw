@@ -59,7 +59,7 @@ void SensorPlugin::setValue(const String &id, const String &value, bool hasValue
 }
 
 
-void SensorPlugin::setup(SetupModeType mode)
+void SensorPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
     _Timer(_timer).add(Event::milliseconds(1000), true, SensorPlugin::timerEvent);
 #if IOT_SENSOR_HAVE_LM75A

@@ -19,7 +19,7 @@ class SSDPPlugin : public PluginComponent {
 public:
     SSDPPlugin();
 
-    virtual void setup(SetupModeType mode) override;
+    virtual void setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies) override;
     virtual void reconfigure(const String &source) override;
     virtual void shutdown() override;
 

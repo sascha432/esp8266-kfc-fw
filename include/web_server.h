@@ -8,7 +8,7 @@
 #if WEBSERVER_SUPPORT
 
 #ifndef DEBUG_WEB_SERVER
-#define DEBUG_WEB_SERVER                    0
+#define DEBUG_WEB_SERVER                    1
 #endif
 
 #include <Arduino_compat.h>
@@ -19,6 +19,9 @@
 #include <HeapStream.h>
 #include "plugins.h"
 #include "web_socket.h"
+#ifdef ENABLE_ARDUINO_OTA
+#include <ArduinoOTA.h>
+#endif
 
 class FileMapping;
 class FailureCounterContainer;
@@ -80,8 +83,10 @@ namespace WebServer {
         bool error;
         uint8_t command;
         size_t size;
+        bool authenticated;
+        uint16_t progress;
 
-        UploadStatus() : response(nullptr), error(0), command(0), size(0) {}
+        UploadStatus() : response(nullptr), error(0), command(0), size(0), authenticated(false), progress(~0) {}
     };
 
     class RestHandler {
@@ -139,21 +144,21 @@ namespace WebServer {
         using AsyncWebHandler::AsyncWebHandler;
 
         virtual bool canHandle(AsyncWebServerRequest *request) override;
-        virtual void handleBody(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) override {
-            __DBG_printf("handle body len=%u index=%u total=%u", len, index, total);
-        }
         virtual void handleRequest(AsyncWebServerRequest *request) override;
         virtual void handleUpload(AsyncWebServerRequest *request, const String& filename, size_t index, uint8_t *data, size_t len, bool final) override;
         virtual bool isRequestHandlerTrivial() override {
-            return true; // do not parse any POST data since it is a huge file upload
+            return false;
         }
+
+    private:
+        UploadStatus *_validateSession(AsyncWebServerRequest *request);
     };
 
     class Plugin : public PluginComponent {
     public:
         Plugin();
 
-        virtual void setup(SetupModeType mode) override;
+        virtual void setup(SetupModeType mode, const DependenciesPtr &dependencies) override;
         virtual void reconfigure(const String &source) override;
         virtual void shutdown() override;
         virtual void getStatus(Print &output) override;
@@ -221,6 +226,61 @@ namespace WebServer {
         void end();
         bool _isPublic(const String &pathString) const;
         bool _clientAcceptsGzip(AsyncWebServerRequest *request) const;
+
+#if ENABLE_ARDUINO_OTA
+
+    public:
+        void ArduinoOTAbegin();
+        void ArduinoOTAend();
+        void ArduinoOTADumpInfo(Print &output);
+        const __FlashStringHelper *ArduinoOTAErrorStr(ota_error_t err);
+
+        struct ArduinoOTAInfo {
+
+            static constexpr int kNoError = -1;
+
+            ota_error_t _error;
+            uint32_t _progress;
+            uint32_t _size;
+            bool _runnning: 1;
+            bool _inProgress: 1;
+            bool _rebootPending: 1;
+
+            ArduinoOTAInfo() : _error(static_cast<ota_error_t>(kNoError)), _progress(0), _size(0), _runnning(false), _inProgress(false), _rebootPending(false) {}
+
+            void start() {
+                _error = static_cast<ota_error_t>(kNoError);
+                _progress = 0;
+                _size = 0;
+                _inProgress = true;
+                _rebootPending = false;
+            }
+
+            void stop(int error = kNoError) {
+                if (!*this) {
+                    // after the first error the status cannot be changed anymore
+                    return;
+                }
+                _error = static_cast<ota_error_t>(error);
+                _inProgress = false;
+                _rebootPending = false;
+                if (error == kNoError) {
+                    _rebootPending = true;
+                }
+            }
+
+            void update(uint32_t progress, uint32_t size) {
+                _progress = progress;
+                _size = size;
+            }
+
+            operator bool() const {
+                return _error == static_cast<ota_error_t>(kNoError);
+            }
+        };
+        ArduinoOTAInfo _AOTAInfo;
+
+#endif
 
         bool _handleFileRead(String path, bool client_accepts_gzip, AsyncWebServerRequest *request, HttpHeaders &httpHeaders);
         bool _sendFile(const FileMapping &mapping, const String &formName, HttpHeaders &httpHeaders, bool client_accepts_gzip, bool isAuthenticated, AsyncWebServerRequest *request, WebTemplate *webTemplate = nullptr);

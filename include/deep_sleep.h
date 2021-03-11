@@ -71,15 +71,15 @@ namespace DeepSleep
     static constexpr auto kWiFiQuickConnectSize = sizeof(WiFiQuickConnect);
     static_assert(kWiFiQuickConnectSize % 4 == 0, "this is stored in RTC memory and needs to be dword aligned");
 
-    #define DEBUG_PIN_STATE 0
+    #define DEBUG_PIN_STATE 1
 
     struct PinState {
 
         uint32_t _time;
         uint32_t _state;
 #if DEBUG_PIN_STATE
-        uint32_t _states[6];
-        uint32_t _times[6];
+        uint32_t _states[16];
+        uint32_t _times[16];
         uint8_t _count;
 #endif
 
@@ -135,6 +135,8 @@ namespace DeepSleep
         uint32_t getStates() const;
         // get values (states for actgive high and inverted states for active low)
         uint32_t getValues() const;
+        // get values from states
+        uint32_t getValues(uint32_t states) const;
 
         // time of objection creation
         uint32_t getMillis() const;
@@ -168,7 +170,12 @@ namespace DeepSleep
 
     inline __attribute__((__always_inline__))
     uint32_t PinState::getValues() const {
-        return activeHigh() ? getStates() : ~getStates();
+        return getValues(getStates());
+    }
+
+    inline __attribute__((__always_inline__))
+    uint32_t PinState::getValues(uint32_t states) const {
+        return activeHigh() ? states : ~states;
     }
 
     inline __attribute__((__always_inline__))

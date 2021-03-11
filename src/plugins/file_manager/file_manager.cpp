@@ -474,9 +474,9 @@ class FileManagerPlugin : public PluginComponent {
 public:
     FileManagerPlugin();
 
-    virtual void setup(SetupModeType mode) override
+    virtual void setup(SetupModeType mode, const DependenciesPtr &dependencies) override
     {
-        dependsOn(F("http"), [](const PluginComponent *plugin) {
+        dependencies->dependsOn(F("http"), [](const PluginComponent *plugin) {
             auto server = WebServer::Plugin::getWebServerObject();
             if (server) {
                 server->addHandler(new AsyncFileUploadWebHandler(String(FSPGM(file_manager_base_uri, "/file_manager/")) + FSPGM(upload), FileManagerWebHandler::onRequestHandler));
@@ -486,7 +486,7 @@ public:
                 // remove menu
                 bootstrapMenu.remove(bootstrapMenu.findMenuByURI(FSPGM(file_manager_html_uri)));
             }
-        });
+        }, this);
     }
 
     // virtual void reconfigure(const String &source) override

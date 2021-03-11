@@ -57,10 +57,18 @@ __LDBG_printf("source=%s", source.c_str());
 
 #include <push_pack.h>
 
-class PluginComponent {
-public:
-    using NameType = const __FlashStringHelper *;
-    using NamedJsonArray = MQTT::Json::NamedArray;
+class PluginComponent;
+
+namespace PluginComponents {
+
+    enum class RTCMemoryId : uint8_t {
+        NONE,
+        RESET_DETECTOR,
+        CONFIG,
+        DEEP_SLEEP,
+        SERIAL2TCP,
+        // REMOTE_INIT_PIN_STATE
+    };
 
     enum class PriorityType : int8_t {
         NONE = std::numeric_limits<int8_t>::min(),
@@ -95,14 +103,7 @@ public:
         MIN = std::numeric_limits<int8_t>::max()
     };
 
-    enum class RTCMemoryId : uint8_t {
-        NONE,
-        RESET_DETECTOR,
-        CONFIG,
-        DEEP_SLEEP,
-        SERIAL2TCP,
-        // REMOTE_INIT_PIN_STATE
-    };
+    using RTCMemoryId = PluginComponents::RTCMemoryId;
 
     enum class FormCallbackType {
         CREATE_GET,     // gets called to create the form and load data for a GET request
@@ -120,11 +121,99 @@ public:
     static_assert((uint8_t)MenuType::MAX <= 0b100, "stored in 2 bits");
 
     enum class SetupModeType : uint8_t {
+        // called once per reboot
         DEFAULT,                                        // normal boot
+        // called once per reboot
         SAFE_MODE,                                      // safe mode active
+
+        // these are called in sequence, DEFAULT is not called
         AUTO_WAKE_UP,                                   // wake up from deep sleep
         DELAYED_AUTO_WAKE_UP,                           // called after a delay to initialize services that have been skipped during wake up
     };
+
+    using PluginsVector = std::vector<PluginComponent *>;
+
+    class Dependency;
+    class Dependencies;
+
+    using DependenciesPtr = std::shared_ptr<Dependencies>;
+
+    using NameType = const __FlashStringHelper *;
+    using NamedJsonArray = MQTT::Json::NamedArray;
+
+    using DependencyCallback = std::function<void(const PluginComponent *plugin)>;
+    using DependenciesVector = std::vector<Dependency>;
+
+    class Dependency {
+    public:
+        Dependency(NameType name, DependencyCallback callback, const PluginComponent *source) : _name(name), _callback(callback), _source(source) {}
+
+        // name of the plugin
+        NameType _name;
+        // callback to call after it has been initialized
+        DependencyCallback _callback;
+        // source of the dependency
+        const PluginComponent *_source;
+
+        void invoke(const PluginComponent *plugin) const;
+
+        bool operator==(NameType name) const {
+            return strcmp_P_P(reinterpret_cast<PGM_P>(_name), reinterpret_cast<PGM_P>(name)) == 0;
+        }
+    };
+
+    class Dependencies {
+    public:
+        Dependencies()
+        {}
+
+        ~Dependencies() {
+            destroy();
+        }
+
+        bool dependsOn(NameType name, DependencyCallback callback, const PluginComponent *source);
+
+        bool empty() const;
+        size_t size() const;
+
+        void check();
+        void cleanup();
+        void destroy();
+
+    private:
+        DependenciesVector _dependencies;
+    };
+
+
+    inline bool Dependencies::empty() const
+    {
+        return _dependencies.empty();
+    }
+
+    inline size_t Dependencies::size() const
+    {
+        return _dependencies.size();
+    }
+
+    class Component {
+    public:
+    };
+
+}
+
+class PluginComponent : PluginComponents::Component {
+public:
+
+    using Dependencies = PluginComponents::Dependencies;
+    using DependencyCallback = PluginComponents::DependencyCallback;
+    using NameType = PluginComponents::NameType;
+    using NamedJsonArray = PluginComponents::NamedJsonArray;
+    using PriorityType = PluginComponents::PriorityType;
+    using RTCMemoryId = PluginComponents::RTCMemoryId;
+    using MenuType = PluginComponents::MenuType;
+    using SetupModeType = PluginComponents::SetupModeType;
+    using FormCallbackType = PluginComponents::FormCallbackType;
+    using DependenciesPtr = PluginComponents::DependenciesPtr;
 
     typedef struct __attribute__packed__  {
         union {
@@ -156,21 +245,6 @@ public:
     } Config_t;
     using PGM_Config_t = const Config_t *;
 
-    using DependencyCallback = std::function<void(const PluginComponent *plugin)>;
-
-    class Dependency {
-    public:
-        Dependency(NameType name, DependencyCallback callback) : _name(name), _callback(callback) {}
-
-        NameType _name;
-        DependencyCallback _callback;
-
-        bool operator==(NameType name) const {
-            return strcmp_P_P(reinterpret_cast<PGM_P>(_name), reinterpret_cast<PGM_P>(name)) == 0;
-        }
-    };
-
-    using DependencyVector = std::vector<Dependency>;
 
 public:
     PluginComponent(PGM_Config_t config) : _setupTime(0), _pluginConfig(config) {
@@ -281,7 +355,7 @@ public:
     virtual void preSetup(SetupModeType mode);
 
     // executed during boot
-    virtual void setup(SetupModeType mode);
+    virtual void setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies);
 
     // executed before a restart
     virtual void shutdown();
@@ -322,27 +396,6 @@ public:
 #endif
 
 public:
-    bool dependsOn(NameType name, DependencyCallback callback);
-    static void invokeDependencies(NameType name, const PluginComponent *plugin);
-    static void checkDependencies();
-    static void createDependencies() {
-        if (!_dependencies) {
-            _dependencies = new DependencyVector();
-        }
-    }
-    static void deleteDependencies() {
-#if DEBUG
-        for(const auto &dep: *_dependencies) {
-            __DBG_printf_E("unresolved dependency name=%s callback=%p", dep._name, &dep._callback);
-        }
-#endif
-        delete _dependencies;
-        _dependencies = nullptr;
-    }
-    static DependencyVector &_getDependencies() {
-        return *_dependencies;
-    }
-
     uint32_t getSetupTime() const;
     void setSetupTime();
     void clearSetupTime();
@@ -356,10 +409,10 @@ public:
 
 private:
     friend KFCFWConfiguration;
+    friend PluginComponents::Dependencies;
 
     uint32_t _setupTime;
     PGM_Config_t _pluginConfig;
-    static DependencyVector *_dependencies;
 };
 
 #define PROGMEM_DEFINE_PLUGIN_OPTIONS(class_name, name, friendly_name, web_templates, config_forms, reconfigure_dependencies, ...) \

@@ -49,9 +49,8 @@ Plugin::Plugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(Plugin))
     REGISTER_PLUGIN(this, "MQTTPlugin");
 }
 
-void Plugin::setup(SetupModeType mode)
+void Plugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
-    __LDBG_println();
     Client::setupInstance();
 }
 

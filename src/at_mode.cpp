@@ -357,7 +357,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LSR, "LSR", "[<directory>]", "List files a
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIFI, "WIFI", "[<reset|on|off|ap_on|ap_off>]", "Modify WiFi settings");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(REM, "REM", "Ignore comment");
 #if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LED, "LED", "<slow,fast,flicker,off,solid,sos>,[,color=0xff0000][,pin]", "Set LED mode");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LED, "LED", "<slow,fast,flicker,off,solid,sos,pattern>,[,color=0xff0000|pattern=10110...][,pin]", "Set LED mode");
 #endif
 #if RTC_SUPPORT
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(RTC, "RTC", "[<set>]", "Set RTC time", "Display RTC time");
@@ -425,7 +425,9 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CSCAN, "I2CSCAN", "[<offset>[,<length>]"
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CS, "I2CS", "<pin-sda>,<pin-scl>[,<speed=100000>,<clock-stretch=45000>,<start|stop>]", "Configure I2C");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CTM, "I2CTM", "<address>,<data,...>", "Transmsit data to slave");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CRQ, "I2CRQ", "<address>,<length>", "Request data from slave");
-
+#if ENABLE_ARDUINO_OTA
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(AOTA, "AOTA", "<start|stop>", "Start/stop Arduino OTA");
+#endif
 
 void at_mode_help_commands()
 {
@@ -506,7 +508,9 @@ void at_mode_help_commands()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(I2CS), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(I2CTM), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(I2CRQ), name);
-
+#if ENABLE_ARDUINO_OTA
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(AOTA), name);
+#endif
 
 }
 
@@ -528,7 +532,7 @@ void at_mode_generate_help(Stream &output, StringVector *findText = nullptr)
 
     // call handler to gather help for all commands
     at_mode_help_commands();
-    for(auto plugin: plugins) {
+    for(auto plugin: PluginComponents::Register::getPlugins()) {
         plugin->atModeHelpGenerator();
     }
     at_mode_display_help(output, findText);
@@ -550,7 +554,7 @@ String at_mode_print_command_string(Stream &output, char separator)
 
     // call handler to gather help for all commands
     at_mode_help_commands();
-    for(auto plugin : plugins) {
+    for(auto plugin: PluginComponents::Register::getPlugins()) {
         plugin->atModeHelpGenerator();
     }
 
@@ -1456,37 +1460,51 @@ void at_mode_serial_handle_event(String &commandString)
             }
 #if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LED))) {
-                if (args.requireArgs(1, 3)) {
+                if (args.requireArgs(1, 4)) {
+                    BlinkLEDTimer::BlinkType type = BlinkLEDTimer::BlinkType::INVALID;
                     String mode = args.toString(0);
                     int32_t color = args.toNumber(1, 0xff00ff);
-                    uint8_t pin = (uint8_t)args.toInt(2, __LED_BUILTIN);
+                    uint16_t delay = args.toInt(2, 50);
+                    uint8_t pin = (uint8_t)args.toInt(3, __LED_BUILTIN);
                     if (__LED_BUILTIN == pin && !BlinkLEDTimer::isPinValid(pin)) {
                         args.print(F("Invalid PIN"));
                     }
                     else {
-                        BlinkLEDTimer::BlinkType type;
-                        mode.toUpperCase();
-                        if (String_equals(mode, F("SLOW"))) {
+                        if (mode.equalsIgnoreCase(F("slow"))) {
                             BlinkLEDTimer::setBlink(pin, type = BlinkLEDTimer::BlinkType::SLOW, color);
                         }
-                        else if (String_equals(mode, F("FAST"))) {
+                        else if (mode.equalsIgnoreCase(F("fast"))) {
                             BlinkLEDTimer::setBlink(pin, type = BlinkLEDTimer::BlinkType::FAST, color);
                         }
-                        else if (String_equals(mode, F("FLICKER"))) {
+                        else if (mode.equalsIgnoreCase(F("flicker"))) {
                             BlinkLEDTimer::setBlink(pin, type = BlinkLEDTimer::BlinkType::FLICKER, color);
                         }
-                        else if (String_equals(mode, F("SOLID"))) {
+                        else if (mode.equalsIgnoreCase(F("solid"))) {
                             BlinkLEDTimer::setBlink(pin, type = BlinkLEDTimer::BlinkType::SOLID, color);
                         }
-                        else if (String_equals(mode, F("SOS"))) {
+                        else if (mode.equalsIgnoreCase(F("sos"))) {
                             BlinkLEDTimer::setBlink(pin, type = BlinkLEDTimer::BlinkType::SOS, color);
+                        }
+                        else if (mode.equalsIgnoreCase(F("pattern")) || mode.startsWith(F("pat"))) {
+                            auto pattern = args.toString(1);
+                            char *endPtr = nullptr;
+                            auto patternValue = strtoull(pattern.c_str(), &endPtr, 2);
+                            size_t len = std::min<size_t>(endPtr - pattern.c_str(), BlinkLEDTimer::kBitsetSize);
+                            if (len < 2) {
+                                len = 2;
+                                patternValue = 0b10;
+                            }
+                            BlinkLEDTimer::setPattern(pin, delay, BlinkLEDTimer::Bitset(patternValue, len));
+                            args.printf_P(PSTR("pattern %*.*s delay %u"), len, len, BitsToStr<56, false>(patternValue).c_str(), delay);
                         }
                         else {
                             mode = F("OFF");
                             color = 0;
                             BlinkLEDTimer::setBlink(pin, type = BlinkLEDTimer::BlinkType::OFF);
                         }
-                        args.printf_P(PSTR("LED pin=%u mode=%s type=%u color=0x%06x"), pin, mode.c_str(), type, color);
+                        if (type != BlinkLEDTimer::BlinkType::INVALID) {
+                            args.printf_P(PSTR("LED pin=%u mode=%s type=%u color=0x%06x"), pin, mode.c_str(), type, color);
+                        }
                     }
                 }
             }
@@ -1560,6 +1578,24 @@ void at_mode_serial_handle_event(String &commandString)
             else if (args.isCommand(F("I2CT")) || args.isCommand(F("I2CA")) || args.isCommand(F("I2CR"))) {
                 // ignore SerialTwoWire communication
             }
+#if ENABLE_ARDUINO_OTA
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(AOTA))) {
+                auto &plugin = WebServer::Plugin::getInstance();
+                if (args.equalsIgnoreCase(0, F("start"))) {
+                    args.print(F("starting ArduinoOTA..."));
+                    args.print(F("WARNING! running this service consumes about 1KB of RAM. To get all the memory back, the device needs to be restarted."));
+                    plugin.ArduinoOTAbegin();
+                }
+                else if (args.equalsIgnoreCase(0, F("stop"))) {
+                    args.print(F("stopping ArduinoOTA..."));
+                    plugin.ArduinoOTAend();
+                }
+                else {
+                    args.print(F("ArduinoOTA status:"));
+                    plugin.ArduinoOTADumpInfo(args.getStream());
+                }
+            }
+#endif
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(WIFI))) {
                 if (!args.empty()) {
                     auto arg0 = args.toString(0);
@@ -1687,7 +1723,7 @@ void at_mode_serial_handle_event(String &commandString)
                     auto cmds = PSTR("list|start|stop|add-blacklist|add|remove");
                     int cmd = stringlist_find_P_P(cmds, args.get(0), '|');
                     if (cmd == 0) {
-                        dump_plugin_list(output);
+                        PluginComponents::RegisterEx::getInstance().dumpList(output);
                         args.printf_P("Blacklist=%s", PluginComponent::getBlacklist());
                     }
                     else if (args.requireArgs(2, 2)) {
@@ -1702,7 +1738,8 @@ void at_mode_serial_handle_event(String &commandString)
                                     if (plugin->getSetupTime() == 0) {
                                         args.printf_P(PSTR("Calling %s.setup()"), plugin->getName_P());
                                         plugin->setSetupTime();
-                                        plugin->setup(PluginComponent::SetupModeType::DEFAULT);
+                                        PluginComponents::DependenciesPtr deps(new PluginComponents::Dependencies());
+                                        plugin->setup(PluginComponent::SetupModeType::DEFAULT, deps);
                                     }
                                     else {
                                         args.printf_P(PSTR("%s already running"), plugin->getName_P());
@@ -2226,7 +2263,7 @@ void at_mode_serial_handle_event(String &commandString)
 #endif
             else {
                 bool commandWasHandled = false;
-                for(const auto plugin : plugins) { // send command to plugins
+                for(const auto plugin: PluginComponents::Register::getPlugins()) { // send command to plugins
                     if (plugin->hasAtMode()) {
                         if (true == (commandWasHandled = plugin->atModeHandler(args))) {
                             break;

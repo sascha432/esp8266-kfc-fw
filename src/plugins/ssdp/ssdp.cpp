@@ -83,7 +83,7 @@ void SSDPPlugin::_end()
     _running = false;
 }
 
-void SSDPPlugin::setup(SetupModeType mode)
+void SSDPPlugin::setup(SetupModeType mode, const DependenciesPtr &dependencies)
 {
     if (System::Flags::getConfig().is_ssdp_enabled) {
         WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, wifiCallback);
@@ -93,7 +93,7 @@ void SSDPPlugin::setup(SetupModeType mode)
 void SSDPPlugin::reconfigure(const String &source)
 {
     shutdown();
-    setup(PluginComponent::SetupModeType::DEFAULT);
+    setup(PluginComponent::SetupModeType::DEFAULT, nullptr);
 }
 
 void SSDPPlugin::shutdown()

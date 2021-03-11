@@ -211,7 +211,7 @@ public:
 #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
     virtual void preSetup(SetupModeType mode) override;
 #endif
-    virtual void setup(SetupModeType mode) override;
+    virtual void setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies) override;
     virtual void reconfigure(const String &source) override;
     virtual void shutdown() override;
     virtual void getStatus(Print &output) override;

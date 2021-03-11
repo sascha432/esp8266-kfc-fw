@@ -415,14 +415,7 @@ bool Plugin::sendFileResponse(uint16_t code, const String &path, AsyncWebServerR
 
 void Plugin::send(uint16_t httpCode, AsyncWebServerRequest *request, const String &message)
 {
-    // if (isHtmlContentType(request))
-    {
-        // contentType = FSPGM(mime_text_html);
-        // responseStr = PrintString(F("<html><head><title>Status %u</title><head><body><h3>Status %u</h3><h1>"), httpCode);
-        // responseStr += String((message.length() == 0) ? AsyncWebServerResponse::responseCodeToString(httpCode) : FPSTR(message.c_str()));
-        // responseStr += F("</h1></body></html>");
-        // auto &plugin = Plugin::getInstance();
-
+    if (isHtmlContentType(request)) {
         HttpHeaders headers;
         headers.addNoCache(true);
         auto webTemplate = new NotFoundTemplate(httpCode, String((message.length() == 0) ? AsyncWebServerResponse::responseCodeToString(httpCode) : FPSTR(message.c_str())));
@@ -649,15 +642,127 @@ void Plugin::_handlerExportSettings(AsyncWebServerRequest *request, HttpHeaders 
     request->send(response);
 }
 
+#if ENABLE_ARDUINO_OTA
+
+inline static void ArduinoOTALoop()
+{
+    ArduinoOTA.handle();
+}
+
+#endif
+
 void Plugin::end()
 {
-    __LDBG_printf("server=%p", _server);
+    __DBG_printf("END");
+#if ENABLE_ARDUINO_OTA
+    LoopFunctions::remove(ArduinoOTALoop);
+#endif
+    __LDBG_printf("server=%p", _server.get());
     _server.reset();
     _loginFailures.reset();
 }
 
+#if ENABLE_ARDUINO_OTA
+
+const __FlashStringHelper *Plugin::ArduinoOTAErrorStr(ota_error_t err)
+{
+    if (err == static_cast<ota_error_t>(ArduinoOTAInfo::kNoError)) {
+        return F("NONE");
+    }
+    switch (err) {
+    case OTA_AUTH_ERROR:
+        return F("AUTH ERROR");
+    case OTA_BEGIN_ERROR:
+        return F("BEGIN ERROR");
+    case OTA_CONNECT_ERROR:
+        return F("CONNECT ERROR");
+    case OTA_RECEIVE_ERROR:
+        return F("RECEIVE ERROR");
+    case OTA_END_ERROR:
+        return F("END ERROR");
+    default:
+        break;
+    }
+    return F("UNKNOWN");
+}
+
+void Plugin::ArduinoOTAbegin()
+{
+    if (_AOTAInfo._runnning) {
+        return;
+    }
+    ArduinoOTA.setHostname(System::Device::getName());
+    ArduinoOTA.setPassword(System::Device::getPassword());
+    ArduinoOTA.onStart([this]() {
+        Logger_notice(F("Firmware upload started"));
+        BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
+        __DBG_printf("ArduinoOTA start");
+        _AOTAInfo.start();
+    });
+    ArduinoOTA.onEnd([this]() {
+        __DBG_printf("ArduinoOTA end");
+        if (_AOTAInfo) {
+            _AOTAInfo.stop();
+            Logger_security(F("Firmware upgrade successful, rebooting device"));
+            BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SLOW);
+            _Scheduler.add(2000, false, [](Event::CallbackTimerPtr timer) {
+                config.restartDevice();
+            });
+        }
+        else {
+            Logger_error(F("Firmware upgrade failed: %s"), ArduinoOTAErrorStr(_AOTAInfo._error));
+        }
+    });
+    ArduinoOTA.onProgress([this](int progress, int size) {
+        __DBG_printf("ArduinoOTA progres %d / %d", progress, size);
+        if (_AOTAInfo) {
+            _AOTAInfo.update(progress, size);
+        }
+    });
+    ArduinoOTA.onError([this](ota_error_t err) {
+        if (_AOTAInfo) {
+            _AOTAInfo.stop(err);
+            if (!_AOTAInfo) {
+                BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SOS);
+                Logger_error(F("Firmware upgrade failed: %s"), ArduinoOTAErrorStr(_AOTAInfo._error));
+            }
+        }
+    });
+    ArduinoOTA.setRebootOnSuccess(false);
+    ArduinoOTA.begin(System::Flags::getConfig().is_mdns_enabled);
+    LoopFunctions::add(ArduinoOTALoop);
+    _AOTAInfo._runnning = true;
+
+    __LDBG_printf("Arduino OTA running on %s", ArduinoOTA.getHostname().c_str());
+}
+
+void Plugin::ArduinoOTAend()
+{
+    if (!_AOTAInfo._runnning) {
+        return;
+    }
+    __LDBG_printf("Arduino OTA stopped");
+    LoopFunctions::remove(ArduinoOTALoop);
+    _AOTAInfo = ArduinoOTAInfo();
+    ArduinoOTA.~ArduinoOTAClass();
+    ArduinoOTA = ArduinoOTAClass();
+}
+
+void Plugin::ArduinoOTADumpInfo(Print &output)
+{
+    output.printf_P(PSTR("running=%u in_progress=%u reboot_pending=%u progress=%u/%u error=%d (%s) state=%d\n"),
+        _AOTAInfo._runnning, _AOTAInfo._inProgress, _AOTAInfo._rebootPending,
+        _AOTAInfo._progress, _AOTAInfo._size,
+        _AOTAInfo._error, ArduinoOTAErrorStr(_AOTAInfo._error),
+        ArduinoOTA._state
+    );
+}
+
+#endif
+
 void Plugin::begin(bool restart)
 {
+    __DBG_printf("BEGIN restart=%u", restart);
     auto mode = System::WebServer::getMode();
     if (mode == System::WebServer::ModeType::DISABLED) {
 #if MDNS_PLUGIN
@@ -669,6 +774,13 @@ void Plugin::begin(bool restart)
     }
 
     auto cfg = System::WebServer::getConfig();
+
+    if (_server.get()) {
+        __DBG_printf("SERVER ALREADY RUNNING PTR=%p", _server.get());
+        return;
+    }
+
+
     _server.reset(new AsyncWebServerEx(cfg.getPort()));
     if (!_server) { // out of memory?
         __DBG_printf("AsyncWebServerEx: failed to create object");
@@ -710,7 +822,7 @@ void Plugin::begin(bool restart)
     }
 
     _server->begin();
-    __LDBG_printf("HTTP running on port %u", System::WebServer::getConfig().getPort());
+    __LDBG_printf("HTTP running on port %u", cfg.getPort());
 }
 
 bool Plugin::_sendFile(const FileMapping &mapping, const String &formName, HttpHeaders &httpHeaders, bool client_accepts_gzip, bool isAuthenticated, AsyncWebServerRequest *request, WebTemplate *webTemplate)
@@ -733,7 +845,7 @@ AsyncWebServerResponse *Plugin::_beginFileResponse(const FileMapping &mapping, c
 
     auto &path = mapping.getFilenameString();
     if (path.startsWith('.') || path.indexOf(F("/.")) != -1) {
-        return nullptr; //  hidden file
+        return nullptr; // hidden file
     }
 
     bool isHtml = path.endsWith(FSPGM(_html));
@@ -750,9 +862,9 @@ AsyncWebServerResponse *Plugin::_beginFileResponse(const FileMapping &mapping, c
                 request->onDisconnect(__weatherStationAttachCanvas); // unlock on disconnect
 #endif
                 __LDBG_printf("form=%s", formName.c_str());
-                FormUI::Form::BaseForm *form = __LDBG_new(SettingsForm, nullptr);
+                FormUI::Form::BaseForm *form = new SettingsForm(nullptr);
                 plugin->createConfigureForm(PluginComponent::FormCallbackType::CREATE_GET, formName, *form, request);
-                webTemplate = __LDBG_new(ConfigTemplate, form);
+                webTemplate = new ConfigTemplate(form);
             }
         }
     }
@@ -907,13 +1019,13 @@ bool Plugin::_handleFileRead(String path, bool client_accepts_gzip, AsyncWebServ
                 else {
                     Logger_security(F("Login from %s failed (%s)"), remote_addr.toString().c_str(), getAuthTypeStr(authType));
                 }
-                return _sendFile(FSPGM(_login_html, "/login.html"), String(), httpHeaders, client_accepts_gzip, isAuthenticated, request, __LDBG_new(LoginTemplate, loginError));
+                return _sendFile(FSPGM(_login_html, "/login.html"), String(), httpHeaders, client_accepts_gzip, isAuthenticated, request, new LoginTemplate(loginError));
             }
         }
         else {
             if (path.endsWith(FSPGM(_html))) {
                 httpHeaders.add(createRemoveSessionIdCookie());
-                return _sendFile(FSPGM(_login_html), String(), httpHeaders, client_accepts_gzip, isAuthenticated, request, __LDBG_new(LoginTemplate, loginError));
+                return _sendFile(FSPGM(_login_html), String(), httpHeaders, client_accepts_gzip, isAuthenticated, request, new LoginTemplate(loginError));
             }
             else {
                 send(403, request);
@@ -938,9 +1050,9 @@ bool Plugin::_handleFileRead(String path, bool client_accepts_gzip, AsyncWebServ
 #if IOT_WEATHER_STATION
                 __weatherStationDetachCanvas(true);
 #endif
-                FormUI::Form::BaseForm *form = __LDBG_new(SettingsForm, request);
+                FormUI::Form::BaseForm *form = new SettingsForm(request);
                 plugin->createConfigureForm(PluginComponent::FormCallbackType::CREATE_POST, formName, *form, request);
-                webTemplate = __LDBG_new(ConfigTemplate, form);
+                webTemplate = new ConfigTemplate(form);
                 if (form->validate()) {
                     plugin->createConfigureForm(PluginComponent::FormCallbackType::SAVE, formName, *form, request);
                     System::Flags::getWriteableConfig().is_factory_settings = false;
@@ -995,14 +1107,13 @@ Plugin::Plugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(Plugin))
     REGISTER_PLUGIN(this, "WebServerPlugin");
 }
 
-void Plugin::setup(SetupModeType mode)
+void Plugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
-    begin();
-    return;
-
-    //TODO
-    // crashes
-
+#if ENABLE_ARDUINO_OTA_AUTOSTART
+    if (mode == SetupModeType::DEFAULT || mode == SetupModeType::DELAYED_AUTO_WAKE_UP) {
+        ArduinoOTAbegin();
+    }
+#endif
     if (mode == SetupModeType::DELAYED_AUTO_WAKE_UP) {
         invokeReconfigureNow(getName());
     }
@@ -1015,7 +1126,7 @@ void Plugin::reconfigure(const String &source)
 {
     HandlerStoragePtr storage;
 
-    __LDBG_printf("server=%p source=%s", _server, source.c_str());
+    __LDBG_printf("server=%p source=%s", _server.get(), source.c_str());
     if (_server) {
 
         // store handlers and web sockets during reconfigure
@@ -1124,12 +1235,13 @@ AsyncCallbackWebHandler *Plugin::addHandler(const String &uri, ArRequestHandlerF
 AuthType Plugin::getAuthenticated(AsyncWebServerRequest *request) const
 {
     const String *pSID;
+    // __DBG_printf("args.%su header.%s=%u", FSPGM(SID), request->hasArg(FSPGM(SID)), FSPGM(Authorization), request->hasHeader(FSPGM(Authorization)));
 
     auto auth = request->getHeader(FSPGM(Authorization));
     if (auth) {
         auto &value = auth->value();
         __SID(__DBG_printf("auth SID=%s remote=%s", value.c_str(), request->client()->remoteIP().toString().c_str()));
-        if (String_startsWith(value, FSPGM(Bearer_))) {
+        if (value.startsWith(FSPGM(Bearer_))) {
             auto token = value.c_str() + 7;
             const auto len = value.length() - 7;
             __SID(__DBG_printf("token=%s device_token=%s len=%u", token, System::Device::getToken(), len));
@@ -1156,167 +1268,13 @@ AuthType Plugin::getAuthenticated(AsyncWebServerRequest *request) const
                 __SID(__DBG_printf("valid SID=%s type=%s", cSID.c_str(), isCookie ? FSPGM(cookie, "cookie") : request->methodToString()));
                 return isCookie ? AuthType::SID_COOKIE : AuthType::SID;
             }
-            __SID(__DBG_printf("invalid SID=%s", SID.c_str()));
+            __SID(__DBG_printf("invalid SID=%s", cSID.c_str()));
         }
         else {
             __SID(__DBG_print("no SID"));
         }
     }
     return AuthType::NONE;
-}
-
-
-// ------------------------------------------------------------------------
-// RestRequest
-// ------------------------------------------------------------------------
-
-RestHandler::RestHandler(const __FlashStringHelper *url, Callback callback) : _url(url), _callback(callback)
-{
-
-}
-
-const __FlashStringHelper *RestHandler::getURL() const
-{
-    return _url;
-}
-
-AsyncWebServerResponse *RestHandler::invokeCallback(AsyncWebServerRequest *request, RestRequest &rest)
-{
-    return _callback(request, rest);
-}
-
-// ------------------------------------------------------------------------
-// RestRequest
-// ------------------------------------------------------------------------
-
-RestRequest::RestRequest(AsyncWebServerRequest *request, const RestHandler &handler, AuthType auth) :
-    _request(request),
-    _handler(handler),
-    _auth(auth),
-    _stream(),
-    _reader(_stream),
-    _readerError(false)
-{
-    _reader.initParser();
-}
-
-AuthType RestRequest::getAuth() const
-{
-    return _auth;
-}
-
-AsyncWebServerResponse *RestRequest::createResponse(AsyncWebServerRequest *request)
-{
-    AsyncWebServerResponse *response = nullptr;
-    // respond with a json message and status 200
-    if (!(request->method() & WebRequestMethod::HTTP_POST)) {
-        response = request->beginResponse(200, FSPGM(mime_application_json), PrintString(F("{\"status\":%u,\"message\":\"%s\"}"), 405, AsyncWebServerResponse::responseCodeToString(405)));
-    }
-    else if (_auth == false) {
-        response = request->beginResponse(200, FSPGM(mime_application_json), PrintString(F("{\"status\":%u,\"message\":\"%s\"}"), 401, AsyncWebServerResponse::responseCodeToString(401)));
-    }
-    else if (_readerError) {
-        response = request->beginResponse(200, FSPGM(mime_application_json), PrintString(F("{\"status\":%u,\"message\":\"%s\"}"), 400, AsyncWebServerResponse::responseCodeToString(400)));
-    }
-    else {
-        return getHandler().invokeCallback(request, *this);
-    }
-    // add no cache and no store to any 200 response
-    HttpHeaders headers;
-    headers.addNoCache(true);
-    headers.setAsyncWebServerResponseHeaders(response);
-    return response;
-}
-
-RestHandler &RestRequest::getHandler()
-{
-    return _handler;
-}
-
-JsonMapReader &RestRequest::getJsonReader()
-{
-    return _reader;
-}
-
-void RestRequest::writeBody(uint8_t *data, size_t len)
-{
-    if (!_readerError) {
-        _stream.setData(data, len);
-        if (!_reader.parseStream()) {
-            __LDBG_printf("json parser: %s", _reader.getLastErrorMessage().c_str());
-            _readerError = true;
-        }
-    }
-}
-
-bool RestRequest::isUriMatch(const __FlashStringHelper *uri) const
-{
-    if (!uri) {
-        return false;
-    }
-    String baseUrl = _handler.getURL();
-    append_slash(baseUrl);
-    baseUrl += uri;
-
-    return _request->url().equals(baseUrl);
-}
-
-
-// ------------------------------------------------------------------------
-// AsyncRestWebHandler
-// ------------------------------------------------------------------------
-
-bool AsyncRestWebHandler::canHandle(AsyncWebServerRequest *request)
-{
-    __LDBG_printf("url=%s auth=%d", request->url().c_str(), Plugin::getInstance().isAuthenticated(request));
-
-    auto &url = request->url();
-    for(const auto &handler: plugin._server->_restCallbacks) {
-        if (url == FPSTR(handler.getURL())) {
-            request->addInterestingHeader(FSPGM(Authorization));
-
-            // emulate AsyncWebServerRequest dtor using onDisconnect callback
-            request->_tempObject = new RestRequest(request, handler, Plugin::getInstance().getAuthenticated(request));
-            request->onDisconnect([this, request]() {
-                if (request->_tempObject) {
-                    delete reinterpret_cast<RestRequest *>(request->_tempObject);
-                    request->_tempObject = nullptr;
-                }
-            });
-            return true;
-        }
-    }
-    return false;
-}
-
-void AsyncRestWebHandler::handleBody(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
-{
-    __LDBG_printf("url=%s data='%*.*s' idx=%u len=%u total=%u temp=%p", request->url().c_str(), len, len, data, index, len, total, request->_tempObject);
-    if (request->_tempObject) {
-        auto &rest = *reinterpret_cast<RestRequest *>(request->_tempObject);
-        // wondering why enum class == true compiles? -> global custom operator
-        if (rest.getAuth() == true) {
-            rest.writeBody(data, len);
-        }
-    }
-    else {
-        request->send(500);
-    }
-}
-
-void AsyncRestWebHandler::handleRequest(AsyncWebServerRequest *request)
-{
-    __LDBG_printf("url=%s json temp=%p is_post_metod=%u", request->url().c_str(), request->_tempObject, (request->method() & WebRequestMethod::HTTP_POST));
-    if (request->_tempObject) {
-        auto &rest = *reinterpret_cast<RestRequest *>(request->_tempObject);
-#if DEBUG_WEB_SERVER
-        rest.getJsonReader().dump(DEBUG_OUTPUT);
-#endif
-        request->send(rest.createResponse(request));
-    }
-    else {
-        request->send(500);
-    }
 }
 
 #include "web_server_action.h"

@@ -162,13 +162,15 @@ bool MDNSPlugin::isNetBIOSEnabled()
 
 }
 
-void MDNSPlugin::setup(SetupModeType mode)
+void MDNSPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
+    __DBG_assert_printf(mode != SetupModeType::AUTO_WAKE_UP, "not allowed SetupModeType::AUTO_WAKE_UP");;
+
     if (isEnabled()) {
         _enabled = true;
         begin();
 
-        dependsOn(FSPGM(http), [this](const PluginComponent *pluginPtr) {
+        dependencies->dependsOn(FSPGM(http), [this](const PluginComponent *pluginPtr) {
             _running = false;
             // add wifi handler after all plugins have been initialized
             WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, wifiCallback);
@@ -176,7 +178,7 @@ void MDNSPlugin::setup(SetupModeType mode)
                 plugin._wifiCallback(WiFiCallbacks::EventType::CONNECTED, nullptr); // simulate event if already connected
             }
             _installWebServerHooks();
-        });
+        }, this);
     }
 }
 

@@ -27,7 +27,7 @@ public:
 public:
     SyslogPlugin();
 
-    virtual void setup(SetupModeType mode) override;
+    virtual void setup(SetupModeType mode, const DependenciesPtr &dependencies) override;
     virtual void reconfigure(const String &source) override;
     virtual void shutdown() override;
 

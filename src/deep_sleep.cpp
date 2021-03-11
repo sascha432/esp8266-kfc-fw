@@ -24,16 +24,6 @@ extern "C" void preinit (void)
     // all pins are reset to input before
     deepSleepPinState.init();
 
-    #if IOT_REMOTE_CONTROL
-        // read the button states once more
-        // setting the awake pin high will clear the button hardware buffer
-        // this code is executed ~60ms after the reset has been invoked and even fast
-        // double clicks can be detected
-        pinMode(IOT_REMOTE_CONTROL_AWAKE_PIN, OUTPUT);
-        digitalWrite(IOT_REMOTE_CONTROL_AWAKE_PIN, HIGH);
-    #endif
-
-
     if (deepSleepPinState.anyPressed()) {
         deepSleepParams = DeepSleepParam();
         return;

@@ -3,6 +3,7 @@
  */
 
 #include "WebUIComponent.h"
+#include "plugins_menu.h"
 #include "plugins.h"
 
 #if DEBUG_WEBUI
@@ -237,7 +238,7 @@ WebUIRow &WebUI::addRow()
 void WebUI::addValues()
 {
     auto &array = _json.addArray(F("values"));
-    for(auto plugin: plugins) {
+    for(auto plugin: PluginComponents::Register::getPlugins()) {
         __LDBG_printf("plugin=%s webui=%u", plugin->getName_P(), plugin->hasWebUI());
         if (plugin->hasWebUI()) {
             plugin->getValues(array);

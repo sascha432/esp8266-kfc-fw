@@ -471,4 +471,4 @@ PROGMEM_STRING_DEF(wifi_settings, "wifi_settings"); // default
 PROGMEM_STRING_DEF(yes, "yes"); // default
 PROGMEM_STRING_DEF(Yes,"Yes");
 PROGMEM_STRING_DEF(Your_session_has_expired,"Your session has expired");
-
+PROGMEM_STRING_DEF(cookie,"cookie");

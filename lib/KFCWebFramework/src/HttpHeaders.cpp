@@ -213,7 +213,7 @@ bool HttpCookieHeader::parseCookie(AsyncWebServerRequest *request, const String 
 {
     // find all cookie headers
     for(const auto header: request->getHeaders()) {
-        // __DBG_printf("header key=% val=%s", header->name().c_str(), header->value().c_str());
+        // __DBG_printf("header.key=% val=%s", header->name().c_str(), header->value().c_str());
         if (header->name().equalsIgnoreCase(FSPGM(Cookie))) {
             // find name in this cookie collection
            if (parseCookie(header->value(), name, value)) {

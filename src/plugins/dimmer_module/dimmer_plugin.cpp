@@ -33,15 +33,15 @@ Plugin::Plugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(Plugin))
     REGISTER_PLUGIN(this, "Dimmer::Plugin");
 }
 
-void Plugin::setup(SetupModeType mode)
+void Plugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
     setupWebServer();
     _begin();
 #if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
-    dependsOn(F("sensor"), [this](const PluginComponent *plugin) {
+    dependencies->dependsOn(F("sensor"), [this](const PluginComponent *plugin) {
         __LDBG_printf("sensor=%p loaded", plugin);
         this->_setDimmingLevels();
-    });
+    }, this);
 #endif
 }
 

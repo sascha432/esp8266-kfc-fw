@@ -2,7 +2,7 @@
   Author: sascha_lammers@gmx.de
 */
 
-#include "plugins.h"
+#include "PluginComponent.h"
 #include "plugins_menu.h"
 #include <Form.h>
 #include <algorithm>
@@ -21,65 +21,37 @@
 #include "debug_helper_disable.h"
 #endif
 
+#include "plugins_menu.h"
+
 using KFCConfigurationClasses::System;
 
-PluginsVector plugins;
-BootstrapMenu bootstrapMenu;
-NavMenu_t navMenu;
+using namespace PluginComponents;
 
-#if ENABLE_BOOT_LOG
 
-File bootLog;
-int8_t bootLogOpenRetries = -10;
+union RegisterExUnitialized {
+    uint8_t buffer[sizeof(RegisterEx)];
+    RegisterEx _registerEx;
+    RegisterExUnitialized() {}
+    ~RegisterExUnitialized() {}
+};
+static RegisterExUnitialized componentRegister; // __attribute__((section(".noinit")));
 
-#include <PrintString.h>
+// PluginComponentInitRegisterEx() needs to be called from the first class that uses PluginComponents::Register
+// global or static data gets zerod during startup in a certain order...  and clears all data of the object while its being used already
+// initializing it manually works well
 
-void bootlog_printf(PGM_P format, ...)
+void PluginComponentInitRegisterEx()
 {
-    if (config.isSafeMode()) {
-        bootLogOpenRetries = 0;
-        if (bootLog) {
-            bootLog.close();
-        }
-        return;
-    }
-    if (bootLogOpenRetries < 0) {
-        bootLogOpenRetries = -bootLogOpenRetries;
-        if (KFCFS.exists(F("/.pvt/boot.txt"))) {
-            KFCFS.remove(F("/.pvt/boot.txt.old"));
-            KFCFS.rename(F("/.pvt/boot.txt"), F("/.pvt/boot.txt.old"));
-        }
-        bootLog = KFCFS.open(F("/.pvt/boot.txt"), fs::FileOpenMode::append);
-        bootLog.println(F("--- start"));
-    }
-    else if (bootLogOpenRetries == 0) {
-        return;
-    }
-    if (!bootLog) {
-        bootLog = KFCFS.open(F("/.pvt/boot.txt"), fs::FileOpenMode::append);
-        if (!bootLog) {
-            delay(10);
-            bootLogOpenRetries--;
-            return;
-        }
-    }
-
-    va_list arg;
-    va_start(arg, format);
-    PrintString str(FPSTR(format), arg);
-    bootLog.printf_P(PSTR("%lu: "), millis());
-    bootLog.println(str);
-    bootLog.flush();
-    vprintf(format, arg);
-    va_end(arg);
-    delay(10);
-
+    ::new(static_cast<void *>(&componentRegister._registerEx)) RegisterEx();
 }
 
-#endif
+Register *Register::getInstance()
+{
+    return &componentRegister._registerEx;
+}
 
 // we need to store the plugins somewhere until the vector is initialized otherwise it will discard already registered plugins
-static PluginsVector *pluginsPtr = nullptr;
+// static PluginComponents::PluginsVector *pluginsPtr = nullptr;
 
 #if DEBUG_PLUGINS
 void register_plugin(PluginComponent *plugin, const char *name)
@@ -87,22 +59,31 @@ void register_plugin(PluginComponent *plugin, const char *name)
     KFC_SAFE_MODE_SERIAL_PORT.begin(KFC_SERIAL_RATE);
     ::printf(PSTR("register_plugin(%p): name=%s\r\n"), plugin, name);
 #else
-void register_plugin(PluginComponent *plugin)
+void Register::_add(PluginComponent *plugin)
 {
 #endif
-    if (plugins.size()) {
-        __LDBG_printf("Registering plugins completed already, skipping %s", plugin->getName_P());
-        return;
-    }
+    // if (_plugins.size()) {
+    //     __LDBG_printf("Registering plugins completed already, skipping %s", plugin->getName_P());
+    //     return;
+    // }
     __LDBG_printf("register_plugin %s priority %d", plugin->getName_P(), plugin->getOptions().priority);
-    if (!pluginsPtr) {
-        pluginsPtr = __LDBG_new(PluginsVector);
-        pluginsPtr->reserve(16);
-    }
-    pluginsPtr->push_back(plugin);
+    // if (!pluginsPtr) {
+    //     pluginsPtr = new PluginComponents::PluginsVector();
+    //     pluginsPtr->reserve(16);
+    // }
+    // pluginsPtr->push_back(plugin);
+    // _plugins.emplace_back(plugin);
+
+//    TestPtr ptr1;
+
+    // auto iterator = std::upper_bound(_plugins.begin(), _plugins.end(), plugin, [](const PluginComponent *a, const PluginComponent *b) {
+    //     return static_cast<int>(b->getOptions().priority) >= static_cast<int>(a->getOptions().priority);
+    // });
+    // _plugins.insert(iterator, plugin);
+    _plugins.push_back(plugin);
 }
 
-void dump_plugin_list(Print &output)
+void Register::dumpList(Print &output)
 {
 #if DEBUG
 
@@ -116,7 +97,7 @@ void dump_plugin_list(Print &output)
     output.print(FPSTR(header));
     output.printf_P(titles);
     output.print(FPSTR(header));
-    for(const auto plugin : plugins) {
+    for(const auto plugin: _plugins) {
         __LDBG_printf("plugin=%p", plugin);
         auto options = plugin->getOptions();
         output.printf_P(format,
@@ -140,175 +121,163 @@ void dump_plugin_list(Print &output)
 
 }
 
-void prepare_plugins()
+void Register::prepare()
 {
-    BOOTLOG_PRINTF("prepare_plugins");
     // copy & sort plugins and free temporary data
-    plugins.resize(pluginsPtr->size());
-    std::partial_sort_copy(pluginsPtr->begin(), pluginsPtr->end(), plugins.begin(), plugins.end(), [](const PluginComponent *a, const PluginComponent *b) {
+    std::sort(_plugins.begin(), _plugins.end(), [](const PluginComponent *a, const PluginComponent *b) {
          return static_cast<int>(b->getOptions().priority) >= static_cast<int>(a->getOptions().priority);
     });
-    free(pluginsPtr);
+    // _plugins.resize(pluginsPtr->size());
+    // std::partial_sort_copy(pluginsPtr->begin(), pluginsPtr->end(), _plugins.begin(), _plugins.end(), [](const PluginComponent *a, const PluginComponent *b) {
+    //      return static_cast<int>(b->getOptions().priority) >= static_cast<int>(a->getOptions().priority);
+    // });
+    // free(pluginsPtr);
+//
+    // __LDBG_printf("counter=%d", _plugins.size());
 
-    BOOTLOG_PRINTF("plugins=%u", plugins.size());
-    __LDBG_printf("counter=%d", plugins.size());
+    __DBG_printf("counter=%d", _plugins.size());
 }
 
-static void create_menu()
+void RegisterEx::_createMenu()
 {
     //TODO move to PROGMEM
 
-    navMenu.home = bootstrapMenu.addMenu(FSPGM(Home));
-    bootstrapMenu.getItem(navMenu.home)->setUri(FSPGM(index_html));
+    _navMenu.home = _bootstrapMenu.addMenu(FSPGM(Home));
+    _bootstrapMenu.getItem(_navMenu.home)->setUri(FSPGM(index_html));
 
     // since "home" has an URI, this menu is hidden
-    bootstrapMenu.addMenuItem(FSPGM(Home), FSPGM(index_html), navMenu.home);
-    bootstrapMenu.addMenuItem(FSPGM(Status), FSPGM(status_html), navMenu.home);
-    bootstrapMenu.addMenuItem(F("Manage WiFi"), FSPGM(wifi_html), navMenu.home);
-    bootstrapMenu.addMenuItem(F("Configure Network"), FSPGM(network_html), navMenu.home);
-    bootstrapMenu.addMenuItem(FSPGM(Change_Password), FSPGM(password_html), navMenu.home);
-    bootstrapMenu.addMenuItem(FSPGM(Reboot_Device), FSPGM(reboot_html), navMenu.home);
-    bootstrapMenu.addMenuItem(F("About"), F("about.html"), navMenu.home);
+    _bootstrapMenu.addMenuItem(FSPGM(Home), FSPGM(index_html), _navMenu.home);
+    _bootstrapMenu.addMenuItem(FSPGM(Status), FSPGM(status_html), _navMenu.home);
+    _bootstrapMenu.addMenuItem(F("Manage WiFi"), FSPGM(wifi_html), _navMenu.home);
+    _bootstrapMenu.addMenuItem(F("Configure Network"), FSPGM(network_html), _navMenu.home);
+    _bootstrapMenu.addMenuItem(FSPGM(Change_Password), FSPGM(password_html), _navMenu.home);
+    _bootstrapMenu.addMenuItem(FSPGM(Reboot_Device), FSPGM(reboot_html), _navMenu.home);
+    _bootstrapMenu.addMenuItem(F("About"), F("about.html"), _navMenu.home);
 
-    navMenu.status = bootstrapMenu.addMenu(FSPGM(Status));
-    bootstrapMenu.getItem(navMenu.status)->setUri(FSPGM(status_html));
+    _navMenu.status = _bootstrapMenu.addMenu(FSPGM(Status));
+    _bootstrapMenu.getItem(_navMenu.status)->setUri(FSPGM(status_html));
 
-    navMenu.config = bootstrapMenu.addMenu(FSPGM(Configuration));
-    bootstrapMenu.addMenuItem(FSPGM(WiFi), FSPGM(wifi_html), navMenu.config);
-    bootstrapMenu.addMenuItem(FSPGM(Network), FSPGM(network_html), navMenu.config);
-    bootstrapMenu.addMenuItem(FSPGM(Device), FSPGM(device_html), navMenu.config);
-    bootstrapMenu.addMenuItem(F("Remote Access"), FSPGM(remote_html), navMenu.config);
+    _navMenu.config = _bootstrapMenu.addMenu(FSPGM(Configuration));
+    _bootstrapMenu.addMenuItem(FSPGM(WiFi), FSPGM(wifi_html), _navMenu.config);
+    _bootstrapMenu.addMenuItem(FSPGM(Network), FSPGM(network_html), _navMenu.config);
+    _bootstrapMenu.addMenuItem(FSPGM(Device), FSPGM(device_html), _navMenu.config);
+    _bootstrapMenu.addMenuItem(F("Remote Access"), FSPGM(remote_html), _navMenu.config);
 
-    navMenu.device = bootstrapMenu.addMenu(FSPGM(Device));
+    _navMenu.device = _bootstrapMenu.addMenu(FSPGM(Device));
 
-    navMenu.admin = bootstrapMenu.addMenu(FSPGM(Admin));
-    bootstrapMenu.addMenuItem(FSPGM(Change_Password), FSPGM(password_html), navMenu.admin);
-    bootstrapMenu.addMenuItem(FSPGM(Reboot_Device), FSPGM(reboot_html), navMenu.admin);
-    bootstrapMenu.addMenuItem(F("Restore Factory Defaults"), FSPGM(factory_html), navMenu.admin);
-    bootstrapMenu.addMenuItem(F("Export Settings"), F("export-settings"), navMenu.admin);
-    bootstrapMenu.addMenuItem(F("Update Firmware"), FSPGM(update_fw_html), navMenu.admin);
+    _navMenu.admin = _bootstrapMenu.addMenu(FSPGM(Admin));
+    _bootstrapMenu.addMenuItem(FSPGM(Change_Password), FSPGM(password_html), _navMenu.admin);
+    _bootstrapMenu.addMenuItem(FSPGM(Reboot_Device), FSPGM(reboot_html), _navMenu.admin);
+    _bootstrapMenu.addMenuItem(F("Restore Factory Defaults"), FSPGM(factory_html), _navMenu.admin);
+    _bootstrapMenu.addMenuItem(F("Export Settings"), F("export-settings"), _navMenu.admin);
+    _bootstrapMenu.addMenuItem(F("Update Firmware"), FSPGM(update_fw_html), _navMenu.admin);
 
-    navMenu.util = bootstrapMenu.addMenu(F("Utilities"));
-    bootstrapMenu.addMenuItem(F("Speed Test"), F("speed-test.html"), navMenu.util);
+    _navMenu.util = _bootstrapMenu.addMenu(F("Utilities"));
+    _bootstrapMenu.addMenuItem(F("Speed Test"), F("speed-test.html"), _navMenu.util);
 }
 
-static bool enableWebUIMenu = false;
-static uint32_t delayedStartupTime;
-
-void set_delayed_startup_time(uint32_t timeout)
+void Register::setup(SetupModeType mode, DependenciesPtr dependencies)
 {
-    delayedStartupTime = timeout;
-}
+    // the object is passed into the next setup_plugins called and destroyed when all are done
+    if (!dependencies.get()) {
+        dependencies.reset(new PluginComponents::Dependencies());
+    }
+    auto &_bootstrapMenu = RegisterEx::getBootstrapMenu();
+    auto &_navMenu = RegisterEx::getNavMenu();
 
-void setup_plugins(PluginComponent::SetupModeType mode)
-{
-    __LDBG_printf("mode=%d counter=%d", mode, plugins.size());
-    BOOTLOG_PRINTF("setup_plugins size=%u mode=%u", plugins.size(), mode);
+    __LDBG_printf("mode=%d counter=%d", mode, _plugins.size());
 
-    if (mode != PluginComponent::SetupModeType::DELAYED_AUTO_WAKE_UP) {
-        create_menu();
+    if (mode != SetupModeType::DELAYED_AUTO_WAKE_UP) {
+        RegisterEx::getInstance()._createMenu();
     }
 
     auto blacklist = System::Firmware::getPluginBlacklist();
-    BOOTLOG_PRINTF("blacklist=%s", __S(blacklist));
 
-    PluginComponent::createDependencies();
-
-    for(const auto plugin : plugins) {
+    for(const auto plugin : _plugins) {
         if (stringlist_find_P_P(blacklist, plugin->getName_P()) != -1) {
             __DBG_printf("plugin=%s blacklist=%s", plugin->getName_P(), blacklist);
             continue;
         }
-        if ((mode != PluginComponent::SetupModeType::SAFE_MODE) || (mode == PluginComponent::SetupModeType::SAFE_MODE && plugin->allowSafeMode())) {
+        if ((mode != SetupModeType::SAFE_MODE) || (mode == SetupModeType::SAFE_MODE && plugin->allowSafeMode())) {
             plugin->preSetup(mode);
         }
     }
 
-    for(const auto plugin : plugins) {
+    for(const auto plugin : _plugins) {
         if (stringlist_find_P_P(blacklist, plugin->getName_P()) != -1) {
             __DBG_printf("plugin=%s blacklist=%s", plugin->getName_P(), blacklist);
             continue;
         }
         bool runSetup = (
-            (mode == PluginComponent::SetupModeType::DEFAULT) ||
-            (mode == PluginComponent::SetupModeType::SAFE_MODE && plugin->allowSafeMode())
+            (mode == SetupModeType::DEFAULT) ||
+            (mode == SetupModeType::SAFE_MODE && plugin->allowSafeMode())
 #if ENABLE_DEEP_SLEEP
             ||
-            (mode == PluginComponent::SetupModeType::AUTO_WAKE_UP && plugin->autoSetupAfterDeepSleep()) ||
-            (mode == PluginComponent::SetupModeType::DELAYED_AUTO_WAKE_UP && !plugin->autoSetupAfterDeepSleep())
+            (mode == SetupModeType::AUTO_WAKE_UP && plugin->autoSetupAfterDeepSleep()) ||
+            (mode == SetupModeType::DELAYED_AUTO_WAKE_UP && !plugin->autoSetupAfterDeepSleep())
 #endif
         );
-        __LDBG_printf("name=%s prio=%d setup=%d mode=%u menu=%u add_menu=%u", plugin->getName_P(), plugin->getOptions().priority, runSetup, mode, plugin->getMenuType(), (mode != PluginComponent::SetupModeType::DELAYED_AUTO_WAKE_UP));
+        __LDBG_printf("name=%s prio=%d setup=%d mode=%u menu=%u add_menu=%u", plugin->getName_P(), plugin->getOptions().priority, runSetup, mode, plugin->getMenuType(), (mode != SetupModeType::DELAYED_AUTO_WAKE_UP));
         if (runSetup) {
-            BOOTLOG_PRINTF("setup plugin=%s", plugin->getName_P());
             plugin->setSetupTime();
-// #if ENABLE_DEEP_SLEEP
-//             ::printf(PSTR("mode=%u plugin=%s\n"), mode, plugin->getName_P());
-// #endif
-            plugin->setup(mode);
-            BOOTLOG_PRINTF("checking dependencies");
-            PluginComponent::checkDependencies();
-            BOOTLOG_PRINTF("done");
+            __LDBG_printf("SETUP plugin=%s mode=%u plugin=%p", plugin->getName_P(), mode, plugin);
+            plugin->setup(mode, dependencies);
+            dependencies->check();
 
             if (plugin->hasWebUI()) {
-                enableWebUIMenu = true;
+                _enableWebUIMenu = true;
             }
         }
-        if (mode != PluginComponent::SetupModeType::DELAYED_AUTO_WAKE_UP) {
-            switch(plugin->getMenuType()) {
-                case PluginComponent::MenuType::CUSTOM:
-                    __LDBG_printf("menu=custom plugin=%s", plugin->getName_P());
-                    plugin->createMenu();
-                    break;
-                case PluginComponent::MenuType::AUTO: {
-                        StringVector list;
-                        explode_P(plugin->getConfigForms(), ',', list);
-                        if (std::find(list.begin(), list.end(), plugin->getName()) == list.end()) {
-                            list.emplace_back(plugin->getName());
-                        }
-                        __LDBG_printf("menu=auto plugin=%s forms=%s", plugin->getName_P(), implode(',', list).c_str());
-                        for(const auto &str: list) {
-                            if (plugin->canHandleForm(str)) {
-                                __LDBG_printf("menu=auto form=%s can_handle=true", str.c_str());
-                                bootstrapMenu.addMenuItem(plugin->getFriendlyName(), str + FSPGM(_html), navMenu.config);
-                            }
-                        }
-                    } break;
-                case PluginComponent::MenuType::NONE:
-                default:
-                    __LDBG_printf("menu=none plugin=%s", plugin->getName_P());
-                    break;
+        if (mode != SetupModeType::DELAYED_AUTO_WAKE_UP) {
+            switch (plugin->getMenuType()) {
+            case MenuType::CUSTOM:
+                __LDBG_printf("menu=custom plugin=%s", plugin->getName_P());
+                plugin->createMenu();
+                break;
+            case MenuType::AUTO: {
+                StringVector list;
+                explode_P(plugin->getConfigForms(), ',', list);
+                if (std::find(list.begin(), list.end(), plugin->getName()) == list.end()) {
+                    list.emplace_back(plugin->getName());
+                }
+                __LDBG_printf("menu=auto plugin=%s forms=%s", plugin->getName_P(), implode(',', list).c_str());
+                for (const auto &str : list) {
+                    if (plugin->canHandleForm(str)) {
+                        __LDBG_printf("menu=auto form=%s can_handle=true", str.c_str());
+                        _bootstrapMenu.addMenuItem(plugin->getFriendlyName(), str + FSPGM(_html), _navMenu.config);
+                    }
+                }
+            } break;
+            case MenuType::NONE:
+            default:
+                __LDBG_printf("menu=none plugin=%s", plugin->getName_P());
+                break;
             }
         }
     }
 
-    if (enableWebUIMenu && System::Flags::getConfig().is_webui_enabled) {
+    if (_enableWebUIMenu && System::Flags::getConfig().is_webui_enabled) {
         auto url = F("webui.html");
-        if (!bootstrapMenu.isValid(bootstrapMenu.findMenuByURI(url, navMenu.device))) {
+        if (!_bootstrapMenu.isValid(_bootstrapMenu.findMenuByURI(url, _navMenu.device))) {
             auto webUi = FSPGM(WebUI);
-            bootstrapMenu.addMenuItem(webUi, url, navMenu.device, navMenu.device/*insert at the top*/);
-            bootstrapMenu.addMenuItem(webUi, url, navMenu.home, bootstrapMenu.getId(bootstrapMenu.findMenuByURI(FSPGM(status_html), navMenu.home)));
+            _bootstrapMenu.addMenuItem(webUi, url, _navMenu.device, _navMenu.device/*insert at the top*/);
+            _bootstrapMenu.addMenuItem(webUi, url, _navMenu.home, _bootstrapMenu.getId(_bootstrapMenu.findMenuByURI(FSPGM(status_html), _navMenu.home)));
         }
     }
 
 #if ENABLE_DEEP_SLEEP
-    if (mode == PluginComponent::SetupModeType::AUTO_WAKE_UP) {
-        __DBG_printf("unresolved dependencies=%u", PluginComponent::_getDependencies().size());
-        delayedStartupTime = PLUGIN_DEEP_SLEEP_DELAYED_START_TIME;
-        _Scheduler.add(1000, true, [](Event::CallbackTimerPtr timer) {
-            if (millis() > delayedStartupTime) {
-                timer->disarm();
-                setup_plugins(PluginComponent::SetupModeType::DELAYED_AUTO_WAKE_UP);
-                PluginComponent::deleteDependencies();
-            }
-        });
+    if (mode == SetupModeType::AUTO_WAKE_UP) {
+        if (!dependencies->empty()) {
+            __DBG_printf("unresolved dependencies=%u", dependencies->size());
+            _delayedStartupTime = PLUGIN_DEEP_SLEEP_DELAYED_START_TIME;
+            _Scheduler.add(1000, true, [dependencies, this](Event::CallbackTimerPtr timer) {
+                if (millis() > _delayedStartupTime) {
+                    __LDBG_printf("DELAYED_AUTO_WAKE_UP");
+                    timer->disarm();
+                    setup(SetupModeType::DELAYED_AUTO_WAKE_UP, dependencies);
+                }
+            });
+        }
     }
-    else {
-        BOOTLOG_PRINTF("deleting dependencies");
-        PluginComponent::deleteDependencies();
-    }
-#else
-    BOOTLOG_PRINTF("deleting dependencies");
-    PluginComponent::deleteDependencies();
 #endif
 }

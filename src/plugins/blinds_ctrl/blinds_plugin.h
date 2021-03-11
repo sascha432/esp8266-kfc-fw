@@ -23,7 +23,7 @@ class BlindsControlPlugin : public PluginComponent, public BlindsControl {
 public:
     BlindsControlPlugin();
 
-    virtual void setup(SetupModeType mode) override;
+    virtual void setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies) override;
     virtual void reconfigure(const String &source) override;
     virtual void shutdown() override;
     virtual void getStatus(Print &output) override;

@@ -269,22 +269,32 @@ public:
     }
 
     // PROGMEM safe
-    void fromString(const char *pattern, bool reverse = false) {
+    void fromString(const char *pattern, bool reverse = true) {
         zero_fill();
-        _size = _size_limit(strlen(pattern));
+        auto len = strlen(pattern);
+        _size = std::min<SizeType>(len, kMaxBits);
         auto endPtr = pattern + _size;
-        uint8_t pos = reverse ? _size - 1 : 0;
-        while (pattern < endPtr) {
-            set(pos, pgm_read_byte(pattern++) == '1');
-            reverse ? --pos : ++pos;
+        auto startPtr = reverse ? pattern : &pattern[len - _size];
+        uint8_t pos = 0;
+        uint8_t endPos = _size - 1;
+        if (reverse) {
+            std::swap(pos, endPos);
         }
-    }
+        while (startPtr < endPtr && pos != endPos) {
+            set(pos, pgm_read_byte(startPtr) == '1');
+            reverse ? --pos : ++pos;
+            startPtr++;
+        }
+    } 
 
-    String toString() const {
+    String toString(uint8_t groups = 0) const {
         String output;
         output.reserve(_size);
         for (int i = _size - 1; i >= 0; i--) {
             output += (test(i) ? '1' : '0');
+            if ((groups > 1) && i && ((i + groups) % groups == 0)) {
+                output += ' ';
+            }
         }
         return output;
     }
@@ -304,18 +314,20 @@ public:
 
     void set(SizeType pos, bool value = true) {
         if (pos < kMaxBits) {
-            uint8_t mask = (1 << (pos & 0x03));
+            uint8_t bytePos = (pos >> 3);
+            uint8_t mask = (1 << (pos - (bytePos << 3)));
             if (value) {
-                data()[pos >> 3] |= mask;
+                data()[bytePos] |= mask;
             }
             else {
-                data()[pos >> 3] &= ~mask;
+                data()[bytePos] &= ~mask;
             }
         }
     }
 
     bool test(SizeType pos) const {
-        return (pos < kMaxBits) ? data()[pos >> 3] & (1 << (pos & 0x03)) : false;
+        uint8_t bytePos = (pos >> 3);
+        return (pos < kMaxBits) ? data()[bytePos] & (1 << (pos - (bytePos << 3))) : false;
     }
 
     void dumpCode(Print &output, const char *variable = "pattern", bool setBytes = false) const {
@@ -352,7 +364,7 @@ public:
     inline __attribute__((__always_inline__))
     void set(_Ta value, SizeType size) {
         zero_fill();
-        _size = std::min<size_t>(std::min<size_t>(sizeof(value) * 8, kMaxBits), size);
+        _size = static_cast<uint8_t>(std::min<size_t>(std::min<size_t>(sizeof(value) * 8, kMaxBits), size));
         memcpy_P(data(), &value, minSize());
         // std::copy_n(reinterpret_cast<uint8_t *>(&value), minSize(), data());
     }
@@ -369,7 +381,7 @@ private:
     // returns size or capacity, depending on which is msaller
     inline __attribute__((__always_inline__))
     BytesSizeType _size_limit(size_t size) const {
-        return std::min<size_t>(size, capacity());
+        return static_cast<BytesSizeType>(std::min<size_t>(static_cast<size_t>(size), capacity()));
     }
 
     inline __attribute__((__always_inline__))
@@ -378,9 +390,10 @@ private:
     }
 
     void zero_fill_unused() {
-        BytesSizeType lastByte = (_size >> 3);
+        auto lastByte = static_cast<BytesSizeType>(_size >> 3);
         // keep bits of the last byte
-        _buffer[lastByte++] &= (1 << (size & 0x03)) - 1;
+        _buffer[lastByte] &= (1 << (size - (lastByte << 3))) - 1;
+        lastByte++;
         std::fill(_buffer + lastByte, _buffer + capacity(), 0);
     }
 

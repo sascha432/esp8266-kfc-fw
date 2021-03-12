@@ -151,7 +151,7 @@ def mem_analyzer(source, target, env):
         which('xtensa-lx106-elf-objdump.exe', env)[0],
         os.path.realpath(str(target[0]))
     ]
-    print(' '.join(args))
+    # print(' '.join(args))
     p = subprocess.Popen(args, text=True)
     p.wait()
 
@@ -285,7 +285,8 @@ env.AddPreAction("uploadfsota", modify_upload_command_fs)
 
 env.AlwaysBuild(env.Alias("newbuild", None, new_build))
 
-env.AddPostAction(env['PIOMAINPROG'], mem_analyzer)
+# env.AddPostAction(env['PIOMAINPROG'], mem_analyzer)
+env.AddPostAction("$BUILD_DIR/${PROGNAME}.elf", mem_analyzer)
 # env.AddPostAction("$BUILD_DIR/${PROGNAME}.bin", copy_firmware)
 
 env.AlwaysBuild(env.Alias("patch_file", None, create_patch_file))

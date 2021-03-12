@@ -165,13 +165,12 @@ void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::Depe
         uint8_t pin = pinPtr->getPin();
         auto debounce = pinPtr->getDebounce();
         if (debounce) {
-            // debounce
             debounce->setState(deepSleepPinState.activeHigh() == false);
         }
         if (states & _BV(pin)) {
             PinMonitor::eventBuffer.emplace_back(2000, pin, interrupt_levels); // place them at 2ms
         }
-        __LDBG_printf("pin=%02u init debouncer=%d queued=%u states=%s interrupt_levels=%s mask=%s", debounce ? (deepSleepPinState.activeHigh()) == false : -1, pin, (states & _BV(pin)) != 0, BitsToStr<16, true>(states).c_str(), BitsToStr<16, true>(interrupt_levels).c_str(), BitsToStr<16, true>(_BV(pin)).c_str());
+        __LDBG_printf("pin=%02u init debouncer=%d queued=%u states=%s interrupt_levels=%s mask=%s", pin, (debounce ? (deepSleepPinState.activeHigh() == false) : -1), (states & _BV(pin)) != 0, BitsToStr<16, true>(states).c_str(), BitsToStr<16, true>(interrupt_levels).c_str(), BitsToStr<16, true>(_BV(pin)).c_str());
 
     }
 
@@ -191,13 +190,13 @@ void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::Depe
     // and compare if another state must be pushed
     for(auto pin: kButtonPins) {
         if ((states & _BV(pin)) ^ (currentStates & _BV(pin))) {
-            PinMonitor::eventBuffer.emplace_back(micros(), pin, interrupt_levels); // add final state
-            __LDBG_printf("pin=%02u final queued=%u states=%s interrupt_levels=%s mask=%s", pin, (currentStates & _BV(pin)) != 0, BitsToStr<16, true>(currentStates).c_str(), BitsToStr<16, true>(interrupt_levels).c_str(), BitsToStr<16, true>(_BV(pin)).c_str());
+            PinMonitor::eventBuffer.emplace_back(micros(), pin, interrupt_levels); //interrupt_levels); // add final state
+            __LDBG_printf("pin=%02u final queued=%u states=%s interrupt_levels=%s mask=%s", pin, interrupt_levels, BitsToStr<16, true>(currentStates).c_str(), BitsToStr<16, true>(interrupt_levels).c_str(), BitsToStr<16, true>(_BV(pin)).c_str());
         }
     }
 
     // clear all interrupts now
-    GPIEC = GPIE;
+    GPIEC = kButtonPinsMask;  // clear interrupts for all pins
     ETS_GPIO_INTR_ENABLE();
 
     __DBG_printf("---");

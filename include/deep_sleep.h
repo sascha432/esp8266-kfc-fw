@@ -11,8 +11,27 @@
 #include <array>
 #include <PinMonitor.h>
 #include <BitsToStr.h>
+#include <stl_ext/array.h>
 #if IOT_REMOTE_CONTROL
 #include "../src/plugins/remote/remote_def.h"
+#endif
+
+#define DEBUG_DEEP_SLEEP 1
+
+#ifndef DEBUG_DEEP_SLEEP
+    #define DEBUG_DEEP_SLEEP                                0
+#endif
+
+#ifndef DEEP_SLEEP_BUTTON_ACTIVE_STATE
+    #define DEEP_SLEEP_BUTTON_ACTIVE_STATE                  PIN_MONITOR_ACTIVE_STATE
+#endif
+
+#ifndef DEEP_SLEEP_BUTTON_PINS
+    #ifdef IOT_REMOTE_CONTROL
+        #define DEEP_SLEEP_BUTTON_PINS                      IOT_REMOTE_CONTROL_BUTTON_PINS
+    #else
+        #error DEEP_SLEEP_BUTTON_PINS not defined
+    #endif
 #endif
 
 namespace DeepSleep
@@ -21,16 +40,12 @@ namespace DeepSleep
     using seconds = std::chrono::duration<uint32_t, std::ratio<1>>;
     using minutes = std::chrono::duration<uint32_t, std::ratio<60>>;
 
-#ifdef IOT_REMOTE_CONTROL
-    static constexpr auto kPinsToRead = std::array<const uint8_t, IOT_REMOTE_CONTROL_BUTTON_COUNT>(IOT_REMOTE_CONTROL_BUTTON_PINS);
-#endif
+    static constexpr auto kPinsToRead = stdex::array_of<uint8_t>(DEEP_SLEEP_BUTTON_PINS);
 
-//     constexpr uint32_t kPinsToBits(uint32_t state, uint32_t bits = 0, size_t index = 0) {
-//         return index < kPinsToRead.size() ? kPinsToBits(state, ((bits << 1) | (state & _BV(kPinsToRead[index]) ? 1 : 0)), index + 1) : (bits);
-//     }
+    // bitmask to detect buttons pressed
+    static constexpr auto kButtonMask = Interrupt::PinAndMask::mask_of(kPinsToRead);
 
-//     static constexpr uint32_t test1 = kPinsToBits(0b100000000010000); //  kPinsToBits(kPinsToRead.data(), kPinsToRead.size(), 0b1000));
-// ;
+
     struct __attribute__packed__ WiFiQuickConnect
     {
         int16_t channel: 15;                    //  0
@@ -160,7 +175,7 @@ namespace DeepSleep
 
     inline __attribute__((__always_inline__))
     bool PinState::anyPressed() const {
-        return _state;
+        return _state & kButtonMask;
     }
 
     inline __attribute__((__always_inline__))
@@ -217,27 +232,53 @@ namespace DeepSleep
         return _time;
     }
 
-     struct __attribute__packed__ DeepSleepParam {
+    enum class WakeupMode {
+        NONE,
+        AUTO,
+        USER
+    };
+
+    struct __attribute__packed__ DeepSleepParam {
 
         uint32_t _totalSleepTime;                   // total amount in milliseconds
         uint32_t _remainingSleepTime;               // time left in millis
         uint32_t _currentSleepTime;                 // the current cycle just woken up from
         uint32_t _runtime;                          // total runtime in microseconds during wakeups
         uint16_t _counter;                          // total count of deep sleep cycles for the total amount
-        RFMode _mode;
+        RFMode _rfMode;
+        WakeupMode _wakeupMode;
+        time_t _realTime;
 
         DeepSleepParam() : _totalSleepTime(0) {}
+        DeepSleepParam(WakeupMode wakeupMode) : _totalSleepTime(0), _wakeupMode(wakeupMode) {}
         DeepSleepParam(minutes deepSleepTime, RFMode mode = RF_NO_CAL) : DeepSleepParam(std::chrono::duration_cast<milliseconds>(deepSleepTime), mode) {}
         DeepSleepParam(seconds deepSleepTime, RFMode mode = RF_NO_CAL) : DeepSleepParam(std::chrono::duration_cast<milliseconds>(deepSleepTime), mode) {}
-        DeepSleepParam(milliseconds deepSleepTime, RFMode mode = RF_NO_CAL) :
+        DeepSleepParam(milliseconds deepSleepTime, RFMode rfMode = RF_NO_CAL) :
             _totalSleepTime(deepSleepTime.count()),
             _remainingSleepTime(deepSleepTime.count()),
             _currentSleepTime(0),
             _runtime(0),
             _counter(0),
-            _mode(mode)
+            _rfMode(rfMode),
+            _wakeupMode(WakeupMode::NONE),
+            _realTime(0)
         {
+#if DEBUG_DEEP_SLEEP
+            dump();
+#endif
         }
+
+#if DEBUG_DEEP_SLEEP
+        void dump() {
+            ::printf_P(PSTR("_totalSleepTime=%u\n"), _totalSleepTime);
+            ::printf_P(PSTR("_currentSleepTime=%u\n"), _currentSleepTime);
+            ::printf_P(PSTR("_remainingSleepTime=%u\n"), _remainingSleepTime);
+            ::printf_P(PSTR("_runtime=%u\n"), _runtime);
+            ::printf_P(PSTR("_counter=%u\n"), _counter);
+            ::printf_P(PSTR("_rfMode=%u\n"), _rfMode);
+            ::printf_P(PSTR("_wakeupMode=%u\n"), _wakeupMode);
+        }
+#endif
 
         static void enterDeepSleep(milliseconds time);
 
@@ -247,8 +288,17 @@ namespace DeepSleep
         }
 
         inline __attribute__((__always_inline__))
-        uint32_t getDeepSleepMaxMillis() const {
+        static uint32_t getDeepSleepMaxMillis() {
+#if DEBUG
+            return 10000;
+#else
             return ESP.deepSleepMax() / (1000 + 150/*some extra margin*/);
+#endif
+        }
+
+        inline __attribute__((__always_inline__))
+        void setRealTime(time_t time) {
+            _realTime = time;
         }
 
         inline __attribute__((__always_inline__))
@@ -260,9 +310,6 @@ namespace DeepSleep
         uint64_t getDeepSleepTimeMicros() const {
             return _currentSleepTime * 1000ULL;
         }
-
-    // private:
-    //     friend void preinit(void);
 
         uint32_t _updateRemainingTime() {
             auto maxSleep = getDeepSleepMaxMillis();
@@ -280,11 +327,22 @@ namespace DeepSleep
                 return maxSleep;
             }
         }
+
+        inline __attribute__((__always_inline__))
+        WakeupMode getWakeupMode() const {
+            return _wakeupMode;
+        }
+
+        inline __attribute__((__always_inline__))
+        void setRFMode(RFMode rfMode) {
+            _rfMode = rfMode;
+        }
     };
 
 };
 
 extern "C" DeepSleep::PinState deepSleepPinState;
 extern "C" DeepSleep::DeepSleepParam deepSleepParams;
+extern "C" void deep_sleep_reset();
 
 #endif

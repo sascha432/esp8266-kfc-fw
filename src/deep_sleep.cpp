@@ -17,68 +17,112 @@ DeepSleep::DeepSleepParam deepSleepParams;
 
 using namespace DeepSleep;
 
-extern "C" void preinit (void)
+// extern "C" void preinit(void)
+// {
+//     deep_sleep_reset()
+// }
+
+void deep_sleep_reset()
 {
+#if DEBUG_DEEP_SLEEP
+    Serial0.begin(KFC_SERIAL_RATE);
+#endif
+
 #if IOT_REMOTE_CONTROL
     // store states of buttons
     // all pins are reset to input before
     deepSleepPinState.init();
 
     if (deepSleepPinState.anyPressed()) {
-        deepSleepParams = DeepSleepParam();
+#if DEBUG_DEEP_SLEEP
+        ::printf_P(PSTR("deep sleep: user awake\n"));
+#endif
+        deepSleepParams = DeepSleepParam(WakeupMode::USER);
         return;
     }
 #endif
 
     if (RTCMemoryManager::read(RTCMemoryManager::RTCMemoryId::DEEP_SLEEP, &deepSleepParams, sizeof(deepSleepParams))) {
         if (deepSleepParams.isValid()) {
+
+            // clear reset counter
+            resetDetector.clearCounter();
+
             auto nextSleepTime = deepSleepParams._updateRemainingTime();
             if (nextSleepTime == 0) {
-                deepSleepParams._remainingSleepTime = deepSleepParams._totalSleepTime;
+
+#if DEBUG_DEEP_SLEEP
+                ::printf_P(PSTR("deep sleep: wakeup (total=%ums remaining=%ums time=%ums wakeup-runtime/counter=%uµs/%u)\n"),
+                    deepSleepParams._totalSleepTime, deepSleepParams._remainingSleepTime, deepSleepParams._currentSleepTime, deepSleepParams._runtime, deepSleepParams._counter
+                );
+#endif
+
+                deepSleepParams._remainingSleepTime = 0;
                 deepSleepParams._currentSleepTime = 0;
+#if !RTC_SUPPORT
+                struct timeval tv = { static_cast<time_t>(deepSleepParams._realTime + ((deepSleepParams._totalSleepTime + (deepSleepParams._runtime / 1000U)) / 1000U)), 0 };
+                settimeofday(&tv, nullptr);
+                ::printf_P(PSTR("stored.time=%ld total=%.3f runtime=%.6f est.tikme=%ld\n"), deepSleepParams._realTime, deepSleepParams._totalSleepTime / 1000.0, deepSleepParams._runtime / 1000000.0, time(nullptr));
+#endif
             }
             else {
                 deepSleepParams._currentSleepTime = nextSleepTime;
+                deepSleepParams._counter++;
+                deepSleepParams._runtime += micros() + 75/* it takes ~75µs system_deep_sleep_instant() call*/;
+                RTCMemoryManager::write(RTCMemoryManager::RTCMemoryId::DEEP_SLEEP, &deepSleepParams, sizeof(deepSleepParams));
             }
-
-            resetDetector.clearCounter();
-            deepSleepParams._counter++;
-            deepSleepParams._runtime += micros();
-            RTCMemoryManager::write(RTCMemoryManager::RTCMemoryId::DEEP_SLEEP, &deepSleepParams, sizeof(deepSleepParams));
 
             if (nextSleepTime == 0) {
-                // RemoteControlPlugin::getInstance()._minAwakeTimeout = 15000;
-                //TODO
+                deepSleepParams._wakeupMode = WakeupMode::AUTO;
+#if DEBUG_DEEP_SLEEP
+                ::printf_P(PSTR("deep sleep: auto awake cycle\n"));
+#endif
             }
             else {
+#if DEBUG_DEEP_SLEEP
+                ::printf_P(PSTR("deep sleep: going back to sleep (total=%ums remaining=%ums time=%ums wakeup-runtime/counter=%uµs/%u)\n"),
+                    deepSleepParams._totalSleepTime, deepSleepParams._remainingSleepTime, deepSleepParams._currentSleepTime, deepSleepParams._runtime, deepSleepParams._counter
+                );
+#endif
                 // go back to sleep
-                // system_deep_sleep_set_option(static_cast<int>(deepSleepParams._mode));
-                // system_deep_sleep_instant(deepSleepParams._currentSleepTime * 1000ULL);
-                // esp_yield();
-                // system_deep_sleep_instant(0);
-                // esp_yield();
+                system_deep_sleep_set_option(static_cast<int>(deepSleepParams._rfMode));
+                system_deep_sleep_instant(deepSleepParams._currentSleepTime * 1000ULL);
+                esp_yield();
+                system_deep_sleep_instant(0);
+                esp_yield();
             }
         }
+#if DEBUG_DEEP_SLEEP
+        else {
+            ::printf_P(PSTR("deep sleep: invalid parameter\n"));
+        }
+    }
+    else {
+        ::printf_P(PSTR("deep sleep: failed to read state from RTC\n"));
+#endif
     }
 }
 
-void DeepSleepParam::enterDeepSleep(milliseconds time)
+void DeepSleepParam::enterDeepSleep(milliseconds sleep_time)
 {
-    // create a new object if we do not have a valid one
-    if (!deepSleepParams.isValid()) {
-        deepSleepParams = DeepSleepParam(time);
-    }
+    deepSleepParams = DeepSleepParam(sleep_time);
     deepSleepParams.updateRemainingTime();
+    deepSleepParams.setRealTime(time(nullptr));
     RTCMemoryManager::write(RTCMemoryManager::RTCMemoryId::DEEP_SLEEP, &deepSleepParams, sizeof(deepSleepParams));
 
     resetDetector.clearCounter();
 
+#if DEBUG_DEEP_SLEEP
+    ::printf_P(PSTR("deep sleep %.2f remaining=%u\n"), (deepSleepParams.getDeepSleepTimeMicros() / 1000.0), deepSleepParams._remainingSleepTime);
+#endif
 #if defined(ESP8266)
-    ESP.deepSleep(deepSleepParams.getDeepSleepTimeMicros(), deepSleepParams._mode);
+    ESP.deepSleep(deepSleepParams.getDeepSleepTimeMicros(), deepSleepParams._rfMode);
     // try again with half of the max. time if first call fails
-    __DBG_printf_E("Deep sleep failed with time=%.0f ms", deepSleepParams.getDeepSleepTimeMicros() / 1000.0);
-    ESP.deepSleep(ESP.deepSleepMax() / 2, deepSleepParams._mode);
-    ESP.deepSleep(0, deepSleepParams._mode);
+#if DEBUG_DEEP_SLEEP
+    ::printf_P(PSTR("deep sleep failed with time=%.0f ms\n"), deepSleepParams.getDeepSleepTimeMicros() / 1000.0);
+#endif
+    ESP.deepSleep(getDeepSleepMaxMillis() / 2, deepSleepParams._rfMode);
+    ESP.deepSleep(0, deepSleepParams._rfMode);
 #else
     ESP.deepSleep(deepSleepParams.getDeepSleepTimeMicros());
     ESP.deepSleep(0);

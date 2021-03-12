@@ -21,6 +21,7 @@
 #include "fs_mapping.h"
 #include "logger.h"
 #include "misc.h"
+#include "deep_sleep.h"
 #include "web_server.h"
 #include "web_socket.h"
 #include "async_web_response.h"
@@ -1246,28 +1247,21 @@ void at_mode_serial_handle_event(String &commandString)
             args.setCommand(command);
 
             if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DSLP))) {
+
+                KFCFWConfiguration::milliseconds time(args.toMillis(0));
+                RFMode mode = (RFMode)args.toInt(1, RF_DEFAULT);
+
+                args.printf_P(PSTR("Entering deep sleep... time=%ums deep_sleep_max=%.0fms mode=%u"), time.count(), (ESP.deepSleepMax() / 1000.0), mode);
+
 #if ENABLE_DEEP_SLEEP
-                if (args.size() == 2 && args.equalsIgnoreCase(0, F("deep_sleep_max"))) {
-                    //TODO
-                    // DeepSleep::DeepSleepParam::setDeepSleepMaxTime(args.toInt(1));
-                    // args.printf_P(PSTR("Setting deep_sleep_max to %ums"), DeepSleep::DeepSleepParam::getDeepSleepMaxMillis());
-                    // args.printf_P(PSTR("Setting deep_sleep_max to %ums"), (uint32_t)(ESP.deepSleepMax() / 1000));
-                }
-                else
-#endif
-                {
-                    KFCFWConfiguration::milliseconds time(args.toMillis(0));
-                    RFMode mode = (RFMode)args.toInt(1, RF_DEFAULT);
-#if ENABLE_DEEP_SLEEP
-                    // args.printf_P(PSTR("Entering deep sleep... time=%ums deep_sleep_max=%ums mode=%u"), time, DeepSleep::DeepSleepParameter::getDeepSleepMaxMillis(), mode);
-                    config.enterDeepSleep(time, mode, 1);
+                deepSleepParams = DeepSleep::DeepSleepParam(time, mode);
+                deepSleepParams.enterDeepSleep(time);
 #else
-                    args.printf_P(PSTR("Entering deep sleep... time=%ums deep_sleep_max=%ums mode=%u"), time, (uint32_t)(ESP.deepSleepMax() / 1000), mode);
-                    ESP.deepSleep(time.count() * 1000ULL, mode);
-                    ESP.deepSleep(ESP.deepSleepMax() / 2, mode);
-                    ESP.deepSleep(0, mode);
+                ESP.deepSleep(time.count() * 1000ULL, mode);
+                ESP.deepSleep(ESP.deepSleepMax() / 2, mode);
+                ESP.deepSleep(0, mode);
 #endif
-                }
+
             }
             else
             if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(HELP))) {
@@ -1463,46 +1457,43 @@ void at_mode_serial_handle_event(String &commandString)
                 if (args.requireArgs(1, 4)) {
                     BlinkLEDTimer::BlinkType type = BlinkLEDTimer::BlinkType::INVALID;
                     String mode = args.toString(0);
-                    int32_t color = args.toNumber(1, 0xff00ff);
                     uint16_t delay = args.toInt(2, 50);
                     uint8_t pin = (uint8_t)args.toInt(3, __LED_BUILTIN);
-                    if (__LED_BUILTIN == pin && !BlinkLEDTimer::isPinValid(pin)) {
-                        args.print(F("Invalid PIN"));
+                    if (mode.equalsIgnoreCase(F("pattern")) || mode.startsWith(F("pat"))) {
+                        auto patternStr = args.toString(1);
+                        auto pattern = BlinkLEDTimer::Bitset();
+                        pattern.fromString(patternStr);
+                        args.printf_P(PSTR("pattern %*.*s delay %u"), pattern.toString().c_str(), delay);
+                        BlinkLEDTimer::setPattern(pin, delay, std::move(pattern));
+                        //+led=pattern,111111111111111111111111111111111111111111111111111111,100
+                        //+led=pattern,1010,100
                     }
                     else {
-                        if (mode.equalsIgnoreCase(F("slow"))) {
-                            BlinkLEDTimer::setBlink(pin, type = BlinkLEDTimer::BlinkType::SLOW, color);
-                        }
-                        else if (mode.equalsIgnoreCase(F("fast"))) {
-                            BlinkLEDTimer::setBlink(pin, type = BlinkLEDTimer::BlinkType::FAST, color);
-                        }
-                        else if (mode.equalsIgnoreCase(F("flicker"))) {
-                            BlinkLEDTimer::setBlink(pin, type = BlinkLEDTimer::BlinkType::FLICKER, color);
-                        }
-                        else if (mode.equalsIgnoreCase(F("solid"))) {
-                            BlinkLEDTimer::setBlink(pin, type = BlinkLEDTimer::BlinkType::SOLID, color);
-                        }
-                        else if (mode.equalsIgnoreCase(F("sos"))) {
-                            BlinkLEDTimer::setBlink(pin, type = BlinkLEDTimer::BlinkType::SOS, color);
-                        }
-                        else if (mode.equalsIgnoreCase(F("pattern")) || mode.startsWith(F("pat"))) {
-                            auto pattern = args.toString(1);
-                            char *endPtr = nullptr;
-                            auto patternValue = strtoull(pattern.c_str(), &endPtr, 2);
-                            size_t len = std::min<size_t>(endPtr - pattern.c_str(), BlinkLEDTimer::kBitsetSize);
-                            if (len < 2) {
-                                len = 2;
-                                patternValue = 0b10;
-                            }
-                            BlinkLEDTimer::setPattern(pin, delay, BlinkLEDTimer::Bitset(patternValue, len));
-                            args.printf_P(PSTR("pattern %*.*s delay %u"), len, len, BitsToStr<56, false>(patternValue).c_str(), delay);
+                        int32_t color = args.toNumber(1, 0xff00ff);
+                        if (__LED_BUILTIN == pin && !BlinkLEDTimer::isPinValid(pin)) {
+                            args.print(F("Invalid PIN"));
                         }
                         else {
-                            mode = F("OFF");
-                            color = 0;
-                            BlinkLEDTimer::setBlink(pin, type = BlinkLEDTimer::BlinkType::OFF);
-                        }
-                        if (type != BlinkLEDTimer::BlinkType::INVALID) {
+                            if (mode.equalsIgnoreCase(F("slow"))) {
+                                BlinkLEDTimer::setBlink(pin, type = BlinkLEDTimer::BlinkType::SLOW, color);
+                            }
+                            else if (mode.equalsIgnoreCase(F("fast"))) {
+                                BlinkLEDTimer::setBlink(pin, type = BlinkLEDTimer::BlinkType::FAST, color);
+                            }
+                            else if (mode.equalsIgnoreCase(F("flicker"))) {
+                                BlinkLEDTimer::setBlink(pin, type = BlinkLEDTimer::BlinkType::FLICKER, color);
+                            }
+                            else if (mode.equalsIgnoreCase(F("solid"))) {
+                                BlinkLEDTimer::setBlink(pin, type = BlinkLEDTimer::BlinkType::SOLID, color);
+                            }
+                            else if (mode.equalsIgnoreCase(F("sos"))) {
+                                BlinkLEDTimer::setBlink(pin, type = BlinkLEDTimer::BlinkType::SOS, color);
+                            }
+                            else {
+                                mode = F("OFF");
+                                color = 0;
+                                BlinkLEDTimer::setBlink(pin, type = BlinkLEDTimer::BlinkType::OFF);
+                            }
                             args.printf_P(PSTR("LED pin=%u mode=%s type=%u color=0x%06x"), pin, mode.c_str(), type, color);
                         }
                     }

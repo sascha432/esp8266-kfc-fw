@@ -1493,7 +1493,7 @@ void KFCConfigurationPlugin::setup(SetupModeType mode, const PluginComponents::D
 #if RTC_SUPPORT
     auto rtc = config.getRTC();
     if (rtc != 0) {
-        struct timeval tv = { (time_t)rtc, 0 };
+        struct timeval tv = { static_cast<time_t>(rtc), 0 };
         settimeofday(&tv, nullptr);
 
 #if NTP_LOG_TIME_UPDATE

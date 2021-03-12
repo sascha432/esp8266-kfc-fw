@@ -18,11 +18,31 @@ namespace PinMonitor {
 
     namespace Interrupt {
 
+        struct PinAndMask {
+            using mask_type = uint16_t;
+
+            constexpr PinAndMask(const int index) : pin(index), mask(_BV(index)) {
+            }
+            constexpr operator int() const {
+                return pin;
+            }
+            const uint8_t pin;
+            const mask_type mask;
+
+            template<typename _Ta>
+            static constexpr uint32_t mask_of(const _Ta &arr, const size_t index = 0, const uint32_t mask = 0) {
+                return index < arr.size() ? (_BV(arr[index]) | mask_of(arr, index + 1, mask)) : mask;
+            }
+        };
+
         static constexpr size_t kEventBufferSize = 64;
 
         struct __attribute__((packed)) Event {
+
+            using mask_type = PinAndMask::mask_type;
+
             Event() : _time(0), _value(0), _pin(0) {}
-            Event(uint32_t time, uint8_t pin, uint16_t value) : _time(time), _value(value), _pin(pin) {}
+            Event(uint32_t time, uint8_t pin, mask_type value) : _time(time), _value(value), _pin(pin) {}
 
             bool operator==(uint8_t pin) const {
                 return _pin == pin;
@@ -49,7 +69,7 @@ namespace PinMonitor {
 
         protected:
             uint32_t _time;
-            uint16_t _value;
+            mask_type _value;
             uint8_t _pin;
         };
 

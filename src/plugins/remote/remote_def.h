@@ -29,7 +29,8 @@
 
 // button pins
 #ifndef IOT_REMOTE_CONTROL_BUTTON_PINS
-#define IOT_REMOTE_CONTROL_BUTTON_PINS                          { 14, 4, 12, 13 }   // D5, D2, D6, D7
+#define  IOT_REMOTE_CONTROL_BUTTON_PINS                         13,12,14,4
+// #define IOT_REMOTE_CONTROL_BUTTON_PINS                          14, 4, 12, 13   // D5, D2, D6, D7
 #endif
 
 // set high while running
@@ -45,6 +46,10 @@
 // enable button combinations
 #ifndef IOT_REMOTE_CONTROL_COMBO_BTN
 #define IOT_REMOTE_CONTROL_COMBO_BTN                            1
+#endif
+
+#if !PIN_MONITOR_USE_GPIO_INTERRUPT
+#error PIN_MONITOR_USE_GPIO_INTERRUPT=1 required
 #endif
 
 using namespace PinMonitor;
@@ -143,8 +148,10 @@ namespace RemoteControl {
 
 //     static constexpr size_t ButtonEventSize = sizeof(ButtonEvent);
 
+    static constexpr auto kButtonPins = stdex::cexpr::array_of<uint8_t>(IOT_REMOTE_CONTROL_BUTTON_PINS);
+
     using KFCConfigurationClasses::Plugins;
     using ConfigType = Plugins::RemoteControl::Config_t;
-    using ButtonPinsArray = std::array<const uint8_t, IOT_REMOTE_CONTROL_BUTTON_COUNT>;
+    using ButtonPinsArray = decltype(kButtonPins);
     using EventQueue = std::list<Queue::Event>;
 }

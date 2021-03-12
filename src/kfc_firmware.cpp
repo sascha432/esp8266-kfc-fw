@@ -79,6 +79,8 @@ void delayedSetup(bool delayed)
 
 void setup()
 {
+    deep_sleep_reset();
+
     PinMonitor::GPIOInterruptsEnable();
     _startupTimings.preSetup(millis());
     #if ENABLE_DEEP_SLEEP
@@ -108,6 +110,7 @@ void setup()
     #endif
     serialHandler.begin();
     DEBUG_HELPER_INIT();
+
 
     #if 0
         #include "../include/retracted/custom_wifi.h"

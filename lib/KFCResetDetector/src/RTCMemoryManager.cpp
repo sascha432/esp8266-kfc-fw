@@ -193,10 +193,10 @@ bool RTCMemoryManager::write(RTCMemoryId id, void *dataPtr, uint8_t dataLength)
 bool RTCMemoryManager::clear() {
 #if defined(ESP8266)
 
-    // clear header only
-    uint8_t blocks = sizeof(Header_t) / __blockSize;
+    // clear header and 16 blocks
+    uint8_t blocks = (sizeof(Header_t) / __blockSize) + 16;
     uint32_t offset = __headerAddress;
-    uint32_t data = 0;
+    uint32_t data = ~0U;
     while (blocks--) {
         if (!system_rtc_mem_write(offset++, &data, sizeof(data))) {
             return false;
@@ -206,7 +206,7 @@ bool RTCMemoryManager::clear() {
 #elif defined(ESP32)
 
     // clear entire block
-    memset(RTCMemoryManager_allocated_block, 0, sizeof(RTCMemoryManager_allocated_block));
+    memset(RTCMemoryManager_allocated_block, 0xff, sizeof(RTCMemoryManager_allocated_block));
 
 #endif
     return true;

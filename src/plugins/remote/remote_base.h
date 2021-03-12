@@ -7,29 +7,23 @@
 #include "remote_def.h"
 #include "remote_event_queue.h"
 #include <kfc_fw_config.h>
+#include <stl_ext/array.h>
 
 class RemoteControlPlugin;
 
 namespace RemoteControl {
 
-    static constexpr auto kButtonPins = ButtonPinsArray(IOT_REMOTE_CONTROL_BUTTON_PINS);
+    static constexpr uint32_t kButtonPinsMask = Interrupt::PinAndMask::mask_of(kButtonPins);
 
-    constexpr uint32_t generatePinMask(uint32_t mask = 0, size_t index = 0)
-    {
-        return index < kButtonPins.size() ? generatePinMask(mask | _BV(kButtonPins[index]), index + 1) : mask;
-    }
-
-    static constexpr uint32_t kButtonPinsMask = generatePinMask();
-
-
-    static inline constexpr size_t getButtonBit(uint8_t pin, size_t index = 0) {
-        return pin == kButtonPins[index] ? index : getButtonBit(pin, index + 1);
+    static inline constexpr size_t getButtonIndex(uint8_t pin, size_t index = 0) {
+        return pin == kButtonPins[index] ? index : getButtonIndex(pin, index + 1);
     }
 
     // button combination used for maintenance mode
+    // first and last PIN vom list
     static constexpr uint8_t kButtonSystemComboPins[2] = { kButtonPins.front(), kButtonPins.back() };
-    static constexpr uint8_t kButtonSystemComboNum[2] = { getButtonBit(kButtonSystemComboPins[0]), getButtonBit(kButtonSystemComboPins[1]) };
-    static constexpr uint8_t kButtonSystemComboBitMask = _BV(getButtonBit(kButtonSystemComboPins[0])) | _BV(getButtonBit(kButtonSystemComboPins[1]));
+    // and the combined bit mask
+    static constexpr uint8_t kButtonSystemComboBitMask = _BV(getButtonIndex(kButtonSystemComboPins[0])) | _BV(getButtonIndex(kButtonSystemComboPins[1]));
 
 
     using EventNameType = Plugins::RemoteControl::RemoteControl::EventNameType;

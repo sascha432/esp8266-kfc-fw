@@ -288,12 +288,12 @@ public:
         if (reverse) {
             std::swap(pos, endPos);
         }
-        while (startPtr < endPtr && pos != endPos) {
-            set(pos, pgm_read_byte(startPtr) == '1');
+        int ch;
+        while (startPtr < endPtr && pos != endPos && (ch = pgm_read_byte(startPtr++)) != 0) {
+            set(pos, ch == '1');
             reverse ? --pos : ++pos;
-            startPtr++;
         }
-    } 
+    }
 
     String toString(uint8_t groups = 0) const {
         String output;

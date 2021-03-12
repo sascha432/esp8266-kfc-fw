@@ -12,7 +12,7 @@
 // see PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS for details
 
 #ifndef DEBUG_PIN_MONITOR
-#define DEBUG_PIN_MONITOR                                       1
+#define DEBUG_PIN_MONITOR                                       0
 #endif
 
 #if DEBUG_PIN_MONITOR

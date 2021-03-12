@@ -81,7 +81,7 @@ void Button::event(EventType eventType, uint32_t now)
             break;
     }
 
-#if 0
+#if 1
     __LDBG_printf("event_type=%s (%ux) button#=%u first_time=%u time=%u pressed=%s",
         eventTypeToString(eventType),
         _repeatCount,

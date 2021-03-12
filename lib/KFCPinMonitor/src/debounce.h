@@ -89,7 +89,7 @@ namespace PinMonitor {
             return _debounce(lastValue, interruptCount, last,now, _micros);
 #endif
         }
-        void setState(bool state);
+        void setState(bool state, uint32_t debounceTimer = 0);
 
     private:
         StateType _debounce(bool lastValue, uint16_t interruptCount, uint32_t last, uint32_t now, uint32_t _micros);
@@ -108,11 +108,17 @@ namespace PinMonitor {
         bool _debounceTimerRunning: 1;
     };
 
-    inline void Debounce::setState(bool state)
+    inline void Debounce::setState(bool state, uint32_t debounceTimer)
     {
         _state = state;
         _value = state;
-        _debounceTimerRunning = false;
+        if (debounceTimer) {
+            _debounceTimerRunning = true;
+            _debounceTimer = debounceTimer;
+        }
+        else {
+            _debounceTimerRunning = false;
+        }
     }
 
 

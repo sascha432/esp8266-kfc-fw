@@ -277,6 +277,7 @@ namespace DeepSleep
             ::printf_P(PSTR("_counter=%u\n"), _counter);
             ::printf_P(PSTR("_rfMode=%u\n"), _rfMode);
             ::printf_P(PSTR("_wakeupMode=%u\n"), _wakeupMode);
+            ::printf_P(PSTR("_realTime=%u\n"), _realTime);
         }
 #endif
 
@@ -289,16 +290,23 @@ namespace DeepSleep
 
         inline __attribute__((__always_inline__))
         static uint32_t getDeepSleepMaxMillis() {
-#if DEBUG
-            return 10000;
-#else
             return ESP.deepSleepMax() / (1000 + 150/*some extra margin*/);
-#endif
+        }
+
+        // total sleep time in seconds
+        inline __attribute__((__always_inline__))
+        float getTotalTime() const {
+            return _totalSleepTime / 1000.0;
         }
 
         inline __attribute__((__always_inline__))
         void setRealTime(time_t time) {
             _realTime = time;
+        }
+
+        inline __attribute__((__always_inline__))
+        time_t getRealTime() const {
+            return _realTime;
         }
 
         inline __attribute__((__always_inline__))
@@ -343,6 +351,9 @@ namespace DeepSleep
 
 extern "C" DeepSleep::PinState deepSleepPinState;
 extern "C" DeepSleep::DeepSleepParam deepSleepParams;
-extern "C" void deep_sleep_reset();
+
+#if DEBUG_DEEP_SLEEP
+void deep_sleep_setup();
+#endif
 
 #endif

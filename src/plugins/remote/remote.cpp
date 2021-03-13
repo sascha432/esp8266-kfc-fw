@@ -225,39 +225,43 @@ void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::Depe
     _updateSystemComboButtonLED();
     __LDBG_printf("setup() done");
 
-    dependencies->dependsOn(F("http"), [](const PluginComponent *plugin) {
-        auto server = WebServer::Plugin::getWebServerObject();
-        if (server) {
-            WebServer::Plugin::addHandler(F("/rc/*"), [](AsyncWebServerRequest *request) {
-                String message;
-                __DBG_printf("remote control web server handler url=%s", request->url().c_str());
-                if (request->url().endsWith(F("/deep_sleep.html"))) {
-                    message = F("Device entering deep sleep...");
-                    request->onDisconnect([]() {
-                        // cannot be called from ISRs
-                        LoopFunctions::callOnce([]() {
-                            RemoteControlPlugin::enterDeepSleep();
-                        });
-                    });
-                }
-                else if (request->url().endsWith(F("/disable_auto_sleep.html"))) {
-                    message = F("Auto sleep has been disabled");
-                    RemoteControlPlugin::disableAutoSleep();
-                }
-                else if (request->url().endsWith(F("/enable_auto_sleep.html"))) {
-                    message = F("Auto sleep has been enabled");
-                    RemoteControlPlugin::enableAutoSleep();
-                }
-                else {
-                    WebServer::Plugin::send(404, request);
-                    return;
-                }
-                HttpHeaders headers;
-                if (!WebServer::Plugin::sendFileResponse(200, F("/.message.html"), request, headers, new MessageTemplate(message))) {
-                    __DBG_printf("failed to send /.message.html");
-                }
-            });
+    dependencies->dependsOn(F("http"), [](const PluginComponent *plugin, DependencyResponseType response) {
+        if (response != DependencyResponseType::SUCCESS) {
+            return;
         }
+        auto server = WebServer::Plugin::getWebServerObject();
+        if (!server) {
+            return;
+        }
+        WebServer::Plugin::addHandler(F("/rc/*"), [](AsyncWebServerRequest *request) {
+            String message;
+            __DBG_printf("remote control web server handler url=%s", request->url().c_str());
+            if (request->url().endsWith(F("/deep_sleep.html"))) {
+                message = F("Device entering deep sleep...");
+                request->onDisconnect([]() {
+                    // cannot be called from ISRs
+                    LoopFunctions::callOnce([]() {
+                        RemoteControlPlugin::enterDeepSleep();
+                    });
+                });
+            }
+            else if (request->url().endsWith(F("/disable_auto_sleep.html"))) {
+                message = F("Auto sleep has been disabled");
+                RemoteControlPlugin::disableAutoSleep();
+            }
+            else if (request->url().endsWith(F("/enable_auto_sleep.html"))) {
+                message = F("Auto sleep has been enabled");
+                RemoteControlPlugin::enableAutoSleep();
+            }
+            else {
+                WebServer::Plugin::send(404, request);
+                return;
+            }
+            HttpHeaders headers;
+            if (!WebServer::Plugin::sendFileResponse(200, F("/.message.html"), request, headers, new MessageTemplate(message))) {
+                __DBG_printf("failed to send /.message.html");
+            }
+        });
     }, this);
 }
 

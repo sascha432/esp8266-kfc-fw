@@ -292,11 +292,6 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         output.print(F("<SSDP support disabled>"));
 #endif
     }
-    // else if (String_equals(key, PSTR("FIRMWARE_UPGRADE_FAILURE"))) {
-    // }
-    else if (String_equals(key, PSTR("FIRMWARE_UPGRADE_FAILURE_CLASS"))) {
-        output.print(FSPGM(_hidden));
-    }
     else if (String_equals(key, PSTR("IS_CONFIG_DIRTY"))) {
         if (!config.isConfigDirty()) {
             output.print(FSPGM(_hidden));
@@ -367,30 +362,13 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         }
         output.print(FSPGM(Not_supported, "Not supported"));
     }
-    else if (stringlist_find_P_P(PSTR("FIRMWARE_UPGRADE_FAILURE,PCF8574_STATUS,PCF8575_STATUS,PCA9685_STATUS,MCP23017_STATUS,RTC_STATUS"), key.c_str(), ',')) {
+    else if (stringlist_find_P_P(PSTR("PCF8574_STATUS,PCF8575_STATUS,PCA9685_STATUS,MCP23017_STATUS,RTC_STATUS"), key.c_str(), ',') != -1) {
         // strings that have not been replaced yet
         return;
     }
     else {
         __DBG_assert_printf(F("key not found") == nullptr, "key not found '%s'", key.c_str());
     }
-}
-
-void UpgradeTemplate::process(const String &key, PrintHtmlEntitiesString &output)
-{
-    if (key == F("FIRMWARE_UPGRADE_FAILURE_CLASS")) {
-    }
-    else if (key == F("FIRMWARE_UPGRADE_FAILURE")) {
-        output.printRaw(_errorMessage);
-    }
-    else {
-        WebTemplate::process(key, output);
-    }
-}
-
-void UpgradeTemplate::setErrorMessage(const String &errorMessage)
-{
-    _errorMessage = errorMessage;
 }
 
 void LoginTemplate::process(const String &key, PrintHtmlEntitiesString &output)
@@ -438,7 +416,7 @@ void MessageTemplate::process(const String &key, PrintHtmlEntitiesString &output
             output.print(_title);
         }
     }
-    else if (key == F("%TPL_TITLE_CLASS%")) {
+    else if (key == F("TPL_TITLE_CLASS")) {
         if (_titleClass) {
             output.print(' ');
             output.print(_titleClass);
@@ -447,7 +425,7 @@ void MessageTemplate::process(const String &key, PrintHtmlEntitiesString &output
             output.print(F(" text-white bg-primary"));
         }
     }
-    else if (key == F("%TPL_MESSAGE_CLASS%")) {
+    else if (key == F("TPL_MESSAGE_CLASS")) {
         if (_messageClass) {
             output.print(' ');
             output.print(_messageClass);

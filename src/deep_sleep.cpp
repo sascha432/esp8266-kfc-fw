@@ -6,6 +6,9 @@
 
 #include "deep_sleep.h"
 #include <user_interface.h>
+#if DEBUG_DEEP_SLEEP
+#include "logger.h"
+#endif
 
 #if IOT_REMOTE_CONTROL
 #include "../src/plugins/remote/remote.h"
@@ -17,30 +20,30 @@ DeepSleep::DeepSleepParam deepSleepParams;
 
 using namespace DeepSleep;
 
-// extern "C" void preinit(void)
-// {
-//     deep_sleep_reset()
-// }
-
-void deep_sleep_reset()
+inline static void deep_sleep_preinit()
 {
+    // store states of all PINs
+    deepSleepPinState.init();
+
 #if DEBUG_DEEP_SLEEP
     Serial0.begin(KFC_SERIAL_RATE);
 #endif
+    if (ESP.getResetInfoPtr()->reason != REASON_DEEP_SLEEP_AWAKE) {
+#if DEBUG_DEEP_SLEEP
+        ::printf_P(PSTR("reset reason not REASON_DEEP_SLEEP_AWAKE\n"));
+#endif
+        RTCMemoryManager::remove(RTCMemoryManager::RTCMemoryId::DEEP_SLEEP);
+        return;
+    }
 
-#if IOT_REMOTE_CONTROL
-    // store states of buttons
-    // all pins are reset to input before
-    deepSleepPinState.init();
-
-    if (deepSleepPinState.anyPressed()) {
+    // if kButtonMask is set, check if any of the buttons is pressed and exit deep sleep
+    if (kButtonMask && deepSleepPinState.anyPressed()) {
 #if DEBUG_DEEP_SLEEP
         ::printf_P(PSTR("deep sleep: user awake\n"));
 #endif
         deepSleepParams = DeepSleepParam(WakeupMode::USER);
         return;
     }
-#endif
 
     if (RTCMemoryManager::read(RTCMemoryManager::RTCMemoryId::DEEP_SLEEP, &deepSleepParams, sizeof(deepSleepParams))) {
         if (deepSleepParams.isValid()) {
@@ -106,6 +109,11 @@ void deep_sleep_reset()
 void DeepSleepParam::enterDeepSleep(milliseconds sleep_time)
 {
     deepSleepParams = DeepSleepParam(sleep_time);
+
+#if DEBUG_DEEP_SLEEP
+    Logger_notice(F("going to deep sleep, time=%ld sleep-time=%.3f"), time(nullptr), deepSleepParams.getTotalTime());
+#endif
+
     deepSleepParams.updateRemainingTime();
     deepSleepParams.setRealTime(time(nullptr));
     RTCMemoryManager::write(RTCMemoryManager::RTCMemoryId::DEEP_SLEEP, &deepSleepParams, sizeof(deepSleepParams));
@@ -147,5 +155,22 @@ String PinState::toString(uint32_t state, uint32_t time) const
     );
     return str;
 }
+
+#if DEBUG_DEEP_SLEEP
+
+void deep_sleep_setup()
+{
+    deep_sleep_preinit();
+}
+
+#else
+
+extern "C" void preinit(void)
+{
+    deep_sleep_preinit()
+}
+
+#endif
+
 
 #endif

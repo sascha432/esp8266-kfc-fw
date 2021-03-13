@@ -12,6 +12,7 @@
 #include <ListDir.h>
 #include "kfc_fw_config.h"
 #include "blink_led_timer.h"
+#include "deep_sleep.h"
 #include "at_mode.h"
 #include "serial_handler.h"
 #include "serial2udp.h"
@@ -79,7 +80,10 @@ void delayedSetup(bool delayed)
 
 void setup()
 {
-    deep_sleep_reset();
+    #if DEBUG_DEEP_SLEEP
+        // if DEBUG_DEEP_SLEEP is disabled, deep sleep setup is executed in preinit()
+        void deep_sleep_setup();
+    #endif
 
     PinMonitor::GPIOInterruptsEnable();
     _startupTimings.preSetup(millis());
@@ -426,6 +430,11 @@ void setup()
         }
         else {
             delayedSetup(false);
+        }
+
+        if (deepSleepParams.getWakeupMode() == DeepSleep::WakeupMode::AUTO) {
+            Logger_notice(F("Wakeup from deep sleep, start-time=%u est.time=%u sleep-time=%.3f"), time(nullptr), deepSleepParams.getRealTime(), deepSleepParams.getTotalTime());
+
         }
 
         _startupTimings.setLoopFunc(millis());

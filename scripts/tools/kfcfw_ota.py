@@ -122,7 +122,7 @@ class OTA(kfcfw.OTAHelpers):
         monitor = MultipartEncoderMonitor(encoder, lambda monitor: bar.update(min(monitor.bytes_read, filesize)))
 
         # resp = requests.post(url + "update", files={ "firmware_image": self.args.image }, data={ "image_type": image_type, "SID": sid }, timeout=30, allow_redirects=False)
-        resp = requests.post(url + 'update', data=monitor, timeout=30, allow_redirects=False, headers={ "Content-Type": monitor.content_type })
+        resp = requests.post(url + 'update', data=monitor, timeout=30, allow_redirects=False, headers={ 'User-Agent': 'KFCFW OTA', "Content-Type": monitor.content_type })
         bar.finish();
 
         if resp.status_code==302:

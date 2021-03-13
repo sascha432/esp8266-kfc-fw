@@ -25,39 +25,44 @@
     </nav>
     <!--NAV%%-->
     <div class="container">
-        <div id="firmware_upgrade_failure" class="%FIRMWARE_UPGRADE_FAILURE_CLASS%">
-            %FIRMWARE_UPGRADE_FAILURE%
-            <br><br><br>
+        <div id="firmware_upgrade_status" class="container accordion mt-3 mb-3 pt-3 pb-3 hidden">
         </div>
-        <div id="firmware_upgrade_status" class="hidden">
-            <h1><span>Firmware</span> upgrade successful!</h1>
-            <br><br><br>
-        </div>
-        <h1>Update Firmware</h1>
-        <form method="POST" action="/update" enctype="multipart/form-data" id="firmware_update">
-            <div class="form-group" id="firmware_upload_fullscreen">
-                <div id="firmware_image_overlay" class="overlay soften" style="display: none">
-                    <div class="overlay darken"></div>
-                    <div class="overlay text">&gt;&gt; Drop your files here &lt;&lt;</div>
+        <div id="firmware_upgrade_progress" class="container hidden">
+            <div class="p-1">
+                <h2 class="m-3 p-3 text-center">Uploading Firmware..</h2>
+            </div>
+            <div class="progress">
+                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" id="upload-progress-bar" style="width:0%;">
                 </div>
-                <label for="firmware_image">Firmware Image:</label>
-                <input type="file" class="form-control-file" name="firmware_image" id="firmware_image">
             </div>
-            <div class="form-group">
-                <label for="image_type">Image Type:</label>
-                <select class="form-control" name="image_type" id="image_type">
-                    <option value="">Auto Select</option>
-                    <option value="u_flash">Firmware</option>
-                    <option value="u_spiffs">SPI Flash File System</option>
-                    <!--#if STK500V1 -->
-                    <option value="u_atmega">ATmega Firmware</option>
-                    <!--#endif-->
-                </select>
-            </div>
-            <div class="form-group">
-                <button type="submit" class="btn btn-primary">Start Update Process...</button>
-            </div>
-        </form>
+        </div>
+        <div id="firmware_upgrade_form" class="container">
+            <h1>Update Firmware</h1>
+            <form method="POST" action="/update" enctype="multipart/form-data" id="firmware_update">
+                <div class="form-group" id="firmware_upload_fullscreen">
+                    <div id="firmware_image_overlay" class="overlay soften" style="display: none">
+                        <div class="overlay darken"></div>
+                        <div class="overlay text">&gt;&gt; Drop your files here &lt;&lt;</div>
+                    </div>
+                    <label for="firmware_image">Firmware Image:</label>
+                    <input type="file" class="form-control-file" name="firmware_image" id="firmware_image">
+                </div>
+                <div class="form-group">
+                    <label for="image_type">Image Type:</label>
+                    <select class="form-control" name="image_type" id="image_type">
+                        <option value="">Auto Select</option>
+                        <option value="u_flash">Firmware</option>
+                        <option value="u_spiffs">SPI Flash File System</option>
+                        <!--#if STK500V1 -->
+                        <option value="u_atmega">ATmega Firmware</option>
+                        <!--#endif-->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary">Start Update Process...</button>
+                </div>
+            </form>
+        </div>
         <!--%%FOOT-->
         <div class="row">
             <div class="col footer">&nbsp;</div>

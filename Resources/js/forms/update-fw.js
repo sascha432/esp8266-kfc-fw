@@ -24,8 +24,80 @@ $(function() {
             });
         };
 
-        window.onblur = onBlur;
-        window.onfocus = onFocus;
+        function add_focus_handler() {
+            $(window).on('focus', onFocus);
+            $(window).on('blur', onBlur);
+        }
+
+        function show_progress() {
+            $('#firmware_upgrade_progress').removeClass('hidden');
+            $('#firmware_upgrade_form').addClass('hidden');
+            $('#firmware_upgrade_status').html('').addClass('hidden');
+            onFocus();
+            $(window).off('focus');
+            $(window).off('blur');
+        }
+
+        function format_message(message) {
+            return '<div class="card"><div class="card-header text-white bg-danger"><h2 class="mb-0">Firmware Upgrade Failed</h2></div><div class="card-body"><h4 class="p-3 m-3">' + message + '</h4></div></div>';
+       }
+
+        function show_status(data) {
+            if ($(data).find('.accordion').length) {
+                message = $(data).find('.accordion').html();
+            } else {
+                message = format_message(data);
+            }
+            $('#firmware_upgrade_form').removeClass('hidden');
+            $('#firmware_upgrade_progress').addClass('hidden');
+            $('#firmware_upgrade_status').html(message).removeClass('hidden');
+            onFocus();
+            add_focus_handler();
+        }
+
+        function update_progress(n) {
+            $('#upload-progress-bar').css('width', parseInt(n) + '%');
+        }
+
+        add_focus_handler();
+
+        $('#firmware_update').off().on('submit', function(e) {
+            e.preventDefault();
+            show_progress();
+            var data = new FormData();
+            data.append('SID', $.getSessionId());
+            $(this).find('input').each(function() {
+                if ($(this)[0].files) {
+                    data.append($(this).attr('name'), $(this)[0].files[0]);
+                }
+                else {
+                    data.append($(this).attr('name'), $(this).val());
+                }
+            });
+            $.ajax({
+                xhr: function () {
+                    var xhr = $.ajaxSettings.xhr();
+                    if (xhr.upload) {
+                        xhr.upload.addEventListener("progress", function (event) {
+                            var percent = Math.ceil((event.loaded / event.total) * 100);
+                            update_progress(Math.min(100.0, percent));
+                        }, false);
+                    }
+                    return xhr;
+                },
+                url: '/update',
+                data: data,
+                cache: false,
+                contentType: false,
+                processData: false,
+                type: 'POST',
+            }).done(function (data) {
+                show_status(data);
+            }).fail(function (jqXHR, textStatus) {
+                show_status('The upload was aborted due to an error');
+            });
+        });
+
     }
 
     if ($('#firmware_upgrade_status').length) {

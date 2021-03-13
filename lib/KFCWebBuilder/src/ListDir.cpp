@@ -220,7 +220,7 @@ bool ListDir::next()
                 break;
             }
 #if defined(ESP8266)
-            if (String_endsWith(_filename, PSTR("/."))) {   // directory emulation
+            if (_filename.endsWith(F("/."))) {   // directory emulation
                 _filename.remove(_filename.length() - 1);
                 __LDBG_printf("file=%s is_dirname=%d is_dir=%d dirname=%s dir=%s",
                     _filename.c_str(),

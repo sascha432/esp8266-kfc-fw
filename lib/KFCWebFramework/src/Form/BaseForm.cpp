@@ -214,25 +214,25 @@ bool Form::BaseForm::process(const String &name, Print &output)
     // }
     // Serial.println();
     for (const auto &field : _fields) {
-        auto len = strlen_P(field->getName());
-        if (field->getType() == Field::Type::TEXT && String_equalsIgnoreCase(name, field->getName())) {
+        auto len = strlen_P(reinterpret_cast<PGM_P>(field->getName()));
+        if (field->getType() == Field::Type::TEXT && name.equalsIgnoreCase(field->getName())) {
             __LDBG_printf("name=%s text=%s", name.c_str(), field->getValue().c_str());
             PrintHtmlEntities::printTo(PrintHtmlEntities::Mode::ATTRIBUTE, field->getValue().c_str(), output);
             return true;
         }
-        else if (field->getType() == Field::Type::TEXTAREA && String_equalsIgnoreCase(name, field->getName())) {
+        else if (field->getType() == Field::Type::TEXTAREA && name.equalsIgnoreCase(field->getName())) {
             __LDBG_printf("name=%s textarea=%s", name.c_str(), field->getValue().c_str());
             PrintHtmlEntities::printTo(PrintHtmlEntities::Mode::HTML, field->getValue().c_str(), output);
             return true;
         }
-        else if (field->getType() == Field::Type::CHECK && String_equalsIgnoreCase(name, field->getName())) {
+        else if (field->getType() == Field::Type::CHECK && name.equalsIgnoreCase(field->getName())) {
             __LDBG_printf("name=%s checkbox=%d", name.c_str(), field->getValue().toInt());
             if (field->getValue().toInt()) {
                 output.print(FSPGM(_checked, " checked"));
             }
             return true;
         }
-        else if (field->getType() == Field::Type::SELECT && strncasecmp_P(name.c_str(), field->getName(), len) == 0) {
+        else if (field->getType() == Field::Type::SELECT && strncasecmp_P(name.c_str(), reinterpret_cast<PGM_P>(field->getName()), len) == 0) {
             if (name.length() == len) {
                 __LDBG_printf("name=%s select=%s", name.c_str(), field->getValue().c_str());
                 PrintHtmlEntities::printTo(PrintHtmlEntities::Mode::ATTRIBUTE, field->getValue().c_str(), output);

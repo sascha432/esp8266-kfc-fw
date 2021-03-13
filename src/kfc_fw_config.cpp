@@ -308,7 +308,6 @@ void KFCFWConfiguration::_onWiFiGotIPCb(const WiFiEventStationModeGotIP &event)
 #if ENABLE_DEEP_SLEEP
     config.storeStationConfig(event.ip, event.mask, event.gw);
 #endif
-
     LoopFunctions::callOnce([event]() {
         WiFiCallbacks::callEvent(WiFiCallbacks::EventType::CONNECTED, (void *)&event);
     });
@@ -730,12 +729,12 @@ void KFCFWConfiguration::storeQuickConnect(const uint8_t *bssid, int8_t channel)
     using namespace DeepSleep;
 
     WiFiQuickConnect quickConnect;
-    if (!RTCMemoryManager::read(RTCMemoryManager::RTCMemoryId::CONFIG, &quickConnect, sizeof(quickConnect))) {
+    if (!RTCMemoryManager::read(RTCMemoryManager::RTCMemoryId::QUICK_CONNECT, &quickConnect, sizeof(quickConnect))) {
         quickConnect = WiFiQuickConnect();
     }
     quickConnect.channel = channel;
     quickConnect.bssid = bssid;
-    RTCMemoryManager::write(RTCMemoryManager::RTCMemoryId::CONFIG, &quickConnect, sizeof(quickConnect));
+    RTCMemoryManager::write(RTCMemoryManager::RTCMemoryId::QUICK_CONNECT, &quickConnect, sizeof(quickConnect));
 }
 
 void KFCFWConfiguration::storeStationConfig(uint32_t ip, uint32_t netmask, uint32_t gateway)
@@ -750,7 +749,7 @@ void KFCFWConfiguration::storeStationConfig(uint32_t ip, uint32_t netmask, uint3
     using namespace DeepSleep;
 
     auto quickConnect = WiFiQuickConnect();
-    if (RTCMemoryManager::read(RTCMemoryManager::RTCMemoryId::CONFIG, &quickConnect, sizeof(quickConnect))) {
+    if (RTCMemoryManager::read(RTCMemoryManager::RTCMemoryId::QUICK_CONNECT, &quickConnect, sizeof(quickConnect))) {
         quickConnect.local_ip = ip;
         quickConnect.subnet = netmask;
         quickConnect.gateway = gateway;
@@ -758,7 +757,7 @@ void KFCFWConfiguration::storeStationConfig(uint32_t ip, uint32_t netmask, uint3
         quickConnect.dns2 = WiFi.dnsIP(1);
         auto flags = System::Flags::getConfig();
         quickConnect.use_static_ip = flags.use_static_ip_during_wakeup || !flags.is_station_mode_dhcp_enabled;
-        RTCMemoryManager::write(RTCMemoryManager::RTCMemoryId::CONFIG, &quickConnect, sizeof(quickConnect));
+        RTCMemoryManager::write(RTCMemoryManager::RTCMemoryId::QUICK_CONNECT, &quickConnect, sizeof(quickConnect));
     } else {
         __DBG_print("reading RTC memory failed");
     }
@@ -915,7 +914,7 @@ void KFCFWConfiguration::wifiQuickConnect()
         uint8_t *bssidPtr;
         DeepSleep::WiFiQuickConnect quickConnect;
 
-        if (RTCMemoryManager::read(PluginComponent::RTCMemoryId::CONFIG, &quickConnect, sizeof(quickConnect))) {
+        if (RTCMemoryManager::read(PluginComponent::RTCMemoryId::QUICK_CONNECT, &quickConnect, sizeof(quickConnect))) {
             channel = quickConnect.channel;
             bssidPtr = quickConnect.bssid;
         } else {
@@ -967,15 +966,6 @@ void KFCFWConfiguration::wifiQuickConnect()
 void KFCFWConfiguration::enterDeepSleep(milliseconds time, RFMode mode, uint16_t delayAfterPrepare)
 {
     __DBG_printf("time=%d mode=%d delay_prep=%d", time.count(), mode, delayAfterPrepare);
-
-#if RTC_SUPPORT
-    _deepSleepParams.unixtime = getRTC();
-#else
-    time_t now = ::time(nullptr);
-    if (IS_TIME_VALID(now)) {
-        // _deepSleepParams.unixtime = now;
-    }
-#endif
 
     // WiFiCallbacks::getVector().clear(); // disable WiFi callbacks to speed up shutdown
     // Scheduler.terminate(); // halt scheduler
@@ -1030,6 +1020,9 @@ void KFCFWConfiguration::restartDevice(bool safeMode)
 
     SaveCrash::removeCrashCounterAndSafeMode();
     resetDetector.setSafeMode(safeMode);
+#if ENABLE_DEEP_SLEEP
+    DeepSleep::DeepSleepParam::reset();
+#endif
     if (_safeMode) {
 #if DEBUG_SHUTDOWN_SEQUENCE
     ::printf(PSTR("safe mode: invoking restart\n"));

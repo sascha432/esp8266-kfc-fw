@@ -157,13 +157,13 @@ void WebTemplate::printSSDPUUID(Print &output)
 
 void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 {
-    if (String_equals(key, PSTR("HOSTNAME"))) {
+    if (key == F("HOSTNAME")) {
         output.print(System::Device::getName());
     }
-    else if (String_equals(key, F("TITLE"))) {
+    else if (key == F("TITLE")) {
         output.print(System::Device::getTitle());
     }
-    else if (String_equals(key, PSTR("HARDWARE"))) {
+    else if (key == F("HARDWARE")) {
 #if defined(ESP8266)
         output.printf_P(PSTR("ESP8266 %s Flash, %d Mhz, Free RAM %s"), formatBytes(ESP.getFlashChipRealSize()).c_str(), system_get_cpu_freq(), formatBytes(ESP.getFreeHeap()).c_str());
 #elif defined(ESP32)
@@ -175,42 +175,42 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         output.printf_P(PSTR(HTML_S(br) "Load Average %.2f %.2f %.2f"), LOOP_COUNTER_LOAD(load_avg[0]), LOOP_COUNTER_LOAD(load_avg[1]), LOOP_COUNTER_LOAD(load_avg[2]));
 #endif
     }
-    else if (String_equals(key, PSTR("VERSION"))) {
+    else if (key == F("VERSION")) {
         printVersion(output);
     }
-    else if (String_equals(key, PSTR("SOFTWARE"))) {
+    else if (key == F("SOFTWARE")) {
         printVersion(output);
         if (System::Flags::getConfig().is_default_password) {
             output.printf_P(PSTR(HTML_S(br) HTML_S(strong) "%s" HTML_E(strong)), SPGM(default_password_warning));
         }
     }
 #if HAVE_PCF8574
-    else if (String_equals(key, PSTR("PCF8574_STATUS"))) {
+    else if (key == F("PCF8574_STATUS")) {
         print_status_pcf8574(output);
     }
 #endif
 #if HAVE_PCF8575
-    else if (String_equals(key, PSTR("PCF8575_STATUS"))) {
+    else if (key == F("PCF8575_STATUS")) {
         print_status_pcf8575(output);
     }
 #endif
 #if HAVE_PCA9685
-    else if (String_equals(key, PSTR("PCA9685_STATUS"))) {
+    else if (key == F("PCA9685_STATUS")) {
         print_status_pca9685(output);
     }
 #endif
 #if HAVE_MCP23017
-    else if (String_equals(key, PSTR("MCP23017_STATUS"))) {
+    else if (key == F("MCP23017_STATUS")) {
         print_status_mcp23017(output);
     }
 #endif
 #if RTC_SUPPORT
-    else if (String_equals(key, PSTR("RTC_STATUS"))) {
+    else if (key == F("RTC_STATUS")) {
         config.printRTCStatus(output, false);
     }
 #endif
 #if NTP_CLIENT || RTC_SUPPORT
-    else if (String_equals(key, PSTR("TIME"))) {
+    else if (key == F("TIME")) {
         auto now = time(nullptr);
         if (!IS_TIME_VALID(now)) {
             output.print(F("No time available"));
@@ -219,34 +219,34 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         }
     }
 #endif
-    else if (String_equals(key, PSTR("SELF_URI"))) {
+    else if (key == F("SELF_URI")) {
         output.print(_selfUri);
     }
-    else if (String_equals(key, PSTR("SAFEMODE"))) {
+    else if (key == F("SAFEMODE")) {
         if (config.isSafeMode()) {
             output.print(F(" - Running in SAFE MODE"));
         }
     }
-    else if (String_equals(key, PSTR("UPTIME"))) {
+    else if (key == F("UPTIME")) {
         output.print(formatTime(getSystemUptime()));
     }
-    else if (String_equals(key, PSTR("WIFI_UPTIME"))) {
+    else if (key == F("WIFI_UPTIME")) {
         auto wifiUp = KFCFWConfiguration::getWiFiUp();
         output.print(System::Flags::getConfig().is_station_mode_enabled ? (wifiUp == 0 ? FSPGM(Offline, "Offline") : formatTime(wifiUp / 1000)) : F("Client mode disabled"));
     }
-    else if (String_equals(key, PSTR("IP_ADDRESS"))) {
+    else if (key == F("IP_ADDRESS")) {
         WiFi_get_address(output);
     }
-    else if (String_equals(key, PSTR("WIFI_IP_ADDRESS"))) {
+    else if (key == F("WIFI_IP_ADDRESS")) {
         WiFi.localIP().printTo(output);
     }
-    else if (String_equals(key, PSTR("WEB_INTERFACE_URL"))) {
+    else if (key == F("WEB_INTERFACE_URL")) {
         WebTemplate::printWebInterfaceUrl(output);
     }
-    else if (String_equals(key, PSTR("MODEL"))) {
+    else if (key == F("MODEL")) {
         WebTemplate::printModel(output);
     }
-    else if (String_equals(key, PSTR("RANDOM"))) {
+    else if (key == F("RANDOM")) {
         uint8_t buf[8];
         rng.rand(buf, sizeof(buf));
         for(auto n: buf) {
@@ -254,7 +254,7 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
             output.print((char)(n < 26 ? (n + 'a') : (n + ('0' - 26))));
         }
     }
-    else if (String_equals(key, PSTR("ALIVE_REDIRECTION"))) {
+    else if (key == F("ALIVE_REDIRECTION")) {
         if (_aliveRedirection.length()) {
             output.print(_aliveRedirection);
         }
@@ -263,48 +263,48 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         }
     }
 #if DEBUG_ASSETS
-    else if (String_equals(key, PSTR("DEBUG_ASSETS_URL1"))) {
+    else if (key == F("DEBUG_ASSETS_URL1")) {
         output.print(F(DEBUG_ASSETS_URL1));
     }
-    else if (String_equals(key, PSTR("DEBUG_ASSETS_URL2"))) {
+    else if (key == F("DEBUG_ASSETS_URL2")) {
         output.print(F(DEBUG_ASSETS_URL2));
     }
 #endif
     // ------------------------------------------------------------------------------------
     // requires to be authenticated from here on
     else if (!isAuthenticated()) {
-        if (String_equals(key, PSTR("IS_CONFIG_DIRTY"))) {
+        if (key == F("IS_CONFIG_DIRTY")) {
             output.print(FSPGM(_hidden));
         }
-        else if (String_equals(key, PSTR("IS_CONFIG_DIRTY_CLASS"))) {
+        else if (key == F("IS_CONFIG_DIRTY_CLASS")) {
             output.print(FSPGM(hidden));
         }
         return;
     }
     // ------------------------------------------------------------------------------------
-    else if (String_equals(key, PSTR("UNIQUE_ID"))) {
+    else if (key == F("UNIQUE_ID")) {
         WebTemplate::printUniqueId(output, FSPGM(kfcfw), -1);
     }
-    else if (String_equals(key, PSTR("SSDP_UUID"))) {
+    else if (key == F("SSDP_UUID")) {
 #if IOT_SSDP_SUPPORT
         WebTemplate::printSSDPUUID(output);
 #else
         output.print(F("<SSDP support disabled>"));
 #endif
     }
-    else if (String_equals(key, PSTR("IS_CONFIG_DIRTY"))) {
+    else if (key == F("IS_CONFIG_DIRTY")) {
         if (!config.isConfigDirty()) {
             output.print(FSPGM(_hidden));
         }
     }
-    else if (String_equals(key, PSTR("IS_CONFIG_DIRTY_CLASS"))) {
+    else if (key == F("IS_CONFIG_DIRTY_CLASS")) {
         if (config.isConfigDirty()) {
             output.print(F("alert alert-dismissible alert-danger fade show"));
         } else {
             output.print(FSPGM(hidden));
         }
     }
-    else if (String_equals(key, PSTR("WEBUI_ALERTS_MQTT_SCRIPT"))) {
+    else if (key == F("WEBUI_ALERTS_MQTT_SCRIPT")) {
 #if WEBUI_ALERTS_ENABLED && WEBUI_ALERTS_USE_MQTT
 
         output.printf_P(PSTR(HTML_S(script)));
@@ -324,7 +324,7 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 
 #endif
     }
-    else if (String_equals(key, PSTR("WEBUI_ALERTS_STATUS"))) {
+    else if (key == F("WEBUI_ALERTS_STATUS")) {
 #if WEBUI_ALERTS_ENABLED
         if (WebAlerts::Alert::hasOption(WebAlerts::OptionsType::ENABLED)) {
             output.printf_P(PSTR("Storage %s, rewrite size %d, poll interval %.2fs, WebUI max. height %s"), SPGM(alerts_storage_filename), WEBUI_ALERTS_REWRITE_SIZE, WEBUI_ALERTS_POLL_INTERVAL / 1000.0, WEBUI_ALERTS_MAX_HEIGHT);
@@ -336,7 +336,7 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 #endif
     }
 #if IOT_ALARM_PLUGIN_ENABLED
-    else if (String_startsWith(key, PSTR("ALARM_TIMESTAMP_"))) {
+    else if (key.startsWithF("ALARM_TIMESTAMP_")) {
         uint8_t num = atoi(key.c_str() + 16);
         if (num < Plugins::Alarm::MAX_ALARMS) {
             auto cfg = Plugins::Alarm::getConfig().alarms[num];
@@ -684,34 +684,34 @@ bool TemplateDataProvider::callback(const String& name, DataProviderInterface& p
     FillBufferMethod fbMethod = FillBufferMethod::NONE;
 
     // menus
-    if (String_equals(name, PSTR("MENU_HTML_MAIN"))) {
+    if (name == F("MENU_HTML_MAIN")) {
         bootstrapMenu.html(printArgs);
         fbMethod = FillBufferMethod::PRINT_ARGS;
     }
-    else if (String_startsWith(name, PSTR("MENU_HTML_MAIN_"))) {
+    else if (name.startsWith(F("MENU_HTML_MAIN_"))) {
         bootstrapMenu.html(printArgs, bootstrapMenu.findMenuByLabel(name.substring(15)));
         fbMethod = FillBufferMethod::PRINT_ARGS;
     }
-    else if (String_startsWith(name, PSTR("MENU_HTML_SUBMENU_"))) {
+    else if (name.startsWith(F("MENU_HTML_SUBMENU_"))) {
         bootstrapMenu.htmlSubMenu(printArgs, bootstrapMenu.findMenuByLabel(name.substring(18)), 0);
         fbMethod = FillBufferMethod::PRINT_ARGS;
     }
     // forms
-    else if (String_equals(name, PSTR("FORM_HTML"))) {
+    else if (name == F("FORM_HTML")) {
         auto form = webTemplate.getForm();
         if (form) {
             form->createHtml(printArgs);
             fbMethod = FillBufferMethod::PRINT_ARGS;
         }
     }
-    else if (String_equals(name, PSTR("FORM_VALIDATOR"))) {
+    else if (name == F("FORM_VALIDATOR")) {
         auto form = webTemplate.getForm();
         if (form) {
             form->createJavascript(printArgs);
             fbMethod = FillBufferMethod::PRINT_ARGS;
         }
     }
-    else if (String_equals(name, PSTR("FORM_JSON"))) {
+    else if (name == F("FORM_JSON")) {
         auto json = webTemplate.getJson();
         if (json) {
             auto stream = std::shared_ptr<JsonBuffer>(new JsonBuffer(*json));
@@ -722,7 +722,7 @@ bool TemplateDataProvider::callback(const String& name, DataProviderInterface& p
         }
     }
     // plugin status
-    else if (String_equals(name, PSTR("PLUGIN_STATUS"))) {
+    else if (name == F("PLUGIN_STATUS")) {
         auto stream = std::shared_ptr<PluginStatusStream>(new PluginStatusStream());
         provider.setFillBuffer([stream](uint8_t *buffer, size_t size) {
             return stream->readBytes(buffer, size);

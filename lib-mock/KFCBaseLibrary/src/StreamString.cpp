@@ -5,7 +5,7 @@
 
 size_t StreamString::write(const uint8_t *data, size_t size) {
     if(size && data) {
-        this->append((const char *)data, size);
+        this->concat((const char *)data, size);
         return size;
     }
     return 0;

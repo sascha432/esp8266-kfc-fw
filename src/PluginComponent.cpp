@@ -277,7 +277,7 @@ bool PluginComponent::removeFromBlacklist(const String &name)
                 // somewhere in the middle
                 tmp += ',';
                 _blacklist.replace(tmp, String(','));
-                String_trim(_blacklist, ',');
+                _blacklist.trim(',');
             }
         }
     }

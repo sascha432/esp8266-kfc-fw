@@ -40,21 +40,21 @@ Form::BaseForm &Field::BaseField::getForm() const
 
 
 __KFC_FORMS_INLINE_METHOD__
-PGM_P Field::BaseField::getName() const
+const __FlashStringHelper *Field::BaseField::getName() const
 {
-    return _name;
+    return FPSTR(_name);
 }
 
 
 __KFC_FORMS_INLINE_METHOD__
-PGM_P Field::BaseField::getNameForType() const
+const __FlashStringHelper *Field::BaseField::getNameForType() const
 {
     switch(pgm_read_byte(_name)) {
         case '.':
         case '#':
-            return _name + 1;
+            return FPSTR(_name + 1);
     }
-    return _name;
+    return FPSTR(_name);
 }
 
 

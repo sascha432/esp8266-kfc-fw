@@ -28,7 +28,7 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
 {
     // auto scheduledTasks = File2String<const __FlashStringHelper *>(FSPGM(scheduler_config_file));
     // if (type == FormCallbackType::CREATE_POST) {
-    //     if (String_equals(formName, SPGM(device))) {
+    //     if (formName.equals(FSPGM(device))) {
     //         auto field = form.getField(F("schet"));
     //         if (field && field->hasChanged()) {
     //             auto crc = crc16_update(field->getValue().c_str(), field->getValue().length());
@@ -42,7 +42,7 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
     // }
     // else
     if (type == FormCallbackType::SAVE) {
-        if (String_equals(formName, SPGM(password))) {
+        if (formName.equals(FSPGM(password))) {
             auto field = form.getField(FSPGM(npwd));
             if (field) {
                 auto &flags = System::Flags::getWriteableConfig();
@@ -50,7 +50,7 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
                 System::Device::setPassword(field->getValue());
             }
         }
-        else if (String_equals(formName, SPGM(device))) {
+        else if (formName.equals(FSPGM(device))) {
             config.setConfigDirty(true);
             // auto field = form.getField(F("schet"));
             // if (field && field->hasChanged()) {
@@ -63,7 +63,7 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
 
         auto &flags = System::Flags::getWriteableConfig();
 
-        if (String_equals(formName, SPGM(wifi))) {
+        if (formName.equals(FSPGM(wifi))) {
 
             auto &softAp = Network::SoftAP::getWriteableConfig();
             FormUI::Container::List wifiModes(createWifiModes());
@@ -139,7 +139,7 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             apModeGroup.end();
 
         }
-        else if (String_equals(formName, SPGM(network))) {
+        else if (formName.equals(FSPGM(network))) {
 
             auto &network = Network::Settings::getWriteableConfig();
             auto &softAp = Network::SoftAP::getWriteableConfig();
@@ -192,7 +192,7 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             apGroup.end();
 
         }
-        else if (String_equals(formName, SPGM(device))) {
+        else if (formName.equals(FSPGM(device))) {
 
             auto &cfg = System::Device::getWriteableConfig();
 
@@ -281,7 +281,7 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             schedulerGroup.end();
 
         }
-        else if (String_equals(formName, SPGM(password))) {
+        else if (formName.equals(FSPGM(password))) {
 
             auto &ui = form.createWebUI();
             ui.setStyle(FormUI::WebUI::StyleType::ACCORDION);

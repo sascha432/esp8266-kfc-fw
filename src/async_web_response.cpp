@@ -447,7 +447,7 @@ size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
                 _buffer.printf_P(PSTR("{\"f\":\"%s\",\"n\":\"%s\",\"m\":%d,\"d\":1"),
                     location.c_str(),
                     name.c_str(),
-                    String_startsWith(path, tmp_dir) ? TYPE_TMP_DIR : (_dir.isMapping() ? TYPE_MAPPED_DIR : TYPE_REGULAR_DIR)
+                    path.startsWith(tmp_dir) ? TYPE_TMP_DIR : (_dir.isMapping() ? TYPE_MAPPED_DIR : TYPE_REGULAR_DIR)
                 );
             }
             else if (_dir.isFile()) {

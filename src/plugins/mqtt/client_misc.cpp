@@ -115,8 +115,7 @@ int8_t MQTTClient::toBool(const char *str, int8_t invalid)
     }
     // check if it is a string match
     auto tmp = String(str);
-    String_rtrim(tmp);
-    auto cTmp = tmp.c_str();
+    auto cTmp = tmp.trim().c_str();
     if (
         (strcasecmp_P(cTmp, PSTR("true")) == 0) ||
         (strcasecmp_P(cTmp, PSTR("on")) == 0) ||

@@ -12,6 +12,9 @@
 
 class String;
 
+
+#include "cores/esp8266/WString.h"
+
 class LPWStr {
 public:
     LPWStr();
@@ -24,6 +27,8 @@ public:
 private:
     LPWSTR _str;
 };
+
+#if CUSTOM_STRING_CLASS
 
 class String : public std::string {
 public:
@@ -104,3 +109,45 @@ public:
     LPWStr LPWStr();
     std::wstring w_str();
 };
+
+namespace esp8266 {
+    using String = String;
+}
+
+#else
+
+using WString = esp8266::String;
+
+class String : public esp8266::String {
+public:
+    using esp8266::String::String;
+
+    using esp8266::String::capacity;
+
+    String substring(unsigned int left) const {
+        return substring(left, length());
+    }
+    String substring(unsigned int left, unsigned int right) const {
+        if (left > right) {
+            unsigned int temp = right;
+            right = left;
+            left = temp;
+        }
+        String out;
+        if (left >= len())
+            return out;
+        if (right > len())
+            right = len();
+        char temp = buffer()[right];  // save the replaced character
+        wbuffer()[right] = '\0';
+        out = wbuffer() + left;  // pointer arithmetic
+        wbuffer()[right] = temp;  //restore character
+        return out;
+    }
+
+    //inline unsigned int capacity() const {
+    //    return String::capacity();
+    //}
+};
+
+#endif

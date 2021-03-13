@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <array>
 #include <vector>
+#include <stdint.h>
 #include <functional>
 #include <type_traits>
 #include <utility>
@@ -29,7 +30,9 @@ typedef uint32_t                                    progmem_aligned_t;
 PROGMEM_READ_ALIGNED_CHUNK(var)
 #endif
 
-class String;
+#include "WString.h"
+
+//class String;
 using StringVector = std::vector<String>;
 
 // pretty format for bytes and unix time
@@ -166,21 +169,20 @@ inline size_t String_replaceIgnoreCase(String &str, int from, int to)
 }
 
 #include "misc_string.h"
-#include "misc_string_inline.h"
 
 // trim trailing zeros
 // return length of the string
 // output can be nullptr to get the length
 size_t printTrimmedDouble(Print *output, double value, int digits = 6);
 
-static inline bool String_startsWith(const String &str1, char ch) {
-    return str1.length() != 0 && str1.charAt(0) == ch;
-}
-bool String_endsWith(const String &str1, char ch);
+// static inline bool String_startsWith(const String &str1, char ch) {
+//     return str1.length() != 0 && str1.charAt(0) == ch;
+// }
+// bool String_endsWith(const String &str1, char ch);
 
-// compare functions that do not create a String object of "str2"
-bool String_startsWith(const String &str1, PGM_P str2);
-bool String_endsWith(const String &str1, PGM_P str2);
+// // compare functions that do not create a String object of "str2"
+// bool String_startsWith(const String &str1, PGM_P str2);
+// bool String_endsWith(const String &str1, PGM_P str2);
 
 // bool String_equals(const String &str1, PGM_P str2);
 // bool String_equalsIgnoreCase(const String &str1, PGM_P str2);

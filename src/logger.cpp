@@ -214,7 +214,7 @@ void Logger::writeLog(Level logLevel, const char *message, va_list arg)
 
         msg.vprintf_P(message, arg);
 
-        String_rtrim(msg);
+        msg.rtrim();
 
         if (file) {
             file.print(header);

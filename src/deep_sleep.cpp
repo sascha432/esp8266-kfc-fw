@@ -63,9 +63,11 @@ inline static void deep_sleep_preinit()
                 deepSleepParams._remainingSleepTime = 0;
                 deepSleepParams._currentSleepTime = 0;
 #if !RTC_SUPPORT
-                struct timeval tv = { static_cast<time_t>(deepSleepParams._realTime + ((deepSleepParams._totalSleepTime + (deepSleepParams._runtime / 1000U)) / 1000U)), 0 };
-                settimeofday(&tv, nullptr);
-                ::printf_P(PSTR("stored.time=%ld total=%.3f runtime=%.6f est.tikme=%ld\n"), deepSleepParams._realTime, deepSleepParams._totalSleepTime / 1000.0, deepSleepParams._runtime / 1000000.0, time(nullptr));
+                if (deepSleepParams._realTime) {
+                    struct timeval tv = { static_cast<time_t>(deepSleepParams._realTime + ((deepSleepParams._totalSleepTime + (deepSleepParams._runtime / 1000U)) / 1000U)), 0 };
+                    settimeofday(&tv, nullptr);
+                }
+                ::printf_P(PSTR("stored.time=%ld total=%.3f runtime=%.6f est.time=%ld\n"), deepSleepParams._realTime, deepSleepParams._totalSleepTime / 1000.0, deepSleepParams._runtime / 1000000.0, time(nullptr));
 #endif
             }
             else {
@@ -106,12 +108,19 @@ inline static void deep_sleep_preinit()
     }
 }
 
+void DeepSleepParam::reset()
+{
+    deepSleepParams = DeepSleepParam();
+    RTCMemoryManager::remove(RTCMemoryManager::RTCMemoryId::DEEP_SLEEP);
+}
+
 void DeepSleepParam::enterDeepSleep(milliseconds sleep_time)
 {
     deepSleepParams = DeepSleepParam(sleep_time);
 
 #if DEBUG_DEEP_SLEEP
     Logger_notice(F("going to deep sleep, time=%ld sleep-time=%.3f"), time(nullptr), deepSleepParams.getTotalTime());
+    delay(250);
 #endif
 
     deepSleepParams.updateRemainingTime();

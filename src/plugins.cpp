@@ -135,7 +135,7 @@ void Register::prepare()
 //
     // __LDBG_printf("counter=%d", _plugins.size());
 
-    __DBG_printf("counter=%d", _plugins.size());
+    __LDBG_printf("counter=%d", _plugins.size());
 }
 
 void RegisterEx::_createMenu()

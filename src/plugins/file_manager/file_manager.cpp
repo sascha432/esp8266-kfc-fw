@@ -175,25 +175,25 @@ void FileManager::handleRequest()
     if (!_isAuthenticated) {
         _sendResponse(403);
     }
-    else if (String_equals(_uri, PSTR("list"))) {
+    else if (_uri.equals(F("list"))) {
         _sendResponse(list());
     }
-    else if (String_equals(_uri, PSTR("mkdir"))) {
+    else if (_uri.equals(F("mkdir"))) {
         _sendResponse(mkdir());
     }
-    else if (String_equals(_uri, SPGM(upload))) {
+    else if (_uri.equals(F("upload"))) {
         _sendResponse(upload());
     }
-    else if (String_equals(_uri, PSTR("remove"))) {
+    else if (_uri.equals(F("remove"))) {
         _sendResponse(remove());
     }
-    else if (String_equals(_uri, PSTR("rename"))) {
+    else if (_uri.equals(F("rename"))) {
         _sendResponse(rename());
     }
-    else if (String_equals(_uri, PSTR("view"))) {
+    else if (_uri.equals(F("view"))) {
         _sendResponse(view(false));
     }
-    else if (String_equals(_uri, PSTR("download"))) {
+    else if (_uri.equals(F("download"))) {
         _sendResponse(view(true));
     }
     else {

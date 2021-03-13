@@ -65,14 +65,14 @@ namespace FormUI {
                 return strcmp_P_P(name, _name) == 0;
             }
 
-            PGM_P getName() const;
+            const __FlashStringHelper *getName() const;
 
             // returns ltrim '#.' of the name
-            PGM_P getNameForType() const;
+            const __FlashStringHelper *getNameForType() const;
 
             // returns '" id="' if name starts with '#' or ' ' if it starts with '.', and an empty string if the name is empty
             // use with printf("... class=\"row%s%s\" ...", getNameType(),getNameForType());
-            PGM_P getNameType() const;
+            const __FlashStringHelper *getNameType() const;
 
             // return value stored in base field
             const String &getValue() const;

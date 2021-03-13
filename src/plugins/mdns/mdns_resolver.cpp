@@ -71,8 +71,8 @@ MDNSResolver::Query::Query(const String &name, const String &service, const Stri
     _timeout(timeout),
     _serviceQuery(nullptr),
     _resolved(false),
-    _isAddress(String_equals(addressValue, SPGM(address))),
-    _isPort(String_equals(portValue, SPGM(port)))
+    _isAddress(addressValue.equals(FSPGM(address))),
+    _isPort(portValue.equals(FSPGM(port)))
 {
 }
 
@@ -171,7 +171,7 @@ void MDNSResolver::Query::createZeroConf(Print &output) const
     output.print(_proto);
     output.print(',');
     output.print(_addressValue);
-    //if (!String_equals(_portValue, SPGM(port)))
+    //if (!_portValue.equals(FSPGM(port)))
     {
         output.print(':');
         output.print(_portValue);

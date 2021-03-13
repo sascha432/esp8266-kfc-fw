@@ -18,16 +18,16 @@ Field::BaseField::~BaseField()
     }
 }
 
-PGM_P Field::BaseField::getNameType() const
+const __FlashStringHelper *Field::BaseField::getNameType() const
 {
     auto ch = pgm_read_byte(_name);
     if (!ch) {
-        return emptyString.c_str();
+        return FPSTR(emptyString.c_str());
     }
     else if (ch == '.') {
-        return PSTR(" ");
+        return F(" ");
     }
-    return PSTR("\" id=\"");
+    return F("\" id=\"");
 }
 
 

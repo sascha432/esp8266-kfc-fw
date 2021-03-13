@@ -590,38 +590,35 @@ size_t str_case_replace(char *src, int from, int to, size_t maxLen)
 }
 
 
-size_t String_rtrim(String &str)
-{
-    auto len = str.length();
-    while (len && isspace(str.charAt(len - 1))) {
-        len--;
-    }
-    str.remove(len, -1);
-    return len;
-}
+// size_t String_rtrim(String &str)
+// {
+//     auto len = str.length();
+//     while (len && isspace(str.charAt(len - 1))) {
+//         len--;
+//     }
+//     str.remove(len, -1);
+//     return len;
+// }
 
-size_t String_ltrim(String &str)
-{
-    size_t remove = 0;
-    while (isspace(str.charAt(remove))) {
-        remove++;
-    }
-    str.remove(0, remove);
-    return str.length();
-}
+// size_t String_ltrim(String &str)
+// {
+//     size_t remove = 0;
+//     while (isspace(str.charAt(remove))) {
+//         remove++;
+//     }
+//     str.remove(0, remove);
+//     return str.length();
+// }
 
-size_t String_trim(String &str)
-{
-    str.trim();
-    return str.length();
-}
+// size_t String_trim(String &str)
+// {
+//     str.trim();
+//     return str.length();
+// }
 
 size_t String_rtrim(String &str, const char *chars, size_t minLength)
 {
     if (!chars) {
-#if DEBUG_STRING_CHECK_NULLPTR
-        debug_printf_P(PSTR("str=%s chars=%p\n"), str.c_str(), chars);
-#endif
         return str.length();
     }
     auto len = str.length();
@@ -635,36 +632,33 @@ size_t String_rtrim(String &str, const char *chars, size_t minLength)
     return len;
 }
 
-size_t String_ltrim(String &str, const char *chars)
-{
-   if (!chars) {
-#if DEBUG_STRING_CHECK_NULLPTR
-        debug_printf_P(PSTR("str=%s chars=%p\n"), str.c_str(), chars);
-#endif
-        return str.length();
-    }
-   if (str.length()) {
-       size_t remove = 0;
-       while (strchr(chars, str.charAt(remove))) {
-           remove++;
-       }
-       str.remove(0, remove);
-   }
-    return str.length();
-}
+// size_t String_ltrim(String &str, const char *chars)
+// {
+//    if (!chars) {
+// #if DEBUG_STRING_CHECK_NULLPTR
+//         debug_printf_P(PSTR("str=%s chars=%p\n"), str.c_str(), chars);
+// #endif
+//         return str.length();
+//     }
+//    if (str.length()) {
+//        size_t remove = 0;
+//        while (strchr(chars, str.charAt(remove))) {
+//            remove++;
+//        }
+//        str.remove(0, remove);
+//    }
+//     return str.length();
+// }
 
-size_t String_trim(String &str, const char *chars)
-{
-    String_rtrim(str, chars);
-    return String_ltrim(str, chars);
-}
+// size_t String_trim(String &str, const char *chars)
+// {
+//     String_rtrim(str, chars);
+//     return String_ltrim(str, chars);
+// }
 
 size_t String_rtrim_P(String &str, PGM_P chars, size_t minLength)
 {
     if (!chars) {
-#if DEBUG_STRING_CHECK_NULLPTR
-        debug_printf_P(PSTR("str=%s chars=%p\n"), str.c_str(), chars);
-#endif
         return str.length();
     }
     auto buf = new char[strlen_P(chars) + 1];
@@ -674,47 +668,47 @@ size_t String_rtrim_P(String &str, PGM_P chars, size_t minLength)
     return len;
 }
 
-size_t String_ltrim_P(String &str, PGM_P chars)
-{
-    if (!chars) {
-#if DEBUG_STRING_CHECK_NULLPTR
-        debug_printf_P(PSTR("str=%s chars=%p\n"), str.c_str(), chars);
-#endif
-        return str.length();
-    }
-    auto buf = new char[strlen_P(chars) + 1];
-    strcpy_P(buf, chars);
-    auto len = String_ltrim(str, buf);
-    delete[] buf;
-    return len;
-}
+// size_t String_ltrim_P(String &str, PGM_P chars)
+// {
+//     if (!chars) {
+// #if DEBUG_STRING_CHECK_NULLPTR
+//         debug_printf_P(PSTR("str=%s chars=%p\n"), str.c_str(), chars);
+// #endif
+//         return str.length();
+//     }
+//     auto buf = new char[strlen_P(chars) + 1];
+//     strcpy_P(buf, chars);
+//     auto len = String_ltrim(str, buf);
+//     delete[] buf;
+//     return len;
+// }
 
-size_t String_trim_P(String &str, PGM_P chars)
-{
-    if (!chars) {
-#if DEBUG_STRING_CHECK_NULLPTR
-        debug_printf_P(PSTR("str=%s chars=%p\n"), str.c_str(), chars);
-#endif
-        return str.length();
-    }
-    auto buf = new char[strlen_P(chars) + 1];
-    strcpy_P(buf, chars);
-    auto len = String_trim(str, buf);
-    delete[] buf;
-    return len;
-}
+// size_t String_trim_P(String &str, PGM_P chars)
+// {
+//     if (!chars) {
+// #if DEBUG_STRING_CHECK_NULLPTR
+//         debug_printf_P(PSTR("str=%s chars=%p\n"), str.c_str(), chars);
+// #endif
+//         return str.length();
+//     }
+//     auto buf = new char[strlen_P(chars) + 1];
+//     strcpy_P(buf, chars);
+//     auto len = String_trim(str, buf);
+//     delete[] buf;
+//     return len;
+// }
 
-size_t String_trim(String &str, char ch)
-{
-    char chars[2] = { ch, 0 };
-    return String_trim(str, chars);
-}
+// size_t String_trim(String &str, char ch)
+// {
+//     char chars[2] = { ch, 0 };
+//     return String_trim(str, chars);
+// }
 
-size_t String_ltrim(String &str, char ch)
-{
-    char chars[2] = { ch, 0 };
-    return String_ltrim(str, chars);
-}
+// size_t String_ltrim(String &str, char ch)
+// {
+//     char chars[2] = { ch, 0 };
+//     return String_ltrim(str, chars);
+// }
 
 size_t String_rtrim(String &str, char ch, size_t minLength)
 {

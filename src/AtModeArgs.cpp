@@ -145,19 +145,19 @@ uint32_t AtModeArgs::toMillis(uint16_t num, uint32_t minTime, uint32_t maxTime, 
     suffix.toLowerCase();
 
     uint32_t result;
-    if (String_equals(suffix, F("ms")) || String_startsWith(suffix, F("mil"))) {
+    if (suffix == F("ms") || suffix.startsWith(F("mil"))) {
         result =  value;
     }
-    else if (String_startsWith(suffix, F("s"))) {
+    else if (suffix.startsWith(F("s"))) {
         result =  value * 1000;
     }
-    else if (String_startsWith(suffix, F("m"))) {
+    else if (suffix.startsWith(F("m"))) {
         result =  value * 1000 * 60;
     }
-    else if (String_startsWith(suffix, F("h"))) {
+    else if (suffix.startsWith(F("h"))) {
         result =  value * 1000 * 3600;
     }
-    else if (String_startsWith(suffix, F("d"))) {
+    else if (suffix.startsWith(F("d"))) {
         result =  value * 1000 * 86400;
     }
     else {

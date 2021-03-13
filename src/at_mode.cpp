@@ -407,12 +407,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPA, "DUMPA", "<reset|mark|leak|freed>",
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMPFS, "DUMPFS", "Display file system information");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPEE, "DUMPEE", "[<offset>[,<length>]", "Dump EEPROM");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMPST, "DUMPST", "Dump Startup timings");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WRTC, "WRTC", "<id,data>", "Write uint32 to RTC memory");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMPRTC, "DUMPRTC", "Dump RTC memory");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(RTCCLR, "RTCCLR", "Clear RTC memory");
-#if ENABLE_DEEP_SLEEP
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RTCQCC, "RTCQCC", "<0=channel/bssid|1=static ip config.>", "Clear quick connect RTC memory");
-#endif
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RTCM, "RTCM", "<list|dump|clear|set|get|quickconnect>[,<id>[,<data>]", "RTC memory access");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIMO, "WIMO", "<0=off|1=STA|2=AP|3=STA+AP>", "Set WiFi mode, store configuration and reboot");
 #if LOGGER
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LOGDBG, "LOGDBG", "<1|0>", "Enable/disable writing debug output to log://debug");
@@ -487,16 +482,11 @@ void at_mode_help_commands()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPA), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPFS), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPEE), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPRTC), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPST), name);
 #if DEBUG_CONFIGURATION_GETHANDLE
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPH), name);
 #endif
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(WRTC), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(RTCCLR), name);
-#if ENABLE_DEEP_SLEEP
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(RTCQCC), name);
-#endif
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(RTCM), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(WIMO), name);
 #if LOGGER
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(LOGDBG), name);
@@ -1590,24 +1580,24 @@ void at_mode_serial_handle_event(String &commandString)
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(WIFI))) {
                 if (!args.empty()) {
                     auto arg0 = args.toString(0);
-                    if (String_equalsIgnoreCase(arg0, FSPGM(on))) {
+                    if (arg0.equalsIgnoreCase(FSPGM(on))) {
                         args.print(F("enabling station mode"));
                         WiFi.enableSTA(true);
                         WiFi.reconnect();
                     }
-                    else if (String_equalsIgnoreCase(arg0, FSPGM(off))) {
+                    else if (arg0.equalsIgnoreCase(FSPGM(off))) {
                         args.print(F("disabling station mode"));
                         WiFi.enableSTA(false);
                     }
-                    else if (String_equalsIgnoreCase(arg0, F("ap_on"))) {
+                    else if (arg0.equalsIgnoreCase(F("ap_on"))) {
                         args.print(F("enabling AP mode"));
                         WiFi.enableAP(true);
                     }
-                    else if (String_equalsIgnoreCase(arg0, F("ap_off"))) {
+                    else if (arg0.equalsIgnoreCase(F("ap_off"))) {
                         args.print(F("disabling AP mode"));
                         WiFi.enableAP(false);
                     }
-                    else if (String_equalsIgnoreCase(arg0, F("reset"))) {
+                    else if (arg0.equalsIgnoreCase(F("reset"))) {
                         config.reconfigureWiFi();
                     }
                 }
@@ -2159,48 +2149,88 @@ void at_mode_serial_handle_event(String &commandString)
                 at_mode_dump_fs_info(output);
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPEE))) {
-                uint16_t offset = args.toInt(0);
+                uint16_t offset = args.toNumber(0);
                 uint16_t length = args.toInt(1, 1);
                 config.dumpEEPROM(output, false, offset, length);
             }
-            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(WRTC))) {
-                if (args.requireArgs(2, 2)) {
-                    auto rtcMemId = static_cast<RTCMemoryManager::RTCMemoryId>(args.toInt(0));
-                    uint32_t data = (uint32_t)args.toNumber(1);
-                    RTCMemoryManager::write(rtcMemId, &data, sizeof(data));
-                    args.printf_P(PSTR("id=%u, data=%u (%x)"), rtcMemId, data, data);
-                }
-            }
-            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPRTC))) {
-                RTCMemoryManager::dump(Serial);
-// #if IOT_REMOTE_CONTROL
-//                 RemoteControlPlugin::PinState state;
-//                 RTCMemoryManager::read(RTCMemoryManager::RTCMemoryId::REMOTE_INIT_PIN_STATE, &state, sizeof(state));
-//                 args.printf_P(PSTR("Remote pin state time=%u valid=%u keys=%s"), state._time, state.isValid(), BitsToStr<RemoteControl::kButtonPins.size(), true>(state._pressed).c_str());
-
-// #endif
-            }
-            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RTCCLR))) {
-                RTCMemoryManager::clear();
-                args.print(F("Memory cleared"));
-            }
-#if ENABLE_DEEP_SLEEP
-            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RTCQCC))) {
-                if (args.requireArgs(1, 1)) {
-                    int num = args.toInt(0);
-                    if (num == 0) {
-                        uint8_t bssid[6] = {};
-                        config.storeQuickConnect(bssid, -1);
-                        args.print(F("BSSID and channel removed"));
-                    } else if (num == 1) {
-                        config.storeStationConfig(0, 0, 0);
-                        args.print(F("Static IP info removed"));
-                    } else {
-                        at_mode_print_invalid_arguments(output);
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RTCM))) {
+                if (args.requireArgs(1)) {
+                    auto &stream = args.getStream();
+                    auto memoryId = static_cast<RTCMemoryManager::RTCMemoryId>(args.toNumber(1));
+                    if (args.equalsIgnoreCase(0, F("qc")) || args.equalsIgnoreCase(0, F("quickconnect"))) {
+                        config.storeQuickConnect(WiFi.BSSID(), WiFi.channel());
+                        config.storeStationConfig(WiFi.localIP(), WiFi.subnetMask(), WiFi.gatewayIP());
+                        args.printf_P(PSTR("Quick connect stored"));
+                    }
+                    else if (args.equalsIgnoreCase(0, F("list")) || args.equalsIgnoreCase(0, F("info"))) {
+                        args.printf_P(PSTR("RTC memory ids:"));
+                        for(uint8_t i = static_cast<uint8_t>(RTCMemoryManager::RTCMemoryId::NONE) + 1; i < static_cast<uint8_t>(RTCMemoryManager::RTCMemoryId::MAX); i++) {
+                            stream.printf_P(PSTR("0x%02x      %s\n"), i, PluginComponent::getMemoryIdName(i));
+                        }
+                    }
+                    else if (args.equalsIgnoreCase(0, F("remove")) || args.equalsIgnoreCase(0, F("del")) || args.equalsIgnoreCase(0, F("delete")) || args.equalsIgnoreCase(0, F("rem"))) {
+                        if (memoryId != RTCMemoryManager::RTCMemoryId::NONE) {
+                            uint32_t tmp;
+                            if (RTCMemoryManager::read(memoryId, &tmp, sizeof(tmp))) {
+                                RTCMemoryManager::remove(memoryId);
+                                args.printf_P(PSTR("Data for id 0x%02x removed"), memoryId);
+                            }
+                            else {
+                                args.printf_P(PSTR("No data for id 0x%02x available"), memoryId);
+                            }
+                        }
+                    }
+                    else if (args.equalsIgnoreCase(0, F("clr")) || args.equalsIgnoreCase(0, F("clear"))) {
+                        if (memoryId != RTCMemoryManager::RTCMemoryId::NONE) {
+                            RTCMemoryManager::remove(memoryId);
+                            args.printf_P(PSTR("Data for id 0x%02x removed"), memoryId);
+                        }
+                        else {
+                            RTCMemoryManager::clear();
+                            args.print(F("RTC Memory cleared"));
+                        }
+                    }
+                    else if (args.equalsIgnoreCase(0, F("set")) || args.equalsIgnoreCase(0, F("write"))) {
+                        uint32_t data[32];
+                        int count = 0;
+                        for (uint8_t i = 2; i < 32 + 2 && i < args.size(); i++) {
+                            data[count++] = args.toNumber(i);
+                        }
+                        auto lengthInBytes = sizeof(data[0]) * count;
+                        RTCMemoryManager::write(memoryId, &data, lengthInBytes);
+                        stream.printf_P(PSTR("id=0x%02x length=%u dwords=%u cmd="), memoryId, lengthInBytes, (lengthInBytes + 3) / 4);
+                        if (count == 0) {
+                            stream.printf_P(PSTR("+RTCM=remove,0x%02x\n"), memoryId);
+                        }
+                        else {
+                            stream.printf_P(PSTR("+RTCM=set,0x%02x,"), memoryId);
+                            for (uint8_t i = 0; i < count; i++) {
+                                stream.printf_P(PSTR("0x%08x%c"), data[i], i == count - 1 ? '\n' : ',');
+                            }
+                        }
+                    }
+                    else if (args.equalsIgnoreCase(0, F("get")) || args.equalsIgnoreCase(0, F("read"))) {
+                        uint32_t data[32];
+                        auto lengthInBytes = RTCMemoryManager::read(memoryId, &data, sizeof(data));
+                        auto count = (lengthInBytes + 3) / 4;
+                        stream.printf_P(PSTR("id=0x%02x length=%u dwords=%u cmd="), memoryId, lengthInBytes, (lengthInBytes + 3) / 4);
+                        if (count == 0) {
+                            stream.printf_P(PSTR("+RTCM=remove,0x%02x\n"), memoryId);
+                        }
+                        else {
+                            stream.printf_P(PSTR("+RTCM=set,0x%02x,"), memoryId);
+                            for (uint8_t i = 0; i < count; i++) {
+                                stream.printf_P(PSTR("0x%08x%c"), data[i], i == count - 1 ? '\n' : ',');
+                            }
+                        }
+                    }
+                    else {
+                        if (!RTCMemoryManager::dump(args.getStream(), memoryId) && memoryId != RTCMemoryManager::RTCMemoryId::NONE) {
+                            args.printf_P(PSTR("No data for id 0x%02x available"), memoryId);
+                        }
                     }
                 }
             }
-#endif
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPST))) {
                 _startupTimings.dump(args.getStream());
             }

@@ -31,7 +31,7 @@ namespace FormUI {
                 _message = message;
             }
 
-            const char *getName() const;
+            const __FlashStringHelper *getName() const;
             const String &getMessage() const;
             const bool is(Field::BaseField &field) const;
 

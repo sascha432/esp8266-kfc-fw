@@ -158,6 +158,8 @@ class __FlashStringHelper;
 #include <CRTDBG.h>
 #include <pgmspace.h>
 
+#include "WString.h"
+
 #define KFCFS                                           SPIFFS
 #define KFCFS_MAX_FILE_LEN                              31
 // includes directory slashes and filename

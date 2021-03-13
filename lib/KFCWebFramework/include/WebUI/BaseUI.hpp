@@ -60,7 +60,7 @@ bool WebUI::BaseUI::_isSelected(int32_t value) const
 __KFC_FORMS_INLINE_METHOD__
 bool WebUI::BaseUI::_compareTextValue(const char *value) const
 {
-    return String_equals(_parent->getValue(), value);
+    return _parent->getValue() == value;
 }
 
 

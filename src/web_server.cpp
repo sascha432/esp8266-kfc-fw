@@ -968,7 +968,7 @@ bool Plugin::_handleFileRead(String path, bool client_accepts_gzip, AsyncWebServ
 {
     __LDBG_printf("path=%s gz=%u request=%p", path.c_str(), client_accepts_gzip, request);
 
-    if (String_endsWith(path, '/')) {
+    if (path.endsWith('/')) {
         path += FSPGM(index_html);
     }
 

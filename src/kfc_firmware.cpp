@@ -432,10 +432,13 @@ void setup()
             delayedSetup(false);
         }
 
+#if DEBUG_DEEP_SLEEP
+        __DBG_printf("wakeup=%u mode=%u", wakeup, deepSleepParams.getWakeupMode());
         if (deepSleepParams.getWakeupMode() == DeepSleep::WakeupMode::AUTO) {
             Logger_notice(F("Wakeup from deep sleep, start-time=%u est.time=%u sleep-time=%.3f"), time(nullptr), deepSleepParams.getRealTime(), deepSleepParams.getTotalTime());
 
         }
+#endif
 
         _startupTimings.setLoopFunc(millis());
     }

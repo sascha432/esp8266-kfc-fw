@@ -411,8 +411,7 @@ String MQTTClient::_getBaseTopic()
     if (topic.indexOf(F("${device_title_no_space}")) != -1) {
         topic.replace(F("${device_title_no_space}"), _filterString(System::Device::getTitle(), true));
     }
-    String_rtrim(topic, '/');
-    return topic;
+    return topic.rtrim('/');
 }
 
 #if MQTT_GROUP_TOPIC

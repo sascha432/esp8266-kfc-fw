@@ -9,10 +9,10 @@
 using namespace FormUI::Form;
 
 __KFC_FORMS_INLINE_METHOD__
-const char *Error::getName() const
+const __FlashStringHelper *Error::getName() const
 {
     if (!_field) {
-        return emptyString.c_str();
+        return FPSTR(emptyString.c_str());
     }
     return _field->getName();
 }

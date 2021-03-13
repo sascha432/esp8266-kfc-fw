@@ -32,7 +32,7 @@ bool Entity::create(ComponentType componentType, const String &componentName, Fo
 {
     String suffix = System::Device::getName();
     if (componentName.length()) {
-        if (!String_startsWith(componentName, '/')) {
+        if (!componentName.startsWith('/')) {
             suffix += '/';
         }
         suffix += componentName;
@@ -63,11 +63,11 @@ bool Entity::_create(ComponentType componentType, const String &name, FormatType
     _topic = ClientConfig::getAutoDiscoveryPrefix();
     _topic += '/';
     _topic += Component::getNameByType(componentType);
-    if (!String_startsWith(name, '/')) {
+    if (!name.startsWith('/')) {
         _topic += '/';
     }
     _topic += name;
-    if (!String_endsWith(_topic, '/')) {
+    if (!_topic.endsWith('/')) {
         _topic += '/';
     }
     _topic += F("config");

@@ -80,7 +80,7 @@ uint32_t *RTCMemoryManager::_readMemory(uint16_t &length) {
         std::fill_n(buf, size, 0);
         memPtr = (uint32_t *)buf;
         uint16_t crc = -1;
-        if (!system_rtc_mem_read(offset / __blockSize, memPtr, size) || ((crc = crc16_update(memPtr, header.length + sizeof(header) - sizeof(header.crc))) != header.crc)) {
+        if (!system_rtc_mem_read(offset / __blockSize, memPtr, size) || ((crc = crc16_update(memPtr, header.length + offsetof(Header_t, crc))) != header.crc)) {
             __LDBG_printf("RTC memory: CRC mismatch %04x != %04x, length %d", crc, header.crc, size);
             __LDBG_delete_array(buf);
             return nullptr;
@@ -150,14 +150,18 @@ bool RTCMemoryManager::write(RTCMemoryId id, void *dataPtr, uint8_t dataLength)
         __LDBG_delete_array((uint8_t *)(memPtr));
     }
 
-    // append new data
-    Entry_t newEntry;
-    newData.reserve(newData.length() + sizeof(newEntry) + dataLength);
-    newEntry.mem_id = static_cast<decltype(newEntry.mem_id)>(id);
-    newEntry.length = dataLength;
+    if (dataLength) {
 
-    newData.write((const uint8_t *)&newEntry, sizeof(newEntry));
-    newData.write((const uint8_t *)dataPtr, dataLength);
+        // append new data
+        Entry_t newEntry;
+        newData.reserve(newData.length() + sizeof(newEntry) + dataLength);
+        newEntry.mem_id = static_cast<decltype(newEntry.mem_id)>(id);
+        newEntry.length = dataLength;
+
+        newData.write((const uint8_t *)&newEntry, sizeof(newEntry));
+        newData.write((const uint8_t *)dataPtr, dataLength);
+
+    }
 
     // align before adding header
     Header_t header;
@@ -171,7 +175,8 @@ bool RTCMemoryManager::write(RTCMemoryId id, void *dataPtr, uint8_t dataLength)
     }
 
     // append header and align
-    uint16_t crcPosition = (uint16_t)(newData.length() + sizeof(header) - sizeof(header.crc));
+    auto crcPosition = reinterpret_cast<uint16_t *>(newData.get() + offsetof(Header_t, crc));
+    // uint16_t crcPosition = (uint16_t)(newData.length() + sizeof(header) - sizeof(header.crc));
     newData.write((const uint8_t *)&header, sizeof(header));
 
     if (!__isHeaderAligned()) {
@@ -182,7 +187,14 @@ bool RTCMemoryManager::write(RTCMemoryId id, void *dataPtr, uint8_t dataLength)
     }
 
     // update CRC in newData and store
-    *(uint16_t *)(newData.get() + crcPosition) = crc16_update(newData.get(), header.length + sizeof(header) - sizeof(header.crc));
+    // auto crc = crc16_update(newData.get(), header.length + offsetof(Header_t, crc));
+    // use memcpy to avoid alignment 32bit alignment issues
+    // memcpy(crcPosition, &crc, sizeof(crc));
+    // *(uint16_t *)(crcPosition) = crc16_update(newData.get(), header.length + sizeof(header) - sizeof(header.crc));
+
+    // update CRC in newData and store
+    *crcPosition = crc16_update(newData.get(), header.length + offsetof(Header_t, crc));
+
     auto result = system_rtc_mem_write((__memorySize - newData.length()) / __blockSize, (uint32_t *)newData.get(), newData.length());
 
     //ESP.rtcMemDump();

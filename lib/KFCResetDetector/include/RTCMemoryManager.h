@@ -52,6 +52,10 @@ public:
     static const uint16_t __headerOffset = __memorySize - __dataSize;
     static const uint16_t __headerAddress = __headerOffset / __blockSize;
 
+    inline static bool _isAligned(size_t length) {
+        return (length & __blockSizeMask) == 0;
+    }
+
     static constexpr bool __isHeaderAligned() {
         return (sizeof(Header_t) & __blockSizeMask) == 0;
     }
@@ -62,6 +66,9 @@ public:
 
     static bool read(RTCMemoryId id, void *, uint8_t maxSize);
     static bool write(RTCMemoryId id, void *, uint8_t maxSize);
+    static bool remove(RTCMemoryId id) {
+        return write(id, nullptr, 0);
+    }
     static bool clear();
 
 #if DEBUG

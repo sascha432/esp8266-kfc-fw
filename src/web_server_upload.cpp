@@ -38,10 +38,7 @@ using namespace WebServer;
 bool AsyncUpdateWebHandler::canHandle(AsyncWebServerRequest *request)
 {
     __LDBG_printf("update handler method_post=%u url=%s", (request->method() & WebRequestMethod::HTTP_POST), request->url().c_str());
-    if (!(request->method() & WebRequestMethod::HTTP_POST)) {
-        return false;
-    }
-    if (request->url() != F("/update")) {
+    if (request->url() != getURI()) {
         return false;
     }
     // emulate AsyncWebServerRequest dtor using onDisconnect callback
@@ -52,11 +49,11 @@ bool AsyncUpdateWebHandler::canHandle(AsyncWebServerRequest *request)
             request->_tempObject = nullptr;
         }
     });
-    request->addInterestingHeader(F("Cookie"));
+    request->addInterestingHeader(FSPGM(Cookie));
     return true;
 }
 
-UploadStatus *AsyncUpdateWebHandler::_validateSession(AsyncWebServerRequest *request)
+UploadStatus *AsyncUpdateWebHandler::_validateSession(AsyncWebServerRequest *request, int index)
 {
     auto status = reinterpret_cast<UploadStatus *>(request->_tempObject);
     if (status && status->authenticated) {
@@ -64,14 +61,20 @@ UploadStatus *AsyncUpdateWebHandler::_validateSession(AsyncWebServerRequest *req
     }
     if (!status) {
         __LDBG_printf("upload status=nullptr");
+        if (index != 0) {
+            request->client()->close();
+            return nullptr;
+        }
         Plugin::send(500, request);
-        request->client()->close();
         return nullptr;
     }
     if (!Plugin::getInstance().isAuthenticated(request)) {
         __LDBG_printf("authentication failed");
+        if (index != 0) {
+            request->client()->close();
+            return nullptr;
+        }
         Plugin::send(403, request);
-        request->client()->close();
         return nullptr;
     }
     status->authenticated = true;
@@ -80,14 +83,20 @@ UploadStatus *AsyncUpdateWebHandler::_validateSession(AsyncWebServerRequest *req
 
 void AsyncUpdateWebHandler::handleRequest(AsyncWebServerRequest *request)
 {
-    auto status = _validateSession(request);
+    auto status = _validateSession(request, 0);
     if (!status) {
         return;
     }
 
-    auto &plugin = Plugin::getInstance();
+    if (!(request->method() & WebRequestMethod::HTTP_POST)) {
+        __LDBG_printf("method not allowed");
+        Plugin::send(405, request);
+        return;
+    }
+
+    // auto &plugin = Plugin::getInstance();
     PrintString errorStr;
-    AsyncWebServerResponse *response = nullptr;
+    // AsyncWebServerResponse *response = nullptr;
 #if STK500V1
     if (status->command == U_ATMEGA) {
         if (!status->tempFile || !status->tempFile.fullName()) {
@@ -149,18 +158,8 @@ void AsyncUpdateWebHandler::handleRequest(AsyncWebServerRequest *request)
 errorResponse: ;
 #endif
         BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SOS);
-        Logger_error(F("Firmware upgrade failed: %s"), errorStr.c_str());
+        Plugin::message(request, MessageType::DANGER, errorStr, F("Firmware Upgrade Failed"));
 
-        String message = F("<h2>Firmware update failed with an error:<br></h2><h3>");
-        message += errorStr;
-        message += F("</h3>");
-
-        HttpHeaders httpHeaders(false);
-        httpHeaders.addNoCache();
-        if (!plugin._sendFile(String('/') + FSPGM(update_fw_html), String(), httpHeaders, plugin._clientAcceptsGzip(request), true, request, new UpgradeTemplate(message))) {
-            // fallback if the file system cannot be read anymore
-            Plugin::send(200, request, message);
-        }
     }
     else {
         Logger_security(F("Firmware upgrade successful"));
@@ -172,6 +171,23 @@ errorResponse: ;
 
         BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SLOW);
         Logger_notice(F("Rebooting after upgrade"));
+
+#if 1
+
+        Plugin::message(request, MessageType::SUCCESS, F("Device is rebooting after firmware upload...."), F("Firmware Upgrade"));
+
+        if (status) {
+            delete status;
+            request->_tempObject = nullptr;
+            status = nullptr;
+        }
+
+        Plugin::executeDelayed(request, []() {
+            config.restartDevice();
+        });
+
+#else
+
 
         String location;
         switch(status->command) {
@@ -214,13 +230,21 @@ errorResponse: ;
         httpHeaders.replace<HttpConnectionHeader>(HttpConnectionHeader::CLOSE);
         httpHeaders.setAsyncWebServerResponseHeaders(response);
         request->send(response);
+#endif
     }
 }
 
 void AsyncUpdateWebHandler::handleUpload(AsyncWebServerRequest *request, const String& filename, size_t index, uint8_t *data, size_t len, bool final)
 {
-    auto status = _validateSession(request);
+    auto status = _validateSession(request, index);
     if (!status) {
+        return;
+    }
+
+    if (!(request->method() & WebRequestMethod::HTTP_POST)) {
+        if (index != 0) {
+            request->client()->close();
+        }
         return;
     }
 
@@ -240,7 +264,6 @@ void AsyncUpdateWebHandler::handleUpload(AsyncWebServerRequest *request, const S
             Update.progress(), Update.remaining(), Update.size(), request->contentLength(),
             index, len, final
         );
-
         if (plugin._updateFirmwareCallback) {
             plugin._updateFirmwareCallback(index + len, request->contentLength());
         }

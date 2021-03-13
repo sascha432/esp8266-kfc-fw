@@ -129,15 +129,18 @@ class OTA(kfcfw.OTAHelpers):
             self.verbose("Update successful")
         else:
             content = resp.content.decode()
-            error = self.get_h3(content)
-            if error==None:
-                self.verbose("Update failed with unknown response")
-                self.verbose("Response code " + str(resp.status_code))
-                self.verbose(content)
-                sys.exit(2)
-            else:
-                self.verbose("Update failed with: " + error)
-                sys.exit(3)
+            if not 'Device is rebooting after' in content:
+                error = self.get_tag(content, 'h4')
+                if error==None:
+                    error = self.get_h3(content)
+                if error==None:
+                    self.verbose("Update failed with unknown response")
+                    self.verbose("Response code " + str(resp.status_code))
+                    self.verbose(content)
+                    sys.exit(2)
+                else:
+                    self.verbose("Update failed with: " + error)
+                    sys.exit(3)
 
         if self.args.no_wait==False:
             max_wait = 60

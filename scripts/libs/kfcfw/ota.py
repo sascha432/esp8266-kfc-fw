@@ -82,7 +82,10 @@ class OTAHelpers(object):
             return m.group(1).strip()
 
     def get_h3(self, content):
-        m = re.search("<h3[^>]*>([^<]+)</h3", content, flags=re.IGNORECASE|re.DOTALL)
+        return self.get_tag(content, 'h3');
+
+    def get_tag(self, content, tag):
+        m = re.search("<" + tag + "[^>]*>([^<]+)</" + tag, content, flags=re.IGNORECASE|re.DOTALL)
         if m:
             return m.group(1).strip()
 

@@ -282,6 +282,7 @@ namespace DeepSleep
 #endif
 
         static void enterDeepSleep(milliseconds time);
+        static void reset();
 
         inline __attribute__((__always_inline__))
         bool isValid() const {
@@ -301,7 +302,12 @@ namespace DeepSleep
 
         inline __attribute__((__always_inline__))
         void setRealTime(time_t time) {
-            _realTime = time;
+            if (IS_TIME_VALID(time)) {
+                _realTime = time;
+            }
+            else {
+                _realTime = 0;
+            }
         }
 
         inline __attribute__((__always_inline__))

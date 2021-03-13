@@ -62,6 +62,7 @@
 - Added min. and max. range limits to reduce the dimmable range (Dimmer Plugin)
 - Web server does not require re-registering web handlers and web sockets on reconfigure anymore
 - Support for ArduinoOTA
+- Max. deep sleep time increasse to up to 31 days
 
 ## Version 0.0.3
 

@@ -64,10 +64,11 @@ namespace PluginComponents {
     enum class RTCMemoryId : uint8_t {
         NONE,
         RESET_DETECTOR,
-        CONFIG,
+        QUICK_CONNECT,
         DEEP_SLEEP,
+        CONFIG,
         SERIAL2TCP,
-        // REMOTE_INIT_PIN_STATE
+        MAX
     };
 
     enum class PriorityType : int8_t {
@@ -280,6 +281,29 @@ public:
 
     static PluginComponent *getByMemoryId(uint8_t memoryId) {
         return getByMemoryId(static_cast<RTCMemoryId>(memoryId));
+    }
+
+    inline static NameType getMemoryIdName(uint8_t id) {
+        return getMemoryIdName(static_cast<RTCMemoryId>(id));
+    }
+
+    inline static NameType getMemoryIdName(RTCMemoryId id) {
+        switch(id) {
+            case RTCMemoryId::DEEP_SLEEP:
+                return F("Deep Sleep");
+            case RTCMemoryId::CONFIG:
+                return F("Configuration");
+            case RTCMemoryId::RESET_DETECTOR:
+                return F("Reset Detector");
+            case RTCMemoryId::QUICK_CONNECT:
+                return F("Quick Connect");
+            case RTCMemoryId::SERIAL2TCP:
+                return F("Serial2TCP");
+            case RTCMemoryId::NONE:
+            case RTCMemoryId::MAX:
+                break;
+        }
+        return F("<UNKNOWN>");
     }
 
 // Configuration and options

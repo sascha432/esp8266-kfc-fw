@@ -62,7 +62,7 @@ bool Form::BaseForm::validateOnly()
         if (field->getType() == Field::Type::GROUP || field->isDisabled()) {
             // field ist a group or disabled
         }
-        else if (_data->hasArg(field->getName())) {
+        else if (_data->hasArg(FPSTR(field->getName()))) {
             // check if any data is available (usually from a POST request)
 
             // __LDBG_printf("Form::BaseForm::validateOnly() Set value %s = %s", field->getName().c_str(), _data->arg(field->getName()).c_str());
@@ -71,7 +71,7 @@ bool Form::BaseForm::validateOnly()
             bool restoreUserValue = false;
 
             // set new value
-            if (field->setValue(_data->arg(field->getName()))) {
+            if (field->setValue(_data->arg(FPSTR(field->getName())))) {
                 _hasChanged = true;
             }
 
@@ -87,7 +87,7 @@ bool Form::BaseForm::validateOnly()
 
             // if an error has occured, restore the user input using the base class
             if (restoreUserValue) {
-                static_cast<Field::BaseField *>(field)->setValue(_data->arg(field->getName()));
+                static_cast<Field::BaseField *>(field)->setValue(_data->arg(FPSTR(field->getName())));
             }
         }
         else if (_invalidMissing) {

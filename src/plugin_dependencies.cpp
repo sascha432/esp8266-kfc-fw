@@ -20,11 +20,16 @@ using namespace PluginComponents;
 void Dependency::invoke(const PluginComponent *plugin) const
 {
     __LDBG_printf("invoking callback name=%s plugin=%p source=%s", _name, plugin, _source->getName_P());
-    __DBG_assert_printf(plugin, "plugin nullptr");
-    __DBG_assert_printf(!!_callback, "invalid callback");
-    auto &plugins = PluginComponents::RegisterEx::getPlugins();
-    __DBG_assert_printf(std::find(plugins.begin(), plugins.end(), plugin) != plugins.end(), "plugin %p does not exists", plugin->getName_P());
-    _callback(plugin);
+    __LDBG_assert_printf(plugin, "plugin nullptr");
+    __LDBG_assert_printf(!!_callback, "invalid callback");
+    __LDBG_assert_printf(std::find(PluginComponents::RegisterEx::getPlugins().begin(), PluginComponents::RegisterEx::getPlugins().end(), plugin) != PluginComponents::RegisterEx::getPlugins().end(), "plugin %p does not exists", plugin->getName_P());
+    _callback(plugin, DependencyResponseType::SUCCESS);
+}
+
+void Dependency::invoke(DependencyResponseType response) const
+{
+    __LDBG_printf("invoking callback name=%s plugin=<NULL> source=%s", _name, _source->getName_P());
+    _callback(nullptr, response);
 }
 
 // ------------------------------------------------------------------------------------
@@ -53,6 +58,7 @@ void PluginComponents::Dependencies::destroy()
 {
     for(const auto &dep: _dependencies) {
         __DBG_printf("unresolved dependency name=%s source=%p", dep._name, dep._source->getName_P());
+        dep.invoke(DependencyResponseType::NOT_LOADED);
     }
 }
 
@@ -80,7 +86,7 @@ bool PluginComponents::Dependencies::dependsOn(NameType name, DependencyCallback
             // check if there is any dependencies left
             check();
             __LDBG_printf("dependency callback type=call name=%s source=%s", (PGM_P)name, source->getName_P());
-            callback(plugin);
+            Dependency(name, callback, source).invoke(plugin);
         }
         else {
             // create delayed dendency
@@ -88,6 +94,9 @@ bool PluginComponents::Dependencies::dependsOn(NameType name, DependencyCallback
             _dependencies.emplace_back(name, callback, source);
         }
         return true;
+    }
+    else {
+        Dependency(name, callback, source).invoke(DependencyResponseType::NOT_FOUND);
     }
     __LDBG_printf("dependency cannot be resolved, plugin=%s not found", name);
     return false;

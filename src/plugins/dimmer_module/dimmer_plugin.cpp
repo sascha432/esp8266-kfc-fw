@@ -38,7 +38,10 @@ void Plugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &
     setupWebServer();
     _begin();
 #if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
-    dependencies->dependsOn(F("sensor"), [this](const PluginComponent *plugin) {
+    dependencies->dependsOn(F("sensor"), [this](const PluginComponent *plugin, DependencyResponseType response) {
+        if (response != DependencyResponseType::SUCCESS) {
+            return;
+        }
         __LDBG_printf("sensor=%p loaded", plugin);
         this->_setDimmingLevels();
     }, this);

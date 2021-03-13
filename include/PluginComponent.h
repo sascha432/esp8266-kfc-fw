@@ -141,7 +141,13 @@ namespace PluginComponents {
     using NameType = const __FlashStringHelper *;
     using NamedJsonArray = MQTT::Json::NamedArray;
 
-    using DependencyCallback = std::function<void(const PluginComponent *plugin)>;
+    enum class DependencyResponseType {
+        SUCCESS = 0,
+        NOT_LOADED,
+        NOT_FOUND,
+    };
+
+    using DependencyCallback = std::function<void(const PluginComponent *plugin, DependencyResponseType response)>;
     using DependenciesVector = std::vector<Dependency>;
 
     class Dependency {
@@ -156,6 +162,7 @@ namespace PluginComponents {
         const PluginComponent *_source;
 
         void invoke(const PluginComponent *plugin) const;
+        void invoke(DependencyResponseType type) const;
 
         bool operator==(NameType name) const {
             return strcmp_P_P(reinterpret_cast<PGM_P>(_name), reinterpret_cast<PGM_P>(name)) == 0;
@@ -172,6 +179,13 @@ namespace PluginComponents {
         }
 
         bool dependsOn(NameType name, DependencyCallback callback, const PluginComponent *source);
+
+        // template<typename _Ta = PluginComponent>
+        // bool dependsOn(NameType name, std::function<void(const _Ta &, bool)> callback, const PluginComponent *source) {
+        //     return dependsOn(name, [callback](const PluginComponent *plugin, bool failure) {
+        //         callback(*reinterpret_cast<_Ta *>(plugin), failure);
+        //     }, source);
+        // }
 
         bool empty() const;
         size_t size() const;
@@ -206,6 +220,8 @@ public:
 
     using Dependencies = PluginComponents::Dependencies;
     using DependencyCallback = PluginComponents::DependencyCallback;
+    using DependenciesPtr = PluginComponents::DependenciesPtr;
+    using DependencyResponseType = PluginComponents::DependencyResponseType;
     using NameType = PluginComponents::NameType;
     using NamedJsonArray = PluginComponents::NamedJsonArray;
     using PriorityType = PluginComponents::PriorityType;
@@ -213,7 +229,6 @@ public:
     using MenuType = PluginComponents::MenuType;
     using SetupModeType = PluginComponents::SetupModeType;
     using FormCallbackType = PluginComponents::FormCallbackType;
-    using DependenciesPtr = PluginComponents::DependenciesPtr;
 
     typedef struct __attribute__packed__  {
         union {

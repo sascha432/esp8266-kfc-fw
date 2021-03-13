@@ -476,9 +476,9 @@ public:
 
     virtual void setup(SetupModeType mode, const DependenciesPtr &dependencies) override
     {
-        dependencies->dependsOn(F("http"), [](const PluginComponent *plugin) {
-            auto server = WebServer::Plugin::getWebServerObject();
-            if (server) {
+        dependencies->dependsOn(F("http"), [](const PluginComponent *, DependencyResponseType response) {
+            WebServer::AsyncWebServerEx *server;
+            if (response == DependencyResponseType::SUCCESS && (server = WebServer::Plugin::getWebServerObject()) != nullptr) {
                 server->addHandler(new AsyncFileUploadWebHandler(String(FSPGM(file_manager_base_uri, "/file_manager/")) + FSPGM(upload), FileManagerWebHandler::onRequestHandler));
                 server->addHandler(new FileManagerWebHandler(FSPGM(file_manager_base_uri)));
             }

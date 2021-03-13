@@ -217,7 +217,7 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
     // for(const auto header: request->getHeaders()) {
     //     list.emplace_back(std::move(header->toString()));
     // }
-    // __DBG_printf("headers for %s:\n%s", request->url().c_str(), implode('\n', list).c_str());
+    // __LDBG_printf("headers for %s:\n%s", request->url().c_str(), implode('\n', list).c_str());
 
     auto &url = request->url();
     if (url == F("/is-alive")) {
@@ -254,7 +254,7 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
     }
     else if (url == F("/scan-wifi")) {
         if (!plugin.isAuthenticated(request)) {
-            request->send(403);
+            request->send(403, FSPGM(mime_text_html));
             return;
         }
         httpHeaders.addNoCache();
@@ -271,7 +271,7 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
     }
     else if (url == F("/mqtt-publish-ad.html")) {
         if (!plugin.isAuthenticated(request)) {
-            request->send(403);
+            request->send(403, FSPGM(mime_text_html));
             return;
         }
         // Action::getInstance().initSession(request, F("/mqtt-publish-ad.html"), F("MQTT Auto Discovery"));
@@ -294,11 +294,11 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
             auto cookieActionId = static_cast<uint32_t>(lastActionId.toInt());
             if ((cookieActionId != actionId) && (actionId <= now)) {
                 httpHeaders.add<HttpCookieHeader>(F("last_action_id"), String(actionId));
-                __DBG_printf("action_id=%u cookie_action_id=%u now=%u", actionId, cookieActionId, now);
+                __LDBG_printf("action_id=%u cookie_action_id=%u now=%u", actionId, cookieActionId, now);
                 run = true;
             }
             else {
-                __DBG_printf("cookie or expired: action_id=%u cookie_action_id=%u now=%u cookie_len=%u", actionId, cookieActionId, now, lastActionId.length());
+                __LDBG_printf("cookie or expired: action_id=%u cookie_action_id=%u now=%u cookie_len=%u", actionId, cookieActionId, now, lastActionId.length());
             }
         }
 
@@ -365,6 +365,7 @@ bool Plugin::isHtmlContentType(AsyncWebServerRequest *request, HttpHeaders *head
         auto header = headers->find(F("Content-Type"));
         if (header) {
             if (header->getValue().indexOf(F("text/html")) == -1) {
+                __LDBG_printf("content-type %s", header->getValue().c_str());
                 return false;
             }
         }
@@ -374,17 +375,25 @@ bool Plugin::isHtmlContentType(AsyncWebServerRequest *request, HttpHeaders *head
         auto dot = url.indexOf('.', url.lastIndexOf('/') + 1);
         if (dot != -1) {
             // filename has an extension
+            __LDBG_printf("url %s", url.c_str());
             return false;
         }
     }
     auto &requestedWith = request->header(F("X-Requested-With")) ;
     if (requestedWith.equalsIgnoreCase(F("XMLHttpRequest"))) {
         // ajax request
+        __LDBG_printf("ajax request %s", url.c_str());
         return false;
     }
     auto &accept = request->header(F("Accept"));
-    if (accept.indexOf(F("text/html")) == -1) {
+    if (request->headerExists(accept) && accept.indexOf(F("text/html")) == -1) {
         // most clients accept html even for pictures, but not in this case
+        __LDBG_printf("accept %s", accept.c_str());
+        return false;
+    }
+    auto &userAgent = request->header(F("User-Agent"));
+    if (userAgent.startsWith(F("KFCFW OTA"))) {
+        __LDBG_printf("user-agent %s", userAgent.c_str());
         return false;
     }
     return true;
@@ -411,6 +420,35 @@ bool Plugin::sendFileResponse(uint16_t code, const String &path, AsyncWebServerR
         delete webTemplate;
     }
     return false;
+}
+
+void Plugin::message(AsyncWebServerRequest *request, MessageType type, const String &message, const String &title)
+{
+    HttpHeaders headers;
+    headers.addNoCache(true);
+    auto webTemplate = new MessageTemplate(message, title);
+    switch(type) {
+        case MessageType::DANGER:
+            webTemplate->setTitleClass(F("text-white bg-danger"));
+            break;
+        case MessageType::WARNING:
+            webTemplate->setTitleClass(F("text-dark bg-warning"));
+            break;
+        case MessageType::INFO:
+            webTemplate->setTitleClass(F("text-white bg-info"));
+            break;
+        case MessageType::SUCCESS:
+            webTemplate->setTitleClass(F("text-white bg-success"));
+            break;
+        default:
+        case MessageType::PRIMARY:
+            webTemplate->setTitleClass(F("text-white bg-primary"));
+            break;
+    }
+    if (sendFileResponse(200, F("/.message.html"), request, headers, webTemplate)) {
+        return;
+    }
+    request->send(500);
 }
 
 void Plugin::send(uint16_t httpCode, AsyncWebServerRequest *request, const String &message)
@@ -538,12 +576,12 @@ void Plugin::_addRestHandler(RestHandler &&handler)
 {
     if (_server) {
         // install rest handler
-        __DBG_printf("installing REST handler url=%s", handler.getURL());
+        __LDBG_printf("installing REST handler url=%s", handler.getURL());
         if (_server->_restCallbacks.empty()) {
             // add AsyncRestWebHandler to web server
             // the object gets destroyed with the web server and requires to keep the list off callbacks separated
             auto restHandler = new AsyncRestWebHandler();
-            __DBG_printf("handler=%p", restHandler);
+            __LDBG_printf("handler=%p", restHandler);
             _server->addHandler(restHandler);
         }
         // store handler
@@ -807,8 +845,6 @@ void Plugin::begin(bool restart)
         _loginFailures.reset();
     }
 
-    _server->onNotFound(handlerNotFound);
-
     // setup webui socket
     if (System::Flags::getConfig().is_webui_enabled) {
         __DBG_printf("WebUISocket::_server=%p", WebUISocket::getServerSocket());
@@ -818,8 +854,10 @@ void Plugin::begin(bool restart)
     }
 
     if (!restart) {
-        _server->addHandler(new AsyncUpdateWebHandler());
+        addHandler(new AsyncUpdateWebHandler(), AsyncUpdateWebHandler::getURI());
     }
+
+    _server->onNotFound(handlerNotFound);
 
     _server->begin();
     __LDBG_printf("HTTP running on port %u", cfg.getPort());
@@ -1118,7 +1156,7 @@ void Plugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &
         invokeReconfigureNow(getName());
     }
     else {
-        begin();
+        begin(false);
     }
 }
 
@@ -1146,7 +1184,7 @@ void Plugin::reconfigure(const String &source)
     // initialize web server
     begin(true);
 
-    // if the server was disabled, the data of storage is released
+    // if the server is disabled, the data of storage is released
     if (storage && _server) {
         // re-attach handlers from storage
         if (!storage->_restCallbacks.empty()) {
@@ -1209,18 +1247,20 @@ AsyncWebServerEx *Plugin::getWebServerObject()
     return plugin._server.get();
 }
 
-bool Plugin::addHandler(AsyncWebHandler *handler)
+bool Plugin::addHandler(AsyncWebHandler *handler, const __FlashStringHelper *uri)
 {
+    __LDBG_assert_printf(!!plugin._server, "_server is nullptr");
     if (!plugin._server) {
         return false;
     }
     plugin._server->addHandler(handler);
-    __LDBG_printf("handler=%p", handler);
+    __LDBG_printf("handler=%p uri=%s", handler, uri);
     return true;
 }
 
 AsyncCallbackWebHandler *Plugin::addHandler(const String &uri, ArRequestHandlerFunction onRequest)
 {
+    __LDBG_assert_printf(!!plugin._server, "_server is nullptr");
     if (!plugin._server) {
         return nullptr;
     }

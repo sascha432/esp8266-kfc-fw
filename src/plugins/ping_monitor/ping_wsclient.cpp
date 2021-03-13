@@ -34,7 +34,7 @@ void _pingMonitorSetupWebHandler()
         return;
     }
     if (Plugins::Ping::getConfig().console) {
-        auto server = WebServerPlugin::getWebServerObject();
+        auto server = WebServer::Plugin::getWebServerObject();
         if (server) {
             auto ws = __LDBG_new(WsClientAsyncWebSocket, F("/ping"), &wsPing);
             ws->onEvent(_pingMonitorEventHandler);

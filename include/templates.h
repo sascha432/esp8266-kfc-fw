@@ -112,17 +112,6 @@ public:
     virtual void process(const String &key, PrintHtmlEntitiesString &output) override;
 };
 
-class UpgradeTemplate : public WebTemplate {
-public:
-    UpgradeTemplate(const String &errorMessage) : _errorMessage(errorMessage) {}
-
-    virtual void process(const String &key, PrintHtmlEntitiesString &output) override;
-    virtual void setErrorMessage(const String &errorMessage);
-
-protected:
-    String _errorMessage;
-};
-
 class StatusTemplate : public WebTemplate {
 public:
     virtual void process(const String &key, PrintHtmlEntitiesString &output) override;
@@ -147,7 +136,13 @@ public:
 
 public:
     // the message and title may contain html code
-    MessageTemplate(const String &message, const String &title = String()) : _title(title), _message(message), _titleClass(nullptr), _messageClass(nullptr), _containsHtml(kHtmlNone) {
+    MessageTemplate(const String &message, const String &title = String()) :
+        _title(title),
+        _message(message),
+        _titleClass(nullptr),
+        _messageClass(nullptr),
+        _containsHtml(kHtmlNone)
+    {
         checkForHtml();
     }
 

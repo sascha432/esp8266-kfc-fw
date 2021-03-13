@@ -406,7 +406,7 @@ void ClockPlugin::preSetup(SetupModeType mode)
 
 #endif
 
-void ClockPlugin::setup(SetupModeType mode)
+void ClockPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
     _disable(10);
     IF_IOT_CLOCK_HAVE_ENABLE_PIN(
@@ -463,7 +463,13 @@ void ClockPlugin::setup(SetupModeType mode)
         ADCManager::getInstance().addAutoReadTimer(Event::seconds(1), Event::milliseconds(30), 24);
         _Timer(_autoBrightnessTimer).add(Event::milliseconds_cast(kAutoBrightnessInterval), true, adjustAutobrightness, Event::PriorityType::TIMER);
         _adjustAutobrightness();
-        _installWebHandlers();
+
+        dependencies->dependsOn(F("http"), [](const PluginComponent *, DependencyResponseType response) {
+            if (response != DependencyResponseType::SUCCESS) {
+                return;
+            }
+            _installWebHandlers();
+        }, this);
     )
 
     MQTT::Client::registerComponent(this);

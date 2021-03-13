@@ -170,12 +170,16 @@ void MDNSPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesP
         _enabled = true;
         begin();
 
-        dependencies->dependsOn(FSPGM(http), [this](const PluginComponent *pluginPtr) {
-            _running = false;
-            // add wifi handler after all plugins have been initialized
-            WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, wifiCallback);
-            if (WiFi.isConnected()) {
-                plugin._wifiCallback(WiFiCallbacks::EventType::CONNECTED, nullptr); // simulate event if already connected
+        _running = false;
+        // add wifi handler after all plugins have been initialized
+        WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, wifiCallback);
+        if (WiFi.isConnected()) {
+            _wifiCallback(WiFiCallbacks::EventType::CONNECTED, nullptr); // simulate event if already connected
+        }
+
+        dependencies->dependsOn(FSPGM(http), [this](const PluginComponent *plugin, DependencyResponseType response) {
+            if (response != DependencyResponseType::SUCCESS) {
+                return;
             }
             _installWebServerHooks();
         }, this);

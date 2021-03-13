@@ -30,7 +30,7 @@ void webui_socket_event_handler(AsyncWebSocket *server, AsyncWebSocketClient *cl
 
 void WebUISocket::setup(AsyncWebServer *server)
 {
-    auto ws = __LDBG_new(WsClientAsyncWebSocket, FSPGM(webui_socket_uri), &_server);
+    auto ws = new WsClientAsyncWebSocket(FSPGM(webui_socket_uri), &_server);
     ws->onEvent(webui_socket_event_handler);
     server->addHandler(ws);
     __LDBG_printf("Web socket for UI running on port %u", System::WebServer::getConfig().getPort());

@@ -8,7 +8,7 @@
 #if WEBSERVER_SUPPORT
 
 #ifndef DEBUG_WEB_SERVER
-#define DEBUG_WEB_SERVER                    1
+#define DEBUG_WEB_SERVER                    0
 #endif
 
 #include <Arduino_compat.h>
@@ -54,6 +54,14 @@ namespace WebServer {
         SID_COOKIE,
         PASSWORD,
         BEARER,
+    };
+
+    enum class MessageType {
+        DANGER,
+        WARNING,
+        INFO,
+        SUCCESS,
+        PRIMARY
     };
 
     using UpdateFirmwareCallback = std::function<void(size_t position, size_t size)>;
@@ -143,6 +151,10 @@ namespace WebServer {
     public:
         using AsyncWebHandler::AsyncWebHandler;
 
+        inline static const __FlashStringHelper *getURI() {
+            return F("/update");
+        }
+
         virtual bool canHandle(AsyncWebServerRequest *request) override;
         virtual void handleRequest(AsyncWebServerRequest *request) override;
         virtual void handleUpload(AsyncWebServerRequest *request, const String& filename, size_t index, uint8_t *data, size_t len, bool final) override;
@@ -151,7 +163,7 @@ namespace WebServer {
         }
 
     private:
-        UploadStatus *_validateSession(AsyncWebServerRequest *request);
+        UploadStatus *_validateSession(AsyncWebServerRequest *request, int index);
     };
 
     class Plugin : public PluginComponent {
@@ -169,7 +181,7 @@ namespace WebServer {
         // check return value for nullptr before using
         static AsyncWebServerEx *getWebServerObject();
 
-        static bool addHandler(AsyncWebHandler* handler);
+        static bool addHandler(AsyncWebHandler* handler, const __FlashStringHelper *uri);
         static AsyncCallbackWebHandler *addHandler(const String &uri, ArRequestHandlerFunction onRequest);
         static void addRestHandler(RestHandler &&handler);
 
@@ -180,7 +192,10 @@ namespace WebServer {
         // returns false on error
         static bool sendFileResponse(uint16_t code, const String &path, AsyncWebServerRequest *request, HttpHeaders &headers, WebTemplate *webTemplate = nullptr);
 
+        static void message(AsyncWebServerRequest *request, MessageType type, const String &message, const String &title);
+
         static void send(uint16_t httpCode, AsyncWebServerRequest *request, const String &message = String());
+
         // returns true for any html page
         static bool isHtmlContentType(AsyncWebServerRequest *request, HttpHeaders *headers = nullptr);
 
@@ -222,7 +237,7 @@ namespace WebServer {
         AsyncWebServerExPtr _server;
 
     private:
-        void begin(bool restart = false);
+        void begin(bool restart);
         void end();
         bool _isPublic(const String &pathString) const;
         bool _clientAcceptsGzip(AsyncWebServerRequest *request) const;

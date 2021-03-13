@@ -20,7 +20,14 @@ _SPIFFS SPIFFS;
 
 uint32_t _EEPROM_start;
 
-const String emptyString;
+char *dtostrf(double val, signed char width, unsigned char prec, char *s) 
+{
+    sprintf(s, "%*.*f", width, prec, val);
+    return s;
+}
+
+
+//const String emptyString;
 
 // flash memory is a flash emulation that creates and deduplicates data, adding usage counter and a ESP8266 flash address
 // all data is dword aligned

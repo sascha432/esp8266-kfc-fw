@@ -164,7 +164,7 @@ const String Dir::fileName() const
     String tmp;
     tmp.reserve(wcslen(_ffd.cFileName) + 1);
     size_t convertedChars;
-    wcstombs_s(&convertedChars, tmp.begin(), tmp.capacity(), _ffd.cFileName, _TRUNCATE);
+    wcstombs_s(&convertedChars, tmp.begin(), static_cast<ex::String &>(tmp).capacity(), _ffd.cFileName, _TRUNCATE);
     tmp.replace('\\', '/');
     return tmp;
 }

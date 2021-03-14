@@ -10,8 +10,6 @@
 #include <stl_ext/fixed_circular_buffer.h>
 #include <kfc_fw_config.h>
 
-// https://www.home-assistant.io/integrations/device_trigger.mqtt/
-
 #ifndef DEBUG_IOT_REMOTE_CONTROL
 #define DEBUG_IOT_REMOTE_CONTROL                                1
 #endif
@@ -34,6 +32,7 @@
 #endif
 
 // set high while running
+// the default using GPIO15 which has a pulldown to enable energy saving mode during deep sleep
 #ifndef IOT_REMOTE_CONTROL_AWAKE_PIN
 #define IOT_REMOTE_CONTROL_AWAKE_PIN                            15
 #endif

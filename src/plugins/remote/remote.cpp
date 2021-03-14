@@ -101,6 +101,8 @@ void RemoteControlPlugin::_updateButtonConfig()
 void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
     deepSleepPinState.merge();
+
+    // start pin monitor
     pinMonitor.begin();
 
 #if PIN_MONITOR_BUTTON_GROUPS
@@ -132,19 +134,10 @@ void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::Depe
 #else
         pinMonitor.attach<Button>(pin, n, this);
 #endif
-        // for(const auto &pinPtr: pinMonitor.getPins()) {
-        //     if (pinPtr->getPin() == pin) { {
-        //         lookupTable.set(pin, Interrupt::LookupType::HARDWARE_PIN, pinPtr.get());
-        //     }
-        // }
         pinMode(pin, INPUT);
     }
 
 #if PIN_MONITOR_USE_GPIO_INTERRUPT
-    // for some reason, pin 12 gets a on change interrupt
-    if (GPI & kButtonPinsMask) {
-        __LDBG_printf("buttons down gpi=%s mask=%s", BitsToStr<16, true>(GPI).c_str(), BitsToStr<16, true>(kButtonPinsMask).c_str());
-    }
     PinMonitor::GPIOInterruptsEnable();
 #endif
 
@@ -176,7 +169,6 @@ void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::Depe
 
     __LDBG_printf("feeding queue size=%u", PinMonitor::eventBuffer.size());
     pinMonitor._loop();
-
 
     __LDBG_printf("enabling GPIO interrupts");
 

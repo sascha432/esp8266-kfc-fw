@@ -11,6 +11,14 @@
 
 class RemoteControlPlugin;
 
+// for more information about MQTT devioce triggers check
+// https://www.home-assistant.io/integrations/device_trigger.mqtt/
+//
+// those can be used without home assistant as well
+// using UDP has the advantage to reduce lag when waking up. MQTT requires ~350ms to arrive at the destination, while UDP reaches it in ~220ms.
+// (assuming WiFi Quick Connect works and connects within ~200ms)
+
+
 namespace RemoteControl {
 
     static constexpr uint32_t kButtonPinsMask = Interrupt::PinAndMask::mask_of(kButtonPins);

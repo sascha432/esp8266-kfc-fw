@@ -399,30 +399,7 @@ public:
 
 #if IOT_CLOCK_HAVE_ROTARY_ENCODER
     void rotaryCallback(bool decrease, uint32_t now);
-
-    void setRotaryAction(uint8_t action) {
-        _rotaryAction = action;
-        if (action != 0) {
-            _Timer(_rotaryActionTimer).add(Event::milliseconds(5000), false, [this](Event::CallbackTimerPtr) {
-                setRotaryAction(0);
-            });
-        }
-        else {
-            _rotaryActionTimer.remove();
-        }
-        switch(action) {
-            case 0:
-                _digitalWrite(132, HIGH); // green LED left side
-                _digitalWrite(128, HIGH); // blue LED
-                _digitalWrite(129, HIGH); // red LED
-                _digitalWrite(130, HIGH); // green LED right side
-                break;
-            case 1:
-                _digitalWrite(128, LOW);
-                _digitalWrite(129, LOW);
-                break;
-        }
-    }
+    void setRotaryAction(uint8_t action);
 
 private:
     // acceleration per step

@@ -230,3 +230,7 @@ https://github.com/adafruit/Adafruit_SSD1306
 https://github.com/adafruit/RTClib
 https://github.com/adafruit/Adafruit_MPR121
 https://github.com/adafruit/Adafruit_NeoPixel
+
+### Rotary encoder handler for arduino. v1.1
+
+https://github.com/buxtronix/arduino/blob/master/libraries/Rotary/Rotary.cpp

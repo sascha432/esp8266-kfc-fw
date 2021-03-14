@@ -1453,7 +1453,7 @@ void at_mode_serial_handle_event(String &commandString)
                         auto patternStr = args.toString(1);
                         auto pattern = BlinkLEDTimer::Bitset();
                         pattern.fromString(patternStr);
-                        args.printf_P(PSTR("pattern %*.*s delay %u"), pattern.toString().c_str(), delay);
+                        args.printf_P(PSTR("pattern %s delay %u"), pattern.toString().c_str(), delay);
                         BlinkLEDTimer::setPattern(pin, delay, std::move(pattern));
                         //+led=pattern,111111111111111111111111111111111111111111111111111111,100
                         //+led=pattern,1010,100

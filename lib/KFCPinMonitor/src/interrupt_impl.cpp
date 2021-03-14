@@ -13,17 +13,17 @@
 #include <debug_helper_disable.h>
 #endif
 
-extern void ICACHE_RAM_ATTR pin_monitor_interrupt_handler(void *ptr);
 
 namespace PinMonitor {
 
     Interrupt::EventBuffer eventBuffer;
-    uint16_t interrupt_levels;
 
+// ------------------------------------------------------------------------
+// implementation with GPIO interrupt instead of Arduino attachInterrupt..
+// ------------------------------------------------------------------------
 #if PIN_MONITOR_USE_GPIO_INTERRUPT
-// ------------------------------------------------------------------------
-// implementation with GPIO interrupt
-// ------------------------------------------------------------------------
+
+    uint16_t interrupt_levels;
 
     void GPIOInterruptsEnable()
     {
@@ -44,29 +44,28 @@ namespace PinMonitor {
         ETS_GPIO_INTR_DISABLE();
     }
 
-}
-
-void ICACHE_RAM_ATTR pin_monitor_interrupt_handler(void *ptr)
-{
-    using namespace PinMonitor::Interrupt;
-    uint32_t status = GPIE;
-    GPIEC = status;
-    if ((status & PinAndMask::mask_of(kPins)) == 0) {
-        return;
-    }
-    auto levels = static_cast<uint16_t>(GPI); // we skip GPIO16 since it cannot handle interrupts anyway
-
-    // to keep the code simple and small in here, just save the time and the GPIO input state
-    ETS_GPIO_INTR_DISABLE();
-    for(auto pin: kPins) {
-        if ((status & PinAndMask(pin).mask) | ((PinMonitor::interrupt_levels & PinAndMask(pin).mask) ^ (levels & PinAndMask(pin).mask))) { // 842 free IRAM
-        // if ((status & mask) && (static_cast<bool>(PinMonitor::interrupt_levels & mask) != static_cast<bool>(levels &  mask))) { // 826 free IRAM
-            PinMonitor::eventBuffer.emplace_back(micros(), pin, levels);
+    void ICACHE_RAM_ATTR pin_monitor_interrupt_handler(void *ptr)
+    {
+        using namespace PinMonitor::Interrupt;
+        uint32_t status = GPIE;
+        GPIEC = status;
+        if ((status & PinAndMask::mask_of(kPins)) == 0) {
+            return;
         }
+        auto levels = static_cast<uint16_t>(GPI); // we skip GPIO16 since it cannot handle interrupts anyway
+
+        // to keep the code simple and small in here, just save the time and the GPIO input state
+        ETS_GPIO_INTR_DISABLE();
+        for(auto pin: kPins) {
+            if ((status & PinAndMask(pin).mask) | ((PinMonitor::interrupt_levels & PinAndMask(pin).mask) ^ (levels & PinAndMask(pin).mask))) { // 842 free IRAM
+            // if ((status & mask) && (static_cast<bool>(PinMonitor::interrupt_levels & mask) != static_cast<bool>(levels &  mask))) { // 826 free IRAM
+                PinMonitor::eventBuffer.emplace_back(micros(), pin, levels);
+            }
+        }
+        PinMonitor::interrupt_levels = levels;
+        ETS_GPIO_INTR_ENABLE();
     }
-    PinMonitor::interrupt_levels = levels;
-    ETS_GPIO_INTR_ENABLE();
+
 }
 
 #endif
-

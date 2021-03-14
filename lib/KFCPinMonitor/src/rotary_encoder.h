@@ -61,39 +61,16 @@ namespace PinMonitor {
         }
 
         void attachPins(uint8_t pin1, uint8_t pin2);
-
-        // void push_back(uint32_t time, uint8_t pin, uint16_t gpi_register);
-        // void push_back(uint32_t time, uint8_t pin);
-
         void processEvent(const Interrupt::Event &event);
 
     public:
         friend HardwarePin;
 
-        // uint8_t _process(uint8_t pinState);
-
-        // stdex::fixed_circular_buffer<uint8_t, 128> _states;
         ActiveStateType _activeState;
         uint16_t _mask1;
         uint16_t _mask2;
         uint8_t _state;
-        // uint8_t _pin1: 4;
-        // uint8_t _pin2: 4;
     };
-
-
-    // inline __attribute__((__always_inline__))
-    // void RotaryEncoder::push_back(uint32_t time, uint8_t pin, uint16_t gpi)
-    // {
-    //     eventBuffer.emplace_back(micros(), pin, ((gpi & _mask1) != 0) | (((gpi & _mask2) != 0) << 1));
-    // }
-
-
-    // inline __attribute__((__always_inline__))
-    // void RotaryEncoder::push_back(uint32_t time, uint8_t pin)
-    // {
-    //     eventBuffer.emplace_back(micros(), pin, ((GPI & _mask1) != 0) | (((GPI & _mask2) != 0) << 1));
-    // }
 
 }
 

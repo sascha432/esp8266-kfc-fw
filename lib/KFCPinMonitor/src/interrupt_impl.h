@@ -15,12 +15,6 @@
 #include <debug_helper_disable.h>
 #endif
 
-#if PIN_MONITOR_USE_GPIO_INTERRUPT
-#ifndef PIN_MONITOR_PINS_TO_USE
-#error PIN_MONITOR_PINS_TO_USE not defined
-#endif
-#endif
-
 namespace PinMonitor {
 
     void GPIOInterruptsEnable();
@@ -33,17 +27,20 @@ namespace PinMonitor {
 #ifdef PIN_MONITOR_PINS_TO_USE
 
         static constexpr auto kPins = stdex::array_of<const uint8_t>(PIN_MONITOR_PINS_TO_USE);
-        // static constexpr auto kPinTypes = std::array<const HardwarePinType, 4>({HardwarePinType::DEBOUNCE, HardwarePinType::DEBOUNCE, HardwarePinType::DEBOUNCE, HardwarePinType::DEBOUNCE});
 
 #endif
 
     }
 
     extern Interrupt::EventBuffer eventBuffer;
+
+#if PIN_MONITOR_USE_GPIO_INTERRUPT
+
     extern uint16_t interrupt_levels;
+    extern void ICACHE_RAM_ATTR pin_monitor_interrupt_handler(void *ptr);
+
+#endif
 
 }
-
-extern void ICACHE_RAM_ATTR pin_monitor_interrupt_handler(void *ptr);
 
 #include <debug_helper_disable.h>

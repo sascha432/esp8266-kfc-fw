@@ -126,7 +126,6 @@ namespace PinMonitor {
         virtual Debounce *getDebounce() const {
             return nullptr;
         }
-        // virtual void handle() {}
         bool hasDebounce() const {
             return false;
         }
@@ -135,11 +134,10 @@ namespace PinMonitor {
             return _pin;
         }
 
-        // static void push_back(uint32_t time, uint8_t pin, bool value);
-        // static void push_back(uint32_t time, uint8_t pin);
-
     // protected:
     public:
+
+        static void ICACHE_RAM_ATTR callback(void *arg);
 
         operator bool() const;
         uint8_t getCount() const;
@@ -163,8 +161,6 @@ namespace PinMonitor {
     class SimpleHardwarePin : public HardwarePin {
     public:
         SimpleHardwarePin(uint8_t pin,  HardwarePinType type = HardwarePinType::SIMPLE) : HardwarePin(pin, type) {}
-
-        // virtual void addEvent(uint32_t time, bool value);
     };
 
     class DebouncedHardwarePin : public SimpleHardwarePin {
@@ -212,17 +208,5 @@ namespace PinMonitor {
         --_count;
         return *this;
     }
-
-    // inline __attribute__((__always_inline__))
-    // void HardwarePin::push_back(uint32_t time, uint8_t pin, bool value)
-    // {
-    //     eventBuffer.emplace_back(time, pin, value);
-    // }
-
-    // inline __attribute__((__always_inline__))
-    // void HardwarePin::push_back(uint32_t time, uint8_t pin)
-    // {
-    //     eventBuffer.emplace_back(time, pin, GPI & _BV(pin));
-    // }
 
 }

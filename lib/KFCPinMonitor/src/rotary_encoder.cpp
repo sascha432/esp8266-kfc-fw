@@ -29,31 +29,18 @@ RotaryEncoderPin::~RotaryEncoderPin()
 
 void RotaryEncoderPin::loop()
 {
-    if (_direction == RotaryEncoderDirection::LAST) {
-        // reinterpret_cast<RotaryEncoder *>(const_cast<void *>(getArg()))->loop();
-    }
+    // if (_direction == RotaryEncoderDirection::LAST) {
+    //     // reinterpret_cast<RotaryEncoder *>(const_cast<void *>(getArg()))->loop();
+    // }
 }
 
 void RotaryEncoder::attachPins(uint8_t pin1, uint8_t pin2)
 {
-    // _rPin1 = &
     pinMonitor.attachPinType<RotaryEncoderPin>(HardwarePinType::ROTARY, pin1, RotaryEncoderDirection::LEFT, this, _activeState);
-    // _rPin2 = &
     pinMonitor.attachPinType<RotaryEncoderPin>(HardwarePinType::ROTARY, pin2, RotaryEncoderDirection::RIGHT, this, _activeState);
     static_assert(RotaryEncoderDirection::RIGHT == RotaryEncoderDirection::LAST, "LAST must be added last");
-    _mask1 = (1U << pin1);
-    _mask2 = (1U << pin2);
-    // _pin1 = pin1;
-    // _pin2 = pin2;
-    // for(const auto &pin: pinMonitor.getPins()) {
-    //     auto pinNum = pin->getPin();
-    //     if (pinNum == pin1) {
-    //         _hPin1 = pin.get();
-    //     }
-    //     else if (pinNum == pin2) {
-    //         _hPin2 = pin.get();
-    //     }
-    // }
+    _mask1 = _BV(pin1);
+    _mask2 = _BV(pin2);
 }
 
 // https://github.com/buxtronix/arduino/blob/master/libraries/Rotary/Rotary.cpp
@@ -191,56 +178,13 @@ constexpr uint8_t ttable[7][4] = {
 #endif
 
 
-// void RotaryEncoder::loop()
-// {
-//     if (_states.begin() != _states.end()) {
-
-//         uint32_t time = micros();
-//         noInterrupts();
-//         auto iterator = _states.begin();
-//         while(iterator != _states.end()) {
-//             auto state = *iterator;
-//             interrupts();
-
-//             if (_activeState == ActiveStateType::ACTIVE_LOW) {
-//                 state ^= 0x03;
-//             }
-
-//             auto result = _process(state);
-//             __LDBG_printf("pin_state=%u%u time=%u state=%u", state>>1, state&1, time, result);
-//             if (result >= DIR_CW) {
-//                 event(static_cast<EventType>(result), time);
-//             }
-
-//             noInterrupts();
-//             ++iterator;
-//         }
-//         // copy items that have not been processed
-//         _states.shrink(iterator, _states.end());
-//         interrupts();
-
-//     }
-
-// }
-
-// uint8_t RotaryEncoder::_process(uint8_t pinState)
-// {
-//     // Determine new state from the pins and state table.
-//     _state = ttable[_state & 0xf][pinState];
-//     // Return emit bits, ie the generated event.
-//     return _state & 0x30;
-// }
-
 void RotaryEncoder::processEvent(const Interrupt::Event &eventData)
 {
     uint8_t value = ((eventData.gpiRegValue() & _mask1) != 0) | (((eventData.gpiRegValue() & _mask1) != 0) << 1);
     uint8_t state = (_activeState == ActiveStateType::ACTIVE_LOW) ? value ^ 0b11 : value;
 
-    // auto result = _process(state);
     _state = ttable[_state & 0xf][state] & 0x30;
     if (_state >= DIR_CW) {
         event(static_cast<EventType>(_state), eventData.getTime());
     }
-
 }
-

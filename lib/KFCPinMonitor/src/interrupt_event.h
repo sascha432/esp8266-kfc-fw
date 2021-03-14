@@ -35,7 +35,7 @@ namespace PinMonitor {
             }
         };
 
-        static constexpr size_t kEventBufferSize = 64;
+        static constexpr size_t kEventBufferSize = PIN_MONITOR_EVENT_QUEUE_SIZE;
 
         struct __attribute__((packed)) Event {
 

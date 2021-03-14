@@ -17,9 +17,8 @@
 using namespace PinMonitor;
 
 
-// void SimpleHardwarePin::addEvent(uint32_t time, bool value)
-// {
-//     noInterrupts();
-//     eventBuffer.emplace_back(time, _pin, value);
-//     interrupts();
-// }
+void ICACHE_RAM_ATTR HardwarePin::callback(void *arg)
+{
+    auto pin = reinterpret_cast<HardwarePin *>(arg)->getPin();
+    PinMonitor::eventBuffer.emplace_back(micros(), pin, GPI);
+}

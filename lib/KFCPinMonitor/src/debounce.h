@@ -4,6 +4,16 @@
 
 #pragma once
 
+#ifndef DEBUG_PIN_MONITOR_DEBOUNCE
+#define DEBUG_PIN_MONITOR_DEBOUNCE          1
+#endif
+
+#if DEBUG_PIN_MONITOR_DEBOUNCE
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
 namespace PinMonitor {
 
     class Monitor;
@@ -66,11 +76,6 @@ namespace PinMonitor {
     public:
 
         Debounce(bool value) :
-#if DEBUG_PIN_MONITOR_EVENTS
-            _bounceCounter(0),
-            _startDebounce(0),
-            _debounceTime(0),
-#endif
             _debounceTimer(0),
             _state(value),
             _value(value),
@@ -79,7 +84,7 @@ namespace PinMonitor {
         }
 
         inline StateType debounce(bool lastValue, uint16_t interruptCount, uint32_t last, uint32_t now, uint32_t _micros) {
-#if 1
+#if DEBUG_PIN_MONITOR_DEBOUNCE
             auto tmp = _debounce(lastValue, interruptCount, last,now, _micros);
             if (interruptCount) {
                 __DBG_printf("debounce=%u value=%u int_count=%u last=%u now=%u micros=%u", tmp, lastValue, interruptCount, last, now, _micros);
@@ -96,12 +101,6 @@ namespace PinMonitor {
 
     private:
         friend Monitor;
-
-#if DEBUG_PIN_MONITOR_EVENTS
-        uint16_t _bounceCounter;
-        uint32_t _startDebounce;
-        uint16_t _debounceTime;
-#endif
         uint32_t _debounceTimer;
         bool _state: 1;
         bool _value: 1;
@@ -121,5 +120,6 @@ namespace PinMonitor {
         }
     }
 
-
 }
+
+#include <debug_helper_disable.h>

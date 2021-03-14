@@ -49,6 +49,10 @@ Monitor::~Monitor()
     end();
 }
 
+//
+// NOTE: using a timer will execute the callback events in a different context and some restrictons apply
+// the execute time is limited to 5 milliseconds for example
+//
 void Monitor::begin(bool useTimer)
 {
     __LDBG_printf("begin pins=%u handlers=%u use_timer=%u", _pins.size(), _handlers.size(), useTimer);
@@ -73,45 +77,45 @@ void Monitor::end()
     }
     _detach(_handlers.begin(), _handlers.end(), true);
 
-    noInterrupts();
+    ETS_GPIO_INTR_DISABLE();
     eventBuffer.clear();
-    interrupts();
+    ETS_GPIO_INTR_ENABLE();
 }
 
-#if DEBUG
+// #if DEBUG
 
-void Monitor::beginDebug(Print &output, uint32_t interval)
-{
-    output.printf_P(PSTR("+PINM: pins=%u handlers=%u debounce=%ums loop_timer=%d\n"), _pins.size(), _handlers.size(), getDebounceTime(), _loopTimer ? *_loopTimer : -1);
-    for(auto &pin: _pins) {
-        output.printf_P(PSTR("+PINM: pin=%u this=%p usage=%u\n"), pin->getPin(), pin.get(), pin->getCount());
-    }
-    for(auto &handler: _handlers) {
-        output.printf_P(PSTR("+PINM: handler=%p "), handler.get());
-        // handler->dumpConfig(output);
-        output.println();
-    }
-    if (!_debugTimer && !_handlers.empty()) {
-        _debugTimer = new Event::Timer();
-        _Timer(_debugTimer)->add(Event::milliseconds(interval), true, [this, &output](Event::CallbackTimerPtr) {
-            PrintString str = F("+PINM: ");
-            for(auto &handler: _handlers) {
-                str.printf_P(PSTR("%p=[pin=%u events=%u value=%u] "), handler.get(), handler->getPin(), handler->_eventCounter, digitalRead(handler->getPin()));
-            }
-            output.println(str);
-        });
-    }
-}
+// void Monitor::beginDebug(Print &output, uint32_t interval)
+// {
+//     output.printf_P(PSTR("+PINM: pins=%u handlers=%u debounce=%ums loop_timer=%d\n"), _pins.size(), _handlers.size(), getDebounceTime(), _loopTimer ? *_loopTimer : -1);
+//     for(auto &pin: _pins) {
+//         output.printf_P(PSTR("+PINM: pin=%u this=%p usage=%u\n"), pin->getPin(), pin.get(), pin->getCount());
+//     }
+//     for(auto &handler: _handlers) {
+//         output.printf_P(PSTR("+PINM: handler=%p "), handler.get());
+//         // handler->dumpConfig(output);
+//         output.println();
+//     }
+//     if (!_debugTimer && !_handlers.empty()) {
+//         _debugTimer = new Event::Timer();
+//         _Timer(_debugTimer)->add(Event::milliseconds(interval), true, [this, &output](Event::CallbackTimerPtr) {
+//             PrintString str = F("+PINM: ");
+//             for(auto &handler: _handlers) {
+//                 str.printf_P(PSTR("%p=[pin=%u events=%u value=%u] "), handler.get(), handler->getPin(), handler->_eventCounter, digitalRead(handler->getPin()));
+//             }
+//             output.println(str);
+//         });
+//     }
+// }
 
-void Monitor::endDebug()
-{
-    if (_debugTimer) {
-        delete _debugTimer;
-        _debugTimer = nullptr;
-    }
-}
+// void Monitor::endDebug()
+// {
+//     if (_debugTimer) {
+//         delete _debugTimer;
+//         _debugTimer = nullptr;
+//     }
+// }
 
-#endif
+// #endif
 
 Pin &Monitor::attach(Pin *handler, HardwarePinType type)
 {
@@ -268,11 +272,13 @@ void Monitor::_detachLoop()
 void Monitor::feed(uint32_t micros1, uint32_t states, bool activeHigh)
 {
     for(const auto &event: PinMonitor::eventBuffer) {
-        __DBG_printf("QUEUE: time=%u pin=%u value=%u gpi=%u st=%u", event.getTime(), event.pin(), event.value(), event.gpiRegValue());
+        __DBG_printf("F-QUEUE: %s", event.toString().c_str());
     }
 
     uint32_t values = activeHigh ? states : ~states; // invert states for activelow
-    Interrupt::EventBuffer tmp;
+    // the container does not have a insert method
+    // create a temporary copy with events to prepend and append all existing events
+    Interrupt::EventBuffer prependEvents;
 
     for(auto &pinPtr: _pins) {
         uint8_t pin = pinPtr->getPin();
@@ -284,100 +290,31 @@ void Monitor::feed(uint32_t micros1, uint32_t states, bool activeHigh)
             auto iterator = std::find(PinMonitor::eventBuffer.begin(), PinMonitor::eventBuffer.end(), pin);
             if (iterator != PinMonitor::eventBuffer.end() && iterator->value() == activeHigh) {
                 // the first state of the PIN is active to inactive and we need to add the missing initial pulse
-                PinMonitor::eventBuffer.emplace_back(1500, pin, static_cast<uint16_t>(values));
+                prependEvents.emplace_back(1500, pin, static_cast<uint16_t>(values));
             }
         }
     }
 
-    if (tmp.size()) {
-        noInterrupts();
-        tmp.copy(PinMonitor::eventBuffer.begin(), PinMonitor::eventBuffer.end());
-        PinMonitor::eventBuffer = std::move(tmp);
-        interrupts();
-        __DBG_printf("queue updated");
+    if (prependEvents.size()) {
+        ETS_GPIO_INTR_DISABLE();
+        // append all existing events
+        prependEvents.copy(PinMonitor::eventBuffer.begin(), PinMonitor::eventBuffer.end());
+        PinMonitor::eventBuffer = std::move(prependEvents);
+        ETS_GPIO_INTR_ENABLE();
+
         for(const auto &event: PinMonitor::eventBuffer) {
-            __DBG_printf("QUEUE: time=%u pin=%u value=%u gpi=%u", event.getTime(), event.pin(), event.value(), event.gpiRegValue());
+            __DBG_printf("U-QUEUE: %s", event.toString().c_str());
         }
     }
-
-
-#if 0
-    uint32_t values = activeHigh ? states : ~states; // invert states for activelow
-
-    for(auto &pinPtr: _pins) {
-        auto debounce = pinPtr->getDebounce();
-        if (debounce) {
-            // reset debouncer
-            debounce->setState(activeHigh == false);
-
-            auto &pin = *reinterpret_cast<DebouncedHardwarePin *>(pinPtr.get());
-
-            // the hardware buffers any button press until the awake pin is set active in setup()
-            // quick ones with less than 50-70ms would not show up otherwise since we cannot read the
-            // values during startup.... after ~60ms setup() gets called
-            auto pinNum = pin.getPin();
-            uint32_t pinMask = _BV(pinNum);
-            uint8_t intCount = 0;
-#if PIN_MONITOR_USE_GPIO_INTERRUPT
-            noInterrupts();
-            // those handlers get installed before preinit and can be used as additional source
-            auto interruptHandler = pin.getValues();
-            if (interruptHandler._intCount) {
-                states |= pinMask;
-                intCount += interruptHandler._intCount;
-            }
-            interrupts();
-#endif
-            bool state = states & pinMask;
-            bool value = values & pinMask;
-
-            // simulate button down
-            uint32_t time = 1000;
-            uint32_t now = time / 1000;
-            _event(pinNum, debounce->debounce(value, intCount, time, now, time), now);
-            _event(pin.getPin(), debounce->debounce(value, 0, time, now, time), now);
-
-            // compare value with the real pin value
-            noInterrupts();
-            auto pinValue = digitalRead(pinNum);
-            if (pinValue != value) {
-                state = !state;
-                value = !value;
-                // micros1 is the setup of the interrupt handler and the first real event possible
-                // it should occur later that the debouncer does not filter it
-                time = std::max(time + 15000, micros1);
-                now = micros1 / 1000;
-
-                // simulate interrupt
-                auto &data = pin.getValues();
-                data._value = value;
-                data._micros = time;
-                data._intCount++;
-                data._debug.push_back((micros1 << 1) | (value));
-            }
-            interrupts();
-
-            // time += 10000;
-            // now += 10;
-            // noInterrupts();
-            // bool _value = digitalRead(pin.getPin());
-            // if (_value != value) {
-            //     // fake interrupt if the value has changd
-            //     auto &data = pin.getValues();
-            //     data._micros = micros();
-            //     data._value = _value;
-            //     data._intCount++;
-            // }
-            // interrupts();
-            // // __DBG_printf("feed int pin=%u new=%u value=%u int_count=%u micros=%u", pin.getPin(), (_value != value), pin._value, pin._intCount, pin._micros);
-
-        }
-    }
-#endif
     _lastRun = millis();
-    // delay(pinMonitor.getDebounceTime() + 5);
 }
 
+// NOTE: this method should be executes at least once per millisecond
+// user experience degrades if the interval is longer than 5 milliseconds, malfunctions might occur >50-100ms
+// in the case the main loop uses a lot delays, the pin monitor loop can be installed as a timer, which can be repeated at a minimum of 5ms
+//
+// see pinMonitor.begin(true)....
+//
 void Monitor::_loop()
 {
     uint32_t now = millis();
@@ -392,22 +329,20 @@ void Monitor::_loop()
         }
 
         for(auto &event: eventBuffer) {
-            __DBG_printf("QUEUE: time=%u pin=%u value=%u gpi=%s", event.getTime(), event.pin(), event.value(), BitsToStr<16, true>(event.gpiRegValue()).c_str());
+            __DBG_printf("L-QUEUE: %s", event.toString().c_str());
         }
 
-        noInterrupts();
+        ETS_GPIO_INTR_DISABLE();
         auto bufIterator = eventBuffer.begin();
         while (bufIterator != eventBuffer.end()) {
             auto event = *bufIterator;
-            interrupts();
+            ETS_GPIO_INTR_ENABLE();
 
-            __DBG_printf("FEEDQ: time=%u pin=%u value=%u gpi=%s", event.getTime(), event.pin(), event.value(), BitsToStr<16, true>(event.gpiRegValue()).c_str());
+            __DBG_printf("L-FEED: %s", event.toString().c_str());
 
-            // pin lookup table? 0-15=16*4 byte ram. or adding an additional index to Interrupt:Event? 5bit? increases the eventbuffer by 1 byte/perelement=64byte?
-            auto iterator = std::find_if(_pins.begin(), _pins.end(), [&event](const HardwarePinPtr &ptr) { return ptr->getPin() == event.pin(); });
-
-            // __DBG_printf("pin=%u hw_pin=%p value=%u time=%u", event.pin(), iterator != _pins.end() ? iterator->get() : nullptr, event.value(), event.getTime());
-
+            auto iterator = std::find_if(_pins.begin(), _pins.end(), [&event](const HardwarePinPtr &ptr) {
+                return ptr->getPin() == event.pin();
+            });
             if (iterator != _pins.end()) {
                 const auto &pinPtr = *iterator;
                 switch(pinPtr->_type) {
@@ -425,37 +360,23 @@ void Monitor::_loop()
                                 return ptr->getPin() == event.pin();
                             });
                             if (pinIterator != _handlers.end()) {
-                                // auto encoder = reinterpret_cast<RotaryEncoder *>(const_cast<void *>(pinIterator->get()->getArg()));
                                 auto encoder = reinterpret_cast<RotaryEncoderPin *>(pinIterator->get())->getEncoder();
                                 encoder->processEvent(event);
                             }
                         }
                         break;
                     default:
-                        //TODO panic
                         break;
                 }
             }
 
-            noInterrupts();
+            ETS_GPIO_INTR_DISABLE();
             ++bufIterator;
         }
         if (bufIterator == eventBuffer.end()) {
             eventBuffer.clear();
         }
-        interrupts();
-
-        // for(auto &event: pinMonitorBuffer) {
-        //     auto iterator = std::find(_pins.begin(), _pins.end(), static_cast<uint8_t>(event.pin()));
-        //     if (iterator != _pins.end()) {
-        //         const auto &pinPtr = *iterator;
-        //         auto debounce = pinPtr->getDebounce();
-        //         if (debounce) {
-        //             _event(event.pin(), debounce->debounce(data._value, data._intCount, data._micros, now, micros()), now);
-        //         }
-        //     }
-        // }
-        // interrupts();
+        ETS_GPIO_INTR_ENABLE();
     }
 
 
@@ -466,7 +387,7 @@ void Monitor::_loop()
     uint32_t time = micros();
     now = millis();
 
-    // inject "empty" events into the pins with debouncing to update states that are time based
+    // inject "empty" events once per millisecond into the pins with debouncing to update states that are time based
     for(const auto &pinPtr: _pins) {
         auto debounce = pinPtr->getDebounce();
         if (debounce) {

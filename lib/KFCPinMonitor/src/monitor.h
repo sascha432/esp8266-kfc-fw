@@ -9,21 +9,6 @@
 #include "pin_monitor.h"
 #include "interrupt_event.h"
 
-#if PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS == 0
-
-// saves 232 byte IRAM compared to attachInterruptArg/detachInterrupt
-// cannot be used with arduino functional interrupts
-
-typedef void (*voidFuncPtrArg)(void*);
-
-// mode is CHANGE
-void attachInterruptArg(uint8_t pin, voidFuncPtrArg userFunc, void *arg);
-// this function must not be called from inside the interrupt handler
-void detachInterrupt(uint8_t pin);
-
-#endif
-
-
 // Monitors attached pins and sends state after debouncing
 
 namespace PinMonitor {

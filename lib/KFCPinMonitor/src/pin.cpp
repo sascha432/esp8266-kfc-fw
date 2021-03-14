@@ -19,6 +19,5 @@ using namespace PinMonitor;
 
 void ICACHE_RAM_ATTR HardwarePin::callback(void *arg)
 {
-    auto pin = reinterpret_cast<HardwarePin *>(arg)->getPin();
-    PinMonitor::eventBuffer.emplace_back(micros(), pin, GPI);
+    PinMonitor::eventBuffer.emplace_back(micros(), reinterpret_cast<HardwarePin *>(arg)->getPin());
 }

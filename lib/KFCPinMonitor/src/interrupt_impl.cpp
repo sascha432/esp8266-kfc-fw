@@ -13,13 +13,16 @@
 #include <debug_helper_disable.h>
 #endif
 
+#if PIN_MONITOR_USE_GPIO_INTERRUPT == 0 && PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS == 0
+#include <interrupts.h>
+#endif
 
 namespace PinMonitor {
 
     Interrupt::EventBuffer eventBuffer;
 
 // ------------------------------------------------------------------------
-// implementation with GPIO interrupt instead of Arduino attachInterrupt..
+// implementation with GPIO interrupt instead of attachInterrupt...
 // ------------------------------------------------------------------------
 #if PIN_MONITOR_USE_GPIO_INTERRUPT
 
@@ -66,6 +69,75 @@ namespace PinMonitor {
         ETS_GPIO_INTR_ENABLE();
     }
 
-}
+#elif PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS == 0
+
+    typedef struct {
+        voidFuncPtrArg fn;
+        void *arg;
+    } interrupt_handler_t;
+
+    static interrupt_handler_t interrupt_handlers[15];
+    static uint32_t interrupt_reg;
+
+    static void set_interrupt_handlers(uint8_t pin, voidFuncPtrArg userFunc, void* arg)
+    {
+        interrupt_handlers[pin].fn = userFunc;
+        interrupt_handlers[pin].arg = arg;
+    }
+
+    void ICACHE_RAM_ATTR interrupt_handler(void *)
+    {
+        uint32_t status = GPIE;
+        GPIEC = status; // clear interrupts
+        if (status == 0 || interrupt_reg == 0) {
+            return;
+        }
+        ETS_GPIO_INTR_DISABLE();
+        uint8_t i = 0;
+        uint32_t changedbits = status & interrupt_reg; // remove bits that do not have an active handler otherwise it results in a nullptr call
+        while (changedbits) {
+            while (!(changedbits & (1 << i))) { // find next set bit
+                i++;
+            }
+            changedbits &= ~(1 << i);
+            {
+                esp8266::InterruptLock irqLock; // stop other interrupts
+                interrupt_handlers[i].fn(interrupt_handlers[i].arg);
+            }
+        }
+        ETS_GPIO_INTR_ENABLE();
+    }
+
+    // mode is CHANGE
+    void attachInterruptArg(uint8_t pin, voidFuncPtrArg userFunc, void *arg)
+    {
+        if (userFunc == nullptr) { // detach interrupt if userfunc is nullptr. makes the check for nullptr inside the ISR obsolete
+            detachInterrupt(pin);
+            return;
+        }
+        ETS_GPIO_INTR_DISABLE();
+        set_interrupt_handlers(pin, userFunc, arg);
+        interrupt_reg |= (1 << pin);
+        GPC(pin) &= ~(0xF << GPCI);  // INT mode disabled
+        GPIEC = (1 << pin);  // Clear Interrupt for this pin
+        GPC(pin) |= ((CHANGE & 0xF) << GPCI);  // INT mode "mode"
+        ETS_GPIO_INTR_ATTACH(interrupt_handler, &interrupt_reg);
+        ETS_GPIO_INTR_ENABLE();
+    }
+
+    // this function must not be called from inside the interrupt handler
+    void detachInterrupt(uint8_t pin)
+    {
+        ETS_GPIO_INTR_DISABLE();
+        GPC(pin) &= ~(0xF << GPCI);  // INT mode disabled
+        GPIEC = (1 << pin);  // Clear Interrupt for this pin
+        interrupt_reg &= ~(1 << pin);
+        set_interrupt_handlers(pin, nullptr, nullptr);
+        if (interrupt_reg) {
+            ETS_GPIO_INTR_ENABLE();
+        }
+    }
 
 #endif
+
+}

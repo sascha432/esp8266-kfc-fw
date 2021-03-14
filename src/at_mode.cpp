@@ -1789,18 +1789,18 @@ void at_mode_serial_handle_event(String &commandString)
                     args.printf_P(PSTR("Storage: %s\nSize: %u"), SPGM(alerts_storage_filename), size);
                 }
             }
-#if PIN_MONITOR
-            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(PINM))) {
-                if (args.isTrue(0) || !pinMonitor.isDebugRunning()) {
-                    args.print(F("starting debug mode"));
-                    pinMonitor.beginDebug(args.getStream(), args.toMillis(1, 500, ~0, 1000U));
-                }
-                else {
-                    args.print(F("ending debug mode"));
-                    pinMonitor.endDebug();
-                }
-            }
-#endif
+// #if PIN_MONITOR
+//             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(PINM))) {
+//                 if (args.isTrue(0) || !pinMonitor.isDebugRunning()) {
+//                     args.print(F("starting debug mode"));
+//                     pinMonitor.beginDebug(args.getStream(), args.toMillis(1, 500, ~0, 1000U));
+//                 }
+//                 else {
+//                     args.print(F("ending debug mode"));
+//                     pinMonitor.endDebug();
+//                 }
+//             }
+// #endif
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RSSI)) || args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(HEAP)) || args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(GPIO))) {
                 if (args.requireArgs(0, 1)) {
                     auto interval = args.toMillis(0, 0, 3600 * 1000, 0, String('s'));

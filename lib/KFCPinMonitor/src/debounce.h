@@ -41,6 +41,10 @@ namespace PinMonitor {
         ANY                    = 0xff
     };
 
+    inline static bool operator&(StateType state, StateType bit) {
+        return static_cast<std::underlying_type<StateType>::type>(state) & static_cast<std::underlying_type<StateType>::type>(bit);
+    }
+
     enum class ActiveStateType : bool {
         ACTIVE_HIGH             = true,
         ACTIVE_LOW              = false,

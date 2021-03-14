@@ -43,9 +43,9 @@ Monitor::Monitor() :
 
 Monitor::~Monitor()
 {
-#if DEBUG
-    endDebug();
-#endif
+// #if DEBUG
+//     endDebug();
+// #endif
     end();
 }
 
@@ -138,9 +138,9 @@ Pin &Monitor::_attach(Pin &pin, HardwarePinType type)
             case HardwarePinType::DEBOUNCE:
                 _pins.emplace_back(new DebouncedHardwarePin(pinNum, digitalRead(pinNum)));
                 break;
-            // case HardwarePinType::SIMPLE:
-            //     _pins.emplace_back(new SimpleHardwarePin(pinNum));
-            //     break;
+            case HardwarePinType::SIMPLE:
+                _pins.emplace_back(new SimpleHardwarePin(pinNum));
+                break;
             case HardwarePinType::ROTARY:
                 _pins.emplace_back(new RotaryHardwarePin(pinNum, pin));
                 break;
@@ -281,16 +281,15 @@ void Monitor::feed(uint32_t micros1, uint32_t states, bool activeHigh)
     Interrupt::EventBuffer prependEvents;
 
     for(auto &pinPtr: _pins) {
-        uint8_t pin = pinPtr->getPin();
         auto debounce = pinPtr->getDebounce();
         if (debounce) {
-
-        }
-        if (states & _BV(pin)) {
-            auto iterator = std::find(PinMonitor::eventBuffer.begin(), PinMonitor::eventBuffer.end(), pin);
-            if (iterator != PinMonitor::eventBuffer.end() && iterator->value() == activeHigh) {
-                // the first state of the PIN is active to inactive and we need to add the missing initial pulse
-                prependEvents.emplace_back(1500, pin, static_cast<uint16_t>(values));
+            uint8_t pin = pinPtr->getPin();
+            if (states & _BV(pin)) {
+                auto iterator = std::find(PinMonitor::eventBuffer.begin(), PinMonitor::eventBuffer.end(), pin);
+                if (iterator != PinMonitor::eventBuffer.end() && iterator->value() == activeHigh) {
+                    // the first state of the PIN is active to inactive and we need to add the missing initial pulse
+                    prependEvents.emplace_back(1500, pin, static_cast<uint16_t>(values));
+                }
             }
         }
     }
@@ -365,6 +364,9 @@ void Monitor::_loop()
                             }
                         }
                         break;
+                    case HardwarePinType::SIMPLE:
+                        _event(event.pin(), event.value() ? StateType::IS_HIGH : StateType::IS_LOW, now);
+                        break;
                     default:
                         break;
                 }
@@ -405,6 +407,7 @@ void Monitor::_event(uint8_t pinNum, StateType state, uint32_t now)
 {
     for(const auto &handler: _handlers) {
         StateType tmp;
+        __DBG_assert_panic(handler.get() != nullptr, "event handler=nullptr pin=%u state=%u", pinNum, state);
         if (handler->getPin() == pinNum && handler->isEnabled() && (tmp = handler->_getStateIfEnabled(state)) != StateType::NONE) {
             handler->_eventCounter++;
             handler->event(tmp, now);

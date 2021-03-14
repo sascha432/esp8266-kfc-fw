@@ -33,17 +33,15 @@ using KFCConfigurationClasses::Plugins;
 // Vs = ((ADC * R2) * (ADC * R1)) / (1024 * R1)
 
 
-#ifndef IOT_SENSOR_BATTERY_CHARGING_HAVE_FUNCTION
-#define IOT_SENSOR_BATTERY_CHARGING_HAVE_FUNCTION               0
-#endif
-
-#if IOT_SENSOR_BATTERY_CHARGING_HAVE_FUNCTION
-extern bool Sensor_Battery_charging_detection();
-#define IOT_SENSOR_BATTERY_CHARGING                                Sensor_Battery_charging_detection()
-#endif
-
+// charging detection
 #ifndef IOT_SENSOR_BATTERY_CHARGING
-// #define IOT_SENSOR_BATTERY_CHARGING                             digitalRead()
+// #define IOT_SENSOR_BATTERY_CHARGING                             digitalRead(...)
+// #define IOT_SENSOR_BATTERY_CHARGING                             isBatteryCharging()
+#endif
+
+// if a function or variable is used, it can be delcared here
+#ifndef IOT_SENSOR_BATTERY_CHARGING_DECL
+// #define IOT_SENSOR_BATTERY_CHARGING_DECL                        extern bool isBatteryCharging()
 #endif
 
 // set pin to detect end of charge cycle.
@@ -53,20 +51,37 @@ extern bool Sensor_Battery_charging_detection();
 #define IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN                -1
 #endif
 
+// detection if running on battery
 #ifndef IOT_SENSOR_BATTERY_ON_BATTERY
 // #define IOT_SENSOR_BATTERY_ON_BATTERY                           digitalRead(5)
+#endif
+
+// can be used to declare the function used for IOT_SENSOR_BATTERY_ON_BATTERY
+#ifndef IOT_SENSOR_BATTERY_ON_BATTERY_DECL
+// #define IOT_SENSOR_BATTERY_ON_BATTERY_DECL                      extern bool onBattery()
 #endif
 
 #ifndef IOT_SENSOR_BATTERY_DSIPLAY_POWER_STATUS
 #define IOT_SENSOR_BATTERY_DSIPLAY_POWER_STATUS                 0
 #endif
 
+// condition for running on external power
+// if a function or variable is used, it can be decalred with IOT_SENSOR_BATTERY_ON_EXTERNAL_DECL
 #ifndef IOT_SENSOR_BATTERY_ON_EXTERNAL
 // #define IOT_SENSOR_BATTERY_ON_EXTERNAL                          digitalRead(5)
+// #define IOT_SENSOR_BATTERY_ON_EXTERNAL                          (onExternalPower)
+#endif
+
+#ifndef IOT_SENSOR_BATTERY_ON_EXTERNAL_DECL
+// #define IOT_SENSOR_BATTERY_ON_EXTERNAL_DECL                     extern bool onExternalPower;
 #endif
 
 #ifndef IOT_SENSOR_BATTERY_ON_STANDBY
 // #define IOT_SENSOR_BATTERY_ON_STANDBY                          !digitalRead(5)
+#endif
+
+#ifndef IOT_SENSOR_BATTERY_ON_STANDBY_DECL
+// #define IOT_SENSOR_BATTERY_ON_STANDBY_DECL                      extern ...;
 #endif
 
 #ifndef IOT_SENSOR_BATTERY_DISPLAY_LEVEL
@@ -75,12 +90,17 @@ extern bool Sensor_Battery_charging_detection();
 
 // function that returns an integer of the battery level in %
 // see Sensor_Battery::calcLipoCapacity(voltage, number_of_cells, is_charging)
-// the functions uses polynomial regression to fit the voltage to the capacity level and probably needs adjustments
-// for different batteries and discharge/charging currents
+// the functions uses polynomial regression to fit the voltage to the capacity level and probably needs
+// adjustments for different batteries and discharge/charging currents
 // max. voltage and an offset can be configured at the WebUI
 // calibrate the ADC to reach a maximum of 4.26V while charging
 #ifndef IOT_SENSOR_BATTERY_LEVEL_FUNCTION
 #define IOT_SENSOR_BATTERY_LEVEL_FUNCTION(u, n, c)              Sensor_Battery::calcLipoCapacity(u, n, c)
+#endif
+
+// can be used to declare a function used in IOT_SENSOR_BATTERY_LEVEL_FUNCTION
+#ifndef IOT_SENSOR_BATTERY_LEVEL_FUNCTION_DECL
+// #define IOT_SENSOR_BATTERY_LEVEL_FUNCTION_DECL                  extern myOwnCalcLipoCapacity(float voltage, int cells, bool isCharging)
 #endif
 
 // number of cells
@@ -105,6 +125,26 @@ extern bool Sensor_Battery_charging_detection();
 
 #ifndef IOT_SENSOR_HAVE_BATTERY_RECORDER
 #define IOT_SENSOR_HAVE_BATTERY_RECORDER                        0
+#endif
+
+#ifdef IOT_SENSOR_BATTERY_ON_BATTERY_DECL
+IOT_SENSOR_BATTERY_ON_BATTERY_DECL;
+#endif
+
+#ifdef IOT_SENSOR_BATTERY_ON_EXTERNAL_DECL
+IOT_SENSOR_BATTERY_ON_EXTERNAL_DECL;
+#endif
+
+#ifdef IOT_SENSOR_BATTERY_ON_STANDBY_DECL
+IOT_SENSOR_BATTERY_ON_STANDBY_DECL;
+#endif
+
+#ifdef IOT_SENSOR_BATTERY_CHARGING_DECL
+IOT_SENSOR_BATTERY_CHARGING_DECL;
+#endif
+
+#ifdef IOT_SENSOR_BATTERY_LEVEL_FUNCTION_DECL
+IOT_SENSOR_BATTERY_LEVEL_FUNCTION_DECL;
 #endif
 
 class Sensor_Battery : public MQTT::Sensor {

@@ -29,28 +29,28 @@ namespace PinMonitor {
         void begin(bool useTimer = false);
         void end();
 
-#if DEBUG
-        // enable debug output on serial port
-        void beginDebug(Print &outout, uint32_t interval = 1000);
-        // disable debug mode
-        void endDebug();
+// #if DEBUG
+//         // enable debug output on serial port
+//         void beginDebug(Print &outout, uint32_t interval = 1000);
+//         // disable debug mode
+//         void endDebug();
 
-        bool isDebugRunning() const {
-            return !!_debugTimer;
-        }
-#endif
+//         bool isDebugRunning() const {
+//             return !!_debugTimer;
+//         }
+// #endif
 
         // add a pin object
         Pin &attach(Pin *pin, HardwarePinType type = HardwarePinType::_DEFAULT);
 
-        template<class T, class ...Args>
-        T &attach(Args&&... args) {
-            return static_cast<T &>(attach(new T(std::forward<Args>(args)...)));
+        template<class _Ta, class ...Args>
+        _Ta &attach(Args&&... args) {
+            return static_cast<_Ta &>(attach(new _Ta(std::forward<Args>(args)...)));
         }
 
-        template<class T, class ...Args>
-        T &attachPinType(HardwarePinType type, Args&&... args) {
-            return static_cast<T &>(attach(new T(std::forward<Args>(args)...), type));
+        template<class _Ta, class ...Args>
+        _Ta &attachPinType(HardwarePinType type, Args&&... args) {
+            return static_cast<_Ta &>(attach(new _Ta(std::forward<Args>(args)...), type));
         }
 
         // remove one or more pins

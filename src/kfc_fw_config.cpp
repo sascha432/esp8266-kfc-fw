@@ -899,6 +899,7 @@ bool KFCFWConfiguration::hasZeroConf(const String &hostname) const
 void KFCFWConfiguration::wifiQuickConnect()
 {
     __LDBG_printf("quick connect");
+#if ENABLE_DEEP_SLEEP
 
 #if defined(ESP32)
     WiFi.mode(WIFI_STA); // needs to be called to initialize wifi
@@ -961,7 +962,10 @@ void KFCFWConfiguration::wifiQuickConnect()
     } else {
         Logger_error(F("Failed to load WiFi configuration"));
     }
+#endif
 }
+
+#if ENABLE_DEEP_SLEEP
 
 void KFCFWConfiguration::enterDeepSleep(milliseconds time, RFMode mode, uint16_t delayAfterPrepare)
 {
@@ -989,6 +993,8 @@ void KFCFWConfiguration::enterDeepSleep(milliseconds time, RFMode mode, uint16_t
 
     DeepSleep::DeepSleepParam::enterDeepSleep(time);
 }
+
+#endif
 
 static void invoke_ESP_restart()
 {

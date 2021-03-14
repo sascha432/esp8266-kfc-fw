@@ -85,8 +85,13 @@ void setup()
         void deep_sleep_setup();
     #endif
 
+#if PIN_MONITOR_USE_GPIO_INTERRUPT
     PinMonitor::GPIOInterruptsEnable();
-    _startupTimings.preSetup(millis());
+#endif
+
+    #if IOT_REMOTE_CONTROL
+        _startupTimings.preSetup(millis());
+    #endif
     #if ENABLE_DEEP_SLEEP
         deepSleepPinState.merge();
         bool wakeup = resetDetector.hasWakeUpDetected();
@@ -105,7 +110,9 @@ void setup()
         deepSleepPinState.merge();
     #endif
     _startupTimings.setSetupFunc(millis());
-    _startupTimings.preInit(deepSleepPinState.getMillis());
+    #if IOT_REMOTE_CONTROL
+        _startupTimings.preInit(deepSleepPinState.getMillis());
+    #endif
 
     KFC_SAFE_MODE_SERIAL_PORT.begin(KFC_SERIAL_RATE);
     #if KFC_DEBUG_USE_SERIAL1

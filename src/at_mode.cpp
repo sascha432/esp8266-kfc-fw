@@ -2158,9 +2158,13 @@ void at_mode_serial_handle_event(String &commandString)
                     auto &stream = args.getStream();
                     auto memoryId = static_cast<RTCMemoryManager::RTCMemoryId>(args.toNumber(1));
                     if (args.equalsIgnoreCase(0, F("qc")) || args.equalsIgnoreCase(0, F("quickconnect"))) {
+#if ENABLE_DEEP_SLEEP
                         config.storeQuickConnect(WiFi.BSSID(), WiFi.channel());
                         config.storeStationConfig(WiFi.localIP(), WiFi.subnetMask(), WiFi.gatewayIP());
                         args.printf_P(PSTR("Quick connect stored"));
+#else
+                            args.printf_P(PSTR("Quick connect not available"));
+#endif
                     }
                     else if (args.equalsIgnoreCase(0, F("list")) || args.equalsIgnoreCase(0, F("info"))) {
                         args.printf_P(PSTR("RTC memory ids:"));

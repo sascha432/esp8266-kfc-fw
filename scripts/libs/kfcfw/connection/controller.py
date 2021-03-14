@@ -44,8 +44,8 @@ class PrintConsole:
         self.log('%s: %s' % (title, message))
 
 class PrintConsoleTk(PrintConsole):
-    def __init__(self):
-        PrintConsole.__init__(self)
+    def __init__(self, debug = True):
+        PrintConsole.__init__(self, debug)
 
     def show_message(message, title = 'Error'):
         import tkinter as tk

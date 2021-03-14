@@ -609,7 +609,7 @@ void FileStorage::_rewriteAlertStorage(File &file, RewriteType rewriteType)
                         __LDBG_printf("line=%s id=%u copy=%u", line.c_str(), id, Item::canCopy(id, items));
                         if (Item::canCopy(id, items)) {
                             // copy this alert
-                            String_rtrim_P(line, PSTR(",]\n"));
+                            line.rtrim(F(",]\n"));
                             tmpFile.print(F(",\n"));
                             tmpFile.print(line);
                         }

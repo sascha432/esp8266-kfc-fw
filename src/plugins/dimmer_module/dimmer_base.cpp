@@ -393,20 +393,21 @@ void Base::_setValue(const String &id, const String &value, bool hasValue, bool 
 
 void Base::setupWebServer()
 {
-    __LDBG_printf("server=%p", WebServerPlugin::getWebServerObject());
-    WebServerPlugin::addHandler(F("/dimmer-reset-fw"), Base::handleWebServer);
+    __LDBG_printf("server=%p", WebServer::Plugin::getWebServerObject());
+    WebServer::Plugin::addHandler(F("/dimmer-reset-fw"), Base::handleWebServer);
 }
 
 void Base::handleWebServer(AsyncWebServerRequest *request)
 {
-    if (WebServerPlugin::getInstance().isAuthenticated(request) == true) {
+    if (WebServer::Plugin::getInstance().isAuthenticated(request) == true) {
         resetDimmerMCU();
         HttpHeaders httpHeaders(false);
         httpHeaders.addNoCache();
         auto response = request->beginResponse_P(200, FSPGM(mime_text_plain), SPGM(OK));
         httpHeaders.setAsyncWebServerResponseHeaders(response);
         request->send(response);
-    } else {
+    }
+    else {
         request->send(403);
     }
 }

@@ -9,7 +9,10 @@
 #include "web_server.h"
 #include "Updater.h"
 #if IOT_REMOTE_CONTROL
-#include "./plugins/remote/remote.h"
+#include "../src/plugins/remote/remote.h"
+#endif
+#if STK500V1
+#include "../src/plugins/stk500v1/STK500v1Programmer.h"
 #endif
 
 #if DEBUG_WEB_SERVER_ACTION
@@ -99,23 +102,24 @@ void AsyncUpdateWebHandler::handleRequest(AsyncWebServerRequest *request)
     // AsyncWebServerResponse *response = nullptr;
 #if STK500V1
     if (status->command == U_ATMEGA) {
-        if (!status->tempFile || !status->tempFile.fullName()) {
+        if (!request->_tempFile || !request->_tempFile.fullName()) {
             errorStr = F("Failed to read temporary file");
             goto errorResponse;
         }
         // get filename and close the file
-        String filename = status->tempFile.fullName();
-        status->tempFile.close();
+        String filename = request->_tempFile.fullName();
+        request->_tempFile.close();
 
         // check if singleton exists
         if (stk500v1) {
-            Logger::error(F("ATmega firmware upgrade already running"));
-            send(200, request, F("Upgrade already running"));
+            errorStr = F("ATmega firmware upgrade already running");
+            Logger_error(errorStr);
+            goto errorResponse;
         }
         else {
             Logger_security(F("Starting ATmega firmware upgrade..."));
 
-            stk500v1 = __LDBG_new(STK500v1Programmer, Serial);
+            stk500v1 = new STK500v1Programmer(Serial);
             stk500v1->setSignature_P(PSTR("\x1e\x95\x0f"));
             stk500v1->setFile(filename);
             stk500v1->setLogging(STK500v1Programmer::LOG_FILE);
@@ -124,22 +128,22 @@ void AsyncUpdateWebHandler::handleRequest(AsyncWebServerRequest *request)
             _Scheduler.add(3500, false, [filename](Event::CallbackTimerPtr timer) {
                 if (stk500v1) {
                     // start update
-                    stk500v1->begin([]() {
+                    stk500v1->begin([filename]() {
                         __LDBG_free(stk500v1);
                         stk500v1 = nullptr;
                         // remove temporary file
-                        KFCFS::unlink(filename);
+                        KFCFS.remove(filename);
                     });
                 }
                 else {
                     // write something to the logfile
-                    Logger::error(F("Cannot start ATmega firmware upgrade"));
+                    Logger_error(F("Cannot start ATmega firmware upgrade"));
                     // remove temporary file
-                    KFCFS::unlink(filename);
+                    KFCFS.remove(filename);
                 }
             });
 
-            response = request->beginResponse(302);
+            auto response = request->beginResponse(302);
             HttpHeaders httpHeaders(false);
             httpHeaders.add<HttpLocationHeader>(String('/') + FSPGM(serial_console_html));
             httpHeaders.replace<HttpConnectionHeader>(HttpConnectionHeader::CLOSE);
@@ -299,8 +303,8 @@ void AsyncUpdateWebHandler::handleUpload(AsyncWebServerRequest *request, const S
 #if STK500V1
             if (imageType == 3) {
                 status->command = U_ATMEGA;
-                status->tempFile = KFCFS.open(FSPGM(stk500v1_tmp_file), fs::FileOpenMode::write);
-                __LDBG_printf("ATmega fw temp file %u, filename %s", (bool)status->tempFile, String(FSPGM(stk500v1_tmp_file)).c_str());
+                request->_tempFile = KFCFS.open(FSPGM(stk500v1_tmp_file), fs::FileOpenMode::write);
+                __LDBG_printf("ATmega fw temp file %u, filename %s", (bool)request->tempFile, String(FSPGM(stk500v1_tmp_file)).c_str());
             }
             else
 #endif
@@ -330,16 +334,16 @@ void AsyncUpdateWebHandler::handleUpload(AsyncWebServerRequest *request, const S
         }
 #if STK500V1
         if (status->command == U_ATMEGA) {
-            if (!status->tempFile) {
+            if (!request->_tempFile) {
                 status->error = true;
             }
-            else if (status->tempFile.write(data, len) != len) {
+            else if (request->_tempFile.write(data, len) != len) {
                 status->error = true;
             }
 #if DEBUG_WEB_SERVER
             if (final) {
-                if (status->tempFile) {
-                    __DBG_printf("upload success: %uB", status->tempFile.size());
+                if (request->_tempFile) {
+                    __DBG_printf("upload success: %uB", request->_tempFile.size());
                 else {
                     __DBG_printf("upload error: tempFile = false");
                 }

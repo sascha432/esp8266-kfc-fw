@@ -27,9 +27,6 @@
 #include "WebUIAlerts.h"
 #include "kfc_fw_config.h"
 #include "failure_counter.h"
-#if STK500V1
-#include "../src/plugins/stk500v1/STK500v1Programmer.h"
-#endif
 #include "./plugins/mdns/mdns_sd.h"
 // #if IOT_REMOTE_CONTROL
 // #include "./plugins/remote/remote.h"

@@ -58,10 +58,11 @@ class WebSocket(BaseConnection):
         else:
             self.error('not connected')
 
-    def send(self, msg, end = '\n'):
+    def send(self, msg, end = '\r\n'):
         if self.is_connected():
             self.debug('sending: %s' % msg)
             self.ws.send(msg + end)
+            # self.ws.send(msg)
             return True
         self.debug('sending failed: not connected: %s' % msg)
         return False

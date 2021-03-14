@@ -16,6 +16,10 @@
 #ifndef PLUGIN_DEEP_SLEEP_DELAYED_START_TIME
 #define PLUGIN_DEEP_SLEEP_DELAYED_START_TIME          7500
 #endif
+#else
+#ifndef PLUGIN_DEEP_SLEEP_DELAYED_START_TIME
+#define PLUGIN_DEEP_SLEEP_DELAYED_START_TIME          0
+#endif
 #endif
 
 namespace PluginComponents {

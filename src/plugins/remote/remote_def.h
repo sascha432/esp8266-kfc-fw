@@ -13,7 +13,7 @@
 // https://www.home-assistant.io/integrations/device_trigger.mqtt/
 
 #ifndef DEBUG_IOT_REMOTE_CONTROL
-#define DEBUG_IOT_REMOTE_CONTROL                                0
+#define DEBUG_IOT_REMOTE_CONTROL                                1
 #endif
 
 #if DEBUG_IOT_REMOTE_CONTROL

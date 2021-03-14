@@ -22,9 +22,9 @@
 #include "debug_helper_disable.h"
 #endif
 
-FLASH_STRING_GENERATOR_AUTO_INIT(
-    AUTO_STRING_DEF(__pure_virtual, "pure virtual call: %s\n")
-);
+// FLASH_STRING_GENERATOR_AUTO_INIT(
+//     AUTO_STRING_DEF(__pure_virtual, "pure virtual call: %s\n")
+// );
 
 #define __DBG_panic_pure_virtual() \
     DEBUG_OUTPUT.printf_P(SPGM(__pure_virtual), getName_P()); \

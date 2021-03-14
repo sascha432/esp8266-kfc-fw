@@ -6,4 +6,3 @@
 
 #include "remote_def.h"
 
-

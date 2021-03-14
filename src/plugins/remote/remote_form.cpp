@@ -120,6 +120,17 @@ void RemoteControlPlugin::createConfigureForm(FormCallbackType type, const Strin
             nameGroup.end();
         }
         {
+            auto &mGroup = form.addCardGroup(F("smm"), F("System Maintenance Mode"), true);
+
+            form.add(F("sm1"), String(F("Button #1")));
+            form.addFormUI(F("Combination Button 1"), FormUI::ReadOnlyAttribute());
+
+            form.add(F("sm2"), String(F("Button #4")));
+            form.addFormUI(F("Combination Button 2"), FormUI::ReadOnlyAttribute());
+
+            mGroup.end();
+        }
+        {
             auto &eventGroup = form.addCardGroup(F("en"), F("Event Names"), true);
 
             PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, 9, en, na);

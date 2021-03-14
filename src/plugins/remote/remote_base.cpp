@@ -172,18 +172,18 @@ namespace RemoteControl {
     }
 
     //
-    // press first and last button to activate the system button combination
+    // hold first and last button to activate the system button combination
     //
-    // holding both buttons for more than 5 seconds restarts the system. if kept pressed during reboot, it will
+    // holding both buttons for more than 5 seconds will reboot the device. if kept pressed during reboot, it will
     // go into the same mode again and repeat...
     //
     // once the buttons have been released, the menu is active, the LED stops flickering and starts blinking slowly.
-    // the menu is active for 10 seconds after the last button press
+    // the menu is active for 30 seconds after the last button press
     //
-    // 1st button short press: enable auto sleep and exit menu - confirmed by 1x blink
-    // 1st button long press: disable auto sleep for remote access and exit menu - confirmed by 2x blink
-    // 4th button click: exit menu - confirmed by flickerung
-
+    // Button #1: disable auto sleep
+    // Button #2: enable auto sleep
+    // Button #3: enter deep sleep
+    // Button #4: exit menu
 
     void Base::systemButtonComboEvent(bool state, EventType eventType, uint8_t button, uint16_t repeatCount, uint32_t eventTime)
     {

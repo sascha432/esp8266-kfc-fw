@@ -82,18 +82,20 @@ RemoteControlPlugin &RemoteControlPlugin::getInstance()
 void RemoteControlPlugin::_updateButtonConfig()
 {
     for(const auto &buttonPtr: pinMonitor.getHandlers()) {
-        auto &button = static_cast<Button &>(*buttonPtr);
-        // __LDBG_printf("arg=%p btn=%p pin=%u digital_read=%u inverted=%u owner=%u", button.getArg(), &button, button.getPin(), digitalRead(button.getPin()), button.isInverted(), button.getBase() == this);
-        if (button.getBase() == this) { // auto downcast of this
+        if (std::find(kButtonPins.begin(), kButtonPins.end(), buttonPtr->getPin()) != kButtonPins.end()) {
+            auto &button = static_cast<Button &>(*buttonPtr);
+            // __LDBG_printf("arg=%p btn=%p pin=%u digital_read=%u inverted=%u owner=%u", button.getArg(), &button, button.getPin(), digitalRead(button.getPin()), button.isInverted(), button.getBase() == this);
+            if (button.getBase() == this) { // auto downcast of this
 #if DEBUG_IOT_REMOTE_CONTROL
-            auto &cfg = _getConfig().actions[button.getButtonNum()];
-            __LDBG_printf("button#=%u on_action.id=%u,%u,%u,%u,%u,%u,%u,%u udp.enabled=%s mqtt.enabled=%s",
-                button.getButtonNum(),
-                cfg.down, cfg.up, cfg.press, cfg.single_click, cfg.double_click, cfg.long_press, cfg.hold, cfg.hold_released,
-                BitsToStr<9, true>(cfg.udp.event_bits).c_str(), BitsToStr<9, true>(cfg.udp.event_bits).c_str()
-            );
+                auto &cfg = _getConfig().actions[button.getButtonNum()];
+                __LDBG_printf("button#=%u on_action.id=%u,%u,%u,%u,%u,%u,%u,%u udp.enabled=%s mqtt.enabled=%s",
+                    button.getButtonNum(),
+                    cfg.down, cfg.up, cfg.press, cfg.single_click, cfg.double_click, cfg.long_press, cfg.hold, cfg.hold_released,
+                    BitsToStr<9, true>(cfg.udp.event_bits).c_str(), BitsToStr<9, true>(cfg.udp.event_bits).c_str()
+                );
 #endif
-            button.updateConfig();
+                button.updateConfig();
+            }
         }
     }
 }
@@ -134,8 +136,13 @@ void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::Depe
 #else
         pinMonitor.attach<Button>(pin, n, this);
 #endif
-        pinMode(pin, INPUT);
     }
+
+#if IOT_REMOTE_CONTROL_CHARGING_PIN!=-1
+
+    pinMonitor.attachPinType<ChargingDetection>(HardwarePinType::SIMPLE, IOT_REMOTE_CONTROL_CHARGING_PIN, this);
+
+#endif
 
 #if PIN_MONITOR_USE_GPIO_INTERRUPT
     PinMonitor::GPIOInterruptsEnable();
@@ -159,12 +166,15 @@ void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::Depe
         auto debounce = pinPtr->getDebounce();
         if (debounce) {
             debounce->setState(deepSleepPinState.activeHigh() == false);
+            if (states & _BV(pin)) {
+                PinMonitor::eventBuffer.emplace_back(2000, pin, interrupt_levels); // place them at 2ms
+            }
+            __LDBG_printf("pin=%02u init debouncer=%d queued=%u states=%s interrupt_levels=%s mask=%s", pin, (debounce ? (deepSleepPinState.activeHigh() == false) : -1), (states & _BV(pin)) != 0, BitsToStr<16, true>(states).c_str(), BitsToStr<16, true>(interrupt_levels).c_str(), BitsToStr<16, true>(_BV(pin)).c_str());
         }
-        if (states & _BV(pin)) {
-            PinMonitor::eventBuffer.emplace_back(2000, pin, interrupt_levels); // place them at 2ms
+        else {
+            // this is not a button
+            __LDBG_printf("pin=%02u init debouncer=none", pin);
         }
-        __LDBG_printf("pin=%02u init debouncer=%d queued=%u states=%s interrupt_levels=%s mask=%s", pin, (debounce ? (deepSleepPinState.activeHigh() == false) : -1), (states & _BV(pin)) != 0, BitsToStr<16, true>(states).c_str(), BitsToStr<16, true>(interrupt_levels).c_str(), BitsToStr<16, true>(_BV(pin)).c_str());
-
     }
 
     __LDBG_printf("feeding queue size=%u", PinMonitor::eventBuffer.size());
@@ -213,6 +223,18 @@ void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::Depe
     _setup();
     _resetAutoSleep();
     // _resolveActionHostnames();
+
+    // check if the device is charging
+    if ((_isCharging = digitalRead(IOT_REMOTE_CONTROL_CHARGING_PIN))) {
+        // fire event
+        _chargingStateChanged(true);
+    }
+
+#if IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN == 15
+    pinMode(IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN, INPUT);
+#elif IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN != 3 && IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN != 16
+    pinMode(IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN, INPUT_PULLUP);
+#endif
 
     _updateSystemComboButtonLED();
     __LDBG_printf("setup() done");
@@ -366,18 +388,7 @@ void RemoteControlPlugin::_loop()
         _enterDeepSleep();
     }
 
-    if (_millis >= _readUsbPinTimeout && _isUsbPowered()) {
-        _readUsbPinTimeout = _millis + 100;
-        _resetAutoSleep();
-        // start delayed plugins
-        PluginComponents::Register::setDelayedStartupTime(0);
-        if (_autoDiscoveryRunOnce && MQTTClient::safeIsConnected() && IS_TIME_VALID(time(nullptr))) {
-            __LDBG_printf("usb power detected, publishing auto discovery");
-            _autoDiscoveryRunOnce = false;
-            publishAutoDiscovery();
-        }
-    }
-    else if (isAutoSleepEnabled()) {
+    if (!isCharging() && isAutoSleepEnabled()) {
         if (_millis >= __autoSleepTimeout) {
             if (
                 (_minAwakeTimeout && (millis() <_minAwakeTimeout)) ||
@@ -427,12 +438,6 @@ void RemoteControlPlugin::_enterDeepSleep()
     config.enterDeepSleep(std::chrono::duration_cast<KFCFWConfiguration::milliseconds>(KFCFWConfiguration::minutes(_config.deep_sleep_time)), WAKE_NO_RFCAL, 1);
 }
 
-
-
-bool RemoteControlPlugin::_isUsbPowered() const
-{
-    return IOT_SENSOR_BATTERY_ON_EXTERNAL;
-}
 
 void RemoteControlPlugin::_readConfig()
 {
@@ -549,3 +554,26 @@ void RemoteControlPlugin::_resolveActionHostnames()
     }
 }
 
+void RemoteControlPlugin::_chargingStateChanged(bool active)
+{
+    __LDBG_printf("event charging state=%u changed", active);
+    if (active) {
+        _resetAutoSleep();
+        // start delayed plugins
+        PluginComponents::Register::setDelayedStartupTime(0);
+        if (_autoDiscoveryRunOnce) {
+            _autoDiscoveryRunOnce = false;
+
+            _Scheduler.add(Event::seconds(30), false, [this](Event::CallbackTimerPtr) {
+                __LDBG_printf("charging state detected, publishing auto discovery");
+                publishAutoDiscovery();
+            });
+        }
+    }
+}
+
+// external function for battery sensor
+bool RemoteControlPluginIsCharging()
+{
+    return RemoteControlPlugin::isCharging();
+}

@@ -19,6 +19,12 @@ using namespace PinMonitor;
 
  namespace RemoteControl {
 
+     inline void ChargingDetection::event(StateType state, uint32_t now)
+     {
+         getBase().event(BaseEventType::CHARGE_DETECTION, state);
+     }
+
+
     inline Button::Button() :
         PushButton(),
         _button(0),

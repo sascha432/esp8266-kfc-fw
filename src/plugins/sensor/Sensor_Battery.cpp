@@ -340,11 +340,17 @@ void Sensor_Battery::Status::updateSensor(Sensor_Battery &sensor)
 #ifdef IOT_SENSOR_BATTERY_CHARGING
 #if IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN != -1
     if (IOT_SENSOR_BATTERY_CHARGING) {
+#if IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN == 3
         noInterrupts();
+        KFC_SAFE_MODE_SERIAL_PORT.begin(KFC_SERIAL_RATE, SERIAL_8N1, SERIAL_TX_ONLY);
         pinMode(IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN, INPUT_PULLUP);
+#endif
         auto value = digitalRead(IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN);
+#if IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN == 3
         pinMode(IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN, INPUT);
+        KFC_SAFE_MODE_SERIAL_PORT.begin(KFC_SERIAL_RATE)
         interrupts();
+#endif
         _charging = value ? ChargingType::CHARGING : ChargingType::COMPLETE;
     }
     else {

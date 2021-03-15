@@ -37,9 +37,9 @@
 #define IOT_REMOTE_CONTROL_AWAKE_PIN                            15
 #endif
 
-// signal led
-#ifndef IOT_REMOTE_CONTROL_LED_PIN
-#define IOT_REMOTE_CONTROL_LED_PIN                              2
+// pin for charging detection (active high)
+#ifndef IOT_REMOTE_CONTROL_CHARGING_PIN
+#define IOT_REMOTE_CONTROL_CHARGING_PIN                         5
 #endif
 
 // enable button combinations
@@ -73,10 +73,27 @@ namespace RemoteControl {
 
     class Base;
 
+    enum class BaseEventType : uint8_t {
+        NONE,
+        CHARGE_DETECTION
+    };
+
     namespace Queue {
         class Event;
         class Target;
     }
+
+    class ChargingDetection : public Pin {
+    public:
+        ChargingDetection(uint8_t pin, Base *base) : Pin(pin, base, StateType::UP_DOWN, ActiveStateType::ACTIVE_HIGH) {}
+
+        virtual void event(StateType state, uint32_t now) override;
+
+    private:
+        Base &getBase() const {
+            return *reinterpret_cast<Base *>(const_cast<void *>(getArg()));
+        }
+    };
 
     class Button : public PushButton {
     public:
@@ -107,45 +124,6 @@ namespace RemoteControl {
         uint8_t _button;
         uint32_t _timeOffset;
     };
-
-//     class ButtonEvent {
-//     public:
-//         static constexpr uint32_t kComboButtonNone = (1 << 3) - 1;
-
-//         ButtonEvent();
-//         ButtonEvent(uint8_t button, EventType type, uint32_t duration = 0, uint32_t repeat = 0, uint32_t comboButton = kComboButtonNone);
-//         uint8_t getButton() const;
-//         //int8_t getComboButton() const;
-//         //ComboActionType getCombo(const ActionType &actions) const;
-//         EventType getType() const;
-//         uint16_t getDuration() const;
-//         uint16_t getRepeat() const;
-//         uint32_t getTimestamp() const;
-//         void remove();
-
-// #if DEBUG_IOT_REMOTE_CONTROL
-//         void printTo(Print &output) const;
-//         String toString() const;
-// #endif
-
-//     private:
-//         EventType type() const;
-//         void type(const EventType type);
-
-//     private:
-//         uint32_t _timestamp;
-//         uint32_t _duration : 14;            // max 16 seconds
-//         uint32_t _repeat : 9;               // 512x times
-//         uint32_t _type: 3;
-//         uint32_t _button: 3;
-//         uint32_t _comboButton: 3;
-
-//         static_assert((int)EventType::MAX < (1U << 3), "too many buttons for _type");
-//         static_assert(IOT_REMOTE_CONTROL_BUTTON_COUNT < (1U << 3) - 1, "too many buttons for _button");
-//         static_assert(IOT_REMOTE_CONTROL_BUTTON_COUNT < kComboButtonNone, "too many buttons for _comboButton");
-//     };
-
-//     static constexpr size_t ButtonEventSize = sizeof(ButtonEvent);
 
     static constexpr auto kButtonPins = stdex::cexpr::array_of<uint8_t>(IOT_REMOTE_CONTROL_BUTTON_PINS);
 

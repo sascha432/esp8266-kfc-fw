@@ -44,9 +44,15 @@ using KFCConfigurationClasses::Plugins;
 // #define IOT_SENSOR_BATTERY_CHARGING_DECL                        extern bool isBatteryCharging()
 #endif
 
-// set pin to detect end of charge cycle.
-// mode is active low and pin gets set to INPUT_PULLUP before reading it with interrupts disabled
-// GPIO3/RX can be used. the pin should be floating while not charging. pulling GPIO3 low with 10K seems to work
+// pin to detect end of charge cycle (using a TP4056)
+// the mode is active low and requires a pullup resistor
+// if GPIO3/RX is used, the UART is set to TX only before the pin is set to INPUT_PULLUP
+// and after the check, the pin is reset to INPUT and UART to FULL mode. this makes it
+// possible to use the serial port unless the charging has finished and the pin gets pulled
+// low. the pin should be connected to the standby signal (active low) using a 1.5-3.3K resistor
+// in series (the internal pullup of the esp8266 is between 30K and 100K) during charge or if
+// the TP4056 is not connected, the standby output is floating
+
 #ifndef IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN
 #define IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN                -1
 #endif

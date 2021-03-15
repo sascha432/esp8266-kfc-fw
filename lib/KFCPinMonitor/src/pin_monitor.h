@@ -10,10 +10,13 @@
 
 // Pin Monitor offers interrupt bases PIN monitoring with support for toggle switches, push buttons, rotary encoders with or without software debouncing
 // Arduino interrupt functons can be used or the optimized version of the pin monitor, which saves a couple hundred byte IRAM
+// all callbacks are scheduled in the main loop and not executed from the ISR
+// if the main loop has too many delays, the monitoring can be installed as a timer and gets executed every 5ms. the timer callback is not an ISR and does
+// not require any code to be in the IRAM
 //
 //  - Arduino functional intrerrupts (>500byte IRAM)
 //  - optimized Arduino like functional interrupts with some limitations (<350 byte IRAM)
-//  - custom implementation which requres less than 100 byte IRAM
+//  - custom implementation which requires less than 100 byte IRAM
 // see PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS for details
 //
 // - toggle switches
@@ -29,8 +32,9 @@
 //   - hold released
 // - push button groups that share timeouts for single/double click
 // - support for touch buttons
-// - support for multi touch and button combinations (i.e. hold key1 + key4 for 5 seconds to reset the device)
+// - support for multi touch and button combinations (i.e. hold key1 + key4 for 5 seconds to reboot the device)
 // - 2 pin rotary encoders with acceleration
+// - any kind of pin monitoring
 //
 // pins can be configured active low or active high globally, or set individually
 // see PIN_MONITOR_ACTIVE_STATE

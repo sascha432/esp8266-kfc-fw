@@ -129,7 +129,8 @@ namespace RemoteControl {
             _pressed(0),
             _autoDiscoveryRunOnce(true),
             _testMode(false),
-            _signalWarning(false)
+            _signalWarning(false),
+            _isCharging(false)
         {}
 
         // enable test mode
@@ -170,6 +171,8 @@ namespace RemoteControl {
 #if DEBUG_IOT_REMOTE_CONTROL
         const char *_getPressedButtons() const;
 #endif
+
+        void event(BaseEventType type, StateType state);
 
     protected:
         // reser auto sleep timer and disable warning LED
@@ -281,6 +284,7 @@ public://TODO
         bool _autoDiscoveryRunOnce;
         bool _testMode;
         bool _signalWarning;
+        bool _isCharging;
     };
 
 }

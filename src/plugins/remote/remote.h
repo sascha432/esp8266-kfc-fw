@@ -127,6 +127,11 @@ public:
 
     static RemoteControlPlugin &getInstance();
 
+    inline static bool isCharging() {
+        return getInstance()._isCharging;
+    }
+    void _chargingStateChanged(bool active);
+
 private:
     // virtual void _onShortPress(Button &button);
     // virtual void _onLongPress(Button &button);
@@ -135,7 +140,6 @@ private:
     void _updateButtonConfig();
     // reset buttons states to remove all events. if buttons are pressed the debouncer will filter the events when released
     void _loop();
-    bool _isUsbPowered() const;
     void _readConfig();
     // void _installWebhooks();
     // void _addButtonEvent(ButtonEvent &&event);
@@ -203,5 +207,7 @@ inline void RemoteControlPlugin::enterDeepSleep()
     __LDBG_printf("enter deep sleep");
     getInstance()._enterDeepSleep();
 }
+
+extern bool RemoteControlPluginIsCharging();
 
 #include <debug_helper_disable.h>

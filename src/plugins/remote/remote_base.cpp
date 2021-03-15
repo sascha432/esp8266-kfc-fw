@@ -171,4 +171,28 @@ namespace RemoteControl {
         }
     }
 
+    void Base::event(BaseEventType type, StateType state)
+    {
+        switch (type) {
+        case BaseEventType::CHARGE_DETECTION: {
+            bool newState = state & StateType::IS_HIGH;
+#if DEBUG
+            __LDBG_printf("event new_state=%u pin_state=%u pin=%u", newState, digitalRead(IOT_REMOTE_CONTROL_CHARGING_PIN), IOT_REMOTE_CONTROL_CHARGING_PIN);
+            delay(5); // check pin after 5ms, simple debouncing for prototype board that is using a switch to toggle the charging state
+            if (digitalRead(IOT_REMOTE_CONTROL_CHARGING_PIN) != newState) {
+                __LDBG_printf("charge detection pin bounce");
+                break;
+            }
+#endif
+            __LDBG_printf("is_charging=%u new_charging_state=%u has_changed=%u pin_state=%u", _isCharging, newState, (newState != _isCharging), digitalRead(IOT_REMOTE_CONTROL_CHARGING_PIN));
+            if (newState != _isCharging) {
+                _isCharging = newState;
+                RemoteControlPlugin::getInstance()._chargingStateChanged(_isCharging);
+            }
+        } break;
+        case BaseEventType::NONE:
+            break;
+        }
+    }
+
 }

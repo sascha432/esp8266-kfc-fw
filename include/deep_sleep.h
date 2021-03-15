@@ -40,7 +40,7 @@ namespace DeepSleep
     using seconds = std::chrono::duration<uint32_t, std::ratio<1>>;
     using minutes = std::chrono::duration<uint32_t, std::ratio<60>>;
 
-    static constexpr auto kPinsToRead = stdex::array_of<uint8_t>(DEEP_SLEEP_BUTTON_PINS);
+    static constexpr auto kPinsToRead = stdex::array_of<const uint8_t>(DEEP_SLEEP_BUTTON_PINS);
 
     // bitmask to detect buttons pressed
     static constexpr auto kButtonMask = Interrupt::PinAndMask::mask_of(kPinsToRead);

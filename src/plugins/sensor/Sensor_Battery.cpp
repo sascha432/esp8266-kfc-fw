@@ -5,6 +5,7 @@
 #if IOT_SENSOR_HAVE_BATTERY
 
 #include <ReadADC.h>
+#include <stl_ext/array.h>
 #include "Sensor_Battery.h"
 #include "sensor.h"
 
@@ -448,8 +449,8 @@ String Sensor_Battery::_getTopic(TopicType type)
 }
 
 
-static float __regress(float x) {
-    static constexpr auto terms = std::array<float, 10>({
+inline static float __regress(float x) {
+    static constexpr auto terms PROGMEM = stdex::array_of<const float>(
         3.0901165359671228e+000,
         1.3918435736462101e-001,
         -1.4396426399182059e-002,
@@ -460,7 +461,7 @@ static float __regress(float x) {
         9.0101915491340791e-011,
         -4.3670186360225468e-013,
         9.0520507287591813e-016
-    });
+    );
     float t = 1;
     float r = 0;
     for(auto term: terms) {
@@ -470,8 +471,8 @@ static float __regress(float x) {
     return r;
 }
 
-static float __regress_charging(float x) {
-    static constexpr auto terms = std::array<float, 12>({
+inline static float __regress_charging(float x) {
+    static constexpr auto terms PROGMEM = stdex::array_of<const float>(
         3.2930194940793633e+000,
         2.0635303243176276e-001,
         -3.5146285982269383e-002,
@@ -484,7 +485,7 @@ static float __regress_charging(float x) {
         1.9567430256134823e-013,
         -7.4374991457700413e-016,
         1.2350426541328422e-018
-    });
+    );
     float t = 1;
     float r = 0;
     for(auto term: terms) {

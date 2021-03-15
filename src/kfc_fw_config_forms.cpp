@@ -133,7 +133,7 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             form.addFormUI(FSPGM(Channel), channelItems);
 
             form.addReference(F("ap_enc"), softAp.encryption);
-            form.addValidator(FormUI::Validator::Enum<uint8_t, WiFiEncryptionTypeArray().size()>(F("Invalid encryption"), createWiFiEncryptionTypeArray()));
+            form.addValidator(FormUI::Validator::Enum<const uint8_t, kWiFiEncryptionTypes.size()>(F("Invalid encryption"), kWiFiEncryptionTypes));
             form.addFormUI(FSPGM(Encryption), encryptionItems);
 
             apModeGroup.end();

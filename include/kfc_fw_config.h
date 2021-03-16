@@ -466,10 +466,12 @@ public:
 
 private:
     friend class KFCConfigurationPlugin;
+    friend void WiFi_get_status(Print &out);
 
     String _lastError;
     uint32_t _wifiConnected;        // time of connection
     uint32_t _wifiUp;               // time of receiving IP address
+    uint32_t _wifiFirstConnectionTime;
     int16_t _garbageCollectionCycleDelay;
     uint8_t _dirty : 1;
     uint8_t _initTwoWire : 1;

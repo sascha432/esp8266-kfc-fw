@@ -86,8 +86,8 @@ namespace PinMonitor {
         void _detachLoop();
     public:
         void _loop();
-    private:
         void _event(uint8_t pin, StateType state, uint32_t now);
+    private:
 
     private:
         Vector _handlers;       // button handler, base class Pin

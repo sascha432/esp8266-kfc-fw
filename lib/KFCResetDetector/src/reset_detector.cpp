@@ -6,34 +6,236 @@
 #include "reset_detector.h"
 #include <LoopFunctions.h>
 #include <PluginComponent.h>
+#include "SPIFlash.h"
 
+#if 1
+#include <debug_helper_enable.h>
+#else
 #undef __LDBG_printf
-#if DEBUG && DEBUG_RESET_DETECTOR
+#if DEBUG_RESET_DETECTOR
 #define __LDBG_printf(fmt, ...) ::printf_P(PSTR("RD%04u: " fmt "\n"), micros() / 1000, ##__VA_ARGS__)
 #else
 #define __LDBG_printf(...)
 #endif
-
-#if defined(ESP8266)
-extern "C" {
-    #include "user_interface.h"
-}
 #endif
+
 
 ResetDetectorUnitialized resetDetector __attribute__((section(".noinit")));;
 
-#if !ENABLE_DEEP_SLEEP
-extern "C" void preinit(void)
-{
-    resetDetector.init();
-    resetDetector.begin();
-}
+extern "C" {
+
+#if defined(ESP8266)
+
+    #include "user_interface.h"
+
 #endif
 
+#if !ENABLE_DEEP_SLEEP
+
+    void preinit(void)
+    {
+        resetDetector.init();
+        resetDetector.begin();
+    }
+
+#endif
+
+    void custom_crash_callback(struct rst_info *rst_info, uint32_t stack, uint32_t stack_end);
+
+}
+
+
+struct SaveCrashData {
+    uint32_t _time;
+    uint32_t _stackSize;
+    struct rst_info _info;
+
+    SaveCrashData(uint32_t time, const struct rst_info &rst_info) :
+        _time(time), _stackSize(0), _info(rst_info)
+    {
+    }
+
+    inline size_t getHeaderSize()  const {
+        return sizeof(SaveCrashData);
+    }
+
+    inline size_t getSize() const {
+        return _stackSize + getHeaderSize();
+    }
+
+    inline size_t getStackSize() const {
+        return _stackSize;
+    }
+};
+
+using namespace SPIFlash;
+
+// extern void testspi();
+
+// void testspi()
+// {
+//     __DBG_printf("create FlashStorage");
+//     auto fs = FlashStorage(0x3F8, 0x3FA);
+//         //(((uint32_t)&_SAVECRASH_start) - 0x40200000) / SPI_FLASH_SEC_SIZE, (((uint32_t)&_SAVECRASH_end) - 0x40200000) / SPI_FLASH_SEC_SIZE);
+
+
+//     __DBG_printf("init %04x - %04x - %04x",fs.begin(), fs.end(), (SECTION_KFCFW_START_ADDRESS-0x40200000)/SPI_FLASH_SEC_SIZE);
+
+//     uint32_t buf[10]={};
+
+//     auto result = fs.read(buf, sizeof(buf), fs.begin(), 0);
+//     if (result._result==FlashResultType::SUCCESS) {
+//         __DBG_printf("result=%u size=%u data=%s", result._result, result.readSize(), printable_string(buf, result.readSize()).c_str());
+//     }
+//     else {
+//         __DBG_printf("result=%u size=%u data=ERROR", result._result, result.readSize());
+//     }
+
+//     __DBG_printf("----------------------------------------------------------------------");
+
+//     __DBG_printf("init");
+//     result = fs.init(fs.begin());
+
+//     __DBG_printf("append");
+//     memset(buf, 0, sizeof(buf));
+//     strcpy_P((char *)buf, PSTR("test123"));
+//     fs.append(buf, 8, result);
+
+//     __DBG_printf("finalize");
+//     fs.finalize(result);
+//     __DBG_printf("result=%u sector=%u size=%u crc=0x%08x", result._result, result._sector, result.size(), result._crc);
+
+//     __DBG_printf("validate size=%u", result._size);
+//     fs.validate(result);
+
+//     __DBG_printf("----------------------------------------------------------------------");
+
+//     __DBG_printf("copy");
+//     result = fs.copy(fs.begin(), fs.begin() + 1);
+
+//     __DBG_printf("append size=%u", result._size);
+//     strcpy_P((char *)buf, PSTR("123test"));
+//     fs.append(buf, 8, result);
+
+//     __DBG_printf("finalize size=%u", result._size);
+//     fs.finalize(result);
+//     __DBG_printf("result=%u sector=%u size=%u crc=0x%08x", result._result, result._sector, result.size(), result._crc);
+
+//     __DBG_printf("validate size=%u", result._size);
+//     fs.validate(result);
+
+//     __DBG_printf("----------------------------------------------------------------------");
+
+//     result = fs.read(buf, sizeof(buf), fs.begin()+1, 0);
+//     if (result._result==FlashResultType::SUCCESS) {
+//         __DBG_printf("result=%u size=%u data=%s", result._result, result.readSize(), printable_string(buf, result.readSize()).c_str());
+//     }
+//     else {
+//         __DBG_printf("result=%u size=%u data=ERROR", result._result, result.readSize());
+//     }
+//     __DBG_printf("----------------------------------------------------------------------");
+
+//     result = fs.read(buf, sizeof(buf), fs.begin(), 0);
+//     if (result._result==FlashResultType::SUCCESS) {
+//         __DBG_printf("result=%u size=%u data=%s", result._result, result.readSize(), printable_string(buf, result.readSize()).c_str());
+//     }
+//     else {
+//         __DBG_printf("result=%u size=%u data=ERROR", result._result, result.readSize());
+//     }
+
+//     __DBG_printf("----------------------------------------------------------------------");
+//     for(const auto &result: fs.find(true)) {
+//         __LDBG_printf("find: sector=%04x size=%u space=%u", result._sector, result.size(), result.space());
+
+//     }
+
+// }
+
+inline static bool append_crash_data(FlashStorage &fs, FlashResult &result, struct rst_info *rst_info, uint32_t stack_begin, uint32_t stack_end)
+{
+    uint32_t *begin = reinterpret_cast<uint32_t *>(stack_begin);
+    uint32_t *end = reinterpret_cast<uint32_t *>(stack_end);
+    SaveCrashData header(time(nullptr), *rst_info);
+    header._stackSize = std::min<size_t>(result.space() - sizeof(header), (end - begin) * sizeof(*begin));
+
+    if (!fs.append(header, result)) {
+        __LDBG_printf("append failed rsult=%u size=%u", result._result, sizeof(header));
+        return false;
+    }
+    if (!fs.append(begin, header._stackSize, result)) {
+        __LDBG_printf("append failed rsult=%u size=%u", result._result, header._stackSize);
+        return false;
+    }
+
+    return true;
+}
+
+void custom_crash_callback(struct rst_info *rst_info, uint32_t stack, uint32_t stack_end)
+{
+    auto fs = FlashStorage((((uint32_t)&_SAVECRASH_start) - 0x40200000) / SPI_FLASH_SEC_SIZE, (((uint32_t)&_SAVECRASH_end) - 0x40200000) / SPI_FLASH_SEC_SIZE);
+    FlashResult result;
+    FindResult copyFrom, copyTo;
+    {
+        // drop results when going out of scope
+        auto results = fs.find(128, true);
+        if (results.size() == 1) { // we need at least one free sector
+            copyFrom = 0;
+            copyTo = results.front();
+            if (copyTo.size()) {
+                __LDBG_printf("found one sector that is not empty");
+                return;
+            }
+        }
+        else if (results.size() >= 2) {
+            auto iterator = results.begin();
+            copyTo = *iterator;
+            if (copyTo.size()) {
+                __LDBG_printf("no emtpy sector available for copying");
+                return;
+            }
+            ++iterator;
+            copyFrom = *iterator;
+        }
+        else {
+            __LDBG_printf("could not find 2 sectors");
+            return;
+        }
+    }
+    if (copyFrom == 0) {
+        result = fs.init(copyTo._sector);
+        if (!result) {
+            __LDBG_printf("init failed=%u sector=0x%04x", result._result, copyTo._sector);
+            return;
+        }
+    }
+    else {
+        result = fs.copy(copyFrom._sector, copyTo._sector);
+        if (!result) {
+            __LDBG_printf("copy failed %u", result._result);
+            return;
+        }
+    }
+    if (!append_crash_data(fs, result, rst_info, stack, stack_end)) {
+        __LDBG_printf("append_crash_data failed %u", result._result);
+        return;
+    }
+    if (!fs.finalize(result)) {
+        __LDBG_printf("finalize failed %u", result._result);
+        return;
+    }
+    if (!fs.validate(result)) {
+        __LDBG_printf("validate failed %u", result._result);
+        return;
+    }
+    if (copyFrom) {
+        fs.erase(copyFrom._sector);
+    }
+}
 
 void ResetDetector::end()
 {
     if (_uart) {
+        __LDBG_printf("end");
 #if DEBUG && DEBUG_RESET_DETECTOR
         ::printf_P(PSTR("\r\n"));
 #endif
@@ -45,13 +247,15 @@ void ResetDetector::end()
 
 void ResetDetector::begin()
 {
+#if DEBUG_RESET_DETECTOR
     if (_uart) {
         __LDBG_printf("begin() called multiple times without end()");
         end();
     }
+#endif
     _uart = uart_init(UART0, 115200, (int) SERIAL_8N1, (int) SERIAL_FULL, 1, 64, false);
 
-#if DEBUG && DEBUG_RESET_DETECTOR
+#if DEBUG_RESET_DETECTOR
     ::printf_P(PSTR("\r\n"));
 #endif
     __LDBG_printf("init reset detector");

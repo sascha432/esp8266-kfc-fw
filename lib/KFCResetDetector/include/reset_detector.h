@@ -4,6 +4,11 @@
 
 #pragma once
 
+//
+// provides a reset counter and interface to access the reason of the restart
+// the counter can be used to restore settings, boot into safe mode or offer any kind of reset function that
+// is based on turning the device off and on quickly
+
 #ifndef __RESET_DETECTOR_INCLUDED
 #define __RESET_DETECTOR_INCLUDED
 #define __RESET_DETECTOR_INSIDE_INCLUDE

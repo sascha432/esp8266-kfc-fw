@@ -94,12 +94,7 @@ bool Queue::isEnabled(bool force)
 #if MQTT_AUTO_DISCOVERY
     auto cfg = Plugins::MQTTClient::getConfig();
     return
-        System::Flags::getConfig().is_mqtt_enabled && cfg.auto_discovery && (force || (
-#if ENABLE_DEEP_SLEEP
-            !resetDetector.hasWakeUpDetected() &&
-#endif
-            (cfg.auto_discovery_delay != 0)
-        ));
+        System::Flags::getConfig().is_mqtt_enabled && cfg.auto_discovery && (force || (cfg.auto_discovery_delay != 0));
 #else
     return false;
 #endif
@@ -131,6 +126,9 @@ bool Queue::isUpdateScheduled()
 
 void Queue::runPublish(uint32_t delayMillis)
 {
+    if (delayMillis == kDefaultDelay) {
+        delayMillis = _client._config.auto_discovery_delay * 1000U; // 0 = disable
+    }
     __LDBG_printf("components=%u delay=%u", _client._components.size(), delayMillis);
     if (!_client._components.empty() && delayMillis) {
         uint32_t initialDelay;
@@ -147,7 +145,7 @@ void Queue::runPublish(uint32_t delayMillis)
         _diff = {};
         _entities = List(_client._components, FormatType::JSON);
 
-        __LDBG_printf("starting broadcast in %u ms", std::max<uint32_t>(1000, initialDelay));
+        __DBG_printf("starting broadcast in %u ms", std::max<uint32_t>(1000, initialDelay));
 
         _Timer(_timer).add(Event::milliseconds(std::max<uint32_t>(1000, initialDelay)), false, [this](Event::CallbackTimerPtr timer) {
 
@@ -155,27 +153,30 @@ void Queue::runPublish(uint32_t delayMillis)
             if (!(_runFlags & RunFlags::FORCE_NOW)) {
                 auto now = time(nullptr);
                 if (!IS_TIME_VALID(now)) {
-                    __DBG_printf("auto discovery, time() is invalid, retrying in 30 seconds");
+                    __LDBG_printf("time() is invalid, retrying auto discovery in 30 seconds");
                     timer->rearm(Event::seconds(30), false);
                     return;
                 }
                 if (!_client.isAutoDiscoveryLastTimeValid()) {
-                    __DBG_printf("auto discovery, last upate timestamp invalid, retrying in 30 seconds");
+                    __LDBG_printf("last update timestamp invalid, retrying auto discovery in 30 seconds");
                     timer->rearm(Event::seconds(30), false);
                     return;
                 }
                 // check when the next auto discovery is supposed to run
-                __DBG_printf("last sucess d% last failure %d run=%d", _client._autoDiscoveryLastSuccess, _client._autoDiscoveryLastFailure, _client._autoDiscoveryLastSuccess > _client._autoDiscoveryLastFailure);
+                __DBG_printf("last_success=%d last_failure=%d run=%d", _client._autoDiscoveryLastSuccess, _client._autoDiscoveryLastFailure, _client._autoDiscoveryLastSuccess > _client._autoDiscoveryLastFailure);
                 if (_client._autoDiscoveryLastSuccess > _client._autoDiscoveryLastFailure) {
                     auto cfg = Plugins::MQTTClient::getConfig();
                     uint32_t next = _client._autoDiscoveryLastSuccess + (cfg.getAutoDiscoveryRebroadcastInterval() * 60);
                     int32_t diff = next - time(nullptr);
-                    __DBG_printf_E("last published=%u wait_time=%d minutes", (diff / 60) + 1);
+                    __DBG_printf("last_published=%d wait_time=%d minutes", (diff / 60) + 1);
                     // not within 2 minutes... report error and delay next run by the time that has been left
                     if (diff > 120) {
                         _publishDone(false, (next / 60) + 1);
                         return;
                     }
+                }
+                else {
+                    __LDBG_printf("failure timestamp more recent than success, ignoring delay");
                 }
             }
 

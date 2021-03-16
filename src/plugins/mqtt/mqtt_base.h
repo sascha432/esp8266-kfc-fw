@@ -69,17 +69,21 @@ namespace MQTT {
         NONE = 0,
         FORCE_NOW = 0x01,                    // ignore any delays and start auto discovery
         FORCE_UPDATE = 0x02,                 // resend entire auto discovery without checking for changes
-        ABORT_RUNNING = 0x04,                // stop the autodisocvery that is currently running
+        ABORT_RUNNING = 0x04,                // stop the autodiscovery that is currently running
         FORCE = FORCE_NOW|FORCE_UPDATE|ABORT_RUNNING,
         DEFAULTS = NONE,
     };
 
     using RunFlagsUnderlyingType = typename std::underlying_type<RunFlags>::type;
 
-
     inline static RunFlagsUnderlyingType operator&(const RunFlags & left, const RunFlags &right)
     {
         return static_cast<RunFlagsUnderlyingType>(left) & static_cast<RunFlagsUnderlyingType>(right);
+    }
+
+    inline static RunFlags &operator|=(RunFlags &flags, RunFlags value)
+    {
+        return (flags = static_cast<RunFlags>(static_cast<RunFlagsUnderlyingType>(flags) | static_cast<RunFlagsUnderlyingType>(value)));
     }
 
     class Component;

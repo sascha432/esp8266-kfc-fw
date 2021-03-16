@@ -171,26 +171,29 @@ bool Plugin::atModeHandler(AtModeArgs &args)
                     break;
                 case 7: // autodiscovery
                 case 8: { // auto
-                        // bool abort = args.isTrue(1) || args.has(F("restart"));
-                        // bool force_update = args.has(F("force"));
+                        MQTT::RunFlags flags = MQTT::RunFlags::NONE;
+                        if (args.has(F("force"))) {
+                            flags = MQTT::RunFlags::FORCE;
+                        }
+                        if (args.has(F("restart")) || args.has(F("abort"))) {
+                            flags |= MQTT::RunFlags::ABORT_RUNNING;
+                        }
+                        if (args.has(F("now"))) {
+                            flags |= MQTT::RunFlags::FORCE_NOW;
+                        }
 
-
-                        // RunFlags flags = RunFlags::FORCE_NOW;
-                        // //TODO
-
-                        // if (!client.isConnected()) {
-
-                        //     args.print(F("mqtt not connected"));
-                        // }
-                        // else if (!abort && client.isAutoDiscoveryRunning()) {
-                        //     args.print(F("auto discovery already running"));
-                        // }
-                        // else if (client.publishAutoDiscovery(true, abort, force_update)) {
-                        //     args.print(F("auto discovery started"));
-                        // }
-                        // else {
-                        //     args.print(F("auto discovery not available"));
-                        // }
+                        if (!client.isConnected()) {
+                            args.print(F("MQTT client not connected"));
+                        }
+                        else if (!(flags & MQTT::RunFlags::ABORT_RUNNING) && client.isAutoDiscoveryRunning()) {
+                            args.print(F("auto discovery already running"));
+                        }
+                        else if (client.publishAutoDiscovery(flags)) {
+                            args.print(F("auto discovery started"));
+                        }
+                        else {
+                            args.print(F("auto discovery not available"));
+                        }
                     } break;
                 case 9: {
                         auto &stream = args.getStream();

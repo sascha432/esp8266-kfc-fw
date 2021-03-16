@@ -1160,6 +1160,7 @@ void Plugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &
 void Plugin::reconfigure(const String &source)
 {
     HandlerStoragePtr storage;
+    bool running = !!_server;
 
     __LDBG_printf("server=%p source=%s", _server.get(), source.c_str());
     if (_server) {
@@ -1179,7 +1180,7 @@ void Plugin::reconfigure(const String &source)
     }
 
     // initialize web server
-    begin(true);
+    begin(running);
 
     // if the server is disabled, the data of storage is released
     if (storage && _server) {

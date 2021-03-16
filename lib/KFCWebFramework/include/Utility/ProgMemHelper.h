@@ -21,7 +21,7 @@
 
 // PROGMEM_DEF_LOCAL_VARNAME_ARRAY(_VAR_, id, 3)
 // const char *_VAR_id[] = { PSTR("id_0"), PSTR("id_1"), PSTR("id_2") };
-#define PROGMEM_DEF_LOCAL_VARNAME_ARRAY(prefix, name, num)      const char *prefix##name[] = { PSTR_NAME_ARRAY_INDEXED(0,num,"_",name) };
+#define PROGMEM_DEF_LOCAL_VARNAME_ARRAY(prefix, name, num)              const char *prefix##name[] = { PSTR_NAME_ARRAY_INDEXED(0,num,"_",name) };
 //PROGMEM_DEF_LOCAL_VARNAME_ARRAY(_VAR_, id, 3);
 
 // PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, 2, aa, bb, cc)

@@ -5,7 +5,7 @@
 #pragma once
 
 #ifndef DEBUG_RTC_MEMORY_MANAGER
-#define DEBUG_RTC_MEMORY_MANAGER 0
+#define DEBUG_RTC_MEMORY_MANAGER                    1
 #endif
 
 #include <Arduino_compat.h>

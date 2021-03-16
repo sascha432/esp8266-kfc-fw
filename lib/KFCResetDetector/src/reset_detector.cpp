@@ -1,83 +1,80 @@
-
 /**
  * Author: sascha_lammers@gmx.de
  */
 
 #include <Arduino_compat.h>
 #include "reset_detector.h"
-#if HAVE_KFC_PLUGINS
 #include <LoopFunctions.h>
 #include <PluginComponent.h>
-#endif
 
-#if DEBUG_RESET_DETECTOR
-#include <debug_helper_enable.h>
+#undef __LDBG_printf
+#if DEBUG && DEBUG_RESET_DETECTOR
+#define __LDBG_printf(fmt, ...) ::printf_P(PSTR("RD%04u: " fmt "\n"), micros() / 1000, ##__VA_ARGS__)
 #else
-#include <debug_helper_disable.h>
+#define __LDBG_printf(...)
 #endif
 
-ResetDetector resetDetector;
+#if defined(ESP8266)
+extern "C" {
+    #include "user_interface.h"
+}
+#endif
 
-ResetDetector::ResetDetector() : _timer()
+ResetDetectorUnitialized resetDetector __attribute__((section(".noinit")));;
+
+#if !ENABLE_DEEP_SLEEP
+extern "C" void preinit(void)
 {
-#if !DEBUG_RESET_DETECTOR
-    _init();
-#else
-    #warning Call _init() manually after the debug output is turned on
+    resetDetector.init();
+    resetDetector.begin();
+}
 #endif
+
+
+void ResetDetector::end()
+{
+    if (_uart) {
+#if DEBUG && DEBUG_RESET_DETECTOR
+        ::printf_P(PSTR("\r\n"));
+#endif
+        uart_flush(_uart);
+        uart_uninit(_uart);
+        _uart = nullptr;
+    }
 }
 
-void ResetDetector::_init()
+void ResetDetector::begin()
 {
-    _debug_println();
-
-    ResetDetectorData_t data = {};
-    auto isValid = false;
-
-#if HAVE_KFC_PLUGINS
-
-    if (RTCMemoryManager::read(PluginComponent::RTCMemoryId::RESET_DETECTOR, &data, sizeof(data))) {
-        isValid = true;
+    if (_uart) {
+        __LDBG_printf("begin() called multiple times without end()");
+        end();
     }
+    _uart = uart_init(UART0, 115200, (int) SERIAL_8N1, (int) SERIAL_FULL, 1, 64, false);
 
-#else
-    if (ESP.rtcUserMemoryRead(RESET_DETECTOR_RTC_MEM_ADDRESS, (uint32_t *)&data, sizeof(data))) {
-        if (data.magic_word == RESET_DETECTOR_MAGIC_WORD) {
-            if (crc16_update(&data, sizeof(data) - sizeof(data.crc)) == data.crc) {
-                isValid = true;
-            }
-        }
-    }
+#if DEBUG && DEBUG_RESET_DETECTOR
+    ::printf_P(PSTR("\r\n"));
 #endif
+    __LDBG_printf("init reset detector");
+
+    _readData();
+    ++_data;
 
 #if defined(ESP32)
-    _resetReason = esp_reset_reason();
+    _data.pushReason(esp_reset_reason());
 #elif defined(ESP8266)
-    struct rst_info *reset_info = ESP.getResetInfoPtr();
-    _resetReason = reset_info->reason;
+    struct rst_info &resetInfo = *system_get_rst_info();
+    _data.pushReason(resetInfo.reason);
+    __LDBG_printf("depc=%08x epc1=%08x epc2=%08x epc3=%08x exccause=%08x excvaddr=%08x reason=%u", resetInfo.depc, resetInfo.epc1, resetInfo.epc2, resetInfo.epc3, resetInfo.exccause, resetInfo.excvaddr, resetInfo.reason);
 #endif
-
-    if (isValid) {
-        if (data.reset_counter < std::numeric_limits<decltype(data.reset_counter)>::max()) { // stop before overflow
-            data.reset_counter++;
-        }
-        _safeMode = data.safe_mode;
-        _resetCounter = data.reset_counter;
+    __LDBG_printf("valid=%d safe_mode=%u counter=%u new=%u", !!_storedData, _storedData.isSafeMode(), _storedData.getResetCounter(), _data.getResetCounter());
+    __LDBG_printf("info=%s crash=%u reset=%u reboot=%u wakeup=%u",
+        getResetInfo().c_str(), hasCrashDetected(), hasResetDetected(), hasRebootDetected(), hasWakeUpDetected()
+    );
+    __LDBG_printf("reason history");
+    for(auto reason: _storedData) {
+        __LDBG_printf("%u - %s", reason, getResetReason(reason));
     }
-    else {
-        _safeMode = 0;
-        _resetCounter = 0;
-    }
-    _initialResetCounter = _resetCounter;
-
-
-#if HAVE_KFC_PLUGINS
-    __LDBG_printf("\n\n\nRD: valid %d, safe mode=%d, reset counter=%d", isValid, data.safe_mode, data.reset_counter);
-    __LDBG_printf("RD: reset reason: %s (%d), reset info: %s, crash=%d, reset=%d, reboot=%d, wakeup=%d", getResetReason().c_str(), _resetReason, getResetInfo().c_str(), hasCrashDetected(), hasResetDetected(), hasRebootDetected(), hasWakeUpDetected());
-#else
-    __LDBG_printf("\n\n\nRD: valid %d, magic word %08x, safe mode=%d, reset counter=%d", isValid, data.magic_word, data.safe_mode, data.reset_counter);
-    __LDBG_printf("RD: reset reason: %s (%d), reset info: %s, crash=%d, reset=%d, reboot=%d, wakeup=%d", getResetReason().c_str(), _resetReason, getResetInfo().c_str(), hasCrashDetected(), hasResetDetected(), hasRebootDetected(), hasWakeUpDetected());
-#endif
+    __LDBG_printf("%u - %s (recent)", _data.getReason(), getResetReason());
 
     _writeData();
     armTimer();
@@ -95,26 +92,31 @@ void ResetDetector::armTimer()
     ets_timer_arm_new(&_timer, RESET_DETECTOR_TIMEOUT, false, true);
 }
 
-void ResetDetector::disarmTimer()
-{
-    ets_timer_disarm(&_timer);
-    ets_timer_done(&_timer);
-}
-
-
-void ResetDetector::_timerCallback(void *arg)
-{
-    auto rd = reinterpret_cast<ResetDetector *>(arg);
-    rd->clearCounter();
-    rd->disarmTimer();
-}
-
-const String ResetDetector::getResetReason() const
+const __FlashStringHelper *ResetDetector::getResetReason(uint8_t reason)
 {
 #if USE_ESP_GET_RESET_REASON
-    return ESP.getResetReason();
+    // copy of ESP.getResetInfo(), returning a PROGMEM string
+    const __FlashStringHelper* buff;
+    switch(reason) {
+        // normal startup by power on
+        case REASON_DEFAULT_RST:      buff = F("Power On"); break;
+        // hardware watch dog reset
+        case REASON_WDT_RST:          buff = F("Hardware Watchdog"); break;
+        // exception reset, GPIO status won’t change
+        case REASON_EXCEPTION_RST:    buff = F("Exception"); break;
+        // software watch dog reset, GPIO status won’t change
+        case REASON_SOFT_WDT_RST:     buff = F("Software Watchdog"); break;
+        // software restart ,system_restart , GPIO status won’t change
+        case REASON_SOFT_RESTART:     buff = F("Software/System restart"); break;
+        // wake up from deep-sleep
+        case REASON_DEEP_SLEEP_AWAKE: buff = F("Deep-Sleep Wake"); break;
+        // // external system reset
+        case REASON_EXT_SYS_RST:      buff = F("External System"); break;
+        default:                      buff = F("Unknown"); break;
+    }
+    return buff;
 #elif defined(ESP32)
-    switch(_resetReason) {
+    switch(reason) {
         case ESP_RST_POWERON:
             return F("Normal startup");
         case ESP_RST_PANIC:
@@ -138,7 +140,7 @@ const String ResetDetector::getResetReason() const
     }
     return F("Unknown");
 #else
-    switch(_resetReason) {
+    switch(reason) {
         case REASON_DEFAULT_RST:
             return F("Normal startup");
         case REASON_WDT_RST:
@@ -169,90 +171,53 @@ const String ResetDetector::getResetInfo() const
 
 void ResetDetector::clearCounter()
 {
-    __LDBG_printf("RD: reset counter = 0 (%d)", _resetCounter);
-    _resetCounter = 0;
+    __LDBG_printf("set counter=0 (%u) safe_mode=%u", _data.getResetCounter(), _data.isSafeMode());
+    _data = 0;
     _writeData();
 }
 
 #if DEBUG
-void ResetDetector::__setResetCounter(uint8_t counter)
+void ResetDetector::__setResetCounter(Counter_t counter)
 {
-    _initialResetCounter = _resetCounter = counter;
+    _storedData = counter;
+    _data = counter;
     _writeData();
 }
 #endif
 
-void ResetDetector::setSafeModeAndClearCounter(uint8_t safeMode)
+void ResetDetector::setSafeModeAndClearCounter(bool safeMode)
 {
-    __LDBG_printf("RD: reset counter = 0 (%d) and safe_mode=%u", _resetCounter, safeMode);
-    _safeMode = safeMode;
-    _resetCounter = 0;
+    __LDBG_printf("set counter=0 (%u) set safe_mode=%u", _data.getResetCounter(), data.isSafeMode());
+    _data = Data(0, safeMode);
     _writeData();
+}
+
+void ResetDetector::_readData()
+{
+    if (RTCMemoryManager::read(PluginComponent::RTCMemoryId::RESET_DETECTOR, &_storedData, sizeof(_storedData))) {
+        _storedData.setValid(true);
+        _data = _storedData;
+    }
+    else {
+        _storedData = Data();
+        _data = Data(0, false);
+    }
 }
 
 void ResetDetector::_writeData()
 {
-    ResetDetectorData_t data = { _resetCounter, _safeMode };
-
-#if HAVE_KFC_PLUGINS
-
-    RTCMemoryManager::write(PluginComponent::RTCMemoryId::RESET_DETECTOR, &data, sizeof(data));
-
-#else
-
-    data.magic_word = RESET_DETECTOR_MAGIC_WORD;
-    data.crc = crc16_update(&data, sizeof(data) - sizeof(data.crc));
-
-    if (!ESP.rtcUserMemoryWrite(RESET_DETECTOR_RTC_MEM_ADDRESS, (uint32_t *)&data, sizeof(data))) {
-        __LDBG_printf("RD: Failed to write to RTC MEM");
+    if (!_data) {
+        RTCMemoryManager::remove(PluginComponent::RTCMemoryId::RESET_DETECTOR);
     }
-
-#endif
-
+    else {
+        RTCMemoryManager::write(PluginComponent::RTCMemoryId::RESET_DETECTOR, &_data, sizeof(_data));
+    }
 }
-
-#if HAVE_KFC_PLUGINS
 
 #include "logger.h"
 
-StartupTimings _startupTimings;
-
-#if IOT_REMOTE_CONTROL
-
-void StartupTimings::dump(Print &output)
-{
-    output.printf_P(PSTR("preInit() call: %ums\n"), _preInit);
-    output.printf_P(PSTR("preSetup() call: %ums\n"), _preSetup);
-    output.printf_P(PSTR("setup() call: %ums\n"), _setup);
-    output.printf_P(PSTR("first loop() call: %ums\n"), _loop);
-    output.printf_P(PSTR("Wifi connected: %ums\n"), _wifiConnected);
-    output.printf_P(PSTR("WiFi (DHCP/IP stack) ready: %ums\n"), _wifiGotIP);
-    output.printf_P(PSTR("NTP time received: %ums\n"), _ntp);
-    output.printf_P(PSTR("MQTT connection established: %ums\n"), _mqtt);
-    output.printf_P(PSTR("Deep Sleep: %ums\n"), _deepSleep);
-}
-
-void StartupTimings::log()
-{
-    Logger_notice(F("WiFi connected/ready %ums/%ums; NTP %ums; MQTT %ums, Deep Sleep %ums"), _wifiConnected, _wifiGotIP, _ntp, _mqtt, _deepSleep);
-}
-
-#else
-
-void StartupTimings::dump(Print &output)
-{
-    output.printf_P(PSTR("WiFi ready: %ums\n"), _wifiGotIP);
-}
-
-void StartupTimings::log() {}
-
-#endif
-
 static ResetDetectorPlugin plugin;
 extern void PluginComponentInitRegisterEx();
-
-
-#define ALWAYS_RUN_SETUP   (DEBUG_RESET_DETECTOR ? true : false)
 
 PROGMEM_DEFINE_PLUGIN_OPTIONS(
     ResetDetectorPlugin,
@@ -264,8 +229,8 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     PluginComponent::PriorityType::RESET_DETECTOR,
     PluginComponent::RTCMemoryId::RESET_DETECTOR,
     static_cast<uint8_t>(PluginComponent::MenuType::NONE),
-    ALWAYS_RUN_SETUP,   // allow_safe_mode
-    ALWAYS_RUN_SETUP,   // setup_after_deep_sleep
+    true,               // allow_safe_mode
+    true,               // setup_after_deep_sleep
     false,              // has_get_status
     false,              // has_config_forms
     false,              // has_web_ui
@@ -279,14 +244,6 @@ ResetDetectorPlugin::ResetDetectorPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_
     PluginComponentInitRegisterEx();
     REGISTER_PLUGIN(this, "ResetDetectorPlugin");
 }
-
-#if DEBUG_RESET_DETECTOR
-    void setup(SetupModeType mode)
-    {
-        _init();
-    }
-#endif
-
 
 #if AT_MODE_SUPPORTED
 
@@ -303,16 +260,18 @@ bool ResetDetectorPlugin::atModeHandler(AtModeArgs &args)
 {
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RD))) {
         if (args.isQueryMode()) {
-            args.getStream().printf_P(PSTR("safe mode: %d\nreset counter: %d\ninitial reset counter: %d\ncrash: %d\nreboot: %d\nreset: %d\nreset reason: %s\n"),
+            args.getStream().printf_P(PSTR("safe mode: %u\nreset counter: %u\ninitial reset counter: %u\ncrash: %u\nreboot: %u\nreset: %u\nwake up: %u\nreset reason: %s\n"),
                 resetDetector.getSafeMode(),
                 resetDetector.getResetCounter(),
                 resetDetector.getInitialResetCounter(),
                 resetDetector.hasCrashDetected(),
                 resetDetector.hasRebootDetected(),
                 resetDetector.hasResetDetected(),
-                resetDetector.getResetReason().c_str()
+                resetDetector.hasWakeUpDetected(),
+                resetDetector.getResetReason()
             );
-        } else {
+        }
+        else {
             resetDetector.clearCounter();
         }
         return true;
@@ -322,4 +281,6 @@ bool ResetDetectorPlugin::atModeHandler(AtModeArgs &args)
 
 #endif
 
+#if !RESET_DETECTOR_INCLUDE_HPP_INLINE
+#include "reset_detector.hpp"
 #endif

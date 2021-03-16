@@ -34,7 +34,7 @@ union RegisterExUnitialized {
     RegisterExUnitialized() {}
     ~RegisterExUnitialized() {}
 };
-static RegisterExUnitialized componentRegister; // __attribute__((section(".noinit")));
+static RegisterExUnitialized componentRegister __attribute__((section(".noinit")));
 
 // PluginComponentInitRegisterEx() needs to be called from the first class that uses PluginComponents::Register
 // global or static data gets zerod during startup in a certain order...  and clears all data of the object while its being used already

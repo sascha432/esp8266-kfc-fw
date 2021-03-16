@@ -406,13 +406,12 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPM, "DUMPM", "<start>,<length>", "Dump 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPA, "DUMPA", "<reset|mark|leak|freed>", "Memory allocation statistics");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMPFS, "DUMPFS", "Display file system information");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPEE, "DUMPEE", "[<offset>[,<length>]", "Dump EEPROM");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMPST, "DUMPST", "Dump Startup timings");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RTCM, "RTCM", "<list|dump|clear|set|get|quickconnect>[,<id>[,<data>]", "RTC memory access");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIMO, "WIMO", "<0=off|1=STA|2=AP|3=STA+AP>", "Set WiFi mode, store configuration and reboot");
 #if LOGGER
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LOGDBG, "LOGDBG", "<1|0>", "Enable/disable writing debug output to log://debug");
 #endif
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(PANIC, "PANIC", "Cause an exception by calling panic()");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PANIC, "PANIC", "[<address|wdt|hwdt>]", "Cause an exception by calling panic(), writing zeros to memory <address> or triggering the (hardware)WDT");
 
 #endif
 #if HAVE_I2CSCANNER
@@ -482,7 +481,6 @@ void at_mode_help_commands()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPA), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPFS), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPEE), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPST), name);
 #if DEBUG_CONFIGURATION_GETHANDLE
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPH), name);
 #endif
@@ -2235,9 +2233,6 @@ void at_mode_serial_handle_event(String &commandString)
                     }
                 }
             }
-            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPST))) {
-                _startupTimings.dump(args.getStream());
-            }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(WIMO))) {
                 if (args.requireArgs(1, 1)) {
                     args.print(F("Setting WiFi mode and restarting device..."));
@@ -2277,8 +2272,26 @@ void at_mode_serial_handle_event(String &commandString)
             }
 #endif
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(PANIC))) {
-                delay(100);
-                panic();
+                if (args.equalsIgnoreCase(0, F("wdt"))) {
+                    args.printf_P(PSTR("starting a loop to trigger the WDT"));
+                    for(;;) {}
+                }
+                else if (args.equalsIgnoreCase(0, F("hwdt"))) {
+                    ESP.wdtDisable();
+                    args.printf_P(PSTR("starting a loop to trigger the hardware WDT"));
+                    for(;;) {}
+                }
+                else if (args.size()) {
+                    uint32_t address = args.toNumber(0);
+                    args.printf_P(PSTR("writing zeros to memory @ %08x"), address);
+                    delay(1000);
+                    memset((void *)address, 0, ~0U);
+                }
+                else {
+                    args.printf_P(PSTR("calling panic()"));
+                    delay(1000);
+                    panic();
+                }
             }
 #endif
 #if DEBUG_COLLECT_STRING_ENABLE

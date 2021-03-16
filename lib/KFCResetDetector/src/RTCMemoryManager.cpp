@@ -46,9 +46,8 @@ namespace RTCMemoryManagerNS {
 #if DEBUG_RTC_MEMORY_MANAGER
 
     bool system_rtc_mem_read(uint8_t ofs, void *data, uint16_t len) {
-        if (!((ofs * 4) >= 255 && (ofs * 4 + len) <= 512 && len != 0)) {
-            __DBG_printf_E("ERROR");
-            __DBG_printf("ofs=%u len=%d %d-%d", ofs, len, ofs*4, ofs*4+len);
+        if (!((ofs * 4) >= 256 && (ofs * 4 + len) <= 512 && len != 0)) {
+            __DBG_panic("system_rtc_mem_read ofs=%u len=%d %d-%d", ofs, len, ofs*4, ofs*4+len);
         }
         auto result = ::system_rtc_mem_read(ofs, data, len);
         // __DBG_printf("rtc_read result=%u ofs=%u length=%u data=%p", result, ofs, len, data);
@@ -62,9 +61,8 @@ namespace RTCMemoryManagerNS {
     }
 
     bool system_rtc_mem_write(uint8_t ofs, const void *data, uint16_t len) {
-        if (!((ofs * 4) >= 255 && (ofs * 4 + len) <= 512 && len != 0)) {
-            __DBG_printf_E("ERROR");
-            __DBG_printf("ofs=%u len=%d %d-%d", ofs, len, ofs*4, ofs*4+len);
+        if (!((ofs * 4) >= 256 && (ofs * 4 + len) <= 512 && len != 0)) {
+            __DBG_panic("system_rtc_mem_write ofs=%u len=%d %d-%d", ofs, len, ofs*4, ofs*4+len);
         }
         auto result = ::system_rtc_mem_write(ofs, data, len);
         // __DBG_printf("rtc_write result=%u ofs=%u length=%u data=%p", result, ofs, len, data);
@@ -339,7 +337,7 @@ bool RTCMemoryManager::clear() {
     uint32_t data[kNumBlocks];
     memset(data, 0xff, sizeof(data));
     __LDBG_printf("clear: address=%u[%u-%u] length=%u", kBaseAddress + kAddress, kBaseAddress, kLastAddress, sizeof(data));
-    if (!system_rtc_mem_write(kBaseAddress + kAddress, &data, sizeof(data))) {
+    if (!RTCMemoryManagerNS::system_rtc_mem_write(kBaseAddress + kAddress, &data, sizeof(data))) {
         return false;
     }
 

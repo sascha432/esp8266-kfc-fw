@@ -4,6 +4,7 @@
 
 #include "dimmer_base.h"
 #include "dimmer_form.h"
+#include "Utility/ProgMemHelper.h"
 
 #if DEBUG_IOT_DIMMER_MODULE
 #include <debug_helper_enable.h>
@@ -109,39 +110,41 @@ void Dimmer::Form::_createConfigureForm(PluginComponent::FormCallbackType type, 
 
         auto &channelGroup = form.addCardGroup(F("chcfg"), F("Channel Configuration"), false);
 
-        const __FlashStringHelper *vars[IOT_DIMMER_MODULE_CHANNELS][2] = {
-#if IOT_DIMMER_MODULE_CHANNELS >= 1
-            {F("ch0o"), F("ch0r")},
-#endif
-#if IOT_DIMMER_MODULE_CHANNELS >= 2
-            {F("ch1o"), F("ch1r")},
-#endif
-#if IOT_DIMMER_MODULE_CHANNELS >= 3
-            {F("ch2o"), F("ch2r")},
-#endif
-#if IOT_DIMMER_MODULE_CHANNELS >= 4
-            {F("ch3o"), F("ch3r")},
-#endif
-#if IOT_DIMMER_MODULE_CHANNELS >= 5
-            {F("ch4o"), F("ch4r")},
-#endif
-#if IOT_DIMMER_MODULE_CHANNELS >= 6
-            {F("ch5o"), F("ch5r")},
-#endif
-#if IOT_DIMMER_MODULE_CHANNELS >= 7
-            {F("ch6o"), F("ch6r")},
-#endif
-#if IOT_DIMMER_MODULE_CHANNELS >= 8
-            {F("ch7o"), F("ch7r")},
-#endif
-        };
+        PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, IOT_DIMMER_MODULE_CHANNELS, cr, co);
+
+//         const __FlashStringHelper *vars[IOT_DIMMER_MODULE_CHANNELS][2] = {
+// #if IOT_DIMMER_MODULE_CHANNELS >= 1
+//             {F("ch0o"), F("ch0r")},
+// #endif
+// #if IOT_DIMMER_MODULE_CHANNELS >= 2
+//             {F("ch1o"), F("ch1r")},
+// #endif
+// #if IOT_DIMMER_MODULE_CHANNELS >= 3
+//             {F("ch2o"), F("ch2r")},
+// #endif
+// #if IOT_DIMMER_MODULE_CHANNELS >= 4
+//             {F("ch3o"), F("ch3r")},
+// #endif
+// #if IOT_DIMMER_MODULE_CHANNELS >= 5
+//             {F("ch4o"), F("ch4r")},
+// #endif
+// #if IOT_DIMMER_MODULE_CHANNELS >= 6
+//             {F("ch5o"), F("ch5r")},
+// #endif
+// #if IOT_DIMMER_MODULE_CHANNELS >= 7
+//             {F("ch6o"), F("ch6r")},
+// #endif
+// #if IOT_DIMMER_MODULE_CHANNELS >= 8
+//             {F("ch7o"), F("ch7r")},
+// #endif
+//         };
 
         for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
-            form.addPointerTriviallyCopyable(vars[i][0], &cfg.level.from[i]);
+            form.addPointerTriviallyCopyable(F_VAR(cr, i), &cfg.level.from[i]);
             form.addFormUI(FormUI::Label(PrintString(F("Channel %u Minimum Level Limit"), i + 1)));
             form.addValidator(FormUI::Validator::Range(0, IOT_DIMMER_MODULE_MAX_BRIGHTNESS - ((IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 100 + 3))));
 
-            form.addPointerTriviallyCopyable(vars[i][1], &cfg.level.to[i]);
+            form.addPointerTriviallyCopyable(F_VAR(co, i), &cfg.level.to[i]);
             form.addFormUI(FormUI::Label(PrintString(F("Channel %u Maximum Level Limit"), i + 1)));
             form.addValidator(FormUI::Validator::Range((IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 100 + 3), IOT_DIMMER_MODULE_MAX_BRIGHTNESS));
 

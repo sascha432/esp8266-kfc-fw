@@ -136,7 +136,7 @@ void RotaryEncoder::attachPins(uint8_t pin1, uint8_t pin2)
 #define R_START_M 0x3
 #define R_CW_BEGIN_M 0x4
 #define R_CCW_BEGIN_M 0x5
-constexpr uint8_t ttable[6][4] = {
+constexpr uint32_t ttable[6][4] PROGMEM = {
   // R_START (00)
   {R_START_M,            R_CW_BEGIN,     R_CCW_BEGIN,  R_START},
   // R_CCW_BEGIN
@@ -159,7 +159,7 @@ constexpr uint8_t ttable[6][4] = {
 #define R_CCW_FINAL 0x5
 #define R_CCW_NEXT 0x6
 
-constexpr uint8_t ttable[7][4] = {
+constexpr uint32_t ttable[7][4] PROGMEM = {
   // R_START
   {R_START,    R_CW_BEGIN,  R_CCW_BEGIN, R_START},
   // R_CW_FINAL

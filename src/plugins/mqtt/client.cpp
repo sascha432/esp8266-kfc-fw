@@ -611,7 +611,6 @@ void MQTTClient::onConnect(bool sessionPresent)
         publishAutoDiscovery();
     }
 #endif
-    _startupTimings.setMqtt(millis());
 }
 
 void MQTTClient::onDisconnect(AsyncMqttClientDisconnectReason reason)
@@ -659,16 +658,14 @@ bool MQTTClient::publishAutoDiscovery(RunFlags flags)
         if (_autoDiscoveryQueue && (flags & RunFlags::ABORT_RUNNING)) { // abort running auto discovery if flag is set
             _autoDiscoveryQueue.reset();
         }
-        if (_autoDiscoveryQueue) {
-            // auto discovery is running, do not start...
-            __LDBG_printf("auto discovery running count=%u size=%u", _autoDiscoveryQueue->_discoveryCount, _autoDiscoveryQueue->_size);
-        }
-        else {
+        if (!_autoDiscoveryQueue) {
+            __DBG_printf("starting auto discovery queue");
             _autoDiscoveryQueue.reset(new AutoDiscovery::Queue(*this));
             _autoDiscoveryQueue->publish(flags);
             return true;
         }
     }
+    __DBG_printf("publishAutoDiscovery false: enabled=%u empty=%u queue=%p", AutoDiscovery::Queue::isEnabled(), _components.empty(), _autoDiscoveryQueue.get());
 #endif
     return false;
 }

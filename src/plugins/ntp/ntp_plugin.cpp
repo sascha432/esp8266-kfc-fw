@@ -168,7 +168,6 @@ void NTPPlugin::updateNtpCallback()
     __LDBG_printf("new time=%u", (int)now);
 
     if (IS_TIME_VALID(now)) {
-        _startupTimings.setNtp(millis());
         NTPPlugin::_ntpRefreshTimeMillis = Plugins::NTPClient::getConfig().getRefreshIntervalMillis();
         plugin._checkTimer.remove();
     }

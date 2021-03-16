@@ -154,23 +154,30 @@ void Queue::runPublish(uint32_t delayMillis)
             // check if we have real time
             if (!(_runFlags & RunFlags::FORCE_NOW)) {
                 auto now = time(nullptr);
-                if (IS_TIME_VALID(now)) {
-                    // check when the next auto discovery is supposed to run
+                if (!IS_TIME_VALID(now)) {
+                    __DBG_printf("auto discovery, time() is invalid, retrying in 30 seconds");
+                    timer->rearm(Event::seconds(30), false);
+                    return;
+                }
+                if (!_client.isAutoDiscoveryLastTimeValid()) {
+                    __DBG_printf("auto discovery, last upate timestamp invalid, retrying in 30 seconds");
+                    timer->rearm(Event::seconds(30), false);
+                    return;
+                }
+                // check when the next auto discovery is supposed to run
+                __DBG_printf("last sucess d% last failure %d run=%d", _client._autoDiscoveryLastSuccess, _client._autoDiscoveryLastFailure, _client._autoDiscoveryLastSuccess > _client._autoDiscoveryLastFailure);
+                if (_client._autoDiscoveryLastSuccess > _client._autoDiscoveryLastFailure) {
                     auto cfg = Plugins::MQTTClient::getConfig();
-                    if (_client._autoDiscoveryLastSuccess > _client._autoDiscoveryLastFailure) {
-                        uint32_t next = _client._autoDiscoveryLastSuccess + (cfg.getAutoDiscoveryRebroadcastInterval() * 60);
-                        int32_t diff = next - time(nullptr);
-                        __DBG_printf_E("last published=%u wait_time=%d minutes", (diff / 60) + 1);
-                        // not within 2 minutes... report error and delay next run by the time that has been left
-                        if (diff > 120) {
-                            _publishDone(false, (next / 60) + 1);
-                            return;
-                        }
+                    uint32_t next = _client._autoDiscoveryLastSuccess + (cfg.getAutoDiscoveryRebroadcastInterval() * 60);
+                    int32_t diff = next - time(nullptr);
+                    __DBG_printf_E("last published=%u wait_time=%d minutes", (diff / 60) + 1);
+                    // not within 2 minutes... report error and delay next run by the time that has been left
+                    if (diff > 120) {
+                        _publishDone(false, (next / 60) + 1);
+                        return;
                     }
                 }
             }
-
-
 
             // get all topics that belong to this device
             __LDBG_printf("starting CollectTopicsComponent");

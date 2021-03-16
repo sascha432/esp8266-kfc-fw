@@ -535,6 +535,10 @@ public:
             }
         }
 
+        inline bool isAutoDiscoveryLastTimeValid() const {
+            return (_autoDiscoveryLastSuccess != ~0U && _autoDiscoveryLastFailure != ~0U);
+        }
+
         String  _autoDiscoveryStatusTopic;
         uint32_t _autoDiscoveryLastFailure{~0U};
         uint32_t _autoDiscoveryLastSuccess{~0U};

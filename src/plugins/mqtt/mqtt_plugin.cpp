@@ -107,7 +107,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF(MQTT, "MQTT", "<connect|disconnect|set|topics|a
 
 ATModeCommandHelpArrayPtr Plugin::atModeCommandHelp(size_t &size) const
 {
-    static ATModeCommandHelpArray tmp PROGMEM = { PROGMEM_AT_MODE_HELP_COMMAND(MQTT), PROGMEM_AT_MODE_HELP_COMMAND(MQTT) };
+    static ATModeCommandHelpArray tmp PROGMEM = { PROGMEM_AT_MODE_HELP_COMMAND(MQTT) };
     size = sizeof(tmp) / sizeof(tmp[0]);
     return tmp;
 }

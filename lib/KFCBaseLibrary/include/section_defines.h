@@ -24,8 +24,10 @@ extern "C" uint32_t _FS_start;
 extern "C" uint32_t _FS_end;
 extern "C" uint32_t _KFCFW_start;
 extern "C" uint32_t _KFCFW_end;
-extern "C" uint32_t _ESPSAVECRASH_start;
+extern "C" uint32_t _SAVECRASH_start;
+extern "C" uint32_t _SAVECRASH_end;
 extern "C" uint32_t _EEPROM_start;
+extern "C" uint32_t _EEPROM_end;
 
 
 #define SECTION_FLASH_START_ADDRESS                         0x40200000
@@ -34,7 +36,9 @@ extern "C" uint32_t _EEPROM_start;
 #define SECTION_HEAP_START_ADDRESS                          ((uint32_t)&_heap_start[0])
 #define SECTION_HEAP_END_ADDRESS                            0x3fffc000U
 #define SECTION_EEPROM_START_ADDRESS                        ((uint32_t)&_EEPROM_start)
-#define SECTION_ESPSAVECRASH_START_ADDRESS                  ((uint32_t)&_ESPSAVECRASH_start)
+#define SECTION_EEPROM_END_ADDRESS                          ((uint32_t)&_EEPROM_end)
+#define SECTION_SAVECRASH_START_ADDRESS                     ((uint32_t)&_SAVECRASH_start)
+#define SECTION_SAVECRASH_END_ADDRESS                       ((uint32_t)&_SAVECRASH_end)
 #define SECTION_KFCFW_START_ADDRESS                         ((uint32_t)&_KFCFW_start)
 #define SECTION_KFCFW_END_ADDRESS                           ((uint32_t)&_KFCFW_end)
 #define SECTION_FS_START_ADDRESS                            ((uint32_t)&_FS_start)

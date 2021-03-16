@@ -18,7 +18,7 @@ PROVIDE ( _SPIFFS_start = 0x40297000 );
 PROVIDE ( _SPIFFS_end = 0x402F9000 );
 PROVIDE ( _SPIFFS_page = 0x100 );
 PROVIDE ( _SPIFFS_block = 0x1000 );
-PROVIDE ( _ESPSAVECRASH_start = 0x402FA000 );
+PROVIDE ( _SAVECRASH_start = 0x402FA000 );
 PROVIDE ( _EEPROM_start = 0x402FB000 );
 
 INCLUDE "local.eagle.app.v6.common.ld"

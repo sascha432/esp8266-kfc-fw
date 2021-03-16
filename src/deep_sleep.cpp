@@ -15,7 +15,7 @@
 #endif
 
 #undef __LDBG_printf
-#if DEBUG && DEBUG_DEEP_SLEEP
+#if DEBUG_DEEP_SLEEP
 #define __LDBG_printf(fmt, ...) ::printf_P(PSTR("DS%04u: " fmt "\n"), micros() / 1000, ##__VA_ARGS__)
 #else
 #define __LDBG_printf(...)
@@ -148,12 +148,12 @@ void DeepSleepParam::dump() {
 }
 #endif
 
-void DeepSleepParam::enterDeepSleep(milliseconds sleep_time)
+void DeepSleepParam::enterDeepSleep(milliseconds sleep_time, RFMode rfMode)
 {
-    deepSleepParams = DeepSleepParam(sleep_time);
+    deepSleepParams = DeepSleepParam(sleep_time, rfMode);
 
 #if DEBUG_DEEP_SLEEP
-    Logger_notice(F("entering deep sleep, time=%ld sleep-time=%.3f"), time(nullptr), deepSleepParams.getTotalTime());
+    Logger_notice(F("entering deep sleep: time=%ld sleep-time=%.0f mode=%u"), time(nullptr), deepSleepParams.getTotalTime(), rfMode);
     delay(250);
 #endif
 
@@ -162,9 +162,10 @@ void DeepSleepParam::enterDeepSleep(milliseconds sleep_time)
     RTCMemoryManager::write(RTCMemoryManager::RTCMemoryId::DEEP_SLEEP, &deepSleepParams, sizeof(deepSleepParams));
 
     resetDetector.clearCounter();
+    SaveCrash::removeCrashCounter();
 
 #if DEBUG_DEEP_SLEEP
-    __LDBG_printf("deep sleep %.2f remaining=%u", (deepSleepParams.getDeepSleepTimeMicros() / 1000.0), deepSleepParams._remainingSleepTime);
+    __LDBG_printf("deep sleep %.2f remaining=%u mode=%u", (deepSleepParams.getDeepSleepTimeMicros() / 1000.0), deepSleepParams._remainingSleepTime, deepSleepParams._rfMode);
 #endif
 #if defined(ESP8266)
     system_deep_sleep_set_option(static_cast<int>(deepSleepParams._rfMode));
@@ -199,8 +200,10 @@ String PinState::toString(uint32_t state, uint32_t time) const
 
 extern "C" void preinit(void)
 {
+
     resetDetector.init();
     resetDetector.begin();
+
     deep_sleep_preinit();
 }
 

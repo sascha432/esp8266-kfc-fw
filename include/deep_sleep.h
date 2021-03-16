@@ -4,6 +4,16 @@
 
 #pragma once
 
+//
+// collects input PIN state during boot and supports deep sleep without the 3 hour limit
+// using deep sleep for longer periods of time causes the system to wake up every 3 hours to check if the time has passed. that takes
+// about 60-70ms. the total amount per day sums up to ~0.8 seconds. the exact time is stored in _runtime (microseconds) since i do not
+// have any equipmnt that can measure µWh, running a longer test over a few weeks or even months is required
+//
+// TODO record power consumption per wakeup for different WiFi modes (off, nocal, cal...)
+//
+//
+
 #if ENABLE_DEEP_SLEEP
 
 #ifndef __DEEP_SLEEP_INCLUDED
@@ -187,7 +197,7 @@ namespace DeepSleep
         void dump();
 #endif
 
-        static void enterDeepSleep(milliseconds time);
+        static void enterDeepSleep(milliseconds time, RFMode rfMode = RF_NO_CAL);
         static void reset();
         bool isValid() const;
         static uint32_t getDeepSleepMaxMillis();

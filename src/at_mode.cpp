@@ -403,6 +403,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPH, "DUMPH", "[<log|panic|clear>]", "Du
 #endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMPD, "DUMPD", "Dump initial debug history");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPM, "DUMPM", "<start>,<length>", "Dump memory");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPIO, "DUMPIO", "<addr>,<end addr>", "Dump IO memory (0x6000xxxx)");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPA, "DUMPA", "<reset|mark|leak|freed>", "Memory allocation statistics");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMPFS, "DUMPFS", "Display file system information");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPEE, "DUMPEE", "[<offset>[,<length>]", "Dump EEPROM");
@@ -478,6 +479,7 @@ void at_mode_help_commands()
 #endif
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPD), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPM), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPIO), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPA), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPFS), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPEE), name);
@@ -1239,11 +1241,13 @@ void at_mode_serial_handle_event(String &commandString)
                 KFCFWConfiguration::milliseconds time(args.toMillis(0));
                 RFMode mode = (RFMode)args.toInt(1, RF_DEFAULT);
 
+                //+dslp=15000,4
+
+
                 args.printf_P(PSTR("Entering deep sleep... time=%ums deep_sleep_max=%.0fms mode=%u"), time.count(), (ESP.deepSleepMax() / 1000.0), mode);
 
 #if ENABLE_DEEP_SLEEP
-                deepSleepParams = DeepSleep::DeepSleepParam(time, mode);
-                deepSleepParams.enterDeepSleep(time);
+                deepSleepParams.enterDeepSleep(time, mode);
 #else
                 ESP.deepSleep(time.count() * 1000ULL, mode);
                 ESP.deepSleep(ESP.deepSleepMax() / 2, mode);
@@ -1263,7 +1267,22 @@ void at_mode_serial_handle_event(String &commandString)
                 }
                 at_mode_generate_help(output, &findItems);
             }
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPIO))) {
+/*
++dumpio=0x700,0x7ff
++dumpio=0x1200,0x1300
+*/
+
+                auto addr = args.toNumber(0);
+                auto toAddr = args.toNumber(1, addr);
+                while(addr < toAddr) {
+                    Serial.printf_P(PSTR("addr=%08x data=%08x (%u, %d)\n"), 0x60000000 + addr, ESP8266_REG(addr), ESP8266_REG(addr), ESP8266_REG(addr));
+                    addr += 4;
+                }
+
+            }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(METRICS))) {
+#if 1
 
                 args.printf_P(PSTR("Device name: %s"), System::Device::getName());
                 args.printf_P(PSTR("Uptime: %u seconds / %s"), getSystemUptime(), formatTime(getSystemUptime(), true).c_str());
@@ -1273,8 +1292,8 @@ void at_mode_serial_handle_event(String &commandString)
                 args.printf_P(PSTR("CPU frequency: %uMHz"), ESP.getCpuFreqMHz());
                 args.printf_P(PSTR("Flash size: %s"), formatBytes(ESP.getFlashChipRealSize()).c_str());
                 args.printf_P(PSTR("Firmware size: %s"), formatBytes(ESP.getSketchSize()).c_str());
-                args.printf_P(PSTR("EEPROM: 0x%x"), SECTION_EEPROM_START_ADDRESS);
-                args.printf_P(PSTR("EspSaveCrash: 0x%x"), SECTION_ESPSAVECRASH_START_ADDRESS);
+                args.printf_P(PSTR("EEPROM: 0x%x/%u"), SECTION_EEPROM_START_ADDRESS, SECTION_EEPROM_END_ADDRESS - SECTION_EEPROM_START_ADDRESS);
+                args.printf_P(PSTR("SaveCrash: 0x%x/%u"), SECTION_SAVECRASH_START_ADDRESS, SECTION_SAVECRASH_END_ADDRESS - SECTION_SAVECRASH_START_ADDRESS);
                 args.printf_P(PSTR("KFCFW: 0x%x/%u"), SECTION_KFCFW_START_ADDRESS, SECTION_KFCFW_END_ADDRESS - SECTION_KFCFW_START_ADDRESS);
                 args.printf_P(PSTR("WiFiCallbacks: size=%u count=%u"), sizeof(WiFiCallbacks::Entry), WiFiCallbacks::getVector().size());
                 args.printf_P(PSTR("LoopFunctions: size=%u count=%u"), sizeof(LoopFunctions::Entry), LoopFunctions::getVector().size());
@@ -1357,6 +1376,8 @@ void at_mode_serial_handle_event(String &commandString)
                     args.printf_P(PSTR("Firmware ELF hash: %s"), hash.c_str());
                 }
 #endif
+#endif
+
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RST))) {
                 bool safeMode = false;

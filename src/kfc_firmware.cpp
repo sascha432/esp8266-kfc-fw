@@ -18,6 +18,7 @@
 #include "serial2udp.h"
 #include "reset_detector.h"
 #include "deep_sleep.h"
+#include "save_crash.h"
 #include "plugins_menu.h"
 #include "WebUIAlerts.h"
 #if PRINTF_WRAPPER_ENABLED
@@ -78,23 +79,34 @@ void delayedSetup(bool delayed)
     SaveCrash::installRemoveCrashCounter(KFC_CRASH_RECOVERY_TIME);
 }
 
+uint32_t rtc_time_read_raw(void);
+uint32_t rtc_time_read_raw_frc2(void);
+
+
 void setup()
 {
-    #if DEBUG_DEEP_SLEEP
-        // if DEBUG_DEEP_SLEEP is disabled, deep sleep setup is executed in preinit()
-        void deep_sleep_setup();
+    #if ENABLE_DEEP_SLEEP
+        deepSleepPinState.merge();
     #endif
 
-#if PIN_MONITOR_USE_GPIO_INTERRUPT
-    PinMonitor::GPIOInterruptsEnable();
-#endif
-
-    #if IOT_REMOTE_CONTROL
-        _startupTimings.preSetup(millis());
+    resetDetector.end(); // release uart to call Serial.begin(). resetDetector is initialized in preinit()
+    KFC_SAFE_MODE_SERIAL_PORT.begin(KFC_SERIAL_RATE);
+    #if KFC_DEBUG_USE_SERIAL1
+        Serial1.begin(KFC_DEBUG_USE_SERIAL1);
+        static_assert(KFC_DEBUG_USE_SERIAL1 >= 300, "must be set to the baud rate");
     #endif
+
+    #if PIN_MONITOR_USE_GPIO_INTERRUPT
+        PinMonitor::GPIOInterruptsEnable();
+    #endif
+
     #if ENABLE_DEEP_SLEEP
         deepSleepPinState.merge();
         bool wakeup = resetDetector.hasWakeUpDetected();
+
+        // ---------------------------------------------------------------------------------
+        // custom code remote control plugin
+        // ---------------------------------------------------------------------------------
         #if IOT_REMOTE_CONTROL
             // read the button states once more
             // setting the awake pin high will clear the button hardware buffer
@@ -103,25 +115,17 @@ void setup()
             pinMode(IOT_REMOTE_CONTROL_AWAKE_PIN, OUTPUT);
             digitalWrite(IOT_REMOTE_CONTROL_AWAKE_PIN, HIGH);
         #endif
+        // ---------------------------------------------------------------------------------
+
         deepSleepPinState.merge();
         if (wakeup) {
             KFCFWConfiguration::wakeUpFromDeepSleep();
         }
         deepSleepPinState.merge();
     #endif
-    _startupTimings.setSetupFunc(millis());
-    #if IOT_REMOTE_CONTROL
-        _startupTimings.preInit(deepSleepPinState.getMillis());
-    #endif
 
-    KFC_SAFE_MODE_SERIAL_PORT.begin(KFC_SERIAL_RATE);
-    #if KFC_DEBUG_USE_SERIAL1
-        Serial1.begin(KFC_DEBUG_USE_SERIAL1);
-        static_assert(KFC_DEBUG_USE_SERIAL1 >= 300, "must be set to the baud rate");
-    #endif
     serialHandler.begin();
     DEBUG_HELPER_INIT();
-
 
     #if 0
         #include "../include/retracted/custom_wifi.h"
@@ -139,10 +143,6 @@ void setup()
     #endif
     #if HAVE_MCP23017
         initialize_mcp23017();
-    #endif
-
-    #if DEBUG_RESET_DETECTOR
-        resetDetector._init();
     #endif
 
     bool safe_mode = false;
@@ -326,28 +326,6 @@ void setup()
 
     }
 
-
-// #if defined(KFC_ENABLE_DEBUG_LOG_AT_BOOTTIME) && KFC_ENABLE_DEBUG_LOG_AT_BOOTTIME
-//     if (!safe_mode) {
-//         String logfile;
-//         uint16_t n = 0;
-//         do {
-//             logfile = PrintString(F("/.pvt/debug.%02u.log"), n++);
-//             if (n > 100) {
-//                 n = 0;
-//                 break;
-//             }
-//         }
-//         while(KFCFS.exists(logfile));
-//         static auto debugLog = KFCFS.open(logfile, "w");
-//         if (debugLog) {
-//             debugStreamWrapper.add(&debugLog);
-//         }
-//     }
-// #endif
-
-
-
 #if WEBUI_ALERTS_ENABLED
     // read only mode in safe mode
     // and do not remove non persistent alerts if a crash has been detected
@@ -446,8 +424,6 @@ void setup()
 
         }
 #endif
-
-        _startupTimings.setLoopFunc(millis());
     }
 
 #if LOAD_STATISTICS

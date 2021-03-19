@@ -4,12 +4,16 @@
 
 #pragma once
 
-// copy on write for SPI flash without buffering the entire sector in ram
+// library for handling flash memory / block storage
 //
-// - erase sector
-// - initialize sector (erase + create)
-// - copy and append data to sector
+// - copy on write without buffering the entire sector in RAM
+// - integrity check per sector
+//
+// - erase sector (makes it available to write)
+// - initialize sector (erase + create - stores data on it)
+// - copy and append data to sector (copies existing data from one sector to another one and appends new data)
 // - validate (crc32 check)
+//
 //
 // requires 64-128byte stack space
 
@@ -23,32 +27,55 @@
 
 namespace SPIFlash {
 
-    static constexpr uint32_t kFlashMagic = 0x208a74e2;
+    // values for erased flash memory
     static constexpr uint32_t kFlashEmpty = 0xffffffff;
     static constexpr uint16_t kFlashEmpty16 = 0xffff;
-    static constexpr uint16_t kFlashEmpty8 = 0xff;
+    static constexpr uint8_t kFlashEmpty8 = 0xff;
+
+    static constexpr uint32_t kFlashMagic = 0x208a74e2;
     static constexpr uint32_t kInitialCrc32 = ~0;
+    static constexpr uint32_t kFlashMemoryStartAddress = 0x40200000;
+    static constexpr uint16_t kFlashMemorySectorSize = SPI_FLASH_SEC_SIZE;
 
     // default buffer size in byte
-    static constexpr size_t kBufferSize = 16 * 4;
+    static constexpr uint16_t kBufferSize = 16 * 4;
+
+    // get offset from adress stored in memory as const char *
+    inline static uint32_t getOffset(const char address[]) {
+        return (uint32_t)&address[0] - kFlashMemoryStartAddress;
+    }
+
+    // get offset from adress stored in memory as uint32_t
+    inline static uint32_t getOffset(uint32_t *address) {
+        return (uint32_t)address - kFlashMemoryStartAddress;
+    }
+
+    // get sector from address in memory
+    inline static uint16_t getSector(const char address[]) {
+        return getOffset(address) / kFlashMemorySectorSize;
+    }
+
+    inline static uint16_t getSector(uint32_t *address) {
+        return getOffset(address) / kFlashMemorySectorSize;
+    }
 
     struct FlashHeader {
         uint32_t _magic;
         uint32_t _crc32;
-        uint16_t _size;
-        uint16_t __reserved; // dword alignment
+        struct {
+            uint16_t _size;
+            uint16_t _versioning: 1;
+            uint16_t __reserved: 3;
+        };
+        uint32_t _version;
 
-        FlashHeader() :
-            _magic(kFlashEmpty),
-            __reserved(kFlashEmpty8)
-        {
-        }
-
-        FlashHeader(uint32_t crc32, uint16_t size) :
+        FlashHeader(uint32_t crc32 = 0xfffffff, uint16_t size = 0xffff) :
             _magic(kFlashMagic),
             _crc32(crc32),
             _size(size),
-            __reserved(kFlashEmpty8)
+            _versioning(0b1),
+            __reserved(0b111),
+            _version(0xffffffff)
         {
         }
 
@@ -58,21 +85,27 @@ namespace SPIFlash {
         {
         }
 
-
         operator bool() const {
-            return isValid();
-        }
-
-        bool isValid() const {
             return _magic == kFlashMagic;
         }
 
-        bool isEmpty() const {
-            return _crc32 == kInitialCrc32 && _size == kFlashEmpty16;
+        // data has been written to the sector and cannot be changed anymore
+        bool isFinal() const {
+            return _size != kFlashEmpty16 || _crc32 != kInitialCrc32;
+        }
+
+        // sector contains no or invalid data
+        // an erase cycle is required to reuse it
+        bool canReuse() const {
+            return (_magic != kFlashMagic) || (_size == kFlashEmpty16) || (_size == 0) || (_crc32 == kInitialCrc32);
         }
 
         uint16_t size() const {
-            return _size == kFlashEmpty16 ? 0 : _size;
+            return *this ? (_size == kFlashEmpty16 ? 0 : _size) : 0;
+        }
+
+        uint16_t space() const {
+            return *this ? ((SPI_FLASH_SEC_SIZE - sizeof(*this)) - size()) : 0;
         }
     };
 
@@ -115,24 +148,39 @@ namespace SPIFlash {
             _crc32(crc32)
         {}
 
-        operator bool() const {
+        // eturn true if valid
+        inline operator bool() const {
             return _sector != 0;
         }
 
-        bool isEmpty() const {
-            return _size == kFlashEmpty16;
+        // return true if valid and not empty
+        inline bool hasData() const {
+            return size() != 0;
         }
 
+        // return true if valid and is any free space left
+        inline bool canWrite() const {
+            return space();
+        }
+
+        // return true if valid and available space is greater is equal size
+        inline bool canWrite(uint16_t size) const {
+            return space() >= size;
+        }
+
+        // return size or 0 if empty or invalid
         uint16_t size() const {
-            return _size == kFlashEmpty16 ? 0 : _size;
+            return *this ? (_size == kFlashEmpty16 ? 0 : _size) : 0;
         }
 
+        // return available space or 0 if invalid
         uint16_t space() const {
-            return kSectorMaxSize - size();
+            return *this ? (kSectorMaxSize - size()) : 0;
         }
     };
 
     using FindResultVector = std::vector<FindResult>;
+    using FindResultArray = std::array<FindResult, 2>;
 
     struct FlashResult {
 
@@ -163,23 +211,36 @@ namespace SPIFlash {
             _size(kFlashEmpty16)
         {}
 
-        operator bool() const {
+        inline operator bool() const {
             return (_result == FlashResultType::SUCCESS) && (_sector != 0) && (_size != kFlashEmpty16);
         }
 
-        uint16_t size() const {
-            return _size;
+        inline bool hasData() const {
+            return size() != 0;
         }
 
-        uint16_t readSize() const {
-            return _size == kFlashEmpty16 ? 0 : _size;
+        inline bool canRead() const {
+            return readSize() != 0;
+        }
+
+        inline bool canWrite() const {
+            return space();
+        }
+
+        inline bool canWrite(uint16_t size) const {
+            return space() >= size;
+        }
+
+        uint16_t size() const {
+            return *this ? (_size == kFlashEmpty16 ? 0 : _size) : 0;
+        }
+
+        inline uint16_t readSize() const {
+            return size();
         }
 
         uint16_t space() const {
-            if (!*this) {
-                return 0;
-            }
-            return kSectorMaxSize - _size;
+            return *this ? (kSectorMaxSize - size()) : 0;
         }
 
         inline static uint32_t headerOffset(uint16_t sector) {
@@ -206,15 +267,26 @@ namespace SPIFlash {
         bool format() const;
 
         // return a list of sectors with at least minSpace free space
+        // sort=true: sorts by empty sectors, then descending by space
+        // limits: limit number of results
         FindResultVector find(uint16_t fromSector, uint16_t toSector, uint16_t minSpace = 0, bool sort = false, uint8_t limit = 0xff) const;
 
         inline FindResultVector find(uint16_t minSpace = 0, bool sort = false, uint8_t limit = 0xff) const {
             return find(_firstSector, _lastSector, minSpace, sort, limit);
         }
 
+        // find 1 empty and 1 writable sector or 2 empty ones
+        // result = 0: not found
+        // result = 1: empty sector found
+        // result = 2: empty and writable(or another empty) sector found
+        // the empty sector is stored at the first position
+        uint8_t find(uint16_t fromSector, uint16_t toSector, FindResultArray &dst, uint16_t minSpace = 0) const;
+
         // read data from flash into memory
         // result.readSize() is the number of bytes read into data
-        FlashResult read(uint32_t *data, uint16_t maxSize, uint16_t sector, uint16_t offset);
+        // if result is not nullptr, it will be used as cache instead of reading the header for every read() call
+        // the cache is sector based and reset if it does not match the sector of the read call
+        FlashResult read(uint32_t *data, uint16_t maxSize, uint16_t sector, uint16_t offset, FlashResult *result = nullptr);
 
         // erase sector. use this method to release a sector after copying
         FlashResult erase(uint16_t sector) const;

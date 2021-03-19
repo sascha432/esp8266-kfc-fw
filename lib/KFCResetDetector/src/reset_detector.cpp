@@ -6,7 +6,7 @@
 #include "reset_detector.h"
 #include <LoopFunctions.h>
 #include <PluginComponent.h>
-#include "SPIFlash.h"
+#include <PrintHtmlEntitiesString.h>
 
 #if 1
 #include <debug_helper_enable.h>
@@ -40,35 +40,8 @@ extern "C" {
 
 #endif
 
-    void custom_crash_callback(struct rst_info *rst_info, uint32_t stack, uint32_t stack_end);
-
 }
 
-
-struct SaveCrashData {
-    uint32_t _time;
-    uint32_t _stackSize;
-    struct rst_info _info;
-
-    SaveCrashData(uint32_t time, const struct rst_info &rst_info) :
-        _time(time), _stackSize(0), _info(rst_info)
-    {
-    }
-
-    inline size_t getHeaderSize()  const {
-        return sizeof(SaveCrashData);
-    }
-
-    inline size_t getSize() const {
-        return _stackSize + getHeaderSize();
-    }
-
-    inline size_t getStackSize() const {
-        return _stackSize;
-    }
-};
-
-using namespace SPIFlash;
 
 // extern void testspi();
 
@@ -150,87 +123,6 @@ using namespace SPIFlash;
 //     }
 
 // }
-
-inline static bool append_crash_data(FlashStorage &fs, FlashResult &result, struct rst_info *rst_info, uint32_t stack_begin, uint32_t stack_end)
-{
-    uint32_t *begin = reinterpret_cast<uint32_t *>(stack_begin);
-    uint32_t *end = reinterpret_cast<uint32_t *>(stack_end);
-    SaveCrashData header(time(nullptr), *rst_info);
-    header._stackSize = std::min<size_t>(result.space() - sizeof(header), (end - begin) * sizeof(*begin));
-
-    if (!fs.append(header, result)) {
-        __LDBG_printf("append failed rsult=%u size=%u", result._result, sizeof(header));
-        return false;
-    }
-    if (!fs.append(begin, header._stackSize, result)) {
-        __LDBG_printf("append failed rsult=%u size=%u", result._result, header._stackSize);
-        return false;
-    }
-
-    return true;
-}
-
-void custom_crash_callback(struct rst_info *rst_info, uint32_t stack, uint32_t stack_end)
-{
-    auto fs = FlashStorage((((uint32_t)&_SAVECRASH_start) - 0x40200000) / SPI_FLASH_SEC_SIZE, (((uint32_t)&_SAVECRASH_end) - 0x40200000) / SPI_FLASH_SEC_SIZE);
-    FlashResult result;
-    FindResult copyFrom, copyTo;
-    {
-        // drop results when going out of scope
-        auto results = fs.find(128, true);
-        if (results.size() == 1) { // we need at least one free sector
-            copyFrom = 0;
-            copyTo = results.front();
-            if (copyTo.size()) {
-                __LDBG_printf("found one sector that is not empty");
-                return;
-            }
-        }
-        else if (results.size() >= 2) {
-            auto iterator = results.begin();
-            copyTo = *iterator;
-            if (copyTo.size()) {
-                __LDBG_printf("no emtpy sector available for copying");
-                return;
-            }
-            ++iterator;
-            copyFrom = *iterator;
-        }
-        else {
-            __LDBG_printf("could not find 2 sectors");
-            return;
-        }
-    }
-    if (copyFrom == 0) {
-        result = fs.init(copyTo._sector);
-        if (!result) {
-            __LDBG_printf("init failed=%u sector=0x%04x", result._result, copyTo._sector);
-            return;
-        }
-    }
-    else {
-        result = fs.copy(copyFrom._sector, copyTo._sector);
-        if (!result) {
-            __LDBG_printf("copy failed %u", result._result);
-            return;
-        }
-    }
-    if (!append_crash_data(fs, result, rst_info, stack, stack_end)) {
-        __LDBG_printf("append_crash_data failed %u", result._result);
-        return;
-    }
-    if (!fs.finalize(result)) {
-        __LDBG_printf("finalize failed %u", result._result);
-        return;
-    }
-    if (!fs.validate(result)) {
-        __LDBG_printf("validate failed %u", result._result);
-        return;
-    }
-    if (copyFrom) {
-        fs.erase(copyFrom._sector);
-    }
-}
 
 void ResetDetector::end()
 {
@@ -426,7 +318,7 @@ extern void PluginComponentInitRegisterEx();
 PROGMEM_DEFINE_PLUGIN_OPTIONS(
     ResetDetectorPlugin,
     "rd",               // name
-    "rd",               // friendly name
+    "Reset Detector",   // friendly name
     "",                 // web_templates
     "",                 // config_forms
     "",                 // reconfigure_dependencies
@@ -435,7 +327,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     static_cast<uint8_t>(PluginComponent::MenuType::NONE),
     true,               // allow_safe_mode
     true,               // setup_after_deep_sleep
-    false,              // has_get_status
+    true,              // has_get_status
     false,              // has_config_forms
     false,              // has_web_ui
     false,              // has_web_templates
@@ -449,41 +341,37 @@ ResetDetectorPlugin::ResetDetectorPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_
     REGISTER_PLUGIN(this, "ResetDetectorPlugin");
 }
 
-#if AT_MODE_SUPPORTED
+#include "save_crash.h"
 
-#include "at_mode.h"
-
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPP(RD, "RD", "Reset detector clear counter", "Display information");
-
-void ResetDetectorPlugin::atModeHelpGenerator()
+void ResetDetectorPlugin::getStatus(Print &output)
 {
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(RD), getName_P());
+    // int counter = espSaveCrash.count();
+    // String name = FSPGM(crash_dump_file);
+    // auto pos = name.indexOf('%');
+    // if (pos != -1) {
+    //     name.remove(pos);
+    // }
+    // auto path = String('/');
+    // if ((pos = name.indexOf('/', 1)) != -1) {
+    //     path = name.substring(0, pos);
+    // }
+    // size_t size = 0;
+    // ListDir dir(path);
+    // while(dir.next()) {
+    //     if (dir.isFile() && dir.fileName().startsWith(name)) {
+    //         counter++;
+    //         size += dir.fileSize();
+    //     }
+    // }
+    // __LDBG_printf("path=%s name=%s size=%u counter=%u espcounter=%u", path.c_str(), name.c_str(), size, counter, espSaveCrash.count());
+    auto info = SaveCrash::createFlashStorage().getInfo();
+    output.printf_P(PSTR("%u crash report(s), total size "), info._counter);
+    output.print(formatBytes(info._size));
+    output.printf_P(PSTR(HTML_S(br) "%u out of %u 4KB sectors used ("), info._sector_used, info._sectors_total);
+    output.print(formatBytes(info._sectors_total * 4096));
+    output.print(')');
 }
 
-bool ResetDetectorPlugin::atModeHandler(AtModeArgs &args)
-{
-    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RD))) {
-        if (args.isQueryMode()) {
-            args.getStream().printf_P(PSTR("safe mode: %u\nreset counter: %u\ninitial reset counter: %u\ncrash: %u\nreboot: %u\nreset: %u\nwake up: %u\nreset reason: %s\n"),
-                resetDetector.getSafeMode(),
-                resetDetector.getResetCounter(),
-                resetDetector.getInitialResetCounter(),
-                resetDetector.hasCrashDetected(),
-                resetDetector.hasRebootDetected(),
-                resetDetector.hasResetDetected(),
-                resetDetector.hasWakeUpDetected(),
-                resetDetector.getResetReason()
-            );
-        }
-        else {
-            resetDetector.clearCounter();
-        }
-        return true;
-    }
-    return false;
-}
-
-#endif
 
 #if !RESET_DETECTOR_INCLUDE_HPP_INLINE
 #include "reset_detector.hpp"

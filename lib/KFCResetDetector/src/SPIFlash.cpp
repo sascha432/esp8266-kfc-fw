@@ -50,6 +50,42 @@ static SpiFlashOpResult _spi_flash_read(uint32 src_addr, uint32 *des_addr, uint3
 
 namespace SPIFlash {
 
+    uint8_t FlashStorage::find(uint16_t fromSector, uint16_t toSector, FindResultArray &dst, uint16_t minSpace) const
+    {
+        bool haveWriteable = false;
+        auto iter = dst.begin();
+        for(auto i = fromSector; i <= toSector && iter != dst.end(); i++) {
+            FlashHeader header;
+            auto rc = _spi_flash_read(FlashResult::headerOffset(i), reinterpret_cast<uint32_t *>(&header), sizeof(header));
+            if (rc == SPI_FLASH_RESULT_OK) {
+                if (header.canReuse() || _crc(FlashResult::dataOffset(i), header.size()) != header._crc32) {
+                    if (iter != dst.begin()) {
+                        // move front to back in case it is a writeable sector and we need to empty one in the front
+                        auto tmp = dst.front();
+                        dst.front() = FindResult(i, kFlashEmpty16, kInitialCrc32);
+                        dst.back() = tmp;
+                        return 2;
+                    }
+                    else {
+                        *iter = FindResult(i, kFlashEmpty16, kInitialCrc32);
+                        ++iter;
+                    }
+                }
+                else if (haveWriteable == false && header.space() >= minSpace) {
+                    // return only one writeable sector
+                    haveWriteable = true;
+                    *iter = FindResult(i, header.size(), kInitialCrc32);
+                    ++iter;
+                }
+            }
+            else {
+                __DBG_printf("sector=0x%04x read error", i);
+            }
+        }
+        return std::distance(dst.begin(), iter);
+    }
+
+
     FindResultVector FlashStorage::find(uint16_t fromSector, uint16_t toSector, uint16_t minSpace, bool sort, uint8_t limit) const
     {
         FindResultVector results;
@@ -57,53 +93,62 @@ namespace SPIFlash {
             FlashHeader header;
             auto rc = _spi_flash_read(FlashResult::headerOffset(i), reinterpret_cast<uint32_t *>(&header), sizeof(header));
             if (rc == SPI_FLASH_RESULT_OK) {
-                if (!header || header.isEmpty()) {
-                    results.emplace_back(i, kFlashEmpty16);
+                if (header.canReuse()) {
+                    // invalid magic, invalid data or no data
+                    results.emplace_back(i, kFlashEmpty16, kInitialCrc32);
+                    limit--;
+                }
+                else if (_crc(FlashResult::dataOffset(i), header.size()) != header._crc32) {
+                    // invalid crc
+                    results.emplace_back(i, kFlashEmpty16, kInitialCrc32);
+                    limit--;
+
+                }
+                else if (header.space() >= minSpace) {
+                    results.emplace_back(i, header._size, header._crc32);
                     limit--;
                 }
                 else {
-                    if (kSectorMaxSize - header.size() >= minSpace) {
-                        if (_crc(FlashResult::dataOffset(i), header.size()) == header._crc32) {
-                            if (!results.empty()) { // do not count until we have at least one free sector
-                                limit--;
-                            }
-                            results.emplace_back(i, header._size, header._crc32);
-                        }
-                        else {
-                            __DBG_printf("crc mismatch sector=0x%04x size=%u", i, header.size());
-#if 0
-                            // re-use sectors with crc error
-                            results.emplace_back(i, kFlashEmpty16);
-                            limit--;
-#endif
-                        }
-                    }
+                    __DBG_printf("sector=0x%04x not enough space: %u > %u", i, minSpace, header.space());
                 }
             }
             else {
-                __DBG_printf("read error sector=0x%04x", i);
+                __DBG_printf("sector=0x%04x read error", i);
             }
         }
         if (sort) {
+            // sort by invalid and empty sectors, then space() descending
             std::sort(results.begin(), results.end(), [](const FindResult &a, const FindResult &b) {
-                return b.space() < a.space();
+                return (a.space() > b.space()) || (a.space() == b.space() && (!a || !a.hasData()));
             });
         }
         return results;
     }
 
-    FlashResult FlashStorage::read(uint32_t *data, uint16_t maxSize, uint16_t sector, uint16_t offset)
+    FlashResult FlashStorage::read(uint32_t *data, uint16_t maxSize, uint16_t sector, uint16_t offset, FlashResult *resultCache)
     {
-        auto header = FlashHeader();
-        auto rc = _spi_flash_read(FlashResult::headerOffset(sector), reinterpret_cast<uint32_t *>(&header), sizeof(header));
-        if (rc != SPI_FLASH_RESULT_OK) {
-            __LDBG_printf("read failed offset=0x%08x", sector * SPI_FLASH_SEC_SIZE);
-            return FlashResult(FlashResultType::READ, sector);
+        if (offset >= kSectorMaxSize) {
+            return FlashResult(FlashResultType::OUT_OF_RANGE, sector);
         }
-        uint32_t crc;
-        if ((crc = _crc(FlashResult::dataOffset(sector), header._size)) != header._crc32) {
-            __LDBG_printf("crc mismatch %08x!=%08x", crc, header._crc32);
-            // return FlashResult(FlashResultType::VALIDATE_CRC, sector);
+        FlashHeader header;
+        if (resultCache && resultCache->_sector == sector && resultCache->_result == FlashResultType::SUCCESS) {
+            header = resultCache->_header;
+        }
+        else {
+            header = FlashHeader();
+        }
+        SpiFlashOpResult rc;
+        if (header.size()) {
+            rc = _spi_flash_read(FlashResult::headerOffset(sector), reinterpret_cast<uint32_t *>(&header), sizeof(header));
+            if (rc != SPI_FLASH_RESULT_OK) {
+                __LDBG_printf("read failed offset=0x%08x", sector * SPI_FLASH_SEC_SIZE);
+                return FlashResult(FlashResultType::READ, sector);
+            }
+            uint32_t crc;
+            if ((crc = _crc(FlashResult::dataOffset(sector), header._size)) != header._crc32) {
+                __LDBG_printf("crc mismatch %08x!=%08x", crc, header._crc32);
+                // return FlashResult(FlashResultType::VALIDATE_CRC, sector);
+            }
         }
         auto read = std::min<uint16_t>(maxSize, std::max(0, header._size - offset));
         if (!read) {
@@ -114,6 +159,9 @@ namespace SPIFlash {
         if (rc != SPI_FLASH_RESULT_OK) {
             __LDBG_printf("read failed offset=0x%08x size=%u", FlashResult::dataOffset(sector) + offset, read);
             return FlashResult(FlashResultType::READ, sector);
+        }
+        if (resultCache) {
+            *resultCache = FlashResult(sector, header, header._size, header._crc32);
         }
         return FlashResult(sector, header, read);
     }
@@ -160,10 +208,10 @@ namespace SPIFlash {
             return result;
         }
         // copy data if it exists
-        if (header && !header.isEmpty()) {
-            if (!_copySector(fromSector, toSector, header.size(), result)) {
-                return result;
-            }
+        if (header.size()) {
+            // result is modified in case of an error
+            // no need to check return value
+            _copySector(fromSector, toSector, header.size(), result);
         }
         return result;
     }
@@ -175,7 +223,7 @@ namespace SPIFlash {
 
     bool FlashStorage::_copySector(uint16_t fromSector, uint16_t toSector, uint16_t size, FlashResult &result) const
     {
-        if (!result._header.isEmpty()) {
+        if (result._header.isFinal()) {
             result = FlashResult(FlashResultType::FINALIZED, result._sector);
             __LDBG_printf("sector finalized sector=%u crc=0x%08x size=%u", result._sector, result._header._crc32, result._header._size);
             return false;
@@ -203,7 +251,7 @@ namespace SPIFlash {
 
     bool FlashStorage::_copy(const uint32_t *data, uint32_t dstAddr, uint16_t size, FlashResult &result) const
     {
-        if (!result._header.isEmpty()) {
+        if (result._header.isFinal()) {
             result = FlashResult(FlashResultType::FINALIZED, result._sector);
             __LDBG_printf("sector finalized sector=%u crc=0x%08x size=%u", result._sector, result._header._crc32, result._header._size);
             return false;
@@ -226,7 +274,7 @@ namespace SPIFlash {
 
     bool FlashStorage::_finalize(FlashResult &result) const
     {
-        if (!result._header.isEmpty()) {
+        if (result._header.isFinal()) {
             __LDBG_printf("sector finalized sector=%u crc=0x%08x size=%u", result._sector, result._header._crc32, result._header._size);
             result = FlashResult(FlashResultType::FINALIZED, result._sector);
             return false;
@@ -282,7 +330,7 @@ namespace SPIFlash {
             __LDBG_printf("read failed offset=0x%08x size=%u", result._sector * SPI_FLASH_SEC_SIZE, sizeof(header));
             return FlashResult(FlashResultType::VALIDATE_READ, result._sector);
         }
-        if(!header || header.isEmpty()) {
+        if(!header.size()) {
             __LDBG_printf("empty sector sector=0x%04x", result._sector);
             return FlashResult(FlashResultType::VALIDATE_EMPTY, result._sector);
         }
@@ -326,7 +374,7 @@ namespace SPIFlash {
         for(auto i = _firstSector; i <= _lastSector; i++) {
             auto rc = _spi_flash_read(FlashResult::headerOffset(i), reinterpret_cast<uint32_t *>(&hdr), sizeof(hdr));
             if (rc != SPI_FLASH_RESULT_OK) {
-                __LDBG_printf("read failed offset=0x%08x size=%u", FlashResult::headerOffset(i), sizeof(hdr));
+                __DBG_printf("sector=0x%04x read failure", i);
                 return false;
             }
             // erase only if the magic can be found or the sector contains any data
@@ -334,6 +382,7 @@ namespace SPIFlash {
 
                 memset(&hdr, 0, sizeof(hdr));
                 // try to overwrite the flash memory
+                __DBG_printf("sector=0x%04x trying to remove magic", i);
                 rc = _spi_flash_write(FlashResult::headerOffset(i), reinterpret_cast<uint32_t *>(&hdr), sizeof(hdr));
                 if (rc == SPI_FLASH_RESULT_OK) {
                     rc = _spi_flash_read(FlashResult::headerOffset(i), reinterpret_cast<uint32_t *>(&hdr), sizeof(hdr));
@@ -345,13 +394,15 @@ namespace SPIFlash {
                 // erase entire sector if the magic cannot be erased
                 rc = _spi_flash_erase_sector(i);
                 if (rc != SPI_FLASH_RESULT_OK) {
-                    __LDBG_printf("erase failed sector=0x%04x failed", i);
+                    __DBG_printf("sector=0x%04x erase failed", i);
                     return false;
                 }
+            }
+            else {
+                __DBG_printf("sector=0x%04x magic mismatch", i);
             }
         }
         return true;
     }
-
 
 }

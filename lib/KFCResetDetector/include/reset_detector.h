@@ -161,9 +161,11 @@ class ResetDetectorPlugin : public PluginComponent {
 public:
     ResetDetectorPlugin();
 
+    virtual void getStatus(Print &output) override;
+
 #if AT_MODE_SUPPORTED
-    void atModeHelpGenerator() override;
-    bool atModeHandler(AtModeArgs &args) override;
+    virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const override;
+    virtual bool atModeHandler(AtModeArgs &args) override;
 #endif
 };
 

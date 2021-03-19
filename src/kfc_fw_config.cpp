@@ -14,13 +14,13 @@
 #include <BitsToStr.h>
 #include <session.h>
 #include <misc.h>
-#include "SaveCrash.h"
 #include "blink_led_timer.h"
 #include "fs_mapping.h"
 #include "WebUISocket.h"
 #include "WebUIAlerts.h"
 #include "web_server.h"
 #include "build.h"
+#include "save_crash.h"
 #include <JsonBaseReader.h>
 #include <Form/Types.h>
 #include "deep_sleep.h"
@@ -193,22 +193,13 @@ KFCFWConfiguration::KFCFWConfiguration() :
     Configuration(CONFIG_EEPROM_OFFSET, CONFIG_EEPROM_SIZE),
     _wifiConnected(0),
     _wifiUp(0),
+    _wifiFirstConnectionTime(0),
     _garbageCollectionCycleDelay(5000),
     _dirty(false),
     _initTwoWire(false),
     _safeMode(false)
 {
     _setupWiFiCallbacks();
-#if SAVE_CRASH_HAVE_CALLBACKS
-    auto nextCallback = EspSaveCrash::getCallback();
-    EspSaveCrash::setCallback([this, nextCallback](const EspSaveCrash::ResetInfo_t &info) {
-        // release all memory in the event of a crash
-        __crashCallback();
-        if (nextCallback) {
-            nextCallback(info);
-        }
-    });
-#endif
 }
 
 KFCFWConfiguration::~KFCFWConfiguration()
@@ -221,12 +212,16 @@ void KFCFWConfiguration::_onWiFiConnectCb(const WiFiEventStationModeConnected &e
     __LDBG_printf("ssid=%s channel=%u bssid=%s wifi_connected=%u is_connected=%u ip=%u/%s", event.ssid.c_str(), event.channel, mac2String(event.bssid).c_str(), _wifiConnected, WiFi.isConnected(), WiFi.localIP().isSet(), WiFi.localIP().toString().c_str());
     if (!_wifiConnected) {
 
-        Logger_notice(F("WiFi connected to %s"), event.ssid.c_str());
         _wifiConnected = millis();
-        _startupTimings.setWiFiConnected(_wifiConnected);
         if (_wifiConnected == 0) {
             _wifiConnected++;
         }
+        String append;
+        if (_wifiFirstConnectionTime == 0) {
+            _wifiFirstConnectionTime = _wifiConnected;
+            append = PrintString(F(" after %ums"), _wifiConnected);
+        }
+        Logger_notice(F("WiFi connected to %s%s"), event.ssid.c_str(), append.c_str());
 #if ENABLE_DEEP_SLEEP
         config.storeQuickConnect(event.bssid, event.channel);
 #endif
@@ -290,7 +285,6 @@ void KFCFWConfiguration::_onWiFiGotIPCb(const WiFiEventStationModeGotIP &event)
     auto dns1 = WiFi.dnsIP().toString();
     auto dns2 = WiFi.dnsIP(1).toString();
     _wifiUp = millis();
-    _startupTimings.setWiFiGotIP(_wifiUp);
     if (_wifiUp == 0) {
         _wifiUp++;
     }
@@ -579,27 +573,8 @@ void KFCFWConfiguration::restoreFactorySettings()
 
     SaveCrash::clearEEPROM();
 
-#if DEBUG
-    uint16_t length = 0;
-    auto hash = System::Firmware::getElfHash(length);
-    uint8_t hashCopy[System::Firmware::getElfHashSize()];
-    if (hash && length == sizeof(hashCopy)) {
-        memcpy(hashCopy, hash, sizeof(hashCopy));
-    } else {
-        length = 0;
-    }
-#endif
-
     clear();
-
-#if DEBUG
-    if (length) {
-        System::Firmware::setElfHash(hashCopy);
-    }
-#endif
-
     auto deviceName = defaultDeviceName();
-
     System::Flags::defaults();
     System::Firmware::defaults();
     System::Device::defaults();
@@ -974,8 +949,8 @@ void KFCFWConfiguration::enterDeepSleep(milliseconds time, RFMode mode, uint16_t
     // WiFiCallbacks::getVector().clear(); // disable WiFi callbacks to speed up shutdown
     // Scheduler.terminate(); // halt scheduler
 
-    resetDetector.clearCounter();
-    SaveCrash::removeCrashCounter();
+    //resetDetector.clearCounter();
+    // SaveCrash::removeCrashCounter();
 
     delay(1);
 
@@ -991,7 +966,7 @@ void KFCFWConfiguration::enterDeepSleep(milliseconds time, RFMode mode, uint16_t
     BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
 #endif
 
-    DeepSleep::DeepSleepParam::enterDeepSleep(time);
+    DeepSleep::DeepSleepParam::enterDeepSleep(time, mode);
 }
 
 #endif

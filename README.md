@@ -206,10 +206,6 @@ https://github.com/me-no-dev/ESPAsyncWebServer/blob/master/src/AsyncWebSocket.h
 
 https://github.com/akaJes/AsyncPing
 
-### EspSaveCrash (store crash dump in EEPROM)
-
-https://github.com/krzychb/EspSaveCrash.git
-
 ### RF24 (RF24 Master)
 
 https://github.com/nRF24/RF24

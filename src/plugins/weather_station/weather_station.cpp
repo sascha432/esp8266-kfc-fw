@@ -13,7 +13,6 @@
 #include <WebUISocket.h>
 #include <AsyncBitmapStreamResponse.h>
 #include <GFXCanvasRLEStream.h>
-#include <EspSaveCrash.h>
 #include <kfc_fw_config.h>
 #include "RestAPI.h"
 #include "web_server.h"

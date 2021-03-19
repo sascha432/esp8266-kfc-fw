@@ -275,13 +275,6 @@
     #endif
 #endif
 
-#if DEBUG_HAVE_SAVECRASH
-#if defined(ESP32)
-#undef DEBUG_HAVE_SAVECRASH
-#define DEBUG_HAVE_SAVECRASH                                0
-#endif
-#endif
-
 // offset of the configuration in the EEPROM
 #ifndef CONFIG_EEPROM_OFFSET
 #define CONFIG_EEPROM_OFFSET                                0
@@ -423,6 +416,10 @@
 #ifndef PCF8574_PORT_RANGE_START
 #define PCF8574_PORT_RANGE_START                            128
 #define PCF8574_PORT_RANGE_END                              (PCF8574_PORT_RANGE_START + 8)
+#endif
+
+#ifndef HAVE_I2CSCANNER
+#define HAVE_I2CSCANNER                                     1
 #endif
 
 

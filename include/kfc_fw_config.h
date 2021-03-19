@@ -27,7 +27,6 @@
 #if MDNS_PLUGIN
 #include "../src/plugins/mdns/mdns_resolver.h"
 #endif
-#include <SaveCrash.h>
 #include <Wire.h>
 #include "logger.h"
 #include "misc.h"

@@ -6,6 +6,7 @@
 
 #include "reset_detector.h"
 #include "deep_sleep.h"
+#include "save_crash.h"
 #if DEBUG_DEEP_SLEEP
 #include "logger.h"
 #endif

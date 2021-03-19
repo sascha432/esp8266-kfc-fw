@@ -28,12 +28,8 @@
 #define DEBUG_AT_MODE                           0
 #endif
 
-#ifndef AT_MODE_ALLOW_PLUS_WITHOUT_AT
-#define AT_MODE_ALLOW_PLUS_WITHOUT_AT           1     // treat + and AT+ the same
-#endif
-
 #ifndef AT_MODE_MAX_ARGUMENTS
-#define AT_MODE_MAX_ARGUMENTS                   16
+#define AT_MODE_MAX_ARGUMENTS                   64
 #endif
 
 typedef struct ATModeCommandHelp_t {
@@ -237,6 +233,10 @@ public:
         return _args;
     }
 
+    ArgumentPtr operator[](int index) const {
+        return _args.at(index);
+    }
+
     inline uint16_t size() const {
         return _args.size();
     }
@@ -351,7 +351,7 @@ public:
         if (nullptr == (arg = get(num))) {
             return false;
         }
-        return strcasecmp(arg, str.c_str()) == 0;
+        return str.equalsIgnoreCase(arg);
     }
 
     bool equals(uint16_t num, const __FlashStringHelper *str) const {
@@ -367,7 +367,7 @@ public:
         if (nullptr == (arg = get(num))) {
             return false;
         }
-        return strcmp(arg, str.c_str()) == 0;
+        return str.equals(arg);
     }
 
     bool equals(uint16_t num, char ch) const {
@@ -449,32 +449,21 @@ public:
     }
 
 public:
-    void setCommand(const char *command) {
+    inline void setCommand(const char *command) {
         _command = command;
         _command.toUpperCase();
     }
-    String &getCommand() {
+    inline String &getCommand() {
         return _command;
     }
-    const String &getCommand() const {
+    inline const String &getCommand() const {
         return _command;
     }
 
-    bool isCommand(const ATModeCommandHelp_t *help) const {
-        auto ptr = _command.c_str();
-        if (help->commandPrefix) {
-            const auto len = strlen_P(help->commandPrefix);
-            if (strncasecmp_P(ptr, help->commandPrefix, len)) {
-                return false;
-            }
-            ptr += len;
+    bool isCommand(const ATModeCommandHelp_t *help) const;
 
-        }
-        return !strcasecmp_P(ptr, help->command);
-    }
-
-    bool isCommand(const __FlashStringHelper *command) const {
-        return !strcasecmp_P(_command.c_str(), RFPSTR(command));
+    inline bool isCommand(const __FlashStringHelper *command) const {
+        return _command.equalsIgnoreCase(command);
     }
 
     void printf_P(PGM_P format, ...);

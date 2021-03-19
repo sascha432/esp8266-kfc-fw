@@ -38,6 +38,20 @@ void AtModeArgs::setQueryMode(bool mode)
     }
 }
 
+bool AtModeArgs::isCommand(const ATModeCommandHelp_t *help) const
+{
+    size_t prefixLen;
+    if (help->commandPrefix && ((prefixLen = strlen_P(help->commandPrefix)) != 0)) {
+        if (!_command._startsWithIgnoreCase_P(help->commandPrefix, prefixLen, 0)) {
+            __DBG_printf("cmd %s=%s _startsWithIgnoreCase_P=%u prefix=%s", _command.c_str() + prefixLen, help->command, _command._startsWithIgnoreCase_P(help->commandPrefix, prefixLen, 0), help->commandPrefix);
+            return false;
+        }
+        __DBG_printf("cmd %s=%s equalsIgnoreCase=%u prefix=%s", _command.c_str() + prefixLen, help->command, _command.equalsIgnoreCase(FPSTR(help->command), prefixLen), help->commandPrefix);
+        return _command.equalsIgnoreCase(FPSTR(help->command), prefixLen);
+    }
+    return _command.equalsIgnoreCase(FPSTR(help->command));
+}
+
 AtModeArgs::ArgumentPtr AtModeArgs::get(uint16_t num) const
 {
     if (!exists(num)) {
@@ -57,7 +71,7 @@ int AtModeArgs::toChar(uint16_t num, int defaultValue) const
 
 bool AtModeArgs::has(const __FlashStringHelper *str, bool ignoreCase) const
 {
-    for (auto arg:_args) {
+    for (auto arg: _args) {
         if (ignoreCase) {
             if (strcasecmp_P(arg, reinterpret_cast<PGM_P>(str)) == 0) {
                 return true;
@@ -69,7 +83,6 @@ bool AtModeArgs::has(const __FlashStringHelper *str, bool ignoreCase) const
     }
     return false;
 }
-
 
 long AtModeArgs::toInt(uint16_t num, long defaultValue) const
 {

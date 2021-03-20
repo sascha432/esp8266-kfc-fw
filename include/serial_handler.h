@@ -194,7 +194,6 @@ namespace SerialHandler {
 
 };
 
-extern StreamCacheVector *debugHistory;
 extern NullStream NullSerial;
 extern HardwareSerial Serial0;
 extern Stream &Serial;

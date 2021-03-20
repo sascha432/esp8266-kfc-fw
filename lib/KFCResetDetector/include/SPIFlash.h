@@ -19,16 +19,11 @@
 
 #include <Arduino_compat.h>
 
-// #define DEBUG_RD_SPIFLASH                           1
-
-#ifndef DEBUG_RD_SPIFLASH
-#define DEBUG_RD_SPIFLASH                           0
-#endif
-
 namespace SPIFlash {
 
     // values for erased flash memory
     static constexpr uint32_t kFlashEmpty = 0xffffffff;
+    static constexpr uint32_t kFlashEmpty32 = 0xffffffff;
     static constexpr uint16_t kFlashEmpty16 = 0xffff;
     static constexpr uint8_t kFlashEmpty8 = 0xff;
 
@@ -62,26 +57,29 @@ namespace SPIFlash {
     struct FlashHeader {
         uint32_t _magic;
         uint32_t _crc32;
-        struct {
-            uint16_t _size;
-            uint16_t _versioning: 1;
-            uint16_t __reserved: 3;
+        union {
+            struct {
+                uint16_t _size;
+                uint16_t _versioning: 1;
+                uint16_t __reserved: 3;
+            };
+            uint32_t _filler;
         };
         uint32_t _version;
 
-        FlashHeader(uint32_t crc32 = 0xfffffff, uint16_t size = 0xffff) :
-            _magic(kFlashMagic),
-            _crc32(crc32),
-            _size(size),
-            _versioning(0b1),
-            __reserved(0b111),
-            _version(0xffffffff)
+        FlashHeader()
         {
+            memset(this, 0xff, sizeof(*this));
         }
 
+        FlashHeader(uint32_t crc32, uint16_t size = 0xffff) : FlashHeader()
+        {
+            _magic = kFlashMagic;
+            _crc32 = crc32;
+            _size = size;
+        }
 
-        FlashHeader(uint32_t crc32, size_t size) :
-            FlashHeader(crc32, static_cast<uint16_t>(size))
+        FlashHeader(uint32_t crc32, size_t size) : FlashHeader(crc32, static_cast<uint16_t>(size))
         {
         }
 
@@ -91,7 +89,7 @@ namespace SPIFlash {
 
         // data has been written to the sector and cannot be changed anymore
         bool isFinal() const {
-            return _size != kFlashEmpty16 || _crc32 != kInitialCrc32;
+            return _crc32 != kInitialCrc32 || _version != kFlashEmpty32 || /*_size != kFlashEmpty16 || */_filler != kFlashEmpty32;
         }
 
         // sector contains no or invalid data
@@ -130,6 +128,15 @@ namespace SPIFlash {
         VALIDATE_EMPTY,
         NOT_EMPTY,
         FINALIZED
+    };
+
+    enum class ClearStorageType : uint8_t {
+        NONE = 0,
+        ERASE,                      // erase all sectors
+        FORMAT = ERASE,             // alias
+        REMOVE_MAGIC,               // overwrite magic and invalidate sector
+        REMOVE_PREVIOUS_VERSIONS,   // remove crash reports from previous versions
+        SHRINK,                     // options specified the amount of memory to be freed in %
     };
 
     struct FindResult {
@@ -188,7 +195,7 @@ namespace SPIFlash {
         FlashHeader _header;            // on success it contains an empty header
         uint32_t _crc;                  // crc of the existing data
         uint16_t _sector;               // and points to the sector ready for append()
-        uint16_t _size;                   // size of the data currently stored
+        uint16_t _size;                 // size of the data currently stored
 
         FlashResult() :
             _result(FlashResultType::NONE)
@@ -263,15 +270,15 @@ namespace SPIFlash {
             _lastSector(lastSector)
         {}
 
-        // format/erase all flash sectors
-        bool format() const;
+        // clear storage memory
+        bool clear(ClearStorageType type, uint32_t options) const;
 
         // return a list of sectors with at least minSpace free space
         // sort=true: sorts by empty sectors, then descending by space
         // limits: limit number of results
-        FindResultVector find(uint16_t fromSector, uint16_t toSector, uint16_t minSpace = 0, bool sort = false, uint8_t limit = 0xff) const;
+        FindResultVector find(uint16_t fromSector, uint16_t toSector, uint16_t minSpace = 0, bool sort = false, uint16_t limit = ~0) const;
 
-        inline FindResultVector find(uint16_t minSpace = 0, bool sort = false, uint8_t limit = 0xff) const {
+        inline FindResultVector find(uint16_t minSpace = 0, bool sort = false, uint16_t limit = ~0) const {
             return find(_firstSector, _lastSector, minSpace, sort, limit);
         }
 

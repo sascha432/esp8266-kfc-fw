@@ -13,7 +13,6 @@
 #endif
 
 extern NullStream NullSerial;
-extern StreamCacheVector *debugHistory;
 
 StreamCacheVector::StreamCacheVector(uint16_t size) : _size(size)
 {
@@ -180,9 +179,6 @@ size_t StreamWrapper::readBytes(char *buffer, size_t length)
 
 size_t StreamWrapper::write(uint8_t data)
 {
-    if (debugHistory) {
-        debugHistory->write(&data, 1);
-    }
     for(const auto stream: *_streams) {
         if (stream->write(data) != sizeof(data)) {
             delay(1); // 1ms per byte
@@ -195,9 +191,6 @@ size_t StreamWrapper::write(uint8_t data)
 
 size_t StreamWrapper::write(const uint8_t *buffer, size_t size)
 {
-    if (debugHistory) {
-        debugHistory->write(buffer, size);
-    }
     for(const auto stream: *_streams) {
         auto len = size;
         auto ptr = buffer;

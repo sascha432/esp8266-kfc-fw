@@ -38,12 +38,6 @@
 #define __DBGSHIO(...)              ;
 #endif
 
-#if DEBUG_PREBOOT_HISTORY
-StreamCacheVector *debugHistory = new StreamCacheVector(DEBUG_PREBOOT_HISTORY);
-#else
-StreamCacheVector *debugHistory = nullptr;
-#endif
-
 NullStream NullSerial;
 HardwareSerial Serial0(UART0);
 // stream wrapper allows to intercept send and receive on Serial

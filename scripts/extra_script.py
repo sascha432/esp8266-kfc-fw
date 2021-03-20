@@ -290,6 +290,7 @@ env.AddPostAction("$BUILD_DIR/${PROGNAME}.elf", mem_analyzer)
 # env.AddPostAction("$BUILD_DIR/${PROGNAME}.bin", copy_firmware)
 
 env.AlwaysBuild(env.Alias("patch_file", None, create_patch_file))
+env.AlwaysBuild(env.Alias("patch-file", None, create_patch_file))
 
 env.AlwaysBuild(env.Alias("disasm", None, disassemble))
 env.AlwaysBuild(env.Alias("disassemble", [env['PIOMAINPROG']], disassemble))

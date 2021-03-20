@@ -22,6 +22,7 @@
 #include "logger.h"
 #include "misc.h"
 #include "deep_sleep.h"
+#include "save_crash.h"
 #include "web_server.h"
 #include "web_socket.h"
 #include "async_web_response.h"
@@ -388,6 +389,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPH, "DUMPH", "[<log|panic|clear>]", "Du
 #endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPM, "DUMPM", "<start>,<length>", "Dump memory");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPIO, "DUMPIO", "<addr>,<end addr>", "Dump IO memory (0x6000xxxx)");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPF, "DUMPF", "<start>,<length>", "Dump flash (0x40200000)");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPA, "DUMPA", "<reset|mark|leak|freed>", "Memory allocation statistics");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMPFS, "DUMPFS", "Display file system information");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPEE, "DUMPEE", "[<offset>[,<length>]", "Dump EEPROM");
@@ -1211,6 +1213,8 @@ void at_mode_serial_handle_event(String &commandString)
     commandString.trim();
     bool isQueryMode = commandString.endsWith('?');
 
+    __dump_binary_to(output, commandString.c_str(), commandString.length(), 16, nullptr, 4);
+
     // check command prefix
     if (commandString.startsWithIgnoreCase(F("AT"))) {
         // remove AT from the command
@@ -1333,11 +1337,26 @@ void at_mode_serial_handle_event(String &commandString)
 +dumpio=0x1200,0x1300
 */
 
-        auto addr = args.toNumber(0);
-        auto toAddr = args.toNumber(1, addr);
+        auto addr = static_cast<uint32_t>(args.toNumber(0));
+        auto toAddr = static_cast<uint32_t>(args.toNumber(1, addr));
         while(addr < toAddr) {
-            Serial.printf_P(PSTR("addr=%08x data=%08x (%u, %d)\n"), 0x60000000 + addr, ESP8266_REG(addr), ESP8266_REG(addr), ESP8266_REG(addr));
+            auto data = ESP8266_REG(addr);
+            Serial.printf_P(PSTR("addr=%08x data=%08x (%u, %d)\n"), 0x60000000 + addr, data, data, data);
             addr += 4;
+        }
+
+    }
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPF))) {
+
+
+        auto addr = static_cast<uint32_t>(args.toNumber(0));
+        auto toAddr = static_cast<uint32_t>(args.toNumber(1, addr));
+        while(addr < toAddr) {
+            uint32_t data;
+            auto result = spi_flash_read(addr, &data, sizeof(data));
+            Serial.printf_P(PSTR("addr=%08x data=%08x (%u, %d) result=%u\n"), addr, data, data, data, result);
+            addr += 4;
+            delay(1);
         }
 
     }
@@ -1352,6 +1371,8 @@ void at_mode_serial_handle_event(String &commandString)
         args.printf_P(PSTR("CPU frequency: %uMHz"), ESP.getCpuFreqMHz());
         args.printf_P(PSTR("Flash size: %s"), formatBytes(ESP.getFlashChipRealSize()).c_str());
         args.printf_P(PSTR("Firmware size: %s"), formatBytes(ESP.getSketchSize()).c_str());
+        args.printf_P(PSTR("Version (uint32): %s (0x%08x)"), SaveCrash::Data::FirmwareVersion().toString().c_str(), SaveCrash::Data::FirmwareVersion().__version);
+        args.printf_P(PSTR("MD5 hash: %s"), SaveCrash::Data().getMD5().c_str());
         args.printf_P(PSTR("EEPROM: 0x%x/%u"), SECTION_EEPROM_START_ADDRESS, SECTION_EEPROM_END_ADDRESS - SECTION_EEPROM_START_ADDRESS);
         args.printf_P(PSTR("SaveCrash: 0x%x/%u"), SECTION_SAVECRASH_START_ADDRESS, SECTION_SAVECRASH_END_ADDRESS - SECTION_SAVECRASH_START_ADDRESS);
         args.printf_P(PSTR("KFCFW: 0x%x/%u"), SECTION_KFCFW_START_ADDRESS, SECTION_KFCFW_END_ADDRESS - SECTION_KFCFW_START_ADDRESS);
@@ -2356,7 +2377,7 @@ void at_mode_serial_handle_event(String &commandString)
         }
         else if (args.equalsIgnoreCase(0, F("alloc"))) {
             uint32_t address = 0;
-            args.printf_P(PSTR("writing zeros to memory @ 0x%08x (after malloc fails"), address);
+            args.printf_P(PSTR("writing zeros to memory @ 0x%08x (after malloc fails)"), address);
             delay(1000);
             while(malloc(4096)) {
             }
@@ -2419,6 +2440,7 @@ void at_mode_serial_input_handler(Stream &client)
                 continue;
             }
             switch(ch) {
+                case 128:
                 case -1:
                 case 0:
                     break;

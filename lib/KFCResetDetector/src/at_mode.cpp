@@ -12,8 +12,10 @@
 
 #include "at_mode.h"
 
+#define LIST_SAVE_CASH_COMMANDS "info|list|print|clear|format"
+
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPP(RD, "RD", "Reset detector clear counter", "Display information");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(SAVECRASH, "SAVECRASH", "<clear|list|print>[,<number>]", "Manage SaveCrash");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(SAVECRASH, "SAVECRASH", "<" LIST_SAVE_CASH_COMMANDS ">[,<number>|<clear-type=erase,shrink,magic,version>]", "Manage SaveCrash");
 
 /*
 
@@ -27,7 +29,15 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(SAVECRASH, "SAVECRASH", "<clear|list|print
 // list crash logs
 +SAVECRASH=list
 // display first crash log
-+SAVECRASH=print,0
++SAVECRASH=print,1
+
+
+
+
++panic
++savecrash=info
++savecrash=list
++savecrash=print,1
 
 */
 
@@ -50,8 +60,7 @@ bool ResetDetectorPlugin::atModeHandler(AtModeArgs &args)
                 resetDetector.hasRebootDetected(),
                 resetDetector.hasResetDetected(),
                 resetDetector.hasWakeUpDetected(),
-                resetDetector.getResetReason()
-            );
+                resetDetector.getResetReason());
         }
         else {
             resetDetector.clearCounter();
@@ -59,47 +68,90 @@ bool ResetDetectorPlugin::atModeHandler(AtModeArgs &args)
         return true;
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SAVECRASH))) {
-        if (args.toLowerChar(0) == 'c') {
-            SaveCrash::clearEEPROM();
-            args.print(F("EEPROM cleared"));
-        }
-        else if (args.toLowerChar(0) == 'i') {
+        switch (args.toLowerChar(0)) {
+        case 'c': {
+            bool cleared = false;
+            if (args.has(F("shrink"))) {
+                if (SaveCrash::clearStorage(SaveCrash::ClearStorageType::SHRINK)) {
+                    cleared = true;
+                }
+                else {
+                    args.print(F("SHRINK is currently not supported"));
+                }
+            }
+            else if (args.has(F("version"))) {
+                if (SaveCrash::clearStorage(SaveCrash::ClearStorageType::REMOVE_PREVIOUS_VERSIONS)) {
+                    cleared = true;
+                }
+                else {
+                    args.print(F("REMOVE_PREVIOUS_VERSIONS is currently not supported"));
+                }
+            }
+            else {
+                if (SaveCrash::clearStorage(SaveCrash::ClearStorageType::REMOVE_MAGIC)) {
+                    cleared = true;
+                }
+            }
+            if (cleared) {
+                args.print(F("SaveCrash log have been cleared"));
+            }
+            else {
+                args.print(F("while clearing SaveCrash logs, one or more errors occured"));
+            }
+
+        } break;
+        case 'f': {
+            if (SaveCrash::clearStorage(SaveCrash::ClearStorageType::ERASE)) {
+                args.print(F("SaveCrash logs erased"));
+            }
+            else {
+                args.print(F("erase SaveCrash logs reported one or more errors"));
+            }
+        } break;
+        case 'i': {
             auto info = SaveCrash::createFlashStorage().getInfo();
             args.printf_P(PSTR("counter=%u size=%u sectors used=%u total=%u"), info._counter, info._size, info._sector_used, info._sectors_total);
             args.printf_P(PSTR("free space=%u largest block=%u"), info._space, info._spaceLargestBlock);
-        }
-        else if (args.toLowerChar(0) == 'l') {
+        } break;
+        case 'l': {
             int16_t count = 0;
             PrintString timeStr;
-            SaveCrash::createFlashStorage().getCrashLog([&](const SaveCrash::CrashLogEntry &item) {
+            Stream &output = args.getStream();
+            auto fs = SaveCrash::createFlashStorage();
+            fs.getCrashLog([&](const SaveCrash::CrashLogEntry &item) {
                 time_t now = static_cast<time_t>(item._header._time);
                 timeStr.clear();
                 timeStr.strftime(FSPGM(strftime_date_time_zone), localtime(&now));
 
-                auto &stream = args.getStream();
-                stream.printf_P(PSTR("<%03u> "), ++count);
-                stream.print(timeStr);
-                stream.print(F(" reason="));
-                stream.print(item._header.getReason());
-                stream.printf_P(PSTR(" excvaddr=0x%08x depc=0x%08x\n"), item._header._info.excvaddr, item._header._info.depc);
+                output.printf_P(PSTR("<%03u> "), ++count);
+                output.print(timeStr);
+                fs.printCrashLogEntry(output, item);
             });
-        }
-        else if (args.toLowerChar(0) == 'p') {
-            auto number = args.toIntMinMax<int16_t>(1, 0, std::numeric_limits<int16_t>::max(), 0);
-            int16_t count = 0;
+        } break;
+        case 'p': {
             auto fs = SaveCrash::createFlashStorage();
-            fs.getCrashLog([&](const SaveCrash::CrashLogEntry &item) {
-                if (++count == number) {
-                    fs.printCrashLog(args.getStream(), item);
-                    number = -1;
-                }
-            });
-            if (number != -1) {
-                args.printf_P(PSTR("Crash log #%u not found"), number);
+            auto counter = fs.getInfo()._counter;
+            if (counter == 0) {
+                args.print(F("SaveCrash log is empty"));
             }
-        }
-        else {
-            args.print(F("invalid argument"));
+            else {
+                auto number = args.toIntMinMax<int16_t>(1, 0, std::numeric_limits<int16_t>::max(), 0);
+                if (number > 0 && number <= counter) {
+                    int16_t count = 0;
+                    fs.getCrashLog([&](const SaveCrash::CrashLogEntry &item) {
+                        if (++count == number) {
+                            fs.printCrashLog(args.getStream(), item);
+                        }
+                    });
+                }
+                else {
+                    args.invalidArgument(1, reinterpret_cast<const __FlashStringHelper *>(PrintString(F("%u-%u"), 1, counter).c_str()));
+                }
+            }
+        } break;
+        default:
+            args.invalidArgument(0, F(LIST_SAVE_CASH_COMMANDS), '|');
+            break;
         }
         return true;
     }

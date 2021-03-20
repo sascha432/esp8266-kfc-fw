@@ -191,7 +191,10 @@ void ResetDetector::armTimer()
 const __FlashStringHelper *ResetDetector::getResetReason(uint8_t reason)
 {
 #if USE_ESP_GET_RESET_REASON
-    // copy of ESP.getResetInfo(), returning a PROGMEM string
+    if (static_cast<int>(reason) == 254) {
+        return F("User exception (panic/abort/assert)");
+    }
+    // copy of ESP.getResetInfo() below returning PROGMEM string
     const __FlashStringHelper* buff;
     switch(reason) {
         // normal startup by power on

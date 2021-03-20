@@ -19,7 +19,7 @@ namespace KFCConfigurationClasses {
         value(1.23),
         min(0.1),
         max(11.0),
-        incr(0.001)
+        incr(0.00326)
     {}
 
     Plugins::ClockConfig::RainbowMultiplier_t::RainbowMultiplier_t(float a, float b, float c, float d) :

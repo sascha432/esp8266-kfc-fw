@@ -114,43 +114,52 @@ size_t hex2bin(void *buf, size_t length, const char *str);
 // string functions are nullptr safe
 // only PGM_P is PROGMEM safe
 
-#define STRINGLIST_SEPARATOR                    ','
-#define STRLS                                   ","
+// #define STRINGLIST_SEPARATOR                    ','
+// #define STRLS                                   ","
+
+// moved to misc_string.h
 
 // find a string in a list of strings separated by a single characters
 // -1 = not found, otherwise the number of the matching string
-int stringlist_find_P_P(PGM_P list, PGM_P find, char separator = STRINGLIST_SEPARATOR);
+// int stringlist_find_P_P(PGM_P list, PGM_P find, char separator);
 
 // multiple separators
-int stringlist_find_P_P(PGM_P list, PGM_P find, PGM_P separator);
+// int stringlist_find_P_P(PGM_P list, PGM_P find, PGM_P separator);
 
-template<typename Tl, typename Tf, typename Tc>
-inline int stringlist_find_P_P(Tl list, Tf find, Tc separator) {
-    return stringlist_find_P_P(reinterpret_cast<PGM_P>(list), reinterpret_cast<PGM_P>(find), separator);
-}
+// template<typename Tl, typename Tf, typename Tc>
+// inline int stringlist_find_P_P(Tl list, Tf find, Tc separator) {
+//     return stringlist_find_P_P(reinterpret_cast<PGM_P>(list), reinterpret_cast<PGM_P>(find), separator);
+// }
 
 bool str_endswith(const char *str, char ch);
 
 #if defined(ESP8266)
 
-bool str_endswith_P(const char *str, char ch);
+bool str_endswith_P(PGM_P str, char ch);
 
 #else
 
-static inline bool str_endswith_P(const char *str, char ch) {
+static inline bool str_endswith_P(PGM_P str, char ch) {
     return str_endswith(str, ch);
 }
 
 #endif
 
-// compare two PROGMEM strings
-int strcmp_end_P(const char *str1, size_t len1, PGM_P str2, size_t len2);
-inline int strcmp_end_P(const char *str1, size_t len1, PGM_P str2) {
-    return strcmp_end_P(str1, len1, str2, strlen_P(str2));
+int strcmp_end_P(char *str1, size_t len1, PGM_P str2, size_t len2);
+int strcmp_end_P_P(PGM_P str1, size_t len1, PGM_P str2, size_t len2);
+
+inline static int strcmp_end_P(const char *str1, PGM_P str2) {
+    return strcmp_end_P(const_cast<char *>(str1), strlen(str1), str2, strlen_P(str2));
 }
-inline int strcmp_end_P(const char *str1, PGM_P str2) {
-    return strcmp_end_P(str1, strlen(str1), str2, strlen_P(str2));
+
+inline static int strcmp_end_P_P(PGM_P  str1, PGM_P str2) {
+    return strcmp_end_P_P(str1, strlen_P(str1), str2, strlen_P(str2));
 }
+
+inline static int strcmp_end_P_P(PGM_P str1, size_t len1, PGM_P str2) {
+    return strcmp_end_P_P(str1, len1, str2, strlen_P(str2));
+}
+
 
 // ends at maxLen characters or the first NUL byte
 size_t str_replace(char *src, int from, int to, size_t maxLen = ~0);

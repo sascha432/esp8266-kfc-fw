@@ -2,6 +2,7 @@
   Author: sascha_lammers@gmx.de
 */
 
+#include <string.h>
 #include <functional>
 #include <PrintString.h>
 #include "misc.h"
@@ -378,19 +379,151 @@ String WiFi_disconnect_reason(WiFiDisconnectReason reason)
 #endif
 }
 
-int stringlist_find_P_P(PGM_P list, PGM_P find, char separator)
-{
-    if (!list || !find) {
-        return -1;
-    }
-    const char separator_str[2] = { separator, 0 };
-    return stringlist_find_P_P(list, find, separator_str);
-}
+// extern void progmem_str_func_test();
+
+// // #if DEBUG
+// // // test C library against PROGMEM to avoid any surprises if certain functions cannot handle PROGMEM
+// // extern void progmem_str_func_test();
+// // progmem_str_func_test();
+// // #endif
+
+
+
+
+
+// void progmem_str_func_test() {
+
+//     auto test1 = PSTR("test string test string test!string test string test string ");
+//     auto len1 = strlen_P(test1);
+//     auto test2 = PSTR("test string");
+//     auto len2 = strlen_P(test2);
+//     auto test3Str = String(FPSTR(test1));
+//     auto test3 = test3Str.c_str();
+
+//     {
+//         __DBG_printf("testing strrchr()");
+//         auto res = strrchr(test1, '!');
+//         res = strrchr(test1 + 1, '!');
+//         res = strrchr(test1 + 2, '!');
+//         res = strrchr(test1 + 3, '!');
+//         res = strrchr(test1 + 4, '!') ;
+//         res = strrchr(test1 + 5, '!');
+//         __DBG_printf("strrchr() = PROGMEM safe %p", res);
+//     }
+
+//     {
+//         __DBG_printf("testing strchr()");
+//         auto res = strchr(test1, '!');
+//         res = strchr(test1 + 1, '!');
+//         res = strchr(test1 + 2, '!');
+//         res = strchr(test1 + 3, '!');
+//         res = strchr(test1 + 4, '!') ;
+//         res = strchr(test1 + 5, '!');
+//         __DBG_printf("strchr() = PROGMEM safe %p", res);
+//     }
+
+//     // cannot handle PROGMEM
+//     // {
+//     //     __DBG_printf("testing strcmp_P(PGM_P, PGM_P)");
+//     //     auto res = strcmp_P(test1, test2 + 5);
+//     //     res = strcmp_P(test1 + 1, test2 + 4);
+//     //     res = strcmp_P(test1 + 2, test2 + 3);
+//     //     res = strcmp_P(test1 + 3, test2 + 2);
+//     //     res = strcmp_P(test1 + 4, test2 + 1);
+//     //     res = strcmp_P(test1 + 5, test2);
+//     //     __DBG_printf("strcmp_P() = PROGMEM safe %p", res);
+//     // }
+
+//     {
+//         __DBG_printf("testing strcmp_PP(PGM_P, PGM_P)");
+//         auto res = strcmp_PP(test1, test2 + 5);
+//         res = strcmp_PP(test1 + 1, test2 + 4);
+//         res = strcmp_PP(test1 + 2, test2 + 3);
+//         res = strcmp_PP(test1 + 3, test2 + 2);
+//         res = strcmp_PP(test1 + 4, test2 + 1);
+//         res = strcmp_PP(test1 + 5, test2);
+//         __DBG_printf("strcmp_PP() = PROGMEM safe %p", res);
+//     }
+
+//     // {
+//     //     __DBG_printf("testing memcmp_P(PGM_P, PGM_P)");
+//     //     auto res = memcmp_P(test1, test2 + 5, len2 - 5);
+//     //     res = memcmp_P(test1 + 1, test2 + 4, len2 - 4);
+//     //     res = memcmp_P(test1 + 2, test2 + 3, len2 - 3);
+//     //     res = memcmp_P(test1 + 3, test2 + 2, len2 - 2);
+//     //     res = memcmp_P(test1 + 4, test2 + 1, len2 - 1);
+//     //     res = memcmp_P(test1 + 5, test2, len2);
+//     //     __DBG_printf("memcmp_P() = PROGMEM safe %p", res);
+//     // }
+
+//     // {
+//     //     __DBG_printf("testing strcasecmp_P(PGM_P, PGM_P)");
+//     //     auto res = strcasecmp_P(test1, test2 + 5);
+//     //     res = strcasecmp_P(test1 + 1, test2 + 4);
+//     //     res = strcasecmp_P(test1 + 2, test2 + 3);
+//     //     res = strcasecmp_P(test1 + 3, test2 + 2);
+//     //     res = strcasecmp_P(test1 + 4, test2 + 1);
+//     //     res = strcasecmp_P(test1 + 5, test2);
+//     //     __DBG_printf("strcasecmp_P() = PROGMEM safe %p", res);
+//     // }
+
+//     // {
+//     //     __DBG_printf("testing strncasecmp_P(PGM_P, PGM_P)");
+//     //     auto res = strncasecmp_P(test1, test2 + 5, 10);
+//     //     res = strncasecmp_P(test1 + 1, test2 + 4, 10);
+//     //     res = strncasecmp_P(test1 + 2, test2 + 3, 10);
+//     //     res = strncasecmp_P(test1 + 3, test2 + 2, 10);
+//     //     res = strncasecmp_P(test1 + 4, test2 + 1, 10);
+//     //     res = strncasecmp_P(test1 + 5, test2, 10);
+//     //     __DBG_printf("strcasecmp_P() = PROGMEM safe %p", res);
+//     // }
+
+//     {
+//         __DBG_printf("testing memchr_P()");
+//         auto res2 = memchr_P(test1, '!', len1);
+//         res2 = memchr_P(test1 + 1, '!', len1 - 1);
+//         res2 = memchr_P(test1 + 2, '!', len1 - 2);
+//         res2 = memchr_P(test1 + 3, '!', len1 - 3);
+//         res2 = memchr_P(test1 + 4, '!', len1 - 4) ;
+//         res2 = memchr_P(test1 + 5, '!', len1 * 5);
+//         __DBG_printf("memchr_P() = PROGMEM safe %p", res2);
+
+//     }
+
+
+
+
+
+//     // strcasestr cannot take progmem for either argument
+//     // __DBG_printf("testing strcasestr(PGM_P, char *)");
+//     // res = strcasestr(test1, "!");
+//     // res = strcasestr(test1 + 1, "!");
+//     // res = strcasestr(test1 + 3, "!");
+//     // res = strcasestr(test1 + 4, "!") ;
+//     // res = strcasestr(test1 + 5, "!");
+//     // __DBG_printf("testing strcasestr(PGM_P, PGM_P)");
+//     // res = strcasestr(test1, test2 + 5);
+//     // res = strcasestr(test1 + 1, test2 + 4);
+//     // res = strcasestr(test1 + 3, test2 + 3);
+//     // res = strcasestr(test1 + 4, test2 + 2) ;
+//     // res = strcasestr(test1 + 5, test2 + 1);
+//     // res = strcasestr(test1 + 6, test2);
+//     // __DBG_printf("testing strcasestr(char *, PGM_P)");
+//     // res = strcasestr(test3, test2 + 5);
+//     // res = strcasestr(test3 + 1, test2 + 4);
+//     // res = strcasestr(test3 + 3, test2 + 3);
+//     // res = strcasestr(test3 + 4, test2 + 2) ;
+//     // res = strcasestr(test3 + 5, test2 + 1);
+//     // res = strcasestr(test3 + 6, test2);
+//     // __DBG_printf("strcasestr() = PROGMEM safe %p", res);
+
+
+// }
 
 int stringlist_find_P_P(PGM_P list, PGM_P find, PGM_P separator/*, int &position*/)
 {
     if (!list || !find || !separator) {
-        return -1;
+        return ESNULLP;
     }
     PGM_P ptr1 = list;
     PGM_P ptr2 = find;
@@ -421,35 +554,93 @@ int stringlist_find_P_P(PGM_P list, PGM_P find, PGM_P separator/*, int &position
     return -1;
 }
 
-int strcmp_P_P(PGM_P str1, PGM_P str2)
+
+int stringlist_ifind_P_P(PGM_P list, PGM_P find, PGM_P separator/*, int &position*/)
 {
-    if (!str1 || !str2) {
-        return -1;
+    if (!list || !find || !separator) {
+        return ESNULLP;
     }
-    // skip comparing if the address of the strings match
-    if (str1 == str2) {
-        return 0;
-    }
-    uint8_t ch1, ch2;
+    PGM_P ptr1 = list;
+    PGM_P ptr2 = find;
+    uint8_t ch;
+    int16_t num = 0;
+    // position = 0;
     do {
-        ch1 = pgm_read_byte(str1++);
-        ch2 = pgm_read_byte(str2++);
-        if (ch1 < ch2) {
-            return -1;
+        ch = tolower(pgm_read_byte(ptr1));
+        if (strichr_P(separator, ch)) {    // end of one string
+            if (ptr2 && pgm_read_byte(ptr2++) == 0) { // match
+                return num;
+            } else {
+                // position = ptr1 - list;
+                ptr2 = find; // compare with next string
+                num++;
+            }
+        } else {
+            if (ptr2 && tolower(pgm_read_byte(ptr2++)) != ch) { // mismatch, stop comparing
+                ptr2 = nullptr;
+            } else if (ptr2 && !ch) { // match
+                return num;
+            }
         }
-        else if (ch1 > ch2) {
-            return 1;
-        }
-        else if (ch1 == 0) {
-            return 0;
-        }
-    } while (true);
+        ptr1++;
+    } while(ch);
+
+    // position = -1;
+    return -1;
 }
+
+char *strichr(char *str1, char ch)
+{
+    if (!str1) {
+        return nullptr;
+    }
+    if (!ch) {
+        // special case: find end of string
+        return str1 + strlen(str1);
+    }
+    ch = tolower(ch);
+    if (toupper(ch) == ch) {
+        // special case: lower and upercase are the same
+        return strchr(str1, ch);
+    }
+    while(*str1 && tolower(*str1) != ch) {
+        str1++;
+    }
+    return (*str1 == 0) ? nullptr : str1;
+}
+
+PGM_P strichr_P(PGM_P str1, char ch)
+{
+    if (!str1) {
+        return nullptr;
+    }
+    if (!ch) {
+        // special case find end of string
+        return str1 + strlen_P(str1);
+    }
+    ch = tolower(ch);
+    if (toupper(ch) == ch) {
+        // special case: lower and upercase are the same
+        return strchr_P(str1, ch);
+    }
+    char ch2;
+    while(((ch2 = pgm_read_byte(str1)) != 0) && tolower(ch2) != ch) {
+        str1++;
+    }
+    return (ch2 == 0) ? nullptr : str1;
+}
+
 
 int strncmp_P_P(PGM_P str1, PGM_P str2, size_t size)
 {
-    if (!str1 || !str2 || !size) {
-        return -1;
+    if (!size) {
+        return ESZEROL;
+    }
+    if (!str1) {
+        return ESNULLP;
+    }
+    if (!str2) {
+        return -ESNULLP;
     }
     if (str1 == str2) {
         return 0;
@@ -465,30 +656,6 @@ int strncmp_P_P(PGM_P str1, PGM_P str2, size_t size)
             return 1;
         }
         else if (ch1 == 0 || --size == 0) {
-            return 0;
-        }
-    } while (true);
-}
-
-int strcasecmp_P_P(PGM_P str1, PGM_P str2)
-{
-    if (!str1 || !str2) {
-        return -1;
-    }
-    if (str1 == str2) {
-        return 0;
-    }
-    uint8_t ch1, ch2;
-    do {
-        ch1 = tolower(pgm_read_byte(str1++));
-        ch2 = tolower(pgm_read_byte(str2++));
-        if (ch1 < ch2) {
-            return -1;
-        }
-        else if (ch1 > ch2) {
-            return 1;
-        }
-        else if (ch1 == 0) {
             return 0;
         }
     } while (true);
@@ -496,8 +663,14 @@ int strcasecmp_P_P(PGM_P str1, PGM_P str2)
 
 int strncasecmp_P_P(PGM_P str1, PGM_P str2, size_t size)
 {
-    if (!str1 || !str2 || !size) {
-        return -1;
+    if (!size) {
+        return ESZEROL;
+    }
+    if (!str1) {
+        return ESNULLP;
+    }
+    if (!str2) {
+        return -ESNULLP;
     }
     if (str1 == str2) {
         return 0;
@@ -518,73 +691,136 @@ int strncasecmp_P_P(PGM_P str1, PGM_P str2, size_t size)
     } while (true);
 }
 
-const char *strstr_P_P(const char *str, const char *find) {
-    if (str && find) {
-        if (str == find) {
+
+PGM_P strstr_P_P(PGM_P str, PGM_P find) {
+    if (!str || !find) {
+        return nullptr;
+    }
+    size_t findLen;
+    if (str == find || ((findLen = strlen_P(find)) == 0)) {
+        return str;
+    }
+    size_t strLen =  strlen_P(str);
+    while (strLen >= findLen) {
+        if (strncmp_P_P(find, str, findLen) == 0) {
             return str;
         }
-        size_t findLen = strlen_P(find);
-        size_t strLen =  strlen_P(str);
-        while (strLen >= findLen) {
-            if (strncmp_P_P(find, str, findLen) == 0) {
-                return str;
-            }
-            strLen--;
-            str++;
-        }
+        strLen--;
+        str++;
     }
     return nullptr;
 }
 
-const char *strcasestr_P_P(const char *str, const char *find) {
-    if (str && find) {
-        if (str == find) {
+PGM_P strcasestr_P_P(PGM_P str, PGM_P find) {
+    if (!str || !find) {
+        return nullptr;
+    }
+    size_t findLen;
+    if (str == find || ((findLen = strlen_P(find)) == 0)) {
+        return str;
+    }
+    size_t strLen =  strlen_P(str);
+    while (strLen >= findLen) {
+        if (strncasecmp_P_P(find, str, findLen) == 0) {
             return str;
         }
-        size_t findLen = strlen_P(find);
-        size_t strLen =  strlen_P(str);
-        while (strLen >= findLen) {
-            if (strncasecmp_P_P(find, str, findLen) == 0) {
-                return str;
-            }
-            strLen--;
-            str++;
+        strLen--;
+        str++;
+    }
+    return nullptr;
+}
+
+char *strcasestr_P(char *str, PGM_P find) {
+    if (!str || !find) {
+        return nullptr;
+    }
+    size_t findLen;
+    if (str == find || ((findLen = strlen_P(find)) == 0)) {
+        return str;
+    }
+    size_t strLen =  strlen(str);
+    while (strLen >= findLen) {
+        if (strncasecmp_P(str, find, findLen) == 0) {
+            return str;
         }
+        strLen--;
+        str++;
     }
     return nullptr;
 }
 
 
-size_t str_replace(char *src, int from, int to, size_t maxLen)
+char *__strrstr(char *str, size_t stringLen, const char *find, size_t findLen)
 {
-    size_t counter = 0;
-    if (src) {
-        while(maxLen-- && *src) {
-            if (*src == from) {
-                *src = to;
-                counter++;
-            }
-            src++;
+	if (findLen > stringLen)
+		return nullptr;
+
+	for (auto ptr = str + stringLen - findLen; ptr >= str; ptr--) {
+		if (strncmp(ptr, find, findLen) == 0) {
+			return ptr;
         }
     }
-    return counter;
+	return nullptr;
 }
 
-size_t str_case_replace(char *src, int from, int to, size_t maxLen)
+char *__strrstr_P(char *str, size_t stringLen, PGM_P find, size_t findLen)
 {
-    size_t counter = 0;
-    if (src) {
-        from = tolower(from);
-        while(maxLen-- && *src) {
-            if (tolower(*src) == from) {
-                *src = to;
-                counter++;
-            }
-            src++;
+	if (findLen > stringLen) {
+        return nullptr;
+    }
+
+	for (auto ptr = str + stringLen - findLen; ptr >= str; ptr--) {
+		if (strncmp_P(ptr, find, findLen) == 0) {
+			return ptr;
         }
     }
-    return counter;
+	return nullptr;
 }
+
+PGM_P __strrstr_P_P(PGM_P  str, size_t stringLen, PGM_P  find, size_t findLen)
+{
+	if (findLen > stringLen) {
+        return nullptr;
+    }
+
+	for (auto ptr = str + stringLen - findLen; ptr >= str; ptr--) {
+		if (strncmp_P_P(ptr, find, findLen) == 0) {
+			return ptr;
+        }
+    }
+	return nullptr;
+}
+
+// size_t str_replace(char *src, int from, int to, size_t maxLen)
+// {
+//     size_t counter = 0;
+//     if (src) {
+//         while(maxLen-- && *src) {
+//             if (*src == from) {
+//                 *src = to;
+//                 counter++;
+//             }
+//             src++;
+//         }
+//     }
+//     return counter;
+// }
+
+// size_t str_case_replace(char *src, int from, int to, size_t maxLen)
+// {
+//     size_t counter = 0;
+//     if (src) {
+//         from = tolower(from);
+//         while(maxLen-- && *src) {
+//             if (tolower(*src) == from) {
+//                 *src = to;
+//                 counter++;
+//             }
+//             src++;
+//         }
+//     }
+//     return counter;
+// }
 
 inline static size_t String_rtrim_zeros(String &str, size_t minLength)
 {
@@ -640,7 +876,7 @@ size_t printTrimmedDouble(Print *output, double value, int digits)
 
 #if defined(ESP8266)
 
-bool str_endswith_P(const char *str, char ch)
+bool str_endswith_P(PGM_P str, char ch)
 {
     if (!str) {
         return false;
@@ -653,53 +889,36 @@ bool str_endswith_P(const char *str, char ch)
 
 int strcmp_end_P(const char *str1, size_t len1, PGM_P str2, size_t len2)
 {
-    if (!str1 || !str2) {
-        return -1;
+    if (!str1) {
+        return ESNULLP;
     }
-    if (str1 == str2) {
-        return 0;
+    if (!str2) {
+        return -ESNULLP;
     }
-    if (len2 > len1) {
-        return -1;
-    } else if (len2 == len1) {
+    if (len2 == len1) {
         return strcmp_P(str1, str2);
     }
     return strcmp_P(str1 + len1 - len2, str2);
 }
 
+int strcmp_end_P_P(PGM_P str1, size_t len1, PGM_P str2, size_t len2)
+{
+    if (!str1) {
+        return ESNULLP;
+    }
+    if (!str2) {
+        return -ESNULLP;
+    }
+    if (len2 > len1) {
+        return -1;
+    }
+    if (len2 == len1) {
+        return strcmp_P_P(str1, str2);
+    }
+    return strcmp_P_P(str1 + len1 - len2, str2);
+}
+
 #if defined(ESP8266) || defined(ESP32)
-
-const char *strchr_P(const char *str, int c)
-{
-    if (!str) {
-        return nullptr;
-    }
-    char ch;
-    while(0 != (ch = pgm_read_byte(str))) {
-        if (ch == c) {
-            return str;
-        }
-        str++;
-    }
-    return nullptr;
-}
-
-const char *strrchr_P(const char *str, int c)
-{
-    if (!str) {
-        return nullptr;
-    }
-    const char *last = nullptr;
-    char ch;
-    // we dont know the length, just start from the beginning...
-    while (0 != (ch = pgm_read_byte(str))) {
-        if (ch == c) {
-            last = str;
-        }
-        str++;
-    }
-    return last;
-}
 
 char *strdup_P(PGM_P src)
 {

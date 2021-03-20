@@ -2574,7 +2574,7 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >         else if (fromIndex > len || fromIndex < 1) {
 >             return -1;
 >         }
->         auto ptr = reinterpret_cast<const char *>(memrchr_P(buffer(), find, fromIndex));
+>         auto ptr = reinterpret_cast<const char *>(memrchr(buffer(), find, fromIndex));
 >         if (!ptr) {
 >             return -1;
 >         }
@@ -2593,7 +2593,7 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >         else if (fromIndex < findLen || fromIndex > len) {
 >             return -1;
 >         }
->         auto ptr = __strrstr_P(buffer(), fromIndex + findLen, find, findLen);
+>         auto ptr = __strrstr_P(wbuffer(), fromIndex + findLen, find, findLen);
 >         if (!ptr) {
 >             return -1;
 >         }
@@ -2612,7 +2612,7 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >         else if (fromIndex < findLen || fromIndex > len) {
 >             return -1;
 >         }
->         auto ptr = __strrstr(buffer(), fromIndex + findLen, find, findLen);
+>         auto ptr = __strrstr(wbuffer(), fromIndex + findLen, find, findLen);
 >         if (!ptr) {
 >             return -1;
 >         }
@@ -2959,13 +2959,6 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >     StringSumHelper(double num) :
 >         String(num) {
 >     }
-356a930,935
-> 
-> #ifdef _MSC_VER
-> #include "misc_string_inline.h"
-> #else
-> #include "KFCBaseLibrary/include/misc_string_inline.h"
-> #endif
 diff -r -Z -P4 ./framework-arduinoespressif8266_orig/libraries/ArduinoOTA/ArduinoOTA.h ./framework-arduinoespressif8266/libraries/ArduinoOTA/ArduinoOTA.h
 23a24,27
 > namespace WebServer{

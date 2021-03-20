@@ -14,6 +14,130 @@ class __FlashStringHelper;
 #define PGM_P const char *
 #endif
 
+#define STRINGLIST_SEPARATOR                    ','
+#define STRLS                                   ","
+
+
+#define ESNULLP                                 ( 400 ) /* null ptr */
+#define ESZEROL                                 ( 401 ) /* length is zero */
+#define EOK                                     ( 0 )
+
+// internal
+char *__strrstr(char *str, size_t stringLen, const char *find, size_t findLen);
+char *__strrstr_P(char *str, size_t stringLen, PGM_P find, size_t findLen);
+PGM_P __strrstr_P_P(PGM_P str, size_t stringLen, PGM_P find, size_t findLen);
+
+
+// return index of the string in the list, 0 based
+// all negative values are errors
+// list == nullptr or find == nullptr: returns -ESNULLP
+// separator == 0 or nullptr: returns -ESZEROL
+int stringlist_find_P_P(PGM_P list, PGM_P find, PGM_P separator);
+int stringlist_ifind_P_P(PGM_P list, PGM_P find, PGM_P separator);
+
+// size == 0: returns ESZEROL
+// str1 == nullptr: returns ESNULLP
+// str2 == nullptr: returns -ESNULLP
+// str1 == str2: returns 0 without comparing
+int strncasecmp_P_P(PGM_P str1, PGM_P str2, size_t size);
+
+// str or find == nullptr: returns nullptr
+// strlen(find) == 0: returns str
+PGM_P strstr_P_P(PGM_P str, PGM_P find);
+PGM_P strcasestr_P_P(PGM_P str, PGM_P find);
+
+// char *strrstr_P(char *str, PGM_P find);
+char *strcasestr_P(char *str, PGM_P find);
+
+inline static char *strcasestr_P(const char *str, PGM_P find)
+{
+    return strcasestr_P(const_cast<char *>(str), find);
+}
+
+// using temporary and memrchr
+inline static void *memrchr_P(PGM_VOID_P ptr, int ch, size_t n)
+{
+    if (!ptr) {
+        return nullptr;
+    }
+    if (n == 0) {
+        return const_cast<void *>(ptr);
+    }
+    else {
+        char tmp[n];
+        memcpy_P(tmp, ptr, n);
+        return memrchr(tmp, ch, n);
+    }
+}
+
+inline static int stringlist_find_P_P(PGM_P list, PGM_P find, char separator = STRINGLIST_SEPARATOR)
+{
+    if (!separator) {
+        return -ESZEROL;
+    }
+    if (!list || !find) {
+        return -ESNULLP;
+    }
+    const char separator_str[2] = { separator, 0 };
+    return stringlist_find_P_P(list, find, separator_str);
+}
+
+
+inline static int stringlist_ifind_P_P(PGM_P list, PGM_P find, char separator = STRINGLIST_SEPARATOR)
+{
+    if (!separator) {
+        return -ESZEROL;
+    }
+    if (!list || !find) {
+        return -ESNULLP;
+    }
+    const char separator_str[2] = { separator, 0 };
+    return stringlist_ifind_P_P(list, find, separator_str);
+}
+
+
+
+// using temporary and strncmp_P
+inline static int strncmp_PP(PGM_P str1, PGM_P str2, size_t size)
+{
+    if (str1 == str2) {
+        return 0;
+    }
+    else {
+        char tmp[strlen_P(str1) + 1];
+        strcpy_P(tmp, str1);
+        return strncmp_P(tmp, str2, size);
+    }
+}
+
+// using temporary and strncasecmp_P
+inline static int strncasecmp_PP(PGM_P str1, PGM_P str2, size_t size)
+{
+    if (str1 == str2) {
+        return 0;
+    }
+    else {
+        char tmp[strlen_P(str1) + 1];
+        strcpy_P(tmp, str1);
+        return strncasecmp_P(tmp, str2, size);
+    }
+}
+
+#define strcmp_PP(str1, str2) strncmp_PP((str1), (str2), SIZE_IRRELEVANT)
+#define strcasecmp_PP(str1, str2) strncasecmp_PP((str1), (str2), SIZE_IRRELEVANT)
+
+// comparing PROGMEM directly
+#define strcmp_P_P(str1, str2) strncmp_P_P((str1), (str2), SIZE_IRRELEVANT)
+#define strcasecmp_P_P(str1, str2) strncasecmp_P_P((str1), (str2), SIZE_IRRELEVANT)
+
+#define stristr_P(str1, str2) strcasestr_P((str1), (str2))
+
+#define stringlist_find_P(list, find, separator) stringlist_find_P_P(list), (find), (separator))
+#define stringlist_ifind_P(list, find, separator) stringlist_ifind_P_P(list), (find), (separator))
+#define stringlist_casefind_P(list, find, separator) stringlist_ifind_P_P(list), (find), (separator))
+
+
+
 #if defined(_MSC_VER)
 
 inline static void *memchr_P(void *s, int c, size_t n) {
@@ -38,106 +162,96 @@ inline static void *memrchr(const void *s, int c, size_t n) {
     return nullptr;
 }
 
-inline static void *memrchr_P(const void *s, int c, size_t n) {
-    return memrchr(s, c, n);
-}
-
 #else
 
-void *memrchr_P(const void *s, int c, size_t n);
-PGM_P strchr_P(PGM_P str, int c);
-PGM_P strrchr_P(PGM_P str, int c);
 char *strdup_P(PGM_P src);
+
+
+inline static const char *strchr_P(const char *str, int c) {
+    // PROGMEM safe
+    return strchr(str, c);
+}
+
+inline static const char *strrchr_P(const char *str, int c) {
+    // PROGMEM safe
+    return strrchr(str, c);
+}
 
 #endif
 
-inline static char *strichr(char *str1, char ch)
-{
-    if (!str1) {
-        return nullptr;
-    }
-    if (!ch) {
-        // special case: find end of string
-        return str1 + strlen(str1);
-    }
-    ch = tolower(ch);
-    if (toupper(ch) == ch) {
-        // special case: lower and upercase are the same
-        return strchr(str1, ch);
-    }
-    while(*str1 && tolower(*str1) != ch) {
-        str1++;
-    }
-    return (*str1 == 0) ? nullptr : str1;
-}
+char *strichr(char *, char ch);
 
 inline static const char *strichr(const char *str1, char ch1)
 {
     return strichr(const_cast<char *>(str1), ch1);
 }
 
-inline static const char *strichr_P(const char *str1, char ch)
+PGM_P strichr_P(PGM_P str1, char ch);
+
+int strncmp_P_P(PGM_P str1, PGM_P str2, size_t len);
+int strncasecmp_P_P(PGM_P str1, PGM_P str2, size_t size);
+
+PGM_P strstr_P_P(PGM_P str, PGM_P find);
+PGM_P strcasestr_P_P(PGM_P str, PGM_P find);
+
+inline static char *strrstr(char *str, const char *find)
 {
-    if (!str1) {
+    if (!str || !find) {
         return nullptr;
     }
-    if (!ch) {
-        // special case find end of string
-        return str1 + strlen_P(str1);
+    if (!*find) {
+        return str;
     }
-    ch = tolower(ch);
-    if (toupper(ch) == ch) {
-        // special case: lower and upercase are the same
-        return strchr_P(str1, ch);
-    }
-    char ch2;
-    while(((ch2 = pgm_read_byte(str1)) != 0) && tolower(ch2) != ch) {
-        str1++;
-    }
-    return (ch2 == 0) ? nullptr : str1;
+    return __strrstr(str, strlen(str), find, strlen(find));
 }
 
-int strcmp_P_P(const char *str1, const char *str2);
-int strncmp_P_P(const char *str1, const char *str2, size_t len);
-int strcasecmp_P_P(const char *str1, const char *str2);
-int strncasecmp_P_P(const char *str1, const char *str2, size_t size);
-
-const char *strstr_P_P(const char *str, const char *find);
-const char *strcasestr_P_P(const char *str, const char *find);
-
-const char *strchr_P(const char *str, int c);
-const char *strrchr_P(const char *str, int c);
-
-inline char *strrstr(char *string, const char *find);
-inline const char *strrstr(const char *string, const char *find) {
+inline static const char *strrstr(const char *string, const char *find)
+{
     return strrstr(const_cast<char *>(string), find);
 }
-inline char *strrstr_P(char *string, const char *find);
-inline const char *strrstr_P(const char *string, const char *find) {
-    return strrstr_P(const_cast<char *>(string), find);
-}
-inline const char *__strrstr_P_P(const char *string, size_t stringLen, const char *find, size_t findLen);
 
-inline const char *strrstr_P_P(const char *string, const char *find);
-inline char *__strrstr(char *string, size_t stringLen, const char *find, size_t findLen);
-inline const char *__strrstr(const char *string, size_t stringLen, const char *find, size_t findLen) {
-    return __strrstr_P_P(string, stringLen, find, findLen);
-}
-inline char *__strrstr_P(char *string, size_t stringLen, const char *find, size_t findLen);
-inline const char *__strrstr_P(const char *string, size_t stringLen, const char *find, size_t findLen) {
-    return __strrstr_P_P(string, stringLen, find, findLen);
-}
-inline const char *__strrstr_P_P(const char *string, size_t stringLen, const char *find, size_t findLen);
-
-
-inline static char *stristr(char *str1, const char *str2) {
-    return const_cast<char *>(strcasestr_P_P(str1, str2)); //TODO this this should be stristr or strcasestr. PGM_P not allowed
+inline static char *strrstr_P(char *str, PGM_P find)
+{
+    if (!str || !str) {
+        return nullptr;
+    }
+    auto findLen = strlen_P(find);
+    if (!findLen) {
+        return str;
+    }
+    return __strrstr_P(str, strlen(str), find, findLen);
 }
 
-inline static char *stristr_P(char *str1, const char *str2) {
-    return const_cast<char *>(strcasestr_P_P(str1, str2)); //TODO this this should be stristr_P or strcasestr_P, str1 cannot be PGM_P
+inline static char *strrstr_P(const char *str, PGM_P find)
+{
+    return strrstr_P(const_cast<char *>(str), find);
 }
 
-inline static const char *stristr_P(const char *str1, const char *str2) {
-    return strcasestr_P_P(str1, str2);
+inline static PGM_P strrstr_P_P(PGM_P str, PGM_P find)
+{
+    if (!str || !find) {
+        return nullptr;
+    }
+    auto findLen = strlen_P(find);
+    if (!findLen) {
+        return str;
+    }
+    return __strrstr_P_P(str, strlen_P(str), find, findLen);
 }
+
+#if __GNU_VISIBLE
+
+inline static char *stristr(char *str1, const char *str2)
+{
+    return strcasestr(str1, str2);
+}
+
+#else
+
+inline static char *stristr(char *str1, const char *str2)
+{
+    return const_cast<char *>(strcasestr_P(str1, str2));
+}
+
+#endif
+

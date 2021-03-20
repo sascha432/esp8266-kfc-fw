@@ -49,3 +49,5 @@ namespace WebServerTypes {
     };
 
 }
+
+extern const char *getFirmwareMD5();

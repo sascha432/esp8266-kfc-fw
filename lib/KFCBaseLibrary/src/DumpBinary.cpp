@@ -6,16 +6,19 @@
 
 extern "C" {
 
-    void __dump_binary(const void *ptr, size_t len, size_t perLine, PGM_P title)
+    void __dump_binary(const void *ptr, size_t len, size_t perLine, PGM_P title, uint8_t groupBytes)
     {
-        __dump_binary_to(Serial, ptr, len, perLine, title);
+        __dump_binary_to(Serial, ptr, len, perLine, title, groupBytes);
     }
 
-    void __dump_binary_to(Print &output, const void *ptr, size_t len, size_t perLine, PGM_P title)
+    void __dump_binary_to(Print &output, const void *ptr, size_t len, size_t perLine, PGM_P title, uint8_t groupBytes)
     {
         DumpBinary d(output);
         if (title) {
             output.printf_P(PSTR("%s: %p:%u\n"), title, ptr, len);
+        }
+        if (groupBytes) {
+            d.setGroupBytes(groupBytes);
         }
         if (perLine == 0) {
             perLine = len;

@@ -571,8 +571,6 @@ void KFCFWConfiguration::restoreFactorySettings()
     __LDBG_println();
     PrintString str;
 
-    SaveCrash::clearEEPROM();
-
     clear();
     auto deviceName = defaultDeviceName();
     System::Flags::defaults();
@@ -634,6 +632,8 @@ void KFCFWConfiguration::restoreFactorySettings()
 #if SECURITY_LOGIN_ATTEMPTS
     KFCFS.remove(FSPGM(login_failure_file));
 #endif
+
+    SaveCrash::clearStorage(SaveCrash::ClearStorageType::REMOVE_MAGIC);
 }
 
 #if CUSTOM_CONFIG_PRESET
@@ -764,6 +764,26 @@ void KFCFWConfiguration::setup()
 
 #include "build.h"
 
+// save_crash.h
+SaveCrash::Data::FirmwareVersion::FirmwareVersion() :
+    major(FIRMWARE_VERSION_MAJOR),
+    minor(FIRMWARE_VERSION_MINOR),
+    revision(FIRMWARE_VERSION_REVISION),
+    build((uint16_t)String(F(__BUILD_NUMBER)).toInt())
+{
+}
+
+String SaveCrash::Data::FirmwareVersion::toString(const __FlashStringHelper *buildSep) const
+{
+    return PrintString(F("%u.%u.%u%s%u"), major, minor, revision, buildSep, build);
+}
+
+void SaveCrash::Data::FirmwareVersion::printTo(Print &output, const __FlashStringHelper *buildSep) const
+{
+    output.printf_P(PSTR("%u.%u.%u%s%u"), major, minor, revision, buildSep, build);
+}
+
+
 void KFCFWConfiguration::read(bool wakeup)
 {
     if (!Configuration::read()) {
@@ -774,15 +794,19 @@ void KFCFWConfiguration::read(bool wakeup)
     }
     else if (wakeup == false) {
         auto version = System::Device::getConfig().config_version;
-        uint32_t currentVersion = (FIRMWARE_VERSION << 16) | (uint16_t)String(F(__BUILD_NUMBER)).toInt();
+        auto currentVersion = SaveCrash::Data::FirmwareVersion().__version;
+        // uint32_t currentVersion = (FIRMWARE_VERSION << 16) | static_cast<uint16_t>(String(F(__BUILD_NUMBER)).toInt());
         if (currentVersion != version) {
-            uint16_t build = version;
-            version >>= 16;
-            Logger_warning(F("Upgrading EEPROM settings from %d.%d.%d.%u to " FIRMWARE_VERSION_STR "." __BUILD_NUMBER), (version >> 16), (version >> 8) & 0xff, (version & 0xff), build);
+
+            // auto build = static_cast<uint16_t>(version);
+            // version >>= 16;
+            // Logger_warning(F("Upgrading EEPROM settings from %d.%d.%d.%u to " FIRMWARE_VERSION_STR "." __BUILD_NUMBER), (version >> 11) & 0x1f, (version >> 6) & 0x1f, (version & 0x3f), build);
+            Logger_warning(F("Upgrading EEPROM settings from %s to " FIRMWARE_VERSION_STR "." __BUILD_NUMBER), SaveCrash::Data::FirmwareVersion(version).toString(F(".")).c_str());
             System::Device::getWriteableConfig().config_version = currentVersion;
             config.recoveryMode(false);
+            System::Firmware::setMD5(ESP.getSketchMD5());
             Configuration::write();
-            SaveCrash::clearEEPROM();
+            SaveCrash::clearStorage(SaveCrash::ClearStorageType::REMOVE_MAGIC);
         }
     }
 }

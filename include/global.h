@@ -10,7 +10,7 @@
 #define FIRMWARE_VERSION_REVISION       4
 #define ________STR(str)                      #str
 #define _______STR(str)                 ________STR(str)
-#define FIRMWARE_VERSION                ((FIRMWARE_VERSION_MAJOR<<16)|(FIRMWARE_VERSION_MINOR<<8)|FIRMWARE_VERSION_REVISION)
+#define FIRMWARE_VERSION                (((FIRMWARE_VERSION_MAJOR & ((1U << 5) - 1)) << 11) | ((FIRMWARE_VERSION_MINOR & ((1U << 5) - 1)) << 6) | (FIRMWARE_VERSION_REVISION & ((1U << 6) - 1)))
 #define FIRMWARE_VERSION_STR            _______STR(FIRMWARE_VERSION_MAJOR) "." _______STR(FIRMWARE_VERSION_MINOR) "." _______STR(FIRMWARE_VERSION_REVISION)
 
 #if ESP8266

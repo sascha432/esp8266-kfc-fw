@@ -105,9 +105,7 @@ uint16_t EEPROMAccess::getReadSize(uint16_t offset, uint16_t length) const
 
 uint16_t EEPROMAccess::read_with_temporary(const uint32_t start_address, uint8_t *temp, const uint16_t readSize, uint8_t *dst, const uint16_t size, const uint16_t maxSize, const uint8_t alignment)
 {
-    noInterrupts();
     SpiFlashOpResult result = spi_flash_read(start_address, reinterpret_cast<uint32_t *>(temp), readSize);
-    interrupts();
 
     __LDBG_assert_printf(result == SPI_FLASH_RESULT_OK, "spi_flash_read failed src=%08x dst=%08x size=%u", start_address, temp, readSize);
     __LDBG_printf("spi_flash_read(%08x, %d) = %d, alignment %u", start_address, readSize, result, alignment);

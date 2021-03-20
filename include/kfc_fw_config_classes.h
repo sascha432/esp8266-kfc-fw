@@ -480,7 +480,7 @@ namespace KFCConfigurationClasses {
             static void defaults();
 
             CREATE_STRING_GETTER_SETTER(MainConfig().system.firmware, PluginBlacklist, 255);
-            CREATE_STRING_GETTER_SETTER(MainConfig().system.firmware, MD5, 20);
+            CREATE_STRING_GETTER_SETTER(MainConfig().system.firmware, MD5, 32);
 
             static const char *getFirmwareMD5() {
                 auto md5Str = getMD5();

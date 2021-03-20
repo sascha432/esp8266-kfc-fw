@@ -291,8 +291,8 @@ namespace __va_args__
 #define FLASH_STRING_GENERATOR_AUTO_INIT(...)           __VA_ARGS__
 #endif
 
-extern "C" void __dump_binary(const void *ptr, size_t len, size_t perLine, PGM_P title = nullptr);
-extern "C" void __dump_binary_to(Print &output, const void *ptr, size_t len, size_t perLine, PGM_P title = nullptr);
+extern "C" void __dump_binary(const void *ptr, size_t len, size_t perLine, PGM_P title = nullptr, uint8_t groupBytes = 0);
+extern "C" void __dump_binary_to(Print &output, const void *ptr, size_t len, size_t perLine, PGM_P title = nullptr, uint8_t groupBytes = 0);
 
 #if _MSC_VER
 #include "../../../include/spgm_auto_strings.h"

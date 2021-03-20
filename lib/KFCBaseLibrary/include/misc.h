@@ -226,11 +226,6 @@ inline bool is_not_PGM_P_or_aligned(const void * ptr)
 
 #if defined(ESP8266) || defined(ESP32)
 
-
-PGM_P strchr_P(PGM_P str, int c);
-PGM_P strrchr_P(PGM_P str, int c);
-char *strdup_P(PGM_P src);
-
 #else
 
 inline PGM_P strchr_P(PGM_P src, int c) {

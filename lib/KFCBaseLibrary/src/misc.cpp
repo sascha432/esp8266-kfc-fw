@@ -378,18 +378,11 @@ String WiFi_disconnect_reason(WiFiDisconnectReason reason)
 #endif
 }
 
-#ifndef DEBUG_STRING_CHECK_NULLPTR
-#define DEBUG_STRING_CHECK_NULLPTR          DEBUG
-#endif
-
 int stringlist_find_P_P(PGM_P list, PGM_P find, char separator)
 {
-#if DEBUG_STRING_CHECK_NULLPTR
     if (!list || !find) {
-        debug_printf_P(PSTR("list=%p find=%p separator=%c\n"), list, find, separator);
         return -1;
     }
-#endif
     const char separator_str[2] = { separator, 0 };
     return stringlist_find_P_P(list, find, separator_str);
 }
@@ -397,9 +390,6 @@ int stringlist_find_P_P(PGM_P list, PGM_P find, char separator)
 int stringlist_find_P_P(PGM_P list, PGM_P find, PGM_P separator/*, int &position*/)
 {
     if (!list || !find || !separator) {
-#if DEBUG_STRING_CHECK_NULLPTR
-        debug_printf_P(PSTR("list=%p find=%p separator=%p\n"), list, find, separator);
-#endif
         return -1;
     }
     PGM_P ptr1 = list;
@@ -434,10 +424,11 @@ int stringlist_find_P_P(PGM_P list, PGM_P find, PGM_P separator/*, int &position
 int strcmp_P_P(PGM_P str1, PGM_P str2)
 {
     if (!str1 || !str2) {
-#if DEBUG_STRING_CHECK_NULLPTR
-        debug_printf_P(PSTR("str1=%p str2=%p\n"), str1, str2);
-#endif
         return -1;
+    }
+    // skip comparing if the address of the strings match
+    if (str1 == str2) {
+        return 0;
     }
     uint8_t ch1, ch2;
     do {
@@ -458,10 +449,10 @@ int strcmp_P_P(PGM_P str1, PGM_P str2)
 int strncmp_P_P(PGM_P str1, PGM_P str2, size_t size)
 {
     if (!str1 || !str2 || !size) {
-#if DEBUG_STRING_CHECK_NULLPTR
-        debug_printf_P(PSTR("str1=%p str2=%p\n"), str1, str2);
-#endif
         return -1;
+    }
+    if (str1 == str2) {
+        return 0;
     }
     uint8_t ch1, ch2;
     do {
@@ -482,10 +473,10 @@ int strncmp_P_P(PGM_P str1, PGM_P str2, size_t size)
 int strcasecmp_P_P(PGM_P str1, PGM_P str2)
 {
     if (!str1 || !str2) {
-#if DEBUG_STRING_CHECK_NULLPTR
-        debug_printf_P(PSTR("str1=%p str2=%p\n"), str1, str2);
-#endif
         return -1;
+    }
+    if (str1 == str2) {
+        return 0;
     }
     uint8_t ch1, ch2;
     do {
@@ -506,10 +497,10 @@ int strcasecmp_P_P(PGM_P str1, PGM_P str2)
 int strncasecmp_P_P(PGM_P str1, PGM_P str2, size_t size)
 {
     if (!str1 || !str2 || !size) {
-#if DEBUG_STRING_CHECK_NULLPTR
-        debug_printf_P(PSTR("str1=%p str2=%p\n"), str1, str2);
-#endif
         return -1;
+    }
+    if (str1 == str2) {
+        return 0;
     }
     uint8_t ch1, ch2;
     do {
@@ -529,6 +520,9 @@ int strncasecmp_P_P(PGM_P str1, PGM_P str2, size_t size)
 
 const char *strstr_P_P(const char *str, const char *find) {
     if (str && find) {
+        if (str == find) {
+            return str;
+        }
         size_t findLen = strlen_P(find);
         size_t strLen =  strlen_P(str);
         while (strLen >= findLen) {
@@ -544,6 +538,9 @@ const char *strstr_P_P(const char *str, const char *find) {
 
 const char *strcasestr_P_P(const char *str, const char *find) {
     if (str && find) {
+        if (str == find) {
+            return str;
+        }
         size_t findLen = strlen_P(find);
         size_t strLen =  strlen_P(str);
         while (strLen >= findLen) {
@@ -589,42 +586,13 @@ size_t str_case_replace(char *src, int from, int to, size_t maxLen)
     return counter;
 }
 
-
-// size_t String_rtrim(String &str)
-// {
-//     auto len = str.length();
-//     while (len && isspace(str.charAt(len - 1))) {
-//         len--;
-//     }
-//     str.remove(len, -1);
-//     return len;
-// }
-
-// size_t String_ltrim(String &str)
-// {
-//     size_t remove = 0;
-//     while (isspace(str.charAt(remove))) {
-//         remove++;
-//     }
-//     str.remove(0, remove);
-//     return str.length();
-// }
-
-// size_t String_trim(String &str)
-// {
-//     str.trim();
-//     return str.length();
-// }
-
-size_t String_rtrim(String &str, const char *chars, size_t minLength)
+inline static size_t String_rtrim_zeros(String &str, size_t minLength)
 {
-    if (!chars) {
-        return str.length();
-    }
     auto len = str.length();
     if (len) {
         minLength = len - minLength;
-        while (minLength-- && len && strchr(chars, str.charAt(len - 1))) {
+        auto cStr = str.c_str();
+        while (minLength-- && len && cStr[len - 1] == '0') {
             len--;
         }
         str.remove(len);
@@ -632,155 +600,43 @@ size_t String_rtrim(String &str, const char *chars, size_t minLength)
     return len;
 }
 
-// size_t String_ltrim(String &str, const char *chars)
-// {
-//    if (!chars) {
-// #if DEBUG_STRING_CHECK_NULLPTR
-//         debug_printf_P(PSTR("str=%s chars=%p\n"), str.c_str(), chars);
-// #endif
-//         return str.length();
-//     }
-//    if (str.length()) {
-//        size_t remove = 0;
-//        while (strchr(chars, str.charAt(remove))) {
-//            remove++;
-//        }
-//        str.remove(0, remove);
-//    }
-//     return str.length();
-// }
-
-// size_t String_trim(String &str, const char *chars)
-// {
-//     String_rtrim(str, chars);
-//     return String_ltrim(str, chars);
-// }
-
-size_t String_rtrim_P(String &str, PGM_P chars, size_t minLength)
-{
-    if (!chars) {
-        return str.length();
-    }
-    auto buf = new char[strlen_P(chars) + 1];
-    strcpy_P(buf, chars);
-    auto len = String_rtrim(str, buf, minLength);
-    delete [] buf;
-    return len;
-}
-
-// size_t String_ltrim_P(String &str, PGM_P chars)
-// {
-//     if (!chars) {
-// #if DEBUG_STRING_CHECK_NULLPTR
-//         debug_printf_P(PSTR("str=%s chars=%p\n"), str.c_str(), chars);
-// #endif
-//         return str.length();
-//     }
-//     auto buf = new char[strlen_P(chars) + 1];
-//     strcpy_P(buf, chars);
-//     auto len = String_ltrim(str, buf);
-//     delete[] buf;
-//     return len;
-// }
-
-// size_t String_trim_P(String &str, PGM_P chars)
-// {
-//     if (!chars) {
-// #if DEBUG_STRING_CHECK_NULLPTR
-//         debug_printf_P(PSTR("str=%s chars=%p\n"), str.c_str(), chars);
-// #endif
-//         return str.length();
-//     }
-//     auto buf = new char[strlen_P(chars) + 1];
-//     strcpy_P(buf, chars);
-//     auto len = String_trim(str, buf);
-//     delete[] buf;
-//     return len;
-// }
-
-// size_t String_trim(String &str, char ch)
-// {
-//     char chars[2] = { ch, 0 };
-//     return String_trim(str, chars);
-// }
-
-// size_t String_ltrim(String &str, char ch)
-// {
-//     char chars[2] = { ch, 0 };
-//     return String_ltrim(str, chars);
-// }
-
-size_t String_rtrim(String &str, char ch, size_t minLength)
-{
-    char chars[2] = { ch, 0 };
-    return String_rtrim(str, chars, minLength);
-}
-
 size_t printTrimmedDouble(Print *output, double value, int digits)
 {
     auto str = PrintString(F("%.*f"), digits, value);
-    auto size = String_rtrim(str, '0', str.indexOf('.') + 2); // min. length dot + 1 char to avoid getting "1." for "1.0000"
+    auto size = String_rtrim_zeros(str, str.indexOf('.') + 2); // min. length dot + 1 char to avoid getting "1." for "1.0000"
     if (output) {
         return output->print(str);
     }
     return size;
 }
 
-#if 0
+// bool String_startsWith(const String &str1, PGM_P str2)
+// {
+//     size_t strlen2;
+//     return str2 && (str1.length() >= (strlen2 = strlen_P(str2))) && !strncmp_P(str1.c_str(), str2, strlen2);
+// }
 
-bool String_equals(const String &str1, PGM_P str2)
-{
-    if (!str2) {
-#if DEBUG_STRING_CHECK_NULLPTR
-        debug_printf_P(PSTR("str1=%s str2=%p\n"), str1.c_str(), str2);
-#endif
-        return false;
-    }
-    const size_t strlen2 = strlen_P(str2);
-    return (str1.length() == strlen2) && !strcmp_P(str1.c_str(), str2);
-}
+// bool String_endsWith(const String &str1, PGM_P str2)
+// {
+//     size_t len;
+//     size_t strlen2;
+//     return str2 && ((len = str1.length()) >= (strlen2 = strlen_P(str2))) && !strcmp_P(str1.c_str() + len - strlen2, str2);
+// }
 
-bool String_equalsIgnoreCase(const String &str1, PGM_P str2)
-{
-    if (!str2) {
-#if DEBUG_STRING_CHECK_NULLPTR
-        debug_printf_P(PSTR("str1=%s str2=%p\n"), str1.c_str(), str2);
-#endif
-        return false;
-    }
-    const size_t strlen2 = strlen_P(str2);
-    return (str1.length() == strlen2) && !strcasecmp_P(str1.c_str(), str2);
-}
+// bool String_endsWith(const String &str1, char ch)
+// {
+//     auto len = str1.length();
+//     return (len != 0) && (str1.charAt(len - 1) == ch);
+// }
 
-#endif
-
-bool String_startsWith(const String &str1, PGM_P str2)
-{
-    size_t strlen2;
-    return str2 && (str1.length() >= (strlen2 = strlen_P(str2))) && !strncmp_P(str1.c_str(), str2, strlen2);
-}
-
-bool String_endsWith(const String &str1, PGM_P str2)
-{
-    size_t len;
-    size_t strlen2;
-    return str2 && ((len = str1.length()) >= (strlen2 = strlen_P(str2))) && !strcmp_P(str1.c_str() + len - strlen2, str2);
-}
-
-bool String_endsWith(const String &str1, char ch)
-{
-    auto len = str1.length();
-    return (len != 0) && (str1.charAt(len - 1) == ch);
-}
-
-bool str_endswith(const char *str, char ch)
-{
-    if (!str) {
-        return false;
-    }
-    auto len = strlen(str);
-    return (len != 0) && (str[len - 1] == ch);
-}
+// bool str_endswith(const char *str, char ch)
+// {
+//     if (!str) {
+//         return false;
+//     }
+//     auto len = strlen(str);
+//     return (len != 0) && (str[len - 1] == ch);
+// }
 
 #if defined(ESP8266)
 
@@ -798,10 +654,10 @@ bool str_endswith_P(const char *str, char ch)
 int strcmp_end_P(const char *str1, size_t len1, PGM_P str2, size_t len2)
 {
     if (!str1 || !str2) {
-#if DEBUG_STRING_CHECK_NULLPTR
-        debug_printf_P(PSTR("str1=%p len1=%u str2=%p len2=%u\n"), str1, len1, str2, len2);
-#endif
         return -1;
+    }
+    if (str1 == str2) {
+        return 0;
     }
     if (len2 > len1) {
         return -1;
@@ -816,9 +672,6 @@ int strcmp_end_P(const char *str1, size_t len1, PGM_P str2, size_t len2)
 const char *strchr_P(const char *str, int c)
 {
     if (!str) {
-#if DEBUG_STRING_CHECK_NULLPTR
-        __DBG_printf("str=%p", str);
-#endif
         return nullptr;
     }
     char ch;
@@ -834,9 +687,6 @@ const char *strchr_P(const char *str, int c)
 const char *strrchr_P(const char *str, int c)
 {
     if (!str) {
-#if DEBUG_STRING_CHECK_NULLPTR
-        __DBG_printf("str=%p", str);
-#endif
         return nullptr;
     }
     const char *last = nullptr;
@@ -854,19 +704,15 @@ const char *strrchr_P(const char *str, int c)
 char *strdup_P(PGM_P src)
 {
     if (!src) {
-#if DEBUG_STRING_CHECK_NULLPTR
-        __DBG_printf("src=%p", src);
-#endif
         return nullptr;
     }
-    char *dst = reinterpret_cast<char *>(malloc(strlen_P(src) + 1));
+    auto len = strlen_P(src) + 1;
+    char *dst = reinterpret_cast<char *>(malloc(len));
     if (!dst) {
-#if DEBUG_STRING_CHECK_NULLPTR
-        __DBG_printf("src=%p dst=%p", src, dst);
-#endif
         return nullptr;
     }
-    return strcpy_P(dst, src);
+    memcpy_P(dst, src, len);
+    return dst;
 }
 
 #endif

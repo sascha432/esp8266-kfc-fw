@@ -1,3 +1,13 @@
+diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/core_esp8266_postmortem.cpp ./framework-arduinoespressif8266/cores/esp8266/core_esp8266_postmortem.cpp
+83c83,88
+< static void ets_printf_P(const char *str, ...) {
+---
+> 
+> // exported for using in custom_crash_callback()
+> extern void ___static_ets_printf_P(const char *str, ...);
+> #define ets_printf_P ___static_ets_printf_P
+> 
+> void ___static_ets_printf_P(const char *str, ...) {
 diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/FS.h ./framework-arduinoespressif8266/cores/esp8266/FS.h
 269c269
 < extern fs::FS SPIFFS __attribute__((deprecated("SPIFFS has been deprecated. Please consider moving to LittleFS or other filesystems.")));
@@ -15,7 +25,7 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString/WStri
 > 
 > #include "WStringEx.cpp"
 diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString/WStringEx.cpp ./framework-arduinoespressif8266/cores/esp8266/WString/WStringEx.cpp
-0a1,900
+0a1,865
 > /*
 >  WString.cpp - String library for Wiring & Arduino
 >  ...mostly rewritten by Paul Stoffregen...
@@ -42,8 +52,7 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString/WStri
 > #ifdef _MSC_VER
 > #include <Arduino_compat.h>
 > #include "cores/esp8266/WString.h"
-> //#include "util/stdlib_noniso.h"
-> namespace esp8266 {
+> #include "util/stdlib_noniso.h"
 > #else
 > #include <Arduino.h>
 > #include "WString.h"
@@ -529,17 +538,6 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString/WStri
 >     return strcmp(buffer(), s.buffer());
 > }
 > 
-> unsigned char String::equals(const String &s2) const {
->     return (len() == s2.len() && compareTo(s2) == 0);
-> }
-> 
-> unsigned char String::equals(const char *cstr) const {
->     if (len() == 0)
->         return (cstr == NULL || *cstr == 0);
->     if (cstr == NULL)
->         return buffer()[0] == 0;
->     return strcmp(buffer(), cstr) == 0;
-> }
 > 
 > unsigned char String::operator<(const String &rhs) const {
 >     return compareTo(rhs) < 0;
@@ -555,22 +553,6 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString/WStri
 > 
 > unsigned char String::operator>=(const String &rhs) const {
 >     return compareTo(rhs) >= 0;
-> }
-> 
-> unsigned char String::equalsIgnoreCase(const String &s2) const {
->     if (this == &s2)
->         return 1;
->     if (len() != s2.len())
->         return 0;
->     if (len() == 0)
->         return 1;
->     const char *p1 = buffer();
->     const char *p2 = s2.buffer();
->     while (*p1) {
->         if (tolower(*p1++) != tolower(*p2++))
->             return 0;
->     }
->     return 1;
 > }
 > 
 > unsigned char String::equalsConstantTime(const String &s2) const {
@@ -658,10 +640,6 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString/WStri
 > // /*  Search                                   */
 > // /*********************************************/
 > 
-> int String::indexOf(char c) const {
->     return indexOf(c, 0);
-> }
-> 
 > int String::indexOf(char ch, unsigned int fromIndex) const {
 >     if (fromIndex >= len())
 >         return -1;
@@ -725,13 +703,14 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString/WStri
 > 
 > bool String::replace(char find, char replace)
 > {
->     if (!buffer()) {
->         return false;
+>     if (!buffer())
+>         return true;
+>     for (char *p = wbuffer(); *p; p++) {
+>         if (*p == find) {
+>             *p = replace;
+>         }
 >     }
->     for (char *p = strchr(wbuffer(), find); *p; p = strchr(p + 1, find)) {
->         *p = replace;
->     }
->     return  true;
+>     return true;
 > }
 > 
 > bool String::_replace(PGM_P find, size_t findLen, PGM_P replace, size_t replaceLen)
@@ -908,10 +887,6 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString/WStri
 >     }
 >     return 0;
 > }
-> 
-> #ifdef _MSC_VER
-> }
-> #endif
 > 
 > // global empty string to allow returning const String& with nothing
 > 
@@ -1798,13 +1773,9 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 38a47,48
 > #endif
 > #ifndef F
-39a50,54
+39a50
 > #endif
-> 
-> #ifdef _MSC_VER
-> namespace esp8266 {
-> #endif
-43,58c58,73
+43,58c54,69
 <         // use a function pointer to allow for "if (s)" without the
 <         // complications of an operator bool(). for more information, see:
 <         // http://www.artima.com/cppsource/safebool.html
@@ -1838,13 +1809,13 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >     String(const char *cstr = nullptr);
 >     String(const String &str);
 >     String(const __FlashStringHelper *str);
-60,61c75,76
+60,61c71,72
 <         String(String &&rval);
 <         String(StringSumHelper &&rval);
 ---
 >     String(String &&rval);
 >     String(StringSumHelper &&rval);
-63,97c78,113
+63,97c74,109
 <         explicit String(char c);
 <         explicit String(unsigned char, unsigned char base = 10);
 <         explicit String(int, unsigned char base = 10);
@@ -1917,17 +1888,17 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >     String &operator =(const String &rhs);
 >     String &operator =(const char *cstr);
 >     String &operator = (const __FlashStringHelper *str);
-99,100c115,116
+99,100c111,112
 <         String & operator =(String &&rval);
 <         String & operator =(StringSumHelper &&rval);
 ---
 >     String &operator =(String &&rval);
 >     String &operator =(StringSumHelper &&rval);
-103c119
+103c115
 <         // concatenate (works w/ built-in types)
 ---
 >     // concatenate (works w/ built-in types)
-105,318c121,664
+105,318c117,891
 <         // returns true on success, false on failure (in which case, the string
 <         // is left unchanged).  if the argument is null or invalid, the
 <         // concatenation is considered unsuccessful.
@@ -2222,11 +2193,8 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >     operator StringIfHelperType() const {
 >         return buffer() ? &String::StringIfHelper : 0;
 >     }
->     int compareTo(const String &s) const;
->     unsigned char equals(const String &s) const;
->     unsigned char equals(const char *cstr) const;
->     unsigned char equals(const __FlashStringHelper *fstr) const {
->         return strcmp_P(buffer(), reinterpret_cast<PGM_P>(fstr)) == 0;
+>     unsigned char operator ==(char ch) const {
+>         return equals(ch);
 >     }
 >     unsigned char operator ==(const String &rhs) const {
 >         return equals(rhs);
@@ -2236,6 +2204,9 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >     }
 >     unsigned char operator ==(const __FlashStringHelper *fstr) const {
 >         return strcmp_P(buffer(), reinterpret_cast<PGM_P>(fstr)) == 0;
+>     }
+>     unsigned char operator !=(char ch) const {
+>         return !equals(ch);
 >     }
 >     unsigned char operator !=(const String &rhs) const {
 >         return !equals(rhs);
@@ -2251,28 +2222,145 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >     unsigned char operator >(const String &rhs) const;
 >     unsigned char operator <=(const String &rhs) const;
 >     unsigned char operator >=(const String &rhs) const;
->     unsigned char equalsIgnoreCase(const String &s) const;
->     unsigned char equalsIgnoreCase(const char *cstr) const {
->         return strcasecmp_P(buffer(), cstr) == 0;
+> 
+>     int compareTo(const String &s) const;
+> 
+>     //
+>     // equals()
+>     //
+>     // changed behaviour:
+>     // any nullptr argument will return false -> String.equals(nullptr) does not return true if String is empty
+> 
+>     // the terminating NUL byte is not considered part of the string
+>     // String.equals('\0') always returns false, even if String is empty
+>     // use length() == 0 to determine if a string is empty
+>     unsigned char equals(char ch) const {
+>         if (length() != 1 || !ch) {
+>             return false;
+>         }
+>         return buffer()[0] == ch;
 >     }
->     unsigned char equalsIgnoreCase(const __FlashStringHelper *fstr) const {
->         return strcasecmp_P(buffer(), reinterpret_cast<PGM_P>(fstr)) == 0;
+> 
+>     unsigned char equals(const String &str) const {
+>         if (this == &str) {
+>             return true;
+>         }
+>         if (length() != str.length()) {
+>             return false;
+>         }
+>         return strcmp(buffer(), str.buffer()) == 0;
 >     }
+> 
+>     unsigned char equals(const char *cStr) const {
+>         if (!cStr) {
+>             return false;
+>         }
+>         if (length() == 0) {
+>             return (*cStr == 0);
+>         }
+>         return strcmp(buffer(), cStr) == 0;
+>     }
+> 
+>     unsigned char equals(const __FlashStringHelper *fStr) const {
+>         if (!fStr) {
+>             return false;
+>         }
+>         return strcmp_P(buffer(), reinterpret_cast<PGM_P>(fStr)) == 0;
+>     }
+> 
+>     //
+>     // equals() with offset
+>     //
+> 
+>     unsigned char equals(const String &str, size_t offset) const {
+>         size_t len1;
+>         size_t len2;
+>         if (((len1 = length()) == 0) || (offset >= len1) || ((len2 = str.length()) == 0) || ((len1 + offset) != len2)) {
+>             return false;
+>         }
+>         return strcmp(buffer() + offset, str.c_str()) == 0;
+>     }
+> 
+>     unsigned char equals(const char *cStr, size_t offset) const {
+>         if (!cStr || !*cStr || offset >= length()) {
+>             return false;
+>         }
+>         return strcmp(buffer() + offset, cStr) == 0;
+>     }
+> 
+>     unsigned char equals(const __FlashStringHelper *fStr, size_t offset) const {
+>         if (!fStr || offset >= length()) {
+>             return false;
+>         }
+>         return strcmp_P(buffer() + offset, reinterpret_cast<PGM_P>(fStr)) == 0;
+>     }
+> 
+>     //
+>     // equalsIgnoreCase() with offset
+>     //
+> 
+>     unsigned char equalsIgnoreCase(const String &str, size_t offset = 0) const {
+>         if (offset == 0 && this == &str) {
+>             return true;
+>         }
+>         size_t len1;
+>         size_t len2;
+>         if (((len1 = length()) == 0) || (offset >= len1) || ((len2 = str.length()) == 0) || ((len1 + offset) != len2)) {
+>             return false;
+>         }
+>         return strcasecmp(buffer() + offset, str.c_str()) == 0;
+>     }
+> 
+>     unsigned char equalsIgnoreCase(const char *cStr, size_t offset = 0) const {
+>         if (!cStr || !*cStr || offset >= length()) {
+>             return false;
+>         }
+>         return strcasecmp(buffer() + offset, cStr) == 0;
+>     }
+> 
+>     unsigned char equalsIgnoreCase(const __FlashStringHelper *fStr, size_t offset = 0) const {
+>         if (!fStr || offset >= length()) {
+>             return false;
+>         }
+>         return strcasecmp_P(buffer() + offset, reinterpret_cast<PGM_P>(fStr)) == 0;
+>     }
+> 
+>     //
+>     // equalsConstantTime
+>     //
 > 
 >     unsigned char equalsConstantTime(const String &s) const;
 > 
-> protected:
+>     //
+>     // _startsWith
+>     //
+> 
 >     inline __attribute__((__always_inline__))
 >         unsigned char _startsWith(const char *prefix, size_t prefixLen, size_t offset) const {
->         return prefixLen && (length() >= prefixLen + offset) && !strncmp_P(c_str() + offset, prefix, prefixLen);
+>         return prefixLen && (length() >= prefixLen + offset) && !strncmp(c_str() + offset, prefix, prefixLen);
 >     }
 >     inline __attribute__((__always_inline__))
 >         unsigned char _startsWith_P(PGM_P prefix, size_t prefixLen, size_t offset) const {
 >         return prefixLen && (length() >= prefixLen + offset) && !strncmp_P(c_str() + offset, prefix, prefixLen);
 >     }
-> public:
+>     inline __attribute__((__always_inline__))
+>         unsigned char _startsWithIgnoreCase(const char *prefix, size_t prefixLen, size_t offset) const {
+>         return prefixLen && (length() >= prefixLen + offset) && !strncasecmp(c_str() + offset, prefix, prefixLen);
+>     }
+>     inline __attribute__((__always_inline__))
+>         unsigned char _startsWithIgnoreCase_P(PGM_P prefix, size_t prefixLen, size_t offset) const {
+>         return prefixLen && (length() >= prefixLen + offset) && !strncasecmp_P(c_str() + offset, prefix, prefixLen);
+>     }
+> 
+>     //
+>     // startsWith(<char|const char *|const String &|const __FlashStringHelper *>[,offset]])
+>     //
+> 
 >     unsigned char startsWith(char ch) const {
 >         return (length() != 0) && (buffer()[0] == ch);
+>     }
+>     unsigned char startsWith(char ch, size_t offset) const {
+>         return (length() > offset) && (buffer()[offset] == ch);
 >     }
 >     unsigned char startsWith(const char *prefix, size_t offset = 0) const {
 >         return prefix && _startsWith(prefix, strlen(prefix), offset);
@@ -2285,18 +2373,53 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >         return prefix && _startsWith_P(reinterpret_cast<PGM_P>(prefix), strlen_P(reinterpret_cast<PGM_P>(prefix)), offset);
 >     }
 > 
-> protected:
+>     //
+>     // startsWithIgnoreCase(<char|const char *|const String &|const __FlashStringHelper *>[,offset]])
+>     //
+> 
+>     unsigned char startsWithIgnoreCase(char ch, size_t offset = 0) const {
+>         return (length() > offset) && (tolower(buffer()[offset]) == tolower(ch));
+>     }
+>     unsigned char startsWithIgnoreCase(const char *prefix, size_t offset = 0) const {
+>         return prefix && _startsWithIgnoreCase(prefix, strlen(prefix), offset);
+>     }
+>     unsigned char startsWithIgnoreCase(const String &prefix, size_t offset = 0) const {
+>         size_t len;
+>         return ((len = prefix.length())) != 0 && _startsWithIgnoreCase(prefix.buffer(), len, offset);
+>     }
+>     unsigned char startsWithIgnoreCase(const __FlashStringHelper *prefix, size_t offset = 0) const {
+>         return prefix && _startsWithIgnoreCase_P(reinterpret_cast<PGM_P>(prefix), strlen_P(reinterpret_cast<PGM_P>(prefix)), offset);
+>     }
+> 
+>     //
+>     // _endsWith
+>     //
+> 
+>     inline __attribute__((__always_inline__))
+>         unsigned char _endsWith(const char *suffix, size_t suffixLen) const {
+>         size_t len;
+>         return suffixLen && ((len = length()) >= suffixLen) && !strcmp(buffer() + len - suffixLen, suffix);
+>     }
 >     inline __attribute__((__always_inline__))
 >         unsigned char _endsWith_P(PGM_P suffix, size_t suffixLen) const {
 >         size_t len;
 >         return suffixLen && ((len = length()) >= suffixLen) && !strcmp_P(buffer() + len - suffixLen, suffix);
 >     }
 >     inline __attribute__((__always_inline__))
->         unsigned char _endsWith(const char *suffix, size_t suffixLen) const {
+>         unsigned char _endsWithIgnoreCase(const char *suffix, size_t suffixLen) const {
 >         size_t len;
->         return suffixLen && ((len = length()) >= suffixLen) && !strcmp(buffer() + len - suffixLen, suffix);
+>         return suffixLen && ((len = length()) >= suffixLen) && !strcasecmp(buffer() + len - suffixLen, suffix);
 >     }
-> public:
+>     inline __attribute__((__always_inline__))
+>         unsigned char _endsWithIgnoreCase_P(PGM_P suffix, size_t suffixLen) const {
+>         size_t len;
+>         return suffixLen && ((len = length()) >= suffixLen) && !strcasecmp_P(buffer() + len - suffixLen, suffix);
+>     }
+> 
+>     //
+>     // endsWith
+>     //
+> 
 >     unsigned char endsWith(char ch) const {
 >         auto len = length();
 >         return (len != 0) && (buffer()[len - 1] == ch);
@@ -2309,6 +2432,24 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >     }
 >     unsigned char endsWith(const __FlashStringHelper *suffix) const {
 >         return suffix && _endsWith_P(reinterpret_cast<PGM_P>(suffix), strlen_P(reinterpret_cast<PGM_P>(suffix)));
+>     }
+> 
+>     //
+>     // endsWithIgnoreCase
+>     //
+> 
+>     unsigned char endsWithIgnoreCase(char ch) const {
+>         auto len = length();
+>         return (len != 0) && (tolower(buffer()[len - 1]) == tolower(ch));
+>     }
+>     unsigned char endsWithIgnoreCase(const String &suffix) const {
+>         return _endsWithIgnoreCase(suffix.buffer(), suffix.length());
+>     }
+>     unsigned char endsWithIgnoreCase(const char *suffix) const {
+>         return suffix && _endsWithIgnoreCase(suffix, strlen(suffix));
+>     }
+>     unsigned char endsWithIgnoreCase(const __FlashStringHelper *suffix) const {
+>         return suffix && _endsWithIgnoreCase_P(reinterpret_cast<PGM_P>(suffix), strlen_P(reinterpret_cast<PGM_P>(suffix)));
 >     }
 > 
 >     // character access
@@ -2326,16 +2467,12 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >     const char *begin() const { return c_str(); }
 >     const char *end() const { return c_str() + length(); }
 > 
->     // search
->     int indexOf(char ch) const;
->     int indexOf(char ch, unsigned int fromIndex) const;
->     int indexOf(const String &str) const;
->     int indexOf(const String &str, unsigned int fromIndex) const;
-> 
 > protected:
->     int _indexOf(const char *find, size_t fromIndex) const
+>     // findLength is optional, provide only if available
+>     int _indexOf(const char *find, size_t fromIndex, size_t findLength = ~0) const
 >     {
->         if (!find || length() == 0) {
+>         size_t len;
+>         if (!find || !findLength || ((len = length()) == 0) || (fromIndex + findLength >= len)) {
 >             return -1;
 >         }
 >         auto ptr = buffer();
@@ -2346,13 +2483,42 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >         return idxPtr - ptr;
 >     }
 > 
->     int _indexOf_P(PGM_P find, size_t fromIndex) const
+>     int _indexOfIgnoreCase(const char *find, size_t fromIndex, size_t findLength = ~0) const
 >     {
->         if (!find || length() == 0) {
+>         size_t len;
+>         if (!find || !findLength || ((len = length()) == 0) || (fromIndex + findLength >= len)) {
+>             return -1;
+>         }
+>         auto ptr = wbuffer();
+>         auto idxPtr = stristr(ptr + fromIndex, find);
+>         if (!idxPtr) {
+>             return -1;
+>         }
+>         return idxPtr - ptr;
+>     }
+> 
+>     int _indexOf_P(PGM_P find, size_t fromIndex, size_t findLength = ~0) const
+>     {
+>         size_t len;
+>         if (!find || !findLength || ((len = length()) == 0) || (fromIndex + findLength >= len)) {
 >             return -1;
 >         }
 >         auto ptr = buffer();
 >         auto idxPtr = strstr_P(ptr + fromIndex, find);
+>         if (!idxPtr) {
+>             return -1;
+>         }
+>         return idxPtr - ptr;
+>     }
+> 
+>     int _indexOfIgnoreCase_P(PGM_P find, size_t fromIndex, size_t findLength = ~0) const
+>     {
+>         size_t len;
+>         if (!find || !findLength || ((len = length()) == 0) || (fromIndex + findLength >= len)) {
+>             return -1;
+>         }
+>         auto ptr = buffer();
+>         auto idxPtr = stristr_P(ptr + fromIndex, find);
 >         if (!idxPtr) {
 >             return -1;
 >         }
@@ -2455,12 +2621,48 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 > 
 > 
 > public:
+>     // search
+>     int indexOf(char ch, unsigned int fromIndex) const;
+>     int indexOf(const String &str) const;
+>     int indexOf(const String &str, unsigned int fromIndex) const;
+> 
+>     int indexOf(char c) const {
+>         return indexOf(c, 0);
+>     }
+> 
 >     int indexOf(const char *str, unsigned int fromIndex = 0) const {
 >         return _indexOf(str, fromIndex);
 >     }
 >     int indexOf(const __FlashStringHelper *fstr, unsigned int fromIndex = 0) const {
 >         return _indexOf_P(reinterpret_cast<PGM_P>(fstr), fromIndex);
 >     }
+> 
+> 
+>     int indexOfIgnoreCase(char c) const {
+>         return indexOfIgnoreCase(c, 0);
+>     }
+> 
+>     int indexOfIgnoreCase(char ch, unsigned int fromIndex) const {
+>         if (fromIndex >= len())
+>             return -1;
+>         const char *temp = strichr(buffer() + fromIndex, ch);
+>         if (temp == NULL)
+>             return -1;
+>         return temp - buffer();
+>     }
+> 
+> 
+>     int indexOfIgnoreCase(const char *str, unsigned int fromIndex = 0) const {
+>         return _indexOfIgnoreCase(str, fromIndex);
+>     }
+>     int indexOfIgnoreCase(const String &str, unsigned int fromIndex = 0) const {
+>         return _indexOfIgnoreCase(str.c_str(), fromIndex, str.length());
+>     }
+>     int indexOfIgnoreCase(const __FlashStringHelper *fstr, unsigned int fromIndex = 0) const {
+>         return _indexOfIgnoreCase_P(reinterpret_cast<PGM_P>(fstr), fromIndex);
+>     }
+> 
+> 
 >     int lastIndexOf(char ch) const {
 >         return _lastIndexOf(ch);
 >     }
@@ -2687,11 +2889,11 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >     // copy and move
 >     String &copy(const char *cstr, unsigned int length);
 >     String &copy(const __FlashStringHelper *pstr, unsigned int length);
-320c666
+320c893
 <         void move(String &rhs);
 ---
 >     void move(String &rhs);
-324,355c670,701
+324,355c897,928
 < class StringSumHelper: public String {
 <     public:
 <         StringSumHelper(const String &s) :
@@ -2757,10 +2959,9 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >     StringSumHelper(double num) :
 >         String(num) {
 >     }
-356a703,709
+356a930,935
 > 
 > #ifdef _MSC_VER
-> }
 > #include "misc_string_inline.h"
 > #else
 > #include "KFCBaseLibrary/include/misc_string_inline.h"

@@ -14,22 +14,24 @@
 #endif
 
 #if PIN_MONITOR_USE_GPIO_INTERRUPT == 0 && PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS == 0
-#include <interrupts.h>
 #endif
+#include <interrupts.h>
 
 namespace PinMonitor {
 
     Interrupt::EventBuffer eventBuffer;
+    uint16_t interrupt_levels;
 
 // ------------------------------------------------------------------------
 // implementation with GPIO interrupt instead of attachInterrupt...
 // ------------------------------------------------------------------------
 #if PIN_MONITOR_USE_GPIO_INTERRUPT
 
-    uint16_t interrupt_levels;
 
     void GPIOInterruptsEnable()
     {
+        // #define GPCI   7  //INT_TYPE (3bits) 0:disable,1:rising,2:falling,3:change,4:low,5:high
+
         ETS_GPIO_INTR_DISABLE();
         eventBuffer.clear();
         for(auto pin: Interrupt::kPins) {
@@ -58,15 +60,18 @@ namespace PinMonitor {
         auto levels = static_cast<uint16_t>(GPI); // we skip GPIO16 since it cannot handle interrupts anyway
 
         // to keep the code simple and small in here, just save the time and the GPIO input state
-        ETS_GPIO_INTR_DISABLE();
+        // ETS_GPIO_INTR_DISABLE();
+        noInterrupts();
         for(auto pin: kPins) {
-            if ((status & PinAndMask(pin).mask) | ((PinMonitor::interrupt_levels & PinAndMask(pin).mask) ^ (levels & PinAndMask(pin).mask))) { // 842 free IRAM
-            // if ((status & mask) && (static_cast<bool>(PinMonitor::interrupt_levels & mask) != static_cast<bool>(levels &  mask))) { // 826 free IRAM
+            // if ((status & PinAndMask(pin).mask) | ((PinMonitor::interrupt_levels & PinAndMask(pin).mask) ^ (levels & PinAndMask(pin).mask))) { // 842 free IRAM
+            if ((status & PinAndMask(pin).mask) && (static_cast<bool>(PinMonitor::interrupt_levels & PinAndMask(pin).mask) != static_cast<bool>(levels &  PinAndMask(pin).mask))) { // 826 free IRAM
+            // if (status & PinAndMask(pin).mask) {
                 PinMonitor::eventBuffer.emplace_back(micros(), pin, levels);
             }
         }
         PinMonitor::interrupt_levels = levels;
-        ETS_GPIO_INTR_ENABLE();
+        interrupts();
+        // ETS_GPIO_INTR_ENABLE();
     }
 
 #elif PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS == 0
@@ -92,7 +97,8 @@ namespace PinMonitor {
         if (status == 0 || interrupt_reg == 0) {
             return;
         }
-        ETS_GPIO_INTR_DISABLE();
+        noInterrupts();
+        // ETS_GPIO_INTR_DISABLE();
         uint8_t i = 0;
         uint32_t changedbits = status & interrupt_reg; // remove bits that do not have an active handler otherwise it results in a nullptr call
         while (changedbits) {
@@ -100,12 +106,10 @@ namespace PinMonitor {
                 i++;
             }
             changedbits &= ~(1 << i);
-            {
-                esp8266::InterruptLock irqLock; // stop other interrupts
-                interrupt_handlers[i].fn(interrupt_handlers[i].arg);
-            }
+            interrupt_handlers[i].fn(interrupt_handlers[i].arg);
         }
-        ETS_GPIO_INTR_ENABLE();
+        interrupts();
+        // ETS_GPIO_INTR_ENABLE();
     }
 
     // mode is CHANGE

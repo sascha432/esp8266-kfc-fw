@@ -165,22 +165,54 @@ void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::Depe
         uint8_t pin = pinPtr->getPin();
         auto debounce = pinPtr->getDebounce();
         if (debounce) {
+            __LDBG_printf("pin=%02u init debouncer=%d states=%s", pin, (debounce ? (deepSleepPinState.activeHigh() == false) : -1), BitsToStr<16, true>(states).c_str());
             debounce->setState(deepSleepPinState.activeHigh() == false);
             if (states & _BV(pin)) {
-                PinMonitor::eventBuffer.emplace_back(2000, pin, interrupt_levels); // place them at 2ms
+                __LDBG_printf("pin=%02u button down", pin);
+                // __LDBG_printf("pin=%02u button states=%s interrupt_levels=%s mask=%s", pin, BitsToStr<16, true>(states).c_str(), BitsToStr<16, true>(interrupt_levels).c_str(), BitsToStr<16, true>(_BV(pin)).c_str());
+
+                // uint32_t time = 2000;
+                // pinMonitor._event(pin, debounce->debounce(false, 1, time, time / 1000, time), time / 1000);
+                // time += 10000;
+                // pinMonitor._event(pin, debounce->debounce(false, 0, time, time / 1000, time), time / 1000);
+                // // pinMonitor._event(pin, debounce->debounce(~interrupt_levels, 0, time, time / 1000, time), time / 1000);
+                // time += pinMonitor.getDebounceTime() * 1000 + 1000;
+                // pinMonitor._event(pin, debounce->debounce(true, 1, time, time / 1000, time), time / 1000);
+                // time += 10000;
+                // pinMonitor._event(pin, debounce->debounce(true, 0, time, time / 1000, time), time / 1000);
+                // // pinMonitor._event(pin, debounce->debounce(interrupt_levels, 0, time, time / 1000, time), time / 1000);
+
+                PinMonitor::eventBuffer.emplace_back(2000, pin, ~interrupt_levels, false);
+                PinMonitor::eventBuffer.emplace_back(2000 + (pinMonitor.getDebounceTime() * 1000), pin, interrupt_levels, false);
             }
-            __LDBG_printf("pin=%02u init debouncer=%d queued=%u states=%s interrupt_levels=%s mask=%s", pin, (debounce ? (deepSleepPinState.activeHigh() == false) : -1), (states & _BV(pin)) != 0, BitsToStr<16, true>(states).c_str(), BitsToStr<16, true>(interrupt_levels).c_str(), BitsToStr<16, true>(_BV(pin)).c_str());
         }
         else {
             // this is not a button
             __LDBG_printf("pin=%02u init debouncer=none", pin);
         }
     }
+    // __LDBG_printf("feeding queue# size=%u", PinMonitor::eventBuffer.size());
 
-    __LDBG_printf("feeding queue size=%u", PinMonitor::eventBuffer.size());
-    pinMonitor._loop();
+    // if (states & kButtonPinsMask) { // skip if no button is down
+    //     delay(pinMonitor.getDebounceTime() + 2);
 
-    __LDBG_printf("enabling GPIO interrupts");
+    //     for(auto &pinPtr: pinMonitor.getPins()) {
+    //         uint8_t pin = pinPtr->getPin();
+    //         auto debounce = pinPtr->getDebounce();
+    //         if (debounce) {
+    //             if (states & _BV(pin)) {
+    //                 // simulate button down
+    //                 // PinMonitor::eventBuffer.emplace_back(1000, pin, ~interrupt_levels, false);
+    //                 // PinMonitor::eventBuffer.emplace_back(2000 + (pinMonitor.getDebounceTime() * 1000), pin, interrupt_levels, false);
+    //                 PinMonitor::eventBuffer.emplace_back(micros(), pin, interrupt_levels, false);
+    //             }
+    //             __LDBG_printf("pin=%02u button states=%s interrupt_levels=%s mask=%s", pin, BitsToStr<16, true>(states).c_str(), BitsToStr<16, true>(interrupt_levels).c_str(), BitsToStr<16, true>(_BV(pin)).c_str());
+    //         }
+    //     }
+
+    //     __LDBG_printf("feeding queue#2 size=%u", PinMonitor::eventBuffer.size());
+    //     pinMonitor._loop();
+    // }
 
     // read pins again
     auto currentStates = deepSleepPinState._readStates();
@@ -192,11 +224,14 @@ void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::Depe
     // and compare if another state must be pushed
     for(auto pin: kButtonPins) {
         if ((states & _BV(pin)) ^ (currentStates & _BV(pin))) {
-            PinMonitor::eventBuffer.emplace_back(micros(), pin, interrupt_levels); //interrupt_levels); // add final state
+            PinMonitor::eventBuffer.emplace_back(micros(), pin, interrupt_levels, false); // add final state
             __LDBG_printf("pin=%02u final queued=%u states=%s interrupt_levels=%s mask=%s", pin, interrupt_levels, BitsToStr<16, true>(currentStates).c_str(), BitsToStr<16, true>(interrupt_levels).c_str(), BitsToStr<16, true>(_BV(pin)).c_str());
         }
     }
 
+    pinMonitor._loop();
+
+    __LDBG_printf("enabling GPIO interrupts");
     // clear all interrupts now
     GPIEC = kButtonPinsMask;  // clear interrupts for all pins
     ETS_GPIO_INTR_ENABLE();
@@ -426,8 +461,7 @@ void RemoteControlPlugin::_loop()
 
 void RemoteControlPlugin::_enterDeepSleep()
 {
-    _startupTimings.setDeepSleep(millis());
-    _startupTimings.log();
+    _maxAwakeTimeout = 0; // avoid calling it repeatedly
     _disableAutoSleepTimeout();
 
 #if SYSLOG_SUPPORT

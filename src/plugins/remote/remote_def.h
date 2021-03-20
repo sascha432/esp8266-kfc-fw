@@ -47,9 +47,9 @@
 #define IOT_REMOTE_CONTROL_COMBO_BTN                            1
 #endif
 
-#if !PIN_MONITOR_USE_GPIO_INTERRUPT
-#error PIN_MONITOR_USE_GPIO_INTERRUPT=1 required
-#endif
+// #if !PIN_MONITOR_USE_GPIO_INTERRUPT
+// #error PIN_MONITOR_USE_GPIO_INTERRUPT=1 required
+// #endif
 
 using namespace PinMonitor;
 

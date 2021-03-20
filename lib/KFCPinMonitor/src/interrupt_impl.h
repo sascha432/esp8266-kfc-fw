@@ -17,7 +17,6 @@ namespace PinMonitor {
     void GPIOInterruptsEnable();
     void GPIOInterruptsDisable();
 
-    extern uint16_t interrupt_levels;
     extern void ICACHE_RAM_ATTR pin_monitor_interrupt_handler(void *ptr);
 
     namespace Interrupt {
@@ -47,6 +46,7 @@ namespace PinMonitor {
 
     class RotaryEncoder;
 
+    extern uint16_t interrupt_levels;
     extern Interrupt::EventBuffer eventBuffer;
 
 }

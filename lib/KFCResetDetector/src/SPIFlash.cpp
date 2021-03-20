@@ -3,6 +3,7 @@
  */
 
 #include "SPIFlash.h"
+#include "logger.h"
 
 #if defined(ESP8266)
 #include "coredecls.h"
@@ -15,7 +16,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-
+#define DEBUG_RD_SPIFLASH 0
 #if DEBUG_RD_SPIFLASH
 
 static  SpiFlashOpResult _spi_flash_erase_sector(uint16 sec)
@@ -86,7 +87,7 @@ namespace SPIFlash {
     }
 
 
-    FindResultVector FlashStorage::find(uint16_t fromSector, uint16_t toSector, uint16_t minSpace, bool sort, uint8_t limit) const
+    FindResultVector FlashStorage::find(uint16_t fromSector, uint16_t toSector, uint16_t minSpace, bool sort, uint16_t limit) const
     {
         FindResultVector results;
         for(auto i = fromSector; i <= toSector && limit; i++) {
@@ -202,6 +203,9 @@ namespace SPIFlash {
             __LDBG_printf("read failed offset=0x%08x", FlashResult::headerOffset(fromSector));
             return FlashResult(FlashResultType::READ, fromSector);
         }
+        if(!header) {
+
+        }
         // create new sector
         auto result = init(toSector);
         if (!result) {
@@ -218,6 +222,7 @@ namespace SPIFlash {
 
     bool FlashStorage::append(const uint32_t *data, uint16_t size, FlashResult &result) const
     {
+        __LDBG_printf("COPY STACK to offset=%x  size=%u", FlashResult::dataOffset(result._sector) + result._size, size);
         return _copy(data, FlashResult::dataOffset(result._sector) + result._size, size, result);
     }
 
@@ -282,6 +287,7 @@ namespace SPIFlash {
         // finalize by copying size, crc and writing it to the flash sector
         result._header._crc32 = result._crc;
         result._header._size = result._size;
+        result._header._version++;
         if (result._header._size > kSectorMaxSize) {
             result = FlashResult(FlashResultType::OUT_OF_RANGE, result._sector);
             __LDBG_printf("size %u > max size=%u", result._header._size, kSectorMaxSize);
@@ -303,17 +309,6 @@ namespace SPIFlash {
             __LDBG_printf("write failed offset=0x%08x size=%u", result._sector * SPI_FLASH_SEC_SIZE + sizeof(result._header._magic), sizeof(result._header) - sizeof(result._header._magic));
             return false;
         }
-#if DEBUG_RD_SPIFLASH
-        {
-            auto header = FlashHeader();
-            rc = _spi_flash_read(FlashResult::headerOffset(result._sector),  reinterpret_cast<uint32_t *>(&header), sizeof(header));
-            if (rc != SPI_FLASH_RESULT_OK || memcmp(&header, &result._header, sizeof(header)) != 0) {
-                __LDBG_printf("written = %s", printable_string(&result._header, sizeof(result._header)).c_str());
-                __LDBG_printf("read    = %s", printable_string(&header, sizeof(header)).c_str());
-
-            }
-        }
-#endif
         result._result = FlashResultType::SUCCESS;
         return true;
     }
@@ -368,26 +363,53 @@ namespace SPIFlash {
         return crc;
     }
 
-    bool FlashStorage::format() const
+    bool FlashStorage::clear(ClearStorageType type, uint32_t options) const
     {
-        FlashHeader hdr;
-        for(auto i = _firstSector; i <= _lastSector; i++) {
-            auto rc = _spi_flash_read(FlashResult::headerOffset(i), reinterpret_cast<uint32_t *>(&hdr), sizeof(hdr));
-            if (rc != SPI_FLASH_RESULT_OK) {
-                __DBG_printf("sector=0x%04x read failure", i);
+        switch(type) {
+            case ClearStorageType::REMOVE_PREVIOUS_VERSIONS:
+            case ClearStorageType::SHRINK:
+                Logger_error(F("SaveCrash log strorage clear type not supported: %u"), type);
                 return false;
-            }
-            // erase only if the magic can be found or the sector contains any data
-            if (hdr._magic == kFlashMagic) {
+            case ClearStorageType::NONE:
+                return false;
+            default:
+                break;
+        }
 
-                memset(&hdr, 0, sizeof(hdr));
-                // try to overwrite the flash memory
-                __DBG_printf("sector=0x%04x trying to remove magic", i);
-                rc = _spi_flash_write(FlashResult::headerOffset(i), reinterpret_cast<uint32_t *>(&hdr), sizeof(hdr));
-                if (rc == SPI_FLASH_RESULT_OK) {
-                    rc = _spi_flash_read(FlashResult::headerOffset(i), reinterpret_cast<uint32_t *>(&hdr), sizeof(hdr));
-                    if (rc == SPI_FLASH_RESULT_OK && hdr._magic != kFlashMagic) {
+        int errors = 0;
+        FlashHeader hdr;
+
+        {
+            for(auto i = _firstSector; i <= _lastSector; i++) {
+                auto offset = FlashResult::headerOffset(i);
+                auto rc = _spi_flash_read(offset, reinterpret_cast<uint32_t *>(&hdr), sizeof(hdr));
+                if (rc != SPI_FLASH_RESULT_OK) {
+                    __DBG_printf("sector=0x%04x read failure", i);
+                    errors++;
+                    continue;
+                }
+                if (type == ClearStorageType::ERASE) {
+                    if (hdr._magic != kFlashMagic) {
+                        __DBG_printf("sector=0x%04x offset=0x%08x magic=%08x", i, offset, hdr._magic);
                         continue;
+                    }
+
+                    // erase only if the magic can be found or the sector contains any data
+                    memset(&hdr, 0xf0, sizeof(hdr));
+                    // try to overwrite the flash memory
+                    __DBG_printf("sector=0x%04x trying to remove magic", i);
+                    rc = _spi_flash_write(offset, reinterpret_cast<uint32_t *>(&hdr), sizeof(hdr));
+                    if (rc == SPI_FLASH_RESULT_OK) {
+                        rc = _spi_flash_read(offset, reinterpret_cast<uint32_t *>(&hdr), sizeof(hdr));
+                        __DBG_printf("sector=0x%04x offset=0x%08x magic=%08x rc=%u", i, offset, hdr._magic, rc);
+                        if (rc != SPI_FLASH_RESULT_OK) {
+                            __DBG_printf("sector=0x%04x read failure", i);
+                            errors++;
+                        }
+                        else if (hdr._magic != kFlashMagic) {
+                            // skip erase
+                            continue;
+                        }
                     }
                 }
 
@@ -395,14 +417,13 @@ namespace SPIFlash {
                 rc = _spi_flash_erase_sector(i);
                 if (rc != SPI_FLASH_RESULT_OK) {
                     __DBG_printf("sector=0x%04x erase failed", i);
-                    return false;
+                    errors++;
+                    continue;
                 }
             }
-            else {
-                __DBG_printf("sector=0x%04x magic mismatch", i);
-            }
+
         }
-        return true;
+        return errors == 0;
     }
 
 }

@@ -406,3 +406,85 @@ $._____rgb565_to_888 = function(color) {
     var r5 = (color >> 11);
     return [(r5 * 527 + 23) >> 6, (g6 * 259 + 33) >> 6, (b5 * 527 + 23) >> 6];
 }
+
+// the example requires jQuery Color
+//
+// flash stores the css properties and runs animation 'repeat' times to change back and forth
+// bewteen the values. each phase can have a different speed and a hold delay before
+//
+// $('button').flash({color: 'red'}, 3);
+// $('button').flash({color: 'red'}, 1, 'slow');
+// $('button').flash({color: 'red'}, 5 'fast');
+// $('button').flash({color: 'red'}, 1, 750, 300, 750, 150);
+//
+jQuery.fn.extend({
+	flash: function(css, repeat, speed, hold, reverse, repeat_delay) {
+		var repeat = repeat || 1;
+        if (speed === undefined || parseInt(speed) == 0) {
+            speed = 333;
+        }
+        else if (speed == 'slow') {
+            speed = 750;
+        }
+        else if (speed == 'fast') {
+            speed = 100;
+        }
+		var hold = hold || Math.round(speed / 2);
+		var reverse = reverse || speed;
+		var repeat_delay = repeat_delay || Math.round(speed / 4);
+		jQuery.each(this, function(key, val) {
+			var element = $(val);
+			if (element.queue().length == 0) {
+				var restore_css = {};
+				$(Object.keys(css)).each(function(key, val) {
+					restore_css[val] = element.css(val);
+				});
+				for(var i = 0; i < repeat; i++) {
+					element.animate(css, speed);
+					element.delay(hold);
+					element.animate(restore_css, reverse);
+					if (repeat_delay) {
+						element.delay(repeat_delay);
+					}
+				}
+			}
+		});
+        return this;
+	}
+});
+
+
+//
+// copy text to clipboard when the on click event is executed and
+// use $.flash() to signal success. default animation is changing
+// to white text on a green background 3 times
+//
+// $.clipboard($('button'), 'copy this to the clipboard');
+// $.clipboard($('button'), 'copy this to the clipboard', {color: 'red'} 300, 3});
+//
+$.clipboard = function(element, text, flash_css_or_color, flash_speed, flash_repeat) {
+    css = flash_css_or_color || {backgroundColor: '#28a745', color: 'white'};
+    if (typeof css !== 'object') {
+        css = {color: css };
+    }
+    flash_speed = flash_speed || 200;
+    flash_repeat = flash_repeat || 3;
+    element.on('click', function(e) {
+        e.preventDefault();
+        navigator.clipboard.writeText(text).then(function() {
+            element.flash(css, flash_repeat, flash_speed);
+            window.setTimeout(function() {
+                element.blur();
+            }, flash_speed * flash_repeat * 2.75 + 50);
+        }, function() {
+            alert('Failed to copy text to clipboard');
+        });
+        // var ta = $('<textarea style="width:1px;height:1px;position:absolute:right-100px;overeflow:hidden">');
+        // ta.text(text);
+        // $('body').append(ta);
+        // ta.select();
+        // document.execCommand('copy');
+        // console.log('');
+        // ta.remove();
+    });
+};

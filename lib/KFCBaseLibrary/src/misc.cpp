@@ -523,7 +523,7 @@ String WiFi_disconnect_reason(WiFiDisconnectReason reason)
 int stringlist_find_P_P(PGM_P list, PGM_P find, PGM_P separator/*, int &position*/)
 {
     if (!list || !find || !separator) {
-        return ESNULLP;
+        return -1;
     }
     PGM_P ptr1 = list;
     PGM_P ptr2 = find;
@@ -558,7 +558,7 @@ int stringlist_find_P_P(PGM_P list, PGM_P find, PGM_P separator/*, int &position
 int stringlist_ifind_P_P(PGM_P list, PGM_P find, PGM_P separator/*, int &position*/)
 {
     if (!list || !find || !separator) {
-        return ESNULLP;
+        return -1;
     }
     PGM_P ptr1 = list;
     PGM_P ptr2 = find;

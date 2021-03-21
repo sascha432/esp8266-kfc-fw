@@ -233,25 +233,6 @@ inline bool is_not_PGM_P_or_aligned(const void * ptr)
 
 #endif
 
-#if defined(ESP8266) || defined(ESP32)
-
-#else
-
-inline PGM_P strchr_P(PGM_P src, int c) {
-    return strchr(src, c);
-}
-
-inline PGM_P strrchr_P(PGM_P src, int c) {
-    return strrchr(src, c);
-}
-
-inline char *strdup_P(PGM_P src) {
-    return strdup(src);
-}
-
-
-#endif
-
 // interface
 class TokenizerArgs {
 public:

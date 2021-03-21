@@ -35,8 +35,13 @@
 #include "debug_helper_disable.h"
 #endif
 
-#if defined(ESP8266)
-#include <user_interface.h>
+#include "user_interface.h"
+#include "coredecls.h"
+
+#if ENABLE_DEEP_SLEEP
+namespace DeepSleep {
+    extern "C" uint64_t _realTimeOffset;
+}
 #endif
 
 namespace RTCMemoryManagerNS {
@@ -412,3 +417,58 @@ bool RTCMemoryManager::dump(Print &output, RTCMemoryId displayId) {
     return result;
 }
 #endif
+
+void RTCMemoryManager::setWriteTime(bool enableWriteTime)
+{
+    _enableWriteTime = enableWriteTime;
+    DeepSleep::_realTimeOffset = 0;
+    writeTime(true);
+}
+
+bool RTCMemoryManager::writeTime(bool forceWrite)
+{
+    uint32_t _time[2] = { 0, ~0U };
+    if (_enableWriteTime) {
+        _time[0] = time(nullptr);
+        _time[1] = crc32(&_time[0], sizeof(_time[0]));
+    }
+    if (_enableWriteTime || forceWrite) {
+        system_rtc_mem_write(kTimeMemorySlot, &_time[0], sizeof(_time));
+        __LDBG_printf("WRITETIME %u", _time[0]);
+    }
+    return _enableWriteTime;
+}
+
+uint32_t RTCMemoryManager::readTime(bool set)
+{
+    uint32_t _time[2] = { 0, ~0U };
+    if (system_rtc_mem_read(kTimeMemorySlot, &_time[0], sizeof(_time))) {
+        if ((_time[0] != 0) && (_time[1] != ~0U) && IS_TIME_VALID(_time[0])) {
+            if (_time[1] == crc32(&_time[0], sizeof(_time[0]))) {
+                __LDBG_printf("READTIME %u", _time[0]);
+                struct timeval tv = { static_cast<time_t>(_time[0]), _enableWriteTime ? 0 : static_cast<suseconds_t>(micros()) };
+#if ENABLE_DEEP_SLEEP
+                // apply offset that is set during preinit
+                tv.tv_sec += static_cast<time_t>(DeepSleep::_realTimeOffset / 1000000U);
+                tv.tv_usec += static_cast<suseconds_t>(DeepSleep::_realTimeOffset % 1000000U);
+                __LDBG_printf("adding %u seconds and %u microseconds to the stored RTC value", (uint32_t)(DeepSleep::_realTimeOffset / 1000000U), ((uint32_t)DeepSleep::_realTimeOffset % 1000000U));
+#endif
+                if (set) {
+#if ENABLE_DEEP_SLEEP
+                    DeepSleep::_realTimeOffset = 0;
+#endif
+                    settimeofday(&tv, nullptr);
+                    __DBG_printf("settimeofday %u @ %.3fs", time(nullptr), micros() / 1000000.0);
+                }
+                else {
+                    // remove microseconds and add offset to seconds
+                    _time[0] += (tv.tv_usec - micros()) / 1000000;
+                }
+                return _time[0];
+            }
+        }
+    }
+    return 0;
+}
+
+bool RTCMemoryManager::_enableWriteTime;

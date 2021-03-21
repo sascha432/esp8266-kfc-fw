@@ -164,8 +164,7 @@ DeepSleepParam::DeepSleepParam(milliseconds deepSleepTime, RFMode rfMode) :
             _runtime(0),
             _counter(0),
             _rfMode(rfMode),
-            _wakeupMode(WakeupMode::NONE),
-            _realTime(0)
+            _wakeupMode(WakeupMode::NONE)
 {
 }
 
@@ -187,23 +186,6 @@ __DEEP_SLEEP_INLINE_AWLAYS__
 float DeepSleepParam::getTotalTime() const
 {
     return _totalSleepTime / 1000.0;
-}
-
-__DEEP_SLEEP_INLINE_AWLAYS__
-void DeepSleepParam::setRealTime(time_t time)
-{
-    if (IS_TIME_VALID(time)) {
-        _realTime = time;
-    }
-    else {
-        _realTime = 0;
-    }
-}
-
-__DEEP_SLEEP_INLINE_AWLAYS__
-time_t DeepSleepParam::getRealTime() const
-{
-    return _realTime;
 }
 
 __DEEP_SLEEP_INLINE_AWLAYS__

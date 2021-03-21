@@ -34,6 +34,8 @@ public:
     static constexpr uint8_t kBaseAddress = 64;
     static constexpr uint8_t kLastAddress = kBaseAddress + (kMemorySize / kBlockSize) - 1;
 
+    static constexpr uint8_t kTimeMemorySlot = kBaseAddress + 2;
+
 #elif defined(ESP32)
     static const uint16_t kMemorySize = 256; // can be adjusted
     static const uint8_t kBlockSize = 1;
@@ -115,8 +117,15 @@ public:
 
     static bool dump(Print &output, RTCMemoryId id);
 
+    // real time management
+    static void setWriteTime(bool enableWriteTime);
+    static bool writeTime(bool forceWrite = false);
+    static uint32_t readTime(bool set = true);
+
 private:
     static uint8_t *_read(uint8_t *&data, Header_t &header, Entry_t &entry, RTCMemoryId id);
+
+    static bool _enableWriteTime;
 };
 
 #include <pop_pack.h>

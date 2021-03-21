@@ -1494,13 +1494,32 @@ void KFCConfigurationPlugin::setup(SetupModeType mode, const PluginComponents::D
         struct timeval tv = { static_cast<time_t>(rtc), 0 };
         settimeofday(&tv, nullptr);
 
+    }
+#elif NTP_STORE_STATUS
+    NtpStatus ntp;
+    uint32_t readTime;
+    if ((readTime = RTCMemoryManager::readTime()) != 0) {
+        __DBG_printf("restord system time=%u from RTC memory readTime=%u @ %.3fs", (uint32_t)time(nullptr), readTime, micros() / 1000000.0);
+    }
+    if (RTCMemoryManager::read(RTCMemoryManager::RTCMemoryId::NTP, &ntp, sizeof(ntp)) && ntp) {
+        // update from NtpStatus only if readTime(failed) or _time is greater than the current time
+        if (readTime == 0 || ntp._time > time(nullptr)) {
+            struct timeval tv = { static_cast<time_t>(ntp._time), static_cast<suseconds_t>(micros()) };
+            settimeofday(&tv, nullptr);
+            __DBG_printf("restoring system time=%u from RTC memory=%u @ %.3fs", (uint32_t)time(nullptr), ntp._time, micros() / 1000000.0);
+        }
+    }
+#else
+    if (RTCMemoryManager::readTime() != 0) {
+        __DBG_printf("restord system time=%u from RTC memory readTime=%u @ %.3fs", (uint32_t)time(nullptr), RTCMemoryManager::readTime(false), micros() / 1000000.0);
+    }
+#endif
+
 #if NTP_LOG_TIME_UPDATE
         char buf[32];
         auto now = time(nullptr);
         strftime_P(buf, sizeof(buf), SPGM(strftime_date_time_zone), localtime(&now));
         Logger_notice(F("RTC time: %s"), buf);
-#endif
-    }
 #endif
 
     if (WiFi.isConnected() && !resetDetector.hasWakeUpDetected()) {
@@ -1533,7 +1552,7 @@ void KFCConfigurationPlugin::reconfigure(const String &source)
 
 WebTemplate *KFCConfigurationPlugin::getWebTemplate(const String &name)
 {
-    return __LDBG_new(StatusTemplate);
+    return new StatusTemplate();
 }
 
 extern const char *session_get_token();

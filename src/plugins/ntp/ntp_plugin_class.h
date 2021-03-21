@@ -33,9 +33,13 @@ public:
     static void updateNtpCallback();
     static void _checkTimerCallback(Event::CallbackTimerPtr timer);
 
+
 public:
     static uint32_t _ntpRefreshTimeMillis;
 
 private:
     Event::Timer _checkTimer;
+#if !RTC_SUPPORT
+    Event::Timer _rtcMemUpdate;
+#endif
 };

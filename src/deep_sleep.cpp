@@ -24,13 +24,31 @@
 
 DeepSleep::PinState deepSleepPinState;
 DeepSleep::DeepSleepParam deepSleepParams;
+uint64_t DeepSleep::_realTimeOffset;
 
 using namespace DeepSleep;
 
+
+
 inline static void deep_sleep_preinit()
 {
+    DeepSleep::_realTimeOffset = 0;
     // store states of all PINs
     deepSleepPinState.init();
+
+    if (RTCMemoryManager::read(RTCMemoryManager::RTCMemoryId::DEEP_SLEEP, &deepSleepParams, sizeof(deepSleepParams))) {
+        if (deepSleepParams.isValid()) {
+            // set offset to the amount of time spent in deep sleep
+            // the last deep sleep cycle is not added unless the deep sleep ends
+            // if the device has been woken up by the user, the time cannot be determined
+            // deepSleepParams._currentSleepTime is not subtracted here... since we cannot
+            // know how much of the time has passed already
+            DeepSleep::_realTimeOffset = (((deepSleepParams._totalSleepTime - deepSleepParams._remainingSleepTime) * 1000ULL) + deepSleepParams._runtime);
+#if DEBUG_DEEP_SLEEP
+            __LDBG_printf("real time offset without the last cycle: %.6f", DeepSleep::_realTimeOffset / 1000000.0);
+#endif
+        }
+    }
 
     if (!resetDetector.hasWakeUpDetected()) {
 #if DEBUG_DEEP_SLEEP
@@ -77,20 +95,21 @@ inline static void deep_sleep_preinit()
             if (nextSleepTime == 0) {
 
 #if DEBUG_DEEP_SLEEP
-                __LDBG_printf("wakeup (total=%ums remaining=%ums time=%ums wakeup-runtime/counter=%uµs/%u unixtime=%u)",
-                    deepSleepParams._totalSleepTime, deepSleepParams._remainingSleepTime, deepSleepParams._currentSleepTime, deepSleepParams._runtime, deepSleepParams._counter, deepSleepParams._realTime
+                __LDBG_printf("wakeup (total=%ums remaining=%ums time=%ums wakeup-runtime/counter=%uµs/%u)",
+                    deepSleepParams._totalSleepTime, deepSleepParams._remainingSleepTime, deepSleepParams._currentSleepTime, deepSleepParams._runtime, deepSleepParams._counter
                 );
 #endif
 
                 deepSleepParams._remainingSleepTime = 0;
                 deepSleepParams._currentSleepTime = 0;
-#if !RTC_SUPPORT
-                if (deepSleepParams._realTime) {
-                    struct timeval tv = { static_cast<time_t>(deepSleepParams._realTime + ((deepSleepParams._totalSleepTime + (deepSleepParams._runtime / 1000U)) / 1000U)), 0 };
-                    settimeofday(&tv, nullptr);
-                }
-                __LDBG_printf("stored.time=%ld total=%.3f runtime=%.6f est.time=%ld", deepSleepParams._realTime, deepSleepParams._totalSleepTime / 1000.0, deepSleepParams._runtime / 1000000.0, time(nullptr));
+
+                // calculate total sleep time when waking up...
+                DeepSleep::_realTimeOffset = ((deepSleepParams._totalSleepTime * 1000ULL) + deepSleepParams._runtime);
+#if DEBUG_DEEP_SLEEP
+            __LDBG_printf("real time offset of the compelte deep sleep cycle: %.6f", DeepSleep::_realTimeOffset / 1000000.0);
 #endif
+                deepSleepParams._wakeupMode = WakeupMode::AUTO;
+
             }
             else {
                 deepSleepParams._currentSleepTime = nextSleepTime;
@@ -99,16 +118,10 @@ inline static void deep_sleep_preinit()
                 RTCMemoryManager::write(RTCMemoryManager::RTCMemoryId::DEEP_SLEEP, &deepSleepParams, sizeof(deepSleepParams));
             }
 
-            if (nextSleepTime == 0) {
-                deepSleepParams._wakeupMode = WakeupMode::AUTO;
+            if (nextSleepTime != 0) {
 #if DEBUG_DEEP_SLEEP
-                __LDBG_printf("auto awake cycle (unixtime %u)", deepSleepParams._realTime);
-#endif
-            }
-            else {
-#if DEBUG_DEEP_SLEEP
-                __LDBG_printf("going back to sleep (total=%ums remaining=%ums time=%ums wakeup-runtime/counter=%uµs/%u unixtime=%u)",
-                    deepSleepParams._totalSleepTime, deepSleepParams._remainingSleepTime, deepSleepParams._currentSleepTime, deepSleepParams._runtime, deepSleepParams._counter, deepSleepParams._realTime
+                __LDBG_printf("going back to sleep (total=%ums remaining=%ums time=%ums wakeup-runtime/counter=%uµs/%u)",
+                    deepSleepParams._totalSleepTime, deepSleepParams._remainingSleepTime, deepSleepParams._currentSleepTime, deepSleepParams._runtime, deepSleepParams._counter
                 );
 #endif
                 // go back to sleep
@@ -145,7 +158,6 @@ void DeepSleepParam::dump() {
     __LDBG_printf("_counter=%u", _counter);
     __LDBG_printf("_rfMode=%u", _rfMode);
     __LDBG_printf("_wakeupMode=%u", _wakeupMode);
-    __LDBG_printf("_realTime=%u", _realTime);
 }
 #endif
 
@@ -159,7 +171,6 @@ void DeepSleepParam::enterDeepSleep(milliseconds sleep_time, RFMode rfMode)
 #endif
 
     deepSleepParams.updateRemainingTime();
-    deepSleepParams.setRealTime(time(nullptr));
     RTCMemoryManager::write(RTCMemoryManager::RTCMemoryId::DEEP_SLEEP, &deepSleepParams, sizeof(deepSleepParams));
 
     resetDetector.clearCounter();

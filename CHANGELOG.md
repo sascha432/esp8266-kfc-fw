@@ -64,6 +64,7 @@
 - Support for ArduinoOTA
 - Max. deep sleep time increasse to up to 31 days
 - Replaced EspSaveCrash with own iplementation that writes to flash memory directly and supports multiple sectors
+- RTC emulation using the RTC memory
 
 ## Version 0.0.3
 

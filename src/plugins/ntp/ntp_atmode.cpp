@@ -40,6 +40,8 @@ bool NTPPlugin::atModeHandler(AtModeArgs &args)
         }
         time_t now = time(nullptr);
         char timestamp[64];
+        auto storedTime = RTCMemoryManager::readTime(false);
+        args.printf_P(PSTR("time=%u stored time=%u diff=%d"), (uint32_t)now, storedTime, storedTime - now);
         if (!IS_TIME_VALID(now)) {
             args.printf_P(PSTR("Time is currently not set (%lu). NTP is %s"), now, (System::Flags::getConfig().is_ntp_client_enabled ? FSPGM(enabled) : FSPGM(disabled)));
         }
@@ -62,6 +64,8 @@ bool NTPPlugin::atModeHandler(AtModeArgs &args)
             for(int i = 0; i < 2; i++) {
                 Serial.printf_P(PSTR("ch=%c,m=%d,n=%d,d=%d,s=%d,change=%ld,offset=%ld\n"), tz.__tzrule[i].ch, tz.__tzrule[i].m, tz.__tzrule[i].n, tz.__tzrule[i].d, tz.__tzrule[i].s, tz.__tzrule[i].change, tz.__tzrule[i].offset);
             }
+             auto str = getenv("TZ");
+            Serial.printf_P(PSTR("TZ=%s"), str ? (PGM_P)str : PSTR("(none)"));
         } else if (args.requireArgs(2, 2)) {
             auto arg = args.get(1);
             if (args.isAnyMatchIgnoreCase(0, F("tz"))) {

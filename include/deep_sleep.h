@@ -185,7 +185,6 @@ namespace DeepSleep
         uint16_t _counter;                          // total count of deep sleep cycles for the total amount
         RFMode _rfMode;
         WakeupMode _wakeupMode;
-        time_t _realTime;
 
         DeepSleepParam();
         DeepSleepParam(WakeupMode wakeupMode);
@@ -202,18 +201,22 @@ namespace DeepSleep
         bool isValid() const;
         static uint32_t getDeepSleepMaxMillis();
         float getTotalTime() const;
-        void setRealTime(time_t time);
-        time_t getRealTime() const;
         void updateRemainingTime();
         uint64_t getDeepSleepTimeMicros() const;
         uint32_t _updateRemainingTime();
         WakeupMode getWakeupMode() const;
         void setRFMode(RFMode rfMode);
+
     };
+
+    static constexpr size_t DeepSleepParamSize = sizeof(DeepSleepParam);
 
     #if DEEP_SLEEP_INCLUDE_HPP_INLINE
         #include "deep_sleep.hpp"
     #endif
+
+
+    extern "C" uint64_t _realTimeOffset;
 
 };
 

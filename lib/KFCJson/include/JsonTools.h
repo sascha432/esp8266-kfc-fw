@@ -94,3 +94,21 @@ public:
     }
 };
 
+
+// PrintString with JSON value encoding
+class JsonPrintString : public PrintString {
+public:
+    using PrintString::PrintString;
+
+    virtual size_t write(uint8_t data) override {
+        return JsonTools::printToEscaped(*this, (const char *)&data, 1);
+    }
+
+    virtual size_t write(const uint8_t* buf, size_t size) override;
+    size_t write(const char *buf, size_t size) {
+        auto requiredLen = JsonTools::lengthEscaped(buf, size);
+        reserve(length() + requiredLen);
+        return JsonTools::printToEscaped(*this, buf, size);
+    }
+
+};

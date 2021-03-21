@@ -157,11 +157,60 @@ void WebTemplate::printSSDPUUID(Print &output)
 
 void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 {
+    // ------------------------------------------------------------------------------------
+    // public variables
+    // ------------------------------------------------------------------------------------
     if (key == F("HOSTNAME")) {
         output.print(System::Device::getName());
     }
     else if (key == F("TITLE")) {
         output.print(System::Device::getTitle());
+    }
+    else if (key == F("SELF_URI")) {
+        output.print(_selfUri);
+    }
+    else if (key == F("ALIVE_REDIRECTION")) {
+        if (_aliveRedirection.length()) {
+            output.print(_aliveRedirection);
+        }
+        else {
+            output.print(FSPGM(index_html));
+        }
+    }
+#if DEBUG_ASSETS
+    else if (key == F("DEBUG_ASSETS_URL1")) {
+        output.print(F(DEBUG_ASSETS_URL1));
+    }
+    else if (key == F("DEBUG_ASSETS_URL2")) {
+        output.print(F(DEBUG_ASSETS_URL2));
+    }
+#endif
+    // ------------------------------------------------------------------------------------
+    // requires to be authenticated after the next block
+    // ------------------------------------------------------------------------------------
+    else if (!isAuthenticated()) {
+        // replacements for unauthenticated clients
+        // everything else will be replaced with an empty string
+        if (key == F("IS_CONFIG_DIRTY")) {
+            output.print(FSPGM(_hidden));
+        }
+        else if (key == F("IS_CONFIG_DIRTY_CLASS")) {
+            output.print(FSPGM(hidden));
+        }
+        return;
+    }
+    // ------------------------------------------------------------------------------------
+    // private variables
+    // ------------------------------------------------------------------------------------
+    else if (key == F("UNIQUE_ID")) {
+        WebTemplate::printUniqueId(output, FSPGM(kfcfw), -1);
+    }
+    else if (key == F("SSDP_UUID")) {
+#if IOT_SSDP_SUPPORT
+        WebTemplate::printSSDPUUID(output);
+#else
+        output.print(F("<SSDP support disabled>"));
+#endif
     }
     else if (key == F("HARDWARE")) {
 #if defined(ESP8266)
@@ -184,6 +233,16 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
             output.printf_P(PSTR(HTML_S(br) HTML_S(strong) "%s" HTML_E(strong)), SPGM(default_password_warning));
         }
     }
+#if NTP_CLIENT || RTC_SUPPORT
+    else if (key == F("TIME")) {
+        auto now = time(nullptr);
+        if (!IS_TIME_VALID(now)) {
+            output.print(F("No time available"));
+        } else {
+            printSystemTime(now, output);
+        }
+    }
+#endif
 #if HAVE_PCF8574
     else if (key == F("PCF8574_STATUS")) {
         print_status_pcf8574(output);
@@ -209,19 +268,6 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         config.printRTCStatus(output, false);
     }
 #endif
-#if NTP_CLIENT || RTC_SUPPORT
-    else if (key == F("TIME")) {
-        auto now = time(nullptr);
-        if (!IS_TIME_VALID(now)) {
-            output.print(F("No time available"));
-        } else {
-            printSystemTime(now, output);
-        }
-    }
-#endif
-    else if (key == F("SELF_URI")) {
-        output.print(_selfUri);
-    }
     else if (key == F("SAFEMODE")) {
         if (config.isSafeMode()) {
             output.print(F(" - Running in SAFE MODE"));
@@ -253,44 +299,6 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
             n %= 36;
             output.print((char)(n < 26 ? (n + 'a') : (n + ('0' - 26))));
         }
-    }
-    else if (key == F("ALIVE_REDIRECTION")) {
-        if (_aliveRedirection.length()) {
-            output.print(_aliveRedirection);
-        }
-        else {
-            output.print(FSPGM(index_html));
-        }
-    }
-#if DEBUG_ASSETS
-    else if (key == F("DEBUG_ASSETS_URL1")) {
-        output.print(F(DEBUG_ASSETS_URL1));
-    }
-    else if (key == F("DEBUG_ASSETS_URL2")) {
-        output.print(F(DEBUG_ASSETS_URL2));
-    }
-#endif
-    // ------------------------------------------------------------------------------------
-    // requires to be authenticated from here on
-    else if (!isAuthenticated()) {
-        if (key == F("IS_CONFIG_DIRTY")) {
-            output.print(FSPGM(_hidden));
-        }
-        else if (key == F("IS_CONFIG_DIRTY_CLASS")) {
-            output.print(FSPGM(hidden));
-        }
-        return;
-    }
-    // ------------------------------------------------------------------------------------
-    else if (key == F("UNIQUE_ID")) {
-        WebTemplate::printUniqueId(output, FSPGM(kfcfw), -1);
-    }
-    else if (key == F("SSDP_UUID")) {
-#if IOT_SSDP_SUPPORT
-        WebTemplate::printSSDPUUID(output);
-#else
-        output.print(F("<SSDP support disabled>"));
-#endif
     }
     else if (key == F("IS_CONFIG_DIRTY")) {
         if (!config.isConfigDirty()) {
@@ -479,9 +487,10 @@ void NotFoundTemplate::process(const String &key, PrintHtmlEntitiesString &outpu
 
 void ConfigTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 {
-    // if (!_isAuthenticated) {
-    //     return;
-    // }
+    if (!_isAuthenticated) {
+        WebTemplate::process(key, output);
+        return;
+    }
     if (_form) {
         if (getForm()->process(key, output)) {
             return;
@@ -533,9 +542,10 @@ void ConfigTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 
 void StatusTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 {
-    // if (!_isAuthenticated) {
-    //     return;
-    // }
+    if (!_isAuthenticated) {
+        WebTemplate::process(key, output);
+        return;
+    }
     if (key == F("GATEWAY")) {
         WiFi.gatewayIP().printTo(output);
     }

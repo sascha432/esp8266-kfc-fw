@@ -31,6 +31,7 @@ namespace cbuf_ex {
 
     class cbuf {
         public:
+            cbuf();
             cbuf(size_t size);
             ~cbuf();
 

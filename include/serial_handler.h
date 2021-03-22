@@ -46,6 +46,9 @@ namespace SerialHandler {
         Client(const Client &) = delete;
         Client &operator=(const Client &) = delete;
 
+        Client() : _events(EventType::NONE) {
+        }
+
         Client(Client &&client) noexcept :
             _cb(std::exchange(client._cb, nullptr)),
             _events(std::move(client._events)),
@@ -53,7 +56,8 @@ namespace SerialHandler {
             _tx(std::move(client._tx))
         {
         }
-        ~Client() {}
+        ~Client() {
+        }
 
 #pragma push_macro("new")
 #undef new

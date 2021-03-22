@@ -5,37 +5,10 @@
 #include <time.h>
 #include "PrintString.h"
 
-PrintString::PrintString()
-{
-}
 
-PrintString::PrintString(const String &str) : String(str)
+void PrintString::printFormatted(const __FlashStringHelper *format)
 {
-}
-
-PrintString::PrintString(const char *format, va_list arg)
-{
-    vprintf(format, arg);
-}
-
-PrintString::PrintString(const __FlashStringHelper *format, va_list arg)
-{
-    vprintf_P(RFPSTR(format), arg);
-}
-
-PrintString::PrintString(double n, uint8_t digits, bool trimTrailingZeros)
-{
-    print(n, digits, trimTrailingZeros);
-}
-
-PrintString::PrintString(const uint8_t* buffer, size_t len)
-{
-    write(buffer, len);
-}
-
-PrintString::PrintString(const __FlashBufferHelper *buffer, size_t len)
-{
-    write_P(reinterpret_cast<PGM_P>(buffer), len);
+    print(format);
 }
 
 size_t PrintString::print(double n, uint8_t digits, bool trimTrailingZeros)
@@ -68,7 +41,7 @@ size_t PrintString::print(double n, uint8_t digits, bool trimTrailingZeros)
 
 size_t PrintString::vprintf(const char *format, va_list arg)
 {
-    char temp[64];
+    char temp[128];
     size_t len = vsnprintf(temp, sizeof(temp), format, arg);
     if (len > sizeof(temp) - 1) {
         auto strLen = length();
@@ -90,7 +63,7 @@ size_t PrintString::vprintf(const char *format, va_list arg)
 
 size_t PrintString::vprintf_P(PGM_P format, va_list arg)
 {
-    char temp[64];
+    char temp[128];
     size_t len = vsnprintf_P(temp, sizeof(temp), format, arg);
     if (len > sizeof(temp) - 1) {
         auto strLen = length();
@@ -112,86 +85,20 @@ size_t PrintString::vprintf_P(PGM_P format, va_list arg)
 
 size_t PrintString::write(uint8_t data)
 {
-    *this += (char)data;
+    auto len = length();
+    if (!reserve(len + 1)) {
+        return 0;
+    }
+    auto ptr = wbuffer() + len++;
+    *ptr++ = static_cast<char>(data);
+    *ptr = 0;
+    setLen(len);
     return 1;
 }
 
-size_t PrintString::write(const uint8_t* buf, size_t size)
+size_t PrintString::write(const uint8_t *buf, size_t size)
 {
-    auto len = length();
-    if (!reserve(len + size)) {
-        return 0;
-    }
-#if WSTRING_HAVE_SETLEN
-    reinterpret_cast<char *>(memmove(wbuffer() + len, buf, size))[size] = 0;
-    setLen(len + size);
-#elif 1
-    memmove(begin() + _increaseLength(len + size), buf, size);
-#else
-    const char* ptr = reinterpret_cast<const char*>(buf);
-    size_t count = size;
-    while (count--) {
-        *this += *ptr++;
-    }
-#endif
-    return size;
-}
-
-size_t PrintString::write_P(PGM_P buf, size_t size)
-{
-    auto len = length();
-    if (!reserve(len + size)) {
-        return 0;
-    }
-#if WSTRING_HAVE_SETLEN
-    reinterpret_cast<char *>(memcpy_P(wbuffer() + len, buf, size))[size] = 0;
-    setLen(len + size);
-#elif 1
-    memcpy_P(begin() + _increaseLength(len + size), buf, size);
-#else
-    size_t count = size;
-    while (count--) {
-        *this += (char)pgm_read_byte(buf++);
-    }
-#endif
-    return size;
-}
-
-size_t PrintString::print(uint64_t value)
-{
-    return concat_to_string(*this, value);
-}
-
-size_t PrintString::print(int64_t value)
-{
-    return concat_to_string(*this, value);
-}
-
-size_t PrintString::strftime(const char *format, struct tm *tm)
-{
-    char temp[64];
-    ::strftime(temp, sizeof(temp), format, tm);
-    return print(temp);
-}
-
-size_t PrintString::strftime_P(PGM_P format, struct tm *tm)
-{
-    char temp[64];
-    ::strftime_P(temp, sizeof(temp), format, tm);
-    return print(temp);
-}
-
-
-PrintString &PrintString::operator+=(uint64_t value)
-{
-    print(value);
-    return *this;
-}
-
-PrintString &PrintString::operator+=(int64_t value)
-{
-    print(value);
-    return *this;
+    return _write(buf, size);
 }
 
 size_t PrintString::_increaseLength(size_t newLen)
@@ -205,4 +112,103 @@ size_t PrintString::_increaseLength(size_t newLen)
         *this += (char)0;
     }
     return len;
+}
+
+size_t PrintString::_print(const uint32_t *str)
+{
+    union {
+        uint32_t dword;
+        uint8_t bytes[4];
+    } tmp;
+    uint8_t n;
+    auto len = length();
+    auto oldLen = len;
+    do {
+        tmp.dword = *str++;
+        if (tmp.bytes[0] == 0) {
+            break;
+        }
+        else if (tmp.bytes[1] == 0) {
+            n = 1;
+        }
+        else if (tmp.bytes[2] == 0) {
+            n = 2;
+        }
+        else if (tmp.bytes[3] == 0) {
+            n = 3;
+        }
+        else {
+            n = 4;
+        }
+        if (!reserve(len + n)) {
+            break;
+        }
+        memmove_P(wbuffer() + len, tmp.bytes, n); // use memmove in case wbuffer() isn't aligned
+        len += n;
+        setLen(len);
+    } while (n == 4);
+    wbuffer()[len] = 0;
+
+    return len - oldLen;
+}
+
+size_t PrintString::_print(PGM_P ptr)
+{
+    auto len = length();
+    if (!reserve(len + 4)) { // reserves at least 5 byte
+        return 0;
+    }
+    uint8_t written = 0;
+    uint8_t ch;
+    auto dst = wbuffer() + len;
+    // check if the string is aligned
+    switch ((reinterpret_cast<const uint32_t>(ptr) & 0x03)) {
+    case 1: // 3 bytes to copy
+        ch = pgm_read_byte(ptr++);
+        if (!ch) {
+            return 0;
+        }
+        *dst++ = ch;
+        written++;
+    case 2: // 2 bytes to copy
+        ch = pgm_read_byte(ptr++);
+        if (!ch) {
+            *dst = 0;
+            setLen(len + 1);
+            return written;
+        }
+        *dst++ = ch;
+        written++;
+    case 3: // 1 byte left
+        ch = pgm_read_byte(ptr++);
+        if (!ch) {
+            *dst = 0;
+            setLen(len + 2);
+            return written;
+        }
+        *dst++ = ch;
+        *dst = 0;
+        written++;
+        setLen(len + 3);
+        return written + _print(reinterpret_cast<const uint32_t *>(ptr));
+    }
+    return _print(reinterpret_cast<const uint32_t *>(ptr));
+}
+
+size_t PrintString::_write_P(const uint8_t *buf, size_t size)
+{
+    auto len = length();
+    if (size && !reserve(len + size)) {
+        return 0;
+    }
+    auto endPtr = reinterpret_cast<uint8_t *>(memmove_P(wbuffer() + len, buf, size));
+
+    // this isac dding the NUL byte
+    // basically *endPtr = 0;
+    uint8_t offset = reinterpret_cast<uint32_t>(endPtr) & 0x03;
+    auto endPtr32 = reinterpret_cast<uint32_t *>(endPtr - offset);
+    *endPtr32 &= ~(0xff << (offset << 3));
+
+    setLen(len + size);
+    return size;
 }

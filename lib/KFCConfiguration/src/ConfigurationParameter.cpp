@@ -210,8 +210,9 @@ void ConfigurationParameter::exportAsJson(Print& output)
     else {
         switch (_param.type()) {
         case ParameterType::STRING: {
+            JsonTools::Utf8Buffer buffer;
             output.print('"');
-            JsonTools::printToEscaped(output, _param.string(), strlen(_param.string()), false);
+            JsonTools::printToEscaped(output, _param.string(), strlen(_param.string()), &buffer);
             output.print('"');
         } break;
         case ParameterType::BINARY: {

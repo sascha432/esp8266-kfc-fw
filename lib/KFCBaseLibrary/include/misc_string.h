@@ -43,17 +43,17 @@ static constexpr uint32_t SIZE_IRRELEVANT = 0x7fffffff;
 #undef alloca
 #define alloca _malloca
 
-inline static void *memchr_P(void *s, int c, size_t n) 
+inline static void *memchr_P(void *s, int c, size_t n)
 {
     return memchr(s, c, n);
 }
 
-inline static const void *memchr_P(const void *s, int c, size_t n) 
+inline static const void *memchr_P(const void *s, int c, size_t n)
 {
     return memchr(s, c, n);
 }
 
-inline static void *memrchr(const void *s, int c, size_t n) 
+inline static void *memrchr(const void *s, int c, size_t n)
 {
     const unsigned char *cp;
     if (!n) {
@@ -88,6 +88,8 @@ inline static char *strdup_P(PGM_P src) {
 
 char *strdup_P(PGM_P src);
 
+// const char *strrchr_P(const char *str, int c);
+// const char *strchr_P(const char *str, int c);
 
 inline static const char *strchr_P(const char *str, int c) {
     // PROGMEM safe

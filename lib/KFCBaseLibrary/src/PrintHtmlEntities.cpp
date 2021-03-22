@@ -39,28 +39,10 @@ static size_t memcpy_strlen_P_v3(char *dst, PGM_P src) {
 
 #endif
 
-PrintHtmlEntities::PrintHtmlEntities() : _mode(Mode::HTML), _lastChar(0)
-{
-}
-
-PrintHtmlEntities::PrintHtmlEntities(Mode mode) : _mode(mode)
-{
-}
-
-PrintHtmlEntities::Mode PrintHtmlEntities::setMode(Mode mode)
-{
-    Mode lastMode = _mode;
-    _mode = mode;
-    return lastMode;
-}
-
-PrintHtmlEntities::Mode PrintHtmlEntities::getMode() const
-{
-    return _mode;
-}
-
 // index of the character must match the index of string in the values array
 static const char __keys_attribute_all_P[] PROGMEM = { "'\"<>&" };
+
+static const char __keys_javascript_P[] PROGMEM = { "'\"\\\b\f\n\r\t\v" };
 
 #if 1
 // do not translate ' inside html attributes
@@ -95,6 +77,19 @@ static const char *__values_P[] PROGMEM = {
     // SPGM(htmlentities_, "&;"),
 };
 
+static const char *__values_javascript_P[] PROGMEM = {
+    SPGM(_escaped_apostrophe, "\\'"),           // '
+    SPGM(_escaped_double_quote, "\\\""),        // "
+    SPGM(_escaped_backslash, "\\\\"),           // \    Backslash
+    SPGM(_escaped_backspace, "\\b"),            // \b	Backspace
+    SPGM(_escaped_formfeed, "\\f"),             // \f	Form Feed
+    SPGM(_escaped_newline, "\\n"),              // \n	New Line
+    SPGM(_escaped_return, "\\r"),               // \r	Carriage Return
+    SPGM(_escaped_htab, "\\t"),                 // \t	Horizontal Tabulator
+    SPGM(_escaped_vtab, "\\v")                  // \v	Vertical Tabulator
+};
+
+
 static int8_t __getKeyIndex_P(char find, PGM_P keys)
 {
     uint8_t count = 0;
@@ -109,36 +104,39 @@ static int8_t __getKeyIndex_P(char find, PGM_P keys)
     return -1;
 }
 
-static void __getKeysAndValues(PGM_P *keys, PGM_P **values, bool attribute)
+struct KeysValues {
+    PGM_P keys;
+    PGM_P *values;
+    KeysValues(PGM_P _keys, PGM_P *_values) : keys(_keys), values(_values) {}
+};
+
+inline static KeysValues __getKeysAndValues(PrintHtmlEntities::Mode mode)
 {
-    if (attribute) {
-        *keys = &__keys_attribute_all_P[kAttributeOffset];
-        *values = &__values_P[kAttributeOffset];
+    if (mode == PrintHtmlEntities::Mode::JAVASCRIPT) {
+        return KeysValues(__keys_javascript_P, __values_javascript_P);
     }
-    else {
-        *keys = __keys_attribute_all_P;
-        *values = __values_P;
+    else if (mode == PrintHtmlEntities::Mode::ATTRIBUTE) {
+        return KeysValues(&__keys_attribute_all_P[kAttributeOffset], &__values_P[kAttributeOffset]);
     }
+    return KeysValues(__keys_attribute_all_P, __values_P);
 }
 
-int PrintHtmlEntities::getTranslatedSize_P(PGM_P str, bool attribute)
+int PrintHtmlEntities::getTranslatedSize_P(PGM_P str, Mode mode)
 {
     if (!str) {
         return kNoTranslationRequired;
     }
-    PGM_P keys;
-    PGM_P *values;
-    __getKeysAndValues(&keys, &values, attribute);
+    auto kv = __getKeysAndValues(mode);
     int requiredSize = 0;
     int len = 0;
     int8_t i;
     char ch;
     while((ch = pgm_read_byte(str)) != 0) {
-        if ((i = __getKeyIndex_P(ch, keys)) == -1) {
+        if ((i = __getKeyIndex_P(ch, kv.keys)) == -1) {
             requiredSize++;
         }
         else {
-            requiredSize += strlen_P(values[i]);
+            requiredSize += strlen_P(kv.values[i]);
         }
         len++;
         str++;
@@ -146,63 +144,59 @@ int PrintHtmlEntities::getTranslatedSize_P(PGM_P str, bool attribute)
     return (len == requiredSize) ? kNoTranslationRequired : requiredSize;
 }
 
-bool PrintHtmlEntities::translateTo(const char *str, String &target, bool attribute, int requiredSize)
+bool PrintHtmlEntities::translateTo(const char *str, String &target, Mode mode, int requiredSize)
 {
     if (!str) {
         return false;
     }
     if (requiredSize == kInvalidSize) {
-        requiredSize = getTranslatedSize_P(str, attribute);
+        requiredSize = getTranslatedSize_P(str, mode);
     }
-    if (requiredSize != kNoTranslationRequired) {
-        if (target.reserve(requiredSize + target.length())) {
-            PGM_P keys;
-            PGM_P *values;
-            __getKeysAndValues(&keys, &values, attribute);
-            char ch;
-            while((ch = pgm_read_byte(str++)) != 0) {
-                auto i = __getKeyIndex_P(ch, keys);
-                if (i == -1) {
-                    target += ch;
-                }
-                else {
-                    target += FPSTR(values[i]);
-                }
-            }
-            return true;
+    if (requiredSize == kNoTranslationRequired || !target.reserve(requiredSize + target.length())) {
+        return false;
+    }
+    auto kv = __getKeysAndValues(mode);
+    char ch;
+    while((ch = pgm_read_byte(str++)) != 0) {
+        auto i = __getKeyIndex_P(ch, kv.keys);
+        if (i == -1) {
+            target += ch;
+        }
+        else {
+            target += FPSTR(kv.values[i]);
         }
     }
-    return false;
+    return true;
 }
 
-char *PrintHtmlEntities::translateTo(const char *str, bool attribute, int requiredSize)
+char *PrintHtmlEntities::translateTo(const char *str, Mode mode, int requiredSize)
 {
-    char *target = nullptr;
-    if (str) {
-        if (requiredSize == kInvalidSize) {
-            requiredSize = getTranslatedSize_P(str, attribute);
+    if (!str){
+        return nullptr;
+    }
+    if (requiredSize == kInvalidSize) {
+        requiredSize = getTranslatedSize_P(str, mode);
+    }
+    if (requiredSize == kNoTranslationRequired) {
+        return nullptr;
+    }
+    auto target = reinterpret_cast<char *>(malloc(requiredSize + 1));
+    if (target) {
+        return nullptr;
+    }
+    auto ptr = target;
+    auto kv = __getKeysAndValues(mode);
+    char ch;
+    while ((ch = pgm_read_byte(str++)) != 0) {
+        auto i = __getKeyIndex_P(ch, kv.keys);
+        if (i == -1) {
+            *ptr++ = ch;
         }
-        if (requiredSize != kNoTranslationRequired) {
-            target = reinterpret_cast<char *>(malloc(requiredSize + 1));
-            if (target) {
-                auto ptr = target;
-                PGM_P keys;
-                PGM_P *values;
-                __getKeysAndValues(&keys, &values, attribute);
-                char ch;
-                while ((ch = pgm_read_byte(str++)) != 0) {
-                    auto i = __getKeyIndex_P(ch, keys);
-                    if (i == -1) {
-                        *ptr++ = ch;
-                    }
-                    else {
-                        ptr += memcpy_strlen_P(ptr, values[i]);
-                    }
-                }
-                *ptr = 0;
-            }
+        else {
+            ptr += memcpy_strlen_P(ptr, kv.values[i]);
         }
     }
+    *ptr = 0;
     return target;
 }
 
@@ -214,96 +208,60 @@ size_t PrintHtmlEntities::printTo(Mode mode, const char *str, Print &output)
     if (mode == Mode::RAW) {
         return output.print(FPSTR(str));
     }
-    auto attribute = (mode == Mode::ATTRIBUTE);
-    auto requiredSize = getTranslatedSize_P(str, attribute);
+    auto requiredSize = getTranslatedSize_P(str, mode);
     if (requiredSize == kNoTranslationRequired) {
         return output.print(FPSTR(str));
     }
     size_t written = 0;
-    PGM_P keys;
-    PGM_P *values;
-    __getKeysAndValues(&keys, &values, attribute);
+    auto kv = __getKeysAndValues(mode);
     char ch;
     while((ch = pgm_read_byte(str)) != 0) {
-        auto i = __getKeyIndex_P(ch, keys);
+        auto i = __getKeyIndex_P(ch, kv.keys);
         if (i == -1) {
             written += output.print(ch);
         }
         else {
-            written += output.print(FPSTR(values[i]));
+            written += output.print(FPSTR(kv.values[i]));
         }
         str++;
     }
     return written;
 }
 
-size_t PrintHtmlEntities::printTo(Mode mode, const char *str, PrintHtmlEntitiesString &output)
-{
-    if (mode == Mode::RAW) {
-        return output.printRaw(str);
-    }
-    auto prevMode = output.setMode(mode);
-    size_t written = output.print(str);
-    output.setMode(prevMode);
-    return written;
-}
-
-size_t PrintHtmlEntities::printTo(Mode mode, const __FlashStringHelper *str, PrintHtmlEntitiesString &output)
-{
-    if (mode == Mode::RAW) {
-        return output.printRaw(str);
-    }
-    auto prevMode = output.setMode(mode);
-    size_t written = output.print(str);
-    output.setMode(prevMode);
-    return written;
-}
-
-String PrintHtmlEntities::getTranslatedTo(const String &str, bool attribute)
-{
-    String tmp;
-    if (translateTo(str.c_str(), tmp, attribute)) {
-        return tmp;
-    }
-    return str;
-}
 
 size_t PrintHtmlEntities::translate(uint8_t data)
 {
-    if (_mode != Mode::RAW) {
-        PGM_P keys;
-        PGM_P *values;
-        __getKeysAndValues(&keys, &values, _mode == Mode::ATTRIBUTE);
-        auto i = __getKeyIndex_P((char)data, keys);
-        if (i != -1) {
-            return _writeRawString(FPSTR(values[i]));
+    if (_mode == Mode::RAW) {
+        return writeRaw(data);
+    }
+    auto kv = __getKeysAndValues(_mode);
+    auto i = __getKeyIndex_P((char)data, kv.keys);
+    if (i != -1) {
+        return _writeRawString(FPSTR(kv.values[i]));
+    }
+    if (data >= 0x80) {
+        if (_lastChar != 0xc2) { // utf8 encoded?
+            writeRaw(0xc2);
+            writeRaw(data);
+            return 2;
         }
-        else {
-            if (data >= 0x80) {
-                if (_lastChar != 0xc2) { // utf8 encoded?
-                    writeRaw(0xc2);
-                    writeRaw(data);
-                    return 2;
-                }
-            }
-            else {
-                switch (data) {
-                    case '\1':
-                        return writeRaw('<');
-                    case '\2':
-                        return writeRaw('>');
-                    case '\3':
-                        return writeRaw('&');
-                    case '\4':
-                        return writeRaw('"');
-                    case '\5':
-                        return writeRaw('=');
-                    case '\6':
-                        return writeRaw('%');
-                    case '\7':
-                        return writeRaw('\'');
-                }
-            }
+    }
+    else {
+        switch (data) {
+            case '\1':
+                return writeRaw('<');
+            case '\2':
+                return writeRaw('>');
+            case '\3':
+                return writeRaw('&');
+            case '\4':
+                return writeRaw('"');
+            case '\5':
+                return writeRaw('=');
+            case '\6':
+                return writeRaw('%');
+            case '\7':
+                return writeRaw('\'');
         }
     }
     return writeRaw(data);

@@ -217,12 +217,12 @@ bool Form::BaseForm::process(const String &name, Print &output)
         auto len = strlen_P(reinterpret_cast<PGM_P>(field->getName()));
         if (field->getType() == Field::Type::TEXT && name.equalsIgnoreCase(field->getName())) {
             __LDBG_printf("name=%s text=%s", name.c_str(), field->getValue().c_str());
-            PrintHtmlEntities::printTo(PrintHtmlEntities::Mode::ATTRIBUTE, field->getValue().c_str(), output);
+            PrintHtmlEntities::printTo(PrintHtmlEntities::Mode::ATTRIBUTE, field->getValue(), output);
             return true;
         }
         else if (field->getType() == Field::Type::TEXTAREA && name.equalsIgnoreCase(field->getName())) {
             __LDBG_printf("name=%s textarea=%s", name.c_str(), field->getValue().c_str());
-            PrintHtmlEntities::printTo(PrintHtmlEntities::Mode::HTML, field->getValue().c_str(), output);
+            PrintHtmlEntities::printTo(PrintHtmlEntities::Mode::HTML, field->getValue(), output);
             return true;
         }
         else if (field->getType() == Field::Type::CHECK && name.equalsIgnoreCase(field->getName())) {
@@ -235,7 +235,7 @@ bool Form::BaseForm::process(const String &name, Print &output)
         else if (field->getType() == Field::Type::SELECT && strncasecmp_P(name.c_str(), reinterpret_cast<PGM_P>(field->getName()), len) == 0) {
             if (name.length() == len) {
                 __LDBG_printf("name=%s select=%s", name.c_str(), field->getValue().c_str());
-                PrintHtmlEntities::printTo(PrintHtmlEntities::Mode::ATTRIBUTE, field->getValue().c_str(), output);
+                PrintHtmlEntities::printTo(PrintHtmlEntities::Mode::ATTRIBUTE, field->getValue(), output);
                 return true;
             }
             else if (name.charAt(len) == '_') {

@@ -478,6 +478,15 @@ PROGMEM_STRING_DECL(wifi_mode);
 PROGMEM_STRING_DECL(wifi_settings);
 // src/at_mode.cpp:1610 (SPGM), src/web_server.cpp:1113 (SPGM)
 PROGMEM_STRING_DECL(yes);
+PROGMEM_STRING_DECL(_escaped_apostrophe);
+PROGMEM_STRING_DECL(_escaped_double_quote);
+PROGMEM_STRING_DECL(_escaped_backslash);
+PROGMEM_STRING_DECL(_escaped_backspace);
+PROGMEM_STRING_DECL(_escaped_formfeed);
+PROGMEM_STRING_DECL(_escaped_newline);
+PROGMEM_STRING_DECL(_escaped_return);
+PROGMEM_STRING_DECL(_escaped_htab);
+PROGMEM_STRING_DECL(_escaped_vtab);
 #ifdef __cplusplus
 } // extern "C"
 #endif

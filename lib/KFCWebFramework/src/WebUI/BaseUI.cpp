@@ -20,7 +20,7 @@
 
 using namespace FormUI;
 
-const char *WebUI::Config::encodeHtmlEntities(const char *cStr, bool attribute)
+const char *WebUI::Config::encodeHtmlEntities(const char *cStr, Mode mode)
 {
     uint8_t byte = pgm_read_byte(cStr);
     if (byte == 0xff) { // marker for html
@@ -32,9 +32,9 @@ const char *WebUI::Config::encodeHtmlEntities(const char *cStr, bool attribute)
     // }
 
     int size;
-    if ((size = PrintHtmlEntities::getTranslatedSize_P(cStr, attribute)) != PrintHtmlEntities::kNoTranslationRequired) {
+    if ((size = PrintHtmlEntities::getTranslatedSize_P(cStr, mode)) != PrintHtmlEntities::kNoTranslationRequired) {
         String target;
-        if (PrintHtmlEntities::translateTo(cStr, target, attribute, size)) {
+        if (PrintHtmlEntities::translateTo(cStr, target, mode, size)) {
             return strings().attachString(target);
         }
     }

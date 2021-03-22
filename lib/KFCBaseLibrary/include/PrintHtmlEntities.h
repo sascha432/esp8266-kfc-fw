@@ -37,6 +37,7 @@ public:
         HTML,
         ATTRIBUTE,
         RAW,
+        JAVASCRIPT
     };
 
 public:
@@ -64,7 +65,7 @@ public:
     static constexpr int kInvalidSize = -2;
 
     // returns the length of the new string or -1 if it does not require any translation
-    static int getTranslatedSize_P(PGM_P str, bool attribute);
+    static int getTranslatedSize_P(PGM_P str, Mode mode);
     // append the translated string to target unless there isn't any translation
     // required or the memory allocation failed
     // if getTranslatedSize() was used before, the value should be passed as requiredSize
@@ -75,24 +76,71 @@ public:
     // NOTES:
     //  - return value false means that target was not modified
     //  - str is PROGMEM safe
-    static bool translateTo(const char *str, String &target, bool attribute, int requiredSize = kInvalidSize);
+    static bool translateTo(const char *str, String &target, Mode mode, int requiredSize = kInvalidSize);
 
     // returns pointer to allocated str or nullptr if no translation was required
-    static char *translateTo(const char *str, bool attribute, int requiredSize = kInvalidSize);
+    static char *translateTo(const char *str, Mode mode, int requiredSize = kInvalidSize);
 
-    // prints the string to output
-    // NOTE: str is PROGMEM safe
     static size_t printTo(Mode mode, const char *str, Print &output);
-
-    static size_t printTo(Mode mode, const char *str, PrintHtmlEntitiesString &output);
-    static size_t printTo(Mode mode, const __FlashStringHelper *str, PrintHtmlEntitiesString &output);
+    static size_t printTo(Mode mode, const String &str, Print &output);
+    static size_t printTo(Mode mode, const __FlashStringHelper *str, Print &output);
 
     // returns string, avoid using it with huge strings
-    static String getTranslatedTo(const String &str, bool attribute);
+    static String getTranslatedTo(const String &str, Mode mode);
 
 protected:
     size_t _writeRawString(const __FlashStringHelper *str);
 
+private:
     Mode _mode;
     uint8_t _lastChar;
 };
+
+inline __attribute__((__always_inline__))
+PrintHtmlEntities::PrintHtmlEntities() :
+    _mode(Mode::HTML), _lastChar(0)
+{
+}
+
+inline __attribute__((__always_inline__))
+PrintHtmlEntities::PrintHtmlEntities(Mode mode) :
+    _mode(mode)
+{
+}
+
+inline __attribute__((__always_inline__))
+PrintHtmlEntities::Mode PrintHtmlEntities::setMode(Mode mode)
+{
+    Mode lastMode = _mode;
+    _mode = mode;
+    _lastChar = 0;
+    return lastMode;
+}
+
+inline __attribute__((__always_inline__))
+PrintHtmlEntities::Mode PrintHtmlEntities::getMode() const
+{
+    return _mode;
+}
+
+inline __attribute__((__always_inline__))
+size_t PrintHtmlEntities::printTo(Mode mode, const String &str, Print &output)
+{
+    return printTo(mode, str.c_str(), output);
+}
+
+inline __attribute__((__always_inline__))
+size_t PrintHtmlEntities::printTo(Mode mode, const __FlashStringHelper *str, Print &output)
+{
+    return printTo(mode, reinterpret_cast<PGM_P>(str), output);
+}
+
+inline __attribute__((__always_inline__))
+String PrintHtmlEntities::getTranslatedTo(const String &str, Mode mode)
+{
+    String tmp;
+    if (translateTo(str.c_str(), tmp, mode)) {
+        return tmp;
+    }
+    return str;
+}

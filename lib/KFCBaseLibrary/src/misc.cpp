@@ -934,6 +934,25 @@ char *strdup_P(PGM_P src)
     return dst;
 }
 
+// const char *strchr_P(const char *str, int c) {
+//     if (!str) {
+//         __DBG_printf("strchr_P(%p, %u)", str, c);
+//         return  nullptr;
+//     }
+//     // PROGMEM safe
+//     return strchr(str, c);
+// }
+
+// const char *strrchr_P(const char *str, int c) {
+//     if (!str) {
+//         __DBG_printf("strrchr_P(%p, %u)", str, c);
+//         return  nullptr;
+//     }
+//     // PROGMEM safe
+//     return strrchr(str, c);
+// }
+
+
 #endif
 
 void bin2hex_append(String &str, const void *data, size_t length)

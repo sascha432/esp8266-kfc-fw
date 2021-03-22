@@ -240,13 +240,71 @@ size_t PrintHtmlEntities::translate(uint8_t data)
         return _writeRawString(FPSTR(kv.values[i]));
     }
     if (data >= 0x80) {
-        if (_lastChar != 0xc2) { // utf8 encoded?
-            writeRaw(0xc2);
-            writeRaw(data);
-            return 2;
+        if ((data & 0b11110000) == 0b11110000) {
+            // len 4
+            _utf8Count = 3;
+            _lastChars = data;
+            return 0;
+        }
+        else if ((data & 0b111100000) == 0b11100000) {
+            // len 3
+            _utf8Count = 2;
+            _lastChars = data;
+            return 0;
+        }
+        else if ((data & 0b111000000) == 0b11000000) {
+            // len 2
+            _utf8Count = 1; // 1 byte left
+            _lastChars = data;
+            return 0;
+        }
+        else if ((data & 0b110000000) == 0b10000000) {
+            // data byte
+            if (_utf8Count) { // skip the data byte if the count is zero
+                if (--_utf8Count == 0) {
+                    if (_lastChars & (1U << 23)) { // 3 bytes have been shifted
+                        writeRaw(_lastChars >> 16);
+                        writeRaw((_lastChars >> 8) & 0xff);
+                        writeRaw(_lastChars & 0xff);
+                        writeRaw(data);
+                        _utf8Count = 0;
+                        return 4;
+                    }
+                    else if (_lastChars & (1U << 15)) {
+                        writeRaw(_lastChars >> 8);
+                        writeRaw(_lastChars & 0xff);
+                        writeRaw(data);
+                        _utf8Count = 0;
+                        return 3;
+                    }
+                    else if (_lastChars & (1U << 7)) {
+                        writeRaw(_lastChars);
+                        writeRaw(data);
+                        _utf8Count = 0;
+                        return 2;
+                    }
+                }
+                else {
+                    _lastChars <<= 8;
+                    _lastChars |= data;
+                    return 0;
+                }
+            }
+            __DBG_printf("invalid utf8 sequence count=%u data=0x%02x data=0x%06x", _utf8Count, data, _lastChars);
+            return 0;
+        }
+        else {
+            // invalid
+            __DBG_printf("invalid utf8 sequence count=%u data=0x%02x data=0x%06x", _utf8Count, data, _lastChars);
+            _utf8Count = 0;
+            return 0;
         }
     }
     else {
+        if (_utf8Count) {
+            __DBG_printf("invalid utf8 sequence count=%u data=0x%02x last=0x%06x", _utf8Count, data, _lastChars);
+        }
+        _utf8Count = 0;
         switch (data) {
             case '\1':
                 return writeRaw('<');
@@ -265,24 +323,4 @@ size_t PrintHtmlEntities::translate(uint8_t data)
         }
     }
     return writeRaw(data);
-}
-
-size_t PrintHtmlEntities::translate(const uint8_t *buffer, size_t size)
-{
-    size_t written = 0;
-    while (size--) {
-        written += translate(*buffer++);
-    }
-    return written;
-}
-
-size_t PrintHtmlEntities::_writeRawString(const __FlashStringHelper *str)
-{
-    PGM_P ptr = RFPSTR(str);
-    size_t written = 0;
-    uint8_t ch;
-    while ((ch = pgm_read_byte(ptr++)) != 0) {
-        written += writeRaw(ch);
-    }
-    return written;
 }

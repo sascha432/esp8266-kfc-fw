@@ -93,18 +93,19 @@ protected:
 
 private:
     Mode _mode;
-    uint8_t _lastChar;
+    uint32_t _lastChars: 24;
+    uint32_t _utf8Count: 8;
 };
 
 inline __attribute__((__always_inline__))
 PrintHtmlEntities::PrintHtmlEntities() :
-    _mode(Mode::HTML), _lastChar(0)
+    _mode(Mode::HTML), _lastChars(0), _utf8Count(0)
 {
 }
 
 inline __attribute__((__always_inline__))
 PrintHtmlEntities::PrintHtmlEntities(Mode mode) :
-    _mode(mode)
+    _mode(mode), _lastChars(0), _utf8Count(0)
 {
 }
 
@@ -113,7 +114,8 @@ PrintHtmlEntities::Mode PrintHtmlEntities::setMode(Mode mode)
 {
     Mode lastMode = _mode;
     _mode = mode;
-    _lastChar = 0;
+    _lastChars = 0;
+    _utf8Count = 0;
     return lastMode;
 }
 
@@ -143,4 +145,26 @@ String PrintHtmlEntities::getTranslatedTo(const String &str, Mode mode)
         return tmp;
     }
     return str;
+}
+
+inline __attribute__((__always_inline__))
+size_t PrintHtmlEntities::translate(const uint8_t *buffer, size_t size)
+{
+    size_t written = 0;
+    while (size--) {
+        written += translate(*buffer++);
+    }
+    return written;
+}
+
+inline __attribute__((__always_inline__))
+size_t PrintHtmlEntities::_writeRawString(const __FlashStringHelper *str)
+{
+    PGM_P ptr = RFPSTR(str);
+    size_t written = 0;
+    uint8_t ch;
+    while ((ch = pgm_read_byte(ptr++)) != 0) {
+        written += writeRaw(ch);
+    }
+    return written;
 }

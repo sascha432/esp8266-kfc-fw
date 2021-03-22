@@ -162,6 +162,8 @@ public:
     ResetDetectorPlugin();
 
     virtual void getStatus(Print &output) override;
+    virtual void createMenu() override; // in web_server.cpp
+
 
 #if AT_MODE_SUPPORTED
     virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const override;

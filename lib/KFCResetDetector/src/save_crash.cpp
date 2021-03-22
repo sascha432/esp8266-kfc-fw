@@ -75,7 +75,7 @@ namespace SaveCrash {
             return fs;
 
         #else
-            return FlashStorage(SPIFlash::getSector(&_SAVECRASH_start), SPIFlash::getSector((&_SAVECRASH_end));
+            return FlashStorage(SPIFlash::getSector(&_SAVECRASH_start), SPIFlash::getSector(&_SAVECRASH_end));
         #endif
     }
 
@@ -143,7 +143,9 @@ namespace SaveCrash {
                     header.getMD5().c_str()
                 );
 
-                callback(CrashLogEntry(header, sector, offset));
+                if (callback(CrashLogEntry(header, sector, offset)) == false) {
+                    return;
+                }
                 offset += header.getSize();
             }
         }
@@ -164,17 +166,17 @@ namespace SaveCrash {
         output.printf_P(PSTR(" md5=%s stack-size=%u\n"), item._header.getMD5().c_str(), item._header.getStackSize());
     }
 
-    void FlashStorage::cut_here(Print &print)
+    void FlashStorage::cut_here(Print &output)
     {
-        print.write('\n');
+        output.write('\n');
         for (auto i = 0; i < 15; i++ ) {
-            print.write('-');
+            output.write('-');
         }
-        ets_printf_P(PSTR(" CUT HERE FOR EXCEPTION DECODER "));
+        output.printf_P(PSTR(" CUT HERE FOR EXCEPTION DECODER "));
         for (auto i = 0; i < 15; i++ ) {
-            print.write('-');
+            output.write('-');
         }
-        print.write('\n');
+        output.write('\n');
     }
 
     void FlashStorage::print_stack(Print &output, uint32_t *values, size_t items, uint32_t &pos, const Data &header)
@@ -232,10 +234,10 @@ namespace SaveCrash {
         //     output.print(F("\nctx: sys\n"));
         // }
 
-        output.printf_P(PSTR("sp: %08x end: %08x offset: %04x\n"), stack._sp, stack._end, stack._sp - stack._begin);
+        output.printf_P(PSTR("sp: %08x end: %08x offset: %04x\n"), stack._sp, stack._end, stack._begin - stack._sp);
 
         while (stackSize) {
-            static uint32_t stackDump[16 * 4]; // multiples of 4
+            uint32_t stackDump[16 * 4]; // multiples of 4
             auto readLen = std::min<size_t>(stackSize, sizeof(stackDump));
             auto result = read(&stackDump[0], readLen, crashLog._sector, offset, &resultCache);
             if (!result) {
@@ -243,11 +245,14 @@ namespace SaveCrash {
                 return false;
             }
 
-            __DBG_printf("READIN STACK ofs=%x size=%u", SPIFlash::FlashResult::dataOffset(result._sector) + offset);
+            // __LDBG_printf("READIN STACK ofs=%x size=%u", SPIFlash::FlashResult::dataOffset(result._sector) + offset);
 
-            std::fill(&stackDump[0], std::end(stackDump), ~0U);
+            // removed since it seems to be 16 byte aligned
+            // fill stack if not read completely
+            // size_t items = result.readSize() / sizeof(stackDump[0]);
+            // std::fill(&stackDump[items], std::end(stackDump), ~0U);
 
-            __DBG_printf("pos=%08x items=%u stacksize=%u", pos, result.readSize() / sizeof(stackDump[0]), header.getStackSize());
+            // __LDBG_printf("pos=%08x items=%u stacksize=%u", pos, result.readSize() / sizeof(stackDump[0]), header.getStackSize());
             print_stack(output, &stackDump[0], result.readSize() / sizeof(stackDump[0]), pos, crashLog._header);
 
             offset += readLen;
@@ -275,6 +280,7 @@ inline static bool append_crash_data(SaveCrash::FlashStorage &fs, SPIFlash::Flas
 {
     // limit stack size to available storage space
     header._stack._size = std::min<uint32_t>(result.space() - sizeof(header), header._stack._size);
+    __DBG_printf("APPEND_CRASH_DATA %u", header._stack._size);
 
     if (!fs.append(header, result)) {
         __LDBG_printf("append failed rsult=%u size=%u", result._result, sizeof(header));
@@ -282,9 +288,9 @@ inline static bool append_crash_data(SaveCrash::FlashStorage &fs, SPIFlash::Flas
     }
 
     // auto stack = header._stack._begin;
-    // SaveCrash::FlashStorage::print_stack(Serial, (uint32_t *)header._stack._begin, 128, stack, stack);
+    // SaveCrash::FlashStorage::print_stack(Serial, (uint32_t *)header._stack._begin, 16, stack, header);
 
-    if (!fs.append((uint32_t *)header._stack._begin, header.getStackSize(), result)) {
+    if (!fs.append(reinterpret_cast<uint32_t *>(header._stack._begin), header.getStackSize(), result)) {
         __LDBG_printf("append failed result=%u size=%u", result._result, header.getStackSize());
         return false;
     }
@@ -298,14 +304,11 @@ void custom_crash_callback(struct rst_info *rst_info, uint32_t stack, uint32_t s
     uint32_t sp_dump = sp;
 
     // create header first to capture umm_last_fail_alloc_*
-    static auto header = SaveCrash::Data(time(nullptr), stack, stack_end, (void *)umm_last_fail_alloc_addr, umm_last_fail_alloc_size, *rst_info);
+    auto header = SaveCrash::Data(time(nullptr), stack, stack_end, sp_dump, (void *)umm_last_fail_alloc_addr, umm_last_fail_alloc_size, *rst_info);
 
-    header._stack._sp = ((uint32_t *)stack)[2]; // TODO verify
-    __DBG_printf("sp=%p stack[2]=%p begin=%p end=%p", sp_dump, header._stack._sp, header._stack._begin, header._stack._end);
-
-    static auto fs = SaveCrash::createFlashStorage();
-    static auto results = SPIFlash::FindResultArray();
-    static uint8_t num;
+    auto fs = SaveCrash::createFlashStorage();
+    auto results = SPIFlash::FindResultArray();
+    uint8_t num;
 
     // try to find enough space for the entire stack trace
     num = fs.find(fs.begin(), fs.end(), results, header.getSize());
@@ -317,31 +320,38 @@ void custom_crash_callback(struct rst_info *rst_info, uint32_t stack, uint32_t s
         }
     }
 
-    static SPIFlash::FlashResult result;
+    SPIFlash::FlashResult result;
     if (num == 1) {
         result = fs.init(results[0]._sector);
+        if (!result) {
+            ets_printf_P(PSTR("initializing sector %x failed"), results[0]._sector);
+            return;
+        }
     }
     else {
         result = fs.copy(results[1]._sector, results[0]._sector);
         if (!result) {
-            __LDBG_printf("copy failed %u", result._result);
+            ets_printf_P(PSTR("copying sector %x to %x failed"), results[1]._sector, results[0]._sector);
             return;
         }
     }
     if (!append_crash_data(fs, result, header)) {
-        __LDBG_printf("append_crash_data failed %u", result._result);
+        ets_printf_P(PSTR("appending data to sector=%x failed=%d"), results[0]._sector, result._result);
         return;
     }
     if (!fs.finalize(result)) {
-        __LDBG_printf("finalize failed %u", result._result);
+        ets_printf_P(PSTR("storing final data on sector=%x failed=%d"), results[0]._sector, result._result);
         return;
     }
     if (!fs.validate(result)) {
-        __LDBG_printf("validate failed %u", result._result);
+        ets_printf_P(PSTR("validating of written sector=%x failed=%d"), results[0]._sector, result._result);
         return;
     }
     if (num == 2) {
-        __LDBG_printf("erase sector %x", results[1]._sector);
-        fs.erase(results[1]._sector);
+        result = fs.erase(results[1]._sector);
+        if (!result) {
+            ets_printf_P(PSTR("erasing sector=%x failed=%d"), results[1]._sector, result._result);
+        }
+
     }
 }

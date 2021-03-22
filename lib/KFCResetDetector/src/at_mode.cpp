@@ -126,6 +126,7 @@ bool ResetDetectorPlugin::atModeHandler(AtModeArgs &args)
                 output.printf_P(PSTR("<%03u> "), ++count);
                 output.print(timeStr);
                 fs.printCrashLogEntry(output, item);
+                return true;
             });
         } break;
         case 'p': {
@@ -141,7 +142,9 @@ bool ResetDetectorPlugin::atModeHandler(AtModeArgs &args)
                     fs.getCrashLog([&](const SaveCrash::CrashLogEntry &item) {
                         if (++count == number) {
                             fs.printCrashLog(args.getStream(), item);
+                            return false;
                         }
+                        return true;
                     });
                 }
                 else {

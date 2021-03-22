@@ -1,4 +1,4 @@
-/**
+ /**
   Author: sascha_lammers@gmx.de
 */
 
@@ -1213,7 +1213,7 @@ void at_mode_serial_handle_event(String &commandString)
     commandString.trim();
     bool isQueryMode = commandString.endsWith('?');
 
-    __dump_binary_to(output, commandString.c_str(), commandString.length(), 16, nullptr, 4);
+    // __dump_binary_to(output, commandString.c_str(), commandString.length(), 16, nullptr, 4);
 
     // check command prefix
     if (commandString.startsWithIgnoreCase(F("AT"))) {
@@ -1805,6 +1805,7 @@ void at_mode_serial_handle_event(String &commandString)
         if (args.requireArgs(1, 2)) {
             auto cmds = PSTR("list|start|stop|add-blacklist|add|remove");
             int cmd = stringlist_find_P_P(cmds, args.get(0), '|');
+            __DBG_printf("cmd=%d arg0=%s cmds=%s", cmd, args.get(0), cmds);
             if (cmd == 0) {
                 PluginComponents::RegisterEx::getInstance().dumpList(output);
                 args.printf_P("Blacklist=%s", PluginComponent::getBlacklist());

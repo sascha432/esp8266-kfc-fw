@@ -7,6 +7,7 @@
 #include <LoopFunctions.h>
 #include <PluginComponent.h>
 #include <PrintHtmlEntitiesString.h>
+#include "save_crash.h"
 
 #if 1
 #include <debug_helper_enable.h>
@@ -322,18 +323,22 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     ResetDetectorPlugin,
     "rd",               // name
     "Reset Detector",   // friendly name
-    "",                 // web_templates
-    "",                 // config_forms
+
+
+    "safecrash",        // web_templates
+    "safecrash",        // config_forms
+
+
     "",                 // reconfigure_dependencies
     PluginComponent::PriorityType::RESET_DETECTOR,
     PluginComponent::RTCMemoryId::RESET_DETECTOR,
-    static_cast<uint8_t>(PluginComponent::MenuType::NONE),
+    static_cast<uint8_t>(PluginComponent::MenuType::NONE), //(CUSTOM),
     true,               // allow_safe_mode
     true,               // setup_after_deep_sleep
-    true,              // has_get_status
+    true,               // has_get_status
     false,              // has_config_forms
     false,              // has_web_ui
-    false,              // has_web_templates
+    true,               // has_web_templates
     true,               // has_at_mode
     0                   // __reserved
 );
@@ -343,8 +348,6 @@ ResetDetectorPlugin::ResetDetectorPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_
     PluginComponentInitRegisterEx();
     REGISTER_PLUGIN(this, "ResetDetectorPlugin");
 }
-
-#include "save_crash.h"
 
 void ResetDetectorPlugin::getStatus(Print &output)
 {

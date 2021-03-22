@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<!--%%HEAD-->
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" debug_loader="1">
+    <link rel="stylesheet" href="../../lib/KFCWebBuilder/Resources/bootstrap-4.5.2-dist/css/bootstrap.min.css" debug_loader="1">
+    <link rel="stylesheet" href="../css/styles.css" debug_loader="1">
+    <link rel="stylesheet" href="../../lib/KFCWebBuilder/Resources/css/open-iconic-bootstrap.css" debug_loader="1">
+    <title>KFC FW</title>
+    <style type='text/css'>
+        .collapsible td {
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        .collapsible div.content {
+            padding: 0.75rem;
+        }
+        .collapsible pre {
+            overflow-x: hidden;
+        }
+        .oi-clipboard {
+            font-size: 1.25rem;
+        }
+       </style>
+</head>
+<!--HEAD%%-->
+<body>
+    <!--%%NAV-->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="index.html">KFC FW</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        </div>
+    </nav>
+    <!--NAV%%-->
+    <div class="container" id="message">
+        <div class="accordion pt-3">
+            <div class="card">
+                <div class="card-header text-white bg-primary">
+                    <h2 class="mb-0">SaveCrash Log Entries</h2>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-body">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th scope="col">#</th>
+                                <th scope="col">Time</th>
+                                <th scope="col">Reason</th>
+                                <th scope="col">Stack</th>
+                            </tr>
+                        </thead>
+                        <tbody id="savecrash-items">
+                            <tr class="hidden savecrash-prototype">
+                                <th scope="row" class="content"></th>
+                                <td class="content"></td>
+                                <td class="content"></td>
+                                <td><button class="btn btn-link content" data-toggle="collapse" role="button" aria-expanded="false"></button></td>
+                            </tr>
+                            <tr class="hidden savecrash-prototype">
+                                <td colspan="10"><div class="collapse" data-parent="#savecrash-items"><div class="content"><div class="inner"></div><div class="loading text-center"><img src="images/spinner.gif" width="64" height="64"></div></div></div></th>
+                            </tr>
+                            <tr class="hidden savecrash-log-empty">
+                                <th colspan="10" scope="row" class="text-center">
+                                    <h3 class="pt-5 content">No entries found</h3>
+                                </th>
+                            </tr>
+                            <tr class="savecrash-log-loading">
+                                <th colspan="10" scope="row" class="text-center"><img src="images/spinner.gif" width="64" height="64"></th>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!--%%FOOT-->
+        <div class="row">
+            <div class="col footer">&nbsp;</div>
+        </div>
+        <!--FOOT%%-->
+    </div>
+    <!--%%JAVASCRIPT-->
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/jquery-3.5.2-dist/jquery.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/popper.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/bootstrap-4.5.2-dist/js/bootstrap.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/js.cookie.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/jquery.color-2.1.2.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../js/common.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../js/debug.js"></script>
+    <!--JAVASCRIPT%%-->
+
+    <script>
+        $(function() {
+
+            var tbody = $('#savecrash-items');
+            var prototype = $('.savecrash-prototype').clone();
+            var st_prototype = prototype.removeAttr('class')[1].outerHTML;
+            prototype = prototype.removeAttr('class')[0].outerHTML;
+            var button_link_color = $('button.btn-link').css('color');
+
+            function empty_list() {
+                $('.savecrash-log-empty').removeClass('hidden').show();
+                $('.savecrash-log-loading').hide();
+            }
+
+            function error(msg) {
+                $('tr.data').remove();
+                $('.savecrash-log-empty').removeClass('hidden').show().find('.content').html(msg);
+                $('.savecrash-log-loading').hide();
+            }
+
+            function populate_trace(content, data) {
+                if (data && data.trace) {
+                    var innerContent = content.find('.inner');
+                    innerContent.removeClass('text-center').html('<button class="btn btn-link float-right">Copy to clipboard <span class="oi oi-clipboard pl-2"></span></button><pre>' + data.trace + '</pre>');
+                    var stack_trace = innerContent.find('pre');
+                    $.clipboard(innerContent.find('button'), stack_trace[0].textContent);
+                }
+                else {
+                    msg = 'Failed to load stack trace';
+                    if (data && data.error) {
+                        msg = data.error;
+                    }
+                    content.find('.inner').html('<h3>' + msg + '</h3>').addClass('text-center');
+                }
+                content.find('.loading').hide();
+                content.data('loading', false);
+            }
+
+            function load_trace(content, id) {
+                $.get('savecrash.json?SID=' + $.getSessionId() + '&id=' + id, function(data) {
+                    populate_trace(content, data);
+                }, 'json').fail(function() {
+                    populate_trace(content);
+                });
+            }
+
+            function populate(data) {
+                if (data && data.hasOwnProperty('items') && data['items'].length != 0) {
+                    $('.savecrash-log-empty').hide();
+                    $('.savecrash-log-loading').hide();
+                    $(data['items']).each(function(key, val) {
+                        tbody.append($(prototype).clone());
+                        var item = tbody.find('tr:last');
+                        item.addClass('data');
+                        var content = item.find('.content');
+                        $(content[0]).html(val.id);
+                        $(content[1]).html(val.ts);
+                        $(content[2]).html(val.r);
+                        $(content[3]).html(val.st).data('target', '#st' + val.id).on('click', function(e) {
+                            e.preventDefault();
+                            var trace = $(this).data('target');
+                            $(trace).find('.collapse').collapse('toggle');
+                        });
+                        tbody.append($(st_prototype).clone());
+                        var trace = tbody.find('tr:last');
+                        trace.attr('id', 'st' + val.id).addClass('collapsible').on('hidden.bs.collapse', function () {
+                        }).on('show.bs.collapse', function () {
+                            var content = $(this).find('.content');
+                            if (!content.data('loading')) {
+                                content.find('.loading').show();
+                                content.find('.inner').html('');
+                                content.data('loading', true);
+                                load_trace($(content), val.id);
+                            }
+                        });
+                    });
+                }
+                else {
+                    empty_list();
+                }
+            }
+
+            function default_error() {
+                error('Failed to load data');
+            }
+
+            $.get('savecrash.json?SID=' + $.getSessionId(), function(data) {
+                try {
+                    populate(data);
+                } catch(e) {
+                    default_error();
+                }
+            }, 'json').fail(function() {
+                default_error();
+            });
+        });
+    </script>
+</body>
+
+</html>

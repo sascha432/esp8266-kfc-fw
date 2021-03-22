@@ -17,6 +17,7 @@
 #endif
 
 #define DEBUG_RD_SPIFLASH 0
+
 #if DEBUG_RD_SPIFLASH
 
 static  SpiFlashOpResult _spi_flash_erase_sector(uint16 sec)

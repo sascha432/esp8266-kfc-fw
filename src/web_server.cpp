@@ -27,15 +27,15 @@
 #include "WebUIAlerts.h"
 #include "kfc_fw_config.h"
 #include "failure_counter.h"
-#include "./plugins/mdns/mdns_sd.h"
-// #if IOT_REMOTE_CONTROL
-// #include "./plugins/remote/remote.h"
-// #endif
+#include "save_crash.h"
+#if MDNS_PLUGIN
+#include "../src/plugins/mdns/mdns_sd.h"
+#endif
 #if MQTT_SUPPORT
-#include "./plugins/mqtt/mqtt_client.h"
+#include "../src/plugins/mqtt/mqtt_client.h"
 #endif
 #if IOT_CLOCK
-#include "./plugins/clock/clock.h"
+#include "../src/plugins/clock/clock.h"
 #endif
 
 #if DEBUG_WEB_SERVER
@@ -340,17 +340,34 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
         response = new AsyncResolveZeroconfResponse(request->arg(FSPGM(value)));
         _prepareAsyncBaseResponse(request, response, httpHeaders);
     }
+    else if (url.startsWith(F("/savecrash/"))) {
+        if (!plugin.isAuthenticated(request)) {
+            request->send(403);
+            return;
+        }
+        httpHeaders.addNoCache(true);
+        if (url.equals(F("index.html"), 11)) {
+            if (SaveCrash::webHandler::index(request, httpHeaders)) {
+                return;
+            }
+        }
+        else if (url.equals(F("savecrash.json"), 11)) {
+            response = SaveCrash::webHandler::json(request, httpHeaders);
+        }
+    }
     else if (url.startsWith(F("/speedtest."))) { // handles speedtest.zip and speedtest.bmp
         plugin._handlerSpeedTest(request, !url.endsWith(F(".bmp")), httpHeaders);
         return;
     }
 
-    // else section
-    if (plugin._handleFileRead(url, plugin._clientAcceptsGzip(request), request, httpHeaders)) {
-        return;
-    }
+    // handle response
     if (response) {
         request->send(response);
+        return;
+    }
+
+    // else section
+    if (plugin._handleFileRead(url, plugin._clientAcceptsGzip(request), request, httpHeaders)) {
         return;
     }
     send(404, request);
@@ -1313,6 +1330,87 @@ AuthType Plugin::getAuthenticated(AsyncWebServerRequest *request) const
         }
     }
     return AuthType::NONE;
+}
+
+// ------------------------------------------------------------------------
+// Reset Detector and SaveCrash
+// ------------------------------------------------------------------------
+
+namespace SaveCrash {
+
+    bool webHandler::index(AsyncWebServerRequest *request, HttpHeaders &httpHeaders)
+    {
+        auto tpl = new WebTemplate();
+        if (!WebServer::Plugin::sendFileResponse(200, F("/savecrash.html"), request, httpHeaders, tpl)) {
+            plugin.send(500, request);
+        }
+        return true;
+    }
+
+    AsyncWebServerResponse *webHandler::json(AsyncWebServerRequest *request, HttpHeaders &httpHeaders)
+    {
+        using namespace MQTT::Json;
+
+        auto fs = SaveCrash::createFlashStorage();
+        PrintString jsonStr;
+
+        auto id = strtoul(request->getParam(F("id"))->value().c_str(), nullptr, 16);
+        if (id) {
+            jsonStr = F("{\"trace\":\"");
+            // write the trace directly into the string buffer to avoid allocating another buffer
+            // huge stack traces barely fit into memory (5-10kb as plain text)
+            // options are to store everything in a temporary file on SPIFFS or stream the
+            // data asynchronously
+            // auto &strackTrace = static_cast<JsonPrintString &>(jsonStr);
+
+            auto &strackTrace=jsonStr;
+
+            fs.getCrashLog([&](const SaveCrash::CrashLogEntry &item) {
+                if (item.getId() == id) {
+                    fs.printCrashLog(strackTrace, item);
+                    return false;
+                }
+                return true;
+            });
+            if (strackTrace.length() < 11) { // 10 would be an emptry string -> {"trace":"
+                jsonStr = PrintString();
+                UnnamedObjectWriter json(jsonStr, NamedString(F("error"), PrintString(F("id 0x%08x not found"), id)));
+            }
+            else {
+                jsonStr.print(F("\"}\n"));
+            }
+        }
+        else {
+            PrintString timeStr;
+            auto items = NamedArray(F("items"));
+            fs.getCrashLog([&](const SaveCrash::CrashLogEntry &item) {
+                __DBG_printf("id=%s reason=%s", item.getIdStr().c_str(), item._header.getReason());
+                time_t now = static_cast<time_t>(item._header._time);
+                timeStr.clear();
+                timeStr.strftime(FSPGM(strftime_date_time_zone), localtime(&now));
+                items.append(UnnamedObject(
+                    NamedFormattedInteger(F("id"), F("%08x"), item.getId()),
+                    NamedString(F("ts"), timeStr),
+                    NamedUint32(F("t"), static_cast<uint32_t>(now)),
+                    NamedString(F("r"), item._header.getReason()),
+                    NamedString(F("st"), item._header.getStack())
+                ));
+                // fs.printCrashLogEntry(output, item);
+                return true;
+            });
+            UnnamedObjectWriter json(jsonStr, items);
+        }
+
+        auto response = request->beginResponse(200, FSPGM(mime_application_json), jsonStr);
+        httpHeaders.setAsyncWebServerResponseHeaders(response);
+        return response;
+    }
+
+}
+
+void ResetDetectorPlugin::createMenu()
+{
+    bootstrapMenu.addMenuItem(F("SaveCrash Log"), F("savecrash.html"), navMenu.util);
 }
 
 #include "web_server_action.h"

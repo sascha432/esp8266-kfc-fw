@@ -8,12 +8,25 @@
 #include <EventScheduler.h>
 #include <EEPROM.h>
 #include "SPIFlash.h"
+#include "coredecls.h"
 
-#define DEBUG_SAVE_CRASH                                1
+// #define DEBUG_SAVE_CRASH                                1
 
 #ifndef DEBUG_SAVE_CRASH
 #define DEBUG_SAVE_CRASH                                0
 #endif
+
+
+#if DEBUG_SAVE_CRASH
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
+
+class HttpHeaders;
+class AsyncWebServerResponse;
+class AsyncWebServerRequest;
 
 // src/kfc_fw_config_forms.cpp
 extern const char *getFirmwareMD5();
@@ -24,7 +37,7 @@ namespace SaveCrash {
     static constexpr uint16_t kLimitStackTraceSize = 1200;
 
     inline static uint16_t limitStackTraceSize(uint32_t begin, uint32_t end) {
-        __DBG_printf("begion=%p end=%p end-begin=%d return=%d", begin, end, end-begin,std::min<int>(SaveCrash::kLimitStackTraceSize, end - begin));
+        __LDBG_printf("begin=%p end=%p end-begin=%d return=%d", begin, end, end-begin,std::min<int>(SaveCrash::kLimitStackTraceSize, end - begin));
         return std::min<size_t>(SaveCrash::kLimitStackTraceSize, end - begin);
     }
 
@@ -92,10 +105,10 @@ namespace SaveCrash {
             {
             }
 
-            Stack(uint32_t start, uint32_t end) :
+            Stack(uint32_t start, uint32_t end, uint32_t sp = 0) :
                 _begin(start),
                 _end(end),
-                _sp(0),
+                _sp(sp),
                 _size(limitStackTraceSize(_begin, _end))
             {
             }
@@ -131,9 +144,9 @@ namespace SaveCrash {
             setMD5(getFirmwareMD5());
         }
 
-        Data(uint32_t time, uint32_t stackStart, uint32_t stackEnd, void *lastFailAllocAddr, int lastFailAllocSize, const struct rst_info &rst_info) :
+        Data(uint32_t time, uint32_t stackStart, uint32_t stackEnd, uint32_t sp, void *lastFailAllocAddr, int lastFailAllocSize, const struct rst_info &rst_info) :
             _time(time),
-            _stack(stackStart, stackEnd),
+            _stack(stackStart, stackEnd, sp),
             _lastFailAlloc(lastFailAllocAddr, lastFailAllocSize),
             _fwVersion(FirmwareVersion()),
             _info(rst_info)
@@ -155,6 +168,10 @@ namespace SaveCrash {
 
         inline size_t getStackSize() const {
             return _stack.size();
+        }
+
+        inline String getStack() const {
+            return PrintString(F("0x%08x-0x%08x"), _stack._begin, _stack._end);
         }
 
         inline const __FlashStringHelper *getReason() const {
@@ -210,9 +227,20 @@ namespace SaveCrash {
             _offset(offset)
         {
         }
+
+        inline uint32_t getId() const {
+            uint32_t addr = ((_sector << 12) | _offset);
+            uint32_t crc = crc32(&addr, sizeof(addr));
+            return addr ^ crc;
+        }
+
+        inline String getIdStr() const {
+            return PrintString(F("%08x"), getId());
+        }
     };
 
-    using ItemCallback = std::function<void(const CrashLogEntry &)>;
+    // return true to continue, false to abort
+    using ItemCallback = std::function<bool(const CrashLogEntry &)>;
 
     struct FlashStorageInfo {
         uint32_t _size;
@@ -253,6 +281,16 @@ namespace SaveCrash {
     void removeCrashCounter(); // calling SPIFFS.begin()
     void installRemoveCrashCounter(uint32_t delay_seconds);
 
+    struct webHandler {
+
+        // in web_server.cpp
+        static bool index(AsyncWebServerRequest *request, HttpHeaders &httpHeaders);
+        static AsyncWebServerResponse *json(AsyncWebServerRequest *request, HttpHeaders &httpHeaders);
+
+    };
+
 };
 
 extern "C" void custom_crash_callback(struct rst_info *rst_info, uint32_t stack, uint32_t stack_end);
+
+#include <debug_helper_disable.h>

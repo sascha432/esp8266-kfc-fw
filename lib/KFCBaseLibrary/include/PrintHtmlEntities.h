@@ -29,7 +29,18 @@
 #define PRINTHTMLENTITIES_ACUTE     "\xb4"  // 0xb4 = 180 = ´
 #define PRINTHTMLENTITIES_MICRO     "\xb5"  // 0xb5 = 181 = µ
 
-class PrintHtmlEntitiesString;
+#define TRANSLATE_SINGLE_QUOTE_IN_HTML_ATTRIBUTE 0
+
+#if TRANSLATE_SINGLE_QUOTE_IN_HTML_ATTRIBUTE
+static constexpr size_t kAttributeOffset = 0;
+#else
+static constexpr size_t kAttributeOffset = 1;
+#endif
+
+extern const char __keys_attribute_all_P[] PROGMEM;
+extern const char __keys_javascript_P[] PROGMEM;
+extern const char *__values_P[] PROGMEM;
+extern const char *__values_javascript_P[] PROGMEM;
 
 class PrintHtmlEntities {
 public:
@@ -38,6 +49,16 @@ public:
         ATTRIBUTE,
         RAW,
         JAVASCRIPT
+    };
+
+    struct KeysValues {
+        PGM_P keys;
+        PGM_P *values;
+        KeysValues(PGM_P _keys, PGM_P *_values) :
+            keys(_keys),
+            values(_values)
+        {
+        }
     };
 
 public:
@@ -92,31 +113,23 @@ protected:
     size_t _writeRawString(const __FlashStringHelper *str);
 
 private:
+    static int8_t __getKeyIndex_P(char find, PGM_P keys);
+    static KeysValues __getKeysAndValues(Mode mode);
+
+private:
     Mode _mode;
     uint32_t _lastChars: 24;
     uint32_t _utf8Count: 8;
 };
 
-inline __attribute__((__always_inline__))
-PrintHtmlEntities::PrintHtmlEntities() :
+inline PrintHtmlEntities::PrintHtmlEntities() :
     _mode(Mode::HTML), _lastChars(0), _utf8Count(0)
 {
 }
 
-inline __attribute__((__always_inline__))
-PrintHtmlEntities::PrintHtmlEntities(Mode mode) :
+inline PrintHtmlEntities::PrintHtmlEntities(Mode mode) :
     _mode(mode), _lastChars(0), _utf8Count(0)
 {
-}
-
-inline __attribute__((__always_inline__))
-PrintHtmlEntities::Mode PrintHtmlEntities::setMode(Mode mode)
-{
-    Mode lastMode = _mode;
-    _mode = mode;
-    _lastChars = 0;
-    _utf8Count = 0;
-    return lastMode;
 }
 
 inline __attribute__((__always_inline__))
@@ -125,8 +138,7 @@ PrintHtmlEntities::Mode PrintHtmlEntities::getMode() const
     return _mode;
 }
 
-inline __attribute__((__always_inline__))
-size_t PrintHtmlEntities::printTo(Mode mode, const String &str, Print &output)
+inline size_t PrintHtmlEntities::printTo(Mode mode, const String &str, Print &output)
 {
     return printTo(mode, str.c_str(), output);
 }
@@ -137,8 +149,16 @@ size_t PrintHtmlEntities::printTo(Mode mode, const __FlashStringHelper *str, Pri
     return printTo(mode, reinterpret_cast<PGM_P>(str), output);
 }
 
-inline __attribute__((__always_inline__))
-String PrintHtmlEntities::getTranslatedTo(const String &str, Mode mode)
+inline PrintHtmlEntities::Mode PrintHtmlEntities::setMode(Mode mode)
+{
+    Mode lastMode = _mode;
+    _mode = mode;
+    _lastChars = 0;
+    _utf8Count = 0;
+    return lastMode;
+}
+
+inline String PrintHtmlEntities::getTranslatedTo(const String &str, Mode mode)
 {
     String tmp;
     if (translateTo(str.c_str(), tmp, mode)) {
@@ -147,8 +167,7 @@ String PrintHtmlEntities::getTranslatedTo(const String &str, Mode mode)
     return str;
 }
 
-inline __attribute__((__always_inline__))
-size_t PrintHtmlEntities::translate(const uint8_t *buffer, size_t size)
+inline size_t PrintHtmlEntities::translate(const uint8_t *buffer, size_t size)
 {
     size_t written = 0;
     while (size--) {
@@ -157,8 +176,7 @@ size_t PrintHtmlEntities::translate(const uint8_t *buffer, size_t size)
     return written;
 }
 
-inline __attribute__((__always_inline__))
-size_t PrintHtmlEntities::_writeRawString(const __FlashStringHelper *str)
+inline size_t PrintHtmlEntities::_writeRawString(const __FlashStringHelper *str)
 {
     PGM_P ptr = RFPSTR(str);
     size_t written = 0;
@@ -168,3 +186,24 @@ size_t PrintHtmlEntities::_writeRawString(const __FlashStringHelper *str)
     }
     return written;
 }
+
+inline int8_t PrintHtmlEntities::__getKeyIndex_P(char find, PGM_P keys)
+{
+#if 1
+    auto ptr = strchr_P(keys, find);
+    if (ptr) {
+        return ptr - keys;
+    }
+#else
+    auto ptr = keys;
+    char ch;
+    while((ch = pgm_read_byte(ptr)) != 0) {
+        if (ch == find) {
+            return ptr - keys;
+        }
+        ptr++;
+    }
+#endif
+    return -1;
+}
+

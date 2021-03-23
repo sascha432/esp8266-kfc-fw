@@ -195,26 +195,32 @@ const __FlashStringHelper *ResetDetector::getResetReason(uint8_t reason)
     if (static_cast<int>(reason) == 254) {
         return F("User exception (panic/abort/assert)");
     }
-    // copy of ESP.getResetInfo() below returning PROGMEM string
-    const __FlashStringHelper* buff;
     switch(reason) {
         // normal startup by power on
-        case REASON_DEFAULT_RST:      buff = F("Power On"); break;
+        case REASON_DEFAULT_RST:
+            return F("Power On");
         // hardware watch dog reset
-        case REASON_WDT_RST:          buff = F("Hardware Watchdog"); break;
+        case REASON_WDT_RST:
+            return F("Hardware Watchdog");
         // exception reset, GPIO status won’t change
-        case REASON_EXCEPTION_RST:    buff = F("Exception"); break;
+        case REASON_EXCEPTION_RST:
+            return F("Exception");
         // software watch dog reset, GPIO status won’t change
-        case REASON_SOFT_WDT_RST:     buff = F("Software Watchdog"); break;
+        case REASON_SOFT_WDT_RST:
+            return F("Software Watchdog");
         // software restart ,system_restart , GPIO status won’t change
-        case REASON_SOFT_RESTART:     buff = F("Software/System restart"); break;
+        case REASON_SOFT_RESTART:
+            return F("Software/System restart");
         // wake up from deep-sleep
-        case REASON_DEEP_SLEEP_AWAKE: buff = F("Deep-Sleep Wake"); break;
+        case REASON_DEEP_SLEEP_AWAKE:
+            return F("Deep-Sleep Wake");
         // // external system reset
-        case REASON_EXT_SYS_RST:      buff = F("External System"); break;
-        default:                      buff = F("Unknown"); break;
+        case REASON_EXT_SYS_RST:
+            return F("External System");
+        default:
+            break;
     }
-    return buff;
+    return F("Unknown");
 #elif defined(ESP32)
     switch(reason) {
         case ESP_RST_POWERON:
@@ -323,16 +329,12 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     ResetDetectorPlugin,
     "rd",               // name
     "Reset Detector",   // friendly name
-
-
     "safecrash",        // web_templates
     "safecrash",        // config_forms
-
-
     "",                 // reconfigure_dependencies
     PluginComponent::PriorityType::RESET_DETECTOR,
     PluginComponent::RTCMemoryId::RESET_DETECTOR,
-    static_cast<uint8_t>(PluginComponent::MenuType::NONE), //(CUSTOM),
+    static_cast<uint8_t>(PluginComponent::MenuType::CUSTOM),
     true,               // allow_safe_mode
     true,               // setup_after_deep_sleep
     true,               // has_get_status
@@ -351,25 +353,6 @@ ResetDetectorPlugin::ResetDetectorPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_
 
 void ResetDetectorPlugin::getStatus(Print &output)
 {
-    // int counter = espSaveCrash.count();
-    // String name = FSPGM(crash_dump_file);
-    // auto pos = name.indexOf('%');
-    // if (pos != -1) {
-    //     name.remove(pos);
-    // }
-    // auto path = String('/');
-    // if ((pos = name.indexOf('/', 1)) != -1) {
-    //     path = name.substring(0, pos);
-    // }
-    // size_t size = 0;
-    // ListDir dir(path);
-    // while(dir.next()) {
-    //     if (dir.isFile() && dir.fileName().startsWith(name)) {
-    //         counter++;
-    //         size += dir.fileSize();
-    //     }
-    // }
-    // __LDBG_printf("path=%s name=%s size=%u counter=%u espcounter=%u", path.c_str(), name.c_str(), size, counter, espSaveCrash.count());
     auto info = SaveCrash::createFlashStorage().getInfo();
     output.printf_P(PSTR("%u crash report(s), total size "), info._counter);
     output.print(formatBytes(info._size));

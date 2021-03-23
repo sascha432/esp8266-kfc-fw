@@ -44,6 +44,14 @@ uint32_t crc32b(const void *message, size_t length, uint32_t crc)
 
 void FileMapping::_openByFilename()
 {
+    String overrides = F("/.overrides");
+    if (!_filename.startsWith('/')) {
+        overrides += '/';
+    }
+    overrides += _filename;
+    if (KFCFS.exists(overrides)) {
+        _filename = overrides;
+    }
     if (KFCFS.exists(_filename)) {
         _uuid = 0;
         _fileSize = KFCFS.open(_filename, fs::FileOpenMode::read).size();
@@ -99,15 +107,6 @@ File FileMapping::open(const char *mode) const
     return KFCFS.open(fnPtr, mode);
 }
 
-File SPIFFSWrapper::open(Dir dir, const char *mode)
-{
-#if ESP8266
-    return dir.openFile(mode);
-#else
-    return File();
-    // return dir.open(mode);
-#endif
-}
 
 File SPIFFSWrapper::open(const char *path, const char *mode)
 {
@@ -120,25 +119,4 @@ File SPIFFSWrapper::open(const char *path, const char *mode)
         return mapping.open(mode);
     }
     return File();
-}
-
-bool SPIFFSWrapper::exists(const char *path)
-{
-    if (KFCFS.exists(path)) {
-        return true;
-    }
-    return FileMapping(path).exists();
-}
-
-bool SPIFFSWrapper::rename(const char* pathFrom, const char* pathTo)
-{
-    if (exists(pathTo)) {
-        return false;
-    }
-    return KFCFS.rename(pathFrom, pathTo);
-}
-
-bool SPIFFSWrapper::remove(const char *path)
-{
-    return KFCFS.remove(path);
 }

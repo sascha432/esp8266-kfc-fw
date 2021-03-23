@@ -487,6 +487,8 @@ PROGMEM_STRING_DECL(_escaped_newline);
 PROGMEM_STRING_DECL(_escaped_return);
 PROGMEM_STRING_DECL(_escaped_htab);
 PROGMEM_STRING_DECL(_escaped_vtab);
+PROGMEM_STRING_DECL(default_format_double);
+PROGMEM_STRING_DECL(default_format_integer);
 #ifdef __cplusplus
 } // extern "C"
 #endif

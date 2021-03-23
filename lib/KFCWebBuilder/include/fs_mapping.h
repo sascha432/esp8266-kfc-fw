@@ -269,3 +269,6 @@ public:
 //     StringVector::iterator _logsIterator;
 // #endif
 // };
+
+#define __FS_MAPPING_INSIDE_INCLUDE
+#include "fs_mapping.hpp"

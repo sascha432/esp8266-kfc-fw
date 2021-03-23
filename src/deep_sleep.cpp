@@ -212,7 +212,6 @@ String PinState::toString(uint32_t state, uint32_t time) const
 
 extern "C" void preinit(void)
 {
-
     resetDetector.init();
     resetDetector.begin();
 

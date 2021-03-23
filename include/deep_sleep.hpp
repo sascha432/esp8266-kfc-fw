@@ -95,7 +95,7 @@ bool DeepSleep::PinState::getValue(uint8_t pin) const
     return (_state & _BV(pin)) == activeHigh();
 }
 
-__DEEP_SLEEP_INLINE_AWLAYS__
+__DEEP_SLEEP_INLINE__
 uint32_t DeepSleep::PinState::_readStates() const
 {
     uint32_t state = GPI;
@@ -131,32 +131,32 @@ uint32_t DeepSleep::PinState::getMicros() const {
 // ------------------------------------------------------------------------
 
 
-__DEEP_SLEEP_INLINE_AWLAYS__
+__DEEP_SLEEP_INLINE__
 DeepSleepParam::DeepSleepParam() :
     _totalSleepTime(0)
 {
 }
 
-__DEEP_SLEEP_INLINE_AWLAYS__
+__DEEP_SLEEP_INLINE__
 DeepSleepParam::DeepSleepParam(WakeupMode wakeupMode) :
     _totalSleepTime(0),
     _wakeupMode(wakeupMode)
 {
 }
 
-__DEEP_SLEEP_INLINE_AWLAYS__
+__DEEP_SLEEP_INLINE__
 DeepSleepParam::DeepSleepParam(minutes deepSleepTime, RFMode mode) :
 DeepSleepParam(std::chrono::duration_cast<milliseconds>(deepSleepTime), mode)
 {
 }
 
-__DEEP_SLEEP_INLINE_AWLAYS__
+__DEEP_SLEEP_INLINE__
 DeepSleepParam::DeepSleepParam(seconds deepSleepTime, RFMode mode) :
     DeepSleepParam(std::chrono::duration_cast<milliseconds>(deepSleepTime), mode)
 {
 }
 
-__DEEP_SLEEP_INLINE_AWLAYS__
+__DEEP_SLEEP_INLINE__
 DeepSleepParam::DeepSleepParam(milliseconds deepSleepTime, RFMode rfMode) :
             _totalSleepTime(deepSleepTime.count()),
             _remainingSleepTime(deepSleepTime.count()),

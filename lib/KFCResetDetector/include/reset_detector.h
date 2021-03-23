@@ -20,11 +20,12 @@
     #define DEBUG_RESET_DETECTOR                            0
 #endif
 
-// include methods in source code = 0, or in header = 1
-// set to 1 for production
+// include methods in source code = 0, or in header as always inline = 1
+// use 1 for production, speeds everything up and reduces code size
+// use 0 for development to avoid recompiling half the program for every change
 #ifndef RESET_DETECTOR_INCLUDE_HPP_INLINE
     #if DEBUG_RESET_DETECTOR
-        #define RESET_DETECTOR_INCLUDE_HPP_INLINE           0
+        #define RESET_DETECTOR_INCLUDE_HPP_INLINE           1
     #else
         #define RESET_DETECTOR_INCLUDE_HPP_INLINE           1
     #endif

@@ -5,61 +5,21 @@
 #include "PrintHtmlEntities.h"
 #include "PrintHtmlEntitiesString.h"
 
-// copy src string into dst memcpy_strlen_P without terminating NUL byte and return copied bytes
-
-//1600000: 361285 micros
-static inline size_t memcpy_strlen_P(char *dst, PGM_P src)
-{
-    return strlen(strcpy_P(dst, src));
-
-}
-
-#if 0
-
-//1600000: 640013 micros
-static size_t memcpy_strlen_P_v2(char *dst, PGM_P src) {
-    uint16_t count = 0;
-    char ch;
-    while ((ch = pgm_read_byte(src++)) != 0) {
-        *dst++ = ch;
-        count++;
-    }
-    return count;
-}
-
-//1600000: 621269 micros
-static size_t memcpy_strlen_P_v3(char *dst, PGM_P src) {
-    auto ptr = dst;
-    char ch;
-    while ((ch = pgm_read_byte(src++)) != 0) {
-        *ptr++ = ch;
-    }
-    return (ptr - dst);
-}
-
-#endif
 
 // index of the character must match the index of string in the values array
-static const char __keys_attribute_all_P[] PROGMEM = { "'\"<>&" };
+const char __keys_attribute_all_P[] PROGMEM = { "'\"<>&" };
 
-static const char __keys_javascript_P[] PROGMEM = { "'\"\\\b\f\n\r\t\v" };
+const char __keys_javascript_P[] PROGMEM = { "'\"\\\b\f\n\r\t\v" };
 
-#if 1
-// do not translate ' inside html attributes
-static constexpr size_t kAttributeOffset = 1;
-#else
-static constexpr size_t kAttributeOffset = 0;
-#endif
+// // index of the character must match the index of string in the values array
+// const char __keys_html_P[] PROGMEM =  { "'\"<>&%=?#" PRINTHTMLENTITIES_COPY PRINTHTMLENTITIES_DEGREE PRINTHTMLENTITIES_PLUSM PRINTHTMLENTITIES_ACUTE PRINTHTMLENTITIES_MICRO };
 
-// index of the character must match the index of string in the values array
-static const char __keys_html_P[] PROGMEM =  { "'\"<>&%=?#" PRINTHTMLENTITIES_COPY PRINTHTMLENTITIES_DEGREE PRINTHTMLENTITIES_PLUSM PRINTHTMLENTITIES_ACUTE PRINTHTMLENTITIES_MICRO };
-
-#ifndef _MSC_VER
-static_assert(strncmp(__keys_attribute_all_P, __keys_html_P, strlen(__keys_attribute_all_P)) == 0, "invalid order");
-#endif
+// #ifndef _MSC_VER
+// static_assert(strncmp(__keys_attribute_all_P, __keys_html_P, strlen(__keys_attribute_all_P)) == 0, "invalid order");
+// #endif
 
 // https://en.wikipedia.org/wiki/Windows-1252
-static const char *__values_P[] PROGMEM = {
+const char *__values_P[] PROGMEM = {
     SPGM(htmlentities_apos, "&apos;"),      // '
     SPGM(htmlentities_quot, "&quot;"),      // "
     SPGM(htmlentities_lt, "&lt;"),          // <
@@ -77,7 +37,8 @@ static const char *__values_P[] PROGMEM = {
     // SPGM(htmlentities_, "&;"),
 };
 
-static const char *__values_javascript_P[] PROGMEM = {
+
+const char *__values_javascript_P[] PROGMEM = {
     SPGM(_escaped_apostrophe, "\\'"),           // '
     SPGM(_escaped_double_quote, "\\\""),        // "
     SPGM(_escaped_backslash, "\\\\"),           // \    Backslash
@@ -88,38 +49,6 @@ static const char *__values_javascript_P[] PROGMEM = {
     SPGM(_escaped_htab, "\\t"),                 // \t	Horizontal Tabulator
     SPGM(_escaped_vtab, "\\v")                  // \v	Vertical Tabulator
 };
-
-
-static int8_t __getKeyIndex_P(char find, PGM_P keys)
-{
-    uint8_t count = 0;
-    char ch;
-    while((ch = pgm_read_byte(keys)) != 0) {
-        if (ch == find) {
-            return count;
-        }
-        count++;
-        keys++;
-    }
-    return -1;
-}
-
-struct KeysValues {
-    PGM_P keys;
-    PGM_P *values;
-    KeysValues(PGM_P _keys, PGM_P *_values) : keys(_keys), values(_values) {}
-};
-
-inline static KeysValues __getKeysAndValues(PrintHtmlEntities::Mode mode)
-{
-    if (mode == PrintHtmlEntities::Mode::JAVASCRIPT) {
-        return KeysValues(__keys_javascript_P, __values_javascript_P);
-    }
-    else if (mode == PrintHtmlEntities::Mode::ATTRIBUTE) {
-        return KeysValues(&__keys_attribute_all_P[kAttributeOffset], &__values_P[kAttributeOffset]);
-    }
-    return KeysValues(__keys_attribute_all_P, __values_P);
-}
 
 int PrintHtmlEntities::getTranslatedSize_P(PGM_P str, Mode mode)
 {
@@ -193,7 +122,8 @@ char *PrintHtmlEntities::translateTo(const char *str, Mode mode, int requiredSiz
             *ptr++ = ch;
         }
         else {
-            ptr += memcpy_strlen_P(ptr, kv.values[i]);
+            ptr += strlen(strcpy_P(ptr, kv.values[i]));
+
         }
     }
     *ptr = 0;
@@ -323,4 +253,15 @@ size_t PrintHtmlEntities::translate(uint8_t data)
         }
     }
     return writeRaw(data);
+}
+
+PrintHtmlEntities::KeysValues PrintHtmlEntities::__getKeysAndValues(PrintHtmlEntities::Mode mode)
+{
+    if (mode == PrintHtmlEntities::Mode::JAVASCRIPT) {
+        return KeysValues(__keys_javascript_P, __values_javascript_P);
+    }
+    else if (mode == PrintHtmlEntities::Mode::ATTRIBUTE) {
+        return KeysValues(&__keys_attribute_all_P[kAttributeOffset], &__values_P[kAttributeOffset]);
+    }
+    return KeysValues(__keys_attribute_all_P, __values_P);
 }

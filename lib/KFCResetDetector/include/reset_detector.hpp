@@ -10,7 +10,7 @@
 #define __RESET_DETECTOR_INLINE_INLINE_DEFINED__
 #else
 #define  __RESET_DETECTOR_INLINE__ inline
-#define  __RESET_DETECTOR_INLINE_AWLAYS__ inline
+#define  __RESET_DETECTOR_INLINE_AWLAYS__ inline __attribute__((__always_inline__))
 #define __RESET_DETECTOR_INLINE_INLINE_DEFINED__
 #include "reset_detector.h"
 #endif
@@ -33,13 +33,13 @@ ResetDetector::~ResetDetector()
     end();
 }
 
-__RESET_DETECTOR_INLINE__
+__RESET_DETECTOR_INLINE_AWLAYS__
 const __FlashStringHelper *ResetDetector::getResetReason() const
 {
     return ResetDetector::getResetReason(_data.getReason());
 }
 
-__RESET_DETECTOR_INLINE__
+__RESET_DETECTOR_INLINE_AWLAYS__
 ResetDetector::Counter_t ResetDetector::getResetCounter() const
 {
     return _data;
@@ -51,7 +51,7 @@ ResetDetector::Counter_t ResetDetector::getInitialResetCounter() const
     return _storedData;
 }
 
-__RESET_DETECTOR_INLINE__
+__RESET_DETECTOR_INLINE_AWLAYS__
 bool ResetDetector::getSafeMode() const
 {
     return _data.isSafeMode();
@@ -150,14 +150,14 @@ bool ResetDetector::hasWakeUpDetected() const
     return false;
 }
 
-__RESET_DETECTOR_INLINE__
+__RESET_DETECTOR_INLINE_AWLAYS__
 void ResetDetector::disarmTimer()
 {
     ets_timer_disarm(&_timer);
     ets_timer_done(&_timer);
 }
 
-__RESET_DETECTOR_INLINE__
+__RESET_DETECTOR_INLINE_AWLAYS__
 void ResetDetector::_timerCallback(void *arg)
 {
     auto rd = reinterpret_cast<ResetDetector *>(arg);
@@ -171,7 +171,10 @@ void ResetDetector::_timerCallback(void *arg)
 // ------------------------------------------------------------------------
 
 __RESET_DETECTOR_INLINE__
-ResetDetector::Data::Data() : _reset_counter(kInvalidCounter), _safe_mode(false) {
+ResetDetector::Data::Data() :
+    _reset_counter(kInvalidCounter),
+    _safe_mode(false)
+{
     std::fill(std::begin(_reason), std::end(_reason), kInvalidReason);
 }
 
@@ -180,25 +183,25 @@ ResetDetector::Data::Data(Counter_t reset_counter, bool safe_mode) : _reset_coun
     std::fill(std::begin(_reason), std::end(_reason), kInvalidReason);
 }
 
-__RESET_DETECTOR_INLINE__
+__RESET_DETECTOR_INLINE_AWLAYS__
 ResetDetector::Data::operator bool() const
 {
     return _reset_counter != kInvalidCounter;
 }
 
-__RESET_DETECTOR_INLINE__
+__RESET_DETECTOR_INLINE_AWLAYS__
 ResetDetector::Data::operator int() const
 {
     return _reset_counter;
 }
 
-__RESET_DETECTOR_INLINE__
+__RESET_DETECTOR_INLINE_AWLAYS__
 ResetDetector::Data::operator Counter_t() const
 {
     return _reset_counter;
 }
 
-__RESET_DETECTOR_INLINE__
+__RESET_DETECTOR_INLINE_AWLAYS__
 ResetDetector::Data &ResetDetector::Data::operator=(Counter_t counter)
 {
     _reset_counter = counter;
@@ -227,19 +230,19 @@ void ResetDetector::Data::setValid(bool valid)
     }
 }
 
-__RESET_DETECTOR_INLINE__
+__RESET_DETECTOR_INLINE_AWLAYS__
 void ResetDetector::Data::setSafeMode(bool safe_mode)
 {
     _safe_mode = safe_mode;
 }
 
-__RESET_DETECTOR_INLINE__
+__RESET_DETECTOR_INLINE_AWLAYS__
 bool ResetDetector::Data::isSafeMode() const
 {
     return _safe_mode;
 }
 
-__RESET_DETECTOR_INLINE__
+__RESET_DETECTOR_INLINE_AWLAYS__
 uint16_t ResetDetector::Data::getResetCounter()
 {
     return _reset_counter;
@@ -258,7 +261,7 @@ bool ResetDetector::Data::hasValidReason() const
     return getReason() != kInvalidReason;
 }
 
-__RESET_DETECTOR_INLINE__
+__RESET_DETECTOR_INLINE_AWLAYS__
 ResetDetector::Reason_t ResetDetector::Data::getReason() const
 {
     return *(end() - 1);
@@ -274,14 +277,14 @@ const ResetDetector::Reason_t *ResetDetector::Data::begin() const
     return ptr;
 }
 
-__RESET_DETECTOR_INLINE__
+__RESET_DETECTOR_INLINE_AWLAYS__
 const ResetDetector::Reason_t *ResetDetector::Data::end() const
 {
     return const_cast<Data *>(this)->_end();
 }
 
 
-__RESET_DETECTOR_INLINE__
+__RESET_DETECTOR_INLINE_AWLAYS__
 ResetDetector::Reason_t *ResetDetector::Data::_begin()
 {
     return _reason;

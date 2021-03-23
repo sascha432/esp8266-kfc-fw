@@ -77,8 +77,9 @@ String JsonVar::formatValue(const String &value, JsonType_t type) {
         break;
     case JsonBaseReader::JSON_TYPE_STRING: {
         PrintString tmp;
+        JsonTools::Utf8Buffer buffer;
         tmp.write('"');
-        JsonTools::printToEscaped(tmp, value);
+        JsonTools::printToEscaped(tmp, value, &buffer);
         tmp.write('"');
         return tmp;
     }

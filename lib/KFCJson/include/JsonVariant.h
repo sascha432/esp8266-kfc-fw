@@ -58,10 +58,12 @@ public:
 
 protected:
     size_t _printTo(Print &output, const __FlashStringHelper *value) const {
-        return output.write('"') + JsonTools::printToEscaped(output, value) + output.write('"');
+        JsonTools::Utf8Buffer buffer;
+        return output.write('"') + JsonTools::printToEscaped(output, value, &buffer) + output.write('"');
     }
     size_t _printTo(Print &output, const char *value) const {
-        return output.write('"') + JsonTools::printToEscaped(output, value, strlen(value)) + output.write('"');
+        JsonTools::Utf8Buffer buffer;
+        return output.write('"') + JsonTools::printToEscaped(output, value, strlen(value), &buffer) + output.write('"');
     }
     size_t _printTo(Print &output, const JsonVar &value) const {
         return output.print(JsonVar::formatValue(value.getValue(), value.getType()));
@@ -70,10 +72,12 @@ protected:
         return value.printTo(output);
     }
     size_t _printTo(Print &output, const JsonString &value) const {
-        return output.write('"') + JsonTools::printToEscaped(output, value) + output.write('"');
+        JsonTools::Utf8Buffer buffer;
+        return output.write('"') + JsonTools::printToEscaped(output, value, &buffer) + output.write('"');
     }
     size_t _printTo(Print &output, const String &value) const {
-        return output.write('"') + JsonTools::printToEscaped(output, value) + output.write('"');
+        JsonTools::Utf8Buffer buffer;
+        return output.write('"') + JsonTools::printToEscaped(output, value, &buffer) + output.write('"');
     }
     size_t _printTo(Print &output, bool value) const {
         return output.print(value ? FSPGM(true) : FSPGM(false));
@@ -110,22 +114,26 @@ protected:
     }
 
     size_t _length(const __FlashStringHelper *value) const {
-        return JsonTools::lengthEscaped(value) + 2;
+        JsonTools::Utf8Buffer buffer;
+        return JsonTools::lengthEscaped(value, &buffer) + 2;
     }
     size_t _length(const char *value) const {
-        return JsonTools::lengthEscaped(value, strlen(value)) + 2;
+        JsonTools::Utf8Buffer buffer;
+        return JsonTools::lengthEscaped(value, strlen(value), &buffer) + 2;
     }
     size_t _length(const JsonVar &value) const {
         return JsonTools::lengthEscaped(JsonVar::formatValue(value.getValue(), value.getType()));
     }
     size_t _length(const JsonString &value) const {
-        return JsonTools::lengthEscaped(value) + 2;
+        JsonTools::Utf8Buffer buffer;
+        return JsonTools::lengthEscaped(value, &buffer) + 2;
     }
     size_t _length(const JsonNumber &value) const {
         return value.length();
     }
     size_t _length(const String &value) const {
-        return JsonTools::lengthEscaped(value) + 2;
+        JsonTools::Utf8Buffer buffer;
+        return JsonTools::lengthEscaped(value, &buffer) + 2;
     }
     size_t _length(bool value) const {
         return value ? 4 : 5;
@@ -220,10 +228,12 @@ public:
 
 protected:
     size_t _printName(Print &output) const {
-        return output.write('"') + JsonTools::printToEscaped(output, _name) + output.write('"') + output.write(':');
+        JsonTools::Utf8Buffer buffer;
+        return output.write('"') + JsonTools::printToEscaped(output, _name, &buffer) + output.write('"') + output.write(':');
     }
     size_t _nameLength() const {
-        return JsonTools::lengthEscaped(_name) + 3;
+        JsonTools::Utf8Buffer buffer;
+        return JsonTools::lengthEscaped(_name, &buffer) + 3;
     }
     virtual const JsonString *getName() const {
         return &_name;

@@ -84,22 +84,14 @@ inline static char *strdup_P(PGM_P src) {
     return strdup(src);
 }
 
-#else
+#endif
+
+#if defined(ESP8266) || defined(ESP32)
 
 char *strdup_P(PGM_P src);
 
-// const char *strrchr_P(const char *str, int c);
-// const char *strchr_P(const char *str, int c);
-
-inline static const char *strchr_P(const char *str, int c) {
-    // PROGMEM safe
-    return strchr(str, c);
-}
-
-inline static const char *strrchr_P(const char *str, int c) {
-    // PROGMEM safe
-    return strrchr(str, c);
-}
+PGM_P strrchr_P(PGM_P str, int c);
+PGM_P strchr_P(PGM_P str, int c);
 
 #endif
 
@@ -280,14 +272,14 @@ inline static int strncasecmp_PP(PGM_P str1, PGM_P str2, size_t size)
 
 #define stringlist_casefind_P(list, find, separator) stringlist_ifind_P_P(list), (find), (separator))
 
-char *strichr(char *, char ch);
+char *strichr(char *, int ch);
 
-inline static const char *strichr(const char *str1, char ch1)
+inline static const char *strichr(const char *str1, int ch1)
 {
     return strichr(const_cast<char *>(str1), ch1);
 }
 
-PGM_P strichr_P(PGM_P str1, char ch);
+PGM_P strichr_P(PGM_P str1, int ch);
 
 int strncmp_P_P(PGM_P str1, PGM_P str2, size_t len);
 int strncasecmp_P_P(PGM_P str1, PGM_P str2, size_t size);

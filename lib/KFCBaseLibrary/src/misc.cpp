@@ -589,46 +589,84 @@ int stringlist_ifind_P_P(PGM_P list, PGM_P find, PGM_P separator/*, int &positio
     return -1;
 }
 
-char *strichr(char *str1, char ch)
+char *strichr(char *str, int c)
 {
-    if (!str1) {
+    if (!str) {
         return nullptr;
     }
-    if (!ch) {
+    if (!c) {
         // special case: find end of string
-        return str1 + strlen(str1);
+        return str + strlen(str);
     }
-    ch = tolower(ch);
-    if (toupper(ch) == ch) {
+    if (toupper(c) == c) {
         // special case: lower and upercase are the same
-        return strchr(str1, ch);
+        return strchr(str, c);
     }
-    while(*str1 && tolower(*str1) != ch) {
-        str1++;
+    c = tolower(static_cast<uint8_t>(c)); // cast to uint8_t since pgm_read_byte returns unsigned
+    int ch;
+    while((ch = tolower(static_cast<uint8_t>(*str))) != c) {
+        if (ch == 0) {
+            return nullptr;
+        }
+        str++;
     }
-    return (*str1 == 0) ? nullptr : str1;
+    return str;
 }
 
-PGM_P strichr_P(PGM_P str1, char ch)
+PGM_P strichr_P(PGM_P str, int c)
 {
-    if (!str1) {
+    if (!str) {
         return nullptr;
     }
-    if (!ch) {
-        // special case find end of string
-        return str1 + strlen_P(str1);
+    if (!c) {
+        return str + strlen_P(str);
     }
-    ch = tolower(ch);
-    if (toupper(ch) == ch) {
-        // special case: lower and upercase are the same
-        return strchr_P(str1, ch);
+    c = tolower(static_cast<uint8_t>(c)); // cast to uint8_t since pgm_read_byte returns unsigned
+    int ch;
+    while ((ch = tolower(pgm_read_byte(str))) != c) {
+        if (ch == 0) {
+            return nullptr;
+        }
+        str++;
     }
-    char ch2;
-    while(((ch2 = pgm_read_byte(str1)) != 0) && tolower(ch2) != ch) {
-        str1++;
-    }
-    return (ch2 == 0) ? nullptr : str1;
+    return str;
 }
+
+#if defined(ESP8266) || defined(ESP32)
+
+PGM_P strrchr_P(PGM_P str, int c)
+{
+    if (!str) {
+        return nullptr;
+    }
+    c = static_cast<uint8_t>(c); // cast to uint8_t since pgm_read_byte returns unsigned
+    PGM_P found = nullptr;
+    while (true) {
+        auto ch = pgm_read_byte(str);
+        if (ch == c) {
+            found = str;
+        }
+        if (ch == 0) {
+            return found;
+        }
+        str++;
+    }
+}
+
+PGM_P strchr_P(PGM_P str, int c)
+{
+    uint8_t ch;
+    c = static_cast<uint8_t>(c); // cast to uint8_t since pgm_read_byte returns unsigned
+    while ((ch = pgm_read_byte(str)) != c) {
+        if (ch == 0) {
+            return nullptr;
+        }
+        str++;
+    }
+    return str;
+}
+
+#endif
 
 
 int strncmp_P_P(PGM_P str1, PGM_P str2, size_t size)
@@ -933,24 +971,6 @@ char *strdup_P(PGM_P src)
     memcpy_P(dst, src, len);
     return dst;
 }
-
-// const char *strchr_P(const char *str, int c) {
-//     if (!str) {
-//         __DBG_printf("strchr_P(%p, %u)", str, c);
-//         return  nullptr;
-//     }
-//     // PROGMEM safe
-//     return strchr(str, c);
-// }
-
-// const char *strrchr_P(const char *str, int c) {
-//     if (!str) {
-//         __DBG_printf("strrchr_P(%p, %u)", str, c);
-//         return  nullptr;
-//     }
-//     // PROGMEM safe
-//     return strrchr(str, c);
-// }
 
 
 #endif

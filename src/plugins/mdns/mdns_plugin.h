@@ -49,6 +49,49 @@ public:
     };
     typedef std::vector<ServiceInfo> ServiceInfoVector;
 
+    enum class OutputState {
+        NONE,
+        SERVICE,
+    };
+
+    class Output {
+    public:
+        String _current;
+        PrintString _output;
+        MDNSResponder::hMDNSServiceQuery _serviceQuery;
+        uint32_t _timeout;
+
+        Output(uint32_t timeout) : _serviceQuery(nullptr), _timeout(timeout) {}
+        ~Output() {
+            if (_serviceQuery) {
+                MDNS.removeServiceQuery(_serviceQuery);
+            }
+        }
+
+        void begin() {
+            _output.print(F("{\"l\":[{"));
+        }
+
+        void end() {
+            if (_output.length()) {
+                _output.trim(',');
+                _output.print(F("}]}"));
+                _timeout = 0;
+                _current = String();
+            }
+        }
+
+        void next() {
+            if (_output.length()) {
+                _output.trim(',');
+                _output.print(F("},{"));
+            }
+            else {
+                begin();
+            }
+        }
+    };
+
 public:
     MDNSPlugin();
 
@@ -67,7 +110,7 @@ public:
         }
     }
     static void mdnsDiscoveryHandler(AsyncWebServerRequest *request);
-    void serviceCallback(ServiceInfoVector &services, bool map, MDNSResponder::MDNSServiceInfo &mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent);
+    void serviceCallback(Output &output, MDNSResponder::MDNSServiceInfo &mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent);
 
 #endif
 

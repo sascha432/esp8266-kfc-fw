@@ -65,12 +65,12 @@ private:
 
 #if ESP32
 
-class AsyncMDNSResponse : public AsyncJsonResponse {
+class AsyncMDNSResponse : public AsyncBaseResponse {
 public:
-    AsyncMDNSResponse() {
+    AsyncMDNSResponse() :
+        AsyncBaseResponse(true)
+    {
         _contentLength = 0;
-        _sendContentLength = false;
-        _chunked = true;
     }
     ~AsyncMDNSResponse() {
     }
@@ -82,28 +82,26 @@ public:
 
 #if MDNS_PLUGIN
 
-class AsyncMDNSResponse : public AsyncJsonResponse {
+class AsyncMDNSResponse : public AsyncBaseResponse {
 public:
-    AsyncMDNSResponse(MDNSResponder::hMDNSServiceQuery serviceQuery, MDNSPlugin::ServiceInfoVector *services, int timeout) :
-        _serviceQuery(serviceQuery),
-        _services(services),
-        _timeout(millis() + timeout)
+    AsyncMDNSResponse(MDNSPlugin::Output *output) :
+        AsyncBaseResponse(true),
+        _output(output)
     {
         _contentLength = 0;
-        _sendContentLength = false;
-        _chunked = true;
     }
     ~AsyncMDNSResponse() {
-        MDNS.removeServiceQuery(_serviceQuery);
-        __LDBG_delete(_services);
+        delete _output;
+    }
+
+    virtual bool _sourceValid() const override {
+        return true;
     }
 
     virtual size_t _fillBuffer(uint8_t *data, size_t len) override;
 
 private:
-    MDNSResponder::hMDNSServiceQuery _serviceQuery;
-    MDNSPlugin::ServiceInfoVector *_services;
-    uint32_t _timeout;
+    MDNSPlugin::Output *_output;
 };
 
 #endif

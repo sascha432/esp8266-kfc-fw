@@ -87,20 +87,22 @@ void MDNSPlugin::mdnsDiscoveryHandler(AsyncWebServerRequest *request)
             if (timeout == 0) {
                 timeout = 2000;
             }
-            ServiceInfoVector *services = __LDBG_new(ServiceInfoVector);
+            Output *output = new Output(millis() + timeout);
             HttpHeaders httpHeaders(false);
             httpHeaders.addNoCache();
 
-            auto serviceQuery = MDNS.installServiceQuery(String(FSPGM(kfcmdns)).c_str(), String(FSPGM(udp)).c_str(), [services](MDNSResponder::MDNSServiceInfo mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent) {
-                plugin.serviceCallback(*services, true, mdnsServiceInfo, answerType, p_bSetContent);
+            output->_serviceQuery = MDNS.installServiceQuery(String(FSPGM(kfcmdns)).c_str(), String(FSPGM(udp)).c_str(), [output](MDNSResponder::MDNSServiceInfo mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent) {
+                plugin.serviceCallback(*output, mdnsServiceInfo, answerType, p_bSetContent);
             });
-            auto response = __LDBG_new(AsyncMDNSResponse, serviceQuery, services, timeout);
+            auto response = new AsyncMDNSResponse(output);
             httpHeaders.setAsyncBaseResponseHeaders(response);
             request->send(response);
-        } else {
+        }
+        else {
             request->send(403);
         }
-    } else {
+    }
+    else {
         request->send(500);
     }
 }

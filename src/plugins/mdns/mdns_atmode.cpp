@@ -31,47 +31,71 @@ void MDNSPlugin::atModeHelpGenerator()
 
 #if ESP8266
 
-void MDNSPlugin::serviceCallback(ServiceInfoVector &services, bool map, MDNSResponder::MDNSServiceInfo &mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent)
+void MDNSPlugin::serviceCallback(Output &output, MDNSResponder::MDNSServiceInfo &mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent)
 {
-    __LDBG_printf("answerType=%u p_bSetContent=%u", answerType, p_bSetContent)
-    PrintString str;
+    if (!output._timeout || !p_bSetContent) {
+        return;
+    }
 
-    auto iterator = std::find_if(services.begin(), services.end(), [&mdnsServiceInfo](const ServiceInfo &info) {
-        return info.serviceDomain.equals(mdnsServiceInfo.serviceDomain());
-    });
-    ServiceInfo *infoPtr;
-    if (iterator != services.end()) {
-        infoPtr = &(*iterator);
+    noInterrupts();
+
+    if (output._current != mdnsServiceInfo.serviceDomain()) {
+        output.next();
+        output._current = mdnsServiceInfo.serviceDomain();
     }
-    else {
-        services.emplace_back(mdnsServiceInfo.serviceDomain());
-        infoPtr = &services.back();
-    }
-    auto &info = *infoPtr;
-    if (mdnsServiceInfo.hostDomainAvailable()) {
-        __LDBG_printf("domain=%s", mdnsServiceInfo.hostDomain());
-        info.domain = mdnsServiceInfo.hostDomain();
-    }
-    if (mdnsServiceInfo.IP4AddressAvailable()) {
-        info.addresses = mdnsServiceInfo.IP4Adresses();
-        __LDBG_printf("addresses=%s", implode_cb(',', info.addresses, [](const IPAddress &addr) { return addr.toString(); }).c_str());
-    }
-    if (mdnsServiceInfo.hostPortAvailable()) {
-        __LDBG_printf("port=%u", mdnsServiceInfo.hostPort());
-        info.port = mdnsServiceInfo.hostPort();
-    }
-    if (mdnsServiceInfo.txtAvailable()) {
-        if (map) {
-            for(const auto &item: mdnsServiceInfo.keyValues()) {
-                __LDBG_printf("txt=%s=%s", item.first, item.second);
-                info.map[item.first] = item.second;
+
+    switch (answerType) {
+        case MDNSResponder::AnswerType::ServiceDomain: {
+                JsonTools::Utf8Buffer buffer;
+                output._output.print(F("\"s\":\""));
+                JsonTools::printToEscaped(output._output, mdnsServiceInfo.serviceDomain(), strlen(mdnsServiceInfo.serviceDomain()), &buffer);
+                output._output.print(F("\","));
             }
-        }
-        else {
-            __LDBG_printf("txt=%s", mdnsServiceInfo.strKeyValue());
-            info.txts = mdnsServiceInfo.strKeyValue();
-        }
+            break;
+        case MDNSResponder::AnswerType::HostDomainAndPort: {
+                JsonTools::Utf8Buffer buffer;
+                output._output.print(F("\"h\":\""));
+                JsonTools::printToEscaped(output._output, mdnsServiceInfo.hostDomain(), strlen(mdnsServiceInfo.hostDomain()), &buffer);
+                output._output.printf_P(PSTR("\",\"p\":%u,"), mdnsServiceInfo.hostPort());
+            }
+            break;
+        case MDNSResponder::AnswerType::IP4Address: {
+                output._output.print(F("\"a\":["));
+                for (const IPAddress &ip: mdnsServiceInfo.IP4Adresses()) {
+                    output._output.print('"');
+                    output._output.print(ip.toString());
+                    output._output.print(F("\","));
+                }
+                output._output.rtrim(',');
+                output._output.print(F("],"));
+            }
+            break;
+        case MDNSResponder::AnswerType::Txt: {
+                auto keys = PSTR("vbt");
+                auto ptr = keys;
+                char ch;
+                while((ch = pgm_read_byte(ptr++)) != 0) {
+                    String key(ch);
+                    auto value = mdnsServiceInfo.value(key.c_str());
+                    if (value) {
+                        output._output.printf_P(PSTR("\"%s\":\""), key.c_str());
+                        JsonTools::Utf8Buffer buffer;
+                        JsonTools::printToEscaped(output._output, value, strlen(value), &buffer);
+                        output._output.print(F("\","));
+                    }
+                }
+            }
+            break;
+        default:
+            break;
     }
+    if (output._output.length() + 1024 > ESP.getFreeHeap()) {
+        output.end();
+        interrupts();
+        __DBG_printf("out of memory len=%u", output._output.length());
+    }
+    interrupts();
+    // __DBG_printf("%s", output._output.c_str());
 }
 
 #endif
@@ -88,26 +112,25 @@ bool MDNSPlugin::atModeHandler(AtModeArgs &args)
             auto query = PrintString(F("service=%s proto=%s wait=%ums"), args.toString(0).c_str(), args.toString(1).c_str(), timeout);
             args.printf_P(PSTR("Querying: %s"), query.c_str());
 
-            ServiceInfoVector *services = __LDBG_new(ServiceInfoVector);
+            Output *output = new MDNSPlugin::Output(millis() + timeout);
 
-            auto serviceQuery = MDNS.installServiceQuery(args.toString(0).c_str(), args.toString(1).c_str(), [this, services](MDNSResponder::MDNSServiceInfo mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent) {
-                serviceCallback(*services, false, mdnsServiceInfo, answerType, p_bSetContent);
+            output->_serviceQuery = MDNS.installServiceQuery(args.toString(0).c_str(), args.toString(1).c_str(), [this, output](MDNSResponder::MDNSServiceInfo mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent) {
+                serviceCallback(*output, mdnsServiceInfo, answerType, p_bSetContent);
             });
 
-            _Scheduler.add(timeout, false, [args, serviceQuery, services, this](Event::CallbackTimerPtr timer) mutable {
-                _IF_DEBUG(auto result = ) MDNS.removeServiceQuery(serviceQuery);
+            _Scheduler.add(timeout, false, [args, output, this](Event::CallbackTimerPtr timer) mutable {
+                _IF_DEBUG(auto result = ) MDNS.removeServiceQuery(output->_serviceQuery);
+                output->_serviceQuery = nullptr;
+                output->end();
+
                 __LDBG_printf("removeServiceQuery=%u", result);
-                if (services->empty()) {
+                if (output->_output.length() == 0) {
                     args.print(F("No response"));
                 }
                 else {
-                    for(auto &svc: *services) {
-                        args.printf_P(PSTR("domain=%s port=%u ips=%s txts=%s"), svc.domain.c_str(), svc.port, implode_cb(',', svc.addresses, [](const IPAddress &addr) {
-                            return addr.toString();
-                        }).c_str(), svc.txts.c_str());
-                    }
+                    args.getStream().println(output->_output);
                 }
-                __LDBG_delete(services);
+                delete output;
             });
 #endif
         }

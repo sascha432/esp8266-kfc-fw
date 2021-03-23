@@ -1,11 +1,10 @@
 <!doctype html>
 <html lang="en">
 <!--%%HEAD-->
-
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" debug_loader="1">
-    <link rel="stylesheet" href="../../lib/KFCWebBuilder/Resources/css/bootstrap.min.css" debug_loader="1">
+    <link rel="stylesheet" href="../../lib/KFCWebBuilder/Resources/bootstrap-4.5.2-dist/css/bootstrap.min.css" debug_loader="1">
     <link rel="stylesheet" href="../css/styles.css" debug_loader="1">
     <link rel="stylesheet" href="../../lib/KFCWebBuilder/Resources/css/open-iconic-bootstrap.css" debug_loader="1">
     <title>KFC FW</title>
@@ -25,20 +24,30 @@
     </nav>
     <!--NAV%%-->
     <div class="container">
-        <h1>MDNS Discovery</h1>
-        <div class="row mdns-console">
-            <table class="table table-striped">
-                <thead class="thead-light">
-                    <tr><th>Hostname</th><th>Addresses</th><th>Device Name</th><th>Device Title</th><th>Version</th></tr>
-                </thead>
-                <tbody>
-                    <tr scope="row" class="spinner">
-                        <td colspan="5" class="text-center bg-white">
-                            <img src="images/spinner.gif" width="64" height="64">
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+        <div class="accordion pt-3">
+            <div class="card">
+                <div class="card-header text-white bg-primary">
+                    <h2 class="mb-0">MDNS Discovery</h2>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-body">
+                    <div class="row mdns-console pr-3 pl-3">
+                        <table class="table table-striped">
+                            <thead class="thead-light">
+                                <tr><th>Hostname</th><th>Addresses</th><th>Device Name</th><th>Device Title</th><th>Version</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr scope="row" class="spinner">
+                                    <td colspan="5" class="text-center bg-white">
+                                        <img src="images/spinner.gif" width="64" height="64">
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
         <!--%%FOOT-->
         <div class="row">
@@ -47,47 +56,57 @@
         <!--FOOT%%-->
     </div>
     <!--%%JAVASCRIPT-->
-	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/jquery-3.3.1.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/jquery-3.5.2-dist/jquery.js"></script>
 	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/popper.min.js"></script>
-	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/popper.min.js"></script>
-	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/bootstrap.min.js"></script>
-	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/js.cookie.min.js"></script>
-	<script debug_loader="1" type="text/javascript" src="../js/main.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/bootstrap-4.5.2-dist/js/bootstrap.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/js.cookie.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/jquery.color-2.1.2.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../js/common.js"></script>
 	<script debug_loader="1" type="text/javascript" src="../js/debug.js"></script>
     <!--JAVASCRIPT%%-->
 
     <script>
         // mdns-discovery.html
-        if ($('.mdns-console').length) {
+        $(function() {
             var timeout = 2000;
             var interval = 1000;
+            var callback = function(data) {
+                var tbody = $('.mdns-console').find('tbody');
+                tbody.find('.spinner').remove();
+                $(data['l']).each(function(key, val) {
+                    var name= val['s'];
+                    var pos = name.indexOf('._');
+                    if (pos == -1) {
+                        pos = name.indexOf('.');
+                    }
+                    if (pos != -1) {
+                        name = name.substring(0, pos - 1);
+                    }
+                    var row = tbody.find('#mdns_id_' + name);
+                    var version = val['v'];
+                    if (val['b']) {
+                        version = version + '-' + val['b'];
+                    }
+                    var title = val['t'] ? val['t'] : '-';
+                    var html = '<tr scope="row" id="mdns_id_' + name + '"><td>' + val['h'] + '</td><td>' + val['a'] + '</td><td>' + name + '</td><td>' + title + '</td><td>' + version + '</td></tr>';
+                    if (row.length) {
+                        row.html($(html).find('tr').html());
+                    }
+                    else {
+                        tbody.append(html);
+                    }
+                });
+                window.setTimeout(update_mdns_discovery, interval);
+                timeout = 5000;
+                interval = 15000;
+            };
             function update_mdns_discovery() {
-                var callback = function(data) {
-                    var tbody = $('.mdns-console').find('tbody');
-                    tbody.find('.spinner').remove();
-                    $(data['l']).each(function(key, val) {
-                        var row = tbody.find('#mdns_id_' + val['n']);
-                        var version = val['v'];
-                        if (val['b']) {
-                            version = version + '-' + val['b'];
-                        }
-                        var title = val['t'] ? val['t'] : '-';
-                        var html = '<tr scope="row" id="mdns_id_' + val['n'] + '"><td>' + val['h'] + '</td><td>' + val['a'] + '</td><td>' + val['n'] + '</td><td>' + title + '</td><td>' + version + '</td></tr>';
-                        if (row.length) {
-                            row.html($(html).find('tr').html());
-                        }
-                        else {
-                            tbody.append(html);
-                        }
-                    });
-                    window.setTimeout(update_mdns_discovery, interval);
-                    timeout = 15000;
-                    interval = 30000;
-                };
-                $.get('/mdns_discovery?timeout=' + timeout, callback);
+                $.get('/mdns_discovery?SID=' + $.getSessionId() + '&timeout=' + timeout, callback, 'json').fail(function() {
+                    window.setTimeout(update_mdns_discovery, 10000);
+                });
             }
             update_mdns_discovery();
-        }
+        });
     </script>
 </body>
 </html>

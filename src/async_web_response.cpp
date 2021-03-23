@@ -8,6 +8,7 @@
 #include "fs_mapping.h"
 #include "web_server.h"
 #include "../src/plugins/mdns/mdns_resolver.h"
+#include "stl_ext/algorithm.h"
 
 #if DEBUG_ASYNC_WEB_RESPONSE
 #include <debug_helper_enable.h>
@@ -248,6 +249,33 @@ size_t AsyncMDNSResponse::_fillBuffer(uint8_t *data, size_t len)
 
 size_t AsyncMDNSResponse::_fillBuffer(uint8_t *data, size_t len)
 {
+    noInterrupts();
+    if (_output->_timeout && millis() > _output->_timeout) {
+        _output->end();
+    }
+
+    size_t keep = _output->_timeout == 0 ? 0 : 32;
+    if (_output->_output.length() == 0 && keep == 0) {
+        // __DBG_printf("length=0 keep=0");
+        interrupts();
+        return 0;
+    }
+    else if (_output->_output.length() > keep) {
+        auto avail = std::clamp<int>(_output->_output.length() - (keep ? 4 : 0), 0, len);
+        // __DBG_printf("avail=%u len=%u keep=%u", avail, _output->_output.length(), keep);
+        if (avail) {
+            memcpy(data, _output->_output.c_str(), avail);
+            _output->_output = _output->_output.c_str() + avail;
+            interrupts();
+            return avail;
+        }
+    }
+    interrupts();
+    // __DBG_printf("retry keep=%u", keep);
+    return RESPONSE_TRY_AGAIN;
+}
+/*
+
     if (millis() > _timeout) {
         auto &json = getJsonObject();
         if (!json.size()) {
@@ -303,7 +331,7 @@ size_t AsyncMDNSResponse::_fillBuffer(uint8_t *data, size_t len)
         return RESPONSE_TRY_AGAIN;
     }
 }
-
+*/
 #endif
 
 #endif

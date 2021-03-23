@@ -20,6 +20,7 @@
 #include "kfc_fw_config.h"
 #include "blink_led_timer.h"
 #include "fs_mapping.h"
+#include "JsonTools.h"
 #include "session.h"
 #include "../include/templates.h"
 #include "web_socket.h"
@@ -217,19 +218,23 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
     // __LDBG_printf("headers for %s:\n%s", request->url().c_str(), implode('\n', list).c_str());
 
     auto &url = request->url();
+    // --------------------------------------------------------------------
     if (url == F("/is-alive")) {
         response = request->beginResponse(200, FSPGM(mime_text_plain), String(request->arg(String('p')).toInt()));
         httpHeaders.addNoCache(true);
         _prepareAsyncWebserverResponse(request, response, httpHeaders);
     }
+    // --------------------------------------------------------------------
     else if (url == F("/webui-handler")) {
         plugin._handlerWebUI(request, httpHeaders);
         return;
     }
+    // --------------------------------------------------------------------
     else if (url == F("/alerts")) {
         plugin._handlerAlerts(request, httpHeaders);
         return;
     }
+    // --------------------------------------------------------------------
     else if (url == F("/sync-time")) {
         if (!plugin.isAuthenticated(request)) {
             request->send(403);
@@ -241,14 +246,17 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
         response = new AsyncBasicResponse(200, FSPGM(mime_text_html), str);
         _prepareAsyncWebserverResponse(request, response, httpHeaders);
     }
+    // --------------------------------------------------------------------
     else if (url == F("/export-settings")) {
         plugin._handlerExportSettings(request, httpHeaders);
         return;
     }
+    // --------------------------------------------------------------------
     else if (url == F("/import-settings")) {
         plugin._handlerImportSettings(request, httpHeaders);
         return;
     }
+    // --------------------------------------------------------------------
     else if (url == F("/scan-wifi")) {
         if (!plugin.isAuthenticated(request)) {
             request->send(403, FSPGM(mime_text_html));
@@ -258,6 +266,7 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
         response = new AsyncNetworkScanResponse(request->arg(FSPGM(hidden, "hidden")).toInt());
         _prepareAsyncBaseResponse(request, response, httpHeaders);
     }
+    // --------------------------------------------------------------------
     else if (url == F("/logout")) {
         __SID(__DBG_printf("sending remove SID cookie"));
         httpHeaders.addNoCache(true);
@@ -266,6 +275,7 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
         response = request->beginResponse(302);
         _prepareAsyncWebserverResponse(request, response, httpHeaders);
     }
+    // --------------------------------------------------------------------
     else if (url == F("/mqtt-publish-ad.html")) {
         if (!plugin.isAuthenticated(request)) {
             request->send(403, FSPGM(mime_text_html));
@@ -299,7 +309,6 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
             }
         }
 
-
         MessageTemplate *tpl = new MessageTemplate(String(), ("MQTT Client"));
         if (!run) {
             tpl->setMessage(F("This page has been reloaded. Use the original link to execute the action again or press the run again button, if available"));
@@ -331,6 +340,7 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
         }
         return;
     }
+    // --------------------------------------------------------------------
     else if (url == F("/zeroconf")) {
         if (!plugin.isAuthenticated(request)) {
             request->send(403);
@@ -340,21 +350,16 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
         response = new AsyncResolveZeroconfResponse(request->arg(FSPGM(value)));
         _prepareAsyncBaseResponse(request, response, httpHeaders);
     }
-    else if (url.startsWith(F("/savecrash/"))) {
+    // --------------------------------------------------------------------
+    else if (url == F("/savecrash.json")) {
         if (!plugin.isAuthenticated(request)) {
             request->send(403);
             return;
         }
         httpHeaders.addNoCache(true);
-        if (url.equals(F("index.html"), 11)) {
-            if (SaveCrash::webHandler::index(request, httpHeaders)) {
-                return;
-            }
-        }
-        else if (url.equals(F("savecrash.json"), 11)) {
-            response = SaveCrash::webHandler::json(request, httpHeaders);
-        }
+        response = SaveCrash::webHandler::json(request, httpHeaders);
     }
+    // --------------------------------------------------------------------
     else if (url.startsWith(F("/speedtest."))) { // handles speedtest.zip and speedtest.bmp
         plugin._handlerSpeedTest(request, !url.endsWith(F(".bmp")), httpHeaders);
         return;
@@ -1338,74 +1343,57 @@ AuthType Plugin::getAuthenticated(AsyncWebServerRequest *request) const
 
 namespace SaveCrash {
 
-    bool webHandler::index(AsyncWebServerRequest *request, HttpHeaders &httpHeaders)
-    {
-        auto tpl = new WebTemplate();
-        if (!WebServer::Plugin::sendFileResponse(200, F("/savecrash.html"), request, httpHeaders, tpl)) {
-            plugin.send(500, request);
-        }
-        return true;
-    }
-
     AsyncWebServerResponse *webHandler::json(AsyncWebServerRequest *request, HttpHeaders &httpHeaders)
     {
         using namespace MQTT::Json;
 
-        auto fs = SaveCrash::createFlashStorage();
         PrintString jsonStr;
+        auto fs = SaveCrash::createFlashStorage();
 
-        auto id = strtoul(request->getParam(F("id"))->value().c_str(), nullptr, 16);
+        uint32_t id = 0;
+        auto idStr = request->getParam(F("id"));
+        if (idStr) {
+            __LDBG_printf("crashlog %u %s", id, idStr->value().c_str());
+            id = strtoul(idStr->value().c_str(), nullptr, 16);
+        }
         if (id) {
-            jsonStr = F("{\"trace\":\"");
-            // write the trace directly into the string buffer to avoid allocating another buffer
-            // huge stack traces barely fit into memory (5-10kb as plain text)
-            // options are to store everything in a temporary file on SPIFFS or stream the
-            // data asynchronously
-            // auto &strackTrace = static_cast<JsonPrintString &>(jsonStr);
-
-            auto &strackTrace=jsonStr;
-
+            JsonPrintStringWrapper wrapper(jsonStr);
+            jsonStr.print(F("{\"trace\":\""));
             fs.getCrashLog([&](const SaveCrash::CrashLogEntry &item) {
                 if (item.getId() == id) {
-                    fs.printCrashLog(strackTrace, item);
+                    fs.printCrashLog(wrapper, item);
                     return false;
                 }
                 return true;
             });
-            if (strackTrace.length() < 11) { // 10 would be an emptry string -> {"trace":"
-                jsonStr = PrintString();
-                UnnamedObjectWriter json(jsonStr, NamedString(F("error"), PrintString(F("id 0x%08x not found"), id)));
-            }
-            else {
-                jsonStr.print(F("\"}\n"));
-            }
+            jsonStr.print(F("\"}"));
         }
         else {
+            __LDBG_printf("crashlog index");
             PrintString timeStr;
-            auto items = NamedArray(F("items"));
+            NamedArray items(F("items"));
             fs.getCrashLog([&](const SaveCrash::CrashLogEntry &item) {
-                __DBG_printf("id=%s reason=%s", item.getIdStr().c_str(), item._header.getReason());
+                __LDBG_printf("id=0x%08x reason=%s", item.getId(), item._header.getReason());
                 time_t now = static_cast<time_t>(item._header._time);
+                auto stack = item._header.getStack();
                 timeStr.clear();
                 timeStr.strftime(FSPGM(strftime_date_time_zone), localtime(&now));
                 items.append(UnnamedObject(
-                    NamedFormattedInteger(F("id"), F("%08x"), item.getId()),
+                    NamedFormattedInteger(F("id"), item.getId(), F("\"%08x\"")),
                     NamedString(F("ts"), timeStr),
                     NamedUint32(F("t"), static_cast<uint32_t>(now)),
                     NamedString(F("r"), item._header.getReason()),
-                    NamedString(F("st"), item._header.getStack())
+                    NamedString(F("st"), stack)
                 ));
-                // fs.printCrashLogEntry(output, item);
                 return true;
             });
-            UnnamedObjectWriter json(jsonStr, items);
+            UnnamedObjectWriter(jsonStr, items);
         }
 
         auto response = request->beginResponse(200, FSPGM(mime_application_json), jsonStr);
         httpHeaders.setAsyncWebServerResponseHeaders(response);
         return response;
     }
-
 }
 
 void ResetDetectorPlugin::createMenu()

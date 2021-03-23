@@ -7,6 +7,7 @@
 #include <Arduino_compat.h>
 #include <memory>
 #include <StringDepulicator.h>
+#include <PrintHtmlEntities.h>
 #include "Types.h"
 
 #include "Utility/Debug.h"
@@ -17,6 +18,8 @@ namespace FormUI {
 
         class Config {
         public:
+            using Mode = PrintHtmlEntities::Mode;
+
             Config(const Config &) = delete;
 
             Config(StringDeduplicator &strings) :
@@ -90,7 +93,7 @@ namespace FormUI {
                 return _strings;
             }
 
-            const char *encodeHtmlEntities(const char *str, bool attribute);
+            const char *encodeHtmlEntities(const char *str, Mode mode);
 
             inline const char *attachString(const char *str) {
                 return _strings.attachString(str);
@@ -103,7 +106,7 @@ namespace FormUI {
             }
 
             inline const char *encodeHtmlEntities(const char *str) {
-                return encodeHtmlEntities(str, false);
+                return encodeHtmlEntities(str, Mode::HTML);
             }
             inline const char *encodeHtmlEntities(const __FlashStringHelper *fpstr) {
                 return encodeHtmlEntities((PGM_P)fpstr);
@@ -113,7 +116,7 @@ namespace FormUI {
             }
 
             inline const char *encodeHtmlAttribute(const char *str) {
-                return encodeHtmlEntities(str, true);
+                return encodeHtmlEntities(str, Mode::ATTRIBUTE);
             }
             inline const char *encodeHtmlAttribute(const __FlashStringHelper *fpstr) {
                 return encodeHtmlAttribute((PGM_P)fpstr);

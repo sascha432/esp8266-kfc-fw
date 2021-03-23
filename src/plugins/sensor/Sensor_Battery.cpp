@@ -161,7 +161,7 @@ void Sensor_Battery::getValues(NamedJsonArray &array, bool timer)
         UnnamedObject(
             NamedString(F("id"), _getId(TopicType::VOLTAGE)),
             NamedBool(F("state"), true),
-            NamedDouble(F("value"), FormattedDouble(_status.getVoltage(), _config.precision))
+            NamedDouble(F("value"), _status.getVoltage(), _config.precision)
         )
 #if IOT_SENSOR_BATTERY_DISPLAY_LEVEL
         ,UnnamedObject(

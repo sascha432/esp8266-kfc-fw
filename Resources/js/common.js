@@ -461,6 +461,9 @@ jQuery.fn.extend({
 //
 // $.clipboard($('button'), 'copy this to the clipboard');
 // $.clipboard($('button'), 'copy this to the clipboard', {color: 'red'} 300, 3});
+// $.clipboard($('button'), function() {
+//     return 'lazy loading';
+// }, {color: 'red'} 300, 3});
 //
 $.clipboard = function(element, text, flash_css_or_color, flash_speed, flash_repeat) {
     css = flash_css_or_color || {backgroundColor: '#28a745', color: 'white'};
@@ -471,20 +474,36 @@ $.clipboard = function(element, text, flash_css_or_color, flash_speed, flash_rep
     flash_repeat = flash_repeat || 3;
     element.on('click', function(e) {
         e.preventDefault();
-        navigator.clipboard.writeText(text).then(function() {
+        if (typeof text === 'function') {
+            text = text();
+        }
+        function success() {
             element.flash(css, flash_repeat, flash_speed);
             window.setTimeout(function() {
                 element.blur();
             }, flash_speed * flash_repeat * 2.75 + 50);
-        }, function() {
+        }
+        function fail() {
             alert('Failed to copy text to clipboard');
-        });
-        // var ta = $('<textarea style="width:1px;height:1px;position:absolute:right-100px;overeflow:hidden">');
-        // ta.text(text);
-        // $('body').append(ta);
-        // ta.select();
-        // document.execCommand('copy');
-        // console.log('');
-        // ta.remove();
+        }
+        try {
+            navigator.clipboard.writeText(text).then(function() {
+                success();
+            }, function() {
+                fail();
+            });
+        } catch(e) {
+            try {
+                var ta = $('<textarea style="width:1px;height:1px;position:absolute:right-100px;overeflow:hidden">');
+                ta.text(text);
+                $('body').append(ta);
+                ta.select();
+                document.execCommand('copy');
+                ta.remove();
+                success();
+            } catch(e) {
+                fail();
+            }
+        }
     });
 };

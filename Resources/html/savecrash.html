@@ -9,21 +9,6 @@
     <link rel="stylesheet" href="../css/styles.css" debug_loader="1">
     <link rel="stylesheet" href="../../lib/KFCWebBuilder/Resources/css/open-iconic-bootstrap.css" debug_loader="1">
     <title>KFC FW</title>
-    <style type='text/css'>
-        .collapsible td {
-            padding: 0 !important;
-            margin: 0 !important;
-        }
-        .collapsible div.content {
-            padding: 0.75rem;
-        }
-        .collapsible pre {
-            overflow-x: hidden;
-        }
-        .oi-clipboard {
-            font-size: 1.25rem;
-        }
-       </style>
 </head>
 <!--HEAD%%-->
 <body>
@@ -38,11 +23,32 @@
         </div>
     </nav>
     <!--NAV%%-->
+    <style type="text/css">
+    .collapsible td {
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    .collapsible div.content {
+        padding: 0.75rem;
+    }
+    .collapsible pre {
+        overflow-x: hidden;
+    }
+    .oi-clipboard {
+        font-size: 1.25rem;
+    }
+    tr.collapsible, tr.collapsible:hover {
+        background-color: transparent !important;
+    }
+    tr.collapsible div.content {
+        background-color: rgba(0,0,0,.025);
+    }
+    </style>
     <div class="container" id="message">
         <div class="accordion pt-3">
             <div class="card">
                 <div class="card-header text-white bg-primary">
-                    <h2 class="mb-0">SaveCrash Log Entries</h2>
+                    <h2 class="mb-0">SaveCrash Log</h2>
                 </div>
             </div>
             <div class="card">
@@ -79,6 +85,7 @@
                 </div>
             </div>
         </div>
+        <div id="stack-trace-prototype" class="hidden"><button class="btn btn-link float-right">Copy to clipboard <span class="oi oi-clipboard pl-2"></span></button><pre></pre></div>
 
         <!--%%FOOT-->
         <div class="row">
@@ -97,58 +104,66 @@
     <!--JAVASCRIPT%%-->
 
     <script>
-        $(function() {
-
-            var tbody = $('#savecrash-items');
-            var prototype = $('.savecrash-prototype').clone();
-            var st_prototype = prototype.removeAttr('class')[1].outerHTML;
-            prototype = prototype.removeAttr('class')[0].outerHTML;
-            var button_link_color = $('button.btn-link').css('color');
-
-            function empty_list() {
-                $('.savecrash-log-empty').removeClass('hidden').show();
-                $('.savecrash-log-loading').hide();
-            }
-
-            function error(msg) {
-                $('tr.data').remove();
-                $('.savecrash-log-empty').removeClass('hidden').show().find('.content').html(msg);
-                $('.savecrash-log-loading').hide();
-            }
-
-            function populate_trace(content, data) {
-                if (data && data.trace) {
-                    var innerContent = content.find('.inner');
-                    innerContent.removeClass('text-center').html('<button class="btn btn-link float-right">Copy to clipboard <span class="oi oi-clipboard pl-2"></span></button><pre>' + data.trace + '</pre>');
-                    var stack_trace = innerContent.find('pre');
-                    $.clipboard(innerContent.find('button'), stack_trace[0].textContent);
+        var savecrash_log = {
+            uri: 'savecrash.json',
+            init: function () {
+                this.tbody = $('#savecrash-items');
+                prototype = $('.savecrash-prototype').clone();
+                this.trace_prototype = prototype.removeAttr('class')[1].outerHTML;
+                this.prototype = prototype.removeAttr('class')[0].outerHTML;
+                this.inner_trace_prototype = $('#stack-trace-prototype');
+                this.log_empty = $('.savecrash-log-empty');
+                this.log_loading = $('.savecrash-log-loading');
+            },
+            error: function (msg) {
+                if (typeof msg !== 'string') {
+                    msg = 'Failed to load data';
                 }
-                else {
-                    msg = 'Failed to load stack trace';
-                    if (data && data.error) {
-                        msg = data.error;
+                this.tbody.find('tr.data').remove();
+                this.log_empty.find('.content').html(msg);
+                this.log_empty.removeClass('hidden').show();
+                this.log_loading.hide();
+            },
+            empty_list: function () {
+                this.error('No entries found');
+            },
+            trace: function (content, strace) {
+                var innerContent = content.find('.inner');
+                innerContent.removeClass('text-center').html(this.inner_trace_prototype.html());
+                innerContent.find('pre').text(strace);
+                $.clipboard(innerContent.find('button'), strace);
+				content.data('loading', false).find('.loading').hide();
+			},
+            load_trace: function (content, id) {
+                var self = this;
+                $.get(self.uri + '?SID=' + $.getSessionId() + '&id=' + id, function(data) {
+                    try {
+                        self.trace(content, data['trace']);
                     }
-                    content.find('.inner').html('<h3>' + msg + '</h3>').addClass('text-center');
-                }
-                content.find('.loading').hide();
-                content.data('loading', false);
-            }
-
-            function load_trace(content, id) {
-                $.get('savecrash.json?SID=' + $.getSessionId() + '&id=' + id, function(data) {
-                    populate_trace(content, data);
+                    catch(e) {
+                        try {
+                            self.error(data['error']);
+                        }
+                        catch(e2) {
+                            self.error('Exception: ' + e);
+                        }
+                    }
                 }, 'json').fail(function() {
-                    populate_trace(content);
+                    self.error('HTTP error');
                 });
-            }
-
-            function populate(data) {
-                if (data && data.hasOwnProperty('items') && data['items'].length != 0) {
-                    $('.savecrash-log-empty').hide();
-                    $('.savecrash-log-loading').hide();
-                    $(data['items']).each(function(key, val) {
-                        tbody.append($(prototype).clone());
-                        var item = tbody.find('tr:last');
+            },
+            index: function (items) {
+                var self = this;
+                try {
+                    if (items.length == 0) {
+                        self.empty_list();
+                        return;
+                    }
+                    self.log_empty.hide();
+                    self.log_loading.hide();
+                    $(items).each(function(key, val) {
+                        self.tbody.append($(self.prototype).clone());
+                        var item = self.tbody.find('tr:last');
                         item.addClass('data');
                         var content = item.find('.content');
                         $(content[0]).html(val.id);
@@ -159,38 +174,45 @@
                             var trace = $(this).data('target');
                             $(trace).find('.collapse').collapse('toggle');
                         });
-                        tbody.append($(st_prototype).clone());
-                        var trace = tbody.find('tr:last');
+                        self.tbody.append($(self.trace_prototype).clone());
+                        var trace = self.tbody.find('tr:last');
                         trace.attr('id', 'st' + val.id).addClass('collapsible').on('hidden.bs.collapse', function () {
                         }).on('show.bs.collapse', function () {
                             var content = $(this).find('.content');
                             if (!content.data('loading')) {
-                                content.find('.loading').show();
+                                content.data('loading', true).find('.loading').show();
                                 content.find('.inner').html('');
-                                content.data('loading', true);
-                                load_trace($(content), val.id);
+                                self.load_trace($(content), val.id);
                             }
                         });
                     });
                 }
-                else {
-                    empty_list();
+                catch(e) {
+                    self.error(e);
                 }
+            },
+            load_index: function() {
+                var self = this;
+                $.get(self.uri + '?SID=' + $.getSessionId(), function(data) {
+                    try {
+                        self.index(data['items']);
+                    }
+                    catch(e) {
+                        try {
+                            self.error(data['error']);
+                        }
+                        catch(e) {
+                            self.error('Exception: ' + e);
+                        }
+                    }
+                }, 'json').fail(function() {
+                    self.error('HTTP error');
+                });
             }
-
-            function default_error() {
-                error('Failed to load data');
-            }
-
-            $.get('savecrash.json?SID=' + $.getSessionId(), function(data) {
-                try {
-                    populate(data);
-                } catch(e) {
-                    default_error();
-                }
-            }, 'json').fail(function() {
-                default_error();
-            });
+        };
+        $(function() {
+            savecrash_log.init();
+            savecrash_log.load_index();
         });
     </script>
 </body>

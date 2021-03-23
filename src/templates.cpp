@@ -43,9 +43,7 @@ JsonUnnamedObject *WebTemplate::getJson()
 
 void WebTemplate::printSystemTime(time_t now, PrintHtmlEntitiesString &output)
 {
-    //char buf[80];
     auto format = PSTR("%a, %d %b %Y " HTML_SA(span, HTML_A("id", "system_time")) "%H:%M:%S" HTML_E(span) " %Z");
-//    strftime_P(buf, sizeof(buf), format, );
     output.printf_P(PSTR(HTML_SA(span, HTML_A("id", "system_date") HTML_A("format", "%s"))), PrintHtmlEntitiesString(FPSTR(format)).c_str());
     output.strftime_P(format, localtime(&now));
     output.print(F(HTML_E(span)));
@@ -197,6 +195,7 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         else if (key == F("IS_CONFIG_DIRTY_CLASS")) {
             output.print(FSPGM(hidden));
         }
+        __DBG_printf("return key='%s'", key.c_str());
         return;
     }
     // ------------------------------------------------------------------------------------
@@ -370,12 +369,21 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         }
         output.print(FSPGM(Not_supported, "Not supported"));
     }
-    else if (stringlist_find_P_P(PSTR("PCF8574_STATUS,PCF8575_STATUS,PCA9685_STATUS,MCP23017_STATUS,RTC_STATUS"), key.c_str(), ',') != -1) {
+    else {
+
+
+    __DBG_printf("strlist check key='%s'", key.c_str());
+
+    // else
+    if (stringlist_find_P_P(PSTR("PCF8574_STATUS,PCF8575_STATUS,PCA9685_STATUS,MCP23017_STATUS,RTC_STATUS"), key.c_str(), ',') != -1) {
         // strings that have not been replaced yet
+        __DBG_printf("return strlist check key='%s'", key.c_str());
         return;
     }
     else {
+        __DBG_printf("return asssert failed check key='%s'", key.c_str());
         __DBG_assert_printf(F("key not found") == nullptr, "key not found '%s'", key.c_str());
+    }
     }
 }
 
@@ -463,26 +471,38 @@ void MessageTemplate::checkForHtml()
 void NotFoundTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 {
     if (key == F("STATUS_CODE")) {
-        if (_code >= 200 && _code < 600) {
-            output.print(_code);
-        }
+        output.print(_code);
+        return;
+        // if (_code >= 200 && _code < 600) {
+        //     output.print(_code);
+        //     return;
+        // }
+        // return;
     }
     else if (key == F("TPL_TITLE")) {
-        if (_code >= 200 && _code < 600) {
-            output.printf_P("Status Code: %u", _code);
-        }
+        output.printf_P("Status Code: %u", _code);
+        return;
+        // if (_code >= 200 && _code < 600) {
+        //     output.printf_P("Status Code: %u", _code);
+        //     return;
+        // }
+        // return;
     }
     else if (_titleClass == nullptr && key == F("TPL_TITLE_CLASS")) {
-        if (_code >= 400 && _code < 600) {
-            output.print(F(" text-white bg-danger"));
+        if (_code >= 400) {
         }
-        else {
-            return MessageTemplate::process(key, output);
+        else if (_code >= 300) {
+            output.print(F(" text-white bg-info"));
+            return;
         }
+        else if (_code >= 200) {
+            output.print(F(" text-white bg-success"));
+            return;
+        }
+        output.print(F(" text-white bg-danger"));
+        return;
     }
-    else {
-        return MessageTemplate::process(key, output);
-    }
+    return MessageTemplate::process(key, output);
 }
 
 void ConfigTemplate::process(const String &key, PrintHtmlEntitiesString &output)
@@ -690,8 +710,8 @@ bool TemplateDataProvider::callback(const String& name, DataProviderInterface& p
     };
 
     auto &printArgs = webTemplate.getPrintArgs();
-    PrintHtmlEntitiesString value;
-    FillBufferMethod fbMethod = FillBufferMethod::NONE;
+    auto value = PrintHtmlEntitiesString();
+    auto fbMethod = FillBufferMethod::NONE;
 
     // menus
     if (name == F("MENU_HTML_MAIN")) {
@@ -742,7 +762,6 @@ bool TemplateDataProvider::callback(const String& name, DataProviderInterface& p
     // other variables
     else {
         webTemplate.process(name, value);
-        // debug_printf_P(PSTR("%s=%s\n"), name.c_str(), value.c_str());
         fbMethod = FillBufferMethod::BUFFER_STREAM;
     }
 

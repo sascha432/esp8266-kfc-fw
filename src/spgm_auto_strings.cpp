@@ -480,3 +480,6 @@ PROGMEM_STRING_DEF(_escaped_newline, "\\n");
 PROGMEM_STRING_DEF(_escaped_return, "\\r");
 PROGMEM_STRING_DEF(_escaped_htab, "\\t");
 PROGMEM_STRING_DEF(_escaped_vtab, "\\v");
+
+PROGMEM_STRING_DEF(default_format_double, "%.6f");
+PROGMEM_STRING_DEF(default_format_integer, "\"%05d\"");

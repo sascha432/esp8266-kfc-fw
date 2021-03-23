@@ -65,11 +65,11 @@ namespace SaveCrash {
             FirmwareVersion(); // kfc_fw_config.cpp
             FirmwareVersion(uint32_t version) : __version(version) {}
 
-            operator uint32_t() const {
+            inline operator uint32_t() const {
                 return __version;
             }
 
-            operator bool() const {
+            inline operator bool() const {
                 return __version != 0 && __version != ~0U;
             }
 
@@ -87,8 +87,17 @@ namespace SaveCrash {
         struct LastFailAlloc {
             uint32_t _addr;
             uint32_t _size;
-            LastFailAlloc() : _addr(0), _size(0) {}
-            LastFailAlloc(void *addr, int size) : _addr(reinterpret_cast<uint32_t>(addr)), _size(static_cast<uint32_t>(size)) {}
+            LastFailAlloc() :
+                _addr(0),
+                _size(0)
+            {
+            }
+
+            LastFailAlloc(void *addr, int size) :
+                _addr(reinterpret_cast<uint32_t>(addr)),
+                _size(static_cast<uint32_t>(size))
+            {
+            }
         };
 
         struct Stack {
@@ -113,15 +122,18 @@ namespace SaveCrash {
             {
             }
 
-             inline size_t size() const {
+            inline size_t size() const {
                 return _size;
             }
+
             inline static bool valid(uint32_t value) {
                 return value != 0 && value != ~0U;
             }
+
             inline static bool valid(uint32_t *value) {
                 return valid(reinterpret_cast<uint32_t>(value));
             }
+
             operator bool() const {
                 return valid(_begin) && valid(_end) && valid(_size);
             }
@@ -171,7 +183,7 @@ namespace SaveCrash {
         }
 
         inline String getStack() const {
-            return PrintString(F("0x%08x-0x%08x"), _stack._begin, _stack._end);
+            return PrintString(F("0x%08x - 0x%08x"), _stack._begin, _stack._end);
         }
 
         inline const __FlashStringHelper *getReason() const {
@@ -229,13 +241,7 @@ namespace SaveCrash {
         }
 
         inline uint32_t getId() const {
-            uint32_t addr = ((_sector << 12) | _offset);
-            uint32_t crc = crc32(&addr, sizeof(addr));
-            return addr ^ crc;
-        }
-
-        inline String getIdStr() const {
-            return PrintString(F("%08x"), getId());
+            return crc32(_header._md5, sizeof(_header._md5), (_sector << 12) | _offset);
         }
     };
 
@@ -284,7 +290,6 @@ namespace SaveCrash {
     struct webHandler {
 
         // in web_server.cpp
-        static bool index(AsyncWebServerRequest *request, HttpHeaders &httpHeaders);
         static AsyncWebServerResponse *json(AsyncWebServerRequest *request, HttpHeaders &httpHeaders);
 
     };

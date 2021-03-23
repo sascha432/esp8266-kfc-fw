@@ -366,20 +366,8 @@ namespace SPIFlash {
 
     bool FlashStorage::clear(ClearStorageType type, uint32_t options) const
     {
-        switch(type) {
-            case ClearStorageType::REMOVE_PREVIOUS_VERSIONS:
-            case ClearStorageType::SHRINK:
-                Logger_error(F("SaveCrash log strorage clear type not supported: %u"), type);
-                return false;
-            case ClearStorageType::NONE:
-                return false;
-            default:
-                break;
-        }
-
         int errors = 0;
         FlashHeader hdr;
-
         {
             for(auto i = _firstSector; i <= _lastSector; i++) {
                 auto offset = FlashResult::headerOffset(i);
@@ -389,12 +377,13 @@ namespace SPIFlash {
                     errors++;
                     continue;
                 }
-                if (type == ClearStorageType::ERASE) {
+
+                if (type == ClearStorageType::REMOVE_MAGIC) {
+                    // skip invalid magic if removal is requested
                     if (hdr._magic != kFlashMagic) {
                         __DBG_printf("sector=0x%04x offset=0x%08x magic=%08x", i, offset, hdr._magic);
                         continue;
                     }
-
                     // erase only if the magic can be found or the sector contains any data
                     memset(&hdr, 0xf0, sizeof(hdr));
                     // try to overwrite the flash memory
@@ -407,19 +396,19 @@ namespace SPIFlash {
                             __DBG_printf("sector=0x%04x read failure", i);
                             errors++;
                         }
-                        else if (hdr._magic != kFlashMagic) {
+                        else if (hdr._magic != kFlashMagic) { // erase sector if magic is still present
                             // skip erase
                             continue;
                         }
                     }
                 }
 
+
                 // erase entire sector if the magic cannot be erased
                 rc = _spi_flash_erase_sector(i);
                 if (rc != SPI_FLASH_RESULT_OK) {
                     __DBG_printf("sector=0x%04x erase failed", i);
                     errors++;
-                    continue;
                 }
             }
 

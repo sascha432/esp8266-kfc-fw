@@ -53,6 +53,9 @@
             </div>
             <div class="card">
                 <div class="card-body">
+                    <div class="pb-3 hidden" id="savecrash-buttons">
+                        <button class="btn btn-primary" id="clear-log">Clear Log</button><span class="pl-3 info"></span>
+                    </div>
                     <table class="table table-hover">
                         <thead>
                             <tr>
@@ -114,17 +117,21 @@
                 this.inner_trace_prototype = $('#stack-trace-prototype');
                 this.log_empty = $('.savecrash-log-empty');
                 this.log_loading = $('.savecrash-log-loading');
+                this.log_clear = $('#clear-log');
+                this.log_buttons = $('#savecrash-buttons');
             },
             error: function (msg) {
                 if (typeof msg !== 'string') {
                     msg = 'Failed to load data';
                 }
-                this.tbody.find('tr.data').remove();
+                this.log_buttons.hide();
+                this.tbody.find('tr.collapsible').remove();
                 this.log_empty.find('.content').html(msg);
                 this.log_empty.removeClass('hidden').show();
                 this.log_loading.hide();
             },
             empty_list: function () {
+                // this.log_buttons.hide();
                 this.error('No entries found');
             },
             trace: function (content, strace) {
@@ -159,30 +166,34 @@
                         self.empty_list();
                         return;
                     }
+                    items.sort(function(a, b) { // sort by time descending
+                        return b['t'] - a['t'];
+                    });
+                    self.log_buttons.removeClass('hidden').show();
+                    self.log_clear.prop('disabled', false);
                     self.log_empty.hide();
                     self.log_loading.hide();
-                    $(items).each(function(key, val) {
-                        self.tbody.append($(self.prototype).clone());
-                        var item = self.tbody.find('tr:last');
-                        item.addClass('data');
-                        var content = item.find('.content');
-                        $(content[0]).html(val.id);
-                        $(content[1]).html(val.ts);
-                        $(content[2]).html(val.r);
-                        $(content[3]).html(val.st).data('target', '#st' + val.id).on('click', function(e) {
+                    $(items).each(function(key, item) {
+                        self.tbody.append(self.prototype);
+                        var tr = self.tbody.find('tr:last');
+                        tr.addClass('header');
+                        self.tbody.append(self.trace_prototype);
+                        var content = tr.find('.content');
+                        $(content[0]).html(item.id);
+                        $(content[1]).html(item.ts);
+                        $(content[2]).html(item.r);
+                        $(content[3]).html(item.st).data('target', '#st' + item.id).on('click', function(e) {
                             e.preventDefault();
-                            var trace = $(this).data('target');
-                            $(trace).find('.collapse').collapse('toggle');
+                            $($(this).data('target')).find('.collapse').collapse('toggle');
                         });
-                        self.tbody.append($(self.trace_prototype).clone());
-                        var trace = self.tbody.find('tr:last');
-                        trace.attr('id', 'st' + val.id).addClass('collapsible').on('hidden.bs.collapse', function () {
+                        tr = tr.next();
+                        tr.attr('id', 'st' + item.id).addClass('collapsible').on('hidden.bs.collapse', function () {
                         }).on('show.bs.collapse', function () {
                             var content = $(this).find('.content');
                             if (!content.data('loading')) {
                                 content.data('loading', true).find('.loading').show();
                                 content.find('.inner').html('');
-                                self.load_trace($(content), val.id);
+                                self.load_trace($(content), item.id);
                             }
                         });
                     });
@@ -192,10 +203,14 @@
                 }
             },
             load_index: function() {
+                this.tbody.find('tr.collapsible,tr.header').remove();
                 var self = this;
                 $.get(self.uri + '?SID=' + $.getSessionId(), function(data) {
                     try {
                         self.index(data['items']);
+                        if (data.hasOwnProperty('info')) {
+                            self.log_buttons.find('.info').html(data['info']);
+                        }
                     }
                     catch(e) {
                         try {
@@ -208,11 +223,25 @@
                 }, 'json').fail(function() {
                     self.error('HTTP error');
                 });
+            },
+            start: function() {
+                var self = this;
+                this.log_clear.on('click', function(e) {
+                    e.preventDefault();
+                    self.log_clear.prop('disabled', true);
+                    $.get(self.uri + '?SID=' + $.getSessionId() + '&cmd=clear', function() {
+                        self.load_index();
+                    }, 'json').fail(function() {
+                        self.log_clear.prop('disabled', false);
+                        self.error('HTTP error');
+                    });
+                });
+                this.load_index();
             }
         };
         $(function() {
             savecrash_log.init();
-            savecrash_log.load_index();
+            savecrash_log.start();
         });
     </script>
 </body>

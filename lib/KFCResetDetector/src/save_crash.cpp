@@ -84,7 +84,82 @@ namespace SaveCrash {
         return createFlashStorage().clear(type, options);
     }
 
-    FlashStorageInfo FlashStorage::getInfo()
+#if ESP8266
+
+    inline static const __FlashStringHelper *getExceptionFPStr(uint32_t execption) {
+        switch(execption) {
+            case 0: return F("IllegalInstructionCause");
+            case 1: return F("SyscallCause");
+            case 2: return F("InstructionFetchErrorCause");
+            case 3: return F("LoadStoreErrorCause");
+            case 4: return F("Level1InterruptCause");
+            case 5: return F("AllocaCause");
+            case 6: return F("IntegerDivideByZeroCause");
+            case 7: return F("Reserved for Tensilica");
+            case 8: return F("PrivilegedCause");
+            case 9: return F("LoadStoreAlignmentCause");
+            case 12: return F("InstrPIFDateErrorCause");
+            case 13: return F("LoadStorePIFDataErrorCause");
+            case 14: return F("InstrPIFAddrErrorCause");
+            case 15: return F("LoadStorePIFAddrErrorCause");
+            case 16: return F("InstTLBMissCause");
+            case 17: return F("InstTLBMultiHitCause");
+            case 18: return F("InstFetchPrivilegeCause");
+            case 19: return F("Reserved for Tensilica");
+            case 20: return F("InstFetchProhibitedCause");
+            case 24: return F("LoadStoreTLBMissCause");
+            case 25: return F("LoadStoreTLBMultiHitCause");
+            case 26: return F("LoadStorePrivilegeCause");
+            case 27: return F("Reserved for Tensilica");
+            case 28: return F("LoadProhibitedCause");
+            case 29: return F("StoreProhibitedCause");
+            default:
+                break;
+        }
+        return nullptr;
+    }
+
+    void Data::printReason(Print &output) const
+    {
+        auto ptr = _info.reason == REASON_EXCEPTION_RST ? getExceptionFPStr(_info.exccause) : nullptr;
+        if (ptr) {
+            output.print(ptr);
+        }
+        else {
+            output.print(ResetDetector::getResetReason(_info.reason));
+            if (_info.reason == REASON_EXCEPTION_RST) {
+                output.printf_P(PSTR(" (%u)"), _info.exccause);
+            }
+        }
+    }
+
+#else
+
+    void Data::printReason(Print &output) const
+    {
+        output.print(ResetDetector::getResetReason(_info.reason))
+        output.printf_P(PSTR(" (%u)"), _info.exccause);
+    }
+
+#endif
+
+    void Data::printMD5(Print &output) const {
+        auto ptr = _md5;
+        auto endPtr = ptr + 16;
+        while (ptr < endPtr) {
+            output.printf_P(PSTR("%02x"), (uint32_t)*ptr++);
+        }
+    }
+
+    bool Data::setMD5(const char *str) {
+        if (strlen(str) != 32) {
+            std::fill(std::begin(_md5), std::end(_md5), 0);
+            return false;
+        }
+        hex2bin(_md5, sizeof(_md5), str);
+        return true;
+    }
+    FlashStorageInfo FlashStorage::getInfo(ItemCallback callback)
     {
         Data header;
         FlashStorageInfo info;
@@ -98,18 +173,21 @@ namespace SaveCrash {
                 // __LDBG_printf("sector=%x magic=%08x hdr.size=%u result=%u size=%u offset=%u header=%u", sector, result._header._magic, result._header._size, (bool)result, result.size(), offset, (bool)header);
                 if (!result || result.size() == 0 || !header) {
                     if (offset == 0) {
-                        info._space += SPIFlash::kSectorMaxSize;
-                        info._spaceLargestBlock = std::max(info._spaceLargestBlock, SPIFlash::kSectorMaxSize);
+                        info._spaceLargestBlock = std::max<uint16_t>(info._spaceLargestBlock, kMaxDataSize);
                     }
                     break; // next sector
                 }
                 if (offset == 0) {
                     // collect info about sector with offset == 0
-                    info._sector_used++;
-                    info._space += result.space();
-                    info._spaceLargestBlock = std::max(info._spaceLargestBlock, result.space());
+                    info._sectors_used++;
+                    if (result.space() >= sizeof(header)) {
+                        info._spaceLargestBlock = std::max<uint16_t>(info._spaceLargestBlock, result.space());
+                    }
                 }
                 // __LDBG_printf("offset=%u time=%u reason=%s stack=%u", offset, header._time, header.getReason(), header.getStackSize());
+                if (callback && callback(CrashLogEntry(header, sector, offset)) == false) {
+                    callback = nullptr;
+                }
                 offset += header.getSize();
                 info._size += header.getSize();
                 info._counter++;
@@ -130,10 +208,9 @@ namespace SaveCrash {
                 if (!result || result.size() == 0 || !header) {
                     break; // next sector
                 }
-                __LDBG_printf("time=%u size=%u reason=%s stack=%u start=0x%08x end=0x%08x sp=0x%08x reason=%s cause=%u " SAVECRASH_EXCEPTION_FMT " md5=%s",
+                __LDBG_printf("time=%u size=%u stack=%u start=0x%08x end=0x%08x sp=0x%08x reason=%s cause=%u " SAVECRASH_EXCEPTION_FMT " md5=%s",
                     header._time,
                     header.getSize(),
-                    header.getReason(),
                     header.getStackSize(),
                     header._stack._begin,
                     header._stack._end,
@@ -154,7 +231,8 @@ namespace SaveCrash {
     void FlashStorage::printCrashLogEntry(Print &output, const SaveCrash::CrashLogEntry &item)
     {
         output.print(F(" reason="));
-        output.print(item._header.getReason());
+        item._header.printReason(output);
+        // output.print(item._header.getReason());
         if (item._header._info.reason == REASON_EXCEPTION_RST) {
             output.printf_P(PSTR(" " SAVECRASH_EXCEPTION_FMT), SAVECRASH_EXCEPTION_ARGS(item._header._info));
         }
@@ -186,7 +264,6 @@ namespace SaveCrash {
             values += 4;
             pos += 0x10;
             if (pos > header._stack._end) {
-                __DBG_printf("pos OUT OF RANGE idx=%u offset=%u", i, (pos > header._stack._end));
                 break;
             }
         }
@@ -208,9 +285,11 @@ namespace SaveCrash {
         cut_here(output);
         output.print(F("\nFirmware "));
         header.printVersion(output);
-        output.print(F(" MD5 "));
+        output.print(F("\nMD5 "));
         header.printMD5(output);
-        output.print(F("\n"));
+        output.print(F("\nTimestamp "));
+        output.print(header.getTimeStr());
+        output.print('\n');
 
         if (static_cast<int>(rst_info.reason) == 254) {
             output.print(F("\nUser exception (panic/abort/assert)\n"));
@@ -225,16 +304,7 @@ namespace SaveCrash {
             output.print(F("\nGeneric Reset\n"));
         }
 
-        output.print(F("\n>>>stack>>>\n"));
-
-        // if (reinterpret_cast<uint32_t>(stack._end) == 0x3fffffb0) {
-        //     output.print(F("\nctx: cont\n"));
-        // }
-        // else {
-        //     output.print(F("\nctx: sys\n"));
-        // }
-
-        output.printf_P(PSTR("sp: %08x end: %08x offset: %04x\n"), stack._sp, stack._end, stack._begin - stack._sp);
+        output.printf_P(PSTR("\n>>>stack>>>\nsp: %08x end: %08x offset: %04x\n"), stack._sp, stack._end, stack._begin - stack._sp);
 
         while (stackSize) {
             uint32_t stackDump[16 * 4]; // multiples of 4
@@ -244,13 +314,6 @@ namespace SaveCrash {
                 __LDBG_printf("sector=%x result=%u read_size=%u offset=%u read failed", crashLog._sector, !!result, readLen, offset);
                 return false;
             }
-
-            // __LDBG_printf("READIN STACK ofs=%x size=%u", SPIFlash::FlashResult::dataOffset(result._sector) + offset);
-
-            // removed since it seems to be 16 byte aligned
-            // fill stack if not read completely
-            // size_t items = result.readSize() / sizeof(stackDump[0]);
-            // std::fill(&stackDump[items], std::end(stackDump), ~0U);
 
             // __LDBG_printf("pos=%08x items=%u stacksize=%u", pos, result.readSize() / sizeof(stackDump[0]), header.getStackSize());
             print_stack(output, &stackDump[0], result.readSize() / sizeof(stackDump[0]), pos, crashLog._header);
@@ -280,7 +343,7 @@ inline static bool append_crash_data(SaveCrash::FlashStorage &fs, SPIFlash::Flas
 {
     // limit stack size to available storage space
     header._stack._size = std::min<uint32_t>(result.space() - sizeof(header), header._stack._size);
-    __DBG_printf("APPEND_CRASH_DATA %u", header._stack._size);
+    __LDBG_printf("APPEND_CRASH_DATA %u", header._stack._size);
 
     if (!fs.append(header, result)) {
         __LDBG_printf("append failed rsult=%u size=%u", result._result, sizeof(header));
@@ -349,7 +412,7 @@ void custom_crash_callback(struct rst_info *rst_info, uint32_t stack, uint32_t s
     }
     if (num == 2) {
         result = fs.erase(results[1]._sector);
-        if (!result) {
+        if (result != SPIFlash::FlashResultType::SUCCESS) {
             ets_printf_P(PSTR("erasing sector=%x failed=%d"), results[1]._sector, result._result);
         }
 

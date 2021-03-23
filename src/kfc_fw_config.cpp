@@ -633,7 +633,7 @@ void KFCFWConfiguration::restoreFactorySettings()
     KFCFS.remove(FSPGM(login_failure_file));
 #endif
 
-    SaveCrash::clearStorage(SaveCrash::ClearStorageType::REMOVE_MAGIC);
+    // SaveCrash::clearStorage(SaveCrash::ClearStorageType::REMOVE_MAGIC);
 }
 
 #if CUSTOM_CONFIG_PRESET
@@ -806,7 +806,7 @@ void KFCFWConfiguration::read(bool wakeup)
             config.recoveryMode(false);
             System::Firmware::setMD5(ESP.getSketchMD5());
             Configuration::write();
-            SaveCrash::clearStorage(SaveCrash::ClearStorageType::REMOVE_MAGIC);
+            // SaveCrash::clearStorage(SaveCrash::ClearStorageType::REMOVE_MAGIC);
         }
     }
 }

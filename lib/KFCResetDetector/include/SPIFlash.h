@@ -135,8 +135,6 @@ namespace SPIFlash {
         ERASE,                      // erase all sectors
         FORMAT = ERASE,             // alias
         REMOVE_MAGIC,               // overwrite magic and invalidate sector
-        REMOVE_PREVIOUS_VERSIONS,   // remove crash reports from previous versions
-        SHRINK,                     // options specified the amount of memory to be freed in %
     };
 
     struct FindResult {
@@ -222,6 +220,10 @@ namespace SPIFlash {
             return (_result == FlashResultType::SUCCESS) && (_sector != 0) && (_size != kFlashEmpty16);
         }
 
+        inline operator FlashResultType() const {
+            return _result;
+        }
+
         inline bool hasData() const {
             return size() != 0;
         }
@@ -271,7 +273,7 @@ namespace SPIFlash {
         {}
 
         // clear storage memory
-        bool clear(ClearStorageType type, uint32_t options) const;
+        bool clear(ClearStorageType type, uint32_t options = 0) const;
 
         // return a list of sectors with at least minSpace free space
         // sort=true: sorts by empty sectors, then descending by space

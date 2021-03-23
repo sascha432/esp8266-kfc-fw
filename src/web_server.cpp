@@ -1348,49 +1348,65 @@ namespace SaveCrash {
         using namespace MQTT::Json;
 
         PrintString jsonStr;
+        AsyncWebServerResponse *response;
         auto fs = SaveCrash::createFlashStorage();
 
-        uint32_t id = 0;
-        auto idStr = request->getParam(F("id"));
-        if (idStr) {
-            __LDBG_printf("crashlog %u %s", id, idStr->value().c_str());
-            id = strtoul(idStr->value().c_str(), nullptr, 16);
-        }
-        if (id) {
-            JsonPrintStringWrapper wrapper(jsonStr);
-            jsonStr.print(F("{\"trace\":\""));
-            fs.getCrashLog([&](const SaveCrash::CrashLogEntry &item) {
-                if (item.getId() == id) {
-                    fs.printCrashLog(wrapper, item);
-                    return false;
-                }
-                return true;
-            });
-            jsonStr.print(F("\"}"));
+        auto cmd = request->getParam(F("cmd"));
+        if (cmd) {
+            if (cmd->value() == F("clear")) {
+                fs.clear(SPIFlash::ClearStorageType::ERASE);
+                response = request->beginResponse_P(200, FSPGM(mime_application_json), PSTR("{\"result\":\"OK\"}"));
+            }
+            else {
+                response = request->beginResponse(400);
+            }
         }
         else {
-            __LDBG_printf("crashlog index");
-            PrintString timeStr;
-            NamedArray items(F("items"));
-            fs.getCrashLog([&](const SaveCrash::CrashLogEntry &item) {
-                __LDBG_printf("id=0x%08x reason=%s", item.getId(), item._header.getReason());
-                time_t now = static_cast<time_t>(item._header._time);
-                auto stack = item._header.getStack();
-                timeStr.clear();
-                timeStr.strftime(FSPGM(strftime_date_time_zone), localtime(&now));
-                items.append(UnnamedObject(
-                    NamedFormattedInteger(F("id"), item.getId(), F("\"%08x\"")),
-                    NamedString(F("ts"), timeStr),
-                    NamedUint32(F("t"), static_cast<uint32_t>(now)),
-                    NamedString(F("r"), item._header.getReason()),
-                    NamedString(F("st"), stack)
-                ));
-                return true;
-            });
-            UnnamedObjectWriter(jsonStr, items);
+            uint32_t id = 0;
+            auto idStr = request->getParam(F("id"));
+            if (idStr) {
+                __LDBG_printf("crashlog %u %s", id, idStr->value().c_str());
+                id = strtoul(idStr->value().c_str(), nullptr, 16);
+            }
+            if (id) {
+                JsonPrintStringWrapper wrapper(jsonStr);
+                jsonStr.print(F("{\"trace\":\""));
+                fs.getCrashLog([&](const SaveCrash::CrashLogEntry &item) {
+                    if (item.getId() == id) {
+                        fs.printCrashLog(wrapper, item);
+                        return false;
+                    }
+                    return true;
+                });
+                jsonStr.print(F("\"}"));
+            }
+            else {
+                __LDBG_printf("crashlog index");
+                NamedArray items(F("items"));
+                String timeStr;
+                auto info = fs.getInfo([&](const SaveCrash::CrashLogEntry &item) {
+                    __LDBG_printf("id=0x%08x reason=%s", item.getId(), item._header.getReason());
+                    auto stack = item._header.getStack();
+                    timeStr = item._header.getTimeStr();
+                    PrintString reason;
+                    item._header.printReason(reason);
+                    items.append(UnnamedObject(
+                        NamedFormattedInteger(F("id"), item.getId(), F("\"%08x\"")),
+                        NamedString(F("ts"), timeStr),
+                        NamedUint32(F("t"), item._header._time),
+                        NamedString(F("r"), reason),
+                        NamedString(F("st"), stack)
+                    ));
+                    return true;
+                });
+                __LDBG_printf("info available=%u capacity=%u entries=%u largest-block=%u size=%u", info.available(), info.capacity(), info.numTraces(), info.getLargestBlock(), info.size());
+
+                auto infoStr = PrintString(F("%u%% free %s/%s %s"), info.available() * 100 / info.capacity(), formatBytes(info.available()).c_str(), formatBytes(info.capacity()).c_str(), SPGM(UTF8_rocket));
+                UnnamedObjectWriter(jsonStr, items, NamedString(F("info"), reinterpret_cast<FStr>(infoStr.c_str())));
+            }
+            response = request->beginResponse(200, FSPGM(mime_application_json), jsonStr);
         }
 
-        auto response = request->beginResponse(200, FSPGM(mime_application_json), jsonStr);
         httpHeaders.setAsyncWebServerResponseHeaders(response);
         return response;
     }

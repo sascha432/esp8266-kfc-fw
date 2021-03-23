@@ -47,10 +47,6 @@ namespace SaveCrash {
     public:
         static constexpr uint32_t kInvalidUint32 = ~0U;
 
-        inline const uint16_t getMaxStackSize() const {
-            return SPI_FLASH_SEC_SIZE - sizeof(*this);
-        }
-
         struct FirmwareVersion {
             union {
                 struct {
@@ -166,11 +162,9 @@ namespace SaveCrash {
             setMD5(getFirmwareMD5());
         }
 
-        inline operator bool() const {
-            return (_stack.size() <= getMaxStackSize()) && static_cast<bool>(_stack) && (_time != 0) && (_time != kInvalidUint32);
-        }
+        operator bool() const;
 
-        inline size_t getHeaderSize()  const {
+        inline const size_t getHeaderSize() const {
             return sizeof(Data);
         }
 
@@ -186,6 +180,12 @@ namespace SaveCrash {
             return PrintString(F("0x%08x - 0x%08x"), _stack._begin, _stack._end);
         }
 
+        inline String getTimeStr() const {
+            PrintString timeStr;
+            timeStr.strftime(FSPGM(strftime_date_time_zone), static_cast<time_t>(_time));
+            return timeStr;
+        }
+
         inline const __FlashStringHelper *getReason() const {
             return ResetDetector::getResetReason(_info.reason);
         }
@@ -195,7 +195,7 @@ namespace SaveCrash {
         }
 
         // does not allocate memory
-        void printVersion(Print &output) const {
+        inline void printVersion(Print &output) const {
             getVersion().printTo(output);
         }
 
@@ -208,25 +208,18 @@ namespace SaveCrash {
         }
 
         // does not allocate memory
-        void printMD5(Print &output) const {
-            auto ptr = _md5;
-            auto endPtr = ptr + 16;
-            while (ptr < endPtr) {
-                output.printf_P(PSTR("%02x"), (uint32_t)*ptr++);
-            }
-        }
-
-        bool setMD5(const char *str) {
-            if (strlen(str) != 32) {
-                std::fill(std::begin(_md5), std::end(_md5), 0);
-                return false;
-            }
-            hex2bin(_md5, sizeof(_md5), str);
-            return true;
-        }
+        void printReason(Print &output) const;
+        void printMD5(Print &output) const;
+        bool setMD5(const char *str);
     };
 
     static constexpr auto kDataSize = sizeof(Data);
+    static constexpr auto kMaxDataSize = SPIFlash::kSectorMaxSize - kDataSize;
+
+    inline Data::operator bool() const
+    {
+        return (_stack.size() <= kMaxDataSize) && static_cast<bool>(_stack) && (_time != 0) && (_time != kInvalidUint32);
+    }
 
     struct CrashLogEntry {
         const Data &_header;
@@ -248,30 +241,58 @@ namespace SaveCrash {
     // return true to continue, false to abort
     using ItemCallback = std::function<bool(const CrashLogEntry &)>;
 
-    struct FlashStorageInfo {
-        uint32_t _size;
-        uint32_t _space;
-        uint16_t _counter;
-        uint16_t _sectors_total;
-        uint16_t _sector_used;
-        uint16_t _spaceLargestBlock;
+    class FlashStorage;
 
+    class FlashStorageInfo {
+    public:
         FlashStorageInfo() :
             _size(0),
-            _space(0),
+            _spaceLargestBlock(0),
             _counter(0),
             _sectors_total(0),
-            _sector_used(0),
-            _spaceLargestBlock(0)
+            _sectors_used(0)
         {
         }
+
+        inline uint8_t numTraces() const {
+            return _counter;
+        }
+
+        inline uint16_t getLargestBlock() const {
+            return _spaceLargestBlock;
+        }
+
+        // free space
+        inline uint32_t available() const {
+            return std::max<int>(0, capacity() - size() - (std::min(1, _sectors_total - 1) * (SPIFlash::kSectorMaxSize - kMaxDataSize)));
+        }
+
+        // max capacity
+        inline uint32_t capacity() const {
+            return _sectors_total > 1 ? (_sectors_total - 1) * kMaxDataSize : kMaxDataSize;
+        }
+
+        // space used
+        inline uint32_t size() const {
+            return _size;
+        }
+
+    private:
+        friend FlashStorage;
+
+        uint32_t _size;
+        uint16_t _spaceLargestBlock;
+        uint8_t _counter;
+        uint8_t _sectors_total;
+        uint8_t _sectors_used;
     };
 
     class FlashStorage : public SPIFlash::FlashStorage {
     public:
         using SPIFlash::FlashStorage::FlashStorage;
 
-        FlashStorageInfo getInfo();
+        // same as getCrashLog() but returns FlashStorageInfo
+        FlashStorageInfo getInfo(ItemCallback callback = nullptr);
         void getCrashLog(ItemCallback callback);
         bool printCrashLog(Print &output, const CrashLogEntry &crashLog);
         void printCrashLogEntry(Print &output, const SaveCrash::CrashLogEntry &item);

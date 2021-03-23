@@ -195,7 +195,7 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         else if (key == F("IS_CONFIG_DIRTY_CLASS")) {
             output.print(FSPGM(hidden));
         }
-        __DBG_printf("return key='%s'", key.c_str());
+        // __DBG_printf("return key='%s'", key.c_str());
         return;
     }
     // ------------------------------------------------------------------------------------

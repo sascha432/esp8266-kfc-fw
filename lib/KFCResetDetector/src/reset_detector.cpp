@@ -354,11 +354,9 @@ ResetDetectorPlugin::ResetDetectorPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_
 void ResetDetectorPlugin::getStatus(Print &output)
 {
     auto info = SaveCrash::createFlashStorage().getInfo();
-    output.printf_P(PSTR("%u crash report(s), total size "), info._counter);
-    output.print(formatBytes(info._size));
-    output.printf_P(PSTR(HTML_S(br) "%u out of %u 4KB sectors used ("), info._sector_used, info._sectors_total);
-    output.print(formatBytes(info._sectors_total * 4096));
-    output.print(')');
+    output.printf_P(PSTR("%u crash report(s), total size "), info.numTraces());
+    output.print(formatBytes(info.size()));
+    output.printf_P(PSTR(HTML_S(br) "%s of %s available"), formatBytes(info.available()).c_str(), formatBytes(info.capacity()).c_str());
 }
 
 

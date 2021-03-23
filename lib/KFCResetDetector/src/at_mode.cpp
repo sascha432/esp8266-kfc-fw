@@ -72,20 +72,20 @@ bool ResetDetectorPlugin::atModeHandler(AtModeArgs &args)
         case 'c': {
             bool cleared = false;
             if (args.has(F("shrink"))) {
-                if (SaveCrash::clearStorage(SaveCrash::ClearStorageType::SHRINK)) {
-                    cleared = true;
-                }
-                else {
+                // if (SaveCrash::clearStorage(SaveCrash::ClearStorageType::SHRINK)) {
+                //     cleared = true;
+                // }
+                // else {
                     args.print(F("SHRINK is currently not supported"));
-                }
+                // }
             }
             else if (args.has(F("version"))) {
-                if (SaveCrash::clearStorage(SaveCrash::ClearStorageType::REMOVE_PREVIOUS_VERSIONS)) {
-                    cleared = true;
-                }
-                else {
+                // if (SaveCrash::clearStorage(SaveCrash::ClearStorageType::REMOVE_PREVIOUS_VERSIONS)) {
+                //     cleared = true;
+                // }
+                // else {
                     args.print(F("REMOVE_PREVIOUS_VERSIONS is currently not supported"));
-                }
+                // }
             }
             else {
                 if (SaveCrash::clearStorage(SaveCrash::ClearStorageType::REMOVE_MAGIC)) {
@@ -110,28 +110,23 @@ bool ResetDetectorPlugin::atModeHandler(AtModeArgs &args)
         } break;
         case 'i': {
             auto info = SaveCrash::createFlashStorage().getInfo();
-            args.printf_P(PSTR("counter=%u size=%u sectors used=%u total=%u"), info._counter, info._size, info._sector_used, info._sectors_total);
-            args.printf_P(PSTR("free space=%u largest block=%u"), info._space, info._spaceLargestBlock);
+            args.printf_P(PSTR("entries=%u size=%u capacity=%u"), info.numTraces(), info.size(), info.capacity());
+            args.printf_P(PSTR("free space=%u largest block=%u"), info.available(), info.getLargestBlock());
         } break;
         case 'l': {
             int16_t count = 0;
-            PrintString timeStr;
             Stream &output = args.getStream();
             auto fs = SaveCrash::createFlashStorage();
             fs.getCrashLog([&](const SaveCrash::CrashLogEntry &item) {
-                time_t now = static_cast<time_t>(item._header._time);
-                timeStr.clear();
-                timeStr.strftime(FSPGM(strftime_date_time_zone), localtime(&now));
-
                 output.printf_P(PSTR("<%03u> "), ++count);
-                output.print(timeStr);
+                output.print(item._header.getTimeStr());
                 fs.printCrashLogEntry(output, item);
                 return true;
             });
         } break;
         case 'p': {
             auto fs = SaveCrash::createFlashStorage();
-            auto counter = fs.getInfo()._counter;
+            auto counter = fs.getInfo().numTraces();
             if (counter == 0) {
                 args.print(F("SaveCrash log is empty"));
             }

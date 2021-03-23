@@ -37,7 +37,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_BME280::getAutoDiscovery(FormatType format
         case 0:
             if (discovery->create(this, _getId(FSPGM(temperature, "temperature")), format)) {
                 discovery->addStateTopic(MQTTClient::formatTopic(_getId()));
-                discovery->addUnitOfMeasurement(FSPGM(degree_Celsius_unicode));
+                discovery->addUnitOfMeasurement(FSPGM(UTF8_degreeC));
                 discovery->addValueTemplate(FSPGM(temperature));
                 discovery->addDeviceClass(F("temperature"));
             }
@@ -115,7 +115,7 @@ void Sensor_BME280::createWebUI(WebUIRoot &webUI, WebUIRow **row)
     // if ((*row)->size() > 1) {
         // *row = &webUI.addRow();
     // }
-    (*row)->addSensor(_getId(FSPGM(temperature)), _name + F(" Temperature"), FSPGM(degree_Celsius_html));
+    (*row)->addSensor(_getId(FSPGM(temperature)), _name + F(" Temperature"), FSPGM(UTF8_degreeC));
     (*row)->addSensor(_getId(FSPGM(humidity)), _name + F(" Humidity"), '%');
     (*row)->addSensor(_getId(FSPGM(pressure)), _name + F(" Pressure"), FSPGM(hPa));
 }

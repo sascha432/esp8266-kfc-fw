@@ -6,12 +6,12 @@
 
 #include <Arduino_compat.h>
 #include <PrintString.h>
-#include <JsonTools.h>
 #include <kfc_fw_config.h>
 #include "mqtt_strings.h"
 #include "auto_discovery.h"
 #include "mqtt_client.h"
 #include "templates.h"
+#include "JsonTools.h"
 
 #if DEBUG_MQTT_CLIENT
 #include <debug_helper_enable.h>
@@ -153,11 +153,15 @@ void Entity::__addParameter(NameType name, const char *str, bool quotes)
             }
         }
 #endif
-        _discovery.print(FPSTR(str));
         if (quotes) {
-            _discovery.print('"');
+            JsonTools::Utf8Buffer buffer;
+            JsonTools::printToEscaped(_discovery, FPSTR(str), &buffer);
+            _discovery.print(F("\","));
         }
-        _discovery.print(',');
+        else {
+            _discovery.print(FPSTR(str));
+            _discovery.print(',');
+        }
     }
     else {
         _discovery.printf_P(PSTR("%s: %s\n    "), name, str);

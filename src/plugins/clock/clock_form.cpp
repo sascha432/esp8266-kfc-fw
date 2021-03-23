@@ -227,19 +227,19 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         auto &protectionGroup = form.addCardGroup(F("prot"), FSPGM(Protection), true);
 
         form.addPointerTriviallyCopyable(F("tmi"), &cfg.protection.temperature_reduce_range.min);
-        form.addFormUI(F("Minimum Temperature To Reduce Brightness"), FormUI::Suffix(FSPGM(degree_Celsius_utf8)));
+        form.addFormUI(F("Minimum Temperature To Reduce Brightness"), FormUI::Suffix(FSPGM(UTF8_degreeC)));
         form.addValidator(FormUI::Validator::Range(kMinimumTemperatureThreshold, 90));
 
         form.addPointerTriviallyCopyable(F("tma"), &cfg.protection.temperature_reduce_range.max);
-        form.addFormUI(F("Maximum. Temperature To Reduce Brightness To 25%"), FormUI::Suffix(FSPGM(degree_Celsius_utf8)));
+        form.addFormUI(F("Maximum. Temperature To Reduce Brightness To 25%"), FormUI::Suffix(FSPGM(UTF8_degreeC)));
         form.addValidator(FormUI::Validator::Range(kMinimumTemperatureThreshold, 90));
 
         form.addPointerTriviallyCopyable(F("tpm"), &cfg.protection.max_temperature);
-        form.addFormUI(F("Over Temperature Protection"), FormUI::Suffix(FSPGM(degree_Celsius_utf8)));
+        form.addFormUI(F("Over Temperature Protection"), FormUI::Suffix(FSPGM(UTF8_degreeC)));
         form.addValidator(FormUI::Validator::Range(kMinimumTemperatureThreshold, 105));
 
         form.addPointerTriviallyCopyable(F("tpv"), &cfg.protection.regulator_margin);
-        form.addFormUI(F("Extra Margin For Voltage Regulator"), FormUI::Suffix(FSPGM(degree_Celsius_utf8)));
+        form.addFormUI(F("Extra Margin For Voltage Regulator"), FormUI::Suffix(FSPGM(UTF8_degreeC)));
         form.addValidator(FormUI::Validator::Range(-50, 50));
 
         protectionGroup.end();

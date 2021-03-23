@@ -42,7 +42,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_DS3231::getAutoDiscovery(FormatType format
     case 0:
         if (discovery->create(this, FSPGM(ds3231_id_temp), format)) {
             discovery->addStateTopic(MQTTClient::formatTopic(FSPGM(ds3231_id_temp)));
-            discovery->addUnitOfMeasurement(FSPGM(degree_Celsius_unicode));
+            discovery->addUnitOfMeasurement(FSPGM(UTF8_degreeC));
         }
         break;
     case 1:

@@ -34,7 +34,7 @@ MQTT::AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num)
         case 0:
             if (discovery->create(this, _getId(FSPGM(temperature)), format)) {
                 discovery->addStateTopic(MQTTClient::formatTopic(_getId()));
-                discovery->addUnitOfMeasurement(FSPGM(degree_Celsius_unicode));
+                discovery->addUnitOfMeasurement(FSPGM(UTF8_degreeC));
                 discovery->addValueTemplate(FSPGM(temperature));
             }
             break;
@@ -76,7 +76,7 @@ void Sensor_DHTxx::getValues(JsonArray &array, bool timer)
 
 void Sensor_DHTxx::createWebUI(WebUIRoot &webUI, WebUIRow **row)
 {
-    (*row)->addSensor(_getId(FSPGM(temperature)), _name + F(" Temperature"), FSPGM(degree_Celsius_html));
+    (*row)->addSensor(_getId(FSPGM(temperature)), _name + F(" Temperature"), FSPGM(UTF8_degreeC));
     (*row)->addSensor(_getId(FSPGM(humidity)), _name + F(" Humidity"), '%');
 }
 

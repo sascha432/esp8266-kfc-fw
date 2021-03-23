@@ -32,7 +32,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_LM75A::getAutoDiscovery(MQTT::FormatType f
         case 0:
             discovery->create(this, _getId(), format);
             discovery->addStateTopic(MQTTClient::formatTopic(_getId()));
-            discovery->addUnitOfMeasurement(FSPGM(degree_Celsius_unicode));
+            discovery->addUnitOfMeasurement(FSPGM(UTF8_degreeC));
             break;
     }
     return discovery;
@@ -68,7 +68,7 @@ void Sensor_LM75A::createWebUI(WebUIRoot &webUI, WebUIRow **row)
     // if ((*row)->size() > 3) {
     //     *row = &webUI.addRow();
     // }
-    (*row)->addSensor(_getId(), _name, FSPGM(degree_Celsius_html));
+    (*row)->addSensor(_getId(), _name, FSPGM(UTF8_degreeC));
 }
 
 void Sensor_LM75A::publishState()

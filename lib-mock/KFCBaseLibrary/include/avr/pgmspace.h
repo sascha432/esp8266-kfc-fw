@@ -8,14 +8,21 @@ Author: sascha_lammers@gmx.de
 
 #define PSTR_ALIGN								4
 
+#if 1
+#define PSTR(str)                               (str)
+#define PSTR1(str)								(str)
+#define PSTRN(str, n)							(str)
+#else
 #define PSTR(str)                               (__register_flash_memory_string(str, PSTR_ALIGN))
+#define PSTR1(str)								(__register_flash_memory_string(str, 1))
+#define PSTRN(str, n)							(__register_flash_memory_string(str, n))
+#endif
+
 #define __PSTR(str)								(PSTR(str))
 #define FPSTR(str)                              (reinterpret_cast<const __FlashStringHelper *>(PSTR(str)))
 #define __FPSTR(str)							(reinterpret_cast<const __FlashStringHelper *>(PSTR(str)))
 #define F(str)									(reinterpret_cast<const __FlashStringHelper *>(PSTR(str)))
 #define RFPSTR(str)								(reinterpret_cast<const char *>(PSTR(str)))
-#define PSTR1(str)								(__register_flash_memory_string(str, 1))
-#define PSTRN(str, n)							(__register_flash_memory_string(str, n))
 
 // add PROGMEM data
 const void *__register_flash_memory(const void *ptr, size_t length, size_t alignment = PSTR_ALIGN);

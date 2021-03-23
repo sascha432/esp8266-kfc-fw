@@ -158,9 +158,6 @@ FLASH_STRING_GENERATOR_AUTO_INIT(
     AUTO_STRING_DEF(_color_state, "/color/state")
     AUTO_STRING_DEF(_effect_set, "/effect/set")
     AUTO_STRING_DEF(_effect_state, "/effect/state")
-    AUTO_STRING_DEF(degree_Celsius_unicode, "\u00b0C")
-    AUTO_STRING_DEF(degree_Celsius_utf8, "°C")
-    AUTO_STRING_DEF(degree_Celsius_html, "&deg;C")
     AUTO_STRING_DEF(_hidden, " hidden")
     AUTO_STRING_DEF(_html, ".html")
     AUTO_STRING_DEF(_login_html, "/login.html")
@@ -456,6 +453,12 @@ FLASH_STRING_GENERATOR_AUTO_INIT(
     AUTO_STRING_DEF(scheduler_config_file, "/.pvt/.scheduler")
     AUTO_STRING_DEF(Enable_UDP, "Enable UDP")
     AUTO_STRING_DEF(Enable_MQTT, "Enable MQTT")
+    AUTO_STRING_DEF(UTF8_rocket, "\xf0\x9f\x9a\x80")
+    AUTO_STRING_DEF(UTF8_degreeCelsius, "\xe2\x84\x83")
+    AUTO_STRING_DEF(UTF8_degreeFahrenheit, "\xe2\x84\x89")
+    AUTO_STRING_DEF(UTF8_degree, "\xc2\xb0")
+    AUTO_STRING_DEF(UTF8_degreeC, "\xc2\xb0" "C")
+    AUTO_STRING_DEF(UTF8_degreeF, "\xc2\xb0" "F")
 );
 
 #ifdef __cplusplus

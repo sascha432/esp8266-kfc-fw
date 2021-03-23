@@ -118,17 +118,17 @@ private:
 
 private:
     Mode _mode;
+    uint32_t _utf8Count: 8; // keep at at 32bit offset to avoid shifting it around
     uint32_t _lastChars: 24;
-    uint32_t _utf8Count: 8;
 };
 
 inline PrintHtmlEntities::PrintHtmlEntities() :
-    _mode(Mode::HTML), _lastChars(0), _utf8Count(0)
+    _mode(Mode::HTML), _utf8Count(0), _lastChars(0)
 {
 }
 
 inline PrintHtmlEntities::PrintHtmlEntities(Mode mode) :
-    _mode(mode), _lastChars(0), _utf8Count(0)
+    _mode(mode), _utf8Count(0), _lastChars(0)
 {
 }
 

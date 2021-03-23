@@ -48,19 +48,16 @@ public:
             NO_ENCODING_REQUIRED = -2,
             MORE_DATA_REQUIRED = -1,
         };
-
-
+        
     public:
-        Utf8Buffer() : _length(0), _buf{} {}
+        Utf8Buffer() : _counter(0), _buf{} {}
 
         // use this function to add more data
-        // -127 = the last sequence was invalid. the current byte can be dropped or the
-        // invalid sequence added. the previous bytes are stored in _buf. clear() must
-        // be called to continue using the buffer
-        // -126 invalid unicode value. treat like -255...
-        // -2 = the character does not require encoding
-        // -1 = more data required
-        // >=0 = unicode value
+        // INVALID_UNICODE_SYMBOL/INVALID_SEQUENCE the current sequence is invalid and skipped
+        // to retrieve the data, store counter() before calling the method. it returns the number
+        // of bytes stored in _buf that will be discarded
+        // feed more data if MORE_DATA_REQUIRED is returned
+        // >=0 = codepoint / UTF32
         inline __attribute__((__always_inline__))
         int32_t feed(char ch) {
             return feed(static_cast<uint8_t>(ch));
@@ -71,89 +68,66 @@ public:
             return feed(static_cast<uint8_t>(ch));
         }
 
-        int32_t feed(uint8_t ch) {
-            // not encoding required
-            if (_length == 0 && ch < 0x80) {
-                return static_cast<int32_t>(ErrorType::NO_ENCODING_REQUIRED);
-            }
-            // buffer full / invalid sequence
-            if (static_cast<uint8_t>(_length) >= sizeof(_buf)) {
-                return static_cast<int32_t>(ErrorType::INVALID_SEQUENCE);
-            }
-            _buf[_length++] = ch;
-            auto result = utf8_length();
-            if (result == _length) {
-            // if the end marker is found check if we have collect all the bytes already
-            //if ((ch & 0xc0) == 0x80) 
-                switch(_length) {
-                case 4: { // 4 byte sequence
-                        uint32_t tmp = ((_buf[0] & 0b111) << 18) | ((_buf[1] & 0b111111) << 12) | ((_buf[2] & 0b111111) << 6) | (ch & 0b111111);
-                        if (tmp <= 0x10ffff) {
-                            return tmp;
-                        }
-                        // invalid unicode
-                        return static_cast<int32_t>(ErrorType::INVALID_UNICODE_SYMBOL);
-                    }
-                case 3: // 3 byte sequence
-                    return ((_buf[0] & 0b1111) << 12) | ((_buf[1] & 0b111111) << 6) | (ch & 0b111111);
-                case 2: // 2 byte sequence
-                    return ((_buf[0] & 0b11111) << 6) | (ch & 0b111111);
-                case 0:
-                    break;
-                default:
-                    return static_cast<int32_t>(ErrorType::INVALID_SEQUENCE);
-                }
-            }
-            return static_cast<int32_t>(ErrorType::MORE_DATA_REQUIRED);
-        }
+        int32_t feed(uint8_t ch);
 
         inline __attribute__((__always_inline__))
         void clear() {
-            _length = 0;
+            _counter = 0;
         }
 
+        // current length of the utf8 buffer or 0 for emtpy
         inline __attribute__((__always_inline__))
-        uint8_t length() const {
-            return _length;
+        uint8_t counter() {
+            return _counter;
         }
 
-        uint8_t unicodeLength(int32_t unicode) const {
-           if (static_cast<uint32_t>(unicode) < 0x10000) {
+        // total length of the current sequence (2, 3 or 4) or 0 for none
+        inline uint8_t length() const {
+            return _counter ? (utf8_length(*_buf) + 1) : 0;
+        }
+
+        // encoded length of the codepoint
+        uint8_t unicodeLength(uint32_t codepoint) const {
+           if (codepoint < 0x10000) {
                 return 6;
             }
-            else if (static_cast<uint32_t>(unicode) <= 0x10ffff) {
+            else if (codepoint <= 0x10ffff) {
                 return 12;
             }
             return 0;
         }
 
-        size_t printTo(Print &print, int32_t unicode) {
-            if (static_cast<uint32_t>(unicode) < 0x10000) {
-                return print.printf_P(PSTR("\\u%04x"), static_cast<uint32_t>(unicode));
+        // convert UTF32 to JSON UTF16
+        size_t printTo(Print &print, uint32_t codepoint) {
+            if (codepoint < 0x10000) {
+                return print.printf_P(PSTR("\\u%04x"), codepoint);
             }
-            else if (static_cast<uint32_t>(unicode) <= 0x10ffff) {
-                return print.printf_P(PSTR("\\u%04x\\u%04x"), 0, 0); // TODO encode to 2x UTF16
+            else if (codepoint <= 0x10ffff) {
+                return print.printf_P(PSTR("\\u%04x\\u%04x"), static_cast<uint16_t>(0xd7c0 + (codepoint >> 10)), static_cast<uint16_t>(0xdc00 + (codepoint & 0x3ff)));
             }
             return 0;
         }
 
     private:
-        int8_t utf8_length() const {
-            uint8_t code = (*_buf >> 3);
-            if (code == 0b11110) {
-                return 4;   // 21bit
+        inline uint8_t utf8_length(uint8_t code) const {
+            if ((code & 0b11110000) == 0b11110000) {
+                return 3;       // 21bit
             }
-            else if (code == 0b11100) {
-                return 3;   // 16bit
+            else if ((code & 0b111100000) == 0b11100000) {
+                return 2;       // 16bit
             }
-            else if (code == 0b11000) {
-                return 2;   // 11bit
+            else if ((code & 0b111000000) == 0b11000000) {
+                return 1;       // 11bit
             }
-            return -127;
+            return 0xf;
+        }
+
+        inline bool isNotData(uint8_t code) const {
+            return ((code & 0b110000000) != 0b10000000);
         }
 
     private:
-        int8_t _length;
+        uint8_t _counter;
         uint8_t _buf[3];
     };
 

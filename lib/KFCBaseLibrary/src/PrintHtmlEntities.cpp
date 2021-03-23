@@ -170,85 +170,89 @@ size_t PrintHtmlEntities::translate(uint8_t data)
         return _writeRawString(FPSTR(kv.values[i]));
     }
     if (data >= 0x80) {
-        if ((data & 0b11110000) == 0b11110000) {
-            // len 4
+        // sequence active?
+        if (_utf8Count) {
+            if ((data & 0b110000000) != 0b10000000) {
+                // not a data byte
+                __DBG_printf("invalid utf8 sequence count=%u data=0x%02x data=0x%06x", _utf8Count, data, _lastChars);
+                _utf8Count = 0;
+                return 0;
+            }
+            if (--_utf8Count == 0) {
+                if (_lastChars & (1U << 23)) { // 3 bytes have been shifted
+                    writeRaw(_lastChars >> 16);
+                    writeRaw((_lastChars >> 8) & 0xff);
+                    writeRaw(_lastChars & 0xff);
+                    writeRaw(data);
+                    return 4;
+                }
+                else if (_lastChars & (1U << 15)) {
+                    writeRaw(_lastChars >> 8);
+                    writeRaw(_lastChars & 0xff);
+                    writeRaw(data);
+                    return 3;
+                }
+                else if (_lastChars & (1U << 7)) {
+                    writeRaw(_lastChars);
+                    writeRaw(data);
+                    return 2;
+                }
+                // invalid length, should be unreachable
+                return 0;
+            }
+            else {
+                // add data byte
+                _lastChars <<= 8;
+                _lastChars |= data;
+                return 0;
+            }
+        }
+        else if ((data & 0b11110000) == 0b11110000) {
+            // length 4
             _utf8Count = 3;
             _lastChars = data;
             return 0;
         }
         else if ((data & 0b111100000) == 0b11100000) {
-            // len 3
+            // length 3
             _utf8Count = 2;
             _lastChars = data;
             return 0;
         }
         else if ((data & 0b111000000) == 0b11000000) {
-            // len 2
+            // length 2
             _utf8Count = 1; // 1 byte left
             _lastChars = data;
             return 0;
         }
-        else if ((data & 0b110000000) == 0b10000000) {
-            // data byte
-            if (_utf8Count) { // skip the data byte if the count is zero
-                if (--_utf8Count == 0) {
-                    if (_lastChars & (1U << 23)) { // 3 bytes have been shifted
-                        writeRaw(_lastChars >> 16);
-                        writeRaw((_lastChars >> 8) & 0xff);
-                        writeRaw(_lastChars & 0xff);
-                        writeRaw(data);
-                        _utf8Count = 0;
-                        return 4;
-                    }
-                    else if (_lastChars & (1U << 15)) {
-                        writeRaw(_lastChars >> 8);
-                        writeRaw(_lastChars & 0xff);
-                        writeRaw(data);
-                        _utf8Count = 0;
-                        return 3;
-                    }
-                    else if (_lastChars & (1U << 7)) {
-                        writeRaw(_lastChars);
-                        writeRaw(data);
-                        _utf8Count = 0;
-                        return 2;
-                    }
-                }
-                else {
-                    _lastChars <<= 8;
-                    _lastChars |= data;
-                    return 0;
-                }
-            }
-            __DBG_printf("invalid utf8 sequence count=%u data=0x%02x data=0x%06x", _utf8Count, data, _lastChars);
-            return 0;
-        }
         else {
-            // invalid
+            // data byte received but sequence not active
             __DBG_printf("invalid utf8 sequence count=%u data=0x%02x data=0x%06x", _utf8Count, data, _lastChars);
             _utf8Count = 0;
             return 0;
         }
     }
     else {
+#if 1
         if (_utf8Count) {
             __DBG_printf("invalid utf8 sequence count=%u data=0x%02x last=0x%06x", _utf8Count, data, _lastChars);
         }
+#endif
         _utf8Count = 0;
         switch (data) {
-            case '\1':
+            case *HTML_TAG_S:
                 return writeRaw('<');
-            case '\2':
+            case *HTML_TAG_E:
                 return writeRaw('>');
-            case '\3':
+            case *HTML_AMP:
                 return writeRaw('&');
-            case '\4':
+            case *HTML_QUOTE:
                 return writeRaw('"');
-            case '\5':
+            case *HTML_EQUALS:
                 return writeRaw('=');
-            case '\6':
+            case *HTML_PCT:
                 return writeRaw('%');
-            case '\7':
+            case *HTML_APOS:
                 return writeRaw('\'');
         }
     }
@@ -259,6 +263,12 @@ PrintHtmlEntities::KeysValues PrintHtmlEntities::__getKeysAndValues(PrintHtmlEnt
 {
     if (mode == PrintHtmlEntities::Mode::JAVASCRIPT) {
         return KeysValues(__keys_javascript_P, __values_javascript_P);
+    }
+    else if (kAttributeOffset == 0) { // constexpr
+        return KeysValues(__keys_attribute_all_P, __values_P);
+    }
+    else if (mode == PrintHtmlEntities::Mode::HTML) {
+        return KeysValues(__keys_attribute_all_P, __values_P);
     }
     else if (mode == PrintHtmlEntities::Mode::ATTRIBUTE) {
         return KeysValues(&__keys_attribute_all_P[kAttributeOffset], &__values_P[kAttributeOffset]);

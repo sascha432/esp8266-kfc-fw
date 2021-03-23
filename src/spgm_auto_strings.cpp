@@ -483,3 +483,7 @@ PROGMEM_STRING_DEF(_escaped_vtab, "\\v");
 
 PROGMEM_STRING_DEF(default_format_double, "%.6f");
 PROGMEM_STRING_DEF(default_format_integer, "\"%05d\"");
+
+PROGMEM_STRING_DEF(UTF8_rocket, "\xf0\x9f\x9a\x80");
+PROGMEM_STRING_DEF(UTF8_degreeC, "\xc2\xb0" "C");
+

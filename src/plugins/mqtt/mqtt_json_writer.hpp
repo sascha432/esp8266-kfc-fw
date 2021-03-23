@@ -29,6 +29,9 @@ namespace MQTT {
         // strings (keys and values) are stored as pointers, all other values as copy. To create new classes
         // with different behavior, the templates UnnamedVariant and NamedVariant can be used.
         //
+        // To create a generator class, that generates its value when the JSON string is created,
+        // see PrintToInterface
+        //
         // following method must be available:
         //
         // [String|const char *|const __FlashStringHelper *] key() const
@@ -71,6 +74,35 @@ namespace MQTT {
 
 
         using FStr = const __FlashStringHelper *;
+
+        struct PrintToInterface {
+            // this is an abstract class with following methods
+            // the class is not virtual to avoid the extra overhead
+            //
+            // as NamedVariant
+            //
+            // const __FlashStringHelper *key() const;
+            // void printTo(PrintStringInterface &output) const
+            //
+            // as UnnamedVariant and value of Un-/namedVariant
+            //
+            // void printTo(PrintStringInterface &output) const
+            //
+            // printTo is responsible for quotes and encoding. the output can be any
+            // valid json variant (nested array/objects)
+            //
+            // JsonPrintStringWrapper can be used to encode JSON values writing directly
+            // to PrintStringInterface
+            //
+            // void printTo(PrintStringInterface &output) const
+            // {
+            //     output.print('"');
+            //     JsonPrintStringWrapper wrapper(output);
+            //     wrapper.print(F("my string \" with \" quotes that was generated at "));
+            //     wrapper.strftime(F("%T %D"), time(nullptr));
+            //     output.print('"');
+            //  }
+        };
 
         inline static FStr F_cast(const char *str) {
             return reinterpret_cast<FStr>(str);
@@ -140,9 +172,9 @@ namespace MQTT {
         }
 
         struct UnnamedBase {
-            FStr key() const {
-                return F("INVALID");
-            }
+        };
+
+        struct NamedBase {
         };
 
         template<typename _Type, typename _ConstRef = typename Helpers::const_ref<_Type>::type>
@@ -158,7 +190,7 @@ namespace MQTT {
         };
 
         template<typename _KeyType, typename _ValueType, typename _KeyConstRef = typename Helpers::const_ref<_KeyType>::type, typename _ValueConstRef = typename Helpers::const_ref<_ValueType>::type>
-        struct NamedVariant : UnnamedVariant<_ValueType, _ValueConstRef> {
+        struct NamedVariant : UnnamedVariant<_ValueType, _ValueConstRef>, NamedBase {
             NamedVariant(_KeyType key, _ValueType value) : UnnamedVariant<_ValueType>(value), _key(key) {}
 
             template<typename _Ta, typename std::enable_if<std::is_same<_KeyType, FStr>::value, int>::type = 0>
@@ -176,51 +208,155 @@ namespace MQTT {
             _KeyType _key;
         };
 
-        static constexpr uint8_t DOUBLE_DEFAULT_PRECISION = 6;
+        struct UnnamedFormattedInteger : PrintToInterface, UnnamedBase {
+            UnnamedFormattedInteger(uint32_t value, const __FlashStringHelper *format = FSPGM(default_format_integer, "\"%05d\"")) : 
+                _format(format), 
+                _value(value) 
+            {
+            }
 
-        struct FormattedDouble {
-            FormattedDouble(double value, uint8_t precision = DOUBLE_DEFAULT_PRECISION) : _value(value), _precision(precision) {}
+            inline __attribute__((__always_inline__))
             void printTo(PrintStringInterface &output) const {
+                output.printf_P(reinterpret_cast<PGM_P>(_format), _value);
+            }
+
+            const __FlashStringHelper *_format;
+            uint32_t _value;
+        };
+
+        struct NamedFormattedInteger : UnnamedFormattedInteger, NamedBase {
+            NamedFormattedInteger(const __FlashStringHelper *key, uint32_t value, const __FlashStringHelper *format = FSPGM(default_format_integer)) : 
+                UnnamedFormattedInteger(value, format), 
+                _key(key) 
+            {
+            }
+
+            inline __attribute__((__always_inline__))
+            const __FlashStringHelper *key() const {
+                return _key;
+            }
+
+            const __FlashStringHelper *_key;
+        };
+
+        // if the value is not normal (nan, inf, -inf etc..) the output is null to meet JSON standards
+        struct UnnamedDouble : PrintToInterface, UnnamedBase {
+            UnnamedDouble(double value, uint8_t precision) :
+                _precision(precision),
+                _value(value)
+            {
+            }
+
+            inline __attribute__((__always_inline__))
+                void printTo(PrintStringInterface &output) const {
                 if (std::isnormal(_value)) {
-                    output.print(_value, _precision, false);
+                    output.printf_P(PSTR("%.*f"), _precision, _value);
                 }
                 else {
                     output.print(F("null"));
                 }
             }
-            double _value;
+
             uint8_t _precision;
+            double _value;
         };
 
-        struct TrimmedDouble {
-            TrimmedDouble(double value, uint8_t precision = DOUBLE_DEFAULT_PRECISION) : _value(value), _precision(precision) {}
-            void printTo(PrintStringInterface &output) const {
+        // if the value is not normal (nan, inf, -inf etc..) the output is null to meet JSON standards
+        struct UnnamedFormattedDouble : PrintToInterface, UnnamedBase {
+            UnnamedFormattedDouble(double value, FStr format = FSPGM(default_format_double, "%.6f")) :
+                _format(format),
+                _value(value)
+            {
+            }
+
+            inline __attribute__((__always_inline__))
+                void printTo(PrintStringInterface &output) const {
                 if (std::isnormal(_value)) {
-                    output.print(_value, _precision, true);
+                    output.printf_P(reinterpret_cast<PGM_P>(_format), _value);
                 }
                 else {
                     output.print(F("null"));
                 }
             }
+
+            FStr _format;
             double _value;
-            uint8_t _precision;
         };
 
-        struct FullyTrimmedDouble {
-            FullyTrimmedDouble(double value, uint8_t precision = DOUBLE_DEFAULT_PRECISION) : _value(value), _precision(precision) {}
+        struct NamedDouble : UnnamedDouble, NamedBase {
+            NamedDouble(FStr key, double value, uint8_t precision) :
+                UnnamedDouble(value, precision), _key(key)
+            {
+            }
+
+            inline __attribute__((__always_inline__))
+            FStr key() const {
+                return _key;
+            }
+
+            FStr _key;
+        };
+
+        struct NamedFormattedDouble : UnnamedFormattedDouble, NamedBase {
+            NamedFormattedDouble(FStr key, double value, FStr format = FSPGM(default_format_double)) :
+                UnnamedFormattedDouble(value, format), _key(key)
+            {
+            }
+
+            inline __attribute__((__always_inline__))
+            FStr key() const {
+                return _key;
+            }
+
+            FStr _key;
+        };
+
+        // if the value is not normaled (nan, inf, -inf etc..) the output is null to meet JSON standards
+        // if the value has more than one leading zero (1.00000, 1.23000), those get trimmed (1.0, 1.23)
+        struct UnnamedTrimmedFormattedDouble : PrintToInterface, UnnamedBase {
+            UnnamedTrimmedFormattedDouble(double value, const __FlashStringHelper *format = FSPGM(default_format_double)) : 
+                _format(format), 
+                _value(value) 
+            {
+            }
+
             void printTo(PrintStringInterface &output) const {
                 if (std::isnormal(_value)) {
-                    output.print(_value, _precision, true);
-                    if (output.endsWith(F(".0"))) {
-                        output.remove(output.length() - 2);
+                    auto pos = output.length();
+                    output.printf_P(reinterpret_cast<PGM_P>(_format), _value);
+                    // find the dot
+                    pos = output.indexOf('.', pos);
+                    if (pos != 0) {
+                        // trim all zeros
+                        output.rtrim('0');
+                        // if the dot is the last character, append a 0
+                        if (pos == output.length() - 1) { 
+                            output += '0';
+                        }
                     }
                 }
                 else {
                     output.print(F("null"));
                 }
             }
+
+            const __FlashStringHelper *_format;
             double _value;
-            uint8_t _precision;
+        };
+
+        struct NamedTrimmedFormattedDouble : UnnamedTrimmedFormattedDouble, NamedBase {
+            NamedTrimmedFormattedDouble(const __FlashStringHelper *key, double value, const __FlashStringHelper *format = FSPGM(default_format_double)) :
+                UnnamedTrimmedFormattedDouble(value), 
+                _key(key) 
+            {
+            }
+
+            inline __attribute__((__always_inline__))
+            const __FlashStringHelper *key() const {
+                return _key;
+            }
+
+            const __FlashStringHelper *_key;
         };
 
         struct ObjectType {};
@@ -246,6 +382,8 @@ namespace MQTT {
         using UnnamedBool = UnnamedVariant<bool>;
 
         struct UnnamedNull : UnnamedBase {
+
+            inline __attribute__((__always_inline__))
             FStr value() const {
                 return F("null");
             }
@@ -265,20 +403,24 @@ namespace MQTT {
         using NamedUnsigned = NamedUint32;
         using NamedInt64 = NamedVariant<FStr, int64_t>;
         using NamedUint64 = NamedVariant<FStr, uint64_t>;
-        using NamedDouble = NamedVariant<FStr, FormattedDouble>;
         class NamedArray;
         class NamedObject;
 
-        struct NamedNull {
+        struct NamedNull : NamedBase {
             NamedNull(FStr key) : _key(key) {}
             NamedNull(const String &key) : _key(F_cast(key.c_str())) {}
             NamedNull(const char *key) : _key(F_cast(key)) {}
+
+            inline __attribute__((__always_inline__))
             FStr key() const {
                 return _key;
             }
+
+            inline __attribute__((__always_inline__))
             FStr value() const {
                 return F("null");
             }
+
             FStr _key;
         };
 
@@ -322,8 +464,11 @@ namespace MQTT {
             Effect(const char *effect) : NamedString(F("effect"), effect) {}
         };
 
-        struct Transition : NamedVariant<FStr, TrimmedDouble> {
-            Transition(double transition, uint8_t precision = 2) : NamedVariant<FStr, TrimmedDouble>(F("transition"), TrimmedDouble(transition, precision)) {}
+        struct Transition : NamedTrimmedFormattedDouble {
+            Transition(double transition, uint8_t precision = 2) : 
+                NamedTrimmedFormattedDouble(F("transition"), transition, reinterpret_cast<FStr>(PrintString(F("%%.%uf"), precision).c_str()))
+            {
+            }
         };
 
         class UnnamedArrayWriter {
@@ -335,7 +480,9 @@ namespace MQTT {
 
             // constructor for arrays with elements
             template<class ..._Args>
-            UnnamedArrayWriter(PrintStringInterface &output, _Args&& ... args) : _output(output) {
+            UnnamedArrayWriter(PrintStringInterface &output, _Args&& ... args) : 
+                _output(output) 
+            {
                 output.print('[');
                 add(std::forward<_Args>(args) ...);
                 _setLast(']');
@@ -346,17 +493,20 @@ namespace MQTT {
             friend JsonStringWriter<UnnamedObjectWriter, ObjectType>;
 
             // constructor for empty arrays
-            UnnamedArrayWriter(ArrayType, PrintStringInterface &output) : UnnamedArrayWriter(output) {
+            UnnamedArrayWriter(ArrayType, PrintStringInterface &output) : 
+                UnnamedArrayWriter(output) 
+            {
             }
 
             // constructor for arrays with elements
             template<class ..._Args>
-            UnnamedArrayWriter(ArrayType, PrintStringInterface &output, _Args&& ... args) : _output(output) {
+            UnnamedArrayWriter(ArrayType, PrintStringInterface &output, _Args&& ... args) : 
+                _output(output) 
+            {
                 output.print('[');
                 add(std::forward<_Args>(args) ...);
                 _setLast(']');
             }
-
 
             // constructor for objects
             UnnamedArrayWriter(ObjectType, PrintStringInterface &output) : _output(output) {
@@ -401,32 +551,39 @@ namespace MQTT {
                 return ErrorType::NONE;
             }
 
-            inline static uint32_t _fromChar(uint8_t n, uint8_t type) {
+            inline __attribute__((__always_inline__))
+            static uint32_t _fromChar(uint8_t n, uint8_t type) {
                 return type ? (1U << n) : 0;
             }
 
-            inline static char _toCharClose(uint8_t n, uint32_t bits) {
+            inline __attribute__((__always_inline__))
+            static char _toCharClose(uint8_t n, uint32_t bits) {
                 return bits & (1U << n) ? '}' : ']';
             }
 
         public:
-            inline const char *c_str() const {
+            inline __attribute__((__always_inline__))
+            const char *c_str() const {
                 return _output.c_str();
             }
 
-            inline size_t length() const {
+            inline __attribute__((__always_inline__))
+            size_t length() const {
                 return _output.length();
             }
 
-            inline const String &toString() const {
+            inline __attribute__((__always_inline__))
+            const String &toString() const {
                 return _output;
             }
 
-            inline PrintStringInterface &toString() {
+            inline __attribute__((__always_inline__))
+            PrintStringInterface &toString() {
                 return _output;
             }
 
-            inline void printTo(Print &print) const {
+            inline __attribute__((__always_inline__))
+            void printTo(Print &print) const {
                 print.print(_output);
             }
 
@@ -446,6 +603,7 @@ namespace MQTT {
                 return type;
             }
 
+            inline __attribute__((__always_inline__))
             char _getLast() const {
                 auto len = _output.length();
                 if (!len) {
@@ -454,6 +612,7 @@ namespace MQTT {
                 return _output.charAt(len - 1);
             }
 
+            inline __attribute__((__always_inline__))
             void _appendLevel() {
                 switch (_getLast()) {
                 case '[':
@@ -465,6 +624,7 @@ namespace MQTT {
                 }
             }
 
+            inline __attribute__((__always_inline__))
             void _append() {
                 // empty arrays and objects start with [ and {
                 if (_output.length() > 2) {
@@ -477,6 +637,7 @@ namespace MQTT {
                 }
             }
 
+            inline __attribute__((__always_inline__))
             void _setLast(char ch) {
                 if (_output.length() > 1) {
 #if MQTT_JSON_WRITER_DEBUG
@@ -531,7 +692,8 @@ namespace MQTT {
                 return -1;
             }
 
-            inline int findNamed(PGM_P name) const {
+            inline __attribute__((__always_inline__))
+            int findNamed(PGM_P name) const {
                 return findNamed(reinterpret_cast<FStr>(name));
             }
 
@@ -574,138 +736,161 @@ namespace MQTT {
             // error -1
             // object = 1
             // array = 0
-            static inline int8_t _isValidTypeClose(char ch) {
+            inline __attribute__((__always_inline__))
+            static int8_t _isValidTypeClose(char ch) {
                 return ch == ']' ? 0 : ch == '}' ? 1 : -1;
             }
 
             // error -1
             // object = 1
             // array = 0
-            static inline int8_t _isValidTypeOpen(char ch) {
+            inline __attribute__((__always_inline__))
+            static int8_t _isValidTypeOpen(char ch) {
                 return ch == '[' ? 0 : ch == '{' ? 1 : -1;
             }
 
         protected:
-            inline void appendValue(const char *value) {
+            inline __attribute__((__always_inline__))
+            void appendValue(const char *value) {
+                JsonTools::Utf8Buffer buffer;
                 _output.print('"');
-                JsonTools::printToEscaped(_output, value, strlen(value), false);
-                _output.print('"');
-            }
-
-            inline void appendValue(FStr value) {
-                _output.print('"');
-                JsonTools::printToEscaped(_output, value);
+                JsonTools::printToEscaped(_output, value, strlen(value), &buffer);
                 _output.print('"');
             }
 
-            inline void appendValue(const String &value) {
+            inline __attribute__((__always_inline__))
+            void appendValue(FStr value) {
+                JsonTools::Utf8Buffer buffer;
                 _output.print('"');
-                JsonTools::printToEscaped(_output, value);
+                JsonTools::printToEscaped(_output, value, &buffer);
                 _output.print('"');
             }
 
-            inline void appendValue(const PrintStringInterface &value) {
+            inline __attribute__((__always_inline__))
+            void appendValue(const String &value) {
+                JsonTools::Utf8Buffer buffer;
+                _output.print('"');
+                JsonTools::printToEscaped(_output, value, &buffer);
+                _output.print('"');
+            }
+
+            inline __attribute__((__always_inline__))
+            void appendValue(const PrintStringInterface &value) {
                 _output.print(value);
             }
 
-            inline void appendValue(const FormattedDouble &arg) {
+            template<typename _Ta, typename std::enable_if<std::is_base_of<PrintToInterface, _Ta>::value, int>::type = 0>
+            inline void appendValue(const _Ta &arg) {
                 arg.printTo(_output);
             }
 
-            inline void appendValue(const TrimmedDouble &arg) {
-                arg.printTo(_output);
-            }
-
-            inline void appendValue(const FullyTrimmedDouble &arg) {
-                arg.printTo(_output);
-            }
-
-            inline void appendValue(nullptr_t) {
+            inline __attribute__((__always_inline__))
+            void appendValue(nullptr_t) {
                 _output.print(F("null"));
             }
 
-            inline void appendValue(bool value) {
+            inline __attribute__((__always_inline__))
+            void appendValue(bool value) {
                 _output.print(value ? F("true") : F("false"));
             }
 
-            inline void appendValue(char value) {
+            inline __attribute__((__always_inline__))
+            void appendValue(char value) {
                 _output.print('"');
                 _output.print(value);
                 _output.print('"');
             }
 
-            inline void appendValue(int8_t value) {
+            inline __attribute__((__always_inline__))
+            void appendValue(int8_t value) {
                 _output.print(static_cast<int>(value));
             }
 
-            inline void appendValue(uint8_t value) {
+            inline __attribute__((__always_inline__))
+            void appendValue(uint8_t value) {
                 _output.print(static_cast<unsigned>(value));
             }
 
-            inline void appendValue(int16_t value) {
+            inline __attribute__((__always_inline__))
+            void appendValue(int16_t value) {
                 _output.print(static_cast<int>(value));
             }
 
-            inline void appendValue(uint16_t value) {
+            inline __attribute__((__always_inline__))
+            void appendValue(uint16_t value) {
                 _output.print(static_cast<unsigned>(value));
             }
 
-            inline void appendValue(int32_t value) {
+            inline __attribute__((__always_inline__))
+            void appendValue(int32_t value) {
                 _output.print(value);
             }
 
-            inline void appendValue(uint32_t value) {
+            inline __attribute__((__always_inline__))
+            void appendValue(uint32_t value) {
                 _output.print(value);
             }
 
-            inline void appendValue(int64_t value) {
+            inline __attribute__((__always_inline__))
+            void appendValue(int64_t value) {
                 _output.print(value);
             }
 
-            inline void appendValue(uint64_t value) {
+            inline __attribute__((__always_inline__))
+            void appendValue(uint64_t value) {
                 _output.print(value);
             }
 
-            inline void appendValue(float value) {
+            inline __attribute__((__always_inline__))
+            void appendValue(float value) {
                 _output.print(value);
             }
 
-            inline void appendValue(double value) {
+            inline __attribute__((__always_inline__))
+            void appendValue(double value) {
                 _output.print(value);
             }
 
-            template<typename _Ta>
-            inline void appendValue(const _Ta &value) {
-                value.printTo(_output);
-            }
-
-            template<typename _Ta>
+            template<typename _Ta, typename std::enable_if<!std::is_base_of<PrintToInterface, _Ta>::value, int>::type = 0>
             void appendValue(_Ta value) {
                 _output.print(value);
             }
 
         protected:
+            inline __attribute__((__always_inline__))
             void add() {
             }
 
-            //void add(const UnnamedObject &writer);
+            void add(const UnnamedObject &writer);
+            void add(const UnnamedArray &writer);
 
-            //void add(const UnnamedArray &writer);
-
+            inline __attribute__((__always_inline__))
             void add(const String &str) {
                 _output.print(str);
                 _output.print(',');
             }
 
-            template<template<typename> class _Ta, typename _Tb>
+            template<template<typename> class _Ta, typename _Tb, typename std::enable_if<!std::is_base_of<PrintToInterface, _Ta<_Tb>>::value, int>::type = 0>
             void add(const _Ta<_Tb> &container) {
                 appendValue(container.value());
                 _output.print(',');
             }
 
-            template<typename _Ta>
+            template<typename _Ta, typename std::enable_if<!std::is_base_of<PrintToInterface, _Ta>::value, int>::type = 0>
             void add(const _Ta &container) {
                 appendValue(container.value());
+                _output.print(',');
+            }
+
+            template<template<typename> class _Ta, typename _Tb, typename std::enable_if<std::is_base_of<PrintToInterface, _Ta<_Tb>>::value, int>::type = 0>
+            void add(const _Ta<_Tb> &print) {
+                print.printTo(_output);
+                _output.print(',');
+            }
+
+            template<typename _Ta, typename std::enable_if<std::is_base_of<PrintToInterface, _Ta>::value, int>::type = 0>
+            void add(const _Ta &print) {
+                print.printTo(_output);
                 _output.print(',');
             }
 
@@ -722,13 +907,17 @@ namespace MQTT {
         class UnnamedObjectWriter : public UnnamedArrayWriter {
         public:
             // constructor for empty objects
-            UnnamedObjectWriter(PrintStringInterface &output) : UnnamedArrayWriter(ObjectType(), output) {
+            UnnamedObjectWriter(PrintStringInterface &output) : 
+                UnnamedArrayWriter(ObjectType(), output) 
+            {
                 _output.print(F("{}"));
             }
 
             // constructor for objects with elements
             template<class ..._Args>
-            UnnamedObjectWriter(PrintStringInterface &output, _Args&& ... args) : UnnamedArrayWriter(ObjectType(), output) {
+            UnnamedObjectWriter(PrintStringInterface &output, _Args&& ... args) : 
+                UnnamedArrayWriter(ObjectType(), output) 
+            {
                 output.print('{');
                 add(std::forward<_Args>(args) ...);
                 _setLast('}');
@@ -738,12 +927,16 @@ namespace MQTT {
             friend JsonStringWriter<UnnamedArrayWriter, ArrayType>;
             friend JsonStringWriter<UnnamedObjectWriter, ObjectType>;
 
-            UnnamedObjectWriter(ObjectType, PrintStringInterface &output) : UnnamedArrayWriter(ObjectType(), output) {
+            UnnamedObjectWriter(ObjectType, PrintStringInterface &output) : 
+                UnnamedArrayWriter(ObjectType(), output) 
+            {
                 _output.print(F("{}"));
             }
 
             template<class ..._Args>
-            UnnamedObjectWriter(ObjectType, PrintStringInterface &output, _Args&& ... args) : UnnamedArrayWriter(ObjectType(), output) {
+            UnnamedObjectWriter(ObjectType, PrintStringInterface &output, _Args&& ... args) : 
+                UnnamedArrayWriter(ObjectType(), output) 
+            {
                 output.print('{');
                 add(std::forward<_Args>(args) ...);
                 _setLast('}');
@@ -759,7 +952,7 @@ namespace MQTT {
             }
 
             template<typename _Ta, class ..._Args, typename std::enable_if<std::is_integral<_Ta>::value, int>::type = 0>
-            inline ErrorType appendObject(_Ta level, _Args&& ...args) {
+            ErrorType appendObject(_Ta level, _Args&& ...args) {
                 auto error = validateLevel(static_cast<uint8_t>(level), '}');
                 if (error != ErrorType::NONE) {
                     return error;
@@ -768,7 +961,7 @@ namespace MQTT {
             }
 
             template<typename _Ta, class ..._Args, typename std::enable_if<std::is_integral<_Ta>::value, int>::type = 0>
-            inline ErrorType appendArray(_Ta level, _Args&& ...args) {
+            ErrorType appendArray(_Ta level, _Args&& ...args) {
                 return UnnamedArrayWriter::appendArray(static_cast<uint8_t>(level), std::forward<_Args>(args)...);
             }
 
@@ -794,27 +987,33 @@ namespace MQTT {
             }
 
         private:
-            inline void appendKey(const String &key) {
+            inline __attribute__((__always_inline__))
+            void appendKey(const String &key) {
                 _output.printf_P(PSTR("\"%s\":"), key.c_str());
             }
 
-            inline void appendKey(const char *key) {
+            inline __attribute__((__always_inline__))
+            void appendKey(const char *key) {
                 _output.printf_P(PSTR("\"%s\":"), key);
             }
 
-            inline void appendKey(FStr key) {
+            inline __attribute__((__always_inline__))
+            void appendKey(FStr key) {
                 _output.printf_P(PSTR("\"%s\":"), key);
             }
 
+            inline __attribute__((__always_inline__))
             void add() {
             }
 
+            inline __attribute__((__always_inline__))
             void add(const UnnamedObjectWriter &writer) {
                 _output.reserve(_output.length() + writer.length() + 1);
                 writer.printTo(_output);
                 _output.print(',');
             }
 
+            inline __attribute__((__always_inline__))
             void add(const UnnamedArrayWriter &writer) {
                 _output.reserve(_output.length() + writer.length() + 1);
                 writer.printTo(_output);
@@ -822,15 +1021,23 @@ namespace MQTT {
             }
 
             void add(const NamedObject &writer);
+            void add(const NamedArray &writer);
 
-            template<template<typename, typename> class _Ta, typename _Tb, typename _Tc>
+            template<template<typename, typename> class _Ta, typename _Tb, typename _Tc, typename std::enable_if<!std::is_base_of<PrintToInterface, _Ta<_Tb, _Tc>>::value &&std::is_base_of<NamedBase, _Ta<_Tb, _Tc>>::value, int>::type = 0>
             void add(const _Ta<_Tb, _Tc> &container) {
                 appendKey(container.key());
                 appendValue(container.value());
                 _output.print(',');
             }
 
-            template<typename _Ta>
+            template<typename _Ta, typename std::enable_if<std::is_base_of<PrintToInterface, _Ta>::value && std::is_base_of<NamedBase, _Ta>::value, int>::type = 0>
+            void add(const _Ta &container) {
+                appendKey(container.key());
+                container.printTo(_output);
+                _output.print(',');
+            }
+
+            template<typename _Ta, typename std::enable_if<!std::is_base_of<PrintToInterface, _Ta>::value && std::is_base_of<NamedBase, _Ta>::value, int>::type = 0>
             void add(const _Ta &container) {
                 appendKey(container.key());
                 appendValue(container.value());
@@ -848,68 +1055,81 @@ namespace MQTT {
         class JsonStringWriter {
         public:
             template<class ..._Args>
-            JsonStringWriter(_Args&& ...args) : _writer(_Tb(), _output, std::forward<_Args>(args)...) {
+            JsonStringWriter(_Args&& ...args) : 
+                _writer(_Tb(), _output, std::forward<_Args>(args)...) 
+            {
             }
-            inline ~JsonStringWriter() {
+            ~JsonStringWriter() {
                 _output.clear();
             }
 
-            inline JsonStringWriter &operator=(nullptr_t) {
+            inline __attribute__((__always_inline__))
+            JsonStringWriter &operator=(nullptr_t) {
                 _output.clear();
             }
 
-            inline void clear() {
+            inline __attribute__((__always_inline__))
+            void clear() {
                 _output.clear();
             }
 
             template<class ..._Args>
-            inline void append(_Args&& ...args) {
+            void append(_Args&& ...args) {
                 _writer.append(std::forward<_Args>(args)...);
             }
 
             template<typename _Ta1, class ..._Args, typename std::enable_if<std::is_integral<_Ta1>::value, int>::type = 0>
-            inline ErrorType appendArray(_Ta1 level, _Args&& ...args) {
+            ErrorType appendArray(_Ta1 level, _Args&& ...args) {
                 return _writer.appendArray(static_cast<uint8_t>(level), std::forward<_Args>(args)...);
             }
 
             template<typename _Ta1, class ..._Args, typename std::enable_if<std::is_integral<_Ta1>::value, int>::type = 0>
-            inline ErrorType appendObject(_Ta1 level, _Args&& ...args) {
+            ErrorType appendObject(_Ta1 level, _Args&& ...args) {
                 return _writer.appendObject(static_cast<uint8_t>(level), std::forward<_Args>(args)...);
             }
 
-            inline size_t length() const {
+            inline __attribute__((__always_inline__))
+            size_t length() const {
                 return _writer.length();
             }
 
-            inline void printTo(Print &print) const {
+            inline __attribute__((__always_inline__))
+            void printTo(Print &print) const {
                 _writer.printTo(print);
             }
 
-            inline const String &toString() const {
+            inline __attribute__((__always_inline__))
+            const String &toString() const {
                 return _writer.toString();
             }
 
-            inline String &toString() {
+            inline __attribute__((__always_inline__))
+            String &toString() {
                 return _writer.toString();
             }
 
-            inline const char *c_str() const {
+            inline __attribute__((__always_inline__))
+            const char *c_str() const {
                 return _writer.c_str();
             }
 
-            inline const PrintStringInterface &value() const {
+            inline __attribute__((__always_inline__))
+            const PrintStringInterface &value() const {
                 return _output;
             }
 
-            inline int findNamed(PGM_P name) const {
+            inline __attribute__((__always_inline__))
+            int findNamed(PGM_P name) const {
                 return _writer.findNamed(name);
             }
 
-            inline int findNamed(FStr name) const {
+            inline __attribute__((__always_inline__))
+            int findNamed(FStr name) const {
                 return _writer.findNamed(name);
             }
 
-            inline String valueAt(int pos) const {
+            inline __attribute__((__always_inline__))
+            String valueAt(int pos) const {
                 return _writer.valueAt(pos);
             }
 
@@ -921,28 +1141,50 @@ namespace MQTT {
         class UnnamedArray : public JsonStringWriter<UnnamedArrayWriter, ArrayType> {
         public:
             template<typename ... _Args>
-            UnnamedArray(_Args&& ...args) : JsonStringWriter<UnnamedArrayWriter, ArrayType>(std::forward<_Args>(args)...) {
+            UnnamedArray(_Args&& ...args) : 
+                JsonStringWriter<UnnamedArrayWriter, ArrayType>(std::forward<_Args>(args)...) 
+            {
             }
         };
 
         class UnnamedObject : public JsonStringWriter<UnnamedObjectWriter, ObjectType> {
         public:
             template<typename ... _Args>
-            UnnamedObject(_Args&& ...args) : JsonStringWriter<UnnamedObjectWriter, ObjectType>(std::forward<_Args>(args)...) {
+            UnnamedObject(_Args&& ...args) : 
+                JsonStringWriter<UnnamedObjectWriter, ObjectType>(std::forward<_Args>(args)...) 
+            {
             }
         };
 
         class NamedArray : public UnnamedArray {
         public:
             template<typename ... _Args>
-            NamedArray(FStr key, _Args&& ...args) : UnnamedArray(std::forward<_Args>(args)...), _key(key) {
+            NamedArray(FStr key, _Args&& ...args) : 
+                UnnamedArray(std::forward<_Args>(args)...), 
+                _key(key) 
+            {
             }
 
-            inline FStr key() {
+            inline __attribute__((__always_inline__))
+            FStr key() {
                 return _key;
             }
-            inline FStr key() const {
+
+            inline __attribute__((__always_inline__))
+            FStr key() const {
                 return _key;
+            }
+
+            inline __attribute__((__always_inline__))
+            void printTo(Print &print) const
+            {
+                print.printf_P(PSTR("\"%s\":"), _key);
+                UnnamedArray::printTo(print);
+            }
+
+            inline __attribute__((__always_inline__))
+            size_t length() const {
+                return UnnamedArray::length() + strlen_P(reinterpret_cast<PGM_P>(_key)) + 3;
             }
 
         private:
@@ -952,32 +1194,59 @@ namespace MQTT {
         class NamedObject : public UnnamedObject {
         public:
             template<typename ... _Args>
-            NamedObject(FStr key, _Args&& ...args) : UnnamedObject(std::forward<_Args>(args)...), _key(key) {
+            NamedObject(FStr key, _Args&& ...args) : 
+                UnnamedObject(std::forward<_Args>(args)...), 
+                _key(key) 
+            {
             }
 
-            inline FStr key() {
+            inline __attribute__((__always_inline__))
+            FStr key() {
                 return _key;
+            }
+
+            inline __attribute__((__always_inline__))
+            void printTo(Print &print) const
+            {
+                print.printf_P(PSTR("\"%s\":"), _key);
+                UnnamedObject::printTo(print);
+            }
+
+            inline __attribute__((__always_inline__))
+            size_t length() const {
+                return UnnamedObject::length() + strlen_P(reinterpret_cast<PGM_P>(_key)) + 3;
             }
 
         private:
             FStr _key;
         };
 
-        //inline void UnnamedArrayWriter::add(const UnnamedObject &writer)
-        //{
-        //    _output.reserve(_output.length() + writer.length() + 1);
-        //    writer.printTo(_output);
-        //    _output.print(',');
-        //}
+        inline __attribute__((__always_inline__))
+        void UnnamedArrayWriter::add(const UnnamedObject &writer)
+        {
+            _output.reserve(_output.length() + writer.length() + 1);
+            writer.printTo(_output);
+            _output.print(',');
+        }
 
-        //inline void UnnamedArrayWriter::add(const UnnamedArray &writer)
-        //{
-        //    _output.reserve(_output.length() + writer.length() + 1);
-        //    writer.printTo(_output);
-        //    _output.print(',');
-        //}
+        inline __attribute__((__always_inline__))
+        void UnnamedArrayWriter::add(const UnnamedArray &writer)
+        {
+            _output.reserve(_output.length() + writer.length() + 1);
+            writer.printTo(_output);
+            _output.print(',');
+        }
 
-        inline void UnnamedObjectWriter::add(const NamedObject &writer)
+        inline __attribute__((__always_inline__))
+        void UnnamedObjectWriter::add(const NamedObject &writer)
+        {
+            _output.reserve(_output.length() + writer.length() + 1);
+            writer.printTo(_output);
+            _output.print(',');
+        }
+
+        inline __attribute__((__always_inline__))
+        void UnnamedObjectWriter::add(const NamedArray &writer)
         {
             _output.reserve(_output.length() + writer.length() + 1);
             writer.printTo(_output);

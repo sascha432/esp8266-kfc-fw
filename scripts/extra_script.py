@@ -66,12 +66,12 @@ def modify_upload_command_fs(source, target, env):
     modify_upload_command(source, target, env, True)
 
 
-def git_get_head():
-    p = subprocess.Popen(["%GITEXE%", "rev-parse", "HEAD"], stdout=subprocess.PIPE, text=True)
-    output, errors = p.communicate()
-    if p.wait()==0:
-        return output.strip()
-    return "NA"
+# def git_get_head():
+#     p = subprocess.Popen(["%GITEXE%", "rev-parse", "HEAD"], stdout=subprocess.PIPE, text=True)
+#     output, errors = p.communicate()
+#     if p.wait()==0:
+#         return output.strip()
+#     return "NA"
 
 # def copy_file(source_path):
 #     id = get_last_build_id()

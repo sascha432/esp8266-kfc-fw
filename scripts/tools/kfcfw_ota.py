@@ -101,6 +101,12 @@ class OTA(kfcfw.OTAHelpers):
                 elf_hash = h.hexdigest();
             except Exception as e:
                 elf_exception = e
+                if self.args.ini:
+                    # get last hash from file
+                    md5bin = path.abspath(path.join(self.args.ini, 'md5bin.txt'))
+                    if path.isfile(md5bin):
+                        with open(md5bin, 'rt') as file:
+                            elf_hash = file.readline().strip()
 
             try:
                 if type=='flash':
@@ -112,12 +118,16 @@ class OTA(kfcfw.OTAHelpers):
                     self.copyfile(self.args.image.name, path.join(self.args.elf, elf_hash + '.spiffs.bin'))
 
                 if elf_hash and self.args.ini:
-
+                    # archive .ini files and git info
                     archive = path.join(self.args.elf, elf_hash + '.tgz')
                     git_dir = path.abspath(path.join(self.args.ini, '.git'))
                     ini_file = path.abspath(path.join(self.args.ini, 'platformio.ini'))
                     ini_dir = path.abspath(path.join(self.args.ini, 'conf', '*'))
                     git_info = path.abspath(path.join(self.args.ini, 'git.txt'))
+
+                    md5bin = path.abspath(path.join(self.args.ini, 'md5bin.txt'))
+                    with open(md5bin, 'wt') as file:
+                        file.write(elf_hash)
 
                     subprocess.run(['git', '--git-dir', git_dir, 'log', '--pretty=oneline', '--since=4.weeks', '>', git_info], shell=True)
                     subprocess.run(['tar', 'cfz', archive, ini_file, git_info, ini_dir], shell=True)
@@ -132,7 +142,18 @@ class OTA(kfcfw.OTAHelpers):
         monitor = MultipartEncoderMonitor(encoder, lambda monitor: bar.update(min(monitor.bytes_read, filesize)))
 
         # resp = requests.post(url + "update", files={ "firmware_image": self.args.image }, data={ "image_type": image_type, "SID": sid }, timeout=30, allow_redirects=False)
-        resp = requests.post(url + 'update', data=monitor, timeout=30, allow_redirects=False, headers={ 'User-Agent': 'KFCFW OTA', "Content-Type": monitor.content_type })
+
+        count = 0
+        while count<30:
+            try:
+                resp = requests.post(url + 'update', data=monitor, timeout=30, allow_redirects=False, headers={ 'User-Agent': 'KFCFW OTA', "Content-Type": monitor.content_type })
+            except:
+                count += 1
+                print('Exception %s, retrying %d/30 in 10 seconds...' % (e, count))
+                time.sleep(10)
+                continue
+            break
+
         bar.finish();
 
         if resp.status_code==302:

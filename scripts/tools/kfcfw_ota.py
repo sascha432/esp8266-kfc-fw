@@ -15,6 +15,8 @@ import re
 import json
 import hashlib
 import shutil
+import subprocess
+from os import path
 
 from os import path
 import sys
@@ -89,7 +91,7 @@ class OTA(kfcfw.OTAHelpers):
             elf_exception = None
             try:
                 elf = self.args.image.name.replace('.bin', '.elf')
-                h = hashlib.sha1()
+                h = hashlib.md5()
                 with open(elf, 'rb') as file:
                     while True:
                         data = file.read(1024)
@@ -104,13 +106,21 @@ class OTA(kfcfw.OTAHelpers):
                 if type=='flash':
                     if elf_exception:
                         raise elf_exception
-                    self.copyfile(elf, os.path.join(self.args.elf, elf_hash + '.elf'))
-                    self.copyfile(self.args.image.name, os.path.join(self.args.elf, elf_hash + '.bin'))
+                    self.copyfile(elf, path.join(self.args.elf, elf_hash + '.elf'))
+                    self.copyfile(self.args.image.name, path.join(self.args.elf, elf_hash + '.bin'))
                 elif type=='spiffs' and elf_hash:
-                    self.copyfile(self.args.image.name, os.path.join(self.args.elf, elf_hash + '.spiffs.bin'))
+                    self.copyfile(self.args.image.name, path.join(self.args.elf, elf_hash + '.spiffs.bin'))
 
                 if elf_hash and self.args.ini:
-                    self.copyfile(self.args.ini, os.path.join(self.args.elf, elf_hash + '.ini'))
+
+                    archive = path.join(self.args.elf, elf_hash + '.tgz')
+                    git_dir = path.abspath(path.join(self.args.ini, '.git'))
+                    ini_file = path.abspath(path.join(self.args.ini, 'platformio.ini'))
+                    ini_dir = path.abspath(path.join(self.args.ini, 'conf', '*'))
+                    git_info = path.abspath(path.join(self.args.ini, 'git.txt'))
+
+                    subprocess.run(['git', '--git-dir', git_dir, 'log', '--pretty=oneline', '--since=4.weeks', '>', git_info], shell=True)
+                    subprocess.run(['tar', 'cfz', archive, ini_file, git_info, ini_dir], shell=True)
 
             except Exception as e:
                 self.error(str(e), 5);
@@ -213,7 +223,7 @@ parser.add_argument("-q", "--quiet", help="do not show any output", action="stor
 parser.add_argument("-n", "--no-status", help="do not query status", action="store_true", default=False)
 parser.add_argument("-W", "--no-wait", help="wait after upload until device has been rebooted", action="store_true", default=False)
 parser.add_argument("--elf", help="copy firmware.(elf|bin) or spiffs.bin to directory", type=str, default=None)
-parser.add_argument("--ini", help="copy platform.ini to elf directory", type=str, default=None)
+parser.add_argument("--ini", help="copy platform.ini and other files to elf directory", type=str, default=None)
 parser.add_argument("--sha1", help="use sha1 authentication", action="store_true", default=False)
 args = parser.parse_args()
 

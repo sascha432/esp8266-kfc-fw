@@ -57,7 +57,7 @@ def modify_upload_command(source, target, env, fs = False):
     args.append('--elf')
     args.append(os.path.abspath(os.path.join(env.subst("$PROJECT_DIR"), 'elf')))
     args.append('--ini')
-    args.append(env.subst("$PROJECT_CONFIG"))
+    args.append(env.subst("$PROJECT_DIR"))
 
     env.Replace(UPLOAD_FLAGS=' '.join(args), UPLOAD_COMMAND=upload_command)
 

@@ -1351,33 +1351,33 @@ namespace SaveCrash {
         AsyncWebServerResponse *response;
         auto fs = SaveCrash::createFlashStorage();
 
-        auto cmd = request->getParam(F("cmd"));
-        if (cmd) {
-            if (cmd->value() == F("clear")) {
+        auto &cmd = request->arg(F("cmd"));
+        if (request->argExists(cmd)) {
+            if (cmd == F("clear")) {
                 fs.clear(SPIFlash::ClearStorageType::ERASE);
                 response = request->beginResponse_P(200, FSPGM(mime_application_json), PSTR("{\"result\":\"OK\"}"));
             }
             else {
-                response = request->beginResponse(400);
+                return request->beginResponse(400);
             }
         }
         else {
-            uint32_t id = 0;
-            auto idStr = request->getParam(F("id"));
-            if (idStr) {
-                __LDBG_printf("crashlog %u %s", id, idStr->value().c_str());
-                id = strtoul(idStr->value().c_str(), nullptr, 16);
-            }
+            uint32_t id = strtoul(request->arg(F("id")).c_str(), nullptr, 16);
             if (id) {
+                __LDBG_printf("crashlog %u", id);
                 JsonPrintStringWrapper wrapper(jsonStr);
                 jsonStr.print(F("{\"trace\":\""));
                 fs.getCrashLog([&](const SaveCrash::CrashLogEntry &item) {
                     if (item.getId() == id) {
                         fs.printCrashLog(wrapper, item);
+                        id = ~0U;
                         return false;
                     }
                     return true;
                 });
+                if (id != ~0U) {
+                    return request->beginResponse(410);
+                }
                 jsonStr.print(F("\"}"));
             }
             else {

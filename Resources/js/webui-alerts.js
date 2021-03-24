@@ -131,17 +131,14 @@
         if (timeout == 0) {
             return;
         }
-        var self = this
-        window.setTimeout(function() {
-            self.get_json();
-        }, timeout);
+        window.setTimeout(this.get_json.bind(this), timeout);
     },
     get_json: function() {
         if (!this.enabled) {
             return;
         }
         if (this.locked) {
-            window.setTimeout(this.schedule_get_json, this.alert_poll_time_on_error * 2);
+            window.setTimeout(this.schedule_get_json.bind(this), this.alert_poll_time_on_error * 2);
             return;
         }
         this.locked = true;

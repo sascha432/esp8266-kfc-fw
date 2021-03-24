@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<!--%%HEAD-->
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" debug_loader="1">
+    <link rel="stylesheet" href="../../lib/KFCWebBuilder/Resources/css/bootstrap.min.css" debug_loader="1">
+    <link rel="stylesheet" href="../css/styles.css" debug_loader="1">
+    <link rel="stylesheet" href="../../lib/KFCWebBuilder/Resources/css/open-iconic-bootstrap.css" debug_loader="1">
+    <title>KFC FW</title>
+</head>
+<!--HEAD%%-->
+
+<body>
+    <!--%%NAV-->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="index.html">KFC FW</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        </div>
+    </nav>
+    <!--NAV%%-->
+    <div class="container">
+        <div class="main">
+            <div class="header">
+                <h1>WiFi Speed Test</h1>
+            </div>
+            <div class="dl-size">
+                <button id="size2" class="btn btn-lg btn-primary active">2 MByte</button>
+                <button id="size16" class="btn btn-lg">16 MByte</button>
+                <button id="size32" class="btn btn-lg">32 MByte</button>
+                <button id="size128" class="btn btn-lg">128 MByte</button>
+            </div>
+            <div class="start">
+                <button id="starttest" class="btn btn-lg btn-primary pl-5 pr-5">Start</button>
+            </div>
+            <div id="results">
+            </div>
+          </div>
+          <div id="download-progress">
+            <div class="progress">
+                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" id="download-progress-bar"></div>
+            </div>
+        </div>
+        <!--%%FOOT-->
+        <div class="row">
+            <div class="col footer">&nbsp;</div>
+        </div>
+        <!--FOOT%%-->
+    </div>
+    <!--%%JAVASCRIPT-->
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/jquery-3.3.1.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/popper.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/popper.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/bootstrap.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/js.cookie.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../js/main.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../js/debug.js"></script>
+    <!--JAVASCRIPT%%-->
+
+    <style type="text/css">
+    .start {
+        text-align: center;
+        height: 120px;
+        margin: 32px;
+    }
+    .dl-size, .header {
+        text-align: center;
+        margin: 24px;
+    }
+    #starttest {
+        text-align: center;
+        width: 35%;
+        height: 100px;
+        font-size: 36px;
+    }
+    #results {
+        text-align: center;
+        margin: 32px;
+    }
+    #download-progress {
+        display: none;
+    }
+    .progress {
+        height: 30px;
+    }
+    </style>
+
+    <script type="text/javascript">
+        $(function () {
+            var startTime, endTime;
+            var download = new Image();
+            var roundedDecimals = 2;
+            var bytesInAKilobyte = 1024;
+
+            function showResults() {
+                var duration = (endTime - startTime) / 1000;
+                var bitsLoaded = downloadSize * 8;
+                var speedBps = (bitsLoaded / duration).toFixed(roundedDecimals);
+                var displaySpeed = speed(speedBps);
+                var results = "<h2>Your WiFi speed is<h2><h1>" + displaySpeed.value + " " + displaySpeed.units + "</h1>"
+
+                $('#results').fadeOut('fast', function () {
+                    $('#results').html(results);
+                    $('#download-progress').hide();
+                    $('#starttest').removeClass('btn-warning').addClass('btn-success');
+                    $('#results').fadeIn('fast', function () {
+                        $('#starttest').text('Thank You!');
+                    });
+                });
+            }
+
+            function speed(bitsPerSecond) {
+                var KBps = (bitsPerSecond / bytesInAKilobyte).toFixed(roundedDecimals);
+                if (KBps <= 1) {
+                    return { value: bitsPerSecond, units: "Bps" };
+                }
+                var MBps = (KBps / bytesInAKilobyte).toFixed(roundedDecimals);
+                if (MBps <= 1) {
+                    return { value: KBps, units: "KBps" };
+                } else {
+                    return { value: MBps, units: "MBps" };
+                }
+            }
+
+            var downloadSize = 1024 * 1024 * 2;
+            function set_size(size, btn) {
+                downloadSize = size * 1024 * 1024;
+                $('.dl-size').find('button').removeClass('active').removeClass('btn-primary');
+                btn.addClass('active').addClass('btn-primary');
+            }
+
+            var imageChunkSize = 0;
+            function get_image_url() {
+                return "speedtest.bmp?size=" + imageChunkSize + "&rnd=" + Math.random();
+            }
+
+            var progress = 0;
+            function update_progress(progress) {
+                $('#download-progress-bar').css('width', Math.floor(progress) + '%');
+            }
+
+            $('#size2').on('click', function() {
+                set_size(2, $(this));
+            });
+            $('#size16').on('click', function() {
+                set_size(16, $(this));
+            });
+            $('#size32').on('click', function() {
+                set_size(32, $(this));
+            });
+            $('#size128').on('click', function() {
+                set_size(128, $(this));
+            });
+
+            var numChunks, chunksLeft, chunkSize, startChunkTime;
+            $('#starttest').on('click', function () {
+                // calculate chunk size for each image
+                numChunks = Math.round(downloadSize / 1024 / 512);
+                chunksLeft = numChunks;
+                chunkSize = Math.floor(downloadSize / numChunks);
+                imageChunkSize = Math.pow(Math.floor(Math.sqrt(chunkSize / 2)), 2) * 2 + 54;
+                downloadSize = imageChunkSize * numChunks;
+
+                $('.main button').attr('disabled', 'disabled');
+                $('#results').html('');
+                $('#starttest').text('Downloading...').removeClass('btn-primary').addClass('btn-warning');
+                update_progress(0);
+                $('#download-progress').show();
+
+                $(download).on('load', function() {
+                    var numIncr = 0;
+                    var timer;
+                    if (--chunksLeft) {
+                        download.src = get_image_url();
+                        progress = Math.floor((numChunks - chunksLeft) * 100 / numChunks);
+                        update_progress(progress);
+
+                        // estimate duration for the next chunk and move progressbar
+                        var duration = ((new Date()).getTime() - startChunkTime) / 10;
+                        startChunkTime = (new Date()).getTime();
+                        var chunkPercent = (100 / numChunks);
+                        numIncr = chunkPercent * 10;
+
+                        function incrProgress() {
+                            progress += 0.1;
+                            update_progress(progress);
+                            if (--numIncr <= 0) {
+                                window.clearInterval(timer);
+                            }
+                        }
+
+                        if (timer) {
+                            window.clearInterval(timer);
+                        }
+                        timer = window.setInterval(incrProgress, duration / chunkPercent);
+                    }
+                    else {
+                        endTime = (new Date()).getTime();
+                        if (timer) {
+                            window.clearInterval(timer);
+                        }
+                        showResults();
+                    }
+                });
+
+                startTime = (new Date()).getTime();
+                startChunkTime = startTime;
+                download.src = get_image_url();
+            })
+
+        });
+    </script>
+
+</body>
+
+</html>

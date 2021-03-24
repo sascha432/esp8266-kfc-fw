@@ -23,11 +23,38 @@
         </div>
     </nav>
     <!--NAV%%-->
+    <style type="text/css">
+    #spinner-top {
+        width: 2.25rem;
+        height: 2.25rem;
+        margin-left: 1rem;
+        margin-top: -0.5rem;
+        mix-blend-mode: darken;
+        display: none;
+    }
+    .error-icon {
+        float: right;
+        font-size: 2.25rem;
+        display: block;
+        padding: 0;
+        animation: error-icon .5s linear infinite;
+        margin-top: .25rem;
+        display: none;
+    }
+    @keyframes error-icon {
+        50% {
+            opacity: 0;
+        }
+    }
+    </style>
     <div class="container">
         <div class="accordion pt-3">
             <div class="card">
                 <div class="card-header text-white bg-primary">
-                    <h2 class="mb-0">MDNS Discovery</h2>
+                    <h2 class="mb-0">MDNS Discovery
+                        <img src="images/spinner.gif" id="spinner-top">
+                        <span class="oi oi-bolt error-icon" id="error-top" data-toggle="tooltip" data-placement="bottom" title="Failed to retreive data"></span>
+                    </h2>
                 </div>
             </div>
             <div class="card">
@@ -66,46 +93,70 @@
     <!--JAVASCRIPT%%-->
 
     <script>
-        // mdns-discovery.html
-        $(function() {
-            var timeout = 2000;
-            var interval = 1000;
-            var callback = function(data) {
-                var tbody = $('.mdns-console').find('tbody');
-                tbody.find('.spinner').remove();
-                $(data['l']).each(function(key, val) {
-                    var name= val['s'];
-                    var pos = name.indexOf('._');
-                    if (pos == -1) {
-                        pos = name.indexOf('.');
-                    }
-                    if (pos != -1) {
-                        name = name.substring(0, pos - 1);
-                    }
-                    var row = tbody.find('#mdns_id_' + name);
-                    var version = val['v'];
-                    if (val['b']) {
-                        version = version + '-' + val['b'];
-                    }
-                    var title = val['t'] ? val['t'] : '-';
-                    var html = '<tr scope="row" id="mdns_id_' + name + '"><td>' + val['h'] + '</td><td>' + val['a'] + '</td><td>' + name + '</td><td>' + title + '</td><td>' + version + '</td></tr>';
-                    if (row.length) {
-                        row.html($(html).find('tr').html());
-                    }
-                    else {
-                        tbody.append(html);
-                    }
-                });
-                window.setTimeout(update_mdns_discovery, interval);
-                timeout = 5000;
-                interval = 15000;
-            };
-            function update_mdns_discovery() {
-                $.get('/mdns_discovery?SID=' + $.getSessionId() + '&timeout=' + timeout, callback, 'json').fail(function() {
-                    window.setTimeout(update_mdns_discovery, 10000);
-                });
+        var mdns_discovery = {
+            timeout: [2000, 5000],  // first, consequent
+            interval: [1000, 30000, 10000], // first, consequent, on error
+            uri: '/mdns_discovery',
+            init: function() {
+                this.tbody = $('.mdns-console').find('tbody');
+                this.spinner_top = $('#spinner-top');
+                this.error_top = $('#error-top');
+                this._interval = this.interval[0];
+            },
+            callback: function(data) {
+                this.tbody.find('.spinner').remove();
+                this.spinner_top.fadeOut();
+                this.error_top.hide();
+                try {
+                    var self = this;
+                    $(data['l']).each(function(key, val) {
+                        var name= val['s'];
+                        var pos = name.indexOf('._');
+                        if (pos == -1) {
+                            pos = name.indexOf('.');
+                        }
+                        if (pos != -1) {
+                            name = name.substring(0, pos - 1);
+                        }
+                        var row = self.tbody.find('#mdns_id_' + name);
+                        var version = val['v'];
+                        if (val['b']) {
+                            version = version + '-' + val['b'];
+                        }
+                        var title = val['t'] ? val['t'] : '-';
+                        var html = '<tr scope="row" id="mdns_id_' + name + '"><td>' + val['h'] + '</td><td>' + val['a'] + '</td><td>' + name + '</td><td>' + title + '</td><td>' + version + '</td></tr>';
+                        if (row.length) {
+                            row.html($(html).find('tr').html());
+                        }
+                        else {
+                            self.tbody.append(html);
+                        }
+                    });
+                }
+                catch(e) {
+                    this.fail();
+                    return;
+                }
+                window.setTimeout(this.update.bind(this), this._interval);
+                this._interval = this.interval[1];
+            },
+            fail: function() {
+                this.error_top.show();
+                this.spinner_top.fadeOut();
+                window.setTimeout(this.update.bind(this), this.interval[2]);
+            },
+            update: function() {
+                this.error_top.hide();
+                this.spinner_top.fadeIn();
+                $.post(this.uri, { SID: $.getSessionId(), timeout: this.timeout[1]}, this.callback.bind(this), 'json').fail(this.fail.bind(this));
+            },
+            start: function() {
+                $.post(this.uri, { SID: $.getSessionId(), timeout: this.timeout[0]}, this.callback.bind(this), 'json').fail(this.fail.bind(this));
             }
-            update_mdns_discovery();
+        };
+        $(function() {
+            mdns_discovery.init();
+            mdns_discovery.start();
         });
     </script>
 </body>

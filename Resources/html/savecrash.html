@@ -134,6 +134,10 @@
                 // this.log_buttons.hide();
                 this.error('No entries found');
             },
+            fail: function() {
+                this.log_clear.prop('disabled', false);
+                this.error('HTTP error');
+            },
             trace: function (content, strace) {
                 var innerContent = content.find('.inner');
                 innerContent.removeClass('text-center').html(this.inner_trace_prototype.html());
@@ -141,38 +145,37 @@
                 $.clipboard(innerContent.find('button'), strace);
 				content.data('loading', false).find('.loading').hide();
 			},
+            trace_callback: function(content, data) {
+                try {
+                    this.trace(content, data['trace']);
+                } catch(e) {
+                    try {
+                        this.error(data['error']);
+                    } catch(e2) {
+                        this.error('Exception: ' + e);
+                    }
+                }
+            },
             load_trace: function (content, id) {
                 var self = this;
-                $.get(self.uri + '?SID=' + $.getSessionId() + '&id=' + id, function(data) {
-                    try {
-                        self.trace(content, data['trace']);
-                    }
-                    catch(e) {
-                        try {
-                            self.error(data['error']);
-                        }
-                        catch(e2) {
-                            self.error('Exception: ' + e);
-                        }
-                    }
-                }, 'json').fail(function() {
-                    self.error('HTTP error');
-                });
+                $.post(this.uri, { SID: $.getSessionId(), 'id': id }, function(data) {
+                    self.trace_callback(content, data);
+                }, 'json').fail(this.fail.bind(this));
             },
             index: function (items) {
-                var self = this;
                 try {
                     if (items.length == 0) {
-                        self.empty_list();
+                        this.empty_list();
                         return;
                     }
                     items.sort(function(a, b) { // sort by time descending
                         return b['t'] - a['t'];
                     });
-                    self.log_buttons.removeClass('hidden').show();
-                    self.log_clear.prop('disabled', false);
-                    self.log_empty.hide();
-                    self.log_loading.hide();
+                    this.log_buttons.removeClass('hidden').show();
+                    this.log_clear.prop('disabled', false);
+                    this.log_empty.hide();
+                    this.log_loading.hide();
+                    var self = this;
                     $(items).each(function(key, item) {
                         self.tbody.append(self.prototype);
                         var tr = self.tbody.find('tr:last');
@@ -202,39 +205,30 @@
                     self.error(e);
                 }
             },
+            index_callback: function(data) {
+                try {
+                    this.index(data['items']);
+                    if (data.hasOwnProperty('info')) {
+                        this.log_buttons.find('.info').html(data['info']);
+                    }
+                } catch(e) {
+                    try {
+                        this.error(data['error']);
+                    } catch(e) {
+                        this.error('Exception: ' + e);
+                    }
+                }
+            },
             load_index: function() {
                 this.tbody.find('tr.collapsible,tr.header').remove();
-                var self = this;
-                $.get(self.uri + '?SID=' + $.getSessionId(), function(data) {
-                    try {
-                        self.index(data['items']);
-                        if (data.hasOwnProperty('info')) {
-                            self.log_buttons.find('.info').html(data['info']);
-                        }
-                    }
-                    catch(e) {
-                        try {
-                            self.error(data['error']);
-                        }
-                        catch(e) {
-                            self.error('Exception: ' + e);
-                        }
-                    }
-                }, 'json').fail(function() {
-                    self.error('HTTP error');
-                });
+                $.post(this.uri, { SID: $.getSessionId() }, this.index_callback.bind(this), 'json').fail(this.fail.bind(this));
             },
             start: function() {
                 var self = this;
                 this.log_clear.on('click', function(e) {
                     e.preventDefault();
                     self.log_clear.prop('disabled', true);
-                    $.get(self.uri + '?SID=' + $.getSessionId() + '&cmd=clear', function() {
-                        self.load_index();
-                    }, 'json').fail(function() {
-                        self.log_clear.prop('disabled', false);
-                        self.error('HTTP error');
-                    });
+                    $.post(self.uri, { SID: $.getSessionId(), cmd: 'clear' }, self.load_index.bind(self), 'json').fail(self.fail.bind(self));
                 });
                 this.load_index();
             }

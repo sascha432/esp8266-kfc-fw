@@ -68,7 +68,7 @@ void FileManager::_sendResponse(uint16_t httpStatusCode)
     if (!_response) {
         _response = _request->beginResponse(httpStatusCode);
     }
-    _headers.setAsyncWebServerResponseHeaders(_response);
+    _headers.setResponseHeaders(_response);
     _response->setCode(httpStatusCode);
     __LDBG_printf("filemanager:%s response %d", _uri.c_str(), httpStatusCode);
     _request->send(_response);

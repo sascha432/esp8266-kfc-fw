@@ -507,7 +507,7 @@ void NotFoundTemplate::process(const String &key, PrintHtmlEntitiesString &outpu
 
 void ConfigTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 {
-    if (!_isAuthenticated) {
+    if (!isAuthenticated()) {
         WebTemplate::process(key, output);
         return;
     }
@@ -562,7 +562,7 @@ void ConfigTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 
 void StatusTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 {
-    if (!_isAuthenticated) {
+    if (!isAuthenticated()) {
         WebTemplate::process(key, output);
         return;
     }

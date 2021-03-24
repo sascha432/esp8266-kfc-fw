@@ -147,7 +147,7 @@ void AsyncUpdateWebHandler::handleRequest(AsyncWebServerRequest *request)
             HttpHeaders httpHeaders(false);
             httpHeaders.add<HttpLocationHeader>(String('/') + FSPGM(serial_console_html));
             httpHeaders.replace<HttpConnectionHeader>(HttpConnectionHeader::CLOSE);
-            httpHeaders.setAsyncWebServerResponseHeaders(response);
+            httpHeaders.setResponseHeaders(response);
             request->send(response);
         }
     }
@@ -232,7 +232,7 @@ errorResponse: ;
         HttpHeaders httpHeaders(false);
         httpHeaders.add<HttpLocationHeader>(location);
         httpHeaders.replace<HttpConnectionHeader>(HttpConnectionHeader::CLOSE);
-        httpHeaders.setAsyncWebServerResponseHeaders(response);
+        httpHeaders.setResponseHeaders(response);
         request->send(response);
 #endif
     }

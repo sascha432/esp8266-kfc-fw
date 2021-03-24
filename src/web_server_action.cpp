@@ -49,7 +49,7 @@ namespace WebServer {
 //     //         httpHeaders.addNoCache(true);
 //     //         httpHeaders.add<HttpLocationHeader>(url);
 //     //         response = request->beginResponse(302);
-//     //         httpHeaders.setAsyncWebServerResponseHeaders(response);
+//     //         httpHeaders.setResponseHeaders(response);
 //     //         request->send(response);
 //     //         return;
 //     //     }

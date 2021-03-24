@@ -190,19 +190,6 @@ bool Plugin::_clientAcceptsGzip(AsyncWebServerRequest *request) const
     return (strstr_P(acceptEncoding, SPGM(gzip, "gzip")) || strstr_P(acceptEncoding, SPGM(deflate, "deflate")));
 }
 
-// AsyncBaseResponse requires a different method to attach headers
-// TODO implement setHttpHeaders to AsyncWebServerResponse
-// response->setHttpHeaders(HttpHeadersVector &&);
-static void _prepareAsyncBaseResponse(AsyncWebServerRequest *request, AsyncWebServerResponse *response, HttpHeaders &headers)
-{
-    headers.setAsyncBaseResponseHeaders(reinterpret_cast<AsyncBaseResponse *>(response));
-}
-
-static void _prepareAsyncWebserverResponse(AsyncWebServerRequest *request, AsyncWebServerResponse *response, HttpHeaders &headers)
-{
-    headers.setAsyncWebServerResponseHeaders(response);
-}
-
 // 404 handler
 // to avoid having multiple handlers and save RAM, all custom handlers are executed here
 void Plugin::handlerNotFound(AsyncWebServerRequest *request)
@@ -222,7 +209,7 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
     if (url == F("/is-alive")) {
         response = request->beginResponse(200, FSPGM(mime_text_plain), String(request->arg(String('p')).toInt()));
         httpHeaders.addNoCache(true);
-        _prepareAsyncWebserverResponse(request, response, httpHeaders);
+        httpHeaders.setResponseHeaders(response);
     }
     // --------------------------------------------------------------------
     else if (url == F("/webui-handler")) {
@@ -244,7 +231,7 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
         PrintHtmlEntitiesString str;
         WebTemplate::printSystemTime(time(nullptr), str);
         response = new AsyncBasicResponse(200, FSPGM(mime_text_html), str);
-        _prepareAsyncWebserverResponse(request, response, httpHeaders);
+        httpHeaders.setResponseHeaders(response);
     }
     // --------------------------------------------------------------------
     else if (url == F("/export-settings")) {
@@ -264,7 +251,7 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
         }
         httpHeaders.addNoCache();
         response = new AsyncNetworkScanResponse(request->arg(FSPGM(hidden, "hidden")).toInt());
-        _prepareAsyncBaseResponse(request, response, httpHeaders);
+        httpHeaders.setResponseHeaders(response);
     }
     // --------------------------------------------------------------------
     else if (url == F("/logout")) {
@@ -273,7 +260,7 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
         httpHeaders.add(createRemoveSessionIdCookie());
         httpHeaders.add<HttpLocationHeader>(String('/'));
         response = request->beginResponse(302);
-        _prepareAsyncWebserverResponse(request, response, httpHeaders);
+        httpHeaders.setResponseHeaders(response);
     }
     // --------------------------------------------------------------------
     else if (url == F("/mqtt-publish-ad.html")) {
@@ -291,7 +278,7 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
             httpHeaders.addNoCache(true);
             httpHeaders.add<HttpLocationHeader>(url);
             response = request->beginResponse(302);
-            httpHeaders.setAsyncWebServerResponseHeaders(response);
+            httpHeaders.setResponseHeaders(response);
             request->send(response);
             return;
         }
@@ -310,6 +297,7 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
         }
 
         MessageTemplate *tpl = new MessageTemplate(String(), ("MQTT Client"));
+        tpl->setAuthenticated(true);
         if (!run) {
             tpl->setMessage(F("This page has been reloaded. Use the original link to execute the action again or press the run again button, if available"));
             tpl->setTitleClass(F("text-white bg-info text-white"));
@@ -348,7 +336,7 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
         }
         httpHeaders.addNoCache(true);
         response = new AsyncResolveZeroconfResponse(request->arg(FSPGM(value)));
-        _prepareAsyncBaseResponse(request, response, httpHeaders);
+        httpHeaders.setResponseHeaders(response);
     }
     // --------------------------------------------------------------------
     else if (url == F("/savecrash.json")) {
@@ -425,13 +413,16 @@ bool Plugin::sendFileResponse(uint16_t code, const String &path, AsyncWebServerR
         if (!webTemplate) {
             webTemplate = new WebTemplate();
         }
+        if (!webTemplate->isAuthenticationSet()) {
+            webTemplate->setAuthenticated(isAuthenticated(request));
+        }
         auto response = new AsyncTemplateResponse(FSPGM(mime_text_html), mapping.open(FileOpenMode::read), webTemplate, [webTemplate](const String& name, DataProviderInterface &provider) {
             return TemplateDataProvider::callback(name, provider, *webTemplate);
         });
         if (code) {
             response->setCode(code);
         }
-        headers.setAsyncBaseResponseHeaders(response);
+        headers.setResponseHeaders(response);
         request->send(response);
         return true;
     }
@@ -446,6 +437,7 @@ void Plugin::message(AsyncWebServerRequest *request, MessageType type, const Str
     HttpHeaders headers;
     headers.addNoCache(true);
     auto webTemplate = new MessageTemplate(message, title);
+    webTemplate->setAuthenticated(isAuthenticated(request));
     switch(type) {
         case MessageType::DANGER:
             webTemplate->setTitleClass(F("text-white bg-danger"));
@@ -476,6 +468,7 @@ void Plugin::send(uint16_t httpCode, AsyncWebServerRequest *request, const Strin
         HttpHeaders headers;
         headers.addNoCache(true);
         auto webTemplate = new NotFoundTemplate(httpCode, String((message.length() == 0) ? AsyncWebServerResponse::responseCodeToString(httpCode) : FPSTR(message.c_str())));
+        webTemplate->setAuthenticated(isAuthenticated(request));
         if (sendFileResponse(httpCode, F("/.message.html"), request, headers, webTemplate)) {
             return;
         }
@@ -484,7 +477,7 @@ void Plugin::send(uint16_t httpCode, AsyncWebServerRequest *request, const Strin
     auto response = request->beginResponse(httpCode);
     HttpHeaders headers;
     headers.addNoCache(true);
-    headers.setAsyncWebServerResponseHeaders(response);
+    headers.setResponseHeaders(response);
     request->send(response);
 }
 
@@ -512,7 +505,7 @@ void Plugin::_handlerWebUI(AsyncWebServerRequest *request, HttpHeaders &httpHead
     // WebTemplate::printSystemTime(time(nullptr), timeStr);
     // httpHeaders.add<HttpSimpleHeader>('device-time', timeStr);
 
-    httpHeaders.setAsyncWebServerResponseHeaders(response);
+    httpHeaders.setResponseHeaders(response);
     //TODO fix
     // auto response = new AsyncJsonResponse();
     // WebUISocket::createWebUIJSON(response->getJsonObject());
@@ -566,7 +559,7 @@ void Plugin::_handlerAlerts(AsyncWebServerRequest *request, HttpHeaders &headers
     //     AsyncWebServerResponse *response = new AsyncBasicResponse(200, FSPGM(mime_application_json), str);
     //     HttpHeaders httpHeaders;
     //     httpHeaders.addNoCache();
-    //     httpHeaders.setAsyncWebServerResponseHeaders(response);
+    //     httpHeaders.setResponseHeaders(response);
     //     request->send(response);
     //     return;
     // }
@@ -627,7 +620,7 @@ void Plugin::_handlerSpeedTest(AsyncWebServerRequest *request, bool zip, HttpHea
     } else {
         response = new AsyncSpeedTestResponse(FSPGM(mime_image_bmp), size);
     }
-    httpHeaders.setAsyncBaseResponseHeaders(response);
+    httpHeaders.setResponseHeaders(response);
 
     request->send(response);
 }
@@ -694,7 +687,7 @@ void Plugin::_handlerExportSettings(AsyncWebServerRequest *request, HttpHeaders 
     PrintString content;
     config.exportAsJson(content, config.getFirmwareVersion());
     AsyncWebServerResponse *response = new AsyncBasicResponse(200, FSPGM(mime_application_json), content);
-    httpHeaders.setAsyncWebServerResponseHeaders(response);
+    httpHeaders.setResponseHeaders(response);
 
     request->send(response);
 }
@@ -921,12 +914,12 @@ AsyncWebServerResponse *Plugin::_beginFileResponse(const FileMapping &mapping, c
                 __LDBG_printf("form=%s", formName.c_str());
                 FormUI::Form::BaseForm *form = new SettingsForm(nullptr);
                 plugin->createConfigureForm(PluginComponent::FormCallbackType::CREATE_GET, formName, *form, request);
-                webTemplate = new ConfigTemplate(form);
+                webTemplate = new ConfigTemplate(form, isAuthenticated);
             }
         }
     }
     if ((isHtml || path.endsWith(FSPGM(_xml))) && webTemplate == nullptr) {
-        webTemplate = __LDBG_new(WebTemplate); // default for all .html files
+        webTemplate = new WebTemplate(); // default for all .html files
     }
 
     __LDBG_printf("web_template=%p", webTemplate);
@@ -935,7 +928,7 @@ AsyncWebServerResponse *Plugin::_beginFileResponse(const FileMapping &mapping, c
         webTemplate->setSelfUri(request->url());
         webTemplate->setAuthenticated(isAuthenticated);
         // process with template
-        response = __LDBG_new(AsyncTemplateResponse, FPSTR(getContentType(path)), mapping.open(FileOpenMode::read), webTemplate, [webTemplate](const String& name, DataProviderInterface &provider) {
+        response = new AsyncTemplateResponse(FPSTR(getContentType(path)), mapping.open(FileOpenMode::read), webTemplate, [webTemplate](const String& name, DataProviderInterface &provider) {
             return TemplateDataProvider::callback(name, provider, *webTemplate);
         });
         httpHeaders.addNoCache();
@@ -954,14 +947,14 @@ AsyncWebServerResponse *Plugin::_beginFileResponse(const FileMapping &mapping, c
         if (mapping.isGz()) {
             httpHeaders.add(FSPGM(Content_Encoding), FSPGM(gzip));
         }
-        httpHeaders.setAsyncWebServerResponseHeaders(response);
+        httpHeaders.setResponseHeaders(response);
         return response;
 #endif
     }
     if (mapping.isGz()) {
         httpHeaders.add(FSPGM(Content_Encoding), FSPGM(gzip));
     }
-    httpHeaders.setAsyncBaseResponseHeaders(response);
+    httpHeaders.setResponseHeaders(response);
     return response;
 }
 
@@ -1097,7 +1090,7 @@ bool Plugin::_handleFileRead(String path, bool client_accepts_gzip, AsyncWebServ
 
         httpHeaders.addNoCache(true);
 
-        if (path.charAt(0) == '/' && path.endsWith(FSPGM(_html))) {
+        if (path.startsWith('/') && path.endsWith(FSPGM(_html))) {
             // auto name = path.substring(1, path.length() - 5);
 
             __LDBG_printf("get_form=%s", formName.c_str());
@@ -1109,7 +1102,7 @@ bool Plugin::_handleFileRead(String path, bool client_accepts_gzip, AsyncWebServ
 #endif
                 FormUI::Form::BaseForm *form = new SettingsForm(request);
                 plugin->createConfigureForm(PluginComponent::FormCallbackType::CREATE_POST, formName, *form, request);
-                webTemplate = new ConfigTemplate(form);
+                webTemplate = new ConfigTemplate(form, isAuthenticated);
                 if (form->validate()) {
                     plugin->createConfigureForm(PluginComponent::FormCallbackType::SAVE, formName, *form, request);
                     System::Flags::getWriteableConfig().is_factory_settings = false;
@@ -1292,7 +1285,7 @@ AsyncCallbackWebHandler *Plugin::addHandler(const String &uri, ArRequestHandlerF
     return handler;
 }
 
-AuthType Plugin::getAuthenticated(AsyncWebServerRequest *request) const
+AuthType Plugin::getAuthenticated(AsyncWebServerRequest *request)
 {
     const String *pSID;
     // __DBG_printf("args.%su header.%s=%u", FSPGM(SID), request->hasArg(FSPGM(SID)), FSPGM(Authorization), request->hasHeader(FSPGM(Authorization)));
@@ -1407,7 +1400,7 @@ namespace SaveCrash {
             response = request->beginResponse(200, FSPGM(mime_application_json), jsonStr);
         }
 
-        httpHeaders.setAsyncWebServerResponseHeaders(response);
+        httpHeaders.setResponseHeaders(response);
         return response;
     }
 }

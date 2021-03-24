@@ -318,7 +318,7 @@ void HttpHeaders::setHeadersCallback(SetCallback_t callback, bool doClear)
 
 #if HAVE_HTTPHEADERS_ASYNCWEBSERVER
 
-void HttpHeaders::setAsyncWebServerResponseHeaders(AsyncWebServerResponse *response)
+void HttpHeaders::_setAsyncWebServerResponseHeaders(AsyncWebServerResponse *response)
 {
     setHeadersCallback([response](const String &name, const String &header) {
         // __DBG_printf("name=%s value=%s", __S(name), __S(header));
@@ -328,16 +328,16 @@ void HttpHeaders::setAsyncWebServerResponseHeaders(AsyncWebServerResponse *respo
 
 #endif
 
-void HttpHeaders::printTo(Print &output)
+void HttpHeaders::printTo(Print &output) const
 {
-    for (auto &header : _headers) {
+    for (const auto &header : _headers) {
         header->printTo(output);
     }
 }
 
 #if DEBUG
 
-void HttpHeaders::dump(Print &output)
+void HttpHeaders::dump(Print &output) const
 {
     output.printf_P(PSTR("--- %d\n"), _headers.size());
     printTo(output);
@@ -345,14 +345,14 @@ void HttpHeaders::dump(Print &output)
 
 #endif
 
-HttpHeadersCmpFunction HttpHeaders::compareName(const String &name)
+HttpHeadersCmpFunction HttpHeaders::compareName(const String &name) const
 {
     return [&name](const HttpHeaderPtr &_header) {
         return _header->getName().equalsIgnoreCase(name);
     };
 }
 
-HttpHeadersCmpFunction  HttpHeaders::compareHeader(const HttpHeader &header)
+HttpHeadersCmpFunction  HttpHeaders::compareHeader(const HttpHeader &header) const
 {
     return [&header](const HttpHeaderPtr &_header) {
         return _header->equals(header);

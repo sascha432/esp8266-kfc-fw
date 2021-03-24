@@ -95,7 +95,7 @@ void MDNSPlugin::mdnsDiscoveryHandler(AsyncWebServerRequest *request)
                 plugin.serviceCallback(*output, mdnsServiceInfo, answerType, p_bSetContent);
             });
             auto response = new AsyncMDNSResponse(output);
-            httpHeaders.setAsyncBaseResponseHeaders(response);
+            httpHeaders.setResponseHeaders(response);
             request->send(response);
         }
         else {

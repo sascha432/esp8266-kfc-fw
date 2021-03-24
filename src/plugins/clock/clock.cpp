@@ -880,7 +880,7 @@ void ClockPlugin::handleWebServer(AsyncWebServerRequest *request)
             }
         });
         httpHeaders.addNoCache();
-        httpHeaders.setAsyncWebServerResponseHeaders(response);
+        httpHeaders.setResponseHeaders(response);
         request->send(response);
     }
     else {

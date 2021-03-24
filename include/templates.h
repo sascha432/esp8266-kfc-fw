@@ -28,6 +28,7 @@ public:
     void setSelfUri(const String &selfUri);
     void setAuthenticated(bool isAuthenticated);
     bool isAuthenticated() const;
+    bool isAuthenticationSet() const;
 
     void setForm(FormUI::Form::BaseForm *form);
     FormUI::Form::BaseForm *getForm();
@@ -51,24 +52,33 @@ public:
     static String _aliveRedirection;
 
 protected:
+    enum class AuthType : uint8_t {
+        NONE,
+        AUTH,
+        NO_AUTH
+    };
+
     FormUI::Form::BaseForm *_form;
     String _selfUri;
     JsonUnnamedObject *_json;
     PrintArgs _printArgs;
-    bool _isAuthenticated;
+    AuthType _isAuthenticated;
 };
 
-inline WebTemplate::WebTemplate() : _form(nullptr), _json(nullptr), _isAuthenticated(false)
+inline WebTemplate::WebTemplate() :
+    _form(nullptr),
+    _json(nullptr),
+    _isAuthenticated(AuthType::NONE)
 {
 }
 
 inline WebTemplate::~WebTemplate()
 {
     if (_json) {
-        __LDBG_delete(_json);
+        delete _json;
     }
     if (_form) {
-        __LDBG_delete(_form);
+        delete _form;
     }
 }
 
@@ -79,12 +89,20 @@ inline void WebTemplate::setSelfUri(const String &selfUri)
 
 inline void WebTemplate::setAuthenticated(bool isAuthenticated)
 {
-    _isAuthenticated = isAuthenticated;
+    _isAuthenticated = isAuthenticated ? AuthType::AUTH : AuthType::NO_AUTH;
 }
 
 inline bool WebTemplate::isAuthenticated() const
 {
-    return _isAuthenticated;
+    if (_isAuthenticated == AuthType::NO_AUTH) {
+        __DBG_printf("authentication not set");
+    }
+    return _isAuthenticated == AuthType::AUTH;
+}
+
+inline bool WebTemplate::isAuthenticationSet() const
+{
+    return _isAuthenticated != AuthType::NONE;
 }
 
 inline void WebTemplate::setForm(FormUI::Form::BaseForm *form)
@@ -106,8 +124,9 @@ inline PrintArgs &WebTemplate::getPrintArgs()
 
 class ConfigTemplate : public WebTemplate {
 public:
-    ConfigTemplate(FormUI::Form::BaseForm *form) {
+    ConfigTemplate(FormUI::Form::BaseForm *form, bool isAuthenticated) {
         setForm(form);
+        setAuthenticated(isAuthenticated);
     }
     virtual void process(const String &key, PrintHtmlEntitiesString &output) override;
 };
@@ -119,7 +138,11 @@ public:
 
 class LoginTemplate : public WebTemplate {
 public:
-    LoginTemplate(const String &errorMessage) : _errorMessage(errorMessage) {}
+    LoginTemplate(const String &errorMessage) :
+        _errorMessage(errorMessage)
+    {
+        setAuthenticated(false);
+    }
 
     virtual void process(const String &key, PrintHtmlEntitiesString &output) override;
     virtual void setErrorMessage(const String &errorMessage);
@@ -217,16 +240,5 @@ private:
 
 class SettingsForm : public FormUI::Form::BaseForm {
 public:
-    // typedef std::vector<std::pair<String, String>> TokenVector;
-
     SettingsForm(AsyncWebServerRequest *request);
-
-    // void setJson(JsonUnnamedObject *json) {
-    //     _json = json;
-    // }
-
-// protected:
-//     friend WebTemplate;
-
-//     JsonUnnamedObject *_json;
 };

@@ -354,11 +354,11 @@ public:
     }
 
     template <typename Th, typename ... Args>
-    Th &add(Args &&...args) {
+    inline Th &add(Args &&...args) {
         return reinterpret_cast<Th &>(add(new Th(std::forward<Args &&>(args)...)));
     }
 
-    void add(const String& name, const String& value) {
+    inline void add(const String& name, const String& value) {
         add(new HttpSimpleHeader(name, value));
     }
 
@@ -369,7 +369,7 @@ public:
     }
 
     template <typename Th, typename ... Args>
-    Th &replace(Args &&...args) {
+    inline Th &replace(Args &&...args) {
         return reinterpret_cast<Th &>(replace(new Th(std::forward<Args &&>(args)...)));
     }
 
@@ -380,10 +380,10 @@ public:
         _headers.erase(std::remove_if(_headers.begin(), _headers.end(), compareHeader(header)), _headers.end());
     }
 
-    HttpHeadersVector &getHeaders() {
+    inline HttpHeadersVector &getHeaders() {
         return _headers;
     }
-    void setHeaders(HttpHeadersVector &&headers) {
+    inline void setHeaders(HttpHeadersVector &&headers) {
         _headers = std::move(headers);
     }
     inline HttpHeadersIterator begin() {
@@ -393,10 +393,10 @@ public:
         return _headers.end();
     }
 
-    HttpHeader *find(const String &name) const {
+    inline HttpHeader *find(const String &name) const {
         return find(name.c_str());
     }
-    HttpHeader *find(const __FlashStringHelper *name) const {
+    inline HttpHeader *find(const __FlashStringHelper *name) const {
         return find(reinterpret_cast<PGM_P>(name));
     }
     HttpHeader *find(PGM_P name) const {
@@ -412,24 +412,33 @@ public:
     void addNoCache(bool noStore = false);
     void addDefaultHeaders();
     void setHeadersCallback(SetCallback_t callback, bool doClear);
-#if HAVE_HTTPHEADERS_ASYNCWEBSERVER
-    void setAsyncWebServerResponseHeaders(AsyncWebServerResponse *response);
 
-    template <class __AsyncBaseResponse>
-    void setAsyncBaseResponseHeaders(__AsyncBaseResponse *response)
-    {
+#if HAVE_HTTPHEADERS_ASYNCWEBSERVER
+
+public:
+    template <typename _Ta, typename std::enable_if<!std::is_base_of<AsyncBaseResponse, _Ta>::value, int>::type = 0>
+    void setResponseHeaders(_Ta *response) {
+        _setAsyncWebServerResponseHeaders(response);
+    }
+
+    template <typename _Ta, typename std::enable_if<std::is_base_of<AsyncBaseResponse, _Ta>::value, int>::type = 0>
+    void setResponseHeaders(_Ta *response) {
         response->setHttpHeaders(std::move(_headers));
     }
+
+private:
+    void _setAsyncWebServerResponseHeaders(AsyncWebServerResponse *response);
 #endif
 
-    void printTo(Print &output);
+public:
+    void printTo(Print &output) const;
 #if DEBUG
-    void dump(Print &output);
+    void dump(Print &output) const;
 #endif
 
 private:
-    HttpHeadersCmpFunction compareName(const String &name);
-    HttpHeadersCmpFunction compareHeader(const HttpHeader &headerPtr);
+    HttpHeadersCmpFunction compareName(const String &name) const;
+    HttpHeadersCmpFunction compareHeader(const HttpHeader &headerPtr) const;
 
     static HttpHeaders _instance;
 

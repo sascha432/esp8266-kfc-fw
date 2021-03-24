@@ -225,8 +225,8 @@ namespace WebServer {
         }
 
         bool isRunning() const;
-        AuthType getAuthenticated(AsyncWebServerRequest *request) const;
-        bool isAuthenticated(AsyncWebServerRequest *request) const;
+        static AuthType getAuthenticated(AsyncWebServerRequest *request);
+        static bool isAuthenticated(AsyncWebServerRequest *request);
 
     private:
         friend AsyncRestWebHandler;
@@ -325,7 +325,7 @@ namespace WebServer {
         return (_server != nullptr);
     }
 
-    inline bool Plugin::isAuthenticated(AsyncWebServerRequest *request) const
+    inline bool Plugin::isAuthenticated(AsyncWebServerRequest *request)
     {
         return getAuthenticated(request) > AuthType::NONE;
     }

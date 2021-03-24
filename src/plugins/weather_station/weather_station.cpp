@@ -122,7 +122,7 @@ void WeatherStationPlugin::_sendScreenCaptureBMP(AsyncWebServerRequest *request)
 #endif
             HttpHeaders httpHeaders;
             httpHeaders.addNoCache();
-            httpHeaders.setAsyncWebServerResponseHeaders(response);
+            httpHeaders.setResponseHeaders(response);
             request->send(response);
         }
         else {

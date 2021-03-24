@@ -46,7 +46,7 @@ AsyncWebServerResponse *RestRequest::createResponse(AsyncWebServerRequest *reque
     // add no cache and no store to any 200 response
     HttpHeaders headers;
     headers.addNoCache(true);
-    headers.setAsyncWebServerResponseHeaders(response);
+    headers.setResponseHeaders(response);
     return response;
 }
 

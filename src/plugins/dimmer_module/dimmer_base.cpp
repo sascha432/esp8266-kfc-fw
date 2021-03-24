@@ -404,7 +404,7 @@ void Base::handleWebServer(AsyncWebServerRequest *request)
         HttpHeaders httpHeaders(false);
         httpHeaders.addNoCache();
         auto response = request->beginResponse_P(200, FSPGM(mime_text_plain), SPGM(OK));
-        httpHeaders.setAsyncWebServerResponseHeaders(response);
+        httpHeaders.setResponseHeaders(response);
         request->send(response);
     }
     else {

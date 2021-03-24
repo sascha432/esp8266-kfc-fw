@@ -82,8 +82,8 @@ split = {
     'sketch': 0x40200000,
     'empty': 0x402FEFF0,
     'fs': 0x40500000,
-    'kfcfw': 0x405EA000,
-    'savecrash': 0x405F3000,
+    'kfcfw': 0x405FB000 - ((16 + 64) * 0x1000),        # 16 x 4096 byte = 64K
+    'savecrash': 0x405FB000 - (64 * 0x1000),           # 64 x 4096 byte = 256K
     'eeprom': 0x405FB000,
     'rfcal': 0x405FC000,
     'wifi': 0x405FD000,
@@ -96,11 +96,12 @@ split = {
     'sketch': 0x40200000,
     'empty': 0x402FEFF0,
     'fs': 0x40400000,
-    'kfcfw': 0x405EA000,
-    'savecrash': 0x405F3000,
+    'kfcfw': 0x405FB000 - ((16 + 64) * 0x1000),        # 16 x 4096 byte = 64K
+    'savecrash': 0x405FB000 - (64 * 0x1000),           # 64 x 4096 byte = 256K
     'eeprom': 0x405FB000,
     'rfcal': 0x405FC000,
     'wifi': 0x405FD000,
     'end': 0x40600000,
 };
 create_eagle_ld(path.join(eagle_dir, 'eagle.flash.4m2m.ld'), split);
+0x405FB000-0x405D2000

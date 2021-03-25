@@ -21,6 +21,9 @@
 #if WEBUI_ALERTS_ENABLED && WEBUI_ALERTS_USE_MQTT
 #include "../include/WebUIAlerts.h"
 #endif
+#if PIN_MONITOR
+#include <PinMonitor.h>
+#endif
 
 #if DEBUG_TEMPLATES
 #include <debug_helper_enable.h>
@@ -310,6 +313,13 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         } else {
             output.print(FSPGM(hidden));
         }
+    }
+    else if (key == F("PIN_MONITOR_STATUS")) {
+#if PIN_MONITOR
+        pinMonitor.printStatus(output);
+#else
+        output.print(F("Pin monitor disabled"));
+#endif
     }
     else if (key == F("WEBUI_ALERTS_MQTT_SCRIPT")) {
 #if WEBUI_ALERTS_ENABLED && WEBUI_ALERTS_USE_MQTT

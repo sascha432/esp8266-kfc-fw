@@ -1389,6 +1389,13 @@ void at_mode_serial_handle_event(String &commandString)
         args.printf_P(PSTR("sizeof(CallbackTimer): %u"), sizeof(Event::CallbackTimer));
         // args.printf_P(PSTR("sizeof(SerialTwoWire): %u"), sizeof(SerialTwoWire));
 
+#if PIN_MONITOR
+        PrintString tmp;
+        pinMonitor.printStatus(tmp);
+        tmp.replace(F(HTML_S(br)), "\n");
+        args.print(tmp);
+#endif
+
 #if 0
         uint32_t start = micros();
         String dummy = F("test_string_long_compare_with_strcmp_P_test_string_long_compare_with_strcmp_P_test_string_long_compare_with_strcmp_P_test_string_long_compare_with_strcmp_P_test_string_long_compare_with_strcmp_P_test_string_long_compare_with_strcmp_P_test_string_long_compare_with_strcmp_P_test_string_long_compare_with_strcmp_P");

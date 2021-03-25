@@ -154,6 +154,17 @@
                     </div>
                     <!--#endif-->
 
+                    <!--#if defined(PIN_MONITOR) && PIN_MONITOR -->
+                    <div class="row">
+                        <div class="col-lg-3 col-lg-auto">
+                            Pin Monitor
+                        </div>
+                        <div class="col">
+                            %PIN_MONITOR_STATUS%
+                        </div>
+                    </div>
+                    <!--#endif-->
+
                     <div class="row">
                         <div class="col-lg-3 col-lg-auto">
                             WebUI Alerts

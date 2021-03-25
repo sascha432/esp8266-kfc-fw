@@ -14,6 +14,15 @@
     display: none;
  }
 
+#index-edit-menu {
+    color: #ffffff;
+    font-size: 1.5rem;
+    cursor: grab;
+}
+#index-edit-menu:hover {
+    color: #99bbee;
+}
+
 .custom-pin-row label {
 	display: none;
 }

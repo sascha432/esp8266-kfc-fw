@@ -53,6 +53,55 @@
 	<script debug_loader="1" type="text/javascript" src="../js/main.min.js"></script>
 	<script debug_loader="1" type="text/javascript" src="../js/debug.js"></script>
     <!--JAVASCRIPT%%-->
+    <script>
+        $(function() {
+            var auto_reload = {
+                errors: 0,
+                message: function(text) {
+                    $('#message .card-body').first().html(text);
+                },
+                callback: function(data) {
+                    var inner_html = data.replace(/.*(<div.*?id=\"message\")/, '$1').replace(/<div class=\"row\".*/, '')
+                    var message = $(inner_html);
+                    if (message.find('.card-header').length) {
+                        var span = message.find('span.auto-reload');
+                        if (span.length) {
+                            this.errors = 0;
+                            this.reload(span);
+                        }
+                        $('#message').html(message.html());
+                    }
+                    else {
+                        this.fail();
+                    }
+                },
+                fail: function() {
+                    this.errors++;
+                    if (this.errors > 4) {
+                        this.message('Invalid response. Please reload the page...');
+                    }
+                    else {
+                        window.setTimeout(this.timeout.bind(this), 15 * 1000);
+                    }
+                },
+                timeout: function() {
+                    $.get(location.href, this.callback.bind(this)).fail(this.fail.bind(this));
+                },
+                reload: function(span) {
+                    var timeout = parseInt(span.attr('data-timeout')) || 60;
+                    var self =
+                    window.setTimeout(this.timeout.bind(this), timeout * 1000);
+                },
+                init: function() {
+                    var span = $('span.auto-reload')
+                    if (span.length) {
+                        this.reload(span);
+                    }
+                }
+            };
+            auto_reload.init();
+        });
+    </script>
 </body>
 
 </html>

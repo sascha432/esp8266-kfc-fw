@@ -180,6 +180,10 @@ void Queue::runPublish(uint32_t delayMillis)
                 }
             }
 
+            if (_callback) {
+                _callback(StatusType::STARTED);
+            }
+
             // get all topics that belong to this device
             __LDBG_printf("starting CollectTopicsComponent");
             _collect.reset(new CollectTopicsComponent(&_client, std::move(_client._createAutoDiscoveryTopics())));
@@ -241,6 +245,16 @@ void Queue::runPublish(uint32_t delayMillis)
     }
     else {
         __LDBG_printf("auto discovery not executed");
+
+        Logger_notice(F("MQTT auto discovery deferred"));
+        if (_callback) {
+            _callback(StatusType::DEFERRED);
+        }
+
+        // cleanup before deleteing
+        clear();
+        _client._autoDiscoveryQueue.reset(); // deletes itself and the timer
+        return;
     }
 }
 
@@ -326,6 +340,9 @@ void Queue::_publishDone(bool success, uint16_t onErrorDelay)
     }
 
     _client.updateAutoDiscoveryTimestamps(success);
+    if (_callback) {
+        _callback(success ? StatusType::SUCCESS : StatusType::FAILURE);
+    }
 
     auto message = PrintString(success ? F("MQTT auto discovery published [entities=%u") : F("MQTT auto discovery aborted [entities=%u"), _entities.size());
     if (_entities.payloadSize()) {

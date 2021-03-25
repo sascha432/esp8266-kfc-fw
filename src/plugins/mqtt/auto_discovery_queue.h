@@ -45,6 +45,10 @@ namespace MQTT {
             static bool isUpdateScheduled();
             static bool isEnabled(bool force = false);
 
+            void setStatusCallback(StatusCallback callback) {
+                _callback = callback;
+            }
+
         private:
             void _publishNextMessage();
             void _publishDone(bool success = true, uint16_t onErrorDelay = 15);
@@ -62,6 +66,7 @@ namespace MQTT {
             List::iterator _iterator;
             uint16_t _packetId;
             RunFlags _runFlags;
+            StatusCallback _callback;
         };
 
     }

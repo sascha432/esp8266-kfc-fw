@@ -143,12 +143,16 @@ void AsyncUpdateWebHandler::handleRequest(AsyncWebServerRequest *request)
                 }
             });
 
-            auto response = request->beginResponse(302);
             HttpHeaders httpHeaders(false);
-            httpHeaders.add<HttpLocationHeader>(String('/') + FSPGM(serial_console_html));
             httpHeaders.replace<HttpConnectionHeader>(HttpConnectionHeader::CLOSE);
-            httpHeaders.setResponseHeaders(response);
-            request->send(response);
+            request->send(HttpLocationHeader::redir(request, String('/') + FSPGM(serial_console_html), headers));
+
+            // auto response = request->beginResponse(302);
+            // HttpHeaders httpHeaders(false);
+            // httpHeaders.add<HttpLocationHeader>(String('/') + FSPGM(serial_console_html));
+            // httpHeaders.replace<HttpConnectionHeader>(HttpConnectionHeader::CLOSE);
+            // httpHeaders.setResponseHeaders(response);
+            // request->send(response);
         }
     }
     else
@@ -228,12 +232,17 @@ errorResponse: ;
             config.restartDevice();
         });
 
-        response = request->beginResponse(302);
         HttpHeaders httpHeaders(false);
-        httpHeaders.add<HttpLocationHeader>(location);
         httpHeaders.replace<HttpConnectionHeader>(HttpConnectionHeader::CLOSE);
-        httpHeaders.setResponseHeaders(response);
-        request->send(response);
+        request->send(HttpLocationHeader::redir(request, location, headers));
+
+
+        // response = request->beginResponse(302);
+        // HttpHeaders httpHeaders(false);
+        // httpHeaders.add<HttpLocationHeader>(location);
+        // httpHeaders.replace<HttpConnectionHeader>(HttpConnectionHeader::CLOSE);
+        // httpHeaders.setResponseHeaders(response);
+        // request->send(response);
 #endif
     }
 }

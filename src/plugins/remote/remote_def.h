@@ -51,6 +51,8 @@
 // #error PIN_MONITOR_USE_GPIO_INTERRUPT=1 required
 // #endif
 
+#define REMOTE_COMTROL_WEBHANDLER_PREFIX                        "/rc/"
+
 using namespace PinMonitor;
 
 namespace RemoteControl {

@@ -96,7 +96,6 @@ class RemoteControlPlugin;
 
 class RemoteControlPlugin : public PluginComponent, public Base, public MqttRemote {
 public:
-public:
     RemoteControlPlugin();
 
     virtual void setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies) override;
@@ -124,6 +123,7 @@ public:
     static void prepareForUpdate();
     static void disableAutoSleepHandler(AsyncWebServerRequest *request);
     static void deepSleepHandler(AsyncWebServerRequest *request);
+    static void webHandler(AsyncWebServerRequest *request);
 
     static RemoteControlPlugin &getInstance();
 

@@ -106,10 +106,19 @@ namespace MQTT {
         class ListIterator;
         class ConstListIterator;
 
+        enum class StatusType {
+            STARTED,
+            DEFERRED,
+            SUCCESS,
+            FAILURE,
+        };
+        using StatusCallback = std::function<void(StatusType status)>;
+
         using EntityPtr = Entity *;
         using EntitySharedPtr = std::shared_ptr<Entity>;
         using QueuePtr = std::unique_ptr<Queue>;
     };
+
 
     using AutoReconnectType = uint16_t;
     using ComponentPtr = Component *;

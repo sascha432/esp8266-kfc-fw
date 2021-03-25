@@ -648,7 +648,7 @@ bool MQTTClient::_topicInUse(ComponentPtr component, const String &topic)
     return false;
 }
 
-bool MQTTClient::publishAutoDiscovery(RunFlags flags)
+bool MQTTClient::publishAutoDiscovery(RunFlags flags, AutoDiscovery::StatusCallback callback)
 {
 #if MQTT_AUTO_DISCOVERY
     _startAutoDiscovery = false;
@@ -661,6 +661,7 @@ bool MQTTClient::publishAutoDiscovery(RunFlags flags)
         if (!_autoDiscoveryQueue) {
             __DBG_printf("starting auto discovery queue");
             _autoDiscoveryQueue.reset(new AutoDiscovery::Queue(*this));
+            _autoDiscoveryQueue->setStatusCallback(callback);
             _autoDiscoveryQueue->publish(flags);
             return true;
         }

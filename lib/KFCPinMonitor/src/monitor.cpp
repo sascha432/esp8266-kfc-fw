@@ -482,6 +482,7 @@ void Monitor::_loop()
                     auto &pin = *reinterpret_cast<SimpleHardwarePin *>(pinPtr.get());
                     auto event = pin.getEventClear();
                     if (event != SimpleHardwarePin::SimpleEventType::NONE) {
+                        Serial.printf_P(PSTR("SIMPLE=%u event=%u\n"), pin.getPin(), event);
                         _event(pin.getPin(), event == SimpleHardwarePin::SimpleEventType::HIGH_VALUE ? StateType::IS_HIGH : StateType::IS_LOW, now);
                     }
                 }

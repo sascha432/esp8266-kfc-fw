@@ -131,6 +131,8 @@ namespace PinMonitor {
         {}
         virtual ~HardwarePin() {}
 
+        virtual void clear() {}
+
         virtual Debounce *getDebounce() const {
             return nullptr;
         }
@@ -191,6 +193,10 @@ namespace PinMonitor {
         {
         }
 
+        virtual void clear() override {
+            _event = SimpleEventType::NONE;
+        }
+
         // void ICACHE_RAM_ATTR addEvent(bool value) {
         inline __attribute__((__always_inline__))
         void addEvent(bool value) {
@@ -240,6 +246,10 @@ namespace PinMonitor {
                 _value(value)
             {
             }
+
+            void dump(Print &output) {
+                output.printf_P(PSTR("micros=%u int_count=%u value=%u\n"), _micros, _interruptCount, _value);
+            }
         };
 
     public:
@@ -248,6 +258,12 @@ namespace PinMonitor {
             _debounce(debounceValue),
             _events(0)
         {
+        }
+
+        virtual void clear() override {
+            clearEventsNoInterrupts();
+            // _debounce = Debounce(digitalRead(getPin()));
+            _debounce.setState(digitalRead(getPin()));
         }
 
         virtual Debounce *getDebounce() const override {
@@ -308,6 +324,20 @@ namespace PinMonitor {
             HardwarePin(pin, HardwarePinType::ROTARY),
             _encoder(*reinterpret_cast<RotaryEncoder *>(const_cast<void *>(handler.getArg())))
         {}
+
+        // virtual void clear() override {
+            // auto iterator = std::remove_if(PinMonitor::eventBuffer.begin(), PinMonitor::eventBuffer.end(), [this](const PinPtr &ptr) {
+            //     reeturn ptr->getPin() == _pin;
+
+            // });
+            // if (iterator != PinMonitor::eventBuffer.end()) {
+            //     PinMonitor::eventBuffer.shrink(PinMonitor::eventBuffer.begin(), iterator);
+            // }
+
+            // PinMonitor::eventBuffer.shrink(PinMonitor::eventBuffer.begin(), std::remove_if(PinMonitor::eventBuffer.begin(), PinMonitor::eventBuffer.end(), [this](const PinPtr &ptr) {
+            //     reeturn ptr->getPin() == _pin;
+            // }));
+        // }
 
     public:
         RotaryEncoder &_encoder;

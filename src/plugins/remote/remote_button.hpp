@@ -21,6 +21,7 @@ using namespace PinMonitor;
 
      inline void ChargingDetection::event(StateType state, uint32_t now)
      {
+         __DBG_printf("ChargingDetection::event %u %u",state,now);
          getBase().event(BaseEventType::CHARGE_DETECTION, state);
      }
 

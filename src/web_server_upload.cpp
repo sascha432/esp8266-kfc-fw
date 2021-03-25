@@ -272,7 +272,7 @@ void AsyncUpdateWebHandler::handleUpload(AsyncWebServerRequest *request, const S
     uint16_t progress = (index +  len) * 1000 / request->contentLength(); //send update every per mil
     if (status->progress != progress || final) {
         status->progress = progress;
-        __DBG_printf("progress=%u state=%u/%u%u done=%u remaining=%u size=%u clen=%u args=%u/%u/%u",
+        __LDBG_printf("progress=%u state=%u/%u%u done=%u remaining=%u size=%u clen=%u args=%u/%u/%u",
             progress, Update.isFinished(), Update.isRunning(), Update.getError(),
             Update.progress(), Update.remaining(), Update.size(), request->contentLength(),
             index, len, final

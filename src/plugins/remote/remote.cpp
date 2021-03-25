@@ -154,12 +154,71 @@ void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::Depe
     _readConfig();
     _updateButtonConfig();
 
+#if IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN == 15
+    pinMode(IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN, INPUT);
+#elif IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN != 3 && IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN != 16
+    pinMode(IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN, INPUT_PULLUP);
+#endif
+
+    // disable GPIO interrupts while adding events that occured during startup
+    ETS_GPIO_INTR_DISABLE();
+    auto states = deepSleepPinState.getStates();            // states during boot
+    interrupt_levels = deepSleepPinState.getValues();       // values during boot (digitalRead)
+
+    const auto &handlers = pinMonitor.getHandlers();
+    for(auto &pinPtr: pinMonitor.getPins()) {
+        // only debounced push buttons supported
+        if (pinPtr->_type != HardwarePinType::DEBOUNCE) {
+            // __LDBG_printf("pin=%u not debounce=%u", pinPtr->getPin(), pinPtr->_type);
+            continue;
+        }
+        // find handler for HardwarePin
+        uint8_t pinNum = pinPtr->getPin();
+        auto handler = std::find_if(handlers.begin(), handlers.end(), [pinNum](const PinPtr &ptr) {
+            return ptr->getPin() == pinNum;
+        });
+        if (handler == handlers.end()) {
+            __LDBG_printf("cannot find handler for pin=%u", pinNum);
+            continue;
+        }
+        const auto state = static_cast<bool>(states & _BV(pinNum));
+        const auto activeHigh = (*handler)->isActiveHigh();
+
+        __DBG_printf("pin=%u state=%u activehigh=%u", pinNum, state, activeHigh);
+        if (state == activeHigh) {
+            auto &pin = *reinterpret_cast<DebouncedHardwarePin *>(pinPtr.get());
+            // auto events = pin.getEventsNoInterrupts();
+            const auto currentValue = static_cast<bool>(GPI & _BV(pinNum));
+            const auto currentState = (currentValue == activeHigh);
+            if (currentState == state) {
+                // add recored event
+                pin.addEvent(2500, currentValue);
+            }
+            else {
+                // state changed meanwhile add new event
+                pin.addEvent(micros(), currentValue);
+            }
+#if 1
+            auto events = pin.getEventsNoInterrupts();
+            events.dump(DEBUG_OUTPUT);
+#endif
+        }
+    }
+
+    GPIEC = kButtonPinsMask;  // clear interrupts for all pins
+    ETS_GPIO_INTR_ENABLE();
+
+    pinMonitor._loop();
+
+#if 0
    // reset state and add buttons to the queue that were pressed when the device rebooted
     __LDBG_printf("disabling GPIO interrupts");
     ETS_GPIO_INTR_DISABLE();
 
    __LDBG_printf("reset button state");
-    PinMonitor::eventBuffer.clear();
+#if PIN_MONITOR_ROTARY_ENCODER_SUPPORT
+     PinMonitor::eventBuffer.clear();
+#endif
     auto states = deepSleepPinState.getStates();
     interrupt_levels = deepSleepPinState.getValues();
 
@@ -242,6 +301,7 @@ void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::Depe
     for(auto &event: PinMonitor::eventBuffer) {
         __DBG_printf("pin=%u value=%u time=%u", event.pin(), event.value(), event.getTime());
     }
+#endif
 
 #if DEBUG_PIN_STATE
     LoopFunctions::callOnce([]() {
@@ -266,12 +326,6 @@ void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::Depe
         // fire event
         _chargingStateChanged(true);
     }
-
-#if IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN == 15
-    pinMode(IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN, INPUT);
-#elif IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN != 3 && IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN != 16
-    pinMode(IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN, INPUT_PULLUP);
-#endif
 
     _updateSystemComboButtonLED();
     __LDBG_printf("setup() done");

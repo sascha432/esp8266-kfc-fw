@@ -176,7 +176,7 @@ namespace RemoteControl {
         switch (type) {
         case BaseEventType::CHARGE_DETECTION: {
             bool newState = state & StateType::IS_HIGH;
-#if DEBUG
+#if 0
             __LDBG_printf("event new_state=%u pin_state=%u pin=%u", newState, digitalRead(IOT_REMOTE_CONTROL_CHARGING_PIN), IOT_REMOTE_CONTROL_CHARGING_PIN);
             delay(5); // check pin after 5ms, simple debouncing for prototype board that is using a switch to toggle the charging state
             if (digitalRead(IOT_REMOTE_CONTROL_CHARGING_PIN) != newState) {
@@ -188,6 +188,12 @@ namespace RemoteControl {
             if (newState != _isCharging) {
                 _isCharging = newState;
                 RemoteControlPlugin::getInstance()._chargingStateChanged(_isCharging);
+                if (!_isCharging) {
+                    if (millis() > __autoSleepTimeout) { // stay awake for 30 seconds after disconnecting the charger
+                        _resetAutoSleep();
+                        _setAutoSleepTimeout(millis() + 30000, ~0U);
+                    }
+                }
             }
         } break;
         case BaseEventType::NONE:

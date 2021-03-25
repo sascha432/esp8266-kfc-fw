@@ -6,6 +6,7 @@
 #include <PrintString.h>
 #include "interrupt_impl.h"
 #include "rotary_encoder.h"
+#include "monitor.h"
 
 #if DEBUG_PIN_MONITOR
 #include <debug_helper_enable.h>
@@ -35,7 +36,20 @@ namespace PinMonitor {
         // #define GPCI   7  //INT_TYPE (3bits) 0:disable,1:rising,2:falling,3:change,4:low,5:high
 
         ETS_GPIO_INTR_DISABLE();
+#if PIN_MONITOR_ROTARY_ENCODER_SUPPORT
         eventBuffer.clear();
+#endif
+#if PIN_MONITOR_SIMPLE_PIN || PIN_MONITOR_DEBOUNCED_PUSHBUTTON
+
+        for(const auto &pinPtr: pinMonitor.getPins()) {
+            pinPtr->clear();
+            // switch(pinPtr->_type) {
+            //     case HardwarePinType::DEBOUNCE:
+            //     case HardwarePinType::SIMPLE:
+            //         break;
+            // }
+        }
+#endif
         for(auto pin: Interrupt::kPins) {
             GPC(pin) &= ~(0xF << GPCI);  // INT mode disabled
             GPC(pin) |= ((CHANGE & 0xF) << GPCI);  // INT mode "mode"
@@ -51,26 +65,77 @@ namespace PinMonitor {
         ETS_GPIO_INTR_DISABLE();
     }
 
+#include "BitsToStr.h"
+
     void ICACHE_RAM_ATTR pin_monitor_interrupt_handler(void *ptr)
     {
         using namespace PinMonitor::Interrupt;
-        uint32_t status = GPIE;
-        GPIEC = status;
+        uint32_t status32 = GPIE;
+        GPIEC = status32;
+        uint16_t status = static_cast<uint16_t>(status32);
         if ((status & PinAndMask::mask_of(kPins)) == 0) {
             return;
         }
         auto levels = static_cast<uint16_t>(GPI); // we skip GPIO16 since it cannot handle interrupts anyway
 
-        // to keep the code simple and small in here, just save the time and the GPIO input state
-        // ETS_GPIO_INTR_DISABLE();
         noInterrupts();
-        for(auto pin: kPins) {
-            // if ((status & PinAndMask(pin).mask) | ((PinMonitor::interrupt_levels & PinAndMask(pin).mask) ^ (levels & PinAndMask(pin).mask))) { // 842 free IRAM
-            if ((status & PinAndMask(pin).mask) && (static_cast<bool>(PinMonitor::interrupt_levels & PinAndMask(pin).mask) != static_cast<bool>(levels &  PinAndMask(pin).mask))) { // 826 free IRAM
-            // if (status & PinAndMask(pin).mask) {
-                PinMonitor::eventBuffer.emplace_back(micros(), pin, levels);
+        for(const auto &pinPtr: pinMonitor.getPins()) {
+            const auto pin = pinPtr.get();
+            auto pinNum = pin->getPin();
+            uint16_t mask = _BV(pinNum);
+
+            if (!!((interrupt_levels ^ levels) & status & mask) != ((status & mask) && (static_cast<bool>(PinMonitor::interrupt_levels & mask) != static_cast<bool>(levels & mask)))) {
+                __DBG_panic("(!!((interrupt_levels ^ levels) & status & mask) != ((status & mask) && (static_cast<bool>(PinMonitor::interrupt_levels & mask) != static_cast<bool>(levels & mask))))");
             }
+
+            //     interrupts();
+            //     Serial.printf_P(PSTR("%u (%u%u%u-%u-%u-%u)"),
+            //         pinNum,
+            //         // BitsToStr<16, false>(mask).toString().c_str(),
+            //         !!(status & mask),
+            //         !!(PinMonitor::interrupt_levels & mask),
+            //         !!(levels & mask),
+            //         (status & mask) && (static_cast<bool>(PinMonitor::interrupt_levels & mask) != static_cast<bool>(levels & mask)),
+            //         !!(((interrupt_levels ^ levels ) & status) & mask)
+            //     );
+            //     Serial.println();
+            //     noInterrupts();
+            // }
+
+
+
+            // if (!((status & mask) && (static_cast<bool>(PinMonitor::interrupt_levels & mask) != static_cast<bool>(levels & mask)))) {
+            if (!((interrupt_levels ^ levels) & status & mask)) {
+                continue;
+            }
+
+            switch(pin->_type) {
+#if PIN_MONITOR_DEBOUNCED_PUSHBUTTON
+                case HardwarePinType::DEBOUNCE:
+                    reinterpret_cast<DebouncedHardwarePin *>(pin)->addEvent(micros(), levels & mask);
+                    break;
+#endif
+#if PIN_MONITOR_SIMPLE_PIN
+                case HardwarePinType::SIMPLE:
+                    reinterpret_cast<SimpleHardwarePin *>(pin)->addEvent(levels & mask);
+                    break;
+#endif
+#if PIN_MONITOR_ROTARY_ENCODER_SUPPORT
+                case HardwarePinType::ROTARY:
+                    PinMonitor::eventBuffer.emplace_back(micros(), pinNum);
+                    break;
+#endif
+                default:
+                    break;
+    }
         }
+
+        // for(auto pin: kPins) {
+        //     if ((status & PinAndMask(pin).mask) && (static_cast<bool>(PinMonitor::interrupt_levels & PinAndMask(pin).mask) != static_cast<bool>(levels &  PinAndMask(pin).mask))) { // 826 free IRAM
+        //     // if (status & PinAndMask(pin).mask) {
+        //         PinMonitor::eventBuffer.emplace_back(micros(), pin, levels);
+        //     }
+        // }
         PinMonitor::interrupt_levels = levels;
         interrupts();
         // ETS_GPIO_INTR_ENABLE();

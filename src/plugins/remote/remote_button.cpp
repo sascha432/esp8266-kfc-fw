@@ -82,7 +82,7 @@ void Button::event(EventType eventType, uint32_t now)
     }
 
 #if 1
-    __LDBG_printf("event_type=%s (%ux) button#=%u first_time=%u time=%u pressed=%s",
+    __DBG_printf("event_type=%s (%ux) button#=%u first_time=%u time=%u pressed=%s",
         eventTypeToString(eventType),
         _repeatCount,
         _button,

@@ -24,6 +24,7 @@
 #include "session.h"
 #include "../include/templates.h"
 #include "web_socket.h"
+#include "web_server_action.h"
 #include "WebUISocket.h"
 #include "WebUIAlerts.h"
 #include "kfc_fw_config.h"
@@ -195,7 +196,7 @@ bool Plugin::_clientAcceptsGzip(AsyncWebServerRequest *request) const
 void Plugin::handlerNotFound(AsyncWebServerRequest *request)
 {
     WebServerSetCPUSpeedHelper setCPUSpeed;
-    HttpHeaders httpHeaders;
+    HttpHeaders headers;
     AsyncWebServerResponse *response = nullptr;
 
     // StringVector list;
@@ -208,17 +209,17 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
     // --------------------------------------------------------------------
     if (url == F("/is-alive")) {
         response = request->beginResponse(200, FSPGM(mime_text_plain), String(request->arg(String('p')).toInt()));
-        httpHeaders.addNoCache(true);
-        httpHeaders.setResponseHeaders(response);
+        headers.addNoCache(true);
+        headers.setResponseHeaders(response);
     }
     // --------------------------------------------------------------------
     else if (url == F("/webui-handler")) {
-        plugin._handlerWebUI(request, httpHeaders);
+        plugin._handlerWebUI(request, headers);
         return;
     }
     // --------------------------------------------------------------------
     else if (url == F("/alerts")) {
-        plugin._handlerAlerts(request, httpHeaders);
+        plugin._handlerAlerts(request, headers);
         return;
     }
     // --------------------------------------------------------------------
@@ -227,20 +228,20 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
             request->send(403);
             return;
         }
-        httpHeaders.addNoCache(true);
+        headers.addNoCache(true);
         PrintHtmlEntitiesString str;
         WebTemplate::printSystemTime(time(nullptr), str);
         response = new AsyncBasicResponse(200, FSPGM(mime_text_html), str);
-        httpHeaders.setResponseHeaders(response);
+        headers.setResponseHeaders(response);
     }
     // --------------------------------------------------------------------
     else if (url == F("/export-settings")) {
-        plugin._handlerExportSettings(request, httpHeaders);
+        plugin._handlerExportSettings(request, headers);
         return;
     }
     // --------------------------------------------------------------------
     else if (url == F("/import-settings")) {
-        plugin._handlerImportSettings(request, httpHeaders);
+        plugin._handlerImportSettings(request, headers);
         return;
     }
     // --------------------------------------------------------------------
@@ -249,18 +250,21 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
             request->send(403, FSPGM(mime_text_html));
             return;
         }
-        httpHeaders.addNoCache();
+        headers.addNoCache();
         response = new AsyncNetworkScanResponse(request->arg(FSPGM(hidden, "hidden")).toInt());
-        httpHeaders.setResponseHeaders(response);
+        headers.setResponseHeaders(response);
     }
     // --------------------------------------------------------------------
     else if (url == F("/logout")) {
         __SID(__DBG_printf("sending remove SID cookie"));
-        httpHeaders.addNoCache(true);
-        httpHeaders.add(createRemoveSessionIdCookie());
-        httpHeaders.add<HttpLocationHeader>(String('/'));
-        response = request->beginResponse(302);
-        httpHeaders.setResponseHeaders(response);
+        headers.addNoCache(true);
+        headers.add(createRemoveSessionIdCookie());
+
+        // headers.add<HttpLocationHeader>(String('/'));
+        // response = request->beginResponse(302);
+        // headers.setResponseHeaders(response);
+
+        response = HttpLocationHeader::redir(request, String('/'), headers);
     }
     // --------------------------------------------------------------------
     else if (url == F("/mqtt-publish-ad.html")) {
@@ -268,63 +272,41 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
             request->send(403, FSPGM(mime_text_html));
             return;
         }
-        // Action::getInstance().initSession(request, F("/mqtt-publish-ad.html"), F("MQTT Auto Discovery"));
 
-        uint32_t now = time(nullptr);
-        uint32_t actionId = request->arg(F("action")).toInt();
-        bool run = false;
-        if (actionId == 0) {
-            auto url = PrintString(F("%s?action=%u"), PSTR("/mqtt-publish-ad.html"), now - 5);
-            httpHeaders.addNoCache(true);
-            httpHeaders.add<HttpLocationHeader>(url);
-            response = request->beginResponse(302);
-            httpHeaders.setResponseHeaders(response);
-            request->send(response);
-            return;
-        }
-        else {
-            String lastActionId;
-            HttpCookieHeader::parseCookie(request, F("last_action_id"), lastActionId);
-            auto cookieActionId = static_cast<uint32_t>(lastActionId.toInt());
-            if ((cookieActionId != actionId) && (actionId <= now)) {
-                httpHeaders.add<HttpCookieHeader>(F("last_action_id"), String(actionId));
-                __LDBG_printf("action_id=%u cookie_action_id=%u now=%u", actionId, cookieActionId, now);
-                run = true;
-            }
-            else {
-                __LDBG_printf("cookie or expired: action_id=%u cookie_action_id=%u now=%u cookie_len=%u", actionId, cookieActionId, now, lastActionId.length());
-            }
-        }
-
-        MessageTemplate *tpl = new MessageTemplate(String(), ("MQTT Client"));
-        tpl->setAuthenticated(true);
-        if (!run) {
-            tpl->setMessage(F("This page has been reloaded. Use the original link to execute the action again or press the run again button, if available"));
-            tpl->setTitleClass(F("text-white bg-info text-white"));
-        }
-        else {
+        auto &session = Action::Handler::getInstance().initSession(request, F("/mqtt-publish-ad.html"), F("MQTT Auto Discovery"), Action::AuthType::AUTH);
+        if (session.isNew()) {
             auto client = MQTT::Client::getClient();
-            if (!client) {
-                tpl->setMessage(F("MQTT client is disabled"));
-                tpl->setTitleClass(F("text-white bg-warning text-dark"));
+            bool result = false;
+            if (client) {
+                auto sessionId = session.getId();
+                result = client->publishAutoDiscovery(MQTT::RunFlags::FORCE, [sessionId](MQTT::AutoDiscovery::StatusType status) {
+                    const auto session = Action::Handler::getInstance().getSession(sessionId);
+                    if (session) {
+                        switch(status) {
+                            case MQTT::AutoDiscovery::StatusType::DEFERRED:
+                                session->setStatus(F("Auto discovery deferred..."));
+                                break;
+                            case MQTT::AutoDiscovery::StatusType::STARTED:
+                                session->setStatus(F("Auto discovery running..." MESSAGE_TEMPLATE_AUTO_RELOAD(15)));
+                                break;
+                            case MQTT::AutoDiscovery::StatusType::SUCCESS:
+                                session->setStatus(F("Auto discovery successfully published..."), MessageType::SUCCESS);
+                                break;
+                            case MQTT::AutoDiscovery::StatusType::FAILURE:
+                                session->setStatus(F("Failed to publish auto discovery..."), MessageType::DANGER);
+                                break;
+                        }
+                    }
+                });
             }
-            else if (!client->isConnected()) {
-                tpl->setMessage(PrintString(F("MQTT client is %s"), client->getConnectionState()));
-                tpl->setTitleClass(F("text-white bg-warning text-dark"));
+            if (result) {
+                session = Action::StateType::EXECUTING;
+                session.setStatus(F("Starting auto discovery..." MESSAGE_TEMPLATE_AUTO_RELOAD(15)));
             }
             else {
-                if (client->publishAutoDiscovery(MQTT::RunFlags::FORCE)) {
-                    tpl->setMessage(F("Publishing auto discovery..."));
-                }
-                else {
-                    tpl->setMessage(F("Failed to publish auto discovery..."));
-                    tpl->setTitleClass(F("text-white bg-danger text-white"));
-                }
+                session = Action::StateType::FINISHED;
+                session.setStatus(F("Failed to publish auto discovery..."), MessageType::DANGER);
             }
-        }
-        httpHeaders.addNoCache(true);
-        if (!WebServer::Plugin::sendFileResponse(200, F("/.message.html"), request, httpHeaders, tpl)) {
-            plugin.send(500, request);
         }
         return;
     }
@@ -334,9 +316,9 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
             request->send(403);
             return;
         }
-        httpHeaders.addNoCache(true);
+        headers.addNoCache(true);
         response = new AsyncResolveZeroconfResponse(request->arg(FSPGM(value)));
-        httpHeaders.setResponseHeaders(response);
+        headers.setResponseHeaders(response);
     }
     // --------------------------------------------------------------------
     else if (url == F("/savecrash.json")) {
@@ -344,12 +326,12 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
             request->send(403);
             return;
         }
-        httpHeaders.addNoCache(true);
-        response = SaveCrash::webHandler::json(request, httpHeaders);
+        headers.addNoCache(true);
+        response = SaveCrash::webHandler::json(request, headers);
     }
     // --------------------------------------------------------------------
     else if (url.startsWith(F("/speedtest."))) { // handles speedtest.zip and speedtest.bmp
-        plugin._handlerSpeedTest(request, !url.endsWith(F(".bmp")), httpHeaders);
+        plugin._handlerSpeedTest(request, !url.endsWith(F(".bmp")), headers);
         return;
     }
 
@@ -360,7 +342,7 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
     }
 
     // else section
-    if (plugin._handleFileRead(url, plugin._clientAcceptsGzip(request), request, httpHeaders)) {
+    if (plugin._handleFileRead(url, plugin._clientAcceptsGzip(request), request, headers)) {
         return;
     }
     send(404, request);
@@ -411,10 +393,10 @@ bool Plugin::sendFileResponse(uint16_t code, const String &path, AsyncWebServerR
     auto mapping = FileMapping(path);
     if (mapping.exists()) {
         if (!webTemplate) {
-            webTemplate = new WebTemplate();
+            webTemplate = new WebTemplate(isAuthenticated(request) ? WebTemplate::AuthType::AUTH : WebTemplate::AuthType::NO_AUTH);
         }
         if (!webTemplate->isAuthenticationSet()) {
-            webTemplate->setAuthenticated(isAuthenticated(request));
+            __DBG_printf("not authenticated %s", path.c_str());
         }
         auto response = new AsyncTemplateResponse(FSPGM(mime_text_html), mapping.open(FileOpenMode::read), webTemplate, [webTemplate](const String& name, DataProviderInterface &provider) {
             return TemplateDataProvider::callback(name, provider, *webTemplate);
@@ -432,12 +414,9 @@ bool Plugin::sendFileResponse(uint16_t code, const String &path, AsyncWebServerR
     return false;
 }
 
-void Plugin::message(AsyncWebServerRequest *request, MessageType type, const String &message, const String &title)
+void Plugin::message(AsyncWebServerRequest *request, MessageType type, const String &message, const String &title, HttpHeaders &headers)
 {
-    HttpHeaders headers;
-    headers.addNoCache(true);
-    auto webTemplate = new MessageTemplate(message, title);
-    webTemplate->setAuthenticated(isAuthenticated(request));
+    auto webTemplate = new MessageTemplate(message, title, isAuthenticated(request));
     switch(type) {
         case MessageType::DANGER:
             webTemplate->setTitleClass(F("text-white bg-danger"));
@@ -481,7 +460,7 @@ void Plugin::send(uint16_t httpCode, AsyncWebServerRequest *request, const Strin
     request->send(response);
 }
 
-void Plugin::_handlerWebUI(AsyncWebServerRequest *request, HttpHeaders &httpHeaders)
+void Plugin::_handlerWebUI(AsyncWebServerRequest *request, HttpHeaders &headers)
 {
     if (!plugin.isAuthenticated(request)) {
         request->send(403);
@@ -499,19 +478,19 @@ void Plugin::_handlerWebUI(AsyncWebServerRequest *request, HttpHeaders &httpHead
         str = json.toString();
     }
     auto response = new AsyncBasicResponse(200, FSPGM(mime_application_json), str);
-    httpHeaders.addNoCache();
+    headers.addNoCache();
 
     // PrintHtmlEntitiesString timeStr;
     // WebTemplate::printSystemTime(time(nullptr), timeStr);
-    // httpHeaders.add<HttpSimpleHeader>('device-time', timeStr);
+    // headers.add<HttpSimpleHeader>('device-time', timeStr);
 
-    httpHeaders.setResponseHeaders(response);
+    headers.setResponseHeaders(response);
     //TODO fix
     // auto response = new AsyncJsonResponse();
     // WebUISocket::createWebUIJSON(response->getJsonObject());
-    // HttpHeaders httpHeaders;
-    // httpHeaders.addNoCache();
-    // httpHeaders.setAsyncBaseResponseHeaders(response);
+    // HttpHeaders headers;
+    // headers.addNoCache();
+    // headers.setAsyncBaseResponseHeaders(response);
     request->send(response);
 }
 
@@ -557,9 +536,9 @@ void Plugin::_handlerAlerts(AsyncWebServerRequest *request, HttpHeaders &headers
     //     WebAlerts::Alert::printAlertsAsJson(str, pollId, false);
 
     //     AsyncWebServerResponse *response = new AsyncBasicResponse(200, FSPGM(mime_application_json), str);
-    //     HttpHeaders httpHeaders;
-    //     httpHeaders.addNoCache();
-    //     httpHeaders.setResponseHeaders(response);
+    //     HttpHeaders headers;
+    //     headers.addNoCache();
+    //     headers.setResponseHeaders(response);
     //     request->send(response);
     //     return;
     // }
@@ -601,7 +580,7 @@ void Plugin::_addRestHandler(RestHandler &&handler)
     }
 }
 
-void Plugin::_handlerSpeedTest(AsyncWebServerRequest *request, bool zip, HttpHeaders &httpHeaders)
+void Plugin::_handlerSpeedTest(AsyncWebServerRequest *request, bool zip, HttpHeaders &headers)
 {
 #if !defined(SPEED_TEST_NO_AUTH) || SPEED_TEST_NO_AUTH == 0
     if (!isAuthenticated(request)) {
@@ -609,31 +588,31 @@ void Plugin::_handlerSpeedTest(AsyncWebServerRequest *request, bool zip, HttpHea
         return;
     }
 #endif
-    httpHeaders.clear(2); // remove default headers and reserve 3 headers
-    httpHeaders.addNoCache(); // adds 2 headers
+    headers.clear(2); // remove default headers and reserve 3 headers
+    headers.addNoCache(); // adds 2 headers
 
     AsyncSpeedTestResponse *response;
     auto size = std::max(1024 * 64, (int)request->arg(FSPGM(size, "size")).toInt());
     if (zip) {
         response = new AsyncSpeedTestResponse(FSPGM(mime_application_zip), size);
-        httpHeaders.add<HttpDispositionHeader>(F("speedtest.zip"));
+        headers.add<HttpDispositionHeader>(F("speedtest.zip"));
     } else {
         response = new AsyncSpeedTestResponse(FSPGM(mime_image_bmp), size);
     }
-    httpHeaders.setResponseHeaders(response);
+    headers.setResponseHeaders(response);
 
     request->send(response);
 }
 
-void Plugin::_handlerImportSettings(AsyncWebServerRequest *request, HttpHeaders &httpHeaders)
+void Plugin::_handlerImportSettings(AsyncWebServerRequest *request, HttpHeaders &headers)
 {
     if (!isAuthenticated(request)) {
         send(403, request);
         return;
     }
 
-    httpHeaders.clear();
-    httpHeaders.addNoCache();
+    headers.clear();
+    headers.addNoCache();
 
     int count = -1;
     uint16_t status;
@@ -666,14 +645,14 @@ void Plugin::_handlerImportSettings(AsyncWebServerRequest *request, HttpHeaders 
     request->send(200, FSPGM(mime_text_plain), PrintString(F("{\"status\":%u,\"count\":%d,\"message\":\"%s\"}"), status, count, message));
 }
 
-void Plugin::_handlerExportSettings(AsyncWebServerRequest *request, HttpHeaders &httpHeaders)
+void Plugin::_handlerExportSettings(AsyncWebServerRequest *request, HttpHeaders &headers)
 {
     if (!isAuthenticated(request)) {
         send(403, request);
         return;
     }
-    httpHeaders.clear();
-    httpHeaders.addNoCache();
+    headers.clear();
+    headers.addNoCache();
 
     auto hostname = System::Device::getName();
 
@@ -682,12 +661,12 @@ void Plugin::_handlerExportSettings(AsyncWebServerRequest *request, HttpHeaders 
     struct tm *tm = localtime(&now);
     strftime_P(timeStr, sizeof(timeStr), PSTR("%Y%m%d_%H%M%S"), tm);
     PrintString filename(F("kfcfw_config_%s_b" __BUILD_NUMBER "_%s.json"), hostname, timeStr);
-    httpHeaders.add<HttpDispositionHeader>(filename);
+    headers.add<HttpDispositionHeader>(filename);
 
     PrintString content;
     config.exportAsJson(content, config.getFirmwareVersion());
     AsyncWebServerResponse *response = new AsyncBasicResponse(200, FSPGM(mime_application_json), content);
-    httpHeaders.setResponseHeaders(response);
+    headers.setResponseHeaders(response);
 
     request->send(response);
 }
@@ -875,9 +854,9 @@ void Plugin::begin(bool restart)
     __LDBG_printf("HTTP running on port %u", cfg.getPort());
 }
 
-bool Plugin::_sendFile(const FileMapping &mapping, const String &formName, HttpHeaders &httpHeaders, bool client_accepts_gzip, bool isAuthenticated, AsyncWebServerRequest *request, WebTemplate *webTemplate)
+bool Plugin::_sendFile(const FileMapping &mapping, const String &formName, HttpHeaders &headers, bool client_accepts_gzip, bool isAuthenticated, AsyncWebServerRequest *request, WebTemplate *webTemplate)
 {
-    auto response = _beginFileResponse(mapping, formName, httpHeaders, client_accepts_gzip, isAuthenticated, request, webTemplate);
+    auto response = _beginFileResponse(mapping, formName, headers, client_accepts_gzip, isAuthenticated, request, webTemplate);
     if (response) {
         request->send(response);
         return true;
@@ -885,7 +864,7 @@ bool Plugin::_sendFile(const FileMapping &mapping, const String &formName, HttpH
     return false;
 }
 
-AsyncWebServerResponse *Plugin::_beginFileResponse(const FileMapping &mapping, const String &formName, HttpHeaders &httpHeaders, bool client_accepts_gzip, bool isAuthenticated, AsyncWebServerRequest *request, WebTemplate *webTemplate)
+AsyncWebServerResponse *Plugin::_beginFileResponse(const FileMapping &mapping, const String &formName, HttpHeaders &headers, bool client_accepts_gzip, bool isAuthenticated, AsyncWebServerRequest *request, WebTemplate *webTemplate)
 {
     __LDBG_printf("mapping=%s exists=%u form=%s gz=%u auth=%u request=%p web_template=%p", mapping.getFilename(), mapping.exists(), formName.c_str(), client_accepts_gzip, isAuthenticated, request, webTemplate);
 
@@ -931,13 +910,13 @@ AsyncWebServerResponse *Plugin::_beginFileResponse(const FileMapping &mapping, c
         response = new AsyncTemplateResponse(FPSTR(getContentType(path)), mapping.open(FileOpenMode::read), webTemplate, [webTemplate](const String& name, DataProviderInterface &provider) {
             return TemplateDataProvider::callback(name, provider, *webTemplate);
         });
-        httpHeaders.addNoCache();
+        headers.addNoCache();
     }
     else {
-        httpHeaders.replace<HttpDateHeader>(FSPGM(Expires), 86400 * 30);
-        httpHeaders.replace<HttpDateHeader>(FSPGM(Last_Modified), mapping.getModificationTime());
+        headers.replace<HttpDateHeader>(FSPGM(Expires), 86400 * 30);
+        headers.replace<HttpDateHeader>(FSPGM(Last_Modified), mapping.getModificationTime());
         if (_isPublic(path)) {
-            httpHeaders.replace<HttpCacheControlHeader>(HttpCacheControlHeader::PUBLIC);
+            headers.replace<HttpCacheControlHeader>(HttpCacheControlHeader::PUBLIC);
         }
         // regular file
 #if 0
@@ -945,16 +924,16 @@ AsyncWebServerResponse *Plugin::_beginFileResponse(const FileMapping &mapping, c
 #else
         auto response = new AsyncFileResponse(mapping.open(FileOpenMode::read), path, FPSTR(getContentType(path)));
         if (mapping.isGz()) {
-            httpHeaders.add(FSPGM(Content_Encoding), FSPGM(gzip));
+            headers.add(FSPGM(Content_Encoding), FSPGM(gzip));
         }
-        httpHeaders.setResponseHeaders(response);
+        headers.setResponseHeaders(response);
         return response;
 #endif
     }
     if (mapping.isGz()) {
-        httpHeaders.add(FSPGM(Content_Encoding), FSPGM(gzip));
+        headers.add(FSPGM(Content_Encoding), FSPGM(gzip));
     }
-    httpHeaders.setResponseHeaders(response);
+    headers.setResponseHeaders(response);
     return response;
 }
 
@@ -976,7 +955,7 @@ void Plugin::setUpdateFirmwareCallback(UpdateFirmwareCallback callback)
 #endif
 }
 
-bool Plugin::_handleFileRead(String path, bool client_accepts_gzip, AsyncWebServerRequest *request, HttpHeaders &httpHeaders)
+bool Plugin::_handleFileRead(String path, bool client_accepts_gzip, AsyncWebServerRequest *request, HttpHeaders &headers)
 {
     __LDBG_printf("path=%s gz=%u request=%p", path.c_str(), client_accepts_gzip, request);
 
@@ -1022,7 +1001,7 @@ bool Plugin::_handleFileRead(String path, bool client_accepts_gzip, AsyncWebServ
             Logger_security(F("Authentication failed for %s"), IPAddress(request->client()->getRemoteAddress()).toString().c_str());
         }
 
-        httpHeaders.addNoCache(true);
+        headers.addNoCache(true);
 
         const String *pUsername;
         const String *pPassword;
@@ -1044,7 +1023,7 @@ bool Plugin::_handleFileRead(String path, bool client_accepts_gzip, AsyncWebServ
                 (*pUsername == username && *pPassword == password)
             ) {
 
-                auto &cookie = httpHeaders.add<HttpCookieHeader>(FSPGM(SID), generate_session_id(username, password, nullptr), String('/'));
+                auto &cookie = headers.add<HttpCookieHeader>(FSPGM(SID), generate_session_id(username, password, nullptr), String('/'));
                 authType = AuthType::PASSWORD;
                 time_t keepTime = request->arg(FSPGM(keep, "keep")).toInt();
                 if (keepTime) {
@@ -1069,13 +1048,13 @@ bool Plugin::_handleFileRead(String path, bool client_accepts_gzip, AsyncWebServ
                 else {
                     Logger_security(F("Login from %s failed (%s)"), remote_addr.toString().c_str(), getAuthTypeStr(authType));
                 }
-                return _sendFile(FSPGM(_login_html, "/login.html"), String(), httpHeaders, client_accepts_gzip, isAuthenticated, request, new LoginTemplate(loginError));
+                return _sendFile(FSPGM(_login_html, "/login.html"), String(), headers, client_accepts_gzip, isAuthenticated, request, new LoginTemplate(loginError));
             }
         }
         else {
             if (path.endsWith(FSPGM(_html))) {
-                httpHeaders.add(createRemoveSessionIdCookie());
-                return _sendFile(FSPGM(_login_html), String(), httpHeaders, client_accepts_gzip, isAuthenticated, request, new LoginTemplate(loginError));
+                headers.add(createRemoveSessionIdCookie());
+                return _sendFile(FSPGM(_login_html), String(), headers, client_accepts_gzip, isAuthenticated, request, new LoginTemplate(loginError));
             }
             else {
                 send(403, request);
@@ -1088,7 +1067,7 @@ bool Plugin::_handleFileRead(String path, bool client_accepts_gzip, AsyncWebServ
 
         __LDBG_printf("HTTP post %s", path.c_str());
 
-        httpHeaders.addNoCache(true);
+        headers.addNoCache(true);
 
         if (path.startsWith('/') && path.endsWith(FSPGM(_html))) {
             // auto name = path.substring(1, path.length() - 5);
@@ -1149,7 +1128,7 @@ bool Plugin::_handleFileRead(String path, bool client_accepts_gzip, AsyncWebServ
         }
     }
 
-    return _sendFile(mapping, formName, httpHeaders, client_accepts_gzip, isAuthenticated, request, webTemplate);
+    return _sendFile(mapping, formName, headers, client_accepts_gzip, isAuthenticated, request, webTemplate);
 }
 
 Plugin::Plugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(Plugin))
@@ -1336,7 +1315,7 @@ AuthType Plugin::getAuthenticated(AsyncWebServerRequest *request)
 
 namespace SaveCrash {
 
-    AsyncWebServerResponse *webHandler::json(AsyncWebServerRequest *request, HttpHeaders &httpHeaders)
+    AsyncWebServerResponse *webHandler::json(AsyncWebServerRequest *request, HttpHeaders &headers)
     {
         using namespace MQTT::Json;
 
@@ -1400,7 +1379,7 @@ namespace SaveCrash {
             response = request->beginResponse(200, FSPGM(mime_application_json), jsonStr);
         }
 
-        httpHeaders.setResponseHeaders(response);
+        headers.setResponseHeaders(response);
         return response;
     }
 }

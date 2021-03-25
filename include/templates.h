@@ -22,7 +22,14 @@ class SettingsForm;
 
 class WebTemplate {
 public:
-    WebTemplate();
+    enum class AuthType : uint8_t {
+        NONE,
+        AUTH,
+        NO_AUTH
+    };
+
+public:
+    WebTemplate(AuthType authenticated = AuthType::NONE);
     virtual ~WebTemplate();
 
     void setSelfUri(const String &selfUri);
@@ -52,12 +59,6 @@ public:
     static String _aliveRedirection;
 
 protected:
-    enum class AuthType : uint8_t {
-        NONE,
-        AUTH,
-        NO_AUTH
-    };
-
     FormUI::Form::BaseForm *_form;
     String _selfUri;
     JsonUnnamedObject *_json;
@@ -65,10 +66,10 @@ protected:
     AuthType _isAuthenticated;
 };
 
-inline WebTemplate::WebTemplate() :
+inline WebTemplate::WebTemplate(AuthType authenticated) :
     _form(nullptr),
     _json(nullptr),
-    _isAuthenticated(AuthType::NONE)
+    _isAuthenticated(authenticated)
 {
 }
 
@@ -95,7 +96,7 @@ inline void WebTemplate::setAuthenticated(bool isAuthenticated)
 inline bool WebTemplate::isAuthenticated() const
 {
     if (_isAuthenticated == AuthType::NO_AUTH) {
-        __DBG_printf("authentication not set");
+        __DBG_printf("authentication not set: _selfUri=%s form=%p", _selfUri.c_str(), _form);
     }
     return _isAuthenticated == AuthType::AUTH;
 }
@@ -151,6 +152,8 @@ protected:
     String _errorMessage;
 };
 
+#define MESSAGE_TEMPLATE_AUTO_RELOAD(timeout)       "<span class=\"auto-reload\" data-timeout=\"" _STRINGIFY(timeout) "\"><img src=\"images/spinner.gif\" class=\"p-1 ml-3\" width=\"36\" height=\"36\"></span>"
+
 class MessageTemplate : public WebTemplate {
 public:
     static constexpr uint8_t kHtmlNone = 0x00;
@@ -159,7 +162,8 @@ public:
 
 public:
     // the message and title may contain html code
-    MessageTemplate(const String &message, const String &title = String()) :
+    MessageTemplate(const String &message, const String &title = String(), bool isAuthenticated = false) :
+        WebTemplate(isAuthenticated ? AuthType::AUTH : AuthType::NO_AUTH),
         _title(title),
         _message(message),
         _titleClass(nullptr),

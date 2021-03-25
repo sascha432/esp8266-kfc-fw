@@ -23,7 +23,7 @@ class AsyncBaseResponse;
 #endif
 
 class HttpHeader;
-class Httpheaders;
+class HttpHeaders;
 
 typedef std::unique_ptr<HttpHeader>                             HttpHeaderPtr;
 typedef std::vector<HttpHeaderPtr>                              HttpHeadersVector;
@@ -82,6 +82,9 @@ public:
 class HttpLocationHeader : public HttpSimpleHeader {
 public:
     HttpLocationHeader(const String &location);
+
+    static AsyncWebServerResponse *redir(AsyncWebServerRequest *request, const String &url, HttpHeaders &headers);
+    static AsyncWebServerResponse *redir(AsyncWebServerRequest *request, const String &url);
 };
 
 class HttpLinkHeader : public HttpSimpleHeader {

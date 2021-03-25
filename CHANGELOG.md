@@ -62,9 +62,13 @@
 - Added min. and max. range limits to reduce the dimmable range (Dimmer Plugin)
 - Web server does not require re-registering web handlers and web sockets on reconfigure anymore
 - Support for ArduinoOTA
-- Max. deep sleep time increasse to up to 31 days
-- Replaced EspSaveCrash with own iplementation that writes to flash memory directly and supports multiple sectors
+- Max. deep sleep time increased to up to 31 days
+- Replaced EspSaveCrash with own implementation that writes to flash storage directly without allocating any memory and supports multiple sectors
 - RTC emulation using the RTC memory
+- Class to write to flash storage with copy on write/basic wear leveling
+- 64/256KB flash storage that survives firmware and file system upgrades
+- Replace read only files from WebUI by placing files in `/.wor/*`
+- SaveCrash WebUI to download crash logs. MD5 checksum of the firmware is included
 
 ## Version 0.0.3
 

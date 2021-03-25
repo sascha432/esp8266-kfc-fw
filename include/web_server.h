@@ -56,7 +56,7 @@ namespace WebServer {
         BEARER,
     };
 
-    enum class MessageType {
+    enum class MessageType : uint8_t {
         DANGER,
         WARNING,
         INFO,
@@ -192,7 +192,8 @@ namespace WebServer {
         // returns false on error
         static bool sendFileResponse(uint16_t code, const String &path, AsyncWebServerRequest *request, HttpHeaders &headers, WebTemplate *webTemplate = nullptr);
 
-        static void message(AsyncWebServerRequest *request, MessageType type, const String &message, const String &title);
+        static void message(AsyncWebServerRequest *request, MessageType type, const String &message, const String &title, HttpHeaders &headers);
+        static void message(AsyncWebServerRequest *request, MessageType type, const String &msg, const String &title);
 
         static void send(uint16_t httpCode, AsyncWebServerRequest *request, const String &message = String());
 
@@ -208,21 +209,7 @@ namespace WebServer {
         static void executeDelayed(AsyncWebServerRequest *request, std::function<void()> callback);
 
     public:
-        static const __FlashStringHelper *getAuthTypeStr(AuthType type) {
-            switch(type) {
-                case AuthType::SID:
-                    return F("Session");
-                case AuthType::SID_COOKIE:
-                    return F("Session Cookie");
-                case AuthType::BEARER:
-                    return F("Bearer Token");
-                case AuthType::PASSWORD:
-                    return F("Password");
-                default:
-                    break;
-            }
-            return F("Not Authorized");
-        }
+        static const __FlashStringHelper *getAuthTypeStr(AuthType type);
 
         bool isRunning() const;
         static AuthType getAuthenticated(AsyncWebServerRequest *request);
@@ -328,6 +315,30 @@ namespace WebServer {
     inline bool Plugin::isAuthenticated(AsyncWebServerRequest *request)
     {
         return getAuthenticated(request) > AuthType::NONE;
+    }
+
+    inline const __FlashStringHelper *Plugin::getAuthTypeStr(AuthType type)
+    {
+        switch(type) {
+            case AuthType::SID:
+                return F("Session");
+            case AuthType::SID_COOKIE:
+                return F("Session Cookie");
+            case AuthType::BEARER:
+                return F("Bearer Token");
+            case AuthType::PASSWORD:
+                return F("Password");
+            default:
+                break;
+        }
+        return F("Not Authorized");
+    }
+
+    inline void Plugin::message(AsyncWebServerRequest *request, MessageType type, const String &msg, const String &title)
+    {
+        HttpHeaders headers;
+        headers.addNoCache();
+        message(request, type, msg, title, headers);
     }
 
 

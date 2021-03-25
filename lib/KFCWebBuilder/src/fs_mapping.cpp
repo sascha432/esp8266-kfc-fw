@@ -44,7 +44,7 @@ uint32_t crc32b(const void *message, size_t length, uint32_t crc)
 
 void FileMapping::_openByFilename()
 {
-    String overrides = F("/.overrides");
+    String overrides = F("/.wor");
     if (!_filename.startsWith('/')) {
         overrides += '/';
     }

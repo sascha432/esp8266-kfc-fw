@@ -32,6 +32,8 @@ Framework to build WebUIs with bootstrap and store them mostly compressed in a v
 ~~Read only file system with long filename support, optimized for low memory environments~~
 Due to constantly changing file system implementations of the Arduno frameworks currently replaced with long filename support on top of SPIFFS/LittleFS, but no transparent access for Dir()/File() anymore. Replacement classes ListDir and SPIFFSWrapper.
 
+Support for overriding read only files by uploading to a special directory.
+
 ### KFCJson
 
 Library to read streamed JSON documents and create JSON streams with small buffer size
@@ -179,6 +181,10 @@ https://github.com/sascha432/ESP8266-WiFi-Weather-Station
 ### File Manager
 
 WebUI to explore and modify SPIFFS and KFCVirtualFileSystem
+
+### SaveCrash
+
+Store crash logs with checksum of the firmware, version and other details directly on flash memory. Does not allocate any memory and uses copy on write to ensure no data is lost. WebUI to review crash reports and download stack traces. The OTA tool supports archiving .ELF files that were uploaded, including file system images and configuration files/git revision...
 
 ## Required third party libraries
 

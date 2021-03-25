@@ -109,6 +109,21 @@ HttpLocationHeader::HttpLocationHeader(const String &location) : HttpSimpleHeade
 {
 }
 
+AsyncWebServerResponse *HttpLocationHeader::redir(AsyncWebServerRequest *request, const String &url, HttpHeaders &headers)
+{
+    auto response = request->beginResponse(302);
+    headers.replace<HttpLocationHeader>(url);
+    headers.setResponseHeaders(response);
+    return response;
+}
+
+AsyncWebServerResponse *HttpLocationHeader::redir(AsyncWebServerRequest *request, const String &url)
+{
+    HttpHeaders headers;
+    headers.addNoCache(true);
+    return redir(request, url, headers);
+}
+
 
 HttpLinkHeader::HttpLinkHeader(const String &location) : HttpSimpleHeader(FSPGM(Link), location)
 {

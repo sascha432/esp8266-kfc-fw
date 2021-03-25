@@ -19,7 +19,9 @@
 
 namespace PinMonitor {
 
+#if PIN_MONITOR_ROTARY_ENCODER_SUPPORT
     Interrupt::EventBuffer eventBuffer;
+#endif
     uint16_t interrupt_levels;
 
 // ------------------------------------------------------------------------

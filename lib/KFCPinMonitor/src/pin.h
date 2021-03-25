@@ -58,6 +58,14 @@ namespace PinMonitor {
             _activeState = static_cast<bool>(activeState);
         }
 
+        inline bool isActiveHigh() const {
+            return _activeState;
+        }
+
+        inline bool isActiveLow() const {
+            return !_activeState;
+        }
+
         inline bool isEnabled() const {
             return !_disabled;
         }
@@ -134,10 +142,20 @@ namespace PinMonitor {
             return _pin;
         }
 
+        HardwarePinType getHardwarePinType() const  {
+            return _type;
+        }
+
+        const __FlashStringHelper *getHardwarePinTypeStr() const  {
+            return PinMonitor::getHardwarePinTypeStr(_type);
+        }
+
     // protected:
     public:
 
+#if PIN_MONITOR_USE_GPIO_INTERRUPT == 0
         static void ICACHE_RAM_ATTR callback(void *arg);
+#endif
 
         operator bool() const;
         uint8_t getCount() const;
@@ -160,14 +178,75 @@ namespace PinMonitor {
 
     class SimpleHardwarePin : public HardwarePin {
     public:
-        SimpleHardwarePin(uint8_t pin,  HardwarePinType type = HardwarePinType::SIMPLE) : HardwarePin(pin, type) {}
+        enum class SimpleEventType {
+            NONE,
+            HIGH_VALUE,
+            LOW_VALUE,
+        };
+
+    public:
+        SimpleHardwarePin(uint8_t pin,  HardwarePinType type = HardwarePinType::SIMPLE) :
+            HardwarePin(pin, type),
+            _event(SimpleEventType::NONE)
+        {
+        }
+
+        // void ICACHE_RAM_ATTR addEvent(bool value) {
+        inline __attribute__((__always_inline__))
+        void addEvent(bool value) {
+            _event = value ? SimpleEventType::HIGH_VALUE : SimpleEventType::LOW_VALUE;
+        }
+
+        inline void clearEvents() {
+            ETS_GPIO_INTR_DISABLE();
+            _event = SimpleEventType::NONE;
+            ETS_GPIO_INTR_ENABLE();
+        }
+
+        inline SimpleEventType getEvent() const {
+            ETS_GPIO_INTR_DISABLE();
+            auto tmp = _event;
+            ETS_GPIO_INTR_ENABLE();
+            return tmp;
+        }
+
+        inline SimpleEventType getEventClear() {
+            ETS_GPIO_INTR_DISABLE();
+            auto tmp = _event;
+            _event = SimpleEventType::NONE;
+            ETS_GPIO_INTR_ENABLE();
+            return tmp;
+        }
+
+    private:
+        volatile SimpleEventType _event;
     };
 
     class DebouncedHardwarePin : public SimpleHardwarePin {
     public:
+        // struct __attribute__((packed)) Events {
+        //     uint32_t _micros;
+        //     uint16_t _interruptCount: 15;
+        //     bool _value: 1;
+        //     Events() : _micros(0), _interruptCount(0), _value(0) {}
+        // };
+        struct Events {
+            uint32_t _micros;
+            uint16_t _interruptCount;
+            bool _value;
+            Events(uint32_t micros = 0, uint16_t interruptCount = 0, bool value = 0) :
+                _micros(micros),
+                _interruptCount(interruptCount),
+                _value(value)
+            {
+            }
+        };
+
+    public:
         DebouncedHardwarePin(uint8_t pin, bool debounceValue) :
             SimpleHardwarePin(pin, HardwarePinType::DEBOUNCE),
-            _debounce(debounceValue)
+            _debounce(debounceValue),
+            _events(0)
         {
         }
 
@@ -175,8 +254,51 @@ namespace PinMonitor {
             return const_cast<Debounce *>(&_debounce);
         }
 
+        // void ICACHE_RAM_ATTR addEvent(uint32_t micros, bool value) {
+        inline __attribute__((__always_inline__))
+        void addEvent(uint32_t micros, bool value) {
+            _events._interruptCount++;
+            _events._micros = micros;
+            _events._value = value;
+        }
+
+        inline __attribute__((__always_inline__))
+        void clearEvents() {
+            ETS_GPIO_INTR_DISABLE();
+            clearEventsNoInterrupts();
+            ETS_GPIO_INTR_ENABLE();
+        }
+
+        // GPIO interrupts must be disabled when calling this method
+        inline __attribute__((__always_inline__))
+        void clearEventsNoInterrupts() {
+            _events._interruptCount = 0;
+        }
+
+        inline Events getEvents() const {
+            ETS_GPIO_INTR_DISABLE();
+            auto tmp = getEventsNoInterrupts();
+            ETS_GPIO_INTR_ENABLE();
+            return tmp;
+        }
+
+        inline Events getEventsClear() {
+            ETS_GPIO_INTR_DISABLE();
+            auto tmp = getEventsNoInterrupts();
+            clearEventsNoInterrupts();
+            ETS_GPIO_INTR_ENABLE();
+            return tmp;
+        }
+
+        // GPIO interrupts must be disabled when calling this method
+        inline Events getEventsNoInterrupts() const {
+            auto tmp = Events(_events._micros, _events._interruptCount, _events._value);
+            return tmp;
+        }
+
     protected:
         Debounce _debounce;
+        volatile Events _events;
     };
 
 

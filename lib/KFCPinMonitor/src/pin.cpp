@@ -16,8 +16,30 @@
 
 using namespace PinMonitor;
 
+#if PIN_MONITOR_USE_GPIO_INTERRUPT == 0
 
 void ICACHE_RAM_ATTR HardwarePin::callback(void *arg)
 {
-    PinMonitor::eventBuffer.emplace_back(micros(), reinterpret_cast<HardwarePin *>(arg)->getPin());
+    auto pinPtr = reinterpret_cast<HardwarePin *>(arg);
+    switch(pinPtr->_type) {
+#if PIN_MONITOR_DEBOUNCED_PUSHBUTTON
+        case HardwarePinType::DEBOUNCE:
+            reinterpret_cast<DebouncedHardwarePin *>(arg)->addEvent(micros(), GPI & _BV(pinPtr->getPin()));
+            break;
+#endif
+#if PIN_MONITOR_SIMPLE_PIN
+        case HardwarePinType::SIMPLE:
+            reinterpret_cast<SimpleHardwarePin *>(arg)->addEvent(GPI & _BV(pinPtr->getPin()));
+            break;
+#endif
+#if PIN_MONITOR_ROTARY_ENCODER_SUPPORT
+        case HardwarePinType::ROTARY:
+            PinMonitor::eventBuffer.emplace_back(micros(), pinPtr->getPin());
+            break;
+#endif
+        default:
+            break;
+    }
 }
+
+#endif

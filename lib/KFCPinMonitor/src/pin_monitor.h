@@ -78,6 +78,24 @@
 #endif
 #endif
 
+// enable support for rotary encoders
+// disabled by default since it requires IRAM
+#ifndef PIN_MONITOR_ROTARY_ENCODER_SUPPORT
+#define PIN_MONITOR_ROTARY_ENCODER_SUPPORT                      0
+#endif
+
+// support for debounced push buttons
+// disabling will free some IRAM
+#ifndef PIN_MONITOR_DEBOUNCED_PUSHBUTTON
+#define PIN_MONITOR_DEBOUNCED_PUSHBUTTON                        1
+#endif
+
+// support for simple I/O pin
+// disabled by default since it requires IRAM
+#ifndef PIN_MONITOR_SIMPLE_PIN
+#define PIN_MONITOR_SIMPLE_PIN                                  0
+#endif
+
 // debounce time in milliseconds
 // values from 5-20 are common
 #ifndef PIN_MONITOR_DEBOUNCE_TIME
@@ -160,6 +178,21 @@ namespace PinMonitor {
         RIGHT = 1,
         LAST = RIGHT
     };
+
+    inline static const __FlashStringHelper *getHardwarePinTypeStr(HardwarePinType type) {
+        switch(type) {
+            case HardwarePinType::SIMPLE:
+                return F("Simple Pin");
+            case HardwarePinType::DEBOUNCE:
+                return F("Debounced Button");
+            case HardwarePinType::ROTARY:
+                return F("Rotary Encoder");
+            case HardwarePinType::BASE:
+            case HardwarePinType::NONE:
+                break;
+        }
+        return F("<Unknown>");
+    }
 
 }
 

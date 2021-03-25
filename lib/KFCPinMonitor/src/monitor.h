@@ -29,6 +29,8 @@ namespace PinMonitor {
         void begin(bool useTimer = false);
         void end();
 
+        void printStatus(Print &output);
+
 // #if DEBUG
 //         // enable debug output on serial port
 //         void beginDebug(Print &outout, uint32_t interval = 1000);

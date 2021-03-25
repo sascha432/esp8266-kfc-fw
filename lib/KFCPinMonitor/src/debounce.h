@@ -5,7 +5,7 @@
 #pragma once
 
 #ifndef DEBUG_PIN_MONITOR_DEBOUNCE
-#define DEBUG_PIN_MONITOR_DEBOUNCE          1
+#define DEBUG_PIN_MONITOR_DEBOUNCE          0
 #endif
 
 #if DEBUG_PIN_MONITOR_DEBOUNCE
@@ -76,6 +76,10 @@ namespace PinMonitor {
         return static_cast<StateType>(((tmp & 0xaa) >> 1) | ((tmp & 0x55) << 1));
     }
 
+    // this class is for push buttons and does not require all events, but the last event (pin, time) and number of interrupts occured
+    // since the last call. it does not accept other timestamps and it is not suitable for feeding in multiple events from the past
+    // the last state and time is enough to predict the state.
+    // after feeding in events, it must be polled until the bounce timer has expired
     class Debounce {
     public:
 
@@ -87,21 +91,21 @@ namespace PinMonitor {
         {
         }
 
-        inline StateType debounce(bool lastValue, uint16_t interruptCount, uint32_t last, uint32_t now, uint32_t _micros) {
+        inline StateType debounce(bool lastValue, uint16_t interruptCount, uint32_t last, uint32_t now) {
 #if DEBUG_PIN_MONITOR_DEBOUNCE
-            auto tmp = _debounce(lastValue, interruptCount, last,now, _micros);
+            auto tmp = _debounce(lastValue, interruptCount, last, now);
             if (interruptCount) {
-                __DBG_printf("debounce=%u value=%u int_count=%u last=%u now=%u micros=%u", tmp, lastValue, interruptCount, last, now, _micros);
+                __DBG_printf("debounce=%u value=%u int_count=%u last=%u now=%u micros=%u", tmp, lastValue, interruptCount, last, now);
             }
             return tmp;
 #else
-            return _debounce(lastValue, interruptCount, last,now, _micros);
+            return _debounce(lastValue, interruptCount, last,now);
 #endif
         }
         void setState(bool state);
 
     private:
-        StateType _debounce(bool lastValue, uint16_t interruptCount, uint32_t last, uint32_t now, uint32_t _micros);
+        StateType _debounce(bool lastValue, uint16_t interruptCount, uint32_t last, uint32_t now);
 
     private:
         friend Monitor;
@@ -117,6 +121,8 @@ namespace PinMonitor {
         _value = state;
         _debounceTimerRunning = false;
     }
+
+    // class Debounce
 
 }
 

@@ -47,6 +47,9 @@ namespace PinMonitor {
     class RotaryEncoder;
 
     extern uint16_t interrupt_levels;
+
+#if PIN_MONITOR_ROTARY_ENCODER_SUPPORT
     extern Interrupt::EventBuffer eventBuffer;
+#endif
 
 }

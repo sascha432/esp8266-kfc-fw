@@ -2341,7 +2341,7 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >     }
 > 
 >     // we can just use endsWithIgnoreCase in this case
->     inline bool endEquals(const String &str) const {
+>     inline bool endEqualsIgnoreCase(const String &str) const {
 >         return str.endsWithIgnoreCase(*this);
 >     }
 > 

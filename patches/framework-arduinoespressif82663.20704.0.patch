@@ -1,3 +1,10 @@
+diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/core_esp8266_main.cpp ./framework-arduinoespressif8266/cores/esp8266/core_esp8266_main.cpp
+221c221
+<     while (p != &__init_array_start)
+---
+>     while (p != &__init_array_start) {
+222a223
+>     }
 diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/core_esp8266_postmortem.cpp ./framework-arduinoespressif8266/cores/esp8266/core_esp8266_postmortem.cpp
 83c83,88
 < static void ets_printf_P(const char *str, ...) {
@@ -1898,7 +1905,7 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 <         // concatenate (works w/ built-in types)
 ---
 >     // concatenate (works w/ built-in types)
-105,318c117,891
+105,318c117,963
 <         // returns true on success, false on failure (in which case, the string
 <         // is left unchanged).  if the argument is null or invalid, the
 <         // concatenation is considered unsuccessful.
@@ -2268,6 +2275,76 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >         return strcmp_P(buffer(), reinterpret_cast<PGM_P>(fStr)) == 0;
 >     }
 > 
+>     // return true if String matches the end of str1
+>     // basically a.endsWith(b) = b.endEquals(a)
+>     //
+>     // String("123").endEquals("test123") == true
+>     // String("").endEquals(nullptr) == false
+>     bool endEquals(const char *str1) const {
+>         size_t len1;
+>         size_t len2;
+>         if (!str1 || (len2 = length()) > (len1 = strlen(str1))) {
+>             return false;
+>         }
+>         if (len2 == len1) {
+>             return strcmp(str1, buffer());
+>         }
+>         return strcmp(str1 + len1 - len2, buffer());
+>     }
+> 
+>     bool endEquals(const __FlashStringHelper *fStr) const {
+>         PGM_P str1 = reinterpret_cast<PGM_P>(fStr);
+>         size_t len1;
+>         size_t len2;
+>         if (!str1 || (len2 = length()) > (len1 = strlen_P(str1))) {
+>             return false;
+>         }
+>         if (len2 == len1) {
+>             return strcmp_P_P(str1, buffer());
+>         }
+>         return strcmp_P_P(str1 + len1 - len2, buffer());
+>     }
+> 
+>     // we can use endsWith in this case
+>     inline bool endEquals(const String &str) const {
+>         return str.endsWith(*this);
+>     }
+> 
+>     // return true if String matches the end of str1
+>     // basically a.endsWith(b) = b.endEquals(a)
+>     //
+>     // String("abc").endEqualsIgnoreCase("TESTABC") == true
+>     // String("").endEqualsIgnoreCase(nullptr) == false
+>     bool endEqualsIgnoreCase(const char *str1) const {
+>         size_t len1;
+>         size_t len2;
+>         if (!str1 || (len2 = length()) > (len1 = strlen(str1))) {
+>             return false;
+>         }
+>         if (len2 == len1) {
+>             return strcasecmp(str1, buffer());
+>         }
+>         return strcasecmp(str1 + len1 - len2, buffer());
+>     }
+> 
+>     bool endEqualsIgnoreCase(const __FlashStringHelper *fStr) const {
+>         PGM_P str1 = reinterpret_cast<PGM_P>(fStr);
+>         size_t len1;
+>         size_t len2;
+>         if (!str1 || (len2 = length()) > (len1 = strlen_P(str1))) {
+>             return false;
+>         }
+>         if (len2 == len1) {
+>             return strcasecmp_P_P(str1, buffer());
+>         }
+>         return strcasecmp_P_P(str1 + len1 - len2, buffer());
+>     }
+> 
+>     // we can just use endsWithIgnoreCase in this case
+>     inline bool endEquals(const String &str) const {
+>         return str.endsWithIgnoreCase(*this);
+>     }
+> 
 >     //
 >     // equals() with offset
 >     //
@@ -2472,7 +2549,7 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >     int _indexOf(const char *find, size_t fromIndex, size_t findLength = ~0) const
 >     {
 >         size_t len;
->         if (!find || !findLength || ((len = length()) == 0) || (fromIndex + findLength >= len)) {
+>         if (!find || !findLength || ((len = length()) == 0) || (findLength != ~0U && (fromIndex + findLength >= len))) {
 >             return -1;
 >         }
 >         auto ptr = buffer();
@@ -2486,7 +2563,7 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >     int _indexOfIgnoreCase(const char *find, size_t fromIndex, size_t findLength = ~0) const
 >     {
 >         size_t len;
->         if (!find || !findLength || ((len = length()) == 0) || (fromIndex + findLength >= len)) {
+>         if (!find || !findLength || ((len = length()) == 0) || (findLength != ~0U && (fromIndex + findLength >= len))) {
 >             return -1;
 >         }
 >         auto ptr = wbuffer();
@@ -2500,7 +2577,7 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >     int _indexOf_P(PGM_P find, size_t fromIndex, size_t findLength = ~0) const
 >     {
 >         size_t len;
->         if (!find || !findLength || ((len = length()) == 0) || (fromIndex + findLength >= len)) {
+>         if (!find || !findLength || ((len = length()) == 0) || (findLength != ~0U && (fromIndex + findLength >= len))) {
 >             return -1;
 >         }
 >         auto ptr = buffer();
@@ -2511,14 +2588,14 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >         return idxPtr - ptr;
 >     }
 > 
->     int _indexOfIgnoreCase_P(PGM_P find, size_t fromIndex, size_t findLength = ~0) const
+>     int _indexOfIgnoreCase_P(PGM_P find, size_t fromIndex, size_t findLength) const
 >     {
 >         size_t len;
 >         if (!find || !findLength || ((len = length()) == 0) || (fromIndex + findLength >= len)) {
 >             return -1;
 >         }
 >         auto ptr = buffer();
->         auto idxPtr = stristr_P(ptr + fromIndex, find);
+>         auto idxPtr = stristr_P(ptr + fromIndex, find, findLength);
 >         if (!idxPtr) {
 >             return -1;
 >         }
@@ -2631,10 +2708,10 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >     }
 > 
 >     int indexOf(const char *str, unsigned int fromIndex = 0) const {
->         return _indexOf(str, fromIndex);
+>         return _indexOf(str, fromIndex, ~0U);
 >     }
 >     int indexOf(const __FlashStringHelper *fstr, unsigned int fromIndex = 0) const {
->         return _indexOf_P(reinterpret_cast<PGM_P>(fstr), fromIndex);
+>         return _indexOf_P(reinterpret_cast<PGM_P>(fstr), fromIndex, ~0U);
 >     }
 > 
 > 
@@ -2653,13 +2730,13 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 > 
 > 
 >     int indexOfIgnoreCase(const char *str, unsigned int fromIndex = 0) const {
->         return _indexOfIgnoreCase(str, fromIndex);
+>         return _indexOfIgnoreCase(str, fromIndex, ~0U);
 >     }
 >     int indexOfIgnoreCase(const String &str, unsigned int fromIndex = 0) const {
 >         return _indexOfIgnoreCase(str.c_str(), fromIndex, str.length());
 >     }
 >     int indexOfIgnoreCase(const __FlashStringHelper *fstr, unsigned int fromIndex = 0) const {
->         return _indexOfIgnoreCase_P(reinterpret_cast<PGM_P>(fstr), fromIndex);
+>         return _indexOfIgnoreCase_P(reinterpret_cast<PGM_P>(fstr), fromIndex, ~0U);
 >     }
 > 
 > 
@@ -2674,10 +2751,12 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >         return _lastIndexOf(str.buffer(), length() - strLen, strLen);
 >     }
 >     int lastIndexOf(const String &str, unsigned int fromIndex) const {
->         return _lastIndexOf(str.buffer(), fromIndex, str.length());
+>         auto findLength = str.length();
+>         return _lastIndexOf(str.buffer(), fromIndex - findLength, findLength);
 >     }
 >     int lastIndexOf(const __FlashStringHelper *str, unsigned int fromIndex) const {
->         return _lastIndexOf_P(reinterpret_cast<PGM_P>(str), fromIndex, strlen_P(reinterpret_cast<PGM_P>(str)));
+>         auto findLength = strlen_P(reinterpret_cast<PGM_P>(str));
+>         return _lastIndexOf_P(reinterpret_cast<PGM_P>(str), fromIndex - findLength, findLength);
 >     }
 > 
 >     String substring(unsigned int beginIndex) const {
@@ -2889,11 +2968,11 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >     // copy and move
 >     String &copy(const char *cstr, unsigned int length);
 >     String &copy(const __FlashStringHelper *pstr, unsigned int length);
-320c893
+320c965
 <         void move(String &rhs);
 ---
 >     void move(String &rhs);
-324,355c897,928
+324,355c969,1000
 < class StringSumHelper: public String {
 <     public:
 <         StringSumHelper(const String &s) :

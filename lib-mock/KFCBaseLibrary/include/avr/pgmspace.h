@@ -6,6 +6,10 @@ Author: sascha_lammers@gmx.de
 
 #pragma once
 
+#ifndef PGM_P
+#define PGM_P const char *
+#endif
+
 #define PSTR_ALIGN								4
 
 #if 1
@@ -38,8 +42,16 @@ static inline const void *__find_flash_memory_string(const void *ptr) {
 
 #define snprintf_P snprintf
 #define sprintf_P sprintf
-#define strstr_P strstr
-static inline size_t strlen_P(const char *str) {
+
+inline static char *strstr_P(char *str1, PGM_P str2, size_t len2 = ~0) {
+	return strstr(str1, str2);
+}
+
+inline static const char *strstr_P(const char *str1, PGM_P str2, size_t len2 = ~0) {
+	return strstr(str1, str2);
+}
+
+inline static size_t strlen_P(PGM_P str) {
 	return strlen(str);
 }
 #define vsnprintf_P vsnprintf

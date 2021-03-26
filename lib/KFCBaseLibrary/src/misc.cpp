@@ -730,12 +730,14 @@ int strncasecmp_P_P(PGM_P str1, PGM_P str2, size_t size)
 }
 
 
-PGM_P strstr_P_P(PGM_P str, PGM_P find) {
+PGM_P strstr_P_P(PGM_P str, PGM_P find, size_t findLen) {
     if (!str || !find) {
         return nullptr;
     }
-    size_t findLen;
-    if (str == find || ((findLen = strlen_P(find)) == 0)) {
+    if (findLen == ~0U) {
+        findLen = strlen_P(find);
+    }
+    if (str == find || (findLen == 0)) {
         return str;
     }
     size_t strLen =  strlen_P(str);
@@ -749,12 +751,14 @@ PGM_P strstr_P_P(PGM_P str, PGM_P find) {
     return nullptr;
 }
 
-PGM_P strcasestr_P_P(PGM_P str, PGM_P find) {
+PGM_P strcasestr_P_P(PGM_P str, PGM_P find, size_t findLen) {
     if (!str || !find) {
         return nullptr;
     }
-    size_t findLen;
-    if (str == find || ((findLen = strlen_P(find)) == 0)) {
+    if (findLen == ~0U) {
+        findLen = strlen_P(find);
+    }
+    if (str == find || (findLen == 0)) {
         return str;
     }
     size_t strLen =  strlen_P(str);
@@ -768,12 +772,14 @@ PGM_P strcasestr_P_P(PGM_P str, PGM_P find) {
     return nullptr;
 }
 
-char *strcasestr_P(char *str, PGM_P find) {
+char *strcasestr_P(char *str, PGM_P find, size_t findLen) {
     if (!str || !find) {
         return nullptr;
     }
-    size_t findLen;
-    if (str == find || ((findLen = strlen_P(find)) == 0)) {
+    if (findLen == ~0U) {
+        findLen = strlen_P(find);
+    }
+    if (str == find || (findLen == 0)) {
         return str;
     }
     size_t strLen =  strlen(str);
@@ -924,6 +930,20 @@ bool str_endswith_P(PGM_P str, char ch)
 }
 
 #endif
+
+int strcmp_end(const char *str1, size_t len1, const char *str2, size_t len2)
+{
+    if (!str1) {
+        return ESNULLP;
+    }
+    if (!str2) {
+        return -ESNULLP;
+    }
+    if (len2 == len1) {
+        return strcmp(str1, str2);
+    }
+    return strcmp(str1 + len1 - len2, str2);
+}
 
 int strcmp_end_P(const char *str1, size_t len1, PGM_P str2, size_t len2)
 {

@@ -145,9 +145,13 @@ static inline bool str_endswith_P(PGM_P str, char ch) {
 
 #endif
 
+int strcmp_end(char *str1, size_t len1, const char *str2, size_t len2);
 int strcmp_end_P(char *str1, size_t len1, PGM_P str2, size_t len2);
 int strcmp_end_P_P(PGM_P str1, size_t len1, PGM_P str2, size_t len2);
 
+inline static int strcmp_end(const char *str1, const char *str2) {
+    return strcmp_end(const_cast<char *>(str1), strlen(str1), str2, strlen(str2));
+}
 inline static int strcmp_end_P(const char *str1, PGM_P str2) {
     return strcmp_end_P(const_cast<char *>(str1), strlen(str1), str2, strlen_P(str2));
 }

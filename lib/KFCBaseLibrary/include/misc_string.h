@@ -120,15 +120,15 @@ int strncasecmp_P_P(PGM_P str1, PGM_P str2, size_t size);
 
 // str or find == nullptr: returns nullptr
 // strlen(find) == 0: returns str
-PGM_P strstr_P_P(PGM_P str, PGM_P find);
-PGM_P strcasestr_P_P(PGM_P str, PGM_P find);
+PGM_P strstr_P_P(PGM_P str, PGM_P find, size_t findLen = 0);
+PGM_P strcasestr_P_P(PGM_P str, PGM_P find, size_t findLen = 0);
 
-// char *strrstr_P(char *str, PGM_P find);
-char *strcasestr_P(char *str, PGM_P find);
+// char *strrstr_P(char *str, PGM_P find, size_t findLen = 0);
+char *strcasestr_P(char *str, PGM_P find, size_t findLen = 0);
 
-inline static char *strcasestr_P(const char *str, PGM_P find)
+inline static char *strcasestr_P(const char *str, PGM_P find, size_t findLen)
 {
-    return strcasestr_P(const_cast<char *>(str), find);
+    return strcasestr_P(const_cast<char *>(str), find, findLen);
 }
 
 // using temporary and memrchr
@@ -268,7 +268,10 @@ inline static int strncasecmp_PP(PGM_P str1, PGM_P str2, size_t size)
 #define strcmp_P_P(str1, str2) strncmp_P_P((str1), (str2), SIZE_IRRELEVANT)
 #define strcasecmp_P_P(str1, str2) strncasecmp_P_P((str1), (str2), SIZE_IRRELEVANT)
 
-#define stristr_P(str1, str2) strcasestr_P((str1), (str2))
+inline static char *stristr_P(const char *str1, PGM_P str2, size_t len2 = ~0) 
+{
+    return strcasestr_P(str1, str2, len2);
+}
 
 #define stringlist_casefind_P(list, find, separator) stringlist_ifind_P_P(list), (find), (separator))
 
@@ -341,9 +344,9 @@ inline static char *stristr(char *str1, const char *str2)
 
 #else
 
-inline static char *stristr(char *str1, const char *str2)
+inline static char *stristr(char *str1, const char *str2, size_t len2 = ~0)
 {
-    return const_cast<char *>(strcasestr_P(str1, str2));
+    return const_cast<char *>(strcasestr_P(str1, str2, len2));
 }
 
 #endif

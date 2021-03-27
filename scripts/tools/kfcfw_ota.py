@@ -147,7 +147,7 @@ class OTA(kfcfw.OTAHelpers):
         while count<30:
             try:
                 resp = requests.post(url + 'update', data=monitor, timeout=30, allow_redirects=False, headers={ 'User-Agent': 'KFCFW OTA', "Content-Type": monitor.content_type })
-            except:
+            except Exception as e:
                 count += 1
                 print('Exception %s, retrying %d/30 in 10 seconds...' % (e, count))
                 time.sleep(10)

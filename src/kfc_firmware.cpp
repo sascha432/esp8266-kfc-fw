@@ -195,9 +195,27 @@ void setup()
         disable_at_mode(Serial);
     #endif
 
-
         KFC_SAFE_MODE_SERIAL_PORT.println(F("Booting KFC firmware..."));
         KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("SAFE MODE %d, reset counter %d, wake up %d\n"), resetDetector.getSafeMode(), resetDetector.getResetCounter(), resetDetector.hasWakeUpDetected());
+
+#if KFC_SAFEMODE_GPIO_COMBO
+    for(uint8_t i = 0; i < KFC_SAFEMODE_GPIO_NUM_TEST; i++) {
+        if ((digitalReadAll() & KFC_SAFEMODE_GPIO_MASK) == KFC_SAFEMODE_GPIO_RESULT) {
+            if (i == KFC_SAFEMODE_GPIO_NUM_TEST - 1) {
+                KFC_SAFE_MODE_SERIAL_PORT.println(F("Starting in safe mode..."));
+                resetDetector.setSafeModeAndClearCounter(false);
+                safe_mode = true;
+                config.setSafeMode(safe_mode);
+                delay(KFC_SAFEMODE_BOOT_DELAY);
+                break;
+            }
+        }
+        else {
+            break;
+        }
+        delay(KFC_SAFEMODE_GPIO_TEST_DELAY);
+    }
+#endif
 
 #if KFC_RESTORE_FACTORY_SETTINGS_RESET_COUNT
         if (resetDetector.hasResetDetected()) {
@@ -224,7 +242,7 @@ void setup()
         if (resetDetector.getSafeMode()) {
 
             KFC_SAFE_MODE_SERIAL_PORT.println(F("Starting in safe mode..."));
-            delay(2000);
+            delay(KFC_SAFEMODE_BOOT_DELAY);
             // normal boot after safe mode
             resetDetector.setSafeModeAndClearCounter(false);
             // activate safe mode
@@ -345,22 +363,6 @@ void setup()
             WebAlerts::RewriteType::KEEP_NON_PERSISTENT :
             WebAlerts::RewriteType::REMOVE_NON_PERSISTENT)
     );
-#endif
-
-#if IOT_REMOTE_CONTROL
-    if ((GPI & kButtonSystemComboBitMask) == kButtonSystemComboBitMask) {
-        delay(25);
-        if ((GPI & kButtonSystemComboBitMask) == kButtonSystemComboBitMask) {
-            delay(250);
-            if ((GPI & kButtonSystemComboBitMask) == kButtonSystemComboBitMask) {
-                KFC_SAFE_MODE_SERIAL_PORT.println(F("Starting in safe mode..."));
-                resetDetector.setSafeModeAndClearCounter(false);
-                safe_mode = true;
-                config.setSafeMode(safe_mode);
-                delay(2000);
-            }
-        }
-}
 #endif
 
     config.read();

@@ -422,9 +422,48 @@
 #define HAVE_I2CSCANNER                                     1
 #endif
 
+// disable crash counter on SPIFFS
 #ifndef KFC_DISABLE_CRASHCOUNTER
-#define KFC_DISABLE_CRASHCOUNTER                          0
+#define KFC_DISABLE_CRASHCOUNTER                            0
 #endif
+
+// delay after writing "Starting in safemode..."
+#ifndef KFC_SAFEMODE_BOOT_DELAY
+#define KFC_SAFEMODE_BOOT_DELAY                             2000
+#endif
+
+// enable safemode by having one or multiple pins high/low during boot
+// all pins are read 4 times in a 50ms interval and if any of those
+// tests fails, safemode will not be activated
+//
+#ifndef KFC_SAFEMODE_GPIO_COMBO
+#define KFC_SAFEMODE_GPIO_COMBO                             0
+#endif
+
+// mask all GPIOs set in this mask
+#ifndef KFC_SAFEMODE_GPIO_MASK
+#define KFC_SAFEMODE_GPIO_MASK                              0
+#endif
+
+// compare the masked result with this value
+// every bit set will represent GPIO active high, every bit not set GPIO active low
+// bits that are masked need to be 0
+#ifndef KFC_SAFEMODE_GPIO_RESULT
+#define KFC_SAFEMODE_GPIO_RESULT                            0
+#endif
+
+#if (KFC_SAFEMODE_GPIO_RESULT & KFC_SAFEMODE_GPIO_MASK) != KFC_SAFEMODE_GPIO_RESULT
+#error invalid KFC_SAFEMODE_GPIO_RESULT for KFC_SAFEMODE_GPIO_MASK
+#endif
+
+#ifndef KFC_SAFEMODE_GPIO_NUM_TEST
+#define KFC_SAFEMODE_GPIO_NUM_TEST                          4
+#endif
+
+#ifndef KFC_SAFEMODE_GPIO_TEST_DELAY
+#define KFC_SAFEMODE_GPIO_TEST_DELAY                       50
+#endif
+
 
 class Stream;
 class HardwareSerial;

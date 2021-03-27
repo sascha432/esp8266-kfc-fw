@@ -75,8 +75,10 @@ void delayedSetup(bool delayed)
         }
     });
 
-    // reset crash counter
-    SaveCrash::installRemoveCrashCounter(KFC_CRASH_RECOVERY_TIME);
+    #if KFC_DISABLE_CRASHCOUNTER == 0
+        // reset crash counter
+        SaveCrash::installRemoveCrashCounter(KFC_CRASH_RECOVERY_TIME);
+    #endif
 }
 
 uint32_t rtc_time_read_raw(void);
@@ -146,7 +148,9 @@ void setup()
     #endif
 
     bool safe_mode = false;
-    bool increaseCrashCounter = false;
+    #if KFC_DISABLE_CRASHCOUNTER == 0
+        bool increaseCrashCounter = false;
+    #endif
     #if !ENABLE_DEEP_SLEEP
         bool wakeup = resetDetector.hasWakeUpDetected();
     #endif
@@ -273,7 +277,9 @@ void setup()
                                 break;
                             case 'c':
                                 RTCMemoryManager::clear();
-                                SaveCrash::removeCrashCounter();
+                                #if KFC_DISABLE_CRASHCOUNTER == 0
+                                    SaveCrash::removeCrashCounter();
+                                #endif
                                 KFC_SAFE_MODE_SERIAL_PORT.println(F("RTC memory cleared"));
                                 break;
                             case 't':
@@ -286,7 +292,9 @@ void setup()
                                 KFC_SAFE_MODE_SERIAL_PORT.println(F("Factory settings restored"));
                                 // fallthrough
                             case 'r':
-                                SaveCrash::removeCrashCounter();
+                                #if KFC_DISABLE_CRASHCOUNTER == 0
+                                    SaveCrash::removeCrashCounter();
+                                #endif
                                 // fallthrough
                             case 's':
                                 resetDetector.setSafeModeAndClearCounter(false);
@@ -299,7 +307,9 @@ void setup()
                 if (endTimeout) {
                     // timeout occured, count as crash
                     // safe_mode should be false
-                    increaseCrashCounter = true;
+                    #if KFC_DISABLE_CRASHCOUNTER == 0
+                        increaseCrashCounter = true;
+                    #endif
                 }
                 delay(100);
 #if defined(ESP8266)
@@ -312,7 +322,7 @@ void setup()
         // start FS, we need it for getCrashCounter()
         KFCFS.begin();
 
-#if KFC_AUTO_SAFE_MODE_CRASH_COUNT
+#if KFC_AUTO_SAFE_MODE_CRASH_COUNT == 0
         if (resetDetector.hasCrashDetected() || increaseCrashCounter) {
             uint8_t counter = SaveCrash::getCrashCounter();
             if (counter >= KFC_AUTO_SAFE_MODE_CRASH_COUNT) {  // boot in safe mode if there were 3 (KFC_AUTO_SAFE_MODE_CRASH_COUNT) crashes within the 5 minutes (KFC_CRASH_RECOVERY_TIME)
@@ -335,6 +345,22 @@ void setup()
             WebAlerts::RewriteType::KEEP_NON_PERSISTENT :
             WebAlerts::RewriteType::REMOVE_NON_PERSISTENT)
     );
+#endif
+
+#if IOT_REMOTE_CONTROL
+    if ((GPI & kButtonSystemComboBitMask) == kButtonSystemComboBitMask) {
+        delay(25);
+        if ((GPI & kButtonSystemComboBitMask) == kButtonSystemComboBitMask) {
+            delay(250);
+            if ((GPI & kButtonSystemComboBitMask) == kButtonSystemComboBitMask) {
+                KFC_SAFE_MODE_SERIAL_PORT.println(F("Starting in safe mode..."));
+                resetDetector.setSafeModeAndClearCounter(false);
+                safe_mode = true;
+                config.setSafeMode(safe_mode);
+                delay(2000);
+            }
+        }
+}
 #endif
 
     config.read();

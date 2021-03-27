@@ -422,6 +422,9 @@
 #define HAVE_I2CSCANNER                                     1
 #endif
 
+#ifndef KFC_DISABLE_CRASHCOUNTER
+#define KFC_DISABLE_CRASHCOUNTER                          0
+#endif
 
 class Stream;
 class HardwareSerial;

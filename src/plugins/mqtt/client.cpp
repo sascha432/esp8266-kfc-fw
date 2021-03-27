@@ -7,6 +7,7 @@
 #include <EventScheduler.h>
 #include <kfc_fw_config.h>
 #include <PrintHtmlEntitiesString.h>
+#include "mqtt_def.h"
 #include "mqtt_plugin.h"
 #include "mqtt_strings.h"
 #include "auto_discovery.h"
@@ -78,8 +79,10 @@ MQTTClient::Client() :
     _config(ClientConfig::getConfig()),
     _client(__LDBG_new(AsyncMqttClient)),
     _port(_config.getPort()),
-    _lastWillPayload(F("offline")),
-    _lastWillTopic(formatTopic(FSPGM(mqtt_status_topic))),
+#if MQTT_SET_LAST_WILL_MODE != 0
+    _lastWillPayloadOffline(MQTT_LAST_WILL_TOPIC_ONLINE),
+    _lastWillTopic(formatTopic(MQTT_LAST_WILL_TOPIC)),
+#endif
     _connState(ConnectionState::NONE),
 #if MQTT_AUTO_DISCOVERY
 #if IOT_REMOTE_CONTROL
@@ -513,7 +516,9 @@ void MQTTClient::connect()
     _client->setCleanSession(true);
     _client->setKeepAlive(_config.keepalive);
 
+#if MQTT_SET_LAST_WILL_MODE != 0
     publishLastWill();
+#endif
 
     _connState = ConnectionState::CONNECTING;
     _client->connect();
@@ -522,32 +527,36 @@ void MQTTClient::connect()
 void MQTTClient::disconnect(bool forceDisconnect)
 {
     __LDBG_printf("force_disconnect=%d conn=%s", forceDisconnect, _connection());
-#if MQTT_SET_LAST_WILL == 0
     if (setConnState(ConnectionState::DISCONNECTING) == ConnectionState::CONNECTED && !forceDisconnect && _client->connected()) {
         // set offline if last will is not used
         // for example for clients that go to deep sleep
         // when reconfiguring or stopping mqtt, the device is marked offline manually
         __LDBG_printf("marking device as offline manually conn=%s", _connection());
+        // clear client to send going offline status
         _resetClient();
-        publishWithId(nullptr, _lastWillTopic, true, String(0));
+
+        #if MQTT_SET_LAST_WILL_MODE == 1 || MQTT_SET_LAST_WILL_MODE == 2
+            // set last will topic
+            publishWithId(nullptr, _lastWillTopic, true, _lastWillPayloadOffline);
+        #endif
+        #if MQTT_SET_LAST_WILL_MODE == 0 || MQTT_SET_LAST_WILL_MODE == 2
+            // set availability topic
+            publishWithId(nullptr, MQTT_AVAILABILITY_TOPIC, true, MQTT_AVAILABILITY_TOPIC_OFFLINE);
+        #endif
+        // publish adds new data to the queue, clear it again
+        _queue.clear();
+        _packetQueue.clear();
     }
-#else
-    _connState = ConnectionState::DISCONNECTING;
-#endif
     _client->disconnect(forceDisconnect);
 }
 
+#if MQTT_SET_LAST_WILL_MODE != 0
 void MQTTClient::publishLastWill()
 {
-#if MQTT_SET_LAST_WILL
     __LDBG_printf("topic=%s value=%s", _lastWillTopic.c_str(), _lastWillPayload.c_str());
-    if (_lastWillTopic.length()) {
-        _client->setWill(_lastWillTopic.c_str(), _translateQosType(getDefaultQos()), true, _lastWillPayload.c_str(), _lastWillPayload.length());
-    }
-#else
-    __LDBG_printf("topic=%s value=%s (not sent to server)", _lastWillTopic.c_str(), _lastWillPayload.c_str());
-#endif
+    _client->setWill(_lastWillTopic.c_str(), _translateQosType(getDefaultQos()), true, _lastWillPayloadOffline.c_str(), _lastWillPayloadOffline.length());
 }
+#endif
 
 void MQTTClient::autoReconnect(AutoReconnectType timeout)
 {
@@ -592,8 +601,14 @@ void MQTTClient::onConnect(bool sessionPresent)
 
     _resetClient();
 
-    // set online status
-    publish(_lastWillTopic, true, F("online"));
+#if MQTT_SET_LAST_WILL_MODE == 1 || MQTT_SET_LAST_WILL_MODE == 2
+    // set last will topic
+    publish(_lastWillTopic, true, MQTT_LAST_WILL_TOPIC_ONLINE);
+#endif
+#if MQTT_SET_LAST_WILL_MODE == 0 || MQTT_SET_LAST_WILL_MODE == 2
+    // set availability topic
+    publish(MQTT_AVAILABILITY_TOPIC, true, MQTT_AVAILABILITY_TOPIC_ONLINE);
+#endif
 
 #if MQTT_AUTO_DISCOVERY
     _autoDiscoveryStatusTopic = _getAutoDiscoveryStatusTopic();

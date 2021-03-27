@@ -64,7 +64,7 @@ void Plugin::reconfigure(const String &source)
 void Plugin::shutdown()
 {
     __LDBG_println();
-#if MQTT_SET_LAST_WILL == 0
+#if MQTT_SET_LAST_WILL_MODE == 0
     auto client = Client::getClient();
     if (client) {
         // send last will manually and give system some time to push out the tcp buffer

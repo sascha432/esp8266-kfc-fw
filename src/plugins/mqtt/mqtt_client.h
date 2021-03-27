@@ -463,8 +463,10 @@ public:
         void connect();
         // disconnect from server
         void disconnect(bool forceDisconnect = false);
+#if MQTT_SET_LAST_WILL_MODE != 0
         // publish last will
         void publishLastWill();
+#endif
         // returns true for ConnectionState::CONNECTED,
         bool isConnected() const;
         // returns true for ConnectionState::PRE_CONNECT, CONNECTING and CONNECTED
@@ -570,12 +572,12 @@ public:
         static void handleWiFiEvents(WiFiCallbacks::EventType event, void *payload);
 
     public:
-        // returns 1 for: [ any integer != 0, "true", "on", "yes", "online", "enable", "enabled" ]
-        // returns 0 for: [ 0, "00"..., "false", "off", "no", "offline", "disable", "disabled" ]
+        // returns 1 for: [ any integer != 0, "on", "yes", "enable", "enabled", SPGM(mqtt_bool_on)="ON", SPGM(mqtt_bool_true)="true", SPGM(mqtt_status_topic_online="online") ]
+        // returns 0 for: [ 0, "00"..., "off", "no", "disable", "disabled", SPGM(mqtt_bool_off)="OFF", SPGM(mqtt_bool_false)="false", SPGM(mqtt_status_topic_offline)="offline" ]
         // otherwise it returns -1 or the value of "invalid"
         // white spaces are stripped and the strings are case insensitive
         static int8_t toBool(const char *, int8_t invalid = -1);
-        static const __FlashStringHelper *toBoolStr(bool value);
+        static const __FlashStringHelper *toBoolTrueFalse(bool value);
         static const __FlashStringHelper *toBoolOnOff(bool value);
 
         static QosType getDefaultQos(QosType qos = QosType::DEFAULT);
@@ -694,8 +696,12 @@ public:
         AsyncMqttClient *_client;
         Event::Timer _timer;
         uint16_t _port;
-        FixedString<7> _lastWillPayload;
-        String _lastWillTopic;
+#if MQTT_SET_LAST_WILL_MODE != 0
+        // these variables are only required if last will is being used since the MQTT client requires a
+        // pointer to memory and does not support flash strings
+        const String _lastWillPayloadOffline;
+        const String _lastWillTopic;
+#endif
         AutoReconnectType _autoReconnectTimeout;
         TopicVector _topics;
         Buffer _buffer;
@@ -830,15 +836,15 @@ public:
     }
 
     inline __attribute__((__always_inline__))
-    const __FlashStringHelper *Client::toBoolStr(bool value)
+    const __FlashStringHelper *Client::toBoolTrueFalse(bool value)
     {
-        return value ? F("true") : F("false");
+        return value ? FSPGM(mqtt_bool_true) : FSPGM(mqtt_bool_false);
     }
 
     inline __attribute__((__always_inline__))
     const __FlashStringHelper *Client::toBoolOnOff(bool value)
     {
-        return value ? F("ON") : F("OFF");
+        return value ? FSPGM(mqtt_bool_on) : FSPGM(mqtt_bool_off);
     }
 
     inline __attribute__((__always_inline__))

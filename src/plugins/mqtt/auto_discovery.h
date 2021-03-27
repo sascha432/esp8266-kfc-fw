@@ -63,7 +63,7 @@ namespace MQTT {
 
             template<typename _Ta, typename std::enable_if<std::is_same<_Ta, bool>::value, int>::type = 0>
             void addParameter(NameType name, _Ta value) {
-                __addParameter(name, value ? PSTR("true") : PSTR("false"), false);
+                __addParameter(name, value ? FSPGM(mqtt_bool_true) : FSPGM(mqtt_bool_false), false);
             }
 
         public:
@@ -174,8 +174,8 @@ namespace MQTT {
             }
 
             void addPayloadOnOff() {
-                addPayloadOn(1);
-                addPayloadOff(0);
+                addPayloadOn(FSPGM(mqtt_bool_on));
+                addPayloadOff(FSPGM(mqtt_bool_off));
             }
 
             template<typename _T>
@@ -184,24 +184,25 @@ namespace MQTT {
             }
 
             void addAutomationType() {
-                addParameter(FSPGM(mqtt_automation_type), F("trigger"));
+                addParameter(FSPGM(mqtt_automation_type), FSPGM(mqtt_trigger));
             }
 
             void addSchemaJson() {
-                addParameter(F("schema"), F("json"));
+                addParameter(FSPGM(mqtt_schema), FSPGM(mqtt_schema_json));
             }
 
             void addDeviceClass(NameType deviceClass) {
                 addParameter(FSPGM(mqtt_device_class), deviceClass);
             }
 
-            void addSubType(const String &buttonName) {
-                addParameter(FSPGM(mqtt_subtype), buttonName);
+            void addSubType(const String &subType) {
+                addParameter(FSPGM(mqtt_subtype), subType);
             }
 
-            void addPayloadAndType(const String &buttonName, NameType type) {
-                addParameter(FSPGM(mqtt_type), String(F("button_")) + String(type));
-                addParameter(FSPGM(mqtt_payload), buttonName + '_' + String(type));
+            void addPayloadAndSubType(const String &subType, NameType type, NameType typePrefix) {
+                addParameter(FSPGM(mqtt_subtype), subType);
+                addParameter(FSPGM(mqtt_type), PrintString(F("%s_%s"), typePrefix, type));
+                addParameter(FSPGM(mqtt_payload), PrintString(F("%s_%s"), subType.c_str(), type));
             }
 
         public:

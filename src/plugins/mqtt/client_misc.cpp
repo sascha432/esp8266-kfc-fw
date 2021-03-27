@@ -117,22 +117,28 @@ int8_t MQTTClient::toBool(const char *str, int8_t invalid)
     auto tmp = String(str);
     auto cTmp = tmp.trim().c_str();
     if (
-        (strcasecmp_P(cTmp, PSTR("true")) == 0) ||
+        // (strcasecmp_P(cTmp, PSTR("true")) == 0) ||
         (strcasecmp_P(cTmp, PSTR("on")) == 0) ||
         (strcasecmp_P(cTmp, PSTR("yes")) == 0) ||
-        (strcasecmp_P(cTmp, PSTR("online")) == 0) ||
+        // (strcasecmp_P(cTmp, PSTR("online")) == 0) ||
         (strcasecmp_P(cTmp, PSTR("enable")) == 0) ||
-        (strcasecmp_P(cTmp, PSTR("enabled")) == 0)
+        (strcasecmp_P(cTmp, PSTR("enabled")) == 0) ||
+        (strcasecmp_P(cTmp, SPGM(mqtt_bool_on)) == 0) ||
+        (strcasecmp_P(cTmp, SPGM(mqtt_status_topic_online)) == 0) ||
+        (strcasecmp_P(cTmp, SPGM(mqtt_bool_true)) == 0)
     ) {
         return true;
     }
     if (
-        (strcasecmp_P(cTmp, PSTR("false")) == 0) ||
+        // (strcasecmp_P(cTmp, PSTR("false")) == 0) ||
         (strcasecmp_P(cTmp, PSTR("off")) == 0) ||
         (strcasecmp_P(cTmp, PSTR("no")) == 0) ||
-        (strcasecmp_P(cTmp, PSTR("offline")) == 0) ||
+        // (strcasecmp_P(cTmp, PSTR("offline")) == 0) ||
         (strcasecmp_P(cTmp, PSTR("disable")) == 0) ||
-        (strcasecmp_P(cTmp, PSTR("disabled")) == 0)
+        (strcasecmp_P(cTmp, PSTR("disabled")) == 0) ||
+        (strcasecmp_P(cTmp, SPGM(mqtt_bool_off)) == 0) ||
+        (strcasecmp_P(cTmp, SPGM(mqtt_status_topic_offline)) == 0) ||
+        (strcasecmp_P(cTmp, SPGM(mqtt_bool_false)) == 0)
     ) {
         return false;
     }

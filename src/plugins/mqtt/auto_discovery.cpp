@@ -95,9 +95,11 @@ bool Entity::_create(ComponentType componentType, const String &name, FormatType
         if (format == FormatType::JSON) {
             addParameter(FSPGM(mqtt_unique_id), uniqueId);
         }
-        addParameter(FSPGM(mqtt_availability_topic), MQTTClient::formatTopic(FSPGM(mqtt_status_topic)));
-        // addParameter(FSPGM(mqtt_payload_available), F("online"));
-        // addParameter(FSPGM(mqtt_payload_not_available), F("offline"));
+        addParameter(FSPGM(mqtt_availability_topic), MQTTClient::formatTopic(MQTT_AVAILABILITY_TOPIC));
+#if MQTT_AVAILABILITY_TOPIC_ADD_PAYLOAD_ON_OFF
+        addParameter(FSPGM(mqtt_payload_available), MQTT_AVAILABILITY_TOPIC_ONLINE);
+        addParameter(FSPGM(mqtt_payload_not_available), MQTT_AVAILABILITY_TOPIC_OFFLINE);
+#endif
     }
     if (_format == FormatType::JSON) {
         PrintString model;

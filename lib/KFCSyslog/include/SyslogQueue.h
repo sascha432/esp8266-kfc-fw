@@ -22,6 +22,7 @@ public:
     SyslogQueueItem();
 	SyslogQueueItem(const String &message, uint32_t id = 1);
     SyslogQueueItem(SyslogQueueItem &&move) noexcept;
+    ~SyslogQueueItem() {}
 
     SyslogQueueItem &operator=(SyslogQueueItem &&move) noexcept;
 
@@ -58,6 +59,74 @@ private:
         uint8_t _data;
     };
 };
+
+#pragma push_macro("new")
+
+#undef new
+
+inline SyslogQueueItem &SyslogQueueItem::operator=(SyslogQueueItem &&move) noexcept
+{
+    this->~SyslogQueueItem();
+    ::new(this) SyslogQueueItem(std::move(move));
+    return *this;
+}
+
+#pragma pop_macro("new")
+
+inline uint32_t SyslogQueueItem::getId() const
+{
+	return _id;
+}
+
+inline uint32_t SyslogQueueItem::getMillis() const
+{
+    return _millis;
+}
+
+inline const String &SyslogQueueItem::getMessage() const
+{
+	return _message;
+}
+
+inline bool SyslogQueueItem::isLocked() const
+{
+    return _locked;
+}
+
+inline void SyslogQueueItem::setLocked(bool locked)
+{
+    _locked = locked;
+}
+
+inline bool SyslogQueueItem::try_lock()
+{
+    noInterrupts();
+    if (_locked) {
+        interrupts();
+        return false;
+    }
+    _locked = true;
+    interrupts();
+    return true;
+}
+
+inline size_t SyslogQueueItem::getFailureCount() const
+{
+    return _failureCount;
+}
+
+inline void SyslogQueueItem::setFailureCount(size_t count)
+{
+    _failureCount = count;
+    __LDBG_assert(_failureCount <= getMaxFailureCount());
+}
+
+inline void SyslogQueueItem::incrFailureCount()
+{
+    _failureCount++;
+    __LDBG_assert(_failureCount <= getMaxFailureCount());
+}
+
 
 class SyslogQueueManager {
 public:

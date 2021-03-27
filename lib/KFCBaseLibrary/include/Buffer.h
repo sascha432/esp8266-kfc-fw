@@ -203,11 +203,11 @@ public:
         write(str);
     }
 
-    Buffer &operator =(Buffer &&buffer) noexcept;
-    Buffer &operator =(const Buffer &buffer);
+    Buffer &operator=(Buffer &&buffer) noexcept;
+    Buffer &operator=(const Buffer &buffer);
 
-    Buffer &operator =(const String &str);
-    Buffer &operator =(String &&str);
+    Buffer &operator=(const String &str);
+    Buffer &operator=(String &&str);
 
     inline bool operator ==(const Buffer &buffer) const {
         return equals(buffer);

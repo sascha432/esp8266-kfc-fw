@@ -46,6 +46,12 @@ public:
 
     using Buffer::operator[];
 
+    BufferStream &operator=(const BufferStream &buffer) {
+        Buffer::operator=(buffer);
+        _position = buffer._position;
+        return *this;
+    }
+
     virtual size_t write(uint8_t data) override {
         return Buffer::write(data);
     }

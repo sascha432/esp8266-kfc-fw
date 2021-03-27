@@ -108,10 +108,12 @@ private:
     }
 
     StaticString &operator=(StaticString &&str) noexcept {
-        ~StaticString();
+        this->~StaticString();
         _ptr = std::exchange(str._ptr, nullptr);
-        _length = std::exchange(str._length, 0);
-        _progmem = std::exchange(str._progmem, 0);
+        _length = str._length;
+        str._length = 0;
+        _progmem = str._progmem;
+        str._progmem = 0;
         return *this;
     }
 

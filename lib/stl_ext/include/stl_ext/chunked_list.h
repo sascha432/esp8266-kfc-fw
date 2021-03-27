@@ -517,7 +517,7 @@ namespace STL_STD_EXT_NAMESPACE_EX {
         }
 
         chunked_list &operator=(chunked_list &&list) noexcept {
-            _destroy();
+            this->~chunked_list();
             ::new(static_cast<void *>(this)) chunked_list(std::move(list));
             return *this;
         }

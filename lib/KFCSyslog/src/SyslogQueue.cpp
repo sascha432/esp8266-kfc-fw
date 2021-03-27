@@ -70,68 +70,6 @@ SyslogQueueItem::SyslogQueueItem(SyslogQueueItem &&move) noexcept :
 {
 }
 
-#undef new
-
-SyslogQueueItem &SyslogQueueItem::operator=(SyslogQueueItem &&move) noexcept
-{
-    new(this) SyslogQueueItem(std::move(move));
-    return *this;
-}
-
-uint32_t SyslogQueueItem::getId() const
-{
-	return _id;
-}
-
-uint32_t SyslogQueueItem::getMillis() const
-{
-    return _millis;
-}
-
-const String &SyslogQueueItem::getMessage() const
-{
-	return _message;
-}
-
-bool SyslogQueueItem::isLocked() const
-{
-    return _locked;
-}
-
-void SyslogQueueItem::setLocked(bool locked)
-{
-    _locked = locked;
-}
-
-bool SyslogQueueItem::try_lock()
-{
-    noInterrupts();
-    if (_locked) {
-        interrupts();
-        return false;
-    }
-    _locked = true;
-    interrupts();
-    return true;
-}
-
-size_t SyslogQueueItem::getFailureCount() const
-{
-    return _failureCount;
-}
-
-void SyslogQueueItem::setFailureCount(size_t count)
-{
-    _failureCount = count;
-    __LDBG_assert(_failureCount <= getMaxFailureCount());
-}
-
-void SyslogQueueItem::incrFailureCount()
-{
-    _failureCount++;
-    __LDBG_assert(_failureCount <= getMaxFailureCount());
-}
-
 // ------------------------------------------------------------------------
 // SyslogQueue
 // ------------------------------------------------------------------------

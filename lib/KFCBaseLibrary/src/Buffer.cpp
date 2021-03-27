@@ -101,53 +101,6 @@ Buffer &Buffer::operator =(Buffer &&buffer) noexcept
     return *this;
 }
 
-Buffer &Buffer::operator =(const Buffer &buffer)
-{
-    _length = buffer._length;
-    if (_changeBuffer(buffer._size)) {
-        std::copy_n(buffer.begin(), _length, begin());
-    }
-    else {
-        clear();
-    }
-    return *this;
-}
-
-Buffer &Buffer::operator=(String &&str)
-{
-    __LDBG_printf("len=%u size=%u ptr=%p", _length, _size, _buffer);
-    clear();
-    MoveStringHelper::move(*this, std::move(str));
-    return *this;
-}
-
-Buffer &Buffer::operator=(const String &str)
-{
-    __LDBG_printf("len=%u size=%u ptr=%p", _length, _size, _buffer);
-    _length = 0;
-    write(str);
-    return *this;
-}
-
-bool Buffer::equals(const Buffer &buffer) const
-{
-    if (buffer._length != _length) {
-        return false;
-    }
-    return memcmp(get(), buffer.get(), _length) == 0;
-}
-
-void Buffer::move(uint8_t **ptr)
-{
-    auto tmp = _buffer;
-    _buffer = nullptr;
-    _size = 0;
-    _length = 0;
-    *ptr = tmp;
-    // remove from registered blocks
-    __LDBG_NOP_free(tmp);
-}
-
 void Buffer::removeAndShrink(size_t index, size_t count, size_t minFree)
 {
     remove(index, count);

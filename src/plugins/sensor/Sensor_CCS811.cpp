@@ -84,7 +84,7 @@ void Sensor_CCS811::getValues(JsonArray &array, bool timer)
     obj->add(JJ(value), sensor.TVOC);
 }
 
-void Sensor_CCS811::createWebUI(WebUIRoot &webUI, WebUIRow **row)
+void Sensor_CCS811::createWebUI(WebUINS::Root &webUI)
 {
     __LDBG_printf("Sensor_CCS811::createWebUI()");
 

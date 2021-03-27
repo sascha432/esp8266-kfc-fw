@@ -87,7 +87,7 @@ void Sensor_BME680::getValues(JsonArray &array, bool timer) {
     obj->add(JJ(value), JsonNumber(sensor.gas, 2));
 }
 
-void Sensor_BME680::createWebUI(WebUIRoot &webUI, WebUIRow **row)
+void Sensor_BME680::createWebUI(WebUINS::Root &webUI)
 {
     __LDBG_printf("Sensor_BME680::createWebUI()");
 

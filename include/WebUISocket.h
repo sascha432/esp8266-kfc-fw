@@ -29,6 +29,10 @@ public:
         WsClient::safeSend(getServerSocket(), client, json);
     }
 
+    static void send(AsyncWebSocketClient *client, const MQTT::Json::UnnamedObject &json) {
+        WsClient::safeSend(getServerSocket(), client, json);
+    }
+
     // text message with no encoding
     inline static void broadcast(WebUISocket *sender, const uint8_t *str, size_t len) {
         WsClient::broadcast(getServerSocket(), sender, str, len);
@@ -55,7 +59,7 @@ public:
 
     static void setup(AsyncWebServer *server);
 
-    static void createWebUIJSON(JsonUnnamedObject &json);
+    static WebUINS::Root createWebUIJSON();
     static void sendValues(AsyncWebSocketClient *client);
 
     inline static WebUISocket *getSender() {

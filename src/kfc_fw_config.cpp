@@ -310,13 +310,18 @@ void KFCFWConfiguration::_onWiFiGotIPCb(const WiFiEventStationModeGotIP &event)
 void KFCFWConfiguration::setWiFiConnectLedMode()
 {
 #if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID
-    auto mode = System::Device::getConfig().getStatusLedMode();
-    if (mode != System::Device::StatusLEDModeType::OFF) {
-        if (WiFi.isConnected()) {
-            BUILDIN_LED_SET(mode == System::Device::StatusLEDModeType::OFF_WHEN_CONNECTED ? BlinkLEDTimer::BlinkType::OFF : BlinkLEDTimer::BlinkType::SOLID);
-        }
-        else {
-            BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FAST);
+    if (config.isSafeMode()) {
+         BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SOS);
+    }
+    else {
+        auto mode = System::Device::getConfig().getStatusLedMode();
+        if (mode != System::Device::StatusLEDModeType::OFF) {
+            if (WiFi.isConnected()) {
+                BUILDIN_LED_SET(mode == System::Device::StatusLEDModeType::OFF_WHEN_CONNECTED ? BlinkLEDTimer::BlinkType::OFF : BlinkLEDTimer::BlinkType::SOLID);
+            }
+            else {
+                BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FAST);
+            }
         }
     }
 #endif

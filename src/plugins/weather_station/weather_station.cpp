@@ -411,7 +411,7 @@ WeatherStationPlugin &WeatherStationPlugin::_getInstance()
     return plugin;
 }
 
-void WeatherStationPlugin::createWebUI(WebUIRoot &webUI)
+void WeatherStationPlugin::createWebUI(WebUINS::Root &webUI)
 {
     auto row = &webUI.addRow();
     row->addGroup(F("Weather Station"), false);

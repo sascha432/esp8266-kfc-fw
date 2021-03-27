@@ -123,7 +123,7 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
 
 #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
 
-void ClockPlugin::addPowerSensor(WebUIRoot &webUI, WebUIRow **row, SensorPlugin::SensorType type)
+void ClockPlugin::addPowerSensor(WebUINS::Root &webUI, SensorPlugin::SensorType type)
 {
     if (type == SensorPlugin::SensorType::SYSTEM_METRICS) {
         (*row)->addSensor(F("pwrlvl"), F("Power"), 'W');
@@ -134,7 +134,7 @@ void ClockPlugin::_updatePowerLevelWebUI()
 {
     if (WebUISocket::hasAuthenticatedClients()) {
         JsonUnnamedObject json(2);
-        json.add(JJ(type), JJ(ue));
+        json.add(JJ(type), JJ(update_events));
         auto &events = json.addArray(JJ(events), 1);
         auto &obj = events.addObject(3);
         obj.add(JJ(id), F("pwrlvl"));
@@ -191,7 +191,7 @@ void ClockPlugin::_calcPowerLevel()
 
 #endif
 
-void ClockPlugin::createWebUI(WebUIRoot &webUI)
+void ClockPlugin::createWebUI(WebUINS::Root &webUI)
 {
     auto row = &webUI.addRow();
     #if IOT_LED_MATRIX
@@ -210,7 +210,7 @@ void ClockPlugin::createWebUI(WebUIRoot &webUI)
     auto height = F("15rem");
 
     IF_IOT_CLOCK_SAVE_STATE(
-        row->addSwitch(F("power"), F("Power<div class=\"p-1\"></div><span class=\"oi oi-power-standby\">"), true, WebUIRow::NamePositionType::TOP).add(JJ(height), height);
+        row->addSwitch(F("power"), F("Power<div class=\"p-1\"></div><span class=\"oi oi-power-standby\">"), true, WebUINS::NamePositionType::TOP).add(JJ(height), height);
     )
 
     IF_IOT_CLOCK(
@@ -224,7 +224,7 @@ void ClockPlugin::createWebUI(WebUIRoot &webUI)
     // )
 
     IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(
-       row->addSensor(FSPGM(light_sensor), F("Ambient Light Sensor"), F("<img src=\"/images/light.svg\" width=\"80\" height=\"80\" style=\"margin-top:-20px;margin-bottom:1rem\">"), WebUIComponent::SensorRenderType::COLUMN).add(JJ(height), height);
+       row->addSensor(FSPGM(light_sensor), F("Ambient Light Sensor"), F("<img src=\"/images/light.svg\" width=\"80\" height=\"80\" style=\"margin-top:-20px;margin-bottom:1rem\">"), WebUINS::SensorRenderType::COLUMN).add(JJ(height), height);
     )
 
     row->addSensor(F("tempp"), F("Temperature Protection"), '%').add(JJ(height), height);
@@ -234,7 +234,7 @@ void ClockPlugin::_broadcastWebUI()
 {
     if (WebUISocket::hasAuthenticatedClients()) {
         JsonUnnamedObject json(2);
-        json.add(JJ(type), JJ(ue));
+        json.add(JJ(type), JJ(update_events));
         getValues(json.addArray(JJ(events)));
         WebUISocket::broadcast(WebUISocket::getSender(), json);
     }

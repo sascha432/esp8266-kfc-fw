@@ -471,26 +471,13 @@ void Plugin::_handlerWebUI(AsyncWebServerRequest *request, HttpHeaders &headers)
         request->send(503);
         return;
     }
-    String str;
-    {
-        JsonUnnamedObject json;
-        WebUISocket::createWebUIJSON(json);
-        str = json.toString();
-    }
-    auto response = new AsyncBasicResponse(200, FSPGM(mime_application_json), str);
+    __DBG_printf("WebUISocket::createWebUIJSON()");
+    auto json = WebUISocket::createWebUIJSON();
+    __DBG_printf("json %p", &json);
+    __DBG_printf("json %s", json.toString().c_str());
+    auto response = new AsyncBasicResponse(200, FSPGM(mime_application_json), json.toString());
     headers.addNoCache();
-
-    // PrintHtmlEntitiesString timeStr;
-    // WebTemplate::printSystemTime(time(nullptr), timeStr);
-    // headers.add<HttpSimpleHeader>('device-time', timeStr);
-
     headers.setResponseHeaders(response);
-    //TODO fix
-    // auto response = new AsyncJsonResponse();
-    // WebUISocket::createWebUIJSON(response->getJsonObject());
-    // HttpHeaders headers;
-    // headers.addNoCache();
-    // headers.setAsyncBaseResponseHeaders(response);
     request->send(response);
 }
 

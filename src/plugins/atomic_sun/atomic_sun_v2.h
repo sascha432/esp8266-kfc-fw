@@ -219,7 +219,7 @@ public:
     }
 // WebUI
 public:
-    virtual void createWebUI(WebUIRoot &webUI) override;
+    virtual void createWebUI(WebUINS::Root &webUI) override;
     virtual void getValues(JsonArray &array) override {
         Driver_4ChDimmer::_getValues(array);
     }

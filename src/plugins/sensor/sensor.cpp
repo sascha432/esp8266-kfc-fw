@@ -45,9 +45,8 @@ SensorPlugin::SensorPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(Sensor
     REGISTER_PLUGIN(this, "SensorPlugin");
 }
 
-void SensorPlugin::getValues(JsonArray &array)
+void SensorPlugin::getValues(NamedArray &array)
 {
-    _debug_println();
     for(auto sensor: _sensors) {
         sensor->getValues(array, false);
     }
@@ -207,27 +206,24 @@ void SensorPlugin::createMenu()
     }
 }
 
-void SensorPlugin::createWebUI(WebUIRoot &webUI)
+void SensorPlugin::createWebUI(WebUINS::Root &webUI)
 {
-    WebUIRow *row = &webUI.addRow();
-
     if (_count()) {
-        row->addGroup(F("Sensors"), false);
-        row = &webUI.addRow();
+        webUI.addRow(WebUINS::Row(WebUINS::Group(F("Sensors"), false)));
     }
 
-    for(auto sensor: _sensors) {
+    for(const auto sensor: _sensors) {
+        __DBG_printf("createWebUI type=%u", sensor->getType());
         if (_addCustomSensors) {
-            _addCustomSensors(webUI, &row, sensor->getType());
+            _addCustomSensors(webUI, sensor->getType());
         }
-        sensor->createWebUI(webUI, &row);
+        sensor->createWebUI(webUI);
     }
     if (_addCustomSensors) {
         if (!_count()) {
-            row->addGroup(F("Sensors"), false);
-            row = &webUI.addRow();
+            webUI.addRow(WebUINS::Row(WebUINS::Group(F("Sensors"), false)));
         }
-        _addCustomSensors(webUI, &row, SensorType::MAX);
+        _addCustomSensors(webUI, SensorType::MAX);
     }
 }
 

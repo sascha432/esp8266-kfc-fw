@@ -77,7 +77,10 @@ private:
     void _ntpCallback(time_t now);
     void _timerCallback(Event::CallbackTimerPtr timer);
     void _publishState();
-    static String _formatTopic(const __FlashStringHelper *topic);
+
+    inline static String _formatTopic(const __FlashStringHelper *topic) {
+        return MQTTClient::formatTopic(String(FSPGM(alarm)), topic);
+    }
 
     class ActiveAlarm {
     public:

@@ -31,7 +31,7 @@ public:
     virtual void publishState() override;
     virtual void getValues(NamedJsonArray &array, bool timer) override;
     virtual void getValues(JsonArray &json, bool timer) override;
-    virtual void createWebUI(WebUIRoot &webUI, WebUIRow **row) override;
+    virtual void createWebUI(WebUINS::Root &webUI) override;
     virtual void getStatus(Print &output) override;
 
 private:
@@ -42,7 +42,7 @@ private:
         return MQTTClient::formatTopic(F("metrics"));
     }
     MetricsType &_updateMetrics(const MetricsType &metrics);
-    void _createWebUI(WebUIRoot &webUI, WebUIRow **row);
+    void _createWebUI(WebUINS::Root &webUI);
 
     String _name;
     MetricsType _metrics;

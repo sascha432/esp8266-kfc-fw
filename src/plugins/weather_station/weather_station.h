@@ -35,7 +35,7 @@ public:
 
 // WebUI
 public:
-    virtual void createWebUI(WebUIRoot &webUI) override;
+    virtual void createWebUI(v &webUI) override;
     virtual void getValues(JsonArray &array) override;
     virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) override;
 

@@ -6,7 +6,6 @@
 
 #include <Arduino_compat.h>
 #include <ESPAsyncWebServer.h>
-#include <ArduinoJson.h>
 #include <AsyncPing.h>
 #include <web_socket.h>
 

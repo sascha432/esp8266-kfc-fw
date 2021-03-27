@@ -398,7 +398,7 @@ void Driver_4ChDimmer::publishState(MQTTClient *client)
 
     if (WebUISocket::hasAuthenticatedClients()) {
         JsonUnnamedObject json(2);
-        json.add(JJ(type), JJ(ue));
+        json.add(JJ(type), JJ(update_events));
         auto &events = json.addArray(JJ(events));
         JsonUnnamedObject *obj;
 
@@ -703,7 +703,7 @@ void AtomicSunPlugin::shutdown()
     _end();
 }
 
-void AtomicSunPlugin::createWebUI(WebUIRoot &webUI)
+void AtomicSunPlugin::createWebUI(WebUINS::Root &webUI)
 {
     auto row = &webUI.addRow();
     row->addGroup(F("Atomic Sun"), false);
@@ -719,7 +719,7 @@ void AtomicSunPlugin::createWebUI(WebUIRoot &webUI)
     if (sensor) {
         sensor->_createWebUI(webUI, &row);
     }
-    row->addSwitch(F("dimmer_lock"), F("Lock Channels"), false, WebUIRow::NamePositionType::TOP);
+    row->addSwitch(F("dimmer_lock"), F("Lock Channels"), false, WebUINS::NamePositionType::TOP);
 
     row->addGroup(F("Channels"), false);
 

@@ -261,7 +261,7 @@ public:
 // ------------------------------------------------------------------------
 
 public:
-    virtual void createWebUI(WebUIRoot &webUI) override;
+    virtual void createWebUI(WebUINS::Root &webUI) override;
     virtual void getValues(JsonArray &array) override;
     virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) override;
 
@@ -327,7 +327,7 @@ private:
 #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION || IOT_CLOCK_HAVE_POWER_LIMIT
 
 public:
-    static void addPowerSensor(WebUIRoot &webUI, WebUIRow **row, SensorPlugin::SensorType type);
+    static void addPowerSensor(WebUINS::Root &webUI, SensorPlugin::SensorType type);
     static uint8_t calcPowerFunction(uint8_t scale, uint32_t data);
     static void webSocketCallback(WsClient::ClientCallbackType type, WsClient *client, AsyncWebSocket *server, WsClient::ClientCallbackId id);
 

@@ -6,6 +6,7 @@
 
 #include <PrintString.h>
 #include <JsonTools.h>
+#include "mqtt_strings.h"
 
 #define MQTT_JSON_WRITER_DEBUG 1
 
@@ -82,11 +83,11 @@ namespace MQTT {
             // as NamedVariant
             //
             // const __FlashStringHelper *key() const;
-            // void printTo(PrintStringInterface &output) const
+            // void printTo(PrintStringInterface &output) const;
             //
             // as UnnamedVariant and value of Un-/namedVariant
             //
-            // void printTo(PrintStringInterface &output) const
+            // void printTo(PrintStringInterface &output) const;
             //
             // printTo is responsible for quotes and encoding. the output can be any
             // valid json variant (nested array/objects)
@@ -138,22 +139,6 @@ namespace MQTT {
             return F("no error");
         }
 
-        //template<typename _Ta> // , typename _Tb = const typename std::remove_reference<typename std::remove_const<_Ta>::type>::type &>
-
-
-        // _Ta is the storage type
-        // _Ta & is the reference
-        // const _Ta & is the const ref
-
-  /*      static constexpr bool xxx = std::is_pointer<FStr>::value;
-        using _Type = FStr;
-        using _Reference = typename std::conditional<std::is_pointer<_Type>::value, _Type, _Type &>::type;
-        using _ConstRef = typename std::conditional<std::is_const<_Type>::value, _Type, const _Type>::type;
-*/
-
-
-
-
         namespace Helpers {
 
             template<typename _Ta>
@@ -176,6 +161,8 @@ namespace MQTT {
 
         struct NamedBase {
         };
+
+        class RemoveOuterBase;
 
         template<typename _Type, typename _ConstRef = typename Helpers::const_ref<_Type>::type>
         struct UnnamedVariant : UnnamedBase {
@@ -209,9 +196,9 @@ namespace MQTT {
         };
 
         struct UnnamedFormattedInteger : PrintToInterface, UnnamedBase {
-            UnnamedFormattedInteger(uint32_t value, const __FlashStringHelper *format = FSPGM(default_format_integer, "\"%05d\"")) : 
-                _format(format), 
-                _value(value) 
+            UnnamedFormattedInteger(uint32_t value, const __FlashStringHelper *format = FSPGM(default_format_integer, "\"%05d\"")) :
+                _format(format),
+                _value(value)
             {
             }
 
@@ -225,9 +212,9 @@ namespace MQTT {
         };
 
         struct NamedFormattedInteger : UnnamedFormattedInteger, NamedBase {
-            NamedFormattedInteger(const __FlashStringHelper *key, uint32_t value, const __FlashStringHelper *format = FSPGM(default_format_integer)) : 
-                UnnamedFormattedInteger(value, format), 
-                _key(key) 
+            NamedFormattedInteger(const __FlashStringHelper *key, uint32_t value, const __FlashStringHelper *format = FSPGM(default_format_integer)) :
+                UnnamedFormattedInteger(value, format),
+                _key(key)
             {
             }
 
@@ -314,9 +301,9 @@ namespace MQTT {
         // if the value is not normaled (nan, inf, -inf etc..) the output is null to meet JSON standards
         // if the value has more than one leading zero (1.00000, 1.23000), those get trimmed (1.0, 1.23)
         struct UnnamedTrimmedFormattedDouble : PrintToInterface, UnnamedBase {
-            UnnamedTrimmedFormattedDouble(double value, const __FlashStringHelper *format = FSPGM(default_format_double)) : 
-                _format(format), 
-                _value(value) 
+            UnnamedTrimmedFormattedDouble(double value, const __FlashStringHelper *format = FSPGM(default_format_double)) :
+                _format(format),
+                _value(value)
             {
             }
 
@@ -330,7 +317,7 @@ namespace MQTT {
                         // trim all zeros
                         output.rtrim('0');
                         // if the dot is the last character, append a 0
-                        if (pos == output.length() - 1) { 
+                        if (pos == output.length() - 1) {
                             output += '0';
                         }
                     }
@@ -346,8 +333,8 @@ namespace MQTT {
 
         struct NamedTrimmedFormattedDouble : UnnamedTrimmedFormattedDouble, NamedBase {
             NamedTrimmedFormattedDouble(const __FlashStringHelper *key, double value, const __FlashStringHelper *format = FSPGM(default_format_double)) :
-                UnnamedTrimmedFormattedDouble(value), 
-                _key(key) 
+                UnnamedTrimmedFormattedDouble(value),
+                _key(key)
             {
             }
 
@@ -380,6 +367,7 @@ namespace MQTT {
         using UnnamedInt64 = UnnamedVariant<int64_t>;
         using UnnamedUint64 = UnnamedVariant<uint64_t>;
         using UnnamedBool = UnnamedVariant<bool>;
+        using UnnamedChar = UnnamedVariant<char>;
 
         struct UnnamedNull : UnnamedBase {
 
@@ -403,6 +391,7 @@ namespace MQTT {
         using NamedUnsigned = NamedUint32;
         using NamedInt64 = NamedVariant<FStr, int64_t>;
         using NamedUint64 = NamedVariant<FStr, uint64_t>;
+        using NamedChar = NamedVariant<FStr, char>;
         class NamedArray;
         class NamedObject;
 
@@ -430,6 +419,32 @@ namespace MQTT {
             NamedString(FStr key, const String &value) : NamedVariant<FStr, FStr>(key, reinterpret_cast<FStr>(value.c_str())) {}
         };
 
+        struct UnnamedStoredString : UnnamedBase {
+            UnnamedStoredString(const char *str) : _value(str) {}
+            UnnamedStoredString(const String &str) : _value(str) {}
+            UnnamedStoredString(String &&str) : _value(std::move(str)) {}
+
+            const String &value() const {
+                return _value;
+            }
+
+            String _value;
+        };
+
+        struct NamedStoredString : UnnamedStoredString, NamedBase {
+            NamedStoredString(FStr key, const char *value) : UnnamedStoredString(value), _key(key) {}
+            // NamedStoredString(FStr key, const String &value) : UnnamedStoredString(value), _key(key) {}
+            // NamedStoredString(FStr key, String &&value) : UnnamedStoredString(std::move(value)), _key(key) {}
+            template<typename _Ta>
+            NamedStoredString(FStr key, _Ta value) : UnnamedStoredString(std::forward<_Ta>(value)), _key(key) {}
+
+            FStr key() const {
+                return _key;
+            }
+
+            FStr _key;
+        };
+
         struct NamedBool : NamedVariant<FStr, bool> {
             NamedBool(FStr key, bool value) : NamedVariant(key, value) {}
         };
@@ -455,7 +470,7 @@ namespace MQTT {
         };
 
         struct State : NamedVariant<FStr, FStr> {
-            State(bool value) : NamedVariant(F("state"), value ? F("ON") : F("OFF")) {}
+            State(bool value) : NamedVariant(F("state"), value ? FSPGM(mqtt_bool_on) : FSPGM(mqtt_bool_off)) {}
         };
 
         struct Effect : NamedString {
@@ -465,7 +480,7 @@ namespace MQTT {
         };
 
         struct Transition : NamedTrimmedFormattedDouble {
-            Transition(double transition, uint8_t precision = 2) : 
+            Transition(double transition, uint8_t precision = 2) :
                 NamedTrimmedFormattedDouble(F("transition"), transition, reinterpret_cast<FStr>(PrintString(F("%%.%uf"), precision).c_str()))
             {
             }
@@ -480,8 +495,8 @@ namespace MQTT {
 
             // constructor for arrays with elements
             template<class ..._Args>
-            UnnamedArrayWriter(PrintStringInterface &output, _Args&& ... args) : 
-                _output(output) 
+            UnnamedArrayWriter(PrintStringInterface &output, _Args&& ... args) :
+                _output(output)
             {
                 output.print('[');
                 add(std::forward<_Args>(args) ...);
@@ -493,15 +508,15 @@ namespace MQTT {
             friend JsonStringWriter<UnnamedObjectWriter, ObjectType>;
 
             // constructor for empty arrays
-            UnnamedArrayWriter(ArrayType, PrintStringInterface &output) : 
-                UnnamedArrayWriter(output) 
+            UnnamedArrayWriter(ArrayType, PrintStringInterface &output) :
+                UnnamedArrayWriter(output)
             {
             }
 
             // constructor for arrays with elements
             template<class ..._Args>
-            UnnamedArrayWriter(ArrayType, PrintStringInterface &output, _Args&& ... args) : 
-                _output(output) 
+            UnnamedArrayWriter(ArrayType, PrintStringInterface &output, _Args&& ... args) :
+                _output(output)
             {
                 output.print('[');
                 add(std::forward<_Args>(args) ...);
@@ -527,7 +542,7 @@ namespace MQTT {
                 if (error != ErrorType::NONE) {
                     return error;
                 }
-                return appendLevel(static_cast<uint8_t>(level), *this, std::forward<_Args>(args)...);
+                return appendLevel(static_cast<uint8_t>(level), std::forward<_Args>(args)...);
             }
 
         protected:
@@ -907,16 +922,16 @@ namespace MQTT {
         class UnnamedObjectWriter : public UnnamedArrayWriter {
         public:
             // constructor for empty objects
-            UnnamedObjectWriter(PrintStringInterface &output) : 
-                UnnamedArrayWriter(ObjectType(), output) 
+            UnnamedObjectWriter(PrintStringInterface &output) :
+                UnnamedArrayWriter(ObjectType(), output)
             {
                 _output.print(F("{}"));
             }
 
             // constructor for objects with elements
             template<class ..._Args>
-            UnnamedObjectWriter(PrintStringInterface &output, _Args&& ... args) : 
-                UnnamedArrayWriter(ObjectType(), output) 
+            UnnamedObjectWriter(PrintStringInterface &output, _Args&& ... args) :
+                UnnamedArrayWriter(ObjectType(), output)
             {
                 output.print('{');
                 add(std::forward<_Args>(args) ...);
@@ -927,15 +942,15 @@ namespace MQTT {
             friend JsonStringWriter<UnnamedArrayWriter, ArrayType>;
             friend JsonStringWriter<UnnamedObjectWriter, ObjectType>;
 
-            UnnamedObjectWriter(ObjectType, PrintStringInterface &output) : 
-                UnnamedArrayWriter(ObjectType(), output) 
+            UnnamedObjectWriter(ObjectType, PrintStringInterface &output) :
+                UnnamedArrayWriter(ObjectType(), output)
             {
                 _output.print(F("{}"));
             }
 
             template<class ..._Args>
-            UnnamedObjectWriter(ObjectType, PrintStringInterface &output, _Args&& ... args) : 
-                UnnamedArrayWriter(ObjectType(), output) 
+            UnnamedObjectWriter(ObjectType, PrintStringInterface &output, _Args&& ... args) :
+                UnnamedArrayWriter(ObjectType(), output)
             {
                 output.print('{');
                 add(std::forward<_Args>(args) ...);
@@ -1044,6 +1059,19 @@ namespace MQTT {
                 _output.print(',');
             }
 
+            template<typename _Ta, typename std::enable_if<
+                std::is_same<const String &, _Ta>::value ||
+                std::is_same<const char *, _Ta>::value ||
+                std::is_same<char *, _Ta>::value ||
+                std::is_same<const __FlashStringHelper *, _Ta>::value, int>::type = 0>
+                void add(_Ta) {
+                static_assert(!(
+                    std::is_same<const String &, _Ta>::value ||
+                    std::is_same<const char *, _Ta>::value ||
+                    std::is_same<char *, _Ta>::value ||
+                    std::is_same<const __FlashStringHelper *, _Ta>::value), "type not allowed");
+            }
+
             template<typename _Ta, typename ... _Args>
             void add(const _Ta &arg, _Args&& ...args) {
                 add(arg);
@@ -1055,8 +1083,8 @@ namespace MQTT {
         class JsonStringWriter {
         public:
             template<class ..._Args>
-            JsonStringWriter(_Args&& ...args) : 
-                _writer(_Tb(), _output, std::forward<_Args>(args)...) 
+            JsonStringWriter(_Args&& ...args) :
+                _writer(_Tb(), _output, std::forward<_Args>(args)...)
             {
             }
             ~JsonStringWriter() {
@@ -1134,6 +1162,8 @@ namespace MQTT {
             }
 
         protected:
+            friend RemoveOuterBase;
+
             PrintString _output;
             _Ta _writer;
         };
@@ -1141,27 +1171,49 @@ namespace MQTT {
         class UnnamedArray : public JsonStringWriter<UnnamedArrayWriter, ArrayType> {
         public:
             template<typename ... _Args>
-            UnnamedArray(_Args&& ...args) : 
-                JsonStringWriter<UnnamedArrayWriter, ArrayType>(std::forward<_Args>(args)...) 
+            UnnamedArray(_Args&& ...args) :
+                JsonStringWriter<UnnamedArrayWriter, ArrayType>(std::forward<_Args>(args)...)
             {
+            }
+
+        protected:
+            friend RemoveOuterBase;
+
+            PrintString &_getOutput() {
+                return _output;
+            }
+
+            const PrintString &_getOutput() const {
+                return _output;
             }
         };
 
         class UnnamedObject : public JsonStringWriter<UnnamedObjectWriter, ObjectType> {
         public:
             template<typename ... _Args>
-            UnnamedObject(_Args&& ...args) : 
-                JsonStringWriter<UnnamedObjectWriter, ObjectType>(std::forward<_Args>(args)...) 
+            UnnamedObject(_Args&& ...args) :
+                JsonStringWriter<UnnamedObjectWriter, ObjectType>(std::forward<_Args>(args)...)
             {
+            }
+
+        protected:
+            friend RemoveOuterBase;
+
+            PrintString &_getOutput() {
+                return _output;
+            }
+
+            const PrintString &_getOutput() const {
+                return _output;
             }
         };
 
         class NamedArray : public UnnamedArray {
         public:
             template<typename ... _Args>
-            NamedArray(FStr key, _Args&& ...args) : 
-                UnnamedArray(std::forward<_Args>(args)...), 
-                _key(key) 
+            NamedArray(FStr key, _Args&& ...args) :
+                UnnamedArray(std::forward<_Args>(args)...),
+                _key(key)
             {
             }
 
@@ -1194,9 +1246,9 @@ namespace MQTT {
         class NamedObject : public UnnamedObject {
         public:
             template<typename ... _Args>
-            NamedObject(FStr key, _Args&& ...args) : 
-                UnnamedObject(std::forward<_Args>(args)...), 
-                _key(key) 
+            NamedObject(FStr key, _Args&& ...args) :
+                UnnamedObject(std::forward<_Args>(args)...),
+                _key(key)
             {
             }
 
@@ -1252,6 +1304,38 @@ namespace MQTT {
             writer.printTo(_output);
             _output.print(',');
         }
+
+
+
+        // append values of an array/object to an array/object
+        class RemoveOuterBase : public PrintToInterface, public  UnnamedBase {
+        public:
+            void printTo(PrintStringInterface &output) const {
+                output.print(_value);
+            }
+
+        protected:
+            RemoveOuterBase(const String &value) {
+                _value.concat(value.c_str() + 1, value.length() - 2);
+                //_value.remove(_value.length() - 1, 1);
+            }
+
+            String _value;
+        };
+
+        // append values of an array to an array
+        class RemoveOuterArray : public RemoveOuterBase {
+        public:
+            inline RemoveOuterArray(const UnnamedArray &arr) : RemoveOuterBase(arr.toString()) {
+            }
+        };
+
+        // append keys/values of an object to an object
+        class RemoveOuterObject : public RemoveOuterBase {
+        public:
+            inline RemoveOuterObject(const UnnamedObject &obj) : RemoveOuterBase(obj.toString()) {
+            }
+        };
 
     }
 

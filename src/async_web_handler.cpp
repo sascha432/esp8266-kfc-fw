@@ -7,6 +7,9 @@
 #include "async_web_handler.h"
 #include "web_server.h"
 #include "misc.h"
+#if MQTT_SUPPORT
+#include "../src/plugins/mqtt/mqtt_strings.h"
+#endif
 
  AsyncFileUploadWebHandler::AsyncFileUploadWebHandler(const String &uri, ArRequestHandlerFunction _onRequest) :
     AsyncCallbackWebHandler()

@@ -89,12 +89,12 @@ class SensorPlugin : public PluginComponent {
 public:
     using SensorType = MQTT::SensorType;
     using SensorVector = std::vector<MQTT::SensorPtr>;
-    using AddCustomSensorCallback = std::function<void(WebUIRoot &webUI, WebUIRow **row, SensorType nextType)>;
+    using AddCustomSensorCallback = std::function<void(WebUINS::Root &webUI, SensorType nextType)>;
 
 // WebUI
 public:
-    virtual void createWebUI(WebUIRoot &webUI) override;
-    virtual void getValues(JsonArray &array) override;
+    virtual void createWebUI(WebUINS::Root &webUI) override;
+    virtual void getValues(NamedArray &array) override;
     virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) override;
 
 // PluginComponent

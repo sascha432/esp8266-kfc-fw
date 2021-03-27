@@ -53,8 +53,8 @@ namespace MQTT {
         static constexpr uint16_t DEFAULT_MQTT_UPDATE_RATE = 30;
 
         using SensorType = MQTT::SensorType;
-        using NamedJsonArray = PluginComponent::NamedJsonArray;
         using SensorPtr = MQTT::SensorPtr;
+        using NamedArray = MQTT::Json::NamedArray;
 
         Sensor(SensorType type);
         virtual ~Sensor();
@@ -77,11 +77,9 @@ namespace MQTT {
         // client is valid and connected
         virtual void publishState() = 0;
         // using update rate
-        virtual void getValues(JsonArray &json, bool timer) = 0;
-
-        virtual void getValues(NamedJsonArray &array, bool timer) = 0;
+        virtual void getValues(NamedArray &array, bool timer) = 0;
         // create webUI for sensor
-        virtual void createWebUI(WebUIRoot &webUI, WebUIRow **row) = 0;
+        virtual void createWebUI(WebUINS::Root &webUI) = 0;
         // return status of the sensor for status.html
         virtual void getStatus(Print &output) = 0;
 
@@ -107,20 +105,28 @@ namespace MQTT {
         }
     #endif
 
-        void timerEvent(MQTT::Json::NamedArray *array, bool mqttIsConnected);
+        void timerEvent(NamedArray *array, bool mqttIsConnected);
 
         inline void setUpdateRate(uint16_t updateRate) {
             _updateRate = updateRate;
-            _nextUpdate = 0;
+            forceUpdate();
         }
 
         inline void setMqttUpdateRate(uint16_t updateRate) {
             _mqttUpdateRate = updateRate;
-            _nextMqttUpdate = 0;
+            forceMqttUpdate();
         }
 
         inline void setNextMqttUpdate(uint16_t delay) {
             _nextMqttUpdate = time(nullptr) + delay;
+        }
+
+        inline void forceUpdate() {
+            _nextUpdate = 0;
+        }
+
+        inline void forceMqttUpdate() {
+            _nextMqttUpdate = 0;
         }
 
         inline SensorType getType() const {

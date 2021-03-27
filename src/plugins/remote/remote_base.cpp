@@ -9,6 +9,7 @@
 #include "remote_event_queue.h"
 #include "remote.h"
 #include "blink_led_timer.h"
+#include "../src/plugins/sensor/sensor.h"
 
 #if DEBUG_IOT_REMOTE_CONTROL
 #include <debug_helper_enable.h>
@@ -189,9 +190,21 @@ namespace RemoteControl {
                 _isCharging = newState;
                 RemoteControlPlugin::getInstance()._chargingStateChanged(_isCharging);
                 if (!_isCharging) {
-                    if (millis() > __autoSleepTimeout) { // stay awake for 30 seconds after disconnecting the charger
+                    if (millis() > __autoSleepTimeout) { // stay awake for 5-35 seconds after disconnecting the charger
                         _resetAutoSleep();
-                        _setAutoSleepTimeout(millis() + 30000, ~0U);
+                        if (MQTT::Client::safeIsConnected()) {
+                            // give the battery voltage some time to settle and update MQTT status
+                            // the battery level update after disconnecting the charger requires at least 22 seconds
+                            for(const auto &sensor: SensorPlugin::getSensors()) {
+                                if (sensor->getType() == SensorPlugin::SensorType::BATTERY) {
+                                    sensor->setMqttUpdateRate(30);
+                                }
+                            }
+                            _setAutoSleepTimeout(millis() + 35000, ~0U);
+                        }
+                        else {
+                            _setAutoSleepTimeout(millis() + 5000, ~0U);
+                        }
                     }
                 }
             }

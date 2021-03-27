@@ -164,6 +164,7 @@ void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::Depe
     ETS_GPIO_INTR_DISABLE();
     auto states = deepSleepPinState.getStates();            // states during boot
     interrupt_levels = deepSleepPinState.getValues();       // values during boot (digitalRead)
+    uint8_t debounceTime = pinMonitor.getDebounceTime() + 2;
 
     const auto &handlers = pinMonitor.getHandlers();
     for(auto &pinPtr: pinMonitor.getPins()) {
@@ -190,16 +191,34 @@ void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::Depe
             // auto events = pin.getEventsNoInterrupts();
             const auto currentValue = static_cast<bool>(GPI & _BV(pinNum));
             const auto currentState = (currentValue == activeHigh);
-            if (currentState == state) {
-                // add recored event
-                pin.addEvent(2500, currentValue);
-            }
-            else {
-                // state changed meanwhile add new event
-                pin.addEvent(micros(), currentValue);
-            }
+
+            pin.addEvent(2500, currentValue);
 #if 1
             auto events = pin.getEventsNoInterrupts();
+            events.dump(DEBUG_OUTPUT);
+#endif
+            pinMonitor._loop();
+#if 1
+            events = pin.getEventsNoInterrupts();
+            events.dump(DEBUG_OUTPUT);
+#endif
+
+            if (currentState != state) {
+                delay(debounceTime);
+                pin.addEvent(micros(), currentValue);
+#if 1
+            events = pin.getEventsNoInterrupts();
+            events.dump(DEBUG_OUTPUT);
+#endif
+                pinMonitor._loop();
+            }
+#if 1
+            events = pin.getEventsNoInterrupts();
+            events.dump(DEBUG_OUTPUT);
+#endif
+            pinMonitor._loop();
+#if 1
+            events = pin.getEventsNoInterrupts();
             events.dump(DEBUG_OUTPUT);
 #endif
         }
@@ -208,6 +227,7 @@ void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::Depe
     GPIEC = kButtonPinsMask;  // clear interrupts for all pins
     ETS_GPIO_INTR_ENABLE();
 
+    delay(debounceTime);
     pinMonitor._loop();
 
 #if 0

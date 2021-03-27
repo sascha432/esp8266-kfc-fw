@@ -11,7 +11,6 @@
 
 #if DEBUG_WEBUI
 #include <debug_helper_enable.h>
-#include <debug_helper_enable_mem.h>
 #else
 #include <debug_helper_disable.h>
 #endif
@@ -93,30 +92,36 @@ void WebUISocket::onText(uint8_t *data, size_t len)
 
 void WebUISocket::sendValues(AsyncWebSocketClient *client)
 {
-    JsonUnnamedObject json(1);
+    using namespace MQTT::Json;
 
-    json.add(JJ(type), JJ(ue));
-    auto &array = json.addArray(JJ(events));
+    __DBG_printf("sendValues()");
 
+    NamedArray events(F("events"));
     for(const auto plugin: PluginComponents::Register::getPlugins()) {
         if (plugin->hasWebUI()) {
-            __LDBG_printf("plugin=%s array_size=%u", plugin->getName_P(), array.size());
-            plugin->getValues(array);
+            __DBG_printf("plugin=%s length=%u", plugin->getName_P(), events.length());
+            __LDBG_printf("plugin=%s length=%u", plugin->getName_P(), events.length());
+            plugin->getValues(events);
         }
     }
-    send(client, json);
+    send(client, UnnamedObject(NamedString(J(type), J(update_events)), events).toString());
 }
 
-void WebUISocket::createWebUIJSON(JsonUnnamedObject &json)
+WebUINS::Root WebUISocket::createWebUIJSON()
 {
-    WebUIRoot webUI(json);
+    WebUINS::Root webUI;
 
+    __DBG_printf("createWebUIJSON()");
     for(const auto plugin: PluginComponents::Register::getPlugins()) {
+        __DBG_printf("plugin=%s webui=%u", plugin->getName_P(), plugin->hasWebUI());
         __LDBG_printf("plugin=%s webui=%u", plugin->getName_P(), plugin->hasWebUI());
         if (plugin->hasWebUI()) {
+            __DBG_printf("createWebUI");
             plugin->createWebUI(webUI);
         }
     }
 
+    __DBG_printf("addValues()");
     webUI.addValues();
+    return webUI;
 }

@@ -530,6 +530,22 @@ void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, co
     });
 }
 
+void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, const MQTT::Json::UnnamedObject &json)
+{
+    if (!__get_server(server, client)) {
+        __LDBG_printf("no clients connected: server=%p client=%p message=%s", server, client, json.toString().c_str());
+        return;
+    }
+    WsClient::forsocket(server, client, [server, &json](AsyncWebSocketClient *socket) {
+        if (socket->canSend()) {
+            socket->text(json.toString());
+            if (can_yield()) {
+                delay(WsClient::getQeueDelay());
+            }
+        }
+    });
+}
+
 void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, const JsonUnnamedObject &json)
 {
     if (!__get_server(server, client)) {

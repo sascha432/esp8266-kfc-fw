@@ -12,6 +12,8 @@
 #include <algorithm>
 #include <vector>
 #include <ESPAsyncWebServer.h>
+#include "../src/plugins/mqtt/mqtt_strings.h"
+#include "../src/plugins/mqtt/mqtt_json.h"
 
 #if DEBUG_WEB_SOCKETS
 #include <debug_helper_enable.h>
@@ -112,6 +114,7 @@ public:
 
     // validate server and client before sending
     static void safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, const String &message);
+    static void safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, const MQTT::Json::UnnamedObject &json);
     static void safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, const JsonUnnamedObject &json);
 
     // use hasAuthenticatedClients() instead
@@ -125,6 +128,7 @@ public:
     // the clients sockets are passed to the function
     static void foreach(AsyncWebSocket *server, WsClient *sender, std::function<void(AsyncWebSocketClient *)> func) {
         for(auto client: server->getClients()) {
+            __DBG_assert_printf(client != nullptr, "client==nullptr");
             if (client->status() == WS_CONNECTED && client->_tempObject && client->_tempObject != sender && reinterpret_cast<WsClient *>(client->_tempObject)->isAuthenticated()) {
                 func(client);
             }
@@ -133,9 +137,11 @@ public:
 
     // call function for "client" if connected and authenticated
     // the clients socket is passed to the function
-    static void forclient(AsyncWebSocket *server, WsClient *client, std::function<void(AsyncWebSocketClient *)> func) {
+    static void forclient(AsyncWebSocket *server, WsClient *forClient, std::function<void(AsyncWebSocketClient *)> func) {
+        __DBG_assert_printf(forClient != nullptr, "forClient==nullptr");
         for(auto client: server->getClients()) {
-            if (client->status() == WS_CONNECTED && client->_tempObject && client->_tempObject == client && reinterpret_cast<WsClient *>(client->_tempObject)->isAuthenticated()) {
+            __DBG_assert_printf(client != nullptr, "client==nullptr");
+            if (client->status() == WS_CONNECTED && client->_tempObject && client->_tempObject == forClient && reinterpret_cast<WsClient *>(client->_tempObject)->isAuthenticated()) {
                 func(client);
                 return;
             }
@@ -144,7 +150,9 @@ public:
 
     // call function for "client" if connected and authenticated
     static void forsocket(AsyncWebSocket *server, AsyncWebSocketClient *socket, std::function<void(AsyncWebSocketClient *)> func) {
+        __DBG_assert_printf(socket != nullptr, "socket==nullptr");
         for(auto client: server->getClients()) {
+            __DBG_assert_printf(client != nullptr, "client==nullptr");
             if (socket == client && client->status() == WS_CONNECTED && client->_tempObject && reinterpret_cast<WsClient *>(client->_tempObject)->isAuthenticated()) {
                 func(socket);
                 return;

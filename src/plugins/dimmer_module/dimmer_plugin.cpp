@@ -65,7 +65,7 @@ void Plugin::shutdown()
     _end();
 }
 
-void Plugin::createWebUI(WebUIRoot &webUI)
+void Plugin::createWebUI(WebUINS::Root &webUI)
 {
     auto row = &webUI.addRow();
     row->addGroup(F(IOT_DIMMER_TITLE), IOT_DIMMER_GROUP_SWITCH);
@@ -73,8 +73,8 @@ void Plugin::createWebUI(WebUIRoot &webUI)
     #if IOT_DIMMER_HAS_RGB
         row = &webUI.addRow();
         auto obj = &row->addSlider(F("d_br"), F(IOT_DIMMER_BRIGHTNESS_TITLE), 0, IOT_DIMMER_MODULE_MAX_BRIGHTNESS);
-        obj->add(JJ(rmin), IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config.min_brightness / 100);
-        obj->add(JJ(rmax), IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config.max_brightness / 100);
+        obj->add(JJ(range_min), IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config.min_brightness / 100);
+        obj->add(JJ(range_max), IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config.max_brightness / 100);
 
         row = &webUI.addRow();
         row->addRGBSlider(F("d_rgb"), F("Color"));
@@ -85,14 +85,14 @@ void Plugin::createWebUI(WebUIRoot &webUI)
         #if IOT_DIMMER_HAS_RGBW
             row = &webUI.addRow();
             obh = &row->addSlider(F("d_wbr"), F(IOT_DIMMER_WBRIGHTNESS_TITLE), 0, IOT_DIMMER_MODULE_MAX_BRIGHTNESS);
-            obj->add(JJ(rmin), IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config.min_brightness / 100);
-            obj->add(JJ(rmax), IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config.max_brightness / 100);
+            obj->add(JJ(range_min), IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config.min_brightness / 100);
+            obj->add(JJ(range_max), IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config.max_brightness / 100);
         #endif
     #elif IOT_DIMMER_HAS_COLOR_TEMP
         row = &webUI.addRow();
         auto obj = &row->addSlider(F("d_br"), F("Brightness"), 0, IOT_DIMMER_MODULE_MAX_BRIGHTNESS);
-        obj->add(JJ(rmin), IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config.min_brightness / 100);
-        obj->add(JJ(rmax), IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config.max_brightness / 100);
+        obj->add(JJ(range_min), IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config.min_brightness / 100);
+        obj->add(JJ(range_max), IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config.max_brightness / 100);
 
         row = &webUI.addRow();
         row->addColorTemperatureSlider(F("d_ct"), F("Color Temperature"));
@@ -106,7 +106,7 @@ void Plugin::createWebUI(WebUIRoot &webUI)
     }
 
     #if IOT_DIMMER_GROUP_LOCK
-        row->addSwitch(F("d_lck"), F("Lock Channels"), false, WebUIRow::NamePositionType::TOP);
+        row->addSwitch(F("d_lck"), F("Lock Channels"), false, WebUINS::NamePositionType::TOP);
     #endif
 
 
@@ -128,8 +128,8 @@ void Plugin::createWebUI(WebUIRoot &webUI)
 
             row = &webUI.addRow();
             auto &obj = row->addSlider(PrintString(F("d_chan%u"), idx), PrintString(F("Channel %u"), number), 0, IOT_DIMMER_MODULE_MAX_BRIGHTNESS);
-            obj.add(JJ(rmin), IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config.min_brightness / 100);
-            obj.add(JJ(rmax), IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config.max_brightness / 100);
+            obj.add(JJ(range_min), IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config.min_brightness / 100);
+            obj.add(JJ(range_max), IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config.max_brightness / 100);
         }
     #endif
 
@@ -152,7 +152,7 @@ void Plugin::createWebUI(WebUIRoot &webUI)
     auto height = F("15rem");
     row->addButtonGroup(F("btn_colon"), F("Colon"), F("Solid,Blink slowly,Blink fast")).add(JJ(height), height);
     row->addButtonGroup(F("btn_animation"), F("Animation"), F("Solid,Rainbow,Flashing,Fading")).add(JJ(height), height);
-    row->addSensor(FSPGM(light_sensor), F("Ambient Light Sensor"), F("<img src=\"http://192.168.0.100/images/light.svg\" width=\"80\" height=\"80\" style=\"margin-top:-20px;margin-bottom:1rem\">"), WebUIComponent::SensorRenderType::COLUMN).add(JJ(height), height);
+    row->addSensor(FSPGM(light_sensor), F("Ambient Light Sensor"), F("<img src=\"http://192.168.0.100/images/light.svg\" width=\"80\" height=\"80\" style=\"margin-top:-20px;margin-bottom:1rem\">"), WebUINS::SensorRenderType::COLUMN).add(JJ(height), height);
 
     row = &webUI.addRow();
     row->addGroup(F("Various items"), false);

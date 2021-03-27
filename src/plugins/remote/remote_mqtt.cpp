@@ -21,15 +21,24 @@ static inline String get_button_name(uint8_t n)
 
 static void add_subtype_type_payload(MQTT::AutoDiscovery::EntityPtr discovery, uint8_t button, const __FlashStringHelper *subType)
 {
-    __LDBG_printf("discovery i=%u sub_type=%s", button, subType);
     auto name = get_button_name(button);
-    discovery->addSubType(name);
-    discovery->addPayloadAndType(name, subType);
+    __LDBG_printf("discovery name=%s i=%u sub_type=%s", name.c_str(), button, subType);
+    discovery->addPayloadAndSubType(name, subType, F("button_"));
 }
 
 MQTT::AutoDiscovery::EntityPtr MqttRemote::getAutoDiscovery(FormatType format, uint8_t num)
 {
     auto discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
+
+
+    if (num == _autoDiscoveryCount - 1) {
+        if (!discovery->create(ComponentType::BINARY_SENSOR, PrintString(F("awake")), format)) {
+            return discovery;
+        }
+        discovery->addStateTopic(MQTT::Client::formatTopic(F("awake")));
+        return discovery;
+    }
+
     if (!discovery->create(ComponentType::DEVICE_AUTOMATION, PrintString(F("remote%02x"), num), format)) {
         return discovery;
     }
@@ -110,6 +119,7 @@ void MqttRemote::_updateAutoDiscoveryCount()
         _autoDiscoveryCount += numberOfSetBits(static_cast<uint16_t>(cfg.actions[i].mqtt.event_bits & cfg.enabled.event_bits));
         // __LDBG_printf("button=%u event=%s mqtt=%s num=%u sum=%u", i, BitsToStr<9, true>(cfg.enabled.event_bits).c_str(), BitsToStr<9, true>(cfg.actions[i].mqtt.event_bits).c_str(), numberOfSetBits(static_cast<uint16_t>(cfg.actions[i].mqtt.event_bits & cfg.enabled.event_bits)),count);
     }
+    _autoDiscoveryCount++;
 }
 
 uint8_t MqttRemote::getAutoDiscoveryCount() const

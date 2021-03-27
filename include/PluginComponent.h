@@ -141,7 +141,7 @@ namespace PluginComponents {
     using DependenciesPtr = std::shared_ptr<Dependencies>;
 
     using NameType = const __FlashStringHelper *;
-    using NamedJsonArray = MQTT::Json::NamedArray;
+    using NamedArray = MQTT::Json::NamedArray;
 
     enum class DependencyResponseType {
         SUCCESS = 0,
@@ -225,7 +225,7 @@ public:
     using DependenciesPtr = PluginComponents::DependenciesPtr;
     using DependencyResponseType = PluginComponents::DependencyResponseType;
     using NameType = PluginComponents::NameType;
-    using NamedJsonArray = PluginComponents::NamedJsonArray;
+    using NamedArray = PluginComponents::NamedArray;
     using PriorityType = PluginComponents::PriorityType;
     using RTCMemoryId = PluginComponents::RTCMemoryId;
     using MenuType = PluginComponents::MenuType;
@@ -424,9 +424,8 @@ public:
     virtual WebTemplate *getWebTemplate(const String &templateName);
 
     // webui.html
-    virtual void createWebUI(WebUIRoot &webUI);
-    virtual void getValues(JsonArray &array);
-    virtual void getValues(NamedJsonArray &array);
+    virtual void createWebUI(WebUINS::Root &webUI);
+    virtual void getValues(NamedArray &array);
     virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState);
 
 #if AT_MODE_SUPPORTED

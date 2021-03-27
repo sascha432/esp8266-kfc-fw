@@ -105,13 +105,13 @@ void BlindsControlPlugin::createMenu()
     configMenu.addMenuItem(getFriendlyName(), F("blinds/controller.html"));
 }
 
-void BlindsControlPlugin::createWebUI(WebUIRoot &webUI) {
+void BlindsControlPlugin::createWebUI(WebUINS::Root &webUI) {
 
     auto row = &webUI.addRow();
     row->addGroup(F("Blinds"), false);
 
     row = &webUI.addRow();
-    row->addSwitch(FSPGM(set_all), String(F("Both Channels")), true, WebUIRow::NamePositionType::TOP).setColumns(4);
+    row->addSwitch(FSPGM(set_all), String(F("Both Channels")), true, WebUINS::NamePositionType::TOP).setColumns(4);
 
     row = &webUI.addRow();
     for(const auto channel: _states.channels()) {

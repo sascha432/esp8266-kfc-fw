@@ -244,16 +244,15 @@ public:
         POWER,
     };
 
-    Sensor_Battery(const JsonString &name);
+    Sensor_Battery(const String &name);
     virtual ~Sensor_Battery();
 
     virtual AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;
 
     virtual void publishState() override;
-    virtual void getValues(NamedJsonArray &array, bool timer) override;
-    virtual void getValues(JsonArray &json, bool timer) override;
-    virtual void createWebUI(WebUIRoot &webUI, WebUIRow **row) override;
+    virtual void getValues(NamedArray &array, bool timer) override;
+    virtual void createWebUI(WebUINS::Root &webUI) override;
     virtual void getStatus(Print &output) override;
     virtual bool getSensorData(String &name, StringVector &values) override;
 
@@ -279,10 +278,10 @@ private:
 
     void _readADC(bool updateSensor);
 
-    String _getId(TopicType type);
+    const __FlashStringHelper *_getId(TopicType type);
     String _getTopic(TopicType type);
 
-    JsonString _name;
+    String _name;
     ConfigType _config;
     Event::Timer _timer;
     float _adcValue;
@@ -293,5 +292,30 @@ private:
 public:
     static float maxVoltage;
 };
+
+inline Sensor_Battery::Status Sensor_Battery::readSensor()
+{
+    return _status;
+}
+
+inline const __FlashStringHelper *Sensor_Battery::_getId(TopicType type)
+{
+    switch(type) {
+        case TopicType::VOLTAGE:
+            return F("voltage");
+        case TopicType::POWER:
+            return F("power");
+        case TopicType::CHARGING:
+            return F("charging");
+        case TopicType::LEVEL:
+        default:
+            return F("level");
+    }
+}
+
+inline String Sensor_Battery::_getTopic(TopicType type)
+{
+    return MQTTClient::formatTopic(_getId(type));
+}
 
 #endif

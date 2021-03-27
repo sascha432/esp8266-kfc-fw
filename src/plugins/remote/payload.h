@@ -7,7 +7,6 @@
 #include <Arduino_compat.h>
 #include "remote_def.h"
 #include <Buffer.h>
-#include <ArduinoJson.h>
 
 #if DEBUG_IOT_REMOTE_CONTROL
 #include <debug_helper_enable.h>
@@ -153,14 +152,14 @@ namespace RemoteControl {
             //     }
             // }
 
-            static Binary serializeFromJson(const JsonDocument &doc)
-            {
-                Binary payload(nullptr, measureJson(doc));
-                if (payload.size()) {
-                    serializeJson(doc, payload.begin(), payload.size());
-                }
-                return payload;
-            }
+            // static Binary serializeFromJson(const JsonDocument &doc)
+            // {
+            //     Binary payload(nullptr, measureJson(doc));
+            //     if (payload.size()) {
+            //         serializeJson(doc, payload.begin(), payload.size());
+            //     }
+            //     return payload;
+            // }
         };
 
     }

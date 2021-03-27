@@ -122,7 +122,7 @@ void Sensor_INA219::getValues(JsonArray &array, bool timer)
     }
 }
 
-void Sensor_INA219::createWebUI(WebUIRoot &webUI, WebUIRow **row)
+void Sensor_INA219::createWebUI(WebUINS::Root &webUI)
 {
     __LDBG_printf("Sensor_INA219::createWebUI()");
     (*row)->addSensor(_getId(VOLTAGE), _name, 'V');

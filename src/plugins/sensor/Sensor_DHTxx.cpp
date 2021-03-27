@@ -74,7 +74,7 @@ void Sensor_DHTxx::getValues(JsonArray &array, bool timer)
     obj->add(JJ(value), JsonNumber(sensor.humidity, 2));
 }
 
-void Sensor_DHTxx::createWebUI(WebUIRoot &webUI, WebUIRow **row)
+void Sensor_DHTxx::createWebUI(WebUINS::Root &webUI)
 {
     (*row)->addSensor(_getId(FSPGM(temperature)), _name + F(" Temperature"), FSPGM(UTF8_degreeC));
     (*row)->addSensor(_getId(FSPGM(humidity)), _name + F(" Humidity"), '%');

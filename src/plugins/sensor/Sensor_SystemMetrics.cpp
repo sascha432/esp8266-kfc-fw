@@ -125,7 +125,7 @@ void Sensor_SystemMetrics::publishState()
     }
 }
 
-void Sensor_SystemMetrics::getValues(NamedJsonArray &array, bool timer)
+void Sensor_SystemMetrics::getValues(NamedArray &array, bool timer)
 {
     using namespace MQTT::Json;
     array.append(
@@ -142,21 +142,21 @@ void Sensor_SystemMetrics::getValues(NamedJsonArray &array, bool timer)
     );
 }
 
-void Sensor_SystemMetrics::getValues(::JsonArray &array, bool timer)
-{
-    using ::JsonString;
-    __LDBG_println();
+// void Sensor_SystemMetrics::getValues(::JsonArray &array, bool timer)
+// {
+//     using ::JsonString;
+//     __LDBG_println();
 
-    auto obj = &array.addObject(3);
-    obj->add(JJ(id), _getId(MetricsType::UPTIME));
-    obj->add(JJ(state), true);
-    obj->add(JJ(value), _getUptime());
+//     auto obj = &array.addObject(3);
+//     obj->add(JJ(id), _getId(MetricsType::UPTIME));
+//     obj->add(JJ(state), true);
+//     obj->add(JJ(value), _getUptime());
 
-    obj = &array.addObject(3);
-    obj->add(JJ(id), _getId(MetricsType::MEMORY));
-    obj->add(JJ(state), true);
-    obj->add(JJ(value), PrintString(F("%.3f KB<br>%u%%"), ESP.getFreeHeap() / 1024.0, ESP.getHeapFragmentation()));
-}
+//     obj = &array.addObject(3);
+//     obj->add(JJ(id), _getId(MetricsType::MEMORY));
+//     obj->add(JJ(state), true);
+//     obj->add(JJ(value), PrintString(F("%.3f KB<br>%u%%"), ESP.getFreeHeap() / 1024.0, ESP.getHeapFragmentation()));
+// }
 
 String Sensor_SystemMetrics::_getUptime() const
 {
@@ -191,14 +191,22 @@ String Sensor_SystemMetrics::_getUptime() const
     return formatTime2(sep, emptyString, false, uptime % 60, minutes);
 }
 
-void Sensor_SystemMetrics::createWebUI(WebUIRoot &webUI, WebUIRow **row)
+void Sensor_SystemMetrics::createWebUI(WebUINS::Root &webUI)
 {
-    *row = &webUI.addRow();
-    (*row)->addGroup(PrintString(F("System Metrics<div class=\"version d-md-inline\">%s</div>"), config.getFirmwareVersion().c_str()), false);
+    __DBG_println();
+    webUI.addRow(WebUINS::Row(WebUINS::Group(PrintString(F("System Metrics<div class=\"version d-md-inline\">%s</div>"), config.getFirmwareVersion().c_str()), false)));
 
-    *row = &webUI.addRow();
-    (*row)->addSensor(_getId(MetricsType::UPTIME), F("Uptime"), F("")).add(JJ(hb), F("h2"));
-    (*row)->addSensor(_getId(MetricsType::MEMORY), F("Free Memory"), F("")).add(JJ(hb), F("h2"));
+    WebUINS::Row row;
+
+    auto sensor1 = WebUINS::Sensor(_getId(MetricsType::UPTIME), F("Uptime"), F(""));
+    sensor1.append(WebUINS::NamedString(J(heading_bottom), F("h2")));
+    row.append(sensor1);
+
+    auto sensor2 = WebUINS::Sensor(_getId(MetricsType::MEMORY), F("Free Memory"), F(""));
+    sensor2.append(WebUINS::NamedString(J(heading_bottom), F("h2")));
+    row.append(sensor2);
+
+    webUI.addRow(row);
 }
 
 String Sensor_SystemMetrics::_getTopic() const

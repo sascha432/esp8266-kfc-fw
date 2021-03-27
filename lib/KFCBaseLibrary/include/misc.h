@@ -691,3 +691,55 @@ inline uint32_t createIPv4Address(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
 #define CREATE_INT32_BITFIELD(name, size)                   CREATE_BITFIELD_TYPE(name, size, int32_t, bits)
 #define CREATE_UINT32_BITFIELD(name, size)                  CREATE_BITFIELD_TYPE(name, size, uint32_t, bits)
 #define CREATE_UINT64_BITFIELD(name, size)                  CREATE_BITFIELD_TYPE(name, size, uint64_t, bits)
+
+
+#if ESP8266
+
+struct Pins {
+    union {
+        uint32_t _value;
+        struct {
+            uint32_t GPIO0: 1;
+            uint32_t GPIO1: 1;
+            uint32_t GPIO2: 1;
+            uint32_t GPIO3: 1;
+            uint32_t GPIO4: 1;
+            uint32_t GPIO6: 1;
+            uint32_t GPIO7: 1;
+            uint32_t GPIO8: 1;
+            uint32_t GPIO9: 1;
+            uint32_t GPIO10: 1;
+            uint32_t GPIO11: 1;
+            uint32_t GPIO12: 1;
+            uint32_t GPIO13: 1;
+            uint32_t GPIO14: 1;
+            uint32_t GPIO15: 1;
+            uint32_t GPIO16: 1;
+        };
+    };
+    Pins() : _value(0) {}
+    Pins(uint32_t value) : _value(value) {}
+    operator int() const {
+        return _value;
+    }
+};
+
+inline static Pins digitalReadAll() {
+    return Pins(GPI | (GP16I ? (1U << 16) : 0));
+}
+
+#elif ESP32
+
+#error TODO
+
+// inline static uint64_t digitalReadAll() {
+//     return 0;
+// }
+
+#else
+
+inline static uint32_t digitalReadAll() {
+    return 0;
+}
+
+#endif

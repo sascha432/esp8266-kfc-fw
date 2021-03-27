@@ -68,7 +68,7 @@ public:
     virtual void publishState() override;
     virtual void getValues(JsonArray &json, bool timer) override;
     virtual void getValues(NamedJsonArray &array, bool timer) override;
-    virtual void createWebUI(WebUIRoot &webUI, WebUIRow **row) override;
+    virtual void createWebUI(WebUINS::Root &webUI) override;
     virtual void getStatus(Print &output) override;
 
 #if AT_MODE_SUPPORTED

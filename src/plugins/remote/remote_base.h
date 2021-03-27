@@ -31,7 +31,7 @@ namespace RemoteControl {
     // first and last PIN vom list
     static constexpr uint8_t kButtonSystemComboPins[2] = { kButtonPins.front(), kButtonPins.back() };
     // and the combined bit mask
-    static constexpr uint8_t kButtonSystemComboBitMask = _BV(getButtonIndex(kButtonSystemComboPins[0])) | _BV(getButtonIndex(kButtonSystemComboPins[1]));
+    static constexpr uint16_t kButtonSystemComboBitMask = _BV(getButtonIndex(kButtonSystemComboPins[0])) | _BV(getButtonIndex(kButtonSystemComboPins[1]));
 
 
     using EventNameType = Plugins::RemoteControl::RemoteControl::EventNameType;
@@ -178,7 +178,7 @@ namespace RemoteControl {
         // reser auto sleep timer and disable warning LED
         void _resetAutoSleep() {
             _setAutoSleepTimeout();
-            if (_signalWarning) {
+            if (_signalWarning && _isAutoSleepBlocked() == false) {
                 KFCFWConfiguration::setWiFiConnectLedMode();
                 _signalWarning = false;
             }
@@ -228,6 +228,10 @@ namespace RemoteControl {
 
         void _updateMaxAwakeTimeout() {
             _maxAwakeTimeout = _config.max_awake_time * (60U * 1000U);
+        }
+
+        bool _isAutoSleepBlocked() const {
+            return config.isSafeMode() || _isSystemComboActive();
         }
 
 

@@ -74,7 +74,6 @@ MQTT::AutoDiscovery::EntityPtr AlarmPlugin::getAutoDiscovery(FormatType format, 
             discovery->create(this, FSPGM(alarm), format);
             discovery->addStateTopic(_formatTopic(FSPGM(_state)));
             discovery->addCommandTopic(_formatTopic(FSPGM(_set)));
-            discovery->addPayloadOnOff();
             break;
     }
     return discovery;
@@ -82,7 +81,7 @@ MQTT::AutoDiscovery::EntityPtr AlarmPlugin::getAutoDiscovery(FormatType format, 
 
 void AlarmPlugin::onConnect()
 {
-    client().subscribe(this, _formatTopic(FSPGM(_set)));
+    subscribe(_formatTopic(FSPGM(_set)));
     _publishState();
 }
 
@@ -340,11 +339,6 @@ void AlarmPlugin::_publishState()
 {
     __LDBG_printf("publish state=%s", String((int)_alarmState).c_str());
     if (isConnected()) {
-        publish(_formatTopic(FSPGM(_state)), true, String(_alarmState));
+        publish(_formatTopic(FSPGM(_state)), true, MQTT::Client::toBoolOnOff(_alarmState));
     }
-}
-
-String AlarmPlugin::_formatTopic(const __FlashStringHelper *topic)
-{
-    return MQTTClient::formatTopic(String(FSPGM(alarm)), topic);
 }

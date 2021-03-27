@@ -53,14 +53,12 @@ MQTT::AutoDiscovery::EntityPtr BlindsControl::getAutoDiscovery(FormatType format
         if (discovery->create(this, PrintString(FSPGM(channel__u, "channel_%u"), channel), format)) {
             discovery->addStateTopic(_getTopic(channel, TopicType::STATE));
             discovery->addCommandTopic(_getTopic(channel, TopicType::SET));
-            discovery->addPayloadOnOff();
         }
     }
     else if (num == kChannelCount) {
         if (discovery->create(this, FSPGM(channels), format)) {
             discovery->addStateTopic(_getTopic(ChannelType::ALL, TopicType::STATE));
             discovery->addCommandTopic(_getTopic(ChannelType::ALL, TopicType::SET));
-            discovery->addPayloadOnOff();
         }
     }
     else if (num == kChannelCount + 1) {
@@ -121,18 +119,18 @@ void BlindsControl::_publishState()
     }
     __LDBG_printf("state %s/%s", _getStateStr(ChannelType::CHANNEL0), _getStateStr(ChannelType::CHANNEL1));
 
-    if (client) {
+    if (isConnected()) {
         JsonUnnamedObject metrics(2);
         JsonUnnamedObject channels(kChannelCount);
         String binaryState = String('b');
 
-        client().publish(_getTopic(ChannelType::ALL, TopicType::STATE), true, String(_states[0].isOpen() || _states[1].isOpen() ? 1 : 0));
+        publish(_getTopic(ChannelType::ALL, TopicType::STATE), true, MQTT::Client::toBoolOnOff(_states[0].isOpen() || _states[1].isOpen()));
 
         for(const auto channel: _states.channels()) {
             auto &state = _states[channel];
             auto isOpen = state.getCharState();
             binaryState += isOpen;
-            client().publish(_getTopic(channel, TopicType::STATE), true, String(isOpen));
+            publish(_getTopic(channel, TopicType::STATE), true, MQTT::Client::toBoolOnOff(isOpen));
             channels.add(PrintString(FSPGM(channel__u), channel), _getStateStr(channel));
         }
         metrics.add(FSPGM(binary), binaryState);
@@ -142,17 +140,17 @@ void BlindsControl::_publishState()
         buffer.reserve(metrics.length());
         metrics.printTo(buffer);
 
-        client().publish(_getTopic(ChannelType::NONE, TopicType::METRICS), true, buffer);
+        publish(_getTopic(ChannelType::NONE, TopicType::METRICS), true, buffer);
 
         buffer = PrintString();
         buffer.reserve(channels.length());
         channels.printTo(buffer);
-        client().publish(_getTopic(ChannelType::NONE, TopicType::CHANNELS), true, buffer);
+        publish(_getTopic(ChannelType::NONE, TopicType::CHANNELS), true, buffer);
     }
 
     if (WebUISocket::hasAuthenticatedClients()) {
         JsonUnnamedObject webUI(2);
-        webUI.add(JJ(type), JJ(ue));
+        webUI.add(JJ(type), JJ(update_events));
         getValues(webUI.addArray(JJ(events), kChannelCount * 2));
         WebUISocket::broadcast(WebUISocket::getSender(), webUI);
     }
@@ -162,9 +160,9 @@ void BlindsControl::onConnect()
 {
     __LDBG_printf("client=%p", client);
     _publishState();
-    client().subscribe(this, _getTopic(ChannelType::ALL, TopicType::SET));
+    subscribe(_getTopic(ChannelType::ALL, TopicType::SET));
     for(const auto channel: _states.channels()) {
-        client().subscribe(this, _getTopic(channel, TopicType::SET));
+        subscribe(_getTopic(channel, TopicType::SET));
     }
 }
 
@@ -191,13 +189,13 @@ void BlindsControl::setValue(const String &id, const String &value, bool hasValu
     __LDBG_printf("id=%s hasValue=%u value=%s hasState=%u state=%u", id.c_str(), hasValue, value.c_str(), hasState, state);
     if (hasValue) {
         bool open = value.toInt();
-        if (String_endsWith(id, PSTR("_set"))) {
+        if (id.endsWith(F("_set"))) {
             size_t channel = atoi(id.c_str() + id.indexOf('_') + 1);
             if (channel < _states.size()) {
                 _executeAction(static_cast<ChannelType>(channel), open);
             }
         }
-        else if (String_equals(id, SPGM(set_all))) {
+        else if (id.endsWith(FSPGM(set_all))) {
             _executeAction(ChannelType::ALL, open);
         }
     }

@@ -253,18 +253,6 @@ $.__global_templates = window.__global_templates = {
     };
 })().init();
 
-$(function() {
-    $.dbg_console.ready();
-
-    $('.dropdown-submenu .dropdown-menu .dropdown-item:first').each(function() {
-        var submenu = $(this).closest('.dropdown-submenu');
-        var parent = submenu.find('a:first');
-        var href = $(this).attr('href');
-        parent.attr('href', href);
-    });
-
-});
-
 function config_init(show_ids, update_form) {
     if (update_form === true) {
          $('input,select').addClass('setting-requires-restart');
@@ -508,8 +496,44 @@ $.clipboard = function(element, text, flash_css_or_color, flash_speed, flash_rep
     });
 };
 
+// filter_object(obj1[, obj2 [, ...]], predicate)
+//
+// predicate(val, key) returns true to include and false to exclude the key value pair
+// obj2, [obj3, ...] overwrites properties of obj1, if the predicate is true
+//
+// the result is a shallow copy of the objects
+
+function filter_objects() {
+    if (arguments.length < 2) {
+        throw 'filter_object requires at least 2 arguments\nfilter_object(obj1[, obj2 [, ...]], predicate)';
+    }
+    var predicate = arguments[arguments.length - 1];
+    var result = {};
+    for(var i = 0; i < arguments.length - 1; i++) {
+        for (var key in arguments[i]) {
+            var obj = arguments[i];
+            if (obj.hasOwnProperty(key) && predicate(obj[key], key)) {
+                result[key] = obj[key];
+            }
+        }
+    }
+    return result;
+};
+
+function filter_object(obj, predicate) {
+    return filter_objects(obj, predicate);
+}
 
 $(function() {
+    $.dbg_console.ready();
+
+    $('.dropdown-submenu .dropdown-menu .dropdown-item:first').each(function() {
+        var submenu = $(this).closest('.dropdown-submenu');
+        var parent = submenu.find('a:first');
+        var href = $(this).attr('href');
+        parent.attr('href', href);
+    });
+
     window.menu_editor = {
         toggle: false,
         cookie_name: 'index-main-menu',

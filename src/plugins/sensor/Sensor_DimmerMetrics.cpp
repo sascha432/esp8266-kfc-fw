@@ -121,7 +121,7 @@ void Sensor_DimmerMetrics::getValues(JsonArray &array, bool timer)
     obj->add(JJ(value), JsonNumber(_metrics.metrics.get_freqency(), 2));
 }
 
-void Sensor_DimmerMetrics::_createWebUI(WebUIRoot &webUI, WebUIRow **row)
+void Sensor_DimmerMetrics::_createWebUI(WebUINS::Root &webUI)
 {
     (*row)->addBadgeSensor(FSPGM(vcc), _name, 'V');
     (*row)->addBadgeSensor(FSPGM(frequency), F("Frequency"), FSPGM(Hz));
@@ -130,7 +130,7 @@ void Sensor_DimmerMetrics::_createWebUI(WebUIRoot &webUI, WebUIRow **row)
     _webUIinitialized = true;
 }
 
-void Sensor_DimmerMetrics::createWebUI(WebUIRoot &webUI, WebUIRow **row)
+void Sensor_DimmerMetrics::createWebUI(WebUINS::Root &webUI)
 {
     if (!_webUIinitialized) {
         _createWebUI(webUI, row);

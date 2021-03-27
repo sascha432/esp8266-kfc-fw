@@ -12,6 +12,7 @@
 #include <EventScheduler.h>
 #include <WebUIComponent.h>
 #include "../mqtt/mqtt_client.h"
+#include "../mqtt/mqtt_json.h"
 #include "plugins.h"
 #include "kfc_fw_config.h"
 
@@ -56,7 +57,7 @@ public:
 
 // WebUI
 public:
-    virtual void createWebUI(WebUIRoot &webUI) override;
+    virtual void createWebUI(WebUINS::Root &webUI) override;
     virtual void getValues(JsonArray &array) override;
     virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) override;
 

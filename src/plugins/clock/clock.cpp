@@ -222,7 +222,7 @@ void ClockPlugin::_updateLightSensorWebUI()
 {
     if (WebUISocket::hasAuthenticatedClients()) {
         JsonUnnamedObject json(2);
-        json.add(JJ(type), JJ(ue));
+        json.add(JJ(type), JJ(update_events));
         auto &events = json.addArray(JJ(events), 1);
         auto &obj = events.addObject(3);
         obj.add(JJ(id), FSPGM(light_sensor, "light_sensor"));
@@ -285,7 +285,7 @@ void ClockPlugin::_setupTimer()
             auto state = _digitalRead(IOT_CLOCK_HAVE_MOTION_SENSOR_PIN);
             if (state != _motionState) {
                 if (isConnected()) {
-                    publish(MQTTClient::formatTopic(F("motion")), true, String(_motionState ? 0 : 1));
+                    publish(MQTT::Client::formatTopic(F("motion")), true, MQTT::Client::toBoolOnOff(_motionState));
                 }
                 // _digitalWrite(_PCF8574Range::pin2DigitalPin(5), !_motionState);
 

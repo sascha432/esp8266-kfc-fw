@@ -27,6 +27,26 @@ $.webUIComponent = {
         webui_button_group_col: '<div class="btn-group-vertical btn-group-lg">{{content}}</div>'
     },
 
+    short: function(from) {
+        var to = {};
+        for(var key in from) {
+            to[from[key]] = key;
+        }
+        return {from: from, to: to};
+    } ({
+        bs: 'binary_sensor',
+        bg: 'button_group',
+        c: 'columns',
+        hs: 'has_switch',
+        // rmin: 'range_min',
+        // rmax: 'range_max',
+        rt: 'render_type',
+        ue: 'update_events',
+        zo: 'zero_off',
+        // ht: 'heading_top',
+        // hb: 'heading_bottom'
+    }),
+
     defaults: {
         row: {
             columns_per_row: 0
@@ -34,7 +54,7 @@ $.webUIComponent = {
         column: {
             group: { columns: 12 },
             switch: { min: 0, max: 1, columns: 2, zero_off: true, name: 0, attributes: [ 'min', 'max', 'value', 'name' ] },
-            slider: { slider_type: 'slider', min: 0, max: 255, columns: 12, rmin: false, rmax: false, attributes: [ 'min', 'max', 'rmin', 'rmax', 'value' ] },
+            slider: { slider_type: 'slider', min: 0, max: 255, columns: 12, range_min: false, range_max: false, attributes: [ 'min', 'max', 'range_min', 'range_max', 'value' ] },
             color_slider: { slider_type: 'slider coplor-slider', min: 15300, max: 50000 },
             rgb_slider: { slider_type: 'slider rgb-slider', min: 0, max: 0xffffff },
             sensor: { columns: 3, no_value: '-'},
@@ -129,38 +149,28 @@ $.webUIComponent = {
     // get prototype and replace variables
     //
     get_prototype: function(name, vars) {
-        var self = this;
-        var prototype = null;
-        var replace = {}
+        // var self = this;
+        // var replace = {}
         name = name.replace(/-/g, '_');
 
-        $.each(this.prototypes, function(key, val) {
-            replace[key] = val;
-            if (key == name) {
-                prototype = val;
-            }
-        });
-        if (prototype === null) {
+        if (!this.prototypes.hasOwnProperty(name)) {
             throw 'prototype ' + name + ' not found';
         }
+        var prototype = this.prototypes[name];
+        var replace = filter_objects(this.prototypes, vars, function(val) { return val !== null; });
 
-        $.each(vars, function(key, val) {
-            if (val !== null) {
-                replace[key] = val;
-            }
-        });
-
-        $.each(replace, function(key, val) {
+        for(var key in replace) {
             regex = new RegExp('{{' + key.replace(/[_-]/g, '[_-]') + '(\|[^}]*)?}}', 'g');
-            prototype = prototype.replace(regex, val);
+            prototype = prototype.replace(regex, replace[key]);
             // self.console.log("replace ", regex, key, val);
-        });
+        }
         // replace missing variables with default values
         prototype = prototype.replace(/{{[^\|]+\|([^}]*)}}/g, '\$1');
 
         var vars = $.matchAll(prototype, '{{(?<var>[^\|}]+)(?:\|[^}]*)?}}');
         if (vars.length) {
-            throw 'variables not found: ' + vars.join(', ');
+            console.log(name, vars, replace, prototype);
+            throw 'variable(s) not found\nvariables=' + vars.join(', ') + '\nname';
         }
 
         // self.console.log('prototype', name, prototype, 'replaced', replace);
@@ -185,9 +195,23 @@ $.webUIComponent = {
     },
 
     //
-    // apply defaultss to all columns and calculate number of columns
+    // apply defaults to all columns and calculate number of columns
     //
     prepare_options: function(options) {
+        // rename keys
+        for (var i in this.short.from) {
+            if (options.hasOwnProperty(i)) {
+                options[this.short.from[i]] = options[i];
+                delete options[i];
+            }
+        }
+        // rename values
+        for (var i in options) {
+            if (this.short.from.hasOwnProperty(options[i])) {
+                options[i] = this.short.from[options[i]];
+            }
+        }
+        // merge defaults
         options = $.extend({}, this.defaults.row, options);
         var self = this;
         $(options.columns).each(function() {
@@ -202,8 +226,7 @@ $.webUIComponent = {
                         break;
                 }
             }
-            var tmp = $.extend({}, defaults, this);
-            $.extend(this, tmp);
+            $.extend(this, $.extend({}, defaults, this));
             options.columns_per_row += this.columns;
         });
         self.row = options;
@@ -673,7 +696,7 @@ $.webUIComponent = {
                         break;
                     default:
                         if (column.columns) {
-                            div.addClass('col-lg-' + column.columns);
+                            div.addClass('col-lg-' + (column.columns % 100));
                         } else {
                             div.addClass('col-auto');
                         }
@@ -951,7 +974,7 @@ $.webUIComponent = {
         else if (event.type == 'data') {
             try {
                 var json = JSON.parse(event.data);
-                if (json.type === 'ue') {
+                if (json.type === this.short.to.update_events) {
                     this.update_events(json.events);
                 }
             } catch(e) {
@@ -959,7 +982,7 @@ $.webUIComponent = {
             }
         }
         else if (event.type == 'object') {
-            if (event.data.type === 'ue') {
+            if (event.data.type === this.short.to.update_events) {
                 this.update_events(event.data.events);
             }
         }

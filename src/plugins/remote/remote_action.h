@@ -9,7 +9,6 @@
 #if MQTT_SUPPORT
 #include "../src/plugins/mqtt/mqtt_client.h"
 #endif
-#include <ArduinoJson.h>
 #include <Buffer.h>
 #include "payload.h"
 

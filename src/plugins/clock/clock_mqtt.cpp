@@ -66,7 +66,6 @@ MQTT::AutoDiscovery::EntityPtr ClockPlugin::getAutoDiscovery(FormatType format, 
                 return discovery;
             }
             discovery->addStateTopic(MQTTClient::formatTopic(F("motion")));
-            discovery->addPayloadOnOff();
         }
         break;
 #endif

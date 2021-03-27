@@ -53,7 +53,7 @@ SwitchPlugin::SwitchPlugin() :
     REGISTER_PLUGIN(this, "SwitchPlugin");
 }
 
-void SwitchPlugin::setup(SetupModeType mode)
+void SwitchPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
     _readConfig();
     _readStates();
@@ -66,19 +66,17 @@ void SwitchPlugin::setup(SetupModeType mode)
         }
         pinMode(_pins[i], OUTPUT);
     }
-    auto mqttClient = MQTTClient::getClient();
-    if (mqttClient) {
-        mqttClient->registerComponent(this);
-    }
+    MQTT::Client::registerComponent(this);
 #if IOT_SWITCH_PUBLISH_MQTT_INTERVAL
     _Timer(_updateTimer).add(IOT_SWITCH_PUBLISH_MQTT_INTERVAL, true, [this](Event::CallbackTimerPtr timer) {
-        _publishState(MQTTClient::getClient());
+        _publishState();
     });
 #endif
 }
 
 void SwitchPlugin::shutdown()
 {
+    MQTT::Client::unregisterComponent(this);
 #if IOT_SWITCH_PUBLISH_MQTT_INTERVAL
     _updateTimer.remove();
 #endif
@@ -151,7 +149,7 @@ void SwitchPlugin::createConfigureForm(FormCallbackType type, const String &form
     form.finalize();
 }
 
-void SwitchPlugin::createWebUI(WebUIRoot &webUI)
+void SwitchPlugin::createWebUI(WebUINS::Root &webUI)
 {
     auto row = &webUI.addRow();
     row->addGroup(F("Switch"), false);
@@ -166,7 +164,7 @@ void SwitchPlugin::createWebUI(WebUIRoot &webUI)
             else {
                 name = PrintString(F("Channel %u"), i);
             }
-            row->addSwitch(PrintString(FSPGM(channel__u), i), name, true, WebUIRow::NamePositionType::HIDE);
+            row->addSwitch(PrintString(FSPGM(channel__u), i), name, true, WebUINS::NamePositionType::HIDE);
         }
         if (_configs[i].webUI == WebUIEnum::NEW_ROW) {
             row = &webUI.addRow();
@@ -197,19 +195,18 @@ void SwitchPlugin::setValue(const String &id, const String &value, bool hasValue
         uint8_t channel = (uint8_t)atoi(ptr);
         if (channel <_pins.size()) {
             _setChannel(channel, state);
-            _publishState(MQTTClient::getClient(), channel);
+            _publishState(channel);
         }
     }
 }
 
-MQTT::AutoDiscovery::EntityPtr SwitchPlugin::gettAutoDiscovery(MQTT::FormatType format, uint8_t num)
+MQTT::AutoDiscovery::EntityPtr SwitchPlugin::getAutoDiscovery(MQTT::FormatType format, uint8_t num)
 {
     auto discovery =__LDBG_new(MQTT::AutoDiscovery::Entity);
     auto channel = PrintString(FSPGM(channel__u), num);
     discovery->create(this, channel, format);
     discovery->addStateTopic(MQTTClient::formatTopic(channel, FSPGM(_state)));
     discovery->addCommandTopic(MQTTClient::formatTopic(channel, FSPGM(_set)));
-    discovery->addPayloadOnOff();
     return discovery;
 }
 
@@ -221,7 +218,7 @@ uint8_t SwitchPlugin::getAutoDiscoveryCount() const
 void SwitchPlugin::onConnect()
 {
     for (size_t i = 0; i < _pins.size(); i++) {
-        client().subscribe(this, MQTTClient::formatTopic(PrintString(FSPGM(channel__u), i), FSPGM(_set)));
+        subscribe(MQTT::Client::formatTopic(PrintString(FSPGM(channel__u), i), FSPGM(_set)));
     }
     _publishState();
 }
@@ -230,7 +227,8 @@ void SwitchPlugin::onMessage(const char *topic, const char *payload, size_t len)
 {
     __LDBG_printf("topic=%s payload=%s", topic, payload);
     for (size_t i = 0; i < _pins.size(); i++) {
-        if (MQTTClient::formatTopic(PrintString(FSPGM(channel__u), i), FSPGM(_set)).equals(topic)) {
+        PrintString topicPrefix(FSPGM(channel__u), i); // "channel_XX" fits into SSO
+        if (topicPrefix.endEquals(payload)) {
             bool state = atoi(payload);
             _setChannel(i, state);
             _publishState(i);
@@ -293,41 +291,30 @@ void SwitchPlugin::_writeStates()
 #endif
 }
 
-void SwitchPlugin::_publishState(MQTTClient *client, int8_t channel)
+void SwitchPlugin::_publishState(int8_t channel)
 {
-    __DBG_println();
-    if (client && client->isConnected()) {
+    if (isConnected()) {
         for (size_t i = 0; i < _pins.size(); i++) {
             if (channel == -1 || (uint8_t)channel == i) {
                 __LDBG_printf("pin=%u state=%u", _pins[i], _getChannel(i));
-                client->publish(MQTTClient::formatTopic(PrintString(FSPGM(channel__u), i), FSPGM(_state)), true, String(_getChannel(i) ? 1 : 0));
+                publish(MQTT::Client::formatTopic(PrintString(FSPGM(channel__u), i), FSPGM(_state)), true, MQTT::Client::toBoolOnOff(_getChannel(i)));
             }
         }
     }
 
+    using namespace MQTT::Json;
     if (WebUISocket::hasAuthenticatedClients()) {
-        JsonUnnamedObject json(2);
-        json.add(JJ(type), JJ(ue));
-        auto &events = json.addArray(JJ(events));
-        JsonUnnamedObject *obj;
+        auto events = NamedArray(F("events"));
         for (size_t i = 0; i < _pins.size(); i++) {
             if (channel == -1 || (uint8_t)channel == i) {
-                obj = &events.addObject(2);
-                obj->add(JJ(id), PrintString(FSPGM(channel__u), i));
-                obj->add(JJ(value), (int)_getChannel(i));
-                obj->add(JJ(state), true);
+                PrintString channel(FSPGM(channel__u), i);
+                events.append(UnnamedObject(
+                    NamedString(J(id), channel),
+                    NamedUnsignedShort(J(value), _getChannel(i)),
+                    NamedBool(J(state), true)
+                ));
             }
         }
-        if (events.size()) {
-            WebUISocket::broadcast(WebUISocket::getSender(), json);
-            // WsClient::broadcast(WebUISocket::getServerSocket(), WebUISocket::getSender(), buffer->c_str(), buffer->length());
-
-            // auto buffer = std::shared_ptr<StreamString>(new StreamString());
-            // json.printTo(*buffer);
-
-            // LoopFunctions::callOnce([this, buffer]() {
-            //     WsClient::broadcast(WebUISocket::getServerSocket(), WebUISocket::getSender(), buffer->c_str(), buffer->length());
-            // });
-        }
+        WebUISocket::broadcast(WebUISocket::getSender(), UnnamedObject(events).toString());
     }
 }

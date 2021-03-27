@@ -4,18 +4,22 @@
 
 #pragma once
 
+// MQTT::Json can be used independently from the MQTT plugin
+
 #include <Arduino_compat.h>
 #include <JsonBaseReader.h>
 #include <PrintString.h>
 #include <JsonTools.h>
 
-#define DEBUG_MQTT_JSON 1
+#define DEBUG_MQTT_JSON                     0
 
 #if DEBUG_MQTT_JSON
 #include <debug_helper_enable.h>
 #else
 #include <debug_helper_disable.h>
 #endif
+
+#undef RGB
 
 namespace MQTT {
 

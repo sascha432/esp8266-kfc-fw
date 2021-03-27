@@ -86,7 +86,7 @@ void Sensor_DS3231::getValues(JsonArray &array, bool timer)
     obj->add(JJ(value), timeStr);
 }
 
-void Sensor_DS3231::createWebUI(WebUIRoot &webUI, WebUIRow **row)
+void Sensor_DS3231::createWebUI(WebUINS::Root &webUI)
 {
     _debug_println();
     (*row)->addSensor(FSPGM(ds3231_id_temp), _name, JsonString());

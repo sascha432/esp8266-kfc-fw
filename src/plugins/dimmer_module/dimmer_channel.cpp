@@ -7,7 +7,6 @@
 #include <WebUISocket.h>
 #include <stl_ext/algorithm.h>
 #include <stl_ext/utility.h>
-#include <ArduinoJson.h>
 
 #if DEBUG_IOT_DIMMER_MODULE
 #include <debug_helper_enable.h>

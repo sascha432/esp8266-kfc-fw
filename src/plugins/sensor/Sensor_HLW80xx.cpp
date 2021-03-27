@@ -149,7 +149,7 @@ void Sensor_HLW80xx::getValues(JsonArray &array, bool timer)
     obj->add(JJ(value), String(pf, 2));
 }
 
-void Sensor_HLW80xx::createWebUI(WebUIRoot &webUI, WebUIRow **row)
+void Sensor_HLW80xx::createWebUI(WebUINS::Root &webUI)
 {
     __LDBG_println();
 

@@ -33,7 +33,7 @@ uint8_t operator&(uint8_t a, SensorRecordType b) {
 static constexpr uint32_t kReadInterval = 125;
 static constexpr uint32_t kUpdateInterval = 2000;
 
-Sensor_Battery::Sensor_Battery(const JsonString &name) :
+Sensor_Battery::Sensor_Battery(const String &name) :
     MQTT::Sensor(MQTT::SensorType::BATTERY),
     _name(name),
     _adcValue(NAN),
@@ -154,7 +154,7 @@ uint8_t Sensor_Battery::getAutoDiscoveryCount() const
     return static_cast<uint8_t>(AutoDiscoveryNumHelperType::MAX);
 }
 
-void Sensor_Battery::getValues(NamedJsonArray &array, bool timer)
+void Sensor_Battery::getValues(NamedArray &array, bool timer)
 {
     using namespace MQTT::Json;
     array.append(
@@ -187,47 +187,21 @@ void Sensor_Battery::getValues(NamedJsonArray &array, bool timer)
     );
 }
 
-void Sensor_Battery::getValues(JsonArray &array, bool timer)
+void Sensor_Battery::createWebUI(WebUINS::Root &webUI)
 {
-    auto obj = &array.addObject(3);
-    obj->add(JJ(id), _getId(TopicType::VOLTAGE));
-    obj->add(JJ(state), true);
-    obj->add(JJ(value), JsonNumber(_status.getVoltage(), _config.precision));
-
+    WebUINS::Row row(
+        WebUINS::Sensor(_getId(TopicType::VOLTAGE), _name, 'V')
 #if IOT_SENSOR_BATTERY_DISPLAY_LEVEL
-    obj = &array.addObject(3);
-    obj->add(JJ(id), _getId(TopicType::LEVEL));
-    obj->add(JJ(state), true);
-    obj->add(JJ(value), JsonNumber(_status.getLevel()));
-#endif
-
-#ifdef IOT_SENSOR_BATTERY_CHARGING
-    obj = &array.addObject(3);
-    obj->add(JJ(id), _getId(TopicType::CHARGING));
-    obj->add(JJ(state), true);
-    obj->add(JJ(value), _status.getChargingStatus());
-#endif
-
-#if IOT_SENSOR_BATTERY_DSIPLAY_POWER_STATUS
-    obj = &array.addObject(3);
-    obj->add(JJ(id), _getId(TopicType::POWER));
-    obj->add(JJ(state), true);
-    obj->add(JJ(value), status.getPowerStatus());
-#endif
-}
-
-void Sensor_Battery::createWebUI(WebUIRoot &webUI, WebUIRow **row)
-{
-    (*row)->addSensor(_getId(TopicType::VOLTAGE), _name, 'V');
-#if IOT_SENSOR_BATTERY_DISPLAY_LEVEL
-    (*row)->addSensor(_getId(TopicType::LEVEL), F("Level"), '%');
+        , WebUINS::Sensor(_getId(TopicType::LEVEL), F("Level"), '%')
 #endif
 #ifdef IOT_SENSOR_BATTERY_CHARGING
-    (*row)->addSensor(_getId(TopicType::CHARGING), F("Charging"), JsonString());
+        , WebUINS::Sensor(_getId(TopicType::CHARGING), F("Charging"), F(""))
 #endif
 #if IOT_SENSOR_BATTERY_DSIPLAY_POWER_STATUS
-    (*row)->addSensor(_getId(TopicType::POWER), F("Status"), JsonString());
+    , WebUINS::Sensor(_getId(TopicType::POWER), F("Status"), F(""))
 #endif
+    );
+    webUI.appendToLastRow(row);
 }
 
 void Sensor_Battery::publishState()
@@ -363,14 +337,14 @@ void Sensor_Battery::Status::updateSensor(Sensor_Battery &sensor)
 #endif
 
 #if IOT_SENSOR_BATTERY_DISPLAY_LEVEL
-    // do not update the level for 30 seconds if the charging state changes
+    // do not update the level for 20 seconds if the charging state changes
     // it needs some time to settle or the values will be quite different
     // do not lock the level until 5 seconds after the reboot
     if (_chargingBefore != _charging) {
         _chargingBefore = _charging;
         auto ms = millis();
         if (ms > 5000) {
-            _lockLevelTime = ms + 30000;
+            _lockLevelTime = ms + 20000;
         }
     }
     if (_lockLevelTime == 0) {
@@ -421,31 +395,6 @@ void Sensor_Battery::Status::updateSensor(Sensor_Battery &sensor)
     }
 #endif
 
-}
-
-Sensor_Battery::Status Sensor_Battery::readSensor()
-{
-    return _status;
-}
-
-String Sensor_Battery::_getId(TopicType type)
-{
-    switch(type) {
-        case TopicType::VOLTAGE:
-            return F("voltage");
-        case TopicType::POWER:
-            return F("power");
-        case TopicType::CHARGING:
-            return F("charging");
-        case TopicType::LEVEL:
-        default:
-            return F("level");
-    }
-}
-
-String Sensor_Battery::_getTopic(TopicType type)
-{
-    return MQTTClient::formatTopic(_getId(type));
 }
 
 

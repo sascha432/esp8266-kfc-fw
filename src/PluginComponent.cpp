@@ -15,6 +15,9 @@
 #include <kfc_fw_config.h>
 #include <ReadADC.h>
 #include <KFCForms.h>
+#if MQTT_SUPPORT
+#include "../src/plugins/mqtt/mqtt_strings.h"
+#endif
 
 #if DEBUG_PLUGINS
 #include "debug_helper_enable.h"
@@ -116,20 +119,14 @@ WebTemplate *PluginComponent::getWebTemplate(const String &formName)
     return nullptr;
 }
 
-void PluginComponent::createWebUI(WebUIRoot &webUI)
+void PluginComponent::createWebUI(WebUINS::Root &webUI)
 {
     __DBG_panic_pure_virtual();
 }
 
-void PluginComponent::getValues(JsonArray &array)
+void PluginComponent::getValues(NamedArray &array)
 {
     __DBG_panic_pure_virtual();
-}
-
-void PluginComponent::getValues(NamedJsonArray &array)
-{
-    //TODO remove comment
-    // __DBG_panic_pure_virtual();
 }
 
 void PluginComponent::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)

@@ -224,6 +224,17 @@ with open(path.abspath(path.join(mqtt_plugin_dir, 'mqtt_strings.h')), 'w') as f:
     f.write('PROGMEM_STRING_DECL(mqtt_component_binary_sensor);\n')
     f.write('PROGMEM_STRING_DECL(mqtt_component_storage);\n')
     f.write('PROGMEM_STRING_DECL(mqtt_status_topic);\n');
+    f.write('PROGMEM_STRING_DECL(mqtt_status_topic_online);\n')
+    f.write('PROGMEM_STRING_DECL(mqtt_status_topic_offline);\n')
+    f.write('PROGMEM_STRING_DECL(mqtt_bool_on);\n')
+    f.write('PROGMEM_STRING_DECL(mqtt_bool_off);\n')
+    f.write('PROGMEM_STRING_DECL(mqtt_bool_true);\n')
+    f.write('PROGMEM_STRING_DECL(mqtt_bool_false);\n')
+    f.write('PROGMEM_STRING_DECL(mqtt_schema);\n')
+    f.write('PROGMEM_STRING_DECL(mqtt_trigger);\n')
+    f.write('PROGMEM_STRING_DECL(mqtt_schema_json);\n')
+    f.write('PROGMEM_STRING_DECL(mqtt_type);\n')
+    f.write('PROGMEM_STRING_DECL(mqtt_component_device_automation);\n')
     for key, val in strings.items():
         f.write('PROGMEM_STRING_DECL(mqtt_%s);\n' % val)
 
@@ -237,6 +248,17 @@ with open(path.abspath(path.join(mqtt_plugin_dir, 'mqtt_strings.cpp')), 'w') as 
     f.write('PROGMEM_STRING_DEF(mqtt_component_binary_sensor, "binary_sensor");\n')
     f.write('PROGMEM_STRING_DEF(mqtt_component_storage, "storage");\n')
     f.write('PROGMEM_STRING_DEF(mqtt_status_topic, "/status");\n')
+    f.write('PROGMEM_STRING_DEF(mqtt_status_topic_online, "online");\n')
+    f.write('PROGMEM_STRING_DEF(mqtt_status_topic_offline, "offline");\n')
+    f.write('PROGMEM_STRING_DEF(mqtt_bool_on, "ON");\n')
+    f.write('PROGMEM_STRING_DEF(mqtt_bool_off, "OFF");\n')
+    f.write('PROGMEM_STRING_DEF(mqtt_bool_true, "true");\n')
+    f.write('PROGMEM_STRING_DEF(mqtt_bool_false, "false");\n')
+    f.write('PROGMEM_STRING_DEF(mqtt_schema, "schema");\n')
+    f.write('PROGMEM_STRING_DEF(mqtt_trigger, "trigger");\n')
+    f.write('PROGMEM_STRING_DEF(mqtt_schema_json, "json");\n')
+    f.write('PROGMEM_STRING_DEF(mqtt_type, "type");\n')
+    f.write('PROGMEM_STRING_DEF(mqtt_component_device_automation, "device_automation");\n')
     f.write('#if MQTT_AUTO_DISCOVERY_USE_ABBREVIATIONS\n')
 
     for key, val in strings.items():

@@ -164,6 +164,14 @@ namespace MQTT {
 
         class RemoveOuterBase;
 
+        struct StoredString {
+            StoredString(const char *value) : _value(value) {}
+            StoredString(const String &value) : _value(value) {}
+            StoredString(String &&value) : _value(std::move(value)) {}
+
+            String _value;
+        };
+
         template<typename _Type, typename _ConstRef = typename Helpers::const_ref<_Type>::type>
         struct UnnamedVariant : UnnamedBase {
             UnnamedVariant(_ConstRef value) : _value(value) {}
@@ -250,7 +258,7 @@ namespace MQTT {
 
         // if the value is not normal (nan, inf, -inf etc..) the output is null to meet JSON standards
         struct UnnamedFormattedDouble : PrintToInterface, UnnamedBase {
-            UnnamedFormattedDouble(double value, FStr format = FSPGM(default_format_double, "%.6f")) :
+            UnnamedFormattedDouble(double value, FStr format = FSPGM(default_format_double, "%.2f")) :
                 _format(format),
                 _value(value)
             {
@@ -333,7 +341,7 @@ namespace MQTT {
 
         struct NamedTrimmedFormattedDouble : UnnamedTrimmedFormattedDouble, NamedBase {
             NamedTrimmedFormattedDouble(const __FlashStringHelper *key, double value, const __FlashStringHelper *format = FSPGM(default_format_double)) :
-                UnnamedTrimmedFormattedDouble(value),
+                UnnamedTrimmedFormattedDouble(value, format),
                 _key(key)
             {
             }
@@ -433,10 +441,17 @@ namespace MQTT {
 
         struct NamedStoredString : UnnamedStoredString, NamedBase {
             NamedStoredString(FStr key, const char *value) : UnnamedStoredString(value), _key(key) {}
-            // NamedStoredString(FStr key, const String &value) : UnnamedStoredString(value), _key(key) {}
-            // NamedStoredString(FStr key, String &&value) : UnnamedStoredString(std::move(value)), _key(key) {}
+            NamedStoredString(const char *key, const char *value) : UnnamedStoredString(value), _key(reinterpret_cast<FStr>(key)) {}
+            NamedStoredString(const String &key, const char *value) : UnnamedStoredString(value), _key(reinterpret_cast<FStr>(key.c_str())) {}
+
             template<typename _Ta>
             NamedStoredString(FStr key, _Ta value) : UnnamedStoredString(std::forward<_Ta>(value)), _key(key) {}
+
+            template<typename _Ta>
+            NamedStoredString(const char *key, _Ta value) : UnnamedStoredString(std::forward<_Ta>(value)), _key(reinterpret_cast<FStr>(key)) {}
+
+            template<typename _Ta>
+            NamedStoredString(const String &key, _Ta value) : UnnamedStoredString(std::forward<_Ta>(value)), _key(reinterpret_cast<FStr>(key.c_str())) {}
 
             FStr key() const {
                 return _key;

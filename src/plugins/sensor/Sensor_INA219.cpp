@@ -9,6 +9,7 @@
 #include "sensor.h"
 #include <EventScheduler.h>
 #include <MicrosTimer.h>
+#include "WebUIComponent.h"
 
 #if DEBUG_IOT_SENSOR
 #include <debug_helper_enable.h>
@@ -86,36 +87,20 @@ uint8_t Sensor_INA219::getAutoDiscoveryCount() const
     return 4;
 }
 
-void Sensor_INA219::getValues(NamedJsonArray &array, bool timer)
+void Sensor_INA219::getValues(NamedArray &array, bool timer)
 {
-//TOPDO
-}
-
-void Sensor_INA219::getValues(JsonArray &array, bool timer)
-{
-    __LDBG_printf("Sensor_INA219::getValues()");
-    auto *obj = &array.addObject(3);
-    obj->add(JJ(id), _getId(VOLTAGE));
     auto U = _data.U();
-    obj->add(JJ(state), !isnan(U));
-    obj->add(JJ(value), JsonNumber(U, 2));
-
-    obj = &array.addObject(3);
-    obj->add(JJ(id), _getId(CURRENT));
     auto I = _data.I();
-    obj->add(JJ(state), !isnan(I));
-    obj->add(JJ(value), JsonNumber(I, 0));
-
-    obj = &array.addObject(3);
-    obj->add(JJ(id), _getId(POWER));
     auto P = _data.P();
-    obj->add(JJ(state), !isnan(P));
-    obj->add(JJ(value), JsonNumber(P, 0));
 
-    obj = &array.addObject(3);
-    obj->add(JJ(id), _getId(PEAK_CURRENT));
-    obj->add(JJ(state), !isnan(_Ipeak));
-    obj->add(JJ(value), JsonNumber(_Ipeak, 0));
+    using namespace WebUINS;
+
+    array.append(
+        Values(_getId(VOLTAGE), TrimmedDouble(U, 2)),
+        Values(_getId(CURRENT), RoundedDouble(I)),
+        Values(_getId(POWER), RoundedDouble(P)),
+        Values(_getId(PEAK_CURRENT), RoundedDouble(_Ipeak))
+    );
 
     if (timer) {
         _data = SensorData();
@@ -124,11 +109,14 @@ void Sensor_INA219::getValues(JsonArray &array, bool timer)
 
 void Sensor_INA219::createWebUI(WebUINS::Root &webUI)
 {
-    __LDBG_printf("Sensor_INA219::createWebUI()");
-    (*row)->addSensor(_getId(VOLTAGE), _name, 'V');
-    (*row)->addSensor(_getId(CURRENT), F("Current"), F("mA"));
-    (*row)->addSensor(_getId(POWER), F("Power"), F("mW"));
-    (*row)->addSensor(_getId(PEAK_CURRENT), F("Peak Current"), F("mA"));
+    using namespace WebUINS;
+    Row row(
+        Sensor(_getId(VOLTAGE), _name, 'V'),
+        Sensor(_getId(CURRENT), F("Current"), F("mA")),
+        Sensor(_getId(POWER), F("Power"), F("mW")),
+        Sensor(_getId(PEAK_CURRENT), F("Peak Current"), F("mA"))
+    );
+    webUI.appendToLastRow(row);
 }
 
 void Sensor_INA219::publishState()

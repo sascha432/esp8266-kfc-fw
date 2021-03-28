@@ -225,9 +225,9 @@ namespace FormUI {
             // see addPointer, addReference and addMemberVariable
             template <typename VarType, typename _Tb = stdex::relaxed_underlying_type_t<VarType>>
             FormValuePointer<VarType> &add(const __FlashStringHelper *name, VarType *value, InputFieldType type = InputFieldType::SELECT) {
-        #if defined(__AVR__) || defined(ESP8266) || defined(ESP32)
-                static_assert(((uintptr_t)value) % sizeof(uintptr_t) == 0, "address not aligned");
-        #endif
+                #if defined(__AVR__) || defined(ESP8266) || defined(ESP32)
+                    __DBG_assert_panic(((uintptr_t)value) % sizeof(uintptr_t) == 0, "FormValuePointer(%s, 0x%08x) pointer address not aligned", name, value);
+                #endif
                 return reinterpret_cast<FormValuePointer<VarType> &>(_add<FormValuePointer<_Tb>>(name, reinterpret_cast<_Tb *>(value), type));
             }
 
@@ -235,9 +235,9 @@ namespace FormUI {
             // see addPointer, addReference and addMemberVariable
             template <typename VarType>
             FormValuePointer<VarType> &add(const __FlashStringHelper *name, VarType &value, InputFieldType type = InputFieldType::SELECT) {
-        #if defined(__AVR__) || defined(ESP8266) || defined(ESP32)
-                static_assert(((uintptr_t)std::addressof(value)) % sizeof(uintptr_t) == 0, "address not aligned");
-        #endif
+                #if defined(__AVR__) || defined(ESP8266) || defined(ESP32)
+                    __DBG_assert_panic(((uintptr_t)std::addressof(value)) % sizeof(uintptr_t) == 0, "FormValuePointer(%s, &0x%08x) reference address not aligned", name, std::addressof(value));
+                #endif
                 return _add<Field::ValuePointer<VarType>>(name, reinterpret_cast<VarType *>(std::addressof(value)), type);
             }
 

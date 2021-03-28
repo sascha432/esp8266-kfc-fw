@@ -179,6 +179,7 @@ class Sensor_HLW80xx : public MQTT::Sensor {
 public:
     using EnergyCounterArray = std::array<uint64_t, IOT_SENSOR_HLW80xx_NUM_ENERGY_COUNTERS>;
     using ConfigType = KFCConfigurationClasses::Plugins::SensorConfig::SensorConfig_t;
+    using NamedJArray = PluginComponents::NamedJArray;
 
 public:
     Sensor_HLW80xx(const String &name, MQTT::SensorType type);
@@ -188,7 +189,7 @@ public:
 
     virtual void publishState() override;
     virtual void getValues(JsonArray &json, bool timer) override;
-    virtual void getValues(NamedJsonArray &array, bool timer) override;
+    virtual void getValues(NamedArray &array, bool timer) override;
     virtual void createWebUI(WebUINS::Root &webUI) override;
 
     virtual String _getId(const __FlashStringHelper *type = nullptr) {
@@ -227,9 +228,9 @@ protected:
     void _loadEnergyCounter();
     void _incrEnergyCounters(uint32_t count);
 
-    JsonNumber _currentToNumber(float current) const;
-    JsonNumber _energyToNumber(float energy) const;
-    JsonNumber _powerToNumber(float power) const;
+    WebUINS::TrimmedDouble _currentToNumber(float current) const;
+    WebUINS::TrimmedDouble _energyToNumber(float energy) const;
+    WebUINS::TrimmedDouble _powerToNumber(float power) const;
 
     float _getPowerFactor() const;
     float _getEnergy(uint8_t num = 0) const;
@@ -310,9 +311,29 @@ inline void Sensor_HLW80xx::_incrEnergyCounters(uint32_t count)
     }
 }
 
-inline JsonNumber Sensor_HLW80xx::_powerToNumber(float power) const
+inline WebUINS::TrimmedDouble Sensor_HLW80xx::_currentToNumber(float current) const
 {
-    return JsonNumber(power, ((power < 10) ? 2 : 1) + _extraDigits);
+    uint8_t digits = 2;
+    if (current < 1) {
+        digits = 3;
+    }
+    return WebUINS::TrimmedDouble(current, digits + _extraDigits);
+}
+
+inline WebUINS::TrimmedDouble Sensor_HLW80xx::_energyToNumber(float energy) const
+{
+    auto tmp = energy;
+    uint8_t digits = 0;
+    while(tmp >= 1 && digits < 3) {
+        digits++;
+        tmp *= 0.1;
+    }
+    return WebUINS::TrimmedDouble(energy, 3 - digits + _extraDigits);
+}
+
+inline WebUINS::TrimmedDouble Sensor_HLW80xx::_powerToNumber(float power) const
+{
+    return WebUINS::TrimmedDouble(power, ((power < 10) ? 2 : 1) + _extraDigits);
 }
 
 inline float Sensor_HLW80xx::_getPowerFactor() const

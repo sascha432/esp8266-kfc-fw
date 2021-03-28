@@ -111,7 +111,6 @@ namespace WebUINS {
         COLUMN,
     };
 
-
     class Component : public UnnamedObject {
     public:
         using UnnamedObject::append;
@@ -267,7 +266,7 @@ namespace WebUINS {
     class Switch : public Component {
     public:
         template<typename _Ta, typename _Tb>
-        Switch(_Ta id, const _Tb title, bool zeroOff = true, NamePositionType position = NamePositionType::HIDE, uint8_t colspan = 0) :
+        Switch(_Ta id, _Tb title, bool zeroOff = true, NamePositionType position = NamePositionType::HIDE, uint8_t colspan = 0) :
             Component(
                 NamedString(J(type), J(switch)),
                 Component::createNamedString(J(id), id),
@@ -480,6 +479,156 @@ namespace WebUINS {
 
     private:
         UnnamedObject _json;
+    };
+
+    // helper class for formatting double and float
+    // precision: is the number of digits (0-7), if an invalid value is passed, 2 will be used
+    // format: custom printf format for double: for example "%05.3f"
+    // trailing zeros are trimmed up to a single zero (1.00000 -> 1.0, 1.23000 -> 1.23)
+    // if the value is not normal (inf, -inf, nan, ..) the json value will be set to null
+    class TrimmedDouble {
+    public:
+        TrimmedDouble(double value, const __FlashStringHelper *format) : _value(value), _format(format) {}
+        TrimmedDouble(double value, int precision = 2) : _value(value), _format(getPrecisionFormat(precision)) {}
+
+        inline double getValue() const {
+            return _value;
+        }
+
+        inline const __FlashStringHelper *getFormat() const {
+            return _format;
+        }
+
+        inline bool isNormal() const {
+            return std::isnormal(_value);
+        }
+
+        inline static const __FlashStringHelper *getPrecisionFormat(int precision) {
+#if 0
+            auto res = _getPrecisionFormat(precision);
+            __DBG_printf("format=%s precision=%u", res, precision);
+            return res;
+        }
+
+        inline static const __FlashStringHelper *_getPrecisionFormat(int precision) {
+#endif
+            switch (precision) {
+            case 0:
+                return F("%.0f");
+            case 1:
+                return F("%.1f");
+            // case 2:
+            //     return F("%.2f");
+            case 3:
+                return F("%.3f");
+            case 4:
+                return F("%.4f");
+            case 5:
+                return F("%.5f");
+            case 6:
+                return F("%.6f");
+            case 7:
+                return F("%.7f");
+            default:
+                break;
+            }
+            return F("%.2f");
+        }
+
+    private:
+        double _value;
+        const __FlashStringHelper *_format;
+    };
+
+    // helper class for double and float with zero digits
+    // if the value is not normal (inf, nan, ..) the json value will be set to null
+    class RoundedDouble : public TrimmedDouble {
+    public:
+        RoundedDouble(double value) : TrimmedDouble(value, 0) {}
+    };
+
+
+    class Values: public UnnamedObject {
+    public:
+        // do not add state
+        static constexpr int8_t kStateNone = -2;
+        // set state depending on the value
+        // String, const char *, const __FlashStringHelper: empty string / strlen() == 0 is invalid. whitespaces are not trimmed
+        // uint32_t: 0 and 4294967295 are invalid
+        // int32_t: -2147483646, 0 and 2147483647 are invalid
+        // uint8_t: 0 is invalid
+        // double/float: !isnormal() is invalid (NAN, INF, -INF...)
+        static constexpr int8_t kStateAuto = -1;
+        static constexpr int8_t kStateTrue = true;
+        static constexpr int8_t kStateFalse = false;
+
+    public:
+        template<typename _Ta>
+        Values(const __FlashStringHelper *id, _Ta value, int8_t state = kStateAuto) :
+            UnnamedObject(NamedString(J(id), id), getValueObject(value))
+        {
+            if (state == kStateAuto) {
+                append(NamedBool(J(state), _validValue));
+            } else if (state != kStateNone) {
+                append(NamedBool(J(state), state));
+            }
+        }
+
+        template<typename _Ta>
+        Values(const String &id, _Ta value, int8_t state = kStateAuto) :
+            UnnamedObject(NamedStoredString(J(id), id), getValueObject(value))
+        {
+            if (state == kStateAuto) {
+                append(NamedBool(J(state), _validValue));
+            }
+            else if (state != kStateNone) {
+                append(NamedBool(J(state), state));
+            }
+        }
+
+    private:
+        NamedString getValueObject(const __FlashStringHelper *value) {
+            _validValue = pgm_read_byte(reinterpret_cast<PGM_P>(value)) != 0;
+            return NamedString(J(value), value);
+        }
+
+        NamedStoredString getValueObject(const String &value) {
+            _validValue = (value.length() != 0);
+            return NamedStoredString(J(value), value);
+        }
+
+        NamedStoredString getValueObject(const char *value) {
+            _validValue = *value != 0;
+            return NamedStoredString(J(value), value);
+        }
+
+        NamedInt32 getValueObject(int32_t value) {
+            _validValue = (value != 0) && (value != std::numeric_limits<int32_t>::min()) && (value != std::numeric_limits<int32_t>::max());
+            return NamedInt32(J(value), value);
+        }
+
+        NamedUint32 getValueObject(uint32_t value) {
+            _validValue = (value != 0) && (value != std::numeric_limits<int32_t>::max());
+            return NamedUint32(J(value), value);
+        }
+
+        NamedUint32 getValueObject(uint8_t value) {
+            _validValue = value != 0;
+            return NamedUint32(J(value), static_cast<uint32_t>(value));
+        }
+
+        NamedBool getValueObject(bool value) {
+            _validValue = true;
+            return NamedBool(J(value), value);
+        }
+
+        NamedTrimmedFormattedDouble getValueObject(const TrimmedDouble &value) {
+            _validValue = value.isNormal();
+            return NamedTrimmedFormattedDouble(J(value), value.getValue(), value.getFormat());
+        }
+
+        bool _validValue;
+
     };
 
 }

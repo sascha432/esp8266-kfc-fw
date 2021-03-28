@@ -66,8 +66,7 @@ public:
     virtual uint8_t getAutoDiscoveryCount() const override;
 
     virtual void publishState() override;
-    virtual void getValues(JsonArray &json, bool timer) override;
-    virtual void getValues(NamedJsonArray &array, bool timer) override;
+    virtual void getValues(NamedArray &array, bool timer) override;
     virtual void createWebUI(WebUINS::Root &webUI) override;
     virtual void getStatus(Print &output) override;
 

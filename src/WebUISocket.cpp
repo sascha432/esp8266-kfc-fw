@@ -94,13 +94,9 @@ void WebUISocket::sendValues(AsyncWebSocketClient *client)
 {
     using namespace MQTT::Json;
 
-    __DBG_printf("sendValues()");
-
     NamedArray events(F("events"));
     for(const auto plugin: PluginComponents::Register::getPlugins()) {
         if (plugin->hasWebUI()) {
-            __DBG_printf("plugin=%s length=%u", plugin->getName_P(), events.length());
-            __LDBG_printf("plugin=%s length=%u", plugin->getName_P(), events.length());
             plugin->getValues(events);
         }
     }
@@ -111,17 +107,13 @@ WebUINS::Root WebUISocket::createWebUIJSON()
 {
     WebUINS::Root webUI;
 
-    __DBG_printf("createWebUIJSON()");
     for(const auto plugin: PluginComponents::Register::getPlugins()) {
         __DBG_printf("plugin=%s webui=%u", plugin->getName_P(), plugin->hasWebUI());
-        __LDBG_printf("plugin=%s webui=%u", plugin->getName_P(), plugin->hasWebUI());
         if (plugin->hasWebUI()) {
-            __DBG_printf("createWebUI");
             plugin->createWebUI(webUI);
         }
     }
 
-    __DBG_printf("addValues()");
     webUI.addValues();
     return webUI;
 }

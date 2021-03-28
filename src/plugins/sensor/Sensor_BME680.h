@@ -18,6 +18,8 @@ class Sensor_CCS811;
 
 class Sensor_BME680 : public MQTT::Sensor {
 public:
+    using NamedJArray = PluginComponents::NamedJArray;
+
     typedef struct {
         float temperature;  // °C
         float humidity;     // %
@@ -33,7 +35,7 @@ public:
 
     virtual void publishState() override;
     virtual void getValues(JsonArray &json, bool timer) override;
-    virtual void getValues(NamedJsonArray &array, bool timer) override;
+    virtual void getValues(NamedJArray &array, bool timer) override;
     virtual void createWebUI(WebUINS::Root &webUI) override;
     virtual void getStatus(Print &output) override;
 

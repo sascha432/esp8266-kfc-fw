@@ -53,7 +53,7 @@ BlindsControlPlugin::BlindsControlPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_
     REGISTER_PLUGIN(this, "BlindsControlPlugin");
 }
 
-void BlindsControlPlugin::setup(SetupModeType mode)
+void BlindsControlPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
     _setup();
     MQTT::Client::registerComponent(this);
@@ -105,35 +105,36 @@ void BlindsControlPlugin::createMenu()
     configMenu.addMenuItem(getFriendlyName(), F("blinds/controller.html"));
 }
 
-void BlindsControlPlugin::createWebUI(WebUINS::Root &webUI) {
+void BlindsControlPlugin::createWebUI(WebUINS::Root &webUI)
+{
+    webUI.addRow(WebUINS::Row(WebUINS::Group(F("Blinds"), false)));
 
-    auto row = &webUI.addRow();
-    row->addGroup(F("Blinds"), false);
+    WebUINS::Row row(
+        WebUINS::Switch(FSPGM(set_all), String(F("Both Channels")), true, WebUINS::NamePositionType::TOP, 4)
+    );
 
-    row = &webUI.addRow();
-    row->addSwitch(FSPGM(set_all), String(F("Both Channels")), true, WebUINS::NamePositionType::TOP).setColumns(4);
-
-    row = &webUI.addRow();
     for(const auto channel: _states.channels()) {
 
         String prefix = PrintString(FSPGM(channel__u), channel);
 
         // row = &webUI.addRow();
-        row->addBadgeSensor(prefix + F("_state"), Plugins::Blinds::getChannelName(*channel), JsonString()).add(JJ(head), F("h5"));
+        WebUINS::BadgeSensor sensor(prefix + F("_state"), reinterpret_cast<WebUINS::FStr>(Plugins::Blinds::getChannelName(*channel)), F(""));
+        sensor.append(WebUINS::NamedString(J(head), F("h5")));
+        row.append(sensor);
 
         // row = &webUI.addRow();
         // row->addSwitch(prefix + F("_set"), String(F("Channel ")) + String(*channel));
     }
-    row = &webUI.addRow();
+    webUI.addRow(row);
+
     for(const auto channel: _states.channels()) {
-
         String prefix = PrintString(FSPGM(channel__u), channel);
-
-        row->addSwitch(prefix + F("_set"), String(F("Channel ")) + String(*channel));
+        auto sw = WebUINS::Switch(prefix + F("_set"), String(F("Channel ")) + String(*channel));
     }
+    webUI.addRow(row);
 }
 
-void BlindsControlPlugin::getValues(JsonArray &array)
+void BlindsControlPlugin::getValues(NamedArray &array)
 {
     BlindsControl::getValues(array);
 }

@@ -26,6 +26,8 @@
 
 class Sensor_DS3231 : public MQTT::Sensor {
 public:
+    using NamedJArray = PluginComponents::NamedJArray;
+
     Sensor_DS3231(const JsonString &name);
     virtual ~Sensor_DS3231();
 

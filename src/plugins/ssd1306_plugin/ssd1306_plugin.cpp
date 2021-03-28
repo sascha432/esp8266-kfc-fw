@@ -271,7 +271,7 @@ public:
         return F("SSD1306");
     }
 
-    virtual void setup(SetupModeType mode) override {
+    virtual void setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies) override {
         ssd1306_setup();
     }
 

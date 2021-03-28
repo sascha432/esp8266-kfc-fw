@@ -117,7 +117,8 @@ void WsPingClient::onText(uint8_t *data, size_t len)
                             LoopFunctions::callOnce([client, response]() {
                                 if (response.answer) {
                                     WsClient::safeSend(wsPing, client, PrintString(FSPGM(ping_monitor_response), response.size, response.addr.toString().c_str(), response.icmp_seq, response.ttl, response.time));
-                                } else {
+                                }
+                                else {
                                     WsClient::safeSend(wsPing, client, FSPGM(ping_monitor_request_timeout));
                                 }
                             });

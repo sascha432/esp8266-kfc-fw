@@ -111,8 +111,10 @@ public:
     static void broadcast(AsyncWebSocket *server, WsClient *sender, String &&str);
     static void broadcast(AsyncWebSocket *server, WsClient *sender, const __FlashStringHelper *str, size_t length);
     static void broadcast(AsyncWebSocket *server, WsClient *sender, const JsonUnnamedObject &json);
+    static void broadcast(AsyncWebSocket *server, WsClient *sender, const MQTT::Json::UnnamedObject &json);
 
     // validate server and client before sending
+    static void safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, const __FlashStringHelper *message);
     static void safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, const String &message);
     static void safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, const MQTT::Json::UnnamedObject &json);
     static void safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, const JsonUnnamedObject &json);

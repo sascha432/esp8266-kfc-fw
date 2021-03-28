@@ -471,10 +471,7 @@ void Plugin::_handlerWebUI(AsyncWebServerRequest *request, HttpHeaders &headers)
         request->send(503);
         return;
     }
-    __DBG_printf("WebUISocket::createWebUIJSON()");
     auto json = WebUISocket::createWebUIJSON();
-    __DBG_printf("json %p", &json);
-    __DBG_printf("json %s", json.toString().c_str());
     auto response = new AsyncBasicResponse(200, FSPGM(mime_application_json), json.toString());
     headers.addNoCache();
     headers.setResponseHeaders(response);

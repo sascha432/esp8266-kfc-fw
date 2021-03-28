@@ -225,7 +225,7 @@ void PingMonitorPlugin::_setupWebHandler()
     _pingMonitorSetupWebHandler();
 }
 
-void PingMonitorPlugin::setup(SetupModeType mode)
+void PingMonitorPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
     _setup();
 }
@@ -320,7 +320,8 @@ void PingMonitorPlugin::createConfigureForm(FormCallbackType type, const String 
 
     auto &serviceGroup = form.addCardGroup(F("pingbs"), FSPGM(ping_monitor_service), cfg.service);
 
-    PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, Plugins::Ping::kHostsMax, h);
+    PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, 8, h);
+    static_assert(8 == Plugins::Ping::kHostsMax, "change value");
 
     for(uint8_t i = 0; i < Plugins::Ping::kHostsMax; i++) {
 

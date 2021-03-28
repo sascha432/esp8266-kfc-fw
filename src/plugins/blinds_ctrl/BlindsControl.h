@@ -12,6 +12,8 @@
 #include <Buffer.h>
 #include <FunctionalInterrupt.h>
 #include "../src/plugins/mqtt/component.h"
+#include "../src/plugins/mqtt/mqtt_json.h"
+#include "PluginComponent.h"
 #include <kfc_fw_config.h>
 #include "blinds_defines.h"
 #include <stl_ext/algorithm.h>
@@ -30,6 +32,7 @@ public:
     using ActionType = Plugins::Blinds::OperationType;
     using PlayToneType = Plugins::Blinds::PlayToneType;
     using Actions = Plugins::Blinds::BlindsConfigOperation_t;
+    using NamedArray = PluginComponents::NamedArray;
 
     enum class TopicType : uint8_t {
         SET,
@@ -284,7 +287,7 @@ public:
     virtual void onConnect() override;
     virtual void onMessage(const char *topic, const char *payload, size_t len) override;
 
-    void getValues(JsonArray &array);
+    void getValues(NamedArray &array);
     void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState);
 
     // void setChannel(ChannelType channel, StateType state);

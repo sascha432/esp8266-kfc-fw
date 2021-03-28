@@ -88,27 +88,35 @@ uint8_t BlindsControl::getAutoDiscoveryCount() const
     return kChannelCount * 2 + 3;
 }
 
-void BlindsControl::getValues(JsonArray &array)
+void BlindsControl::getValues(NamedArray &array)
 {
-    JsonUnnamedObject *obj;
+    using namespace WebUINS;
 
-    obj = &array.addObject(3);
-    obj->add(JJ(id), FSPGM(set_all, "set_all"));
-    obj->add(JJ(value), _states[0].isOpen() || _states[1].isOpen() ? 1 : 0);
-    obj->add(JJ(state), true);
+    array.append(Values(FSPGM(set_all, "set_all"), _states[0].isOpen() || _states[1].isOpen() ? 1 : 0, true));
+
+    // JsonUnnamedObject *obj;
+
+    // obj = &array.addObject(3);
+    // obj->add(JJ(id), );
+    // obj->add(JJ(value), _states[0].isOpen() || _states[1].isOpen() ? 1 : 0);
+    // obj->add(JJ(state), true);
 
     for(const auto channel: _states.channels()) {
         String prefix = PrintString(FSPGM(channel__u), channel);
+        array.append(
+            Values(prefix + F("_state"), _getStateStr(channel), true),
+            Values(prefix + F("_set"), _states[channel].isOpen() ? 1 : 0, true)
+        );
 
-        obj = &array.addObject(3);
-        obj->add(JJ(id), prefix + F("_state"));
-        obj->add(JJ(value), _getStateStr(channel));
-        obj->add(JJ(state), true);
+        // obj = &array.addObject(3);
+        // obj->add(JJ(id), prefix + F("_state"));
+        // obj->add(JJ(value), _getStateStr(channel));
+        // obj->add(JJ(state), true);
 
-        obj = &array.addObject(3);
-        obj->add(JJ(id), prefix + F("_set"));
-        obj->add(JJ(value), _states[channel].isOpen() ? 1 : 0);
-        obj->add(JJ(state), true);
+        // obj = &array.addObject(3);
+        // obj->add(JJ(id), prefix + F("_set"));
+        // obj->add(JJ(value), _states[channel].isOpen() ? 1 : 0);
+        // obj->add(JJ(state), true);
     }
 }
 
@@ -119,9 +127,13 @@ void BlindsControl::_publishState()
     }
     __LDBG_printf("state %s/%s", _getStateStr(ChannelType::CHANNEL0), _getStateStr(ChannelType::CHANNEL1));
 
+    using namespace MQTT::Json;
+
     if (isConnected()) {
-        JsonUnnamedObject metrics(2);
-        JsonUnnamedObject channels(kChannelCount);
+
+        // JsonUnnamedObject metrics(2);
+        // JsonUnnamedObject channels(kChannelCount);
+        UnnamedObject channels;
         String binaryState = String('b');
 
         publish(_getTopic(ChannelType::ALL, TopicType::STATE), true, MQTT::Client::toBoolOnOff(_states[0].isOpen() || _states[1].isOpen()));
@@ -131,34 +143,28 @@ void BlindsControl::_publishState()
             auto isOpen = state.getCharState();
             binaryState += isOpen;
             publish(_getTopic(channel, TopicType::STATE), true, MQTT::Client::toBoolOnOff(isOpen));
-            channels.add(PrintString(FSPGM(channel__u), channel), _getStateStr(channel));
+            PrintString channelStr(FSPGM(channel__u), channel);
+            channels.append(NamedString(reinterpret_cast<FStr>(channelStr.c_str()), _getStateStr(channel)));
         }
-        metrics.add(FSPGM(binary), binaryState);
-        metrics.add(FSPGM(busy), !_queue.empty());
 
-        PrintString buffer;
-        buffer.reserve(metrics.length());
-        metrics.printTo(buffer);
+        publish(_getTopic(ChannelType::NONE, TopicType::METRICS), true, UnnamedObject(
+            NamedString(FSPGM(binary), binaryState),
+            NamedBool(FSPGM(busy), !_queue.empty())
+        ).toString());
 
-        publish(_getTopic(ChannelType::NONE, TopicType::METRICS), true, buffer);
-
-        buffer = PrintString();
-        buffer.reserve(channels.length());
-        channels.printTo(buffer);
-        publish(_getTopic(ChannelType::NONE, TopicType::CHANNELS), true, buffer);
+        publish(_getTopic(ChannelType::NONE, TopicType::CHANNELS), true, channels.toString());
     }
 
+
     if (WebUISocket::hasAuthenticatedClients()) {
-        JsonUnnamedObject webUI(2);
-        webUI.add(JJ(type), JJ(update_events));
-        getValues(webUI.addArray(JJ(events), kChannelCount * 2));
-        WebUISocket::broadcast(WebUISocket::getSender(), webUI);
+        NamedArray events(F("events"));
+        getValues(events);
+        WebUISocket::broadcast(WebUISocket::getSender(), UnnamedObject(NamedString(J(type), J(update_events)), events));
     }
 }
 
 void BlindsControl::onConnect()
 {
-    __LDBG_printf("client=%p", client);
     _publishState();
     subscribe(_getTopic(ChannelType::ALL, TopicType::SET));
     for(const auto channel: _states.channels()) {
@@ -169,10 +175,11 @@ void BlindsControl::onConnect()
 void BlindsControl::onMessage(const char *topic, const char *payload, size_t len)
 {
     ChannelType channel;
-    if (strstr_P(topic, PSTR("/channel_0/"))) {
+
+    if (String(F("/channel_0/")).endEquals(topic)) {
         channel = ChannelType::CHANNEL0;
     }
-    else if (strstr_P(topic, PSTR("/channel_1/"))) {
+    else if (String(F("/channel_1/")).endEquals(topic)) {
         channel = ChannelType::CHANNEL1;
     }
     else {

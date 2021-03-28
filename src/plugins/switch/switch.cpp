@@ -151,10 +151,9 @@ void SwitchPlugin::createConfigureForm(FormCallbackType type, const String &form
 
 void SwitchPlugin::createWebUI(WebUINS::Root &webUI)
 {
-    auto row = &webUI.addRow();
-    row->addGroup(F("Switch"), false);
+    webUI.addRow(WebUINS::Row(WebUINS::Group(F("Switch"), false)));
 
-    row = &webUI.addRow();
+    WebUINS::Row row;
     for (size_t i = 0; i < _pins.size(); i++) {
         if (_configs[i].webUI != WebUIEnum::HIDE) {
             PrintString name;
@@ -164,23 +163,26 @@ void SwitchPlugin::createWebUI(WebUINS::Root &webUI)
             else {
                 name = PrintString(F("Channel %u"), i);
             }
-            row->addSwitch(PrintString(FSPGM(channel__u), i), name, true, WebUINS::NamePositionType::HIDE);
+            row.append(WebUINS::Switch(PrintString(FSPGM(channel__u), i), name, true, WebUINS::NamePositionType::HIDE));
         }
         if (_configs[i].webUI == WebUIEnum::NEW_ROW) {
-            row = &webUI.addRow();
+            webUI.addRow(row);
+        }
+        else {
+            webUI.appendToLastRow(row);
         }
     }
 }
 
-void SwitchPlugin::getValues(JsonArray &array)
+void SwitchPlugin::getValues(NamedArray &array)
 {
-    __LDBG_println();
-
     for (size_t i = 0; i < _pins.size(); i++) {
-        auto obj = &array.addObject(2);
-        obj->add(JJ(id), PrintString(FSPGM(channel__u), i));
-        obj->add(JJ(value), (int)_getChannel(i));
-        obj->add(JJ(state), true);
+        using namespace MQTT::Json;
+        array.append(UnnamedObject(
+            NamedStoredString(J(id), PrintString(FSPGM(channel__u), i)),
+            NamedInt32(J(value), _getChannel(i) ? 1 : 0),
+            NamedBool(J(state), true)
+        ));
     }
 }
 

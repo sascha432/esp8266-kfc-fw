@@ -8,6 +8,7 @@
 #include <ESPAsyncWebServer.h>
 #include <AsyncPing.h>
 #include <web_socket.h>
+#include "../src/plugins/mqtt/mqtt_json.h"
 
 #ifndef DEBUG_PING_MONITOR
 #define DEBUG_PING_MONITOR                  0
@@ -114,7 +115,7 @@ public:
 
     static bool hasStats();
     static PingStatistics getStats();
-    static void addToJson(DynamicJsonDocument &obj);
+    static void addToJson(MQTT::Json::UnnamedObjectWriter &obj);
 
 private:
     void _addAnswer(bool answer, uint32_t time);

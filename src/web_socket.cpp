@@ -488,6 +488,15 @@ void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, const char *s
     }
 }
 
+void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, const MQTT::Json::UnnamedObject &json)
+{
+    if (!__get_server(server, sender)) {
+        return;
+    }
+    auto jsonStr = json.toString();
+    broadcast(server, sender, std::move(jsonStr));
+}
+
 void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, String &&str)
 {
     if (!__get_server(server, sender)) {
@@ -509,6 +518,26 @@ void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, const __Flash
         memcpy_P(buffer->get(), str, length);
         _broadcast(server, sender, buffer);
     }
+}
+
+void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, const __FlashStringHelper *message)
+{
+    if (!__get_server(server, client)) {
+        __LDBG_printf("no clients connected: server=%p client=%p message=%s", server, client, message);
+        return;
+    }
+    WsClient::forsocket(server, client, [server, &message](AsyncWebSocketClient *socket) {
+        if (socket->canSend()) {
+            auto msg = String(message);
+            auto buffer = utf8ToBuffer(server, msg.c_str(), msg.length()); //TODO change to __FlashStringHelper
+            if (buffer) {
+                socket->text(buffer);
+                if (can_yield()) {
+                    delay(WsClient::getQeueDelay());
+                }
+            }
+        }
+    });
 }
 
 void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, const String &message)

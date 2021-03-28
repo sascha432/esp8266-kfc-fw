@@ -99,7 +99,6 @@ namespace WebUINS {
             }
         }
 #endif
-        __LDBG_printf("append values length=%u json=%s", values.length(), values.toString().c_str());
         _json.append(values);
     }
 

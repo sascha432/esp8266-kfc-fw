@@ -166,6 +166,7 @@ public:
     using LoopOptionsType     = Clock::LoopOptionsType;
     using milliseconds        = std::chrono::duration<uint32_t, std::ratio<1>>;
     using seconds             = std::chrono::duration<uint32_t, std::ratio<1000>>;
+    using NamedArray          = PluginComponents::NamedArray;
 
     static constexpr uint16_t kDefaultUpdateRate  = 1000;  // milliseconds
     static constexpr uint16_t kMinBlinkColonSpeed = 50;
@@ -262,7 +263,7 @@ public:
 
 public:
     virtual void createWebUI(WebUINS::Root &webUI) override;
-    virtual void getValues(JsonArray &array) override;
+    virtual void getValues(NamedArray &array) override;
     virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) override;
 
 // ------------------------------------------------------------------------

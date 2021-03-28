@@ -340,7 +340,7 @@ void setup()
         // start FS, we need it for getCrashCounter()
         KFCFS.begin();
 
-#if KFC_AUTO_SAFE_MODE_CRASH_COUNT == 0
+#if KFC_AUTO_SAFE_MODE_CRASH_COUNT != 0 && KFC_DISABLE_CRASHCOUNTER == 0
         if (resetDetector.hasCrashDetected() || increaseCrashCounter) {
             uint8_t counter = SaveCrash::getCrashCounter();
             if (counter >= KFC_AUTO_SAFE_MODE_CRASH_COUNT) {  // boot in safe mode if there were 3 (KFC_AUTO_SAFE_MODE_CRASH_COUNT) crashes within the 5 minutes (KFC_CRASH_RECOVERY_TIME)

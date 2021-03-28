@@ -44,7 +44,7 @@ Serial2TcpPlugin::Serial2TcpPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTION
     REGISTER_PLUGIN(this, "Serial2TcpPlugin");
 }
 
-void Serial2TcpPlugin::setup(SetupModeType mode)
+void Serial2TcpPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
     if (Serial2TcpBase::getInstance()) {
         return;

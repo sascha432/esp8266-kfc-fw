@@ -239,17 +239,18 @@ void PingMonitorTask::printStats(Print &out)
     }
 }
 
-void PingMonitorTask::addToJson(DynamicJsonDocument &doc)
+void PingMonitorTask::addToJson(MQTT::Json::UnnamedObjectWriter &json)
 {
+    using namespace MQTT::Json;
+
     if (hasStats()) {
         auto stats = getStats();
-        auto json = doc.createNestedObject(FSPGM(ping_monitor));
 
-        json[F("avg_resp_time")] = stats.getAvgResponseTime();
-        json[F("rcvd_pkts")] = stats.getReceivedCount();
-        json[F("lost_pkts")] = stats.getLostCount();
-        json[F("success")] = stats.getSuccessCount();
-        json[F("failure")] = stats.getFailureCount();
+        json.append(NamedUint32(F("avg_resp_time"), stats.getAvgResponseTime()));
+        json.append(NamedUint32(F("rcvd_pkts"), stats.getReceivedCount()));
+        json.append(NamedUint32(F("lost_pkts"), stats.getLostCount()));
+        json.append(NamedUint32(F("success"), stats.getSuccessCount()));
+        json.append(NamedUint32(F("failure"), stats.getFailureCount()));
 
         // auto &json = obj.addObject(FSPGM(ping_monitor));
         // json.add(F("avg_resp_time"), stats.getAvgResponseTime());

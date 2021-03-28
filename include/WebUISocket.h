@@ -52,6 +52,9 @@ public:
     inline static void broadcast(WebUISocket *sender, const String &str) {
         WsClient::broadcast(getServerSocket(), sender, str.c_str(), str.length());
     }
+    inline static void broadcast(WebUISocket *sender, const MQTT::Json::UnnamedObject &json) {
+        WsClient::broadcast(getServerSocket(), sender, json);
+    }
     // text message with no encoding
     inline static void broadcast(WebUISocket *sender, const __FlashStringHelper *str) {
         WsClient::broadcast(getServerSocket(), sender, str, strlen(reinterpret_cast<PGM_P>(str)));

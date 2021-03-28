@@ -17,6 +17,8 @@ class Sensor_CCS811;
 
 class Sensor_LM75A : public MQTT::Sensor {
 public:
+    using NamedJArray = PluginComponents::NamedJArray;
+
     Sensor_LM75A(const JsonString &name, TwoWire &wire, uint8_t address = 0x48);
     virtual ~Sensor_LM75A();
 
@@ -24,8 +26,7 @@ public:
     virtual uint8_t getAutoDiscoveryCount() const override;
 
     virtual void publishState() override;
-    virtual void getValues(JsonArray &json, bool timer) override;
-    virtual void getValues(NamedJsonArray &array, bool timer) override;
+    virtual void getValues(NamedArray &array, bool timer) override;
     virtual void createWebUI(WebUINS::Root &webUI) override;
     virtual void getStatus(Print &output) override;
     virtual bool getSensorData(String &name, StringVector &values) override;

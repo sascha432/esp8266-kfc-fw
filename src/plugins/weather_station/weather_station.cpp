@@ -231,7 +231,7 @@ void WeatherStationPlugin::_readConfig()
     _backlightLevel = std::min(1024 * _config.backlight_level / 100, 1023);
 }
 
-void WeatherStationPlugin::setup(SetupModeType mode)
+void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
     _readConfig();
     _init();

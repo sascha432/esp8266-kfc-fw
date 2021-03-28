@@ -42,33 +42,19 @@ uint8_t Sensor_LM75A::getAutoDiscoveryCount() const
 {
     return 1;
 }
-void Sensor_LM75A::getValues(NamedJsonArray &array, bool timer)
+void Sensor_LM75A::getValues(NamedArray &array, bool timer)
 {
-    using namespace MQTT::Json;
+    using namespace WebUINS;
     auto temp = _readSensor();
-    array.append(UnnamedObject(
-            NamedString(F("id"), _getId()),
-            NamedBool(F("state"), !isnan(temp)),
-            NamedVariant<FStr, TrimmedDouble>(F("value"), TrimmedDouble(temp, 2))
-        )
-    );
-}
-
-void Sensor_LM75A::getValues(JsonArray &array, bool timer)
-{
-    auto &obj = array.addObject(3);
-    auto temp = _readSensor();
-    obj.add(JJ(id), _getId());
-    obj.add(JJ(state), !isnan(temp));
-    obj.add(JJ(value), JsonNumber(temp, 2));
+    array.append(Values(_getId()), TrimmedDouble(temp, 2));
 }
 
 void Sensor_LM75A::createWebUI(WebUINS::Root &webUI)
 {
+    webUI.appendToLastRow(WebUINS::Row(WebUINS::Sensor(_getId(), _name, FSPGM(UTF8_degreeC))))
     // if ((*row)->size() > 3) {
     //     *row = &webUI.addRow();
     // }
-    (*row)->addSensor(_getId(), _name, FSPGM(UTF8_degreeC));
 }
 
 void Sensor_LM75A::publishState()

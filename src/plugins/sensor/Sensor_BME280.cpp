@@ -67,57 +67,35 @@ uint8_t Sensor_BME280::getAutoDiscoveryCount() const
     return 3;
 }
 
-void Sensor_BME280::getValues(NamedJsonArray &array, bool timer)
+void Sensor_BME280::getValues(NamedArray &array, bool timer)
 {
+    using namespace MQTT::Json;
+
     SensorData_t sensor;
     _readSensor(sensor);
     array.append(
-        UnnamedObject(
-            NamedString(F("id"), _getId(FSPGM(temperature))),
-            NamedBool(F("state"), true),
-            NamedDouble(F("value"), JsonNumber(sensor.temperature, FormattedDouble::TRIMMED(2)))
-        ),
-        UnnamedObject(
-            NamedString(F("id"), _getId(FSPGM(humidity))),
-            NamedBool(F("state"), true),
-            NamedDouble(F("value"), JsonNumber(sensor.humidity, FormattedDouble::TRIMMED(2)))
-        ),
-        UnnamedObject(
-            NamedString(F("id"), _getId(FSPGM(pressure))),
-            NamedBool(F("state"), true),
-            NamedDouble(F("value"), JsonNumber(sensor.pressure, FormattedDouble::TRIMMED(2)))
-        )
+        WebUINS::Values(_getId(FSPGM(temperature)), WebUINS::TrimmedDouble(sensor.temperature, 2), true),
+        WebUINS::Values(_getId(FSPGM(humidity)), WebUINS::TrimmedDouble(sensor.humidity, 2), true),
+        WebUINS::Values(_getId(FSPGM(pressure)), WebUINS::TrimmedDouble(sensor.pressure, 2), true)
     );
-}
-
-void Sensor_BME280::getValues(JsonArray &array, bool timer)
-{
-    SensorData_t sensor;
-    _readSensor(sensor);
-
-    auto obj = &array.addObject(3);
-    obj->add(JJ(id), _getId(FSPGM(temperature)));
-    obj->add(JJ(state), true);
-    obj->add(JJ(value), JsonNumber(sensor.temperature, 2));
-    obj = &array.addObject(3);
-    obj->add(JJ(id), _getId(FSPGM(humidity)));
-    obj->add(JJ(state), true);
-    obj->add(JJ(value), JsonNumber(sensor.humidity, 2));
-    obj = &array.addObject(3);
-    obj->add(JJ(id), _getId(FSPGM(pressure)));
-    obj->add(JJ(state), true);
-    obj->add(JJ(value), JsonNumber(sensor.pressure, 2));
 }
 
 void Sensor_BME280::createWebUI(WebUINS::Root &webUI)
 {
-    _debug_println();
+    WebUINS::Row row(
+        WebUINS::Sensor(_getId(FSPGM(temperature)), _name + F(" Temperature"), FSPGM(UTF8_degreeC)),
+        WebUINS::Sensor(_getId(FSPGM(humidity)), _name + F(" Humidity"), '%'),
+        WebUINS::Sensor(_getId(FSPGM(pressure)), _name + F(" Pressure"), FSPGM(hPa))
+    );
+    webUI.appendToLastRow(row);
+
+
     // if ((*row)->size() > 1) {
         // *row = &webUI.addRow();
-    // }
-    (*row)->addSensor(_getId(FSPGM(temperature)), _name + F(" Temperature"), FSPGM(UTF8_degreeC));
-    (*row)->addSensor(_getId(FSPGM(humidity)), _name + F(" Humidity"), '%');
-    (*row)->addSensor(_getId(FSPGM(pressure)), _name + F(" Pressure"), FSPGM(hPa));
+    // // }
+    // (*row)->addSensor(_getId(FSPGM(temperature)), _name + F(" Temperature"), FSPGM(UTF8_degreeC));
+    // (*row)->addSensor(_getId(FSPGM(humidity)), _name + F(" Humidity"), '%');
+    // (*row)->addSensor(_getId(FSPGM(pressure)), _name + F(" Pressure"), FSPGM(hPa));
 }
 
 void Sensor_BME280::getStatus(Print &output)
@@ -130,25 +108,25 @@ bool Sensor_BME280::getSensorData(String &name, StringVector &values)
     name = F("BME280");
     SensorData_t sensor;
     _readSensor(sensor);
-    values.emplace_back(PrintString(F("%.2f &deg;C"), sensor.temperature));
+    values.emplace_back(PrintString(F("%.2f %s"), sensor.temperature, SPGM(UTF8_degreeC)));
     values.emplace_back(PrintString(F("%.2f %%"), sensor.humidity));
     values.emplace_back(PrintString(F("%.2f hPa"), sensor.pressure));
     return true;
 }
 
-void Sensor_BME280::publishState(MQTTClient *client)
+void Sensor_BME280::publishState()
 {
-    if (client && client->isConnected()) {
+    if (isConnected()) {
         SensorData_t sensor;
         _readSensor(sensor);
-        PrintString str;
-        JsonUnnamedObject json;
-        json.add(FSPGM(temperature), JsonNumber(sensor.temperature, 2));
-        json.add(FSPGM(humidity), JsonNumber(sensor.humidity, 2));
-        json.add(FSPGM(pressure), JsonNumber(sensor.pressure, 2));
-        json.printTo(str);
 
-        client->publish(MQTTClient::formatTopic(_getId()), true, str);
+        using namespace MQTT::Json;
+
+        publish(MQTTClient::formatTopic(_getId()), true, UnnamedObject(
+            NamedFormattedDouble(FSPGM(temperature), sensor.temperature, F("%.2f")),
+            NamedFormattedDouble(FSPGM(humidity), sensor.humidity, F("%.2f")),
+            NamedFormattedDouble(FSPGM(pressure), sensor.pressure, F("%.2f"))
+        ).toString());
     }
 }
 
@@ -158,11 +136,11 @@ void Sensor_BME280::_readSensor(SensorData_t &sensor)
     sensor.humidity = _bme280.readHumidity();
     sensor.pressure = _bme280.readPressure() / 100.0;
 
-    __LDBG_printf("address 0x%02x: %.2f °C, %.2f%%, %.2f hPa", _address, sensor.temperature, sensor.humidity, sensor.pressure);
+    __LDBG_printf("address 0x%02x: %.2f %s, %.2f%%, %.2f hPa", _address, sensor.temperature, SPGM(UTF8_degreeC), sensor.humidity, sensor.pressure);
 
     if (_callback != nullptr) {
         _callback(sensor);
-        __LDBG_printf("compensated %.2f °C, %.2f%%", sensor.temperature, sensor.humidity);
+        __LDBG_printf("compensated %.2f %s, %.2f%%", sensor.temperature, SPGM(UTF8_degreeC), sensor.humidity);
     }
 }
 

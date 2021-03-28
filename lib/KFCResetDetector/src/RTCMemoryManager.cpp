@@ -421,7 +421,9 @@ bool RTCMemoryManager::dump(Print &output, RTCMemoryId displayId) {
 void RTCMemoryManager::setWriteTime(bool enableWriteTime)
 {
     _enableWriteTime = enableWriteTime;
+#if ENABLE_DEEP_SLEEP
     DeepSleep::_realTimeOffset = 0;
+#endif
     writeTime(true);
 }
 

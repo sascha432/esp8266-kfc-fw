@@ -127,36 +127,12 @@ void Sensor_SystemMetrics::publishState()
 
 void Sensor_SystemMetrics::getValues(NamedArray &array, bool timer)
 {
-    using namespace MQTT::Json;
+    using namespace WebUINS;
     array.append(
-        UnnamedObject(
-            NamedString(F("id"), _getId(MetricsType::UPTIME)),
-            NamedBool(F("state"), true),
-            NamedString(F("value"), _getUptime())
-        ),
-        UnnamedObject(
-            NamedString(F("id"), _getId(MetricsType::MEMORY)),
-            NamedBool(F("state"), true),
-            NamedString(F("value"), PrintString(F("%.3f KB<br>%u%%"), ESP.getFreeHeap() / 1024.0, ESP.getHeapFragmentation()))
-        )
+        Values(_getId(MetricsType::UPTIME), _getUptime(), true),
+        Values(_getId(MetricsType::MEMORY), PrintString(F("%.3f KB<br>%u%%"), ESP.getFreeHeap() / 1024.0, ESP.getHeapFragmentation()), true)
     );
 }
-
-// void Sensor_SystemMetrics::getValues(::JsonArray &array, bool timer)
-// {
-//     using ::JsonString;
-//     __LDBG_println();
-
-//     auto obj = &array.addObject(3);
-//     obj->add(JJ(id), _getId(MetricsType::UPTIME));
-//     obj->add(JJ(state), true);
-//     obj->add(JJ(value), _getUptime());
-
-//     obj = &array.addObject(3);
-//     obj->add(JJ(id), _getId(MetricsType::MEMORY));
-//     obj->add(JJ(state), true);
-//     obj->add(JJ(value), PrintString(F("%.3f KB<br>%u%%"), ESP.getFreeHeap() / 1024.0, ESP.getHeapFragmentation()));
-// }
 
 String Sensor_SystemMetrics::_getUptime() const
 {
@@ -218,7 +194,7 @@ void Sensor_SystemMetrics::_getMetricsJson(PrintString &json) const
 {
     using namespace MQTT::Json;
 
-    UnnamedObjectWriter(json,
+    UnnamedObjectWriter jsonObj(json,
         NamedUint32(FSPGM(uptime), getSystemUptime()),
         NamedUint32(FSPGM(heap), ESP.getFreeHeap()),
         NamedShort(F("heap_frag"), ESP.getHeapFragmentation()),
@@ -226,7 +202,7 @@ void Sensor_SystemMetrics::_getMetricsJson(PrintString &json) const
     );
 
 #if PING_MONITOR_SUPPORT
-    PingMonitorTask::addToJson(json);
+    PingMonitorTask::addToJson(jsonObj);
 #endif
 
 }

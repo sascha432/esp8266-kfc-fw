@@ -106,19 +106,15 @@ uint8_t Sensor_HLW80xx::getAutoDiscoveryCount() const
     return 6;
 }
 
-void Sensor_HLW80xx::getValues(NamedJsonArray &array, bool timer)
+void Sensor_HLW80xx::getValues(NamedArray &array, bool timer)
 {
-
-}
-
-void Sensor_HLW80xx::getValues(JsonArray &array, bool timer)
-{
-    __LDBG_println();
-
+    array.append(
+        Values(_getId(FSPGM(power)), _powerToNumber(_power)),
+    );
     auto obj = &array.addObject(3);
-    obj->add(JJ(id), _getId(FSPGM(power)));
+    obj->add(JJ(id), );
     obj->add(JJ(state), !isnan(_power));
-    obj->add(JJ(value), _powerToNumber(_power));
+    obj->add(JJ(value), );
 
     obj = &array.addObject(3);
     obj->add(JJ(id), _getId(FSPGM(energy_total)));
@@ -281,26 +277,6 @@ void Sensor_HLW80xx::_loadEnergyCounter()
     resetEnergyCounter();
     _saveEnergyCounterTimeout = ~0;
 #endif
-}
-
-JsonNumber Sensor_HLW80xx::_currentToNumber(float current) const
-{
-    uint8_t digits = 2;
-    if (current < 1) {
-        digits = 3;
-    }
-    return JsonNumber(current, digits + _extraDigits);
-}
-
-JsonNumber Sensor_HLW80xx::_energyToNumber(float energy) const
-{
-    auto tmp = energy;
-    uint8_t digits = 0;
-    while(tmp >= 1 && digits < 3) {
-        digits++;
-        tmp *= 0.1;
-    }
-    return JsonNumber(energy, 3 - digits + _extraDigits);
 }
 
 void Sensor_HLW80xx::setExtraDigits(uint8_t digits)

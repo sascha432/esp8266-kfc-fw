@@ -156,32 +156,17 @@ uint8_t Sensor_Battery::getAutoDiscoveryCount() const
 
 void Sensor_Battery::getValues(NamedArray &array, bool timer)
 {
-    using namespace MQTT::Json;
+    using namespace WebUINS;
     array.append(
-        UnnamedObject(
-            NamedString(F("id"), _getId(TopicType::VOLTAGE)),
-            NamedBool(F("state"), true),
-            NamedDouble(F("value"), _status.getVoltage(), _config.precision)
-        )
+        Values(_getId(TopicType::VOLTAGE), TrimmedDouble(_status.getVoltage(), _config.precision))
 #if IOT_SENSOR_BATTERY_DISPLAY_LEVEL
-        ,UnnamedObject(
-            NamedString(F("id"), _getId(TopicType::LEVEL)),
-            NamedBool(F("state"), true),
-            NamedShort(F("value"), _status.getLevel())
-        )
+        , Values(_getId(TopicType::LEVEL), _status.getLevel(), true)
 #endif
 #ifdef IOT_SENSOR_BATTERY_CHARGING
-        ,UnnamedObject(
-            NamedString(F("id"), _getId(TopicType::CHARGING)),
-            NamedBool(F("state"), true),
-            NamedString(F("value"), _status.getChargingStatus())
-        )
+        , Values(_getId(TopicType::CHARGING), _status.getChargingStatus(), true)
 #endif
 #if IOT_SENSOR_BATTERY_DSIPLAY_POWER_STATUS
-        ,UnnamedObject(
-            NamedString(F("id"), _getId(TopicType::POWER)),
-            NamedBool(F("state"), true),
-            NamedString(F("value"), tatus.getPowerStatus())
+        , Values(_getId(TopicType::POWER), _status.getPowerStatus(), true)
         )
 #endif
     );
@@ -198,7 +183,7 @@ void Sensor_Battery::createWebUI(WebUINS::Root &webUI)
         , WebUINS::Sensor(_getId(TopicType::CHARGING), F("Charging"), F(""))
 #endif
 #if IOT_SENSOR_BATTERY_DSIPLAY_POWER_STATUS
-    , WebUINS::Sensor(_getId(TopicType::POWER), F("Status"), F(""))
+        , WebUINS::Sensor(_getId(TopicType::POWER), F("Status"), F(""))
 #endif
     );
     webUI.appendToLastRow(row);

@@ -51,7 +51,7 @@ namespace MQTT {
 
         private:
             void _publishNextMessage();
-            void _publishDone(bool success = true, uint16_t onErrorDelay = 15);
+            void _publishDone(StatusType result = StatusType::SUCCESS, uint16_t onErrorDelay = 15);
 
         private:
             friend Client;

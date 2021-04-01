@@ -674,7 +674,7 @@ bool MQTTClient::publishAutoDiscovery(RunFlags flags, AutoDiscovery::StatusCallb
             _autoDiscoveryQueue.reset();
         }
         if (!_autoDiscoveryQueue) {
-            __DBG_printf("starting auto discovery queue");
+            __LDBG_printf("starting auto discovery queue");
             _autoDiscoveryQueue.reset(new AutoDiscovery::Queue(*this));
             _autoDiscoveryQueue->setStatusCallback(callback);
             _autoDiscoveryQueue->publish(flags);

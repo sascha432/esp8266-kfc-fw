@@ -38,7 +38,7 @@ Queue::~Queue()
 
     // if the component is still registered, publish done has not been called
     if (MQTTClient::unregisterComponent(this)) {
-        _publishDone(false);
+        _publishDone(StatusType::FAILURE);
     }
 
 #if DEBUG_MQTT_AUTO_DISCOVERY_QUEUE
@@ -74,7 +74,7 @@ void Queue::onPacketAck(uint16_t packetId, PacketAckType type)
         _packetId = 0;
         if (type == PacketAckType::TIMEOUT) {
             LoopFunctions::callOnce([this]() {
-                _publishDone(false);
+                _publishDone(StatusType::FAILURE);
             });
             return;
         }
@@ -145,7 +145,7 @@ void Queue::runPublish(uint32_t delayMillis)
         _diff = {};
         _entities = List(_client._components, FormatType::JSON);
 
-        __DBG_printf("starting broadcast in %u ms", std::max<uint32_t>(1000, initialDelay));
+        __LDBG_printf("starting broadcast in %u ms", std::max<uint32_t>(1000, initialDelay));
 
         _Timer(_timer).add(Event::milliseconds(std::max<uint32_t>(1000, initialDelay)), false, [this](Event::CallbackTimerPtr timer) {
 
@@ -163,15 +163,15 @@ void Queue::runPublish(uint32_t delayMillis)
                     return;
                 }
                 // check when the next auto discovery is supposed to run
-                __DBG_printf("last_success=%d last_failure=%d run=%d", _client._autoDiscoveryLastSuccess, _client._autoDiscoveryLastFailure, _client._autoDiscoveryLastSuccess > _client._autoDiscoveryLastFailure);
+                __LDBG_printf("last_success=%d last_failure=%d run=%d", _client._autoDiscoveryLastSuccess, _client._autoDiscoveryLastFailure, _client._autoDiscoveryLastSuccess > _client._autoDiscoveryLastFailure);
                 if (_client._autoDiscoveryLastSuccess > _client._autoDiscoveryLastFailure) {
                     auto cfg = Plugins::MQTTClient::getConfig();
                     uint32_t next = _client._autoDiscoveryLastSuccess + (cfg.getAutoDiscoveryRebroadcastInterval() * 60);
                     int32_t diff = next - time(nullptr);
-                    __DBG_printf("last_published=%d wait_time=%d minutes", (diff / 60) + 1);
+                    __LDBG_printf("last_published=%d wait_time=%d minutes", (diff / 60) + 1);
                     // not within 2 minutes... report error and delay next run by the time that has been left
                     if (diff > 120) {
-                        _publishDone(false, (next / 60) + 1);
+                        _publishDone(StatusType::DEFERRED, (next / 60) + 1);
                         return;
                     }
                 }
@@ -204,7 +204,7 @@ void Queue::runPublish(uint32_t delayMillis)
                     //if (currentCrcs == crcs) {
                     if (_diff.equal) {
                         __LDBG_printf("auto discovery matches current version");
-                        _publishDone(true);
+                        _publishDone(StatusType::SUCCESS);
                         return;
                     }
                     else {
@@ -229,7 +229,7 @@ void Queue::runPublish(uint32_t delayMillis)
                             }
                             else {
                                 __LDBG_printf("error %u occurred during remove topics", error);
-                                _publishDone(false);
+                                _publishDone(StatusType::FAILURE);
                                 return;
                             }
                         });
@@ -237,7 +237,7 @@ void Queue::runPublish(uint32_t delayMillis)
                 }
                 else {
                     __LDBG_printf("error %u occurred during collect topics", error);
-                    _publishDone(false);
+                    _publishDone(StatusType::FAILURE);
                     return;
                 }
             });
@@ -263,13 +263,13 @@ void Queue::_publishNextMessage()
     do {
         if (_iterator == _entities.end()) {
             __LDBG_printf("auto discovery published");
-            _publishDone(true);
+            _publishDone(StatusType::SUCCESS);
             return;
         }
         if (!_client.isConnected()) {
             __LDBG_printf("lost connection: auto discovery aborted");
             // _client._startAutoDiscovery = true;
-            _publishDone(false);
+            _publishDone(StatusType::FAILURE);
             return;
         }
         const auto &entitiy = *_iterator;
@@ -305,7 +305,7 @@ void Queue::_publishNextMessage()
         auto queue = _client.publishWithId(nullptr, entitiy->getTopic(), true, entitiy->getPayload(), QosType::AUTO_DISCOVERY, _packetId);
         if (!queue) {
             __LDBG_printf("failed to publish topic=%s", topic);
-            _publishDone(false);
+            _publishDone(StatusType::FAILURE);
             return;
         }
         // _packetId = queue.getInternalId();
@@ -316,9 +316,9 @@ void Queue::_publishNextMessage()
 
 // make sure to exit any method after calling done
 // the method deletes the object and this becomes invalid
-void Queue::_publishDone(bool success, uint16_t onErrorDelay)
+void Queue::_publishDone(StatusType result, uint16_t onErrorDelay)
 {
-    __DBG_printf("success=%u error_delay=%u entities=%u size=%u crc=%08x add=%u modified=%u removed=%u unchanged=%u",
+    __LDBG_printf("success=%u error_delay=%u entities=%u size=%u crc=%08x add=%u modified=%u removed=%u unchanged=%u",
         success,
         onErrorDelay,
         _entities.size(),
@@ -329,7 +329,7 @@ void Queue::_publishDone(bool success, uint16_t onErrorDelay)
     MQTTClient::unregisterComponent(this);
 
     Event::milliseconds delay;
-    if (success) {
+    if (result == StatusType::SUCCESS) {
         delay = Event::minutes(Plugins::MQTTClient::getConfig().getAutoDiscoveryRebroadcastInterval());
     }
     else if (onErrorDelay) {
@@ -339,12 +339,28 @@ void Queue::_publishDone(bool success, uint16_t onErrorDelay)
         delay = Event::milliseconds::zero();
     }
 
-    _client.updateAutoDiscoveryTimestamps(success);
+    auto resultStr = F("unknown");
+    switch(result) {
+        case StatusType::SUCCESS:
+            resultStr = F("published");
+            _client.updateAutoDiscoveryTimestamps(true);
+            break;
+        case StatusType::FAILURE:
+            resultStr = F("aborted");
+            _client.updateAutoDiscoveryTimestamps(false);
+            break;
+        case StatusType::DEFERRED:
+            resultStr = F("deferred");
+            break;
+        default:
+            __DBG_printf("invalid result %u", result);
+            break;
+    }
     if (_callback) {
-        _callback(success ? StatusType::SUCCESS : StatusType::FAILURE);
+        _callback(result);
     }
 
-    auto message = PrintString(success ? F("MQTT auto discovery published [entities=%u") : F("MQTT auto discovery aborted [entities=%u"), _entities.size());
+    auto message = PrintString(F("MQTT auto discovery %s [entities=%u"), resultStr, _entities.size());
     if (_entities.payloadSize()) {
         message.print(F(", size="));
         message.print(formatBytes(_entities.payloadSize()));

@@ -81,6 +81,8 @@ namespace Dimmer {
 
     class Base {
     public:
+        using NamedArray = PluginComponents::NamedArray;
+
         static const uint32_t METRICS_DEFAULT_UPDATE_RATE = 60000;
 
         // stepSize = IOT_DIMMER_MODULE_MAX_BRIGHTNESS * ((repeatTime / 1000.0) / fadetime)
@@ -182,7 +184,7 @@ namespace Dimmer {
 
     // WebUI
     protected:
-        void _getValues(JsonArray &array);
+        void _getValues(NamedArray &array);
         void _setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState);
 
     #if AT_MODE_SUPPORTED

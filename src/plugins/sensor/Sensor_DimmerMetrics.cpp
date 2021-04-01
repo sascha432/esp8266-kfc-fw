@@ -69,83 +69,74 @@ uint8_t Sensor_DimmerMetrics::getAutoDiscoveryCount() const
     return 4;
 }
 
-void Sensor_DimmerMetrics::getValues(NamedJsonArray &array, bool timer)
+void Sensor_DimmerMetrics::getValues(NamedArray &array, bool timer)
 {
-    using namespace MQTT::Json;
+    using namespace WebUINS;
     array.append(
-        UnnamedObject(
-            NamedString(F("id"), F("ntc_temp")),
-            NamedBool(F("state"), _metrics.metrics.has_ntc_temp()),
-            NamedVariant<FStr, TrimmedDouble>(F("value"), TrimmedDouble(_metrics.metrics.get_ntc_temp(), 1))
-        ),
-        UnnamedObject(
-            NamedString(F("id"), F("int_temp")),
-            NamedBool(F("state"), _metrics.metrics.has_int_temp()),
-            NamedVariant<FStr, TrimmedDouble>(F("value"), TrimmedDouble(_metrics.metrics.get_int_temp(), 1))
-        ),
-        UnnamedObject(
-            NamedString(F("id"), F("vcc")),
-            NamedBool(F("state"), _metrics.metrics.has_vcc()),
-            NamedVariant<FStr, TrimmedDouble>(F("value"), TrimmedDouble(_metrics.metrics.get_vcc(), 3))
-        ),
-        UnnamedObject(
-            NamedString(F("id"), F("frequency")),
-            NamedBool(F("state"), _metrics.metrics.has_frequency()),
-            NamedDouble(F("value"), FormattedDouble(_metrics.metrics.get_freqency(), 2))
-        )
+        Values(F("ntc_temp"), TrimmedDouble(_metrics.metrics.get_ntc_temp(), 1), _metrics.metrics.has_ntc_temp()),
+        Values(F("int_temp"), TrimmedDouble(_metrics.metrics.get_int_temp(), 1), _metrics.metrics.has_int_temp()),
+        Values(F("vcc"), TrimmedDouble(_metrics.metrics.get_vcc(), 3), _metrics.metrics.has_vcc()),
+        Values(F("frequency"), FormattedDouble(_metrics.metrics.get_freqency(), 2), _metrics.metrics.has_frequency())
     );
 }
 
-void Sensor_DimmerMetrics::getValues(JsonArray &array, bool timer)
-{
-    JsonUnnamedObject *obj;
+// void Sensor_DimmerMetrics::getValues(JsonArray &array, bool timer)
+// {
+//     JsonUnnamedObject *obj;
 
-    obj = &array.addObject(3);
-    obj->add(JJ(id), F("ntc_temp"));
-    obj->add(JJ(state), _metrics.metrics.has_ntc_temp());
-    obj->add(JJ(value), JsonNumber(_metrics.metrics.get_ntc_temp(), 2));
+//     obj = &array.addObject(3);
+//     obj->add(JJ(id), F("ntc_temp"));
+//     obj->add(JJ(state), _metrics.metrics.has_ntc_temp());
+//     obj->add(JJ(value), JsonNumber(_metrics.metrics.get_ntc_temp(), 2));
 
-    obj = &array.addObject(3);
-    obj->add(JJ(id), F("int_temp"));
-    obj->add(JJ(state), _metrics.metrics.has_int_temp());
-    obj->add(JJ(value), JsonNumber(_metrics.metrics.get_int_temp(), 2));
+//     obj = &array.addObject(3);
+//     obj->add(JJ(id), F("int_temp"));
+//     obj->add(JJ(state), _metrics.metrics.has_int_temp());
+//     obj->add(JJ(value), JsonNumber(_metrics.metrics.get_int_temp(), 2));
 
-    obj = &array.addObject(3);
-    obj->add(JJ(id), FSPGM(vcc));
-    obj->add(JJ(state), _metrics.metrics.has_vcc());
-    obj->add(JJ(value), JsonNumber(_metrics.metrics.get_vcc(), 3));
+//     obj = &array.addObject(3);
+//     obj->add(JJ(id), FSPGM(vcc));
+//     obj->add(JJ(state), _metrics.metrics.has_vcc());
+//     obj->add(JJ(value), JsonNumber(_metrics.metrics.get_vcc(), 3));
 
-    obj = &array.addObject(3);
-    obj->add(JJ(id), FSPGM(frequency));
-    obj->add(JJ(state), !_metrics.metrics.has_frequency());
-    obj->add(JJ(value), JsonNumber(_metrics.metrics.get_freqency(), 2));
-}
+//     obj = &array.addObject(3);
+//     obj->add(JJ(id), FSPGM(frequency));
+//     obj->add(JJ(state), !_metrics.metrics.has_frequency());
+//     obj->add(JJ(value), JsonNumber(_metrics.metrics.get_freqency(), 2));
+// }
 
 void Sensor_DimmerMetrics::_createWebUI(WebUINS::Root &webUI)
 {
-    (*row)->addBadgeSensor(FSPGM(vcc), _name, 'V');
-    (*row)->addBadgeSensor(FSPGM(frequency), F("Frequency"), FSPGM(Hz));
-    (*row)->addBadgeSensor(F("int_temp"), F("ATmega"), FSPGM(UTF8_degreeC));
-    (*row)->addBadgeSensor(F("ntc_temp"), F("NTC"), FSPGM(UTF8_degreeC));
+    using namespace WebUINS;
+    webUI.addRow(WebUINS::Row(
+        WebUINS::BadgeSensor(FSPGM(vcc), _name, 'V'),
+        WebUINS::BadgeSensor(FSPGM(frequency), F("Frequency"), FSPGM(Hz)),
+        WebUINS::BadgeSensor(F("int_temp"), F("ATmega"), FSPGM(UTF8_degreeC)),
+        WebUINS::BadgeSensor(F("ntc_temp"), F("NTC"), FSPGM(UTF8_degreeC))
+    ));
+    // (*row)->addBadgeSensor(FSPGM(vcc), _name, 'V');
+    // (*row)->addBadgeSensor(FSPGM(frequency), F("Frequency"), FSPGM(Hz));
+    // (*row)->addBadgeSensor(F("int_temp"), F("ATmega"), FSPGM(UTF8_degreeC));
+    // (*row)->addBadgeSensor(F("ntc_temp"), F("NTC"), FSPGM(UTF8_degreeC));
     _webUIinitialized = true;
 }
 
 void Sensor_DimmerMetrics::createWebUI(WebUINS::Root &webUI)
 {
     if (!_webUIinitialized) {
-        _createWebUI(webUI, row);
+        _createWebUI(webUI);
     }
 }
 
 void Sensor_DimmerMetrics::publishState()
 {
     if (isConnected()) {
-        using namespace MQTT::Json;
+        using namespace WebUINS;
         publish(_getMetricsTopics(), true, UnnamedObject(
-            NamedDouble(F("int_temp"), FormattedDouble(_metrics.metrics.get_int_temp(), 2)),
-            NamedDouble(F("ntc_temp"), FormattedDouble(_metrics.metrics.get_ntc_temp(), 2)),
-            NamedDouble(F("vcc"), FormattedDouble(_metrics.metrics.get_vcc(), 3)),
-            NamedDouble(F("frequency"), FormattedDouble(_metrics.metrics.get_freqency(), 2))
+            NamedTrimmedFormattedDouble(F("int_temp"), _metrics.metrics.get_int_temp(), FormattedDouble::getPrecisionFormat(2)),
+            NamedTrimmedFormattedDouble(F("ntc_temp"), _metrics.metrics.get_ntc_temp(), FormattedDouble::getPrecisionFormat(2)),
+            NamedTrimmedFormattedDouble(F("vcc"), _metrics.metrics.get_vcc(), FormattedDouble::getPrecisionFormat(3)),
+            NamedFormattedDouble(F("frequency"), _metrics.metrics.get_freqency(), FormattedDouble::getPrecisionFormat(2))
         ).toString());
     }
 }

@@ -322,28 +322,32 @@ float Base::getTransitionTime(int fromLevel, int toLevel, float transitionTimeOv
 // WebUI/MQTT
 // ------------------------------------------------------------------------
 
-void Base::_getValues(JsonArray &array)
+void Base::_getValues(NamedArray &array)
 {
-    __LDBG_println();
-    JsonUnnamedObject *obj;
+    using namespace WebUINS;
     bool on = false;
 
     for (uint8_t i = 0; i < getChannelCount(); i++) {
-        obj = &array.addObject(3);
         PrintString id(F("d_chan%u"), i);
-        obj->add(JJ(id), id);
-        auto value = getChannel(i);
-        obj->add(JJ(value), value);
-        obj->add(JJ(state), true);
+        auto value = static_cast<int32_t>(getChannel(i));
+        array.append(Values(id, value));
+
+        // obj = &array.addObject(3);
+        // PrintString id(F("d_chan%u"), i);
+        // obj->add(JJ(id), id);
+
+        // obj->add(JJ(value), value);
+        // obj->add(JJ(state), true);
         if (getChannelState(i) && value) {
             on = true;
         }
     }
 
-    obj = &array.addObject(3);
-    obj->add(JJ(id), F("group-switch-0"));
-    obj->add(JJ(value), on ? 1 : 0);
-    obj->add(JJ(state), true);
+    array.append(Values(F("group-switch-0"), on ? 1 : 0));
+    // obj = &array.addObject(3);
+    // obj->add(JJ(id), F("group-switch-0"));
+    // obj->add(JJ(value), on ? 1 : 0);
+    // obj->add(JJ(state), true);
 }
 
 void Base::_setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)

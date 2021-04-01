@@ -64,6 +64,12 @@ namespace MQTT {
     //     _DEFAULT     = UPDATE_ALL,
     // };
 
+    enum class StatusType {
+        STARTED,
+        DEFERRED,
+        SUCCESS,
+        FAILURE,
+    };
 
     enum class RunFlags : uint8_t {
         NONE = 0,
@@ -106,12 +112,6 @@ namespace MQTT {
         class ListIterator;
         class ConstListIterator;
 
-        enum class StatusType {
-            STARTED,
-            DEFERRED,
-            SUCCESS,
-            FAILURE,
-        };
         using StatusCallback = std::function<void(StatusType status)>;
 
         using EntityPtr = Entity *;

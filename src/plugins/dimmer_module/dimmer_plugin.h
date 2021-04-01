@@ -11,6 +11,9 @@ namespace Dimmer {
 
     class Plugin : public PluginComponent, public Module {
     public:
+        using NamedArray = PluginComponents::NamedArray;
+
+    public:
         Plugin();
 
         virtual void setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies) override;
@@ -32,7 +35,7 @@ namespace Dimmer {
             Form::_createConfigureForm(type, formName, form);
         }
 
-        virtual void getValues(JsonArray &array) override {
+        virtual void getValues(NamedArray &array) override {
             _getValues(array);
         }
         virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) override {

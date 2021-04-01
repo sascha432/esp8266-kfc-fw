@@ -204,7 +204,7 @@ namespace MQTT {
         };
 
         struct UnnamedFormattedInteger : PrintToInterface, UnnamedBase {
-            UnnamedFormattedInteger(uint32_t value, const __FlashStringHelper *format = FSPGM(default_format_integer, "\"%05d\"")) :
+            UnnamedFormattedInteger(uint32_t value, FStr format = FSPGM(default_format_integer, "\"%05d\"")) :
                 _format(format),
                 _value(value)
             {
@@ -215,23 +215,23 @@ namespace MQTT {
                 output.printf_P(reinterpret_cast<PGM_P>(_format), _value);
             }
 
-            const __FlashStringHelper *_format;
+            FStr _format;
             uint32_t _value;
         };
 
         struct NamedFormattedInteger : UnnamedFormattedInteger, NamedBase {
-            NamedFormattedInteger(const __FlashStringHelper *key, uint32_t value, const __FlashStringHelper *format = FSPGM(default_format_integer)) :
+            NamedFormattedInteger(FStr key, uint32_t value, FStr format = FSPGM(default_format_integer)) :
                 UnnamedFormattedInteger(value, format),
                 _key(key)
             {
             }
 
             inline __attribute__((__always_inline__))
-            const __FlashStringHelper *key() const {
+            FStr key() const {
                 return _key;
             }
 
-            const __FlashStringHelper *_key;
+            FStr _key;
         };
 
         // if the value is not normal (nan, inf, -inf etc..) the output is null to meet JSON standards
@@ -309,7 +309,7 @@ namespace MQTT {
         // if the value is not normaled (nan, inf, -inf etc..) the output is null to meet JSON standards
         // if the value has more than one leading zero (1.00000, 1.23000), those get trimmed (1.0, 1.23)
         struct UnnamedTrimmedFormattedDouble : PrintToInterface, UnnamedBase {
-            UnnamedTrimmedFormattedDouble(double value, const __FlashStringHelper *format = FSPGM(default_format_double)) :
+            UnnamedTrimmedFormattedDouble(double value, FStr format = FSPGM(default_format_double)) :
                 _format(format),
                 _value(value)
             {
@@ -335,23 +335,23 @@ namespace MQTT {
                 }
             }
 
-            const __FlashStringHelper *_format;
+            FStr _format;
             double _value;
         };
 
         struct NamedTrimmedFormattedDouble : UnnamedTrimmedFormattedDouble, NamedBase {
-            NamedTrimmedFormattedDouble(const __FlashStringHelper *key, double value, const __FlashStringHelper *format = FSPGM(default_format_double)) :
+            NamedTrimmedFormattedDouble(FStr key, double value, FStr format = FSPGM(default_format_double)) :
                 UnnamedTrimmedFormattedDouble(value, format),
                 _key(key)
             {
             }
 
             inline __attribute__((__always_inline__))
-            const __FlashStringHelper *key() const {
+            FStr key() const {
                 return _key;
             }
 
-            const __FlashStringHelper *_key;
+            FStr _key;
         };
 
         struct ObjectType {};

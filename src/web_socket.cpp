@@ -447,11 +447,11 @@ AsyncWebSocketMessageBuffer *WsClient::moveStringToBuffer(AsyncWebSocket *server
     }
     __LDBG_NOP_free(cStr);
     return server->makeBuffer(reinterpret_cast<uint8_t *>(cStr), len, false/* use cStr instead of allocating new memory and copying */);
-    auto buffer = server->makeBuffer(str.length());
-    if (buffer) {
-        memcpy((char *)buffer->get(), cStr, len + 1);
-    }
-    return buffer;
+    // auto buffer = server->makeBuffer(str.length());
+    // if (buffer) {
+    //     memcpy((char *)buffer->get(), cStr, len + 1);
+    // }
+    // return buffer;
 }
 
 void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, const JsonUnnamedObject &json)

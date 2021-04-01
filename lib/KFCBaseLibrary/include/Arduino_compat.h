@@ -287,6 +287,8 @@ namespace __va_args__
     }
 #else
 
+// declare strings even if they do not exist
+// that makes it possible to compile, but linking fails
 #define AUTO_STRING_DEF(name, ...)                      PROGMEM_STRING_DECL(name);
 #define FLASH_STRING_GENERATOR_AUTO_INIT(...)           __VA_ARGS__
 #endif

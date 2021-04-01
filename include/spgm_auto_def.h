@@ -321,7 +321,6 @@ FLASH_STRING_GENERATOR_AUTO_INIT(
     AUTO_STRING_DEF(mime_text_xml, "text/xml")
     AUTO_STRING_DEF(min, "min")
     AUTO_STRING_DEF(minutes, "minutes")
-    AUTO_STRING_DEF(minutes__5_, "minutes ±5%")
     AUTO_STRING_DEF(mode, "mode")
     AUTO_STRING_DEF(moon_phase_0, "Full Moon")
     AUTO_STRING_DEF(moon_phase_1, "Waning Gibbous")
@@ -453,12 +452,15 @@ FLASH_STRING_GENERATOR_AUTO_INIT(
     AUTO_STRING_DEF(scheduler_config_file, "/.pvt/.scheduler")
     AUTO_STRING_DEF(Enable_UDP, "Enable UDP")
     AUTO_STRING_DEF(Enable_MQTT, "Enable MQTT")
-    AUTO_STRING_DEF(UTF8_rocket, "\xf0\x9f\x9a\x80")
-    AUTO_STRING_DEF(UTF8_degreeCelsius, "\xe2\x84\x83")
-    AUTO_STRING_DEF(UTF8_degreeFahrenheit, "\xe2\x84\x89")
-    AUTO_STRING_DEF(UTF8_degree, "\xc2\xb0")
+    AUTO_STRING_DEF(UTF8_rocket, "\xf0\x9f\x9a\x80")        // 🚀 alt-128640
+    AUTO_STRING_DEF(UTF8_degreeCelsius, "\xe2\x84\x83")     // ℃ alt-8451
+    AUTO_STRING_DEF(UTF8_degreeFahrenheit, "\xe2\x84\x89")  // ℉ alt-8457
+    AUTO_STRING_DEF(UTF8_degree, "\xc2\xb0")                // ° alt-0176
     AUTO_STRING_DEF(UTF8_degreeC, "\xc2\xb0" "C")
     AUTO_STRING_DEF(UTF8_degreeF, "\xc2\xb0" "F")
+    AUTO_STRING_DEF(UTF8_minutes_plusminus5percent, "minutes \xc2\xb1" "5%")   // ± alt+0177
+    AUTO_STRING_DEF(default_format_double, "%.2f")
+    AUTO_STRING_DEF(default_format_integer, "\"%05d\"")
 );
 
 #ifdef __cplusplus

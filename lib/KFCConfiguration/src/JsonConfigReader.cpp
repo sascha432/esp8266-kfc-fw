@@ -4,12 +4,15 @@
 
 #include "JsonConfigReader.h"
 
-JsonConfigReader::JsonConfigReader(Stream* stream, Configuration &config, HandleType *handles) : 
-    JsonBaseReader(stream), 
-    _config(config), 
-    _handles(handles), 
-    _handle(INVALID_HANDLE), 
-    _isConfigObject(false) 
+PROGMEM_STRING_DECL(config_object_name);
+PROGMEM_STRING_DEF(config_object_name, "config");
+
+JsonConfigReader::JsonConfigReader(Stream* stream, Configuration &config, HandleType *handles) :
+    JsonBaseReader(stream),
+    _config(config),
+    _handles(handles),
+    _handle(INVALID_HANDLE),
+    _isConfigObject(false)
 {
 }
 
@@ -114,7 +117,7 @@ bool JsonConfigReader::endObject()
             //Serial.printf("handle %04x done\n", _handle);
             _handle = INVALID_HANDLE;
         }
-        else if (getLevel() == 2 && !strcmp_P(getKey().c_str(), SPGM(config_object_name))) {
+        else if (getLevel() == 2 && getKey() == FSPGM(config_object_name)) {
             _isConfigObject = false;
         }
     }

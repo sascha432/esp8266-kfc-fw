@@ -54,6 +54,11 @@ inline static const char *strstr_P(const char *str1, PGM_P str2, size_t len2 = ~
 inline static size_t strlen_P(PGM_P str) {
 	return strlen(str);
 }
+
+inline static int strncmp_P(const char *str1, PGM_P str2, size_t count) {
+	return strncmp(str1, str2, count);
+}
+
 #define vsnprintf_P vsnprintf
 #ifndef pgm_read_byte
 #define pgm_read_byte(a)                        (*(a))
@@ -62,12 +67,24 @@ inline static size_t strlen_P(PGM_P str) {
 #define pgm_read_word(addr)                     (*reinterpret_cast<const uint16_t*>(addr))
 #define pgm_read_dword(addr) 		            (*reinterpret_cast<const uint32_t*>(addr))
 #define pgm_read_ptr(addr)                      (*reinterpret_cast<const void* const *>(addr))
+
+inline static char *strcpy_P(char *dst, PGM_P src) {
+	return strcpy(dst, src);
+}
+
+inline static char *strncpy_P(char *dst, PGM_P src, size_t count) {
+	return strncpy(dst, src, count);
+}
+
+inline static char *strcat_P(char *dst, PGM_P src) {
+	return strcat(dst, src);
+}
+
+inline static char *strcat_P(char *dst, PGM_P src, size_t count) {
+	return strncat(dst, src, count);
+}
+
 #define memcmp_P memcmp
-#define strncmp_P strncmp
-#define strcpy_P strcpy
-#define strcat_P strcpy
-#define strncpy_P strncpy
-#define strncat_P strcpy
 #define memcpy_P memcpy
 #define memmove_P memmove
 
@@ -82,6 +99,6 @@ class __FlashStringHelper;
 #define strcasecmp_P					_stricmp
 #define strncasecmp						_strnicmp
 #define strcmp_P						strcmp
-#define strncasecmp_P						_strnicmp
+#define strncasecmp_P					_strnicmp
 
 #endif

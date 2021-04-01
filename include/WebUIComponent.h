@@ -5,7 +5,7 @@
 #pragma once
 
 #ifndef DEBUG_WEBUI
-#define DEBUG_WEBUI                             1
+#define DEBUG_WEBUI                             0
 #endif
 
 #include <Arduino_compat.h>
@@ -298,6 +298,23 @@ namespace WebUINS {
                 append(NamedUint32(J(columns), colspan));
             }
         }
+
+        template<typename _Ta, typename _Tb>
+        Slider(_Ta id, _Tb title, int32_t minVal, int32_t maxVal, bool zeroOff = true, uint8_t colspan = 0) :
+            Component(
+                NamedString(J(type), J(slider)),
+                Component::createNamedString(J(id), id),
+                Component::createNamedString(J(title), title),
+                NamedInt32(J(min), minVal),
+                NamedInt32(J(max), maxVal),
+                NamedBool(J(zero_off), zeroOff)
+            )
+        {
+            colspan = colspanToColumns(colspan);
+            if (colspan) {
+                append(NamedUint32(J(columns), colspan));
+            }
+        }
     };
 
     class ColorTemperatureSlider : public Component {
@@ -424,11 +441,6 @@ namespace WebUINS {
 
     class Root {
     public:
-        using UnnamedObject = MQTT::Json::UnnamedObject;
-        using NamedArray = MQTT::Json::NamedArray;
-        using NamedString = MQTT::Json::NamedString;
-        using RemoveOuterArray = MQTT::Json::RemoveOuterArray;
-
         Root() {
             _json.append(NamedString(J(type), F("ui")));
             _json.append(NamedArray(F("data")));
@@ -481,21 +493,16 @@ namespace WebUINS {
         UnnamedObject _json;
     };
 
-    // helper class for formatting double and float
-    // precision: is the number of digits (0-7), if an invalid value is passed, 2 will be used
-    // format: custom printf format for double: for example "%05.3f"
-    // trailing zeros are trimmed up to a single zero (1.00000 -> 1.0, 1.23000 -> 1.23)
-    // if the value is not normal (inf, -inf, nan, ..) the json value will be set to null
-    class TrimmedDouble {
+    class DoubleBase {
     public:
-        TrimmedDouble(double value, const __FlashStringHelper *format) : _value(value), _format(format) {}
-        TrimmedDouble(double value, int precision = 2) : _value(value), _format(getPrecisionFormat(precision)) {}
+        DoubleBase(double value, const __FlashStringHelper *format) : _value(value), _format(format) {}
+        DoubleBase(double value, int precision = 2) : _value(value), _format(getPrecisionFormat(precision)) {}
 
         inline double getValue() const {
             return _value;
         }
 
-        inline const __FlashStringHelper *getFormat() const {
+        inline FStr getFormat() const {
             return _format;
         }
 
@@ -503,14 +510,14 @@ namespace WebUINS {
             return std::isnormal(_value);
         }
 
-        inline static const __FlashStringHelper *getPrecisionFormat(int precision) {
+        inline static FStr getPrecisionFormat(int precision) {
 #if 0
             auto res = _getPrecisionFormat(precision);
             __DBG_printf("format=%s precision=%u", res, precision);
             return res;
         }
 
-        inline static const __FlashStringHelper *_getPrecisionFormat(int precision) {
+        inline static FStr _getPrecisionFormat(int precision) {
 #endif
             switch (precision) {
             case 0:
@@ -537,7 +544,23 @@ namespace WebUINS {
 
     private:
         double _value;
-        const __FlashStringHelper *_format;
+        FStr _format;
+    };
+
+    // helper class for formatting double and float
+    // precision: is the number of digits (0-7), if an invalid value is passed, 2 will be used
+    // format: custom printf format for double: for example "%05.3f"
+    // trailing zeros are trimmed up to a single zero (1.00000 -> 1.0, 1.23000 -> 1.23)
+    // if the value is not normal (inf, -inf, nan, ..) the json value will be set to null
+    class TrimmedDouble : public DoubleBase {
+    public:
+        using DoubleBase::DoubleBase;
+    };
+
+    // helper class for double and float with a fixed number of digits
+    class FormattedDouble : public DoubleBase {
+    public:
+        using DoubleBase::DoubleBase;
     };
 
     // helper class for double and float with zero digits
@@ -625,6 +648,11 @@ namespace WebUINS {
         NamedTrimmedFormattedDouble getValueObject(const TrimmedDouble &value) {
             _validValue = value.isNormal();
             return NamedTrimmedFormattedDouble(J(value), value.getValue(), value.getFormat());
+        }
+
+        NamedFormattedDouble getValueObject(const FormattedDouble &value) {
+            _validValue = value.isNormal();
+            return NamedFormattedDouble(J(value), value.getValue(), value.getFormat());
         }
 
         bool _validValue;

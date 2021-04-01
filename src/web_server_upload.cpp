@@ -143,8 +143,8 @@ void AsyncUpdateWebHandler::handleRequest(AsyncWebServerRequest *request)
                 }
             });
 
-            HttpHeaders httpHeaders(false);
-            httpHeaders.replace<HttpConnectionHeader>(HttpConnectionHeader::CLOSE);
+            HttpHeaders headers(false);
+            headers.replace<HttpConnectionHeader>(HttpConnectionHeader::CLOSE);
             request->send(HttpLocationHeader::redir(request, String('/') + FSPGM(serial_console_html), headers));
 
             // auto response = request->beginResponse(302);

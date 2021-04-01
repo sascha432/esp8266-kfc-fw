@@ -103,7 +103,7 @@ void BlinkLEDTimer::setPattern(uint8_t pin, uint16_t delay, Bitset &&pattern)
         return;
     }
     if (!ledTimer) {
-        ledTimer = __LDBG_new(BlinkLEDTimer);
+        ledTimer = new BlinkLEDTimer();
     }
     ledTimer->set(delay, pin, std::move(pattern));
 }
@@ -152,7 +152,7 @@ void BlinkLEDTimer::setBlink(uint8_t pin, uint16_t delay, int32_t color)
 
 #if __LED_BUILTIN == NEOPIXEL_PIN_ID
     if (pin == NEOPIXEL_PIN) {
-        auto timer = __LDBG_new(WS2812LEDTimer);
+        auto timer = new WS2812LEDTimer();
         if (delay == BlinkLEDTimer::OFF) {
             timer->off();
         }
@@ -189,7 +189,7 @@ void BlinkLEDTimer::setBlink(uint8_t pin, uint16_t delay, int32_t color)
             _digitalWrite(pin, BUILTIN_LED_STATE(true));
         }
         else {
-            ledTimer = __LDBG_new(BlinkLEDTimer, pin);
+            ledTimer = new BlinkLEDTimer(pin);
             Bitset pattern;
             if (delay == static_cast<uint16_t>(BlinkLEDTimer::BlinkType::SOS)) {
                 pattern.set<uint64_t>(0b000000010101000011110000111100001111010101ULL, 42);

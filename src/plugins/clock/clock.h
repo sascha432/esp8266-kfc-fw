@@ -2,6 +2,8 @@
  * Author: sascha_lammers@gmx.de
  */
 
+#pragma once
+
 #include <Arduino_compat.h>
 #include <EventScheduler.h>
 #include <MicrosTimer.h>
@@ -13,18 +15,12 @@
 #include "kfc_fw_config.h"
 #include "plugins.h"
 #include "stored_state.h"
-#include "../src/plugins/mqtt/component.h"
-#include "../src/plugins/sensor/sensor.h"
-#if IOT_ALARM_PLUGIN_ENABLED
-#include "../src/plugins/alarm/alarm.h"
-#endif
-#if HTTP2SERIAL_SUPPORT
-#include "../src/plugins/http2serial/http2serial.h"
-#endif
+#include "../src/plugins/plugins.h"
 
 using KFCConfigurationClasses::Plugins;
 
 class WebServerPlugin;
+class AsyncUpdateWebHandler;
 class ClockPlugin;
 
 namespace Clock {
@@ -263,7 +259,7 @@ public:
 
 public:
     virtual void createWebUI(WebUINS::Root &webUI) override;
-    virtual void getValues(NamedArray &array) override;
+    virtual void getValues(WebUINS::Events &array) override;
     virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) override;
 
 // ------------------------------------------------------------------------
@@ -515,6 +511,7 @@ public:
 
 private:
     friend WebServerPlugin;
+    friend AsyncUpdateWebHandler;
 
     // set brightness
     // enable LEDs if disabled

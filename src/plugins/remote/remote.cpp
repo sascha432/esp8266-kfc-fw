@@ -146,10 +146,6 @@ void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::Depe
 
 #endif
 
-#if PIN_MONITOR_USE_GPIO_INTERRUPT
-    PinMonitor::GPIOInterruptsEnable();
-#endif
-
     // _buttonsLocked = 0;
     _readConfig();
     _updateButtonConfig();
@@ -160,168 +156,77 @@ void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::Depe
     pinMode(IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN, INPUT_PULLUP);
 #endif
 
-    // disable GPIO interrupts while adding events that occured during startup
+    __DBG_printf("RELEASE NOW");
+    delay(1000);
+
+    PinMonitor::GPIOInterruptsEnable();
     ETS_GPIO_INTR_DISABLE();
-    auto states = deepSleepPinState.getStates();            // states during boot
-    interrupt_levels = deepSleepPinState.getValues();       // values during boot (digitalRead)
-    uint8_t debounceTime = pinMonitor.getDebounceTime() + 2;
+
+    // states during boot
+    auto states = deepSleepPinState.getStates();
+    // values during boot (digitalRead)
+    interrupt_levels = deepSleepPinState.getValues();
 
     const auto &handlers = pinMonitor.getHandlers();
     for(auto &pinPtr: pinMonitor.getPins()) {
         // only debounced push buttons supported
         if (pinPtr->_type != HardwarePinType::DEBOUNCE) {
-            // __LDBG_printf("pin=%u not debounce=%u", pinPtr->getPin(), pinPtr->_type);
             continue;
         }
-        // find handler for HardwarePin
-        uint8_t pinNum = pinPtr->getPin();
-        auto handler = std::find_if(handlers.begin(), handlers.end(), [pinNum](const PinPtr &ptr) {
-            return ptr->getPin() == pinNum;
-        });
-        if (handler == handlers.end()) {
-            __LDBG_printf("cannot find handler for pin=%u", pinNum);
-            continue;
-        }
-        const auto state = static_cast<bool>(states & _BV(pinNum));
-        const auto activeHigh = (*handler)->isActiveHigh();
 
-        __DBG_printf("pin=%u state=%u activehigh=%u", pinNum, state, activeHigh);
-        if (state == activeHigh) {
-            auto &pin = *reinterpret_cast<DebouncedHardwarePin *>(pinPtr.get());
-            // auto events = pin.getEventsNoInterrupts();
+        const uint8_t pinNum = pinPtr->getPin();
+        const auto bootState = static_cast<bool>(states & _BV(pinNum));
+        const auto bootValue = static_cast<bool>(interrupt_levels & _BV(pinNum));
+        // button was pressed during boot
+        if (bootState) {
+            // find handler for HardwarePin
+            auto handler = std::find_if(handlers.begin(), handlers.end(), [pinNum](const PinPtr &ptr) {
+                return ptr->getPin() == pinNum;
+            });
+            if (handler == handlers.end()) {
+                continue;
+            }
+            const auto activeHigh = (*handler)->isActiveHigh();
+            auto &button = *reinterpret_cast<Button *>(handler->get());
+
+            // get current state
             const auto currentValue = static_cast<bool>(GPI & _BV(pinNum));
             const auto currentState = (currentValue == activeHigh);
+            if (currentState == bootState) {
+                // button is still pressed
+                // simulate first event and prepare state machine to handle further events
 
-            pin.addEvent(2500, currentValue);
-#if 1
-            auto events = pin.getEventsNoInterrupts();
-            events.dump(DEBUG_OUTPUT);
-#endif
-            pinMonitor._loop();
-#if 1
-            events = pin.getEventsNoInterrupts();
-            events.dump(DEBUG_OUTPUT);
-#endif
-
-            if (currentState != state) {
-                delay(debounceTime);
-                pin.addEvent(micros(), currentValue);
-#if 1
-            events = pin.getEventsNoInterrupts();
-            events.dump(DEBUG_OUTPUT);
-#endif
-                pinMonitor._loop();
+                // send down event
+                button.event(Button::EventType::DOWN, 5);
+                // set debouncer state
+                pinPtr->getDebounce()->setState(!bootValue);
+                // add event
+                auto &pin = *reinterpret_cast<DebouncedHardwarePin *>(pinPtr.get());
+                pin.addEvent(5000, bootValue);
             }
-#if 1
-            events = pin.getEventsNoInterrupts();
-            events.dump(DEBUG_OUTPUT);
-#endif
-            pinMonitor._loop();
-#if 1
-            events = pin.getEventsNoInterrupts();
-            events.dump(DEBUG_OUTPUT);
-#endif
-        }
-    }
-
-    GPIEC = kButtonPinsMask;  // clear interrupts for all pins
-    ETS_GPIO_INTR_ENABLE();
-
-    delay(debounceTime);
-    pinMonitor._loop();
-
-#if 0
-   // reset state and add buttons to the queue that were pressed when the device rebooted
-    __LDBG_printf("disabling GPIO interrupts");
-    ETS_GPIO_INTR_DISABLE();
-
-   __LDBG_printf("reset button state");
-#if PIN_MONITOR_ROTARY_ENCODER_SUPPORT
-     PinMonitor::eventBuffer.clear();
-#endif
-    auto states = deepSleepPinState.getStates();
-    interrupt_levels = deepSleepPinState.getValues();
-
-    for(auto &pinPtr: pinMonitor.getPins()) {
-        uint8_t pin = pinPtr->getPin();
-        auto debounce = pinPtr->getDebounce();
-        if (debounce) {
-            __LDBG_printf("pin=%02u init debouncer=%d states=%s", pin, (debounce ? (deepSleepPinState.activeHigh() == false) : -1), BitsToStr<16, true>(states).c_str());
-            debounce->setState(deepSleepPinState.activeHigh() == false);
-            if (states & _BV(pin)) {
-                __LDBG_printf("pin=%02u button down", pin);
-                // __LDBG_printf("pin=%02u button states=%s interrupt_levels=%s mask=%s", pin, BitsToStr<16, true>(states).c_str(), BitsToStr<16, true>(interrupt_levels).c_str(), BitsToStr<16, true>(_BV(pin)).c_str());
-
-                // uint32_t time = 2000;
-                // pinMonitor._event(pin, debounce->debounce(false, 1, time, time / 1000, time), time / 1000);
-                // time += 10000;
-                // pinMonitor._event(pin, debounce->debounce(false, 0, time, time / 1000, time), time / 1000);
-                // // pinMonitor._event(pin, debounce->debounce(~interrupt_levels, 0, time, time / 1000, time), time / 1000);
-                // time += pinMonitor.getDebounceTime() * 1000 + 1000;
-                // pinMonitor._event(pin, debounce->debounce(true, 1, time, time / 1000, time), time / 1000);
-                // time += 10000;
-                // pinMonitor._event(pin, debounce->debounce(true, 0, time, time / 1000, time), time / 1000);
-                // // pinMonitor._event(pin, debounce->debounce(interrupt_levels, 0, time, time / 1000, time), time / 1000);
-
-                PinMonitor::eventBuffer.emplace_back(2000, pin, ~interrupt_levels, false);
-                PinMonitor::eventBuffer.emplace_back(2000 + (pinMonitor.getDebounceTime() * 1000), pin, interrupt_levels, false);
+            else {
+                // button already released
+                // send events
+                button.event(Button::EventType::DOWN, 5);
+                button.event(Button::EventType::PRESSED, millis());
+                button.event(Button::EventType::SINGLE_CLICK, millis());
+                button.event(Button::EventType::RELEASED, millis());
+                if (activeHigh) {
+                    // clear bit
+                    interrupt_levels &= ~_BV(pinNum);
+                }
+                else {
+                    // set bit
+                    interrupt_levels |= _BV(pinNum);
+                }
             }
         }
-        else {
-            // this is not a button
-            __LDBG_printf("pin=%02u init debouncer=none", pin);
-        }
-    }
-    // __LDBG_printf("feeding queue# size=%u", PinMonitor::eventBuffer.size());
-
-    // if (states & kButtonPinsMask) { // skip if no button is down
-    //     delay(pinMonitor.getDebounceTime() + 2);
-
-    //     for(auto &pinPtr: pinMonitor.getPins()) {
-    //         uint8_t pin = pinPtr->getPin();
-    //         auto debounce = pinPtr->getDebounce();
-    //         if (debounce) {
-    //             if (states & _BV(pin)) {
-    //                 // simulate button down
-    //                 // PinMonitor::eventBuffer.emplace_back(1000, pin, ~interrupt_levels, false);
-    //                 // PinMonitor::eventBuffer.emplace_back(2000 + (pinMonitor.getDebounceTime() * 1000), pin, interrupt_levels, false);
-    //                 PinMonitor::eventBuffer.emplace_back(micros(), pin, interrupt_levels, false);
-    //             }
-    //             __LDBG_printf("pin=%02u button states=%s interrupt_levels=%s mask=%s", pin, BitsToStr<16, true>(states).c_str(), BitsToStr<16, true>(interrupt_levels).c_str(), BitsToStr<16, true>(_BV(pin)).c_str());
-    //         }
-    //     }
-
-    //     __LDBG_printf("feeding queue#2 size=%u", PinMonitor::eventBuffer.size());
-    //     pinMonitor._loop();
-    // }
-
-    // read pins again
-    auto currentStates = deepSleepPinState._readStates();
-    // update interrupt levels
-    interrupt_levels = deepSleepPinState.getValues(currentStates);
-
-    __DBG_printf("final states %s %s ", BitsToStr<16, true>(states&kButtonPinsMask).c_str(), BitsToStr<16, true>(currentStates&kButtonPinsMask).c_str());
-
-    // and compare if another state must be pushed
-    for(auto pin: kButtonPins) {
-        if ((states & _BV(pin)) ^ (currentStates & _BV(pin))) {
-            PinMonitor::eventBuffer.emplace_back(micros(), pin, interrupt_levels, false); // add final state
-            __LDBG_printf("pin=%02u final queued=%u states=%s interrupt_levels=%s mask=%s", pin, interrupt_levels, BitsToStr<16, true>(currentStates).c_str(), BitsToStr<16, true>(interrupt_levels).c_str(), BitsToStr<16, true>(_BV(pin)).c_str());
-        }
     }
 
-    pinMonitor._loop();
-
-    __LDBG_printf("enabling GPIO interrupts");
-    // clear all interrupts now
-    GPIEC = kButtonPinsMask;  // clear interrupts for all pins
+    // clear interrupts for all pins
+    GPIEC = kButtonPinsMask;
+    // enable GPIO interrupts
     ETS_GPIO_INTR_ENABLE();
-
-    __DBG_printf("---");
-    for(auto &event: PinMonitor::eventBuffer) {
-        __DBG_printf("pin=%u value=%u time=%u", event.pin(), event.value(), event.getTime());
-    }
-#endif
 
 #if DEBUG_PIN_STATE
     LoopFunctions::callOnce([]() {

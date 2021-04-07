@@ -78,15 +78,18 @@ namespace PinMonitor {
         }
         auto levels = static_cast<uint16_t>(GPI); // we skip GPIO16 since it cannot handle interrupts anyway
 
-        noInterrupts();
+        // noInterrupts();
+        ETS_GPIO_INTR_DISABLE();
         for(const auto &pinPtr: pinMonitor.getPins()) {
             const auto pin = pinPtr.get();
             auto pinNum = pin->getPin();
             uint16_t mask = _BV(pinNum);
 
-            if (!!((interrupt_levels ^ levels) & status & mask) != ((status & mask) && (static_cast<bool>(PinMonitor::interrupt_levels & mask) != static_cast<bool>(levels & mask)))) {
-                __DBG_panic("(!!((interrupt_levels ^ levels) & status & mask) != ((status & mask) && (static_cast<bool>(PinMonitor::interrupt_levels & mask) != static_cast<bool>(levels & mask))))");
-            }
+            // __DBG_printf("pin=%u set=%u last=%u new=%u trigger=%u", pinNum, status & mask, interrupt_levels & mask, levels & mask, ((interrupt_levels ^ levels) & status & mask));
+
+            // if (!!((interrupt_levels ^ levels) & status & mask) != ((status & mask) && (static_cast<bool>(PinMonitor::interrupt_levels & mask) != static_cast<bool>(levels & mask)))) {
+            //     __DBG_panic("(!!((interrupt_levels ^ levels) & status & mask) != ((status & mask) && (static_cast<bool>(PinMonitor::interrupt_levels & mask) != static_cast<bool>(levels & mask))))");
+            // }
 
             //     interrupts();
             //     Serial.printf_P(PSTR("%u (%u%u%u-%u-%u-%u)"),
@@ -102,12 +105,11 @@ namespace PinMonitor {
             //     noInterrupts();
             // }
 
-
-
             // if (!((status & mask) && (static_cast<bool>(PinMonitor::interrupt_levels & mask) != static_cast<bool>(levels & mask)))) {
             if (!((interrupt_levels ^ levels) & status & mask)) {
                 continue;
             }
+            __DBG_printf("pin=%u set=%u last=%u new=%u", pinNum, status & mask, interrupt_levels & mask, levels & mask);
 
             switch(pin->_type) {
 #if PIN_MONITOR_DEBOUNCED_PUSHBUTTON
@@ -137,8 +139,8 @@ namespace PinMonitor {
         //     }
         // }
         PinMonitor::interrupt_levels = levels;
-        interrupts();
-        // ETS_GPIO_INTR_ENABLE();
+        // interrupts();
+        ETS_GPIO_INTR_ENABLE();
     }
 
 #elif PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS == 0

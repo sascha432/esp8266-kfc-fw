@@ -96,10 +96,6 @@ void setup()
         static_assert(KFC_DEBUG_USE_SERIAL1 >= 300, "must be set to the baud rate");
     #endif
 
-    #if PIN_MONITOR_USE_GPIO_INTERRUPT
-        PinMonitor::GPIOInterruptsEnable();
-    #endif
-
     #if ENABLE_DEEP_SLEEP
         deepSleepPinState.merge();
         bool wakeup = resetDetector.hasWakeUpDetected();

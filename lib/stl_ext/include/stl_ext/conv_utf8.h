@@ -218,11 +218,15 @@ namespace STL_STD_EXT_NAMESPACE_EX {
             };
 
             using QuestionMarkReplacement = Unicode::toUTF8<'?'>;
-            using DefaultReplacement = Unicode::toUTF8<0xfffd>;
+            // using DefaultReplacement = Unicode::toUTF8<0xfffd>;
 
-            //struct DefaultReplacement : Unicode::toUTF8<0xfffd> {
+            struct DefaultReplacement {
             //    static constexpr auto value = Unicode::toUTF8<0xfffd>::value;
-            //};
+               static constexpr std::array<const uint8_t, 3U> value = {{(unsigned char)239U, (unsigned char)191U, (unsigned char)189U}};
+               static constexpr size_t size() {
+                   return 3;
+               }
+            };
 
             //
             // helper returns

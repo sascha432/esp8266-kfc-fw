@@ -20,7 +20,7 @@ public:
 
     // max. capacity in bits
     static constexpr size_t kMaxSize = _MaxBits;
-    static constexpr size_t kMaxBits = _MaxBits;
+    static constexpr int kMaxBits = _MaxBits;
     // max capacity in bytes
     static constexpr size_t kCapacity = (_MaxBits + 7) / 8;
     static constexpr size_t kMaxBytes = kCapacity;

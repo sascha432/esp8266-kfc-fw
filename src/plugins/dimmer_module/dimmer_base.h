@@ -111,6 +111,8 @@ namespace Dimmer {
         virtual int16_t getRange(uint8_t channel) const = 0;
         virtual int16_t getOffset(uint8_t channel) const = 0;
 
+        virtual void publishChannel(uint8_t channel) = 0;
+
         // read config from dimmer
         void _readConfig(ConfigType &config);
         // write config to dimmer
@@ -136,12 +138,18 @@ namespace Dimmer {
         float getTransitionTime(int fromLevel, int toLevel, float transitionTimeOverride);
 
         int16_t _calcLevel(int16_t level, uint8_t channel) const {
+            if (level == 0) {
+                return 0;
+            }
             auto min = _config.level.from[channel];
             auto max = _config.level.to[channel];
             return (level * (max - min) + (IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 2)) / IOT_DIMMER_MODULE_MAX_BRIGHTNESS + min;
        }
 
        int16_t _calcLevelReverse(int16_t level, uint8_t channel) const {
+            if (level == 0) {
+                return 0;
+            }
             auto min = _config.level.from[channel];
             auto max = _config.level.to[channel];
             auto range = max - min;

@@ -338,24 +338,26 @@ void Base::_getValues(WebUINS::Events &array)
 
 void Base::_setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
 {
-    __LDBG_printf("id=%s", id.c_str());
+    __LDBG_printf("id=%s has_value=%u has_state=%u value=%s state=%u", id.c_str(), hasValue, hasState, value.c_str(), state);
 
     if (id == F("group-switch-0")) {
         if (hasValue) {
-            int val = value.toInt();
+            auto val = value.toInt() != 0;
             for(uint8_t i = 0; i < getChannelCount(); i++) {
                 if (val) {
                     on(i);
                 } else {
                     off(i);
                 }
+                publishChannel(i);
+                __DBG_printf("group switch value=%u channel=%u level=%u state=%u", val, i, getChannel(i), getChannelState(i));
             }
         }
     }
     else if (id.startsWith(F("d_chan"))) {
         uint8_t channel = id[6] - '0';
         int val = value.toInt();
-        __LDBG_printf("channel=%d hasValue=%d value=%d hasState=%d state=%d", channel, hasValue, val, hasState, state);
+        __LDBG_printf("channel=%d has_value=%d value=%d has_state=%d state=%d", channel, hasValue, val, hasState, state);
 
         if (channel < getChannelCount()) {
             if (hasValue) {

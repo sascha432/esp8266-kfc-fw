@@ -160,6 +160,10 @@ int16_t Module::getOffset(uint8_t channel) const
     return 0;
 }
 
+void Module::publishChannel(uint8_t channel)
+{
+    _channels[channel].publishState();
+}
 
 void Module::_onReceive(size_t length)
 {

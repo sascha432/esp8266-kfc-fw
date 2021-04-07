@@ -36,6 +36,8 @@ namespace Dimmer {
         virtual int16_t getChannel(uint8_t channel) const override;
         virtual void setChannel(uint8_t channel, int16_t level, float transition = NAN) override;
 
+        virtual void publishChannel(uint8_t channel) override;
+
         virtual int16_t getRange(uint8_t channel) const override;
         virtual int16_t getOffset(uint8_t channel) const override;
 

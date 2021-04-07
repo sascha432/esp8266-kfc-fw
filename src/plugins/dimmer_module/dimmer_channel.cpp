@@ -132,6 +132,9 @@ bool Channel::on(float transition)
 //     }
 // #endif
     if (!_brightness) {
+        if (!_storedBrightness)  {
+            _storedBrightness = MAX_LEVEL / 10;
+        }
         return _set(_storedBrightness, transition);
     }
     return false;
@@ -184,7 +187,7 @@ bool Channel::_set(int32_t level, float transition, bool publish)
     else if (level != _brightness) {
         auto tmp = _brightness;
         _brightness = std::clamp<int32_t>(level, _dimmer->_getConfig().min_brightness * getMaxLevel() / 100, _dimmer->_getConfig().max_brightness * getMaxLevel() / 100);
-        __DBG_printf("level=%u min=%u max=%u brightness=%u", level, _dimmer->_getConfig().min_brightness * getMaxLevel() / 100, _dimmer->_getConfig().max_brightness * getMaxLevel() / 100, _brightness);
+        __LDBG_printf("level=%u min=%u max=%u brightness=%u", level, _dimmer->_getConfig().min_brightness * getMaxLevel() / 100, _dimmer->_getConfig().max_brightness * getMaxLevel() / 100, _brightness);
         _dimmer->_fade(_channel, _brightness, _dimmer->getTransitionTime(tmp, _brightness, transition));
         _dimmer->_wire.writeEEPROM();
         if (publish) {
@@ -271,9 +274,6 @@ void Channel::_publishMQTT()
 {
     if (isConnected()) {
         using namespace MQTT::Json;
-
-        __DBG_printf("topic=%s payload=%s", _createTopics(TopicType::COMMAND_STATE).c_str(), UnnamedObject(State(_brightness != 0), Brightness(_brightness), Transition(_dimmer->_getConfig().lp_fadetime)).toString().c_str());
-
         publish(_createTopics(TopicType::COMMAND_STATE), true, UnnamedObject(State(_brightness != 0), Brightness(_brightness), Transition(_dimmer->_getConfig().lp_fadetime)).toString());
     }
 }
@@ -281,32 +281,10 @@ void Channel::_publishMQTT()
 void Channel::_publishWebUI()
 {
     if (WebUISocket::hasAuthenticatedClients()) {
-
-        WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::Events(
+        WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(WebUINS::Events(
             WebUINS::Values(PrintString(F("d_chan%u"), _channel), _brightness, true),
-            WebUINS::Values(F("group-switch-0"), _dimmer->isAnyOn(), true)
-        ));
-
-        // using namespace MQTT::Json;
-
-        // // auto json = PrintString(F("{\"type\":\"ue\",\"events\":[{\"id\":\"d_chan%u\",\"value\":%u,\"state\":true,\"group\":%u}]}"),
-        // //     _channel, _brightness, _dimmer->isAnyOn()
-        // // );
-        // WebUISocket::broadcast(WebUISocket::getSender(), std::move(UnnamedObject(
-        //     NamedString(F("type"), F("ue")),
-        //     NamedArray(F("events"),
-        //         UnnamedObject(
-        //             NamedString(F("id"), PrintString(F("d_chan%u"), _channel)),
-        //             NamedShort(F("value"), _brightness),
-        //             NamedBool(F("state"), true)
-        //         ),
-        //         UnnamedObject(
-        //             NamedString(F("id"), F("group-switch-0")),
-        //             NamedShort(F("value"), _dimmer->isAnyOn()),
-        //             NamedBool(F("state"), true)
-        //         )
-        //     )
-        // ).toString()));
+            WebUINS::Values(F("group-switch-0"), _dimmer->isAnyOn() ? 1 : 0, true)
+        )));
     }
 }
 

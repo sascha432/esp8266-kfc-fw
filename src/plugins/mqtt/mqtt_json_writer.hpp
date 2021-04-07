@@ -496,9 +496,15 @@ namespace MQTT {
 
         struct Transition : NamedTrimmedFormattedDouble {
             Transition(double transition, uint8_t precision = 2) :
-                NamedTrimmedFormattedDouble(F("transition"), transition, reinterpret_cast<FStr>(PrintString(F("%%.%uf"), precision).c_str()))
+                NamedTrimmedFormattedDouble(F("transition"), transition, reinterpret_cast<FStr>(_formatStr.c_str())),
+                _formatStr(PrintString(F("%%.%uf"), precision))
             {
+                // check if the c_str() pointer has changed
+                if (_format != reinterpret_cast<FStr>(_formatStr.c_str())) {
+                    _format = reinterpret_cast<FStr>(_formatStr.c_str());
+                }
             }
+            String _formatStr;
         };
 
         class UnnamedArrayWriter {

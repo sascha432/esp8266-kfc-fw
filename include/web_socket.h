@@ -26,7 +26,7 @@
 
 class WsClient;
 class WsClientAsyncWebSocket;
-class JsonUnnamedObject;
+// class JsonUnnamedObject;
 
 namespace WebServer {
     class Plugin;
@@ -110,14 +110,14 @@ public:
     // no encoding
     static void broadcast(AsyncWebSocket *server, WsClient *sender, String &&str);
     static void broadcast(AsyncWebSocket *server, WsClient *sender, const __FlashStringHelper *str, size_t length);
-    static void broadcast(AsyncWebSocket *server, WsClient *sender, const JsonUnnamedObject &json);
+    // static void broadcast(AsyncWebSocket *server, WsClient *sender, const JsonUnnamedObject &json);
     static void broadcast(AsyncWebSocket *server, WsClient *sender, const MQTT::Json::UnnamedObject &json);
 
     // validate server and client before sending
     static void safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, const __FlashStringHelper *message);
     static void safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, const String &message);
     static void safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, const MQTT::Json::UnnamedObject &json);
-    static void safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, const JsonUnnamedObject &json);
+    // static void safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, const JsonUnnamedObject &json);
 
     // use hasAuthenticatedClients() instead
     static bool hasClients(AsyncWebSocket *server) {
@@ -204,7 +204,7 @@ protected:
 
 private:
     static uint16_t getQeueDelay();
-    static AsyncWebSocketMessageBuffer *jsonToBuffer(AsyncWebSocket *server, const JsonUnnamedObject &json);
+    // static AsyncWebSocketMessageBuffer *jsonToBuffer(AsyncWebSocket *server, const JsonUnnamedObject &json);
     static AsyncWebSocketMessageBuffer *utf8ToBuffer(AsyncWebSocket *server, const char *str, size_t length);
     static AsyncWebSocketMessageBuffer *moveStringToBuffer(AsyncWebSocket *server, String &&str);
 

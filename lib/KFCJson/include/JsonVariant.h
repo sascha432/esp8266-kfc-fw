@@ -4,6 +4,8 @@
 
 #pragma once
 
+#warning used
+
 #include <Arduino_compat.h>
 #include <misc.h>
 #include <int64_to_string.h>

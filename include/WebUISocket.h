@@ -25,9 +25,9 @@ public:
     virtual void onText(uint8_t *data, size_t len) override;
 
 public:
-    static void send(AsyncWebSocketClient *client, const JsonUnnamedObject &json) {
-        WsClient::safeSend(getServerSocket(), client, json);
-    }
+    // static void send(AsyncWebSocketClient *client, const JsonUnnamedObject &json) {
+    //     WsClient::safeSend(getServerSocket(), client, json);
+    // }
 
     static void send(AsyncWebSocketClient *client, const MQTT::Json::UnnamedObject &json) {
         WsClient::safeSend(getServerSocket(), client, json);
@@ -38,9 +38,9 @@ public:
         WsClient::broadcast(getServerSocket(), sender, str, len);
     }
 
-    inline static void broadcast(WebUISocket *sender, const JsonUnnamedObject &json) {
-        WsClient::broadcast(getServerSocket(), sender, json);
-    }
+    // inline static void broadcast(WebUISocket *sender, const JsonUnnamedObject &json) {
+    //     WsClient::broadcast(getServerSocket(), sender, json);
+    // }
 
     // text message UTF-8
     inline static void broadcast(WebUISocket *sender, const char *str) {

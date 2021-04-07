@@ -163,72 +163,72 @@ size_t AsyncBaseResponse::_ack(AsyncWebServerRequest* request, size_t len, uint3
     return 0;
 }
 
-AsyncJsonResponse::AsyncJsonResponse() :
-    AsyncBaseResponse(false),
-    _jsonBuffer(_json)
-{
-    _code = 200;
-    _contentType = FSPGM(mime_application_json);
-}
+// AsyncJsonResponse::AsyncJsonResponse() :
+//     AsyncBaseResponse(false),
+//     _jsonBuffer(_json)
+// {
+//     _code = 200;
+//     _contentType = FSPGM(mime_application_json);
+// }
 
-bool AsyncJsonResponse::_sourceValid() const
-{
-    return true;
-}
+// bool AsyncJsonResponse::_sourceValid() const
+// {
+//     return true;
+// }
 
-size_t AsyncJsonResponse::_fillBuffer(uint8_t *data, size_t len)
-{
-#if DEBUG
-    auto size = _jsonBuffer.fillBuffer(data, len);
-    if (size == 0) {
-        auto diff = _contentLength - _sentLength;
-        if (diff > len) {
-            diff = len;
-        }
-        memset(data, ' ', diff);
-        // debug code below in __assembleHead()
-        __DBG_printf("_json.length()=%u _jsonBuffer.fillBuffer()=%u filling missing data with spaces. check for utf-8/unicode issues", _json.length(), _sentLength);
-        return diff;
-    }
-    return size;
-#else
-    return _jsonBuffer.fillBuffer(data, len);
-#endif
-}
+// size_t AsyncJsonResponse::_fillBuffer(uint8_t *data, size_t len)
+// {
+// #if DEBUG
+//     auto size = _jsonBuffer.fillBuffer(data, len);
+//     if (size == 0) {
+//         auto diff = _contentLength - _sentLength;
+//         if (diff > len) {
+//             diff = len;
+//         }
+//         memset(data, ' ', diff);
+//         // debug code below in __assembleHead()
+//         __DBG_printf("_json.length()=%u _jsonBuffer.fillBuffer()=%u filling missing data with spaces. check for utf-8/unicode issues", _json.length(), _sentLength);
+//         return diff;
+//     }
+//     return size;
+// #else
+//     return _jsonBuffer.fillBuffer(data, len);
+// #endif
+// }
 
-JsonUnnamedObject &AsyncJsonResponse::getJsonObject()
-{
-    return _json;
-}
+// JsonUnnamedObject &AsyncJsonResponse::getJsonObject()
+// {
+//     return _json;
+// }
 
-void AsyncJsonResponse::__assembleHead(uint8_t version)
-{
-#if 1
-    __DBG_printf("__assembleHead _sendContentLength=%u _contentLength=%u json=%u/%u", _sendContentLength, _contentLength, _json.length(), _json.toString().length());
-    Serial.println(F("------ _json.toString() ------"));
-    Serial.println(_json.toString());
-    Serial.println(F("------ JsonBuffer(_json).fillBuffer(); ------"));
-    uint8_t buffer[101];
-    JsonBuffer b(_json);
-    PrintString c(F("chunks "));
-    int res = 0;
-    do {
-        res = b.fillBuffer(buffer, 100);
-        buffer[100] = 0;
-        buffer[res] = 0;
-        c.printf("%d ", res);
-        Serial.println((char *)buffer);
-    }
-    while(res);
-    Serial.println(F("------"));
-    Serial.println(c);
-    Serial.println(F("------"));
-#endif
-    if (_sendContentLength) {
-        _contentLength = _json.length();
-    }
-    AsyncBaseResponse::__assembleHead(version);
-};
+// void AsyncJsonResponse::__assembleHead(uint8_t version)
+// {
+// #if 1
+//     __DBG_printf("__assembleHead _sendContentLength=%u _contentLength=%u json=%u/%u", _sendContentLength, _contentLength, _json.length(), _json.toString().length());
+//     Serial.println(F("------ _json.toString() ------"));
+//     Serial.println(_json.toString());
+//     Serial.println(F("------ JsonBuffer(_json).fillBuffer(); ------"));
+//     uint8_t buffer[101];
+//     JsonBuffer b(_json);
+//     PrintString c(F("chunks "));
+//     int res = 0;
+//     do {
+//         res = b.fillBuffer(buffer, 100);
+//         buffer[100] = 0;
+//         buffer[res] = 0;
+//         c.printf("%d ", res);
+//         Serial.println((char *)buffer);
+//     }
+//     while(res);
+//     Serial.println(F("------"));
+//     Serial.println(c);
+//     Serial.println(F("------"));
+// #endif
+//     if (_sendContentLength) {
+//         _contentLength = _json.length();
+//     }
+//     AsyncBaseResponse::__assembleHead(version);
+// };
 
 
 #if ESP32

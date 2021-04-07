@@ -40,7 +40,9 @@ public:
     void setForm(FormUI::Form::BaseForm *form);
     FormUI::Form::BaseForm *getForm();
 
-    JsonUnnamedObject *getJson();
+    // JsonUnnamedObject *getJson() {
+    //     return _json;
+    // }
 
     PrintArgs &getPrintArgs();
 
@@ -61,23 +63,23 @@ public:
 protected:
     FormUI::Form::BaseForm *_form;
     String _selfUri;
-    JsonUnnamedObject *_json;
+    // JsonUnnamedObject *_json;
     PrintArgs _printArgs;
     AuthType _isAuthenticated;
 };
 
 inline WebTemplate::WebTemplate(AuthType authenticated) :
     _form(nullptr),
-    _json(nullptr),
+    // _json(nullptr),
     _isAuthenticated(authenticated)
 {
 }
 
 inline WebTemplate::~WebTemplate()
 {
-    if (_json) {
-        delete _json;
-    }
+    // if (_json) {
+    //     delete _json;
+    // }
     if (_form) {
         delete _form;
     }
@@ -110,7 +112,7 @@ inline bool WebTemplate::isAuthenticationSet() const
 
 inline void WebTemplate::setForm(FormUI::Form::BaseForm *form)
 {
-    _json = nullptr; //static_cast<SettingsForm *>(form)->_json;
+    // _json = nullptr; //static_cast<SettingsForm *>(form)->_json;
     _form = form;
 }
 

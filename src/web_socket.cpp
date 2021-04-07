@@ -406,23 +406,23 @@ void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, AsyncWebSocke
     }
 }
 
-AsyncWebSocketMessageBuffer *WsClient::jsonToBuffer(AsyncWebSocket *server, const JsonUnnamedObject &json)
-{
-    // more efficient than JsonBuffer
-    String str = json.toString();
-    size_t len = str.length();
-    auto cStr = MoveStringHelper::move(std::move(str), nullptr);
-    if (!cStr) {
-        return nullptr;
-    }
-    __LDBG_NOP_free(cStr);
-    return server->makeBuffer(reinterpret_cast<uint8_t *>(cStr), len, false/* use cStr instead of allocating new memory and copying */);
-    auto buffer = server->makeBuffer(str.length());
-    if (buffer) {
-        memcpy((char *)buffer->get(), cStr, len + 1);
-    }
-    return buffer;
-}
+// AsyncWebSocketMessageBuffer *WsClient::jsonToBuffer(AsyncWebSocket *server, const JsonUnnamedObject &json)
+// {
+//     // more efficient than JsonBuffer
+//     String str = json.toString();
+//     size_t len = str.length();
+//     auto cStr = MoveStringHelper::move(std::move(str), nullptr);
+//     if (!cStr) {
+//         return nullptr;
+//     }
+//     __LDBG_NOP_free(cStr);
+//     return server->makeBuffer(reinterpret_cast<uint8_t *>(cStr), len, false/* use cStr instead of allocating new memory and copying */);
+//     auto buffer = server->makeBuffer(str.length());
+//     if (buffer) {
+//         memcpy((char *)buffer->get(), cStr, len + 1);
+//     }
+//     return buffer;
+// }
 
 AsyncWebSocketMessageBuffer *WsClient::utf8ToBuffer(AsyncWebSocket *server, const char *str, size_t length)
 {
@@ -453,16 +453,16 @@ AsyncWebSocketMessageBuffer *WsClient::moveStringToBuffer(AsyncWebSocket *server
     // return buffer;
 }
 
-void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, const JsonUnnamedObject &json)
-{
-    if (!__get_server(server, sender)) {
-        return;
-    }
-    auto buffer = jsonToBuffer(server, json);
-    if (buffer) {
-        _broadcast(server, sender, buffer);
-    }
-}
+// void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, const JsonUnnamedObject &json)
+// {
+//     if (!__get_server(server, sender)) {
+//         return;
+//     }
+//     auto buffer = jsonToBuffer(server, json);
+//     if (buffer) {
+//         _broadcast(server, sender, buffer);
+//     }
+// }
 
 void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, const uint8_t *str, size_t length)
 {
@@ -574,21 +574,21 @@ void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, co
     });
 }
 
-void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, const JsonUnnamedObject &json)
-{
-    if (!__get_server(server, client)) {
-        __LDBG_printf("no clients connected: server=%p client=%p message=%s", server, client, json.toString().c_str());
-        return;
-    }
-    WsClient::forsocket(server, client, [server, &json](AsyncWebSocketClient *socket) {
-        if (socket->canSend()) {
-            auto buffer = jsonToBuffer(server, json);
-            if (buffer) {
-                socket->text(buffer);
-                if (can_yield()) {
-                    delay(WsClient::getQeueDelay());
-                }
-            }
-        }
-    });
-}
+// void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, const JsonUnnamedObject &json)
+// {
+//     if (!__get_server(server, client)) {
+//         __LDBG_printf("no clients connected: server=%p client=%p message=%s", server, client, json.toString().c_str());
+//         return;
+//     }
+//     WsClient::forsocket(server, client, [server, &json](AsyncWebSocketClient *socket) {
+//         if (socket->canSend()) {
+//             auto buffer = jsonToBuffer(server, json);
+//             if (buffer) {
+//                 socket->text(buffer);
+//                 if (can_yield()) {
+//                     delay(WsClient::getQeueDelay());
+//                 }
+//             }
+//         }
+//     });
+// }

@@ -29,12 +29,6 @@ using KFCConfigurationClasses::Plugins;
 
 String WebTemplate::_aliveRedirection;
 
-JsonUnnamedObject *WebTemplate::getJson()
-{
-    __DBG_print("called");
-    return _json;
-}
-
 void WebTemplate::printSystemTime(time_t now, PrintHtmlEntitiesString &output)
 {
     auto format = PSTR("%a, %d %b %Y " HTML_SA(span, HTML_A("id", "system_time")) "%H:%M:%S" HTML_E(span) " %Z");
@@ -742,16 +736,16 @@ bool TemplateDataProvider::callback(const String& name, DataProviderInterface& p
             fbMethod = FillBufferMethod::PRINT_ARGS;
         }
     }
-    else if (name == F("FORM_JSON")) {
-        auto json = webTemplate.getJson();
-        if (json) {
-            auto stream = std::shared_ptr<JsonBuffer>(new JsonBuffer(*json));
-            provider.setFillBuffer([stream](uint8_t *buffer, size_t size) {
-                return stream->fillBuffer(buffer, size);
-            });
-            return true;
-        }
-    }
+    // else if (name == F("FORM_JSON")) {
+    //     auto json = webTemplate.getJson();
+    //     if (json) {
+    //         auto stream = std::shared_ptr<JsonBuffer>(new JsonBuffer(*json));
+    //         provider.setFillBuffer([stream](uint8_t *buffer, size_t size) {
+    //             return stream->fillBuffer(buffer, size);
+    //         });
+    //         return true;
+    //     }
+    // }
     // plugin status
     else if (name == F("PLUGIN_STATUS")) {
         auto stream = std::shared_ptr<PluginStatusStream>(new PluginStatusStream());

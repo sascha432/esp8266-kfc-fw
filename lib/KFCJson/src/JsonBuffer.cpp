@@ -11,7 +11,7 @@
 #endif
 
 
-JsonPrint::JsonPrint(uint8_t *buffer, size_t size) 
+JsonPrint::JsonPrint(uint8_t *buffer, size_t size)
 {
     _buffer = buffer;
     _ptr = buffer;
@@ -21,7 +21,7 @@ JsonPrint::JsonPrint(uint8_t *buffer, size_t size)
     _overflow = false;
 }
 
-size_t JsonPrint::write(uint8_t data) 
+size_t JsonPrint::write(uint8_t data)
 {
     if (_skip) {
         _skip--;
@@ -36,7 +36,7 @@ size_t JsonPrint::write(uint8_t data)
     return 0;
 }
 
-size_t JsonPrint::write(const uint8_t *buffer, size_t size) 
+size_t JsonPrint::write(const uint8_t *buffer, size_t size)
 {
     if (_overflow) {
         return 0;
@@ -68,7 +68,7 @@ size_t JsonPrint::write(const uint8_t *buffer, size_t size)
 }
 
 
-void JsonBuffer::reset() 
+void JsonBuffer::reset()
 {
     _writePosition = 0;
     _stack.clear();
@@ -76,7 +76,7 @@ void JsonBuffer::reset()
     _stack.push_back(Stack(_object));
 }
 
-size_t JsonBuffer::fillBuffer(uint8_t *buf, size_t size) 
+size_t JsonBuffer::fillBuffer(uint8_t *buf, size_t size)
 {
     if (!_stack.size()) {
         return 0;
@@ -160,7 +160,7 @@ recursiveCall:
     return print.getLength();
 }
 
-bool JsonBuffer::isBufferFull(JsonPrint &print, bool advance) 
+bool JsonBuffer::isBufferFull(JsonPrint &print, bool advance)
 {
     auto &stack = _stack.back();
     if (print.isOverflow()) {
@@ -178,7 +178,7 @@ bool JsonBuffer::isBufferFull(JsonPrint &print, bool advance)
     return false;
 }
 
-AbstractJsonValue *JsonBuffer::getObject(uint8_t skip) 
+AbstractJsonValue *JsonBuffer::getObject(uint8_t skip)
 {
     AbstractJsonValue *object = &_object;
     auto end = _stack.end() - skip;

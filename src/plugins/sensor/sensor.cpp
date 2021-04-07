@@ -208,7 +208,7 @@ void SensorPlugin::createWebUI(WebUINS::Root &webUI)
     }
 
     for(const auto sensor: _sensors) {
-        __DBG_printf("createWebUI type=%u", sensor->getType());
+        __LDBG_printf("createWebUI type=%u", sensor->getType());
         if (_addCustomSensors) {
             _addCustomSensors(webUI, sensor->getType());
         }

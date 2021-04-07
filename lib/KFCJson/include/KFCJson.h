@@ -9,7 +9,8 @@
 #include "JsonMapReader.h"
 #include "JsonVariableReader.h"
 
-#include "JsonValue.h"
-#include "JsonArray.h"
-#include "JsonObject.h"
-#include "JsonBuffer.h"
+// those have been removed by default
+// #include "JsonValue.h"
+// #include "JsonArray.h"
+// #include "JsonObject.h"
+// #include "JsonBuffer.h"

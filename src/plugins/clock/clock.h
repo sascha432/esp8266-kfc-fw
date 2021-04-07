@@ -401,9 +401,9 @@ public:
 
 private:
     // acceleration per step
-    static constexpr uint8_t kRotaryAccelerationDivider = 1;
+    static constexpr int kRotaryAccelerationDivider = 1;
     // max. acceleration
-    static constexpr uint8_t kRotaryMaxAcceleration = 10 * kRotaryAccelerationDivider;
+    static constexpr int kRotaryMaxAcceleration = 10 * kRotaryAccelerationDivider;
 
     uint32_t _lastRotaryUpdate{0};
     uint8_t _rotaryAcceleration{kRotaryAccelerationDivider};

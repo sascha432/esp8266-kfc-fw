@@ -10,7 +10,7 @@
 
 #include <Arduino_compat.h>
 #include <ESPAsyncWebServer.h>
-#include <KFCJson.h>
+// #include <KFCJson.h>
 #include <vector>
 #include <map>
 #include <functional>
@@ -46,22 +46,22 @@ protected:
     String _head;
 };
 
-class AsyncJsonResponse : public AsyncBaseResponse {
-public:
-    AsyncJsonResponse();
+// class AsyncJsonResponse : public AsyncBaseResponse {
+// public:
+//     AsyncJsonResponse();
 
-    virtual bool _sourceValid() const override;
-    virtual size_t _fillBuffer(uint8_t *data, size_t len) override;
+//     virtual bool _sourceValid() const override;
+//     virtual size_t _fillBuffer(uint8_t *data, size_t len) override;
 
-    JsonUnnamedObject &getJsonObject();
+//     JsonUnnamedObject &getJsonObject();
 
-protected:
-    virtual void __assembleHead(uint8_t version) override;
+// protected:
+//     virtual void __assembleHead(uint8_t version) override;
 
-private:
-    JsonUnnamedObject _json;
-    JsonBuffer _jsonBuffer;
-};
+// private:
+//     JsonUnnamedObject _json;
+//     JsonBuffer _jsonBuffer;
+// };
 
 #if ESP32
 

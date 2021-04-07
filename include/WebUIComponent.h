@@ -676,7 +676,9 @@ namespace WebUINS {
         }
 
         bool hasAny() const {
-            return true; //TODO
+            // "events":[]
+            // "values":[]
+            return length() > 11;
         }
 
     };

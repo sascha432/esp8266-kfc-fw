@@ -166,7 +166,7 @@ String Sensor_SystemMetrics::_getUptime() const
 
 void Sensor_SystemMetrics::createWebUI(WebUINS::Root &webUI)
 {
-    __DBG_println();
+    __LDBG_println();
     webUI.addRow(WebUINS::Row(WebUINS::Group(PrintString(F("System Metrics<div class=\"version d-md-inline\">%s</div>"), config.getFirmwareVersion().c_str()), false)));
 
     WebUINS::Row row;

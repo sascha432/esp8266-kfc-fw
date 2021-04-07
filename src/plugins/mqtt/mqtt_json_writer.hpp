@@ -894,6 +894,25 @@ namespace MQTT {
             void add(const UnnamedObject &writer);
             void add(const UnnamedArray &writer);
 
+            // template<typename _Ta, typename std::enable_if<std::is_base_of<UnnamedObject, _Ta>::value && !std::is_base_of<NamedObject, _Ta>::value, int>::type = 0>
+            // inline __attribute__((__always_inline__))
+            // void add(const _Ta &writer)
+            // {
+            //     _output.reserve(_output.length() + writer.length() + 1);
+            //     writer.printTo(_output);
+            //     _output.print(',');
+            // }
+
+            // template<typename _Ta, typename std::enable_if<std::is_base_of<UnnamedArray, _Ta>::value && !std::is_base_of<NamedArray, _Ta>::value, int>::type = 0>
+            // inline __attribute__((__always_inline__))
+            // void add(const _Ta &writer)
+            // {
+            //     _output.reserve(_output.length() + writer.length() + 1);
+            //     writer.printTo(_output);
+            //     _output.print(',');
+            // }
+
+
             inline __attribute__((__always_inline__))
             void add(const String &str) {
                 _output.print(str);
@@ -1036,22 +1055,43 @@ namespace MQTT {
             void add() {
             }
 
+            // inline __attribute__((__always_inline__))
+            // void add(const UnnamedObjectWriter &writer) {
+            //     _output.reserve(_output.length() + writer.length() + 1);
+            //     writer.printTo(_output);
+            //     _output.print(',');
+            // }
+
+            // inline __attribute__((__always_inline__))
+            // void add(const UnnamedArrayWriter &writer) {
+            //     _output.reserve(_output.length() + writer.length() + 1);
+            //     writer.printTo(_output);
+            //     _output.print(',');
+            // }
+
+            // void add(const NamedObject &writer);
+            // void add(const NamedArray &writer);
+
+            template<typename _Ta, typename std::enable_if<std::is_base_of<NamedObject, _Ta>::value, int>::type = 0>
             inline __attribute__((__always_inline__))
-            void add(const UnnamedObjectWriter &writer) {
+            void add(const _Ta &writer)
+            {
+                // __DBG_printf("UnnamedObjectWriter::add(NamedObject)");
                 _output.reserve(_output.length() + writer.length() + 1);
                 writer.printTo(_output);
                 _output.print(',');
             }
 
+            template<typename _Ta, typename std::enable_if<std::is_base_of<NamedArray, _Ta>::value, int>::type = 0>
             inline __attribute__((__always_inline__))
-            void add(const UnnamedArrayWriter &writer) {
+            void add(const _Ta &writer)
+            {
+                // __DBG_printf("UnnamedObjectWriter::add(NamedArray)");
                 _output.reserve(_output.length() + writer.length() + 1);
                 writer.printTo(_output);
                 _output.print(',');
             }
 
-            void add(const NamedObject &writer);
-            void add(const NamedArray &writer);
 
             template<template<typename, typename> class _Ta, typename _Tb, typename _Tc, typename std::enable_if<!std::is_base_of<PrintToInterface, _Ta<_Tb, _Tc>>::value &&std::is_base_of<NamedBase, _Ta<_Tb, _Tc>>::value, int>::type = 0>
             void add(const _Ta<_Tb, _Tc> &container) {
@@ -1087,10 +1127,18 @@ namespace MQTT {
                     std::is_same<const __FlashStringHelper *, _Ta>::value), "type not allowed");
             }
 
+            int _debugLevel{0};
+
             template<typename _Ta, typename ... _Args>
             void add(const _Ta &arg, _Args&& ...args) {
+                _debugLevel++;
+                if (_debugLevel > 16) {
+                    __DBG_printf("JSON recursion arg=%p", std::addressof(arg));
+                    return;
+                }
                 add(arg);
                 add(std::forward<_Args>(args)...);
+                _debugLevel--;
             }
         };
 
@@ -1304,23 +1352,23 @@ namespace MQTT {
             _output.print(',');
         }
 
-        inline __attribute__((__always_inline__))
-        void UnnamedObjectWriter::add(const NamedObject &writer)
-        {
-            _output.reserve(_output.length() + writer.length() + 1);
-            writer.printTo(_output);
-            _output.print(',');
-        }
+        // inline __attribute__((__always_inline__))
+        // void UnnamedObjectWriter::add(const NamedObject &writer)
+        // {
+        //     __DBG_printf("UnnamedObjectWriter::add(NamedObject)");
+        //     _output.reserve(_output.length() + writer.length() + 1);
+        //     writer.printTo(_output);
+        //     _output.print(',');
+        // }
 
-        inline __attribute__((__always_inline__))
-        void UnnamedObjectWriter::add(const NamedArray &writer)
-        {
-            _output.reserve(_output.length() + writer.length() + 1);
-            writer.printTo(_output);
-            _output.print(',');
-        }
-
-
+        // inline __attribute__((__always_inline__))
+        // void UnnamedObjectWriter::add(const NamedArray &writer)
+        // {
+        //     __DBG_printf("UnnamedObjectWriter::add(NamedArray)");
+        //     _output.reserve(_output.length() + writer.length() + 1);
+        //     writer.printTo(_output);
+        //     _output.print(',');
+        // }
 
         // append values of an array/object to an array/object
         class RemoveOuterBase : public PrintToInterface, public  UnnamedBase {

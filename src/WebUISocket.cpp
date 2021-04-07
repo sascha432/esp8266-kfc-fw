@@ -108,7 +108,7 @@ WebUINS::Root WebUISocket::createWebUIJSON()
     WebUINS::Root webUI;
 
     for(const auto plugin: PluginComponents::Register::getPlugins()) {
-        __DBG_printf("plugin=%s webui=%u", plugin->getName_P(), plugin->hasWebUI());
+        // __DBG_printf("plugin=%s webui=%u", plugin->getName_P(), plugin->hasWebUI());
         if (plugin->hasWebUI()) {
             plugin->createWebUI(webUI);
         }

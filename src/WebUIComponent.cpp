@@ -90,15 +90,16 @@ namespace WebUINS {
 
     void Root::addValues()
     {
-        auto values = WebUINS::Events(WebUINS::Events::Values()) ;
+        auto values = WebUINS::Events(WebUINS::Events::Values());
+
 #ifndef _MSC_VER
         for(auto plugin: PluginComponents::Register::getPlugins()) {
-            __LDBG_printf("plugin=%s webui=%u", plugin->getName_P(), plugin->hasWebUI());
             if (plugin->hasWebUI()) {
                 plugin->getValues(values);
             }
         }
 #endif
+
         _json.append(values);
     }
 

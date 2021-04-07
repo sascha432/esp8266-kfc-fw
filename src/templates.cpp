@@ -14,16 +14,8 @@
 #include "reset_detector.h"
 #include "plugins_menu.h"
 #include "WebUIAlerts.h"
-#if IOT_ALARM_PLUGIN_ENABLED
-#include "../src/plugins/alarm/alarm.h"
-#include "../src/plugins/ntp/ntp_plugin.h"
-#endif
-#if WEBUI_ALERTS_ENABLED && WEBUI_ALERTS_USE_MQTT
-#include "../include/WebUIAlerts.h"
-#endif
-#if PIN_MONITOR
-#include <PinMonitor.h>
-#endif
+#include "../src/plugins/plugins.h"
+#include  "spgm_auto_def.h"
 
 #if DEBUG_TEMPLATES
 #include <debug_helper_enable.h>
@@ -31,7 +23,6 @@
 #include <debug_helper_disable.h>
 #endif
 
-#include "../src/plugins/ssdp/ssdp.h"
 
 using KFCConfigurationClasses::System;
 using KFCConfigurationClasses::Plugins;
@@ -353,7 +344,7 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 #endif
     }
 #if IOT_ALARM_PLUGIN_ENABLED
-    else if (key.startsWithF("ALARM_TIMESTAMP_")) {
+    else if (key.startsWith(F("ALARM_TIMESTAMP_"))) {
         uint8_t num = atoi(key.c_str() + 16);
         if (num < Plugins::Alarm::MAX_ALARMS) {
             auto cfg = Plugins::Alarm::getConfig().alarms[num];

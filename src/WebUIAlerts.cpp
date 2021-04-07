@@ -13,9 +13,7 @@
 #include <WebUISocket.h>
 #include <WebUIAlerts.h>
 #include "kfc_fw_config.h"
-#if HTTP2SERIAL_SUPPORT
-#include "../src/plugins/http2serial/http2serial.h"
-#endif
+#include "../src/plugins/plugins.h"
 
 #if DEBUG_WEBUI_ALERTS
 #include <debug_helper_enable.h>

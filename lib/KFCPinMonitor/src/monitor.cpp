@@ -213,7 +213,7 @@ Pin &Monitor::_attach(Pin &pin, HardwarePinType type)
                 attachInterruptArg(digitalPinToInterrupt(pinNum), HardwarePin::callback, &curPin, CHANGE);
             #else
                 // 0 byte IRAM
-                ___attachInterruptArg(digitalPinToInterrupt(pinNum), HardwarePin::callback, &curPin);
+                attachInterruptArg(digitalPinToInterrupt(pinNum), HardwarePin::callback, &curPin);
             #endif
         }
     #endif

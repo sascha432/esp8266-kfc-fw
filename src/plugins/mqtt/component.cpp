@@ -4,6 +4,7 @@
 
 #include "component.h"
 #include "mqtt_client.h"
+#include "mqtt_strings.h"
 
 #if DEBUG_MQTT_CLIENT
 #include <debug_helper_enable.h>

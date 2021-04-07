@@ -96,7 +96,9 @@ inline void WebTemplate::setAuthenticated(bool isAuthenticated)
 inline bool WebTemplate::isAuthenticated() const
 {
     if (_isAuthenticated == AuthType::NO_AUTH) {
-        __DBG_printf("authentication not set: _selfUri=%s form=%p", _selfUri.c_str(), _form);
+        if (_selfUri != F("/description.xml")) {
+            __DBG_printf("authentication not set: _selfUri=%s form=%p", _selfUri.c_str(), _form);
+        }
     }
     return _isAuthenticated == AuthType::AUTH;
 }

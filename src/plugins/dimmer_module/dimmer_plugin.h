@@ -10,8 +10,6 @@
 namespace Dimmer {
 
     class Plugin : public PluginComponent, public Module {
-    public:
-        using NamedArray = PluginComponents::NamedArray;
 
     public:
         Plugin();
@@ -35,7 +33,7 @@ namespace Dimmer {
             Form::_createConfigureForm(type, formName, form);
         }
 
-        virtual void getValues(NamedArray &array) override {
+        virtual void getValues(WebUINS::Events &array) override {
             _getValues(array);
         }
         virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) override {

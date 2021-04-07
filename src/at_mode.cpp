@@ -36,19 +36,7 @@
 #include <IOExpander.h>
 extern IOExpander::PCF8574 _PCF8574;
 #endif
-#include "../src/plugins/http2serial/http2serial.h"
-#if IOT_DIMMER_MODULE || IOT_ATOMIC_SUN_V2
-#include "../src/plugins/dimmer_module/dimmer_base.h"
-#endif
-#if IOT_BLINDS_CTRL
-#include "../src/plugins/blinds_ctrl/blinds_plugin.h"
-#endif
-// #if IOT_SENSOR_BATTERY_DISPLAY_LEVEL
-// #include "../src/plugins/sensor/sensor.h"
-// #endif
-// #if IOT_REMOTE_CONTROL
-// #include "../src/plugins/remote/remote.h"
-// #endif
+#include "../src/plugins/plugins.h"
 #include "umm_malloc/umm_malloc_cfg.h"
 
 #include "core_esp8266_waveform.h"

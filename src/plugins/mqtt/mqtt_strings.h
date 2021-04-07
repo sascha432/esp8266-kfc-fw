@@ -7,6 +7,11 @@
 #ifndef MQTT_AUTO_DISCOVERY_USE_ABBREVIATIONS
 #define MQTT_AUTO_DISCOVERY_USE_ABBREVIATIONS 1
 #endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 PROGMEM_STRING_DECL(mqtt_component_switch);
 PROGMEM_STRING_DECL(mqtt_component_light);
 PROGMEM_STRING_DECL(mqtt_component_sensor);
@@ -205,3 +210,7 @@ PROGMEM_STRING_DECL(mqtt_white_value_template);
 PROGMEM_STRING_DECL(mqtt_xy_command_topic);
 PROGMEM_STRING_DECL(mqtt_xy_state_topic);
 PROGMEM_STRING_DECL(mqtt_xy_value_template);
+
+#ifdef __cplusplus
+}
+#endif

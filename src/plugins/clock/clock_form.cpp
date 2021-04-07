@@ -48,7 +48,7 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
     #endif
 
-    if (String_equals(formName, PSTR("animations"))) {
+    if (formName == F("animations")) {
 
         // --------------------------------------------------------------------
         auto &animationGroup = form.addCardGroup(F("anicfg"), FSPGM(Animation), true);
@@ -221,7 +221,7 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         #endif
 
     }
-    else if (String_equals(formName, PSTR("protection"))) {
+    else if (formName == F("protection")) {
 
         // --------------------------------------------------------------------
         auto &protectionGroup = form.addCardGroup(F("prot"), FSPGM(Protection), true);

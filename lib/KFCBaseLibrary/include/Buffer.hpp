@@ -6,6 +6,7 @@
 
 #include "Buffer.h"
 #include <PrintString.h>
+#include  "spgm_auto_def.h"
 
 #if DEBUG_BUFFER
 #include "debug_helper_enable.h"

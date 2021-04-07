@@ -8,7 +8,6 @@
 #include <vector>
 #include <array>
 #include <EnumHelper.h>
-#include "WebUIComponent.h"
 #include "../src/plugins/mqtt/mqtt_json.h"
 
 #ifdef DEFAULT
@@ -29,6 +28,10 @@ namespace FormUI {
     }
 }
 
+namespace WebUINS {
+    class Root;
+    class Events;
+}
 /*
 PROGMEM_DEFINE_PLUGIN_OPTIONS(
     xxxPluginClass,
@@ -225,7 +228,6 @@ public:
     using DependenciesPtr = PluginComponents::DependenciesPtr;
     using DependencyResponseType = PluginComponents::DependencyResponseType;
     using NameType = PluginComponents::NameType;
-    using NamedArray = PluginComponents::NamedArray;
     using PriorityType = PluginComponents::PriorityType;
     using RTCMemoryId = PluginComponents::RTCMemoryId;
     using MenuType = PluginComponents::MenuType;
@@ -425,7 +427,7 @@ public:
 
     // webui.html
     virtual void createWebUI(WebUINS::Root &webUI);
-    virtual void getValues(NamedArray &array);
+    virtual void getValues(WebUINS::Events &array);
     virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState);
 
 #if AT_MODE_SUPPORTED

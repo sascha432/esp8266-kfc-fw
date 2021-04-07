@@ -94,7 +94,7 @@ public:
 // WebUI
 public:
     virtual void createWebUI(WebUINS::Root &webUI) override;
-    virtual void getValues(NamedArray &array) override;
+    virtual void getValues(WebUINS::Events &array) override;
     virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) override;
 
 // PluginComponent

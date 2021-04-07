@@ -14,9 +14,8 @@
 #include "clock.h"
 #include "blink_led_timer.h"
 #include <stl_ext/algorithm.h>
-#include "../src/plugins/mqtt/mqtt_client.h"
-#include "../src/plugins/ntp/ntp_plugin.h"
-#include "../src/plugins/sensor/sensor.h"
+#include "../src/plugins/plugins.h"
+#include "../src/plugins/mqtt/mqtt_json.h"
 
 #if DEBUG_IOT_CLOCK
 #include <debug_helper_enable.h>
@@ -221,15 +220,7 @@ String ClockPlugin::_getLightSensorWebUIValue()
 void ClockPlugin::_updateLightSensorWebUI()
 {
     if (WebUISocket::hasAuthenticatedClients()) {
-        JsonUnnamedObject json(2);
-        json.add(JJ(type), JJ(update_events));
-        auto &events = json.addArray(JJ(events), 1);
-        auto &obj = events.addObject(3);
-        obj.add(JJ(id), FSPGM(light_sensor, "light_sensor"));
-        obj.add(JJ(value), _getLightSensorWebUIValue());
-        obj.add(JJ(state), true);
-
-        WebUISocket::broadcast(WebUISocket::getSender(), json);
+        WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(WebUINS::Events(WebUINS::Values(FSPGM(light_sensor, "light_sensor")), _getLightSensorWebUIValue())))));
     }
 }
 
@@ -282,6 +273,7 @@ void ClockPlugin::_setupTimer()
         _timerCounter++;
 
         IF_IOT_CLOCK_HAVE_MOTION_SENSOR(
+            _pinMode(IOT_CLOCK_HAVE_MOTION_SENSOR_PIN, INPUT);
             auto state = _digitalRead(IOT_CLOCK_HAVE_MOTION_SENSOR_PIN);
             if (state != _motionState) {
                 if (isConnected()) {

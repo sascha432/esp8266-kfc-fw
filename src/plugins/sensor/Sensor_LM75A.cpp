@@ -14,7 +14,7 @@
 
 #include <debug_helper_enable_mem.h>
 
-Sensor_LM75A::Sensor_LM75A(const JsonString &name, TwoWire &wire, uint8_t address) : MQTT::Sensor(SensorType::LM75A), _name(name), _wire(wire), _address(address)
+Sensor_LM75A::Sensor_LM75A(const String &name, TwoWire &wire, uint8_t address) : MQTT::Sensor(SensorType::LM75A), _name(name), _wire(wire), _address(address)
 {
     REGISTER_SENSOR_CLIENT(this);
     config.initTwoWire();
@@ -42,19 +42,15 @@ uint8_t Sensor_LM75A::getAutoDiscoveryCount() const
 {
     return 1;
 }
-void Sensor_LM75A::getValues(NamedArray &array, bool timer)
+void Sensor_LM75A::getValues(WebUINS::Events &array, bool timer)
 {
-    using namespace WebUINS;
     auto temp = _readSensor();
-    array.append(Values(_getId()), TrimmedDouble(temp, 2));
+    array.append(WebUINS::Values(_getId(), WebUINS::TrimmedDouble(temp, 2)));
 }
 
 void Sensor_LM75A::createWebUI(WebUINS::Root &webUI)
 {
-    webUI.appendToLastRow(WebUINS::Row(WebUINS::Sensor(_getId(), _name, FSPGM(UTF8_degreeC))))
-    // if ((*row)->size() > 3) {
-    //     *row = &webUI.addRow();
-    // }
+    webUI.appendToLastRow(WebUINS::Row(WebUINS::Sensor(_getId(), _name, FSPGM(UTF8_degreeC))));
 }
 
 void Sensor_LM75A::publishState()
@@ -77,7 +73,7 @@ void Sensor_LM75A::getStatus(Print &output)
 
 bool Sensor_LM75A::getSensorData(String &name, StringVector &values)
 {
-    name = std::move(_name.toString());
+    name = _name;
     values.emplace_back(PrintString(F("%.2f &deg;C"), _readSensor()));
     return true;
 }

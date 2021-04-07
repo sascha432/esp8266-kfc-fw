@@ -90,7 +90,7 @@ namespace WebUINS {
 
     void Root::addValues()
     {
-        NamedArray values(F("values"));
+        auto values = WebUINS::Events(WebUINS::Events::Values()) ;
 #ifndef _MSC_VER
         for(auto plugin: PluginComponents::Register::getPlugins()) {
             __LDBG_printf("plugin=%s webui=%u", plugin->getName_P(), plugin->hasWebUI());

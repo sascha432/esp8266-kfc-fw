@@ -7,8 +7,8 @@
 #include <MicrosTimer.h>
 #include "fs_mapping.h"
 #include "web_server.h"
-#include "../src/plugins/mdns/mdns_resolver.h"
 #include "stl_ext/algorithm.h"
+#include "../src/plugins/plugins.h"
 
 #if DEBUG_ASYNC_WEB_RESPONSE
 #include <debug_helper_enable.h>

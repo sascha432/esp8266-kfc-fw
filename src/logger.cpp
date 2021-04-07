@@ -9,12 +9,9 @@
 #include <time.h>
 #include <vector>
 #include <EnumHelper.h>
-#if SYSLOG_SUPPORT
-#include <Syslog.h>
-#include <SyslogStream.h>
-#endif
 #include <misc.h>
 #include "kfc_fw_config.h"
+#include "../src/plugins/plugins.h"
 
 #if DEBUG_LOGGER
 #include <debug_helper_enable.h>

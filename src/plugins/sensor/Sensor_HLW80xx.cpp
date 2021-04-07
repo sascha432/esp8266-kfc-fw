@@ -106,7 +106,7 @@ uint8_t Sensor_HLW80xx::getAutoDiscoveryCount() const
     return 6;
 }
 
-void Sensor_HLW80xx::getValues(NamedArray &array, bool timer)
+void Sensor_HLW80xx::getValues(WebUINS::Events &array, bool timer)
 {
     array.append(
         Values(_getId(FSPGM(power)), _powerToNumber(_power)),

@@ -24,23 +24,7 @@
 #include <JsonBaseReader.h>
 #include <Form/Types.h>
 #include "deep_sleep.h"
-#if NTP_CLIENT
-#include "../src/plugins/ntp/ntp_plugin.h"
-#endif
-#if MQTT_SUPPORT
-#include "../src/plugins/mqtt/mqtt_client.h"
-#endif
-#if MDNS_PLUGIN
-#include <ESP8266SSDP.h>
-#include "../src/plugins/mdns/mdns_plugin.h"
-#include "../src/plugins/mdns/mdns_resolver.h"
-#endif
-#if HTTP2SERIAL_SUPPORT
-#include "../src/plugins/http2serial/http2serial.h"
-#endif
-#if IOT_REMOTE_CONTROL
-#include "../src/plugins/remote/remote.h"
-#endif
+#include "../src/plugins/plugins.h"
 #include "PinMonitor.h"
 
 #if defined(ESP8266)

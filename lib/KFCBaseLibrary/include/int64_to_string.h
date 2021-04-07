@@ -4,8 +4,7 @@
 
 #pragma once
 
-#include <Arduino.h>
-#include <String.h>
+#include <Arduino_compat.h>
 
 static constexpr size_t kInt64ToStringBufferSize = 22;
 

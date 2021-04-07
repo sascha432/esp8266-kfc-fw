@@ -30,16 +30,8 @@
 #include "kfc_fw_config.h"
 #include "failure_counter.h"
 #include "save_crash.h"
-#if MDNS_PLUGIN
-#include "../src/plugins/mdns/mdns_sd.h"
-#endif
-#if MQTT_SUPPORT
-#include "../src/plugins/mqtt/mqtt_client.h"
-#endif
-#if IOT_CLOCK
-#include "../src/plugins/clock/clock.h"
-#endif
-
+#include "../src/plugins/plugins.h"
+#include  "spgm_auto_def.h"
 #if DEBUG_WEB_SERVER
 #include <debug_helper_enable.h>
 #else

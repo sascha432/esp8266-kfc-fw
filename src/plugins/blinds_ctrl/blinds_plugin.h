@@ -21,8 +21,6 @@ class AsyncWebServerRequest;
 
 class BlindsControlPlugin : public PluginComponent, public BlindsControl {
 public:
-    using NamedArray = PluginComponents::NamedArray;
-
     BlindsControlPlugin();
 
     virtual void setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies) override;
@@ -36,7 +34,7 @@ public:
 // WebUI
 public:
     virtual void createWebUI(WebUINS::Root &webUI) override;
-    virtual void getValues(NamedArray &array) override;
+    virtual void getValues(WebUINS::Events &array) override;
     virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) override;
 
 #if AT_MODE_SUPPORTED

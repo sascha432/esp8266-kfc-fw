@@ -88,7 +88,7 @@ uint8_t BlindsControl::getAutoDiscoveryCount() const
     return kChannelCount * 2 + 3;
 }
 
-void BlindsControl::getValues(NamedArray &array)
+void BlindsControl::getValues(WebUINS::Events &array)
 {
     using namespace WebUINS;
 
@@ -157,9 +157,11 @@ void BlindsControl::_publishState()
 
 
     if (WebUISocket::hasAuthenticatedClients()) {
-        NamedArray events(F("events"));
+        WebUINS::Events events;
         getValues(events);
-        WebUISocket::broadcast(WebUISocket::getSender(), UnnamedObject(NamedString(J(type), J(update_events)), events));
+        if (events.hasAny()) {
+            WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(events));
+        }
     }
 }
 

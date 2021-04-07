@@ -134,7 +134,7 @@ void BlindsControlPlugin::createWebUI(WebUINS::Root &webUI)
     webUI.addRow(row);
 }
 
-void BlindsControlPlugin::getValues(NamedArray &array)
+void BlindsControlPlugin::getValues(WebUINS::Events &array)
 {
     BlindsControl::getValues(array);
 }

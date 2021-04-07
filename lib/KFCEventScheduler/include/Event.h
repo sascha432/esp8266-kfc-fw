@@ -5,6 +5,7 @@
 #pragma once
 
 #include <Arduino_compat.h>
+#include <time.h>
 #include <chrono>
 
 #ifndef DEBUG_EVENT_SCHEDULER

@@ -67,10 +67,8 @@ uint8_t Sensor_BME280::getAutoDiscoveryCount() const
     return 3;
 }
 
-void Sensor_BME280::getValues(NamedArray &array, bool timer)
+void Sensor_BME280::getValues(WebUINS::Events &array, bool timer)
 {
-    using namespace MQTT::Json;
-
     SensorData_t sensor;
     _readSensor(sensor);
     array.append(

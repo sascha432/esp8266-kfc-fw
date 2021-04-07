@@ -69,7 +69,7 @@ uint8_t Sensor_DimmerMetrics::getAutoDiscoveryCount() const
     return 4;
 }
 
-void Sensor_DimmerMetrics::getValues(NamedArray &array, bool timer)
+void Sensor_DimmerMetrics::getValues(WebUINS::Events &array, bool timer)
 {
     using namespace WebUINS;
     array.append(

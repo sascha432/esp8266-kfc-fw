@@ -154,7 +154,7 @@ uint8_t Sensor_Battery::getAutoDiscoveryCount() const
     return static_cast<uint8_t>(AutoDiscoveryNumHelperType::MAX);
 }
 
-void Sensor_Battery::getValues(NamedArray &array, bool timer)
+void Sensor_Battery::getValues(WebUINS::Events &array, bool timer)
 {
     using namespace WebUINS;
     array.append(

@@ -273,32 +273,14 @@ namespace __va_args__
     template<typename ...Args>
     constexpr std::size_t va_count(Args &&...) { return sizeof...(Args); }
 }
-
 #define __VA_ARGS_COUNT__(...)                          __va_args__::va_count(__VA_ARGS__)
-
-#if FLASH_STRINGS_AUTO_INIT
-#define AUTO_STRING_DEF(...)                            AUTO_INIT_SPGM(__VA_ARGS__),
-#define FLASH_STRING_GENERATOR_AUTO_INIT(...) \
-    static bool __flash_string_generator_auto_init_var = []() { \
-        SPGM_P strings[] = { \
-            __VA_ARGS__ nullptr \
-        };
-        return true; \
-    }
-#else
-
-// declare strings even if they do not exist
-// that makes it possible to compile, but linking fails
-#define AUTO_STRING_DEF(name, ...)                      PROGMEM_STRING_DECL(name);
-#define FLASH_STRING_GENERATOR_AUTO_INIT(...)           __VA_ARGS__
-#endif
 
 extern "C" void __dump_binary(const void *ptr, size_t len, size_t perLine, PGM_P title = nullptr, uint8_t groupBytes = 0);
 extern "C" void __dump_binary_to(Print &output, const void *ptr, size_t len, size_t perLine, PGM_P title = nullptr, uint8_t groupBytes = 0);
 
 #if _MSC_VER
 #include "../../../include/spgm_auto_strings.h"
-#elif defined(HAVE_FLASH_STRING_GENERATOR) && HAVE_FLASH_STRING_GENERATOR
+#else
 #include "spgm_auto_strings.h"
 #include "spgm_auto_def.h"
 #endif

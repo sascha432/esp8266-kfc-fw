@@ -322,7 +322,7 @@ float Base::getTransitionTime(int fromLevel, int toLevel, float transitionTimeOv
 // WebUI/MQTT
 // ------------------------------------------------------------------------
 
-void Base::_getValues(NamedArray &array)
+void Base::_getValues(WebUINS::Events &array)
 {
     using namespace WebUINS;
     bool on = false;

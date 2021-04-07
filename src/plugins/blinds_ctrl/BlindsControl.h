@@ -32,7 +32,6 @@ public:
     using ActionType = Plugins::Blinds::OperationType;
     using PlayToneType = Plugins::Blinds::PlayToneType;
     using Actions = Plugins::Blinds::BlindsConfigOperation_t;
-    using NamedArray = PluginComponents::NamedArray;
 
     enum class TopicType : uint8_t {
         SET,
@@ -287,7 +286,7 @@ public:
     virtual void onConnect() override;
     virtual void onMessage(const char *topic, const char *payload, size_t len) override;
 
-    void getValues(NamedArray &array);
+    void getValues(WebUINS::Events &array);
     void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState);
 
     // void setChannel(ChannelType channel, StateType state);

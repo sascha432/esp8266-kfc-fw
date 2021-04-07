@@ -21,7 +21,6 @@ namespace Dimmer {
 class Sensor_DimmerMetrics : public MQTT::Sensor {
 public:
     using MetricsType = Dimmer::MetricsType;
-    using NamedArray = PluginComponents::NamedArray;
 
     Sensor_DimmerMetrics(const String &name);
     virtual ~Sensor_DimmerMetrics();
@@ -30,7 +29,7 @@ public:
     virtual uint8_t getAutoDiscoveryCount() const override;
 
     virtual void publishState() override;
-    virtual void getValues(NamedArray &array, bool timer) override;
+    virtual void getValues(WebUINS::Events &array, bool timer) override;
     virtual void createWebUI(WebUINS::Root &webUI) override;
     virtual void getStatus(Print &output) override;
 

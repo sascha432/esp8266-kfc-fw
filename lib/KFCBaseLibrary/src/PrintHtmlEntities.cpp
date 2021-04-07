@@ -2,9 +2,9 @@
  * Author: sascha_lammers@gmx.de
  */
 
+//#include <Arduino_compat.h>
 #include "PrintHtmlEntities.h"
 #include "PrintHtmlEntitiesString.h"
-
 
 // index of the character must match the index of string in the values array
 const char __keys_attribute_all_P[] PROGMEM = { "'\"<>&" };

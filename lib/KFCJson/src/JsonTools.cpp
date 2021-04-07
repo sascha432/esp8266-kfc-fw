@@ -22,7 +22,7 @@ size_t JsonTools::lengthEscaped(PGM_P value, size_t length, Utf8Buffer *buffer)
         return 0;
     }
     size_t outputLen = 0;
-    char ch;
+    char ch = 0;
     if (buffer) {
         while (length-- && (ch = static_cast<char>(pgm_read_byte(value++)))) {
             auto codepoint = buffer->feed(ch);
@@ -64,7 +64,7 @@ size_t JsonTools::printToEscaped(Print &output, PGM_P value, size_t length, Utf8
         return 0;
     }
     size_t outputLen = 0;
-    char ch;
+    char ch = 0;
     if (buffer) {
         while (length-- && (ch = static_cast<char>(pgm_read_byte(value++)))) {
             auto result = buffer->feed(ch);

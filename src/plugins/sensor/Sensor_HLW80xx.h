@@ -189,7 +189,7 @@ public:
 
     virtual void publishState() override;
     virtual void getValues(JsonArray &json, bool timer) override;
-    virtual void getValues(NamedArray &array, bool timer) override;
+    virtual void getValues(WebUINS::Events &array, bool timer) override;
     virtual void createWebUI(WebUINS::Root &webUI) override;
 
     virtual String _getId(const __FlashStringHelper *type = nullptr) {

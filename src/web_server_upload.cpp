@@ -8,12 +8,7 @@
 #include "templates.h"
 #include "web_server.h"
 #include "Updater.h"
-#if IOT_REMOTE_CONTROL
-#include "../src/plugins/remote/remote.h"
-#endif
-#if STK500V1
-#include "../src/plugins/stk500v1/STK500v1Programmer.h"
-#endif
+#include "../src/plugins/plugins.h"
 
 #if DEBUG_WEB_SERVER_ACTION
 #include <debug_helper_enable.h>

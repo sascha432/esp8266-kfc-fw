@@ -2,6 +2,8 @@
   Author: sascha_lammers@gmx.de
 */
 
+
+#include <Arduino_compat.h>
 #include "int64_to_string.h"
 
 String to_string(const int64_t value)

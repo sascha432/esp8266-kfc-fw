@@ -14,58 +14,39 @@
 #include <debug_helper_disable.h>
 #endif
 
-void ClockPlugin::getValues(JsonArray &array)
+void ClockPlugin::getValues(WebUINS::Events &array)
 {
-    auto obj = &array.addObject(3);
-    obj->add(JJ(id), F("btn_animation"));
-    obj->add(JJ(state), true);
-    obj->add(JJ(value), _config.animation); //static_cast<int>(_config.animation));
+    using namespace WebUINS;
+    array.append(Values(F("btn_animation"), _config.animation));
 
     IF_IOT_CLOCK(
-        obj = &array.addObject(3);
-        obj->add(JJ(id), F("btn_colon"));
-        obj->add(JJ(state), _tempBrightness != -1);
-        obj->add(JJ(value), (_config.blink_colon_speed < kMinBlinkColonSpeed) ? 0 : (_config.blink_colon_speed < 750 ? 2 : 1));
+        array.append(Values(F("btn_colon"), (_config.blink_colon_speed < kMinBlinkColonSpeed) ? 0 : (_config.blink_colon_speed < 750 ? 2 : 1), _tempBrightness != -1));
     )
 
-    obj = &array.addObject(3);
-    obj->add(JJ(id), F("color"));
-    obj->add(JJ(state), _config.getAnimation() == AnimationType::FADING || _config.getAnimation() == AnimationType::SOLID);
-    obj->add(JJ(value), _getColor());
+    array.append(
+        Values(F("color"), _getColor(), _config.getAnimation() == AnimationType::FADING || _config.getAnimation() == AnimationType::SOLID),
+        Values(FSPGM(brightness), static_cast<uint8_t>(_targetBrightness ? _targetBrightness : _savedBrightness), _tempBrightness != -1)
+    );
 
-    obj = &array.addObject(3);
-    obj->add(JJ(id), FSPGM(brightness));
-    obj->add(JJ(state), _tempBrightness != -1);
-    obj->add(JJ(value), static_cast<uint8_t>(_targetBrightness ? _targetBrightness : _savedBrightness));
 
-    obj = &array.addObject(2);
-    obj->add(JJ(id), F("tempp"));
     if (_tempBrightness == -1) {
-        obj->add(JJ(value), F("OVERHEATED"));
+        array.append(Values(F("tempp"), F("OVERHEATED")));
     }
     else {
-        obj->add(JJ(value), JsonNumber(100 - _tempBrightness * 100.0, 1));
+        array.append(Values(F("tempp"), FormattedDouble(100 - _tempBrightness * 100.0, 1)));
     }
 
+
     IF_IOT_CLOCK_SAVE_STATE(
-        obj = &array.addObject(3);
-        obj->add(JJ(id), F("power"));
-        obj->add(JJ(state), _getEnabledState());
-        obj->add(JJ(value), static_cast<uint8_t>(_getEnabledState()));
+        array.append(Values(F("power"), static_cast<uint8_t>(_getEnabledState(), _getEnabledState())));
     )
 
     IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(
-        obj = &array.addObject(3);
-        obj->add(JJ(id), FSPGM(light_sensor));
-        obj->add(JJ(state), true);
-        obj->add(JJ(value), _getLightSensorWebUIValue());
+        array.append(Values(FSPGM(light_sensor), _getLightSensorWebUIValue()));
     )
 
     IF_IOT_CLOCK_DISPLAY_POWER_CONSUMPTION(
-        obj = &array.addObject(3);
-        obj->add(JJ(id), F("pwrlvl"));
-        obj->add(JJ(state), true);
-        obj->add(JJ(value), JsonNumber(_getPowerLevel(), 2));
+        array.append(Values(F("pwrlvl"), FormattedDouble(_getPowerLevel(), 2)));
     )
 }
 
@@ -95,24 +76,24 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
             else
         )
         IF_IOT_CLOCK_SAVE_STATE(
-            if (String_equals(id, PSTR("power"))) {
+            if (id == F("power")) {
                 _setState(val);
             }
             else
         )
-        if (String_equals(id, PSTR("btn_animation"))) {
+        if (id == F("btn_animation")) {
             setAnimation(static_cast<AnimationType>(val));
             IF_IOT_CLOCK_SAVE_STATE(
                 _saveStateDelayed();
             )
         }
-        else if (String_equals(id, PSTR("color"))) {
+        else if (id == F("color")) {
             setColorAndRefresh(val);
             IF_IOT_CLOCK_SAVE_STATE(
                 _saveStateDelayed();
             )
         }
-        else if (String_equals(id, SPGM(brightness))) {
+        else if (id == FSPGM(brightness)) {
             setBrightness(std::clamp<uint8_t>(val, 0, kMaxBrightness));
             IF_IOT_CLOCK_SAVE_STATE(
                 _saveStateDelayed();
@@ -126,21 +107,15 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
 void ClockPlugin::addPowerSensor(WebUINS::Root &webUI, SensorPlugin::SensorType type)
 {
     if (type == SensorPlugin::SensorType::SYSTEM_METRICS) {
-        (*row)->addSensor(F("pwrlvl"), F("Power"), 'W');
+        webUI.addRow(WebUINS::Row(WebUINS::Sensor(F("pwrlvl"), F("Power"), 'W')));
     }
 }
 
 void ClockPlugin::_updatePowerLevelWebUI()
 {
     if (WebUISocket::hasAuthenticatedClients()) {
-        JsonUnnamedObject json(2);
-        json.add(JJ(type), JJ(update_events));
-        auto &events = json.addArray(JJ(events), 1);
-        auto &obj = events.addObject(3);
-        obj.add(JJ(id), F("pwrlvl"));
-        obj.add(JJ(state), true);
-        obj.add(JJ(value), JsonNumber(_getPowerLevel(), 2));
-        WebUISocket::broadcast(WebUISocket::getSender(), json);
+        WebUINS::Events events(WebUINS::Values(F("pwrlvl"), WebUINS::FormattedDouble(_getPowerLevel(), 2)));
+        WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(events));
     }
 }
 
@@ -193,49 +168,55 @@ void ClockPlugin::_calcPowerLevel()
 
 void ClockPlugin::createWebUI(WebUINS::Root &webUI)
 {
-    auto row = &webUI.addRow();
     #if IOT_LED_MATRIX
-        row->addGroup(F("LED Matrix"), false);
+        webUI.addRow(WebUINS::Group(F("LED Matrix"), false));
     #else
-        row->addGroup(F("Clock"), false);
+        webUI.addRow(WebUINS::Group(F("Clock"), false));
     #endif
 
-    row = &webUI.addRow();
-    row->addSlider(FSPGM(brightness), FSPGM(brightness), 0, kMaxBrightness, true);
 
-    row = &webUI.addRow();
-    row->addRGBSlider(F("color"), F("Color"));
+    webUI.addRow(WebUINS::Slider(FSPGM(brightness), FSPGM(brightness), 0, kMaxBrightness, true));
+    webUI.addRow(WebUINS::RGBSlider(F("color"), F("Color")));
 
-    row = &webUI.addRow();
+    WebUINS::Row row;
     auto height = F("15rem");
 
     IF_IOT_CLOCK_SAVE_STATE(
-        row->addSwitch(F("power"), F("Power<div class=\"p-1\"></div><span class=\"oi oi-power-standby\">"), true, WebUINS::NamePositionType::TOP).add(JJ(height), height);
+        auto power = WebUINS::Switch(F("power"), F("Power<div class=\"p-1\"></div><span class=\"oi oi-power-standby\">"), true, WebUINS::NamePositionType::TOP);
+        power.append(WebUINS::NamedString(J(height), height));
+        row.append(power);
     )
 
     IF_IOT_CLOCK(
-        row->addButtonGroup(F("btn_colon"), F("Colon"), F("Solid,Blink slowly,Blink fast")).add(JJ(height), height);
+        auto colon = WebUINS::ButtonGroup(F("btn_colon"), F("Colon"), F("Solid,Blink slowly,Blink fast"));
+        colon.append(WebUINS::NamedString(J(height), height));
+        row.append(colon);
     )
 
-    auto &col = row->addButtonGroup(F("btn_animation"), F("Animation"), Plugins::ClockConfig::ClockConfig_t::getAnimationNames());
-    col.add(JJ(height), height);
-    col.add(JJ(row), 3);
-    // IF_IOT_LED_MATRIX(
-    // )
+    auto animation = WebUINS::ButtonGroup(F("btn_animation"), F("Animation"), Plugins::ClockConfig::ClockConfig_t::getAnimationNames());
+    animation.append(WebUINS::NamedString(J(height), height));
+    animation.append(WebUINS::NamedUint32(J(row), 3));
 
     IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(
-       row->addSensor(FSPGM(light_sensor), F("Ambient Light Sensor"), F("<img src=\"/images/light.svg\" width=\"80\" height=\"80\" style=\"margin-top:-20px;margin-bottom:1rem\">"), WebUINS::SensorRenderType::COLUMN).add(JJ(height), height);
+        auto lightSensor = WebUINS::Sensor(FSPGM(light_sensor), F("Ambient Light Sensor"), F("<img src=\"/images/light.svg\" width=\"80\" height=\"80\" style=\"margin-top:-20px;margin-bottom:1rem\">"), WebUINS::SensorRenderType::COLUMN);
+        lightSensor.append(WebUINS::NamedString(J(height), height));
+        row.append(lightSensor);
     )
 
-    row->addSensor(F("tempp"), F("Temperature Protection"), '%').add(JJ(height), height);
+    auto tempProtection = WebUINS::Sensor(F("tempp"), F("Temperature Protection"), '%');
+    tempProtection.append(WebUINS::NamedString(J(height), height));
+    row.append(tempProtection);
+
+    webUI.addRow(row);
 }
 
 void ClockPlugin::_broadcastWebUI()
 {
     if (WebUISocket::hasAuthenticatedClients()) {
-        JsonUnnamedObject json(2);
-        json.add(JJ(type), JJ(update_events));
-        getValues(json.addArray(JJ(events)));
-        WebUISocket::broadcast(WebUISocket::getSender(), json);
+        WebUINS::Events events;
+        getValues(events);
+        if (events.hasAny()) {
+            WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(events));
+        }
     }
 }

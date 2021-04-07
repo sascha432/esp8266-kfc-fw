@@ -21,13 +21,10 @@
 
 #include <debug_helper_enable_mem.h>
 
-
-FLASH_STRING_GENERATOR_AUTO_INIT(
-    AUTO_STRING_DEF(uptime, "uptime")
-    AUTO_STRING_DEF(heap, "heap")
-    AUTO_STRING_DEF(bytes, "bytes")
-    AUTO_STRING_DEF(version, "version")
-);
+AUTO_STRING_DEF(uptime, "uptime")
+AUTO_STRING_DEF(heap, "heap")
+AUTO_STRING_DEF(bytes, "bytes")
+AUTO_STRING_DEF(version, "version")
 
 Sensor_SystemMetrics::Sensor_SystemMetrics() : MQTT::Sensor(MQTT::SensorType::SYSTEM_METRICS)
 {
@@ -125,7 +122,7 @@ void Sensor_SystemMetrics::publishState()
     }
 }
 
-void Sensor_SystemMetrics::getValues(NamedArray &array, bool timer)
+void Sensor_SystemMetrics::getValues(WebUINS::Events &array, bool timer)
 {
     using namespace WebUINS;
     array.append(

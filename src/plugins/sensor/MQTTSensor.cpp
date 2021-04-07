@@ -42,7 +42,7 @@ void Sensor::onConnect()
     setNextMqttUpdate(2);
 }
 
-void Sensor::timerEvent(MQTT::Json::NamedArray *array, bool mqttIsConnected)
+void Sensor::timerEvent(WebUINS::Events *array, bool mqttIsConnected)
 {
     uint32_t now = time(nullptr);
     if (array && now >= _nextUpdate) {

@@ -12,10 +12,8 @@
 #include <KFCJson.h>
 #include <vector>
 #include <memory>
-#if MQTT_SUPPORT
-#include "../src/plugins/mqtt/mqtt_strings.h"
-#endif
 #include "../src/plugins/mqtt/mqtt_json.h"
+
 
 #if DEBUG_WEBUI
 #include <debug_helper_enable.h>
@@ -657,6 +655,37 @@ namespace WebUINS {
 
         bool _validValue;
 
+    };
+
+    class Events : public NamedArray {
+    public:
+        struct Values {};
+
+    public:
+        Events() : NamedArray(F("events"))
+        {
+        }
+
+        Events(WebUINS::Events::Values) : NamedArray(F("values"))
+        {}
+
+        template<typename ... _Args>
+        Events(_Args&& ...args) :
+            NamedArray(F("events"), std::forward<_Args>(args)...)
+        {
+        }
+
+        bool hasAny() const {
+            return true; //TODO
+        }
+
+    };
+
+    class UpdateEvents : public UnnamedObject {
+    public:
+        UpdateEvents(const Events &events) : UnnamedObject(NamedString(J(type), J(update_events)), events)
+        {
+        }
     };
 
 }

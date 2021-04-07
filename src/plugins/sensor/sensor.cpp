@@ -45,7 +45,7 @@ SensorPlugin::SensorPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(Sensor
     REGISTER_PLUGIN(this, "SensorPlugin");
 }
 
-void SensorPlugin::getValues(NamedArray &array)
+void SensorPlugin::getValues(WebUINS::Events &array)
 {
     for(auto sensor: _sensors) {
         sensor->getValues(array, false);
@@ -131,20 +131,15 @@ void SensorPlugin::_timerEvent()
     auto mqttIsConnected = MQTTClient::safeIsConnected();
 
     if (WebUISocket::hasAuthenticatedClients()) {
-        PrintString jsonStr;
+        using namespace MQTT::Json;
+        WebUINS::Events events;
         {
-            using namespace MQTT::Json;
-            auto events = NamedArray(F("events"));
             for(auto sensor: _sensors) {
                 sensor->timerEvent(&events, mqttIsConnected);
             }
-            if (events.length() > 2) {
-                UnnamedObjectWriter(jsonStr, NamedString(F("type"), F("ue")), events);
-            }
         }
-        if (jsonStr.length() > 2) {
-            // __DBG_printf("timer: %s", jsonStr.c_str());
-            WebUISocket::broadcast(WebUISocket::getSender(), std::move(jsonStr));
+        if (events.hasAny()) {
+            WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(events));
         }
     }
     else if (mqttIsConnected) {

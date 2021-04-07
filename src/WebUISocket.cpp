@@ -92,15 +92,15 @@ void WebUISocket::onText(uint8_t *data, size_t len)
 
 void WebUISocket::sendValues(AsyncWebSocketClient *client)
 {
-    using namespace MQTT::Json;
-
-    NamedArray events(F("events"));
+    WebUINS::Events events;
     for(const auto plugin: PluginComponents::Register::getPlugins()) {
         if (plugin->hasWebUI()) {
             plugin->getValues(events);
         }
     }
-    send(client, UnnamedObject(NamedString(J(type), J(update_events)), events).toString());
+    if (events.hasAny()) {
+        send(client, WebUINS::UpdateEvents(events));
+    }
 }
 
 WebUINS::Root WebUISocket::createWebUIJSON()

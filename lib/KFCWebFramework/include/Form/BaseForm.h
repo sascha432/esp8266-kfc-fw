@@ -27,6 +27,19 @@
 
 #include "Utility/Debug.h"
 
+AUTO_STRING_DEF(FormEnumValidator_default_message, "Invalid value: %allowed%")
+AUTO_STRING_DEF(FormHostValidator_default_message, "Invalid hostname or IP address")
+AUTO_STRING_DEF(FormLengthValidator_default_message, "This field must be between %min% and %max% characters")
+AUTO_STRING_DEF(FormRangeValidator_default_message, "This fields value must be between %min% and %max%")
+AUTO_STRING_DEF(FormRangeValidator_default_message_zero_allowed, "This fields value must be 0 or between %min% and %max%")
+AUTO_STRING_DEF(FormRangeValidator_invalid_port, "Invalid Port")
+AUTO_STRING_DEF(FormRangeValidator_invalid_port_range, "Invalid Port (%min%-%max%)")
+AUTO_STRING_DEF(FormValidator_allowed_macro, "%allowed%")
+AUTO_STRING_DEF(FormValidator_max_macro, "%max%")
+AUTO_STRING_DEF(FormValidator_min_macro, "%min%")
+AUTO_STRING_DEF(Form_value_missing_default_message, "This field is missing")
+
+
 namespace FormUI {
 
     namespace Form {

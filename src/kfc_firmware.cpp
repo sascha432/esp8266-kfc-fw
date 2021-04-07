@@ -24,9 +24,7 @@
 #if PRINTF_WRAPPER_ENABLED
 #include <printf_wrapper.h>
 #endif
-#if IOT_REMOTE_CONTROL
-#include "../src/plugins/remote/remote.h"
-#endif
+#include "../src/plugins/plugins.h"
 #if HAVE_GDBSTUB
 #error uncomment the line below
 // #include <GDBStub.h>

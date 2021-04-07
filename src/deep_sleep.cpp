@@ -10,10 +10,7 @@
 #if DEBUG_DEEP_SLEEP
 #include "logger.h"
 #endif
-
-#if IOT_REMOTE_CONTROL
-#include "../src/plugins/remote/remote.h"
-#endif
+#include "../src/plugins/plugins.h"
 
 #undef __LDBG_printf
 #if DEBUG_DEEP_SLEEP

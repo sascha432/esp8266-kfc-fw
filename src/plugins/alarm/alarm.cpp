@@ -46,10 +46,12 @@ AlarmPlugin::AlarmPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(AlarmPlu
     REGISTER_PLUGIN(this, "AlarmPlugin");
 }
 
-void AlarmPlugin::setup(SetupModeType mode)
+void AlarmPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
     _installAlarms(*_timer);
+#if NTP_HAVE_CALLBACKS
     addTimeUpdatedCallback(ntpCallback);
+#endif
     MQTTClient::registerComponent(this);
 }
 

@@ -24,16 +24,14 @@
 #include <debug_helper_disable.h>
 #endif
 
-FLASH_STRING_GENERATOR_AUTO_INIT(
-    AUTO_STRING_DEF(ping_monitor_response, "%d bytes from %s: icmp_seq=%d ttl=%d time=%ld ms")
-    AUTO_STRING_DEF(ping_monitor_end_response, "Total answer from %s sent %d recevied %d time %ld ms")
-    AUTO_STRING_DEF(ping_monitor_ethernet_detected, "Detected eth address %s")
-    AUTO_STRING_DEF(ping_monitor_request_timeout, "Request timed out.")
-    AUTO_STRING_DEF(ping_monitor_service_status, "Ping monitor service has been %s")
-    AUTO_STRING_DEF(ping_monitor_ping_for_hostname_failed, "Pinging %s failed")
-    AUTO_STRING_DEF(ping_monitor_cancelled, "Ping cancelled")
-    AUTO_STRING_DEF(ping_monitor_service, "Ping Monitor Service")
-);
+AUTO_STRING_DEF(ping_monitor_response, "%d bytes from %s: icmp_seq=%d ttl=%d time=%ld ms")
+AUTO_STRING_DEF(ping_monitor_end_response, "Total answer from %s sent %d recevied %d time %ld ms")
+AUTO_STRING_DEF(ping_monitor_ethernet_detected, "Detected eth address %s")
+AUTO_STRING_DEF(ping_monitor_request_timeout, "Request timed out.")
+AUTO_STRING_DEF(ping_monitor_service_status, "Ping monitor service has been %s")
+AUTO_STRING_DEF(ping_monitor_ping_for_hostname_failed, "Pinging %s failed")
+AUTO_STRING_DEF(ping_monitor_cancelled, "Ping cancelled")
+AUTO_STRING_DEF(ping_monitor_service, "Ping Monitor Service")
 
 using KFCConfigurationClasses::System;
 using KFCConfigurationClasses::Plugins;

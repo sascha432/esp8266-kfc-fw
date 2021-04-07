@@ -15,9 +15,8 @@
 #include <kfc_fw_config.h>
 #include <ReadADC.h>
 #include <KFCForms.h>
-#if MQTT_SUPPORT
-#include "../src/plugins/mqtt/mqtt_strings.h"
-#endif
+#include "WebUIComponent.h"
+#include "../src/plugins/plugins.h"
 
 #if DEBUG_PLUGINS
 #include "debug_helper_enable.h"
@@ -25,9 +24,7 @@
 #include "debug_helper_disable.h"
 #endif
 
-// FLASH_STRING_GENERATOR_AUTO_INIT(
-//     AUTO_STRING_DEF(__pure_virtual, "pure virtual call: %s\n")
-// );
+AUTO_STRING_DEF(__pure_virtual, "pure virtual call: %s\n")
 
 #define __DBG_panic_pure_virtual() \
     DEBUG_OUTPUT.printf_P(SPGM(__pure_virtual), getName_P()); \
@@ -124,7 +121,7 @@ void PluginComponent::createWebUI(WebUINS::Root &webUI)
     __DBG_panic_pure_virtual();
 }
 
-void PluginComponent::getValues(NamedArray &array)
+void PluginComponent::getValues(WebUINS::Events &array)
 {
     __DBG_panic_pure_virtual();
 }

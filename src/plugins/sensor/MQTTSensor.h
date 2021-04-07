@@ -77,7 +77,7 @@ namespace MQTT {
         // client is valid and connected
         virtual void publishState() = 0;
         // using update rate
-        virtual void getValues(NamedArray &array, bool timer) = 0;
+        virtual void getValues(WebUINS::Events &array, bool timer) = 0;
         // create webUI for sensor
         virtual void createWebUI(WebUINS::Root &webUI) = 0;
         // return status of the sensor for status.html
@@ -105,7 +105,7 @@ namespace MQTT {
         }
     #endif
 
-        void timerEvent(NamedArray *array, bool mqttIsConnected);
+        void timerEvent(WebUINS::Events *array, bool mqttIsConnected);
 
         inline void setUpdateRate(uint16_t updateRate) {
             _updateRate = updateRate;

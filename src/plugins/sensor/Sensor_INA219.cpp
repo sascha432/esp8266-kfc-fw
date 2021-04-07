@@ -87,7 +87,7 @@ uint8_t Sensor_INA219::getAutoDiscoveryCount() const
     return 4;
 }
 
-void Sensor_INA219::getValues(NamedArray &array, bool timer)
+void Sensor_INA219::getValues(WebUINS::Events &array, bool timer)
 {
     auto U = _data.U();
     auto I = _data.I();

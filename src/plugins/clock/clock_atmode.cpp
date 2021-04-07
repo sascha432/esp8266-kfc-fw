@@ -4,11 +4,8 @@
 
 #include <Arduino_compat.h>
 #include <EventScheduler.h>
-#include "clock.h"
 #include <web_socket.h>
-#if HTTP2SERIAL_SUPPORT
-#include "../src/plugins/http2serial/http2serial.h"
-#endif
+#include "../src/plugins/plugins.h"
 
 #if DEBUG_IOT_CLOCK
 #include <debug_helper_enable.h>

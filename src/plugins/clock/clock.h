@@ -19,8 +19,9 @@
 
 using KFCConfigurationClasses::Plugins;
 
-class WebServerPlugin;
-class AsyncUpdateWebHandler;
+namespace WebServer {
+    class AsyncUpdateWebHandler;
+}
 class ClockPlugin;
 
 namespace Clock {
@@ -510,8 +511,7 @@ public:
     Color getColor() const;
 
 private:
-    friend WebServerPlugin;
-    friend AsyncUpdateWebHandler;
+    friend WebServer::AsyncUpdateWebHandler;
 
     // set brightness
     // enable LEDs if disabled

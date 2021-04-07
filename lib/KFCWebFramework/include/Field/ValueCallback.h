@@ -11,8 +11,8 @@
 #include <misc.h>
 #include "Field/BaseField.h"
 #include "Field/Value.h"
-
 #include "Utility/Debug.h"
+#include  "spgm_auto_def.h"
 
 namespace FormUI {
 

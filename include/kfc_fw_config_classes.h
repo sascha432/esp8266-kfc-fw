@@ -1037,26 +1037,49 @@ namespace KFCConfigurationClasses {
 
         class IOTSwitch {
         public:
-            typedef enum : uint8_t {
+            enum class StateEnum : uint8_t {
                 OFF =       0x00,
                 ON =        0x01,
                 RESTORE =   0x02,
-            } StateEnum_t;
-            typedef enum : uint8_t {
+            };
+            enum class WebUIEnum : uint8_t {
                 NONE =      0x00,
                 HIDE =      0x01,
                 NEW_ROW =   0x02,
-            } WebUIEnum_t;
-            typedef struct __attribute__packed__ {
-                uint8_t length;
-                StateEnum_t state;
-                WebUIEnum_t webUI;
-            } Switch_t;
+            };
+            struct __attribute__packed__ SwitchConfig {
+                void setLength(size_t length) {
+                    _length = length;
+                }
+                size_t getLength() const {
+                    return _length;
+                }
+                void setState(StateEnum state) {
+                    _state = static_cast<uint8_t>(state);
+                }
+                StateEnum getState() const {
+                    return static_cast<StateEnum>(_state);
+                }
+                void setWebUI(WebUIEnum webUI) {
+                    _webUI = static_cast<uint8_t>(webUI);
+                }
+                WebUIEnum getWebUI() const {
+                    return static_cast<WebUIEnum>(_webUI);
+                }
+
+                SwitchConfig() : _length(0), _state(0), _webUI(0) {}
+                SwitchConfig(const String &name, StateEnum state, WebUIEnum webUI) : _length(name.length()), _state(static_cast<uint8_t>(state)), _webUI(static_cast<uint8_t>(webUI)) {}
+
+            private:
+                uint8_t _length;
+                uint8_t _state: 4;
+                uint8_t _webUI: 4;
+            };
 
             static const uint8_t *getConfig();
             static void setConfig(const uint8_t *buf, size_t size);
 
-            // T = std::array<String, N>, R = std::array<Switch_t, N>
+            // T = std::array<String, N>, R = std::array<SwitchConfig, N>
             template <class T, class R>
             static void getConfig(T &names, R &configs) {
                 names = {};
@@ -1066,9 +1089,9 @@ namespace KFCConfigurationClasses {
                 if (ptr) {
                     size_t i = 0;
                     auto endPtr = ptr + length;
-                    while(ptr + sizeof(Switch_t) <= endPtr && i < names.size()) {
-                        configs[i] = *reinterpret_cast<Switch_t *>(const_cast<uint8_t *>(ptr));
-                        ptr += sizeof(Switch_t);
+                    while(ptr + sizeof(SwitchConfig) <= endPtr && i < names.size()) {
+                        configs[i] = *reinterpret_cast<SwitchConfig *>(const_cast<uint8_t *>(ptr));
+                        ptr += sizeof(SwitchConfig);
                         if (ptr + configs[i].length <= endPtr) {
                             names[i] = PrintString(ptr, configs[i].length);
                         }

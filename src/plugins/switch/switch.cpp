@@ -153,8 +153,8 @@ void SwitchPlugin::createWebUI(WebUINS::Root &webUI)
 {
     webUI.addRow(WebUINS::Row(WebUINS::Group(F("Switch"), false)));
 
-    WebUINS::Row row;
     for (size_t i = 0; i < _pins.size(); i++) {
+        WebUINS::Row row;
         if (_configs[i].webUI != WebUIEnum::HIDE) {
             PrintString name;
             if (_names[i].length()) {
@@ -174,15 +174,10 @@ void SwitchPlugin::createWebUI(WebUINS::Root &webUI)
     }
 }
 
-void SwitchPlugin::getValues(NamedArray &array)
+void SwitchPlugin::getValues(WebUINS::Events &array)
 {
     for (size_t i = 0; i < _pins.size(); i++) {
-        using namespace MQTT::Json;
-        array.append(UnnamedObject(
-            NamedStoredString(J(id), PrintString(FSPGM(channel__u), i)),
-            NamedInt32(J(value), _getChannel(i) ? 1 : 0),
-            NamedBool(J(state), true)
-        ));
+        array.append(WebUINS::Values(PrintString(FSPGM(channel__u), i), _getChannel(i) ? 1 : 0, true));
     }
 }
 
@@ -204,9 +199,11 @@ void SwitchPlugin::setValue(const String &id, const String &value, bool hasValue
 
 MQTT::AutoDiscovery::EntityPtr SwitchPlugin::getAutoDiscovery(MQTT::FormatType format, uint8_t num)
 {
-    auto discovery =__LDBG_new(MQTT::AutoDiscovery::Entity);
+    auto discovery = new MQTT::AutoDiscovery::Entity();
     auto channel = PrintString(FSPGM(channel__u), num);
-    discovery->create(this, channel, format);
+    if (!discovery->create(this, channel, format)) {
+        return discovery;
+    }
     discovery->addStateTopic(MQTTClient::formatTopic(channel, FSPGM(_state)));
     discovery->addCommandTopic(MQTTClient::formatTopic(channel, FSPGM(_set)));
     return discovery;

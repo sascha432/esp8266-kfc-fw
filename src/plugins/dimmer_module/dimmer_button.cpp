@@ -11,7 +11,7 @@
 #include <stl_ext/algorithm.h>
 // #include <EnumHelper.h>
 
-#if DEBUG_IOT_DIMMER_MODULE && DEBUG_PIN_MONITOR
+#if DEBUG_IOT_DIMMER_MODULE //&& DEBUG_PIN_MONITOR
 #include <debug_helper_enable.h>
 #else
 #include <debug_helper_disable.h>
@@ -64,7 +64,7 @@ void Button::event(EventType eventType, uint32_t now)
         case EventType::SINGLE_CLICK:
             // button 1 only
             if (_dimmer._channels[_channel].off(&config, _level)) {
-                __LDBG_printf("%s OFF store_level=%d duration=%u", name(), _level, _duration);
+                __LDBG_printf("#%u OFF store_level=%d duration=%u", _button, _level, _duration);
             }
             break;
         case EventType::LONG_CLICK: {
@@ -79,7 +79,7 @@ void Button::event(EventType eventType, uint32_t now)
             }
             break;
         default:
-            __LDBG_printf("%s IGNORED event=%s", name(), eventTypeToString(eventType));
+            __LDBG_printf("#%u IGNORED event=%s", _button, eventTypeToString(eventType));
             break;
     }
     __DBG_IF(
@@ -105,12 +105,12 @@ void Button::_changeLevelRepeat(uint16_t repeatTime, bool invert)
     float fadeTime = _dimmer._config.lp_fadetime;
     int16_t levelChange = IOT_DIMMER_MODULE_MAX_BRIGHTNESS * ((repeatTime / 1000.0) / fadeTime);
     __LDBG_printf("fadetime=%f/%f repeat=%u level=%d", fadeTime, fadeTime * 1.024, repeatTime, invert ? -levelChange : levelChange);
-    _changeLevel(invert ? -levelChange : levelChange, fadeTime * 1.024);
+    _changeLevel(invert ? -levelChange : levelChange, _dimmer._config.lp_fadetime * 1.1); //(repeatTime + 15) / 1000);
 }
 
 void Button::_setLevel(int32_t newLevel, float fadeTime)
 {
-    __LDBG_printf("%s SET level=%d state=%d time=%f", name(), newLevel, _dimmer.getChannelState(_channel), fadeTime);
+    __LDBG_printf("#%u SET level=%d state=%d time=%f", _button, newLevel, _dimmer.getChannelState(_channel), fadeTime);
     if (_dimmer.getChannelState(_channel)) {
         _setLevel(newLevel, _dimmer.getChannel(_channel), fadeTime);
     }
@@ -125,6 +125,7 @@ void Button::_setLevel(int32_t newLevel, int16_t curLevel, float fadeTime)
         IOT_DIMMER_MODULE_MAX_BRIGHTNESS * config.max_brightness / 100
     );
     if (curLevel != newLevel) {
+        __LDBG_printf("#%u setChannel channel=%d new_level=%d time=%f", _button, _channel, newLevel, -fadeTime);
         _dimmer.setChannel(_channel, newLevel, -fadeTime);
     }
 }

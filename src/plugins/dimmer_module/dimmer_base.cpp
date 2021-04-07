@@ -203,7 +203,11 @@ void Base::_writeConfig(ConfigType &config)
 
 void Base::_fade(uint8_t channel, int16_t toLevel, float fadeTime)
 {
-    __LDBG_printf("channel=%u toLevel=%u fadeTime=%f realToLevel=%u", channel, toLevel, fadeTime, _calcLevel(toLevel, channel));
+    auto maxTime = max(_config.lp_fadetime, max(_config.on_fadetime, _config.off_fadetime));
+    if (fadeTime > maxTime) {
+        fadeTime = maxTime;
+    }
+    __LDBG_printf("channel=%u to_level=%u fadetime=%f max_time=%f real_to_level=%u", channel, toLevel, fadeTime, maxTime, _calcLevel(toLevel, channel));
 
     _wire.fadeTo(channel, DIMMER_CURRENT_LEVEL, _calcLevel(toLevel, channel), fadeTime);
 #if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
@@ -300,14 +304,14 @@ float Base::getTransitionTime(int fromLevel, int toLevel, float transitionTimeOv
     if (transitionTimeOverride < 0) { // negative values are pass through
         return -transitionTimeOverride;
     }
+    if (toLevel == 0) {
+        __DBG_printf("transition=%.2f off", _config.off_fadetime);
+        return _config.off_fadetime;
+    }
     if (!isnan(transitionTimeOverride)) {
         auto time = transitionTimeOverride / (abs(fromLevel - toLevel) / (float)DIMMER_MAX_LEVEL); // calculate how much time it takes to dim from 0-100%
         __DBG_printf("transition=%.2f t100=%f", transitionTimeOverride, time);
         return time;
-    }
-    if (toLevel == 0) {
-        __DBG_printf("transition=%.2f off", _config.off_fadetime);
-        return _config.off_fadetime;
     }
     if (fromLevel == 0 && toLevel) {
         __DBG_printf("transition=%.2f on", _config.on_fadetime);

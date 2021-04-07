@@ -161,7 +161,7 @@ void Channel::setLevel(int32_t level, float transition, bool publish)
 //     _offDelayPrecheck(level, nullptr);
 // #endif
     if (level == 0) {
-        setStoredBrightness(_brightness);
+        //setStoredBrightness(_brightness);
         _set(0, transition, publish);
     }
     else {
@@ -171,6 +171,7 @@ void Channel::setLevel(int32_t level, float transition, bool publish)
 
 bool Channel::_set(int32_t level, float transition, bool publish)
 {
+    __LDBG_printf("set=%d transition=%f", level, transition);
     if (level == 0) {
         if (_brightness != 0) {
             auto tmp = _brightness;

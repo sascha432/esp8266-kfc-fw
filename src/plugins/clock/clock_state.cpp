@@ -68,8 +68,10 @@ ClockPlugin::StoredState ClockPlugin::_getState() const
     if (file) {
         auto state = StoredState::load(file);
         if (state.hasValidData()) {
+#if DEBUG_IOT_CLOCK
             auto &cfg = state.getConfig();
             __LDBG_printf("loaded state eanbled=%u brightness=%u animation=%u solid_color=%s blink_colon=%u", cfg.enabled, cfg.getBrightness(), cfg.getAnimation(), Color(cfg.solid_color).toString().c_str(), IF_IOT_CLOCK(cfg.blink_colon_speed) IF_IOT_LED_MATRIX(0));
+#endif
             return state;
         }
     }

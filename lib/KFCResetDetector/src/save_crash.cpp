@@ -371,6 +371,8 @@ inline static bool append_crash_data(SaveCrash::FlashStorage &fs, SPIFlash::Flas
     return true;
 }
 
+#if 1
+
 void custom_crash_callback(struct rst_info *rst_info, uint32_t stack, uint32_t stack_end)
 {
     register uint32_t sp asm("a1");
@@ -428,3 +430,5 @@ void custom_crash_callback(struct rst_info *rst_info, uint32_t stack, uint32_t s
 
     }
 }
+
+#endif

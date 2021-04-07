@@ -195,9 +195,9 @@ $.webUIComponent = {
     },
 
     //
-    // apply defaults to all columns and calculate number of columns
+    // rename shortcuts in keys and values
     //
-    prepare_options: function(options) {
+    rename_shortcuts: function(options) {
         // rename keys
         for (var i in this.short.from) {
             if (options.hasOwnProperty(i)) {
@@ -205,10 +205,22 @@ $.webUIComponent = {
                 delete options[i];
             }
         }
-        // rename values
+        // replace values
         for (var i in options) {
             if (this.short.from.hasOwnProperty(options[i])) {
                 options[i] = this.short.from[options[i]];
+            }
+        }
+    },
+
+    //
+    // apply defaults to all columns and calculate number of columns
+    //
+    prepare_options: function(options) {
+        this.rename_shortcuts(options);
+        if (options.hasOwnProperty('columns') && options.columns.length) {
+            for(var i = 0; i < options.columns.length; i++) {
+                this.rename_shortcuts(options.columns[i]);
             }
         }
         // merge defaults
@@ -544,7 +556,6 @@ $.webUIComponent = {
     // element add methods
     //
     add_element_group: function(options) {
-        var prototype;
         var row_prototype = $(this.get_prototype('webui-row', { content:
             options.has_switch ?
                 (prototype = this.get_prototype('webui-group-title-content', { title: options.title, content: this.get_prototype('webui-switch', {}) })) :

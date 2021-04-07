@@ -522,11 +522,12 @@ void Monitor::_loop()
 void Monitor::_event(uint8_t pinNum, StateType state, uint32_t now)
 {
     for(const auto &handler: _handlers) {
-        StateType tmp;
-        __DBG_assert_panic(handler.get() != nullptr, "event handler=nullptr pin=%u state=%u", pinNum, state);
-        if (handler->getPin() == pinNum && handler->isEnabled() && (tmp = handler->_getStateIfEnabled(state)) != StateType::NONE) {
-            handler->_eventCounter++;
-            handler->event(tmp, now);
+        if (handler.get()) {
+            StateType tmp;
+            if (handler->getPin() == pinNum && handler->isEnabled() && (tmp = handler->_getStateIfEnabled(state)) != StateType::NONE) {
+                handler->_eventCounter++;
+                handler->event(tmp, now);
+            }
         }
     }
 }

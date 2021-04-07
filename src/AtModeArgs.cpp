@@ -43,10 +43,10 @@ bool AtModeArgs::isCommand(const ATModeCommandHelp_t *help) const
     size_t prefixLen;
     if (help->commandPrefix && ((prefixLen = strlen_P(help->commandPrefix)) != 0)) {
         if (!_command._startsWithIgnoreCase_P(help->commandPrefix, prefixLen, 0)) {
-            __DBG_printf("cmd %s=%s _startsWithIgnoreCase_P=%u prefix=%s", _command.c_str() + prefixLen, help->command, _command._startsWithIgnoreCase_P(help->commandPrefix, prefixLen, 0), help->commandPrefix);
+            // __DBG_printf("cmd %s=%s _startsWithIgnoreCase_P=%u prefix=%s", _command.c_str() + prefixLen, help->command, _command._startsWithIgnoreCase_P(help->commandPrefix, prefixLen, 0), help->commandPrefix);
             return false;
         }
-        __DBG_printf("cmd %s=%s equalsIgnoreCase=%u prefix=%s", _command.c_str() + prefixLen, help->command, _command.equalsIgnoreCase(FPSTR(help->command), prefixLen), help->commandPrefix);
+        // __DBG_printf("cmd %s=%s equalsIgnoreCase=%u prefix=%s", _command.c_str() + prefixLen, help->command, _command.equalsIgnoreCase(FPSTR(help->command), prefixLen), help->commandPrefix);
         return _command.equalsIgnoreCase(FPSTR(help->command), prefixLen);
     }
     return _command.equalsIgnoreCase(FPSTR(help->command));

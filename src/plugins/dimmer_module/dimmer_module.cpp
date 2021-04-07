@@ -51,7 +51,6 @@ void Module::_beginMqtt()
 
 void Module::_endMqtt()
 {
-    _debug_println();
     auto client = MQTT::Client::getClient();
     if (client) {
         client->unregisterComponent(this);

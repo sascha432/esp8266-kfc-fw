@@ -175,16 +175,18 @@ void Plugin::createMenu()
     subMenu.addMenuItem(F("Advanced Firmware Configuration"), F("dimmer/advanced.html"));
 }
 
+
+#if IOT_DIMMER_MODULE_INTERFACE_UART
+    #define IOT_DIMMER_INTERFACE "Serial Port"
+#else
+    #define IOT_DIMMER_INTERFACE "I2C"
+#endif
+
 void Plugin::getStatus(Print &out)
 {
     out.printf_P(PSTR("%u Channel MOSFET Dimmer "), _channels.size());
     if (_isEnabled()) {
-        out.print(F("enabled on "));
-#if IOT_DIMMER_MODULE_INTERFACE_UART
-        out.print(F("Serial Port"));
-#else
-        out.print(F("I2C"));
-#endif
+        out.print(F("enabled on " IOT_DIMMER_INTERFACE));
         _printStatus(out);
     }
     else {

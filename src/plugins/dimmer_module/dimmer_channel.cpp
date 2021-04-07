@@ -271,8 +271,10 @@ void Channel::_publishMQTT()
 {
     if (isConnected()) {
         using namespace MQTT::Json;
-        auto payload = std::move(UnnamedObject(State(_brightness != 0), Brightness(_brightness), Transition(_dimmer->_getConfig().lp_fadetime)).toString());
-        publish(_createTopics(TopicType::COMMAND_STATE), true, payload);
+
+        __DBG_printf("topic=%s payload=%s", _createTopics(TopicType::COMMAND_STATE).c_str(), UnnamedObject(State(_brightness != 0), Brightness(_brightness), Transition(_dimmer->_getConfig().lp_fadetime)).toString().c_str());
+
+        publish(_createTopics(TopicType::COMMAND_STATE), true, UnnamedObject(State(_brightness != 0), Brightness(_brightness), Transition(_dimmer->_getConfig().lp_fadetime)).toString());
     }
 }
 
@@ -280,32 +282,37 @@ void Channel::_publishWebUI()
 {
     if (WebUISocket::hasAuthenticatedClients()) {
 
-        using namespace MQTT::Json;
+        WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::Events(
+            WebUINS::Values(PrintString(F("d_chan%u"), _channel), _brightness, true),
+            WebUINS::Values(F("group-switch-0"), _dimmer->isAnyOn(), true)
+        ));
 
-        // auto json = PrintString(F("{\"type\":\"ue\",\"events\":[{\"id\":\"d_chan%u\",\"value\":%u,\"state\":true,\"group\":%u}]}"),
-        //     _channel, _brightness, _dimmer->isAnyOn()
-        // );
-        WebUISocket::broadcast(WebUISocket::getSender(), std::move(UnnamedObject(
-            NamedString(F("type"), F("ue")),
-            NamedArray(F("events"),
-                UnnamedObject(
-                    NamedString(F("id"), PrintString(F("d_chan%u"), _channel)),
-                    NamedShort(F("value"), _brightness),
-                    NamedBool(F("state"), true)
-                ),
-                UnnamedObject(
-                    NamedString(F("id"), F("group-switch-0")),
-                    NamedShort(F("value"), _dimmer->isAnyOn()),
-                    NamedBool(F("state"), true)
-                )
-            )
-        ).toString()));
+        // using namespace MQTT::Json;
+
+        // // auto json = PrintString(F("{\"type\":\"ue\",\"events\":[{\"id\":\"d_chan%u\",\"value\":%u,\"state\":true,\"group\":%u}]}"),
+        // //     _channel, _brightness, _dimmer->isAnyOn()
+        // // );
+        // WebUISocket::broadcast(WebUISocket::getSender(), std::move(UnnamedObject(
+        //     NamedString(F("type"), F("ue")),
+        //     NamedArray(F("events"),
+        //         UnnamedObject(
+        //             NamedString(F("id"), PrintString(F("d_chan%u"), _channel)),
+        //             NamedShort(F("value"), _brightness),
+        //             NamedBool(F("state"), true)
+        //         ),
+        //         UnnamedObject(
+        //             NamedString(F("id"), F("group-switch-0")),
+        //             NamedShort(F("value"), _dimmer->isAnyOn()),
+        //             NamedBool(F("state"), true)
+        //         )
+        //     )
+        // ).toString()));
     }
 }
 
 void Channel::_publish()
 {
-    __DBG_printf("publish channel=%u", _channel);
+    __LDBG_printf("publish channel=%u", _channel);
     _publishMQTT();
     _publishWebUI();
     _publishLastTime = millis();

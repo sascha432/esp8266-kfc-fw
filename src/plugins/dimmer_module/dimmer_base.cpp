@@ -26,7 +26,7 @@ Base::Base() :
 #if IOT_DIMMER_MODULE_INTERFACE_UART
     _wire(Serial)
 #else
-    _wire(static_cast<DimmerTwoWireEx &>(config.initTwoWire()))
+    _wire(static_cast<TwoWire &>(config.initTwoWire()))
 #endif
 {
 }
@@ -203,7 +203,7 @@ void Base::_writeConfig(ConfigType &config)
 
 void Base::_fade(uint8_t channel, int16_t toLevel, float fadeTime)
 {
-    __LDBG_printf("channel=%u toLevel=%u fadeTime=%f", channel, toLevel, fadeTime);
+    __LDBG_printf("channel=%u toLevel=%u fadeTime=%f realToLevel=%u", channel, toLevel, fadeTime, _calcLevel(toLevel, channel));
 
     _wire.fadeTo(channel, DIMMER_CURRENT_LEVEL, _calcLevel(toLevel, channel), fadeTime);
 #if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
@@ -324,30 +324,16 @@ float Base::getTransitionTime(int fromLevel, int toLevel, float transitionTimeOv
 
 void Base::_getValues(WebUINS::Events &array)
 {
-    using namespace WebUINS;
     bool on = false;
-
     for (uint8_t i = 0; i < getChannelCount(); i++) {
         PrintString id(F("d_chan%u"), i);
         auto value = static_cast<int32_t>(getChannel(i));
-        array.append(Values(id, value));
-
-        // obj = &array.addObject(3);
-        // PrintString id(F("d_chan%u"), i);
-        // obj->add(JJ(id), id);
-
-        // obj->add(JJ(value), value);
-        // obj->add(JJ(state), true);
+        array.append(WebUINS::Values(id, value));
         if (getChannelState(i) && value) {
             on = true;
         }
     }
-
-    array.append(Values(F("group-switch-0"), on ? 1 : 0));
-    // obj = &array.addObject(3);
-    // obj->add(JJ(id), F("group-switch-0"));
-    // obj->add(JJ(value), on ? 1 : 0);
-    // obj->add(JJ(state), true);
+    array.append(WebUINS::Values(F("group-switch-0"), on ? 1 : 0));
 }
 
 void Base::_setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)

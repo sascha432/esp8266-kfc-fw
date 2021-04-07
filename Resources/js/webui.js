@@ -54,7 +54,7 @@ $.webUIComponent = {
         column: {
             group: { columns: 12 },
             switch: { min: 0, max: 1, columns: 2, zero_off: true, name: 0, attributes: [ 'min', 'max', 'value', 'name' ] },
-            slider: { slider_type: 'slider', min: 0, max: 255, columns: 12, range_min: false, range_max: false, attributes: [ 'min', 'max', 'range_min', 'range_max', 'value' ] },
+            slider: { slider_type: 'slider', min: 0, max: 255, columns: 12, rmin: false, rmax: false, attributes: [ 'min', 'max', 'rmin', 'rmax', 'value' ] },
             color_slider: { slider_type: 'slider coplor-slider', min: 15300, max: 50000 },
             rgb_slider: { slider_type: 'slider rgb-slider', min: 0, max: 0xffffff },
             sensor: { columns: 3, no_value: '-'},

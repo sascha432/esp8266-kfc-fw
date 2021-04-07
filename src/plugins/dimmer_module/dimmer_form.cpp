@@ -17,7 +17,15 @@ using Plugins = KFCConfigurationClasses::Plugins;
 void Dimmer::Form::_createConfigureForm(PluginComponent::FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form)
 {
     if (type == PluginComponent::FormCallbackType::SAVE) {
-        if (formName == F("advanced") || formName == F("general")) {
+        if (formName == F("channels")) {
+            auto &cfg = Plugins::Dimmer::getWriteableConfig();
+            for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
+                if (cfg.level.from[i] > cfg.level.to[i]) {
+                    cfg.level.from[i] = cfg.level.to[i];
+                }
+            }
+        }
+        else if (formName == F("advanced") || formName == F("general")) {
             writeConfig(Plugins::Dimmer::getWriteableConfig());
         }
         return;
@@ -29,7 +37,14 @@ void Dimmer::Form::_createConfigureForm(PluginComponent::FormCallbackType type, 
 
     auto &cfg = Plugins::Dimmer::getWriteableConfig();
     if (type == PluginComponent::FormCallbackType::CREATE_GET) {
-        if (formName == F("advanced") || formName == F("general")) {
+        if (formName == F("channels")) {
+            for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
+                if (cfg.level.from[i] > cfg.level.to[i]) {
+                    cfg.level.from[i] = cfg.level.to[i];
+                }
+            }
+        }
+        else if (formName == F("advanced") || formName == F("general")) {
             readConfig(cfg);
         }
     }
@@ -111,33 +126,6 @@ void Dimmer::Form::_createConfigureForm(PluginComponent::FormCallbackType type, 
         auto &channelGroup = form.addCardGroup(F("chcfg"), F("Channel Configuration"), false);
 
         PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, IOT_DIMMER_MODULE_CHANNELS, cr, co);
-
-//         const __FlashStringHelper *vars[IOT_DIMMER_MODULE_CHANNELS][2] = {
-// #if IOT_DIMMER_MODULE_CHANNELS >= 1
-//             {F("ch0o"), F("ch0r")},
-// #endif
-// #if IOT_DIMMER_MODULE_CHANNELS >= 2
-//             {F("ch1o"), F("ch1r")},
-// #endif
-// #if IOT_DIMMER_MODULE_CHANNELS >= 3
-//             {F("ch2o"), F("ch2r")},
-// #endif
-// #if IOT_DIMMER_MODULE_CHANNELS >= 4
-//             {F("ch3o"), F("ch3r")},
-// #endif
-// #if IOT_DIMMER_MODULE_CHANNELS >= 5
-//             {F("ch4o"), F("ch4r")},
-// #endif
-// #if IOT_DIMMER_MODULE_CHANNELS >= 6
-//             {F("ch5o"), F("ch5r")},
-// #endif
-// #if IOT_DIMMER_MODULE_CHANNELS >= 7
-//             {F("ch6o"), F("ch6r")},
-// #endif
-// #if IOT_DIMMER_MODULE_CHANNELS >= 8
-//             {F("ch7o"), F("ch7r")},
-// #endif
-//         };
 
         for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
             form.addPointerTriviallyCopyable(F_VAR(cr, i), &cfg.level.from[i]);

@@ -67,7 +67,7 @@ void SyslogTCP::transmit(const SyslogQueueItem &item)
     _buffer.write('\n');
     _ack = _buffer.length();
 
-    __DBG_printf("buffer: %s", printable_string(_buffer.c_str(), _buffer.length()).c_str());
+    // __DBG_printf("buffer: %s", printable_string(_buffer.c_str(), _buffer.length()).c_str());
 
     _connect();
 }
@@ -302,3 +302,4 @@ void SyslogTCP::_onDisconnect()
         _freeClient();
     }
 }
+

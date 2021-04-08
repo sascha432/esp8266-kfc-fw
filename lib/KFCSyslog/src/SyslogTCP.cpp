@@ -46,9 +46,28 @@ void SyslogTCP::transmit(const SyslogQueueItem &item)
 
     _queueId = item.getId();
     _buffer = _getHeader(item.getMillis());
-    _buffer.write(message);
+    auto ptr = message.c_str();
+    char ch;
+    while((ch = *ptr++) != 0) {
+        switch(ch) {
+        case '\n':
+            _buffer.write(F("\\n"));
+            break;
+        case '\r':
+            _buffer.write(F("\\r"));
+            break;
+        case 0:
+            _buffer.write(F("\\x00"));
+            break;
+        default:
+            _buffer.write(ch);
+            break;
+        }
+    }
     _buffer.write('\n');
     _ack = _buffer.length();
+
+    __DBG_printf("buffer: %s", printable_string(_buffer.c_str(), _buffer.length()).c_str());
 
     _connect();
 }

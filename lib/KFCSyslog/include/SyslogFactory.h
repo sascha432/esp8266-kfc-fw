@@ -12,6 +12,6 @@ public:
 	static constexpr uint16_t kDefaultPort = ~0;
 	static constexpr uint16_t kZeroconfPort = 0;
 
-	static Syslog *create(SyslogParameter &&parameter, SyslogQueue *queue, SyslogProtocol protocol, const String &host, uint16_t port = kDefaultPort);
-	static Syslog *create(SyslogParameter &&parameter, SyslogQueue *queue, SyslogProtocol protocol, const String &hostOrPath, uint32_t portOrMaxFilesize = kDefaultValue);
+	static Syslog *create(const char *hostname, SyslogQueue *queue, SyslogProtocol protocol, const String &host, uint16_t port = kDefaultPort);
+	static Syslog *create(const char *hostname, SyslogQueue *queue, SyslogProtocol protocol, const String &hostOrPath, uint32_t portOrMaxFilesize = kDefaultValue);
 };

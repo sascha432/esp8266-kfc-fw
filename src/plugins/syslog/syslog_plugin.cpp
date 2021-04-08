@@ -120,9 +120,9 @@ void SyslogPlugin::_begin()
         if (hostname.length() && port) {
             bool zeroconf = config.hasZeroConf(hostname);
 
-            auto queue = __LDBG_new(SyslogMemoryQueue, *this, SYSLOG_PLUGIN_QUEUE_SIZE);
-            auto syslog = SyslogFactory::create(SyslogParameter(System::Device::getName(), FSPGM(kfcfw)), queue, cfg.protocol_enum, zeroconf ? emptyString : hostname, static_cast<uint16_t>(zeroconf ? SyslogFactory::kZeroconfPort : port));
-            _stream = __LDBG_new(SyslogStream, syslog, _timer);
+            auto queue = new SyslogMemoryQueue(*this, SYSLOG_PLUGIN_QUEUE_SIZE);
+            auto syslog = SyslogFactory::create(System::Device::getName(), queue, cfg.protocol_enum, zeroconf ? emptyString : hostname, static_cast<uint16_t>(zeroconf ? SyslogFactory::kZeroconfPort : port));
+            _stream = new SyslogStream(syslog, _timer);
             _logger.setSyslog(_stream);
 
             __LDBG_printf("zeroconf=%u port=%u", zeroconf, port);
@@ -153,7 +153,7 @@ void SyslogPlugin::_end()
     if (_stream) {
         _timer.remove();
         _logger.setSyslog(nullptr);
-        __LDBG_delete(_stream);
+        delete _stream;
         _stream = nullptr;
     }
 }
@@ -185,8 +185,9 @@ void SyslogPlugin::_kill(uint32_t timeout)
 
         _waitForQueue(stream, timeout);
         stream->clearQueue();
-
-        // __LDBG_delete(stream);
+        // keep stream alive to avoid any calls to a dangling pointer
+        // _kill is usually called during restart and we do not care about the memory leak
+        // delete stream;
     }
 }
 

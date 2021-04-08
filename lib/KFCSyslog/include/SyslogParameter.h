@@ -6,6 +6,10 @@
 
 #include <Arduino_compat.h>
 
+#ifndef SYSLOG_APPNAME
+#define SYSLOG_APPNAME                          "kfcfw"
+#endif
+
 typedef enum  : uint8_t {
     SYSLOG_EMERG = 0,
     SYSLOG_ALERT,
@@ -39,10 +43,10 @@ typedef enum : uint8_t {
 
 class SyslogParameter {
 public:
-    SyslogParameter(SyslogParameter &&move);
+    SyslogParameter(SyslogParameter &&) = delete;
     SyslogParameter(const SyslogParameter &) = delete;
 
-    SyslogParameter(const char *hostname, const __FlashStringHelper *appName = nullptr, const char *processId = nullptr);
+    SyslogParameter(const char *hostname);
     ~SyslogParameter();
 
     void setFacility(SyslogFacility facility);
@@ -54,16 +58,55 @@ public:
     void setHostname(const char *hostname);
     const char *getHostname() const;
 
-    void setAppName(const __FlashStringHelper *appName = nullptr);
-    const __FlashStringHelper *getAppName() const;
-
-    void setProcessId(const char *processId = nullptr);
-    const char *getProcessId() const;
-
 private:
     SyslogFacility _facility;
     SyslogSeverity _severity;
     char *_hostname;
-    const __FlashStringHelper *_appName;
-    char *_processId;
 };
+
+inline SyslogParameter::SyslogParameter(const char *hostname) :
+    _facility(SYSLOG_FACILITY_KERN),
+    _severity(SYSLOG_NOTICE),
+    _hostname(strdup(hostname))
+{
+}
+
+inline SyslogParameter::~SyslogParameter()
+{
+    if (_hostname) {
+        free(_hostname);
+    }
+}
+
+inline void SyslogParameter::setFacility(SyslogFacility facility)
+{
+    _facility = facility;
+}
+
+inline SyslogFacility SyslogParameter::getFacility() const
+{
+    return _facility;
+}
+
+inline void SyslogParameter::setSeverity(SyslogSeverity severity)
+{
+    _severity = severity;
+}
+
+inline SyslogSeverity SyslogParameter::getSeverity() const
+{
+    return _severity;
+}
+
+inline void SyslogParameter::setHostname(const char *hostname)
+{
+    if (_hostname) {
+        free(_hostname);
+    }
+    _hostname = strdup(hostname);
+}
+
+inline const char *SyslogParameter::getHostname() const
+{
+    return _hostname;
+}

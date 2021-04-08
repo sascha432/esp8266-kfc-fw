@@ -12,6 +12,33 @@
 #include <debug_helper_disable.h>
 #endif
 
+// ------------------------------------------------------------------------
+// StringAllocSize
+// ------------------------------------------------------------------------
+
+#if defined(ESP8266)
+
+class StringAllocSize : public String {
+public:
+    inline size_t getAllocSize() const {
+        if (isSSO()) {
+            return 0;
+        }
+        return capacity() + 1;
+    }
+};
+
+#else
+
+class StringAllocSize : public String {
+public:
+    inline size_t getAllocSize(size_t len) {
+        return (length() + 8) & ~7;
+    }
+};
+
+#endif
+
 class Syslog;
 
 class SyslogQueueItem {
@@ -53,10 +80,10 @@ private:
     uint32_t _millis;
     union __attribute__packed__  {
         struct __attribute__packed__ {
-            uint8_t _failureCount : 7;
-            uint8_t _locked : 1;
+            volatile uint8_t _failureCount : 7;
+            volatile uint8_t _locked : 1;
         };
-        uint8_t _data;
+        volatile uint8_t _data;
     };
 };
 
@@ -67,11 +94,34 @@ private:
 inline SyslogQueueItem &SyslogQueueItem::operator=(SyslogQueueItem &&move) noexcept
 {
     this->~SyslogQueueItem();
-    ::new(this) SyslogQueueItem(std::move(move));
+    ::new(static_cast<void *>(this)) SyslogQueueItem(std::move(move));
     return *this;
 }
 
 #pragma pop_macro("new")
+
+inline SyslogQueueItem::SyslogQueueItem() :
+    _id(0),
+    _millis(0),
+    _data(0)
+{
+}
+
+inline SyslogQueueItem::SyslogQueueItem(const String &message, uint32_t id) :
+    _message(message),
+    _id(id),
+    _millis(millis()),
+    _data(0)
+{
+}
+
+inline SyslogQueueItem::SyslogQueueItem(SyslogQueueItem &&move) noexcept :
+    _message(std::move(move._message)),
+    _id(std::exchange(move._id, 0)),
+    _millis(std::exchange(move._millis, 0)),
+    _data(std::exchange(move._data, 0))
+{
+}
 
 inline uint32_t SyslogQueueItem::getId() const
 {
@@ -126,7 +176,6 @@ inline void SyslogQueueItem::incrFailureCount()
     _failureCount++;
     __LDBG_assert(_failureCount <= getMaxFailureCount());
 }
-
 
 class SyslogQueueManager {
 public:
@@ -213,6 +262,37 @@ inline void SyslogQueue::managerQueueSize(uint32_t size, bool isAvailable)
         _manager->queueSize(size, isAvailable);
     }
 }
+
+inline SyslogQueue::SyslogQueue() :
+    SyslogQueue(nullptr)
+{
+}
+
+inline SyslogQueue::SyslogQueue(SyslogQueueManager &manager) :
+    _dropped(0),
+    _manager(&manager)
+{
+    managerQueueSize(0, false);
+}
+
+inline SyslogQueue::SyslogQueue(SyslogQueueManager *manager) :
+    _dropped(0),
+    _manager(manager)
+{
+    managerQueueSize(0, false);
+}
+
+inline SyslogQueue::~SyslogQueue()
+{
+    managerQueueSize(0, false);
+}
+
+inline size_t SyslogQueue::_getQueueItemSize(const String &msg) const
+{
+    return reinterpret_cast<const StringAllocSize &>(msg).getAllocSize() + kSyslogQueueItemSize;
+}
+
+
 
 #include <debug_helper_disable.h>
 

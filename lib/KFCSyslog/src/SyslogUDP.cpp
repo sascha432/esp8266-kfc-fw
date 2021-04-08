@@ -12,24 +12,15 @@
 #include <debug_helper_disable.h>
 #endif
 
-SyslogUDP::SyslogUDP(SyslogParameter &&parameter, SyslogQueue &queue, const String &host, uint16_t port) :
-    Syslog(std::move(parameter), queue),
+SyslogUDP::SyslogUDP(const char *hostname, SyslogQueue *queue, const String &host, uint16_t port) :
+    Syslog(hostname, queue),
     _host(nullptr),
     _port(port)
 {
-    if (host.length()) {
-        if (!_address.fromString(host)) {
-            _host = strdup(host.c_str()); // resolve hostname later
-        }
+    if (host.length() && !_address.fromString(host)) {
+        _host = strdup(host.c_str()); // resolve hostname later
     }
     __LDBG_printf("%s:%d address=%s", host.c_str(), port, _address.toString().c_str());
-}
-
-SyslogUDP::~SyslogUDP()
-{
-    if (_host) {
-        free(_host);
-    }
 }
 
 bool SyslogUDP::setupZeroConf(const String &hostname, const IPAddress &address, uint16_t port)
@@ -38,7 +29,7 @@ bool SyslogUDP::setupZeroConf(const String &hostname, const IPAddress &address, 
         free(_host);
         _host = nullptr;
     }
-    if (address.isSet()) {
+    if (IPAddress_isValid(address)) {
         _address = address;
     }
     else if (hostname.length()) {
@@ -48,42 +39,14 @@ bool SyslogUDP::setupZeroConf(const String &hostname, const IPAddress &address, 
     return true;
 }
 
-String SyslogUDP::getHostname() const
-{
-    if (_host) {
-        return _host;
-    }
-    if (_address.isSet()) {
-        return _address.toString();
-    }
-    return emptyString;
-}
-
-uint16_t SyslogUDP::getPort() const
-{
-    return _port;
-}
-
-uint32_t SyslogUDP::getState(StateType state)
-{
-    switch (state) {
-    case StateType::CAN_SEND:
-        return (_port != 0) && (_host || _address.isSet()) && WiFi.isConnected();
-    default:
-        break;
-    }
-    return false;
-}
-
 void SyslogUDP::transmit(const SyslogQueueItem &item)
 {
     auto &message = item.getMessage();
     __LDBG_printf("id=%u msg=%s%s", item.getId(), _getHeader(item.getMillis()).c_str(), message.c_str());
 
-    bool success = false;
-    while(true) {
+    _queue.remove(item.getId(), [&]() {
         if (!WiFi.isConnected()) {
-            break;
+            return false;
         }
         if (_host) {
             if (WiFi.hostByName(_host, _address) && IPAddress_isValid(_address)) { // try to resolve host and store its IP
@@ -91,23 +54,25 @@ void SyslogUDP::transmit(const SyslogQueueItem &item)
                 _host = nullptr;
             }
             else {
-                break;
+                // failed to resolve _host
+                return false;
             }
         }
-
-        success = _udp.beginPacket(_address, _port);
-        if (success) {
-            {
-                String header = _getHeader(item.getMillis());
-                success = _udp.write((const uint8_t*)header.c_str(), header.length()) == header.length();
-            }
-            if (success) {
-                success =
-                    _udp.write((const uint8_t*)message.c_str(), message.length()) == message.length() &&
-                    _udp.endPacket();
+        if (!_udp.beginPacket(_address, _port)) {
+            _udp.stop();
+            return false;
+        }
+        {
+            String header = _getHeader(item.getMillis());
+            if (_udp.write((const uint8_t*)header.c_str(), header.length()) != header.length()) {
+                _udp.stop();
+                return false;
             }
         }
-        break;
-    }
-    _queue.remove(item.getId(), success);
+        if ((_udp.write((const uint8_t*)message.c_str(), message.length()) == message.length()) && _udp.endPacket()) {
+            return true;
+        }
+        _udp.stop();
+        return false;
+    }());
 }

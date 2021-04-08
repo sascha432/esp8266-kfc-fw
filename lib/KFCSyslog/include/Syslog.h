@@ -34,6 +34,9 @@
 
 #define SYSLOG_FILE_TIMESTAMP_FORMAT            "%FT%T%z"
 
+#define SYSLOG_NIL_SP                           "- "
+#define SYSLOG_NIL_VALUE                        (SYSLOG_NIL_SP[0])
+
 class Syslog;
 class SyslogStream;
 
@@ -69,8 +72,6 @@ extern const SyslogFilterItemPair syslogFilterSeverityItems[] PROGMEM;
 
 #endif
 
-PROGMEM_STRING_DECL(syslog_nil_value);
-
 class SyslogQueue;
 class SyslogParameter;
 class SyslogManagedStream;
@@ -89,7 +90,7 @@ public:
 public:
     Syslog(const Syslog &) = delete;
 
-    Syslog(SyslogParameter &&parameter, SyslogQueue &queue);
+    Syslog(const char *hostname, SyslogQueue *queue);
     virtual ~Syslog();
 
     virtual bool setupZeroConf(const String &hostname, const IPAddress &address, uint16_t port) = 0;
@@ -119,11 +120,61 @@ protected:
     friend SyslogManagedStream;
     friend SyslogPlugin;
 
-    String _getHeader(uint32_t millis);
+    String _getHeader(uint32_t millis) const;
+    void _addTimestamp(PrintString &buffer, uint32_t millis, PGM_P format) const;
 
-    void _addTimestamp(PrintString &buffer, uint32_t millis, PGM_P format);
-    void _addParameter(PrintString &buffer, PGM_P value);
+    void _addParameter(PrintString &buffer, const char *value) const;
+    void _addParameter(PrintString &buffer, const String &value) const;
+    void _addParameter(PrintString &buffer, const __FlashStringHelper *value) const;
 
+private:
+    template<typename _Ta>
+    void __addParameter(PrintString &buffer, _Ta value) const
+    {
+        size_t len = 0;
+        if (value) {
+            len = buffer.print(value);
+        }
+        if (len) {
+            buffer.write(' ');
+        }
+        else {
+            buffer.print(F(SYSLOG_NIL_SP));
+        }
+    }
+
+protected:
     SyslogParameter _parameter;
     SyslogQueue &_queue;
 };
+
+inline Syslog::Syslog(const char *hostname, SyslogQueue *queue) :
+    _parameter(hostname),
+    _queue(*queue)
+{
+}
+
+inline Syslog::~Syslog()
+{
+	delete reinterpret_cast<SyslogQueue *>(&_queue);
+}
+
+inline void Syslog::clear()
+{
+    _queue.clear();
+}
+
+inline void Syslog::_addParameter(PrintString &buffer, const char *value) const
+{
+    __addParameter(buffer, value);
+}
+
+inline void Syslog::_addParameter(PrintString &buffer, const String &value) const
+{
+    __addParameter(buffer, value.c_str());
+}
+
+inline void Syslog::_addParameter(PrintString &buffer, const __FlashStringHelper *value) const
+{
+    __addParameter(buffer, value);
+}

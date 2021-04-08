@@ -3,6 +3,8 @@
  */
 
 #include <Arduino_compat.h>
+#include <EventScheduler.h>
+#include <misc.h>
 #include "SyslogParameter.h"
 #include "Syslog.h"
 #include "SyslogTCP.h"
@@ -14,8 +16,8 @@
 #include <debug_helper_disable.h>
 #endif
 
-SyslogTCP::SyslogTCP(SyslogParameter &&parameter, SyslogQueue &queue, const String &host, uint16_t port, bool useTLS) :
-    Syslog(std::move(parameter), queue),
+SyslogTCP::SyslogTCP(const char *hostname, SyslogQueue *queue, const String &host, uint16_t port, bool useTLS) :
+    Syslog(hostname, queue),
     _client(nullptr),
     _host(nullptr),
     _queueId(0),
@@ -24,20 +26,8 @@ SyslogTCP::SyslogTCP(SyslogParameter &&parameter, SyslogQueue &queue, const Stri
     _useTLS(useTLS)
 {
     __LDBG_printf("%s:%d TLS %d", host.c_str(), _port, _useTLS);
-
-    if (host.length()) {
-        if (!_address.fromString(host)) {
-            _host = strdup(host.c_str());
-        }
-    }
-}
-
-SyslogTCP::~SyslogTCP()
-{
-    _queueId = 0;
-    _freeClient();
-    if (_host) {
-        free(_host);
+    if (host.length() && !_address.fromString(host)) {
+        _host = strdup(host.c_str());
     }
 }
 
@@ -67,7 +57,7 @@ uint32_t SyslogTCP::getState(StateType state)
 {
     switch (state) {
     case StateType::CAN_SEND:
-        return (_port != 0) && (_host || _address.isSet()) && WiFi.isConnected();
+        return (_port != 0) && (_host || IPAddress_isValid(_address)) && WiFi.isConnected();
     case StateType::IS_SENDING:
         return _queueId;
     case StateType::CONNECTED:
@@ -82,7 +72,7 @@ uint32_t SyslogTCP::getState(StateType state)
 
 void SyslogTCP::clear()
 {
-    __LDBG_print("clear");
+    // clear queue and disconnect
     if (_client) {
         _disconnect();
     }
@@ -98,150 +88,123 @@ bool SyslogTCP::setupZeroConf(const String &hostname, const IPAddress &address, 
         free(_host);
         _host = nullptr;
     }
-    if (address.isSet()) {
+    _address = IPAddress();
+    if (IPAddress_isValid(address)) {
         _address = address;
     }
-    else  if (hostname.length()) {
+    else if (hostname.length()) {
         _host = strdup(hostname.c_str());
     }
     _port = port;
-    if (_client) {
-        __LDBG_printf("client=%p queue=%u state=%s", _client, _queueId, _client->stateToString());
-        if (_client->connected()) {
-            _disconnect();
-        }
-        if (_queueId) {
-            _connect();
-        }
+
+    if (hasQueue()) {
+        // check if we have a queue and connect
+        _connect();
     }
     else {
-        __LDBG_printf("client=%p", _client);
+        // terminate any existing client
+        _freeClient();
     }
     return true;
 }
 
-String SyslogTCP::getHostname() const
-{
-    if (_host) {
-        return _host;
-    }
-    if (_address.isSet()) {
-        return _address.toString();
-    }
-    return emptyString;
-}
 
-uint16_t SyslogTCP::getPort() const
+void SyslogTCP::_onTimeout(uint32_t time)
 {
-    return _port;
-}
-
-void SyslogTCP::__onDisconnect()
-{
-    __LDBG_assert_panic(_client != nullptr, "_client==nullptr");
-    bool hasNoQueue = (_queueId == 0);
-    __LDBG_printf("has_no_queue=%u state=%s state=%u", hasNoQueue, _client->stateToString(), _client->state());
-    if (_client->state() == 0 && hasNoQueue) {
-        _freeClient();
+    if (hasQueue()) {
+        _status(false, F("timeout, reconnecting"));
+        _reconnect();
     }
     else {
-        _status(false __LDBG_IF(, PSTR("disconnect")));
+        _status(false, F("timeout"));
+        _disconnect();
     }
-}
-
-void SyslogTCP::__onTimeout(uint32_t time)
-{
-    __LDBG_assert_panic(_client != nullptr, "_client==nullptr");
-    bool hasNoQueue = (_queueId == 0); // store queue state
-    __LDBG_printf("timeout=%u has_no_queue=%u connected=%u state=%s", time, hasNoQueue, _client->connected(), _client->stateToString());
-    _status(false __LDBG_IF(, PSTR("timeout")));
-    if (hasNoQueue) {
-        _freeClient(); // disconnect and free client
-    }
-}
-
-void SyslogTCP::__onPoll()
-{
-    __sendQueue();
 }
 
 // connect to remote host if connection is not established
 void SyslogTCP::_connect()
 {
-    if (!_client) {
-        _allocClient();
-    }
-    __LDBG_printf("connected=%u port=%u connecting=%u can_send=%u state=%s", _client->connected(), _port, _client->connecting(), _client->canSend(), _client->stateToString());
     if (_port == 0) {
+        __LDBG_printf("port==0");
+        _freeClient();
         return;
     }
-    if (!_client->connected() && !_client->connecting()) {
+    __LDBG_printf("connected=%u port=%u connecting=%u can_send=%u state=%s", _client->connected(), _port, _client->connecting(), _client->canSend(), _client->stateToString());
+    _allocClient();
+
 #if ASYNC_TCP_SSL_ENABLED
 #   define USE_TLS              , _useTLS
 #else
 #   define USE_TLS
 #endif
-        bool result;
-        if (_host) {
-            result = _client->connect(_host, _port USE_TLS);
-        }
-        else {
-            result = _client->connect(_address, _port USE_TLS);
-        }
-        if (!result) {
-            _status(false __LDBG_IF(, PSTR("connect")));
-        }
+    bool result;
+    if (_host) {
+        result = _client->connect(_host, _port USE_TLS);
+    }
+    else {
+        result = _client->connect(_address, _port USE_TLS);
+    }
+    if (!result) {
+        _status(false, F("connect failed"));
     }
 }
 
-void SyslogTCP::_disconnect()
-{
-    __LDBG_assert_panic(_client != nullptr, "_client==nullptr");
-    __LDBG_printf("disconnect id=%u connected=%d state=%s", _queueId, _client->connected(), _client->stateToString());
-    _client->close(true);
-}
 
 void SyslogTCP::_allocClient()
 {
-    __LDBG_printf("client=%p port=%u", _client, _port);
-    if (!_client) {
-        _client = __LDBG_new(AsyncClient);
-        _client->onConnect(_onPoll, this);
-        _client->onPoll(_onPoll, this);
-        _client->onDisconnect(_onDisconnect, this);
-        _client->onAck(_onAck, this);
-        _client->onError(_onError, this);
-        _client->onTimeout(_onTimeout, this);
-        _client->setRxTimeout(kMaxIdleSeconds);
-    }
+    _freeClient();
+    _client = new AsyncClient();
+    _client->onConnect(__onPoll, this);
+    _client->onPoll(__onPoll, this);
+    _client->onDisconnect([](void *arg, AsyncClient *client)  {
+        reinterpret_cast<SyslogTCP *>(arg)->_onDisconnect();
+    }, this);
+    _client->onAck([](void *arg, AsyncClient *client, size_t len, uint32_t time) {
+        reinterpret_cast<SyslogTCP *>(arg)->_onAck(len, time);
+    }, this);
+    _client->onError([](void *arg, AsyncClient *client, int8_t error) {
+        reinterpret_cast<SyslogTCP *>(arg)->_onError(error);
+    }, this);
+    _client->onTimeout([](void *arg, AsyncClient *client, uint32_t time) {
+        reinterpret_cast<SyslogTCP *>(arg)->_onTimeout(time);
+    }, this);
+    _client->setRxTimeout(kMaxIdleSeconds);
 }
 
 void SyslogTCP::_freeClient()
 {
-    __LDBG_printf("client=%p", _client);
     if (_client) {
-        __LDBG_assert(_queueId == 0);
+        if (_reconnectTimer && *_reconnectTimer) { // disarm timer if running
+            _reconnectTimer->remove();
+        }
+        // remove all callbacks before aborting the connection
         _client->onConnect(nullptr);
         _client->onPoll(nullptr);
         _client->onDisconnect(nullptr);
         _client->onAck(nullptr);
         _client->onError(nullptr);
         _client->onTimeout(nullptr);
-        // _client->abort();
-        __LDBG_printf("freeable=%u state=%s", _client->freeable(), _client->stateToString());
-        __LDBG_delete(_client);
+        // close and abort forcefully
+        _client->close(true);
+        _client->abort();
+        delete _client;
         _client = nullptr;
     }
 }
 
-
-void SyslogTCP::_status(bool success __LDBG_IF(, const char *reason))
+void SyslogTCP::_status(bool success, const __FlashStringHelper *reason)
 {
-    __LDBG_assert_panic(_client != nullptr, "_client==nullptr");
-    __LDBG_printf("success=%u id=%u ack=%u reason=%s queue=%s state=%s error=%s", success, _queueId, _ack, __S(reason), _queueId ? PSTR("busy") : PSTR("idle"), _client->stateToString(), success ? PSTR("null") : _client->errorToString(_client->getCloseError()));
-    if (_queueId) {
+#if DEBUG_SYSLOG
+    if (success) {
+        __DBG_printf("success queue_id=%u", _queueId);
+    }
+    else {
+        __DBG_printf("failure queue_id=%u reason=%s", _queueId, reason);
+    }
+#endif
+    if (hasQueue()) {
         if (!success) {
-            __LDBG_printf("failed to send syslog message %u", _queueId);
+            __DBG_printf("failed to send syslog message queue_id=%u reason=%s buffer=%s (%u)", _queueId, reason, printable_string(_buffer.c_str(), _buffer.length(), 64).c_str(), _buffer.length());
         }
         _queue.remove(_queueId, success);
         _queueId = 0;
@@ -250,13 +213,11 @@ void SyslogTCP::_status(bool success __LDBG_IF(, const char *reason))
     }
 }
 
-void SyslogTCP::__sendQueue()
+void SyslogTCP::_sendQueue()
 {
-    __LDBG_assert_panic(_client != nullptr, "_client==nullptr");
     if (_queueId && _buffer.length() && _client->connected() && _client->canSend()) {
         auto toSend = std::min(_client->space(), _buffer.length());
         auto written = _client->write(_buffer.cstr_begin(), toSend);
-        __LDBG_printf("buffer=%u send=%u written=%u remove=%u", _buffer.length(), toSend, written, (written == toSend));
         if (written == toSend) {
             // remove what has been written to the socket
             if (written == _buffer.length()) {
@@ -265,22 +226,26 @@ void SyslogTCP::__sendQueue()
             else {
                 _buffer.removeAndShrink(0, written);
             }
+            // remove reconnect timer
+            if (_reconnectTimer) {
+                delete _reconnectTimer;
+                _reconnectTimer = nullptr;
+            }
         }
         else {
-            _status(false __LDBG_IF(, PSTR("write")));
-            _disconnect();
+            _status(false, F("socket write error, reconnecting"));
+            _reconnect();
         }
     }
 }
 
-void SyslogTCP::__onAck(size_t len, uint32_t time)
+void SyslogTCP::_onAck(size_t len, uint32_t time)
 {
-    __LDBG_assert_panic(_client != nullptr, "_client==nullptr");
     __LDBG_printf("len=%u time=%u ack=%u id=%u buffer=%u state=%s", len, time, _ack, _queueId, _buffer.length(), _client->stateToString());
-    if (_queueId) {
+    if (hasQueue()) {
         if (len > _ack) {
-            _status(false __LDBG_IF(, PSTR("ack > message")));
-            _disconnect();
+            _status(false, F("invalid ACK size, reconnecting"));
+            _reconnect();
         }
         else {
             _ack -= len;
@@ -290,52 +255,31 @@ void SyslogTCP::__onAck(size_t len, uint32_t time)
             }
              else if (_buffer.length()) {
                  // try to send more data
-                 __sendQueue();
+                 _sendQueue();
              }
         }
     }
     else {
-        __LDBG_printf("ack while not sending");
-        _disconnect();
+        // we do not expect any ACK packet
+        // terminate client
+        _freeClient();
     }
 }
 
-void SyslogTCP::__onError(int8_t error)
+void SyslogTCP::_onError(int8_t error)
 {
-    __LDBG_assert_panic(_client != nullptr, "_client==nullptr");
-    __LDBG_printf("err=%d error=%s state=%s", error, _client->errorToString(error), _client->stateToString());
-    _status(false __LDBG_IF(, PSTR("error")));
+    auto errorStr = _client->errorToString(error);
+    _status(false, reinterpret_cast<const __FlashStringHelper *>(errorStr));
+    _freeClient();
 }
 
-void SyslogTCP::_onDisconnect(void *arg, AsyncClient *client)
+void SyslogTCP::_onDisconnect()
 {
-    __LDBG_assert(reinterpret_cast<SyslogTCP *>(arg)->_client == client);
-    reinterpret_cast<SyslogTCP *>(arg)->__onDisconnect();
-}
-
-void SyslogTCP::_onError(void *arg, AsyncClient *client, int8_t error)
-{
-    __LDBG_assert(reinterpret_cast<SyslogTCP *>(arg)->_client == client);
-    reinterpret_cast<SyslogTCP *>(arg)->__onError(error);
-}
-
-// default ack timeout is 5000ms for sending
-// rx timeout is set to kMaxIdleSeconds
-void SyslogTCP::_onTimeout(void *arg, AsyncClient *client, uint32_t time)
-{
-    __LDBG_assert(reinterpret_cast<SyslogTCP *>(arg)->_client == client);
-    reinterpret_cast<SyslogTCP *>(arg)->__onTimeout(time);
-}
-
-void SyslogTCP::_onAck(void *arg, AsyncClient *client, size_t len, uint32_t time)
-{
-    __LDBG_assert(reinterpret_cast<SyslogTCP *>(arg)->_client == client);
-    reinterpret_cast<SyslogTCP *>(arg)->__onAck(len, time);
-}
-
-// gets called once per second or every 125ms while connected
-void SyslogTCP::_onPoll(void *arg, AsyncClient *client)
-{
-    __LDBG_assert(reinterpret_cast<SyslogTCP *>(arg)->_client == client);
-    reinterpret_cast<SyslogTCP *>(arg)->__onPoll();
+    if (hasQueue()) {
+        _status(false, F("reconnecting"));
+        _reconnect();
+    }
+    else {
+        _freeClient();
+    }
 }

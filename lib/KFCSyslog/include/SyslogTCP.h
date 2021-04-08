@@ -5,6 +5,7 @@
 #pragma once
 
 #include <Buffer.h>
+#include <EventScheduler.h>
 #include "Syslog.h"
 
 #if defined(ESP8266)
@@ -20,9 +21,10 @@ public:
     static constexpr uint16_t kDefaultPort = 514;
     static constexpr uint16_t kDefaultPortTLS = 6514;
     static constexpr uint16_t kMaxIdleSeconds = 30;
+    static constexpr uint16_t kReconnectDelay = 3000;
 
 public:
-    SyslogTCP(SyslogParameter &&parameter, SyslogQueue &queue, const String &host, uint16_t port = kDefaultPort, bool useTLS = false);
+    SyslogTCP(const char *hostname, SyslogQueue *queue, const String &host, uint16_t port = kDefaultPort, bool useTLS = false);
     virtual ~SyslogTCP();
 
     virtual bool setupZeroConf(const String &hostname, const IPAddress &address, uint16_t port);
@@ -33,33 +35,40 @@ public:
     virtual uint16_t getPort() const;
 
 public:
-    static void _onDisconnect(void *arg, AsyncClient *client);
-    static void _onAck(void *arg, AsyncClient *client, size_t len, uint32_t time);
-    static void _onError(void *arg, AsyncClient *client, int8_t error);
-    static void _onTimeout(void *arg, AsyncClient *client, uint32_t time);
-    static void _onPoll(void *arg, AsyncClient *client);
+    inline static void __onPoll(void *arg, AsyncClient *client) {
+        reinterpret_cast<SyslogTCP *>(arg)->_sendQueue();
+    }
 
 private:
-    void __onAck(size_t len, uint32_t time);
-    void __onError(int8_t error);
-    void __onTimeout(uint32_t time);
-    void __onDisconnect();
-    void __onPoll();
-    void __sendQueue();
+    void _onAck(size_t len, uint32_t time);
+    void _onError(int8_t error);
+    void _onTimeout(uint32_t time);
+    void _onDisconnect();
+    void _onPoll();
+    void _sendQueue();
 
 private:
+    // calls _connect() after 3 seconds
+    // subsequent calls do not increase the delay
+    void _reconnect();
+    // create new client and connect
     void _connect();
+    // disconnect gracefully
     void _disconnect();
-#if DEBUG_SYSLOG
-    void _status(bool success, const char *reason = nullptr);
-#else
-    void _status(bool success);
-#endif
+    // status report
+    void _status(bool success, const __FlashStringHelper *reason = nullptr);
 
+    // create (new) client
     void _allocClient();
+    // destroy client
     void _freeClient();
 
+    bool hasQueue() const;
+    bool hasNoQueue() const;
+
+private:
     AsyncClient *_client;
+    Event::Timer *_reconnectTimer;
     char *_host;
     IPAddress _address;
     Buffer _buffer;                     // data to write for _queueid
@@ -68,3 +77,59 @@ private:
     uint32_t _ack: 15;                  // number of bytes waiting for ack
     uint32_t _useTLS: 1;
 };
+
+inline void SyslogTCP::_reconnect()
+{
+    if (!_reconnectTimer) {
+        // allocate when needed
+        _reconnectTimer = new Event::Timer();
+    }
+    if (!*_reconnectTimer) {
+        // add new timer
+        _Timer((* _reconnectTimer)).add(Event::milliseconds(kReconnectDelay), false, [this](Event::CallbackTimerPtr) {
+            _connect();
+        });
+    }
+}
+
+inline SyslogTCP::~SyslogTCP()
+{
+    if (_reconnectTimer) {
+        delete _reconnectTimer;
+        _reconnectTimer = nullptr;
+    }
+    _queueId = 0;
+    _freeClient();
+    if (_host) {
+        free(_host);
+    }
+}
+
+inline String SyslogTCP::getHostname() const
+{
+    return _host ? _host : (IPAddress_isValid(_address) ? _address.toString() : emptyString);
+}
+
+inline uint16_t SyslogTCP::getPort() const
+{
+    return _port;
+}
+
+inline void SyslogTCP::_disconnect()
+{
+    if (_reconnectTimer) {
+        delete _reconnectTimer;
+        _reconnectTimer = nullptr;
+    }
+    _client->close();
+}
+
+inline bool SyslogTCP::hasQueue() const
+{
+    return _queueId != 0;
+}
+
+inline bool SyslogTCP::hasNoQueue() const
+{
+    return _queueId == 0;
+}

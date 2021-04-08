@@ -80,26 +80,13 @@ const SyslogFilterItemPair syslogFilterSeverityItems[] PROGMEM = {
 
 #endif
 
-PROGMEM_STRING_DEF(syslog_nil_value, "- ");
-
-Syslog::Syslog(SyslogParameter &&parameter, SyslogQueue &queue) : _parameter(std::move(parameter)), _queue(queue)
-{
-	__LDBG_printf("host=%s app=%s process=%s queue=%p", __S(_parameter.getHostname()), __S(_parameter.getAppName()), __S(_parameter.getProcessId()), &_queue);
-	assert(&_queue != nullptr);
-}
-
-Syslog::~Syslog()
-{
-	__LDBG_delete(reinterpret_cast<SyslogQueue *>(&_queue));
-}
-
-void Syslog::_addTimestamp(PrintString &buffer, uint32_t ms, PGM_P format)
+void Syslog::_addTimestamp(PrintString &buffer, uint32_t ms, PGM_P format) const
 {
 	time_t now = time(nullptr);
     uint32_t frac = millis() - ms;
 #if SEND_NILVALUE_IF_INVALID_TIMESTAMP
 	if (!IS_TIME_VALID(now)) {
-		buffer.print(FSPGM(syslog_nil_value));
+		buffer.printF(SYSLOG_NIL_SP));
 		return;
 	}
 #endif
@@ -116,19 +103,6 @@ void Syslog::_addTimestamp(PrintString &buffer, uint32_t ms, PGM_P format)
     buffer.write(':');
     buffer.print(buf + 3);
 #endif
-}
-
-void Syslog::_addParameter(PrintString &buffer, PGM_P value)
-{
-	if (value) {
-        size_t len = strlen_P(value);
-        if (len) {
-            buffer.write_P((const char *)value, len);
-            buffer.write(' ');
-            return;
-        }
-	}
-    buffer.print(FSPGM(syslog_nil_value));
 }
 
 /*
@@ -189,7 +163,7 @@ DIGIT           = %d48 / NONZERO-DIGIT
 NILVALUE        = "-"
 */
 
-String Syslog::_getHeader(uint32_t millis)
+String Syslog::_getHeader(uint32_t millis) const
 {
 #if SYSLOG_USE_RFC5424
 
@@ -203,10 +177,10 @@ String Syslog::_getHeader(uint32_t millis)
 	PrintString buffer(F("<%u>" SYSLOG_VERSION " "), (_parameter.getFacility() << 3) | _parameter.getSeverity()); // <PRIVAL> VERSION SP
 	_addTimestamp(buffer, millis, PSTR(SYSLOG_TIMESTAMP_FORMAT)); // TIMESTAMP SP
 	_addParameter(buffer, _parameter.getHostname()); // HOSTNAME SP
-	_addParameter(buffer, (PGM_P)_parameter.getAppName()); // APP-NAME SP
-	_addParameter(buffer, _parameter.getProcessId()); // PROCID SP
-	buffer.print(FSPGM(syslog_nil_value)); // MSGID SP
-	buffer.print(FSPGM(syslog_nil_value)); // STRUCTURED-DATA SP
+	_addParameter(buffer, F(SYSLOG_APPNAME)); // APP-NAME SP
+	buffer.print(F(SYSLOG_NIL_SP)); // PROCID SP
+	buffer.print(F(SYSLOG_NIL_SP)); // MSGID SP
+	buffer.print(F(SYSLOG_NIL_SP)); // STRUCTURED-DATA SP
 #if SYSLOG_SEND_BOM
     buffer.write(0xef);
     buffer.write(0xbb);
@@ -222,23 +196,9 @@ String Syslog::_getHeader(uint32_t millis)
 	PrintString buffer(F("<%u>"), (_parameter.getFacility() << 3) | _parameter.getSeverity()); // <PRIVAL>
 	_addTimestamp(buffer, millis, PSTR(SYSLOG_TIMESTAMP_FORMAT)); // TIMESTAMP SP
 	_addParameter(buffer, _parameter.getHostname()); // HOSTNAME SP
-    if (_parameter.getAppName()) {
-        buffer.print(_parameter.getAppName()); // APP-NAME
-        if (_parameter.getProcessId()) {
-            buffer.print('[');
-	        _addParameter(buffer, _parameter.getProcessId()); // [PROCID]
-            buffer.print(']');
-        }
-        buffer.print(F(": "));
-    }
+    buffer.print(F(SYSLOG_APPNAME ": ")); // APPNAME ":" SP
 	// followed by MSG
 
 #endif
     return buffer;
-}
-
-void Syslog::clear()
-{
-    __LDBG_print("clear");
-    _queue.clear();
 }

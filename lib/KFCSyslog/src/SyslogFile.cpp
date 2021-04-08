@@ -3,6 +3,7 @@
  */
 
 #include <PrintString.h>
+#include "SyslogParameter.h"
 #include "Syslog.h"
 #include "SyslogQueue.h"
 #include "SyslogFile.h"
@@ -13,8 +14,8 @@
 #include <debug_helper_disable.h>
 #endif
 
-SyslogFile::SyslogFile(SyslogParameter &&parameter, SyslogQueue &queue, const String &filename, size_t maxSize, uint16_t maxRotate) :
-    Syslog(std::move(parameter), queue),
+SyslogFile::SyslogFile(const char *hostname, SyslogQueue *queue, const String &filename, size_t maxSize, uint16_t maxRotate) :
+    Syslog(hostname, queue),
     _filename(filename),
     _maxSize(maxSize),
     _maxRotate(maxRotate)
@@ -26,34 +27,8 @@ String SyslogFile::_getHeader()
     PrintString buffer;
     _addTimestamp(buffer, 0, PSTR(SYSLOG_FILE_TIMESTAMP_FORMAT));
     _addParameter(buffer, _parameter.getHostname());
-    auto appName = _parameter.getAppName();
-    if (appName) {
-        buffer += appName;
-        auto processId = _parameter.getProcessId();
-        if (processId) {
-            buffer += '[';
-            buffer += processId;
-            buffer += ']';
-        }
-        buffer += ':';
-        buffer += ' ';
-    }
+    buffer += F(SYSLOG_APPNAME ": ");
     return buffer;
-}
-
-bool SyslogFile::setupZeroConf(const String &hostname, const IPAddress &address, uint16_t port)
-{
-    return false;
-}
-
-String SyslogFile::getHostname() const
-{
-    return String(F("file://")) + _filename;
-}
-
-uint16_t SyslogFile::getPort() const
-{
-    return 0;
 }
 
 void SyslogFile::transmit(const SyslogQueueItem &item)

@@ -175,8 +175,6 @@ errorResponse: ;
         BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SLOW);
         Logger_notice(F("Rebooting after upgrade"));
 
-#if 1
-
         Plugin::message(request, MessageType::SUCCESS, F("Device is rebooting after firmware upload...."), F("Firmware Upgrade"));
 
         if (status) {
@@ -186,59 +184,8 @@ errorResponse: ;
         }
 
         Plugin::executeDelayed(request, []() {
-            config.restartDevice();
+            config.resetDevice();
         });
-
-#else
-
-
-        String location;
-        switch(status->command) {
-            case U_FLASH: {
-#if DEBUG
-                auto hash = request->arg(F("elf_hash"));
-                __LDBG_printf("hash %u %s", hash.length(), hash.c_str());
-                if (hash.length() == System::Firmware::getElfHashHexSize()) {
-                    System::Firmware::setElfHashHex(hash.c_str());
-                    config.write();
-                }
-#endif
-                WebTemplate::_aliveRedirection = String(FSPGM(update_fw_html, "update-fw.html")) + F("#u_flash");
-                location += '/';
-                location += FSPGM(rebooting_html);
-            } break;
-            case U_SPIFFS:
-                WebTemplate::_aliveRedirection = String(FSPGM(update_fw_html)) + F("#u_spiffs");
-                location += '/';
-                location += FSPGM(rebooting_html);
-                break;
-        }
-
-        // executeDelayed sets a new ondisconnect callback
-        // delete upload object before
-        if (status) {
-            delete status;
-            request->_tempObject = nullptr;
-            status = nullptr;
-        }
-
-        // execute restart with a delay to finish the current request
-        Plugin::executeDelayed(request, []() {
-            config.restartDevice();
-        });
-
-        HttpHeaders httpHeaders(false);
-        httpHeaders.replace<HttpConnectionHeader>(HttpConnectionHeader::CLOSE);
-        request->send(HttpLocationHeader::redir(request, location, headers));
-
-
-        // response = request->beginResponse(302);
-        // HttpHeaders httpHeaders(false);
-        // httpHeaders.add<HttpLocationHeader>(location);
-        // httpHeaders.replace<HttpConnectionHeader>(HttpConnectionHeader::CLOSE);
-        // httpHeaders.setResponseHeaders(response);
-        // request->send(response);
-#endif
     }
 }
 

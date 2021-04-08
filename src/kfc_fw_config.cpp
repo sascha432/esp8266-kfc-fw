@@ -996,6 +996,23 @@ static void invoke_ESP_restart()
 #include "pin_monitor.h"
 #endif
 
+void KFCFWConfiguration::resetDevice(bool safeMode = false)
+{
+    String msg = F("Device is being reset");
+    if (safeMode) {
+        msg += F(" in SAFE MODE");
+    }
+    Logger_notice(msg);
+    delay(500);
+
+    SaveCrash::removeCrashCounterAndSafeMode();
+    resetDetector.setSafeMode(safeMode);
+#if ENABLE_DEEP_SLEEP
+    DeepSleep::DeepSleepParam::reset();
+#endif
+    ESP.restart();
+}
+
 void KFCFWConfiguration::restartDevice(bool safeMode)
 {
     __LDBG_println();

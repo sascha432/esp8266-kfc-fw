@@ -413,7 +413,10 @@ public:
 public:
     static void wifiQuickConnect();
 
+    // shutdown plugins gracefully and reboot device
     void restartDevice(bool safeMode = false);
+    // clear RTC memory and reset device
+    void resetDevice(bool safeMode = false);
 
     static void printVersion(Print &output);
     void printInfo(Print &output);

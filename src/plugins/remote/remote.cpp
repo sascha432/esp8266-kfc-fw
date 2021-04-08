@@ -156,9 +156,6 @@ void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::Depe
     pinMode(IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN, INPUT_PULLUP);
 #endif
 
-    __DBG_printf("RELEASE NOW");
-    delay(1000);
-
     PinMonitor::GPIOInterruptsEnable();
     ETS_GPIO_INTR_DISABLE();
 

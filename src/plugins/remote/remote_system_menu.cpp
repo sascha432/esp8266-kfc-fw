@@ -41,14 +41,14 @@ namespace RemoteControl {
             Logger_notice(F("Entering system maintenance menu"));
             _systemButtonComboTime = millis();
             _systemButtonComboTimeout = _systemButtonComboTime + kSystemComboRebootTimeout;
-            __DBG_printf("PRESSED");
+            __LDBG_printf("PRESSED");
             _systemComboNextState(ComboButtonStateType::PRESSED);
         }
         else {
             bool acceptEvent = (_systemButtonComboState != ComboButtonStateType::PRESSED) && (millis() > _systemButtonComboTime);
 #if DEBUG_IOT_REMOTE_CONTROL
             if (acceptEvent) {
-                __DBG_printf("event_type=%s (%ux) button#=%u pressed=%s time=%u",
+                __LDBG_printf("event_type=%s (%ux) button#=%u pressed=%s time=%u",
                     PinMonitor::PushButton::eventTypeToString(eventType),
                     repeatCount,
                     button,
@@ -107,7 +107,7 @@ namespace RemoteControl {
             if ((_pressed & kButtonSystemComboBitMask) == 0 && _systemButtonComboState == ComboButtonStateType::PRESSED) { // wait until the last button has been released
                 __LDBG_printf("released");
                 _systemComboNextState(ComboButtonStateType::RELEASED);
-                _systemButtonComboTime = millis() + 750; // ignore all events
+                _systemButtonComboTime = millis() + 750; // ignore all events for one second
             }
         }
     }

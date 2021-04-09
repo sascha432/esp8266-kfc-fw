@@ -161,65 +161,71 @@ void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::Depe
 
     // states during boot
     auto states = deepSleepPinState.getStates();
-    // values during boot (digitalRead)
-    interrupt_levels = deepSleepPinState.getValues();
+    // check if the system menu was activated
+    if ((states & kButtonSystemComboBitMask) == kButtonSystemComboBitMask) {
+        systemButtonComboEvent(true); // enable combo
+    }
+    else {
+        // values during boot (digitalRead)
+        interrupt_levels = deepSleepPinState.getValues();
 
-    const auto &handlers = pinMonitor.getHandlers();
-    for(auto &pinPtr: pinMonitor.getPins()) {
-        // only debounced push buttons supported
-        if (pinPtr->_type != HardwarePinType::DEBOUNCE) {
-            continue;
-        }
-
-        const uint8_t pinNum = pinPtr->getPin();
-        const auto bootState = static_cast<bool>(states & _BV(pinNum));
-        const auto bootValue = static_cast<bool>(interrupt_levels & _BV(pinNum));
-        // button was pressed during boot
-        if (bootState) {
-            // find handler for HardwarePin
-            auto handler = std::find_if(handlers.begin(), handlers.end(), [pinNum](const PinPtr &ptr) {
-                return ptr->getPin() == pinNum;
-            });
-            if (handler == handlers.end()) {
+        const auto &handlers = pinMonitor.getHandlers();
+        for(auto &pinPtr: pinMonitor.getPins()) {
+            // only debounced push buttons supported
+            if (pinPtr->_type != HardwarePinType::DEBOUNCE) {
                 continue;
             }
-            const auto activeHigh = (*handler)->isActiveHigh();
-            auto &button = *reinterpret_cast<Button *>(handler->get());
 
-            // get current state
-            const auto currentValue = static_cast<bool>(GPI & _BV(pinNum));
-            const auto currentState = (currentValue == activeHigh);
-            if (currentState == bootState) {
-                // button is still pressed
-                // simulate first event and prepare state machine to handle further events
+            const uint8_t pinNum = pinPtr->getPin();
+            const auto bootState = static_cast<bool>(states & _BV(pinNum));
+            const auto bootValue = static_cast<bool>(interrupt_levels & _BV(pinNum));
+            // button was pressed during boot
+            if (bootState) {
+                // find handler for HardwarePin
+                auto handler = std::find_if(handlers.begin(), handlers.end(), [pinNum](const PinPtr &ptr) {
+                    return ptr->getPin() == pinNum;
+                });
+                if (handler == handlers.end()) {
+                    continue;
+                }
+                const auto activeHigh = (*handler)->isActiveHigh();
+                auto &button = *reinterpret_cast<Button *>(handler->get());
 
-                // send down event
-                button.event(Button::EventType::DOWN, 5);
-                // set debouncer state
-                pinPtr->getDebounce()->setState(!bootValue);
-                // add event
-                auto &pin = *reinterpret_cast<DebouncedHardwarePin *>(pinPtr.get());
-                pin.addEvent(5000, bootValue);
-            }
-            else {
-                // button already released
-                // send events
-                button.event(Button::EventType::DOWN, 5);
-                button.event(Button::EventType::PRESSED, millis());
-                button.event(Button::EventType::SINGLE_CLICK, millis());
-                button.event(Button::EventType::RELEASED, millis());
-                if (activeHigh) {
-                    // clear bit
-                    interrupt_levels &= ~_BV(pinNum);
+                // get current state
+                const auto currentValue = static_cast<bool>(GPI & _BV(pinNum));
+                const auto currentState = (currentValue == activeHigh);
+                if (currentState == bootState) {
+                    // button is still pressed
+                    // simulate first event and prepare state machine to handle further events
+
+                    // send down event
+                    button.event(Button::EventType::DOWN, 5);
+                    // set debouncer state
+                    pinPtr->getDebounce()->setState(!bootValue);
+                    // add event
+                    auto &pin = *reinterpret_cast<DebouncedHardwarePin *>(pinPtr.get());
+                    pin.addEvent(5000, bootValue);
                 }
                 else {
-                    // set bit
-                    interrupt_levels |= _BV(pinNum);
+                    // button already released
+                    // send events
+                    button.event(Button::EventType::DOWN, 5);
+                    button.event(Button::EventType::PRESSED, millis());
+                    button.event(Button::EventType::SINGLE_CLICK, millis());
+                    button.event(Button::EventType::RELEASED, millis());
+                    if (activeHigh) {
+                        // clear bit
+                        interrupt_levels &= ~_BV(pinNum);
+                    }
+                    else {
+                        // set bit
+                        interrupt_levels |= _BV(pinNum);
+                    }
                 }
             }
         }
-    }
 
+    }
     // clear interrupts for all pins
     GPIEC = kButtonPinsMask;
     // enable GPIO interrupts

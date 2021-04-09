@@ -79,9 +79,21 @@ void delayedSetup(bool delayed)
     #endif
 }
 
-uint32_t rtc_time_read_raw(void);
-uint32_t rtc_time_read_raw_frc2(void);
-
+#if KFC_SAFEMODE_GPIO_COMBO
+// read key combo and debounce
+bool isSystemKeyComboPressed()
+{
+    uint8_t count = 0;
+    for(uint8_t i = 0; i < 5; i++) {
+        __LDBG_printf("readall %08x mask %08x result %08x count=%u masked=%08x", digitalReadAll(), KFC_SAFEMODE_GPIO_MASK, KFC_SAFEMODE_GPIO_RESULT, count, digitalReadAll()&KFC_SAFEMODE_GPIO_MASK);
+        if ((digitalReadAll() & KFC_SAFEMODE_GPIO_MASK) == KFC_SAFEMODE_GPIO_RESULT) {
+            count++;
+        }
+        delay(10);
+    }
+    return (count != 0);
+}
+#endif
 
 void setup()
 {
@@ -180,7 +192,7 @@ void setup()
             BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
         }
         else {
-            BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SOD);
+            BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SOS);
         }
     #endif
 
@@ -193,22 +205,43 @@ void setup()
         KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("SAFE MODE %d, reset counter %d, wake up %d\n"), resetDetector.getSafeMode(), resetDetector.getResetCounter(), resetDetector.hasWakeUpDetected());
 
 #if KFC_SAFEMODE_GPIO_COMBO
-    for(uint8_t i = 0; i < KFC_SAFEMODE_GPIO_NUM_TEST; i++) {
-        if ((digitalReadAll() & KFC_SAFEMODE_GPIO_MASK) == KFC_SAFEMODE_GPIO_RESULT) {
-            if (i == KFC_SAFEMODE_GPIO_NUM_TEST - 1) {
-                KFC_SAFE_MODE_SERIAL_PORT.println(F("Starting in safe mode..."));
-                resetDetector.setSafeModeAndClearCounter(false);
-                safe_mode = true;
-                config.setSafeMode(safe_mode);
-                delay(KFC_SAFEMODE_BOOT_DELAY);
+    // boot menu
+    //
+    // >1000ms start in safe mode (SOS signal)
+    // >12000ms reset factory settings and start in safe mode (flickering LED)
+    // >20000ms abort boot menu
+
+    if (isSystemKeyComboPressed()) {
+        auto start = millis();
+        uint8_t mode = 0;
+        BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::MEDIUM);
+        while(isSystemKeyComboPressed()) {
+            auto duration = millis() - start;
+            if (duration > 20000) {
+                BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
+                mode = 0;
                 break;
             }
+            if (mode == 1 && duration > 12000) {
+                BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
+                mode++;
+            }
+            else if (mode == 0 && duration > 1000) {
+                BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SOS);
+                mode++;
+            }
         }
-        else {
-            break;
+        if (mode == 2) {
+            KFC_SAFE_MODE_SERIAL_PORT.println(F("Restoring factory defaults..."));
+            config.restoreFactorySettings();
+            config.write();
         }
-        delay(KFC_SAFEMODE_GPIO_TEST_DELAY);
+        if (mode >= 1) {
+            safe_mode = true;
+            config.setSafeMode(safe_mode);
+        }
     }
+    else {
 #endif
 
 #if KFC_RESTORE_FACTORY_SETTINGS_RESET_COUNT
@@ -227,10 +260,15 @@ void setup()
 #endif
                 config.restoreFactorySettings();
                 config.write();
+                safe_mode = true;
                 resetDetector.setSafeMode(false);
                 resetDetector.clearCounter();
             }
         }
+#endif
+
+#if KFC_SAFEMODE_GPIO_COMBO
+    }
 #endif
 
         if (resetDetector.getSafeMode()) {

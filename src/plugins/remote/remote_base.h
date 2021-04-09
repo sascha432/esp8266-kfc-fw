@@ -32,6 +32,7 @@ namespace RemoteControl {
     static constexpr uint8_t kButtonSystemComboPins[2] = { kButtonPins.front(), kButtonPins.back() };
     // and the combined bit mask
     static constexpr uint16_t kButtonSystemComboBitMask = _BV(getButtonIndex(kButtonSystemComboPins[0])) | _BV(getButtonIndex(kButtonSystemComboPins[1]));
+    static constexpr uint16_t kGPIOSystemComboBitMask = _BV(kButtonSystemComboPins[0]) | _BV(kButtonSystemComboPins[1]);
 
 
     using EventNameType = Plugins::RemoteControl::RemoteControl::EventNameType;

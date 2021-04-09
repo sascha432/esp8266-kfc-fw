@@ -456,15 +456,6 @@
 #error invalid KFC_SAFEMODE_GPIO_RESULT for KFC_SAFEMODE_GPIO_MASK
 #endif
 
-#ifndef KFC_SAFEMODE_GPIO_NUM_TEST
-#define KFC_SAFEMODE_GPIO_NUM_TEST                          4
-#endif
-
-#ifndef KFC_SAFEMODE_GPIO_TEST_DELAY
-#define KFC_SAFEMODE_GPIO_TEST_DELAY                       50
-#endif
-
-
 class Stream;
 class HardwareSerial;
 

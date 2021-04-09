@@ -996,7 +996,7 @@ static void invoke_ESP_restart()
 #include "pin_monitor.h"
 #endif
 
-void KFCFWConfiguration::resetDevice(bool safeMode = false)
+void KFCFWConfiguration::resetDevice(bool safeMode)
 {
     String msg = F("Device is being reset");
     if (safeMode) {

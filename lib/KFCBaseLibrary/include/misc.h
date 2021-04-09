@@ -724,7 +724,8 @@ struct Pins {
     }
 };
 
-inline static Pins digitalReadAll() {
+inline static Pins digitalReadAll()
+{
     return Pins(GPI | (GP16I ? (1U << 16) : 0));
 }
 

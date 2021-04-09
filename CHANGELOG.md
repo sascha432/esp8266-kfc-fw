@@ -69,6 +69,7 @@
 - 64/256KB flash storage that survives firmware and file system upgrades
 - Replace read only files from WebUI by placing files in `/.wor/*`
 - SaveCrash WebUI to download crash logs. MD5 checksum of the firmware is included
+- Key Combo for safe mode and reset factory settings during boot
 
 ## Version 0.0.3
 

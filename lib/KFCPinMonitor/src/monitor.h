@@ -74,12 +74,6 @@ namespace PinMonitor {
         static const __FlashStringHelper *stateType2String(StateType state);
         static const __FlashStringHelper *stateType2Level(StateType state);
 
-        // reset debouncer and feed the pin states
-        // an active state means the button is pressed, the read value would be true for
-        // active high and false for active low
-        // if activeHigh == false, the states are inverted to ressemble the values
-        void feed(uint32_t time, uint32_t states, bool activeHigh);
-
     private:
         Pin &_attach(Pin &pin, HardwarePinType type = HardwarePinType::_DEFAULT);
         void _detach(Iterator begin, Iterator end, bool clear);

@@ -44,9 +44,6 @@ Monitor::Monitor() :
 
 Monitor::~Monitor()
 {
-// #if DEBUG
-//     endDebug();
-// #endif
     end();
 }
 
@@ -126,41 +123,6 @@ void Monitor::printStatus(Print &output)
         }
     }
 }
-
-// #if DEBUG
-
-// void Monitor::beginDebug(Print &output, uint32_t interval)
-// {
-//     output.printf_P(PSTR("+PINM: pins=%u handlers=%u debounce=%ums loop_timer=%d\n"), _pins.size(), _handlers.size(), getDebounceTime(), _loopTimer ? *_loopTimer : -1);
-//     for(auto &pin: _pins) {
-//         output.printf_P(PSTR("+PINM: pin=%u this=%p usage=%u\n"), pin->getPin(), pin.get(), pin->getCount());
-//     }
-//     for(auto &handler: _handlers) {
-//         output.printf_P(PSTR("+PINM: handler=%p "), handler.get());
-//         // handler->dumpConfig(output);
-//         output.println();
-//     }
-//     if (!_debugTimer && !_handlers.empty()) {
-//         _debugTimer = new Event::Timer();
-//         _Timer(_debugTimer)->add(Event::milliseconds(interval), true, [this, &output](Event::CallbackTimerPtr) {
-//             PrintString str = F("+PINM: ");
-//             for(auto &handler: _handlers) {
-//                 str.printf_P(PSTR("%p=[pin=%u events=%u value=%u] "), handler.get(), handler->getPin(), handler->_eventCounter, digitalRead(handler->getPin()));
-//             }
-//             output.println(str);
-//         });
-//     }
-// }
-
-// void Monitor::endDebug()
-// {
-//     if (_debugTimer) {
-//         delete _debugTimer;
-//         _debugTimer = nullptr;
-//     }
-// }
-
-// #endif
 
 Pin &Monitor::attach(Pin *handler, HardwarePinType type)
 {
@@ -311,55 +273,15 @@ void Monitor::_attachLoop()
 void Monitor::_detachLoop()
 {
     __LDBG_printf("detach=loop timer=%d", _loopTimer ? (bool)*_loopTimer : -1);
+#if PIN_MONITOR_USE_GPIO_INTERRUPT
+    PinMonitor::GPIOInterruptsDisable();
+#endif
     if (_loopTimer) {
         _loopTimer->remove();
     }
     else {
         LoopFunctions::remove(loop);
     }
-}
-
-void Monitor::feed(uint32_t micros1, uint32_t states, bool activeHigh)
-{
-#if PIN_MONITOR_ROTARY_ENCODER_SUPPORT
-    for(const auto &event: PinMonitor::eventBuffer) {
-        __DBG_printf("F-QUEUE: %s", event.toString().c_str());
-    }
-#endif
-#if 0
-
-    uint32_t values = activeHigh ? states : ~states; // invert states for activelow
-    // the container does not have a insert method
-    // create a temporary copy with events to prepend and append all existing events
-    Interrupt::EventBuffer prependEvents;
-
-    for(auto &pinPtr: _pins) {
-        auto debounce = pinPtr->getDebounce();
-        if (debounce) {
-            uint8_t pin = pinPtr->getPin();
-            if (states & _BV(pin)) {
-                auto iterator = std::find(PinMonitor::eventBuffer.begin(), PinMonitor::eventBuffer.end(), pin);
-                if (iterator != PinMonitor::eventBuffer.end() && iterator->value() == activeHigh) {
-                    // the first state of the PIN is active to inactive and we need to add the missing initial pulse
-                    prependEvents.emplace_back(1500, pin, static_cast<uint16_t>(values));
-                }
-            }
-        }
-    }
-
-    if (prependEvents.size()) {
-        ETS_GPIO_INTR_DISABLE();
-        // append all existing events
-        prependEvents.copy(PinMonitor::eventBuffer.begin(), PinMonitor::eventBuffer.end());
-        PinMonitor::eventBuffer = std::move(prependEvents);
-        ETS_GPIO_INTR_ENABLE();
-
-        for(const auto &event: PinMonitor::eventBuffer) {
-            __DBG_printf("U-QUEUE: %s", event.toString().c_str());
-        }
-    }
-#endif
-    _lastRun = millis();
 }
 
 // NOTE: this method should be executes at least once per millisecond

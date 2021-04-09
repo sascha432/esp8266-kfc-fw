@@ -331,6 +331,11 @@ void RemoteControlPlugin::reconfigure(const String &source)
 
 void RemoteControlPlugin::shutdown()
 {
+#if PIN_MONITOR_USE_GPIO_INTERRUPT
+    // disable GPIO interrupts before detaching the Pin Monitor
+    PinMonitor::GPIOInterruptsDisable();
+#endif
+
     _shutdown();
     pinMonitor.detach(this);
 
@@ -341,6 +346,11 @@ void RemoteControlPlugin::shutdown()
 void RemoteControlPlugin::prepareDeepSleep(uint32_t sleepTimeMillis)
 {
     __LDBG_printf("time=%u", sleepTimeMillis);
+
+#if PIN_MONITOR_USE_GPIO_INTERRUPT
+    PinMonitor::GPIOInterruptsDisable();
+#endif
+
     ADCManager::getInstance().terminate(false);
     digitalWrite(IOT_REMOTE_CONTROL_AWAKE_PIN, LOW);
     pinMode(IOT_REMOTE_CONTROL_AWAKE_PIN, INPUT);
@@ -468,6 +478,10 @@ void RemoteControlPlugin::_loop()
 
 void RemoteControlPlugin::_enterDeepSleep()
 {
+#if PIN_MONITOR_USE_GPIO_INTERRUPT
+    PinMonitor::GPIOInterruptsDisable();
+#endif
+
     _maxAwakeTimeout = 0; // avoid calling it repeatedly
     _disableAutoSleepTimeout();
 

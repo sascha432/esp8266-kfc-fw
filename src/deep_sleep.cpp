@@ -25,8 +25,6 @@ uint64_t DeepSleep::_realTimeOffset;
 
 using namespace DeepSleep;
 
-
-
 inline static void deep_sleep_preinit()
 {
     DeepSleep::_realTimeOffset = 0;

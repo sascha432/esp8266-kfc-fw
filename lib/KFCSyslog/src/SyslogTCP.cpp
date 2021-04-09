@@ -193,9 +193,7 @@ void SyslogTCP::_allocClient()
 void SyslogTCP::_freeClient()
 {
     if (_client) {
-        if (_reconnectTimer && *_reconnectTimer) { // disarm timer if running
-            _reconnectTimer->remove();
-        }
+        _reconnectTimer.remove();
         // remove all callbacks before aborting the connection
         _client->onConnect(nullptr);
         _client->onPoll(nullptr);
@@ -244,11 +242,6 @@ void SyslogTCP::_sendQueue()
             }
             else {
                 _buffer.removeAndShrink(0, written);
-            }
-            // remove reconnect timer
-            if (_reconnectTimer) {
-                delete _reconnectTimer;
-                _reconnectTimer = nullptr;
             }
         }
         else {

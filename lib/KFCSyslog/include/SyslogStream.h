@@ -56,3 +56,63 @@ protected:
     String _message;
     Event::Timer &_timer;
 };
+
+inline SyslogStream::SyslogStream(Syslog *syslog, Event::Timer &timer) :
+    _syslog(*syslog),
+    _timer(timer)
+{
+}
+
+inline SyslogStream::~SyslogStream()
+{
+    delete &_syslog;
+}
+
+inline void SyslogStream::setFacility(SyslogFacility facility)
+{
+    _syslog._parameter.setFacility(facility);
+}
+
+inline void SyslogStream::setSeverity(SyslogSeverity severity)
+{
+    _syslog._parameter.setSeverity(severity);
+}
+
+inline size_t SyslogStream::write(uint8_t data)
+{
+    _message += (char)data;
+    if (data == '\n') {
+        flush();
+    }
+    return 1;
+}
+
+inline int SyslogStream::read()
+{
+    return -1;
+}
+
+inline int SyslogStream::peek()
+{
+    return -1;
+}
+
+inline void SyslogStream::clearQueue()
+{
+    _syslog.clear();
+}
+
+inline size_t SyslogStream::queueSize() const
+{
+    return _syslog._queue.size();
+}
+
+inline bool SyslogStream::hasQueuedMessages()
+{
+    return _syslog._queue.size() != 0;
+}
+
+inline int SyslogStream::available()
+{
+    return false;
+}

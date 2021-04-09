@@ -19,36 +19,6 @@
 // SyslogStream
 // ------------------------------------------------------------------------
 
-SyslogStream::SyslogStream(Syslog *syslog, Event::Timer &timer) :
-    _syslog(*syslog),
-    _timer(timer)
-{
-    assert(&_syslog != nullptr);
-}
-
-SyslogStream::~SyslogStream()
-{
-    __LDBG_delete(&_syslog);
-}
-
-void SyslogStream::setFacility(SyslogFacility facility)
-{
-    _syslog._parameter.setFacility(facility);
-}
-
-void SyslogStream::setSeverity(SyslogSeverity severity)
-{
-    _syslog._parameter.setSeverity(severity);
-}
-
-size_t SyslogStream::write(uint8_t data)
-{
-    _message += (char)data;
-    if (data == '\n') {
-        flush();
-    }
-    return 1;
-}
 
 size_t SyslogStream::write(const uint8_t *buffer, size_t len)
 {
@@ -73,42 +43,12 @@ void SyslogStream::flush()
     }
 }
 
-bool SyslogStream::hasQueuedMessages()
-{
-    return _syslog._queue.size() != 0;
-}
-
-int SyslogStream::available()
-{
-    return false;
-}
-
-int SyslogStream::read()
-{
-    return -1;
-}
-
-int SyslogStream::peek()
-{
-    return -1;
-}
-
 void SyslogStream::deliverQueue()
 {
     _startMillis = _timeout + millis();
     while(millis() < _startMillis && !_syslog.isSending() && _syslog._queue.isAvailable()) {
         _syslog.transmit(_syslog._queue.get());
 	}
-}
-
-void SyslogStream::clearQueue()
-{
-    _syslog.clear();
-}
-
-size_t SyslogStream::queueSize() const
-{
-    return _syslog._queue.size();
 }
 
 void SyslogStream::dumpQueue(Print &output, bool items) const

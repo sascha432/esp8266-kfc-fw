@@ -68,7 +68,7 @@ private:
 
 private:
     AsyncClient *_client;
-    Event::Timer *_reconnectTimer;
+    Event::Timer _reconnectTimer;
     char *_host;
     IPAddress _address;
     Buffer _buffer;                     // data to write for _queueid
@@ -80,13 +80,11 @@ private:
 
 inline void SyslogTCP::_reconnect()
 {
+    __DBG_printf("reconnect in %ums", kReconnectDelay);
     if (!_reconnectTimer) {
-        // allocate when needed
-        _reconnectTimer = new Event::Timer();
-    }
-    if (!*_reconnectTimer) {
         // add new timer
-        _Timer((* _reconnectTimer)).add(Event::milliseconds(kReconnectDelay), false, [this](Event::CallbackTimerPtr) {
+        _Timer(_reconnectTimer).add(Event::milliseconds(kReconnectDelay), false, [this](Event::CallbackTimerPtr) {
+            __DBG_printf("reconnecting");
             _connect();
         });
     }
@@ -94,10 +92,7 @@ inline void SyslogTCP::_reconnect()
 
 inline SyslogTCP::~SyslogTCP()
 {
-    if (_reconnectTimer) {
-        delete _reconnectTimer;
-        _reconnectTimer = nullptr;
-    }
+    _reconnectTimer.remove();
     _queueId = 0;
     _freeClient();
     if (_host) {
@@ -117,10 +112,7 @@ inline uint16_t SyslogTCP::getPort() const
 
 inline void SyslogTCP::_disconnect()
 {
-    if (_reconnectTimer) {
-        delete _reconnectTimer;
-        _reconnectTimer = nullptr;
-    }
+    _reconnectTimer.remove();
     _client->close();
 }
 

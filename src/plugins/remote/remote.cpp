@@ -434,39 +434,42 @@ void RemoteControlPlugin::wifiCallback(WiFiCallbacks::EventType event, void *pay
 
 void RemoteControlPlugin::_loop()
 {
-    auto _millis = millis();
-    if (_maxAwakeTimeout && _millis >= _maxAwakeTimeout) {
-        __LDBG_printf("forcing deep sleep @ max awake timeout=%u", _maxAwakeTimeout);
-        _enterDeepSleep();
-    }
+    if (!isCharging()) {
+        auto _millis = millis();
 
-    if (!isCharging() && isAutoSleepEnabled()) {
-        if (_millis >= __autoSleepTimeout) {
-            if (
-                (_minAwakeTimeout && (millis() <_minAwakeTimeout)) ||
-                _hasEvents() ||
-                _isSystemComboActive() ||
+        if (_maxAwakeTimeout && _millis >= _maxAwakeTimeout) {
+            __LDBG_printf("forcing deep sleep @ max awake timeout=%u", _maxAwakeTimeout);
+            _enterDeepSleep();
+        }
+
+        if (isAutoSleepEnabled()) {
+            if (_millis >= __autoSleepTimeout) {
+                if (
+                    (_minAwakeTimeout && (millis() <_minAwakeTimeout)) ||
+                    _hasEvents() ||
+                    _isSystemComboActive() ||
 #if MQTT_AUTO_DISCOVERY
-                MQTTClient::safeIsAutoDiscoveryRunning() ||
+                    MQTTClient::safeIsAutoDiscoveryRunning() ||
 #endif
 #if HTTP2SERIAL_SUPPORT
-                Http2Serial::hasAuthenticatedClients() ||
+                    Http2Serial::hasAuthenticatedClients() ||
 #endif
-                WebUISocket::hasAuthenticatedClients()
-            ) {
-                // check again in 500ms
-                __autoSleepTimeout = _millis + 500;
+                    WebUISocket::hasAuthenticatedClients()
+                ) {
+                    // check again in 500ms
+                    __autoSleepTimeout = _millis + 500;
 
-                // start blinking after the timeout or 10 seconds
-                if (!_signalWarning && (_millis > std::max((_config.auto_sleep_time * 1000U), 10000U))) {
-                    // BUILDIN_LED_SETP(200, BlinkLEDTimer::Bitset(0b000000000000000001010101U, 24U));
-                    BlinkLEDTimer::setPattern(__LED_BUILTIN, 100, BlinkLEDTimer::Bitset(0b000000000000000001010101U, 24U));
-                    _signalWarning = true;
-                    __DBG_printf("signal warning");
+                    // start blinking after the timeout or 10 seconds
+                    if (!_signalWarning && (_millis > std::max((_config.auto_sleep_time * 1000U), 10000U))) {
+                        // BUILDIN_LED_SETP(200, BlinkLEDTimer::Bitset(0b000000000000000001010101U, 24U));
+                        BlinkLEDTimer::setPattern(__LED_BUILTIN, 100, BlinkLEDTimer::Bitset(0b000000000000000001010101U, 24U));
+                        _signalWarning = true;
+                        __DBG_printf("signal warning");
+                    }
                 }
-            }
-            else {
-                _enterDeepSleep();
+                else {
+                    _enterDeepSleep();
+                }
             }
         }
     }

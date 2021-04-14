@@ -1,3 +1,11 @@
+/**
+ * Author: sascha_lammers@gmx.de
+ */
+
+#pragma once
+
+#include "kfc_fw_config/base.h"
+
     // --------------------------------------------------------------------
     // Network
 

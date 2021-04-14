@@ -846,13 +846,7 @@ namespace KFCConfigurationClasses {
                     action(BlindsConfigOperation_t::cast_int_action(OperationType::NONE))
                 {}
 
-                template<typename Archive>
-                void serialize(Archive & ar, kfc::serialization::version version){
-                    ar & KFC_SERIALIZATION_NVP(action);
-                    ar & KFC_SERIALIZATION_NVP(delay);
-                }
-
-            } BlindsConfigOperation_t;
+             } BlindsConfigOperation_t;
 
             typedef struct __attribute__packed__ BlindsConfigChannel_t {
                 using Type = BlindsConfigChannel_t;
@@ -864,15 +858,6 @@ namespace KFCConfigurationClasses {
                 CREATE_UINT16_BITFIELD_MIN_MAX(close_time_ms, 16, 0, 60000, 5000, 250);                     // bits 00:15 ofs:len 064:16 0-0xffff (65535)
                 BlindsConfigChannel_t();
 
-                template<typename Archive>
-                void serialize(Archive & ar, kfc::serialization::version version) {
-                    ar & KFC_SERIALIZATION_NVP(current_limit_mA);
-                    ar & KFC_SERIALIZATION_NVP(dac_pwm_value);
-                    ar & KFC_SERIALIZATION_NVP(pwm_value);
-                    ar & KFC_SERIALIZATION_NVP(current_avg_period_us);
-                    ar & KFC_SERIALIZATION_NVP(open_time_ms);
-                    ar & KFC_SERIALIZATION_NVP(close_time_ms);
-                }
             } BlindsConfigChannel_t;
 
             typedef struct __attribute__packed__ BlindsConfig_t {

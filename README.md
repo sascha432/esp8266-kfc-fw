@@ -17,6 +17,12 @@ The firmware offers a plugin interface to easily extend its functionality. The p
 
 [Version 0.0.2](https://github.com/sascha432/esp8266-kfc-fw/blob/027305464fb486606840fa821595f7bce6e6ef1d/CHANGELOG.md)
 
+## Stable versions
+
+I started to create branches of stable versions for my different devices.
+
+[Remote Control - Version 0.0.4](https://github.com/sascha432/esp8266-kfc-fw/tree/remote_control_0.4.0)
+
 ## Libraries
 
 ### KFCSyslog

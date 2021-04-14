@@ -6,6 +6,8 @@
 
 #include "kfc_fw_config/base.h"
 
+namespace KFCConfigurationClasses {
+
     // --------------------------------------------------------------------
     // Network
 
@@ -116,3 +118,5 @@
         SoftAP softap;
         WiFi wifi;
     };
+
+}

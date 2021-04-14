@@ -6,6 +6,7 @@
 
 #include "kfc_fw_config/base.h"
 
+namespace KFCConfigurationClasses {
 
     struct System {
 
@@ -209,3 +210,5 @@
         WebServer webserver;
 
     };
+
+}

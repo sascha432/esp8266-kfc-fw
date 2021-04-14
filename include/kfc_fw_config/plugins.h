@@ -6,6 +6,7 @@
 
 #include "kfc_fw_config/base.h"
 
+namespace KFCConfigurationClasses {
 
     // --------------------------------------------------------------------
     // Plugins
@@ -1279,3 +1280,5 @@
         MDNS mdns;
 
     };
+
+}

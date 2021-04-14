@@ -6,19 +6,19 @@
 
 #include "kfc_fw_config/base.h"
 
+// --------------------------------------------------------------------
+// System
+#include "kfc_fw_config/system.h"
+
+// --------------------------------------------------------------------
+// Network
+#include "kfc_fw_config/network.h"
+
+// --------------------------------------------------------------------
+// Plugins
+#include "kfc_fw_config/plugins.h"
+
 namespace KFCConfigurationClasses {
-
-    // --------------------------------------------------------------------
-    // System
-    #include "kfc_fw_config/system.h"
-
-    // --------------------------------------------------------------------
-    // Network
-    #include "kfc_fw_config/network.h"
-
-    // --------------------------------------------------------------------
-    // Plugins
-    #include "kfc_fw_config/plugins.h"
 
     // --------------------------------------------------------------------
     // Main Config Structure

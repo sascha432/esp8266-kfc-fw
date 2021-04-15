@@ -22,6 +22,7 @@ The firmware offers a plugin interface to easily extend its functionality. The p
 I started to create branches of stable versions for my different devices.
 
 [Blinds Control - Version 0.0.4.7551](https://github.com/sascha432/esp8266-kfc-fw/tree/blinds_control_0.0.4.7551)
+
 [Remote Control - Version 0.0.4.7545](https://github.com/sascha432/esp8266-kfc-fw/tree/remote_control_0.4.0)
 
 ## Libraries

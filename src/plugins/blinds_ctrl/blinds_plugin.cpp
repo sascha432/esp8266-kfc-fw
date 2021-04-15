@@ -100,9 +100,10 @@ void BlindsControlPlugin::getStatus(Print &output)
 void BlindsControlPlugin::createMenu()
 {
     auto configMenu = bootstrapMenu.getMenuItem(navMenu.config);
-    configMenu.addMenuItem(F("Blinds Channels"), F("blinds/channels.html"));
-    configMenu.addMenuItem(F("Blinds Automation"), F("blinds/automation.html"));
-    configMenu.addMenuItem(getFriendlyName(), F("blinds/controller.html"));
+    auto subMenu = configMenu.addSubMenu(getFriendlyName());
+    subMenu.addMenuItem(F("Channels"), F("blinds/channels.html"));
+    subMenu.addMenuItem(F("Automation"), F("blinds/automation.html"));
+    subMenu.addMenuItem(F("Controller"), F("blinds/controller.html"));
 }
 
 void BlindsControlPlugin::createWebUI(WebUINS::Root &webUI)

@@ -449,6 +449,11 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
             pinMode(IOT_CLOCK_ROTARY_ENC_PINA, INPUT);
             pinMode(IOT_CLOCK_ROTARY_ENC_PINB, INPUT);
         )
+
+        #if PIN_MONITOR_USE_GPIO_INTERRUPT
+            PinMonitor::GPIOInterruptsEnable();
+        #endif
+
     )
 
     IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(
@@ -527,6 +532,10 @@ void ClockPlugin::reconfigure(const String &source)
 void ClockPlugin::shutdown()
 {
     __LDBG_println();
+
+#if PIN_MONITOR_USE_GPIO_INTERRUPT
+    PinMonitor::GPIOInterruptsDisable();
+#endif
 
 #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
     _displaySensor = DisplaySensorType::DESTROYED;

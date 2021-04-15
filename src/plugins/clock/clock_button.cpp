@@ -26,7 +26,7 @@ void Button::event(EventType eventType, uint32_t now)
 
 void Clock::RotaryEncoder::event(EventType eventType, uint32_t now)
 {
-    // __LDBG_printf("event_type=%u now=%u decrease=%u", eventType, now, eventType == EventType::COUNTER_CLOCK_WISE);
+    __LDBG_printf("event_type=%u now=%u decrease=%u", eventType, now, eventType == EventType::COUNTER_CLOCK_WISE);
     ClockPlugin::getInstance().rotaryCallback(eventType == EventType::COUNTER_CLOCK_WISE, now);
 }
 

@@ -86,7 +86,7 @@ namespace Clock {
             Button(pin, button, clock)
         {
             _activeState = true; //ActiveStateType::PRESSED_WHEN_HIGH;
-            _subscribedEvents = PushButtonConfig::EventType::REPEATED_CLICK;
+            _subscribedEvents = PushButtonConfig::EventType::PRESSED;
             _longpressTime = ~0;
             _clickTime = 350;
             _repeatTime = ~0;

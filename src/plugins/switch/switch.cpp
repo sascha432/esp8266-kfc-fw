@@ -58,11 +58,11 @@ void SwitchPlugin::setup(SetupModeType mode, const PluginComponents::Dependencie
     _readConfig();
     _readStates();
     for (size_t i = 0; i < _pins.size(); i++) {
-        if (_configs[i].state == SwitchStateEnum::RESTORE) {
+        if (_configs[i].getState() == SwitchStateEnum::RESTORE) {
             _setChannel(i, _states & (1 << i));
         }
         else {
-            _setChannel(i, _configs[i].state);
+            _setChannel(i, _configs[i].getState());
         }
         pinMode(_pins[i], OUTPUT);
     }

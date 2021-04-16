@@ -11,9 +11,8 @@
 #include <Arduino_compat.h>
 #include <EventScheduler.h>
 #include <WebUIComponent.h>
-#include "../mqtt/mqtt_client.h"
-#include "../mqtt/mqtt_json.h"
-#include "plugins.h"
+#include "../src/plugins/mqtt/mqtt_json.h"
+#include "../src/plugins/plugins.h"
 #include "kfc_fw_config.h"
 
 #ifndef IOT_SWITCH_ON_STATE
@@ -87,9 +86,9 @@ private:
     void _writeStates();
 
 private:
-    using SwitchConfig = KFCConfigurationClasses::Plugins::IOTSwitch::Switch_t;
-    using SwitchStateEnum = KFCConfigurationClasses::Plugins::IOTSwitch::StateEnum_t;
-    using WebUIEnum = KFCConfigurationClasses::Plugins::IOTSwitch::WebUIEnum_t;
+    using SwitchConfig = KFCConfigurationClasses::Plugins::IOTSwitch::SwitchConfig;
+    using SwitchStateEnum = KFCConfigurationClasses::Plugins::IOTSwitch::StateEnum;
+    using WebUIEnum = KFCConfigurationClasses::Plugins::IOTSwitch::WebUIEnum;
 
     std::array<String, IOT_SWITCH_CHANNEL_NUM> _names;
     std::array<SwitchConfig, IOT_SWITCH_CHANNEL_NUM> _configs;

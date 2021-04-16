@@ -319,7 +319,7 @@ namespace KFCConfigurationClasses {
             static void setConfig(const T &names, R &configs) {
                 Buffer buffer;
                 for(size_t i = 0; i < names.size(); i++) {
-                    configs[i].length = names[i].length();
+                    configs[i].setLength(names[i].length());
                     buffer.push_back(configs[i]);
                     buffer.write(names[i]);
                 }

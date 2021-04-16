@@ -32,7 +32,7 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString/WStri
 > 
 > #include "WStringEx.cpp"
 diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString/WStringEx.cpp ./framework-arduinoespressif8266/cores/esp8266/WString/WStringEx.cpp
-0a1,865
+0a1,859
 > /*
 >  WString.cpp - String library for Wiring & Arduino
 >  ...mostly rewritten by Paul Stoffregen...
@@ -170,12 +170,6 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString/WStri
 > // /*********************************************/
 > // /*  Memory Management                        */
 > // /*********************************************/
-> 
-> inline void String::init(void) {
->     setSSO(true);
->     setLen(0);
->     wbuffer()[0] = 0;
-> }
 > 
 > void String::invalidate(void) {
 >     if (!isSSO() && wbuffer())
@@ -1905,7 +1899,7 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 <         // concatenate (works w/ built-in types)
 ---
 >     // concatenate (works w/ built-in types)
-105,318c117,963
+105,318c117,968
 <         // returns true on success, false on failure (in which case, the string
 <         // is left unchanged).  if the argument is null or invalid, the
 <         // concatenation is considered unsuccessful.
@@ -2287,9 +2281,9 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >             return false;
 >         }
 >         if (len2 == len1) {
->             return strcmp(str1, buffer());
+>             return strcmp(str1, buffer()) == 0;
 >         }
->         return strcmp(str1 + len1 - len2, buffer());
+>         return strcmp(str1 + len1 - len2, buffer()) == 0;
 >     }
 > 
 >     bool endEquals(const __FlashStringHelper *fStr) const {
@@ -2300,9 +2294,9 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >             return false;
 >         }
 >         if (len2 == len1) {
->             return strcmp_P_P(str1, buffer());
+>             return strcmp_P_P(str1, buffer()) == 0;
 >         }
->         return strcmp_P_P(str1 + len1 - len2, buffer());
+>         return strcmp_P_P(str1 + len1 - len2, buffer()) == 0;
 >     }
 > 
 >     // we can use endsWith in this case
@@ -2322,9 +2316,9 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >             return false;
 >         }
 >         if (len2 == len1) {
->             return strcasecmp(str1, buffer());
+>             return strcasecmp(str1, buffer()) == 0;
 >         }
->         return strcasecmp(str1 + len1 - len2, buffer());
+>         return strcasecmp(str1 + len1 - len2, buffer()) == 0;
 >     }
 > 
 >     bool endEqualsIgnoreCase(const __FlashStringHelper *fStr) const {
@@ -2335,9 +2329,9 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >             return false;
 >         }
 >         if (len2 == len1) {
->             return strcasecmp_P_P(str1, buffer());
+>             return strcasecmp_P_P(str1, buffer()) == 0;
 >         }
->         return strcasecmp_P_P(str1 + len1 - len2, buffer());
+>         return strcasecmp_P_P(str1 + len1 - len2, buffer()) == 0;
 >     }
 > 
 >     // we can just use endsWithIgnoreCase in this case
@@ -2961,18 +2955,23 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >     inline char *wbuffer() const { return isSSO() ? const_cast<char *>(sso.buff) : ptr.buff; } // Writable version of buffer
 > 
 > protected:
->     void init(void);
+>     inline void init(void) {
+>         setSSO(true);
+>         setLen(0);
+>         wbuffer()[0] = 0;
+>     }
+> 
 >     void invalidate(void);
 >     unsigned char changeBuffer(unsigned int maxStrLen);
 > 
 >     // copy and move
 >     String &copy(const char *cstr, unsigned int length);
 >     String &copy(const __FlashStringHelper *pstr, unsigned int length);
-320c965
+320c970
 <         void move(String &rhs);
 ---
 >     void move(String &rhs);
-324,355c969,1000
+324,355c974,1005
 < class StringSumHelper: public String {
 <     public:
 <         StringSumHelper(const String &s) :

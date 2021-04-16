@@ -113,26 +113,19 @@ void BlindsControlPlugin::createWebUI(WebUINS::Root &webUI)
     WebUINS::Row row(
         WebUINS::Switch(FSPGM(set_all), String(F("Both Channels")), true, WebUINS::NamePositionType::TOP, 4)
     );
+    webUI.addRow(row);
 
+    WebUINS::Row row2;
+    WebUINS::Row row3;
     for(const auto channel: _states.channels()) {
-
         String prefix = PrintString(FSPGM(channel__u), channel);
-
-        // row = &webUI.addRow();
         WebUINS::BadgeSensor sensor(prefix + F("_state"), reinterpret_cast<WebUINS::FStr>(Plugins::Blinds::getChannelName(*channel)), F(""));
         sensor.append(WebUINS::NamedString(J(head), F("h5")));
-        row.append(sensor);
-
-        // row = &webUI.addRow();
-        // row->addSwitch(prefix + F("_set"), String(F("Channel ")) + String(*channel));
+        row2.append(sensor);
+        row3.append(WebUINS::Switch(prefix + F("_set"), String(F("Channel ")) + String(*channel)));
     }
-    webUI.addRow(row);
-
-    for(const auto channel: _states.channels()) {
-        String prefix = PrintString(FSPGM(channel__u), channel);
-        auto sw = WebUINS::Switch(prefix + F("_set"), String(F("Channel ")) + String(*channel));
-    }
-    webUI.addRow(row);
+    webUI.addRow(row2);
+    webUI.addRow(row3);
 }
 
 void BlindsControlPlugin::getValues(WebUINS::Events &array)

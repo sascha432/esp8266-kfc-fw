@@ -140,9 +140,10 @@ void SwitchPlugin::createConfigureForm(FormCallbackType type, const String &form
     );
 
     FormUI::Container::List webUI(
-        WebUIEnum::NONE, F("Display"),
-        WebUIEnum::HIDE, F("Hidden"),
-        WebUIEnum::NEW_ROW, F("New row after switch")
+        WebUIEnum::NONE, F("Display Channel Name"),
+        WebUIEnum::TOP, F("Display On Top (Large)"),
+        WebUIEnum::HIDE, F("Hide Switch"),
+        WebUIEnum::NEW_ROW, F("New Row After Switch")
     );
 
     PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, IOT_SWITCH_CHANNEL_NUM, chan, name, state, webui);
@@ -171,18 +172,19 @@ void SwitchPlugin::createWebUI(WebUINS::Root &webUI)
 
     for (uint8_t i = 0; i < _pins.size(); i++) {
         WebUINS::Row row;
+        __LDBG_printf("name=%s webui=%u pos=%u", _names[i].toString(i).c_str(), _configs[i].getWebUI(), _configs[i].getWebUINamePosition());
         if (_configs[i].getWebUI() != WebUIEnum::HIDE) {
-            PrintString channel(FSPGM(channel__u), i);
-            auto name = _names[i].toString(i);
-            row.append(WebUINS::Switch(channel, name, true, WebUINS::NamePositionType::TOP));
+            row.append(WebUINS::Switch(PrintString(FSPGM(channel__u), i), _names[i].toString(i), true, _configs[i].getWebUINamePosition()));
         }
         if (_configs[i].getWebUI() == WebUIEnum::NEW_ROW) {
             webUI.addRow(row);
+            webUI.addRow(WebUINS::Row());
         }
         else {
             webUI.appendToLastRow(row);
         }
     }
+    // __LDBG_printf("webui=%s", webUI.toString().c_str());
 }
 
 void SwitchPlugin::getValues(WebUINS::Events &array)
@@ -195,7 +197,6 @@ void SwitchPlugin::getValues(WebUINS::Events &array)
 void SwitchPlugin::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
 {
     __LDBG_printf("id=%s value=%s has_value=%u state=%u has_state=%u", id.c_str(), value.c_str(), hasValue, state, hasState);
-
     if (id.startsWith(F("channel_")) && hasValue) {
         auto state = static_cast<bool>(value.toInt());
         auto channel = static_cast<uint8_t>(atoi(id.c_str() + 8));

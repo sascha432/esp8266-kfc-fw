@@ -5,6 +5,7 @@
 #pragma once
 
 #include "kfc_fw_config/base.h"
+#include "WebUIComponent.h"
 
 namespace KFCConfigurationClasses {
 
@@ -261,6 +262,7 @@ namespace KFCConfigurationClasses {
                 NONE =      0x00,
                 HIDE =      0x01,
                 NEW_ROW =   0x02,
+                TOP =       0x03,
             };
             struct __attribute__packed__ SwitchConfig {
                 using Type = SwitchConfig;
@@ -282,6 +284,16 @@ namespace KFCConfigurationClasses {
                 }
                 WebUIEnum getWebUI() const {
                     return static_cast<WebUIEnum>(_webUI);
+                }
+                WebUINS::NamePositionType getWebUINamePosition() const {
+                    switch(static_cast<WebUIEnum>(_webUI)) {
+                        case WebUIEnum::TOP:
+                        case WebUIEnum::NEW_ROW:
+                            return WebUINS::NamePositionType::TOP;
+                        default:
+                            break;
+                    }
+                    return WebUINS::NamePositionType::SHOW;
                 }
 
                 SwitchConfig() : _length(0), _state(0), _webUI(0) {}

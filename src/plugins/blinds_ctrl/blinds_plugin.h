@@ -51,3 +51,21 @@ public:
     static void rpmIntCallback(InterruptInfo info);
 #endif
 };
+
+inline __attribute__((__always_inline__))
+void BlindsControlPlugin::getValues(WebUINS::Events &array)
+{
+    BlindsControl::getValues(array);
+}
+
+inline __attribute__((__always_inline__))
+void BlindsControlPlugin::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
+{
+    BlindsControl::setValue(id, value, hasValue, state, hasState);
+}
+
+inline __attribute__((__always_inline__))
+void BlindsControlPlugin::loopMethod()
+{
+    getInstance()._loopMethod();
+}

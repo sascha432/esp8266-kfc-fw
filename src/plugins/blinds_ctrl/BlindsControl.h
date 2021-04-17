@@ -33,6 +33,13 @@ public:
     using PlayToneType = Plugins::Blinds::PlayToneType;
     using Actions = Plugins::Blinds::BlindsConfigOperation_t;
 
+    static constexpr size_t kChannel0Open = Plugins::Blinds::kChannel0_OpenPinArrayIndex;
+    static constexpr size_t kChannel0Close = Plugins::Blinds::kChannel0_ClosePinArrayIndex;
+    static constexpr size_t kChannel1Open = Plugins::Blinds::kChannel1_OpenPinArrayIndex;
+    static constexpr size_t kChannel1Close = Plugins::Blinds::kChannel1_ClosePinArrayIndex;
+    static constexpr size_t kMultiplexerPin = Plugins::Blinds::kMultiplexerPinArrayIndex;
+    static constexpr size_t kDACPin = Plugins::Blinds::kDACPinArrayIndex;
+
     enum class TopicType : uint8_t {
         SET,
         STATE,

@@ -58,6 +58,17 @@ void BlindsControlPlugin::setup(SetupModeType mode, const PluginComponents::Depe
     _setup();
     MQTT::Client::registerComponent(this);
     LoopFunctions::add(loopMethod);
+
+    // update states when wifi has been connected
+    WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTED, [this](WiFiCallbacks::EventType event, void *payload) {
+        _publishState();
+    }, this);
+
+    // update states when wifi is already connected
+    if (WiFi.isConnected()) {
+        _publishState();
+    }
+
 }
 
 void BlindsControlPlugin::reconfigure(const String &source)
@@ -73,6 +84,7 @@ void BlindsControlPlugin::reconfigure(const String &source)
 void BlindsControlPlugin::shutdown()
 {
     _stop();
+    WiFiCallbacks::remove(WiFiCallbacks::EventType::CONNECTED, this);
     LoopFunctions::add(loopMethod);
     MQTT::Client::unregisterComponent(this);
 }
@@ -128,17 +140,6 @@ void BlindsControlPlugin::createWebUI(WebUINS::Root &webUI)
     webUI.addRow(row3);
 }
 
-void BlindsControlPlugin::getValues(WebUINS::Events &array)
-{
-    BlindsControl::getValues(array);
-}
-
-void BlindsControlPlugin::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
-{
-    BlindsControl::setValue(id, value, hasValue, state, hasState);
-}
-
-
 #if IOT_BLINDS_CTRL_RPM_PIN
 
 void BlindsControl::rpmIntCallback(InterruptInfo info) {
@@ -151,12 +152,6 @@ BlindsControlPlugin &BlindsControlPlugin::getInstance()
 {
     return plugin;
 }
-
-void BlindsControlPlugin::loopMethod()
-{
-    plugin._loopMethod();
-}
-
 
 #if AT_MODE_SUPPORTED
 

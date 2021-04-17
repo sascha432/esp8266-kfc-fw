@@ -43,6 +43,7 @@ void BlindsControl::_setup()
     attachScheduledInterrupt(digitalPinToInterrupt(IOT_BLINDS_CTRL_RPM_PIN), BlindsControl::rpmIntCallback, RISING);
     pinMode(IOT_BLINDS_CTRL_RPM_PIN, INPUT);
 #endif
+
 }
 
 MQTT::AutoDiscovery::EntityPtr BlindsControl::getAutoDiscovery(FormatType format, uint8_t num)
@@ -90,68 +91,43 @@ uint8_t BlindsControl::getAutoDiscoveryCount() const
 
 void BlindsControl::getValues(WebUINS::Events &array)
 {
-    using namespace WebUINS;
-
-    array.append(Values(FSPGM(set_all, "set_all"), _states[0].isOpen() || _states[1].isOpen() ? 1 : 0, true));
-
-    // JsonUnnamedObject *obj;
-
-    // obj = &array.addObject(3);
-    // obj->add(JJ(id), );
-    // obj->add(JJ(value), _states[0].isOpen() || _states[1].isOpen() ? 1 : 0);
-    // obj->add(JJ(state), true);
-
+    array.append(WebUINS::Values(FSPGM(set_all, "set_all"), _states[0].isOpen() || _states[1].isOpen() ? 1 : 0, true));
     for(const auto channel: _states.channels()) {
         String prefix = PrintString(FSPGM(channel__u), channel);
         array.append(
-            Values(prefix + F("_state"), _getStateStr(channel), true),
-            Values(prefix + F("_set"), _states[channel].isOpen() ? 1 : 0, true)
+            WebUINS::Values(prefix + F("_state"), _getStateStr(channel), true),
+            WebUINS::Values(prefix + F("_set"), _states[channel].isOpen() ? 1 : 0, true)
         );
-
-        // obj = &array.addObject(3);
-        // obj->add(JJ(id), prefix + F("_state"));
-        // obj->add(JJ(value), _getStateStr(channel));
-        // obj->add(JJ(state), true);
-
-        // obj = &array.addObject(3);
-        // obj->add(JJ(id), prefix + F("_set"));
-        // obj->add(JJ(value), _states[channel].isOpen() ? 1 : 0);
-        // obj->add(JJ(state), true);
     }
 }
 
 void BlindsControl::_publishState()
 {
-    if (!isConnected()) {
-        return;
-    }
     __LDBG_printf("state %s/%s", _getStateStr(ChannelType::CHANNEL0), _getStateStr(ChannelType::CHANNEL1));
-
-    using namespace MQTT::Json;
-
     if (isConnected()) {
 
-        // JsonUnnamedObject metrics(2);
-        // JsonUnnamedObject channels(kChannelCount);
+        using namespace MQTT::Json;
         UnnamedObject channels;
         String binaryState = String('b');
 
+        // __LDBG_printf("topic=%s payload=%s", _getTopic(ChannelType::ALL, TopicType::STATE).c_str(), MQTT::Client::toBoolOnOff(_states[0].isOpen() || _states[1].isOpen()));
         publish(_getTopic(ChannelType::ALL, TopicType::STATE), true, MQTT::Client::toBoolOnOff(_states[0].isOpen() || _states[1].isOpen()));
 
         for(const auto channel: _states.channels()) {
             auto &state = _states[channel];
-            auto isOpen = state.getCharState();
-            binaryState += isOpen;
-            publish(_getTopic(channel, TopicType::STATE), true, MQTT::Client::toBoolOnOff(isOpen));
-            PrintString channelStr(FSPGM(channel__u), channel);
-            channels.append(NamedString(reinterpret_cast<FStr>(channelStr.c_str()), _getStateStr(channel)));
+            binaryState += state.getCharState();;
+            // __LDBG_printf("topic=%s payload=%s", _getTopic(channel, TopicType::STATE).c_str(), MQTT::Client::toBoolOnOff(state.isOpen()));
+            publish(_getTopic(channel, TopicType::STATE), true, MQTT::Client::toBoolOnOff(state.isOpen()));
+            channels.append(NamedStoredString(PrintString(FSPGM(channel__u), channel), _getStateStr(channel)));
         }
 
+        // __LDBG_printf("topic=%s payload=%s", _getTopic(ChannelType::NONE, TopicType::METRICS).c_str(), UnnamedObject(NamedString(FSPGM(binary), binaryState), NamedBool(FSPGM(busy), !_queue.empty())).toString().c_str());
         publish(_getTopic(ChannelType::NONE, TopicType::METRICS), true, UnnamedObject(
             NamedString(FSPGM(binary), binaryState),
             NamedBool(FSPGM(busy), !_queue.empty())
         ).toString());
 
+        // __LDBG_printf("topic=%s payload=%s", _getTopic(ChannelType::NONE, TopicType::CHANNELS).c_str(), channels.toString().c_str());
         publish(_getTopic(ChannelType::NONE, TopicType::CHANNELS), true, channels.toString());
     }
 
@@ -159,19 +135,17 @@ void BlindsControl::_publishState()
     if (WebUISocket::hasAuthenticatedClients()) {
         WebUINS::Events events;
         getValues(events);
-        if (events.hasAny()) {
-            WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(events));
-        }
+        WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(events));
     }
 }
 
 void BlindsControl::onConnect()
 {
-    _publishState();
     subscribe(_getTopic(ChannelType::ALL, TopicType::SET));
     for(const auto channel: _states.channels()) {
         subscribe(_getTopic(channel, TopicType::SET));
     }
+    _publishState();
 }
 
 void BlindsControl::onMessage(const char *topic, const char *payload, size_t len)
@@ -187,7 +161,7 @@ void BlindsControl::onMessage(const char *topic, const char *payload, size_t len
     else {
         channel = ChannelType::ALL;
     }
-    auto state = atoi(payload); // payload is NUL terminated
+    auto state = MQTTClient::toBool(payload, false);
     __LDBG_printf("topic=%s state=%u payload=%s", topic, state, payload);
     _executeAction(channel, state);
 }
@@ -195,11 +169,11 @@ void BlindsControl::onMessage(const char *topic, const char *payload, size_t len
 
 void BlindsControl::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
 {
-    __LDBG_printf("id=%s hasValue=%u value=%s hasState=%u state=%u", id.c_str(), hasValue, value.c_str(), hasState, state);
+    __LDBG_printf("id=%s has_value=%u value=%s has_state=%u state=%u", id.c_str(), hasValue, value.c_str(), hasState, state);
     if (hasValue) {
-        bool open = value.toInt();
+        auto open = static_cast<bool>(value.toInt());
         if (id.endsWith(F("_set"))) {
-            size_t channel = atoi(id.c_str() + id.indexOf('_') + 1);
+            auto channel = static_cast<uint8_t>(atoi(id.c_str() + id.indexOf('_') + 1));
             if (channel < _states.size()) {
                 _executeAction(static_cast<ChannelType>(channel), open);
             }
@@ -225,8 +199,8 @@ void BlindsControl::_setDac(uint16_t pwm)
 {
     analogWriteRange(PWMRANGE);
     analogWriteFreq(kPwmMaxFrequency);
-    analogWrite(_config.pins[5], pwm);
-    __LDBG_printf("dac pin=%u pwm=%u frequency=%u", _config.pins[5], pwm, kPwmMaxFrequency);
+    analogWrite(_config.pins[kDACPin], pwm);
+    __LDBG_printf("dac pin=%u pwm=%u frequency=%u", _config.pins[kDACPin], pwm, kPwmMaxFrequency);
 }
 
 #if HAVE_IMPERIAL_MARCH
@@ -290,7 +264,7 @@ void BlindsControl::_playImerialMarch(uint16_t speed, int8_t zweiklang, uint8_t 
                 _stop();
                 return;
             }
-            uint8_t note = pgm_read_byte(imperial_march_notes + IMPERIAL_MARCH_NOTES_COUNT - 1);
+            auto note = pgm_read_byte(imperial_march_notes + IMPERIAL_MARCH_NOTES_COUNT - 1);
             _playNote(settings.pin, settings.pwmValue, note);
             if (settings.zweiklang) {
                 _playNote(settings.pin2, settings.pwmValue, note + settings.zweiklang);
@@ -340,8 +314,8 @@ void BlindsControl::_playImerialMarch(uint16_t speed, int8_t zweiklang, uint8_t 
         }
 
         if (settings.counter++ >= settings.nextNote) {
-            uint8_t note = pgm_read_byte(imperial_march_notes + settings.notePosition);
-            uint8_t length = pgm_read_byte(imperial_march_lengths + settings.notePosition);
+            auto note = pgm_read_byte(imperial_march_notes + settings.notePosition);
+            auto length = pgm_read_byte(imperial_march_lengths + settings.notePosition);
 
             analogWrite(settings.pin, 0);
             analogWrite(settings.pin2, 0);
@@ -757,8 +731,8 @@ void BlindsControl::_clearAdc()
     analogWriteFreq(_config.pwm_frequency);
 
     uint8_t state = (channel == _config.adc_multiplexer) ? HIGH : LOW;
-    digitalWrite(_config.pins[4], state);
-    __LDBG_printf("multiplexer pin=%u channel=%u multiplexer=%u state=%u delay=%u", _config.pins[4], channel, _config.adc_multiplexer, state, IOT_BLINDS_CTRL_SETUP_DELAY);
+    digitalWrite(_config.pins[kMultiplexerPin], state);
+    __LDBG_printf("multiplexer pin=%u channel=%u multiplexer=%u state=%u delay=%u", _config.pins[kMultiplexerPin], channel, _config.adc_multiplexer, state, IOT_BLINDS_CTRL_SETUP_DELAY);
 
     delay(IOT_BLINDS_CTRL_SETUP_DELAY);
 
@@ -857,8 +831,8 @@ void BlindsControl::_stop()
 
     _activeChannel = ChannelType::NONE;
     _disableMotors();
-    digitalWrite(_config.pins[4], LOW);
-    digitalWrite(_config.pins[5], LOW);
+    digitalWrite(_config.pins[kMultiplexerPin], LOW);
+    digitalWrite(_config.pins[kDACPin], LOW);
 
     _adcIntegral = 0;
 }

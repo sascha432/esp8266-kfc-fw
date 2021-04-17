@@ -70,6 +70,7 @@
 - Replace read only files from WebUI by placing files in `/.wor/*`
 - SaveCrash WebUI to download crash logs. MD5 checksum of the firmware is included
 - Key Combo for safe mode and reset factory settings during boot
+- Customized WString class
 
 ## Version 0.0.3
 

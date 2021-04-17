@@ -4,5 +4,5 @@
 
 #pragma once
 
-#define __BUILD_NUMBER "7556"
+#define __BUILD_NUMBER "7572"
 

@@ -263,6 +263,8 @@ namespace KFCConfigurationClasses {
                 NEW_ROW =   0x02,
             };
             struct __attribute__packed__ SwitchConfig {
+                using Type = SwitchConfig;
+
                 void setLength(size_t length) {
                     _length = length;
                 }
@@ -285,13 +287,12 @@ namespace KFCConfigurationClasses {
                 SwitchConfig() : _length(0), _state(0), _webUI(0) {}
                 SwitchConfig(const String &name, StateEnum state, WebUIEnum webUI) : _length(name.length()), _state(static_cast<uint8_t>(state)), _webUI(static_cast<uint8_t>(webUI)) {}
 
-            private:
-                uint8_t _length;
-                uint8_t _state: 4;
-                uint8_t _webUI: 4;
+                CREATE_UINT8_BITFIELD(_length, 8);
+                CREATE_UINT8_BITFIELD(_state, 4);
+                CREATE_UINT8_BITFIELD(_webUI, 4);
             };
 
-            static const uint8_t *getConfig();
+            static const uint8_t *getConfig(uint16_t &length);
             static void setConfig(const uint8_t *buf, size_t size);
 
             // T = std::array<String, N>, R = std::array<SwitchConfig, N>
@@ -300,17 +301,20 @@ namespace KFCConfigurationClasses {
                 names = {};
                 configs = {};
                 uint16_t length = 0;
-                auto ptr = getConfig();
+                auto ptr = getConfig(length);
+#if 1
+                __dump_binary_to(DEBUG_OUTPUT, ptr, length, length, PSTR("getConfig"));
+#endif
                 if (ptr) {
-                    size_t i = 0;
+                    uint8_t i = 0;
                     auto endPtr = ptr + length;
                     while(ptr + sizeof(SwitchConfig) <= endPtr && i < names.size()) {
                         configs[i] = *reinterpret_cast<SwitchConfig *>(const_cast<uint8_t *>(ptr));
                         ptr += sizeof(SwitchConfig);
-                        if (ptr + configs[i].length <= endPtr) {
-                            names[i] = PrintString(ptr, configs[i].length);
+                        if (ptr + configs[i].getLength() <= endPtr) {
+                            names[i] = PrintString(ptr, configs[i].getLength());
                         }
-                        ptr += configs[i++].length;
+                        ptr += configs[i++].getLength();
                     }
                 }
             }
@@ -318,12 +322,15 @@ namespace KFCConfigurationClasses {
             template <class T, class R>
             static void setConfig(const T &names, R &configs) {
                 Buffer buffer;
-                for(size_t i = 0; i < names.size(); i++) {
+                for(uint8_t i = 0; i < names.size(); i++) {
                     configs[i].setLength(names[i].length());
                     buffer.push_back(configs[i]);
-                    buffer.write(names[i]);
+                    buffer.write(static_cast<const String &>(names[i]));
                 }
                 setConfig(buffer.begin(), buffer.length());
+#if 1
+                __dump_binary_to(DEBUG_OUTPUT, buffer.begin(), buffer.length(), buffer.length(), PSTR("setConfig"));
+#endif
             }
         };
 

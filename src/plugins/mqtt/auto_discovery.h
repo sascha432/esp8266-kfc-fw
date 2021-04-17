@@ -73,6 +73,11 @@ namespace MQTT {
             }
 
             template<typename _T>
+            void addName(_T value) {
+                addParameter(FSPGM(mqtt_name), value);
+            }
+
+            template<typename _T>
             void addStateTopicAndPayloadOnOff(_T value) {
                 addParameter(FSPGM(mqtt_state_topic), value);
                 addPayloadOnOff();

@@ -12,9 +12,8 @@ namespace KFCConfigurationClasses {
         config.setBinary(_H(MainConfig().plugins.iotswitch), buf, size);
     }
 
-    const uint8_t *Plugins::IOTSwitch::getConfig()
+    const uint8_t *Plugins::IOTSwitch::getConfig(uint16_t &length)
     {
-        uint16_t length;
         return config.getBinary(_H(MainConfig().plugins.iotswitch), length);
     }
 

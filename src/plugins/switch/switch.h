@@ -5,12 +5,13 @@
 #pragma once
 
 #ifndef DEBUG_IOT_SWITCH
-#define DEBUG_IOT_SWITCH                            0
+#define DEBUG_IOT_SWITCH                            1
 #endif
 
 #include <Arduino_compat.h>
 #include <EventScheduler.h>
 #include <WebUIComponent.h>
+#include <BitsToStr.h>
 #include "../src/plugins/mqtt/mqtt_json.h"
 #include "../src/plugins/plugins.h"
 #include "kfc_fw_config.h"
@@ -42,6 +43,64 @@
 #endif
 
 class SwitchPlugin : public PluginComponent, public MQTTComponent {
+public:
+    class States {
+    public:
+        States() : _states(0) {}
+
+        bool operator[](int index) const {
+            return _states & _BV(index);
+        }
+
+        void setState(int index, bool state) {
+            if (state) {
+                _states |= _BV(index);
+            }
+            else {
+                _states &= ~_BV(index);
+            }
+        }
+
+        const String toString() const {
+            return BitsToStr<IOT_SWITCH_CHANNEL_NUM, true>(_states).toString();
+        }
+
+    private:
+        uint32_t _states;
+    };
+
+    class ChannelName {
+    public:
+        ChannelName() {}
+        ChannelName(const String &name) : _name(name) {}
+
+        // toString() returns the name or "Channel #" if no name is set
+        const String toString(uint8_t channel) const {
+            return _name.length() ? _name : PrintString(F("Channel %u"), channel);
+        }
+
+        // handling custom names
+        ChannelName &operator=(const String &name) {
+            _name = name;
+            return *this;
+        }
+
+        operator const String &() const {
+            return _name;
+        }
+
+        operator String &() {
+            return _name;
+        }
+
+        size_t length() const {
+            return _name.length();
+        }
+
+    private:
+        String _name;
+    };
+
 public:
     SwitchPlugin();
 
@@ -80,7 +139,6 @@ private:
 private:
     void _setChannel(uint8_t channel, bool state);
     bool _getChannel(uint8_t channel) const;
-    String _getChannelName(uint8_t channel) const;
     void _readConfig();
     void _readStates();
     void _writeStates();
@@ -90,8 +148,8 @@ private:
     using SwitchStateEnum = KFCConfigurationClasses::Plugins::IOTSwitch::StateEnum;
     using WebUIEnum = KFCConfigurationClasses::Plugins::IOTSwitch::WebUIEnum;
 
-    std::array<String, IOT_SWITCH_CHANNEL_NUM> _names;
+    std::array<ChannelName, IOT_SWITCH_CHANNEL_NUM> _names;
     std::array<SwitchConfig, IOT_SWITCH_CHANNEL_NUM> _configs;
-    uint32_t _states;
+    States _states;
     const std::array<uint8_t, IOT_SWITCH_CHANNEL_NUM> _pins;
 };

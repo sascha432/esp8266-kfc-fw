@@ -152,6 +152,9 @@ It includes a python tool to generate a translation table to address any 7 segme
 ### LED Matrix
 
 Plugin based on the clock plugin to control a WS2812 LED matrix or LED string. The plugin is using FastLED and supports all the available LED types.
+Support for motion detection sensors, LED power limit and temperature protection. A maximum of 1024 LEDs are supported.
+
+Compatible with my [EasyEDA WS2812 WiFi Controller](https://easyeda.com/sascha23095123423/iot_wifi_clock_controller)
 
 ### Dimmer
 

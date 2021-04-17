@@ -23,7 +23,7 @@ I started to create branches of stable versions for my different devices.
 
 [BME280 Sensor - Version 0.0.4.7552](https://github.com/sascha432/esp8266-kfc-fw/tree/bme280_0.0.4.7552)
 
-[Blinds Control - Version 0.0.4.7556](https://github.com/sascha432/esp8266-kfc-fw/tree/blinds_control_0.0.4.7556)
+[Blinds Control - Version 0.0.4.7591](https://github.com/sascha432/esp8266-kfc-fw/tree/blinds_control_0.0.4.7591)
 
 [Remote Control - Version 0.0.4.7545](https://github.com/sascha432/esp8266-kfc-fw/tree/remote_control_0.4.0)
 

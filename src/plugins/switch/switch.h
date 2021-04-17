@@ -5,7 +5,7 @@
 #pragma once
 
 #ifndef DEBUG_IOT_SWITCH
-#define DEBUG_IOT_SWITCH                            1
+#define DEBUG_IOT_SWITCH                            0
 #endif
 
 #include <Arduino_compat.h>
@@ -20,9 +20,9 @@
 #define IOT_SWITCH_ON_STATE                         HIGH
 #endif
 
-// interval to publish the state of all channels, 0 to disable
+// interval to publish the state of all channels in milliseconds, 0 to disable
 #ifndef IOT_SWITCH_PUBLISH_MQTT_INTERVAL
-#define IOT_SWITCH_PUBLISH_MQTT_INTERVAL            60000
+#define IOT_SWITCH_PUBLISH_MQTT_INTERVAL            (120 * 1000)
 #endif
 
 // store states on file system
@@ -30,8 +30,9 @@
 #define IOT_SWITCH_STORE_STATES                     1
 #endif
 
+// write delay on the file system in milliseconds
 #ifndef IOT_SWITCH_STORE_STATES_WRITE_DELAY
-#define IOT_SWITCH_STORE_STATES_WRITE_DELAY         30000
+#define IOT_SWITCH_STORE_STATES_WRITE_DELAY         (10 * 1000)
 #endif
 
 #ifndef IOT_SWITCH_CHANNEL_NUM
@@ -63,6 +64,27 @@ public:
 
         const String toString() const {
             return BitsToStr<IOT_SWITCH_CHANNEL_NUM, true>(_states).toString();
+        }
+
+        bool write(File &file) const {
+            return file.write(getData(), length()) == length();
+        }
+
+        bool read(File &file) {
+            return file.read(getData(), length()) == length();
+        }
+
+    private:
+        const uint8_t *getData() const {
+            return reinterpret_cast<const uint8_t *>(&_states);
+        }
+
+        uint8_t *getData() {
+            return reinterpret_cast<uint8_t *>(&_states);
+        }
+
+        size_t length() const {
+            return sizeof(_states);
         }
 
     private:
@@ -141,7 +163,8 @@ private:
     bool _getChannel(uint8_t channel) const;
     void _readConfig();
     void _readStates();
-    void _writeStates();
+    void _writeStatesDelayed();
+    void _writeStatesNow();
 
 private:
     using SwitchConfig = KFCConfigurationClasses::Plugins::IOTSwitch::SwitchConfig;

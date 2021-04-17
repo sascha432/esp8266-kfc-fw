@@ -302,7 +302,7 @@ namespace KFCConfigurationClasses {
                 configs = {};
                 uint16_t length = 0;
                 auto ptr = getConfig(length);
-#if 1
+#if DEBUG_IOT_SWITCH
                 __dump_binary_to(DEBUG_OUTPUT, ptr, length, length, PSTR("getConfig"));
 #endif
                 if (ptr) {
@@ -328,7 +328,7 @@ namespace KFCConfigurationClasses {
                     buffer.write(static_cast<const String &>(names[i]));
                 }
                 setConfig(buffer.begin(), buffer.length());
-#if 1
+#if DEBUG_IOT_SWITCH
                 __dump_binary_to(DEBUG_OUTPUT, buffer.begin(), buffer.length(), buffer.length(), PSTR("setConfig"));
 #endif
             }

@@ -71,6 +71,7 @@
 - SaveCrash WebUI to download crash logs. MD5 checksum of the firmware is included
 - Key Combo for safe mode and reset factory settings during boot
 - Customized WString class
+- Switch plugin fixes and improvements
 
 ## Version 0.0.3
 

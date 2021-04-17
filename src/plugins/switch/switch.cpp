@@ -56,7 +56,7 @@ void SwitchPlugin::setup(SetupModeType mode, const PluginComponents::Dependencie
 {
     _readConfig();
     _readStates();
-    for (size_t i = 0; i < _pins.size(); i++) {
+    for (uint8_t i = 0; i < _pins.size(); i++) {
         if (_configs[i].getState() == SwitchStateEnum::RESTORE) {
             _setChannel(i, _states[i]);
         }
@@ -92,8 +92,10 @@ void SwitchPlugin::shutdown()
 #endif
 #if IOT_SWITCH_STORE_STATES
     if (_delayedWrite) {
-        _delayedWrite->_invokeCallback(nullptr);
-        _delayedWrite.remove(); // stop timer and store now
+        // stop timer
+        _delayedWrite.remove();
+        // write states
+        _writeStatesNow();
     }
 #endif
     MQTT::Client::unregisterComponent(this);
@@ -110,7 +112,7 @@ void SwitchPlugin::reconfigure(const String &source)
 void SwitchPlugin::getStatus(Print &output)
 {
     output.printf_P(PSTR("%u channel switch"), _pins.size());
-    for (size_t i = 0; i < _pins.size(); i++) {
+    for (uint8_t i = 0; i < _pins.size(); i++) {
         output.printf_P(PSTR(HTML_S(br) "%s - %s"), _names[i].toString(i).c_str(), _getChannel(i) ? SPGM(On) : SPGM(Off));
     }
 }
@@ -145,7 +147,7 @@ void SwitchPlugin::createConfigureForm(FormCallbackType type, const String &form
 
     PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, IOT_SWITCH_CHANNEL_NUM, chan, name, state, webui);
 
-    for (size_t i = 0; i < _pins.size(); i++) {
+    for (uint8_t i = 0; i < _pins.size(); i++) {
         auto &group = form.addCardGroup(F_VAR(chan, i), PrintString(F("Channel %u"), i), true);
 
         form.add(F_VAR(name, i), _names[i]);
@@ -185,7 +187,7 @@ void SwitchPlugin::createWebUI(WebUINS::Root &webUI)
 
 void SwitchPlugin::getValues(WebUINS::Events &array)
 {
-    for (size_t i = 0; i < _pins.size(); i++) {
+    for (uint8_t i = 0; i < _pins.size(); i++) {
         array.append(WebUINS::Values(PrintString(FSPGM(channel__u), i), _getChannel(i) ? 1 : 0, true));
     }
 }
@@ -195,7 +197,7 @@ void SwitchPlugin::setValue(const String &id, const String &value, bool hasValue
     __LDBG_printf("id=%s value=%s has_value=%u state=%u has_state=%u", id.c_str(), value.c_str(), hasValue, state, hasState);
 
     if (id.startsWith(F("channel_")) && hasValue) {
-        auto state = static_cast<bool>(value.c_str());
+        auto state = static_cast<bool>(value.toInt());
         auto channel = static_cast<uint8_t>(atoi(id.c_str() + 8));
         if (channel < _pins.size()) {
             _setChannel(channel, state);
@@ -250,7 +252,7 @@ void SwitchPlugin::_setChannel(uint8_t channel, bool state)
     __LDBG_printf("channel=%u state=%u", channel, state);
     digitalWrite(_pins[channel], state ? IOT_SWITCH_ON_STATE : !IOT_SWITCH_ON_STATE);
     _states.setState(channel, state);
-    _writeStates();
+    _writeStatesDelayed();
 }
 
 bool SwitchPlugin::_getChannel(uint8_t channel) const
@@ -267,28 +269,32 @@ void SwitchPlugin::_readStates()
 {
 #if IOT_SWITCH_STORE_STATES
     auto file = KFCFS.open(FSPGM(iot_switch_states_file, "/.pvt/switch.states"), fs::FileOpenMode::read);
-    if (file) {
-        if (file.read(reinterpret_cast<uint8_t *>(&_states), sizeof(_states)) != sizeof(_states)) {
-            // reset on read error
-            _states = States();
-        }
+    if (!file || !_states.read(file)) {
+        // reset on read error
+        _states = States();
     }
 #endif
     __LDBG_printf("states=%s", _states.toString().c_str());
 }
 
-void SwitchPlugin::_writeStates()
+void SwitchPlugin::_writeStatesDelayed()
 {
     __LDBG_printf("states=%s", _states.toString().c_str());
 #if IOT_SWITCH_STORE_STATES
-    _Timer(_delayedWrite).add(IOT_SWITCH_STORE_STATES_WRITE_DELAY, false, [this](Event::CallbackTimerPtr timer) {
+    _Timer(_delayedWrite).add(IOT_SWITCH_STORE_STATES_WRITE_DELAY, false, [this](Event::CallbackTimerPtr) {
         __LDBG_printf("delayed write states=%s", _states.toString().c_str());
-        auto file = KFCFS.open(FSPGM(iot_switch_states_file), fs::FileOpenMode::write);
-        if (file) {
-            file.write(reinterpret_cast<const uint8_t *>(&_states), sizeof(_states));
-        }
+        _writeStatesNow();
     });
 #endif
+}
+
+void SwitchPlugin::_writeStatesNow()
+{
+    __LDBG_printf("states=%s", _states.toString().c_str());
+    auto file = KFCFS.open(FSPGM(iot_switch_states_file), fs::FileOpenMode::write);
+    if (file && !_states.write(file)) {
+        __LDBG_printf("failed to write states");
+    }
 }
 
 void SwitchPlugin::_publishState(int8_t channel)

@@ -141,9 +141,11 @@ Plugin for up to 10 different alarms, single alarm or repeated on daily basis.
 
 Plugin for my WS2812 Based 7 Segment Clocks
 
-https://github.com/sascha432/ESP8266-WiFi-Clock
-https://easyeda.com/sascha23095123423/iot_wifi_7segment
-https://easyeda.com/sascha23095123423/iot_wifi_clock_controller
+[ESP8266-WiFi-Clock](https://github.com/sascha432/ESP8266-WiFi-Clock)
+
+[EasyEDA 7-Segment WiFi Display](https://easyeda.com/sascha23095123423/iot_wifi_7segment)
+
+[EasyEDA WS2812 WiFi Controller](https://easyeda.com/sascha23095123423/iot_wifi_clock_controller)
 
 It includes a python tool to generate a translation table to address any 7 segment display.
 
@@ -155,38 +157,40 @@ Plugin based on the clock plugin to control a WS2812 LED matrix or LED string. T
 
 Plugin to control my trailing edge WiFi dimmer with energy monitor
 
-https://github.com/sascha432/trailing_edge_dimmer
+[ATmega328P Firmware - Trailing Edge Dimmer](https://github.com/sascha432/trailing_edge_dimmer)
 
-4 Channel with power monitor
-https://easyeda.com/sascha23095123423/iot-4-channel-dimmer-with-pm
+[EasyEDA 4-Channel Dimmer with Power Monitor](https://easyeda.com/sascha23095123423/iot-4-channel-dimmer-with-pm)
 
-1 Channel in-wall or plugin with power monitor
-https://easyeda.com/sascha23095123423/iot_1ch_dimmer_copy_copy_copy
-Control module
-https://easyeda.com/sascha23095123423/esp12e_iot_module_copy
+[EasyEDA 1-Channel in-wall or plugin dimmer with Power Monitor](https://easyeda.com/sascha23095123423/iot_1ch_dimmer_copy_copy_copy)
+
+[EasyEDA Control Module for 1-Channel Dimmer](https://easyeda.com/sascha23095123423/esp12e_iot_module_copy)
+
 
 ### Blinds Controller
 
 Plugin for my 2 channel blinds controller
 
-https://github.com/sascha432/ESP8266-WiFi-Blinds
-https://easyeda.com/sascha23095123423/iot_blinds_controller
+[ESP8266-WiFi-Blinds](https://github.com/sascha432/ESP8266-WiFi-Blinds)
+
+[EasyEDA Blinds Controller](https://easyeda.com/sascha23095123423/iot_blinds_controller)
 
 ### WiFi Remote Control
 
 Plugin for my 4 button ultra low power WiFi remote control. 16.5µA standby, 250ms wakeup time to send first UDP packets and 300ms for a fully established MQTT session with QoS.
 Supports MQTT / Homeassistant Device Triggers and UDP packets.
 
-https://github.com/sascha432/ESP8266-WiFi-Remote-Control
-https://easyeda.com/sascha23095123423/iot_4ch_remote
+[ESP8266-WiFi-Remote-Control](https://github.com/sascha432/ESP8266-WiFi-Remote-Control)
+
+[EasyEDA 4Channel Remote Control](https://easyeda.com/sascha23095123423/iot_4ch_remote)
 
 ### Weather Station
 
 Weather Station for TFT displays with openweathermap.org API.
 Live remote view over WebUI and screenshots in .BMP format
 
-https://easyeda.com/sascha23095123423/iot_weather_station
-https://github.com/sascha432/ESP8266-WiFi-Weather-Station
+[ESP8266-WiFi-Weather-Station](https://github.com/sascha432/ESP8266-WiFi-Weather-Station)
+
+[EasyEDA Weather Station](https://easyeda.com/sascha23095123423/iot_weather_station)
 
 ### File Manager
 
@@ -200,49 +204,58 @@ Store crash logs with checksum of the firmware, version and other details direct
 
 ### ESPAsyncWebServer
 
-https://github.com/me-no-dev/ESPAsyncWebServer
+[ESPAsyncWebServer](https://github.com/me-no-dev/ESPAsyncWebServer)
 
 ### asyncHTTPrequest
 
-https://github.com/boblemaire/asyncHTTPrequest
+[https://github.com/boblemaire/asyncHTTPrequest](https://github.com/boblemaire/asyncHTTPrequest)
 
 ### Arduino Cryptography Library
 
-https://github.com/rweather/arduinolibs
+[https://github.com/rweather/arduinolibs](https://github.com/rweather/arduinolibs)
 
 ### AsyncMqttClient (MQTT plugin)
 
-https://github.com/marvinroger/async-mqtt-client
+[async-mqtt-client](https://github.com/marvinroger/async-mqtt-client)
 
 ### AsyncWebSocket (Http2Serial plugin)
 
-https://github.com/me-no-dev/ESPAsyncWebServer/blob/master/src/AsyncWebSocket.h
+[ESPAsyncWebServer](https://github.com/me-no-dev/ESPAsyncWebServer/blob/master/src/AsyncWebSocket.h)
 
 ### AsyncPing (Ping Monitor plugin)
 
 https://github.com/akaJes/AsyncPing
 
-### RF24 (RF24 Master)
+~~### RF24 (RF24 Master)~~
 
-https://github.com/nRF24/RF24
+~~https://github.com/nRF24/RF24~~
 
 ### FastLED (Clock plugin)
 
-https://github.com/FastLED/FastLED
+[FastLED](https://github.com/FastLED/FastLED)
 
 ### Adafruit Libraries (Various plugins)
 
-https://github.com/adafruit/Adafruit_Sensor
-https://github.com/adafruit/Adafruit_BME280_Library
-https://github.com/adafruit/Adafruit_CCS811.git
-https://github.com/adafruit/Adafruit_INA219
-https://github.com/adafruit/Adafruit-GFX-Library
-https://github.com/adafruit/Adafruit-ST7735-Library
-https://github.com/adafruit/Adafruit_SSD1306
-https://github.com/adafruit/RTClib
-https://github.com/adafruit/Adafruit_MPR121
-https://github.com/adafruit/Adafruit_NeoPixel
+[Adafruit_Sensor](https://github.com/adafruit/Adafruit_Sensor)
+
+[Adafruit_BME280_Library](https://github.com/adafruit/Adafruit_BME280_Library)
+
+[Adafruit_CCS811.git](https://github.com/adafruit/Adafruit_CCS811.git)
+
+[Adafruit_INA219](https://github.com/adafruit/Adafruit_INA219)
+
+[Adafruit-GFX-Library](https://github.com/adafruit/Adafruit-GFX-Library)
+
+[Adafruit-ST7735-Library](https://github.com/adafruit/Adafruit-ST7735-Library)
+
+[Adafruit_SSD1306](https://github.com/adafruit/Adafruit_SSD1306)
+
+[adafruit/RTClib](https://github.com/adafruit/RTClib)
+
+[Adafruit_MPR121](https://github.com/adafruit/Adafruit_MPR121)
+
+[Adafruit_NeoPixel](https://github.com/adafruit/Adafruit_NeoPixel)
 
 ### Rotary encoder handler for arduino. v1.1
 
-https://github.com/buxtronix/arduino/blob/master/libraries/Rotary/Rotary.cpp
+[buxtronix/arduino/Rotary.cpp](https://github.com/buxtronix/arduino/blob/master/libraries/Rotary/Rotary.cpp)

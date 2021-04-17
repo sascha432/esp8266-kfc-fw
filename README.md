@@ -21,6 +21,8 @@ The firmware offers a plugin interface to easily extend its functionality. The p
 
 I started to create branches of stable versions for my different devices.
 
+[7 Channel Relay Board - Version 0.0.4.7598](https://github.com/sascha432/esp8266-kfc-fw/tree/relay_board_0.0.4.7598)
+
 [BME280 Sensor - Version 0.0.4.7552](https://github.com/sascha432/esp8266-kfc-fw/tree/bme280_0.0.4.7552)
 
 [Blinds Control - Version 0.0.4.7591](https://github.com/sascha432/esp8266-kfc-fw/tree/blinds_control_0.0.4.7591)

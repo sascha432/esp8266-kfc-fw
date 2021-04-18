@@ -37,7 +37,7 @@ IPAddress MDNSResolver::MDNSServiceInfo::findIP4Address(const IPAddress &myAddre
         }
         __LDBG_printf("address=%s my_address=%s closest=%s", address.toString().c_str(), myAddress.toString().c_str(), closestAddress.toString().c_str());
     }
-    auto &result = closestAddress.isSet() ? closestAddress : address;
+    auto &result = IPAddress_isValid(closestAddress) ? closestAddress : address;
     __LDBG_printf("found=%s", result.toString().c_str())
     return result;
 };
@@ -130,9 +130,9 @@ void MDNSResolver::Query::end()
             bool logging = _name.length() && System::Device::getConfig().zeroconf_logging;
             if (_resolved) {
                 if (logging) {
-                    Logger_notice(F("%s: Zeroconf response %s:%u"), _name.c_str(), _address.isSet() ? _address.toString().c_str() : _hostname.c_str(), _port);
+                    Logger_notice(F("%s: Zeroconf response %s:%u"), _name.c_str(), IPAddress_isValid(_address) ? _address.toString().c_str() : _hostname.c_str(), _port);
                 }
-                _prefix += _address.isSet() ? _address.toString() : _hostname;
+                _prefix += IPAddress_isValid(_address) ? _address.toString() : _hostname;
                 _prefix += _suffix;
                 _callback(_hostname, _address, _port, _prefix, ResponseType::RESOLVED);
             }
@@ -234,7 +234,7 @@ void MDNSResolver::Query::serviceCallback(bool map, MDNSResolver::MDNSServiceInf
         if (!_isAddress) {
             auto value = mdnsServiceInfo.findTxtValue(_addressValue);
             if (value) {
-                if ((_address = convertToIPAddress(value)).isSet()) {
+                if (IPAddress_isValid(_address = convertToIPAddress(value))) {
                     _dataCollected |= DATA_COLLECTED_ADDRESS;
                 } else {
                     _hostname = value;

@@ -22,7 +22,7 @@ StringVector MQTTClient::_createAutoDiscoveryTopics() const
 
 String MQTTClient::connectionDetailsString()
 {
-    auto message = PrintString(F("%s@%s:%u"), _username.length() ? _username.c_str() : SPGM(Anonymous), (_address.isSet() ? _address.toString().c_str() : _hostname.c_str()), _port);
+    auto message = PrintString(F("%s@%s:%u"), _username.length() ? _username.c_str() : SPGM(Anonymous), (IPAddress_isValid(_address) ? _address.toString().c_str() : _hostname.c_str()), _port);
 #if ASYNC_TCP_SSL_ENABLED
     if (ConfigType::cast_enum_mode(_config.mode) == ModeType::SECURE) {
         message += F(", Secure MQTT");

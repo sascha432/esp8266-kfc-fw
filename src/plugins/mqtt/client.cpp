@@ -172,7 +172,7 @@ void MQTTClient::_setupClient()
 
     _autoReconnectTimeout = _config.auto_reconnect_min;
 
-    if (_address.isSet()) {
+    if (IPAddress_isValid(_address)) {
         _client->setServer(_address, _port);
     }
     else {

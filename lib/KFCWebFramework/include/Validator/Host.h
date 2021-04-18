@@ -52,7 +52,7 @@ namespace FormUI {
                     }
                     if (EnumHelper::Bitset::has(_allowedTypes, AllowedType::IPADDRESS)) {
                         IPAddress addr;
-                        if (addr.fromString(tmpStr) && addr.isSet() && addr != 0xffffffffU) {
+                        if (addr.fromString(tmpStr) && IPAddress_isValid(addr)) {
                             return true;
                         }
                     }

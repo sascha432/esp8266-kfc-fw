@@ -81,14 +81,14 @@ bool _pingMonitorResolveHost(const String &host, IPAddress &addr, PrintString &e
     }
 
     // do not allow INADDR_NONE, the response is odd
-    if (addr.fromString(host) && addr != INADDR_NONE && addr.isSet()) {
-        __LDBG_printf("resolved address %s=%s isset=%u addr=%x", host.c_str(), addr.toString().c_str(), addr.isSet(), (uint32_t)addr);
+    if (addr.fromString(host) && IPAddress_isValid(addr)) {
+        __LDBG_printf("resolved address %s=%s isset=%u addr=%x", host.c_str(), addr.toString().c_str(), IPAddress_isValid(addr), (uint32_t)addr);
         return true;
     }
 
     // hostByName can returns true and INADDR_NONE
-    if (WiFi.hostByName(host.c_str(), addr) && addr != INADDR_NONE && addr.isSet()) {
-        __LDBG_printf("resolved host %s=%s isset=%u addr=%x", host.c_str(), addr.toString().c_str(), addr.isSet(), (uint32_t)addr);
+    if (WiFi.hostByName(host.c_str(), addr) && IPAddress_isValid(addr)) {
+        __LDBG_printf("resolved host %s=%s isset=%u addr=%x", host.c_str(), addr.toString().c_str(), IPAddress_isValid(addr), (uint32_t)addr);
         return true;
     }
     errorMessage.printf_P(SPGM(ping_monitor_unknown_service), host.c_str());

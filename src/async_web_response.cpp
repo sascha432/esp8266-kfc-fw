@@ -859,7 +859,7 @@ void AsyncResolveZeroconfResponse::_doStuff(bool *async, const String &value)
             str.print(value);
             String result;
             PGM_P resultType;
-            if (address.isSet()) {
+            if (IPAddress_isValid(address)) {
                 result = address.toString();
                 resultType = SPGM(Address);
 

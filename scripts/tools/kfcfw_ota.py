@@ -46,8 +46,6 @@ class SimpleProgressBar:
             self.bar.finish()
 
 
-
-
 class OTA(kfcfw.OTAHelpers):
 
     def __init__(self, args):
@@ -75,7 +73,7 @@ class OTA(kfcfw.OTAHelpers):
         if type=="upload":
             type = "flash"
         elif type=="uploadfs":
-            type = "spiffs"
+            type = "fs"
 
         image_type = "u_" + type
 
@@ -114,8 +112,8 @@ class OTA(kfcfw.OTAHelpers):
                         raise elf_exception
                     self.copyfile(elf, path.join(self.args.elf, elf_hash + '.elf'))
                     self.copyfile(self.args.image.name, path.join(self.args.elf, elf_hash + '.bin'))
-                elif type=='spiffs' and elf_hash:
-                    self.copyfile(self.args.image.name, path.join(self.args.elf, elf_hash + '.spiffs.bin'))
+                elif type=='littlefs' and elf_hash:
+                    self.copyfile(self.args.image.name, path.join(self.args.elf, elf_hash + '.littlefs.bin'))
 
                 if elf_hash and self.args.ini:
                     # archive .ini files and git info
@@ -130,23 +128,25 @@ class OTA(kfcfw.OTAHelpers):
                         file.write(elf_hash)
 
                     subprocess.run(['git', '--git-dir', git_dir, 'log', '--pretty=oneline', '--since=4.weeks', '>', git_info], shell=True)
-                    subprocess.run(['tar', 'cfz', archive, ini_file, git_info, ini_dir], shell=True)
+                    subprocess.run(['tar', 'cfz', archive, ini_file, git_info, ini_dir, '>', 'nul'], shell=True)
 
             except Exception as e:
                 self.error(str(e), 5);
 
         bar = SimpleProgressBar(max_value=filesize, redirect_stdout=True)
         bar.start();
-        encoder = MultipartEncoder(fields={ "image_type": image_type, "SID": sid, "elf_hash": elf_hash, "firmware_image": ("filename", self.args.image, "application/octet-stream") })
+        headers = { "image_type": image_type, "SID": sid, "elf_hash": elf_hash, "firmware_image": ("filename", self.args.image, "application/octet-stream") }
+        encoder = MultipartEncoder(fields=headers)
 
         monitor = MultipartEncoderMonitor(encoder, lambda monitor: bar.update(min(monitor.bytes_read, filesize)))
 
         # resp = requests.post(url + "update", files={ "firmware_image": self.args.image }, data={ "image_type": image_type, "SID": sid }, timeout=30, allow_redirects=False)
 
         count = 0
+        update_url = url + 'update'
         while count<30:
             try:
-                resp = requests.post(url + 'update', data=monitor, timeout=30, allow_redirects=False, headers={ 'User-Agent': 'KFCFW OTA', "Content-Type": monitor.content_type })
+                resp = requests.post(update_url, data=monitor, timeout=30, allow_redirects=False, headers={ 'User-Agent': 'KFCFW OTA', "Content-Type": monitor.content_type })
             except Exception as e:
                 count += 1
                 print('Exception %s, retrying %d/30 in 10 seconds...' % (e, count))
@@ -155,6 +155,7 @@ class OTA(kfcfw.OTAHelpers):
             break
 
         bar.finish();
+
 
         if resp.status_code==302:
             self.verbose("Update successful")
@@ -165,12 +166,14 @@ class OTA(kfcfw.OTAHelpers):
                 if error==None:
                     error = self.get_h3(content)
                 if error==None:
-                    self.verbose("Update failed with unknown response")
-                    self.verbose("Response code " + str(resp.status_code))
-                    self.verbose(content)
+                    self.verbose('Update failed with unknown response code: %s' % resp.status_code)
+                    self.verbose('Headers: %s' % resp.headers)
+                    self.verbose('Response: %s' % content)
+                    self.verbose('URL: %s' % update_url)
+                    self.verbose('Headers sent: %s' % headers)
                     sys.exit(2)
                 else:
-                    self.verbose("Update failed with: " + error)
+                    self.verbose("Update failed with: %s" % error)
                     sys.exit(3)
 
         if self.args.no_wait==False:
@@ -231,7 +234,7 @@ class OTA(kfcfw.OTAHelpers):
 # main
 
 parser = argparse.ArgumentParser(description="OTA for KFC Firmware", formatter_class=argparse.RawDescriptionHelpFormatter, epilog="exit codes:\n  0 - success\n  1 - general error\n  2 - device did not respond\n  3 - update failed\n  4 - device did not respond after update\n  5 - copying ELF firmware failed")
-parser.add_argument("action", help="action to execute", choices=["flash", "upload", "spiffs", "uploadfs", "atmega", "status", "alive", "export", "import", "factoryreset"])
+parser.add_argument("action", help="action to execute", choices=["flash", "upload", "littlefs", "uploadfs", "atmega", "status", "alive", "export", "import", "factoryreset", "safemode", "console"])
 parser.add_argument("hostname", help="web server hostname")
 parser.add_argument("-u", "--user", help="username", required=True)
 parser.add_argument("-p", "--pw", "--pass", help="password", required=True)
@@ -239,11 +242,12 @@ parser.add_argument("-I", "--image", help="firmware image", type=argparse.FileTy
 parser.add_argument("-O", "--output", help="export settings output file")
 parser.add_argument("--params", help="parameters to import", nargs='*', default=[])
 parser.add_argument("-P", "--port", help="web server port", type=int, default=80)
+parser.add_argument("-t", "--timeout", help="timeout for console commands", type=int, default=30)
 parser.add_argument("-s", "--secure", help="use https to upload", action="store_true", default=False)
 parser.add_argument("-q", "--quiet", help="do not show any output", action="store_true", default=False)
 parser.add_argument("-n", "--no-status", help="do not query status", action="store_true", default=False)
 parser.add_argument("-W", "--no-wait", help="wait after upload until device has been rebooted", action="store_true", default=False)
-parser.add_argument("--elf", help="copy firmware.(elf|bin) or spiffs.bin to directory", type=str, default=None)
+parser.add_argument("--elf", help="copy firmware.(elf|bin) or littlefs.bin to directory", type=str, default=None)
 parser.add_argument("--ini", help="copy platform.ini and other files to elf directory", type=str, default=None)
 parser.add_argument("--sha1", help="use sha1 authentication", action="store_true", default=False)
 args = parser.parse_args()
@@ -263,11 +267,11 @@ else:
 sid = session.generate(args.user, args.pw)
 target = args.user + ":***@" + args.hostname
 
-if args.action in("flash", "upload", "spiffs", "uploadfs", "atmega"):
+if args.action in("flash", "upload", "littlefs", "uploadfs", "atmega"):
     ota.flash(url, args.action, target, sid)
 elif args.action=="factoryreset":
     payload_sent = False
-    timeout = time.monotonic() + 30
+    timeout = time.monotonic() + args.timeout
     socket = kfcfw.OTASerialConsole(args.hostname, sid)
     while time.monotonic()<timeout and not socket.is_closed:
         if socket.is_authenticated and payload_sent==False:
@@ -276,7 +280,25 @@ elif args.action=="factoryreset":
             socket.ws.send('+rst\r\n')
             payload_sent = True
         time.sleep(1)
-
+elif args.action=="safemode":
+    payload_sent = False
+    timeout = time.monotonic() + args.timeout
+    socket = kfcfw.OTASerialConsole(args.hostname, sid)
+    while time.monotonic()<timeout and not socket.is_closed:
+        if socket.is_authenticated and payload_sent==False:
+            socket.ws.send('+rst s\r\n')
+            socket.ws.send('+rst s\r\n')
+            payload_sent = True
+        time.sleep(1)
+elif args.action=="console":
+    payload_sent = False
+    timeout = time.monotonic() + args.timeout
+    socket = kfcfw.OTASerialConsole(args.hostname, sid)
+    while time.monotonic()<timeout and not socket.is_closed:
+        if socket.is_authenticated and payload_sent==False:
+            socket.ws.send('at\r\n')
+            payload_sent = True
+        time.sleep(1)
 elif args.action=="status":
     ota.get_status(url, target, sid)
 elif args.action=="alive":

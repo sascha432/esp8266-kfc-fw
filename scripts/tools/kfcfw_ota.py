@@ -252,7 +252,6 @@ parser.add_argument("--ini", help="copy platform.ini and other files to elf dire
 parser.add_argument("--sha1", help="use sha1 authentication", action="store_true", default=False)
 args = parser.parse_args()
 
-
 ota = OTA(args)
 
 url = "http"
@@ -268,6 +267,16 @@ sid = session.generate(args.user, args.pw)
 target = args.user + ":***@" + args.hostname
 
 if args.action in("flash", "upload", "littlefs", "uploadfs", "atmega"):
+    print("restarting device in safe mode...")
+    payload_sent = False
+    timeout = time.monotonic() + 10
+    socket = kfcfw.OTASerialConsole(args.hostname, sid)
+    while time.monotonic()<timeout and not socket.is_closed:
+        if socket.is_authenticated and payload_sent==False:
+            socket.ws.send('+rst s\r\n')
+            payload_sent = True
+        time.sleep(1)
+    print("starting update....")
     ota.flash(url, args.action, target, sid)
 elif args.action=="factoryreset":
     payload_sent = False

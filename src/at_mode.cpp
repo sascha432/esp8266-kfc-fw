@@ -1757,7 +1757,7 @@ void at_mode_serial_handle_event(String &commandString)
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RN))) {
         if (args.requireArgs(2, 2)) {
             auto filename = args.get(0);
-            auto newFilename = args.get(0);
+            auto newFilename = args.get(1);
             auto result = KFCFS.rename(filename, newFilename);
             args.printf_P(PSTR("%s => %s: %s"), filename, newFilename, result ? PSTR("success") : PSTR("failure"));
         }

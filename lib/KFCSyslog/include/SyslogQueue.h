@@ -299,9 +299,9 @@ inline size_t SyslogQueue::_getQueueItemSize(const String &msg) const
 #if 0
 // persistant storage that survives reboots and can store a significant amount of messages if the syslog server isn't available
 // TODO
-class SyslogSPIFFSQueue : public SyslogQueue {
+class SyslogFSQueue : public SyslogQueue {
 public:
-    SyslogSPIFFSQueue(const String &filename, size_t maxSize) {
+    SyslogFSQueue(const String &filename, size_t maxSize) {
         _maxSize = maxSize;
         _filename = filename;
     }

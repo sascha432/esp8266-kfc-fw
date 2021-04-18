@@ -96,9 +96,9 @@ call :launch php.exe %DIR%\lib\KFCWebFrameWork\bin\include\cli_tool.php %DIR%\KF
 cd %DIR%
 IF %ERROR_LEVEL% NEQ 127 (
     call :line
-    echo "[BUILD] Uploading webui SPIFFS image"
+    echo "[BUILD] Uploading webui LittleFS image"
     call :line
-    SET ERROR_MSG=Failed to upload SPIFFS image
+    SET ERROR_MSG=Failed to upload LittleFS image
     call :launch platformio.exe run --target uploadfs %UPORT%
 ) else (
     call :line

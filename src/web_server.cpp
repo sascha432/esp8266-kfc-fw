@@ -805,7 +805,7 @@ void Plugin::begin(bool restart)
     if (System::Flags::getConfig().is_log_login_failures_enabled) {
         _loginFailures.reset(new FailureCounterContainer());
         if (_loginFailures) {
-            _loginFailures->readFromSPIFFS();
+            _loginFailures->readFromFS();
         }
     }
     else {

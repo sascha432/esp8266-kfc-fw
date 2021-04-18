@@ -301,7 +301,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SSDST, "SSDST", "Display time and WiFi sta
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SSDCLR, "SSDCLR", "Clear display and reset to detault");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(SSDXY, "SSDXY", "<x,y>", "Set cursor");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(SSDW, "SSDW", "<line1[,line2,...]>", "Display text");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(SSDRF, "SSDRF", "<filename>", "Read font from SPIFFS");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(SSDRF, "SSDRF", "<filename>", "Read font from FS");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(SSDDF, "SSDDF", "<url>", "Download font");
 
 void SSD1306Plugin::atModeHelpGenerator()

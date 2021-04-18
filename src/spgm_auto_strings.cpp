@@ -122,7 +122,7 @@ PROGMEM_STRING_DEF(Reboot_Device, "Reboot Device");
 PROGMEM_STRING_DEF(Refresh_Interval, "Refresh Interval");
 PROGMEM_STRING_DEF(Running, "Running");
 PROGMEM_STRING_DEF(SID, "SID");
-PROGMEM_STRING_DEF(SPIFFS_tmp_dir, "/.tmp/");
+PROGMEM_STRING_DEF(FS_tmp_dir, "/.tmp/");
 PROGMEM_STRING_DEF(SRV, "SRV");
 PROGMEM_STRING_DEF(SSDP_Discovery, "SSDP Discovery");
 PROGMEM_STRING_DEF(SSID, "SSID");

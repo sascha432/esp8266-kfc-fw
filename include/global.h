@@ -110,7 +110,7 @@
 #endif
 
 #ifndef LOGGER
-// Logging to files on SPIFFS
+// Logging to files on FS
 #define LOGGER                                      1
 #endif
 
@@ -254,7 +254,7 @@
 #endif
 #endif
 
-// Simple web file manager for SPIFFS
+// Simple web file manager for FS
 #ifndef FILE_MANAGER
 #define FILE_MANAGER                                        1
 #endif
@@ -422,7 +422,7 @@
 #define HAVE_I2CSCANNER                                     1
 #endif
 
-// disable crash counter on SPIFFS
+// disable crash counter on FS
 #ifndef KFC_DISABLE_CRASHCOUNTER
 #define KFC_DISABLE_CRASHCOUNTER                            0
 #endif

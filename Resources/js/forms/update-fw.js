@@ -104,7 +104,7 @@ $(function() {
         var hash = $(location).attr('hash');
         if (hash == '#u_flash') {
             $('#firmware_upgrade_status').show();
-        } else if (hash == '#u_spiffs') {
+        } else if (hash == '#u_fs') {
             $('#firmware_upgrade_status').show().find('h1 span').html('SPI Flash File System');
         }
         function update_action() {

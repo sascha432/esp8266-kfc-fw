@@ -308,7 +308,7 @@ namespace SaveCrash {
     bool clearStorage(ClearStorageType type, uint32_t options = 50);
     uint8_t getCrashCounter();
     void removeCrashCounterAndSafeMode();
-    void removeCrashCounter(); // calling SPIFFS.begin()
+    void removeCrashCounter(); // calling KFCFS.begin()
     void installRemoveCrashCounter(uint32_t delay_seconds);
 
     struct webHandler {

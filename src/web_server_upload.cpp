@@ -19,12 +19,6 @@
 
 #define U_ATMEGA 254
 
-#if ARDUINO_ESP8266_VERSION_COMBINED >= 0x020603
-#ifndef U_SPIFFS
-#define U_SPIFFS U_FS
-#endif
-#endif
-
 using KFCConfigurationClasses::System;
 
 using namespace WebServer;
@@ -236,7 +230,7 @@ void AsyncUpdateWebHandler::handleUpload(AsyncWebServerRequest *request, const S
             if (request->arg(FSPGM(image_type)) == F("u_flash")) { // firmware selected
                 imageType = 0;
             }
-            else if (request->arg(FSPGM(image_type)) == F("u_spiffs")) { // spiffs selected
+            else if (request->arg(FSPGM(image_type)) == F("u_fs")) { // filesystem selected
                 imageType = 1;
             }
 #if STK500V1
@@ -247,7 +241,7 @@ void AsyncUpdateWebHandler::handleUpload(AsyncWebServerRequest *request, const S
                 imageType = 3;
             }
 #endif
-            else if (filename.indexOf(F("spiffs")) != -1) { // auto select
+            else if (filename.indexOf(F("spiffs")) != -1 || filename.indexOf(F("littlefs")) != -1) { // auto select
                 imageType = 2;
             }
 
@@ -266,7 +260,7 @@ void AsyncUpdateWebHandler::handleUpload(AsyncWebServerRequest *request, const S
 #else
                     size = 1048576;
 #endif
-                    command = U_SPIFFS;
+                    command = U_FS;
                 } else {
                     size = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
                     command = U_FLASH;

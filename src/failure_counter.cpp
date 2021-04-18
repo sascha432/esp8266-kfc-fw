@@ -92,7 +92,7 @@ void FailureCounter::addFailure()
     __LDBG_printf("Failed attempt from %s #%u", _addr.toString().c_str(), _counter);
     if (IS_TIME_VALID(_lastFailure) && _lastFailure > _container._lastRewrite + _container._rewriteInterval) {
         _container._lastRewrite = _container._rewriteInterval;
-        _container.rewriteSPIFFSFile();
+        _container.rewriteStorageFile();
     }
     else {
         auto file = KFCFS.open(FSPGM(login_failure_file), fs::FileOpenMode::append);
@@ -156,7 +156,7 @@ FailureCounterContainer::FailureCounterContainer() :
 /**
  * Read data from SPIIFS and clean up expired records
  */
-void FailureCounterContainer::readFromSPIFFS()
+void FailureCounterContainer::readFromFS()
 {
     _failures.clear();
     auto file = KFCFS.open(FSPGM(login_failure_file), fs::FileOpenMode::read);
@@ -185,9 +185,9 @@ void FailureCounterContainer::readFromSPIFFS()
 }
 
 /**
- * Remove expires records and store on SPIFFS
+ * Remove expires records and store on FS
  **/
-void FailureCounterContainer::rewriteSPIFFSFile()
+void FailureCounterContainer::rewriteStorageFile()
 {
     auto file = KFCFS.open(FSPGM(login_failure_file), fs::FileOpenMode::write);
     if (file) {
@@ -200,7 +200,7 @@ void FailureCounterContainer::rewriteSPIFFSFile()
         }
         file.close();
 
-        __LDBG_printf("Written %d out of %d records to SPIFFS", _failures.size(), count);
+        __LDBG_printf("Written %d out of %d records to FS", _failures.size(), count);
     }
 }
 

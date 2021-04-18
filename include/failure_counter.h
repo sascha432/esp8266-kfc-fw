@@ -82,8 +82,8 @@ public:
 
     const FailureCounter &addFailure(const IPAddress &addr);
     bool isAddressBlocked(const IPAddress &addr);
-    void readFromSPIFFS();
-    void rewriteSPIFFSFile();
+    void readFromFS();
+    void rewriteStorageFile();
 
 private:
     friend FailureCounter;

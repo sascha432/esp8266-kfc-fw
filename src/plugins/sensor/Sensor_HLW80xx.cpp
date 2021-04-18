@@ -270,7 +270,7 @@ void Sensor_HLW80xx::_loadEnergyCounter()
     auto file = KFCFS.open(FSPGM(iot_sensor_hlw80xx_state_file), fs::FileOpenMode::read);
     if (!file || file.read(reinterpret_cast<uint8_t *>(_energyCounter.data()), sizeof(_energyCounter)) != sizeof(_energyCounter)) {
         resetEnergyCounter();
-        _energyCounter[0] = Plugins::Sensor::getConfig().energyCounter; // restore data from EEPROM in case SPIFFS was updated
+        _energyCounter[0] = Plugins::Sensor::getConfig().energyCounter; // restore data from EEPROM in case FS was updated
     }
     _saveEnergyCounterTimeout = millis() + IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT;
 #else

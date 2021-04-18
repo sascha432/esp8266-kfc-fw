@@ -132,7 +132,7 @@
 #define IOT_SENSOR_HLW80xx_F_OSC                        3.579000
 #endif
 
-// interval to save energy counter to SPIFFS, 0 to disable
+// interval to save energy counter to FS, 0 to disable
 #ifndef IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT
 #define IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT              (5 * 60 * 1000)
 #endif

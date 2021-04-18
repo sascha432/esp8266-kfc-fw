@@ -10,7 +10,7 @@
 #define DEBUG_IOT_BLINDS_CTRL               0
 #endif
 
-// save last state on SPIFFS
+// save last state on FS
 #ifndef IOT_BLINDS_CTRL_SAVE_STATE
 #define IOT_BLINDS_CTRL_SAVE_STATE          1
 #endif

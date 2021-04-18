@@ -15,11 +15,6 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/core_esp8266_
 > #define ets_printf_P ___static_ets_printf_P
 > 
 > void ___static_ets_printf_P(const char *str, ...) {
-diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/FS.h ./framework-arduinoespressif8266/cores/esp8266/FS.h
-269c269
-< extern fs::FS SPIFFS __attribute__((deprecated("SPIFFS has been deprecated. Please consider moving to LittleFS or other filesystems.")));
----
-> extern fs::FS SPIFFS; // __attribute__((deprecated("SPIFFS has been deprecated. Please consider moving to LittleFS or other filesystems.")));
 diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/HardwareSerial.h ./framework-arduinoespressif8266/cores/esp8266/HardwareSerial.h
 206a207,209
 > #ifdef HAVE_KFC_FIRMWARE_VERSION

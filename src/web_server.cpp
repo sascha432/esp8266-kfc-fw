@@ -767,7 +767,7 @@ void Plugin::ArduinoOTADumpInfo(Print &output)
 
 void Plugin::begin(bool restart)
 {
-    __DBG_printf("BEGIN restart=%u", restart);
+    __LDBG_printf("BEGIN restart=%u", restart);
     auto mode = System::WebServer::getMode();
     if (mode == System::WebServer::ModeType::DISABLED) {
 #if MDNS_PLUGIN
@@ -814,7 +814,7 @@ void Plugin::begin(bool restart)
 
     // setup webui socket
     if (System::Flags::getConfig().is_webui_enabled) {
-        __DBG_printf("WebUISocket::_server=%p", WebUISocket::getServerSocket());
+        __LDBG_printf("WebUISocket::_server=%p", WebUISocket::getServerSocket());
         if (WebUISocket::getServerSocket() == nullptr) {
             WebUISocket::setup(_server.get());
         }

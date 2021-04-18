@@ -430,7 +430,7 @@ size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
 
     if (_state == 0) { // fill _buffer
         FSInfo info;
-        SPIFFS_info(info);
+        KFCFS.info(info);
 
         // if (String_endsWith(_dirName, '/')) {
         //     _dirName.remove(_dirName.length() - 1, 1);
@@ -487,8 +487,11 @@ size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
                     _dir.fileSize(),
                     _dir.isMapping() ? TYPE_MAPPED_FILE : TYPE_REGULAR_FILE
                 );
+
             }
-            if (_dir.isMapping()) {
+
+            // add file creation time for directories and files, if available
+            if (_dir.isMapping() || _dir.fileTime()) {
                 _buffer.print(F(",\"t\":\""));
                 _buffer.strftime_P(PSTR("%Y-%m-%d %H:%M"), _dir.fileTime());
                 _buffer.print('"');

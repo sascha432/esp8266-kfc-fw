@@ -225,6 +225,7 @@ PROGMEM_STRING_DEF(err, "err");
 PROGMEM_STRING_DEF(error, "error");
 PROGMEM_STRING_DEF(factory_html, "factory.html");
 PROGMEM_STRING_DEF(file_manager_base_uri, "/file_manager/");
+PROGMEM_STRING_DEF(file_manager_upload_uri, "/file_manager/upload")
 PROGMEM_STRING_DEF(file_manager_html_uri, "file-manager.html");
 PROGMEM_STRING_DEF(filename, "filename");
 PROGMEM_STRING_DEF(float, "float");

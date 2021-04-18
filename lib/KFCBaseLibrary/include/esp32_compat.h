@@ -6,8 +6,12 @@
 
 #if defined(ESP32)
 
+#if USE_LITTLEFS
+#include <LittleFS.h>
+#else
 #include "../src/SPIFFS.h"
 #include <FS.h>
+#endif
 
 #include <esp_timer.h>
 
@@ -117,8 +121,6 @@ namespace fs {
 
 using Dir = fs::Dir;
 
-#define SPIFFS_openDir(dirname)             Dir(SPIFFS.open(dirname))
-
 // namespace fs {
 
 //     enum OpenMode {
@@ -197,6 +199,7 @@ typedef struct {
 } FSInfo;
 
 
+//TODO change to KFCFS.info()
 #define SPIFFS_info(info) \
     memset(&info, 0, sizeof(info)); \
     info.totalBytes = SPIFFS.totalBytes(); \

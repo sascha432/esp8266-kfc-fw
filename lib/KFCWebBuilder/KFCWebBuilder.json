@@ -8,8 +8,6 @@
     },
     "configuration": {
         "run_command_on_success": "",
-        // "run_command_on_success": "${commands.pio_upload_spiffs}",
-        // "run_command_on_success": "${commands.create_spiffs}",
         "scanner_database_dir": "${path.sys_temp_dir}",
         "package_hash_file": "${path.shared_temp_dir}/kfcfw-package.hash"
     },
@@ -20,7 +18,9 @@
         "minify_html": "${bin.java} -jar ${bin.html_compressor} --type html --compress-js --compress-css --output ${file.tmp_out} ${file.tmp_in}",
         "minify_css": "${bin.java} -jar ${bin.yui_compressor} --type css ${file.tmp_in} > ${file.tmp_out}",
         "compress_gzip": "${bin.gzip} -9 -k -n -c ${file.tmp_in} > ${file.tmp_out}",
-        "create_spiffs": "${bin.mkspiffs} -c data -p 256 -b 8192 -s 1024000 .pio/build/${pio.env}/spiffs.bin",
+        "UNUSED_create_spiffs": "${bin.mkspiffs} -c data -p 256 -b 8192 -s 1024000 .pio/build/${pio.env}/spiffs.bin",
+        "create_spiffs": "${bin.mklittlefs} -c data -p 256 -b 8192 -s 1024000 .pio/build/${pio.env}/littlefs.bin",
+
         "pio_upload_spiffs": {
             "#if OS_WIN": "${bin.platformio_activate} && ${bin.platformio} run --target uploadfs -v",
             "#else": ". ${bin.platformio_activate} && ${bin.platformio} run --target uploadfs -v"
@@ -38,6 +38,12 @@
         "java": {
             "#if OS_WIN": "java.exe",
             "#else": "java"
+        },
+        "mklittlefs": {
+            "#if OS_WIN && ESP8266": "~/.platformio/packages/tool-mklittlefs/mklittlefs.exe",
+            "#elif OS_WIN && ESP32": "~/.platformio/packages/tool-mklittlefs/mklittlefs.exe",
+            "#elif ESP8266": "~/.platformio/packages/tool-mklittlefs/mklittlefs",
+            "#elif ESP32": "~/.platformio/packages/tool-mklittlefs/mklittlefs"
         },
         "mkspiffs": {
             "#if OS_WIN && ESP8266": "~/.platformio/packages/tool-mkspiffs/mkspiffs_espressif8266_arduino.exe",

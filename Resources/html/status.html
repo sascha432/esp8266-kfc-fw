@@ -133,6 +133,17 @@
                             %WIFI_STATUS%
                         </div>
                     </div>
+                    <div class="row">
+                        <div class="col-lg-3 col-lg-auto">
+                            File System
+                            <!--#if defined(USE_LITTLEFS) && USE_LITTLEFS -->
+                            <hr><strong>LittleFS</strong>
+                            <!--#endif-->
+                        </div>
+                        <div class="col">
+                            %FILE_SYSTEM_INFO%
+                        </div>
+                    </div>
 
                     <div class="row">
                         <div class="col">

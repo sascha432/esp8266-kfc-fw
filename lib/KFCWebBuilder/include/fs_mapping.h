@@ -6,7 +6,6 @@
 
 #include <Arduino_compat.h>
 #include <WString.h>
-#include <FSImpl.h>
 
 using namespace fs;
 
@@ -22,7 +21,7 @@ using namespace fs;
 #ifdef SPIFFS_OBJ_NAME_LEN
 #define FS_MAPPING_MAX_FILENAME_LEN         (SPIFFS_OBJ_NAME_LEN + 1)
 #else
-#define FS_MAPPING_MAX_FILENAME_LEN         33
+#define FS_MAPPING_MAX_FILENAME_LEN         KFCFS_MAX_FILE_LEN
 #endif
 
 #include <push_pack.h>
@@ -98,28 +97,21 @@ private:
 
 #include <pop_pack.h>
 
-class SPIFFSWrapper {
+class FSWrapper {
 public:
-    SPIFFSWrapper() {
-    }
     static File open(Dir dir, const char *mode);
     static File open(const char *path, const char *mode);
-    static File open(const String &path, const char *mode) {
-        return open(path.c_str(), mode);
-    }
+    static File open(const String &path, const char *mode);
 
     static bool exists(const char *path);
-    static bool exists(const String &path) {
-        return exists(path.c_str());
-    }
+    static bool exists(const String &path);
+
     static bool rename(const char* pathFrom, const char* pathTo);
-    static bool rename(const String &pathFrom, const String &pathTo) {
-        return rename(pathFrom.c_str(), pathTo.c_str());
-    }
+    static bool rename(const String &pathFrom, const String &pathTo);
+
     static bool remove(const char *path);
-    static bool remove(const String &path) {
-        return remove(path.c_str());
-    }
+    static bool remove(const String &path);
+
     // static Dir openDir(const char *path);
     // static Dir openDir(const String &path) {
     //     return openDir(path.c_str());

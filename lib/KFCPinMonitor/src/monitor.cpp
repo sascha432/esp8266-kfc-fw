@@ -15,10 +15,13 @@
 #include "logger.h"
 #include <PrintHtmlEntitiesString.h>
 
+#if PIN_MONITOR_USE_POLLING
+#else
 #if PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS
 #include <FunctionalInterrupt.h>
 #else
 #include "interrupt_impl.h"
+#endif
 #endif
 #include "interrupt_event.h"
 
@@ -76,16 +79,22 @@ void Monitor::end()
     _detach(_handlers.begin(), _handlers.end(), true);
 
 #if PIN_MONITOR_ROTARY_ENCODER_SUPPORT
-    ETS_GPIO_INTR_DISABLE();
-    eventBuffer.clear();
-    ETS_GPIO_INTR_ENABLE();
+    #if PIN_MONITOR_USE_POLLING
+        eventBuffer.clear();
+    #else
+        ETS_GPIO_INTR_DISABLE();
+        eventBuffer.clear();
+        ETS_GPIO_INTR_ENABLE();
+    #endif
 #endif
 }
 
 
 void Monitor::printStatus(Print &output)
 {
-#if PIN_MONITOR_USE_GPIO_INTERRUPT
+#if PIN_MONITOR_USE_POLLING
+    output.print(F("GPIO Polling, Interrupts are disabled" HTML_S(br)));
+#elif PIN_MONITOR_USE_GPIO_INTERRUPT
     output.print(F("Interrupt Handler: Custom GPIO Interrupt handler" HTML_S(br)));
 #elif PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS == 0
     output.print(F("Interrupt Handler: Optimized Functional Interrupts" HTML_S(br)));
@@ -168,7 +177,7 @@ Pin &Monitor::_attach(Pin &pin, HardwarePinType type)
 
     __LDBG_printf("%s attaching pin=%u usage=%u arg=%p", typeStr, curPin.getPin(), curPin.getCount() + 1, pin.getArg());
     ++curPin;
-    #if !PIN_MONITOR_USE_GPIO_INTERRUPT
+    #if PIN_MONITOR_USE_GPIO_INTERRUPT == 0 && PIN_MONITOR_USE_POLLING == 0
         if (curPin) {
             #if PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS
                 // +72 byte IRAM
@@ -208,14 +217,16 @@ void Monitor::_detach(Iterator begin, Iterator end, bool clear)
             __LDBG_printf("detaching pin=%u usage=%u remove=%u", pin->getPin(), curPin.getCount(), curPin.getCount() == 1);
             if (!--curPin) {
                 __LDBG_printf("detaching interrupt pin=%u", pinNum);
-#if PIN_MONITOR_USE_GPIO_INTERRUPT == 0
-#if PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS
+#if PIN_MONITOR_USE_POLLING
+                // no interrupts
+#elif !PIN_MONITOR_USE_GPIO_INTERRUPT
+    #if PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS
                 // +160 byte IRAM
                 detachInterrupt(digitalPinToInterrupt(pinNum));
-#else
+    #else
                 // 0 byte IRAM
                 detachInterrupt(digitalPinToInterrupt(pinNum));
-#endif
+    #endif
 #endif
                 pinMode(pinNum, INPUT);
 
@@ -273,7 +284,7 @@ void Monitor::_attachLoop()
 void Monitor::_detachLoop()
 {
     __LDBG_printf("detach=loop timer=%d", _loopTimer ? (bool)*_loopTimer : -1);
-#if PIN_MONITOR_USE_GPIO_INTERRUPT
+#if PIN_MONITOR_USE_GPIO_INTERRUPT && PIN_MONITOR_USE_POLLING == 0
     PinMonitor::GPIOInterruptsDisable();
 #endif
     if (_loopTimer) {
@@ -305,7 +316,7 @@ void Monitor::_loop()
         }
 
 
-#if 1
+#if 0
         {
             ETS_GPIO_INTR_DISABLE();
             auto bufIterator = eventBuffer.begin();
@@ -328,11 +339,15 @@ void Monitor::_loop()
         // };
         // DebounceSummary dsPins[17] = {};
 
-        ETS_GPIO_INTR_DISABLE();
+        #if PIN_MONITOR_USE_POLLING == 0
+            ETS_GPIO_INTR_DISABLE();
+        #endif
         auto bufIterator = eventBuffer.begin();
         while (bufIterator != eventBuffer.end()) {
             auto event = *bufIterator;
-            ETS_GPIO_INTR_ENABLE();
+            #if PIN_MONITOR_USE_POLLING == 0
+                ETS_GPIO_INTR_ENABLE();
+            #endif
 
             __DBG_printf("L-FEED: %s", event.toString().c_str());
 
@@ -374,13 +389,17 @@ void Monitor::_loop()
                 // }
             }
 
-            ETS_GPIO_INTR_DISABLE();
+            #if PIN_MONITOR_USE_POLLING == 0
+                ETS_GPIO_INTR_DISABLE();
+            #endif
             ++bufIterator;
         }
         if (bufIterator == eventBuffer.end()) {
             eventBuffer.clear();
         }
-        ETS_GPIO_INTR_ENABLE();
+        #if PIN_MONITOR_USE_POLLING == 0
+            ETS_GPIO_INTR_ENABLE();
+        #endif
 
     }
     now = millis();

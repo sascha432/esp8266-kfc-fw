@@ -370,6 +370,7 @@ void setup()
 #endif
 
         // start FS, we need it for getCrashCounter()
+        // KFCFS.setConfig(LittleFSConfig(false));
         KFCFS.begin();
 
 #if KFC_AUTO_SAFE_MODE_CRASH_COUNT != 0 && KFC_DISABLE_CRASHCOUNTER == 0

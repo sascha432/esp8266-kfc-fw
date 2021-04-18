@@ -11,8 +11,11 @@
 
 namespace PinMonitor {
 
+// exterimental support for polling / no interrupts or IRAM usage
+#if PIN_MONITOR_USE_POLLING
+
 // custom interrupt handler, requires least amount of IRAM
-#if PIN_MONITOR_USE_GPIO_INTERRUPT
+#elif PIN_MONITOR_USE_GPIO_INTERRUPT
 
     void GPIOInterruptsEnable();
     void GPIOInterruptsDisable();

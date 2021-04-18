@@ -53,6 +53,7 @@ def before_clean(source, target, env):
     env.Execute("del ${PROJECTDATA_DIR}/webui/ -Recurse")
 
 
-env.AddPreAction("$BUILD_DIR/spiffs.bin", build_webui)
+# env.AddPreAction("$BUILD_DIR/spiffs.bin", build_webui)
+env.AddPreAction("$BUILD_DIR/littlefs.bin", build_webui)
 #env.AddPreAction("buildfs", build_webui)
 env.AlwaysBuild(env.Alias("rebuildfs", None, rebuild_webui))

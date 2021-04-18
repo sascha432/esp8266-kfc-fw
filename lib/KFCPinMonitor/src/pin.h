@@ -155,7 +155,7 @@ namespace PinMonitor {
     // protected:
     public:
 
-#if PIN_MONITOR_USE_GPIO_INTERRUPT == 0
+#if PIN_MONITOR_USE_GPIO_INTERRUPT == 0 && PIN_MONITOR_USE_POLLING == 0
         static void ICACHE_RAM_ATTR callback(void *arg);
 #endif
 
@@ -204,28 +204,43 @@ namespace PinMonitor {
         }
 
         inline void clearEvents() {
-            ETS_GPIO_INTR_DISABLE();
+            #if PIN_MONITOR_USE_POLLING == 0
+                ETS_GPIO_INTR_DISABLE();
+            #endif
             _event = SimpleEventType::NONE;
-            ETS_GPIO_INTR_ENABLE();
+            #if PIN_MONITOR_USE_POLLING == 0
+                ETS_GPIO_INTR_ENABLE();
+            #endif
         }
 
         inline SimpleEventType getEvent() const {
-            ETS_GPIO_INTR_DISABLE();
+            #if PIN_MONITOR_USE_POLLING == 0
+                ETS_GPIO_INTR_DISABLE();
+            #endif
             auto tmp = _event;
-            ETS_GPIO_INTR_ENABLE();
+            #if PIN_MONITOR_USE_POLLING == 0
+                ETS_GPIO_INTR_ENABLE();
+            #endif
             return tmp;
         }
 
         inline SimpleEventType getEventClear() {
-            ETS_GPIO_INTR_DISABLE();
+            #if PIN_MONITOR_USE_POLLING == 0
+                ETS_GPIO_INTR_DISABLE();
+            #endif
             auto tmp = _event;
             _event = SimpleEventType::NONE;
-            ETS_GPIO_INTR_ENABLE();
+            #if PIN_MONITOR_USE_POLLING == 0
+                ETS_GPIO_INTR_ENABLE();
+            #endif
             return tmp;
         }
 
     private:
-        volatile SimpleEventType _event;
+        #if PIN_MONITOR_USE_POLLING == 0
+        volatile
+        #endif
+        SimpleEventType _event;
     };
 
     class DebouncedHardwarePin : public SimpleHardwarePin {
@@ -280,9 +295,13 @@ namespace PinMonitor {
 
         inline __attribute__((__always_inline__))
         void clearEvents() {
-            ETS_GPIO_INTR_DISABLE();
+            #if PIN_MONITOR_USE_POLLING == 0
+                ETS_GPIO_INTR_DISABLE();
+            #endif
             clearEventsNoInterrupts();
-            ETS_GPIO_INTR_ENABLE();
+            #if PIN_MONITOR_USE_POLLING == 0
+                ETS_GPIO_INTR_ENABLE();
+            #endif
         }
 
         // GPIO interrupts must be disabled when calling this method
@@ -292,17 +311,25 @@ namespace PinMonitor {
         }
 
         inline Events getEvents() const {
-            ETS_GPIO_INTR_DISABLE();
+            #if PIN_MONITOR_USE_POLLING == 0
+                ETS_GPIO_INTR_DISABLE();
+            #endif
             auto tmp = getEventsNoInterrupts();
-            ETS_GPIO_INTR_ENABLE();
+            #if PIN_MONITOR_USE_POLLING == 0
+                ETS_GPIO_INTR_ENABLE();
+            #endif
             return tmp;
         }
 
         inline Events getEventsClear() {
-            ETS_GPIO_INTR_DISABLE();
+            #if PIN_MONITOR_USE_POLLING == 0
+                ETS_GPIO_INTR_DISABLE();
+            #endif
             auto tmp = getEventsNoInterrupts();
             clearEventsNoInterrupts();
-            ETS_GPIO_INTR_ENABLE();
+            #if PIN_MONITOR_USE_POLLING == 0
+                ETS_GPIO_INTR_ENABLE();
+            #endif
             return tmp;
         }
 

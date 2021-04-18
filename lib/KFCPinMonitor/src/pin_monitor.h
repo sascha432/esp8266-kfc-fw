@@ -41,7 +41,7 @@
 
 
 #ifndef DEBUG_PIN_MONITOR
-#define DEBUG_PIN_MONITOR                                       0
+#define DEBUG_PIN_MONITOR                                           0
 #endif
 
 // use custom interrupt handler for push buttons and rotary encoder
@@ -49,7 +49,12 @@
 // lowest IRAM consumption and best performance
 // no interrupt locking
 #ifndef PIN_MONITOR_USE_GPIO_INTERRUPT
-#define PIN_MONITOR_USE_GPIO_INTERRUPT                            0
+#define PIN_MONITOR_USE_GPIO_INTERRUPT                              0
+#endif
+
+// experimental version that does not use IRAM/interrupts
+#ifndef PIN_MONITOR_USE_POLLING
+#define PIN_MONITOR_USE_POLLING                                     0
 #endif
 
 // use attachInterruptArg()/detachInterrupt() for interrupt callbacks
@@ -60,15 +65,19 @@
 // set it 0. the custom implementation saves those 232 byte IRAM but
 // is not fully compatible with arduino functional interrupts
 #ifndef PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS
-#if PIN_MONITOR_USE_GPIO_INTERRUPT
-#define PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS                    0
+#if PIN_MONITOR_USE_GPIO_INTERRUPT || PIN_MONITOR_USE_POLLING
+#define PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS                       0
 #else
-#define PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS                    1
+#define PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS                       1
 #endif
 #endif
 
 #if PIN_MONITOR_USE_GPIO_INTERRUPT && PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS
 #error PIN_MONITOR_USE_GPIO_INTERRUPT=1 and PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS=1 cannot be combined
+#endif
+
+#if (PIN_MONITOR_USE_GPIO_INTERRUPT || PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS) && PIN_MONITOR_USE_POLLING
+#error PIN_MONITOR_USE_POLLING cannot be used with interrupts
 #endif
 
 // requires a list of PINs which are fixed and compiled in

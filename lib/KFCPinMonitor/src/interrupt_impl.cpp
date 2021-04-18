@@ -26,9 +26,14 @@ namespace PinMonitor {
     uint16_t interrupt_levels;
 
 // ------------------------------------------------------------------------
+// GPIO polling
+// ------------------------------------------------------------------------
+#if PIN_MONITOR_USE_POLLING
+
+// ------------------------------------------------------------------------
 // implementation with GPIO interrupt instead of attachInterrupt...
 // ------------------------------------------------------------------------
-#if PIN_MONITOR_USE_GPIO_INTERRUPT
+#elif PIN_MONITOR_USE_GPIO_INTERRUPT
 
 
     void GPIOInterruptsEnable()

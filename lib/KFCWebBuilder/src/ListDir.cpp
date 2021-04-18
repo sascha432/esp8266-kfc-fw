@@ -10,10 +10,6 @@
 #include "debug_helper_disable.h"
 // #include "debug_helper_enable.h"
 
-ListDir::ListDir() : _listing({})
-{
-}
-
 #if ESP8266
 
 ListDir::ListDir(const String &dirName, bool filterSubdirs, bool hiddenFiles) :
@@ -27,11 +23,6 @@ ListDir::ListDir(const String &dirName, bool filterSubdirs, bool hiddenFiles) :
 {
     append_slash(_dirName);
     __LDBG_printf("dirName=%s hiddenFiles=%u", _dirName.c_str(), _hiddenFiles);
-}
-
-File ListDir::openFile(const char* mode)
-{
-    return _dir.openFile(mode);
 }
 
 #elif ESP32
@@ -56,37 +47,6 @@ File ListDir::openFile(const char* mode)
 
 #endif
 
-String ListDir::fileName()
-{
-    if (_listing.valid) {
-        return _listing.filename;
-    }
-    return _filename;
-}
-
-size_t ListDir::fileSize()
-{
-    if (_listing.valid) {
-        return _listing.header.orgSize;
-    }
-#if ESP8266
-    return _dir.fileSize();
-#elif ESP32
-    return _file.size();
-#endif
-}
-
-time_t ListDir::fileTime()
-{
-    if (_listing.valid) {
-        return _listing.header.mtime;
-    }
-#if ESP8266
-    return _dir.fileTime();
-#elif ESP32
-    return 0;
-#endif
-}
 
 // _dirName = "/mydir/subdir0/"
 // dir = "/mydir/subdir0/mystuff/many/files.txt"
@@ -149,7 +109,7 @@ bool ListDir::next()
             if (_listings.readBytes(reinterpret_cast<char *>(&_listing.header), sizeof(_listing.header)) != sizeof(_listing.header)) {
                 __LDBG_printf("read failure: header pos=%u size=%u", _listings.position(), _listings.size());
                 _listings.close();
-                _listing = {};
+                _listing = Listing();
                 break;
             }
             else {
@@ -157,7 +117,7 @@ bool ListDir::next()
                 if (!_listing.filename.length()) {
                     __LDBG_printf("filename empty pos=%u size=%u", _listings.position(), _listings.size());
                     _listings.close();
-                    _listing = {};
+                    _listing = Listing();
                     break;
                 }
                 else {
@@ -172,21 +132,27 @@ bool ListDir::next()
     }
 #if defined(ESP8266)
     bool next;
-    if (_listing.valid && _listing.header.uuid == ~0U) {
+    if (_listing.valid && _listing.header.uuid == kDirectoryUUID) {
         next = true;
-        _listing = {};
-    } else {
+        _listing = Listing();
+    }
+    else {
         next = _dir.next();
     }
     while (next) {
+#if USE_LITTLEFS
+        _filename = _dirName + _dir.fileName();
+#else
         _filename = _dir.fileName();
+#endif
+
 #elif defined(ESP32)
     File next;
     while((next = _dir.openNextFile())) {
         _filename = next.name();
 #endif
         while(true) {
-            if (!strncmp_P(_filename.c_str(), SPGM(fs_mapping_dir), strlen_P(SPGM(fs_mapping_dir)))) {
+            if (_filename.startsWithIgnoreCase(FSPGM(fs_mapping_dir))) {
                 break;
             }
             _isDir = false;
@@ -206,9 +172,7 @@ bool ListDir::next()
                 if (std::find(_dirs.begin(), _dirs.end(), crc) == _dirs.end()) {
                     _listing.valid = true;
                     _listing.filename = std::move(dir);
-                    _listing.header = {};
-                    _listing.header.isDir = true;
-                    _listing.header.uuid = ~0U;
+                    _listing.header = ListingsHeader(true);
                     _dirs.push_back(crc);
                     return true;
                 }
@@ -255,43 +219,4 @@ bool ListDir::next()
 #endif
     }
     return false;
-}
-
-bool ListDir::rewind()
-{
-    _listings = KFCFS.open(FSPGM(fs_mapping_listings), FileOpenMode::read);
-    _listing = {};
-    _isDir = false;
-#if ESP8266
-    return _dir.rewind();
-#elif ESP32
-    _dir.rewindDirectory();
-    return true;
-#endif
-}
-
-bool ListDir::isFile() const
-{
-    return !isDirectory();
-}
-
-bool ListDir::isDirectory() const
-{
-    if (_listing.valid) {
-        return _listing.header.isDir;
-    }
-    if (_isDir) {
-        return true;
-    }
-#if ESP8266
-    return _dir.isDirectory();
-#elif ESP32
-    return false;
-#endif
-
-}
-
-bool ListDir::isMapping() const
-{
-    return _listing.valid && _listing.header.uuid != ~0U; // ~0U is used for directory emulation
 }

@@ -79,7 +79,7 @@ namespace StreamOutput {
         {
             _buffer = new uint8_t[_bufferSize];
             if (_buffer) {
-                _file = SPIFFSWrapper::open(filename, fs::FileOpenMode::read);
+                _file = FSWrapper::open(filename, fs::FileOpenMode::read);
             }
             if (_buffer && _file) {
                 if (_printInfo) {

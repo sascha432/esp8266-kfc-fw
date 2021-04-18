@@ -6,7 +6,6 @@
 #include "ConfigurationHelper.h"
 #include "DebugHandle.h"
 #include <crc16.h>
-#include <FS.h>
 
 #if DEBUG_CONFIGURATION
 #include <debug_helper_enable.h>

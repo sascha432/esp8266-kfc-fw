@@ -308,6 +308,7 @@ PROGMEM_STRING_DECL(err);
 PROGMEM_STRING_DECL(error);
 PROGMEM_STRING_DECL(factory_html);
 PROGMEM_STRING_DECL(file_manager_base_uri);
+PROGMEM_STRING_DECL(file_manager_upload_uri);
 PROGMEM_STRING_DECL(file_manager_html_uri);
 PROGMEM_STRING_DECL(filename);
 PROGMEM_STRING_DECL(float);

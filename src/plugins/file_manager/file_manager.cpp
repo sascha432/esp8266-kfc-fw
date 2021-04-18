@@ -55,7 +55,7 @@ FileManager::FileManager(AsyncWebServerRequest *request, bool isAuthenticated, c
 
 void FileManager::addHandler(AsyncWebServer *server)
 {
-    server->addHandler(new AsyncFileUploadWebHandler(String(FSPGM(file_manager_base_uri, "/file_manager/")) + FSPGM(upload), FileManagerWebHandler::onRequestHandler));
+    server->addHandler(new AsyncFileUploadWebHandler(FSPGM(file_manager_upload_uri), FileManagerWebHandler::onRequestHandler));
     server->addHandler(new FileManagerWebHandler(FSPGM(file_manager_base_uri)));
 }
 
@@ -388,7 +388,7 @@ uint16_t FileManager::remove()
         }
         Logger_notice(F("Removing %s (request %s) - %s"), filename.c_str(), requestFilename.c_str(), success ? SPGM(success) : SPGM(failure));
     }
-    __DBG_printf("%s", message.c_str());
+    __LDBG_printf("%s", message.c_str());
     _response = _request->beginResponse(httpCode, FSPGM(mime_text_plain), message);
     return httpCode;
 }
@@ -440,7 +440,7 @@ uint16_t FileManager::rename()
             }
         }
     }
-    __DBG_printf("%s", message.c_str());
+    __LDBG_printf("%s", message.c_str());
     _response = _request->beginResponse(httpCode, FSPGM(mime_text_plain), message);
     return httpCode;
 }
@@ -479,7 +479,7 @@ public:
         dependencies->dependsOn(F("http"), [](const PluginComponent *, DependencyResponseType response) {
             WebServer::AsyncWebServerEx *server;
             if (response == DependencyResponseType::SUCCESS && (server = WebServer::Plugin::getWebServerObject()) != nullptr) {
-                server->addHandler(new AsyncFileUploadWebHandler(String(FSPGM(file_manager_base_uri, "/file_manager/")) + FSPGM(upload), FileManagerWebHandler::onRequestHandler));
+                server->addHandler(new AsyncFileUploadWebHandler(FSPGM(file_manager_upload_uri), FileManagerWebHandler::onRequestHandler));
                 server->addHandler(new FileManagerWebHandler(FSPGM(file_manager_base_uri)));
             }
             else {

@@ -12,6 +12,8 @@ The firmware offers a plugin interface to easily extend its functionality. The p
 
 ## ChangeLog
 
+**SPIFFS** has been replaced with **LittleFS** starting with version 0.0.4.7604
+
 [Version 0.0.4](./CHANGELOG.md)
 
 [Version 0.0.3](https://github.com/sascha432/esp8266-kfc-fw/blob/v0.0.3/CHANGELOG.md)

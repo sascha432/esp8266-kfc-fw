@@ -135,7 +135,11 @@ inline time_t ListDir::fileTime()
         return _listing.header.mtime;
     }
 #if ESP8266
-    return _dir.fileTime();
+    auto time = _dir.fileTime();
+    if (time == 0) {
+        time = _dir.fileCreationTime();
+    }
+    return time;
 #elif ESP32
     return 0;
 #endif

@@ -2,7 +2,7 @@
 
 Firmware for ESP8266/ESP32 and IoT devices
 
-The firmware offers a plugin interface to easily extend its functionality. The plugins can be configured via web interface and have access to the network, file system, logging, serial console, I2C bus, GPIO, EEPROM, RTC memory, event/task scheduler etc... via API functions. Support for deep sleep and WiFi Quick Connect (<250ms) after wake up
+The firmware offers a plugin interface to easily extend its functionality. The plugins can be configured via web interface and have access to the network, file system, logging, serial console, I2C bus, GPIO, GPIO extenders, EEPROM, improved and stable internal ADC, RTC memory, a (more or less) precise RTC during deep sleep, a maximum of 30 days deep sleep, an event/task scheduler, direct access to flash storage (copy on write) without file system overhead, crash logs with stack traces, etc... via API functions. Support for deep sleep, quick boot (~37ms) and WiFi Quick Connect (<230ms) after wake up is also available
 
 ## Required flash size
 
@@ -27,7 +27,7 @@ I started to create branches of stable versions for my different devices.
 
 [Blinds Control - Version 0.0.4.7591](https://github.com/sascha432/esp8266-kfc-fw/tree/blinds_control_0.0.4.7591)
 
-[Remote Control - Version 0.0.4.7545](https://github.com/sascha432/esp8266-kfc-fw/tree/remote_control_0.4.0)
+[Remote Control - Version 0.0.4.7545](https://github.com/sascha432/esp8266-kfc-fw/tree/remote_control_0.0.4.7545)
 
 ## Libraries
 

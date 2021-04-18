@@ -72,6 +72,7 @@
 - Key Combo for safe mode and reset factory settings during boot
 - Customized WString class
 - Switch plugin fixes and improvements
+- Replaced the JSON library with a more stable version that consumes less memory
 
 ## Version 0.0.3
 

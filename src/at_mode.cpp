@@ -751,7 +751,7 @@ void disable_at_mode(Stream &output)
 void at_mode_dump_fs_info(Stream &output)
 {
     FSInfo info;
-    SPIFFS_info(info);
+    KFCFS.info(info);
     output.printf_P(PSTR(
         "+FS: Block size           %d\n"
         "+FS: Max. open files      %d\n"

@@ -7,6 +7,7 @@ The firmware offers a plugin interface to easily extend its functionality. The p
 ## Required flash size
 
 1M with most features activated, no OTA updates
+
 2M with OTA
 
 ## ChangeLog
@@ -42,7 +43,7 @@ Framework to build WebUIs with bootstrap and store them mostly compressed in a v
 ### KFCVirtualFileSystem
 
 ~~Read only file system with long filename support, optimized for low memory environments~~
-Due to constantly changing file system implementations of the Arduno frameworks currently replaced with long filename support on top of SPIFFS/LittleFS, but no transparent access for Dir()/File() anymore. Replacement classes ListDir and SPIFFSWrapper.
+Due to constantly changing file system implementations of the Arduno frameworks currently replaced with long filename support on top of LittleFS, but no transparent access for Dir()/File() anymore. Replacement classes ListDir and FSWrapper.
 
 Support for overriding read only files by uploading to a special directory.
 
@@ -199,7 +200,7 @@ Live remote view over WebUI and screenshots in .BMP format
 
 ### File Manager
 
-WebUI to explore and modify SPIFFS and KFCVirtualFileSystem
+WebUI to explore and modify LittleFS and KFCVirtualFileSystem
 
 ### SaveCrash
 

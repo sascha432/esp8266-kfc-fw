@@ -5,7 +5,9 @@
 #pragma once
 
 #include "Buffer.h"
-#if HAVE_BUFFER_STREAM_FS
+#if USE_LITTLEFS
+#include <LittleFS.h>
+#elif HAVE_BUFFER_STREAM_FS
 #include <FS.h>
 #include <FSImpl.h>
 #endif

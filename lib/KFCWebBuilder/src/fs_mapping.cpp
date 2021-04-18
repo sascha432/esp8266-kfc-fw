@@ -108,7 +108,7 @@ File FileMapping::open(const char *mode) const
 }
 
 
-File SPIFFSWrapper::open(const char *path, const char *mode)
+File FSWrapper::open(const char *path, const char *mode)
 {
     auto file = KFCFS.open(path, mode);
     if (file) {

@@ -430,7 +430,7 @@ size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
 
     if (_state == 0) { // fill _buffer
         FSInfo info;
-        SPIFFS_info(info);
+        KFCFS.info(info);
 
         // if (String_endsWith(_dirName, '/')) {
         //     _dirName.remove(_dirName.length() - 1, 1);

@@ -129,7 +129,7 @@ String FileManager::_requireFile(const String &name, bool mustExists)
         _errors++;
         __LDBG_printf("%s is empty", name.c_str());
     }
-    else if (!SPIFFSWrapper::exists(path)) {
+    else if (!FSWrapper::exists(path)) {
         _errors++;
         __LDBG_printf("File %s not found", path.c_str());
         path = String();
@@ -144,7 +144,7 @@ File FileManager::_requireFile(const String &name)
     if (!path.length()) {
         return File();
     }
-    return SPIFFSWrapper::open(path, fs::FileOpenMode::read);
+    return FSWrapper::open(path, fs::FileOpenMode::read);
 }
 
 String FileManager::_requireArgument(const String &name)
@@ -228,11 +228,11 @@ uint16_t FileManager::mkdir()
     }
     normalizeFilename(newDir);
 
-    if (SPIFFSWrapper::exists(newDir)) {
+    if (FSWrapper::exists(newDir)) {
         message = FSPGM(ERROR_, "ERROR:");
         message += F("Directory already exists");
     } else {
-        File file = SPIFFSWrapper::open(newDir, fs::FileOpenMode::write);
+        File file = FSWrapper::open(newDir, fs::FileOpenMode::write);
         if (file) {
             file.close();
             success = true;
@@ -272,7 +272,7 @@ uint16_t FileManager::upload()
         }
         normalizeFilename(filename);
 
-        if (SPIFFSWrapper::exists(filename)) {
+        if (FSWrapper::exists(filename)) {
             httpCode = 409;
             message = FSPGM(ERROR_);
             message.printf_P(PSTR("File %s already exists"), filename.c_str());
@@ -283,7 +283,7 @@ uint16_t FileManager::upload()
                 String fullname = _request->_tempFile.fullName();
                 _request->_tempFile.close();
 
-                if (SPIFFSWrapper::rename(fullname, filename)) {
+                if (FSWrapper::rename(fullname, filename)) {
                     __LDBG_printf("Renamed upload %s to %s", fullname.c_str(), filename.c_str());
                     success = true;
                     message = F("Upload successful");
@@ -311,7 +311,7 @@ uint16_t FileManager::upload()
     __LDBG_printf("File upload status %d, message %s, ajax %d", httpCode, message.c_str(), ajax_request);
 
     if (success) {
-        Logger_notice(F("File upload successful. Filename %s, size %d"), filename.c_str(), SPIFFSWrapper::open(filename, fs::FileOpenMode::read).size());
+        Logger_notice(F("File upload successful. Filename %s, size %d"), filename.c_str(), FSWrapper::open(filename, fs::FileOpenMode::read).size());
     }
     else {
         Logger_warning(F("File upload failed: %s"), message.c_str());
@@ -377,7 +377,7 @@ uint16_t FileManager::remove()
         String filename = file.name();
         file.close();
 
-        if (!SPIFFSWrapper::remove(filename)) {
+        if (!FSWrapper::remove(filename)) {
             message = FSPGM(ERROR_);
             message += F("Cannot remove ");
             message += filename;
@@ -410,7 +410,7 @@ uint16_t FileManager::rename()
     }
     else {
         FSInfo info;
-        SPIFFS_info(info);
+        KFCFS.info(info);
         String renameFrom = file.name();
         file.close();
 
@@ -424,12 +424,12 @@ uint16_t FileManager::rename()
             message = PrintString(F("%sFilename %s exceeds %d characters"), SPGM(ERROR_), renameTo.c_str(), info.maxPathLength - 1);
         }
         else {
-            if (SPIFFSWrapper::exists(renameTo)) {
+            if (FSWrapper::exists(renameTo)) {
                 message = PrintString(F("%sFile %s already exists"), SPGM(ERROR_), renameTo.c_str());
                 _response = _request->beginResponse(httpCode, FSPGM(mime_text_plain), message);
             }
             else {
-                if (!SPIFFSWrapper::rename(renameFrom, renameTo)) {
+                if (!FSWrapper::rename(renameFrom, renameTo)) {
                     message = PrintString(F("%sCannot rename %s to %s"), SPGM(ERROR_), renameFrom.c_str(), renameTo.c_str());
                 }
                 else {

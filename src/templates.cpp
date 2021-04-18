@@ -131,6 +131,24 @@ void WebTemplate::printModel(Print &output)
 #endif
 }
 
+void WebTemplate::printFileSystemInfo(Print &output)
+{
+#if USE_LITTLEFS
+    FSInfo info;
+    KFCFS.info(info);
+    output.printf_P(PSTR("Block size %d" HTML_S(br)
+            "Max. open files %d" HTML_S(br)
+            "Max. path length %d" HTML_S(br)
+            "Page size %d" HTML_S(br)
+            "Total bytes %d" HTML_S(br)
+            "Used bytes %d (%.2f%%)" HTML_S(br)
+        ), info.blockSize, info.maxOpenFiles, info.maxPathLength, info.pageSize, info.totalBytes, info.usedBytes, info.usedBytes * 100.0 / info.totalBytes
+    );
+#else
+    output.print(F("SPIFFS is deprecated." HTML_S(br) "Please consider to upgrade to LittleFS or another file system"));
+#endif
+}
+
 #if IOT_SSDP_SUPPORT
 
 void WebTemplate::printSSDPUUID(Print &output)
@@ -275,6 +293,9 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     }
     else if (key == F("WEB_INTERFACE_URL")) {
         WebTemplate::printWebInterfaceUrl(output);
+    }
+    else if (key == F("FILE_SYSTEM_INFO")) {
+        WebTemplate::printFileSystemInfo(output);
     }
     else if (key == F("MODEL")) {
         WebTemplate::printModel(output);

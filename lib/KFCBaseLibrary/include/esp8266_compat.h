@@ -9,9 +9,6 @@
 #include <os_type.h>
 #include <user_interface.h>
 
-#define SPIFFS_info(info)                           KFCFS.info(info)
-#define SPIFFS_openDir(dirname)                     KFCFS.openDir(dirname)
-
 #define WiFi_isHidden(num)                          WiFi.isHidden(num)
 
 extern "C" {

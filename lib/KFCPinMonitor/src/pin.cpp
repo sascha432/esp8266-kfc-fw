@@ -16,7 +16,11 @@
 
 using namespace PinMonitor;
 
-#if PIN_MONITOR_USE_GPIO_INTERRUPT == 0
+#if PIN_MONITOR_USE_POLLING == 1
+
+// nothing to see here, move along
+
+#elif PIN_MONITOR_USE_GPIO_INTERRUPT == 0
 
 void ICACHE_RAM_ATTR HardwarePin::callback(void *arg)
 {

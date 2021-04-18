@@ -7,6 +7,9 @@
 #include "debounce.h"
 #include "monitor.h"
 
+#undef DEBUG_PIN_MONITOR_DEBOUNCE
+#define DEBUG_PIN_MONITOR_DEBOUNCE 0
+
 #if DEBUG_PIN_MONITOR_DEBOUNCE
 #include <debug_helper_enable.h>
 #else

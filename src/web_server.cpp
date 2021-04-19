@@ -440,7 +440,13 @@ void Plugin::send(uint16_t httpCode, AsyncWebServerRequest *request, const Strin
 
     __LDBG_printf("send httpcode=%u request_uri=%s message=%s content_type_html=%u", httpCode, request->url().c_str(), message.c_str(), isHtmlContentType(request));
     if (isHtmlContentType(request)) {
-        auto webTemplate = new NotFoundTemplate(httpCode, String((message.length() == 0) ? AsyncWebServerResponse::responseCodeToString(httpCode) : FPSTR(message.c_str())));
+        NotFoundTemplate *webTemplate;
+        if (message.length() == 0) {
+            webTemplate = new NotFoundTemplate(httpCode, PrintString(F("URL: <i>%s</i> - <strong>%s</strong>"), request->url().c_str(), AsyncWebServerResponse::responseCodeToString(httpCode)));
+        }
+        else {
+            webTemplate = new NotFoundTemplate(httpCode, message);
+        }
         webTemplate->setAuthenticated(isAuthenticated(request));
         if (sendFileResponse(httpCode, F("/.message.html"), request, headers, webTemplate)) {
             return;

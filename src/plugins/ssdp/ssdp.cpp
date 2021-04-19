@@ -112,6 +112,5 @@ void SSDPPlugin::getStatus(Print &output)
     }
     else {
         output.print(FSPGM(Disabled));
-
     }
 }

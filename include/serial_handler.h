@@ -18,8 +18,7 @@
 #include <EventScheduler.h>
 #include <HardwareSerial.h>
 #include <EnumHelper.h>
-#include <cbuf_ex.h>
-
+#include <cbuf.h>
 
 #ifndef SERIAL_HANDLER_INPUT_BUFFER_MAX
 #define SERIAL_HANDLER_INPUT_BUFFER_MAX                     512
@@ -27,7 +26,7 @@
 
 namespace SerialHandler {
 
-    using cbuf = cbuf_ex::cbuf;
+    // using cbuf = cbuf_ex::cbuf;
 
     enum class EventType : uint8_t {
         NONE =          0,
@@ -46,8 +45,7 @@ namespace SerialHandler {
         Client(const Client &) = delete;
         Client &operator=(const Client &) = delete;
 
-        Client() : _events(EventType::NONE) {
-        }
+        Client();
 
         Client(Client &&client) noexcept :
             _cb(std::exchange(client._cb, nullptr)),
@@ -72,12 +70,8 @@ namespace SerialHandler {
 
         Client(Callback cb, EventType events);
 
-        bool operator==(const Client &cb) {
-            return std::addressof(cb) == this;
-        }
-        inline EventType getEvents() const {
-            return _getEvents();
-        }
+        bool operator==(const Client &cb);
+        EventType getEvents() const;
 
         // set events and allocate buffers
         void start(EventType events);
@@ -87,18 +81,10 @@ namespace SerialHandler {
     private:
         friend Wrapper;
 
-        cbuf &_getRx() {
-            return _rx;
-        }
-        cbuf &_getTx() {
-            return _tx;
-        }
-        EventType _getEvents() const {
-            return _events;
-        }
-        bool _hasAny(EventType event) const {
-            return EnumHelper::Bitset::hasAny(_events, event);
-        }
+        cbuf &_getRx();
+        cbuf &_getTx();
+        EventType _getEvents() const;
+        bool _hasAny(EventType event) const;
 
         void _allocateBuffers();
         void _freeBuffers();
@@ -152,22 +138,12 @@ namespace SerialHandler {
         static void pollSerial();
 
     public:
-        virtual int available() override {
-            return 0;
-        }
-        virtual int read() override {
-            return -1;
-        }
-        virtual int peek() override {
-            return -1;
-        }
-        virtual size_t readBytes(char *buffer, size_t length) override {
-            return 0;
-        }
+        virtual int available() override;
+        virtual int read() override;
+        virtual int peek() override;
+        virtual size_t readBytes(char *buffer, size_t length) override;
 
-        Clients &getClients() {
-            return _clients;
-        }
+        Clients &getClients();
 
     public:
         // send data to serial port and all clients
@@ -195,6 +171,94 @@ namespace SerialHandler {
         Clients _clients;
         bool _txFlag; // indicator that _clients have _tx with data
     };
+
+    //
+    // Client
+    //
+
+    inline bool Client::operator==(const Client &cb)
+    {
+        return std::addressof(cb) == this;
+    }
+
+    inline EventType Client::getEvents() const
+    {
+        return _getEvents();
+    }
+
+    inline cbuf &Client::_getRx()
+    {
+        return _rx;
+    }
+
+    inline cbuf &Client::_getTx()
+    {
+        return _tx;
+    }
+
+    inline EventType Client::_getEvents() const
+    {
+        return _events;
+    }
+
+    inline bool Client::_hasAny(EventType event) const
+    {
+        return EnumHelper::Bitset::hasAny(_events, event);
+    }
+
+    inline int Client::available()
+    {
+        return _rx.available();
+    }
+
+    inline int Client::read()
+    {
+        return _rx.read();
+    }
+
+    inline int Client::peek()
+    {
+        return _rx.peek();
+    }
+
+    //
+    // Wrapper
+    //
+
+    inline Wrapper::~Wrapper()
+    {
+        end();
+    }
+
+    inline int Wrapper::available()
+    {
+        return 0;
+    }
+
+    inline int Wrapper::read()
+    {
+        return -1;
+    }
+
+    inline int Wrapper::peek()
+    {
+        return -1;
+    }
+
+    inline size_t Wrapper::readBytes(char *buffer, size_t length)
+    {
+        return 0;
+    }
+
+    inline size_t Wrapper::write(uint8_t data)
+    {
+        return write(&data, 1);
+    }
+
+    inline Wrapper::Clients &Wrapper::getClients()
+    {
+        return _clients;
+    }
 
 };
 

@@ -79,13 +79,9 @@ void Monitor::end()
     _detach(_handlers.begin(), _handlers.end(), true);
 
 #if PIN_MONITOR_ROTARY_ENCODER_SUPPORT
-    #if PIN_MONITOR_USE_POLLING
-        eventBuffer.clear();
-    #else
-        ETS_GPIO_INTR_DISABLE();
-        eventBuffer.clear();
-        ETS_GPIO_INTR_ENABLE();
-    #endif
+    PIN_MONITOR_ETS_GPIO_INTR_DISABLE();
+    eventBuffer.clear();
+    PIN_MONITOR_ETS_GPIO_INTR_ENABLE();
 #endif
 }
 
@@ -178,13 +174,14 @@ Pin &Monitor::_attach(Pin &pin, HardwarePinType type)
     __LDBG_printf("%s attaching pin=%u usage=%u arg=%p", typeStr, curPin.getPin(), curPin.getCount() + 1, pin.getArg());
     ++curPin;
     #if PIN_MONITOR_USE_GPIO_INTERRUPT == 0 && PIN_MONITOR_USE_POLLING == 0
+        // code for functional interrupts only
         if (curPin) {
             #if PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS
                 // +72 byte IRAM
                 attachInterruptArg(digitalPinToInterrupt(pinNum), HardwarePin::callback, &curPin, CHANGE);
             #else
                 // 0 byte IRAM
-                attachInterruptArg(digitalPinToInterrupt(pinNum), HardwarePin::callback, &curPin);
+                _attachInterruptArg(digitalPinToInterrupt(pinNum), HardwarePin::callback, &curPin);
             #endif
         }
     #endif
@@ -219,13 +216,13 @@ void Monitor::_detach(Iterator begin, Iterator end, bool clear)
                 __LDBG_printf("detaching interrupt pin=%u", pinNum);
 #if PIN_MONITOR_USE_POLLING
                 // no interrupts
-#elif !PIN_MONITOR_USE_GPIO_INTERRUPT
+#elif PIN_MONITOR_USE_GPIO_INTERRUPT == 0
     #if PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS
                 // +160 byte IRAM
                 detachInterrupt(digitalPinToInterrupt(pinNum));
     #else
                 // 0 byte IRAM
-                detachInterrupt(digitalPinToInterrupt(pinNum));
+                _detachInterrupt(digitalPinToInterrupt(pinNum));
     #endif
 #endif
                 pinMode(pinNum, INPUT);
@@ -307,27 +304,24 @@ void Monitor::_loop()
 
 #if PIN_MONITOR_ROTARY_ENCODER_SUPPORT
     // process all new events
+    PIN_MONITOR_ETS_GPIO_INTR_DISABLE();
     if (eventBuffer.size()) {
 
         static uint16_t maxEventSize = 0;
         if (eventBuffer.size() > maxEventSize) {
             maxEventSize = eventBuffer.size();
-            __DBG_printf("maxEventSize increased %u", maxEventSize);
+            __LDBG_printf("maxEventSize increased %u", maxEventSize);
         }
 
 
-#if 0
+#if 1
         {
-            ETS_GPIO_INTR_DISABLE();
             auto bufIterator = eventBuffer.begin();
             while (bufIterator != eventBuffer.end()) {
                 auto event = *bufIterator;
-                ETS_GPIO_INTR_ENABLE();
                 __DBG_printf("L-QUEUE: %s", event.toString().c_str());
-                ETS_GPIO_INTR_DISABLE();
                 ++bufIterator;
             }
-            ETS_GPIO_INTR_ENABLE();
         }
 #endif
         // struct DebounceSummary {
@@ -339,17 +333,12 @@ void Monitor::_loop()
         // };
         // DebounceSummary dsPins[17] = {};
 
-        #if PIN_MONITOR_USE_POLLING == 0
-            ETS_GPIO_INTR_DISABLE();
-        #endif
         auto bufIterator = eventBuffer.begin();
         while (bufIterator != eventBuffer.end()) {
             auto event = *bufIterator;
-            #if PIN_MONITOR_USE_POLLING == 0
-                ETS_GPIO_INTR_ENABLE();
-            #endif
+            PIN_MONITOR_ETS_GPIO_INTR_ENABLE();
 
-            __DBG_printf("L-FEED: %s", event.toString().c_str());
+            // __DBG_printf("L-FEED: %s", event.toString().c_str());
 
             auto iterator = std::find_if(_pins.begin(), _pins.end(), [&event](const HardwarePinPtr &ptr) {
                 return ptr->getPin() == event.pin();
@@ -389,19 +378,15 @@ void Monitor::_loop()
                 // }
             }
 
-            #if PIN_MONITOR_USE_POLLING == 0
-                ETS_GPIO_INTR_DISABLE();
-            #endif
+            PIN_MONITOR_ETS_GPIO_INTR_DISABLE();
             ++bufIterator;
         }
         if (bufIterator == eventBuffer.end()) {
             eventBuffer.clear();
         }
-        #if PIN_MONITOR_USE_POLLING == 0
-            ETS_GPIO_INTR_ENABLE();
-        #endif
 
     }
+    PIN_MONITOR_ETS_GPIO_INTR_ENABLE();
     now = millis();
 #endif
 

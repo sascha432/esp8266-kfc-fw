@@ -7,5 +7,4 @@
 #include <Arduino_compat.h>
 #include "led_matrix.h"
 
-
 #endif

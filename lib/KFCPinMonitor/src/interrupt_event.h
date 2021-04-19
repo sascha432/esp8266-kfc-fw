@@ -81,6 +81,16 @@ namespace PinMonitor {
                 );
             }
 
+            inline __attribute__((__always_inline__))
+            void setTime(uint32_t time) {
+                _time = time;
+            }
+
+            inline __attribute__((__always_inline__))
+            void setValue(uint16_t value) {
+                _value = value;
+            }
+
         protected:
             uint32_t _time;
             union {

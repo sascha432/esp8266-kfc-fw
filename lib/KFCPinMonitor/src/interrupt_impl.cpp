@@ -35,7 +35,6 @@ namespace PinMonitor {
 // ------------------------------------------------------------------------
 #elif PIN_MONITOR_USE_GPIO_INTERRUPT
 
-
     void GPIOInterruptsEnable()
     {
         // #define GPCI   7  //INT_TYPE (3bits) 0:disable,1:rising,2:falling,3:change,4:low,5:high
@@ -116,10 +115,13 @@ namespace PinMonitor {
             }
             __DBG_printf("pin=%u set=%u last=%u new=%u", pinNum, status & mask, interrupt_levels & mask, levels & mask);
 
+#if PIN_MONITOR_ROTARY_ENCODER_SUPPORT || PIN_MONITOR_DEBOUNCED_PUSHBUTTON
+            auto _micros = micros();
+#endif
             switch(pin->_type) {
 #if PIN_MONITOR_DEBOUNCED_PUSHBUTTON
                 case HardwarePinType::DEBOUNCE:
-                    reinterpret_cast<DebouncedHardwarePin *>(pin)->addEvent(micros(), levels & mask);
+                    reinterpret_cast<DebouncedHardwarePin *>(pin)->addEvent(_micros, levels & mask);
                     break;
 #endif
 #if PIN_MONITOR_SIMPLE_PIN
@@ -129,7 +131,8 @@ namespace PinMonitor {
 #endif
 #if PIN_MONITOR_ROTARY_ENCODER_SUPPORT
                 case HardwarePinType::ROTARY:
-                    PinMonitor::eventBuffer.emplace_back(micros(), pinNum);
+                    //TODO optimize
+                    PinMonitor::eventBuffer.emplace_back(_micros, pinNum);
                     break;
 #endif
                 default:
@@ -171,8 +174,8 @@ namespace PinMonitor {
         if (status == 0 || interrupt_reg == 0) {
             return;
         }
-        noInterrupts();
-        // ETS_GPIO_INTR_DISABLE();
+        // noInterrupts();
+        ETS_GPIO_INTR_DISABLE();
         uint8_t i = 0;
         uint32_t changedbits = status & interrupt_reg; // remove bits that do not have an active handler otherwise it results in a nullptr call
         while (changedbits) {
@@ -182,15 +185,15 @@ namespace PinMonitor {
             changedbits &= ~(1 << i);
             interrupt_handlers[i].fn(interrupt_handlers[i].arg);
         }
-        interrupts();
-        // ETS_GPIO_INTR_ENABLE();
+        // interrupts();
+        ETS_GPIO_INTR_ENABLE();
     }
 
     // mode is CHANGE
-    void attachInterruptArg(uint8_t pin, voidFuncPtrArg userFunc, void *arg)
+    void _attachInterruptArg(uint8_t pin, voidFuncPtrArg userFunc, void *arg)
     {
         if (userFunc == nullptr) { // detach interrupt if userfunc is nullptr. makes the check for nullptr inside the ISR obsolete
-            detachInterrupt(pin);
+            _detachInterrupt(pin);
             return;
         }
         ETS_GPIO_INTR_DISABLE();
@@ -204,7 +207,7 @@ namespace PinMonitor {
     }
 
     // this function must not be called from inside the interrupt handler
-    void detachInterrupt(uint8_t pin)
+    void _detachInterrupt(uint8_t pin)
     {
         ETS_GPIO_INTR_DISABLE();
         GPC(pin) &= ~(0xF << GPCI);  // INT mode disabled

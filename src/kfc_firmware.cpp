@@ -196,6 +196,7 @@ void setup()
         }
     #endif
 
+
     #if HAVE_GDBSTUBGPR
         gdbstub_do_break();
         disable_at_mode(Serial);

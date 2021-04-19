@@ -14,11 +14,18 @@ namespace PinMonitor {
 // exterimental support for polling / no interrupts or IRAM usage
 #if PIN_MONITOR_USE_POLLING
 
+    #define PIN_MONITOR_ETS_GPIO_INTR_DISABLE()         ;
+    #define PIN_MONITOR_ETS_GPIO_INTR_ENABLE()          ;
+
 // custom interrupt handler, requires least amount of IRAM
 #elif PIN_MONITOR_USE_GPIO_INTERRUPT
 
     void GPIOInterruptsEnable();
     void GPIOInterruptsDisable();
+
+    #define PIN_MONITOR_ETS_GPIO_INTR_DISABLE()         ETS_GPIO_INTR_DISABLE();
+    #define PIN_MONITOR_ETS_GPIO_INTR_ENABLE()          ETS_GPIO_INTR_ENABLE();
+
 
     extern void ICACHE_RAM_ATTR pin_monitor_interrupt_handler(void *ptr);
 
@@ -34,6 +41,9 @@ namespace PinMonitor {
 // arduino style interrupt handler with limitations saving 232byte IRAM
 #elif PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS == 0
 
+    #define PIN_MONITOR_ETS_GPIO_INTR_DISABLE()         ETS_GPIO_INTR_DISABLE();
+    #define PIN_MONITOR_ETS_GPIO_INTR_ENABLE()          ETS_GPIO_INTR_ENABLE();
+
     // saves 232 byte IRAM compared to attachInterruptArg/detachInterrupt
     // cannot be used with arduino functional interrupts
     // interrupt trigger is CHANGE only
@@ -41,9 +51,9 @@ namespace PinMonitor {
     typedef void (* voidFuncPtrArg)(void *);
 
     // mode is CHANGE
-    void attachInterruptArg(uint8_t pin, voidFuncPtrArg userFunc, void *arg);
+    void _attachInterruptArg(uint8_t pin, voidFuncPtrArg userFunc, void *arg);
     // NOTE: this function must not be called from inside the interrupt handler
-    void detachInterrupt(uint8_t pin);
+    void _detachInterrupt(uint8_t pin);
 
 #endif
 

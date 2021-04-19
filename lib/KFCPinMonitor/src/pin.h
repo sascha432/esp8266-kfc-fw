@@ -140,7 +140,7 @@ namespace PinMonitor {
             return false;
         }
 
-        uint8_t getPin() const {
+        inline uint8_t getPin() const {
             return _pin;
         }
 
@@ -204,42 +204,30 @@ namespace PinMonitor {
         }
 
         inline void clearEvents() {
-            #if PIN_MONITOR_USE_POLLING == 0
-                ETS_GPIO_INTR_DISABLE();
-            #endif
+            PIN_MONITOR_ETS_GPIO_INTR_DISABLE();
             _event = SimpleEventType::NONE;
-            #if PIN_MONITOR_USE_POLLING == 0
-                ETS_GPIO_INTR_ENABLE();
-            #endif
+            PIN_MONITOR_ETS_GPIO_INTR_ENABLE();
         }
 
         inline SimpleEventType getEvent() const {
-            #if PIN_MONITOR_USE_POLLING == 0
-                ETS_GPIO_INTR_DISABLE();
-            #endif
+            PIN_MONITOR_ETS_GPIO_INTR_DISABLE();
             auto tmp = _event;
-            #if PIN_MONITOR_USE_POLLING == 0
-                ETS_GPIO_INTR_ENABLE();
-            #endif
+            PIN_MONITOR_ETS_GPIO_INTR_ENABLE();
             return tmp;
         }
 
         inline SimpleEventType getEventClear() {
-            #if PIN_MONITOR_USE_POLLING == 0
-                ETS_GPIO_INTR_DISABLE();
-            #endif
+            PIN_MONITOR_ETS_GPIO_INTR_DISABLE();
             auto tmp = _event;
             _event = SimpleEventType::NONE;
-            #if PIN_MONITOR_USE_POLLING == 0
-                ETS_GPIO_INTR_ENABLE();
-            #endif
+            PIN_MONITOR_ETS_GPIO_INTR_ENABLE();
             return tmp;
         }
 
     private:
-        #if PIN_MONITOR_USE_POLLING == 0
-        volatile
-        #endif
+        // #if PIN_MONITOR_USE_POLLING == 0
+        // volatile
+        // #endif
         SimpleEventType _event;
     };
 
@@ -288,20 +276,16 @@ namespace PinMonitor {
         // void ICACHE_RAM_ATTR addEvent(uint32_t micros, bool value) {
         inline __attribute__((__always_inline__))
         void addEvent(uint32_t micros, bool value) {
-            _events._interruptCount++;
             _events._micros = micros;
+            _events._interruptCount++;
             _events._value = value;
         }
 
         inline __attribute__((__always_inline__))
         void clearEvents() {
-            #if PIN_MONITOR_USE_POLLING == 0
-                ETS_GPIO_INTR_DISABLE();
-            #endif
+            PIN_MONITOR_ETS_GPIO_INTR_DISABLE();
             clearEventsNoInterrupts();
-            #if PIN_MONITOR_USE_POLLING == 0
-                ETS_GPIO_INTR_ENABLE();
-            #endif
+            PIN_MONITOR_ETS_GPIO_INTR_ENABLE();
         }
 
         // GPIO interrupts must be disabled when calling this method
@@ -311,25 +295,17 @@ namespace PinMonitor {
         }
 
         inline Events getEvents() const {
-            #if PIN_MONITOR_USE_POLLING == 0
-                ETS_GPIO_INTR_DISABLE();
-            #endif
+            PIN_MONITOR_ETS_GPIO_INTR_DISABLE();
             auto tmp = getEventsNoInterrupts();
-            #if PIN_MONITOR_USE_POLLING == 0
-                ETS_GPIO_INTR_ENABLE();
-            #endif
+            PIN_MONITOR_ETS_GPIO_INTR_ENABLE();
             return tmp;
         }
 
         inline Events getEventsClear() {
-            #if PIN_MONITOR_USE_POLLING == 0
-                ETS_GPIO_INTR_DISABLE();
-            #endif
+            PIN_MONITOR_ETS_GPIO_INTR_DISABLE();
             auto tmp = getEventsNoInterrupts();
             clearEventsNoInterrupts();
-            #if PIN_MONITOR_USE_POLLING == 0
-                ETS_GPIO_INTR_ENABLE();
-            #endif
+            PIN_MONITOR_ETS_GPIO_INTR_ENABLE();
             return tmp;
         }
 
@@ -341,7 +317,7 @@ namespace PinMonitor {
 
     protected:
         Debounce _debounce;
-        volatile Events _events;
+        Events _events;
     };
 
 
@@ -370,20 +346,24 @@ namespace PinMonitor {
         RotaryEncoder &_encoder;
     };
 
-    inline HardwarePin::operator bool() const {
+    inline HardwarePin::operator bool() const
+    {
         return _count != 0;
     }
 
-    inline uint8_t HardwarePin::getCount() const {
+    inline uint8_t HardwarePin::getCount() const
+    {
         return _count;
     }
 
-    inline HardwarePin &HardwarePin::operator++() {
+    inline HardwarePin &HardwarePin::operator++()
+    {
         ++_count;
         return *this;
     }
 
-    inline HardwarePin &HardwarePin::operator--() {
+    inline HardwarePin &HardwarePin::operator--()
+    {
         --_count;
         return *this;
     }

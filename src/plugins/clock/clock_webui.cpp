@@ -16,37 +16,34 @@
 
 void ClockPlugin::getValues(WebUINS::Events &array)
 {
-    using namespace WebUINS;
-    array.append(Values(F("btn_animation"), _config.animation));
+    array.append(WebUINS::Values(F("btn_animation"), _config.animation));
 
     IF_IOT_CLOCK(
-        array.append(Values(F("btn_colon"), (_config.blink_colon_speed < kMinBlinkColonSpeed) ? 0 : (_config.blink_colon_speed < 750 ? 2 : 1), _tempBrightness != -1));
+        array.append(WebUINS::Values(F("btn_colon"), (_config.blink_colon_speed < kMinBlinkColonSpeed) ? 0 : (_config.blink_colon_speed < 750 ? 2 : 1), _tempBrightness != -1));
     )
 
     array.append(
-        Values(F("color"), _getColor(), _config.getAnimation() == AnimationType::FADING || _config.getAnimation() == AnimationType::SOLID),
-        Values(FSPGM(brightness), static_cast<uint8_t>(_targetBrightness ? _targetBrightness : _savedBrightness), _tempBrightness != -1)
+        WebUINS::Values(F("color"), _getColor(), _config.getAnimation() == AnimationType::FADING || _config.getAnimation() == AnimationType::SOLID),
+        WebUINS::Values(FSPGM(brightness), static_cast<uint8_t>(_targetBrightness ? _targetBrightness : _savedBrightness), _tempBrightness != -1)
     );
 
-
     if (_tempBrightness == -1) {
-        array.append(Values(F("tempp"), F("OVERHEATED")));
+        array.append(WebUINS::Values(F("tempp"), F("OVERHEATED")));
     }
     else {
-        array.append(Values(F("tempp"), FormattedDouble(100 - _tempBrightness * 100.0, 1)));
+        array.append(WebUINS::Values(F("tempp"), WebUINS::FormattedDouble(100 - _tempBrightness * 100.0, 1)));
     }
 
-
     IF_IOT_CLOCK_SAVE_STATE(
-        array.append(Values(F("power"), static_cast<uint8_t>(_getEnabledState(), _getEnabledState())));
+        array.append(WebUINS::Values(F("power"), static_cast<uint8_t>(_getEnabledState(), _getEnabledState())));
     )
 
     IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(
-        array.append(Values(FSPGM(light_sensor), _getLightSensorWebUIValue()));
+        array.append(WebUINS::Values(FSPGM(light_sensor), _getLightSensorWebUIValue()));
     )
 
     IF_IOT_CLOCK_DISPLAY_POWER_CONSUMPTION(
-        array.append(Values(F("pwrlvl"), FormattedDouble(_getPowerLevel(), 2)));
+        array.append(WebUINS::Values(F("pwrlvl"), WebUINS::FormattedDouble(_getPowerLevel(), 2)));
     )
 }
 
@@ -55,9 +52,9 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
     __LDBG_printf("id=%s has_value=%u value=%s has_state=%u state=%u", id.c_str(), hasValue, value.c_str(), hasState, state);
     if (hasValue) {
         _resetAlarm();
-        auto val = (uint32_t)value.toInt();
+        auto val = static_cast<uint32_t>(value.toInt());
         IF_IOT_CLOCK(
-            if (String_equals(id, PSTR("btn_colon"))) {
+            if (id == F("btn_colon")) {
                 switch(val) {
                     case 0:
                         setBlinkColon(0);
@@ -114,8 +111,9 @@ void ClockPlugin::addPowerSensor(WebUINS::Root &webUI, SensorPlugin::SensorType 
 void ClockPlugin::_updatePowerLevelWebUI()
 {
     if (WebUISocket::hasAuthenticatedClients()) {
-        WebUINS::Events events(WebUINS::Values(F("pwrlvl"), WebUINS::FormattedDouble(_getPowerLevel(), 2)));
-        WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(events));
+        WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(
+            WebUINS::Events(WebUINS::Values(F("pwrlvl"), WebUINS::FormattedDouble(_getPowerLevel(), 2)))
+        ));
     }
 }
 
@@ -157,7 +155,7 @@ void ClockPlugin::_calcPowerLevel()
     }
     else {
         auto ms = micros();
-        auto diff = _powerLevelUpdateRate / (float)get_time_diff(_powerLevelUpdateTimer, ms);
+        auto diff = _powerLevelUpdateRate / static_cast<float>(get_time_diff(_powerLevelUpdateTimer, ms));
         _powerLevelAvg = ((_powerLevelAvg * diff) + _powerLevelCurrentmW) / (diff + 1.0);
         // __LDBG_printf("currentmW=%u diff=%f avgmW=%.3f", _powerLevelCurrentmW, diff, _powerLevelAvg);
         _powerLevelUpdateTimer = ms;
@@ -215,8 +213,6 @@ void ClockPlugin::_broadcastWebUI()
     if (WebUISocket::hasAuthenticatedClients()) {
         WebUINS::Events events;
         getValues(events);
-        if (events.hasAny()) {
-            WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(events));
-        }
+        WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(events));
     }
 }

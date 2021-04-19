@@ -566,7 +566,8 @@ void ClockPlugin::shutdown()
     )
 
     IF_IOT_CLOCK_BUTTON_PIN(
-        pinMonitor.detach(this);
+        // pinMonitor.detach(this);
+        pinMonitor.end();
     )
 
     #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR

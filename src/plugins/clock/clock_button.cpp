@@ -69,7 +69,9 @@ void ClockPlugin::rotaryCallback(bool decrease, uint32_t now)
     }
 }
 
-void ClockPlugin::setRotaryAction(uint8_t action) {
+void ClockPlugin::setRotaryAction(uint8_t action)
+{
+    __LDBG_printf("set rotary action=%u", action);
     _rotaryAction = action;
     if (action != 0) {
         _Timer(_rotaryActionTimer).add(Event::milliseconds(5000), false, [this](Event::CallbackTimerPtr) {
@@ -133,7 +135,8 @@ void ClockPlugin::buttonCallback(uint8_t button, EventType eventType, uint16_t r
                     _Timer(_timer).remove();
 
                     // disable buttons
-                    pinMonitor.detach(this);
+                    pinMonitor.end();
+                    //pinMonitor.detach(this);
 
                     _Scheduler.add(2000, false, [this](Event::CallbackTimerPtr timer) {
                         __LDBG_printf("restarting device");

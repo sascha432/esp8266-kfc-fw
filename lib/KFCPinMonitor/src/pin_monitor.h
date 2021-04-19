@@ -48,6 +48,10 @@
 // other GPIO pins cannot be used
 // lowest IRAM consumption and best performance
 // no interrupt locking
+// ---------------------------------------------------------------------------------------------
+// NOTE: if functional interrupts are used, this will *increase* the IRAM usage since
+// it does not share any code with the arduino implementation
+// ---------------------------------------------------------------------------------------------
 #ifndef PIN_MONITOR_USE_GPIO_INTERRUPT
 #define PIN_MONITOR_USE_GPIO_INTERRUPT                              0
 #endif
@@ -61,9 +65,11 @@
 // attachInterruptArg() requires 72 byte IRAM
 // detachInterrupt() requires 160 byte IRAM
 // = 232 byte IRAM
-// if the arduino interrupt functions are not used anywhere else,
-// set it 0. the custom implementation saves those 232 byte IRAM but
-// is not fully compatible with arduino functional interrupts
+// ---------------------------------------------------------------------------------------------
+// NOTE: if the arduino interrupt functions are *not* used anywhere else, set it to 0. the
+// custom implementation saves those 232 byte IRAM but is not fully compatible with arduino
+// functional interrupts
+// ---------------------------------------------------------------------------------------------
 #ifndef PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS
 #if PIN_MONITOR_USE_GPIO_INTERRUPT || PIN_MONITOR_USE_POLLING
 #define PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS                       0
@@ -106,12 +112,12 @@
 #endif
 
 // debounce time in milliseconds
-// values from 5-20 are common
+// values from 5-20ms are common
 #ifndef PIN_MONITOR_DEBOUNCE_TIME
 #define PIN_MONITOR_DEBOUNCE_TIME                               10
 #endif
 
-// suport for button groups
+// support for button groups
 // allows to detect single/dobule clicks across multiple buttons
 #ifndef PIN_MONITOR_BUTTON_GROUPS
 #define PIN_MONITOR_BUTTON_GROUPS                               0

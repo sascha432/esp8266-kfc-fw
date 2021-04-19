@@ -38,9 +38,12 @@
 - Support for loading javascript and CSS from remote server(s) during development
 - Fixed some environments and adapted changes of the Espressif 8266 2.3.1 framework (Arduino Core 2.7.4)
 - utf-8 support for web sockets
-- Rewrite of the remote control plugin (in progress) for faster response times and longer battery life
+- Rewrite of the remote control plugin for faster response times and longer battery life
   - Removed support for home assistant Restful API
   - Option to send UDP packets to minimize latency
+  - Deep sleep up to 30 days
+  - 230ms WiFi Quick Connect, sending UDP packets
+  - 300ms for MQTT over TCP
 - LED Matrix plugin
 - Cycling color and animation for rainbow mode (Clock/LED matrix)
 - Reduce brightness depending on the temperature

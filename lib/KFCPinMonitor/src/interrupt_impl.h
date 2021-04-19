@@ -23,10 +23,6 @@ namespace PinMonitor {
     void GPIOInterruptsEnable();
     void GPIOInterruptsDisable();
 
-    #define PIN_MONITOR_ETS_GPIO_INTR_DISABLE()         ETS_GPIO_INTR_DISABLE();
-    #define PIN_MONITOR_ETS_GPIO_INTR_ENABLE()          ETS_GPIO_INTR_ENABLE();
-
-
     extern void ICACHE_RAM_ATTR pin_monitor_interrupt_handler(void *ptr);
 
     namespace Interrupt {
@@ -41,8 +37,6 @@ namespace PinMonitor {
 // arduino style interrupt handler with limitations saving 232byte IRAM
 #elif PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS == 0
 
-    #define PIN_MONITOR_ETS_GPIO_INTR_DISABLE()         ETS_GPIO_INTR_DISABLE();
-    #define PIN_MONITOR_ETS_GPIO_INTR_ENABLE()          ETS_GPIO_INTR_ENABLE();
 
     // saves 232 byte IRAM compared to attachInterruptArg/detachInterrupt
     // cannot be used with arduino functional interrupts
@@ -66,3 +60,11 @@ namespace PinMonitor {
 #endif
 
 }
+
+#ifndef PIN_MONITOR_ETS_GPIO_INTR_DISABLE
+#define PIN_MONITOR_ETS_GPIO_INTR_DISABLE()         ETS_GPIO_INTR_DISABLE();
+#endif
+
+#ifndef PIN_MONITOR_ETS_GPIO_INTR_ENABLE
+#define PIN_MONITOR_ETS_GPIO_INTR_ENABLE()          ETS_GPIO_INTR_ENABLE();
+#endif

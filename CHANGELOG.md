@@ -77,6 +77,7 @@
 - Switch plugin fixes and improvements
 - Replaced the JSON library with a more stable version that consumes less memory
 - Switched to LittleFS
+- Fixed missing information for SSDP
 
 ## Version 0.0.3
 

@@ -21,7 +21,7 @@
 #include "cbuf_ex.h"
 #include "c_types.h"
 
-using namespace cbuf_ex;
+using namespace __cbuf_ex;
 
 cbuf::cbuf(size_t size) :
     next(NULL), _size(size), _buf(new char[size]), _bufend(_buf + size), _begin(_buf), _end(_begin) {

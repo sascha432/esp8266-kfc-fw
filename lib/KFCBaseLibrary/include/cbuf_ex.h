@@ -27,7 +27,7 @@
 #include <new>
 #include <stl_ext/utility.h>
 
-namespace cbuf_ex {
+namespace __cbuf_ex {
 
     class cbuf {
         public:

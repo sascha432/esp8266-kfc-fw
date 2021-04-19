@@ -32,7 +32,7 @@
 #include "save_crash.h"
 #include "../src/plugins/plugins.h"
 #include  "spgm_auto_def.h"
-#if DEBUG_WEB_SERVER
+#if DEBUG_WEB_SERVER || 1
 #include <debug_helper_enable.h>
 #else
 #include <debug_helper_disable.h>
@@ -351,8 +351,13 @@ bool Plugin::isHtmlContentType(AsyncWebServerRequest *request, HttpHeaders *head
             }
         }
     }
+    auto &userAgent = request->header(F("User-Agent"));
+    if (userAgent.startsWith(F("KFCFW OTA"))) {
+        __LDBG_printf("user-agent %s", userAgent.c_str());
+        return false;
+    }
     auto &url = request->url();
-    if (!url.endsWith(F(".html") && !url.endsWith(F(".htm")))) {
+    if (!url.endsWith(F(".html")) && !url.endsWith(F(".htm"))) {
         auto dot = url.indexOf('.', url.lastIndexOf('/') + 1);
         if (dot != -1) {
             // filename has an extension
@@ -370,11 +375,6 @@ bool Plugin::isHtmlContentType(AsyncWebServerRequest *request, HttpHeaders *head
     if (request->headerExists(accept) && accept.indexOf(F("text/html")) == -1) {
         // most clients accept html even for pictures, but not in this case
         __LDBG_printf("accept %s", accept.c_str());
-        return false;
-    }
-    auto &userAgent = request->header(F("User-Agent"));
-    if (userAgent.startsWith(F("KFCFW OTA"))) {
-        __LDBG_printf("user-agent %s", userAgent.c_str());
         return false;
     }
     return true;
@@ -435,9 +435,11 @@ void Plugin::message(AsyncWebServerRequest *request, MessageType type, const Str
 
 void Plugin::send(uint16_t httpCode, AsyncWebServerRequest *request, const String &message)
 {
+    HttpHeaders headers;
+    headers.addNoCache(true);
+
+    __LDBG_printf("send httpcode=%u request_uri=%s message=%s content_type_html=%u", httpCode, request->url().c_str(), message.c_str(), isHtmlContentType(request));
     if (isHtmlContentType(request)) {
-        HttpHeaders headers;
-        headers.addNoCache(true);
         auto webTemplate = new NotFoundTemplate(httpCode, String((message.length() == 0) ? AsyncWebServerResponse::responseCodeToString(httpCode) : FPSTR(message.c_str())));
         webTemplate->setAuthenticated(isAuthenticated(request));
         if (sendFileResponse(httpCode, F("/.message.html"), request, headers, webTemplate)) {
@@ -446,8 +448,6 @@ void Plugin::send(uint16_t httpCode, AsyncWebServerRequest *request, const Strin
     }
 
     auto response = request->beginResponse(httpCode);
-    HttpHeaders headers;
-    headers.addNoCache(true);
     headers.setResponseHeaders(response);
     request->send(response);
 }

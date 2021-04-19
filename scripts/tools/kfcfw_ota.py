@@ -128,7 +128,7 @@ class OTA(kfcfw.OTAHelpers):
                         file.write(elf_hash)
 
                     subprocess.run(['git', '--git-dir', git_dir, 'log', '--pretty=oneline', '--since=4.weeks', '>', git_info], shell=True)
-                    subprocess.run(['tar', 'cfz', archive, ini_file, git_info, ini_dir, '>', 'nul'], shell=True)
+                    subprocess.run(['tar', 'cfz', archive, ini_file, git_info, ini_dir, '2>', 'NUL'], shell=True)
 
             except Exception as e:
                 self.error(str(e), 5);

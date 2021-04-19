@@ -190,6 +190,31 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     }
 #endif
     // ------------------------------------------------------------------------------------
+    // SSDP public info
+    // ------------------------------------------------------------------------------------
+    else if (key == F("WIFI_IP_ADDRESS")) {
+        WiFi.localIP().printTo(output);
+    }
+    else if (key == F("WEB_INTERFACE_URL")) {
+        printWebInterfaceUrl(output);
+    }
+    else if (key == F("VERSION")) {
+        printVersion(output);
+    }
+    else if (key == F("MODEL")) {
+        printModel(output);
+    }
+    else if (key == F("UNIQUE_ID")) {
+        printUniqueId(output, FSPGM(kfcfw), -1);
+    }
+    else if (key == F("SSDP_UUID")) {
+#if IOT_SSDP_SUPPORT
+        printSSDPUUID(output);
+#else
+        output.print(F("<SSDP support disabled>"));
+#endif
+    }
+    // ------------------------------------------------------------------------------------
     // requires to be authenticated after the next block
     // ------------------------------------------------------------------------------------
     else if (!isAuthenticated()) {
@@ -207,16 +232,6 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     // ------------------------------------------------------------------------------------
     // private variables
     // ------------------------------------------------------------------------------------
-    else if (key == F("UNIQUE_ID")) {
-        WebTemplate::printUniqueId(output, FSPGM(kfcfw), -1);
-    }
-    else if (key == F("SSDP_UUID")) {
-#if IOT_SSDP_SUPPORT
-        WebTemplate::printSSDPUUID(output);
-#else
-        output.print(F("<SSDP support disabled>"));
-#endif
-    }
     else if (key == F("HARDWARE")) {
 #if defined(ESP8266)
         output.printf_P(PSTR("ESP8266 %s Flash, %d Mhz, Free RAM %s"), formatBytes(ESP.getFlashChipRealSize()).c_str(), system_get_cpu_freq(), formatBytes(ESP.getFreeHeap()).c_str());
@@ -228,9 +243,6 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 #if LOAD_STATISTICS
         output.printf_P(PSTR(HTML_S(br) "Load Average %.2f %.2f %.2f"), LOOP_COUNTER_LOAD(load_avg[0]), LOOP_COUNTER_LOAD(load_avg[1]), LOOP_COUNTER_LOAD(load_avg[2]));
 #endif
-    }
-    else if (key == F("VERSION")) {
-        printVersion(output);
     }
     else if (key == F("SOFTWARE")) {
         printVersion(output);
@@ -288,17 +300,8 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     else if (key == F("IP_ADDRESS")) {
         WiFi_get_address(output);
     }
-    else if (key == F("WIFI_IP_ADDRESS")) {
-        WiFi.localIP().printTo(output);
-    }
-    else if (key == F("WEB_INTERFACE_URL")) {
-        WebTemplate::printWebInterfaceUrl(output);
-    }
     else if (key == F("FILE_SYSTEM_INFO")) {
         WebTemplate::printFileSystemInfo(output);
-    }
-    else if (key == F("MODEL")) {
-        WebTemplate::printModel(output);
     }
     else if (key == F("RANDOM")) {
         uint8_t buf[8];

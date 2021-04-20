@@ -14,7 +14,7 @@
 using KFCConfigurationClasses::Plugins;
 using namespace Dimmer;
 
-void Module::_begin()
+void Module::setup()
 {
     __LDBG_println();
     Base::_begin();
@@ -25,7 +25,7 @@ void Module::_begin()
     });
 }
 
-void Module::_end()
+void Module::shutdown()
 {
     _endMqtt();
     Buttons::_end();
@@ -56,7 +56,7 @@ void Driver_DimmerModule::onConnect()
 }
 #endif
 
-void Module::_printStatus(Print &out)
+void Module::getStatus(Print &out)
 {
     out.print(F(", Fading enabled" HTML_S(br)));
     for(uint8_t i = 0; i < _channels.size(); i++) {
@@ -67,7 +67,7 @@ void Module::_printStatus(Print &out)
             out.print(F("off" HTML_S(br)));
         }
     }
-    Base::_printStatus(out);
+    Base::getStatus(out);
 }
 
 bool Module::isAnyOn() const

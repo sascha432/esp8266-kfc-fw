@@ -44,11 +44,12 @@ namespace Dimmer {
         virtual void _onReceive(size_t length) override;
 
     protected:
-        void _begin();
-        void _end();
+        void setup();
+        void shutdown();
+        void getStatus(Print &out);
+
         void _beginMqtt();
         void _endMqtt();
-        void _printStatus(Print &out);
 
     private:
         void _getChannels();

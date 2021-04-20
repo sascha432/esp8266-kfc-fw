@@ -21,7 +21,7 @@ namespace Dimmer {
         virtual void readConfig(ConfigType &cfg) = 0;
         virtual void writeConfig(ConfigType &cfg) = 0;
 
-        void _createConfigureForm(PluginComponent::FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form);
+        void createConfigureForm(PluginComponent::FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form);
     };
 
 }

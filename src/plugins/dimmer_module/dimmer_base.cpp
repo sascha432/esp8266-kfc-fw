@@ -50,7 +50,7 @@ void Base::_begin()
 #endif
 
     _config = Plugins::Dimmer::getConfig();
-    _readConfig(_config);
+    Base::readConfig(_config);
 
 #if IOT_DIMMER_MODULE_INTERFACE_UART == 0
     // ESP8266 I2C does not support slave mode. Use timer to poll metrics instead
@@ -172,7 +172,7 @@ void Base::_fetchMetrics()
 
 #endif
 
-void Base::_readConfig(ConfigType &config)
+void Base::readConfig(ConfigType &config)
 {
     auto reader = _wire.getConfigReader();
     _updateConfig(config, reader, reader.readConfig(5, 100));
@@ -182,7 +182,7 @@ void Base::_readConfig(ConfigType &config)
     }
 }
 
-void Base::_writeConfig(ConfigType &config)
+void Base::writeConfig(ConfigType &config)
 {
     if (!config.version) {
         WebAlerts::Alert::error(F("Cannot store invalid firmware configuration"), WebAlerts::ExpiresType::REBOOT);
@@ -238,12 +238,12 @@ void Base::_setDimmingLevels()
 // status information
 // ------------------------------------------------------------------------
 
-void Base::_printStatus(Print &output)
+void Base::getStatus(Print &out)
 {
-    auto &out = static_cast<PrintHtmlEntitiesString &>(output);
+    // auto &out = static_cast<PrintHtmlEntitiesString &>(output);
     bool written = false;
     if (isValidTemperature(_metrics.metrics.int_temp)) {
-        out.printf_P(PSTR("Internal temperature %.1f" PRINTHTMLENTITIES_DEGREE "C"), static_cast<float>(_metrics.metrics.int_temp));
+        out.printf_P(PSTR("Internal temperature %.1f %s"), static_cast<float>(_metrics.metrics.int_temp), SPGM(UTF8_degreeC));
         written = true;
     }
     if (isValidTemperature(_metrics.metrics.ntc_temp)) {
@@ -251,7 +251,7 @@ void Base::_printStatus(Print &output)
             out.print(F(", "));
         }
         written = true;
-        out.printf_P(PSTR("NTC %.2f" PRINTHTMLENTITIES_DEGREE "C"), _metrics.metrics.ntc_temp);
+        out.printf_P(PSTR("NTC %.2f %s"), _metrics.metrics.ntc_temp, SPGM(UTF8_degreeC));
     }
     if (isValidVoltage(_metrics.metrics.vcc)) {
         if (written) {
@@ -259,7 +259,8 @@ void Base::_printStatus(Print &output)
         }
         written = true;
          out.printf_P(PSTR("VCC %.3fV"), _metrics.metrics.vcc / 1000.0);
-     }  if (!isnan(_metrics.metrics.frequency) && _metrics.metrics.frequency) {
+     }
+     if (!isnan(_metrics.metrics.frequency) && _metrics.metrics.frequency) {
         if (written) {
             out.print(F(", "));
         }
@@ -326,21 +327,21 @@ float Base::getTransitionTime(int fromLevel, int toLevel, float transitionTimeOv
 // WebUI/MQTT
 // ------------------------------------------------------------------------
 
-void Base::_getValues(WebUINS::Events &array)
+void Base::getValues(WebUINS::Events &array)
 {
-    bool on = false;
+    int on = 0;
     for (uint8_t i = 0; i < getChannelCount(); i++) {
         PrintString id(F("d_chan%u"), i);
         auto value = static_cast<int32_t>(getChannel(i));
         array.append(WebUINS::Values(id, value));
         if (getChannelState(i) && value) {
-            on = true;
+            on = 1;
         }
     }
-    array.append(WebUINS::Values(F("group-switch-0"), on ? 1 : 0));
+    array.append(WebUINS::Values(F("group-switch-0"), on));
 }
 
-void Base::_setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
+void Base::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
 {
     __LDBG_printf("id=%s has_value=%u has_state=%u value=%s state=%u", id.c_str(), hasValue, hasState, value.c_str(), state);
 
@@ -426,15 +427,19 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DIMS, "DIMS", "<channel>,<level>[,<time>]"
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIMW, "DIMW", "Write EEPROM");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIMR, "DIMR", "Reset ATmega");
 
-void Base::_atModeHelpGenerator(PGM_P name)
+ATModeCommandHelpArrayPtr Base::atModeCommandHelp(size_t &size) const
 {
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DIMG), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DIMS), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DIMW), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DIMR), name);
+    static ATModeCommandHelpArray tmp PROGMEM = {
+        PROGMEM_AT_MODE_HELP_COMMAND(DIMG),
+        PROGMEM_AT_MODE_HELP_COMMAND(DIMS),
+        PROGMEM_AT_MODE_HELP_COMMAND(DIMW),
+        PROGMEM_AT_MODE_HELP_COMMAND(DIMR),
+    };
+    size = sizeof(tmp) / sizeof(tmp[0]);
+    return tmp;
 }
 
-bool Base::_atModeHandler(AtModeArgs &args, const Base &dimmer, int32_t maxLevel)
+bool Base::atModeHandler(AtModeArgs &args, const Base &dimmer, int32_t maxLevel)
 {
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DIMW))) {
         _wire.writeEEPROM();

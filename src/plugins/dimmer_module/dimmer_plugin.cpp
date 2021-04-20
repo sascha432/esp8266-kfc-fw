@@ -36,7 +36,7 @@ Plugin::Plugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(Plugin))
 void Plugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
     setupWebServer();
-    _begin();
+    Module::setup();
 #if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
     dependencies->dependsOn(F("sensor"), [this](const PluginComponent *plugin, DependencyResponseType response) {
         if (response != DependencyResponseType::SUCCESS) {
@@ -50,19 +50,9 @@ void Plugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &
 
 void Plugin::reconfigure(const String &source)
 {
-    _readConfig(_config);
-    // if (source == FSPGM(http)) {
-    //     setupWebServer();
-    // }
-    // else {
-        _end();
-        _begin();
-    // }
-}
-
-void Plugin::shutdown()
-{
-    _end();
+    Base::readConfig(_config);
+    Module::shutdown();
+    Module::setup();
 }
 
 void Plugin::createWebUI(WebUINS::Root &webUI)
@@ -187,7 +177,7 @@ void Plugin::getStatus(Print &out)
     out.printf_P(PSTR("%u Channel MOSFET Dimmer "), _channels.size());
     if (_isEnabled()) {
         out.print(F("enabled on " IOT_DIMMER_INTERFACE));
-        _printStatus(out);
+        Module::getStatus(out);
     }
     else {
         out.print(F("disabled"));

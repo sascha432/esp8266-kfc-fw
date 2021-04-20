@@ -37,9 +37,7 @@ private:
     friend Dimmer::Plugin;
     friend Dimmer::Base;
 
-    String _getMetricsTopics() const {
-        return MQTTClient::formatTopic(F("metrics"));
-    }
+    String _getMetricsTopics() const;
     MetricsType &_updateMetrics(const MetricsType &metrics);
     void _createWebUI(WebUINS::Root &webUI);
 
@@ -47,5 +45,46 @@ private:
     MetricsType _metrics;
     bool _webUIinitialized;
 };
+
+inline Sensor_DimmerMetrics::Sensor_DimmerMetrics(const String &name) :
+    MQTT::Sensor(SensorType::DIMMER_METRICS),
+    _name(name),
+    _webUIinitialized(false)
+{
+    REGISTER_SENSOR_CLIENT(this);
+}
+
+inline Sensor_DimmerMetrics::~Sensor_DimmerMetrics()
+{
+    UNREGISTER_SENSOR_CLIENT(this);
+}
+
+inline uint8_t Sensor_DimmerMetrics::getAutoDiscoveryCount() const
+{
+    return 4;
+}
+
+inline void Sensor_DimmerMetrics::createWebUI(WebUINS::Root &webUI)
+{
+    if (!_webUIinitialized) {
+        _createWebUI(webUI);
+    }
+}
+
+inline void Sensor_DimmerMetrics::getStatus(Print &output)
+{
+}
+
+inline String Sensor_DimmerMetrics::_getMetricsTopics() const
+{
+    return MQTTClient::formatTopic(F("metrics"));
+}
+
+inline Sensor_DimmerMetrics::MetricsType &Sensor_DimmerMetrics::_updateMetrics(const MetricsType &metrics)
+{
+    _metrics = metrics;
+    return _metrics;
+}
+
 
 #endif

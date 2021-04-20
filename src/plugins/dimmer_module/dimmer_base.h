@@ -114,9 +114,9 @@ namespace Dimmer {
         virtual void publishChannel(uint8_t channel) = 0;
 
         // read config from dimmer
-        void _readConfig(ConfigType &config);
+        void readConfig(ConfigType &config);
         // write config to dimmer
-        void _writeConfig(ConfigType &config);
+        void writeConfig(ConfigType &config);
 
     protected:
         friend Channel;
@@ -124,7 +124,7 @@ namespace Dimmer {
         void _begin();
         void _end();
 
-        void _printStatus(Print &out);
+        void getStatus(Print &out);
         void _updateMetrics(const MetricsType &metrics);
 
         void _fade(uint8_t channel, int16_t toLevel, float fadeTime);
@@ -190,14 +190,14 @@ namespace Dimmer {
 
     // WebUI
     protected:
-        void _getValues(WebUINS::Events &array);
-        void _setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState);
+        void getValues(WebUINS::Events &array);
+        void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState);
 
+    // ATMode
     #if AT_MODE_SUPPORTED
-    // AT Mode
     protected:
-        void _atModeHelpGenerator(PGM_P name);
-        bool _atModeHandler(AtModeArgs &args, const Base &dimmer, int32_t maxLevel);
+        ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const;
+        bool atModeHandler(AtModeArgs &args, const Base &dimmer, int32_t maxLevel);
     #endif
 
     public:

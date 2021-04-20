@@ -14,7 +14,7 @@
 
 using Plugins = KFCConfigurationClasses::Plugins;
 
-void Dimmer::Form::_createConfigureForm(PluginComponent::FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form)
+void Dimmer::Form::createConfigureForm(PluginComponent::FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form)
 {
     if (type == PluginComponent::FormCallbackType::SAVE) {
         if (formName == F("channels")) {

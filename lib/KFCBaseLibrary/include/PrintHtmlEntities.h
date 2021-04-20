@@ -23,12 +23,6 @@
 #define HTML_SA(tag, attr)          HTML_TAG_S ___STRINGIFY(tag) attr HTML_TAG_E
 #define HTML_A(key, value)          " " key HTML_EQUALS HTML_QUOTE value HTML_QUOTE
 
-#define PRINTHTMLENTITIES_COPY      "\xa9"  // 0xa9 = 169 = ©
-#define PRINTHTMLENTITIES_DEGREE    "\xb0"  // 0xb0 = 176 = °
-#define PRINTHTMLENTITIES_PLUSM     "\xb1"  // 0xb1 = 177 = ±
-#define PRINTHTMLENTITIES_ACUTE     "\xb4"  // 0xb4 = 180 = ´
-#define PRINTHTMLENTITIES_MICRO     "\xb5"  // 0xb5 = 181 = µ
-
 #define TRANSLATE_SINGLE_QUOTE_IN_HTML_ATTRIBUTE 0
 
 #if TRANSLATE_SINGLE_QUOTE_IN_HTML_ATTRIBUTE

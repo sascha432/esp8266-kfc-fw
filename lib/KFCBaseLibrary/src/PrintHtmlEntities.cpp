@@ -6,6 +6,12 @@
 #include "PrintHtmlEntities.h"
 #include "PrintHtmlEntitiesString.h"
 
+// #define PRINTHTMLENTITIES_COPY      "\xa9"  // 0xa9 = 169 = ©
+// #define PRINTHTMLENTITIES_DEGREE    "\xb0"  // 0xb0 = 176 = °
+// #define PRINTHTMLENTITIES_PLUSM     "\xb1"  // 0xb1 = 177 = ±
+// #define PRINTHTMLENTITIES_ACUTE     "\xb4"  // 0xb4 = 180 = ´
+// #define PRINTHTMLENTITIES_MICRO     "\xb5"  // 0xb5 = 181 = µ
+
 // index of the character must match the index of string in the values array
 const char __keys_attribute_all_P[] PROGMEM = { "'\"<>&" };
 

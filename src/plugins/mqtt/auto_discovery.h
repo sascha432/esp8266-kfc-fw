@@ -200,6 +200,12 @@ namespace MQTT {
                 addParameter(FSPGM(mqtt_device_class), deviceClass);
             }
 
+            template<typename _Ta>
+            void addDeviceClass(NameType deviceClass, _Ta unitOfMeasurement) {
+                addParameter(FSPGM(mqtt_unit_of_measurement), unitOfMeasurement);
+                addParameter(FSPGM(mqtt_device_class), deviceClass);
+            }
+
             void addSubType(const String &subType) {
                 addParameter(FSPGM(mqtt_subtype), subType);
             }

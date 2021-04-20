@@ -21,12 +21,14 @@ using KFCConfigurationClasses::System;
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(MDNSQ, "MDNSQ", "<service>,<proto>,[<wait=2000ms>]", "Query MDNS");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(MDNSR, "MDNSR", "<stop|start|enable|disable|zeroconf>", "Configure MDNS");
 
-void MDNSPlugin::atModeHelpGenerator()
+ATModeCommandHelpArrayPtr MDNSPlugin::atModeCommandHelp(size_t &size) const
 {
-    auto name = getName_P();
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(MDNSQ), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(MDNSR), name);
-    // at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(MDNSBSD), name);
+    static ATModeCommandHelpArray tmp PROGMEM = {
+        PROGMEM_AT_MODE_HELP_COMMAND(MDNSQ),
+        PROGMEM_AT_MODE_HELP_COMMAND(MDNSR)
+    };
+    size = sizeof(tmp) / sizeof(tmp[0]);
+    return tmp;
 }
 
 #if ESP8266

@@ -14,18 +14,13 @@
 using KFCConfigurationClasses::Plugins;
 using namespace Dimmer;
 
-Module::Module() :
-    MQTTComponent(ComponentType::SENSOR)
-{
-}
-
 void Module::_begin()
 {
     __LDBG_println();
     Base::_begin();
     Buttons::_begin();
     _beginMqtt();
-    _Scheduler.add(900, false, [this](Event::CallbackTimerPtr) {
+    _Scheduler.add(Event::milliseconds(900), false, [this](Event::CallbackTimerPtr) {
         _getChannels();
     });
 }
@@ -39,24 +34,18 @@ void Module::_end()
 
 void Module::_beginMqtt()
 {
-    auto client = MQTT::Client::getClient();
-    if (client) {
-        for (uint8_t i = 0; i < _channels.size(); i++) {
-            _channels[i].setup(this, i);
-            client->registerComponent(&_channels[i]);
-        }
-        client->registerComponent(this);
+    for (uint8_t i = 0; i < _channels.size(); i++) {
+        _channels[i].setup(this, i);
+        MQTT::Client::registerComponent(&_channels[i]);
     }
+    MQTT::Client::registerComponent(this);
 }
 
 void Module::_endMqtt()
 {
-    auto client = MQTT::Client::getClient();
-    if (client) {
-        client->unregisterComponent(this);
-        for(uint8_t i = 0; i < _channels.size(); i++) {
-            client->unregisterComponent(&_channels[i]);
-        }
+    MQTT::Client::unregisterComponent(this);
+    for(uint8_t i = 0; i < _channels.size(); i++) {
+        MQTT::Client::unregisterComponent(&_channels[i]);
     }
 }
 
@@ -79,17 +68,6 @@ void Module::_printStatus(Print &out)
         }
     }
     Base::_printStatus(out);
-}
-
-
-bool Module::on(uint8_t channel, float transition)
-{
-    return _channels[channel].on(transition);
-}
-
-bool Module::off(uint8_t channel, float transition)
-{
-    return _channels[channel].off(&_config, transition);
 }
 
 bool Module::isAnyOn() const
@@ -128,41 +106,6 @@ void Module::_getChannels()
         }
         _wire.unlock();
     }
-}
-
-int16_t Module::getChannel(uint8_t channel) const
-{
-    return _channels[channel].getLevel();
-}
-
-bool Module::getChannelState(uint8_t channel) const
-{
-    return _channels[channel].getOnState();
-}
-
-void Module::setChannel(uint8_t channel, int16_t level, float transition)
-{
-    _channels[channel].setLevel(level, transition);
-}
-
-uint8_t Module::getChannelCount() const
-{
-    return _channels.size();
-}
-
-int16_t Module::getRange(uint8_t channel) const
-{
-    return 0;
-}
-
-int16_t Module::getOffset(uint8_t channel) const
-{
-    return 0;
-}
-
-void Module::publishChannel(uint8_t channel)
-{
-    _channels[channel].publishState();
 }
 
 void Module::_onReceive(size_t length)

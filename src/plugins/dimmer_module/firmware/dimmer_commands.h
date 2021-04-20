@@ -140,6 +140,33 @@ namespace Dimmer {
         Callback _callback;
     };
 
+    inline ConfigReaderWriter::~ConfigReaderWriter()
+    {
+        end();
+    }
+
+    inline void ConfigReaderWriter::begin()
+    {
+        _valid = 0;
+        _timer.remove();
+    }
+
+    inline void ConfigReaderWriter::end()
+    {
+        begin();
+        _valid = kStopped;
+    }
+
+    inline bool ConfigReaderWriter::isValid(VersionType version)
+    {
+        return version;
+    }
+
+    inline Config &ConfigReaderWriter::config()
+    {
+        return _config;
+    }
+
     inline ConfigReaderWriter TwoWire::getConfigReader(uint8_t address)
     {
         return ConfigReaderWriter(*this, address);

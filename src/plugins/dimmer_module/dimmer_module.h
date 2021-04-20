@@ -54,4 +54,54 @@ namespace Dimmer {
         void _getChannels();
     };
 
+    inline Module::Module() :
+        MQTTComponent(ComponentType::SENSOR)
+    {
+    }
+
+    inline bool Module::on(uint8_t channel, float transition)
+    {
+        return _channels[channel].on(transition);
+    }
+
+    inline bool Module::off(uint8_t channel, float transition)
+    {
+        return _channels[channel].off(&_config, transition);
+    }
+
+    inline int16_t Module::getChannel(uint8_t channel) const
+    {
+        return _channels[channel].getLevel();
+    }
+
+    inline bool Module::getChannelState(uint8_t channel) const
+    {
+        return _channels[channel].getOnState();
+    }
+
+    inline void Module::setChannel(uint8_t channel, int16_t level, float transition)
+    {
+        _channels[channel].setLevel(level, transition);
+    }
+
+    inline uint8_t Module::getChannelCount() const
+    {
+        return _channels.size();
+    }
+
+    inline int16_t Module::getRange(uint8_t channel) const
+    {
+        return 0;
+    }
+
+    inline int16_t Module::getOffset(uint8_t channel) const
+    {
+        return 0;
+    }
+
+    inline void Module::publishChannel(uint8_t channel)
+    {
+        _channels[channel].publishState();
+    }
+
 }

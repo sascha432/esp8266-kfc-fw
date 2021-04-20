@@ -20,21 +20,6 @@ ConfigReaderWriter::ConfigReaderWriter(TwoWire &wire, uint8_t address) :
     _valid(0)
 {}
 
-ConfigReaderWriter::~ConfigReaderWriter()
-{
-    end();
-}
-
-void ConfigReaderWriter::begin() {
-    _valid = 0;
-    _timer.remove();
-}
-
-void ConfigReaderWriter::end() {
-    begin();
-    _valid = kStopped;
-}
-
 void ConfigReaderWriter::_rescheduleNextRetry(Event::CallbackTimerPtr timer)
 {
     if (!(_valid & kStopped) && _retries) {
@@ -113,17 +98,6 @@ bool ConfigReaderWriter::getConfig()
     }
     __LDBG_printf("status=%u", (_valid & kHasConfig));
     return (_valid & kHasConfig);
-}
-
-bool ConfigReaderWriter::isValid(VersionType version)
-{
-    return version;
-}
-
-
-Config &ConfigReaderWriter::config()
-{
-    return _config;
 }
 
 // retries will be ignored if called from inside an ISR

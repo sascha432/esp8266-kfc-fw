@@ -32,7 +32,7 @@ namespace WebServer {
 
             HttpHeaders headers;
             headers.addNoCache(true);
-            headers.replace<HttpConnectionHeader>(HttpConnectionHeader::CLOSE);
+            headers.replace<HttpConnectionHeader>(HttpConnectionHeader::ConnectionType::CLOSE);
 
             uint32_t id = request->arg(F("action")).toInt();
             if (id) {

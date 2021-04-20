@@ -46,7 +46,7 @@ void AsyncBaseResponse::__assembleHead(uint8_t version)
         //out.printf_P(PSTR("Content-Type: %s\r\n"), _contentType.c_str());
     }
 
-    _httpHeaders.replace<HttpConnectionHeader>(HttpConnectionHeader::CLOSE);
+    _httpHeaders.replace<HttpConnectionHeader>(HttpConnectionHeader::ConnectionType::CLOSE);
 
     for(const auto &header : _headers) {
         out.printf_P(PSTR("%s: %s\r\n"), header->name().c_str(), header->value().c_str());

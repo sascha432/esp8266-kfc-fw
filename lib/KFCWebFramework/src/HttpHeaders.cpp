@@ -12,25 +12,8 @@
 #include "../include/spgm_auto_def.h"
 #include "../include/spgm_auto_strings.h"
 
-HttpHeaders::HttpHeaders()
-{
-    init();
-}
 
-HttpHeaders::HttpHeaders(bool addDefault)
-{
-    if (addDefault) {
-        init();
-    }
-}
-
-
-HttpHeaders::~HttpHeaders()
-{
-    clear(-1);
-}
-
-const String  HttpHeaders::getRFC7231Date(const time_t *time)
+String HttpHeaders::getRFC7231Date(const time_t *time)
 {
     char buf[32];
 #if HAS_STRFTIME_P
@@ -46,15 +29,6 @@ const String  HttpHeaders::getRFC7231Date(const time_t *time)
 }
 
 
-HttpHeader::HttpHeader(const String &name)
-{
-    _name = name;
-}
-
-HttpHeader::~HttpHeader()
-{
-}
-
 // const String HttpHeader::getHeader()
 // {
 //     String tmp = getName();
@@ -63,31 +37,13 @@ HttpHeader::~HttpHeader()
 //     return tmp;
 // }
 
-void HttpHeader::printTo(Print &output) const
+HttpDispositionHeader::HttpDispositionHeader(const String& filename) :
+    HttpSimpleHeader(F("Content-Disposition"))
 {
-    output.print(getName());
-    output.print(F(": "));
-    output.println(getValue());
-}
-
-bool HttpHeader::equals(const HttpHeader &header) const {
-    return _name.equalsIgnoreCase(header.getName());
-}
-
-HttpPragmaHeader::HttpPragmaHeader(const String &value) : HttpSimpleHeader(FSPGM(Pragma), value)
-{
-}
-
-HttpDispositionHeader::HttpDispositionHeader(const String& filename) : HttpSimpleHeader(F("Content-Disposition"))
-{
-    String str = F("attachment; filename=\"");
-    str += filename;
-    str += '"';
-    setHeader(str);
-}
-
-HttpLocationHeader::HttpLocationHeader(const String &location) : HttpSimpleHeader(FSPGM(Location), location)
-{
+    _header.reserve(23 + filename.length() + 1);
+    _header += F("attachment; filename=\"");
+    _header += filename;
+    _header += '"';
 }
 
 AsyncWebServerResponse *HttpLocationHeader::redir(AsyncWebServerRequest *request, const String &url, HttpHeaders &headers)
@@ -106,19 +62,12 @@ AsyncWebServerResponse *HttpLocationHeader::redir(AsyncWebServerRequest *request
 }
 
 
-HttpLinkHeader::HttpLinkHeader(const String &location) : HttpSimpleHeader(FSPGM(Link), location)
-{
-}
-
-HttpDateHeader::HttpDateHeader(const String &name, const String &expires) : HttpSimpleHeader(name, expires)
-{
-}
-
 /* expires in seconds or Unix time */
-HttpDateHeader::HttpDateHeader(const String &name, time_t expires) : HttpSimpleHeader(name)
+HttpDateHeader::HttpDateHeader(const String &name, time_t expires) :
+    HttpSimpleHeader(name)
 {
 #if NTP_CLIENT || RTC_SUPPORT
-    if (expires < 31536000) {
+    if (expires < static_cast<time_t>(MaxAgeType::ONE_YEAR)) {
         if (time(nullptr) == 0) {
             expires = 0x7ffffff0;
         } else {
@@ -128,16 +77,16 @@ HttpDateHeader::HttpDateHeader(const String &name, time_t expires) : HttpSimpleH
 #else
     expires = 0x7ffffff0;
 #endif
-    HttpSimpleHeader::setHeader(HttpHeaders::getRFC7231Date(&expires));
+    HttpSimpleHeader::setHeader(std::move(HttpHeaders::getRFC7231Date(&expires)));
 }
 
 const String HttpCacheControlHeader::getValue() const
 {
     String tmp;
-    uint32_t maxAge = _maxAge;
+    auto maxAge = _maxAge;
 
-    if (maxAge == AUTO && !_noCache) {
-        maxAge = 31536000;
+    if (maxAge == MaxAgeType::AUTO && !_noCache) {
+        maxAge = MaxAgeType::ONE_YEAR;
     }
 
     if (_noCache) {
@@ -155,24 +104,24 @@ const String HttpCacheControlHeader::getValue() const
         }
         tmp += F("must-revalidate");
     }
-    if (_cacheControl == PRIVATE) {
+    if (static_cast<CacheControlType>(_cacheControl) == CacheControlType::PRIVATE) {
         if (tmp.length()) {
             tmp += FSPGM(comma_);
         }
         tmp += FSPGM(private);
     }
-    if (_cacheControl == PUBLIC) {
+    if (static_cast<CacheControlType>(_cacheControl) == CacheControlType::PUBLIC) {
         if (tmp.length()) {
             tmp += FSPGM(comma_);
         }
         tmp += FSPGM(public);
     }
-    if (maxAge != AUTO && maxAge != NOT_SET) {
+    if (maxAge != MaxAgeType::AUTO && maxAge != MaxAgeType::NOT_SET) {
         if (tmp.length()) {
             tmp += FSPGM(comma_);
         }
         tmp += F("max-age=");
-        tmp += String(maxAge);
+        tmp += String(static_cast<std::underlying_type<MaxAgeType>::type>(maxAge));
     }
 
     // debug_printf_P(PSTR("Cache-Control: %s\n"), tmp.c_str());
@@ -181,8 +130,7 @@ const String HttpCacheControlHeader::getValue() const
 
 const String HttpCookieHeader::getValue() const
 {
-    PrintString header;
-    header.print(_cookieName);
+    String header = _cookieName;
     header += '=';
     if (_expires != COOKIE_EXPIRED) {
         header += _value;
@@ -262,24 +210,10 @@ bool HttpCookieHeader::parseCookie(const String &cookies, const String &name, St
     return false;
 }
 
-
-
-void HttpHeaders::clear(uint8_t reserveItems)
-{
-    _headers.clear();
-    _headers.reserve(reserveItems);
-}
-
-void HttpHeaders::init()
-{
-    clear(5);
-    addDefaultHeaders();
-}
-
 void HttpHeaders::addNoCache(bool noStore)
 {
     replace(new HttpPragmaHeader(FSPGM(no_cache)));
-    replace(new HttpCacheControlHeader(HttpCacheControlHeader::PRIVATE, noStore, true, noStore));
+    replace(new HttpCacheControlHeader(HttpCacheControlHeader::CacheControlType::PRIVATE, noStore, true, noStore));
     remove(FSPGM(Expires));
     remove(FSPGM(Last_Modified));
 }
@@ -300,7 +234,7 @@ void HttpHeaders::addDefaultHeaders()
     add(new HttpDateHeader(FSPGM(Expires), 86400 * 30));
 }
 
-void HttpHeaders::setHeadersCallback(SetCallback_t callback, bool doClear)
+void HttpHeaders::setHeadersCallback(SetCallback callback, bool doClear)
 {
     if (_headers.size()) {
         for (const auto &header : _headers) {

@@ -32,7 +32,7 @@
 #include "save_crash.h"
 #include "../src/plugins/plugins.h"
 #include  "spgm_auto_def.h"
-#if DEBUG_WEB_SERVER || 1
+#if DEBUG_WEB_SERVER
 #include <debug_helper_enable.h>
 #else
 #include <debug_helper_disable.h>
@@ -898,7 +898,7 @@ AsyncWebServerResponse *Plugin::_beginFileResponse(const FileMapping &mapping, c
         headers.replace<HttpDateHeader>(FSPGM(Expires), 86400 * 30);
         headers.replace<HttpDateHeader>(FSPGM(Last_Modified), mapping.getModificationTime());
         if (_isPublic(path)) {
-            headers.replace<HttpCacheControlHeader>(HttpCacheControlHeader::PUBLIC);
+            headers.replace<HttpCacheControlHeader>(HttpCacheControlHeader::CacheControlType::PUBLIC);
         }
         // regular file
 #if 0

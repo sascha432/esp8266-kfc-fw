@@ -133,13 +133,13 @@ void AsyncUpdateWebHandler::handleRequest(AsyncWebServerRequest *request)
             });
 
             HttpHeaders headers(false);
-            headers.replace<HttpConnectionHeader>(HttpConnectionHeader::CLOSE);
+            headers.replace<HttpConnectionHeader>(HttpConnectionHeader::ConnectionType::CLOSE);
             request->send(HttpLocationHeader::redir(request, String('/') + FSPGM(serial_console_html), headers));
 
             // auto response = request->beginResponse(302);
             // HttpHeaders httpHeaders(false);
             // httpHeaders.add<HttpLocationHeader>(String('/') + FSPGM(serial_console_html));
-            // httpHeaders.replace<HttpConnectionHeader>(HttpConnectionHeader::CLOSE);
+            // httpHeaders.replace<HttpConnectionHeader>(HttpConnectionHeader::ConnectionType::CLOSE);
             // httpHeaders.setResponseHeaders(response);
             // request->send(response);
         }

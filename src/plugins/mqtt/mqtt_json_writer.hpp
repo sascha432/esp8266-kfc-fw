@@ -317,15 +317,15 @@ namespace MQTT {
 
             void printTo(PrintStringInterface &output) const {
                 if (std::isnormal(_value)) {
-                    auto pos = output.length();
+                    auto length = output.length();
                     output.printf_P(reinterpret_cast<PGM_P>(_format), _value);
                     // find the dot
-                    pos = output.indexOf('.', pos);
-                    if (pos != 0) {
+                    auto pos = output.indexOf('.', length);
+                    if (pos != -1) {
                         // trim all zeros
                         output.rtrim('0');
                         // if the dot is the last character, append a 0
-                        if (pos == output.length() - 1) {
+                        if (pos == static_cast<decltype(pos)>(output.length() - 1)) {
                             output += '0';
                         }
                     }

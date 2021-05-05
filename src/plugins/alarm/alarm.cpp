@@ -76,6 +76,8 @@ MQTT::AutoDiscovery::EntityPtr AlarmPlugin::getAutoDiscovery(FormatType format, 
             discovery->create(this, FSPGM(alarm), format);
             discovery->addStateTopic(_formatTopic(FSPGM(_state)));
             discovery->addCommandTopic(_formatTopic(FSPGM(_set)));
+            discovery->addRGBStateTopic(_formatTopic(F("/rgb")));
+            discovery->addRGBCommandTopic(_formatTopic(F("/set/rgb")));
             break;
     }
     return discovery;
@@ -84,6 +86,7 @@ MQTT::AutoDiscovery::EntityPtr AlarmPlugin::getAutoDiscovery(FormatType format, 
 void AlarmPlugin::onConnect()
 {
     subscribe(_formatTopic(FSPGM(_set)));
+    subscribe(_formatTopic(F("/set/rgb")));
     _publishState();
 }
 
@@ -91,15 +94,20 @@ void AlarmPlugin::onMessage(const char *topic, const char *payload, size_t len)
 {
     __LDBG_printf("client=%p topic=%s payload=%s alarm_state=%u callback=%u", client, topic, payload, _alarmState, (bool)_callback);
 
-    if (_callback) {
-        _alarmState = (bool)atoi(payload);
-        if (_alarmState) {
-            _callback(Alarm::AlarmModeType::BOTH, Alarm::DEFAULT_MAX_DURATION);
+    if (strcmp_P(topic, PSTR("/set/rgb")) == 0) {
+
+    } else {
+
+        if (_callback) {
+            _alarmState = (bool)atoi(payload);
+            if (_alarmState) {
+                _callback(Alarm::AlarmModeType::BOTH, Alarm::DEFAULT_MAX_DURATION);
+            }
+            else {
+                _callback(Alarm::AlarmModeType::BOTH, Alarm::STOP_ALARM);
+            }
+            _publishState();
         }
-        else {
-            _callback(Alarm::AlarmModeType::BOTH, Alarm::STOP_ALARM);
-        }
-        _publishState();
     }
 }
 

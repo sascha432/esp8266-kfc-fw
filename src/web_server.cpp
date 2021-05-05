@@ -430,7 +430,8 @@ void Plugin::message(AsyncWebServerRequest *request, MessageType type, const Str
     if (sendFileResponse(200, F("/.message.html"), request, headers, webTemplate)) {
         return;
     }
-    request->send(500);
+    auto response = request->beginResponse(200, FSPGM(mime_text_plain), title + '\n' + message + F("\n\n(File system read error occurred during request)"));
+    request->send(response);
 }
 
 void Plugin::send(uint16_t httpCode, AsyncWebServerRequest *request, const String &message)

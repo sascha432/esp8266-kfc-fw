@@ -68,8 +68,8 @@ namespace KFCConfigurationClasses {
         blink_colon_speed(kDefaultValueFor_blink_colon_speed),
 #endif
         flashing_speed(kDefaultValueFor_flashing_speed),
-        power({static_cast<uint16_t>(16.3 * 5 * kPowerNumLeds), static_cast<uint16_t>(16.4 * 5 * kPowerNumLeds), static_cast<uint16_t>(16.3 * 5 * kPowerNumLeds), static_cast<uint16_t>(0.83 * 5 * kPowerNumLeds)}),
-        protection( { { 45, 60 }, 70, 25} ),
+        power({static_cast<uint16_t>(79.7617 * kPowerNumLeds), static_cast<uint16_t>(79.9648 * kPowerNumLeds), static_cast<uint16_t>(79.6055 * kPowerNumLeds), static_cast<uint16_t>(4.0586 * kPowerNumLeds)}),
+        protection( { { 45, 60 }, 70, 25 } ),
         rainbow{ RainbowMultiplier_t(), RainbowColor_t(), 30 },
         alarm{ { IOT_CLOCK_ALARM_COLOR }, IOT_CLOCK_ALARM_FLASHING_SPEED },
         fading{ fading.kDefaultValueFor_speed, fading.kDefaultValueFor_delay, 0xffffff },

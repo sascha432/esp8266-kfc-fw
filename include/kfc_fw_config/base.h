@@ -149,8 +149,8 @@ namespace ConfigurationHelper {
     static_assert(max_value >= std::numeric_limits<long>::min() && max_value <= std::numeric_limits<long>::max(), "max_value value out of range (type long)"); \
     CREATE_BITFIELD_TYPE(name, size, type, bits)
 
-#define CREATE_BOOL_BITFIELD_MIN_MAX(name, min_value, max_value, ...) \
-    CREATE_BITFIELD_TYPE_MIN_MAX(name, 1, bool, min_value, max_value, ##__VA_ARGS__)
+#define CREATE_BOOL_BITFIELD_MIN_MAX(name, ...) \
+    CREATE_BITFIELD_TYPE_MIN_MAX(name, 1, bool, false, true, ##__VA_ARGS__)
 
 #define CREATE_UINT8_BITFIELD_MIN_MAX(name, size, min_value, max_value, ...) \
     CREATE_BITFIELD_TYPE_MIN_MAX(name, size, uint8_t, min_value, max_value, ##__VA_ARGS__)

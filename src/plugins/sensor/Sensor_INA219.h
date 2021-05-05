@@ -13,6 +13,8 @@
 #include "plugins.h"
 #include "MQTTSensor.h"
 
+using KFCConfigurationClasses::Plugins;
+
 #ifndef IOT_SENSOR_INA219_R_SHUNT
 // NOTE: 0.064 or 4x the value is required for a 0.016 shunt for an unknown reason (INA219_CONFIG_GAIN_2_80MV)
 // The value is multiplied in the constructor
@@ -40,11 +42,6 @@
 #define IOT_SENSOR_INA219_READ_INTERVAL     68
 #endif
 
-#ifndef IOT_SENSOR_INA219_PEAK_HOLD_TIME
-// time in milliseconds until the peak current is reset
-#define IOT_SENSOR_INA219_PEAK_HOLD_TIME    60000
-#endif
-
 // webui update rate in seconds
 #ifndef IN219_WEBUI_UPDATE_RATE
 #define IN219_WEBUI_UPDATE_RATE             2
@@ -60,9 +57,17 @@ public:
         VOLTAGE =       'u',
         CURRENT =       'i',
         POWER =         'p',
+        AVG_CURRENT =   'j',
+        AVG_POWER =     'o',
         PEAK_CURRENT =  'm',
+        PEAK_POWER =    'n',
     };
 
+    using ConfigType = Plugins::Sensor::INA219Config_t;
+    using CurrentDisplayType = Plugins::Sensor::INA219CurrentDisplayType;
+    using PowerDisplayType = Plugins::Sensor::INA219PowerDisplayType;
+
+public:
     Sensor_INA219(const String &name, TwoWire &wire, uint8_t address = IOT_SENSOR_HAVE_INA219);
     virtual ~Sensor_INA219();
 
@@ -73,6 +78,12 @@ public:
     virtual void getValues(WebUINS::Events &array, bool timer) override;
     virtual void createWebUI(WebUINS::Root &webUI) override;
     virtual void getStatus(Print &output) override;
+
+    virtual bool hasForm() const {
+        return true;
+    }
+    virtual void createConfigureForm(AsyncWebServerRequest *request, FormUI::Form::BaseForm &form) override;
+    virtual void reconfigure(PGM_P source) override;
 
 #if AT_MODE_SUPPORTED
     virtual void atModeHelpGenerator() override;
@@ -87,6 +98,9 @@ public:
     float getCurrent() const;
     float getPower() const;
     float getPeakCurrent() const;
+    float getPeakPower() const;
+
+    void resetPeak();
 
 private:
     class SensorData {
@@ -109,16 +123,26 @@ private:
     };
 
     void _loop();
-    String _getId(SensorInputType type);
+    String _getId(SensorInputType type) const;
+    ConfigType _readConfig() const;
+    const __FlashStringHelper *_getCurrentUnit() const;
+    const __FlashStringHelper *_getPowerUnit() const;
+    uint8_t _getCurrentPrecision() const;
+    uint8_t _getPowerPrecision() const;
+    float _convertCurrent(float current) const;
+    float _convertPower(float power) const;
 
     String _name;
     uint8_t _address;
+    ConfigType _config;
 
     uint32_t _updateTimer;
     uint32_t _holdPeakTimer;
     SensorData _data;
+    SensorData _avgData;
     SensorData _mqttData;
     float _Ipeak;
+    float _Ppeak;
 
     Adafruit_INA219 _ina219;
 };
@@ -196,9 +220,21 @@ inline float Sensor_INA219::getPeakCurrent() const
     return _Ipeak;
 }
 
+inline float Sensor_INA219::getPeakPower() const
+{
+    return _Ppeak;
+}
+
+inline void Sensor_INA219::resetPeak()
+{
+    _Ipeak = NAN;
+    _Ppeak = NAN;
+    _holdPeakTimer = 0;
+}
+
 inline uint8_t Sensor_INA219::getAutoDiscoveryCount() const
 {
-    return 4;
+    return 5;
 }
 
 

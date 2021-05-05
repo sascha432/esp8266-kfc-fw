@@ -24,6 +24,7 @@
 #define PROGMEM_AT_MODE_HELP_COMMAND_PREFIX "CLOCK"
 #endif
 
+// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKTP, "TP", "<#color>[,<time=500ms>]", "Test peak values");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(CLOCKBR, "BR", "Set brightness (0-65535). 0 disables the LEDs, > 0 enables them");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKPX, "PX", "[<number|-1=all>,<#RGB>|<r>,<g>,<b>]", "Set level of a single pixel. No arguments turns all off");
 #if !IOT_LED_MATRIX
@@ -57,6 +58,7 @@ void ClockPlugin::_removeDisplayLedTimer()
 ATModeCommandHelpArrayPtr ClockPlugin::atModeCommandHelp(size_t &size) const
 {
     static ATModeCommandHelpArray tmp PROGMEM = {
+        // PROGMEM_AT_MODE_HELP_COMMAND(CLOCKTP),
         PROGMEM_AT_MODE_HELP_COMMAND(CLOCKBR),
         PROGMEM_AT_MODE_HELP_COMMAND(CLOCKPX),
 #if !IOT_LED_MATRIX
@@ -212,6 +214,39 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
 #endif
         return true;
     }
+    /*
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKTP))) {
+        if (args.requireArgs(1, 2)) {
+
+            Sensor_INA219 *ina219 = nullptr;
+            for(auto sensor: SensorPlugin::getSensors()) {
+                if (sensor->getType() == SensorPlugin::SensorType::INA219) {
+                    ina219 = reinterpret_cast<Sensor_INA219 *>(sensor);
+                }
+            }
+
+            setAnimation(AnimationType::SOLID, 0);
+            _setBrightness(0);
+            if (ina219) {
+                delay(500);
+                ina219->resetPeak();
+            }
+
+            setColor(Color::fromString(args.toString(0)));
+            _setBrightness(255);
+            delay(100);
+
+            auto &stream = args.getStream();
+            _Scheduler.add(Event::milliseconds(args.toIntMinMax(1, 250, 5000, 500)), false, [this, ina219, &stream](Event::CallbackTimerPtr) {
+                _setBrightness(0);
+                if (ina219) {
+                    stream.printf_P(PSTR("U=%f I=%f P=%f"), ina219->getVoltage(), ina219->getPeakCurrent(), ina219->getPeakPower());
+                }
+            });
+        }
+        return true;
+    }
+    */
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKBR))) {
         if (args.requireArgs(1, 2)) {
             auto brightness = args.toIntMinMax<uint16_t>(0, 0, Clock::kMaxBrightness);

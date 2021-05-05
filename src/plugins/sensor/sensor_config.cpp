@@ -36,9 +36,25 @@ namespace KFCConfigurationClasses {
     }
 #endif
 
+#if IOT_SENSOR_HAVE_INA219
+    Plugins::Sensor::INA219Config_t::INA219Config_t() :
+        display_current(0),
+        display_power(0),
+        webui_current(kDefaultValueFor_webui_current),
+        webui_average(kDefaultValueFor_webui_average),
+        webui_peak(kDefaultValueFor_webui_peak),
+        webui_voltage_precision(kDefaultValueFor_webui_voltage_precision),
+        webui_current_precision(kDefaultValueFor_webui_current_precision),
+        webui_power_precision(kDefaultValueFor_webui_power_precision),
+        averaging_period(kDefaultValueFor_averaging_period),
+        hold_peak_time(kDefaultValueFor_hold_peak_time)
+    {
+    }
+#endif
+
     void Plugins::Sensor::defaults()
     {
-        SensorConfig_t tmp = {};
+        auto tmp = SensorConfig_t();
         setConfig(tmp);
     }
 

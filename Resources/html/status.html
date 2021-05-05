@@ -157,10 +157,18 @@
                             I/O Expander
                         </div>
                         <div class="col">
-                            %PCF8574_STATUS%
-                            %PCF8575_STATUS%
-                            %PCA9685_STATUS%
-                            %MCP23017_STATUS%
+                            <!--#if (defined(HAVE_PCF8574) && HAVE_PCF8574) -->
+                            %PCF8574_STATUS%<br>
+                            <!--#endif-->
+                            <!--#if (defined(HAVE_PCF8575) && HAVE_PCF8575) -->
+                            %PCF8575_STATUS%<br>
+                            <!--#endif-->
+                            <!--#if (defined(HAVE_PCA9685) && HAVE_PCA9685) -->
+                            %PCA9685_STATUS%<br>
+                            <!--#endif-->
+                            <!--#if (defined(HAVE_MCP23017) && HAVE_MCP23017) -->
+                            %MCP23017_STATUS%<br>
+                            <!--#endif-->
                         </div>
                     </div>
                     <!--#endif-->

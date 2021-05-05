@@ -245,22 +245,22 @@ void Sensor_Battery::createConfigureForm(AsyncWebServerRequest *request, FormUI:
     auto &cfg = Plugins::Sensor::getWriteableConfig();
     auto &group = form.addCardGroup(F("spcfg"), F(IOT_SENSOR_NAMES_BATTERY), true);
 
-    form.addPointerTriviallyCopyable(F("sp_uc"), &cfg.calibration);
+    form.addPointerTriviallyCopyable(F("sp_uc"), &cfg.battery.calibration);
     form.addFormUI(F("Calibration"), FormUI::Suffix(PrintString(F("Max. Voltage %.4f"), maxVoltage)));
 
-    form.addPointerTriviallyCopyable(F("sp_ofs"), &cfg.offset);
+    form.addPointerTriviallyCopyable(F("sp_ofs"), &cfg.battery.offset);
     form.addFormUI(F("Offset"));
 
-    form.addObjectGetterSetter(F("sp_pr"), cfg, cfg.get_bits_precision, cfg.set_bits_precision);
+    form.addObjectGetterSetter(F("sp_pr"), cfg.battery, cfg.battery.get_bits_precision, cfg.battery.set_bits_precision);
     form.addFormUI(F("Display Precision"));
-    cfg.addRangeValidatorFor_precision(form);
+    cfg.battery.addRangeValidatorFor_precision(form);
 
 #if IOT_SENSOR_HAVE_BATTERY_RECORDER
 
-    form.addObjectGetterSetter(F("sp_ra"), cfg, cfg.get_ipv4_address, cfg.set_ipv4_address);
+    form.addObjectGetterSetter(F("sp_ra"), cfg.battery, cfg.battery.get_ipv4_address, cfg.battery.set_ipv4_address);
     form.addFormUI(F("Data Hostname"));
 
-    form.addObjectGetterSetter(F("sp_rp"), cfg, cfg.get_bits_port, cfg.set_bits_port);
+    form.addObjectGetterSetter(F("sp_rp"), cfg.battery, cfg.battery.get_bits_port, cfg.battery.set_bits_port);
     form.addFormUI(F("Data Port"));
     cfg.addRangeValidatorFor_port(form);
 
@@ -271,7 +271,7 @@ void Sensor_Battery::createConfigureForm(AsyncWebServerRequest *request, FormUI:
         SensorRecordType::BOTH, F("Record ADC and sensor values")
     );
 
-    form.addObjectGetterSetter(F("sp_brt"), cfg, cfg.get_int_record, cfg.set_int_record);
+    form.addObjectGetterSetter(F("sp_brt"), cfg.battery, cfg.battery.get_int_record, cfg.battery.set_int_record);
     form.addFormUI(F("Sensor Data"), items);
 
 #endif
@@ -281,7 +281,7 @@ void Sensor_Battery::createConfigureForm(AsyncWebServerRequest *request, FormUI:
 
 void Sensor_Battery::reconfigure(PGM_P source)
 {
-    _config = Plugins::Sensor::getConfig();
+    _config = Plugins::Sensor::getConfig().battery;
     maxVoltage = 0;
 }
 

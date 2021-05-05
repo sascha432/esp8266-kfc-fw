@@ -77,6 +77,10 @@
 #define IOT_SENSOR_NAMES_INA219                 "INA219 Voltage"
 #endif
 
+#ifndef IOT_SENSOR_NAMES_INA219_FORM_TITLE
+#define IOT_SENSOR_NAMES_INA219_FORM_TITLE      "INA219 Voltage And Current Sensor"
+#endif
+
 #ifndef IOT_SENSOR_NAMES_DIMMER_METRICS
 #if IOT_ATOMIC_SUN_V2
 #define IOT_SENSOR_NAMES_DIMMER_METRICS         "Atomic Sun VCC"

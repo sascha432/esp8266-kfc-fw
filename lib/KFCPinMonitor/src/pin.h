@@ -9,6 +9,10 @@
 
 namespace PinMonitor {
 
+    // --------------------------------------------------------------------
+    // PinMonitor::Pin
+    // --------------------------------------------------------------------
+
     class Pin
     {
     public:
@@ -114,13 +118,17 @@ namespace PinMonitor {
         uint32_t _eventCounter;
         StateType _states;
         uint8_t _pin: 4;
-        bool _disabled: 1;
-        bool _activeState: 1;
+        uint8_t _disabled: 1;
+        uint8_t _activeState: 1;
 
 #if DEBUG_PIN_MONITOR
         char name_buffer[16]{};
 #endif
     };
+
+    // --------------------------------------------------------------------
+    // PinMonitor::HardwarePin
+    // --------------------------------------------------------------------
 
     class HardwarePin {
     public:
@@ -178,6 +186,10 @@ namespace PinMonitor {
         HardwarePinType _type;
     };
 
+    // --------------------------------------------------------------------
+    // PinMonitor::SimpleHardwarePin
+    // --------------------------------------------------------------------
+
     class SimpleHardwarePin : public HardwarePin {
     public:
         enum class SimpleEventType {
@@ -230,6 +242,10 @@ namespace PinMonitor {
         // #endif
         SimpleEventType _event;
     };
+
+    // --------------------------------------------------------------------
+    // PinMonitor::DebouncedHardwarePin
+    // --------------------------------------------------------------------
 
     class DebouncedHardwarePin : public SimpleHardwarePin {
     public:
@@ -320,6 +336,9 @@ namespace PinMonitor {
         Events _events;
     };
 
+    // --------------------------------------------------------------------
+    // PinMonitor::RotaryHardwarePin
+    // --------------------------------------------------------------------
 
     class RotaryHardwarePin : public HardwarePin {
     public:
@@ -345,6 +364,10 @@ namespace PinMonitor {
     public:
         RotaryEncoder &_encoder;
     };
+
+    // --------------------------------------------------------------------
+    // PinMonitor::HardwarePin
+    // --------------------------------------------------------------------
 
     inline HardwarePin::operator bool() const
     {

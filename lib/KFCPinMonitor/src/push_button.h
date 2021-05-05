@@ -7,6 +7,9 @@
 #include <MicrosTimer.h>
 #include "pin.h"
 
+#undef DEBUG_PIN_MONITOR
+#define DEBUG_PIN_MONITOR 1
+
 #if DEBUG_PIN_MONITOR
 #include <debug_helper_enable.h>
 #else
@@ -75,48 +78,46 @@ namespace PinMonitor {
 
 #if PIN_MONITOR_BUTTON_GROUPS
 
+    // --------------------------------------------------------------------
+    // PinMonitor::SingleClickGroup
+    // --------------------------------------------------------------------
+
     // Object to manage a group of buttons with shared properties
     class SingleClickGroup {
     public:
-        static constexpr uint16_t kClickRepeatCountMax = (1 << 15) - 1;
+        static constexpr uint16_t kClickRepeatCountMax = (1 << 15) - 2;
+        static constexpr uint16_t kClickRepeatNotSet = (1 << 15) - 1;
 
-        SingleClickGroup(uint16_t singleClickTimeout) : _timerOwner(nullptr), _timer(0), _timeout(singleClickTimeout), _repeatCount(kClickRepeatCountMax), _timerRunning(false)  {}
-
-        void pressed() {
-            if (_repeatCount == kClickRepeatCountMax) {
-                _repeatCount = 0;
-                __LDBG_assert(_timerRunning == false);
-            }
+        SingleClickGroup(uint16_t singleClickTimeout) :
+            _timerOwner(nullptr),
+            _timer(0),
+            _timeout(singleClickTimeout),
+            _repeatCount(kClickRepeatNotSet),
+            _timerRunning(false)
+        {
         }
 
+        void pressed();
         void released(const void *owner, uint32_t millis) {
             _timer = millis;
             _timerRunning = true;
             _timerOwner = owner; // replace owner
-            if (_repeatCount < kClickRepeatCountMax - 1) {
+            if (_repeatCount < kClickRepeatCountMax - 1) { // limit reached
                 _repeatCount++;
             }
         }
 
-        inline bool isTimerRunning(const void *owner) const {
-            return (owner == nullptr || owner == _timerOwner) ? _timerRunning : false;
-        }
+        bool isTimerRunning(const void *owner) const;
+        bool isTimerRunning() const;
 
-        inline uint16_t getTimeout() const {
-            return _timeout;
-        }
-
-        inline uint16_t getRepeatCount() const {
-            return _repeatCount;
-        }
-
-        inline uint32_t getDuration() const {
-            return get_time_diff(_timer, millis());
-        }
+        uint16_t getTimeout() const;
+        uint16_t getRepeatCount() const;
+        uint32_t getDuration() const;
 
         void stopTimer(const void *owner) {
+            __LDBG_printf("stop timer owner=%p timer_owner=%p", owner, _timerOwner);
             if (_timerOwner == owner) {
-                _repeatCount = kClickRepeatCountMax;
+                _repeatCount = kClickRepeatNotSet;
                 _timerRunning = false;
                 _timerOwner = nullptr;
             }
@@ -132,23 +133,88 @@ namespace PinMonitor {
         uint16_t _timerRunning : 1;
     };
 
+    static constexpr size_t kSingleClickGroupSize = sizeof(SingleClickGroup);
+
+    inline void SingleClickGroup::pressed()
+    {
+        if (_repeatCount == kClickRepeatNotSet) {
+            _repeatCount = 0;
+        }
+        // __LDBG_assert_printf(_repeatCount == kClickRepeatNotSet && _timerRunning == false, "timer running and _repeatCount not set");
+        // _repeatCount = getRepeatCount();
+        // return _repeatCount;
+
+    }
+
+    inline bool SingleClickGroup::isTimerRunning(const void *owner) const
+    {
+        return (owner == _timerOwner) ? _timerRunning : false;
+    }
+
+    inline bool SingleClickGroup::isTimerRunning() const
+    {
+        return static_cast<bool>(_timerRunning);
+    }
+
+    inline uint16_t SingleClickGroup::getTimeout() const
+    {
+        return _timeout;
+    }
+
+    inline uint16_t SingleClickGroup::getRepeatCount() const
+    {
+        return (_repeatCount == kClickRepeatNotSet) ? 0 : _repeatCount;
+        return _repeatCount; //(_repeatCount == kClickRepeatNotSet) ? 0 : _repeatCount;
+    }
+
+    inline uint32_t SingleClickGroup::getDuration() const
+    {
+        return get_time_diff(_timer, millis());
+    }
+
+    // --------------------------------------------------------------------
+    // PinMonitor::SingleClickGroupPtr
+    // --------------------------------------------------------------------
+
     class SingleClickGroupPtr : public std::shared_ptr<SingleClickGroup>
     {
     public:
         using PtrType = std::shared_ptr<SingleClickGroup>;
         using PtrType::reset;
 
-        SingleClickGroupPtr() : PtrType() {}
-        SingleClickGroupPtr(PtrType ptr) : PtrType(ptr) {}
-        SingleClickGroupPtr(uint16_t singleClickTimeout) : PtrType(new SingleClickGroup(singleClickTimeout)) {}
+        SingleClickGroupPtr();
+        SingleClickGroupPtr(PtrType ptr);
+        SingleClickGroupPtr(uint16_t singleClickTimeout);
         SingleClickGroupPtr(PushButton &button);
 
-        inline void reset(uint16_t singleClickTimeout) {
-            reset(new SingleClickGroup(singleClickTimeout));
-        }
+        void reset(uint16_t singleClickTimeout);
     };
 
+    inline SingleClickGroupPtr::SingleClickGroupPtr() :
+        PtrType()
+    {
+    }
+
+    inline SingleClickGroupPtr::SingleClickGroupPtr(PtrType ptr) :
+        PtrType(ptr)
+    {
+    }
+
+    inline SingleClickGroupPtr::SingleClickGroupPtr(uint16_t singleClickTimeout) :
+        PtrType(new SingleClickGroup(singleClickTimeout))
+    {
+    }
+
+    inline void SingleClickGroupPtr::reset(uint16_t singleClickTimeout)
+    {
+        reset(new SingleClickGroup(singleClickTimeout));
+    }
+
 #endif
+
+    // --------------------------------------------------------------------
+    // PinMonitor::PushButtonConfig
+    // --------------------------------------------------------------------
 
     class PushButtonConfig {
     public:
@@ -174,9 +240,7 @@ namespace PinMonitor {
         {
         }
 
-        bool hasEvent(EventType event) const {
-            return (static_cast<uint16_t>(_subscribedEvents) & static_cast<uint16_t>(event)) != 0;
-        }
+        bool hasEvent(EventType event) const;
 
     protected:
         EventType _subscribedEvents;
@@ -191,6 +255,15 @@ namespace PinMonitor {
         // timeout for detecting single and repeated clkicks
         uint16_t _singleClickTime;
     };
+
+    inline bool PushButtonConfig::hasEvent(EventType event) const
+    {
+        return (static_cast<uint16_t>(_subscribedEvents) & static_cast<uint16_t>(event)) != 0;
+    }
+
+    // --------------------------------------------------------------------
+    // PinMonitor::PushButton
+    // --------------------------------------------------------------------
 
     class PushButton : public Pin, public PushButtonConfig {
     public:
@@ -208,16 +281,16 @@ namespace PinMonitor {
         }
 
         PushButton(uint8_t pin, const void *arg, const PushButtonConfig &config,
-#if PIN_MONITOR_BUTTON_GROUPS
+    #if PIN_MONITOR_BUTTON_GROUPS
             SingleClickGroupPtr singleClickGroup = SingleClickGroupPtr(),
-#endif
+    #endif
             ActiveStateType activeLow = PIN_MONITOR_ACTIVE_STATE) :
 
             Pin(pin, arg, StateType::UP_DOWN, activeLow),
             PushButtonConfig(config),
-#if PIN_MONITOR_BUTTON_GROUPS
+    #if PIN_MONITOR_BUTTON_GROUPS
             _singleClickGroup(singleClickGroup),
-#endif
+    #endif
             _startTimer(0),
             _duration(0),
             _repeatCount(0),
@@ -227,22 +300,26 @@ namespace PinMonitor {
         {
         }
 
-#if PIN_MONITOR_BUTTON_GROUPS
-        void setSingleClickGroup(SingleClickGroupPtr singleClickGroup) {
-            _singleClickGroup = singleClickGroup;
-        }
-#endif
+    #if PIN_MONITOR_BUTTON_GROUPS
+        void setSingleClickGroup(SingleClickGroupPtr singleClickGroup);
+    #endif
 
     public:
         virtual void event(EventType eventType, uint32_t now);
         virtual void loop() override;
 
         // number of repeats for EventType::HOLD and EventType::REPEATED_CLICK
-        uint16_t getRepeatCount() const {
-            return _repeatCount;
-        }
+        uint16_t getRepeatCount() const;
 
         static const __FlashStringHelper *eventTypeToString(EventType eventType);
+
+    #if DEBUG_PIN_MONITOR
+        const char *name() const {
+            static char buf[32];
+            snprintf_P(buf, sizeof(buf) - 1, PSTR("#%u@%08x"), (unsigned)_pin, (unsigned)_arg);
+            return buf;
+        }
+    #endif
 
     protected:
         // event for StateType is final
@@ -253,11 +330,11 @@ namespace PinMonitor {
         void _reset();
 
     protected:
-#if PIN_MONITOR_BUTTON_GROUPS
+    #if PIN_MONITOR_BUTTON_GROUPS
         friend SingleClickGroupPtr;
         // pointer to the group settings
         SingleClickGroupPtr _singleClickGroup;
-#endif
+    #endif
 
         uint32_t _startTimer;
         uint32_t _duration;
@@ -266,9 +343,22 @@ namespace PinMonitor {
         uint16_t _holdRepeat: 1;
     };
 
+    #if PIN_MONITOR_BUTTON_GROUPS
+        inline void PushButton::setSingleClickGroup(SingleClickGroupPtr singleClickGroup)
+        {
+            _singleClickGroup = singleClickGroup;
+        }
+    #endif
+
+    inline uint16_t PushButton::getRepeatCount() const
+    {
+        return _repeatCount;
+    }
+
+
     inline bool PushButton::_fireEvent(EventType eventType)
     {
-        __LDBG_printf("event_type=%u has_event=%u", eventType, hasEvent(eventType));
+        __LDBG_printf("%s event_type=%u has_event=%u", name(), eventType, hasEvent(eventType));
         if (hasEvent(eventType)) {
             event(eventType, millis());
             return true;
@@ -283,6 +373,17 @@ namespace PinMonitor {
         _repeatCount = 0;
         _startTimerRunning = false;
     }
+
+    // --------------------------------------------------------------------
+    // PinMonitor::SingleClickGroupPtr
+    // --------------------------------------------------------------------
+
+#if PIN_MONITOR_BUTTON_GROUPS
+    inline SingleClickGroupPtr::SingleClickGroupPtr(PushButton &button) :
+        PtrType(button._singleClickGroup)
+    {
+    }
+#endif
 
 }
 

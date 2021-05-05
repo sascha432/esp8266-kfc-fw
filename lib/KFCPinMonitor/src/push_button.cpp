@@ -14,12 +14,6 @@
 
 using namespace PinMonitor;
 
-#if PIN_MONITOR_BUTTON_GROUPS
-SingleClickGroupPtr::SingleClickGroupPtr(PushButton &button) : PtrType(button._singleClickGroup)
-{
-}
-#endif
-
 void PushButton::event(StateType state, uint32_t now)
 {
     __LDBG_printf("%s EVENT state=%s time=%u", name(), Monitor::stateType2String(state), now);
@@ -54,7 +48,7 @@ void PushButton::event(StateType state, uint32_t now)
 
 void PushButton::event(EventType eventType, uint32_t now)
 {
-    __LDBG_printf("PURE VIRTUAL: event_type=%u now=%u", eventType, now);
+    __DBG_panic("PURE VIRTUAL: event_type=%u now=%u", eventType, now);
 }
 
 void PushButton::loop()

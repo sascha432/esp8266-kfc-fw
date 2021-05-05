@@ -19,12 +19,14 @@
 
 #include <debug_helper_enable_mem.h>
 
-Sensor_INA219::Sensor_INA219(const JsonString &name, TwoWire &wire, uint8_t address) :
+Sensor_INA219::Sensor_INA219(const String &name, TwoWire &wire, uint8_t address) :
     MQTT::Sensor(MQTT::SensorType::INA219),
     _name(name),
     _address(address),
     _updateTimer(0),
     _holdPeakTimer(0),
+    _data(IN219_WEBUI_UPDATE_RATE * 1000 / 2),
+    _mqttData(_mqttUpdateRate * 1000 / 2),
     _Ipeak(NAN),
     _ina219(address)
 {
@@ -32,7 +34,7 @@ Sensor_INA219::Sensor_INA219(const JsonString &name, TwoWire &wire, uint8_t addr
     _ina219.begin(&config.initTwoWire());
     _ina219.setCalibration(IOT_SENSOR_INA219_BUS_URANGE, IOT_SENSOR_INA219_GAIN, IOT_SENSOR_INA219_SHUNT_ADC_RES, IOT_SENSOR_INA219_R_SHUNT * 4);
 
-    __LDBG_printf("Sensor_INA219::Sensor_INA219(): address=%x, voltage range=%x, gain=%x, shunt ADC resolution=%x", _address, IOT_SENSOR_INA219_BUS_URANGE, IOT_SENSOR_INA219_GAIN, IOT_SENSOR_INA219_SHUNT_ADC_RES);
+    __LDBG_printf("address=%x voltage_range=%x gain=%x shunt_ADC_res=%x", _address, IOT_SENSOR_INA219_BUS_URANGE, IOT_SENSOR_INA219_GAIN, IOT_SENSOR_INA219_SHUNT_ADC_RES);
 
     setUpdateRate(IN219_WEBUI_UPDATE_RATE);
     LoopFunctions::add([this]() {
@@ -48,32 +50,32 @@ Sensor_INA219::~Sensor_INA219()
 
 MQTT::AutoDiscovery::EntityPtr Sensor_INA219::getAutoDiscovery(FormatType format, uint8_t num)
 {
-    auto discovery = __LDBG_new(AutoDiscovery::Entity);
+    auto discovery = new AutoDiscovery::Entity();
     switch(num) {
         case 0:
-            if (discovery->create(this, _getId(VOLTAGE), format)) {
-                discovery->addStateTopic(MQTTClient::formatTopic(_getId(VOLTAGE)));
+            if (discovery->create(this, _getId(SensorInputType::VOLTAGE), format)) {
+                discovery->addStateTopic(MQTTClient::formatTopic(_getId(SensorInputType::VOLTAGE)));
                 discovery->addUnitOfMeasurement('V');
                 discovery->addDeviceClass(F("voltage"));
             }
             break;
         case 1:
-            if (discovery->create(this, _getId(CURRENT), format)) {
-                discovery->addStateTopic(MQTTClient::formatTopic(_getId(CURRENT)));
+            if (discovery->create(this, _getId(SensorInputType::CURRENT), format)) {
+                discovery->addStateTopic(MQTTClient::formatTopic(_getId(SensorInputType::CURRENT)));
                 discovery->addUnitOfMeasurement(F("mA"));
                 discovery->addDeviceClass(F("current"));
             }
             break;
         case 2:
-            if (discovery->create(this, _getId(POWER), format)) {
-                discovery->addStateTopic(MQTTClient::formatTopic(_getId(POWER)));
+            if (discovery->create(this, _getId(SensorInputType::POWER), format)) {
+                discovery->addStateTopic(MQTTClient::formatTopic(_getId(SensorInputType::POWER)));
                 discovery->addUnitOfMeasurement(F("mW"));
                 discovery->addDeviceClass(F("power"));
             }
             break;
         case 3:
-            if (discovery->create(this, _getId(PEAK_CURRENT), format)) {
-                discovery->addStateTopic(MQTTClient::formatTopic(_getId(PEAK_CURRENT)));
+            if (discovery->create(this, _getId(SensorInputType::PEAK_CURRENT), format)) {
+                discovery->addStateTopic(MQTTClient::formatTopic(_getId(SensorInputType::PEAK_CURRENT)));
                 discovery->addUnitOfMeasurement(F("mA"));
                 discovery->addDeviceClass(F("current"));
             }
@@ -82,60 +84,43 @@ MQTT::AutoDiscovery::EntityPtr Sensor_INA219::getAutoDiscovery(FormatType format
     return discovery;
 }
 
-uint8_t Sensor_INA219::getAutoDiscoveryCount() const
-{
-    return 4;
-}
-
 void Sensor_INA219::getValues(WebUINS::Events &array, bool timer)
 {
-    auto U = _data.U();
-    auto I = _data.I();
-    auto P = _data.P();
-
-    using namespace WebUINS;
-
     array.append(
-        Values(_getId(VOLTAGE), TrimmedDouble(U, 2)),
-        Values(_getId(CURRENT), RoundedDouble(I)),
-        Values(_getId(POWER), RoundedDouble(P)),
-        Values(_getId(PEAK_CURRENT), RoundedDouble(_Ipeak))
+        WebUINS::Values(_getId(SensorInputType::VOLTAGE), WebUINS::TrimmedDouble(_data.U(), 2)),
+        WebUINS::Values(_getId(SensorInputType::CURRENT), WebUINS::RoundedDouble(_data.I())),
+        WebUINS::Values(_getId(SensorInputType::POWER), WebUINS::RoundedDouble(_data.P())),
+        WebUINS::Values(_getId(SensorInputType::PEAK_CURRENT), WebUINS::RoundedDouble(_Ipeak))
     );
-
-    if (timer) {
-        _data = SensorData();
-    }
+    // __LDBG_printf("U=%f I=%f P=%f %s", _data.U(), _data.I(), _data.P(), array.toString().c_str());
 }
 
 void Sensor_INA219::createWebUI(WebUINS::Root &webUI)
 {
-    using namespace WebUINS;
-    Row row(
-        Sensor(_getId(VOLTAGE), _name, 'V'),
-        Sensor(_getId(CURRENT), F("Current"), F("mA")),
-        Sensor(_getId(POWER), F("Power"), F("mW")),
-        Sensor(_getId(PEAK_CURRENT), F("Peak Current"), F("mA"))
-    );
-    webUI.appendToLastRow(row);
+    webUI.addRow(WebUINS::Row(
+        WebUINS::Sensor(_getId(SensorInputType::VOLTAGE), _name, 'V'),
+        WebUINS::Sensor(_getId(SensorInputType::CURRENT), F("Current"), F("mA")),
+        WebUINS::Sensor(_getId(SensorInputType::POWER), F("Power"), F("mW")),
+        WebUINS::Sensor(_getId(SensorInputType::PEAK_CURRENT), F("Peak Current"), F("mA"))
+    ));
 }
 
 void Sensor_INA219::publishState()
 {
     if (isConnected()) {
-        publish(MQTTClient::formatTopic(_getId(VOLTAGE)), true, String(_mqttData.U(), 2));
-        publish(MQTTClient::formatTopic(_getId(CURRENT)), true, String(_mqttData.I(), 0));
-        publish(MQTTClient::formatTopic(_getId(POWER)), true, String(_mqttData.P(), 0));
-        publish(MQTTClient::formatTopic(_getId(PEAK_CURRENT)), true, String(_Ipeak, 0));
-        _mqttData = SensorData();
+        publish(MQTTClient::formatTopic(_getId(SensorInputType::VOLTAGE)), true, String(_mqttData.U(), 2));
+        publish(MQTTClient::formatTopic(_getId(SensorInputType::CURRENT)), true, String(_mqttData.I(), 0));
+        publish(MQTTClient::formatTopic(_getId(SensorInputType::POWER)), true, String(_mqttData.P(), 0));
+        publish(MQTTClient::formatTopic(_getId(SensorInputType::PEAK_CURRENT)), true, String(_Ipeak, 0));
     }
 }
 
 void Sensor_INA219::getStatus(Print &output)
 {
-    output.printf_P(PSTR("INA219 @ I2C address 0x%02x" HTML_S(br)), _address);
+    output.printf_P(PSTR("INA219 @ I2C address 0x%02x, shunt %.3fm\xE2\x84\xA6" HTML_S(br)), _address, IOT_SENSOR_INA219_R_SHUNT * 1000.0);
 }
 
-String Sensor_INA219::_getId(SensorTypeEnum_t type)
+String Sensor_INA219::_getId(SensorInputType type)
 {
     return PrintString(F("ina219_0x%02x_%c"), _address, type);
 }
@@ -144,15 +129,16 @@ void Sensor_INA219::_loop()
 {
     if (millis() > _updateTimer) {
         _updateTimer = millis() + IOT_SENSOR_INA219_READ_INTERVAL;
+        auto microsTime = micros();
         float U = _ina219.getBusVoltage_V();
         float I = _ina219.getCurrent_mA();
-        // reset peak current after IOT_SENSOR_INA219_PEAK_HOLD_TIME seconds or store new peak
+        // reset peak current after IOT_SENSOR_INA219_PEAK_HOLD_TIME milliseconds or store new peak
         if (I > _Ipeak || millis() > _holdPeakTimer) {
             _Ipeak = I;
-            _holdPeakTimer = millis() + IOT_SENSOR_INA219_PEAK_HOLD_TIME * 1000;
+            _holdPeakTimer = millis() + IOT_SENSOR_INA219_PEAK_HOLD_TIME;
         }
-        _data.add(U, I);
-        _mqttData.add(U, I);
+        _data.add(U, I, microsTime);
+        _mqttData.add(U, I, microsTime);
     }
 }
 
@@ -176,9 +162,10 @@ bool Sensor_INA219::atModeHandler(AtModeArgs &args)
 
         auto &serial = args.getStream();
         auto timerPrintFunc = [this, &serial](Event::CallbackTimerPtr timer) {
-            return std::count_if(SensorPlugin::begin(), SensorPlugin::end(), [this, &serial](SensorPtr sensor) {
-                if ( sensor->getType() == SensorType::INA219) {
-                    auto &ina219 = *reinterpret_cast<Sensor_INA219 *>(sensor);
+            return std::count_if(SensorPlugin::begin(), SensorPlugin::end(), [this, &serial](SensorPtr sensorPtr) {
+                if (sensorPtr->getType() == SensorType::INA219) {
+                    auto &sensor = *reinterpret_cast<Sensor_INA219 *>(sensorPtr);
+                    auto &ina219 = sensor._ina219;
                     serial.printf_P(PSTR("+SENSORINA219: raw: U=%d, Vshunt=%d, I=%d, current: P=%d: %.3fV, %.1fmA, %.1fmW, average: %.3fV, %.1fmA, %.1fmW\n"),
                         ina219.getBusVoltage_raw(),
                         ina219.getShuntVoltage_raw(),
@@ -191,12 +178,14 @@ bool Sensor_INA219::atModeHandler(AtModeArgs &args)
                         sensor.getCurrent(),
                         sensor.getPower()
                     );
+                    return true;
                 }
+                return false;
             });
         };
 
         if (!timerPrintFunc(*timer)) {
-            serial.printf_P(PSTR("+%s: No sensor found\n"), PROGMEM_AT_MODE_HELP_COMMAND(SENSORINA219));
+            args.printf_P(PSTR("No sensor found"));
         }
         else {
             auto repeat = args.toMillis(AtModeArgs::FIRST, 500, ~0, 0, String('s'));

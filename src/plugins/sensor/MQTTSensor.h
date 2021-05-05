@@ -133,9 +133,11 @@ namespace MQTT {
             return _type;
         }
 
-    private:
+    protected:
         uint16_t _updateRate;
         uint16_t _mqttUpdateRate;
+
+    private:
         uint32_t _nextUpdate;
         uint32_t _nextMqttUpdate;
         SensorType _type;

@@ -31,7 +31,7 @@ Base::Base() :
 {
 }
 
-void Base::_begin()
+void Base::begin()
 {
 #if IOT_DIMMER_MODULE_INTERFACE_UART
     _client = &serialHandler.addClient(onData, SerialHandler::EventType::READ);
@@ -61,7 +61,7 @@ void Base::_begin()
 #endif
 }
 
-void Base::_end()
+void Base::end()
 {
     _config.version = {};
 
@@ -149,7 +149,7 @@ void Base::_onReceive(size_t length)
     else if (type == DIMMER_EVENT_TEMPERATURE_ALERT && length == 3) {
         dimmer_over_temperature_event_t event;
         _wire.read(event);
-        WebAlerts::Alert::error(PrintString(F("Dimmer temperature alarm triggered: %u&deg;C > %u&deg;C"), event.current_temp, event.max_temp));
+        WebAlerts::Alert::error(PrintString(F("Dimmer temperature alarm triggered: %u%s > %u%s"), event.current_temp, SPGM(UTF8_degreeC), event.max_temp, SPGM(UTF8_degreeC)));
     }
 }
 
@@ -422,18 +422,32 @@ void Base::resetDimmerMCU()
 
 #include "at_mode.h"
 
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIMG, "DIMG", "Get level");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DIMS, "DIMS", "<channel>,<level>[,<time>]", "Set level");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIMW, "DIMW", "Write EEPROM");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIMR, "DIMR", "Reset ATmega");
+#undef PROGMEM_AT_MODE_HELP_COMMAND_PREFIX
+#define PROGMEM_AT_MODE_HELP_COMMAND_PREFIX "DIM"
+
+#define DIMMER_COMMANDS "reset|wree|display|modify|store|factory"
+#undef DISPLAY
+
+enum class DimmerCommandType {
+    INVALID = -1,
+    RESET,
+    WRITE_EEPROM,
+    DISPLAY,
+    MODIFY,
+    STORE,
+    FACTORY
+};
+
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIMG, "G", "Get level(s)");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DIMS, "S", "<channel>,<level>[,<time>]", "Set level");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DIMCF, "CF", "<" DIMMER_COMMANDS ">", "Configure dimmer firmware");
 
 ATModeCommandHelpArrayPtr Base::atModeCommandHelp(size_t &size) const
 {
     static ATModeCommandHelpArray tmp PROGMEM = {
         PROGMEM_AT_MODE_HELP_COMMAND(DIMG),
         PROGMEM_AT_MODE_HELP_COMMAND(DIMS),
-        PROGMEM_AT_MODE_HELP_COMMAND(DIMW),
-        PROGMEM_AT_MODE_HELP_COMMAND(DIMR),
+        PROGMEM_AT_MODE_HELP_COMMAND(DIMCF),
     };
     size = sizeof(tmp) / sizeof(tmp[0]);
     return tmp;
@@ -441,21 +455,10 @@ ATModeCommandHelpArrayPtr Base::atModeCommandHelp(size_t &size) const
 
 bool Base::atModeHandler(AtModeArgs &args, const Base &dimmer, int32_t maxLevel)
 {
-    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DIMW))) {
-        _wire.writeEEPROM();
-        args.ok();
-        return true;
-    }
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DIMG))) {
+    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DIMG))) {
         for(uint8_t i = 0; i < dimmer.getChannelCount(); i++) {
             args.printf_P(PSTR("%u: %d (%s)"), i, getChannel(i), getChannelState(i) ? PSTR("on") : PSTR("off"), dimmer_plugin.getChannels().at(i).getStorededBrightness());
         }
-        return true;
-    }
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DIMR))) {
-        args.printf_P(PSTR("Pulling GPIO%u low for 10ms"), STK500V1_RESET_PIN);
-        dimmer.resetDimmerMCU();
-        args.printf_P(PSTR("GPIO%u set to input"), STK500V1_RESET_PIN);
         return true;
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DIMS))) {
@@ -470,6 +473,29 @@ bool Base::atModeHandler(AtModeArgs &args, const Base &dimmer, int32_t maxLevel)
             else {
                 args.print(F("Invalid channel"));
             }
+        }
+        return true;
+    }
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DIMCF))) {
+        auto commands = F(DIMMER_COMMANDS);
+        auto index = static_cast<DimmerCommandType>(stringlist_find_P(commands, args.get(0), '|'));
+        switch(index) {
+            case DimmerCommandType::RESET: {
+                    args.printf_P(PSTR("Pulling GPIO%u low for 10ms"), STK500V1_RESET_PIN);
+                    dimmer.resetDimmerMCU();
+                    args.printf_P(PSTR("GPIO%u set to input"), STK500V1_RESET_PIN);
+                }
+                break;
+            case DimmerCommandType::WRITE_EEPROM: {
+                    _wire.writeEEPROM();
+                    args.ok();
+                }
+                break;
+            //TODO
+            case DimmerCommandType::INVALID:
+            default:
+                args.printf_P(PSTR("Invalid command: %s: expected: <%s>"), args.toString(0).c_str(), commands);
+                break;
         }
         return true;
     }

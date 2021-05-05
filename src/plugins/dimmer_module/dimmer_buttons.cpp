@@ -24,12 +24,13 @@ static_assert(IOT_DIMMER_MODULE_CHANNELS <= 8, "max. channels exceeded");
 //     pinMonitor.begin(true);
 // }
 
-void Buttons::_begin()
+void Buttons::begin()
 {
     SingleClickGroupPtr group;
 
     for(uint8_t i = 0; i < _channels.size() * 2; i++) {
         auto pinNum = _config.pin(i);
+        __LDBG_assert_printf(pinNum != 0xff, "pinNum=0x%02x channel=%u", pinNum, i);
         if (pinNum != 0xff) {
             if (i % 2 == 0) {
                 group.reset(_config.single_click_time); // create new group for each channel
@@ -42,11 +43,6 @@ void Buttons::_begin()
         }
     }
 
-}
-
-void Buttons::_end()
-{
-    pinMonitor.detach(static_cast<const void *>(this));
 }
 
 #endif

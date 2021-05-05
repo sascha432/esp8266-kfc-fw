@@ -8,7 +8,7 @@
 #include <stl_ext/algorithm.h>
 #include <stl_ext/utility.h>
 
-#if DEBUG_IOT_DIMMER_MODULE
+#if DEBUG_IOT_DIMMER_MODULE && 0
 #include <debug_helper_enable.h>
 #else
 #include <debug_helper_disable.h>
@@ -284,7 +284,7 @@ void Channel::_publishWebUI()
     if (WebUISocket::hasAuthenticatedClients()) {
         WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(WebUINS::Events(
             WebUINS::Values(PrintString(F("d_chan%u"), _channel), _brightness, true),
-            WebUINS::Values(F("group-switch-0"), _dimmer->isAnyOn() ? 1 : 0, true)
+            WebUINS::Values(F("group-switch-0"), _dimmer->isAnyOnInt(), true)
         )));
     }
 }
@@ -300,12 +300,12 @@ void Channel::_publish()
 void Channel::publishState()
 {
     if (_publishTimer) {
-        __DBG_printf("timer running");
+        // __LDBG_printf("timer running");
         return;
     }
     auto diff = get_time_diff(_publishLastTime, millis());
     if (diff < 250 - 10) {
-        __DBG_printf("starting timer %u", 250 - diff);
+        __LDBG_printf("starting timer %u", 250 - diff);
         _Timer(_publishTimer).add(Event::milliseconds(250 - diff), false, [this](Event::CallbackTimerPtr) {
             _publish();
         });
@@ -313,8 +313,6 @@ void Channel::publishState()
     else {
         _publish();
     }
-
-
 
     // if (publishFlag == 0) { // no updates
     //     return;

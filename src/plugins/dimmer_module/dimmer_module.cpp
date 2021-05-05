@@ -17,8 +17,8 @@ using namespace Dimmer;
 void Module::setup()
 {
     __LDBG_println();
-    Base::_begin();
-    Buttons::_begin();
+    Base::begin();
+    Buttons::begin();
     _beginMqtt();
     _Scheduler.add(Event::milliseconds(900), false, [this](Event::CallbackTimerPtr) {
         _getChannels();
@@ -28,8 +28,8 @@ void Module::setup()
 void Module::shutdown()
 {
     _endMqtt();
-    Buttons::_end();
-    Base::_end();
+    Buttons::end();
+    Base::end();
 }
 
 void Module::_beginMqtt()
@@ -48,13 +48,6 @@ void Module::_endMqtt()
         MQTT::Client::unregisterComponent(&_channels[i]);
     }
 }
-
-#if !IOT_DIMMER_MODULE_INTERFACE_UART
-void Driver_DimmerModule::onConnect()
-{
-    _fetchMetrics();
-}
-#endif
 
 void Module::getStatus(Print &out)
 {
@@ -122,6 +115,7 @@ void Module::_onReceive(size_t length)
                 auto level = _calcLevelReverse(event.level, event.channel);
                 auto curLevel = _channels[event.channel].getLevel();
                 if (curLevel != level) {  // update level if out of sync
+                    __LDBG_printf("out of sync %u!=%u", curLevel, level);
                     auto publish = (event.level == _calcLevel(curLevel, event.channel)); // check if the error comes from up or downsampling and do not publish in those cases
                     _channels[event.channel].setLevel(level, NAN, publish);
                 }

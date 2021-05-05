@@ -48,6 +48,9 @@ namespace Dimmer {
     class NoButtonsImpl;
     class Channels;
     class Button;
+    class Plugin;
+
+    extern Plugin dimmer_plugin;
 
     #if IOT_DIMMER_MODULE_HAS_BUTTONS
         class ButtonsImpl;
@@ -78,6 +81,9 @@ namespace Dimmer {
 
     // using MinMaxLevelArray = std::array<MinMaxLevel, IOT_DIMMER_MODULE_CHANNELS>;
 
+    // --------------------------------------------------------------------
+    // Dimmer::Base
+    // --------------------------------------------------------------------
 
     class Base {
     public:
@@ -89,7 +95,7 @@ namespace Dimmer {
 
     public:
         Base();
-        virtual ~Base() {}
+        virtual ~Base();
 
     #if IOT_DIMMER_MODULE_INTERFACE_UART
         static void onData(Stream &client);
@@ -121,8 +127,8 @@ namespace Dimmer {
     protected:
         friend Channel;
 
-        void _begin();
-        void _end();
+        void begin();
+        void end();
 
         void getStatus(Print &out);
         void _updateMetrics(const MetricsType &metrics);
@@ -137,37 +143,16 @@ namespace Dimmer {
         // return absoluate fade time for changing to another level
         float getTransitionTime(int fromLevel, int toLevel, float transitionTimeOverride);
 
-        int16_t _calcLevel(int16_t level, uint8_t channel) const {
-            if (level == 0) {
-                return 0;
-            }
-            auto min = _config.level.from[channel];
-            auto max = _config.level.to[channel];
-            return (level * (max - min) + (IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 2)) / IOT_DIMMER_MODULE_MAX_BRIGHTNESS + min;
-       }
-
-       int16_t _calcLevelReverse(int16_t level, uint8_t channel) const {
-            if (level == 0) {
-                return 0;
-            }
-            auto min = _config.level.from[channel];
-            auto max = _config.level.to[channel];
-            auto range = max - min;
-            return ((level - min) * IOT_DIMMER_MODULE_MAX_BRIGHTNESS + (range / 2)) / range;
-       }
+        int16_t _calcLevel(int16_t level, uint8_t channel) const;
+        int16_t _calcLevelReverse(int16_t level, uint8_t channel) const;
 
     protected:
         String _getMetricsTopics(uint8_t num) const;
         void _updateConfig(ConfigType &config, ConfigReaderWriter &reader, bool status);
         uint8_t _endTransmission();
 
-        inline bool _isEnabled() const {
-            return _config.version;
-        }
-
-        inline ConfigType &_getConfig() {
-            return _config;
-        }
+        bool _isEnabled() const;
+        ConfigType &_getConfig();
 
     protected:
         MetricsType _metrics;
@@ -205,5 +190,40 @@ namespace Dimmer {
         static void handleWebServer(AsyncWebServerRequest *request);
         static void resetDimmerMCU();
     };
+
+    inline Base::~Base()
+    {
+    }
+
+    inline int16_t Base::_calcLevel(int16_t level, uint8_t channel) const
+    {
+        if (level == 0) {
+            return 0;
+        }
+        auto min = _config.level.from[channel];
+        auto max = _config.level.to[channel];
+        return (level * (max - min) + (IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 2)) / IOT_DIMMER_MODULE_MAX_BRIGHTNESS + min;
+    }
+
+    inline int16_t Base::_calcLevelReverse(int16_t level, uint8_t channel) const
+    {
+        if (level == 0) {
+            return 0;
+        }
+        auto min = _config.level.from[channel];
+        auto max = _config.level.to[channel];
+        auto range = max - min;
+        return ((level - min) * IOT_DIMMER_MODULE_MAX_BRIGHTNESS + (range / 2)) / range;
+    }
+
+    inline bool Base::_isEnabled() const
+    {
+        return _config.version;
+    }
+
+    inline ConfigType &Base::_getConfig()
+    {
+        return _config;
+    }
 
 }

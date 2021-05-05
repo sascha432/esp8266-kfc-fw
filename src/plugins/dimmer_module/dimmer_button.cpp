@@ -33,9 +33,9 @@ Button::Button(uint8_t pin, uint8_t channel, uint8_t button, Buttons &dimmer, Si
     if (_button == 1) {
         _subscribedEvents = EnumHelper::Bitset::addBits(_subscribedEvents, EventType::SINGLE_CLICK);
     }
-#if DEBUG_PIN_MONITOR
-    setName(PrintString(F("%s:%u"), _button == 0 ? PSTR("BUTTON-UP") : PSTR("BUTTON-DOWN"), _channel));
-#endif
+// #if DEBUG_PIN_MONITOR
+//     setName(PrintString(F("%s:%u"), _button == 0 ? PSTR("BUTTON-UP") : PSTR("BUTTON-DOWN"), _channel));
+// #endif
 }
 
 void Button::event(EventType eventType, uint32_t now)
@@ -44,11 +44,14 @@ void Button::event(EventType eventType, uint32_t now)
         auto oldLevel = _dimmer.getChannel(_channel);
     );
     auto &config = _dimmer._getConfig();
-    auto repeatCount = _singleClickGroup->getRepeatCount();
+    auto groupRepeatCount = _singleClickGroup->getRepeatCount();
     switch (eventType) {
         case EventType::DOWN:
+            // if (groupRepeatCount) { // ignore event if group button click
+            //     break;
+            // }
             // store level first
-            if (_singleClickGroup->getRepeatCount() == 0) {
+            if (groupRepeatCount == 0) {
                 _level = _dimmer.getChannel(_channel);
             }
             if (_dimmer.getChannelState(_channel)) {
@@ -83,7 +86,7 @@ void Button::event(EventType eventType, uint32_t now)
             break;
     }
     __DBG_IF(
-        __DBG_printf("type=%s (%02x) repeat=%u btn=%u dur=%u level=%u new=%u", eventTypeToString(eventType), eventType, repeatCount, _button, _duration, oldLevel, _dimmer.getChannel(_channel));
+        __DBG_printf("%s type=%s (%02x) repeat=%u group-rep=%u btn=%u dur=%u group-dur=%u level=%u new=%u", name(), eventTypeToString(eventType), eventType, _repeatCount, groupRepeatCount, _button, _duration, _singleClickGroup->getDuration(), oldLevel, _dimmer.getChannel(_channel));
     );
 }
 

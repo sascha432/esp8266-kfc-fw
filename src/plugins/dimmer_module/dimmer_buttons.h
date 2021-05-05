@@ -21,12 +21,20 @@ namespace Dimmer {
     public:
         using Base::Base;
 
-        void _begin() {}
-        void _end() {}
+        void begin();
+        void end();
 
     protected:
         std::array<Channel, IOT_DIMMER_MODULE_CHANNELS> _channels;
     };
+
+    inline void NoButtonsImpl::begin()
+    {
+    }
+
+    inline void NoButtonsImpl::end()
+    {
+    }
 
     #if IOT_DIMMER_MODULE_HAS_BUTTONS
 
@@ -39,16 +47,19 @@ namespace Dimmer {
         using Base::Base;
         using ChannelsArray = std::array<Channel, IOT_DIMMER_MODULE_CHANNELS>;
 
-        // ButtonsImpl();
-
-        void _begin();
-        void _end();
+        void begin();
+        void end();
 
     protected:
         friend Button;
 
         ChannelsArray _channels;
     };
+
+    inline void Buttons::end()
+    {
+        pinMonitor.detach(static_cast<const void *>(this));
+    }
 
     #endif
 

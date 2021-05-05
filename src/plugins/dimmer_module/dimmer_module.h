@@ -22,7 +22,7 @@ namespace Dimmer {
     public:
         Module();
 
-    #if !IOT_DIMMER_MODULE_INTERFACE_UART
+    #if IOT_DIMMER_MODULE_INTERFACE_UART == 0
         virtual void onConnect() override;
     #endif
 
@@ -31,6 +31,7 @@ namespace Dimmer {
 
         virtual uint8_t getChannelCount() const override;
         virtual bool isAnyOn() const;
+        uint8_t isAnyOnInt() const;
         virtual bool getChannelState(uint8_t channel) const override;
 
         virtual int16_t getChannel(uint8_t channel) const override;
@@ -58,6 +59,19 @@ namespace Dimmer {
     inline Module::Module() :
         MQTTComponent(ComponentType::SENSOR)
     {
+    }
+
+    #if IOT_DIMMER_MODULE_INTERFACE_UART == 0
+    inline void Module::onConnect()
+    {
+        _fetchMetrics();
+    }
+    #endif
+
+
+    inline uint8_t Module::isAnyOnInt() const
+    {
+        return isAnyOn() ? 1 : 0;
     }
 
     inline bool Module::on(uint8_t channel, float transition)

@@ -133,7 +133,7 @@ extern const char ___debugPrefix[] PROGMEM;
 #define __DBG_println()                                     debug_print(F(__DBG_newline))
 #define __DBG_panic(fmt, ...)                               (DEBUG_OUTPUT.printf_P(PSTR(fmt __DBG_newline), ## __VA_ARGS__) && __debugbreak_and_panic())
 #define __DBG_assert(cond)                                  (!(cond) ? (__DBG_print(_VT100(bold_red) "assert( " _STRINGIFY(cond) ") FAILED" _VT100(reset)) && DebugContext::reportAssert(DebugContext_ctor(), F(_STRINGIFY(cond)))) : false)
-#define __DBG_assert_printf(cond, fmt, ...)                 (__DBG_assert(cond) ? __DBG_printf(fmt, ##__VA_ARGS__) : false)
+#define __DBG_assert_printf(cond, fmt, ...)                 (!(cond) ? (__DBG_print(_VT100(bold_red) "assert( " _STRINGIFY(cond) ") FAILED" _VT100(reset)) && __DBG_printf(fmt, ##__VA_ARGS__) && DebugContext::reportAssert(DebugContext_ctor(), F(_STRINGIFY(cond)))) : false)
 #define __DBG_assert_panic(cond, fmt, ...)                  (__DBG_assert(cond) ? __DBG_panic(fmt, ##__VA_ARGS__) : false)
 #define __DBG_print_result(result)                          debug_print_result(result)
 #define __DBG_printf_result(result, fmt, ...)               debug_printf_result(result, PSTR(fmt __DBG_newline), ##__VA_ARGS__)

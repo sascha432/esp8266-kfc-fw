@@ -103,8 +103,13 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
 
 void ClockPlugin::addPowerSensor(WebUINS::Root &webUI, SensorPlugin::SensorType type)
 {
+#ifdef IOT_SENSOR_HAVE_INA219
+    if (type == SensorPlugin::SensorType::INA219) {
+        webUI.appendToLastRow(WebUINS::Row(WebUINS::Sensor(F("pwrlvl"), F("Calculated Power"), 'W')));
+#else
     if (type == SensorPlugin::SensorType::SYSTEM_METRICS) {
         webUI.addRow(WebUINS::Row(WebUINS::Sensor(F("pwrlvl"), F("Power"), 'W')));
+#endif
     }
 }
 

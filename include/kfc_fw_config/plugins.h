@@ -976,7 +976,7 @@ namespace KFCConfigurationClasses {
                     return pin(idx / 2, idx % 2);
                 }
                 uint8_t pin(uint8_t channel, uint8_t button) const {
-                    switch(channel<<4|button) {
+                    switch((channel << 4) | button) {
                         case 0x00: return pin_ch0_up;
                         case 0x01: return pin_ch0_down;
                     }
@@ -986,7 +986,7 @@ namespace KFCConfigurationClasses {
                     return pin_inverted(idx / 2, idx % 2);
                 }
                 bool pin_inverted(uint8_t channel, uint8_t button) const {
-                    switch(channel<<4|button) {
+                    switch((channel << 4) | button) {
                         case 0x00: return pin_ch0_up_inverted;
                         case 0x01: return pin_ch0_down_inverted;
                     }

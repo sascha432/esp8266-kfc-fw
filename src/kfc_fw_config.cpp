@@ -658,7 +658,7 @@ bool KFCFWConfiguration::isConfigDirty() const
     return _dirty;
 }
 
-const char __compile_date__[] PROGMEM = { __DATE__ };
+const char __compile_date__[] PROGMEM = { __DATE__ " " __TIME__ };
 
 const String KFCFWConfiguration::getFirmwareVersion()
 {

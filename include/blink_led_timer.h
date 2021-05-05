@@ -52,13 +52,9 @@ public:
     static const uint8_t IGNORE_BUILTIN_LED_PIN = IGNORE_BUILTIN_LED_PIN_ID;
     static const uint8_t NEOPIXEL_PIN = NEOPIXEL_PIN_ID;
 
-    BlinkLEDTimer(uint8_t pin = INVALID_PIN) : _pin(pin), _delay(BlinkType::INVALID) {}
+    BlinkLEDTimer(uint8_t pin = INVALID_PIN);
 
-    inline __attribute__((__always_inline__))
-    void set(uint16_t delay, Bitset &&pattern) {
-        set(delay, _pin, std::move(pattern));
-    }
-
+    void set(uint16_t delay, Bitset &&pattern);
     void set(uint16_t delay, uint8_t pin, Bitset &&pattern);
 
     virtual void run() override;
@@ -69,19 +65,17 @@ public:
     static void setPattern(uint8_t pin, uint16_t delay, Bitset &&pattern);
 
     static void setBlink(uint8_t pin, uint16_t delay, int32_t color = -1);
-
-    static void setBlink(uint8_t pin, BlinkType delay, int32_t color = -1) {
-        setBlink(pin, static_cast<uint16_t>(delay), color);
-    }
+    static void setBlink(uint8_t pin, BlinkType delay, int32_t color = -1);
 
     static bool isPattern(uint8_t pin, uint16_t delay, const Bitset &pattern);
     static bool isBlink(uint8_t pin, BlinkType delay);
 
-    static bool isPinValid(uint8_t pin) {;
-        return pin != IGNORE_BUILTIN_LED_PIN && pin != NEOPIXEL_PIN && pin != INVALID_PIN;
-    }
+    static bool isPinValid(uint8_t pin);
 
 protected:
+    static void _digitalWrite(uint8_t pin, uint8_t value);
+    void _digitalWrite(uint8_t value);
+
     static constexpr bool high() {
         return BUILTIN_LED_STATE(true);
     }
@@ -100,5 +94,28 @@ protected:
     Bitset _pattern;
     BlinkType _delay;
 };
+
+inline BlinkLEDTimer::BlinkLEDTimer(uint8_t pin) :
+    _pin(pin),
+    _delay(BlinkType::INVALID)
+{
+}
+
+inline __attribute__((__always_inline__))
+void BlinkLEDTimer::set(uint16_t delay, Bitset &&pattern)
+{
+    set(delay, _pin, std::move(pattern));
+}
+
+inline  __attribute__((__always_inline__))
+void BlinkLEDTimer::setBlink(uint8_t pin, BlinkType delay, int32_t color)
+{
+    setBlink(pin, static_cast<uint16_t>(delay), color);
+}
+
+inline bool BlinkLEDTimer::isPinValid(uint8_t pin)
+{
+    return (pin != IGNORE_BUILTIN_LED_PIN) && (pin != NEOPIXEL_PIN) && (pin != INVALID_PIN);
+}
 
 extern BlinkLEDTimer *ledTimer;

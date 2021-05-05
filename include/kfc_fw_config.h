@@ -51,138 +51,8 @@ extern float load_avg[3]; // 1min, 5min, 15min
 
 #define HASH_SIZE                   64
 
-#if HAVE_PCF8574
-#include <IOExpander.h>
-using _PCF8574Range = IOExpander::PCF8574_Range<PCF8574_PORT_RANGE_START, PCF8574_PORT_RANGE_END>;
-extern IOExpander::PCF8574 _PCF8574;
-// these functions must be implemented and exported
-extern void initialize_pcf8574();
-extern void print_status_pcf8574(Print &output);
-#endif
+#include <kfc_fw_ioexpander.h>
 
-#if HAVE_PCF8575
-#include <PCF8575.h>
-extern PCF8575 _PCF8575;
-extern void initialize_pcf8575();
-extern void print_status_pcf8575(Print &output);
-#endif
-
-#if HAVE_PCA9685
-extern void initialize_pca9785();
-extern void print_status_pca9785(Print &output);
-#endif
-#if HAVE_MCP23017
-extern void initialize_mcp23017();
-extern void print_status_mcp23017(Print &output);
-#endif
-
-static inline void _digitalWrite(uint8_t pin, uint8_t value) {
-#if HAVE_PCF8574
-
-    if (_PCF8574Range::inRange(pin)) {
-        _PCF8574.digitalWrite(_PCF8574Range::digitalPin2Pin(pin), value);
-    }
-    else
-#endif
-    {
-        digitalWrite(pin, value);
-    }
-}
-
-static inline uint8_t _digitalRead(uint8_t pin) {
-#if HAVE_PCF8574
-    if (_PCF8574Range::inRange(pin)) {
-        return _PCF8574.digitalRead(_PCF8574Range::digitalPin2Pin(pin));
-    }
-    else
-#endif
-    {
-        return digitalRead(pin);
-    }
-}
-
-static inline void _analogWrite(uint8_t pin, uint16_t value) {
-#if HAVE_PCF8574
-    if (_PCF8574Range::inRange(pin)) {
-        _PCF8574.digitalWrite(_PCF8574Range::digitalPin2Pin(pin), value ? HIGH : LOW);
-    }
-    else
-#endif
-    {
-        analogWrite(pin, value);
-    }
-}
-
-static inline uint16_t _analogRead(uint8_t pin) {
-#if HAVE_PCF8574
-    if (_PCF8574Range::inRange(pin)) {
-        return _PCF8574.digitalRead(_PCF8574Range::digitalPin2Pin(pin)) ? 1023 : 0;
-    }
-    else
-#endif
-    {
-        return analogRead(pin);
-    }
-
-}
-
-static inline void _pinMode(uint8_t pin, uint8_t mode) {
-#if HAVE_PCF8574
-    if (_PCF8574Range::inRange(pin)) {
-        _PCF8574.pinMode(_PCF8574Range::digitalPin2Pin(pin), mode);
-    }
-    else
-#endif
-    {
-        pinMode(pin, mode);
-    }
-}
-
-static inline size_t _pinName(uint8_t pin, char *buf, size_t size) {
-#if HAVE_PCF8574
-    if (_PCF8574Range::inRange(pin)) {
-        return snprintf_P(buf, size - 1, PSTR("%u (PCF8574 pin %u)"), pin, _PCF8574Range::digitalPin2Pin(pin));
-    }
-    else
-#endif
-    {
-        return snprintf_P(buf, size - 1, PSTR("%u"), pin);
-    }
-}
-
-static inline bool _pinHasAnalogRead(uint8_t pin) {
-#if HAVE_PCF8574
-    if (_PCF8574Range::inRange(pin)) {
-        return false;
-    }
-    else
-#endif
-    {
-#if ESP8266
-        return (pin == A0);
-#else
-#error missing
-#endif
-    }
-
-}
-
-static inline bool _pinHasAnalogWrite(uint8_t pin) {
-#if HAVE_PCF8574
-    if (_PCF8574Range::inRange(pin)) {
-        return false;
-    }
-    else
-#endif
-    {
-#if ESP8266
-        return pin < A0;
-#else
-#error missing
-#endif
-    }
-
-}
 
 
 // #include "push_pack.h"
@@ -359,7 +229,7 @@ public:
     using seconds = std::chrono::duration<uint32_t, std::ratio<1>>;
     using minutes = std::chrono::duration<uint32_t, std::ratio<60>>;
 
-    static constexpr auto test1 = std::chrono::duration_cast<seconds>(KFCFWConfiguration::minutes(300)).count();
+    // static constexpr auto test1 = std::chrono::duration_cast<seconds>(KFCFWConfiguration::minutes(300)).count();
 
     KFCFWConfiguration();
     ~KFCFWConfiguration();
@@ -426,12 +296,8 @@ public:
     static uint8_t getMaxWiFiChannels();
     static const __FlashStringHelper *getWiFiEncryptionType(uint8_t type);
 
-    bool isSafeMode() const {
-        return _safeMode;
-    }
-    void setSafeMode(bool mode) {
-        _safeMode = mode;
-    }
+    bool isSafeMode() const;
+    void setSafeMode(bool mode);
 
     static void apStandModehandler(WiFiCallbacks::EventType event, void *payload);
 
@@ -489,6 +355,17 @@ private:
     WiFiEventHandler _softAPModeStationDisconnected;
 #endif
 };
+
+inline bool KFCFWConfiguration::isSafeMode() const
+{
+    return _safeMode;
+}
+
+inline void KFCFWConfiguration::setSafeMode(bool mode)
+{
+    _safeMode = mode;
+}
+
 
 extern KFCFWConfiguration config;
 

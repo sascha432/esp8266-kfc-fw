@@ -37,6 +37,15 @@ MQTT::AutoDiscovery::EntityPtr ClockPlugin::getAutoDiscovery(FormatType format, 
             discovery->addEffectStateTopic(MQTTClient::formatTopic(FSPGM(_effect_state)));
             discovery->addEffectCommandTopic(MQTTClient::formatTopic(FSPGM(_effect_set)));
             discovery->addEffectList(Clock::Config_t::getAnimationNamesJsonArray());
+
+            // if (!discovery->createJsonSchema(this, MQTT_NAME, format)) {
+            //     return discovery;
+            // }
+            // discovery->addStateTopic(MQTTClient::formatTopic(FSPGM(_state)));
+            // discovery->addCommandTopic(MQTTClient::formatTopic(FSPGM(_set)));
+            // discovery->addBrightnessScale(kMaxBrightness);
+            // discovery->addParameter(F("brightness"), true);
+
         }
         break;
 #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
@@ -154,7 +163,7 @@ void ClockPlugin::_publishState()
 #else
     // __LDBG_printf("client=%p animation=%u (%p) color=%s brightness=%u", client, _config.animation, _animation, getColor().implode(',').c_str(), _targetBrightness);
 #endif
-        publish(MQTTClient::formatTopic(FSPGM(_state)), true, String(_getEnabledState()));
+        publish(MQTTClient::formatTopic(FSPGM(_state)), true, MQTTClient::toBoolOnOff(_getEnabledState()));
         publish(MQTTClient::formatTopic(FSPGM(_brightness_state)), true, String(_targetBrightness == 0 ? _savedBrightness : _targetBrightness));
         publish(MQTTClient::formatTopic(FSPGM(_color_state)), true, getColor().implode(','));
         publish(MQTTClient::formatTopic(FSPGM(_effect_state)), true, Clock::Config_t::getAnimationName(_config.getAnimation()));

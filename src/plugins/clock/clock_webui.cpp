@@ -48,8 +48,8 @@ void ClockPlugin::getValues(WebUINS::Events &array)
     )
 
     IF_IOT_CLOCK_HAVE_MOTION_SENSOR(
-        auto value = _motionLastUpdate ? get_time_diff(_motionLastUpdate, millis()) / 1000.0 : NAN;
-        auto timeStr = formatTime2(F(", "), F(" and "), false, value);
+        auto value = _motionLastUpdate ? get_time_diff(_motionLastUpdate, millis()) / 1000 : 0;
+        auto timeStr = value ? formatTime2(F(", "), F(" and "), false, value) : String(F("NOW"));
         array.append(WebUINS::Values(F("motion"), timeStr));
     )
 }

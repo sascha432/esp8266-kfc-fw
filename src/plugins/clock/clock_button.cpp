@@ -83,14 +83,18 @@ void ClockPlugin::setRotaryAction(uint8_t action)
     }
     switch(action) {
         case 0:
-            _digitalWrite(132, HIGH); // green LED left side
-            _digitalWrite(128, HIGH); // blue LED
-            _digitalWrite(129, HIGH); // red LED
-            _digitalWrite(130, HIGH); // green LED right side
+            // _digitalWrite(132, HIGH); // green LED left side
+            // _digitalWrite(128, HIGH); // blue LED
+            // _digitalWrite(129, HIGH); // red LED
+            // _digitalWrite(130, HIGH); // green LED right side
+            _PCF8574.PORT |= 0b10111;
+            // _PCF8574.PORT = static_cast<uint8_t>(_PCF8574.PORT) & ~0b10111;
             break;
         case 1:
-            _digitalWrite(128, LOW);
-            _digitalWrite(129, LOW);
+            // _digitalWrite(128, LOW);
+            // _digitalWrite(129, LOW);
+            _PCF8574.PORT &= ~0b11;
+            // _PCF8574.PORT = static_cast<uint8_t>(_PCF8574.PORT) & ~0b11;
             break;
     }
 }

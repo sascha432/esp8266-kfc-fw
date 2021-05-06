@@ -16,13 +16,14 @@
 
 void ClockPlugin::getValues(WebUINS::Events &array)
 {
-    array.append(WebUINS::Values(F("btn_animation"), _config.animation));
+    auto enabled = _getEnabledState();
 
     IF_IOT_CLOCK(
         array.append(WebUINS::Values(F("btn_colon"), (_config.blink_colon_speed < kMinBlinkColonSpeed) ? 0 : (_config.blink_colon_speed < 750 ? 2 : 1), _tempBrightness != -1));
     )
 
     array.append(
+        WebUINS::Values(F("btn_ani"), static_cast<int>(_config.animation), enabled),
         WebUINS::Values(F("color"), _getColor(), _config.getAnimation() == AnimationType::FADING || _config.getAnimation() == AnimationType::SOLID),
         WebUINS::Values(FSPGM(brightness), static_cast<uint8_t>(_targetBrightness ? _targetBrightness : _savedBrightness), _tempBrightness != -1)
     );
@@ -35,7 +36,7 @@ void ClockPlugin::getValues(WebUINS::Events &array)
     }
 
     IF_IOT_CLOCK_SAVE_STATE(
-        array.append(WebUINS::Values(F("power"), static_cast<uint8_t>(_getEnabledState(), _getEnabledState())));
+        array.append(WebUINS::Values(F("power"), static_cast<uint8_t>(enabled), enabled));
     )
 
     IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(
@@ -44,6 +45,12 @@ void ClockPlugin::getValues(WebUINS::Events &array)
 
     IF_IOT_CLOCK_DISPLAY_POWER_CONSUMPTION(
         array.append(WebUINS::Values(F("pwrlvl"), WebUINS::FormattedDouble(_getPowerLevel(), 2)));
+    )
+
+    IF_IOT_CLOCK_HAVE_MOTION_SENSOR(
+        auto value = _motionLastUpdate ? get_time_diff(_motionLastUpdate, millis()) / 1000.0 : NAN;
+        auto timeStr = formatTime2(F(", "), F(" and "), false, value);
+        array.append(WebUINS::Values(F("motion"), timeStr));
     )
 }
 
@@ -78,7 +85,7 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
             }
             else
         )
-        if (id == F("btn_animation")) {
+        if (id == F("btn_ani")) {
             setAnimation(static_cast<AnimationType>(val));
             IF_IOT_CLOCK_SAVE_STATE(
                 _saveStateDelayed();
@@ -110,6 +117,9 @@ void ClockPlugin::addPowerSensor(WebUINS::Root &webUI, SensorPlugin::SensorType 
     if (type == SensorPlugin::SensorType::SYSTEM_METRICS) {
         webUI.addRow(WebUINS::Row(WebUINS::Sensor(F("pwrlvl"), F("Power"), 'W')));
 #endif
+        IF_IOT_CLOCK_HAVE_MOTION_SENSOR(
+            webUI.appendToLastRow(WebUINS::Row(WebUINS::Sensor(F("motion"), F("Motion Sensor"), F("ago"))));
+        )
     }
 }
 
@@ -124,8 +134,18 @@ void ClockPlugin::_updatePowerLevelWebUI()
 
 uint8_t ClockPlugin::_calcPowerFunction(uint8_t targetBrightness, uint32_t maxPower_mW)
 {
+    if (maxPower_mW == 0) {
+        maxPower_mW = 55552;
+    }
+
     uint32_t requestedPower_mW;
     uint8_t newBrightness = _calculate_max_brightness_for_power_mW(targetBrightness, maxPower_mW, requestedPower_mW);
+    if (targetBrightness && newBrightness == 0) {
+        newBrightness = 1;
+    }
+    static int counter=0;
+    if (++counter%100==0)
+        __DBG_printf("brightness=%u target=%u max=%.0fmW requested=%.0fmW", newBrightness, targetBrightness, maxPower_mW, requestedPower_mW);
     if (_config.enabled) {
         _powerLevelCurrentmW = (targetBrightness == newBrightness) ? requestedPower_mW : maxPower_mW;
         _calcPowerLevel();
@@ -196,9 +216,10 @@ void ClockPlugin::createWebUI(WebUINS::Root &webUI)
         row.append(colon);
     )
 
-    auto animation = WebUINS::ButtonGroup(F("btn_animation"), F("Animation"), Plugins::ClockConfig::ClockConfig_t::getAnimationNames());
+    auto animation = WebUINS::ButtonGroup(F("btn_ani"), F("Animation"), Plugins::ClockConfig::ClockConfig_t::getAnimationNames());
     animation.append(WebUINS::NamedString(J(height), height));
     animation.append(WebUINS::NamedUint32(J(row), 3));
+    row.append(animation);
 
     IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(
         auto lightSensor = WebUINS::Sensor(FSPGM(light_sensor), F("Ambient Light Sensor"), F("<img src=\"/images/light.svg\" width=\"80\" height=\"80\" style=\"margin-top:-20px;margin-bottom:1rem\">"), WebUINS::SensorRenderType::COLUMN);

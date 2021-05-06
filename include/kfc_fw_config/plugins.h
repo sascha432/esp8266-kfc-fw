@@ -774,8 +774,9 @@ namespace KFCConfigurationClasses {
                 CREATE_UINT8_BITFIELD_MIN_MAX(webui_voltage_precision, 3, 0, 6, 2, 1);
                 CREATE_UINT8_BITFIELD_MIN_MAX(webui_current_precision, 3, 0, 6, 0, 1);
                 CREATE_UINT8_BITFIELD_MIN_MAX(webui_power_precision, 3, 0, 6, 0, 1);
-                CREATE_UINT16_BITFIELD_MIN_MAX(averaging_period, 10, 5, 900, 30, 1);
-                CREATE_UINT16_BITFIELD_MIN_MAX(hold_peak_time, 10, 5, 900, 60, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(webui_update_rate, 4, 1, 15, 2, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(averaging_period, 10, 5, 900, 30, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(hold_peak_time, 10, 5, 900, 60, 1);
 
                 INA219CurrentDisplayType getDisplayCurrent() const {
                     return static_cast<INA219CurrentDisplayType>(display_current);

@@ -29,10 +29,10 @@ static ClockPlugin plugin;
 
 void initialize_pcf8574()
 {
+    config.initTwoWire(); // init I2C
+    // begin sets all pins to high level output and then to pin mode input
     _PCF8574.begin(PCF8574_I2C_ADDRESS);
     _PCF8574.DDR = 0b00111111;
-    _pinMode(_PCF8574Range::pin2DigitalPin(6), INPUT);
-    _pinMode(_PCF8574Range::pin2DigitalPin(7), INPUT);
 }
 
 void print_status_pcf8574(Print &output)
@@ -40,14 +40,16 @@ void print_status_pcf8574(Print &output)
     output.printf_P(PSTR("PCF8574 @ I2C address 0x%02x"), PCF8574_I2C_ADDRESS);
     output.print(F(HTML_S(br) "Interrupt disabled" HTML_S(br)));
     if (_PCF8574.isConnected()) {
+        output.print(HTML_S(small));
         uint8_t ddr = _PCF8574.DDR;
         uint8_t state = _PCF8574.PIN;
         for(uint8_t i = 0; i < 8; i++) {
-            output.printf_P(PSTR("%u(%s)=%s "), i, (ddr & _BV(i) ? PSTR("OUTPUT") : PSTR("INPUT")), (state & _BV(i)) ? PSTR("HIGH") : PSTR("LOW"));
+            output.printf_P(PSTR("%u(%s)=%s "), i, (ddr & _BV(i) ? PSTR("OUT") : PSTR("IN")), (state & _BV(i)) ? PSTR("HIGH") : PSTR("LOW"));
         }
+        output.print(HTML_E(small));
     }
     else {
-        output.print(F(HTML_S(br) "ERROR - Device not found!"));
+        output.print(F("ERROR - Device not found!"));
     }
 }
 
@@ -273,11 +275,15 @@ void ClockPlugin::_setupTimer()
         _timerCounter++;
 
         IF_IOT_CLOCK_HAVE_MOTION_SENSOR(
-            _pinMode(IOT_CLOCK_HAVE_MOTION_SENSOR_PIN, INPUT);
             auto state = _digitalRead(IOT_CLOCK_HAVE_MOTION_SENSOR_PIN);
             if (state != _motionState) {
                 if (isConnected()) {
                     publish(MQTT::Client::formatTopic(F("motion")), true, MQTT::Client::toBoolOnOff(_motionState));
+                }
+                if (WebUISocket::hasAuthenticatedClients()) {
+                    WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(
+                        WebUINS::Events(WebUINS::Values(F("motion"), WebUINS::RoundedDouble(NAN)))
+                    ));
                 }
                 // _digitalWrite(_PCF8574Range::pin2DigitalPin(5), !_motionState);
 
@@ -401,9 +407,6 @@ void ClockPlugin::preSetup(SetupModeType mode)
 void ClockPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
     _disable(10);
-    IF_IOT_CLOCK_HAVE_ENABLE_PIN(
-        pinMode(IOT_CLOCK_EN_PIN, OUTPUT);
-    )
 
     IF_IOT_CLOCK_DISPLAY_POWER_CONSUMPTION(
         WsClient::addClientCallback(webSocketCallback, this);
@@ -411,6 +414,10 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
 
     readConfig();
     _targetBrightness = 0;
+
+    IF_IOT_CLOCK_HAVE_ENABLE_PIN(
+        pinMode(IOT_CLOCK_EN_PIN, OUTPUT);
+    )
 
     IF_IOT_LED_MATRIX_STANDBY_PIN(
         _digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(false));
@@ -810,7 +817,7 @@ void ClockPlugin::readConfig()
     __LDBG_printf("config read");
 
     #if IOT_CLOCK_HAVE_POWER_LIMIT || IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
-        __LDBG_printf("limit=%u/%u r/g/b/idle=%u/%u/%u/%u", _config.power_limit, _getPowerLevelLimit(_config.power_limit), _config.power.red, _config.power.green, _config.power.blue, _config.power.idle);
+        __DBG_printf("limit=%u/%u r/g/b/idle=%u/%u/%u/%u", _config.power_limit, _getPowerLevelLimit(_config.power_limit), _config.power.red, _config.power.green, _config.power.blue, _config.power.idle);
         FastLED.setMaxPowerInMilliWatts(_getPowerLevelLimit(_config.power_limit) IF_IOT_CLOCK_DISPLAY_POWER_CONSUMPTION(, &calcPowerFunction));
         FastLED.setPowerConsumptionInMilliwattsPer256(_config.power.red, _config.power.green, _config.power.blue, _config.power.idle);
     #endif
@@ -1108,10 +1115,13 @@ float ClockPlugin::__getPowerLevel(float P, float min) const
     return std::max<float>(IOT_CLOCK_POWER_CORRECTION_OUTPUT);
 }
 
-uint32_t ClockPlugin::_getPowerLevelLimit(uint32_t P_mW) const
+uint32_t ClockPlugin::_getPowerLevelLimit(uint32_t P_Watt) const
 {
-    float P = P_mW / 1000.0;
-    return std::max<float>(0, IOT_CLOCK_POWER_CORRECTION_LIMIT);
+    if (P_Watt == 0) {
+        return ~0U; // unlimited
+    }
+    return P_Watt * 1090;
+    // return std::max<float>(0, IOT_CLOCK_POWER_CORRECTION_LIMIT);
 }
 
 #endif

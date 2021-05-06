@@ -370,6 +370,7 @@ void setup()
         }
 #endif
 
+        // __DBG_printf("FS begin");
         // start FS, we need it for getCrashCounter()
         // KFCFS.setConfig(LittleFSConfig(false));
         KFCFS.begin();
@@ -399,7 +400,9 @@ void setup()
     );
 #endif
 
+    // __DBG_printf("read config");
     config.read();
+    // __DBG_printf("starting safe_mode=%u", safe_mode);
     if (safe_mode) {
 
         WebAlerts::Alert::warning(F("Running in Safe Mode"), WebAlerts::ExpiresType::REBOOT);

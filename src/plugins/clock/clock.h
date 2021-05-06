@@ -336,7 +336,7 @@ private:
     void _webSocketCallback(WsClient::ClientCallbackType type, WsClient *client, AsyncWebSocket *server, WsClient::ClientCallbackId id);
     void _calcPowerLevel();
     float __getPowerLevel(float P_W, float min) const;
-    uint32_t _getPowerLevelLimit(uint32_t P_mW) const;
+    uint32_t _getPowerLevelLimit(uint32_t P_Watt) const;
 
 #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
 
@@ -344,7 +344,7 @@ private:
         if (!_isEnabled || _tempBrightness == -1) {
             return NAN;
         }
-        return __getPowerLevel(_powerLevelAvg / 1000.0, 0.54);
+        return __getPowerLevel(_powerLevelAvg / 1000.0, 1.039);
     }
 
 private:

@@ -471,7 +471,9 @@ void Plugin::_handlerWebUI(AsyncWebServerRequest *request, HttpHeaders &headers)
         return;
     }
     auto json = WebUISocket::createWebUIJSON();
-    auto response = new AsyncBasicResponse(200, FSPGM(mime_application_json), json.toString());
+    String &jsonStr = json.toString();
+    // __DBG_printf("_handlerWebUI %u", jsonStr.length());
+    auto response = new AsyncBasicResponse(200, FSPGM(mime_application_json), std::move(jsonStr)); //TODO use stream or fillbuffer
     headers.addNoCache();
     headers.setResponseHeaders(response);
     request->send(response);

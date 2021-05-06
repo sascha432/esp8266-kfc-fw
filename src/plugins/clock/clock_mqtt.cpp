@@ -125,11 +125,11 @@ void ClockPlugin::onMessage(const char *topic, const  char *payload, size_t len)
         else {
             // red,green,blue
             char *endptr = nullptr;
-            auto red = (uint8_t)strtoul(payload, &endptr, 10);
+            auto red = static_cast<uint8_t>(strtoul(payload, &endptr, 10));
             if (endptr && *endptr++ == ',') {
-                auto green = (uint8_t)strtoul(endptr, &endptr, 10);
+                auto green = static_cast<uint8_t>(strtoul(endptr, &endptr, 10));
                 if (endptr && *endptr++ == ',') {
-                    auto blue = (uint8_t)strtoul(endptr, nullptr, 10);
+                    auto blue = static_cast<uint8_t>(strtoul(endptr, nullptr, 10));
                     setColorAndRefresh(Color(red, green, blue));
                     IF_IOT_CLOCK_SAVE_STATE(
                         _saveStateDelayed();
@@ -163,6 +163,9 @@ void ClockPlugin::_publishState()
         )
         IF_IOT_CLOCK_DISPLAY_POWER_CONSUMPTION(
             publish(MQTTClient::formatTopic(F("power")), true, String(_getPowerLevel(), 2));
+        )
+        IF_IOT_CLOCK_HAVE_MOTION_SENSOR(
+            //
         )
     }
 

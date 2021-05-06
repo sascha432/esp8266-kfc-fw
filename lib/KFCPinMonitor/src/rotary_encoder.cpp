@@ -159,7 +159,8 @@ constexpr uint32_t ttable[6][4] PROGMEM = {
 #define R_CCW_FINAL 0x5
 #define R_CCW_NEXT 0x6
 
-constexpr uint32_t ttable[7][4] PROGMEM = {
+// constexpr uint32_t ttable[7][4] PROGMEM = {
+const uint8_t ttable[7][4] = {
   // R_START
   {R_START,    R_CW_BEGIN,  R_CCW_BEGIN, R_START},
   // R_CW_FINAL
@@ -180,10 +181,16 @@ constexpr uint32_t ttable[7][4] PROGMEM = {
 
 void RotaryEncoder::processEvent(const Interrupt::Event &eventData)
 {
-    uint8_t value = ((eventData.gpiRegValue() & _mask1) != 0) | (((eventData.gpiRegValue() & _mask1) != 0) << 1);
+    // uint8_t value = ((eventData.gpiRegValue() & _mask1) != 0) | (((eventData.gpiRegValue() & _mask2) != 0) << 1);
+    uint8_t value = (eventData.gpiRegValue() & _mask1) ? 0b01 : 0b00;
+    if (eventData.gpiRegValue() & _mask2) {
+        value |= 0b10;
+    }
     uint8_t state = (_activeState == ActiveStateType::ACTIVE_LOW) ? value ^ 0b11 : value;
 
-    _state = ttable[_state & 0xf][state] & 0x30;
+    // __DBG_printf("rotary state=0b%u%u _state=0x%02x/%u -> 0x%02x", state&1, state>>1, _state&0xf, state, ttable[_state & 0xf][state]);
+
+    _state = ttable[_state & 0xf][state];
     if (_state >= DIR_CW) {
         event(static_cast<EventType>(_state), eventData.getTime());
     }

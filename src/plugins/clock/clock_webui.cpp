@@ -134,18 +134,15 @@ void ClockPlugin::_updatePowerLevelWebUI()
 
 uint8_t ClockPlugin::_calcPowerFunction(uint8_t targetBrightness, uint32_t maxPower_mW)
 {
-    if (maxPower_mW == 0) {
-        maxPower_mW = 55552;
-    }
-
     uint32_t requestedPower_mW;
     uint8_t newBrightness = _calculate_max_brightness_for_power_mW(targetBrightness, maxPower_mW, requestedPower_mW);
-    if (targetBrightness && newBrightness == 0) {
+    if (targetBrightness && newBrightness == 0) { // brightness must not be 0
         newBrightness = 1;
     }
-    static int counter=0;
-    if (++counter%100==0)
-        __DBG_printf("brightness=%u target=%u max=%.0fmW requested=%.0fmW", newBrightness, targetBrightness, maxPower_mW, requestedPower_mW);
+    // static int counter=0;
+    // if (++counter%100==0)
+    //     __DBG_printf("brightness=%u target=%u max=%umW requested=%umW", newBrightness, targetBrightness, maxPower_mW, requestedPower_mW);
+
     if (_config.enabled) {
         _powerLevelCurrentmW = (targetBrightness == newBrightness) ? requestedPower_mW : maxPower_mW;
         _calcPowerLevel();

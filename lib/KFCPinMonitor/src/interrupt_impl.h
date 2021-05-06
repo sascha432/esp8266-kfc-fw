@@ -11,25 +11,20 @@
 
 namespace PinMonitor {
 
-// exterimental support for polling / no interrupts or IRAM usage
-#if PIN_MONITOR_USE_POLLING
-
-    #define PIN_MONITOR_ETS_GPIO_INTR_DISABLE()         ;
-    #define PIN_MONITOR_ETS_GPIO_INTR_ENABLE()          ;
-
 // custom interrupt handler, requires least amount of IRAM
-#elif PIN_MONITOR_USE_GPIO_INTERRUPT
+#if PIN_MONITOR_USE_GPIO_INTERRUPT || PIN_MONITOR_USE_POLLING
 
-    void GPIOInterruptsEnable();
-    void GPIOInterruptsDisable();
-
-    extern void ICACHE_RAM_ATTR pin_monitor_interrupt_handler(void *ptr);
+    extern void
+#if PIN_MONITOR_USE_POLLING == 0
+    ICACHE_RAM_ATTR
+#endif
+    pin_monitor_interrupt_handler(void *ptr);
 
     namespace Interrupt {
 
-#ifndef PIN_MONITOR_PINS_TO_USE
-#error PIN_MONITOR_USE_GPIO_INTERRUPT=1 requires to define a list of pins used as PIN_MONITOR_PINS_TO_USE
-#endif
+        #ifndef PIN_MONITOR_PINS_TO_USE
+        #error PIN_MONITOR_USE_GPIO_INTERRUPT=1 requires to define a list of pins used as PIN_MONITOR_PINS_TO_USE
+        #endif
         static constexpr auto kPins = stdex::array_of<const uint8_t>(PIN_MONITOR_PINS_TO_USE);
 
     }
@@ -50,6 +45,9 @@ namespace PinMonitor {
     void _detachInterrupt(uint8_t pin);
 
 #endif
+
+    void GPIOInterruptsEnable();
+    void GPIOInterruptsDisable();
 
     class RotaryEncoder;
 

@@ -163,7 +163,9 @@ namespace PinMonitor {
     // protected:
     public:
 
-#if PIN_MONITOR_USE_GPIO_INTERRUPT == 0 && PIN_MONITOR_USE_POLLING == 0
+#if PIN_MONITOR_USE_POLLING == 1
+        static void callback(void *arg, uint16_t _GPI);
+#elif PIN_MONITOR_USE_GPIO_INTERRUPT == 0
         static void ICACHE_RAM_ATTR callback(void *arg);
 #endif
 

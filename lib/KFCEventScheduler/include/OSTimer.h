@@ -25,7 +25,7 @@ public:
 
     virtual void run() = 0;
 
-    void startTimer(int32_t delay, bool repeat);
+    void startTimer(int32_t delay, bool repeat, bool millis = true);
     virtual void detach();
 
     bool isRunning() const {

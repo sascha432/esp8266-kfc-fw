@@ -13,6 +13,29 @@
 
 namespace PinMonitor {
 
+#if PIN_MONITOR_USE_POLLING
+
+    class PollingTimer : public OSTimer {
+    public:
+        PollingTimer();
+
+        void start();
+        virtual void run();
+
+        uint16_t getStates() const {
+            return _states;
+        }
+
+    private:
+        uint16_t _states;
+    };
+
+    inline PollingTimer::PollingTimer() : _states(0)
+    {
+    }
+
+#endif
+
     class Monitor
     {
     public:
@@ -138,3 +161,6 @@ namespace PinMonitor {
 }
 
 extern PinMonitor::Monitor pinMonitor;
+#if PIN_MONITOR_USE_POLLING
+extern PinMonitor::PollingTimer pollingTimer;
+#endif

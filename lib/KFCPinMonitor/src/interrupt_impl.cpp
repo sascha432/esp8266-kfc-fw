@@ -4,6 +4,7 @@
 
 #include <Arduino_compat.h>
 #include <PrintString.h>
+#include "BitsToStr.h"
 #include "interrupt_impl.h"
 #include "rotary_encoder.h"
 #include "monitor.h"
@@ -26,14 +27,16 @@ namespace PinMonitor {
     uint16_t interrupt_levels;
 
 // ------------------------------------------------------------------------
-// GPIO polling
-// ------------------------------------------------------------------------
-#if PIN_MONITOR_USE_POLLING
-
-// ------------------------------------------------------------------------
 // implementation with GPIO interrupt instead of attachInterrupt...
 // ------------------------------------------------------------------------
-#elif PIN_MONITOR_USE_GPIO_INTERRUPT
+#if PIN_MONITOR_USE_GPIO_INTERRUPT || PIN_MONITOR_USE_POLLING
+
+#if PIN_MONITOR_POLLING_USE_INTERRUPTS == 0
+
+    void GPIOInterruptsEnable() {}
+    void GPIOInterruptsDisable() {}
+
+#else
 
     void GPIOInterruptsEnable()
     {
@@ -44,7 +47,6 @@ namespace PinMonitor {
         eventBuffer.clear();
 #endif
 #if PIN_MONITOR_SIMPLE_PIN || PIN_MONITOR_DEBOUNCED_PUSHBUTTON
-
         for(const auto &pinPtr: pinMonitor.getPins()) {
             pinPtr->clear();
             // switch(pinPtr->_type) {
@@ -59,6 +61,25 @@ namespace PinMonitor {
             GPC(pin) |= ((CHANGE & 0xF) << GPCI);  // INT mode "mode"
         }
         GPIEC = Interrupt::PinAndMask::mask_of(Interrupt::kPins);  // clear interrupts for all pins
+// #if PIN_MONITOR_USE_POLLING
+//         ets_isr_attach(ETS_GPIO_INUM, [](void *arg) {
+//             // using namespace PinMonitor::Interrupt;
+//             // uint32_t status32 = GPIE;
+//             // GPIEC = status32;
+//             // uint16_t status = static_cast<uint16_t>(status32);
+//             // if ((status & PinAndMask::mask_of(kPins)) == 0) {
+//             //     return;
+//             // }
+//             // auto levels = static_cast<uint16_t>(GPI); // we skip GPIO16 since it cannot handle interrupts anyway
+
+//             ETS_GPIO_INTR_DISABLE();
+//             // GPIEC = ~0U;
+//             pollingTimer.run();
+//             interrupt_levels = pollingTimer.getStates();
+//             ETS_GPIO_INTR_ENABLE();
+//         }, nullptr);
+// #else
+// #endif
         ETS_GPIO_INTR_ATTACH(pin_monitor_interrupt_handler, nullptr);
         interrupt_levels = GPI;
         ETS_GPIO_INTR_ENABLE();
@@ -69,10 +90,17 @@ namespace PinMonitor {
         ETS_GPIO_INTR_DISABLE();
     }
 
-#include "BitsToStr.h"
-
-    void ICACHE_RAM_ATTR pin_monitor_interrupt_handler(void *ptr)
+    void
+#if PIN_MONITOR_USE_POLLING == 0
+    ICACHE_RAM_ATTR
+#endif
+    pin_monitor_interrupt_handler(void *ptr)
     {
+#if PIN_MONITOR_USE_POLLING
+        if (ptr != nullptr) {
+            return;
+        }
+#endif
         using namespace PinMonitor::Interrupt;
         uint32_t status32 = GPIE;
         GPIEC = status32;
@@ -113,7 +141,7 @@ namespace PinMonitor {
             if (!((interrupt_levels ^ levels) & status & mask)) {
                 continue;
             }
-            __DBG_printf("pin=%u set=%u last=%u new=%u", pinNum, status & mask, interrupt_levels & mask, levels & mask);
+            // __DBG_printf("pin=%u set=%u last=%u new=%u", pinNum, status & mask, interrupt_levels & mask, levels & mask);
 
 #if PIN_MONITOR_ROTARY_ENCODER_SUPPORT || PIN_MONITOR_DEBOUNCED_PUSHBUTTON
             auto _micros = micros();
@@ -131,13 +159,12 @@ namespace PinMonitor {
 #endif
 #if PIN_MONITOR_ROTARY_ENCODER_SUPPORT
                 case HardwarePinType::ROTARY:
-                    //TODO optimize
-                    PinMonitor::eventBuffer.emplace_back(_micros, pinNum);
+                    PinMonitor::eventBuffer.emplace_back(_micros, pinNum, levels);
                     break;
 #endif
                 default:
                     break;
-    }
+            }
         }
 
         // for(auto pin: kPins) {
@@ -151,7 +178,12 @@ namespace PinMonitor {
         ETS_GPIO_INTR_ENABLE();
     }
 
+#endif
+
 #elif PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS == 0
+
+    void GPIOInterruptsEnable() {}
+    void GPIOInterruptsDisable() {}
 
     typedef struct {
         voidFuncPtrArg fn;

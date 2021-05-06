@@ -7,8 +7,8 @@
 #include <MicrosTimer.h>
 #include "pin.h"
 
-#undef DEBUG_PIN_MONITOR
-#define DEBUG_PIN_MONITOR 1
+// #undef DEBUG_PIN_MONITOR
+// #define DEBUG_PIN_MONITOR 1
 
 #if DEBUG_PIN_MONITOR
 #include <debug_helper_enable.h>

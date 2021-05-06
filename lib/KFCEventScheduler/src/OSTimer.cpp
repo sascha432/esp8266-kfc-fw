@@ -19,12 +19,12 @@ extern "C" void ICACHE_FLASH_ATTR _etstimer_callback(void *arg)
     reinterpret_cast<OSTimer *>(arg)->run();
 }
 
-void OSTimer::startTimer(int32_t delay, bool repeat)
+void OSTimer::startTimer(int32_t delay, bool repeat, bool millis)
 {
     delay = std::clamp<int32_t>(delay, Event::kMinDelay, Event::kMaxDelay);
     ets_timer_disarm(&_etsTimer);
     ets_timer_setfn(&_etsTimer, reinterpret_cast<ETSTimerFunc *>(_etstimer_callback), this);
-    ets_timer_arm_new(&_etsTimer, delay, repeat, true);
+    ets_timer_arm_new(&_etsTimer, delay, repeat, millis);
 }
 
 void OSTimer::detach()

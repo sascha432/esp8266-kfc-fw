@@ -47,37 +47,71 @@ namespace PinMonitor {
             Event() : _time(0), _value(0)
             {}
 
-            Event(uint32_t time, uint8_t pin, uint16_t value = GPI, bool pin16 = GP16I) :
+            // value = GPI
+            // pin16 = GP16I
+            Event(uint32_t time, uint8_t pin, uint16_t value, bool pin16) :
                 _time(time),
-                _value((value & kValueMask) | ((pin & kPinNumMask) << kPinNumBit) | (pin16 << kGPIO16Bit))
-            {}
+                _value(value)
+                // _value((value & kValueMask) | ((pin & kPinNumMask) << kPinNumBit) | (pin16 << kGPIO16Bit))
+            {
+                _pinNum = pin;
+                _pin16 = pin16;
+            }
 
+            // value = GPI
+            // GPIO16 is ignored
+            Event(uint32_t time, uint8_t pin, uint16_t value) :
+                _time(time),
+                _value(value)
+                // _value((value & kValueMask) | ((pin & kPinNumMask) << kPinNumBit))
+            {
+                _pinNum = pin;
+                _pin16 = 0;
+            }
+
+            inline __attribute__((__always_inline__))
             bool operator==(uint8_t pin) const {
                 return _pinNum == pin;
             }
+
+            inline __attribute__((__always_inline__))
             bool operator!=(uint8_t pin) const {
                 return _pinNum != pin;
             }
 
+            inline __attribute__((__always_inline__))
             uint32_t getTime() const {
                 return _time;
             }
 
+            inline __attribute__((__always_inline__))
             bool value() const {
                 return (_value & _BV(_pinNum)) != 0;
             }
 
+            inline __attribute__((__always_inline__))
+            bool value(uint8_t pin) const {
+                return (_value & _BV(pin)) != 0;
+            }
+
+            inline __attribute__((__always_inline__))
             uint8_t pin() const {
                 return _pinNum;
             }
 
-            uint32_t gpiRegValue() const {
+            // include GPIO16
+            uint32_t gpiReg16Value() const {
                 return (_value & kValueMask) | (_pin16 << 16);
+            }
+
+            inline __attribute__((__always_inline__))
+            uint16_t gpiRegValue() const {
+                return _value & kValueMask;
             }
 
             String toString() const {
                 return PrintString(F("time=%u pin=%u (%u[0]%u[1]%u[2]%u[3]%u[4]%u[5]%u[12]%u[13]%u[14]%u[15]%u[16])"),
-                    _time, _pinNum, _pin0, _pin1, _pin2, _pin3, _pin4, _pin5, _pin12, _pin13, _pin14, _pin15, _pin16
+                    getTime(), pin(), value(0), value(1), value(2), value(3), value(4), value(5), value(12), value(13), value(14), value(15), _pin16
                 );
             }
 

@@ -289,7 +289,10 @@ void ClockPlugin::_setupTimer()
 
                 _motionState = state;
                 if (_motionState) {
-                    __LDBG_printf("motion detected: last update %u ms ago", _motionLastUpdate ? millis() - _motionLastUpdate : 0);
+                    // __LDBG_printf("motion detected: last update %u ms ago", _motionLastUpdate ? millis() - _motionLastUpdate : 0);
+                    // if (_motionLastUpdate) {
+                    //     auto diff = get_time_diff(_motionLastUpdate, millis());
+                    // }
                     _motionLastUpdate = millis();
                 }
             }
@@ -457,9 +460,7 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
             pinMode(IOT_CLOCK_ROTARY_ENC_PINB, INPUT);
         )
 
-        #if PIN_MONITOR_USE_GPIO_INTERRUPT
-            PinMonitor::GPIOInterruptsEnable();
-        #endif
+        PinMonitor::GPIOInterruptsEnable();
 
     )
 
@@ -540,9 +541,7 @@ void ClockPlugin::shutdown()
 {
     __LDBG_println();
 
-#if PIN_MONITOR_USE_GPIO_INTERRUPT
     PinMonitor::GPIOInterruptsDisable();
-#endif
 
 #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
     _displaySensor = DisplaySensorType::DESTROYED;

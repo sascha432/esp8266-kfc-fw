@@ -61,6 +61,16 @@
 #define PIN_MONITOR_USE_POLLING                                     0
 #endif
 
+// use timer with microseconds. for rotary encoder only
+#ifndef PIN_MONITOR_POLLING_USE_MICROS
+#define PIN_MONITOR_POLLING_USE_MICROS                              0
+#endif
+
+// experimental interrupt without IRAM using the timer to keep the code in RAM
+#ifndef PIN_MONITOR_POLLING_USE_INTERRUPTS
+#define PIN_MONITOR_POLLING_USE_INTERRUPTS                          1
+#endif
+
 // use attachInterruptArg()/detachInterrupt() for interrupt callbacks
 // attachInterruptArg() requires 72 byte IRAM
 // detachInterrupt() requires 160 byte IRAM

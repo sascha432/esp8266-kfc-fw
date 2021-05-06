@@ -159,8 +159,8 @@ constexpr uint32_t ttable[6][4] PROGMEM = {
 #define R_CCW_FINAL 0x5
 #define R_CCW_NEXT 0x6
 
-// constexpr uint32_t ttable[7][4] PROGMEM = {
-const uint8_t ttable[7][4] = {
+constexpr uint32_t ttable[7][4] PROGMEM = {
+// const uint8_t ttable[7][4] = {
   // R_START
   {R_START,    R_CW_BEGIN,  R_CCW_BEGIN, R_START},
   // R_CW_FINAL

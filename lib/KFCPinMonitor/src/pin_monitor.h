@@ -68,7 +68,7 @@
 
 // experimental interrupt without IRAM using the timer to keep the code in RAM
 #ifndef PIN_MONITOR_POLLING_USE_INTERRUPTS
-#define PIN_MONITOR_POLLING_USE_INTERRUPTS                          1
+#define PIN_MONITOR_POLLING_USE_INTERRUPTS                          0
 #endif
 
 // use attachInterruptArg()/detachInterrupt() for interrupt callbacks

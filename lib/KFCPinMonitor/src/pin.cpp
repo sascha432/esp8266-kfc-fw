@@ -42,13 +42,8 @@ void ICACHE_RAM_ATTR HardwarePin::callback(void *arg)
             break;
 #endif
 #if PIN_MONITOR_ROTARY_ENCODER_SUPPORT
-        case HardwarePinType::ROTARY: {
-                //TODO fix optimized version
-                // auto &data = PinMonitor::eventBuffer.get_write_ref();
-                // data.setTime(_micros);
-                // data.setValue(_GPI/*(_GPI & PinMonitor::Interrupt::kValueMask)*/ & ((pinPtr->getPin()/* & PinMonitor::Interrupt::kPinNumMask*/) << PinMonitor::Interrupt::kPinNumBit));
-                PinMonitor::eventBuffer.emplace_back(_micros, pinPtr->getPin(), _GPI);
-            }
+        case HardwarePinType::ROTARY:
+            PinMonitor::eventBuffer.emplace_back(_micros, pinPtr->getPin(), _GPI);
             break;
 #endif
         default:

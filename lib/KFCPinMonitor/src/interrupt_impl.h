@@ -14,11 +14,7 @@ namespace PinMonitor {
 // custom interrupt handler, requires least amount of IRAM
 #if PIN_MONITOR_USE_GPIO_INTERRUPT || PIN_MONITOR_USE_POLLING
 
-    extern void
-#if PIN_MONITOR_USE_POLLING == 0
-    ICACHE_RAM_ATTR
-#endif
-    pin_monitor_interrupt_handler(void *ptr);
+    extern void ICACHE_RAM_ATTR pin_monitor_interrupt_handler(void *ptr);
 
     namespace Interrupt {
 

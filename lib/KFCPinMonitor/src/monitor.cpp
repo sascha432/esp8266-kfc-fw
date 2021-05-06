@@ -63,10 +63,15 @@ void PollingTimer::run()
     // call the interrupt handler to keep it in the cache
     // if the code is not in ram, the program crashes
     // IRAM is disabled
-    pin_monitor_interrupt_handler(&pollingTimer);
+    noInterrupts();
+    pin_monitor_interrupt_handler(nullptr);
+    interrupts();
 #else
     uint16_t states = GPI;
     for(const auto &pinPtr: pinMonitor.getPins()) {
+        if (pinPtr->getHardwarePinType() == HardwarePinType::ROTARY) {
+            continue;
+        }
         auto pin = pinPtr->getPin();
         auto pinMask = static_cast<uint16_t>(_BV(pin));
         auto newState = (states & pinMask) != 0;
@@ -361,31 +366,11 @@ void Monitor::_loop()
     PIN_MONITOR_ETS_GPIO_INTR_DISABLE();
     if (eventBuffer.size()) {
 
-        static uint16_t maxEventSize = 0;
-        if (eventBuffer.size() > maxEventSize) {
-            maxEventSize = eventBuffer.size();
-            __LDBG_printf("maxEventSize increased %u", maxEventSize);
-        }
-
-
-#if 0
-        {
-            auto bufIterator = eventBuffer.begin();
-            while (bufIterator != eventBuffer.end()) {
-                auto event = *bufIterator;
-                __DBG_printf("L-QUEUE: %s", event.toString().c_str());
-                ++bufIterator;
-            }
-        }
-#endif
-        // struct DebounceSummary {
-        //     uint32_t _micros;
-        //     uint16_t _interruptCount;
-        //     bool _value;
-        //     Debounce *_debounce;
-        //     DebounceSummary() : _interruptCount(0) {}
-        // };
-        // DebounceSummary dsPins[17] = {};
+        // static uint16_t maxEventSize = 0;
+        // if (eventBuffer.size() > maxEventSize) {
+        //     maxEventSize = eventBuffer.size();
+        //     __LDBG_printf("maxEventSize increased %u", maxEventSize);
+        // }
 
         auto bufIterator = eventBuffer.begin();
         while (bufIterator != eventBuffer.end()) {
@@ -417,7 +402,6 @@ void Monitor::_loop()
         if (bufIterator == eventBuffer.end()) {
             eventBuffer.clear();
         }
-
     }
     PIN_MONITOR_ETS_GPIO_INTR_ENABLE();
     now = millis();

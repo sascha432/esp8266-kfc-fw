@@ -33,8 +33,51 @@ namespace PinMonitor {
 
 #if PIN_MONITOR_POLLING_USE_INTERRUPTS == 0
 
-    void GPIOInterruptsEnable() {}
-    void GPIOInterruptsDisable() {}
+    static constexpr uint32_t kGPIORotaryMask = _BV(IOT_CLOCK_ROTARY_ENC_PINA)|_BV(IOT_CLOCK_ROTARY_ENC_PINB);
+
+    void GPIOInterruptsEnable()
+    {
+        ETS_GPIO_INTR_DISABLE();
+        eventBuffer.clear();
+        for(const auto &pinPtr: pinMonitor.getPins()) {
+            pinPtr->clear();
+        }
+        GPC(IOT_CLOCK_ROTARY_ENC_PINA) &= ~(0xF << GPCI);  // INT mode disabled
+        GPC(IOT_CLOCK_ROTARY_ENC_PINA) |= ((CHANGE & 0xF) << GPCI);  // INT mode "mode"
+        GPC(IOT_CLOCK_ROTARY_ENC_PINB) &= ~(0xF << GPCI);  // INT mode disabled
+        GPC(IOT_CLOCK_ROTARY_ENC_PINB) |= ((CHANGE & 0xF) << GPCI);  // INT mode "mode"
+        GPIEC = kGPIORotaryMask;
+        ETS_GPIO_INTR_ATTACH(pin_monitor_interrupt_handler, nullptr);
+        interrupt_levels = GPI;
+        ETS_GPIO_INTR_ENABLE();
+    }
+
+    void GPIOInterruptsDisable()
+    {
+        ETS_GPIO_INTR_DISABLE();
+    }
+
+    void ICACHE_RAM_ATTR pin_monitor_interrupt_handler(void *ptr)
+    {
+        uint32_t status32 = GPIE;
+        GPIEC = status32;
+        uint16_t status = static_cast<uint16_t>(status32);
+        auto levels = static_cast<uint16_t>(GPI); // we skip GPIO16 since it cannot handle interrupts anyway
+        ETS_GPIO_INTR_DISABLE();
+        uint8_t pinNum = 0xff;
+
+        if ((interrupt_levels ^ levels) & status & _BV(IOT_CLOCK_ROTARY_ENC_PINA)) {
+            pinNum = IOT_CLOCK_ROTARY_ENC_PINA;
+        }
+        if ((interrupt_levels ^ levels) & status & _BV(IOT_CLOCK_ROTARY_ENC_PINB)) {
+            pinNum = IOT_CLOCK_ROTARY_ENC_PINB;
+        }
+        if (pinNum != 0xff) {
+            PinMonitor::eventBuffer.emplace_back(micros(), pinNum, levels);
+        }
+        PinMonitor::interrupt_levels = levels;
+        ETS_GPIO_INTR_ENABLE();
+    }
 
 #else
 
@@ -61,25 +104,6 @@ namespace PinMonitor {
             GPC(pin) |= ((CHANGE & 0xF) << GPCI);  // INT mode "mode"
         }
         GPIEC = Interrupt::PinAndMask::mask_of(Interrupt::kPins);  // clear interrupts for all pins
-// #if PIN_MONITOR_USE_POLLING
-//         ets_isr_attach(ETS_GPIO_INUM, [](void *arg) {
-//             // using namespace PinMonitor::Interrupt;
-//             // uint32_t status32 = GPIE;
-//             // GPIEC = status32;
-//             // uint16_t status = static_cast<uint16_t>(status32);
-//             // if ((status & PinAndMask::mask_of(kPins)) == 0) {
-//             //     return;
-//             // }
-//             // auto levels = static_cast<uint16_t>(GPI); // we skip GPIO16 since it cannot handle interrupts anyway
-
-//             ETS_GPIO_INTR_DISABLE();
-//             // GPIEC = ~0U;
-//             pollingTimer.run();
-//             interrupt_levels = pollingTimer.getStates();
-//             ETS_GPIO_INTR_ENABLE();
-//         }, nullptr);
-// #else
-// #endif
         ETS_GPIO_INTR_ATTACH(pin_monitor_interrupt_handler, nullptr);
         interrupt_levels = GPI;
         ETS_GPIO_INTR_ENABLE();
@@ -90,18 +114,10 @@ namespace PinMonitor {
         ETS_GPIO_INTR_DISABLE();
     }
 
-    void
-#if PIN_MONITOR_USE_POLLING == 0
-    ICACHE_RAM_ATTR
-#endif
-    pin_monitor_interrupt_handler(void *ptr)
+    void ICACHE_RAM_ATTR pin_monitor_interrupt_handler(void *ptr)
     {
-#if PIN_MONITOR_USE_POLLING
-        if (ptr != nullptr) {
-            return;
-        }
-#endif
         using namespace PinMonitor::Interrupt;
+
         uint32_t status32 = GPIE;
         GPIEC = status32;
         uint16_t status = static_cast<uint16_t>(status32);
@@ -110,32 +126,11 @@ namespace PinMonitor {
         }
         auto levels = static_cast<uint16_t>(GPI); // we skip GPIO16 since it cannot handle interrupts anyway
 
-        // noInterrupts();
         ETS_GPIO_INTR_DISABLE();
         for(const auto &pinPtr: pinMonitor.getPins()) {
             const auto pin = pinPtr.get();
             auto pinNum = pin->getPin();
             uint16_t mask = _BV(pinNum);
-
-            // __DBG_printf("pin=%u set=%u last=%u new=%u trigger=%u", pinNum, status & mask, interrupt_levels & mask, levels & mask, ((interrupt_levels ^ levels) & status & mask));
-
-            // if (!!((interrupt_levels ^ levels) & status & mask) != ((status & mask) && (static_cast<bool>(PinMonitor::interrupt_levels & mask) != static_cast<bool>(levels & mask)))) {
-            //     __DBG_panic("(!!((interrupt_levels ^ levels) & status & mask) != ((status & mask) && (static_cast<bool>(PinMonitor::interrupt_levels & mask) != static_cast<bool>(levels & mask))))");
-            // }
-
-            //     interrupts();
-            //     Serial.printf_P(PSTR("%u (%u%u%u-%u-%u-%u)"),
-            //         pinNum,
-            //         // BitsToStr<16, false>(mask).toString().c_str(),
-            //         !!(status & mask),
-            //         !!(PinMonitor::interrupt_levels & mask),
-            //         !!(levels & mask),
-            //         (status & mask) && (static_cast<bool>(PinMonitor::interrupt_levels & mask) != static_cast<bool>(levels & mask)),
-            //         !!(((interrupt_levels ^ levels ) & status) & mask)
-            //     );
-            //     Serial.println();
-            //     noInterrupts();
-            // }
 
             // if (!((status & mask) && (static_cast<bool>(PinMonitor::interrupt_levels & mask) != static_cast<bool>(levels & mask)))) {
             if (!((interrupt_levels ^ levels) & status & mask)) {
@@ -166,15 +161,7 @@ namespace PinMonitor {
                     break;
             }
         }
-
-        // for(auto pin: kPins) {
-        //     if ((status & PinAndMask(pin).mask) && (static_cast<bool>(PinMonitor::interrupt_levels & PinAndMask(pin).mask) != static_cast<bool>(levels &  PinAndMask(pin).mask))) { // 826 free IRAM
-        //     // if (status & PinAndMask(pin).mask) {
-        //         PinMonitor::eventBuffer.emplace_back(micros(), pin, levels);
-        //     }
-        // }
         PinMonitor::interrupt_levels = levels;
-        // interrupts();
         ETS_GPIO_INTR_ENABLE();
     }
 

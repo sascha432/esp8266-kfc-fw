@@ -159,8 +159,7 @@ constexpr uint32_t ttable[6][4] PROGMEM = {
 #define R_CCW_FINAL 0x5
 #define R_CCW_NEXT 0x6
 
-constexpr uint32_t ttable[7][4] PROGMEM = {
-// const uint8_t ttable[7][4] = {
+const uint8_t ttable_P[7][4] PROGMEM = {
   // R_START
   {R_START,    R_CW_BEGIN,  R_CCW_BEGIN, R_START},
   // R_CW_FINAL
@@ -187,6 +186,9 @@ void RotaryEncoder::processEvent(const Interrupt::Event &eventData)
         value |= 0b10;
     }
     uint8_t state = (_activeState == ActiveStateType::ACTIVE_LOW) ? value ^ 0b11 : value;
+
+    uint8_t ttable[7][4];
+    memcpy_P(ttable, ttable_P, sizeof(ttable));
 
     // __DBG_printf("rotary state=0b%u%u _state=0x%02x/%u -> 0x%02x", state&1, state>>1, _state&0xf, state, ttable[_state & 0xf][state]);
 

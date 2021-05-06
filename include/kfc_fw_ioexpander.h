@@ -145,5 +145,5 @@ void BlinkLEDTimer::_digitalWrite(uint8_t pin, uint8_t value) {
 
 inline  __attribute__((__always_inline__))
 void BlinkLEDTimer::_digitalWrite(uint8_t value) {
-    _digitalWrite(_pin, value);
+    ::_digitalWrite(_pin, value);
 }

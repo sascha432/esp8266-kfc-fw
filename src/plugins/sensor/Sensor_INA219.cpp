@@ -39,7 +39,7 @@ Sensor_INA219::Sensor_INA219(const String &name, TwoWire &wire, uint8_t address)
 
     __LDBG_printf("address=%x voltage_range=%x gain=%x shunt_ADC_res=%x", _address, IOT_SENSOR_INA219_BUS_URANGE, IOT_SENSOR_INA219_GAIN, IOT_SENSOR_INA219_SHUNT_ADC_RES);
 
-    setUpdateRate(IN219_WEBUI_UPDATE_RATE);
+    setUpdateRate(_config.webui_update_rate);
     LoopFunctions::add([this]() {
         this->_loop();
     }, this);
@@ -220,6 +220,10 @@ void Sensor_INA219::createConfigureForm(AsyncWebServerRequest *request, FormUI::
     form.addFormUI(F("Averaging Period"), FormUI::Suffix(F("seconds")));
     cfg.ina219.addRangeValidatorFor_averaging_period(form);
 
+    form.addObjectGetterSetter(F("ina219_wr"), cfg.ina219, cfg.ina219.get_bits_webui_update_rate, cfg.ina219.set_bits_webui_update_rate);
+    form.addFormUI(F("WebUI Update Rate"), FormUI::Suffix(F("seconds")));
+    cfg.ina219.addRangeValidatorFor_webui_update_rate(form);
+
     form.addObjectGetterSetter(F("ina219_hp"), cfg.ina219, cfg.ina219.get_bits_hold_peak_time, cfg.ina219.set_bits_hold_peak_time);
     form.addFormUI(F("Hold Peak Time"), FormUI::Suffix(F("seconds")));
     cfg.ina219.addRangeValidatorFor_hold_peak_time(form);
@@ -231,7 +235,7 @@ void Sensor_INA219::createConfigureForm(AsyncWebServerRequest *request, FormUI::
     form.addFormUI(F("Display Average Values"), FormUI::BoolItems());
 
     form.addObjectGetterSetter(F("ina219_dp"), cfg.ina219, cfg.ina219.get_bits_webui_peak, cfg.ina219.set_bits_webui_peak);
-    form.addFormUI(F("Display Average Values"), FormUI::BoolItems());
+    form.addFormUI(F("Display Peak Values"), FormUI::BoolItems());
 
     form.addObjectGetterSetter(F("ina219_up"), cfg.ina219, cfg.ina219.get_bits_webui_voltage_precision, cfg.ina219.set_bits_webui_voltage_precision);
     form.addFormUI(F("Voltage Display Precision"));
@@ -251,6 +255,7 @@ void Sensor_INA219::createConfigureForm(AsyncWebServerRequest *request, FormUI::
 void Sensor_INA219::reconfigure(PGM_P source)
 {
     _config = _readConfig();
+    setUpdateRate(_config.webui_update_rate);
     _updateTimer = 0;
     _holdPeakTimer = 0;
     _Ipeak = NAN;

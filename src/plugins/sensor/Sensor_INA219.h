@@ -42,12 +42,6 @@ using KFCConfigurationClasses::Plugins;
 #define IOT_SENSOR_INA219_READ_INTERVAL     68
 #endif
 
-// webui update rate in seconds
-#ifndef IN219_WEBUI_UPDATE_RATE
-#define IN219_WEBUI_UPDATE_RATE             2
-#endif
-
-
 #pragma push_macro("_U")
 #undef _U
 

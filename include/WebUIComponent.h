@@ -482,7 +482,7 @@ namespace WebUINS {
         // retrieve values and states from all components
         void addValues();
 
-        inline String toString() {
+        inline String &toString() {
             return _json.toString();
         }
 

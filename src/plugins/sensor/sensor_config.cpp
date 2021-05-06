@@ -46,6 +46,7 @@ namespace KFCConfigurationClasses {
         webui_voltage_precision(kDefaultValueFor_webui_voltage_precision),
         webui_current_precision(kDefaultValueFor_webui_current_precision),
         webui_power_precision(kDefaultValueFor_webui_power_precision),
+        webui_update_rate(kDefaultValueFor_webui_update_rate),
         averaging_period(kDefaultValueFor_averaging_period),
         hold_peak_time(kDefaultValueFor_hold_peak_time)
     {

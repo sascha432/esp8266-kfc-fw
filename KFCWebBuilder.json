@@ -26,7 +26,6 @@
             "#if 1": [
                 "./Resources/html/__prototypes.html",
                 "./Resources/html/__prototypes_webui.html",
-
                 "./lib/KFCWebBuilder/Resources/charts-js-2.9.3-dist/Chart.js",
                 "./lib/KFCWebBuilder/Resources/charts-js-2.9.3-dist/Chart.css",
                 "./Resources/js/charts/chartjs-plugin-dragdata.min.js"
@@ -134,6 +133,8 @@
                         "./lib/KFCWebBuilder/Resources/js/js.cookie.js",
                         "./lib/KFCWebBuilder/Resources/js/selectize.min.js",
                         "./lib/KFCWebBuilder/Resources/js/rangeslider.min.js",
+                        "./lib/KFCWebBuilder/Resources/bootstrap-colorpickersliders-master/dist/tinycolor-min.js",
+                        "./lib/KFCWebBuilder/Resources/bootstrap-colorpickersliders-master/dist/bootstrap.colorpickersliders.js",
                         //"./lib/KFCWebBuilder/Resources/js/mqtt.min.js",
                         "./lib/KFCWebBuilder/Resources/paho.mqtt.javascript/dist/mqttws31.js",
                         "./Resources/js/jQuery.base64.js",
@@ -187,6 +188,7 @@
                         "./lib/KFCWebBuilder/Resources/css/selectize.bootstrap4.css",
                         "./lib/KFCWebBuilder/Resources/css/open-iconic-bootstrap.css",
                         "./lib/KFCWebBuilder/Resources/css/rangeslider.css",
+                        "./lib/KFCWebBuilder/Resources/bootstrap-colorpickersliders-master/dist/bootstrap.colorpickersliders.css",
                         "./lib/KFCWebBuilder/Resources/css/math.css",
                         "./Resources/css/styles.css",
                         "./Resources/css/http2serial.css",

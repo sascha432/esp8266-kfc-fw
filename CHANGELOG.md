@@ -78,6 +78,8 @@
 - Replaced the JSON library with a more stable version that consumes less memory
 - Switched to LittleFS
 - Fixed missing information for SSDP
+- Replaced RGB Silder with Bootstrap Color Picker Sliders
+- Support for https://github.com/NimmLor/IoT-Audio-Visualization-Center
 
 ## Version 0.0.3
 

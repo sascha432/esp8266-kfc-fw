@@ -345,19 +345,6 @@ starting with fb-0=1.125 going up to fb-11=2.5rem */
     background-color: transparent;
 }
 
-/*
-.webuicomponent > .slider.rgb-slider .rangeslider--horizontal {
-    background-image: linear-gradient(to right,red, orange, yellow, green, blue, purple ) !important;
-} */
-
-.webuicomponent > .slider.rgb-slider .rangeslider__fill {
-    background-color: transparent;
-}
-
-.webuicomponent > .slider.rgb-slider .rangeslider--horizontal {
-    background: linear-gradient(to right, rgb(255, 0, 0), rgb(255, 125, 0),rgb(255, 255, 0), rgb(125, 255, 0), rgb(0, 255, 0), rgb(0, 255, 125), rgb(0, 255, 255),rgb(0, 125, 255), rgb(0, 0, 255) );
-}
-
 /* button-group */
 
 #btn_animation > div {

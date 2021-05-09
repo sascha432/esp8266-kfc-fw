@@ -72,56 +72,6 @@ $.webUIComponent = {
     queue_end_slider_default_timeout: 500,
     retry_time: 500,
 
-    // .webuicomponent > .slider.rgb-slider .rangeslider--horizontal
-    rgb_slider_colors: [ [255, 0, 0], [255, 125, 0], [255, 255, 0], [125, 255, 0], [0, 255, 0], [0, 255, 125], [0, 255, 255], [0, 125, 255], [0, 0, 255] ],
-    //
-    // convert slider value to RGB
-    // the slider must have min="0" and max="16777215"
-    //
-    get_rgb_color: function(value) {
-        function mix(from, to, frac) {
-            return parseInt((to - from) * frac + from);
-        }
-        var offset = (this.rgb_slider_colors.length - 1) * (value / 16777216);
-        var index = Math.min(Math.floor(offset), this.rgb_slider_colors.length - 2);
-        var next = this.rgb_slider_colors[index + 1];
-        var current = this.rgb_slider_colors[index];
-        offset -= index;
-        var r = mix(current[0], next[0], offset);
-        var g = mix(current[1], next[1], offset);
-        var b = mix(current[2], next[2], offset);
-
-        // var val2 = (r << 16) | (g << 8) | b;
-        // console.log(value, val2, this.get_value_from_color(val2));
-        // this.get_value_from_color(val2);
-
-        return (r << 16) | (g << 8) | b;
-    },
-    //
-    // convert RGB to slider value
-    get_value_from_color: function(value) {
-        var r = value >> 16;
-        var g = (value >> 8) & 0xff;
-        var b = value & 0xff;
-        var start = null;
-        var end = null;
-        for(var i = 0; i < this.rgb_slider_colors.length - 1; i++) {
-            var current = this.rgb_slider_colors[i];
-            var next = this.rgb_slider_colors[i + 1];
-            if (start === null && r >= current[0] && g >= current[1] && b >= current[2]) {
-                start = i;
-            }
-            if (r <= next[0] && g <= next[1] && b <= next[2]) {
-                if (start !== null && i > start) {
-                    end = i;
-                    break;
-                }
-            }
-    }
-        // console.log('#', r, g, b, 'index', start, end);
-        return 0;
-    },
-
     create_slider_gradient: function(min, max, rmin, rmax) {
         min = parseFloat(min);
         max = parseFloat(max);
@@ -144,7 +94,6 @@ $.webUIComponent = {
         grad += ' 100%';
         return grad + ')';
     },
-
     //
     // get prototype and replace variables
     //
@@ -607,26 +556,22 @@ $.webUIComponent = {
     },
     add_element_slider: function(options) {
         this.components[options.id] = {type: 'slider'};
-        if (options.color == 'rgb') {
-            var self = this;
-            this.components[options.id].converter = {
-                from: function(value) {
-                    console.log("converter from "+value);
-                    return value;
-                },
-                to: function(value) {
-                    value = self.get_rgb_color(value);
-                    // r = value >> 16;
-                    // g = (value >> 8) & 0xff;
-                    // b = value & 0xff;
-                    // $('#webui > div:nth-child(1) > div > div > div > div> div> div').css('background-color', 'rgb('+r+','+g+','+b+')');
-                    return value;
-                }
-            };
-        }
         var prototype = $(this.get_prototype('webui-slider', options));
         var range = prototype.find('.attribute-target');
         this.add_attributes(range, options);
+
+        if (options.color == 'rgb') {
+            range.append('<div class="rgb-slider-div"></div');
+            range.find('.rgb-slider-div').ColorPickerSliders({
+                // color: "rgb(36, 170, 242)",
+                connectedinput: range.find('input'),
+                flat: true,
+                order: {
+                    hsl: 1,
+                    preview: 3
+                }
+            });
+        }
         return prototype;
     },
     add_element_screen: function(options) {

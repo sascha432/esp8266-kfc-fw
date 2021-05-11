@@ -370,7 +370,10 @@ $.webUIComponent = {
     // restore update_lock status
     // use_queue = false will not lock or update the queue
     //
-    queue_update_element: function(id, element, value, state, use_queue = true) {
+    queue_update_element: function(id, element, value, state, use_queue) {
+        if (arguments.length < 5) {
+            use_queue = true;
+        }
         // use publish queue or create dummy object
         var component = this.components[id];
         var webui_component = element.closest('.webuicomponent');

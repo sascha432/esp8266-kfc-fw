@@ -205,7 +205,7 @@ namespace WebUINS {
     class Sensor : public Component {
     public:
         template<typename _Ta, typename _Tb, typename _Tc>
-        Sensor(_Ta id, _Tb title, _Tc unit, SensorRenderType render = SensorRenderType::ROW, bool binary = false) :
+        Sensor(_Ta id, _Tb title, _Tc unit, SensorRenderType render = SensorRenderType::ROW, bool binary = false, uint8_t colspan = 0) :
             Component(
                 NamedString(J(type), binary ? J(binary_sensor) : J(sensor)),
                 Component::createNamedString(J(id), id),
@@ -214,23 +214,29 @@ namespace WebUINS {
             )
         {
             append(render);
+            colspan = colspanToColumns(colspan);
+            if (colspan) {
+                append(NamedUint32(J(columns), colspan));
+            }
         }
     };
 
     class BadgeSensor : public Sensor {
     public:
         template<typename _Ta, typename _Tb, typename _Tc>
-        BadgeSensor(_Ta id, _Tb title, _Tc unit) :
-            Sensor(id, title, unit, SensorRenderType::BADGE)
-        {}
+        BadgeSensor(_Ta id, _Tb title, _Tc unit, uint8_t colspan = 0) :
+            Sensor(id, title, unit, SensorRenderType::BADGE, colspan)
+        {
+        }
     };
 
     class BinarySensor : public Sensor {
     public:
         template<typename _Ta, typename _Tb, typename _Tc>
-        BinarySensor(_Ta id, _Tb title, _Tc unit, SensorRenderType render = SensorRenderType::ROW) :
-            Sensor(id, title, unit, render, true)
-        {}
+        BinarySensor(_Ta id, _Tb title, _Tc unit, SensorRenderType render = SensorRenderType::ROW, uint8_t colspan = 0) :
+            Sensor(id, title, unit, render, true, colspan)
+        {
+        }
     };
 
     class Group : public Component {
@@ -371,7 +377,7 @@ namespace WebUINS {
     class ButtonGroup : public Component {
     public:
         template<typename _Ta, typename _Tb, typename _Tc>
-        ButtonGroup(_Ta id, _Tb title, _Tc buttons, uint8_t colspan = 0) :
+        ButtonGroup(_Ta id, _Tb title, _Tc buttons, uint8_t itemsPerRow = 0, uint8_t colspan = 0) :
             Component(
                 NamedString(J(type), J(button_group)),
                 Component::createNamedString(J(id), id),
@@ -379,6 +385,9 @@ namespace WebUINS {
                 Component::createNamedString(J(items), buttons)
             )
         {
+            if (itemsPerRow) {
+                append(NamedUint32(J(row), itemsPerRow));
+            }
             colspan = colspanToColumns(colspan);
             if (colspan) {
                 append(NamedUint32(J(columns), colspan));
@@ -389,7 +398,7 @@ namespace WebUINS {
     class Listbox : public Component {
     public:
         template<typename _Ta, typename _Tb, typename _Tc>
-        Listbox(_Ta id, _Tb title, _Tc items, bool selectMultiple = false, uint8_t colspan = 0) :
+        Listbox(_Ta id, _Tb title, _Tc items, bool selectMultiple = false, uint32_t size = 0, uint8_t colspan = 0) :
             Component(
                 NamedString(J(type), J(listbox)),
                 Component::createNamedString(J(id), id),
@@ -399,6 +408,9 @@ namespace WebUINS {
         {
             if (selectMultiple)   {
                 append(NamedBool(J(multi), true));
+            }
+            if (size) {
+                append(NamedUint32(J(row), size));
             }
             colspan = colspanToColumns(colspan);
             if (colspan) {

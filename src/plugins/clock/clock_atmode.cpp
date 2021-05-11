@@ -307,7 +307,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKT))) {
         _tempOverride = args.toIntMinMax<uint8_t>(0, kMinimumTemperatureThreshold, 255, 0);
         if (_tempOverride) {
-            args.printf_P(PSTR("temperature override %u°C"), _tempOverride);
+            args.printf_P(PSTR("temperature override %u%s"), _tempOverride, SPGM(UTF8_degreeC));
         }
         else {
             args.print(F("temperature override disabled"));

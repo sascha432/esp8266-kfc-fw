@@ -359,13 +359,13 @@ void ClockPlugin::_setupTimer()
                 if (tempSensor > _config.protection.max_temperature) {
 
                     PrintString str;
-                    PrintString str2 = F("OVERHEATED ");
+                    PrintString str2 = F("<span style=\"font-size:1.65rem\">OVERHEATED<br>");
 
                     for(auto sensor: SensorPlugin::getInstance().getSensors()) {
                         if (sensor->getType() == MQTT::SensorType::LM75A) {
                             auto &lm75a = *reinterpret_cast<Sensor_LM75A *>(sensor);
-                            str.printf_P(PSTR("%s %.2f%s"), lm75a.getSensorName().c_str(), lm75a.readSensor(), SPGM(UTF8_degreeC));
-                            str2.printf_P(PSTR(".1f%s"), lm75a.readSensor(), SPGM(UTF8_degreeC));
+                            str.printf_P(PSTR("%s %.2f%s "), lm75a.getSensorName().c_str(), lm75a.readSensor(), SPGM(UTF8_degreeC));
+                            str2.printf_P(PSTR("%.1f%s"), lm75a.readSensor(), SPGM(UTF8_degreeC));
                         }
                     }
                     _overheatedInfo = std::move(str2);
@@ -376,6 +376,14 @@ void ClockPlugin::_setupTimer()
                     _setBrightness(0);
                     enableLoop(false);
                     _tempBrightness = -1.0;
+#if IOT_CLOCK_HAVE_OVERHEATED_PIN
+                    _digitalWrite(IOT_CLOCK_HAVE_OVERHEATED_PIN, LOW);
+                    IF_IOT_LED_MATRIX_STANDBY_PIN(
+                        _digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(false));
+                    )
+#endif
+
+                    Logger_error(message);
                     WebAlerts::Alert::error(message);
                     _schedulePublishState = true;
                 }
@@ -827,7 +835,7 @@ void ClockPlugin::_setColor(uint32_t color, bool updateAnimation)
         _config.solid_color = __color;
     }
 #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
-    if (_config.getAnimation() == AnimationType::VISUALIZER) {
+    else if (_config.getAnimation() == AnimationType::VISUALIZER) {
         _config.visualizer._color = __color;
     }
 #endif
@@ -858,6 +866,10 @@ void ClockPlugin::readConfig()
 
     // reset temperature protection
     _tempBrightness = 1.0;
+#if IOT_CLOCK_HAVE_OVERHEATED_PIN
+    _digitalWrite(IOT_CLOCK_HAVE_OVERHEATED_PIN, HIGH);
+#endif
+
     _setColor(_config.solid_color.value);
 #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
     _autoBrightness = _config.auto_brightness;

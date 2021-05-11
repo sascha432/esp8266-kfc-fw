@@ -1517,7 +1517,7 @@ void KFCConfigurationPlugin::setup(SetupModeType mode, const PluginComponents::D
     }
 #else
     if (RTCMemoryManager::readTime() != 0) {
-        __DBG_printf("restord system time=%u from RTC memory readTime=%u @ %.3fs", (uint32_t)time(nullptr), RTCMemoryManager::readTime(false), micros() / 1000000.0);
+        __DBG_printf("restored system time=%u from RTC memory readTime=%u @ %.3fs", (uint32_t)time(nullptr), RTCMemoryManager::readTime(false), micros() / 1000000.0);
     }
 #endif
 

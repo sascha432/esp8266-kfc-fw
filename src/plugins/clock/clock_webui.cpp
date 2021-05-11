@@ -256,8 +256,9 @@ void ClockPlugin::_broadcastWebUI()
 void ClockPlugin::_webUIUpdateColor(int color)
 {
     if (WebUISocket::hasAuthenticatedClients()) {
+        auto colorStr = Color(color == -1 ? _getColor() : color).toString();
         WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(WebUINS::Events(
-            WebUINS::Values(F("color"), Color(color == -1 ? _getColor() : color).toString(), _getEnabledState() && _config.hasColorSupport())
+            WebUINS::Values(F("color"), colorStr, _getEnabledState() && _config.hasColorSupport())
         )));
     }
 }

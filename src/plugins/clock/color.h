@@ -144,6 +144,11 @@ namespace Clock {
         return _value != 0;
     }
 
+    inline Color::operator int() const
+    {
+        return _value;
+    }
+
     inline Color::operator uint32_t() const
     {
         return _value;

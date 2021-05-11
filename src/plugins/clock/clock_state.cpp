@@ -30,12 +30,9 @@ void ClockPlugin::_saveStateDelayed()
 
 void ClockPlugin::_saveState()
 {
-    if (_targetBrightness == 0 && _savedBrightness) {
-        _config.setBrightness(_savedBrightness);
-    }
     auto state = _getState();
-    __LDBG_printf("target_brighness=%u _config.enabled=%u is_enabled=%u", _targetBrightness, _config.enabled, _isEnabled);
-    auto newState = StoredState(_config, _config.getBrightness());
+    auto newState = StoredState(_config, (_isEnabled && _targetBrightness), (_targetBrightness == 0 && _savedBrightness) ? _savedBrightness : _targetBrightness);
+    __LDBG_printf("save brightness=%u enabled=%u", newState.getConfig().getBrightness(), newState.getConfig().enabled);
     if (state != newState) {
         auto file = KFCFS.open(FSPGM(iot_clock_save_state_file, "/.pvt/device.state"), fs::FileOpenMode::write);
         if (file) {
@@ -70,7 +67,7 @@ ClockPlugin::StoredState ClockPlugin::_getState() const
         if (state.hasValidData()) {
 #if DEBUG_IOT_CLOCK
             auto &cfg = state.getConfig();
-            __LDBG_printf("loaded state eanbled=%u brightness=%u animation=%u solid_color=%s blink_colon=%u", cfg.enabled, cfg.getBrightness(), cfg.getAnimation(), Color(cfg.solid_color).toString().c_str(), IF_IOT_CLOCK(cfg.blink_colon_speed) IF_IOT_LED_MATRIX(0));
+            __LDBG_printf("loaded state enabled=%u brightness=%u animation=%u solid_color=%s blink_colon=%u", cfg.enabled, cfg.getBrightness(), cfg.getAnimation(), Color(cfg.solid_color).toString().c_str(), IF_IOT_CLOCK(cfg.blink_colon_speed) IF_IOT_LED_MATRIX(0));
 #endif
             return state;
         }

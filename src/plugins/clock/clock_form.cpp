@@ -5,7 +5,7 @@
 #include <Arduino_compat.h>
 #include "clock.h"
 #include <KFCForms.h>
-#include "./plugins/sensor/sensor.h"
+#include "../src/plugins/sensor/sensor.h"
 
 #if DEBUG_IOT_CLOCK
 #include <debug_helper_enable.h>
@@ -29,6 +29,7 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         AnimationType::FIRE, F("Fire"),
         AnimationType::FLASHING, F("Flash"),
         AnimationType::FADING, F("Color Fade"),
+        AnimationType::VISUALIZER, F("Visualizer"),
         AnimationType::INTERLEAVED, F("Interleaved")
     );
 
@@ -284,6 +285,12 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
             form.addObjectGetterSetter(F("is"), cfg, cfg.get_int_initial_state, cfg.set_int_initial_state);
             form.addFormUI(F("After Reset"), initialStateItems);
         )
+
+        #if IOT_CLOCK_HAVE_MOTION_SENSOR
+            form.addObjectGetterSetter(F("ao"), cfg, cfg.get_bits_motion_auto_off, cfg.set_bits_motion_auto_off);
+            form.addFormUI(F("Auto Off Delay For Motion Sensor"), FormUI::Suffix(F("minutes")), FormUI::IntAttribute(F("disabled-value"), 0));
+            cfg.addRangeValidatorFor_motion_auto_off(form);
+        #endif
 
         form.addObjectGetterSetter(F("br"), cfg, cfg.get_bits_brightness, cfg.set_bits_brightness);
         form.addFormUI(FormUI::Type::RANGE_SLIDER, FSPGM(Brightness), FormUI::MinMax(cfg.kMinValueFor_brightness, cfg.kMaxValueFor_brightness));

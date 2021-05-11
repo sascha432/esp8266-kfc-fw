@@ -111,6 +111,8 @@ Clock::LoopOptionsBase::LoopOptionsBase(ClockPlugin &plugin) :
         plugin._setBrightness(plugin._targetBrightness);
         plugin._isFading = false;
         _doRefresh = true;
+        // update mqtt and webui
+        plugin._publishState();
     }
 }
 
@@ -258,7 +260,7 @@ float ClockPlugin::_getFadingBrightness() const
 
 ClockPlugin::AnimationType ClockPlugin::_getAnimationType(String name)
 {
-    String list = Clock::Config_t::getAnimationNames();
+    String list = Clock::ConfigType::getAnimationNames();
     list.toLowerCase();
     name.toLowerCase();
     uint32_t animation = stringlist_find_P_P(list.c_str(), name.c_str(), ',');
@@ -271,6 +273,12 @@ ClockPlugin::AnimationType ClockPlugin::_getAnimationType(String name)
 void ClockPlugin::_setupTimer()
 {
     _Timer(_timer).add(Event::seconds(1), true, [this](Event::CallbackTimerPtr timer) {
+
+        if (_isEnabled && _motionLastUpdate && _config.motion_auto_off && get_time_diff(_motionLastUpdate, millis()) > (_config.motion_auto_off * 60000U)) {
+            _motionLastUpdate = 0;
+            setBrightness(0);
+            Logger_notice(F("No motion detected. Turning device off..."));
+        }
 
         _timerCounter++;
 
@@ -289,11 +297,11 @@ void ClockPlugin::_setupTimer()
 
                 _motionState = state;
                 if (_motionState) {
-                    // __LDBG_printf("motion detected: last update %u ms ago", _motionLastUpdate ? millis() - _motionLastUpdate : 0);
-                    // if (_motionLastUpdate) {
-                    //     auto diff = get_time_diff(_motionLastUpdate, millis());
-                    // }
+                    __LDBG_printf("motion detected: last=%.3fs auto_off=%us", _motionLastUpdate ? (millis() - _motionLastUpdate) / 1000.0 : 0.0,  (_config.motion_auto_off * 60));
                     _motionLastUpdate = millis();
+                    if (_motionLastUpdate == 0) {
+                        _motionLastUpdate++;
+                    }
                 }
             }
         )
@@ -324,35 +332,47 @@ void ClockPlugin::_setupTimer()
 
         // temperature protection
         if (_timerCounter % kCheckTemperatureInterval == 0) {
-            float tempSensor;
+            float tempSensor = 0;
+            for(auto sensor: SensorPlugin::getInstance().getSensors()) {
+                if (sensor->getType() == MQTT::SensorType::LM75A) {
+                    auto &lm75a = *reinterpret_cast<Sensor_LM75A *>(sensor);
+                    tempSensor = max(tempSensor, lm75a.readSensor() - (lm75a.getAddress() == IOT_CLOCK_VOLTAGE_REGULATOR_LM75A_ADDRESS ? _config.protection.regulator_margin : 0));
+                }
+            }
             if (_tempOverride) {
                 tempSensor = _tempOverride;
-            }
-            else {
-                tempSensor = 0;
-                for(auto sensor: SensorPlugin::getInstance().getSensors()) {
-                    if (sensor->getType() == MQTT::SensorType::LM75A) {
-                        auto &lm75a = *reinterpret_cast<Sensor_LM75A *>(sensor);
-                        tempSensor = max(tempSensor, lm75a.readSensor() - (lm75a.getAddress() == IOT_CLOCK_VOLTAGE_REGULATOR_LM75A_ADDRESS ? _config.protection.regulator_margin : 0));
-                    }
-                }
             }
 
             if (tempSensor) {
 
-                #if DEBUG_IOT_CLOCK
-                    if (_timerCounter % 60 == 0) {
-                        __LDBG_printf("temp=%.1f prot=%u range=%u-%u max=%u", tempSensor, isTempProtectionActive(), _config.protection.temperature_reduce_range.min, _config.protection.temperature_reduce_range.max, _config.protection.max_temperature);
-                        __LDBG_printf("reduce=%u val=%f br=%f", _config.protection.temperature_reduce_range.max - _config.protection.temperature_reduce_range.min, _config.protection.temperature_reduce_range.min - tempSensor, std::clamp<float>(1.0 - ((tempSensor - _config.protection.temperature_reduce_range.min) * 0.75 / (float)(_config.protection.temperature_reduce_range.max - _config.protection.temperature_reduce_range.min)), 0.25, 1.0));
-                    }
-                #endif
+                // #if DEBUG_IOT_CLOCK
+                //     if (_timerCounter % 60 == 0) {
+                //         __LDBG_printf("temp=%.1f prot=%u range=%u-%u max=%u", tempSensor, isTempProtectionActive(), _config.protection.temperature_reduce_range.min, _config.protection.temperature_reduce_range.max, _config.protection.max_temperature);
+                //         __LDBG_printf("reduce=%u val=%f br=%f", _config.protection.temperature_reduce_range.max - _config.protection.temperature_reduce_range.min, _config.protection.temperature_reduce_range.min - tempSensor, std::clamp<float>(1.0 - ((tempSensor - _config.protection.temperature_reduce_range.min) * 0.75 / (float)(_config.protection.temperature_reduce_range.max - _config.protection.temperature_reduce_range.min)), 0.25, 1.0));
+                //     }
+                // #endif
 
                 if (isTempProtectionActive()) {
                     return;
                 }
 
                 if (tempSensor > _config.protection.max_temperature) {
-                    auto message = PrintString(F("Over temperature protection activated: %.1f&deg;C &gt; %u&deg;C"), tempSensor, _config.protection.max_temperature);
+
+                    PrintString str;
+                    PrintString str2 = F("OVERHEATED ");
+
+                    for(auto sensor: SensorPlugin::getInstance().getSensors()) {
+                        if (sensor->getType() == MQTT::SensorType::LM75A) {
+                            auto &lm75a = *reinterpret_cast<Sensor_LM75A *>(sensor);
+                            str.printf_P(PSTR("%s %.2f%s"), lm75a.getSensorName().c_str(), lm75a.readSensor(), SPGM(UTF8_degreeC));
+                            str2.printf_P(PSTR(".1f%s"), lm75a.readSensor(), SPGM(UTF8_degreeC));
+                        }
+                    }
+                    _overheatedInfo = std::move(str2);
+
+                    auto message = PrintString(F("Over temperature protection activated: %.1f%s &gt; %u%s"), tempSensor, SPGM(UTF8_degreeC), _config.protection.max_temperature, SPGM(UTF8_degreeC));
+                    message += F("<br>");
+                    message += str;
                     _setBrightness(0);
                     enableLoop(false);
                     _tempBrightness = -1.0;
@@ -409,6 +429,16 @@ void ClockPlugin::preSetup(SetupModeType mode)
 
 void ClockPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
+    IF_IOT_CLOCK_HAVE_ENABLE_PIN(
+        digitalWrite(IOT_CLOCK_EN_PIN, enablePinState(false));
+        pinMode(IOT_CLOCK_EN_PIN, OUTPUT);
+    )
+
+    IF_IOT_LED_MATRIX_STANDBY_PIN(
+        _digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(false));
+        _pinMode(IOT_LED_MATRIX_STANDBY_PIN, OUTPUT);
+    )
+
     _disable(10);
 
     IF_IOT_CLOCK_DISPLAY_POWER_CONSUMPTION(
@@ -417,15 +447,6 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
 
     readConfig();
     _targetBrightness = 0;
-
-    IF_IOT_CLOCK_HAVE_ENABLE_PIN(
-        pinMode(IOT_CLOCK_EN_PIN, OUTPUT);
-    )
-
-    IF_IOT_LED_MATRIX_STANDBY_PIN(
-        _digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(false));
-        _pinMode(IOT_LED_MATRIX_STANDBY_PIN, OUTPUT);
-    )
 
     IF_IOT_CLOCK(
         // _setSevenSegmentDisplay();
@@ -518,6 +539,7 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
     )
 
     _setupTimer();
+
 }
 
 void ClockPlugin::reconfigure(const String &source)
@@ -606,6 +628,9 @@ void ClockPlugin::shutdown()
 
     // turn all LEDs off
     _disable(10);
+
+    delete _animation;
+    delete _blendAnimation;
 }
 
 void ClockPlugin::getStatus(Print &output)
@@ -780,6 +805,11 @@ void ClockPlugin::setAnimation(AnimationType animation, uint16_t blendTime)
         case  AnimationType::INTERLEAVED:
             _setAnimation(new Clock::InterleavedAnimation(*this, _getColor(), _config.interleaved.rows, _config.interleaved.cols, _config.interleaved.time));
             break;
+#if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
+        case  AnimationType::VISUALIZER:
+            _setAnimation(new Clock::VisualizerAnimation(*this, _config.visualizer));
+            break;
+#endif
         case AnimationType::SOLID:
         default:
             _config.animation = static_cast<uint8_t>(AnimationType::SOLID);
@@ -796,6 +826,11 @@ void ClockPlugin::_setColor(uint32_t color, bool updateAnimation)
     if (_config.getAnimation() == AnimationType::SOLID) {
         _config.solid_color = __color;
     }
+#if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
+    if (_config.getAnimation() == AnimationType::VISUALIZER) {
+        _config.visualizer._color = __color;
+    }
+#endif
     if (updateAnimation && _animation) {
         _animation->setColor(__color);
     }
@@ -827,11 +862,11 @@ void ClockPlugin::readConfig()
 #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
     _autoBrightness = _config.auto_brightness;
 #endif
-    _setBrightness(_config.getBrightness());
+    _setBrightness(_config.getBrightness(), false);
     setAnimation(static_cast<AnimationType>(_config.animation));
 }
 
-Clock::Config_t &ClockPlugin::getWriteableConfig()
+Clock::ConfigType &ClockPlugin::getWriteableConfig()
 {
     auto &cfg = Plugins::Clock::getWriteableConfig();
     cfg = _config;
@@ -904,7 +939,7 @@ void ClockPlugin::_installWebHandlers()
 
 #endif
 
-void ClockPlugin::_setBrightness(uint8_t brightness)
+void ClockPlugin::_setBrightness(uint8_t brightness, bool useEnable)
 {
     if (isTempProtectionActive()) {
         __LDBG_printf("temperature protection active");
@@ -912,11 +947,13 @@ void ClockPlugin::_setBrightness(uint8_t brightness)
         return;
     }
     __LDBG_printf("brightness=%u fading=%u", brightness, _isFading);
-    if (brightness) {
-        _enable();
-    }
-    else {
-        _disable();
+    if (useEnable) {
+        if (brightness) {
+            _enable();
+        }
+        else {
+            _disable();
+        }
     }
     _updateBrightnessSettings();
     _targetBrightness = brightness;

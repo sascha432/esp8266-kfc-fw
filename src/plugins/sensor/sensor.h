@@ -137,6 +137,7 @@ public:
     static SensorPlugin &getInstance();
 
     // the callback is invoked before a sensor is added
+    // before the title row, the first Sensor is SensorType::MIN
     // the last type is SensorType::MAX for appending a new sensor at the end
     void setAddCustomSensorsCallback(AddCustomSensorCallback callback) {
         _addCustomSensors = callback;

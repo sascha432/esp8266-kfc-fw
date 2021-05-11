@@ -6,6 +6,7 @@
 #include <EventScheduler.h>
 #include <ReadADC.h>
 #include "clock.h"
+#include "stl_ext/algorithm.h"
 
 #if DEBUG_IOT_CLOCK
 #include <debug_helper_enable.h>
@@ -68,7 +69,7 @@ bool ClockPlugin::_loopSyncingAnimation(LoopOptionsType &options)
 //                 }
 //                 for(uint8_t i = 0; i < _display->numDigits(); i++) {
 //                     _display->rotate(i, _isSyncing - 1, _color, nullptr, 0);
-//                 }
+//
 //             }
 // #endif
 //             _display.show();

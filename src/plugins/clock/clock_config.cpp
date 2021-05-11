@@ -17,7 +17,7 @@ namespace KFCConfigurationClasses {
 
     Plugins::ClockConfig::RainbowMultiplier_t::RainbowMultiplier_t() :
         value(1.23),
-        min(0.1),
+        min(2.5),
         max(11.0),
         incr(0.00326)
     {}
@@ -47,7 +47,7 @@ namespace KFCConfigurationClasses {
     {}
 
     Plugins::ClockConfig::ClockConfig_t::ClockConfig_t() :
-        solid_color(0x440044),
+        solid_color(0xff00ff),
         animation(cast_int_animation(AnimationType::SOLID)),
 #if IOT_LED_MATRIX
         initial_state(cast_int_initial_state(InitialStateType::RESTORE)),
@@ -68,6 +68,7 @@ namespace KFCConfigurationClasses {
         blink_colon_speed(kDefaultValueFor_blink_colon_speed),
 #endif
         flashing_speed(kDefaultValueFor_flashing_speed),
+        motion_auto_off(kDefaultValueFor_motion_auto_off),
         power({static_cast<uint16_t>(79.7617 * kPowerNumLeds), static_cast<uint16_t>(79.9648 * kPowerNumLeds), static_cast<uint16_t>(79.6055 * kPowerNumLeds), static_cast<uint16_t>(4.0586 * kPowerNumLeds)}),
         protection( { { 45, 60 }, 70, 25 } ),
         rainbow{ RainbowMultiplier_t(), RainbowColor_t(), 30 },
@@ -93,6 +94,9 @@ namespace KFCConfigurationClasses {
             "Flash," \
             "Color Fade,"
             "Fire," \
+            IF_IOT_LED_MATRIX_VIS(
+                "Visualizer," \
+            ) \
             "Interleaved"
         );
     }
@@ -103,12 +107,16 @@ namespace KFCConfigurationClasses {
             "\042Solid\042," \
             "\042Rainbow\042," \
             "\042Flash\042," \
-            "\042Color Fade\042,"
+            "\042Color Fade\042," \
+            IF_IOT_LED_MATRIX_VIS(
+                "\042Visualizer\042," \
+            ) \
             "\042Fire\042," \
-            "\042Interleaved\042" IF_IOT_CLOCK(
-            ",\042Colon: Solid\042," \
-            "\042Colon: Blink Slowly\042," \
-            "\042Colon: Blink Fast\042") \
+            "\042Interleaved\042" \
+            IF_IOT_CLOCK(
+                ",\042Colon: Solid\042," \
+                "\042Colon: Blink Slowly\042," \
+                "\042Colon: Blink Fast\042") \
             "]");
     }
 
@@ -122,6 +130,10 @@ namespace KFCConfigurationClasses {
                 return F("Color Fade");
             case AnimationType::FIRE:
                 return F("Fire");
+        IF_IOT_LED_MATRIX_VIS(
+            case AnimationType::VISUALIZER:
+                return F("Visualizer");
+        )
             case AnimationType::INTERLEAVED:
                 return F("Interleaved");
 #if !IOT_LED_MATRIX

@@ -203,6 +203,9 @@ void SensorPlugin::createMenu()
 
 void SensorPlugin::createWebUI(WebUINS::Root &webUI)
 {
+    if (_addCustomSensors) {
+        _addCustomSensors(webUI, SensorType::MIN);
+    }
     if (_count()) {
         webUI.addRow(WebUINS::Row(WebUINS::Group(F("Sensors"), false)));
     }

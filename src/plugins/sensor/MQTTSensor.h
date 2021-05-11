@@ -27,6 +27,7 @@
 namespace MQTT {
 
     enum class SensorType : uint8_t {
+        MIN = 0,
         UNKNOWN = 0,
         LM75A,
         BME280,

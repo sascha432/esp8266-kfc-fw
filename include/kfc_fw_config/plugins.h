@@ -1080,7 +1080,7 @@ namespace KFCConfigurationClasses {
             typedef struct __attribute__packed__ RainbowColor_t {
                 ClockColor_t min;
                 ClockColor_t factor;
-                float red_incr;
+                float  red_incr;
                 float green_incr;
                 float blue_incr;
                 RainbowColor_t();
@@ -1111,6 +1111,20 @@ namespace KFCConfigurationClasses {
 
             } FireAnimation_t;
 
+            typedef struct __attribute__packed__ VisualizerAnimation_t {
+                using Type = VisualizerAnimation_t;
+                uint16_t _port;
+                uint8_t _lines;
+                ClockColor_t _color;
+
+                VisualizerAnimation_t() :
+                    _port(4210),
+                    _lines(32),
+                    _color(0)
+                {
+                }
+            } VisualizerAnimation_t;
+
             typedef struct __attribute__packed__ ClockConfig_t {
                 using Type = ClockConfig_t;
 
@@ -1121,6 +1135,9 @@ namespace KFCConfigurationClasses {
                     FLASHING,
                     FADING,
                     FIRE,
+#if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
+                    VISUALIZER,
+#endif
                     INTERLEAVED,
 #if !IOT_LED_MATRIX
                     COLON_SOLID,
@@ -1159,6 +1176,7 @@ namespace KFCConfigurationClasses {
                 CREATE_UINT32_BITFIELD_MIN_MAX(blink_colon_speed, 13, 50, 8000, 1000, 100)
 #endif
                 CREATE_UINT32_BITFIELD_MIN_MAX(flashing_speed, 13, 50, 8000, 150, 100)
+                CREATE_UINT32_BITFIELD_MIN_MAX(motion_auto_off, 10, 0, 1000, 0, 1)
 
                 static const uint16_t kPowerNumLeds = 256;
 
@@ -1201,6 +1219,10 @@ namespace KFCConfigurationClasses {
 
                 FireAnimation_t fire;
 
+#if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
+                VisualizerAnimation_t visualizer;
+#endif
+
                 struct __attribute__packed__ {
                     uint8_t rows;
                     uint8_t cols;
@@ -1228,6 +1250,19 @@ namespace KFCConfigurationClasses {
                 }
                 void setAnimation(AnimationType animation) {
                     set_enum_animation(*this, animation);
+                }
+                bool hasColorSupport() const {
+                    switch(getAnimation()) {
+                        case AnimationType::FADING:
+                        case AnimationType::SOLID:
+                        case AnimationType::FLASHING:
+                        case AnimationType::INTERLEAVED:
+                        case AnimationType::VISUALIZER:
+                            return true;
+                        default:
+                            break;
+                    }
+                    return false;
                 }
 
                 InitialStateType getInitialState() const {

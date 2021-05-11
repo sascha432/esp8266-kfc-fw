@@ -183,13 +183,7 @@ public:
 #endif
 
     constexpr static uint8_t enablePinState(bool active) {
-        return (active ?
-#if IOT_CLOCK_EN_PIN_INVERTED
-                       LOW : HIGH
-#else
-                       HIGH : LOW
-#endif
-        );
+        return IF_IOT_CLOCK_EN_PIN_INVERTED(active ? LOW : HIGH, active ? HIGH : LOW);
     }
 
     enum class DisplaySensorType : uint8_t {
@@ -259,9 +253,11 @@ public:
 // ------------------------------------------------------------------------
 
 public:
-    virtual void createWebUI(WebUINS::Root &webUI) override;
+    virtual void createWebUI(WebUINS::Root &webUI) override {}
     virtual void getValues(WebUINS::Events &array) override;
     virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) override;
+
+    void _createWebUI(WebUINS::Root &webUI);
 
 // ------------------------------------------------------------------------
 // MQTT
@@ -303,18 +299,16 @@ public:
     // read defaults and copy to local storage
     void readConfig();
     // get stored configuration and update it with local storage
-    Clock::Config_t &getWriteableConfig();
+    Clock::ConfigType &getWriteableConfig();
 
 // ------------------------------------------------------------------------
 // Motion sensor
 // ------------------------------------------------------------------------
 #if IOT_CLOCK_HAVE_MOTION_SENSOR
 
-
 private:
     uint8_t _motionState{0xff};
     uint32_t _motionLastUpdate{0};
-
 
 #endif
 
@@ -330,6 +324,7 @@ public:
     static void webSocketCallback(WsClient::ClientCallbackType type, WsClient *client, AsyncWebSocket *server, WsClient::ClientCallbackId id);
 
 private:
+    String _getPowerLevelStr();
     void _updatePowerLevelWebUI();
     uint8_t _calcPowerFunction(uint8_t scale, uint32_t data);
     void _powerLevelCallback(uint32_t total_mW, uint32_t requested_mW, uint32_t max_mW, uint8_t target_brightness, uint8_t recommended_brightness);
@@ -490,6 +485,7 @@ private:
 
 public:
     void _broadcastWebUI();
+    void _webUIUpdateColor(int color = -1);
     static void handleWebServer(AsyncWebServerRequest *request);
 
 private:
@@ -516,7 +512,7 @@ private:
     // set brightness
     // enable LEDs if disabled
     // store new level in config
-    void _setBrightness(uint8_t brightness);
+    void _setBrightness(uint8_t brightness, bool useEnable = true);
 
     // update brightness settings savedBrightmess, config.brightness and config.enabled
     void _updateBrightnessSettings();
@@ -567,8 +563,9 @@ private:
     uint32_t _lastUpdateTime;
     uint8_t _tempOverride;
     float _tempBrightness;
+    String _overheatedInfo;
 
-    Clock::Config_t _config;
+    Clock::ConfigType _config;
     Event::Timer _timer;
     uint32_t _timerCounter;
 

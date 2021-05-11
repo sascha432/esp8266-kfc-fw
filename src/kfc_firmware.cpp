@@ -495,6 +495,10 @@ void setup()
     load_avg_timer = millis() + 30000;
 #endif
 
+#if DEBUG_ASSETS
+    __DBG_printf("DEBUG_ASSETS activated");
+#endif
+
 }
 
 #if LOAD_STATISTICS

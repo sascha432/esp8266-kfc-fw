@@ -86,6 +86,12 @@
 #    define IF_IOT_CLOCK_SAVE_STATE(...)
 #endif
 
+#ifdef IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
+#    define IF_IOT_LED_MATRIX_VIS(...) __VA_ARGS__
+#else
+#    define IF_IOT_LED_MATRIX_VIS(...)
+#endif
+
 // delay in seconds before any changes get stored except for power on/off
 // prevents from wearing out the EEPROM
 #ifndef IOT_CLOCK_SAVE_STATE_DELAY
@@ -149,6 +155,14 @@
 // disable ambient light sensor by default
 #ifndef IOT_CLOCK_AMBIENT_LIGHT_SENSOR
 #    define IOT_CLOCK_AMBIENT_LIGHT_SENSOR 0
+#endif
+
+#ifndef IF_IOT_CLOCK_EN_PIN_INVERTED
+#   if IOT_CLOCK_EN_PIN_INVERTED
+#       define IF_IOT_CLOCK_EN_PIN_INVERTED(a, b) (a)
+#   else
+#       define IF_IOT_CLOCK_EN_PIN_INVERTED(a, b) (b)
+#   endif
 #endif
 
 #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
@@ -255,4 +269,9 @@
 #    ifndef FASTLED_ESP8266_RAW_PIN_ORDER
 #        define FASTLED_ESP8266_RAW_PIN_ORDER 1
 #    endif
+#endif
+
+// UDP por3t for visualizer. 0 to disable
+#ifndef IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
+#define IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER 0
 #endif

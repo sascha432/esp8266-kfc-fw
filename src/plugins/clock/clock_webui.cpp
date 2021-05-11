@@ -19,24 +19,28 @@ void ClockPlugin::getValues(WebUINS::Events &array)
     auto enabled = _getEnabledState();
 
     IF_IOT_CLOCK(
-        array.append(WebUINS::Values(F("btn_colon"), (_config.blink_colon_speed < kMinBlinkColonSpeed) ? 0 : (_config.blink_colon_speed < 750 ? 2 : 1), _tempBrightness != -1));
+        array.append(WebUINS::Values(F("colon"), enabled && (_config.blink_colon_speed < kMinBlinkColonSpeed) ? 0 : (_config.blink_colon_speed < 750 ? 500 : 1000y), enabled));
     )
 
     array.append(
-        WebUINS::Values(F("btn_ani"), static_cast<int>(_config.animation), enabled),
-        WebUINS::Values(F("color"), _getColor(), _config.getAnimation() == AnimationType::FADING || _config.getAnimation() == AnimationType::SOLID),
-        WebUINS::Values(FSPGM(brightness), static_cast<uint8_t>(_targetBrightness ? _targetBrightness : _savedBrightness), _tempBrightness != -1)
+        WebUINS::Values(F("ani"), static_cast<int>(_config.animation), enabled),
+        WebUINS::Values(F("color"), Color(_getColor()).toString(), enabled && _config.hasColorSupport()),
+        WebUINS::Values(FSPGM(brightness), static_cast<uint8_t>(enabled ? _targetBrightness : _savedBrightness), true/* brightness can be used to turn it on */)
     );
 
     if (_tempBrightness == -1) {
-        array.append(WebUINS::Values(F("tempp"), F("OVERHEATED")));
+        array.append(WebUINS::Values(F("tempp"), _overheatedInfo));
     }
     else {
-        array.append(WebUINS::Values(F("tempp"), WebUINS::FormattedDouble(100 - _tempBrightness * 100.0, 1)));
+        if (_tempBrightness == 1.0) {
+            array.append(WebUINS::Values(F("tempp"), F("Off")));
+        } else {
+            array.append(WebUINS::Values(F("tempp"), WebUINS::FormattedDouble(100 - _tempBrightness * 100.0, 1)));
+        }
     }
 
     IF_IOT_CLOCK_SAVE_STATE(
-        array.append(WebUINS::Values(F("power"), static_cast<uint8_t>(enabled), enabled));
+        array.append(WebUINS::Values(F("power"), static_cast<uint8_t>(enabled), true));
     )
 
     IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(
@@ -44,12 +48,12 @@ void ClockPlugin::getValues(WebUINS::Events &array)
     )
 
     IF_IOT_CLOCK_DISPLAY_POWER_CONSUMPTION(
-        array.append(WebUINS::Values(F("pwrlvl"), WebUINS::FormattedDouble(_getPowerLevel(), 2)));
+        array.append(WebUINS::Values(F("pwrlvl"), _getPowerLevelStr()));
     )
 
     IF_IOT_CLOCK_HAVE_MOTION_SENSOR(
         auto value = _motionLastUpdate ? get_time_diff(_motionLastUpdate, millis()) / 1000 : 0;
-        auto timeStr = value ? formatTime2(F(", "), F(" and "), false, value) : String(F("NOW"));
+        auto timeStr = value ? formatTime2(F(", "), F(" and "), false, value) + F(" ago") : String(F("NOW"));
         array.append(WebUINS::Values(F("motion"), timeStr));
     )
 }
@@ -61,18 +65,8 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
         _resetAlarm();
         auto val = static_cast<uint32_t>(value.toInt());
         IF_IOT_CLOCK(
-            if (id == F("btn_colon")) {
-                switch(val) {
-                    case 0:
-                        setBlinkColon(0);
-                        break;
-                    case 1:
-                        setBlinkColon(1000);
-                        break;
-                    case 2:
-                        setBlinkColon(500);
-                        break;
-                }
+            if (id == F("colon")) {
+                setBlinkColon(val);
                 IF_IOT_CLOCK_SAVE_STATE(
                     _saveStateDelayed();
                 )
@@ -85,7 +79,7 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
             }
             else
         )
-        if (id == F("btn_ani")) {
+        if (id == F("ani")) {
             setAnimation(static_cast<AnimationType>(val));
             IF_IOT_CLOCK_SAVE_STATE(
                 _saveStateDelayed();
@@ -110,25 +104,45 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
 
 void ClockPlugin::addPowerSensor(WebUINS::Root &webUI, SensorPlugin::SensorType type)
 {
+    // add control to the top of the UI
+    if (type == SensorPlugin::SensorType::MIN) {
+        ClockPlugin::getInstance()._createWebUI(webUI);
+        return;
+    }
+    // add ina219 or popwer sensor to sensors
 #ifdef IOT_SENSOR_HAVE_INA219
     if (type == SensorPlugin::SensorType::INA219) {
-        webUI.appendToLastRow(WebUINS::Row(WebUINS::Sensor(F("pwrlvl"), F("Calculated Power"), 'W')));
+        webUI.appendToLastRow(WebUINS::Row(WebUINS::Sensor(F("pwrlvl"), getInstance()._config.power_limit ? F("Calculated Power / Limit") : F("Calculated Power"), 'W')));
 #else
     if (type == SensorPlugin::SensorType::SYSTEM_METRICS) {
-        webUI.addRow(WebUINS::Row(WebUINS::Sensor(F("pwrlvl"), F("Power"), 'W')));
+        webUI.appendToLastRow(addRow::Row(WebUINS::Sensor(F("pwrlvl"), getInstance()._config.power_limit ? F("Power / Limit") : F("Power"), 'W')));
 #endif
         IF_IOT_CLOCK_HAVE_MOTION_SENSOR(
-            webUI.appendToLastRow(WebUINS::Row(WebUINS::Sensor(F("motion"), F("Motion Sensor"), F("ago"))));
+            webUI.appendToLastRow(WebUINS::Row(WebUINS::Sensor(F("motion"), F("Motion Sensor"), F(""))));
         )
     }
+}
+
+String ClockPlugin::_getPowerLevelStr()
+{
+    PrintString powerLevelStr;
+    auto level = _getPowerLevel();
+    if (!std::isnormal(level)) {
+        powerLevelStr = '0';
+    }
+    else {
+        MQTT::Json::UnnamedTrimmedFormattedDouble(level, F("%.2f")).printTo(powerLevelStr);
+    }
+    if (_config.power_limit) {
+        powerLevelStr.printf_P(PSTR(" / %u"), _config.power_limit);
+    }
+    return powerLevelStr;
 }
 
 void ClockPlugin::_updatePowerLevelWebUI()
 {
     if (WebUISocket::hasAuthenticatedClients()) {
-        WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(
-            WebUINS::Events(WebUINS::Values(F("pwrlvl"), WebUINS::FormattedDouble(_getPowerLevel(), 2)))
-        ));
+        WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(WebUINS::Events(WebUINS::Values(F("pwrlvl"), _getPowerLevelStr()))));
     }
 }
 
@@ -186,7 +200,7 @@ void ClockPlugin::_calcPowerLevel()
 
 #endif
 
-void ClockPlugin::createWebUI(WebUINS::Root &webUI)
+void ClockPlugin::_createWebUI(WebUINS::Root &webUI)
 {
     #if IOT_LED_MATRIX
         webUI.addRow(WebUINS::Group(F("LED Matrix"), false));
@@ -202,29 +216,28 @@ void ClockPlugin::createWebUI(WebUINS::Root &webUI)
     auto height = F("15rem");
 
     IF_IOT_CLOCK_SAVE_STATE(
-        auto power = WebUINS::Switch(F("power"), F("Power<div class=\"p-1\"></div><span class=\"oi oi-power-standby\">"), true, WebUINS::NamePositionType::TOP);
+        auto power = WebUINS::Switch(F("power"), F("Power<div class=\"p-1\"></div><span class=\"oi oi-power-standby\">"), true, WebUINS::NamePositionType::TOP, 3);
         power.append(WebUINS::NamedString(J(height), height));
         row.append(power);
     )
 
     IF_IOT_CLOCK(
-        auto colon = WebUINS::ButtonGroup(F("btn_colon"), F("Colon"), F("Solid,Blink slowly,Blink fast"));
+        auto colon = WebUINS::ButtonGroup(F("colon"), F("Colon"), F("{\"0\":\"Solid\",\"1000\":\"Blink slowly\",\"500\":\"Blink fast\"}"), 0, 3);
         colon.append(WebUINS::NamedString(J(height), height));
         row.append(colon);
     )
 
-    auto animation = WebUINS::ButtonGroup(F("btn_ani"), F("Animation"), Plugins::ClockConfig::ClockConfig_t::getAnimationNames());
+    auto animation = WebUINS::Listbox(F("ani"), F("Animation"), Plugins::ClockConfig::ClockConfig_t::getAnimationNames(), false, 5, 3);
     animation.append(WebUINS::NamedString(J(height), height));
-    animation.append(WebUINS::NamedUint32(J(row), 3));
     row.append(animation);
 
     IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(
-        auto lightSensor = WebUINS::Sensor(FSPGM(light_sensor), F("Ambient Light Sensor"), F("<img src=\"/images/light.svg\" width=\"80\" height=\"80\" style=\"margin-top:-20px;margin-bottom:1rem\">"), WebUINS::SensorRenderType::COLUMN);
+        auto lightSensor = WebUINS::Sensor(FSPGM(light_sensor), F("Ambient Light Sensor"), F("<img src=\"/images/light.svg\" width=\"80\" height=\"80\" style=\"margin-top:-20px;margin-bottom:1rem\">"), WebUINS::SensorRenderType::COLUMN, false, 3);
         lightSensor.append(WebUINS::NamedString(J(height), height));
         row.append(lightSensor);
     )
 
-    auto tempProtection = WebUINS::Sensor(F("tempp"), F("Temperature Protection"), '%');
+    auto tempProtection = WebUINS::Sensor(F("tempp"), F("Temperature Protection"), '%', WebUINS::SensorRenderType::ROW, false, 3);
     tempProtection.append(WebUINS::NamedString(J(height), height));
     row.append(tempProtection);
 
@@ -237,5 +250,14 @@ void ClockPlugin::_broadcastWebUI()
         WebUINS::Events events;
         getValues(events);
         WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(events));
+    }
+}
+
+void ClockPlugin::_webUIUpdateColor(int color)
+{
+    if (WebUISocket::hasAuthenticatedClients()) {
+        WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(WebUINS::Events(
+            WebUINS::Values(F("color"), Color(color == -1 ? _getColor() : color).toString(), _getEnabledState() && _config.hasColorSupport())
+        )));
     }
 }

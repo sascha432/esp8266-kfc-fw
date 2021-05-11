@@ -6,6 +6,7 @@
 #include <EventScheduler.h>
 #include <web_socket.h>
 #include "../src/plugins/plugins.h"
+#include "animation.h"
 
 #if DEBUG_IOT_CLOCK
 #include <debug_helper_enable.h>
@@ -24,12 +25,13 @@
 #define PROGMEM_AT_MODE_HELP_COMMAND_PREFIX "CLOCK"
 #endif
 
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKTP, "TP", "<#color>[,<time=500ms>]", "Test peak values");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKTP, "TP", "<#color>[,<time=500ms>]", "Test peak values");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(CLOCKBR, "BR", "Set brightness (0-65535). 0 disables the LEDs, > 0 enables them");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKPX, "PX", "[<number|-1=all>,<#RGB>|<r>,<g>,<b>]", "Set level of a single pixel. No arguments turns all off");
 #if !IOT_LED_MATRIX
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKP, "P", "<00[:.]00[:.]00>", "Display strings");
 #endif
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKV, "V", "<1-4>", "Set visualizer mode");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKC, "C", "<#RGB>|<r>,<g>,<b>", "Set color");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKM, "M", "<value>[,<incr>,<min>,<max>]", "Set rainbow animation multiplier");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKT, "T", "<value>", "Override temperature");
@@ -58,7 +60,7 @@ void ClockPlugin::_removeDisplayLedTimer()
 ATModeCommandHelpArrayPtr ClockPlugin::atModeCommandHelp(size_t &size) const
 {
     static ATModeCommandHelpArray tmp PROGMEM = {
-        // PROGMEM_AT_MODE_HELP_COMMAND(CLOCKTP),
+        PROGMEM_AT_MODE_HELP_COMMAND(CLOCKTP),
         PROGMEM_AT_MODE_HELP_COMMAND(CLOCKBR),
         PROGMEM_AT_MODE_HELP_COMMAND(CLOCKPX),
 #if !IOT_LED_MATRIX
@@ -113,6 +115,11 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKM))) {
         _config.rainbow.multiplier.value = args.toFloatMinMax(0, 0.1f, 100.0f, _config.rainbow.multiplier.value);
         args.printf_P(PSTR("Rainbow multiplier=%f increment=%f min=%f max=%f"), _config.rainbow.multiplier.value, _config.rainbow.multiplier.incr, _config.rainbow.multiplier.min, _config.rainbow.multiplier.max);
+        return true;
+    }
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKV))) {
+        Clock::VisualizerAnimation::_visualizerType = args.toIntMinMax(0, 1, 4, 2);
+        args.printf_P(PSTR("Visualizer=%u"), Clock::VisualizerAnimation::_visualizerType);
         return true;
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKA))) {
@@ -214,7 +221,6 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
 #endif
         return true;
     }
-    /*
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKTP))) {
         if (args.requireArgs(1, 2)) {
 
@@ -228,16 +234,16 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             setAnimation(AnimationType::SOLID, 0);
             _setBrightness(0);
             if (ina219) {
-                delay(500);
-                ina219->resetPeak();
+                _Scheduler.add(Event::milliseconds(250), false, [this, ina219](Event::CallbackTimerPtr) {
+                    ina219->resetPeak();
+                });
             }
 
             setColor(Color::fromString(args.toString(0)));
             _setBrightness(255);
-            delay(100);
 
             auto &stream = args.getStream();
-            _Scheduler.add(Event::milliseconds(args.toIntMinMax(1, 250, 5000, 500)), false, [this, ina219, &stream](Event::CallbackTimerPtr) {
+            _Scheduler.add(Event::milliseconds(args.toIntMinMax(1, 500, 5000, 500)), false, [this, ina219, &stream](Event::CallbackTimerPtr) {
                 _setBrightness(0);
                 if (ina219) {
                     stream.printf_P(PSTR("U=%f I=%f P=%f"), ina219->getVoltage(), ina219->getPeakCurrent(), ina219->getPeakPower());
@@ -246,7 +252,6 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
         }
         return true;
     }
-    */
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKBR))) {
         if (args.requireArgs(1, 2)) {
             auto brightness = args.toIntMinMax<uint16_t>(0, 0, Clock::kMaxBrightness);

@@ -36,11 +36,11 @@ using KFCConfigurationClasses::Plugins;
 
 namespace Clock {
 
-    using Config_t = Plugins::Clock::ClockConfig_t;
+    using ConfigType = Plugins::Clock::ClockConfig_t;
     using ColorType = uint32_t;
     using ClockColor_t = Plugins::Clock::ClockColor_t;
-    using AnimationType = Config_t::AnimationType;
-    using InitialStateType = Config_t::InitialStateType;
+    using AnimationType = ConfigType::AnimationType;
+    using InitialStateType = ConfigType::InitialStateType;
 
     // static constexpr auto kTotalPixelCount = SevenSegmentDisplay::kTotalPixelCount;
     static constexpr uint8_t kMaxBrightness = 0xff;

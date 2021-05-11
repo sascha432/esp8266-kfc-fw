@@ -36,6 +36,10 @@ public:
         return _address;
     }
 
+    const String &getSensorName() const {
+        return _name;
+    }
+
 private:
     friend Sensor_CCS811;
 

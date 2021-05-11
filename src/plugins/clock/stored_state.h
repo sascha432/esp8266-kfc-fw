@@ -22,7 +22,7 @@ namespace Clock {
     public:
         typedef struct __attribute__packed__ {
             uint16_t _crc16;
-            Config_t _config;
+            ConfigType _config;
         } FileFormat_t;
 
     public:
@@ -30,9 +30,10 @@ namespace Clock {
         StoredState() : _storage()
         {}
 
-        StoredState(const Config_t &config, uint8_t brightness) :
+        StoredState(const ConfigType &config, bool enabled, uint8_t brightness) :
             _storage({0, config})
         {
+            _storage._config.enabled = enabled;
             _storage._config.setBrightness(brightness);
             _updateCrc();
         }
@@ -51,7 +52,7 @@ namespace Clock {
             return !operator==(state);
         }
 
-        const Config_t &getConfig() const {
+        const ConfigType &getConfig() const {
             return _storage._config;
         }
 

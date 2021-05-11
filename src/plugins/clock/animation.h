@@ -669,7 +669,6 @@ namespace Clock {
 
     // ------------------------------------------------------------------------
     // FireAnimation
-    // TODO finish FireAnimation
 
     class FireAnimation : public Animation {
     public:
@@ -887,6 +886,129 @@ namespace Clock {
         uint8_t *_lineBuffer;
         FireAnimationConfig &_cfg;
     };
+
+    // ------------------------------------------------------------------------
+    // VisualizerAnimation
+    //
+    // virtual LEDs for led_matrix_visualizer
+
+#if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
+
+    class VisualizerAnimation : public Animation {
+    public:
+        using VisualizerAnimationConfig = Plugins::ClockConfig::VisualizerAnimation_t;
+        using DisplayType = Clock::DisplayType;
+
+    public:
+        VisualizerAnimation(ClockPlugin &clock, VisualizerAnimationConfig &cfg) :
+            Animation(clock),
+            _cfg(cfg),
+            _speed(70),
+            _gHue(0),
+            _iPos(0),
+            _lastBrightness(0),
+            _lastFinished(true)
+        {
+            std::fill(std::begin(_incomingPacket), std::end(_incomingPacket), 0);
+            std::fill(_lastVals.begin(), _lastVals.end(), 1);
+
+            _disableBlinkColon = true;
+            _udp.begin(cfg._port);
+        }
+
+        ~VisualizerAnimation() {
+            // if (_leds) {
+            //     delete[] _leds;
+            // }
+            // _setLeds(nullptr);
+        }
+
+        // void _setLeds(CRGB *leds);
+
+        virtual void begin() override
+        {
+            _loopTimer = millis();
+            _updateRate = 1000 / 120;
+            fill_solid(_leds, kNumPixels, CHSV(0, 0, 0));
+            __LDBG_printf("begin update_rate=%u pixels=%u", _updateRate, kNumPixels);
+        }
+
+        virtual void loop(uint32_t millisValue) override;
+
+        virtual void copyTo(DisplayType &display, uint32_t millisValue) override
+        {
+            _copyTo(display, millisValue);
+        }
+
+        virtual void copyTo(DisplayBufferType &buffer, uint32_t millisValue) override
+        {
+            _copyTo(buffer, millisValue);
+        }
+
+        template<typename _Ta>
+        void _copyTo(_Ta &output, uint32_t millisValue) override
+        {
+            for(CoordinateType i = 0; i < kRows; i++) {
+                for(CoordinateType j = 0; j < kCols; j++) {
+                    auto coords = PixelCoordinatesType(i, j);
+                    output.setPixel(coords, _leds[i * kRows + j]);
+                }
+            }
+        }
+
+        int _getVolume(uint8_t vals[], int start, int end, double factor);
+        void _BrightnessVisualizer();
+        bool _FadeUp(CRGB c, int start, int end, int update_rate, int starting_brightness, bool isNew);
+        void _TrailingBulletsVisualizer();
+        void _ShiftLeds(int shiftAmount);
+        void _SendLeds(CHSV c, int shiftAmount);
+        void _SendTrailingLeds(CHSV c, int shiftAmount);
+        CHSV _getVisualizerBulletValue(double cd);
+        CHSV _getVisualizerBulletValue(int hue, double cd);
+        void _vuMeter(CHSV c, int mode);
+        void _vuMeterTriColor();
+        int _getPeakPosition();
+        void _printPeak(CHSV c, int pos, int grpSize);
+        void _setBar(int row, double num, CRGB color, bool fill_ends);
+        void _setBar(int row, int num, CRGB color);
+        void _setBar(int row, double num, CHSV col, bool fill_ends);
+        void _setBar(int row, int num, CHSV col);
+        void _setBarDoubleSided(int row, double num, CRGB color, bool fill_ends);
+        void _setBarDoubleSided(int row, double num, CHSV col, bool fill_ends);
+
+
+        bool _parseUdp();
+
+        void _RainbowVisualizer();
+        void _RainbowVisualizerDoubleSided();
+        void _SingleColorVisualizer();
+        void _SingleColorVisualizerDoubleSided();
+
+    private:
+        static constexpr int kVisualizerPacketSize = 32;
+        static constexpr int kAvgArraySize = 10;
+        static constexpr uint8_t kBandStart = 0;
+        static constexpr uint8_t kBandEnd = 3;
+
+        uint32_t _loopTimer;
+        uint16_t _updateRate;
+        VisualizerAnimationConfig &_cfg;
+        WiFiUDP _udp;
+        CRGB _leds[kNumPixels];
+        uint8_t _incomingPacket[kVisualizerPacketSize + 1];
+        std::array<uint8_t, kAvgArraySize> _lastVals;
+        uint8_t _speed;
+        uint8_t _gHue;
+        int _iPos;
+        int _lastBrightness;
+        bool _lastFinished;
+        CRGB _lastCol;
+
+    public:
+        static uint8_t _visualizerType;
+    };
+
+#endif
 
 }
 

@@ -56,19 +56,10 @@
 #define PIN_MONITOR_USE_GPIO_INTERRUPT                              0
 #endif
 
-// experimental version that does not use IRAM/interrupts
+// polling key events with no interrupts to save IRAM
+// rotary encoders require interrupts, but with polling enable the IRAM usage is very small
 #ifndef PIN_MONITOR_USE_POLLING
 #define PIN_MONITOR_USE_POLLING                                     0
-#endif
-
-// use timer with microseconds. for rotary encoder only
-#ifndef PIN_MONITOR_POLLING_USE_MICROS
-#define PIN_MONITOR_POLLING_USE_MICROS                              0
-#endif
-
-// experimental interrupt without IRAM using the timer to keep the code in RAM
-#ifndef PIN_MONITOR_POLLING_USE_INTERRUPTS
-#define PIN_MONITOR_POLLING_USE_INTERRUPTS                          0
 #endif
 
 // use attachInterruptArg()/detachInterrupt() for interrupt callbacks
@@ -107,6 +98,13 @@
 // disabled by default since it requires IRAM
 #ifndef PIN_MONITOR_ROTARY_ENCODER_SUPPORT
 #define PIN_MONITOR_ROTARY_ENCODER_SUPPORT                      0
+#endif
+
+// a list of pins that the rotary encoder uses
+#if PIN_MONITOR_ROTARY_ENCODER_SUPPORT && PIN_MONITOR_USE_POLLING
+#ifndef PIN_MONITOR_ROTARY_ENCODER_PINS
+#error PIN_MONITOR_ROTARY_ENCODER_PINS not defined
+#endif
 #endif
 
 // support for debounced push buttons

@@ -15,13 +15,10 @@
 #include "logger.h"
 #include <PrintHtmlEntitiesString.h>
 
-#if PIN_MONITOR_USE_POLLING
-#else
 #if PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS
 #include <FunctionalInterrupt.h>
 #else
 #include "interrupt_impl.h"
-#endif
 #endif
 #include "interrupt_event.h"
 
@@ -40,33 +37,14 @@ Monitor pinMonitor;
 
 PollingTimer pollingTimer;
 
-#if PIN_MONITOR_POLLING_USE_MICROS
-extern "C" void preinit(void)
-{
-    system_timer_reinit();
-}
-#endif
-
 void PollingTimer::start()
 {
     _states = GPI;
-#if PIN_MONITOR_POLLING_USE_MICROS
-    startTimer(0x64, true, false);
-#else
     startTimer(5, true);
-#endif
 }
 
 void PollingTimer::run()
 {
-#if PIN_MONITOR_POLLING_USE_INTERRUPTS
-    // call the interrupt handler to keep it in the cache
-    // if the code is not in ram, the program crashes
-    // IRAM is disabled
-    noInterrupts();
-    pin_monitor_interrupt_handler(nullptr);
-    interrupts();
-#else
     uint16_t states = GPI;
     for(const auto &pinPtr: pinMonitor.getPins()) {
         if (pinPtr->getHardwarePinType() == HardwarePinType::ROTARY) {
@@ -82,7 +60,6 @@ void PollingTimer::run()
         }
     }
     _states = states;
-#endif
 }
 
 #endif

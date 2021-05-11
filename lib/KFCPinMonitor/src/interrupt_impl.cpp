@@ -31,9 +31,7 @@ namespace PinMonitor {
 // ------------------------------------------------------------------------
 #if PIN_MONITOR_USE_GPIO_INTERRUPT || PIN_MONITOR_USE_POLLING
 
-#if PIN_MONITOR_POLLING_USE_INTERRUPTS == 0
-
-    static constexpr uint32_t kGPIORotaryMask = _BV(IOT_CLOCK_ROTARY_ENC_PINA)|_BV(IOT_CLOCK_ROTARY_ENC_PINB);
+#if PIN_MONITOR_USE_POLLING && PIN_MONITOR_ROTARY_ENCODER_SUPPORT
 
     void GPIOInterruptsEnable()
     {
@@ -42,13 +40,15 @@ namespace PinMonitor {
         for(const auto &pinPtr: pinMonitor.getPins()) {
             pinPtr->clear();
         }
-        GPC(IOT_CLOCK_ROTARY_ENC_PINA) &= ~(0xF << GPCI);  // INT mode disabled
-        GPC(IOT_CLOCK_ROTARY_ENC_PINA) |= ((CHANGE & 0xF) << GPCI);  // INT mode "mode"
-        GPC(IOT_CLOCK_ROTARY_ENC_PINB) &= ~(0xF << GPCI);  // INT mode disabled
-        GPC(IOT_CLOCK_ROTARY_ENC_PINB) |= ((CHANGE & 0xF) << GPCI);  // INT mode "mode"
-        GPIEC = kGPIORotaryMask;
+#if PIN_MONITOR_ROTARY_ENCODER_SUPPORT
+        for(const auto pinNum: PinMonitor::Interrupt::kRotaryPins) {
+            GPC(pinNum) &= ~(0xF << GPCI);
+            GPC(pinNum) |= ((CHANGE & 0xF) << GPCI);
+        }
+        GPIEC = PinMonitor::Interrupt::kGPIORotaryMask;
         ETS_GPIO_INTR_ATTACH(pin_monitor_interrupt_handler, nullptr);
         interrupt_levels = GPI;
+#endif
         ETS_GPIO_INTR_ENABLE();
     }
 
@@ -57,6 +57,7 @@ namespace PinMonitor {
         ETS_GPIO_INTR_DISABLE();
     }
 
+#if PIN_MONITOR_ROTARY_ENCODER_SUPPORT
     void ICACHE_RAM_ATTR pin_monitor_interrupt_handler(void *ptr)
     {
         uint32_t status32 = GPIE;
@@ -64,20 +65,15 @@ namespace PinMonitor {
         uint16_t status = static_cast<uint16_t>(status32);
         auto levels = static_cast<uint16_t>(GPI); // we skip GPIO16 since it cannot handle interrupts anyway
         ETS_GPIO_INTR_DISABLE();
-        uint8_t pinNum = 0xff;
-
-        if ((interrupt_levels ^ levels) & status & _BV(IOT_CLOCK_ROTARY_ENC_PINA)) {
-            pinNum = IOT_CLOCK_ROTARY_ENC_PINA;
-        }
-        if ((interrupt_levels ^ levels) & status & _BV(IOT_CLOCK_ROTARY_ENC_PINB)) {
-            pinNum = IOT_CLOCK_ROTARY_ENC_PINB;
-        }
-        if (pinNum != 0xff) {
-            PinMonitor::eventBuffer.emplace_back(micros(), pinNum, levels);
+        for(const auto pinNum: PinMonitor::Interrupt::kRotaryPins) {
+            if ((interrupt_levels ^ levels) & status & _BV(pinNum)) {
+                PinMonitor::eventBuffer.emplace_back(micros(), pinNum, levels);
+            }
         }
         PinMonitor::interrupt_levels = levels;
         ETS_GPIO_INTR_ENABLE();
     }
+#endif
 
 #else
 
@@ -92,11 +88,6 @@ namespace PinMonitor {
 #if PIN_MONITOR_SIMPLE_PIN || PIN_MONITOR_DEBOUNCED_PUSHBUTTON
         for(const auto &pinPtr: pinMonitor.getPins()) {
             pinPtr->clear();
-            // switch(pinPtr->_type) {
-            //     case HardwarePinType::DEBOUNCE:
-            //     case HardwarePinType::SIMPLE:
-            //         break;
-            // }
         }
 #endif
         for(auto pin: Interrupt::kPins) {

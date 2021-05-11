@@ -23,6 +23,11 @@ namespace PinMonitor {
         #endif
         static constexpr auto kPins = stdex::array_of<const uint8_t>(PIN_MONITOR_PINS_TO_USE);
 
+        #ifdef PIN_MONITOR_ROTARY_ENCODER_PINS
+        static constexpr auto kRotaryPins = stdex::array_of<const uint8_t>(PIN_MONITOR_ROTARY_ENCODER_PINS);
+        static constexpr auto kGPIORotaryMask = Interrupt::PinAndMask::mask_of(kRotaryPins);
+        #endif
+
     }
 
 // arduino style interrupt handler with limitations saving 232byte IRAM

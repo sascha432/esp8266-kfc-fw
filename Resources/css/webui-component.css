@@ -89,6 +89,11 @@
     text-align: center;
 }
 
+.webuicomponent > .button-group .btn-group-vertical {
+    overflow-y: scroll;
+    overflow-x: hidden;
+}
+
 .webuicomponent > .button-group .title {
     padding: .75rem .5rem 0.25rem 0.5rem;
 }
@@ -100,6 +105,24 @@
 
 .webuicomponent > .button-group button.disabled:focus {
     box-shadow: 0 0 black;
+}
+
+/* webui-listbox */
+
+.webuicomponent > .listbox .title {
+    padding: .75rem .5rem 0.25rem 0.5rem;
+    margin-bottom: -1.5rem;
+}
+
+.webuicomponent > .listbox .col {
+    text-align: center;
+    padding: 1.25rem;
+    margin-left: 1rem;
+    margin-right: 1rem;
+}
+
+.webuicomponent > .listbox .custom-select {
+    font-size: 1.25rem;
 }
 
 /* webui-slider */

@@ -151,6 +151,15 @@
             </div>
         </div>
 
+        <div id="webui-color-picker" class="__prototypes">
+            <div class="webuicomponent">
+                <div class="{{slider-type}}">
+                    <input type="hidden" class="attribute-target" data-color-format="hex">
+                    <div class="rgb-color-picker"></div>
+                </div>
+            </div>
+        </div>
+
         <div id="webui-screen" class="__prototypes">
             <div class="webuicomponent">
                 <div class="screen">
@@ -167,13 +176,17 @@
             <div class="webuicomponent">
                 <div class="listbox">
                     <div class="row">
-                        <div class="col title">{{title}}</div>
+                        <var value="{{th|h4}}" class="col title">{{title}}</var>
                     </div>
                     <div class="row">
                         <div class="col"><select class="attribute-target">{{content}}</select></div>
                     </div>
                 </div>
             </div>
+        </div>
+
+        <div id="webui-listbox-option" class="__prototypes">
+            <option{{index}}>{{value}}</option>
         </div>
 
         <div id="webui-button-group" class="__prototypes">

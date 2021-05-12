@@ -1257,7 +1257,9 @@ namespace KFCConfigurationClasses {
                         case AnimationType::SOLID:
                         case AnimationType::FLASHING:
                         case AnimationType::INTERLEAVED:
+#if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
                         case AnimationType::VISUALIZER:
+#endif
                             return true;
                         default:
                             break;

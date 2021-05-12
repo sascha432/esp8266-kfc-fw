@@ -377,6 +377,12 @@ public:
 
     Event::Timer _saveTimer;
     uint32_t _saveTimestamp{0};
+#else:
+
+public:
+    void _saveStateDelayed() {}
+    void _saveState() {}
+
 #endif
     void _setState(bool state);
 

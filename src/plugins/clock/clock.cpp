@@ -293,7 +293,7 @@ void ClockPlugin::_setupTimer()
                         WebUINS::Events(WebUINS::Values(F("motion"), WebUINS::RoundedDouble(NAN)))
                     ));
                 }
-                // _digitalWrite(_PCF8574Range::pin2DigitalPin(5), !_motionState);
+                _digitalWrite(131, _motionState);
 
                 _motionState = state;
                 if (_motionState) {
@@ -543,6 +543,7 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
                 case InitialStateType::MAX:
                     break;
             }
+            setAnimation(state.getConfig().getAnimation(), 0);
         }
     )
 
@@ -875,7 +876,7 @@ void ClockPlugin::readConfig()
     _autoBrightness = _config.auto_brightness;
 #endif
     _setBrightness(_config.getBrightness(), false);
-    setAnimation(static_cast<AnimationType>(_config.animation));
+    setAnimation(_config.getAnimation());
 }
 
 Clock::ConfigType &ClockPlugin::getWriteableConfig()

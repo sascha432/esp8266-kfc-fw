@@ -67,9 +67,7 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
         IF_IOT_CLOCK(
             if (id == F("colon")) {
                 setBlinkColon(val);
-                IF_IOT_CLOCK_SAVE_STATE(
-                    _saveStateDelayed();
-                )
+                _saveStateDelayed();
             }
             else
         )
@@ -81,21 +79,15 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
         )
         if (id == F("ani")) {
             setAnimation(static_cast<AnimationType>(val));
-            IF_IOT_CLOCK_SAVE_STATE(
-                _saveStateDelayed();
-            )
+            _saveStateDelayed();
         }
         else if (id == F("color")) {
             setColorAndRefresh(val);
-            IF_IOT_CLOCK_SAVE_STATE(
-                _saveStateDelayed();
-            )
+            _saveStateDelayed();
         }
         else if (id == FSPGM(brightness)) {
             setBrightness(std::clamp<uint8_t>(val, 0, kMaxBrightness));
-            IF_IOT_CLOCK_SAVE_STATE(
-                _saveStateDelayed();
-            )
+            _saveStateDelayed();
         }
     }
 }
@@ -256,9 +248,8 @@ void ClockPlugin::_broadcastWebUI()
 void ClockPlugin::_webUIUpdateColor(int color)
 {
     if (WebUISocket::hasAuthenticatedClients()) {
-        auto colorStr = Color(color == -1 ? _getColor() : color).toString();
         WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(WebUINS::Events(
-            WebUINS::Values(F("color"), colorStr, _getEnabledState() && _config.hasColorSupport())
+            WebUINS::Values(F("color"), Color(color == -1 ? _getColor() : color).toString(), _getEnabledState() && _config.hasColorSupport())
         )));
     }
 }

@@ -100,27 +100,21 @@ void ClockPlugin::onMessage(const char *topic, const  char *payload, size_t len)
         auto animation = _getAnimationType(payload);
         if (animation != AnimationType::MAX) {
             setAnimation(static_cast<AnimationType>(animation));
-            IF_IOT_CLOCK_SAVE_STATE(
-                _saveStateDelayed();
-            )
+            _saveStateDelayed();
         }
     }
     else if (!strcmp_end_P(topic, SPGM(_brightness_set))) {
         if (len) {
             auto value = strtoul(payload, nullptr, 0);
             setBrightness(std::clamp<uint8_t>(value, 0, kMaxBrightness));
-            IF_IOT_CLOCK_SAVE_STATE(
-                _saveStateDelayed();
-            )
+            _saveStateDelayed();
         }
     }
     else if (!strcmp_end_P(topic, SPGM(_color_set))) {
         if (*payload == '#') {
             // rgb color code #FFEECC
             setColorAndRefresh(Color::fromString(payload));
-            IF_IOT_CLOCK_SAVE_STATE(
-                _saveStateDelayed();
-            )
+            _saveStateDelayed();
         }
         else {
             // red,green,blue
@@ -131,9 +125,7 @@ void ClockPlugin::onMessage(const char *topic, const  char *payload, size_t len)
                 if (endptr && *endptr++ == ',') {
                     auto blue = static_cast<uint8_t>(strtoul(endptr, nullptr, 10));
                     setColorAndRefresh(Color(red, green, blue));
-                    IF_IOT_CLOCK_SAVE_STATE(
-                        _saveStateDelayed();
-                    )
+                    _saveStateDelayed();
                 }
             }
         }
@@ -165,7 +157,7 @@ void ClockPlugin::_publishState()
             publish(MQTTClient::formatTopic(F("power")), true, String(_getPowerLevel(), 2));
         )
         IF_IOT_CLOCK_HAVE_MOTION_SENSOR(
-            //
+            publish(MQTT::Client::formatTopic(F("motion")), true, MQTT::Client::toBoolOnOff(_motionState));
         )
     }
 

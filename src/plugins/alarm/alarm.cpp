@@ -41,7 +41,12 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
 );
 
 
-AlarmPlugin::AlarmPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(AlarmPlugin)), MQTTComponent(MQTT::ComponentType::SWITCH), _nextAlarm(0), _alarmState(false)
+AlarmPlugin::AlarmPlugin() :
+    PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(AlarmPlugin)),
+    MQTTComponent(MQTT::ComponentType::LIGHT),
+    _nextAlarm(0),
+    _alarmState(false),
+    _color(-1)
 {
     REGISTER_PLUGIN(this, "AlarmPlugin");
 }
@@ -76,8 +81,8 @@ MQTT::AutoDiscovery::EntityPtr AlarmPlugin::getAutoDiscovery(FormatType format, 
             discovery->create(this, FSPGM(alarm), format);
             discovery->addStateTopic(_formatTopic(FSPGM(_state)));
             discovery->addCommandTopic(_formatTopic(FSPGM(_set)));
-            discovery->addRGBStateTopic(_formatTopic(F("/rgb")));
-            discovery->addRGBCommandTopic(_formatTopic(F("/set/rgb")));
+            discovery->addRGBStateTopic(_formatTopic(F("/rgb/state")));
+            discovery->addRGBCommandTopic(_formatTopic(F("/rgb/set")));
             break;
     }
     return discovery;
@@ -86,7 +91,7 @@ MQTT::AutoDiscovery::EntityPtr AlarmPlugin::getAutoDiscovery(FormatType format, 
 void AlarmPlugin::onConnect()
 {
     subscribe(_formatTopic(FSPGM(_set)));
-    subscribe(_formatTopic(F("/set/rgb")));
+    subscribe(_formatTopic(F("/rgb/set")));
     _publishState();
 }
 
@@ -94,12 +99,14 @@ void AlarmPlugin::onMessage(const char *topic, const char *payload, size_t len)
 {
     __LDBG_printf("client=%p topic=%s payload=%s alarm_state=%u callback=%u", client, topic, payload, _alarmState, (bool)_callback);
 
-    if (strcmp_P(topic, PSTR("/set/rgb")) == 0) {
+    if (strcmp_P(topic, PSTR("/rgb/set")) == 0) {
+
+        __DBG_printf("alarm color %s", payload);
 
     } else {
 
         if (_callback) {
-            _alarmState = (bool)atoi(payload);
+            _alarmState = MQTTClient::toBool(payload);
             if (_alarmState) {
                 _callback(Alarm::AlarmModeType::BOTH, Alarm::DEFAULT_MAX_DURATION);
             }
@@ -350,5 +357,6 @@ void AlarmPlugin::_publishState()
     __LDBG_printf("publish state=%s", String((int)_alarmState).c_str());
     if (isConnected()) {
         publish(_formatTopic(FSPGM(_state)), true, MQTT::Client::toBoolOnOff(_alarmState));
+        publish(_formatTopic(F("/rgb/state")), true, PrintString(F("%06x"), _color));
     }
 }

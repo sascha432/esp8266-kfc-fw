@@ -97,4 +97,5 @@ private:
     Callback _callback;
     Alarm::TimeType _nextAlarm;
     bool _alarmState;
+    int32_t _color;
 };

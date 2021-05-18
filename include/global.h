@@ -418,6 +418,11 @@
 #define PCF8574_PORT_RANGE_END                              (PCF8574_PORT_RANGE_START + 8)
 #endif
 
+#ifndef TINYPWM_PORT_RANGE_START
+#define TINYPWM_PORT_RANGE_START                            140
+#define TINYPWM_PORT_RANGE_END                              (TINYPWM_PORT_RANGE_START + 2)
+#endif
+
 #ifndef HAVE_I2CSCANNER
 #define HAVE_I2CSCANNER                                     1
 #endif

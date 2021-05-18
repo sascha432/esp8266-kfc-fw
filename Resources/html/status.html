@@ -151,7 +151,7 @@
                         </div>
                     </div>
 
-                    <!--#if (defined(HAVE_PCF8574) && HAVE_PCF8574) || (defined(HAVE_PCF8575) && HAVE_PCF8575) || (defined(HAVE_PCA9685) && HAVE_PCA9685) || (defined(HAVE_MCP23017) && HAVE_MCP23017) -->
+                    <!--#if (defined(HAVE_PCF8574) && HAVE_PCF8574) || (defined(HAVE_PCF8575) && HAVE_PCF8575) || (defined(HAVE_TINYPWM) && HAVE_TINYPWM) || (defined(HAVE_PCA9685) && HAVE_PCA9685) || (defined(HAVE_MCP23017) && HAVE_MCP23017) -->
                     <div class="row">
                         <div class="col-lg-3 col-lg-auto">
                             I/O Expander
@@ -162,6 +162,9 @@
                             <!--#endif-->
                             <!--#if (defined(HAVE_PCF8575) && HAVE_PCF8575) -->
                             %PCF8575_STATUS%<br>
+                            <!--#endif-->
+                            <!--#if (defined(HAVE_TINYPWM) && HAVE_TINYPWM) -->
+                            %TINYPWM_STATUS%<br>
                             <!--#endif-->
                             <!--#if (defined(HAVE_PCA9685) && HAVE_PCA9685) -->
                             %PCA9685_STATUS%<br>

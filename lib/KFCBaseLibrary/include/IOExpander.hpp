@@ -19,10 +19,33 @@ namespace IOExpander {
 
     namespace IOWrapper {
 
+        // ------------------------------------------------------------------
+        // PCF8574_PIN
+        // ------------------------------------------------------------------
+
         IOEXPANDER_INLINE PCF8574_PIN::operator uint8_t()
         {
             return _readValue();
         }
+
+        IOEXPANDER_INLINE uint8_t PCF8574_PIN::_readValue()
+        {
+            if (_parent->hasWire()) {
+                auto &wire = _parent->getWire();
+                if (wire.requestFrom(_parent->getAddress(), (uint8_t)0x01) == 1) {
+                    int data;
+                    while(wire.available() && (data = wire.read()) != -1) {
+                        _value = data;
+                    }
+                }
+            }
+            // __DBG_printf("read PIN=%02x DDR=%02x PORT=%02x _value=%02x", _parent->PIN._value, _parent->DDR._value, _parent->PORT._value, _value);
+            return _value;
+        }
+
+        // ------------------------------------------------------------------
+        // PCF8574_PORT
+        // ------------------------------------------------------------------
 
         IOEXPANDER_INLINE PCF8574_PORT &PCF8574_PORT::operator=(uint8_t value)
         {
@@ -45,20 +68,9 @@ namespace IOExpander {
             }
         }
 
-        IOEXPANDER_INLINE uint8_t PCF8574_PIN::_readValue()
-        {
-            if (_parent->hasWire()) {
-                auto &wire = _parent->getWire();
-                if (wire.requestFrom(_parent->getAddress(), (uint8_t)0x01) == 1) {
-                    int data;
-                    while(wire.available() && (data = wire.read()) != -1) {
-                        _value = data;
-                    }
-                }
-            }
-            // __DBG_printf("read PIN=%02x DDR=%02x PORT=%02x _value=%02x", _parent->PIN._value, _parent->DDR._value, _parent->PORT._value, _value);
-            return _value;
-        }
+        // ------------------------------------------------------------------
+        // PCF8574_DDR
+        // ------------------------------------------------------------------
 
         IOEXPANDER_INLINE PCF8574_DDR &PCF8574_DDR::operator=(uint8_t value)
         {
@@ -75,8 +87,7 @@ namespace IOExpander {
     }
 
     IOEXPANDER_INLINE PCF8574::PCF8574(uint8_t address, TwoWire *wire) :
-        _wire(wire),
-        _address(address),
+        Base(address, wire),
         DDR(*this, 0x00),
         PIN(*this, 0x00),
         PORT(*this, 0xff)
@@ -94,25 +105,6 @@ namespace IOExpander {
         _address = address;
         DDR._value = 0xff; // set all ports to input
         PORT = 0xff; // set all ports to high
-    }
-
-    IOEXPANDER_INLINE bool PCF8574::isConnected() const
-    {
-        if (!hasWire()) {
-            return false;
-        }
-        _wire->beginTransmission(_address);
-        return (_wire->endTransmission() == 0);
-    }
-
-    IOEXPANDER_INLINE uint8_t PCF8574::getAddress() const
-    {
-        return _address;
-    }
-
-    IOEXPANDER_INLINE TwoWire &PCF8574::getWire()
-    {
-        return *_wire;
     }
 
     IOEXPANDER_INLINE void PCF8574::pinMode(uint8_t pin, uint8_t mode)
@@ -159,9 +151,43 @@ namespace IOExpander {
         return static_cast<uint8_t>(PIN);
     }
 
-    IOEXPANDER_INLINE bool PCF8574::hasWire() const
+    // ------------------------------------------------------------------
+    // TinyPwm
+    // ------------------------------------------------------------------
+
+    namespace TinyPwmNS {
+
+        enum class Commands : uint8_t {
+            ANALOG_WRITE = 10,          // 1 byte data
+            ANALOG_READ,                // one byte, 0 = pb3, 1 = pb4. returns int / 2 byte
+            SET_PRESCALER,              // set presclaer bits
+        };
+
+    };
+
+    IOEXPANDER_INLINE int TinyPwm::analogRead(uint8_t pin)
     {
-        return _wire != nullptr;
+        _wire->beginTransmission(_address);
+        _wire->write(static_cast<uint8_t>(TinyPwmNS::Commands::ANALOG_READ));
+        _wire->write(pin);
+        if (_wire->endTransmission(false) == 0 && _wire->available()) {
+            int16_t value;
+            if (_wire->readBytes(reinterpret_cast<uint8_t *>(&value), sizeof(value)) == sizeof(value)) {
+                return value;
+            }
+
+        }
+        return 0;
+    }
+
+    IOEXPANDER_INLINE void TinyPwm::analogWrite(uint8_t pin, uint8_t value)
+    {
+        _wire->beginTransmission(_address);
+        _wire->write(static_cast<uint8_t>(TinyPwmNS::Commands::ANALOG_WRITE));
+        _wire->write(pin);
+        if (_wire->endTransmission(false) != 0) {
+            __DBG_printf("endTransmission() failed");
+        }
     }
 
 }

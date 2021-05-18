@@ -20,6 +20,13 @@ extern void initialize_pcf8575();
 extern void print_status_pcf8575(Print &output);
 #endif
 
+#if HAVE_TINYPWM
+using _TinyPwmRange = IOExpander::TinyPwm_Range<TINYPWM_PORT_RANGE_START, TINYPWM_PORT_RANGE_END>;
+extern IOExpander::TinyPwm _TinyPwm;
+extern void initialize_tinypwm();
+extern void print_status_tinypwm(Print &output);
+#endif
+
 #if HAVE_PCA9685
 extern void initialize_pca9785();
 extern void print_status_pca9785(Print &output);
@@ -61,6 +68,12 @@ inline static void _analogWrite(uint8_t pin, uint16_t value) {
     }
     else
 #endif
+#if HAVE_TINYPWM
+    if (_TinyPwmRange::inRange(pin)) {
+        _TinyPwm.analogWrite(pin, value);
+    }
+    else
+#endif
     {
         analogWrite(pin, value);
     }
@@ -70,6 +83,12 @@ inline static uint16_t _analogRead(uint8_t pin) {
 #if HAVE_PCF8574
     if (_PCF8574Range::inRange(pin)) {
         return _PCF8574.digitalRead(_PCF8574Range::digitalPin2Pin(pin)) ? 1023 : 0;
+    }
+    else
+#endif
+#if HAVE_TINYPWM
+    if (_TinyPwmRange::inRange(pin)) {
+        return _TinyPwm.analogRead(pin);
     }
     else
 #endif

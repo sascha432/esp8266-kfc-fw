@@ -12,6 +12,86 @@
 namespace IOExpander {
 
     class PCF8574;
+    class TinyPwm;
+
+    template<uint8_t _DefaultAddress>
+    class Base {
+    public:
+        static constexpr uint8_t kDefaultAddress = _DefaultAddress;
+
+    public:
+        Base() : _address(0), _wire(nullptr)
+        {
+        }
+
+        Base(uint8_t address, TwoWire *wire)  : _address(address), _wire(wire)
+        {
+        }
+
+        void begin(uint8_t address, TwoWire *wire)
+        {
+            _address = address;
+            _wire = wire;
+        }
+
+        void begin(uint8_t address)
+        {
+            _address = address;
+        }
+
+        void begin()
+        {
+        }
+
+        bool isConnected() const
+        {
+            if (!hasWire()) {
+                return false;
+            }
+            _wire->beginTransmission(_address);
+            return (_wire->endTransmission() == 0);
+        }
+
+        uint8_t getAddress() const
+        {
+            return _address;
+        }
+
+        TwoWire &getWire()
+        {
+            return *_wire;
+        }
+
+        bool hasWire() const
+        {
+            return _wire != nullptr;
+        }
+
+
+    protected:
+        uint8_t _address;
+        TwoWire *_wire;
+    };
+
+    template<uint8_t _PinRangeStart, uint8_t _PinRangeEnd>
+    class BaseRange {
+    public:
+        static bool inRange(uint8_t pin) {
+            return pin >= _PinRangeStart && pin < _PinRangeEnd;
+        }
+        static uint8_t pin2DigitalPin(uint8_t pin) {
+            return _PinRangeStart + pin;
+        }
+        static uint8_t digitalPin2Pin(uint8_t pin) {
+            return pin - _PinRangeStart;
+        }
+        static uint8_t pin2AnalogPin(uint8_t pin) {
+            return _PinRangeStart + pin;
+        }
+        static uint8_t analogPin2Pin(uint8_t pin) {
+            return pin - _PinRangeStart;
+        }
+    };
 
     namespace IOWrapper {
 
@@ -71,6 +151,7 @@ namespace IOExpander {
 
         protected:
             friend PCF8574;
+            friend TinyPwm;
 
             _Ta _value;
             _Parent *_parent;
@@ -132,39 +213,27 @@ namespace IOExpander {
             void _updatePort();
         };
 
-    };
+    }
 
-    template<uint8_t _PinRangeStart, uint8_t _PinRangeEnd>
-    class PCF8574_Range {
+    template <uint8_t _PinRangeStart, uint8_t _PinRangeEnd>
+    using PCF8574_Range =  BaseRange<_PinRangeStart, _PinRangeEnd>;
+
+    class PCF8574 : public Base<0x21> {
     public:
-        static bool inRange(uint8_t pin) {
-            return pin >= _PinRangeStart && pin < _PinRangeEnd;
-        }
-        static uint8_t pin2DigitalPin(uint8_t pin) {
-            return _PinRangeStart + pin;
-        }
-        static uint8_t digitalPin2Pin(uint8_t pin) {
-            return pin - _PinRangeStart;
-        }
-    };
-
-    class PCF8574 {
-    public:
-        static constexpr uint8_t kDefaultAddress = 0x21;
-
         using DDRType = IOWrapper::PCF8574_DDR;
         using PINType = IOWrapper::PCF8574_PIN;
         using PORTType = IOWrapper::PCF8574_PORT;
 
     public:
+        using Base = Base<0x21>;
+        using Base::Base;
+        using Base::begin;
+
+    public:
     	PCF8574(uint8_t address = kDefaultAddress, TwoWire *wire = &Wire);
 
-    	void begin(uint8_t address, TwoWire *wire);
-        void begin(uint8_t address = kDefaultAddress);
-        bool isConnected() const;
-        uint8_t getAddress() const;
-        TwoWire &getWire();
-        bool hasWire() const;
+    	 void begin(uint8_t address, TwoWire *wire);
+        void begin(uint8_t address);
 
 	    void pinMode(uint8_t pin, uint8_t mode);
         void digitalWrite(uint8_t pin, uint8_t value);
@@ -172,14 +241,29 @@ namespace IOExpander {
     	void write8(uint8_t value);
 	    uint8_t read8();
 
-    protected:
-        TwoWire *_wire;
-        uint8_t _address;
-
     public:
         DDRType DDR;
         PINType PIN;
         PORTType PORT;
+    };
+
+    // ATTiny853 IO expander with 1 PWM output and 2 ADC inputs
+
+    template <uint8_t _PinRangeStart, uint8_t _PinRangeEnd>
+    using TinyPwm_Range =  BaseRange<_PinRangeStart, _PinRangeEnd>;
+
+    class TinyPwm : public Base<0x60> {
+    public:
+        using Base = Base<0x60>;
+        using Base::Base;
+        using Base::begin;
+
+        // TinyPwm(uint8_t address = kDefaultAddress, TwoWire *wire = &Wire);
+
+        int analogRead(uint8_t pin);
+        void analogWrite(uint8_t pin, uint8_t value);
+
+        void pinMode(uint8_t pin, uint8_t mode) {}
     };
 
 }

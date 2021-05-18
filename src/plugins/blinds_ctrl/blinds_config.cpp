@@ -42,13 +42,15 @@ namespace KFCConfigurationClasses {
         cfg.open[1]._set_enum_action(OperationType::OPEN_CHANNEL0_FOR_CHANNEL1);
         cfg.open[2]._set_enum_action(OperationType::OPEN_CHANNEL1);
 
-        cfg.close[0]._set_enum_action(OperationType::OPEN_CHANNEL0);
-        cfg.close[1]._set_enum_action(OperationType::OPEN_CHANNEL0_FOR_CHANNEL1);
-        cfg.close[2]._set_enum_action(OperationType::CLOSE_CHANNEL1_FOR_CHANNEL0);
+        // cfg.close[0]._set_enum_action(OperationType::OPEN_CHANNEL0);
+        cfg.close[0]._set_enum_action(OperationType::OPEN_CHANNEL0_FOR_CHANNEL1);
+        cfg.close[1]._set_enum_action(OperationType::CLOSE_CHANNEL1_FOR_CHANNEL0);
+        cfg.close[1].delay = 30;
+        cfg.close[1]._set_enum_play_tone(PlayToneType::INTERVAL);
+        cfg.close[2]._set_enum_action(OperationType::CLOSE_CHANNEL1);
         cfg.close[2].delay = 30;
-        cfg.close[3]._set_enum_action(OperationType::CLOSE_CHANNEL1);
-        cfg.close[3].delay = 30;
-        cfg.close[4]._set_enum_action(OperationType::CLOSE_CHANNEL0);
+        cfg.close[2]._set_enum_play_tone(PlayToneType::INTERVAL);
+        cfg.close[3]._set_enum_action(OperationType::CLOSE_CHANNEL0);
 
         setConfig(cfg);
         setChannel0Name(FSPGM(Turn));

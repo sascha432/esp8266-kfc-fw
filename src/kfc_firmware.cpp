@@ -146,6 +146,9 @@ void setup()
     #if HAVE_PCF8575
         initialize_pcf8575();
     #endif
+    #if HAVE_TINYPWM
+        initialize_tinypwm();
+    #endif
     #if HAVE_PCA9685
         initialize_pca9785();
     #endif

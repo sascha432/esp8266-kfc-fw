@@ -229,11 +229,22 @@ void ClockPlugin::_createWebUI(WebUINS::Root &webUI)
         row.append(lightSensor);
     )
 
+#if HAVE_FANCONTROL
+
     auto tempProtection = WebUINS::Sensor(F("tempp"), F("Temperature Protection"), '%', WebUINS::SensorRenderType::ROW, false, 3);
     tempProtection.append(WebUINS::NamedString(J(height), height));
     row.append(tempProtection);
 
     webUI.addRow(row);
+
+#else
+    auto tempProtection = WebUINS::Sensor(F("tempp"), F("Temperature Protection"), '%', WebUINS::SensorRenderType::ROW, false, 3);
+    tempProtection.append(WebUINS::NamedString(J(height), height));
+    row.append(tempProtection);
+
+    webUI.addRow(row);
+#endif
+
 }
 
 void ClockPlugin::_broadcastWebUI()

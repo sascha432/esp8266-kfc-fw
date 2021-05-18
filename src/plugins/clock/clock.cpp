@@ -12,6 +12,7 @@
 #include <WebUIAlerts.h>
 #include <async_web_response.h>
 #include "clock.h"
+#include "web_server.h"
 #include "blink_led_timer.h"
 #include <stl_ext/algorithm.h>
 #include "../src/plugins/plugins.h"
@@ -29,9 +30,8 @@ static ClockPlugin plugin;
 
 void initialize_pcf8574()
 {
-    config.initTwoWire(); // init I2C
     // begin sets all pins to high level output and then to pin mode input
-    _PCF8574.begin(PCF8574_I2C_ADDRESS);
+    _PCF8574.begin(PCF8574_I2C_ADDRESS, &config.initTwoWire());
     _PCF8574.DDR = 0b00111111;
 }
 
@@ -52,6 +52,19 @@ void print_status_pcf8574(Print &output)
         output.print(F("ERROR - Device not found!"));
     }
 }
+
+#endif
+
+#if HAVE_TINYPWM
+
+void print_status_tinypwm(Print &output)
+{
+    output.printf_P(PSTR("TinyPWM @ I2C address 0x%02x"), TINYPWM_I2C_ADDRESS);
+    if (!_TinyPwm.isConnected()) {
+        output.print(F("ERROR - Device not found!"));
+    }
+}
+
 
 #endif
 
@@ -155,6 +168,10 @@ void ClockPlugin::createMenu()
 
 bool ClockPlugin::_loopDisplayLightSensor(LoopOptionsType &options)
 {
+#if IOT_CLOCK_AMBIENT_LIGHT_SENSOR == 2
+    // not supported
+    return false;
+#else
     if (_displaySensor == DisplaySensorType::OFF) {
         return false;
     }
@@ -185,6 +202,7 @@ bool ClockPlugin::_loopDisplayLightSensor(LoopOptionsType &options)
         });
     }
     return true;
+#endif
 }
 
 void ClockPlugin::adjustAutobrightness(Event::CallbackTimerPtr timer)
@@ -224,14 +242,53 @@ String ClockPlugin::_getLightSensorWebUIValue()
 void ClockPlugin::_updateLightSensorWebUI()
 {
     if (WebUISocket::hasAuthenticatedClients()) {
-        WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(WebUINS::Events(WebUINS::Values(FSPGM(light_sensor, "light_sensor")), _getLightSensorWebUIValue())))));
+        WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(
+            WebUINS::Events(WebUINS::Values(FSPGM(light_sensor, "light_sensor"), _getLightSensorWebUIValue()))
+        ));
     }
 }
 
-uint16_t ClockPlugin::_readLightSensor() const
+uint16_t ClockPlugin::_readLightSensor()
 {
+#if IOT_CLOCK_AMBIENT_LIGHT_SENSOR == 1
     return ADCManager::getInstance().readValue();
+#elif IOT_CLOCK_AMBIENT_LIGHT_SENSOR == 2
+    return _lightSensorAvgLevel;
+#else
+    return 0;
+#endif
 }
+
+#if IOT_CLOCK_AMBIENT_LIGHT_SENSOR == 2
+uint16_t ClockPlugin::_readI2CLightSensor()
+{
+    uint16_t level;
+    Wire.beginTransmission(TINYPWM_I2C_ADDRESS);
+    Wire.write(0x11);
+    Wire.write(0x00);
+    if (
+        (Wire.endTransmission() == 0) &&
+        (Wire.requestFrom(TINYPWM_I2C_ADDRESS, sizeof(level)) == sizeof(level)) &&
+        (Wire.readBytes(reinterpret_cast<uint8_t *>(&level), sizeof(level)) == sizeof(level))
+     ) {
+         level = 1023 - level;  // tested min/max. values 17 - 730 (bright - dark)
+        __LDBG_printf("ambient light sensor level: %u", level);
+        if (isnan(_lightSensorAvgLevel)) {
+            _lightSensorAvgLevel = level;
+        }
+        else {
+            auto mul = 2000 / static_cast<float>(get_time_diff(_lightSensorLastUpate, millis()));
+            _lightSensorAvgLevel = ((_lightSensorAvgLevel * mul) + level) / (mul + 1.0);
+        }
+        _lightSensorLastUpate = millis();
+        return level;
+    }
+    else {
+        __LDBG_printf("failed to retrieve analog data from TinyPwm");
+    }
+    return 0;
+}
+#endif
 
 uint8_t ClockPlugin::_getBrightness(bool temperatureProtection) const
 {
@@ -307,6 +364,10 @@ void ClockPlugin::_setupTimer()
         )
 
         IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(
+            #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR == 2
+                // read I2C sensor once per second
+                _readI2CLightSensor();
+            #endif
             // update light sensor webui
             if (_timerCounter % kUpdateAutobrightnessInterval == 0) {
                 uint8_t tmp = _autoBrightnessValue * 100;
@@ -494,11 +555,14 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
     )
 
     IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(
+
+        #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR == 1
         ADCManager::getInstance().addAutoReadTimer(Event::seconds(1), Event::milliseconds(30), 24);
+        #endif
         _Timer(_autoBrightnessTimer).add(Event::milliseconds_cast(kAutoBrightnessInterval), true, adjustAutobrightness, Event::PriorityType::TIMER);
         _adjustAutobrightness();
 
-        dependencies->dependsOn(F("http"), [](const PluginComponent *, DependencyResponseType response) {
+        dependencies->dependsOn(F("http"), [this](const PluginComponent *, DependencyResponseType response) {
             if (response != DependencyResponseType::SUCCESS) {
                 return;
             }
@@ -648,6 +712,9 @@ void ClockPlugin::getStatus(Print &output)
     output.print(F("LED Matrix Plugin" HTML_S(br)));
 #else
     output.print(F("Clock Plugin" HTML_S(br)));
+#endif
+#if HAVE_FANCONTROL
+    output.print(F("Fan control, "));
 #endif
 #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
     output.print(F("Ambient light sensor"));
@@ -919,22 +986,35 @@ void ClockPlugin::_setBlendAnimation(Clock::Animation *blendAnimation)
 
 void ClockPlugin::handleWebServer(AsyncWebServerRequest *request)
 {
-    if (WebServerPlugin::getInstance().isAuthenticated(request) == true) {
+    if (WebServer::Plugin::getInstance().isAuthenticated(request) == true) {
+        char buffer[16];
+
         HttpHeaders httpHeaders(false);
-        auto response = __LDBG_new(AsyncFillBufferCallbackResponse, [](bool *async, bool fillBuffer, AsyncFillBufferCallbackResponse *response) {
+#if IOT_CLOCK_AMBIENT_LIGHT_SENSOR == 1
+        auto response = new AsyncFillBufferCallbackResponse([](bool *async, bool fillBuffer, AsyncFillBufferCallbackResponse *response) {
             if (*async && !fillBuffer) {
                 response->setContentType(FSPGM(mime_text_plain));
                 if (!ADCManager::getInstance().requestAverage(10, 30000, [async, response](const ADCManager::ADCResult &result) {
-                    char buffer[16];
                     snprintf_P(buffer, sizeof(buffer), PSTR("%u"), result.getValue());
                     response->getBuffer().write(buffer);
                     AsyncFillBufferCallbackResponse::finished(async, response);
                 })) {
-                    response->setCode(500);
+                    response->setCode(503);
                     AsyncFillBufferCallbackResponse::finished(async, response);
                 }
             }
         });
+#elif IOT_CLOCK_AMBIENT_LIGHT_SENSOR == 2
+        AsyncWebServerResponse *response;
+        auto &plugin = ClockPlugin::getInstance();
+        if (std::isnan(plugin._lightSensorAvgLevel)) {
+            response = request->beginResponse(503, FSPGM(mime_text_plain), String());
+        }
+        else {
+            snprintf_P(buffer, sizeof(buffer), PSTR("%u"), static_cast<uint16_t>(plugin._lightSensorAvgLevel));
+            response = request->beginResponse(200, FSPGM(mime_text_plain), buffer);
+        }
+#endif
         httpHeaders.addNoCache();
         httpHeaders.setResponseHeaders(response);
         request->send(response);
@@ -946,8 +1026,8 @@ void ClockPlugin::handleWebServer(AsyncWebServerRequest *request)
 
 void ClockPlugin::_installWebHandlers()
 {
-    __LDBG_printf("server=%p", WebServerPlugin::getWebServerObject());
-    WebServerPlugin::addHandler(F("/ambient_light_sensor"), handleWebServer);
+    __LDBG_printf("server=%p", WebServer::Plugin::getWebServerObject());
+    WebServer::Plugin::addHandler(F("/ambient_light_sensor"), handleWebServer);
 }
 
 #endif

@@ -3,7 +3,7 @@
  */
 
 $(function() {
-	if ($('#clock_settings').length) {
+	if ($('#clock_settings,#led_matrix_settings').length) {
         $('#dis_auto_br').off('click').on('click', function() {
             $('#auto_br').val(-1);
         });

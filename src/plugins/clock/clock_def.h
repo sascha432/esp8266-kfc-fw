@@ -152,9 +152,24 @@
 #    define IOT_CLOCK_EN_PIN_INVERTED 0
 #endif
 
-// disable ambient light sensor by default
+// 0 = disabled
+// 1 = sensor connected to ADC
+// 2 = TinyPwm I2C sensor
 #ifndef IOT_CLOCK_AMBIENT_LIGHT_SENSOR
 #    define IOT_CLOCK_AMBIENT_LIGHT_SENSOR 0
+#endif
+
+// support for fan control
+// 0 = disabled
+// 1 = TinyPwm Fan Control
+#ifndef HAVE_FANCONTROL
+#   define HAVE_FANCONTROL 0
+#endif
+
+#ifndef IF_IOT_HAVE_FANCONTROL
+#    define IF_IOT_HAVE_FANCONTROL(...) __VA_ARGS__
+#else
+#    define IF_IOT_HAVE_FANCONTROL(...)
 #endif
 
 #ifndef IF_IOT_CLOCK_EN_PIN_INVERTED
@@ -164,6 +179,7 @@
 #       define IF_IOT_CLOCK_EN_PIN_INVERTED(a, b) (b)
 #   endif
 #endif
+
 
 #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
 #    define IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(...) __VA_ARGS__

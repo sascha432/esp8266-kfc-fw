@@ -80,6 +80,8 @@
 - Fixed missing information for SSDP
 - Replaced RGB Silder with Bootstrap Color Picker Sliders
 - Support for https://github.com/NimmLor/IoT-Audio-Visualization-Center
+- Support for TinyPwm I2C IO Expander
+- Fan control and light sensor for LED matrix
 
 ## Version 0.0.3
 

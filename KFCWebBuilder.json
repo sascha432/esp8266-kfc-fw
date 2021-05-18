@@ -73,11 +73,11 @@
             ],
             "#if !IOT_CLOCK && !IOT_LED_MATRIX": [
                 "./Resources/images/light.svg",
-                "./Resources/js/led-matrix.js"
+                "./Resources/js/led-matrix.js",
+                "./Resources/js/forms/clock.js"
             ],
             "#if !IOT_CLOCK || IOT_LED_MATRIX": [
                 "./Resources/html/clock.html",
-                "./Resources/js/forms/clock.js",
                 "./Resources/css/clock-led-matrix.css"
             ],
             "#if IOT_CLOCK || !IOT_LED_MATRIX": [

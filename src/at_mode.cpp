@@ -16,6 +16,7 @@
 #include <queue>
 #include <JsonTools.h>
 #include <ListDir.h>
+#include <DumpBinary.h>
 #include "at_mode.h"
 #include "kfc_fw_config.h"
 #include "fs_mapping.h"
@@ -1624,11 +1625,12 @@ void at_mode_serial_handle_event(String &commandString)
             for(uint8_t i = 1; i < args.size(); i++) {
                 Wire.write(args.toNumber(i, 0xff));
             }
-            if (Wire.endTransmission() == 0) {
+            uint8_t error;
+            if ((error = Wire.endTransmission()) == 0) {
                 args.printf_P(PSTR("slave 0x%02X: transmitted %u bytes"), address, args.size() - 1);
             }
             else {
-                args.printf_P(PSTR("slave 0x%02X: transmission failed"), address);
+                args.printf_P(PSTR("slave 0x%02X: transmission failed, error %u"), address, error);
             }
         }
     }
@@ -1638,18 +1640,22 @@ void at_mode_serial_handle_event(String &commandString)
             uint8_t length = args.toNumber(1, 0);
             if (Wire.requestFrom(address, length) == length) {
                 uint8_t *buf = new uint8_t[length + 1]();
-                if (buf) {
-                    delete[] buf;
-                }
-                else {
+                if (!buf) {
                     args.printf_P(PSTR("failed to allocate memory. %u bytes"), length);
                 }
-                auto read = Wire.readBytes(buf, length);
-                args.printf_P(PSTR("slave 0x%02X: requested %u byte. data:"), address, read);
-                printable_string(args.getStream(), buf, read, 0);
+                else {
+                    auto read = Wire.readBytes(buf, length);
+                    args.printf_P(PSTR("slave 0x%02X: requested %u byte. data:"), address, read);
+                    DumpBinary dump(args.getStream());
+                    dump.setPerLine(16).setGroupBytes(4).dump(buf, read);
+                    // printable_string(args.getStream(), buf, read, 0);
+                    if (buf) {
+                        delete[] buf;
+                    }
+                }
             }
             else {
-                args.printf_P(PSTR("slave 0x%02X: requesting data failed"), address);
+                args.printf_P(PSTR("slave 0x%02X: requesting data failed, length=%u"), address, length);
             }
         }
     }

@@ -270,6 +270,11 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         print_status_pcf8575(output);
     }
 #endif
+#if HAVE_TINYPWM
+    else if (key == F("TINYPWM_STATUS")) {
+        print_status_tinypwm(output);
+    }
+#endif
 #if HAVE_PCA9685
     else if (key == F("PCA9685_STATUS")) {
         print_status_pca9685(output);
@@ -394,7 +399,7 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     __DBG_printf("strlist check key='%s'", key.c_str());
 
     // else
-    if (stringlist_find_P_P(PSTR("PCF8574_STATUS,PCF8575_STATUS,PCA9685_STATUS,MCP23017_STATUS,RTC_STATUS"), key.c_str(), ',') != -1) {
+    if (stringlist_find_P_P(PSTR("PCF8574_STATUS,PCF8575_STATUS,TINYPWM_STATUS,PCA9685_STATUS,MCP23017_STATUS,RTC_STATUS"), key.c_str(), ',') != -1) {
         // strings that have not been replaced yet
         __DBG_printf("return strlist check key='%s'", key.c_str());
         return;

@@ -377,7 +377,7 @@ public:
 
     Event::Timer _saveTimer;
     uint32_t _saveTimestamp{0};
-#else:
+#else
 
 public:
     void _saveStateDelayed() {}
@@ -471,7 +471,7 @@ private:
     void _adjustAutobrightness();
     String _getLightSensorWebUIValue();
     void _updateLightSensorWebUI();
-    uint16_t _readLightSensor() const;
+    uint16_t _readLightSensor();
     // uint16_t _readLightSensor(uint8_t num, uint8_t delayMillis) const;
     bool _loopDisplayLightSensor(LoopOptionsType &options);
     void _installWebHandlers();
@@ -485,6 +485,13 @@ private:
     int16_t _autoBrightness{ADCManager::kMaxADCValue};
     uint8_t _autoBrightnessLastValue{0};
     DisplaySensorType _displaySensor{DisplaySensorType::OFF};
+
+#if IOT_CLOCK_AMBIENT_LIGHT_SENSOR == 2
+    uint16_t _readI2CLightSensor();
+    float _lightSensorAvgLevel{NAN};
+    uint32_t _lightSensorLastUpate{0};
+#endif
+
 #endif
 
 // ------------------------------------------------------------------------

@@ -21,6 +21,7 @@ $.webUIComponent = {
         webui_named_switch: '<div class="webuicomponent"><div class="switch named-switch"><div class="row"><div class="col"><input type="range" class="attribute-target"></div></div><div class="row"><div class="col title">{{title}}</div></div></div></div>',
         webui_switch_top: '<div class="webuicomponent"><div class="switch named-switch"><div class="row"><{{ht|h4}} class="col title">{{title}}</{{ht|h4}}></div><div class="row"><div class="col"><input type="range" class="attribute-target"></div></div></div></div>',
         webui_slider: '<div class="webuicomponent"><div class="{{slider-type}}"><input type="range" class="attribute-target"></div></div>',
+        webui_slider_top: '<div class="webuicomponent"><div class="switch named-switch"><div class="row"><{{ht|h4}} class="col title">{{title}}</{{ht|h4}}></div><div class="row"><div class="col"><div class="{{slider-type}}"><input type="range" class="attribute-target"></div></div></div></div></div>',
         webui_color_picker: '<div class="webuicomponent"><div class="{{slider-type}}"><input type="hidden" class="attribute-target" data-color-format="hex"><div class="rgb-color-picker"></div></div></div>',
         webui_screen: '<div class="webuicomponent"><div class="screen"><div class="row"><div class="col"><canvas class="attribute-target"></canvas></div></div></div></div>',
         webui_listbox: '<div class="webuicomponent"><div class="listbox"><div class="row"><{{th|h4}} class="col title">{{title}}</{{th|h4}}></div><div class="row"><div class="col"><select class="attribute-target">{{content}}</select></div></div></div></div>',
@@ -622,7 +623,13 @@ $.webUIComponent = {
     //
     add_element_slider: function(options) {
         this.components[options.id] = {type: 'slider'};
-        var prototype = $(this.get_prototype('webui-slider', options));
+        var prototype;
+        if (options.name == 2) {
+            prototype = $(this.get_prototype('webui-slider-top', options));
+        }
+        else {
+            prototype = $(this.get_prototype('webui-slider', options));
+        }
         var range = prototype.find('.attribute-target');
         this.add_attributes(range, options);
         return prototype;

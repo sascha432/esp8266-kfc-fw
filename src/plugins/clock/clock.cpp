@@ -341,7 +341,10 @@ void ClockPlugin::_setupTimer()
 
         IF_IOT_CLOCK_HAVE_MOTION_SENSOR(
             auto state = _digitalRead(IOT_CLOCK_HAVE_MOTION_SENSOR_PIN);
-            if (state != _motionState) {
+            if (!state && _motionLastUpdate && get_time_diff(_motionLastUpdate, millis()) < (_config.motion_trigger_timeout * 60 * 1000)) {
+                // keep the motion signal on if any motion is detected within N min.
+            }
+            else if (state != _motionState) {
                 if (isConnected()) {
                     publish(MQTT::Client::formatTopic(F("motion")), true, MQTT::Client::toBoolOnOff(_motionState));
                 }

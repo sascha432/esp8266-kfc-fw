@@ -68,6 +68,7 @@ namespace KFCConfigurationClasses {
         blink_colon_speed(kDefaultValueFor_blink_colon_speed),
 #endif
         flashing_speed(kDefaultValueFor_flashing_speed),
+        motion_trigger_timeout(kDefaultValueFor_motion_trigger_timeout),
         motion_auto_off(kDefaultValueFor_motion_auto_off),
         power({static_cast<uint16_t>(79.7617 * kPowerNumLeds), static_cast<uint16_t>(79.9648 * kPowerNumLeds), static_cast<uint16_t>(79.6055 * kPowerNumLeds), static_cast<uint16_t>(4.0586 * kPowerNumLeds)}),
         protection( { { 45, 60 }, 70, 25 } ),

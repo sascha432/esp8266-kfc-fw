@@ -286,14 +286,18 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
             form.addFormUI(F("After Reset"), initialStateItems);
         )
 
+        form.addObjectGetterSetter(F("br"), cfg, cfg.get_bits_brightness, cfg.set_bits_brightness);
+        form.addFormUI(FormUI::Type::RANGE_SLIDER, FSPGM(Brightness), FormUI::MinMax(cfg.kMinValueFor_brightness, cfg.kMaxValueFor_brightness));
+
         #if IOT_CLOCK_HAVE_MOTION_SENSOR
+            form.addObjectGetterSetter(F("mt"), cfg, cfg.get_bits_motion_trigger_timeout, cfg.set_bits_motion_trigger_timeout);
+            form.addFormUI(F("Motion Sensor Timeout"), FormUI::Suffix(F("minutes")));
+            cfg.addRangeValidatorFor_motion_trigger_timeout(form);
+
             form.addObjectGetterSetter(F("ao"), cfg, cfg.get_bits_motion_auto_off, cfg.set_bits_motion_auto_off);
             form.addFormUI(F("Auto Off Delay For Motion Sensor"), FormUI::Suffix(F("minutes")), FormUI::IntAttribute(F("disabled-value"), 0));
             cfg.addRangeValidatorFor_motion_auto_off(form);
         #endif
-
-        form.addObjectGetterSetter(F("br"), cfg, cfg.get_bits_brightness, cfg.set_bits_brightness);
-        form.addFormUI(FormUI::Type::RANGE_SLIDER, FSPGM(Brightness), FormUI::MinMax(cfg.kMinValueFor_brightness, cfg.kMaxValueFor_brightness));
 
         IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(
             form.addObjectGetterSetter(F("auto_br"), cfg, cfg.get_bits_auto_brightness, cfg.set_bits_auto_brightness);

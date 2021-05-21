@@ -1177,6 +1177,7 @@ namespace KFCConfigurationClasses {
 #endif
                 CREATE_UINT32_BITFIELD_MIN_MAX(flashing_speed, 13, 50, 8000, 150, 100)
                 CREATE_UINT32_BITFIELD_MIN_MAX(motion_auto_off, 10, 0, 1000, 0, 1)
+                CREATE_UINT32_BITFIELD_MIN_MAX(motion_trigger_timeout, 8, 1, 240, 15, 1)
 
                 static const uint16_t kPowerNumLeds = 256;
 

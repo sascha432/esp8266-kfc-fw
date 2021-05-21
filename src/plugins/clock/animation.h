@@ -319,13 +319,13 @@ namespace Clock {
             _from = _color;
             _waiting = false;
             _finished = false;
-            __LDBG_printf("fading from %s to %s in %ums", _from.toString().c_str(), _to.toString().c_str(), _duration);
+            // __LDBG_printf("fading from %s to %s in %ums", _from.toString().c_str(), _to.toString().c_str(), _duration);
             _loopTimer = millis();
         }
 
         virtual void setColor(Color color) override
         {
-            __LDBG_printf("set color=%s current=%s", color.toString().c_str(), _color.toString().c_str());
+            // __LDBG_printf("set color=%s current=%s", color.toString().c_str(), _color.toString().c_str());
             _to = color;
             begin();
         }
@@ -333,7 +333,7 @@ namespace Clock {
         virtual void loop(uint32_t millisValue)
         {
             if (_waiting && get_time_diff(_waitTimer, millis()) >= _holdTime) {
-                __LDBG_printf("waiting period is over");
+                // __LDBG_printf("waiting period is over");
                 _color = _getColor();
                 srand(millisValue);
                 _to.rnd();
@@ -351,13 +351,13 @@ namespace Clock {
             if (duration >= _duration) {
                 _color = _to;
                 if (_holdTime == kNoColorChange) {
-                    __LDBG_printf("no color change activated");
+                    // __LDBG_printf("no color change activated");
                     // no automatic color change enabled
                     _finished = true;
                     _waiting = false;
                     return;
                 }
-                __LDBG_printf("entering waiting period time=%u", _holdTime);
+                // __LDBG_printf("entering waiting period time=%u", _holdTime);
                 // wait for next color change
                 _waitTimer = millis();
                 _waiting = true;

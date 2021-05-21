@@ -272,7 +272,7 @@ uint16_t ClockPlugin::_readI2CLightSensor()
         (Wire.readBytes(reinterpret_cast<uint8_t *>(&level), sizeof(level)) == sizeof(level))
      ) {
          level = 1023 - level;  // tested min/max. values 17 - 730 (bright - dark)
-        __LDBG_printf("ambient light sensor level: %u", level);
+        // __LDBG_printf("ambient light sensor level: %u", level);
         if (isnan(_lightSensorAvgLevel)) {
             _lightSensorAvgLevel = level;
         }
@@ -362,6 +362,13 @@ void ClockPlugin::_setupTimer()
                     if (_motionLastUpdate == 0) {
                         _motionLastUpdate++;
                     }
+                }
+            }
+            else if (state && state == _motionState && _motionLastUpdate) {
+                // __LDBG_printf("motion detected (retrigger): last=%.3fs auto_off=%us", _motionLastUpdate ? (millis() - _motionLastUpdate) / 1000.0 : 0.0,  (_config.motion_auto_off * 60));
+                _motionLastUpdate = millis();
+                if (_motionLastUpdate == 0) {
+                    _motionLastUpdate++;
                 }
             }
         )

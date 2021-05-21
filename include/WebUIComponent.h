@@ -318,6 +318,26 @@ namespace WebUINS {
                 append(NamedUint32(J(columns), colspan));
             }
         }
+
+/*
+        template<typename _Ta, typename _Tb>
+        Slider(_Ta id, _Tb title, int32_t minVal, int32_t maxVal, bool zeroOff = true, NamePositionType position = NamePositionType::HIDE, uint8_t colspan = 0) :
+            Component(
+                NamedString(J(type), J(slider)),
+                Component::createNamedString(J(id), id),
+                Component::createNamedString(J(title), title),
+                NamedInt32(J(min), minVal),
+                NamedInt32(J(max), maxVal),
+                NamedBool(J(zero_off), zeroOff),
+                NamedUint32(J(name), static_cast<uint32_t>(position))
+            )
+        {
+            colspan = colspanToColumns(colspan);
+            if (colspan) {
+                append(NamedUint32(J(columns), colspan));
+            }
+        }
+*/
     };
 
     class ColorTemperatureSlider : public Component {

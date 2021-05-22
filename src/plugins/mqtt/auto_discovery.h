@@ -134,7 +134,7 @@ namespace MQTT {
             }
 
             // JSON array
-            // ["Efect1","Effect2",...]
+            // ["Effect1","Effect2",...]
             void addEffectList(String json) {
                 __addParameter(FSPGM(mqtt_effect_list), json.c_str(), false);
             }
@@ -215,6 +215,43 @@ namespace MQTT {
                 addParameter(FSPGM(mqtt_type), PrintString(F("%s_%s"), typePrefix, type));
                 addParameter(FSPGM(mqtt_payload), PrintString(F("%s_%s"), subType.c_str(), type));
             }
+
+            template<typename _T>
+            void addSpeedRangeMin(_T value) {
+                addParameter(FSPGM(mqtt_speed_range_min), value);
+            }
+
+            template<typename _T>
+            void addSpeedRangeMax(_T value) {
+                addParameter(FSPGM(mqtt_speed_range_max), value);
+            }
+
+            template<typename _T>
+            void addPercentageCommandTopic(_T value) {
+                addParameter(FSPGM(mqtt_percentage_command_topic), value);
+            }
+
+            template<typename _T>
+            void addPercentageStateTopic(_T value) {
+                addParameter(FSPGM(percentage_state_topic), value);
+            }
+
+            template<typename _T>
+            void addPresetModeStateTopic(_T value) {
+                addParameter(FSPGM(mqtt_preset_mode_state_topic), value);
+            }
+
+            template<typename _T>
+            void addPresetModeCommandTopic(_T value) {
+                addParameter(FSPGM(mqtt_preset_mode_command_topic), value);
+            }
+
+            // JSON array
+            // ["Mode1","Mode2",...]
+            void addPresetModes(String json) {
+                __addParameter(FSPGM(mqtt_preset_modes), json.c_str(), false);
+            }
+
 
         public:
             void finalize();

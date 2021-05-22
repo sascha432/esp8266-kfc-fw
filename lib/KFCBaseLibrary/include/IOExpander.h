@@ -261,7 +261,7 @@ namespace IOExpander {
         // TinyPwm(uint8_t address = kDefaultAddress, TwoWire *wire = &Wire);
 
         int analogRead(uint8_t pin);
-        void analogWrite(uint8_t pin, uint8_t value);
+        bool analogWrite(uint8_t pin, uint8_t value);
 
         void pinMode(uint8_t pin, uint8_t mode) {}
     };

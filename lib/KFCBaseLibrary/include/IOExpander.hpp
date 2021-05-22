@@ -180,14 +180,16 @@ namespace IOExpander {
         return 0;
     }
 
-    IOEXPANDER_INLINE void TinyPwm::analogWrite(uint8_t pin, uint8_t value)
+    IOEXPANDER_INLINE bool TinyPwm::analogWrite(uint8_t pin, uint8_t value)
     {
         _wire->beginTransmission(_address);
         _wire->write(static_cast<uint8_t>(TinyPwmNS::Commands::ANALOG_WRITE));
-        _wire->write(pin);
+        _wire->write(value);
         if (_wire->endTransmission(false) != 0) {
             __DBG_printf("endTransmission() failed");
+            return false;
         }
+        return true;
     }
 
 }

@@ -16,6 +16,7 @@ namespace MQTT {
         SENSOR,
         BINARY_SENSOR,
         DEVICE_AUTOMATION,
+        FAN,
         AUTO_DISCOVERY
     };
 

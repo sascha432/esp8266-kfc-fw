@@ -25,7 +25,7 @@ void ClockPlugin::getValues(WebUINS::Events &array)
     array.append(
         WebUINS::Values(F("ani"), static_cast<int>(_config.animation), enabled),
         WebUINS::Values(F("color"), Color(_getColor()).toString(), enabled && _config.hasColorSupport()),
-        WebUINS::Values(FSPGM(brightness), static_cast<uint8_t>(enabled ? _targetBrightness : _savedBrightness), true/* brightness can be used to turn it on */)
+        WebUINS::Values(FSPGM(brightness), static_cast<uint8_t>(enabled ? _targetBrightness : _savedBrightness), true/* changing brightness can be used to turn the LEDs on */)
     );
 
     if (_tempBrightness == -1) {
@@ -56,6 +56,10 @@ void ClockPlugin::getValues(WebUINS::Events &array)
         auto timeStr = value ? formatTime2(F(", "), F(" and "), false, value) + F(" ago") : String(F("NOW"));
         array.append(WebUINS::Values(F("motion"), timeStr));
     )
+
+    IF_IOT_HAVE_FANCONTROL(
+        array.append(WebUINS::Values(F("fanspeed"), _fanSpeed, true));
+    )
 }
 
 void ClockPlugin::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
@@ -74,6 +78,17 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
         IF_IOT_CLOCK_SAVE_STATE(
             if (id == F("power")) {
                 _setState(val);
+            }
+            else
+        )
+        IF_IOT_HAVE_FANCONTROL(
+            if (id == F("fanspeed")) {
+                _setFanSpeed(val);
+                _config.fan_speed = _fanSpeed;
+                _saveStateDelayed();
+                // if (val != _fanSpeed) {
+                //     _webUIUpdateFanSpeed();
+                // }
             }
             else
         )
@@ -101,13 +116,13 @@ void ClockPlugin::addPowerSensor(WebUINS::Root &webUI, SensorPlugin::SensorType 
         ClockPlugin::getInstance()._createWebUI(webUI);
         return;
     }
-    // add ina219 or popwer sensor to sensors
+//     // // calculated power and power limit
 #ifdef IOT_SENSOR_HAVE_INA219
     if (type == SensorPlugin::SensorType::INA219) {
-        webUI.appendToLastRow(WebUINS::Row(WebUINS::Sensor(F("pwrlvl"), getInstance()._config.power_limit ? F("Calculated Power / Limit") : F("Calculated Power"), 'W')));
+//         webUI.appendToLastRow(WebUINS::Row(WebUINS::Sensor(F("pwrlvl"), getInstance()._config.power_limit ? F("Calculated Power / Limit") : F("Calculated Power"), 'W')));
 #else
     if (type == SensorPlugin::SensorType::SYSTEM_METRICS) {
-        webUI.appendToLastRow(addRow::Row(WebUINS::Sensor(F("pwrlvl"), getInstance()._config.power_limit ? F("Power / Limit") : F("Power"), 'W')));
+//         webUI.appendToLastRow(addRow::Row(WebUINS::Sensor(F("pwrlvl"), getInstance()._config.power_limit ? F("Power / Limit") : F("Power"), 'W')));
 #endif
         IF_IOT_CLOCK_HAVE_MOTION_SENSOR(
             webUI.appendToLastRow(WebUINS::Row(WebUINS::Sensor(F("motion"), F("Motion Sensor"), F(""))));
@@ -204,46 +219,79 @@ void ClockPlugin::_createWebUI(WebUINS::Root &webUI)
     webUI.addRow(WebUINS::Slider(FSPGM(brightness), FSPGM(brightness), 0, kMaxBrightness, true));
     webUI.addRow(WebUINS::RGBSlider(F("color"), F("Color")));
 
-    WebUINS::Row row;
     auto height = F("15rem");
+    {
+        WebUINS::Row row;
 
-    IF_IOT_CLOCK_SAVE_STATE(
-        auto power = WebUINS::Switch(F("power"), F("Power<div class=\"p-1\"></div><span class=\"oi oi-power-standby\">"), true, WebUINS::NamePositionType::TOP, 3);
-        power.append(WebUINS::NamedString(J(height), height));
-        row.append(power);
-    )
+        IF_IOT_CLOCK_SAVE_STATE(
+            auto power = WebUINS::Switch(F("power"), F("Power<div class=\"p-1\"></div><span class=\"oi oi-power-standby\">"), true, WebUINS::NamePositionType::TOP, 3);
+            power.append(WebUINS::NamedString(J(height), height));
+            row.append(power);
+        )
 
-    IF_IOT_CLOCK(
-        auto colon = WebUINS::ButtonGroup(F("colon"), F("Colon"), F("{\"0\":\"Solid\",\"1000\":\"Blink slowly\",\"500\":\"Blink fast\"}"), 0, 3);
-        colon.append(WebUINS::NamedString(J(height), height));
-        row.append(colon);
-    )
+        IF_IOT_CLOCK(
+            auto colon = WebUINS::ButtonGroup(F("colon"), F("Colon"), F("{\"0\":\"Solid\",\"1000\":\"Blink slowly\",\"500\":\"Blink fast\"}"), 0, 3);
+            colon.append(WebUINS::NamedString(J(height), height));
+            row.append(colon);
+        )
 
-    auto animation = WebUINS::Listbox(F("ani"), F("Animation"), Plugins::ClockConfig::ClockConfig_t::getAnimationNames(), false, 5, 3);
-    animation.append(WebUINS::NamedString(J(height), height));
-    row.append(animation);
+        auto animation = WebUINS::Listbox(F("ani"), F("Animation"), Plugins::ClockConfig::ClockConfig_t::getAnimationNames(), false, 5, 3);
+        animation.append(WebUINS::NamedString(J(height), height));
+        row.append(animation);
 
-    IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(
-        auto lightSensor = WebUINS::Sensor(FSPGM(light_sensor), F("Ambient Light Sensor"), F("<img src=\"/images/light.svg\" width=\"80\" height=\"80\" style=\"margin-top:-20px;margin-bottom:1rem\">"), WebUINS::SensorRenderType::COLUMN, false, 3);
-        lightSensor.append(WebUINS::NamedString(J(height), height));
-        row.append(lightSensor);
-    )
+        IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(
+            auto lightSensor = WebUINS::Sensor(FSPGM(light_sensor), F("Ambient Light Sensor"), F("<img src=\"/images/light.svg\" width=\"80\" height=\"80\" style=\"margin-top:-20px;margin-bottom:1rem\">"), WebUINS::SensorRenderType::COLUMN, false, 3);
+            lightSensor.append(WebUINS::NamedString(J(height), height));
+            row.append(lightSensor);
+        )
 
-#if HAVE_FANCONTROL
+        webUI.addRow(row);
 
-    auto tempProtection = WebUINS::Sensor(F("tempp"), F("Temperature Protection"), '%', WebUINS::SensorRenderType::ROW, false, 3);
-    tempProtection.append(WebUINS::NamedString(J(height), height));
-    row.append(tempProtection);
+    }
 
-    webUI.addRow(row);
+    // protection
+    {
+        WebUINS::Row row;
+        webUI.addRow(WebUINS::Group(F("Protection"), false));
+
+        auto tempProtection = WebUINS::Sensor(F("tempp"), F("Temperature Protection"), '%', WebUINS::SensorRenderType::ROW, false, 3);
+        tempProtection.append(WebUINS::NamedString(J(height), height));
+        row.append(tempProtection);
+
+        webUI.addRow(row);
+
+        IF_IOT_HAVE_FANCONTROL(
+            {
+                auto fanSpeed = WebUINS::Slider(F("fanspeed"), F("Fan Speed<div class=\"p-1\"></div><span class=\"oi oi-fire\">"), _config.min_fan_speed - 1, _config.max_fan_speed, true, 3);
+                fanSpeed.append(
+                    WebUINS::NamedUint32(J(name), static_cast<uint32_t>(WebUINS::NamePositionType::TOP)),
+                    WebUINS::NamedString(J(height), height)
+                );
+                webUI.appendToLastRow(fanSpeed);
+            }
+        );
+
+        // calculated power and power limit
+#ifdef IOT_SENSOR_HAVE_INA219
+        auto power = WebUINS::Sensor(F("pwrlvl"), getInstance()._config.power_limit ? F("Calculated Power / Limit") : F("Calculated Power"), 'W');
 
 #else
-    auto tempProtection = WebUINS::Sensor(F("tempp"), F("Temperature Protection"), '%', WebUINS::SensorRenderType::ROW, false, 3);
-    tempProtection.append(WebUINS::NamedString(J(height), height));
-    row.append(tempProtection);
-
-    webUI.addRow(row);
+        auto power = WebUINS::Sensor(F("pwrlvl"), getInstance()._config.power_limit ? F("Power / Limit") : F("Power"), 'W'));
 #endif
+        power.append(
+            WebUINS::NamedString(J(height), height),
+            WebUINS::NamedUint32(J(columns), 3)
+        );
+        webUI.appendToLastRow(power);
+    }
+
+    // IF_IOT_CLOCK_HAVE_MOTION_SENSOR(
+    //     {
+    //         webUI.addRow(WebUINS::Row(
+    //             WebUINS::Sensor(F("motion"), F("Motion Sensor"), F(""))
+    //         ));
+    //     }
+    // );
 
 }
 
@@ -264,3 +312,16 @@ void ClockPlugin::_webUIUpdateColor(int color)
         )));
     }
 }
+
+// #if HAVE_FANCONTROL
+
+// void ClockPlugin::_webUIUpdateFanSpeed()
+// {
+//     if (WebUISocket::hasAuthenticatedClients()) {
+//         WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(WebUINS::Events(
+//             WebUINS::Values(F("fanspeed"), _fanSpeed, true)
+//         )));
+//     }
+// }
+
+// #endif

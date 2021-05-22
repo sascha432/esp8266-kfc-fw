@@ -245,6 +245,26 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
         protectionGroup.end();
 
+        IF_IOT_HAVE_FANCONTROL(
+
+            auto &fanGroup = form.addCardGroup(F("fan"), F("Fan"), true);
+
+            form.addObjectGetterSetter(F("fs"), cfg, cfg.get_bits_fan_speed, cfg.set_bits_fan_speed);
+            form.addFormUI(F("Fan Speed"));
+            form.addValidator(FormUI::Validator::Range(0, 255));
+
+            form.addObjectGetterSetter(F("mif"), cfg, cfg.get_bits_min_fan_speed, cfg.set_bits_min_fan_speed);
+            form.addFormUI(F("Minimum Fan Speed"));
+            form.addValidator(FormUI::Validator::Range(0, 255));
+
+            form.addObjectGetterSetter(F("maf"), cfg, cfg.get_bits_max_fan_speed, cfg.set_bits_max_fan_speed);
+            form.addFormUI(F("Maximum Fan Speed"));
+            form.addValidator(FormUI::Validator::Range(0, 255));
+
+            fanGroup.end();
+
+        )
+
         auto &powerGroup = form.addCardGroup(F("pow"), F("Power"), true);
 
         form.addObjectGetterSetter(F("pl"), cfg, cfg.get_bits_power_limit, cfg.set_bits_power_limit);

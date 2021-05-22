@@ -258,9 +258,11 @@ namespace IOExpander {
         using Base::Base;
         using Base::begin;
 
+        static constexpr uint8_t PB1 = 1;
+
         // TinyPwm(uint8_t address = kDefaultAddress, TwoWire *wire = &Wire);
 
-        int analogRead(uint8_t pin);
+        int analogRead(uint8_t pinNo);
         bool analogWrite(uint8_t pin, uint8_t value);
 
         void pinMode(uint8_t pin, uint8_t mode) {}

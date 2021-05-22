@@ -32,7 +32,7 @@
 #include "save_crash.h"
 #include "../src/plugins/plugins.h"
 #include  "spgm_auto_def.h"
-#if DEBUG_WEB_SERVER
+#if DEBUG_WEB_SERVER || 1
 #include <debug_helper_enable.h>
 #else
 #include <debug_helper_disable.h>

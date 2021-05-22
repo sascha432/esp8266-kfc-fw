@@ -312,6 +312,17 @@ private:
 
 #endif
 
+#ifdef HAVE_FANCONTROL
+
+private:
+    void _setFanSpeed(uint8_t speed);
+    // void _webUIUpdateFanSpeed();
+
+private:
+    uint8_t _fanSpeed{0};
+
+#endif
+
 // ------------------------------------------------------------------------
 // Power consumption sensor
 // ------------------------------------------------------------------------

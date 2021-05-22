@@ -68,8 +68,15 @@ namespace KFCConfigurationClasses {
         blink_colon_speed(kDefaultValueFor_blink_colon_speed),
 #endif
         flashing_speed(kDefaultValueFor_flashing_speed),
+#if IOT_CLOCK_HAVE_MOTION_SENSOR
         motion_auto_off(kDefaultValueFor_motion_auto_off),
         motion_trigger_timeout(kDefaultValueFor_motion_trigger_timeout),
+#endif
+#if HAVE_FANCONTROL
+        fan_speed(kDefaultValueFor_fan_speed),
+        min_fan_speed(kDefaultValueFor_min_fan_speed),
+        max_fan_speed(kDefaultValueFor_max_fan_speed),
+#endif
         power({static_cast<uint16_t>(79.7617 * kPowerNumLeds), static_cast<uint16_t>(79.9648 * kPowerNumLeds), static_cast<uint16_t>(79.6055 * kPowerNumLeds), static_cast<uint16_t>(4.0586 * kPowerNumLeds)}),
         protection( { { 45, 60 }, 70, 25 } ),
         rainbow{ RainbowMultiplier_t(), RainbowColor_t(), 30 },

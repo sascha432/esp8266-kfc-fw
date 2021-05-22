@@ -284,7 +284,15 @@ uint16_t ClockPlugin::_readI2CLightSensor()
         return level;
     }
     else {
-        __LDBG_printf("failed to retrieve analog data from TinyPwm");
+#if DEBUG_IOT_CLOCK
+        static uint32_t lastOutput = 0;
+        static uint32_t errorCounter = 0;
+        errorCounter++;
+        if (millis() >= lastOutput + 60000) {
+            lastOutput = millis();
+            __LDBG_printf("failed to retrieve analog data from TinyPwm (#%u)", errorCounter);
+        }
+#endif
     }
     return 0;
 }
@@ -447,6 +455,9 @@ void ClockPlugin::_setupTimer()
                     _setBrightness(0);
                     enableLoop(false);
                     _tempBrightness = -1.0;
+                    IF_IOT_HAVE_FANCONTROL(
+                        _setFanSpeed(255);
+                    )
 #if IOT_CLOCK_HAVE_OVERHEATED_PIN
                     _digitalWrite(IOT_CLOCK_HAVE_OVERHEATED_PIN, LOW);
                     IF_IOT_LED_MATRIX_STANDBY_PIN(
@@ -580,6 +591,10 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
         }, this);
     )
 
+    IF_IOT_HAVE_FANCONTROL(
+        _setFanSpeed(_config.fan_speed);
+    )
+
     MQTT::Client::registerComponent(this);
 
     LoopFunctions::add(ClockPlugin::loop);
@@ -633,6 +648,9 @@ void ClockPlugin::reconfigure(const String &source)
 #endif
     _disable(10);
     readConfig();
+    IF_IOT_HAVE_FANCONTROL(
+        _setFanSpeed(_config.fan_speed);
+    )
     IF_IOT_CLOCK_SAVE_STATE(
         _saveState();
     )
@@ -992,6 +1010,29 @@ void ClockPlugin::_setBlendAnimation(Clock::Animation *blendAnimation)
     _blendAnimation->begin();
 }
 
+#if HAVE_FANCONTROL
+
+void ClockPlugin::_setFanSpeed(uint8_t speed)
+{
+#if DEBUG_IOT_CLOCK
+    auto setSpeed = speed;
+#endif
+    if (speed < _config.min_fan_speed) {
+        speed = 0;
+    }
+    else {
+        speed = std::min<uint8_t>(speed, _config.max_fan_speed);
+    }
+    if (_TinyPwm.analogWrite(_TinyPwm.PB1, speed)) {
+        _fanSpeed = speed;
+    }
+#if DEBUG_IOT_CLOCK
+    __DBG_printf("set %u speed %u result %u", setSpeed, speed, _fanSpeed);
+#endif
+}
+
+#endif
+
 #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
 
 void ClockPlugin::handleWebServer(AsyncWebServerRequest *request)
@@ -1106,7 +1147,9 @@ void ClockPlugin::_enable()
             _digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(false));
         }
     )
-
+    IF_IOT_HAVE_FANCONTROL(
+        _setFanSpeed(_config.fan_speed);
+    )
     LoopFunctions::remove(standbyLoop);
     LoopFunctions::add(loop);
 
@@ -1138,6 +1181,10 @@ void ClockPlugin::_disable(uint8_t delayMillis)
         if (_config.standby_led) {
             _digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(true));
         }
+    )
+
+    IF_IOT_HAVE_FANCONTROL(
+        _setFanSpeed(0);
     )
 
     LoopFunctions::remove(loop);

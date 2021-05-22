@@ -69,6 +69,20 @@ MQTT::AutoDiscovery::EntityPtr ClockPlugin::getAutoDiscovery(FormatType format, 
         }
         break;
 #endif
+#if HAVE_FANCONTROL
+    case 1 IF_IOT_CLOCK_HAVE_MOTION_SENSOR( + 1) IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR( + 1) IF_IOT_CLOCK_DISPLAY_POWER_CONSUMPTION( + 1): {
+            if (!discovery->create(MQTTComponent::ComponentType::FAN, F("fan"), format)) {
+                return discovery;
+            }
+            discovery->addStateTopicAndPayloadOnOff(MQTTClient::formatTopic(F("/fan/state")));
+            discovery->addCommandTopic(MQTTClient::formatTopic(F("/fan/set")));
+            discovery->addParameter(F("speed_range_min"), _config.min_fan_speed);
+            discovery->addParameter(F("speed_range_max"), _config.max_fan_speed);
+
+
+        }
+        break;
+#endif
     }
     return discovery;
 }
@@ -78,7 +92,8 @@ uint8_t ClockPlugin::getAutoDiscoveryCount() const
     return 1
         IF_IOT_CLOCK_HAVE_MOTION_SENSOR( + 1)
         IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR( + 1)
-        IF_IOT_CLOCK_DISPLAY_POWER_CONSUMPTION( + 1);
+        IF_IOT_CLOCK_DISPLAY_POWER_CONSUMPTION( + 1)
+        IF_IOT_HAVE_FANCONTROL(+ 1);
 }
 
 void ClockPlugin::onConnect()
@@ -87,6 +102,9 @@ void ClockPlugin::onConnect()
     subscribe(MQTTClient::formatTopic(FSPGM(_color_set)));
     subscribe(MQTTClient::formatTopic(FSPGM(_brightness_set)));
     subscribe(MQTTClient::formatTopic(FSPGM(_effect_set)));
+    IF_IOT_HAVE_FANCONTROL(
+        subscribe(MQTTClient::formatTopic(F("/fan/set")));
+    )
     _publishState();
 }
 
@@ -96,6 +114,11 @@ void ClockPlugin::onMessage(const char *topic, const  char *payload, size_t len)
 
     _resetAlarm();
 
+    IF_IOT_HAVE_FANCONTROL(
+        if (!strcmp_end_P(topic, PSTR("/fan/set"))) {
+
+        } else
+    )
     if (!strcmp_end_P(topic, SPGM(_effect_set))) {
         auto animation = _getAnimationType(payload);
         if (animation != AnimationType::MAX) {

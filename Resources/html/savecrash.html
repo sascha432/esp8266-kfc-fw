@@ -136,7 +136,9 @@
             },
             fail: function() {
                 this.log_clear.prop('disabled', false);
-                this.error('HTTP error');
+                // this can occur if there is not enough memory
+                // leading to an invalid JSON response
+                this.error('HTTP error - <small>check console AT+SAVECRASH=list/clear</small>');
             },
             trace: function (content, strace) {
                 var innerContent = content.find('.inner');

@@ -69,6 +69,7 @@ bool ResetDetectorPlugin::atModeHandler(AtModeArgs &args)
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SAVECRASH))) {
         switch (args.toLowerChar(0)) {
+#if 0
         case 'c': {
             bool cleared = false;
             if (args.has(F("shrink"))) {
@@ -100,6 +101,8 @@ bool ResetDetectorPlugin::atModeHandler(AtModeArgs &args)
             }
 
         } break;
+#endif
+        case 'c':
         case 'f': {
             if (SaveCrash::clearStorage(SaveCrash::ClearStorageType::ERASE)) {
                 args.print(F("SaveCrash logs erased"));

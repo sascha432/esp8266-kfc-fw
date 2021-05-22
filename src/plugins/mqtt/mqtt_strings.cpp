@@ -6,6 +6,7 @@ PROGMEM_STRING_DEF(mqtt_component_switch, "switch");
 PROGMEM_STRING_DEF(mqtt_component_light, "light");
 PROGMEM_STRING_DEF(mqtt_component_sensor, "sensor");
 PROGMEM_STRING_DEF(mqtt_component_binary_sensor, "binary_sensor");
+PROGMEM_STRING_DEF(mqtt_component_fan, "fan");
 PROGMEM_STRING_DEF(mqtt_component_storage, "storage");
 PROGMEM_STRING_DEF(mqtt_status_topic, "/status");
 PROGMEM_STRING_DEF(mqtt_status_topic_online, "online");

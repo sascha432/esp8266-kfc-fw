@@ -127,6 +127,8 @@ NameType Component::getNameByType(ComponentType type)
             return FSPGM(mqtt_component_binary_sensor);
         case ComponentType::DEVICE_AUTOMATION:
             return FSPGM(mqtt_component_device_automation);
+        case ComponentType::FAN:
+            return FSPGM(mqtt_component_fan);
         case ComponentType::AUTO_DISCOVERY:
             return F("auto_discovery");
         case ComponentType::SWITCH:

@@ -238,6 +238,7 @@ with open(path.abspath(path.join(mqtt_plugin_dir, 'mqtt_strings.h')), 'w') as f:
     f.write('PROGMEM_STRING_DECL(mqtt_component_light);\n')
     f.write('PROGMEM_STRING_DECL(mqtt_component_sensor);\n')
     f.write('PROGMEM_STRING_DECL(mqtt_component_binary_sensor);\n')
+    f.write('PROGMEM_STRING_DECL(mqtt_component_fan);\n')
     f.write('PROGMEM_STRING_DECL(mqtt_component_storage);\n')
     f.write('PROGMEM_STRING_DECL(mqtt_status_topic);\n');
     f.write('PROGMEM_STRING_DECL(mqtt_status_topic_online);\n')
@@ -262,6 +263,7 @@ with open(path.abspath(path.join(mqtt_plugin_dir, 'mqtt_strings.cpp')), 'w') as 
     f.write('PROGMEM_STRING_DEF(mqtt_component_light, "light");\n')
     f.write('PROGMEM_STRING_DEF(mqtt_component_sensor, "sensor");\n')
     f.write('PROGMEM_STRING_DEF(mqtt_component_binary_sensor, "binary_sensor");\n')
+    f.write('PROGMEM_STRING_DEF(mqtt_component_fan, "fan");\n')
     f.write('PROGMEM_STRING_DEF(mqtt_component_storage, "storage");\n')
     f.write('PROGMEM_STRING_DEF(mqtt_status_topic, "/status");\n')
     f.write('PROGMEM_STRING_DEF(mqtt_status_topic_online, "online");\n')

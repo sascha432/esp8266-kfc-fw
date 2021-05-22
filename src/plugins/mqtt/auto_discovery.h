@@ -233,7 +233,7 @@ namespace MQTT {
 
             template<typename _T>
             void addPercentageStateTopic(_T value) {
-                addParameter(FSPGM(percentage_state_topic), value);
+                addParameter(FSPGM(mqtt_percentage_state_topic), value);
             }
 
             template<typename _T>

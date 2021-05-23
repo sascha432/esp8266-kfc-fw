@@ -351,6 +351,7 @@ void ClockPlugin::_setupTimer()
             auto state = _digitalRead(IOT_CLOCK_HAVE_MOTION_SENSOR_PIN);
             if (!state && _motionLastUpdate && get_time_diff(_motionLastUpdate, millis()) < (_config.motion_trigger_timeout * 60 * 1000)) {
                 // keep the motion signal on if any motion is detected within N min.
+                _digitalWrite(131, !_motionState);
             }
             else if (state != _motionState) {
                 if (isConnected()) {
@@ -361,23 +362,23 @@ void ClockPlugin::_setupTimer()
                         WebUINS::Events(WebUINS::Values(F("motion"), WebUINS::RoundedDouble(NAN)))
                     ));
                 }
-                _digitalWrite(131, _motionState);
-
                 _motionState = state;
                 if (_motionState) {
-                    __LDBG_printf("motion detected: last=%.3fs auto_off=%us", _motionLastUpdate ? (millis() - _motionLastUpdate) / 1000.0 : 0.0,  (_config.motion_auto_off * 60));
+                    __LDBG_printf("motion detected: state=%u last=%.3fs auto_off=%us", _motionState, _motionLastUpdate ? (millis() - _motionLastUpdate) / 1000.0 : 0.0,  (_config.motion_auto_off * 60));
                     _motionLastUpdate = millis();
                     if (_motionLastUpdate == 0) {
                         _motionLastUpdate++;
                     }
                 }
+                _digitalWrite(131, !_motionState);
             }
             else if (state && state == _motionState && _motionLastUpdate) {
-                // __LDBG_printf("motion detected (retrigger): last=%.3fs auto_off=%us", _motionLastUpdate ? (millis() - _motionLastUpdate) / 1000.0 : 0.0,  (_config.motion_auto_off * 60));
+                // __LDBG_printf("motion detected (retrigger): state=%u last=%.3fs auto_off=%us", _motionState, _motionLastUpdate ? (millis() - _motionLastUpdate) / 1000.0 : 0.0,  (_config.motion_auto_off * 60));
                 _motionLastUpdate = millis();
                 if (_motionLastUpdate == 0) {
                     _motionLastUpdate++;
                 }
+                _digitalWrite(131, !_motionState);
             }
         )
 

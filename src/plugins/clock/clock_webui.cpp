@@ -57,7 +57,7 @@ void ClockPlugin::getValues(WebUINS::Events &array)
         array.append(WebUINS::Values(F("motion"), timeStr));
     )
 
-    IF_IOT_HAVE_FANCONTROL(
+    IF_IOT_IOT_LED_MATRIX_FAN_CONTROL(
         array.append(WebUINS::Values(F("fanspeed"), _fanSpeed, true));
     )
 }
@@ -81,7 +81,7 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
             }
             else
         )
-        IF_IOT_HAVE_FANCONTROL(
+        IF_IOT_IOT_LED_MATRIX_FAN_CONTROL(
             if (id == F("fanspeed")) {
                 _setFanSpeed(val);
                 _config.fan_speed = _fanSpeed;
@@ -260,7 +260,7 @@ void ClockPlugin::_createWebUI(WebUINS::Root &webUI)
 
         webUI.addRow(row);
 
-        IF_IOT_HAVE_FANCONTROL(
+        IF_IOT_IOT_LED_MATRIX_FAN_CONTROL(
             {
                 auto fanSpeed = WebUINS::Slider(F("fanspeed"), F("Fan Speed<div class=\"p-1\"></div><span class=\"oi oi-fire\">"), _config.min_fan_speed - 1, _config.max_fan_speed, true, 3);
                 fanSpeed.append(
@@ -313,7 +313,7 @@ void ClockPlugin::_webUIUpdateColor(int color)
     }
 }
 
-// #if HAVE_FANCONTROL
+// #if IOT_LED_MATRIX_FAN_CONTROL
 
 // void ClockPlugin::_webUIUpdateFanSpeed()
 // {

@@ -162,14 +162,14 @@
 // support for fan control
 // 0 = disabled
 // 1 = TinyPwm Fan Control
-#ifndef HAVE_FANCONTROL
-#   define HAVE_FANCONTROL 0
+#ifndef IOT_LED_MATRIX_FAN_CONTROL
+#   define IOT_LED_MATRIX_FAN_CONTROL 0
 #endif
 
-#ifndef IF_IOT_HAVE_FANCONTROL
-#    define IF_IOT_HAVE_FANCONTROL(...) __VA_ARGS__
+#ifndef IF_IOT_IOT_LED_MATRIX_FAN_CONTROL
+#    define IF_IOT_IOT_LED_MATRIX_FAN_CONTROL(...) __VA_ARGS__
 #else
-#    define IF_IOT_HAVE_FANCONTROL(...)
+#    define IF_IOT_IOT_LED_MATRIX_FAN_CONTROL(...)
 #endif
 
 #ifndef IF_IOT_CLOCK_EN_PIN_INVERTED
@@ -287,7 +287,7 @@
 #    endif
 #endif
 
-// UDP por3t for visualizer. 0 to disable
+// UDP port for visualizer. 0 to disable
 #ifndef IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
-#define IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER 0
+#   define IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER 0
 #endif

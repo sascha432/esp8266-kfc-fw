@@ -312,7 +312,7 @@ private:
 
 #endif
 
-#ifdef HAVE_FANCONTROL
+#ifdef IOT_LED_MATRIX_FAN_CONTROL
 
 private:
     void _setFanSpeed(uint8_t speed);

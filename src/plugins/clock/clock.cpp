@@ -455,7 +455,7 @@ void ClockPlugin::_setupTimer()
                     _setBrightness(0);
                     enableLoop(false);
                     _tempBrightness = -1.0;
-                    IF_IOT_HAVE_FANCONTROL(
+                    IF_IOT_IOT_LED_MATRIX_FAN_CONTROL(
                         _setFanSpeed(255);
                     )
 #if IOT_CLOCK_HAVE_OVERHEATED_PIN
@@ -591,7 +591,7 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
         }, this);
     )
 
-    IF_IOT_HAVE_FANCONTROL(
+    IF_IOT_IOT_LED_MATRIX_FAN_CONTROL(
         _setFanSpeed(_config.fan_speed);
     )
 
@@ -648,7 +648,7 @@ void ClockPlugin::reconfigure(const String &source)
 #endif
     _disable(10);
     readConfig();
-    IF_IOT_HAVE_FANCONTROL(
+    IF_IOT_IOT_LED_MATRIX_FAN_CONTROL(
         _setFanSpeed(_config.fan_speed);
     )
     IF_IOT_CLOCK_SAVE_STATE(
@@ -741,7 +741,7 @@ void ClockPlugin::getStatus(Print &output)
 #else
     output.print(F("Clock Plugin" HTML_S(br)));
 #endif
-#if HAVE_FANCONTROL
+#if IOT_LED_MATRIX_FAN_CONTROL
     output.print(F("Fan control, "));
 #endif
 #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
@@ -1010,7 +1010,7 @@ void ClockPlugin::_setBlendAnimation(Clock::Animation *blendAnimation)
     _blendAnimation->begin();
 }
 
-#if HAVE_FANCONTROL
+#if IOT_LED_MATRIX_FAN_CONTROL
 
 void ClockPlugin::_setFanSpeed(uint8_t speed)
 {
@@ -1147,7 +1147,7 @@ void ClockPlugin::_enable()
             _digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(false));
         }
     )
-    IF_IOT_HAVE_FANCONTROL(
+    IF_IOT_IOT_LED_MATRIX_FAN_CONTROL(
         _setFanSpeed(_config.fan_speed);
     )
     LoopFunctions::remove(standbyLoop);
@@ -1183,7 +1183,7 @@ void ClockPlugin::_disable(uint8_t delayMillis)
         }
     )
 
-    IF_IOT_HAVE_FANCONTROL(
+    IF_IOT_IOT_LED_MATRIX_FAN_CONTROL(
         _setFanSpeed(0);
     )
 

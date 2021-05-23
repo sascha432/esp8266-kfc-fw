@@ -245,7 +245,7 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
         protectionGroup.end();
 
-        IF_IOT_HAVE_FANCONTROL(
+        IF_IOT_IOT_LED_MATRIX_FAN_CONTROL(
 
             auto &fanGroup = form.addCardGroup(F("fan"), F("Fan"), true);
 

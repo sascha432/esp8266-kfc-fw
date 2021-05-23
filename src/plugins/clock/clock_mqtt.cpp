@@ -69,17 +69,17 @@ MQTT::AutoDiscovery::EntityPtr ClockPlugin::getAutoDiscovery(FormatType format, 
         }
         break;
 #endif
-#if HAVE_FANCONTROL
+#if IOT_LED_MATRIX_FAN_CONTROL
     case 1 IF_IOT_CLOCK_HAVE_MOTION_SENSOR( + 1) IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR( + 1) IF_IOT_CLOCK_DISPLAY_POWER_CONSUMPTION( + 1): {
             if (!discovery->create(MQTTComponent::ComponentType::FAN, F("fan"), format)) {
                 return discovery;
             }
-            discovery->addStateTopicAndPayloadOnOff(MQTTClient::formatTopic(F("/fan/state")));
-            discovery->addCommandTopic(MQTTClient::formatTopic(F("/fan/set")));
-            discovery->addParameter(F("speed_range_min"), _config.min_fan_speed);
-            discovery->addParameter(F("speed_range_max"), _config.max_fan_speed);
-
-
+            discovery->addStateTopicAndPayloadOnOff(MQTTClient::formatTopic(F("/fan/on/state")));
+            discovery->addCommandTopic(MQTTClient::formatTopic(F("/fan/on/set")));
+            discovery->addPercentageStateTopic(MQTTClient::formatTopic(F("/fan/speed/state")));
+            discovery->addPercentageCommandTopic(MQTTClient::formatTopic(F("/fan/speed/set")));
+            discovery->addSpeedRangeMin(_config.min_fan_speed);
+            discovery->addSpeedRangeMax(_config.max_fan_speed);
         }
         break;
 #endif
@@ -93,7 +93,7 @@ uint8_t ClockPlugin::getAutoDiscoveryCount() const
         IF_IOT_CLOCK_HAVE_MOTION_SENSOR( + 1)
         IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR( + 1)
         IF_IOT_CLOCK_DISPLAY_POWER_CONSUMPTION( + 1)
-        IF_IOT_HAVE_FANCONTROL(+ 1);
+        IF_IOT_IOT_LED_MATRIX_FAN_CONTROL(+ 1);
 }
 
 void ClockPlugin::onConnect()
@@ -102,8 +102,9 @@ void ClockPlugin::onConnect()
     subscribe(MQTTClient::formatTopic(FSPGM(_color_set)));
     subscribe(MQTTClient::formatTopic(FSPGM(_brightness_set)));
     subscribe(MQTTClient::formatTopic(FSPGM(_effect_set)));
-    IF_IOT_HAVE_FANCONTROL(
-        subscribe(MQTTClient::formatTopic(F("/fan/set")));
+    IF_IOT_IOT_LED_MATRIX_FAN_CONTROL(
+        subscribe(MQTTClient::formatTopic(F("/fan/on/set")));
+        subscribe(MQTTClient::formatTopic(F("/fan/speed/set")));
     )
     _publishState();
 }
@@ -114,9 +115,12 @@ void ClockPlugin::onMessage(const char *topic, const  char *payload, size_t len)
 
     _resetAlarm();
 
-    IF_IOT_HAVE_FANCONTROL(
-        if (!strcmp_end_P(topic, PSTR("/fan/set"))) {
-
+    IF_IOT_IOT_LED_MATRIX_FAN_CONTROL(
+        if (!strcmp_end_P(topic, PSTR("/fan/on/set"))) {
+            __DBG_printf("/fan/on/set %s", payload);
+        }
+        else if (!strcmp_end_P(topic, PSTR("/fan/speed/set"))) {
+            __DBG_printf("/fan/speed/set %s", payload);
         } else
     )
     if (!strcmp_end_P(topic, SPGM(_effect_set))) {
@@ -181,6 +185,9 @@ void ClockPlugin::_publishState()
         )
         IF_IOT_CLOCK_HAVE_MOTION_SENSOR(
             publish(MQTT::Client::formatTopic(F("motion")), true, MQTT::Client::toBoolOnOff(_motionState));
+        )
+        IF_IOT_IOT_LED_MATRIX_FAN_CONTROL(
+            publish(MQTT::Client::formatTopic(F("/fan/state")), true, MQTT::Client::toBoolOnOff(_fanSpeed >= _config.min_fan_speed));
         )
     }
 

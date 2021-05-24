@@ -34,6 +34,14 @@
 #    define IOT_LED_MATRIX_STANDBY_PIN_STATE(value) (value ? HIGH : LOW)
 #endif
 
+#ifndef IOT_LED_MATRIX_WEBUI_COLSPAN_ANIMATION
+#   define IOT_LED_MATRIX_WEBUI_COLSPAN_ANIMATION 3
+#endif
+
+#ifndef IOT_LED_MATRIX_WEBUI_COLSPAN_PROTECTION
+#   define IOT_LED_MATRIX_WEBUI_COLSPAN_PROTECTION 3
+#endif
+
 // first pixel to use, others can be controlled separately and are reset during reboot only
 #ifndef IOT_LED_MATRIX_START_ADDR
 #    define IOT_LED_MATRIX_START_ADDR 0

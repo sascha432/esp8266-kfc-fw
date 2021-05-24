@@ -219,42 +219,44 @@ void ClockPlugin::_createWebUI(WebUINS::Root &webUI)
     webUI.addRow(WebUINS::Slider(FSPGM(brightness), FSPGM(brightness), 0, kMaxBrightness, true));
     webUI.addRow(WebUINS::RGBSlider(F("color"), F("Color")));
 
+    // animation
     auto height = F("15rem");
     {
+        constexpr uint8_t colspan = IOT_LED_MATRIX_WEBUI_COLSPAN_ANIMATION;
         WebUINS::Row row;
 
         IF_IOT_CLOCK_SAVE_STATE(
-            auto power = WebUINS::Switch(F("power"), F("Power<div class=\"p-1\"></div><span class=\"oi oi-power-standby\">"), true, WebUINS::NamePositionType::TOP, 3);
+            auto power = WebUINS::Switch(F("power"), F("Power<div class=\"p-1\"></div><span class=\"oi oi-power-standby\">"), true, WebUINS::NamePositionType::TOP, colspan);
             power.append(WebUINS::NamedString(J(height), height));
             row.append(power);
         )
 
         IF_IOT_CLOCK(
-            auto colon = WebUINS::ButtonGroup(F("colon"), F("Colon"), F("{\"0\":\"Solid\",\"1000\":\"Blink slowly\",\"500\":\"Blink fast\"}"), 0, 3);
+            auto colon = WebUINS::ButtonGroup(F("colon"), F("Colon"), F("{\"0\":\"Solid\",\"1000\":\"Blink slowly\",\"500\":\"Blink fast\"}"), 0, colspan);
             colon.append(WebUINS::NamedString(J(height), height));
             row.append(colon);
         )
 
-        auto animation = WebUINS::Listbox(F("ani"), F("Animation"), Plugins::ClockConfig::ClockConfig_t::getAnimationNames(), false, 5, 3);
+        auto animation = WebUINS::Listbox(F("ani"), F("Animation"), Plugins::ClockConfig::ClockConfig_t::getAnimationNames(), false, 5, colspan);
         animation.append(WebUINS::NamedString(J(height), height));
         row.append(animation);
 
         IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(
-            auto lightSensor = WebUINS::Sensor(FSPGM(light_sensor), F("Ambient Light Sensor"), F("<img src=\"/images/light.svg\" width=\"80\" height=\"80\" style=\"margin-top:-20px;margin-bottom:1rem\">"), WebUINS::SensorRenderType::COLUMN, false, 3);
+            auto lightSensor = WebUINS::Sensor(FSPGM(light_sensor), F("Ambient Light Sensor"), F("<img src=\"/images/light.svg\" width=\"80\" height=\"80\" style=\"margin-top:-20px;margin-bottom:1rem\">"), WebUINS::SensorRenderType::COLUMN, false, colspan);
             lightSensor.append(WebUINS::NamedString(J(height), height));
             row.append(lightSensor);
         )
 
         webUI.addRow(row);
-
     }
 
     // protection
     {
+        constexpr uint8_t colspan = IOT_LED_MATRIX_WEBUI_COLSPAN_PROTECTION;
         WebUINS::Row row;
         webUI.addRow(WebUINS::Group(F("Protection"), false));
 
-        auto tempProtection = WebUINS::Sensor(F("tempp"), F("Temperature Protection"), '%', WebUINS::SensorRenderType::ROW, false, 3);
+        auto tempProtection = WebUINS::Sensor(F("tempp"), F("Temperature Protection"), '%', WebUINS::SensorRenderType::ROW, false, colspan);
         tempProtection.append(WebUINS::NamedString(J(height), height));
         row.append(tempProtection);
 
@@ -262,7 +264,7 @@ void ClockPlugin::_createWebUI(WebUINS::Root &webUI)
 
         IF_IOT_IOT_LED_MATRIX_FAN_CONTROL(
             {
-                auto fanSpeed = WebUINS::Slider(F("fanspeed"), F("Fan Speed<div class=\"p-1\"></div><span class=\"oi oi-fire\">"), _config.min_fan_speed - 1, _config.max_fan_speed, true, 3);
+                auto fanSpeed = WebUINS::Slider(F("fanspeed"), F("Fan Speed<div class=\"p-1\"></div><span class=\"oi oi-fire\">"), _config.min_fan_speed - 1, _config.max_fan_speed, true, colspan);
                 fanSpeed.append(
                     WebUINS::NamedUint32(J(name), static_cast<uint32_t>(WebUINS::NamePositionType::TOP)),
                     WebUINS::NamedString(J(height), height)
@@ -280,7 +282,7 @@ void ClockPlugin::_createWebUI(WebUINS::Root &webUI)
 #endif
         power.append(
             WebUINS::NamedString(J(height), height),
-            WebUINS::NamedUint32(J(columns), 3)
+            WebUINS::NamedUint32(J(columns), colspan)
         );
         webUI.appendToLastRow(power);
     }

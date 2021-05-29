@@ -101,14 +101,14 @@ namespace ConfigurationHelper {
 
 #define CREATE_STRING_GETTER_SETTER_BINARY(class_name, name, len) \
     static constexpr size_t k##name##MaxSize = len; \
-    static constexpr HandleType k##name##ConfigHandle = CONFIG_GET_HANDLE_STR(_STRINGIFY(class_name) "." _STRINGIFY(name)); \
+    static constexpr ConfigurationHelper::HandleType k##name##ConfigHandle = CONFIG_GET_HANDLE_STR(_STRINGIFY(class_name) "." _STRINGIFY(name)); \
     static inline size_t get##name##Size() { return k##name##MaxSize; } \
     static inline const uint8_t *get##name() { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_GET); return loadBinaryConfig(k##name##ConfigHandle, k##name##MaxSize); } \
     static inline void set##name(const uint8_t *data) { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_SET); storeBinaryConfig(k##name##ConfigHandle, data, k##name##MaxSize); }
 
 #define CREATE_STRING_GETTER_SETTER(class_name, name, len) \
     static constexpr size_t k##name##MaxSize = len; \
-    static constexpr HandleType k##name##ConfigHandle = CONFIG_GET_HANDLE_STR(_STRINGIFY(class_name) "." _STRINGIFY(name)); \
+    static constexpr ConfigurationHelper::HandleType k##name##ConfigHandle = CONFIG_GET_HANDLE_STR(_STRINGIFY(class_name) "." _STRINGIFY(name)); \
     static inline const char *get##name() { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_GET); return loadStringConfig(k##name##ConfigHandle); } \
     static inline char *getWriteable##name() { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_GET); return loadWriteableStringConfig(k##name##ConfigHandle, k##name##MaxSize); } \
     static inline void set##name(const char *str) { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_SET); storeStringConfig(k##name##ConfigHandle, str); } \
@@ -171,7 +171,7 @@ namespace ConfigurationHelper {
     CREATE_BITFIELD_TYPE_MIN_MAX(name, size, uint64_t, min_value, max_value, ##__VA_ARGS__)
 
 #define CREATE_GETTER_SETTER_IP(class_name, name) \
-    static constexpr HandleType k##name##ConfigHandle = CONFIG_GET_HANDLE_STR(_STRINGIFY(class_name) "." _STRINGIFY(name)); \
+    static constexpr ConfigurationHelper::HandleType k##name##ConfigHandle = CONFIG_GET_HANDLE_STR(_STRINGIFY(class_name) "." _STRINGIFY(name)); \
     static const IPAddress get##name() { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_GET); return IPAddress(*(uint32_t *)loadBinaryConfig(k##name##ConfigHandle, sizeof(uint32_t))); } \
     static void set##name(const IPAddress &address) { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_SET); storeBinaryConfig(k##name##ConfigHandle, &static_cast<uint32_t>(address), sizeof(uint32_t)); }
 
@@ -261,7 +261,7 @@ DECLARE_CONFIG_HANDLE_PROGMEM_STR(handleNameRemoteConfig_t);
 
 namespace KFCConfigurationClasses {
 
-    using HandleType = uint16_t;
+    using HandleType = ConfigurationHelper::HandleType;
 
     FormUI::Container::List createFormPinList(uint8_t from = 0, uint8_t to = 0xff);
     String createZeroConf(const __FlashStringHelper *service, const __FlashStringHelper *proto, const __FlashStringHelper *varName, const __FlashStringHelper *defaultValue = nullptr);

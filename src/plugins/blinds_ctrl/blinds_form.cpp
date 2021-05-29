@@ -113,7 +113,7 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
 
         FormUI::Container::List playToneItems(
             PlayToneType::NONE, F("None"),
-            PlayToneType::INTERVAL, F("short tone, 2 second interval"),
+            PlayToneType::INTERVAL, F("Short tone, 2 second interval"),
 #if HAVE_IMPERIAL_MARCH
             PlayToneType::IMPERIAL_MARCH, F("Imperial March")
 #endif
@@ -128,13 +128,13 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
             form.addFormUI(FSPGM(Action, "Action"), operationTypeItems);
 
             auto &relativeDelay = form.addObjectGetterSetter(F_VAR(or, i), cfg.open[i], cfg.open[0].get_bits_relative_delay, cfg.open[0].set_bits_relative_delay);
-            form.addFormUI(FormUI::Type::HIDDEN);
+            form.addFormUI(FormUI::Type::HIDDEN_SELECT, delayTypeItems, FormUI::FPStringAttribute(F("classex"), F("sm-font")));
 
             auto &playTone = form.addObjectGetterSetter(F_VAR(op, i), cfg.open[i], cfg.open[0].get_int_play_tone, cfg.open[0].set_int_play_tone);
-            form.addFormUI(FormUI::Type::HIDDEN);
+            form.addFormUI(FormUI::Type::HIDDEN_SELECT, playToneItems, FormUI::FPStringAttribute(F("classex"), F("sm-font")));
 
             form.addObjectGetterSetter(F_VAR(od, i), cfg.open[i], cfg.open[0].get_bits_delay, cfg.open[0].set_bits_delay);
-            form.addFormUI(F("Next Action Time"), FormUI::Suffix(F("time in milliseconds")), FormUI::SelectSuffix(relativeDelay, delayTypeItems), FormUI::SelectSuffix(playTone, playToneItems));
+            form.addFormUI(F("Next Action Time"), FormUI::Suffix(FSPGM(milliseconds)), FormUI::SelectSuffix(relativeDelay), FormUI::SelectSuffix(playTone));
             cfg.open[0].addRangeValidatorFor_delay(form);
 
         }
@@ -146,13 +146,13 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
             form.addFormUI(FSPGM(Action), operationTypeItems);
 
             auto &relativeDelay = form.addObjectGetterSetter(F_VAR(cr, i), cfg.close[i], cfg.close[0].get_bits_relative_delay, cfg.close[0].set_bits_relative_delay);
-            form.addFormUI(FormUI::Type::HIDDEN);
+            form.addFormUI(FormUI::Type::HIDDEN_SELECT, delayTypeItems, FormUI::FPStringAttribute(F("classex"), F("sm-font")));
 
             auto &playTone = form.addObjectGetterSetter(F_VAR(cp, i), cfg.close[i], cfg.close[0].get_int_play_tone, cfg.close[0].set_int_play_tone);
-            form.addFormUI(FormUI::Type::HIDDEN);
+            form.addFormUI(FormUI::Type::HIDDEN_SELECT, playToneItems, FormUI::FPStringAttribute(F("classex"), F("sm-font")));
 
             form.addObjectGetterSetter(F_VAR(cd, i), cfg.close[i], cfg.close[0].get_bits_delay, cfg.close[0].set_bits_delay);
-            form.addFormUI(F("Next Action Time"), FormUI::Suffix(F("time in milliseconds")), FormUI::SelectSuffix(relativeDelay, delayTypeItems), FormUI::SelectSuffix(playTone, playToneItems));
+            form.addFormUI(F("Next Action Time"), FormUI::Suffix(FSPGM(milliseconds)), FormUI::SelectSuffix(relativeDelay), FormUI::SelectSuffix(playTone));
             cfg.close[0].addRangeValidatorFor_delay(form);
         }
 
@@ -184,10 +184,10 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
         form.addFormUI(F("Channel 1 Close Pin"), pins);
 
         auto &multiplexer = form.addObjectGetterSetter(F("shmp"), cfg, cfg.get_bits_adc_multiplexer, cfg.set_bits_adc_multiplexer);
-        form.addFormUI(FormUI::Type::HIDDEN);
+        form.addFormUI(FormUI::Type::HIDDEN_SELECT, FormUI::Container::List(0, F("Enable for Channel 0"), 1, F("Enable for Channel 1")));
 
         form.addPointerTriviallyCopyable(F("pin4"), &cfg.pins[4]);
-        form.addFormUI(F("Shunt Multiplexer Pin"), pins, FormUI::SelectSuffix(multiplexer, FormUI::Container::List(0, F("Enable for Channel 0"), 1, F("Enable for Channel 1"))));
+        form.addFormUI(F("Shunt Multiplexer Pin"), pins, FormUI::SelectSuffix(multiplexer));
 
         form.addPointerTriviallyCopyable(F("pin5"), &cfg.pins[5]);
         form.addFormUI(F("DAC Pin for DRV8870 Vref"), pins);

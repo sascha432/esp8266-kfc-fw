@@ -122,6 +122,7 @@ namespace FormUI {
             END_GROUPS = GROUP_END_CARD,
 
             HIDDEN,
+            HIDDEN_SELECT,
         };
 
         enum class StyleType : uint8_t {

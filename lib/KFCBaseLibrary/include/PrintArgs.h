@@ -81,6 +81,7 @@ namespace PrintArgsHelper {
         HTML_ATTRIBUTE_STR_STR,
         HTML_ATTRIBUTE_STR_INT,
         HTML_OPEN_SELECT,
+        HTML_OPEN_HIDDEN_SELECT,
         HTML_OPEN_TEXTAREA,
         HTML_OPEN_TEXT_INPUT,
         HTML_OPEN_NUMBER_INPUT,

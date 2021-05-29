@@ -191,6 +191,7 @@ void BlindsControl::startToneTimer(uint32_t maxLength)
 
 void BlindsControl::_playTone(uint8_t pin, uint16_t pwm, uint32_t frequency)
 {
+    __LDBG_printf("pin=%u pwm=%u freq=%u", pin, pwm, frequency);
     analogWriteFreq(frequency);
     analogWrite(pin, pwm);
 }

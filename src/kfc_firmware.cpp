@@ -499,7 +499,7 @@ void setup()
 #endif
 
 #if DEBUG_ASSETS
-    __DBG_printf("DEBUG_ASSETS activated");
+    __DBG_printf("DEBUG_ASSETS=1: " DEBUG_ASSETS_URL1 " " DEBUG_ASSETS_URL2);
 #endif
 
 }

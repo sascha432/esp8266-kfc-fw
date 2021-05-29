@@ -47,6 +47,8 @@ const __FlashStringHelper *PrintArgsHelper::getFormatByType(FormatType type)
         return F("<textarea class=\"form-control\" name=\"%s\" id=\"%s\"");
         case FormatType::HTML_OPEN_SELECT:
             return F("<select class=\"form-control\" name=\"%s\" id=\"%s\"");
+        case FormatType::HTML_OPEN_HIDDEN_SELECT:
+            return F("<select class=\"form-control\" data-target=\"#%s\" data-action=\"transfer-hidden-field\"");
         case FormatType::HTML_OPEN_TEXT_INPUT:
             return F("<input type=\"text\" class=\"form-control\" name=\"%s\" id=\"%s\" value=\"%s\"");
         case FormatType::HTML_OPEN_NUMBER_INPUT:

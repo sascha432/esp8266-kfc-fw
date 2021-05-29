@@ -223,7 +223,13 @@ void WebUI::BaseUI::renderInputField(Type type, PrintInterface &output, const ch
         // Select field
         // ---------------------------------------------------------------
         case Type::SELECT:
-            output.printf_P(PrintArgs::FormatType::HTML_OPEN_SELECT, name, name);
+        case Type::HIDDEN_SELECT:
+            if (type == Type::SELECT) {
+                output.printf_P(PrintArgs::FormatType::HTML_OPEN_SELECT, name, name);
+            }
+            else {
+                output.printf_P(PrintArgs::FormatType::HTML_OPEN_HIDDEN_SELECT, name);
+            }
             _printAttributeTo(output);
             _printOptionsTo(output);
             output.printf_P(PrintArgs::FormatType::HTML_CLOSE_SELECT);

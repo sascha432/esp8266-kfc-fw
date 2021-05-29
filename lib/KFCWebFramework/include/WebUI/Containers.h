@@ -574,16 +574,12 @@ namespace FormUI {
 
         class SelectSuffix : public CheckboxButtonSuffix {
         public:
-            SelectSuffix(const FormField &hiddenField, const List &options) : _options(options) {
-                initSelect(hiddenField);
-            }
+            SelectSuffix(const FormField &hiddenField);
 
-        protected:
-            friend WebUI::BaseUI;
-
-            void initSelect(const FormField &hiddenField);
-
-            List _options;
+        // // options will be copied from the hidden select field
+        // protected:
+        //     friend WebUI::BaseUI;
+        //     List _options;
         };
 
         class IntMinMax

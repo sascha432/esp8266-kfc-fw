@@ -99,4 +99,11 @@ InputFieldType Field::BaseField::getType() const
     return _type;
 }
 
+
+__KFC_FORMS_INLINE_METHOD__
+bool Field::BaseField::isSelectType() const
+{
+    return _type == Type::SELECT;
+}
+
 #include <debug_helper_disable.h>

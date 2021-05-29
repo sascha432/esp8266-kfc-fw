@@ -105,6 +105,9 @@ namespace FormUI {
             // get type of input field
             InputFieldType getType() const;
 
+            // select or hidden select type
+            bool isSelectType() const;
+
             // get render type
             RenderType getRenderType() const;
 

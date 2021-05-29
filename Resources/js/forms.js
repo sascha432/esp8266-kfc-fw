@@ -496,10 +496,10 @@ $(function() {
     // transfers hidden input field "target" to another input field and removes the target
     // supports select, input type=[text,number,range,password,checkbox]
     // attributes copied: ['id', 'name', 'min', 'max', 'step', 'placeholder', 'readonly', 'spellcheck', 'autocomplete']
+    // attributes added: ['classex' => 'class']
     //
-    // example:
-    // <input type="hidden" name="shmp" id="shmp" value="1">
-    // <div class="input-group-append"><select data-target="#shmp" data-action="transfer-hidden-field" class="input-group-text form-select"><option value="0">Enable for Channel 0</option><option value="1">Enable for Channel 1</option></select></div>
+    // example of a hidden select input. the select options will be copied and the entire form-group removed
+    // <select class="input-group-text form-select" id="shmp" name="shmp"><option value="0">Enable for Channel 0</option><option value="1" selected="">Enable for Channel 1</option></select>
     //
     // output
     // <div class="input-group-append"><select id="shmp" class="input-group-text form-select" name="shmp"><option value="0">Enable for Channel 0</option><option value="1" selected>Enable for Channel 1</option></select></div>
@@ -509,22 +509,40 @@ $(function() {
         var src = $(target);
         var dst = $(this);
         if (src.length) {
-            var attributes = ['id', 'name', 'min', 'max', 'step', 'placeholder', 'readonly', 'spellcheck', 'autocomplete']
+            var attributes = ['id', 'name', 'min', 'max', 'step', 'placeholder', 'readonly', 'spellcheck', 'autocomplete', 'classex']
             for(key in attributes) {
                 var name = attributes[key];
                 var val = src.attr(name);
                 if (val !== undefined) {
-                    dst.attr(name, val);
+                    if (name === 'classex') {
+                        dst.addClass(val);
+                    }
+                    else {
+                        dst.attr(name, val);
+                    }
                 }
             }
-            if (dst.attr('type') == 'checkbox') {
+            if (src.prop('tagName').toLowerCase() == 'select') {
+                // copy all options
+                dst.html(src.html());
+            }
+            else  if (dst.attr('type') == 'checkbox') {
+                // set checked if non zero
                 dst.prop('checked', parseInt(src.val()) != 0);
             }
             else {
+                // copy value
                 dst.val(src.val());
             }
             dst.removeAttr('data-target').removeAttr('data-action');
-            src.remove();
+            var form_group = src.parent();
+            if (form_group.hasClass('form-group') && form_group.find('label').length == 0) {
+                // remove entire form-group if it does not have a label
+                form_group.remove();
+            }
+            else {
+                src.remove();
+            }
         }
         else {
             console.error('transfer-hidden-field target ' + target + ' not found');

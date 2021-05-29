@@ -128,14 +128,14 @@ namespace ConfigurationHelper {
 //name, size, type, min_value, max_value, default_value[, step_size]
 #define CREATE_BITFIELD_TYPE_MIN_MAX(name, size, type, min_value, max_value, ...) \
     static inline FormUI::Validator::Range &addRangeValidatorFor_##name(FormUI::Form::BaseForm &form, bool allowZero = false) { \
-        form.getLastField().getFormUI()->addItems(FormUI::PlaceHolder(kDefaultValueFor_##name), FormUI::MinMax((int32_t)kMinValueFor_##name, (int32_t)kMaxValueFor_##name), \
+        form.getLastField().getFormUI()->addItems(FormUI::PlaceHolder(kDefaultValueFor_##name), FormUI::MinMax(kMinValueFor_##name, kMaxValueFor_##name), \
             BOOST_PP_REMOVE_PARENS(BOOST_PP_IF(BOOST_PP_EQUAL(BOOST_PP_VARIADIC_SIZE(__VA_ARGS__),1),(FormUI::Type::NUMBER_RANGE),(FormUI::Attribute(F("step"),BOOST_PP_VARIADIC_ELEM(1,##__VA_ARGS__)),FormUI::Type::NUMBER_RANGE)))); \
-        return form.addValidator(FormUI::Validator::Range((long)kMinValueFor_##name, (long)kMaxValueFor_##name, allowZero)); \
+        return form.addValidator(FormUI::Validator::Range(static_cast<long>(kMinValueFor_##name), static_cast<long>(kMaxValueFor_##name), allowZero)); \
     } \
     static inline FormUI::Validator::Range &addRangeValidatorFor_##name(const String &message, FormUI::Form::BaseForm &form, bool allowZero = false) { \
-        form.getLastField().getFormUI()->addItems(FormUI::PlaceHolder(kDefaultValueFor_##name), FormUI::MinMax((int32_t)kMinValueFor_##name, (int32_t)kMaxValueFor_##name), \
+        form.getLastField().getFormUI()->addItems(FormUI::PlaceHolder(kDefaultValueFor_##name), FormUI::MinMax(kMinValueFor_##name, kMaxValueFor_##name), \
             BOOST_PP_REMOVE_PARENS(BOOST_PP_IF(BOOST_PP_EQUAL(BOOST_PP_VARIADIC_SIZE(__VA_ARGS__),1),(FormUI::Type::NUMBER_RANGE),(FormUI::Attribute(F("step"),BOOST_PP_VARIADIC_ELEM(1,##__VA_ARGS__)),FormUI::Type::NUMBER_RANGE)))); \
-        return form.addValidator(FormUI::Validator::Range(message, (long)kMinValueFor_##name, (long)kMaxValueFor_##name, allowZero)); \
+        return form.addValidator(FormUI::Validator::Range(message, static_cast<long>(kMinValueFor_##name), static_cast<long>(kMaxValueFor_##name), allowZero)); \
     } \
     static constexpr type kMinValueFor_##name = min_value; \
     static constexpr type kMaxValueFor_##name = max_value; \

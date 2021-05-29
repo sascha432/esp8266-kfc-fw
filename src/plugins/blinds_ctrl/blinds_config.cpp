@@ -9,6 +9,11 @@
 
 namespace KFCConfigurationClasses {
 
+#ifndef  _MSC_VER
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Woverflow"
+#endif
+
     Plugins::Blinds::BlindsConfig_t::BlindsConfig_t() :
         channels(), pins{IOT_BLINDS_CTRL_M1_PIN, IOT_BLINDS_CTRL_M2_PIN, IOT_BLINDS_CTRL_M3_PIN, IOT_BLINDS_CTRL_M4_PIN, IOT_BLINDS_CTRL_MULTIPLEXER_PIN, IOT_BLINDS_CTRL_DAC_PIN},
         pwm_frequency(kDefaultValueFor_pwm_frequency),
@@ -20,10 +25,14 @@ namespace KFCConfigurationClasses {
         pwm_softstart_time(kDefaultValueFor_pwm_softstart_time),
         play_tone_channel(kDefaultValueFor_play_tone_channel),
         tone_frequency(kDefaultValueFor_tone_frequency),
-        tone_pwm_value(kDefaultValueFor_tone_pwm_value)
+        tone_pwm_value(kDefaultValueFor_tone_pwm_value)             // warning: large integer implicitly truncated to unsigned type [-Woverflow]
+                                                                    // value is 150U, uint32_t: 10, 0U-1023U
     {
     }
 
+#ifndef  _MSC_VER
+#pragma GCC diagnostic pop
+#endif
 
     Plugins::Blinds::BlindsConfigChannel_t::BlindsConfigChannel_t() :
         current_limit_mA(kDefaultValueFor_current_limit_mA),

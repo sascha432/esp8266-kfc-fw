@@ -924,14 +924,14 @@ namespace KFCConfigurationClasses {
                 BlindsConfigOperation_t open[kMaxOperations];
                 BlindsConfigOperation_t close[kMaxOperations];
                 uint8_t pins[6];
-                CREATE_UINT16_BITFIELD_MIN_MAX(pwm_frequency, 16, 1000, 40000, 30000, 1000);                // bits 00:15 ofs:len 000:16 0-0xffff (65535)
-                CREATE_UINT16_BITFIELD_MIN_MAX(adc_recovery_time, 16, 1000, 65000, 12500, 500);             // bits 00:15 ofs:len 016:16 0-0xffff (65535)
-                CREATE_UINT16_BITFIELD_MIN_MAX(adc_read_interval, 12, 250, 4000, 750, 100);                 // bits 00:11 ofs:len 032:12 0-0xfff (4095)
-                CREATE_UINT16_BITFIELD_MIN_MAX(adc_recoveries_per_second, 3, 1, 7, 4);                      // bits 12:14 ofs:len 044:03 0-0x07 (7)
-                CREATE_UINT16_BITFIELD_MIN_MAX(adc_multiplexer, 1, 0, 1, 0);                                // bits 15:15 ofs:len 047:01 0-0x01 (1)
-                CREATE_INT32_BITFIELD_MIN_MAX(adc_offset, 11, -1000, 1000, 0);                              // bits 00:10 ofs:len 048:11 0-0x07ff (-1023 - 1023)
-                CREATE_INT32_BITFIELD_MIN_MAX(pwm_softstart_time, 12, 0, 1000, 300, 10);                    // bits 11:23 ofs:len 059:23
-                CREATE_INT32_BITFIELD_MIN_MAX(play_tone_channel, 3, 0, 2, 0, 0);                            // bits 24:27
+                CREATE_UINT32_BITFIELD_MIN_MAX(pwm_frequency, 16, 1000, 40000, 30000, 1000);
+                CREATE_UINT32_BITFIELD_MIN_MAX(adc_recovery_time, 16, 1000, 65000, 12500, 500);
+                CREATE_UINT32_BITFIELD_MIN_MAX(adc_read_interval, 12, 250, 4000, 750, 100);
+                CREATE_UINT32_BITFIELD_MIN_MAX(adc_recoveries_per_second, 3, 1, 7, 4);
+                CREATE_UINT32_BITFIELD_MIN_MAX(adc_multiplexer, 1, 0, 1, 0);
+                CREATE_INT32_BITFIELD_MIN_MAX(adc_offset, 11, -1000, 1000, 0);
+                CREATE_UINT32_BITFIELD_MIN_MAX(pwm_softstart_time, 10, 0, 1000, 300, 10);
+                CREATE_UINT32_BITFIELD_MIN_MAX(play_tone_channel, 3, 0, 2, 0, 0);
                 CREATE_UINT32_BITFIELD_MIN_MAX(tone_frequency, 11, 150, 2000, 800, 50);
                 CREATE_UINT32_BITFIELD_MIN_MAX(tone_pwm_value, 10, 0, 1023, 150, 1);
 
@@ -939,6 +939,7 @@ namespace KFCConfigurationClasses {
 
             } SensorConfig_t;
 
+            static constexpr size_t SensorConfig_t_Size = sizeof(SensorConfig_t);
             static constexpr size_t BlindsConfig_t_Size = sizeof(BlindsConfig_t);
             static constexpr size_t BlindsConfig_t_open_Size = sizeof(BlindsConfig_t().open);
             static constexpr size_t BlindsConfigChannel_t_Size = sizeof(BlindsConfigChannel_t);

@@ -115,7 +115,7 @@ namespace ConfigurationHelper {
     static inline void set##name(const __FlashStringHelper *str) { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_SET); storeStringConfig(k##name##ConfigHandle, str); } \
     static inline void set##name(const String &str) { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_SET); storeStringConfig(k##name##ConfigHandle, str); }
 
-#define CREATE_STRING_GETTER_SETTER_MIN_MAX(class_name, name, mins, maxs) \
+#define  CREATE_STRING_GETTER_SETTER_MIN_MAX(class_name, name, mins, maxs) \
     static inline FormUI::Validator::Length &add##name##LengthValidator(FormUI::Form::BaseForm &form, bool allowEmpty = false) { \
         return form.addValidator(FormUI::Validator::Length(k##name##MinSize, k##name##MaxSize, allowEmpty)); \
     } \
@@ -261,7 +261,8 @@ DECLARE_CONFIG_HANDLE_PROGMEM_STR(handleNameRemoteConfig_t);
 
 namespace KFCConfigurationClasses {
 
-    using HandleType = ConfigurationHelper::HandleType;
+    using HandleType = uint16_t;
+    // using HandleType = ConfigurationHelper::HandleType;
 
     FormUI::Container::List createFormPinList(uint8_t from = 0, uint8_t to = 0xff);
     String createZeroConf(const __FlashStringHelper *service, const __FlashStringHelper *proto, const __FlashStringHelper *varName, const __FlashStringHelper *defaultValue = nullptr);

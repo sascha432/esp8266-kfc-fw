@@ -10,7 +10,7 @@ using namespace MQTT;
 
 ComponentIterator AutoDiscovery::List::begin()
 {
-    if (!_components) {
+    if (!_components || _components->empty()) {
         return ComponentIterator();
     }
     auto iterator = ComponentListIterator(*_components, _components->begin(), _format);
@@ -19,7 +19,7 @@ ComponentIterator AutoDiscovery::List::begin()
 
 ComponentIterator AutoDiscovery::List::end()
 {
-    if (!_components) {
+    if (!_components || _components->empty()) {
         return ComponentIterator();
     }
     auto iterator = ComponentListIterator(*_components, _components->end(), _format);

@@ -48,48 +48,62 @@ String formatTime(unsigned long seconds, bool printDaysIfZero)
     return out;
 }
 
+const char *formatTimeNames_long[] PROGMEM = {
+    SPGM(year),                     // 0
+    SPGM(month),                    // 1
+    SPGM(week),                     // 2
+    SPGM(day),                      // 3
+    SPGM(hour),                     // 4
+    SPGM(minute),                   // 5
+    SPGM(second),                   // 6
+    SPGM(millisecond),              // 7
+    SPGM(microsecond),              // 8
+};
 
-//
-// create a string out of time
-//
-// formatTime2(F(", "), F(" and "), false, 0, 6, 5, 4, 0, 3, 2, 1)
-// 1 year, 2 months, 3 days, 5 hours and 6 minutes
-//
-// if lastSep is an empty string, sep will be used
-// displayZero if set to true, values with 0 will be displayed and values below 0 can be used to skip
-//
-String formatTime2(const String &sep, const String &_lastSep, bool displayZero, int seconds, int minutes, int hours, int days, int weeks, int months, int years, int milliseconds, int microseconds)
+const char *formatTimeNames_short[] PROGMEM = {
+    SPGM(yr),
+    SPGM(mth),
+    SPGM(wk),
+    SPGM(day),
+    SPGM(hr),
+    SPGM(min),
+    SPGM(sec),
+    SPGM(ms),
+    SPGM(UTF8_microseconds),
+};
+
+String __formatTime(PGM_P names[], bool isShort, const String &sep, const String &_lastSep, bool displayZero, int seconds, int minutes, int hours, int days, int weeks, int months, int years, int milliseconds, int microseconds)
 {
-    const String &lastSep = _lastSep.length() ? _lastSep : sep;
     StringVector items;
-    int minValue = displayZero ? 0 : 1;
+    auto &lastSep = _lastSep.length() ? _lastSep : sep;
+    auto minValue = displayZero ? 0 : 1;
 
     if (years >= minValue) {
-        items.emplace_back(PrintString(F("%u year%s"), years, years == 1 ? emptyString.c_str() : PSTR("s")));
+        items.emplace_back(PrintString(F("%u %s%s"), years, names[0], years == 1 ? emptyString.c_str() : PSTR("s")));
     }
     if (months >= minValue) {
-        items.emplace_back(PrintString(F("%u month%s"), months, months == 1 ? emptyString.c_str() : PSTR("s")));
+        items.emplace_back(PrintString(F("%u %s%s"), months, names[1], months == 1 ? emptyString.c_str() : PSTR("s")));
     }
     if (weeks >= minValue) {
-        items.emplace_back(PrintString(F("%u week%s"), weeks, weeks == 1 ? emptyString.c_str() : PSTR("s")));
+        items.emplace_back(PrintString(F("%u %s%s"), weeks, names[2], weeks == 1 ? emptyString.c_str() : PSTR("s")));
     }
     if (days >= minValue) {
-        items.emplace_back(PrintString(F("%u day%s"), days, days == 1 ? emptyString.c_str() : PSTR("s")));
+        items.emplace_back(PrintString(F("%u %s%s"), days, names[3], days == 1 ? emptyString.c_str() : PSTR("s")));
     }
     if (hours >= minValue) {
-        items.emplace_back(PrintString(F("%u hour%s"), hours, hours == 1 ? emptyString.c_str() : PSTR("s")));
+        items.emplace_back(PrintString(F("%u %s%s"), hours, names[4], hours == 1 ? emptyString.c_str() : PSTR("s")));
     }
     if (minutes >= minValue) {
-        items.emplace_back(PrintString(F("%u minute%s"), minutes, minutes == 1 ? emptyString.c_str() : PSTR("s")));
+        items.emplace_back(PrintString(F("%u %s%s"), minutes, names[5], (minutes == 1) || isShort ? emptyString.c_str() : PSTR("s")));
     }
     if (seconds >= minValue) {
-        items.emplace_back(PrintString(F("%u second%s"), seconds, seconds == 1 ? emptyString.c_str() : PSTR("s")));
+        items.emplace_back(PrintString(F("%u %s%s"), seconds, names[6], (seconds == 1) || isShort ? emptyString.c_str() : PSTR("s")));
     }
     if (milliseconds >= minValue) {
-        items.emplace_back(PrintString(F("%u millisecond%s"), milliseconds, milliseconds == 1 ? emptyString.c_str() : PSTR("s")));
+        items.emplace_back(PrintString(F("%u %s%s"), milliseconds, names[7], (milliseconds == 1) || isShort ? emptyString.c_str() : PSTR("s")));
     }
     if (microseconds >= minValue) {
-        items.emplace_back(PrintString(F("%u microsecond%s"), microseconds, microseconds == 1 ? emptyString.c_str() : PSTR("s")));
+        items.emplace_back(PrintString(F("%u %s%s"), microseconds, names[8], (microseconds == 1) || isShort ? emptyString.c_str() : PSTR("s")));
     }
     switch(items.size()) {
         case 0:

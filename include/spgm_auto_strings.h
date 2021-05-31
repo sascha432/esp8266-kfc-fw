@@ -528,6 +528,8 @@ PROGMEM_STRING_DECL(UTF8_degreeFahrenheit);
 PROGMEM_STRING_DECL(UTF8_degree);
 PROGMEM_STRING_DECL(UTF8_degreeC);
 PROGMEM_STRING_DECL(UTF8_degreeF);
+PROGMEM_STRING_DECL(UTF8_micro);
+PROGMEM_STRING_DECL(UTF8_microseconds);
 PROGMEM_STRING_DECL(UTF8_minutes_plusminus5percent);
 PROGMEM_STRING_DECL(default_format_double);
 PROGMEM_STRING_DECL(default_format_integer);
@@ -542,6 +544,19 @@ PROGMEM_STRING_DECL(_escaped_htab);
 PROGMEM_STRING_DECL(_escaped_vtab);
 PROGMEM_STRING_DECL(iot_clock_save_state_file);
 PROGMEM_STRING_DECL(html_br_);
+PROGMEM_STRING_DECL(year);
+PROGMEM_STRING_DECL(month);
+PROGMEM_STRING_DECL(week);
+PROGMEM_STRING_DECL(minute);
+PROGMEM_STRING_DECL(second);
+PROGMEM_STRING_DECL(millisecond);
+PROGMEM_STRING_DECL(microsecond);
+PROGMEM_STRING_DECL(yr);
+PROGMEM_STRING_DECL(mth);
+PROGMEM_STRING_DECL(wk);
+PROGMEM_STRING_DECL(ms);
+PROGMEM_STRING_DECL(hr);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

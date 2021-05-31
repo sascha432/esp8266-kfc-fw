@@ -145,25 +145,25 @@ String Sensor_SystemMetrics::_getUptime(const __FlashStringHelper *sep) const
     auto months = int(uptime / (kSecondsPerDay * kDaysPerMonth));
     auto years = int(uptime / (kSecondsPerDay * kDaysPerYear));
     if (years) {
-        return formatTime2(sep, emptyString, false, 0, 0, 0, 0, 0, months % 12, years);
+        return formatTimeShort(sep, emptyString, false, 0, 0, 0, 0, 0, months % 12, years);
     }
     auto days = (uptime / kSecondsPerDay);
     if (months) {
-        return formatTime2(sep, emptyString, false, 0, 0, 0, (days - (months * kDaysPerMonth)), 0, months);
+        return formatTimeShort(sep, emptyString, false, 0, 0, 0, (days - (months * kDaysPerMonth)), 0, months);
     }
     auto weeks = (uptime / (kSecondsPerDay * 7)) % 4;
     if (weeks) {
-        return formatTime2(sep, emptyString, false, 0, 0, 0, days % 7, weeks);
+        return formatTimeShort(sep, emptyString, false, 0, 0, 0, days % 7, weeks);
     }
     auto hours = uptime / 3600;
     if (days) {
-        return formatTime2(sep, emptyString, false, 0, 0, hours % 24, days);
+        return formatTimeShort(sep, emptyString, false, 0, 0, hours % 24, days);
     }
     auto minutes = uptime / 60;
     if (hours) {
-        return formatTime2(sep, emptyString, false, 0, minutes % 60, hours);
+        return formatTimeShort(sep, emptyString, false, 0, minutes % 60, hours);
     }
-    return formatTime2(sep, emptyString, false, uptime % 60, minutes);
+    return formatTimeShort(sep, emptyString, false, uptime % 60, minutes);
 }
 
 void Sensor_SystemMetrics::createWebUI(WebUINS::Root &webUI)

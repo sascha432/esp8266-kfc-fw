@@ -44,20 +44,43 @@ String formatBytes(size_t bytes);
 //
 String formatTime(unsigned long seconds, bool printDaysIfZero = false);
 
+
+// internal
+extern "C" const char *formatTimeNames_long[] PROGMEM;
+extern "C" const char *formatTimeNames_short[] PROGMEM;
+
+// internal
+String __formatTime(PGM_P names[], bool isShort, const String &sep, const String &_lastSep, bool displayZero, int seconds, int minutes = -1, int hours = -1, int days = -1, int weeks = -1, int months = -1, int years = -1, int milliseconds = -1, int microseconds = -1);
+
 //
 // create a string out of time
 //
-// formatTime(F(", "), F(" and "), false, 0, 6, 5, 4, 0, 3, 2, 1)
+// formatTimeLong(F(", "), F(" and "), false, 0, 6, 5, 4, 0, 3, 2, 1)
 // 1 year, 2 months, 3 days, 5 hours and 6 minutes
 //
 // if lastSep is an empty string, sep will be used
 // displayZero if set to true, values with 0 will be displayed and values below 0 can be used to skip
 //
-String formatTime2(const String &sep, const String &lastSep, bool displayZero, int seconds, int minutes = -1, int hours = -1, int days = -1, int weeks = -1, int months = -1, int years = -1, int milliseconds = -1, int microseconds = -1);
+static inline String formatTimeLong(const String &sep, const String &_lastSep, bool displayZero, int seconds, int minutes = -1, int hours = -1, int days = -1, int weeks = -1, int months = -1, int years = -1, int milliseconds = -1, int microseconds = -1)
+{
+    return __formatTime(formatTimeNames_long, false, sep, _lastSep,  displayZero, seconds, minutes, hours, days, weeks, months, years, milliseconds, microseconds);
+}
+
+// see formatTimeLong
+// 1 yr, 2 mths, 3 days, 5 hrs and 6 min
+static inline String formatTimeShort(const String &sep, const String &_lastSep, bool displayZero, int seconds, int minutes = -1, int hours = -1, int days = -1, int weeks = -1, int months = -1, int years = -1, int milliseconds = -1, int microseconds = -1)
+{
+    return __formatTime(formatTimeNames_short, true, sep, _lastSep,  displayZero, seconds, minutes, hours, days, weeks, months, years, milliseconds, microseconds);
+}
 
 static inline String formatTimeMicros(const String &sep, const String &lastSep, int seconds, int milliseconds, int microseconds)
 {
-    return formatTime2(sep, lastSep, false, seconds, -1, -1, -1, -1, -1, -1, milliseconds, microseconds);
+    return formatTimeLong(sep, lastSep, false, seconds, -1, -1, -1, -1, -1, -1, milliseconds, microseconds);
+}
+
+static inline String formatTimeMicrosShort(const String &sep, const String &lastSep, int seconds, int milliseconds, int microseconds)
+{
+    return formatTimeShort(sep, lastSep, false, seconds, -1, -1, -1, -1, -1, -1, milliseconds, microseconds);
 }
 
 String url_encode(const String &str);

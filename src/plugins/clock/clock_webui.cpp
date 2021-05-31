@@ -53,7 +53,7 @@ void ClockPlugin::getValues(WebUINS::Events &array)
 
     IF_IOT_CLOCK_HAVE_MOTION_SENSOR(
         auto value = _motionLastUpdate ? get_time_diff(_motionLastUpdate, millis()) / 1000 : 0;
-        auto timeStr = value ? formatTime2(F(", "), F(" and "), false, value) + F(" ago") : String(F("NOW"));
+        auto timeStr = value ? formatTimeShort(F(", "), F(" and "), false, value) + F(" ago") : String(F("NOW"));
         array.append(WebUINS::Values(F("motion"), timeStr));
     )
 

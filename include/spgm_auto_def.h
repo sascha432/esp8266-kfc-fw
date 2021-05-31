@@ -455,6 +455,8 @@ AUTO_STRING_DEF(UTF8_degreeFahrenheit, "\xe2\x84\x89")  // ℉ alt-8457
 AUTO_STRING_DEF(UTF8_degree, "\xc2\xb0")                // ° alt-0176
 AUTO_STRING_DEF(UTF8_degreeC, "\xc2\xb0" "C")
 AUTO_STRING_DEF(UTF8_degreeF, "\xc2\xb0" "F")
+AUTO_STRING_DEF(UTF8_micro, "\xC2\xB5");                // µ
+AUTO_STRING_DEF(UTF8_microseconds, "\xC2\xB5" "s");     // µs
 AUTO_STRING_DEF(UTF8_minutes_plusminus5percent, "minutes \xc2\xb1" "5%")   // ± alt+0177
 AUTO_STRING_DEF(default_format_double, "%.2f")
 AUTO_STRING_DEF(default_format_integer, "\"%05d\"")
@@ -481,6 +483,18 @@ AUTO_STRING_DEF(_escaped_newline, "\\n")              // \n	New Line
 AUTO_STRING_DEF(_escaped_return, "\\r")               // \r	Carriage Return
 AUTO_STRING_DEF(_escaped_htab, "\\t")                 // \t	Horizontal Tabulator
 AUTO_STRING_DEF(_escaped_vtab, "\\v")                  // \v	Vertical Tabulator
+AUTO_STRING_DEF(html_br_, "<br>");
+AUTO_STRING_DEF(year, "year");
+AUTO_STRING_DEF(month, "month");
+AUTO_STRING_DEF(week, "week");
+AUTO_STRING_DEF(minute, "minute");
+AUTO_STRING_DEF(second, "second");
+AUTO_STRING_DEF(millisecond, "millisecond");
+AUTO_STRING_DEF(microsecond, "microsecond");
+AUTO_STRING_DEF(yr, "yr");
+AUTO_STRING_DEF(mth, "mth");
+AUTO_STRING_DEF(wk, "wk");
+
 
 // AUTO_STRING_DEF(FormRangeValidator_default_message, "This fields value must be between %min% and %max%")
 // AUTO_STRING_DEF(FormRangeValidator_default_message_zero_allowed, "This fields value must be between %min% and %max% or 0")

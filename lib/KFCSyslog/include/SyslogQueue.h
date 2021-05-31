@@ -12,33 +12,6 @@
 #include <debug_helper_disable.h>
 #endif
 
-// ------------------------------------------------------------------------
-// StringAllocSize
-// ------------------------------------------------------------------------
-
-#if defined(ESP8266)
-
-class StringAllocSize : public String {
-public:
-    inline size_t getAllocSize() const {
-        if (isSSO()) {
-            return 0;
-        }
-        return capacity() + 1;
-    }
-};
-
-#else
-
-class StringAllocSize : public String {
-public:
-    inline size_t getAllocSize(size_t len) {
-        return (length() + 8) & ~7;
-    }
-};
-
-#endif
-
 class Syslog;
 
 class SyslogQueueItem {
@@ -289,7 +262,7 @@ inline SyslogQueue::~SyslogQueue()
 
 inline size_t SyslogQueue::_getQueueItemSize(const String &msg) const
 {
-    return reinterpret_cast<const StringAllocSize &>(msg).getAllocSize() + kSyslogQueueItemSize;
+    return msg.__getAllocSize() + kSyslogQueueItemSize;
 }
 
 

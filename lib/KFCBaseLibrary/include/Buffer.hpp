@@ -154,7 +154,7 @@ inline void Buffer::clear()
 {
     // __LDBG_printf("len=%u size=%u ptr=%p", _length, _fp_size, _buffer);
     if (_buffer) {
-        __LDBG_free(_buffer);
+        free(_buffer);
         _buffer = nullptr;
     }
     _size = 0;
@@ -176,8 +176,14 @@ inline Buffer &Buffer::operator=(const Buffer &buffer)
 inline Buffer &Buffer::operator=(String &&str)
 {
     __LDBG_printf("len=%u size=%u ptr=%p", _length, _size, _buffer);
-    this->~Buffer();
-    MoveStringHelper::move(*this, std::move(str));
+    if (_buffer) {
+        free(_buffer);
+    }
+    _length = str.length();
+    _buffer = reinterpret_cast<uint8_t *>(str.__release(_size));
+    if (_length > _size - 1) { // _size == str.capacity() + 1
+        _length = (_size == 0) ? 0 : (_size - 1);
+    }
     return *this;
 }
 
@@ -199,13 +205,33 @@ inline bool Buffer::equals(const Buffer &buffer) const
 
 inline void Buffer::move(uint8_t **ptr)
 {
-    auto tmp = _buffer;
-    _buffer = nullptr;
+    *ptr = __release();
+}
+
+inline uint8_t *Buffer::__release()
+{
     _size = 0;
     _length = 0;
-    *ptr = tmp;
-    // remove from registered blocks
-    __LDBG_NOP_free(tmp);
+    return std::exchange(_buffer, nullptr);
+}
+
+inline Buffer &Buffer::operator =(Buffer &&buffer) noexcept
+{
+    if (_buffer) {
+        free(_buffer);
+    }
+    _buffer = std::exchange(buffer._buffer, nullptr);
+    _length = std::exchange(buffer._length, 0);
+    _size = std::exchange(buffer._size, 0);
+    return *this;
+}
+
+inline void Buffer::removeAndShrink(size_t index, size_t count, size_t minFree)
+{
+    remove(index, count);
+    if (_length + minFree < _size) {
+        shrink(_length);
+    }
 }
 
 #if DEBUG_BUFFER

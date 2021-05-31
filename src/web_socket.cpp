@@ -411,17 +411,16 @@ void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, AsyncWebSocke
 //     // more efficient than JsonBuffer
 //     String str = json.toString();
 //     size_t len = str.length();
-//     auto cStr = MoveStringHelper::move(std::move(str), nullptr);
+//     auto cStr = str.__release();
 //     if (!cStr) {
-//         return nullptr;
+//         cStr = reinterpret_cast<char *>(calloc(1, len));
 //     }
-//     __LDBG_NOP_free(cStr);
 //     return server->makeBuffer(reinterpret_cast<uint8_t *>(cStr), len, false/* use cStr instead of allocating new memory and copying */);
-//     auto buffer = server->makeBuffer(str.length());
-//     if (buffer) {
-//         memcpy((char *)buffer->get(), cStr, len + 1);
-//     }
-//     return buffer;
+//     // auto buffer = server->makeBuffer(str.length());
+//     // if (buffer) {
+//     //     memcpy((char *)buffer->get(), cStr, len + 1);
+//     // }
+//     // return buffer;
 // }
 
 AsyncWebSocketMessageBuffer *WsClient::utf8ToBuffer(AsyncWebSocket *server, const char *str, size_t length)
@@ -440,11 +439,10 @@ AsyncWebSocketMessageBuffer *WsClient::utf8ToBuffer(AsyncWebSocket *server, cons
 AsyncWebSocketMessageBuffer *WsClient::moveStringToBuffer(AsyncWebSocket *server, String &&str)
 {
     size_t len = str.length();
-    auto cStr = MoveStringHelper::move(std::move(str), nullptr);
+    auto cStr = str.__release();
     if (!cStr) {
-        return nullptr;
+        cStr = reinterpret_cast<char *>(calloc(1, len));
     }
-    __LDBG_NOP_free(cStr);
     return server->makeBuffer(reinterpret_cast<uint8_t *>(cStr), len, false/* use cStr instead of allocating new memory and copying */);
     // auto buffer = server->makeBuffer(str.length());
     // if (buffer) {

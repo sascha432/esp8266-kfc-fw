@@ -1771,7 +1771,7 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 > #ifndef F
 39a50
 > #endif
-43,58c54,69
+43,97c54,69
 <         // use a function pointer to allow for "if (s)" without the
 <         // complications of an operator bool(). for more information, see:
 <         // http://www.artima.com/cppsource/safebool.html
@@ -1788,30 +1788,10 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 <         String(const char *cstr = nullptr);
 <         String(const String &str);
 <         String(const __FlashStringHelper *str);
----
->     // use a function pointer to allow for "if (s)" without the
->     // complications of an operator bool(). for more information, see:
->     // http://www.artima.com/cppsource/safebool.html
->     typedef void (String:: *StringIfHelperType)() const;
->     void StringIfHelper() const {
->     }
-> 
-> public:
->     // constructors
->     // creates a copy of the initial value.
->     // if the initial value is null or invalid, or if memory allocation
->     // fails, the string will be marked as invalid (i.e. "if (s)" will
->     // be false).
->     String(const char *cstr = nullptr);
->     String(const String &str);
->     String(const __FlashStringHelper *str);
-60,61c71,72
+< #ifdef __GXX_EXPERIMENTAL_CXX0X__
 <         String(String &&rval);
 <         String(StringSumHelper &&rval);
----
->     String(String &&rval);
->     String(StringSumHelper &&rval);
-63,97c74,109
+< #endif
 <         explicit String(char c);
 <         explicit String(unsigned char, unsigned char base = 10);
 <         explicit String(int, unsigned char base = 10);
@@ -1848,6 +1828,29 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 <         String & operator =(const char *cstr);
 <         String & operator = (const __FlashStringHelper *str);
 ---
+>     // use a function pointer to allow for "if (s)" without the
+>     // complications of an operator bool(). for more information, see:
+>     // http://www.artima.com/cppsource/safebool.html
+>     typedef void (String:: *StringIfHelperType)() const;
+>     void StringIfHelper() const {
+>     }
+> 
+> public:
+>     // constructors
+>     // creates a copy of the initial value.
+>     // if the initial value is null or invalid, or if memory allocation
+>     // fails, the string will be marked as invalid (i.e. "if (s)" will
+>     // be false).
+>     String(const char *cstr = nullptr);
+>     String(const String &str);
+>     String(const __FlashStringHelper *str);
+99,100c71,72
+<         String & operator =(String &&rval);
+<         String & operator =(StringSumHelper &&rval);
+---
+>     String(String &&rval);
+>     String(StringSumHelper &&rval);
+101a74,82
 >     explicit String(char c);
 >     explicit String(unsigned char, unsigned char base = 10);
 >     explicit String(int, unsigned char base = 10);
@@ -1857,7 +1860,9 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >     explicit String(float, unsigned char decimalPlaces = 2);
 >     explicit String(double, unsigned char decimalPlaces = 2);
 >     ~String(void);
-> 
+103c84,102
+<         // concatenate (works w/ built-in types)
+---
 >     // memory management
 >     // return true on success, false on failure (in which case, the string
 >     // is left unchanged).  reserve(0), if successful, will validate an
@@ -1877,24 +1882,7 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >     inline bool isEmpty(void) const {
 >         return length() == 0;
 >     }
-> 
->     // creates a copy of the assigned value.  if the value is null or
->     // invalid, or if the memory allocation fails, the string will be
->     // marked as invalid ("if (s)" will be false).
->     String &operator =(const String &rhs);
->     String &operator =(const char *cstr);
->     String &operator = (const __FlashStringHelper *str);
-99,100c111,112
-<         String & operator =(String &&rval);
-<         String & operator =(StringSumHelper &&rval);
----
->     String &operator =(String &&rval);
->     String &operator =(StringSumHelper &&rval);
-103c115
-<         // concatenate (works w/ built-in types)
----
->     // concatenate (works w/ built-in types)
-105,318c117,968
+105,318c104,109
 <         // returns true on success, false on failure (in which case, the string
 <         // is left unchanged).  if the argument is null or invalid, the
 <         // concatenation is considered unsuccessful.
@@ -2110,6 +2098,27 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 <         String & copy(const char *cstr, unsigned int length);
 <         String & copy(const __FlashStringHelper *pstr, unsigned int length);
 ---
+>     // creates a copy of the assigned value.  if the value is null or
+>     // invalid, or if the memory allocation fails, the string will be
+>     // marked as invalid ("if (s)" will be false).
+>     String &operator =(const String &rhs);
+>     String &operator =(const char *cstr);
+>     String &operator = (const __FlashStringHelper *str);
+320c111,112
+<         void move(String &rhs);
+---
+>     String &operator =(String &&rval);
+>     String &operator =(StringSumHelper &&rval);
+322d113
+< };
+324,327c115,551
+< class StringSumHelper: public String {
+<     public:
+<         StringSumHelper(const String &s) :
+<                 String(s) {
+---
+>     // concatenate (works w/ built-in types)
+> 
 >     // returns true on success, false on failure (in which case, the string
 >     // is left unchanged).  if the argument is null or invalid, the
 >     // concatenation is considered unsuccessful.
@@ -2545,7 +2554,10 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >         auto idxPtr = strstr(ptr + fromIndex, find);
 >         if (!idxPtr) {
 >             return -1;
->         }
+329,330c553,565
+<         StringSumHelper(const char *p) :
+<                 String(p) {
+---
 >         return idxPtr - ptr;
 >     }
 > 
@@ -2559,7 +2571,10 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >         auto idxPtr = stristr(ptr + fromIndex, find);
 >         if (!idxPtr) {
 >             return -1;
->         }
+332,333c567,579
+<         StringSumHelper(char c) :
+<                 String(c) {
+---
 >         return idxPtr - ptr;
 >     }
 > 
@@ -2573,7 +2588,10 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >         auto idxPtr = strstr_P(ptr + fromIndex, find);
 >         if (!idxPtr) {
 >             return -1;
->         }
+335,336c581,593
+<         StringSumHelper(unsigned char num) :
+<                 String(num) {
+---
 >         return idxPtr - ptr;
 >     }
 > 
@@ -2587,7 +2605,10 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >         auto idxPtr = stristr_P(ptr + fromIndex, find, findLength);
 >         if (!idxPtr) {
 >             return -1;
->         }
+338,339c595,602
+<         StringSumHelper(int num) :
+<                 String(num) {
+---
 >         return idxPtr - ptr;
 >     }
 > 
@@ -2596,7 +2617,10 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >         auto ptr = strrchr(buffer(), find);
 >         if (!ptr) {
 >             return -1;
->         }
+341,342c604,611
+<         StringSumHelper(unsigned int num) :
+<                 String(num) {
+---
 >         return ptr - buffer();
 >     }
 > 
@@ -2605,7 +2629,10 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >         auto ptr = strrchr_P(buffer(), find);
 >         if (!ptr) {
 >             return -1;
->         }
+344,345c613,630
+<         StringSumHelper(long num) :
+<                 String(num) {
+---
 >         return ptr - buffer();
 >     }
 > 
@@ -2624,7 +2651,10 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >         auto ptr = reinterpret_cast<const char *>(memrchr(buffer(), find, fromIndex));
 >         if (!ptr) {
 >             return -1;
->         }
+347,348c632,649
+<         StringSumHelper(unsigned long num) :
+<                 String(num) {
+---
 >         return ptr - buffer();
 >     }
 > 
@@ -2643,7 +2673,10 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >         auto ptr = reinterpret_cast<const char *>(memrchr(buffer(), find, fromIndex));
 >         if (!ptr) {
 >             return -1;
->         }
+350,351c651,668
+<         StringSumHelper(float num) :
+<                 String(num) {
+---
 >         return ptr - buffer();
 >     }
 > 
@@ -2662,7 +2695,10 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >         auto ptr = __strrstr_P(wbuffer(), fromIndex + findLen, find, findLen);
 >         if (!ptr) {
 >             return -1;
->         }
+353,354c670,687
+<         StringSumHelper(double num) :
+<                 String(num) {
+---
 >         return ptr - buffer();
 >     }
 > 
@@ -2681,7 +2717,7 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >         auto ptr = __strrstr(wbuffer(), fromIndex + findLen, find, findLen);
 >         if (!ptr) {
 >             return -1;
->         }
+355a689,1054
 >         return ptr - buffer();
 >     }
 > 
@@ -2918,6 +2954,55 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >         return toFloat();
 >     }
 > 
+> 
+> public:
+>     // access to SSO and internals
+> 
+>     // returns allocated memory
+>     inline size_t __getAllocSize() const {
+> #if defined(ESP8266)
+>         if (isSSO()) {
+>             return 0;
+>         }
+>         return capacity() + 1;
+> #else
+>         return (length() + 8) & ~7;
+> #endif
+>     }
+> 
+>     // returns memory usage
+>     inline size_t __getMemorySize() const {
+>         return sizeof(String) + __getAllocSize();
+>     }
+> 
+>     // get pointer to allocated memory and release ownership
+>     // capacity is the size of the allocated block
+>     // if no memory is allocated, it returns nullptr and capacity is set to 0
+>     // the string is empty afterwards
+>     inline char *__release(size_t &capacity) {
+>         if (isSSO()) {
+>             capacity = 0;
+>             return nullptr;
+>         }
+>         capacity = this->capacity() + 1;
+>         auto rPtr = ptr.buff;
+>         ptr = {};
+>         invalidate();
+>         return rPtr;
+>     }
+> 
+>     // see __release(size_t &capacity)
+>     inline char *__release() {
+>         if (isSSO()) {
+>             return nullptr;
+>         }
+>         auto rPtr = ptr.buff;
+>         ptr = {};
+>         invalidate();
+>         return rPtr;
+>     }
+> 
+> 
 > protected:
 >     // Contains the string info when we're not in SSO mode
 >     struct _ptr {
@@ -2962,44 +3047,11 @@ diff -r -Z -P4 ./framework-arduinoespressif8266_orig/cores/esp8266/WString.h ./f
 >     // copy and move
 >     String &copy(const char *cstr, unsigned int length);
 >     String &copy(const __FlashStringHelper *pstr, unsigned int length);
-320c970
-<         void move(String &rhs);
----
+> #ifdef __GXX_EXPERIMENTAL_CXX0X__
 >     void move(String &rhs);
-324,355c974,1005
-< class StringSumHelper: public String {
-<     public:
-<         StringSumHelper(const String &s) :
-<                 String(s) {
-<         }
-<         StringSumHelper(const char *p) :
-<                 String(p) {
-<         }
-<         StringSumHelper(char c) :
-<                 String(c) {
-<         }
-<         StringSumHelper(unsigned char num) :
-<                 String(num) {
-<         }
-<         StringSumHelper(int num) :
-<                 String(num) {
-<         }
-<         StringSumHelper(unsigned int num) :
-<                 String(num) {
-<         }
-<         StringSumHelper(long num) :
-<                 String(num) {
-<         }
-<         StringSumHelper(unsigned long num) :
-<                 String(num) {
-<         }
-<         StringSumHelper(float num) :
-<                 String(num) {
-<         }
-<         StringSumHelper(double num) :
-<                 String(num) {
-<         }
----
+> #endif
+> };
+> 
 > class StringSumHelper : public String {
 > public:
 >     StringSumHelper(const String &s) :

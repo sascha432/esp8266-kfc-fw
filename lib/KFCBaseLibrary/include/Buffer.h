@@ -30,19 +30,7 @@
 #define __DBG_BUFFER_asserted(cmp, ...)         __VA_ARGS__
 #endif
 
-class Buffer;
 class FileBufferStreamImpl;
-
-// move allocated memory or allocate and copy the string
-// the source string is empty afterwards
-class MoveStringHelper : public String {
-public:
-    MoveStringHelper();
-    // returns nullptr if the string "move" is empty or if it cannot allocate memory
-    // otherwise the allocated block of memory (malloc()!)
-    static char *move(String &&move, int *allocSize);
-    static void move(Buffer &buffer, String &&move);
-};
 
 class Buffer {
 public:
@@ -179,27 +167,38 @@ public:
         _size(std::exchange(buffer._size, 0))
     {}
 
-    Buffer(size_t size) : Buffer() {
+    Buffer(size_t size) : Buffer()
+    {
         _changeBuffer(size);
     }
 
-    ~Buffer() {
+    ~Buffer()
+    {
         __LDBG_printf("len=%u size=%u ptr=%p this=%p", _length, _size, _buffer, this);
         if (_buffer) {
             __LDBG_free(_buffer);
         }
+        _buffer = nullptr;
+        _length = 0;
+        _size = 0;
         CHECK_MEMORY();
     }
 
-    Buffer(const __FlashStringHelper *str) : Buffer() {
+    Buffer(const __FlashStringHelper *str) : Buffer()
+    {
         write(str, strlen_P(reinterpret_cast<PGM_P>(str)));
     }
 
-    Buffer(String &&str) : Buffer() {
-        MoveStringHelper::move(*this, std::move(str));
+    Buffer(String &&str) : _length(str.length())
+    {
+        _buffer = reinterpret_cast<uint8_t *>(str.__release(_size));
+        if (_length > _size - 1) { // _size == str.capacity() + 1
+            _length = (_size == 0) ? 0 : (_size - 1);
+        }
     }
 
-    Buffer(const String &str) : Buffer() {
+    Buffer(const String &str) : Buffer()
+    {
         write(str);
     }
 
@@ -219,8 +218,12 @@ public:
     bool equals(const Buffer &buffer) const;
 
     void clear();
+
     // move buffer pointer. needs to be freed with free() if not null
     void move(uint8_t** ptr);
+
+    // return pointer to allocated memory and release ownership
+    uint8_t *__release();
 
     inline uint8_t *operator*() const {
         return _buffer;

@@ -93,7 +93,7 @@ namespace RemoteControl {
 
         public:
             Binary(::String &&move) : _data(nullptr), _size(move.length()) {
-                _data = reinterpret_cast<uint8_t *>(MoveStringHelper::move(std::move(move), nullptr));
+                _data = reinterpret_cast<uint8_t *>(move.__release());
                 if (!_data) {
                     _size = 0;
                 }

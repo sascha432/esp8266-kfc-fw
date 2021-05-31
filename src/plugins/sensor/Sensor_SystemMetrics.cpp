@@ -191,12 +191,10 @@ String Sensor_SystemMetrics::_getTopic() const
 
 String Sensor_SystemMetrics::_getMetricsJson() const
 {
-    auto uptimeStr = _getUptime(F("\n"));
-
     using namespace MQTT::Json;
     UnnamedObject jsonObj(
         NamedUint32(FSPGM(uptime), getSystemUptime()),
-        NamedString(F("uptime_fmt"), uptimeStr),
+        NamedStoredString(F("uptime_fmt"), _getUptime(F("\n"))),
         NamedUint32(FSPGM(heap), ESP.getFreeHeap()),
         NamedShort(F("heap_frag"), ESP.getHeapFragmentation()),
         NamedString(FSPGM(version), FPSTR(config.getShortFirmwareVersion_P()))

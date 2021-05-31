@@ -50,9 +50,9 @@ MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::Form
             discovery->addValueTemplate(FSPGM(uptime));
             break;
         case 1:
-            discovery->create(this, F("uptime_fmt"), format);
+            discovery->create(this, F("uptime_hr"), format);
             discovery->addStateTopic(_getTopic());
-            discovery->addValueTemplate(F("uptime_fmt"));
+            discovery->addValueTemplate(F("uptime_hr"));
             break;
         case 2:
             discovery->create(this, FSPGM(heap), format);
@@ -194,7 +194,7 @@ String Sensor_SystemMetrics::_getMetricsJson() const
     using namespace MQTT::Json;
     UnnamedObject jsonObj(
         NamedUint32(FSPGM(uptime), getSystemUptime()),
-        NamedStoredString(F("uptime_fmt"), _getUptime(F("\n"))),
+        NamedStoredString(F("uptime_hr"), _getUptime(F("\n"))),
         NamedUint32(FSPGM(heap), ESP.getFreeHeap()),
         NamedShort(F("heap_frag"), ESP.getHeapFragmentation()),
         NamedString(FSPGM(version), FPSTR(config.getShortFirmwareVersion_P()))

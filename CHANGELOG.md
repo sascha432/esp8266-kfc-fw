@@ -79,8 +79,9 @@
 - Switched to LittleFS
 - Fixed missing information for SSDP
 - Replaced RGB Silder with Bootstrap Color Picker Sliders
-- Support for https://github.com/NimmLor/IoT-Audio-Visualization-Center
-- Support for TinyPwm I2C IO Expander
+- Support for [https://github.com/NimmLor/IoT-Audio-Visualization-Center](https://github.com/NimmLor/IoT-Audio-Visualization-Center)
+- Support for PCF8574 IO-Expander
+- Support for TinyPwm I2C IO-Expander [https://github.com/sascha432/TinyPwm](https://github.com/sascha432/TinyPwm)
 - Fan control and light sensor for LED matrix
 - Human readable uptime for MQTT system metrics
 

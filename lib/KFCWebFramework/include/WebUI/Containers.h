@@ -535,6 +535,13 @@ namespace FormUI {
             using MixedString::MixedString;
         };
 
+        class InlineSuffix : public MixedString {
+        public:
+            InlineSuffix(const __FlashStringHelper *value) : MixedString(PrintString(F("<span class=\"input-group-text inline hidden\">%s</span>"), value)) {}
+            InlineSuffix(const String &value) : InlineSuffix(reinterpret_cast<const __FlashStringHelper *>(value.c_str())) {}
+            InlineSuffix(const char *value) : InlineSuffix(reinterpret_cast<const __FlashStringHelper *>(value)) {}
+        };
+
         class SuffixHtml : public Suffix {
         public:
             using Suffix::Suffix;

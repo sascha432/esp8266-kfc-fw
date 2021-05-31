@@ -489,6 +489,17 @@ $(function() {
 
     });
 
+    // ---------------------------------------------------------------------------------
+    // FormUI:InlineSuffix()
+    // adds input-group-text inside the input field
+    // ---------------------------------------------------------------------------------
+    $('.input-group-text.inline.hidden').each(function() {
+        var text = $(this);
+        var wrapper = text.closest('div.input-group');
+        var input = wrapper.find('input:first')
+        input.css('padding-right', parseFloat(text.outerWidth()) + parseFloat(input.css('padding-right')));
+        text.css('position', 'absolute').css('left', input.outerWidth() - text.outerWidth() + 3).removeClass('hidden');
+    });
 
     // ---------------------------------------------------------------------------------
     // transfer hidden inputs to other input fields

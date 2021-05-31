@@ -128,6 +128,14 @@ namespace FormUI {
                 using Single::pop_front;
             };
 
+            class SuffixInline : public Single<Type::SUFFIX_TEXT> {
+            public:
+                using Single::Single;
+                using Single::getValue;
+                using Single::push_back;
+                using Single::pop_front;
+            };
+
             class SuffixHtml : public Single<Type::SUFFIX_HTML> {
             public:
                 using Single::Single;

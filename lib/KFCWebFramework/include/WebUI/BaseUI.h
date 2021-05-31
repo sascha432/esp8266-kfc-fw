@@ -158,6 +158,10 @@ namespace FormUI {
                 _storage.push_back(Storage::Value::SuffixHtml(attachString(suffix.getValue())));
             }
 
+            inline void _addItem(const Container::InlineSuffix &suffix) {
+                _storage.push_back(Storage::Value::SuffixHtml(attachString(suffix.getValue())));
+            }
+
             void _addItem(const Container::CheckboxButtonSuffix &suffix);
             void _addItem(const Container::SelectSuffix &suffix);
 

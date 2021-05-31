@@ -493,13 +493,42 @@ $(function() {
     // FormUI:InlineSuffix()
     // adds input-group-text inside the input field
     // ---------------------------------------------------------------------------------
-    $('.input-group-text.inline.hidden').each(function() {
-        var text = $(this);
-        var wrapper = text.closest('div.input-group');
-        var input = wrapper.find('input:first')
-        input.css('padding-right', parseFloat(text.outerWidth()) + parseFloat(input.css('padding-right')));
-        text.css('position', 'absolute').css('left', input.outerWidth() - text.outerWidth() + 3).removeClass('hidden');
-    });
+    {
+        var input_group_text_resize_handler = null;
+
+        $('.input-group-text.inline.hidden').each(function() {
+            var text = $(this);
+            var input = text.closest('div.input-group').find('input:first')
+            input.addClass('input-text-inline-group');
+            var update_inline_element = function() {
+                var pos = text.css('position');
+                // reset
+                input.removeAttr('style').css('padding-right', '');
+                text.removeAttr('style').css('left', '').css('top', '');
+                // adjust to new size and postion
+                if (pos === 'relative') {
+                    text.removeClass('hidden');
+                }
+                else {
+                    text.css('height', input.outerHeight() + 2);
+                    window.setTimeout(function() {
+                        var padding = (input.innerWidth() - input.width()) / 2;
+                        var text_width = text.outerWidth();
+                        input.css('padding-right', text_width + padding);
+                        text.css('left', input.outerWidth() - text_width + 3).css('top', 0).removeClass('hidden');
+                    }, 1);
+                }
+            };
+            update_inline_element();
+            if (input_group_text_resize_handler === null) {
+                $(window).on('resize', function() {
+                    update_inline_element();
+                });
+                input_group_text_resize_handler = true;
+            }
+        });
+
+    }
 
     // ---------------------------------------------------------------------------------
     // transfer hidden inputs to other input fields

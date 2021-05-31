@@ -202,3 +202,16 @@
     text-decoration: underline;
     transform: rotate(-90deg);
 }
+
+
+.lg-font {
+    font-size: 1.25rem;
+}
+
+.sm-font {
+    font-size: 0.75rem;
+}
+
+.xs-font {
+    font-size: 0.65rem;
+}

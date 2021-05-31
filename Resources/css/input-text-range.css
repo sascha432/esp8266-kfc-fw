@@ -77,19 +77,60 @@
     border-color: #dc3545;
 }
 
+/*
+inline input groups (inside input field)
+custom range slider
+*/
+
+.input-group-text.inline {
+    cursor: default;
+    overflow: hidden;
+    position: absolute;
+}
+
+.input-text-inline-group {
+}
+
+
 @media only screen and (max-width: 576px) {
     .form-control.input-text-range > input:first-child {
         min-width: 135px;
+        padding: 0.125rem 0.125rem !important;
+    }
+    .input-group-text.inline {
+        font-size: 0.65rem;
+        padding: 0.25rem 0.25rem;
+        position: relative !important;
+    }
+    .input-text-inline-group {
+        padding-right: .75rem !important;
     }
 }
 @media only screen and (max-width: 992px) and (min-width: 576px) {
     .form-control.input-text-range > input:first-child {
         min-width: 175px;
+        padding: 0.125rem 0.125rem !important;
+    }
+    .input-group-text.inline {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.25rem;
+        position: relative !important;
+    }
+    .input-group-text.form-select {
+        padding-right: .75rem !important;
+    }
+    .input-text-inline-group {
     }
 }
 @media only screen and (max-width: 1200px) and (min-width: 992px) {
     .form-control.input-text-range > input:first-child {
         min-width: 250px;
+    }
+    .input-group-text.inline {
+        font-size: 0.85rem;
+        padding: 0.5rem 0.5rem;
+    }
+    .input-text-inline-group {
     }
 }
 @media only screen and (min-width: 1200px) {

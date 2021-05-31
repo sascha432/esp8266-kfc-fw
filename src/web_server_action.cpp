@@ -24,7 +24,7 @@ namespace WebServer {
                 authenticated = plugin.isAuthenticated(request) ? AuthType::AUTH : AuthType::NO_AUTH;
             }
             if (authenticated != AuthType::AUTH) {
-                __DBG_printf("%s: unauthorized", url);
+                __LDBG_printf("%s: unauthorized", url);
                 request->send(403);
                 _error = StateType::UNAUTHORIZED;
                 return _error;
@@ -38,13 +38,13 @@ namespace WebServer {
             if (id) {
                 auto session = getSession(id);
                 if (!session) {
-                    __DBG_printf("%s: no session", url);
+                    __LDBG_printf("%s: no session", url);
                     Plugin::message(request, MessageType::DANGER, F("This session has expired"), title, headers);
                     _error = StateType::EXPIRED;
                     return _error;
                 }
 
-                __DBG_printf("%s: status: %s", url, session->getStatusFPStr() ? session->getStatusFPStr() : F("No status message available"));
+                __LDBG_printf("%s: status: %s", url, session->getStatusFPStr() ? session->getStatusFPStr() : F("No status message available"));
                 Plugin::message(request, session->getStatusType(), session->getStatusFPStr() ? session->getStatusFPStr() : F("No status message available"), title, headers);
                 return *session;
             }
@@ -53,7 +53,7 @@ namespace WebServer {
             session.setDetails(url, title);
 
             String redirUrl = PrintString(F("%s?action=%u"), session.getUrl(), session.getId());
-            __DBG_printf("redirecting to %s", redirUrl.c_str());
+            __LDBG_printf("redirecting to %s", redirUrl.c_str());
             request->send(HttpLocationHeader::redir(request, redirUrl, headers));
             return session;
         }
@@ -88,7 +88,7 @@ namespace WebServer {
         {
             uint32_t minId = time(nullptr) - Session::kUnixtimeStartOffset + Session::kMaxLifetime;
 
-            __DBG_printf("session min. id %u sessions %u", minId, _sessions.size());
+            __LDBG_printf("session min. id %u sessions %u", minId, _sessions.size());
 
             noInterrupts();
             _sessions.erase(std::remove_if(_sessions.begin(), _sessions.end(), [minId](const Session &session) {
@@ -97,7 +97,7 @@ namespace WebServer {
             interrupts();
 
             if (_sessions.empty()) {
-                __DBG_printf("deleting action handler instance");
+                __LDBG_printf("deleting action handler instance");
                 delete this;
                 return;
             }

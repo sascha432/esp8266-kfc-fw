@@ -9,7 +9,7 @@
 #include "coredecls.h"
 
 #ifndef DEBUG_WEB_SERVER_ACTION
-#define DEBUG_WEB_SERVER_ACTION                     1
+#define DEBUG_WEB_SERVER_ACTION                     0
 #endif
 
 #if DEBUG_WEB_SERVER_ACTION

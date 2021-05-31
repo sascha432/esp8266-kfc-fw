@@ -82,6 +82,7 @@
 - Support for https://github.com/NimmLor/IoT-Audio-Visualization-Center
 - Support for TinyPwm I2C IO Expander
 - Fan control and light sensor for LED matrix
+- Human readable uptime for MQTT system metrics
 
 ## Version 0.0.3
 

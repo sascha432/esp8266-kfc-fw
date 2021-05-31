@@ -50,44 +50,49 @@ MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::Form
             discovery->addValueTemplate(FSPGM(uptime));
             break;
         case 1:
+            discovery->create(this, F("uptime_fmt"), format);
+            discovery->addStateTopic(_getTopic());
+            discovery->addValueTemplate(F("uptime_fmt"));
+            break;
+        case 2:
             discovery->create(this, FSPGM(heap), format);
             discovery->addStateTopic(_getTopic());
             discovery->addUnitOfMeasurement(FSPGM(bytes));
             discovery->addValueTemplate(FSPGM(heap));
             break;
-        case 2:
+        case 3:
             discovery->create(this, FSPGM(version), format);
             discovery->addStateTopic(_getTopic());
             discovery->addValueTemplate(FSPGM(version));
             break;
-        case 3:
+        case 4:
             discovery->create(this, F("heap_frag"), format);
             discovery->addStateTopic(_getTopic());
             discovery->addValueTemplate(F("heap_frag"));
             break;
 #if PING_MONITOR_SUPPORT
-        case 4:
+        case 5:
             discovery->create(this, F("ping_monitor_success"), format);
             discovery->addStateTopic(_getTopic());
             discovery->addValueTemplate(F("ping_monitor_success"));
             break;
-        case 5:
+        case 6:
             discovery->create(this, F("ping_monitor_failure"), format);
             discovery->addStateTopic(_getTopic());
             discovery->addValueTemplate(F("ping_monitor_failure"));
             break;
-        case 6:
+        case 7:
             discovery->create(this, F("ping_monitor_avg_resp_time"), format);
             discovery->addStateTopic(_getTopic());
             discovery->addValueTemplate(F("ping_monitor_avg_resp_time"));
             discovery->addUnitOfMeasurement(F("ms"));
             break;
-        case 7:
+        case 8:
             discovery->create(this, F("ping_monitor_rcvd_pkts"), format);
             discovery->addStateTopic(_getTopic());
             discovery->addValueTemplate(F("ping_monitor_rcvd_pkts"));
             break;
-        case 8:
+        case 9:
             discovery->create(this, F("ping_monitor_lost_pkts"), format);
             discovery->addStateTopic(_getTopic());
             discovery->addValueTemplate(F("ping_monitor_lost_pkts"));
@@ -102,9 +107,9 @@ MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::Form
 uint8_t Sensor_SystemMetrics::getAutoDiscoveryCount() const
 {
 #if PING_MONITOR_SUPPORT
-    return 9;
+    return 10;
 #else
-    return 4;
+    return 5;
 #endif
 }
 
@@ -116,9 +121,7 @@ void Sensor_SystemMetrics::getStatus(Print &output)
 void Sensor_SystemMetrics::publishState()
 {
     if (isConnected()) {
-        PrintString json;
-        _getMetricsJson(json);
-        publish(_getTopic(), true, json);
+        publish(_getTopic(), true, _getMetricsJson());
     }
 }
 
@@ -131,12 +134,11 @@ void Sensor_SystemMetrics::getValues(WebUINS::Events &array, bool timer)
     );
 }
 
-String Sensor_SystemMetrics::_getUptime() const
+String Sensor_SystemMetrics::_getUptime(const __FlashStringHelper *sep) const
 {
     static constexpr auto kDaysPerYear = 365.25;
     static constexpr auto kDaysPerMonth = 365.25 / 12.0;
     static constexpr auto kSecondsPerDay = 86400;
-    auto sep = F("<br>");
 
     PrintString uptimeStr;
     auto uptime = getSystemUptime();
@@ -187,12 +189,14 @@ String Sensor_SystemMetrics::_getTopic() const
     return MQTTClient::formatTopic(F("sys"));
 }
 
-void Sensor_SystemMetrics::_getMetricsJson(PrintString &json) const
+String Sensor_SystemMetrics::_getMetricsJson() const
 {
-    using namespace MQTT::Json;
+    auto uptimeStr = _getUptime(F("\n"));
 
-    UnnamedObjectWriter jsonObj(json,
+    using namespace MQTT::Json;
+    UnnamedObject jsonObj(
         NamedUint32(FSPGM(uptime), getSystemUptime()),
+        NamedString(F("uptime_fmt"), uptimeStr),
         NamedUint32(FSPGM(heap), ESP.getFreeHeap()),
         NamedShort(F("heap_frag"), ESP.getHeapFragmentation()),
         NamedString(FSPGM(version), FPSTR(config.getShortFirmwareVersion_P()))
@@ -201,7 +205,7 @@ void Sensor_SystemMetrics::_getMetricsJson(PrintString &json) const
 #if PING_MONITOR_SUPPORT
     PingMonitorTask::addToJson(jsonObj);
 #endif
-
+    return jsonObj.toString();
 }
 
 const __FlashStringHelper *Sensor_SystemMetrics::_getId(MetricsType type) const

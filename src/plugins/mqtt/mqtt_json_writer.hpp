@@ -1140,6 +1140,10 @@ namespace MQTT {
                 _debugLevel++;
                 if (_debugLevel > 16) {
                     __DBG_printf("JSON recursion arg=%p", std::addressof(arg));
+#if DEBUG && 0
+                    // enable to trace
+                    panic();
+#endif
                     return;
                 }
                 add(arg);

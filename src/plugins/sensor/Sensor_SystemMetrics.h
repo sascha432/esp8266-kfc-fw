@@ -33,9 +33,9 @@ private:
     };
 
     String _getTopic() const;
-    String _getUptime() const;
+    String _getUptime(const __FlashStringHelper *sep = FSPGM(html_br_, "<br>")) const;
 
-    void _getMetricsJson(PrintString &json) const;
+    String _getMetricsJson() const;
 
     const __FlashStringHelper *_getId(MetricsType type) const;
 };

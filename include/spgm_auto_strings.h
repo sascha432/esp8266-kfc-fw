@@ -541,6 +541,7 @@ PROGMEM_STRING_DECL(_escaped_return);
 PROGMEM_STRING_DECL(_escaped_htab);
 PROGMEM_STRING_DECL(_escaped_vtab);
 PROGMEM_STRING_DECL(iot_clock_save_state_file);
+PROGMEM_STRING_DECL(html_br_);
 #ifdef __cplusplus
 } // extern "C"
 #endif

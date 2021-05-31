@@ -457,3 +457,5 @@ PROGMEM_STRING_DEF(_escaped_return, "\\r");
 PROGMEM_STRING_DEF(_escaped_htab, "\\t");
 PROGMEM_STRING_DEF(_escaped_vtab, "\\v");
 PROGMEM_STRING_DEF(iot_clock_save_state_file, "/.pvt/device.state");
+PROGMEM_STRING_DEF(html_br_, "<br>");
+

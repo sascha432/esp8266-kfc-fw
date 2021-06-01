@@ -31,6 +31,9 @@
 #include "failure_counter.h"
 #include "save_crash.h"
 #include "../src/plugins/plugins.h"
+#if IOT_BLINDS_CTRL && IOT_BLINDS_CTRL_SAVE_STATE
+#include "../src/plugins/blinds_ctrl/blinds_plugin.h"
+#endif
 #include  "spgm_auto_def.h"
 #if DEBUG_WEB_SERVER
 #include <debug_helper_enable.h>
@@ -1097,6 +1100,14 @@ bool Plugin::_handleFileRead(String path, bool client_accepts_gzip, AsyncWebServ
                         else if (isFactoryHtml) {
                             config.restoreFactorySettings();
                             config.write();
+#if IOT_BLINDS_CTRL && IOT_BLINDS_CTRL_SAVE_STATE
+                            BlindsControl::StateType states[2] = {
+                                static_cast<BlindsControl::StateType>(request->arg(F("blindsctrl_channel0")).toInt()),
+                                static_cast<BlindsControl::StateType>(request->arg(F("blindsctrl_channel1")).toInt())
+                            };
+                            __DBG_printf("blinds factory channel states: 0=%s 1=%s", BlindsControl::ChannelState::__getFPStr(states[0]), BlindsControl::ChannelState::__getFPStr(states[1]));
+                            BlindsControlPlugin::_saveState(states, 2);
+#endif
                             RTCMemoryManager::clear();
                         }
                         Plugin::executeDelayed(request, [safeMode]() {
@@ -1341,8 +1352,14 @@ namespace SaveCrash {
                 __LDBG_printf("crashlog index");
                 NamedArray items(F("items"));
                 String timeStr;
+                bool outOfMemory = false;
                 auto info = fs.getInfo([&](const SaveCrash::CrashLogEntry &item) {
                     __LDBG_printf("id=0x%08x reason=%s", item.getId(), item._header.getReason());
+                    if (ESP.getFreeHeap() < 4096) {
+                        outOfMemory = true;
+                        __DBG_printf("crashlog index: out of heap");
+                        return false;
+                    }
                     auto stack = item._header.getStack();
                     timeStr = item._header.getTimeStr();
                     PrintString reason;
@@ -1359,9 +1376,12 @@ namespace SaveCrash {
                 __LDBG_printf("info available=%u capacity=%u entries=%u largest-block=%u size=%u", info.available(), info.capacity(), info.numTraces(), info.getLargestBlock(), info.size());
 
                 auto infoStr = PrintString(F("%u%% free %s/%s %s"), info.available() * 100 / info.capacity(), formatBytes(info.available()).c_str(), formatBytes(info.capacity()).c_str(), SPGM(UTF8_rocket));
+                if (outOfMemory) {
+                    infoStr += F(" (Insufficient memory to show all)");
+                }
                 UnnamedObjectWriter(jsonStr, items, NamedString(F("info"), reinterpret_cast<FStr>(infoStr.c_str())));
             }
-            response = request->beginResponse(200, FSPGM(mime_application_json), jsonStr);
+            response = request->beginResponse(200, FSPGM(mime_application_json), std::move(jsonStr));
         }
 
         headers.setResponseHeaders(response);

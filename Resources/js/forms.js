@@ -494,8 +494,7 @@ $(function() {
     // adds input-group-text inside the input field
     // ---------------------------------------------------------------------------------
     {
-        var input_group_text_resize_handler = null;
-
+        var input_group_text_resize_handler = false;
         $('.input-group-text.inline.hidden').each(function() {
             var text = $(this);
             var input = text.closest('div.input-group').find('input:first')
@@ -520,7 +519,7 @@ $(function() {
                 }
             };
             update_inline_element();
-            if (input_group_text_resize_handler === null) {
+            if (!input_group_text_resize_handler) {
                 $(window).on('resize', function() {
                     update_inline_element();
                 });

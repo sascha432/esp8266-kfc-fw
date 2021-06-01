@@ -473,6 +473,12 @@ class PlatformIOParser {
             if (sizeof($this->undefinedConstants) == 0) {
                 break;
             }
+
+            // sort defines by length of the name
+            usort($this->undefinedConstants, function($a, $b) {
+                return strlen($b) - strlen($a);
+            });
+
             foreach($this->undefinedConstants as $name) {
                 $expr = str_replace($name, isset($this->defines[$name]) ? $this->defines[$name] : 'false', $expr);
                 // $resolved[] = $name.'='.(isset($this->defines[$name]) ? $this->defines[$name] : '*UNDEF*');

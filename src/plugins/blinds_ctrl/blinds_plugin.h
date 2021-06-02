@@ -69,3 +69,30 @@ void BlindsControlPlugin::loopMethod()
 {
     getInstance()._loopMethod();
 }
+
+// ------------------------------------------------------------------------
+// BlindsControl
+// ------------------------------------------------------------------------
+
+inline void BlindsControl:: startToneTimer(uint32_t timeout)
+{
+    __LDBG_printf("timeout=%u", timeout);
+    BlindsControlPlugin::getInstance()._startToneTimer(timeout);
+}
+
+#if HAVE_IMPERIAL_MARCH
+
+inline void BlindsControl::playImperialMarch(uint16_t speed, int8_t zweiklang, uint8_t repeat)
+{
+    BlindsControlPlugin::getInstance()._playImperialMarch(speed, zweiklang, repeat);
+}
+
+#endif
+
+inline void BlindsControl::stopToneTimer(ActionStateType state)
+{
+    __LDBG_printf("state=%u", state);
+    if (state != ActionStateType::DELAY) {
+        BlindsControlPlugin::getInstance()._stopToneTimer();
+    }
+}

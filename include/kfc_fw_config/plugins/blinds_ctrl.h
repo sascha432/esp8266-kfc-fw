@@ -5,6 +5,11 @@
 #include "kfc_fw_config/base.h"
 #include "ConfigurationHelper.h"
 
+// #define CTOR_INIT_DEFAULT_FOR(name,n) name(kDefaultValueFor_##name),
+// #define CTOR_INIT_DEFAULT(...) BOOST_PP_SEQ_FOR_EACH(CTOR_INIT_DEFAULT_FOR,(BOOST_PP_VARIADIC_SIZE(__VA_ARGS__)),BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__))
+
+
+
         // --------------------------------------------------------------------
         // BlindsController
 
@@ -23,7 +28,7 @@
 
             static constexpr size_t kMaxOperations = BLINDS_CONFIG_MAX_OPERATIONS;
 
-            enum class OperationType : uint32_t {
+            enum class OperationType : uint8_t {
                 NONE = 0,
                 OPEN_CHANNEL0,                    // _FOR_CHANNEL0_AND_ALL
                 OPEN_CHANNEL0_FOR_CHANNEL1,       // _ONLY
@@ -39,32 +44,33 @@
                 MAX
             };
 
-            enum class PlayToneType : uint32_t {
+            enum class PlayToneType : uint8_t {
                 NONE = 0,
                 INTERVAL,
+                INTERVAL_SPEED_UP,
                 IMPERIAL_MARCH,
                 MAX
             };
 
-            typedef struct __attribute__packed__ BlindsConfigOperation_t {
+            struct __attribute__packed__ BlindsConfigOperation_t {
                 using Type = BlindsConfigOperation_t;
 
-                CREATE_UINT32_BITFIELD_MIN_MAX(delay, 20, 0, 900000, 0, 500);
-                CREATE_UINT32_BITFIELD_MIN_MAX(relative_delay, 1, 0, 1, 0, 1);
-                CREATE_ENUM_BITFIELD(play_tone, PlayToneType);
-                CREATE_ENUM_BITFIELD(action, OperationType);
-
-                // uint16_t delay;                                     // delay before execution in seconds
-                // OperationType type;                                 // action
+                CREATE_ENUM_D_BITFIELD(play_tone, PlayToneType, PlayToneType::NONE);
+                CREATE_ENUM_D_BITFIELD(action, OperationType, OperationType::NONE);
+                CREATE_UINT16_BITFIELD_MIN_MAX(delay, 10, 0, 900, 0, 1);
+                CREATE_UINT16_BITFIELD_MIN_MAX(relative_delay, 1, 0, 1, 0, 1);
 
                 BlindsConfigOperation_t() :
+                    // CTOR_INIT_DEFAULT(play_tone, action, delay, relative_delay)
+                    play_tone(kDefaultValueFor_play_tone),
+                    action(kDefaultValueFor_action),
                     delay(kDefaultValueFor_delay),
-                    relative_delay(0),
-                    play_tone(BlindsConfigOperation_t::cast_int_play_tone(PlayToneType::NONE)),
-                    action(BlindsConfigOperation_t::cast_int_action(OperationType::NONE))
+                    relative_delay(kDefaultValueFor_relative_delay)
                 {}
 
-             } BlindsConfigOperation_t;
+             };
+
+             static constexpr size_t kBlindsConfigOperation_tSize = sizeof(BlindsConfigOperation_t);
 
             typedef struct __attribute__packed__ BlindsConfigChannel_t {
                 using Type = BlindsConfigChannel_t;
@@ -92,9 +98,9 @@
                 CREATE_UINT32_BITFIELD_MIN_MAX(adc_multiplexer, 1, 0, 1, 0);
                 CREATE_INT32_BITFIELD_MIN_MAX(adc_offset, 11, -1000, 1000, 0);
                 CREATE_UINT32_BITFIELD_MIN_MAX(pwm_softstart_time, 10, 0, 1000, 300, 10);
-                CREATE_UINT32_BITFIELD_MIN_MAX(play_tone_channel, 3, 0, 2, 0, 0);
-                CREATE_UINT32_BITFIELD_MIN_MAX(tone_frequency, 11, 150, 2000, 800, 50);
-                CREATE_UINT32_BITFIELD_MIN_MAX(tone_pwm_value, 10, 0, 1023, 150, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(play_tone_channel, 2, 0, 3, 0, 0);
+                CREATE_UINT32_BITFIELD_MIN_MAX(tone_frequency, 13, 150, 8000, 1850, 50);
+                CREATE_UINT32_BITFIELD_MIN_MAX(tone_pwm_value, 8, 0, 255, 100, 1);
 
                 BlindsConfig_t();
 

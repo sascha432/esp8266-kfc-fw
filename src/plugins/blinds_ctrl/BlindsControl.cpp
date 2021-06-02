@@ -6,7 +6,7 @@
 #include "BlindsControl.h"
 #include "blinds_plugin.h"
 #include "kfc_fw_config.h"
-#include "../src/plugins/mqtt/mqtt_client.h"
+#include <stl_ext/algorithm.h>
 
 #if DEBUG_IOT_BLINDS_CTRL
 #include <debug_helper_enable.h>
@@ -14,220 +14,23 @@
 #include <debug_helper_disable.h>
 #endif
 
-extern int8_t operator *(const BlindsControl::ChannelType type);
+extern "C" std::underlying_type<BlindsControl::ChannelType>::type operator *(const BlindsControl::ChannelType type);
 
-static constexpr float kAdcIntegralMultiplierDivider = 1000.0 * 10.0;
-
-int8_t operator *(const BlindsControl::ChannelType type) {
-    return static_cast<int8_t>(type);
-}
-
-BlindsControl::BlindsControl() :
-    MQTTComponent(ComponentType::SWITCH), _queue(*this),
-    _activeChannel(ChannelType::NONE),
-    _adcIntegralMultiplier(2500 / kAdcIntegralMultiplierDivider),
-    _adc(ADCManager::getInstance())
-{
-}
-
-void BlindsControl::_setup()
-{
-    __LDBG_println();
-    _readConfig();
-    for(auto pin : _config.pins) {
-        digitalWrite(pin, LOW);
-        pinMode(pin, OUTPUT);
-    }
-
-#if IOT_BLINDS_CTRL_RPM_PIN
-    attachScheduledInterrupt(digitalPinToInterrupt(IOT_BLINDS_CTRL_RPM_PIN), BlindsControl::rpmIntCallback, RISING);
-    pinMode(IOT_BLINDS_CTRL_RPM_PIN, INPUT);
-#endif
-
-}
-
-MQTT::AutoDiscovery::EntityPtr BlindsControl::getAutoDiscovery(FormatType format, uint8_t num)
-{
-    auto discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
-    if (num < kChannelCount) {
-        ChannelType channel = (ChannelType)num;
-        if (discovery->create(this, PrintString(FSPGM(channel__u, "channel_%u"), channel), format)) {
-            discovery->addStateTopic(_getTopic(channel, TopicType::STATE));
-            discovery->addCommandTopic(_getTopic(channel, TopicType::SET));
-        }
-    }
-    else if (num == kChannelCount) {
-        if (discovery->create(this, FSPGM(channels), format)) {
-            discovery->addStateTopic(_getTopic(ChannelType::ALL, TopicType::STATE));
-            discovery->addCommandTopic(_getTopic(ChannelType::ALL, TopicType::SET));
-        }
-    }
-    else if (num == kChannelCount + 1) {
-        if (discovery->create(MQTTComponent::ComponentType::SENSOR, FSPGM(binary), format)) {
-            discovery->addStateTopic(_getTopic(ChannelType::NONE, TopicType::METRICS));
-            discovery->addValueTemplate(FSPGM(binary));
-        }
-    }
-    else if (num == kChannelCount + 2) {
-        if (discovery->create(MQTTComponent::ComponentType::SENSOR, FSPGM(busy, "busy"), format)) {
-            discovery->addStateTopic(_getTopic(ChannelType::NONE, TopicType::METRICS));
-            discovery->addValueTemplate(FSPGM(busy));
-        }
-    }
-    else if (num >= kChannelCount + 3) {
-        ChannelType channel = (ChannelType)(num - (kChannelCount + 3));
-        if (discovery->create(MQTTComponent::ComponentType::SENSOR, PrintString(FSPGM(channel__u), channel), format)) {
-            discovery->addStateTopic(_getTopic(ChannelType::NONE, TopicType::CHANNELS));
-            discovery->addValueTemplate(PrintString(FSPGM(channel__u), channel));
-        }
-    }
-    return discovery;
-}
-
-uint8_t BlindsControl::getAutoDiscoveryCount() const
-{
-    return kChannelCount * 2 + 3;
-}
-
-void BlindsControl::getValues(WebUINS::Events &array)
-{
-    array.append(WebUINS::Values(FSPGM(set_all, "set_all"), _states[0].isOpen() || _states[1].isOpen() ? 1 : 0, true));
-    for(const auto channel: _states.channels()) {
-        String prefix = PrintString(FSPGM(channel__u), channel);
-        array.append(
-            WebUINS::Values(prefix + F("_state"), _getStateStr(channel), true),
-            WebUINS::Values(prefix + F("_set"), _states[channel].isOpen() ? 1 : 0, true)
-        );
-    }
-}
-
-void BlindsControl::_publishState()
-{
-    __LDBG_printf("state %s/%s", _getStateStr(ChannelType::CHANNEL0), _getStateStr(ChannelType::CHANNEL1));
-    if (isConnected()) {
-
-        using namespace MQTT::Json;
-        UnnamedObject channels;
-        String binaryState = String('b');
-
-        // __LDBG_printf("topic=%s payload=%s", _getTopic(ChannelType::ALL, TopicType::STATE).c_str(), MQTT::Client::toBoolOnOff(_states[0].isOpen() || _states[1].isOpen()));
-        publish(_getTopic(ChannelType::ALL, TopicType::STATE), true, MQTT::Client::toBoolOnOff(_states[0].isOpen() || _states[1].isOpen()));
-
-        for(const auto channel: _states.channels()) {
-            auto &state = _states[channel];
-            binaryState += state.getCharState();;
-            // __LDBG_printf("topic=%s payload=%s", _getTopic(channel, TopicType::STATE).c_str(), MQTT::Client::toBoolOnOff(state.isOpen()));
-            publish(_getTopic(channel, TopicType::STATE), true, MQTT::Client::toBoolOnOff(state.isOpen()));
-            channels.append(NamedStoredString(PrintString(FSPGM(channel__u), channel), _getStateStr(channel)));
-        }
-
-        // __LDBG_printf("topic=%s payload=%s", _getTopic(ChannelType::NONE, TopicType::METRICS).c_str(), UnnamedObject(NamedString(FSPGM(binary), binaryState), NamedBool(FSPGM(busy), !_queue.empty())).toString().c_str());
-        publish(_getTopic(ChannelType::NONE, TopicType::METRICS), true, UnnamedObject(
-            NamedString(FSPGM(binary), binaryState),
-            NamedBool(FSPGM(busy), !_queue.empty())
-        ).toString());
-
-        // __LDBG_printf("topic=%s payload=%s", _getTopic(ChannelType::NONE, TopicType::CHANNELS).c_str(), channels.toString().c_str());
-        publish(_getTopic(ChannelType::NONE, TopicType::CHANNELS), true, channels.toString());
-    }
-
-
-    if (WebUISocket::hasAuthenticatedClients()) {
-        WebUINS::Events events;
-        getValues(events);
-        WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(events));
-    }
-}
-
-void BlindsControl::onConnect()
-{
-    subscribe(_getTopic(ChannelType::ALL, TopicType::SET));
-    for(const auto channel: _states.channels()) {
-        subscribe(_getTopic(channel, TopicType::SET));
-    }
-    _publishState();
-}
-
-void BlindsControl::onMessage(const char *topic, const char *payload, size_t len)
-{
-    ChannelType channel;
-
-    if (String(F("/channel_0/")).endEquals(topic)) {
-        channel = ChannelType::CHANNEL0;
-    }
-    else if (String(F("/channel_1/")).endEquals(topic)) {
-        channel = ChannelType::CHANNEL1;
-    }
-    else {
-        channel = ChannelType::ALL;
-    }
-    auto state = MQTTClient::toBool(payload, false);
-    __LDBG_printf("topic=%s state=%u payload=%s", topic, state, payload);
-    _executeAction(channel, state);
-}
-
-
-void BlindsControl::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
-{
-    __LDBG_printf("id=%s has_value=%u value=%s has_state=%u state=%u", id.c_str(), hasValue, value.c_str(), hasState, state);
-    if (hasValue) {
-        auto open = static_cast<bool>(value.toInt());
-        if (id.endsWith(F("_set"))) {
-            auto channel = static_cast<uint8_t>(atoi(id.c_str() + id.indexOf('_') + 1));
-            if (channel < _states.size()) {
-                _executeAction(static_cast<ChannelType>(channel), open);
-            }
-        }
-        else if (id.endsWith(FSPGM(set_all))) {
-            _executeAction(ChannelType::ALL, open);
-        }
-    }
-}
-
-void BlindsControl::startToneTimer(uint32_t maxLength)
-{
-    BlindsControlPlugin::getInstance()._startToneTimer(maxLength);
-}
-
-void BlindsControl::_playTone(uint8_t pin, uint16_t pwm, uint32_t frequency)
-{
-    __LDBG_printf("pin=%u pwm=%u freq=%u", pin, pwm, frequency);
-    analogWriteFreq(frequency);
-    analogWrite(pin, pwm);
-}
-
-void BlindsControl::_setDac(uint16_t pwm)
-{
-    analogWriteRange(PWMRANGE);
-    analogWriteFreq(kPwmMaxFrequency);
-    analogWrite(_config.pins[kDACPin], pwm);
-    __LDBG_printf("dac pin=%u pwm=%u frequency=%u", _config.pins[kDACPin], pwm, kPwmMaxFrequency);
+std::underlying_type<BlindsControl::ChannelType>::type operator *(const BlindsControl::ChannelType type) {
+    return static_cast<std::underlying_type<BlindsControl::ChannelType>::type>(type);
 }
 
 #if HAVE_IMPERIAL_MARCH
 
-void BlindsControl::playImerialMarch(uint16_t speed, int8_t zweiklang, uint8_t repeat)
-{
-    BlindsControlPlugin::getInstance().playImerialMarch(speed, zweiklang, repeat);
-}
-
-void BlindsControl::_playNote(uint8_t pin, uint16_t pwm, uint8_t note)
-{
-    uint8_t tmp = note + MPERIAL_MARCH_NOTE_OFFSET;
-    if (tmp < NOTE_TO_FREQUENCY_COUNT) {
-        _playTone(pin, pwm, NOTE_FP_TO_INT(pgm_read_word(note_to_frequency + tmp)));
-    }
-}
-
-void BlindsControl::_playImerialMarch(uint16_t speed, int8_t zweiklang, uint8_t repeat)
+void BlindsControl::_playImperialMarch(uint16_t speed, int8_t zweiklang, uint8_t repeat)
 {
     _stopToneTimer();
-    if (_config.play_tone_channel == 0) {
+    if ((_config.play_tone_channel & 0x03) == 0) {
         __LDBG_printf("tone timer disabled");
         return;
     }
     uint8_t channel = (_config.play_tone_channel - 1) % kChannelCount;
-    uint8_t channel2 = _config.play_tone_channel % kChannelCount;
+    uint8_t channel2 = (channel + 1) % kChannelCount;
     uint8_t index = (channel * kChannelCount) + (_states[channel].isClosed() ? 1 : 0);
     uint8_t index2 = (channel2 * kChannelCount) + (_states[channel2].isClosed() ? 1 : 0);
     struct {
@@ -336,73 +139,77 @@ void BlindsControl::_playImerialMarch(uint16_t speed, int8_t zweiklang, uint8_t 
 
 #endif
 
-void BlindsControl::_startToneTimer(uint32_t maxLength)
+void BlindsControl::_startToneTimer(uint32_t timeout)
 {
     _stopToneTimer();
-    if (_config.play_tone_channel == 0) {
+    if ((_config.play_tone_channel & 0x03) == 0) {
         __LDBG_printf("tone timer disabled");
         return;
     }
-    static constexpr uint16_t tone_interval = 2000;
-    static constexpr uint16_t tone_duration = 150;
-    static constexpr uint32_t max_length = 120 * 10000; // stop after 120 seconds
 
-    uint8_t channel = (_config.play_tone_channel - 1) % kChannelCount;
-    uint8_t index = (channel * kChannelCount) + (_states[channel].isClosed() ? 1 : 0);
-    struct {
-        uint32_t counter;
-        uint32_t maxLength;
-        uint16_t frequency;
-        uint16_t pwmValue;
-        uint8_t pin;
-    } settings = {
-        0,
-        maxLength == 0 ? max_length : maxLength,
-        (uint16_t)_config.tone_frequency,
-        (uint16_t)_config.tone_pwm_value,
-        _config.pins[index], // use channel 1, and use open/close pin that is jammed
-    };
+    uint8_t pins[2] = { kInvalidPin, kInvalidPin };
+    auto pinPtr = &pins[0];
+    if (_config.play_tone_channel & 0x01) {
+        *pinPtr++ = _config.pins[0 * kChannelCount];
+    }
+    if (_config.play_tone_channel & 0x02) {
+        *pinPtr = _config.pins[1 * kChannelCount];
+    }
 
-    __LDBG_printf("start tone timer pin=%u(#%u) channel=%u state=%s frequency=%u pwm=%u interval=%u duration=%u max_duration=%.1fs",
-        settings.pin,
-        index,
-        channel,
-        _states[channel]._getFPStr(),
+    // stored in the callback lambda function
+    ToneSettings settings(_config.tone_frequency, _config.tone_pwm_value, pins, timeout);
+
+    __LDBG_printf("start tone timer pin=%u,%u states=%s,%s freq=%u pwm=%u interval=%ums tone=%ums max_duration=%.1fs runtime=%u",
+        settings.pin[0],
+        settings.pin[1],
+        _states[0]._getFPStr(),
+        _states[1]._getFPStr(),
         settings.frequency,
         settings.pwmValue,
-        tone_interval,
-        tone_duration,
-        ((settings.maxLength / tone_duration) * tone_duration) / 1000.0
+        settings.interval,
+        ToneSettings::kToneDuration,
+        ToneSettings::kMaxLength / 1000.0,
+        settings.runtime
     );
 
     _setDac(PWMRANGE);
 
-    _Timer(_toneTimer).add(tone_duration, true, [this, settings](Event::CallbackTimerPtr timer) mutable {
-        uint16_t loop = settings.counter % (tone_interval / tone_duration);
-        if (loop == 0) {
-            _playTone(settings.pin, settings.pwmValue, settings.frequency);
+    _Timer(_toneTimer).add(ToneSettings::kTimerInterval, true, [this, settings](Event::CallbackTimerPtr timer) mutable {
+        auto interval = settings.runtime ? std::clamp<uint16_t>(ToneSettings::kToneInterval - (((settings.counter * (ToneSettings::kToneInterval - ToneSettings::kToneMinInterval)) / (settings.runtime / ToneSettings::kTimerInterval)) + ToneSettings::kToneMinInterval), ToneSettings::kToneMinInterval, ToneSettings::kToneInterval) : settings.interval;
+        // __LDBG_printf("_toneTimer loop=%u counter=%u/%u interval=%u interval_loops=%u", loop, settings.counter, settings.runtime / ToneSettings::kTimerInterval, interval, interval / ToneSettings::kTimerInterval);
+        if (settings.loop == 0) {
+            // __LDBG_printf("_toneTimer ON counter=%u interval=%u", settings.counter, interval);
+            // start tone
+            _playTone(settings.pin.data(), settings.pwmValue, settings.frequency);
         }
-        else if (loop == 1) {
-            analogWrite(settings.pin, 0);
+        else if (settings.loop == ToneSettings::kToneMaxLoop) {
+            // stop tone
+            // __LDBG_printf("_toneTimer OFF loop=%u/%u", settings.loop, (interval / ToneSettings::kTimerInterval));
+            analogWrite(settings.pin[0], 0);
+#if !defined(ESP8266)
+            // analogWrite checks the pin
+            if (settings.hasPin2())
+#endif
+            {
+                analogWrite(settings.pin[1], 0);
+            }
         }
-        if (++settings.counter > (settings.maxLength / tone_duration)) {
-            _stop();
+        if (++settings.loop > (interval / ToneSettings::kTimerInterval)) {
+            // __LDBG_printf("_toneTimer IVAL counter=%u", settings.counter);
+            settings.loop = 0;
+        }
+        // max. limit
+        if (++settings.counter > (ToneSettings::kMaxLength / ToneSettings::kTimerInterval)) {
+            __LDBG_printf("_toneTimer max. timeout reached");
+            timer->disarm();
+            LoopFunctions::callOnce([this]() {
+                _stop();
+            });
             return;
         }
     });
 }
 
-void BlindsControl::stopToneTimer()
-{
-    BlindsControlPlugin::getInstance()._stopToneTimer();
-}
-
-void BlindsControl::_stopToneTimer()
-{
-    __LDBG_printf("stopping tone timer and disabling motors");
-    _toneTimer.remove();
-    _disableMotors();
-}
 
 void BlindsControl::_executeAction(ChannelType channel, bool open)
 {
@@ -413,11 +220,8 @@ void BlindsControl::_executeAction(ChannelType channel, bool open)
         for(size_t i = 0; i < sizeof(automation) / sizeof(automation[0]); i++) {
             auto action = automation[i]._get_enum_action();
             if (action != ActionType::NONE) {
-                uint16_t delay = automation[i].delay;
-                __LDBG_printf("queue action=%u channel=%u delay=%u", action, channel, delay);
-                auto playTone = (PlayToneType)automation[i].play_tone;
-                bool relativeDelay = automation[i].relative_delay;
-                _queue.emplace_back(action, channel, delay, relativeDelay, playTone);
+                __LDBG_printf("queue action=%u channel=%u delay=%u relative=%u", action, channel, automation[i].delay, automation[i].relative_delay);
+                _queue.push_back(ChannelAction(_queue.getStartTime(), automation[i]._get_delay(), action, channel, automation[i]._get_enum_play_tone(), automation[i].relative_delay));
             }
         }
     }
@@ -525,60 +329,60 @@ void BlindsControl::_monitorMotor(ChannelAction &action)
     }
 }
 
-BlindsControl::ActionToChannel::ActionToChannel(ActionType action, ChannelType channel) : ActionToChannel()
-{
-    switch(action) { // translate action into which channel to check and which to open/close
-        case ActionType::DO_NOTHING:
-            _for = ChannelType::ALL;
-            _open = ChannelType::NONE;
-            _close = ChannelType::NONE;
-            break;
-        case ActionType::DO_NOTHING_CHANNEL0:
-            _for = ChannelType::CHANNEL0;
-            _open = ChannelType::NONE;
-            _close = ChannelType::NONE;
-            break;
-        case ActionType::DO_NOTHING_CHANNEL1:
-            _for = ChannelType::CHANNEL1;
-            _open = ChannelType::NONE;
-            _close = ChannelType::NONE;
-            break;
-        case ActionType::OPEN_CHANNEL0:
-            _for = channel == ChannelType::ALL ? ChannelType::ALL : ChannelType::CHANNEL0;
-            _open = ChannelType::CHANNEL0;
-            break;
-        case ActionType::OPEN_CHANNEL1:
-            _for = channel == ChannelType::ALL ? ChannelType::ALL : ChannelType::CHANNEL1;
-            _open = ChannelType::CHANNEL1;
-            break;
-        case ActionType::OPEN_CHANNEL0_FOR_CHANNEL1:
-            _for = ChannelType::CHANNEL1;
-            _open = ChannelType::CHANNEL0;
-            break;
-        case ActionType::OPEN_CHANNEL1_FOR_CHANNEL0:
-            _for = ChannelType::CHANNEL0;
-            _open = ChannelType::CHANNEL1;
-            break;
-        case ActionType::CLOSE_CHANNEL0:
-            _for = channel == ChannelType::ALL ? ChannelType::ALL : ChannelType::CHANNEL0;
-            _close = ChannelType::CHANNEL0;
-            break;
-        case ActionType::CLOSE_CHANNEL1:
-            _for = channel == ChannelType::ALL ? ChannelType::ALL : ChannelType::CHANNEL1;
-            _close = ChannelType::CHANNEL1;
-            break;
-        case ActionType::CLOSE_CHANNEL0_FOR_CHANNEL1:
-            _for = ChannelType::CHANNEL1;
-            _close = ChannelType::CHANNEL0;
-            break;
-        case ActionType::CLOSE_CHANNEL1_FOR_CHANNEL0:
-            _for = ChannelType::CHANNEL0;
-            _close = ChannelType::CHANNEL1;
-            break;
-        default:
-            break;
-    }
-}
+// BlindsControl::ActionToChannel::ActionToChannel(ActionType action, ChannelType channel) : ActionToChannel()
+// {
+//     switch(action) { // translate action into which channel to check and which to open/close
+//         case ActionType::DO_NOTHING:
+//             _for = ChannelType::ALL;
+//             _open = ChannelType::NONE;
+//             _close = ChannelType::NONE;
+//             break;
+//         case ActionType::DO_NOTHING_CHANNEL0:
+//             _for = ChannelType::CHANNEL0;
+//             _open = ChannelType::NONE;
+//             _close = ChannelType::NONE;
+//             break;
+//         case ActionType::DO_NOTHING_CHANNEL1:
+//             _for = ChannelType::CHANNEL1;
+//             _open = ChannelType::NONE;
+//             _close = ChannelType::NONE;
+//             break;
+//         case ActionType::OPEN_CHANNEL0:
+//             _for = channel == ChannelType::ALL ? ChannelType::ALL : ChannelType::CHANNEL0;
+//             _open = ChannelType::CHANNEL0;
+//             break;
+//         case ActionType::OPEN_CHANNEL1:
+//             _for = channel == ChannelType::ALL ? ChannelType::ALL : ChannelType::CHANNEL1;
+//             _open = ChannelType::CHANNEL1;
+//             break;
+//         case ActionType::OPEN_CHANNEL0_FOR_CHANNEL1:
+//             _for = ChannelType::CHANNEL1;
+//             _open = ChannelType::CHANNEL0;
+//             break;
+//         case ActionType::OPEN_CHANNEL1_FOR_CHANNEL0:
+//             _for = ChannelType::CHANNEL0;
+//             _open = ChannelType::CHANNEL1;
+//             break;
+//         case ActionType::CLOSE_CHANNEL0:
+//             _for = channel == ChannelType::ALL ? ChannelType::ALL : ChannelType::CHANNEL0;
+//             _close = ChannelType::CHANNEL0;
+//             break;
+//         case ActionType::CLOSE_CHANNEL1:
+//             _for = channel == ChannelType::ALL ? ChannelType::ALL : ChannelType::CHANNEL1;
+//             _close = ChannelType::CHANNEL1;
+//             break;
+//         case ActionType::CLOSE_CHANNEL0_FOR_CHANNEL1:
+//             _for = ChannelType::CHANNEL1;
+//             _close = ChannelType::CHANNEL0;
+//             break;
+//         case ActionType::CLOSE_CHANNEL1_FOR_CHANNEL0:
+//             _for = ChannelType::CHANNEL0;
+//             _close = ChannelType::CHANNEL1;
+//             break;
+//         default:
+//             break;
+//     }
+// }
 
 bool BlindsControl::_cleanQueue()
 {
@@ -632,7 +436,7 @@ void BlindsControl::_loopMethod()
         uint32_t stime = _config.pwm_softstart_time * 1000U;
         if (diff >= stime) { // finished, set final pwm value
             analogWrite(_motorPin, _motorPWMValue);
-            __LDBG_printf("soft start finished time=%u pin=%u pwm=%u updates=%u", diff, _motorPin, _motorPWMValue, _softStartUpdateCount);
+            __LDBG_printf("soft start finished time=%.3fms pin=%u pwm=%u updates=%u", diff / 1000.0, _motorPin, _motorPWMValue, _softStartUpdateCount);
             _motorStartTime = 0;
         }
         else {
@@ -707,19 +511,7 @@ void BlindsControl::_loopMethod()
     }
 }
 
-BlindsControl::NameType BlindsControl::_getStateStr(ChannelType channel) const
-{
-    if (_queue.empty()) {
-        return _states[channel]._getFPStr();
-    }
-    else if (_activeChannel == channel) {
-        return FSPGM(Running, "Running");
-    }
-    else if (!_queue.empty() && _queue.getAction().getState() == ActionStateType::DELAY) {
-        return F("Waiting");
-    }
-    return FSPGM(Busy);
-}
+
 
 void BlindsControl::_clearAdc()
 {
@@ -808,94 +600,6 @@ void BlindsControl::_setMotorSpeed(ChannelType channelType, uint16_t speed, bool
     }
     digitalWrite(pin2, LOW);
     interrupts();
-}
-
-void BlindsControl::_disableMotors()
-{
-    // do not allow interrupts when changing a pin pair from high/high to low/low and vice versa
-    noInterrupts();
-    for(uint8_t i = 0; i < 2 * kChannelCount; i++) {
-        digitalWrite(_config.pins[i], LOW);
-    }
-    interrupts();
-}
-
-void BlindsControl::_stop()
-{
-    _stopToneTimer();
-
-    __LDBG_printf("pwm=%u pin=%u adc=%.2f peak=%.2f stopping motor", _motorPWMValue, _motorPin, _adcIntegral, _adcIntegralPeak);
-
-    _motorStartTime = 0;
-    _motorPWMValue = 0;
-    _motorTimeout.disable();
-
-    _activeChannel = ChannelType::NONE;
-    _disableMotors();
-    digitalWrite(_config.pins[kMultiplexerPin], LOW);
-    digitalWrite(_config.pins[kDACPin], LOW);
-
-    _adcIntegral = 0;
-}
-
-String BlindsControl::_getTopic(ChannelType channel, TopicType type)
-{
-    if (type == TopicType::METRICS) {
-        return MQTTClient::formatTopic(FSPGM(metrics));
-    }
-    else if (type == TopicType::CHANNELS) {
-        return MQTTClient::formatTopic(FSPGM(channels));
-    }
-    const __FlashStringHelper *str;
-    switch(type) {
-        case TopicType::SET:
-            str = FSPGM(_set);
-            break;
-        case TopicType::STATE:
-        default:
-            str = FSPGM(_state);
-            break;
-    }
-    if (channel == ChannelType::ALL) {
-        return MQTTClient::formatTopic(str);
-    }
-    return MQTTClient::formatTopic(PrintString(FSPGM(channel__u), channel), str);
-}
-
-void BlindsControl::_loadState()
-{
-#if IOT_BLINDS_CTRL_SAVE_STATE
-    auto file = KFCFS.open(FSPGM(iot_blinds_control_state_file), fs::FileOpenMode::read);
-    if (file) {
-        file.read(reinterpret_cast<uint8_t *>(_states.data()), _states.size() * sizeof(*_states.data()));
-    }
-    __LDBG_printf("file=%u state=%u,%u", (bool)file, _states[0], _states[1]);
-#endif
-}
-
-void BlindsControl::_saveState()
-{
-#if IOT_BLINDS_CTRL_SAVE_STATE
-    auto file = KFCFS.open(FSPGM(iot_blinds_control_state_file), fs::FileOpenMode::write);
-    if (file) {
-        file.write(reinterpret_cast<const uint8_t *>(_states.data()), _states.size() * sizeof(*_states.data()));
-    }
-    __LDBG_printf("file=%u state=%u,%u", (bool)file, _states[0], _states[1]);
-#endif
-}
-
-void BlindsControl::_readConfig()
-{
-    _config = Plugins::Blinds::getConfig();
-    _adcIntegralMultiplier = _config.channels[0].current_avg_period_us / kAdcIntegralMultiplierDivider;
-
-    _adc.setOffset(_config.adc_offset);
-    _adc.setMinDelayMicros(_config.adc_read_interval);
-    _adc.setMaxDelayMicros(_config.adc_recovery_time);
-    _adc.setRepeatMaxDelayPerSecond(_config.adc_recoveries_per_second);
-    _adc.setMaxDelayYieldTimeMicros(std::min<uint16_t>(1000, _config.adc_recovery_time / 2));
-
-    _loadState();
 }
 
 #if IOT_BLINDS_CTRL_RPM_PIN

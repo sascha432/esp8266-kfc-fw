@@ -23,7 +23,7 @@
 
 // Plugin
 
-extern int8_t operator *(const BlindsControl::ChannelType type);
+extern "C" std::underlying_type<BlindsControl::ChannelType>::type operator *(const BlindsControl::ChannelType type);
 
 static BlindsControlPlugin plugin;
 
@@ -111,11 +111,20 @@ void BlindsControlPlugin::getStatus(Print &output)
 
 void BlindsControlPlugin::createMenu()
 {
-    auto configMenu = bootstrapMenu.getMenuItem(navMenu.config);
-    auto subMenu = configMenu.addSubMenu(getFriendlyName());
-    subMenu.addMenuItem(F("Channels"), F("blinds/channels.html"));
-    subMenu.addMenuItem(F("Automation"), F("blinds/automation.html"));
-    subMenu.addMenuItem(F("Controller"), F("blinds/controller.html"));
+    {
+        auto configMenu = bootstrapMenu.getMenuItem(navMenu.config);
+        auto subMenu = configMenu.addSubMenu(getFriendlyName());
+        subMenu.addMenuItem(F("Channels"), F("blinds/channels.html"));
+        subMenu.addMenuItem(F("Automation"), F("blinds/automation.html"));
+        subMenu.addMenuItem(F("Controller"), F("blinds/controller.html"));
+    }
+    // {
+    //     auto homeMenu = bootstrapMenu.getMenuItem(navMenu.home);
+    //     auto subMenu = homeMenu.addSubMenu(F("Blinds Configuration"));
+    //     subMenu.addMenuItem(F("Channels"), F("blinds/channels.html"));
+    //     subMenu.addMenuItem(F("Automation"), F("blinds/automation.html"));
+    //     subMenu.addMenuItem(F("Controller"), F("blinds/controller.html"));
+    // }
 }
 
 void BlindsControlPlugin::createWebUI(WebUINS::Root &webUI)
@@ -123,7 +132,7 @@ void BlindsControlPlugin::createWebUI(WebUINS::Root &webUI)
     webUI.addRow(WebUINS::Row(WebUINS::Group(F("Blinds"), false)));
 
     WebUINS::Row row(
-        WebUINS::Switch(FSPGM(set_all), String(F("Both Channels")), true, WebUINS::NamePositionType::TOP, 4)
+        WebUINS::Switch(FSPGM(set_all), F("Both Channels"), true, WebUINS::NamePositionType::TOP, 4)
     );
     webUI.addRow(row);
 
@@ -157,7 +166,7 @@ BlindsControlPlugin &BlindsControlPlugin::getInstance()
 
 #include "at_mode.h"
 
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(BCME, "BCME", "<open|close|stop|tone>[,<channel>][,<tone_frequency>,<tone_pwm_value>]", "Open, close a channel, stop motor or run tone test");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(BCME, "BCME", "<open|close|stop|tone|imperial|init>[,<channel>][,<tone_frequency>,<tone_pwm_value>]", "Open, close a channel, stop motor or run tone test, play imperial march, init. state");
 
 ATModeCommandHelpArrayPtr BlindsControlPlugin::atModeCommandHelp(size_t &size) const
 {
@@ -172,7 +181,7 @@ bool BlindsControlPlugin::atModeHandler(AtModeArgs &args)
 {
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(BCME))) {
         if (args.requireArgs(1, 8)) {
-            auto cmds = PSTR("open|close|stop|tone|imperial");
+            auto cmds = PSTR("open|close|stop|tone|imperial|init");
             int cmd = stringlist_find_P_P(cmds, args.get(0), '|');
             int channel = args.toIntMinMax(1, 0, 1, 0);
             switch(cmd) {
@@ -190,9 +199,9 @@ bool BlindsControlPlugin::atModeHandler(AtModeArgs &args)
                         auto tone_frequency = _config.tone_frequency;
                         auto tone_pwm_value = _config.tone_pwm_value;
                         auto resetConfig = [&]() {
-                                _config.play_tone_channel = play_tone_channel;
-                                _config.tone_frequency = tone_frequency;
-                                _config.tone_pwm_value = tone_pwm_value;
+                            _config.play_tone_channel = play_tone_channel;
+                            _config.tone_frequency = tone_frequency;
+                            _config.tone_pwm_value = tone_pwm_value;
                         };
                         if (args.size() >= 2) {
                             _config.play_tone_channel = 1 + channel;
@@ -219,25 +228,41 @@ bool BlindsControlPlugin::atModeHandler(AtModeArgs &args)
                                         return;
                                     }
                                     timer->disarm();
-                                    _playImerialMarch(speed, zweiklang, repeat);
+                                    _playImperialMarch(speed, zweiklang, repeat);
                                     resetConfig();
                                 }, Event::PriorityType::HIGHEST);
                             }
                             else {
                                 args.print(F("Imperial march"));
-                                _playImerialMarch(speed, zweiklang, repeat);
+                                _playImperialMarch(speed, zweiklang, repeat);
                                 resetConfig();
                             }
 
-                        } else {
-                            _startToneTimer(15000);
+                        }
+                        else {
+                            _startToneTimer(_config.tone_pwm_value * 1000U);
                             resetConfig();
                         }
 #else
-                        _startToneTimer(15000);
+                        _startToneTimer(_config.tone_pwm_value * 1000U);
                         resetConfig();
 #endif
                     } break;
+                case 5:
+                    if (args.size() < 3) {
+                        args.print(F("init,<channel>,<open|closed>"));
+                    }
+                    else {
+                        if (args.isTrue(2, _states[channel].isOpen())) {
+                            _states[channel] = StateType::OPEN;
+                        }
+                        else if (args.isFalse(2, _states[channel].isClosed())) {
+                            _states[channel] = StateType::CLOSED;
+                        }
+                        args.printf_P(PSTR("set channel #%u state to %s"), channel, _states[channel]._getFPStr());
+                        _saveState();
+                    }
+                    break;
                 default:
                     _stop();
                     args.printf_P(PSTR("motor stopped"));

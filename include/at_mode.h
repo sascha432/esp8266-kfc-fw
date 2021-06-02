@@ -407,7 +407,7 @@ public:
 
     }
 
-    // return true for "yes", "Y", "true", "start", "on", "enable", "en" and any integer != 0
+    // return true for "yes", "Y", "true", "start", "on", "enable", "en", "open" and any integer != 0
     // missing argument returns bDefault
     bool isTrue(uint16_t num, bool bDefault = false) const {
         ArgumentPtr arg;
@@ -415,13 +415,13 @@ public:
             return bDefault;
         }
         int result = 0;
-        if ((_isValidInt(arg, result) && result != 0) || (_isAnyMatchIgnoreCase(arg, F("start|yes|y|true|on|enable|en")))) {
+        if ((_isValidInt(arg, result) && result != 0) || (_isAnyMatchIgnoreCase(arg, F("start|yes|y|true|on|enable|en|open")))) {
             return true;
         }
         return false;
     }
 
-    // return true for "", "stop", "no", "N", "false", "off", "disable", "dis" and any integer == 0
+    // return true for "", "stop", "no", "N", "false", "off", "disable", "dis", "close", "closed" and any integer == 0
     // missing argument returns bDefault
     bool isFalse(uint16_t num, bool bDefault = false) const {
         ArgumentPtr arg;
@@ -429,7 +429,7 @@ public:
             return bDefault;
         }
         int result;
-        if ((_isValidInt(arg, result) && result == 0) || (_isAnyMatchIgnoreCase(arg, F("|stop|no|n|false|off|disable|dis|null")))) {
+        if ((_isValidInt(arg, result) && result == 0) || (_isAnyMatchIgnoreCase(arg, F("|stop|no|n|false|off|disable|dis|null|close|closed")))) {
             return true;
         }
         return false;

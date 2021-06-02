@@ -113,7 +113,8 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
 
         FormUI::Container::List playToneItems(
             PlayToneType::NONE, F("None"),
-            PlayToneType::INTERVAL, F("Short tone, 2 second interval"),
+            PlayToneType::INTERVAL, F("Tone, 2 second interval"),
+            PlayToneType::INTERVAL_SPEED_UP, F("Tone, decreasing interval"),
 #if HAVE_IMPERIAL_MARCH
             PlayToneType::IMPERIAL_MARCH, F("Imperial March")
 #endif
@@ -123,7 +124,7 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
 
         auto &autoGroup = form.addCardGroup(FSPGM(open, "open"), F("Open Automation"), false);
 
-        for(size_t i = 0; i < BLINDS_CONFIG_MAX_OPERATIONS; i++) {
+        for(uint8_t i = 0; i < BLINDS_CONFIG_MAX_OPERATIONS; i++) {
             form.addObjectGetterSetter(F_VAR(ot, i), cfg.open[i], cfg.open[0].get_int_action, cfg.open[0].set_int_action);
             form.addFormUI(FSPGM(Action, "Action"), operationTypeItems);
 
@@ -134,14 +135,14 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
             form.addFormUI(FormUI::Type::HIDDEN_SELECT, playToneItems, FormUI::FPStringAttribute(F("classex"), F("sm-font")));
 
             form.addObjectGetterSetter(F_VAR(od, i), cfg.open[i], cfg.open[0].get_bits_delay, cfg.open[0].set_bits_delay);
-            form.addFormUI(F("Next Action Time"), FormUI::Suffix(FSPGM(milliseconds)), FormUI::SelectSuffix(relativeDelay), FormUI::SelectSuffix(playTone));
+            form.addFormUI(F("Next Action Time"), FormUI::InlineSuffix(FSPGM(seconds)), FormUI::SelectSuffix(relativeDelay), FormUI::SelectSuffix(playTone));
             cfg.open[0].addRangeValidatorFor_delay(form);
 
         }
 
         auto &closeGroup = autoGroup.end().addCardGroup(FSPGM(close), F("Close Automation"), false);
 
-        for(size_t i = 0; i < BLINDS_CONFIG_MAX_OPERATIONS; i++) {
+        for(uint8_t i = 0; i < BLINDS_CONFIG_MAX_OPERATIONS; i++) {
             form.addObjectGetterSetter(F_VAR(ct, i), cfg.close[i], cfg.close[0].get_int_action, cfg.close[0].set_int_action);
             form.addFormUI(FSPGM(Action), operationTypeItems);
 
@@ -152,7 +153,7 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
             form.addFormUI(FormUI::Type::HIDDEN_SELECT, playToneItems, FormUI::FPStringAttribute(F("classex"), F("sm-font")));
 
             form.addObjectGetterSetter(F_VAR(cd, i), cfg.close[i], cfg.close[0].get_bits_delay, cfg.close[0].set_bits_delay);
-            form.addFormUI(F("Next Action Time"), FormUI::Suffix(FSPGM(milliseconds)), FormUI::SelectSuffix(relativeDelay), FormUI::SelectSuffix(playTone));
+            form.addFormUI(F("Next Action Time"), FormUI::InlineSuffix(FSPGM(seconds)), FormUI::SelectSuffix(relativeDelay), FormUI::SelectSuffix(playTone));
             cfg.close[0].addRangeValidatorFor_delay(form);
         }
 
@@ -164,7 +165,8 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
         FormUI::Container::List channelsItems(
             0, F("Off"),
             1, F("Use Channel 0"),
-            2, F("Use Channel 1")
+            2, F("Use Channel 1"),
+            3, F("Use Channel 0 and 1")
         );
 
         FormUI::Container::List pins(KFCConfigurationClasses::createFormPinList());

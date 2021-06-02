@@ -146,7 +146,7 @@ class OTA(kfcfw.OTAHelpers):
         update_url = url + 'update'
         while count<30:
             try:
-                resp = requests.post(update_url, data=monitor, timeout=30, allow_redirects=False, headers={ 'User-Agent': 'KFCFW OTA', "Content-Type": monitor.content_type })
+                resp = requests.post(update_url, data=monitor, timeout=5, allow_redirects=False, headers={ 'User-Agent': 'KFCFW OTA', "Content-Type": monitor.content_type })
             except Exception as e:
                 count += 1
                 print('Exception %s, retrying %d/30 in 10 seconds...' % (e, count))
@@ -177,7 +177,7 @@ class OTA(kfcfw.OTAHelpers):
                     sys.exit(3)
 
         if self.args.no_wait==False:
-            max_wait = 60
+            max_wait = 20
             step = 0
             self.verbose("Waiting for device to reboot...")
             if self.args.quiet==False:

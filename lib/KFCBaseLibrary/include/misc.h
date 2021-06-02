@@ -678,7 +678,18 @@ inline uint32_t createIPv4Address(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
     } \
     static enum_type cast_enum_##name(underlying_type value) { \
         return static_cast<enum_type>(value); \
+    } \
+    static underlying_type cast(enum_type value) { \
+        return static_cast<underlying_type>(value); \
+    } \
+    static enum_type cast_##name(underlying_type value) { \
+        return static_cast<enum_type>(value); \
     }
+
+#define CREATE_ENUM_BITFIELD_SIZE_DEFAULT(name, size, enum_type, underlying_type, underlying_type_name, default_value) \
+    CREATE_ENUM_BITFIELD_SIZE(name, size, enum_type, underlying_type, underlying_type_name); \
+    static constexpr auto kDefaultValueFor_##name = static_cast<underlying_type>(default_value);
+
 
 #define CREATE_BITFIELD_TYPE(name, size, type, prefix) \
     type name: size; \
@@ -688,7 +699,14 @@ inline uint32_t createIPv4Address(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
     } \
     static type get_##prefix##_##name(const Type &obj) { \
         return obj.name; \
+    } \
+    void _set_##name(type value) { \
+        name = value; \
+    } \
+    type _get_##name() const { \
+        return name; \
     }
+
 
 #define CREATE_GETTER_SETTER_TYPE(name, size, type, prefix) \
     static constexpr size_t kBitCountFor_##name = size; \
@@ -703,6 +721,7 @@ inline uint32_t createIPv4Address(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
 // using Type = MyStructure_t;
 
 // requires last value MAX to be defined: enum class uint8_t { NONE, VAL1, VAL2, MAX };
+#define CREATE_ENUM_D_BITFIELD(name, enum_type, def_val)    CREATE_ENUM_BITFIELD_SIZE_DEFAULT(name, kNumBitsRequired((int)enum_type::MAX - 1), enum_type, std::underlying_type<enum_type>::type, int, def_val)
 #define CREATE_ENUM_BITFIELD(name, enum_type)               CREATE_ENUM_BITFIELD_SIZE(name, kNumBitsRequired((int)enum_type::MAX - 1), enum_type, std::underlying_type<enum_type>::type, int)
 #define CREATE_ENUM_N_BITFIELD(name, size, enum_type)       CREATE_ENUM_BITFIELD_SIZE(name, size, enum_type, std::underlying_type<enum_type>::type, int)
 

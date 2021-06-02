@@ -84,6 +84,9 @@
 - Support for TinyPwm I2C IO-Expander [https://github.com/sascha432/TinyPwm](https://github.com/sascha432/TinyPwm)
 - Fan control and light sensor for LED matrix
 - Human readable uptime for MQTT system metrics
+- User customizable options for factory reset over the WebUI
+- OTA update tool restarts device in safe mode before running any updates
+- Fixed play tone for blinds plugin
 
 ## Version 0.0.3
 

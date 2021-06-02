@@ -26,6 +26,10 @@
 
 using KFCConfigurationClasses::Plugins;
 
+namespace WebServer {
+    class Plugin;
+}
+
 class BlindsControl : public MQTTComponent {
 public:
     using NameType = const __FlashStringHelper *;
@@ -39,6 +43,8 @@ public:
     static constexpr size_t kChannel1Close = Plugins::Blinds::kChannel1_ClosePinArrayIndex;
     static constexpr size_t kMultiplexerPin = Plugins::Blinds::kMultiplexerPinArrayIndex;
     static constexpr size_t kDACPin = Plugins::Blinds::kDACPinArrayIndex;
+
+    static constexpr uint8_t kInvalidPin = 255;
 
     enum class TopicType : uint8_t {
         SET,
@@ -73,56 +79,31 @@ public:
     };
 
     static constexpr size_t kChannelCount = IOT_BLINDS_CTRL_CHANNEL_COUNT;
+    static_assert(kChannelCount == 2, "only 2 channels are supported");
+
     static const uint32_t kPwmMaxFrequency = 40000;
+    static constexpr float kAdcIntegralMultiplierDivider = 1000.0 * 10.0;
 
 protected:
+    friend WebServer::Plugin;
+
     class ChannelState {
     public:
-        ChannelState() : _state(StateType::UNKNOWN) {
-        }
+        ChannelState();
 
-        ChannelState &operator=(StateType state) {
-            _state = state;
-            return *this;
-        }
+        ChannelState &operator=(StateType state);
 
-        // void setToggleOpenClosed(StateType state) {
-        //     _state = (state == StateType::OPEN ? StateType::CLOSED : StateType::OPEN);
-        // }
+        // void setToggleOpenClosed(StateType state);
 
-        StateType getState() const {
-            return _state;
-        }
+        StateType getState() const;
         // return binary state as char
-        char getCharState() const {
-            return isOpen() ? '1' : '0';
-        }
+        char getCharState() const;
+        bool isOpen() const;
+        uint8_t isOpenInt() const;
+        bool isClosed() const;
 
-        bool isOpen() const {
-            return _state == StateType::OPEN;
-        }
-
-        bool isClosed() const {
-            return _state == StateType::CLOSED;
-        }
-
-        NameType _getFPStr() const {
-            return __getFPStr(_state);
-        }
-
-        static NameType __getFPStr(StateType state) {
-            switch(state) {
-                case StateType::OPEN:
-                    return FSPGM(Open);
-                case StateType::CLOSED:
-                    return FSPGM(Closed);
-                case StateType::STOPPED:
-                    return FSPGM(Stopped);
-                default:
-                    break;
-            }
-            return FSPGM(n_a);
-        }
+        NameType _getFPStr() const;
+        static NameType __getFPStr(StateType state);
 
     private:
         StateType _state;
@@ -171,119 +152,42 @@ protected:
 
     class ChannelAction {
     public:
-        ChannelAction() :
-            _delay(0),
-            _state(ActionStateType::NONE),
-            _action(ActionType::NONE),
-            _channel(ChannelType::NONE),
-            _relativeDelay(false),
-            _open(false)
-        {
-        }
-        ChannelAction(ActionType state, ChannelType channel, uint16_t delay, bool relativeDelay, PlayToneType playTone) :
-            _delay(delay ? ((relativeDelay ? 0 : millis()) + (delay * 1000U)) : 0),
-            _state(ActionStateType::NONE),
-            _action(state),
-            _channel(channel),
-            _relativeDelay(relativeDelay),
-            _open(false),
-            _playTone(playTone)
-        {
-        }
+        ChannelAction(uint32_t startTime = 0, uint16_t delay = 0, ActionType state = ActionType::NONE, ChannelType channel = ChannelType::NONE, PlayToneType playTone = PlayToneType::NONE, bool relativeDelay = false);
 
-        ChannelType getChannel() const {
-            return _channel;
-        }
+        ChannelType getChannel() const;
+        ActionType getAction() const;
+        ActionStateType getState() const;
+        PlayToneType getPlayTone() const;
 
-        ActionType getAction() const {
-            return _action;
-        }
+        // return delay in milliseconds
+        uint32_t getDelay() const;
 
-        ActionStateType getState() const {
-            return _state;
-        }
+        // return timeout for millis()
+        uint32_t getTimeout() const;
 
-        bool getOpen() const {
-            return _open;
-        }
+        // returns true if the delay is relative to the start of the action
+        bool isRelativeDelay() const;
 
-        void monitorDelay() {
-            if (_state == ActionStateType::DELAY && millis() >= _delay) {
-                __LDBG_printf("delay=%u finished", _delay);
-                next();
-            }
-        }
+        bool getOpen() const;
 
-        void beginDoNothing(ChannelType channel) {
-            __LDBG_printf("begin=%u channel=%u do_nothing", _state, channel);
-            _state = ActionStateType::START_DELAY;
-        }
-
-        void begin(ChannelType channel, bool open) {
-            __LDBG_printf("begin=%u channel=%u open=%u", _state, channel, open);
-            // update channel to change and the state
-            _open = open;
-            _channel = channel;
-            next();
-        }
-
-        void next() {
-            BlindsControl::stopToneTimer();
-            __LDBG_printf("next=%u", _state);
-            switch (_state) {
-                case ActionStateType::NONE:
-                    _state = ActionStateType::START_MOTOR;
-                    break;
-                case ActionStateType::START_MOTOR:
-                    _state = ActionStateType::WAIT_FOR_MOTOR;
-                    break;
-                case ActionStateType::START_DELAY:
-                case ActionStateType::WAIT_FOR_MOTOR:
-                    if (_delay) {
-                        _state = ActionStateType::DELAY;
-                        if (_relativeDelay) {
-                            _delay += millis();
-                        }
-                        __LDBG_printf("delay=%u (in %ums) relative=%u play_tone=%u", _delay, (uint32_t)(millis() - _delay), _relativeDelay, _playTone);
-                        switch(_playTone) {
-                            case PlayToneType::INTERVAL:
-                                BlindsControl::startToneTimer();
-                                break;
-#if HAVE_IMPERIAL_MARCH
-                            case PlayToneType::IMPERIAL_MARCH:
-                                BlindsControl::playImerialMarch(80, 0, 1);
-                                break;
-#endif
-                            default:
-                                break;
-
-                        }
-
-                        break;
-                    }
-                    // fallthrough
-                default:
-                    end();
-                    break;
-            }
-        }
-
-        void end() {
-            BlindsControl::stopToneTimer();
-            __LDBG_printf("end=%u", _state);
-            _delay = 0;
-            _state = ActionStateType::REMOVE;
-        }
+        void monitorDelay();
+        void beginDoNothing(ChannelType channel);
+        void begin(ChannelType channel, bool open);
+        void next();
+        void end();
 
     private:
-        uint32_t _delay;
+        uint32_t _startTime;
+        uint16_t _delay;
         ActionStateType _state;
         ActionType _action;
         ChannelType _channel;
-        bool _relativeDelay: 1;
-        bool _open: 1;
         PlayToneType _playTone;
+        bool _relativeDelay;
+        bool _open;
     };
+
+    static constexpr auto kChannelActionSize = sizeof(ChannelAction);
 
 public:
     BlindsControl();
@@ -303,19 +207,19 @@ public:
         return std::clamp<uint32_t>(_adcIntegral * 64.0, 0, 0xffff);
     }
 
-    static void startToneTimer(uint32_t maxLength = 0);
+    static void startToneTimer(uint32_t timeout = 0);
 #if HAVE_IMPERIAL_MARCH
-    static void playImerialMarch(uint16_t speed, int8_t zweiklang, uint8_t repeat);
+    static void playImperialMarch(uint16_t speed, int8_t zweiklang, uint8_t repeat);
 #endif
-    static void stopToneTimer();
+    static void stopToneTimer(ActionStateType state = ActionStateType::NONE);
 
 protected:
     void _loopMethod();
-    void _startToneTimer(uint32_t maxLength = 0);
-    void _playTone(uint8_t pin, uint16_t pwm, uint32_t frequency);
+    void _startToneTimer(uint32_t timeout = 0);
+    void _playTone(uint8_t *pins, uint16_t pwm, uint32_t frequency);
     void _setDac(uint16_t pwm);
 #if HAVE_IMPERIAL_MARCH
-    void _playImerialMarch(uint16_t speed, int8_t zweiklang, uint8_t repeat);
+    void _playImperialMarch(uint16_t speed, int8_t zweiklang, uint8_t repeat);
     void _playNote(uint8_t pin, uint16_t pwm, uint8_t note);
 #endif
     void _stopToneTimer();
@@ -328,6 +232,7 @@ protected:
 
     void _publishState();
     void _executeAction(ChannelType channel, bool open);
+    void _startTone();
     void _startMotor(ChannelType channel, bool open);
     void _monitorMotor(ChannelAction &action);
     bool _checkMotor();
@@ -343,52 +248,103 @@ protected:
     void _loadState();
     void _saveState();
 
+public:
+    static void _saveState(StateType *channels, uint8_t numChannels);
+
 protected:
-    class ChannelQueue : public std::vector<ChannelAction>
-    {
+    class ChannelQueue : protected std::vector<ChannelAction> {
     public:
         using Type = std::vector<ChannelAction>;
+        using Type::size;
+        using Type::empty;
+        using Type::clear;
+        using Type::begin;
+        using Type::end;
 
-        ChannelQueue(BlindsControl &control) : Type(), _control(control) {}
+        ChannelQueue(BlindsControl &control);
 
-        ChannelAction &getAction() {
-            return front();
-        }
+        void push_back(ChannelAction &&action);
 
-        const ChannelAction &getAction() const {
-            return front();
-        }
+        ChannelAction &getAction();
+        const ChannelAction &getAction() const;
+        void removeAction(const ChannelAction &action);
 
-        void removeAction(const ChannelAction &action) {
-            __LDBG_printf("remove action=%p", &action);
-            erase(std::remove_if(begin(), end(), [&action](const ChannelAction &_action) {
-                return &action == &_action;
-            }), end());
-        }
+        void resetStartTime(uint32_t startTime = millis());
+        uint32_t getStartTime() const;
 
     private:
         BlindsControl &_control;
+        uint32_t _startTime;
     };
 
     class ActionToChannel {
     public:
-        ActionToChannel() : _for(ChannelType::NONE), _open(ChannelType::NONE), _close(ChannelType::NONE) {}
+        ActionToChannel();
         ActionToChannel(ActionType action, ChannelType channel);
 
-        bool isOpenValid() const {
-            return _open != ChannelType::NONE;
-        }
-        bool isCloseValid() const {
-            return _close != ChannelType::NONE;
-        }
-        bool isDoNothing() const {
-            return _close == ChannelType::NONE && _open == ChannelType::NONE;
-        }
+        bool isOpenValid() const;
+        bool isCloseValid() const;
+        bool isDoNothing() const;
 
         ChannelType _for;
         ChannelType _open;
         ChannelType _close;
     };
+
+    struct ToneSettings {
+        // max. time before the tone gets stopped in milliseconds
+        static constexpr uint32_t kMaxLength = 120 * 1000;
+        // default interval in milliseconds
+        static constexpr uint16_t kToneInterval = 2000;
+        // default length of the tone in milliseconds
+        static constexpr uint16_t kToneDuration = 150;
+        // decrease interval until this value has been reached
+        static constexpr uint16_t kToneMinInterval = 100 + kToneDuration;
+        // interval of the timer in milliseconds
+        static constexpr uint16_t kTimerInterval = 30;
+
+        static_assert((kToneDuration % kTimerInterval) == 0, "kToneDuration must be a multiple of kTimerInterval");
+        static_assert(kToneDuration >= kTimerInterval, "kToneDuration must be greater or equal kTimerInterval");
+        static constexpr auto kToneMaxLoop = stdex::max<uint8_t>({1, kToneDuration / kTimerInterval});
+
+        uint16_t counter;
+        uint16_t loop;
+        uint32_t runtime;
+        uint16_t frequency;
+        uint16_t pwmValue;
+        uint16_t interval;
+        std::array<uint8_t, 2> pin;
+
+        ToneSettings(uint16_t _frequency, uint16_t _pwmValue, uint8_t _pins[2], uint32_t _timeout = 0) :
+            counter(0),
+            loop(0),
+            runtime(_timeout ? get_time_diff(millis(), _timeout) : 0),
+            frequency(_frequency),
+            pwmValue(_pwmValue),
+            interval(kToneInterval),
+            pin({_pins[0], _pins[1]})
+        {
+            __LDBG_assert_panic(!(_pins[0] == kInvalidPin && _pins[1] != kInvalidPin), "pin1=%u not set, pin2=%u set", _pins[0], _pins[1]);
+        }
+
+        bool hasPin(uint8_t num) const {
+            return (num < pin.size()) && (pin[num] != kInvalidPin);
+        }
+
+        // returns if first pin is available
+        // if the first pin is invalid, the second pin is invalid as well
+        bool hasPin1() const {
+            return pin[0] != kInvalidPin;
+        }
+
+        // returns true if second pin is available
+        bool hasPin2() const {
+            return pin[1] != kInvalidPin;
+        }
+    };
+
+    static constexpr auto kToneSettingsSize = sizeof(ToneSettings);
+
 
     bool _cleanQueue();
 
@@ -433,5 +389,7 @@ protected:
 private:
     ADCManager &_adc;
 };
+
+#include "BlindsControl.hpp"
 
 #include <debug_helper_disable.h>

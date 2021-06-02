@@ -218,6 +218,7 @@
     <ClCompile Include="..\..\..\src\WriteableData.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="stdlib_noniso.cpp" />
+    <ClCompile Include="test_bitfield_class.cpp" />
     <ClCompile Include="test_mqtt_json.cpp" />
     <ClCompile Include="test_strings.cpp" />
     <ClCompile Include="test_int24.cpp" />

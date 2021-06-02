@@ -47,18 +47,24 @@ namespace KFCConfigurationClasses {
     void Plugins::Blinds::defaults()
     {
         BlindsConfig_t cfg = {};
+
         cfg.open[0]._set_enum_action(OperationType::OPEN_CHANNEL0);
         cfg.open[1]._set_enum_action(OperationType::OPEN_CHANNEL0_FOR_CHANNEL1);
         cfg.open[2]._set_enum_action(OperationType::OPEN_CHANNEL1);
 
         // cfg.close[0]._set_enum_action(OperationType::OPEN_CHANNEL0);
         cfg.close[0]._set_enum_action(OperationType::OPEN_CHANNEL0_FOR_CHANNEL1);
+
         cfg.close[1]._set_enum_action(OperationType::CLOSE_CHANNEL1_FOR_CHANNEL0);
         cfg.close[1].delay = 30;
-        cfg.close[1]._set_enum_play_tone(PlayToneType::INTERVAL);
+        cfg.close[1].relative_delay = 0;
+        cfg.close[1]._set_enum_play_tone(PlayToneType::INTERVAL_SPEED_UP);
+
         cfg.close[2]._set_enum_action(OperationType::CLOSE_CHANNEL1);
         cfg.close[2].delay = 30;
-        cfg.close[2]._set_enum_play_tone(PlayToneType::INTERVAL);
+        cfg.close[2].relative_delay = 0;
+        cfg.close[2]._set_enum_play_tone(PlayToneType::INTERVAL_SPEED_UP);
+
         cfg.close[3]._set_enum_action(OperationType::CLOSE_CHANNEL0);
 
         setConfig(cfg);

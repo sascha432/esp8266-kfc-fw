@@ -25,26 +25,30 @@
 #define PROGMEM_AT_MODE_HELP_COMMAND_PREFIX "CLOCK"
 #endif
 
+#if IOT_SENSOR_HAVE_INA219
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKTP, "TP", "<#color>[,<time=500ms>]", "Test peak values");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(CLOCKBR, "BR", "Set brightness (0-65535). 0 disables the LEDs, > 0 enables them");
+#endif
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(CLOCKBR, "BR", "Set brightness (0-255). 0 disables the LEDs, > 0 enables them");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKPX, "PX", "[<number|-1=all>,<#RGB>|<r>,<g>,<b>]", "Set level of a single pixel. No arguments turns all off");
 #if !IOT_LED_MATRIX
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKP, "P", "<00[:.]00[:.]00>", "Display strings");
 #endif
+#if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKV, "V", "<1-4>", "Set visualizer mode");
+#endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKC, "C", "<#RGB>|<r>,<g>,<b>", "Set color");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKM, "M", "<value>[,<incr>,<min>,<max>]", "Set rainbow animation multiplier");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKT, "T", "<value>", "Override temperature");
 // PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKTS, "TS", "<num>,<segment>", "Set segment for digit <num>");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(CLOCKA, "A", "<num>[,<arguments>,...]", "Set animation", "Display available animations");
 // PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(CLOCKD, "D", "Dump pixel addresses and other information");
-#if HTTP2SERIAL_SUPPORT && IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
+#if IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
 #undef PROGMEM_AT_MODE_HELP_COMMAND_PREFIX
 #define PROGMEM_AT_MODE_HELP_COMMAND_PREFIX "LM"
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LMVIEW, "VIEW", "<interval in ms|0=disable>,<client_id>", "Display Leds over http2serial");
 #endif
 
-#if HTTP2SERIAL_SUPPORT && IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
+#if IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
 
 void ClockPlugin::_removeDisplayLedTimer()
 {
@@ -60,11 +64,16 @@ void ClockPlugin::_removeDisplayLedTimer()
 ATModeCommandHelpArrayPtr ClockPlugin::atModeCommandHelp(size_t &size) const
 {
     static ATModeCommandHelpArray tmp PROGMEM = {
+#if IOT_SENSOR_HAVE_INA219
         PROGMEM_AT_MODE_HELP_COMMAND(CLOCKTP),
+#endif
         PROGMEM_AT_MODE_HELP_COMMAND(CLOCKBR),
         PROGMEM_AT_MODE_HELP_COMMAND(CLOCKPX),
 #if !IOT_LED_MATRIX
         PROGMEM_AT_MODE_HELP_COMMAND(CLOCKP),
+#endif
+#if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
+        PROGMEM_AT_MODE_HELP_COMMAND(CLOCKV),
 #endif
         PROGMEM_AT_MODE_HELP_COMMAND(CLOCKC),
         PROGMEM_AT_MODE_HELP_COMMAND(CLOCKM),
@@ -72,7 +81,7 @@ ATModeCommandHelpArrayPtr ClockPlugin::atModeCommandHelp(size_t &size) const
         // PROGMEM_AT_MODE_HELP_COMMAND(CLOCKTS),
         PROGMEM_AT_MODE_HELP_COMMAND(CLOCKA),
         // PROGMEM_AT_MODE_HELP_COMMAND(CLOCKD),
-#if HTTP2SERIAL_SUPPORT && IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
+#if IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
         PROGMEM_AT_MODE_HELP_COMMAND(LMVIEW)
 #endif
     };
@@ -117,11 +126,13 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
         args.printf_P(PSTR("Rainbow multiplier=%f increment=%f min=%f max=%f"), _config.rainbow.multiplier.value, _config.rainbow.multiplier.incr, _config.rainbow.multiplier.min, _config.rainbow.multiplier.max);
         return true;
     }
+#if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKV))) {
         Clock::VisualizerAnimation::_visualizerType = args.toIntMinMax(0, 1, 4, 2);
         args.printf_P(PSTR("Visualizer=%u"), Clock::VisualizerAnimation::_visualizerType);
         return true;
     }
+#endif
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKA))) {
         if (args.isQueryMode()) {
             for(uint8_t i = 0; i < static_cast<int>(AnimationType::MAX); i++) {
@@ -221,6 +232,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
 #endif
         return true;
     }
+#if IOT_SENSOR_HAVE_INA219
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKTP))) {
         if (args.requireArgs(1, 2)) {
 
@@ -252,6 +264,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
         }
         return true;
     }
+#endif
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKBR))) {
         if (args.requireArgs(1, 2)) {
             auto brightness = args.toIntMinMax<uint16_t>(0, 0, Clock::kMaxBrightness);
@@ -314,7 +327,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
         }
         return true;
     }
-#if HTTP2SERIAL_SUPPORT && IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
+#if IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LMVIEW))) {
         auto interval = static_cast<uint32_t>(args.toInt(0));
         if (interval != 0) {
@@ -366,7 +379,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                                     __LDBG_printf("failed to send udp packet");
                                     timer->disarm();
                                     LoopFunctions::callOnce([this]() {
-                                        delay(50);
+                                        _display.delay(50);
                                         _removeDisplayLedTimer();
                                     });
                                     return;
@@ -426,7 +439,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                             if (!client) {
                                 timer->disarm();
                                 LoopFunctions::callOnce([this]() {
-                                    delay(50);
+                                    _display.delay(50);
                                     _removeDisplayLedTimer();
                                 });
                                 return;

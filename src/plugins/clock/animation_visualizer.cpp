@@ -43,7 +43,7 @@ bool VisualizerAnimation::_parseUdp()
     return false;
 }
 
-uint8_t VisualizerAnimation::_visualizerType = 4;
+uint8_t VisualizerAnimation::_visualizerType = 3;
 
 void VisualizerAnimation::loop(uint32_t millisValue)
 {

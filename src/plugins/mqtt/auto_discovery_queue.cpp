@@ -476,7 +476,7 @@ void Queue::runPublish(uint32_t delayMillis)
                         return;
                     }
                     else {
-                        __LDBG_printf("add=%u modified=%u removed=%u unchanged=%u force_update=%u", _diff.add, _diff.modify, _diff.remove, _diff.unchanged, _forceUpdate);
+                        __LDBG_printf("add=%u modified=%u removed=%u unchanged=%u force_update=%u", _diff.add, _diff.modify, _diff.remove, _diff.unchanged, _runFlags & RunFlags::FORCE_UPDATE);
                         // discovery has changed, remove all topics that are not updated/old and start broadcasting
                         // recycle _wildcards and currentCrcs
                         _remove.reset(new RemoveTopicsComponent(&_client, std::move(_collect->_wildcards), std::move(currentCrcs)));
@@ -586,8 +586,8 @@ void Queue::_publishNextMessage()
 // the method deletes the object and this becomes invalid
 void Queue::_publishDone(StatusType result, uint16_t onErrorDelay)
 {
-    __LDBG_printf("success=%u error_delay=%u entities=%u size=%u crc=%08x add=%u modified=%u removed=%u unchanged=%u",
-        success,
+    __LDBG_printf("result=%u error_delay=%u entities=%u size=%u crc=%08x add=%u modified=%u removed=%u unchanged=%u",
+        result,
         onErrorDelay,
         _entities.size(),
         _entities.payloadSize(),

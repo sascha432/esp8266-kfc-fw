@@ -18,11 +18,7 @@
 extern RTC_DS3231 rtc;
 #endif
 
-PROGMEM_STRING_DEF(ds3231_id_temp, "ds3231_temp");
-PROGMEM_STRING_DEF(ds3231_id_time, "ds3231_time");
-PROGMEM_STRING_DEF(ds3231_id_lost_power, "ds3231_lost_power");
-
-Sensor_DS3231::Sensor_DS3231(const JsonString& name) :
+Sensor_DS3231::Sensor_DS3231(const String& name) :
     MQTT::Sensor(MQTT::SensorType::DS3231),
     _name(name),
     _wire(&config.initTwoWire())
@@ -37,7 +33,7 @@ Sensor_DS3231::~Sensor_DS3231()
 
 MQTT::AutoDiscovery::EntityPtr Sensor_DS3231::getAutoDiscovery(FormatType format, uint8_t num)
 {
-    auto discovery = __LDBG_new(AutoDiscovery::Entity);
+    auto discovery = new AutoDiscovery::Entity();
     switch (num) {
     case 0:
         if (discovery->create(this, FSPGM(ds3231_id_temp), format)) {
@@ -64,41 +60,29 @@ uint8_t Sensor_DS3231::getAutoDiscoveryCount() const
     return 3;
 }
 
-void Sensor_DS3231::getValues(NamedJsonArray &array, bool timer)
+void Sensor_DS3231::getValues(WebUINS::Events &array, bool timer)
 {
-//TODO
-}
-
-void Sensor_DS3231::getValues(JsonArray &array, bool timer)
-{
-    _debug_println();
-
-    auto obj = &array.addObject(3);
     auto temp = _readSensorTemp();
-    obj->add(JJ(id), FSPGM(ds3231_id_temp));
-    obj->add(JJ(state), !isnan(temp));
-    obj->add(JJ(value), JsonNumber(temp, 2));
-
-    obj = &array.addObject(3);
     String timeStr = _getTimeStr();
-    obj->add(JJ(id), FSPGM(ds3231_id_time));
-    obj->add(JJ(state), timeStr.indexOf('\n') != -1);
-    obj->add(JJ(value), timeStr);
+    array.append(
+        WebUINS::Values(FSPGM(ds3231_id_temp), WebUINS::TrimmedDouble(temp, 2), isnan(temp)),
+        WebUINS::Values(FSPGM(ds3231_id_time), timeStr, timeStr.indexOf('\n') != -1)
+    );
 }
 
 void Sensor_DS3231::createWebUI(WebUINS::Root &webUI)
 {
-    _debug_println();
-    (*row)->addSensor(FSPGM(ds3231_id_temp), _name, JsonString());
-    auto &clock = (*row)->addSensor(FSPGM(ds3231_id_time), F("RTC Clock"), JsonString());
-    clock.add(JJ(head), F("h4"));
+    webUI.appendToLastRow(WebUINS::Row(
+        WebUINS::Sensor(FSPGM(ds3231_id_time), _name, FSPGM(UTF8_degreeC)),
+        WebUINS::Sensor(FSPGM(ds3231_id_temp), F("RTC Clock"), FSPGM(UTF8_degreeC))
+    ));
 }
 
 void Sensor_DS3231::publishState()
 {
     if (isConnected()) {
-        client().publish(MQTTClient::formatTopic(FSPGM(ds3231_id_temp)), true, String(_readSensorTemp(), 2));
-        client().publish(MQTTClient::formatTopic(FSPGM(ds3231_id_time)), true, String((uint32_t)_readSensorTime()));
+        publish(MQTTClient::formatTopic(FSPGM(ds3231_id_temp)), true, String(_readSensorTemp(), 2));
+        publish(MQTTClient::formatTopic(FSPGM(ds3231_id_time)), true, String((uint32_t)_readSensorTime()));
         publish(MQTTClient::formatTopic(FSPGM(ds3231_id_lost_power)), true, String(_readSensorLostPower()));
     }
 }

@@ -38,6 +38,9 @@ uint16_t MQTTClient::unsubscribe(ComponentPtr component, const String &topic)
 
 uint16_t MQTTClient::publish(ComponentPtr component, const String &topic, bool retain, const String &payload, QosType qos)
 {
+    __LDBG_assert_panic(topic.length() != 0, "emtpy topic");
+    __LDBG_assert_panic(payload.length() != 0, "empty payload");
+
     PacketQueue queue(0, millis());
     if (_queue.empty()) {
         queue = publishWithId(component, topic, retain, payload, qos);

@@ -944,6 +944,15 @@ $.webUIComponent = {
         }
         var self = this;
         $(events).each(function() {
+            if (this.hasOwnProperty('i')) {
+                this.id = this.i;
+            }
+            if (this.hasOwnProperty('v')) {
+                this.value = this.v;
+            }
+            if (this.hasOwnProperty('s')) {
+                this.state = this.s;
+            }
             var element = $('#' + this.id);
             if (element.length) {
                 // this.group is the value for the group switch

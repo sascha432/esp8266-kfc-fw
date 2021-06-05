@@ -104,6 +104,7 @@ void ClockPlugin::_loop()
 {
     LoopOptionsType options(*this);
     _display.setBrightness(_getBrightness());
+    _display.show();
 
     if (_animation) {
         _animation->loop(options.getMillis());
@@ -209,10 +210,11 @@ void ClockPlugin::_loop()
         break;
     }
 
-    if (options.doRefresh() || _config.dithering) {
-        // refresh display brightness
+    if (options.doRefresh()) {
         _display.show();
-        delayMicroseconds(750);
+    }
+    else {
+        _display.delay(1);
     }
 
     // __LDBG_printf("refresh fading_brightness=%u color=%s fps=%u", _fadingBrightness, getColor().toString().c_str(), FastLED.getFPS());

@@ -39,6 +39,7 @@ AUTO_STRING_DEF(FormValidator_max_macro, "%max%")
 AUTO_STRING_DEF(FormValidator_min_macro, "%min%")
 AUTO_STRING_DEF(Form_value_missing_default_message, "This field is missing")
 
+#define FormGetterSetter(obj, name) obj, obj.get_bits_##name, obj.set_bits_##name
 
 namespace FormUI {
 

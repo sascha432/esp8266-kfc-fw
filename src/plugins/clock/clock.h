@@ -200,9 +200,9 @@ public:
 public:
     ClockPlugin();
 
-#if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
-    virtual void preSetup(SetupModeType mode) override;
-#endif
+// #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
+//     virtual void preSetup(SetupModeType mode) override;
+// #endif
     virtual void setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies) override;
     virtual void reconfigure(const String &source) override;
     virtual void shutdown() override;
@@ -213,7 +213,7 @@ public:
 #if AT_MODE_SUPPORTED
 
 private:
-#if HTTP2SERIAL_SUPPORT && IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
+#if IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
     struct LedMatrixDisplayTimer {
         Event::Timer timer;
         void *clientId;
@@ -273,9 +273,7 @@ public:
 
 public:
     static void loop();
-    static void standbyLoop() {
-        delay(25); // energy saving mode
-    }
+    static void standbyLoop();
 
 private:
     void _loop();
@@ -312,6 +310,7 @@ private:
 
 #endif
 
+
 #ifdef IOT_LED_MATRIX_FAN_CONTROL
 
 private:
@@ -330,7 +329,7 @@ private:
 #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION || IOT_CLOCK_HAVE_POWER_LIMIT
 
 public:
-    static void addPowerSensor(WebUINS::Root &webUI, SensorPlugin::SensorType type);
+    // static void addPowerSensor(WebUINS::Root &webUI, SensorPlugin::SensorType type);
     static uint8_t calcPowerFunction(uint8_t scale, uint32_t data);
     static void webSocketCallback(WsClient::ClientCallbackType type, WsClient *client, AsyncWebSocket *server, WsClient::ClientCallbackId id);
 
@@ -573,10 +572,11 @@ private:
     friend Clock::ClockLoopOptions;
 
     // SevenSegmentDisplay _display;
-    bool _schedulePublishState : 1;
-    bool _isFading : 1;
-    bool _isEnabled : 1;
+    bool _schedulePublishState;
+    bool _isFading;
+    bool _isEnabled;
     bool _forceUpdate;
+    //952228
 
     using Animation = Clock::Animation;
     friend Animation;
@@ -611,6 +611,11 @@ inline void ClockPlugin::setColor(Color color)
 inline ClockPlugin::Color ClockPlugin::getColor() const
 {
     return _getColor();
+}
+
+inline void ClockPlugin::standbyLoop()
+{
+    ::delay(50); // energy saving mode
 }
 
 #if DEBUG_IOT_CLOCK

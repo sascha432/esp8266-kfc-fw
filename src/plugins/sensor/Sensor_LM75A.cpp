@@ -30,7 +30,9 @@ MQTT::AutoDiscovery::EntityPtr Sensor_LM75A::getAutoDiscovery(MQTT::FormatType f
     auto discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
     switch(num) {
         case 0:
-            discovery->create(this, _getId(), format);
+            if (!discovery->create(this, _getId(), format)) {
+                return discovery;
+            }
             discovery->addStateTopic(MQTTClient::formatTopic(_getId()));
             discovery->addUnitOfMeasurement(FSPGM(UTF8_degreeC));
             break;
@@ -42,6 +44,7 @@ uint8_t Sensor_LM75A::getAutoDiscoveryCount() const
 {
     return 1;
 }
+
 void Sensor_LM75A::getValues(WebUINS::Events &array, bool timer)
 {
     auto temp = _readSensor();

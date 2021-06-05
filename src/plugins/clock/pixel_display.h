@@ -16,6 +16,9 @@
 
 namespace Clock {
 
+#if IOT_LED_MATRIX_CONFIGURABLE_DISPLAY
+#else
+
     template<class _CoordinateType, _CoordinateType _Rows, _CoordinateType _Columns>
     class PixelCoordinates {
     public:
@@ -250,6 +253,8 @@ namespace Clock {
         }
     };
 
+#endif
+
     template<size_t _StartAddress, size_t _Rows, size_t _Columns, bool _ReverseRows, bool _ReverseColumns, bool _Rotate, bool _Interleaved>
     class PixelDisplayBuffer : public PixelMapping<_StartAddress, _Rows, _Columns, _ReverseRows, _ReverseColumns, _Rotate, _Interleaved> {
     public:
@@ -385,11 +390,12 @@ namespace Clock {
         PixelDisplay() :
             _controller(_ControllerType::addLeds(_pixels.data(), _pixels.size()))
         {
-            _controller.setDither(DISABLE_DITHER);
+            setDither(false);
         }
 
         void setDither(bool enable) {
             _controller.setDither(enable ? BINARY_DITHER : DISABLE_DITHER);
+            FastLED.setDither(_controller.getDither());
         }
 
         void reset() {
@@ -411,6 +417,16 @@ namespace Clock {
 
         void show(uint8_t brightness) {
             FastLED.show(brightness);
+        }
+
+        void delay(unsigned long ms) {
+            if (can_yield() && (_controller.getDither() != DISABLE_DITHER) && (FastLED.getBrightness() != 0) && (FastLED.getBrightness() != 255)) {
+                FastLED.delay(ms);
+            }
+            else {
+                ::delay(ms);
+            }
+
         }
 
     private:

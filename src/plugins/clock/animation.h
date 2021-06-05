@@ -16,6 +16,20 @@
 
 using KFCConfigurationClasses::Plugins;
 
+
+#define _INCREMENT(value, min, max, incr) \
+        if (incr) { \
+            value += incr; \
+            if (value < min && incr < 0) { \
+                value = min; \
+                incr = -incr; \
+            } \
+            else if (value >= max && incr > 0) { \
+                incr = -incr; \
+                value = max + incr;\
+            } \
+        }
+
 namespace Clock {
 
     using DisplayBufferType = Clock::PixelDisplayBuffer<0, IOT_LED_MATRIX_ROWS, IOT_LED_MATRIX_COLS, true, false, false, true>;
@@ -450,11 +464,12 @@ namespace Clock {
             }
             _lastUpdate = millisValue;
 
-            _increment(&_multiplier.value, _multiplier.min, _multiplier.max, &_multiplier.incr);
-            _increment(&_factor._red, _color.min.red, 256, &_color.red_incr);
-            _increment(&_factor._green, _color.min.green, 256, &_color.green_incr);
-            _increment(&_factor._blue, _color.min.blue, 256, &_color.blue_incr);
+            _INCREMENT(_multiplier.value, _multiplier.min, _multiplier.max, _multiplier.incr);
+            _INCREMENT(_factor._red, _color.min.red, 256, _color.red_incr);
+            _INCREMENT(_factor._green, _color.min.green, 256, _color.green_incr);
+            _INCREMENT(_factor._blue, _color.min.blue, 256, _color.blue_incr);
         }
+
 
         virtual void copyTo(DisplayType &display, uint32_t millisValue) override
         {
@@ -505,7 +520,6 @@ namespace Clock {
 
     private:
         Color _normalizeColor(uint8_t red, uint8_t green, uint8_t blue) const;
-        void _increment(float *valuePtr, float min, float max, float *incrPtr);
 
         uint16_t _speed;
         RainbowMultiplier _multiplier;
@@ -541,27 +555,27 @@ namespace Clock {
         );
     }
 
-    inline void RainbowAnimation::_increment(float *valuePtr, float min, float max, float *incrPtr)
-    {
-        float value;
-        float incr;
-        // we need to use memcpy in case the pointer is not dword aligned
-        memcpy(&value, valuePtr, sizeof(value));
-        memcpy(&incr, incrPtr, sizeof(incr));
-        if (incr) {
-            value += incr;
-            if (value < min && incr < 0) {
-                value = min;
-                incr = -incr;
-            }
-            else if (value >= max && incr > 0) {
-                incr = -incr;
-                value = max + incr;
-            }
-        }
-        memcpy(valuePtr, &value, sizeof(*valuePtr));
-        memcpy(incrPtr, &incr, sizeof(*incrPtr));
-    }
+    // inline void RainbowAnimation::_INCREMENT(float *valuePtr, float min, float max, float *incrPtr)
+    // {
+    //     float value;
+    //     float incr;
+    //     // we need to use memcpy in case the pointer is not dword aligned
+    //     memcpy(&value, valuePtr, sizeof(value));
+    //     memcpy(&incr, incrPtr, sizeof(incr));
+    //     if (incr) {
+    //         value += incr;
+    //         if (value < min && incr < 0) {
+    //             value = min;
+    //             incr = -incr;
+    //         }
+    //         else if (value >= max && incr > 0) {
+    //             incr = -incr;
+    //             value = max + incr;
+    //         }
+    //     }
+    //     memcpy(valuePtr, &value, sizeof(*valuePtr));
+    //     memcpy(incrPtr, &incr, sizeof(*incrPtr));
+    // }
 
     // ------------------------------------------------------------------------
     // FlashingAnimation
@@ -850,7 +864,7 @@ namespace Clock {
         }
 
         template<typename _Ta>
-        void _copyTo(_Ta &output, uint32_t millisValue) override
+        void _copyTo(_Ta &output, uint32_t millisValue) 
         {
             uint8_t mapping = ((_cfg.cast_enum_orientation(_cfg.orientation) == Orientation::VERTICAL ? 2 : 0) + (_cfg.invert_direction ? 1 : 0));
             for(CoordinateType i = 0; i < kRows; i++) {

@@ -23,6 +23,7 @@ namespace FormUI {
             Config(const Config &) = delete;
 
             Config(StringDeduplicator &strings) :
+                kDefaultButtonLabel(SPGM(Save_Changes)),
                 _style(StyleType::DEFAULT),
                 _containerId(nullptr),
                 _title(nullptr),
@@ -81,7 +82,7 @@ namespace FormUI {
             }
             const char *getButtonLabel() const {
                 if (_saveButtonLabel == kDefaultButtonLabel) {
-                    return _strings.attachString(PSTR("Save Changes..."));
+                    return kDefaultButtonLabel;
                 }
                 else if (_saveButtonLabel) {
                     return _saveButtonLabel;
@@ -126,7 +127,7 @@ namespace FormUI {
             }
 
         private:
-            static constexpr const char *kDefaultButtonLabel = (const char *)1;
+            const char *kDefaultButtonLabel;
 
             StyleType _style;
             const char *_containerId;

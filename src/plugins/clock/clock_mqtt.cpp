@@ -168,11 +168,6 @@ void ClockPlugin::onMessage(const char *topic, const  char *payload, size_t len)
 void ClockPlugin::_publishState()
 {
     if (isConnected()) {
-#if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
-    // __LDBG_printf("client=%p color=%s brightness=%u auto=%d", client, getColor().implode(',').c_str(), _targetBrightness, _autoBrightness);
-#else
-    // __LDBG_printf("client=%p animation=%u (%p) color=%s brightness=%u", client, _config.animation, _animation, getColor().implode(',').c_str(), _targetBrightness);
-#endif
         publish(MQTTClient::formatTopic(FSPGM(_state)), true, MQTTClient::toBoolOnOff(_getEnabledState()));
         publish(MQTTClient::formatTopic(FSPGM(_brightness_state)), true, String(_targetBrightness == 0 ? _savedBrightness : _targetBrightness));
         publish(MQTTClient::formatTopic(FSPGM(_color_state)), true, getColor().implode(','));

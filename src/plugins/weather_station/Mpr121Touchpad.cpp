@@ -22,7 +22,7 @@ Mpr121Touchpad *touchpad = nullptr;
 
 static Mpr121Touchpad::ReadBuffer buffer;
 
-extern "C" void ICACHE_RAM_ATTR mpr121_irq_callback()
+extern "C" void IRAM_ATTR mpr121_irq_callback()
 {
     mpr121_irq_callback_flag = true;
 }

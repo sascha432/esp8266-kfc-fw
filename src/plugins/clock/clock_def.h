@@ -8,8 +8,26 @@
 #    define DEBUG_IOT_CLOCK 1
 #endif
 
+// allows to diplay the RGB leds in the browser
 #ifndef IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
 #    define IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL 1
+#endif
+
+#if IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL == 1 && HTTP2SERIAL_SUPPORT != 1
+#   error HTTP2SERIAL_SUPPORT=1 required
+#endif
+
+// gives the user them option to activate dithering
+// https://github.com/FastLED/FastLED/wiki/FastLED-Temporal-Dithering
+#ifndef IOT_CLOCK_USE_DITHERING
+#   define IOT_CLOCK_USE_DITHERING 1
+#endif
+
+// the number of pixels and order can be changed if set to 1
+// configurable requires memory and CPU time
+// set IOT_LED_MATRIX_COLS=1 and IOT_LED_MATRIX_ROWS=max. number of LEDs
+#ifndef IOT_LED_MATRIX_CONFIGURABLE_DISPLAY
+#   define IOT_LED_MATRIX_CONFIGURABLE_DISPLAY 0
 #endif
 
 // -1 to disable standby LED
@@ -175,9 +193,11 @@
 #endif
 
 #ifndef IF_IOT_IOT_LED_MATRIX_FAN_CONTROL
-#    define IF_IOT_IOT_LED_MATRIX_FAN_CONTROL(...) __VA_ARGS__
-#else
-#    define IF_IOT_IOT_LED_MATRIX_FAN_CONTROL(...)
+#   if IOT_LED_MATRIX_FAN_CONTROL
+#       define IF_IOT_IOT_LED_MATRIX_FAN_CONTROL(...) __VA_ARGS__
+#   else
+#       define IF_IOT_IOT_LED_MATRIX_FAN_CONTROL(...)
+#   endif
 #endif
 
 #ifndef IF_IOT_CLOCK_EN_PIN_INVERTED
@@ -284,9 +304,22 @@
 #    define IF_IOT_CLOCK_PIXEL_SYNC_ANIMATION(...)
 #endif
 
+#ifndef IOT_CLOCK_TEMPERATURE_PROTECTION
+#   define IOT_CLOCK_TEMPERATURE_PROTECTION 0
+#endif
+
+#ifndef IF_IOT_CLOCK_TEMPERATURE_PROTECTION
+#   if IOT_CLOCK_TEMPERATURE_PROTECTION
+#       define IF_IOT_CLOCK_TEMPERATURE_PROTECTION(...) __VA_ARGS__
+#   else
+#       define IF_IOT_CLOCK_TEMPERATURE_PROTECTION(...)
+#   endif
+#endif
+
 // address of the LM75A sensor for the voltage regulator
+// 255 = none
 #ifndef IOT_CLOCK_VOLTAGE_REGULATOR_LM75A_ADDRESS
-#    define IOT_CLOCK_VOLTAGE_REGULATOR_LM75A_ADDRESS -1
+#    define IOT_CLOCK_VOLTAGE_REGULATOR_LM75A_ADDRESS 255
 #endif
 
 #if defined(ESP8266)
@@ -299,3 +332,4 @@
 #ifndef IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
 #   define IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER 0
 #endif
+

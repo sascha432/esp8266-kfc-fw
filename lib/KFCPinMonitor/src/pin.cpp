@@ -23,7 +23,7 @@ using namespace PinMonitor;
 void HardwarePin::callback(void *arg, uint16_t _GPI)
 #else
 #define _GPI GPI
-void ICACHE_RAM_ATTR HardwarePin::callback(void *arg)
+void IRAM_ATTR HardwarePin::callback(void *arg)
 #endif
 {
     auto pinPtr = reinterpret_cast<HardwarePin *>(arg);

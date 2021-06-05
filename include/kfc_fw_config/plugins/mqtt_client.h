@@ -62,8 +62,8 @@
                     auto_reconnect_max(kDefaultValueFor_auto_reconnect_max),
                     auto_reconnect_incr(kDefaultValueFor_auto_reconnect_incr),
                     auto_discovery_delay(kDefaultValueFor_auto_discovery_delay),
-                    mode(cast_int_mode(ModeType::UNSECURE)),
-                    qos(cast_int_qos(QosType::EXACTLY_ONCE)),
+                    mode(cast(ModeType::UNSECURE)),
+                    qos(cast(QosType::EXACTLY_ONCE)),
                     __port(kDefaultValueFor___port)
                 {}
 

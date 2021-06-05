@@ -23,6 +23,7 @@
 #include <memory>
 #include <vector>
 #include "serial_handler.h"
+#include <../include/time.h>
 
 #ifndef DEBUG_AT_MODE
 #define DEBUG_AT_MODE                           0

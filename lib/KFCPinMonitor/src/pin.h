@@ -166,7 +166,7 @@ namespace PinMonitor {
 #if PIN_MONITOR_USE_POLLING == 1
         static void callback(void *arg, uint16_t _GPI);
 #elif PIN_MONITOR_USE_GPIO_INTERRUPT == 0
-        static void ICACHE_RAM_ATTR callback(void *arg);
+        static void IRAM_ATTR callback(void *arg);
 #endif
 
         operator bool() const;
@@ -211,7 +211,7 @@ namespace PinMonitor {
             _event = SimpleEventType::NONE;
         }
 
-        // void ICACHE_RAM_ATTR addEvent(bool value) {
+        // void IRAM_ATTR addEvent(bool value) {
         inline __attribute__((__always_inline__))
         void addEvent(bool value) {
             _event = value ? SimpleEventType::HIGH_VALUE : SimpleEventType::LOW_VALUE;
@@ -291,7 +291,7 @@ namespace PinMonitor {
             return const_cast<Debounce *>(&_debounce);
         }
 
-        // void ICACHE_RAM_ATTR addEvent(uint32_t micros, bool value) {
+        // void IRAM_ATTR addEvent(uint32_t micros, bool value) {
         inline __attribute__((__always_inline__))
         void addEvent(uint32_t micros, bool value) {
             _events._micros = micros;

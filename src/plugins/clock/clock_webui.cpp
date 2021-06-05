@@ -19,7 +19,7 @@ void ClockPlugin::getValues(WebUINS::Events &array)
     auto enabled = _getEnabledState();
 
     IF_IOT_CLOCK(
-        array.append(WebUINS::Values(F("colon"), enabled && (_config.blink_colon_speed < kMinBlinkColonSpeed) ? 0 : (_config.blink_colon_speed < 750 ? 500 : 1000y), enabled));
+        array.append(WebUINS::Values(F("colon"), enabled && (_config.blink_colon_speed < kMinBlinkColonSpeed) ? 0 : (_config.blink_colon_speed < 750 ? 500 : 1000), enabled));
     )
 
     array.append(
@@ -109,26 +109,26 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
 
 #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
 
-void ClockPlugin::addPowerSensor(WebUINS::Root &webUI, SensorPlugin::SensorType type)
-{
-    // add control to the top of the UI
-    if (type == SensorPlugin::SensorType::MIN) {
-        ClockPlugin::getInstance()._createWebUI(webUI);
-        return;
-    }
-//     // // calculated power and power limit
-#ifdef IOT_SENSOR_HAVE_INA219
-    if (type == SensorPlugin::SensorType::INA219) {
-//         webUI.appendToLastRow(WebUINS::Row(WebUINS::Sensor(F("pwrlvl"), getInstance()._config.power_limit ? F("Calculated Power / Limit") : F("Calculated Power"), 'W')));
-#else
-    if (type == SensorPlugin::SensorType::SYSTEM_METRICS) {
-//         webUI.appendToLastRow(addRow::Row(WebUINS::Sensor(F("pwrlvl"), getInstance()._config.power_limit ? F("Power / Limit") : F("Power"), 'W')));
-#endif
-        IF_IOT_CLOCK_HAVE_MOTION_SENSOR(
-            webUI.appendToLastRow(WebUINS::Row(WebUINS::Sensor(F("motion"), F("Motion Sensor"), F(""))));
-        )
-    }
-}
+// void ClockPlugin::addPowerSensor(WebUINS::Root &webUI, SensorPlugin::SensorType type)
+// {
+//     // add control to the top of the UI
+//     if (type == SensorPlugin::SensorType::MIN) {
+//         ClockPlugin::getInstance()._createWebUI(webUI);
+//         return;
+//     }
+// //     // // calculated power and power limit
+// #ifdef IOT_SENSOR_HAVE_INA219
+//     if (type == SensorPlugin::SensorType::INA219) {
+// //         webUI.appendToLastRow(WebUINS::Row(WebUINS::Sensor(F("pwrlvl"), getInstance()._config.power_limit ? F("Calculated Power / Limit") : F("Calculated Power"), 'W')));
+// #else
+//     if (type == SensorPlugin::SensorType::SYSTEM_METRICS) {
+// //         webUI.appendToLastRow(addRow::Row(WebUINS::Sensor(F("pwrlvl"), getInstance()._config.power_limit ? F("Power / Limit") : F("Power"), 'W')));
+// #endif
+//         IF_IOT_CLOCK_HAVE_MOTION_SENSOR(
+//             webUI.appendToLastRow(WebUINS::Row(WebUINS::Sensor(F("motion"), F("Motion Sensor"), F(""))));
+//         )
+//     }
+// }
 
 String ClockPlugin::_getPowerLevelStr()
 {
@@ -209,6 +209,7 @@ void ClockPlugin::_calcPowerLevel()
 
 void ClockPlugin::_createWebUI(WebUINS::Root &webUI)
 {
+    __LDBG_printf("createWebUI");
     #if IOT_LED_MATRIX
         webUI.addRow(WebUINS::Group(F("LED Matrix"), false));
     #else
@@ -219,11 +220,12 @@ void ClockPlugin::_createWebUI(WebUINS::Root &webUI)
     webUI.addRow(WebUINS::Slider(FSPGM(brightness), FSPGM(brightness), 0, kMaxBrightness, true));
     webUI.addRow(WebUINS::RGBSlider(F("color"), F("Color")));
 
+    WebUINS::Row row;
+
     // animation
     auto height = F("15rem");
     {
         constexpr uint8_t colspan = IOT_LED_MATRIX_WEBUI_COLSPAN_ANIMATION;
-        WebUINS::Row row;
 
         IF_IOT_CLOCK_SAVE_STATE(
             auto power = WebUINS::Switch(F("power"), F("Power<div class=\"p-1\"></div><span class=\"oi oi-power-standby\">"), true, WebUINS::NamePositionType::TOP, colspan);
@@ -248,53 +250,59 @@ void ClockPlugin::_createWebUI(WebUINS::Root &webUI)
         )
 
         webUI.addRow(row);
+
     }
 
     // protection
     {
         constexpr uint8_t colspan = IOT_LED_MATRIX_WEBUI_COLSPAN_PROTECTION;
-        WebUINS::Row row;
+        // WebUINS::Row row;
         webUI.addRow(WebUINS::Group(F("Protection"), false));
 
-        auto tempProtection = WebUINS::Sensor(F("tempp"), F("Temperature Protection"), '%', WebUINS::SensorRenderType::ROW, false, colspan);
-        tempProtection.append(WebUINS::NamedString(J(height), height));
-        row.append(tempProtection);
-
-        webUI.addRow(row);
+        IF_IOT_CLOCK_TEMPERATURE_PROTECTION(
+            {
+                auto tempProtection = WebUINS::Sensor(F("tempp"), F("Temperature Protection"), '%', WebUINS::SensorRenderType::ROW, false, colspan);
+                row.append(tempProtection.append(WebUINS::NamedString(J(height), height)));
+            }
+        )
 
         IF_IOT_IOT_LED_MATRIX_FAN_CONTROL(
             {
                 auto fanSpeed = WebUINS::Slider(F("fanspeed"), F("Fan Speed<div class=\"p-1\"></div><span class=\"oi oi-fire\">"), _config.min_fan_speed - 1, _config.max_fan_speed, true, colspan);
-                fanSpeed.append(
+                row.append(fanSpeed.append(
                     WebUINS::NamedUint32(J(name), static_cast<uint32_t>(WebUINS::NamePositionType::TOP)),
                     WebUINS::NamedString(J(height), height)
-                );
-                webUI.appendToLastRow(fanSpeed);
+                ));
             }
         );
 
         // calculated power and power limit
-#ifdef IOT_SENSOR_HAVE_INA219
-        auto power = WebUINS::Sensor(F("pwrlvl"), getInstance()._config.power_limit ? F("Calculated Power / Limit") : F("Calculated Power"), 'W');
+        auto power = WebUINS::Sensor(F("pwrlvl"), getInstance()._config.power_limit ?
+#if IOT_SENSOR_HAVE_INA219
+            F("Calculated Power / Limit") : F("Calculated Power"), 'W'
 
 #else
-        auto power = WebUINS::Sensor(F("pwrlvl"), getInstance()._config.power_limit ? F("Power / Limit") : F("Power"), 'W'));
+            F("Power / Limit") : F("Power"), 'W'
 #endif
+        );
         power.append(
             WebUINS::NamedString(J(height), height),
             WebUINS::NamedUint32(J(columns), colspan)
         );
-        webUI.appendToLastRow(power);
+        row.append(power);
+
+        IF_IOT_CLOCK_HAVE_MOTION_SENSOR({
+            auto motion = WebUINS::Sensor(F("motion"), F("Motion Sensor"), F(""));
+            motion.append(
+                WebUINS::NamedString(J(height), height),
+                WebUINS::NamedUint32(J(columns), colspan)
+            );
+            row.append(motion);
+        });
+
     }
 
-    // IF_IOT_CLOCK_HAVE_MOTION_SENSOR(
-    //     {
-    //         webUI.addRow(WebUINS::Row(
-    //             WebUINS::Sensor(F("motion"), F("Motion Sensor"), F(""))
-    //         ));
-    //     }
-    // );
-
+    webUI.addRow(row);
 }
 
 void ClockPlugin::_broadcastWebUI()

@@ -13,6 +13,8 @@
 #include <debug_helper_disable.h>
 #endif
 
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
+
 void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
 {
     __LDBG_printf("type=%u name=%s", type, formName.c_str());
@@ -29,7 +31,9 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         AnimationType::FIRE, F("Fire"),
         AnimationType::FLASHING, F("Flash"),
         AnimationType::FADING, F("Color Fade"),
+#if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
         AnimationType::VISUALIZER, F("Visualizer"),
+#endif
         AnimationType::INTERLEAVED, F("Interleaved")
     );
 
@@ -124,6 +128,17 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         form.addValidator(FormUI::Validator::Range(0.0f, 0.1f));
 
         rainbowGroup.end();
+
+        // --------------------------------------------------------------------
+        // auto &visGroup = form.addCardGroup(F("vis"), F("Visualizer"), true);
+
+        // form.addPointerTriviallyCopyable(F("vln"), &cfg.visualizer._lines);
+        // form.addFormUI(F("Number of Colums per Line"));
+
+        // form.addPointerTriviallyCopyable(F("vport"), &cfg.visualizer._port);
+        // form.addFormUI(F("Port"));
+
+        // visGroup.end();
 
         // --------------------------------------------------------------------
 
@@ -325,23 +340,23 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
             cfg.addRangeValidatorFor_auto_brightness(form);
         )
 
-        form.addObjectGetterSetter(F("ft"), cfg, cfg.get_bits_fading_time, cfg.set_bits_fading_time);
+        form.addObjectGetterSetter(F("ft"), FormGetterSetter(cfg, fading_time));
         form.addFormUI(F("Fading Time From 0 To 100%"), FormUI::Suffix(FSPGM(seconds)));
         cfg.addRangeValidatorFor_fading_time(form, true);
 
         IF_IOT_CLOCK(
-            form.addObjectGetterSetter(F("tfmt"), cfg, cfg.get_bits_time_format_24h, cfg.set_bits_time_format_24h);
+            form.addObjectGetterSetter(F("tfmt"), FormGetterSetter(cfg, time_format_24h));
             form.addFormUI(F("Time Format"), FormUI::BoolItems(F("24h"), F("12h")));
 
-            form.addObjectGetterSetter(F("csp"), cfg, cfg.get_bits_blink_colon_speed, cfg.set_bits_blink_colon_speed);
+            form.addObjectGetterSetter(F("csp"), FormGetterSetter(cfg, blink_colon_speed));
             form.addFormUI(F("Colon Blink Speed"), FormUI::Suffix(F("milliseconds")), FormUI::IntAttribute(F("disabled-value"), 0), FormUI::FPStringAttribute(F("disabled-value-placeholder"), F("Solid")));
             cfg.addRangeValidatorFor_blink_colon_speed(form, true);
         )
 
         #if IOT_CLOCK_USE_DITHERING
 
-            form.addObjectGetterSetter(F("dt"), cfg, cfg.get_bits_dithering, cfg.set_bits_dithering);
-            form.addFormUI(F("Dithering"), FormUI::BoolItems(F("Enable"), F("Disable")));
+            form.addObjectGetterSetter(F("dt"), FormGetterSetter(cfg, dithering));
+            form.addFormUI(F("FastLED Temporal Dithering"), FormUI::BoolItems(F("Enable"), F("Disable")));
 
         #endif
 

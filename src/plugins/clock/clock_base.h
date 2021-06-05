@@ -21,12 +21,15 @@
 #include <rotary_encoder.h>
 #endif
 
+// #if defined(ESP8266)
 // #ifndef FASTLED_ALLOW_INTERRUPTS
-// #define FASTLED_ALLOW_INTERRUPTS                                0
+// #define FASTLED_ALLOW_INTERRUPTS 0
 // #endif
-// #ifndef FASTLED_INTERRUPT_RETRY_COUNT
-// #define FASTLED_INTERRUPT_RETRY_COUNT                           1
+// #if !defined(FASTLED_INTERRUPT_RETRY_COUNT) && (FASTLED_ALLOW_INTERRUPTS == 1)
+// #define FASTLED_INTERRUPT_RETRY_COUNT 1
 // #endif
+// #endif
+
 #define FASTLED_INTERNAL
 #include <FastLED.h>
 

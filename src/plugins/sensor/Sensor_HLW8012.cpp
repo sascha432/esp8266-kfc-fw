@@ -28,13 +28,13 @@ static volatile uint32_t energyCounter = 0;
 static Sensor_HLW8012::InterruptBuffer _interruptBufferCF;
 static Sensor_HLW8012::InterruptBuffer _interruptBufferCF1;
 
-extern "C" void ICACHE_RAM_ATTR Sensor_HLW8012_callbackCF()
+extern "C" void IRAM_ATTR Sensor_HLW8012_callbackCF()
 {
     _interruptBufferCF.push_back(micros());
     energyCounter++;
 }
 
-extern "C" void ICACHE_RAM_ATTR Sensor_HLW8012_callbackCF1()
+extern "C" void IRAM_ATTR Sensor_HLW8012_callbackCF1()
 {
     _interruptBufferCF1.push_back(micros());
 }

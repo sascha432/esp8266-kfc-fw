@@ -26,17 +26,14 @@
 
 class Sensor_DS3231 : public MQTT::Sensor {
 public:
-    using NamedJArray = PluginComponents::NamedJArray;
-
-    Sensor_DS3231(const JsonString &name);
+    Sensor_DS3231(const String &name);
     virtual ~Sensor_DS3231();
 
     virtual AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;
 
     virtual void publishState() override;
-    virtual void getValues(JsonArray &json, bool timer) override;
-    virtual void getValues(NamedJsonArray &array, bool timer) override;
+    virtual void getValues(WebUINS::Events &array, bool timer) override;
     virtual void createWebUI(WebUINS::Root &webUI) override;
     virtual void getStatus(Print &output) override;
     virtual bool getSensorData(String &name, StringVector &values) override;
@@ -47,7 +44,7 @@ private:
     int8_t _readSensorLostPower();
     String _getTimeStr();
 
-    JsonString _name;
+    String _name;
     TwoWire *_wire;
 };
 

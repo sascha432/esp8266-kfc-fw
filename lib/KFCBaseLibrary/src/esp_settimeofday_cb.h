@@ -5,9 +5,18 @@
 // settimeofday_cb() emulation, requires
 // build_flags = -Wl,--wrap=settimeofday
 
-#if ESP8266 && ARDUINO_ESP8266_VERSION_COMBINED >= 0x020701
+#include <global.h>
+
+#if ESP8266 && ARDUINO_ESP8266_VERSION_COMBINED >= 0x30000
+
+#include <coredecls.h>
+#include <sys/_tz_structs.h>
+
+#elif ESP8266 && ARDUINO_ESP8266_VERSION_COMBINED >= 0x020701
+
 #error remove wrapper
-#endif
+
+#else
 
 #include <LoopFunctions.h>
 
@@ -33,3 +42,5 @@ int __wrap_settimeofday(const struct timeval* tv, const struct timezone* tz)
 }
 
 }
+
+#endif

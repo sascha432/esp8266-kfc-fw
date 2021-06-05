@@ -204,7 +204,7 @@ namespace STL_STD_EXT_NAMESPACE_EX {
 
         struct utf8 {
 
-            struct RemoveInvalidEncoding : Unicode::toUTF8 <~0> {
+            struct RemoveInvalidEncoding : Unicode::toUTF8 <~0U> {
             };
 
             template<uint32_t _Unicode>

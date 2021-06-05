@@ -11,7 +11,7 @@
 
 namespace STL_STD_EXT_NAMESPACE {
 
-#if __HAVE_CPP14 == 0 && _MSC_VER == 0
+#if __HAS_CPP17 != 1 && __HAVE_CPP14 == 0 && _MSC_VER == 0
 
     template<class T, class U = T>
     T exchange(T& obj, U&& new_value)

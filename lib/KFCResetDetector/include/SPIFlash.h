@@ -67,14 +67,12 @@ namespace SPIFlash {
         };
         uint32_t _version;
 
-        FlashHeader()
+        FlashHeader() : _magic(kFlashMagic), _crc32(0), _filler(~0), _version(~0)
         {
-            memset(this, 0xff, sizeof(*this));
         }
 
         FlashHeader(uint32_t crc32, uint16_t size = 0xffff) : FlashHeader()
         {
-            _magic = kFlashMagic;
             _crc32 = crc32;
             _size = size;
         }

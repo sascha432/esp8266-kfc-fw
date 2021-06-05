@@ -16,7 +16,8 @@
 
 #if defined(ESP8266)
 #include <sntp.h>
-#include <sntp-lwip2.h>
+#include <coredecls.h>                  // settimeofday_cb()
+// #include <sntp-lwip2.h>
 #elif defined(ESP32)
 #include <lwip/apps/sntp.h>
 #endif
@@ -113,13 +114,16 @@ void NTPPlugin::reconfigure(const String &source)
     setup(SetupModeType::DEFAULT, nullptr);
 }
 
+static void nothing(bool) {}
+
 void NTPPlugin::shutdown()
 {
     _checkTimer.remove();
 #if !RTC_SUPPORT
     _rtcMemUpdate.remove();
 #endif
-    settimeofday_cb(nullptr);
+
+    settimeofday_cb(nothing);
 }
 
 void NTPPlugin::getStatus(Print &output)

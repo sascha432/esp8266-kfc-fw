@@ -45,7 +45,7 @@ public:
 
     template<typename T>
     inline T printResult(T result) const {
-        if (isActive) {
+        if (isActive()) {
             prefix();
             getOutput().print(F("result="));
             getOutput().println(result);
@@ -55,7 +55,7 @@ public:
 
     template<typename T>
     inline T printsResult(T result, const String &resultStr) const {
-        if (isActive) {
+        if (isActive()) {
             prefix();
             getOutput().print(F("result="));
             getOutput().println(resultStr);

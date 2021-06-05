@@ -133,6 +133,10 @@ class __FlashStringHelper;
 #define PSTR1(str)                                      PSTRN(str, 1)
 #endif
 
+#ifdef PWMRANGE
+#define PWMRANGE 1023
+#endif
+
 #include "debug_helper.h"
 #include "misc.h"
 
@@ -238,20 +242,20 @@ constexpr size_t constexpr_strlen(const char *s) noexcept
 
 #endif
 
-static size_t constexpr constexpr_strlen(const uint8_t *str) noexcept
-{
-    return constexpr_strlen((const char *)str);
-}
+// static size_t constexpr constexpr_strlen(const uint8_t *str) noexcept
+// {
+//     return constexpr_strlen((str));
+// }
 
-static size_t constexpr constexpr_strlen_P(const char *str) noexcept
-{
-    return constexpr_strlen(str);
-}
+// static size_t constexpr constexpr_strlen_P(const char *str) noexcept
+// {
+//     return constexpr_strlen(str);
+// }
 
-static size_t constexpr constexpr_strlen(const __FlashStringHelper *str) noexcept
-{
-    return constexpr_strlen((const char *)str);
-}
+// static size_t constexpr constexpr_strlen(const __FlashStringHelper *str) noexcept
+// {
+//     return constexpr_strlen((const char*)str);
+// }
 
 
 #ifndef _STRINGIFY

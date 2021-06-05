@@ -93,6 +93,22 @@ char *strdup_P(PGM_P src);
 PGM_P strrchr_P(PGM_P str, int c);
 PGM_P strchr_P(PGM_P str, int c);
 
+inline static void *memrchr(const void *s, int c, size_t n)
+{
+    const unsigned char *cp;
+    if (!n) {
+        return nullptr;
+    }
+    cp = (unsigned char *)s + n;
+    do {
+        if (*(--cp) == (unsigned char)c) {
+            return (void *)cp;
+        }
+    } while (--n != 0);
+    return nullptr;
+}
+
+
 #endif
 
 // return index of the string in the list, 0 based
@@ -268,7 +284,7 @@ inline static int strncasecmp_PP(PGM_P str1, PGM_P str2, size_t size)
 #define strcmp_P_P(str1, str2) strncmp_P_P((str1), (str2), SIZE_IRRELEVANT)
 #define strcasecmp_P_P(str1, str2) strncasecmp_P_P((str1), (str2), SIZE_IRRELEVANT)
 
-inline static char *stristr_P(const char *str1, PGM_P str2, size_t len2 = ~0) 
+inline static char *stristr_P(const char *str1, PGM_P str2, size_t len2 = ~0)
 {
     return strcasestr_P(str1, str2, len2);
 }
@@ -301,10 +317,12 @@ inline static char *strrstr(char *str, const char *find)
     return __strrstr(str, strlen(str), find, strlen(find));
 }
 
-inline static const char *strrstr(const char *string, const char *find)
-{
-    return strrstr(const_cast<char *>(string), find);
-}
+
+extern "C" const char *strrstr(const char *string, const char *find);
+// static const char *strrstr(const char *string, const char *find)
+// {
+//     return strrstr(const_cast<char *>(string), find);
+// }
 
 inline static char *strrstr_P(char *str, PGM_P find)
 {

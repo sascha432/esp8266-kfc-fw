@@ -61,7 +61,8 @@ namespace STL_STD_EXT_NAMESPACE_EX {
 #if !defined(__clang__) && __GNUC__ < 5
 # define ce_assert(x) ((void)0)
 #else
-# define ce_assert(x) assert(x)
+# define ce_assert(x) ((void)0)
+// # define ce_assert(x) assert(x)
 #endif
     namespace cexpr {
 

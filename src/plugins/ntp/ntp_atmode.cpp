@@ -16,6 +16,7 @@
 using KFCConfigurationClasses::System;
 
 #include "at_mode.h"
+#include "esp_settimeofday_cb.h"
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(NOW, "NOW", "<update>", "Display current time or update NTP");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(TZ, "TZ", "<timezone>", "Set timezone", "Show timezone information");
@@ -33,12 +34,12 @@ bool NTPPlugin::atModeHandler(AtModeArgs &args)
         if (args.size()) {
             execConfigTime();
             args.print(F("Waiting up to 5 seconds for a valid time..."));
-            ulong end = millis() + 5000;
+            auto end = millis() + 5000;
             while(millis() < end && !IS_TIME_VALID(time(nullptr))) {
                 delay(10);
             }
         }
-        time_t now = time(nullptr);
+        auto now = time(nullptr);
         char timestamp[64];
         auto storedTime = RTCMemoryManager::readTime(false);
         args.printf_P(PSTR("time=%u stored time=%u diff=%d"), (uint32_t)now, storedTime, storedTime - now);

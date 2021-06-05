@@ -19,7 +19,7 @@
 
 static std::vector<std::function<void(void)>> scheduled_functions;
 
-bool ICACHE_RAM_ATTR schedule_function (const std::function<void(void)> &fn)
+bool IRAM_ATTR schedule_function (const std::function<void(void)> &fn)
 {
     if (fn) {
         if (scheduled_functions.size() < SCHEDULED_FN_MAX_COUNT) {

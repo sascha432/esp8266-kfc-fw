@@ -10,6 +10,11 @@
 
 #include <Arduino_compat.h>
 
+#if defined(ESP8266) && SPEED_BOOSTER_ENABLED && (F_CPU == 160000000L)
+#error SPEED_BOOSTER_ENABLED not supported with 160MHZ
+#endif
+
+
 // boost CPU speed
 class SpeedBooster {
 public:

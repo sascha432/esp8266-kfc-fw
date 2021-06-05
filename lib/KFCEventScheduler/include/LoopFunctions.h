@@ -19,7 +19,7 @@
 #include <vector>
 
 #if defined(ESP32) || defined(_MSC_VER)
-bool ICACHE_RAM_ATTR schedule_function (const std::function<void(void)> &fn);
+bool IRAM_ATTR schedule_function (const std::function<void(void)> &fn);
 void run_scheduled_functions();
 #endif
 

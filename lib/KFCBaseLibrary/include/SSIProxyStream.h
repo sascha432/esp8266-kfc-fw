@@ -47,7 +47,7 @@ public:
         return read((uint8_t *)buffer, length);
     }
 
-    size_t read(uint8_t *buffer, size_t length);
+    int read(uint8_t *buffer, size_t length);
 
     virtual size_t write(uint8_t) override {
         return 0;

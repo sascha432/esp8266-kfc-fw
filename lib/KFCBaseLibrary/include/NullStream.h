@@ -19,7 +19,7 @@ public:
     virtual int peek() override {
         return -1;
     }
-    virtual size_t read(uint8_t *buffer, size_t length) {
+    virtual int read(uint8_t *buffer, size_t length) {
         return 0;
     }
 

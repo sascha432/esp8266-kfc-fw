@@ -49,6 +49,7 @@ WEBUI_PROGMEM_STRING_DECL(has_switch)
 WEBUI_PROGMEM_STRING_DECL(head)
 WEBUI_PROGMEM_STRING_DECL(height)
 WEBUI_PROGMEM_STRING_DECL(id)
+WEBUI_PROGMEM_STRING_DECL(i)
 WEBUI_PROGMEM_STRING_DECL(items)
 WEBUI_PROGMEM_STRING_DECL(left)
 WEBUI_PROGMEM_STRING_DECL(listbox)
@@ -67,6 +68,7 @@ WEBUI_PROGMEM_STRING_DECL(screen)
 WEBUI_PROGMEM_STRING_DECL(sensor)
 WEBUI_PROGMEM_STRING_DECL(slider)
 WEBUI_PROGMEM_STRING_DECL(state)
+WEBUI_PROGMEM_STRING_DECL(s)
 WEBUI_PROGMEM_STRING_DECL(switch)
 WEBUI_PROGMEM_STRING_DECL(temp)
 WEBUI_PROGMEM_STRING_DECL(title)
@@ -75,6 +77,7 @@ WEBUI_PROGMEM_STRING_DECL(type)
 WEBUI_PROGMEM_STRING_DECL(unit)
 WEBUI_PROGMEM_STRING_DECL(update_events)
 WEBUI_PROGMEM_STRING_DECL(value)
+WEBUI_PROGMEM_STRING_DECL(v)
 WEBUI_PROGMEM_STRING_DECL(vcc)
 WEBUI_PROGMEM_STRING_DECL(width)
 WEBUI_PROGMEM_STRING_DECL(zero_off)
@@ -617,71 +620,71 @@ namespace WebUINS {
     public:
         template<typename _Ta>
         Values(const __FlashStringHelper *id, _Ta value, int8_t state = kStateAuto) :
-            UnnamedObject(NamedString(J(id), id), getValueObject(value))
+            UnnamedObject(NamedString(J(i), id), getValueObject(value))
         {
             if (state == kStateAuto) {
-                append(NamedBool(J(state), _validValue));
+                append(NamedBool(J(s), _validValue));
             } else if (state != kStateNone) {
-                append(NamedBool(J(state), state));
+                append(NamedBool(J(s), state));
             }
         }
 
         template<typename _Ta>
         Values(const String &id, _Ta value, int8_t state = kStateAuto) :
-            UnnamedObject(NamedStoredString(J(id), id), getValueObject(value))
+            UnnamedObject(NamedStoredString(J(i), id), getValueObject(value))
         {
             if (state == kStateAuto) {
-                append(NamedBool(J(state), _validValue));
+                append(NamedBool(J(s), _validValue));
             }
             else if (state != kStateNone) {
-                append(NamedBool(J(state), state));
+                append(NamedBool(J(s), state));
             }
         }
 
     private:
         NamedString getValueObject(const __FlashStringHelper *value) {
             _validValue = pgm_read_byte(reinterpret_cast<PGM_P>(value)) != 0;
-            return NamedString(J(value), value);
+            return NamedString(J(v), value);
         }
 
         NamedStoredString getValueObject(const String &value) {
             _validValue = (value.length() != 0);
-            return NamedStoredString(J(value), value);
+            return NamedStoredString(J(v), value);
         }
 
         NamedStoredString getValueObject(const char *value) {
             _validValue = *value != 0;
-            return NamedStoredString(J(value), value);
+            return NamedStoredString(J(v), value);
         }
 
         NamedInt32 getValueObject(int32_t value) {
             _validValue = (value != 0) && (value != std::numeric_limits<int32_t>::min()) && (value != std::numeric_limits<int32_t>::max());
-            return NamedInt32(J(value), value);
+            return NamedInt32(J(v), value);
         }
 
         NamedUint32 getValueObject(uint32_t value) {
             _validValue = (value != 0) && (value != std::numeric_limits<int32_t>::max());
-            return NamedUint32(J(value), value);
+            return NamedUint32(J(v), value);
         }
 
         NamedUint32 getValueObject(uint8_t value) {
             _validValue = value != 0;
-            return NamedUint32(J(value), static_cast<uint32_t>(value));
+            return NamedUint32(J(v), static_cast<uint32_t>(value));
         }
 
         NamedBool getValueObject(bool value) {
             _validValue = true;
-            return NamedBool(J(value), value);
+            return NamedBool(J(v), value);
         }
 
         NamedTrimmedFormattedDouble getValueObject(const TrimmedDouble &value) {
             _validValue = value.isNormal();
-            return NamedTrimmedFormattedDouble(J(value), value.getValue(), value.getFormat());
+            return NamedTrimmedFormattedDouble(J(v), value.getValue(), value.getFormat());
         }
 
         NamedFormattedDouble getValueObject(const FormattedDouble &value) {
             _validValue = value.isNormal();
-            return NamedFormattedDouble(J(value), value.getValue(), value.getFormat());
+            return NamedFormattedDouble(J(v), value.getValue(), value.getFormat());
         }
 
         bool _validValue;

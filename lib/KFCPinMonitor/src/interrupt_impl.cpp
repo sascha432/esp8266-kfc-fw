@@ -58,7 +58,7 @@ namespace PinMonitor {
     }
 
 #if PIN_MONITOR_ROTARY_ENCODER_SUPPORT
-    void ICACHE_RAM_ATTR pin_monitor_interrupt_handler(void *ptr)
+    void IRAM_ATTR pin_monitor_interrupt_handler(void *ptr)
     {
         uint32_t status32 = GPIE;
         GPIEC = status32;
@@ -105,7 +105,7 @@ namespace PinMonitor {
         ETS_GPIO_INTR_DISABLE();
     }
 
-    void ICACHE_RAM_ATTR pin_monitor_interrupt_handler(void *ptr)
+    void IRAM_ATTR pin_monitor_interrupt_handler(void *ptr)
     {
         using namespace PinMonitor::Interrupt;
 
@@ -177,7 +177,7 @@ namespace PinMonitor {
         interrupt_handlers[pin].arg = arg;
     }
 
-    void ICACHE_RAM_ATTR interrupt_handler(void *)
+    void IRAM_ATTR interrupt_handler(void *)
     {
         uint32_t status = GPIE;
         GPIEC = status; // clear interrupts

@@ -131,7 +131,7 @@ public:
         return _stream->write(buf, size);
     }
 
-    virtual size_t read(uint8_t* buf, size_t size) {
+    virtual int read(uint8_t* buf, size_t size) {
         if (!_stream) {
             return 0;
         }

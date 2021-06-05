@@ -207,7 +207,7 @@ protected:
         _bufferPtr = _buffer.end() + sizeof(FormatType);
         _collect(args...);
 
-        __LDBG_assert_printf(size == (_bufferPtr - _buffer.end()), "calc_size=%u does not match size=%u", size, _bufferPtr - _buffer.end());
+        __LDBG_assert_printf(size == (size_t)(_bufferPtr - _buffer.end()), "calc_size=%u does not match size=%u", (int)size, (int)(_bufferPtr - _buffer.end()));
 
         // store number of pointers copied
         *_buffer.end() = ((_bufferPtr - &_buffer.end()[1]) / sizeof(uintptr_t)) - 1;

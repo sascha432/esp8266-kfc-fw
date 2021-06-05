@@ -29,7 +29,7 @@
 
 #if defined(ESP8266)
 #include <sntp.h>
-#include <sntp-lwip2.h>
+// #include <sntp-lwip2.h>
 #elif defined(ESP32)
 #include <lwip/apps/sntp.h>
 #endif

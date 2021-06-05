@@ -5,6 +5,7 @@
 #if AT_MODE_SUPPORTED
 
 #include <Arduino_compat.h>
+
 #include <Syslog.h>
 #include <ReadADC.h>
 #include <EventScheduler.h>
@@ -1999,6 +2000,10 @@ void at_mode_serial_handle_event(String &commandString)
             }
             else {
 
+#if ESP8266
+                #define PWMRANGE 1023
+#endif
+
                 auto level = (uint16_t)args.toIntMinMax(1, 0, PWMRANGE, 0);
                 if (level == 0) {
                     if (args.isAnyMatchIgnoreCase(1, F("h|hi|high"))) {
@@ -2383,13 +2388,20 @@ void at_mode_serial_handle_event(String &commandString)
             delay(1000);
             while(malloc(4096)) {
             }
-            memset((void *)address, 0, ~0U);
+#ifndef _MSC_VER
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wnonnull"
+#endif
+            memset((void *)address, 0, 2147483647);
+#ifndef _MSC_VER
+#pragma GCC diagnostic pop
+#endif
         }
         else if (args.size()) {
             uint32_t address = args.toNumber(0);
             args.printf_P(PSTR("writing zeros to memory @ 0x%08x"), address);
             delay(1000);
-            memset((void *)address, 0, ~0U);
+            memset((void *)address, 0, 2147483647);
         }
         else {
             args.printf_P(PSTR("calling panic()"));

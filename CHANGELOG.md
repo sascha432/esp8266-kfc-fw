@@ -13,7 +13,7 @@
 - Added boot option to set passwords to default, enable AP mode and web server
 - Support for zeroconf (`${zeroconf:<service>.<proto>:<address|value[:port value]>|<fallback[:port]>}` as hostname)
 - Blacklist to prevent plugins being loaded at start-up
-- Debug print functions for ICACHE_RAM_ATTR that do not pull the entire SerialWrapper code into IRAM
+- Debug print functions for IRAM_ATTR that do not pull the entire SerialWrapper code into IRAM
 - Templates for configuration getters/setters
 - Added SSDP plugin
 - Improved HTML form generator
@@ -87,6 +87,7 @@
 - User customizable options for factory reset over the WebUI
 - OTA update tool restarts device in safe mode before running any updates
 - Fixed play tone for blinds plugin
+- Added framework-arduinoespressif8266 3.30000.210519 (3.0.0)
 
 ## Version 0.0.3
 

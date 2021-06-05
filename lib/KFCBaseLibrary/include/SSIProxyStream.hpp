@@ -15,7 +15,7 @@ inline size_t SSIProxyStream::_available()
     return _buffer.length() - _position;
 }
 
-inline size_t SSIProxyStream::read(uint8_t *buffer, size_t length)
+inline int SSIProxyStream::read(uint8_t *buffer, size_t length)
 {
     //__LDBG_printf("read_len=%d pos=%d length=%d size=%d", length, _position, _buffer.length(), _buffer.size());
     auto ptr = buffer;

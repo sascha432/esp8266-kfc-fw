@@ -101,8 +101,7 @@ void setup()
         deepSleepPinState.merge();
     #endif
 
-    resetDetector.end(); // release uart to call Serial.begin(). resetDetector is initialized in preinit()
-    KFC_SAFE_MODE_SERIAL_PORT.begin(KFC_SERIAL_RATE);
+    resetDetector.begin(&KFC_SAFE_MODE_SERIAL_PORT, KFC_SERIAL_RATE); // release uart and call Serial.begin()
     #if KFC_DEBUG_USE_SERIAL1
         Serial1.begin(KFC_DEBUG_USE_SERIAL1);
         static_assert(KFC_DEBUG_USE_SERIAL1 >= 300, "must be set to the baud rate");
@@ -420,7 +419,7 @@ void setup()
         componentRegister.setup(PluginComponent::SetupModeType::SAFE_MODE);
 
         // check if wifi is up
-        _Scheduler.add(Event::seconds(1), true, [](Event::CallbackTimerPtr timer) {
+        _Scheduler.add(Event::seconds(10), true, [](Event::CallbackTimerPtr timer) {
             timer->updateInterval(Event::seconds(60));
             if (!WiFi.isConnected()) {
                 _debug_println(F("WiFi not connected, restarting"));

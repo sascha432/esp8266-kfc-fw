@@ -13,7 +13,7 @@
 #define __RESET_DETECTOR_INCLUDED
 #define __RESET_DETECTOR_INSIDE_INCLUDE
 
-#define DEBUG_RESET_DETECTOR                                1
+#define DEBUG_RESET_DETECTOR                                0
 
 // enable debug outout
 #ifndef DEBUG_RESET_DETECTOR
@@ -33,6 +33,7 @@
 
 
 #include <Arduino_compat.h>
+#include <HardwareSerial.h>
 
 #if defined(ESP8266)
 #include <osapi.h>
@@ -115,6 +116,7 @@ public:
 public:
     void begin();
     void end();
+    void begin(HardwareSerial *serial, int baud);
 
     // returns the number of resets. starts with 1 after the first reset and increases with
     // each reset that occurs before the device is running longer than RESET_DETECTOR_TIMEOUT
@@ -172,6 +174,8 @@ public:
 #endif
 };
 
+class HardwareSerial;
+
 union ResetDetectorUnitialized {
     using Counter_t = ResetDetector::Counter_t;
     using Reason_t = ResetDetector::Reason_t;
@@ -190,6 +194,9 @@ union ResetDetectorUnitialized {
     }
     inline void end() {
         _rd.end();
+    }
+    inline void begin(HardwareSerial *serial, int baud) {
+        _rd.begin(serial, baud);
     }
     inline Counter_t getResetCounter() const {
         return _rd.getResetCounter();

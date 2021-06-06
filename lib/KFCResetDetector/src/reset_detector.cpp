@@ -127,9 +127,13 @@ extern "C" {
 
 void ResetDetector::end()
 {
+#if DEBUG_RESET_DETECTOR
+    ::printf_P(PSTR("rd::end(), _uart=%p\r\n"), _uart);
+#endif
+
     if (_uart) {
         __LDBG_printf("end");
-#if DEBUG && DEBUG_RESET_DETECTOR
+#if DEBUG_RESET_DETECTOR
         ::printf_P(PSTR("\r\n"));
 #endif
         uart_flush(_uart);
@@ -138,8 +142,33 @@ void ResetDetector::end()
     }
 }
 
+void ResetDetector::begin(HardwareSerial *serial, int baud)
+{
+#if DEBUG_RESET_DETECTOR
+    ::printf_P(PSTR("rd::begin(), _uart=%p, serial=%p\r\n"), _uart, serial, baud);
+#endif
+
+    if (_uart) {
+#if DEBUG_RESET_DETECTOR
+        ::printf_P(PSTR("\r\n"));
+#endif
+        uart_flush(_uart);
+        uart_uninit(_uart);
+        _uart = nullptr;
+    }
+#if DEBUG_RESET_DETECTOR
+    ::printf_P(PSTR("serial=%p begin=%u\r\n"), serial, baud);
+#endif
+    serial->begin(baud);
+}
+
 void ResetDetector::begin()
 {
+#if DEBUG_RESET_DETECTOR
+    auto oldUart = _uart;
+    ::printf_P(PSTR("rd::begin(), _uart=%p\r\n"), _uart);
+#endif
+
 #if DEBUG_RESET_DETECTOR
     if (_uart) {
         __LDBG_printf("begin() called multiple times without end()");
@@ -147,10 +176,10 @@ void ResetDetector::begin()
     }
 #endif
     _uart = uart_init(UART0, 115200, (int) SERIAL_8N1, (int) SERIAL_FULL, 1, 64, false);
-
 #if DEBUG_RESET_DETECTOR
-    ::printf_P(PSTR("\r\n"));
+    ::printf_P(PSTR("rd::begin() has been called, old_uart=%p _uart=%p\r\n"), oldUart, _uart);
 #endif
+
     __LDBG_printf("init reset detector");
 
     _readData();

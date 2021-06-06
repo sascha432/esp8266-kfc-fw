@@ -6,6 +6,7 @@
 #include <kfc_fw_config.h>
 #include <kfc_fw_config_plugin.h>
 #include <stl_ext/array.h>
+#include <sys/time.h>
 #include <EEPROM.h>
 #include <ReadADC.h>
 #include <PrintString.h>
@@ -1319,7 +1320,7 @@ bool KFCFWConfiguration::connectWiFi()
                 setLastError(message);
                 Logger_error(message);
             } else {
-                Logger_notice(F("AP Mode sucessfully initialized"));
+                Logger_notice(F("AP Mode successfully initialized"));
                 ap_mode_success = true;
             }
         }

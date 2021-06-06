@@ -12,7 +12,7 @@
 
 class MillisTimer {
 public:
-    MillisTimer() : _raw{} {}
+    MillisTimer();
     // max. 1 billion milliseconds
     MillisTimer(uint32_t delay);
 
@@ -37,11 +37,20 @@ private:
             uint32_t _active : 1;
             uint32_t _overflow : 1;
         };
-        uint8_t _raw[sizeof(uint32_t) * 2];
+        uint32_t _raw[2];
     };
 };
 
 static_assert(sizeof(MillisTimer) == sizeof(uint32_t) * 2, "something went wrong");
+
+inline MillisTimer::MillisTimer() : _raw{}
+{
+}
+
+inline MillisTimer::MillisTimer(uint32_t delay)
+{
+    set(delay);
+}
 
 inline bool MillisTimer::isActive() const
 {
@@ -52,5 +61,62 @@ inline void MillisTimer::disable()
 {
     _active = false;
 }
+
+inline void MillisTimer::set(uint32_t delay)
+{
+    uint32_t ms = millis();
+    _endTime = ms + delay;
+    _overflow = ms > _endTime;
+    if (_overflow) {
+        _endTime += 0x7fffffffU;
+    }
+    _active = true;
+    _delay = delay;
+}
+
+inline uint32_t MillisTimer::getTimeLeft() const
+{
+    uint32_t ms = millis();
+    if (_overflow) {
+        ms += 0x7fffffffU;
+    }
+    if (ms < _endTime) {
+        return _endTime - ms;
+    }
+    return 0;
+}
+
+inline int32_t MillisTimer::get() const
+{
+    if (!_active) {
+        return -1;
+    }
+    return getTimeLeft();
+}
+
+inline bool MillisTimer::reached(bool reset)
+{
+    if (_active)  {
+        uint32_t ms = millis();
+        if (_overflow) {
+            ms += 0x7fffffffU;
+        }
+        if (ms >= _endTime) {
+            if (reset) {
+                set(_delay);
+            } else {
+                _active = false;
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
+inline void MillisTimer::restart()
+{
+    set(_delay);
+}
+
 
 #include <pop_pack.h>

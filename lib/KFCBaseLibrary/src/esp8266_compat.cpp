@@ -10,12 +10,27 @@
 
 #if ARDUINO_ESP8266_VERSION_COMBINED >= 0x020701
 
-// settimeofday_cb() working again?
+    // settimeofday_cb() working again?
 
 #elif ARDUINO_ESP8266_VERSION_COMBINED == 0x020603
 
-#include "esp_settimeofday_cb.h"
+    #include "esp_settimeofday_cb.h"
 
 #endif
+
+#if ARDUINO_ESP8266_VERSION_COMBINED >= 0x030000
+
+    #include <LwipDhcpServer.h>
+
+    bool wifi_softap_get_dhcps_lease(struct dhcps_lease *please) {
+        return dhcpSoftAP.get_dhcps_lease(please);
+    }
+
+    bool wifi_softap_set_dhcps_lease(struct dhcps_lease *please) {
+        return dhcpSoftAP.set_dhcps_lease(please);
+    }
+
+#endif
+
 
 #endif

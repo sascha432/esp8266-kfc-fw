@@ -193,7 +193,7 @@ bool ClockPlugin::_loopDisplayLightSensor(LoopOptionsType &options)
 
             auto str = PrintString(F("% " __STRINGIFY(IOT_CLOCK_NUM_DIGITS) "u"), result.getValue()); // left padded with spaces
             // replace space with #
-            String_replace(str, ' ', '#');
+            str.replace(' ', '#');
             // disable any animation, set color to green and brightness to 50%
 
             _display.fill(Color(0, 0xff, 0));

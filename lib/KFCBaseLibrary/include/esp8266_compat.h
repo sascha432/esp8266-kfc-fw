@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <global.h>
+
 #if defined(ESP8266)
 
 #include <os_type.h>
@@ -23,8 +25,21 @@ extern "C" {
     void ets_timer_done (ETSTimer *ptimer);
 
 #if ARDUINO_ESP8266_VERSION_COMBINED == 0x020603
+
     void settimeofday_cb (void (*cb)(void));
+
 #endif
+
+
+#if ARDUINO_ESP8266_VERSION_COMBINED >= 0x030000
+
+    #include <sys/_tz_structs.h>
+
+    bool wifi_softap_get_dhcps_lease(struct dhcps_lease *please);
+    bool wifi_softap_set_dhcps_lease(struct dhcps_lease *please);
+
+#endif
+
 
 }
 

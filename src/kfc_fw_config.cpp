@@ -257,6 +257,7 @@ void KFCFWConfiguration::_onWiFiConnectCb(const WiFiEventStationModeConnected &e
 #endif
 
     }
+
 }
 
 void KFCFWConfiguration::_onWiFiDisconnectCb(const WiFiEventStationModeDisconnected &event)
@@ -741,11 +742,10 @@ void KFCFWConfiguration::storeQuickConnect(const uint8_t *bssid, int8_t channel)
 
 void KFCFWConfiguration::storeStationConfig(uint32_t ip, uint32_t netmask, uint32_t gateway)
 {
-    __LDBG_printf("ip=%s netmask=%s gw=%s dhcp=%u",
+    __LDBG_printf("ip=%s netmask=%s gw=%s",
         IPAddress(ip).toString().c_str(),
         IPAddress(netmask).toString().c_str(),
-        IPAddress(gateway).toString().c_str(),
-        (wifi_station_dhcpc_status() == DHCP_STARTED)
+        IPAddress(gateway).toString().c_str()
     );
 
     using namespace DeepSleep;
@@ -1314,7 +1314,6 @@ bool KFCFWConfiguration::connectWiFi()
             }
 
 #endif
-
             if (!WiFi.softAP(Network::WiFi::getSoftApSSID(), Network::WiFi::getSoftApPassword(), softAp.getChannel(), flags.is_softap_ssid_hidden)) {
                 String message = F("Cannot start AP mode");
                 setLastError(message);

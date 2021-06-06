@@ -74,13 +74,6 @@ typedef struct {
 
 #define WiFi_isHidden(num)                  (WiFi.SSID(num).length() == 0)
 
-enum dhcp_status {
-    DHCP_STOPPED,
-    DHCP_STARTED
-};
-
-enum dhcp_status wifi_station_dhcpc_status(void);
-
 namespace fs {
 
     class Dir : public File {

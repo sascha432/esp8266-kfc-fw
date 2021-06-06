@@ -6,6 +6,10 @@
 #include <PrintHtmlEntitiesString.h>
 #include "status.h"
 #include "kfc_fw_config.h"
+#include <ESP8266WiFi.h>
+#include <ESP8266WiFiAP.h>
+#include "LwipDhcpServer.h"
+#include <user_interface.h>
 
 void WiFi_get_address(Print &out)
 {
@@ -94,7 +98,10 @@ void WiFi_get_status(Print &out)
                 out.print(F("Disconnected"));
                 break;
             }
-            if (wifi_station_dhcpc_status() == DHCP_STARTED) {
+
+            // if (wifi_station_dhcpc_status() == DHCP_STARTED) {
+
+            if (KFCConfigurationClasses::System::Flags::getConfig().is_station_mode_dhcp_enabled) {
                 out.print(F(HTML_S(br) "DHCP client running"));
             }
 #elif defined(ESP32)
@@ -125,22 +132,17 @@ void WiFi_get_status(Print &out)
                 }
             }
 
-            if (System::Flags::getConfig().is_softap_dhcpd_enabled) {
-                out.print(F(HTML_S(br) "DHCP client running"));
-            }
-#else
+// #else
 #error Platform not supported
 #endif
-            out.print(F(HTML_S(br) "IP Address/Network "));
-            WiFi.localIP().printTo(out);
-            out.print('/');
-            WiFi.subnetMask().printTo(out);
-            out.print(F(HTML_S(br) "Gateway "));
-            WiFi.gatewayIP().printTo(out);
-            out.print(F(", DNS "));
-            WiFi.dnsIP().printTo(out);
-            out.print(F(", "));
-            WiFi.dnsIP(1).printTo(out);
+
+            out.printf_P(PSTR(HTML_S(br) "IP Address/Network %s / %s " HTML_S(br) "Gateway %s DNS %s, %s"),
+                WiFi.localIP().toString().c_str(),
+                WiFi.subnetMask().toString().c_str(),
+                WiFi.gatewayIP().toString().c_str(),
+                WiFi.dnsIP().toString().c_str(),
+                WiFi.dnsIP(1).toString().c_str()
+            );
     }
 
     if (mode & WIFI_AP_STA) {
@@ -151,32 +153,31 @@ void WiFi_get_status(Print &out)
     if (mode & WIFI_AP) {
         ip_info if_cfg;
 
-        out.print(F(HTML_S(br) HTML_S(strong) "Access point:" HTML_E(strong) HTML_S(br)));
-
         softap_config config;
         if (!wifi_softap_get_config(&config)) {
             config.max_connection = 4;
         }
-        out.printf_P(PSTR("Clients connected %u out of %u" HTML_S(br)), WiFi.softAPgetStationNum(), config.max_connection);
+        out.printf_P(PSTR(HTML_S(br) HTML_S(strong) "Access point:" HTML_E(strong) HTML_S(br)
+            "Clients connected %u out of %u" HTML_S(br)), WiFi.softAPgetStationNum(), config.max_connection);
 
         if (wifi_get_ip_info(SOFTAP_IF, &if_cfg)) {
-            out.print(F("IP Address/Network "));
-            IPAddress(if_cfg.ip.addr).printTo(out);
-            out.print('/');
-            IPAddress(if_cfg.netmask.addr).printTo(out);
-            out.print(F(HTML_S(br) "Gateway "));
-            IPAddress(if_cfg.gw.addr).printTo(out);
-            out.print(F(HTML_S(br)));
+            out.printf_P(PSTR("IP Address/Network %s / %s" HTML_S(br) "Gateway %s" HTML_S(br)),
+                IPAddress(if_cfg.ip.addr).toString().c_str(),
+                IPAddress(if_cfg.netmask.addr).toString().c_str(),
+                IPAddress(if_cfg.gw.addr).toString().c_str()
+            );
         }
+#if 0
         if (wifi_softap_dhcps_status() == DHCP_STOPPED) {
+#else
+        if (!dhcpSoftAP.isRunning()) {
+#endif
             out.print(F("DHCP server not running"));
-        } else {
+        }
+        else {
             dhcps_lease please;
             if (wifi_softap_get_dhcps_lease(&please)) {
-                out.print(F("DHCP server lease range "));
-                IPAddress(please.start_ip.addr).printTo(out);
-                out.print(F(" - "));
-                IPAddress(please.end_ip.addr).printTo(out);
+                out.printf_P(PSTR("DHCP server lease range %s - %s"), IPAddress(please.start_ip.addr).toString().c_str(), IPAddress(please.end_ip.addr).toString().c_str());
             }
         }
 
@@ -273,8 +274,8 @@ void WiFi_get_status(Print &out)
 #endif
 
     if (resetDetector.hasWakeUpDetected() && config._wifiFirstConnectionTime) {
-        out.print(F(HTML_S(br) HTML_S(br) HTML_S(strong) "Quick connect:" HTML_E(strong) HTML_S(br)));
-        out.printf_P(PSTR("WiFi connection established after %ums" HTML_S(br)), config._wifiFirstConnectionTime);
+        out.printf_P(PSTR(HTML_S(br) HTML_S(br) HTML_S(strong) "Quick connect:" HTML_E(strong) HTML_S(br)
+            "WiFi connection established after %ums" HTML_S(br)), config._wifiFirstConnectionTime);
     }
 }
 

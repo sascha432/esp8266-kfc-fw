@@ -279,8 +279,12 @@ namespace __va_args__
 }
 #define __VA_ARGS_COUNT__(...)                          __va_args__::va_count(__VA_ARGS__)
 
-extern "C" void __dump_binary(const void *ptr, size_t len, size_t perLine, PGM_P title = nullptr, uint8_t groupBytes = 0);
-extern "C" void __dump_binary_to(Print &output, const void *ptr, size_t len, size_t perLine, PGM_P title = nullptr, uint8_t groupBytes = 0);
+
+#define DUMP_BINARY_DEFAULTS ~0
+#define DUMP_BINARY_NO_TITLE nullptr
+
+extern "C" void __dump_binary(const void *ptr, size_t len, size_t perLine = DUMP_BINARY_DEFAULTS, PGM_P title = DUMP_BINARY_NO_TITLE, uint8_t groupBytes = DUMP_BINARY_DEFAULTS);
+extern "C" void __dump_binary_to(Print &output, const void *ptr, size_t len, size_t perLine = DUMP_BINARY_DEFAULTS, PGM_P title = DUMP_BINARY_NO_TITLE, uint8_t groupBytes = DUMP_BINARY_DEFAULTS);
 
 #if _MSC_VER
 #include "../../../include/spgm_auto_strings.h"

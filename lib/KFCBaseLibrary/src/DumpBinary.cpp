@@ -8,36 +8,18 @@ extern "C" {
 
     void __dump_binary(const void *ptr, size_t len, size_t perLine, PGM_P title, uint8_t groupBytes)
     {
-        __dump_binary_to(Serial, ptr, len, perLine, title, groupBytes);
+        __dump_binary_to(Serial, ptr, len, perLine == ~0U ? DumpBinary::kPerLineDefault : perLine, title, groupBytes == 0xff ? DumpBinary::kGroupBytesDefault : groupBytes);
     }
 
     void __dump_binary_to(Print &output, const void *ptr, size_t len, size_t perLine, PGM_P title, uint8_t groupBytes)
     {
-        DumpBinary d(output);
+        DumpBinary d(output, groupBytes == DUMP_BINARY_DEFAULTS ? DumpBinary::kGroupBytesDefault : groupBytes, perLine == 0 ? len : perLine == DUMP_BINARY_DEFAULTS ? DumpBinary::kPerLineDefault : perLine);
         if (title) {
             output.printf_P(PSTR("%s: %p:%u\n"), title, ptr, len);
         }
-        if (groupBytes) {
-            d.setGroupBytes(groupBytes);
-        }
-        if (perLine == 0) {
-            perLine = len;
-        }
-        d.setPerLine((uint8_t)perLine).dump(ptr, len);
+        d.dump(ptr, len);
     }
 
-}
-
-DumpBinary::DumpBinary(Print &output) : _output(output)
-{
-    _perLine = 16;
-    _groupBytes = 2;
-}
-
-DumpBinary::DumpBinary(const String &title, Print &output) : DumpBinary(output)
-{
-    output.print(title);
-    output.println(':');
 }
 
 DumpBinary &DumpBinary::setPerLine(uint8_t perLine)
@@ -87,7 +69,7 @@ DumpBinary &DumpBinary::dump(const uint8_t *data, size_t length, ptrdiff_t offse
         }
         j = 0;
         for (; pos < end && j < perLine; pos++, j++) {
-            int ch = pgm_read_byte(data + pos);
+            uint8_t ch = pgm_read_byte(data + pos);
             _output.printf_P(PSTR("%02x"), ch);
             if ((pos < end - 1) && (((j % _groupBytes) == 1) || (_groupBytes == 1))) {
                 _output.print(' ');

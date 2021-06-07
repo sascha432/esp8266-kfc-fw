@@ -8,10 +8,25 @@
 
 class DumpBinary {
 public:
+    static constexpr uint8_t kPerLineDefault = 16;
+    static constexpr uint8_t kGroupBytesDefault = 2;
     static constexpr uint8_t kPerLineDisabled = 0xff;
+
 public:
-    DumpBinary(Print &output);
-    DumpBinary(const String &title, Print &output);
+    DumpBinary(Print &output, uint8_t groupBytes = kGroupBytesDefault, uint8_t perLine = kPerLineDefault) : _output(output), _perLine(perLine), _groupBytes(groupBytes) {
+    }
+    DumpBinary(const String &title, Print &output, uint8_t groupBytes = kGroupBytesDefault, uint8_t perLine = kPerLineDefault) : DumpBinary(output, groupBytes, perLine) {
+        if (title.endsWith('\n')) {
+            output.print(title);
+        }
+        else if (title.endsWith(':')) {
+            output.println(title);
+        }
+        else {
+            output.print(title);
+            output.println(':');
+        }
+    }
 
     // bytes per line
     DumpBinary &setPerLine(uint8_t perLine);

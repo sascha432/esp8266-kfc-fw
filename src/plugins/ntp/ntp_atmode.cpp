@@ -35,23 +35,23 @@ bool NTPPlugin::atModeHandler(AtModeArgs &args)
             execConfigTime();
             args.print(F("Waiting up to 5 seconds for a valid time..."));
             auto end = millis() + 5000;
-            while(millis() < end && !IS_TIME_VALID(time(nullptr))) {
+            while(millis() < end && !isTimeValid()) {
                 delay(10);
             }
         }
         auto now = time(nullptr);
         char timestamp[64];
-        auto storedTime = RTCMemoryManager::readTime(false);
-        args.printf_P(PSTR("time=%u stored time=%u diff=%d"), (uint32_t)now, storedTime, storedTime - now);
-        if (!IS_TIME_VALID(now)) {
-            args.printf_P(PSTR("Time is currently not set (%lu). NTP is %s"), now, (System::Flags::getConfig().is_ntp_client_enabled ? FSPGM(enabled) : FSPGM(disabled)));
-        }
-        else {
+        auto rtc = RTCMemoryManager::readTime();
+        args.printf_P(PSTR("Now=" TIME_T_FMT " stored=%u status=%s"), now, rtc.getTime(), rtc.getStatus());
+        if (isTimeValid(now)) {
             strftime_P(timestamp, sizeof(timestamp), SPGM(strftime_date_time_zone), gmtime(&now));
-            args.printf_P(PSTR("gmtime=%s, unixtime=%u"), timestamp, now);
+            args.printf_P(PSTR("gmtime=%s, unixtime=" TIME_T_FMT), timestamp, now);
 
             strftime_P(timestamp, sizeof(timestamp), SPGM(strftime_date_time_zone), localtime(&now));
             args.printf_P(PSTR("localtime=%s"), timestamp);
+        }
+        else {
+            args.printf_P(PSTR("Time is currently not set (" TIME_T_FMT "). NTP is %s"), now, (System::Flags::getConfig().is_ntp_client_enabled ? SPGM(enabled) : SPGM(disabled)));
         }
         return true;
     }
@@ -63,9 +63,9 @@ bool NTPPlugin::atModeHandler(AtModeArgs &args)
             Serial.printf_P(PSTR("_tzname[0]=%s,_tzname[1]=%s\n"), _tzname[0], _tzname[1]);
             Serial.printf_P(PSTR("__tznorth=%u,__tzyear=%u\n"), tz.__tznorth, tz.__tzyear);
             for(int i = 0; i < 2; i++) {
-                Serial.printf_P(PSTR("ch=%c,m=%d,n=%d,d=%d,s=%d,change=%ld,offset=%ld\n"), tz.__tzrule[i].ch, tz.__tzrule[i].m, tz.__tzrule[i].n, tz.__tzrule[i].d, tz.__tzrule[i].s, tz.__tzrule[i].change, tz.__tzrule[i].offset);
+                Serial.printf_P(PSTR("ch=%c,m=%d,n=%d,d=%d,s=%d,change=" TIME_T_FMT ",offset=%ld\n"), tz.__tzrule[i].ch, tz.__tzrule[i].m, tz.__tzrule[i].n, tz.__tzrule[i].d, tz.__tzrule[i].s, (long)tz.__tzrule[i].change, tz.__tzrule[i].offset);
             }
-             auto str = getenv("TZ");
+            auto str = getenv("TZ");
             Serial.printf_P(PSTR("TZ=%s"), str ? (PGM_P)str : PSTR("(none)"));
         } else if (args.requireArgs(2, 2)) {
             auto arg = args.get(1);

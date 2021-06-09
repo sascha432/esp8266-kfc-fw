@@ -15,28 +15,7 @@
 #endif
 
 #ifndef NTP_LOG_TIME_UPDATE
-#define NTP_LOG_TIME_UPDATE                     0
-#endif
-
-#ifndef NTP_STORE_STATUS
-#define NTP_STORE_STATUS                        0
-#endif
-
-#if NTP_STORE_STATUS
-
-struct NtpStatus {
-
-    time_t _time;
-
-    NtpStatus() : _time(0) {}
-    NtpStatus(time_t now) : _time(now) {
-    }
-
-    operator bool () const {
-        return IS_TIME_VALID(_time);
-    }
-};
-
+#define NTP_LOG_TIME_UPDATE                     1
 #endif
 
 #if NTP_HAVE_CALLBACKS

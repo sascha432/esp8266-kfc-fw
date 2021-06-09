@@ -85,12 +85,16 @@ NTPPlugin::NTPPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(NTPPlugin))
 #define SNTP_STARTUP_DELAY_MAX_TIME         1000UL
 #endif
 
+extern "C" uint32_t sntp_startup_delay_MS_rfc_not_less_than_60000();
+
 uint32_t sntp_startup_delay_MS_rfc_not_less_than_60000()
 {
     return rand() % SNTP_STARTUP_DELAY_MAX_TIME;
 }
 
 #endif
+
+extern "C" uint32_t sntp_update_delay_MS_rfc_not_less_than_15000();
 
 uint32_t sntp_update_delay_MS_rfc_not_less_than_15000()
 {
@@ -114,16 +118,10 @@ void NTPPlugin::reconfigure(const String &source)
     setup(SetupModeType::DEFAULT, nullptr);
 }
 
-static void nothing(bool) {}
-
 void NTPPlugin::shutdown()
 {
     _checkTimer.remove();
-#if !RTC_SUPPORT
-    _rtcMemUpdate.remove();
-#endif
-
-    settimeofday_cb(nothing);
+    settimeofday_cb((BoolCB)nullptr);
 }
 
 void NTPPlugin::getStatus(Print &output)
@@ -159,7 +157,6 @@ void NTPPlugin::execConfigTime()
 {
     settimeofday_cb(updateNtpCallback);
 
-
      // set refresh time to a minimum for the update. calling configTime() seems to ignore this value. once
      // the time is valid, it is reset to the regular NTP refresh interval
     _ntpRefreshTimeMillis = 15000;
@@ -174,29 +171,13 @@ void NTPPlugin::execConfigTime()
 void NTPPlugin::updateNtpCallback()
 {
     auto now = time(nullptr);
-    __DBG_printf("new time=%u @%.3fs", (int)now, micros() / 1000000.0);
+    __DBG_printf("new time=%u @ %.3fs", (int)now, millis() / 1000.0);
 
-    if (IS_TIME_VALID(now)) {
+    if (isTimeValid(now)) {
         NTPPlugin::_ntpRefreshTimeMillis = Plugins::NTPClient::getConfig().getRefreshIntervalMillis();
         plugin._checkTimer.remove();
+        setLastKnownTime(now);
     }
-
-#if RTC_SUPPORT
-    // update RTC
-    config.setRTC(now);
-#elif NTP_STORE_STATUS
-    NtpStatus ntp(now);
-    RTCMemoryManager::write(RTCMemoryManager::RTCMemoryId::NTP, &ntp, sizeof(ntp));
-#endif
-#if !RTC_SUPPORT
-    // emulate RTC using the RTC memory
-    // the time is restored during reboot
-    // this does not work when the RTC memory is lost and is very unprecise using deep sleep
-    RTCMemoryManager::setWriteTime(true);
-    _Timer(plugin._rtcMemUpdate).add(Event::milliseconds(1000), true, [](Event::CallbackTimerPtr) {
-        RTCMemoryManager::writeTime();
-    });
-#endif
 
 #if NTP_LOG_TIME_UPDATE
     char buf[32];
@@ -205,7 +186,7 @@ void NTPPlugin::updateNtpCallback()
 #endif
 
 #if NTP_HAVE_CALLBACKS
-    for(auto callback: _callbacks) {
+    for(const auto &callback: _callbacks) {
         callback(time(nullptr));
     }
 #endif
@@ -213,9 +194,10 @@ void NTPPlugin::updateNtpCallback()
 
 void NTPPlugin::_checkTimerCallback(Event::CallbackTimerPtr timer)
 {
-    if (IS_TIME_VALID(time(nullptr))) {
+    if (isTimeValid()) {
         __LDBG_printf("detaching NTP check timer");
         timer->disarm();
+        return;
     }
     else {
         __LDBG_printf("NTP did not update, calling configTime() again, delay=%u", timer->getDelayUInt32());

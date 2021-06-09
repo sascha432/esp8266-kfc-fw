@@ -695,7 +695,7 @@ void MQTTClient::updateAutoDiscoveryTimestamps(bool success)
     _resetAutoDiscoveryInitialState();
 
     auto now = time(nullptr);
-    if (!IS_TIME_VALID(now)) {
+    if (!isTimeValid(now)) {
         now = std::max(_autoDiscoveryLastSuccess, _autoDiscoveryLastFailure) + 1;
     }
 

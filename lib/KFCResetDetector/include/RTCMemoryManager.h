@@ -12,7 +12,14 @@
 #include <push_pack.h>
 
 #if HAVE_KFC_FIRMWARE_VERSION
+#include <EventScheduler.h>
 #include <PluginComponent.h>
+#endif
+
+#if DEBUG_RTC_MEMORY_MANAGER
+#include "debug_helper_enable.h"
+#else
+#include "debug_helper_disable.h"
 #endif
 
 // any data stored in RTC memory is kept during deep sleep and device reboots
@@ -33,8 +40,6 @@ public:
     static constexpr uint8_t kBlockSize = 4;
     static constexpr uint8_t kBaseAddress = 64;
     static constexpr uint8_t kLastAddress = kBaseAddress + (kMemorySize / kBlockSize) - 1;
-
-    static constexpr uint8_t kTimeMemorySlot = kBaseAddress + 2;
 
 #elif defined(ESP32)
     static const uint16_t kMemorySize = 256; // can be adjusted
@@ -85,6 +90,50 @@ public:
     };
 
 public:
+    enum class SyncStatus : uint8_t {
+        NO = 0,
+        YES = 1,
+        UNKNOWN = 2,
+    };
+
+    struct RtcTime {
+#if RTC_SUPPORT == 0
+        uint32_t time;
+#endif
+        SyncStatus status;
+
+        RtcTime(time_t _time = 0, SyncStatus _status = SyncStatus::UNKNOWN) :
+#if RTC_SUPPORT == 0
+            time(_time),
+#endif
+            status(_status)
+        {
+        }
+
+        uint32_t getTime() const {
+#if RTC_SUPPORT
+            return 0;
+#else
+            return time;
+#endif
+        }
+
+        const __FlashStringHelper *getStatus() const {
+            switch(status) {
+            case SyncStatus::YES:
+                return F("In sync");
+            case SyncStatus::NO:
+                return F("Out of sync");
+            default:
+                break;
+            }
+            return F("Unknown");
+        }
+    };
+
+    static constexpr auto kRtcTimeSize = sizeof(RtcTime);
+
+public:
     static constexpr uint16_t kMemoryLimit = kMemorySize - sizeof(Header_t);
     static constexpr uint16_t kHeaderOffset = kMemorySize - sizeof(Header_t);
     static constexpr uint16_t kHeaderAddress = kHeaderOffset / kBlockSize + kBaseAddress;
@@ -94,7 +143,6 @@ public:
     }
 
     static_assert(sizeof(Header_t) % kBlockSize == 0, "header not aligned");
-
 
 public:
     static bool _readHeader(Header_t &header);
@@ -108,7 +156,7 @@ public:
     // free pointer returned by read()
     static void free(uint8_t *buffer);
 
-    static bool write(RTCMemoryId id, void *, uint8_t maxSize);
+    static bool write(RTCMemoryId id, const void *, uint8_t maxSize);
 
     static bool remove(RTCMemoryId id) {
         return write(id, nullptr, 0);
@@ -117,15 +165,73 @@ public:
 
     static bool dump(Print &output, RTCMemoryId id);
 
-    // real time management
-    static void setWriteTime(bool enableWriteTime);
-    static bool writeTime(bool forceWrite = false);
-    static uint32_t readTime(bool set = true);
-
 private:
     static uint8_t *_read(uint8_t *&data, Header_t &header, Entry_t &entry, RTCMemoryId id);
 
-    static bool _enableWriteTime;
+// methods to use the internal RTC
+public:
+    static void setupRTC();
+    static void setTime(time_t time, SyncStatus status);
+    static SyncStatus getSyncStatus();
+    // there must be valid record in the RTC memory to use following methods
+    static void setSyncStatus(bool inSync);
+    static void updateTimeOffset(uint32_t millis_offset);
+    static void storeTime();
+
+    inline static RtcTime readTime() {
+        return _readTime();
+    }
+
+private:
+    static RtcTime _readTime();
+    static void _writeTime(const RtcTime &time);
+    static void _clearTime();
+
+public:
+    class RtcTimer : public OSTimer {
+    public:
+        virtual void run() {
+            RTCMemoryManager::storeTime();
+        }
+    };
+
+#if RTC_SUPPORT == 0
+    static RtcTimer _rtcTimer;
+#endif
 };
 
+inline RTCMemoryManager::SyncStatus RTCMemoryManager::getSyncStatus()
+{
+    return _readTime().status;
+}
+
+inline void RTCMemoryManager::setTime(time_t time, SyncStatus status)
+{
+    _writeTime(RtcTime(time, status));
+}
+
+inline void RTCMemoryManager::storeTime()
+{
+    auto rtc = _readTime();
+    rtc.time = time(nullptr);
+    _writeTime(rtc);
+}
+
+inline void RTCMemoryManager::setSyncStatus(bool status)
+{
+    auto rtc = _readTime();
+    if (
+        (status == true && rtc.status != SyncStatus::YES) ||
+        (status == false && rtc.status == SyncStatus::YES)
+    ) {
+        rtc.status = status ? SyncStatus::YES : SyncStatus::NO;
+        _writeTime(rtc);
+    }
+}
+
+
 #include <pop_pack.h>
+
+#if DEBUG_RTC_MEMORY_MANAGER
+#include "debug_helper_disable.h"
+#endif

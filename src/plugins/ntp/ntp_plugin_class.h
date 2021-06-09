@@ -39,7 +39,4 @@ public:
 
 private:
     Event::Timer _checkTimer;
-#if !RTC_SUPPORT
-    Event::Timer _rtcMemUpdate;
-#endif
 };

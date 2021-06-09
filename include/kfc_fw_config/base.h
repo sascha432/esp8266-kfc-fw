@@ -13,6 +13,7 @@
 #include <boost/preprocessor/tuple/rem.hpp>
 #include <boost/preprocessor/variadic/size.hpp>
 #include <boost/preprocessor/variadic/elem.hpp>
+#include <boost/preprocessor/variadic/to_tuple.hpp>
 #include <boost/preprocessor/control/if.hpp>
 #include <boost/preprocessor/comparison/equal.hpp>
 #include <boost/preprocessor/punctuation/remove_parens.hpp>
@@ -102,24 +103,24 @@ namespace ConfigurationHelper {
 #define CREATE_STRING_GETTER_SETTER_BINARY(class_name, name, len) \
     static constexpr size_t k##name##MaxSize = len; \
     static constexpr ConfigurationHelper::HandleType k##name##ConfigHandle = CONFIG_GET_HANDLE_STR(_STRINGIFY(class_name) "." _STRINGIFY(name)); \
-    static inline size_t get##name##Size() { return k##name##MaxSize; } \
-    static inline const uint8_t *get##name() { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_GET); return KFCConfigurationClasses::loadBinaryConfig(k##name##ConfigHandle, k##name##MaxSize); } \
-    static inline void set##name(const uint8_t *data) { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_SET); KFCConfigurationClasses::storeBinaryConfig(k##name##ConfigHandle, data, k##name##MaxSize); }
+    inline static size_t get##name##Size() { return k##name##MaxSize; } \
+    inline static const uint8_t *get##name() { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_GET); return KFCConfigurationClasses::loadBinaryConfig(k##name##ConfigHandle, k##name##MaxSize); } \
+    inline static void set##name(const uint8_t *data) { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_SET); KFCConfigurationClasses::storeBinaryConfig(k##name##ConfigHandle, data, k##name##MaxSize); }
 
 #define CREATE_STRING_GETTER_SETTER(class_name, name, len) \
     static constexpr size_t k##name##MaxSize = len; \
     static constexpr ConfigurationHelper::HandleType k##name##ConfigHandle = CONFIG_GET_HANDLE_STR(_STRINGIFY(class_name) "." _STRINGIFY(name)); \
-    static inline const char *get##name() { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_GET); return KFCConfigurationClasses::loadStringConfig(k##name##ConfigHandle); } \
-    static inline char *getWriteable##name() { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_GET); return KFCConfigurationClasses::loadWriteableStringConfig(k##name##ConfigHandle, k##name##MaxSize); } \
-    static inline void set##name(const char *str) { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_SET); KFCConfigurationClasses::storeStringConfig(k##name##ConfigHandle, str); } \
-    static inline void set##name(const __FlashStringHelper *str) { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_SET); KFCConfigurationClasses::storeStringConfig(k##name##ConfigHandle, str); } \
-    static inline void set##name(const String &str) { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_SET); KFCConfigurationClasses::storeStringConfig(k##name##ConfigHandle, str); }
+    inline static const char *get##name() { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_GET); return KFCConfigurationClasses::loadStringConfig(k##name##ConfigHandle); } \
+    inline static char *getWriteable##name() { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_GET); return KFCConfigurationClasses::loadWriteableStringConfig(k##name##ConfigHandle, k##name##MaxSize); } \
+    inline static void set##name(const char *str) { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_SET); KFCConfigurationClasses::storeStringConfig(k##name##ConfigHandle, str); } \
+    inline static void set##name(const __FlashStringHelper *str) { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_SET); KFCConfigurationClasses::storeStringConfig(k##name##ConfigHandle, str); } \
+    inline static void set##name(const String &str) { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_SET); KFCConfigurationClasses::storeStringConfig(k##name##ConfigHandle, str); }
 
 #define  CREATE_STRING_GETTER_SETTER_MIN_MAX(class_name, name, mins, maxs) \
-    static inline FormUI::Validator::Length &add##name##LengthValidator(FormUI::Form::BaseForm &form, bool allowEmpty = false) { \
+    inline static FormUI::Validator::Length &add##name##LengthValidator(FormUI::Form::BaseForm &form, bool allowEmpty = false) { \
         return form.addValidator(FormUI::Validator::Length(k##name##MinSize, k##name##MaxSize, allowEmpty)); \
     } \
-    static inline FormUI::Validator::Length &add##name##LengthValidator(const String &message, FormUI::Form::BaseForm &form, bool allowEmpty = false) { \
+    inline static FormUI::Validator::Length &add##name##LengthValidator(const String &message, FormUI::Form::BaseForm &form, bool allowEmpty = false) { \
         return form.addValidator(FormUI::Validator::Length(message, k##name##MinSize, k##name##MaxSize, allowEmpty)); \
     } \
     static constexpr size_t k##name##MinSize = mins; \
@@ -127,12 +128,12 @@ namespace ConfigurationHelper {
 
 //name, size, type, min_value, max_value, default_value[, step_size]
 #define CREATE_BITFIELD_TYPE_MIN_MAX(name, size, type, min_value, max_value, ...) \
-    static inline FormUI::Validator::Range &addRangeValidatorFor_##name(FormUI::Form::BaseForm &form, bool allowZero = false) { \
+    inline static FormUI::Validator::Range &addRangeValidatorFor_##name(FormUI::Form::BaseForm &form, bool allowZero = false) { \
         form.getLastField().getFormUI()->addItems(FormUI::PlaceHolder(kDefaultValueFor_##name), FormUI::MinMax(kMinValueFor_##name, kMaxValueFor_##name), \
             BOOST_PP_REMOVE_PARENS(BOOST_PP_IF(BOOST_PP_EQUAL(BOOST_PP_VARIADIC_SIZE(__VA_ARGS__),1),(FormUI::Type::NUMBER_RANGE),(FormUI::Attribute(F("step"),BOOST_PP_VARIADIC_ELEM(1,##__VA_ARGS__)),FormUI::Type::NUMBER_RANGE)))); \
         return form.addValidator(FormUI::Validator::Range(static_cast<long>(kMinValueFor_##name), static_cast<long>(kMaxValueFor_##name), allowZero)); \
     } \
-    static inline FormUI::Validator::Range &addRangeValidatorFor_##name(const String &message, FormUI::Form::BaseForm &form, bool allowZero = false) { \
+    inline static FormUI::Validator::Range &addRangeValidatorFor_##name(const String &message, FormUI::Form::BaseForm &form, bool allowZero = false) { \
         form.getLastField().getFormUI()->addItems(FormUI::PlaceHolder(kDefaultValueFor_##name), FormUI::MinMax(kMinValueFor_##name, kMaxValueFor_##name), \
             BOOST_PP_REMOVE_PARENS(BOOST_PP_IF(BOOST_PP_EQUAL(BOOST_PP_VARIADIC_SIZE(__VA_ARGS__),1),(FormUI::Type::NUMBER_RANGE),(FormUI::Attribute(F("step"),BOOST_PP_VARIADIC_ELEM(1,##__VA_ARGS__)),FormUI::Type::NUMBER_RANGE)))); \
         return form.addValidator(FormUI::Validator::Range(message, static_cast<long>(kMinValueFor_##name), static_cast<long>(kMaxValueFor_##name), allowZero)); \
@@ -175,13 +176,50 @@ namespace ConfigurationHelper {
     static const IPAddress get##name() { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_GET); return IPAddress(*(uint32_t *)loadBinaryConfig(k##name##ConfigHandle, sizeof(uint32_t))); } \
     static void set##name(const IPAddress &address) { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_SET); storeBinaryConfig(k##name##ConfigHandle, &static_cast<uint32_t>(address), sizeof(uint32_t)); }
 
-#define CREATE_IPV4_ADDRESS(name) \
+#define CREATE_IPV4_ADDRESS(name, default_value) \
     uint32_t name; \
-    static inline void set_ipv4_##name(Type &obj, const IPAddress &addr) { \
+    static constexpr uint32_t kDefaultValueFor_##name = default_value; \
+    inline static void set_ipv4_##name(Type &obj, const IPAddress &addr) { \
         obj.name = static_cast<uint32_t>(addr); \
     } \
-    static inline IPAddress get_ipv4_##name(const Type &obj) { \
+    inline static IPAddress get_ipv4_##name(const Type &obj) { \
         return obj.name; \
+    } \
+    inline static void set_bits_##name(Type &obj, const IPAddress &value) { \
+        obj.name = static_cast<uint32_t>(value); \
+    } \
+    inline static IPAddress get_bits_##name(const Type &obj) { \
+        return obj.name; \
+    } \
+    inline static FormUI::Validator::Hostname &addHostnameValidatorFor_##name(FormUI::Form::BaseForm &form, bool allowEmpty = true) { \
+        if constexpr (kDefaultValueFor_##name != 0) { \
+            form.getLastField().getFormUI()->addItems(FormUI::PlaceHolder(kDefaultValueFor_##name)); \
+        } \
+        return form.addValidator(FormUI::Validator::Hostname(allowEmpty ? FormUI::HostnameValidator::AllowedType::EMPTY_OR_IP : FormUI::HostnameValidator::AllowedType::IPADDRESS)); \
+    }
+
+#define CREATE_FLOAT_FIELD(name, min_value, max_value, default_value) \
+    float name; \
+    static constexpr float kMinValueFor_##name = min_value; \
+    static constexpr float kMaxValueFor_##name = max_value; \
+    static constexpr float kDefaultValueFor_##name = default_value; \
+    inline static void set_bits_##name(Type &obj, float value) { \
+        obj.name = value; \
+    } \
+    inline static float get_bits_##name(const Type &obj) { \
+        return obj.name; \
+    } \
+    inline static FormUI::Validator::Range &addRangeValidatorFor_##name(FormUI::Form::BaseForm &form, bool allowZero = false) { \
+        if constexpr (std::isnormal(kDefaultValueFor_##name)) { \
+            form.getLastField().getFormUI()->addItems(FormUI::PlaceHolder(kDefaultValueFor_##name)); \
+        } \
+        return form.addValidator(FormUI::Validator::Range(static_cast<float>(kMinValueFor_##name), static_cast<float>(kMaxValueFor_##name), allowZero)); \
+    } \
+    inline static FormUI::Validator::Range &addRangeValidatorFor_##name(const String &message, FormUI::Form::BaseForm &form, bool allowZero = false) { \
+        if constexpr (std::isnormal(kDefaultValueFor_##name)) { \
+            form.getLastField().getFormUI()->addItems(FormUI::PlaceHolder(kDefaultValueFor_##name)); \
+        } \
+        return form.addValidator(FormUI::Validator::Range(message, static_cast<float>(kMinValueFor_##name), static_cast<float>(kMaxValueFor_##name), allowZero)); \
     }
 
 #define AUTO_DEFAULT_PORT_CONST(default_port) \

@@ -223,7 +223,7 @@ void AlarmPlugin::_installAlarms(Event::CallbackTimerPtr timer)
     Alarm::TimeType minAlarmTime = std::numeric_limits<Alarm::TimeType>::max();
     _nextAlarm = 0;
 
-    if (!IS_TIME_VALID(time(nullptr))) {
+    if (!isTimeValid()) {
         __LDBG_printf("time not valid: %u", (int)time(nullptr));
     }
     else {
@@ -293,7 +293,7 @@ void AlarmPlugin::_removeAlarms()
 void AlarmPlugin::_ntpCallback(time_t now)
 {
     __LDBG_printf("time=%u", (int)now);
-    if (IS_TIME_VALID(now)) {
+    if (isTimeValid(now)) {
         // reinstall alarms if time changed
         _removeAlarms();
         _installAlarms(*_timer);

@@ -2,9 +2,8 @@
   Author: sascha_lammers@gmx.de
 */
 
-#if AT_MODE_SUPPORTED
+#include <Arduino_compat.h>
 #include "at_mode.h"
-#endif
 #include "PluginComponent.h"
 #include "plugins_menu.h"
 #include "plugins.h"

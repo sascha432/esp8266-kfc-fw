@@ -2,9 +2,9 @@
  * Author: sascha_lammers@gmx.de
  */
 
+#include <Arduino_compat.h>
 #include <MicrosTimer.h>
-#include "rotary_encoder.h"
-#include "monitor.h"
+#include "pin_monitor.h"
 
 #if DEBUG_PIN_MONITOR
 #include <debug_helper_enable.h>

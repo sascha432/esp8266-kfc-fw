@@ -17,7 +17,6 @@
 #include "serial_handler.h"
 #include "serial2udp.h"
 #include "reset_detector.h"
-#include "deep_sleep.h"
 #include "save_crash.h"
 #include "plugins_menu.h"
 #include "WebUIAlerts.h"
@@ -450,6 +449,8 @@ void setup()
     }
     else {
 
+        KFCFWConfiguration::setupRTC();
+
 #if WEBUI_ALERTS_ENABLED && WEBUI_ALERTS_USE_MQTT
         WebAlerts::AbstractStorage::changeStorageToMQTT();
 #endif
@@ -487,7 +488,7 @@ void setup()
 #if DEBUG_DEEP_SLEEP
         __DBG_printf("wakeup=%u mode=%u", wakeup, deepSleepParams.getWakeupMode());
         if (deepSleepParams.getWakeupMode() == DeepSleep::WakeupMode::AUTO) {
-            Logger_notice(F("Wakeup from deep sleep start-time=%u sleep-time=%.3f rtc-offset=%.6f"), time(nullptr), deepSleepParams.getTotalTime(), DeepSleep::_realTimeOffset / 1000000.0);
+            Logger_notice(F("Wakeup from deep sleep start-time=" TIME_T_FMT " sleep-time=%.3f rtc-offset=%.6f"), time(nullptr), deepSleepParams.getTotalTime(), DeepSleep::_realTimeOffset / 1000000.0);
 
         }
 #endif

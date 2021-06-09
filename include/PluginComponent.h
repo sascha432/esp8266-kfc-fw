@@ -69,7 +69,7 @@ namespace PluginComponents {
         RESET_DETECTOR,
         QUICK_CONNECT,
         DEEP_SLEEP,
-        NTP,
+        RTC,
         CONFIG,
         SERIAL2TCP,
         MAX
@@ -302,8 +302,8 @@ public:
                 return F("Quick Connect");
             case RTCMemoryId::SERIAL2TCP:
                 return F("Serial2TCP");
-            case RTCMemoryId::NTP:
-                return F("NTP");
+            case RTCMemoryId::RTC:
+                return F("RTC");
             case RTCMemoryId::NONE:
             case RTCMemoryId::MAX:
                 break;

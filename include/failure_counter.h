@@ -92,7 +92,7 @@ private:
 
 private:
     std::vector<FailureCounter> _failures;
-    uint32_t _lastRewrite;
+    time_t _lastRewrite;
     uint32_t _rewriteInterval;
     uint32_t _storageTimeframe;
     uint16_t _checkTimeframe;

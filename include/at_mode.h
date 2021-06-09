@@ -156,9 +156,10 @@ void at_mode_print_prefix(Stream &output, const char *command);
 inline void at_mode_print_prefix(Stream &output, const String &command) {
     at_mode_print_prefix(output, (const char *)command.c_str());
 }
-typedef std::function<void(const String &name)> AtModeResolveACallback;
 void enable_at_mode(Stream &output);
 void disable_at_mode(Stream &output);
+
+using AtModeResolveACallback = std::function<void(const String &name)>;
 
 class AtModeArgs : public TokenizerArgs {
 public:
@@ -172,24 +173,9 @@ public:
     }
 
 public:
-    typedef const char *ArgumentPtr;
-    typedef std::vector<ArgumentPtr> ArgumentVector;
-    typedef ArgumentVector::iterator ArgumentVectorIterator;
-
-    typedef enum {
-        ARG_ONE = 0,
-        FIRST = 0,
-        SECOND = 1,
-        THIRD = 2,
-        FOURTH = 3,
-        FIFTH = 4,
-        SIXTH = 5,
-        SEVENTH = 6,
-        EIGHTH = 7,
-        NINTH = 8,
-        TENTH = 9,
-        ARG_TEN = 9,
-    } ArgumentEnum_t;
+    using ArgumentPtr = const char *;
+    using ArgumentVector = std::vector<ArgumentPtr>;
+    using ArgumentVectorIterator = ArgumentVector::iterator;
 
     static constexpr uint32_t kNoDefaultValue = ~0;
 
@@ -199,104 +185,104 @@ public:
     AtModeArgs(AtModeArgs &&) = delete;
 
     AtModeArgs(Stream &output);
+
+    // does not copy the arguments vector _args
+    AtModeArgs(const AtModeArgs &args);
+
     void clear();
     void setQueryMode(bool mode);
+    bool isQueryMode() const;
+    Stream &getStream() const;
 
-    // AtModeArgs(Stream &output, AtModeArgs *move) : AtModeArgs(move != nullptr ? std::move(AtModeArgs(std::move(*move))) : std::move(AtModeArgs(output))) {}
+    // arguments access
+    ArgumentVector &getArgs();
+    const ArgumentVector &getArgs() const;
+    ArgumentPtr operator[](int index) const;
+    uint16_t size() const;
+    bool empty() const;
+    ArgumentVectorIterator begin();
+    ArgumentVectorIterator end();
 
-    // AtModeArgs(AtModeArgs &&move) :
-    //     _output(move._output),
-    //     _command(std::move(move._command)),
-    //     _args(std::move(move._args)),
-    //     _queryMode(std::exchange(move._queryMode, false))
-    // {
-    // }
-
-    AtModeArgs(const AtModeArgs &args) : _output(args._output) {
-        _command = args._command;
-        _args = args._args;
-        _queryMode = args._queryMode;
-    }
-
-    Stream &getStream() {
-        return _output;
-    }
-
-    bool isQueryMode() const {
-        return _queryMode;
-    }
-
-    ArgumentVector &getArgs() {
-        return _args;
-    }
-
-    const ArgumentVector &getArgs() const {
-        return _args;
-    }
-
-    ArgumentPtr operator[](int index) const {
-        return _args.at(index);
-    }
-
-    inline uint16_t size() const {
-        return _args.size();
-    }
-
-    inline bool empty() const {
-        return _args.empty();
-    }
-
-    inline ArgumentVectorIterator begin() {
-        return _args.begin();
-    }
-
-    inline ArgumentVectorIterator end() {
-        return _args.end();
-    }
-
-    inline bool exists(uint16_t num) const {
-        return num < _args.size();
-    }
+    // returns true if argument does not exists
+    bool isInvalidArg(uint16_t num) const;
 
     ArgumentPtr get(uint16_t num) const;
-    long toInt(uint16_t num, long defaultValue = 0) const;
 
-    template<typename T>
-    T toIntT(uint16_t num, T defaultValue = 0) const {
-        return static_cast<T>(toInt(num, static_cast<long>(defaultValue)));
+    // toInt() base is 10 by default
+    // type is determined by defaultValue
+    int32_t toInt(uint16_t num, int32_t defaultValue, uint8_t base = 10) const;
+    uint32_t toInt(uint16_t num, uint32_t defaultValue, uint8_t base = 10) const;
+    int64_t toInt(uint16_t num, int64_t defaultValue, uint8_t base = 10) const;
+    uint64_t toInt(uint16_t num, uint64_t defaultValue, uint8_t base = 10) const;
+
+    int32_t toInt(uint16_t num) const {
+        return toInt(num, 0);
     }
 
-    long toNumber(uint16_t num, long defaultValue = 0, uint8_t base = 0) const; // auto detect octal, hex and decimal
-    long long toLongLong(uint16_t num, long long defaultValue = 0) const;
-
-    template<class T>
-    T toIntMinMax(uint16_t num, T min, T max, T defaultValue) const {
-        if (!exists(num)) {
-            return defaultValue;
-        }
-        return std::max(min, std::min(max, (T)toLongLong(num)));
+    // toInt with type
+    inline int8_t toInt8(uint16_t num, int8_t defaultValue = 0, uint8_t base = 10) const {
+        return toInt(num, static_cast<int32_t>(defaultValue), base);
     }
-
-    template<class T>
-    T toIntMinMax(uint16_t num, T min, T max) const {
-        return toIntMinMax(num, min, max, min);
+    inline uint8_t toUint8(uint16_t num, uint8_t defaultValue = 0, uint8_t base = 10) const {
+        return toInt(num, static_cast<uint32_t>(defaultValue), base);
+    }
+    inline int8_t toInt16(uint16_t num, int16_t defaultValue = 0, uint8_t base = 10) const {
+        return toInt(num, static_cast<int32_t>(defaultValue), base);
+    }
+    inline uint16_t toUint16(uint16_t num, uint16_t defaultValue = 0, uint8_t base = 10) const {
+        return toInt(num, static_cast<uint32_t>(defaultValue), base);
+    }
+    inline int32_t toInt32(uint16_t num, int32_t defaultValue = 0, uint8_t base = 10) const {
+        return toInt(num, defaultValue, base);
+    }
+    inline uint32_t toUint32(uint16_t num, uint32_t defaultValue = 0, uint8_t base = 10) const {
+        return toInt(num, defaultValue, base);
+    }
+    inline int64_t toInt64(uint16_t num, int64_t defaultValue = 0, uint8_t base = 10) const {
+        return toInt(num, defaultValue, base);
+    }
+    inline uint64_t toUint64(uint16_t num, uint64_t defaultValue = 0, uint8_t base = 10) const {
+        return toInt(num, defaultValue, base);
     }
 
     double toDouble(uint16_t num, double defaultValue = 0) const;
-    inline float toFloat(uint16_t num, float defaultValue = 0) const {
-        return toDouble(num, defaultValue);
+    float toFloat(uint16_t num, float defaultValue = 0) const;
+
+    // template<typename _Ta>
+    // _Ta toIntT(uint16_t num, _Ta defaultValue = 0, uint8_t base = 10) const {
+    //     return toInt(num, defaultValue, base);
+    // }
+
+    // toNumber() base is auto detect by default
+    template<typename _Ta>
+    _Ta toNumber(uint16_t num, _Ta defaultValue = 0, uint8_t base = 0) const {
+        return toInt(num, defaultValue, base);
     }
 
-    template<class T>
-    T toFloatMinMax(uint16_t num, T min, T max, T defaultValue) const {
-        if (!exists(num)) {
+    template<class _Ta>
+    _Ta toIntMinMax(uint16_t num, _Ta min, _Ta max, _Ta defaultValue) const {
+        if (isInvalidArg(num)) {
             return defaultValue;
         }
-        return std::max(min, std::min(max, (T)toDouble(num)));
+        return std::clamp<_Ta>(toInt(num, static_cast<_Ta>(0)), min, max);
     }
 
-    template<class T>
-    T toFloatMinMax(uint16_t num, T min, T max) const {
+    template<class _Ta>
+    _Ta toIntMinMax(uint16_t num, _Ta min, _Ta max) const {
+        return toIntMinMax(num, min, max, min);
+    }
+
+    template<class _Ta>
+    _Ta toFloatMinMax(uint16_t num, _Ta min, _Ta max, _Ta defaultValue) const {
+        if (isInvalidArg(num)) {
+            return defaultValue;
+        }
+        // return std::max(min, std::min(max, static_cast<_Ta>(toDouble(num))));
+        return std::clamp<_Ta>(toDouble(num, defaultValue), min, max);
+    }
+
+    template<class _Ta>
+    _Ta toFloatMinMax(uint16_t num, _Ta min, _Ta max) const {
         return toFloatMinMax(num, min, max, min);
     }
 
@@ -325,165 +311,74 @@ public:
 
     int toChar(uint16_t num, int defaultValue = -1) const;
 
-    int toLowerChar(uint16_t num, int defaultValue = -1) const {
-        return tolower(toChar(num, defaultValue));
-    }
+    int toLowerChar(uint16_t num, int defaultValue = -1) const;
 
-    inline String toString(uint16_t num, const String &defaultStr = String()) const {
-        auto str = get(num);
-        if (!str) {
-            return defaultStr;
-        }
-        return str;
-    }
+    String toString(uint16_t num, const String &defaultStr = String()) const;
 
     bool has(const __FlashStringHelper *str, bool ignoreCase = true) const;
 
-    bool equalsIgnoreCase(uint16_t num, const __FlashStringHelper *str) const {
-        ArgumentPtr arg;
-        if (nullptr == (arg = get(num))) {
-            return false;
-        }
-        return strcasecmp_P(arg, RFPSTR(str)) == 0;
-    }
-
-    bool equalsIgnoreCase(uint16_t num, const String &str) const {
-        ArgumentPtr arg;
-        if (nullptr == (arg = get(num))) {
-            return false;
-        }
-        return str.equalsIgnoreCase(arg);
-    }
-
-    bool equals(uint16_t num, const __FlashStringHelper *str) const {
-        ArgumentPtr arg;
-        if (nullptr == (arg = get(num))) {
-            return false;
-        }
-        return strcmp_P(arg, RFPSTR(str)) == 0;
-    }
-
-    bool equals(uint16_t num, const String &str) const {
-        ArgumentPtr arg;
-        if (nullptr == (arg = get(num))) {
-            return false;
-        }
-        return str.equals(arg);
-    }
-
-    bool equals(uint16_t num, char ch) const {
-        ArgumentPtr arg;
-        if (nullptr == (arg = get(num))) {
-            return false;
-        }
-        return arg[0] == ch && arg[1] == 0;
-    }
-
-    bool startsWith(uint16_t num, const __FlashStringHelper *str) const {
-        ArgumentPtr arg;
-        if (nullptr == (arg = get(num))) {
-            return false;
-        }
-        return strncmp_P(arg, RFPSTR(str), strlen_P(RFPSTR(str))) == 0;
-    }
-
-    bool isAnyMatchIgnoreCase(uint16_t num, const __FlashStringHelper *strings) const {
-        ArgumentPtr arg;
-        if (nullptr == (arg = get(num))) {
-            return false;
-        }
-        return _isAnyMatchIgnoreCase(arg, strings);
-    }
+    bool equalsIgnoreCase(uint16_t num, const __FlashStringHelper *str) const;
+    bool equalsIgnoreCase(uint16_t num, const String &str) const;
+    bool equals(uint16_t num, const __FlashStringHelper *str) const;
+    bool equals(uint16_t num, const String &str) const;
+    bool equals(uint16_t num, char ch) const;
+    bool startsWith(uint16_t num, const __FlashStringHelper *str) const;
+    bool isAnyMatchIgnoreCase(uint16_t num, const __FlashStringHelper *strings) const;
 
     // return true for "", "*", "any", "all"
-    bool isAny(uint16_t num) const {
-        ArgumentPtr arg;
-        if (nullptr == (arg = get(num))) {
-            return false;
-        }
-        if (_isAnyMatchIgnoreCase(arg, F("|*|*.*|any|all"))) {
-            return true;
-        }
-        return false;
-
-    }
+    bool isAny(uint16_t num) const;
 
     // return true for "yes", "Y", "true", "start", "on", "enable", "en", "open" and any integer != 0
     // missing argument returns bDefault
-    bool isTrue(uint16_t num, bool bDefault = false) const {
-        ArgumentPtr arg;
-        if (nullptr == (arg = get(num)) || *arg == 0) {
-            return bDefault;
-        }
-        int result = 0;
-        if ((_isValidInt(arg, result) && result != 0) || (_isAnyMatchIgnoreCase(arg, F("start|yes|y|true|on|enable|en|open")))) {
-            return true;
-        }
-        return false;
-    }
-
+    bool isTrue(uint16_t num, bool bDefault = false) const;
     // return true for "", "stop", "no", "N", "false", "off", "disable", "dis", "close", "closed" and any integer == 0
     // missing argument returns bDefault
-    bool isFalse(uint16_t num, bool bDefault = false) const {
-        ArgumentPtr arg;
-        if (nullptr == (arg = get(num))) {
-            return bDefault;
-        }
-        int result;
-        if ((_isValidInt(arg, result) && result == 0) || (_isAnyMatchIgnoreCase(arg, F("|stop|no|n|false|off|disable|dis|null|close|closed")))) {
-            return true;
-        }
-        return false;
-    }
+    bool isFalse(uint16_t num, bool bDefault = false) const;
 
 public:
-    bool requireArgs(uint16_t min, uint16_t max = ~0) const {
-        if (_queryMode && min) {
-            at_mode_print_invalid_arguments(_output, 0, min, max);
-            return false;
-        }
-        if (_args.size() < min || _args.size() > max) {
-            at_mode_print_invalid_arguments(_output, _args.size(), min, max);
-            return false;
-        }
-        return true;
-    }
+    bool requireArgs(uint16_t min, uint16_t max = ~0) const;
 
 public:
-    inline void setCommand(const char *command) {
-        _command = command;
-        _command.toUpperCase();
-    }
-    inline String &getCommand() {
-        return _command;
-    }
-    inline const String &getCommand() const {
-        return _command;
-    }
-
+    void setCommand(const char *command);
+    String &getCommand();
+    const String &getCommand() const;
     bool isCommand(const ATModeCommandHelp_t *help) const;
+    bool isCommand(const __FlashStringHelper *command) const;
 
-    inline bool isCommand(const __FlashStringHelper *command) const {
-        return _command.equalsIgnoreCase(command);
+    // deprecated
+    void printf_P(PGM_P format, ...) const;
+
+    // print(const __FlashStringHelper *fmt, ...) printf_P(fmt, ...) + "\n"
+    template<typename _Ta, typename ... _Args>
+    void print(_Ta arg, _Args &&...args) const {
+        _printfLn((const __FlashStringHelper *)arg, std::forward<_Args>(args)...);
     }
 
-    void printf_P(PGM_P format, ...);
-    void print(const char *str);
-    void print(const __FlashStringHelper *str);
-    void print(const String &str) {
-        print(str.c_str());
+    // print(str) str + "\n"
+    template<typename _Ta>
+    void print(_Ta arg) const {
+        _println(arg);
     }
-    void print();
-    void ok();
-    void help();
+
+    // "+CMD: ""
+    void print() const;
+    // "OK - SAFE MODE"
+    void ok() const;
+    // "try +HELP=COMMAND\n"
+    void help() const;
     // makeList = '|' converts expected from "a|b|c" to "[a, b, c]"
-    void invalidArgument(uint16_t num, const __FlashStringHelper *expected = nullptr, char makeList = 0);
+    void invalidArgument(uint16_t num, const __FlashStringHelper *expected = nullptr, char makeList = 0) const;
 
 private:
-    template <class T>
-    bool _isValidInt(const char *str, T &result) const {
+    void _printfLn(const __FlashStringHelper *, ...) const;
+    void _println(const __FlashStringHelper *str) const;
+    void _println(const char *str) const;
+    void _println(const String &str) const;
+
+    template <class _Ta>
+    bool _isValidInt(const char *str, _Ta &result) const {
         char *endPtr = nullptr;
-        auto value = (T)strtoll(str, &endPtr, 10);
+        auto value = static_cast<_Ta>(strtoll(str, &endPtr, 10));
         // no end pointer?
         if (!endPtr) {
             return false;
@@ -501,11 +396,7 @@ private:
         return false;
     }
 
-    bool _isAnyMatchIgnoreCase(String str, const __FlashStringHelper *strings) const {
-        str.trim();
-        str.toLowerCase();
-        return (stringlist_find_P_P(RFPSTR(strings), str.c_str(), '|') != -1);
-    }
+    bool _isAnyMatchIgnoreCase(String str, const __FlashStringHelper *strings) const;
 
 private:
     Stream &_output;
@@ -513,5 +404,7 @@ private:
     ArgumentVector _args;
     bool _queryMode;
 };
+
+#include "AtModeArgs.hpp"
 
 #endif

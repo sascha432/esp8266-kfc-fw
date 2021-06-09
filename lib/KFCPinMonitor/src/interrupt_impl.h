@@ -4,10 +4,11 @@
 
 #pragma once
 
-#include "pin_monitor.h"
-#include "interrupt_event.h"
+#include <Arduino_compat.h>
 #include <stl_ext/array.h>
 #include <stl_ext/type_traits.h>
+#include <interrupts.h>
+#include "interrupt_event.h"
 
 namespace PinMonitor {
 
@@ -59,11 +60,3 @@ namespace PinMonitor {
 #endif
 
 }
-
-#ifndef PIN_MONITOR_ETS_GPIO_INTR_DISABLE
-#define PIN_MONITOR_ETS_GPIO_INTR_DISABLE()         ETS_GPIO_INTR_DISABLE();
-#endif
-
-#ifndef PIN_MONITOR_ETS_GPIO_INTR_ENABLE
-#define PIN_MONITOR_ETS_GPIO_INTR_ENABLE()          ETS_GPIO_INTR_ENABLE();
-#endif

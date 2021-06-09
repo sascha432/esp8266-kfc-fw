@@ -2,10 +2,9 @@
   Author: sascha_lammers@gmx.de
 */
 
+#include <Arduino_compat.h>
 #include <MicrosTimer.h>
 #include "pin_monitor.h"
-#include "debounce.h"
-#include "monitor.h"
 
 #undef DEBUG_PIN_MONITOR_DEBOUNCE
 #define DEBUG_PIN_MONITOR_DEBOUNCE 0

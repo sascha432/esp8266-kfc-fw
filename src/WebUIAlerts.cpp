@@ -85,7 +85,7 @@ AbstractStorage *AbstractStorage::_storage = &_fileStorage;
 
 struct Json {
     static void printHeader(Print &output, time_t time, IdType alertId) {
-        output.printf_P(PSTR("{\"created\":%lu,\"alert_id\":%u}"), (unsigned long)time, alertId);
+        output.printf_P(PSTR("{\"created\":" TIME_T_FMT ",\"alert_id\":%u}"), time, alertId);
     }
 
     template<typename _Ta>
@@ -171,8 +171,8 @@ void MQTTStorage::dismissAlert(IdType id)
     __DBG_printf("dismissAlerts %d", id);
     bool success = false;
     // generate unique id
-    PrintString idStr(F("%08x%03%05x"), time(nullptr), micros(), millis());
-    idStr.printf_P(PSTR("%03x"), micros());
+    PrintString idStr(F("%08lx%03lx%05lx"), (unsigned long)time(nullptr), micros(), millis());
+    idStr.printf_P(PSTR("%03lx"), micros());
     String topic = _getRemoveTopic(idStr.c_str());
     if (_canSend()) {
         MQTTClient::getClient()->publish(topic, true, String(id), 2);
@@ -301,7 +301,7 @@ IdType FileStorage::addAlert(const String &message, Type type, ExpiresType expir
     __LDBG_printf("add=%s type=%u file=%u pos=%u size=%u", message.c_str(), type, !!file, file.position(), file.size());
     if (file) {
         auto now = time(nullptr);
-        if (!IS_TIME_VALID(now)) {
+        if (!isTimeValid(now)) {
             now = 0;
         }
         if (file.size()) {
@@ -346,13 +346,13 @@ IdType FileStorage::addAlert(const String &message, Type type, ExpiresType expir
             }
             break;
             case AddAlertActionType::REMOVE: {
-                file.printf_P(PSTR("{\"i\":%u,\"d\":%u"), ++_alertId, message.toInt());
+                file.printf_P(PSTR("{\"i\":%u,\"d\":%lu"), ++_alertId, message.toInt());
             }
             break;
             case AddAlertActionType::ADD: {
                 file.printf_P(PSTR("{\"i\":%u,"), ++_alertId);
                 if (now) {
-                    file.printf_P(PSTR("\"ts\":%lu,"), (unsigned long)now);
+                    file.printf_P(PSTR("\"ts\":" TIME_T_FMT ","), now);
                 }
                 file.printf_P(PSTR("\"t\":\"%s\",\"e\":%u"), getTypeStr(type), expires);
                 if (message.length()) {
@@ -376,8 +376,8 @@ IdType FileStorage::addAlert(const String &message, Type type, ExpiresType expir
 #endif
         WebUISocket::broadcast(nullptr, reinterpret_cast<uint8_t *>(const_cast<__FlashStringHelper *>(wwebUIAlertMsg)), strlen_P(reinterpret_cast<PGM_P>(wwebUIAlertMsg)));
     }
-    //  __LDBG_printf("id=%u,msg=%s,type=%s,time=%lu,exp=%u,dismissable=%d,persistent=%d",
-    //     alert.getId(), alert.getMessage().c_str(), alert.getTypeStr(), alert.getTime(), alert.getExpires(), alert.isDismissable(), alert.isPersistent()
+    //  __LDBG_printf("id=%u,msg=%s,type=%s,time=%lld,exp=%u,dismissable=%d,persistent=%d",
+    //     alert.getId(), alert.getMessage().c_str(), alert.getTypeStr(), static_cast<int64_t>(alert.getTime()), alert.getExpires(), alert.isDismissable(), alert.isPersistent()
     // );
     return _alertId;
 }
@@ -493,7 +493,7 @@ void FileStorage::_rewriteAlertStorage(File &file, RewriteType rewriteType)
 
     if (file && file.seek(0, SeekMode::SeekSet)) {
         auto now = time(nullptr);
-        if (!IS_TIME_VALID(now)) {
+        if (!isTimeValid(now)) {
             now = 0;
         }
 

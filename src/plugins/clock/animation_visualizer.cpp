@@ -91,7 +91,7 @@ void VisualizerAnimation::_BrightnessVisualizer()
     int currentVolume = 0;
     int avgVolume = 0;
     double cd = 0;
-    CHSV toSend;
+    // CHSV toSend;
 
     if (!*_incomingPacket) {
         return;

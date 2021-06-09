@@ -281,40 +281,49 @@ bool Sensor_INA219::atModeHandler(AtModeArgs &args)
 {
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SENSORINA219))) {
 
-        static Event::Timer timer;
-        timer.remove();
+        static Event::Timer *_timer;
+        if (_timer) {
+            delete _timer;
+            _timer = nullptr;
+            args.print(F("Timer stopped"));
+        } else {
+            _timer = new Event::Timer();
+            Event::Timer &timer = *_timer;
 
-        auto &serial = args.getStream();
-        auto timerPrintFunc = [this, &serial](Event::CallbackTimerPtr timer) {
-            return std::count_if(SensorPlugin::begin(), SensorPlugin::end(), [this, &serial](SensorPtr sensorPtr) {
-                if (sensorPtr->getType() == SensorType::INA219) {
-                    auto &sensor = *reinterpret_cast<Sensor_INA219 *>(sensorPtr);
-                    auto &ina219 = sensor._ina219;
-                    serial.printf_P(PSTR("+SENSORINA219: raw: U=%d, Vshunt=%d, I=%d, current: P=%d: %.3fV, %.1fmA, %.1fmW, average: %.3fV, %.1fmA, %.1fmW\n"),
-                        ina219.getBusVoltage_raw(),
-                        ina219.getShuntVoltage_raw(),
-                        ina219.getCurrent_raw(),
-                        ina219.getPower_raw(),
-                        ina219.getBusVoltage_V(),
-                        ina219.getCurrent_mA(),
-                        ina219.getBusVoltage_V() * ina219.getCurrent_mA(),
-                        sensor.getVoltage(),
-                        sensor.getCurrent(),
-                        sensor.getPower()
-                    );
-                    return true;
+            auto &serial = args.getStream();
+            auto timerPrintFunc = [this, &serial](Event::CallbackTimerPtr timer) {
+                return std::count_if(SensorPlugin::begin(), SensorPlugin::end(), [this, &serial](SensorPtr sensorPtr) {
+                    if (sensorPtr->getType() == SensorType::INA219) {
+                        auto &sensor = *reinterpret_cast<Sensor_INA219 *>(sensorPtr);
+                        auto &ina219 = sensor._ina219;
+                        serial.printf_P(PSTR("+SENSORINA219: raw: U=%d, Vshunt=%d, I=%d, current: P=%d: %.3fV, %.1fmA, %.1fmW, average: %.3fV, %.1fmA, %.1fmW\n"),
+                            ina219.getBusVoltage_raw(),
+                            ina219.getShuntVoltage_raw(),
+                            ina219.getCurrent_raw(),
+                            ina219.getPower_raw(),
+                            ina219.getBusVoltage_V(),
+                            ina219.getCurrent_mA(),
+                            ina219.getBusVoltage_V() * ina219.getCurrent_mA(),
+                            sensor.getVoltage(),
+                            sensor.getCurrent(),
+                            sensor.getPower()
+                        );
+                        return true;
+                    }
+                    return false;
+                });
+            };
+
+            if (!timerPrintFunc(*timer)) {
+                args.print(F("No sensor found"));
+                delete _timer;
+                _timer = nullptr;
+            }
+            else {
+                auto repeat = args.toMillis(0, 500, ~0, 0, String('s'));
+                if (repeat) {
+                    _Timer(timer).add(repeat, true, timerPrintFunc);
                 }
-                return false;
-            });
-        };
-
-        if (!timerPrintFunc(*timer)) {
-            args.printf_P(PSTR("No sensor found"));
-        }
-        else {
-            auto repeat = args.toMillis(AtModeArgs::FIRST, 500, ~0, 0, String('s'));
-            if (repeat) {
-                _Timer(timer).add(repeat, true, timerPrintFunc);
             }
         }
         return true;

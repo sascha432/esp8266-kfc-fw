@@ -6,8 +6,6 @@
 
 #include <Arduino_compat.h>
 #include <EventScheduler.h>
-#include "pin_monitor.h"
-#include "interrupt_event.h"
 
 // Monitors attached pins and sends state after debouncing
 
@@ -22,9 +20,7 @@ namespace PinMonitor {
         void start();
         virtual void run();
 
-        uint16_t getStates() const {
-            return _states;
-        }
+        uint16_t getStates() const;
 
     private:
         uint16_t _states;
@@ -32,6 +28,11 @@ namespace PinMonitor {
 
     inline PollingTimer::PollingTimer() : _states(0)
     {
+    }
+
+    inline uint16_t PollingTimer::getStates() const
+    {
+        return _states;
     }
 
 #endif
@@ -158,9 +159,10 @@ namespace PinMonitor {
         return _pins;
     }
 
-}
+    extern Monitor pinMonitor;
 
-extern PinMonitor::Monitor pinMonitor;
-#if PIN_MONITOR_USE_POLLING
-extern PinMonitor::PollingTimer pollingTimer;
-#endif
+    #if PIN_MONITOR_USE_POLLING
+        extern PollingTimer pollingTimer;
+    #endif
+
+}

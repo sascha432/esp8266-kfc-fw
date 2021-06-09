@@ -28,8 +28,8 @@
             typedef struct __attribute__packed__ BatteryConfig_t {
                 using Type = BatteryConfig_t;
 
-                float calibration;
-                float offset;
+                CREATE_FLOAT_FIELD(calibration, -100, 100, IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_CALIBRATION);
+                CREATE_FLOAT_FIELD(offset, -100, 100, 0);
                 CREATE_UINT8_BITFIELD_MIN_MAX(precision, 4, 0, 7, 2, 1);
 
 #if IOT_SENSOR_HAVE_BATTERY_RECORDER

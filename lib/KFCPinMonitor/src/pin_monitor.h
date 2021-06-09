@@ -154,8 +154,6 @@
 #define IF_DEBUG_PIN_MONITOR()
 #endif
 
-#include "debounce.h"
-
 namespace PinMonitor {
 
     // all frequencies above (1000 / kDebounceTimeDefault) Hz will be filtered
@@ -202,20 +200,13 @@ namespace PinMonitor {
         LAST = RIGHT
     };
 
-    inline static const __FlashStringHelper *getHardwarePinTypeStr(HardwarePinType type) {
-        switch(type) {
-            case HardwarePinType::SIMPLE:
-                return F("Simple Pin");
-            case HardwarePinType::DEBOUNCE:
-                return F("Debounced Button");
-            case HardwarePinType::ROTARY:
-                return F("Rotary Encoder");
-            case HardwarePinType::BASE:
-            case HardwarePinType::NONE:
-                break;
-        }
-        return F("<Unknown>");
-    }
+    const __FlashStringHelper *getHardwarePinTypeStr(HardwarePinType type);
 
 }
 
+#include "interrupt_impl.h"
+#include "debounce.h"
+#include "pin.h"
+#include "push_button.h"
+#include "monitor.h"
+#include "rotary_encoder.h"

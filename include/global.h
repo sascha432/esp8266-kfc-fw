@@ -307,6 +307,7 @@
 #define IOT_SWITCH                                          0
 #endif
 
+// 0 for internal RTC, 1 for external
 #ifndef RTC_SUPPORT
 #define RTC_SUPPORT                                         0
 #endif

@@ -20,6 +20,7 @@
 #define WSTRING_HAVE_SETLEN                 1
 #endif
 #endif
+
 class PrintString : public String, public Print {
 public:
     using Print::print;
@@ -235,19 +236,19 @@ size_t PrintString::strftime_P(PGM_P format, struct tm *tm)
 }
 
 inline __attribute__((__always_inline__))
-size_t PrintString::strftime_P(PGM_P format, time_t now) 
+size_t PrintString::strftime_P(PGM_P format, time_t now)
 {
     return strftime_P(format, localtime(&now));
 }
 
 inline __attribute__((__always_inline__))
-size_t PrintString::strftime(const char *format, time_t now) 
+size_t PrintString::strftime(const char *format, time_t now)
 {
     return strftime(format, localtime(&now));
 }
 
 inline __attribute__((__always_inline__))
-size_t PrintString::strftime(const __FlashStringHelper *format, time_t now) 
+size_t PrintString::strftime(const __FlashStringHelper *format, time_t now)
 {
     return strftime(format, localtime(&now));
 }

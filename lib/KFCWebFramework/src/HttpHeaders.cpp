@@ -66,17 +66,14 @@ AsyncWebServerResponse *HttpLocationHeader::redir(AsyncWebServerRequest *request
 HttpDateHeader::HttpDateHeader(const String &name, time_t expires) :
     HttpSimpleHeader(name)
 {
-#if NTP_CLIENT || RTC_SUPPORT
-    if (expires < static_cast<time_t>(MaxAgeType::ONE_YEAR)) {
-        if (time(nullptr) == 0) {
-            expires = 0x7ffffff0;
-        } else {
+    // treat everything less than 10 years as relative
+    if (expires < static_cast<time_t>(MaxAgeType::TEN_YEARS) && isTimeValid()) {
             expires += time(nullptr);
-        }
     }
-#else
-    expires = 0x7ffffff0;
-#endif
+    else {
+        // if the time is invald, use an arbitrary time in the future
+        expires = TIME_T_MAX;
+    }
     HttpSimpleHeader::setHeader(std::move(HttpHeaders::getRFC7231Date(&expires)));
 }
 

@@ -218,11 +218,10 @@ namespace DeepSleep
 
 
     extern "C" uint64_t _realTimeOffset;
+    extern "C" PinState deepSleepPinState;
+    extern "C" DeepSleepParam deepSleepParams;
 
 };
-
-extern "C" DeepSleep::PinState deepSleepPinState;
-extern "C" DeepSleep::DeepSleepParam deepSleepParams;
 
 #endif
 

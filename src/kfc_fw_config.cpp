@@ -263,11 +263,11 @@ void KFCFWConfiguration::_onWiFiConnectCb(const WiFiEventStationModeConnected &e
 
 void KFCFWConfiguration::_onWiFiDisconnectCb(const WiFiEventStationModeDisconnected &event)
 {
-    __LDBG_printf("reason=%d error=%s wifi_connected=%u wifi_up=%u is_connected=%u ip=%s", event.reason, WiFi_disconnect_reason(event.reason).c_str(), _wifiConnected, _wifiUp, WiFi.isConnected(), WiFi.localIP().toString().c_str());
+    __LDBG_printf("reason=%d error=%s wifi_connected=%u wifi_up=%u is_connected=%u ip=%s", event.reason, WiFi_disconnect_reason(event.reason), _wifiConnected, _wifiUp, WiFi.isConnected(), WiFi.localIP().toString().c_str());
     if (_wifiConnected) {
         BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FAST);
 
-        Logger_notice(F("WiFi disconnected, SSID %s, reason %s, had %sIP address"), event.ssid.c_str(), WiFi_disconnect_reason(event.reason).c_str(), _wifiUp ? emptyString.c_str() : PSTR("no "));
+        Logger_notice(F("WiFi disconnected, SSID %s, reason %s, had %sIP address"), event.ssid.c_str(), WiFi_disconnect_reason(event.reason), _wifiUp ? emptyString.c_str() : PSTR("no "));
         _wifiConnected = 0;
         _wifiUp = 0;
         LoopFunctions::callOnce([event]() {
@@ -977,11 +977,11 @@ void KFCFWConfiguration::wifiQuickConnect()
                 channel,
                 mac2String(bssidPtr).c_str(),
                 quickConnect.use_static_ip ? 1 : 0,
-                inet_ntoString(quickConnect.local_ip).c_str(),
-                inet_ntoString(quickConnect.gateway).c_str(),
-                inet_ntoString(quickConnect.subnet).c_str(),
-                inet_ntoString(quickConnect.dns1).c_str(),
-                inet_ntoString(quickConnect.dns2).c_str()
+                __S(IPAddress(quickConnect.local_ip)),
+                inet_nto_cstr(quickConnect.gateway),
+                inet_nto_cstr(quickConnect.subnet),
+                inet_nto_cstr(quickConnect.dns1),
+                inet_nto_cstr(quickConnect.dns2)
             );
 
         }
@@ -1049,6 +1049,7 @@ void KFCFWConfiguration::resetDevice(bool safeMode)
 #if ENABLE_DEEP_SLEEP
     DeepSleep::DeepSleepParam::reset();
 #endif
+    RTCMemoryManager::storeTime();
     ESP.restart();
 }
 
@@ -1424,19 +1425,58 @@ bool KFCFWConfiguration::setRTC(uint32_t unixtime)
     initTwoWire();
     if (rtc.begin()) {
         rtc.adjust(DateTime(unixtime));
+        return true;
     }
 #endif
     return false;
 }
 
+void KFCFWConfiguration::setupRTC() {
+#if RTC_SUPPORT
+    // support for external RTCs
+    initTwoWire();
+    auto unixtime = config.getRTC();
+    if (unixtime != 0) {
+        struct timeval tv = { static_cast<time_t>(unixtime), 0 };
+        settimeofday(&tv, nullptr);
+        int16_t offset = 0;
+        auto rtc = RTCMemoryManager::readTime();
+        if (rtc.status == RTCMemoryManager::SyncStatus::YES) {
+            offset = rtc.timezoneOffset;
+        }
+        RTCMemoryManager::setTime(unixtime, offset, RTCMemoryManager::SyncStatus::YES);
+    }
+    else {
+        RTCMemoryManager::setSyncStatus(false);
+    }
+#else
+    // support for the internal RTC
+    // NTP should be used to synchronize the RTC after each restart, if possible after deep sleep as well
+    // issues:
+    // - inaccurate when using deep sleep
+    // - no battery backup
+    RTCMemoryManager::setSyncStatus(false);
+#endif
+}
+
 bool KFCFWConfiguration::rtcLostPower() {
 #if RTC_SUPPORT
-    initTwoWire();
-    if (rtc.begin()) {
-        return rtc.lostPower();
+    auto status = RTCMemoryManager::getSyncStatus();
+    if (status == RTCMemoryManager::SyncStatus::NO) {
+        return false;
     }
+    initTwoWire();
+    uint32_t unixtime = 0;
+    if (rtc.begin()) {
+        auto unixtime = rtc.getRTC();
+    }
+    if (unixtime == 0) {
+        RTCMemoryManager::setSyncStatus(false);
+    }
+    return unixtime != 0;
+#else
+    return RTCMemoryManager::getSyncStatus() != RTCMemoryManager::SyncStatus::YES;
 #endif
-    return true;
 }
 
 uint32_t KFCFWConfiguration::getRTC()
@@ -1444,8 +1484,8 @@ uint32_t KFCFWConfiguration::getRTC()
 #if RTC_SUPPORT
     initTwoWire();
     if (rtc.begin()) {
-        auto unixtime = rtc.now().unixtime();
-        __LDBG_printf("time=%u", unixtime);
+        unsigned long unixtime = rtc.now().unixtime();
+        __LDBG_printf("time=%lu", unixtime);
         if (rtc.lostPower()) {
             __LDBG_printf("time=0, lostPower=true");
             return 0;
@@ -1473,28 +1513,19 @@ void KFCFWConfiguration::printRTCStatus(Print &output, bool plain)
 #if RTC_SUPPORT
     initTwoWire();
     if (rtc.begin()) {
-        auto now = rtc.now();
-        if (plain) {
-            output.print(F("timestamp="));
-            output.print(now.timestamp());
-#if RTC_DEVICE_DS3231
-            output.printf_P(PSTR(" temperature=%.3f lost_power=%u"), rtc.getTemperature(), rtc.lostPower());
+        String now = rtc.now.timestamp();
+#else
+    {
+        String now = PrintString(FSPGM(strftime_date_time_zone), time(nullptr));
 #endif
-        }
-        else {
-            output.print(F("Timestamp: "));
-            output.print(now.timestamp());
-#if RTC_DEVICE_DS3231
-            output.printf_P(PSTR(", temperature: %.2f" "\xb0" "C, lost power: %s"), rtc.getTemperature(), rtc.lostPower() ? SPGM(yes, "yes") : SPGM(no, "no"));
-#endif
-        }
-    }
+        output.print(F("Timestamp: "));
+        output.print(now);
+        output.printf_P(PSTR(", temperature: %.2f%s, lost power: %s"), getRTCTemperature(), plain ? PSTR("C") : SPGM(UTF8_degreeC), rtcLostPower() ? SPGM(yes) : SPGM(no));
+#if RTC_SUPPORT
     else {
         output.print(F("Failed to initialize RTC"));
-    }
-#else
-    output.print(F("RTC not supported"));
 #endif
+    }
 }
 
 static KFCConfigurationPlugin plugin;
@@ -1531,33 +1562,6 @@ void KFCConfigurationPlugin::setup(SetupModeType mode, const PluginComponents::D
 {
     __DBG_printf("safe mode %d, wake up %d", (mode == SetupModeType::SAFE_MODE), resetDetector.hasWakeUpDetected());
     config.setup();
-
-#if RTC_SUPPORT
-    auto rtc = config.getRTC();
-    if (rtc != 0) {
-        struct timeval tv = { static_cast<time_t>(rtc), 0 };
-        settimeofday(&tv, nullptr);
-
-    }
-#elif NTP_STORE_STATUS
-    NtpStatus ntp;
-    uint32_t readTime;
-    if ((readTime = RTCMemoryManager::readTime()) != 0) {
-        __DBG_printf("restord system time=%u from RTC memory readTime=%u @ %.3fs", (uint32_t)time(nullptr), readTime, micros() / 1000000.0);
-    }
-    if (RTCMemoryManager::read(RTCMemoryManager::RTCMemoryId::NTP, &ntp, sizeof(ntp)) && ntp) {
-        // update from NtpStatus only if readTime(failed) or _time is greater than the current time
-        if (readTime == 0 || ntp._time > time(nullptr)) {
-            struct timeval tv = { static_cast<time_t>(ntp._time), static_cast<suseconds_t>(micros()) };
-            settimeofday(&tv, nullptr);
-            __DBG_printf("restoring system time=%u from RTC memory=%u @ %.3fs", (uint32_t)time(nullptr), ntp._time, micros() / 1000000.0);
-        }
-    }
-#else
-    if (RTCMemoryManager::readTime() != 0) {
-        __DBG_printf("restored system time=%u from RTC memory readTime=%u @ %.3fs", (uint32_t)time(nullptr), RTCMemoryManager::readTime(false), micros() / 1000000.0);
-    }
-#endif
 
 #if NTP_LOG_TIME_UPDATE
         char buf[32];

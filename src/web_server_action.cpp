@@ -60,7 +60,7 @@ namespace WebServer {
 
         Session &Handler::addSession()
         {
-            time_t expires = time(nullptr) + Session::kMaxLifetime;
+            auto expires = time(nullptr) + Session::kMaxLifetime;
             noInterrupts();
             // find unused id
             for(;;) {

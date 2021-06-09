@@ -26,7 +26,7 @@ bool is_safe_ptr(const uint8_t *ptr) {
     return true;
 #else
     uintptr_t addr = (uintptr_t)ptr;
-    return (addr >= 0x3FFE8000 && addr <=0x3FFFC000) || (addr >= 0x40200000 && addr <= 0x40300000);
+    return (addr >= SECTION_HEAP_START_ADDRESS && addr <= SECTION_HEAP_END_ADDRESS) || (addr >= SECTION_FLASH_START_ADDRESS && addr <= SECTION_FLASH_END_ADDRESS);
 #endif
 }
 

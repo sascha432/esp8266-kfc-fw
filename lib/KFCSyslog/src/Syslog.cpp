@@ -85,7 +85,7 @@ void Syslog::_addTimestamp(PrintString &buffer, uint32_t ms, PGM_P format) const
 	time_t now = time(nullptr);
     uint32_t frac = millis() - ms;
 #if SEND_NILVALUE_IF_INVALID_TIMESTAMP
-	if (!IS_TIME_VALID(now)) {
+	if (!isTimeValid(now)) {
 		buffer.printF(SYSLOG_NIL_SP));
 		return;
 	}

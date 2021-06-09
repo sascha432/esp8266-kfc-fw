@@ -331,11 +331,13 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LS, "LS", "[<directory>[,<hidden=true|fals
 #if ESP8266
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LSR, "LSR", "[<directory>]", "List files and directories using FS.openDir()");
 #endif
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIFI, "WIFI", "[<reset|on|off|ap_on|ap_off>]", "Modify WiFi settings");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIFI, "WIFI", "[<reset|on|off|ap_on|ap_off|wimo>][,<wimo-mode 0=off|1=STA|2=AP|3=STA+AP>]", "Modify WiFi settings, wimo sets mode and reboots");
+
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(REM, "REM", "Ignore comment");
 #if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LED, "LED", "<slow,fast,flicker,off,solid,sos,pattern>,[,color=0xff0000|pattern=10110...][,pin]", "Set LED mode");
 #endif
+
 #if RTC_SUPPORT
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(RTC, "RTC", "[<set>]", "Set RTC time", "Display RTC time");
 #endif
@@ -380,11 +382,11 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPH, "DUMPH", "[<log|panic|clear>]", "Du
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPM, "DUMPM", "<start>,<length>", "Dump memory");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPIO, "DUMPIO", "<addr>,<end addr>", "Dump IO memory (0x6000xxxx)");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPF, "DUMPF", "<start>,<length>", "Dump flash (0x40200000)");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(FLASH, "FLASH", "<erase|read|write>,<address>,<offset=0>,<length=4096>", "Erase, read or write flash memory");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPA, "DUMPA", "<reset|mark|leak|freed>", "Memory allocation statistics");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMPFS, "DUMPFS", "Display file system information");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPEE, "DUMPEE", "[<offset>[,<length>]", "Dump EEPROM");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RTCM, "RTCM", "<list|dump|clear|set|get|quickconnect>[,<id>[,<data>]", "RTC memory access");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIMO, "WIMO", "<0=off|1=STA|2=AP|3=STA+AP>", "Set WiFi mode, store configuration and reboot");
 #if LOGGER
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LOGDBG, "LOGDBG", "<1|0>", "Enable/disable writing debug output to log://debug");
 #endif
@@ -458,11 +460,11 @@ void at_mode_help_commands()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPA), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPFS), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPEE), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(FLASH), name);
 #if DEBUG_CONFIGURATION_GETHANDLE
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPH), name);
 #endif
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(RTCM), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(WIMO), name);
 #if LOGGER
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(LOGDBG), name);
 #endif
@@ -1192,6 +1194,23 @@ static bool tokenizerCmpFuncCmdLineMode(char ch, int type)
     return false;
 }
 
+static bool _writeAndVerifyFlash(uint32_t address, uint8_t *data, size_t size, uint8_t *compare, const AtModeArgs &args)
+{
+    if (ESP.flashWrite(address, data, size) == false) {
+        args.print(F("flash write error address=%08x length=%u"), address, size);
+        return false;
+    }
+    if (ESP.flashRead(address, compare, size) == false) {
+        args.print(F("flash read error address=%08x length=%u"), address, size);
+        return false;
+    }
+    if (memcpy(data, compare, size) != 0) {
+        args.print(F("flash verify error address=%08x length=%u"), address, size);
+        return false;
+    }
+    return true;
+}
+
 void at_mode_serial_handle_event(String &commandString)
 {
     auto &output = Serial;
@@ -1282,9 +1301,9 @@ void at_mode_serial_handle_event(String &commandString)
 #if DEBUG
     if (args.isCommand(F("TT"))) { // test tokenizer
 
-        args.printf_P(PSTR("command='%s' args_num=%u query_mode=%u at_command_mode=%u"), args.getCommand().c_str(), args.size(), args.isQueryMode(), atModeCommands);
+        args.print(F("command='%s' args_num=%u query_mode=%u at_command_mode=%u"), args.getCommand().c_str(), args.size(), args.isQueryMode(), atModeCommands);
         for(uint8_t i = 0; i < args.size(); i++) {
-            args.printf_P(PSTR("arg#=%u value='%s'"), i, args[i]);
+            args.print(F("arg#=%u value='%s'"), i, args[i]);
         }
 
     }
@@ -1298,7 +1317,7 @@ void at_mode_serial_handle_event(String &commandString)
         //+dslp=15000,4
 
 
-        args.printf_P(PSTR("Entering deep sleep... time=%ums deep_sleep_max=%.0fms mode=%u"), time.count(), (ESP.deepSleepMax() / 1000.0), mode);
+        args.print(F("Entering deep sleep... time=%ums deep_sleep_max=%.0fms mode=%u"), time.count(), (ESP.deepSleepMax() / 1000.0), mode);
 
 #if ENABLE_DEEP_SLEEP
         deepSleepParams.enterDeepSleep(time, mode);
@@ -1326,58 +1345,174 @@ void at_mode_serial_handle_event(String &commandString)
 +dumpio=0x700,0x7ff
 +dumpio=0x1200,0x1300
 */
-
-        auto addr = static_cast<uint32_t>(args.toNumber(0));
-        auto toAddr = static_cast<uint32_t>(args.toNumber(1, addr));
+        auto addr = args.toNumber(0, 0U);
+        auto toAddr = args.toNumber(1, addr);
         while(addr < toAddr) {
             auto data = ESP8266_REG(addr);
             Serial.printf_P(PSTR("addr=%08x data=%08x (%u, %d)\n"), 0x60000000 + addr, data, data, data);
             addr += 4;
         }
-
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPF))) {
-
-
-        auto addr = static_cast<uint32_t>(args.toNumber(0));
-        auto toAddr = static_cast<uint32_t>(args.toNumber(1, addr));
+        auto addr = args.toNumber(0, SECTION_FLASH_START_ADDRESS);
+        auto toAddr = args.toNumber(1, addr);
+        uint8_t buf[32];
+        auto &stream = args.getStream();
         while(addr < toAddr) {
-            uint32_t data;
-            auto result = spi_flash_read(addr, &data, sizeof(data));
-            Serial.printf_P(PSTR("addr=%08x data=%08x (%u, %d) result=%u\n"), addr, data, data, data, result);
-            addr += 4;
+            uint16_t len = toAddr - addr;
+            if (len > sizeof(buf)) {
+                len = sizeof(buf);
+            }
+            auto result = ESP.flashRead(addr, buf, len);
+            stream.printf_P(PSTR("addr=%08x data="), addr);
+            if (result) {
+                DumpBinary(stream, DumpBinary::kGroupBytesDefault, DumpBinary::kPerLineDisabled).dump(buf, len, addr);
+            }
+            else {
+                stream.print(F("<read error>"));
+            }
+            stream.printf_P(PSTR(" result=%u\n"), result);
+            addr += len;
             delay(1);
+        }
+    }
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(FLASH))) {
+/*
+
++flash=r,0x405ab000,32
+
+*/
+        auto cmdStr = args.get(0);
+        if (cmdStr) {
+            int cmd = stringlist_ifind_P(F("erase,e,read,r,write,w"), cmdStr);
+            auto addr = static_cast<uint32_t>(args.toNumber(1, SECTION_FLASH_START_ADDRESS));
+            auto offset = static_cast<uint32_t>(args.toNumber(2, 0));
+            addr += offset;
+            auto length = static_cast<uint32_t>(args.toNumber(3, SPI_FLASH_SEC_SIZE));
+            uint16_t sector = (addr - SECTION_FLASH_START_ADDRESS) / SPI_FLASH_SEC_SIZE;
+            // recalculate address and offset
+            offset = (addr - SECTION_FLASH_START_ADDRESS) - (sector * SPI_FLASH_SEC_SIZE);
+            addr = (sector * SPI_FLASH_SEC_SIZE) + SECTION_FLASH_START_ADDRESS;
+            bool rc = true;
+            switch(cmd) {
+                case 0: // erase
+                case 1: // e
+                    args.print(F("erasing sector %u (%08x)"), sector, addr);
+                    if ((rc = ESP.flashEraseSector(sector)) == false) {
+                        args.print(F("erase failed"));
+                    }
+                    break;
+                case 2: // read
+                case 3: // r
+                    {
+                        args.print(F("reading sector %u address %08x offset %u length %u"), sector, addr, offset, length);
+                        uint32_t start = addr + offset;
+                        uint32_t end = start + length;
+                        uint8_t buf[32];
+                        while (start < end) {
+                            uint8_t len = end - start;
+                            if (len > sizeof(buf)) {
+                                len = sizeof(buf);
+                            }
+                            if ((rc = ESP.flashRead(start, buf, len)) == false) {
+                                args.print(F("read error address=%08x length=%u"), start, length);
+                                break;
+                            }
+                            DumpBinary(args.getStream(), DumpBinary::kGroupBytesDefault, DumpBinary::kPerLineDisabled)
+                                .setPerLine(sizeof(buf)).setGroupBytes(sizeof(uint32_t)).dump(buf, len, start);
+                            start += len;
+                            delay(1);
+                        }
+                    }
+                    break;
+                case 4: // write
+                case 5: // w
+                    {
+                        if (args.size() <= 3) {
+                            args.print(F("no data to write"));
+                        }
+                        else {
+                            length = args.size() - 3;
+                            args.print(F("writing sector %u (%08x) offset %u length %u"), sector, addr, offset, length);
+                            uint16_t position = 0;
+                            auto &stream = args.getStream();
+                            static constexpr size_t kFlashBufferSize = 32;
+                            auto data = std::unique_ptr<uint8_t[]>(new uint8_t[kFlashBufferSize]);
+                            auto compare = std::unique_ptr<uint8_t[]>(new uint8_t[kFlashBufferSize]);
+                            uint32_t start = addr + offset;
+                            if (data && compare) {
+                                rc = 0;
+                                auto ptr = data.get();
+                                for(uint16_t i = 3; i < args.size(); i++) {
+                                    auto value = static_cast<uint8_t>(args.toNumber(i, 0xff));
+                                    *ptr++ = value;
+                                    stream.printf_P(PSTR("%02x "), value);
+                                    // once the buffer is full, write and verify
+                                    if (++position % kFlashBufferSize == 0) {
+                                        stream.println();
+                                        if (!_writeAndVerifyFlash(start, data.get(), kFlashBufferSize, compare.get(), args)) {
+                                            position = 0;
+                                            break;
+                                        }
+                                        delay(1);
+                                        // reset buffer ptr
+                                        ptr = data.get();
+                                        // move address ahead
+                                        start += 32;
+                                    }
+                                }
+
+                                // data left?
+                                auto rest = position % kFlashBufferSize;
+                                if (rest != 0) {
+                                    stream.println();
+                                    _writeAndVerifyFlash(start, data.get(), rest, compare.get(), args);
+                                }
+                            }
+                            else {
+                                args.print(F("failed to allocate %u bytes"), length);
+                            }
+                        }
+                    }
+                    break;
+                default:
+                    args.print(F("invalid command: %s"), cmdStr);
+                    break;
+            }
+        }
+        else {
+            args.print(F("invalid command"));
         }
 
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(METRICS))) {
 #if 1
 
-        args.printf_P(PSTR("Device name: %s"), System::Device::getName());
-        args.printf_P(PSTR("Uptime: %u seconds / %s"), getSystemUptime(), formatTime(getSystemUptime(), true).c_str());
-        args.printf_P(PSTR("Free heap/fragmentation: %u / %u"), ESP.getFreeHeap(), ESP.getHeapFragmentation());
-        args.printf_P(PSTR("Heap start/size: 0x%x/%u"), SECTION_HEAP_START_ADDRESS, SECTION_HEAP_END_ADDRESS - SECTION_HEAP_START_ADDRESS);
-        args.printf_P(PSTR("irom0.text: 0x%08x-0x%08x"), SECTION_IROM0_TEXT_START_ADDRESS, SECTION_IROM0_TEXT_END_ADDRESS);
-        args.printf_P(PSTR("CPU frequency: %uMHz"), ESP.getCpuFreqMHz());
-        args.printf_P(PSTR("Flash size: %s"), formatBytes(ESP.getFlashChipRealSize()).c_str());
-        args.printf_P(PSTR("Firmware size: %s"), formatBytes(ESP.getSketchSize()).c_str());
-        args.printf_P(PSTR("Version (uint32): %s (0x%08x)"), SaveCrash::Data::FirmwareVersion().toString().c_str(), SaveCrash::Data::FirmwareVersion().__version);
-        args.printf_P(PSTR("MD5 hash: %s"), SaveCrash::Data().getMD5().c_str());
-        args.printf_P(PSTR("EEPROM: 0x%x/%u"), SECTION_EEPROM_START_ADDRESS, SECTION_EEPROM_END_ADDRESS - SECTION_EEPROM_START_ADDRESS);
-        args.printf_P(PSTR("SaveCrash: 0x%x/%u"), SECTION_SAVECRASH_START_ADDRESS, SECTION_SAVECRASH_END_ADDRESS - SECTION_SAVECRASH_START_ADDRESS);
-        args.printf_P(PSTR("KFCFW: 0x%x/%u"), SECTION_KFCFW_START_ADDRESS, SECTION_KFCFW_END_ADDRESS - SECTION_KFCFW_START_ADDRESS);
-        args.printf_P(PSTR("WiFiCallbacks: size=%u count=%u"), sizeof(WiFiCallbacks::Entry), WiFiCallbacks::getVector().size());
-        args.printf_P(PSTR("LoopFunctions: size=%u count=%u"), sizeof(LoopFunctions::Entry), LoopFunctions::getVector().size());
+        args.print(F("Device name: %s"), System::Device::getName());
+        args.print(F("Uptime: %u seconds / %s"), getSystemUptime(), formatTime(getSystemUptime(), true).c_str());
+        args.print(F("Free heap/fragmentation: %u / %u"), ESP.getFreeHeap(), ESP.getHeapFragmentation());
+        args.print(F("Heap start/size: 0x%x/%u"), SECTION_HEAP_START_ADDRESS, SECTION_HEAP_END_ADDRESS - SECTION_HEAP_START_ADDRESS);
+        args.print(F("irom0.text: 0x%08x-0x%08x"), SECTION_IROM0_TEXT_START_ADDRESS, SECTION_IROM0_TEXT_END_ADDRESS);
+        args.print(F("CPU frequency: %uMHz"), ESP.getCpuFreqMHz());
+        args.print(F("Flash size: %s"), formatBytes(ESP.getFlashChipRealSize()).c_str());
+        args.print(F("Firmware size: %s"), formatBytes(ESP.getSketchSize()).c_str());
+        args.print(F("Version (uint32): %s (0x%08x)"), SaveCrash::Data::FirmwareVersion().toString().c_str(), SaveCrash::Data::FirmwareVersion().__version);
+        args.print(F("MD5 hash: %s"), SaveCrash::Data().getMD5().c_str());
+        args.print(F("EEPROM: 0x%x/%u"), SECTION_EEPROM_START_ADDRESS, SECTION_EEPROM_END_ADDRESS - SECTION_EEPROM_START_ADDRESS);
+        args.print(F("SaveCrash: 0x%x/%u"), SECTION_SAVECRASH_START_ADDRESS, SECTION_SAVECRASH_END_ADDRESS - SECTION_SAVECRASH_START_ADDRESS);
+        args.print(F("KFCFW: 0x%x/%u"), SECTION_KFCFW_START_ADDRESS, SECTION_KFCFW_END_ADDRESS - SECTION_KFCFW_START_ADDRESS);
+        args.print(F("WiFiCallbacks: size=%u count=%u"), sizeof(WiFiCallbacks::Entry), WiFiCallbacks::getVector().size());
+        args.print(F("LoopFunctions: size=%u count=%u"), sizeof(LoopFunctions::Entry), LoopFunctions::getVector().size());
 
-        args.printf_P(PSTR("sizeof(String) / SSOSIZE: %u / %u"), sizeof(String), StringSSOSize::getSSOSize());
-        args.printf_P(PSTR("sizeof(std::vector<int>): %u"), sizeof(std::vector<int>));
-        args.printf_P(PSTR("sizeof(std::vector<double>): %u"), sizeof(std::vector<double>));
-        args.printf_P(PSTR("sizeof(std::list<int>): %u"), sizeof(std::list<int>));
-        // args.printf_P(PSTR("sizeof(FormUI::Field::Base): %u"), sizeof(FormUI::Field::Base));
-        // args.printf_P(PSTR("sizeof(FormUI:UI): %u"), sizeof(FormUI::WebUI::Base));
-        args.printf_P(PSTR("sizeof(AsyncClient): %u"), sizeof(AsyncClient));
-        args.printf_P(PSTR("sizeof(CallbackTimer): %u"), sizeof(Event::CallbackTimer));
-        // args.printf_P(PSTR("sizeof(SerialTwoWire): %u"), sizeof(SerialTwoWire));
+        args.print(F("sizeof(String) / SSOSIZE: %u / %u"), sizeof(String), StringSSOSize::getSSOSize());
+        args.print(F("sizeof(std::vector<int>): %u"), sizeof(std::vector<int>));
+        args.print(F("sizeof(std::vector<double>): %u"), sizeof(std::vector<double>));
+        args.print(F("sizeof(std::list<int>): %u"), sizeof(std::list<int>));
+        // args.print(F("sizeof(FormUI::Field::Base): %u"), sizeof(FormUI::Field::Base));
+        // args.print(F("sizeof(FormUI:UI): %u"), sizeof(FormUI::WebUI::Base));
+        args.print(F("sizeof(AsyncClient): %u"), sizeof(AsyncClient));
+        args.print(F("sizeof(CallbackTimer): %u"), sizeof(Event::CallbackTimer));
+        // args.print(F("sizeof(SerialTwoWire): %u"), sizeof(SerialTwoWire));
 
 #if PIN_MONITOR
         PrintString tmp;
@@ -1448,7 +1583,7 @@ void at_mode_serial_handle_event(String &commandString)
 
 #endif
 
-        args.printf_P(PSTR("Firmware MD5: %s"), System::Firmware::getFirmwareMD5());
+        args.print(F("Firmware MD5: %s"), System::Firmware::getFirmwareMD5());
 #endif
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RST))) {
@@ -1509,7 +1644,7 @@ void at_mode_serial_handle_event(String &commandString)
                     config.write();
                     config.setConfigDirty(true);
                 } else {
-                    args.printf_P(PSTR("Failed to import: %s"), filename);
+                    args.print(F("Failed to import: %s"), filename);
                 }
             }
         }
@@ -1544,7 +1679,7 @@ void at_mode_serial_handle_event(String &commandString)
                 auto patternStr = args.toString(1);
                 auto pattern = BlinkLEDTimer::Bitset();
                 pattern.fromString(patternStr);
-                args.printf_P(PSTR("pattern %s delay %u"), pattern.toString().c_str(), delay);
+                args.print(F("pattern %s delay %u"), pattern.toString().c_str(), delay);
                 BlinkLEDTimer::setPattern(pin, delay, std::move(pattern));
                 //+led=pattern,111111111111111111111111111111111111111111111111111111,100
                 //+led=pattern,1010,100
@@ -1575,7 +1710,7 @@ void at_mode_serial_handle_event(String &commandString)
                         color = 0;
                         BlinkLEDTimer::setBlink(pin, type = BlinkLEDTimer::BlinkType::OFF);
                     }
-                    args.printf_P(PSTR("LED pin=%u mode=%s type=%u color=0x%06x"), pin, mode.c_str(), type, color);
+                    args.print(F("LED pin=%u mode=%s type=%u color=0x%06x"), pin, mode.c_str(), type, color);
                 }
             }
         }
@@ -1603,7 +1738,7 @@ void at_mode_serial_handle_event(String &commandString)
             uint32_t stretch = args.toInt(3, KFC_TWOWIRE_CLOCK_STRETCH);
             bool stop = args.has(F("stop"));
             if (isFlashInterfacePin(sda) || isFlashInterfacePin(scl)) {
-                args.printf_P(PSTR("Pins 6, 7, 8, 9, 10 and 11 cannot be used"));
+                args.print(F("Pins 6, 7, 8, 9, 10 and 11 cannot be used"));
             }
             else if (stop) {
                 pinMode(sda, INPUT);
@@ -1615,7 +1750,7 @@ void at_mode_serial_handle_event(String &commandString)
                 Wire.begin(sda, scl);
                 Wire.setClockStretchLimit(stretch);
                 Wire.setClock(speed);
-                args.printf_P(PSTR("I2C started on %u:%u (sda:scl), speed %u, clock stretch %u"), sda, scl, speed, stretch);
+                args.print(F("I2C started on %u:%u (sda:scl), speed %u, clock stretch %u"), sda, scl, speed, stretch);
             }
         }
     }
@@ -1628,10 +1763,10 @@ void at_mode_serial_handle_event(String &commandString)
             }
             uint8_t error;
             if ((error = Wire.endTransmission()) == 0) {
-                args.printf_P(PSTR("slave 0x%02X: transmitted %u bytes"), address, args.size() - 1);
+                args.print(F("slave 0x%02X: transmitted %u bytes"), address, args.size() - 1);
             }
             else {
-                args.printf_P(PSTR("slave 0x%02X: transmission failed, error %u"), address, error);
+                args.print(F("slave 0x%02X: transmission failed, error %u"), address, error);
             }
         }
     }
@@ -1642,11 +1777,11 @@ void at_mode_serial_handle_event(String &commandString)
             if (Wire.requestFrom(address, length) == length) {
                 uint8_t *buf = new uint8_t[length + 1]();
                 if (!buf) {
-                    args.printf_P(PSTR("failed to allocate memory. %u bytes"), length);
+                    args.print(F("failed to allocate memory. %u bytes"), length);
                 }
                 else {
                     auto read = Wire.readBytes(buf, length);
-                    args.printf_P(PSTR("slave 0x%02X: requested %u byte. data:"), address, read);
+                    args.print(F("slave 0x%02X: requested %u byte. data:"), address, read);
                     DumpBinary dump(args.getStream());
                     dump.setPerLine(16).setGroupBytes(4).dump(buf, read);
                     // printable_string(args.getStream(), buf, read, 0);
@@ -1656,7 +1791,7 @@ void at_mode_serial_handle_event(String &commandString)
                 }
             }
             else {
-                args.printf_P(PSTR("slave 0x%02X: requesting data failed, length=%u"), address, length);
+                args.print(F("slave 0x%02X: requesting data failed, length=%u"), address, length);
             }
         }
     }
@@ -1684,7 +1819,13 @@ void at_mode_serial_handle_event(String &commandString)
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(WIFI))) {
         if (!args.empty()) {
             auto arg0 = args.toString(0);
-            if (arg0.equalsIgnoreCase(FSPGM(on))) {
+            if (arg0.endsWithIgnoreCase(F("wimo"))) {
+                args.print(F("Setting WiFi mode and restarting device..."));
+                System::Flags::getWriteableConfig().setWifiMode(args.toUint8(1));
+                config.write();
+                config.restartDevice();
+            }
+            else if (arg0.equalsIgnoreCase(FSPGM(on))) {
                 args.print(F("enabling station mode"));
                 WiFi.enableSTA(true);
                 WiFi.reconnect();
@@ -1725,13 +1866,13 @@ void at_mode_serial_handle_event(String &commandString)
 #if RTC_SUPPORT
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RTC))) {
         if (!args.empty()) {
-            args.printf_P(PSTR("Time=%u, rtc=%u, lostPower=%u"), (uint32_t)time(nullptr), config.getRTC(), config.rtcLostPower());
+            args.print(F("Time=" TIME_T_FMT ", rtc=%u, lostPower=%u"), time(nullptr), config.getRTC(), config.rtcLostPower());
             output.print(F("+RTC: "));
             config.printRTCStatus(output);
             output.println();
         }
         else {
-            args.printf_P(PSTR("Set=%u, rtc=%u"), config.setRTC(time(nullptr)), config.getRTC());
+            args.print(F("Set=%u, rtc=%u"), config.setRTC(time(nullptr)), config.getRTC());
         }
     }
 #endif
@@ -1740,11 +1881,11 @@ void at_mode_serial_handle_event(String &commandString)
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DLY))) {
         auto delayTime = args.toMillis(0, 1, 3600 * 1000, 250, String("ms"));
-        args.printf_P(PSTR("%ums"), delayTime);
+        args.print(F("%ums"), delayTime);
         delay(delayTime);
 
         // if (commandQueue == nullptr && delayTime < 5) { // queue not active and delay very short delays
-        //     args.printf_P(PSTR("%ums"), delayTime);
+        //     args.print(F("%ums"), delayTime);
         //     delay(delayTime);
         // }
         // else {
@@ -1758,7 +1899,7 @@ void at_mode_serial_handle_event(String &commandString)
         if (args.requireArgs(1, 1)) {
             auto filename = args.get(0);
             auto result = KFCFS.remove(filename);
-            args.printf_P(PSTR("%s: %s"), filename, result ? PSTR("success") : PSTR("failure"));
+            args.print(F("%s: %s"), filename, result ? PSTR("success") : PSTR("failure"));
         }
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RN))) {
@@ -1766,7 +1907,7 @@ void at_mode_serial_handle_event(String &commandString)
             auto filename = args.get(0);
             auto newFilename = args.get(1);
             auto result = KFCFS.rename(filename, newFilename);
-            args.printf_P(PSTR("%s => %s: %s"), filename, newFilename, result ? PSTR("success") : PSTR("failure"));
+            args.print(F("%s => %s: %s"), filename, newFilename, result ? PSTR("success") : PSTR("failure"));
         }
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LS))) {
@@ -1816,29 +1957,29 @@ void at_mode_serial_handle_event(String &commandString)
                 PluginComponent *plugin = nullptr;
                 plugin = PluginComponent::findPlugin(FPSTR(args.get(1)), false);
                 if (!plugin) {
-                    args.printf_P(PSTR("Cannot find plugin '%s'"), args.get(1));
+                    args.print(F("Cannot find plugin '%s'"), args.get(1));
                 }
                 else {
                     switch(cmd) {
                         case 1: // start
                             if (plugin->getSetupTime() == 0) {
-                                args.printf_P(PSTR("Calling %s.setup()"), plugin->getName_P());
+                                args.print(F("Calling %s.setup()"), plugin->getName_P());
                                 plugin->setSetupTime();
                                 PluginComponents::DependenciesPtr deps(new PluginComponents::Dependencies());
                                 plugin->setup(PluginComponent::SetupModeType::DEFAULT, deps);
                             }
                             else {
-                                args.printf_P(PSTR("%s already running"), plugin->getName_P());
+                                args.print(F("%s already running"), plugin->getName_P());
                             }
                             break;
                         case 2: // stop
                             if (plugin->getSetupTime() != 0) {
-                                args.printf_P(PSTR("Calling %s.shutdown()"), plugin->getName_P());
+                                args.print(F("Calling %s.shutdown()"), plugin->getName_P());
                                 plugin->shutdown();
                                 plugin->clearSetupTime();
                             }
                             else {
-                                args.printf_P(PSTR("%s not running"), plugin->getName_P());
+                                args.print(F("%s not running"), plugin->getName_P());
                             }
                             break;
                         case 3:     // add-blacklist
@@ -1858,7 +1999,7 @@ void at_mode_serial_handle_event(String &commandString)
                                 args.printf_P("Blacklist=%s action=%s", PluginComponent::getBlacklist(), flag ? SPGM(success, "success") : SPGM(failure));
                             } break;
                         default:
-                            args.printf_P(PSTR("expected <%s>"), cmds);
+                            args.print(F("expected <%s>"), cmds);
                             break;
                     }
                 }
@@ -1869,13 +2010,13 @@ void at_mode_serial_handle_event(String &commandString)
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(FSM))) {
         auto &streams = *serialHandler.getStreams();
         auto &clients = serialHandler.getClients();
-        args.printf_P(PSTR("outputs=%u clients=%u"), streams.size(), clients.size());
+        args.print(F("outputs=%u clients=%u"), streams.size(), clients.size());
         for(const auto stream: streams) {
-            args.printf_P(PSTR("output %p"), stream);
+            args.print(F("output %p"), stream);
         }
-        args.printf_P(PSTR("input %p"), serialHandler.getInput());
+        args.print(F("input %p"), serialHandler.getInput());
         for(auto &client: clients) {
-            args.printf_P(PSTR("client %p: events: %02x"), &client, client.getEvents());
+            args.print(F("client %p: events: %02x"), &client, client.getEvents());
         }
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(FSM))) {
@@ -1885,13 +2026,13 @@ void at_mode_serial_handle_event(String &commandString)
         if (args.size() > 0) {
             auto msg = args.toString(0);
             auto id = WebAlerts::Alert::add(args.toString(0), static_cast<WebAlerts::Type>(args.toIntMinMax(1, (int)(WebAlerts::Type::NONE) + 1, (int)(WebAlerts::Type::MAX) - 1, (int)(WebAlerts::Type::SUCCESS))));
-            args.printf_P(PSTR("Alert added id %u"), id);
+            args.print(F("Alert added id %u"), id);
         }
         if (WebAlerts::Alert::hasOption(WebAlerts::OptionsType::GET_ALERTS)) {
             auto file = KFCFS.open(FSPGM(alerts_storage_filename), FileOpenMode::read);
             auto size = file.size();
             file.close();
-            args.printf_P(PSTR("Storage: %s\nSize: %u"), SPGM(alerts_storage_filename), size);
+            args.print(F("Storage: %s\nSize: %u"), SPGM(alerts_storage_filename), size);
         }
     }
 // #if PIN_MONITOR
@@ -1930,25 +2071,25 @@ void at_mode_serial_handle_event(String &commandString)
                 else {
                     displayTimer->setType(DisplayTimer::DisplayType::HEAP, Event::milliseconds(interval));
                 }
-                args.printf_P(PSTR("Interval set to %ums"), interval);
+                args.print(F("Interval set to %ums"), interval);
             }
         }
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(PWM))) {
         if (args.requireArgs(2, 7)) {
-            auto pin = (uint8_t)args.toInt(0);
+            auto pin = args.toUint8(0);
             if (args.equalsIgnoreCase(1, F("waveform"))) {
                 if (pin > 16) {
                     char buf[32];
                     _pinName(pin, buf, sizeof(buf));
-                    args.printf_P(PSTR("%s does not support waveform"), buf);
+                    args.print(F("%s does not support waveform"), buf);
                 }
                 else {
                     uint32_t timeHighUS = args.toInt(2, ~0U);
                     uint32_t timeLowUS = args.toInt(3, ~0U);
                     uint32_t runTimeUS = args.toInt(4, 0);
                     uint32_t increment = args.toInt(5, 0);
-                    uint32_t delayTime = args.toInt(6);
+                    auto delayTime = args.toUint32(6);
                     if (timeHighUS == ~0U || timeLowUS == ~0U) {
                         digitalWrite(pin, LOW);
                         stopWaveform(pin);
@@ -1959,7 +2100,7 @@ void at_mode_serial_handle_event(String &commandString)
                         digitalWrite(pin, LOW);
                         pinMode(pin, OUTPUT);
                         if (increment) {
-                            args.printf_P(PSTR("pin=%u high=%u low=%u runtime=%u increment=%u delay=%u"), pin, timeHighUS, timeLowUS, runTimeUS, increment, delayTime);
+                            args.print(F("pin=%u high=%u low=%u runtime=%u increment=%u delay=%u"), pin, timeHighUS, timeLowUS, runTimeUS, increment, delayTime);
                             uint32_t start = 0;
                             _Scheduler.add(Event::milliseconds(delayTime), true, [args, delayTime, pin, timeHighUS, timeLowUS, runTimeUS, increment, start](Event::CallbackTimerPtr timer) mutable {
                                 start += increment;
@@ -1969,12 +2110,12 @@ void at_mode_serial_handle_event(String &commandString)
                                 }
                                 startWaveformClockCycles(pin, start, timeLowUS, runTimeUS);
                                 if (delayTime > 20) {
-                                    args.printf_P(PSTR("pin=%u high=%u low=%u runtime=%u"), pin, start, timeLowUS, runTimeUS);
+                                    args.print(F("pin=%u high=%u low=%u runtime=%u"), pin, start, timeLowUS, runTimeUS);
                                 }
                             }, Event::PriorityType::TIMER);
 
                         } else {
-                            args.printf_P(PSTR("pin=%u high=%u low=%u runtime=%u"), pin, timeHighUS, timeLowUS, runTimeUS);
+                            args.print(F("pin=%u high=%u low=%u runtime=%u"), pin, timeHighUS, timeLowUS, runTimeUS);
                             startWaveformClockCycles(pin, timeHighUS, timeLowUS, runTimeUS);
                         }
                     }
@@ -1986,7 +2127,7 @@ void at_mode_serial_handle_event(String &commandString)
                 _pinMode(pin, INPUT);
                 char buf[32];
                 _pinName(pin, buf, sizeof(buf));
-                args.printf_P(PSTR("set pin=%s to INPUT"), buf);
+                args.print(F("set pin=%s to INPUT"), buf);
 
             }
             else if (args.equalsIgnoreCase(1, F("input_pullup"))) {
@@ -1995,7 +2136,7 @@ void at_mode_serial_handle_event(String &commandString)
                 _pinMode(pin, pin == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
                 char buf[32];
                 _pinName(pin, buf, sizeof(buf));
-                args.printf_P(PSTR("set pin=%s to %s"), buf, pin == 16 ? PSTR("INPUT_PULLDOWN_16") : PSTR("INPUT_PULLUP"));
+                args.print(F("set pin=%s to %s"), buf, pin == 16 ? PSTR("INPUT_PULLDOWN_16") : PSTR("INPUT_PULLUP"));
 
             }
             else {
@@ -2048,12 +2189,12 @@ void at_mode_serial_handle_event(String &commandString)
                 if (freq == 0) {
                     char buf[32];
                     _pinName(pin, buf, sizeof(buf));
-                    args.printf_P(PSTR("%s(%s, %u)%s"), type, buf, level, durationStr.c_str());
+                    args.print(F("%s(%s, %u)%s"), type, buf, level, durationStr.c_str());
                 }
                 else {
                     float cycle = (1000000 / (float)freq);
                     float dc = cycle * (level / (float)PWMRANGE);
-                    args.printf_P(PSTR("%s(%u, %u) duty cycle=%.2f cycle=%.2fµs f=%uHz%s"), type, pin, level, dc, cycle, freq, durationStr.c_str());
+                    args.print(F("%s(%u, %u) duty cycle=%.2f cycle=%.2fµs f=%uHz%s"), type, pin, level, dc, cycle, freq, durationStr.c_str());
                 }
                 if (duration) {
                     auto &stream = args.getStream();
@@ -2084,7 +2225,7 @@ void at_mode_serial_handle_event(String &commandString)
                     at_mode_adc_delete_object();
                     atModeADC = __LDBG_new(AtModeADCWebSocket);
                     if (reinterpret_cast<AtModeADCWebSocket *>(atModeADC)->init(interval, duration, packetSize, client)) {
-                        args.printf_P(PSTR("Sending ADC readings to client=%p for %.2f seconds, interval=%.3f milliseconds, packet size=%u"), client, duration / 1000.0, interval / 1000.0, packetSize);
+                        args.print(F("Sending ADC readings to client=%p for %.2f seconds, interval=%.3f milliseconds, packet size=%u"), client, duration / 1000.0, interval / 1000.0, packetSize);
                     }
                     else {
                         args.print(F("Failed to initialize ADC"));
@@ -2092,7 +2233,7 @@ void at_mode_serial_handle_event(String &commandString)
                     }
                 }
                 else {
-                    args.printf_P(PSTR("Cannot find web socket client id=0x%08x"), clientId);
+                    args.print(F("Cannot find web socket client id=0x%08x"), clientId);
                 }
 
             }
@@ -2111,7 +2252,7 @@ void at_mode_serial_handle_event(String &commandString)
                 atModeADC = __LDBG_new(AtModeADC);
                 if (atModeADC->init(period, multiplier, unit, readDelay)) {
 
-                    args.printf_P(PSTR("ADC display interval %ums"), interval);
+                    args.print(F("ADC display interval %ums"), interval);
                     auto &stream = args.getStream();
                     atModeADC->getTimer().add(interval, true, [&stream](Event::CallbackTimerPtr) {
                         stream.printf_P(PSTR("+ADC: %u (%umV) converted=%s "), atModeADC->getValue(), atModeADC->getValue(), atModeADC->getConvertedString().c_str());
@@ -2131,9 +2272,9 @@ void at_mode_serial_handle_event(String &commandString)
         if (args.size() == 1) {
             auto speed = (uint8_t)args.toInt(0, ESP.getCpuFreqMHz());
             auto result = system_update_cpu_freq(speed);
-            args.printf_P(PSTR("Set %d MHz = %d"), speed, result);
+            args.print(F("Set %d MHz = %d"), speed, result);
         }
-        args.printf_P(PSTR("%d MHz"), ESP.getCpuFreqMHz());
+        args.print(F("%d MHz"), ESP.getCpuFreqMHz());
     }
 #endif
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMP))) {
@@ -2167,46 +2308,32 @@ void at_mode_serial_handle_event(String &commandString)
 #endif
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPM))) {
         if (args.requireArgs(2, 3)) {
-            uint32_t start = args.toNumber(0);
-            uint32_t len = args.toNumber(1);
-            if (!start || !len) {
-                args.print(F("start or length missing"));
+            auto start = args.toNumber(0, 0U);
+            auto len = args.toNumber(1, 0U);
+            if ((start < UMM_MALLOC_CFG_HEAP_ADDR || start > UMM_HEAP_END_ADDR) && (start < SECTION_FLASH_START_ADDRESS || start >= SECTION_IROM0_TEXT_END_ADDRESS)) {
+                args.print(F("address not HEAP (%08x-%08x) or FLASH (%08x-%08x)"), UMM_MALLOC_CFG_HEAP_ADDR, UMM_HEAP_END_ADDR - 1, SECTION_FLASH_START_ADDRESS, SECTION_IROM0_TEXT_END_ADDRESS - 1);
+            }
+            else if (len == 0) {
+                args.print(F("length missing"));
             }
             else {
-                uint8_t *startPtr = (uint8_t *)(start & ~0x3);
-                uint8_t *endPtr = (uint8_t *)((start + len + 3) & ~0x03);
-
-                args.printf_P(PSTR("start=0x%08x end=0x%08x"), startPtr, endPtr);
-                if (args.isTrue(2)) {
-
-                    auto &stream = args.getStream();
-
-                    constexpr size_t kPerColumn = 4;
-                    uint32_t data[kPerColumn];
-                    uint32_t *dword = &data[0];
-                    size_t col = 0;
-                    stream.printf_P("\n%08x: ", (uintptr_t)startPtr);
-                    while(startPtr < endPtr) {
-                        if ((uintptr_t)startPtr < SECTION_FLASH_START_ADDRESS) {
-                            *dword = pgm_read_dword(startPtr);
-                        }
-                        else if (!ESP.flashRead((uintptr_t)startPtr - SECTION_FLASH_START_ADDRESS, dword, sizeof(*dword))) {
-                            *dword = ~0;
-                        }
-                        startPtr += sizeof(*dword);
-                        stream.printf_P(PSTR("%08x "), *dword);
-                        dword++;
-
-                        if (++col % kPerColumn == 0) {
-                            dword = &data[0];
-                            stream.print('[');
-                            printable_string(stream, (const uint8_t *)data, sizeof(data));
-                            if (startPtr < endPtr) {
-                                stream.printf_P("]\n%08x: ", (uintptr_t)startPtr);
+                auto end = start + len;
+                args.print(F("start=0x%08x end=0x%08x length=%u"), start, end, end - start);
+                if (!args.isFalse(2)) {
+                    uint8_t buf[32];
+                    while(start < end) {
+                        auto len = std::min<size_t>(sizeof(buf), end - start);
+                        if (start >= SECTION_FLASH_START_ADDRESS) {
+                            if (!ESP.flashRead(start, buf, len)) {
+                                break;
                             }
                         }
+                        else {
+                            memcpy_P(buf, (const void *)start, len);
+                        }
+                        DumpBinary(args.getStream(), DumpBinary::kGroupBytesDefault, len).dump(buf, len, start);
+                        start += len;
                     }
-                    stream.println();
                 }
 
             }
@@ -2248,25 +2375,27 @@ void at_mode_serial_handle_event(String &commandString)
         at_mode_dump_fs_info(output);
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPEE))) {
-        uint16_t offset = args.toNumber(0);
-        uint16_t length = args.toInt(1, 1);
+        auto offset = args.toNumber<uint16_t>(0);
+        auto length = args.toUint16(1, 1);
         config.dumpEEPROM(output, false, offset, length);
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RTCM))) {
         if (args.requireArgs(1)) {
             auto &stream = args.getStream();
-            auto memoryId = static_cast<RTCMemoryManager::RTCMemoryId>(args.toNumber(1));
+            auto memoryId = static_cast<RTCMemoryManager::RTCMemoryId>(args.toNumber<uint32_t>(1));
             if (args.equalsIgnoreCase(0, F("qc")) || args.equalsIgnoreCase(0, F("quickconnect"))) {
 #if ENABLE_DEEP_SLEEP
                 config.storeQuickConnect(WiFi.BSSID(), WiFi.channel());
                 config.storeStationConfig(WiFi.localIP(), WiFi.subnetMask(), WiFi.gatewayIP());
-                args.printf_P(PSTR("Quick connect stored"));
+                args.print(F("Quick connect stored"));
 #else
-                    args.printf_P(PSTR("Quick connect not available"));
+                    args.print(F("Quick connect not available"));
 #endif
             }
             else if (args.equalsIgnoreCase(0, F("list")) || args.equalsIgnoreCase(0, F("info"))) {
-                args.printf_P(PSTR("RTC memory ids:"));
+                auto rtc = RTCMemoryManager::readTime();
+                args.print(F("RTC time=%u status=%s"), rtc.getTime(), rtc.getStatus());
+                args.print(F("RTC memory ids:"));
                 for(uint8_t i = static_cast<uint8_t>(RTCMemoryManager::RTCMemoryId::NONE) + 1; i < static_cast<uint8_t>(RTCMemoryManager::RTCMemoryId::MAX); i++) {
                     stream.printf_P(PSTR("0x%02x      %s\n"), i, PluginComponent::getMemoryIdName(i));
                 }
@@ -2276,17 +2405,17 @@ void at_mode_serial_handle_event(String &commandString)
                     uint32_t tmp;
                     if (RTCMemoryManager::read(memoryId, &tmp, sizeof(tmp))) {
                         RTCMemoryManager::remove(memoryId);
-                        args.printf_P(PSTR("Data for id 0x%02x removed"), memoryId);
+                        args.print(F("Data for id 0x%02x removed"), memoryId);
                     }
                     else {
-                        args.printf_P(PSTR("No data for id 0x%02x available"), memoryId);
+                        args.print(F("No data for id 0x%02x available"), memoryId);
                     }
                 }
             }
             else if (args.equalsIgnoreCase(0, F("clr")) || args.equalsIgnoreCase(0, F("clear"))) {
                 if (memoryId != RTCMemoryManager::RTCMemoryId::NONE) {
                     RTCMemoryManager::remove(memoryId);
-                    args.printf_P(PSTR("Data for id 0x%02x removed"), memoryId);
+                    args.print(F("Data for id 0x%02x removed"), memoryId);
                 }
                 else {
                     RTCMemoryManager::clear();
@@ -2297,7 +2426,7 @@ void at_mode_serial_handle_event(String &commandString)
                 uint32_t data[32];
                 int count = 0;
                 for (uint8_t i = 2; i < 32 + 2 && i < args.size(); i++) {
-                    data[count++] = args.toNumber(i);
+                    data[count++] = args.toNumber(i, ~0U);
                 }
                 auto lengthInBytes = sizeof(data[0]) * count;
                 RTCMemoryManager::write(memoryId, &data, lengthInBytes);
@@ -2318,7 +2447,7 @@ void at_mode_serial_handle_event(String &commandString)
                 auto count = (lengthInBytes + 3) / 4;
                 stream.printf_P(PSTR("id=0x%02x length=%u dwords=%u cmd="), memoryId, lengthInBytes, (lengthInBytes + 3) / 4);
                 if (count == 0) {
-                    stream.printf_P(PSTR("+RTCM=remove,0x%02x\n"), memoryId);
+                    args.print(F("remove,0x%02x"), memoryId);
                 }
                 else {
                     stream.printf_P(PSTR("+RTCM=set,0x%02x,"), memoryId);
@@ -2329,17 +2458,9 @@ void at_mode_serial_handle_event(String &commandString)
             }
             else {
                 if (!RTCMemoryManager::dump(args.getStream(), memoryId) && memoryId != RTCMemoryManager::RTCMemoryId::NONE) {
-                    args.printf_P(PSTR("No data for id 0x%02x available"), memoryId);
+                    args.print(F("No data for id 0x%02x available"), memoryId);
                 }
             }
-        }
-    }
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(WIMO))) {
-        if (args.requireArgs(1, 1)) {
-            args.print(F("Setting WiFi mode and restarting device..."));
-            System::Flags::getWriteableConfig().setWifiMode(args.toInt(0));
-            config.write();
-            config.restartDevice();
         }
     }
 #if LOGGER
@@ -2354,7 +2475,7 @@ void at_mode_serial_handle_event(String &commandString)
                     debugLog = _logger.__openLog(Logger::Level::_DEBUG, true);
                     if (debugLog) {
                         debugStreamWrapper.add(&debugLog);
-                        args.printf_P(PSTR("enabled=%s"), debugLog.fullName());
+                        args.print(F("enabled=%s"), debugLog.fullName());
                     }
                 }
             }
@@ -2374,17 +2495,17 @@ void at_mode_serial_handle_event(String &commandString)
 #endif
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(PANIC))) {
         if (args.equalsIgnoreCase(0, F("wdt"))) {
-            args.printf_P(PSTR("starting a loop to trigger the WDT"));
+            args.print(F("starting a loop to trigger the WDT"));
             for(;;) {}
         }
         else if (args.equalsIgnoreCase(0, F("hwdt"))) {
             ESP.wdtDisable();
-            args.printf_P(PSTR("starting a loop to trigger the hardware WDT"));
+            args.print(F("starting a loop to trigger the hardware WDT"));
             for(;;) {}
         }
         else if (args.equalsIgnoreCase(0, F("alloc"))) {
             uint32_t address = 0;
-            args.printf_P(PSTR("writing zeros to memory @ 0x%08x (after malloc fails)"), address);
+            args.print(F("writing zeros to memory @ 0x%08x (after malloc fails)"), address);
             delay(1000);
             while(malloc(4096)) {
             }
@@ -2393,18 +2514,22 @@ void at_mode_serial_handle_event(String &commandString)
 #pragma GCC diagnostic ignored "-Wnonnull"
 #endif
             memset((void *)address, 0, 2147483647);
+            memset((void *)2147483647, 0, 2147483647);
+            memset((void *)0, 0, 2147483647);
+        }
+        else if (args.size()) {
+            auto address = args.toNumber<uint32_t>(0);
+            args.print(F("writing zeros to memory @ 0x%08x"), address);
+            delay(1000);
+            memset((void *)address, 0, 2147483647);
+            memset((void *)2147483647, 0, 2147483647);
+            memset((void *)0, 0, 2147483647);
 #ifndef _MSC_VER
 #pragma GCC diagnostic pop
 #endif
         }
-        else if (args.size()) {
-            uint32_t address = args.toNumber(0);
-            args.printf_P(PSTR("writing zeros to memory @ 0x%08x"), address);
-            delay(1000);
-            memset((void *)address, 0, 2147483647);
-        }
         else {
-            args.printf_P(PSTR("calling panic()"));
+            args.print(F("calling panic()"));
             delay(1000);
             panic();
         }

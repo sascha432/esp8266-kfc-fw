@@ -31,6 +31,22 @@ PROGMEM_READ_ALIGNED_CHUNK(var)
 #endif
 
 #include "WString.h"
+#include "misc_string.h"
+#include "misc_time.h"
+#include "misc_safestring.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+    // internal
+    extern const char *formatTimeNames_long[] PROGMEM;
+    extern const char *formatTimeNames_short[] PROGMEM;
+
+#ifdef __cplusplus
+}
+#endif
+
 
 //class String;
 using StringVector = std::vector<String>;
@@ -43,11 +59,6 @@ String formatBytes(size_t bytes);
 //  1 day 05:23:42
 //
 String formatTime(unsigned long seconds, bool printDaysIfZero = false);
-
-
-// internal
-extern "C" const char *formatTimeNames_long[] PROGMEM;
-extern "C" const char *formatTimeNames_short[] PROGMEM;
 
 // internal
 String __formatTime(PGM_P names[], bool isShort, const String &sep, const String &_lastSep, bool displayZero, int seconds, int minutes = -1, int hours = -1, int days = -1, int weeks = -1, int months = -1, int years = -1, int milliseconds = -1, int microseconds = -1);
@@ -100,7 +111,7 @@ void remove_trailing_slash(String &dir);
 const __FlashStringHelper *sys_get_temp_dir();
 File tmpfile(String dir, const String &prefix);
 
-String WiFi_disconnect_reason(WiFiDisconnectReason reason);
+const __FlashStringHelper *WiFi_disconnect_reason(WiFiDisconnectReason reason);
 
 size_t _printMacAddress(const uint8_t *mac, Print &output, char separator = ':');
 
@@ -116,149 +127,20 @@ inline String mac2String(const void *mac, char separator = ':') {
     return _mac2String(reinterpret_cast<const uint8_t *>(mac), separator);
 }
 
-#define INET_NTOA_LEN                           16
-
-String inet_ntoString(uint32_t ip);
-
-const char *inet_ntoa_s(char *dst, size_t size, uint32_t ip);
-
-#define inet_ntoa(dst, ip)                      inet_ntoa_s(dst, INET_NTOA_LEN, ip)
+#define inet_ntoString(ip)                     IPAddress(ip).toString()
+#define inet_nto_cstr(ip)                      IPAddress(ip).toString().c_str()
 
 void bin2hex_append(String &str, const void *data, size_t length);
 size_t hex2bin(void *buf, size_t length, const char *str);
 
 // memcpy with the minimum size of both variables
-#define MEMNCPY_S(dst, src)                     { memcpy((void *)dst, (void *)src, min(sizeof(src), sizeof(dst))); }
+#define MEMNCPY_S(dst, src)                     memcpy((void *)dst, (void *)src, std::min(sizeof(src), sizeof(dst)));
 
 // bzero variant using sizeof(dst)
 #define BNZERO_S(dst)                           memset(&dst, 0, sizeof(dst));
 
-// NOTE:
-// string functions are nullptr safe
-// only PGM_P is PROGMEM safe
-
-// #define STRINGLIST_SEPARATOR                    ','
-// #define STRLS                                   ","
-
-// moved to misc_string.h
-
-// find a string in a list of strings separated by a single characters
-// -1 = not found, otherwise the number of the matching string
-// int stringlist_find_P_P(PGM_P list, PGM_P find, char separator);
-
-// multiple separators
-// int stringlist_find_P_P(PGM_P list, PGM_P find, PGM_P separator);
-
-// template<typename Tl, typename Tf, typename Tc>
-// inline int stringlist_find_P_P(Tl list, Tf find, Tc separator) {
-//     return stringlist_find_P_P(reinterpret_cast<PGM_P>(list), reinterpret_cast<PGM_P>(find), separator);
-// }
-
-bool str_endswith(const char *str, char ch);
-
-#if defined(ESP8266)
-
-bool str_endswith_P(PGM_P str, char ch);
-
-#else
-
-static inline bool str_endswith_P(PGM_P str, char ch) {
-    return str_endswith(str, ch);
-}
-
-#endif
-
-int strcmp_end(char *str1, size_t len1, const char *str2, size_t len2);
-int strcmp_end_P(const char *str1, size_t len1, PGM_P str2, size_t len2);
-int strcmp_end_P_P(PGM_P str1, size_t len1, PGM_P str2, size_t len2);
-
-inline static int strcmp_end(const char *str1, const char *str2) {
-    return strcmp_end(const_cast<char *>(str1), strlen(str1), str2, strlen(str2));
-}
-inline static int strcmp_end_P(const char *str1, PGM_P str2) {
-    return strcmp_end_P(str1, strlen(str1), str2, strlen_P(str2));
-}
-
-inline static int strcmp_end_P_P(PGM_P  str1, PGM_P str2) {
-    return strcmp_end_P_P(str1, strlen_P(str1), str2, strlen_P(str2));
-}
-
-inline static int strcmp_end_P_P(PGM_P str1, size_t len1, PGM_P str2) {
-    return strcmp_end_P_P(str1, len1, str2, strlen_P(str2));
-}
 
 
-// ends at maxLen characters or the first NUL byte
-size_t str_replace(char *src, int from, int to, size_t maxLen = ~0);
-
-// case insensitive comparision of from
-size_t str_case_replace(char *src, int from, int to, size_t maxLen = ~0);
-
-inline size_t String_replace(String &str, int from, int to)
-{
-    return str_replace(str.begin(), from, to, str.length());
-}
-
-inline size_t String_replaceIgnoreCase(String &str, int from, int to)
-{
-    return str_case_replace(str.begin(), from, to, str.length());
-}
-
-#include "misc_string.h"
-
-// trim trailing zeros
-// return length of the string
-// output can be nullptr to get the length
-size_t printTrimmedDouble(Print *output, double value, int digits = 6);
-
-// static inline bool String_startsWith(const String &str1, char ch) {
-//     return str1.length() != 0 && str1.charAt(0) == ch;
-// }
-// bool String_endsWith(const String &str1, char ch);
-
-// // compare functions that do not create a String object of "str2"
-// bool String_startsWith(const String &str1, PGM_P str2);
-// bool String_endsWith(const String &str1, PGM_P str2);
-
-// bool String_equals(const String &str1, PGM_P str2);
-// bool String_equalsIgnoreCase(const String &str1, PGM_P str2);
-
-
-
-#if defined(ESP8266)
-
-inline bool is_PGM_P(const void *ptr) {
-    //return (const uintptr_t)ptr >= 0x40000000U;
-    return (const uintptr_t)ptr >> 30;
-}
-
-inline bool is_aligned_PGM_P(const void * ptr)
-{
-    return (((const uintptr_t)ptr & 3) == 0);
-}
-
-inline bool is_not_PGM_P_or_aligned(const void * ptr)
-{
-    auto tmp = (const uintptr_t)ptr;
-    return ((tmp >> 30) == 0) || ((tmp & 3) == 0);
-}
-
-
-#else
-
-bool is_PGM_P(const void *ptr);
-
-inline bool is_aligned_PGM_P(const void * ptr)
-{
-    return (((const uintptr_t)ptr & 3) == 0);
-}
-
-inline bool is_not_PGM_P_or_aligned(const void * ptr)
-{
-    return is_aligned_PGM_P(ptr);
-}
-
-#endif
 
 // interface
 class TokenizerArgs {
@@ -501,36 +383,6 @@ void *lambda_target(T callback) {
 
 // timezone support
 
-#if _MSC_VER
-
-#define IS_TIME_VALID(time) (time > 946684800UL)
-
-#elif 1
-
-// typedef char end_of_time_t_2038[(time_t)(1UL<<31)==INT32_MIN '? 1 : -1];
-#define IS_TIME_VALID(time) (((time_t)time < -1) || time > 946684800L)
-
-#else
-
-typedef char end_of_time_t_2106[(time_t)(1UL<<31)==(INT32_MAX+1UL) ? 1 : -1];
-#define IS_TIME_VALID(time) (time > 946684800UL)
-
-#endif
-
-size_t strftime_P(char *buf, size_t size, PGM_P format, const struct tm *tm);
-
-// seconds since boot
-uint32_t getSystemUptime();
-
-// milliseconds
-uint64_t getSystemUptimeMillis();
-
-// use signed char to get an integer
-template<typename T>
-String enumToString(T value) {
-    return String(static_cast<typename std::underlying_type<T>::type>(value));
-}
-
 // auto address = convertToIPAddress("192.168.0.1");
 // if (IPAddress_isValid(address)) { //we can use the address }
 
@@ -552,75 +404,6 @@ inline IPAddress convertToIPAddress(const String &hostname) {
 #define __PP_CAT_I(a, b)                __PP_CAT_II(~, a ## b)
 #define __PP_CAT_II(p, res)             res
 #define __UNIQUE_NAME(base)             __PP_CAT(__PP_CAT(__PP_CAT(base, __COUNTER__), _), __LINE__)
-
-
-// __S(str) for printf_P("%s") or any function requires const char * arguments
-//
-// const char *str                       __S(str) = str
-// const __FlashStringHelper *str        __S(str) = (const char *)str
-// String test;                         __S(test) = test.c_str()
-// on the stack inside the a function call. the object gets destroyed when the function returns
-//                                      __S(String()) = String().c_str()
-// IPAddress addr;                       __S(addr) = addr.toString().c_str()
-//                                      __S(IPAddress()) = IPAddress().toString().c_str()
-// nullptr_t or any nullptr             __S((const char *)0) = "null"
-// const void *                         __S(const void *)1767708) = String().printf("0x%08x", 0xff).c_str() = 0x001af91c
-
-#define _S_STRLEN(str)                  (str ? strlen_P(__S(str)) : 0)
-#define _S_STR(str)                     __S(str)
-#define __S(str)                        __safeCString(str).c_str()
-
-#if _MSC_VER
-extern "C" const char *SPGM_null PROGMEM;
-extern "C" const char *SPGM_0x_08x PROGMEM;
-#else
-extern "C" const char SPGM_null[] PROGMEM;
-extern "C" const char SPGM_0x_08x[] PROGMEM;
-#endif
-
-#if defined(ESP8266)
-#define __IS_SAFE_STR(str)              (((((uintptr_t)str) >= 0x3FF00000) && ((uintptr_t)str) < 0x40300000) ? str : __safeCString((const void *)str).c_str())
-#else
-#define __IS_SAFE_STR(str)              str
-#endif
-
-inline const String __safeCString(const void *ptr) {
-    char buf[16];
-    snprintf_P(buf, sizeof(buf), SPGM(0x_08x), ptr);
-    return buf;
-}
-
-class SafeStringWrapper {
-public:
-    constexpr SafeStringWrapper() : _str(SPGM(null)) {}
-    constexpr SafeStringWrapper(const char *str) : _str(str ? __IS_SAFE_STR(str) : SPGM(null)) {}
-    constexpr SafeStringWrapper(const __FlashStringHelper *str) : _str(str ? __IS_SAFE_STR((PGM_P)str) : SPGM(null)) {}
-    constexpr const char *c_str() const {
-        return _str;
-    }
-public:
-    const char *_str;
-};
-
-inline const String __safeCString(const IPAddress &addr) {
-    return addr.toString();
-}
-
-constexpr const String &__safeCString(const String &str) {
-    return str;
-}
-
-constexpr const SafeStringWrapper __safeCString(const __FlashStringHelper *str) {
-    return SafeStringWrapper(str);
-}
-
-constexpr const SafeStringWrapper __safeCString(const char *str) {
-    return SafeStringWrapper(str);
-}
-
-constexpr const SafeStringWrapper __safeCString(nullptr_t ptr) {
-    return SafeStringWrapper();
-}
 
 uint8_t numberOfSetBits(uint32_t i);
 uint8_t numberOfSetBits(uint16_t i);
@@ -652,37 +435,43 @@ inline uint32_t createIPv4Address(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
 #define CREATE_ENUM_BITFIELD_SIZE(name, size, enum_type, underlying_type, underlying_type_name) \
     underlying_type name: size; \
     static constexpr size_t kBitCountFor_##name = size; \
-    static void set_enum_##name(Type &obj, enum_type value) { \
+    inline static void set_enum_##name(Type &obj, enum_type value) { \
         obj.name = static_cast<underlying_type>(value); \
     } \
-    void _set_enum_##name(enum_type value) { \
+    inline void _set_enum_##name(enum_type value) { \
         name = static_cast<underlying_type>(value); \
     } \
-    static enum_type get_enum_##name(const Type &obj) { \
+    inline static enum_type get_enum_##name(const Type &obj) { \
         return static_cast<enum_type>(obj.name); \
     } \
-    static void set_##underlying_type_name##_##name(Type &obj, underlying_type value) { \
+    inline static void set_##underlying_type_name##_##name(Type &obj, underlying_type value) { \
         obj.name = value; \
     } \
-    static underlying_type get_##underlying_type_name##_##name(const Type &obj) { \
+    inline static void set_bits_##name(Type &obj, underlying_type value) { \
+        obj.name = value; \
+    } \
+    inline static underlying_type get_##underlying_type_name##_##name(const Type &obj) { \
+        return obj.name; \
+    } \
+    inline static underlying_type get_bits_##name(const Type &obj) { \
         return obj.name; \
     } \
     underlying_type _get_##underlying_type_name##_##name() const { \
         return name; \
     } \
-    enum_type _get_enum_##name() const { \
+    inline enum_type _get_enum_##name() const { \
         return static_cast<enum_type>(name); \
     } \
-    static underlying_type cast_##underlying_type_name##_##name(enum_type value) { \
+    inline static underlying_type cast_##underlying_type_name##_##name(enum_type value) { \
         return static_cast<underlying_type>(value); \
     } \
-    static enum_type cast_enum_##name(underlying_type value) { \
+    inline static enum_type cast_enum_##name(underlying_type value) { \
         return static_cast<enum_type>(value); \
     } \
-    static underlying_type cast(enum_type value) { \
+    inline static underlying_type cast(enum_type value) { \
         return static_cast<underlying_type>(value); \
     } \
-    static enum_type cast_##name(underlying_type value) { \
+    inline static enum_type cast_##name(underlying_type value) { \
         return static_cast<enum_type>(value); \
     }
 
@@ -694,26 +483,44 @@ inline uint32_t createIPv4Address(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
 #define CREATE_BITFIELD_TYPE(name, size, type, prefix) \
     type name: size; \
     static constexpr size_t kBitCountFor_##name = size; \
-    static void set_##prefix##_##name(Type &obj, type value) { \
+    inline static void set_##prefix##_##name(Type &obj, type value) { \
         obj.name = value; \
     } \
-    static type get_##prefix##_##name(const Type &obj) { \
+    inline static type get_##prefix##_##name(const Type &obj) { \
         return obj.name; \
     } \
-    void _set_##name(type value) { \
+    inline void _set_##name(type value) { \
         name = value; \
     } \
-    type _get_##name() const { \
+    inline type _get_##name() const { \
         return name; \
     }
 
+#define CREATE_GETTER_SETTER_TYPE(name, size, type, prefix)  BOOST_PP_CAT(CREATE_GETTER_SETTER_TYPE_,prefix)(name, size, type, prefix)
 
-#define CREATE_GETTER_SETTER_TYPE(name, size, type, prefix) \
+#define CREATE_GETTER_SETTER_TYPE_int(name, size, type, prefix) \
     static constexpr size_t kBitCountFor_##name = size; \
-    static void set_##prefix##_##name(Type &obj, type value) { \
+    inline static void set_##prefix##_##name(Type &obj, type value) { \
         obj.name = value; \
     } \
-    static type get_##prefix##_##name(const Type &obj) { \
+    inline static type get_##prefix##_##name(const Type &obj) { \
+        return obj.name; \
+    } \
+    inline static void set_bits_##name(Type &obj, type value) { \
+        obj.name = value; \
+    } \
+    inline static type get_bits_##name(const Type &obj) { \
+        return obj.name; \
+    }
+
+#define CREATE_GETTER_SETTER_TYPE_bit(name, size, type, prefix) CREATE_GETTER_SETTER_TYPE_int(name, size, type, prefix)
+
+#define CREATE_GETTER_SETTER_TYPE_bits(name, size, type, prefix) \
+    static constexpr size_t kBitCountFor_##name = size; \
+    inline static void set_##prefix##_##name(Type &obj, type value) { \
+        obj.name = value; \
+    } \
+    inline static type get_##prefix##_##name(const Type &obj) { \
         return obj.name; \
     }
 

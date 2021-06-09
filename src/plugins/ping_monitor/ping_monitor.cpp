@@ -24,8 +24,8 @@
 #include <debug_helper_disable.h>
 #endif
 
-AUTO_STRING_DEF(ping_monitor_response, "%d bytes from %s: icmp_seq=%d ttl=%d time=%ld ms")
-AUTO_STRING_DEF(ping_monitor_end_response, "Total answer from %s sent %d recevied %d time %ld ms")
+AUTO_STRING_DEF(ping_monitor_response, "%d bytes from %s: icmp_seq=%d ttl=%d time=%u ms")
+AUTO_STRING_DEF(ping_monitor_end_response, "Total answer from %s sent %d recevied %d time %u ms")
 AUTO_STRING_DEF(ping_monitor_ethernet_detected, "Detected eth address %s")
 AUTO_STRING_DEF(ping_monitor_request_timeout, "Request timed out.")
 AUTO_STRING_DEF(ping_monitor_service_status, "Ping monitor service has been %s")

@@ -44,7 +44,7 @@ void KFCMemoryDebugging::__add(const DebugContext &p, const void *ptr, size_t si
         _failCount++;
         if (p.isActive()) {
             p.prefix();
-            p.getOutput().printf_P(PSTR("allocation failed size=%ld\n"), size);
+            p.getOutput().printf_P(PSTR("allocation failed size=%u\n"), size);
         }
     }
     else {
@@ -230,12 +230,12 @@ const char ___debugPrefix[] PROGMEM = "D%08lu (%s:%u <%d:%u> %s): ";
 const char ___debugPrefix[] PROGMEM = "DBG: ";
 #endif
 
-void DebugContext::prefix() const 
+void DebugContext::prefix() const
 {
     getOutput().printf_P(___debugPrefix, millis(), _file, _line, ESP.getFreeHeap(), can_yield(), _functionName);
 }
 
-String DebugContext::getPrefix() const 
+String DebugContext::getPrefix() const
 {
     PrintString str(F("%s:%u: "), __S(_file), _line);
     return str;

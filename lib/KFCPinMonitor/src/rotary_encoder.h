@@ -4,8 +4,8 @@
 
 #pragma once
 
+#include <Arduino_compat.h>
 #include <MicrosTimer.h>
-#include "push_button.h"
 
 #if DEBUG_PIN_MONITOR
 #include <debug_helper_enable.h>
@@ -74,4 +74,6 @@ namespace PinMonitor {
 
 }
 
+#if DEBUG_PIN_MONITOR
 #include <debug_helper_disable.h>
+#endif

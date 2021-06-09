@@ -253,10 +253,11 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 #if NTP_CLIENT || RTC_SUPPORT
     else if (key == F("TIME")) {
         auto now = time(nullptr);
-        if (!IS_TIME_VALID(now)) {
-            output.print(F("No time available"));
-        } else {
+        if (isTimeValid(now)) {
             printSystemTime(now, output);
+        }
+        else {
+            output.print(F("No time available"));
         }
     }
 #endif

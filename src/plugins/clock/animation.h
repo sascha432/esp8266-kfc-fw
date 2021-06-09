@@ -864,7 +864,7 @@ namespace Clock {
         }
 
         template<typename _Ta>
-        void _copyTo(_Ta &output, uint32_t millisValue) 
+        void _copyTo(_Ta &output, uint32_t millisValue)
         {
             uint8_t mapping = ((_cfg.cast_enum_orientation(_cfg.orientation) == Orientation::VERTICAL ? 2 : 0) + (_cfg.invert_direction ? 1 : 0));
             for(CoordinateType i = 0; i < kRows; i++) {
@@ -960,7 +960,7 @@ namespace Clock {
         }
 
         template<typename _Ta>
-        void _copyTo(_Ta &output, uint32_t millisValue) override
+        void _copyTo(_Ta &output, uint32_t millisValue) 
         {
             for(CoordinateType i = 0; i < kRows; i++) {
                 for(CoordinateType j = 0; j < kCols; j++) {

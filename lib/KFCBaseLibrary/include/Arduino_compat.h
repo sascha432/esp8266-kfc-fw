@@ -71,6 +71,20 @@
 
 #endif
 
+class String;
+class __FlashStringHelper;
+#ifndef PGM_P
+#define PGM_P const char *
+#endif
+#ifndef PGM_VOID_P
+#define PGM_VOID_P const void *
+#endif
+
+#define ESNULLP                                 ( 400 ) /* null ptr */
+#define ESZEROL                                 ( 401 ) /* length is zero */
+#define EOK                                     ( 0 )
+
+
 #if defined(ESP32)
 
 #include <Arduino.h>
@@ -242,22 +256,6 @@ constexpr size_t constexpr_strlen(const char *s) noexcept
 
 #endif
 
-// static size_t constexpr constexpr_strlen(const uint8_t *str) noexcept
-// {
-//     return constexpr_strlen((str));
-// }
-
-// static size_t constexpr constexpr_strlen_P(const char *str) noexcept
-// {
-//     return constexpr_strlen(str);
-// }
-
-// static size_t constexpr constexpr_strlen(const __FlashStringHelper *str) noexcept
-// {
-//     return constexpr_strlen((const char*)str);
-// }
-
-
 #ifndef _STRINGIFY
 #define _STRINGIFY(...)                     ___STRINGIFY(__VA_ARGS__)
 #endif
@@ -277,18 +275,29 @@ namespace __va_args__
     template<typename ...Args>
     constexpr std::size_t va_count(Args &&...) { return sizeof...(Args); }
 }
+
 #define __VA_ARGS_COUNT__(...)                          __va_args__::va_count(__VA_ARGS__)
 
 
-#define DUMP_BINARY_DEFAULTS ~0
+#define DUMP_BINARY_DEFAULTS ~0U
 #define DUMP_BINARY_NO_TITLE nullptr
 
-extern "C" void __dump_binary(const void *ptr, size_t len, size_t perLine = DUMP_BINARY_DEFAULTS, PGM_P title = DUMP_BINARY_NO_TITLE, uint8_t groupBytes = DUMP_BINARY_DEFAULTS);
-extern "C" void __dump_binary_to(Print &output, const void *ptr, size_t len, size_t perLine = DUMP_BINARY_DEFAULTS, PGM_P title = DUMP_BINARY_NO_TITLE, uint8_t groupBytes = DUMP_BINARY_DEFAULTS);
+extern "C" {
+    void __dump_binary(const void *ptr, size_t len, size_t perLine = DUMP_BINARY_DEFAULTS, PGM_P title = DUMP_BINARY_NO_TITLE, uint8_t groupBytes = static_cast<uint8_t>(DUMP_BINARY_DEFAULTS));
+    void __dump_binary_to(Print &output, const void *ptr, size_t len, size_t perLine = DUMP_BINARY_DEFAULTS, PGM_P title = DUMP_BINARY_NO_TITLE, uint8_t groupBytes = static_cast<uint8_t>(DUMP_BINARY_DEFAULTS));
+}
 
 #if _MSC_VER
+
 #include "../../../include/spgm_auto_strings.h"
+
 #else
-#include "spgm_auto_strings.h"
-#include "spgm_auto_def.h"
+
+#include <spgm_auto_strings.h>
+#include <spgm_auto_def.h>
+
+#if ESP8266
+#include <coredecls.h>
+#endif
+
 #endif

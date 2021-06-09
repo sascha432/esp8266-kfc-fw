@@ -67,7 +67,6 @@
 - Support for ArduinoOTA
 - Max. deep sleep time increased to up to 31 days
 - Replaced EspSaveCrash with own implementation that writes to flash storage directly without allocating any memory and supports multiple sectors
-- RTC emulation using the RTC memory
 - Class to write to flash storage with copy on write/basic wear leveling
 - 64/256KB flash storage that survives firmware and file system upgrades
 - Replace read only files from WebUI by placing files in `/.wor/*`
@@ -88,6 +87,8 @@
 - OTA update tool restarts device in safe mode before running any updates
 - Fixed play tone for blinds plugin
 - Added framework-arduinoespressif8266 3.30000.210519 (3.0.0)
+- Changes for GCC 10
+- Support for interal or external RTC
 
 ## Version 0.0.3
 

@@ -245,22 +245,25 @@ void Sensor_Battery::createConfigureForm(AsyncWebServerRequest *request, FormUI:
     auto &cfg = Plugins::Sensor::getWriteableConfig();
     auto &group = form.addCardGroup(F("spcfg"), F(IOT_SENSOR_NAMES_BATTERY), true);
 
-    form.addPointerTriviallyCopyable(F("sp_uc"), &cfg.battery.calibration);
+    form.addPointerTriviallyCopyable<float>(F("sp_uc"), reinterpret_cast<void *>(&cfg.battery.calibration));
     form.addFormUI(F("Calibration"), FormUI::Suffix(PrintString(F("Max. Voltage %.4f"), maxVoltage)));
+    cfg.battery.addRangeValidatorFor_calibration(form);
 
-    form.addPointerTriviallyCopyable(F("sp_ofs"), &cfg.battery.offset);
+    form.addPointerTriviallyCopyable<float>(F("sp_ofs"), reinterpret_cast<void *>(&cfg.battery.offset));
     form.addFormUI(F("Offset"));
+    cfg.battery.addRangeValidatorFor_offset(form);
 
-    form.addObjectGetterSetter(F("sp_pr"), cfg.battery, cfg.battery.get_bits_precision, cfg.battery.set_bits_precision);
+    form.addObjectGetterSetter(F("sp_pr"),  FormGetterSetter(cfg.battery, precision));
     form.addFormUI(F("Display Precision"));
     cfg.battery.addRangeValidatorFor_precision(form);
 
 #if IOT_SENSOR_HAVE_BATTERY_RECORDER
 
-    form.addObjectGetterSetter(F("sp_ra"), cfg.battery, cfg.battery.get_ipv4_address, cfg.battery.set_ipv4_address);
+    form.addObjectGetterSetter(F("sp_ra"), FormGetterSetter(cfg.battery, address));
     form.addFormUI(F("Data Hostname"));
+    cfg.battery.addHostnameValidatorFor_address(form)
 
-    form.addObjectGetterSetter(F("sp_rp"), cfg.battery, cfg.battery.get_bits_port, cfg.battery.set_bits_port);
+    form.addObjectGetterSetter(F("sp_rp"), FormGetterSetter(cfg.battery, port));
     form.addFormUI(F("Data Port"));
     cfg.addRangeValidatorFor_port(form);
 
@@ -271,7 +274,7 @@ void Sensor_Battery::createConfigureForm(AsyncWebServerRequest *request, FormUI:
         SensorRecordType::BOTH, F("Record ADC and sensor values")
     );
 
-    form.addObjectGetterSetter(F("sp_brt"), cfg.battery, cfg.battery.get_int_record, cfg.battery.set_int_record);
+    form.addObjectGetterSetter(F("sp_brt"), FormGetterSetter(cfg.battery, record));
     form.addFormUI(F("Sensor Data"), items);
 
 #endif

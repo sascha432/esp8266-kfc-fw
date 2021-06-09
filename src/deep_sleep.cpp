@@ -27,7 +27,7 @@ using namespace DeepSleep;
 
 inline static void deep_sleep_preinit()
 {
-    DeepSleep::_realTimeOffset = 0;
+    uint32_t realTimeOffset = 0;
     // store states of all PINs
     deepSleepPinState.init();
 
@@ -38,7 +38,7 @@ inline static void deep_sleep_preinit()
             // if the device has been woken up by the user, the time cannot be determined
             // deepSleepParams._currentSleepTime is not subtracted here... since we cannot
             // know how much of the time has passed already
-            DeepSleep::_realTimeOffset = (((deepSleepParams._totalSleepTime - deepSleepParams._remainingSleepTime) * 1000ULL) + deepSleepParams._runtime);
+            realTimeOffset = deepSleepParams._remainingSleepTime * 1000ULL;
 #if DEBUG_DEEP_SLEEP
             __LDBG_printf("real time offset without the last cycle: %.6f", DeepSleep::_realTimeOffset / 1000000.0);
 #endif
@@ -50,6 +50,7 @@ inline static void deep_sleep_preinit()
         __LDBG_printf("reason: %s", resetDetector.getResetReason());
 #endif
         RTCMemoryManager::remove(RTCMemoryManager::RTCMemoryId::DEEP_SLEEP);
+        RTCMemoryManager::updateTimeOffset((realTimeOffset + (micros() / 1000));
         return;
     }
 
@@ -97,12 +98,6 @@ inline static void deep_sleep_preinit()
 
                 deepSleepParams._remainingSleepTime = 0;
                 deepSleepParams._currentSleepTime = 0;
-
-                // calculate total sleep time when waking up...
-                DeepSleep::_realTimeOffset = ((deepSleepParams._totalSleepTime * 1000ULL) + deepSleepParams._runtime);
-#if DEBUG_DEEP_SLEEP
-            __LDBG_printf("real time offset of the compelte deep sleep cycle: %.6f", DeepSleep::_realTimeOffset / 1000000.0);
-#endif
                 deepSleepParams._wakeupMode = WakeupMode::AUTO;
 
             }
@@ -161,7 +156,7 @@ void DeepSleepParam::enterDeepSleep(milliseconds sleep_time, RFMode rfMode)
     deepSleepParams = DeepSleepParam(sleep_time, rfMode);
 
 #if DEBUG_DEEP_SLEEP
-    Logger_notice(F("entering deep sleep: time=%ld sleep-time=%.0f mode=%u"), time(nullptr), deepSleepParams.getTotalTime(), rfMode);
+    Logger_notice(F("entering deep sleep: time=" TIME_T_FMT " sleep-time=%.0f mode=%u"), time(nullptr), deepSleepParams.getTotalTime(), rfMode);
     delay(250);
 #endif
 

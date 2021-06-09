@@ -4,20 +4,14 @@
 
 #include <Arduino_compat.h>
 #include <PrintString.h>
-#include "BitsToStr.h"
-#include "interrupt_impl.h"
-#include "rotary_encoder.h"
-#include "monitor.h"
+#include <BitsToStr.h>
+#include "pin_monitor.h"
 
 #if DEBUG_PIN_MONITOR
 #include <debug_helper_enable.h>
 #else
 #include <debug_helper_disable.h>
 #endif
-
-#if PIN_MONITOR_USE_GPIO_INTERRUPT == 0 && PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS == 0
-#endif
-#include <interrupts.h>
 
 namespace PinMonitor {
 

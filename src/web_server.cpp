@@ -1016,8 +1016,8 @@ bool Plugin::_handleFileRead(String path, bool client_accepts_gzip, AsyncWebServ
                 time_t keepTime = request->arg(FSPGM(keep, "keep")).toInt();
                 if (keepTime) {
                     auto now = time(nullptr);
-                    keepTime = (keepTime == 1 && IS_TIME_VALID(now)) ? now : keepTime; // check if the time was provied, otherwise use system time
-                    if (IS_TIME_VALID(keepTime)) {
+                    keepTime = (keepTime == 1 && isTimeValid(now)) ? now : keepTime; // check if the time was provied, otherwise use system time
+                    if (isTimeValid(keepTime)) {
                         cookie.setExpires(keepTime + System::Device::getConfig().getWebUICookieLifetimeInSeconds());
                     }
                 }
@@ -1322,7 +1322,7 @@ namespace SaveCrash {
         auto &cmd = request->arg(F("cmd"));
         if (request->argExists(cmd)) {
             if (cmd == F("clear")) {
-                fs.clear(SPIFlash::ClearStorageType::ERASE);
+                fs.clear(SPIFlash::ClearStorageType::REMOVE_MAGIC);
                 response = request->beginResponse_P(200, FSPGM(mime_application_json), PSTR("{\"result\":\"OK\"}"));
             }
             else {

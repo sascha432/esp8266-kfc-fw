@@ -251,10 +251,10 @@ namespace KFCConfigurationClasses {
     // Settings
 
     Network::Settings::SettingsConfig_t::SettingsConfig_t() :
-        subnet(kCreateIPv4Address(255, 255, 255, 0)),
-        gateway(kCreateIPv4Address(192, 168, 4, 1)),
-        dns1(kCreateIPv4Address(8, 8, 8, 8)),
-        dns2(kCreateIPv4Address(8, 8, 4, 4))
+        subnet(kDefaultValueFor_subnet),
+        gateway(kDefaultValueFor_gateway),
+        dns1(kDefaultValueFor_dns1),
+        dns2(kDefaultValueFor_dns2)
     {
         uint8_t mac[6];
         ::WiFi.macAddress(mac);
@@ -277,11 +277,11 @@ namespace KFCConfigurationClasses {
     // SoftAP
 
     Network::SoftAP::SoftAPConfig_t::SoftAPConfig_t() :
-        address(kCreateIPv4Address(192, 168, 4, 1)),
-        subnet(kCreateIPv4Address(255, 255, 255, 0)),
-        gateway(kCreateIPv4Address(192, 168, 4, 1)),
-        dhcp_start(kCreateIPv4Address(192, 168, 4, 2)),
-        dhcp_end(kCreateIPv4Address(192, 168, 4, 100)),
+        address(kDefaultValueFor_address),
+        subnet(kDefaultValueFor_subnet),
+        gateway(kDefaultValueFor_gateway),
+        dhcp_start(kDefaultValueFor_dhcp_start),
+        dhcp_end(kDefaultValueFor_dhcp_end),
         channel(7),
         encryption_enum(kWiFiEncryptionTypeDefault)
     {

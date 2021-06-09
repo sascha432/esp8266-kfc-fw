@@ -4,8 +4,8 @@
 
 #pragma once
 
+#include <Arduino_compat.h>
 #include <MicrosTimer.h>
-#include "pin.h"
 
 // #undef DEBUG_PIN_MONITOR
 // #define DEBUG_PIN_MONITOR 1
@@ -387,4 +387,6 @@ namespace PinMonitor {
 
 }
 
+#if DEBUG_PIN_MONITOR
 #include <debug_helper_disable.h>
+#endif

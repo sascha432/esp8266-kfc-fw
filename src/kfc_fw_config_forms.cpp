@@ -164,30 +164,46 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             form.addObjectGetterSetter(F("st_dhcp"), flags, flags.get_bit_is_station_mode_dhcp_enabled, flags.set_bit_is_station_mode_dhcp_enabled);
             form.addFormUI(FSPGM(DHCP_Client), FormUI::BoolItems());
 
-            form.addObjectGetterSetter(F("st_ip"), network, network.get_ipv4_local_ip, network.set_ipv4_local_ip);
+            form.addObjectGetterSetter(F("st_ip"), FormGetterSetter(network, local_ip));
             form.addFormUI(FSPGM(IP_Address));
-            form.addObjectGetterSetter(F("st_subnet"), network, network.get_ipv4_subnet, network.set_ipv4_subnet);
+            network.addHostnameValidatorFor_local_ip(form);
+
+            form.addObjectGetterSetter(F("st_subnet"), FormGetterSetter(network, subnet));
             form.addFormUI(FSPGM(Subnet));
-            form.addObjectGetterSetter(F("st_gw"), network, network.get_ipv4_gateway, network.set_ipv4_gateway);
+            network.addHostnameValidatorFor_subnet(form);
+
+            form.addObjectGetterSetter(F("st_gw"), FormGetterSetter(network, gateway));
             form.addFormUI(FSPGM(Gateway));
-            form.addObjectGetterSetter(F("st_dns1"), network, network.get_ipv4_dns1, network.set_ipv4_dns1);
+            network.addHostnameValidatorFor_gateway(form);
+
+            form.addObjectGetterSetter(F("st_dns1"), FormGetterSetter(network, dns1));
             form.addFormUI(FSPGM(DNS_1));
-            form.addObjectGetterSetter(F("st_dns2"), network, network.get_ipv4_dns2, network.set_ipv4_dns2);
+            network.addHostnameValidatorFor_dns1(form);
+
+            form.addObjectGetterSetter(F("st_dns2"), FormGetterSetter(network, dns2));
             form.addFormUI(FSPGM(DNS_2));
+            network.addHostnameValidatorFor_dns2(form);
 
             auto &apGroup = stationGroup.end().addCardGroup(FSPGM(ap_mode), FSPGM(Access_Point));
 
             form.addObjectGetterSetter(F("ap_dhcpd"), flags, flags.get_bit_is_softap_dhcpd_enabled, flags.set_bit_is_softap_dhcpd_enabled);
             form.addFormUI(FSPGM(DHCP_Server), FormUI::BoolItems());
 
-            form.addObjectGetterSetter(F("ap_ip"), softAp, softAp.get_ipv4_address, softAp.set_ipv4_address);
+            form.addObjectGetterSetter(F("ap_ip"), FormGetterSetter(softAp, address));
             form.addFormUI(FSPGM(IP_Address));
-            form.addObjectGetterSetter(F("ap_subnet"), softAp, softAp.get_ipv4_subnet, softAp.set_ipv4_subnet);
+            softAp.addHostnameValidatorFor_address(form);
+
+            form.addObjectGetterSetter(F("ap_subnet"), FormGetterSetter(softAp, subnet));
             form.addFormUI(FSPGM(Subnet));
-            form.addObjectGetterSetter(F("ap_dhcpds"), softAp, softAp.get_ipv4_dhcp_start, softAp.set_ipv4_dhcp_start);
+            softAp.addHostnameValidatorFor_subnet(form);
+
+            form.addObjectGetterSetter(F("ap_dhcpds"), FormGetterSetter(softAp, dhcp_start));
             form.addFormUI(F("DHCP Start IP"));
-            form.addObjectGetterSetter(F("ap_dhcpde"), softAp, softAp.get_ipv4_dhcp_end, softAp.set_ipv4_dhcp_end);
+            softAp.addHostnameValidatorFor_dhcp_start(form);
+
+            form.addObjectGetterSetter(F("ap_dhcpde"), FormGetterSetter(softAp, dhcp_end));
             form.addFormUI(F("DHCP End IP"));
+            softAp.addHostnameValidatorFor_dhcp_end(form);
 
             apGroup.end();
 

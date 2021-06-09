@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <Arduino_compat.h>
+
 #ifndef DEBUG_PIN_MONITOR_DEBOUNCE
 #define DEBUG_PIN_MONITOR_DEBOUNCE          0
 #endif

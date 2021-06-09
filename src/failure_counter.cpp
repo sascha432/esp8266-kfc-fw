@@ -90,7 +90,7 @@ void FailureCounter::addFailure()
     }
     _lastFailure = time(nullptr);
     __LDBG_printf("Failed attempt from %s #%u", _addr.toString().c_str(), _counter);
-    if (IS_TIME_VALID(_lastFailure) && _lastFailure > _container._lastRewrite + _container._rewriteInterval) {
+    if (isTimeValid(_lastFailure) && _lastFailure > _container._lastRewrite + _container._rewriteInterval) {
         _container._lastRewrite = _container._rewriteInterval;
         _container.rewriteStorageFile();
     }
@@ -126,7 +126,7 @@ bool FailureCounterContainer::isAddressBlocked(const IPAddress &addr)
 {
     _removeOldRecords();
     for(auto &failure: _failures) {
-        __LDBG_printf("is blocked ip %s record %s # %d, timeframe %lu", addr.toString().c_str(), failure.getIPAddress().toString().c_str(), failure.getCounter(), failure.getTimeframe());
+        __LDBG_printf("is blocked ip %s record %s # %u, timeframe %u", addr.toString().c_str(), failure.getIPAddress().toString().c_str(), failure.getCounter(), failure.getTimeframe());
         if (failure.isBlocked(addr)) {
             return true;
         }
@@ -164,7 +164,6 @@ void FailureCounterContainer::readFromFS()
 #if DEBUG_LOGIN_FAILURES
         auto count = 0;
 #endif
-        bool isTimeValid = IS_TIME_VALID(time(nullptr));
         while(file.available()) {
             FailureCounterFileRecord_t record;
             if (file.read((uint8_t *)&record, sizeof(record)) != sizeof(record)) {
@@ -174,7 +173,7 @@ void FailureCounterContainer::readFromFS()
             count++;
 #endif
             uint32_t timeframe = record.lastFailure - record.firstFailure;
-            if (isTimeValid == false || timeframe <  _storageTimeframe) { // keep all records if the time has not been set
+            if (isTimeValid() == false || timeframe < _storageTimeframe) { // keep all records if the time has not been set
                 _failures.push_back(FailureCounter(*this, record));
             }
         }

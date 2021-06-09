@@ -76,7 +76,7 @@ void RemoteControlPlugin::createConfigureForm(FormCallbackType type, const Strin
 
         form.addStringGetterSetter(F("udph"), Plugins::RemoteControl::getUdpHost, Plugins::RemoteControl::setUdpHost);
         form.addFormUI(F("Host"));
-        form.addValidator(FormUI::Validator::Hostname(FormUI::AllowedType::HOST_OR_IP_OR_EMPTY));
+        form.addValidator(FormUI::Validator::Hostname(FormUI::AllowedType::EMPTY_OR_HOST_OR_IP));
 
         form.addObjectGetterSetter(F("udpp"), cfg, cfg.get_bits_udp_port, cfg.set_bits_udp_port);
         form.addFormUI(FormUI::Type::NUMBER, F("Port"), FormUI::PlaceHolder(7881));

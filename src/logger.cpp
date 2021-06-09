@@ -198,7 +198,7 @@ void Logger::writeLog(Level logLevel, const char *message, va_list arg)
     PrintString msg;
     {
         PrintString header;
-        time_t now = time(nullptr);
+        auto now = time(nullptr);
         auto file = __openLog(logLevel, true);
         if (!file) {
             file = __openLog(Level::MAX, true); // try to log in "messages" if custom log files cannot be opened

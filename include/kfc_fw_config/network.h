@@ -19,11 +19,11 @@ namespace KFCConfigurationClasses {
         public:
             typedef struct __attribute__packed__ SettingsConfig_t {
                 using Type = SettingsConfig_t;
-                CREATE_IPV4_ADDRESS(local_ip);
-                CREATE_IPV4_ADDRESS(subnet);
-                CREATE_IPV4_ADDRESS(gateway);
-                CREATE_IPV4_ADDRESS(dns1);
-                CREATE_IPV4_ADDRESS(dns2);
+                CREATE_IPV4_ADDRESS(local_ip, 0);
+                CREATE_IPV4_ADDRESS(subnet, kCreateIPv4Address(255, 255, 255, 0));
+                CREATE_IPV4_ADDRESS(gateway, kCreateIPv4Address(192, 168, 4, 1));
+                CREATE_IPV4_ADDRESS(dns1, kCreateIPv4Address(8, 8, 8, 8));
+                CREATE_IPV4_ADDRESS(dns2, kCreateIPv4Address(8, 8, 4, 4));
 
                 IPAddress getLocalIp() const {
                     return local_ip;
@@ -60,18 +60,18 @@ namespace KFCConfigurationClasses {
 
             typedef struct __attribute__packed__ SoftAPConfig_t {
                 using Type = SoftAPConfig_t;
-                CREATE_IPV4_ADDRESS(address);
-                CREATE_IPV4_ADDRESS(subnet);
-                CREATE_IPV4_ADDRESS(gateway);
-                CREATE_IPV4_ADDRESS(dhcp_start);
-                CREATE_IPV4_ADDRESS(dhcp_end);
+                CREATE_IPV4_ADDRESS(address, kCreateIPv4Address(192, 168, 4, 1));
+                CREATE_IPV4_ADDRESS(subnet, kCreateIPv4Address(255, 255, 255, 0));
+                CREATE_IPV4_ADDRESS(gateway, kCreateIPv4Address(192, 168, 4, 1));
+                CREATE_IPV4_ADDRESS(dhcp_start, kCreateIPv4Address(192, 168, 4, 2));
+                CREATE_IPV4_ADDRESS(dhcp_end, kCreateIPv4Address(192, 168, 4, 100));
                 uint8_t channel;
                 union __attribute__packed__ {
                     EncryptionType encryption_enum;
                     uint8_t encryption;
                 };
                 SoftAPConfig_t();
-
+                
                 IPAddress getAddress() const {
                     return address;
                 }

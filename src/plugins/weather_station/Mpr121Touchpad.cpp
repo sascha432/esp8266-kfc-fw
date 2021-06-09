@@ -611,7 +611,7 @@ void Mpr121Touchpad::processEvents()
         } while(++iterator != buffer.end());
 
         // event_counter += n;
-        // __LDBG_printf("read %u (%u) events, dur %lu, size %u, max. lag %d", n, event_counter, millis() - start, buffer.size(), lagg);
+        // __LDBG_printf("read %u (%u) events, dur %d, size %u, max. lag %d", n, event_counter, (int)(millis() - start), buffer.size(), lagg);
 
         noInterrupts();
         buffer.shrink(iterator, buffer.end()); // <1µs

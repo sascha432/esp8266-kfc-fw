@@ -203,7 +203,7 @@ void WeatherStationBase::_loop()
     //     }
 
     //     if (_toggleScreenTimer && millis() > _toggleScreenTimer) {
-    //         // __LDBG_printf("_toggleScreenTimer %lu", _toggleScreenTimer);
+    //         // __LDBG_printf("_toggleScreenTimer %u", _toggleScreenTimer);
     //         _setScreen((_currentScreen + 1) % NUM_SCREENS);
     //         _draw();
     //         return;

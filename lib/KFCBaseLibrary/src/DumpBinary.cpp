@@ -8,12 +8,12 @@ extern "C" {
 
     void __dump_binary(const void *ptr, size_t len, size_t perLine, PGM_P title, uint8_t groupBytes)
     {
-        __dump_binary_to(Serial, ptr, len, perLine == ~0U ? DumpBinary::kPerLineDefault : perLine, title, groupBytes == 0xff ? DumpBinary::kGroupBytesDefault : groupBytes);
+        __dump_binary_to(Serial, ptr, len, perLine == DUMP_BINARY_DEFAULTS ? DumpBinary::kPerLineDefault : perLine, title, groupBytes == static_cast<uint8_t>(DUMP_BINARY_DEFAULTS) ? DumpBinary::kGroupBytesDefault : groupBytes);
     }
 
     void __dump_binary_to(Print &output, const void *ptr, size_t len, size_t perLine, PGM_P title, uint8_t groupBytes)
     {
-        DumpBinary d(output, groupBytes == DUMP_BINARY_DEFAULTS ? DumpBinary::kGroupBytesDefault : groupBytes, perLine == 0 ? len : perLine == DUMP_BINARY_DEFAULTS ? DumpBinary::kPerLineDefault : perLine);
+        DumpBinary d(output, groupBytes == static_cast<uint8_t>(DUMP_BINARY_DEFAULTS) ? DumpBinary::kGroupBytesDefault : groupBytes, perLine == 0 ? len : perLine == DUMP_BINARY_DEFAULTS ? DumpBinary::kPerLineDefault : perLine);
         if (title) {
             output.printf_P(PSTR("%s: %p:%u\n"), title, ptr, len);
         }

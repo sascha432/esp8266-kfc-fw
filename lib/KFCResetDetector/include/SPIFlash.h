@@ -29,7 +29,7 @@ namespace SPIFlash {
 
     static constexpr uint32_t kFlashMagic = 0x208a74e2;
     static constexpr uint32_t kInitialCrc32 = ~0;
-    static constexpr uint32_t kFlashMemoryStartAddress = 0x40200000;
+    static constexpr uint32_t kFlashMemoryStartAddress = SECTION_FLASH_START_ADDRESS;
     static constexpr uint16_t kFlashMemorySectorSize = SPI_FLASH_SEC_SIZE;
 
     // default buffer size in byte
@@ -102,6 +102,10 @@ namespace SPIFlash {
 
         uint16_t space() const {
             return *this ? ((SPI_FLASH_SEC_SIZE - sizeof(*this)) - size()) : 0;
+        }
+
+        void setPattern(uint8_t pattern) {
+            std::fill_n(reinterpret_cast<uint8_t *>(this), pattern, sizeof(*this));
         }
     };
 

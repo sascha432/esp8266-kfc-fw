@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <Arduino.h>
+#include <Arduino_compat.h>
 
 uint32_t get_time_diff(uint32_t start, uint32_t end);
 

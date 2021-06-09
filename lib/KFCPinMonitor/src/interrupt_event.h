@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "pin_monitor.h"
+#include <Arduino_compat.h>
 #include <PrintString.h>
 #include <stl_ext/utility.h>
 #include <stl_ext/fixed_circular_buffer.h>
@@ -156,4 +156,6 @@ namespace PinMonitor {
 
 }
 
+#if DEBUG_PIN_MONITOR
 #include <debug_helper_disable.h>
+#endif

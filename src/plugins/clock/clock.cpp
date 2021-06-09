@@ -551,7 +551,7 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
     IF_IOT_CLOCK(
         // _setSevenSegmentDisplay();
         IF_IOT_CLOCK_PIXEL_SYNC_ANIMATION(
-            if (IS_TIME_VALID(time(nullptr))) {
+            if (isTimeValid()) {
                 _isSyncing = false;
             } else {
                 setSyncing(true);

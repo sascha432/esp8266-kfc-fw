@@ -112,7 +112,7 @@ bool MDNSPlugin::atModeHandler(AtModeArgs &args)
 #if ESP8266
             auto timeout = args.toMillis(2, 100, ~0, 2000);
             auto query = PrintString(F("service=%s proto=%s wait=%ums"), args.toString(0).c_str(), args.toString(1).c_str(), timeout);
-            args.printf_P(PSTR("Querying: %s"), query.c_str());
+            args.print(F("Querying: %s"), query.c_str());
 
             Output *output = new MDNSPlugin::Output(millis() + timeout);
 
@@ -120,7 +120,7 @@ bool MDNSPlugin::atModeHandler(AtModeArgs &args)
                 serviceCallback(*output, mdnsServiceInfo, answerType, p_bSetContent);
             });
 
-            _Scheduler.add(timeout, false, [args, output, this](Event::CallbackTimerPtr timer) mutable {
+            _Scheduler.add(timeout, false, [args, output, this](Event::CallbackTimerPtr timer) {
                 _IF_DEBUG(auto result = ) MDNS.removeServiceQuery(output->_serviceQuery);
                 output->_serviceQuery = nullptr;
                 output->end();

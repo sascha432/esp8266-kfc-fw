@@ -2,11 +2,12 @@
   Author: sascha_lammers@gmx.de
 */
 
+#include <Arduino_compat.h>
 #include "pin_monitor.h"
 #include "pin.h"
-#include "rotary_encoder.h"
 #include "Schedule.h"
 #include "interrupt_impl.h"
+#include "rotary_encoder.h"
 #include "monitor.h"
 
 #if DEBUG_PIN_MONITOR

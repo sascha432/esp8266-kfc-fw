@@ -24,6 +24,8 @@ extern "C" {
     void ets_timer_disarm (ETSTimer *ptimer);
     void ets_timer_done (ETSTimer *ptimer);
 
+    extern "C" char *_tzname[2];
+
 #if ARDUINO_ESP8266_VERSION_COMBINED == 0x020603
 
     void settimeofday_cb (void (*cb)(void));
@@ -34,6 +36,8 @@ extern "C" {
 #if ARDUINO_ESP8266_VERSION_COMBINED >= 0x030000
 
     #include <sys/_tz_structs.h>
+
+    int settimeofday(const struct timeval* tv, const struct timezone* tz);
 
     bool wifi_softap_get_dhcps_lease(struct dhcps_lease *please);
     bool wifi_softap_set_dhcps_lease(struct dhcps_lease *please);

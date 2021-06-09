@@ -426,7 +426,7 @@ RTCMemoryManager::RtcTime RTCMemoryManager::_readTime()
 {
     RtcTime time;
     if (read(RTCMemoryId::RTC, &time, sizeof(time)) == sizeof(time)) {
-        __DBG_printf("read time=%u offset=%d in_sync=%u", time.time, time.offset, time.status);
+        __DBG_printf("read time=%u status=%s", time.getTime(), time.getStatus());
         return time;
     }
     __DBG_printf("invalid RtcTime");
@@ -435,7 +435,7 @@ RTCMemoryManager::RtcTime RTCMemoryManager::_readTime()
 
 void RTCMemoryManager::_writeTime(const RtcTime &time)
 {
-    __DBG_printf("write time=%u offset=%d in_sync=%u", time.time, time.offset, time.status);
+    __DBG_printf("write time=%u status=%s", time.getTime(), time.getStatus());
     write(RTCMemoryId::RTC, &time, sizeof(time));
 }
 

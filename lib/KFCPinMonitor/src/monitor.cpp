@@ -2,18 +2,19 @@
   Author: sascha_lammers@gmx.de
 */
 
-#include "pin_monitor.h"
-#include "monitor.h"
-#include "debounce.h"
-#include "pin.h"
-#include <PrintString.h>
-#include <BitsToStr.h>
+#include <Arduino_compat.h>
+#include <PrintHtmlEntitiesString.h>
 #include <misc.h>
 #include <stl_ext/memory.h>
 #include <MicrosTimer.h>
+#include "pin_monitor.h"
+#include "debounce.h"
+#include "pin.h"
+#include "monitor.h"
+#include <PrintString.h>
+#include <BitsToStr.h>
 #include "rotary_encoder.h"
 #include "logger.h"
-#include <PrintHtmlEntitiesString.h>
 
 #if PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS
 #include <FunctionalInterrupt.h>
@@ -31,11 +32,11 @@
 
 using namespace PinMonitor;
 
-Monitor pinMonitor;
+Monitor PinMonitor::pinMonitor;
 
 #if PIN_MONITOR_USE_POLLING
 
-PollingTimer pollingTimer;
+PollingTimer PinMonitor::pollingTimer;
 
 void PollingTimer::start()
 {
@@ -113,9 +114,9 @@ void Monitor::end()
     _detach(_handlers.begin(), _handlers.end(), true);
 
 #if PIN_MONITOR_ROTARY_ENCODER_SUPPORT
-    PIN_MONITOR_ETS_GPIO_INTR_DISABLE();
+    GPIOInterruptsDisable();
     eventBuffer.clear();
-    PIN_MONITOR_ETS_GPIO_INTR_ENABLE();
+    GPIOInterruptsEnable();
 #endif
 }
 
@@ -340,7 +341,7 @@ void Monitor::_loop()
 
 #if PIN_MONITOR_ROTARY_ENCODER_SUPPORT
     // process all new events
-    PIN_MONITOR_ETS_GPIO_INTR_DISABLE();
+    GPIOInterruptsDisable();
     if (eventBuffer.size()) {
 
         // static uint16_t maxEventSize = 0;
@@ -352,7 +353,7 @@ void Monitor::_loop()
         auto bufIterator = eventBuffer.begin();
         while (bufIterator != eventBuffer.end()) {
             auto event = *bufIterator;
-            PIN_MONITOR_ETS_GPIO_INTR_ENABLE();
+            GPIOInterruptsDisable();
 
             // __DBG_printf("L-FEED: %s", event.toString().c_str());
 
@@ -373,14 +374,14 @@ void Monitor::_loop()
                 }
             }
 
-            PIN_MONITOR_ETS_GPIO_INTR_DISABLE();
+            GPIOInterruptsDisable();
             ++bufIterator;
         }
         if (bufIterator == eventBuffer.end()) {
             eventBuffer.clear();
         }
     }
-    PIN_MONITOR_ETS_GPIO_INTR_ENABLE();
+    GPIOInterruptsDisable();
     now = millis();
 #endif
 

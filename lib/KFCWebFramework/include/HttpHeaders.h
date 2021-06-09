@@ -226,6 +226,7 @@ public:
         AUTO =  ~0U,
         NOT_SET = 0,
         ONE_YEAR = 365 * 86400,
+        TEN_YEARS = 10 * 365 * 86400
     };
 
     HttpDateHeader(const String &name, const String &expires);
@@ -464,7 +465,7 @@ inline HttpCookieHeader &HttpCookieHeader::setMaxAge(int32_t maxAge)
         _expires = COOKIE_EXPIRED;
     } else {
         time_t t;
-        if (IS_TIME_VALID(t = time(nullptr))) {
+        if (isTimeValid(t = time(nullptr))) {
             _expires = t + maxAge;
         }
     }

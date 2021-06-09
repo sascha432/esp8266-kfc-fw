@@ -372,6 +372,8 @@ namespace SPIFlash {
             for(auto i = _firstSector; i <= _lastSector; i++) {
                 auto offset = FlashResult::headerOffset(i);
                 auto rc = _spi_flash_read(offset, reinterpret_cast<uint32_t *>(&hdr), sizeof(hdr));
+                __DBG_printf("sector=0x%04x ofs=%u read=%d", i, offset, rc);
+
                 if (rc != SPI_FLASH_RESULT_OK) {
                     __DBG_printf("sector=0x%04x read failure", i);
                     errors++;
@@ -385,7 +387,7 @@ namespace SPIFlash {
                         continue;
                     }
                     // erase only if the magic can be found or the sector contains any data
-                    memset(&hdr, 0xf0, sizeof(hdr));
+                    hdr.setPattern(0xf0);
                     // try to overwrite the flash memory
                     __DBG_printf("sector=0x%04x trying to remove magic", i);
                     rc = _spi_flash_write(offset, reinterpret_cast<uint32_t *>(&hdr), sizeof(hdr));
@@ -398,6 +400,7 @@ namespace SPIFlash {
                         }
                         else if (hdr._magic != kFlashMagic) { // erase sector if magic is still present
                             // skip erase
+                            __DBG_printf("sector=0x%04x skip erase magic=%08x!=%08x", i, hdr._magic != kFlashMagic);
                             continue;
                         }
                     }

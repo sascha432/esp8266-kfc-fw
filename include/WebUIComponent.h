@@ -155,18 +155,24 @@ namespace WebUINS {
             append(NamedBool(J(state), state));
         }
 
+        template<class ..._Args>
+        Component &append(_Args&& ... args) {
+            UnnamedObject::append(std::forward<_Args>(args) ...);
+            return *this;
+        }
+
         void append(SensorRenderType render) {
             switch(render) {
             case SensorRenderType::BADGE:
-                append(NamedString(J(render_type), J(badge)));
-                append(NamedUint32(J(columns), 2));
+                UnnamedObject::append(NamedString(J(render_type), J(badge)));
+                UnnamedObject::append(NamedUint32(J(columns), 2));
                 break;
             case SensorRenderType::ROW:
-                append(NamedString(J(render_type), J(row)));
-                append(NamedUint32(J(columns), 4));
+                UnnamedObject::append(NamedString(J(render_type), J(row)));
+                UnnamedObject::append(NamedUint32(J(columns), 4));
                 break;
             case SensorRenderType::COLUMN:
-                append(NamedString(J(render_type), J(columns)));
+                UnnamedObject::append(NamedString(J(render_type), J(columns)));
                 break;
             }
         }

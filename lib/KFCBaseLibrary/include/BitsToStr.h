@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <WString.h>
+#include <Arduino_compat.h>
 
 template<size_t _Bits, bool _Reverse>
 class BitsToStr {

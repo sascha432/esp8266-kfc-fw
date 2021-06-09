@@ -325,9 +325,10 @@ public:
     // 0 = not connected
     static uint32_t getWiFiUp();
 
+    static void setupRTC();
     TwoWire &initTwoWire(bool reset = false, Print *output = nullptr);
-    bool setRTC(uint32_t unixtime);
-    uint32_t getRTC();
+    static bool setRTC(uint32_t unixtime);
+    static uint32_t getRTC();
     float getRTCTemperature();
     bool rtcLostPower() ;
     void printRTCStatus(Print &output, bool plain = true);

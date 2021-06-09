@@ -420,7 +420,7 @@ void Queue::runPublish(uint32_t delayMillis)
             // check if we have real time
             if (!(_runFlags & RunFlags::FORCE_NOW)) {
                 auto now = time(nullptr);
-                if (!IS_TIME_VALID(now)) {
+                if (!isTimeValid(now)) {
                     __LDBG_printf("time() is invalid, retrying auto discovery in 30 seconds");
                     timer->rearm(Event::seconds(30), false);
                     return;

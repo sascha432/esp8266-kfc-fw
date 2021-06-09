@@ -540,19 +540,23 @@ unsigned char String::operator>=(const String &rhs) const {
 }
 
 unsigned char String::equalsIgnoreCase(const String &s2) const {
-    if (this == &s2)
+    if (this == &s2)  {
         return 1;
-    if (len() != s2.len())
-        return 0;
-    if (len() == 0)
-        return 1;
-    const char *p1 = buffer();
-    const char *p2 = s2.buffer();
-    while (*p1) {
-        if (tolower(*p1++) != tolower(*p2++))
-            return 0;
     }
-    return 1;
+    if (len() != s2.len()) {
+        return 0;
+    }
+    if (len() == 0) {
+        return 1;
+    }
+    return strcasecmp(buffer(), s2.buffer()) == 0;
+    // const char *p1 = buffer();
+    // const char *p2 = s2.buffer();
+    // while (*p1) {
+    //     if (tolower(*p1++) != tolower(*p2++))
+    //         return 0;
+    // }
+    // return 1;
 }
 
 unsigned char String::equalsConstantTime(const String &s2) const {

@@ -4,8 +4,7 @@
 
 #pragma once
 
-#include "pin_monitor.h"
-#include "interrupt_impl.h"
+#include <Arduino_compat.h>
 
 namespace PinMonitor {
 
@@ -16,9 +15,6 @@ namespace PinMonitor {
     class Pin
     {
     public:
-        using StateType = PinMonitor::StateType;
-        using ActiveStateType = PinMonitor::ActiveStateType;
-
         Pin() = delete;
         Pin(const Pin &) = delete;
 
@@ -218,23 +214,23 @@ namespace PinMonitor {
         }
 
         inline void clearEvents() {
-            PIN_MONITOR_ETS_GPIO_INTR_DISABLE();
+            GPIOInterruptsDisable();
             _event = SimpleEventType::NONE;
-            PIN_MONITOR_ETS_GPIO_INTR_ENABLE();
+            GPIOInterruptsDisable();
         }
 
         inline SimpleEventType getEvent() const {
-            PIN_MONITOR_ETS_GPIO_INTR_DISABLE();
+            GPIOInterruptsDisable();
             auto tmp = _event;
-            PIN_MONITOR_ETS_GPIO_INTR_ENABLE();
+            GPIOInterruptsDisable();
             return tmp;
         }
 
         inline SimpleEventType getEventClear() {
-            PIN_MONITOR_ETS_GPIO_INTR_DISABLE();
+            GPIOInterruptsDisable();
             auto tmp = _event;
             _event = SimpleEventType::NONE;
-            PIN_MONITOR_ETS_GPIO_INTR_ENABLE();
+            GPIOInterruptsDisable();
             return tmp;
         }
 
@@ -301,9 +297,9 @@ namespace PinMonitor {
 
         inline __attribute__((__always_inline__))
         void clearEvents() {
-            PIN_MONITOR_ETS_GPIO_INTR_DISABLE();
+            GPIOInterruptsDisable();
             clearEventsNoInterrupts();
-            PIN_MONITOR_ETS_GPIO_INTR_ENABLE();
+            GPIOInterruptsDisable();
         }
 
         // GPIO interrupts must be disabled when calling this method
@@ -313,17 +309,17 @@ namespace PinMonitor {
         }
 
         inline Events getEvents() const {
-            PIN_MONITOR_ETS_GPIO_INTR_DISABLE();
+            GPIOInterruptsDisable();
             auto tmp = getEventsNoInterrupts();
-            PIN_MONITOR_ETS_GPIO_INTR_ENABLE();
+            GPIOInterruptsDisable();
             return tmp;
         }
 
         inline Events getEventsClear() {
-            PIN_MONITOR_ETS_GPIO_INTR_DISABLE();
+            GPIOInterruptsDisable();
             auto tmp = getEventsNoInterrupts();
             clearEventsNoInterrupts();
-            PIN_MONITOR_ETS_GPIO_INTR_ENABLE();
+            GPIOInterruptsDisable();
             return tmp;
         }
 

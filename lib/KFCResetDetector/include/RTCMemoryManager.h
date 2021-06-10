@@ -22,6 +22,8 @@
 #include "debug_helper_disable.h"
 #endif
 
+#include <Utility/ProgMemHelper.h>
+
 // any data stored in RTC memory is kept during deep sleep and device reboots
 // data integrity is ensured
 // NOTE for ESP32: during normal boots, the data is erased and the reset button seems to be detected as normal boot (tested with heltec wifi lora32)
@@ -92,8 +94,9 @@ public:
 public:
     enum class SyncStatus : uint8_t {
         NO = 0,
-        YES = 1,
-        UNKNOWN = 2,
+        YES,
+        UNKNOWN,
+        NTP_UPDATE
     };
 
     struct RtcTime {
@@ -118,16 +121,22 @@ public:
 #endif
         }
 
-        const __FlashStringHelper *getStatus() const {
+        static const __FlashStringHelper *getStatus(SyncStatus status) {
             switch(status) {
             case SyncStatus::YES:
                 return F("In sync");
             case SyncStatus::NO:
                 return F("Out of sync");
+            case SyncStatus::NTP_UPDATE:
+                return F("NTP update in progress");
             default:
                 break;
             }
             return F("Unknown");
+        }
+
+        const __FlashStringHelper *getStatus() const {
+            return getStatus(status);
         }
     };
 
@@ -154,7 +163,7 @@ public:
     // requires to free the returned pointer using free()
     static uint8_t *read(RTCMemoryId id, uint8_t &length);
     // free pointer returned by read()
-    static void free(uint8_t *buffer);
+    static void release(uint8_t *buffer);
 
     static bool write(RTCMemoryId id, const void *, uint8_t maxSize);
 
@@ -170,13 +179,16 @@ private:
 
 // methods to use the internal RTC
 public:
+#if RTC_SUPPORT == 0
     static void setupRTC();
+    static void updateTimeOffset(uint32_t millis_offset);
+    static void storeTime();
+#endif
     static void setTime(time_t time, SyncStatus status);
     static SyncStatus getSyncStatus();
     // there must be valid record in the RTC memory to use following methods
     static void setSyncStatus(bool inSync);
-    static void updateTimeOffset(uint32_t millis_offset);
-    static void storeTime();
+    static void setNtpUpdate();
 
     inline static RtcTime readTime() {
         return _readTime();
@@ -207,8 +219,12 @@ inline RTCMemoryManager::SyncStatus RTCMemoryManager::getSyncStatus()
 
 inline void RTCMemoryManager::setTime(time_t time, SyncStatus status)
 {
-    _writeTime(RtcTime(time, status));
+    auto rtc = RtcTime(time, status);
+    __LDBG_printf("set time=%u status=%s", rtc.getTime(), rtc.getStatus());
+    _writeTime(rtc);
 }
+
+#if RTC_SUPPORT == 0
 
 inline void RTCMemoryManager::storeTime()
 {
@@ -217,9 +233,12 @@ inline void RTCMemoryManager::storeTime()
     _writeTime(rtc);
 }
 
+#endif
+
 inline void RTCMemoryManager::setSyncStatus(bool status)
 {
     auto rtc = _readTime();
+    __LDBG_printf("new status=%u old status=%u", status, rtc.status);
     if (
         (status == true && rtc.status != SyncStatus::YES) ||
         (status == false && rtc.status == SyncStatus::YES)
@@ -229,6 +248,12 @@ inline void RTCMemoryManager::setSyncStatus(bool status)
     }
 }
 
+inline void RTCMemoryManager::setNtpUpdate()
+{
+    auto rtc = _readTime();
+    rtc.status = SyncStatus::NTP_UPDATE;
+    _writeTime(rtc);
+}
 
 #include <pop_pack.h>
 

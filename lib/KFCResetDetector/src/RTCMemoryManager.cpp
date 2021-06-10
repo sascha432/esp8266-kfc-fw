@@ -150,7 +150,8 @@ uint8_t *RTCMemoryManager::_readMemory(Header_t &header, uint16_t extraSize) {
                 size += kBlockSize - alignment;
             }
         }
-        auto buf = reinterpret_cast<uint8_t *>(calloc(size, 1));
+        // auto buf = reinterpret_cast<uint8_t *>(calloc(size, 1));
+        auto buf = new uint8_t[size]();
         if (!buf) {
             __DBG_printf("malloc failed length=%u", size);
             break;
@@ -169,7 +170,7 @@ uint8_t *RTCMemoryManager::_readMemory(Header_t &header, uint16_t extraSize) {
         __LDBG_printf("read: address=%u[%u-%u] length=%u crc=0x%04x", header.start_address(), kBaseAddress, kLastAddress, header.length, header.crc);
         return buf;
     }
-    free(buf);
+    release(buf);
     return nullptr;
 }
 
@@ -186,7 +187,7 @@ uint8_t RTCMemoryManager::read(RTCMemoryId id, void *dataPtr, uint8_t maxSize)
     }
     auto copyLen = std::min(entry.length, maxSize);
     memcpy(dataPtr, data, copyLen);
-    free(memPtr);
+    release(memPtr);
     return copyLen;
 }
 
@@ -206,10 +207,10 @@ uint8_t *RTCMemoryManager::read(RTCMemoryId id, uint8_t &length)
     return memPtr;
 }
 
-void RTCMemoryManager::free(uint8_t *buffer)
+void RTCMemoryManager::release(uint8_t *buffer)
 {
     if (buffer) {
-        ::free(buffer);
+        delete[] buffer;
     }
 }
 
@@ -220,7 +221,6 @@ uint8_t *RTCMemoryManager::_read(uint8_t *&data, Header_t &header, Entry_t &entr
         __LDBG_printf("read = nullptr");
         return nullptr;
     }
-
     auto ptr = header.begin(memPtr);
     auto endPtr = header.end(memPtr);
     while(ptr + sizeof(Entry_t) < endPtr) {
@@ -241,7 +241,7 @@ uint8_t *RTCMemoryManager::_read(uint8_t *&data, Header_t &header, Entry_t &entr
         }
         ptr += entry.length;
     }
-    free(memPtr);
+    release(memPtr);
     return nullptr;
 }
 
@@ -255,7 +255,10 @@ bool RTCMemoryManager::write(RTCMemoryId id, const void *dataPtr, uint8_t dataLe
     Header_t header;
     uint16_t newLength = sizeof(header);
     uint8_t *outPtr;
-    auto memPtr = _readMemory(header, dataLength);
+    auto memUnqiuePtr = std::unique_ptr<uint8_t[]>(_readMemory(header, dataLength));
+    auto memPtr = memUnqiuePtr.get();
+
+    // auto memPtr = _readMemory(header, dataLength);
     if (memPtr) {
         // copy existing items
         auto ptr = header.begin(memPtr);
@@ -290,9 +293,11 @@ bool RTCMemoryManager::write(RTCMemoryId id, const void *dataPtr, uint8_t dataLe
         header.length = newLength;
     }
     else {
-        memPtr = reinterpret_cast<uint8_t *>(calloc(dataLength + kBlockSize + sizeof(header) + sizeof(Entry_t), 1));
-        if (!memPtr) {
-            __DBG_printf("malloc failed length=%u", dataLength + kBlockSize + sizeof(header) + sizeof(Entry_t));
+        auto size = dataLength + kBlockSize + sizeof(header) + sizeof(Entry_t);
+        memUnqiuePtr.reset(new uint8_t[size]());
+        memPtr = memUnqiuePtr.get();
+        if (!memUnqiuePtr) {
+            __DBG_printf("malloc failed length=%u", size);
             return false;
         }
         outPtr = memPtr;
@@ -415,8 +420,7 @@ bool RTCMemoryManager::dump(Print &output, RTCMemoryId displayId) {
         }
         ptr += entry.length;
     }
-
-    free(memPtr);
+    release(memPtr);
     return result;
 }
 
@@ -426,7 +430,7 @@ RTCMemoryManager::RtcTime RTCMemoryManager::_readTime()
 {
     RtcTime time;
     if (read(RTCMemoryId::RTC, &time, sizeof(time)) == sizeof(time)) {
-        __DBG_printf("read time=%u status=%s", time.getTime(), time.getStatus());
+        __LDBG_printf("read time=%u status=%s", time.getTime(), time.getStatus());
         return time;
     }
     __DBG_printf("invalid RtcTime");
@@ -435,34 +439,32 @@ RTCMemoryManager::RtcTime RTCMemoryManager::_readTime()
 
 void RTCMemoryManager::_writeTime(const RtcTime &time)
 {
-    __DBG_printf("write time=%u status=%s", time.getTime(), time.getStatus());
+    __LDBG_printf("write time=%u status=%s", time.getTime(), time.getStatus());
     write(RTCMemoryId::RTC, &time, sizeof(time));
 }
 
+#if RTC_SUPPORT == 0
+
 void RTCMemoryManager::setupRTC()
 {
-#if RTC_SUPPORT == 0
-    _rtcTimer.startTimer(1000, true, true);
-    // _Timer(RTCMemoryManager::_updateTimer).add(Event::milliseconds(1000), true, [](Event::CallbackTimerPtr timer) {
-    //     RTCMemoryManager::storeTime();
-    // });
-#endif
+    _rtcTimer.startTimer(1000, true);
 }
 
 void RTCMemoryManager::updateTimeOffset(uint32_t offset)
 {
-#if RTC_SUPPORT == 0
-    __DBG_printf("update time offset=%ums", offset);
+    __LDBG_printf("update time offset=%ums", offset);
     offset /= 1000;
     if (offset) {
         auto rtc = _readTime();
         rtc.time += offset;
         _writeTime(rtc);
     }
-#endif
 }
+
+#endif
 
 void RTCMemoryManager::_clearTime()
 {
+    __LDBG_print("clearTime");
     remove(RTCMemoryId::RTC);
 }

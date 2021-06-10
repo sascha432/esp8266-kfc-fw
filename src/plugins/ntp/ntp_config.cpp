@@ -36,7 +36,7 @@ namespace KFCConfigurationClasses {
         while (isspace(*end) && end >= server) {
             end--;
         }
-        if (!*server) {
+        if (server == end) {
             return nullptr;
         }
         if (alloc) {
@@ -51,7 +51,8 @@ namespace KFCConfigurationClasses {
             __DBG_printf("newptr %s", server);
         }
         else {
-            *end = 0;
+            end[1] = 0;
+            __DBG_printf("newsvr %s", server);
         }
         return server;
     }

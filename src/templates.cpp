@@ -286,11 +286,9 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         print_status_mcp23017(output);
     }
 #endif
-#if RTC_SUPPORT
     else if (key == F("RTC_STATUS")) {
         config.printRTCStatus(output, false);
     }
-#endif
     else if (key == F("SAFEMODE")) {
         if (config.isSafeMode()) {
             output.print(F(" - Running in SAFE MODE"));

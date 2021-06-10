@@ -8,12 +8,12 @@
 
 static time_t ntpLastKnownTime = TIME_T_MIN;
 
-time_t getLastKnownTime()
+time_t getLastKnownTimeOfDay()
 {
     return ntpLastKnownTime;
 }
 
-void setLastKnownTime(time_t time)
+void setLastKnownTimeOfDay(time_t time)
 {
     ntpLastKnownTime = time;
 }

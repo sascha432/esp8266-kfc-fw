@@ -72,6 +72,7 @@ ClockPlugin::StoredState ClockPlugin::_getState() const
             return state;
         }
     }
+
     __LDBG_printf("failed to load state %s", SPGM(iot_clock_save_state_file));
     return StoredState();
 }

@@ -55,7 +55,8 @@ DumpBinary &DumpBinary::dump(const uint8_t *data, size_t length, ptrdiff_t offse
             auto ch = (uint8_t)pgm_read_byte(data + i);
             if (isprint(ch)) {
                 _output.print((char)ch);
-            } else {
+            }
+            else {
                 _output.print('.');
             }
         }
@@ -71,7 +72,10 @@ DumpBinary &DumpBinary::dump(const uint8_t *data, size_t length, ptrdiff_t offse
         for (; pos < end && j < perLine; pos++, j++) {
             uint8_t ch = pgm_read_byte(data + pos);
             _output.printf_P(PSTR("%02x"), ch);
-            if ((pos < end - 1) && (((j % _groupBytes) == 1) || (_groupBytes == 1))) {
+            if (
+                (_groupBytes == 1) ||
+                (_groupBytes && (pos < end - 1) && (j < perLine - 1) && (((j % _groupBytes) == _groupBytes - 1)))
+            ) {
                 _output.print(' ');
             }
         }

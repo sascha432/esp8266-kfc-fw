@@ -20,8 +20,6 @@
 #endif
 
 DeepSleep::PinState deepSleepPinState;
-DeepSleep::DeepSleepParam deepSleepParams;
-uint64_t DeepSleep::_realTimeOffset;
 
 using namespace DeepSleep;
 
@@ -38,7 +36,7 @@ inline static void deep_sleep_preinit()
             // if the device has been woken up by the user, the time cannot be determined
             // deepSleepParams._currentSleepTime is not subtracted here... since we cannot
             // know how much of the time has passed already
-            realTimeOffset = deepSleepParams._remainingSleepTime * 1000ULL;
+            realTimeOffset = (deepSleepParams._totalSleepTime - deepSleepParams._remainingSleepTime) + (deepSleepParams._runtime / 1000);
 #if DEBUG_DEEP_SLEEP
             __LDBG_printf("real time offset without the last cycle: %.6f", DeepSleep::_realTimeOffset / 1000000.0);
 #endif
@@ -120,6 +118,9 @@ inline static void deep_sleep_preinit()
                 esp_yield();
                 system_deep_sleep_instant(0);
                 esp_yield();
+            }
+            else {
+                RTCMemoryManager::updateTimeOffset(realTimeOffset);
             }
         }
 #if DEBUG_DEEP_SLEEP

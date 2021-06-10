@@ -35,11 +35,11 @@
 
 #endif
 
-time_t getLastKnownTime();
-void setLastKnownTime(time_t time);
+time_t getLastKnownTimeOfDay();
+void setLastKnownTimeOfDay(time_t time);
 
 inline static bool isTimeValid(time_t time) {
-    return time >= getLastKnownTime();
+    return time >= getLastKnownTimeOfDay();
 }
 
 inline static bool isTimeValid() {

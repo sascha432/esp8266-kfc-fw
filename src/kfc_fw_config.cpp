@@ -1439,12 +1439,7 @@ void KFCFWConfiguration::setupRTC() {
     if (unixtime != 0) {
         struct timeval tv = { static_cast<time_t>(unixtime), 0 };
         settimeofday(&tv, nullptr);
-        int16_t offset = 0;
-        auto rtc = RTCMemoryManager::readTime();
-        if (rtc.status == RTCMemoryManager::SyncStatus::YES) {
-            offset = rtc.timezoneOffset;
-        }
-        RTCMemoryManager::setTime(unixtime, offset, RTCMemoryManager::SyncStatus::YES);
+        RTCMemoryManager::setTime(unixtime, RTCMemoryManager::SyncStatus::YES);
     }
     else {
         RTCMemoryManager::setSyncStatus(false);
@@ -1456,7 +1451,11 @@ void KFCFWConfiguration::setupRTC() {
     // - inaccurate when using deep sleep
     // - no battery backup
     RTCMemoryManager::setSyncStatus(false);
+    auto rtc = RTCMemoryManager::readTime();
+    struct timeval tv = { static_cast<time_t>(rtc.time), 0 };
+    settimeofday(&tv, nullptr);
 #endif
+    RTCMemoryManager::setupRTC();
 }
 
 bool KFCFWConfiguration::rtcLostPower() {

@@ -31,12 +31,20 @@
             static bool isEnabled();
 
             CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.ntpclient, Server1, 0, 64);
+            #if SNTP_MAX_SERVERS > 1
             CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.ntpclient, Server2, 0, 64);
+            #endif
+            #if SNTP_MAX_SERVERS > 2
             CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.ntpclient, Server3, 0, 64);
+            #endif
+            #if SNTP_MAX_SERVERS > 3
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.ntpclient, Server4, 0, 64);
+            #endif
             CREATE_STRING_GETTER_SETTER(MainConfig().plugins.ntpclient, TimezoneName, 64);
             CREATE_STRING_GETTER_SETTER(MainConfig().plugins.ntpclient, PosixTimezone, 64);
 
-            static const char *getServer(uint8_t num);
-            static constexpr uint8_t kServersMax = 3;
+            static char *getServer(uint8_t num, bool alloc = false);
+            static constexpr uint8_t kServersMax = SNTP_MAX_SERVERS;
+            static_assert(kServersMax <= 4, "limited to 4 servers");
 
         };

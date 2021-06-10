@@ -243,20 +243,39 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                 }
             }
 
-            setAnimation(AnimationType::SOLID, 0);
-            _setBrightness(0);
+            uint32_t color = Color::fromString(args.toString(0));
+            auto duration = args.toIntMinMax(1, 100, 5000, 100);
+            args.print(F("testing color=%06x brightness 255 duration %u mspower_limit=off. debug mode enabled, reset device to disable"), color, duration);
+
+            _debug = true;
+            FastLED.setMaxPowerInMilliWatts(0, nullptr);
+
+            _setBrightness(5);
+            // if (ina219) {
+            //     _Scheduler.add(Event::milliseconds(250), false, [this, ina219](Event::CallbackTimerPtr) {
+            //         ina219->resetPeak();
+            //     });
+            // }
+
+            _display.setDither(false);
+            _display.setBrightness(0);
+            _display.clear();
+            _display.show();
+            delay(250);
+
             if (ina219) {
-                _Scheduler.add(Event::milliseconds(250), false, [this, ina219](Event::CallbackTimerPtr) {
-                    ina219->resetPeak();
-                });
+                ina219->resetPeak();
             }
 
-            setColor(Color::fromString(args.toString(0)));
-            _setBrightness(255);
+            _display.setBrightness(255);
+            _display.fill(color);
+            _display.show();
 
             auto &stream = args.getStream();
-            _Scheduler.add(Event::milliseconds(args.toIntMinMax(1, 500, 5000, 500)), false, [this, ina219, &stream](Event::CallbackTimerPtr) {
-                _setBrightness(0);
+            _Scheduler.add(Event::milliseconds(), false, [this, ina219, &stream](Event::CallbackTimerPtr) {
+                _display.setBrightness(0);
+                _display.clear();
+                _display.show();
                 if (ina219) {
                     stream.printf_P(PSTR("U=%f I=%f P=%f"), ina219->getVoltage(), ina219->getPeakCurrent(), ina219->getPeakPower());
                 }

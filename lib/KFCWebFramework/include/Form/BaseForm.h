@@ -412,7 +412,7 @@ namespace FormUI {
                 static_assert(std::is_trivially_copyable<VarType>::value, "only for TriviallyCopyable");
                 // auto bytePtr = reinterpret_cast<uint8_t *>(valuePtr);
                 return _add<FormValueCallback<VarType>>(name, [valuePtr](VarType &value, Field::BaseField &field, bool store) {
-                    // __LDBG_printf("size=%u ptr=%p align=%u", sizeof(VarType), bytePtr, ((intptr_t)bytePtr) % 4);
+                    // __DBG_printf("size=%u ptr=%p align=%u store=%u", sizeof(VarType), valuePtr, ((intptr_t)valuePtr) % 4, store);
                     // use memcpy to avoid alignment issues
                     if (store) {
                         memcpy(valuePtr, &value, sizeof(VarType));

@@ -404,7 +404,7 @@ namespace Clock {
         }
 
         void clear() {
-            FastLED.clear(true);
+            fill(0);
         }
 
         void setBrightness(uint8_t brightness) {
@@ -415,8 +415,8 @@ namespace Clock {
             FastLED.show();
         }
 
-        void show(uint8_t brightness) {
-            FastLED.show(brightness);
+        void fill(ColorType color) {
+            std::fill(_pixels.begin(), _pixels.end(), color);
         }
 
         void delay(unsigned long ms) {

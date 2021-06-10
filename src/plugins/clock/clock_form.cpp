@@ -244,11 +244,11 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
         form.addPointerTriviallyCopyable(F("tmi"), &cfg.protection.temperature_reduce_range.min);
         form.addFormUI(F("Minimum Temperature To Reduce Brightness"), FormUI::Suffix(FSPGM(UTF8_degreeC)));
-        form.addValidator(FormUI::Validator::Range(kMinimumTemperatureThreshold, 90));
+        form.addValidator(FormUI::Validator::Range(kMinimumTemperatureThreshold, 85));
 
         form.addPointerTriviallyCopyable(F("tma"), &cfg.protection.temperature_reduce_range.max);
         form.addFormUI(F("Maximum. Temperature To Reduce Brightness To 25%"), FormUI::Suffix(FSPGM(UTF8_degreeC)));
-        form.addValidator(FormUI::Validator::Range(kMinimumTemperatureThreshold, 90));
+        form.addValidator(FormUI::Validator::Range(kMinimumTemperatureThreshold, 85));
 
         form.addPointerTriviallyCopyable(F("tpm"), &cfg.protection.max_temperature);
         form.addFormUI(F("Over Temperature Protection"), FormUI::Suffix(FSPGM(UTF8_degreeC)));
@@ -282,7 +282,7 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
         auto &powerGroup = form.addCardGroup(F("pow"), F("Power"), true);
 
-        form.addObjectGetterSetter(F("pl"), cfg, cfg.get_bits_power_limit, cfg.set_bits_power_limit);
+        form.addObjectGetterSetter(F("pl"), FormGetterSetter(cfg, power_limit));
         form.addFormUI(F("Limit Maximum Power"), FormUI::Suffix(F("Watt")), FormUI::IntAttribute(F("disabled-value"), 0));
         cfg.addRangeValidatorFor_fading_time(form, true);
 

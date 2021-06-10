@@ -30,6 +30,10 @@ void ClockPlugin::_saveStateDelayed()
 
 void ClockPlugin::_saveState()
 {
+    if (_debug) {
+        __DBG_printf("DEBUG MODE - saving the state has been disabled");
+        return;
+    }
     auto state = _getState();
     auto newState = StoredState(_config, (_isEnabled && _targetBrightness), (_targetBrightness == 0 && _savedBrightness) ? _savedBrightness : _targetBrightness);
     __LDBG_printf("save brightness=%u enabled=%u", newState.getConfig().getBrightness(), newState.getConfig().enabled);

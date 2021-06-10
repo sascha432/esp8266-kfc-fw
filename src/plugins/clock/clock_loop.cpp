@@ -102,6 +102,9 @@ bool ClockPlugin::_loopSyncingAnimation(LoopOptionsType &options)
 
 void ClockPlugin::_loop()
 {
+    if (_debug) {
+        return;
+    }
     LoopOptionsType options(*this);
     _display.setBrightness(_getBrightness());
     _display.show();

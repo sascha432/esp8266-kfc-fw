@@ -1515,11 +1515,13 @@ void KFCFWConfiguration::printRTCStatus(Print &output, bool plain)
         String now = rtc.now.timestamp();
 #else
     {
-        String now = PrintString(FSPGM(strftime_date_time_zone), time(nullptr));
+        PrintString now;
+        now.strftime(FSPGM(strftime_date_time_zone), time(nullptr));
 #endif
+        auto nl = plain ? PSTR("\n") : PSTR(", ");
         output.print(F("Timestamp: "));
         output.print(now);
-        output.printf_P(PSTR(", temperature: %.2f%s, lost power: %s"), getRTCTemperature(), plain ? PSTR("C") : SPGM(UTF8_degreeC), rtcLostPower() ? SPGM(yes) : SPGM(no));
+        output.printf_P(PSTR("%sTemperature: %.2f%s%sLost Power: %s"), nl, getRTCTemperature(), plain ? PSTR("C") : SPGM(UTF8_degreeC), nl, rtcLostPower() ? SPGM(Yes) : SPGM(No));
 #if RTC_SUPPORT
     else {
         output.print(F("Failed to initialize RTC"));
@@ -1563,10 +1565,9 @@ void KFCConfigurationPlugin::setup(SetupModeType mode, const PluginComponents::D
     config.setup();
 
 #if NTP_LOG_TIME_UPDATE
-        char buf[32];
-        auto now = time(nullptr);
-        strftime_P(buf, sizeof(buf), SPGM(strftime_date_time_zone), localtime(&now));
-        Logger_notice(F("RTC time: %s"), buf);
+        PrintString nowStr;
+        nowStr.strftime(FSPGM(strftime_date_time_zone), time(nullptr));
+        Logger_notice(F("RTC time: %s"), nowStr.c_str());
 #endif
 
     if (WiFi.isConnected() && !resetDetector.hasWakeUpDetected()) {

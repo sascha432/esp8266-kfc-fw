@@ -49,7 +49,7 @@ void print_status_pcf8574(Print &output)
         output.print(HTML_E(small));
     }
     else {
-        output.print(F("ERROR - Device not found!"));
+        output.print(F(HTML_S(br) "ERROR - Device not found!"));
     }
 }
 
@@ -61,7 +61,7 @@ void print_status_tinypwm(Print &output)
 {
     output.printf_P(PSTR("TinyPWM @ I2C address 0x%02x"), TINYPWM_I2C_ADDRESS);
     if (!_TinyPwm.isConnected()) {
-        output.print(F("ERROR - Device not found!"));
+        output.print(F(HTML_S(br) "ERROR - Device not found!"));
     }
 }
 
@@ -144,7 +144,8 @@ ClockPlugin::ClockPlugin() :
     _savedBrightness(0),
     _targetBrightness(0),
     _animation(nullptr),
-    _blendAnimation(nullptr)
+    _blendAnimation(nullptr),
+    _debug(false)
 {
     REGISTER_PLUGIN(this, "ClockPlugin");
 }
@@ -513,19 +514,15 @@ void ClockPlugin::_setupTimer()
 }
 
 
-#if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
-
-// void ClockPlugin::preSetup(SetupModeType mode)
-// {
-//     if (mode == SetupModeType::DEFAULT) {
-//         auto sensorPlugin = PluginComponent::getPlugin<SensorPlugin>(F("sensor"), false);
-//         if (sensorPlugin) {
-//             sensorPlugin->getInstance().setAddCustomSensorsCallback(addPowerSensor);
-//         }
-//     }
-// }
-
-#endif
+void ClockPlugin::preSetup(SetupModeType mode)
+{
+    if (mode == SetupModeType::DEFAULT) {
+        auto sensorPlugin = PluginComponent::getPlugin<SensorPlugin>(F("sensor"), false);
+        if (sensorPlugin) {
+            sensorPlugin->getInstance().setAddCustomSensorsCallback(webUIHook);
+        }
+    }
+}
 
 void ClockPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
@@ -1174,8 +1171,9 @@ void ClockPlugin::_disable(uint8_t delayMillis)
     __LDBG_printf("disable LED pin %u state %u (is_enabled=%u, config=%u)", IOT_CLOCK_EN_PIN, enablePinState(false), _isEnabled, _config.enabled);
 
     // turn all leds off and set brightness to 0
+    _display.setBrightness(0);
     _display.clear();
-    _display.show(0);
+    _display.show();
 
     _config.enabled = false;
     _isEnabled = false;

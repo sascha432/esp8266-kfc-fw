@@ -200,9 +200,7 @@ public:
 public:
     ClockPlugin();
 
-// #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
-//     virtual void preSetup(SetupModeType mode) override;
-// #endif
+    virtual void preSetup(SetupModeType mode) override;
     virtual void setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies) override;
     virtual void reconfigure(const String &source) override;
     virtual void shutdown() override;
@@ -258,6 +256,7 @@ public:
     virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) override;
 
     void _createWebUI(WebUINS::Root &webUI);
+    static void webUIHook(WebUINS::Root &webUI, SensorPlugin::SensorType type);
 
 // ------------------------------------------------------------------------
 // MQTT
@@ -329,7 +328,6 @@ private:
 #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION || IOT_CLOCK_HAVE_POWER_LIMIT
 
 public:
-    // static void addPowerSensor(WebUINS::Root &webUI, SensorPlugin::SensorType type);
     static uint8_t calcPowerFunction(uint8_t scale, uint32_t data);
     static void webSocketCallback(WsClient::ClientCallbackType type, WsClient *client, AsyncWebSocket *server, WsClient::ClientCallbackId id);
 
@@ -601,6 +599,7 @@ private:
 
     Clock::Animation *_animation;
     Clock::BlendAnimation *_blendAnimation;
+    bool _debug;
 };
 
 inline void ClockPlugin::setColor(Color color)

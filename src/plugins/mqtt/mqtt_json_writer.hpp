@@ -1387,6 +1387,10 @@ namespace MQTT {
                 output.print(_value);
             }
 
+            const String &toString() const {
+                return _value;
+            }
+
         protected:
             RemoveOuterBase(const String &value) {
                 _value.concat(value.c_str() + 1, value.length() - 2);

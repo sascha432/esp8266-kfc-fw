@@ -6,11 +6,14 @@
 
 #include <Arduino_compat.h>
 #include <EventScheduler.h>
+#include <kfc_fw_config.h>
 #include "ntp_plugin.h"
 #include "plugins.h"
 
 class AtModeArgs;
 class AsyncWebServerRequest;
+
+using KFCConfigurationClasses::Plugins;
 
 class NTPPlugin : public PluginComponent {
 public:
@@ -28,15 +31,54 @@ public:
 #endif
 
 public:
-    // sets the callback and executes configTime()
-    static void execConfigTime();
     static void updateNtpCallback();
-    static void _checkTimerCallback(Event::CallbackTimerPtr timer);
-
-
-public:
-    static uint32_t _ntpRefreshTimeMillis;
+    static void checkTimerCallback(Event::CallbackTimerPtr timer);
+    // static void wifiCallback(WiFiCallbacks::EventType type, void *);
 
 private:
+    void _updateNtpCallback();
+    // void _wifiCallback(WiFiCallbacks::EventType type, void *);
+    void _checkTimerCallback(Event::CallbackTimerPtr timer);
+    void _execConfigTime();
+    void _setTZ(const char *tz);
+
+// private:
+public:
+    static constexpr uint32_t kCheckInterval = 60000;
+
+    enum class CallbackState : uint8_t {
+        NONE = 0,
+        STARTUP,
+        SHUTDOWN,
+        // WIFI_LOST,
+        // WAITING_FOR_1ST_CALLBACK,
+        WAITING_FOR_CALLBACK,
+        WAITING_FOR_REFRESH,
+    };
+
+    const __FlashStringHelper *getCallbackState() {
+        switch(_callbackState) {
+        case CallbackState::NONE:
+            return F("NONE");
+        case CallbackState::STARTUP:
+            return F("Waiting for first response");
+        case CallbackState::SHUTDOWN:
+            return F("SNTP client not running");
+        // case CallbackState::WIFI_LOST:
+        //     return F("WiFi connection lost");
+        // case CallbackState::WAITING_FOR_1ST_CALLBACK:
+        case CallbackState::WAITING_FOR_CALLBACK:
+            return F("Waiting for response");
+        case CallbackState::WAITING_FOR_REFRESH:
+            return F("Waiting for periodic refresh");
+        default:
+            break;
+        }
+        return F("<invalid value>");
+    }
+
     Event::Timer _checkTimer;
+    CallbackState _callbackState;
+    std::array<char *, Plugins::NTPClient::kServersMax> _servers;
 };
+

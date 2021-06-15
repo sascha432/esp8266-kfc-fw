@@ -67,10 +67,6 @@ public:
         MQTTClient::unregisterComponent(this);
     }
 
-    static String getMQTTTopic() {
-        return MQTTClient::formatTopic(F("/triggers"));
-    }
-
 private:
     void _updateAutoDiscoveryCount();
 

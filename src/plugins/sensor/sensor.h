@@ -69,6 +69,14 @@
 #define IOT_SENSOR_NAMES_BATTERY                "Battery Voltage"
 #endif
 
+#ifndef IOT_SENSOR_NAMES_MOTION_SENSOR
+#define IOT_SENSOR_NAMES_MOTION_SENSOR          "Motion Sensor"
+#endif
+
+#ifndef IOT_SENSOR_NAMES_AMBIENT_LIGHT_SENSOR
+#define IOT_SENSOR_NAMES_AMBIENT_LIGHT_SENSOR   "Ambient Light"
+#endif
+
 #ifndef IOT_SENSOR_NAMES_DS3231
 #define IOT_SENSOR_NAMES_DS3231                 "DS3231 Temperature"
 #endif

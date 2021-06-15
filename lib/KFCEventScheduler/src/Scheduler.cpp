@@ -64,7 +64,7 @@ Scheduler::~Scheduler()
 
 CallbackTimer *Scheduler::_add(int64_t delay, RepeatType repeat, Callback callback, PriorityType priority)
 {
-    auto timerPtr = __LDBG_new(CallbackTimer, callback, delay, repeat, priority);
+    auto timerPtr = new CallbackTimer(callback, delay, repeat, priority);
     _timers.push_back(timerPtr);
     _addedFlag = true;
 
@@ -124,7 +124,7 @@ bool Scheduler::_removeTimer(CallbackTimerPtr timer)
             *iterator = nullptr;
             _removedFlag = true;
             _checkTimers = true;
-            __LDBG_delete(timer);
+            delete timer;
             return true;
         }
         else {

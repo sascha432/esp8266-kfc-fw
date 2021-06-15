@@ -171,12 +171,12 @@ uint16_t EEPROMAccess::read(uint8_t *dst, uint16_t offset, uint16_t size, uint16
         result = read_with_temporary(eeprom_start_address, temp, readSize, dst, size, maxSize, alignment);
     }
     else {
-        auto temp = __LDBG_new_array(readSize, uint8_t);
+        auto temp = new uint8_t[readSize];
         // large read operation should have an aligned address or enough extra space to avoid memory allocations
         __LDBG_assert_printf(false, "allocating read buffer read_size=%d len=%d size=%u ptr=%p", readSize, size, maxSize, temp);
         if (temp) {
             result = read_with_temporary(eeprom_start_address, temp, readSize, dst, size, maxSize, alignment);
-            __LDBG_delete_array(temp);
+            delete[] temp;
         }
         else {
             result = 0;

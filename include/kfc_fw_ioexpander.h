@@ -156,6 +156,7 @@ inline static bool _pinHasAnalogWrite(uint8_t pin) {
 
 }
 
+#include "blink_led_timer.h"
 
 inline  __attribute__((__always_inline__))
 void BlinkLEDTimer::_digitalWrite(uint8_t pin, uint8_t value) {

@@ -329,7 +329,7 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     }
     else if (key == F("PIN_MONITOR_STATUS")) {
 #if PIN_MONITOR
-        pinMonitor.printStatus(output);
+        PinMonitor::pinMonitor.printStatus(output);
 #else
         output.print(F("Pin monitor disabled"));
 #endif

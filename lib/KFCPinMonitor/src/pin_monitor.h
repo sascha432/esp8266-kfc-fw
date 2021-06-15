@@ -62,6 +62,16 @@
 #define PIN_MONITOR_USE_POLLING                                     0
 #endif
 
+// support for GPIO expanders and polling
+#ifndef PIN_MONITOR_POLLING_GPIO_EXPANDER_SUPPORT
+#define PIN_MONITOR_POLLING_GPIO_EXPANDER_SUPPORT                   0
+#endif
+
+// up to 16 IO expander pins can be used with _digitalRead()
+#if !defined(PIN_MONITOR_POLLING_GPIO_EXPANDER_PINS_TO_USE) && PIN_MONITOR_POLLING_GPIO_EXPANDER_SUPPORT
+#error PIN_MONITOR_POLLING_GPIO_EXPANDER_PINS_TO_USE must be defined
+#endif
+
 // use attachInterruptArg()/detachInterrupt() for interrupt callbacks
 // attachInterruptArg() requires 72 byte IRAM
 // detachInterrupt() requires 160 byte IRAM

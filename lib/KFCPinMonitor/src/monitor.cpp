@@ -15,6 +15,9 @@
 #include <BitsToStr.h>
 #include "rotary_encoder.h"
 #include "logger.h"
+#if PIN_MONITOR_POLLING_GPIO_EXPANDER_SUPPORT
+#include "kfc_fw_ioexpander.h"
+#endif
 
 #if PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS
 #include <FunctionalInterrupt.h>
@@ -40,7 +43,23 @@ PollingTimer PinMonitor::pollingTimer;
 
 void PollingTimer::start()
 {
+    // store initial values for GPIO ports
     _states = GPI;
+#if PIN_MONITOR_POLLING_GPIO_EXPANDER_SUPPORT
+    // store intial values for GPIO expander ports
+    _expanderStates = 0;
+    uint8_t n = 0;
+    for(const auto pin: PinMonitor::Interrupt::kIOExpanderPins) {
+        bool value = _digitalRead(pin);
+        if (value) {
+            _expanderStates |= _BV(n);
+        }
+        else {
+            _expanderStates &= ~_BV(n);
+        }
+        n++;
+    }
+#endif
     startTimer(5, true);
 }
 
@@ -61,6 +80,29 @@ void PollingTimer::run()
         }
     }
     _states = states;
+
+#if PIN_MONITOR_POLLING_GPIO_EXPANDER_SUPPORT
+    uint8_t n = 0;
+    for(const auto pin: PinMonitor::Interrupt::kIOExpanderPins) {
+        bool value = _digitalRead(pin);
+        if ((_expanderStates & _BV(n)) != value) {
+
+            // TODO call callback function for this IO pin
+            // currently only this debug message is displayed
+            __DBG_printf("IO expander callback pin=%u value=%u", pin, value);
+
+            // store new value
+            if (value) {
+                _expanderStates |= _BV(n);
+            }
+            else {
+                _expanderStates &= ~_BV(n);
+            }
+        }
+        n++;
+
+    }
+#endif
 }
 
 #endif

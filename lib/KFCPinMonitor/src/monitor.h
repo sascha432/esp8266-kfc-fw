@@ -24,6 +24,9 @@ namespace PinMonitor {
 
     private:
         uint16_t _states;
+#if PIN_MONITOR_POLLING_GPIO_EXPANDER_SUPPORT
+        uint16_t _expanderStates;
+#endif
     };
 
     inline PollingTimer::PollingTimer() : _states(0)

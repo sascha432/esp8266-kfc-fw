@@ -24,6 +24,10 @@ namespace PinMonitor {
         #endif
         static constexpr auto kPins = stdex::array_of<const uint8_t>(PIN_MONITOR_PINS_TO_USE);
 
+        #if PIN_MONITOR_POLLING_GPIO_EXPANDER_SUPPORT
+        static constexpr auto kIOExpanderPins = stdex::array_of<const uint8_t>(PIN_MONITOR_POLLING_GPIO_EXPANDER_PINS_TO_USE);
+        #endif
+
         #ifdef PIN_MONITOR_ROTARY_ENCODER_PINS
         static constexpr auto kRotaryPins = stdex::array_of<const uint8_t>(PIN_MONITOR_ROTARY_ENCODER_PINS);
         static constexpr auto kGPIORotaryMask = Interrupt::PinAndMask::mask_of(kRotaryPins);

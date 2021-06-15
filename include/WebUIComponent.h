@@ -486,7 +486,6 @@ namespace WebUINS {
 
         void addRow(Row &row) {
             // append to _json.data
-            __DBG_printf("addrow '%s' '%s'", row._columns.toString().c_str(), RemoveOuterArray(row._columns).toString().c_str());
             _json.appendArray(2, UnnamedObject(
                 NamedString(J(type), J(row)),
                 NamedArray(F("columns"), RemoveOuterArray(row._columns))
@@ -496,7 +495,6 @@ namespace WebUINS {
 
         void addRow(const Row &row) {
             // append to _json.data
-            __DBG_printf("addrow '%s' '%s'", row._columns.toString().c_str(), RemoveOuterArray(row._columns).toString().c_str());
             _json.appendArray(2, UnnamedObject(
                 NamedString(J(type), J(row)),
                 NamedArray(F("columns"), RemoveOuterArray(row._columns))

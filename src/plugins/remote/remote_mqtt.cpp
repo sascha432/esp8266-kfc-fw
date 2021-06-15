@@ -43,7 +43,7 @@ MQTT::AutoDiscovery::EntityPtr MqttRemote::getAutoDiscovery(FormatType format, u
         return discovery;
     }
     discovery->addAutomationType();
-    discovery->addTopic(getMQTTTopic());
+    discovery->addTopic(MQTT::AutoDiscovery::Entity::getTriggersTopic());
     auto cfg = Plugins::RemoteControl::getConfig();
 
     uint8_t count = 0;

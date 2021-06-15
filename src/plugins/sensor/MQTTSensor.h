@@ -40,6 +40,8 @@ namespace MQTT {
         INA219,
         DHTxx,
         DIMMER_METRICS,
+        MOTION,
+        AMBIENT_LIGHT,
         SYSTEM_METRICS,
         MAX
     };

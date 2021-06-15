@@ -44,7 +44,10 @@ namespace DeepSleep {
 }
 #endif
 
+
+#if RTC_SUPPORT == 0
 RTCMemoryManager::RtcTimer RTCMemoryManager::_rtcTimer;
+#endif
 
 namespace RTCMemoryManagerNS {
 

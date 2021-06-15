@@ -199,6 +199,7 @@ private:
     static void _writeTime(const RtcTime &time);
     static void _clearTime();
 
+#if RTC_SUPPORT == 0
 public:
     class RtcTimer : public OSTimer {
     public:
@@ -207,7 +208,6 @@ public:
         }
     };
 
-#if RTC_SUPPORT == 0
     static RtcTimer _rtcTimer;
 #endif
 };

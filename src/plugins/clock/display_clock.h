@@ -3,95 +3,74 @@
 
 #pragma once
 
+#include <Arduino_compat.h>
 #include <stdint.h>
 #include <array>
 
 using PixelAddressType = uint8_t;
+using PixelAddressPtr = const PixelAddressType *;
 
-using SegmentPixelArray = std::array<PixelAddressType, 2>;
-using SegmentArray = std::array<SegmentPixelArray, 7>;
-using DigitArray = std::array<SegmentArray, 6>;
+inline static PixelAddressType readPixelAddress(PixelAddressPtr ptr) {
+    return pgm_read_byte(ptr);
+}
 
-using ColonPixelsArray = std::array<PixelAddressType, 1>;
-using ColonPixelArray = std::array<ColonPixelsArray, 2>;
-using ColonArray = std::array<ColonPixelArray, 2>;
+static constexpr PixelAddressType kNumDigits = 6;
+static constexpr PixelAddressType kNumColons = 2;
 
-using AnimationOrderArray = std::array<PixelAddressType, 14>;
+static constexpr PixelAddressType kNumPixels = 88;
+static constexpr PixelAddressType kNumPixelsDigits = 84;
+static constexpr PixelAddressType kNumPixelsColons = 4;
+static constexpr PixelAddressType kNumPixelsPerSegment = 6;
+static constexpr PixelAddressType kNumPixelsPerDigit = kNumPixelsPerSegment * 7;
+static constexpr PixelAddressType kNumPixelsPerColon = 2;
 
-static constexpr uint8_t kNumDigits = 6;
-#define IOT_CLOCK_NUM_DIGITS 6
-static constexpr uint8_t kNumColons = 2;
-#define IOT_CLOCK_NUM_COLONS 2
-static constexpr uint8_t kNumPixels = 88;
-static constexpr uint8_t kNumPixelsDigits = 84;
+#define SEVEN_SEGMENT_DIGITS_TRANSLATION_TABLE 0, 1, \
+    2, 3, \
+    6, 7, \
+    8, 9, \
+    10, 11, \
+    12, 13, \
+    4, 5, \
+    14, 15, \
+    16, 17, \
+    20, 21, \
+    22, 23, \
+    24, 25, \
+    26, 27, \
+    18, 19, \
+    30, 31, \
+    32, 33, \
+    36, 37, \
+    38, 39, \
+    40, 41, \
+    42, 43, \
+    34, 35, \
+    44, 45, \
+    46, 47, \
+    50, 51, \
+    52, 53, \
+    54, 55, \
+    56, 57, \
+    48, 49, \
+    60, 61, \
+    62, 63, \
+    66, 67, \
+    68, 69, \
+    70, 71, \
+    72, 73, \
+    64, 65, \
+    74, 75, \
+    76, 77, \
+    80, 81, \
+    82, 83, \
+    84, 85, \
+    86, 87, \
+    78, 79
 
-static constexpr auto kDigitsTranslationTable = DigitArray({
-    SegmentArray({
-        SegmentPixelArray({ 0, 1 }),
-        SegmentPixelArray({ 2, 3 }),
-        SegmentPixelArray({ 6, 7 }),
-        SegmentPixelArray({ 8, 9 }),
-        SegmentPixelArray({ 10, 11 }),
-        SegmentPixelArray({ 12, 13 }),
-        SegmentPixelArray({ 4, 5 })
-    }),
-    SegmentArray({
-        SegmentPixelArray({ 14, 15 }),
-        SegmentPixelArray({ 16, 17 }),
-        SegmentPixelArray({ 20, 21 }),
-        SegmentPixelArray({ 22, 23 }),
-        SegmentPixelArray({ 24, 25 }),
-        SegmentPixelArray({ 26, 27 }),
-        SegmentPixelArray({ 18, 19 })
-    }),
-    SegmentArray({
-        SegmentPixelArray({ 30, 31 }),
-        SegmentPixelArray({ 32, 33 }),
-        SegmentPixelArray({ 36, 37 }),
-        SegmentPixelArray({ 38, 39 }),
-        SegmentPixelArray({ 40, 41 }),
-        SegmentPixelArray({ 42, 43 }),
-        SegmentPixelArray({ 34, 35 })
-    }),
-    SegmentArray({
-        SegmentPixelArray({ 44, 45 }),
-        SegmentPixelArray({ 46, 47 }),
-        SegmentPixelArray({ 50, 51 }),
-        SegmentPixelArray({ 52, 53 }),
-        SegmentPixelArray({ 54, 55 }),
-        SegmentPixelArray({ 56, 57 }),
-        SegmentPixelArray({ 48, 49 })
-    }),
-    SegmentArray({
-        SegmentPixelArray({ 60, 61 }),
-        SegmentPixelArray({ 62, 63 }),
-        SegmentPixelArray({ 66, 67 }),
-        SegmentPixelArray({ 68, 69 }),
-        SegmentPixelArray({ 70, 71 }),
-        SegmentPixelArray({ 72, 73 }),
-        SegmentPixelArray({ 64, 65 })
-    }),
-    SegmentArray({
-        SegmentPixelArray({ 74, 75 }),
-        SegmentPixelArray({ 76, 77 }),
-        SegmentPixelArray({ 80, 81 }),
-        SegmentPixelArray({ 82, 83 }),
-        SegmentPixelArray({ 84, 85 }),
-        SegmentPixelArray({ 86, 87 }),
-        SegmentPixelArray({ 78, 79 })
-    })
-});
+#define SEVEN_SEGMENT_COLONTRANSLATIONTABLE 28, \
+    30, \
+    58, \
+    60
 
-static constexpr auto kColonTranslationTable = ColonArray({
-    ColonPixelArray({
-        ColonPixelsArray({ 28 }),
-        ColonPixelsArray({ 30 })
-    }),
-    ColonPixelArray({
-        ColonPixelsArray({ 58 }),
-        ColonPixelsArray({ 60 })
-    })
-});
-
-static constexpr auto kPixelAnimationOrder = AnimationOrderArray({0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13});
+#define SEVEN_SEGMENT_PIXEL_ANIMATION_ORDER 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13
 

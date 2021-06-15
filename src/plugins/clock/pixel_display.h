@@ -14,6 +14,13 @@
 #include <debug_helper_disable.h>
 #endif
 
+ // 0 = use memcpy_P and stack for buffering
+// 1 = use pgm_read_byte, which is slower but does not need stack/heap
+// required stack/heap: kNumPixelsPerDigit * sizeof(PixelAddressType)
+#ifndef PIXEL_DISPLAY_USE_PROGMEM_DIRECTLY
+#define PIXEL_DISPLAY_USE_PROGMEM_DIRECTLY 0
+#endif
+
 namespace Clock {
 
 #if IOT_LED_MATRIX_CONFIGURABLE_DISPLAY
@@ -70,19 +77,23 @@ namespace Clock {
     // 3:1=04 2:1=05 1:1=06 0:1=07
     // 3:2=08 2:2=09 1:2=10 0:2=11
 
-    template<size_t _StartAddress, size_t _Rows, size_t _Columns, bool _ReverseRows, bool _ReverseColumns, bool _Rotate, bool _Interleaved>
-    class PixelMapping : public Types<_StartAddress, _Rows, _Columns> {
+    // pixels are mapped with a zero offset
+    // _PixelOffset is used to determine the type of the pixel and the storage size
+    // Unused pixels still need to be allocated
+
+    template<size_t _PixelOffset, size_t _Rows, size_t _Columns, bool _ReverseRows, bool _ReverseColumns, bool _Rotate, bool _Interleaved>
+    class PixelMapping : public Types<_PixelOffset, _Rows, _Columns> {
     public:
-        using TypesType = Types<_StartAddress, _Rows, _Columns>;
+        using TypesType = Types<_PixelOffset, _Rows, _Columns>;
         using PixelAddressType = typename TypesType::PixelAddressType;
         using CoordinateType = typename TypesType::CoordinateType;
         using PixelCoordinatesType = typename TypesType::PixelCoordinatesType;
         using TypesType::kRows;
         using TypesType::kCols;
         using TypesType::kNumPixels;
-        using TypesType::kStartAddress;
     protected:
-        using TypesType::kTotalPixelCount;
+        using TypesType::kPixelOffset;
+        using TypesType::kMaxPixelAddress; // kPixelOffset + kNumPixels
 
         static constexpr uint8_t kMappingTypeId = (_ReverseRows ? 0x01 : 0x00) | (_ReverseColumns ? 0x02 : 0x00) | (_Rotate ? 0x04 : 0) | (_Interleaved ? 0x08 : 0);
 
@@ -255,64 +266,73 @@ namespace Clock {
 
 #endif
 
-    template<size_t _StartAddress, size_t _Rows, size_t _Columns, bool _ReverseRows, bool _ReverseColumns, bool _Rotate, bool _Interleaved>
-    class PixelDisplayBuffer : public PixelMapping<_StartAddress, _Rows, _Columns, _ReverseRows, _ReverseColumns, _Rotate, _Interleaved> {
+    // generic class for managing pixel mapping and shapes
+
+    template<size_t _PixelOffset, size_t _Rows, size_t _Columns, bool _ReverseRows, bool _ReverseColumns, bool _Rotate, bool _Interleaved>
+    class PixelDisplayBuffer : public PixelMapping<_PixelOffset, _Rows, _Columns, _ReverseRows, _ReverseColumns, _Rotate, _Interleaved> {
     public:
-        using PixelMappingType = PixelMapping<_StartAddress, _Rows, _Columns, _ReverseRows, _ReverseColumns, _Rotate, _Interleaved>;
+        using PixelMappingType = PixelMapping<_PixelOffset, _Rows, _Columns, _ReverseRows, _ReverseColumns, _Rotate, _Interleaved>;
         using PixelMappingType::getPoint;
         using PixelMappingType::getAddress;
         using PixelMappingType::kRows;
         using PixelMappingType::kCols;
+        using PixelMappingType::kPixelOffset;
         using PixelMappingType::kNumPixels;
-        using PixelMappingType::kStartAddress;
     protected:
-        using PixelMappingType::kTotalPixelCount;
+        using PixelMappingType::kMaxPixelAddress; // = kPixelOffset + kNumPixels
 
     public:
         using PixelAddressType = typename PixelMappingType::PixelAddressType;
         using CoordinateType = typename PixelMappingType::CoordinateType;
         using PixelCoordinatesType = typename PixelMappingType::PixelCoordinatesType;
-        using PixelBufferType = std::array<CRGB, kTotalPixelCount>;
         using ColorType = CRGB;
+        using PixelBufferPtr = ColorType *;
+        using PixelBufferType = std::array<ColorType, kMaxPixelAddress>;
 
     public:
+
+        PixelDisplayBuffer() : _pixels(__pixels.data() + kPixelOffset)
+        {
+        }
+
         void reset() {
-            _pixels.fill(0);
+            __pixels.fill(0);
         }
 
         void clear() {
-            std::fill(_pixels.begin() + kStartAddress, _pixels.end(), 0);
+            fill(ColorType());
         }
 
         void fill(ColorType color) {
-            std::fill(_pixels.begin() + kStartAddress, _pixels.end(), color);
+            for(auto ptr = _pixels; ptr < &_pixels[kNumPixels]; ptr++) {
+                *ptr = color;
+            }
         }
 
         void setPixel(CoordinateType row, CoordinateType col, ColorType color) {
-            // _pixels[getAddress(row, col) + kStartAddress] = color;
-            (*this)[getAddress(row, col)] = color;
+            _set(getAddress(row, col), color);
+        }
+
+        // sequential pixel address 0 to kNumPixels - 1, addressing __pixels[kPixelOffset] to __pixels[kTotalPixels - 1]
+        void setPixel(PixelAddressType numPixel, ColorType color) {
+            _set(getAddress(getPoint(numPixel)), color);
         }
 
         void setPixel(PixelCoordinatesType point, ColorType color) {
-            setPixel(point.row(), point.col(), color);
+            _set(getAddress(point), color);
         }
 
-        void setPixel(PixelAddressType numPixel, ColorType color) {
-            (*this)[getAddress(getPoint(numPixel))] = color;
-            // pixels(getAddress(getPoint(numPixel)) + kStartAddress) = color;
+        const ColorType &getPixel(CoordinateType row, CoordinateType col) const {
+            return _get(getAddress(row, col));
         }
 
-        ColorType getPixel(CoordinateType row, CoordinateType col) const {
-            return (*this)[getAddress(row, col)];
+        // sequential pixel address 0 to kNumPixels - 1, addressing __pixels[kPixelOffset] to __pixels[kTotalPixels - 1]
+        const ColorType &getPixel(PixelAddressType numPixel) const {
+            return _get(getAddress(getPoint(numPixel)));
         }
 
-        ColorType getPixel(PixelCoordinatesType point) const {
-            return getPixel(point.row(), point.col());
-        }
-
-        ColorType getPixel(PixelAddressType numPixel) const {
-            return (*this)[getAddress(getPoint(numPixel))];
-            // return pixels(getAddress(getPoint(numPixel)) + kStartAddress);
+        const ColorType &getPixel(PixelCoordinatesType point) const {
+            return _get(point);
         }
 
         template<typename _Ta, typename _Tb, typename std::enable_if<_Ta::kMappingTypeId == _Tb::kMappingTypeId, int>::type = 0>
@@ -330,43 +350,99 @@ namespace Clock {
 
         // access to all pixels, starting with first LED
         ColorType &pixels(PixelAddressType address) {
-            __DBG_assert_printf(address >= 0 && address < _pixels.size(), "address out of bounds: %d", address);
-            return _pixels[address];
+            __DBG_assert_printf(address >= 0 && address < size(), "address out of bounds: %d", address);
+            return __pixels[address];
         }
 
         ColorType pixels(PixelAddressType address) const {
-            __DBG_assert_printf(address >= 0 && address < _pixels.size(), "address out of bounds: %d", address);
-            return _pixels[address];
+            __DBG_assert_printf(address >= 0 && address < size(), "address out of bounds: %d", address);
+            return __pixels[address];
         }
 
         // access to LEDs after the start address
         ColorType &operator [](PixelAddressType idx) {
-            return pixels(kStartAddress + idx);
+            return _get(idx);
         }
 
-        ColorType operator [](PixelAddressType idx) const {
-            return pixels(kStartAddress + idx);
+        const ColorType &operator [](PixelAddressType idx) const {
+            return _get(idx);
         }
 
-        ColorType *begin() {
-            return &_pixels.data()[kStartAddress];
+        PixelBufferPtr begin() {
+            return &_pixels[0];
         }
 
-        ColorType *begin() const {
-            return &_pixels.data()[kStartAddress];
+        const PixelBufferPtr begin() const {
+            return &_pixels[0];
         }
 
-        ColorType *end() {
-            return &_pixels.data()[_pixels.size()];
+        PixelBufferPtr end() {
+            return &_pixels[kNumPixels];
         }
 
-        ColorType *end() const {
-            return &_pixels.data()[_pixels.size()];
+        constexpr const PixelBufferPtr end() const {
+            return &_pixels[kNumPixels];
+        }
+
+        constexpr size_t size() const {
+            return kNumPixels;
+        }
+
+        // debug and dummy methods
+        //
+
+        void print(const String &text) {
+        }
+
+        void print(const char *text) {
+        }
+
+        void setPixelState(PixelAddressType, bool)  {
+        }
+
+        bool getPixelState(PixelAddressType) const {
+            return true;
+        }
+
+        void showAll()  {
+        }
+
+        void hideAll() {
+        }
+
+        void dump(Print &output) {
+            output.printf_P(PSTR("data=%p pixels=%p offset=%u num=%u mode=led_matrix\n"), __pixels.data(), _pixels, kPixelOffset, kNumPixels);
         }
 
     protected:
-        PixelBufferType _pixels;
+        void _set(PixelAddressType idx, ColorType color) {
+            if (idx < kNumPixels) {
+                _pixels[idx] = color;
+            }
+        }
+
+        ColorType &_get(PixelAddressType idx) {
+            if (idx < kNumPixels) {
+                return _pixels[idx];
+            }
+            static ColorType invalid = ColorType(0);
+            return invalid;
+        }
+
+        const ColorType &_get(PixelAddressType idx) const {
+            if (idx < kNumPixels) {
+                return _pixels[idx];
+            }
+            static ColorType invalid = ColorType(0);
+            return invalid;
+        }
+
+    protected:
+        PixelBufferType __pixels;
+        PixelBufferPtr _pixels;
     };
+
+    // FastLED controller adapter
 
     template<uint8_t _OutputPin>
     class NeoPixelController {
@@ -376,19 +452,27 @@ namespace Clock {
         }
     };
 
-    template<class _ControllerType, class _PixelDisplayBufferType>
+    // FastLED display
+
+    template<typename _ControllerType, typename _PixelDisplayBufferType>
     class PixelDisplay : public _PixelDisplayBufferType
     {
     public:
         using PixelBufferType = _PixelDisplayBufferType;
+        using PixelBufferType::__pixels;
         using PixelBufferType::_pixels;
         using PixelBufferType::begin;
         using PixelBufferType::end;
         using PixelBufferType::operator[];
+        using PixelBufferType::clear;
+        using PixelBufferType::fill;
+        using PixelBufferType::reset;
+        using PixelBufferType::size;
+        using PixelBufferType::kPixelOffset;
 
     public:
         PixelDisplay() :
-            _controller(_ControllerType::addLeds(_pixels.data(), _pixels.size()))
+            _controller(_ControllerType::addLeds(__pixels.data(), __pixels.size(), _PixelDisplayBufferType::kPixelOffset))
         {
             setDither(false);
         }
@@ -403,10 +487,6 @@ namespace Clock {
             FastLED.show();
         }
 
-        void clear() {
-            fill(0);
-        }
-
         void setBrightness(uint8_t brightness) {
             FastLED.setBrightness(brightness);
         }
@@ -415,8 +495,14 @@ namespace Clock {
             FastLED.show();
         }
 
-        void fill(ColorType color) {
-            std::fill(_pixels.begin(), _pixels.end(), color);
+        void showIntrLocked() {
+#if ESP8266
+            ets_intr_lock();
+#endif
+            FastLED.show();
+#if ESP8266
+            ets_intr_unlock();
+#endif
         }
 
         void delay(unsigned long ms) {
@@ -426,7 +512,6 @@ namespace Clock {
             else {
                 ::delay(ms);
             }
-
         }
 
     private:

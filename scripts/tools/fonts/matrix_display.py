@@ -28,6 +28,6 @@ def dump_matrix(width, height, direction=(1, None), fmt='\'%03u\': \' \', '):
 # print('-'*76)
 # dump_matrix(32, 8, (None, 1))
 # print('-'*76)
-# # dump_matrix(32, 8, (1, None))
-# # print('-'*76)
+dump_matrix(32, 8, (1,  None))
+print('-'*76)
 # sys.exit(0)

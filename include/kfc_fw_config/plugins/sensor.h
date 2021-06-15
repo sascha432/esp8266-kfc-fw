@@ -25,7 +25,7 @@
                 MAX
             };
 
-            typedef struct __attribute__packed__ BatteryConfig_t {
+            struct __attribute__packed__ BatteryConfig_t {
                 using Type = BatteryConfig_t;
 
                 CREATE_FLOAT_FIELD(calibration, -100, 100, IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_CALIBRATION);
@@ -40,11 +40,11 @@
 
                 BatteryConfig_t();
 
-            } BatteryConfig_t;
+            };
 #endif
 
 #if (IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032)
-            typedef struct __attribute__packed__ HLW80xxConfig_t {
+            struct __attribute__packed__ HLW80xxConfig_t {
 
                 using Type = HLW80xxConfig_t;
                 float calibrationU;
@@ -70,7 +70,7 @@
                 MAX
             };
 
-            typedef struct __attribute__packed__ INA219Config_t {
+            struct __attribute__packed__ INA219Config_t {
                 using Type = INA219Config_t;
 
                 CREATE_ENUM_BITFIELD(display_current, INA219CurrentDisplayType);
@@ -99,10 +99,45 @@
 
                 INA219Config_t();
 
-            } INA219Config_t;
+            };
 #endif
 
-            typedef struct __attribute__packed__ SensorConfig_t {
+#if IOT_SENSOR_HAVE_MOTION_SENSOR
+            struct __attribute__packed__ MotionSensorConfig_t {
+                using Type = MotionSensorConfig_t;
+
+#if IOT_SENSOR_HAVE_MOTION_AUTO_OFF
+                CREATE_UINT32_BITFIELD_MIN_MAX(motion_auto_off, 10, 0, 1000, 0, 1);
+#endif
+                CREATE_UINT32_BITFIELD_MIN_MAX(motion_trigger_timeout, 8, 1, 240, 15, 1);
+
+                MotionSensorConfig_t() :
+#if IOT_SENSOR_HAVE_MOTION_AUTO_OFF
+                    motion_auto_off(kDefaultValueFor_motion_auto_off),
+#endif
+                    motion_trigger_timeout(kDefaultValueFor_motion_trigger_timeout)
+                {
+                }
+
+            };
+#endif
+
+#if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR
+
+            struct __attribute__packed__ AmbientLightSensorConfig_t {
+                using Type = AmbientLightSensorConfig_t;
+
+                CREATE_INT32_BITFIELD_MIN_MAX(auto_brightness, 11, -1, 1023, -1, 1);
+
+                AmbientLightSensorConfig_t() :
+                    auto_brightness(kDefaultValueFor_auto_brightness)
+                {
+                }
+            };
+
+#endif
+
+            struct __attribute__packed__ SensorConfig_t {
 
 #if IOT_SENSOR_HAVE_BATTERY
                 BatteryConfig_t battery;
@@ -113,8 +148,13 @@
 #if (IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032)
                 HLW80xxConfig_t hlw80xx;
 #endif
-
-            } SensorConfig_t;
+#if IOT_SENSOR_HAVE_MOTION_SENSOR
+                MotionSensorConfig_t motion;
+#endif
+#if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR
+                AmbientLightSensorConfig_t ambient;
+#endif
+            };
 
         };
 

@@ -89,6 +89,7 @@
 - Added framework-arduinoespressif8266 3.30000.210519 (3.0.0)
 - Changes for GCC 10
 - Support for interal or external RTC
+- Improved NTP plugin
 
 ## Version 0.0.3
 

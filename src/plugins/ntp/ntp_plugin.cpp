@@ -263,7 +263,7 @@ void NTPPlugin::_updateNtpCallback()
 #endif
     }
     else {
-        __DBG_printf("invalid SNTP time=" TIME_T_FMT "+60 lk_time=" TIME_T_FMT, now, getLastKnownTimeOfDay());
+        __LDBG_printf("invalid SNTP time=" TIME_T_FMT "+60 lk_time=" TIME_T_FMT, now, getLastKnownTimeOfDay());
         Logger_error(F("NTP time is in the past: %s"), timeStr.c_str());
     }
 
@@ -275,7 +275,7 @@ void NTPPlugin::_updateNtpCallback()
 
 #if DEBUG_NTP_CLIENT
     for(uint8_t i = 0; i < Plugins::NTPClient::kServersMax; i++) {
-        __DBG_printf("reachability server%s=%u", __S(sntp_getservername(i)), sntp_getreachability(i));
+        __LDBG_printf("reachability server%s=%u", __S(sntp_getservername(i)), sntp_getreachability(i));
     }
 #endif
 

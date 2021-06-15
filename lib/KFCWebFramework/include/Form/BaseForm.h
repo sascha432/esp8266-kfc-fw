@@ -452,6 +452,7 @@ namespace FormUI {
         protected:
             inline Field::BaseField &__add(Field::BaseField *field)
             {
+                __DBG_printf("form field %s", field->getName());
                 field->setForm(this);
                 _fields.emplace_back(field);
                 return *_fields.back();

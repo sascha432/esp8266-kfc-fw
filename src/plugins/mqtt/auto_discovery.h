@@ -264,6 +264,7 @@ namespace MQTT {
             static String getWildcardTopic();
             static String getConfigWildcardTopic();
             static String getConfig2ndLevelWildcardTopic();
+            static String getTriggersTopic();
 
         private:
             void __addParameter(NameType name, const char *value, bool quotes = true); // PROGMEM safe

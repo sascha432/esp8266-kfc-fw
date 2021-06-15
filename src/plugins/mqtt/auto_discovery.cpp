@@ -55,6 +55,11 @@ String Entity::getConfig2ndLevelWildcardTopic()
     return PrintString(F("%s/+/%s/+/config"), ClientConfig::getAutoDiscoveryPrefix(), System::Device::getName());
 }
 
+String Entity::getTriggersTopic()
+{
+    return MQTT::Client::formatTopic(F("/triggers"));
+}
+
 bool Entity::_create(ComponentType componentType, const String &name, FormatType format, NameType platform)
 {
     String uniqueId;

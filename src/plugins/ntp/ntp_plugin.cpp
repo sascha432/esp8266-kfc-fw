@@ -158,6 +158,7 @@ void NTPPlugin::shutdown()
     settimeofday_cb((BoolCB)nullptr);
     sntp_stop();
     for (uint8_t i = 0; i < Plugins::NTPClient::kServersMax; i++) {
+        // remove pointer to server before releasing memory
         sntp_setservername(i, nullptr);
         if (_servers[i]) {
             delete[] _servers[i];
@@ -192,6 +193,9 @@ void NTPPlugin::getStatus(Print &output)
         output.print(FSPGM(Disabled));
     }
 }
+
+extern "C" int	setenv (const char *__string, const char *__value, int __overwrite);
+extern "C" void tzset(void);
 
 void NTPPlugin::_setTZ(const char *tz)
 {
@@ -275,7 +279,7 @@ void NTPPlugin::_updateNtpCallback()
 
 #if DEBUG_NTP_CLIENT
     for(uint8_t i = 0; i < Plugins::NTPClient::kServersMax; i++) {
-        __LDBG_printf("reachability server%s=%u", __S(sntp_getservername(i)), sntp_getreachability(i));
+        __DBG_printf("reachability server%s=%u", __S(sntp_getservername(i)), sntp_getreachability(i));
     }
 #endif
 

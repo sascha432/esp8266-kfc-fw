@@ -326,10 +326,8 @@ float ClockPlugin::_getFadingBrightness() const
 
 ClockPlugin::AnimationType ClockPlugin::_getAnimationType(String name)
 {
-    String list = Clock::ConfigType::getAnimationNames();
-    list.toLowerCase();
-    name.toLowerCase();
-    uint32_t animation = stringlist_find_P_P(list.c_str(), name.c_str(), ',');
+    auto list = Clock::ConfigType::getAnimationNames();
+    uint32_t animation = stringlist_ifind_P_P(list, name.c_str(), ',');
     if (animation < static_cast<uint32_t>(AnimationType::MAX)) {
         return static_cast<AnimationType>(animation);
     }
@@ -352,28 +350,28 @@ void ClockPlugin::_setupTimer()
 
         IF_IOT_CLOCK_HAVE_MOTION_SENSOR(
             auto state = _digitalRead(IOT_CLOCK_HAVE_MOTION_SENSOR_PIN);
+            auto type = MotionStateType::NONE;
             if (!state && _motionLastUpdate && get_time_diff(_motionLastUpdate, millis()) < (_config.motion_trigger_timeout * 60 * 1000)) {
-                // keep the motion signal on if any motion is detected within N min.
-                _digitalWrite(131, !_motionState);
+                // keep the motion signal on if any motion is detected within motion_trigger_timeout min.
             }
             else if (state != _motionState) {
                 if (isConnected()) {
                     publish(MQTT::Client::formatTopic(F("motion")), true, MQTT::Client::toBoolOnOff(_motionState));
                 }
-                if (WebUISocket::hasAuthenticatedClients()) {
-                    WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(
-                        WebUINS::Events(WebUINS::Values(F("motion"), WebUINS::RoundedDouble(NAN)))
-                    ));
-                }
+
                 _motionState = state;
                 if (_motionState) {
-                    __LDBG_printf("motion detected: state=%u last=%.3fs auto_off=%us", _motionState, _motionLastUpdate ? (millis() - _motionLastUpdate) / 1000.0 : 0.0,  (_config.motion_auto_off * 60));
+                    // __LDBG_printf("motion detected: state=%u last=%.3fs auto_off=%us", _motionState, _motionLastUpdate ? (millis() - _motionLastUpdate) / 1000.0 : 0.0,  (_config.motion_auto_off * 60));
                     _motionLastUpdate = millis();
                     if (_motionLastUpdate == 0) {
                         _motionLastUpdate++;
                     }
                 }
+                else {
+                    // __LDBG_printf("motion sesnor timeout");
+                }
                 _digitalWrite(131, !_motionState);
+                type = _motionState ? MotionStateType::DETECTED : MotionStateType::NO_MOTION;
             }
             else if (state && state == _motionState && _motionLastUpdate) {
                 // __LDBG_printf("motion detected (retrigger): state=%u last=%.3fs auto_off=%us", _motionState, _motionLastUpdate ? (millis() - _motionLastUpdate) / 1000.0 : 0.0,  (_config.motion_auto_off * 60));
@@ -382,7 +380,27 @@ void ClockPlugin::_setupTimer()
                     _motionLastUpdate++;
                 }
                 _digitalWrite(131, !_motionState);
+                type = MotionStateType::RETRIGGERED;
+
             }
+
+            if (type != MotionStateType::NONE) {
+                _motionHistory.erase(std::remove_if(_motionHistory.begin(), _motionHistory.end(), [](const Motion &motion) {
+                    return motion.state == MotionStateType::RETRIGGERED;
+                }), _motionHistory.end());
+                _motionHistory.emplace_back(time(nullptr), type);
+                if (_motionHistory.size() > 8) {
+                    _motionHistory.erase(_motionHistory.end() - 8, _motionHistory.end());
+                }
+
+                if (WebUISocket::hasAuthenticatedClients()) {
+                    WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(
+                        WebUINS::Events(WebUINS::Values(F("motion"), _getMotionHistory()))
+                    ));
+                }
+            }
+            _digitalWrite(131, !_motionState);
+
         )
 
         IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(
@@ -598,6 +616,10 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
         }, this);
     )
 
+    IF_IOT_CLOCK_HAVE_MOTION_SENSOR(
+        _motionHistory.clear();
+    )
+
     IF_IOT_IOT_LED_MATRIX_FAN_CONTROL(
         _setFanSpeed(_config.fan_speed);
     )
@@ -712,6 +734,10 @@ void ClockPlugin::shutdown()
 
     IF_IOT_CLOCK_DISPLAY_POWER_CONSUMPTION(
         WsClient::removeClientCallback(this);
+    )
+
+    IF_IOT_CLOCK_HAVE_MOTION_SENSOR(
+        _motionHistory.clear();
     )
 
     _timer.remove();
@@ -1018,6 +1044,48 @@ void ClockPlugin::_setBlendAnimation(Clock::Animation *blendAnimation)
     }
     _blendAnimation->begin();
 }
+
+#if IOT_CLOCK_HAVE_MOTION_SENSOR
+
+String ClockPlugin::_getMotionHistory() const
+{
+    return F("disabled");
+    __DBG_printf("motion history %u", _motionHistory.size());
+    PrintString str;
+    str.print(F("<div class=\"motion-sensor-history\">"));
+    if (_motionHistory.empty()) {
+        str.print(F("Waiting..."));
+    }
+    else {
+        for(const auto &entry: _motionHistory) {
+            str.print(F("<div>"));
+            if (time(nullptr) - entry.time > 12 * 60 * 60) {
+                str.strftime(F("%b %d %H:%M:%S: "), entry.time);
+            }
+            else {
+                str.strftime(F("%H:%M:%S: "), entry.time);
+            }
+            switch(entry.state) {
+                case MotionStateType::DETECTED:
+                    str.printf_P(PSTR("motion detected"));
+                    break;
+                case MotionStateType::NO_MOTION:
+                    str.printf_P(PSTR("no motion"));
+                    break;
+                case MotionStateType::RETRIGGERED:
+                    str.printf_P(PSTR("retriggered"));
+                    break;
+                case MotionStateType::NONE:
+                    break;
+            }
+            str.print(F("</div>"));
+        }
+    }
+    str.print(F("</div>"));
+    return str;
+}
+
+#endif
 
 #if IOT_LED_MATRIX_FAN_CONTROL
 

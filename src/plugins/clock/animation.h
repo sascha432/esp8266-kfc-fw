@@ -32,13 +32,13 @@ using KFCConfigurationClasses::Plugins;
 
 namespace Clock {
 
-    using DisplayBufferType = Clock::PixelDisplayBuffer<0, IOT_LED_MATRIX_ROWS, IOT_LED_MATRIX_COLS, true, false, false, true>;
+    using DisplayBufferType = Clock::PixelDisplayBuffer<IOT_LED_MATRIX_PIXEL_OFFSET, IOT_LED_MATRIX_ROWS, IOT_LED_MATRIX_COLS, IOT_LED_MATRIX_OPTS_REVERSE_ROWS, IOT_LED_MATRIX_OPTS_REVERSE_COLS, IOT_LED_MATRIX_OPTS_ROTATE, IOT_LED_MATRIX_OPTS_INTERLEAVED>;
 
 #if IOT_LED_MATRIX
 
     using DisplayType = Clock::PixelDisplay<
-            Clock::NeoPixelController<IOT_CLOCK_LED_PIN>,
-            Clock::PixelDisplayBuffer<IOT_LED_MATRIX_START_ADDR, IOT_LED_MATRIX_ROWS, IOT_LED_MATRIX_COLS, true, false, false, true>
+            Clock::NeoPixelController<IOT_CLOCK_WS2812_OUTPUT>,
+            Clock::PixelDisplayBuffer<IOT_LED_MATRIX_PIXEL_OFFSET, IOT_LED_MATRIX_ROWS, IOT_LED_MATRIX_COLS, IOT_LED_MATRIX_OPTS_REVERSE_ROWS, IOT_LED_MATRIX_OPTS_REVERSE_COLS, IOT_LED_MATRIX_OPTS_ROTATE, IOT_LED_MATRIX_OPTS_INTERLEAVED>
         >;
 
     using CoordinateType = DisplayType::CoordinateType;
@@ -48,8 +48,8 @@ namespace Clock {
 #else
 
     using BaseDisplayType = Clock::PixelDisplay<
-            Clock::NeoPixelController<IOT_CLOCK_LED_PIN>,
-            Clock::PixelDisplayBuffer<IOT_LED_MATRIX_START_ADDR, IOT_LED_MATRIX_ROWS, IOT_LED_MATRIX_COLS, true, false, false, true>
+            Clock::NeoPixelController<IOT_CLOCK_WS2812_OUTPUT>,
+            Clock::PixelDisplayBuffer<IOT_LED_MATRIX_PIXEL_OFFSET, IOT_LED_MATRIX_ROWS, IOT_LED_MATRIX_COLS, IOT_LED_MATRIX_OPTS_REVERSE_COLS, IOT_LED_MATRIX_OPTS_ROTATE, IOT_LED_MATRIX_OPTS_INTERLEAVED>
         >;
 
     using CoordinateType = BaseDisplayType::CoordinateType;
@@ -60,7 +60,7 @@ namespace Clock {
 
     using DisplayType = SevenSegment::Display;
 
-    static_assert(IOT_CLOCK_NUM_PIXELS == SevenSegment::kNumPixels, "total pixels do not match");
+    static_assert(IOT_CLOCK_NUM_PIXELS == DisplayType::kNumPixels, "total pixels do not match");
 
 #endif
 
@@ -253,8 +253,12 @@ namespace Clock {
             _source->removeBlendBuffer(_sourceBuffer);
             _target->removeBlendBuffer(_targetBuffer);
             // make target the new animation and delete the source
+__DBG_printf("source=%p target=%p", _source, _target);
+Serial.println(1);
             std::swap(_source, _target);
+Serial.println(2);
             delete _target;
+Serial.println(3);
         }
 
         void begin() {
@@ -960,7 +964,7 @@ namespace Clock {
         }
 
         template<typename _Ta>
-        void _copyTo(_Ta &output, uint32_t millisValue) 
+        void _copyTo(_Ta &output, uint32_t millisValue)
         {
             for(CoordinateType i = 0; i < kRows; i++) {
                 for(CoordinateType j = 0; j < kCols; j++) {

@@ -180,31 +180,47 @@ void ClockPlugin::_loop()
 
                 if (_blendAnimation->blend(_display, options.getMillis())) {
                     // display mixed state
-                    _display.show();
+                    _display.showIntrLocked();
                 }
                 else {
                     // blending done, delete _blendAnimation
                     __LDBG_printf("blending done");
                     delete _blendAnimation;
                     _blendAnimation = nullptr;
-                    _display.show();
+                    _display.showIntrLocked();
                 }
 
             }
             else if (_animation) {
 
+#define BENCH 0
                 // render single frame
+#if BENCH
+                // ets_intr_lock();
+                uint32_t _start = micros();
+#endif
                 _animation->nextFrame(options.getMillis());
+#if BENCH
+                uint32_t dur2 = micros() - _start;
+#endif
+
                 _animation->copyTo(_display, options.getMillis());
+#if BENCH
+                uint32_t dur3 = micros() - _start;
+#endif
                 _display.show();
+#if BENCH
+                uint32_t dur4 = micros() - _start;
+// ets_intr_unlock();
+                ::printf("%u %u %u\n", dur2, dur3, dur4);
+#endif
 
             }
             else {
-
                 // no animation object available
                 // display plain color
                 _display.fill(_getColor());
-                _display.show();
+                _display.showIntrLocked();
             }
 
             return;
@@ -214,9 +230,11 @@ void ClockPlugin::_loop()
     }
 
     if (options.doRefresh()) {
-        _display.show();
+        _display.showIntrLocked();
     }
     else {
+        // run display.show() every millisecond to update dithering
+        // mandatory frames are displayed with interrupts locked
         _display.delay(1);
     }
 

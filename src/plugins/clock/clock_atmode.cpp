@@ -29,7 +29,7 @@
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKTP, "TP", "<#color>[,<time=500ms>]", "Test peak values");
 #endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(CLOCKBR, "BR", "Set brightness (0-255). 0 disables the LEDs, > 0 enables them");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKPX, "PX", "[<number|-1=all>,<#RGB>|<r>,<g>,<b>]", "Set level of a single pixel. No arguments turns all off");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKPX, "PX", "[<number|-1=all>,<#RGB>|<r>,<g>,<b>|<get>]", "Set or get level of a single pixel. No arguments turns all off");
 #if !IOT_LED_MATRIX
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKP, "P", "<00[:.]00[:.]00>", "Display strings");
 #endif
@@ -103,24 +103,6 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
     //     return true;
     // }
     // else
-#if !IOT_LED_MATRIX
-    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKP))) {
-        enableLoop(false);
-        if (args.size() < 1) {
-            _display.clear();
-            _display.show();
-            args.print(F("display cleared"));
-        }
-        else {
-            auto text = args.get(0);
-            args.printf_P(PSTR("display '%s'"), text);
-            _display.print(text);
-            _display.show();
-        }
-        return true;
-    }
-    else
-#endif
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKM))) {
         _config.rainbow.multiplier.value = args.toFloatMinMax(0, 0.1f, 100.0f, _config.rainbow.multiplier.value);
         args.printf_P(PSTR("Rainbow multiplier=%f increment=%f min=%f max=%f"), _config.rainbow.multiplier.value, _config.rainbow.multiplier.incr, _config.rainbow.multiplier.min, _config.rainbow.multiplier.max);
@@ -303,35 +285,122 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
         args.printf_P(PSTR("set color %s"), getColor().toString().c_str());
         return true;
     }
+#if !IOT_LED_MATRIX
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKP))) {
+        enableLoop(false);
+
+        if (args.size() < 1) {
+            _display.hideAll();
+            _display.show();
+            args.print(F("display cleared"));
+        }
+        else {
+            auto text = args.get(0);
+            args.printf_P(PSTR("display '%s'"), text);
+            _display.print(text);
+            _display.show();
+        }
+        return true;
+    }
+#endif
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKPX))) {
-        if (args.size() == 0) {
-            enableLoop(false);
+        enableLoop(false);
+
+        if (args.equalsIgnoreCase(0, F("ani"))) {
+            _display.setBrightness(32);
+            for(uint16_t y = 0; y < _display.kRows; y++) {
+                for(uint16_t x = 0; x < _display.kCols; x++) {
+                    _display.fill(0);
+                    _display.setPixel(y, x, Color(0x300030));
+                    delay(40);
+                    _display.show();
+                }
+            }
+
+        }
+        else if (args.equalsIgnoreCase(0, F("dither"))) {
+            bool state = args.toInt(1);
+            _display.setDither(state);
+            args.print(F("dithering %s"), state ? PSTR("enabled") : PSTR("disabled"));
+        }
+        else if (args.equalsIgnoreCase(0, F("reset"))) {
+            _display.setBrightness(32);
+            _display.hideAll();
+            _display.show();
+            args.print(F("display reset"));
+        }
+        else if (args.equalsIgnoreCase(0, F("clear")) || args.size() == 0) {
             _display.clear();
             _display.show();
             args.print(F("display cleared"));
         }
-        else if (args.size() == 2 || args.requireArgs(4, 4)) {
-            enableLoop(false);
-            int num = args.toInt(0);
+        else if (args.size() >= 1 || args.requireArgs(4, 4)) {
+            int num = args.equalsIgnoreCase(0, F("all")) ? - 1 : args.toInt(0);
             Color color;
-            if (args.size() == 2) {
-                color = Color::fromString(args.toString(1));
+            bool get = false;
+            if (args.size() == 1) {
+                get = true;
+            }
+            else if (args.size() == 2) {
+                if (args.equalsIgnoreCase(1, F("get"))) {
+                    get = true;
+                }
+                else if (args.toString(1).trim() == F("0")) {
+                    color = 0;
+                }
+                else {
+                    color = Color::fromString(args.toString(1));
+                }
             }
             else {
                 color = Color(args.toNumber(1, 0), args.toNumber(2, 0), args.toNumber(3, 0x80));
             }
-            if (num == -1) {
-                args.printf_P(PSTR("pixel=0-%u, color=%s"), _display.kNumPixels, color.toString().c_str());
+            if (get) {
+                auto &stream = args.getStream();
+                if (num == -1) {
+                    if (_display.kRows > 1) {
+                        args.print(F("Matrix %ux%u"), _display.kCols, _display.kRows);
+                    }
+                    else {
+                        args.print(F("No shape, %u pixels"), _display.kCols * _display.kRows);
+                    }
+                    _display.dump(args.getStream());
+                    for(uint16_t y = 0; y < _display.kRows; y++) {
+                        for(uint16_t x = 0; x < _display.kCols; x++) {
+                            auto state = _display.getPixelState(_display.getAddress(y, x));
+                            auto color = Color(static_cast<uint32_t>(_display.getPixel(y, x)));
+                            stream.printf_P(PSTR("%c%06x "), state ? '#' : '!', color.get() & 0xffffff);
+                            if ((_display.kRows == 1) && ((x % 10) == 9)) {
+                                stream.println();
+                            }
+                        }
+                        stream.println();
+                    }
+                }
+                else {
+                    auto state = _display.getPixelState(num);
+                    auto color = Color(static_cast<uint32_t>(_display.getPixel(num)));
+                    args.print(F("%u: %c%06x"), num, state ? '#' : '!', color.get() & 0xffffff);
+                }
+            }
+            else if (num == -1) {
+                args.print(F("pixel=0-%u, color=%s"), _display.kNumPixels, color.toString().c_str());
+                _display.dump(args.getStream());
+                _display.showAll();
                 _display.fill(color.get());
                 _display.show();
             }
             else if (num >= 0) {
-                args.printf_P(PSTR("pixel=%u, color=%s"), num, color.toString().c_str());
+                auto point = _display.getPoint(num);
+                auto address = _display.getAddress(point);
+                args.print(F("pixel=%u color=%s x=%u y=%u seq=%u"), num, color.toString().c_str(), point.col(), point.row(), address);
+                _display.dump(args.getStream());
                 _display.setPixel(num, color.get());
+                _display.setPixelState(num, true);
                 _display.show();
             }
             else {
-                args.print(F("invalid pixel number"));
+                args.print(F("usage: +clockpx=reset|clear|dither,<0|1>|<pixel>,get|<pixel>,<#rgb color>"));
             }
         }
         return true;
@@ -378,7 +447,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                                 tmp = _displayLedTimer->errors << 4;
                                 if (udp.write((const uint8_t *)&tmp, sizeof(tmp)) == sizeof(tmp)) {
                                     error = false;
-                                    for(uint16_t i = IOT_LED_MATRIX_START_ADDR; i < (IOT_LED_MATRIX_ROWS * IOT_LED_MATRIX_COLS) + IOT_LED_MATRIX_START_ADDR; i++) {
+                                    for(uint16_t i = IOT_LED_MATRIX_PIXEL_OFFSET; i < (IOT_LED_MATRIX_ROWS * IOT_LED_MATRIX_COLS) + IOT_LED_MATRIX_PIXEL_OFFSET; i++) {
                                         auto color = _display._pixels[i];
                                         // 888 to 565
                                         tmp = ((color.red & 0b11111000) << 8) | ((color.green & 0b11111100) << 3) | (color.blue >> 3);
@@ -440,7 +509,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                                     // 4 / 12 bit
                                     *buf++ = (server->getQueuedMessageCount() & 0x0f) | ((server->getQueuedMessageSize() >> 1) & 0xfff0);
 
-                                    for(uint16_t i = IOT_LED_MATRIX_START_ADDR; i < (IOT_LED_MATRIX_ROWS * IOT_LED_MATRIX_COLS) + IOT_LED_MATRIX_START_ADDR; i++) {
+                                    for(uint16_t i = IOT_LED_MATRIX_PIXEL_OFFSET; i < (IOT_LED_MATRIX_ROWS * IOT_LED_MATRIX_COLS) + IOT_LED_MATRIX_PIXEL_OFFSET; i++) {
                                         auto color = _display._pixels[i];
                                         // 888 to 565
                                         *buf++ = ((color.red & 0b11111000) << 8) | ((color.green & 0b11111100) << 3) | (color.blue >> 3);

@@ -302,10 +302,34 @@ public:
 // Motion sensor
 // ------------------------------------------------------------------------
 #if IOT_CLOCK_HAVE_MOTION_SENSOR
+private:
+    enum class MotionStateType  {
+        NONE,
+        NO_MOTION,
+        DETECTED,
+        RETRIGGERED
+    };
+
+    struct Motion {
+        time_t time;
+        MotionStateType state;
+
+        Motion(time_t _time = 0, MotionStateType _state = MotionStateType::NONE) :
+            time(_time),
+            state(_state)
+        {
+        }
+    };
+
+    using MotionVector = std::vector<Motion>;
+
+private:
+    String _getMotionHistory() const;
 
 private:
     uint8_t _motionState{0xff};
     uint32_t _motionLastUpdate{0};
+    MotionVector _motionHistory;
 
 #endif
 

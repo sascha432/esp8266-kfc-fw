@@ -52,9 +52,7 @@ void ClockPlugin::getValues(WebUINS::Events &array)
     )
 
     IF_IOT_CLOCK_HAVE_MOTION_SENSOR(
-        auto value = _motionLastUpdate ? get_time_diff(_motionLastUpdate, millis()) / 1000 : 0;
-        auto timeStr = value ? formatTimeShort(F(", "), F(" and "), false, value) + F(" ago") : String(F("NOW"));
-        array.append(WebUINS::Values(F("motion"), timeStr));
+        array.append(WebUINS::Values(F("motion"), _getMotionHistory()));
     )
 
     IF_IOT_IOT_LED_MATRIX_FAN_CONTROL(

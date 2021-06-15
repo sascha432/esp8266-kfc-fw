@@ -19,11 +19,28 @@
 #define MQTT_NAME "clock"
 #endif
 
+enum class AutoDiscoverySwitchEnum {
+    BRIGHTNESS = 0,
+#if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
+    AMBIENT_LIGHT,
+#endif
+#if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
+    POWER_CONSUMPTION,
+#endif
+#if IOT_CLOCK_HAVE_MOTION_SENSOR
+    MOTION_SENSOR,
+#endif
+#if IOT_LED_MATRIX_FAN_CONTROL
+    FAN_CONTROL,
+#endif
+    MAX
+};
+
 MQTT::AutoDiscovery::EntityPtr ClockPlugin::getAutoDiscovery(FormatType format, uint8_t num)
 {
     auto discovery = __LDBG_new(AutoDiscovery::Entity);
-    switch(num) {
-        case 0: {
+    switch(static_cast<AutoDiscoverySwitchEnum>(num)) {
+        case AutoDiscoverySwitchEnum::BRIGHTNESS: {
             if (!discovery->create(this, MQTT_NAME, format)) {
                 return discovery;
             }
@@ -40,7 +57,7 @@ MQTT::AutoDiscovery::EntityPtr ClockPlugin::getAutoDiscovery(FormatType format, 
         }
         break;
 #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
-        case 1: {
+        case AutoDiscoverySwitchEnum::AMBIENT_LIGHT: {
             if (!discovery->create(MQTTComponent::ComponentType::SENSOR, FSPGM(light_sensor), format)) {
                 return discovery;
             }
@@ -48,9 +65,19 @@ MQTT::AutoDiscovery::EntityPtr ClockPlugin::getAutoDiscovery(FormatType format, 
             discovery->addUnitOfMeasurement(String('%'));
         }
         break;
+/*
+TODO
+        case 2: {
+            if (!discovery->create(ComponentType::DEVICE_AUTOMATION, F("motion_sensor")), format)) {
+                return discovery;
+            }
+            discovery->addAutomationType();
+            discovery->addTopic(MQTT::AutoDiscovery::Entity::getTriggersTopic());
+            discovery->addPayloadAndSubType(F("sensor"), F("detected"), F("motion_"));
+            */
 #endif
 #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
-        case 1 IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR( + 1): {
+        case AutoDiscoverySwitchEnum::POWER_CONSUMPTION: {
             if (!discovery->create(MQTTComponent::ComponentType::SENSOR, F("power"), format)) {
                 return discovery;
             }
@@ -61,7 +88,7 @@ MQTT::AutoDiscovery::EntityPtr ClockPlugin::getAutoDiscovery(FormatType format, 
         break;
 #endif
 #if IOT_CLOCK_HAVE_MOTION_SENSOR
-    case 1 IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR( + 1) IF_IOT_CLOCK_DISPLAY_POWER_CONSUMPTION( + 1): {
+        case AutoDiscoverySwitchEnum::MOTION_SENSOR: {
             if (!discovery->create(MQTTComponent::ComponentType::BINARY_SENSOR, F("motion"), format)) {
                 return discovery;
             }
@@ -70,7 +97,7 @@ MQTT::AutoDiscovery::EntityPtr ClockPlugin::getAutoDiscovery(FormatType format, 
         break;
 #endif
 #if IOT_LED_MATRIX_FAN_CONTROL
-    case 1 IF_IOT_CLOCK_HAVE_MOTION_SENSOR( + 1) IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR( + 1) IF_IOT_CLOCK_DISPLAY_POWER_CONSUMPTION( + 1): {
+        case AutoDiscoverySwitchEnum::FAN_CONTROL: {
             if (!discovery->create(MQTTComponent::ComponentType::FAN, F("fan"), format)) {
                 return discovery;
             }
@@ -83,17 +110,15 @@ MQTT::AutoDiscovery::EntityPtr ClockPlugin::getAutoDiscovery(FormatType format, 
         }
         break;
 #endif
+        case AutoDiscoverySwitchEnum::MAX:
+            break;
     }
     return discovery;
 }
 
 uint8_t ClockPlugin::getAutoDiscoveryCount() const
 {
-    return 1
-        IF_IOT_CLOCK_HAVE_MOTION_SENSOR( + 1)
-        IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR( + 1)
-        IF_IOT_CLOCK_DISPLAY_POWER_CONSUMPTION( + 1)
-        IF_IOT_IOT_LED_MATRIX_FAN_CONTROL(+ 1);
+    return static_cast<uint8_t>(AutoDiscoverySwitchEnum::MAX);
 }
 
 void ClockPlugin::onConnect()

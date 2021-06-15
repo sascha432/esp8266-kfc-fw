@@ -61,8 +61,8 @@
 #endif
 
 // first pixel to use, others can be controlled separately and are reset during reboot only
-#ifndef IOT_LED_MATRIX_START_ADDR
-#    define IOT_LED_MATRIX_START_ADDR 0
+#ifndef IOT_LED_MATRIX_PIXEL_OFFSET
+#    define IOT_LED_MATRIX_PIXEL_OFFSET 0
 #endif
 
 // enable LED matrix mode instead of clock mode
@@ -76,6 +76,22 @@
 #        define IOT_LED_MATRIX_COLS IOT_CLOCK_NUM_PIXELS
 #        define IOT_LED_MATRIX_ROWS 1
 #    endif
+#endif
+
+#ifndef IOT_LED_MATRIX_OPTS_REVERSE_ROWS
+#define IOT_LED_MATRIX_OPTS_REVERSE_ROWS true
+#endif
+
+#ifndef IOT_LED_MATRIX_OPTS_REVERSE_COLS
+#define IOT_LED_MATRIX_OPTS_REVERSE_COLS false
+#endif
+
+#ifndef IOT_LED_MATRIX_OPTS_ROTATE
+#define IOT_LED_MATRIX_OPTS_ROTATE false
+#endif
+
+#ifndef IOT_LED_MATRIX_OPTS_INTERLEAVED
+#define IOT_LED_MATRIX_OPTS_INTERLEAVED true
 #endif
 
 #if SPEED_BOOSTER_ENABLED

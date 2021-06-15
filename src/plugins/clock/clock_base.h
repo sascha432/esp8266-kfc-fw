@@ -45,7 +45,7 @@ namespace Clock {
     using AnimationType = ConfigType::AnimationType;
     using InitialStateType = ConfigType::InitialStateType;
 
-    // static constexpr auto kTotalPixelCount = SevenSegmentDisplay::kTotalPixelCount;
+    // static constexpr auto kMaxPixelAddress = SevenSegmentDisplay::kMaxPixelAddress;
     static constexpr uint8_t kMaxBrightness = 0xff;
     static constexpr uint8_t kUpdateRate = 20;
     static constexpr uint8_t kBrightness75 = kMaxBrightness * 0.75;
@@ -54,24 +54,25 @@ namespace Clock {
 
     template<class _CoordinateType, _CoordinateType _Rows, _CoordinateType _Columns> class PixelCoordinates;
 
-    template<size_t _StartAddress, size_t _Rows, size_t _Columns>
+    template<size_t _PixelOffset, size_t _Rows, size_t _Columns>
     class Types {
     protected:
-        static constexpr size_t kTotalPixelCount = _Rows * _Columns + _StartAddress;
+        static constexpr size_t kMaxPixelAddress = (_Rows * _Columns) + _PixelOffset;
 
     private:
         static constexpr size_t _kCols = _Columns;
         static constexpr size_t _kRows = _Rows;
+        static constexpr size_t _kPixelOffset = _PixelOffset;
 
     public:
-        using PixelAddressType = typename std::conditional<(kTotalPixelCount > 255), uint16_t, uint8_t>::type;
+        using PixelAddressType = typename std::conditional<(kMaxPixelAddress > 255), uint16_t, uint8_t>::type;
         using CoordinateType = typename std::conditional<(_kRows > 255 || _kCols > 255), uint16_t, uint8_t>::type;
         using PixelCoordinatesType = PixelCoordinates<CoordinateType, _Rows, _Columns>;
 
     public:
         static constexpr CoordinateType kCols = _Columns;
         static constexpr CoordinateType kRows = _Rows;
-        static constexpr PixelAddressType kStartAddress = _StartAddress;
+        static constexpr PixelAddressType kPixelOffset = _PixelOffset;
         static constexpr PixelAddressType kNumPixels = kRows * kCols;
     };
 }

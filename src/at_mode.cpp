@@ -1516,7 +1516,7 @@ void at_mode_serial_handle_event(String &commandString)
 
 #if PIN_MONITOR
         PrintString tmp;
-        pinMonitor.printStatus(tmp);
+        PinMonitor::pinMonitor.printStatus(tmp);
         tmp.replace(F(HTML_S(br)), "\n");
         args.print(tmp);
 #endif

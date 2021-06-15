@@ -50,6 +50,7 @@ RTC_DS3231 rtc;
 #include <debug_helper_disable.h>
 #endif
 
+bool KFCFWConfiguration::_initTwoWire = false;
 KFCFWConfiguration config;
 
 using MainConfig = KFCConfigurationClasses::MainConfig;
@@ -219,7 +220,6 @@ KFCFWConfiguration::KFCFWConfiguration() :
     _wifiFirstConnectionTime(0),
     _garbageCollectionCycleDelay(5000),
     _dirty(false),
-    _initTwoWire(false),
     _safeMode(false)
 {
     _setupWiFiCallbacks();
@@ -1049,7 +1049,9 @@ void KFCFWConfiguration::resetDevice(bool safeMode)
 #if ENABLE_DEEP_SLEEP
     DeepSleep::DeepSleepParam::reset();
 #endif
+#if RTC_SUPPORT == 0
     RTCMemoryManager::storeTime();
+#endif
     ESP.restart();
 }
 
@@ -1122,7 +1124,7 @@ void KFCFWConfiguration::restartDevice(bool safeMode)
     ::printf(PSTR("terminating pin monitor\n"));
 #endif
 #if PIN_MONITOR
-    pinMonitor.end();
+    PinMonitor::pinMonitor.end();
 #endif
 
 #if DEBUG_SHUTDOWN_SEQUENCE
@@ -1454,8 +1456,8 @@ void KFCFWConfiguration::setupRTC() {
     auto rtc = RTCMemoryManager::readTime();
     struct timeval tv = { static_cast<time_t>(rtc.time), 0 };
     settimeofday(&tv, nullptr);
-#endif
     RTCMemoryManager::setupRTC();
+#endif
 }
 
 bool KFCFWConfiguration::rtcLostPower() {
@@ -1467,7 +1469,7 @@ bool KFCFWConfiguration::rtcLostPower() {
     initTwoWire();
     uint32_t unixtime = 0;
     if (rtc.begin()) {
-        auto unixtime = rtc.getRTC();
+        unixtime = rtc.now().unixtime();
     }
     if (unixtime == 0) {
         RTCMemoryManager::setSyncStatus(false);
@@ -1483,8 +1485,8 @@ uint32_t KFCFWConfiguration::getRTC()
 #if RTC_SUPPORT
     initTwoWire();
     if (rtc.begin()) {
-        unsigned long unixtime = rtc.now().unixtime();
-        __LDBG_printf("time=%lu", unixtime);
+        uint32_t unixtime = rtc.now().unixtime();
+        __LDBG_printf("time=%u", unixtime);
         if (rtc.lostPower()) {
             __LDBG_printf("time=0, lostPower=true");
             return 0;
@@ -1509,24 +1511,31 @@ float KFCFWConfiguration::getRTCTemperature()
 
 void KFCFWConfiguration::printRTCStatus(Print &output, bool plain)
 {
+    time_t now;
 #if RTC_SUPPORT
     initTwoWire();
     if (rtc.begin()) {
-        String now = rtc.now.timestamp();
+        auto timeFormat_P = PSTR("DDD, DD MMM YYYY hh:mm:ss");
+        const auto size = strlen_P(timeFormat_P) + 1;
+        char timeFormat[size];
+        memcpy_P(timeFormat, timeFormat_P, size);
+
+        now = rtc.now().unixtime();
 #else
-    {
-        PrintString now;
-        now.strftime(FSPGM(strftime_date_time_zone), time(nullptr));
+        now = time(nullptr);
 #endif
+        PrintString nowStr;
+        nowStr.strftime(FSPGM(strftime_date_time_zone), now);
         auto nl = plain ? PSTR("\n") : PSTR(", ");
         output.print(F("Timestamp: "));
-        output.print(now);
+        output.print(nowStr);
         output.printf_P(PSTR("%sTemperature: %.2f%s%sLost Power: %s"), nl, getRTCTemperature(), plain ? PSTR("C") : SPGM(UTF8_degreeC), nl, rtcLostPower() ? SPGM(Yes) : SPGM(No));
 #if RTC_SUPPORT
+    }
     else {
         output.print(F("Failed to initialize RTC"));
-#endif
     }
+#endif
 }
 
 static KFCConfigurationPlugin plugin;

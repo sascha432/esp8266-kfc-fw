@@ -373,3 +373,11 @@ starting with fb-0=1.125 going up to fb-11=2.5rem */
 #btn_animation > div {
     padding: 0.125rem !important;
 }
+
+.motion-sensor-history {
+    font-size: 1.0rem;
+}
+
+.motion-sensor-history > div {
+    font-size: 0.85rem;
+}

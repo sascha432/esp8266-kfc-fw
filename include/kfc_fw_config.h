@@ -325,8 +325,9 @@ public:
     // 0 = not connected
     static uint32_t getWiFiUp();
 
+    static TwoWire &initTwoWire(bool reset = false, Print *output = nullptr);
+
     static void setupRTC();
-    TwoWire &initTwoWire(bool reset = false, Print *output = nullptr);
     static bool setRTC(uint32_t unixtime);
     static uint32_t getRTC();
     float getRTCTemperature();
@@ -343,9 +344,9 @@ private:
     uint32_t _wifiFirstConnectionTime;
     int16_t _garbageCollectionCycleDelay;
     uint8_t _dirty : 1;
-    uint8_t _initTwoWire : 1;
     uint8_t _safeMode : 1;
 
+    static bool _initTwoWire;
 
 #if USE_WIFI_SET_EVENT_HANDLER_CB == 0
     WiFiEventHandler _onWiFiConnect;

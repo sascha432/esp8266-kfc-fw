@@ -39,20 +39,24 @@ namespace KFCConfigurationClasses {
         if (server == end) {
             return nullptr;
         }
+        end++; // move to \0
         if (alloc) {
-            auto size = end - hostname + 2;
-            __DBG_printf("getserver %s %p:%p=%u", hostname, server, end, size);
-            auto ptr = reinterpret_cast<char *>(malloc(size));
+            // allocate memory for the trimmed hostname name
+            auto size = end - server;
+            auto ptr = new char[size + 1];
             if (!ptr) {
                 return nullptr;
             }
-            server = strncpy(ptr, server, size - 1);
+            // copy trimmed hostname to server
+            std::copy(server, end, ptr);
+            server = ptr;
             server[size] = 0;
-            __DBG_printf("newptr %s", server);
+            // __DBG_printf("newptr '%s' %u", server, size);
         }
         else {
-            end[1] = 0;
-            __DBG_printf("newsvr %s", server);
+            // return trimmed hostname
+            *end = 0;
+            // __DBG_printf("newsvr '%s' %u", server, strlen(server));
         }
         return server;
     }

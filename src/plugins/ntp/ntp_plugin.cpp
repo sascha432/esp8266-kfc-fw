@@ -160,7 +160,7 @@ void NTPPlugin::shutdown()
     for (uint8_t i = 0; i < Plugins::NTPClient::kServersMax; i++) {
         sntp_setservername(i, nullptr);
         if (_servers[i]) {
-            free(_servers[i]);
+            delete[] _servers[i];
             _servers[i] = nullptr;
         }
     }
@@ -220,7 +220,7 @@ void NTPPlugin::_execConfigTime()
         sntp_setservername(i, server);
         // release memory after setting a new server
         if (_servers[i]) {
-            free(_servers[i]);
+            delete[] _servers[i];
         }
         _servers[i] = server;
     }

@@ -3,16 +3,17 @@
 // Needs to be a separate .c file to enforce IRAM_ATTR execution.
 // GPIO16 support https://github.com/sascha432/esp8266-kfc-fw/blob/master/lib/KFCBaseLibrary/src/NeoPixel_esp.c
 
-#if (defined(ESP8266) || defined(ESP32)) && HAVE_NEOPIXEL
+#if (defined(ESP8266) || defined(ESP32))
 
 #include <Arduino.h>
 #ifdef ESP8266
-#include <eagle_soc.h>
-#include <user_interface.h>
+#include <coredecls.h>
 #endif
 
 #include <push_optimize.h>
 #pragma GCC optimize ("O2")
+
+#include "NeoPixel_esp.h"
 
 void NeoPixel_fillColor(uint8_t *pixels, uint16_t numBytes, uint32_t color)
 {
@@ -28,7 +29,8 @@ void NeoPixel_fillColor(uint8_t *pixels, uint16_t numBytes, uint32_t color)
 
 // compensation for if (pin == ...)
 // high 400-410ns low 800-810ns period 1300ns 769kHz
-#define COMP_CYCLES     3
+#define COMP_CYCLES         3
+#define COMP_CYCLES_160     2
 
 #define gpio_set_level_high() \
     if (pin == 16) { \
@@ -56,9 +58,10 @@ void NeoPixel_fillColor(uint8_t *pixels, uint16_t numBytes, uint32_t color)
 #define CYCLES_800_T0H  (F_CPU / 2500000) // 0.4us
 #define CYCLES_800_T1H  (F_CPU / 1250000) // 0.8us
 #define CYCLES_800      (F_CPU / 800000) // 1.25us per bit
-#define CYCLES_400_T0H  (F_CPU / 2000000) // 0.5uS
-#define CYCLES_400_T1H  (F_CPU / 833333) // 1.2us
-#define CYCLES_400      (F_CPU / 400000) // 2.5us per bit
+
+#define CYCLES_800_T0H_160  (160000000L / 2500000) // 0.4us
+#define CYCLES_800_T1H_160  (160000000L / 1250000) // 0.8us
+#define CYCLES_800_160      (160000000L / 800000) // 1.25us per bit
 
 
 static uint32_t _getCycleCount(void) __attribute__((always_inline));
@@ -74,11 +77,14 @@ static inline uint32_t _getCycleCount(void)
 // 162 byte
 
 #if defined(ESP8266)
-void IRAM_ATTR espShow(uint8_t pin, uint8_t *pixels, uint32_t numBytes, uint8_t *p, uint8_t *end, uint32_t time0, uint32_t time1, uint32_t period, uint32_t pinMask, uint32_t gpio_clear, uint32_t gpio_set)
+void PRECACHE_ATTR espShow(uint8_t pin, const uint8_t *pixels, uint16_t numBytes, const uint8_t *p, const uint8_t *end, uint32_t time0, uint32_t time1, uint32_t period, uint32_t pinMask, uint32_t gpio_clear, uint32_t gpio_set)
 #else
-void IRAM_ATTR espShow(uint8_t pin, uint8_t *pixels, uint32_t numBytes, uint8_t *p, uint8_t *end, uint32_t time0, uint32_t time1, uint32_t period)
+void IRAM_ATTR espShow(uint8_t pin, const uint8_t *pixels, uint16_t numBytes, const uint8_t *p, const uint8_t *end, uint32_t time0, uint32_t time1, uint32_t period)
 #endif
 {
+#if defined(ESP8266)
+    PRECACHE_START(NeoPixel_espShow);
+#endif
     uint8_t pix, mask;
     uint32_t c, t;
     uint32_t startTime = 0;
@@ -105,45 +111,44 @@ void IRAM_ATTR espShow(uint8_t pin, uint8_t *pixels, uint32_t numBytes, uint8_t 
     }
     while ((_getCycleCount() - startTime) < period)
         ; // Wait for last bit
+#if defined(ESP8266)
+    PRECACHE_END(NeoPixel_espShow);
+#endif
 }
 
-void NeoPixel_espShow(uint8_t pin, uint8_t *pixels, uint32_t numBytes, bool is800KHz)
+void NeoPixel_espShow(uint8_t pin, const uint8_t *pixels, uint16_t numBytes)
 {
-#ifdef ESP8266
-    system_update_cpu_freq(SYS_CPU_80MHZ);
-#endif
     ets_intr_lock();
 
-    uint8_t *p, *end;
+    const uint8_t *p, *end;
     uint32_t time0, time1, period, pinMask;
 
     pinMask = _BV(pin);
     p = pixels;
     end = p + numBytes;
 
-#ifdef NEO_KHZ400
-    if (is800KHz) {
-#endif
+
+#if defined(ESP8266)
+
+#if FCPU == 80000000L && ARDUINO_ESP8266_VERSION_COMBINED < 0x030000
+    if (esp_get_cpu_freq_mhz() == 160) {
+        // TODO untested
+        // current the framework 3.0.0 does not allow dynamicly switching from 80 to 160MHz
+        time0 = CYCLES_800_T0H_160 - COMP_CYCLES_160;
+        time1 = CYCLES_800_T1H_160 - COMP_CYCLES_160;
+        period = CYCLES_800_160;
+    }
+    else {
         time0 = CYCLES_800_T0H - COMP_CYCLES;
         time1 = CYCLES_800_T1H - COMP_CYCLES;
         period = CYCLES_800;
-#ifdef NEO_KHZ400
-    } else { // 400 KHz bitstream
-        time0 = CYCLES_400_T0H - COMP_CYCLES;
-        time1 = CYCLES_400_T1H - COMP_CYCLES;
-        period = CYCLES_400;
     }
+#else
+    time0 = CYCLES_800_T0H - COMP_CYCLES;
+    time1 = CYCLES_800_T1H - COMP_CYCLES;
+    period = CYCLES_800;
 #endif
 
-#ifdef ESP8266
-    // TODO gpio_set_level_high() / gpio_set_level_low() could be replaced with a single write operator without the
-    // if, but that seems to mess with the number of clock cycles. needs some disassembling to figure out what the
-    // compiler is doing....
-    // WRITE_PERI_REG(gpio_set_address, gpio_set);
-    // WRITE_PERI_REG(gpio_clear_address, gpio_clear);
-
-    // uint32_t gpio_clear_address;
-    // uint32_t gpio_set_address;
     uint32_t gpio_clear;
     uint32_t gpio_set;
     if (pin == 16) {
@@ -151,14 +156,12 @@ void NeoPixel_espShow(uint8_t pin, uint8_t *pixels, uint32_t numBytes, bool is80
         // gpio_set_address = RTC_GPIO_OUT;
         gpio_clear = (READ_PERI_REG(RTC_GPIO_OUT) & 0xfffffffeU);
         gpio_set = gpio_clear | 1;
-
     }
     else {
         // gpio_clear_address = PERIPHS_GPIO_BASEADDR + GPIO_OUT_W1TC_ADDRESS;
         // gpio_set_address = PERIPHS_GPIO_BASEADDR + GPIO_OUT_W1TS_ADDRESS;
         gpio_set = pinMask;
         gpio_clear = pinMask;
-
     }
 #endif
 

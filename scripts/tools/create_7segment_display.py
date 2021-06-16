@@ -237,8 +237,8 @@ class SevenSegmentDisplay(object):
 
     def get_colon_pixels(self, address, type):
         if type==Colons.BOTTOM:
-            address += self.num_pixels_colon
-        return [(i + address) for i in range(0, self.num_pixels_colon) ]
+            address += self.num_pixels_colon // 2
+        return [(i + address) for i in range(0, self.num_pixels_colon // 2) ]
 
     def get_digit_pixels(self, address, segment):
         for key, val in self.segment_order.items():
@@ -279,9 +279,7 @@ elif args.action=='testgfx':
     cfg = ('Dialog_8pt', 2, 6, 0)
     cfg = ('digital_7_mono_8pt', 0, 6, 6)
 
-    cfg=list(cfg)
-
-
+    cfg = list(cfg)
 
     font = Font(cfg[0], canvas)
     font.wrap = False
@@ -389,22 +387,8 @@ elif args.action=='dumpcode':
         file.write('    return %s(ptr);\n' % pixel_read_func)
         file.write('}\n')
         file.write('\n')
-        # file.write('using SegmentPixelArray = std::array<PixelAddressType, %u>;\n' % display.digits_pixels)
-        # file.write('using SegmentArray = std::array<SegmentPixelArray, %u>;\n' % display.segments_len)
-        # file.write('using DigitArray = std::array<SegmentArray, %u>;\n' % display.num_digits)
-        # file.write('\n')
-        # file.write('using ColonPixelsArray = std::array<PixelAddressType, %u>;\n' % display.colons_pixels)
-        # file.write('using ColonPixelArray = std::array<ColonPixelsArray, %u>;\n' % display.colons_len)
-        # file.write('using ColonArray = std::array<ColonPixelArray, %u>;\n' % display.num_colons)
-        # file.write('\n')
-        # file.write('using AnimationOrderArray = std::array<PixelAddressType, %u>;\n' % display.animation_order_len)
-        # file.write('\n')
         file.write('static constexpr PixelAddressType kNumDigits = %u;\n' % display.num_digits)
-        # file.write('#define IOT_CLOCK_NUM_DIGITS %u\n' % display.num_digits)
         file.write('static constexpr PixelAddressType kNumColons = %u;\n' % display.num_colons)
-        # file.write('#define IOT_CLOCK_NUM_COLONS %u\n' % display.num_colons)
-
-
         file.write('\n')
         file.write('static constexpr PixelAddressType kNumPixels = %u;\n' % display.num_pixels)
         file.write('static constexpr PixelAddressType kNumPixelsDigits = %u;\n' % display.num_pixels_digits)
@@ -413,63 +397,6 @@ elif args.action=='dumpcode':
         file.write('static constexpr PixelAddressType kNumPixelsPerDigit = kNumPixelsPerSegment * 7;\n')
         file.write('static constexpr PixelAddressType kNumPixelsPerColon = %u;\n' % display.colons_len)
         file.write('\n')
-
-        # file.write('static constexpr auto kDigitsTranslationTable PROGMEM = DigitArray({\n')
-        # n = display.num_digits
-        # for i in range(0, n):
-        #     file.write('    SegmentArray({\n')
-        #     m = display.segments_len
-        #     for j in range(0, m):
-        #         address = display.get_digit_start(i)
-        #         file.write('        SegmentPixelArray({ ')
-        #         o = display.digits_pixels
-        #         px = display.get_digit_pixels(address, SEGMENTS_LIST[j])
-        #         for l in range(0, o):
-        #             file.write('%u' % px[l])
-        #             if l<o-1:
-        #                 file.write(', ')
-        #             else:
-        #                 file.write(' })')
-        #         if j<m-1:
-        #             file.write(',\n')
-        #         else:
-        #             file.write('\n')
-        #     file.write('    })')
-        #     if i<n-1:
-        #         file.write(',\n')
-        #     else:
-        #         file.write('\n')
-        # file.write('});\n')
-        # file.write('\n')
-        # file.write('static constexpr auto kColonTranslationTable PROGMEM = ColonArray({\n')
-        # n = display.num_colons
-        # for i in range(0, n):
-        #     file.write('    ColonPixelArray({\n')
-        #     m = display.colons_len
-        #     for j in range(0, m):
-        #         address = display.get_colon_start(i)
-        #         file.write('        ColonPixelsArray({ ')
-        #         o = display.colons_pixels
-        #         px = display.get_colon_pixels(address, COLONS_LIST[j])
-        #         for l in range(0, o):
-        #             file.write('%u' % px[l])
-        #             if l<o-1:
-        #                 file.write(', ')
-        #             else:
-        #                 file.write(' })')
-        #         if j<m-1:
-        #             file.write(',\n')
-        #         else:
-        #             file.write('\n')
-        #     file.write('    })')
-        #     if i<n-1:
-        #         file.write(',\n')
-        #     else:
-        #         file.write('\n')
-        # file.write('});\n')
-        # file.write('\n')
-        # file.write('static constexpr auto kPixelAnimationOrder PROGMEM = AnimationOrderArray({%s});\n' % display.animation_order_array_str)
-        # file.write('\n')
 
         file.write('#define SEVEN_SEGMENT_DIGITS_TRANSLATION_TABLE ')
 

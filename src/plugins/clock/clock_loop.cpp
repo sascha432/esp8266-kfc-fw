@@ -105,9 +105,9 @@ void ClockPlugin::_loop()
     if (_debug) {
         return;
     }
+    //
     LoopOptionsType options(*this);
     _display.setBrightness(_getBrightness());
-    _display.show();
 
     if (_animation) {
         _animation->loop(options.getMillis());
@@ -127,7 +127,7 @@ void ClockPlugin::_loop()
 
         IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(
             if (_loopDisplayLightSensor(options)) {
-                break;
+                return;
             }
         )
 
@@ -180,14 +180,14 @@ void ClockPlugin::_loop()
 
                 if (_blendAnimation->blend(_display, options.getMillis())) {
                     // display mixed state
-                    _display.showIntrLocked();
+                    _display.show();
                 }
                 else {
                     // blending done, delete _blendAnimation
                     __LDBG_printf("blending done");
                     delete _blendAnimation;
                     _blendAnimation = nullptr;
-                    _display.showIntrLocked();
+                    _display.show();
                 }
 
             }
@@ -211,7 +211,7 @@ void ClockPlugin::_loop()
                 _display.show();
 #if BENCH
                 uint32_t dur4 = micros() - _start;
-// ets_intr_unlock();
+                //  ets_intr_unlock();
                 ::printf("%u %u %u\n", dur2, dur3, dur4);
 #endif
 
@@ -220,7 +220,7 @@ void ClockPlugin::_loop()
                 // no animation object available
                 // display plain color
                 _display.fill(_getColor());
-                _display.showIntrLocked();
+                _display.show();
             }
 
             return;
@@ -229,14 +229,11 @@ void ClockPlugin::_loop()
         break;
     }
 
-    if (options.doRefresh()) {
-        _display.showIntrLocked();
-    }
-    else {
-        // run display.show() every millisecond to update dithering
-        // mandatory frames are displayed with interrupts locked
-        _display.delay(1);
-    }
+    _display.show();
+
+    // run display.show() every millisecond to update dithering
+    // mandatory frames are displayed with interrupts locked
+    _display.delay(5);
 
     // __LDBG_printf("refresh fading_brightness=%u color=%s fps=%u", _fadingBrightness, getColor().toString().c_str(), FastLED.getFPS());
 }

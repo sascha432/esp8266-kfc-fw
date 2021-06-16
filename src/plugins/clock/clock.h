@@ -35,7 +35,6 @@ namespace Clock {
         uint32_t getMillis() const;
         uint8_t getBrightness() const;
         bool doUpdate() const;
-        bool doRefresh() const;
         bool doRedraw();
         time_t getNow() const;
 
@@ -43,7 +42,6 @@ namespace Clock {
         // uint16_t _updateRate;
         bool &_forceUpdate;
         uint8_t _brightness;
-        bool _doRefresh;
         uint32_t _millis;
         uint32_t _millisSinceLastUpdate;
     };
@@ -66,11 +64,6 @@ namespace Clock {
     inline bool LoopOptionsBase::doUpdate() const
     {
         return (_millisSinceLastUpdate >= kUpdateRate);
-    }
-
-    inline bool LoopOptionsBase::doRefresh() const
-    {
-        return _forceUpdate || _doRefresh;
     }
 
     inline bool LoopOptionsBase::doRedraw()
@@ -598,7 +591,6 @@ private:
     bool _isFading;
     bool _isEnabled;
     bool _forceUpdate;
-    //952228
 
     using Animation = Clock::Animation;
     friend Animation;

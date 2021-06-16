@@ -49,7 +49,7 @@ namespace Clock {
 
     using BaseDisplayType = Clock::PixelDisplay<
             Clock::NeoPixelController<IOT_CLOCK_WS2812_OUTPUT>,
-            Clock::PixelDisplayBuffer<IOT_LED_MATRIX_PIXEL_OFFSET, IOT_LED_MATRIX_ROWS, IOT_LED_MATRIX_COLS, IOT_LED_MATRIX_OPTS_REVERSE_COLS, IOT_LED_MATRIX_OPTS_ROTATE, IOT_LED_MATRIX_OPTS_INTERLEAVED>
+            Clock::PixelDisplayBuffer<IOT_LED_MATRIX_PIXEL_OFFSET, IOT_LED_MATRIX_ROWS, IOT_LED_MATRIX_COLS, IOT_LED_MATRIX_OPTS_REVERSE_ROWS, IOT_LED_MATRIX_OPTS_REVERSE_COLS, IOT_LED_MATRIX_OPTS_ROTATE, IOT_LED_MATRIX_OPTS_INTERLEAVED>
         >;
 
     using CoordinateType = BaseDisplayType::CoordinateType;
@@ -253,12 +253,9 @@ namespace Clock {
             _source->removeBlendBuffer(_sourceBuffer);
             _target->removeBlendBuffer(_targetBuffer);
             // make target the new animation and delete the source
-__DBG_printf("source=%p target=%p", _source, _target);
-Serial.println(1);
+            __DBG_printf("source=%p target=%p", _source, _target);
             std::swap(_source, _target);
-Serial.println(2);
             delete _target;
-Serial.println(3);
         }
 
         void begin() {

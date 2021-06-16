@@ -115,7 +115,6 @@ Clock::LoopOptionsBase::LoopOptionsBase(ClockPlugin &plugin) :
     // _updateRate(plugin._updateRate),
     _forceUpdate(plugin._forceUpdate),
     _brightness(plugin._getBrightness()),
-    _doRefresh(plugin._isFading && _brightness != plugin._fadingBrightness),
     _millis(millis()),
     _millisSinceLastUpdate(get_time_diff(plugin._lastUpdateTime, _millis))
 {
@@ -123,7 +122,6 @@ Clock::LoopOptionsBase::LoopOptionsBase(ClockPlugin &plugin) :
         __LDBG_printf("fading=done brightness=%u target_brightness=%u", plugin._getBrightness(), plugin._targetBrightness);
         plugin._setBrightness(plugin._targetBrightness);
         plugin._isFading = false;
-        _doRefresh = true;
         // update mqtt and webui
         plugin._publishState();
     }
@@ -580,12 +578,12 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
 
         __LDBG_printf("button at pin %u", IOT_CLOCK_BUTTON_PIN);
         pinMonitor.attach<Clock::Button>(IOT_CLOCK_BUTTON_PIN, 0, *this);
-        pinMode(IOT_CLOCK_BUTTON_PIN, INPUT);
+        _pinMode(IOT_CLOCK_BUTTON_PIN, INPUT);
 
         #if IOT_CLOCK_TOUCH_PIN != -1
             __LDBG_printf("touch sensor at pin %u", IOT_CLOCK_TOUCH_PIN);
             pinMonitor.attach<Clock::TouchButton>(IOT_CLOCK_TOUCH_PIN, 1, *this);
-            pinMode(IOT_CLOCK_TOUCH_PIN, INPUT);
+            _pinMode(IOT_CLOCK_TOUCH_PIN, INPUT);
         #endif
 
         IF_IOT_CLOCK_HAVE_ROTARY_ENCODER(

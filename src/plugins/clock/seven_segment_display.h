@@ -49,6 +49,16 @@ namespace SevenSegment {
         MAX_DIGIT = 15
     };
 
+    SegmentType getSegments(uint8_t digit);
+
+    #if IOT_CLOCK_DISPLAY_INCLUDE == 1
+        #include "display_clock.h"
+    #elif IOT_CLOCK_DISPLAY_INCLUDE == 2
+        #include "display_clockv2.h"
+    #else
+        #error "no translation table available"
+    #endif
+
     extern "C" const SegmentType segmentTypeTranslationTable[] PROGMEM;
     extern "C" const PixelAddressType digitsTranslationTable[] PROGMEM;
     extern "C" const PixelAddressType colonTranslationTable[] PROGMEM;
@@ -59,16 +69,6 @@ namespace SevenSegment {
         BOTTOM,
         MAX
     };
-
-    SegmentType getSegments(uint8_t digit);
-
-    #if IOT_CLOCK_DISPLAY_INCLUDE == 1
-        #include "display_clock.h"
-    #elif IOT_CLOCK_DISPLAY_INCLUDE == 2
-        #include "display_clockv2.h"
-    #else
-        #error "no translation table available"
-    #endif
 
     // inline static PixelAddressType readPixelAddress(PixelAddressPtr ptr) {
     //     if constexpr (sizeof(PixelAddressType) == 2) {
@@ -151,19 +151,11 @@ namespace SevenSegment {
         }
 
         void setColon(uint8_t num, ColonType colon, bool state = true) {
-#if PIXEL_DISPLAY_USE_PROGMEM_DIRECTLY
-            auto ptr = getColonsArrayPtr(num);
-            auto endPtr = ptr + kNumPixelsPerColon;
-            while(ptr < endPtr) {
-                setPixelState(readPixelAddress(ptr++), state);
-            }
-#else
             PixelAddressType buf[kNumPixelsPerColon];
             memcpy_P(buf, getColonsArrayPtr(num), kNumPixelsPerColon * sizeof(PixelAddressType));
             for(const auto address: buf) {
                 setPixelState(address, state);
             }
-#endif
         }
 
         void clearColon(uint8_t num, ColonType colon) {
@@ -176,23 +168,6 @@ namespace SevenSegment {
                     __DBG_panic("number %u out of range [0;%u]", digit, static_cast<uint8_t>(SegmentType::MAX_DIGIT));
                 }
             #endif
-#if PIXEL_DISPLAY_USE_PROGMEM_DIRECTLY
-            auto ptr = getSegmentPixelAddressPtr(num, 0);
-            auto endPtr = ptr + kNumPixelsPerDigit;
-            if (digit == 0xff) {
-                while(ptr < endPtr) {
-                    setPixelState(readPixelAddress(ptr++), false);
-                }
-            }
-            else {
-                auto digitSegments = getSegments(digit);
-                uint8_t n = 0;
-                while(ptr < endPtr) {
-                    setPixelState(readPixelAddress(ptr++), (digitSegments == n) ? state : false);
-                    n++;
-                }
-            }
-#else
             PixelAddressType buf[kNumPixelsPerDigit];
             memcpy_P(buf, getSegmentsArrayPtr(num), sizeof(buf));
             if (digit == 0xff) {
@@ -211,7 +186,6 @@ namespace SevenSegment {
                     n++;
                 }
             }
-#endif
         }
 
         void clearDigit(uint8_t num) {
@@ -223,19 +197,19 @@ namespace SevenSegment {
 
         // make pixel visible
         void setPixelState(PixelAddressType address, bool state) {
-            _state[address] = state;
+            _masked[address] = state;
         }
 
         bool getPixelState(PixelAddressType address) const {
-            return _state[address];
+            return _masked[address];
         }
 
         void hideAll() {
-            _state.reset();
+            _masked.reset();
         }
 
         void showAll() {
-            _state.set();
+            _masked.set();
         }
 
         void clear() {
@@ -243,40 +217,14 @@ namespace SevenSegment {
             showAll();
         }
 
-        void showIntrLocked() {
-            _applyState();
-            BaseDisplayType::showIntrLocked();
-        }
-
         void show() {
-            show(FastLED.getBrightness());
+            _applyMask();
+            FastLED.show();
         }
 
         void show(uint8_t brightness) {
-            _applyState();
+            _applyMask();
             FastLED.show(brightness);
-        }
-
-        void _applyState() {
-            for(PixelAddressType i = 0; i < kNumPixels; i++) {
-                if (!_state[i]) {
-                    setPixel(i, ColorType());
-                }
-
-            }
-            // PixelAddressType address = 0;
-            // for(const auto &state: bitset::indices_on(_state)) {
-            //     if (!state) {
-            //         setPixel(address, ColorType());
-            //     }
-            //     address++;
-            // }
-            // for(auto state: _state) {
-            //     if (!state) {
-            //         setPixel(address, ColorType());
-            //     }
-            //     address++;
-            // }
         }
 
         void dump(Print &output) {
@@ -284,6 +232,14 @@ namespace SevenSegment {
         }
 
     private:
+        void _applyMask() {
+            for(PixelAddressType i = 0; i < kNumPixels; i++) {
+                if (!_masked[i]) {
+                    setPixel(i, ColorType());
+                }
+            }
+        }
+
         PixelAddressPtr getColonsArrayPtr(uint8_t num) const {
             return &colonTranslationTable[(num * kNumPixelsPerColon)];
         }
@@ -297,61 +253,13 @@ namespace SevenSegment {
         }
 
     private:
-        // std::array<bool, BaseDisplayType::kNumPixels> _state;
-        // std::vector<bool> _state;
-        std::bitset<kNumPixels> _state;
+        std::bitset<kNumPixels> _masked;
     };
-
-#if 1
 
     inline SegmentType getSegments(uint8_t digit)
     {
         return static_cast<SegmentType>(pgm_read_byte(segmentTypeTranslationTable + digit));
     }
-
-#else
-
-    inline SegmentType getSegments(uint8_t digit) {
-        switch(digit) {
-            case 0:
-                return SegmentType::DIGIT_0;
-            case 1:
-                return SegmentType::DIGIT_1;
-            case 2:
-                return SegmentType::DIGIT_2;
-            case 3:
-                return SegmentType::DIGIT_3;
-            case 4:
-                return SegmentType::DIGIT_4;
-            case 5:
-                return SegmentType::DIGIT_5;
-            case 6:
-                return SegmentType::DIGIT_6;
-            case 7:
-                return SegmentType::DIGIT_7;
-            case 8:
-                return SegmentType::DIGIT_8;
-            case 9:
-                return SegmentType::DIGIT_9;
-            case 10:
-                return SegmentType::DIGIT_A;
-            case 11:
-                return SegmentType::DIGIT_B;
-            case 12:
-                return SegmentType::DIGIT_C;
-            case 13:
-                return SegmentType::DIGIT_D;
-            case 14:
-                return SegmentType::DIGIT_E;
-            case 15:
-                return SegmentType::DIGIT_F;
-            default:
-            break;
-        }
-        return SegmentType::NONE;
-    }
-
-#endif
 
 }
 

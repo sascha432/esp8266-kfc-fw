@@ -14,13 +14,6 @@
 #include <debug_helper_disable.h>
 #endif
 
- // 0 = use memcpy_P and stack for buffering
-// 1 = use pgm_read_byte, which is slower but does not need stack/heap
-// required stack/heap: kNumPixelsPerDigit * sizeof(PixelAddressType)
-#ifndef PIXEL_DISPLAY_USE_PROGMEM_DIRECTLY
-#define PIXEL_DISPLAY_USE_PROGMEM_DIRECTLY 0
-#endif
-
 namespace Clock {
 
 #if IOT_LED_MATRIX_CONFIGURABLE_DISPLAY
@@ -296,7 +289,7 @@ namespace Clock {
         }
 
         void reset() {
-            __pixels.fill(0);
+            __pixels.fill(ColorType());
         }
 
         void clear() {
@@ -304,9 +297,7 @@ namespace Clock {
         }
 
         void fill(ColorType color) {
-            for(auto ptr = _pixels; ptr < &_pixels[kNumPixels]; ptr++) {
-                *ptr = color;
-            }
+            std::fill(begin(), end(), color);
         }
 
         void setPixel(CoordinateType row, CoordinateType col, ColorType color) {
@@ -359,7 +350,7 @@ namespace Clock {
             return __pixels[address];
         }
 
-        // access to LEDs after the start address
+        // access to LEDs without the pixel offset
         ColorType &operator [](PixelAddressType idx) {
             return _get(idx);
         }
@@ -439,7 +430,7 @@ namespace Clock {
 
     protected:
         PixelBufferType __pixels;
-        PixelBufferPtr _pixels;
+        PixelBufferPtr _pixels; // __pixels.data() + kPixelOffset
     };
 
     // FastLED controller adapter
@@ -484,7 +475,7 @@ namespace Clock {
 
         void reset() {
             PixelBufferType::reset();
-            FastLED.show();
+            show();
         }
 
         void setBrightness(uint8_t brightness) {
@@ -495,18 +486,9 @@ namespace Clock {
             FastLED.show();
         }
 
-        void showIntrLocked() {
-#if ESP8266
-            ets_intr_lock();
-#endif
-            FastLED.show();
-#if ESP8266
-            ets_intr_unlock();
-#endif
-        }
-
         void delay(unsigned long ms) {
             if (can_yield() && (_controller.getDither() != DISABLE_DITHER) && (FastLED.getBrightness() != 0) && (FastLED.getBrightness() != 255)) {
+                // use FastLED.delay for dithering
                 FastLED.delay(ms);
             }
             else {

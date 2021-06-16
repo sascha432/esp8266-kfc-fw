@@ -458,6 +458,7 @@ elif args.action=='dumpcode':
 
     filename = 'display.js'
     print('Output: %s' % filename)
+    print('This file needs to be included in "Resources\html\serial-console.html"');
 
     with open(filename, 'wt') as file:
 

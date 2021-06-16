@@ -14,7 +14,7 @@
             typedef struct __attribute__packed__ NtpClientConfig_t {
                 using Type = NtpClientConfig_t;
 
-                CREATE_UINT16_BITFIELD_MIN_MAX(refreshInterval, 16, 5, 720 * 60, 15, 5);
+                CREATE_UINT16_BITFIELD_MIN_MAX(refreshInterval, 16, 5, 720 * 60, 1440, 5);
                 uint32_t getRefreshIntervalMillis() const {
                     return refreshInterval * 60U * 1000U;
                 }

@@ -3,6 +3,10 @@
 # Author: sascha_lammers@gmx.de
 #
 
+# script to create the PROGMEM data for the pixel to 7 segment mapping
+# class SevenSegmentDisplay holds all the different types identified by a unique name
+# see "clockv2" for a more detailed explanation of the data
+
 import json
 import argparse
 import enum
@@ -50,10 +54,12 @@ class Colons(str, enum.Enum):
     def __str__(self):
         return str(self.value)[0].upper()
 
-COLONS_LIST =[Colons.TOP, Colons.BOTTOM]
+COLONS_LIST = [Colons.TOP, Colons.BOTTOM]
 
+# different mappings for the pixels
 class SevenSegmentDisplay(object):
     displays = {
+        # ---
         'clock': {
             'digits': (6, 2),
             'colons': (2, 1),
@@ -70,6 +76,7 @@ class SevenSegmentDisplay(object):
             ),
             'pixel_animation_order': list(range(0, 7 * 2)),
         },
+        # ---
         'clock_4': {
             'digits': (4, 2),
             'colons': (1, 1),
@@ -83,10 +90,15 @@ class SevenSegmentDisplay(object):
             ),
             'pixel_animation_order': list(range(0, 7 * 2)),
         },
+        # ---
         'clockv2': {
+            # (number of digits, pixels per segment)
             'digits': (4, 4),
+            # (number of colons, pixels per dot)
             'colons': (1, 2),
+            # (order of the segments)
             'segment_order': { Segments.A: 6, Segments.B: 5, Segments.C: 2, Segments.D: 3, Segments.E: 4, Segments.F: 0, Segments.G: 1 },
+            # (order of digits and colons)
             'order': (
                 ('colon', 0),
                 ('digit', 2),
@@ -94,8 +106,11 @@ class SevenSegmentDisplay(object):
                 ('digit', 1),
                 ('digit', 0),
             ),
+            # (order of the pixels per digit for animations, should be a continuous loop through the 8 )
             'pixel_animation_order': (28, 29, 30, 31, 24, 25, 26, 27, 11, 10, 9, 8, 20, 21, 22, 23, 16, 17, 18, 19, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4),
         },
+        # ---
+        # test for using a LED matrix displaying a 7 segment clock using a font
         'matrix_clock': {
             'digits': (6, 1),
             'colons': (2, 1),

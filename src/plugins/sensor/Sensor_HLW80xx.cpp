@@ -20,8 +20,6 @@
 #include <debug_helper_disable.h>
 #endif
 
-#include <debug_helper_enable_mem.h>
-
 using KFCConfigurationClasses::Plugins;
 
 PROGMEM_STRING_DEF(iot_sensor_hlw80xx_state_file, "/.pvt/hlw80xx.state");
@@ -53,7 +51,7 @@ Sensor_HLW80xx::Sensor_HLW80xx(const String &name, MQTT::SensorType type) : MQTT
 MQTT::AutoDiscovery::EntityPtr Sensor_HLW80xx::getAutoDiscovery(MQTT::FormatType format, uint8_t num)
 {
     String topic = _getTopic();
-    auto discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
+    auto discovery = new MQTT::AutoDiscovery::Entity();
     switch(num) {
         case 0:
             discovery->create(this, FSPGM(power), format);

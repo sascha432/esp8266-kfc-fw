@@ -32,7 +32,7 @@ Channel::Channel(Module *dimmer, uint8_t channel) :
 
 MQTT::AutoDiscovery::EntityPtr Channel::getAutoDiscovery(FormatType format, uint8_t num)
 {
-    auto discovery = __LDBG_new(AutoDiscovery::Entity);
+    auto discovery = new AutoDiscovery::Entity();
     switch(num) {
         case 0:
             if (discovery->createJsonSchema(this, PrintString(FSPGM(channel__u), _channel), format)) {

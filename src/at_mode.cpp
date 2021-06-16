@@ -41,7 +41,11 @@ extern IOExpander::PCF8574 _PCF8574;
 #include "../src/plugins/plugins.h"
 #include "umm_malloc/umm_malloc_cfg.h"
 
+#include "NeoPixel_esp.h"
+
+#if ESP8266
 #include "core_esp8266_waveform.h"
+#endif
 
 #if DEBUG_AT_MODE
 #include <debug_helper_enable.h>
@@ -489,7 +493,7 @@ static void new_ATModeHelpVector_atModeCommandHelp()
         __DBG_panic("atModeCommandHelp=%p", atModeCommandHelp);
     }
 #endif
-    atModeCommandHelp = __LDBG_new(ATModeHelpVector);
+    atModeCommandHelp = new ATModeHelpVector();
 }
 
 void at_mode_generate_help(Stream &output, StringVector *findText = nullptr)
@@ -505,7 +509,7 @@ void at_mode_generate_help(Stream &output, StringVector *findText = nullptr)
     }
     at_mode_display_help(output, findText);
 
-    __LDBG_delete(atModeCommandHelp);
+    delete atModeCommandHelp;
     atModeCommandHelp = nullptr;
 
     if (config.isSafeMode()) {
@@ -539,7 +543,7 @@ String at_mode_print_command_string(Stream &output, char separator)
         }
     }
 
-    __LDBG_delete(atModeCommandHelp);
+    delete atModeCommandHelp;
     atModeCommandHelp = nullptr;
 
     return commands;
@@ -702,9 +706,6 @@ static void print_heap()
     else {
         Serial.printf_P(PSTR("+HEAP: free=%u cpu=%dMHz frag=%u"), ESP.getFreeHeap(), ESP.getCpuFreqMHz(), ESP.getHeapFragmentation());
     }
-#if HAVE_MEM_DEBUG
-    KFCMemoryDebugging::dumpShort(Serial);
-#endif
 }
 
 #endif
@@ -1086,7 +1087,7 @@ AtModeADC *atModeADC;
 static void at_mode_adc_delete_object()
 {
     if (atModeADC) {
-        __LDBG_delete(atModeADC);
+        delete atModeADC;
         atModeADC = nullptr;
     }
 }
@@ -2223,7 +2224,7 @@ void at_mode_serial_handle_event(String &commandString)
                 AsyncWebSocketClient *client = Http2Serial::getClientById(reinterpret_cast<AsyncWebSocketClient *>(clientId));
                 if (client) {
                     at_mode_adc_delete_object();
-                    atModeADC = __LDBG_new(AtModeADCWebSocket);
+                    atModeADC = new AtModeADCWebSocket();
                     if (reinterpret_cast<AtModeADCWebSocket *>(atModeADC)->init(interval, duration, packetSize, client)) {
                         args.print(F("Sending ADC readings to client=%p for %.2f seconds, interval=%.3f milliseconds, packet size=%u"), client, duration / 1000.0, interval / 1000.0, packetSize);
                     }
@@ -2249,7 +2250,7 @@ void at_mode_serial_handle_event(String &commandString)
                 auto readDelay = args.toIntMinMax(4, 0U, ~0U, 1250U);
 
                 at_mode_adc_delete_object();
-                atModeADC = __LDBG_new(AtModeADC);
+                atModeADC = new AtModeADC();
                 if (atModeADC->init(period, multiplier, unit, readDelay)) {
 
                     args.print(F("ADC display interval %ums"), interval);
@@ -2339,38 +2340,6 @@ void at_mode_serial_handle_event(String &commandString)
             }
         }
     }
-#if HAVE_MEM_DEBUG
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPA))) {
-        KFCMemoryDebugging::AllocType type = KFCMemoryDebugging::AllocType::ALL;
-        int cmd = -1;
-        if (args.size() >= 1) {
-            cmd = stringlist_find_P_P(PSTR("reset|mark|leak|freed"), args.get(0), '|');
-            switch(cmd) {
-                case 0: // reset
-                    args.print(F("stats reset"));
-                    KFCMemoryDebugging::reset();
-                    cmd = 0;
-                    break;
-                case 1: // mark
-                    args.print(F("all blocks marked as no leak"));
-                    KFCMemoryDebugging::markAllNoLeak();
-                    cmd = 0;
-                    break;
-                case 2: // leak
-                    type = KFCMemoryDebugging::AllocType::LEAK;
-                    break;
-                case 3: // freed
-                    type = KFCMemoryDebugging::AllocType::FREED;
-                    break;
-                default:
-                    break;
-            }
-        }
-        if (cmd) {
-            KFCMemoryDebugging::dump(Serial, type);
-        }
-    }
-#endif
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPFS))) {
         at_mode_dump_fs_info(output);
     }
@@ -2605,6 +2574,10 @@ void at_mode_serial_input_handler(Stream &client)
                     line = String();
                     break;
                 default:
+                    if (ch > 128) {
+                        serial.printf_P(PSTR("Serial input - invalid character %u\r\n"), ch);
+                        break;
+                    }
                     line += (char)ch;
                     serial.write(ch);
                     if (line.length() >= SERIAL_HANDLER_INPUT_BUFFER_MAX) {

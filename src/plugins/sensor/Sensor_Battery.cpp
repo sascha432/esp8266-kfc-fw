@@ -15,8 +15,6 @@
 #include <debug_helper_disable.h>
 #endif
 
-#include <debug_helper_enable_mem.h>
-
 float Sensor_Battery::maxVoltage = 0;
 
 using KFCConfigurationClasses::System;
@@ -111,7 +109,7 @@ enum class AutoDiscoveryNumHelperType {
 
 MQTT::AutoDiscovery::EntityPtr Sensor_Battery::getAutoDiscovery(FormatType format, uint8_t num)
 {
-    auto discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
+    auto discovery = new MQTT::AutoDiscovery::Entity();
     switch(static_cast<AutoDiscoveryNumHelperType>(num)) {
         case AutoDiscoveryNumHelperType::VOLTAGE:
             if (discovery->create(this, _getId(TopicType::VOLTAGE), format)) {

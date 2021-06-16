@@ -16,8 +16,6 @@
 #include <debug_helper_disable.h>
 #endif
 
-#include <debug_helper_enable_mem.h>
-
 Sensor_CCS811::Sensor_CCS811(const String &name, uint8_t address) :
     MQTT::Sensor(MQTT::SensorType::CCS811),
     _name(name),
@@ -39,7 +37,7 @@ Sensor_CCS811::~Sensor_CCS811()
 
 MQTT::AutoDiscovery::EntityPtr Sensor_CCS811::getAutoDiscovery(FormatType format, uint8_t num)
 {
-    discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
+    discovery = new MQTT::AutoDiscovery::Entity();
     switch(num) {
         case 0:
             if (discovery->create(this, _getId(F("eco2")), format)) {

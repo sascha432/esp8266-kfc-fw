@@ -11,16 +11,14 @@
 #include <debug_helper_disable.h>
 #endif
 
-#include <debug_helper_enable_mem.h>
-
 JsonUnnamedArray & JsonArrayMethods::addArray(size_t reserve)
 {
-    return reinterpret_cast<JsonUnnamedArray &>(add(__LDBG_new(JsonUnnamedArray, reserve)));
+    return reinterpret_cast<JsonUnnamedArray &>(add(new JsonUnnamedArray(reserve)));
 }
 
 JsonUnnamedObject & JsonArrayMethods::addObject(size_t reserve)
 {
-    return reinterpret_cast<JsonUnnamedObject &>(add(__LDBG_new(JsonUnnamedObject, reserve)));
+    return reinterpret_cast<JsonUnnamedObject &>(add(new JsonUnnamedObject(reserve)));
 }
 
 JsonUnnamedArray::JsonUnnamedArray(size_t reserve) : JsonUnnamedVariant<AbstractJsonValue::JsonVariantVector>(nullptr, reserve)

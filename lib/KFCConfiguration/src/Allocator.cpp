@@ -14,7 +14,7 @@ uint8_t *Allocator::allocate(size_t size, size_t *realSize, uint8_t alignment)
 {
     __LDBG_assert_printf(size != 0, "allocating size=%u", size);
     size = std::max(1U, size);
-    auto ptr = (uint32_t *)__LDBG_malloc(size = _get_aligned_size(size, alignment));
+    auto ptr = reinterpret_cast<uint32_t *>(malloc(size = _get_aligned_size(size, alignment)));
     __LDBG_assert_printf(ptr != nullptr, "malloc=%u returned=%p", size, ptr);
     if (!ptr) {
         if (realSize) {

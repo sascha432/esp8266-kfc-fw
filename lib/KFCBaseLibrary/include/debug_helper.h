@@ -4,15 +4,6 @@
 
 #pragma once
 
-#if defined(HAVE_MEM_NO_DEBUG) || defined(KFC_DEVICE_ID)
-#undef HAVE_MEM_DEBUG
-#endif
-
-#ifndef HAVE_MEM_DEBUG
-#define HAVE_MEM_DEBUG                                      0
-#endif
-
-
 #include <Arduino_compat.h>
 #include <Print.h>
 #include <StreamWrapper.h>
@@ -40,40 +31,6 @@ extern unsigned long millis(void);
 #else
 #define __BASENAME_FILE__                                   __FILE__
 #endif
-
-#define __NDBG_allocator                                    std::allocator
-#if _MSC_VER
-#define __NDBG_operator_new(...)                            std::malloc(__VA_ARGS__)
-#define __NDBG_operator_delete(...)                         std::free(__VA_ARGS__)
-#else
-#include <new>
-#define __NDBG_operator_new(...)                            ::operator new(__VA_ARGS__)
-#define __NDBG_operator_delete(...)                         ::operator delete(__VA_ARGS__)
-#endif
-#define __NDBG_new(name, ...)                               new name(__VA_ARGS__)
-#define __NDBG_delete(ptr)                                  delete ptr
-#define __NDBG_new_array(num, name, ...)                    new name[num](__VA_ARGS__)
-#define __NDBG_delete_array(ptr)                            delete[] ptr
-#define __NDBG_track_new(...)                               ;
-#define __NDBG_track_delete(...)                            ;
-#define __NDBG_malloc(size)                                 malloc(size)
-#define __NDBG_realloc(ptr, size)                           realloc(ptr, size)
-
-#define __NDBG_free(ptr)                                    free(ptr)
-#define __NDBG_malloc_str(size)                             reinterpret_cast<char *>(__NDBG_malloc(size))
-#define __NDBG_malloc_buf(size)                             reinterpret_cast<uint8_t *>(__NDBG_malloc(size))
-#define __NDBG_realloc_str(str, size)                       reinterpret_cast<char *>(__NDBG_realloc(str, size))
-#define __NDBG_realloc_buf(ptr, size)                       reinterpret_cast<uint8_t *>(__NDBG_realloc(ptr, size))
-#define __NDBG_strdup(str)                                  strdup(str)
-#define __NDBG_strdup_P(str)                                strdup_P(str)
-
-#define __NDBG_NOP_new(...)                                 ;
-#define __NDBG_NOP_delete(...)                              ;
-#define __NDBG_NOP_new_array(...)                           ;
-#define __NDBG_NOP_delete_array(...)                        ;
-#define __NDBG_NOP_malloc(...)                              ;
-#define __NDBG_NOP_realloc(...)                             ;
-#define __NDBG_NOP_free(...)                                ;
 
 // invokes panic() on ESP8266/32, calls __debugbreak() with visual studio to intercept and debug the error
 extern int ___debugbreak_and_panic(const char *filename, int line, const char *function);
@@ -155,101 +112,6 @@ extern const char ___debugPrefix[] PROGMEM;
 
 #include "DebugContext.h"
 
-// debug
-#if HAVE_MEM_DEBUG
-#include "DebugMemoryHelper.h"
-#define __DBG_allocator                                     __DebugAllocator
-#define __DBG_track_allocator                               __TrackAllocator
-#define __DBG_operator_new(...)                             KFCMemoryDebugging::_new(DebugContext_ctor(), (__VA_ARGS__), __NDBG_operator_new(__VA_ARGS__))
-#define __DBG_operator_delete(ptr)                          __NDBG_operator_delete(KFCMemoryDebugging::_delete(DebugContext_ctor(), ptr))
-#define __DBG_track_new(size)                               KFCMemoryDebugging::_track_new(size)
-#define __DBG_track_delete(size)                            KFCMemoryDebugging::_track_delete(nullptr, size)
-#define __DBG_new(name, ...)                                KFCMemoryDebugging::_new(DebugContext_ctor(), sizeof(name), new name(__VA_ARGS__))
-#define __DBG_delete(ptr)                                   delete KFCMemoryDebugging::_delete(DebugContext_ctor(), ptr)
-#define __DBG_new_array(n, name, ...)                       KFCMemoryDebugging::_new(DebugContext_ctor(), n * sizeof(name), new name[n](__VA_ARGS__))
-#define __DBG_delete_array(ptr)                             delete[] KFCMemoryDebugging::_delete(DebugContext_ctor(), ptr)
-#define __DBG_malloc(size)                                  KFCMemoryDebugging::_alloc(DebugContext_ctor(), size, malloc(size))
-#define __DBG_realloc(ptr, size)                            KFCMemoryDebugging::_realloc(DebugContext_ctor(), size, ptr, realloc(ptr, size))
-#define __DBG_free(ptr)                                     free(KFCMemoryDebugging::_free(DebugContext_ctor(), ptr))
-
-#define __DBG_malloc_str(size)                              reinterpret_cast<char *>(__DBG_malloc(size))
-#define __DBG_malloc_buf(size)                              reinterpret_cast<uint8_t *>(__DBG_malloc(size))
-#define __DBG_realloc_str(ptr, size)                        reinterpret_cast<char *>(__DBG_realloc(ptr, size))
-#define __DBG_realloc_buf(ptr, size)                        reinterpret_cast<uint8_t *>(__DBG_realloc(ptr, size))
-#define __DBG_strdup(str)                                   KFCMemoryDebugging::_alloc(DebugContext_ctor(), strdup(str))
-#define __DBG_strdup_P(str)                                 KFCMemoryDebugging::_alloc(DebugContext_ctor(), strdup_P(str))
-
-#define __DBG_NOP_new(ptr)                                  KFCMemoryDebugging::_new(DebugContext_ctor(), sizeof(*ptr), ptr)
-#define __DBG_NOP_delete(ptr)                               KFCMemoryDebugging::_delete(DebugContext_ctor(), ptr)
-#define __DBG_NOP_new_array(n, ptr)                         KFCMemoryDebugging::_new(DebugContext_ctor(), n * sizeof(*ptr), ptr)
-#define __DBG_NOP_delete_array(ptr)                         KFCMemoryDebugging::_delete(DebugContext_ctor(), ptr)
-#define __DBG_NOP_malloc(ptr, size)                         KFCMemoryDebugging::_alloc(DebugContext_ctor(), size, ptr)
-#define __DBG_NOP_realloc(old_ptr, new_ptr, size)           KFCMemoryDebugging::_realloc(DebugContext_ctor(), size, old_ptr, new_ptr)
-#define __DBG_NOP_free(ptr)                                 KFCMemoryDebugging::_free(DebugContext_ctor(), ptr)
-
-#else
-
-#define __DBG_allocator                                     __NDBG_allocator
-#define __DBG_operator_new(...)                             __NDBG_operator_new(__VA_ARGS__)
-#define __DBG_operator_delete(...)                          __NDBG_operator_delete(__VA_ARGS__)
-#define __DBG_track_new(size)                               __NDBG_track_new(size)
-#define __DBG_track_delete(size)                            __NDBG_track_delete(size)
-#define __DBG_new(name, ...)                                __NDBG_new(name, ##__VA_ARGS__)
-#define __DBG_delete(obj)                                   __NDBG_delete(obj)
-#define __DBG_new_array(num, name, ...)                     __NDBG_new_array(num, name, ##__VA_ARGS__)
-#define __DBG_delete_array(ptr)                             __NDBG_delete_array(ptr)
-#define __DBG_malloc(size)                                  __NDBG_malloc(size)
-#define __DBG_realloc(ptr, size)                            __NDBG_realloc(ptr, size)
-#define __DBG_free(ptr)                                     __NDBG_free(ptr)
-
-#define __DBG_malloc_str(size)                              __NDBG_malloc_str(size)
-#define __DBG_malloc_buf(size)                              __NDBG_malloc_buf(size)
-#define __DBG_realloc_str(ptr, size)                        __NDBG_realloc_str(ptr, size)
-#define __DBG_realloc_buf(ptr, size)                        __NDBG_realloc_buf(ptr, size)
-#define __DBG_strdup(str)                                   __NDBG_strdup(str)
-#define __DBG_strdup_P(str)                                 __NDBG_strdup_P(str)
-
-#define __DBG_NOP_new(arg, ...)                             __NDBG_NOP_new(arg, ##__VA_ARGS__)
-#define __DBG_NOP_delete(arg, ...)                          __NDBG_NOP_delete(arg, ##__VA_ARGS__)
-#define __DBG_NOP_new_array(arg, ...)                       __NDBG_NOP_new_array(arg, ##__VA_ARGS__)
-#define __DBG_NOP_delete_array(arg, ...)                    __NDBG_NOP_delete_array(arg, ##__VA_ARGS__)
-#define __DBG_NOP_malloc(arg, ...)                          __NDBG_NOP_malloc(arg, ##__VA_ARGS__)
-#define __DBG_NOP_realloc(arg, ...)                         __NDBG_NOP_realloc(arg, ##__VA_ARGS__)
-#define __DBG_NOP_free(arg, ...)                            __NDBG_NOP_free(arg, ##__VA_ARGS__)
-
-#endif
-
-// debug if local and memory debugging is enabled
-#define __LDBG_allocator                                    __LMDBG_S_IF(__DBG_allocator, __NDBG_allocator)
-#define __LDBG_track_allocator                              __LMDBG_S_IF(__DBG_track_allocator, __NDBG_allocator)
-#define __LDBG_operator_new(arg, ...)                       __LMDBG_S_IF(__DBG_operator_new(arg, ##__VA_ARGS__), __NDBG_operator_new(arg, ##__VA_ARGS__))
-#define __LDBG_operator_delete(arg, ...)                    __LMDBG_S_IF(__DBG_operator_delete(arg, ##__VA_ARGS__), __NDBG_operator_delete(arg, ##__VA_ARGS__))
-#define __LDBG_track_new(size)                              __LMDBG_S_IF(__DBG_track_new(size), __NDBG_track_new(size))
-#define __LDBG_track_delete(size)                           __LMDBG_S_IF(__DBG_track_delete(size), __NDBG_track_delete(size))
-#define __LDBG_new(name, ...)                               __LMDBG_S_IF(__DBG_new(name, ##__VA_ARGS__), __NDBG_new(name, ##__VA_ARGS__))
-#define __LDBG_delete(ptr)                                  __LMDBG_S_IF(__DBG_delete(ptr), __NDBG_delete(ptr))
-#define __LDBG_new_array(num, name, ...)                    __LMDBG_S_IF(__DBG_new_array(num, name, ##__VA_ARGS__), __NDBG_new_array(num, name, ##__VA_ARGS__))
-#define __LDBG_delete_array(ptr)                            __LMDBG_S_IF(__DBG_delete_array(ptr), __NDBG_delete_array(ptr))
-#define __LDBG_malloc(size)                                 __LMDBG_S_IF(__DBG_malloc(size), __NDBG_malloc(size))
-#define __LDBG_realloc(ptr, size)                           __LMDBG_S_IF(__DBG_realloc(ptr, size), __NDBG_realloc(ptr, size))
-#define __LDBG_free(ptr)                                    __LMDBG_S_IF(__DBG_free(ptr), __NDBG_free(ptr))
-
-#define __LDBG_malloc_str(size)                             __LMDBG_S_IF(__DBG_malloc_str(size), __NDBG_malloc_str(size))
-#define __LDBG_malloc_buf(size)                             __LMDBG_S_IF(__DBG_malloc_buf(size), __NDBG_malloc_buf(size))
-#define __LDBG_realloc_str(ptr, size)                       __LMDBG_S_IF(__DBG_realloc_str(ptr, size), __NDBG_realloc_str(ptr, size))
-#define __LDBG_realloc_buf(ptr, size)                       __LMDBG_S_IF(__DBG_realloc_buf(ptr, size), __NDBG_realloc_buf(ptr, size))
-#define __LDBG_strdup(str)                                  __LMDBG_S_IF(__DBG_strdup(str), __NDBG_strdup(str))
-#define __LDBG_strdup_P(str)                                __LMDBG_S_IF(__DBG_strdup_P(str), __NDBG_strdup_P(str))
-
-#define __LDBG_NOP_free(...)                                __LMDBG_S_IF(__DBG_NOP_free(__VA_ARGS__), __NDBG_NOP_free(__VA_ARGS__))
-#define __LDBG_NOP_delete(...)                              __LMDBG_S_IF(__DBG_NOP_delete(__VA_ARGS__), __NDBG_NOP_delete(__VA_ARGS__))
-#define __LDBG_NOP_new_array(...)                           __LMDBG_S_IF(__DBG_NOP_new_array(__VA_ARGS__), __NDBG_NOP_new_array(__VA_ARGS__))
-#define __LDBG_NOP_delete_array(...)                        __LMDBG_S_IF(__DBG_NOP_delete_array(__VA_ARGS__), __NDBG_NOP_delete_array(__VA_ARGS__))
-#define __LDBG_NOP_malloc(...)                              __LMDBG_S_IF(__DBG_NOP_malloc(__VA_ARGS__), __NDBG_NOP_malloc(__VA_ARGS__))
-#define __LDBG_NOP_realloc(...)                             __LMDBG_S_IF(__DBG_NOP_realloc(__VA_ARGS__), __NDBG_NOP_realloc(__VA_ARGS__))
-#define __LDBG_NOP_free(...)                                __LMDBG_S_IF(__DBG_NOP_free(__VA_ARGS__), __NDBG_NOP_free(__VA_ARGS__))
-
-
 // validate pointers from alloc
 #if _MSC_VER
 
@@ -288,15 +150,7 @@ extern const char ___debugPrefix[] PROGMEM;
 // local functions that need to be activated by including debug_helper_[enable|disable].h
 #define __LDBG_IF(...)
 #define __LDBG_N_IF(...)                                    __VA_ARGS__
-#if HAVE_MEM_DEBUG
-#define __LMDBG_IF(...)
-#define __LMDBG_N_IF(...)                                   __VA_ARGS__
-#else
-#define __LMDBG_IF(...)                                     __VA_ARGS__
-#define __LMDBG_N_IF(...)
-#endif
 #define __LDBG_S_IF(a, b)                                   __LDBG_IF(a)__LDBG_N_IF(b)
-#define __LMDBG_S_IF(a, b)                                  __LMDBG_IF(a)__LMDBG_N_IF(b)
 #define __LDBG_panic(...)                                   __LDBG_IF(__DBG_panic(__VA_ARGS__))
 #define __LDBG_printf(...)                                  __LDBG_IF(__DBG_printf(__VA_ARGS__))
 #define __LDBG_printf_E(...)                                __LDBG_IF(__DBG_printf_E(__VA_ARGS__))
@@ -379,8 +233,6 @@ static inline int DEBUG_OUTPUT_flush() {
 #define DEBUG_SOURCE_FORMAT
 #endif
 
-#include "DebugAllocator.h"
-
 #else
 
 // deprecated
@@ -427,46 +279,9 @@ static inline int DEBUG_OUTPUT_flush() {
 #define __DBG_print_result(result, ...)                     result
 #define __DBG_IF(...)
 
-// memory management
-
-#define __DBG_allocator                                     __NDBG_allocator
-#define __DBG_operator_new(arg, ...)                             __NDBG_operator_new(arg, ##__VA_ARGS__)
-#define __DBG_operator_delete(arg, ...)                          __NDBG_operator_delete(arg, ##__VA_ARGS__)
-#define __DBG_new(arg, ...)                                      __NDBG_new(arg, ##__VA_ARGS__)
-#define __DBG_delete(arg, ...)                                   __NDBG_delete(arg, ##__VA_ARGS__)
-#define __DBG_delete_remove(arg, ...)                            __NDBG_delete_remove(arg, ##__VA_ARGS__)
-#define __DBG_new_array(arg, ...)                                __NDBG_new_array(arg, ##__VA_ARGS__)
-#define __DBG_delete_array(arg, ...)                             __NDBG_delete_array(arg, ##__VA_ARGS__)
-#define __DBG_malloc(arg, ...)                                   __NDBG_malloc(arg, ##__VA_ARGS__)
-#define __DBG_realloc(arg, ...)                                  __NDBG_realloc(arg, ##__VA_ARGS__)
-#define __DBG_free(arg, ...)                                     __NDBG_free(arg, ##__VA_ARGS__)
-#define __DBG_malloc_str(arg, ...)                               __NDBG_malloc_str(arg, ##__VA_ARGS__)
-#define __DBG_malloc_buf(arg, ...)                               __NDBG_malloc_buf(arg, ##__VA_ARGS__)
-#define __DBG_strdup(arg, ...)                                   __NDBG_strdup(arg, ##__VA_ARGS__)
-#define __DBG_strdup_P(arg, ...)                                 __NDBG_strdup_P(arg, ##__VA_ARGS__)
-
-#define __LDBG_allocator                                    __NDBG_allocator
-#define __LDBG_operator_new(arg, ...)                            __NDBG_operator_new(arg, ##__VA_ARGS__)
-#define __LDBG_operator_delete(arg, ...)                         __NDBG_operator_delete(arg, ##__VA_ARGS__)
-#define __LDBG_new(arg, ...)                                     __NDBG_new(arg, ##__VA_ARGS__)
-#define __LDBG_delete(arg, ...)                                  __NDBG_delete(arg, ##__VA_ARGS__)
-#define __LDBG_delete_remove(arg, ...)                           __NDBG_delete_remove(arg, ##__VA_ARGS__)
-#define __LDBG_new_array(arg, ...)                               __NDBG_new_array(arg, ##__VA_ARGS__)
-#define __LDBG_delete_array(arg, ...)                            __NDBG_delete_array(arg, ##__VA_ARGS__)
-#define __LDBG_malloc(arg, ...)                                  __NDBG_malloc(arg, ##__VA_ARGS__)
-#define __LDBG_realloc(arg, ...)                                 __NDBG_realloc(arg, ##__VA_ARGS__)
-#define __LDBG_free(arg, ...)                                    __NDBG_free(arg, ##__VA_ARGS__)
-#define __LDBG_malloc_str(arg, ...)                              __NDBG_malloc_str(arg, ##__VA_ARGS__)
-#define __LDBG_malloc_buf(arg, ...)                              __NDBG_malloc_buf(arg, ##__VA_ARGS__)
-#define __LDBG_strdup(arg, ...)                                  __NDBG_strdup(arg, ##__VA_ARGS__)
-#define __lDBG_strdup_P(arg, ...)                                __NDBG_strdup_P(arg, ##__VA_ARGS__)
-
 #define __LDBG_IF(...)
 #define __LDBG_N_IF(...)                                    __VA_ARGS__
 #define __LDBG_S_IF(a, b)                                   b
-#define __LMDBG_IF(...)
-#define __LMDBG_N_IF(...)                                   __VA_ARGS__
-#define __LMDBG_S_IF(a, b)                                  b
 #define __LDBG_panic(...)                                   ;
 #define __LDBG_printf(...)                                  ;
 #define __LDBG_print(...)                                   ;
@@ -487,5 +302,3 @@ static inline int DEBUG_OUTPUT_flush() {
 #endif
 
 #include "debug_helper_enable.h"
-//#include "debug_helper_disable_mem.h"
-#include "debug_helper_enable_mem.h"

@@ -17,7 +17,7 @@ inline uint8_t *Allocator::allocate(size_t size, uint8_t alignment)
 inline void Allocator::deallocate(void *ptr)
 {
     __LDBG_assert_printf(ptr != nullptr, "freeing nullptr");
-    __LDBG_free(ptr);
+    free(ptr);
 }
 
 inline void Allocator::release()

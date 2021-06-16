@@ -18,19 +18,13 @@
 
 #include "GFXCanvasCache.h"
 
-#if DEBUG_GFXCANVAS_MEM
-#include <debug_helper_enable_mem.h>
-#else
-#include <debug_helper_disable_mem.h>
-#endif
-
 using namespace GFXCanvas;
 
 Cache::Cache(Cache &&cache) noexcept : _buffer(std::exchange(cache._buffer, nullptr)), _y(std::exchange(cache._y, kYInvalid)), _width(std::exchange(cache._width, 0)), _flags(std::exchange(cache._flags, 0))
 {
 }
 
-Cache::Cache(uWidthType width, sYType y) : _buffer(__LDBG_new_array(width, ColorType)), _y(y), _width(width), _flags(0)
+Cache::Cache(uWidthType width, sYType y) : _buffer(new ColorType[width]()), _y(y), _width(width), _flags(0)
 {
     if (!_buffer) {
         __DBG_panic("alloc failed, width=%u", width);
@@ -45,14 +39,14 @@ Cache::Cache(uWidthType width, nullptr_t) : _buffer(nullptr), _y(kYInvalid), _wi
 Cache::~Cache()
 {
     if (_buffer) {
-        __LDBG_delete_array(_buffer);
+        delete[] _buffer;
     }
 }
 
 Cache &Cache::operator=(Cache &&cache) noexcept
 {
     if (_buffer) {
-        __LDBG_delete_array(_buffer);
+        delete[] _buffer;
     }
     _buffer = std::exchange(cache._buffer, nullptr);
     _y = std::exchange(cache._y, kYInvalid);
@@ -65,7 +59,7 @@ Cache &Cache::operator=(Cache &&cache) noexcept
 void Cache::allocate()
 {
     if (!_buffer) {
-        _buffer = __LDBG_new_array(_width, ColorType);
+        _buffer = new ColorType[_width];
     }
     _y = kYInvalid;
     _flags = 0;
@@ -74,7 +68,7 @@ void Cache::allocate()
 void Cache::release()
 {
     if (_buffer) {
-        __LDBG_delete_array(_buffer);
+        delete[]  _buffer;
     }
     _buffer = nullptr;
     _y = kYInvalid;
@@ -129,4 +123,3 @@ Cache &SingleLineCache::get(GFXCanvasCompressed &canvas, sYType y)
 }
 
 #include <pop_optimize.h>
-#include <debug_helper_disable_mem.h>

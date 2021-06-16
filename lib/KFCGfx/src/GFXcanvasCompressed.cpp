@@ -24,12 +24,6 @@ extern "C" {
 #pragma GCC optimize ("O3")
 #endif
 
-#if DEBUG_GFXCANVAS_MEM
-#include <debug_helper_enable_mem.h>
-#else
-#include <debug_helper_disable_mem.h>
-#endif
-
 using namespace GFXCanvas;
 
 GFXCanvasCompressed::GFXCanvasCompressed(uWidthType width, uHeightType height) : AdafruitGFXExtension(width, height), _lines(height), _cache(width, height, kCachedLinesMax)
@@ -46,7 +40,7 @@ GFXCanvasCompressed::~GFXCanvasCompressed()
 
 GFXCanvasCompressed *GFXCanvasCompressed::clone()
 {
-    return __LDBG_new(GFXCanvasCompressed, width(), _lines);
+    return new GFXCanvasCompressed(width(), _lines);
 }
 
 void GFXCanvasCompressed::setRotation(uint8_t r)

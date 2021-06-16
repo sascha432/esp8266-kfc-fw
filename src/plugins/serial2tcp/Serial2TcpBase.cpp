@@ -27,7 +27,7 @@ Serial2TcpBase::~Serial2TcpBase()
 {
     switch(_config.serial_port) {
         case Serial2TCP::SerialPortType::SOFTWARE:
-            __LDBG_delete(reinterpret_cast<SoftwareSerial *>(&_serial));
+            delete reinterpret_cast<SoftwareSerial *>(&_serial);
             // fall through
         case Serial2TCP::SerialPortType::SERIAL1:
             LoopFunctions::remove(Serial2TcpBase::handleSerialDataLoop);
@@ -85,7 +85,7 @@ Serial2TcpBase *Serial2TcpBase::createInstance(const Serial2TCP::Serial2Tcp_t &c
     SerialHandler::Client *client = nullptr;
     switch(cfg.serial_port) {
         case Serial2TCP::SerialPortType::SOFTWARE: {
-                auto softwareSerial = __LDBG_new(SoftwareSerial, cfg.rx_pin, cfg.tx_pin);
+                auto softwareSerial = new SoftwareSerial(cfg.rx_pin, cfg.tx_pin);
                 softwareSerial->begin(cfg.baudrate);
                 serialPort = softwareSerial;
                 __DBGS2T("SoftwareSerial: rx=%d tx=%d baud=%d\n", cfg.rx_pin, cfg.tx_pin, cfg.baudrate);
@@ -111,14 +111,14 @@ Serial2TcpBase *Serial2TcpBase::createInstance(const Serial2TCP::Serial2Tcp_t &c
     }
 
     if (cfg.mode == Serial2TCP::ModeType::SERVER) {
-        _instance = __LDBG_new(Serial2TcpServer, *serialPort, cfg));
+        _instance = new Serial2TcpServer(*serialPort, cfg);
         __DBGS2T("server mode port %u\n", cfg.port);
     }
     else  {
         if (!hostname) {
             hostname = Serial2TCP::getHostname();
         }
-        _instance = __LDBG_new(Serial2TcpClient, *serialPort, hostname, cfg);
+        _instance = new Serial2TcpClient(*serialPort, hostname, cfg);
         __DBGS2T("client mode: %s:%u\n", hostname, cfg.port);
     }
     _instance->_setClient(client);
@@ -131,7 +131,7 @@ Serial2TcpBase *Serial2TcpBase::createInstance(const Serial2TCP::Serial2Tcp_t &c
 void Serial2TcpBase::destroyInstance()
 {
     if (_instance) {
-        __LDBG_delete(_instance);
+        delete _instance;
         _instance = nullptr;
     }
 }

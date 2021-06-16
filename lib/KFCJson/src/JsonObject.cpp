@@ -10,21 +10,20 @@
 #else
 #include <debug_helper_disable.h>
 #endif
-#include <debug_helper_enable_mem.h>
 
 JsonArray & JsonObjectMethods::addArray(const JsonString & name, size_t reserve) {
-    return reinterpret_cast<JsonArray &>(add(__LDBG_new(JsonArray, name, reserve)));
+    return reinterpret_cast<JsonArray &>(add(new JsonArray(name, reserve)));
 }
 
 JsonObject & JsonObjectMethods::addObject(const JsonString & name, size_t reserve) {
-    return reinterpret_cast<JsonObject &>(add(__LDBG_new(JsonObject, name, reserve)));
+    return reinterpret_cast<JsonObject &>(add(new JsonObject(name, reserve)));
 }
 
 AbstractJsonValue & JsonObjectMethods::replace(const JsonString & name, AbstractJsonValue * value) {
     auto vector = getVector();
     for (auto iterator = vector->begin(); iterator != vector->end(); ++iterator) {
         if (*(*iterator)->getName() == name) {
-            __LDBG_delete(*iterator);
+            delete (*iterator);
             *iterator = value;
             return *value;
         }
@@ -126,5 +125,3 @@ AbstractJsonValue::JsonVariantVector * JsonObject::getVector()
 {
     return &_getValue();
 }
-
-#include <debug_helper_disable_mem.h>

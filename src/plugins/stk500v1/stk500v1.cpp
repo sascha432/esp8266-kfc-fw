@@ -114,7 +114,7 @@ bool STK500v1Plugin::atModeHandler(AtModeArgs &args) {
 
                 args.printf_P(PSTR("Flashing %s on %s\n"), filename.c_str(), portName);
 
-                stk500v1 = __LDBG_new(STK500v1Programmer, *serialPort);
+                stk500v1 = nwe STK500v1Programmer(*serialPort);
                 stk500v1->setSignature(_signature);
                 stk500v1->setFile(filename);
                 stk500v1->setLogging(args.toInt(2, STK500v1Programmer::LOG_FILE));
@@ -125,7 +125,7 @@ bool STK500v1Plugin::atModeHandler(AtModeArgs &args) {
                         // if (serialPort != &Serial && serialPort != &Serial1) {
                         //     delete reinterpret_cast<SoftwareSerial *>(serialPort);
                         // }
-                        __LDBG_delete(stk500v1);
+                        delete stk500v1;
                         stk500v1 = nullptr;
                     });
                 });

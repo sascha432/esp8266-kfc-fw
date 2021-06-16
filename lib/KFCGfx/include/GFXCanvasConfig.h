@@ -11,10 +11,6 @@
 #define DEBUG_GFXCANVAS                             1
 #endif
 
-#ifndef DEBUG_GFXCANVAS_MEM
-#define DEBUG_GFXCANVAS_MEM                         1
-#endif
-
 #ifndef DEBUG_GFXCANVAS_BOUNDS
 #define DEBUG_GFXCANVAS_BOUNDS                      1
 #endif

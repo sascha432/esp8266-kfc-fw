@@ -17,8 +17,6 @@
 #include <debug_helper_disable.h>
 #endif
 
-#include <debug_helper_enable_mem.h>
-
 Sensor_INA219::Sensor_INA219(const String &name, TwoWire &wire, uint8_t address) :
     MQTT::Sensor(MQTT::SensorType::INA219),
     _name(name),

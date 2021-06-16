@@ -176,7 +176,7 @@ public:
     {
         __LDBG_printf("len=%u size=%u ptr=%p this=%p", _length, _size, _buffer, this);
         if (_buffer) {
-            __LDBG_free(_buffer);
+            free(_buffer);
         }
         _buffer = nullptr;
         _length = 0;

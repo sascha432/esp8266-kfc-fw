@@ -19,7 +19,7 @@ public:
 
 public:
     inline static WsClient *createInstance(AsyncWebSocketClient *socket) {
-        return __LDBG_new(WebUISocket, socket);
+        return new WebUISocket(socket);
     }
 
     virtual void onText(uint8_t *data, size_t len) override;

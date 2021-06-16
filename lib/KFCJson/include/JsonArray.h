@@ -12,69 +12,67 @@
 #include "JsonString.h"
 #include "JsonNumber.h"
 
-#include <debug_helper_enable_mem.h>
-
 class JsonUnnamedObject;
 class JsonUnnamedArray;
 
 class JsonArrayMethods {
 public:
     AbstractJsonValue &add(const __FlashStringHelper *value) {
-        return add(__LDBG_new(JsonUnnamedVariant<const __FlashStringHelper *>, value));
+        return add(new JsonUnnamedVariant<const __FlashStringHelper *>(value));
     }
     AbstractJsonValue &add(const char *value) {
-        return add(__LDBG_new(JsonUnnamedVariant<const char *>, value));
+        return add(new JsonUnnamedVariant<const char *>(value));
     }
     AbstractJsonValue &add(const JsonVar &value) {
-        return add(__LDBG_new(JsonUnnamedVariant<JsonVar>, value));
+        return add(new JsonUnnamedVariant<JsonVar>(value));
     }
     AbstractJsonValue &add(const JsonString &value) {
         if (value.isProgMem()) {
-            return add(__LDBG_new(JsonUnnamedVariant<const __FlashStringHelper *>, value.getFPStr()));
+            return add(new JsonUnnamedVariant<const __FlashStringHelper *>(value.getFPStr()));
         }
-        return add(__LDBG_new(JsonUnnamedVariant<JsonString>, value));
+        return add(new JsonUnnamedVariant<JsonString>(value));
     }
     AbstractJsonValue &add(JsonString &&value) {
         if (value.isProgMem()) {
-            return add(__LDBG_new(JsonUnnamedVariant<const __FlashStringHelper *>, value.getFPStr()));
+            return add(new JsonUnnamedVariant<const __FlashStringHelper *>(value.getFPStr()));
         }
-        return add(__LDBG_new(JsonUnnamedVariant<JsonString>, std::move(value)));
+        return add(new JsonUnnamedVariant<JsonString>(std::move(value)));
     }
     AbstractJsonValue &add(const JsonNumber &value) {
-        return add(__LDBG_new(JsonUnnamedVariant<JsonNumber>, value));
+        return add(new JsonUnnamedVariant<JsonNumber>(value));
     }
     AbstractJsonValue &add(JsonNumber &&value) {
-        return add(__LDBG_new(JsonUnnamedVariant<JsonNumber>, std::move(value)));
+        return add(new JsonUnnamedVariant<JsonNumber>(std::move(value)));
     }
     AbstractJsonValue &add(const String &value) {
-        return add(__LDBG_new(JsonUnnamedVariant<JsonString>, value));
+        return add(new JsonUnnamedVariant<JsonString>(value));
     }
     AbstractJsonValue &add(bool value) {
-        return add(__LDBG_new(JsonUnnamedVariant<bool>, value));
+        return add(new JsonUnnamedVariant<bool>(value));
     }
     AbstractJsonValue &add(std::nullptr_t value) {
-        return add(__LDBG_new(JsonUnnamedVariant<std::nullptr_t>, value));
+        return add(new JsonUnnamedVariant<std::nullptr_t>( value));
     }
     AbstractJsonValue &add(uint32_t value) {
-        return add(__LDBG_new(JsonUnnamedVariant<uint32_t>, value));
+        return add(new JsonUnnamedVariant<uint32_t>(value));
     }
     AbstractJsonValue &add(int32_t value) {
-        return add(__LDBG_new(JsonUnnamedVariant<int32_t>, value));
+        return add(new JsonUnnamedVariant<int32_t>(value));
     }
     AbstractJsonValue &add(unsigned long value) {
-        return add(__LDBG_new(JsonUnnamedVariant<uint32_t>, (uint32_t)value));
+        return add(new JsonUnnamedVariant<uint32_t>((uint32_t)value));
     }
     AbstractJsonValue &add(long value) {
-        return add(__LDBG_new(JsonUnnamedVariant<int32_t>, (int32_t)value));
+        return add(new JsonUnnamedVariant<int32_t>((int32_t)value));
     }
     AbstractJsonValue &add(uint64_t value) {
-        return add(__LDBG_new(JsonUnnamedVariant<uint64_t>, value));
+        return add(new JsonUnnamedVariant<uint64_t>(value));
     }
     AbstractJsonValue &add(int64_t value) {
-        return add(__LDBG_new(JsonUnnamedVariant<int64_t>, value));
+        return add(new JsonUnnamedVariant<int64_t>(value));
     }
     AbstractJsonValue &add(double value) {
-        return add(__LDBG_new(JsonUnnamedVariant<double>, value));
+        return add(new JsonUnnamedVariant<double>(value));
     }
 
     JsonUnnamedArray &addArray(size_t reserve = 0);
@@ -86,7 +84,7 @@ public:
 
     void clear() {
         for(auto variant : elements()) {
-            __LDBG_delete(variant);
+            delete variant;
         }
         elements().clear();
     }
@@ -138,4 +136,3 @@ protected:
     virtual AbstractJsonValue::JsonVariantVector *getVector();
 };
 
-#include <debug_helper_disable_mem.h>

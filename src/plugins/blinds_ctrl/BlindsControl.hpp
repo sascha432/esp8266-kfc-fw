@@ -416,7 +416,7 @@ inline void BlindsControl::_publishState()
 
 inline MQTT::AutoDiscovery::EntityPtr BlindsControl::getAutoDiscovery(FormatType format, uint8_t num)
 {
-    auto discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
+    auto discovery = new MQTT::AutoDiscovery::Entity();
     if (num < kChannelCount) {
         ChannelType channel = (ChannelType)num;
         if (discovery->create(this, PrintString(FSPGM(channel__u, "channel_%u"), channel), format)) {

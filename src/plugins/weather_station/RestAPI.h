@@ -22,7 +22,7 @@ namespace WeatherStation {
 
         virtual void autoDelete(void *restApiPtr) override {
             __LDBG_printf("executing auto delete api=%p", restApiPtr);
-            __LDBG_delete((RestAPI *)restApiPtr);
+            delete reinterpret_cast<RestAPI *>(restApiPtr);
         }
 
         void call(JsonBaseReader *reader, int timeout, HttpRequest::Callback_t callback) {

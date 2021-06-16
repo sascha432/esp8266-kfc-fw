@@ -3,6 +3,7 @@
 ## Version 0.0.5
 
 - New version for framework-arduinoespressif8266 3.30000.210519 (3.0.0) and GCC 10.2 changes
+- Removed internal memory debugger
 
 ## Version 0.0.4
 

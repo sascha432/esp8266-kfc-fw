@@ -20,8 +20,6 @@
 #include <debug_helper_disable.h>
 #endif
 
-#include <debug_helper_enable_mem.h>
-
 using KFCConfigurationClasses::System;
 
 using namespace MQTT;
@@ -57,7 +55,7 @@ void MQTTClient::setupInstance()
     }
 #endif
     if (System::Flags::getConfig().is_mqtt_enabled) {
-        _mqttClient = __LDBG_new(MQTTClient);
+        _mqttClient = new MQTTClient();
     }
 }
 
@@ -65,7 +63,7 @@ void MQTTClient::deleteInstance()
 {
     __LDBG_printf("client=%p", _mqttClient);
     if (_mqttClient) {
-        __LDBG_delete(_mqttClient);
+        delete _mqttClient;
         _mqttClient = nullptr;
     }
 }
@@ -77,7 +75,7 @@ MQTTClient::Client() :
     _username(ClientConfig::getUsername()),
     _password(ClientConfig::getPassword()),
     _config(ClientConfig::getConfig()),
-    _client(__LDBG_new(AsyncMqttClient)),
+    _client(new AsyncMqttClient()),
     _port(_config.getPort()),
 #if MQTT_SET_LAST_WILL_MODE != 0
     _lastWillPayloadOffline(MQTT_LAST_WILL_TOPIC_ONLINE),
@@ -138,7 +136,7 @@ MQTT::Client::~Client()
         component->setClient(nullptr);
     }
     disconnect(true);
-    __LDBG_delete(_client);
+    delete _client;
 }
 
 void MQTTClient::_resetClient()

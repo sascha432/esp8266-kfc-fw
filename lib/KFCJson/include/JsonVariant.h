@@ -11,8 +11,6 @@
 #include "JsonString.h"
 #include "JsonNumber.h"
 
-#include <debug_helper_enable_mem.h>
-
 template <class T>
 class JsonUnnamedVariant : public AbstractJsonValue {
 public:
@@ -171,7 +169,7 @@ protected:
 
     inline void _destroy(AbstractJsonValue::JsonVariantVector &value) {
         for (auto variant : value) {
-            __LDBG_delete(variant);
+            delete variant;
         }
     }
     template <class R>
@@ -244,5 +242,3 @@ protected:
 
     JsonString _name;
 };
-
-#include <debug_helper_disable_mem.h>

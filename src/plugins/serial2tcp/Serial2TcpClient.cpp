@@ -107,7 +107,7 @@ void Serial2TcpClient::_connect()
 {
     _disconnect();
 
-    _connection = __LDBG_new(Serial2TcpConnection, __LDBG_new(AsyncClient), hasAuthentication());
+    _connection = new Serial2TcpConnection(new AsyncClient(), hasAuthentication());
     auto &client = _client();
     __DBGS2T("connect this=%p conn=%p client=%p\n", this, _connection, _connection->getClient());
     client.onConnect(handleConnect, this);
@@ -145,7 +145,7 @@ void Serial2TcpClient::_disconnect()
     if (_connection) {
         _stopClient();
         _connection->close();
-        __LDBG_delete(_connection);
+        delete _connection;
         _connection = nullptr;
     }
 }

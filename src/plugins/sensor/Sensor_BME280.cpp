@@ -13,8 +13,6 @@
 #include <debug_helper_disable.h>
 #endif
 
-#include <debug_helper_enable_mem.h>
-
 Sensor_BME280::Sensor_BME280(const String &name, TwoWire &wire, uint8_t address) :
     MQTT::Sensor(MQTT::SensorType::BME280),
     _name(name),
@@ -32,7 +30,7 @@ Sensor_BME280::~Sensor_BME280()
 
 MQTT::AutoDiscovery::EntityPtr Sensor_BME280::getAutoDiscovery(FormatType format, uint8_t num)
 {
-    auto discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
+    auto discovery = new MQTT::AutoDiscovery::Entity();
     switch(num) {
         case 0:
             if (discovery->create(this, _getId(FSPGM(temperature, "temperature")), format)) {

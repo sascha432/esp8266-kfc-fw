@@ -12,8 +12,6 @@
 #include <debug_helper_disable.h>
 #endif
 
-#include <debug_helper_enable_mem.h>
-
 Sensor_LM75A::Sensor_LM75A(const String &name, TwoWire &wire, uint8_t address) : MQTT::Sensor(SensorType::LM75A), _name(name), _wire(wire), _address(address)
 {
     REGISTER_SENSOR_CLIENT(this);
@@ -27,7 +25,7 @@ Sensor_LM75A::~Sensor_LM75A()
 
 MQTT::AutoDiscovery::EntityPtr Sensor_LM75A::getAutoDiscovery(MQTT::FormatType format, uint8_t num)
 {
-    auto discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
+    auto discovery = new MQTT::AutoDiscovery::Entity();
     switch(num) {
         case 0:
             if (!discovery->create(this, _getId(), format)) {

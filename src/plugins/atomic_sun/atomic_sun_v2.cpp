@@ -84,7 +84,7 @@ void AtomicSunPlugin::getStatus(Print &output)
 
 MQTT::AutoDiscovery::EntityPtr Driver_4ChDimmer::getAutoDiscovery(FormatType format, uint8_t num)
 {
-    auto discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
+    auto discovery = new MQTT::AutoDiscovery::Entity();
     switch(num) {
         case 0:
             discovery->createJsonShema(this, FSPGM(main), format);

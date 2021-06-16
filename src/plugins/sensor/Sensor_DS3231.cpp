@@ -12,8 +12,6 @@
 #include <debug_helper_disable.h>
 #endif
 
-#include <debug_helper_enable_mem.h>
-
 #if RTC_DEVICE_DS3231
 extern RTC_DS3231 rtc;
 #endif

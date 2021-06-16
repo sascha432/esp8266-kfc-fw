@@ -118,7 +118,7 @@ void AsyncUpdateWebHandler::handleRequest(AsyncWebServerRequest *request)
                 if (stk500v1) {
                     // start update
                     stk500v1->begin([filename]() {
-                        __LDBG_free(stk500v1);
+                        free(stk500v1);
                         stk500v1 = nullptr;
                         // remove temporary file
                         KFCFS.remove(filename);

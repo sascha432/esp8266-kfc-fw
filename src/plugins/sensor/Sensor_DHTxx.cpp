@@ -13,8 +13,6 @@
 #include <debug_helper_disable.h>
 #endif
 
-#include <debug_helper_enable_mem.h>
-
 Sensor_DHTxx::Sensor_DHTxx(const String &name, uint8_t pin/*, uint8_t type*/) : MQTT::Sensor(MQTT::SensorType::DHTxx), _name(name), _pin(pin), _dht(pin)
 //_type(type), _dht(_pin, _type)
 {
@@ -29,7 +27,7 @@ Sensor_DHTxx::~Sensor_DHTxx()
 
 MQTT::AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num)
 {
-    auto discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
+    auto discovery = new MQTT::AutoDiscovery::Entity();
     switch(num) {
         case 0:
             if (discovery->create(this, _getId(FSPGM(temperature)), format)) {

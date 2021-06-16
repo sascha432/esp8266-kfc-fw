@@ -4,8 +4,6 @@
 
 #include "JsonVariableReader.h"
 
-#include <debug_helper_enable_mem.h>
-
 namespace JsonVariableReader {
 
     Element::Element(const JsonString &path, AssignCallback callback) : _path(path), _callback(callback)
@@ -33,16 +31,16 @@ namespace JsonVariableReader {
     ElementGroup::~ElementGroup()
     {
         for (auto element : _elements) {
-            __LDBG_delete(element);
+            delete element;
         }
         for (auto result : _results) {
-            __LDBG_delete(result);
+            delete result;
         }
     }
 
     ElementGroup::ElementPtr ElementGroup::add(const JsonString &path, Element::AssignCallback callback)
     {
-        _elements.emplace_back(__LDBG_new(Element, path, callback));
+        _elements.emplace_back(new Element(path, callback));
         return _elements.back();
     }
 
@@ -82,13 +80,13 @@ namespace JsonVariableReader {
     }
 
 
-    Reader::Reader() : JsonBaseReader(nullptr), _elementGroups(__LDBG_new(ElementGroup::Vector)), _current(nullptr), _level(0), _skip(false)
+    Reader::Reader() : JsonBaseReader(nullptr), _elementGroups(new ElementGroup::Vector()), _current(nullptr), _level(0), _skip(false)
     {
     }
 
     Reader::~Reader()
     {
-        __LDBG_delete(_elementGroups);
+        delete _elementGroups;
     }
 
     ElementGroup::Vector *Reader::getElementGroups()
@@ -160,5 +158,3 @@ namespace JsonVariableReader {
     }
 
 };
-
-#include <debug_helper_disable_mem.h>

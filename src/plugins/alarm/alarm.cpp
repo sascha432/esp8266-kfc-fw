@@ -75,7 +75,7 @@ void AlarmPlugin::shutdown()
 
 MQTT::AutoDiscovery::EntityPtr AlarmPlugin::getAutoDiscovery(FormatType format, uint8_t num)
 {
-    auto discovery = __LDBG_new(AutoDiscovery::Entity);
+    auto discovery = new AutoDiscovery::Entity();
     switch(num) {
         case 0:
             discovery->create(this, FSPGM(alarm), format);

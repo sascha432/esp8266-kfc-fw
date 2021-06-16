@@ -11,8 +11,6 @@
 #include <StreamString.h>
 #endif
 
-#include <debug_helper_enable_mem.h>
-
 WeatherStationBase::WeatherStationBase() :
     _pollDataLastMillis(0),
     _pollDataRetries(0)
@@ -104,7 +102,7 @@ void WeatherStationBase::_httpRequest(const String &url, int timeout, JsonBaseRe
         prev(httpCode, error);
     };
 #endif
-    auto rest = __LDBG_new(::WeatherStation::RestAPI, url);
+    auto rest = new ::WeatherStation::RestAPI(url);
     rest->call(jsonReader, std::max(15, timeout), callback);
 }
 

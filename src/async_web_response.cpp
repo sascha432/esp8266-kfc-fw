@@ -724,7 +724,7 @@ AsyncTemplateResponse::AsyncTemplateResponse(const String &contentType, const Fi
 
 AsyncTemplateResponse::~AsyncTemplateResponse()
 {
-    __LDBG_delete(_webTemplate);
+    delete _webTemplate;
 }
 
 AsyncSpeedTestResponse::AsyncSpeedTestResponse(const String &contentType, uint32_t size) :
@@ -799,7 +799,7 @@ void AsyncFillBufferCallbackResponse::finished(bool *async, AsyncFillBufferCallb
         response->_async = nullptr;
         response->_finished = true;
     }
-    __LDBG_delete(async);
+    delete async;
 }
 
 bool AsyncFillBufferCallbackResponse::_sourceValid() const

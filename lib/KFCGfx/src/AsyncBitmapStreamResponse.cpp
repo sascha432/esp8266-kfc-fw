@@ -7,11 +7,6 @@
 #include "GFXCanvasConfig.h"
 
 #include <debug_helper_disable.h>
-#if DEBUG_GFXCANVAS_MEM
-#include <debug_helper_enable_mem.h>
-#else
-#include <debug_helper_disable_mem.h>
-#endif
 
 AsyncBitmapStreamResponse::AsyncBitmapStreamResponse(GFXCanvasCompressed& canvas, Callback callback) : AsyncAbstractResponse(nullptr), _stream(canvas), _callback(callback)
 {
@@ -25,7 +20,6 @@ AsyncBitmapStreamResponse::~AsyncBitmapStreamResponse()
     if (_callback) {
         _callback();
     }
-    __LDBG_delete_remove(this);
 }
 
 bool AsyncBitmapStreamResponse::_sourceValid() const
@@ -53,5 +47,5 @@ AsyncClonedBitmapStreamResponse::AsyncClonedBitmapStreamResponse(GFXCanvasCompre
 
 AsyncClonedBitmapStreamResponse::~AsyncClonedBitmapStreamResponse()
 {
-    __LDBG_delete(_canvasPtr);
+    delete _canvasPtr;
 }

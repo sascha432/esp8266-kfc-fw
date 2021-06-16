@@ -29,7 +29,7 @@ bool Buffer::_changeBuffer(size_t newSize)
                 }
             }
             else {
-                _buffer = __DBG_realloc_buf(_buffer, resize);
+                _buffer = reinterpret_cast<uint8_t *>(realloc(_buffer, resize));
                 if (!_buffer) {
                     // __LDBG_printf("alloc failed");
                     _size = 0;

@@ -15,19 +15,13 @@
 
 #include "GFXCanvasLines.h"
 
-#if DEBUG_GFXCANVAS_MEM
-#include <debug_helper_enable_mem.h>
-#else
-#include <debug_helper_disable_mem.h>
-#endif
-
 using namespace GFXCanvas;
 
 Lines::Lines() : _height(0), _lines(nullptr)
 {
 }
 
-Lines::Lines(uHeightType height) : _height(height), _lines(__LDBG_new_array(height, LineBuffer))
+Lines::Lines(uHeightType height) : _height(height), _lines(new LineBuffer[height])
 {
     assert(_lines != nullptr);
 }
@@ -40,7 +34,7 @@ Lines::Lines(const Lines &lines) : Lines(lines._height)
 Lines::~Lines()
 {
     if (_lines) {
-        __LDBG_delete_array(_lines);
+        delete[]  _lines;
     }
 }
 

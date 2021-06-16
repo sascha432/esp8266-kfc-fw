@@ -87,14 +87,14 @@ JsonString::JsonString(const __FlashStringHelper *str, bool forceFlash) : JsonSt
 JsonString::~JsonString()
 {
     if (_getType() == ALLOC) {
-        __LDBG_free(_getPtr());
+        free(_getPtr());
     }
 }
 
 JsonString &JsonString::operator=(const JsonString &str)
 {
     if (_getType() == ALLOC) {
-        __LDBG_free(_getPtr());
+        free(_getPtr());
     }
     if (str._getType() == ALLOC) {
         _init(str._getConstPtr(), str._getLength());
@@ -108,7 +108,7 @@ JsonString &JsonString::operator=(const JsonString &str)
 JsonString & JsonString::operator=(JsonString &&str)
 {
     if (_getType() == ALLOC) {
-        __LDBG_free(_getPtr());
+        free(_getPtr());
     }
     if (str._getType() == ALLOC) {
         _setType(ALLOC);
@@ -183,7 +183,7 @@ bool JsonString::equals(const __FlashStringHelper *str) const
 void JsonString::clear()
 {
     if (_getType() == ALLOC) {
-        __LDBG_free(_getPtr());
+        free(_getPtr());
     }
     _setType(STORED);
     *_raw = 0;
@@ -236,7 +236,7 @@ char *JsonString::_allocate(length_t length)
 {
     _setType(ALLOC);
 
-    auto ptr = __LDBG_malloc_str(length + 1);
+    auto ptr = reinterpret_cast<char *>(malloc(length + 1));
     _setPtr(ptr);
     return ptr;
 }

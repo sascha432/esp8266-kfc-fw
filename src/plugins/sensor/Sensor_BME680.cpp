@@ -25,7 +25,7 @@ Sensor_BME680::~Sensor_BME680()
 
 MQTT::AutoDiscovery::EntityPtr Sensor_BME680::getAutoDiscovery(FormatType format, uint8_t num)
 {
-    auto discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
+    auto discovery = new MQTT::AutoDiscovery::Entity();
     switch(num) {
     case 0:
         if (discovery->create(this, _getId(FSPGM(temperature)), format)) {

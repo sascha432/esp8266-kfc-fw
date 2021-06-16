@@ -9,10 +9,8 @@
 
 #if DEBUG_SYSLOG
 #include <debug_helper_enable.h>
-#include <debug_helper_enable_mem.h>
 #else
 #include <debug_helper_disable.h>
-#include <debug_helper_disable_mem.h>
 #endif
 
 using SyslogClient = KFCConfigurationClasses::Plugins::SyslogClient;

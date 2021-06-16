@@ -34,13 +34,13 @@ STK500v1Programmer::STK500v1Programmer(Stream &serial) : _serial(serial), _delay
     _fuseBytes[FUSE_LOW] = 0xff;
     _fuseBytes[FUSE_HIGH] = 0xda;
     _fuseBytes[FUSE_EXT] = 0xff;
-    _pageBuffer = __LDBG_new_array(_pageSize, uint8_t);
+    _pageBuffer = new uint8_t[_pageSize]();
     BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::MEDIUM);
 }
 
 STK500v1Programmer::~STK500v1Programmer()
 {
-    __LDBG_delete_array(_pageBuffer);
+    delete[] _pageBuffer;
 }
 
 void STK500v1Programmer::setFile(const String &filename)

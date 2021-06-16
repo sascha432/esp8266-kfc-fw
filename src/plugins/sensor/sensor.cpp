@@ -15,8 +15,6 @@
 #include <debug_helper_disable.h>
 #endif
 
-#include <debug_helper_enable_mem.h>
-
 static SensorPlugin plugin;
 
 PROGMEM_DEFINE_PLUGIN_OPTIONS(
@@ -162,8 +160,7 @@ void SensorPlugin::shutdown()
     for(auto sensor: _sensors) {
         __LDBG_printf("type=%u", sensor->getType());
         sensor->shutdown();
-        __LDBG_delete(sensor);
-
+        delete sensor;
     }
     _sensors.clear();
 }

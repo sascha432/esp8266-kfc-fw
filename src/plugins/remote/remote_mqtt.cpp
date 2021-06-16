@@ -28,9 +28,7 @@ static void add_subtype_type_payload(MQTT::AutoDiscovery::EntityPtr discovery, u
 
 MQTT::AutoDiscovery::EntityPtr MqttRemote::getAutoDiscovery(FormatType format, uint8_t num)
 {
-    auto discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
-
-
+    auto discovery = new MQTT::AutoDiscovery::Entity();
     if (num == _autoDiscoveryCount - 1) {
         if (!discovery->create(ComponentType::BINARY_SENSOR, PrintString(F("awake")), format)) {
             return discovery;

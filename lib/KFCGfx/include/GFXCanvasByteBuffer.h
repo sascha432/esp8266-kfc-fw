@@ -9,11 +9,6 @@
 #include "GFXCanvasBufferPool.h"
 
 #include <debug_helper.h>
-#if DEBUG_GFXCANVAS_MEM && 1
-#include <debug_helper_enable_mem.h>
-#else
-#include <debug_helper_disable_mem.h>
-#endif
 
 namespace GFXCanvas {
 
@@ -146,4 +141,3 @@ namespace GFXCanvas {
     };
 }
 
-#include <debug_helper_disable_mem.h>

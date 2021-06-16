@@ -13,7 +13,6 @@
 
 #if DEBUG_EVENT_SCHEDULER
 #include <debug_helper_enable.h>
-#include <debug_helper_enable_mem.h>
 #define DEBUG_EVENT_SCHEDULER_ASSERT        1
 #else
 #include <debug_helper_disable.h>

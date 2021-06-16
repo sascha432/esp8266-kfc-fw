@@ -206,7 +206,7 @@ uint16_t FileManager::list()
     __LDBG_printf("FileManager::list()");
     auto dirName = _requireDir(FSPGM(dir));
     if (_isValidData()) {
-        _response = __LDBG_new(AsyncDirResponse, _getDir(dirName), dirName);
+        _response = new AsyncDirResponse(_getDir(dirName), dirName);
         return 200;
     }
     return 500;

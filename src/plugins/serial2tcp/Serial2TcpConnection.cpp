@@ -27,7 +27,7 @@ void Serial2TcpConnection::close()
     // __DBGS2T("CLOSE this=%p client=%p\n", this, _client);
     if (_client) {
         _client->abort();
-        __LDBG_delete(_client);
+        delete _client;
         _client = nullptr;
     }
 }

@@ -36,7 +36,7 @@ void _pingMonitorSetupWebHandler()
     if (Plugins::Ping::getConfig().console) {
         auto server = WebServer::Plugin::getWebServerObject();
         if (server) {
-            auto ws = __LDBG_new(WsClientAsyncWebSocket, F("/ping"), &wsPing);
+            auto ws = new WsClientAsyncWebSocket(F("/ping"), &wsPing);
             ws->onEvent(_pingMonitorEventHandler);
             server->addHandler(ws);
             Logger_notice("Web socket for ping running on port %u", System::WebServer::getConfig().getPort());
@@ -68,7 +68,7 @@ WsPingClient::~WsPingClient()
 
 WsClient *WsPingClient::getInstance(AsyncWebSocketClient *socket)
 {
-    return __LDBG_new(WsPingClient, socket);
+    return new WsPingClient(socket);
 }
 
 void WsPingClient::onText(uint8_t *data, size_t len)

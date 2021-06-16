@@ -59,7 +59,7 @@ void Serial2TcpServer::end()
         for(auto &&conn: _connections) {
             _onDisconnect(conn->getClient(), F("server shutdown"));
         }
-        __LDBG_delete(_server);
+        delete _server;
         _server = nullptr;
     }
     _onEnd();
@@ -148,7 +148,7 @@ void Serial2TcpServer::_handleNewClient(AsyncClient *client)
 Serial2TcpConnection &Serial2TcpServer::_addClient(AsyncClient *client)
 {
     __LDBG_printf("Serial2TcpServer::_addClient(%p) IP address %s", client, client->remoteIP().toString().c_str());
-    _connections.emplace_back(__LDBG_new(Serial2TcpConnection, client, false));
+    _connections.emplace_back(new Serial2TcpConnection(client, false));
     if (_connections.size() == 1) {
         _onStart();
     }

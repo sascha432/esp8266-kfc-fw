@@ -40,7 +40,6 @@
 #else
 #include <debug_helper_disable.h>
 #endif
-#include <debug_helper_disable_mem.h>
 
 #define DEBUG_WEB_SERVER_SID                DEBUG_WEB_SERVER
 

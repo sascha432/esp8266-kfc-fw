@@ -161,7 +161,7 @@ void Http2Serial::destroyInstance()
 {
     __LDBG_printf("inst=%p", _instance);
     if (_instance) {
-        __LDBG_delete(_instance);
+        delete _instance;
         _instance = nullptr;
     }
 }

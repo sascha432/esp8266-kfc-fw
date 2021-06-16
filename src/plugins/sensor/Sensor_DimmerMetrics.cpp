@@ -13,11 +13,9 @@
 #include <debug_helper_disable.h>
 #endif
 
-#include <debug_helper_enable_mem.h>
-
 MQTT::AutoDiscovery::EntityPtr Sensor_DimmerMetrics::getAutoDiscovery(FormatType format, uint8_t num)
 {
-    auto discovery = __LDBG_new(AutoDiscovery::Entity);
+    auto discovery = new AutoDiscovery::Entity();
     switch(num) {
         case 0:
             if (discovery->create(this, F("int_temp"), format)) {

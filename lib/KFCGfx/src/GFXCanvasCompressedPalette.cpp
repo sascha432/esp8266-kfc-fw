@@ -15,12 +15,6 @@
 #pragma GCC optimize ("O3")
 #endif
 
-#if DEBUG_GFXCANVAS_MEM
-#include <debug_helper_enable_mem.h>
-#else
-#include <debug_helper_disable_mem.h>
-#endif
-
 using namespace GFXCanvas;
 
 GFXCanvasCompressedPalette::GFXCanvasCompressedPalette(uWidthType width, uHeightType height) : GFXCanvasCompressed(width, height)
@@ -33,7 +27,7 @@ GFXCanvasCompressedPalette::GFXCanvasCompressedPalette(const GFXCanvasCompressed
 
 GFXCanvasCompressed* GFXCanvasCompressedPalette::clone()
 {
-    return __LDBG_new(GFXCanvasCompressedPalette, *this);
+    return new GFXCanvasCompressedPalette(*this);
 }
 
 void GFXCanvasCompressedPalette::fillScreen(uint16_t color)

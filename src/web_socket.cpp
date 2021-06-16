@@ -184,7 +184,7 @@ void WsClient::onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, i
         }
 
         // WS_EVT_DISCONNECT is called in the destructor of AsyncWebSocketClient
-        __LDBG_delete(wsClient);
+        delete wsClient;
         client->_tempObject = nullptr;
 
     }

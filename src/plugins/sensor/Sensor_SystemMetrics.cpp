@@ -19,8 +19,6 @@
 #include <debug_helper_disable.h>
 #endif
 
-#include <debug_helper_enable_mem.h>
-
 AUTO_STRING_DEF(uptime, "uptime")
 AUTO_STRING_DEF(heap, "heap")
 AUTO_STRING_DEF(bytes, "bytes")
@@ -41,7 +39,7 @@ Sensor_SystemMetrics::~Sensor_SystemMetrics()
 
 MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::FormatType format, uint8_t num)
 {
-    MQTT::AutoDiscovery::EntityPtr discovery = __LDBG_new(MQTT::AutoDiscovery::Entity);
+    MQTT::AutoDiscovery::EntityPtr discovery = new MQTT::AutoDiscovery::Entity();
     switch(num) {
         case 0:
             discovery->create(this, FSPGM(uptime), format);

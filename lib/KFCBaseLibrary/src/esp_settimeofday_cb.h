@@ -7,7 +7,7 @@
 
 #include <global.h>
 
-#if ESP8266 && ARDUINO_ESP8266_VERSION_COMBINED >= 0x30000
+#if ESP8266 && ARDUINO_ESP8266_VERSION_COMBINED >= 0x030000
 
 #include <coredecls.h>
 #include <sys/_tz_structs.h>

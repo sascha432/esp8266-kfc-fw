@@ -21,9 +21,10 @@ using namespace PinMonitor;
 #if PIN_MONITOR_USE_GPIO_INTERRUPT == 0 || PIN_MONITOR_USE_POLLING == 1
 
 #if PIN_MONITOR_USE_POLLING == 1
-void HardwarePin::callback(void *arg, uint16_t _GPI)
+void HardwarePin::callback(void *arg, uint16_t _GPI, uint16_t mask)
 #else
 #define _GPI GPI
+#define mask _BV(pinPtr->getPin())
 void IRAM_ATTR HardwarePin::callback(void *arg)
 #endif
 {
@@ -34,12 +35,12 @@ void IRAM_ATTR HardwarePin::callback(void *arg)
     switch(pinPtr->_type) {
 #if PIN_MONITOR_DEBOUNCED_PUSHBUTTON
         case HardwarePinType::DEBOUNCE:
-            reinterpret_cast<DebouncedHardwarePin *>(arg)->addEvent(_micros, _GPI & _BV(pinPtr->getPin()));
+            reinterpret_cast<DebouncedHardwarePin *>(arg)->addEvent(_micros, _GPI & mask);
             break;
 #endif
 #if PIN_MONITOR_SIMPLE_PIN
         case HardwarePinType::SIMPLE:
-            reinterpret_cast<SimpleHardwarePin *>(arg)->addEvent(_GPI & _BV(pinPtr->getPin()));
+            reinterpret_cast<SimpleHardwarePin *>(arg)->addEvent(_GPI & mask);
             break;
 #endif
 #if PIN_MONITOR_ROTARY_ENCODER_SUPPORT
@@ -51,5 +52,9 @@ void IRAM_ATTR HardwarePin::callback(void *arg)
             break;
     }
 }
+#if PIN_MONITOR_USE_POLLING == 0
+#undef _GPI
+#undef mask
+#endif
 
 #endif

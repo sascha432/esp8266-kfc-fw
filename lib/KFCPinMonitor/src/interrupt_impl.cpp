@@ -223,6 +223,11 @@ namespace PinMonitor {
         }
     }
 
+#else
+
+    void GPIOInterruptsEnable() {}
+    void GPIOInterruptsDisable() {}
+
 #endif
 
 }

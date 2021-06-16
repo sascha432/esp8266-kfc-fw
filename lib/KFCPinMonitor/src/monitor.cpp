@@ -15,9 +15,7 @@
 #include <BitsToStr.h>
 #include "rotary_encoder.h"
 #include "logger.h"
-#if PIN_MONITOR_POLLING_GPIO_EXPANDER_SUPPORT
 #include "kfc_fw_ioexpander.h"
-#endif
 
 #if PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS
 #include <FunctionalInterrupt.h>
@@ -67,16 +65,20 @@ void PollingTimer::run()
 {
     uint16_t states = GPI;
     for(const auto &pinPtr: pinMonitor.getPins()) {
+#if PIN_MONITOR_ROTARY_ENCODER_SUPPORT
         if (pinPtr->getHardwarePinType() == HardwarePinType::ROTARY) {
             continue;
         }
+#endif
         auto pin = pinPtr->getPin();
-        auto pinMask = static_cast<uint16_t>(_BV(pin));
-        auto newState = (states & pinMask) != 0;
-        auto state = (_states & pinMask) != 0;
-        if (state != newState) {
-            // __DBG_printf("pin=%u changed=%u", pin, newState);
-            pinPtr->callback(pinPtr.get(), _states);
+        if (pin < 16) {
+            auto pinMask = static_cast<uint16_t>(_BV(pin));
+            auto newState = (states & pinMask) != 0;
+            auto state = (_states & pinMask) != 0;
+            if (state != newState) {
+                // __DBG_printf("pin=%u changed=%u", pin, newState);
+                pinPtr->callback(pinPtr.get(), _states, _BV(pin));
+            }
         }
     }
     _states = states;
@@ -87,10 +89,12 @@ void PollingTimer::run()
         bool value = _digitalRead(pin);
         if ((_expanderStates & _BV(n)) != value) {
 
-            // TODO call callback function for this IO pin
-            // currently only this debug message is displayed
-            __DBG_printf("IO expander callback pin=%u value=%u", pin, value);
-
+            __DBG_printf("IO expander callback pin=%u value=%u mask=%u", pin, value, _BV(n));
+            for(const auto &pinPtr: pinMonitor.getPins()) {
+                if (pinPtr->getPin() == pin) {
+                    pinPtr->callback(pinPtr.get(), _expanderStates, _BV(n));
+                }
+            }
             // store new value
             if (value) {
                 _expanderStates |= _BV(n);
@@ -100,7 +104,6 @@ void PollingTimer::run()
             }
         }
         n++;
-
     }
 #endif
 }
@@ -111,7 +114,7 @@ Monitor::Monitor() :
     _lastRun(0),
     _loopTimer(nullptr),
     __LDBG_IF(_debugTimer(nullptr),)
-    _pinMode(INPUT),
+    _pinModeFlag(INPUT),
     _debounceTime(kDebounceTimeDefault)
 {
 }
@@ -226,11 +229,11 @@ Pin &Monitor::_attach(Pin &pin, HardwarePinType type)
     });
     if (iterator == _pins.end()) {
 
-        pinMode(pinNum, _pinMode);
+        _pinMode(pinNum, _pinModeFlag);
         switch(type) {
 #if PIN_MONITOR_DEBOUNCED_PUSHBUTTON
             case HardwarePinType::DEBOUNCE:
-                _pins.emplace_back(new DebouncedHardwarePin(pinNum, digitalRead(pinNum)));
+                _pins.emplace_back(new DebouncedHardwarePin(pinNum, _digitalRead(pinNum)));
                 break;
 #endif
 #if PIN_MONITOR_SIMPLE_PIN
@@ -306,7 +309,7 @@ void Monitor::_detach(Iterator begin, Iterator end, bool clear)
                 _detachInterrupt(digitalPinToInterrupt(pinNum));
     #endif
 #endif
-                pinMode(pinNum, INPUT);
+                _pinMode(pinNum, INPUT);
 
                 if (clear == false) {
                     _pins.erase(iterator);

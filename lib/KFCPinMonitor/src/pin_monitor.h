@@ -14,10 +14,11 @@
 // if the main loop has too many delays, the monitoring can be installed as a timer and gets executed every 5ms. the timer callback is not an ISR and does
 // not require any code to be in the IRAM
 //
-//  - Arduino functional intrerrupts (>500byte IRAM)
-//  - optimized Arduino like functional interrupts with some limitations (<350 byte IRAM)
-//  - custom implementation which requires less than 100 byte IRAM
+//  - Arduino functional interrupts (>500byte IRAM)
+//  - Optimized Arduino like functional interrupts with some limitations (<350 byte IRAM)
+//  - Custom implementation which requires less than 100 byte IRAM
 // see PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS for details
+//  - Polling mode without IRAM usage
 //
 // - toggle switches
 // - push buttons with following events
@@ -67,7 +68,12 @@
 #define PIN_MONITOR_POLLING_GPIO_EXPANDER_SUPPORT                   0
 #endif
 
+#if PIN_MONITOR_USE_POLLING == 0 && PIN_MONITOR_POLLING_GPIO_EXPANDER_SUPPORT
+#error GPIO expander pins only supported with polling
+#endif
+
 // up to 16 IO expander pins can be used with _digitalRead()
+// the pins must be added to PIN_MONITOR_POLLING_GPIO_EXPANDER_PINS_TO_USE
 #if !defined(PIN_MONITOR_POLLING_GPIO_EXPANDER_PINS_TO_USE) && PIN_MONITOR_POLLING_GPIO_EXPANDER_SUPPORT
 #error PIN_MONITOR_POLLING_GPIO_EXPANDER_PINS_TO_USE must be defined
 #endif
@@ -106,6 +112,8 @@
 
 // enable support for rotary encoders
 // disabled by default since it requires IRAM
+// PIN_MONITOR_USE_POLLING=1 does not support rotary encoders
+// rotary encoders can still be used with interrupts and polling for other pins
 #ifndef PIN_MONITOR_ROTARY_ENCODER_SUPPORT
 #define PIN_MONITOR_ROTARY_ENCODER_SUPPORT                      0
 #endif

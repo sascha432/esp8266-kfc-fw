@@ -121,7 +121,7 @@ namespace PinMonitor {
         Event::Timer *_debugTimer;
 #endif
 
-        uint8_t _pinMode;
+        uint8_t _pinModeFlag;
         uint8_t _debounceTime;
     };
 
@@ -139,7 +139,7 @@ namespace PinMonitor {
     // set default pin mode for adding new pins
     inline void Monitor::setDefaultPinMode(uint8_t mode)
     {
-        _pinMode = mode;
+        _pinModeFlag = mode;
     }
 
     inline void Monitor::detach(Iterator begin, Iterator end)

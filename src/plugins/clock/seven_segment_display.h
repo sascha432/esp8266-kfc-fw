@@ -26,7 +26,7 @@
 // high level functions to display the digits and colons or single dots are available
 // low level functions for animations are also supported by the base class
 // the code is optimized for performance and can easily display 2000Hz depending on the type and number of pixels
-// for example WS2813 with 800kbit gives a refresh rate of 33333Hz per LED, or 333Hz for 100
+// for example WS2813 with 800kbit have a refresh rate of 33333Hz per LED, or 333Hz for 100
 // with a single core MCU like the ESP8266 and many LEDs, disabling interrupts when calling display.show() might help with choppy animations
 // since those might interrupt the output and FastLED will retry a few times depending on the settings
 // FastLED dithering is supported as well, which can also be executed with interrupts locked to a certain limit

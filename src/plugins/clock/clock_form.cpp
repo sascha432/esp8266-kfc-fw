@@ -25,6 +25,17 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
     auto &cfg = getWriteableConfig();
 
+#if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
+    using VisualizerType = KFCConfigurationClasses::Plugins::ClockConfig::VisualizerAnimation_t::VisualizerType;
+
+    auto visualizerTypeItems = FormUI::Container::List(
+        VisualizerType::RAINBOW, "Rainbow",
+        VisualizerType::RAINBOW_DOUBLE_SIDED, "Rainbow Double Sided",
+        VisualizerType::SINGLE_COLOR, "Single Color",
+        VisualizerType::SINGLE_COLOR_DOUBLE_SIDED, "Single Color Double Sided"
+    );
+#endif
+
     auto animationTypeItems = FormUI::Container::List(
         AnimationType::SOLID, FSPGM(Solid_Color),
         AnimationType::RAINBOW, FSPGM(Rainbow),
@@ -60,7 +71,6 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
         form.addObjectGetterSetter(F("ani"), cfg, cfg.get_int_animation, cfg.set_int_animation);
         form.addFormUI(FSPGM(Type), animationTypeItems);
-        //form.addValidator(FormUI::Validator::RangeEnum<AnimationType>());
 
         form.add(F("col"), Color(cfg.solid_color.value).toString(), [&cfg](const String &value, FormUI::Field::BaseField &field, bool store) {
             if (store) {
@@ -129,16 +139,29 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
         rainbowGroup.end();
 
+#if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
+
         // --------------------------------------------------------------------
-        // auto &visGroup = form.addCardGroup(F("vis"), F("Visualizer"), true);
+        auto &visGroup = form.addCardGroup(F("vis"), F("Visualizer"), true);
 
-        // form.addPointerTriviallyCopyable(F("vln"), &cfg.visualizer._lines);
-        // form.addFormUI(F("Number of Colums per Line"));
+        form.addObjectGetterSetter(F("vln"), FormGetterSetter(cfg.visualizer, type));
+        form.addFormUI(F("Visualization Type"), visualizerTypeItems);
 
-        // form.addPointerTriviallyCopyable(F("vport"), &cfg.visualizer._port);
-        // form.addFormUI(F("Port"));
+        form.add(F("vsc"), Color(cfg.visualizer.color).toString(), [&cfg](const String &value, FormUI::Field::BaseField &field, bool store) {
+            if (store) {
+                cfg.visualizer.color = Color::fromString(value);
+            }
+            return false;
+        });
+        form.addFormUI(F("Color For Single Color Mode"));
 
-        // visGroup.end();
+        form.addObjectGetterSetter(F("vport"), FormGetterSetter(cfg.visualizer, port));
+        form.addFormUI(F("UDP Port"));
+        cfg.visualizer.addRangeValidatorFor_port(form);
+
+        visGroup.end();
+
+#endif
 
         // --------------------------------------------------------------------
 

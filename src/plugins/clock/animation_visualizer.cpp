@@ -13,8 +13,11 @@
 #else
 #include <debug_helper_disable.h>
 #endif
+
 // most code is from
 // https://github.com/NimmLor/esp8266-fastled-iot-webserver/blob/master/esp8266-fastled-iot-webserver.ino
+
+// TODO integrate all available animations and options
 
 using namespace Clock;
 
@@ -43,26 +46,26 @@ bool VisualizerAnimation::_parseUdp()
     return false;
 }
 
-uint8_t VisualizerAnimation::_visualizerType = 3;
-
 void VisualizerAnimation::loop(uint32_t millisValue)
 {
     if (get_time_diff(_loopTimer, millisValue) >= _updateRate) {
         _loopTimer = millisValue;
         if (_parseUdp() && *_incomingPacket) {
             fadeToBlackBy(_leds, kNumPixels, 150);
-            switch(_visualizerType) {
-                case 1:
+            switch(static_cast<VisualizerAnimationConfig::VisualizerType>(_cfg.type)) {
+                case VisualizerAnimationConfig::VisualizerType::SINGLE_COLOR:
                     _SingleColorVisualizer();
                     break;
-                case 2:
+                case VisualizerAnimationConfig::VisualizerType::SINGLE_COLOR_DOUBLE_SIDED:
                     _SingleColorVisualizerDoubleSided();
                     break;
-                case 3:
+                case VisualizerAnimationConfig::VisualizerType::RAINBOW:
                     _RainbowVisualizer();
                     break;
-                case 4:
+                case VisualizerAnimationConfig::VisualizerType::RAINBOW_DOUBLE_SIDED:
                     _RainbowVisualizerDoubleSided();
+                    break;
+                default:
                     break;
             }
             *_incomingPacket = 0;
@@ -444,14 +447,14 @@ void VisualizerAnimation::_RainbowVisualizerDoubleSided()
 void VisualizerAnimation::_SingleColorVisualizer()
 {
     for (int i = 0; i < kCols && _incomingPacket[i]; i++) {
-        _setBar(i, static_cast<double>(_incomingPacket[i]), CRGB(_cfg._color));
+        _setBar(i, static_cast<double>(_incomingPacket[i]), CRGB(_cfg.color));
     }
 }
 
 void VisualizerAnimation::_SingleColorVisualizerDoubleSided()
 {
     for (int i = 0; i < kCols && _incomingPacket[i]; i++) {
-        _setBarDoubleSided(i, static_cast<double>(_incomingPacket[i]), CRGB(_cfg._color), false);
+        _setBarDoubleSided(i, static_cast<double>(_incomingPacket[i]), CRGB(_cfg.color), false);
     }
 }
 

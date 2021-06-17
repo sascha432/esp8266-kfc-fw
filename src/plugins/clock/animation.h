@@ -928,7 +928,7 @@ namespace Clock {
             std::fill(_lastVals.begin(), _lastVals.end(), 1);
 
             _disableBlinkColon = true;
-            _udp.begin(cfg._port);
+            _udp.begin(cfg.port);
         }
 
         ~VisualizerAnimation() {
@@ -1018,9 +1018,6 @@ namespace Clock {
         int _lastBrightness;
         bool _lastFinished;
         CRGB _lastCol;
-
-    public:
-        static uint8_t _visualizerType;
     };
 
 #endif

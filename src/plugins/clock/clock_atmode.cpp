@@ -37,7 +37,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKP, "P", "<00[:.]00[:.]00>", "Display 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKV, "V", "<1-4>", "Set visualizer mode");
 #endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKC, "C", "<#RGB>|<r>,<g>,<b>", "Set color");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKM, "M", "<value>[,<incr>,<min>,<max>]", "Set rainbow animation multiplier");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKM, "M", "<value>[,<incr>,<min>,<max>,<red incr.>,<green incr.>,<blue incr.>]", "Set rainbow animation multiplier and color changing");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKT, "T", "<value>", "Override temperature");
 // PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKTS, "TS", "<num>,<segment>", "Set segment for digit <num>");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(CLOCKA, "A", "<num>[,<arguments>,...]", "Set animation", "Display available animations");
@@ -119,8 +119,8 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
     }
 #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKV))) {
-        Clock::VisualizerAnimation::_visualizerType = args.toIntMinMax(0, 1, 4, 2);
-        args.printf_P(PSTR("Visualizer=%u"), Clock::VisualizerAnimation::_visualizerType);
+        _config.visualizer.type = args.toIntMinMax(0, 1, 4, 2);
+        args.printf_P(PSTR("Visualizer=%u"), _config.visualizer.type);
         return true;
     }
 #endif

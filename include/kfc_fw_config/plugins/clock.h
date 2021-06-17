@@ -14,7 +14,7 @@
 
         class ClockConfig {
         public:
-            typedef union __attribute__packed__ ClockColor_t {
+            union __attribute__packed__ ClockColor_t {
                 uint32_t value: 24;
                 uint8_t bgr[3];
                 struct __attribute__packed__ {
@@ -26,27 +26,27 @@
                 operator uint32_t() const {
                     return value;
                 }
-            } ClockColor_t;
+            };
 
-            typedef struct __attribute__packed__ RainbowMultiplier_t {
+            struct __attribute__packed__ RainbowMultiplier_t {
                 float value;
                 float min;
                 float max;
                 float incr;
                 RainbowMultiplier_t();
                 RainbowMultiplier_t(float value, float min, float max, float incr);
-            } RainbowMultiplier_t;
+            };
 
-            typedef struct __attribute__packed__ RainbowColor_t {
+            struct __attribute__packed__ RainbowColor_t {
                 ClockColor_t min;
                 ClockColor_t factor;
                 float red_incr;
                 float green_incr;
                 float blue_incr;
                 RainbowColor_t();
-            } RainbowColor_t;
+            };
 
-            typedef struct __attribute__packed__ FireAnimation_t {
+            struct __attribute__packed__ FireAnimation_t {
 
                 enum class Orientation : uint8_t {
                     MIN = 0,
@@ -69,23 +69,31 @@
 
                 FireAnimation_t();
 
-            } FireAnimation_t;
+            };
 
-            typedef struct __attribute__packed__ VisualizerAnimation_t {
+            struct __attribute__packed__ VisualizerAnimation_t {
                 using Type = VisualizerAnimation_t;
-                uint16_t _port;
-                uint8_t _lines;
-                ClockColor_t _color;
+                enum class VisualizerType : uint8_t {
+                    SINGLE_COLOR,
+                    SINGLE_COLOR_DOUBLE_SIDED,
+                    RAINBOW,
+                    RAINBOW_DOUBLE_SIDED,
+                    MAX,
+                };
+
+                CREATE_UINT32_BITFIELD_MIN_MAX(port, 16, 0, 65535, 4210);
+                CREATE_ENUM_D_BITFIELD(type, VisualizerType, VisualizerType::RAINBOW);
+                ClockColor_t color;
 
                 VisualizerAnimation_t() :
-                    _port(4210),
-                    _lines(32),
-                    _color(0)
+                    port(kDefaultValueFor_port),
+                    type(kDefaultValueFor_type),
+                    color(0xff00ff)
                 {
                 }
-            } VisualizerAnimation_t;
+            };
 
-            typedef struct __attribute__packed__ ClockConfig_t {
+            struct __attribute__packed__ ClockConfig_t {
                 using Type = ClockConfig_t;
 
                 enum class AnimationType : uint8_t {
@@ -242,7 +250,7 @@
                     set_enum_initial_state(*this, state);
                 }
 
-            } ClockConfig_t;
+            };
         };
 
         class Clock : public ClockConfig, public KFCConfigurationClasses::ConfigGetterSetter<ClockConfig::ClockConfig_t, _H(MainConfig().plugins.clock.cfg) CIF_DEBUG(, &handleNameClockConfig_t)>

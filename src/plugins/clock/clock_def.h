@@ -28,7 +28,10 @@
 // set IOT_LED_MATRIX_COLS=1 and IOT_LED_MATRIX_ROWS=max. number of LEDs
 #ifndef IOT_LED_MATRIX_CONFIGURABLE_DISPLAY
 #   define IOT_LED_MATRIX_CONFIGURABLE_DISPLAY 0
-#error currently not supported
+#endif
+
+#if IOT_LED_MATRIX_CONFIGURABLE_DISPLAY
+#   error currently not supported
 #endif
 
 // -1 to disable standby LED

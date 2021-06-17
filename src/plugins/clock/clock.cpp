@@ -963,7 +963,7 @@ void ClockPlugin::_setColor(uint32_t color, bool updateAnimation)
     }
 #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
     else if (_config.getAnimation() == AnimationType::VISUALIZER) {
-        _config.visualizer._color = __color;
+        _config.visualizer.color = __color;
     }
 #endif
     if (updateAnimation && _animation) {

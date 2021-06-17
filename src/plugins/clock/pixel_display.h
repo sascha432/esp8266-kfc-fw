@@ -99,6 +99,8 @@ namespace Clock {
             static constexpr int kInterleaved = _Interleaved ? 1 : 0;
         };
 
+#if __GNUG__ < 10
+
         // rotated
 
         template<typename _Ta = CoordinateHelperType, typename std::enable_if<_Ta::kRotate, int>::type = 0>
@@ -162,6 +164,73 @@ namespace Clock {
         typename _Ta::type _col(typename _Ta::type row, typename _Ta::type col) const {
             return (kCols - 1) - col;
         }
+
+#else
+
+        // non-rotated
+
+        template<typename _Ta = CoordinateHelperType>
+        typename _Ta::type getRow(typename _Ta::type row, typename _Ta::type col) const {
+            if constexpr (!_Ta::kRotate) {
+                return row;
+            }
+            else if constexpr (_Ta::kRotate) {
+                return col;
+            }
+        }
+
+        template<typename _Ta = CoordinateHelperType>
+        typename _Ta::type getCol(typename _Ta::type row, typename _Ta::type col) const {
+            if constexpr (!_Ta::kRotate) {
+                return col;
+            }
+            else if constexpr (_Ta::kRotate) {
+                return row;
+            }
+        }
+
+        // normalize rows
+
+        template<typename _Ta = CoordinateHelperType>
+        typename _Ta::type _row(typename _Ta::type row, typename _Ta::type col) const {
+            if constexpr (_Ta::kInterleaved) {
+                if constexpr (_Ta::kReverseRows) {
+                    if (col % 2 == _Ta::kInterleaved) {
+                        return (kRows - 1) - row;
+                    }
+                    return row;
+                }
+                else if constexpr (!_Ta::kReverseRows) {
+                    if (col % 2 == _Ta::kInterleaved) {
+                        return row;
+                    }
+                    return (kRows - 1) - row;
+                }
+            }
+            else {
+                if constexpr (_Ta::kReverseRows) {
+                    return (kRows - 1) - row;
+                }
+                else if constexpr (!_Ta::kReverseRows) {
+                    return row;
+                }
+            }
+        }
+
+        // normalize columns
+
+        template<typename _Ta = CoordinateHelperType>
+        typename _Ta::type _col(typename _Ta::type row, typename _Ta::type col) const {
+            if constexpr (_Ta::kReverseColumns) {
+                return (kCols - 1) - col;
+            }
+            else {
+                return col;
+            }
+
+        }
+
+#endif
 
         PixelAddressType getAddress(CoordinateType row, CoordinateType col) const {
             // return row + col * kRows;
@@ -248,6 +317,8 @@ namespace Clock {
             return _get(point);
         }
 
+#if __GNUG__ < 10
+
         template<typename _Ta, typename _Tb, typename std::enable_if<_Ta::kMappingTypeId == _Tb::kMappingTypeId, int>::type = 0>
         static void copy(_Ta src, _Tb dst, PixelAddressType numPixel) {
             std::copy(src.begin(), src.begin() + numPixel, dst.begin());
@@ -260,6 +331,23 @@ namespace Clock {
                 dst[dst.getAddress(src.getPoint(i))] = src[i];
             }
         }
+
+#else
+
+        template<typename _Ta, typename _Tb>
+        static void copy(_Ta src, _Tb dst, PixelAddressType numPixel) {
+            if constexpr (_Ta::kMappingTypeId == _Tb::kMappingTypeId) {
+                std::copy(src.begin(), src.begin() + numPixel, dst.begin());
+            }
+            else {
+                for (typename _Ta::PixelAddressType i = 0; i < numPixel; i++) {
+                    // translate the address of each pixel if the mapping is different
+                    dst[dst.getAddress(src.getPoint(i))] = src[i];
+                }
+            }
+        }
+
+#endif
 
         // access to all pixels, starting with first LED
         ColorType &pixels(PixelAddressType address) {

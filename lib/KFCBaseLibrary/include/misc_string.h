@@ -171,15 +171,15 @@ size_t str_replace(char *src, int from, int to, size_t maxLen = ~0);
 // case insensitive comparision of from
 size_t str_case_replace(char *src, int from, int to, size_t maxLen = ~0);
 
-inline size_t String_replace(String &str, int from, int to)
-{
-    return str_replace(str.begin(), from, to, str.length());
-}
+// inline size_t String_replace(String &str, int from, int to)
+// {
+//     return str_replace(str.begin(), from, to, str.length());
+// }
 
-inline size_t String_replaceIgnoreCase(String &str, int from, int to)
-{
-    return str_case_replace(str.begin(), from, to, str.length());
-}
+// inline size_t String_replaceIgnoreCase(String &str, int from, int to)
+// {
+//     return str_case_replace(str.begin(), from, to, str.length());
+// }
 
 // trim trailing zeros
 // return length of the string

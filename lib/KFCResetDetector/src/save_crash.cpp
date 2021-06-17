@@ -21,10 +21,18 @@ extern "C" {
     extern void *umm_last_fail_alloc_addr;
     extern int umm_last_fail_alloc_size;
 
-    // cores/esp8266/core_esp8266_postmortem.cpp
-    void ___static_ets_printf_P(const char *str, ...);
-    #define ets_printf_P ___static_ets_printf_P
+}
 
+static void ets_printf_P(const char *str, ...) {
+    char destStr[160];
+    char *c = destStr;
+    va_list argPtr;
+    va_start(argPtr, str);
+    vsnprintf(destStr, sizeof(destStr), str, argPtr);
+    va_end(argPtr);
+    while (*c) {
+        ets_uart_putc1(*(c++));
+    }
 }
 
 #define SAVECRASH_EXCEPTION_FMT                     "epc1=0x%08x epc2=0x%08x epc3=0x%08x excvaddr=0x%08x depc=0x%08x"

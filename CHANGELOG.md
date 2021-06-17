@@ -2,118 +2,119 @@
 
 ## Version 0.0.5
 
-- New version for framework-arduinoespressif8266 3.30000.210519 (3.0.0) and GCC 10.2 changes
+- arduinoespressif8266 patch files have been removed and moved to https://github.com/sascha432/Arduino/tree/master
 - Removed internal memory debugger
+- New version for framework-arduinoespressif8266 3.30000.210519 (3.0.0) and GCC 10.2 changes
 
 ## Version 0.0.4
 
-- Alarm plugin for Clock, Weather Station, ...
-- NTP plugin: Check once per minute if the time is valid and call configTime() again if not
-- MQTT metrics: uptime, heap
-- Added Alarm plugin to Clock and Weather Station
-- KFC OTA copies firmware.elf and stores the hash in the device configuration
-- Rewritten StreamWrapper (Serial, DebugSerial, SerialHandler etc...)
-- Rewritten SerialHandler
-- Improved plugin system, ~2kb more free RAM
-- Added boot option to set passwords to default, enable AP mode and web server
-- Support for zeroconf (`${zeroconf:<service>.<proto>:<address|value[:port value]>|<fallback[:port]>}` as hostname)
-- Blacklist to prevent plugins being loaded at start-up
-- Debug print functions for IRAM_ATTR that do not pull the entire SerialWrapper code into IRAM
-- Templates for configuration getters/setters
-- Added SSDP plugin
-- Improved HTML form generator
-- Added missing html enitities encoding to forms
-- Open/close automation for the Blinds Plugin, audible warning while running or shortly before
-- MQTT auto discovery rebroadcast interval
-- Zeroconf resolve button for forms
-- Javascript updates and fixes
-- Enable recovery mode after version change (AP mode enabled, default SSID, broadcast SSID, enable web server, reset passwords IF empty)
-- Disable AP mode after 15min. if default password is used (does not apply to AP mode in standby)
-- Removed test mode from the blinds plugin and implemented it into kfwfc_tool
-- AT mode command DUMPM for dumping memory or flash contents
-- 64KB flash storage (R/W) dedicated for the firmware
-- Clearing EspSaveCrash EEPROM during factory reset
-- Device title is being used as name for MQTT auto discovery
-- Ping monitor improvements
-- Memory debugging and leak detection added
-- Improved event scheduler (freed ~500 byte IRAM), memory usage and performance
-- Removed filters from syslog, reduced memory usage and improved performance
-- Read ADC over web sockets with kfcfw_tool and graphical analysis
-- Major improvements for forms, they are using ~10x less memory and are ~20x faster. Most need less than 1KB and load within 10ms
-- Support for loading javascript and CSS from remote server(s) during development
-- Fixed some environments and adapted changes of the Espressif 8266 2.3.1 framework (Arduino Core 2.7.4)
-- utf-8 support for web sockets
+- Improved NTP plugin
+- Support for interal or external RTC
+- Changes for GCC 10.2
+- Added framework-arduinoespressif8266 3.30000.210519 (3.0.0)
+- Fixed play tone for blinds plugin
+- OTA update tool restarts device in safe mode before running any updates
+- User customizable options for factory reset over the WebUI
+- Human readable uptime for MQTT system metrics
+- Fan control and light sensor for LED matrix
+- Support for TinyPwm I2C IO-Expander [https://github.com/sascha432/TinyPwm](https://github.com/sascha432/TinyPwm)
+- Support for PCF8574 I2C IO-Expander
+- Support for [https://github.com/NimmLor/IoT-Audio-Visualization-Center](https://github.com/NimmLor/IoT-Audio-Visualization-Center)
+- Replaced RGB Silder with Bootstrap Color Picker Sliders
+- Fixed missing information for SSDP
+- Switched to LittleFS
+- Replaced the JSON library with a more stable version that consumes less memory
+- Switch plugin fixes and improvements
+- Customized WString class
+- Key Combo for safe mode and reset factory settings during boot
+- SaveCrash WebUI to download crash logs. MD5 checksum of the firmware is included
+- Replace read only files from WebUI by placing files in `/.wor/*`
+- 64/256KB flash storage that survives firmware and file system upgrades
+- Class to write to flash storage with copy on write/basic wear leveling
+- Replaced EspSaveCrash with own implementation that writes to flash storage directly without allocating any memory and supports multiple sectors
+- Max. deep sleep time increased to up to 31 days
+- Support for ArduinoOTA
+- Web server does not require re-registering web handlers and web sockets on reconfigure anymore
+- Added min. and max. range limits to reduce the dimmable range (Dimmer Plugin)
+- Registered MQTT components are stored separately and do not require re-registering
+- Class to send Serial output over UDP
+- Colored sub ranges for rangeslider.js
+- JSON schema support for MQTT light
+- Upgrade to arduinoespressif8266 3.20704.0 including patch files for the platform
+- Fully asynchronous MQTT auto discovery with incremental or full updates
+- MQTT callbacks for QoS
+- Battery level indicator in % with charging detection
+- MQTT device triggers for remote control
+- Support for rotary encoders with pushbutton and capacitive touch sensor
+- Limit maximum power of the LEDs
+- Option to save and restore brightness/other settings after reboot (Clock/LED Matrix plugin)
+- Fixed crash during login with login security disabled
+- Configureable login security
+- Added fire animation
+- Reduce brightness depending on the temperature
+- Cycling color and animation for rainbow mode (Clock/LED matrix)
+- LED Matrix plugin
 - Rewrite of the remote control plugin for faster response times and longer battery life
   - Removed support for home assistant Restful API
   - Option to send UDP packets to minimize latency
   - Deep sleep up to 30 days
   - 230ms WiFi Quick Connect, sending UDP packets
   - 300ms for MQTT over TCP
-- LED Matrix plugin
-- Cycling color and animation for rainbow mode (Clock/LED matrix)
-- Reduce brightness depending on the temperature
-- Added fire animation
-- Configureable login security
-- Fixed crash during login with login security disabled
-- Option to save and restore brightness/other settings after reboot (Clock/LED Matrix plugin)
-- Limit maximum power of the LEDs
-- Support for rotary encoders with pushbutton and capacitive touch sensor
-- MQTT device triggers for remote control
-- Battery level indicator in % with charging detection
-- MQTT callbacks for QoS
-- Fully asynchronous MQTT auto discovery with incremental or full updates
-- Upgrade to arduinoespressif8266 3.20704.0 including patch files for the platform
-- JSON schema support for MQTT light
-- Colored sub ranges for rangeslider.js
-- Class to send Serial output over UDP
-- Registered MQTT components are stored separately and do not require re-registering
-- Added min. and max. range limits to reduce the dimmable range (Dimmer Plugin)
-- Web server does not require re-registering web handlers and web sockets on reconfigure anymore
-- Support for ArduinoOTA
-- Max. deep sleep time increased to up to 31 days
-- Replaced EspSaveCrash with own implementation that writes to flash storage directly without allocating any memory and supports multiple sectors
-- Class to write to flash storage with copy on write/basic wear leveling
-- 64/256KB flash storage that survives firmware and file system upgrades
-- Replace read only files from WebUI by placing files in `/.wor/*`
-- SaveCrash WebUI to download crash logs. MD5 checksum of the firmware is included
-- Key Combo for safe mode and reset factory settings during boot
-- Customized WString class
-- Switch plugin fixes and improvements
-- Replaced the JSON library with a more stable version that consumes less memory
-- Switched to LittleFS
-- Fixed missing information for SSDP
-- Replaced RGB Silder with Bootstrap Color Picker Sliders
-- Support for [https://github.com/NimmLor/IoT-Audio-Visualization-Center](https://github.com/NimmLor/IoT-Audio-Visualization-Center)
-- Support for PCF8574 I2C IO-Expander
-- Support for TinyPwm I2C IO-Expander [https://github.com/sascha432/TinyPwm](https://github.com/sascha432/TinyPwm)
-- Fan control and light sensor for LED matrix
-- Human readable uptime for MQTT system metrics
-- User customizable options for factory reset over the WebUI
-- OTA update tool restarts device in safe mode before running any updates
-- Fixed play tone for blinds plugin
-- Added framework-arduinoespressif8266 3.30000.210519 (3.0.0)
-- Changes for GCC 10
-- Support for interal or external RTC
-- Improved NTP plugin
+- utf-8 support for web sockets
+- Fixed some environments and adapted changes of the Espressif 8266 2.3.1 framework (Arduino Core 2.7.4)
+- Support for loading javascript and CSS from remote server(s) during development
+- Major improvements for forms, they are using ~10x less memory and are ~20x faster. Most need less than 1KB and load within 10ms
+- Read ADC over web sockets with kfcfw_tool and graphical analysis
+- Removed filters from syslog, reduced memory usage and improved performance
+- Improved event scheduler (freed ~500 byte IRAM), memory usage and performance
+- Memory debugging and leak detection added
+- Ping monitor improvements
+- Device title is being used as name for MQTT auto discovery
+- Clearing EspSaveCrash EEPROM during factory reset
+- 64KB flash storage (R/W) dedicated for the firmware
+- AT mode command DUMPM for dumping memory or flash contents
+- Removed test mode from the blinds plugin and implemented it into kfwfc_tool
+- Disable AP mode after 15min. if default password is used (does not apply to AP mode in standby)
+- Enable recovery mode after version change (AP mode enabled, default SSID, broadcast SSID, enable web server, reset passwords IF empty)
+- Javascript updates and fixes
+- Zeroconf resolve button for forms
+- MQTT auto discovery rebroadcast interval
+- Open/close automation for the Blinds Plugin, audible warning while running or shortly before
+- Added missing html enitities encoding to forms
+- Improved HTML form generator
+- Added SSDP plugin
+- Templates for configuration getters/setters
+- Debug print functions for IRAM_ATTR that do not pull the entire SerialWrapper code into IRAM
+- Blacklist to prevent plugins being loaded at start-up
+- Support for zeroconf (`${zeroconf:<service>.<proto>:<address|value[:port value]>|<fallback[:port]>}` as hostname)
+- Added boot option to set passwords to default, enable AP mode and web server
+- Improved plugin system, ~2kb more free RAM
+- Rewritten SerialHandler
+- Rewritten StreamWrapper (Serial, DebugSerial, SerialHandler etc...)
+- KFC OTA copies firmware.elf and stores the hash in the device configuration
+- Added Alarm plugin to Clock and Weather Station
+- MQTT metrics: uptime, heap
+- NTP plugin: Check once per minute if the time is valid and call configTime() again if not
+- Alarm plugin for Clock, Weather Station, ...
 
 ## Version 0.0.3
 
-- Device configuration page for WebUI
-- Option to turn status LED off when connected to WiFi
-- Deep sleep support can be disabled
-- Arduino ESP8266 2.6.3 release changes
-- Support for MQTT component names instead of enumeration
-- Conditional attributes for HTML forms
-- Form validator for double
-- Advanced firmware configuration for dimmer plugin
-- Option to enable/disable mDNS
-- Arduino ESP8266 2.7.1 release changes/fixes
-- NTP startup delay reduced to 1 second (from up to 5 minutes)
-- MQTT auto discovery queue to reduce memory usage and network load
-- Send calibration/config. to MQTT for recovery after firmware updates
-- MQTT auto discovery abbreviations
-- MQTT auto discovery aggregates all entities as single device
 - Replaced remote timezone with native POSIX timezone support
+- MQTT auto discovery aggregates all entities as single device
+- MQTT auto discovery abbreviations
+- Send calibration/config. to MQTT for recovery after firmware updates
+- MQTT auto discovery queue to reduce memory usage and network load
+- NTP startup delay reduced to 1 second (from up to 5 minutes)
+- Arduino ESP8266 2.7.1 release changes/fixes
+- Option to enable/disable mDNS
+- Advanced firmware configuration for dimmer plugin
+- Form validator for double
+- Conditional attributes for HTML forms
+- Support for MQTT component names instead of enumeration
+- Arduino ESP8266 2.6.3 release changes
+- Deep sleep support can be disabled
+- Option to turn status LED off when connected to WiFi
+- Device configuration page for WebUI
 
 ## Version 0.0.2
 

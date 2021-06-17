@@ -14,6 +14,10 @@ The firmware offers a plugin interface to easily extend its functionality. The p
 
 **SPIFFS** has been replaced with **LittleFS** starting with version 0.0.4.7604
 
+Starting with version 0.0.5, a modified Arduino framework is being used.
+https://github.com/sascha432/Arduino/tree/master
+This required to install it in the .platformio/packages directory. Right now I do not know how to configure PIO to automatically install this version. It is compatible with the default framework.
+
 [Version 0.0.5](./CHANGELOG.md)
 
 [Version 0.0.4](https://github.com/sascha432/esp8266-kfc-fw/blob/v0.0.4/CHANGELOG.md)

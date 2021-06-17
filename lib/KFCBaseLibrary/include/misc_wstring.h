@@ -4,6 +4,8 @@
 
 #pragma once
 
+// additional low level string functions
+
 #include <stdint.h>
 #include <string.h>
 #include <pgmspace.h>

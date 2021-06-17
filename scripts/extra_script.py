@@ -200,33 +200,33 @@ def firmware_config(source, target, env, action):
     sock.close()
 
 
-def create_patch_file(source, target, env):
-    packages_dir = path.abspath(env.subst('$PROJECT_PACKAGES_DIR'))
-    new_dir = path.join(packages_dir, 'framework-arduinoespressif8266')
-    orig_dir = path.join(packages_dir, 'framework-arduinoespressif8266_orig')
-    with open(path.join(orig_dir, 'package.json'), "rt") as f:
-        info = json.loads(f.read())
-    target = path.abspath(env.subst('$PROJECT_DIR/patches/%s%s.patch' % (info['name'], info['version'])))
+# def create_patch_file(source, target, env):
+#     packages_dir = path.abspath(env.subst('$PROJECT_PACKAGES_DIR'))
+#     new_dir = path.join(packages_dir, 'framework-arduinoespressif8266')
+#     orig_dir = path.join(packages_dir, 'framework-arduinoespressif8266_orig')
+#     with open(path.join(orig_dir, 'package.json'), "rt") as f:
+#         info = json.loads(f.read())
+#     target = path.abspath(env.subst('$PROJECT_DIR/patches/%s%s.patch' % (info['name'], info['version'])))
 
-    diff_bin = 'c:/cygwin64/bin/diff'
+#     diff_bin = 'c:/cygwin64/bin/diff'
 
-    packages_dir = packages_dir.replace('\\', '/')
-    orig_dir = orig_dir.replace('\\', '/')
-    new_dir = new_dir.replace('\\', '/')
+#     packages_dir = packages_dir.replace('\\', '/')
+#     orig_dir = orig_dir.replace('\\', '/')
+#     new_dir = new_dir.replace('\\', '/')
 
-    orig_dir = '.' + orig_dir[len(packages_dir):]
-    new_dir = '.' + new_dir[len(packages_dir):]
+#     orig_dir = '.' + orig_dir[len(packages_dir):]
+#     new_dir = '.' + new_dir[len(packages_dir):]
 
-    args = [diff_bin, '-r', '-Z', '-P4', orig_dir, new_dir, '>', target]
+#     args = [diff_bin, '-r', '-Z', '-P4', orig_dir, new_dir, '>', target]
 
-    wd = os.getcwd()
-    try:
-        os.chdir(packages_dir)
-        return_code = subprocess.run(args, shell=True).returncode
-    finally:
-        os.chdir(wd)
+#     wd = os.getcwd()
+#     try:
+#         os.chdir(packages_dir)
+#         return_code = subprocess.run(args, shell=True).returncode
+#     finally:
+#         os.chdir(wd)
 
-    click.secho('Output file: %s' % target, fg='green')
+#     click.secho('Output file: %s' % target, fg='green')
 
 
 env.AddPreAction('upload', modify_upload_command)
@@ -239,8 +239,8 @@ env.AlwaysBuild(env.Alias('newbuild', None, new_build))
 # env.AddPostAction(env['PIOMAINPROG'], mem_analyzer)
 env.AddPostAction('$BUILD_DIR/${PROGNAME}.elf', mem_analyzer)
 
-env.AlwaysBuild(env.Alias('patch_file', None, create_patch_file))
-env.AlwaysBuild(env.Alias('patch-file', None, create_patch_file))
+# env.AlwaysBuild(env.Alias('patch_file', None, create_patch_file))
+# env.AlwaysBuild(env.Alias('patch-file', None, create_patch_file))
 
 env.AlwaysBuild(env.Alias('disasm', None, disassemble))
 env.AlwaysBuild(env.Alias('disassemble', [env['PIOMAINPROG']], disassemble))

@@ -3,7 +3,6 @@
  */
 
 #include <PrintString.h>
-// #include <JsonBuffer.h>
 #include <assert.h>
 #include "plugins.h"
 #include "session.h"
@@ -67,10 +66,10 @@ void WebUISocket::onText(uint8_t *data, size_t len)
 
         __LDBG_printf("command=%s args=%s", command.c_str(), implode(',', args, argc).c_str());
 
-        if (strcasecmp_P(command.c_str(), PSTR("+get_values")) == 0) {
+        if (command.equalsIgnoreCase(F("+get_values"))) {
             sendValues(client);
         }
-        else if (strcasecmp_P(command.c_str(), PSTR("+set_state")) == 0) {
+        else if (command.equalsIgnoreCase(F("+set_state"))) {
             bool state = args[1].toInt() || (strcasecmp_P(args[1].c_str(), SPGM(true)) == 0);
             for(auto plugin: PluginComponents::Register::getPlugins()) {
                 if (plugin->hasWebUI()) {
@@ -78,7 +77,7 @@ void WebUISocket::onText(uint8_t *data, size_t len)
                 }
             }
         }
-        else if (strcasecmp_P(command.c_str(), PSTR("+set")) == 0) {
+        else if (command.equalsIgnoreCase(F("+set"))) {
             _sender = this;
             for(auto plugin: PluginComponents::Register::getPlugins()) {
                 if (plugin->hasWebUI()) {
@@ -108,7 +107,7 @@ WebUINS::Root WebUISocket::createWebUIJSON()
     WebUINS::Root webUI;
 
     for(const auto plugin: PluginComponents::Register::getPlugins()) {
-        // __DBG_printf("plugin=%s webui=%u", plugin->getName_P(), plugin->hasWebUI());
+        __DBG_printf("plugin=%s webui=%u", plugin->getName_P(), plugin->hasWebUI());
         if (plugin->hasWebUI()) {
             plugin->createWebUI(webUI);
         }

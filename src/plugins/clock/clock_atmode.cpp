@@ -264,9 +264,16 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
 
             auto &stream = args.getStream();
             _Scheduler.add(Event::milliseconds(), false, [this, ina219, &stream](Event::CallbackTimerPtr) {
+                // ramp down slowly to keep the 5V rail within is limits
+                for(uint8_t i = 255 - 31; i >= 0; i -= 32) {
+                    _display.setBrightness(i);
+                    _display.show();
+                    ::delay(10);
+                }
                 _display.setBrightness(0);
                 _display.clear();
                 _display.show();
+
                 if (ina219) {
                     stream.printf_P(PSTR("U=%f I=%f P=%f"), ina219->getVoltage(), ina219->getPeakCurrent(), ina219->getPeakPower());
                 }

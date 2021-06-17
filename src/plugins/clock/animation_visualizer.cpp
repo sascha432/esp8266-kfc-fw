@@ -16,6 +16,12 @@
 
 // most code is from
 // https://github.com/NimmLor/esp8266-fastled-iot-webserver/blob/master/esp8266-fastled-iot-webserver.ino
+//
+// windows software
+// https://github.com/NimmLor/IoT-Audio-Visualization-Center
+//
+// thanks for the great software :)
+
 
 // TODO integrate all available animations and options
 

@@ -17,6 +17,24 @@
 #include <debug_helper_disable.h>
 #endif
 
+// class for 7 segment display with various shapes that can be created with
+// the ./scripts/tools/create_7segment_display.py tool
+// currently up to 6 digits and 2 colons are supported
+// the mapping is stored in PROGMEM to reduce memory overhead, the additonal memory required is (total pixels / 8) bytes (32bit padded)
+// see kSevenSegmentExtraMemorySize and kSevenSegmentTotalMemorySize (that is including the base class)
+//
+// high level functions to display the digits and colons or single dots are available
+// low level functions for animations are also supported by the base class
+// the code is optimized for performance and can easily display 2000Hz depending on the type and number of pixels
+// for example WS2813 with 800kbit gives a refresh rate of 33333Hz per LED, or 333Hz for 100
+// with a single core MCU like the ESP8266 and many LEDs, disabling interrupts when calling display.show() might help with choppy animations
+// since those might interrupt the output and FastLED will retry a few times depending on the settings
+// FastLED dithering is supported as well, which can also be executed with interrupts locked to a certain limit
+// more information about this issue can be found here
+// https://github.com/FastLED/FastLED/wiki/Interrupt-problems
+//
+// the code has not been tested on 8bit MCUs
+
 namespace SevenSegment {
 
     enum class SegmentType : uint8_t {
@@ -175,23 +193,20 @@ namespace SevenSegment {
             #endif
             PixelAddressType buf[kNumPixelsPerDigit];
             memcpy_P(buf, getSegmentsArrayPtr(num), sizeof(buf));
-            if (digit == 0xff) {
-                for(const auto address: buf) {
-                    setPixelState(address, false);
-                }
-            }
-            else {
-                auto digitSegments = getSegments(digit);
-                uint8_t n = 0;
-                for(const auto address: buf) {
-                    setPixelState(address, (digitSegments == (n / kNumPixelsPerSegment)));
-                    n++;
-                }
+            auto digitSegments = getSegments(digit);
+            uint8_t n = 0;
+            for(const auto address: buf) {
+                setPixelState(address, (digitSegments == (n / kNumPixelsPerSegment)));
+                n++;
             }
         }
 
         void clearDigit(uint8_t num) {
-            setDigit(num, 0xff);
+            PixelAddressType buf[kNumPixelsPerDigit];
+            memcpy_P(buf, getSegmentsArrayPtr(num), sizeof(buf));
+            for(const auto address: buf) {
+                setPixelState(address, false);
+            }
         }
 
         // low level methods
@@ -257,6 +272,9 @@ namespace SevenSegment {
     private:
         std::bitset<kNumPixels> _masked;
     };
+
+    static constexpr auto kSevenSegmentExtraMemorySize = sizeof(Display::_masked);
+    static constexpr auto kSevenSegmentTotalMemorySize = sizeof(Display);
 
     inline SegmentType getSegments(uint8_t digit)
     {

@@ -14,9 +14,18 @@
 #include <debug_helper_disable.h>
 #endif
 
+// class to address LED matrix displays by x and y coordinates mapping it to its real coordinates
+// the mapping is done during compilation and fixed for best performance
+//
+// the required memory is total pixels (including pixels that are not display, see _PixelOffset) * 3 byte and 32bit padded, plus an additonal pointer
+// 118 pixel * 3 / 4 = 88.5 = with padding 89 * 4 + 4 byte = 360 byte
+
 namespace Clock {
 
 #if IOT_LED_MATRIX_CONFIGURABLE_DISPLAY
+
+    #error not supported yet
+
 #else
 
     template<class _CoordinateType, _CoordinateType _Rows, _CoordinateType _Columns>
@@ -72,7 +81,7 @@ namespace Clock {
 
     // pixels are mapped with a zero offset
     // _PixelOffset is used to determine the type of the pixel and the storage size
-    // Unused pixels still need to be allocated
+    // unused pixels still need to be allocated and refreshed
 
     template<size_t _PixelOffset, size_t _Rows, size_t _Columns, bool _ReverseRows, bool _ReverseColumns, bool _Rotate, bool _Interleaved>
     class PixelMapping : public Types<_PixelOffset, _Rows, _Columns> {
@@ -100,6 +109,8 @@ namespace Clock {
         };
 
 #if __GNUG__ < 10
+
+        #warning this code might not be up to date
 
         // rotated
 
@@ -167,29 +178,29 @@ namespace Clock {
 
 #else
 
-        // non-rotated
+        // rotation
 
         template<typename _Ta = CoordinateHelperType>
         typename _Ta::type getRow(typename _Ta::type row, typename _Ta::type col) const {
-            if constexpr (!_Ta::kRotate) {
-                return row;
-            }
-            else if constexpr (_Ta::kRotate) {
+            if constexpr (_Ta::kRotate) {
                 return col;
+            }
+            else {
+                return row;
             }
         }
 
         template<typename _Ta = CoordinateHelperType>
         typename _Ta::type getCol(typename _Ta::type row, typename _Ta::type col) const {
-            if constexpr (!_Ta::kRotate) {
-                return col;
-            }
-            else if constexpr (_Ta::kRotate) {
+            if constexpr (_Ta::kRotate) {
                 return row;
+            }
+            else {
+                return col;
             }
         }
 
-        // normalize rows
+        // reversed and interleaved rows
 
         template<typename _Ta = CoordinateHelperType>
         typename _Ta::type _row(typename _Ta::type row, typename _Ta::type col) const {
@@ -200,7 +211,7 @@ namespace Clock {
                     }
                     return row;
                 }
-                else if constexpr (!_Ta::kReverseRows) {
+                else {
                     if (col % 2 == _Ta::kInterleaved) {
                         return row;
                     }
@@ -211,13 +222,13 @@ namespace Clock {
                 if constexpr (_Ta::kReverseRows) {
                     return (kRows - 1) - row;
                 }
-                else if constexpr (!_Ta::kReverseRows) {
+                else {
                     return row;
                 }
             }
         }
 
-        // normalize columns
+        // reversed columns
 
         template<typename _Ta = CoordinateHelperType>
         typename _Ta::type _col(typename _Ta::type row, typename _Ta::type col) const {
@@ -318,6 +329,8 @@ namespace Clock {
         }
 
 #if __GNUG__ < 10
+
+        #warning this code might not be up to date
 
         template<typename _Ta, typename _Tb, typename std::enable_if<_Ta::kMappingTypeId == _Tb::kMappingTypeId, int>::type = 0>
         static void copy(_Ta src, _Tb dst, PixelAddressType numPixel) {

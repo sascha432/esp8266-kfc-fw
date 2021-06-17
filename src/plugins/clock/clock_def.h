@@ -4,6 +4,34 @@
 
 #pragma once
 
+#ifndef IOT_CLOCK
+#   error IOT_CLOCK missing
+#endif
+
+#ifndef IOT_LED_MATRIX
+#   define IOT_LED_MATRIX 0
+#endif
+
+#if IOT_CLOCK && IOT_LED_MATRIX
+#   define IOT_CLOCK_MODE 0
+#   define IOT_MATRIX_MODE 1
+#else
+#   define IOT_CLOCK_MODE 1
+#   define IOT_MATRIX_MODE 0
+#endif
+
+#if IOT_CLOCK_MODE
+#    define IF_IOT_CLOCK_MODE(...) __VA_ARGS__
+#else
+#    define IF_IOT_CLOCK_MODE(...)
+#endif
+
+#if IOT_MATRIX_MODE
+#    define IF_IOT_MATRIX_MODE(...) __VA_ARGS__
+#else
+#    define IF_IOT_MATRIX_MODE(...)
+#endif
+
 #ifndef DEBUG_IOT_CLOCK
 #    define DEBUG_IOT_CLOCK 1
 #endif
@@ -15,6 +43,12 @@
 
 #if IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL == 1 && HTTP2SERIAL_SUPPORT != 1
 #   error HTTP2SERIAL_SUPPORT=1 required
+#endif
+
+#if IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
+#    define IF_IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL(...) __VA_ARGS__
+#else
+#    define IF_IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL(...)
 #endif
 
 // gives the user them option to activate dithering
@@ -353,3 +387,18 @@
 #   define IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER 0
 #endif
 
+#if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
+#   define IF_IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER(...) __VA_ARGS__
+#else
+#   define IF_IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER(...)
+#endif
+
+#ifndef IOT_SENSOR_HAVE_INA219
+#   define IOT_SENSOR_HAVE_INA219 0
+#endif
+
+#if IOT_SENSOR_HAVE_INA219
+#   define IF_IOT_SENSOR_HAVE_INA219(...) __VA_ARGS__
+#else
+#   define IF_IOT_SENSOR_HAVE_INA219(...)
+#endif

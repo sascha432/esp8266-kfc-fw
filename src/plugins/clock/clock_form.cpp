@@ -378,7 +378,7 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
         #if IOT_CLOCK_USE_DITHERING
 
-            form.addObjectGetterSetter(F("dt"), FormGetterSetter(cfg, dithering));
+        form.addObjectGetterSetter(F("dt"), FormGetterSetter(cfg, dithering));
             form.addFormUI(F("FastLED Temporal Dithering"), FormUI::BoolItems(F("Enable"), F("Disable")));
 
         #endif

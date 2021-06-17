@@ -90,51 +90,6 @@ namespace Clock {
 
         static constexpr uint8_t kMappingTypeId = (_ReverseRows ? 0x01 : 0x00) | (_ReverseColumns ? 0x02 : 0x00) | (_Rotate ? 0x04 : 0) | (_Interleaved ? 0x08 : 0);
 
-        // non-rotated
-
-        // template<class T, typename = std::enable_if<_ReverseRows == false && _Rotate == false && _Interleaved == false>>
-        // CoordinateType applyRowDirection(T row, T col) const {
-        //     return row;
-        // }
-
-        // template<typename T, typename = std::enable_if<_ReverseRows == true && _Rotate == false && _Interleaved == false>>
-        // CoordinateType applyRowDirection(T row, T col) const {
-        //     return (kRows - 1) - row;
-        // }
-
-        // template<typename T, typename = std::enable_if<_Rotate == false && _Interleaved == true>>
-        // CoordinateType applyRowDirection(T row, T col) const {
-        //     if (col % 2 == kInterleaved) {
-        //         return row;
-        //     }
-        //     else {
-        //         return (kRows - 1) - row;
-        //     }
-        // }
-
-        // // rotated
-
-        // template<typename T, typename = std::enable_if<_ReverseRows == false && _Rotate == true && _Interleaved == false>>
-        // CoordinateType applyRowDirection(T col, T row) const {
-        //     return row;
-        // }
-
-        // template<typename T, typename = std::enable_if<_ReverseRows == true && _Rotate == true && _Interleaved == false>>
-        // CoordinateType applyRowDirection(T col, T row) const {
-        //     return (kRows - 1) - row;
-        // }
-
-        // template<typename T, typename = std::enable_if<_Rotate == true && _Interleaved == true>>>
-        // CoordinateType applyRowDirection(T col, T row) const {
-        //     if (col % 2 == kInterleaved) {
-        //         return row;
-        //     }
-        //     else {
-        //         return (kRows - 1) - row;
-        //     }
-        // }
-
-
         struct CoordinateHelperType {
             using type = CoordinateType;
 
@@ -207,39 +162,6 @@ namespace Clock {
         typename _Ta::type _col(typename _Ta::type row, typename _Ta::type col) const {
             return (kCols - 1) - col;
         }
-
-        // CoordinateType _row(CoordinateType row) const {
-        //      return row;
-        // }
-        // CoordinateType _col(CoordinateType col) const {
-        //      return col;
-        // }
-        // CoordinateType getRow(CoordinateType col, CoordinateType row) const {
-        //     if (_Rotate) {
-        //         std::swap(row, col);
-        //     }
-        //     if (_ReverseRows) {
-        //         if (_Interleaved) {
-        //             col++;
-        //         } else {
-        //             return (kRows - 1) - row;
-        //         }
-        //     }
-        //     if (_Interleaved && (col % 2 != kInterleaved)) {
-        //         return (kRows - 1) - row;
-        //     }
-        //     return row;
-        // }
-        //
-        // CoordinateType getCol(CoordinateType row, CoordinateType col) const {
-        //     if (_Rotate) {
-        //         std::swap(row, col);
-        //     }
-        //     if (_ReverseColumns) {
-        //         col = (kCols - 1) - col;
-        //     }
-        //     return col;
-        // }
 
         PixelAddressType getAddress(CoordinateType row, CoordinateType col) const {
             // return row + col * kRows;

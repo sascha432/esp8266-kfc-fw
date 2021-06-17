@@ -148,27 +148,21 @@ void ClockPlugin::_loop()
                     displayColon = ((_lastUpdateTime / _config.blink_colon_speed) % 2 == 0);
                 }
 
-                uint32_t color = _getColor();
                 auto &tm = options.getLocalTime();
 
-                _display.setDigit(0, tm.tm_hour_format() / 10, color);
-                _display.setDigit(1, tm.tm_hour_format() % 10, color);
-                _display.setDigit(2, tm.tm_min / 10, color);
-                _display.setDigit(3, tm.tm_min % 10, color);
+                _display.setDigit(0, tm.tm_hour_format() / 10);
+                _display.setDigit(1, tm.tm_hour_format() % 10);
+                _display.setDigit(2, tm.tm_min / 10);
+                _display.setDigit(3, tm.tm_min % 10);
                 #if IOT_CLOCK_NUM_DIGITS == 6
-                    _display.setDigit(4, tm.tm_sec / 10, color);
-                    _display.setDigit(5, tm.tm_sec % 10, color);
+                    _display.setDigit(4, tm.tm_sec / 10);
+                    _display.setDigit(5, tm.tm_sec % 10);
                 #endif
 
-                if (!displayColon) {
-                    color = 0;
-                }
-
-                _display.setColon(0, Clock::SevenSegment::ColonType::TOP, color);
-                _display.setColon(0, Clock::SevenSegment::ColonType::BOTTOM, color);
+                auto colon = displayColon ? Clock::SevenSegment::ColonType::BOTH : Clock::SevenSegment::ColonType::NONE;
+                _display.setColon(0, colon);
                 #if IOT_CLOCK_NUM_COLONS == 2
-                    _display.setColon(1, Clock::SevenSegment::ColonType::TOP, color);
-                    _display.setColon(1, Clock::SevenSegment::ColonType::BOTTOM, color);
+                    _display.setColon(1, colon);
                 #endif
 
             )

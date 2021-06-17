@@ -15,49 +15,79 @@
 
 namespace KFCConfigurationClasses {
 
+#if IOT_LED_MATRIX
     Plugins::ClockConfig::RainbowMultiplier_t::RainbowMultiplier_t() :
         value(1.23),
         min(2.5),
         max(11.0),
         incr(0.00326)
-    {}
+    {
+    }
+#else
+    Plugins::ClockConfig::RainbowMultiplier_t::RainbowMultiplier_t() :
+        value(5.23),
+        min(0),
+        max(0),
+        incr(0)
+    {
+    }
+#endif
 
     Plugins::ClockConfig::RainbowMultiplier_t::RainbowMultiplier_t(float a, float b, float c, float d) :
         value(a),
         min(b),
         max(c),
         incr(d)
-    {}
+    {
+    }
 
+#if IOT_LED_MATRIX
     Plugins::ClockConfig::RainbowColor_t::RainbowColor_t() :
         min(0x000000),
         factor(0xffffff),
         red_incr(0.1),
         green_incr(0.25),
         blue_incr(0.125)
-    {}
+    {
+    }
+#else
+    Plugins::ClockConfig::RainbowColor_t::RainbowColor_t() :
+        min(0x000000),
+        factor(0xffffff),
+        red_incr(0),
+        green_incr(0),
+        blue_incr(0)
+    {
+    }
+#endif
 
     Plugins::ClockConfig::FireAnimation_t::FireAnimation_t() :
         cooling(60),
         sparking(95),
         speed(50),
-        orientation(cast_int_orientation(Orientation::VERTICAL)),
+        orientation(cast(Orientation::VERTICAL)),
         invert_direction(false),
         factor(0xffff00)
-    {}
+    {
+    }
 
     Plugins::ClockConfig::ClockConfig_t::ClockConfig_t() :
         solid_color(0xff00ff),
-        animation(cast_int_animation(AnimationType::SOLID)),
 #if IOT_LED_MATRIX
-        initial_state(cast_int_initial_state(InitialStateType::RESTORE)),
+        animation(cast(AnimationType::SOLID)),
+        initial_state(cast(InitialStateType::RESTORE)),
 #else
-        initial_state(cast_int_initial_state(InitialStateType::ON)),
+        animation(cast(AnimationType::RAINBOW)),
+        initial_state(cast(InitialStateType::ON)),
         time_format_24h(true),
 #endif
         dithering(false),
         standby_led(true),
+#if IOT_LED_MATRIX
         enabled(false),
+#else
+        enabled(true),
+#endif
         fading_time(kDefaultValueFor_fading_time),
 #if IOT_CLOCK_HAVE_POWER_LIMIT
         power_limit(kDefaultValueFor_power_limit),

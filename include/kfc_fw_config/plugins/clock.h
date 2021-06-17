@@ -40,7 +40,7 @@
             typedef struct __attribute__packed__ RainbowColor_t {
                 ClockColor_t min;
                 ClockColor_t factor;
-                float  red_incr;
+                float red_incr;
                 float green_incr;
                 float blue_incr;
                 RainbowColor_t();

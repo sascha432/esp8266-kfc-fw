@@ -104,8 +104,17 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
     // }
     // else
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKM))) {
-        _config.rainbow.multiplier.value = args.toFloatMinMax(0, 0.1f, 100.0f, _config.rainbow.multiplier.value);
-        args.printf_P(PSTR("Rainbow multiplier=%f increment=%f min=%f max=%f"), _config.rainbow.multiplier.value, _config.rainbow.multiplier.incr, _config.rainbow.multiplier.min, _config.rainbow.multiplier.max);
+        _config.rainbow.multiplier.value = args.toFloatMinMax(0, 0.1f, 100.0f, 5.23f);
+        _config.rainbow.multiplier.incr = args.toFloatMinMax(1, 0.0f, 1.0f, _config.rainbow.multiplier.incr);
+        _config.rainbow.multiplier.min = args.toFloatMinMax(2, 0.1f, 100.0f, _config.rainbow.multiplier.min);
+        _config.rainbow.multiplier.max = args.toFloatMinMax(3, 0.1f, 100.0f, _config.rainbow.multiplier.max);
+        _config.rainbow.color.red_incr = args.toFloatMinMax(4, 0.0f, 1.0f, _config.rainbow.color.red_incr);
+        _config.rainbow.color.green_incr = args.toFloatMinMax(5, 0.0f, 1.0f, _config.rainbow.color.green_incr);
+        _config.rainbow.color.blue_incr = args.toFloatMinMax(6, 0.0f, 1.0f, _config.rainbow.color.blue_incr);
+        args.printf_P(PSTR("Rainbow multiplier=%f increment=%f min=%f max=%f color incr r=%f g=%f b=%f"),
+            _config.rainbow.multiplier.value, _config.rainbow.multiplier.incr, _config.rainbow.multiplier.min, _config.rainbow.multiplier.max,
+            _config.rainbow.color.red_incr, _config.rainbow.color.green_incr, _config.rainbow.color.blue_incr
+        );
         return true;
     }
 #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
@@ -288,15 +297,18 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
 #if !IOT_LED_MATRIX
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKP))) {
         enableLoop(false);
-
         if (args.size() < 1) {
-            _display.hideAll();
+            _display.clear();
+            _display.setBrightness(255);
             _display.show();
             args.print(F("display cleared"));
         }
         else {
             auto text = args.get(0);
             args.printf_P(PSTR("display '%s'"), text);
+            _display.clear();
+            _display.fill(0x000020);
+            _display.setBrightness(255);
             _display.print(text);
             _display.show();
         }
@@ -305,18 +317,58 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
 #endif
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKPX))) {
         enableLoop(false);
-
         if (args.equalsIgnoreCase(0, F("ani"))) {
+            uint16_t x;
+            uint16_t y;
+            uint16_t n;
             _display.setBrightness(32);
-            for(uint16_t y = 0; y < _display.kRows; y++) {
-                for(uint16_t x = 0; x < _display.kCols; x++) {
-                    _display.fill(0);
-                    _display.setPixel(y, x, Color(0x300030));
-                    delay(40);
-                    _display.show();
-                }
+            _display.clear();
+            auto displayPtr = &_display;
+            switch(args.toInt(1)) {
+                case 1:
+                    _Scheduler.add(Event::milliseconds(100), true, [n, displayPtr](Event::CallbackTimerPtr timer) mutable {
+                        displayPtr->fill(0);
+                        displayPtr->setPixel(n, Color(0x300030));
+                        displayPtr->show();
+                        n++;
+                        if (n >= displayPtr->kCols * displayPtr->kRows) {
+                            displayPtr->clear();
+                            displayPtr->show();
+                            timer->disarm();
+                        }
+                    });
+                    break;
+                case 2:
+                    _Scheduler.add(Event::milliseconds(100), true, [n, displayPtr](Event::CallbackTimerPtr timer) mutable {
+                        displayPtr->fill(0x300030);
+                        displayPtr->hideAll();
+                        displayPtr->setPixelState(n, true);
+                        displayPtr->show();
+                        n++;
+                        if (n >= displayPtr->kCols * displayPtr->kRows) {
+                            displayPtr->clear();
+                            displayPtr->show();
+                            timer->disarm();
+                        }
+                    });
+                    break;
+                default:
+                    _Scheduler.add(Event::milliseconds(100), true, [x, y, displayPtr](Event::CallbackTimerPtr timer) mutable {
+                        displayPtr->fill(0);
+                        displayPtr->setPixel(y, x, Color(0x300030));
+                        displayPtr->show();
+                        x++;
+                        if (x >= displayPtr->kCols) {
+                            y++;
+                            if (y >= displayPtr->kRows) {
+                                displayPtr->fill(0);
+                                displayPtr->show();
+                                timer->disarm();
+                            }
+                        }
+                    });
+                    break;
             }
-
         }
         else if (args.equalsIgnoreCase(0, F("dither"))) {
             bool state = args.toInt(1);
@@ -325,6 +377,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
         }
         else if (args.equalsIgnoreCase(0, F("reset"))) {
             _display.setBrightness(32);
+            _display.clear();
             _display.hideAll();
             _display.show();
             args.print(F("display reset"));
@@ -400,7 +453,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                 _display.show();
             }
             else {
-                args.print(F("usage: +clockpx=reset|clear|dither,<0|1>|<pixel>,get|<pixel>,<#rgb color>"));
+                args.print(F("usage: +clockpx=ani,[0,1,2]|reset|clear|dither,<0|1>|<pixel>,get|<pixel>,<#rgb color>"));
             }
         }
         return true;

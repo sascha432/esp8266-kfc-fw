@@ -24,10 +24,11 @@
 #endif
 
 // the number of pixels and order can be changed if set to 1
-// configurable requires memory and CPU time
+// configurable requires memory and CPU time of the maximum. number of configured LEDs, even if only 1 is active
 // set IOT_LED_MATRIX_COLS=1 and IOT_LED_MATRIX_ROWS=max. number of LEDs
 #ifndef IOT_LED_MATRIX_CONFIGURABLE_DISPLAY
 #   define IOT_LED_MATRIX_CONFIGURABLE_DISPLAY 0
+#error currently not supported
 #endif
 
 // -1 to disable standby LED

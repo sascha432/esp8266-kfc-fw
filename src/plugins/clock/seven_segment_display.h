@@ -65,8 +65,10 @@ namespace SevenSegment {
     extern "C" const PixelAddressType pixelAnimationOrder[] PROGMEM;
 
     enum class ColonType : uint8_t {
-        TOP = 0,
-        BOTTOM,
+        NONE = 0,
+        TOP = 1,
+        BOTTOM = 2,
+        BOTH = TOP|BOTTOM,
         MAX
     };
 
@@ -81,6 +83,10 @@ namespace SevenSegment {
 
     inline static bool operator==(SegmentType type, uint8_t segment) {
         return static_cast<uint8_t>(type) & _BV(segment);
+    }
+
+    inline static bool operator==(ColonType type, uint8_t position) {
+        return static_cast<uint8_t>(type) & _BV(position);
     }
 
     class Display : public BaseDisplayType {
@@ -131,15 +137,12 @@ namespace SevenSegment {
                 else if (*text == ' ' || *text == '.' || *text == ':') {
                     if (colon < kNumColons) {
                         if (*text == ' ') {
-                            clearColon(colon, ColonType::TOP);
-                            clearColon(colon, ColonType::BOTTOM);
+                            clearColon(colon);
                         }
                         else if (*text == ':') {
-                            setColon(colon, ColonType::TOP);
-                            setColon(colon, ColonType::BOTTOM);
+                            setColon(colon, ColonType::BOTH);
                         }
                         else if (*text == '.') {
-                            clearColon(colon, ColonType::TOP);
                             setColon(colon, ColonType::BOTTOM);
                         }
                         colon++;
@@ -150,19 +153,21 @@ namespace SevenSegment {
             }
         }
 
-        void setColon(uint8_t num, ColonType colon, bool state = true) {
-            PixelAddressType buf[kNumPixelsPerColon];
-            memcpy_P(buf, getColonsArrayPtr(num), kNumPixelsPerColon * sizeof(PixelAddressType));
+        void setColon(uint8_t num, ColonType colon) {
+            PixelAddressType buf[kNumPixelsPerColon * 2];
+            memcpy_P(buf, getColonsArrayPtr(num), sizeof(buf));
+            uint8_t n = 0;
             for(const auto address: buf) {
-                setPixelState(address, state);
+                setPixelState(address, (colon == (n / kNumPixelsPerColon)));
+                n++;
             }
         }
 
-        void clearColon(uint8_t num, ColonType colon) {
-            setColon(num, colon, false);
+        void clearColon(uint8_t num) {
+            setColon(num, ColonType::NONE);
         }
 
-        void setDigit(uint8_t num, uint8_t digit, int color = -1) {
+        void setDigit(uint8_t num, uint8_t digit) {
             #if DEBUG_IOT_CLOCK
                 if (digit > static_cast<uint8_t>(SegmentType::MAX_DIGIT)) {
                     __DBG_panic("number %u out of range [0;%u]", digit, static_cast<uint8_t>(SegmentType::MAX_DIGIT));
@@ -179,10 +184,7 @@ namespace SevenSegment {
                 auto digitSegments = getSegments(digit);
                 uint8_t n = 0;
                 for(const auto address: buf) {
-                    setPixelState(address, (digitSegments == n));
-                    if (color != -1) {
-                        setPixel(address, color);
-                    }
+                    setPixelState(address, (digitSegments == (n / kNumPixelsPerSegment)));
                     n++;
                 }
             }
@@ -214,7 +216,7 @@ namespace SevenSegment {
 
         void clear() {
             DisplayType::clear();
-            showAll();
+            hideAll();
         }
 
         void show() {
@@ -241,7 +243,7 @@ namespace SevenSegment {
         }
 
         PixelAddressPtr getColonsArrayPtr(uint8_t num) const {
-            return &colonTranslationTable[(num * kNumPixelsPerColon)];
+            return &colonTranslationTable[(num * kNumPixelsPerColon * 2)];
         }
 
         PixelAddressPtr getSegmentsArrayPtr(uint8_t num) const {

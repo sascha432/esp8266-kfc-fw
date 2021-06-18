@@ -20,9 +20,9 @@
 #include "blink_led_timer.h"
 #include "./plugins/sensor/sensor.h"
 #include "./plugins/sensor/Sensor_BME280.h"
-#if IOT_WEATHER_STATION_COMP_RH
-#include "./plugins/sensor/EnvComp.h"
-#endif
+// #if IOT_WEATHER_STATION_COMP_RH
+// #include "./plugins/sensor/EnvComp.h"
+// #endif
 
 using KFCConfigurationClasses::Plugins;
 
@@ -300,16 +300,16 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
     });
 #endif
 
-    auto compensationCallback = [this](Sensor_BME280::SensorData_t &sensor) {
-        sensor.humidity += _config.humidity_offset;
-        sensor.pressure += _config.pressure_offset;
-#if IOT_WEATHER_STATION_COMP_RH
-        float temp = sensor.temperature + _config.temp_offset;
-        sensor.humidity = EnvComp::getCompensatedRH(sensor.temperature, sensor.humidity, temp);
-#else
-        sensor.temperature += _config.temp_offset;
-#endif
-    };
+//     auto compensationCallback = [this](Sensor_BME280::SensorDataType &sensor) {
+//         sensor.humidity += _config.humidity_offset;
+//         sensor.pressure += _config.pressure_offset;
+// #if IOT_WEATHER_STATION_COMP_RH
+//         float temp = sensor.temperature + _config.temp_offset;
+//         sensor.humidity = EnvComp::getCompensatedRH(sensor.temperature, sensor.humidity, temp);
+// #else
+//         sensor.temperature += _config.temp_offset;
+// #endif
+//     };
     for(auto sensor: SensorPlugin::getSensors()) {
         if (sensor->getType() == MQTT::SensorType::ENUM::BME280) {
             reinterpret_cast<Sensor_BME280 *>(sensor)->setCompensationCallback(compensationCallback);

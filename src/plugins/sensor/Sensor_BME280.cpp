@@ -20,6 +20,7 @@ Sensor_BME280::Sensor_BME280(const String &name, TwoWire &wire, uint8_t address)
     _callback(nullptr)
 {
     REGISTER_SENSOR_CLIENT(this);
+    _readConfig();
     _bme280.begin(_address, &config.initTwoWire());
 }
 
@@ -60,15 +61,9 @@ MQTT::AutoDiscovery::EntityPtr Sensor_BME280::getAutoDiscovery(FormatType format
     return discovery;
 }
 
-uint8_t Sensor_BME280::getAutoDiscoveryCount() const
-{
-    return 3;
-}
-
 void Sensor_BME280::getValues(WebUINS::Events &array, bool timer)
 {
-    SensorData_t sensor;
-    _readSensor(sensor);
+    auto sensor = _readSensor();
     array.append(
         WebUINS::Values(_getId(FSPGM(temperature)), WebUINS::TrimmedDouble(sensor.temperature, 2), true),
         WebUINS::Values(_getId(FSPGM(humidity)), WebUINS::TrimmedDouble(sensor.humidity, 2), true),
@@ -97,24 +92,49 @@ void Sensor_BME280::createWebUI(WebUINS::Root &webUI)
 void Sensor_BME280::getStatus(Print &output)
 {
     output.printf_P(PSTR("BME280 @ I2C address 0x%02x" HTML_S(br)), _address);
+    if (_cfg.temp_offset) {
+        output.printf_P(PSTR("Temperature offset %.3f%s "), _cfg.temp_offset, SPGM(UTF8_degreeC));
+    }
+    if (_cfg.humidity_offset) {
+        output.printf_P(PSTR("Humidity offset %.3f%% "), _cfg.humidity_offset);
+    }
+    if (_cfg.pressure_offset) {
+        output.printf_P(PSTR("Pressure offset %.3f%s"), _cfg.pressure_offset, FSPGM(hPa));
+    }
 }
 
 bool Sensor_BME280::getSensorData(String &name, StringVector &values)
 {
     name = F("BME280");
-    SensorData_t sensor;
-    _readSensor(sensor);
+    auto sensor = _readSensor();
     values.emplace_back(PrintString(F("%.2f %s"), sensor.temperature, SPGM(UTF8_degreeC)));
     values.emplace_back(PrintString(F("%.2f %%"), sensor.humidity));
     values.emplace_back(PrintString(F("%.2f hPa"), sensor.pressure));
     return true;
 }
 
+void Sensor_BME280::createConfigureForm(AsyncWebServerRequest *request, FormUI::Form::BaseForm &form)
+{
+    auto &cfg = Plugins::Sensor::getWriteableConfig();
+
+    auto &group = form.addCardGroup(F("bme280"), F("BME280 Temperature, Humidity and Pressure Sensor"), true);
+
+    form.addPointerTriviallyCopyable<float>(F("bme280_t"), reinterpret_cast<void *>(&cfg.bme280.temp_offset));
+    form.addFormUI(F("Temperature Offset"), FormUI::Suffix(FSPGM(UTF8_degreeC)));
+
+    form.addPointerTriviallyCopyable<float>(F("bme280_h"), reinterpret_cast<void *>(&cfg.bme280.humidity_offset));
+    form.addFormUI(F("Humidity Offset"), FormUI::Suffix(F("%")));
+
+    form.addPointerTriviallyCopyable<float>(F("bme280_p"), reinterpret_cast<void *>(&cfg.bme280.pressure_offset));
+    form.addFormUI(F("Pressure Offset"), FormUI::Suffix(FSPGM(hPa)));
+
+    group.end();
+}
+
 void Sensor_BME280::publishState()
 {
     if (isConnected()) {
-        SensorData_t sensor;
-        _readSensor(sensor);
+        auto sensor = _readSensor();
 
         using namespace MQTT::Json;
 
@@ -126,28 +146,24 @@ void Sensor_BME280::publishState()
     }
 }
 
-void Sensor_BME280::_readSensor(SensorData_t &sensor)
+Sensor_BME280::SensorDataType Sensor_BME280::_readSensor()
 {
-    sensor.temperature = _bme280.readTemperature();
-    sensor.humidity = _bme280.readHumidity();
-    sensor.pressure = _bme280.readPressure() / 100.0;
+    SensorDataType sensor;
+
+    sensor.temperature = _bme280.readTemperature() + _cfg.temp_offset;
+    sensor.humidity = _bme280.readHumidity() + _cfg.humidity_offset;
+    sensor.pressure = (_bme280.readPressure() / 100.0) + _cfg.pressure_offset;
 
     __LDBG_printf("address 0x%02x: %.2f %s, %.2f%%, %.2f hPa", _address, sensor.temperature, SPGM(UTF8_degreeC), sensor.humidity, sensor.pressure);
 
-    if (_callback != nullptr) {
+#if IOT_SENSOR_BME280_HAVE_COMPENSATION_CALLBACK
+    if (_callback) {
         _callback(sensor);
         __LDBG_printf("compensated %.2f %s, %.2f%%", sensor.temperature, SPGM(UTF8_degreeC), sensor.humidity);
     }
+#endif
+    return sensor;
 }
 
-String Sensor_BME280::_getId(const __FlashStringHelper *type)
-{
-    PrintString id(F("bme280_0x%02x"), _address);
-    if (type) {
-        id.write('_');
-        id.print(type);
-    }
-    return id;
-}
 
 #endif

@@ -40,6 +40,8 @@ namespace KFCConfigurationClasses {
 
         #include "plugins/mdns.h"
 
+        #include "plugins/weather_station.h"
+
         // --------------------------------------------------------------------
         // Plugin Structure
 

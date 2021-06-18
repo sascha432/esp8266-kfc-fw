@@ -73,9 +73,7 @@ public:
     virtual void createWebUI(WebUINS::Root &webUI) override;
     virtual void getStatus(Print &output) override;
 
-    virtual bool hasForm() const {
-        return true;
-    }
+    virtual bool hasForm() const;
     virtual void createConfigureForm(AsyncWebServerRequest *request, FormUI::Form::BaseForm &form) override;
     virtual void reconfigure(PGM_P source) override;
 
@@ -231,6 +229,10 @@ inline uint8_t Sensor_INA219::getAutoDiscoveryCount() const
     return 5;
 }
 
+inline bool Sensor_INA219::hasForm() const
+{
+    return true;
+}
 
 #pragma pop_macro("_U")
 

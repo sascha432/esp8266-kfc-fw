@@ -137,6 +137,23 @@
 
 #endif
 
+#if IOT_SENSOR_HAVE_BME280
+            struct __attribute__packed__ BME280Sensor_t {
+                using Type = BME280Sensor_t;
+
+                CREATE_FLOAT_FIELD(temp_offset, -100, 100, 0);
+                CREATE_FLOAT_FIELD(humidity_offset, -100, 100, 0);
+                CREATE_FLOAT_FIELD(pressure_offset, -100, 100, 0);
+
+                BME280Sensor_t() :
+                    temp_offset(kDefaultValueFor_temp_offset),
+                    humidity_offset(kDefaultValueFor_humidity_offset),
+                    pressure_offset(kDefaultValueFor_pressure_offset)
+                {
+                }
+
+            };
+#endif
             struct __attribute__packed__ SensorConfig_t {
 
 #if IOT_SENSOR_HAVE_BATTERY
@@ -154,6 +171,10 @@
 #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR
                 AmbientLightSensorConfig_t ambient;
 #endif
+#if IOT_SENSOR_HAVE_BME280
+                BME280Sensor_t bme280;
+#endif
+
             };
 
         };

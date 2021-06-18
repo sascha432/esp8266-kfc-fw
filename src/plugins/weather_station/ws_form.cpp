@@ -54,14 +54,14 @@ void WeatherStationPlugin::createConfigureForm(FormCallbackType type, const Stri
     form.add(F("trt"), _H_W_STRUCT_VALUE(cfg, released_threshold));
     form.addFormUI(F("Release Threshold"));
 
-    form.add(F("t_ofs"), _H_W_STRUCT_VALUE(cfg, temp_offset));
-    form.addFormUI(F("BMP280 Temperature Offset"), FormUI::Suffix('%'));
+    // form.add(F("t_ofs"), _H_W_STRUCT_VALUE(cfg, temp_offset));
+    // form.addFormUI(F("BMP280 Temperature Offset"), FormUI::Suffix('%'));
 
-    form.add(F("h_ofs"), _H_W_STRUCT_VALUE(cfg, humidity_offset));
-    form.addFormUI(F("Humidity Offset"), FormUI::Suffix('%'));
+    // form.add(F("h_ofs"), _H_W_STRUCT_VALUE(cfg, humidity_offset));
+    // form.addFormUI(F("Humidity Offset"), FormUI::Suffix('%'));
 
-    form.add(F("p_ofs"), _H_W_STRUCT_VALUE(cfg, pressure_offset));
-    form.addFormUI(F("Pressure Offset"), FormUI::Suffix(FSPGM(hPa)));
+    // form.add(F("p_ofs"), _H_W_STRUCT_VALUE(cfg, pressure_offset));
+    // form.addFormUI(F("Pressure Offset"), FormUI::Suffix(FSPGM(hPa)));
 
     for(uint8_t i = 0; i < WeatherStationPlugin::ScreenEnum_t::NUM_SCREENS; i++) {
         PrintString str;

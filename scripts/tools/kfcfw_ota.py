@@ -31,19 +31,29 @@ class SimpleProgressBar:
 
     def __init__(self, max_value, redirect_stdout=True):
         self.bar = None
+        self.counter = 0;
         # self.bar = progressbar.ProgressBar(...)
 
     def start(self):
+
         if self.bar!=None:
             self.bar.start()
+        else:
+            print("Upload started ", end='', flush=True)
 
     def update(self, value, max_value = 0):
         if self.bar!=None:
             self.bar.update(value, max_value)
+        else:
+            if self.counter%3==0:
+                print('.', end='',flush=True);
+            self.counter += 1
 
     def finish(self):
         if self.bar!=None:
             self.bar.finish()
+        else:
+            print(" finished")
 
 
 class OTA(kfcfw.OTAHelpers):
@@ -250,6 +260,7 @@ parser.add_argument("-W", "--no-wait", help="wait after upload until device has 
 parser.add_argument("--elf", help="copy firmware.(elf|bin) or littlefs.bin to directory", type=str, default=None)
 parser.add_argument("--ini", help="copy platform.ini and other files to elf directory", type=str, default=None)
 parser.add_argument("--sha1", help="use sha1 authentication", action="store_true", default=False)
+parser.add_argument("--skip-safemode", help="do not restart device in safemode before upload", action="store_true", default=False)
 args = parser.parse_args()
 
 ota = OTA(args)
@@ -267,15 +278,19 @@ sid = session.generate(args.user, args.pw)
 target = args.user + ":***@" + args.hostname
 
 if args.action in("flash", "upload", "littlefs", "uploadfs", "atmega"):
-    print("restarting device in safe mode...")
-    payload_sent = False
-    timeout = time.monotonic() + 10
-    socket = kfcfw.OTASerialConsole(args.hostname, sid)
-    while time.monotonic()<timeout and not socket.is_closed:
-        if socket.is_authenticated and payload_sent==False:
-            socket.ws.send('+rst s\r\n')
-            payload_sent = True
-        time.sleep(1)
+    if not args.skip_safemode:
+        print("restarting device in safe mode...")
+        payload_sent = False
+        timeout = time.monotonic() + 10
+        socket = kfcfw.OTASerialConsole(args.hostname, sid)
+        while time.monotonic()<timeout and not socket.is_closed:
+            if socket.is_authenticated and payload_sent==False:
+                socket.ws.send('+rst s\r\n')
+                payload_sent = True
+            time.sleep(1)
+    else:
+        print("skipped restarting device in safemode...")
+
     print("starting update....")
     ota.flash(url, args.action, target, sid)
 elif args.action=="factoryreset":

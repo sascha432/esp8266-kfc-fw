@@ -14,6 +14,32 @@
 #include <debug_helper_disable.h>
 #endif
 
+
+extern uint32_t gpio_clear;
+extern uint32_t gpio_set;
+extern uint32_t pinMask;
+extern uint8_t pin;
+
+static bool init_gpio();
+uint32_t gpio_clear;
+uint32_t gpio_set;
+uint32_t pinMask;
+uint8_t pin = 12;
+static bool initxxx = init_gpio();
+static bool init_gpio() {
+    pinMask=_BV(pin);
+    if (pin == 16) {
+        gpio_clear = (READ_PERI_REG(RTC_GPIO_OUT) & 0xfffffffeU);
+        gpio_set = gpio_clear | 1;
+    }
+    else {
+        gpio_set = pinMask;
+        gpio_clear = pinMask;
+    }
+    return true;
+}
+
+
 #if IOT_LED_MATRIX == 0
 
 Clock::ClockLoopOptions::ClockLoopOptions(ClockPlugin &plugin) :

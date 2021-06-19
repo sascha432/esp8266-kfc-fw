@@ -5,8 +5,10 @@
 #include <Arduino_compat.h>
 #include <EventScheduler.h>
 #include <web_socket.h>
+#include "NeoPixel_esp.h"
 #include "../src/plugins/plugins.h"
 #include "animation.h"
+
 
 #if DEBUG_IOT_CLOCK
 #include <debug_helper_enable.h>
@@ -323,8 +325,8 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
         }
     )
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKPX))) {
-        enableLoop(false);
         if (args.equalsIgnoreCase(0, F("ani"))) {
+            enableLoop(false);
             uint16_t x;
             uint16_t y;
             uint16_t n;
@@ -382,7 +384,11 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             _display.setDither(state);
             args.print(F("dithering %s"), state ? PSTR("enabled") : PSTR("disabled"));
         }
+        else if (args.equalsIgnoreCase(0, F("frames"))) {
+            args.print(F("aborted frames=%u"), NeoPixel_getAbortedFrames);
+        }
         else if (args.equalsIgnoreCase(0, F("reset"))) {
+            enableLoop(false);
             _display.setBrightness(32);
             _display.clear();
             _display.hideAll();
@@ -390,11 +396,13 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             args.print(F("display reset"));
         }
         else if (args.equalsIgnoreCase(0, F("clear")) || args.size() == 0) {
+            enableLoop(false);
             _display.clear();
             _display.show();
             args.print(F("display cleared"));
         }
         else if (args.size() >= 1 || args.requireArgs(4, 4)) {
+            enableLoop(false);
             int num = args.equalsIgnoreCase(0, F("all")) ? - 1 : args.toInt(0);
             Color color;
             bool get = false;

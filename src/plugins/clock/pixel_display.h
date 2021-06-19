@@ -519,7 +519,7 @@ namespace Clock {
             }
         }
 
-    private:
+    protected:
         CLEDController &_controller;
     };
 

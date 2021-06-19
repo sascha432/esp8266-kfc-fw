@@ -11,6 +11,8 @@
 #include <bitset>
 #include "pixel_display.h"
 
+#include "NeoPixel_esp.h"
+
 #if DEBUG_IOT_CLOCK
 #include <debug_helper_enable.h>
 #else
@@ -250,7 +252,8 @@ namespace SevenSegment {
 
         void show() {
             _applyMask();
-            FastLED.show();
+            // FastLED.show();
+            NeoPixel_espShow(IOT_CLOCK_WS2812_OUTPUT, (uint8_t *)__pixels.data(), __pixels.size() * 3, FastLED.getBrightness());
         }
 
         void show(uint8_t brightness) {

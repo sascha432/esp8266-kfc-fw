@@ -73,13 +73,26 @@ static inline uint32_t _getCycleCount(void)
     return ccount;
 }
 
-// ~213 byte IRAM~
-// 162 byte
+#if NEOPIXEL_HAVE_BRIGHTHNESS
+
+inline static uint8_t applyBrightness(uint8_t value, uint16_t brightness)
+{
+    return (value * brightness) >> 8;
+}
+
+#else
+
+inline static uint8_t applyBrightness(uint8_t value, uint16_t brightness)
+{
+    return value;
+}
+
+#endif
 
 #if defined(ESP8266)
-void PRECACHE_ATTR espShow(uint8_t pin, const uint8_t *pixels, uint16_t numBytes, const uint8_t *p, const uint8_t *end, uint32_t time0, uint32_t time1, uint32_t period, uint32_t pinMask, uint32_t gpio_clear, uint32_t gpio_set)
+void PRECACHE_ATTR espShow(uint8_t pin, uint16_t brightness, const uint8_t *pixels, uint16_t numBytes, const uint8_t *p, const uint8_t *end, uint32_t time0, uint32_t time1, uint32_t period, uint32_t pinMask, uint32_t gpio_clear, uint32_t gpio_set)
 #else
-void IRAM_ATTR espShow(uint8_t pin, const uint8_t *pixels, uint16_t numBytes, const uint8_t *p, const uint8_t *end, uint32_t time0, uint32_t time1, uint32_t period)
+void IRAM_ATTR espShow(uint8_t pin, uint16_t brightness, const uint8_t *pixels, uint16_t numBytes, const uint8_t *p, const uint8_t *end, uint32_t time0, uint32_t time1, uint32_t period)
 #endif
 {
 #if defined(ESP8266)
@@ -89,7 +102,11 @@ void IRAM_ATTR espShow(uint8_t pin, const uint8_t *pixels, uint16_t numBytes, co
     uint32_t c, t;
     uint32_t startTime = 0;
 
-    pix = *p++;
+    if (brightness) { // change range to 1-256 to avoid divison in applyBrightness()
+        brightness++;
+    }
+
+    pix = applyBrightness(*p++, brightness);
     mask = 0x80;
 
     for (t = time0;; t = time0) {
@@ -105,7 +122,7 @@ void IRAM_ATTR espShow(uint8_t pin, const uint8_t *pixels, uint16_t numBytes, co
         if (!(mask >>= 1)) { // Next bit/byte
             if (p >= end)
                 break;
-            pix = *p++;
+            pix = applyBrightness(*p++, brightness);
             mask = 0x80;
         }
     }
@@ -116,7 +133,7 @@ void IRAM_ATTR espShow(uint8_t pin, const uint8_t *pixels, uint16_t numBytes, co
 #endif
 }
 
-void NeoPixel_espShow(uint8_t pin, const uint8_t *pixels, uint16_t numBytes)
+void NeoPixel_espShow(uint8_t pin, const uint8_t *pixels, uint16_t numBytes, uint8_t brightness)
 {
     ets_intr_lock();
 
@@ -133,7 +150,7 @@ void NeoPixel_espShow(uint8_t pin, const uint8_t *pixels, uint16_t numBytes)
 #if FCPU == 80000000L && ARDUINO_ESP8266_VERSION_COMBINED < 0x030000
     if (esp_get_cpu_freq_mhz() == 160) {
         // TODO untested
-        // current the framework 3.0.0 does not allow dynamicly switching from 80 to 160MHz
+        // current the framework 3.0.0 does not allow dynamically switching from 80 to 160MHz
         time0 = CYCLES_800_T0H_160 - COMP_CYCLES_160;
         time1 = CYCLES_800_T1H_160 - COMP_CYCLES_160;
         period = CYCLES_800_160;
@@ -166,7 +183,7 @@ void NeoPixel_espShow(uint8_t pin, const uint8_t *pixels, uint16_t numBytes)
 #endif
 
 #if defined(ESP8266)
-    espShow(pin, pixels, numBytes, p, end, time0, time1, period, pinMask, gpio_clear, gpio_set);
+    espShow(pin, brightness, pixels, numBytes, p, end, time0, time1, period, pinMask, gpio_clear, gpio_set);
 #else
     espShow(pin, pixels, numBytes, p, end, time0, time1, period);
 #endif

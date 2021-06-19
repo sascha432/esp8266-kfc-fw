@@ -23,6 +23,10 @@ NeoPixel_espShow(WS2812_OUTPUT_PIN, pixels, sizeof(pixels));
 
 */
 
+#ifndef NEOPIXEL_HAVE_BRIGHTHNESS
+#define NEOPIXEL_HAVE_BRIGHTHNESS 1
+#endif
+
 struct SingleNeoPixel {
     uint8_t g;
     uint8_t r;
@@ -46,8 +50,16 @@ struct SingleNeoPixel {
     }
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void NeoPixel_fillColor(uint8_t *pixels, uint16_t numBytes, uint32_t color);
-void NeoPixel_espShow(uint8_t pin, const uint8_t *pixels, uint16_t numBytes);
+void NeoPixel_espShow(uint8_t pin, const uint8_t *pixels, uint16_t numBytes, uint8_t brightness = 255);
+
+#ifdef __cplusplus
+}
+#endif
 
 inline static void NeoPixel_fillColor(SingleNeoPixel *pixels, uint16_t numBytes, uint32_t color) {
     NeoPixel_fillColor(reinterpret_cast<uint8_t *>(pixels), numBytes, color);

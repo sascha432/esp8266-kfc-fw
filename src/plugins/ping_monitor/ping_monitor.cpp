@@ -17,6 +17,7 @@
 #include "plugins.h"
 #include "plugins_menu.h"
 #include "Utility/ProgMemHelper.h"
+#include <stl_ext/algorithm.h>
 
 #if DEBUG_PING_MONITOR
 #include <debug_helper_enable.h>
@@ -97,14 +98,9 @@ bool _pingMonitorResolveHost(const String &host, IPAddress &addr, PrintString &e
 
 void _pingMonitorValidateValues(int &count, int &timeout)
 {
-    if (count < Plugins::PingConfig::PingConfig_t::kRepeatCountMin) {
-        count = Plugins::PingConfig::PingConfig_t::kRepeatCountDefault;
-    }
-    count = std::min((int)Plugins::PingConfig::PingConfig_t::kRepeatCountMax, count);
-    if (timeout < Plugins::PingConfig::PingConfig_t::kTimeoutMin) {
-        timeout = Plugins::PingConfig::PingConfig_t::kTimeoutDefault;
-    }
-    timeout = std::min((int)Plugins::PingConfig::PingConfig_t::kTimeoutMax, timeout);
+    using PingConfig = Plugins::PingConfig::PingConfig_t;
+    count = std::clamp<int>(count, PingConfig::kTypeMinValueFor_count, PingConfig::kMaxValueFor_count);
+    timeout = std::clamp<int>(timeout, PingConfig::kMinValueFor_timeout, PingConfig::kMaxValueFor_timeout);
 }
 
 bool _pingMonitorBegin(const AsyncPingPtr &ping, const String &host, IPAddress &addr, int count, int timeout, PrintString &message)
@@ -144,31 +140,28 @@ private:
 #endif
 
 private:
-    friend PingMonitorTask;
+    friend PingMonitor::Task;
 
     void _setPingConsoleMenu(bool enable);
     void _setup();
     void _setupWebHandler();
 
-    PingMonitorTask::PingMonitorTaskPtr _task;
+    PingMonitor::TaskPtr _task;
 };
 
 static PingMonitorPlugin plugin;
 
-bool PingMonitorTask::hasStats()
+bool PingMonitor::Task::hasStats()
 {
-    if (!plugin._task) {
-        return false;
-    }
-    return plugin._task->_stats.hasData();
+    return static_cast<bool>(plugin._task);
 }
 
-PingMonitorTask::PingStatistics PingMonitorTask::getStats()
+PingMonitor::Statistics PingMonitor::Task::getStats()
 {
     if (plugin._task) {
         return plugin._task->_stats;
     }
-    return PingStatistics();
+    return PingMonitor::Statistics();
 }
 
 PROGMEM_DEFINE_PLUGIN_OPTIONS(
@@ -176,7 +169,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     "pingmon",          // name
     "Ping Monitor",     // friendly name
     "",                 // web_templates
-    "ping_monitor",     // config_forms
+    "ping-monitor",     // config_forms
     "",             // reconfigure_dependencies
     PluginComponent::PriorityType::PING_MONITOR,
     PluginComponent::RTCMemoryId::NONE,
@@ -210,7 +203,7 @@ void PingMonitorPlugin::_setup()
     // setup ping monitor background service
     if (config.service && config.interval && config.count && Plugins::Ping::getHostCount()) {
 
-        _task.reset(new PingMonitorTask(config.interval, config.count, config.timeout));
+        _task.reset(new PingMonitor::Task(config.interval, config.count, config.timeout));
         for(uint8_t i = 0; i < Plugins::Ping::kHostsMax; i++) {
             _task->addHost(Plugins::Ping::getHost(i));
         }
@@ -301,33 +294,34 @@ void PingMonitorPlugin::createConfigureForm(FormCallbackType type, const String 
 
     auto &mainGroup = form.addCardGroup(FSPGM(config));
 
-    form.addObjectGetterSetter(F("pwc"), cfg, Plugins::PingConfig::PingConfig_t::get_bits_console, Plugins::PingConfig::PingConfig_t::set_bits_console);
+    form.addObjectGetterSetter(F("pwc"), FormGetterSetter(cfg, console));
     form.addFormUI(F("Ping Console"), FormUI::BoolItems());
 
-    form.addObjectGetterSetter(F("pbt"), cfg, Plugins::PingConfig::PingConfig_t::get_bits_service, Plugins::PingConfig::PingConfig_t::set_bits_service);
+    form.addObjectGetterSetter(F("pbt"), FormGetterSetter(cfg, service));
     form.addFormUI(F("Ping Monitor Service"), FormUI::BoolItems());
 
-    form.addObjectGetterSetter(F("pc"), cfg, Plugins::PingConfig::PingConfig_t::get_bits_count, Plugins::PingConfig::PingConfig_t::set_bits_count);
+    form.addObjectGetterSetter(F("pc"), FormGetterSetter(cfg, count));
     form.addFormUI(F("Ping Count"));
-    form.addValidator(FormUI::Validator::Range(Plugins::PingConfig::PingConfig_t::kRepeatCountMin, Plugins::PingConfig::PingConfig_t::kRepeatCountMax));
+    cfg.addRangeValidatorFor_count(form);
 
-    form.add(F("pt"), _H_W_STRUCT_VALUE(cfg, timeout));
+    form.addObjectGetterSetter(F("pt"), FormGetterSetter(cfg, timeout));
     form.addFormUI(FSPGM(Timeout), FormUI::Suffix(FSPGM(milliseconds)));
-    form.addValidator(FormUI::Validator::Range(Plugins::PingConfig::PingConfig_t::kTimeoutMin, Plugins::PingConfig::PingConfig_t::kTimeoutMax));
+    cfg.addRangeValidatorFor_timeout(form);
 
     mainGroup.end();
 
     auto &serviceGroup = form.addCardGroup(F("pingbs"), FSPGM(ping_monitor_service), cfg.service);
 
     PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, 8, h);
-    static_assert(8 == Plugins::Ping::kHostsMax, "change value");
+    static_assert(8 == Plugins::Ping::kHostsMax, "adjust value above");
 
     for(uint8_t i = 0; i < Plugins::Ping::kHostsMax; i++) {
 
         form.addCallbackGetterSetter<String>(F_VAR(h, i), [i](String &str, Field::BaseField &, bool store) {
             if (store) {
                 Plugins::Ping::setHost(i, str.c_str());
-            } else {
+            }
+            else {
                 str = Plugins::Ping::getHost(i);
             }
             return true;
@@ -341,10 +335,9 @@ void PingMonitorPlugin::createConfigureForm(FormCallbackType type, const String 
 
     }
 
-    //form.addReference(F("pi"), cfg.interval);
-    form.add(F("pi"), _H_W_STRUCT_VALUE(cfg, interval));
+    form.addObjectGetterSetter(F("pi"), FormGetterSetter(cfg, interval));
     form.addFormUI(FSPGM(Interval), FormUI::Suffix(FSPGM(minutes)));
-    form.addValidator(FormUI::Validator::Range(Plugins::PingConfig::PingConfig_t::kIntervalMin, Plugins::PingConfig::PingConfig_t::kIntervalMax));
+    cfg.addRangeValidatorFor_interval(form);
 
     serviceGroup.end();
 

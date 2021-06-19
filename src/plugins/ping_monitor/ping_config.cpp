@@ -7,7 +7,12 @@
 
 namespace KFCConfigurationClasses {
 
-    Plugins::PingConfig::PingConfig_t::PingConfig_t() : interval(kIntervalDefault), timeout(kTimeoutDefault), count(4), console(true), service(false)
+    Plugins::PingConfig::PingConfig_t::PingConfig_t() :
+        interval(kDefaultValueFor_interval),
+        timeout(kDefaultValueFor_timeout),
+        count(kDefaultValueFor_count),
+        console(kDefaultValueFor_console),
+        service(kDefaultValueFor_service)
     {
     }
 
@@ -68,19 +73,17 @@ namespace KFCConfigurationClasses {
             case 7:
                 return getHost8();
             default:
-                return nullptr;
+                break;
         }
+        return emptyString.c_str();
     }
 
     uint8_t Plugins::Ping::getHostCount()
     {
         uint8_t count = 0;
         for(uint8_t i = 0; i < kHostsMax; i++) {
-            auto hostname = getHost(i);
-            while(isspace(*hostname)) {
-                hostname++;
-            }
-            if (*hostname) {
+            String hostname = getHost(i);
+            if (hostname.trim().length()) {
                 count++;
             }
         }
@@ -92,12 +95,10 @@ namespace KFCConfigurationClasses {
         for(uint8_t i = 0; i < kHostsMax; i++) {
             String host = getHost(i);
             auto length = host.length();
-            host.trim();
-            if (host.length() == 0) { // empty, find a replacement
+            if (host.trim().length() == 0) { // empty, find a replacement
                 for(uint8_t j = i + 1; j < kHostsMax; j++) {
                     String host2 = getHost(j);
-                    host2.trim();
-                    if (host2.length() != 0) {
+                    if (host2.trim().length()) {
                         setHost(i, host2.c_str());
                         setHost(j, emptyString.c_str());
                         break;

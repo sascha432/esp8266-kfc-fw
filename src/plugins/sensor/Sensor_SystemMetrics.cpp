@@ -199,7 +199,7 @@ String Sensor_SystemMetrics::_getMetricsJson() const
     );
 
 #if PING_MONITOR_SUPPORT
-    PingMonitorTask::addToJson(jsonObj);
+    PingMonitor::Task::addToJson(jsonObj);
 #endif
     return jsonObj.toString();
 }

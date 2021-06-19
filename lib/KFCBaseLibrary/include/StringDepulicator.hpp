@@ -142,6 +142,7 @@ inline const char *StringDeduplicator::attachString(const char *str)
 
 inline const char *StringDeduplicator::attachString(const __FlashStringHelper *str)
 {
+    __ASSERT_PTR(str);
     return attachString(reinterpret_cast<const char *>(str));
 }
 

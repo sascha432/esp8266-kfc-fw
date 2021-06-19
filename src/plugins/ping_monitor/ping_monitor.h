@@ -11,7 +11,7 @@
 #include "../src/plugins/mqtt/mqtt_json.h"
 
 #ifndef DEBUG_PING_MONITOR
-#define DEBUG_PING_MONITOR                  0
+#define DEBUG_PING_MONITOR                  1
 #endif
 
 #define __LDBG_AsyncPingResponse(type, response) \
@@ -28,31 +28,33 @@ bool _pingMonitorBegin(const AsyncPingPtr &ping, const String &host, IPAddress &
 void _pingMonitorResolveHostVariables(String &host);
 void _pingMonitorShutdownWebSocket();
 
-class WsPingClient : public WsClient {
-public:
-    WsPingClient(AsyncWebSocketClient *client);
-    virtual ~WsPingClient();
+namespace PingMonitor {
 
-    static WsClient *getInstance(AsyncWebSocketClient *socket);
+    using UnnamedObject = MQTT::Json::UnnamedObject;
 
-    virtual void onText(uint8_t *data, size_t len) override;
-    virtual void onDisconnect(uint8_t *data, size_t len) override;
-    virtual void onError(WsErrorType type, uint8_t *data, size_t len) override;
-
-    AsyncPingPtr &getPing();
-
-private:
-    void _cancelPing();
-    AsyncPingPtr _ping;
-};
-
-class PingMonitorTask {
-public:
-    using PingMonitorTaskPtr = std::shared_ptr<PingMonitorTask>;
-
-    class PingStatistics {
+    class WsPingClient : public WsClient {
     public:
-        PingStatistics();
+        WsPingClient(AsyncWebSocketClient *client);
+        virtual ~WsPingClient();
+
+        static WsClient *getInstance(AsyncWebSocketClient *socket);
+
+        virtual void onText(uint8_t *data, size_t len) override;
+        virtual void onDisconnect(uint8_t *data, size_t len) override;
+        virtual void onError(WsErrorType type, uint8_t *data, size_t len) override;
+
+        AsyncPingPtr &getPing();
+
+    private:
+        void _cancelPing();
+        AsyncPingPtr _ping;
+    };
+
+    class Task;
+
+    class Statistics {
+    public:
+        Statistics();
 
         void clear();
 
@@ -68,7 +70,7 @@ public:
         bool hasData() const;
 
     private:
-        friend PingMonitorTask;
+        friend Task;
 
         void addReceived(uint32_t millis);
         void addLost();
@@ -83,57 +85,66 @@ public:
         float _averageResponseTime;
     };
 
-    class PingHost {
+    class Host {
     public:
-        PingHost(const String &host);
+        Host(const String &host);
+        // Host(String &&host);
 
-        String getHostname() const;
-        PingStatistics &getStats();
-        const PingStatistics &getStats() const;
+        const String &getHostname() const;
+        Statistics &getStats();
+        const Statistics &getStats() const;
 
     private:
         String _host;
-        PingStatistics _stats;
+        Statistics _stats;
     };
 
+    using TaskPtr = std::shared_ptr<Task>;
+    using HostVector = std::vector<Host>;
 
-    typedef std::vector<PingHost> PingVector;
+    class Task {
+    public:
+        Task(uint16_t interval, uint8_t count, uint16_t timeout);
+        ~Task();
 
-    PingMonitorTask(uint16_t interval, uint8_t count, uint16_t timeout);
-    ~PingMonitorTask();
+        // empty hosts are ignored
+        void addHost(String host);
 
-    // empty hosts are ignored
-    void addHost(String host);
+        // start service
+        void start();
+        // stop service
+        void stop();
 
-    // start service
-    void start();
-    // stop service
-    void stop();
+        // print statistics
+        void printStats(Print &out);
 
-    // print statistics
-    void printStats(Print &out);
+        static bool hasStats();
+        static Statistics getStats();
+        static void addToJson(UnnamedObject &obj);
 
-    static bool hasStats();
-    static PingStatistics getStats();
-    static void addToJson(MQTT::Json::UnnamedObjectWriter &obj);
+    private:
+        void _addAnswer(bool answer, uint32_t time);
+        // ping current host
+        void _begin();
+        // store results from last ping, select next server and schedule next _begin() call
+        // if error is set, the delay is reduced to 10 seconds
+        void _next(bool error = false);
+        // cancel current ping operation and remove timer
+        void _cancelPing();
 
-private:
-    void _addAnswer(bool answer, uint32_t time);
-    // ping current host
-    void _begin();
-    // store results from last ping, select next server and schedule next _begin() call
-    // if error is set, the delay is reduced to 10 seconds
-    void _next(bool error = false);
-    // cancel current ping operation and remove timer
-    void _cancelPing();
+        Event::Timer _nextTimer;
+        HostVector _pingHosts;
+        AsyncPingPtr _ping;
+        Statistics _stats;
+        uint16_t _interval;
+        uint16_t _timeout;
+        bool _successFlag;
+        uint8_t _currentServer;
+        uint8_t _count;
+    };
 
-    uint8_t _currentServer;
-    uint8_t _count : 7;
-    uint8_t _successFlag : 1;
-    uint16_t _interval;
-    uint16_t _timeout;
-    Event::Timer _nextTimer;
-    PingVector _pingHosts;
-    AsyncPingPtr _ping;
-    PingStatistics _stats;
-};
+    static constexpr auto kTaskSize = sizeof(Task);
+
+}
+
+#include "ping_monitor.hpp"

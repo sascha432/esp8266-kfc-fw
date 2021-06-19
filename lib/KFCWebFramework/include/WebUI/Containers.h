@@ -6,6 +6,7 @@
 
 #include <Arduino_compat.h>
 #include <vector>
+#include <string.h>
 #include <PrintString.h>
 #include "Types.h"
 #include "WebUI/Config.h"

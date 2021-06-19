@@ -64,7 +64,7 @@ WsClientAsyncWebSocket::WsClientAsyncWebSocket(const String &url, WsClientAsyncW
 
 WsClientAsyncWebSocket::~WsClientAsyncWebSocket()
 {
-    __DBG_printf("this=%p _ptr=%p *_ptr=%p clients=%u count=%u", this, _ptr, _ptr ? *_ptr : nullptr, getClients().length(), count());
+    __LDBG_printf("this=%p _ptr=%p *_ptr=%p clients=%u count=%u", this, _ptr, _ptr ? *_ptr : nullptr, getClients().length(), count());
     disableSocket();
     if (_ptr) {
         if (*_ptr != this) {
@@ -82,14 +82,14 @@ void WsClientAsyncWebSocket::shutdown()
 
 void WsClientAsyncWebSocket::disableSocket()
 {
-    __DBG_printf("count=%u authenticated=%u", WsClient::_webSockets.size(), _authenticatedClients);
+    __LDBG_printf("count=%u authenticated=%u", WsClient::_webSockets.size(), _authenticatedClients);
     _authenticatedClients = 0;
     WsClient::_webSockets.erase(std::remove(WsClient::_webSockets.begin(), WsClient::_webSockets.end(), this), WsClient::_webSockets.end());
 }
 
 void WsClientAsyncWebSocket::addWebSocketPtr(WsClientAsyncWebSocket **ptr)
 {
-    __DBG_printf("this=%p ptr=%u *ptr=%p _ptr=%p *_ptr=%p", this, ptr, ptr ? *ptr : nullptr, _ptr, _ptr ? *_ptr : nullptr);
+    __LDBG_printf("this=%p ptr=%u *ptr=%p _ptr=%p *_ptr=%p", this, ptr, ptr ? *ptr : nullptr, _ptr, _ptr ? *_ptr : nullptr);
     _ptr = ptr;
     *_ptr = this;
 }

@@ -13,21 +13,11 @@
             typedef struct __attribute__packed__ PingConfig_t {
                 using Type = PingConfig_t;
 
-                uint16_t interval;                      // minutes
-                uint16_t timeout;                       // ms
-                CREATE_UINT8_BITFIELD(count, 6);        // number of pings
-                CREATE_UINT8_BITFIELD(console, 1);      // ping console @ utilities
-                CREATE_UINT8_BITFIELD(service, 1);      // ping monitor background service
-
-                static constexpr uint8_t kRepeatCountMin = 1;
-                static constexpr uint8_t kRepeatCountMax = (1 << kBitCountFor_count) - 1;
-                static constexpr uint8_t kRepeatCountDefault = 4;
-                static constexpr uint16_t kIntervalMin = 1;
-                static constexpr uint16_t kIntervalMax = (24 * 60) * 30;
-                static constexpr uint16_t kIntervalDefault = 5;
-                static constexpr uint16_t kTimeoutMin = 100;
-                static constexpr uint16_t kTimeoutMax = 60000;
-                static constexpr uint16_t kTimeoutDefault = 5000;
+                CREATE_UINT16_BITFIELD_MIN_MAX(interval, 16, 1, (24 * 60) * 30, 5);
+                CREATE_UINT16_BITFIELD_MIN_MAX(timeout, 16, 100, 60000, 5000);
+                CREATE_UINT8_BITFIELD_MIN_MAX(count, 6, 0, 63, 4);
+                CREATE_UINT8_BITFIELD_MIN_MAX(console, 1, 0, 1, true);
+                CREATE_UINT8_BITFIELD_MIN_MAX(service, 1, 0, 1, false);
 
                 PingConfig_t();
 

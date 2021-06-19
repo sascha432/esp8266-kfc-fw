@@ -39,12 +39,16 @@
 extern IOExpander::PCF8574 _PCF8574;
 #endif
 #include "../src/plugins/plugins.h"
-#include "umm_malloc/umm_malloc_cfg.h"
+#include <umm_malloc/umm_malloc_cfg.h>
+#if ARDUINO_ESP8266_VERSION_COMBINED >= 0x030000
+#include <umm_malloc/umm_heap_select.h>
+#endif
 
 #include "NeoPixel_esp.h"
 
 #if ESP8266
 #include "core_esp8266_waveform.h"
+#include "core_version.h"
 #endif
 
 #if DEBUG_AT_MODE
@@ -1489,9 +1493,28 @@ void at_mode_serial_handle_event(String &commandString)
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(METRICS))) {
 #if 1
 
+        #ifndef ARDUINO_ESP8266_RELEASE_EX
+        #define ARDUINO_ESP8266_RELEASE_EX ""
+        #endif
+
         args.print(F("Device name: %s"), System::Device::getName());
+        args.print(F("Framework Arduino ESP8266 " _STRINGIFY(ARDUINO_ESP8266_GIT_VER) " " _STRINGIFY(ARDUINO_ESP8266_GIT_DESC) " " ARDUINO_ESP8266_RELEASE_EX));
         args.print(F("Uptime: %u seconds / %s"), getSystemUptime(), formatTime(getSystemUptime(), true).c_str());
         args.print(F("Free heap/fragmentation: %u / %u"), ESP.getFreeHeap(), ESP.getHeapFragmentation());
+#if ARDUINO_ESP8266_VERSION_COMBINED >= 0x030000
+    #ifdef UMM_HEAP_IRAM
+        {
+            HeapSelectIram ephemeral;
+            args.print(F("Free IRAM: %u"), ESP.getFreeHeap());
+        }
+    #endif
+    #if (UMM_NUM_HEAPS != 1)
+        {
+            HeapSelectDram ephemeral;
+            args.print(F("Free DRAM: %u"), ESP.getFreeHeap());
+        }
+    #endif
+#endif
         args.print(F("Heap start/size: 0x%x/%u"), SECTION_HEAP_START_ADDRESS, SECTION_HEAP_END_ADDRESS - SECTION_HEAP_START_ADDRESS);
         args.print(F("irom0.text: 0x%08x-0x%08x"), SECTION_IROM0_TEXT_START_ADDRESS, SECTION_IROM0_TEXT_END_ADDRESS);
         args.print(F("CPU frequency: %uMHz"), ESP.getCpuFreqMHz());

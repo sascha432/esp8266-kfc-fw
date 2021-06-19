@@ -12,6 +12,7 @@
 - support for GPIO16
 - no IRAM required, using precaching
 - support for uint8_t and SingleNeoPixel(3 bytes)
+- support for brightness
 
 example:
 

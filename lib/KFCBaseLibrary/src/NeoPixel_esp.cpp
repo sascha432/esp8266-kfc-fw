@@ -11,9 +11,15 @@
 #endif
 
 #include <push_optimize.h>
-#pragma GCC optimize ("O2")
+#pragma GCC optimize ("O3")
 
 #include "NeoPixel_esp.h"
+
+#if NEOPIXEL_ALLOW_INTERRUPTS
+
+uint32_t NeoPixel_getAbortedFrames = 0;
+
+#endif
 
 void NeoPixel_fillColor(uint8_t *pixels, uint16_t numBytes, uint32_t color)
 {
@@ -26,6 +32,8 @@ void NeoPixel_fillColor(uint8_t *pixels, uint16_t numBytes, uint32_t color)
 }
 
 #if defined(ESP8266)
+
+#define CLKS_PER_US         (F_CPU / 1000000)
 
 // compensation for if (pin == ...)
 // high 400-410ns low 800-810ns period 1300ns 769kHz
@@ -64,25 +72,23 @@ void NeoPixel_fillColor(uint8_t *pixels, uint16_t numBytes, uint32_t color)
 #define CYCLES_800_160      (160000000L / 800000) // 1.25us per bit
 
 
-static uint32_t _getCycleCount(void) __attribute__((always_inline));
-static inline uint32_t _getCycleCount(void)
+__attribute__((always_inline)) inline static uint32_t _getCycleCount(void)
 {
     uint32_t ccount;
-    __asm__ __volatile__("rsr %0,ccount"
-                         : "=a"(ccount));
+    __asm__ __volatile__("rsr %0,ccount" : "=a"(ccount));
     return ccount;
 }
 
 #if NEOPIXEL_HAVE_BRIGHTHNESS
 
-inline static uint8_t applyBrightness(uint8_t value, uint16_t brightness)
+__attribute__((always_inline)) inline static uint8_t applyBrightness(uint8_t value, uint16_t brightness)
 {
-    return (value * brightness) >> 8;
+    return (static_cast<uint16_t>(value) * brightness) >> 8;
 }
 
 #else
 
-inline static uint8_t applyBrightness(uint8_t value, uint16_t brightness)
+__attribute__((always_inline)) inline static uint8_t applyBrightness(uint8_t value, uint16_t brightness)
 {
     return value;
 }
@@ -90,12 +96,12 @@ inline static uint8_t applyBrightness(uint8_t value, uint16_t brightness)
 #endif
 
 #if defined(ESP8266)
-void PRECACHE_ATTR espShow(uint8_t pin, uint16_t brightness, const uint8_t *pixels, uint16_t numBytes, const uint8_t *p, const uint8_t *end, uint32_t time0, uint32_t time1, uint32_t period, uint32_t pinMask, uint32_t gpio_clear, uint32_t gpio_set)
+void NEOPIXEL_ESPSHOW_FUNC_ATTR espShow(uint8_t pin, uint16_t brightness, const uint8_t *p, const uint8_t *end, uint32_t time0, uint32_t time1, uint32_t period, uint32_t pinMask, uint32_t gpio_clear, uint32_t gpio_set)
 #else
-void IRAM_ATTR espShow(uint8_t pin, uint16_t brightness, const uint8_t *pixels, uint16_t numBytes, const uint8_t *p, const uint8_t *end, uint32_t time0, uint32_t time1, uint32_t period)
+void IRAM_ATTR espShow(uint8_t pin, uint16_t brightness, const uint8_t *p, const uint8_t *end, uint32_t time0, uint32_t time1, uint32_t period)
 #endif
 {
-#if defined(ESP8266)
+#if NEOPIXEL_USE_PRECACHING
     PRECACHE_START(NeoPixel_espShow);
 #endif
     uint8_t pix, mask;
@@ -125,10 +131,23 @@ void IRAM_ATTR espShow(uint8_t pin, uint16_t brightness, const uint8_t *pixels, 
             pix = applyBrightness(*p++, brightness);
             mask = 0x80;
         }
+
+#if NEOPIXEL_ALLOW_INTERRUPTS
+        // allow interrupts
+        ets_intr_unlock();
+        ets_delay_us(1);
+        ets_intr_lock();
+        if ((_getCycleCount() - startTime) > period - 1000/*TODO find best value*/) {
+            // abort if the interrupts took too much time
+            NeoPixel_getAbortedFrames++;
+            return;
+        }
+#endif
     }
     while ((_getCycleCount() - startTime) < period)
         ; // Wait for last bit
-#if defined(ESP8266)
+
+#if NEOPIXEL_USE_PRECACHING
     PRECACHE_END(NeoPixel_espShow);
 #endif
 }
@@ -169,23 +188,19 @@ void NeoPixel_espShow(uint8_t pin, const uint8_t *pixels, uint16_t numBytes, uin
     uint32_t gpio_clear;
     uint32_t gpio_set;
     if (pin == 16) {
-        // gpio_clear_address = RTC_GPIO_OUT;
-        // gpio_set_address = RTC_GPIO_OUT;
         gpio_clear = (READ_PERI_REG(RTC_GPIO_OUT) & 0xfffffffeU);
         gpio_set = gpio_clear | 1;
     }
     else {
-        // gpio_clear_address = PERIPHS_GPIO_BASEADDR + GPIO_OUT_W1TC_ADDRESS;
-        // gpio_set_address = PERIPHS_GPIO_BASEADDR + GPIO_OUT_W1TS_ADDRESS;
         gpio_set = pinMask;
         gpio_clear = pinMask;
     }
 #endif
 
 #if defined(ESP8266)
-    espShow(pin, brightness, pixels, numBytes, p, end, time0, time1, period, pinMask, gpio_clear, gpio_set);
+    espShow(pin, brightness, p, end, time0, time1, period, pinMask, gpio_clear, gpio_set);
 #else
-    espShow(pin, pixels, numBytes, p, end, time0, time1, period);
+    espShow(pin, brightness, p, end, time0, time1, period);
 #endif
 
     ets_intr_unlock();

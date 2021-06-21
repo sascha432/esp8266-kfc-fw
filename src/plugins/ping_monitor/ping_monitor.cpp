@@ -29,7 +29,7 @@ AUTO_STRING_DEF(ping_monitor_response, "%d bytes from %s: icmp_seq=%d ttl=%d tim
 AUTO_STRING_DEF(ping_monitor_end_response, "Total answer from %s sent %d recevied %d time %u ms")
 AUTO_STRING_DEF(ping_monitor_ethernet_detected, "Detected eth address %s")
 AUTO_STRING_DEF(ping_monitor_request_timeout, "Request timed out.")
-AUTO_STRING_DEF(ping_monitor_service_status, "Ping monitor service has been %s")
+AUTO_STRING_DEF(ping_monitor_service_status, "Ping monitor service has been %s%s")
 AUTO_STRING_DEF(ping_monitor_ping_for_hostname_failed, "Pinging %s failed")
 AUTO_STRING_DEF(ping_monitor_cancelled, "Ping cancelled")
 AUTO_STRING_DEF(ping_monitor_service, "Ping Monitor Service")
@@ -356,7 +356,6 @@ bool PingMonitorPlugin::atModeHandler(AtModeArgs &args)
             if (PingMonitor::resolveHost(host, addr, message)) {
                 int count = args.toInt(1);
                 int timeout = args.toInt(2);
-
 
                 _ping->on(true, [&serial](const AsyncPingResponse &response) {
                     __LDBG_AsyncPingResponse(true, response);

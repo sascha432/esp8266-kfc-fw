@@ -355,7 +355,7 @@ PROGMEM_STRING_DEF(ping_monitor_ping_for_hostname_failed, "Pinging %s failed");
 PROGMEM_STRING_DEF(ping_monitor_request_timeout, "Request timed out.");
 PROGMEM_STRING_DEF(ping_monitor_response, "%d bytes from %s: icmp_seq=%d ttl=%d time=%u ms");
 PROGMEM_STRING_DEF(ping_monitor_service, "Ping Monitor Service");
-PROGMEM_STRING_DEF(ping_monitor_service_status, "Ping monitor service has been %s");
+PROGMEM_STRING_DEF(ping_monitor_service_status, "Ping monitor service has been %s%s");
 PROGMEM_STRING_DEF(ping_monitor_unknown_service, "ping: %s: Name or service not known");
 PROGMEM_STRING_DEF(placeholder, "placeholder");
 PROGMEM_STRING_DEF(plugin_name_rd, "rd");

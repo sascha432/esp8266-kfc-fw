@@ -198,19 +198,23 @@ namespace PingMonitor {
                 return true;
             });
 
+            PGM_P state;
+
             if (WiFi.isConnected()) {
                 __LDBG_print("wifi already connected");
                 _begin();
+                state = emptyString.c_str();
             }
             else {
                 __LDBG_print("waiting for wifi connection");
+                state = PSTR(". Waiting for WiFi to connect...");
                 WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTED, [this](WiFiCallbacks::EventType events, void *payload) {
                     WiFiCallbacks::remove(WiFiCallbacks::EventType::ANY, this);
                     _begin();
                 }, this);
             }
 
-            Logger_notice(FSPGM(ping_monitor_service_status), FSPGM(started));
+            Logger_notice(FSPGM(ping_monitor_service_status), SPGM(started), state);
         }
         else {
             __LDBG_printf("no hosts");
@@ -220,9 +224,10 @@ namespace PingMonitor {
     void Task::stop()
     {
         __LDBG_printf("hosts=%u", _pingHosts.size());
+        WiFiCallbacks::remove(WiFiCallbacks::EventType::ANY, this);
         _cancelPing();
         _pingHosts.clear();
-        Logger_notice(FSPGM(ping_monitor_service_status), FSPGM(stopped));
+        Logger_notice(FSPGM(ping_monitor_service_status), SPGM(stopped), emptyString.c_str());
     }
 
     void Task::_cancelPing()

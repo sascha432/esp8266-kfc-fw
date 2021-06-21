@@ -165,7 +165,6 @@ void PingMonitorPlugin::_setup()
             for(uint8_t i = 0; i < size; i++) {
                 _task->addHost(hosts[i]);
             }
-
             _task->start();
         }
     }
@@ -198,13 +197,7 @@ void PingMonitorPlugin::setup(SetupModeType mode, const PluginComponents::Depend
 
 void PingMonitorPlugin::reconfigure(const String &source)
 {
-    // if (String_equals(source, SPGM(http))) {
-    //     _setupWebHandler();
-    // }
-    // else
-    {
-        _setup();
-    }
+    _setup();
 }
 
 void PingMonitorPlugin::shutdown()
@@ -255,11 +248,11 @@ void PingMonitorPlugin::createConfigureForm(FormCallbackType type, const String 
     __LDBG_printf("type=%u name=%s", type, formName.c_str());
     if (type == FormCallbackType::SAVE) {
         auto hosts = Plugins::Ping::getHosts();
-        // hosts.clear();
+        hosts.clear();
         for (const auto &field: form.getFields()) {
-            if (pgm_read_byte(field->getName()) == 'h') {
-                __DBG_printf("%s=%s", field->getName(), field->getValue());
-                // hosts.append(field->getValue().trim());
+            if (strncmp_P_P(reinterpret_cast<PGM_P>(field->getName()), PSTR("h_"), 2) == 0) {
+                __LDBG_printf("%s=%s", field->getName(), field->getValue().c_str());
+                hosts.append(field->getValue().trim());
             }
         }
         return;
@@ -299,25 +292,8 @@ void PingMonitorPlugin::createConfigureForm(FormCallbackType type, const String 
     PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, 8, h);
     static_assert(8 == Plugins::Ping::kHostsMax, "adjust value above");
 
-    // if (request->methodToString() == F("POST")) {
-
-    // }
-
     for(uint8_t i = 0; i < Plugins::Ping::kHostsMax; i++) {
-
-        form.addCallbackGetterSetter<String>(F_VAR(h, i), [i](String &str, Field::BaseField &, bool store) {
-            __LDBG_printf("host callback store=%u host=%s num=%u", store, str.c_str(), i);
-            using Ping = Plugins::Ping;
-            if (store) {
-                // Ping::setHost(i, str.trim().c_str(), true);
-                __DBG_printf("trimmed len=%u", str.length());
-            }
-            else {
-                str = Plugins::Ping::getHosts()[i];
-            }
-            return true;
-        }, InputFieldType::TEXT);
-
+        form.add(F_VAR(h, i), Plugins::Ping::getHosts()[i]);
         form.addFormUI(FormUI::Label(PrintString(F("Host %u"), i + 1)));
         form.addValidator(FormUI::Validator::Length(0, Plugins::Ping::HostnameType::kMaxLength));
         form.addValidator(FormUI::Validator::HostnameEx(FormUI::Validator::Hostname::AllowedType::EMPTY)).emplace_back(FSPGM(_var_gateway, "${gateway}"));

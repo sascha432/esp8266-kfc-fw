@@ -57,28 +57,32 @@ String ConfigurationParameter::toString() const
 
 bool ConfigurationParameter::_compareData(const uint8_t *data, size_type length) const
 {
+    // if (_param.isString() && length == 0) {
+    //     length++;
+    // }
     return _param.hasData() && _param.length() == length && memcmp_P(_param.data(), data, length) == 0;
 }
 
 void ConfigurationParameter::setData(Configuration &conf, const uint8_t *data, size_type length)
 {
-    __LDBG_printf("%s set_size=%u %s", toString().c_str(), length, Configuration::__debugDumper(*this, data, length).c_str());
+    __DBG_printf("%s set_size=%u %s", toString().c_str(), length, Configuration::__debugDumper(*this, data, length).c_str());
     if (_compareData(data, length)) {
         __LDBG_printf("compareData=true");
         return;
     }
     if (_param.isString() && length == 0) {
-        // we have an empty string, set length to 1 and fill with 2 NUL bytes
-        // otherwise the string will not be stored and created in write mode each time its access, using 24 bytes instead of 8
+        // we have an empty string, set length to 2 and fill with NUL bytes
+        // otherwise the string will not be stored and created in write mode each time being accessed, using 24 bytes instead of 8
         length = 1;
         _makeWriteable(conf, length);
-        *((uint16_t *)_param.data()) = 0;
+        __DBG_printf("empty string fill=%u sizeof=%u len=%u", _param._length, _param.sizeOf(length), length);
+        std::fill_n(_param.data(), length + 1, 0);
     }
     else {
         _makeWriteable(conf, length);
-        memcpy_P(_param.data(), data, length);
+        memmove_P(_param.data(), data, length); // for strings, we do not copy trailing NUL byte if length != 0
     }
-    __LDBG_assert_printf(_param.isString() == false || _param.string()[length] == 0, "%s NUL byte missing", toString().c_str());
+    // __LDBG_assert_printf(_param.isString() == false || _param.string()[length] == 0, "%s NUL byte missing", toString().c_str());
 }
 
 const char *ConfigurationParameter::getString(Configuration &conf, uint16_t offset)
@@ -118,7 +122,7 @@ uint16_t ConfigurationParameter::read(Configuration &conf, uint16_t offset)
 
 void ConfigurationParameter::_makeWriteable(Configuration &conf, size_type length)
 {
-    __LDBG_printf("%s length=%u is_writable=%u _writeable=%p ", toString().c_str(), length, _param.isWriteable(), _param._writeable);
+    __DBG_printf("%s length=%u is_writable=%u _writeable=%p ", toString().c_str(), length, _param.isWriteable(), _param._writeable);
     if (_param.isWriteable()) {
         _param.resizeWriteable(length, *this, conf);
     }

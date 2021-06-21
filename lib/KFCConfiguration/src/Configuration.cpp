@@ -219,6 +219,7 @@ const uint8_t *Configuration::getBinary(HandleType handle, size_type &length)
     uint16_t offset;
     auto param = _findParam(ParameterType::BINARY, handle, offset);
     if (param == _params.end()) {
+        length = 0;
         return nullptr;
     }
     return param->getBinary(*this, length, offset);
@@ -234,7 +235,7 @@ void *Configuration::getWriteableBinary(HandleType handle, size_type length)
 
 void Configuration::_setString(HandleType handle, const char *string, size_type length, size_type maxLength)
 {
-    __LDBG_printf("handle=%04x length=%u max_len=%u", handle, length, maxLength);
+    __DBG_printf("handle=%04x length=%u max_len=%u", handle, length, maxLength);
     if (maxLength != (size_type)~0U) {
         if (length >= maxLength - 1) {
             length = maxLength - 1;
@@ -246,7 +247,7 @@ void Configuration::_setString(HandleType handle, const char *string, size_type 
 void Configuration::_setString(HandleType handle, const char *string, size_type length)
 {
     __LDBG_measure_time(handle);
-    __LDBG_printf("handle=%04x length=%u", handle, length);
+    __DBG_printf("handle=%04x length=%u", handle, length);
     uint16_t offset;
     auto &param = _getOrCreateParam(ParameterType::STRING, handle, offset);
     param.setData(*this, (const uint8_t *)string, length);
@@ -486,25 +487,14 @@ bool Configuration::_readParams()
     return false;
 }
 
-#if DEBUG_CONFIGURATION
-
-String Configuration::__debugDumper(ConfigurationParameter &param, const uint8_t *data, size_t len, bool progmem)
+String Configuration::__debugDumper(ConfigurationParameter &param, const uint8_t *data, size_t len)
 {
     PrintString str = F("data");
-progmem=true;// treat everything as PROGMEM
     if (param._param.isString()) {
         str.printf_P(PSTR("[%u]='"), len);
-        if (progmem) {
-            auto ptr = data;
-            while (len--) {
-                str += (char)pgm_read_byte(ptr++);
-            }
-        }
-        else {
-            auto ptr = data;
-            while (len--) {
-                str += (char)*ptr++;
-            }
+        auto ptr = data;
+        while (len--) {
+            str += (char)pgm_read_byte(ptr++);
         }
         str += '\'';
     }
@@ -512,18 +502,8 @@ progmem=true;// treat everything as PROGMEM
         str += '=';
         DumpBinary dump(str);
         dump.setPerLine((uint8_t)len);
-        if (progmem) {
-            auto pPtr = malloc(len);
-            memcpy_P(pPtr, data, len);
-            dump.dump((uint8_t *)pPtr, len);
-            free(pPtr);
-        }
-        else {
-            dump.dump(data, len);
-        }
+        dump.dump(data, len);
         str.rtrim();
     }
     return str;
 }
-
-#endif

@@ -312,14 +312,11 @@ public:
 // ------------------------------------------------------------------------
 // DEBUG
 
-#if DEBUG_CONFIGURATION
+    static String __debugDumper(ConfigurationParameter &param, const uint8_t *data, size_t len);
 
     static String __debugDumper(ConfigurationParameter &param, const __FlashStringHelper *data, size_t len) {
-        return __debugDumper(param, (uint8_t *)data, len, true);
+        return __debugDumper(param, reinterpret_cast<const uint8_t *>(data), len);
     }
-    static String __debugDumper(ConfigurationParameter &param, const uint8_t *data, size_t len, bool progmem = false);
-
-#endif
 
 };
 

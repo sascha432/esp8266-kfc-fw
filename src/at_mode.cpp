@@ -1384,7 +1384,7 @@ void at_mode_serial_handle_event(String &commandString)
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(FLASH))) {
 /*
 
-+flash=r,0x405ab000,32
++flash=r,0x405ab000,0,32
 
 */
         auto cmdStr = args.get(0);
@@ -1419,7 +1419,7 @@ void at_mode_serial_handle_event(String &commandString)
                             if (len > sizeof(buf)) {
                                 len = sizeof(buf);
                             }
-                            if ((rc = ESP.flashRead(start, buf, len)) == false) {
+                            if ((rc = ESP.flashRead(start - SECTION_FLASH_START_ADDRESS, buf, len)) == false) {
                                 args.print(F("read error address=%08x length=%u"), start, length);
                                 break;
                             }
@@ -1455,7 +1455,7 @@ void at_mode_serial_handle_event(String &commandString)
                                     // once the buffer is full, write and verify
                                     if (++position % kFlashBufferSize == 0) {
                                         stream.println();
-                                        if (!_writeAndVerifyFlash(start, data.get(), kFlashBufferSize, compare.get(), args)) {
+                                        if (!_writeAndVerifyFlash(start - SECTION_FLASH_START_ADDRESS, data.get(), kFlashBufferSize, compare.get(), args)) {
                                             position = 0;
                                             break;
                                         }
@@ -1471,7 +1471,7 @@ void at_mode_serial_handle_event(String &commandString)
                                 auto rest = position % kFlashBufferSize;
                                 if (rest != 0) {
                                     stream.println();
-                                    _writeAndVerifyFlash(start, data.get(), rest, compare.get(), args);
+                                    _writeAndVerifyFlash(start - SECTION_FLASH_START_ADDRESS, data.get(), rest, compare.get(), args);
                                 }
                             }
                             else {

@@ -109,22 +109,49 @@ namespace PingMonitor {
     void Task::printStats(Print &out)
     {
         out.printf_P(PSTR("Interval %d minute(s), timeout %dms, repeat ping %d" HTML_S(br) HTML_S(hr)), _interval, _timeout, _count);
-        for(const auto &host: _pingHosts) {
-            auto stats = host.getStats();
-            out.print(host.getHostname());
-            out.printf_P(PSTR(": %u (%s) packets received, %u lost, avg. response %ums, %u (%s) ping succeded, %u failed" HTML_S(br)),
-                stats.getReceivedCount(),
-                stats.getRatioString(stats.getReceivedRatio()).c_str(),
-                stats.getLostCount(),
-                stats.getAvgResponseTime(),
-                stats.getSuccessCount(),
-                stats.getRatioString(stats.getSuccessRatio()).c_str(),
-                stats.getFailureCount()
-            );
+        if (_pingHosts.size()) {
+            out.print(F(
+                HTML_SA(table, HTML_A("class", "table table-striped"))
+                    HTML_SA(thead, HTML_A("class", "thead-light"))
+                        HTML_S(tr)
+                            HTML_S(th) "Host" HTML_E(th)
+                            HTML_S(th) "Pkts. Received" HTML_E(th)
+                            HTML_S(th) "Lost" HTML_E(th)
+                            HTML_S(th) "Avg. Response" HTML_E(th)
+                            HTML_S(th) "Succeeded" HTML_E(th)
+                            HTML_S(th) "Failed" HTML_E(th)
+                        HTML_E(tr)
+                    HTML_E(thead)
+                    HTML_S(tbody)));
+            for(const auto &host: _pingHosts) {
+                auto stats = host.getStats();
+
+                out.print(F(
+                    HTML_SA(tr, HTML_A("scope", "row"))
+                        HTML_S(td)));
+                out.print(host.getHostname());
+                out.printf_P(PSTR(HTML_E(td)
+                        HTML_S(td) "%u (%s)" HTML_E(td)
+                        HTML_S(td) "%u" HTML_E(td)
+                        HTML_S(td) "%ums" HTML_E(td)
+                        HTML_S(td) "%u (%s)" HTML_E(td)
+                        HTML_S(td) "%u" HTML_E(td)
+                    HTML_E(tr)
+                    ),
+                    stats.getReceivedCount(),
+                    stats.getRatioString(stats.getReceivedRatio()).c_str(),
+                    stats.getLostCount(),
+                    stats.getAvgResponseTime(),
+                    stats.getSuccessCount(),
+                    stats.getRatioString(stats.getSuccessRatio()).c_str(),
+                    stats.getFailureCount()
+                );
+            }
+            out.print(F(HTML_E(tbody) HTML_E(table)));
         }
         if (hasStats()) {
             auto stats = getStats();
-            out.printf_P(PSTR(HTML_S(hr) "Average response time: %ums" HTML_S(br) "Received packets: %u (%s)" HTML_S(br) "Lost packets: %u" HTML_S(br) "Success: %u (%s)" HTML_S(br) "Failure: %u"),
+            out.printf_P(PSTR("Average response time: %ums" HTML_S(br) "Received packets: %u (%s)" HTML_S(br) "Lost packets: %u" HTML_S(br) "Success: %u (%s)" HTML_S(br) "Failure: %u"),
                 stats.getAvgResponseTime(),
                 stats.getReceivedCount(),
                 stats.getRatioString(stats.getReceivedRatio()).c_str(),

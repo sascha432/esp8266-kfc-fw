@@ -31,6 +31,12 @@
 #define DEBUG_CONFIG_CLASS                                                  0
 #endif
 
+#if DEBUG_CONFIG_CLASS
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
 #if DEBUG_CONFIGURATION_GETHANDLE && !DEBUG_CONFIG_CLASS
 #error DEBUG_CONFIG_CLASS=1 required for DEBUG_CONFIGURATION_GETHANDLE=1
 #endif
@@ -348,4 +354,133 @@ namespace KFCConfigurationClasses {
         }
     };
 
+    template<HandleType _Handle, size_t _Capacity, size_t _MaxLength>
+    class ConfigStringArray {
+    public:
+        static constexpr auto kHandle = _Handle;
+        static constexpr auto kMaxLength = _MaxLength;
+        static constexpr auto kMaxSize = (_Capacity * (_MaxLength + 1) + 3);
+        static constexpr char kSeparator = -1;
+
+        static_assert(kMaxSize < _BV(11), "max. size exceeded");
+
+        struct SizeType {
+            uint16_t count;
+            uint16_t length;
+
+            SizeType() : count(0), length(0) {}
+        };
+
+    public:
+        String get(int index) const {
+            auto data = _load();
+            auto size = _size(data);
+            return _get(index, data, size);
+        }
+
+        String operator[](int index) const {
+            return get(index);
+        }
+
+        size_t size() const {
+            return _size(_load()).count;
+        }
+
+        constexpr size_t capacity() const {
+            return _Capacity;
+        }
+
+        constexpr size_t max_length() const {
+            return _MaxLength;
+        }
+
+        void clear() {
+            _store(emptyString.c_str());
+        }
+
+        bool append(const String &str) {
+            return append(str.c_str(), str.length());
+        }
+
+        bool append(const __FlashStringHelper *str, int length = -1) {
+            return append(reinterpret_cast<const char *>(str), length);
+        }
+
+        bool append(const char *str, int length = -1) {
+            if (length == -1) {
+                length = strlen_P(str);
+            }
+            length = std::min<int>(max_length(), length);
+            __DBG_printf("append str=%*.*s len=%u", length, length, str, length);
+            if (length == 0) {
+                // empty strings are not stored
+                return false;
+            }
+            auto data = _load();
+            auto size = _size(data);
+            if (size.count >= capacity()) {
+                // capacity reached
+                return false;
+            }
+            // increase buffer
+            auto newData = loadWriteableStringConfig(kHandle, size.length + length + 2);
+            // append new string
+            memcpy_P(newData + size.length, str, length);
+            // truncate string if max_length() was exceeded and add separator
+            auto endPtr = newData + size.length + length;
+            *endPtr++ = kSeparator;
+            *endPtr = 0;
+            __dump_binary(newData, endPtr - newData + 1, ~0U, PSTR("append"));
+            return true;
+        }
+
+    private:
+        String _get(int index, const char *data, SizeType size) const {
+            String tmp;
+            if (index < size.count) {
+                auto iterator = data;
+                while(index > 0) {
+                    iterator += _strlen(iterator) + 1;
+                    index--;
+                }
+                tmp.concat(iterator, _strlen(iterator));
+            }
+            return tmp;;
+        }
+
+        uint16_t _strlen(const char *data) const {
+            auto ptr = data;
+            while(*ptr != kSeparator && *ptr) {
+                ptr++;
+            }
+            return ptr - data;
+        }
+
+        SizeType _size(const char *data) const {
+            SizeType size;
+            auto ptr = data;
+            while(*ptr) {
+                if (*ptr++ == kSeparator) {
+                    size.count++;
+                }
+            }
+            size.length = ptr - data;
+            __DBG_printf("count=%u len=%u", size.count, size.length);
+            return size;
+        }
+
+        void _store(const char *data) {
+            KFCConfigurationClasses::storeStringConfig(kHandle, data);
+        }
+
+        const char *_load() const {
+            return KFCConfigurationClasses::loadStringConfig(kHandle);
+        }
+    };
+
+
 }
+
+#if DEBUG_CONFIG_CLASS
+#include <debug_helper_disable.h>
+#endif

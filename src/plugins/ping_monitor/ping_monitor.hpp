@@ -174,9 +174,41 @@ namespace PingMonitor {
 
     inline void WsPingClient::_cancelPing()
     {
-        _pingMonitorSafeCancelPing(_ping);
+        _cancelPing(_ping.get());
     }
 
+    inline void WsPingClient::_cancelPing(AsyncPing *pingPtr)
+    {
+        __LDBG_printf("pingPtr=%p", pingPtr);
+        if (!pingPtr) {
+            return;
+        }
+        auto &ping = *pingPtr;
+        #if DEBUG_PING_MONITOR
+            ping.on(true, [](const AsyncPingResponse &response) {
+                __LDBG_print("on=received callback removed");
+                return true;
+            });
+            ping.on(false, [](const AsyncPingResponse &response) {
+                __LDBG_print("on=sent callback removed");
+                return false;
+            });
+        #else
+            ping.on(true, nullptr);
+            ping.on(false, nullptr);
+        #endif
+        ping.cancel();
+    }
+
+    inline void WsPingClient::_deletePingPtr(AsyncPing *pingPtr)
+    {
+        __LDBG_printf("pingPtr=%p", pingPtr);
+        if (!pingPtr) {
+            return;
+        }
+        _cancelPing(pingPtr);
+        delete pingPtr;
+    }
 }
 
 

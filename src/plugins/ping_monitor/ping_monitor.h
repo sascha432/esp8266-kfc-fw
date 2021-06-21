@@ -19,18 +19,22 @@
 
 using AsyncPingPtr = std::shared_ptr<AsyncPing>;
 
-void _pingMonitorValidateValues(int &count, int &timeout);
-void _pingMonitorSafeCancelPing(AsyncPingPtr &ping);
-void _pingMonitorSafeDeletePing(AsyncPingPtr &ping);
-void _pingMonitorSetupWebHandler();
-bool _pingMonitorResolveHost(const String &host, IPAddress &addr, PrintString &errorMessage);
-bool _pingMonitorBegin(const AsyncPingPtr &ping, const String &host, IPAddress &addr, int count, int timeout, PrintString &message);
-void _pingMonitorResolveHostVariables(String &host);
-void _pingMonitorShutdownWebSocket();
+extern WsClientAsyncWebSocket *wsPing;
 
 namespace PingMonitor {
 
     using UnnamedObject = MQTT::Json::UnnamedObject;
+
+    bool resolveHost(const String &host, IPAddress &addr, PrintString &errorMessage);
+    bool begin(const AsyncPingPtr &ping, const String &host, IPAddress &addr, int count, int timeout, PrintString &message);
+    void eventHandler(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);
+
+    inline static void validateValues(int &count, int &timeout)
+    {
+        using PingConfig = KFCConfigurationClasses::Plugins::PingConfig::PingConfig_t;
+        count = std::clamp<int>(count, PingConfig::kTypeMinValueFor_count, PingConfig::kMaxValueFor_count);
+        timeout = std::clamp<int>(timeout, PingConfig::kMinValueFor_timeout, PingConfig::kMaxValueFor_timeout);
+    }
 
     class WsPingClient : public WsClient {
     public:
@@ -45,10 +49,27 @@ namespace PingMonitor {
 
         AsyncPingPtr &getPing();
 
+        static void getDefaultDeleter(AsyncPing *pingPtr);
+        static void cancelPing(AsyncPing *pingPtr);
+
     private:
+        static void _cancelPing(AsyncPing *pingPtr);
+        static void _deletePingPtr(AsyncPing *pingPtr);
         void _cancelPing();
+
+    private:
         AsyncPingPtr _ping;
     };
+
+    inline __attribute__((always_inline)) void WsPingClient::getDefaultDeleter(AsyncPing *pingPtr)
+    {
+        _deletePingPtr(pingPtr);
+    }
+
+    inline __attribute__((always_inline)) void WsPingClient::cancelPing(AsyncPing *pingPtr)
+    {
+        _cancelPing(pingPtr);
+    }
 
     class Task;
 

@@ -86,7 +86,10 @@ namespace PingMonitor {
     {
         __LDBG_assert_printf(_currentServer < _pingHosts.size(), "server %u size %u", _currentServer, _pingHosts.size());
         String host = _pingHosts[_currentServer].getHostname();
-        _pingMonitorResolveHostVariables(host);
+
+        host.replace(FSPGM(_var_gateway), WiFi.isConnected() ? WiFi.gatewayIP().toString() : emptyString);
+        host.trim();
+
         _successFlag = false;
         __LDBG_printf("host=%s (%s)", host.c_str(), host.c_str());
         if (host.length() == 0) {
@@ -154,7 +157,7 @@ namespace PingMonitor {
         _cancelPing();
         if (_pingHosts.size()) {
             _currentServer = 0;
-            _ping.reset(new AsyncPing());
+            _ping.reset(new AsyncPing(), WsPingClient::getDefaultDeleter);
             // response callback
             _ping->on(true, [this](const AsyncPingResponse &response) {
                 __LDBG_AsyncPingResponse(true, response);
@@ -199,7 +202,7 @@ namespace PingMonitor {
     {
         __LDBG_printf("ping=%p timer=%u", _ping.get(), (bool)_nextTimer);
         _nextTimer.remove();
-        _pingMonitorSafeDeletePing(_ping);
+        _ping.reset();
     }
 
 }

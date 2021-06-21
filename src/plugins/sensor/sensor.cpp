@@ -140,6 +140,7 @@ void SensorPlugin::_timerEvent()
         WebUINS::Events events;
         {
             for(auto sensor: _sensors) {
+                __ASSERT_PTR(sensor);
                 sensor->timerEvent(&events, mqttIsConnected);
             }
         }
@@ -149,6 +150,7 @@ void SensorPlugin::_timerEvent()
     }
     else if (mqttIsConnected) {
         for(auto sensor: _sensors) {
+            __ASSERT_PTR(sensor);
             sensor->timerEvent(nullptr, true);
         }
     }

@@ -29,19 +29,11 @@
         public:
             static void defaults();
 
-            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.ping, Host1, 0, 64);
-            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.ping, Host2, 0, 64);
-            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.ping, Host3, 0, 64);
-            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.ping, Host4, 0, 64);
-            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.ping, Host5, 0, 64);
-            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.ping, Host6, 0, 64);
-            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.ping, Host7, 0, 64);
-            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.ping, Host8, 0, 64);
-
-            static void setHost(uint8_t num, const char *);
-            static const char *getHost(uint8_t num);
-            static void removeEmptyHosts(); // trim hostnames and move empty hostnames to the end of the list
-            static uint8_t getHostCount();
             static constexpr uint8_t kHostsMax = 8;
 
+            using HostnameType = KFCConfigurationClasses::ConfigStringArray<_H(MainConfig().plugins.ping), kHostsMax, 64>;
+
+            static HostnameType getHosts() {
+                return HostnameType();
+            }
         };

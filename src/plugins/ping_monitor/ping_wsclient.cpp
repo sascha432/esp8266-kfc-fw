@@ -19,45 +19,18 @@ using KFCConfigurationClasses::Plugins;
 
 WsClientAsyncWebSocket *wsPing = nullptr;
 
-static void _pingMonitorEventHandler(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len)
-{
-    __LDBG_printf("server=%p client=%p ping=%p", server, client, wsPing);
-    if (wsPing) {
-        PingMonitor::WsPingClient::onWsEvent(server, client, (int)type, data, len, arg, PingMonitor::WsPingClient::getInstance);
-    }
-}
-
-void _pingMonitorSetupWebHandler()
-{
-    if (wsPing) {
-        __LDBG_printf("wsPing=%p not null", wsPing);
-        return;
-    }
-    if (Plugins::Ping::getConfig().console) {
-        auto server = WebServer::Plugin::getWebServerObject();
-        if (server) {
-            auto ws = new WsClientAsyncWebSocket(F("/ping"), &wsPing);
-            ws->onEvent(_pingMonitorEventHandler);
-            server->addHandler(ws);
-            Logger_notice("Web socket for ping running on port %u", System::WebServer::getConfig().getPort());
-        }
-    }
-    else {
-        __LDBG_print("web socket disabled");
-    }
-}
-
-void _pingMonitorShutdownWebSocket()
-{
-    if (wsPing) {
-        wsPing->shutdown();
-    }
-}
-
 // ------------------------------------------------------------------------
 // class WsPingClient
 
 namespace PingMonitor {
+
+    void eventHandler(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len)
+    {
+        __LDBG_printf("server=%p client=%p ping=%p", server, client, wsPing);
+        if (wsPing) {
+            PingMonitor::WsPingClient::onWsEvent(server, client, (int)type, data, len, arg, PingMonitor::WsPingClient::getInstance);
+        }
+    }
 
     void WsPingClient::onText(uint8_t *data, size_t len)
     {
@@ -79,7 +52,7 @@ namespace PingMonitor {
                     auto count = (int)items[0].toInt();
                     auto timeout = (int)items[1].toInt();
                     const auto host = items[2];
-                    _pingMonitorValidateValues(count, timeout);
+                    validateValues(count, timeout);
 
                     _cancelPing();
 
@@ -90,10 +63,10 @@ namespace PingMonitor {
                         __LDBG_printf("host=%s count=%d timeout=%d client=%p ping=%p", host.c_str(), count, timeout, client, _ping.get());
                         IPAddress addr;
                         PrintString message;
-                        if (_pingMonitorResolveHost(host.c_str(), addr, message)) {
+                        if (resolveHost(host.c_str(), addr, message)) {
 
                             if (!_ping) {
-                                _ping.reset(new AsyncPing());
+                                _ping.reset(new AsyncPing(), WsPingClient::getDefaultDeleter);
                             }
 
                             __DBG_printf("_ping=%p", &_ping);
@@ -127,7 +100,7 @@ namespace PingMonitor {
                                 return true;
                             });
 
-                            _pingMonitorBegin(_ping, host.c_str(), addr, count, timeout, message);
+                            begin(_ping, host.c_str(), addr, count, timeout, message);
                         }
 
                         // message is set by _pingMonitorResolveHost or _pingMonitorBegin

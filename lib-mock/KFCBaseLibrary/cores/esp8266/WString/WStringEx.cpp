@@ -857,3 +857,4 @@ float String::toFloat(void) const
 // global empty string to allow returning const String& with nothing
 
 const String emptyString;
+

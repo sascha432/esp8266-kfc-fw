@@ -52,7 +52,6 @@ CHAR console_getch()
         console_last_ch = -1;
         return console_last_ch;
     }
-    DWORD cc;
     HANDLE h = GetStdHandle(STD_INPUT_HANDLE);
     if (!h) {
         return -1;
@@ -63,10 +62,12 @@ CHAR console_getch()
         return -1;
     }
 
-    WCHAR c = 0;
-    ReadConsole(h, &c, 1, &cc, NULL);
+    INPUT_RECORD buffer[1];
+    if (!ReadConsoleInput(h, buffer, 1, &events) || events == 0 || buffer->EventType != KEY_EVENT || buffer->Event.KeyEvent.bKeyDown == FALSE) {
+        return -1;
+    }
     console_last_ch = -1;
-    return (CHAR)c;
+    return buffer->Event.KeyEvent.uChar.AsciiChar;
 }
 
 CHAR console_peekch()

@@ -6,6 +6,9 @@
 #include <OSTimer.h>
 #include <EventScheduler.h>
 
+#ifdef Serial
+#undef Serial
+#endif
 #define Serial Serial0 // allows to call begin() etc.. since Serial is a Stream object not HardwareSerial, pointing to Serial0
 
 class TestTimer : public OSTimer /* ETSTimer implementation */ {
@@ -25,15 +28,12 @@ void setup()
     testTimer1.startTimer(15000, true);
 
     // Scheduler test
-    static constexpr auto kMaxRepeat = 10;
-    static constexpr auto kRepeatInterval = 60;
-
-    _Scheduler.add(Event::seconds(kRepeatInterval), kMaxRepeat, [](Event::CallbackTimerPtr timer) {
-        Serial.printf_P(PSTR("Scheduled event %.3fs, %u/%u\n"), micros() / 1000000.0, timer->_repeat.getRepeatsLeft() + 1, kMaxRepeat);
+    _Scheduler.add(Event::seconds(30), 10, [](Event::CallbackTimerPtr timer) {
+        Serial.printf_P(PSTR("Scheduled event %.3fs, %u/%u\n"), micros() / 1000000.0, timer->_repeat.getRepeatsLeft() + 1, 10);
     });
 
     //ets_dump_timer(Serial); // #include "ets_timer_win32.h"
-    Serial.println(F("Press any key to display millis. Ctrl+C to end program..."));
+    Serial.println(F("Press any key to display millis(). Ctrl+C to end program..."));
 }
 
 
@@ -41,10 +41,8 @@ void setup()
 void loop() 
 {
     if (Serial.available()) {
-        Serial.printf_P(PSTR("millis %u\n"), millis());
-        while (Serial.available()) {
-            Serial.read();
-        }
+        Serial.printf_P(PSTR("millis()=%u\n"), millis());
+        Serial.read();
     }
     delay(50);
 }

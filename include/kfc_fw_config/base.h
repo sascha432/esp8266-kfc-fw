@@ -395,7 +395,9 @@ namespace KFCConfigurationClasses {
         }
 
         void clear() {
-            _store(emptyString.c_str());
+            _store(emptyString);
+            auto data = _load();
+            __dump_binary(data, strlen(data), ~0U, PSTR("clear"));
         }
 
         bool append(const String &str) {
@@ -411,7 +413,7 @@ namespace KFCConfigurationClasses {
                 length = strlen_P(str);
             }
             length = std::min<int>(max_length(), length);
-            __DBG_printf("append str=%*.*s len=%u", length, length, str, length);
+            __LDBG_printf("append str=%*.*s len=%u", length, length, str, length);
             if (length == 0) {
                 // empty strings are not stored
                 return false;
@@ -469,8 +471,12 @@ namespace KFCConfigurationClasses {
             return size;
         }
 
-        void _store(const char *data) {
-            KFCConfigurationClasses::storeStringConfig(kHandle, data);
+        void _store(const char *str) {
+            KFCConfigurationClasses::storeStringConfig(kHandle, str);
+        }
+
+        void _store(const String &str) {
+            KFCConfigurationClasses::storeStringConfig(kHandle, str);
         }
 
         const char *_load() const {

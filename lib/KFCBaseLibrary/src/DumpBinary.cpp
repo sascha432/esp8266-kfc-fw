@@ -13,7 +13,7 @@ extern "C" {
 
     void __dump_binary_to(Print &output, const void *ptr, size_t len, size_t perLine, PGM_P title, uint8_t groupBytes)
     {
-        DumpBinary d(output, groupBytes == static_cast<uint8_t>(DUMP_BINARY_DEFAULTS) ? DumpBinary::kGroupBytesDefault : groupBytes, perLine == 0 ? len : perLine == DUMP_BINARY_DEFAULTS ? DumpBinary::kPerLineDefault : perLine);
+        DumpBinary d(output, groupBytes == static_cast<uint8_t>(DUMP_BINARY_DEFAULTS) ? DumpBinary::kGroupBytesDefault : groupBytes, perLine == 0 ? static_cast<uint8_t>(len) : perLine == DUMP_BINARY_DEFAULTS ? DumpBinary::kPerLineDefault : static_cast<uint8_t>(perLine));
         if (title) {
             output.printf_P(PSTR("%s: %p:%u\n"), title, ptr, len);
         }

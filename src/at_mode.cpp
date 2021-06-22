@@ -1209,7 +1209,7 @@ static bool _writeAndVerifyFlash(uint32_t address, uint8_t *data, size_t size, u
         args.print(F("flash read error address=%08x length=%u"), address, size);
         return false;
     }
-    if (memcpy(data, compare, size) != 0) {
+    if (memcmp(data, compare, size) != 0) {
         args.print(F("flash verify error address=%08x length=%u"), address, size);
         return false;
     }
@@ -1385,6 +1385,13 @@ void at_mode_serial_handle_event(String &commandString)
 /*
 
 +flash=r,0x405ab000,0,32
++flash=r,0x405ab000,0,256
++flash=e,0x405ab000
++flash=w,0x405ab000,0,1,2,3,4,5,6,7,8
+
+// EEPROM
++flash=r,0x405fb000,0,1024
+
 
 */
         auto cmdStr = args.get(0);
@@ -1397,8 +1404,9 @@ void at_mode_serial_handle_event(String &commandString)
             uint16_t sector = (addr - SECTION_FLASH_START_ADDRESS) / SPI_FLASH_SEC_SIZE;
             // recalculate address and offset
             offset = (addr - SECTION_FLASH_START_ADDRESS) - (sector * SPI_FLASH_SEC_SIZE);
-            addr = (sector * SPI_FLASH_SEC_SIZE) + SECTION_FLASH_START_ADDRESS;
+            addr = (sector * SPI_FLASH_SEC_SIZE);
             bool rc = true;
+            static constexpr size_t kFlashBufferSize = 32;
             switch(cmd) {
                 case 0: // erase
                 case 1: // e
@@ -1413,13 +1421,10 @@ void at_mode_serial_handle_event(String &commandString)
                         args.print(F("reading sector %u address %08x offset %u length %u"), sector, addr, offset, length);
                         uint32_t start = addr + offset;
                         uint32_t end = start + length;
-                        uint8_t buf[32];
+                        uint8_t buf[kFlashBufferSize];
                         while (start < end) {
-                            uint8_t len = end - start;
-                            if (len > sizeof(buf)) {
-                                len = sizeof(buf);
-                            }
-                            if ((rc = ESP.flashRead(start - SECTION_FLASH_START_ADDRESS, buf, len)) == false) {
+                            uint8_t len = std::min<size_t>(sizeof(buf), end - start);
+                            if ((rc = ESP.flashRead(start, buf, len)) == false) {
                                 args.print(F("read error address=%08x length=%u"), start, length);
                                 break;
                             }
@@ -1441,7 +1446,6 @@ void at_mode_serial_handle_event(String &commandString)
                             args.print(F("writing sector %u (%08x) offset %u length %u"), sector, addr, offset, length);
                             uint16_t position = 0;
                             auto &stream = args.getStream();
-                            static constexpr size_t kFlashBufferSize = 32;
                             auto data = std::unique_ptr<uint8_t[]>(new uint8_t[kFlashBufferSize]);
                             auto compare = std::unique_ptr<uint8_t[]>(new uint8_t[kFlashBufferSize]);
                             uint32_t start = addr + offset;
@@ -1455,7 +1459,7 @@ void at_mode_serial_handle_event(String &commandString)
                                     // once the buffer is full, write and verify
                                     if (++position % kFlashBufferSize == 0) {
                                         stream.println();
-                                        if (!_writeAndVerifyFlash(start - SECTION_FLASH_START_ADDRESS, data.get(), kFlashBufferSize, compare.get(), args)) {
+                                        if (!_writeAndVerifyFlash(start, data.get(), kFlashBufferSize, compare.get(), args)) {
                                             position = 0;
                                             break;
                                         }
@@ -1471,7 +1475,7 @@ void at_mode_serial_handle_event(String &commandString)
                                 auto rest = position % kFlashBufferSize;
                                 if (rest != 0) {
                                     stream.println();
-                                    _writeAndVerifyFlash(start - SECTION_FLASH_START_ADDRESS, data.get(), rest, compare.get(), args);
+                                    _writeAndVerifyFlash(start, data.get(), rest, compare.get(), args);
                                 }
                             }
                             else {

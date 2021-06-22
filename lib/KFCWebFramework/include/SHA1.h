@@ -22,26 +22,30 @@ public:
         reset();
     }
 
-    size_t hashSize() const {
+    constexpr size_t hashSize() const {
         return 20;
     }
 
-    void reset() {
+    inline __attribute__((always_inline)) void reset() {
         br_sha1_init(&context);
     }
 
-    void update(const void *data, size_t len) {
-        br_sha1_update(&context, (uint8_t *)data, len);
+    inline __attribute__((always_inline)) void update(const void *data, size_t len) {
+        br_sha1_update(&context, data, len);
     }
 
-    void finalize(void *hash, size_t len) {
+    inline __attribute__((always_inline)) void finalize(void *hash, size_t len) {
+        finalize(reinterpret_cast<uint8_t *>(hash), len);
+    }
+
+    void finalize(uint8_t *hash, size_t len) {
         if (len == hashSize()) {
-            br_sha1_out(&context, (uint8_t *)hash);
-        } else {
+            br_sha1_out(&context, hash);
+        }
+        else {
             uint8_t buf[hashSize()];
-            bzero(hash, len);
             br_sha1_out(&context, buf);
-            memcpy(hash, buf, len > sizeof(buf) ? sizeof(buf) : len);
+            std::fill(std::copy_n(buf, std::min(sizeof(buf), len), hash), hash + len, 0);
         }
     }
 

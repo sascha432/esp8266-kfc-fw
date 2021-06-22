@@ -24,6 +24,9 @@ typedef struct _ETSTIMER_ {
 
 extern ETSTimer *timer_list;
 
+class Stream;
+
+void ets_dump_timer(Stream &output);
 
 void ets_timer_delay(uint32_t time_ms);
 void ets_timer_delay_us(uint64_t time_us);

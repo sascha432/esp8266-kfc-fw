@@ -119,32 +119,18 @@ class HardwareSerial : public Stdout {
 public:
     HardwareSerial(const HardwareSerial &fake) = delete;
 
-    HardwareSerial() : Stdout() {
-    }
-    void begin(int baud) {
-    }
-    void end() {
-    }
-    virtual int available() {
-        return 0;
-    }
-    virtual int read() {
-        return -1;
-    }
-    virtual int peek() {
-        return -1;
-    }
-    void flush(void) override {
-        fflush(stdout);
-    }
-    virtual size_t write(uint8_t c) override {
-        return write(&c, 1);
-    }
-    virtual size_t write(const uint8_t* buffer, size_t size) override {
-        ::printf("%*.*s", size, size, buffer);
-        _RPTN(_CRT_WARN, "%*.*s", size, size, buffer);
-        return size;
-    }
+    HardwareSerial();
+    ~HardwareSerial();
+
+    void begin(int baud);
+    void end();
+
+    virtual int available();
+    virtual int read();
+    virtual int peek();
+    virtual void flush(void) override;
+    virtual size_t write(uint8_t c) override;
+    virtual size_t write(const uint8_t *buffer, size_t size) override;
 };
 
 using FakeSerial = HardwareSerial;

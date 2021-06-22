@@ -28,9 +28,6 @@
     <Filter Include="Source Files\core\esp8266">
       <UniqueIdentifier>{3c4aee24-5127-466f-9a63-2262521a0706}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\lib\NewFilter1">
-      <UniqueIdentifier>{bddf55a5-892d-4242-9bc3-248b5d2851b5}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\lib-mock">
       <UniqueIdentifier>{bacd514c-117c-4a34-8a0c-f15edaca1036}</UniqueIdentifier>
     </Filter>
@@ -118,6 +115,63 @@
     </ClCompile>
     <ClCompile Include="..\..\src\WiFiUDP.cpp">
       <Filter>Source Files\lib-mock\KFCBaseLibrary</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\int64_to_string.cpp">
+      <Filter>Source Files\lib\KFCBaseLibrary</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\Arduino_compat.cpp">
+      <Filter>Source Files\lib\KFCBaseLibrary</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\Buffer.cpp">
+      <Filter>Source Files\lib\KFCBaseLibrary</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\BufferStream.cpp">
+      <Filter>Source Files\lib\KFCBaseLibrary</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\debug_helper.cpp">
+      <Filter>Source Files\lib\KFCBaseLibrary</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\DumpBinary.cpp">
+      <Filter>Source Files\lib\KFCBaseLibrary</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\dyn_bitset.cpp">
+      <Filter>Source Files\lib\KFCBaseLibrary</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\TypeName.cpp">
+      <Filter>Source Files\lib\KFCBaseLibrary</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\MicrosTimer.cpp">
+      <Filter>Source Files\lib\KFCBaseLibrary</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\MillisTimer.cpp">
+      <Filter>Source Files\lib\KFCBaseLibrary</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\misc.cpp">
+      <Filter>Source Files\lib\KFCBaseLibrary</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\misc_string.cpp">
+      <Filter>Source Files\lib\KFCBaseLibrary</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\misc_time.cpp">
+      <Filter>Source Files\lib\KFCBaseLibrary</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\PrintArgs.cpp">
+      <Filter>Source Files\lib\KFCBaseLibrary</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\PrintBuffer.cpp">
+      <Filter>Source Files\lib\KFCBaseLibrary</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\PrintHtmlEntities.cpp">
+      <Filter>Source Files\lib\KFCBaseLibrary</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\PrintHtmlEntitiesString.cpp">
+      <Filter>Source Files\lib\KFCBaseLibrary</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\PrintString.cpp">
+      <Filter>Source Files\lib\KFCBaseLibrary</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\spgm_auto_strings.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

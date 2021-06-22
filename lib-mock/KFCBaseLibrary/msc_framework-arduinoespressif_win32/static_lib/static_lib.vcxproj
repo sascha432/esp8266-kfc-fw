@@ -163,6 +163,24 @@
     <ClInclude Include="framework.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\Arduino_compat.cpp" />
+    <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\Buffer.cpp" />
+    <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\BufferStream.cpp" />
+    <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\debug_helper.cpp" />
+    <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\DumpBinary.cpp" />
+    <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\dyn_bitset.cpp" />
+    <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\int64_to_string.cpp" />
+    <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\MicrosTimer.cpp" />
+    <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\MillisTimer.cpp" />
+    <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\misc.cpp" />
+    <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\misc_string.cpp" />
+    <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\misc_time.cpp" />
+    <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\PrintArgs.cpp" />
+    <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\PrintBuffer.cpp" />
+    <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\PrintHtmlEntities.cpp" />
+    <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\PrintHtmlEntitiesString.cpp" />
+    <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\PrintString.cpp" />
+    <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\TypeName.cpp" />
     <ClCompile Include="..\..\..\..\lib\KFCEventScheduler\src\CallbackTimer.cpp" />
     <ClCompile Include="..\..\..\..\lib\KFCEventScheduler\src\Event.cpp" />
     <ClCompile Include="..\..\..\..\lib\KFCEventScheduler\src\LoopFunctions.cpp" />
@@ -171,6 +189,7 @@
     <ClCompile Include="..\..\..\..\lib\KFCEventScheduler\src\Scheduler.cpp" />
     <ClCompile Include="..\..\..\..\lib\KFCEventScheduler\src\Timer.cpp" />
     <ClCompile Include="..\..\..\..\lib\KFCEventScheduler\src\WiFiCallbacks.cpp" />
+    <ClCompile Include="..\..\..\..\src\spgm_auto_strings.cpp" />
     <ClCompile Include="..\..\..\ets_impl\ets_main.cpp" />
     <ClCompile Include="..\..\..\ets_impl\ets_sys_win32.cpp" />
     <ClCompile Include="..\..\..\ets_impl\ets_timer_win32.cpp" />

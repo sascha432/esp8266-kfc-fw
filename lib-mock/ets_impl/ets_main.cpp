@@ -48,7 +48,7 @@ static std::thread ets_main_thread;
 static void ets_main_thread_stop()
 {
     if (ets_main_thread.joinable()) {
-        __DBG_printf("ets_main_thread join");
+        //__DBG_printf("ets_main_thread join");
         ets_main_thread.join();
     }
 }
@@ -56,7 +56,7 @@ static void ets_main_thread_stop()
 void __ets_end_loop()
 {
     __ets_is_running = false;
-    __DBG_printf("__ets_end_loop invoked=1");
+    //__DBG_printf("__ets_end_loop invoked=1");
     ets_timer_deinit();
     ets_main_thread_stop();
 }

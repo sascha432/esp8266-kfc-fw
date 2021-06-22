@@ -91,12 +91,12 @@ static void remove_timer(ETSTimer *timer)
     }
 }
 
-static void dump_timers(const ETSTimerList &timers)
+static void dump_timers(const ETSTimerList &timers, Stream &output)
 {
-    Serial.printf_P("timer count=%u\n", timers.size());
+    output.printf_P("timer count=%u\n", timers.size());
     auto now = std::chrono::high_resolution_clock::now();
     for (auto timer : timers) {
-        Serial.printf_P(PSTR("sort timer=%p next=%p expire=%lld period=%lld\n"), timer, timer->timer_next, std::chrono::duration_cast<std::chrono::milliseconds>(timer->timer_expire - now).count(), timer->timer_period);
+        output.printf_P(PSTR("sort timer=%p next=%p expire=%lld period=%lld\n"), timer, timer->timer_next, std::chrono::duration_cast<std::chrono::milliseconds>(timer->timer_expire - now).count(), timer->timer_period);
     }
 }
 
@@ -115,11 +115,16 @@ static void order_timers(ETSTimerList &_timers)
     });
 }
 
-static void dump_order_timers()
+static void dump_order_timers(Stream &output = Serial)
 {
     ETSTimerList timers;
     order_timers(timers);
-    dump_timers(timers);
+    dump_timers(timers, output);
+}
+
+void ets_dump_timer(Stream &output)
+{
+    dump_order_timers(output);
 }
 
 static String this_thread_id()

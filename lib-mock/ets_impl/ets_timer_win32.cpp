@@ -6,6 +6,8 @@
 #include "ets_sys_win32.h"
 #include "ets_timer_win32.h"
 #include <chrono>
+#include <iostream>
+#include <sstream>
 #include <LoopFunctions.h>
 #include <thread>
 #include <mutex>
@@ -91,6 +93,7 @@ static void remove_timer(ETSTimer *timer)
 
 static void dump_timers(const ETSTimerList &timers)
 {
+    Serial.printf_P("timer count=%u\n", timers.size());
     auto now = std::chrono::high_resolution_clock::now();
     for (auto timer : timers) {
         Serial.printf_P(PSTR("sort timer=%p next=%p expire=%lld period=%lld\n"), timer, timer->timer_next, std::chrono::duration_cast<std::chrono::milliseconds>(timer->timer_expire - now).count(), timer->timer_period);
@@ -117,6 +120,14 @@ static void dump_order_timers()
     ETSTimerList timers;
     order_timers(timers);
     dump_timers(timers);
+}
+
+static String this_thread_id()
+{
+    std::stringbuf buffer;
+    std::ostream os(&buffer);
+    os << "thread " << std::this_thread::get_id();
+    return buffer.str().c_str();
 }
 
 static std::thread create_timer_thread()
@@ -166,7 +177,12 @@ static std::thread create_timer_thread()
 
             // wait for the next timer or modification of the list
             std::unique_lock<std::mutex> lock(__ets_timer_list_mutex);
-            __ets_timer_thread_wakeup.wait_until(lock, wait_until, []() { return false; });
+            if (__ets_timer_thread_wakeup.wait_until(lock, wait_until, []() {
+                return __ets_timer_thread_end == true;
+            })) {
+                // end timer thread
+                break;
+            }
         }
     });
 }
@@ -279,14 +295,12 @@ void ets_timer_init(void)
 void ets_timer_deinit(void)
 {
     if (timer_list) {
-        std::lock_guard<std::mutex> lock(__ets_timer_list_mutex);
-        if (__ets_timer_thread.joinable()) {
-            __ets_timer_thread_end = true;
-            __ets_timer_thread_wakeup.notify_all();
-            __DBG_printf("__ets_timer_thread join");
-            __ets_timer_thread.join();
-            timer_list = nullptr;
-        }
+        __ets_timer_thread_end = true;
+        __ets_timer_thread_wakeup.notify_all();
+        dump_order_timers();
+        __DBG_printf("__ets_timer_thread joinable=%u", __ets_timer_thread.joinable());
+        __ets_timer_thread.join();
+        timer_list = nullptr;
     }
 }
 

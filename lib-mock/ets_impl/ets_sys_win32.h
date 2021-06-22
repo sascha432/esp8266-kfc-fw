@@ -89,6 +89,7 @@ extern void __ets_end_loop();
 extern void __ets_post_loop_do_yield();
 extern void __ets_post_loop_exec_loop_functions();
 extern void __ets_pre_setup();
+extern void preinit();
 extern void loop();
 extern void setup();
 

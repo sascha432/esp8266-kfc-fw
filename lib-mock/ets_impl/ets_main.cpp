@@ -107,7 +107,7 @@ void __ets_pre_setup()
 #if !ETS_MAIN_NO_TIMERS
     ets_timer_init();
 #endif
-    SetConsoleOutputCP(65001);
+    SetConsoleOutputCP(CP_UTF8);
     ESP._enableMSVCMemdebug();
 #if !ETS_MAIN_NO_TIMERS
     SetConsoleCtrlHandler((PHANDLER_ROUTINE)__ets_console_handler, TRUE);
@@ -143,9 +143,14 @@ static void start_main_thread()
 {
 }
 
+void preinit() 
+{
+}
+
 int main()
 {
     __ets_pre_setup();
+    preinit();
     setup();
     _ASSERTE(_CrtCheckMemory());
     do {

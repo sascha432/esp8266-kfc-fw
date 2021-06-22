@@ -19,6 +19,14 @@ PGM_P __strrstr_P_P(PGM_P str, size_t stringLen, PGM_P find, size_t findLen);
 
 #if defined(_MSC_VER)
 
+#ifndef __attribute__
+#define __attribute__(...)
+#endif
+
+#ifndef PGM_VOID_P
+#define PGM_VOID_P const void *
+#endif
+
 static constexpr uint32_t SIZE_IRRELEVANT = 0x7fffffff;
 
 #pragma push_macro("alloca")

@@ -9,7 +9,7 @@
 // use TIME_T_FMT for sprintf and time_t
 #if defined(_MSC_VER)
 
-#if __WIN32__
+#ifdef _WIN32
 
 #define TIME_T_FMT "%ld"
 #define TIME_T_MIN 946684800L       // Sat Jan 01 2000 00:00:00 GMT+0000

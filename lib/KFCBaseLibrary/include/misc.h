@@ -136,12 +136,6 @@ size_t hex2bin(void *buf, size_t length, const char *str);
 // memcpy with the minimum size of both variables
 #define MEMNCPY_S(dst, src)                     memcpy((void *)dst, (void *)src, std::min(sizeof(src), sizeof(dst)));
 
-// bzero variant using sizeof(dst)
-#define BNZERO_S(dst)                           memset(&dst, 0, sizeof(dst));
-
-
-
-
 // interface
 class TokenizerArgs {
 public:

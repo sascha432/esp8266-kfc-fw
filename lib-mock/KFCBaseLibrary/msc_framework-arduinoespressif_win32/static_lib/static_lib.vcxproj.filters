@@ -1,0 +1,123 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Source Files\core">
+      <UniqueIdentifier>{b0a9e495-6a1b-4d09-b3b4-9c4943568bc3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\lib">
+      <UniqueIdentifier>{f13b6fdf-2057-4cce-af1a-eebde598cbe9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\lib\KFCEventScheduler">
+      <UniqueIdentifier>{e215c071-f382-493b-8150-f3bfcfd9fb34}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\lib\KFCBaseLibrary">
+      <UniqueIdentifier>{239c1470-0219-4514-bbff-7b9dc385b1ed}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\core\esp8266">
+      <UniqueIdentifier>{3c4aee24-5127-466f-9a63-2262521a0706}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\lib\NewFilter1">
+      <UniqueIdentifier>{bddf55a5-892d-4242-9bc3-248b5d2851b5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\lib-mock">
+      <UniqueIdentifier>{bacd514c-117c-4a34-8a0c-f15edaca1036}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\lib-mock\ets_impl">
+      <UniqueIdentifier>{2590c9de-3a9f-4145-bd7c-dafdba75f354}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\lib-mock\KFCBaseLibrary">
+      <UniqueIdentifier>{194db183-aa17-431d-b85d-b7169cd9f9a1}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="framework.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\..\lib\KFCEventScheduler\src\CallbackTimer.cpp">
+      <Filter>Source Files\lib\KFCEventScheduler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\lib\KFCEventScheduler\src\Event.cpp">
+      <Filter>Source Files\lib\KFCEventScheduler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\lib\KFCEventScheduler\src\LoopFunctions.cpp">
+      <Filter>Source Files\lib\KFCEventScheduler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\lib\KFCEventScheduler\src\ManagedTimer.cpp">
+      <Filter>Source Files\lib\KFCEventScheduler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\lib\KFCEventScheduler\src\OSTimer.cpp">
+      <Filter>Source Files\lib\KFCEventScheduler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\lib\KFCEventScheduler\src\Scheduler.cpp">
+      <Filter>Source Files\lib\KFCEventScheduler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\lib\KFCEventScheduler\src\Timer.cpp">
+      <Filter>Source Files\lib\KFCEventScheduler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\lib\KFCEventScheduler\src\WiFiCallbacks.cpp">
+      <Filter>Source Files\lib\KFCEventScheduler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\framework-arduinoespressif8266_3.20704.0\cores\esp8266\WString\WString.cpp">
+      <Filter>Source Files\core\esp8266</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\ets_impl\ets_main.cpp">
+      <Filter>Source Files\lib-mock\ets_impl</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\ets_impl\ets_sys_win32.cpp">
+      <Filter>Source Files\lib-mock\ets_impl</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\ets_impl\ets_timer_win32.cpp">
+      <Filter>Source Files\lib-mock\ets_impl</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Compat.cpp">
+      <Filter>Source Files\lib-mock\KFCBaseLibrary</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\EEPROM.cpp">
+      <Filter>Source Files\lib-mock\KFCBaseLibrary</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\ESP8266HttpClient.cpp">
+      <Filter>Source Files\lib-mock\KFCBaseLibrary</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\FS.cpp">
+      <Filter>Source Files\lib-mock\KFCBaseLibrary</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Print.cpp">
+      <Filter>Source Files\lib-mock\KFCBaseLibrary</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Serial.cpp">
+      <Filter>Source Files\lib-mock\KFCBaseLibrary</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\SPI.cpp">
+      <Filter>Source Files\lib-mock\KFCBaseLibrary</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\stdlib_noniso.cpp">
+      <Filter>Source Files\lib-mock\KFCBaseLibrary</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Stream.cpp">
+      <Filter>Source Files\lib-mock\KFCBaseLibrary</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\StreamString.cpp">
+      <Filter>Source Files\lib-mock\KFCBaseLibrary</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\WiFi.cpp">
+      <Filter>Source Files\lib-mock\KFCBaseLibrary</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\WiFiUDP.cpp">
+      <Filter>Source Files\lib-mock\KFCBaseLibrary</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

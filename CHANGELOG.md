@@ -2,6 +2,7 @@
 
 ## Version 0.0.5
 
+- Cleanup of the Visual Studio mock libary for 3.0.0
 - arduinoespressif8266 patch files have been removed and moved to https://github.com/sascha432/Arduino/tree/master
 - Removed internal memory debugger
 - New version for framework-arduinoespressif8266 3.30000.210519 (3.0.0) and GCC 10.2 changes

@@ -1,0 +1,315 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Source Files\lib">
+      <UniqueIdentifier>{a8ff7ff1-bcf7-40d4-8feb-0df6d85f63ea}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\mock">
+      <UniqueIdentifier>{ad2149c3-b5d5-4d35-8d6c-0e9f42298b00}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\KFCConfiguration">
+      <UniqueIdentifier>{af599466-74a3-45a9-847f-035f297cb808}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\mock">
+      <UniqueIdentifier>{9688230d-4b9c-46a2-b665-461791793826}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\KFCBaseLibrary">
+      <UniqueIdentifier>{01532f8f-ed8e-4e3c-95a7-84335f61db10}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\KFCBaseLibrary">
+      <UniqueIdentifier>{39776abb-4753-4304-9280-ac03b61fb175}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\stl_ext">
+      <UniqueIdentifier>{7609a448-5e81-4601-9cd4-ff9ffbb87a0a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\KFCConfigV2">
+      <UniqueIdentifier>{edccbb7d-b808-468a-90cd-3f529c4816ea}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\framework-arduinoespressif8266">
+      <UniqueIdentifier>{e31b7f8c-1452-4120-aac3-499b50081ca5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\framework-arduinoespressif8266\cores">
+      <UniqueIdentifier>{81cc6bc9-d2af-4f2e-ae73-f05d06576ba8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\framework-arduinoespressif8266\cores\esp8266">
+      <UniqueIdentifier>{88041d0e-a1bb-4080-8977-7423c573c101}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\framework-arduinoespressif8266\cores\esp8266\WString">
+      <UniqueIdentifier>{eac3b2f6-d594-4629-984d-1dd17d788d20}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\..\KFCJson\src\JsonTools.cpp">
+      <Filter>Source Files\lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\KFCJson\src\JsonString.cpp">
+      <Filter>Source Files\lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\KFCJson\src\JsonObject.cpp">
+      <Filter>Source Files\lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\KFCJson\src\JsonValue.cpp">
+      <Filter>Source Files\lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\KFCJson\src\JsonVar.cpp">
+      <Filter>Source Files\lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\KFCJson\src\JsonArray.cpp">
+      <Filter>Source Files\lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\KFCJson\src\JsonBaseReader.cpp">
+      <Filter>Source Files\lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\KFCJson\src\JsonBuffer.cpp">
+      <Filter>Source Files\lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\KFCJson\src\JsonCallbackReader.cpp">
+      <Filter>Source Files\lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\KFCJson\src\JsonConverter.cpp">
+      <Filter>Source Files\lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\KFCJson\src\JsonMapReader.cpp">
+      <Filter>Source Files\lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\KFCJson\src\JsonNumber.cpp">
+      <Filter>Source Files\lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\PrintString.cpp">
+      <Filter>Source Files\lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\libcrc16\src\crc16.cpp">
+      <Filter>Source Files\lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\int64_to_string.cpp">
+      <Filter>Source Files\lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\lib-mock\ets_impl\ets_main.cpp">
+      <Filter>Source Files\mock</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\lib-mock\ets_impl\ets_sys_win32.cpp">
+      <Filter>Source Files\mock</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\lib-mock\ets_impl\ets_timer_win32.cpp">
+      <Filter>Source Files\mock</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\lib-mock\KFCBaseLibrary\src\StreamString.cpp">
+      <Filter>Source Files\mock</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\lib-mock\KFCBaseLibrary\src\WiFi.cpp">
+      <Filter>Source Files\mock</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\lib-mock\KFCBaseLibrary\src\WiFiUDP.cpp">
+      <Filter>Source Files\mock</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\lib-mock\KFCBaseLibrary\src\Stream.cpp">
+      <Filter>Source Files\mock</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\lib-mock\KFCBaseLibrary\src\Serial.cpp">
+      <Filter>Source Files\mock</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\lib-mock\KFCBaseLibrary\src\SPI.cpp">
+      <Filter>Source Files\mock</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\lib-mock\KFCBaseLibrary\src\Print.cpp">
+      <Filter>Source Files\mock</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\lib-mock\KFCBaseLibrary\src\FS.cpp">
+      <Filter>Source Files\mock</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\lib-mock\KFCBaseLibrary\src\ESP8266HttpClient.cpp">
+      <Filter>Source Files\mock</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\lib-mock\KFCBaseLibrary\src\EEPROM.cpp">
+      <Filter>Source Files\mock</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\lib-mock\KFCBaseLibrary\src\Compat.cpp">
+      <Filter>Source Files\mock</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\KFCEventScheduler\src\Scheduler.cpp">
+      <Filter>Source Files\lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\KFCEventScheduler\src\Timer.cpp">
+      <Filter>Source Files\lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\KFCEventScheduler\src\CallbackTimer.cpp">
+      <Filter>Source Files\lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\KFCEventScheduler\src\Event.cpp">
+      <Filter>Source Files\lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\KFCEventScheduler\src\LoopFunctions.cpp">
+      <Filter>Source Files\lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\KFCEventScheduler\src\ManagedTimer.cpp">
+      <Filter>Source Files\lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\KFCEventScheduler\src\OSTimer.cpp">
+      <Filter>Source Files\lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\KFCEventScheduler\src\WiFiCallbacks.cpp">
+      <Filter>Source Files\lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\MicrosTimer.cpp">
+      <Filter>Source Files\lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\MillisTimer.cpp">
+      <Filter>Source Files\lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\Arduino_compat.cpp">
+      <Filter>Source Files\KFCBaseLibrary</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\Buffer.cpp">
+      <Filter>Source Files\KFCBaseLibrary</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\BufferStream.cpp">
+      <Filter>Source Files\KFCBaseLibrary</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\debug_helper.cpp">
+      <Filter>Source Files\KFCBaseLibrary</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\DumpBinary.cpp">
+      <Filter>Source Files\KFCBaseLibrary</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\misc.cpp">
+      <Filter>Source Files\KFCBaseLibrary</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\PrintHtmlEntitiesString.cpp">
+      <Filter>Source Files\KFCBaseLibrary</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\PrintHtmlEntities.cpp">
+      <Filter>Source Files\KFCBaseLibrary</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\src\spgm_auto_strings.cpp">
+      <Filter>Source Files\lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\lib-mock\KFCBaseLibrary\src\stdlib_noniso.cpp">
+      <Filter>Source Files\mock</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\..\..\..\.platformio\packages\tmp-framework-arduinoespressif8266\_framework-arduinoespressif8266_3.20704.0\cores\esp8266\WString\WString.cpp">
+      <Filter>Source Files\framework-arduinoespressif8266\cores\esp8266\WString</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\misc_time.cpp">
+      <Filter>Source Files\KFCBaseLibrary</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\misc_string.cpp">
+      <Filter>Source Files\KFCBaseLibrary</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\include\Configuration.h">
+      <Filter>Header Files\KFCConfiguration</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\ConfigurationHelper.h">
+      <Filter>Header Files\KFCConfiguration</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\ConfigurationParameter.h">
+      <Filter>Header Files\KFCConfiguration</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\JsonConfigReader.h">
+      <Filter>Header Files\KFCConfiguration</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\WriteableData.h">
+      <Filter>Header Files\KFCConfiguration</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\Allocator.h">
+      <Filter>Header Files\KFCConfiguration</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\Allocator.hpp">
+      <Filter>Header Files\KFCConfiguration</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\EEPROMAccess.h">
+      <Filter>Header Files\KFCConfiguration</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\ConfigurationParameterT.h">
+      <Filter>Header Files\KFCConfiguration</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\DebugHandle.h">
+      <Filter>Header Files\KFCConfiguration</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\lib-mock\KFCBaseLibrary\include\FS.h">
+      <Filter>Header Files\mock</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\KFCBaseLibrary\include\Arduino_compat.h">
+      <Filter>Header Files\KFCBaseLibrary</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\KFCBaseLibrary\include\Buffer.h">
+      <Filter>Header Files\KFCBaseLibrary</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\KFCBaseLibrary\include\BufferStream.h">
+      <Filter>Header Files\KFCBaseLibrary</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\KFCBaseLibrary\include\crc16.h">
+      <Filter>Header Files\KFCBaseLibrary</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\KFCBaseLibrary\include\TableDumper.h">
+      <Filter>Header Files\KFCBaseLibrary</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\stl_ext\include\stl_ext\algorithm.h">
+      <Filter>Header Files\stl_ext</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\stl_ext\include\stl_ext\array.h">
+      <Filter>Header Files\stl_ext</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\stl_ext\include\stl_ext\fixed_circular_buffer.h">
+      <Filter>Header Files\stl_ext</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\stl_ext\include\stl_ext\chunked_list.h">
+      <Filter>Header Files\stl_ext</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\stl_ext\include\stl_ext\is_trivially_copyable.h">
+      <Filter>Header Files\stl_ext</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\stl_ext\include\stl_ext\iterator.h">
+      <Filter>Header Files\stl_ext</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\stl_ext\include\stl_ext\memory.h">
+      <Filter>Header Files\stl_ext</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\stl_ext\include\stl_ext\non_std.h">
+      <Filter>Header Files\stl_ext</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\stl_ext\include\stl_ext\type_traits.h">
+      <Filter>Header Files\stl_ext</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\stl_ext\include\stl_ext\utility.h">
+      <Filter>Header Files\stl_ext</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\stl_ext\include\stl_ext\variant.h">
+      <Filter>Header Files\stl_ext</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\stl_ext\include\stl_ext\vector.h">
+      <Filter>Header Files\stl_ext</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\stl_ext\include\stl_ext\printf_wrapper.h">
+      <Filter>Header Files\stl_ext</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\stl_ext\include\stl_ext\bitfield_storage.h">
+      <Filter>Header Files\stl_ext</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\stl_ext\include\stl_ext_all.h">
+      <Filter>Header Files\stl_ext</Filter>
+    </ClInclude>
+    <ClInclude Include="tests.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\stl_ext\include\stl_ext\conv_utf8.h">
+      <Filter>Header Files\stl_ext</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

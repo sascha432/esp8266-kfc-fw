@@ -8,7 +8,8 @@
 #include <mutex>
 #include "ets_sys_win32.h"
 
-volatile bool __ets_is_running = true;
+//volatile bool __ets_is_running = true;
+std::atomic_bool __ets_is_running = true;
 std::chrono::steady_clock::time_point micros_start_time = std::chrono::high_resolution_clock::now();
 
 uint64_t micros64()

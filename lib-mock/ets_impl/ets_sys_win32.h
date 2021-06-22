@@ -82,7 +82,8 @@ void ets_timer_deinit(void);
 
 int ets_printf(const char *fmt, ...);
 
-extern volatile bool __ets_is_running;
+extern std::atomic_bool __ets_is_running;
+//extern volatile bool __ets_is_running;
 extern bool __ets_is_loop_running();
 extern void __ets_end_loop();
 

@@ -288,7 +288,7 @@ void ets_timer_init(void)
         root.timer_func = nullptr;
         timer_list = &root;
         __ets_timer_thread = create_timer_thread();
-        __DBG_printf("ets_timer_thread created=1");
+        //__DBG_printf("ets_timer_thread created=1");
     }
 }
 
@@ -297,8 +297,7 @@ void ets_timer_deinit(void)
     if (timer_list) {
         __ets_timer_thread_end = true;
         __ets_timer_thread_wakeup.notify_all();
-        dump_order_timers();
-        __DBG_printf("__ets_timer_thread joinable=%u", __ets_timer_thread.joinable());
+        //__DBG_printf("__ets_timer_thread joinable=%u", __ets_timer_thread.joinable());
         __ets_timer_thread.join();
         timer_list = nullptr;
     }

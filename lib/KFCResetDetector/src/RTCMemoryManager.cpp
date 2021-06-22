@@ -179,10 +179,10 @@ uint8_t *RTCMemoryManager::_readMemory(Header_t &header, uint16_t extraSize) {
 
 uint8_t RTCMemoryManager::read(RTCMemoryId id, void *dataPtr, uint8_t maxSize)
 {
-    Header_t header;
+    Header_t header __attribute__((aligned(4)));
     Entry_t entry;
     uint8_t *data;
-    memset(dataPtr, 0, maxSize);
+    std::fill_n(reinterpret_cast<uint8_t *>(dataPtr), maxSize, 0);
     auto memPtr = _read(data, header, entry, id);
     if (!memPtr) {
         __LDBG_printf("read = nullptr");
@@ -196,7 +196,7 @@ uint8_t RTCMemoryManager::read(RTCMemoryId id, void *dataPtr, uint8_t maxSize)
 
 uint8_t *RTCMemoryManager::read(RTCMemoryId id, uint8_t &length)
 {
-    Header_t header;
+    Header_t header __attribute__((aligned(4)));
     Entry_t entry;
     uint8_t *data;
     auto memPtr = _read(data, header, entry, id);
@@ -255,7 +255,7 @@ bool RTCMemoryManager::write(RTCMemoryId id, const void *dataPtr, uint8_t dataLe
     }
     __LDBG_printf("write id=%u data=%p len=%u", id, dataPtr, dataLength);
 
-    Header_t header;
+    Header_t header __attribute__((aligned(4)));
     uint16_t newLength = sizeof(header);
     uint8_t *outPtr;
     auto memUnqiuePtr = std::unique_ptr<uint8_t[]>(_readMemory(header, dataLength));
@@ -370,7 +370,7 @@ bool RTCMemoryManager::write(RTCMemoryId id, const void *dataPtr, uint8_t dataLe
 
 bool RTCMemoryManager::dump(Print &output, RTCMemoryId displayId) {
 
-    Header_t header;
+    Header_t header __attribute__((aligned(4)));
     auto memPtr = _readMemory(header, 0);
     if (!memPtr) {
         output.println(F("RTC data not set or invalid"));

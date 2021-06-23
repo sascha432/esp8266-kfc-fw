@@ -138,6 +138,15 @@ static String this_thread_id()
 static std::thread create_timer_thread()
 {
     __ets_timer_thread_end = false;
+
+    atexit([]() {
+        Serial.println("exit() called, terminating application...");
+        if (!__ets_timer_thread_end) {
+            __ets_end_loop();
+        }
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+    });
+
     return std::thread([]() {
         while (!__ets_timer_thread_end) {
             std::chrono::steady_clock::time_point wait_until = std::chrono::steady_clock::time_point::max();

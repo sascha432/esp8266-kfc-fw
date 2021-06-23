@@ -11,41 +11,48 @@
 
 #if ARDUINO_ESP8266_VERSION_COMBINED >= 0x020603
 
-extern "C" {
-    #include <bearssl/bearssl_hash.h>
-}
+#include <bearssl/bearssl_hash.h>
 
-class SHA1
-{
-public:
-    static constexpr size_t kHashSize = 20;
-public:
-    SHA1() {
-        reset();
-    }
+namespace Session {
 
-    constexpr size_t hashSize() const {
-        return kHashSize;
-    }
-
-    inline __attribute__((always_inline)) void reset() {
-        br_sha1_init(&context);
-    }
-
-    inline __attribute__((always_inline)) void update(const void *data, size_t len) {
-        br_sha1_update(&context, data, len);
-    }
-
-    template<size_t _Len>
-    inline __attribute__((always_inline)) void finalize(void *hash)
+    class SHA1
     {
-        static_assert(_Len == kHashSize, "invalid size");
-        br_sha1_out(&context, hash);
+    public:
+        static constexpr size_t kHashSize = br_sha1_SIZE;
+    public:
+        SHA1() {
+            reset();
+        }
+
+        constexpr size_t hashSize() const {
+            return kHashSize;
+        }
+
+        void reset();
+        void update(const void *data, size_t len);
+
+        template<size_t _Len>
+        inline __attribute__((always_inline)) void finalize(void *hash)
+        {
+            static_assert(_Len == kHashSize, "invalid size");
+            br_sha1_out(&_context, hash);
+        }
+
+    private:
+        br_sha1_context _context;
+    };
+
+    inline __attribute__((always_inline)) void SHA1::reset()
+    {
+        br_sha1_init(&_context);
     }
 
-private:
-    br_sha1_context context;
-};
+    inline __attribute__((always_inline)) void SHA1::update(const void *data, size_t len)
+    {
+        br_sha1_update(&_context, data, len);
+    }
+
+}
 
 #else
 

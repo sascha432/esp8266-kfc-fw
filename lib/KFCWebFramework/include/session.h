@@ -31,9 +31,6 @@ namespace Session {
         constexpr size_t hashSize() const {
             return kHashSize;
         }
-        constexpr size_t blockSize() const {
-            return kHashSize * 2;
-        }
 
         void reset();
         void update(const void *data, size_t len);
@@ -98,7 +95,7 @@ public:
 
 #include "SHA1.h"
 
-class SessionHash : public SHA1
+class SessionHash : public Session::SHA1
 {
 public:
     using SHA1::SHA1;

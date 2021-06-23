@@ -36,21 +36,6 @@ public:
         br_sha1_update(&context, data, len);
     }
 
-    // inline __attribute__((always_inline)) void finalize(void *hash, size_t len) {
-    //     finalize(reinterpret_cast<uint8_t *>(hash), len);
-    // }
-
-    // void finalize(uint8_t *hash, size_t len) {
-    //     if (len == hashSize()) {
-    //         br_sha1_out(&context, hash);
-    //     }
-    //     else {
-    //         uint8_t buf[hashSize()];
-    //         br_sha1_out(&context, buf);
-    //         std::fill(std::copy_n(buf, std::min(sizeof(buf), len), hash), hash + len, 0);
-    //     }
-    // }
-
     template<size_t _Len>
     inline __attribute__((always_inline)) void finalize(void *hash)
     {

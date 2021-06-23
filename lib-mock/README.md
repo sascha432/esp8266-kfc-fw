@@ -6,6 +6,29 @@ It is "work in progress". Most Arduino based code is working and the ESP8266 fra
 
 Serial as mapped to the Window Console for I/O and debugging.
 
+## GPIO Support
+
+255 GPIO pins are supported, digital and analog.
+
+## Fash Memory Emulation
+
+By default, the flash memory is organized in a split configuration `conf\ld\eagle.flash.4m2m.ld`
+
+- 4MByte Flash Memory in 4KB blocks
+- 1MByte for code
+- 1Mbyte free
+- 2Mbyte for SPIFFS/LittleFS, EEPROM and other types
+
+See `lib\KFCBaseLibrary\include\section_defines.h` for details. The data is stored in `FLASH_MEMORY_STORAGE_FILE` (default `EspFlashMemory.4m2m.dat`)
+
+## IRAM/DRAM Support
+
+There is no support for IRAM/DRAM and the default Windows memory allocator is used. it is possible to limit the read/write access to a certain area. Details can be found in the EEPROM library
+
+## EEPROM Emulation
+
+The EEPROM is a single 4096 Byte Flash Sector based on the Flash Emulation
+
 ## Win32 GUI support
 
 Support for TFT displays is implemented via Adafruit's GFX library, which requires to compile it was Win32 Application instead of Console and add the GFX mock library. A static library will be available soon...

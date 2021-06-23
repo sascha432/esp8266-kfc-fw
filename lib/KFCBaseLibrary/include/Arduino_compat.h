@@ -196,6 +196,8 @@ class __FlashStringHelper;
 
 void init_winsock();
 
+extern "C" uint32_t crc32(const void *data, size_t length, uint32_t crc = ~0U);
+
 #ifndef strdup
 #define strdup _strdup
 #endif

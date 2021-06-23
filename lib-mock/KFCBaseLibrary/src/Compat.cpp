@@ -6,6 +6,7 @@
 
 #include "Arduino_compat.h"
 #include <chrono>
+#include <section_defines.h>
 #include <ets_timer_win32.h>
 #include <winternl.h>
 #include <algorithm>
@@ -18,14 +19,30 @@
 EEPROMClass EEPROM;
 _SPIFFS SPIFFS;
 
-uint32_t _EEPROM_start;
-
 char *dtostrf(double val, signed char width, unsigned char prec, char *s) 
 {
     sprintf(s, "%*.*f", width, prec, val);
     return s;
 }
 
+uint32_t crc32(const void *data, size_t length, uint32_t crc)
+{
+    const uint8_t *ldata = reinterpret_cast<const uint8_t *>(data);
+    while (length--) {
+        uint8_t c = pgm_read_byte(ldata++);
+        for (uint32_t i = 0x80; i > 0; i >>= 1) {
+            bool bit = crc & 0x80000000;
+            if (c & i) {
+                bit = !bit;
+            }
+            crc <<= 1;
+            if (bit) {
+                crc ^= 0x04c11db7;
+            }
+        }
+    }
+    return crc;
+}
 
 //const String emptyString;
 
@@ -261,21 +278,17 @@ protected:
     }
 
     uintptr_t _get_address() const {
-        _end_address -= _length();
-        return _end_address;
+        return SECTION_IROM0_TEXT_END_ADDRESS - _length();
     }
 
     uint8_t *_begin;
     uint8_t *_end;
     uintptr_t _address;
     size_t _deduplicated;
-
-    static uintptr_t _end_address;
 public:
     static Vector _vector;
 };
 
-uintptr_t flash_memory::_end_address = 0x40300000;
 flash_memory::Vector flash_memory::_vector;
 
 #pragma pop_macro("new")
@@ -444,9 +457,8 @@ unsigned long pulseInLong(uint8_t pin, uint8_t state, unsigned long timeout)
     return 0;
 }
 
-
 uint16_t __builtin_bswap16(uint16_t word) {
-    return ((word >> 8) & 0xff) | ((word << 8) && 0xffff);
+    return ((word >> 8) & 0xff) | ((word << 8) & 0xffff);
 }
 
 #endif

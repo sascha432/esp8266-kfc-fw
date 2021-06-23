@@ -5,9 +5,14 @@ VisualStudioVersion = 16.0.30503.244
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "main_test", "core\msc_framework-arduinoespressif_win32.vcxproj", "{D22B37FC-C179-4622-924B-6F1CAEF329D3}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "static_lib", "static_lib\static_lib.vcxproj", "{6582A005-B269-430F-909E-8B79CD1FB280}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "framework-arduinoespressif", "static_lib\static_lib.vcxproj", "{6582A005-B269-430F-909E-8B79CD1FB280}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ConsoleApplication1", "ConsoleApplication1\ConsoleApplication1.vcxproj", "{D1F8C426-47F8-4D13-BDB1-DB25431388C4}"
+	ProjectSection(ProjectDependencies) = postProject
+		{6582A005-B269-430F-909E-8B79CD1FB280} = {6582A005-B269-430F-909E-8B79CD1FB280}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ConfigV2Test", "ConfigV2Test\ConfigV2Test.vcxproj", "{B1F22761-51FB-4045-933A-10ABDD6328E6}"
 	ProjectSection(ProjectDependencies) = postProject
 		{6582A005-B269-430F-909E-8B79CD1FB280} = {6582A005-B269-430F-909E-8B79CD1FB280}
 	EndProjectSection
@@ -30,7 +35,6 @@ Global
 		{6582A005-B269-430F-909E-8B79CD1FB280}.Debug|x64.ActiveCfg = Debug|x64
 		{6582A005-B269-430F-909E-8B79CD1FB280}.Debug|x64.Build.0 = Debug|x64
 		{6582A005-B269-430F-909E-8B79CD1FB280}.Debug|x86.ActiveCfg = Debug|Win32
-		{6582A005-B269-430F-909E-8B79CD1FB280}.Debug|x86.Build.0 = Debug|Win32
 		{6582A005-B269-430F-909E-8B79CD1FB280}.Release|x64.ActiveCfg = Release|x64
 		{6582A005-B269-430F-909E-8B79CD1FB280}.Release|x64.Build.0 = Release|x64
 		{6582A005-B269-430F-909E-8B79CD1FB280}.Release|x86.ActiveCfg = Release|Win32
@@ -38,11 +42,18 @@ Global
 		{D1F8C426-47F8-4D13-BDB1-DB25431388C4}.Debug|x64.ActiveCfg = Debug|x64
 		{D1F8C426-47F8-4D13-BDB1-DB25431388C4}.Debug|x64.Build.0 = Debug|x64
 		{D1F8C426-47F8-4D13-BDB1-DB25431388C4}.Debug|x86.ActiveCfg = Debug|Win32
-		{D1F8C426-47F8-4D13-BDB1-DB25431388C4}.Debug|x86.Build.0 = Debug|Win32
 		{D1F8C426-47F8-4D13-BDB1-DB25431388C4}.Release|x64.ActiveCfg = Release|x64
 		{D1F8C426-47F8-4D13-BDB1-DB25431388C4}.Release|x64.Build.0 = Release|x64
 		{D1F8C426-47F8-4D13-BDB1-DB25431388C4}.Release|x86.ActiveCfg = Release|Win32
 		{D1F8C426-47F8-4D13-BDB1-DB25431388C4}.Release|x86.Build.0 = Release|Win32
+		{B1F22761-51FB-4045-933A-10ABDD6328E6}.Debug|x64.ActiveCfg = Debug|x64
+		{B1F22761-51FB-4045-933A-10ABDD6328E6}.Debug|x64.Build.0 = Debug|x64
+		{B1F22761-51FB-4045-933A-10ABDD6328E6}.Debug|x86.ActiveCfg = Debug|Win32
+		{B1F22761-51FB-4045-933A-10ABDD6328E6}.Debug|x86.Build.0 = Debug|Win32
+		{B1F22761-51FB-4045-933A-10ABDD6328E6}.Release|x64.ActiveCfg = Release|x64
+		{B1F22761-51FB-4045-933A-10ABDD6328E6}.Release|x64.Build.0 = Release|x64
+		{B1F22761-51FB-4045-933A-10ABDD6328E6}.Release|x86.ActiveCfg = Release|Win32
+		{B1F22761-51FB-4045-933A-10ABDD6328E6}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

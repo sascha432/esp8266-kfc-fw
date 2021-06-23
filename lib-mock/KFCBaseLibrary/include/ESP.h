@@ -110,6 +110,17 @@ public:
     uint8_t *_rtcMemory;
 
     struct rst_info *resetInfo;
+
+public:
+    static constexpr uint32_t kFlashStartAddress = 0x40200000U;
+    static constexpr uint32_t kFlashEndAddress = 0x402FEFF0U;
+
+    static bool flashEraseSector(uint32_t sector);
+    static bool flashWrite(uint32_t address, const uint32_t *data, size_t size);
+    static bool flashWrite(uint32_t address, const uint8_t *data, size_t size);
+    static bool flashRead(uint32_t address, uint32_t *data, size_t size);
+    static bool flashRead(uint32_t address, uint8_t *data, size_t size);
+
 };
 
 extern EspClass ESP;

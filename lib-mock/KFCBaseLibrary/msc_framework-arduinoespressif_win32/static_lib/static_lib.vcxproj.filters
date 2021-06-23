@@ -37,11 +37,9 @@
     <Filter Include="Source Files\lib-mock\KFCBaseLibrary">
       <UniqueIdentifier>{194db183-aa17-431d-b85d-b7169cd9f9a1}</UniqueIdentifier>
     </Filter>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="framework.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
+    <Filter Include="Source Files\lib-mock\Flash">
+      <UniqueIdentifier>{4211f8d3-6d41-4446-8512-eae0dd52129f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\..\lib\KFCEventScheduler\src\CallbackTimer.cpp">
@@ -172,6 +170,12 @@
     </ClCompile>
     <ClCompile Include="..\..\..\..\src\spgm_auto_strings.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Flash\EspFlash.cpp">
+      <Filter>Source Files\lib-mock\Flash</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Flash\eagle.flash.4m2m.ld.cpp">
+      <Filter>Source Files\lib-mock\Flash</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

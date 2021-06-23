@@ -24,6 +24,7 @@
     <ProjectGuid>{6582a005-b269-430f-909e-8b79cd1fb280}</ProjectGuid>
     <RootNamespace>staticlib</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>framework-arduinoespressif</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -100,7 +101,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <Lib>
-      <OutputFile>$(OutDir)framework-arduinoespressif$(TargetExt)</OutputFile>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
     </Lib>
     <Bscmake>
       <OutputFile>$(OutDir)framework-arduinoespressif.bsc</OutputFile>
@@ -160,9 +161,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="framework.h" />
-  </ItemGroup>
-  <ItemGroup>
     <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\Arduino_compat.cpp" />
     <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\Buffer.cpp" />
     <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\BufferStream.cpp" />
@@ -197,6 +195,8 @@
     <ClCompile Include="..\..\src\Compat.cpp" />
     <ClCompile Include="..\..\src\EEPROM.cpp" />
     <ClCompile Include="..\..\src\ESP8266HttpClient.cpp" />
+    <ClCompile Include="..\..\src\Flash\eagle.flash.4m2m.ld.cpp" />
+    <ClCompile Include="..\..\src\Flash\EspFlash.cpp" />
     <ClCompile Include="..\..\src\FS.cpp" />
     <ClCompile Include="..\..\src\Print.cpp" />
     <ClCompile Include="..\..\src\Serial.cpp" />

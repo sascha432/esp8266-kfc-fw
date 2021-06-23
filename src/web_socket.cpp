@@ -98,7 +98,7 @@ void WsClientAsyncWebSocket::_enableAuthentication()
 {
     uint8_t buf[32];
     String password = String('\xff');
-    rng.rand(buf, sizeof(buf));
+    ESP.random(buf, sizeof(buf));
     const char *ptr = (const char *)buf;
     for(uint8_t i = 0; i < (uint8_t)sizeof(buf); i++) {
         if (*ptr) {

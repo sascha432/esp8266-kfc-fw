@@ -6,10 +6,6 @@
 
 #include <Arduino_compat.h>
 
-#ifndef SESSION_RNG_RANDOM
-#define SESSION_RNG_RANDOM                      1
-#endif
-
 #ifndef HAVE_SESSION_DEVICE_TOKEN
 #define HAVE_SESSION_DEVICE_TOKEN               1
 #endif
@@ -18,12 +14,70 @@
 #define SESSION_DEVICE_TOKEN_MIN_LENGTH         16
 #endif
 
-#if SESSION_RNG_RANDOM
-#include <RNG.h>
-extern RNGClass rng;
-#endif
+#if defined(ESP8266) && ARDUINO_ESP8266_VERSION_COMBINED >= 0x030000
 
-#if defined(ESP32) || defined(ESP8266)
+#include <bearssl/bearssl.h>
+
+namespace Session {
+
+    class SHA256
+    {
+    public:
+        static constexpr size_t kHashSize = br_sha256_SIZE;
+
+    public:
+        SHA256();
+
+        constexpr size_t hashSize() const {
+            return kHashSize;
+        }
+        constexpr size_t blockSize() const {
+            return kHashSize * 2;
+        }
+
+        void reset();
+        void update(const void *data, size_t len);
+
+        template<size_t _Len>
+        inline __attribute__((always_inline)) void finalize(void *hash)
+        {
+            static_assert(_Len == kHashSize, "invalid size");
+            br_sha256_out(&_context, hash);
+        }
+
+    private:
+        br_sha256_context _context;
+    };
+
+    inline SHA256::SHA256()
+    {
+        reset();
+    }
+
+    inline __attribute__((always_inline)) void SHA256::reset()
+    {
+        br_sha256_init(&_context);
+    }
+
+    inline __attribute__((always_inline)) void SHA256::update(const void *data, size_t len)
+    {
+        br_sha256_update(&_context, data, len);
+    }
+
+}
+
+class SessionHash : public Session::SHA256
+{
+public:
+    using HashBuffer = uint8_t[SHA256::kHashSize];
+    using SaltBuffer = uint8_t[8];
+
+    static constexpr size_t kRounds = 1024;
+    static constexpr size_t kSessionIdSize = (sizeof(SaltBuffer) + sizeof(HashBuffer)) * 2;
+};
+
+
+#elif defined(ESP32) || defined(ESP8266)
 
 #include <SHA256.h>
 

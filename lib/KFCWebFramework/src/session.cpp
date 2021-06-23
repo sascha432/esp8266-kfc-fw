@@ -6,8 +6,6 @@
 #include "session.h"
 #include "misc.h"
 
-RNGClass rng;
-
 const uint8_t *pepper_and_salt(const uint8_t *originalSalt, SessionHash &hash, SessionHash::SaltBuffer &saltBuffer)
 {
     uint8_t *salt;
@@ -16,7 +14,7 @@ const uint8_t *pepper_and_salt(const uint8_t *originalSalt, SessionHash &hash, S
     }
     else {
         salt = saltBuffer;
-        rng.rand(salt, sizeof(saltBuffer));
+        ESP.random(salt, sizeof(saltBuffer));
     }
     hash.update(salt, sizeof(saltBuffer));
     return salt;
@@ -32,13 +30,13 @@ String generate_session_id(const char *username, const char *password, const uin
     auto newSalt = pepper_and_salt(salt, hash, saltBuf);
     hash.update(password, strlen(password));
     hash.update(username, strlen(username));
-    hash.finalize(buf, sizeof(buf));
+    hash.finalize<sizeof(buf)>(buf);
 
     for(size_t i = 0; i < SessionHash::kRounds; i++) {
         hash.reset();
         hash.update(buf, sizeof(buf));
         hash.update(newSalt, sizeof(saltBuf));
-        hash.finalize(buf, sizeof(buf));
+        hash.finalize<sizeof(buf)>(buf);
     }
 
     bin2hex_append(sid, newSalt, sizeof(saltBuf));

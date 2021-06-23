@@ -309,7 +309,7 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     }
     else if (key == F("RANDOM")) {
         uint8_t buf[8];
-        rng.rand(buf, sizeof(buf));
+        ESP.random(buf, sizeof(buf));
         for(auto n: buf) {
             n %= 36;
             output.print((char)(n < 26 ? (n + 'a') : (n + ('0' - 26))));

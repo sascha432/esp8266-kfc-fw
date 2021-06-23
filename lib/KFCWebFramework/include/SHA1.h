@@ -18,12 +18,14 @@ extern "C" {
 class SHA1
 {
 public:
+    static constexpr size_t kHashSize = 20;
+public:
     SHA1() {
         reset();
     }
 
     constexpr size_t hashSize() const {
-        return 20;
+        return kHashSize;
     }
 
     inline __attribute__((always_inline)) void reset() {
@@ -34,19 +36,26 @@ public:
         br_sha1_update(&context, data, len);
     }
 
-    inline __attribute__((always_inline)) void finalize(void *hash, size_t len) {
-        finalize(reinterpret_cast<uint8_t *>(hash), len);
-    }
+    // inline __attribute__((always_inline)) void finalize(void *hash, size_t len) {
+    //     finalize(reinterpret_cast<uint8_t *>(hash), len);
+    // }
 
-    void finalize(uint8_t *hash, size_t len) {
-        if (len == hashSize()) {
-            br_sha1_out(&context, hash);
-        }
-        else {
-            uint8_t buf[hashSize()];
-            br_sha1_out(&context, buf);
-            std::fill(std::copy_n(buf, std::min(sizeof(buf), len), hash), hash + len, 0);
-        }
+    // void finalize(uint8_t *hash, size_t len) {
+    //     if (len == hashSize()) {
+    //         br_sha1_out(&context, hash);
+    //     }
+    //     else {
+    //         uint8_t buf[hashSize()];
+    //         br_sha1_out(&context, buf);
+    //         std::fill(std::copy_n(buf, std::min(sizeof(buf), len), hash), hash + len, 0);
+    //     }
+    // }
+
+    template<size_t _Len>
+    inline __attribute__((always_inline)) void finalize(void *hash)
+    {
+        static_assert(_Len == kHashSize, "invalid size");
+        br_sha1_out(&context, hash);
     }
 
 private:

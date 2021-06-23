@@ -779,14 +779,6 @@ void KFCFWConfiguration::setup()
         BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
     }
 
-    // ~5ms
-    rng.begin(version.c_str());
-    uint8_t mac[WL_MAC_ADDR_LENGTH];
-    rng.stir(WiFi.macAddress(mac), WL_MAC_ADDR_LENGTH);
-    auto channel = WiFi.channel();
-    rng.stir((const uint8_t *)&channel, sizeof(channel));
-    rng.stir((const uint8_t *)&config, sizeof(config));
-
     LoopFunctions::add(KFCFWConfiguration::loop);
 }
 
@@ -1158,7 +1150,6 @@ void KFCFWConfiguration::restartDevice(bool safeMode)
 
 void KFCFWConfiguration::loop()
 {
-    rng.loop();
     config.gc();
 }
 

@@ -56,6 +56,13 @@ class PlatformIOParser {
      */
     private $envConfig;
 
+    /**
+     * stores last $line, $keyword on the end of thze line
+     *
+     * @var array
+     */
+    private $lastLine = [];
+
     public function __construct()
     {
         $this->defines = array();
@@ -383,12 +390,14 @@ class PlatformIOParser {
                         $this->processIniLine($environment, $keyword, $fullLine);
                         $keyword = null;
                         $fullLine = '';
+                        $this->lastLine = [$line_num, $keyword, $environment];
                     }
                 }
                 else {
                     $line = trim($line);
                     if ($line != "") {
                         echo "WARNING! '$line' skipped\n";
+                        echo "line=".$this->lastLine[0]." keyword=".$this->lastLine[1]." env=".$this->lastLine[2]."\n";
                     }
                 }
             }

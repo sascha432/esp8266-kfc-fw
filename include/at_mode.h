@@ -323,6 +323,7 @@ public:
     bool equals(uint16_t num, const String &str) const;
     bool equals(uint16_t num, char ch) const;
     bool startsWith(uint16_t num, const __FlashStringHelper *str) const;
+    bool startsWithIgnoreCase(uint16_t num, const __FlashStringHelper *str) const;
     bool isAnyMatchIgnoreCase(uint16_t num, const __FlashStringHelper *strings) const;
 
     // return true for "", "*", "any", "all"
@@ -334,6 +335,21 @@ public:
     // return true for "", "stop", "no", "N", "false", "off", "disable", "dis", "close", "closed" and any integer == 0
     // missing argument returns bDefault
     bool isFalse(uint16_t num, bool bDefault = false) const;
+
+    struct Range {
+        uint32_t offset;
+        uint32_t size;
+        Range() : offset(0), size(~0U) {
+        }
+        Range(uint32_t _offset) : offset(_offset), size(0U - _offset) {
+        }
+        Range(uint32_t _offset, uint32_t _size) : offset(_offset), size(_size) {
+        }
+    };
+
+    // get range from min-max
+    // syntax: <min>[-<max|min+1>] or <offset>[,<length|1>]
+    Range toRange(uint16_t num, uint32_t min, uint32_t max, const String &defaultValue);
 
 public:
     bool requireArgs(uint16_t min, uint16_t max = ~0) const;

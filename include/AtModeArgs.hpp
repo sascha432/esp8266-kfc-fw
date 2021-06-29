@@ -296,7 +296,15 @@ inline bool AtModeArgs::startsWith(uint16_t num, const __FlashStringHelper *str)
     if (isInvalidArg(num)) {
         return false;
     }
-    return strncmp_P(get(0), RFPSTR(str), strlen_P(RFPSTR(str))) == 0;
+    return strncmp_P(get(num), RFPSTR(str), strlen_P(RFPSTR(str))) == 0;
+}
+
+inline bool AtModeArgs::startsWithIgnoreCase(uint16_t num, const __FlashStringHelper *str) const
+{
+    if (isInvalidArg(num)) {
+        return false;
+    }
+    return strncasecmp_P(get(num), RFPSTR(str), strlen_P(RFPSTR(str))) == 0;
 }
 
 inline bool AtModeArgs::isAnyMatchIgnoreCase(uint16_t num, const __FlashStringHelper *strings) const
@@ -313,7 +321,7 @@ inline  bool AtModeArgs::isAny(uint16_t num) const
     if (isInvalidArg(num)) {
         return false;
     }
-    if (_isAnyMatchIgnoreCase(get(0), F("|*|*.*|any|all"))) {
+    if (_isAnyMatchIgnoreCase(get(num), F("|*|*.*|any|all"))) {
         return true;
     }
     return false;
@@ -351,6 +359,29 @@ inline bool AtModeArgs::_isAnyMatchIgnoreCase(String str, const __FlashStringHel
 {
     str.trim();
     return (stringlist_ifind_P(strings, str.c_str(), '|') != -1);
+}
+
+inline Range AtModeArgs::toRange(uint16_t num, uint32_t min, uint32_t max, const String &defaultValue)
+{
+    uint32_t from = 0;
+    uint32_t to = ~0U;
+    auto arg = toString(num, defaultValue);
+    char *end = nullptr;
+    from = strtoul(arg.c_str(), &end, 0);
+    if (end) {
+        while(isspace(*end)) {
+            end++;
+        }
+        if (*end == ',' || *end == '-') {
+            to = strtoul(end + 1, nullptr, 0);
+            if (*end == ',') {
+                to += from;
+            }
+        }
+    }
+    from = std::clamp(from, min, max);
+    to = std::clamp(to, min + 1, max);
+    return Range(from, to);
 }
 
 #if DEBUG_AT_MODE

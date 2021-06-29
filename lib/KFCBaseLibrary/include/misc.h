@@ -418,6 +418,29 @@ constexpr size_t kNumBitsRequired() {
     return kNumBitsRequired((int)T::MAX - 1, 0);
 }
 
+constexpr size_t _kGetRequiredBitsForValue(uint64_t value, size_t count = 0);
+
+constexpr size_t _kGetRequiredBitsForValue(uint64_t value, size_t count) {
+    return value == 0 ? count : _kGetRequiredBitsForValue(value >> 1, count + 1);
+}
+
+// get number of bits to store value
+constexpr size_t kGetRequiredBitsForValue(int64_t value, size_t count) {
+    return value == 0 ? count : value < 0 ? _kGetRequiredBitsForValue(static_cast<uint64_t>(-value), 1) : _kGetRequiredBitsForValue(value >> 1, count + 1);
+}
+
+// get number of bits to store values between from and to
+constexpr size_t kGetRequiredBitsForRange(int64_t from, int64_t to) {
+    return from < 0 || to < 0 ?
+        std::max(_kGetRequiredBitsForValue(static_cast<uint64_t>(-std::min<int64_t>(from, to)), 1), _kGetRequiredBitsForValue(-from + to + 1, from <= 0 && to <= 0 ? 0 : 1)) :
+        std::max(_kGetRequiredBitsForValue(std::max<uint64_t>(from, to), 0), _kGetRequiredBitsForValue(from + to));
+}
+
+// get number of bits for values from 0 to (num - offset)
+constexpr size_t kGetRequiredBitsWithOffset(uint64_t offset, uint64_t num) {
+    return offset > num ? _kGetRequiredBitsForValue(offset - num, 1) : _kGetRequiredBitsForValue(num - offset);
+}
+
 constexpr uint32_t kCreateIPv4Address(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
 	return a | (b << 8U) | (c << 16U) | (d << 24U);
 }

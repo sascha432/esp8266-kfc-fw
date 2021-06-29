@@ -10,7 +10,7 @@
 #include <StreamString.h>
 #include "WebUIComponent.h"
 #include "WeatherStationBase.h"
-#include "NeoPixel_esp.h"
+#include <NeoPixelEx.h>
 #include "plugins.h"
 #if IOT_ALARM_PLUGIN_ENABLED
 #include "../src/plugins/alarm/alarm.h"

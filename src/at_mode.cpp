@@ -30,10 +30,10 @@
 #include "async_web_response.h"
 #include "serial_handler.h"
 #include "blink_led_timer.h"
-#include "NeoPixel_esp.h"
 #include "plugins.h"
 #include "WebUIAlerts.h"
 #include "PinMonitor.h"
+#include <NeoPixelEx.h>
 #if HAVE_PCF8574
 #include <IOExpander.h>
 extern IOExpander::PCF8574 _PCF8574;
@@ -43,8 +43,6 @@ extern IOExpander::PCF8574 _PCF8574;
 #if ARDUINO_ESP8266_VERSION_COMBINED >= 0x030000
 #include <umm_malloc/umm_heap_select.h>
 #endif
-
-#include "NeoPixel_esp.h"
 
 #if ESP8266
 #include "core_esp8266_waveform.h"
@@ -1388,9 +1386,12 @@ void at_mode_serial_handle_event(String &commandString)
 +flash=r,0x405ab000,0,256
 +flash=e,0x405ab000
 +flash=w,0x405ab000,0,1,2,3,4,5,6,7,8
++flash=r,0x405ab000,0,8
+
 
 // EEPROM
 +flash=r,0x405fb000,0,1024
++flash=r,0x405fb000,0,128
 
 
 */
@@ -1410,7 +1411,7 @@ void at_mode_serial_handle_event(String &commandString)
             switch(cmd) {
                 case 0: // erase
                 case 1: // e
-                    args.print(F("erasing sector %u (%08x)"), sector, addr);
+                    args.print(F("erasing sector %u [0x%08X]"), sector, addr + SECTION_FLASH_START_ADDRESS);
                     if ((rc = ESP.flashEraseSector(sector)) == false) {
                         args.print(F("erase failed"));
                     }
@@ -1429,7 +1430,7 @@ void at_mode_serial_handle_event(String &commandString)
                                 break;
                             }
                             DumpBinary(args.getStream(), DumpBinary::kGroupBytesDefault, DumpBinary::kPerLineDisabled)
-                                .setPerLine(sizeof(buf)).setGroupBytes(sizeof(uint32_t)).dump(buf, len, start);
+                                .setPerLine(sizeof(buf)).setGroupBytes(sizeof(uint32_t)).dump(buf, len, start + SECTION_FLASH_START_ADDRESS);
                             start += len;
                             delay(1);
                         }
@@ -1453,6 +1454,9 @@ void at_mode_serial_handle_event(String &commandString)
                                 rc = 0;
                                 auto ptr = data.get();
                                 for(uint16_t i = 3; i < args.size(); i++) {
+                                    if (i == 3) {
+                                        stream.printf_P(PSTR("[0x%08X] "), start + SECTION_FLASH_START_ADDRESS);
+                                    }
                                     auto value = static_cast<uint8_t>(args.toNumber(i, 0xff));
                                     *ptr++ = value;
                                     stream.printf_P(PSTR("%02x "), value);
@@ -1468,6 +1472,9 @@ void at_mode_serial_handle_event(String &commandString)
                                         ptr = data.get();
                                         // move address ahead
                                         start += 32;
+                                        if (i < args.size() - 1) {
+                                            stream.printf_P(PSTR("[0x%08X] "), start + SECTION_FLASH_START_ADDRESS);
+                                        }
                                     }
                                 }
 
@@ -1519,10 +1526,32 @@ void at_mode_serial_handle_event(String &commandString)
         }
     #endif
 #endif
+        PGM_P flashModeStr;
+        switch(ESP.getFlashChipMode()) {
+            case FM_DIO:
+                flashModeStr = PSTR("DIO");
+                break;
+            case FM_DOUT:
+                flashModeStr = PSTR("DOUT");
+                break;
+            case FM_QIO:
+                flashModeStr = PSTR("QIO");
+                break;
+            case FM_QOUT:
+                flashModeStr = PSTR("QOUT");
+                break;
+            case FM_UNKNOWN:
+            default:
+                flashModeStr = PSTR("UNKNOWN");
+                break;
+        }
+
         args.print(F("Heap start/size: 0x%x/%u"), SECTION_HEAP_START_ADDRESS, SECTION_HEAP_END_ADDRESS - SECTION_HEAP_START_ADDRESS);
         args.print(F("irom0.text: 0x%08x-0x%08x"), SECTION_IROM0_TEXT_START_ADDRESS, SECTION_IROM0_TEXT_END_ADDRESS);
         args.print(F("CPU frequency: %uMHz"), ESP.getCpuFreqMHz());
-        args.print(F("Flash size: %s"), formatBytes(ESP.getFlashChipRealSize()).c_str());
+        args.print(F("Flash size / Vendor / Mode: %s / %02x / %s"), formatBytes(ESP.getFlashChipRealSize()).c_str(), ESP.getFlashChipVendorId(), flashModeStr);
+        args.print(F("SDK / Core: %s / %s"), ESP.getSdkVersion(), ESP.getFullVersion().c_str());
+        args.print(F("Boot mode: %u, %u"), ESP.getBootVersion(), ESP.getBootMode());
         args.print(F("Firmware size: %s"), formatBytes(ESP.getSketchSize()).c_str());
         args.print(F("Version (uint32): %s (0x%08x)"), SaveCrash::Data::FirmwareVersion().toString().c_str(), SaveCrash::Data::FirmwareVersion().__version);
         args.print(F("MD5 hash: %s"), SaveCrash::Data().getMD5().c_str());
@@ -1541,6 +1570,7 @@ void at_mode_serial_handle_event(String &commandString)
         args.print(F("sizeof(AsyncClient): %u"), sizeof(AsyncClient));
         args.print(F("sizeof(CallbackTimer): %u"), sizeof(Event::CallbackTimer));
         // args.print(F("sizeof(SerialTwoWire): %u"), sizeof(SerialTwoWire));
+
 
 #if PIN_MONITOR
         PrintString tmp;

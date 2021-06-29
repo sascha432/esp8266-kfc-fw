@@ -615,7 +615,14 @@ private:
 
     Clock::Animation *_animation;
     Clock::BlendAnimation *_blendAnimation;
+    bool _running;
+    Clock::ShowMethodType _method;
     bool _debug;
+
+public:
+    static Clock::ShowMethodType getShowMethod();
+    static void setShowMethod(Clock::ShowMethodType method);
+    static void toggleShowMethod();
 };
 
 inline void ClockPlugin::setColor(Color color)
@@ -631,6 +638,12 @@ inline ClockPlugin::Color ClockPlugin::getColor() const
 inline void ClockPlugin::standbyLoop()
 {
     ::delay(50); // energy saving mode
+}
+
+extern "C" uint8_t getNeopixelShowMethodInt();
+
+inline static Clock::ShowMethodType getNeopixelShowMethod() {
+    return static_cast<Clock::ShowMethodType>(getNeopixelShowMethodInt());
 }
 
 #if DEBUG_IOT_CLOCK

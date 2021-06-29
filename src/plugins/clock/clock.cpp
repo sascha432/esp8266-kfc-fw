@@ -143,9 +143,32 @@ ClockPlugin::ClockPlugin() :
     _targetBrightness(0),
     _animation(nullptr),
     _blendAnimation(nullptr),
+    _running(false),
+    _method(Clock::ShowMethodType::FASTLED),
     _debug(false)
 {
     REGISTER_PLUGIN(this, "ClockPlugin");
+}
+
+Clock::ShowMethodType ClockPlugin::getShowMethod()
+{
+    return plugin._method;
+}
+
+void ClockPlugin::setShowMethod(Clock::ShowMethodType method)
+{
+    plugin._method = method;
+}
+
+void ClockPlugin::toggleShowMethod()
+{
+    auto method = static_cast<int>(plugin._method);
+    plugin._method = static_cast<Clock::ShowMethodType>(std::clamp(method + 1, static_cast<int>(Clock::ShowMethodType::NONE) + 1, static_cast<int>(Clock::ShowMethodType::MAX) - 1));
+}
+
+uint8_t getNeopixelShowMethodInt()
+{
+    return static_cast<uint8_t>(plugin.getShowMethod());
 }
 
 void ClockPlugin::createMenu()
@@ -529,7 +552,6 @@ void ClockPlugin::_setupTimer()
     });
 }
 
-
 void ClockPlugin::preSetup(SetupModeType mode)
 {
     if (mode == SetupModeType::DEFAULT) {
@@ -665,11 +687,15 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
 
     _setupTimer();
 
+    pinMode(14, OUTPUT);
+    digitalWrite(14, LOW);
+    _running = true;
 }
 
 void ClockPlugin::reconfigure(const String &source)
 {
     __LDBG_printf("source=%s", source.c_str());
+    _running = false;
 #if IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
     _removeDisplayLedTimer();
 #endif
@@ -685,10 +711,12 @@ void ClockPlugin::reconfigure(const String &source)
     if (_targetBrightness) {
         _enable();
     }
+    _running = true;
 }
 
 void ClockPlugin::shutdown()
 {
+    _running = false;
 #if PIN_MONITOR
     PinMonitor::GPIOInterruptsDisable();
 #endif
@@ -1369,7 +1397,9 @@ uint8_t ClockPlugin::calcPowerFunction(uint8_t scale, uint32_t data)
 
 void ClockPlugin::webSocketCallback(WsClient::ClientCallbackType type, WsClient *client, AsyncWebSocket *server, WsClient::ClientCallbackId id)
 {
-    plugin._webSocketCallback(type, client, server, id);
+    if (plugin._running) {
+        plugin._webSocketCallback(type, client, server, id);
+    }
 }
 
 float ClockPlugin::__getPowerLevel(float P, float min) const

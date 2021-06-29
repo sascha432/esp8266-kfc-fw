@@ -7,6 +7,9 @@
 #include <Arduino_compat.h>
 #include <type_traits>
 #include "color.h"
+#include <NeoPixelEx.h>
+
+extern "C" uint8_t getNeopixelShowMethodInt();
 
 #if DEBUG_IOT_CLOCK
 #include <debug_helper_enable.h>
@@ -21,6 +24,13 @@
 // 118 pixel * 3 / 4 = 88.5 = with padding 89 * 4 + 4 byte = 360 byte
 
 namespace Clock {
+
+    enum class ShowMethodType : uint8_t {
+        NONE = 0,
+        FASTLED,
+        NEOPIXEL,
+        MAX
+    };
 
 #if IOT_LED_MATRIX_CONFIGURABLE_DISPLAY
 
@@ -283,6 +293,7 @@ namespace Clock {
         using ColorType = CRGB;
         using PixelBufferPtr = ColorType *;
         using PixelBufferType = std::array<ColorType, kMaxPixelAddress>;
+        using NeoPixelBufferType = NeoPixelEx::Array<kMaxPixelAddress, NeoPixelEx::GRB>;
 
     public:
 
@@ -428,6 +439,10 @@ namespace Clock {
             output.printf_P(PSTR("data=%p pixels=%p offset=%u num=%u mode=led_matrix\n"), __pixels.data(), _pixels, kPixelOffset, kNumPixels);
         }
 
+        inline NeoPixelBufferType &__neopixels() {
+            return *reinterpret_cast<NeoPixelBufferType *>(reinterpret_cast<uint8_t *>(&_pixels[0]));
+        }
+
     protected:
         void _set(PixelAddressType idx, ColorType color) {
             if (idx < kNumPixels) {
@@ -474,6 +489,7 @@ namespace Clock {
     public:
         using PixelBufferType = _PixelDisplayBufferType;
         using PixelBufferType::__pixels;
+        using PixelBufferType::__neopixels;
         using PixelBufferType::_pixels;
         using PixelBufferType::begin;
         using PixelBufferType::end;
@@ -483,6 +499,7 @@ namespace Clock {
         using PixelBufferType::reset;
         using PixelBufferType::size;
         using PixelBufferType::kPixelOffset;
+        using PixelBufferType::kNumPixels;
 
     public:
         PixelDisplay() :
@@ -506,11 +523,32 @@ namespace Clock {
         }
 
         void show() {
-            FastLED.show();
+            show(FastLED.getBrightness());
+        }
+
+        void show(uint8_t brightness) {
+#if 1
+    static bool _toogle = false;
+    if ((_toogle = !_toogle)) {
+        GPOC = _BV(14);
+    } else {
+        GPOS = _BV(14);
+    }
+#endif
+            if (getNeopixelShowMethodInt() == static_cast<uint8_t>(Clock::ShowMethodType::FASTLED)) {
+                ets_intr_lock();
+                ets_intr_lock();
+                FastLED.show(brightness);
+                ets_intr_unlock();
+                ets_intr_unlock();
+            }
+            else if (getNeopixelShowMethodInt() == static_cast<uint8_t>(Clock::ShowMethodType::NEOPIXEL)) {
+                NeoPixel_espShow(IOT_CLOCK_WS2812_OUTPUT, __neopixels(), __neopixels().getNumBytes(), brightness);
+            }
         }
 
         void delay(unsigned long ms) {
-            if (can_yield() && (_controller.getDither() != DISABLE_DITHER) && (FastLED.getBrightness() != 0) && (FastLED.getBrightness() != 255)) {
+            if (can_yield() && (getNeopixelShowMethodInt() == static_cast<uint8_t>(Clock::ShowMethodType::FASTLED)) && (_controller.getDither() != DISABLE_DITHER) && (FastLED.getBrightness() != 0) && (FastLED.getBrightness() != 255)) {
                 // use FastLED.delay for dithering
                 FastLED.delay(ms);
             }

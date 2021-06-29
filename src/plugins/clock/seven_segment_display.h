@@ -9,9 +9,8 @@
 #include <Arduino_compat.h>
 #include <type_traits>
 #include <bitset>
+#include <NeoPixelEx.h>
 #include "pixel_display.h"
-
-#include "NeoPixel_esp.h"
 
 #if DEBUG_IOT_CLOCK
 #include <debug_helper_enable.h>
@@ -252,13 +251,12 @@ namespace SevenSegment {
 
         void show() {
             _applyMask();
-            // FastLED.show();
-            NeoPixel_espShow(IOT_CLOCK_WS2812_OUTPUT, (uint8_t *)__pixels.data(), __pixels.size() * 3, FastLED.getBrightness());
+            BaseDisplayType::show(FastLED.getBrightness());
         }
 
         void show(uint8_t brightness) {
             _applyMask();
-            FastLED.show(brightness);
+            BaseDisplayType::show(brightness);
         }
 
         void dump(Print &output) {

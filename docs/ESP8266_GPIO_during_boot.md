@@ -6,6 +6,28 @@ Low < 0.3V
 High > 3V
 High goes down arround 80-95ms >2.55V
 
+## NodeMCU / GPIO pins
+
+Depending on the levelshifter, GPIO 1, 3, 9 and 10 can be used. GPIO 9 and 10 require to run the flash memory in DIO mode.
+
+  NodeMCU | PIN | Description |
+|---|---|---|
+| D0 | GPIO16 | floating (or connected to reset, directly or via low value series resistor = pullup) |
+| D1 | GPIO5 | floating
+| D2 | GPIO4 | floating
+| D3 | GPIO0 | pullup
+| D4 | GPIO2 | pullup
+| D5 | GPIO14 | floating
+| D6 | GPIO12 | floating
+| D7 | GPIO13 | floating
+| D8 | GPIO15 | pulldown
+| RX | GPIO3 | serial2usb converter
+| TX | GPIO1 | serial2usb converter
+| S2 | GPIO9 | flash memory (QIO mode)
+| S3 | GPIO10 | flash memory (QIO mode)
+| A0 | ADC0/TOUT | floating
+
+
 ## External Reset
 
 A0 - low
@@ -19,7 +41,7 @@ D6 = high
 D7 = high
 D8 = low, high during reset, @19ms low
 RX = high
-TX* = same as D4 (sending some serial data @ 78600baud)
+TX = same as D4 (sending some serial data @ 78600baud)
 S3 = high
 S2 = low with random PWM high
 S1 = same as S2

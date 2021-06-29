@@ -23,6 +23,15 @@ DeepSleep::PinState deepSleepPinState;
 
 using namespace DeepSleep;
 
+inline static void deep_sleep_wakeup_wifi()
+{
+#if ARDUINO_ESP8266_VERSION_COMBINED >= 0x030000
+// Starting from arduino core v3: wifi is disabled at boot time
+// WiFi.begin() or WiFi.softAP() will wake WiFi up
+#error TODO enable wifi or remove disabling via __disableWiFiAtBootTime
+#endif
+}
+
 inline static void deep_sleep_preinit()
 {
     uint32_t realTimeOffset = 0;
@@ -59,6 +68,7 @@ inline static void deep_sleep_preinit()
 #endif
         RTCMemoryManager::remove(RTCMemoryManager::RTCMemoryId::DEEP_SLEEP);
         deepSleepParams = DeepSleepParam(WakeupMode::USER);
+        deep_sleep_wakeup_wifi(); // speed up wifi connection
         return;
     }
 
@@ -97,6 +107,7 @@ inline static void deep_sleep_preinit()
                 deepSleepParams._remainingSleepTime = 0;
                 deepSleepParams._currentSleepTime = 0;
                 deepSleepParams._wakeupMode = WakeupMode::AUTO;
+                // deep_sleep_wakeup_wifi(); // speed up wifi connection
 
             }
             else {
@@ -118,6 +129,8 @@ inline static void deep_sleep_preinit()
                 esp_yield();
                 system_deep_sleep_instant(0);
                 esp_yield();
+                /*  NO RETURN */
+                do {} while(true) ;
             }
             else {
                 RTCMemoryManager::updateTimeOffset(realTimeOffset);

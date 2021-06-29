@@ -10,6 +10,7 @@
 #include <StreamWrapper.h>
 #include <PrintString.h>
 #include <ListDir.h>
+#include <NeoPixelEx.h>
 #include "kfc_fw_config.h"
 #include "blink_led_timer.h"
 #include "deep_sleep.h"
@@ -94,8 +95,13 @@ bool isSystemKeyComboPressed()
 }
 #endif
 
+
 void setup()
 {
+    #if NEOPIXEL_CLEAR_ON_BOOT
+        NeoPixel_clearStrips();
+    #endif
+
     #if ENABLE_DEEP_SLEEP
         deepSleepPinState.merge();
     #endif

@@ -456,6 +456,10 @@
 #error invalid KFC_SAFEMODE_GPIO_RESULT for KFC_SAFEMODE_GPIO_MASK
 #endif
 
+#ifndef KFC_HAVCE_NEOPIXEL_EX
+#define KFC_HAVCE_NEOPIXEL_EX                               0
+#endif
+
 class Stream;
 class HardwareSerial;
 

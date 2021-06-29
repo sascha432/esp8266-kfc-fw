@@ -24,6 +24,7 @@
 #include "save_crash.h"
 #include <JsonBaseReader.h>
 #include <Form/Types.h>
+#include <NeoPixelEx.h>
 #include "deep_sleep.h"
 #include "../src/plugins/plugins.h"
 #include "PinMonitor.h"
@@ -1029,6 +1030,10 @@ static void invoke_ESP_restart()
 
 void KFCFWConfiguration::resetDevice(bool safeMode)
 {
+    #if NEOPIXEL_CLEAR_ON_RESET
+        NeoPixel_clearStrips();
+    #endif
+
     String msg = F("Device is being reset");
     if (safeMode) {
         msg += F(" in SAFE MODE");
@@ -1050,6 +1055,9 @@ void KFCFWConfiguration::resetDevice(bool safeMode)
 void KFCFWConfiguration::restartDevice(bool safeMode)
 {
     __LDBG_println();
+    #if NEOPIXEL_CLEAR_ON_RESET
+        NeoPixel_clearStrips();
+    #endif
 
 // enable debugging output (::printf) for shutdown sequence
 #define DEBUG_SHUTDOWN_SEQUENCE DEBUG

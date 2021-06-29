@@ -11,7 +11,7 @@
 
 class RemoteControlPlugin;
 
-// for more information about MQTT devioce triggers check
+// for more information about MQTT device triggers check
 // https://www.home-assistant.io/integrations/device_trigger.mqtt/
 //
 // those can be used without home assistant as well

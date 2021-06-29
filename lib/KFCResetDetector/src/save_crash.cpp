@@ -177,6 +177,7 @@ namespace SaveCrash {
         hex2bin(_md5, sizeof(_md5), str);
         return true;
     }
+
     FlashStorageInfo FlashStorage::getInfo(ItemCallback callback)
     {
         Data header;
@@ -381,7 +382,7 @@ inline static bool append_crash_data(SaveCrash::FlashStorage &fs, SPIFlash::Flas
 
 #if 1
 
-void custom_crash_callback(struct rst_info *rst_info, uint32_t stack, uint32_t stack_end)
+inline static void _custom_crash_callback(struct rst_info *rst_info, uint32_t stack, uint32_t stack_end)
 {
     register uint32_t sp asm("a1");
     uint32_t sp_dump = sp;
@@ -437,6 +438,17 @@ void custom_crash_callback(struct rst_info *rst_info, uint32_t stack, uint32_t s
         }
 
     }
+}
+
+void custom_crash_callback(struct rst_info *rst_info, uint32_t stack, uint32_t stack_end)
+{
+    #if NEOPIXEL_CLEAR_ON_EXCEPTION == 1
+        NeoPixel_clearStrips();
+    #endif
+    _custom_crash_callback(rst_info, stack, stack_end);
+    #if NEOPIXEL_CLEAR_ON_EXCEPTION == 2
+        NeoPixel_clearStrips();
+    #endif
 }
 
 #endif

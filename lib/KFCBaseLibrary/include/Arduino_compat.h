@@ -285,8 +285,9 @@ namespace __va_args__
 #define DUMP_BINARY_NO_TITLE nullptr
 
 extern "C" {
-    void __dump_binary(const void *ptr, size_t len, size_t perLine = DUMP_BINARY_DEFAULTS, PGM_P title = DUMP_BINARY_NO_TITLE, uint8_t groupBytes = static_cast<uint8_t>(DUMP_BINARY_DEFAULTS));
-    void __dump_binary_to(Print &output, const void *ptr, size_t len, size_t perLine = DUMP_BINARY_DEFAULTS, PGM_P title = DUMP_BINARY_NO_TITLE, uint8_t groupBytes = static_cast<uint8_t>(DUMP_BINARY_DEFAULTS));
+    // negative len won't output anything
+    void __dump_binary(const void *ptr, int len, size_t perLine = DUMP_BINARY_DEFAULTS, PGM_P title = DUMP_BINARY_NO_TITLE, uint8_t groupBytes = static_cast<uint8_t>(DUMP_BINARY_DEFAULTS));
+    void __dump_binary_to(Print &output, const void *ptr, int len, size_t perLine = DUMP_BINARY_DEFAULTS, PGM_P title = DUMP_BINARY_NO_TITLE, uint8_t groupBytes = static_cast<uint8_t>(DUMP_BINARY_DEFAULTS));
 }
 
 #if _MSC_VER

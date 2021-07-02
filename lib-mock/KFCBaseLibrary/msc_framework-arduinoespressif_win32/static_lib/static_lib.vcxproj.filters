@@ -66,9 +66,6 @@
     <ClCompile Include="..\..\..\..\lib\KFCEventScheduler\src\WiFiCallbacks.cpp">
       <Filter>Source Files\lib\KFCEventScheduler</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\framework-arduinoespressif8266_3.20704.0\cores\esp8266\WString\WString.cpp">
-      <Filter>Source Files\core\esp8266</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\ets_impl\ets_main.cpp">
       <Filter>Source Files\lib-mock\ets_impl</Filter>
     </ClCompile>
@@ -79,9 +76,6 @@
       <Filter>Source Files\lib-mock\ets_impl</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\Compat.cpp">
-      <Filter>Source Files\lib-mock\KFCBaseLibrary</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\EEPROM.cpp">
       <Filter>Source Files\lib-mock\KFCBaseLibrary</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\ESP8266HttpClient.cpp">
@@ -113,9 +107,6 @@
     </ClCompile>
     <ClCompile Include="..\..\src\WiFiUDP.cpp">
       <Filter>Source Files\lib-mock\KFCBaseLibrary</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\int64_to_string.cpp">
-      <Filter>Source Files\lib\KFCBaseLibrary</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\Arduino_compat.cpp">
       <Filter>Source Files\lib\KFCBaseLibrary</Filter>
@@ -176,6 +167,12 @@
     </ClCompile>
     <ClCompile Include="..\..\src\Flash\eagle.flash.4m2m.ld.cpp">
       <Filter>Source Files\lib-mock\Flash</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\EEPROM.cpp">
+      <Filter>Source Files\lib-mock\KFCBaseLibrary</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\..\..\.platformio\packages\framework-arduinoespressif8266\cores\esp8266\WString.cpp">
+      <Filter>Source Files\core\esp8266</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

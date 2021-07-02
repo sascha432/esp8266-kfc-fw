@@ -6,6 +6,9 @@ Author: sascha_lammers@gmx.de
 
 #pragma once
 
+#include <string>
+#include <stdlib_noniso.h>
+
 #ifndef PGM_P
 #define PGM_P const char *
 #endif
@@ -23,8 +26,10 @@ Author: sascha_lammers@gmx.de
 #endif
 
 #define __PSTR(str)								(PSTR(str))
+#undef FPSTR
 #define FPSTR(str)                              (reinterpret_cast<const __FlashStringHelper *>(PSTR(str)))
 #define __FPSTR(str)							(reinterpret_cast<const __FlashStringHelper *>(PSTR(str)))
+#undef F
 #define F(str)									(reinterpret_cast<const __FlashStringHelper *>(PSTR(str)))
 #define RFPSTR(str)								(reinterpret_cast<const char *>(PSTR(str)))
 
@@ -89,10 +94,11 @@ inline static char *strcat_P(char *dst, PGM_P src, size_t count) {
 #define memmove_P memmove
 
 #ifndef PGM_P
-typedef const char *PGM_P;
+#define PGM_P const char *
 #endif
-#ifndef PGM_VOID
-typedef const void *PGM_VOID;
+
+#ifndef PGM_VOID_P
+#define PGM_VOID_P const void *
 #endif
 class __FlashStringHelper;
 

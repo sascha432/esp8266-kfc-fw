@@ -22,11 +22,16 @@
 #ifndef STDLIB_NONISO_H
 #define STDLIB_NONISO_H
 
+#include <cstdlib>
+
 #define itoa _itoa
 #define ltoa _ltoa
 #define utoa _ultoa
 #define ultoa _ultoa
 #define atof (float)atof
+
+char *lltoa(long long val, char *str, int slen, unsigned int radix);
+char *ulltoa(unsigned long long val, char *str, int slen, unsigned int radix);
 
 #ifndef __attribute__
 #define __attribute__(...)

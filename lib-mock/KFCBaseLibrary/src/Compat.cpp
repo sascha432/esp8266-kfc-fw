@@ -16,7 +16,6 @@
 #include <pgmspace.h>
 #include <list>
 
-EEPROMClass EEPROM;
 _SPIFFS SPIFFS;
 
 char *dtostrf(double val, signed char width, unsigned char prec, char *s) 
@@ -427,8 +426,6 @@ void init_winsock() {
         winsock_initialized = true;
     }
 }
-
-
 
 
 EspClass ESP;

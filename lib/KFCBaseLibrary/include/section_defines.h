@@ -18,28 +18,33 @@
 
 #endif
 
-// #if _MSC_VER
+#if _MSC_VER
 
-// #define SECTION_FLASH_START_ADDRESS                         ((uintptr_t)&_EEPROM_start)
-// #define SECTION_IROM0_TEXT_START_ADDRESS                    0
-// #define SECTION_IROM0_TEXT_END_ADDRESS                      UINTPTR_MAX
-// #define SECTION_HEAP_START_ADDRESS                          0
-// #define SECTION_HEAP_END_ADDRESS                            UINTPTR_MAX
-// #define SECTION_EEPROM_START_ADDRESS                        ((uintptr_t)&_EEPROM_start)
+// linker address emulation
 
-// #else
+#include <eagle_soc.h>
 
-extern "C" uint32_t _irom0_text_start;
-extern "C" uint32_t _irom0_text_end;
-extern "C" char _heap_start[];
-extern "C" uint32_t _FS_start;
-extern "C" uint32_t _FS_end;
-extern "C" uint32_t _KFCFW_start;
-extern "C" uint32_t _KFCFW_end;
-extern "C" uint32_t _SAVECRASH_start;
-extern "C" uint32_t _SAVECRASH_end;
-extern "C" uint32_t _EEPROM_start;
-extern "C" uint32_t _EEPROM_end;
+using uint32_t_f = FlashMemory::Uint32Address;
+using char_f = FlashMemory::CharAddress;
+
+#else
+
+using uint32_t_f = uint32_t;
+using char_f = char;
+
+#endif
+
+extern "C" uint32_t_f _irom0_text_start;
+extern "C" uint32_t_f _irom0_text_end;
+extern "C" char_f _heap_start[];
+extern "C" uint32_t_f _FS_start;
+extern "C" uint32_t_f _FS_end;
+extern "C" uint32_t_f _KFCFW_start;
+extern "C" uint32_t_f _KFCFW_end;
+extern "C" uint32_t_f _SAVECRASH_start;
+extern "C" uint32_t_f _SAVECRASH_end;
+extern "C" uint32_t_f _EEPROM_start;
+extern "C" uint32_t_f _EEPROM_end;
 
 #define SECTION_FLASH_START_ADDRESS                         0x40200000U
 #define SECTION_FLASH_END_ADDRESS                           0x402FEFF0U

@@ -92,7 +92,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\stl_ext\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib-mock\ets_impl;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib-mock\KFCEventScheduler;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib-mock\KFCBaseLibrary\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\tests\enum_test\pattern_test;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCConfigV2\include;C:\Users\sascha\Documents\PlatformIO\Projects\libcrc16\src;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCJson\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCWebFramework\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCEventScheduler\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCSyslog\include;C:\Users\sascha\Documents\PlatformIO\Projects\boost_1_74_0\include_only;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib-extra\variant\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib-mock\KFCBaseLibrary\framework-arduinoespressif8266_3.20704.0;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\stl_ext\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib-mock\ets_impl;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib-mock\KFCEventScheduler;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib-mock\KFCBaseLibrary\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\tests\enum_test\pattern_test;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCConfigV2\include;C:\Users\sascha\Documents\PlatformIO\Projects\libcrc16\src;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCJson\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCWebFramework\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCEventScheduler\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCSyslog\include;C:\Users\sascha\Documents\PlatformIO\Projects\boost_1_74_0\include_only;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib-extra\variant\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\include;C:\Users\sascha\.platformio\packages\framework-arduinoespressif8266;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <ProgramDataBaseFileName>$(IntDir)framework-arduinoespressif.pdb</ProgramDataBaseFileName>
     </ClCompile>
     <Link>
@@ -161,13 +161,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\..\..\..\..\..\..\.platformio\packages\framework-arduinoespressif8266\cores\esp8266\WString.cpp" />
     <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\Arduino_compat.cpp" />
     <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\Buffer.cpp" />
     <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\BufferStream.cpp" />
     <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\debug_helper.cpp" />
     <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\DumpBinary.cpp" />
     <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\dyn_bitset.cpp" />
-    <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\int64_to_string.cpp" />
     <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\MicrosTimer.cpp" />
     <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\MillisTimer.cpp" />
     <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\misc.cpp" />
@@ -191,7 +191,6 @@
     <ClCompile Include="..\..\..\ets_impl\ets_main.cpp" />
     <ClCompile Include="..\..\..\ets_impl\ets_sys_win32.cpp" />
     <ClCompile Include="..\..\..\ets_impl\ets_timer_win32.cpp" />
-    <ClCompile Include="..\..\framework-arduinoespressif8266_3.20704.0\cores\esp8266\WString\WString.cpp" />
     <ClCompile Include="..\..\src\Compat.cpp" />
     <ClCompile Include="..\..\src\EEPROM.cpp" />
     <ClCompile Include="..\..\src\ESP8266HttpClient.cpp" />

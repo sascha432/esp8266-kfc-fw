@@ -144,9 +144,11 @@ static void start_main_thread()
 {
 }
 
+#ifndef CUSTOM_PREINIT
 void preinit() 
 {
 }
+#endif
 
 int main()
 {

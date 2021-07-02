@@ -175,7 +175,7 @@ namespace FlashMemory {
 		}
 
 		int32_t read(uint32_t address, void *data, uint32_t len) {
-			auto sector = _findSector(address);
+			auto sector = _findSector(address - _baseAddress);
 			if (!sector) {
 				return -1;
 			}
@@ -183,7 +183,7 @@ namespace FlashMemory {
 		}
 
 		int32_t write(uint32_t address, const void *data, uint32_t len) {
-			auto sector = _findSector(address);
+			auto sector = _findSector(address - _baseAddress);
 			if (!sector) {
 				return -1;
 			}

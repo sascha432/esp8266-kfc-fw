@@ -4,7 +4,7 @@
 
 #if _MSC_VER
 
-// SPI EEPROM emulation
+// using ESP class for writing flash
 
 #pragma once
 
@@ -36,8 +36,6 @@ typedef struct {
 
 extern SpiFlashChip *flashchip; // in ram ROM-BIOS
 
-extern "C" uint32_t _EEPROM_start;
-
 #define EEPROM_getDataPtr() const_cast<uint8_t *>(EEPROM.getConstDataPtr())
 
 inline uint32_t spi_flash_get_id(void) {
@@ -45,40 +43,16 @@ inline uint32_t spi_flash_get_id(void) {
 }
 
 inline SpiFlashOpResult spi_flash_erase_sector(uint16_t sec) {
-	if (sec == (((uintptr_t)&_EEPROM_start - SECTION_EEPROM_START_ADDRESS) / SPI_FLASH_SEC_SIZE)) {
-		if (EEPROM.begin()) {
-			memset(EEPROM_getDataPtr(), 0, SPI_FLASH_SEC_SIZE);
-			EEPROM.commit();
-			return SPI_FLASH_RESULT_OK;
-		}
-	}
-	return SPI_FLASH_RESULT_ERR;
+	return ESP.flashEraseSector(sec) ? SPI_FLASH_RESULT_OK : SPI_FLASH_RESULT_ERR;
 }
 
 inline SpiFlashOpResult spi_flash_write(uint32_t des_addr, uint32_t *src_addr, uint32_t size) {
-	auto eeprom_start_address = ((uintptr_t)&_EEPROM_start - SECTION_EEPROM_START_ADDRESS);
-	auto eeprom_ofs = (uintptr_t)(src_addr - eeprom_start_address);
-	if (eeprom_ofs + size <= SPI_FLASH_SEC_SIZE && ((size & 3) == 0) && ((((uintptr_t)des_addr) & 3) == 0)) {
-		if (EEPROM.begin()) {
-			memcpy(EEPROM_getDataPtr() + eeprom_ofs, src_addr, size);
-			EEPROM.commit();
-			return SPI_FLASH_RESULT_OK;
-		}
-	}
-	return SPI_FLASH_RESULT_ERR;
+	return ESP.flashWrite(des_addr, src_addr, size) ? SPI_FLASH_RESULT_OK : SPI_FLASH_RESULT_ERR;
 }
 
 inline SpiFlashOpResult spi_flash_read(uint32_t src_addr, uint32_t *des_addr, uint32_t size)
 {
-	auto eeprom_start_address = ((uintptr_t)&_EEPROM_start - SECTION_EEPROM_START_ADDRESS);
-	auto eeprom_ofs = (uintptr_t)(src_addr - eeprom_start_address);
-	if (eeprom_ofs + size <= SPI_FLASH_SEC_SIZE && ((size & 3) == 0) && ((((uintptr_t)des_addr) & 3) == 0)) {
-		if (EEPROM.begin()) {
-			memcpy(des_addr, EEPROM.getConstDataPtr() + eeprom_ofs, size);
-			return SPI_FLASH_RESULT_OK;
-		}
-	}
-	return SPI_FLASH_RESULT_ERR;
+	return ESP.flashRead(src_addr, des_addr, size) ? SPI_FLASH_RESULT_OK : SPI_FLASH_RESULT_ERR;
 }
 
 #pragma warning(pop)

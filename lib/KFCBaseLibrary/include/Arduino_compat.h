@@ -229,8 +229,6 @@ void throwException(PGM_P message);
 #include "debug_helper.h"
 #include "misc.h"
 
-extern "C" uint32_t _EEPROM_start;
-
 extern const String emptyString;
 
 #else

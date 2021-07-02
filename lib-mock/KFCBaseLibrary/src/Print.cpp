@@ -113,6 +113,18 @@ size_t Print::print(unsigned long n, int base) {
         return printNumber(n, base);
 }
 
+size_t Print::print(unsigned long long n, int base) {
+    char buf[24];
+    auto str = ulltoa(n, buf, sizeof(buf), base);
+    return str ? write(str, &buf[sizeof(buf) - 1] - str) : 0;
+}
+
+size_t Print::print(long long n, int base) {
+    char buf[24];
+    auto str = lltoa(n, buf, sizeof(buf), base);
+    return str ? write(str, &buf[sizeof(buf) - 1] - str) : 0;
+}
+
 size_t Print::print(double n, int digits) {
     return printFloat(n, digits);
 }

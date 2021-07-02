@@ -361,7 +361,7 @@ inline bool AtModeArgs::_isAnyMatchIgnoreCase(String str, const __FlashStringHel
     return (stringlist_ifind_P(strings, str.c_str(), '|') != -1);
 }
 
-inline Range AtModeArgs::toRange(uint16_t num, uint32_t min, uint32_t max, const String &defaultValue)
+inline AtModeArgs::Range AtModeArgs::toRange(uint16_t num, uint32_t min, uint32_t max, const String &defaultValue)
 {
     uint32_t from = 0;
     uint32_t to = ~0U;

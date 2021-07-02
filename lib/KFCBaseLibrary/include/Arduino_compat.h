@@ -161,8 +161,9 @@ class __FlashStringHelper;
 #define _CRTDBG_MAP_ALLOC
 #endif
 
+#define DEBUGV(...) ;
+
 #include <stdint.h>
-#include <stdlib.h>
 #include <crtdbg.h>
 #include <string.h>
 #include <time.h>

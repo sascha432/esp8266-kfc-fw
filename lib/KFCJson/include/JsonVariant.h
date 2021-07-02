@@ -6,7 +6,6 @@
 
 #include <Arduino_compat.h>
 #include <misc.h>
-#include <int64_to_string.h>
 #include "JsonValue.h"
 #include "JsonString.h"
 #include "JsonNumber.h"
@@ -90,10 +89,10 @@ protected:
         return output.print(value);
     }
     size_t _printTo(Print &output, uint64_t value) const {
-        return print_string(output, value);
+        return output.print(value);
     }
     size_t _printTo(Print &output, int64_t value) const {
-        return print_string(output, value);
+        return output.print(value);
     }
     size_t _printTo(Print &output, double value) const {
         return printTrimmedDouble(&output, value);
@@ -146,12 +145,14 @@ protected:
         return snprintf_P(nullptr, 0, PSTR("%d"), value);
     }
     size_t _length(uint64_t value) const {
-        char buffer[kInt64ToStringBufferSize];
-        return &buffer[kInt64ToStringBufferSize - 1] - ulltoa(value, buffer);
+        char buffer[24];
+        auto str = ulltoa(value, buffer, sizeof(buffer), 10);
+        return str ? &buffer[sizeof(buffer) - 1] - str : 0;
     }
     size_t _length(int64_t value) const {
-        char buffer[kInt64ToStringBufferSize];
-        return &buffer[kInt64ToStringBufferSize - 1] - lltoa(value, buffer);
+        char buffer[24];
+        auto str = lltoa(value, buffer, sizeof(buffer), 10);
+        return str ? &buffer[sizeof(buffer) - 1] - str : 0;
     }
     size_t _length(double value) const {
         return printTrimmedDouble(nullptr, value);

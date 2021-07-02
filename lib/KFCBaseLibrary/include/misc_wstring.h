@@ -6,8 +6,15 @@
 
 // additional low level string functions
 
+#ifdef _MSC_VER
+#include <stdlib_noniso.h>
+#else
 #include <stdint.h>
+#include <stdlib_noniso.h>
 #include <string.h>
+#include <stdlib.h>
+#include <strings.h>
+#endif
 #include <pgmspace.h>
 #include <memory>
 
@@ -83,7 +90,7 @@ char *strdup_P(PGM_P src);
 PGM_P strrchr_P(PGM_P str, int c);
 PGM_P strchr_P(PGM_P str, int c);
 
-inline static void *memrchr(const void *s, int c, size_t n)
+inline void *memrchr(const void *s, int c, size_t n)
 {
     const unsigned char *cp;
     if (!n) {
@@ -115,13 +122,13 @@ PGM_P strcasestr_P_P(PGM_P str, PGM_P find, size_t findLen = 0);
 // char *strrstr_P(char *str, PGM_P find, size_t findLen = 0);
 char *strcasestr_P(char *str, PGM_P find, size_t findLen = 0);
 
-inline static char *strcasestr_P(const char *str, PGM_P find, size_t findLen)
+inline char *strcasestr_P(const char *str, PGM_P find, size_t findLen)
 {
     return strcasestr_P(const_cast<char *>(str), find, findLen);
 }
 
 // using temporary and memrchr
-inline static void *memrchr_P(PGM_VOID_P ptr, int ch, size_t n)
+inline void *memrchr_P(PGM_VOID_P ptr, int ch, size_t n)
 {
     if (!ptr) {
         return nullptr;
@@ -145,7 +152,7 @@ inline static void *memrchr_P(PGM_VOID_P ptr, int ch, size_t n)
 
 
 // using temporary and strncmp_P
-inline static int strncmp_PP(PGM_P str1, PGM_P str2, size_t size)
+inline int strncmp_PP(PGM_P str1, PGM_P str2, size_t size)
 {
     if (str1 == str2) {
         return 0;

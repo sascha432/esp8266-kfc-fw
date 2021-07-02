@@ -5,7 +5,6 @@
 #include "JsonNumber.h"
 #include "JsonVar.h"
 #include "JsonTools.h"
-#include <int64_to_string.h>
 
 JsonNumber::JsonNumber(double value, uint8_t decimalPlaces) : JsonString()
 {
@@ -35,16 +34,26 @@ JsonNumber::JsonNumber(int32_t value) : JsonString()
 
 JsonNumber::JsonNumber(uint64_t value) : JsonString()
 {
-    char buf[kInt64ToStringBufferSize];
-    char *str = ulltoa(value, buf);
-    _init(str, &buf[kInt64ToStringBufferSize - 1] - str);
+    char buffer[24];
+    char *str = ulltoa(value, buffer, sizeof(buffer), 10);
+    if (!str) {
+        _init(emptyString.c_str(), 0);
+    }
+    else {
+        _init(str, &buffer[sizeof(buffer) - 1] - str);
+    }
 }
 
 JsonNumber::JsonNumber(int64_t value) : JsonString()
 {
-    char buf[kInt64ToStringBufferSize];
-    char *str = lltoa(value, buf);
-    _init(str, &buf[kInt64ToStringBufferSize - 1] - str);
+    char buffer[24];
+    char *str = lltoa(value, buffer, sizeof(buffer), 10);
+    if (!str) {
+        _init(emptyString.c_str(), 0);
+    }
+    else {
+        _init(str, &buffer[sizeof(buffer) - 1] - str);
+    }
 }
 
 bool JsonNumber::validate()

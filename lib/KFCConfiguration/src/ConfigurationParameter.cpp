@@ -183,14 +183,13 @@ void ConfigurationParameter::dump(Print &output)
                 output.printf_P(PSTR("%u (%d, %04X)\n"), value, value, value);
             } break;
         case ParameterType::DWORD: {
-            auto value = *(uint32_t *)_param.data();
-            output.printf_P(PSTR("%u (%d, %08X)\n"), value, value, value);
-        } break;
+                auto value = *(uint32_t *)_param.data();
+                output.printf_P(PSTR("%u (%d, %08X)\n"), value, value, value);
+            } break;
         case ParameterType::QWORD: {
-            auto value = *(uint64_t *)_param.data();
-            print_string(output, value);
-            output.println();
-        } break;
+                auto value = *(uint64_t *)_param.data();
+                output.println(value);
+            } break;
         case ParameterType::FLOAT: {
                 auto value = *(float *)_param.data();
                 output.printf_P(PSTR("%f\n"), value);
@@ -243,7 +242,7 @@ void ConfigurationParameter::exportAsJson(Print& output)
         } break;
         case ParameterType::QWORD: {
             auto value = *(uint64_t *)_param.data();
-            print_string(output, value);
+            output.print(value);
         } break;
         case ParameterType::FLOAT: {
             auto value = *(float *)_param.data();

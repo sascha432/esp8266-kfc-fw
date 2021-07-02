@@ -9,7 +9,6 @@
 #pragma once
 
 #include <Arduino_compat.h>
-#include "int64_to_string.h"
 
 #ifndef WSTRING_HAVE_SETLEN
 #if ESP8266
@@ -74,9 +73,6 @@ public:
     size_t print(const __FlashStringHelper *str);
     size_t println(const __FlashStringHelper *str);
 
-    size_t print(uint64_t value);
-    size_t print(int64_t value);
-
     size_t strftime_P(PGM_P format, struct tm *tm);
     size_t strftime(const char *format, struct tm *tm);
     size_t strftime(const __FlashStringHelper *format, struct tm *tm);
@@ -85,8 +81,8 @@ public:
     size_t strftime(const char *format, time_t now);
     size_t strftime(const __FlashStringHelper *format, time_t now);
 
-    PrintString &operator+=(uint64_t);
-    PrintString &operator+=(int64_t);
+    PrintString &operator+=(unsigned long long);
+    PrintString &operator+=(long long);
 
     virtual size_t write(uint8_t data) override;
     virtual size_t write(const uint8_t *buf, size_t size) override;
@@ -204,18 +200,6 @@ PrintString::PrintString(const __FlashBufferHelper *buffer, size_t len) : String
 }
 
 inline __attribute__((__always_inline__))
-size_t PrintString::print(uint64_t value)
-{
-    return concat_to_string(*this, value);
-}
-
-inline __attribute__((__always_inline__))
-size_t PrintString::print(int64_t value)
-{
-    return concat_to_string(*this, value);
-}
-
-inline __attribute__((__always_inline__))
 size_t PrintString::strftime(const char *format, struct tm *tm)
 {
     char temp[128];
@@ -254,14 +238,14 @@ size_t PrintString::strftime(const __FlashStringHelper *format, time_t now)
 }
 
 inline __attribute__((__always_inline__))
-PrintString &PrintString::operator+=(uint64_t value)
+PrintString &PrintString::operator+=(unsigned long long value)
 {
     print(value);
     return *this;
 }
 
 inline __attribute__((__always_inline__))
-PrintString &PrintString::operator+=(int64_t value)
+PrintString &PrintString::operator+=(long long value)
 {
     print(value);
     return *this;

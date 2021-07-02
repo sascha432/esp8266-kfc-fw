@@ -48,7 +48,7 @@ public:
             NO_ENCODING_REQUIRED = -2,
             MORE_DATA_REQUIRED = -1,
         };
-        
+
     public:
         Utf8Buffer() : _counter(0), _buf{} {}
 
@@ -239,9 +239,9 @@ public:
     using Print::print;
     using Utf8Buffer = JsonTools::Utf8Buffer;
 
-    JsonPrintStringWrapper(PrintString &printString) : 
-        _printString(printString), 
-        _buffer() 
+    JsonPrintStringWrapper(PrintString &printString) :
+        _printString(printString),
+        _buffer()
     {
     }
 
@@ -265,18 +265,6 @@ public:
     inline __attribute__((__always_inline__))
     size_t vprintf_P(PGM_P format, va_list arg) {
         return printf_P(format, arg);
-    }
-
-    inline __attribute__((__always_inline__))
-    size_t print(uint64_t value) {
-        // no encoding required
-        return print_string(_printString, value);
-    }
-
-    inline __attribute__((__always_inline__))
-    size_t print(int64_t value) {
-        // no encoding required
-        return print_string(_printString, value);
     }
 
     inline __attribute__((__always_inline__))

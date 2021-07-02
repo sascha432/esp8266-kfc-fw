@@ -429,6 +429,14 @@ constexpr size_t kGetRequiredBitsForValue(int64_t value, size_t count) {
     return value == 0 ? count : value < 0 ? _kGetRequiredBitsForValue(static_cast<uint64_t>(-value), 1) : _kGetRequiredBitsForValue(value >> 1, count + 1);
 }
 
+#ifdef max
+#undef max
+#endif
+
+#ifdef min
+#undef min
+#endif
+
 // get number of bits to store values between from and to
 constexpr size_t kGetRequiredBitsForRange(int64_t from, int64_t to) {
     return from < 0 || to < 0 ?

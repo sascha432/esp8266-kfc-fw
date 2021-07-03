@@ -85,4 +85,17 @@ namespace ConfigurationHelper {
     static constexpr size_t WriteableDataSize = sizeof(WriteableData);
 
     static_assert(WriteableDataSize == 16 || sizeof(void *) == 8/*platformide detedcts code as x64,, we cannot validate size*/, "check alignment");
+
+    inline void WriteableData::freeData()
+    {
+        // free _data pointer or clear _buffer
+        __LDBG_printf("free data=%p size=%u _is_allocated=%u", _data, size(), _is_allocated);
+        if (_is_allocated) {
+            free(_data);
+            _is_allocated = false;
+        }
+        // clear _buffer and set _data to nullptr
+        std::fill(_buffer_begin(), _buffer_end(), 0);
+    }
+
 }

@@ -12,7 +12,7 @@
 #include <stl_ext/type_traits.h>
 
 #include "ConfigurationHelper.h"
-#include "Allocator.h"
+// #include ".h"
 #include "WriteableData.h"
 
 #if DEBUG_CONFIGURATION
@@ -30,36 +30,6 @@ class Configuration;
 #endif
 
 namespace ConfigurationHelper {
-
-#if DEBUG_CONFIGURATION_STATS
-    class DebugMeasureTime {
-    public:
-        DebugMeasureTime(HandleType) {
-            if (_data._stack++ == 0) {
-                _data._start = micros();
-            }
-        }
-        ~DebugMeasureTime() {
-            if (--_data._stack == 0) {
-                _data._sum += get_time_diff(_data._start, micros());
-                _data._counter++;
-            }
-        }
-
-        static void dump(Print &output) {
-            output.printf_P(PSTR("config stats: total=%uus count=%u avg=%uus\n"), _data._sum, _data._counter, (uint32_t)(_data._sum / (double)_data._counter));
-        }
-
-        struct DebugMeasureTime_t {
-            uint32_t _start;
-            uint32_t _counter;
-            uint32_t _stack;
-            uint32_t _sum;
-        };
-
-        static DebugMeasureTime_t _data;
-    };
-#endif
 
     class ParameterInfo {
     public:
@@ -139,7 +109,12 @@ namespace ConfigurationHelper {
         };
 
         // return length of data stored in eeprom
+        // 32 bit aligned
         inline size_type next_offset() const {
+            return (_length + 3) & ~3;
+        }
+
+        inline size_type next_offset_unaligned() const {
             return _length;
         }
 
@@ -177,6 +152,8 @@ namespace ConfigurationHelper {
     static constexpr size_t ParameterInfoSize = sizeof(ParameterInfo);
     // static_assert(ParameterInfoSize == 8, "invalid size");
 
+    static_assert((sizeof(ParameterHeaderType) & 3) == 0, "not dword aligned");
+
 }
 
 class ConfigurationParameter {
@@ -206,7 +183,7 @@ public:
             delete _param._writeable;
         }
         else if (_param._readable) {
-            ConfigurationHelper::_allocator.deallocate(_param._readable);
+            free(_param._readable);
         }
     }
 
@@ -278,7 +255,7 @@ private:
     uint16_t read(Configuration &conf, uint16_t offset);
 
     bool _readData(Configuration &conf, uint16_t offset);
-    bool _readDataTo(Configuration &conf, uint16_t offset, uint8_t *ptr, size_type maxSize) const;
+    bool _readDataTo(Configuration &conf, uint16_t offset, uint8_t *ptr) const;
     void _makeWriteable(Configuration &conf, size_type length);
 
     // PROGMEM safe
@@ -292,8 +269,6 @@ public:
         return _param;
     }
 };
-
-#include "ConfigurationParameterT.h"
 
 namespace ConfigurationHelper {
 

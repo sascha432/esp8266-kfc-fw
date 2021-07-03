@@ -4,10 +4,7 @@
 
 #include "ConfigurationHelper.h"
 #include "WriteableData.h"
-#include "Allocator.h"
 #include "ConfigurationParameter.h"
-
-#include "Allocator.hpp"
 
 using namespace ConfigurationHelper;
 
@@ -19,14 +16,14 @@ WriteableData::WriteableData(size_type length, ConfigurationParameter &parameter
     _is_allocated(false)
 {
     if (_length > _buffer_length()) {
-        _data = _allocator.allocate(size() + 4);
+        _data = allocate(size() + 4, nullptr);
         _is_allocated = true;
     }
 
     if (parameter.hasData()) {
         auto &param = parameter._getParam();
         memcpy(data(), param._readable, std::min(_length, param.length()));
-        _allocator.deallocate(param._readable);
+        free(param._readable);
         param._readable = nullptr;
     }
 }
@@ -55,7 +52,7 @@ void WriteableData::resize(size_type newLength, ConfigurationParameter &paramete
     if (newLength > _buffer_length()) {
         // allocate new block
         size_t realSize;
-        auto ptr = _allocator.allocate(newSize + 4, &realSize);
+        auto ptr = allocate(newSize + 4, &realSize);
         // copy previous data and zero fill the rest
         std::fill(std::copy_n(param._writeable->data(), std::min(length(), newLength), ptr), ptr + realSize, 0);
 
@@ -72,7 +69,7 @@ void WriteableData::resize(size_type newLength, ConfigurationParameter &paramete
         std::fill(std::copy_n(ptr, std::min(length(), newLength), _buffer_begin()), _buffer_end(), 0);
         _length = newLength;
         // free saved pointer
-        _allocator.deallocate(ptr);
+        free(ptr);
         _is_allocated = false;
         return;
     }

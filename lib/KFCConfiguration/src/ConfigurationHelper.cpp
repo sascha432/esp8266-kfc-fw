@@ -6,6 +6,7 @@
 #include "ConfigurationHelper.h"
 #include "DebugHandle.h"
 #include <crc16.h>
+#include <ConfigurationParameter.h>
 
 #if DEBUG_CONFIGURATION
 #include <debug_helper_enable.h>
@@ -26,6 +27,57 @@ EEPROMClass EEPROM((SECTION_EEPROM_START_ADDRESS) / SPI_FLASH_SEC_SIZE);
 #endif
 
 namespace ConfigurationHelper {
+
+    uint8_t *allocate(size_t size, size_t *realSize)
+    {
+        __LDBG_assert_printf(size != 0, "allocating size=%u", size);
+        size = std::max(1U, size);
+        size = (size + 7) & ~7;
+        auto ptr = reinterpret_cast<uint32_t *>(malloc(size));
+        __LDBG_assert_printf(ptr != nullptr, "malloc=%u returned=%p", size, ptr);
+        if (!ptr) {
+            if (realSize) {
+                *realSize = 0;
+            }
+            return nullptr;
+        }
+        if (realSize) {
+            *realSize = size;
+        }
+        std::fill_n(ptr, size / sizeof(uint32_t), 0);
+        return (uint8_t *)ptr;
+    }
+
+    void allocate(size_t size, ConfigurationParameter &parameter)
+    {
+        __LDBG_assert_printf(size != 0, "allocating size=%u", size);
+    #if 1
+        __LDBG_assert_printf(parameter.hasData() == false, "has_data=%u is_writable=%u _readable=%p", parameter.hasData(), parameter.isWriteable(), parameter._getParam()._readable);
+        if (parameter.hasData()) {
+            deallocate(parameter);
+        }
+    #else
+        __LDBG_assert_panic(parameter.hasData() == false, "has_data=%", parameter.hasData());
+    #endif
+        auto &param = parameter._getParam();
+        __LDBG_assert_printf(size >= param.size(), "size=%u too small param.size=%u", size, param.size());
+        param._readable = allocate(size, nullptr);
+    }
+
+    void deallocate(ConfigurationParameter &parameter)
+    {
+        auto &param = parameter._getParam();
+        if (param.isWriteable()) {
+            //param._length = param._writeable->length();
+            delete param._writeable;
+            param._writeable = nullptr;
+            param._is_writeable = false;
+        }
+        if (param._readable) {
+            free(param._readable);
+            param._readable = nullptr;
+        }
+    }
 
     size_type getParameterLength(ParameterType type, size_t length)
     {

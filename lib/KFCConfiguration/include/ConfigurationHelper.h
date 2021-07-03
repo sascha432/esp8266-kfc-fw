@@ -11,10 +11,6 @@
 #define DEBUG_CONFIGURATION                                         0
 #endif
 
-#ifndef DEBUG_CONFIGURATION_STATS
-#define DEBUG_CONFIGURATION_STATS                                   0
-#endif
-
 #ifndef DEBUG_CONFIGURATION_GETHANDLE
 #define DEBUG_CONFIGURATION_GETHANDLE                               0
 #endif
@@ -29,13 +25,8 @@
 #include <debug_helper_disable.h>
 #endif
 
-// compare direct reads vs. EEPROM class
-#ifndef DEBUG_CONFIGURATION_VERIFY_DIRECT_EEPROM_READ
-#define DEBUG_CONFIGURATION_VERIFY_DIRECT_EEPROM_READ               DEBUG_CONFIGURATION
-#endif
-
 #ifndef CONFIG_MAGIC_DWORD
-#define CONFIG_MAGIC_DWORD                                          0xfef31214
+#define CONFIG_MAGIC_DWORD                                          0xfef312f7
 #endif
 
 #define CONFIG_GET_HANDLE(name)                                     __get_constexpr_getHandle(_STRINGIFY(name))
@@ -79,17 +70,11 @@
 // store all configuration handle names for debugging. needs a lot RAM
 #define __DBG__registerHandleName(name, type)                       ConfigurationHelper::registerHandleName(name, type)
 #define __DBG__checkIfHandleExists(type, handle)                    if (!registerHandleExists(handle)) { __DBG_printf("handle=%04x no name registered, type=%s", handle, PSTR(type)); }
-#define __DBG__addFlashReadSize(handle, size)                       ConfigurationHelper::addFlashUsage(handle, size, 0)
-#define __DBG__addFlashWriteSize(handle, size)                      ConfigurationHelper::addFlashUsage(handle, 0, size)
-#define __DBG_IF_flashUsage(...)                                    __VA_ARGS__
 
 #else
 
 #define __DBG__registerHandleName(...)
 #define __DBG__checkIfHandleExists(...)
-#define __DBG__addFlashReadSize(...)
-#define __DBG__addFlashWriteSize(...)
-#define __DBG_IF_flashUsage(...)
 
 #endif
 
@@ -107,10 +92,14 @@ namespace ConfigurationHelper {
     using ParameterHeaderType = uint32_t;
 
     class ParameterInfo;
-    class Allocator;
+    // class Allocator;
     class WriteableData;
 
-    extern Allocator _allocator;
+    uint8_t *allocate(size_t size, size_t *realSize);
+    void allocate(size_t size, ConfigurationParameter &parameter);
+    void deallocate(ConfigurationParameter &parameter);
+
+    // extern Allocator _allocator;
 
     enum class ParameterType : uint8_t { // 4 bit, 0-13 available as type
         _INVALID = 0,

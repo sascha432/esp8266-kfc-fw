@@ -17,7 +17,6 @@
 
 #include "ConfigurationHelper.h"
 #include "ConfigurationParameter.h"
-#include "ConfigurationParameterT.h"
 #include "EEPROMAccess.h"
 
 #if defined(ESP8266)
@@ -37,12 +36,6 @@ extern EEPROMClass EEPROM;
 #include <debug_helper_disable.h>
 #endif
 
-#if DEBUG_CONFIGURATION_STATS
-#define __LDBG_measure_time(handle) ConfigurationHelper::DebugMeasureTime _____D_timer1(handle);
-#else
-#define __LDBG_measure_time(...)
-#endif
-
 #if _MSC_VER
 #pragma warning(push)
 #pragma warning(disable : 26812)
@@ -59,34 +52,43 @@ public:
     using ParameterHeaderType = ConfigurationHelper::ParameterHeaderType;
     using size_type = ConfigurationHelper::size_type;
 
-#include <push_pack.h>
+    struct Header {
+        uint32_t magic;
+        uint32_t version;
+        uint32_t crc;
+        uint16_t length;
+        uint16_t params;
+        // uint32_t length : 12;       // 60
+        // uint32_t params : 10;       // 70
 
-    typedef struct __attribute__((packed)) Header_t {
-        uint32_t magic;             // 32
-        uint16_t crc;               // 48
-        uint32_t length : 12;       // 60
-        uint32_t params : 10;       // 70
         uint16_t getParamsLength() const {
             return sizeof(ParameterHeaderType) * params;
         };
-    } Header_t;
 
-#include <pop_pack.h>
+        Header(uint32_t _version = 0, uint32_t _crc = ~0U, uint16_t _length = 0, uint16_t _params = 0) : magic(CONFIG_MAGIC_DWORD), version(_version), crc(_crc), length(_length), params(_params) {}
+    };
 
-    typedef union {
-        struct alignas(uint32_t) {
-            uint8_t buffer[sizeof(Header_t)];
-        };
-        Header_t header;
-    } HeaderAligned_t;
+    static_assert((sizeof(Header) & 3) == 0, "not dword aligned");
 
+    // iterators must not change when the list is modified
     // ParameterList = std::list<ConfigurationParameter>;
     using ParameterList = stdex::chunked_list<ConfigurationParameter, 6>;
 
     static constexpr size_t ParameterListChunkSize = ParameterList::chunk_element_count * 8 + sizeof(uint32_t); ; //ParameterList::chunk_size;
 
+    static constexpr uint16_t kOffset = 0;
+    static_assert((kOffset & 3) == 0, "not dword aligned");
+
+    static constexpr uint16_t kParamsOffset = kOffset + sizeof(Header);
+    static_assert((kParamsOffset & 3) == 0, "not dword aligned");
+
+    constexpr uint16_t getDataOffset(uint16_t numParams) const {
+        return kParamsOffset + (sizeof(ParameterHeaderType) * numParams);
+    }
+
+
 public:
-    Configuration(uint16_t offset, uint16_t size);
+    Configuration(uint16_t size);
     ~Configuration();
 
     // clear data and parameters
@@ -106,7 +108,6 @@ public:
 
     template <typename _Ta>
     ConfigurationParameter &getWritableParameter(HandleType handle, size_type maxLength = sizeof(_Ta)) {
-        __LDBG_measure_time(handle);
         __LDBG_printf("handle=%04x max_len=%u", handle, maxLength);
         uint16_t offset;
         auto &param = _getOrCreateParam(ConfigurationParameter::getType<_Ta>(), handle, offset);
@@ -126,7 +127,6 @@ public:
 
     template <typename _Ta>
     ConfigurationParameter *getParameter(HandleType handle) {
-        __LDBG_measure_time(handle);
         __LDBG_printf("handle=%04x", handle);
         size_type offset;
         auto iterator = _findParam(ConfigurationParameter::getType<_Ta>(), handle, offset);
@@ -134,15 +134,6 @@ public:
             return nullptr;
         }
         return &(*iterator);
-    }
-
-    template <typename _Ta>
-    ConfigurationParameterT<_Ta> &getParameterT(HandleType handle) {
-        __LDBG_measure_time(handle);
-        __LDBG_printf("handle=%04x", handle);
-        uint16_t offset;
-        auto &param = _getOrCreateParam(ConfigurationParameter::getType<_Ta>(), handle, offset);
-        return static_cast<ConfigurationParameterT<_Ta> &>(param);
     }
 
     void makeWriteable(ConfigurationParameter &param, size_type length);
@@ -272,7 +263,6 @@ private:
 
     // read parameter headers
     bool _readParams();
-    uint16_t _readHeader(uint16_t offset, HeaderAligned_t &header);
 
     // ------------------------------------------------------------------------
     // EEPROM
@@ -281,21 +271,16 @@ protected:
     ConfigurationHelper::EEPROMAccess _eeprom;
     ParameterList _params;
     uint32_t _readAccess;
-    uint16_t _offset;
-    uint16_t _dataOffset;
+    // uint16_t _dataOffset;
     uint16_t _size;
 
-    inline uint16_t getDataOffset() const {
-        return _offset + sizeof(Header_t);
-    }
-    inline void resetDataOffset() {
-        _dataOffset = getDataOffset();
-    }
+    // constexpr uint16_t getDataOffset() const {
+    //     return _offset + sizeof(Header);
+    // }
 
-public:
-    void dumpEEPROM(Print &output, bool asByteArray = true, uint16_t offset = 0, uint16_t length = 0) {
-        _eeprom.dump(output, asByteArray, offset, length);
-    }
+    // inline void resetDataOffset() {
+    //     _dataOffset = getDataOffset();
+    // }
 
 // ------------------------------------------------------------------------
 // last access

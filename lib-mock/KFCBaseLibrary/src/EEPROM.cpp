@@ -20,18 +20,22 @@
 */
 
 #include <Arduino_compat.h>
-#include <eagle_soc.h>
+#include <section_defines.h>
 #include "EEPROM.h"
 
-EEPROMClass::EEPROMClass(uint32_t sector)
-: _sector(sector)
+static constexpr size_t kMaxFlashSectors = (16 * 1024 * 1024) / SPI_FLASH_SEC_SIZE;
+
+EEPROMClass::EEPROMClass(uint32_t sector) : _sector(sector)
 {
+    if (_sector >= kMaxFlashSectors) {
+        ::printf("invalid EEPROM sector %u. make sure _EEPROM_start is initialized\n", _sector);
+        panic();
+    }
 }
 
 EEPROMClass::EEPROMClass(void)
-: _sector((( (uint32_t)&_EEPROM_start - SECTION_FLASH_START_ADDRESS) / SPI_FLASH_SEC_SIZE))
+    : EEPROMClass((((uint32_t)&_EEPROM_start - SECTION_FLASH_START_ADDRESS) / SPI_FLASH_SEC_SIZE))
 {
-    ::printf("EEPROM address %08x, without offset %08x, sector %u\n", &_EEPROM_start, &_EEPROM_start, &_EEPROM_start / SPI_FLASH_SEC_SIZE);
 }
 
 void EEPROMClass::begin(size_t size) {

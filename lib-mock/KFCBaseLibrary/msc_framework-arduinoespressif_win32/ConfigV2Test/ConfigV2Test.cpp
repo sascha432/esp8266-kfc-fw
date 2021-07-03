@@ -7,31 +7,42 @@
 
 void setup()
 {
+	ESP.flashDump(Serial);
+	exit(0);
+
+#if 0
 	if (!ESP.flashEraseSector(0)) {
 		Serial.println(F("Failed to erase sector 0"));
 	}
 
-	//uint8_t buf[256];
+	const char *buf2 = "test";
+	ESP.flashWrite(32, (uint32_t*)&buf2[0], 5);
+
+	uint8_t buf3[1024];
+	ESP.flashRead(0, buf3, sizeof(buf3));
+
+	__dump_binary_to(Serial, buf3, sizeof(buf3));
+
+	exit(1);
+#endif
+#if 0
 	int len = 0;
 
 	EEPROM.begin(2);
-	EEPROM.write(0, 100);
-	EEPROM.write(1, 200);
+	EEPROM.write(0, 0x21);
+	EEPROM.write(1, 0x43);
 	EEPROM.commit();
 
-	EEPROM.begin(3);
-	char buf3[3];
-	EEPROM.get(0, buf3);
+	EEPROM.begin(4);
+	uint32_t buf;
+	EEPROM.get(0, buf);
+
+	Serial.printf("%08x\n", buf);
+
 	EEPROM.end();
 
-
-
-
-	//ESP.flashWriepromeprote(0, buf, 10);
-
-	//__dump_binary_to(Serial, buf, len);
-
 	exit(0);
+#endif
 }
 
 void loop()

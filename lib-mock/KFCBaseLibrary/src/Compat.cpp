@@ -428,8 +428,6 @@ void init_winsock() {
 }
 
 
-EspClass ESP;
-
 void EspClass::rtcMemDump() {
     if (_rtcMemory) {
         DumpBinary dump(Serial);

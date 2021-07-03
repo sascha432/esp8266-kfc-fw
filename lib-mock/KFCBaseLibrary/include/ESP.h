@@ -6,11 +6,7 @@
 
 class EspClass {
 public:
-    EspClass() {
-        memset(&resetInfo, 0, sizeof(resetInfo));
-        _rtcMemory = nullptr;
-        _readRtcMemory();
-    }
+    EspClass();
     ~EspClass() {
         free(_rtcMemory);
     }
@@ -120,7 +116,8 @@ public:
     static bool flashWrite(uint32_t address, const uint8_t *data, size_t size);
     static bool flashRead(uint32_t address, uint32_t *data, size_t size);
     static bool flashRead(uint32_t address, uint8_t *data, size_t size);
+    static void flashDump(Stream &output);
 
 };
 
-extern EspClass ESP;
+extern EspClass &ESP;

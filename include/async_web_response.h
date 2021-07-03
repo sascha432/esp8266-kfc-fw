@@ -41,7 +41,6 @@ public:
 protected:
     virtual void __assembleHead(uint8_t version);
 
-    WebServerSetCPUSpeedHelper _setCPUSpeed;
     HttpHeaders _httpHeaders;
     String _head;
 };

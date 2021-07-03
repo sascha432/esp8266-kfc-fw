@@ -14,7 +14,6 @@
 #include <Arduino_compat.h>
 #include <ESPAsyncWebServer.h>
 #include <HttpHeaders.h>
-#include <SpeedBooster.h>
 #include <KFCJson.h>
 #include <HeapStream.h>
 #include "plugins.h"
@@ -30,11 +29,6 @@ class FailureCounterContainer;
 extern void __weatherStationDetachCanvas(bool release);
 extern void __weatherStationAttachCanvas();
 #endif
-
-class WebServerSetCPUSpeedHelper : public SpeedBooster {
-public:
-    WebServerSetCPUSpeedHelper();
-};
 
 class WebTemplate;
 
@@ -86,7 +80,6 @@ namespace WebServer {
 
     struct UploadStatus
     {
-        WebServerSetCPUSpeedHelper setCPUSpeed;
         AsyncWebServerResponse *response;
         bool error;
         uint8_t command;

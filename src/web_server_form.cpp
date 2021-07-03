@@ -79,17 +79,6 @@ void Plugin::createConfigureForm(FormCallbackType type, const String &name, Form
     }));
 #endif
 
-#if defined(ESP8266) && SPEED_BOOSTER_ENABLED
-    auto performanceItems = FormUI::Container::List(
-        0, F("80MHz"),
-        1, F("160MHz (Recommended for TLS)")
-    );
-
-    form.addObjectGetterSetter(F("perf"), flags, flags.get_bit_is_webserver_performance_mode_enabled, flags.set_bit_is_webserver_performance_mode_enabled);
-    form.addFormUI(F("Performance"), performanceItems);
-
-#endif
-
     form.addCallbackSetter(F("port"), cfg.getPortAsString(), [&cfg](const String &value, FormField &field) {
         cfg.setPort(value.toInt());
         field.setValue(cfg.getPortAsString());

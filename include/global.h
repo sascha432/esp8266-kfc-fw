@@ -95,14 +95,6 @@
 #define ENABLE_DEEP_SLEEP                           0
 #endif
 
-#ifndef SPEED_BOOSTER_ENABLED
-#if defined(ESP8266)
-#define SPEED_BOOSTER_ENABLED                       1
-#else
-#define SPEED_BOOSTER_ENABLED                       0
-#endif
-#endif
-
 #ifndef DEBUG_INCLUDE_SOURCE_INFO
 // Add source file and line number to the debug output
 #define DEBUG_INCLUDE_SOURCE_INFO                   0

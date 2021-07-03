@@ -12,7 +12,6 @@
 #include <GFXCanvasCompressed.h>
 #include <GFXCanvasCompressedPalette.h>
 #include <OpenWeatherMapAPI.h>
-#include <SpeedBooster.h>
 #include <EventScheduler.h>
 #include "FixedCircularBuffer.h"
 #include "fonts/fonts.h"

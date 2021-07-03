@@ -132,10 +132,6 @@
 #define IOT_LED_MATRIX_OPTS_INTERLEAVED true
 #endif
 
-#if SPEED_BOOSTER_ENABLED
-#    error The speed booster causes timing issues and should be deactivated
-#endif
-
 #if !NTP_CLIENT || !NTP_HAVE_CALLBACKS
 #    error NTP_CLIENT=1 and NTP_HAVE_CALLBACKS=1 required
 #endif

@@ -56,8 +56,6 @@ private:
     AsyncWebServerRequest *_request;
     AsyncWebServerResponse *_response;
     HttpHeaders _headers;
-
-    WebServerSetCPUSpeedHelper _setCPUSpeed;
 };
 
 class FileManagerWebHandler : public AsyncWebHandler {

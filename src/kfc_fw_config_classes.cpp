@@ -58,7 +58,7 @@ namespace KFCConfigurationClasses {
         is_ntp_client_enabled(true),
         is_syslog_enabled(false),
         is_web_server_enabled(true),
-        is_webserver_performance_mode_enabled(true),
+        ___reserved3(false),
         is_mqtt_enabled(false),
         is_rest_api_enabled(),
         is_serial2tcp_enabled(true),

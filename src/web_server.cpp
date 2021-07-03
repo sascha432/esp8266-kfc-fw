@@ -75,13 +75,6 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     0                   // __reserved
 );
 
-WebServerSetCPUSpeedHelper::WebServerSetCPUSpeedHelper() : SpeedBooster(
-#if defined(ESP8266)
-    System::Flags::getConfig().is_webserver_performance_mode_enabled
-#endif
-) {
-}
-
 HttpCookieHeader *createRemoveSessionIdCookie()
 {
     return new HttpCookieHeader(FSPGM(SID, "SID"), String(), String('/'), HttpCookieHeader::COOKIE_EXPIRED);
@@ -189,7 +182,6 @@ bool Plugin::_clientAcceptsGzip(AsyncWebServerRequest *request) const
 // to avoid having multiple handlers and save RAM, all custom handlers are executed here
 void Plugin::handlerNotFound(AsyncWebServerRequest *request)
 {
-    WebServerSetCPUSpeedHelper setCPUSpeed;
     HttpHeaders headers;
     AsyncWebServerResponse *response = nullptr;
 

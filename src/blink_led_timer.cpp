@@ -19,7 +19,6 @@ BlinkLEDTimer *ledTimer = nullptr;
 #include <LoopFunctions.h>
 #include <reset_detector.h>
 #include <NeoPixelEx.h>
-#include "SpeedBooster.h"
 
 class WS2812LEDTimer : public BlinkLEDTimer {
 public:

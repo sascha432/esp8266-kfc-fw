@@ -33,7 +33,7 @@ namespace KFCConfigurationClasses {
                 CREATE_BOOL_BITFIELD(is_ntp_client_enabled);
                 CREATE_BOOL_BITFIELD(is_syslog_enabled);
                 CREATE_BOOL_BITFIELD(is_web_server_enabled);
-                CREATE_BOOL_BITFIELD(is_webserver_performance_mode_enabled);
+                bool ___reserved3: 1;
 
                 CREATE_BOOL_BITFIELD(is_mqtt_enabled);
                 CREATE_BOOL_BITFIELD(is_rest_api_enabled);

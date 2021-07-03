@@ -413,7 +413,7 @@ namespace KFCConfigurationClasses {
                 length = strlen_P(str);
             }
             length = std::min<int>(max_length(), length);
-            __LDBG_printf("append str=%*.*s len=%u", length, length, str, length);
+            // __LDBG_printf("append str=%*.*s len=%u", length, length, str, length);
             if (length == 0) {
                 // empty strings are not stored
                 return false;

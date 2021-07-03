@@ -77,6 +77,7 @@ namespace ConfigurationHelper {
             free(param._readable);
             param._readable = nullptr;
         }
+        // param._usage._counter2 = param._usage._counter + 1;
     }
 
     size_type getParameterLength(ParameterType type, size_t length)

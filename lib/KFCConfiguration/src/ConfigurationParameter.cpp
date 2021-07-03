@@ -177,14 +177,29 @@ void ConfigurationParameter::exportAsJson(Print& output)
         case ParameterType::STRING: {
             auto ptr = _param.string();
             if (strchr(ptr, 0xff)) {
+                auto lastSep = strrchr(ptr, 0xff);
+                if (lastSep) {
+                    *lastSep = 0;
+                }
+                output.print('[');
                 // KFCConfigurationClasses::ConfigStringArray
                 char sep[2] = { 0xff, 0 };
                 split::split(ptr, sep, [&output](const char *str, size_t size, int flags) {
                     JsonTools::Utf8Buffer buffer;
                     output.print('"');
-                    JsonTools::printToEscaped(output, str, strlen(str), &buffer);
-                    output.print('"');
+                    auto endPtr = strchr(str, 0xff);
+                    JsonTools::printToEscaped(output, str, endPtr ? endPtr - str : strlen(str), &buffer);
+                    if ((flags & split::SplitFlagsType::LAST)) {
+                        output.print('"');
+                    }
+                    else {
+                        output.print(F("\", "));
+                    }
                 }, split::SplitFlagsType::EMPTY);
+                output.print(']');
+                if (lastSep) {
+                    *lastSep = 0xff;
+                }
             } else {
                 JsonTools::Utf8Buffer buffer;
                 output.print('"');

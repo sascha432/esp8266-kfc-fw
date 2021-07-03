@@ -293,6 +293,7 @@ namespace split {
         EMPTY =         0x01,       // add empty strings
         TRIM =          0x02,       // trim strings
         _PROGMEM =      0x04,
+        LAST =          0x08,       // last item
     } SplitFlagsType;
 
     using AddItemCallback = std::function<void(const char *str, size_t len, int flags)>;

@@ -483,7 +483,7 @@ void split::split(const char *str, const char *sep, AddItemCallback callback, in
             start = stop + 1;
         }
     }
-    callback(str + start, stop - start, flags);
+    callback(str + start, stop - start, flags | SplitFlagsType::LAST);
 }
 
 void split::split_P(const FPStr &str, const FPStr &sep, AddItemCallback callback, int flags, uint16_t limit)
@@ -498,7 +498,7 @@ void split::split_P(const FPStr &str, const FPStr &sep, AddItemCallback callback
             start = stop + 1;
         }
     }
-    callback(str.c_str() + start, stop - start, flags);
+    callback(str.c_str() + start, stop - start, flags | SplitFlagsType::LAST);
 }
 
 // timezone support

@@ -57,9 +57,15 @@ void Configuration::release()
     for(auto &parameter: _params) {
         if (!parameter.isWriteable()) {
             ConfigurationHelper::deallocate(parameter);
+            // if (_readAccess) {
+            //     parameter._getParam()._usage._counter2 += (millis() - _readAccess) / 1000;
+            // }
         }
         else if (parameter.hasDataChanged(*this) == false) {
             ConfigurationHelper::deallocate(parameter);
+            // if (_readAccess) {
+            //     parameter._getParam()._usage._counter2 += (millis() - _readAccess) / 1000;
+            // }
         }
     }
     _readAccess = 0;
@@ -351,7 +357,9 @@ void Configuration::dump(Print &output, bool dirty, const String &name)
 #else
             output.printf_P(PSTR("%04x: "), param.getHandle());
 #endif
-            output.printf_P(PSTR("type=%s ofs=%d[+%u] len=%d dirty=%u value: "), (const char *)parameter.getTypeString(parameter.getType()), dataOffset, param.next_offset(), parameter.getLength(), parameter.isWriteable());
+            output.printf_P(PSTR("type=%s ofs=%d[+%u] len=%d dirty=%u value: "), (const char *)parameter.getTypeString(parameter.getType()),
+                dataOffset, param.next_offset(), parameter.getLength(), parameter.isWriteable()
+            );
             parameter.dump(output);
         }
         dataOffset += param.next_offset();
@@ -427,6 +435,7 @@ Configuration::ParameterList::iterator Configuration::_findParam(ConfigurationPa
     for (auto it = _params.begin(); it != _params.end(); ++it) {
         if (*it == handle && ((type == ParameterType::_ANY) || (it->_param.type() == type))) {
             //__LDBG_printf("%s FOUND", it->toString().c_str());
+            // it->_getParam()._usage._counter++;
             return it;
         }
         offset += it->_param.next_offset();

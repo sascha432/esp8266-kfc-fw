@@ -132,6 +132,11 @@ namespace ConfigurationHelper {
 
 
     public:
+        // struct Usage {
+        //     uint16_t _counter;
+        //     uint16_t _counter2;
+        //     Usage() : _counter(0), _counter2(0) {}
+        // };
         struct {
             union {
                 struct {
@@ -147,9 +152,10 @@ namespace ConfigurationHelper {
                 WriteableData *_writeable;
             };
         };
+        // Usage _usage;
     };
 
-    static constexpr size_t ParameterInfoSize = sizeof(ParameterInfo);
+    static constexpr size_t kParameterInfoSize = sizeof(ParameterInfo);
     // static_assert(ParameterInfoSize == 8, "invalid size");
 
     static_assert((sizeof(ParameterHeaderType) & 3) == 0, "not dword aligned");

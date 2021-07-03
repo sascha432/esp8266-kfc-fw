@@ -23,7 +23,6 @@ char *__strrstr(char *str, size_t stringLen, const char *find, size_t findLen);
 char *__strrstr_P(char *str, size_t stringLen, PGM_P find, size_t findLen);
 PGM_P __strrstr_P_P(PGM_P str, size_t stringLen, PGM_P find, size_t findLen);
 
-
 #if defined(_MSC_VER)
 
 #ifndef __attribute__
@@ -40,17 +39,17 @@ static constexpr uint32_t SIZE_IRRELEVANT = 0x7fffffff;
 #undef alloca
 #define alloca _malloca
 
-inline static void *memchr_P(void *s, int c, size_t n)
+inline void *memchr_P(void *s, int c, size_t n)
 {
     return memchr(s, c, n);
 }
 
-inline static const void *memchr_P(const void *s, int c, size_t n)
+inline const void *memchr_P(const void *s, int c, size_t n)
 {
     return memchr(s, c, n);
 }
 
-inline static void *memrchr(const void *s, int c, size_t n)
+inline void *memrchr(const void *s, int c, size_t n)
 {
     const unsigned char *cp;
     if (!n) {
@@ -65,19 +64,19 @@ inline static void *memrchr(const void *s, int c, size_t n)
     return nullptr;
 }
 
-inline static const char *strrchr_P(const char *str, int c) {
+inline const char *strrchr_P(const char *str, int c) {
     return strrchr(str, c);
 }
 
-inline static int strcasecmp(const char *str1, const char *str2) {
+inline int strcasecmp(const char *str1, const char *str2) {
     return _stricmp(str1, str2);
 }
 
-inline static PGM_P strchr_P(PGM_P src, int c) {
+inline PGM_P strchr_P(PGM_P src, int c) {
     return strchr(src, c);
 }
 
-inline static char *strdup_P(PGM_P src) {
+inline char *strdup_P(PGM_P src) {
     return strdup(src);
 }
 
@@ -172,7 +171,7 @@ inline int strncmp_PP(PGM_P str1, PGM_P str2, size_t size)
 }
 
 // using temporary and strncasecmp_P
-inline static int strncasecmp_PP(PGM_P str1, PGM_P str2, size_t size)
+inline int strncasecmp_PP(PGM_P str1, PGM_P str2, size_t size)
 {
     if (str1 == str2) {
         return 0;
@@ -198,7 +197,7 @@ inline static int strncasecmp_PP(PGM_P str1, PGM_P str2, size_t size)
 #define strcmp_P_P(str1, str2) strncmp_P_P((str1), (str2), SIZE_IRRELEVANT)
 #define strcasecmp_P_P(str1, str2) strncasecmp_P_P((str1), (str2), SIZE_IRRELEVANT)
 
-inline static char *stristr_P(const char *str1, PGM_P str2, size_t len2 = ~0)
+inline char *stristr_P(char *str1, PGM_P str2, size_t len2 = ~0)
 {
     return strcasestr_P(str1, str2, len2);
 }
@@ -207,7 +206,7 @@ inline static char *stristr_P(const char *str1, PGM_P str2, size_t len2 = ~0)
 
 char *strichr(char *, int ch);
 
-inline static const char *strichr(const char *str1, int ch1)
+inline const char *strichr(const char *str1, int ch1)
 {
     return strichr(const_cast<char *>(str1), ch1);
 }
@@ -220,7 +219,7 @@ int strncasecmp_P_P(PGM_P str1, PGM_P str2, size_t size);
 PGM_P strstr_P_P(PGM_P str, PGM_P find);
 PGM_P strcasestr_P_P(PGM_P str, PGM_P find);
 
-inline static char *strrstr(char *str, const char *find)
+inline char *strrstr(char *str, const char *find)
 {
     if (!str || !find) {
         return nullptr;
@@ -233,12 +232,12 @@ inline static char *strrstr(char *str, const char *find)
 
 
 extern "C" const char *strrstr(const char *string, const char *find);
-// static const char *strrstr(const char *string, const char *find)
+// const char *strrstr(const char *string, const char *find)
 // {
 //     return strrstr(const_cast<char *>(string), find);
 // }
 
-inline static char *strrstr_P(char *str, PGM_P find)
+inline char *strrstr_P(char *str, PGM_P find)
 {
     if (!str || !find) {
         return nullptr;
@@ -250,12 +249,12 @@ inline static char *strrstr_P(char *str, PGM_P find)
     return __strrstr_P(str, strlen(str), find, findLen);
 }
 
-inline static char *strrstr_P(const char *str, PGM_P find)
+inline char *strrstr_P(const char *str, PGM_P find)
 {
     return strrstr_P(const_cast<char *>(str), find);
 }
 
-inline static PGM_P strrstr_P_P(PGM_P str, PGM_P find)
+inline PGM_P strrstr_P_P(PGM_P str, PGM_P find)
 {
     if (!str || !find) {
         return nullptr;
@@ -269,19 +268,24 @@ inline static PGM_P strrstr_P_P(PGM_P str, PGM_P find)
 
 #if __GNU_VISIBLE
 
-inline static char *stristr(char *str1, const char *str2)
+inline char *stristr(char *str1, const char *str2)
 {
     return strcasestr(str1, str2);
 }
 
 #else
 
-inline static char *stristr(char *str1, const char *str2, size_t len2 = ~0)
+inline char *stristr(char *str1, const char *str2, size_t len2 = ~0)
 {
     return const_cast<char *>(strcasestr_P(str1, str2, len2));
 }
 
 #endif
+
+inline const char *stristr(const char *str1, const char *str2, size_t len2 = ~0)
+{
+    return stristr(str1, str2, len2);
+}
 
 #if defined(_MSC_VER)
 #pragma pop_macro("alloca")

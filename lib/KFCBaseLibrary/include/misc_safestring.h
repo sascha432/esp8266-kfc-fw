@@ -45,8 +45,8 @@ extern "C" {
 
 #define PROGMEM_START_ADDRESS                               0x40200000U
 #define PROGMEM_END_ADDRESS                                 0x402FEFF0U
-#define HEAP_START_ADDRESS                                  ((uintptr_t)&_heap_start[0])
-#define HEAP_END_ADDRESS                                    UMM_HEAP_END_ADDR
+#define HEAP_START_ADDRESS                                  0x3FFE8000U
+#define HEAP_END_ADDRESS                                    0x3FFFFFFFU
 
 inline bool is_HEAP_P(const void *ptr) {
     return (reinterpret_cast<const uintptr_t>(ptr) >= HEAP_START_ADDRESS) && (reinterpret_cast<const uintptr_t>(ptr) < HEAP_END_ADDRESS);
@@ -66,7 +66,7 @@ inline bool is_PGM_P(const void *begin, const void *end) {
 
 inline bool is_aligned_PGM_P(const void * ptr)
 {
-    return ((reinterpret_cast<const uintptr_t>(ptr) & 3) == 0);
+    return ((reinterpret_cast<const uintptr_t>(ptr) & 0b11) == 0);
 }
 
 inline bool is_not_PGM_P_or_aligned(const void * ptr)
@@ -85,11 +85,15 @@ inline bool is_not_PGM_P_or_aligned(const void * ptr)
 
 #else
 
+inline bool is_HEAP_P(const void *ptr) {
+    return true;
+}
+
 bool is_PGM_P(const void *ptr);
 
 inline bool is_aligned_PGM_P(const void * ptr)
 {
-    return (((const uintptr_t)ptr & 3) == 0);
+    return (((const uintptr_t)ptr & 0b11) == 0);
 }
 
 inline bool is_not_PGM_P_or_aligned(const void * ptr)
@@ -101,6 +105,8 @@ inline bool is_not_PGM_P_or_aligned(const void * ptr)
 #define __IS_SAFE_STR(str)              str
 
 #endif
+
+#define pgm_read_byte_safe(ptr)         (is_HEAP_P(ptr) || is_PGM_P(ptr) ? pgm_read_byte(ptr) : -1)
 
 // __S(str) for printf_P("%s") or any function requires const char * arguments
 //
@@ -119,9 +125,9 @@ inline bool is_not_PGM_P_or_aligned(const void * ptr)
 #define __S(str)                        __safeCString(str).c_str()
 // #define __S(str)                        __safeCString::validateLength(__safeCString(str).c_str())
 
-inline static const String __safeCString(const void *ptr) {
+inline const String __safeCString(const void *ptr) {
     char buf[16];
-    snprintf_P(buf, sizeof(buf), SPGM(0x_08x), ptr);
+    snprintf_P(buf, sizeof(buf), SPGM(0x_08x), (uint32_t)ptr);
     return buf;
 }
 
@@ -142,7 +148,7 @@ public:
 
 };
 
-inline static const String __safeCString(const IPAddress &addr) {
+inline const String __safeCString(const IPAddress &addr) {
     return addr.toString();
 }
 

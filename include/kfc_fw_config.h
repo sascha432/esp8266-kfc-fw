@@ -8,11 +8,6 @@
 #define DEBUG_KFC_CONFIG            0
 #endif
 
-// basic load statistics
-#ifndef LOAD_STATISTICS
-#define LOAD_STATISTICS             0
-#endif
-
 #include <Arduino_compat.h>
 #include <EventScheduler.h>
 #include <vector>
@@ -28,188 +23,21 @@
 #include "../src/plugins/mdns/mdns_resolver.h"
 #endif
 #include <Wire.h>
+#include <dyn_bitset.h>
 #include "logger.h"
 #include "misc.h"
 #include "at_mode.h"
 #include "blink_led_timer.h"
-
 #include "reset_detector.h"
-#include "dyn_bitset.h"
 
 #ifdef dhcp_start // defined in framework-arduinoespressif8266@2.20402.4/tools/sdk/lwip2/include/arch/cc.h
 #undef dhcp_start
 #endif
 
-#if LOAD_STATISTICS
-extern unsigned long load_avg_timer;
-extern uint32_t load_avg_counter;
-extern float load_avg[3]; // 1min, 5min, 15min
-#define LOOP_COUNTER_LOAD(avg) (avg ? 45900 / avg : NAN)    // this calculates the load compared to safe mode @ 1.0, no wifi and no load, 80MHz
-#endif
-
-#include <kfc_fw_config_types.h>
-
 #define HASH_SIZE                   64
 
+#include <kfc_fw_config_types.h>
 #include <kfc_fw_ioexpander.h>
-
-
-
-// #include "push_pack.h"
-
-// // NOTE: any member of an packed structure (__attribute__packed__ ) cannot be passed to forms as reference, otherwise it might cause an unaligned exception
-// // marking integers as bitset prevents using it as reference, i.e. uint8_t value: 8;
-// // use _H_STRUCT_VALUE() or suitable macro
-
-// class Config_Button {
-// public:
-//     typedef struct __attribute__packed__ {
-//         uint16_t time;
-//         uint16_t actionId;
-//     } ButtonAction_t;
-
-//     typedef struct __attribute__packed__ {
-//         ButtonAction_t shortpress;
-//         ButtonAction_t longpress;
-//         ButtonAction_t repeat;
-//         ButtonAction_t singleClick;
-//         ButtonAction_t doubleClick;
-//         uint8_t pin: 8;
-//         uint8_t pinMode: 8;
-//     } Button_t;
-
-//     typedef std::vector<Button_t> ButtonVector;
-
-//     static void getButtons(ButtonVector &buttons);
-//     static void setButtons(ButtonVector &buttons);
-// };
-
-// #include "pop_pack.h"
-
-
-#define _H_IP_VALUE(name, ...) \
-    IPAddress(config._H_GET_IP(name)), [__VA_ARGS__](const IPAddress &addr, FormUI::Field::BaseField &, bool store) { \
-        if (store) { \
-            config._H_SET_IP(name, addr); \
-        } \
-        return false; \
-    }
-
-#define _H_STR_VALUE(name, ...) \
-    String(config._H_STR(name)), [__VA_ARGS__](const String &str, FormUI::Field::BaseField &, bool store) { \
-        if (store) { \
-            config._H_SET_STR(name, str); \
-        } \
-        return false; \
-    }
-
-#define _H_CSTR_FUNC(getter, setter, ...) \
-    String(getter()), [__VA_ARGS__](const String &str, FormUI::Field::BaseField &, bool store) { \
-        if (store) { \
-            setter(str.c_str()); \
-        } \
-        return false; \
-    }
-
-#define _H_FUNC(getter, setter, ...) \
-    _H_FUNC_TYPE(getter, setter, decltype(getter()), ##__VA_ARGS__)
-
-#define _H_FUNC_TYPE(getter, setter, type, ...) \
-    static_cast<type>(getter()), [__VA_ARGS__](const type value, FormUI::Field::BaseField &, bool store) { \
-        if (store) { \
-            setter(static_cast<decltype(getter())>(value)); \
-        } \
-        return false; \
-    }
-
-#define _H_STRUCT_IP_VALUE(name, field, ...) \
-    IPAddress(config._H_GET(name).field), [__VA_ARGS__](const IPAddress &value, FormUI::Field::BaseField &, bool store) { \
-        if (store) { \
-            auto &data = config._H_W_GET(name); \
-            data.field = value; \
-        } \
-        return false; \
-    }
-
-#define _H_W_STRUCT_IP_VALUE(name, field, ...) \
-    IPAddress(name.field), [&name, ##__VA_ARGS__](const IPAddress &value, FormUI::Field::BaseField &, bool store) { \
-        if (store) { \
-            name.field = value; \
-        } \
-        return false; \
-    }
-
-#define _H_STRUCT_VALUE(name, field, ...) \
-    config._H_GET(name).field, [__VA_ARGS__](const decltype(name.field) &value, FormUI::Field::BaseField &, bool store) { \
-        if (store) { \
-            auto &data = config._H_W_GET(name); \
-            data.field = value; \
-        } \
-        return false; \
-    }
-
-
-#define _H_STRUCT_VALUE_TYPE(name, field, type, ...) \
-    config._H_GET(name).field, [__VA_ARGS__](const type &value, FormUI::Field::BaseField &, bool store) { \
-        if (store) { \
-            auto &data = config._H_W_GET(name); \
-            data.field = value; \
-        } \
-        return false; \
-    }
-
-#define _H_W_STRUCT_VALUE(name, field, ...) \
-    name.field, [&name, ##__VA_ARGS__](const decltype(name.field) &value, FormUI::Field::BaseField &, bool store) { \
-        if (store) { \
-            name.field = value; \
-        } \
-        return false; \
-    }
-
-#define _H_W_STRUCT_VALUE_TYPE(name, field, type, ...) \
-    name.field, [&name, ##__VA_ARGS__](const type &value, FormUI::Field::BaseField &, bool store) { \
-        if (store) { \
-            name.field = value; \
-        } \
-        return false; \
-    }
-
-#define _H_FLAGS_BOOL_VALUE(name, field, ...) \
-    config._H_GET(name).field, [__VA_ARGS__](bool &value, FormUI::Field::BaseField &, bool store) { \
-        if (store) { \
-            auto &data = config._H_W_GET(name); \
-            data.field = value; \
-        } \
-        return false; \
-    }
-
-#define _H_FLAGS_VALUE(name, field, ...) \
-    config._H_GET(name).field, [__VA_ARGS__](uint8_t &value, FormUI::Field::BaseField &, bool store) { \
-        if (store) { \
-            auto &data = config._H_W_GET(name); \
-            data.field = value; \
-        } \
-        return false; \
-    }
-
-#define addWriteableStruct(form_name, struct, member, ...) \
-    add<decltype(struct.member)>(F(form_name), _H_W_STRUCT_VALUE(struct, member, ##__VA_ARGS__)
-
-#define addWriteableStructIPAddress(form_name, struct, member, ...) \
-    add(F(form_name), _H_W_STRUCT_IP_VALUE(struct, member, ##__VA_ARGS__)
-
-#define addCStrGetterSetter(form_name, getter, setter, ...) \
-    add(F(form_name), _H_CSTR_FUNC(getter, setter, ##__VA_ARGS__)
-
-#define addGetterSetter(form_name, getter, setter, ...) \
-    add(F(form_name), _H_FUNC(getter, setter, ##__VA_ARGS__)
-
-#define addGetterSetterType(form_name, getter, setter, type, ...) \
-    add(F(form_name), _H_FUNC_TYPE(getter, setter, type, ##__VA_ARGS__)
-
-#define addGetterSetterType_P(form_name, getter, setter, type, ...) \
-    add(FPSTR(form_name), _H_FUNC_TYPE(getter, setter, type, ##__VA_ARGS__)
-
 
 // NOTE using the new handlers (USE_WIFI_SET_EVENT_HANDLER_CB=0) costs 896 byte RAM with 5 handlers
 #ifndef USE_WIFI_SET_EVENT_HANDLER_CB
@@ -343,8 +171,8 @@ private:
     uint32_t _wifiUp;               // time of receiving IP address
     uint32_t _wifiFirstConnectionTime;
     int16_t _garbageCollectionCycleDelay;
-    uint8_t _dirty : 1;
-    uint8_t _safeMode : 1;
+    bool _dirty;
+    bool _safeMode;
 
     static bool _initTwoWire;
 
@@ -367,7 +195,6 @@ inline void KFCFWConfiguration::setSafeMode(bool mode)
 {
     _safeMode = mode;
 }
-
 
 extern KFCFWConfiguration config;
 

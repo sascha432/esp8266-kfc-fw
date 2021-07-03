@@ -8,7 +8,7 @@
 
 uint32_t &_irom0_text_start = *(uint32_t *)0x40201010;
 uint32_t &_irom0_text_end = *(uint32_t *)0x40201010;
-char *&_heap_start = *(char **)0x3ffff000;
+char *&_heap_start = *(char **)0x3FFE8000;
 uint32_t &_FS_start = *(uint32_t *)0x402FEFF0;
 uint32_t &_FS_end = *(uint32_t *)0x402FEFF0;
 uint32_t &_KFCFW_start = *(uint32_t *)0x405AB000;

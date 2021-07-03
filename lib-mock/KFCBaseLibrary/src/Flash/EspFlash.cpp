@@ -8,7 +8,7 @@
 #include "section_defines.h"
 #include "ESP.h"
 
-#define DEBUG_ESP_FLASH_MEMORY 1
+#define DEBUG_ESP_FLASH_MEMORY 0
 
 EspClass _ESP;
 EspClass &ESP = _ESP;
@@ -342,9 +342,17 @@ namespace FlashMemory {
 					return -1;
 				}
 				// copy new data and advance ptr to next sector
-				memcpy(sectorData.c_str() + sector.offset, ptr, maxWrite);
+				auto dst = sectorData.c_str() + sector.offset;
+				auto endPtr = dst + maxWrite;
+				while (dst < endPtr) {
+					// only remove bits
+					// erase must be used to reset the data
+					*dst = static_cast<uint8_t>(*ptr++) & static_cast<uint8_t>(*dst);
+					dst++;
+				}
+				// memcpy(sectorData.c_str() + sector.offset, ptr, maxWrite);
+				// ptr += maxWrite;
 				written += maxWrite;
-				ptr += maxWrite;
 				len -= maxWrite;
 
 				// store sector data
@@ -582,17 +590,14 @@ namespace FlashMemory {
 			if ((_fs.rdstate() & std::ifstream::failbit) != 0) {
 				return false;
 			}
-			Buffer buffer;
-			auto count = kSectorSize / buffer.size();
+			Sector sectorData;
 			sector.index.cycles++;
 			sector.index.clear();
-			while (count--) {
-				_fs.write(buffer, buffer.size());
-				if ((_fs.rdstate() & std::ifstream::failbit) != 0) {
-					return false;
-				}
+			_fs.write(sectorData.c_str(), sectorData.size());
+			if ((_fs.rdstate() & std::ifstream::failbit) != 0) {
+				return false;
 			}
-			return sector.index.seekp(_fs, sector.sectorNum) && sector.index.write(_fs);
+			return sector.index.write(_fs, sector.sectorNum);
 		}
 
 		static constexpr uint32_t _getIndexOffset() {

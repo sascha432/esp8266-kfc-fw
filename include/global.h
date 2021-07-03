@@ -275,11 +275,7 @@
 #endif
 
 // offset of the configuration in the EEPROM
-#ifndef CONFIG_EEPROM_OFFSET
-#define CONFIG_EEPROM_OFFSET                                0
-#endif
-
-// length of the data stored in EEPROM, actual size required would be CONFIG_EEPROM_OFFSET + CONFIG_EEPROM_SIZELENGTH
+// length of the data stored in EEPROM, actual size required would be CONFIG_EEPROM_SIZELENGTH
 #ifndef CONFIG_EEPROM_SIZE
 #define CONFIG_EEPROM_SIZE                                  4096
 #endif

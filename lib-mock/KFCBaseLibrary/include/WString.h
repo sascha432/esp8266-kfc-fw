@@ -136,10 +136,14 @@ namespace ex {
                 return out;
             if (right > len())
                 right = len();
+#ifdef _MSC_VER
+            out.concat(buffer() + left, right - left);
+#else
             char temp = buffer()[right];  // save the replaced character
             wbuffer()[right] = '\0';
             out = wbuffer() + left;  // pointer arithmetic
             wbuffer()[right] = temp;  //restore character
+#endif
             return out;
         }
 

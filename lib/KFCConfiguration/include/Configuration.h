@@ -41,12 +41,17 @@ namespace ConfigurationHelper {
     }
 
     inline uint32_t getFlashAddress(size_t offset) {
-        return SECTION_EEPROM_START_ADDRESS - SECTION_FLASH_START_ADDRESS + offset;
+        return getFlashAddress() + offset;
+    }
+
+    inline uint32_t getOffsetFromFlashAddress(uint32_t address) {
+        return address - getFlashAddress();
     }
 
     struct Header {
         Header() : _magic(CONFIG_MAGIC_DWORD), _crc(~0U) {}
 
+        // length does not include the Header
         uint16_t length() const {
             return _data.length;
         }
@@ -101,8 +106,12 @@ namespace ConfigurationHelper {
             return CONFIG_MAGIC_DWORD == _magic;
         }
 
-        operator uint8_t *() {
+        explicit operator uint8_t *() {
             return reinterpret_cast<uint8_t *>(this);
+        }
+
+        operator uint32_t *() {
+            return reinterpret_cast<uint32_t *>(this);
         }
 
     private:
@@ -143,10 +152,21 @@ public:
 
     static constexpr size_t ParameterListChunkSize = ParameterList::chunk_element_count * 8 + sizeof(uint32_t); ; //ParameterList::chunk_size;
 
-    static constexpr uint16_t kOffset = 0;
-    static_assert((kOffset & 3) == 0, "not dword aligned");
+    // Offset 0
+    //  some data...
+    // kHeaderOffset
+    //  Header
+    // kParamsOffset
+    //  param 1 (ParameterHeaderType)
+    //  param 2 ...
+    // getDataOffset(numParam)
+    //  data record 1
+    //  data record 2 ...
 
-    static constexpr uint16_t kParamsOffset = kOffset + sizeof(Header);
+    static constexpr uint16_t kHeaderOffset = 0;
+    static_assert((kHeaderOffset & 3) == 0, "not dword aligned");
+
+    static constexpr uint16_t kParamsOffset = kHeaderOffset + sizeof(Header);
     static_assert((kParamsOffset & 3) == 0, "not dword aligned");
 
     constexpr uint16_t getDataOffset(uint16_t numParams) const {

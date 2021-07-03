@@ -818,9 +818,8 @@ void KFCFWConfiguration::read(bool wakeup)
     else if (wakeup == false) {
         auto version = System::Device::getConfig().config_version;
         auto currentVersion = SaveCrash::Data::FirmwareVersion().__version;
-        // uint32_t currentVersion = (FIRMWARE_VERSION << 16) | static_cast<uint16_t>(String(F(__BUILD_NUMBER)).toInt());
-        __DBG_printf ("CONFIG VERSION %08x %08x", version, currentVersion);
-        if (0 && currentVersion != version) {
+        // uint32_t currentVersion = (FIRMWARE_VERSION << 16) | (__BUILD_NUMBER_INT & 0xffff);
+        if (currentVersion != version) {
 
             // auto build = static_cast<uint16_t>(version);
             // version >>= 16;

@@ -224,7 +224,7 @@ void MDNSPlugin::begin()
         _running = true;
         if (MDNSService::addService(FSPGM(kfcmdns), FSPGM(udp), 5353)) {
             MDNSService::addServiceTxt(FSPGM(kfcmdns), FSPGM(udp), String('v'), FIRMWARE_VERSION_STR);
-            MDNSService::addServiceTxt(FSPGM(kfcmdns), FSPGM(udp), String('b'), F(__BUILD_NUMBER));
+            MDNSService::addServiceTxt(FSPGM(kfcmdns), FSPGM(udp), String('b'), String(__BUILD_NUMBER_INT));
             MDNSService::addServiceTxt(FSPGM(kfcmdns), FSPGM(udp), String('t'), System::Device::getTitle());
         }
     }

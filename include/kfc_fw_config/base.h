@@ -467,7 +467,7 @@ namespace KFCConfigurationClasses {
                 }
             }
             size.length = ptr - data;
-            __LDBG_printf("count=%u len=%u", size.count, size.length);
+            // __LDBG_printf("count=%u len=%u", size.count, size.length);
             return size;
         }
 

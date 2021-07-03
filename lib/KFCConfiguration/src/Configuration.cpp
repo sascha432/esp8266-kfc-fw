@@ -84,12 +84,12 @@ bool Configuration::write()
 {
     __LDBG_printf("params=%u", _params.size());
 
-    auto address = ConfigurationHelper::getFlashAddress();
     Header header;
+    auto address = ConfigurationHelper::getFlashAddress(kHeaderOffset);
 
     // get header
-    if (!ESP.flashRead(address + kOffset, header, sizeof(header))) {
-        __DBG_panic("cannot read header");
+    if (!ESP.flashRead(address, header, sizeof(header))) {
+        __DBG_panic("cannot read header offset=%u", ConfigurationHelper::getOffsetFromFlashAddress(address));
     }
     if (!header) {
         __DBG_panic("invalid magic=%08x", header.magic());
@@ -166,7 +166,8 @@ bool Configuration::write()
                     break;
                 }
             }
-            oldAddress += param.next_offset(); // next_offset returns the offset of the data in the flash memory
+            // next_offset() returns the offset of the data stored in the flash memory, not the current data in param
+            oldAddress += param.next_offset();
             ConfigurationHelper::deallocate(parameter);
             parameter._getParam() = {};
         }
@@ -179,34 +180,39 @@ bool Configuration::write()
         header.update(header.version() + 1, _params.size(), buffer.length());
         header.calcCrc(buffer.get(), buffer.length());
 
-        // write data to flash directly without double buffering
+        // format flash and copy stored data
+        address = ConfigurationHelper::getFlashAddress();
+
         std::unique_ptr<uint8_t[]> data;
-        if constexpr (kOffset != 0) {
-            // load data from before the offset
-            auto data = std::unique_ptr<uint8_t[]>(new uint8_t[kOffset]); // copying the previous data could be done before allocating "buffer" after the interrupt lock
+        if constexpr (kHeaderOffset != 0) {
+            // load data before the offset
+            auto data = std::unique_ptr<uint8_t[]>(new uint8_t[kHeaderOffset]); // copying the previous data could be done before allocating "buffer" after the interrupt lock
             if (!data) {
                 __DBG_panic("failed to allocate memory (preoffset data)");
             }
-            if (!ESP.flashRead(address, data.get(), kOffset)) {
+            if (!ESP.flashRead(address, data.get(), kHeaderOffset)) {
                 __DBG_panic("failed to read flash (preoffset data)");
             }
         }
 
-        // store in flash directly, first erase sector
+        // erase sector
+        // TODO if something goes wrong here, all data is lost
+        // add redundancy writing to multiple sectors, the header has an incremental version number
+        // append mode can be used to fill the sector before erasing
         if (!ESP.flashEraseSector(address / SPI_FLASH_SEC_SIZE)) {
             __DBG_panic("failed to write configuration (erase)");
         }
 
-        if constexpr (kOffset != 0) {
+        if constexpr (kHeaderOffset != 0) {
             // restore data before the offset
-            ESP.flashWrite(address, data.get(), kOffset);
+            ESP.flashWrite(address, data.get(), kHeaderOffset);
             // if this fails, we cannot do anything anymore
             // the sector has been erased already
             data.reset();
         }
 
         // write header
-        address += kOffset;
+        address += kHeaderOffset;
         if (!ESP.flashWrite(address, header, sizeof(header))) {
             __DBG_panic("failed to write configuration (write header)");
         }
@@ -300,8 +306,7 @@ void Configuration::setBinary(HandleType handle, const void *data, size_type len
 void Configuration::dump(Print &output, bool dirty, const String &name)
 {
     Header header;
-
-    auto address = ConfigurationHelper::getFlashAddress(kOffset);
+    auto address = ConfigurationHelper::getFlashAddress(kHeaderOffset);
 
     if (!ESP.flashRead(address, header, sizeof(header)) || !header) {
         output.printf_P(PSTR("cannot read header, magic=0x%08x"), header.magic());
@@ -310,10 +315,10 @@ void Configuration::dump(Print &output, bool dirty, const String &name)
 
     uint16_t dataOffset = getDataOffset(_params.size());
     output.printf_P(PSTR("Configuration:\noffset=%d data_ofs=%u params=%d len=%d version=%u\n"),
-        kOffset,
+        kHeaderOffset,
         dataOffset,
         _params.size(),
-        _size - kOffset,
+        _size - kHeaderOffset,
         header.version()
     );
     output.printf_P(PSTR("min_mem_usage=%d header_size=%d Param_t::size=%d, ConfigurationParameter::size=%d, Configuration::size=%d\n"),
@@ -346,7 +351,7 @@ void Configuration::dump(Print &output, bool dirty, const String &name)
 #else
             output.printf_P(PSTR("%04x: "), param.getHandle());
 #endif
-            output.printf_P(PSTR("type=%s ofs=%d[+%u] len=%d dirty=%u value: "), (const char *)parameter.getTypeString(parameter.getType()), dataOffset, param.next_offset(), /*calculateOffset(param.handle),*/ parameter.getLength(), parameter.isWriteable());
+            output.printf_P(PSTR("type=%s ofs=%d[+%u] len=%d dirty=%u value: "), (const char *)parameter.getTypeString(parameter.getType()), dataOffset, param.next_offset(), parameter.getLength(), parameter.isWriteable());
             parameter.dump(output);
         }
         dataOffset += param.next_offset();
@@ -372,14 +377,18 @@ void Configuration::exportAsJson(Print &output, const String &version)
         "\t\"config\": {\n"
     ), CONFIG_MAGIC_DWORD, version.c_str());
 
-    uint16_t dataOffset = kParamsOffset;
+    uint16_t dataOffset = getDataOffset(_params.size());
+    bool n = false;
     for (auto &parameter : _params) {
-        auto &param = parameter._param;
 
-        if (dataOffset != kParamsOffset) {
+        if (n) {
             output.print(F(",\n"));
         }
+        else {
+            n = true;
+        }
 
+        auto &param = parameter._param;
         output.printf_P(PSTR("\t\t\"%#04x\": {\n"), param.getHandle());
 #if DEBUG_CONFIGURATION_GETHANDLE
         output.print(F("\t\t\t\"name\": \""));
@@ -446,8 +455,10 @@ bool Configuration::_readParams()
 {
     Header header;
 
-    if (!ESP.flashRead(ConfigurationHelper::getFlashAddress(kOffset), header, sizeof(header))) {
-        __LDBG_printf("read error offset %u", kOffset);
+    if (!ESP.flashRead(ConfigurationHelper::getFlashAddress(kHeaderOffset), header, sizeof(header))) {
+        __LDBG_printf("read error offset %u", kHeaderOffset);
+        clear();
+        return false;
     }
 
 #if DEBUG_CONFIGURATION
@@ -455,12 +466,9 @@ bool Configuration::_readParams()
     dump.dump(header, sizeof(header));
 #endif
 
-    while(true) {
+    do {
         if (!header) {
             __LDBG_printf("invalid magic 0x%08x", header.magic());
-#if DEBUG_CONFIGURATION
-            __dump_binary_to(DEBUG_OUTPUT, &header, sizeof(header));
-#endif
             break;
         }
         else if (header.crc() == ~0U) {
@@ -473,48 +481,57 @@ bool Configuration::_readParams()
         }
 
         // read all data and validate CRC
-        uint8_t buf[128];
-        uint16_t address = ConfigurationHelper::getFlashAddress(kParamsOffset);
-        uint16_t endAddress = address + header.length();
-        uint32_t crc = header.initCrc();
+        auto address = ConfigurationHelper::getFlashAddress(kParamsOffset);
+        auto endAddress = address + header.length();
+        auto crc = header.initCrc();
         uint16_t paramIdx = 0;
+        uint32_t buf[128 / sizeof(uint32_t)];
         while(address < endAddress) {
             auto read = std::min<size_t>(endAddress - address, sizeof(buf));
-            if (!ESP.flashRead(address, buf, read)) {
+            if (!ESP.flashRead(address, buf, read)) { // using uint32_t * since buf is aligned
                 break;
             }
             crc = crc32(buf, read, crc);
 
             // copy parameters from data block
-            auto ptr = buf;
-            auto endPtr = buf + read;
+            auto startPtr = reinterpret_cast<uint8_t *>(buf);
+            auto endPtr = startPtr + read;
+            auto ptr = startPtr;
             for(; paramIdx < header.numParams() && ptr + sizeof(ParameterInfo()._header) < endPtr; paramIdx++) {
                 ParameterInfo param;
-                memcpy(&param._header, ptr, sizeof(param._header));
-                ptr += sizeof(param._header);
-                __DBG_printf("NEW READ PARAMS idx=%u handle=%04x type=%u", paramIdx, param._handle, param.type());
 
+                if constexpr (sizeof(param._header) == sizeof(uint32_t)) {
+                    param._header = *reinterpret_cast<uint32_t *>(ptr);
+                }
+                else {
+                    memcpy(&param._header, ptr, sizeof(param._header));
+                }
+                ptr += sizeof(param._header);
+
+                // __DBG_printf("READ PARAMS idx=%u handle=%04x type=%u address=%u buf_ofs=%u", paramIdx, param._handle, param.type(), address, (ptr - startPtr));
                 if (param.type() == ParameterType::_INVALID) {
-                    __LDBG_assert_printf(false, "read error %u/%u type=%u address=%u data=%u", paramIdx + 1, header.numParams(), param.type(), address + (ptr - buf), getDataOffset(paramIdx));
+                    __LDBG_printf("read error %u/%u type=%u offset=%u data=%u", paramIdx + 1, header.numParams(), param.type(), ConfigurationHelper::getOffsetFromFlashAddress(address + (ptr - startPtr)), getDataOffset(paramIdx));
                     break;
                 }
                 _params.emplace_back(param._header);
             }
-
             address += read;
         }
 
-        if (header.validateCrc(crc)) {
+        if (!header.validateCrc(crc)) {
             __LDBG_printf("CRC mismatch 0x%08x<>0x%08x", crc, header.crc());
-            // break;
+            break;
         }
         if (_params.size() == header.numParams()) {
             return true;
         }
 
-        break;
     }
+    while(false);
 
+#if DEBUG_CONFIGURATION
+    __dump_binary_to(DEBUG_OUTPUT, &header, sizeof(header));
+#endif
     clear();
     return false;
 }

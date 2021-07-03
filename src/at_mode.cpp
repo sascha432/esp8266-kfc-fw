@@ -358,11 +358,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(FSM, "FSM", "Display FS mapping");
 #if PIN_MONITOR
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PINM, "PINM", "[<1=start|0=stop>,<interval in ms>]", "List or monitor PINs");
 #endif
-#if LOAD_STATISTICS
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HEAP, "HEAP", "[interval in seconds|0=disable]", "Display free heap and system load");
-#else
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HEAP, "HEAP", "[interval in seconds|0=disable]", "Display free heap");
-#endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RSSI, "RSSI", "[interval in seconds|0=disable]", "Display WiFi RSSI");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(GPIO, "GPIO", "[interval in seconds|0=disable]", "Display GPIO states");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PWM, "PWM", "<pin>,<input|input_pullup|waveform|level=0-" __STRINGIFY(PWMRANGE) ">[,<frequency=100-40000Hz>[,<duration/ms>]]", "PWM output on PIN, min./max. level set it to LOW/HIGH"
@@ -385,13 +381,11 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMPT, "DUMPT", "Dump timers");
 #if DEBUG_CONFIGURATION_GETHANDLE
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPH, "DUMPH", "[<log|panic|clear>]", "Dump configuration handles");
 #endif
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPM, "DUMPM", "<start>,<length>", "Dump memory");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPIO, "DUMPIO", "<addr>,<end addr>", "Dump IO memory (0x6000xxxx)");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPF, "DUMPF", "<start>,<length>", "Dump flash (0x40200000)");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(FLASH, "FLASH", "<erase|read|write>,<address>,<offset=0>,<length=4096>", "Erase, read or write flash memory");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPA, "DUMPA", "<reset|mark|leak|freed>", "Memory allocation statistics");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPIO, "DUMPIO", "<address=0x60000000>[,<end address|length=4>]", "Dump IO memory");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPM, "DUMPM", "<address>[,<length=32>][,<insecure=false>,<use ESP.flashRead()=true>]", "Dump memory (32bit aligned)");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPF, "DUMPF", "<start=0x40200000>[,<end address|length=32>]", "Dump flash memory");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(FLASH, "FLASH", "<e[rase]>,<address>|<r[ead]>,<address>[,<offset=0>,<length=4096>]|w[rite],<address>,<byte1>[,<byte2>[,...]]]", "Erase, read or write flash memory");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMPFS, "DUMPFS", "Display file system information");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPEE, "DUMPEE", "[<offset>[,<length>]", "Dump EEPROM");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RTCM, "RTCM", "<list|dump|clear|set|get|quickconnect>[,<id>[,<data>]", "RTC memory access");
 #if LOGGER
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LOGDBG, "LOGDBG", "<1|0>", "Enable/disable writing debug output to log://debug");
@@ -463,9 +457,7 @@ void at_mode_help_commands()
 #endif
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPM), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPIO), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPA), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPFS), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPEE), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(FLASH), name);
 #if DEBUG_CONFIGURATION_GETHANDLE
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPH), name);
@@ -608,13 +600,8 @@ public:
             _maxHeap = heap;
             _maxHeapTime = getSystemUptime();
         }
-        Serial.printf_P(PSTR("+HEAP: free=%u(%u/%u@%us) cpu=%dMHz frag=%u uptime=%us"), heap, _minHeap, _maxHeap, _maxHeapTime, ESP.getCpuFreqMHz(), ESP.getHeapFragmentation(), getSystemUptime());
+        Serial.printf_P(PSTR("+HEAP: free=%u(%u/%u@%us) cpu=%dMHz frag=%u uptime=%us\n"), heap, _minHeap, _maxHeap, _maxHeapTime, ESP.getCpuFreqMHz(), ESP.getHeapFragmentation(), getSystemUptime());
         _minHeap = heap;
-
-#if LOAD_STATISTICS
-        Serial.printf_P(PSTR(" load avg=%.2f %.2f %.2f"), LOOP_COUNTER_LOAD(load_avg[0]), LOOP_COUNTER_LOAD(load_avg[1]), LOOP_COUNTER_LOAD(load_avg[2]));
-#endif
-        Serial.println();
     }
 
     void printGPIO() {
@@ -1214,6 +1201,47 @@ static bool _writeAndVerifyFlash(uint32_t address, uint8_t *data, size_t size, u
     return true;
 }
 
+static uintptr_t translateAddress(String str) {
+    str.trim('_');
+    if (str.equalsIgnoreCase(F("text")) || str.equalsIgnoreCase(F("irom0_text_start"))) {
+        return (uintptr_t)&_irom0_text_start;
+    }
+    else if (str.equalsIgnoreCase(F("irom0_text_end"))) {
+        return (uintptr_t)&_irom0_text_start;
+    }
+    else if (str.startsWithIgnoreCase(F("heap"))) {
+        return (uintptr_t)&_heap_start;
+    }
+    else if (str.startsWithIgnoreCase(F("fs_s")) || str.equalsIgnoreCase(F("fs"))) {
+        return (uintptr_t)&_FS_start;
+    }
+    else if (str.startsWithIgnoreCase(F("fs_e"))) {
+        return (uintptr_t)&_FS_end;
+    }
+    else if (str.startsWithIgnoreCase(F("kfc"))) {
+        return (uintptr_t)&_KFCFW_start;
+    }
+    else if (str.startsWithIgnoreCase(F("kfcfw_e")) || str.startsWithIgnoreCase(F("kfc_e"))) {
+        return (uintptr_t)&_KFCFW_end;
+    }
+    else if (str.startsWithIgnoreCase(F("savecrash"))) {
+        return (uintptr_t)&_SAVECRASH_start;
+    }
+    else if (str.startsWithIgnoreCase(F("savcecrash_e"))) {
+        return (uintptr_t)&_SAVECRASH_end;
+    }
+    else if (str.startsWithIgnoreCase(F("ee"))) {
+        return (uintptr_t)&_EEPROM_start;
+    }
+    else if (str.equalsIgnoreCase(F("gpi"))) {
+        return (uintptr_t)&GPI;
+    }
+    else if (str.startsWithIgnoreCase(F("gpo"))) {
+        return (uintptr_t)&GPO;
+    }
+    return (uintptr_t)~0;
+}
+
 void at_mode_serial_handle_event(String &commandString)
 {
     auto &output = Serial;
@@ -1347,39 +1375,105 @@ void at_mode_serial_handle_event(String &commandString)
 /*
 +dumpio=0x700,0x7ff
 +dumpio=0x1200,0x1300
++dumpio=GPI
 */
-        auto addr = args.toNumber(0, 0U);
-        auto toAddr = args.toNumber(1, addr);
-        while(addr < toAddr) {
-            auto data = ESP8266_REG(addr);
-            Serial.printf_P(PSTR("addr=%08x data=%08x (%u, %d)\n"), 0x60000000 + addr, data, data, data);
-            addr += 4;
+        static constexpr auto kIOBase = 0x60000000U; // std::addressof(ESP8266_REG(0));
+        uintptr_t addr = translateAddress(args.toString(0));
+        if (addr == ~0U) {
+            addr = args.toNumber(0, kIOBase);
+        }
+        if (addr < kIOBase) {
+            addr += kIOBase;
+        }
+        uintptr_t toAddr = args.toNumber(1, sizeof(uint32_t));
+        if (toAddr == 0) {
+            toAddr = sizeof(uint32_t);
+        }
+        if (toAddr < addr) {
+            toAddr += addr;
+        }
+        addr &= 0xffff;
+        toAddr &= 0xffff;
+        if (addr & 0x3)  {
+            args.print(F("address=0x%08x not aligned"), addr);
+        }
+        else {
+            while(addr < toAddr) {
+                auto data = ESP8266_REG(addr);
+                uint8_t len;
+                switch(toAddr - addr) {
+                    case 1:
+                        data &= 0xff;
+                        len = 2;
+                        break;
+                    case 2:
+                        data &= 0xffff;
+                        len = 4;
+                        break;
+                    case 3:
+                        data &= 0xffffff;
+                        len = 6;
+                        break;
+                    default:
+                        len = 8;
+                        break;
+                }
+                Serial.printf_P(PSTR("address=0x%0*.*x data=0x%0*.*x %u %d %s\n"), len, len, addr + kIOBase, len, len, data, data, data, BitsToStr<32, false>(data).c_str() + ((8 - len) * 4));
+                addr += sizeof(uint32_t);
+                delay(1);
+            }
         }
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPF))) {
-        auto addr = args.toNumber(0, SECTION_FLASH_START_ADDRESS);
-        auto toAddr = args.toNumber(1, addr);
-        uint8_t buf[32];
+        static constexpr size_t kFlashBufferSize = 32;
+        uintptr_t addr = translateAddress(args.toString(0));
+        if (addr == ~0U) {
+            addr = args.toNumber(0, SECTION_FLASH_START_ADDRESS);
+        }
+        uintptr_t toAddr = args.toNumber(1, 32U);
+        if (!toAddr) {
+            addr -= SECTION_FLASH_START_ADDRESS;
+            toAddr = addr + kFlashBufferSize;
+        }
+        else if (toAddr >= addr) { // length or address?
+            addr -= SECTION_FLASH_START_ADDRESS;
+            toAddr -= SECTION_FLASH_START_ADDRESS;
+            if (addr == toAddr) {
+                toAddr += sizeof(4);
+            }
+        }
+        else {
+            addr -= SECTION_FLASH_START_ADDRESS;
+            toAddr += addr;
+        }
+        uint8_t buf[kFlashBufferSize];
+        std::fill_n(buf, sizeof(buf), 0xff);
+
         auto &stream = args.getStream();
+        uint32_t start = millis();
         while(addr < toAddr) {
+            if ((millis() - start) > 5000) {
+                stream.println(F("timeout..."));
+                break;
+            }
             uint16_t len = toAddr - addr;
             if (len > sizeof(buf)) {
                 len = sizeof(buf);
             }
             auto result = ESP.flashRead(addr, buf, len);
-            stream.printf_P(PSTR("addr=%08x data="), addr);
             if (result) {
-                DumpBinary(stream, DumpBinary::kGroupBytesDefault, DumpBinary::kPerLineDisabled).dump(buf, len, addr);
+                DumpBinary(stream, DumpBinary::kGroupBytesDefault, sizeof(buf), addr + SECTION_FLASH_START_ADDRESS).dump(buf, len);
             }
             else {
-                stream.print(F("<read error>"));
+                stream.printf_P(PSTR("address=0x%08x offset=%u len=%u read error\n"), addr + SECTION_FLASH_START_ADDRESS, addr, len);
+                break;
             }
-            stream.printf_P(PSTR(" result=%u\n"), result);
             addr += len;
             delay(1);
         }
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(FLASH))) {
+        // +flash=<e[rase]>,<address>|<r[ead]>,<address>[,<offset=0>,<length=4096>]|w[rite],<address>,<byte1>[,<byte2>[,...]]]>
 /*
 
 +flash=r,0x405ab000,0,32
@@ -1390,15 +1484,18 @@ void at_mode_serial_handle_event(String &commandString)
 
 
 // EEPROM
-+flash=r,0x405fb000,0,1024
-+flash=r,0x405fb000,0,128
++flash=r,EEPROM,0,1024
++flash=r,EEPROM,0,128
 
 
 */
         auto cmdStr = args.get(0);
         if (cmdStr) {
             int cmd = stringlist_ifind_P(F("erase,e,read,r,write,w"), cmdStr);
-            auto addr = static_cast<uint32_t>(args.toNumber(1, SECTION_FLASH_START_ADDRESS));
+            uintptr_t addr = translateAddress(args.toString(1));
+            if (addr == ~0U) {
+                addr = static_cast<uint32_t>(args.toNumber(1, SECTION_FLASH_START_ADDRESS));
+            }
             auto offset = static_cast<uint32_t>(args.toNumber(2, 0));
             addr += offset;
             auto length = static_cast<uint32_t>(args.toNumber(3, SPI_FLASH_SEC_SIZE));
@@ -1411,7 +1508,7 @@ void at_mode_serial_handle_event(String &commandString)
             switch(cmd) {
                 case 0: // erase
                 case 1: // e
-                    args.print(F("erasing sector %u [0x%08X]"), sector, addr + SECTION_FLASH_START_ADDRESS);
+                    args.print(F("erasing sector %u [%08X]"), sector, addr + SECTION_FLASH_START_ADDRESS);
                     if ((rc = ESP.flashEraseSector(sector)) == false) {
                         args.print(F("erase failed"));
                     }
@@ -1419,18 +1516,18 @@ void at_mode_serial_handle_event(String &commandString)
                 case 2: // read
                 case 3: // r
                     {
-                        args.print(F("reading sector %u address %08x offset %u length %u"), sector, addr, offset, length);
+                        args.print(F("reading sector %u address 0x%08x offset %u length %u"), sector, addr + SECTION_FLASH_START_ADDRESS, offset, length);
                         uint32_t start = addr + offset;
                         uint32_t end = start + length;
                         uint8_t buf[kFlashBufferSize];
+                        std::fill_n(buf, sizeof(buf), 0xff);
                         while (start < end) {
                             uint8_t len = std::min<size_t>(sizeof(buf), end - start);
                             if ((rc = ESP.flashRead(start, buf, len)) == false) {
-                                args.print(F("read error address=%08x length=%u"), start, length);
+                                args.print(F("read error address=0x%08x length=%u"), start, length);
                                 break;
                             }
-                            DumpBinary(args.getStream(), DumpBinary::kGroupBytesDefault, DumpBinary::kPerLineDisabled)
-                                .setPerLine(sizeof(buf)).setGroupBytes(sizeof(uint32_t)).dump(buf, len, start + SECTION_FLASH_START_ADDRESS);
+                            DumpBinary(args.getStream(), DumpBinary::kGroupBytesDefault, sizeof(buf), start + SECTION_FLASH_START_ADDRESS).dump(buf, len);
                             start += len;
                             delay(1);
                         }
@@ -1444,18 +1541,18 @@ void at_mode_serial_handle_event(String &commandString)
                         }
                         else {
                             length = args.size() - 3;
-                            args.print(F("writing sector %u (%08x) offset %u length %u"), sector, addr, offset, length);
+                            args.print(F("writing sector %u (0x%08x) offset %u length %u"), sector, addr + SECTION_FLASH_START_ADDRESS, offset, length);
                             uint16_t position = 0;
                             auto &stream = args.getStream();
-                            auto data = std::unique_ptr<uint8_t[]>(new uint8_t[kFlashBufferSize]);
-                            auto compare = std::unique_ptr<uint8_t[]>(new uint8_t[kFlashBufferSize]);
+                            auto data = std::unique_ptr<uint8_t[]>(new uint8_t[kFlashBufferSize]());
+                            auto compare = std::unique_ptr<uint8_t[]>(new uint8_t[kFlashBufferSize]());
                             uint32_t start = addr + offset;
                             if (data && compare) {
                                 rc = 0;
                                 auto ptr = data.get();
                                 for(uint16_t i = 3; i < args.size(); i++) {
                                     if (i == 3) {
-                                        stream.printf_P(PSTR("[0x%08X] "), start + SECTION_FLASH_START_ADDRESS);
+                                        stream.printf_P(PSTR("[%08X] "), start + SECTION_FLASH_START_ADDRESS);
                                     }
                                     auto value = static_cast<uint8_t>(args.toNumber(i, 0xff));
                                     *ptr++ = value;
@@ -1473,7 +1570,7 @@ void at_mode_serial_handle_event(String &commandString)
                                         // move address ahead
                                         start += 32;
                                         if (i < args.size() - 1) {
-                                            stream.printf_P(PSTR("[0x%08X] "), start + SECTION_FLASH_START_ADDRESS);
+                                            stream.printf_P(PSTR("[%08X] "), start + SECTION_FLASH_START_ADDRESS);
                                         }
                                     }
                                 }
@@ -1504,12 +1601,18 @@ void at_mode_serial_handle_event(String &commandString)
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(METRICS))) {
 #if 1
 
-        #ifndef ARDUINO_ESP8266_RELEASE_EX
-        #define ARDUINO_ESP8266_RELEASE_EX ""
-        #endif
 
         args.print(F("Device name: %s"), System::Device::getName());
-        args.print(F("Framework Arduino ESP8266 " _STRINGIFY(ARDUINO_ESP8266_GIT_VER) " " _STRINGIFY(ARDUINO_ESP8266_GIT_DESC) " " ARDUINO_ESP8266_RELEASE_EX));
+#if ARDUINO_ESP8266_DEV
+    #ifndef ARDUINO_ESP8266_RELEASE_EX
+        #define ARDUINO_ESP8266_RELEASE_EX _STRINGIFY(ARDUINO_ESP8266_VERSION) "-dev " _STRINGIFY(ARDUINO_ESP8266_GIT_DESC) " " _STRINGIFY(ARDUINO_ESP8266_GIT_VER)
+    #endif
+#else
+    #ifndef ARDUINO_ESP8266_RELEASE_EX
+        #define ARDUINO_ESP8266_RELEASE_EX ARDUINO_ESP8266_RELEASE
+    #endif
+#endif
+        args.print(F("Framework Arduino ESP8266 " ARDUINO_ESP8266_RELEASE_EX));
         args.print(F("Uptime: %u seconds / %s"), getSystemUptime(), formatTime(getSystemUptime(), true).c_str());
         args.print(F("Free heap/fragmentation: %u / %u"), ESP.getFreeHeap(), ESP.getHeapFragmentation());
 #if ARDUINO_ESP8266_VERSION_COMBINED >= 0x030000
@@ -1548,6 +1651,9 @@ void at_mode_serial_handle_event(String &commandString)
 
         args.print(F("Heap start/size: 0x%x/%u"), SECTION_HEAP_START_ADDRESS, SECTION_HEAP_END_ADDRESS - SECTION_HEAP_START_ADDRESS);
         args.print(F("irom0.text: 0x%08x-0x%08x"), SECTION_IROM0_TEXT_START_ADDRESS, SECTION_IROM0_TEXT_END_ADDRESS);
+        args.print(F("EEPROM: 0x%x/%u"), SECTION_EEPROM_START_ADDRESS, SECTION_EEPROM_END_ADDRESS - SECTION_EEPROM_START_ADDRESS);
+        args.print(F("SaveCrash: 0x%x/%u"), SECTION_SAVECRASH_START_ADDRESS, SECTION_SAVECRASH_END_ADDRESS - SECTION_SAVECRASH_START_ADDRESS);
+        args.print(F("KFCFW: 0x%x/%u"), SECTION_KFCFW_START_ADDRESS, SECTION_KFCFW_END_ADDRESS - SECTION_KFCFW_START_ADDRESS);
         args.print(F("CPU frequency: %uMHz"), ESP.getCpuFreqMHz());
         args.print(F("Flash size / Vendor / Mode: %s / %02x / %s"), formatBytes(ESP.getFlashChipRealSize()).c_str(), ESP.getFlashChipVendorId(), flashModeStr);
         args.print(F("SDK / Core: %s / %s"), ESP.getSdkVersion(), ESP.getFullVersion().c_str());
@@ -1555,9 +1661,6 @@ void at_mode_serial_handle_event(String &commandString)
         args.print(F("Firmware size: %s"), formatBytes(ESP.getSketchSize()).c_str());
         args.print(F("Version (uint32): %s (0x%08x)"), SaveCrash::Data::FirmwareVersion().toString().c_str(), SaveCrash::Data::FirmwareVersion().__version);
         args.print(F("MD5 hash: %s"), SaveCrash::Data().getMD5().c_str());
-        args.print(F("EEPROM: 0x%x/%u"), SECTION_EEPROM_START_ADDRESS, SECTION_EEPROM_END_ADDRESS - SECTION_EEPROM_START_ADDRESS);
-        args.print(F("SaveCrash: 0x%x/%u"), SECTION_SAVECRASH_START_ADDRESS, SECTION_SAVECRASH_END_ADDRESS - SECTION_SAVECRASH_START_ADDRESS);
-        args.print(F("KFCFW: 0x%x/%u"), SECTION_KFCFW_START_ADDRESS, SECTION_KFCFW_END_ADDRESS - SECTION_KFCFW_START_ADDRESS);
         args.print(F("WiFiCallbacks: size=%u count=%u"), sizeof(WiFiCallbacks::Entry), WiFiCallbacks::getVector().size());
         args.print(F("LoopFunctions: size=%u count=%u"), sizeof(LoopFunctions::Entry), LoopFunctions::getVector().size());
 
@@ -1840,9 +1943,7 @@ void at_mode_serial_handle_event(String &commandString)
                 else {
                     auto read = Wire.readBytes(buf, length);
                     args.print(F("slave 0x%02X: requested %u byte. data:"), address, read);
-                    DumpBinary dump(args.getStream());
-                    dump.setPerLine(16).setGroupBytes(4).dump(buf, read);
-                    // printable_string(args.getStream(), buf, read, 0);
+                    DumpBinary(args.getStream(), DumpBinary::kGroupBytesDefault, 16).dump(buf, read);
                     if (buf) {
                         delete[] buf;
                     }
@@ -2365,11 +2466,22 @@ void at_mode_serial_handle_event(String &commandString)
     }
 #endif
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPM))) {
-        if (args.requireArgs(2, 3)) {
-            auto start = args.toNumber(0, 0U);
-            auto len = args.toNumber(1, 0U);
-            if ((start < UMM_MALLOC_CFG_HEAP_ADDR || start > UMM_HEAP_END_ADDR) && (start < SECTION_FLASH_START_ADDRESS || start >= SECTION_IROM0_TEXT_END_ADDRESS)) {
-                args.print(F("address not HEAP (%08x-%08x) or FLASH (%08x-%08x)"), UMM_MALLOC_CFG_HEAP_ADDR, UMM_HEAP_END_ADDR - 1, SECTION_FLASH_START_ADDRESS, SECTION_IROM0_TEXT_END_ADDRESS - 1);
+        if (args.requireArgs(1, 4)) {
+            uintptr_t start = translateAddress(args.toString(0));
+            if (start == ~0U) {
+                start = args.toNumber(0, 0U);
+            }
+            auto len = args.toNumber(1, 32U);
+            bool insecure = args.isTrue(2, false);
+            bool flashRead = args.isTrue(3, true);
+            if (!insecure && ((start < UMM_MALLOC_CFG_HEAP_ADDR || start > UMM_HEAP_END_ADDR) && (start < SECTION_FLASH_START_ADDRESS || start >= SECTION_IROM0_TEXT_END_ADDRESS))) {
+                args.print(F("address=0x%08x not HEAP (%08x-%08x) or FLASH (%08x-%08x), use unsecure mode"), start, UMM_MALLOC_CFG_HEAP_ADDR, UMM_HEAP_END_ADDR - 1, SECTION_FLASH_START_ADDRESS, SECTION_IROM0_TEXT_END_ADDRESS - 1);
+            }
+            else if (start & 0x3) {
+                args.print(F("address=%0x08x not aligned"), start);
+            }
+            else if (start == 0) {
+                args.print(F("address missing"));
             }
             else if (len == 0) {
                 args.print(F("length missing"));
@@ -2377,33 +2489,26 @@ void at_mode_serial_handle_event(String &commandString)
             else {
                 auto end = start + len;
                 args.print(F("start=0x%08x end=0x%08x length=%u"), start, end, end - start);
-                if (!args.isFalse(2)) {
-                    uint8_t buf[32];
-                    while(start < end) {
-                        auto len = std::min<size_t>(sizeof(buf), end - start);
-                        if (start >= SECTION_FLASH_START_ADDRESS) {
-                            if (!ESP.flashRead(start, buf, len)) {
-                                break;
-                            }
+                uint8_t buf[32];
+                std::fill_n(buf, sizeof(buf), 0xff);
+                while(start < end) {
+                    auto len = std::min<size_t>(sizeof(buf), end - start);
+                    if (flashRead && start >= SECTION_FLASH_START_ADDRESS && start < SECTION_FLASH_END_ADDRESS) {
+                        if (!ESP.flashRead(start - SECTION_FLASH_START_ADDRESS, buf, len)) {
+                            break;
                         }
-                        else {
-                            memcpy_P(buf, (const void *)start, len);
-                        }
-                        DumpBinary(args.getStream(), DumpBinary::kGroupBytesDefault, len).dump(buf, len, start);
-                        start += len;
                     }
+                    else {
+                        memcpy_P(buf, (const void *)start, len);
+                    }
+                    DumpBinary(args.getStream(), DumpBinary::kGroupBytesDefault, len, start).dump(buf, len);
+                    start += len;
                 }
-
             }
         }
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPFS))) {
         at_mode_dump_fs_info(output);
-    }
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPEE))) {
-        auto offset = args.toNumber<uint16_t>(0);
-        auto length = args.toUint16(1, 1);
-        config.dumpEEPROM(output, false, offset, length);
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RTCM))) {
         if (args.requireArgs(1)) {

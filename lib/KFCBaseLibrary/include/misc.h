@@ -72,24 +72,24 @@ String __formatTime(PGM_P names[], bool isShort, const String &sep, const String
 // if lastSep is an empty string, sep will be used
 // displayZero if set to true, values with 0 will be displayed and values below 0 can be used to skip
 //
-static inline String formatTimeLong(const String &sep, const String &_lastSep, bool displayZero, int seconds, int minutes = -1, int hours = -1, int days = -1, int weeks = -1, int months = -1, int years = -1, int milliseconds = -1, int microseconds = -1)
+inline String formatTimeLong(const String &sep, const String &_lastSep, bool displayZero, int seconds, int minutes = -1, int hours = -1, int days = -1, int weeks = -1, int months = -1, int years = -1, int milliseconds = -1, int microseconds = -1)
 {
     return __formatTime(formatTimeNames_long, false, sep, _lastSep,  displayZero, seconds, minutes, hours, days, weeks, months, years, milliseconds, microseconds);
 }
 
 // see formatTimeLong
 // 1 yr, 2 mths, 3 days, 5 hrs and 6 min
-static inline String formatTimeShort(const String &sep, const String &_lastSep, bool displayZero, int seconds, int minutes = -1, int hours = -1, int days = -1, int weeks = -1, int months = -1, int years = -1, int milliseconds = -1, int microseconds = -1)
+inline String formatTimeShort(const String &sep, const String &_lastSep, bool displayZero, int seconds, int minutes = -1, int hours = -1, int days = -1, int weeks = -1, int months = -1, int years = -1, int milliseconds = -1, int microseconds = -1)
 {
     return __formatTime(formatTimeNames_short, true, sep, _lastSep,  displayZero, seconds, minutes, hours, days, weeks, months, years, milliseconds, microseconds);
 }
 
-static inline String formatTimeMicros(const String &sep, const String &lastSep, int seconds, int milliseconds, int microseconds)
+inline String formatTimeMicros(const String &sep, const String &lastSep, int seconds, int milliseconds, int microseconds)
 {
     return formatTimeLong(sep, lastSep, false, seconds, -1, -1, -1, -1, -1, -1, milliseconds, microseconds);
 }
 
-static inline String formatTimeMicrosShort(const String &sep, const String &lastSep, int seconds, int milliseconds, int microseconds)
+inline String formatTimeMicrosShort(const String &sep, const String &lastSep, int seconds, int milliseconds, int microseconds)
 {
     return formatTimeShort(sep, lastSep, false, seconds, -1, -1, -1, -1, -1, -1, milliseconds, microseconds);
 }
@@ -98,10 +98,10 @@ String url_encode(const String &str);
 void printable_string(Print &output, const uint8_t *buffer, size_t length, size_t maxLength = 0, PGM_P extra = nullptr, bool crlfAsText = false);
 String printable_string(const uint8_t *buffer, size_t length, size_t maxLength = 0, PGM_P extra = nullptr, bool crlfAsText = false);
 
-static inline void printable_string(Print &output, const void *buffer, size_t length, size_t maxLength = 0, PGM_P extra = nullptr, bool crlfAsText = false) {
+inline void printable_string(Print &output, const void *buffer, size_t length, size_t maxLength = 0, PGM_P extra = nullptr, bool crlfAsText = false) {
     return printable_string(output, reinterpret_cast<const uint8_t *>(buffer), length, maxLength, extra, crlfAsText);
 }
-static inline String printable_string(const void *buffer, size_t length, size_t maxLength = 0, PGM_P extra = nullptr, bool crlfAsText = false) {
+inline String printable_string(const void *buffer, size_t length, size_t maxLength = 0, PGM_P extra = nullptr, bool crlfAsText = false) {
     return printable_string(reinterpret_cast<const uint8_t *>(buffer), length, maxLength, extra, crlfAsText);
 }
 
@@ -384,7 +384,7 @@ void *lambda_target(T callback) {
 // use instead of address.isSet()
 // performs additional checks to validate the stored IP address
 // some versions of the framework had issues doing it correctly
-static inline bool IPAddress_isValid(const IPAddress &address) {
+inline bool IPAddress_isValid(const IPAddress &address) {
     return address != (uint32_t)0 && address != (uint32_t)0xffffffffU && address.isSet();
 }
 
@@ -598,7 +598,7 @@ struct Pins {
     }
 };
 
-inline static Pins digitalReadAll()
+inline Pins digitalReadAll()
 {
     return Pins(GPI | (GP16I ? (1U << 16) : 0));
 }
@@ -607,13 +607,13 @@ inline static Pins digitalReadAll()
 
 #error TODO
 
-// inline static uint64_t digitalReadAll() {
+// inline uint64_t digitalReadAll() {
 //     return 0;
 // }
 
 #else
 
-inline static uint32_t digitalReadAll() {
+inline uint32_t digitalReadAll() {
     return 0;
 }
 

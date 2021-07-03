@@ -11,7 +11,7 @@
 #include "../src/plugins/mqtt/mqtt_json.h"
 
 #ifndef DEBUG_PING_MONITOR
-#define DEBUG_PING_MONITOR                  1
+#define DEBUG_PING_MONITOR                  0
 #endif
 
 #define __LDBG_AsyncPingResponse(type, response) \

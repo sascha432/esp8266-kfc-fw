@@ -145,8 +145,8 @@ void BlinkLEDTimer::setBlink(uint8_t pin, uint16_t delay, int32_t color)
         __LDBG_printf("PIN %u, blink %d", pin, delay);
     }
 
-    __LDBG_printf("delete ledTimer=%p", ledTimer);
     if (ledTimer) {
+        __ASSERT_PTR(ledTimer);
         delete ledTimer;
         ledTimer = nullptr;
     }

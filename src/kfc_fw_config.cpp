@@ -212,10 +212,10 @@ const uint16_t note_to_frequency[NOTE_TO_FREQUENCY_COUNT] PROGMEM = {
 // KFCFWConfiguration
 
 
-static_assert(CONFIG_EEPROM_SIZE >= 1024 && (CONFIG_EEPROM_OFFSET + CONFIG_EEPROM_SIZE) <= 4096, "invalid EEPROM size");
+static_assert(CONFIG_EEPROM_SIZE >= 1024 && (CONFIG_EEPROM_SIZE) <= 4096, "invalid EEPROM size");
 
 KFCFWConfiguration::KFCFWConfiguration() :
-    Configuration(CONFIG_EEPROM_OFFSET, CONFIG_EEPROM_SIZE),
+    Configuration(CONFIG_EEPROM_SIZE),
     _wifiConnected(0),
     _wifiUp(0),
     _wifiFirstConnectionTime(0),
@@ -704,7 +704,9 @@ const char __compile_date__[] PROGMEM = { __DATE__ " " __TIME__ };
 const String KFCFWConfiguration::getFirmwareVersion()
 {
 #if DEBUG
-#if ESP8266
+#if ARDUINO_ESP8266_DEV
+    return getShortFirmwareVersion() + F("." _STRINGIFY(ARDUINO_ESP8266_GIT_DESC) "-dev " ) + FPSTR(__compile_date__);
+#elif defined(ESP8266)
     return getShortFirmwareVersion() + F("." ARDUINO_ESP8266_RELEASE " " ) + FPSTR(__compile_date__);
 #else
     return getShortFirmwareVersion() + ' ' + FPSTR(__compile_date__);
@@ -790,7 +792,7 @@ SaveCrash::Data::FirmwareVersion::FirmwareVersion() :
     major(FIRMWARE_VERSION_MAJOR),
     minor(FIRMWARE_VERSION_MINOR),
     revision(FIRMWARE_VERSION_REVISION),
-    build((uint16_t)String(F(__BUILD_NUMBER)).toInt())
+    build(__BUILD_NUMBER_INT)
 {
 }
 
@@ -1052,15 +1054,21 @@ void KFCFWConfiguration::resetDevice(bool safeMode)
     ESP.restart();
 }
 
+// enable debugging output (::printf) for shutdown sequence
+#define DEBUG_SHUTDOWN_SEQUENCE DEBUG
+#if DEBUG_SHUTDOWN_SEQUENCE
+#define _DPRINTF(msg, ...) ::printf(PSTR(msg "\n"), ##__VA_ARGS__)
+#else
+#define _DPRINTF(...)
+#endif
+
+
 void KFCFWConfiguration::restartDevice(bool safeMode)
 {
     __LDBG_println();
     #if NEOPIXEL_CLEAR_ON_RESET
         NeoPixel_clearStrips();
     #endif
-
-// enable debugging output (::printf) for shutdown sequence
-#define DEBUG_SHUTDOWN_SEQUENCE DEBUG
 
     String msg = F("Device is being restarted");
     if (safeMode) {
@@ -1078,7 +1086,7 @@ void KFCFWConfiguration::restartDevice(bool safeMode)
 #endif
     if (_safeMode) {
 #if DEBUG_SHUTDOWN_SEQUENCE
-    ::printf(PSTR("safe mode: invoking restart\n"));
+    _DPRINTF("safe mode: invoking restart");
 #endif
         invoke_ESP_restart();
     }
@@ -1087,21 +1095,15 @@ void KFCFWConfiguration::restartDevice(bool safeMode)
     ADCManager::terminate(false);
 
 #if HTTP2SERIAL_SUPPORT
-#if DEBUG_SHUTDOWN_SEQUENCE
-    ::printf(PSTR("terminating http2serial instance\n"));
-#endif
+    _DPRINTF("terminating http2serial instance");
     Http2Serial::destroyInstance();
 #endif
 
-#if DEBUG_SHUTDOWN_SEQUENCE
-    ::printf(PSTR("scheduled tasks %u, WiFi callbacks %u, Loop Functions %u\n"), _Scheduler.size(), WiFiCallbacks::getVector().size(), LoopFunctions::size());
-#endif
+    _DPRINTF("scheduled tasks %u, WiFi callbacks %u, Loop Functions %u", _Scheduler.size(), WiFiCallbacks::getVector().size(), LoopFunctions::size());
 
     auto webUiSocket = WebUISocket::getServerSocket();
     if (webUiSocket) {
-#if DEBUG_SHUTDOWN_SEQUENCE
-        ::printf(PSTR("terminating webui websocket=%p\n"), webUiSocket);
-#endif
+        _DPRINTF("terminating webui websocket=%p", webUiSocket);
         webUiSocket->shutdown();
     }
 
@@ -1109,49 +1111,41 @@ void KFCFWConfiguration::restartDevice(bool safeMode)
     auto &plugins = PluginComponents::RegisterEx::getPlugins();
     for(auto iterator = plugins.rbegin(); iterator != plugins.rend(); ++iterator) {
         const auto plugin = *iterator;
-#if DEBUG_SHUTDOWN_SEQUENCE
-        ::printf(PSTR("shutdown plugin=%s\n"), plugin->getName_P());
-#endif
+        _DPRINTF("shutdown plugin=%s", plugin->getName_P());
         plugin->shutdown();
         plugin->clearSetupTime();
     }
 
-#if DEBUG_SHUTDOWN_SEQUENCE
-    ::printf(PSTR("scheduled tasks %u, WiFi callbacks %u, Loop Functions %u\n"), _Scheduler.size(), WiFiCallbacks::getVector().size(), LoopFunctions::size());
-#endif
+    _DPRINTF("scheduled tasks %u, WiFi callbacks %u, Loop Functions %u", _Scheduler.size(), WiFiCallbacks::getVector().size(), LoopFunctions::size());
 
-#if DEBUG_SHUTDOWN_SEQUENCE
-    ::printf(PSTR("terminating pin monitor\n"));
-#endif
 #if PIN_MONITOR
+    _DPRINTF("terminating pin monitor");
     PinMonitor::pinMonitor.end();
 #endif
 
-#if DEBUG_SHUTDOWN_SEQUENCE
-    ::printf(PSTR("terminating serial handlers\n"));
-#endif
+    _DPRINTF("terminating serial handlers");
     serialHandler.end();
 #if DEBUG
     debugStreamWrapper.clear();
 #endif
 
 #if DEBUG_SHUTDOWN_SEQUENCE
-    ::printf(PSTR("clearing wifi callbacks\n"));
+    _DPRINTF("clearing wifi callbacks");
 #endif
     WiFiCallbacks::clear();
 
 #if DEBUG_SHUTDOWN_SEQUENCE
-    ::printf(PSTR("clearing loop functions\n"));
+    _DPRINTF("clearing loop functions");
 #endif
     LoopFunctions::clear();
 
 #if DEBUG_SHUTDOWN_SEQUENCE
-    ::printf(PSTR("terminating event scheduler\n"));
+    _DPRINTF("terminating event scheduler");
 #endif
     __Scheduler.end();
 
 #if DEBUG_SHUTDOWN_SEQUENCE
-    ::printf(PSTR("invoking restart\n"));
+    _DPRINTF("invoking restart");
 #endif
     invoke_ESP_restart();
 }
@@ -1235,7 +1229,8 @@ bool KFCFWConfiguration::connectWiFi()
         bool result;
         if (flags.is_station_mode_dhcp_enabled) {
             result = WiFi.config((uint32_t)0, (uint32_t)0, (uint32_t)0, (uint32_t)0, (uint32_t)0);
-        } else {
+        }
+        else {
             result = WiFi.config(network.getLocalIp(), network.getGateway(), network.getSubnet(), network.getDns1(), network.getDns2());
         }
         if (!result) {
@@ -1243,13 +1238,15 @@ bool KFCFWConfiguration::connectWiFi()
             message.printf_P(PSTR("Failed to configure Station Mode with %s"), flags.is_station_mode_dhcp_enabled ? PSTR("DHCP") : PSTR("static address"));
             setLastError(message);
             Logger_error(message);
-        } else {
+        }
+        else {
 
             if (WiFi.begin(Network::WiFi::getSSID(), Network::WiFi::getPassword()) == WL_CONNECT_FAILED) {
                 String message = F("Failed to start Station Mode");
                 setLastError(message);
                 Logger_error(message);
-            } else {
+            }
+            else {
                 __LDBG_printf("Station Mode SSID %s", Network::WiFi::getSSID());
                 station_mode_success = true;
             }
@@ -1270,7 +1267,8 @@ bool KFCFWConfiguration::connectWiFi()
             String message = F("Cannot configure AP mode");
             setLastError(message);
             Logger_error(message);
-        } else {
+        }
+        else {
 
 #if defined(ESP32)
 
@@ -1306,7 +1304,8 @@ bool KFCFWConfiguration::connectWiFi()
                 String message = F("Failed to configure DHCP server");
                 setLastError(message);
                 Logger_error(message);
-            } else {
+            }
+            else {
                 if (flags.is_softap_dhcpd_enabled) {
                     if (!wifi_softap_dhcps_start()) {
                         String message = F("Failed to start DHCP server");
@@ -1321,7 +1320,8 @@ bool KFCFWConfiguration::connectWiFi()
                 String message = F("Cannot start AP mode");
                 setLastError(message);
                 Logger_error(message);
-            } else {
+            }
+            else {
                 Logger_notice(F("AP Mode successfully initialized"));
                 ap_mode_success = true;
             }
@@ -1330,7 +1330,8 @@ bool KFCFWConfiguration::connectWiFi()
         // install hnalder to enable AP mode if station mode goes down
         if (flags.is_softap_standby_mode_enabled) {
             WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, KFCFWConfiguration::apStandModehandler);
-        } else {
+        }
+        else {
             WiFiCallbacks::remove(WiFiCallbacks::EventType::ANY, KFCFWConfiguration::apStandModehandler);
         }
 
@@ -1432,7 +1433,8 @@ bool KFCFWConfiguration::setRTC(uint32_t unixtime)
     return false;
 }
 
-void KFCFWConfiguration::setupRTC() {
+void KFCFWConfiguration::setupRTC()
+{
 #if RTC_SUPPORT
     // support for external RTCs
     initTwoWire();

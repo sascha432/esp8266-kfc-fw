@@ -240,9 +240,6 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 #else
 #error Platform not supported
 #endif
-#if LOAD_STATISTICS
-        output.printf_P(PSTR(HTML_S(br) "Load Average %.2f %.2f %.2f"), LOOP_COUNTER_LOAD(load_avg[0]), LOOP_COUNTER_LOAD(load_avg[1]), LOOP_COUNTER_LOAD(load_avg[2]));
-#endif
     }
     else if (key == F("SOFTWARE")) {
         printVersion(output);

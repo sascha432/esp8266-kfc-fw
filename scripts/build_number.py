@@ -26,7 +26,7 @@ for line in lines:
     try:
         number = int(m.group(1).strip());
         number = number + args.add
-        line = "#define " + args.name +  " \"" + str(number + 1) + "\""
+        line = "#define %s \"%d\"\n#define %s_INT %d" % (args.name, number + 1, args.name, number + 1)
     except:
         pass
     if args.print_number:

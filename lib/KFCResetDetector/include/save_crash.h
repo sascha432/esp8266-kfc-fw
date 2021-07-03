@@ -10,14 +10,12 @@
 #include "SPIFlash.h"
 #include "coredecls.h"
 
-// #define DEBUG_SAVE_CRASH                                    1
-
 #ifndef DEBUG_SAVE_CRASH
 #define DEBUG_SAVE_CRASH                                    0
 #endif
 
 #ifndef KFC_DISABLE_CRASHCOUNTER
-#define KFC_DISABLE_CRASHCOUNTER                          0
+#define KFC_DISABLE_CRASHCOUNTER                            0
 #endif
 
 #if DEBUG_SAVE_CRASH

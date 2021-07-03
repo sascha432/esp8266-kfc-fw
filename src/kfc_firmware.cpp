@@ -501,21 +501,11 @@ void setup()
 #endif
     }
 
-#if LOAD_STATISTICS
-    load_avg_timer = millis() + 30000;
-#endif
-
 #if DEBUG_ASSETS
     __DBG_printf("DEBUG_ASSETS=1: " DEBUG_ASSETS_URL1 " " DEBUG_ASSETS_URL2);
 #endif
 
 }
-
-#if LOAD_STATISTICS
-unsigned long load_avg_timer = 0;
-uint32_t load_avg_counter = 0;
-float load_avg[3] = {0, 0, 0};
-#endif
 
 #undef HIGH
 
@@ -538,24 +528,6 @@ void loop()
     }
     __Scheduler.run(); // check all events
 
-#if LOAD_STATISTICS
-    load_avg_counter++;
-    if (millis() >= load_avg_timer) {
-        load_avg_timer = millis() + 1000;
-        if (load_avg[0] == 0) {
-            load_avg[0] = load_avg_counter / 30;
-            load_avg[1] = load_avg_counter / 30;
-            load_avg[2] = load_avg_counter / 30;
-
-        } else {
-            load_avg[0] = ((load_avg[0] * 60) + load_avg_counter) / (60 + 1);
-            load_avg[1] = ((load_avg[1] * 300) + load_avg_counter) / (300 + 1);
-            load_avg[2] = ((load_avg[2] * 900) + load_avg_counter) / (900 + 1);
-
-        }
-        load_avg_counter = 0;
-    }
-#endif
 #if ESP32
     run_scheduled_functions();
 #endif

@@ -40,25 +40,17 @@ DumpBinary &DumpBinary::print(const String &str)
     return *this;
 }
 
-DumpBinary &DumpBinary::dump(const uint8_t *data, size_t length, ptrdiff_t offset)
+DumpBinary &DumpBinary::dump(const uint8_t *data, size_t length)
 {
-    ptrdiff_t end = length + offset;
-    if (end - offset < 1) {
-        return *this;
-    }
-    uint8_t perLine = _perLine ? _perLine : (end - offset);
-    ptrdiff_t pos = offset;
+    ptrdiff_t end = length;
+    uint8_t perLine = _perLine ? _perLine : end;
+    ptrdiff_t pos = 0;
     while (pos < end) {
-        _output.printf_P(PSTR("[0x%08X] "), pos);
+        _output.printf_P(PSTR("[%08X] "), pos + _displayOffset);
         uint8_t j = 0;
         for (ptrdiff_t i = pos; i < end && j < perLine; i++, j++) {
-            auto ch = (uint8_t)pgm_read_byte(data + i);
-            if (isprint(ch)) {
-                _output.print((char)ch);
-            }
-            else {
-                _output.print('.');
-            }
+            int ch = pgm_read_byte_safe(data + i);
+            _output.print(ch == -1 ? '!' : isprint(ch) ? static_cast<char>(ch) : '.');
         }
         if (perLine == kPerLineDisabled) {
             _output.print(' ');
@@ -70,8 +62,8 @@ DumpBinary &DumpBinary::dump(const uint8_t *data, size_t length, ptrdiff_t offse
         }
         j = 0;
         for (; pos < end && j < perLine; pos++, j++) {
-            uint8_t ch = pgm_read_byte(data + pos);
-            _output.printf_P(PSTR("%02x"), ch);
+            int ch = pgm_read_byte_safe(data + pos);
+            _output.printf_P(ch == -1 ? PSTR("??") : PSTR("%02x"), static_cast<uint8_t>(ch));
             if (
                 (_groupBytes == 1) ||
                 (_groupBytes && (pos < end - 1) && (j < perLine - 1) && (((j % _groupBytes) == _groupBytes - 1)))
@@ -83,8 +75,9 @@ DumpBinary &DumpBinary::dump(const uint8_t *data, size_t length, ptrdiff_t offse
             _output.println();
         }
     }
-#if ESP8266
-    delay(1);
-#endif
+    if (_perLine == kPerLineDisabled) {
+        _output.println();
+    }
+    delayMicroseconds(100);
     return *this;
 }

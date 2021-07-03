@@ -72,6 +72,7 @@ namespace PluginComponents {
         RTC,
         CONFIG,
         SERIAL2TCP,
+        SAFE_MODE,
         MAX
     };
 
@@ -304,6 +305,8 @@ public:
                 return F("Serial2TCP");
             case RTCMemoryId::RTC:
                 return F("RTC");
+            case RTCMemoryId::SAFE_MODE:
+                return F("SAFE_MODE");
             case RTCMemoryId::NONE:
             case RTCMemoryId::MAX:
                 break;

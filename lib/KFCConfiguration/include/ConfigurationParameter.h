@@ -280,6 +280,36 @@ namespace ConfigurationHelper {
 
 }
 
+inline bool ConfigurationParameter::_compareData(const uint8_t *data, size_type length) const
+{
+    return _param.hasData() && _param.length() == length && memcmp_P(_param.data(), data, length) == 0;
+}
+
+inline const __FlashStringHelper *ConfigurationParameter::getTypeString(ParameterType type)
+{
+    switch (type) {
+    case ParameterType::STRING:
+        return F("STRING");
+    case ParameterType::BINARY:
+        return F("BINARY");
+    case ParameterType::BYTE:
+        return F("BYTE");
+    case ParameterType::WORD:
+        return F("WORD");
+    case ParameterType::DWORD:
+        return F("DWORD");
+    case ParameterType::QWORD:
+        return F("QWORD");
+    case ParameterType::FLOAT:
+        return F("FLOAT");
+    case ParameterType::DOUBLE:
+        return F("DOUBLE");
+    default:
+        break;
+    }
+    return F("INVALID");
+}
+
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif

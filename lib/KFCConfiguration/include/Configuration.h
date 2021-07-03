@@ -14,17 +14,10 @@
 #include <type_traits>
 #include <stl_ext/chunked_list.h>
 #include <stl_ext/is_trivially_copyable.h>
+#include <coredecls.h>
 
 #include "ConfigurationHelper.h"
 #include "ConfigurationParameter.h"
-#include "EEPROMAccess.h"
-
-#if defined(ESP8266)
-#ifdef NO_GLOBAL_EEPROM
-#include <EEPROM.h>
-extern EEPROMClass EEPROM;
-#endif
-#endif
 
 // #if defined(ESP32)
 // #include <esp_partition.h>
@@ -41,6 +34,97 @@ extern EEPROMClass EEPROM;
 #pragma warning(disable : 26812)
 #endif
 
+namespace ConfigurationHelper {
+
+    inline uint32_t getFlashAddress() {
+        return SECTION_EEPROM_START_ADDRESS - SECTION_FLASH_START_ADDRESS;
+    }
+
+    inline uint32_t getFlashAddress(size_t offset) {
+        return SECTION_EEPROM_START_ADDRESS - SECTION_FLASH_START_ADDRESS + offset;
+    }
+
+    struct Header {
+        Header() : _magic(CONFIG_MAGIC_DWORD), _crc(~0U) {}
+
+        uint16_t length() const {
+            return _data.length;
+        }
+
+        uint16_t numParams() const {
+            return _data.params;
+        }
+
+        uint32_t &version() {
+            return _data.version;
+        }
+
+        void update(uint32_t version, uint16_t numParams, int16_t length) {
+            _data.version = version;
+            _data.params = numParams;
+            _data.length = length;
+        }
+
+        // update crc from data passed
+        void calcCrc(const uint8_t *buffer, size_t len) {
+            _crc = crc32(buffer, len, _data.crc());
+        }
+
+        // calculate crc of header
+        uint32_t initCrc() const {
+            return _data.crc();
+        }
+
+        uint16_t getParamsLength() const {
+            return sizeof(ParameterHeaderType) * numParams();
+        };
+
+        // compare magic and crc
+        bool validateCrc(uint32_t crc) const {
+            return (CONFIG_MAGIC_DWORD == _magic) && (_crc == crc);
+        }
+
+        // check if the length fits into the sector
+        bool isLengthValid(size_t maxSize) const{
+            return (_data.length >= sizeof(*this) && _data.length < (maxSize - sizeof(*this)));
+        }
+
+        uint32_t magic() const {
+            return _magic;
+        }
+
+        uint32_t crc() const {
+            return _crc;
+        }
+
+        operator bool() const {
+            return CONFIG_MAGIC_DWORD == _magic;
+        }
+
+        operator uint8_t *() {
+            return reinterpret_cast<uint8_t *>(this);
+        }
+
+    private:
+        uint32_t _magic;
+        uint32_t _crc;
+        struct Data {
+            uint32_t version;
+            uint16_t length;
+            uint16_t params;
+
+            Data() : version(0), length(0), params(0) {}
+
+            uint32_t crc() const {
+                return crc32(this, sizeof(*this));
+            }
+        } _data;
+    };
+
+    static_assert((sizeof(Header) & 3) == 0, "not dword aligned");
+
+}
+
 class Configuration {
 public:
     using Handle_t = ConfigurationHelper::HandleType;
@@ -51,24 +135,7 @@ public:
     using ParameterInfo = ConfigurationHelper::ParameterInfo;
     using ParameterHeaderType = ConfigurationHelper::ParameterHeaderType;
     using size_type = ConfigurationHelper::size_type;
-
-    struct Header {
-        uint32_t magic;
-        uint32_t version;
-        uint32_t crc;
-        uint16_t length;
-        uint16_t params;
-        // uint32_t length : 12;       // 60
-        // uint32_t params : 10;       // 70
-
-        uint16_t getParamsLength() const {
-            return sizeof(ParameterHeaderType) * params;
-        };
-
-        Header(uint32_t _version = 0, uint32_t _crc = ~0U, uint16_t _length = 0, uint16_t _params = 0) : magic(CONFIG_MAGIC_DWORD), version(_version), crc(_crc), length(_length), params(_params) {}
-    };
-
-    static_assert((sizeof(Header) & 3) == 0, "not dword aligned");
+    using Header = ConfigurationHelper::Header;
 
     // iterators must not change when the list is modified
     // ParameterList = std::list<ConfigurationParameter>;
@@ -268,19 +335,9 @@ private:
     // EEPROM
 
 protected:
-    ConfigurationHelper::EEPROMAccess _eeprom;
     ParameterList _params;
     uint32_t _readAccess;
-    // uint16_t _dataOffset;
     uint16_t _size;
-
-    // constexpr uint16_t getDataOffset() const {
-    //     return _offset + sizeof(Header);
-    // }
-
-    // inline void resetDataOffset() {
-    //     _dataOffset = getDataOffset();
-    // }
 
 // ------------------------------------------------------------------------
 // last access

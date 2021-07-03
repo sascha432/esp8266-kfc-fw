@@ -42,11 +42,11 @@ void WriteableData::resize(size_type newLength, ConfigurationParameter &paramete
     auto &param = parameter._getParam();
     // update string length
     if (param.isString()) {
-        __DBG_printf("len=%u strlen=%u writeable_length=%u", param._length, strlen(param.string()), length());
+        __LDBG_printf("len=%u strlen=%u writeable_length=%u", param._length, strlen(param.string()), length());
         param._length = strlen(param.string());
         _length = param._length;
     }
-    __DBG_printf("new_length=%u length=%u data=%p", newLength, length(), data());
+    __LDBG_printf("new_length=%u length=%u data=%p", newLength, length(), data());
 
     size_t newSize = param.sizeOf(newLength);
     if (newLength > _buffer_length()) {

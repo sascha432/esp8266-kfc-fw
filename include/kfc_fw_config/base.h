@@ -396,8 +396,8 @@ namespace KFCConfigurationClasses {
 
         void clear() {
             _store(emptyString);
-            auto data = _load();
-            __dump_binary(data, strlen(data), ~0U, PSTR("clear"));
+            // auto data = _load();
+            // __dump_binary(data, strlen(data), ~0U, PSTR("clear"));
         }
 
         bool append(const String &str) {
@@ -432,7 +432,7 @@ namespace KFCConfigurationClasses {
             auto endPtr = newData + size.length + length;
             *endPtr++ = kSeparator;
             *endPtr = 0;
-            __dump_binary(newData, endPtr - newData + 1, ~0U, PSTR("append"));
+            // __dump_binary(newData, endPtr - newData + 1, ~0U, PSTR("append"));
             return true;
         }
 
@@ -467,7 +467,7 @@ namespace KFCConfigurationClasses {
                 }
             }
             size.length = ptr - data;
-            __DBG_printf("count=%u len=%u", size.count, size.length);
+            __LDBG_printf("count=%u len=%u", size.count, size.length);
             return size;
         }
 

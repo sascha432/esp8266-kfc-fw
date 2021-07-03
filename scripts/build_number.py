@@ -22,7 +22,12 @@ number = 0
 
 output = ""
 for line in lines:
-    m = re.search("#define\s*" + args.name + "\s*\"(.*?)\"", line)
+    empty = line.strip()
+    line = re.sub("#define\s*%s_INT\s*[0-9]+" % args.name, '', line)
+    if line.strip()=='' and not empty:
+        continue
+
+    m = re.search("#define\s*%s\s*\"(.*?)\"" % args.name, line)
     try:
         number = int(m.group(1).strip());
         number = number + args.add

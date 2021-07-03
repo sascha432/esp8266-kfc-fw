@@ -15,10 +15,6 @@
 #define DEBUG_CONFIGURATION_GETHANDLE                               0
 #endif
 
-#ifndef DEBUG_EEPROM_ENABLE
-#define DEBUG_EEPROM_ENABLE                                         0
-#endif
-
 #if DEBUG_CONFIGURATION
 #include <debug_helper_enable.h>
 #else
@@ -69,7 +65,7 @@
 
 // store all configuration handle names for debugging. needs a lot RAM
 #define __DBG__registerHandleName(name, type)                       ConfigurationHelper::registerHandleName(name, type)
-#define __DBG__checkIfHandleExists(type, handle)                    if (!registerHandleExists(handle)) { __DBG_printf("handle=%04x no name registered, type=%s", handle, PSTR(type)); }
+#define __DBG__checkIfHandleExists(type, handle)                    if (!ConfigurationHelper::registerHandleExists(handle)) { __DBG_printf("handle=%04x no name registered, type=%s", handle, PSTR(type)); }
 
 #else
 
@@ -92,14 +88,11 @@ namespace ConfigurationHelper {
     using ParameterHeaderType = uint32_t;
 
     class ParameterInfo;
-    // class Allocator;
     class WriteableData;
 
     uint8_t *allocate(size_t size, size_t *realSize);
     void allocate(size_t size, ConfigurationParameter &parameter);
     void deallocate(ConfigurationParameter &parameter);
-
-    // extern Allocator _allocator;
 
     enum class ParameterType : uint8_t { // 4 bit, 0-13 available as type
         _INVALID = 0,

@@ -5,6 +5,7 @@
 #include <Configuration.h>
 #include "kfc_fw_config.h"
 #include <Utility/ProgMemHelper.h>
+#include "save_crash.h"
 
 #if DEBUG_CONFIG_CLASS
 #include <debug_helper_enable.h>
@@ -231,6 +232,7 @@ namespace KFCConfigurationClasses {
     void System::Device::defaults()
     {
         DeviceConfig_t cfg = {};
+        cfg.config_version = SaveCrash::Data::FirmwareVersion().__version;
         setConfig(cfg);
         setTitle(SPGM(KFC_Firmware));
     }

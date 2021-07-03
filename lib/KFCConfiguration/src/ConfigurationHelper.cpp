@@ -184,7 +184,7 @@ namespace ConfigurationHelper {
             uint32_t count = 0;
             while (file.available()) {
                 auto line = file.readStringUntil('\n');
-                if (String_rtrim(line)) {
+                if (line.trim().length()) {
                     ConfigurationHelper::registerHandleName(line.c_str(), __DBG__TYPE_NONE);
                     count++;
                 }

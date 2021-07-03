@@ -367,7 +367,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PWM, "PWM", "<pin>,<input|input_pullup|wav
 #endif
 );
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(ADC, "ADC", "<off|display interval=1s>[,<period=1s>,<multiplier=1.0>,<unit=mV>,<read delay=5000us>]", "Read the ADC and display values");
-#if defined(ESP8266)
+#if defined(ESP8266) && (ARDUINO_ESP8266_VERSION_COMBINED < 0x030000)
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(CPU, "CPU", "<80|160>", "Set CPU speed", "Display CPU speed");
 #endif
 
@@ -446,7 +446,7 @@ void at_mode_help_commands()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(GPIO), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(PWM), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(ADC), name);
-#if defined(ESP8266)
+#if defined(ESP8266) && (ARDUINO_ESP8266_VERSION_COMBINED < 0x030000)
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(CPU), name);
 #endif
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(PSTORE), name);
@@ -1660,6 +1660,8 @@ void at_mode_serial_handle_event(String &commandString)
         args.print(F("Boot mode: %u, %u"), ESP.getBootVersion(), ESP.getBootMode());
         args.print(F("Firmware size: %s"), formatBytes(ESP.getSketchSize()).c_str());
         args.print(F("Version (uint32): %s (0x%08x)"), SaveCrash::Data::FirmwareVersion().toString().c_str(), SaveCrash::Data::FirmwareVersion().__version);
+        auto version = System::Device::getConfig().config_version;
+        args.print(F("Config version 0x%08x, %s"), version, SaveCrash::Data::FirmwareVersion(version).toString().c_str());
         args.print(F("MD5 hash: %s"), SaveCrash::Data().getMD5().c_str());
         args.print(F("WiFiCallbacks: size=%u count=%u"), sizeof(WiFiCallbacks::Entry), WiFiCallbacks::getVector().size());
         args.print(F("LoopFunctions: size=%u count=%u"), sizeof(LoopFunctions::Entry), LoopFunctions::getVector().size());
@@ -2426,7 +2428,7 @@ void at_mode_serial_handle_event(String &commandString)
             }
         }
     }
-#if defined(ESP8266)
+#if defined(ESP8266) && (ARDUINO_ESP8266_VERSION_COMBINED < 0x030000)
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CPU))) {
         if (args.size() == 1) {
             auto speed = (uint8_t)args.toInt(0, ESP.getCpuFreqMHz());
@@ -2437,6 +2439,10 @@ void at_mode_serial_handle_event(String &commandString)
     }
 #endif
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMP))) {
+
+        auto version = System::Device::getConfig().config_version;
+        args.print(F("stored config version 0x%08x, %s"), version, SaveCrash::Data::FirmwareVersion(version).toString().c_str());
+
         if (args.equals(0, F("dirty"))) {
             config.dump(output, true);
         }

@@ -49,14 +49,6 @@ String ConfigurationParameter::toString() const
 #endif
 }
 
-bool ConfigurationParameter::_compareData(const uint8_t *data, size_type length) const
-{
-    // if (_param.isString() && length == 0) {
-    //     length++;
-    // }
-    return _param.hasData() && _param.length() == length && memcmp_P(_param.data(), data, length) == 0;
-}
-
 void ConfigurationParameter::setData(Configuration &conf, const uint8_t *data, size_type length)
 {
     __LDBG_printf("%s set_size=%u %s", toString().c_str(), length, Configuration::__debugDumper(*this, data, length).c_str());
@@ -123,31 +115,6 @@ void ConfigurationParameter::_makeWriteable(Configuration &conf, size_type lengt
     else {
         _param.setWriteable(new WriteableData(length, *this, conf));
     }
-}
-
-const __FlashStringHelper *ConfigurationParameter::getTypeString(ParameterType type)
-{
-    switch (type) {
-    case ParameterType::STRING:
-        return F("STRING");
-    case ParameterType::BINARY:
-        return F("BINARY");
-    case ParameterType::BYTE:
-        return F("BYTE");
-    case ParameterType::WORD:
-        return F("WORD");
-    case ParameterType::DWORD:
-        return F("DWORD");
-    case ParameterType::QWORD:
-        return F("QWORD");
-    case ParameterType::FLOAT:
-        return F("FLOAT");
-    case ParameterType::DOUBLE:
-        return F("DOUBLE");
-    default:
-        break;
-    }
-    return F("INVALID");
 }
 
 void ConfigurationParameter::dump(Print &output)
@@ -269,7 +236,7 @@ bool ConfigurationParameter::hasDataChanged(Configuration &conf) const
     __LDBG_assert_panic(static_cast<const void *>(&(*iterator)) == static_cast<const void *>(this), "*iterator=%p this=%p", &(*iterator), this);
 
     if (_param.length() != _param.next_offset_unaligned()) {
-        __LDBG_printf("%s length changed", toString().c_str());
+        __DBG_printf("%s length changed", toString().c_str());
         return true;
     }
 
@@ -294,7 +261,7 @@ bool ConfigurationParameter::_readDataTo(Configuration &conf, uint16_t offset, u
     if (_param.length() == 0) {
         return true;
     }
-    return conf._eeprom.read(ptr, offset, _param.length());
+    return ESP.flashRead(ConfigurationHelper::getFlashAddress(offset), ptr, _param.length());
 }
 
 bool ConfigurationParameter::_readData(Configuration &conf, uint16_t offset)

@@ -162,8 +162,17 @@ void ClockPlugin::setShowMethod(Clock::ShowMethodType method)
 
 void ClockPlugin::toggleShowMethod()
 {
-    auto method = static_cast<int>(plugin._method);
-    plugin._method = static_cast<Clock::ShowMethodType>(std::clamp(method + 1, static_cast<int>(Clock::ShowMethodType::NONE) + 1, static_cast<int>(Clock::ShowMethodType::MAX) - 1));
+    constexpr auto kFirst = static_cast<int>(Clock::ShowMethodType::NONE) + 1;
+    constexpr auto kRange = static_cast<int>(Clock::ShowMethodType::MAX) - kFirst;
+    auto method = static_cast<uint8_t>(plugin._method);
+    method -= kFirst + 1;
+    if (method < 0) {
+        method = 0;
+    }
+    else {
+        method %= kRange;
+    }
+    plugin._method = static_cast<Clock::ShowMethodType>(method + kFirst);
 }
 
 uint8_t getNeopixelShowMethodInt()
@@ -410,6 +419,7 @@ void ClockPlugin::_setupTimer()
                     return motion.state == MotionStateType::RETRIGGERED;
                 }), _motionHistory.end());
                 _motionHistory.emplace_back(time(nullptr), type);
+                __DBG_printf("_motionHistory size=%u", _motionHistory.size());
                 if (_motionHistory.size() > 8) {
                     _motionHistory.erase(_motionHistory.end() - 8, _motionHistory.end());
                 }

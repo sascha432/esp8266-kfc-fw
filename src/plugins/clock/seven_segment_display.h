@@ -200,6 +200,20 @@ namespace SevenSegment {
             setColon(num, ColonType::NONE);
         }
 
+        void setColons(ColonType colon) {
+            PixelAddressType buf[kNumPixels - kNumPixelsDigits];
+            memcpy_P(buf, getColonsArrayPtr(0), sizeof(buf));
+            uint8_t n = 0;
+            for(const auto address: buf) {
+                setPixelState(address, (colon == (n / kNumPixelsPerColon)));
+                n++;
+            }
+        }
+
+        void clearColons() {
+            setColons(ColonType::NONE);
+        }
+
         void setDigit(uint8_t num, uint8_t digit) {
             #if DEBUG_IOT_CLOCK
                 if (digit > static_cast<uint8_t>(SegmentType::MAX_DIGIT)) {

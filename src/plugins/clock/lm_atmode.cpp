@@ -323,7 +323,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             else {
                 ClockPlugin::toggleShowMethod();
             }
-            args.print(F("show method: %s"), ClockPlugin::getShowMethod() == Clock::ShowMethodType::FASTLED ? PSTR("FastLED") : PSTR("internal"));
+            args.print(F("show method: %s (%u)"), ClockPlugin::getShowMethod() == Clock::ShowMethodType::FASTLED ? PSTR("FastLED") : PSTR("internal"), ClockPlugin::getShowMethod());
         }
         else if (args.startsWithIgnoreCase(0, F("ani"))) {
             enableLoop(false);
@@ -386,29 +386,30 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             args.print(F("dithering %s"), state ? PSTR("enabled") : PSTR("disabled"));
         }
         // frames[,rst]
-        else if (args.equalsIgnoreCase(0, F("frames"))) {
+        else if (args.startsWithIgnoreCase(0, F("fr"))) {
             auto &stats = NeoPixelEx::getStats();
-            args.print(F("aborted frames=%u/%u fps=%.2f"), stats.getAbortedFrames(), stats.getFrames(), stats.getFps());
+            args.print(F("Internal: aborted frames=%u/%u fps=%u"), stats.getAbortedFrames(), stats.getFrames(), stats.getFps());
+            args.print(F("FastLED: fps=%u"), FastLED.getFPS());
             if (args.size() > 1) {
                 stats.clear();
                 args.print(F("reset"));
             }
         }
-        else if (args.equalsIgnoreCase(0, F("reset"))) {
+        else if (args.startsWithIgnoreCase(0, F("res"))) {
             enableLoop(true);
             _display.setBrightness(32);
             _display.clear();
             _display.show();
             args.print(F("display reset"));
         }
-        else if (args.equalsIgnoreCase(0, F("clear"))) {
+        else if (args.startsWithIgnoreCase(0, F("cl"))) {
             enableLoop(false);
             _display.clear();
             _display.show();
             args.print(F("display cleared"));
         }
         // <temp>,<value>
-        else if (args.equalsIgnoreCase(0, F("temp"))) {
+        else if (args.startsWithIgnoreCase(0, F("tem"))) {
             _tempOverride = args.toIntMinMax<uint8_t>(0, kMinimumTemperatureThreshold, 255, 0);
             if (_tempOverride) {
                 args.printf_P(PSTR("temperature override %u%s"), _tempOverride, SPGM(UTF8_degreeC));

@@ -110,6 +110,25 @@ class SevenSegmentDisplay(object):
             'pixel_animation_order': (28, 29, 30, 31, 24, 25, 26, 27, 11, 10, 9, 8, 20, 21, 22, 23, 16, 17, 18, 19, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4),
         },
         # ---
+        'clock_4digits_1': {
+            # (number of digits, pixels per segment)
+            'digits': (4, 4),
+            # (number of colons, pixels per dot)
+            'colons': (1, 1),
+            # (order of the segments)
+            'segment_order': { Segments.A: 6, Segments.B: 5, Segments.C: 2, Segments.D: 3, Segments.E: 4, Segments.F: 0, Segments.G: 1 },
+            # (order of digits and colons)
+            'order': (
+                ('digit', 3),
+                ('digit', 2),
+                ('digit', 1),
+                ('digit', 4),
+                ('colon', 0),
+            ),
+            # (order of the pixels per digit for animations, should be a continuous loop through the 8 )
+            'pixel_animation_order': range(0, 14),
+        },
+        # ---
         # test for using a LED matrix displaying a 7 segment clock using a font
         'matrix_clock': {
             'digits': (6, 1),

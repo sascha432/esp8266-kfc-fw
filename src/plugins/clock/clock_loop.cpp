@@ -142,11 +142,9 @@ void ClockPlugin::_loop()
         _blendAnimation->loop(options.getMillis());
     }
 
-    while(true) {
+    // while(true) {
 
-        if (!options.doUpdate()) {
-            break;
-        }
+    if (options.doUpdate()) {
 
         // start update process
         _lastUpdateTime = millis();
@@ -159,14 +157,13 @@ void ClockPlugin::_loop()
 
         IF_IOT_CLOCK_PIXEL_SYNC_ANIMATION(
             if (_loopSyncingAnimation(options)) {
-                break;
+                // ...
             }
+            else
         )
-
         if (options.doRedraw()) {
 
             IF_IOT_CLOCK(
-
                 uint8_t displayColon = true;
                 // does the animation allow blinking and is it set?
                 if ((!_animation || (_animation && !_animation->isBlinkColonDisabled())) && (_config.blink_colon_speed >= kMinBlinkColonSpeed)) {
@@ -185,75 +182,26 @@ void ClockPlugin::_loop()
                     _display.setDigit(5, tm.tm_sec % 10);
                 #endif
 
-                auto colon = displayColon ? Clock::SevenSegment::ColonType::BOTH : Clock::SevenSegment::ColonType::NONE;
-                _display.setColon(0, colon);
-                #if IOT_CLOCK_NUM_COLONS == 2
-                    _display.setColon(1, colon);
-                #endif
-
+                _display.setColons(displayColon ? Clock::SevenSegment::ColonType::BOTH : Clock::SevenSegment::ColonType::NONE);
             )
 
             if (_blendAnimation) {
-
                 _animation->nextFrame(options.getMillis());
                 _blendAnimation->nextFrame(options.getMillis());
 
-                if (_blendAnimation->blend(_display, options.getMillis())) {
-                    // display mixed state
-                    _display.show();
-                }
-                else {
-                    // blending done, delete _blendAnimation
+                if (!_blendAnimation->blend(_display, options.getMillis())) {
                     __LDBG_printf("blending done");
                     delete _blendAnimation;
                     _blendAnimation = nullptr;
-                    _display.show();
                 }
-
             }
             else if (_animation) {
-
-#define BENCH 0
-                // render single frame
-#if BENCH
-                // ets_intr_lock();
-                uint32_t _start = micros();
-#endif
                 _animation->nextFrame(options.getMillis());
-#if BENCH
-                uint32_t dur2 = micros() - _start;
-#endif
-
                 _animation->copyTo(_display, options.getMillis());
-#if BENCH
-                uint32_t dur3 = micros() - _start;
-#endif
-                _display.show();
-#if BENCH
-                uint32_t dur4 = micros() - _start;
-                //  ets_intr_unlock();
-                ::printf("%u %u %u\n", dur2, dur3, dur4);
-#endif
-
             }
-            else {
-                // no animation object available
-                // display plain color
-                _display.fill(_getColor());
-                _display.show();
-            }
-
-            return;
         }
-
-        break;
     }
 
     _display.show();
-
-    // run display.show() every millisecond to update dithering
-    // mandatory frames are displayed with interrupts locked
-    _display.delay(5);
-
-    // __LDBG_printf("refresh fading_brightness=%u color=%s fps=%u", _fadingBrightness, getColor().toString().c_str(), FastLED.getFPS());
+    delay(5);
 }

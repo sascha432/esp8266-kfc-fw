@@ -60,6 +60,7 @@ Form::BaseForm &Group::end()
 
     _groupOpen = false;
     form.endGroup(FPSTR(getName()), form.getEndGroupType(type));
+    __DBG_printf("group=%s end", getName());
     return form;
 }
 

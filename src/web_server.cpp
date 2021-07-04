@@ -859,7 +859,7 @@ AsyncWebServerResponse *Plugin::_beginFileResponse(const FileMapping &mapping, c
     bool isHtml = path.endsWith(FSPGM(_html));
     if (isAuthenticated && webTemplate == nullptr) {
         if (path.charAt(0) == '/' && formName.length()) {
-            __LDBG_printf("template=%s", formName.c_str());
+            __DBG_printf("template=%s", formName.c_str());
             auto plugin = PluginComponent::getTemplate(formName);
             if (plugin) {
                 webTemplate = plugin->getWebTemplate(formName);
@@ -869,7 +869,7 @@ AsyncWebServerResponse *Plugin::_beginFileResponse(const FileMapping &mapping, c
                 __weatherStationDetachCanvas(true);
                 request->onDisconnect(__weatherStationAttachCanvas); // unlock on disconnect
 #endif
-                __LDBG_printf("form=%s", formName.c_str());
+                __DBG_printf("form=%s", formName.c_str());
                 FormUI::Form::BaseForm *form = new SettingsForm(nullptr);
                 plugin->createConfigureForm(PluginComponent::FormCallbackType::CREATE_GET, formName, *form, request);
                 webTemplate = new ConfigTemplate(form, isAuthenticated);

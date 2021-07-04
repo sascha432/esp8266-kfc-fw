@@ -119,13 +119,13 @@ void Sensor_BME280::createConfigureForm(AsyncWebServerRequest *request, FormUI::
 
     auto &group = form.addCardGroup(F("bme280"), F("BME280 Temperature, Humidity and Pressure Sensor"), true);
 
-    form.addPointerTriviallyCopyable<float>(F("bme280_t"), reinterpret_cast<void *>(&cfg.bme280.temp_offset));
+    form.addObjectGetterSetter(F("bme280_t"), FormGetterSetter(cfg.bme280, temp_offset));
     form.addFormUI(F("Temperature Offset"), FormUI::Suffix(FSPGM(UTF8_degreeC)));
 
-    form.addPointerTriviallyCopyable<float>(F("bme280_h"), reinterpret_cast<void *>(&cfg.bme280.humidity_offset));
+    form.addObjectGetterSetter(F("bme280_h"), FormGetterSetter(cfg.bme280, humidity_offset));
     form.addFormUI(F("Humidity Offset"), FormUI::Suffix(F("%")));
 
-    form.addPointerTriviallyCopyable<float>(F("bme280_p"), reinterpret_cast<void *>(&cfg.bme280.pressure_offset));
+    form.addObjectGetterSetter(F("bme280_p"), FormGetterSetter(cfg.bme280, pressure_offset));
     form.addFormUI(F("Pressure Offset"), FormUI::Suffix(FSPGM(hPa)));
 
     group.end();

@@ -9,8 +9,12 @@
 #include <PrintHtmlEntitiesString.h>
 #include "save_crash.h"
 
-#if 1
+#if 0
+#if DEBUG_RESET_DETECTOR
 #include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>>
+#endif
 #else
 #undef __LDBG_printf
 #if DEBUG_RESET_DETECTOR
@@ -42,88 +46,6 @@ extern "C" {
 #endif
 
 }
-
-
-// extern void testspi();
-
-// void testspi()
-// {
-//     __DBG_printf("create FlashStorage");
-//     auto fs = FlashStorage(0x3F8, 0x3FA);
-//         //(((uint32_t)&_SAVECRASH_start) - 0x40200000) / SPI_FLASH_SEC_SIZE, (((uint32_t)&_SAVECRASH_end) - 0x40200000) / SPI_FLASH_SEC_SIZE);
-
-
-//     __DBG_printf("init %04x - %04x - %04x",fs.begin(), fs.end(), (SECTION_KFCFW_START_ADDRESS-0x40200000)/SPI_FLASH_SEC_SIZE);
-
-//     uint32_t buf[10]={};
-
-//     auto result = fs.read(buf, sizeof(buf), fs.begin(), 0);
-//     if (result._result==FlashResultType::SUCCESS) {
-//         __DBG_printf("result=%u size=%u data=%s", result._result, result.readSize(), printable_string(buf, result.readSize()).c_str());
-//     }
-//     else {
-//         __DBG_printf("result=%u size=%u data=ERROR", result._result, result.readSize());
-//     }
-
-//     __DBG_printf("----------------------------------------------------------------------");
-
-//     __DBG_printf("init");
-//     result = fs.init(fs.begin());
-
-//     __DBG_printf("append");
-//     memset(buf, 0, sizeof(buf));
-//     strcpy_P((char *)buf, PSTR("test123"));
-//     fs.append(buf, 8, result);
-
-//     __DBG_printf("finalize");
-//     fs.finalize(result);
-//     __DBG_printf("result=%u sector=%u size=%u crc=0x%08x", result._result, result._sector, result.size(), result._crc);
-
-//     __DBG_printf("validate size=%u", result._size);
-//     fs.validate(result);
-
-//     __DBG_printf("----------------------------------------------------------------------");
-
-//     __DBG_printf("copy");
-//     result = fs.copy(fs.begin(), fs.begin() + 1);
-
-//     __DBG_printf("append size=%u", result._size);
-//     strcpy_P((char *)buf, PSTR("123test"));
-//     fs.append(buf, 8, result);
-
-//     __DBG_printf("finalize size=%u", result._size);
-//     fs.finalize(result);
-//     __DBG_printf("result=%u sector=%u size=%u crc=0x%08x", result._result, result._sector, result.size(), result._crc);
-
-//     __DBG_printf("validate size=%u", result._size);
-//     fs.validate(result);
-
-//     __DBG_printf("----------------------------------------------------------------------");
-
-//     result = fs.read(buf, sizeof(buf), fs.begin()+1, 0);
-//     if (result._result==FlashResultType::SUCCESS) {
-//         __DBG_printf("result=%u size=%u data=%s", result._result, result.readSize(), printable_string(buf, result.readSize()).c_str());
-//     }
-//     else {
-//         __DBG_printf("result=%u size=%u data=ERROR", result._result, result.readSize());
-//     }
-//     __DBG_printf("----------------------------------------------------------------------");
-
-//     result = fs.read(buf, sizeof(buf), fs.begin(), 0);
-//     if (result._result==FlashResultType::SUCCESS) {
-//         __DBG_printf("result=%u size=%u data=%s", result._result, result.readSize(), printable_string(buf, result.readSize()).c_str());
-//     }
-//     else {
-//         __DBG_printf("result=%u size=%u data=ERROR", result._result, result.readSize());
-//     }
-
-//     __DBG_printf("----------------------------------------------------------------------");
-//     for(const auto &result: fs.find(true)) {
-//         __LDBG_printf("find: sector=%04x size=%u space=%u", result._sector, result.size(), result.space());
-
-//     }
-
-// }
 
 void ResetDetector::end()
 {
@@ -196,26 +118,17 @@ void ResetDetector::begin()
     __LDBG_printf("info=%s crash=%u reset=%u reboot=%u wakeup=%u",
         getResetInfo().c_str(), hasCrashDetected(), hasResetDetected(), hasRebootDetected(), hasWakeUpDetected()
     );
-    __LDBG_printf("reason history");
+#if DEBUG_RESET_DETECTOR
+    __DBG_printf("reason history");
     for(auto reason: _storedData) {
-        __LDBG_printf("%u - %s", reason, getResetReason(reason));
+        __DBG_printf("%u - %s", reason, getResetReason(reason));
     }
-    __LDBG_printf("%u - %s (recent)", _data.getReason(), getResetReason());
+    __DBG_printf("%u - %s (recent)", _data.getReason(), getResetReason());
+#endif
 
     _writeData();
-    armTimer();
-}
-
-ETSTimer *ResetDetector::getTimer()
-{
-    return &_timer;
-}
-
-void ResetDetector::armTimer()
-{
-    ets_timer_disarm(&_timer);
-    ets_timer_setfn(&_timer, reinterpret_cast<ETSTimerFunc *>(_timerCallback), reinterpret_cast<void *>(this));
-    ets_timer_arm_new(&_timer, RESET_DETECTOR_TIMEOUT, false, true);
+    // crashes with 3.0.0
+    // armTimer();
 }
 
 const __FlashStringHelper *ResetDetector::getResetReason(uint8_t reason)
@@ -295,21 +208,6 @@ const __FlashStringHelper *ResetDetector::getResetReason(uint8_t reason)
 #endif
 }
 
-const String ResetDetector::getResetInfo() const
-{
-#if defined(ESP32)
-    return getResetReason();
-#else
-    return ESP.getResetInfo();
-#endif
-}
-
-void ResetDetector::clearCounter()
-{
-    __LDBG_printf("set counter=0 (%u) safe_mode=%u", _data.getResetCounter(), _data.isSafeMode());
-    _data = 0;
-    _writeData();
-}
 
 #if DEBUG
 void ResetDetector::__setResetCounter(Counter_t counter)
@@ -320,13 +218,6 @@ void ResetDetector::__setResetCounter(Counter_t counter)
 }
 #endif
 
-void ResetDetector::setSafeModeAndClearCounter(bool safeMode)
-{
-    __LDBG_printf("set counter=0 (%u) set safe_mode=%u", _data.getResetCounter(), data.isSafeMode());
-    _data = Data(0, safeMode);
-    _writeData();
-}
-
 void ResetDetector::_readData()
 {
     if (RTCMemoryManager::read(PluginComponent::RTCMemoryId::RESET_DETECTOR, &_storedData, sizeof(_storedData))) {
@@ -336,16 +227,6 @@ void ResetDetector::_readData()
     else {
         _storedData = Data();
         _data = Data(0, false);
-    }
-}
-
-void ResetDetector::_writeData()
-{
-    if (!_data) {
-        RTCMemoryManager::remove(PluginComponent::RTCMemoryId::RESET_DETECTOR);
-    }
-    else {
-        RTCMemoryManager::write(PluginComponent::RTCMemoryId::RESET_DETECTOR, &_data, sizeof(_data));
     }
 }
 

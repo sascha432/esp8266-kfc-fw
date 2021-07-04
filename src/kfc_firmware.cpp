@@ -51,6 +51,7 @@ extern "C" void gdbstub_do_break();
 using KFCConfigurationClasses::System;
 using KFCConfigurationClasses::Network;
 
+
 void delayedSetup(bool delayed)
 {
     if (delayed) {
@@ -98,14 +99,11 @@ bool isSystemKeyComboPressed()
 
 void setup()
 {
-    #if NEOPIXEL_CLEAR_ON_BOOT
-        NeoPixel_clearStrips();
-    #endif
-
     #if ENABLE_DEEP_SLEEP
         deepSleepPinState.merge();
     #endif
 
+    resetDetector.armTimer();
     resetDetector.begin(&KFC_SAFE_MODE_SERIAL_PORT, KFC_SERIAL_RATE); // release uart and call Serial.begin()
     #if KFC_DEBUG_USE_SERIAL1
         Serial1.begin(KFC_DEBUG_USE_SERIAL1);

@@ -165,6 +165,59 @@ void ResetDetector::_timerCallback(void *arg)
     rd->disarmTimer();
 }
 
+__RESET_DETECTOR_INLINE__
+ETSTimer *ResetDetector::getTimer()
+{
+    return &_timer;
+}
+
+__RESET_DETECTOR_INLINE__
+void ResetDetector::armTimer()
+{
+#if DEBUG_RESET_DETECTOR
+    ::printf_P(PSTR("rd::armTimer()\r\n"));
+#endif
+    ets_timer_disarm(&_timer);
+    ets_timer_setfn(&_timer, reinterpret_cast<ETSTimerFunc *>(_timerCallback), reinterpret_cast<void *>(this));
+    ets_timer_arm_new(&_timer, RESET_DETECTOR_TIMEOUT, false, true);
+}
+
+__RESET_DETECTOR_INLINE__
+const String ResetDetector::getResetInfo() const
+{
+#if defined(ESP32)
+    return getResetReason();
+#else
+    return ESP.getResetInfo();
+#endif
+}
+
+__RESET_DETECTOR_INLINE__
+void ResetDetector::clearCounter()
+{
+    __LDBG_printf("set counter=0 (%u) safe_mode=%u", _data.getResetCounter(), _data.isSafeMode());
+    _data = 0;
+    _writeData();
+}
+
+__RESET_DETECTOR_INLINE__
+void ResetDetector::setSafeModeAndClearCounter(bool safeMode)
+{
+    __LDBG_printf("set counter=0 (%u) set safe_mode=%u", _data.getResetCounter(), data.isSafeMode());
+    _data = Data(0, safeMode);
+    _writeData();
+}
+
+__RESET_DETECTOR_INLINE__
+void ResetDetector::_writeData()
+{
+    if (!_data) {
+        RTCMemoryManager::remove(PluginComponent::RTCMemoryId::RESET_DETECTOR);
+    }
+    else {
+        RTCMemoryManager::write(PluginComponent::RTCMemoryId::RESET_DETECTOR, &_data, sizeof(_data));
+    }
+}
 
 // ------------------------------------------------------------------------
 //  ResetDetector::Data
@@ -295,7 +348,6 @@ ResetDetector::Reason_t *ResetDetector::Data::_end()
 {
     return &_reason[(sizeof(_reason) / sizeof(_reason[0]))];
 }
-
 
 #ifdef __RESET_DETECTOR_INLINE_INLINE_DEFINED__
 #undef  __RESET_DETECTOR_INLINE__

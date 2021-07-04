@@ -125,6 +125,12 @@ namespace FormUI {
             HIDDEN_SELECT,
         };
 
+        enum class OptionsType : uint8_t {
+            DEFAULT = 0,
+            OPTIONAL,
+            MAX,
+        };
+
         enum class StyleType : uint8_t {
             DEFAULT = 0,
             ACCORDION,

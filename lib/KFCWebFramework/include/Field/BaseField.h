@@ -23,6 +23,7 @@ namespace FormUI {
                 _type(type),
                 _hasChanged(false),
                 _disabled(false),
+                _optional(false),
                 _expanded(false),
                 _groupOpen(false)
             {
@@ -132,6 +133,11 @@ namespace FormUI {
             void setDisabled(bool state);
             bool isDisabled() const;
 
+            // optional fields are validated and copied unless
+            // they are missing in the POST data
+            void setOptional(bool optional);
+            bool isOptional() const;
+
             void html(PrintInterface &output);
 
         protected:
@@ -144,6 +150,7 @@ namespace FormUI {
             InputFieldType _type;
             bool _hasChanged : 1;
             bool _disabled: 1;
+            bool _optional: 1;
         protected:
             bool _expanded: 1;
             bool _groupOpen : 1;

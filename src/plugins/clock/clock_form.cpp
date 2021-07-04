@@ -206,11 +206,11 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
         form.addPointerTriviallyCopyable(F("ilr"), &cfg.interleaved.rows);
         form.addFormUI(F("Display every nth row"));
-        form.addValidator(FormUI::Validator::Range(0, IOT_LED_MATRIX_ROWS));
+        // form.addValidator(FormUI::Validator::Range(0, IOT_LED_MATRIX_ROWS));
 
         form.addPointerTriviallyCopyable(F("ilc"), &cfg.interleaved.cols);
         form.addFormUI(F("Display every nth column"));
-        form.addValidator(FormUI::Validator::Range(0, IOT_LED_MATRIX_COLS));
+        // form.addValidator(FormUI::Validator::Range(0, IOT_LED_MATRIX_COLS));
 
         form.addPointerTriviallyCopyable(F("ilt"), &cfg.interleaved.time);
         form.addFormUI(F("Rotate Through Rows And Columns"), FormUI::Suffix(F("milliseconds")), FormUI::IntAttribute(F("disabled-value"), 0));

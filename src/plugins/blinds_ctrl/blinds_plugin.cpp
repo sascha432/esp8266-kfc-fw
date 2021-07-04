@@ -221,7 +221,7 @@ bool BlindsControlPlugin::atModeHandler(AtModeArgs &args)
                                 PrintString str;
                                 str.strftime_P(PSTR("%H:%M:%S"), now);
                                 str.strftime_P(PSTR(" now=%H:%M:%S"), time(nullptr));
-                                args.printf_P(PSTR("Imperial march @ %s in=%u seconds)"), str.c_str(), now - time(nullptr));
+                                args.printf_P(PSTR("Imperial march @ %s in=%u seconds)"), str.c_str(), (uint32_t)(now - time(nullptr)));
 
                                 _Scheduler.add(10, true, [this, now, speed, zweiklang, repeat, resetConfig](Event::CallbackTimerPtr timer) {
                                     if ((uint32_t)time(nullptr) <= now) {

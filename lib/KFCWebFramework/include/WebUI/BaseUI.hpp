@@ -136,4 +136,17 @@ bool Field::BaseField::isDisabled() const
     return _disabled;
 }
 
+__KFC_FORMS_INLINE_METHOD__
+void Field::BaseField::setOptional(bool opts)
+{
+    _optional = opts;
+}
+
+__KFC_FORMS_INLINE_METHOD__
+bool Field::BaseField::isOptional() const
+{
+    return _optional;
+}
+
+
 #include <debug_helper_disable.h>

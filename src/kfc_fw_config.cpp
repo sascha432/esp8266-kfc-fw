@@ -1453,6 +1453,10 @@ void KFCFWConfiguration::setupRTC()
     // issues:
     // - inaccurate when using deep sleep
     // - no battery backup
+    //
+    // after a reset, the time is marked as not synchronized (rtcLostPower() == false) until set by NTP or manually
+    // while it does not work if a device gets turned off, it is still ok when rebooting or recovering from a crash
+    // time won't start at 1970 and the timezone is also set...
     RTCMemoryManager::setSyncStatus(false);
     auto rtc = RTCMemoryManager::readTime();
     struct timeval tv = { static_cast<time_t>(rtc.time), 0 };

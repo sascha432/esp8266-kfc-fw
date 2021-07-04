@@ -164,23 +164,23 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             form.addObjectGetterSetter(F("st_dhcp"), flags, flags.get_bit_is_station_mode_dhcp_enabled, flags.set_bit_is_station_mode_dhcp_enabled);
             form.addFormUI(FSPGM(DHCP_Client), FormUI::BoolItems());
 
-            form.addObjectGetterSetter(F("st_ip"), FormGetterSetter(network, local_ip));
+            form.addObjectGetterSetter(F("st_ip"), FormGetterSetter(network, local_ip)).setOptional(true);
             form.addFormUI(FSPGM(IP_Address));
             network.addHostnameValidatorFor_local_ip(form);
 
-            form.addObjectGetterSetter(F("st_subnet"), FormGetterSetter(network, subnet));
+            form.addObjectGetterSetter(F("st_subnet"), FormGetterSetter(network, subnet)).setOptional(true);
             form.addFormUI(FSPGM(Subnet));
             network.addHostnameValidatorFor_subnet(form);
 
-            form.addObjectGetterSetter(F("st_gw"), FormGetterSetter(network, gateway));
+            form.addObjectGetterSetter(F("st_gw"), FormGetterSetter(network, gateway)).setOptional(true);
             form.addFormUI(FSPGM(Gateway));
             network.addHostnameValidatorFor_gateway(form);
 
-            form.addObjectGetterSetter(F("st_dns1"), FormGetterSetter(network, dns1));
+            form.addObjectGetterSetter(F("st_dns1"), FormGetterSetter(network, dns1)).setOptional(true);
             form.addFormUI(FSPGM(DNS_1));
             network.addHostnameValidatorFor_dns1(form);
 
-            form.addObjectGetterSetter(F("st_dns2"), FormGetterSetter(network, dns2));
+            form.addObjectGetterSetter(F("st_dns2"), FormGetterSetter(network, dns2)).setOptional(true);
             form.addFormUI(FSPGM(DNS_2));
             network.addHostnameValidatorFor_dns2(form);
 
@@ -197,11 +197,11 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             form.addFormUI(FSPGM(Subnet));
             softAp.addHostnameValidatorFor_subnet(form);
 
-            form.addObjectGetterSetter(F("ap_dhcpds"), FormGetterSetter(softAp, dhcp_start));
+            form.addObjectGetterSetter(F("ap_dhcpds"), FormGetterSetter(softAp, dhcp_start)).setOptional(true);
             form.addFormUI(F("DHCP Start IP"));
             softAp.addHostnameValidatorFor_dhcp_start(form);
 
-            form.addObjectGetterSetter(F("ap_dhcpde"), FormGetterSetter(softAp, dhcp_end));
+            form.addObjectGetterSetter(F("ap_dhcpde"), FormGetterSetter(softAp, dhcp_end)).setOptional(true);
             form.addFormUI(F("DHCP End IP"));
             softAp.addHostnameValidatorFor_dhcp_end(form);
 

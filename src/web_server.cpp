@@ -635,11 +635,8 @@ void Plugin::_handlerExportSettings(AsyncWebServerRequest *request, HttpHeaders 
 
     auto hostname = System::Device::getName();
 
-    char timeStr[32];
-    auto now = time(nullptr);
-    struct tm *tm = localtime(&now);
-    strftime_P(timeStr, sizeof(timeStr), PSTR("%Y%m%d_%H%M%S"), tm);
-    PrintString filename(F("kfcfw_config_%s_b" __BUILD_NUMBER "_%s.json"), hostname, timeStr);
+    PrintString filename(F("kfcfw_config_%s_b" __BUILD_NUMBER "_"), hostname);
+    filename.strftime_P(PSTR("%Y%m%d_%H%M%S.json"), time(nullptr));
     headers.add<HttpDispositionHeader>(filename);
 
     PrintString content;

@@ -90,7 +90,8 @@ bool Form::BaseForm::validateOnly()
                 static_cast<Field::BaseField *>(field)->setValue(_data->arg(FPSTR(field->getName())));
             }
         }
-        else if (_invalidMissing) {
+        else if (_invalidMissing && !_field->isOptional()) {
+            // all fields are manadatory by default
             _addError(field, FSPGM(Form_value_missing_default_message));
         }
     }

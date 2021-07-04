@@ -454,6 +454,7 @@ void setup()
     }
     else {
 
+        // setup internal or external RTC
         KFCFWConfiguration::setupRTC();
 
 #if WEBUI_ALERTS_ENABLED && WEBUI_ALERTS_USE_MQTT

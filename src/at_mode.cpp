@@ -712,8 +712,11 @@ SerialHandler::Client *_client;
 
 void at_mode_setup()
 {
-    __LDBG_printf("AT_MODE_ENABLED=%u", System::Flags::getConfig().is_at_mode_enabled);
+    __LDBG_printf("AT_MODE_ENABLED=%u", System::Flags::getConfig().is_at_mode_eabled);
 
+    if (_client) {
+        serialHandler.removeClient(*_client);
+    }
     _client = &serialHandler.addClient(at_mode_serial_input_handler, SerialHandler::EventType::READ);
 
     WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, at_mode_wifi_callback);
@@ -731,7 +734,10 @@ void enable_at_mode(Stream &output)
 void disable_at_mode(Stream &output)
 {
     if (System::Flags::getConfig().is_at_mode_enabled) {
-        _client->stop();
+        if (_client) {
+            serialHandler.removeClient(*_client);
+            _client = nullptr;
+        }
         output.println(F("Disabling AT MODE."));
 #if DEBUG
         if (displayTimer) {
@@ -2176,8 +2182,8 @@ void at_mode_serial_handle_event(String &commandString)
             args.print(F("output %p"), stream);
         }
         args.print(F("input %p"), serialHandler.getInput());
-        for(auto &client: clients) {
-            args.print(F("client %p: events: %02x"), &client, client.getEvents());
+        for(const auto &client: clients) {
+            args.print(F("client %p: events: %02x"), client.get(), client->getEvents());
         }
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(FSM))) {
@@ -2480,8 +2486,8 @@ void at_mode_serial_handle_event(String &commandString)
             auto len = args.toNumber(1, 32U);
             bool insecure = args.isTrue(2, false);
             bool flashRead = args.isTrue(3, true);
-            if (!insecure && ((start < UMM_MALLOC_CFG_HEAP_ADDR || start > UMM_HEAP_END_ADDR) && (start < SECTION_FLASH_START_ADDRESS || start >= SECTION_IROM0_TEXT_END_ADDRESS))) {
-                args.print(F("address=0x%08x not HEAP (%08x-%08x) or FLASH (%08x-%08x), use unsecure mode"), start, UMM_MALLOC_CFG_HEAP_ADDR, UMM_HEAP_END_ADDR - 1, SECTION_FLASH_START_ADDRESS, SECTION_IROM0_TEXT_END_ADDRESS - 1);
+            if (!insecure && ((start < UMM_MALLOC_CFG_HEAP_ADDR || start >= 0x3FFFFFFFUL) && (start < SECTION_FLASH_START_ADDRESS || start >= SECTION_IROM0_TEXT_END_ADDRESS))) {
+                args.print(F("address=0x%08x not HEAP (%08x-%08x) or FLASH (%08x-%08x), use unsecure mode"), start, UMM_MALLOC_CFG_HEAP_ADDR, 0x3FFFFFFFUL, SECTION_FLASH_START_ADDRESS, SECTION_IROM0_TEXT_END_ADDRESS - 1);
             }
             else if (start & 0x3) {
                 args.print(F("address=%0x08x not aligned"), start);

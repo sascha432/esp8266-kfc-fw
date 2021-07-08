@@ -337,7 +337,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LS, "LS", "[<directory>[,<hidden=true|fals
 #if ESP8266
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LSR, "LSR", "[<directory>]", "List files and directories using FS.openDir()");
 #endif
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIFI, "WIFI", "[<reset|on|off|ap_on|ap_off|wimo>][,<wimo-mode 0=off|1=STA|2=AP|3=STA+AP>]", "Modify WiFi settings, wimo sets mode and reboots");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIFI, "WIFI", "[<reset|on|off|ap_on|ap_off|ap_standby|wimo>][,<wimo-mode 0=off|1=STA|2=AP|3=STA+AP>]", "Modify WiFi settings, wimo sets mode and reboots");
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(REM, "REM", "Ignore comment");
 #if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID
@@ -2012,9 +2012,9 @@ void at_mode_serial_handle_event(String &commandString)
             else if (arg0.equalsIgnoreCase(F("ap_standby"))) {
                 args.print(F("disabling AP mode (standby is on)"));
                 WiFi.enableAP(false);
-                auto flags = System::Flags::getWriteableConfig();
+                auto &flags = System::Flags::getWriteableConfig();
                 flags.is_softap_standby_mode_enabled = true;
-                flags.is_softap_enabled = true;
+                flags.is_softap_enabled = false;
                 config.write();
                 WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, KFCFWConfiguration::apStandbyModehandler);
             }

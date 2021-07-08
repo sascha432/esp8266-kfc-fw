@@ -304,23 +304,39 @@ void KFCFWConfiguration::_onWiFiDisconnectCb(const WiFiEventStationModeDisconnec
 
 void KFCFWConfiguration::_onWiFiGotIPCb(const WiFiEventStationModeGotIP &event)
 {
-    auto ip = event.ip.toString();
-    auto mask = event.mask.toString();
-    auto gw = event.gw.toString();
-    auto dns1 = WiFi.dnsIP().toString();
-    auto dns2 = WiFi.dnsIP(1).toString();
+    // auto ip = event.ip.toString();
+    // auto mask = event.mask.toString();
+    // auto gw = event.gw.toString();
+    // auto dns1 = WiFi.dnsIP().toString();
+    // auto dns2 = WiFi.dnsIP(1).toString();
     _wifiUp = millis();
     if (_wifiUp == 0) {
         _wifiUp++;
     }
-    __LDBG_printf("ip=%s/%s gw=%s dns=%s/%s wifi_connected=%u wifi_up=%u is_connected=%u ip=%s", ip.c_str(), mask.c_str(), gw.c_str(), dns1.c_str(), dns2.c_str(), _wifiConnected, _wifiUp, WiFi.isConnected(), WiFi.localIP().toString().c_str());
+    // __LDBG_printf("%s", ip.c_str(), mask.c_str(), gw.c_str(), dns1.c_str(), dns2.c_str(), _wifiConnected, _wifiUp, WiFi.isConnected(), WiFi.localIP().toString().c_str());
 
-    Logger_notice(F("%s: IP/Net %s/%s GW %s DNS: %s, %s"),
-        System::Flags::getConfig().is_station_mode_dhcp_enabled ? PSTR("DHCP") : PSTR("Static configuration"),
-        ip.c_str(), mask.c_str(),
-        gw.c_str(),
-        dns1.c_str(), dns2.c_str()
-    );
+    PrintString msg = System::Flags::getConfig().is_station_mode_dhcp_enabled ? F("DHCP") : F("Static configuration");
+    msg.print(F(": IP/Net "));
+    if (event.ip.isSet()) {
+        event.ip.printTo(msg);
+        if (event.mask.isSet()) {
+            msg.print('/');
+            event.mask.printTo(msg);
+        }
+    }
+    if (event.gw.isSet()) {
+        msg.print(F(" GW "));
+        event.gw.printTo(msg);
+    }
+    msg.print(F(" DNS: "));
+    if (WiFi.dnsIP(0).isSet()) {
+        WiFi.dnsIP(0).printTo(msg);
+    }
+    if (WiFi.dnsIP(1).isSet()) {
+        msg.print('/');
+        WiFi.dnsIP(1).printTo(msg);
+    }
+    Logger_notice(msg);
 
     setWiFiConnectLedMode();
 
@@ -428,50 +444,68 @@ void KFCFWConfiguration::_onWiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info)
 
 #elif USE_WIFI_SET_EVENT_HANDLER_CB
 
+struct WiFiEventStationModeGotIPEx : WiFiEventStationModeGotIP
+{
+    WiFiEventStationModeGotIPEx() : WiFiEventStationModeGotIP({~0U, ~0U, ~0U}) {}
+    WiFiEventStationModeGotIPEx(const IPAddress &_ip, const IPAddress &_mask, const IPAddress &_gw) : WiFiEventStationModeGotIP({_ip, _mask, _gw}) {}
+};
+
+struct WiFiEventStationModeConnectedEx : WiFiEventStationModeConnected {
+    WiFiEventStationModeConnectedEx() : WiFiEventStationModeConnected({String(), {}, 0}) {}
+    WiFiEventStationModeConnectedEx(const uint8_t *_ssid, size_t ssidLen, uint8_t *_bssid, size_t bssidLen, uint8_t channel) : WiFiEventStationModeConnected({String(), {}, channel}) {
+        ssid.concat(reinterpret_cast<const char *>(_ssid), ssidLen);
+        memcpy_P(bssid, _bssid, std::min(sizeof(bssid), bssidLen));
+    }
+};
+
+struct WiFiEventStationModeDisconnectedEx : WiFiEventStationModeDisconnected {
+    WiFiEventStationModeDisconnectedEx() : WiFiEventStationModeDisconnected({String(), {}, WiFiDisconnectReason::WIFI_DISCONNECT_REASON_UNSPECIFIED}) {}
+    WiFiEventStationModeDisconnectedEx(const uint8_t *_ssid, size_t ssidLen, uint8_t *_bssid, size_t bssidLen, uint8_t reason) : WiFiEventStationModeDisconnected({String(), {}, static_cast<WiFiDisconnectReason>(reason)}) {
+        ssid.concat(reinterpret_cast<const char *>(_ssid), ssidLen);
+        memcpy_P(bssid, _bssid, std::min(sizeof(bssid), bssidLen));
+    }
+};
+
+struct WiFiEventSoftAPModeStationDisconnectedEx : WiFiEventSoftAPModeStationDisconnected {
+    WiFiEventSoftAPModeStationDisconnectedEx() : WiFiEventSoftAPModeStationDisconnected({{}, 0}) {}
+    WiFiEventSoftAPModeStationDisconnectedEx(const uint8_t *_mac, size_t macLen, uint8_t aid) : WiFiEventSoftAPModeStationDisconnected({{}, aid}) {
+        memcpy_P(mac, _mac, std::min(sizeof(mac), macLen));
+    }
+};
+
+struct WiFiEventSoftAPModeStationConnectedEx : WiFiEventSoftAPModeStationConnected {
+    WiFiEventSoftAPModeStationConnectedEx() : WiFiEventSoftAPModeStationConnected({0, {}}) {}
+    WiFiEventSoftAPModeStationConnectedEx(uint8_t rssi, const uint8_t *_mac, size_t macLen) : WiFiEventSoftAPModeStationConnected({static_cast<uint8_t>(rssi), {}}) {
+        memcpy_P(mac, _mac, std::min(sizeof(mac), macLen));
+    }
+};
+
 void KFCFWConfiguration::_onWiFiEvent(System_Event_t *orgEvent)
 {
     //event->event_info.connected
     switch(orgEvent->event) {
         case EVENT_STAMODE_CONNECTED: {
-                WiFiEventStationModeConnected dst;
                 auto &src = orgEvent->event_info.connected;
-                dst.ssid = reinterpret_cast<const char *>(src.ssid);
-                MEMNCPY_S(dst.bssid, src.bssid);
-                dst.channel = src.channel;
-                config._onWiFiConnectCb(dst);
+                config._onWiFiConnectCb(WiFiEventStationModeConnectedEx(src.ssid, sizeof(src.ssid), src.bssid, sizeof(src.ssid_len), src.channel));
             } break;
         case EVENT_STAMODE_DISCONNECTED: {
-                WiFiEventStationModeDisconnected dst;
                 auto &src = orgEvent->event_info.disconnected;
-                dst.ssid = reinterpret_cast<const char *>(src.ssid);
-                MEMNCPY_S(dst.bssid, src.bssid);
-                dst.reason = (WiFiDisconnectReason)src.reason;
-                config._onWiFiDisconnectCb(dst);
+                config._onWiFiDisconnectCb(WiFiEventStationModeDisconnectedEx(src.ssid, src.ssid_len, src.bssid, sizeof(src.bssid), src.reason));
             } break;
         case EVENT_STAMODE_GOT_IP: {
-                WiFiEventStationModeGotIP dst;
                 auto &src = orgEvent->event_info.got_ip;
-                dst.gw = src.gw.addr;
-                dst.ip = src.ip.addr;
-                dst.mask = src.mask.addr;
-                config._onWiFiGotIPCb(dst);
+                config._onWiFiGotIPCb(WiFiEventStationModeGotIPEx(src.ip.addr, src.mask.addr, src.gw.addr));
             } break;
         case EVENT_STAMODE_DHCP_TIMEOUT: {
                 config._onWiFiOnDHCPTimeoutCb();
             } break;
         case EVENT_SOFTAPMODE_STACONNECTED: {
-                WiFiEventSoftAPModeStationConnected dst;
                 auto &src = orgEvent->event_info.sta_connected;
-                dst.aid = src.aid;
-                MEMNCPY_S(dst.mac, src.mac);
-                config._softAPModeStationConnectedCb(dst);
+                config._softAPModeStationConnectedCb(WiFiEventSoftAPModeStationConnectedEx(src.aid, src.mac, sizeof(src.mac)));
             } break;
         case EVENT_SOFTAPMODE_STADISCONNECTED: {
-                WiFiEventSoftAPModeStationDisconnected dst;
                 auto &src = orgEvent->event_info.sta_disconnected;
-                dst.aid = src.aid;
-                MEMNCPY_S(dst.mac, src.mac);
-                config._softAPModeStationDisconnectedCb(dst);
+                config._softAPModeStationDisconnectedCb(WiFiEventSoftAPModeStationDisconnectedEx(src.mac, sizeof(src.mac), src.aid));
             } break;
     }
 }

@@ -2009,6 +2009,15 @@ void at_mode_serial_handle_event(String &commandString)
                 args.print(F("disabling AP mode"));
                 WiFi.enableAP(false);
             }
+            else if (arg0.equalsIgnoreCase(F("ap_standby"))) {
+                args.print(F("disabling AP mode (standby is on)"));
+                WiFi.enableAP(false);
+                auto flags = System::Flags::getWriteableConfig();
+                flags.is_softap_standby_mode_enabled = true;
+                flags.is_softap_enabled = true;
+                config.write();
+                WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, KFCFWConfiguration::apStandbyModehandler);
+            }
             else if (arg0.equalsIgnoreCase(F("reset"))) {
                 config.reconfigureWiFi();
             }

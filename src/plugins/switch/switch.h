@@ -71,7 +71,7 @@ public:
         }
 
         bool read(File &file) {
-            return file.read(getData(), length()) == length();
+            return (size_t)file.read(getData(), length()) == length();
         }
 
     private:

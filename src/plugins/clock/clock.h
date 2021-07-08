@@ -642,9 +642,24 @@ inline void ClockPlugin::standbyLoop()
 }
 
 extern "C" uint8_t getNeopixelShowMethodInt();
+extern "C" const __FlashStringHelper *getNeopixelShowMethodStr();
 
-inline static Clock::ShowMethodType getNeopixelShowMethod() {
+inline Clock::ShowMethodType getNeopixelShowMethod()
+{
     return static_cast<Clock::ShowMethodType>(getNeopixelShowMethodInt());
+}
+
+inline const __FlashStringHelper *getNeopixelShowMethodStr()
+{
+    switch(getNeopixelShowMethod()) {
+        case Clock::ShowMethodType::FASTLED:
+            return F("FastLED");
+        case Clock::ShowMethodType::NEOPIXEL:
+            return F("NeoPixel");
+        default:
+            break;
+    }
+    return F("Unknown");
 }
 
 #if DEBUG_IOT_CLOCK

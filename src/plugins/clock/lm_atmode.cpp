@@ -22,20 +22,7 @@
 #if IOT_SENSOR_HAVE_INA219
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LMTESTP, "LMTESTP", "<#color>[,<time=500ms>]", "Test peak values. WARNING! This command will bypass all potections and limits");
 #endif
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(CLOCKBR, "BR", "Set brightness (0-255). 0 disables the LEDs, > 0 enables them");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LMC, "LMC", "<command|help>[,<options>]", "Run command");
-// #if !IOT_LED_MATRIX
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKP, "P", "<00[:.]00[:.]00>", "Display strings");
-// #endif
-// #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKV, "V", "<1-4>", "Set visualizer mode");
-// #endif
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKC, "C", "<#RGB>|<r>,<g>,<b>", "Set color");
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKM, "M", "<value>[,<incr>,<min>,<max>,<red incr.>,<green incr.>,<blue incr.>]", "Set rainbow animation multiplier and color changing");
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKT, "T", "<value>", "Override temperature");
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKTS, "TS", "<num>,<segment>", "Set segment for digit <num>");
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF(CLOCKA, "A", "<num>[,<arguments>,...]", "Set animation", "Display available animations");
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(CLOCKD, "D", "Dump pixel addresses and other information");
 #if IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LMVIEW, "LMVIEW", "<interval in ms|0=disable>,<client_id>", "Display Leds over http2serial");
 #endif
@@ -264,28 +251,6 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
 //         args.printf_P(PSTR("set color %s"), getColor().toString().c_str());
 //         return true;
 //     }
-//     IF_IOT_CLOCK_MODE(
-//         else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKP))) {
-//             enableLoop(false);
-//             if (args.size() < 1) {
-//                 _display.clear();
-//                 _display.setBrightness(255);
-//                 _display.show();
-//                 args.print(F("display cleared"));
-//             }
-//             else {
-//                 auto text = args.get(0);
-//                 args.printf_P(PSTR("display '%s'"), text);
-//                 _display.clear();
-//                 _display.fill(0x000020);
-//                 _display.setBrightness(255);
-//                 _display.print(text);
-//                 _display.show();
-//             }
-//             return true;
-//         }
-//     )
-//     else
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LMC))) {
         if (args.startsWithIgnoreCase(0, F("vis"))) {
             IF_IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER(
@@ -312,7 +277,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             args.printf_P(PSTR("set color %s"), getColor().toString().c_str());
         }
         // met[hod][,<fastled|interenal|toggle>]
-        // +lmc=method,topg
+        // +lmc=method,tog
         else if (args.startsWithIgnoreCase(0, F("met"))) {
             if (args.startsWithIgnoreCase(1, F("fast"))) {
                 ClockPlugin::setShowMethod(Clock::ShowMethodType::FASTLED);
@@ -395,11 +360,19 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                 args.print(F("reset"));
             }
         }
+        // +lmc=res,1
         else if (args.startsWithIgnoreCase(0, F("res"))) {
             enableLoop(true);
-            _display.setBrightness(32);
-            _display.clear();
-            _display.show();
+            if (args.isTrue(1)) {
+                _display.clear();
+                pinMode(IOT_CLOCK_WS2812_OUTPUT, OUTPUT);
+                NeoPixel_espShow(IOT_CLOCK_WS2812_OUTPUT, nullptr, IOT_CLOCK_NUM_PIXELS * 3, 0);
+            }
+            else {
+                _display.setBrightness(32);
+                _display.clear();
+                _display.show();
+            }
             args.print(F("display reset"));
         }
         else if (args.startsWithIgnoreCase(0, F("cl"))) {
@@ -407,6 +380,34 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             _display.clear();
             _display.show();
             args.print(F("display cleared"));
+        }
+        // pr[int],<display=00:00:00>
+        else if (args.startsWithIgnoreCase(0, F("pr"))) {
+            IF_IOT_CLOCK_MODE(
+                enableLoop(false);
+                if (args.size() < 1) {
+                    _display.clear();
+                    _display.show();
+                    args.print(F("display cleared"));
+                }
+                else {
+                    auto text = args.get(0);
+                    args.printf_P(PSTR("display '%s'"), text);
+                    _display.clear();
+                    _display.fill(0x000020);
+                    _display.setBrightness(255);
+                    _display.print(text);
+                    _display.show();
+                }
+            )
+        }
+        // lo[op],<enable|disable>
+        else if (args.startsWithIgnoreCase(0, F("lo"))) {
+            _display.clear();
+            _display.show();
+            auto value = args.isTrue(1);
+            enableLoop(value);
+            args.print(F("loop %s"), value ? PSTR("enabled") : PSTR("disabled"));
         }
         // <temp>,<value>
         else if (args.startsWithIgnoreCase(0, F("tem"))) {
@@ -418,6 +419,10 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                 args.print(F("temperature override disabled"));
             }
         }
+        // +lmc=set,0-16,#120000;+lmc=get
+        // +lmc=set,0-16,0x23,0,0;+lmc=get
+        // +lmc=get
+        // +lmc=cl;+lmc=get
         // <get>,[<any|*>[,<offset>,<length>]
         else if (args.equalsIgnoreCase(0, F("get")) || args.equalsIgnoreCase(0, F("set"))) {
             Color color;
@@ -430,7 +435,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             else {
                 args.print(F("No shape, %u pixels"), _display.kCols * _display.kRows);
             }
-            // <set>,[<any|*>[,<offset>,<length>,<#color>]
+            // <set>,[<any|*>[,<range>,<#color>]
             if (args.equalsIgnoreCase(0, F("set"))) {
                 if (args.toString(2).trim() == F("0")) {
                     color = 0;
@@ -443,7 +448,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                 }
                 auto point = _display.getPoint(range.offset);
                 auto address = _display.getAddress(point);
-                args.print(F("pixel=%u color=%s x=%u y=%u seq=%u"), range.size - range.offset + 1, color.toString().c_str(), point.col(), point.row(), address);
+                args.print(F("pixel=%u color=%s x=%u y=%u seq=%u show=%s pin=%u"), range.size - range.offset + 1, color.toString().c_str(), point.col(), point.row(), address, getNeopixelShowMethodStr(), IOT_CLOCK_WS2812_OUTPUT);
                 _display.dump(args.getStream());
                 for(uint16_t i = range.offset; i < range.offset + range.size; i++) {
                     _display.setPixel(i, color);
@@ -452,6 +457,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                 _display.show();
             }
             else {
+                args.getStream().printf_P(PSTR("show=%s pin=%u "), getNeopixelShowMethodStr(), IOT_CLOCK_WS2812_OUTPUT);
                 _display.dump(args.getStream());
                 auto ofs = range.offset;
                 for(uint16_t y = 0; y < _display.kRows; y++) {
@@ -463,9 +469,10 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                             }
                             continue;
                         }
-                        auto state = _display.getPixelState(_display.getAddress(y, x));
-                        auto color = Color(static_cast<uint32_t>(_display.getPixel(y, x)));
-                        stream.printf_P(PSTR("%c%06x "), state ? '#' : '!', color.get() & 0xffffff);
+                        auto address = _display.getAddress(y, x);
+                        auto state = _display.getPixelState(address);
+                        auto color = Color(_display._pixels[address]);
+                        stream.printf_P(PSTR("%c%06x "), state ? '#' : '!', color.get());
                         if ((_display.kRows == 1) && ((x % 10) == 9)) {
                             stream.println();
                         }
@@ -478,15 +485,15 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             }
         }
         else {
-            args.print(F("usage: +LMC=<me[thod]<fastled|int>|ani[mation],<name>|di[ther],<on|off>|co[lor],<#color>|br[igthness],<level>|cl[ear]|re[set]|<temp>,<value>|get,<range>|set,<range>,[#color]>"));
+            args.print(F("usage: +LMC=<lo[op],<enable|disable>|me[thod]<fastled|int>|ani[mation],<name>|di[ther],<on|off>|co[lor],<#color>|br[igthness],<level>|cl[ear]|re[set]|<temp>,<value>|get,<range>|set,<range>,[#color]|pr[int],<display=00:00:00>>"));
         }
         return true;
     }
     IF_IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL(
         else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LMVIEW))) {
-            auto interval = static_cast<uint32_t>(args.toInt(0));
+            auto interval = static_cast<uint32_t>(args.toInt(0, 30));
             if (interval != 0) {
-                interval = std::max(5U, interval);
+                interval = std::max(15U, interval);
             }
             auto serverStr = args.toString(1);
             if (serverStr.startsWith(F("udp")) && interval) {
@@ -515,9 +522,18 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                                     if (udp.write((const uint8_t *)&tmp, sizeof(tmp)) == sizeof(tmp)) {
                                         error = false;
                                         for(uint16_t i = IOT_LED_MATRIX_PIXEL_OFFSET; i < (IOT_LED_MATRIX_ROWS * IOT_LED_MATRIX_COLS) + IOT_LED_MATRIX_PIXEL_OFFSET; i++) {
-                                            auto color = _display._pixels[i];
-                                            // 888 to 565
-                                            tmp = ((color.red & 0b11111000) << 8) | ((color.green & 0b11111100) << 3) | (color.blue >> 3);
+#if !IOT_LED_MATRIX
+                                            if (_display.getPixelState(i)) {
+#endif
+                                                auto color = _display._pixels[i];
+                                                // 888 to 565
+                                                tmp = ((color.red & 0b11111000) << 8) | ((color.green & 0b11111100) << 3) | (color.blue >> 3);
+#if !IOT_LED_MATRIX
+                                            }
+                                            else {
+                                                tmp = 0;
+                                            }
+#endif
                                             if (udp.write((const uint8_t *)&tmp, sizeof(tmp)) != sizeof(tmp)) {
                                                 error = true;
                                                 break;
@@ -620,10 +636,6 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             return true;
         }
     )
-//     // else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKD))) {
-//     //     _display.dump(args.getStream());
-//     //     return true;
-//     // }
     return false;
 }
 

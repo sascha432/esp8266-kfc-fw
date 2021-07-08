@@ -698,8 +698,8 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
 
     _setupTimer();
 
-    pinMode(14, OUTPUT);
-    digitalWrite(14, LOW);
+    pinMode(IOT_CLOCK_WS2812_OUTPUT, OUTPUT);
+
     _running = true;
 }
 

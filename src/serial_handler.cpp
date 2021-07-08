@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <utility>
 #include <HardwareSerial.h>
+#include <interrupts.h>
 #include "serial_handler.h"
 
 #if DEBUG_SERIAL_HANDLER
@@ -190,15 +191,22 @@ namespace SerialHandler {
         _clients.clear();
     }
 
-    Client &Wrapper::addClient(Callback cb, EventType events)
+    Client &Wrapper::addClient(const Callback &cb, EventType events)
     {
-        _clients.emplace_back(cb, events);
-        return _clients.back();
+        _clients.emplace_back(new Client(cb, events));
+        return *_clients.back().get();
     }
 
     void Wrapper::removeClient(const Client &client)
     {
-        _clients.erase(std::remove(_clients.begin(), _clients.end(), client), _clients.end());
+        auto ptr = std::addressof(client);
+        // remove outside interrupts
+        LoopFunctions::callOnce([ptr, this]() {
+            esp8266::InterruptLock lock;
+            _clients.erase(std::remove_if(_clients.begin(), _clients.end(), [ptr](const ClientPtr &client) {
+                return client.get() == ptr;
+            }), _clients.end());
+        });
     }
 
     void Wrapper::pollSerial()
@@ -219,37 +227,30 @@ namespace SerialHandler {
 
     void Wrapper::_writeClientsRx(Client *src, const uint8_t *buffer, size_t size, EventType type)
     {
-        for(auto &client: _clients) {
-            if (src != &client) {
-                if (client._hasAny(type)) {
-                    auto &rx = client._getRx();
-                    client._checkBufferSize(rx, size);
-                    rx.write(reinterpret_cast<const char *>(buffer), size);
-                }
+        for(const auto &clientPtr: _clients) {
+            if (clientPtr && (src != clientPtr.get()) && clientPtr->_hasAny(type)) {
+                auto &rx = clientPtr->_getRx();
+                clientPtr->_checkBufferSize(rx, size);
+                rx.write(reinterpret_cast<const char *>(buffer), size);
             }
         }
         // second loop for the callbacks to keep all clients in sync
-        for(auto &client: _clients) {
-            if (src != &client) {
-                auto &rx = client._getRx();
-                if (client._hasAny(type) && client._cb && !rx.empty()) {
-                    __DBGSHIO("write rx client %p callback %u", &client, rx.available());
-                    client._cb(client);
-                }
+        for(const auto &clientPtr: _clients) {
+            if (clientPtr && (src != clientPtr.get()) && clientPtr->_hasAny(type) && clientPtr->_cb && !clientPtr->_getRx().empty()) {
+                __DBGSHIO("write rx client %p callback %u", clientPtr.get(), clientPtr->_getRx().available());
+                clientPtr->_cb(*clientPtr);
             }
         }
     }
 
     void Wrapper::_writeClientsTx(Client *src, const uint8_t *buffer, size_t size)
     {
-        for(auto &client: _clients) {
-            if (src != &client) {
-                if (client._hasAny(EventType::WRITE)) {
-                    auto &tx = client._getTx();
-                    client._checkBufferSize(tx, size);
-                    tx.write(reinterpret_cast<const char *>(buffer), size);
-                    _txFlag = true;
-                }
+        for(const auto &clientPtr: _clients) {
+            if (clientPtr && (src != clientPtr.get()) && clientPtr->_hasAny(EventType::WRITE)) {
+                auto &tx = clientPtr->_getTx();
+                clientPtr->_checkBufferSize(tx, size);
+                tx.write(reinterpret_cast<const char *>(buffer), size);
+                _txFlag = true;
             }
         }
     }
@@ -272,29 +273,34 @@ namespace SerialHandler {
 
     void Wrapper::_transmitClientsRx()
     {
-        for(auto &client: _clients) {
-            auto &rx = client._getRx();
-            if (client._hasAny(EventType::RW) && client._cb && !rx.empty()) {
-                __DBGSHIO("transmit rx client %p callback %u", &client, rx.available());
-                client._cb(client);
-                client._resizeBufferMinSize(rx);
+        for(const auto &clientPtr: _clients) {
+            if (clientPtr) {
+                auto &client = *clientPtr;
+                auto &rx = client._getRx();
+                if (client._hasAny(EventType::RW) && client._cb && !rx.empty()) {
+                    __DBGSHIO("transmit rx client %p callback %u", &client, rx.available());
+                    client._cb(client);
+                    client._resizeBufferMinSize(rx);
+                }
             }
         }
     }
 
     void Wrapper::_transmitClientsTx()
     {
-        for(auto &client: _clients) {
-            auto &tx = client._getTx();
-            if (tx.available()) {
-                uint8_t buf[Wrapper::kMinBufferSize / 2];
-                size_t len;
-                while((len = tx.read(reinterpret_cast<char *>(buf), sizeof(buf))) != 0) {
-                    __DBGSHIO("transmit tx client %p size %u", &client, len);
-                    _writeClientsRx(&client, buf, len, EventType::READ);
+        for(const auto &clientPtr: _clients) {
+            if (clientPtr) {
+                auto &tx = clientPtr->_getTx();
+                if (tx.available()) {
+                    uint8_t buf[Wrapper::kMinBufferSize / 2];
+                    size_t len;
+                    while((len = tx.read(reinterpret_cast<char *>(buf), sizeof(buf))) != 0) {
+                        __DBGSHIO("transmit tx client %p size %u", &client, len);
+                        _writeClientsRx(clientPtr.get(), buf, len, EventType::READ);
+                    }
                 }
+                clientPtr->_resizeBufferMinSize(tx);
             }
-            client._resizeBufferMinSize(tx);
         }
         _txFlag = false;
     }

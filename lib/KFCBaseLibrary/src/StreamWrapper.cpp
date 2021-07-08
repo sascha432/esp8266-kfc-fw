@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <NullStream.h>
+#include <interrupts.h>
 #include "StreamWrapper.h"
 
 #if DEBUG_SERIAL_HANDLER
@@ -118,6 +119,7 @@ Stream *StreamWrapper::getInput()
 
 void StreamWrapper::add(Stream *output)
 {
+    esp8266::InterruptLock lock;
     __DSW("add output=%p", output);
     if (std::find(_streams->begin(), _streams->end(), output) != _streams->end()) {
         __DSW("IGNORING DUPLICATE STREAM %p", output);
@@ -128,6 +130,7 @@ void StreamWrapper::add(Stream *output)
 
 void StreamWrapper::remove(Stream *output)
 {
+    esp8266::InterruptLock lock;
     __DSW("remove output=%p", output);
     _streams->erase(std::remove(_streams->begin(), _streams->end(), output), _streams->end());
     if (_streams->empty() || _input == output) {
@@ -137,6 +140,7 @@ void StreamWrapper::remove(Stream *output)
 
 void StreamWrapper::clear()
 {
+    esp8266::InterruptLock lock;
     __DSW("clear");
     _streams->clear();
     setInput(&NullSerial);
@@ -144,6 +148,7 @@ void StreamWrapper::clear()
 
 void StreamWrapper::replaceFirst(Stream *output, Stream *input)
 {
+    esp8266::InterruptLock lock;
     __DSW("output=%p size=%u", output, _streams->size());
     if (_streams->size() > 1) {
         if (_streams->front() == _input) {
@@ -179,10 +184,16 @@ size_t StreamWrapper::readBytes(char *buffer, size_t length)
 
 size_t StreamWrapper::write(uint8_t data)
 {
+    bool canYield = can_yield();
+#if defined(HAVE_GDBSTUB) && HAVE_GDBSTUB
+    if (gdb_present()) {
+        canYield = false;
+    }
+#endif
     for(const auto stream: *_streams) {
-        if (stream->write(data) != sizeof(data)) {
-            delay(1); // 1ms per byte
-            __DSW("stream=%p write %u/%u", stream, 0, 1);
+        if (stream->write(data) != 1 && canYield) {
+            delay(1);
+            // __DSW("stream=%p write %u/%u", stream, 0, 1);
             stream->write(data);
         }
     }
@@ -191,20 +202,52 @@ size_t StreamWrapper::write(uint8_t data)
 
 size_t StreamWrapper::write(const uint8_t *buffer, size_t size)
 {
-    for(const auto stream: *_streams) {
-        auto len = size;
-        auto ptr = buffer;
-        auto timeout = millis() + 100;
-        do {
-            auto written = stream->write(ptr, len);
-            if (written < len) {
-                __DSW("stream=%p write %u/%u", stream, written, len);
-                ptr += written;
-                delay(1);
+#if DEBUG
+    if (!buffer) {
+        ::printf(PSTR("StreamWrapper::write(nullptr, %u)\n"), size);
+        panic();
+    }
+#endif
+    if (!buffer || !size) {
+        return 0;
+    }
+    bool canYield = can_yield();
+#if defined(HAVE_GDBSTUB) && HAVE_GDBSTUB
+    if (gdb_present()) {
+        canYield = false;
+    }
+#endif
+    if (canYield) {
+        auto start = millis();
+        for(const auto stream: *_streams) {
+            if (stream == &Serial0 || stream == &Serial1) {
+                stream->write(buffer, size);
             }
-            len -= written;
+            else {
+                auto len = size;
+                auto ptr = buffer;
+                do {
+                    auto written = stream->write(ptr, len);
+                    if (written < len) {
+                        ptr += written;
+                        delay(1);
+                    }
+#if DEBUG
+                    if (written > len) {
+                        ::printf(PSTR("written=%u > len=%u\n"), written, len);
+                        panic();
+                    }
+#endif
+                    len -= written;
+                }
+                while (len && ((millis() - start) < 1000));
+            }
         }
-        while (len && millis() < timeout);
+    }
+    else {
+        for(const auto stream: *_streams) {
+            stream->write(buffer, size);
+        }
     }
     return size;
 }

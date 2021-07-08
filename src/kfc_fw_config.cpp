@@ -637,8 +637,8 @@ void KFCFWConfiguration::recoveryMode(bool resetPasswords)
     flags.is_softap_standby_mode_enabled = false;
     flags.is_softap_enabled = false;
 #else
-    flags.is_softap_standby_mode_enabled = false;
-    flags.is_softap_enabled = true;
+    flags.is_softap_standby_mode_enabled = true;
+    flags.is_softap_enabled = false;
     KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("Recovery mode SSID %s\n"), Network::WiFi::getSoftApSSID());
 #endif
     flags.is_web_server_enabled = true;

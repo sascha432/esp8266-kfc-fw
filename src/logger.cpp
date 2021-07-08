@@ -224,17 +224,29 @@ void Logger::writeLog(Level logLevel, const char *message, va_list arg)
             __LDBG_printf("Cannot append to log file %s", _getLogFilename(logLevel).c_str());
         }
 
-#if ___DEBUG
-        DebugContext_prefix(DEBUG_OUTPUT.println(msg));
+        _closeLog(file);
+
+#if defined(HAVE_GDBSTUB) && HAVE_GDBSTUB
+        PrintString tmp;
+        __debug_prefix(tmp);
+        tmp += msg;
+        msg = String();
+        tmp += F("\r\n");
+        DEBUG_OUTPUT.write(reinterpret_cast<const uint8_t *>(tmp.c_str()), tmp.length());
 #elif LOGGER_SERIAL_OUTPUT
         if (System::Flags::getConfig().is_at_mode_enabled) {
-            Serial.print(F("+LOGGER="))
+            Serial.print(F("+LOGGER="));
             Serial.print(header);
             Serial.println(msg);
         }
+        #if ___DEBUG
+        else {
+            DebugContext_prefix(DEBUG_OUTPUT.println(msg));
+        }
+        #endif
+#else
+        DebugContext_prefix(DEBUG_OUTPUT.println(msg));
 #endif
-
-        _closeLog(file);
     }
 
 #if SYSLOG_SUPPORT

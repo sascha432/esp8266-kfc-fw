@@ -65,7 +65,8 @@ namespace KFCConfigurationClasses {
         is_serial2tcp_enabled(true),
         is_webui_enabled(true),
         is_webalerts_enabled(true),
-        is_ssdp_enabled(true),
+        // is_ssdp_enabled(true), //TODO disabled cause of crashing
+        is_ssdp_enabled(false),
         is_netbios_enabled(true),
         is_log_login_failures_enabled(false),
         __reserved2(0)
@@ -284,8 +285,8 @@ namespace KFCConfigurationClasses {
         gateway(kDefaultValueFor_gateway),
         dhcp_start(kDefaultValueFor_dhcp_start),
         dhcp_end(kDefaultValueFor_dhcp_end),
-        channel(7),
-        encryption_enum(kWiFiEncryptionTypeDefault)
+        channel(kDefaultValueFor_channel),
+        encryption(kDefaultValueFor_encryption)
     {
     }
 

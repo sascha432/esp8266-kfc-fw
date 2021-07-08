@@ -127,11 +127,11 @@ public:
     bool isSafeMode() const;
     void setSafeMode(bool mode);
 
-    static void apStandModehandler(WiFiCallbacks::EventType event, void *payload);
+    static void apStandbyModehandler(WiFiCallbacks::EventType event, void *payload);
 
 private:
     void _setupWiFiCallbacks();
-    void _apStandModehandler(WiFiCallbacks::EventType event);
+    void _apStandbyModehandler(WiFiCallbacks::EventType event);
 #if defined(ESP32)
     static void _onWiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info);
 #elif USE_WIFI_SET_EVENT_HANDLER_CB
@@ -186,6 +186,8 @@ private:
 #endif
 };
 
+extern KFCFWConfiguration config;
+
 inline bool KFCFWConfiguration::isSafeMode() const
 {
     return _safeMode;
@@ -196,7 +198,24 @@ inline void KFCFWConfiguration::setSafeMode(bool mode)
     _safeMode = mode;
 }
 
-extern KFCFWConfiguration config;
+inline void KFCFWConfiguration::_apStandbyModehandler(WiFiCallbacks::EventType event)
+{
+    __LDBG_printf("event=%u", event);
+    if (event == WiFiCallbacks::EventType::CONNECTED) {
+        WiFi.enableAP(false);
+        Logger_notice(F("AP Mode disabled"));
+    }
+    else if (event == WiFiCallbacks::EventType::DISCONNECTED) {
+        WiFi.enableAP(true);
+        Logger_notice(F("AP Mode enabled"));
+    }
+}
+
+inline void KFCFWConfiguration::apStandbyModehandler(WiFiCallbacks::EventType event, void *payload)
+{
+    config._apStandbyModehandler(event);
+}
+
 
 #ifndef HAVE_IMPERIAL_MARCH
 #define HAVE_IMPERIAL_MARCH 1

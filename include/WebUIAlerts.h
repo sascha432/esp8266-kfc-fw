@@ -13,7 +13,7 @@
 #if WEBUI_ALERTS_ENABLED
 
 #ifndef DEBUG_WEBUI_ALERTS
-#define DEBUG_WEBUI_ALERTS                              1
+#define DEBUG_WEBUI_ALERTS                              0
 #endif
 
 #ifndef WEBUI_ALERTS_USE_MQTT

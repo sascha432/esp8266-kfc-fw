@@ -32,6 +32,7 @@ namespace Clock {
         Color(uint8_t *values);
         Color(uint8_t red, uint8_t green, uint8_t blue);
         Color(uint32_t value);
+        Color(CRGB color);
 
         static Color fromString(const String &value);
         static Color fromBGR(uint32_t value);
@@ -83,6 +84,31 @@ namespace Clock {
         };
 
     };
+
+    inline Color::Color() : _value(0)
+    {
+    }
+
+    inline Color::Color(uint8_t values[]) : _blue(values[0]), _green(values[1]), _red(values[2])
+    {
+    }
+
+    inline Color::Color(uint8_t red, uint8_t green, uint8_t blue) : _blue(blue), _green(green), _red(red)
+    {
+    }
+
+    inline Color::Color(uint32_t value) : _value(value)
+    {
+    }
+
+    inline Color::Color(CRGB color) : Color(color.red, color.green, color.blue)
+    {
+    }
+
+    inline Color Color::fromBGR(uint32_t value)
+    {
+        return Color(value, value >> 8, value >> 16);
+    }
 
     inline bool Color::operator==(uint32_t value) const
     {

@@ -14,22 +14,6 @@
 
 using namespace Clock;
 
-Color::Color() : _value(0)
-{
-}
-
-Color::Color(uint8_t values[]) : _blue(values[0]), _green(values[1]), _red(values[2])
-{
-}
-
-Color::Color(uint8_t red, uint8_t green, uint8_t blue) : _blue(blue), _green(green), _red(red)
-{
-}
-
-Color::Color(uint32_t value) : _value(value)
-{
-}
-
 Color Color::fromString(const String &value)
 {
     auto ptr = value.c_str();
@@ -37,11 +21,6 @@ Color Color::fromString(const String &value)
         ptr++;
     }
     return static_cast<uint32_t>(strtol(ptr, nullptr, 16) & 0xffffff);
-}
-
-Color Color::fromBGR(uint32_t value)
-{
-    return Color(value, value >> 8, value >> 16);
 }
 
 String Color::toString() const

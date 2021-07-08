@@ -436,7 +436,7 @@ namespace Clock {
         }
 
         void dump(Print &output) {
-            output.printf_P(PSTR("data=%p pixels=%p offset=%u num=%u mode=led_matrix\n"), __pixels.data(), _pixels, kPixelOffset, kNumPixels);
+            output.printf_P(PSTR("data=%p pixels=%p offset=%u num=%u mode=led_matrix brightness=%u\n"), __pixels.data(), _pixels, kPixelOffset, kNumPixels, FastLED.getBrightness());
         }
 
     protected:

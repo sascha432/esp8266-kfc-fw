@@ -134,6 +134,17 @@ class __FlashStringHelper;
 #define KFCFS_MAX_PATH_LEN                              KFCFS_MAX_FILE_LEN
 #endif
 
+#if defined(HAVE_GDBSTUB) && HAVE_GDBSTUB
+
+//#include <GDBStub.h>
+
+extern "C" void gdbstub_do_break(void);
+extern "C" bool gdb_present(void);
+
+#define gdb_do_break gdbstub_do_break
+
+#endif
+
 #include "esp8266_compat.h"
 
 #define SPGM(name, ...)                                 PROGMEM_STRING_ID(name)

@@ -565,6 +565,7 @@ void ClockPlugin::_setupTimer()
 void ClockPlugin::preSetup(SetupModeType mode)
 {
     if (mode == SetupModeType::DEFAULT) {
+        _reset();
         auto sensorPlugin = PluginComponent::getPlugin<SensorPlugin>(F("sensor"), false);
         if (sensorPlugin) {
             sensorPlugin->getInstance().setAddCustomSensorsCallback(webUIHook);
@@ -656,7 +657,7 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
 
     MQTT::Client::registerComponent(this);
 
-    LoopFunctions::add(ClockPlugin::loop);
+    enableLoop(true, false);
     IF_IOT_ALARM_PLUGIN_ENABLED(
         AlarmPlugin::setCallback(alarmCallback);
     )
@@ -797,10 +798,12 @@ void ClockPlugin::shutdown()
     LoopFunctions::remove(loop);
 
     // turn all LEDs off
-    _disable(10);
+    _disable(1);
 
     delete _animation;
     delete _blendAnimation;
+
+    _reset();
 }
 
 void ClockPlugin::getStatus(Print &output)
@@ -849,11 +852,14 @@ void ClockPlugin::loop()
     plugin._loop();
 }
 
-void ClockPlugin::enableLoop(bool enable)
+void ClockPlugin::enableLoop(bool enable, bool clear)
 {
-    __LDBG_printf("enable loop=%u", enable);
-    _display.clear();
-    _display.show();
+    __LDBG_printf("enable loop=%u clear=%u", enable, clear);
+    if (clear) {
+        _display.clear();
+        _display.show();
+    }
+    LoopFunctions::remove(standbyLoop);
     if (enable) {
         LoopFunctions::add(loop);
     }
@@ -1240,6 +1246,14 @@ void ClockPlugin::_updateBrightnessSettings()
     }
 }
 
+void ClockPlugin::_reset()
+{
+    digitalWrite(IOT_CLOCK_WS2812_OUTPUT, LOW);
+    pinMode(IOT_CLOCK_WS2812_OUTPUT, OUTPUT);
+    NeoPixel_espShow(IOT_CLOCK_WS2812_OUTPUT, nullptr, IOT_CLOCK_NUM_PIXELS * 3, 0);
+    pinMode(IOT_CLOCK_WS2812_OUTPUT, INPUT);
+}
+
 void ClockPlugin::_enable()
 {
     if (_isEnabled) {
@@ -1263,8 +1277,7 @@ void ClockPlugin::_enable()
     IF_IOT_IOT_LED_MATRIX_FAN_CONTROL(
         _setFanSpeed(_config.fan_speed);
     )
-    LoopFunctions::remove(standbyLoop);
-    LoopFunctions::add(loop);
+    enableLoop(true, false);
 
     _config.enabled = true;
     _isEnabled = true;

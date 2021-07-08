@@ -275,7 +275,7 @@ private:
     AnimationType _getAnimationType(String name);
 
 public:
-    void enableLoop(bool enable);
+    void enableLoop(bool enable, bool clear = true);
 
     void setColorAndRefresh(Color color);
     // time represents fading level 0 to max, the fading time is relative to the different between the brightness levels
@@ -383,6 +383,7 @@ private:
 // ------------------------------------------------------------------------
 
 private:
+    void _reset();
     void _enable();
     void _disable(uint8_t delayMillis = 100);
     bool _getEnabledState() const {

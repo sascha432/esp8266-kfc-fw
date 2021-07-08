@@ -658,7 +658,6 @@ inline static void ArduinoOTALoop()
 
 void Plugin::end()
 {
-    __DBG_printf("END");
 #if ENABLE_ARDUINO_OTA
     LoopFunctions::remove(ArduinoOTALoop);
 #endif
@@ -767,7 +766,7 @@ void Plugin::ArduinoOTADumpInfo(Print &output)
 
 void Plugin::begin(bool restart)
 {
-    __LDBG_printf("BEGIN restart=%u", restart);
+    __LDBG_printf("restart=%u", restart);
     auto mode = System::WebServer::getMode();
     if (mode == System::WebServer::ModeType::DISABLED) {
 #if MDNS_PLUGIN
@@ -778,14 +777,9 @@ void Plugin::begin(bool restart)
         return;
     }
 
+    __DBG_assert_printf(_server.get() == nullptr, "SERVER ALREADY RUNNING PTR=%p", _server.get());
+
     auto cfg = System::WebServer::getConfig();
-
-    if (_server.get()) {
-        __DBG_printf("SERVER ALREADY RUNNING PTR=%p", _server.get());
-        return;
-    }
-
-
     _server.reset(new AsyncWebServerEx(cfg.getPort()));
     if (!_server) { // out of memory?
         __DBG_printf("AsyncWebServerEx: failed to create object");
@@ -830,16 +824,6 @@ void Plugin::begin(bool restart)
     __LDBG_printf("HTTP running on port %u", cfg.getPort());
 }
 
-bool Plugin::_sendFile(const FileMapping &mapping, const String &formName, HttpHeaders &headers, bool client_accepts_gzip, bool isAuthenticated, AsyncWebServerRequest *request, WebTemplate *webTemplate)
-{
-    auto response = _beginFileResponse(mapping, formName, headers, client_accepts_gzip, isAuthenticated, request, webTemplate);
-    if (response) {
-        request->send(response);
-        return true;
-    }
-    return false;
-}
-
 AsyncWebServerResponse *Plugin::_beginFileResponse(const FileMapping &mapping, const String &formName, HttpHeaders &headers, bool client_accepts_gzip, bool isAuthenticated, AsyncWebServerRequest *request, WebTemplate *webTemplate)
 {
     __LDBG_printf("mapping=%s exists=%u form=%s gz=%u auth=%u request=%p web_template=%p", mapping.getFilename(), mapping.exists(), formName.c_str(), client_accepts_gzip, isAuthenticated, request, webTemplate);
@@ -856,7 +840,6 @@ AsyncWebServerResponse *Plugin::_beginFileResponse(const FileMapping &mapping, c
     bool isHtml = path.endsWith(FSPGM(_html));
     if (isAuthenticated && webTemplate == nullptr) {
         if (path.charAt(0) == '/' && formName.length()) {
-            __DBG_printf("template=%s", formName.c_str());
             auto plugin = PluginComponent::getTemplate(formName);
             if (plugin) {
                 webTemplate = plugin->getWebTemplate(formName);
@@ -866,11 +849,11 @@ AsyncWebServerResponse *Plugin::_beginFileResponse(const FileMapping &mapping, c
                 __weatherStationDetachCanvas(true);
                 request->onDisconnect(__weatherStationAttachCanvas); // unlock on disconnect
 #endif
-                __DBG_printf("form=%s", formName.c_str());
                 FormUI::Form::BaseForm *form = new SettingsForm(nullptr);
                 plugin->createConfigureForm(PluginComponent::FormCallbackType::CREATE_GET, formName, *form, request);
                 webTemplate = new ConfigTemplate(form, isAuthenticated);
             }
+            // __DBG_printf("form=%s plugin=%08x webTemplate=%08x", formName.c_str(), (uint32_t)plugin, (uint32_t)webTemplate);
         }
     }
     if ((isHtml || path.endsWith(FSPGM(_xml))) && webTemplate == nullptr) {

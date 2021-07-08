@@ -2,6 +2,7 @@
   Author: sascha_lammers@gmx.de
 */
 
+#include <Arduino_compat.h>
 #include "PluginComponent.h"
 #include "plugins_menu.h"
 #include <Form.h>

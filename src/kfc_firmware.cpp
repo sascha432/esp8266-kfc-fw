@@ -25,11 +25,6 @@
 #include <printf_wrapper.h>
 #endif
 #include "../src/plugins/plugins.h"
-#if HAVE_GDBSTUB
-#error uncomment the line below
-// #include <GDBStub.h>
-extern "C" void gdbstub_do_break();
-#endif
 #if 0
 #include <debug_helper_enable.h>
 #else
@@ -96,14 +91,15 @@ bool isSystemKeyComboPressed()
 }
 #endif
 
-
 void setup()
 {
     #if ENABLE_DEEP_SLEEP
         deepSleepPinState.merge();
     #endif
 
-    resetDetector.armTimer();
+    #if defined(HAVE_GDBSTUB) && HAVE_GDBSTUB == 0
+        resetDetector.armTimer();
+    #endif
     resetDetector.begin(&KFC_SAFE_MODE_SERIAL_PORT, KFC_SERIAL_RATE); // release uart and call Serial.begin()
     #if KFC_DEBUG_USE_SERIAL1
         Serial1.begin(KFC_DEBUG_USE_SERIAL1);
@@ -136,6 +132,12 @@ void setup()
 
     serialHandler.begin();
     DEBUG_HELPER_INIT();
+
+    #if defined(HAVE_GDBSTUB) && HAVE_GDBSTUB
+        if (resetDetector.getResetCounter()) {
+            resetDetector.clearCounter();
+        }
+    #endif
 
     #if 0
         #include "../include/retracted/custom_wifi.h"
@@ -201,11 +203,6 @@ void setup()
         }
     #endif
 
-
-    #if HAVE_GDBSTUBGPR
-        gdbstub_do_break();
-        disable_at_mode(Serial);
-    #endif
 
         KFC_SAFE_MODE_SERIAL_PORT.println(F("Booting KFC firmware..."));
         KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("SAFE MODE %d, reset counter %d, wake up %d\n"), resetDetector.getSafeMode(), resetDetector.getResetCounter(), resetDetector.hasWakeUpDetected());
@@ -510,6 +507,9 @@ void setup()
 
 void loop()
 {
+static bool toggle;
+toggle = !toggle;
+
     auto &loopFunctions = LoopFunctions::getVector();
     bool cleanUp = false;
     for(uint8_t i = 0; i < loopFunctions.size(); i++) { // do not use iterators since the vector can be modifed inside the callback
@@ -531,3 +531,5 @@ void loop()
     run_scheduled_functions();
 #endif
 }
+
+

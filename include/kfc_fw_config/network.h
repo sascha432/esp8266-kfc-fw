@@ -65,13 +65,11 @@ namespace KFCConfigurationClasses {
                 CREATE_IPV4_ADDRESS(gateway, kCreateIPv4Address(192, 168, 4, 1));
                 CREATE_IPV4_ADDRESS(dhcp_start, kCreateIPv4Address(192, 168, 4, 2));
                 CREATE_IPV4_ADDRESS(dhcp_end, kCreateIPv4Address(192, 168, 4, 100));
-                uint8_t channel;
-                union __attribute__packed__ {
-                    EncryptionType encryption_enum;
-                    uint8_t encryption;
-                };
+                CREATE_UINT8_BITFIELD_MIN_MAX(channel, 8, 0, 255, 1, 7);
+                CREATE_ENUM_BITFIELD_SIZE_DEFAULT(encryption, 8, EncryptionType, std::underlying_type<EncryptionType>::type, uint8, kWiFiEncryptionTypeDefault);
+
                 SoftAPConfig_t();
-                
+
                 IPAddress getAddress() const {
                     return address;
                 }
@@ -91,7 +89,7 @@ namespace KFCConfigurationClasses {
                     return channel;
                 }
                 EncryptionType getEncryption() const {
-                    return encryption_enum;
+                    return static_cast<EncryptionType>(encryption);
                 }
             } SoftAPConfig_t;
         };

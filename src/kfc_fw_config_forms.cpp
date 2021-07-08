@@ -128,11 +128,11 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             Network::WiFi::addSoftApPasswordLengthValidator(form);
             form.addFormUI(FormUI::Type::PASSWORD, FSPGM(Passphrase));
 
-            form.addReference(F("ap_ch"), softAp.channel);
+            form.addObjectGetterSetter(F("ap_ch"), softAp, softAp.get_bits_channel, softAp.set_bits_channel);
             form.addValidator(FormUI::Validator::Range(1, config.getMaxWiFiChannels(), true));
             form.addFormUI(FSPGM(Channel), channelItems);
 
-            form.addReference(F("ap_enc"), softAp.encryption);
+            form.addObjectGetterSetter(F("ap_enc"), softAp, softAp.get_bits_encryption, softAp.set_bits_encryption);
             form.addValidator(FormUI::Validator::Enum<const uint8_t, kWiFiEncryptionTypes.size()>(F("Invalid encryption"), kWiFiEncryptionTypes));
             form.addFormUI(FSPGM(Encryption), encryptionItems);
 

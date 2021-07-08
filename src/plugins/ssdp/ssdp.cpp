@@ -23,7 +23,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     "",                 // web_templates
     "",                 // config_forms
     // reconfigure_dependencies
-    "wifi,network,device,http",
+    "wifi,network,device",
     PluginComponent::PriorityType::SSDP,
     PluginComponent::RTCMemoryId::NONE,
     static_cast<uint8_t>(PluginComponent::MenuType::NONE),
@@ -87,6 +87,9 @@ void SSDPPlugin::setup(SetupModeType mode, const DependenciesPtr &dependencies)
 {
     if (System::Flags::getConfig().is_ssdp_enabled) {
         WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, wifiCallback);
+        if (WiFi.isConnected()) {
+            wifiCallback(WiFiCallbacks::EventType::CONNECTED, nullptr);
+        }
     }
 }
 
@@ -98,7 +101,7 @@ void SSDPPlugin::reconfigure(const String &source)
 
 void SSDPPlugin::shutdown()
 {
-    SSDP.end();
+    _end();
     WiFiCallbacks::remove(WiFiCallbacks::EventType::ANY, wifiCallback);
 }
 

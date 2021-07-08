@@ -5,6 +5,7 @@
 #include <Arduino_compat.h>
 #include <EventScheduler.h>
 #include <misc.h>
+#include <memory.h>
 #include "SyslogParameter.h"
 #include "Syslog.h"
 #include "SyslogTCP.h"
@@ -15,6 +16,8 @@
 #else
 #include <debug_helper_disable.h>
 #endif
+
+extern "C" char *strdup(const char *);
 
 SyslogTCP::SyslogTCP(const char *hostname, SyslogQueue *queue, const String &host, uint16_t port, bool useTLS) :
     Syslog(hostname, queue),

@@ -46,28 +46,6 @@ namespace SerialHandler {
         Client &operator=(const Client &) = delete;
 
         Client();
-
-        Client(Client &&client) noexcept :
-            _cb(std::exchange(client._cb, nullptr)),
-            _events(std::move(client._events)),
-            _rx(std::move(client._rx)),
-            _tx(std::move(client._tx))
-        {
-        }
-        ~Client() {
-        }
-
-#pragma push_macro("new")
-#undef new
-
-        Client &operator=(Client &&client) noexcept {
-            this->~Client();
-            ::new(static_cast<void *>(this)) Client(std::move(client));
-            return *this;
-        }
-
-#pragma pop_macro("new")
-
         Client(Callback cb, EventType events);
 
         bool operator==(const Client &cb);
@@ -113,7 +91,8 @@ namespace SerialHandler {
     class Wrapper : public StreamWrapper
     {
     public:
-        using Clients = std::list<Client>;
+        using ClientPtr = std::unique_ptr<Client>;
+        using Clients = std::list<ClientPtr>;
         // initial size
         static constexpr size_t kMinBufferSize = 128;
         // max. size before resizing stops
@@ -125,7 +104,8 @@ namespace SerialHandler {
         // set buffer to this initial value
         static constexpr size_t kInitBufferSize = 8;
 
-        Client &addClient(Callback cb, EventType events);
+        // the returned reference is only valid until Wrapper.end() is called or the client is removed
+        Client &addClient(const Callback &cb, EventType events);
         void removeClient(const Client &client);
 
     public:

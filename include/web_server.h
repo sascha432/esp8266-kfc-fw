@@ -334,6 +334,15 @@ namespace WebServer {
         message(request, type, msg, title, headers);
     }
 
+    inline bool Plugin::_sendFile(const FileMapping &mapping, const String &formName, HttpHeaders &headers, bool client_accepts_gzip, bool isAuthenticated, AsyncWebServerRequest *request, WebTemplate *webTemplate)
+    {
+        auto response = _beginFileResponse(mapping, formName, headers, client_accepts_gzip, isAuthenticated, request, webTemplate);
+        if (response) {
+            request->send(response);
+            return true;
+        }
+        return false;
+    }
 
     class AsyncWebServerEx : public AsyncWebServer {
     public:

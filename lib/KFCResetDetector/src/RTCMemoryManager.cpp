@@ -432,18 +432,22 @@ bool RTCMemoryManager::dump(Print &output, RTCMemoryId displayId) {
 RTCMemoryManager::RtcTime RTCMemoryManager::_readTime()
 {
     RtcTime time;
+#if RTC_SUPPORT == 0
     if (read(RTCMemoryId::RTC, &time, sizeof(time)) == sizeof(time)) {
         __LDBG_printf("read time=%u status=%s", time.getTime(), time.getStatus());
         return time;
     }
     __DBG_printf("invalid RtcTime");
+#endif
     return RtcTime();
 }
 
 void RTCMemoryManager::_writeTime(const RtcTime &time)
 {
+#if RTC_SUPPORT == 0
     __LDBG_printf("write time=%u status=%s", time.getTime(), time.getStatus());
     write(RTCMemoryId::RTC, &time, sizeof(time));
+#endif
 }
 
 #if RTC_SUPPORT == 0

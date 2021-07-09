@@ -33,6 +33,8 @@ namespace Event {
         CallbackTimerPtr get() const noexcept;
         void clear();
 
+        bool remove();
+
     private:
         // friend Timer;
 

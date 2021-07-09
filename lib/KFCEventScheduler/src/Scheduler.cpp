@@ -127,7 +127,8 @@ bool Scheduler::_removeTimer(CallbackTimerPtr timer)
             return true;
         }
         else {
-            __LDBG_printf(_VT100(bold_red) "timer=%p NOT FOUND" _VT100(reset), timer);
+            // __LDBG_printf(_VT100(bold_red) "timer=%p NOT FOUND" _VT100(reset), timer);
+            __DBG_assert_printf(false, "timer=%p NOT FOUND", timer);
         }
     }
     return false;

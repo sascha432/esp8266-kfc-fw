@@ -28,10 +28,7 @@ ManangedCallbackTimer::ManangedCallbackTimer(CallbackTimerPtr callbackTimer, Tim
     EVENT_SCHEDULER_ASSERT(callbackTimer != nullptr);
     __LDBG_printf("callback_timer=%p timer=%p _timer=%p", callbackTimer, timer, callbackTimer->_timer);
     if (callbackTimer) {
-        if (callbackTimer->_timer) {
-            __LDBG_printf("removing managed timer=%p", callbackTimer->_timer);
-            callbackTimer->_timer->_managedTimer.clear();
-        }
+        callbackTimer->_releaseManagerTimer();
         _callbackTimer->_timer = timer;
     }
 }
@@ -40,10 +37,7 @@ ManangedCallbackTimer &ManangedCallbackTimer::operator=(ManangedCallbackTimer &&
 {
     EVENT_SCHEDULER_ASSERT(move._callbackTimer != nullptr);
     if (_callbackTimer) {
-        if (_callbackTimer->_timer) {
-            __LDBG_printf("removing managed timer=%p", _callbackTimer->_timer);
-            _callbackTimer->_timer->_managedTimer.clear();
-        }
+        _callbackTimer->_releaseManagerTimer();
     }
     EVENT_SCHEDULER_ASSERT(move._callbackTimer != nullptr);
     _callbackTimer = std::exchange(move._callbackTimer, nullptr);
@@ -53,14 +47,7 @@ ManangedCallbackTimer &ManangedCallbackTimer::operator=(ManangedCallbackTimer &&
 ManangedCallbackTimer::~ManangedCallbackTimer()
 {
     __LDBG_printf("this=%p callback_timer=%p timer=%p", this, _callbackTimer, _callbackTimer ? _callbackTimer->_timer : nullptr);
-
-    if (_callbackTimer) {
-        if (_callbackTimer->_timer) {
-            _callbackTimer->_timer->_managedTimer._callbackTimer = nullptr;
-        }
-        __LDBG_printf("remove callback_timer=%p", _callbackTimer);
-        __Scheduler.remove(_callbackTimer);
-    }
+    remove();
 }
 
 ManangedCallbackTimer::operator bool() const
@@ -78,14 +65,38 @@ CallbackTimerPtr ManangedCallbackTimer::get() const noexcept
     return _callbackTimer;
 }
 
+bool ManangedCallbackTimer::remove()
+{
+    __LDBG_printf("_callbackTimer=%p _timer=%p _managedTimer=%d _managedTimer._callbackTimer=%p",
+        _callbackTimer,
+        _callbackTimer ? _callbackTimer->_timer : nullptr,
+        _callbackTimer && _callbackTimer->_timer ? (int)(bool)_callbackTimer->_timer->_managedTimer : -1,
+        _callbackTimer && _callbackTimer->_timer ? _callbackTimer->_timer->_managedTimer._callbackTimer : nullptr
+    );
+    if (!_callbackTimer || !_callbackTimer->_timer) {
+        return false;
+    }
+    auto result = __Scheduler._removeTimer(_callbackTimer);
+    // remove timer after calling _removeTimer
+    // the managed timer has been cleared during removal
+    _callbackTimer = nullptr;
+    return result;
+}
+
 void ManangedCallbackTimer::clear()
 {
+    __LDBG_printf("_callbackTimer=%p _timer=%p _managedTimer=%p this=%p _managedTimer._callbackTimer=%p",
+        _callbackTimer,
+        _callbackTimer ? _callbackTimer->_timer : nullptr,
+        _callbackTimer && _callbackTimer->_timer ? &_callbackTimer->_timer->_managedTimer : nullptr,
+        this,
+        _callbackTimer && _callbackTimer->_timer ? _callbackTimer->_timer->_managedTimer._callbackTimer : nullptr
+    );
+    if (_callbackTimer && _callbackTimer->_timer) {
+        __DBG_assert_printf(_callbackTimer->_timer->_managedTimer._callbackTimer == nullptr || _callbackTimer->_timer->_managedTimer._callbackTimer == _callbackTimer, "_managedTimer._callbackTimer=%p points to a different _callbackTimer=%p", _callbackTimer->_timer->_managedTimer._callbackTimer, _callbackTimer);
+    }
     if (_callbackTimer) {
-        if (_callbackTimer->_timer) {
-            __LDBG_printf("this=%p timer=%p managed=%p", this, _callbackTimer, _callbackTimer->_timer->_managedTimer._callbackTimer);
-            _callbackTimer->_timer = nullptr;
-        }
+        _callbackTimer->_timer = nullptr;
         _callbackTimer = nullptr;
     }
 }
-

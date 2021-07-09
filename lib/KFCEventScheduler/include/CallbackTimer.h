@@ -19,7 +19,10 @@ namespace Event {
     public:
 
         CallbackTimer(Callback loopCallback, int64_t delay, RepeatType repeat, PriorityType priority);
+    private:
         ~CallbackTimer();
+
+    public:
 
         bool isArmed() const;
         int64_t getInterval() const;
@@ -55,6 +58,8 @@ namespace Event {
         void _disarm();
         void _invokeCallback(CallbackTimerPtr timer);
         uint32_t _runtimeLimit(PriorityType priority) const;
+        // release manager timer without removing the timer it manages
+        void _releaseManagerTimer();
 
     public:
         inline int64_t __getRemainingDelayMillis() const {

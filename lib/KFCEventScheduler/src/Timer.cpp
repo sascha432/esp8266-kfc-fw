@@ -52,8 +52,10 @@ void Timer::add(milliseconds interval, RepeatType repeat, Callback callback, Pri
 
 bool Timer::remove()
 {
+    __LDBG_printf("_managedTimer=%u", (bool)_managedTimer);
     if (_managedTimer) {
-        return __Scheduler._removeTimer(_managedTimer.get());
+        return _managedTimer.remove();
+        // return __Scheduler._removeTimer(_managedTimer.get());
     }
     return false;
 }

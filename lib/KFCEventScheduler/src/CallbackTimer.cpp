@@ -147,6 +147,14 @@ uint32_t CallbackTimer::_runtimeLimit(PriorityType priority) const
     return 0;
 }
 
+void CallbackTimer::_releaseManagerTimer()
+{
+    __LDBG_printf("_timer=%p", _timer);
+    if (_timer) {
+        _timer->_managedTimer.clear();
+    }
+}
+
 #if DEBUG_EVENT_SCHEDULER
 
 #include <PrintString.h>

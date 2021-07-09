@@ -46,12 +46,29 @@
 #include <debug_helper_disable.h>
 #endif
 
+//
+// Event::Timer is a self managing timer using the Scheduler
+// It has an add() and remove() method and the destructor removes the timer
+//
+// Event::CallbackTimer is a system timer managed by the Scheduler. It can have a managed timer attached to it
+// using disarm or Scheduler.remove(), removes the timer and clears the manager timer, if one is attached
+// ! the object must not be deleted
+// ! disarm() must be called inside the timer callback
+//
+// Event::ManangedCallbackTimer links to Event::CallbackTimer and is used internally by Event::Timer
+// to keep the Scheduler in-sync
+//
+// Event::Scheduler is a singleton that manages Event::*Timer objects. It can be used to add()
+// and remove() Event::CallbackTimer and Event::Timer. It is recommended to use Event::Timer instead of the
+// Scheduler or Event::CallbackTimer
+
 
 namespace Event {
 
     class Timer;
     class CallbackTimer;
     class Scheduler;
+    class ManangedCallbackTimer;
 
     static constexpr uint32_t kMinDelay = 5;
     static constexpr uint32_t kMaxDelay = 0x68D7A3;                                              // 6870947ms / 6870.947 seconds

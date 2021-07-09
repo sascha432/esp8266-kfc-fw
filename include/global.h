@@ -453,6 +453,10 @@
 #define KFC_HAVCE_NEOPIXEL_EX                               0
 #endif
 
+#ifndef HAVE_GDBSTUB
+#define HAVE_GDBSTUB                                        0
+#endif
+
 class Stream;
 class HardwareSerial;
 

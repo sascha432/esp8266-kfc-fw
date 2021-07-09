@@ -136,7 +136,7 @@ class __FlashStringHelper;
 
 #if defined(HAVE_GDBSTUB) && HAVE_GDBSTUB
 
-//#include <GDBStub.h>
+#include <GDBStub.h>
 
 extern "C" void gdbstub_do_break(void);
 extern "C" bool gdb_present(void);

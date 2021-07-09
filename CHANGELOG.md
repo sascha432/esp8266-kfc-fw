@@ -2,6 +2,7 @@
 
 ## Version 0.0.5
 
+- Support for GDBStub
 - framework-arduinoespressif8266 3.1.0  / Arduino Core 3.0.1-dev
 - Cleanup of the Visual Studio mock libary for 3.0.0
 - arduinoespressif8266 patch files have been removed and moved to https://github.com/sascha432/Arduino/tree/master

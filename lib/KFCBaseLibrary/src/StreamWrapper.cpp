@@ -185,11 +185,6 @@ size_t StreamWrapper::readBytes(char *buffer, size_t length)
 size_t StreamWrapper::write(uint8_t data)
 {
     bool canYield = can_yield();
-#if defined(HAVE_GDBSTUB) && HAVE_GDBSTUB
-    if (gdb_present()) {
-        canYield = false;
-    }
-#endif
     for(const auto stream: *_streams) {
         if (stream->write(data) != 1 && canYield) {
             delay(1);
@@ -212,11 +207,6 @@ size_t StreamWrapper::write(const uint8_t *buffer, size_t size)
         return 0;
     }
     bool canYield = can_yield();
-#if defined(HAVE_GDBSTUB) && HAVE_GDBSTUB
-    if (gdb_present()) {
-        canYield = false;
-    }
-#endif
     if (canYield) {
         auto start = millis();
         for(const auto stream: *_streams) {

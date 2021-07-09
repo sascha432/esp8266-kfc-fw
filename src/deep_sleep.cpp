@@ -4,6 +4,7 @@
 
 #if ENABLE_DEEP_SLEEP
 
+#include <stl_ext/memory.h>
 #include "reset_detector.h"
 #include "deep_sleep.h"
 #include "save_crash.h"
@@ -11,6 +12,7 @@
 #include "logger.h"
 #endif
 #include "../src/plugins/plugins.h"
+#include <plugins_menu.h>
 
 #undef __LDBG_printf
 #if DEBUG_DEEP_SLEEP
@@ -19,7 +21,9 @@
 #define __LDBG_printf(...)
 #endif
 
-DeepSleep::PinState deepSleepPinState;
+using DeepSleepPinStateUninitialized = stdex::UninitializedClass<DeepSleep::PinState>;
+static DeepSleepPinStateUninitialized deepSleepPinStateNoInit __attribute__((section(".noinit")));
+DeepSleep::PinState &deepSleepPinState = deepSleepPinStateNoInit._object;
 
 using namespace DeepSleep;
 
@@ -216,7 +220,9 @@ String PinState::toString(uint32_t state, uint32_t time) const
 
 extern "C" void preinit(void)
 {
-    resetDetector.init();
+    resetDetectorNoInit.init();
+    deepSleepPinStateNoInit.init();
+    componentRegisterNoInit.init();
     resetDetector.begin();
 
     deep_sleep_preinit();

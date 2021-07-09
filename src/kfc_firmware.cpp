@@ -96,9 +96,7 @@ void setup()
         deepSleepPinState.merge();
     #endif
 
-    #if defined(HAVE_GDBSTUB) && HAVE_GDBSTUB == 0
-        resetDetector.armTimer();
-    #endif
+    // resetDetector.armTimer();
     resetDetector.begin(&KFC_SAFE_MODE_SERIAL_PORT, KFC_SERIAL_RATE); // release uart and call Serial.begin()
     #if KFC_DEBUG_USE_SERIAL1
         Serial1.begin(KFC_DEBUG_USE_SERIAL1);
@@ -131,6 +129,8 @@ void setup()
 
     serialHandler.begin();
     DEBUG_HELPER_INIT();
+
+    // PluginComponents::RegisterEx::getInstance().dumpList(KFC_SAFE_MODE_SERIAL_PORT);
 
     #if DEBUG
     {
@@ -174,6 +174,7 @@ void setup()
     #if !ENABLE_DEEP_SLEEP
         bool wakeup = resetDetector.hasWakeUpDetected();
     #endif
+
     if (!wakeup) {
 
         BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
@@ -209,7 +210,6 @@ void setup()
             BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SOS);
         }
     #endif
-
 
         KFC_SAFE_MODE_SERIAL_PORT.println(F("Booting KFC firmware..."));
         KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("SAFE MODE %d, reset counter %d, wake up %d\n"), resetDetector.getSafeMode(), resetDetector.getResetCounter(), resetDetector.hasWakeUpDetected());
@@ -381,7 +381,7 @@ void setup()
 
         // __DBG_printf("FS begin");
         // start FS, we need it for getCrashCounter()
-        KFCFS.setConfig(LittleFSConfig(true)); // auto format true
+        // KFCFS.setConfig(LittleFSConfig(true));
         KFCFS.begin();
 
 #if KFC_AUTO_SAFE_MODE_CRASH_COUNT != 0 && KFC_DISABLE_CRASHCOUNTER == 0
@@ -423,7 +423,6 @@ void setup()
         #endif
 
         auto &componentRegister = PluginComponents::RegisterEx::getInstance();
-        componentRegister.prepare();
         componentRegister.setup(PluginComponent::SetupModeType::SAFE_MODE);
 
         // check if wifi is up
@@ -476,7 +475,6 @@ void setup()
 
         auto &componentRegister = PluginComponents::RegisterEx::getInstance();
 
-        componentRegister.prepare();
         componentRegister.setup(
 #if ENABLE_DEEP_SLEEP
             wakeup ?

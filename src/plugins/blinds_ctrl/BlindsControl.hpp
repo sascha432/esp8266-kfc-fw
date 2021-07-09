@@ -637,7 +637,8 @@ inline void BlindsControl::_loadState()
 #if IOT_BLINDS_CTRL_SAVE_STATE
     auto file = KFCFS.open(FSPGM(iot_blinds_control_state_file), fs::FileOpenMode::read);
     if (file) {
-        file.read(reinterpret_cast<uint8_t *>(_states.data()), _states.size() * sizeof(*_states.data()));
+        // file.read(reinterpret_cast<uint8_t *>(_states.data()), _states.size() * sizeof(*_states.data()));
+        file.read(_states, _states.sizeInBytes());
     }
     __LDBG_printf("file=%u state=%u,%u", (bool)file, _states[0], _states[1]);
 #endif
@@ -648,7 +649,8 @@ inline void BlindsControl::_saveState()
 #if IOT_BLINDS_CTRL_SAVE_STATE
     auto file = KFCFS.open(FSPGM(iot_blinds_control_state_file), fs::FileOpenMode::write);
     if (file) {
-        file.write(reinterpret_cast<const uint8_t *>(_states.data()), _states.size() * sizeof(*_states.data()));
+        //file.write(reinterpret_cast<const uint8_t *>(_states.data()), _states.size() * sizeof(*_states.data()));
+        file.write(_states, _states.sizeInBytes());
     }
     __LDBG_printf("file=%u state=%u,%u", (bool)file, _states[0], _states[1]);
 #endif
@@ -665,7 +667,8 @@ inline void BlindsControl::_saveState(StateType *channels, uint8_t numChannels)
 
     auto file = KFCFS.open(FSPGM(iot_blinds_control_state_file), fs::FileOpenMode::write);
     if (file) {
-        file.write(reinterpret_cast<const uint8_t *>(_states.data()), _states.size() * sizeof(*_states.data()));
+        // file.write(reinterpret_cast<const uint8_t *>(_states.data()), _states.size() * sizeof(*_states.data()));
+        file.write(_states, _states.sizeInBytes());
     }
 #endif
 }

@@ -145,6 +145,16 @@ protected:
             return Type::at(static_cast<size_t>(channel));
         }
 
+        operator uint8_t *() {
+            return reinterpret_cast<uint8_t *>(this);
+        }
+        operator const uint8_t *() const {
+            return reinterpret_cast<const uint8_t *>(this);
+        }
+        size_t sizeInBytes() const {
+            return size() * sizeof(ChannelState);
+        }
+
         constexpr std::array<ChannelType, N> channels() {
             return std::array<ChannelType, N>({ChannelType::CHANNEL0, ChannelType::CHANNEL1});
         }

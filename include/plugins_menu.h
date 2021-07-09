@@ -6,6 +6,7 @@
 
 #include "plugins.h"
 #include <BootstrapMenu.h>
+#include <stl_ext/memory.h>
 
 struct NavMenu {
     BootstrapMenu::menu_item_id_t home;
@@ -31,7 +32,7 @@ namespace PluginComponents {
 
     private:
         friend Register;
-        
+
         void _createMenu();
         BootstrapMenu &_getBootstrapMenu();
         NavMenu &_getNavMenu();
@@ -72,3 +73,6 @@ namespace PluginComponents {
     }
 
 }
+
+using RegisterExUninitialized = stdex::UninitializedClass<PluginComponents::RegisterEx>;
+extern RegisterExUninitialized componentRegisterNoInit __attribute__((section(".noinit")));

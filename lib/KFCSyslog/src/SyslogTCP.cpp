@@ -17,8 +17,6 @@
 #include <debug_helper_disable.h>
 #endif
 
-extern "C" char *strdup(const char *);
-
 SyslogTCP::SyslogTCP(const char *hostname, SyslogQueue *queue, const String &host, uint16_t port, bool useTLS) :
     Syslog(hostname, queue),
     _client(nullptr),

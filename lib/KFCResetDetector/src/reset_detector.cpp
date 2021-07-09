@@ -3,29 +3,24 @@
  */
 
 #include <Arduino_compat.h>
+#include <stl_ext/memory.h>
 #include "reset_detector.h"
 #include <LoopFunctions.h>
 #include <PluginComponent.h>
+#include <plugins_menu.h>
 #include <PrintHtmlEntitiesString.h>
 #include "save_crash.h"
 
-#if 0
-#if DEBUG_RESET_DETECTOR
-#include <debug_helper_enable.h>
-#else
-#include <debug_helper_disable.h>>
-#endif
-#else
 #undef __LDBG_printf
 #if DEBUG_RESET_DETECTOR
-#define __LDBG_printf(fmt, ...) ::printf_P(PSTR("RD%04u: " fmt "\n"), micros() / 1000, ##__VA_ARGS__)
+#define __LDBG_printf(fmt, ...) ::printf_P(PSTR("RD%04u: " fmt "\r\n"), micros() / 1000, ##__VA_ARGS__)
 #else
 #define __LDBG_printf(...)
 #endif
-#endif
 
-
-ResetDetectorUnitialized resetDetector __attribute__((section(".noinit")));;
+using ResetDetectorUninitialized = stdex::UninitializedClass<ResetDetector>;
+static ResetDetectorUninitialized resetDetectorNoInit __attribute__((section(".noinit")));
+ResetDetector &resetDetector = resetDetectorNoInit._object;
 
 extern "C" {
 
@@ -39,7 +34,8 @@ extern "C" {
 
     void preinit(void)
     {
-        resetDetector.init();
+        resetDetectorNoInit.init();
+        componentRegisterNoInit.init();
         resetDetector.begin();
     }
 
@@ -49,15 +45,10 @@ extern "C" {
 
 void ResetDetector::end()
 {
-#if DEBUG_RESET_DETECTOR
-    ::printf_P(PSTR("rd::end(), _uart=%p\r\n"), _uart);
-#endif
+    __LDBG_printf("rd::end(), _uart=%p", _uart);
 
     if (_uart) {
-        __LDBG_printf("end");
-#if DEBUG_RESET_DETECTOR
-        ::printf_P(PSTR("\r\n"));
-#endif
+        __LDBG_printf("\r\n");
         uart_flush(_uart);
         uart_uninit(_uart);
         _uart = nullptr;
@@ -66,21 +57,15 @@ void ResetDetector::end()
 
 void ResetDetector::begin(HardwareSerial *serial, int baud)
 {
-#if DEBUG_RESET_DETECTOR
-    ::printf_P(PSTR("rd::begin(), _uart=%p, serial=%p\r\n"), _uart, serial, baud);
-#endif
+    __LDBG_printf("rd::begin(), _uart=%p, serial=%p", _uart, serial, baud);
 
     if (_uart) {
-#if DEBUG_RESET_DETECTOR
-        ::printf_P(PSTR("\r\n"));
-#endif
+        __LDBG_printf("\r\n");
         uart_flush(_uart);
         uart_uninit(_uart);
         _uart = nullptr;
     }
-#if DEBUG_RESET_DETECTOR
-    ::printf_P(PSTR("serial=%p begin=%u\r\n"), serial, baud);
-#endif
+    __LDBG_printf("serial=%p begin=%u", serial, baud);
     serial->begin(baud);
 }
 
@@ -88,7 +73,7 @@ void ResetDetector::begin()
 {
 #if DEBUG_RESET_DETECTOR
     auto oldUart = _uart;
-    ::printf_P(PSTR("rd::begin(), _uart=%p\r\n"), _uart);
+    __LDBG_printf("rd::begin(), _uart=%p", _uart);
 #endif
 
 #if DEBUG_RESET_DETECTOR
@@ -99,7 +84,7 @@ void ResetDetector::begin()
 #endif
     _uart = uart_init(UART0, 115200, (int) SERIAL_8N1, (int) SERIAL_FULL, 1, 64, false);
 #if DEBUG_RESET_DETECTOR
-    ::printf_P(PSTR("rd::begin() has been called, old_uart=%p _uart=%p\r\n"), oldUart, _uart);
+    __LDBG_printf("rd::begin() has been called, old_uart=%p _uart=%p", oldUart, _uart);
 #endif
 
     __LDBG_printf("init reset detector");
@@ -127,8 +112,7 @@ void ResetDetector::begin()
 #endif
 
     _writeData();
-    // crashes with 3.0.0
-    // armTimer();
+    armTimer();
 }
 
 const __FlashStringHelper *ResetDetector::getResetReason(uint8_t reason)
@@ -233,7 +217,6 @@ void ResetDetector::_readData()
 #include "logger.h"
 
 static ResetDetectorPlugin plugin;
-extern void PluginComponentInitRegisterEx();
 
 PROGMEM_DEFINE_PLUGIN_OPTIONS(
     ResetDetectorPlugin,
@@ -257,7 +240,6 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
 
 ResetDetectorPlugin::ResetDetectorPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(ResetDetectorPlugin))
 {
-    PluginComponentInitRegisterEx();
     REGISTER_PLUGIN(this, "ResetDetectorPlugin");
 }
 

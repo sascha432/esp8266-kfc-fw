@@ -20,10 +20,21 @@ namespace Clock {
 
     class StoredState {
     public:
-        typedef struct __attribute__packed__ {
-            uint16_t _crc16;
+        struct FileFormat {
+            uint32_t _crc;
             ConfigType _config;
-        } FileFormat_t;
+
+            FileFormat() : _crc(~0U) {}
+            FileFormat(const ConfigType &config) : _crc(~0U), _config(config) {}
+
+            operator uint8_t *() {
+                return reinterpret_cast<uint8_t *>(this);
+            }
+
+            operator const uint8_t *() const {
+                return reinterpret_cast<const uint8_t *>(this);
+            }
+        };
 
     public:
 
@@ -31,7 +42,7 @@ namespace Clock {
         {}
 
         StoredState(const ConfigType &config, bool enabled, uint8_t brightness) :
-            _storage({0, config})
+            _storage(config)
         {
             _storage._config.enabled = enabled;
             _storage._config.setBrightness(brightness);
@@ -39,15 +50,17 @@ namespace Clock {
         }
 
         bool hasValidData() const {
-            return _storage._crc16 != 0;
+            return (_storage._crc != 0) && (_storage._crc != ~0U);
         }
+
         void clear() {
-            _storage = {};
+            _storage = FileFormat();
         }
 
         bool operator==(const StoredState &state) const {
             return _getCrc() == state._getCrc();
         }
+
         bool operator!=(const StoredState &state) const {
             return !operator==(state);
         }
@@ -63,7 +76,7 @@ namespace Clock {
         bool store(Stream &stream) {
             if (hasValidData()) {
                 _updateCrc();
-                return (stream.write(reinterpret_cast<const uint8_t *>(&_storage), sizeof(_storage)) == sizeof(_storage));
+                return (stream.write(_storage, sizeof(_storage)) == sizeof(_storage));
             }
             return false;
         }
@@ -71,8 +84,8 @@ namespace Clock {
         static StoredState load(Stream &stream) {
             StoredState state;
             if (
-                (stream.readBytes(reinterpret_cast<uint8_t *>(&state._storage), sizeof(state._storage)) != sizeof(state._storage)) ||
-                (state._storage._crc16 != _getCrc(state._storage))
+                (stream.readBytes(state._storage, sizeof(state._storage)) != sizeof(state._storage)) ||
+                (state._storage._crc != _getCrc(state._storage))
             ) {
                 state.clear();
             }
@@ -80,20 +93,20 @@ namespace Clock {
         }
 
     private:
-        static uint16_t _getCrc(const FileFormat_t &storage) {
-            return crc16_update(&storage._config, sizeof(storage._config));
+        static uint32_t _getCrc(const FileFormat &storage) {
+            return crc32(&storage._config, sizeof(storage._config));
         }
 
-        uint16_t _getCrc() const {
+        uint32_t _getCrc() const {
             return _getCrc(_storage);
         }
 
         void _updateCrc() {
-            _storage._crc16 = _getCrc();
+            _storage._crc = _getCrc();
         }
 
     private:
-        FileFormat_t _storage;
+        FileFormat _storage;
     };
 
 }

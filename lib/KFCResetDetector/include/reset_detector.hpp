@@ -6,13 +6,19 @@
 
 #ifndef __RESET_DETECTOR_INSIDE_INCLUDE
 #define  __RESET_DETECTOR_INLINE__
-#define  __RESET_DETECTOR_INLINE_AWLAYS__
+#define  __RESET_DETECTOR_INLINE_ALWAYS__
 #define __RESET_DETECTOR_INLINE_INLINE_DEFINED__
 #else
 #define  __RESET_DETECTOR_INLINE__ inline
-#define  __RESET_DETECTOR_INLINE_AWLAYS__ inline __attribute__((__always_inline__))
+#define  __RESET_DETECTOR_INLINE_ALWAYS__ inline __attribute__((__always_inline__))
 #define __RESET_DETECTOR_INLINE_INLINE_DEFINED__
 #include "reset_detector.h"
+#endif
+
+#if DEBUG_RESET_DETECTOR
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
 #endif
 
 // ------------------------------------------------------------------------
@@ -21,11 +27,10 @@
 
 __RESET_DETECTOR_INLINE__
 ResetDetector::ResetDetector() :
-    _timer(),
+    _timer({}),
     _uart(nullptr)
 {
 }
-
 
 __RESET_DETECTOR_INLINE__
 ResetDetector::~ResetDetector()
@@ -33,13 +38,13 @@ ResetDetector::~ResetDetector()
     end();
 }
 
-__RESET_DETECTOR_INLINE_AWLAYS__
+__RESET_DETECTOR_INLINE_ALWAYS__
 const __FlashStringHelper *ResetDetector::getResetReason() const
 {
     return ResetDetector::getResetReason(_data.getReason());
 }
 
-__RESET_DETECTOR_INLINE_AWLAYS__
+__RESET_DETECTOR_INLINE_ALWAYS__
 ResetDetector::Counter_t ResetDetector::getResetCounter() const
 {
     return _data;
@@ -51,7 +56,7 @@ ResetDetector::Counter_t ResetDetector::getInitialResetCounter() const
     return _storedData;
 }
 
-__RESET_DETECTOR_INLINE_AWLAYS__
+__RESET_DETECTOR_INLINE_ALWAYS__
 bool ResetDetector::getSafeMode() const
 {
     return _data.isSafeMode();
@@ -150,14 +155,14 @@ bool ResetDetector::hasWakeUpDetected() const
     return false;
 }
 
-__RESET_DETECTOR_INLINE_AWLAYS__
+__RESET_DETECTOR_INLINE_ALWAYS__
 void ResetDetector::disarmTimer()
 {
     ets_timer_disarm(&_timer);
     ets_timer_done(&_timer);
 }
 
-__RESET_DETECTOR_INLINE_AWLAYS__
+__RESET_DETECTOR_INLINE__
 void ResetDetector::_timerCallback(void *arg)
 {
     auto rd = reinterpret_cast<ResetDetector *>(arg);
@@ -174,9 +179,6 @@ ETSTimer *ResetDetector::getTimer()
 __RESET_DETECTOR_INLINE__
 void ResetDetector::armTimer()
 {
-#if DEBUG_RESET_DETECTOR
-    ::printf_P(PSTR("rd::armTimer()\r\n"));
-#endif
     ets_timer_disarm(&_timer);
     ets_timer_setfn(&_timer, reinterpret_cast<ETSTimerFunc *>(_timerCallback), reinterpret_cast<void *>(this));
     ets_timer_arm_new(&_timer, RESET_DETECTOR_TIMEOUT, false, true);
@@ -224,37 +226,32 @@ void ResetDetector::_writeData()
 // ------------------------------------------------------------------------
 
 __RESET_DETECTOR_INLINE__
-ResetDetector::Data::Data() :
-    _reset_counter(kInvalidCounter),
-    _safe_mode(false)
+ResetDetector::Data::Data(Counter_t reset_counter, bool safe_mode) :
+    _reset_counter(reset_counter),
+    _safe_mode(safe_mode),
+    _reason{kInvalidReason, kInvalidReason, kInvalidReason, kInvalidReason, kInvalidReason, kInvalidReason, kInvalidReason, kInvalidReason}
 {
-    std::fill(std::begin(_reason), std::end(_reason), kInvalidReason);
 }
 
-__RESET_DETECTOR_INLINE__
-ResetDetector::Data::Data(Counter_t reset_counter, bool safe_mode) : _reset_counter(reset_counter), _safe_mode(safe_mode) {
-    std::fill(std::begin(_reason), std::end(_reason), kInvalidReason);
-}
-
-__RESET_DETECTOR_INLINE_AWLAYS__
+__RESET_DETECTOR_INLINE_ALWAYS__
 ResetDetector::Data::operator bool() const
 {
     return _reset_counter != kInvalidCounter;
 }
 
-__RESET_DETECTOR_INLINE_AWLAYS__
+__RESET_DETECTOR_INLINE_ALWAYS__
 ResetDetector::Data::operator int() const
 {
     return _reset_counter;
 }
 
-__RESET_DETECTOR_INLINE_AWLAYS__
+__RESET_DETECTOR_INLINE_ALWAYS__
 ResetDetector::Data::operator Counter_t() const
 {
     return _reset_counter;
 }
 
-__RESET_DETECTOR_INLINE_AWLAYS__
+__RESET_DETECTOR_INLINE_ALWAYS__
 ResetDetector::Data &ResetDetector::Data::operator=(Counter_t counter)
 {
     _reset_counter = counter;
@@ -283,20 +280,20 @@ void ResetDetector::Data::setValid(bool valid)
     }
 }
 
-__RESET_DETECTOR_INLINE_AWLAYS__
+__RESET_DETECTOR_INLINE_ALWAYS__
 void ResetDetector::Data::setSafeMode(bool safe_mode)
 {
     _safe_mode = safe_mode;
 }
 
-__RESET_DETECTOR_INLINE_AWLAYS__
+__RESET_DETECTOR_INLINE_ALWAYS__
 bool ResetDetector::Data::isSafeMode() const
 {
     return _safe_mode;
 }
 
-__RESET_DETECTOR_INLINE_AWLAYS__
-uint16_t ResetDetector::Data::getResetCounter()
+__RESET_DETECTOR_INLINE_ALWAYS__
+ResetDetector::Counter_t ResetDetector::Data::getResetCounter()
 {
     return _reset_counter;
 }
@@ -304,20 +301,21 @@ uint16_t ResetDetector::Data::getResetCounter()
 __RESET_DETECTOR_INLINE__
 void ResetDetector::Data::pushReason(Reason_t reason)
 {
-    std::copy(_begin() + 1, _end(), _begin());
-    *(_end() - 1) = reason;
+    auto begin = _begin();
+    std::copy(begin + 1, _end(), begin);
+    *_current() = reason;
 }
 
-__RESET_DETECTOR_INLINE__
+__RESET_DETECTOR_INLINE_ALWAYS__
 bool ResetDetector::Data::hasValidReason() const
 {
     return getReason() != kInvalidReason;
 }
 
-__RESET_DETECTOR_INLINE_AWLAYS__
+__RESET_DETECTOR_INLINE_ALWAYS__
 ResetDetector::Reason_t ResetDetector::Data::getReason() const
 {
-    return *(end() - 1);
+    return *const_cast<Data *>(this)->_current();
 }
 
 __RESET_DETECTOR_INLINE__
@@ -327,26 +325,31 @@ const ResetDetector::Reason_t *ResetDetector::Data::begin() const
     while(ptr < end() && *ptr == kInvalidReason) {
         ptr++;
     }
-    return ptr;
+    return ptr; // ptr >= _begin() && < _end()
 }
 
-__RESET_DETECTOR_INLINE_AWLAYS__
+__RESET_DETECTOR_INLINE_ALWAYS__
 const ResetDetector::Reason_t *ResetDetector::Data::end() const
 {
     return const_cast<Data *>(this)->_end();
 }
 
-
-__RESET_DETECTOR_INLINE_AWLAYS__
+__RESET_DETECTOR_INLINE_ALWAYS__
 ResetDetector::Reason_t *ResetDetector::Data::_begin()
 {
     return _reason;
 }
 
-__RESET_DETECTOR_INLINE__
+__RESET_DETECTOR_INLINE_ALWAYS__
 ResetDetector::Reason_t *ResetDetector::Data::_end()
 {
-    return &_reason[(sizeof(_reason) / sizeof(_reason[0]))];
+    return &_reason[kReasonMax];
+}
+
+__RESET_DETECTOR_INLINE_ALWAYS__
+ResetDetector::Reason_t *ResetDetector::Data::_current()
+{
+    return &_reason[kReasonMax - 1];
 }
 
 #ifdef __RESET_DETECTOR_INLINE_INLINE_DEFINED__
@@ -355,4 +358,8 @@ ResetDetector::Reason_t *ResetDetector::Data::_end()
 #ifdef __RESET_DETECTOR_NOINLINE__
 #undef __RESET_DETECTOR_NOINLINE__
 #endif
+#endif
+
+#if DEBUG_RESET_DETECTOR
+#include <debug_helper_disable.h>
 #endif

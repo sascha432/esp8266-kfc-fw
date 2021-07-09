@@ -31,6 +31,19 @@ namespace STL_STD_EXT_NAMESPACE_EX {
         return compare_unique_ptr_function<_Ta>(ptr);
     }
 
+    template<typename _T>
+    union __attribute__((aligned(4))) UninitializedClass {
+        uint8_t buffer[(sizeof(_T) + 3) & ~3];
+        _T _object;
+
+        UninitializedClass() {}
+        ~UninitializedClass() {}
+
+        inline void init() {
+            ::new(static_cast<void *>(&_object)) _T();
+        }
+    };
+
 }
 
 #if __HAS_CPP14 == 0

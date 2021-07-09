@@ -102,6 +102,7 @@ bool ClockPlugin::_loopSyncingAnimation(LoopOptionsType &options)
 
 void ClockPlugin::_loop()
 {
+    return;
     if (_debug) {
         return;
     }

@@ -3,6 +3,7 @@
 */
 
 #include <Arduino_compat.h>
+#include <stl_ext/memory.h>
 #include "PluginComponent.h"
 #include "plugins_menu.h"
 #include <Form.h>
@@ -28,31 +29,13 @@ using KFCConfigurationClasses::System;
 
 using namespace PluginComponents;
 
-
-union RegisterExUnitialized {
-    uint8_t buffer[sizeof(RegisterEx)];
-    RegisterEx _registerEx;
-    RegisterExUnitialized() {}
-    ~RegisterExUnitialized() {}
-};
-static RegisterExUnitialized componentRegister __attribute__((section(".noinit")));
-
-// PluginComponentInitRegisterEx() needs to be called from the first class that uses PluginComponents::Register
-// global or static data gets zerod during startup in a certain order...  and clears all data of the object while its being used already
-// initializing it manually works well
-
-void PluginComponentInitRegisterEx()
-{
-    ::new(static_cast<void *>(&componentRegister._registerEx)) RegisterEx();
-}
+using RegisterExUninitialized = stdex::UninitializedClass<RegisterEx>;
+RegisterExUninitialized componentRegisterNoInit __attribute__((section(".noinit")));
 
 Register *Register::getInstance()
 {
-    return &componentRegister._registerEx;
+    return &componentRegisterNoInit._object;
 }
-
-// we need to store the plugins somewhere until the vector is initialized otherwise it will discard already registered plugins
-// static PluginComponents::PluginsVector *pluginsPtr = nullptr;
 
 #if DEBUG_PLUGINS
 void register_plugin(PluginComponent *plugin, const char *name)
@@ -63,25 +46,12 @@ void register_plugin(PluginComponent *plugin, const char *name)
 void Register::_add(PluginComponent *plugin)
 {
 #endif
-    // if (_plugins.size()) {
-    //     __LDBG_printf("Registering plugins completed already, skipping %s", plugin->getName_P());
-    //     return;
-    // }
     __LDBG_printf("register_plugin %s priority %d", plugin->getName_P(), plugin->getOptions().priority);
-    // if (!pluginsPtr) {
-    //     pluginsPtr = new PluginComponents::PluginsVector();
-    //     pluginsPtr->reserve(16);
-    // }
-    // pluginsPtr->push_back(plugin);
-    // _plugins.emplace_back(plugin);
-
-//    TestPtr ptr1;
-
-    // auto iterator = std::upper_bound(_plugins.begin(), _plugins.end(), plugin, [](const PluginComponent *a, const PluginComponent *b) {
-    //     return static_cast<int>(b->getOptions().priority) >= static_cast<int>(a->getOptions().priority);
-    // });
-    // _plugins.insert(iterator, plugin);
-    _plugins.push_back(plugin);
+    auto iterator = std::upper_bound(_plugins.begin(), _plugins.end(), plugin, [](const PluginComponent *a, const PluginComponent *b) {
+        return static_cast<int>(b->getOptions().priority) >= static_cast<int>(a->getOptions().priority);
+    });
+    _plugins.insert(iterator, plugin);
+    // _plugins.push_back(plugin);
 }
 
 void Register::dumpList(Print &output)
@@ -103,7 +73,7 @@ void Register::dumpList(Print &output)
         auto options = plugin->getOptions();
         output.printf_P(format,
             plugin->getName_P(),
-            options.priority,
+            static_cast<int8_t>(options.priority),
             BOOL_STR(plugin->allowSafeMode()),
 #if ENABLE_DEEP_SLEEP
             BOOL_STR(plugin->autoSetupAfterDeepSleep()),
@@ -122,22 +92,14 @@ void Register::dumpList(Print &output)
 
 }
 
-void Register::prepare()
-{
-    // copy & sort plugins and free temporary data
-    std::sort(_plugins.begin(), _plugins.end(), [](const PluginComponent *a, const PluginComponent *b) {
-         return static_cast<int>(b->getOptions().priority) >= static_cast<int>(a->getOptions().priority);
-    });
-    // _plugins.resize(pluginsPtr->size());
-    // std::partial_sort_copy(pluginsPtr->begin(), pluginsPtr->end(), _plugins.begin(), _plugins.end(), [](const PluginComponent *a, const PluginComponent *b) {
-    //      return static_cast<int>(b->getOptions().priority) >= static_cast<int>(a->getOptions().priority);
-    // });
-    // free(pluginsPtr);
-//
-    // __LDBG_printf("counter=%d", _plugins.size());
-
-    __LDBG_printf("counter=%d", _plugins.size());
-}
+// void Register::prepare()
+// {
+//     // sort plugins
+//     // std::sort(_plugins.begin(), _plugins.end(), [](const PluginComponent *a, const PluginComponent *b) {
+//     //      return static_cast<int>(b->getOptions().priority) >= static_cast<int>(a->getOptions().priority);
+//     // });
+//     __LDBG_printf("counter=%d", _plugins.size());
+// }
 
 void RegisterEx::_createMenu()
 {

@@ -1638,7 +1638,7 @@ void at_mode_serial_handle_event(String &commandString)
             options += F("BREAK_ON_INIT ");
             #endif
 
-            args.print(F("GDBStub (%s), GDB preset: %u"), options.trim().c_str(), gdb_present());
+            args.print(F("GDBStub: %s"), options.trim().c_str());
         }
 #endif
         args.print(F("Uptime: %u seconds / %s"), getSystemUptime(), formatTime(getSystemUptime(), true).c_str());

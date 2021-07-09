@@ -13,11 +13,11 @@
 #define __RESET_DETECTOR_INCLUDED
 #define __RESET_DETECTOR_INSIDE_INCLUDE
 
-#define DEBUG_RESET_DETECTOR                                0
+#define DEBUG_RESET_DETECTOR 0
 
 // enable debug outout
 #ifndef DEBUG_RESET_DETECTOR
-    #define DEBUG_RESET_DETECTOR                            0
+    #define DEBUG_RESET_DETECTOR 0
 #endif
 
 // include methods in source code = 0, or in header as always inline = 1
@@ -25,9 +25,9 @@
 // use 0 for development to avoid recompiling half the program for every change
 #ifndef RESET_DETECTOR_INCLUDE_HPP_INLINE
     #if DEBUG_RESET_DETECTOR
-        #define RESET_DETECTOR_INCLUDE_HPP_INLINE           1
+        #define RESET_DETECTOR_INCLUDE_HPP_INLINE 1
     #else
-        #define RESET_DETECTOR_INCLUDE_HPP_INLINE           1
+        #define RESET_DETECTOR_INCLUDE_HPP_INLINE 1
     #endif
 #endif
 
@@ -46,12 +46,12 @@
 
 #include <push_pack.h>
 
-#define RESET_DETECTOR_TIMEOUT              5000
+#define RESET_DETECTOR_TIMEOUT 5000
 #ifndef USE_ESP_GET_RESET_REASON
 #if defined(ESP8266)
-#define USE_ESP_GET_RESET_REASON            1
+#define USE_ESP_GET_RESET_REASON 1
 #else
-#define USE_ESP_GET_RESET_REASON            0
+#define USE_ESP_GET_RESET_REASON 0
 #endif
 #endif
 
@@ -67,13 +67,13 @@ public:
 
     class Data {
     public:
-        static constexpr Counter_t kInvalidCounter = (1U << 15) - 1;
+        static constexpr Counter_t kInvalidCounter = (1U << (sizeof(Counter_t) << 3)) - 1;
         static constexpr Counter_t kMaxCounter = kInvalidCounter - 1;
         static constexpr Reason_t kInvalidReason = 0xff;
+        static constexpr size_t kReasonMax = 8;
 
     public:
-        Data();
-        Data(Counter_t reset_counter, bool safe_mode);
+        Data(Counter_t reset_counter = kInvalidCounter, bool safe_mode = false);
 
         operator bool() const;
         operator int() const;
@@ -84,7 +84,7 @@ public:
         void setValid(bool valid);
         void setSafeMode(bool safe_mode);
         bool isSafeMode() const;
-        uint16_t getResetCounter();
+        Counter_t getResetCounter();
         void pushReason(Reason_t reason);
         bool hasValidReason() const;
         Reason_t getReason() const;
@@ -94,13 +94,12 @@ public:
     protected:
         Reason_t *_begin();
         Reason_t *_end();
+        Reason_t *_current();
 
     private:
-        struct __attribute__((packed)) {
-            Counter_t _reset_counter: 15;
-            bool _safe_mode: 1;
-        };
-        Reason_t _reason[6];
+        Counter_t _reset_counter;
+        bool _safe_mode;
+        Reason_t _reason[kReasonMax];
     };
 
     static constexpr auto kResetDetectorDataSize = sizeof(Data);
@@ -176,74 +175,7 @@ public:
 
 class HardwareSerial;
 
-union ResetDetectorUnitialized {
-    using Counter_t = ResetDetector::Counter_t;
-    using Reason_t = ResetDetector::Reason_t;
-
-    uint8_t buffer[sizeof(ResetDetector)];
-    ResetDetector _rd;
-
-    ResetDetectorUnitialized() {}
-    ~ResetDetectorUnitialized() {}
-
-    inline void init() {
-        ::new(static_cast<void *>(&_rd)) ResetDetector();
-    }
-    inline void begin() {
-        _rd.begin();
-    }
-    inline void end() {
-        _rd.end();
-    }
-    inline void begin(HardwareSerial *serial, int baud) {
-        _rd.begin(serial, baud);
-    }
-    inline Counter_t getResetCounter() const {
-        return _rd.getResetCounter();
-    }
-    inline Counter_t getInitialResetCounter() const {
-        return _rd.getInitialResetCounter();
-    }
-    inline bool getSafeMode() const {
-        return _rd.getSafeMode();
-    }
-    inline void setSafeMode(bool safeMode) {
-        _rd.setSafeMode(safeMode);
-    }
-    inline void clearCounter() {
-        _rd.clearCounter();
-    }
-    inline void setSafeModeAndClearCounter(bool safeMode) {
-        _rd.setSafeModeAndClearCounter(safeMode);
-    }
-    inline bool hasCrashDetected() const {
-        return _rd.hasCrashDetected();
-    }
-    inline bool hasResetDetected() const {
-        return _rd.hasResetDetected();
-    }
-    inline bool hasRebootDetected() const {
-        return _rd.hasRebootDetected();
-    }
-    inline bool hasWakeUpDetected() const {
-        return _rd.hasWakeUpDetected();
-    }
-    inline const String getResetInfo() const {
-        return _rd.getResetInfo();
-    }
-    inline const __FlashStringHelper *getResetReason() const {
-        return _rd.getResetReason();
-    }
-    inline void armTimer() {
-        _rd.armTimer();
-    }
-    inline void disarmTimer() {
-        _rd.disarmTimer();
-    }
-
-};
-
-extern ResetDetectorUnitialized resetDetector __attribute__((section(".noinit")));
+extern ResetDetector &resetDetector;
 
 #if RESET_DETECTOR_INCLUDE_HPP_INLINE
 #include "reset_detector.hpp"

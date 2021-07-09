@@ -166,7 +166,7 @@
 #    define IF_IOT_CLOCK_SAVE_STATE(...)
 #endif
 
-#ifdef IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
+#if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
 #    define IF_IOT_LED_MATRIX_VIS(...) __VA_ARGS__
 #else
 #    define IF_IOT_LED_MATRIX_VIS(...)

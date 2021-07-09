@@ -497,9 +497,11 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             }
             auto serverStr = args.toString(1);
             if (serverStr.startsWith(F("udp")) && interval) {
+                auto &output = args.getStream();
                 if (_displayLedTimer) {
                     _displayLedTimer->timer->setInterval(Event::milliseconds(interval));
                     args.printf_P(PSTR("changed interval to %ums"), interval);
+                    output.printf_P(PSTR("+LED_MATRIX_SERVER=ws://%s:%u,%u,%u,1,0,0,1\n"), _displayLedTimer->host.c_str(), _displayLedTimer->wsPort, IOT_LED_MATRIX_ROWS, IOT_LED_MATRIX_COLS);
                 }
                 else {
                     StringVector parts;
@@ -509,7 +511,6 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                         _displayLedTimer->host = parts[1];
                         _displayLedTimer->udpPort = parts[2].toInt();
                         _displayLedTimer->wsPort = parts[3].toInt();
-                        auto &output = args.getStream();
                         output.printf_P(PSTR("+LED_MATRIX_SERVER=ws://%s:%u,%u,%u,1,0,0,1\n"), _displayLedTimer->host.c_str(), _displayLedTimer->wsPort, IOT_LED_MATRIX_ROWS, IOT_LED_MATRIX_COLS);
                         _Timer(_displayLedTimer->timer).add(Event::milliseconds(interval), true, [this, &output](Event::CallbackTimerPtr timer) {
                             WiFiUDP udp;
@@ -522,18 +523,18 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                                     if (udp.write((const uint8_t *)&tmp, sizeof(tmp)) == sizeof(tmp)) {
                                         error = false;
                                         for(uint16_t i = IOT_LED_MATRIX_PIXEL_OFFSET; i < (IOT_LED_MATRIX_ROWS * IOT_LED_MATRIX_COLS) + IOT_LED_MATRIX_PIXEL_OFFSET; i++) {
-#if !IOT_LED_MATRIX
+                                            #if !IOT_LED_MATRIX
                                             if (_display.getPixelState(i)) {
-#endif
+                                            #endif
                                                 auto color = _display._pixels[i];
                                                 // 888 to 565
                                                 tmp = ((color.red & 0b11111000) << 8) | ((color.green & 0b11111100) << 3) | (color.blue >> 3);
-#if !IOT_LED_MATRIX
+                                            #if !IOT_LED_MATRIX
                                             }
                                             else {
                                                 tmp = 0;
                                             }
-#endif
+                                            #endif
                                             if (udp.write((const uint8_t *)&tmp, sizeof(tmp)) != sizeof(tmp)) {
                                                 error = true;
                                                 break;
@@ -593,9 +594,18 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                                         *buf++ = (server->getQueuedMessageCount() & 0x0f) | ((server->getQueuedMessageSize() >> 1) & 0xfff0);
 
                                         for(uint16_t i = IOT_LED_MATRIX_PIXEL_OFFSET; i < (IOT_LED_MATRIX_ROWS * IOT_LED_MATRIX_COLS) + IOT_LED_MATRIX_PIXEL_OFFSET; i++) {
-                                            auto color = _display._pixels[i];
-                                            // 888 to 565
-                                            *buf++ = ((color.red & 0b11111000) << 8) | ((color.green & 0b11111100) << 3) | (color.blue >> 3);
+                                            #if !IOT_LED_MATRIX
+                                            if (_display.getPixelState(i)) {
+                                            #endif
+                                                auto color = _display._pixels[i];
+                                                // 888 to 565
+                                                *buf++ = ((color.red & 0b11111000) << 8) | ((color.green & 0b11111100) << 3) | (color.blue >> 3);
+                                            #if !IOT_LED_MATRIX
+                                            }
+                                            else {
+                                                *buf++ = 0;
+                                            }
+                                            #endif
                                         }
                                         client->binary(sBuf);
                                         _displayLedTimer->errors = 0;

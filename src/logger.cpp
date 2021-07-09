@@ -226,14 +226,7 @@ void Logger::writeLog(Level logLevel, const char *message, va_list arg)
 
         _closeLog(file);
 
-#if defined(HAVE_GDBSTUB) && HAVE_GDBSTUB
-        PrintString tmp;
-        __debug_prefix(tmp);
-        tmp += msg;
-        msg = String();
-        tmp += F("\r\n");
-        DEBUG_OUTPUT.write(reinterpret_cast<const uint8_t *>(tmp.c_str()), tmp.length());
-#elif LOGGER_SERIAL_OUTPUT
+#if LOGGER_SERIAL_OUTPUT
         if (System::Flags::getConfig().is_at_mode_enabled) {
             Serial.print(F("+LOGGER="));
             Serial.print(header);

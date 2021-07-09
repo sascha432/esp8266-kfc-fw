@@ -130,7 +130,7 @@ namespace KFCConfigurationClasses {
             "Solid," \
             "Rainbow," \
             "Flash," \
-            "Color Fade,"
+            "Color Fade," \
             "Fire," \
             IF_IOT_LED_MATRIX_VIS(
                 "Visualizer," \

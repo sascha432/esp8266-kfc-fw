@@ -337,7 +337,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LS, "LS", "[<directory>[,<hidden=true|fals
 #if ESP8266
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LSR, "LSR", "[<directory>]", "List files and directories using FS.openDir()");
 #endif
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIFI, "WIFI", "[<reset|on|off|ap_on|ap_off|ap_standby|wimo>][,<wimo-mode 0=off|1=STA|2=AP|3=STA+AP>]", "Modify WiFi settings, wimo sets mode and reboots");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIFI, "WIFI", "[<reset|on|off|ap_on|ap_off|ap_standby|wimo>][,<wimo-mode 0=off|1=STA|2=AP|3=STA+AP>|clear[_flash]|diag[nostics]]", "Modify WiFi settings, wimo sets mode and reboots");
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(REM, "REM", "Ignore comment");
 #if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID
@@ -507,7 +507,7 @@ void at_mode_generate_help(Stream &output, StringVector *findText = nullptr)
     atModeCommandHelp = nullptr;
 
     if (config.isSafeMode()) {
-        output.printf_P(PSTR("\nSAFE MODE ENABLED\n\n"));
+        output.printf_P(PSTR("\n%s\n\n"), PSTR("SAFE MODE ENABLED"));
     }
 }
 
@@ -766,14 +766,14 @@ void at_mode_dump_fs_info(Stream &output)
 void at_mode_print_help(Stream &output)
 {
     output.println("AT? or AT+HELP=<command|text to find> for help");
+    if (config.isSafeMode()) {
+        output.println(F("SAFE MODE ENABLED"));
+    }
 }
 
 void at_mode_print_invalid_command(Stream &output)
 {
     output.print(F("ERROR - Invalid command. "));
-    if (config.isSafeMode()) {
-        output.print(F(""));
-    }
     at_mode_print_help(output);
 }
 
@@ -1619,6 +1619,28 @@ void at_mode_serial_handle_event(String &commandString)
     #endif
 #endif
         args.print(F("Framework Arduino ESP8266 " ARDUINO_ESP8266_RELEASE_EX));
+#if defined(HAVE_GDBSTUB) && HAVE_GDBSTUB
+        {
+            String options;
+            #if GDBSTUB_USE_OWN_STACK
+            options += F("USE_OWN_STACK ");
+            #endif
+            #if GDBSTUB_BREAK_ON_EXCEPTION
+            options += F("BREAK_ON_EXCEPTION ");
+            #endif
+            #if GDBSTUB_CTRLC_BREAK
+            options += F("CTRLC_BREAK ");
+            #endif
+            #if GDBSTUB_REDIRECT_CONSOLE_OUTPUT
+            options += F("REDIRECT_CONSOLE_OUTPUT ");
+            #endif
+            #if GDBSTUB_BREAK_ON_INIT
+            options += F("BREAK_ON_INIT ");
+            #endif
+
+            args.print(F("GDBStub (%s), GDB preset: %u"), options.trim().c_str(), gdb_present());
+        }
+#endif
         args.print(F("Uptime: %u seconds / %s"), getSystemUptime(), formatTime(getSystemUptime(), true).c_str());
         args.print(F("Free heap/fragmentation: %u / %u"), ESP.getFreeHeap(), ESP.getHeapFragmentation());
 #if ARDUINO_ESP8266_VERSION_COMBINED >= 0x030000
@@ -2018,20 +2040,31 @@ void at_mode_serial_handle_event(String &commandString)
                 config.write();
                 WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, KFCFWConfiguration::apStandbyModehandler);
             }
+            else if (arg0.startsWithIgnoreCase(F("clear"))) {
+                station_config wifiConfig;
+                auto result = wifi_station_set_config(&wifiConfig);
+                args.print(F("clearing default config from flash... %s"), result ? PSTR("success") : PSTR("failure"));
+                config.reconfigureWiFi(F("reconfiguring WiFi adapter"));
+                config.printDiag(args.getStream(), F("+WIFI: "));
+            }
+            else if (arg0.startsWithIgnoreCase(F("diag"))) {
+                config.printDiag(args.getStream(), F("+WIFI: "));
+            }
             else if (arg0.equalsIgnoreCase(F("reset"))) {
-                config.reconfigureWiFi();
+                config.reconfigureWiFi(F("reconfiguring WiFi adapter"));
+                config.printDiag(args.getStream(), F("+WIFI: "));
             }
         }
 
         auto flags = System::Flags::getConfig();
-        args.printf_P("station mode %s, DHCP %s, SSID %s, connected %s, IP %s",
+        args.print(F("station mode %s, DHCP %s, SSID %s, connected %s, IP %s"),
             (WiFi.getMode() & WIFI_STA) ? SPGM(on) : SPGM(off),
             flags.is_station_mode_dhcp_enabled ? SPGM(on) : SPGM(off),
             Network::WiFi::getSSID(),
             WiFi.isConnected() ? SPGM(yes) : SPGM(no),
             WiFi.localIP().toString().c_str()
         );
-        args.printf_P("AP mode %s, DHCP %s, SSID %s, clients connected %u, IP %s",
+        args.print(F("AP mode %s, DHCP %s, SSID %s, clients connected %u, IP %s"),
             (flags.is_softap_enabled) ? ((flags.is_softap_standby_mode_enabled) ? ((WiFi.getMode() & WIFI_AP) ? SPGM(on) : PSTR("stand-by")) : SPGM(on)) : SPGM(off),
             flags.is_softap_dhcpd_enabled ? SPGM(on) : SPGM(off),
             Network::WiFi::getSoftApSSID(),
@@ -2056,7 +2089,7 @@ void at_mode_serial_handle_event(String &commandString)
         // ignore comment
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DLY))) {
-        auto delayTime = args.toMillis(0, 1, 3600 * 1000, 250, String("ms"));
+        auto delayTime = args.toMillis(0, 1, 3600 * 1000, 250, F("ms"));
         args.print(F("%ums"), delayTime);
         delay(delayTime);
 

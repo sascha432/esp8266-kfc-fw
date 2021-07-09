@@ -62,8 +62,7 @@ void delayedSetup(bool delayed)
                 }
                 else {
                     // restart entire wifi subsystem. the interval was reset back to 60 seconds
-                    config.reconfigureWiFi();
-                    Logger_notice(F("WiFi subsystem restarted"));
+                    config.reconfigureWiFi(F("reconfiguring WiFi adapter"));
                 }
             }
         }
@@ -132,6 +131,14 @@ void setup()
 
     serialHandler.begin();
     DEBUG_HELPER_INIT();
+
+    #if DEBUG
+    {
+        PrintString prefix;
+        __debug_prefix(prefix);
+        KFCFWConfiguration::printDiag(DEBUG_OUTPUT, prefix);
+    }
+    #endif
 
     #if defined(HAVE_GDBSTUB) && HAVE_GDBSTUB
         if (resetDetector.getResetCounter()) {
@@ -423,8 +430,7 @@ void setup()
         _Scheduler.add(Event::seconds(10), true, [](Event::CallbackTimerPtr timer) {
             timer->updateInterval(Event::seconds(60));
             if (!WiFi.isConnected()) {
-                _debug_println(F("WiFi not connected, restarting"));
-                config.reconfigureWiFi();
+                config.reconfigureWiFi(F("WiFi not connected, reconfiguring WiFi adapter"));
             }
         });
 

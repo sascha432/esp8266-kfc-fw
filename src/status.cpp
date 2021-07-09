@@ -62,18 +62,7 @@ void WiFi_get_status(Print &out)
 #if defined(ESP8266)
         switch (wifi_station_get_connect_status()) {
             case STATION_GOT_IP:
-                out.printf_P(PSTR("Connected, signal strength %d dBm, channel %u, mode "), WiFi.RSSI(), WiFi.channel());
-                switch(WiFi.getPhyMode()) {
-                    case WIFI_PHY_MODE_11B:
-                        out.print(F("802.11b"));
-                        break;
-                    case WIFI_PHY_MODE_11G:
-                        out.print(F("802.11g"));
-                        break;
-                    case WIFI_PHY_MODE_11N:
-                        out.print(F("802.11n"));
-                        break;
-                }
+                out.printf_P(PSTR("Connected, signal strength %d dBm, channel %u, mode %s"), WiFi.RSSI(), WiFi.channel(), KFCFWConfiguration::getWiFiPhyModeStr(wifi_get_phy_mode()));
                 wifi_country_t country;
                 if (wifi_get_country(&country)) {
                     out.printf_P(PSTR(", country %.2s"), country.cc);

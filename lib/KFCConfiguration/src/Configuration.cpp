@@ -201,6 +201,8 @@ bool Configuration::write()
             }
         }
 
+        __DBG_printf("flash write %08x sector %u", address, address / SPI_FLASH_SEC_SIZE);
+
         // erase sector
         // TODO if something goes wrong here, all data is lost
         // add redundancy writing to multiple sectors, the header has an incremental version number

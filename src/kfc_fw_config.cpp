@@ -275,6 +275,10 @@ void KFCFWConfiguration::_onWiFiDisconnectCb(const WiFiEventStationModeDisconnec
             WiFiCallbacks::callEvent(WiFiCallbacks::EventType::DISCONNECTED, (void *)&event);
         });
 
+        if (event.reason == WIFI_DISCONNECT_REASON_AUTH_EXPIRE) {
+            config.reconfigureWiFi(F("Authentication expired, reconfiguring WiFi adapter"));
+        }
+
     }
 #if defined(ESP32)
     else {
@@ -898,6 +902,63 @@ void KFCFWConfiguration::write()
     }
 }
 
+const __FlashStringHelper *KFCFWConfiguration::getSleepTypeStr(sleep_type_t type)
+{
+    switch(type) {
+        case sleep_type_t::NONE_SLEEP_T:
+            return F("None");
+        case sleep_type_t::LIGHT_SLEEP_T:
+            return F("Light");
+        case sleep_type_t::MODEM_SLEEP_T:
+            return F("Modem");
+        default:
+            break;
+    }
+    return F("Unknown");
+}
+
+const __FlashStringHelper *KFCFWConfiguration::getWiFiOpModeStr(uint8_t mode)
+{
+    switch(mode) {
+        case WiFiMode_t::WIFI_STA:
+            return F("Station mode");
+        case WiFiMode_t::WIFI_AP:
+            return F("AP mode");
+        case WiFiMode_t::WIFI_AP_STA:
+            return F("AP and station mode");
+        case WiFiMode_t::WIFI_OFF:
+            return F("Off");
+        default:
+            break;
+    }
+    return F("Unknown");
+}
+
+const __FlashStringHelper *KFCFWConfiguration::getWiFiPhyModeStr(phy_mode_t mode)
+{
+    switch(mode) {
+        case phy_mode_t::PHY_MODE_11B:
+            return F("802.11b");
+        case phy_mode_t::PHY_MODE_11G:
+            return F("802.11g");
+        case phy_mode_t::PHY_MODE_11N:
+            return F("802.11n");
+        default:
+            break;
+    }
+    return F("");
+}
+
+void KFCFWConfiguration::printDiag(Print &output, const String &prefix)
+{
+    station_config wifiConfig;
+    wifi_station_get_config_default(&wifiConfig);
+    output.printf_P(PSTR("%s default ssid=%.32s password=%.64s bssid_set=%u bssid=%s mode=%s"), prefix.c_str(), wifiConfig.ssid, wifiConfig.password, wifiConfig.bssid_set, mac2String(wifiConfig.bssid).c_str(), KFCFWConfiguration::getWiFiOpModeStr(wifi_get_opmode_default()));
+    wifi_station_get_config(&wifiConfig);
+    output.printf_P(PSTR("%s config ssid=%.32s password=%.64s bssid_set=%u bssid=%s mode=%s"), prefix.c_str(), wifiConfig.ssid, wifiConfig.password, wifiConfig.bssid_set, mac2String(wifiConfig.bssid).c_str(), KFCFWConfiguration::getWiFiOpModeStr(wifi_get_opmode()));
+    output.printf_P(PSTR("%s sleep=%s phy=%s channel=%u AP_id=%u auto_connect=%u reconnect=%u"), prefix.c_str(), KFCFWConfiguration::getSleepTypeStr(wifi_get_sleep_type()), KFCFWConfiguration::getWiFiPhyModeStr(wifi_get_phy_mode()), wifi_get_channel(), wifi_station_get_current_ap_id(), wifi_station_get_auto_connect(), wifi_station_get_reconnect_policy());
+}
+
 bool KFCFWConfiguration::resolveZeroConf(const String &name, const String &hostname, uint16_t port, MDNSResolver::ResolvedCallback callback) const
 {
     __LDBG_printf("resolveZeroConf=%s port=%u", hostname.c_str(), port);
@@ -1255,14 +1316,18 @@ const __FlashStringHelper *KFCFWConfiguration::getWiFiEncryptionType(uint8_t typ
     return F("N/A");
 }
 
-bool KFCFWConfiguration::reconfigureWiFi()
+bool KFCFWConfiguration::reconfigureWiFi(const __FlashStringHelper *msg)
 {
-    WiFi.persistent(false); // disable during disconnects since it saves the configuration
+    if (msg) {
+        Logger_notice(msg);
+        __DBG_printf("WiFi diagnostics");
+        WiFi.printDiag(DEBUG_OUTPUT);
+    }
+    WiFi.persistent(false); // disable storing WiFi config
     WiFi.setAutoConnect(false);
     WiFi.setAutoReconnect(false);
     WiFi.disconnect(true);
     WiFi.softAPdisconnect(true);
-    WiFi.persistent(true);
 
     return connectWiFi();
 }

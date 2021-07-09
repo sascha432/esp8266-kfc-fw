@@ -82,10 +82,15 @@ public:
     bool isConfigDirty() const;
 
     void setup();
-    bool reconfigureWiFi();
+    bool reconfigureWiFi(const __FlashStringHelper *msg = nullptr);
     bool connectWiFi();
     void read(bool wakeup = false);
     void write();
+
+    static const __FlashStringHelper *getSleepTypeStr(sleep_type_t type);
+    static const __FlashStringHelper *getWiFiOpModeStr(uint8_t mode);
+    static const __FlashStringHelper *getWiFiPhyModeStr(phy_mode_t mode);
+    static void printDiag(Print &output, const String &prefix);
 
     // support for zeroconf
     // ${zeroconf:<service>.<proto>:<address|value[:port value]>|<fallback[:port]>}

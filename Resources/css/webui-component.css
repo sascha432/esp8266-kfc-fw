@@ -90,7 +90,7 @@
 }
 
 .webuicomponent > .button-group .btn-group-vertical {
-    overflow-y: scroll;
+    overflow-y: auto;
     overflow-x: hidden;
 }
 
@@ -98,9 +98,18 @@
     padding: .75rem .5rem 0.25rem 0.5rem;
 }
 
+.webuicomponent > .button-group button:hover {
+    background-color: #008cff;
+}
+
 .webuicomponent > .button-group button.disabled {
     color: #6c757d;
     border-color: #6c757d;
+    cursor: not-allowed;
+}
+
+.webuicomponent > .button-group button.disabled:hover {
+    background-color: transparent;
 }
 
 .webuicomponent > .button-group button.disabled:focus {
@@ -262,9 +271,9 @@
 }
 
 .webuicomponent span.connected > .webui-disconnected-icon {
-    animation: webui-disconnected-icon 2.5s button-groupte;
+    animation: webui-disconnected-icon 2.5s linear infinite;
 }
-#
+
 @keyframes webui-disconnected-icon {
     50% {
         opacity: 0;

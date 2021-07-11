@@ -424,7 +424,7 @@ $.webUIComponent = {
             }
         }
         if (value !== undefined) {
-            // console.log('queue_update_element', id, element[0].type, component.converter ? value + '=>' + component.converter.from(value) : value)
+            console.log('queue_update_element', id, element, component.converter ? value + '=>' + component.converter.from(value) : value)
             if (component.converter) {
                 value = component.converter.from(value);
             }
@@ -434,17 +434,13 @@ $.webUIComponent = {
             if (component.type == 'button-group') {
                 var buttons = $(element).find('button');
                 buttons.removeClass('active');
-                var activeButton = null;
                 buttons.each(function() {
                     var btn = $(this);
                     if (btn.data('value') == value) {
+                        btn.trigger('blur');
                         btn.addClass('active');
-                        activeButton = btn;
                     }
                 });
-                if (activeButton) {
-                    activeButton.trigger('click');
-                }
             }
             else {
                 var update_lock = queue.update_lock;
@@ -666,21 +662,13 @@ $.webUIComponent = {
         var count = 0;
         var items = this.parse_items(options.items);
         var content = '';
-        var func = function(key, val) {
+        $.each(items, function(key, val) {
             content += $(self.get_prototype('webui-button-group-button', { value: val, index: key }))[0].outerHTML;
             if (options.row && ++count % options.row == 0) {
                 options.content += $(self.get_prototype('webui-button-group-col', { content: content }))[0].outerHTML;
                 content = '';
             }
-        };
-        if (typeof items === 'object') {
-            for(key in items) {
-                func(key, items[key]);
-            }
-        }
-        else {
-            $(items).each(func);
-        }
+        });
         if (content != '') {
             options.content += $(self.get_prototype('webui-button-group-col', { content: content }))[0].outerHTML;
         }
@@ -718,7 +706,7 @@ $.webUIComponent = {
         var self = this;
         var items = this.parse_items(options.items);
         var content = '';
-        $(items).each(function(key, val) {
+        $.each(items, function(key, val) {
             index = ' value="' + key + '"';
             content += $(self.get_prototype('webui-listbox-option', { value: val, index: index }))[0].outerHTML;
         });

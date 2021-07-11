@@ -75,7 +75,15 @@ namespace StreamOutput {
 
     protected:
         Cat(const String &filename, Stream &output, uint8_t flags, size_t bufferSize, Callback callback) :
-            _output(output), _buffer(nullptr), _bufferSize(bufferSize), _printInfo(flags & kPrintInfo), _printCrLfAsText(flags & kPrintCrLfAsText), _printBinary(flags & kPrintBinary), _loopAdded(false), _hasError(false), _callback(callback)
+            _callback(callback),
+            _output(output),
+            _buffer(nullptr),
+            _bufferSize(bufferSize),
+            _printInfo(flags & kPrintInfo),
+            _printCrLfAsText(flags & kPrintCrLfAsText),
+            _printBinary(flags & kPrintBinary),
+            _loopAdded(false),
+            _hasError(false)
         {
             _buffer = new uint8_t[_bufferSize];
             if (_buffer) {
@@ -145,6 +153,7 @@ namespace StreamOutput {
         }
 
     private:
+        Callback _callback;
         File _file;
         Stream &_output;
         uint8_t *_buffer;
@@ -154,7 +163,6 @@ namespace StreamOutput {
         uint8_t _printBinary: 1;
         uint8_t _loopAdded: 1;
         uint8_t _hasError: 1;
-        Callback _callback;
     };
 
 };

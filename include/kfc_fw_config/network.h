@@ -107,7 +107,7 @@ namespace KFCConfigurationClasses {
         class WiFi {
         public:
             CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().network.wifi, SSID, 1, 32);
-            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().network.wifi, Password, 8, 32);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().network.wifi, Password, 8, 64);
             CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().network.wifi, SoftApSSID, 1, 32);
             CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().network.wifi, SoftApPassword, 8, 32);
         };

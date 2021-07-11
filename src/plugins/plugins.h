@@ -6,7 +6,6 @@
 //
 // - for all plugin headers
 // - PinMonitor
-// - WebAlerts
 
 #pragma once
 
@@ -60,7 +59,4 @@
 #endif
 #if IOT_SSDP_SUPPORT
 #include "../src/plugins/ssdp/ssdp.h"
-#endif
-#if WEBUI_ALERTS_ENABLED && WEBUI_ALERTS_USE_MQTT
-#include "../include/WebUIAlerts.h"
 #endif

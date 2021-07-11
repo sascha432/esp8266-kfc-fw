@@ -13,7 +13,6 @@
 #include "status.h"
 #include "reset_detector.h"
 #include "plugins_menu.h"
-#include "WebUIAlerts.h"
 #include "../src/plugins/plugins.h"
 #include  "spgm_auto_def.h"
 
@@ -329,37 +328,6 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         PinMonitor::pinMonitor.printStatus(output);
 #else
         output.print(F("Pin monitor disabled"));
-#endif
-    }
-    else if (key == F("WEBUI_ALERTS_MQTT_SCRIPT")) {
-#if WEBUI_ALERTS_ENABLED && WEBUI_ALERTS_USE_MQTT
-
-        output.printf_P(PSTR(HTML_S(script)));
-        //TODO encode as json
-        auto mode = output.setMode(PrintHtmlEntities::Mode::RAW);
-        // load onready or after the mqtt sccript
-        // lots to do
-        output.printf_P(PSTR("window.mqttClient = { id: 'ClientId', topics: { m: '%s', r: '%s', max_id: %u, }, host: '%s', port: %u, client: new Paho.MQTT.Client(window.mqttClient.host, Number(window.mqttClient.port), window.mqttClient.id) };"),
-            WebAlerts::MQTTStorage::getInstance()._getMessageTopic(true).c_str(),
-            WebAlerts::MQTTStorage::getInstance()._getRemoveTopic().c_str(),
-            WebAlerts::MQTTStorage::getInstance().getMaxAlertId() + 1,
-            PSTR("192.168.0.3"), //Plugins::MQTTClient::getHostname(),
-            9001 //Plugins::MQTTClient::getConfig().getPort()
-        );
-        output.setMode(mode);
-        output.printf_P(PSTR(HTML_E(script)));
-
-#endif
-    }
-    else if (key == F("WEBUI_ALERTS_STATUS")) {
-#if WEBUI_ALERTS_ENABLED
-        if (WebAlerts::Alert::hasOption(WebAlerts::OptionsType::ENABLED)) {
-            output.printf_P(PSTR("Storage %s, rewrite size %d, poll interval %.2fs, WebUI max. height %s"), SPGM(alerts_storage_filename), WEBUI_ALERTS_REWRITE_SIZE, WEBUI_ALERTS_POLL_INTERVAL / 1000.0, WEBUI_ALERTS_MAX_HEIGHT);
-        } else {
-            output.print(F("Disabled"));
-        }
-#else
-        output.print(F("Send to logger"));
 #endif
     }
 #if IOT_ALARM_PLUGIN_ENABLED

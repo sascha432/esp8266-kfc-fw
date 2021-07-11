@@ -282,11 +282,6 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             form.addFormUI(F("Allow to store credentials in a cookie to login automatically"), FormUI::Suffix(FSPGM(days)));
             cfg.addRangeValidatorFor_webui_cookie_lifetime_days(form);
 
-#if WEBUI_ALERTS_ENABLED
-            form.addObjectGetterSetter(F("walert_en"), flags, System::Flags::ConfigStructType::get_bit_is_webalerts_enabled, System::Flags::ConfigStructType::set_bit_is_webalerts_enabled);
-            form.addFormUI(FSPGM(Web_Alerts), FormUI::BoolItems());
-#endif
-
             webUIGroup.end();
 
             auto &schedulerGroup = form.addCardGroup(F("scheduler"), F("Task Scheduler"), true);

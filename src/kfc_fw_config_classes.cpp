@@ -64,7 +64,7 @@ namespace KFCConfigurationClasses {
         is_rest_api_enabled(),
         is_serial2tcp_enabled(true),
         is_webui_enabled(true),
-        is_webalerts_enabled(true),
+        ___reserved4(false),
         // is_ssdp_enabled(true), //TODO disabled cause of crashing
         is_ssdp_enabled(false),
         is_netbios_enabled(true),

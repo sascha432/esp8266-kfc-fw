@@ -18,7 +18,6 @@
 #include "blink_led_timer.h"
 #include "fs_mapping.h"
 #include "WebUISocket.h"
-#include "WebUIAlerts.h"
 #include "web_server.h"
 #include "build.h"
 #include "save_crash.h"
@@ -536,7 +535,7 @@ struct WiFiSystemEventEx : System_Event_t {
 void KFCFWConfiguration::_onWiFiEvent(System_Event_t *orgEventPtr)
 {
     auto &orgEvent = *reinterpret_cast<WiFiSystemEventEx *>(orgEventPtr);
-    __DBG_printf("event=%u(%s)", orgEvent.event, orgEvent.eventToString());
+    __LDBG_printf("event=%u(%s)", orgEvent.event, orgEvent.eventToString());
     switch(orgEvent.event) {
         case EVENT_STAMODE_CONNECTED:
             config._onWiFiConnectCb(orgEvent);
@@ -718,7 +717,7 @@ void KFCFWConfiguration::restoreFactorySettings()
 #if CUSTOM_CONFIG_PRESET
     customSettings();
 #endif
-    WebAlerts::Alert::warning(F("Factory settings restored"));
+    Logger_warning(F("Factory settings restored"));
 
 #if SECURITY_LOGIN_ATTEMPTS
     KFCFS.remove(FSPGM(login_failure_file));

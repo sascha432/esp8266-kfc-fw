@@ -20,7 +20,6 @@
 #include "reset_detector.h"
 #include "save_crash.h"
 #include "plugins_menu.h"
-#include "WebUIAlerts.h"
 #if PRINTF_WRAPPER_ENABLED
 #include <printf_wrapper.h>
 #endif
@@ -399,23 +398,11 @@ void setup()
 
     }
 
-#if WEBUI_ALERTS_ENABLED
-    // read only mode in safe mode
-    // and do not remove non persistent alerts if a crash has been detected
-    WebAlerts::Alert::readStorage(safe_mode ?
-        WebAlerts::RewriteType::READ_ONLY :
-        (resetDetector.hasCrashDetected() ?
-            WebAlerts::RewriteType::KEEP_NON_PERSISTENT :
-            WebAlerts::RewriteType::REMOVE_NON_PERSISTENT)
-    );
-#endif
-
     // __DBG_printf("read config");
     config.read();
     // __DBG_printf("starting safe_mode=%u", safe_mode);
     if (safe_mode) {
 
-        WebAlerts::Alert::warning(F("Running in Safe Mode"), WebAlerts::ExpiresType::REBOOT);
         serialHandler.replaceFirst(&KFC_SAFE_MODE_SERIAL_PORT);
 
         #if AT_MODE_SUPPORTED
@@ -459,19 +446,9 @@ void setup()
         // setup internal or external RTC
         KFCFWConfiguration::setupRTC();
 
-#if WEBUI_ALERTS_ENABLED && WEBUI_ALERTS_USE_MQTT
-        WebAlerts::AbstractStorage::changeStorageToMQTT();
-#endif
-
         #if AT_MODE_SUPPORTED
             at_mode_setup();
         #endif
-
-#if WEBUI_ALERTS_ENABLED
-        if (resetDetector.hasCrashDetected()) {
-            WebAlerts::Alert::error(PrintString(F("System crash detected.<br>%s"), resetDetector.getResetInfo().c_str()));
-        }
-#endif
 
         auto &componentRegister = PluginComponents::RegisterEx::getInstance();
 

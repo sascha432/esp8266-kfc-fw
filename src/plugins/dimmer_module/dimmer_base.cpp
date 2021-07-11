@@ -4,7 +4,6 @@
 
 #include "dimmer_base.h"
 #include <WebUISocket.h>
-#include <WebUIAlerts.h>
 #if IOT_ATOMIC_SUN_V2
 #include "../src/plugins/atomic_sun/atomic_sun_v2.h"
 #else
@@ -92,7 +91,7 @@ void Base::_updateConfig(ConfigType &config, Dimmer::ConfigReaderWriter &reader,
         config.cfg = reader.config().config;
 
         if (config.version.major != DIMMER_FIRMWARE_VERSION_MAJOR || config.version.minor != DIMMER_FIRMWARE_VERSION_MINOR) {
-            WebAlerts::Alert::error(PrintString(F("Dimmer firmware version %u.%u.%u not supported"), config.version.major, config.version.minor, config.version.revision));
+            Logger_error(PrintString(F("Dimmer firmware version %u.%u.%u not supported"), config.version.major, config.version.minor, config.version.revision));
         }
         else {
             LoopFunctions::callOnce([this]() {
@@ -102,7 +101,7 @@ void Base::_updateConfig(ConfigType &config, Dimmer::ConfigReaderWriter &reader,
         }
     }
     else {
-        WebAlerts::Alert::error(F("Reading firmware configuration failed"));
+        Logger_error(F("Reading firmware configuration failed"));
     }
     // failure
     config.version = {};
@@ -149,7 +148,7 @@ void Base::_onReceive(size_t length)
     else if (type == DIMMER_EVENT_TEMPERATURE_ALERT && length == 3) {
         dimmer_over_temperature_event_t event;
         _wire.read(event);
-        WebAlerts::Alert::error(PrintString(F("Dimmer temperature alarm triggered: %u%s > %u%s"), event.current_temp, SPGM(UTF8_degreeC), event.max_temp, SPGM(UTF8_degreeC)));
+        Logger_error(PrintString(F("Dimmer temperature alarm triggered: %u%s > %u%s"), event.current_temp, SPGM(UTF8_degreeC), event.max_temp, SPGM(UTF8_degreeC)));
     }
 }
 
@@ -185,7 +184,7 @@ void Base::readConfig(ConfigType &config)
 void Base::writeConfig(ConfigType &config)
 {
     if (!config.version) {
-        WebAlerts::Alert::error(F("Cannot store invalid firmware configuration"), WebAlerts::ExpiresType::REBOOT);
+        Logger_error(F("Cannot store invalid firmware configuration"));
         return;
     }
     config.cfg.fade_in_time = config.on_fadetime;

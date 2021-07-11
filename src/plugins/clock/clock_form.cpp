@@ -25,16 +25,16 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
     auto &cfg = getWriteableConfig();
 
-#if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
-    using VisualizerType = KFCConfigurationClasses::Plugins::ClockConfig::VisualizerAnimation_t::VisualizerType;
+    #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
+        using VisualizerType = KFCConfigurationClasses::Plugins::ClockConfig::VisualizerAnimation_t::VisualizerType;
 
-    auto visualizerTypeItems = FormUI::Container::List(
-        VisualizerType::RAINBOW, "Rainbow",
-        VisualizerType::RAINBOW_DOUBLE_SIDED, "Rainbow Double Sided",
-        VisualizerType::SINGLE_COLOR, "Single Color",
-        VisualizerType::SINGLE_COLOR_DOUBLE_SIDED, "Single Color Double Sided"
-    );
-#endif
+        auto visualizerTypeItems = FormUI::Container::List(
+            VisualizerType::RAINBOW, "Rainbow",
+            VisualizerType::RAINBOW_DOUBLE_SIDED, "Rainbow Double Sided",
+            VisualizerType::SINGLE_COLOR, "Single Color",
+            VisualizerType::SINGLE_COLOR_DOUBLE_SIDED, "Single Color Double Sided"
+        );
+    #endif
 
     auto animationTypeItems = FormUI::Container::List(
         AnimationType::SOLID, FSPGM(Solid_Color),
@@ -42,26 +42,22 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         AnimationType::FIRE, F("Fire"),
         AnimationType::FLASHING, F("Flash"),
         AnimationType::FADING, F("Color Fade"),
-#if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
+        #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
         AnimationType::VISUALIZER, F("Visualizer"),
-#endif
+        #endif
         AnimationType::INTERLEAVED, F("Interleaved")
     );
 
     #if IOT_LED_MATRIX
-
         auto &ui = form.createWebUI();
         ui.setTitle(F("LED Matrix Configuration"));
         ui.setContainerId(F("led_matrix_settings"));
         ui.setStyle(FormUI::WebUI::StyleType::ACCORDION);
-
     #else
-
         auto &ui = form.createWebUI();
         ui.setTitle(F("Clock Configuration"));
         ui.setContainerId(F("clock_settings"));
         ui.setStyle(FormUI::WebUI::StyleType::ACCORDION);
-
     #endif
 
     if (formName == F("animations")) {
@@ -139,29 +135,29 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
         rainbowGroup.end();
 
-#if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
+        #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
 
-        // --------------------------------------------------------------------
-        auto &visGroup = form.addCardGroup(F("vis"), F("Visualizer"), true);
+            // --------------------------------------------------------------------
+            auto &visGroup = form.addCardGroup(F("vis"), F("Visualizer"), true);
 
-        form.addObjectGetterSetter(F("vln"), FormGetterSetter(cfg.visualizer, type));
-        form.addFormUI(F("Visualization Type"), visualizerTypeItems);
+            form.addObjectGetterSetter(F("vln"), FormGetterSetter(cfg.visualizer, type));
+            form.addFormUI(F("Visualization Type"), visualizerTypeItems);
 
-        form.add(F("vsc"), Color(cfg.visualizer.color).toString(), [&cfg](const String &value, FormUI::Field::BaseField &field, bool store) {
-            if (store) {
-                cfg.visualizer.color = Color::fromString(value);
-            }
-            return false;
-        });
-        form.addFormUI(F("Color For Single Color Mode"));
+            form.add(F("vsc"), Color(cfg.visualizer.color).toString(), [&cfg](const String &value, FormUI::Field::BaseField &field, bool store) {
+                if (store) {
+                    cfg.visualizer.color = Color::fromString(value);
+                }
+                return false;
+            });
+            form.addFormUI(F("Color For Single Color Mode"));
 
-        form.addObjectGetterSetter(F("vport"), FormGetterSetter(cfg.visualizer, port));
-        form.addFormUI(F("UDP Port"));
-        cfg.visualizer.addRangeValidatorFor_port(form);
+            form.addObjectGetterSetter(F("vport"), FormGetterSetter(cfg.visualizer, port));
+            form.addFormUI(F("UDP Port"));
+            cfg.visualizer.addRangeValidatorFor_port(form);
 
-        visGroup.end();
+            visGroup.end();
 
-#endif
+        #endif
 
         // --------------------------------------------------------------------
 
@@ -283,8 +279,7 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
         protectionGroup.end();
 
-        IF_IOT_IOT_LED_MATRIX_FAN_CONTROL(
-
+        #if IOT_LED_MATRIX_FAN_CONTROL
             auto &fanGroup = form.addCardGroup(F("fan"), F("Fan"), true);
 
             form.addObjectGetterSetter(F("fs"), cfg, cfg.get_bits_fan_speed, cfg.set_bits_fan_speed);
@@ -300,8 +295,7 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
             form.addValidator(FormUI::Validator::Range(0, 255));
 
             fanGroup.end();
-
-        )
+        #endif
 
         auto &powerGroup = form.addCardGroup(F("pow"), F("Power"), true);
 
@@ -333,7 +327,7 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         auto &mainGroup = form.addCardGroup(FSPGM(config));
 
         // --------------------------------------------------------------------
-        IF_IOT_CLOCK_SAVE_STATE(
+        #if IOT_CLOCK_SAVE_STATE
             auto initialStateItems = FormUI::Container::List(
                 Clock::InitialStateType::OFF, F("Turn Off"),
                 Clock::InitialStateType::ON, F("Turn On"),
@@ -342,7 +336,7 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
             form.addObjectGetterSetter(F("is"), cfg, cfg.get_int_initial_state, cfg.set_int_initial_state);
             form.addFormUI(F("After Reset"), initialStateItems);
-        )
+        #endif
 
         form.addObjectGetterSetter(F("br"), cfg, cfg.get_bits_brightness, cfg.set_bits_brightness);
         form.addFormUI(FormUI::Type::RANGE_SLIDER, FSPGM(Brightness), FormUI::MinMax(cfg.kMinValueFor_brightness, cfg.kMaxValueFor_brightness));
@@ -357,37 +351,33 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
             cfg.addRangeValidatorFor_motion_auto_off(form);
         #endif
 
-        IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(
+        #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
             form.addObjectGetterSetter(F("auto_br"), cfg, cfg.get_bits_auto_brightness, cfg.set_bits_auto_brightness);
             form.addFormUI(F("Auto Brightness Value"), FormUI::SuffixHtml(F("<span class=\"input-group-text\">0-1023</span><span id=\"abr_sv\" class=\"input-group-text\"></span><button class=\"btn btn-secondary\" type=\"button\" id=\"dis_auto_br\">Disable</button>")));
             cfg.addRangeValidatorFor_auto_brightness(form);
-        )
+        #endif
 
         form.addObjectGetterSetter(F("ft"), FormGetterSetter(cfg, fading_time));
         form.addFormUI(F("Fading Time From 0 To 100%"), FormUI::Suffix(FSPGM(seconds)));
         cfg.addRangeValidatorFor_fading_time(form, true);
 
-        IF_IOT_CLOCK(
+        #if IOT_LED_MATRIX == 0
             form.addObjectGetterSetter(F("tfmt"), FormGetterSetter(cfg, time_format_24h));
             form.addFormUI(F("Time Format"), FormUI::BoolItems(F("24h"), F("12h")));
 
             form.addObjectGetterSetter(F("csp"), FormGetterSetter(cfg, blink_colon_speed));
             form.addFormUI(F("Colon Blink Speed"), FormUI::Suffix(F("milliseconds")), FormUI::IntAttribute(F("disabled-value"), 0), FormUI::FPStringAttribute(F("disabled-value-placeholder"), F("Solid")));
             cfg.addRangeValidatorFor_blink_colon_speed(form, true);
-        )
+        #endif
 
         #if IOT_CLOCK_USE_DITHERING
-
-        form.addObjectGetterSetter(F("dt"), FormGetterSetter(cfg, dithering));
+            form.addObjectGetterSetter(F("dt"), FormGetterSetter(cfg, dithering));
             form.addFormUI(F("FastLED Temporal Dithering"), FormUI::BoolItems(F("Enable"), F("Disable")));
-
         #endif
 
         #if IOT_LED_MATRIX_STANDBY_PIN != -1
-
             form.addObjectGetterSetter(F("sbl"), cfg, cfg.get_bits_standby_led, cfg.set_bits_standby_led);
             form.addFormUI(F("Standby LED"), FormUI::BoolItems(F("Enable"), F("Disable")));
-
         #endif
 
         mainGroup.end();

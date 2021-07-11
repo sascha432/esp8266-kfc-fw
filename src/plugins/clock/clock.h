@@ -275,7 +275,8 @@ private:
     AnimationType _getAnimationType(String name);
 
 public:
-    void enableLoop(bool enable, bool clear = true);
+    void enableLoop(bool enable);
+    void enableLoopNoClear(bool enable);
 
     void setColorAndRefresh(Color color);
     // time represents fading level 0 to max, the fading time is relative to the different between the brightness levels
@@ -385,7 +386,7 @@ private:
 private:
     void _reset();
     void _enable();
-    void _disable(uint8_t delayMillis = 100);
+    void _disable(uint8_t delayMillis = 10);
     bool _getEnabledState() const {
         return _config.enabled && _isEnabled && _targetBrightness && _tempBrightness != -1;
     }
@@ -618,7 +619,6 @@ private:
     Clock::BlendAnimation *_blendAnimation;
     bool _running;
     Clock::ShowMethodType _method;
-    bool _debug;
 
 public:
     static Clock::ShowMethodType getShowMethod();

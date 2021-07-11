@@ -386,7 +386,7 @@ inline static bool append_crash_data(SaveCrash::FlashStorage &fs, SPIFlash::Flas
 #include "NeoPixelEspEx.h"
 #endif
 
-inline static void _custom_crash_callback(struct rst_info *rst_info, uint32_t stack, uint32_t stack_end)
+inline __attribute__((__always_inline__)) static void _custom_crash_callback(struct rst_info *rst_info, uint32_t stack, uint32_t stack_end)
 {
     register uint32_t sp asm("a1");
     uint32_t sp_dump = sp;
@@ -395,8 +395,7 @@ inline static void _custom_crash_callback(struct rst_info *rst_info, uint32_t st
     auto header = SaveCrash::Data(time(nullptr), stack, stack_end, sp_dump, (void *)umm_last_fail_alloc_addr, umm_last_fail_alloc_size, *rst_info);
 
 #if IOT_CLOCK_WS2812_OUTPUT
-    pinMode(IOT_CLOCK_WS2812_OUTPUT, OUTPUT);
-    NeoPixel_espShow(IOT_CLOCK_WS2812_OUTPUT, nullptr, IOT_CLOCK_NUM_PIXELS * 3, 0);
+    NeoPixelEx::forceClear(IOT_CLOCK_WS2812_OUTPUT, IOT_CLOCK_NUM_PIXELS);
     pinMode(IOT_CLOCK_WS2812_OUTPUT, INPUT);
 #endif
 
@@ -452,13 +451,7 @@ inline static void _custom_crash_callback(struct rst_info *rst_info, uint32_t st
 
 void custom_crash_callback(struct rst_info *rst_info, uint32_t stack, uint32_t stack_end)
 {
-    #if NEOPIXEL_CLEAR_ON_EXCEPTION == 1
-        NeoPixel_clearStrips();
-    #endif
     _custom_crash_callback(rst_info, stack, stack_end);
-    #if NEOPIXEL_CLEAR_ON_EXCEPTION == 2
-        NeoPixel_clearStrips();
-    #endif
 }
 
 #endif

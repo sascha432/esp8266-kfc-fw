@@ -13,6 +13,11 @@
 
 using KFCConfigurationClasses::Plugins;
 
+class AmbientLightSensorHandler {
+public:
+
+//ADCManager::getInstance().addAutoReadTimer(Event::seconds(1), Event::milliseconds(30), 24);
+};
 
 class Sensor_AmbientLight : public MQTT::Sensor {
 public:
@@ -37,6 +42,7 @@ public:
 
 private:
     String _name;
+    AmbientLightSensorHandler *_handler;
 };
 
 #endif

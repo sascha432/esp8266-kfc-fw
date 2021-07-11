@@ -102,10 +102,6 @@ bool ClockPlugin::_loopSyncingAnimation(LoopOptionsType &options)
 
 void ClockPlugin::_loop()
 {
-    return;
-    if (_debug) {
-        return;
-    }
     //
     LoopOptionsType options(*this);
     _display.setBrightness(_getBrightness());
@@ -124,18 +120,18 @@ void ClockPlugin::_loop()
         // start update process
         _lastUpdateTime = millis();
 
-        IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(
+        #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
             if (_loopDisplayLightSensor(options)) {
                 return;
             }
-        )
+        #endif
 
-        IF_IOT_CLOCK_PIXEL_SYNC_ANIMATION(
+        #if IOT_CLOCK_PIXEL_SYNC_ANIMATION
             if (_loopSyncingAnimation(options)) {
                 // ...
             }
             else
-        )
+        #endif
         if (options.doRedraw()) {
 
             IF_IOT_CLOCK(
@@ -178,5 +174,4 @@ void ClockPlugin::_loop()
     }
 
     _display.show();
-    delay(5);
 }

@@ -247,6 +247,25 @@ void KFCFWConfiguration::_onWiFiConnectCb(const WiFiEventStationModeConnected &e
         Logger_notice(F("WiFi connected to %s%s"), event.ssid.c_str(), append.c_str());
 #if ENABLE_DEEP_SLEEP
         config.storeQuickConnect(event.bssid, event.channel);
+
+        // get default WiFi settings
+        struct station_config defaultCfg;
+        wifi_station_get_config_default(&defaultCfg);
+
+        struct station_config config = {};
+        strncpy(reinterpret_cast<char *>(config.ssid), event.ssid.c_str(), sizeof(config.ssid));
+        strncpy(reinterpret_cast<char *>(config.password), Network::WiFi::getPassword(), sizeof(config.password));
+        memcpy(config.bssid, event.bssid, sizeof(event.bssid));
+        config.bssid_set = 0;
+
+#error TODO check
+// to use quickconnect, WiFi needs to be enabled during boot and the default config loaded
+
+        // check if something has changed
+        if (memcmp(&config, &defaultCfg, sizeof(config)) != 0) {
+            wifi_station_set_config(&config);
+            __DBG_printf("updated WiFi defualt configuration");
+        }
 #endif
 
 #if defined(ESP32)
@@ -1047,6 +1066,7 @@ void KFCFWConfiguration::wifiQuickConnect()
     if (esp_wifi_get_config(ESP_IF_WIFI_STA, &_config) == ESP_OK) {
 #elif defined(ESP8266)
 
+    WiFi.persistent(false);
     struct station_config config;
     if (wifi_station_get_config_default(&config)) {
 #endif
@@ -1063,6 +1083,7 @@ void KFCFWConfiguration::wifiQuickConnect()
             // bssidPtr = nullptr;
         }
 
+        WiFi.per
 
         if (channel <= 0 || !bssidPtr) {
 
@@ -1137,6 +1158,10 @@ void KFCFWConfiguration::enterDeepSleep(milliseconds time, RFMode mode, uint16_t
 
 static void invoke_ESP_restart()
 {
+#if IOT_CLOCK_WS2812_OUTPUT
+    NeoPixelEx::forceClear(IOT_CLOCK_WS2812_OUTPUT, IOT_CLOCK_NUM_PIXELS);
+    pinMode(IOT_CLOCK_WS2812_OUTPUT, INPUT);
+#endif
 #if __LED_BUILTIN == NEOPIXEL_PIN_ID
     BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::OFF);
 #endif
@@ -1149,10 +1174,6 @@ static void invoke_ESP_restart()
 
 void KFCFWConfiguration::resetDevice(bool safeMode)
 {
-    #if NEOPIXEL_CLEAR_ON_RESET
-        NeoPixel_clearStrips();
-    #endif
-
     String msg = F("Device is being reset");
     if (safeMode) {
         msg += F(" in SAFE MODE");
@@ -1168,7 +1189,7 @@ void KFCFWConfiguration::resetDevice(bool safeMode)
 #if RTC_SUPPORT == 0
     RTCMemoryManager::storeTime();
 #endif
-    ESP.restart();
+    invoke_ESP_restart();
 }
 
 // enable debugging output (::printf) for shutdown sequence
@@ -1183,9 +1204,6 @@ void KFCFWConfiguration::resetDevice(bool safeMode)
 void KFCFWConfiguration::restartDevice(bool safeMode)
 {
     __LDBG_println();
-    #if NEOPIXEL_CLEAR_ON_RESET
-        NeoPixel_clearStrips();
-    #endif
 
     String msg = F("Device is being restarted");
     if (safeMode) {

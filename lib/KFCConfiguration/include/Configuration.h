@@ -147,10 +147,10 @@ public:
     using Header = ConfigurationHelper::Header;
 
     // iterators must not change when the list is modified
-    // ParameterList = std::list<ConfigurationParameter>;
-    using ParameterList = stdex::chunked_list<ConfigurationParameter, 6>;
+    using ParameterList = std::list<ConfigurationParameter>;
 
-    static constexpr size_t ParameterListChunkSize = ParameterList::chunk_element_count * 8 + sizeof(uint32_t); ; //ParameterList::chunk_size;
+    // using ParameterList = stdex::chunked_list<ConfigurationParameter, 6>;
+    // static constexpr size_t ParameterListChunkSize = ParameterList::chunk_element_count * 8 + sizeof(uint32_t); ; //ParameterList::chunk_size;
 
     // Offset 0
     //  some data...

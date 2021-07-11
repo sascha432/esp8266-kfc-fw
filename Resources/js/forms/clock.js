@@ -9,7 +9,7 @@ $(function() {
                     $('#auto_br').val(-1);
             });
             function load_sensor_value() {
-                $.get('/ambient_light_sensor?SID=' + $.getSessionId(), function (value) {
+                $.get('/ambient_light_sensor?SID=' + $.getSessionId() + '&id=0', function (value) {
                     value = parseInt(value);
                     if (value > 0) {
                         $('#abr_sv').html('Sensor&nbsp;<strong>' + value + '</strong>');

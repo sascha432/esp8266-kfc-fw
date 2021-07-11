@@ -246,11 +246,17 @@
 #   define IOT_LED_MATRIX_FAN_CONTROL 0
 #endif
 
-#ifndef IF_IOT_IOT_LED_MATRIX_FAN_CONTROL
+#if IOT_CLOCK_HAVE_OVERHEATED_PIN != -1
+#       define IF_IOT_IOT_LED_OVERHEATED_PIN(...) __VA_ARGS__
+#else
+#       define IF_IOT_IOT_LED_OVERHEATED_PIN(...)
+#endif
+
+#ifndef IF_IOT_LED_MATRIX_FAN_CONTROL
 #   if IOT_LED_MATRIX_FAN_CONTROL
-#       define IF_IOT_IOT_LED_MATRIX_FAN_CONTROL(...) __VA_ARGS__
+#       define IF_IOT_LED_MATRIX_FAN_CONTROL(...) __VA_ARGS__
 #   else
-#       define IF_IOT_IOT_LED_MATRIX_FAN_CONTROL(...)
+#       define IF_IOT_LED_MATRIX_FAN_CONTROL(...)
 #   endif
 #endif
 

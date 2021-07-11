@@ -13,6 +13,11 @@
 
 using KFCConfigurationClasses::Plugins;
 
+class MotionSensorHandler {
+public:
+    virtual void motionDetected() = 0;
+    virtual void motionTimeout() = 0;
+};
 
 class Sensor_Motion : public MQTT::Sensor {
 public:
@@ -37,6 +42,7 @@ public:
 
 private:
     String _name;
+    MotionSensorHandler *_handler;
 };
 
 #endif

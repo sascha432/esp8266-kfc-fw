@@ -504,8 +504,7 @@ namespace Clock {
         }
 
         void setDither(bool enable) {
-            _controller.setDither(enable ? BINARY_DITHER : DISABLE_DITHER);
-            FastLED.setDither(_controller.getDither());
+            FastLED.setDither(enable ? BINARY_DITHER : DISABLE_DITHER);
         }
 
         void reset() {
@@ -523,15 +522,18 @@ namespace Clock {
 
         void show(uint8_t brightness) {
             if (getNeopixelShowMethodInt() == static_cast<uint8_t>(Clock::ShowMethodType::FASTLED)) {
+                #if NEOPIXEL_DEBUG
+                    NeoPixelEx::Context::validate(nullptr).getDebugContext().togglePin();
+                #endif
                 FastLED.show(brightness);
             }
             else if (getNeopixelShowMethodInt() == static_cast<uint8_t>(Clock::ShowMethodType::NEOPIXEL)) {
-                NeoPixel_espShow(IOT_CLOCK_WS2812_OUTPUT, reinterpret_cast<uint8_t *>(_pixels), kNumPixels, brightness);
+                NeoPixelEx::StaticStrip::externalShow<NeoPixelEx::TimingsWS2812, NeoPixelEx::CRGB>(IOT_CLOCK_WS2812_OUTPUT, reinterpret_cast<uint8_t *>(_pixels), kNumPixels, brightness, NeoPixelEx::Context::validate(nullptr));
             }
         }
 
         void delay(unsigned long ms) {
-            if (can_yield() && (getNeopixelShowMethodInt() == static_cast<uint8_t>(Clock::ShowMethodType::FASTLED)) && (_controller.getDither() != DISABLE_DITHER) && (FastLED.getBrightness() != 0) && (FastLED.getBrightness() != 255)) {
+            if ((getNeopixelShowMethodInt() == static_cast<uint8_t>(Clock::ShowMethodType::FASTLED)) && (_controller.getDither() != DISABLE_DITHER) && (FastLED.getBrightness() != 0) && (FastLED.getBrightness() != 255)) {
                 // use FastLED.delay for dithering
                 FastLED.delay(ms);
             }

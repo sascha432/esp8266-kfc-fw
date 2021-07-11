@@ -197,7 +197,6 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
 //                 auto duration = args.toIntMinMax(1, 100, 5000, 100);
 //                 args.print(F("testing color=%06x brightness 255 duration %u mspower_limit=off. debug mode enabled, reset device to disable"), color, duration);
 
-//                 _debug = true;
 //                 FastLED.setMaxPowerInMilliWatts(0, nullptr);
 
 //                 _setBrightness(5);
@@ -365,8 +364,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             enableLoop(true);
             if (args.isTrue(1)) {
                 _display.clear();
-                pinMode(IOT_CLOCK_WS2812_OUTPUT, OUTPUT);
-                NeoPixel_espShow(IOT_CLOCK_WS2812_OUTPUT, nullptr, IOT_CLOCK_NUM_PIXELS * 3, 0);
+                NeoPixelEx::forceClear(IOT_CLOCK_WS2812_OUTPUT, IOT_CLOCK_NUM_PIXELS);
             }
             else {
                 _display.setBrightness(32);
@@ -383,7 +381,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
         }
         // pr[int],<display=00:00:00>
         else if (args.startsWithIgnoreCase(0, F("pr"))) {
-            IF_IOT_CLOCK_MODE(
+            #if IOT_LED_MATRIX == 0
                 enableLoop(false);
                 if (args.size() < 1) {
                     _display.clear();
@@ -391,15 +389,17 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                     args.print(F("display cleared"));
                 }
                 else {
-                    auto text = args.get(0);
-                    args.printf_P(PSTR("display '%s'"), text);
+                    auto text = args.get(1);
+                    args.print(F("display '%s'"), text);
                     _display.clear();
                     _display.fill(0x000020);
                     _display.setBrightness(255);
                     _display.print(text);
                     _display.show();
                 }
-            )
+            #else
+                args.print(F("print not supported"));
+            #endif
         }
         // lo[op],<enable|disable>
         else if (args.startsWithIgnoreCase(0, F("lo"))) {
@@ -489,7 +489,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
         }
         return true;
     }
-    IF_IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL(
+    #if IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
         else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LMVIEW))) {
             auto interval = static_cast<uint32_t>(args.toInt(0, 30));
             if (interval != 0) {
@@ -645,7 +645,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             }
             return true;
         }
-    )
+    #endif
     return false;
 }
 

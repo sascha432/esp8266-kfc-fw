@@ -127,10 +127,10 @@ void ClockPlugin::onConnect()
     subscribe(MQTTClient::formatTopic(FSPGM(_color_set)));
     subscribe(MQTTClient::formatTopic(FSPGM(_brightness_set)));
     subscribe(MQTTClient::formatTopic(FSPGM(_effect_set)));
-    IF_IOT_IOT_LED_MATRIX_FAN_CONTROL(
+    #if IOT_LED_MATRIX_FAN_CONTROL
         subscribe(MQTTClient::formatTopic(F("/fan/on/set")));
         subscribe(MQTTClient::formatTopic(F("/fan/speed/set")));
-    )
+    #endif
     _publishState();
 }
 
@@ -138,16 +138,18 @@ void ClockPlugin::onMessage(const char *topic, const  char *payload, size_t len)
 {
     __LDBG_printf("topic=%s payload=%s", topic, payload);
 
-    _resetAlarm();
+    #if IOT_ALARM_PLUGIN_ENABLED
+        _resetAlarm();
+    #endif
 
-    IF_IOT_IOT_LED_MATRIX_FAN_CONTROL(
+    #if IOT_LED_MATRIX_FAN_CONTROL
         if (!strcmp_end_P(topic, PSTR("/fan/on/set"))) {
             __DBG_printf("/fan/on/set %s", payload);
         }
         else if (!strcmp_end_P(topic, PSTR("/fan/speed/set"))) {
             __DBG_printf("/fan/speed/set %s", payload);
         } else
-    )
+    #endif
     if (!strcmp_end_P(topic, SPGM(_effect_set))) {
         auto animation = _getAnimationType(payload);
         if (animation != AnimationType::MAX) {
@@ -197,18 +199,18 @@ void ClockPlugin::_publishState()
         publish(MQTTClient::formatTopic(FSPGM(_brightness_state)), true, String(_targetBrightness == 0 ? _savedBrightness : _targetBrightness));
         publish(MQTTClient::formatTopic(FSPGM(_color_state)), true, getColor().implode(','));
         publish(MQTTClient::formatTopic(FSPGM(_effect_state)), true, Clock::ConfigType::getAnimationName(_config.getAnimation()));
-        IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(
+        #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
             publish(MQTTClient::formatTopic(FSPGM(light_sensor)), true, String(_autoBrightnessValue * 100, 0));
-        )
-        IF_IOT_CLOCK_DISPLAY_POWER_CONSUMPTION(
+        #endif
+        #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
             publish(MQTTClient::formatTopic(F("power")), true, String(_getPowerLevel(), 2));
-        )
-        IF_IOT_CLOCK_HAVE_MOTION_SENSOR(
+        #endif
+        #if IOT_CLOCK_HAVE_MOTION_SENSOR
             publish(MQTT::Client::formatTopic(F("motion")), true, MQTT::Client::toBoolOnOff(_motionState));
-        )
-        IF_IOT_IOT_LED_MATRIX_FAN_CONTROL(
+        #endif
+        #if IOT_LED_MATRIX_FAN_CONTROL
             publish(MQTT::Client::formatTopic(F("/fan/state")), true, MQTT::Client::toBoolOnOff(_fanSpeed >= _config.min_fan_speed));
-        )
+        #endif
     }
 
     _broadcastWebUI();

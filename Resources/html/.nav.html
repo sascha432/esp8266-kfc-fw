@@ -9,12 +9,6 @@
         </a>
     </div>
 
-    <!--#if (defined(WEBUI_ALERTS_ENABLED) && WEBUI_ALERTS_ENABLED)-->
-    <div class="navbar-text last navbar-collapsed-show hidden">
-        <a href="#" class="btn btn-danger"><span class="alerts-count">0</span></a>
-    </div>
-    <!--#endif-->
-
     <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarMain" aria-controls="navbarMain" aria-expanded="false" aria-label="Toggle navigation">
         <span class="oi oi-menu" aria-hidden="true"></span>
     </button>
@@ -28,13 +22,6 @@
             <a href="/reboot.html" class="btn btn-danger%IS_CONFIG_DIRTY%">
                 <span class="oi oi-reload text-white"></span>
             </a>
-            <!--#if (defined(WEBUI_ALERTS_ENABLED) && WEBUI_ALERTS_ENABLED)-->
-            <button class="btn btn-danger hidden" id="webui-alerts-enabled">
-                <span class="alerts-count-text">Alerts</span>
-                <span class="badge badge-light alerts-count">0</span>
-            </button>
-            %WEBUI_ALERTS_MQTT_SCRIPT%
-            <!--#endif-->
         </form>
         <ul class="navbar-nav pl-3">
             <li class="nav-item">

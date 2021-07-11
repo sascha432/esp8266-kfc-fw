@@ -31,7 +31,6 @@
 #include "serial_handler.h"
 #include "blink_led_timer.h"
 #include "plugins.h"
-#include "WebUIAlerts.h"
 #include "PinMonitor.h"
 #include <NeoPixelEx.h>
 #if HAVE_PCF8574
@@ -352,7 +351,6 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PLG, "PLG", "<list|start|stop|add-blacklis
 
 #if DEBUG
 
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(ALERT, "ALERT", "<message>[,<type|0-3>]", "Add WebUI alert");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DSH, "DSH", "Display serial handler");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(FSM, "FSM", "Display FS mapping");
 #if PIN_MONITOR
@@ -2231,31 +2229,6 @@ void at_mode_serial_handle_event(String &commandString)
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(FSM))) {
         // Mappings::getInstance().dump(output);
     }
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(ALERT))) {
-        if (args.size() > 0) {
-            auto msg = args.toString(0);
-            auto id = WebAlerts::Alert::add(args.toString(0), static_cast<WebAlerts::Type>(args.toIntMinMax(1, (int)(WebAlerts::Type::NONE) + 1, (int)(WebAlerts::Type::MAX) - 1, (int)(WebAlerts::Type::SUCCESS))));
-            args.print(F("Alert added id %u"), id);
-        }
-        if (WebAlerts::Alert::hasOption(WebAlerts::OptionsType::GET_ALERTS)) {
-            auto file = KFCFS.open(FSPGM(alerts_storage_filename), FileOpenMode::read);
-            auto size = file.size();
-            file.close();
-            args.print(F("Storage: %s\nSize: %u"), SPGM(alerts_storage_filename), size);
-        }
-    }
-// #if PIN_MONITOR
-//             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(PINM))) {
-//                 if (args.isTrue(0) || !pinMonitor.isDebugRunning()) {
-//                     args.print(F("starting debug mode"));
-//                     pinMonitor.beginDebug(args.getStream(), args.toMillis(1, 500, ~0, 1000U));
-//                 }
-//                 else {
-//                     args.print(F("ending debug mode"));
-//                     pinMonitor.endDebug();
-//                 }
-//             }
-// #endif
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RSSI)) || args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(HEAP)) || args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(GPIO))) {
         if (args.requireArgs(0, 1)) {
             auto interval = args.toMillis(0, 0, 3600 * 1000, 0, String('s'));

@@ -17,7 +17,6 @@ else:
 
     # dump script tags
     files = [
-        "./Resources/js/webui-alerts.js",
         "./Resources/js/forms.js",
         "./Resources/js/forms/alarm.js",
         "./Resources/js/forms/alive-check.js",

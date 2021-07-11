@@ -39,7 +39,7 @@ namespace KFCConfigurationClasses {
                 CREATE_BOOL_BITFIELD(is_rest_api_enabled);
                 CREATE_BOOL_BITFIELD(is_serial2tcp_enabled);
                 CREATE_BOOL_BITFIELD(is_webui_enabled);
-                CREATE_BOOL_BITFIELD(is_webalerts_enabled);
+                bool ___reserved4: 1;
                 CREATE_BOOL_BITFIELD(is_ssdp_enabled);
                 CREATE_BOOL_BITFIELD(is_netbios_enabled);
                 CREATE_BOOL_BITFIELD(is_log_login_failures_enabled);

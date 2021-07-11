@@ -447,7 +447,7 @@ namespace KFCConfigurationClasses {
                 }
                 tmp.concat(iterator, _strlen(iterator));
             }
-            return tmp;;
+            return tmp;
         }
 
         uint16_t _strlen(const char *data) const {

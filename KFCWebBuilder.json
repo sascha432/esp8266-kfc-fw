@@ -113,14 +113,6 @@
             "#if !SERIAL2TCP_SUPPORT": [
                 "./Resources/html/serial2tcp.html",
                 "./Resources/js/forms/serial2tcp.js"
-            ],
-            "#if !WEBUI_ALERTS_USE_MQTT": [
-                // "./lib/KFCWebBuilder/Resources/js/mqtt.min.js",
-                "./lib/KFCWebBuilder/Resources/paho.mqtt.javascript/dist/mqttws31.js"
-            ],
-            "#if !WEBUI_ALERTS_ENABLED": [
-                "./Resources/js/webui-alerts.js",
-                "./Resources/css/alert-container.css"
             ]
         },
         "groups": {
@@ -135,11 +127,8 @@
                         "./lib/KFCWebBuilder/Resources/js/rangeslider.min.js",
                         "./lib/KFCWebBuilder/Resources/bootstrap-colorpickersliders-master/dist/tinycolor-min.js",
                         "./lib/KFCWebBuilder/Resources/bootstrap-colorpickersliders-master/dist/bootstrap.colorpickersliders.js",
-                        //"./lib/KFCWebBuilder/Resources/js/mqtt.min.js",
-                        "./lib/KFCWebBuilder/Resources/paho.mqtt.javascript/dist/mqttws31.js",
                         "./Resources/js/jQuery.base64.js",
                         "./Resources/js/common.js",
-                        "./Resources/js/webui-alerts.js",
                         "./Resources/js/forms.js",
                         "./Resources/js/forms/*.js",
                         "./Resources/js/sync-time.js",
@@ -194,7 +183,6 @@
                         "./Resources/css/http2serial.css",
                         "./Resources/css/ping-console.css",
                         "./Resources/css/nav-alerts.css",
-                        "./Resources/css/alert-container.css",
                         "./Resources/css/webui-component.css",
                         "./Resources/css/rangeslider.css",
                         "./Resources/css/form-help-block.css",

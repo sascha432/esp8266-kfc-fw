@@ -2,6 +2,9 @@
 
 ## Version 0.0.5
 
+- Removed persistant WiFi settings and improved stability
+- WebServer logging to Serial
+- Removed WebAlerts
 - Support for GDBStub
 - framework-arduinoespressif8266 3.1.0  / Arduino Core 3.0.1-dev
 - Cleanup of the Visual Studio mock libary for 3.0.0

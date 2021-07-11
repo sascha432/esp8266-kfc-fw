@@ -81,7 +81,20 @@ namespace SPIFlash {
         {
         }
 
+        operator uint32_t *() {
+            return reinterpret_cast<uint32_t *>(this);
+        }
+
+        operator const uint32_t *() const {
+            return reinterpret_cast<const uint32_t *>(this);
+        }
+
         operator bool() const {
+            return hasMagic();
+        }
+
+        inline __attribute__((__always_inline__))
+        bool hasMagic() const {
             return _magic == kFlashMagic;
         }
 

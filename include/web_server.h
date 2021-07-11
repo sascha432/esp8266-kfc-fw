@@ -8,7 +8,12 @@
 #if WEBSERVER_SUPPORT
 
 #ifndef DEBUG_WEB_SERVER
-#define DEBUG_WEB_SERVER                    0
+#define DEBUG_WEB_SERVER 0
+#endif
+
+// enable logging HTTP requests to Serial
+#ifndef WEBSERVER_LOG_SERIAL
+#define WEBSERVER_LOG_SERIAL 1
 #endif
 
 #include <Arduino_compat.h>
@@ -222,6 +227,8 @@ namespace WebServer {
         bool _isPublic(const String &pathString) const;
         bool _clientAcceptsGzip(AsyncWebServerRequest *request) const;
 
+        static void _logRequest(AsyncWebServerRequest *request, AsyncWebServerResponse *response);
+
 #if ENABLE_ARDUINO_OTA
 
     public:
@@ -338,11 +345,20 @@ namespace WebServer {
     {
         auto response = _beginFileResponse(mapping, formName, headers, client_accepts_gzip, isAuthenticated, request, webTemplate);
         if (response) {
+            _logRequest(request, response);
             request->send(response);
             return true;
         }
+        _logRequest(request, response);
         return false;
     }
+
+#if WEBSERVER_LOG_SERIAL == 0
+    inline void Plugin::_logRequest(AsyncWebServerRequest *request, AsyncWebServerResponse *response)
+    {
+    }
+#endif
+
 
     class AsyncWebServerEx : public AsyncWebServer {
     public:

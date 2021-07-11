@@ -26,7 +26,6 @@
 #include "web_socket.h"
 #include "web_server_action.h"
 #include "WebUISocket.h"
-#include "WebUIAlerts.h"
 #include "kfc_fw_config.h"
 #include "failure_counter.h"
 #include "save_crash.h"
@@ -211,7 +210,9 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
     // --------------------------------------------------------------------
     else if (url == F("/sync-time")) {
         if (!plugin.isAuthenticated(request)) {
-            request->send(403);
+            auto response = request->beginResponse(403);
+            _logRequest(request, response);
+            request->send(response);
             return;
         }
         headers.addNoCache(true);
@@ -233,7 +234,9 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
     // --------------------------------------------------------------------
     else if (url == F("/scan-wifi")) {
         if (!plugin.isAuthenticated(request)) {
-            request->send(403, FSPGM(mime_text_html));
+            auto response = request->beginResponse(403, FSPGM(mime_text_html));
+            _logRequest(request, response);
+            request->send(response);
             return;
         }
         headers.addNoCache();
@@ -255,7 +258,9 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
     // --------------------------------------------------------------------
     else if (url == F("/mqtt-publish-ad.html")) {
         if (!plugin.isAuthenticated(request)) {
-            request->send(403, FSPGM(mime_text_html));
+            auto response = request->beginResponse(403, FSPGM(mime_text_html));
+            _logRequest(request, response);
+            request->send(response);
             return;
         }
 
@@ -299,7 +304,9 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
     // --------------------------------------------------------------------
     else if (url == F("/zeroconf")) {
         if (!plugin.isAuthenticated(request)) {
-            request->send(403);
+            auto response = request->beginResponse(403);
+            _logRequest(request, response);
+            request->send(response);
             return;
         }
         headers.addNoCache(true);
@@ -309,7 +316,9 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
     // --------------------------------------------------------------------
     else if (url == F("/savecrash.json")) {
         if (!plugin.isAuthenticated(request)) {
-            request->send(403);
+            auto response = request->beginResponse(403);
+            _logRequest(request, response);
+            request->send(response);
             return;
         }
         headers.addNoCache(true);
@@ -323,6 +332,7 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
 
     // handle response
     if (response) {
+        _logRequest(request, response);
         request->send(response);
         return;
     }
@@ -391,6 +401,7 @@ bool Plugin::sendFileResponse(uint16_t code, const String &path, AsyncWebServerR
             response->setCode(code);
         }
         headers.setResponseHeaders(response);
+        _logRequest(request, response);
         request->send(response);
         return true;
     }
@@ -425,6 +436,7 @@ void Plugin::message(AsyncWebServerRequest *request, MessageType type, const Str
         return;
     }
     auto response = request->beginResponse(200, FSPGM(mime_text_plain), title + '\n' + message + F("\n\n(File system read error occurred during request)"));
+    _logRequest(request, response);
     request->send(response);
 }
 
@@ -450,18 +462,44 @@ void Plugin::send(uint16_t httpCode, AsyncWebServerRequest *request, const Strin
 
     auto response = request->beginResponse(httpCode);
     headers.setResponseHeaders(response);
+    _logRequest(request, response);
     request->send(response);
 }
+
+#if WEBSERVER_LOG_SERIAL
+void Plugin::_logRequest(AsyncWebServerRequest *request, AsyncWebServerResponse *response)
+{
+    PrintString log;
+    IPAddress(request->client()->getRemoteAddress()).printTo(log);
+    log.strftime_P(PSTR(" [%m/%d/%Y %H:%M:%S] "), time(nullptr));
+    log.print(request->methodToString());
+    log.print(F(" \""));
+    log.print(request->url());
+    if (response) {
+        auto contentLength = response->getContentLength();
+        auto contentLengthStr = contentLength ? String(contentLength) : String('-');
+        log.printf_P(PSTR("\" %d %s \"%s\""), response->getCode(), contentLengthStr.c_str(), response->getContentType().c_str());
+    }
+    else {
+        log.printf_P(PSTR("\" failed"));
+    }
+    Serial.println(log);
+}
+#endif
 
 void Plugin::_handlerWebUI(AsyncWebServerRequest *request, HttpHeaders &headers)
 {
     if (!plugin.isAuthenticated(request)) {
-        request->send(403);
+        auto response = request->beginResponse(403);
+        _logRequest(request, response);
+        request->send(response);
         return;
     }
     // 503 if the webui is disabled
     if (!System::Flags::getConfig().is_webui_enabled) {
-        request->send(503);
+        auto response = request->beginResponse(503);
+        _logRequest(request, response);
+        request->send(response);
         return;
     }
     auto json = WebUISocket::createWebUIJSON();
@@ -470,74 +508,16 @@ void Plugin::_handlerWebUI(AsyncWebServerRequest *request, HttpHeaders &headers)
     auto response = new AsyncBasicResponse(200, FSPGM(mime_application_json), std::move(jsonStr)); //TODO use stream or fillbuffer
     headers.addNoCache();
     headers.setResponseHeaders(response);
+    _logRequest(request, response);
     request->send(response);
 }
-
-#if WEBUI_ALERTS_ENABLED
-
-void Plugin::_handlerAlerts(AsyncWebServerRequest *request, HttpHeaders &headers)
-{
-    if (!isAuthenticated(request)) {
-        request->send(403);
-        return;
-    }
-    // 503 if disabled
-    if (!WebAlerts::Alert::hasOption(WebAlerts::OptionsType::ENABLED)) {
-        request->send(503);
-        return;
-    }
-    headers.addNoCache(true);
-
-    if (request->arg(F("clear")).toInt()) {
-        WebAlerts::Alert::dismissAll();
-        request->send(200);
-        return;
-    }
-
-    auto dismiss = request->arg(F("dismiss_id"));
-    if (dismiss.length() != 0) {
-        WebAlerts::Alert::dismissAlerts(dismiss);
-        request->send(200);
-        return;
-    }
-
-    WebAlerts::IdType pollId = request->arg(F("poll_id")).toInt();
-    if (
-        (pollId > WebAlerts::FileStorage::getMaxAlertId()) ||
-        !_sendFile(FSPGM(alerts_storage_filename), emptyString, headers, _clientAcceptsGzip(request), true, request, nullptr)
-    ) {
-        request->send(204);
-    }
-
-    // auto pollId = (uint32_t)request->arg(F("poll_id")).toInt();
-    // if (pollId) {
-    //     PrintHtmlEntitiesString str;
-    //     WebAlerts::Alert::printAlertsAsJson(str, pollId, false);
-
-    //     AsyncWebServerResponse *response = new AsyncBasicResponse(200, FSPGM(mime_application_json), str);
-    //     HttpHeaders headers;
-    //     headers.addNoCache();
-    //     headers.setResponseHeaders(response);
-    //     request->send(response);
-    //     return;
-    // }
-    // else {
-    //     auto alertId = (WebAlerts::IdType)request->arg(FSPGM(id)).toInt();
-    //     if (alertId) {
-    //         WebAlerts::Alert::dimiss(alertId);
-    //         request->send(200, FSPGM(mime_text_plain), FSPGM(OK));
-    //         return;
-    //     }
-    // }
-    // request->send(400);
-}
-
-#else
 
 void Plugin::_handlerAlerts(AsyncWebServerRequest *request, HttpHeaders &headers)
 {
     // 503 response if disabled (no support compiled in)
-    request->send(503);
+    auto response = request->beginResponse(503);
+    _logRequest(request, response);
+    request->send(response);
 }
 
 #endif
@@ -578,8 +558,7 @@ void Plugin::_handlerSpeedTest(AsyncWebServerRequest *request, bool zip, HttpHea
     } else {
         response = new AsyncSpeedTestResponse(FSPGM(mime_image_bmp), size);
     }
-    headers.setResponseHeaders(response);
-
+    _logRequest(request, response);
     request->send(response);
 }
 
@@ -621,7 +600,9 @@ void Plugin::_handlerImportSettings(AsyncWebServerRequest *request, HttpHeaders 
         message = AsyncWebServerResponse::responseCodeToString(405);
         status = 405;
     }
-    request->send(200, FSPGM(mime_text_plain), PrintString(F("{\"status\":%u,\"count\":%d,\"message\":\"%s\"}"), status, count, message));
+    auto response = request->beginResponse(200, FSPGM(mime_text_plain), PrintString(F("{\"status\":%u,\"count\":%d,\"message\":\"%s\"}"), status, count, message));
+    _logRequest(request, response);
+    request->send(response);
 }
 
 void Plugin::_handlerExportSettings(AsyncWebServerRequest *request, HttpHeaders &headers)
@@ -641,9 +622,9 @@ void Plugin::_handlerExportSettings(AsyncWebServerRequest *request, HttpHeaders 
 
     PrintString content;
     config.exportAsJson(content, config.getFirmwareVersion());
-    AsyncWebServerResponse *response = new AsyncBasicResponse(200, FSPGM(mime_application_json), content);
+    auto response = request->beginResponse(200, FSPGM(mime_application_json), content);
     headers.setResponseHeaders(response);
-
+    _logRequest(request, response);
     request->send(response);
 }
 
@@ -943,7 +924,9 @@ bool Plugin::_handleFileRead(String path, bool client_accepts_gzip, AsyncWebServ
     }
     if (mapping.isGz() && !client_accepts_gzip) {
         __LDBG_printf("gzip not supported=%s", path.c_str());
-        request->send_P(503, FSPGM(mime_text_plain), PSTR("503: Client does not support gzip Content Encoding"));
+        auto response = request->beginResponse_P(503, FSPGM(mime_text_plain), PSTR("503: Client does not support gzip Content Encoding"));
+        _logRequest(request, response);
+        request->send(response);
         return true;
     }
 
@@ -1366,5 +1349,3 @@ void ResetDetectorPlugin::createMenu()
 }
 
 #include "web_server_action.h"
-
-#endif

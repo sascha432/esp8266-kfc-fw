@@ -319,7 +319,7 @@ uint16_t FileManager::upload()
 
     if (!ajax_request) {
         String url = PrintString(F("/%s?_message="), SPGM(file_manager_html_uri, "file-manager.html"));
-        url += url_encode(message);
+        url += urlEncode(message);
         if (success) {
             url += F("&_type=success&_title=Information");
         }

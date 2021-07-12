@@ -36,8 +36,8 @@ void OpenWeatherMapAPI::setQuery(const String &query)
 String OpenWeatherMapAPI::getApiUrl(const String &apiType) const
 {
     String url = FSPGM(openweathermap_api_url);
-    url.replace(F("{query}"), url_encode(_apiQuery));
-    url.replace(F("{api_key}"), url_encode(_apiKey));
+    url.replace(F("{query}"), urlEncode(_apiQuery));
+    url.replace(F("{api_key}"), urlEncode(_apiKey));
     url.replace(F("{api_type}"), apiType);
     return url;
 }

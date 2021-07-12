@@ -465,7 +465,7 @@ size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
         while (_next) {
             path = std::move(_dir.fileName());
             String name = path.substring(_dirName.length());
-            String location = url_encode(path);
+            String location = urlEncode(path);
             __LDBG_printf("dir=%s dir=%u file=%u name=%s", path.c_str(), _dir.isDirectory(), _dir.isFile(), name.c_str());
 
             if (_dir.isDirectory()) {

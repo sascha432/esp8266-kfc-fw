@@ -471,14 +471,15 @@ void Plugin::_logRequest(AsyncWebServerRequest *request, AsyncWebServerResponse 
 {
     PrintString log;
     IPAddress(request->client()->getRemoteAddress()).printTo(log);
-    log.strftime_P(PSTR(" [%m/%d/%Y %H:%M:%S] "), time(nullptr));
+    log.strftime_P(PSTR(" - - [%m/%d/%Y %H:%M:%S] \""), time(nullptr));
     log.print(request->methodToString());
-    log.print(F(" \""));
-    log.print(request->url());
+    log.print(' ');
+    auto url = urlEncode(request->url(), F("\r\n\" "));
+    log.print(url);
     if (response) {
         auto contentLength = response->getContentLength();
         auto contentLengthStr = contentLength ? String(contentLength) : String('-');
-        log.printf_P(PSTR("\" %d %s \"%s\""), response->getCode(), contentLengthStr.c_str(), response->getContentType().c_str());
+        log.printf_P(PSTR(" HTTP/1.%u\" %d %s \"%s\""), request->version(), response->getCode(), contentLengthStr.c_str(), response->getContentType().c_str());
     }
     else {
         log.printf_P(PSTR("\" failed"));

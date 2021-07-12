@@ -105,8 +105,11 @@
 
 // enable LED matrix mode instead of clock mode
 #if IOT_LED_MATRIX
-#    define IF_IOT_LED_MATRIX(...) __VA_ARGS__
-#    define IF_IOT_CLOCK(...)
+#   define IF_IOT_LED_MATRIX(...) __VA_ARGS__
+#   define IF_IOT_CLOCK(...)
+#   ifndef IOT_CLOCK_NUM_PIXELS
+#       define IOT_CLOCK_NUM_PIXELS ((IOT_LED_MATRIX_COLS * IOT_LED_MATRIX_ROWS) + IOT_LED_MATRIX_PIXEL_OFFSET)
+#   endif
 #else
 #    define IF_IOT_LED_MATRIX(...)
 #    define IF_IOT_CLOCK(...) __VA_ARGS__
@@ -116,8 +119,8 @@
 #    endif
 #endif
 
-#if defined(IOT_LED_MATRIX_ROWS) && (IOT_LED_MATRIX_ROWS * IOT_LED_MATRIX_COLS) != IOT_CLOCK_NUM_PIXELS
-#error IOT_CLOCK_NUM_PIXELS does not match IOT_LED_MATRIX_ROWS * IOT_LED_MATRIX_COLS
+#if defined(IOT_LED_MATRIX_ROWS) && ((IOT_LED_MATRIX_COLS * IOT_LED_MATRIX_ROWS) + IOT_LED_MATRIX_PIXEL_OFFSET) != IOT_CLOCK_NUM_PIXELS
+#error IOT_CLOCK_NUM_PIXELS does not match (IOT_LED_MATRIX_ROWS * IOT_LED_MATRIX_COLS) + IOT_LED_MATRIX_PIXEL_OFFSET
 #endif
 
 #ifndef IOT_LED_MATRIX_OPTS_REVERSE_ROWS
@@ -212,24 +215,14 @@
 #endif
 
 // enable/disable power to all LEDs per GPIO
-#ifndef IOT_CLOCK_HAVE_ENABLE_PIN
-#    define IOT_CLOCK_HAVE_ENABLE_PIN 0
+// -1 to disable
+#ifndef IOT_LED_MATRIX_ENABLE_PIN
+#    define IOT_LED_MATRIX_ENABLE_PIN 15
 #endif
 
-#if IOT_CLOCK_HAVE_ENABLE_PIN
-#    define IF_IOT_CLOCK_HAVE_ENABLE_PIN(...) __VA_ARGS__
-#else
-#    define IF_IOT_CLOCK_HAVE_ENABLE_PIN(...)
-#endif
-
-// pin to enable LEDs
-#ifndef IOT_CLOCK_EN_PIN
-#    define IOT_CLOCK_EN_PIN 15
-#endif
-
-// IOT_CLOCK_EN_PIN_INVERTED=1 sets IOT_CLOCK_EN_PIN to active low
-#ifndef IOT_CLOCK_EN_PIN_INVERTED
-#    define IOT_CLOCK_EN_PIN_INVERTED 0
+// IOT_LED_MATRIX_ENABLE_PIN_INVERTED=1 sets IOT_LED_MATRIX_ENABLE_PIN to active low
+#ifndef IOT_LED_MATRIX_ENABLE_PIN_INVERTED
+#    define IOT_LED_MATRIX_ENABLE_PIN_INVERTED 0
 #endif
 
 // 0 = disabled
@@ -260,11 +253,11 @@
 #   endif
 #endif
 
-#ifndef IF_IOT_CLOCK_EN_PIN_INVERTED
-#   if IOT_CLOCK_EN_PIN_INVERTED
-#       define IF_IOT_CLOCK_EN_PIN_INVERTED(a, b) (a)
+#ifndef IF_IOT_LED_MATRIX_ENABLE_PIN_INVERTED
+#   if IOT_LED_MATRIX_ENABLE_PIN_INVERTED
+#       define IF_IOT_LED_MATRIX_ENABLE_PIN_INVERTED(a, b) (a)
 #   else
-#       define IF_IOT_CLOCK_EN_PIN_INVERTED(a, b) (b)
+#       define IF_IOT_LED_MATRIX_ENABLE_PIN_INVERTED(a, b) (b)
 #   endif
 #endif
 

@@ -28,7 +28,12 @@
 #include <Form/Types.h>
 
 #ifndef DEBUG_CONFIG_CLASS
-#define DEBUG_CONFIG_CLASS                                                  0
+#define DEBUG_CONFIG_CLASS 0
+#endif
+
+#if DEBUG_CONFIGURATION_GETHANDLE && !DEBUG_CONFIG_CLASS
+#undef DEBUG_CONFIG_CLASS
+#define DEBUG_CONFIG_CLASS 1
 #endif
 
 #if DEBUG_CONFIG_CLASS
@@ -37,13 +42,10 @@
 #include <debug_helper_disable.h>
 #endif
 
-#if DEBUG_CONFIGURATION_GETHANDLE && !DEBUG_CONFIG_CLASS
-#error DEBUG_CONFIG_CLASS=1 required for DEBUG_CONFIGURATION_GETHANDLE=1
-#endif
-
-#if DEBUG_CONFIG_CLASS && 0
+#if DEBUG_CONFIG_CLASS && 1
 #define __CDBG_printf(...)                                                  __DBG_printf(__VA_ARGS__)
-#define __CDBG_dump(class_name, cfg)                                        cfg.dump<class_name>();
+// #define __CDBG_dump(class_name, cfg)                                        cfg.dump<class_name>();
+#define __CDBG_dump(class_name, cfg)
 #define __CDBG_dumpString(name)                                             DEBUG_OUTPUT.printf_P(PSTR("%s [%04X]=%s\n"), _STRINGIFY(name), k##name##ConfigHandle, get##name());
 #define CONFIG_DUMP_STRUCT_INFO(type)                                       DEBUG_OUTPUT.printf_P(PSTR("--- config struct handle=%04x\n"), type::kConfigStructHandle);
 #define CONFIG_DUMP_STRUCT_VAR(name)                                        { DEBUG_OUTPUT.print(_STRINGIFY(name)); DEBUG_OUTPUT.print("="); DEBUG_OUTPUT.println(this->name); }

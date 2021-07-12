@@ -37,7 +37,7 @@ namespace Clock {
 #if IOT_LED_MATRIX
 
     using DisplayType = Clock::PixelDisplay<
-            Clock::NeoPixelController<IOT_CLOCK_WS2812_OUTPUT>,
+            Clock::NeoPixelController<IOT_LED_MATRIX_OUTPUT_PIN>,
             Clock::PixelDisplayBuffer<IOT_LED_MATRIX_PIXEL_OFFSET, IOT_LED_MATRIX_ROWS, IOT_LED_MATRIX_COLS, IOT_LED_MATRIX_OPTS_REVERSE_ROWS, IOT_LED_MATRIX_OPTS_REVERSE_COLS, IOT_LED_MATRIX_OPTS_ROTATE, IOT_LED_MATRIX_OPTS_INTERLEAVED>
         >;
 
@@ -48,7 +48,7 @@ namespace Clock {
 #else
 
     using BaseDisplayType = Clock::PixelDisplay<
-            Clock::NeoPixelController<IOT_CLOCK_WS2812_OUTPUT>,
+            Clock::NeoPixelController<IOT_LED_MATRIX_OUTPUT_PIN>,
             Clock::PixelDisplayBuffer<IOT_LED_MATRIX_PIXEL_OFFSET, IOT_LED_MATRIX_ROWS, IOT_LED_MATRIX_COLS, IOT_LED_MATRIX_OPTS_REVERSE_ROWS, IOT_LED_MATRIX_OPTS_REVERSE_COLS, IOT_LED_MATRIX_OPTS_ROTATE, IOT_LED_MATRIX_OPTS_INTERLEAVED>
         >;
 

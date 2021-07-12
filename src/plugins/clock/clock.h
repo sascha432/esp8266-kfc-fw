@@ -176,7 +176,7 @@ public:
 #endif
 
     constexpr static uint8_t enablePinState(bool active) {
-        return IF_IOT_CLOCK_EN_PIN_INVERTED(active ? LOW : HIGH, active ? HIGH : LOW);
+        return IF_IOT_LED_MATRIX_ENABLE_PIN_INVERTED(active ? LOW : HIGH, active ? HIGH : LOW);
     }
 
     enum class DisplaySensorType : uint8_t {

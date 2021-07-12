@@ -1491,6 +1491,7 @@ void at_mode_serial_handle_event(String &commandString)
 +flash=r,EEPROM,0,1024
 +flash=r,EEPROM,0,128
 
++flash=e,EEPROM
 
 */
         auto cmdStr = args.get(0);

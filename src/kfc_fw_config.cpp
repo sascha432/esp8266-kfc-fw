@@ -915,8 +915,9 @@ void KFCFWConfiguration::read(bool wakeup)
 
 void KFCFWConfiguration::write()
 {
-    if (!Configuration::write()) {
-        Logger_error(F("Failure to write settings to EEPROM"));
+    auto result = Configuration::write();
+    if (result != Configuration::WriteResultType::SUCCESS) {
+        Logger_error(F("Failed to write settings to EEPROM. %s"), Configuration::getWriteResultTypeStr(result));
     }
 }
 
@@ -1158,9 +1159,9 @@ void KFCFWConfiguration::enterDeepSleep(milliseconds time, RFMode mode, uint16_t
 
 static void invoke_ESP_restart()
 {
-#if IOT_CLOCK_WS2812_OUTPUT
-    NeoPixelEx::forceClear(IOT_CLOCK_WS2812_OUTPUT, IOT_CLOCK_NUM_PIXELS);
-    pinMode(IOT_CLOCK_WS2812_OUTPUT, INPUT);
+#if IOT_LED_MATRIX_OUTPUT_PIN
+    NeoPixelEx::forceClear(IOT_LED_MATRIX_OUTPUT_PIN, IOT_CLOCK_NUM_PIXELS);
+    pinMode(IOT_LED_MATRIX_OUTPUT_PIN, INPUT);
 #endif
 #if __LED_BUILTIN == NEOPIXEL_PIN_ID
     BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::OFF);

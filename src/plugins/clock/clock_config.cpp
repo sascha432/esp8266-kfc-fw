@@ -5,6 +5,8 @@
 #include <Configuration.h>
 #include <kfc_fw_config.h>
 
+#include "clock_def.h"
+
 #ifndef IOT_CLOCK_ALARM_COLOR
 #define IOT_CLOCK_ALARM_COLOR 0x880000
 #endif

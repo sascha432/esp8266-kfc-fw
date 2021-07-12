@@ -528,7 +528,7 @@ namespace Clock {
                 FastLED.show(brightness);
             }
             else if (getNeopixelShowMethodInt() == static_cast<uint8_t>(Clock::ShowMethodType::NEOPIXEL)) {
-                NeoPixelEx::StaticStrip::externalShow<NeoPixelEx::TimingsWS2812, NeoPixelEx::CRGB>(IOT_CLOCK_WS2812_OUTPUT, reinterpret_cast<uint8_t *>(_pixels), kNumPixels, brightness, NeoPixelEx::Context::validate(nullptr));
+                NeoPixelEx::StaticStrip::externalShow<NeoPixelEx::TimingsWS2812, NeoPixelEx::CRGB>(IOT_LED_MATRIX_OUTPUT_PIN, reinterpret_cast<uint8_t *>(_pixels), kNumPixels, brightness, NeoPixelEx::Context::validate(nullptr));
             }
         }
 

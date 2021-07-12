@@ -156,7 +156,7 @@
 
                 static const uint16_t kPowerNumLeds = 256;
 
-#if IOT_CLOCK_HAVE_POWER_LIMIT  || IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
+#if IOT_CLOCK_HAVE_POWER_LIMIT || IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
                 struct __attribute__packed__ {
                     uint16_t red;
                     uint16_t green;

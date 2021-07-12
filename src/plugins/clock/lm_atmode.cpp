@@ -8,6 +8,7 @@
 #include <NeoPixelEx.h>
 #include "../src/plugins/plugins.h"
 #include "animation.h"
+#include "clock.h"
 
 #if DEBUG_IOT_CLOCK
 #include <debug_helper_enable.h>
@@ -281,7 +282,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             if (args.startsWithIgnoreCase(1, F("fast"))) {
                 ClockPlugin::setShowMethod(Clock::ShowMethodType::FASTLED);
             }
-            else if (args.startsWithIgnoreCase(1, F("int"))) {
+            else if (args.startsWithIgnoreCase(1, F("neo"))) {
                 ClockPlugin::setShowMethod(Clock::ShowMethodType::NEOPIXEL);
             }
             else {
@@ -359,12 +360,19 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                 args.print(F("reset"));
             }
         }
-        // +lmc=res,1
+        // reset[,<pixels>]
         else if (args.startsWithIgnoreCase(0, F("res"))) {
             enableLoop(true);
-            if (args.isTrue(1)) {
+            auto num = args.toIntMinMax<uint16_t>(1, 0, 2048, 0);
+            if (num > 0) {
                 _display.clear();
-                NeoPixelEx::forceClear(IOT_CLOCK_WS2812_OUTPUT, IOT_CLOCK_NUM_PIXELS);
+                if (num > IOT_CLOCK_NUM_PIXELS) {
+                    args.print(F("clearing %u pixels"), num);
+                    NeoPixelEx::forceClear(IOT_LED_MATRIX_OUTPUT_PIN, num);
+                }
+                else {
+                    NeoPixelEx::forceClear(IOT_LED_MATRIX_OUTPUT_PIN, IOT_CLOCK_NUM_PIXELS);
+                }
             }
             else {
                 _display.setBrightness(32);
@@ -448,7 +456,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                 }
                 auto point = _display.getPoint(range.offset);
                 auto address = _display.getAddress(point);
-                args.print(F("pixel=%u color=%s x=%u y=%u seq=%u show=%s pin=%u"), range.size - range.offset + 1, color.toString().c_str(), point.col(), point.row(), address, getNeopixelShowMethodStr(), IOT_CLOCK_WS2812_OUTPUT);
+                args.print(F("pixel=%u color=%s x=%u y=%u seq=%u show=%s pin=%u"), range.size - range.offset + 1, color.toString().c_str(), point.col(), point.row(), address, getNeopixelShowMethodStr(), IOT_LED_MATRIX_OUTPUT_PIN);
                 _display.dump(args.getStream());
                 for(uint16_t i = range.offset; i < range.offset + range.size; i++) {
                     _display.setPixel(i, color);
@@ -457,7 +465,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                 _display.show();
             }
             else {
-                args.getStream().printf_P(PSTR("show=%s pin=%u "), getNeopixelShowMethodStr(), IOT_CLOCK_WS2812_OUTPUT);
+                args.getStream().printf_P(PSTR("show=%s pin=%u "), getNeopixelShowMethodStr(), IOT_LED_MATRIX_OUTPUT_PIN);
                 _display.dump(args.getStream());
                 auto ofs = range.offset;
                 for(uint16_t y = 0; y < _display.kRows; y++) {
@@ -485,7 +493,38 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             }
         }
         else {
-            args.print(F("usage: +LMC=<lo[op],<enable|disable>|me[thod]<fastled|int>|ani[mation],<name>|di[ther],<on|off>|co[lor],<#color>|br[igthness],<level>|cl[ear]|re[set]|<temp>,<value>|get,<range>|set,<range>,[#color]|pr[int],<display=00:00:00>>"));
+            StringVector cmds;
+            cmds.emplace_back(F("lo[op],<enable|disable>"));
+            cmds.emplace_back(F("me[thod]<fast[led]|neo[pixel]>"));
+            {
+                auto animations = String(Plugins::ClockConfig::ClockConfig_t::getAnimationNames());
+                animations.toLowerCase();
+                animations.replace(',', '|');
+                animations.replace(' ', '_');
+                cmds.emplace_back(PrintString(F("ani[mation],<%s>"), animations.c_str()));
+            }
+            cmds.emplace_back(F("di[ther],<on|off>"));
+            cmds.emplace_back(F("co[lor],<#color>"));
+            cmds.emplace_back(F("br[igthness],<level>"));
+            cmds.emplace_back(F("cl[ear]"));
+            cmds.emplace_back(PrintString(F("res[et][,<pixels=%u>]"), IOT_CLOCK_NUM_PIXELS));
+            cmds.emplace_back(F("get[,<range>]"));
+            cmds.emplace_back(F("set,<range(=0-7)>,[#color]"));
+            #if IOT_LED_MATRIX == 0
+            cmds.emplace_back(F("pr[int],<display=00:00:00>"));
+            #endif
+            cmds.emplace_back(F("tem[perature],<value>"));
+
+            auto last = &cmds.back();
+            auto &stream = args.getStream();
+            stream.print("usage: +LMC=<");
+            for(auto &str: cmds) {
+                stream.print(str);
+                if (&str != last) {
+                    stream.print('|');
+                }
+            }
+            stream.println(">");
         }
         return true;
     }

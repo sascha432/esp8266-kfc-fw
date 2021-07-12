@@ -417,7 +417,7 @@ void ClockPlugin::_setupTimer()
                     return motion.state == MotionStateType::RETRIGGERED;
                 }), _motionHistory.end());
                 _motionHistory.emplace_back(time(nullptr), type);
-                __DBG_printf("_motionHistory size=%u", _motionHistory.size());
+                // __LDBG_printf("_motionHistory size=%u", _motionHistory.size());
                 if (_motionHistory.size() > 8) {
                     _motionHistory.erase(_motionHistory.end() - 8, _motionHistory.end());
                 }
@@ -570,12 +570,12 @@ void ClockPlugin::preSetup(SetupModeType mode)
 
 void ClockPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
-    digitalWrite(IOT_CLOCK_WS2812_OUTPUT, LOW);
-    pinMode(IOT_CLOCK_WS2812_OUTPUT, OUTPUT);
+    digitalWrite(IOT_LED_MATRIX_OUTPUT_PIN, LOW);
+    pinMode(IOT_LED_MATRIX_OUTPUT_PIN, OUTPUT);
 
-    #if IOT_CLOCK_HAVE_ENABLE_PIN
-        digitalWrite(IOT_CLOCK_EN_PIN, enablePinState(false));
-        pinMode(IOT_CLOCK_EN_PIN, OUTPUT);
+    #if IOT_LED_MATRIX_ENABLE_PIN != -1
+        digitalWrite(IOT_LED_MATRIX_ENABLE_PIN, enablePinState(false));
+        pinMode(IOT_LED_MATRIX_ENABLE_PIN, OUTPUT);
     #endif
 
     #if IOT_LED_MATRIX_STANDBY_PIN != -1
@@ -801,7 +801,7 @@ void ClockPlugin::shutdown()
     delete _blendAnimation;
 
     _reset();
-    pinMode(IOT_CLOCK_WS2812_OUTPUT, INPUT);
+    pinMode(IOT_LED_MATRIX_OUTPUT_PIN, INPUT);
 }
 
 void ClockPlugin::getStatus(Print &output)
@@ -1257,13 +1257,13 @@ void ClockPlugin::_updateBrightnessSettings()
 
 void ClockPlugin::_reset()
 {
-    NeoPixelEx::forceClear(IOT_CLOCK_WS2812_OUTPUT, IOT_CLOCK_NUM_PIXELS);
+    NeoPixelEx::forceClear(IOT_LED_MATRIX_OUTPUT_PIN, IOT_CLOCK_NUM_PIXELS);
 }
 
 void ClockPlugin::_enable()
 {
     if (_isEnabled) {
-        // __LDBG_printf("enable LED pin %u state %u (is_enabled=%u, config=%u) SKIPPED", IOT_CLOCK_EN_PIN, enablePinState(true), _isEnabled, _config.enabled);
+        // __LDBG_printf("enable LED pin %u state %u (is_enabled=%u, config=%u) SKIPPED", IOT_LED_MATRIX_ENABLE_PIN, enablePinState(true), _isEnabled, _config.enabled);
         return;
     }
     if (isTempProtectionActive()) {
@@ -1271,9 +1271,9 @@ void ClockPlugin::_enable()
         return;
     }
 
-    #if IOT_CLOCK_HAVE_ENABLE_PIN
-        digitalWrite(IOT_CLOCK_EN_PIN, enablePinState(true));
-        __LDBG_printf("enable LED pin %u state %u (is_enabled=%u, config=%u)", IOT_CLOCK_EN_PIN, enablePinState(true), _isEnabled, _config.enabled);
+    #if IOT_LED_MATRIX_ENABLE_PIN != -1
+        digitalWrite(IOT_LED_MATRIX_ENABLE_PIN, enablePinState(true));
+        __LDBG_printf("enable LED pin %u state %u (is_enabled=%u, config=%u)", IOT_LED_MATRIX_ENABLE_PIN, enablePinState(true), _isEnabled, _config.enabled);
     #endif
     #if IOT_LED_MATRIX_STANDBY_PIN != -1
         if (_config.standby_led) {
@@ -1291,7 +1291,7 @@ void ClockPlugin::_enable()
 
 void ClockPlugin::_disable(uint8_t delayMillis)
 {
-    __LDBG_printf("disable LED pin %u state %u (is_enabled=%u, config=%u)", IOT_CLOCK_EN_PIN, enablePinState(false), _isEnabled, _config.enabled);
+    __LDBG_printf("disable LED pin %u state %u (is_enabled=%u, config=%u)", IOT_LED_MATRIX_ENABLE_PIN, enablePinState(false), _isEnabled, _config.enabled);
 
     // turn all leds off and set brightness to 0
     _display.setBrightness(0);
@@ -1307,8 +1307,8 @@ void ClockPlugin::_disable(uint8_t delayMillis)
         _powerLevelAvg = 0;
     #endif
 
-    #if IOT_CLOCK_HAVE_ENABLE_PIN
-        digitalWrite(IOT_CLOCK_EN_PIN, enablePinState(false));
+    #if IOT_LED_MATRIX_ENABLE_PIN != -1
+        digitalWrite(IOT_LED_MATRIX_ENABLE_PIN, enablePinState(false));
     #endif
     #if IOT_LED_MATRIX_STANDBY_PIN != -1
         if (_config.standby_led) {

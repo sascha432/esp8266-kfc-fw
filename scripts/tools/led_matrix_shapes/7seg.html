@@ -1,0 +1,231 @@
+<html>
+    <head>
+        <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+        <style type="text/css">
+            #digit-prototype {
+                display: none;
+            }
+            #colon-prototype {
+                display: none;
+            }
+            .digits-container {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                background-color: #000000;
+                width: 1600px;
+            }
+            .digit-container {
+                padding-right: 1rem;
+                width: 224px;
+                height: 368px;
+            }
+            .colon-container {
+                width: 90px;
+                height: 200px;
+            }
+
+            .digits-container .pixel, .digits-container .px {
+                font-family: Verdana, Geneva, Tahoma, sans-serif;
+                font-size: 0.75rem;
+                border: 1px solid #000000;
+                border-radius: 1rem;
+                padding: 0.25rem;
+                margin: 0.125rem;
+                width: 1rem;
+                height: 1rem;
+                min-width: 1rem;
+                min-height: 1rem;
+                text-align: center;
+                align-self: center;
+            }
+
+            .digits-container .colon {
+                display: inline-grid;
+                justify-content: center;
+            }
+            .digits-container .colon .pixels-top, .digits-container .colon .pixels-bottom {
+                width: 70px;
+                min-height: 70px;
+                background: #7c6c6c;
+                border: 0px none #000000;
+                border-radius: 3rem;
+                overflow: hidden;
+                justify-content: center;
+                /* horizontally aligned pixels */
+                display: inline-flex;
+                /* vertically aligned pixels */
+                /* display: inline-grid; */
+            }
+            .digits-container .colon .pixels-bottom {
+                margin-top: 3rem;
+            }
+
+            .digits-container .digit-vertical, .digits-container .digit-horizontal {
+                background: #7c6c6c;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                overflow: hidden;
+            }
+            .digits-container .digit-vertical {
+                width: 28%;
+                min-height: 8.5rem;
+                max-height: 8.5rem;
+                clip-path: polygon(50% 0, 100% 23%, 100% 77%, 50% 100%, 0 77%, 0% 23%);
+            }
+            .digits-container .digit-horizontal {
+                width: 65%;
+                min-height: 3.75rem;
+                max-height: 3.75rem;
+                clip-path: polygon(0 50%, 20% 0, 80% 0, 100% 50%, 80% 100%, 20% 100%, 0 50%);
+            }
+            .digits-container .pixels {
+            }
+            .digits-container .pixels-horizontal {
+                padding: 0;
+                margin: 0;
+                display: inline-flex;
+                align-content: center;
+            }
+            .digits-container .pixels-vertical {
+                padding: 0;
+                margin: 0;
+                display: inline-grid;
+            }
+            .digits-container .pixels-vertical .pixel {
+                display: block;
+            }
+
+            .digits-container .row {
+                width: 100%;
+                display: flex;
+                justify-content: center;
+                margin-top: -1.5rem;
+            }
+            .digits-container .row:first-of-type {
+                margin-top: 0;
+            }
+            .digits-container .row .spacer {
+                flex: 1 0;
+            }
+
+        </style>
+    </head>
+    <body>
+        <div id="led-matrix"><div id="pixel-container"></div></div>
+        <div id="digits" style="display: none;">
+            <div class="digits-container">
+                <div class="digit-container" id="digit-prototype">
+                    <div class="row horizontal">
+                        <div class="digit-horizontal">
+                            <div class="pixels">
+                                <div class="pixels-horizontal">
+                                    <div class="pixel A">A</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row vertical">
+                        <div class="digit-vertical">
+                            <div class="pixels">
+                                <div class="pixels-vertical">
+                                    <div class="pixel F">F</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="spacer"></div>
+                        <div class="digit-vertical">
+                            <div class="pixels">
+                                <div class="pixels-vertical">
+                                    <div class="pixel B">B</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row horizontal">
+                        <div class="digit-horizontal">
+                            <div class="pixels">
+                                <div class="pixels-horizontal">
+                                    <div class="pixel G">G</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row vertical">
+                        <div class="digit-vertical">
+                            <div class="pixels">
+                                <div class="pixels-vertical">
+                                    <div class="pixel E">E</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="spacer"></div>
+                        <div class="digit-vertical">
+                            <div class="pixels">
+                                <div class="pixels-vertical">
+                                    <div class="pixel C">C</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row horizontal">
+                        <div class="digit-horizontal">
+                            <div class="pixels">
+                                <div class="pixels-horizontal">
+                                    <div class="pixel D">D</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="colon-container" id="colon-prototype">
+                    <div class="colon">
+                        <div class="pixels-top">
+                            <div class="pixel T">T</div>
+                        </div>
+                        <div class="pixels-bottom">
+                            <div class="pixel B">B</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script>
+            $(function() {
+
+                function add(pxid) {
+                    return '<div class="px" id="px' + pxid + '"><div class="ipx">' + pxid + '</div></div>';
+                }
+                function ss(digit, name) {
+                    var segment = digit.find('.pixel.' + name).parent();
+                    var pixels = '';
+                    for(var i = 2; i < arguments.length; i++) {
+                        pixels += add(arguments[i]);
+                    }
+                    segment.html(pixels);
+                }
+
+                var d = $('<div class="digit-container" id="digit_0">' + $('#digit-prototype').html() + '</div>');
+ss(d, 'A', 0, 1); ss(d, 'B', 2, 3); ss(d, 'C', 6, 7); ss(d, 'D', 8, 9); ss(d, 'E', 10, 11); ss(d, 'F', 12, 13); ss(d, 'G', 4, 5);
+$('.digits-container').append(d);
+var d = $('<div class="digit-container" id="digit_1">' + $('#digit-prototype').html() + '</div>');
+ss(d, 'A', 14, 15); ss(d, 'B', 16, 17); ss(d, 'C', 20, 21); ss(d, 'D', 22, 23); ss(d, 'E', 24, 25); ss(d, 'F', 26, 27); ss(d, 'G', 18, 19);
+$('.digits-container').append(d);
+var c = $('<div class="colon-container" id="colon_0">' + $('#colon-prototype').html() + '</div>');
+ss(c, 'T', 28); ss(c, 'B', 30);
+$('.digits-container').append(c);
+var d = $('<div class="digit-container" id="digit_2">' + $('#digit-prototype').html() + '</div>');
+ss(d, 'A', 30, 31); ss(d, 'B', 32, 33); ss(d, 'C', 36, 37); ss(d, 'D', 38, 39); ss(d, 'E', 40, 41); ss(d, 'F', 42, 43); ss(d, 'G', 34, 35);
+$('.digits-container').append(d);
+var d = $('<div class="digit-container" id="digit_3">' + $('#digit-prototype').html() + '</div>');
+ss(d, 'A', 44, 45); ss(d, 'B', 46, 47); ss(d, 'C', 50, 51); ss(d, 'D', 52, 53); ss(d, 'E', 54, 55); ss(d, 'F', 56, 57); ss(d, 'G', 48, 49);
+$('.digits-container').append(d);
+
+                $('#pixel-container').html($('#digits').html());
+
+            });
+
+        </script>
+    </body>
+</html>

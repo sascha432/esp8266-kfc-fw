@@ -1,0 +1,200 @@
+<<html>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+
+<body>
+    <style type="text/css" id="pixel-styles">
+            .row-np {
+            margin-left: -100px;
+            margin-right: -100px;
+            margin-top: 0px;
+            margin-bottom: -100px;
+            color: rgb(90, 123, 233);
+            }
+    </style>
+
+    <script>
+        $(function() {
+
+            var rows = 16;
+            var cols = 16;
+            var a1 = 1;
+            var a2 = 0.5;
+            var _pixel_size = 0.75;
+            var unit = 'rem';
+            var pixel_size = _pixel_size + unit;
+            var inner_size = (_pixel_size * 1) + unit;
+            var outer_size = (_pixel_size * 4) + unit;
+            var border_radius = _pixel_size + unit;
+            var pixel_outer_size = _pixel_size * 4;
+            var padding = 0;
+
+            function set_color(selector, r, g, b, a1, a2, calc) {
+                if (calc) {
+                    min_brightness = 100;
+                    x = 256 - min_brightness;
+                    r %= x;
+                    g %= x;
+                    b %= x;
+                    r = Math.floor(r) + min_brightness;
+                    g = Math.floor(g) + min_brightness;
+                    b = Math.floor(b) + min_brightness;
+                }
+
+                var is = inner_size;
+                var os = outer_size;
+                var tmp = $(selector);
+                tmp2 = tmp.find('.ipx');
+                tmp.css('background', 'rgba(' + r + ',' + g + ',' + b + ',' + a1 + ')');
+                tmp.css('border-color', 'rgba(' + r + ',' + g + ',' + b + ',' + a1 + ')');
+                if (a1) {
+                    tmp.css('box-shadow', '0 0 ' + is + ' ' + is + ' rgba(' + r + ',' + g + ',' + b + ',' + a1 + ')');
+                }
+                if (a2) {
+                    tmp2.css('box-shadow', '0 0 ' + os + ' ' + os + ' rgba(' + r + ',' + g + ',' + b + ',' + a2 + ')');
+                }
+            }
+
+            bg = '0, 0, 0';
+            mode = 'lighten';
+            mode2 = 'lighten';
+
+            // bg='200, 200, 200';
+            // mode='normal';
+            // mode2='lighten';
+
+            $('body').append('<div id="pixel-container"></div></div><style type="text/css" id="pixel-styles"> \
+    #pixel-container { \
+        position: absolute; \
+        right: 0; \
+        bottom: 0; \
+        padding: 7rem; \
+        background: rgba(' + bg + '); \
+        z-index: 999; \
+        min-height: 1rem; \
+        min-width: 1rem; \
+        overflow: hidden; \
+    } \
+    #pixel-container .row { \
+        display: block; \
+    } \
+    #pixel-container .px { \
+        mix-blend-mode: '+mode+'; \
+        margin: ' + inner_size + '; \
+        width: ' + pixel_size + '; \
+        height: ' + pixel_size + '; \
+        display: inline-block; \
+        border-radius: ' + border_radius +  '; \
+    } \
+    #pixel-container .ipx { \
+        mix-blend-mode: '+mode2+'; \
+        margin: 0px; \
+        width: 0px; \
+        height: 0px; \
+        display: inline; \
+        border-radius: 0px; \
+        color: #ffffff; \
+        font-size: 0.65rem; \
+        // position: relative; \
+        // top:12px; \
+        font-size: 0rem; \
+        font-family: arial; \
+    } \
+    </style>');
+
+    function to_address(row, col, reverse_rows, reverse_cols, rotate, interleaved) {
+            if (rotate) {
+                var tmp = row;
+                row = col;
+                col = tmp;
+            }
+            if (reverse_rows) {
+                row = (rows - 1) - row;
+            }
+            if (reverse_cols) {
+                col = (cols - 1) - col;
+            }
+            if (interleaved) {
+                if (col % 2 == 1) {
+                    row = (rows - 1) - row;
+                }
+            }
+            return col * rows + row;
+        }
+
+
+            var container = $('#pixel-container');
+            var contents = '';
+            var n = 0, k = 0;
+            for (var i = 0; i < rows; i++) {
+                contents += '<div class="row">';
+                for (var j = 0; j < cols; j++) {
+                    var px_id = to_address(i, j, true, false, true, true);
+                    name = px_id;
+                    k++;
+                    contents += '<div id="px' + px_id + '" class="px"><div class="ipx">'+name+'</div></div>';
+                }
+                n += cols;
+                contents += '</div>';
+            }
+            container.html(contents);
+
+            var n = 0;
+            for (var i = 0; i < rows; i++) {
+                for (var j = 0; j < cols; j++) {
+                    var name = 'px' + n;
+                    n++;
+                    // set_color('#' + name, 89, 123, 234, 1, 0, false);
+                    k=n+Math.floor(i/2);
+                    // k=n%16;
+                    // if (j%i==0) {
+                    //     k++;
+                    // }
+                    if (i%4==0) {
+                        set_color('#' + name, 70,70,70, 1, 0.5,false);
+                    }
+                    else {
+                        set_color('#' + name, (k%3==0)?255:0, (k%3==1)?255:0, (k%3==2)?255:0, 1, 0.5,false);
+                    }
+
+                    // set_color('#' + name, ((j*16+i)*(i*16+j))  / 256, 256-((j*16+i)*(i*16+j))  / 256, (j * 16 + i), a1, a2, true);
+                }
+            }
+            container.width(container.height());
+
+            if (false) {
+                var start = 0;
+                var animate = 0;
+                var l = 0;
+
+                animate = function() {
+
+                    var n = start % rows;
+                    for (var i = 0; i <rows; i++) {
+                        for (var j = 0; j < cols; j++) {
+                            // k = n + start * i;
+                            // k %= rows * cols;
+                            k = (n + (i % 2 == 1 ? rows - j - 1 : j));
+                            k = n;
+                            k += start;
+                            k %= rows * cols;
+                            var name = 'px' + k;
+                            set_color('#' + name, (i * rows) / (4 - l), (j + i) * cols, j * cols / l, a1, a2);
+                        }
+                        n += cols;
+                    }
+                    start += 1;
+                    l += 0.1;
+                    l %= 4;
+
+                    window.setTimeout(animate, 25);
+
+                };
+                window.setTimeout(animate, 25);
+
+            }
+
+
+        });
+        </script>
+</body>
+</html>

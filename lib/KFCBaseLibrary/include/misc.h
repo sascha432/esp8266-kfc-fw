@@ -94,7 +94,20 @@ inline String formatTimeMicrosShort(const String &sep, const String &lastSep, in
     return formatTimeShort(sep, lastSep, false, seconds, -1, -1, -1, -1, -1, -1, milliseconds, microseconds);
 }
 
-String url_encode(const String &str);
+// set = nullptr, encode all characters except alphanueric
+// set = string of characters to encode
+String urlEncode(const __FlashStringHelper *str, const __FlashStringHelper *set = nullptr);
+
+inline String urlEncode(const String &str, const __FlashStringHelper *set = nullptr)
+{
+    return urlEncode(FPSTR(str.c_str()), set);
+}
+
+inline String urlEncode(const char *str, const __FlashStringHelper *set = nullptr)
+{
+    return urlEncode(FPSTR(str), set);
+}
+
 void printable_string(Print &output, const uint8_t *buffer, size_t length, size_t maxLength = 0, PGM_P extra = nullptr, bool crlfAsText = false);
 String printable_string(const uint8_t *buffer, size_t length, size_t maxLength = 0, PGM_P extra = nullptr, bool crlfAsText = false);
 

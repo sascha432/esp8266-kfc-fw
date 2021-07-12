@@ -29,21 +29,27 @@ String formatBytes(size_t bytes)
     return buf;
 }
 
-
-String url_encode(const String &str)
+String urlEncode(const __FlashStringHelper *str, const __FlashStringHelper *set)
 {
-    PrintString out_str;
-    const char *ptr = str.c_str();
-    char ch;
-    while((ch = *ptr) != 0) {
-        if (isalnum(ch)) {
-            out_str += ch;
-        } else {
-            out_str.printf_P(PSTR("%%%02X"), ch);
+    PrintString out;
+    auto ptr = reinterpret_cast<PGM_P>(str);
+    if (!out.reserve(strlen_P(ptr))) {
+        return String();
+    }
+    uint8_t ch;
+    while((ch = pgm_read_byte(ptr)) != 0) {
+        if (
+            (set && (!isprint(ch) || strchr_P(reinterpret_cast<PGM_P>(set), ch))) ||
+            (!set && !isalnum(ch))
+        ) {
+            out.printf_P(PSTR("%%%02X"), ch);
+        }
+        else {
+            out += static_cast<char>(ch);
         }
         ptr++;
     }
-    return out_str;
+    return out;
 }
 
 String printable_string(const uint8_t *buffer, size_t length, size_t maxLength, PGM_P extra, bool crlfAsText)

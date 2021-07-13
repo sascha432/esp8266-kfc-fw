@@ -129,7 +129,7 @@ void ConfigurationParameter::dump(Print &output)
             break;
         case ParameterType::BINARY: {
                 DumpBinary dumper(output, DumpBinary::kGroupBytesDefault, 32);
-                dumper.setNewLine(F("\n       "));
+                dumper.setNewLine(F("\n      "));
                 if (_param.length()) {
                     dumper.dump(_param.data(), _param.length());
                     output.print('\r');

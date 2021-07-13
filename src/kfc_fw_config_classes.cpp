@@ -159,9 +159,7 @@ namespace KFCConfigurationClasses {
     {
         __CDBG_printf("handle=%04x data=%p len=%u", handle, data, length);
         config.setBinary(handle, data, length);
-
     }
-
 
     const char *loadStringConfig(HandleType handle)
     {

@@ -1157,11 +1157,14 @@ void KFCFWConfiguration::enterDeepSleep(milliseconds time, RFMode mode, uint16_t
 
 #endif
 
+#if IOT_LED_MATRIX_OUTPUT_PIN
+extern "C" void ClockPluginClearPixels();
+#endif
+
 static void invoke_ESP_restart()
 {
 #if IOT_LED_MATRIX_OUTPUT_PIN
-    NeoPixelEx::forceClear(IOT_LED_MATRIX_OUTPUT_PIN, IOT_CLOCK_NUM_PIXELS);
-    pinMode(IOT_LED_MATRIX_OUTPUT_PIN, INPUT);
+    ClockPluginClearPixels();
 #endif
 #if __LED_BUILTIN == NEOPIXEL_PIN_ID
     BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::OFF);

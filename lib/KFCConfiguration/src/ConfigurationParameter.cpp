@@ -128,9 +128,11 @@ void ConfigurationParameter::dump(Print &output)
             output.printf_P(PSTR("'%s'\n"), _param.string());
             break;
         case ParameterType::BINARY: {
-                DumpBinary dumper(output);
+                DumpBinary dumper(output, DumpBinary::kGroupBytesDefault, 32);
+                dumper.setNewLine(F("\n       "));
                 if (_param.length()) {
                     dumper.dump(_param.data(), _param.length());
+                    output.print('\r');
                 }
                 else {
                     output.println();

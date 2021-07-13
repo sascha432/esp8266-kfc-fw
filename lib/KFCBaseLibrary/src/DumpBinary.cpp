@@ -72,11 +72,11 @@ DumpBinary &DumpBinary::dump(const uint8_t *data, size_t length)
             }
         }
         if (_perLine != kPerLineDisabled) {
-            _output.println();
+            _output.print(_newLine);
         }
     }
     if (_perLine == kPerLineDisabled) {
-        _output.println();
+        _output.print(_newLine);
     }
     delayMicroseconds(100);
     return *this;

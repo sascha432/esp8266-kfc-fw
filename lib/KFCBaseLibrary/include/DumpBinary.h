@@ -13,9 +13,18 @@ public:
     static constexpr uint8_t kPerLineDisabled = 0xff;
 
 public:
-    DumpBinary(Print &output, uint8_t groupBytes = kGroupBytesDefault, uint8_t perLine = kPerLineDefault, uintptr_t displayOffset = 0) : _output(output), _perLine(perLine), _groupBytes(groupBytes), _displayOffset(displayOffset) {
+    DumpBinary(Print &output, uint8_t groupBytes = kGroupBytesDefault, uint8_t perLine = kPerLineDefault, uintptr_t displayOffset = 0) :
+        _output(output),
+        _newLine(String('\n')),
+        _displayOffset(displayOffset),
+        _perLine(perLine),
+        _groupBytes(groupBytes)
+    {
     }
-    DumpBinary(const String &title, Print &output, uint8_t groupBytes = kGroupBytesDefault, uint8_t perLine = kPerLineDefault, uintptr_t displayOffset = 0) : DumpBinary(output, groupBytes, perLine, displayOffset) {
+
+    DumpBinary(const String &title, Print &output, uint8_t groupBytes = kGroupBytesDefault, uint8_t perLine = kPerLineDefault, uintptr_t displayOffset = 0) :
+        DumpBinary(output, groupBytes, perLine, displayOffset)
+    {
         if (title.endsWith('\n')) {
             output.print(title);
         }
@@ -39,6 +48,11 @@ public:
         return *this;
     }
 
+    DumpBinary &setNewLine(const String &newLine) {
+        _newLine = newLine;
+        return *this;
+    }
+
     // space between group of bytes
     DumpBinary &setGroupBytes(uint8_t groupBytes);
 
@@ -52,7 +66,8 @@ public:
 
 private:
     Print &_output;
+    String _newLine;
+    uintptr_t _displayOffset;
     uint8_t _perLine;
     uint8_t _groupBytes;
-    uintptr_t _displayOffset;
 };

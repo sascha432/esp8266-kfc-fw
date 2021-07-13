@@ -252,12 +252,14 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
 //         return true;
 //     }
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LMC))) {
+        // vis[ulizer],<tzpe>
         if (args.startsWithIgnoreCase(0, F("vis"))) {
             IF_IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER(
                 _config.visualizer.type = args.toIntMinMax(1, 1, 4, 2);
                 args.printf_P(PSTR("Visualizer=%u"), _config.visualizer.type);
             )
         }
+        // br[ightness],<level>
         else if (args.startsWithIgnoreCase(0, F("br"))) {
             if (args.requireArgs(2, 3)) {
                 auto brightness = args.toIntMinMax<uint16_t>(1, 0, Clock::kMaxBrightness);
@@ -266,7 +268,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                 args.printf_P("fading brightness to %.2f%% (%u) in %.3f seconds", brightness / (float)Clock::kMaxBrightness * 100.0, brightness, time / 1000.0);
             }
         }
-        // color,<#RGB|r,b,g>
+        // co[lor],<#RGB|r,b,g>
         else if (args.startsWithIgnoreCase(0, F("co"))) {
             if (args.size() == 1) {
                 setColor(Color::fromString(args.toString(1)));
@@ -276,7 +278,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             }
             args.printf_P(PSTR("set color %s"), getColor().toString().c_str());
         }
-        // met[hod][,<fastled|interenal|toggle>]
+        // met[hod][,<fastled|neopixel|toggle>]
         // +lmc=method,tog
         else if (args.startsWithIgnoreCase(0, F("met"))) {
             if (args.startsWithIgnoreCase(1, F("fast"))) {
@@ -290,6 +292,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             }
             args.print(F("show method: %s (%u)"), ClockPlugin::getShowMethod() == Clock::ShowMethodType::FASTLED ? PSTR("FastLED") : PSTR("internal"), ClockPlugin::getShowMethod());
         }
+        // ani[mation],<animation>
         else if (args.startsWithIgnoreCase(0, F("ani"))) {
             enableLoop(false);
             uint16_t x;
@@ -344,13 +347,24 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                     break;
             }
         }
-        // dither,<on|off|1|0>
+        // di[ther],<on|off>
         else if (args.startsWithIgnoreCase(0, F("dit"))) {
             bool state = args.isTrue(1);
             _display.setDither(state);
             args.print(F("dithering %s"), state ? PSTR("enabled") : PSTR("disabled"));
         }
-        // frames[,rst]
+        // out[put],<on|off>
+        else if (args.startsWithIgnoreCase(0, F("out"))) {
+            bool state = args.isTrue(1);
+            if (state) {
+                _enable();
+            }
+            else {
+                _disable();
+            }
+            args.print(F("LED output %s"), state ? PSTR("enabled") : PSTR("disabled"));
+        }
+        // fr[ames][,rst]
         else if (args.startsWithIgnoreCase(0, F("fr"))) {
             auto &stats = NeoPixelEx::getStats();
             args.print(F("Internal: aborted frames=%u/%u fps=%u"), stats.getAbortedFrames(), stats.getFrames(), stats.getFps());
@@ -360,7 +374,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                 args.print(F("reset"));
             }
         }
-        // reset[,<pixels>]
+        // res[et][,<pixels>]
         else if (args.startsWithIgnoreCase(0, F("res"))) {
             enableLoop(true);
             auto num = args.toIntMinMax<uint16_t>(1, 0, 2048, 0);
@@ -381,6 +395,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             }
             args.print(F("display reset"));
         }
+        // cl[ear]
         else if (args.startsWithIgnoreCase(0, F("cl"))) {
             enableLoop(false);
             _display.clear();
@@ -503,6 +518,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                 animations.replace(' ', '_');
                 cmds.emplace_back(PrintString(F("ani[mation],<%s>"), animations.c_str()));
             }
+            cmds.emplace_back(F("out[put],<on|off>"));
             cmds.emplace_back(F("di[ther],<on|off>"));
             cmds.emplace_back(F("co[lor],<#color>"));
             cmds.emplace_back(F("br[igthness],<level>"));

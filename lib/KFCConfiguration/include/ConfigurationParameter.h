@@ -310,6 +310,8 @@ inline const __FlashStringHelper *ConfigurationParameter::getTypeString(Paramete
         return F("FLOAT");
     case ParameterType::DOUBLE:
         return F("DOUBLE");
+    case ParameterType::_ANY:
+        return F("ANY");
     default:
         break;
     }

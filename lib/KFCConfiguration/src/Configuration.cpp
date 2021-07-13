@@ -86,7 +86,7 @@ bool Configuration::read()
     return true;
 }
 
-bool Configuration::write()
+Configuration::WriteResultType Configuration::write()
 {
     __LDBG_printf("params=%u", _params.size());
 
@@ -95,23 +95,23 @@ bool Configuration::write()
 
     // get header
     if (!ESP.flashRead(address, header, sizeof(header))) {
-        __DBG_panic("cannot read header offset=%u", ConfigurationHelper::getOffsetFromFlashAddress(address));
-    }
-    if (!header) {
-        __DBG_panic("invalid magic=%08x", header.magic());
+        __DBG_printf("cannot read header offset=%u", ConfigurationHelper::getOffsetFromFlashAddress(address));
+        return WriteResultType::READING_HEADER_FAILED;
     }
 
-    // check dirty data for changes
-    bool dirty = false;
-    for (auto &parameter : _params) {
-        if (parameter.hasDataChanged(*this)) {
-            dirty = true;
-            break;
+    if (header) {
+        // check dirty data for changes
+        bool dirty = false;
+        for (auto &parameter : _params) {
+            if (parameter.hasDataChanged(*this)) {
+                dirty = true;
+                break;
+            }
         }
-    }
-    if (dirty == false) {
-        __LDBG_printf("configuration did not change");
-        return read();
+        if (dirty == false) {
+            __LDBG_printf("configuration did not change");
+            return read() ? WriteResultType::SUCCESS : WriteResultType::READING_CONF_FAILED;
+        }
     }
 
     // create new configuration in memory
@@ -162,14 +162,14 @@ bool Configuration::write()
                 // read from flash
                 auto len = param.next_offset();
                 if (!buffer.reserve(buffer.length() + len)) {
-                    __DBG_panic("out of memory: buffer=%u size=%u", buffer.length(), _size);
-                    break;
+                    __DBG_printf("out of memory: buffer=%u size=%u", buffer.length(), _size);
+                    return WriteResultType::OUT_OF_MEMORY;
                 }
                 auto ptr = buffer.end();
                 buffer.setLength(buffer.length() + len);
                 if (!ESP.flashRead(oldAddress, ptr, len)) {
                     __DBG_panic("failed to read flash address=%u len=%u", oldAddress, len);
-                    break;
+                    return WriteResultType::READING_PREV_CONF_FAILED;
                 }
             }
             // next_offset() returns the offset of the data stored in the flash memory, not the current data in param
@@ -179,11 +179,12 @@ bool Configuration::write()
         }
 
         if (buffer.length() > _size) {
-            __DBG_panic("size exceeded: %u > %u", buffer.length(), _size);
+            __DBG_printf("size exceeded: %u > %u", buffer.length(), _size);
+            return WriteResultType::MAX_SIZE_EXCEEDED;
         }
 
         // update header
-        header.update(header.version() + 1, _params.size(), buffer.length());
+        header = Header(header.version() + 1, buffer.length(), _params.size());
         header.calcCrc(buffer.get(), buffer.length());
 
         // format flash and copy stored data
@@ -194,10 +195,12 @@ bool Configuration::write()
             // load data before the offset
             auto data = std::unique_ptr<uint8_t[]>(new uint8_t[kHeaderOffset]); // copying the previous data could be done before allocating "buffer" after the interrupt lock
             if (!data) {
-                __DBG_panic("failed to allocate memory (preoffset data)");
+                __DBG_printf("failed to allocate memory=%u (preoffset data)", kHeaderOffset);
+                return WriteResultType::OUT_OF_MEMORY;
             }
             if (!ESP.flashRead(address, data.get(), kHeaderOffset)) {
-                __DBG_panic("failed to read flash (preoffset data)");
+                __DBG_printf("failed to read flash (preoffset data, address=%u size=%u)", address, kHeaderOffset);
+                return WriteResultType::FLASH_READ_ERROR;
             }
         }
 
@@ -208,7 +211,8 @@ bool Configuration::write()
         // add redundancy writing to multiple sectors, the header has an incremental version number
         // append mode can be used to fill the sector before erasing
         if (!ESP.flashEraseSector(address / SPI_FLASH_SEC_SIZE)) {
-            __DBG_panic("failed to write configuration (erase)");
+            __DBG_printf("failed to write configuration (erase)");
+            return WriteResultType::FLASH_ERASE_ERROR;
         }
 
         if constexpr (kHeaderOffset != 0) {
@@ -221,13 +225,16 @@ bool Configuration::write()
 
         // write header
         address += kHeaderOffset;
+
         if (!ESP.flashWrite(address, header, sizeof(header))) {
-            __DBG_panic("failed to write configuration (write header)");
+            __DBG_printf("failed to write configuration (write header, address=%u, size=%u)", address, sizeof(header));
+            return WriteResultType::FLASH_WRITE_ERROR;
         }
         // params and data
         address += sizeof(header);
         if (!ESP.flashWrite(address, buffer.get(), buffer.length())) {
-            __DBG_panic("failed to write configuration (write buffer)");
+            __DBG_printf("failed to write configuration (write buffer, address=%u, size=%u)", address, buffer.length());
+            return WriteResultType::FLASH_WRITE_ERROR;
         }
 
     }
@@ -239,11 +246,14 @@ bool Configuration::write()
 
     // re-read parameters
     _params.clear();
-    return _readParams();
+    return _readParams() ? WriteResultType::SUCCESS : WriteResultType::READING_CONF_FAILED;
 }
 
 void Configuration::makeWriteable(ConfigurationParameter &param, size_type length)
 {
+#if DEBUG_CONFIGURATION
+    delay(1);
+#endif
     param._makeWriteable(*this, length);
 }
 
@@ -436,6 +446,7 @@ Configuration::ParameterList::iterator Configuration::_findParam(ConfigurationPa
     offset = getDataOffset(_params.size());
     for (auto it = _params.begin(); it != _params.end(); ++it) {
         if (*it == handle && ((type == ParameterType::_ANY) || (it->_param.type() == type))) {
+        // if (*it == handle && (it->_param.type() == type)) {
             //__LDBG_printf("%s FOUND", it->toString().c_str());
             // it->_getParam()._usage._counter++;
             return it;
@@ -448,6 +459,9 @@ Configuration::ParameterList::iterator Configuration::_findParam(ConfigurationPa
 
 ConfigurationParameter &Configuration::_getOrCreateParam(ConfigurationParameter::TypeEnum_t type, HandleType handle, uint16_t &offset)
 {
+#if DEBUG_CONFIGURATION
+    delay(1);
+#endif
     auto iterator = _findParam(ParameterType::_ANY, handle, offset);
     if (iterator == _params.end()) {
         _params.emplace_back(handle, type);
@@ -530,7 +544,7 @@ bool Configuration::_readParams()
         }
 
         if (!header.validateCrc(crc)) {
-            __LDBG_printf("CRC mismatch 0x%08x<>0x%08x", crc, header.crc());
+            __LDBG_printf("CRC mismatch 0x%08x<>0x%08x magic 0x%08x<>0x%08x", crc, header.crc(), header.magic(), CONFIG_MAGIC_DWORD);
             break;
         }
         if (_params.size() == header.numParams()) {

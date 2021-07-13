@@ -49,7 +49,18 @@ namespace ConfigurationHelper {
     }
 
     struct Header {
-        Header() : _magic(CONFIG_MAGIC_DWORD), _crc(~0U) {}
+        Header() :
+            _magic(CONFIG_MAGIC_DWORD),
+            _crc(~0U)
+        {
+        }
+
+        Header(uint32_t version, uint16_t length, uint16_t numParams) :
+            _magic(CONFIG_MAGIC_DWORD),
+            _crc(~0U),
+            _data(version, length, numParams)
+        {
+        }
 
         // length does not include the Header
         uint16_t length() const {
@@ -64,7 +75,7 @@ namespace ConfigurationHelper {
             return _data.version;
         }
 
-        void update(uint32_t version, uint16_t numParams, int16_t length) {
+        void update(uint32_t version, uint16_t numParams, uint16_t length) {
             _data.version = version;
             _data.params = numParams;
             _data.length = length;
@@ -114,6 +125,10 @@ namespace ConfigurationHelper {
             return reinterpret_cast<uint32_t *>(this);
         }
 
+        void setMagic() {
+            _magic = CONFIG_MAGIC_DWORD;
+        }
+
     private:
         uint32_t _magic;
         uint32_t _crc;
@@ -122,7 +137,9 @@ namespace ConfigurationHelper {
             uint16_t length;
             uint16_t params;
 
+
             Data() : version(0), length(0), params(0) {}
+            Data(uint32_t _version, uint16_t _length, uint16_t _params) : version(_version), length(_length), params(_params) {}
 
             uint32_t crc() const {
                 return crc32(this, sizeof(*this));
@@ -173,6 +190,48 @@ public:
         return kParamsOffset + (sizeof(ParameterHeaderType) * numParams);
     }
 
+    enum class WriteResultType {
+        SUCCESS = 0,
+        READING_HEADER_FAILED,
+        READING_CONF_FAILED,
+        OUT_OF_MEMORY,
+        READING_PREV_CONF_FAILED,
+        MAX_SIZE_EXCEEDED,
+        FLASH_READ_ERROR,
+        FLASH_ERASE_ERROR,
+        FLASH_WRITE_ERROR,
+    };
+
+    static const __FlashStringHelper *getWriteResultTypeStr(WriteResultType result) {
+        switch(result) {
+            case WriteResultType::SUCCESS:
+                return F("SUCCESS");
+            case WriteResultType::READING_HEADER_FAILED:
+                return F("READING_HEADER_FAILED");
+            case WriteResultType::READING_CONF_FAILED:
+                return F("READING_CONF_FAILED");
+            case WriteResultType::OUT_OF_MEMORY:
+                return F("OUT_OF_MEMORY");
+            case WriteResultType::READING_PREV_CONF_FAILED:
+                return F("READING_PREV_CONF_FAILED");
+            case WriteResultType::MAX_SIZE_EXCEEDED:
+                return F("MAX_SIZE_EXCEEDED");
+            case WriteResultType::FLASH_READ_ERROR:
+                return F("FLASH_READ_ERROR");
+            case WriteResultType::FLASH_ERASE_ERROR:
+                return F("FLASH_ERASE_ERROR");
+            case WriteResultType::FLASH_WRITE_ERROR:
+                return F("FLASH_WRITE_ERROR");
+            // default:
+            //     break;
+        }
+        // this is causing a memory leak for invalid result codes, which should not occur
+        auto str = new String();
+        *str = F("INVALID RESULT #");
+        *str += String(static_cast<int>(result));
+        return reinterpret_cast<const __FlashStringHelper *>(str->c_str());
+    }
+
 
 public:
     Configuration(uint16_t size);
@@ -191,7 +250,7 @@ public:
     bool read();
 
     // write data to EEPROM
-    bool write();
+    WriteResultType write();
 
     template <typename _Ta>
     ConfigurationParameter &getWritableParameter(HandleType handle, size_type maxLength = sizeof(_Ta)) {

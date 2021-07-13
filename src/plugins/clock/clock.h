@@ -146,7 +146,11 @@ namespace Clock {
 
 }
 
-class ClockPlugin : public PluginComponent, public MQTTComponent {
+class ClockPlugin : public PluginComponent, public MQTTComponent
+#if IOT_SENSOR_HAVE_MOTION_SENSOR
+    , public MotionSensorHandler
+#endif
+{
 public:
     // using SevenSegmentDisplay = Clock::SevenSegmentDisplay;
     using Color               = Clock::Color;
@@ -295,38 +299,12 @@ public:
 // ------------------------------------------------------------------------
 // Motion sensor
 // ------------------------------------------------------------------------
-#if IOT_CLOCK_HAVE_MOTION_SENSOR
-private:
-    enum class MotionStateType  {
-        NONE,
-        NO_MOTION,
-        DETECTED,
-        RETRIGGERED
-    };
-
-    struct Motion {
-        time_t time;
-        MotionStateType state;
-
-        Motion(time_t _time = 0, MotionStateType _state = MotionStateType::NONE) :
-            time(_time),
-            state(_state)
-        {
-        }
-    };
-
-    using MotionVector = std::vector<Motion>;
-
-private:
-    String _getMotionHistory() const;
-
-private:
-    uint8_t _motionState{0xff};
-    uint32_t _motionLastUpdate{0};
-    MotionVector _motionHistory;
+#if IOT_SENSOR_HAVE_MOTION_SENSOR
+public:
+    virtual void eventMotionDetected(bool motion) override;
+    virtual bool eventMotionAutoOff(bool off);
 
 #endif
-
 
 #ifdef IOT_LED_MATRIX_FAN_CONTROL
 
@@ -383,8 +361,13 @@ private:
 // Enable/disable LEDs
 // ------------------------------------------------------------------------
 
+public:
+    static void clear() {
+        _reset();
+    }
+
 private:
-    void _reset();
+    static void _reset();
     void _enable();
     void _disable(uint8_t delayMillis = 10);
     bool _getEnabledState() const {
@@ -661,6 +644,8 @@ inline const __FlashStringHelper *getNeopixelShowMethodStr()
     }
     return F("Unknown");
 }
+
+extern "C" void ClockPluginClearPixels();
 
 #if DEBUG_IOT_CLOCK
 #include <debug_helper_disable.h>

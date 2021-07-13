@@ -4,6 +4,8 @@
 
 #if IOT_SENSOR_HAVE_MOTION_SENSOR
 
+#include <EventScheduler.h>
+#include <WebUISocket.h>
 #include "Sensor_Motion.h"
 #include "sensor.h"
 
@@ -16,6 +18,12 @@
 Sensor_Motion::Sensor_Motion(const String &name) :
     MQTT::Sensor(MQTT::SensorType::MOTION),
     _name(name),
+    _handler(nullptr),
+    _config(Plugins::Sensor::getConfig().motion),
+    _motionLastUpdate(0),
+    _motionState(0xff),
+    _pin(0xff),
+    _pinInverted(false)
 {
     REGISTER_SENSOR_CLIENT(this);
 }
@@ -48,61 +56,158 @@ void Sensor_Motion::getValues(WebUINS::Events &array, bool timer)
 {
     using namespace WebUINS;
     array.append(
-        Values(_getId(), _motion, true)
+        Values(_getId(), _getStateStr(_motionState), _motionState != 0xff)
     );
 }
 
 void Sensor_Motion::createWebUI(WebUINS::Root &webUI)
 {
     WebUINS::Row row(
-        WebUINS::Sensor(_getId(), _name, '')
+        WebUINS::Sensor(_getId(), _name, emptyString)
     );
     webUI.appendToLastRow(row);
 }
 
-void Sensor_Battery::publishState()
+void Sensor_Motion::publishState()
 {
-    // auto status = readSensor();
-    // if (!_status.isValid()) {
-    //     return;
-    // }
     __LDBG_printf("client=%p connected=%u", client, client && client->isConnected() ? 1 : 0);
     if (isConnected()) {
-        publish(_getTopic(), true, String(_motion ? 1 : 0));
+        publish(_getTopic(), true, MQTT::Client::toBoolOnOff(_motionState));
+    }
+    if (WebUISocket::hasAuthenticatedClients()) {
+        WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(
+            WebUINS::Events(WebUINS::Values(_getId(), _getStateStr(_motionState)))
+        ));
     }
 }
 
-void Sensor_Battery::getStatus(Print &output)
+void Sensor_Motion::getStatus(Print &output)
 {
     output.printf_P(PSTR(IOT_SENSOR_NAMES_MOTION_SENSOR));
     // output.print(F(""));
 }
 
-bool Sensor_Battery::getSensorData(String &name, StringVector &values)
-{
-    auto status = readSensor();
-
-    name = F(IOT_SENSOR_NAMES_BATTERY);
-    values.emplace_back(String(status.getVoltage(), _config.precision) + F(" V"));
-#ifdef IOT_SENSOR_BATTERY_CHARGING
-    values.emplace_back(PrintString(F("Charging: %s"), status.isCharging() ? SPGM(Yes) : SPGM(No)));
-#endif
-#if IOT_SENSOR_BATTERY_DSIPLAY_POWER_STATUS
-    values.emplace_back(PrintString(F("Status: %s"), status.getPowerStatus()));
-#endif
-    return true;
-}
-
 void Sensor_Motion::createConfigureForm(AsyncWebServerRequest *request, FormUI::Form::BaseForm &form)
 {
     auto &cfg = Plugins::Sensor::getWriteableConfig();
-    auto &group = form.addCardGroup(F("smcfg"), F(IOT_SENSOR_NAMES_BATTERY), true);
+    auto &group = form.addCardGroup(F("mscfg"), F(IOT_SENSOR_NAMES_MOTION_SENSOR), true);
+
+    form.addObjectGetterSetter(F("msto"), FormGetterSetter(cfg.motion, motion_trigger_timeout));
+    form.addFormUI(F("Motion Sensor Timeout"), FormUI::Suffix(F("minutes")));
+    cfg.motion.addRangeValidatorFor_motion_trigger_timeout(form);
+
+    #if IOT_SENSOR_HAVE_MOTION_AUTO_OFF
+        form.addObjectGetterSetter(F("msao"), FormGetterSetter(cfg.motion, motion_auto_off));
+        form.addFormUI(F("Auto Off Delay Without Motion"), FormUI::Suffix(F("minutes")), FormUI::IntAttribute(F("disabled-value"), 0));
+        cfg.motion.addRangeValidatorFor_motion_auto_off(form);
+    #endif
+
     group.end();
 }
 
 void Sensor_Motion::reconfigure(PGM_P source)
 {
     _config = Plugins::Sensor::getConfig().motion;
+}
+
+void Sensor_Motion::begin(MotionSensorHandler *handler, uint8_t pin, bool pinInverted)
+{
+    _handler = nullptr;
+    _pin = pin;
+    _pinInverted = pinInverted;
+    _timerCallback();
+    _handler = handler;
+    _timer.add(Event::seconds(1), true, [this](Event::CallbackTimerPtr) {
+        _timerCallback();
+    });
+}
+
+void Sensor_Motion::end()
+{
+    _timer.remove();
+    _handler = nullptr;
+}
+
+void Sensor_Motion::_timerCallback()
+{
+    bool state = _digitalRead(_pin);
+    if (_pinInverted) {
+        state = !state;
+    }
+    if (!state && _motionLastUpdate && (millis() - _motionLastUpdate) < (_config.motion_trigger_timeout * 60000UL)) {
+        // keep the motion signal on if any motion is detected within motion_trigger_timeout min.
+    }
+    else if (state != _motionState) {
+        // motion detected or timeout
+        _motionState = state;
+        if (_motionState) {
+            __LDBG_printf("motion detected: state=%u last=%.3fs auto_off=%us", _motionState, _motionLastUpdate ? (millis() - _motionLastUpdate) / 1000.0 : 0.0,  (_config.motion_auto_off * 60));
+
+            #if IOT_SENSOR_HAVE_MOTION_AUTO_OFF
+                if (_handler && _handler->_autoOff) {
+                    if (_motionLastUpdate == 0 && _config.motion_auto_off) {
+                        if (_handler->eventMotionAutoOff(true)) {
+                            Logger_notice(F("Motion detected. Turning device on..."));
+                        }
+                    }
+                }
+            #endif
+
+            _motionLastUpdate = millis();
+            if (_motionLastUpdate == 0) {
+                _motionLastUpdate++;
+            }
+        }
+        else {
+            __LDBG_printf("motion sensor timeout");
+        }
+        if (_handler) {
+            _handler->eventMotionDetected(_motionState);
+        }
+        publishState();
+    }
+    else if (state && state == _motionState && _motionLastUpdate) {
+        // motion detected within timeout
+        __LDBG_printf("motion detected (retrigger): state=%u last=%.3fs auto_off=%us", _motionState, _motionLastUpdate ? (millis() - _motionLastUpdate) / 1000.0 : 0.0,  (_config.motion_auto_off * 60));
+        _motionLastUpdate = millis();
+        if (_motionLastUpdate == 0) {
+            _motionLastUpdate++;
+        }
+    }
+
+    #if IOT_SENSOR_HAVE_MOTION_AUTO_OFF
+        if (_handler && _handler->_autoOff) {
+            if (_motionLastUpdate && _config.motion_auto_off && get_time_diff(_motionLastUpdate, millis()) > (_config.motion_auto_off * 60000UL)) {
+                _motionLastUpdate = 0;
+                if (_handler->eventMotionAutoOff(true)) {
+                    Logger_notice(F("No motion detected. Turning device off..."));
+                }
+            }
+        }
+    #endif
+}
+
+const __FlashStringHelper *Sensor_Motion::_getId()
+{
+    return F("motion");
+}
+
+String Sensor_Motion::_getTopic()
+{
+    return MQTTClient::formatTopic(_getId());
+}
+
+const __FlashStringHelper *Sensor_Motion::_getStateStr(uint8_t state) const
+{
+    switch(state) {
+        case 1:
+            return F("ON");
+        case 0:
+            return F("OFF");
+        default:
+            break;
+    }
+    return F("DISABLED");
 }
 
 #endif

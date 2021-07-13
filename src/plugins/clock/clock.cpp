@@ -15,6 +15,7 @@
 #include "blink_led_timer.h"
 #include <stl_ext/algorithm.h>
 #include "../src/plugins/plugins.h"
+// #include "../src/plugins/sensor/sensor.h"
 #include "../src/plugins/mqtt/mqtt_json.h"
 
 #if DEBUG_IOT_CLOCK
@@ -366,70 +367,7 @@ void ClockPlugin::_setupTimer()
 {
     _Timer(_timer).add(Event::seconds(1), true, [this](Event::CallbackTimerPtr timer) {
 
-        #if IOT_CLOCK_HAVE_MOTION_SENSOR
-            if (_isEnabled && _motionLastUpdate && _config.motion_auto_off && get_time_diff(_motionLastUpdate, millis()) > (_config.motion_auto_off * 60000U)) {
-                _motionLastUpdate = 0;
-                setBrightness(0);
-                Logger_notice(F("No motion detected. Turning device off..."));
-            }
-        #endif
-
         _timerCounter++;
-
-        #if IOT_CLOCK_HAVE_MOTION_SENSOR
-            auto state = _digitalRead(IOT_CLOCK_HAVE_MOTION_SENSOR_PIN);
-            auto type = MotionStateType::NONE;
-            if (!state && _motionLastUpdate && get_time_diff(_motionLastUpdate, millis()) < (_config.motion_trigger_timeout * 60 * 1000)) {
-                // keep the motion signal on if any motion is detected within motion_trigger_timeout min.
-            }
-            else if (state != _motionState) {
-                if (isConnected()) {
-                    publish(MQTT::Client::formatTopic(F("motion")), true, MQTT::Client::toBoolOnOff(_motionState));
-                }
-
-                _motionState = state;
-                if (_motionState) {
-                    // __LDBG_printf("motion detected: state=%u last=%.3fs auto_off=%us", _motionState, _motionLastUpdate ? (millis() - _motionLastUpdate) / 1000.0 : 0.0,  (_config.motion_auto_off * 60));
-                    _motionLastUpdate = millis();
-                    if (_motionLastUpdate == 0) {
-                        _motionLastUpdate++;
-                    }
-                }
-                else {
-                    // __LDBG_printf("motion sesnor timeout");
-                }
-                _digitalWrite(131, !_motionState);
-                type = _motionState ? MotionStateType::DETECTED : MotionStateType::NO_MOTION;
-            }
-            else if (state && state == _motionState && _motionLastUpdate) {
-                // __LDBG_printf("motion detected (retrigger): state=%u last=%.3fs auto_off=%us", _motionState, _motionLastUpdate ? (millis() - _motionLastUpdate) / 1000.0 : 0.0,  (_config.motion_auto_off * 60));
-                _motionLastUpdate = millis();
-                if (_motionLastUpdate == 0) {
-                    _motionLastUpdate++;
-                }
-                _digitalWrite(131, !_motionState);
-                type = MotionStateType::RETRIGGERED;
-
-            }
-
-            if (type != MotionStateType::NONE) {
-                _motionHistory.erase(std::remove_if(_motionHistory.begin(), _motionHistory.end(), [](const Motion &motion) {
-                    return motion.state == MotionStateType::RETRIGGERED;
-                }), _motionHistory.end());
-                _motionHistory.emplace_back(time(nullptr), type);
-                // __LDBG_printf("_motionHistory size=%u", _motionHistory.size());
-                if (_motionHistory.size() > 8) {
-                    _motionHistory.erase(_motionHistory.end() - 8, _motionHistory.end());
-                }
-
-                if (WebUISocket::hasAuthenticatedClients()) {
-                    WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(
-                        WebUINS::Events(WebUINS::Values(F("motion"), _getMotionHistory()))
-                    ));
-                }
-            }
-            _digitalWrite(131, !_motionState);
-        #endif
 
         #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
             #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR == 2
@@ -560,7 +498,6 @@ void ClockPlugin::_setupTimer()
 void ClockPlugin::preSetup(SetupModeType mode)
 {
     if (mode == SetupModeType::DEFAULT) {
-        _reset();
         auto sensorPlugin = PluginComponent::getPlugin<SensorPlugin>(F("sensor"), false);
         if (sensorPlugin) {
             sensorPlugin->getInstance().setAddCustomSensorsCallback(webUIHook);
@@ -570,9 +507,6 @@ void ClockPlugin::preSetup(SetupModeType mode)
 
 void ClockPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
-    digitalWrite(IOT_LED_MATRIX_OUTPUT_PIN, LOW);
-    pinMode(IOT_LED_MATRIX_OUTPUT_PIN, OUTPUT);
-
     #if IOT_LED_MATRIX_ENABLE_PIN != -1
         digitalWrite(IOT_LED_MATRIX_ENABLE_PIN, enablePinState(false));
         pinMode(IOT_LED_MATRIX_ENABLE_PIN, OUTPUT);
@@ -645,8 +579,13 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
         }, this);
     #endif
 
-    #if IOT_CLOCK_HAVE_MOTION_SENSOR
-        _motionHistory.clear();
+    #if IOT_SENSOR_HAVE_MOTION_SENSOR
+        for(const auto &sensor: SensorPlugin::getSensors()) {
+            if (sensor->getType() == SensorPlugin::SensorType::MOTION) {
+                reinterpret_cast<Sensor_Motion *>(sensor)->begin(this, IOT_CLOCK_MOTION_SENSOR_PIN, false);
+                break;
+            }
+        }
     #endif
 
     #if IOT_LED_MATRIX_FAN_CONTROL
@@ -733,6 +672,15 @@ void ClockPlugin::shutdown()
         _displaySensor = DisplaySensorType::DESTROYED;
     #endif
 
+    #if IOT_SENSOR_HAVE_MOTION_SENSOR
+        for(const auto &sensor: SensorPlugin::getSensors()) {
+            if (sensor->getType() == SensorPlugin::SensorType::MOTION) {
+                reinterpret_cast<Sensor_Motion *>(sensor)->end();
+                break;
+            }
+        }
+    #endif
+
     #if IOT_CLOCK_SAVE_STATE
         if (_saveTimer) {
             _saveTimer.remove();
@@ -770,10 +718,6 @@ void ClockPlugin::shutdown()
         WsClient::removeClientCallback(this);
     #endif
 
-    #if IOT_CLOCK_HAVE_MOTION_SENSOR
-        _motionHistory.clear();
-    #endif
-
     _timer.remove();
 
     #if IOT_ALARM_PLUGIN_ENABLED
@@ -799,9 +743,6 @@ void ClockPlugin::shutdown()
 
     delete _animation;
     delete _blendAnimation;
-
-    _reset();
-    pinMode(IOT_LED_MATRIX_OUTPUT_PIN, INPUT);
 }
 
 void ClockPlugin::getStatus(Print &output)
@@ -1094,44 +1035,19 @@ void ClockPlugin::_setBlendAnimation(Clock::Animation *blendAnimation)
     _blendAnimation->begin();
 }
 
-#if IOT_CLOCK_HAVE_MOTION_SENSOR
+#if IOT_SENSOR_HAVE_MOTION_AUTO_OFF
 
-String ClockPlugin::_getMotionHistory() const
+void ClockPlugin::eventMotionDetected(bool motion)
 {
-    return F("disabled");
-    __DBG_printf("motion history %u", _motionHistory.size());
-    PrintString str;
-    str.print(F("<div class=\"motion-sensor-history\">"));
-    if (_motionHistory.empty()) {
-        str.print(F("Waiting..."));
+    _digitalWrite(131, !motion);
+}
+
+bool ClockPlugin::eventMotionAutoOff(bool off)
+{
+    if (off && _getBrightness()) {
+        return true;
     }
-    else {
-        for(const auto &entry: _motionHistory) {
-            str.print(F("<div>"));
-            if (time(nullptr) - entry.time > 12 * 60 * 60) {
-                str.strftime(F("%b %d %H:%M:%S: "), entry.time);
-            }
-            else {
-                str.strftime(F("%H:%M:%S: "), entry.time);
-            }
-            switch(entry.state) {
-                case MotionStateType::DETECTED:
-                    str.printf_P(PSTR("motion detected"));
-                    break;
-                case MotionStateType::NO_MOTION:
-                    str.printf_P(PSTR("no motion"));
-                    break;
-                case MotionStateType::RETRIGGERED:
-                    str.printf_P(PSTR("retriggered"));
-                    break;
-                case MotionStateType::NONE:
-                    break;
-            }
-            str.print(F("</div>"));
-        }
-    }
-    str.print(F("</div>"));
-    return str;
+    return false;
 }
 
 #endif
@@ -1255,9 +1171,21 @@ void ClockPlugin::_updateBrightnessSettings()
     }
 }
 
+void ClockPluginClearPixels()
+{
+    plugin.clear();
+}
+
 void ClockPlugin::_reset()
 {
+    #if IOT_LED_MATRIX_ENABLE_PIN != -1
+        digitalWrite(IOT_LED_MATRIX_ENABLE_PIN, enablePinState(true));
+    #endif
     NeoPixelEx::forceClear(IOT_LED_MATRIX_OUTPUT_PIN, IOT_CLOCK_NUM_PIXELS);
+    #if IOT_LED_MATRIX_ENABLE_PIN != -1
+        digitalWrite(IOT_LED_MATRIX_ENABLE_PIN, enablePinState(false));
+    #endif
+    pinMode(IOT_LED_MATRIX_OUTPUT_PIN, INPUT);
 }
 
 void ClockPlugin::_enable()
@@ -1275,6 +1203,9 @@ void ClockPlugin::_enable()
         digitalWrite(IOT_LED_MATRIX_ENABLE_PIN, enablePinState(true));
         __LDBG_printf("enable LED pin %u state %u (is_enabled=%u, config=%u)", IOT_LED_MATRIX_ENABLE_PIN, enablePinState(true), _isEnabled, _config.enabled);
     #endif
+
+    pinMode(IOT_LED_MATRIX_OUTPUT_PIN, OUTPUT);
+
     #if IOT_LED_MATRIX_STANDBY_PIN != -1
         if (_config.standby_led) {
             _digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(false));
@@ -1307,9 +1238,13 @@ void ClockPlugin::_disable(uint8_t delayMillis)
         _powerLevelAvg = 0;
     #endif
 
+    // avoid leakage through the level shifter
+    pinMode(IOT_LED_MATRIX_OUTPUT_PIN, INPUT);
+
     #if IOT_LED_MATRIX_ENABLE_PIN != -1
         digitalWrite(IOT_LED_MATRIX_ENABLE_PIN, enablePinState(false));
     #endif
+
     #if IOT_LED_MATRIX_STANDBY_PIN != -1
         if (_config.standby_led) {
             _digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(true));

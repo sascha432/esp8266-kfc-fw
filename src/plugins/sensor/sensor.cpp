@@ -102,7 +102,7 @@ void SensorPlugin::setup(SetupModeType mode, const PluginComponents::Dependencie
     addSensor<Sensor_DHTxx>(F(IOT_SENSOR_NAMES_DHTxx), IOT_SENSOR_HAVE_DHTxx_PIN);
 #endif
 #if IOT_SENSOR_HAVE_MOTION_SENSOR
-    addSensor<Sensor_Motion>(F(IOT_SENSOR_NAMES_MOTION_SENSOR), IOT_SENSOR_MOTION_SENSOR_GET_VALUE_FUNC);
+    addSensor<Sensor_Motion>(F(IOT_SENSOR_NAMES_MOTION_SENSOR));
 #endif
 #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR
     addSensor<Sensor_AmbientLight>(F(IOT_SENSOR_NAMES_AMBIENT_LIGHT_SENSOR), IOT_SENSOR_AMBIENT_LIGHT_GET_VALUE_FUNC);

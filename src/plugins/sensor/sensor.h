@@ -24,6 +24,8 @@
 #include "Sensor_INA219.h"
 #include "Sensor_DHTxx.h"
 #include "Sensor_DimmerMetrics.h"
+#include "Sensor_Motion.h"
+// #include "Sensor_AmbientLight.h"
 
 #ifndef IOT_SENSOR_NAMES_LM75A
 #define IOT_SENSOR_NAMES_LM75A                  "LM75A Temperature"

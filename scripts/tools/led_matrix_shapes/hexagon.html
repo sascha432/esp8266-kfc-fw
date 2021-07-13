@@ -5,8 +5,9 @@
 
             .hexagon-container {
                 width: 18.0rem;
-                min-height: 15.5rem;
-                max-height: 15.5rem;
+                min-width: 18.0rem;
+                min-height: 16rem;
+                max-height: 16rem;
                 clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
                 background-color: #000000;
                 display: flex;
@@ -34,16 +35,46 @@
                 top: 8rem;
                 left: -16.5rem;
             }
-
-            .line2 {
+            .hexagon-container:nth-child(5) {
                 position: relative;
-                top: -1rem;
+                left: -22rem;
             }
+            .hexagon-container:nth-child(6) {
+                position: relative;
+                top: 8rem;
+                left: -27.5rem;
+            }
+            .hexagon-container:nth-child(7) {
+                position: relative;
+                left: -33rem;
+            }
+            .hexagon-container:nth-child(8) {
+                position: relative;
+                top: 8rem;
+                left: -33rem;
+            }
+
+            .hexagon-column:nth-child(2) {
+                margin-top: -1rem;
+            }
+            .hexagon-column:nth-child(3) {
+                margin-top: -1rem;
+            }
+            .hexagon-column:nth-child(4) {
+                margin-top: -1rem;
+            }
+            .hexagon-column:nth-child(5) {
+                margin-top: -1rem;
+            }
+            .hexagon-column:nth-child(6) {
+                margin-top: -1rem;
+            }
+
 
             .hexagon-face-container {
                 width: 18.0rem;
-                min-height: 15.5rem;
-                max-height: 15.5rem;
+                min-height: 16rem;
+                max-height: 16rem;
                 clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
                 background-color: #ffffff;
                 display: flex;
@@ -195,10 +226,80 @@
         </style>
     </head>
     <body>
-        <div id="led-matrix">
-            <div id="pixel-container">
+        <div id="prototypes" style="display:none;">
+            <div>
+                <div class="hexagon-container">
+                    <div class="hexagon-face-container">
+                        <div class="inner-hexagon-container">
+                            <div class="pixels-top">
+                                <div class="pixel p5">5</div>
+                                <div class="spacer-top"></div>
+                                <div class="pixel p4">4</div>
+                            </div>
+                            <div class="pixels-center">
+                                <div class="pixel p6">6</div>
+                                <div class="spacer-center"></div>
+                                <div class="pixel p3">3</div>
+                            </div>
+                            <div class="pixels-bottom">
+                                <div class="pixel p1">1</div>
+                                <div class="spacer-bottom"></div>
+                                <div class="pixel p2">2</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-                <div id="hexagon-column">
+        <div id="led-matrix">
+            <div id="pixel-container" style="width: 150rem; height: 120rem">
+            </div>
+        </div>
+
+        <script>
+            types = {
+                0: 'hidden',
+                2: 'hidden',
+                3: 'hidden',
+                4: 'hidden',
+                14: 'hidden',
+                19: 'hidden',
+                1: 'no_led',
+                8: 'no_led',
+                15: 'no_led',
+                9: 'no_led',
+                16: 'no_led',
+                17: 'no_led',
+                10: 'no_led',
+            }
+            var num = 0;
+            var container = $('#prototypes').find('.hexagon-container').parent();
+            for(var j = 0; j < 3; j++) {
+                column = '<div class="hexagon-column">';
+                for(var i = 0; i < 7; i++) {
+                    var con = $(container).clone();
+                    var name = 'H' + num;
+                    $(con).find('.spacer-center').html(name);
+                    $(con).find('.inner-hexagon-container').addClass(name);
+                    if (types[num] == 'hidden') {
+                        $(con).find('.hexagon-face-container').css('visibility', 'hidden');
+                        $(con).find('.hexagon-container').css('opacity', '0');
+                    }
+                    else if (types[num] == 'no_led') {
+                        $(con).find('.inner-hexagon-container').css('opacity', '0');
+                    }
+                    column += $(con).html();
+                    num++;
+                }
+                column += '</div>';
+                $('#pixel-container').append(column);
+            }
+        </script>
+
+<!--
+
+                <div class="hexagon-column">
                     <div class="hexagon-container">
                         <div class="hexagon-face-container">
                             <div class="inner-hexagon-container h1">
@@ -289,7 +390,7 @@
                 </div>
             </div>
 
-            <div id="hexagon-column line2">
+            <div class="hexagon-column">
                 <div class="hexagon-container">
                     <div class="hexagon-face-container">
                         <div class="inner-hexagon-container h5">
@@ -312,6 +413,71 @@
                     </div>
                 </div>
 
+                <div class="hexagon-container">
+                    <div class="hexagon-face-container">
+                        <div class="inner-hexagon-container h6">
+                            <div class="pixels-top">
+                                <div class="pixel p5">5</div>
+                                <div class="spacer-top"></div>
+                                <div class="pixel p4">4</div>
+                            </div>
+                            <div class="pixels-center">
+                                <div class="pixel p6">6</div>
+                                <div class="spacer-center">h6</div>
+                                <div class="pixel p3">3</div>
+                            </div>
+                            <div class="pixels-bottom">
+                                <div class="pixel p1">1</div>
+                                <div class="spacer-bottom"></div>
+                                <div class="pixel p2">2</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="hexagon-container">
+                    <div class="hexagon-face-container">
+                        <div class="inner-hexagon-container h7">
+                            <div class="pixels-top">
+                                <div class="pixel p5">5</div>
+                                <div class="spacer-top"></div>
+                                <div class="pixel p4">4</div>
+                            </div>
+                            <div class="pixels-center">
+                                <div class="pixel p6">6</div>
+                                <div class="spacer-center">h7</div>
+                                <div class="pixel p3">3</div>
+                            </div>
+                            <div class="pixels-bottom">
+                                <div class="pixel p1">1</div>
+                                <div class="spacer-bottom"></div>
+                                <div class="pixel p2">2</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="hexagon-container">
+                    <div class="hexagon-face-container">
+                        <div class="inner-hexagon-container h8">
+                            <div class="pixels-top">
+                                <div class="pixel p5">5</div>
+                                <div class="spacer-top"></div>
+                                <div class="pixel p4">4</div>
+                            </div>
+                            <div class="pixels-center">
+                                <div class="pixel p6">6</div>
+                                <div class="spacer-center">h8</div>
+                                <div class="pixel p3">3</div>
+                            </div>
+                            <div class="pixels-bottom">
+                                <div class="pixel p1">1</div>
+                                <div class="spacer-bottom"></div>
+                                <div class="pixel p2">2</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -433,5 +599,6 @@ $('.digits-container').append(d);
             </div>
         </div>
  -->
+
 
 </html>

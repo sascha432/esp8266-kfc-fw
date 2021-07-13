@@ -383,7 +383,7 @@ inline static bool append_crash_data(SaveCrash::FlashStorage &fs, SPIFlash::Flas
 #if 1
 
 #if IOT_LED_MATRIX_OUTPUT_PIN
-#include "NeoPixelEspEx.h"
+extern "C" void ClockPluginClearPixels();
 #endif
 
 inline __attribute__((__always_inline__)) static void _custom_crash_callback(struct rst_info *rst_info, uint32_t stack, uint32_t stack_end)
@@ -395,8 +395,7 @@ inline __attribute__((__always_inline__)) static void _custom_crash_callback(str
     auto header = SaveCrash::Data(time(nullptr), stack, stack_end, sp_dump, (void *)umm_last_fail_alloc_addr, umm_last_fail_alloc_size, *rst_info);
 
 #if IOT_LED_MATRIX_OUTPUT_PIN
-    NeoPixelEx::forceClear(IOT_LED_MATRIX_OUTPUT_PIN, IOT_CLOCK_NUM_PIXELS);
-    pinMode(IOT_LED_MATRIX_OUTPUT_PIN, INPUT);
+    ClockPluginClearPixels();
 #endif
 
     auto fs = SaveCrash::createFlashStorage();

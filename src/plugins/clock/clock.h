@@ -304,6 +304,9 @@ public:
     virtual void eventMotionDetected(bool motion) override;
     virtual bool eventMotionAutoOff(bool off);
 
+private:
+    bool _autoOff{false};
+
 #endif
 
 #ifdef IOT_LED_MATRIX_FAN_CONTROL

@@ -44,6 +44,7 @@
                 float green_incr;
                 float blue_incr;
                 RainbowColor_t();
+                RainbowColor_t(uint32_t _min, uint32_t _max, float r, float g, float b);
             };
 
             struct __attribute__packed__ FireAnimation_t {

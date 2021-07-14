@@ -63,6 +63,15 @@ namespace KFCConfigurationClasses {
     }
 #endif
 
+    Plugins::ClockConfig::RainbowColor_t::RainbowColor_t(uint32_t _min, uint32_t _max, float r, float g, float b) :
+        min(_min),
+        factor(_max),
+        red_incr(r),
+        green_incr(g),
+        blue_incr(b)
+    {
+    }
+
     Plugins::ClockConfig::FireAnimation_t::FireAnimation_t() :
         cooling(60),
         sparking(95),

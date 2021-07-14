@@ -1035,7 +1035,7 @@ void ClockPlugin::_setBlendAnimation(Clock::Animation *blendAnimation)
     _blendAnimation->begin();
 }
 
-#if IOT_SENSOR_HAVE_MOTION_AUTO_OFF
+#if IOT_SENSOR_HAVE_MOTION_SENSOR && IOT_SENSOR_HAVE_MOTION_AUTO_OFF
 
 void ClockPlugin::eventMotionDetected(bool motion)
 {
@@ -1044,7 +1044,15 @@ void ClockPlugin::eventMotionDetected(bool motion)
 
 bool ClockPlugin::eventMotionAutoOff(bool off)
 {
-    if (off && _getBrightness()) {
+    if (off && _isEnabled) {
+        _disable();
+        // mark as deactivated by the motion sensor
+        _autoOff = true;
+        return true;
+    }
+    if (!off && !_isEnabled && _autoOff) {
+        // reactivate if disabled by the motion sensor
+        _enable();
         return true;
     }
     return false;
@@ -1218,6 +1226,9 @@ void ClockPlugin::_enable()
 
     _config.enabled = true;
     _isEnabled = true;
+    #if IOT_SENSOR_HAVE_MOTION_SENSOR
+        _autoOff = false;
+    #endif
 }
 
 void ClockPlugin::_disable(uint8_t delayMillis)
@@ -1231,6 +1242,9 @@ void ClockPlugin::_disable(uint8_t delayMillis)
 
     _config.enabled = false;
     _isEnabled = false;
+    #if IOT_SENSOR_HAVE_MOTION_SENSOR
+        _autoOff = false;
+    #endif
 
     #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
         _powerLevelCurrentmW = 0;

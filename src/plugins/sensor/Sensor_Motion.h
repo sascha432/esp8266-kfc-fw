@@ -84,4 +84,28 @@ private:
     bool _pinInverted;
 };
 
+
+inline const __FlashStringHelper *Sensor_Motion::_getId()
+{
+    return F("motion");
+}
+
+inline String Sensor_Motion::_getTopic()
+{
+    return MQTTClient::formatTopic(_getId());
+}
+
+inline const __FlashStringHelper *Sensor_Motion::_getStateStr(uint8_t state) const
+{
+    switch(state) {
+        case 1:
+            return F("ON");
+        case 0:
+            return F("OFF");
+        default:
+            break;
+    }
+    return F("DISABLED");
+}
+
 #endif

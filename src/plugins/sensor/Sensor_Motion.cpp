@@ -54,37 +54,45 @@ uint8_t Sensor_Motion::getAutoDiscoveryCount() const
 
 void Sensor_Motion::getValues(WebUINS::Events &array, bool timer)
 {
-    using namespace WebUINS;
-    array.append(
-        Values(_getId(), _getStateStr(_motionState), _motionState != 0xff)
-    );
+    // array.append(
+    //     WebUINS::Values(_getId(), _getStateStr(_motionState))
+    // );
 }
 
 void Sensor_Motion::createWebUI(WebUINS::Root &webUI)
 {
-    WebUINS::Row row(
-        WebUINS::Sensor(_getId(), _name, emptyString)
-    );
-    webUI.appendToLastRow(row);
+//     WebUINS::Row row(
+//         WebUINS::Sensor(_getId(), _name, emptyString)
+//     );
+//     webUI.appendToLastRow(row);
 }
 
 void Sensor_Motion::publishState()
 {
-    __LDBG_printf("client=%p connected=%u", client, client && client->isConnected() ? 1 : 0);
+    // __LDBG_printf("client=%p connected=%u", client, client && client->isConnected() ? 1 : 0);
     if (isConnected()) {
         publish(_getTopic(), true, MQTT::Client::toBoolOnOff(_motionState));
     }
-    if (WebUISocket::hasAuthenticatedClients()) {
-        WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(
-            WebUINS::Events(WebUINS::Values(_getId(), _getStateStr(_motionState)))
-        ));
-    }
+    // if (WebUISocket::hasAuthenticatedClients()) {
+    //     WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(
+    //         WebUINS::Events(WebUINS::Values(_getId(), _getStateStr(_motionState)))
+    //     ));
+    // }
 }
 
 void Sensor_Motion::getStatus(Print &output)
 {
-    output.printf_P(PSTR(IOT_SENSOR_NAMES_MOTION_SENSOR));
-    // output.print(F(""));
+    output.printf_P(PSTR(IOT_SENSOR_NAMES_MOTION_SENSOR HTML_S(br) "Trigger timeout %u minutes"), _config.motion_trigger_timeout);
+    #if IOT_SENSOR_HAVE_MOTION_AUTO_OFF
+        output.print(F(HTML_S(br) "Device auto off "));
+        if (_config.motion_auto_off) {
+            output.printf_P(PSTR("%u minutes"), _config.motion_auto_off);
+        }
+        else {
+            output.print(F("disabled"));
+        }
+    #endif
+    output.println(F(HTML_S(br)));
 }
 
 void Sensor_Motion::createConfigureForm(AsyncWebServerRequest *request, FormUI::Form::BaseForm &form)
@@ -115,6 +123,7 @@ void Sensor_Motion::begin(MotionSensorHandler *handler, uint8_t pin, bool pinInv
     _handler = nullptr;
     _pin = pin;
     _pinInverted = pinInverted;
+    _pinMode(_pin, INPUT);
     _timerCallback();
     _handler = handler;
     _timer.add(Event::seconds(1), true, [this](Event::CallbackTimerPtr) {
@@ -185,29 +194,6 @@ void Sensor_Motion::_timerCallback()
             }
         }
     #endif
-}
-
-const __FlashStringHelper *Sensor_Motion::_getId()
-{
-    return F("motion");
-}
-
-String Sensor_Motion::_getTopic()
-{
-    return MQTTClient::formatTopic(_getId());
-}
-
-const __FlashStringHelper *Sensor_Motion::_getStateStr(uint8_t state) const
-{
-    switch(state) {
-        case 1:
-            return F("ON");
-        case 0:
-            return F("OFF");
-        default:
-            break;
-    }
-    return F("DISABLED");
 }
 
 #endif

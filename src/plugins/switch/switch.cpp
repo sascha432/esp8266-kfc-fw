@@ -111,7 +111,7 @@ void SwitchPlugin::reconfigure(const String &source)
 
 void SwitchPlugin::getStatus(Print &output)
 {
-    output.printf_P(PSTR("%u channel switch"), _pins.size());
+    output.printf_P(PSTR("%u Channel Switch"), _pins.size());
     for (uint8_t i = 0; i < _pins.size(); i++) {
         output.printf_P(PSTR(HTML_S(br) "%s - %s"), _names[i].toString(i).c_str(), _getChannel(i) ? SPGM(On) : SPGM(Off));
     }

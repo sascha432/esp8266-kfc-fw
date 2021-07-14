@@ -222,6 +222,11 @@ void SyslogTCP::_status(bool success, const __FlashStringHelper *reason)
 #endif
     if (hasQueue()) {
         if (!success) {
+            /*
+TODO fix memory leak
+D11616589 (SyslogTCP.cpp:225 <2448:1> _status): failed to send syslog message queue_id=18 reason=connect failed buffer=<5>Jul 13 18:50:17 KFCE12138 kfcfw: Disconnected from MQTT serve (119)
+D11617713 (SyslogTCP.cpp:225 <2256:1> _status): failed to send syslog message queue_id=18 reason=connect failed buffer=<5>Jul 13 18:50:17 KFCE12138 kfcfw: Disconnected from MQTT serve (119)
+D11618839 (SyslogTCP.cpp:225 <2064:1> _status): failed to send syslog message queue_id=18 reason=connect failed buffer=<5>Jul 13 18:50:17 KFCE12138 kfcfw: Disconnected from MQTT serve (119)            */
             __DBG_printf("failed to send syslog message queue_id=%u reason=%s buffer=%s (%u)", _queueId, reason, printable_string(_buffer.c_str(), _buffer.length(), 64).c_str(), _buffer.length());
         }
         _queue.remove(_queueId, success);

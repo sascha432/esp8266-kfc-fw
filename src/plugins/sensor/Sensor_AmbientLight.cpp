@@ -10,6 +10,9 @@
 #include "Sensor_AmbientLight.h"
 #include "sensor.h"
 
+#undef DEBUG_IOT_SENSOR
+#define DEBUG_IOT_SENSOR 1
+
 #if DEBUG_IOT_SENSOR
 #include <debug_helper_enable.h>
 #else
@@ -17,7 +20,7 @@
 #endif
 
 Sensor_AmbientLight::Sensor_AmbientLight(const String &name) :
-    MQTT::Sensor(MQTT::SensorType::MOTION),
+    MQTT::Sensor(MQTT::SensorType::AMBIENT_LIGHT),
     _name(name),
     _handler(nullptr),
     _sensor({SensorType::NONE}),
@@ -174,6 +177,13 @@ void Sensor_AmbientLight::_timerCallback(uint32_t interval)
             const float count = period + 1;
             _handler->_autoBrightnessValue = ((_handler->_autoBrightnessValue * period) + value) / count; // integrate over 2.5 seconds to get a smooth transition and avoid flickering
         }
+#if DEBUG_IOT_SENSOR
+        static uint32_t start;
+        if ((start - millis()) > 1000U) {
+            start = millis();
+            __LDBG_printf("value=%d auto_brightness=%d brightness=%.3f", _value, _config.auto_brightness, _handler->_autoBrightnessValue);
+        }
+#endif
     }
 
 }

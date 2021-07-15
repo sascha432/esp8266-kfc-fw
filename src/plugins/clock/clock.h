@@ -478,6 +478,10 @@ private:
 // Ambient light sensor
 // ------------------------------------------------------------------------
 #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR
+    virtual bool isAutobrightnessEnabled() const override {
+        return AmbientLightSensorHandler::isAutobrightnessEnabled() && _config.auto_brightness != -1;
+    }
+
 #endif
 
 // ------------------------------------------------------------------------

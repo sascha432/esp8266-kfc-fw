@@ -50,7 +50,7 @@ public:
         }
     }
 
-    bool isAutobrightnessEnabled() const {
+    virtual bool isAutobrightnessEnabled() const {
         return _autobrightness;
     }
 

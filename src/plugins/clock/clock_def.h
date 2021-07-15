@@ -228,8 +228,13 @@
 // 0 = disabled
 // 1 = sensor connected to ADC
 // 2 = TinyPwm I2C sensor
+// 3 =
 #ifndef IOT_CLOCK_AMBIENT_LIGHT_SENSOR
 #    define IOT_CLOCK_AMBIENT_LIGHT_SENSOR 0
+#endif
+
+#ifndef IOT_CLOCK_AMBIENT_LIGHT_SENSOR_INVERTED
+#define IOT_CLOCK_AMBIENT_LIGHT_SENSOR_INVERTED 0
 #endif
 
 // support for fan control

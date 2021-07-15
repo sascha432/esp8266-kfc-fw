@@ -54,13 +54,16 @@ uint8_t Sensor_Motion::getAutoDiscoveryCount() const
 
 void Sensor_Motion::getValues(WebUINS::Events &array, bool timer)
 {
-    // array.append(WebUINS::Values(_getId(), _getStateStr(_motionState)));
+    auto str = PrintString(F("<div class=\"pt-3\">%s</div>"), _getStateStr(_motionState));
+    array.append(WebUINS::Values(_getId(), str));
 }
 
 void Sensor_Motion::createWebUI(WebUINS::Root &webUI)
 {
-//     WebUINS::Row row(WebUINS::Sensor(_getId(), _name, emptyString));
-//     webUI.appendToLastRow(row);
+    auto sensor = WebUINS::Sensor(_getId(), _name, emptyString, WebUINS::SensorRenderType::COLUMN);
+    sensor.append(WebUINS::NamedString(J(height), F("15rem")));
+    WebUINS::Row row(sensor);
+    webUI.appendToLastRow(row);
 }
 
 void Sensor_Motion::publishState()

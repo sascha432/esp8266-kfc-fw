@@ -76,7 +76,7 @@
 #endif
 
 #ifndef IOT_SENSOR_NAMES_AMBIENT_LIGHT_SENSOR
-#define IOT_SENSOR_NAMES_AMBIENT_LIGHT_SENSOR   "Ambient Light"
+#define IOT_SENSOR_NAMES_AMBIENT_LIGHT_SENSOR   "Ambient Light Sensor"
 #endif
 
 #ifndef IOT_SENSOR_NAMES_DS3231

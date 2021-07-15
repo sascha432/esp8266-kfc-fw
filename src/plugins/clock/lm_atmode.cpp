@@ -144,24 +144,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
 //                     }
 //                 });
 //             }
-// #if !IOT_LED_MATRIX && IOT_CLOCK_AMBIENT_LIGHT_SENSOR
-//             else if (value == 200) {
-//                 if (args.isTrue(1)) {
-//                     if (_displaySensor == DisplaySensorType::OFF) {
-//                         _autoBrightness = kAutoBrightnessOff;
-//                         _displaySensor = DisplaySensorType::SHOW;
-//                         _display.clear();
-//                         _display.show();
-//                         args.print(F("displaying sensor value"));
-//                     }
-//                 }
-//                 else if (_displaySensor == DisplaySensorType::SHOW) {
-//                     _displaySensor = DisplaySensorType::OFF;
-//                     _autoBrightness = _config.auto_brightness;
-//                     args.print(F("displaying time"));
-//                 }
-//             }
-// #endif
+
 //             else if (value >= 0 && value < (int)AnimationType::MAX) {
 //                 switch(static_cast<AnimationType>(value)) {
 //                     case AnimationType::RAINBOW:

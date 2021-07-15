@@ -210,11 +210,6 @@ void ClockPlugin::_createWebUI(WebUINS::Root &webUI)
         auto animation = WebUINS::Listbox(F("ani"), F("Animation"), Plugins::ClockConfig::ClockConfig_t::getAnimationNames(), false, 5, colspan);
         row.append(animation.append(WebUINS::NamedString(J(height), height)));
 
-        #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
-            auto lightSensor = WebUINS::Sensor(FSPGM(light_sensor), F("Ambient Light Sensor"), F("<img src=\"/images/light.svg\" width=\"80\" height=\"80\" style=\"margin-top:-20px;margin-bottom:1rem\">"), WebUINS::SensorRenderType::COLUMN, false, colspan);
-            row.append(lightSensor.append(WebUINS::NamedString(J(height), height)));
-        #endif
-
         webUI.addRow(row); //IF_IOT_CLOCK_SAVE_STATE(power, ) IF_IOT_CLOCK(colon, ) animation, IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(lightSensor));
 
     }

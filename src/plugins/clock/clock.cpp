@@ -428,9 +428,14 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
             if (sensor->getType() == SensorPlugin::SensorType::AMBIENT_LIGHT) {
                 #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR == 1
                     auto sensorCfg = Sensor_AmbientLight::SensorConfig(Sensor_AmbientLight::SensorType::INTERNAL_ADC);
+                    sensorCfg.adc.inverted = IOT_CLOCK_AMBIENT_LIGHT_SENSOR_INVERTED;
                 #elif IOT_CLOCK_AMBIENT_LIGHT_SENSOR == 2
                     auto sensorCfg = Sensor_AmbientLight::SensorConfig(Sensor_AmbientLight::SensorType::TINYPWM);
                     sensorCfg.tinyPWM = Sensor_AmbientLight::SensorConfig::TinyPWM(TINYPWM_I2C_ADDRESS);
+                #elif IOT_CLOCK_AMBIENT_LIGHT_SENSOR == 3
+                    auto sensorCfg = Sensor_AmbientLight::SensorConfig(Sensor_AmbientLight::SensorType::BH1750FVI);
+                    //TODO
+                    #error
                 #endif
                 reinterpret_cast<Sensor_AmbientLight *>(sensor)->begin(this, sensorCfg);
                 break;

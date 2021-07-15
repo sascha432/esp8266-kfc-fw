@@ -108,10 +108,17 @@ public:
             BH1750FVI(uint8_t _i2cAddress) : i2cAddress(_i2cAddress) {}
         };
 
+        struct ADC {
+            bool inverted;
+            ADC() {}
+            ADC(bool _inverted) : inverted(_inverted) {}
+        };
+
         SensorType type;
         union {
             TinyPWM tinyPWM;
             BH1750FVI bh1750FVI;
+            ADC adc;
         };
         SensorConfig() {}
         SensorConfig(SensorType _type) : type(_type) {}
@@ -141,7 +148,7 @@ public:
     float getAutoBrightness() const;
 
 private:
-    void _timerCallback(uint32_t interval);
+    void _timerCallback();
     const __FlashStringHelper *_getId();
     String _getTopic();
     String _getLightSensorWebUIValue();

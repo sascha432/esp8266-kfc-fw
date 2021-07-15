@@ -61,12 +61,14 @@ MQTT::AutoDiscovery::EntityPtr Sensor_AmbientLight::getAutoDiscovery(FormatType 
 
 void Sensor_AmbientLight::getValues(WebUINS::Events &array, bool timer)
 {
-    array.append(WebUINS::Values(FSPGM(light_sensor), _getLightSensorWebUIValue()));
+    array.append(WebUINS::Values(_getId(), _getLightSensorWebUIValue()));
 }
 
 void Sensor_AmbientLight::createWebUI(WebUINS::Root &webUI)
 {
-    WebUINS::Row row(WebUINS::Sensor(_getId(), _name, emptyString));
+    auto sensor = WebUINS::Sensor(_getId(), F("Ambient Light Sensor"), F("<img src=\"/images/light.svg\" width=\"80\" height=\"80\" style=\"margin-top:-20px;margin-bottom:1rem\">"), WebUINS::SensorRenderType::COLUMN);
+    sensor.append(WebUINS::NamedString(J(height), F("15rem")));
+    WebUINS::Row row(sensor);
     webUI.appendToLastRow(row);
 }
 
@@ -74,7 +76,7 @@ void Sensor_AmbientLight::publishState()
 {
     // __LDBG_printf("client=%p connected=%u", client, client && client->isConnected() ? 1 : 0);
     if (isConnected()) {
-        publish(MQTTClient::formatTopic(FSPGM(light_sensor)), true, String(getAutoBrightness(), 0));
+        publish(_getTopic(), true, String(getAutoBrightness(), 0));
     }
 }
 
@@ -93,6 +95,10 @@ void Sensor_AmbientLight::createConfigureForm(AsyncWebServerRequest *request, Fo
     form.addFormUI(F("Auto Brightness Value"), FormUI::SuffixHtml(F("<span class=\"input-group-text\">0-1023</span><span id=\"abr_sv\" class=\"input-group-text\"></span><button class=\"btn btn-secondary\" type=\"button\" id=\"dis_auto_br\">Disable</button>")));
     cfg.ambient.addRangeValidatorFor_auto_brightness(form);
 
+    form.addObjectGetterSetter(F("auto_bras"), FormGetterSetter(cfg.ambient, adjustment_speed));
+    form.addFormUI(F("Adjustment Speed"));
+    cfg.ambient.addRangeValidatorFor_adjustment_speed(form);
+
     group.end();
 }
 
@@ -103,7 +109,6 @@ void Sensor_AmbientLight::reconfigure(PGM_P source)
 
 void Sensor_AmbientLight::begin(AmbientLightSensorHandler *handler, const SensorConfig &sensor)
 {
-    uint32_t interval;
     _handler = nullptr;
     _sensor = sensor;
     switch(_sensor.type) {
@@ -117,22 +122,19 @@ void Sensor_AmbientLight::begin(AmbientLightSensorHandler *handler, const Sensor
                 Wire.write(BH1750FVI_MODE_HIGHRES);
                 Wire.endTransmission();
             }
-            interval = 240;
             break;
         case SensorType::INTERNAL_ADC:
             ADCManager::getInstance().addAutoReadTimer(Event::seconds(1), Event::milliseconds(30), 24);
-            interval = 750;
             break;
         default:
-            interval = 250;
             break;
 
     }
-    _timerCallback(interval);
+    _timerCallback();
     _handler = handler;
     _handler->_ambientLightSensor = this;
-    _timer.add(Event::milliseconds(interval), true, [this](Event::CallbackTimerPtr timer) {
-        _timerCallback(timer->getShortInterval());
+    _timer.add(Event::milliseconds(125), true, [this](Event::CallbackTimerPtr timer) {
+        _timerCallback();
     });
 }
 
@@ -152,7 +154,7 @@ void Sensor_AmbientLight::end()
     }
 }
 
-void Sensor_AmbientLight::_timerCallback(uint32_t interval)
+void Sensor_AmbientLight::_timerCallback()
 {
     switch(_sensor.type) {
         case SensorType::BH1750FVI:
@@ -163,25 +165,29 @@ void Sensor_AmbientLight::_timerCallback(uint32_t interval)
             break;
         case SensorType::INTERNAL_ADC:
             _value = ADCManager::getInstance().readValue();
+            if (_sensor.adc.inverted) {
+                _value = ADCManager::kMaxADCValue - _value;
+            }
             break;
         default:
             break;
     }
     if (_handler && _handler->isAutobrightnessEnabled()) {
+        const uint32_t speed = ((_config.adjustment_speed << 4) + 1000);
         float value = std::clamp(_value / static_cast<float>(_config.auto_brightness), 0.1f, 1.0f);
         if (_handler->_autoBrightnessValue == 0) {
             _handler->_autoBrightnessValue = value;
         }
         else {
-            const float period = 2500 / interval;
+            const float period = speed / 125;
             const float count = period + 1;
             _handler->_autoBrightnessValue = ((_handler->_autoBrightnessValue * period) + value) / count; // integrate over 2.5 seconds to get a smooth transition and avoid flickering
         }
 #if DEBUG_IOT_SENSOR
         static uint32_t start;
-        if ((start - millis()) > 1000U) {
+        if ((millis() - start) > 1000U) {
             start = millis();
-            __LDBG_printf("value=%d auto_brightness=%d brightness=%.3f", _value, _config.auto_brightness, _handler->_autoBrightnessValue);
+            __LDBG_printf("value=%d auto_br=%d br=%.3f adj=%u", _value, _config.auto_brightness, _handler->_autoBrightnessValue, speed);
         }
 #endif
     }

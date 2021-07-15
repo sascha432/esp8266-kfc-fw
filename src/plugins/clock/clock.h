@@ -178,9 +178,6 @@ public:
     static constexpr uint8_t kMaxBrightness = Clock::kMaxBrightness;
 
     static constexpr int16_t kAutoBrightnessOff = -1;
-#if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
-    static constexpr float kAutoBrightnessInterval = IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL;  // milliseconds
-#endif
 
     constexpr static uint8_t enablePinState(bool active) {
         return IF_IOT_LED_MATRIX_ENABLE_PIN_INVERTED(active ? LOW : HIGH, active ? HIGH : LOW);

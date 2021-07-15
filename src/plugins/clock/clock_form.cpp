@@ -343,22 +343,6 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         form.addObjectGetterSetter(F("br"), cfg, cfg.get_bits_brightness, cfg.set_bits_brightness);
         form.addFormUI(FormUI::Type::RANGE_SLIDER, FSPGM(Brightness), FormUI::MinMax(cfg.kMinValueFor_brightness, cfg.kMaxValueFor_brightness));
 
-        #if IOT_CLOCK_HAVE_MOTION_SENSOR
-            form.addObjectGetterSetter(F("mt"), cfg, cfg.get_bits_motion_trigger_timeout, cfg.set_bits_motion_trigger_timeout);
-            form.addFormUI(F("Motion Sensor Timeout"), FormUI::Suffix(F("minutes")));
-            cfg.addRangeValidatorFor_motion_trigger_timeout(form);
-
-            form.addObjectGetterSetter(F("ao"), cfg, cfg.get_bits_motion_auto_off, cfg.set_bits_motion_auto_off);
-            form.addFormUI(F("Auto Off Delay For Motion Sensor"), FormUI::Suffix(F("minutes")), FormUI::IntAttribute(F("disabled-value"), 0));
-            cfg.addRangeValidatorFor_motion_auto_off(form);
-        #endif
-
-        #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
-            form.addObjectGetterSetter(F("auto_br"), cfg, cfg.get_bits_auto_brightness, cfg.set_bits_auto_brightness);
-            form.addFormUI(F("Auto Brightness Value"), FormUI::SuffixHtml(F("<span class=\"input-group-text\">0-1023</span><span id=\"abr_sv\" class=\"input-group-text\"></span><button class=\"btn btn-secondary\" type=\"button\" id=\"dis_auto_br\">Disable</button>")));
-            cfg.addRangeValidatorFor_auto_brightness(form);
-        #endif
-
         form.addObjectGetterSetter(F("ft"), FormGetterSetter(cfg, fading_time));
         form.addFormUI(F("Fading Time From 0 To 100%"), FormUI::Suffix(FSPGM(seconds)));
         cfg.addRangeValidatorFor_fading_time(form, true);

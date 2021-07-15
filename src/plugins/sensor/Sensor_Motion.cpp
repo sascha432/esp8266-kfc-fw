@@ -54,16 +54,12 @@ uint8_t Sensor_Motion::getAutoDiscoveryCount() const
 
 void Sensor_Motion::getValues(WebUINS::Events &array, bool timer)
 {
-    // array.append(
-    //     WebUINS::Values(_getId(), _getStateStr(_motionState))
-    // );
+    // array.append(WebUINS::Values(_getId(), _getStateStr(_motionState)));
 }
 
 void Sensor_Motion::createWebUI(WebUINS::Root &webUI)
 {
-//     WebUINS::Row row(
-//         WebUINS::Sensor(_getId(), _name, emptyString)
-//     );
+//     WebUINS::Row row(WebUINS::Sensor(_getId(), _name, emptyString));
 //     webUI.appendToLastRow(row);
 }
 
@@ -73,11 +69,15 @@ void Sensor_Motion::publishState()
     if (isConnected()) {
         publish(_getTopic(), true, MQTT::Client::toBoolOnOff(_motionState));
     }
-    // if (WebUISocket::hasAuthenticatedClients()) {
-    //     WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(
-    //         WebUINS::Events(WebUINS::Values(_getId(), _getStateStr(_motionState)))
-    //     ));
-    // }
+}
+
+void Sensor_Motion::_publishWebUI()
+{
+    if (WebUISocket::hasAuthenticatedClients()) {
+        WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(
+            WebUINS::Events(WebUINS::Values(_getId(), _getStateStr(_motionState)))
+        ));
+    }
 }
 
 void Sensor_Motion::getStatus(Print &output)
@@ -174,6 +174,7 @@ void Sensor_Motion::_timerCallback()
             _handler->eventMotionDetected(_motionState);
         }
         publishState();
+        _publishWebUI();
     }
     else if (state && state == _motionState && _motionLastUpdate) {
         // motion detected within timeout

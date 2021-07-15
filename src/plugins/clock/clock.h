@@ -150,6 +150,9 @@ class ClockPlugin : public PluginComponent, public MQTTComponent
 #if IOT_SENSOR_HAVE_MOTION_SENSOR
     , public MotionSensorHandler
 #endif
+#if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR
+    , public AmbientLightSensorHandler
+#endif
 {
 public:
     // using SevenSegmentDisplay = Clock::SevenSegmentDisplay;
@@ -193,7 +196,6 @@ public:
 // ------------------------------------------------------------------------
 // PluginComponent
 // ------------------------------------------------------------------------
-
 public:
     ClockPlugin();
 
@@ -246,7 +248,6 @@ public:
 // ------------------------------------------------------------------------
 // WebUI
 // ------------------------------------------------------------------------
-
 public:
     virtual void createWebUI(WebUINS::Root &webUI) override {}
     virtual void getValues(WebUINS::Events &array) override;
@@ -258,7 +259,6 @@ public:
 // ------------------------------------------------------------------------
 // MQTT
 // ------------------------------------------------------------------------
-
 public:
     virtual AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const;
@@ -309,6 +309,9 @@ private:
 
 #endif
 
+// ------------------------------------------------------------------------
+// Fan control
+// ------------------------------------------------------------------------
 #ifdef IOT_LED_MATRIX_FAN_CONTROL
 
 private:
@@ -323,7 +326,6 @@ private:
 // ------------------------------------------------------------------------
 // Power consumption sensor
 // ------------------------------------------------------------------------
-
 #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION || IOT_CLOCK_HAVE_POWER_LIMIT
 
 public:
@@ -363,7 +365,6 @@ private:
 // ------------------------------------------------------------------------
 // Enable/disable LEDs
 // ------------------------------------------------------------------------
-
 public:
     static void clear() {
         _reset();
@@ -380,7 +381,6 @@ private:
 // ------------------------------------------------------------------------
 // Save state
 // ------------------------------------------------------------------------
-
 #if IOT_CLOCK_SAVE_STATE
 
 public:
@@ -402,7 +402,6 @@ public:
 // ------------------------------------------------------------------------
 // Button
 // ------------------------------------------------------------------------
-
 #if IOT_CLOCK_BUTTON_PIN != -1
 
 public:
@@ -430,8 +429,8 @@ private:
 // ------------------------------------------------------------------------
 // Alarm Plugin
 // ------------------------------------------------------------------------
-
 #if IOT_ALARM_PLUGIN_ENABLED
+
 public:
     using Alarm = Plugins::Alarm;
 
@@ -476,35 +475,9 @@ private:
 #endif
 
 // ------------------------------------------------------------------------
-// Light sensor
+// Ambient light sensor
 // ------------------------------------------------------------------------
-
-#if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
-private:
-    void _adjustAutobrightness();
-    String _getLightSensorWebUIValue();
-    void _updateLightSensorWebUI();
-    uint16_t _readLightSensor();
-    // uint16_t _readLightSensor(uint8_t num, uint8_t delayMillis) const;
-    bool _loopDisplayLightSensor(LoopOptionsType &options);
-    void _installWebHandlers();
-
-public:
-    static void adjustAutobrightness(Event::CallbackTimerPtr timer);
-
-private:
-    float _autoBrightnessValue{1.0};
-    Event::Timer _autoBrightnessTimer;
-    int16_t _autoBrightness{ADCManager::kMaxADCValue};
-    uint8_t _autoBrightnessLastValue{0};
-    DisplaySensorType _displaySensor{DisplaySensorType::OFF};
-
-#if IOT_CLOCK_AMBIENT_LIGHT_SENSOR == 2
-    uint16_t _readI2CLightSensor();
-    float _lightSensorAvgLevel{NAN};
-    uint32_t _lightSensorLastUpate{0};
-#endif
-
+#if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR
 #endif
 
 // ------------------------------------------------------------------------

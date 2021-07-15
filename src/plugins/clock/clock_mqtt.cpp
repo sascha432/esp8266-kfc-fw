@@ -21,14 +21,8 @@
 
 enum class AutoDiscoverySwitchEnum {
     BRIGHTNESS = 0,
-#if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
-    AMBIENT_LIGHT,
-#endif
 #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
     POWER_CONSUMPTION,
-#endif
-#if IOT_CLOCK_HAVE_MOTION_SENSOR
-    MOTION_SENSOR,
 #endif
 #if IOT_LED_MATRIX_FAN_CONTROL
     FAN_CONTROL,
@@ -56,26 +50,6 @@ MQTT::AutoDiscovery::EntityPtr ClockPlugin::getAutoDiscovery(FormatType format, 
             discovery->addEffectList(Clock::ConfigType::getAnimationNamesJsonArray());
         }
         break;
-#if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
-        case AutoDiscoverySwitchEnum::AMBIENT_LIGHT: {
-            if (!discovery->create(MQTTComponent::ComponentType::SENSOR, FSPGM(light_sensor), format)) {
-                return discovery;
-            }
-            discovery->addStateTopic(MQTTClient::formatTopic(FSPGM(light_sensor)));
-            discovery->addUnitOfMeasurement(String('%'));
-        }
-        break;
-/*
-TODO
-        case 2: {
-            if (!discovery->create(ComponentType::DEVICE_AUTOMATION, F("motion_sensor")), format)) {
-                return discovery;
-            }
-            discovery->addAutomationType();
-            discovery->addTopic(MQTT::AutoDiscovery::Entity::getTriggersTopic());
-            discovery->addPayloadAndSubType(F("sensor"), F("detected"), F("motion_"));
-            */
-#endif
 #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
         case AutoDiscoverySwitchEnum::POWER_CONSUMPTION: {
             if (!discovery->create(MQTTComponent::ComponentType::SENSOR, F("power"), format)) {
@@ -84,15 +58,6 @@ TODO
             discovery->addStateTopic(MQTTClient::formatTopic(F("power")));
             discovery->addUnitOfMeasurement(String('W'));
             discovery->addDeviceClass(F("power"));
-        }
-        break;
-#endif
-#if IOT_CLOCK_HAVE_MOTION_SENSOR
-        case AutoDiscoverySwitchEnum::MOTION_SENSOR: {
-            if (!discovery->create(MQTTComponent::ComponentType::BINARY_SENSOR, F("motion"), format)) {
-                return discovery;
-            }
-            discovery->addStateTopic(MQTTClient::formatTopic(F("motion")));
         }
         break;
 #endif
@@ -199,19 +164,12 @@ void ClockPlugin::_publishState()
         publish(MQTTClient::formatTopic(FSPGM(_brightness_state)), true, String(_targetBrightness == 0 ? _savedBrightness : _targetBrightness));
         publish(MQTTClient::formatTopic(FSPGM(_color_state)), true, getColor().implode(','));
         publish(MQTTClient::formatTopic(FSPGM(_effect_state)), true, Clock::ConfigType::getAnimationName(_config.getAnimation()));
-        #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
-            publish(MQTTClient::formatTopic(FSPGM(light_sensor)), true, String(_autoBrightnessValue * 100, 0));
-        #endif
         #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
             publish(MQTTClient::formatTopic(F("power")), true, String(_getPowerLevel(), 2));
-        #endif
-        #if IOT_CLOCK_HAVE_MOTION_SENSOR
-            publish(MQTT::Client::formatTopic(F("motion")), true, MQTT::Client::toBoolOnOff(_motionState));
         #endif
         #if IOT_LED_MATRIX_FAN_CONTROL
             publish(MQTT::Client::formatTopic(F("/fan/state")), true, MQTT::Client::toBoolOnOff(_fanSpeed >= _config.min_fan_speed));
         #endif
     }
-
     _broadcastWebUI();
 }

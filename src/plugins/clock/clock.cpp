@@ -65,7 +65,6 @@ void print_status_tinypwm(Print &output)
     }
 }
 
-
 #endif
 
 #if IOT_LED_MATRIX
@@ -83,21 +82,13 @@ void print_status_tinypwm(Print &output)
 
 #endif
 
-#define PLUGIN_OPTIONS_WEB_TEMPLATES                    ""
-
-#if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
-#define PLUGIN_OPTIONS_RECONFIGURE_DEPENDENCIES         ""
-#else
-#define PLUGIN_OPTIONS_RECONFIGURE_DEPENDENCIES         ""
-#endif
-
 PROGMEM_DEFINE_PLUGIN_OPTIONS(
     ClockPlugin,
     PLUGIN_OPTIONS_NAME,
     PLUGIN_OPTIONS_FRIENDLY_NAME,
-    PLUGIN_OPTIONS_WEB_TEMPLATES,
+    "",
     PLUGIN_OPTIONS_CONFIG_FORMS,
-    PLUGIN_OPTIONS_RECONFIGURE_DEPENDENCIES,
+    "",
     PluginComponent::PriorityType::MIN,
     PluginComponent::RTCMemoryId::NONE,
     static_cast<uint8_t>(PluginComponent::MenuType::CUSTOM),
@@ -194,145 +185,15 @@ void ClockPlugin::createMenu()
     subMenu.addMenuItem(F("Protection"), F(MENU_URI_PREFIX "protection.html"));
 }
 
-#if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
-
-bool ClockPlugin::_loopDisplayLightSensor(LoopOptionsType &options)
-{
-#if IOT_CLOCK_AMBIENT_LIGHT_SENSOR == 2
-    // not supported
-    return false;
-#else
-    if (_displaySensor == DisplaySensorType::OFF) {
-        return false;
-    }
-    _forceUpdate = false;
-    if (_displaySensor == DisplaySensorType::SHOW) {
-        _displaySensor = DisplaySensorType::BUSY;
-
-        // request to read the ADC 10 times every 25ms ~ 250ms
-        ADCManager::getInstance().requestAverage(10, 25000, [this](const ADCManager::ADCResult &result) {
-
-            if (
-                result.isInvalid() ||                               // adc queue has been aborted
-                _displaySensor != DisplaySensorType::BUSY           // disabled or something went wrong
-            ) {
-                __LDBG_printf("ADC callback: display sensor value=%u result=%u", _displaySensor, result.isValid());
-                return;
-            }
-            _displaySensor = DisplaySensorType::SHOW; // set back from BUSY to SHOW
-
-            auto str = PrintString(F("% " __STRINGIFY(IOT_CLOCK_NUM_DIGITS) "u"), result.getValue()); // left padded with spaces
-            // replace space with #
-            str.replace(' ', '#');
-            // disable any animation, set color to green and brightness to 50%
-
-            _display.fill(Color(0, 0xff, 0));
-            _display.print(str);
-            _display.show(kMaxBrightness / 2);
-        });
-    }
-    return true;
-#endif
-}
-
-void ClockPlugin::adjustAutobrightness(Event::CallbackTimerPtr timer)
-{
-    plugin._adjustAutobrightness();
-}
-
-void ClockPlugin::_adjustAutobrightness()
-{
-    if (_autoBrightness != kAutoBrightnessOff) {
-        float value = _readLightSensor() / (float)_autoBrightness;
-        if (value > 1) {
-            value = 1;
-        }
-        else if (value < 0.10) {
-            value = 0.10;
-        }
-        if (_autoBrightnessValue == 0) {
-            _autoBrightnessValue = value;
-        }
-        else {
-            constexpr float period = 2500 / kAutoBrightnessInterval;
-            constexpr float count = period + 1;
-            _autoBrightnessValue = ((_autoBrightnessValue * period) + value) / count; // integrate over 2.5 seconds to get a smooth transition and avoid flickering
-        }
-    }
-}
-
-String ClockPlugin::_getLightSensorWebUIValue()
-{
-    if (_autoBrightness == kAutoBrightnessOff) {
-        return PrintString(F("<strong>OFF</strong><br> <span class=\"light-sensor-value\">Sensor value %u</span>"), _readLightSensor());
-    }
-    return PrintString(F("%.0f &#37;"), _autoBrightnessValue * 100.0);
-}
-
-void ClockPlugin::_updateLightSensorWebUI()
-{
-    if (WebUISocket::hasAuthenticatedClients()) {
-        WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(
-            WebUINS::Events(WebUINS::Values(FSPGM(light_sensor, "light_sensor"), _getLightSensorWebUIValue()))
-        ));
-    }
-}
-
-uint16_t ClockPlugin::_readLightSensor()
-{
-#if IOT_CLOCK_AMBIENT_LIGHT_SENSOR == 1
-    return ADCManager::getInstance().readValue();
-#elif IOT_CLOCK_AMBIENT_LIGHT_SENSOR == 2
-    return _lightSensorAvgLevel;
-#else
-    return 0;
-#endif
-}
-
-#if IOT_CLOCK_AMBIENT_LIGHT_SENSOR == 2
-uint16_t ClockPlugin::_readI2CLightSensor()
-{
-    uint16_t level;
-    Wire.beginTransmission(TINYPWM_I2C_ADDRESS);
-    Wire.write(0x11);
-    Wire.write(0x00);
-    if (
-        (Wire.endTransmission() == 0) &&
-        (Wire.requestFrom(TINYPWM_I2C_ADDRESS, sizeof(level)) == sizeof(level)) &&
-        (Wire.readBytes(reinterpret_cast<uint8_t *>(&level), sizeof(level)) == sizeof(level))
-     ) {
-         level = 1023 - level;  // tested min/max. values 17 - 730 (bright - dark)
-        // __LDBG_printf("ambient light sensor level: %u", level);
-        if (isnan(_lightSensorAvgLevel)) {
-            _lightSensorAvgLevel = level;
-        }
-        else {
-            auto mul = 2000 / static_cast<float>(get_time_diff(_lightSensorLastUpate, millis()));
-            _lightSensorAvgLevel = ((_lightSensorAvgLevel * mul) + level) / (mul + 1.0);
-        }
-        _lightSensorLastUpate = millis();
-        return level;
-    }
-    else {
-#if DEBUG_IOT_CLOCK
-        static uint32_t lastOutput = 0;
-        static uint32_t errorCounter = 0;
-        errorCounter++;
-        if (millis() >= lastOutput + 60000) {
-            lastOutput = millis();
-            __LDBG_printf("failed to retrieve analog data from TinyPwm (#%u)", errorCounter);
-        }
-#endif
-    }
-    return 0;
-}
-#endif
+#if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR
 
 uint8_t ClockPlugin::_getBrightness(bool temperatureProtection) const
 {
-    return (_autoBrightness == kAutoBrightnessOff) ?
-        _getFadingBrightness() :
-        (_getFadingBrightness() * _autoBrightnessValue * (temperatureProtection ? getTempProtectionFactor() : 1.0f));
+    return isAutobrightnessEnabled() ?
+        (_getFadingBrightness() * (getAutoBrightness()) * (temperatureProtection ? getTempProtectionFactor() : 1.0f)) :
+        (temperatureProtection ?
+            (_getFadingBrightness() * getTempProtectionFactor()) :
+            _getFadingBrightness());
 }
 
 #else
@@ -369,24 +230,24 @@ void ClockPlugin::_setupTimer()
 
         _timerCounter++;
 
-        #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
-            #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR == 2
-                // read I2C sensor once per second
-                _readI2CLightSensor();
-            #endif
-            // update light sensor webui
-            if (_timerCounter % kUpdateAutobrightnessInterval == 0) {
-                uint8_t tmp = _autoBrightnessValue * 100;
-                if (tmp != _autoBrightnessLastValue) {
-                    __LDBG_printf("auto brightness %f", _autoBrightnessValue);
-                    _autoBrightnessLastValue = tmp;
-                    // check if we will publish the state in this loop
-                    if (!_schedulePublishState) {
-                        _updateLightSensorWebUI();
-                    }
-                }
-            }
-        #endif
+        // #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
+        //     #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR == 2
+        //         // read I2C sensor once per second
+        //         _readI2CLightSensor();
+        //     #endif
+        //     // update light sensor webui
+        //     if (_timerCounter % kUpdateAutobrightnessInterval == 0) {
+        //         uint8_t tmp = _autoBrightnessValue * 100;
+        //         if (tmp != _autoBrightnessLastValue) {
+        //             __LDBG_printf("auto brightness %f", _autoBrightnessValue);
+        //             _autoBrightnessLastValue = tmp;
+        //             // check if we will publish the state in this loop
+        //             if (!_schedulePublishState) {
+        //                 _updateLightSensorWebUI();
+        //             }
+        //         }
+        //     }
+        // #endif
 
         #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
             _calcPowerLevel();
@@ -562,21 +423,21 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
         PinMonitor::GPIOInterruptsEnable();
     #endif
 
-    #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
-
-        #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR == 1
-            ADCManager::getInstance().addAutoReadTimer(Event::seconds(1), Event::milliseconds(30), 24);
-        #endif
-
-        _Timer(_autoBrightnessTimer).add(Event::milliseconds_cast(kAutoBrightnessInterval), true, adjustAutobrightness, Event::PriorityType::TIMER);
-        _adjustAutobrightness();
-
-        dependencies->dependsOn(F("http"), [this](const PluginComponent *, DependencyResponseType response) {
-            if (response != DependencyResponseType::SUCCESS) {
-                return;
+    #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR
+        for(const auto &sensor: SensorPlugin::getSensors()) {
+            if (sensor->getType() == SensorPlugin::SensorType::AMBIENT_LIGHT) {
+                #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR == 1
+                    auto sensorCfg = Sensor_AmbientLight::SensorConfig(Sensor_AmbientLight::SensorType::INTERNAL_ADC);
+                #elif IOT_CLOCK_AMBIENT_LIGHT_SENSOR == 2
+                    auto sensorCfg = Sensor_AmbientLight::SensorConfig(Sensor_AmbientLight::SensorType::TINYPWM);
+                    sensorCfg.tinyPWM = Sensor_AmbientLight::SensorConfig::TinyPWM(TINYPWM_I2C_ADDRESS);
+                #endif
+                reinterpret_cast<Sensor_AmbientLight *>(sensor)->begin(this, sensorCfg);
+                break;
             }
-            _installWebHandlers();
-        }, this);
+        }
+        // _Timer(_autoBrightnessTimer).add(Event::milliseconds_cast(kAutoBrightnessInterval), true, adjustAutobrightness, Event::PriorityType::TIMER);
+        // _adjustAutobrightness();
     #endif
 
     #if IOT_SENSOR_HAVE_MOTION_SENSOR
@@ -668,14 +529,19 @@ void ClockPlugin::shutdown()
         PinMonitor::GPIOInterruptsDisable();
     #endif
 
-    #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
-        _displaySensor = DisplaySensorType::DESTROYED;
-    #endif
-
     #if IOT_SENSOR_HAVE_MOTION_SENSOR
         for(const auto &sensor: SensorPlugin::getSensors()) {
             if (sensor->getType() == SensorPlugin::SensorType::MOTION) {
                 reinterpret_cast<Sensor_Motion *>(sensor)->end();
+                break;
+            }
+        }
+    #endif
+
+    #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR
+        for(const auto &sensor: SensorPlugin::getSensors()) {
+            if (sensor->getType() == SensorPlugin::SensorType::AMBIENT_LIGHT) {
+                reinterpret_cast<Sensor_AmbientLight *>(sensor)->end();
                 break;
             }
         }
@@ -708,10 +574,6 @@ void ClockPlugin::shutdown()
     #if IOT_CLOCK_BUTTON_PIN != -1
         // pinMonitor.detach(this);
         pinMonitor.end();
-    #endif
-
-    #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
-        _autoBrightnessTimer.remove();
     #endif
 
     #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
@@ -757,16 +619,9 @@ void ClockPlugin::getStatus(Print &output)
         output.print(F("Fan control, "));
     #endif
 
-    #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
-        output.print(F("Ambient light sensor"));
-        if (_config.protection.max_temperature > 25 && _config.protection.max_temperature < 85) {
-            output.print(F(", over-temperature protection enabled"));
-        }
-    #else
-        if (_config.protection.max_temperature > 25 && _config.protection.max_temperature < 85) {
-            output.print(F("Over-temperature protection enabled"));
-        }
-    #endif
+    if (_config.protection.max_temperature > 25 && _config.protection.max_temperature < 85) {
+        output.print(F("Over-temperature protection enabled"));
+    }
 
     #if IOT_LED_MATRIX
         output.printf_P(PSTR(HTML_S(br) "Total pixels %u"), Clock::DisplayType::kNumPixels);
@@ -795,7 +650,6 @@ void ClockPlugin::loop()
 {
     plugin._loop();
 }
-
 
 void ClockPlugin::enableLoop(bool enable)
 {
@@ -992,9 +846,6 @@ void ClockPlugin::readConfig()
     #endif
 
     _setColor(_config.solid_color.value);
-    #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
-        _autoBrightness = _config.auto_brightness;
-    #endif
     _setBrightness(_config.getBrightness(), false);
     setAnimation(_config.getAnimation());
 }
@@ -1123,12 +974,6 @@ void ClockPlugin::handleWebServer(AsyncWebServerRequest *request)
     else {
         request->send(403);
     }
-}
-
-void ClockPlugin::_installWebHandlers()
-{
-    __LDBG_printf("server=%p", WebServer::Plugin::getWebServerObject());
-    WebServer::Plugin::addHandler(F("/ambient_light_sensor"), handleWebServer);
 }
 
 #endif
@@ -1316,14 +1161,15 @@ void ClockPlugin::_alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration
         } saved = {
             _config.getAnimation(),
             _targetBrightness,
-            IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(_autoBrightness)
+            // IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(_autoBrightness) TODO
         };
 
         __LDBG_printf("storing parameters brightness=%u auto=%d color=%s animation=%u", saved.targetBrightness, IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(saved.autoBrightness) -1, getColor().toString().c_str(), saved.animation);
         _resetAlarmFunc = [this, saved](Event::CallbackTimerPtr timer) {
-            #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
-                _autoBrightness = saved.autoBrightness;
-            #endif
+            //TODO
+            // #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
+            //     _autoBrightness = saved.autoBrightness;
+            // #endif
             _targetBrightness = saved.targetBrightness;
             setAnimation(saved.animation);
             __LDBG_printf("restored parameters brightness=%u auto=%d color=%s animation=%u timer=%u", saved.targetBrightness, IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(saved.autoBrightness) -1, getColor().toString().c_str(), saved.animation, (bool)timer);
@@ -1335,9 +1181,10 @@ void ClockPlugin::_alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration
     // check if an alarm is already active
     if (!_alarmTimer) {
         __LDBG_printf("alarm brightness=%u color=%s", _targetBrightness, getColor().toString().c_str());
-        #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
-            _autoBrightness = kAutoBrightnessOff;
-        #endif
+        //TODO
+        // #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
+        //     _autoBrightness = kAutoBrightnessOff;
+        // #endif
 
         _targetBrightness = kMaxBrightness;
         _setAnimation(new Clock::FlashingAnimation(*this, _config.alarm.color.value, _config.alarm.speed));

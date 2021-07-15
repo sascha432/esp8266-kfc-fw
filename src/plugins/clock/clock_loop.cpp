@@ -120,12 +120,6 @@ void ClockPlugin::_loop()
         // start update process
         _lastUpdateTime = millis();
 
-        #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
-            if (_loopDisplayLightSensor(options)) {
-                return;
-            }
-        #endif
-
         #if IOT_CLOCK_PIXEL_SYNC_ANIMATION
             if (_loopSyncingAnimation(options)) {
                 // ...

@@ -324,6 +324,37 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
         headers.addNoCache(true);
         response = SaveCrash::webHandler::json(request, headers);
     }
+#if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR
+    // --------------------------------------------------------------------
+    else if (url == F("/ambient_light_sensor")) {
+        if (!plugin.isAuthenticated(request)) {
+            auto response = request->beginResponse(403);
+            _logRequest(request, response);
+            request->send(response);
+            return;
+        }
+        int n = 0;
+        Sensor_AmbientLight *lightSensor = nullptr;
+        for(const auto &sensor: SensorPlugin::getSensors()) {
+            if (sensor->getType() == SensorPlugin::SensorType::AMBIENT_LIGHT) {
+                if (n == 0) {
+                    lightSensor = reinterpret_cast<Sensor_AmbientLight *>(sensor);
+                    break;
+                }
+                n--;
+            }
+        }
+        if (!lightSensor || lightSensor->getValue() == -1) {
+            auto response = request->beginResponse(503);
+            _logRequest(request, response);
+            request->send(response);
+            return;
+        }
+        headers.addNoCache(true);
+        headers.setResponseHeaders(response);
+        response = request->beginResponse(200, FSPGM(mime_text_plain), String(lightSensor->getValue()));
+    }
+#endif
     // --------------------------------------------------------------------
     else if (url.startsWith(F("/speedtest."))) { // handles speedtest.zip and speedtest.bmp
         plugin._handlerSpeedTest(request, !url.endsWith(F(".bmp")), headers);

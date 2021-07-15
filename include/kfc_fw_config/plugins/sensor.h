@@ -127,7 +127,7 @@
             struct __attribute__packed__ AmbientLightSensorConfig_t {
                 using Type = AmbientLightSensorConfig_t;
 
-                CREATE_INT32_BITFIELD_MIN_MAX(auto_brightness, 11, -1, 1023, -1, 1);
+                CREATE_INT32_BITFIELD_MIN_MAX(auto_brightness, 17, -1, 0xffff, -1, 1);
 
                 AmbientLightSensorConfig_t() :
                     auto_brightness(kDefaultValueFor_auto_brightness)

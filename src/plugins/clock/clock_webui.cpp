@@ -43,16 +43,8 @@ void ClockPlugin::getValues(WebUINS::Events &array)
         array.append(WebUINS::Values(F("power"), static_cast<uint8_t>(enabled), true));
     #endif
 
-    #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
-        array.append(WebUINS::Values(FSPGM(light_sensor), _getLightSensorWebUIValue()));
-    #endif
-
     #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
         array.append(WebUINS::Values(F("pwrlvl"), _getPowerLevelStr()));
-    #endif
-
-    #if IOT_CLOCK_HAVE_MOTION_SENSOR
-        array.append(WebUINS::Values(F("motion"), _getMotionHistory()));
     #endif
 
     #if IOT_LED_MATRIX_FAN_CONTROL

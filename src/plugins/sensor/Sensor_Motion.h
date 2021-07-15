@@ -72,6 +72,7 @@ private:
     const __FlashStringHelper *_getId();
     String _getTopic();
     const __FlashStringHelper *_getStateStr(uint8_t state) const;
+    void _publishWebUI();
 
 private:
     String _name;

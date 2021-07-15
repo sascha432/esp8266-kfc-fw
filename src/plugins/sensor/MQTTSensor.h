@@ -5,7 +5,7 @@
 #pragma once
 
 #ifndef DEBUG_IOT_SENSOR
-#define DEBUG_IOT_SENSOR                    0
+#define DEBUG_IOT_SENSOR 1
 #endif
 
 #include <Arduino_compat.h>
@@ -18,7 +18,7 @@
 #include "EnumBitset.h"
 
 #if DEBUG_IOT_SENSOR
-#define REGISTER_SENSOR_CLIENT(sensor)                  { ::printf(PSTR("registerClient " __FUNCTION__ " "__FILE__ ":" __LINE__ "\n"); registerClient(sensor); }
+#define REGISTER_SENSOR_CLIENT(sensor)                  { ::printf("registerClient %s:%u\n", __BASENAME_FILE__, __LINE__); registerClient(sensor); }
 #else
 #define REGISTER_SENSOR_CLIENT(sensor)                  registerClient(sensor);
 #endif

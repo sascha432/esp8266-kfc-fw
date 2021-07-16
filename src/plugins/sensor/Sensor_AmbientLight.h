@@ -50,7 +50,7 @@ public:
         }
     }
 
-    virtual bool isAutobrightnessEnabled() const {
+    bool isAutobrightnessEnabled() const {
         return _autobrightness;
     }
 
@@ -125,7 +125,7 @@ public:
     };
 
 public:
-    Sensor_AmbientLight(const String &name);
+    Sensor_AmbientLight(const String &name, uint8_t id = 0);
     virtual ~Sensor_AmbientLight();
 
     virtual AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num) override;
@@ -146,10 +146,12 @@ public:
 
     int32_t getValue() const;
     float getAutoBrightness() const;
+    uint8_t getId() const;
+    bool enabled() const;
 
 private:
     void _timerCallback();
-    const __FlashStringHelper *_getId();
+    String _getId();
     String _getTopic();
     String _getLightSensorWebUIValue();
     void _updateLightSensorWebUI();
@@ -164,6 +166,7 @@ private:
     SensorConfig _sensor;
     ConfigType _config;
     int32_t _value;
+    uint8_t _id;
 };
 
 inline uint8_t Sensor_AmbientLight::getAutoDiscoveryCount() const
@@ -184,6 +187,16 @@ inline int32_t Sensor_AmbientLight::getValue() const
 inline float Sensor_AmbientLight::getAutoBrightness() const
 {
     return _handler ? _handler->_autoBrightnessValue * 100.0f : 1;
+}
+
+inline uint8_t Sensor_AmbientLight::getId() const
+{
+    return _id;
+}
+
+inline bool Sensor_AmbientLight::enabled() const
+{
+    return _handler != nullptr && _timer != false;
 }
 
 #endif

@@ -81,25 +81,21 @@ void __kfcfw_queue_monitor(AsyncWebSocketMessage *dataMessage, AsyncClient *_cli
 
 void check_if_exist_I2C(TwoWire &wire, Print &output, uint8_t startAddress, uint8_t endAddress)
 {
-    uint8_t error;
-    int nDevices;
-
-    nDevices = 0;
+    int nDevices = 0;
     for (auto address = startAddress; address < endAddress; address++ ) {
         // The i2c_scanner uses the return value of
         // the Write.endTransmisstion to see if
         // a device did acknowledge to the address.
         wire.beginTransmission(address);
-        error = wire.endTransmission();
-
+        uint8_t error = wire.endTransmission(true);
         if (error == 0 || error == 3) { // 0=ACK, 3=NACK for data
-            output.printf_P(PSTR("I2C device found at address 0x%02x\n"), address);
+            output.printf_P(PSTR("I2C device found at address 0x%02x (%u)\n"), address, error);
             nDevices++;
         }
         else if (error == 4) {
             output.printf_P(PSTR("Unknown error at address 0x%02x\n"), address);
         }
-    } //for loop
+    }
     if (nDevices == 0) {
         output.println(F("No I2C devices found"));
     }
@@ -111,11 +107,13 @@ void scanI2C(Print &output, int8_t sda, int8_t scl, uint8_t startAddress, uint8_
     output.printf_P(PSTR("Scanning (SDA : SCL) - GPIO%u : GPIO%u - "), sda, scl);
     if (sda == -1 || scl == -1) {
         wire = &config.initTwoWire(true, &output);
-    } else {
+    }
+    else {
         Wire.begin(sda, scl);
         wire = &Wire;
     }
     check_if_exist_I2C(*wire, output, startAddress, endAddress);
+    config.initTwoWire(true);
 }
 
 #define I2C_SCANNER_SKIP_PORT(i) (i == 1 || i == 3 || isFlashInterfacePin(i))
@@ -1921,42 +1919,42 @@ void at_mode_serial_handle_event(String &commandString)
     }
 #endif
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CS))) {
-        if (args.requireArgs(2)) {
-            uint8_t sda = args.toIntMinMax(0, 0, 16, KFC_TWOWIRE_SDA);
-            uint8_t scl = args.toIntMinMax(1, 0, 16, KFC_TWOWIRE_SCL);
-            uint32_t speed = args.toInt(2, KFC_TWOWIRE_CLOCK_SPEED);
-            uint32_t stretch = args.toInt(3, KFC_TWOWIRE_CLOCK_STRETCH);
-            bool stop = args.has(F("stop"));
-            if (isFlashInterfacePin(sda) || isFlashInterfacePin(scl)) {
-                args.print(F("Pins 6, 7, 8, 9, 10 and 11 cannot be used"));
-            }
-            else if (stop) {
-                pinMode(sda, INPUT);
-                pinMode(scl, INPUT);
-                Wire.begin(255, 255);
-                args.print(F("I2C stopped"));
-            }
-            else {
-                Wire.begin(sda, scl);
-                Wire.setClockStretchLimit(stretch);
-                Wire.setClock(speed);
-                args.print(F("I2C started on %u:%u (sda:scl), speed %u, clock stretch %u"), sda, scl, speed, stretch);
-            }
+        uint8_t sda = args.toIntMinMax(0, 0, 16, KFC_TWOWIRE_SDA);
+        uint8_t scl = args.toIntMinMax(1, 0, 16, KFC_TWOWIRE_SCL);
+        uint32_t speed = args.toInt(2, KFC_TWOWIRE_CLOCK_SPEED);
+        uint32_t stretch = args.toInt(3, KFC_TWOWIRE_CLOCK_STRETCH);
+        bool stop = args.has(F("stop"));
+        if (isFlashInterfacePin(sda) || isFlashInterfacePin(scl)) {
+            args.print(F("Pins 6, 7, 8, 9, 10 and 11 cannot be used"));
+        }
+        else if (stop) {
+            pinMode(sda, INPUT);
+            pinMode(scl, INPUT);
+            Wire.begin(255, 255);
+            args.print(F("I2C stopped"));
+        }
+        else {
+            config.initTwoWire(true);
+            Wire.begin(sda, scl);
+            Wire.setClockStretchLimit(stretch);
+            Wire.setClock(speed);
+            args.print(F("I2C started on %u:%u (sda:scl), speed %u, clock stretch %u"), sda, scl, speed, stretch);
         }
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CTM))) {
         if (args.requireArgs(1)) {
             uint8_t address = args.toNumber(0, 0x48);
+            uint8_t written = 0;
             Wire.beginTransmission(address);
             for(uint8_t i = 1; i < args.size(); i++) {
-                Wire.write(args.toNumber(i, 0xff));
+                written += Wire.write(args.toNumber(i, 0xff));
             }
             uint8_t error;
-            if ((error = Wire.endTransmission()) == 0) {
-                args.print(F("slave 0x%02X: transmitted %u bytes"), address, args.size() - 1);
+            if ((error = Wire.endTransmission(true)) == 0) {
+                args.print(F("slave 0x%02X: transmitted %u bytes"), address, written);
             }
             else {
-                args.print(F("slave 0x%02X: transmission failed, error %u"), address, error);
+                args.print(F("slave 0x%02X: transmitted %u bytes, error %u"), address, written, error);
             }
         }
     }
@@ -1965,17 +1963,15 @@ void at_mode_serial_handle_event(String &commandString)
             uint8_t address = args.toNumber(0, 0x48);
             uint8_t length = args.toNumber(1, 0);
             if (Wire.requestFrom(address, length) == length) {
-                uint8_t *buf = new uint8_t[length + 1]();
+                auto pbuf = std::unique_ptr<uint8_t[]>(new uint8_t[length + 1]());
+                auto buf = pbuf.get();
                 if (!buf) {
-                    args.print(F("failed to allocate memory. %u bytes"), length);
+                    args.print(F("failed to allocate memory. %u bytes"), length + 1);
                 }
                 else {
                     auto read = Wire.readBytes(buf, length);
                     args.print(F("slave 0x%02X: requested %u byte. data:"), address, read);
                     DumpBinary(args.getStream(), DumpBinary::kGroupBytesDefault, 16).dump(buf, read);
-                    if (buf) {
-                        delete[] buf;
-                    }
                 }
             }
             else {

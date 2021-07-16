@@ -19,13 +19,14 @@
 #include <debug_helper_disable.h>
 #endif
 
-Sensor_AmbientLight::Sensor_AmbientLight(const String &name) :
+Sensor_AmbientLight::Sensor_AmbientLight(const String &name, uint8_t id) :
     MQTT::Sensor(MQTT::SensorType::AMBIENT_LIGHT),
     _name(name),
     _handler(nullptr),
     _sensor({SensorType::NONE}),
     _config(Plugins::Sensor::getConfig().ambient),
-    _value(-1)
+    _value(-1),
+    _id(id)
 
 {
     REGISTER_SENSOR_CLIENT(this);
@@ -41,10 +42,10 @@ MQTT::AutoDiscovery::EntityPtr Sensor_AmbientLight::getAutoDiscovery(FormatType 
     auto discovery = new MQTT::AutoDiscovery::Entity();
     switch(num) {
         case 0: {
-            if (!discovery->create(MQTTComponent::ComponentType::SENSOR, F("light_sensor"), format)) {
+            if (!discovery->create(MQTTComponent::ComponentType::SENSOR, _getId(), format)) {
                 return discovery;
             }
-            discovery->addStateTopic(MQTTClient::formatTopic(F("light_sensor")));
+            discovery->addStateTopic(MQTTClient::formatTopic(_getId()));
             switch(_sensor.type) {
                 // case SensorType::BH1750FVI:
                 //     discovery->addUnitOfMeasurement(F("lx"));
@@ -88,18 +89,20 @@ void Sensor_AmbientLight::getStatus(Print &output)
 
 void Sensor_AmbientLight::createConfigureForm(AsyncWebServerRequest *request, FormUI::Form::BaseForm &form)
 {
-    auto &cfg = Plugins::Sensor::getWriteableConfig();
-    auto &group = form.addCardGroup(F("alscfg"), F(IOT_SENSOR_NAMES_AMBIENT_LIGHT_SENSOR), true);
+    if (getId() == 0) {
+        auto &cfg = Plugins::Sensor::getWriteableConfig();
+        auto &group = form.addCardGroup(F("alscfg"), F(IOT_SENSOR_NAMES_AMBIENT_LIGHT_SENSOR), true);
 
-    form.addObjectGetterSetter(F("auto_br"), FormGetterSetter(cfg.ambient, auto_brightness));
-    form.addFormUI(F("Auto Brightness Value"), FormUI::SuffixHtml(F("<span class=\"input-group-text\">0-1023</span><span id=\"abr_sv\" class=\"input-group-text\"></span><button class=\"btn btn-secondary\" type=\"button\" id=\"dis_auto_br\">Disable</button>")));
-    cfg.ambient.addRangeValidatorFor_auto_brightness(form);
+        form.addObjectGetterSetter(F("auto_br"), FormGetterSetter(cfg.ambient, auto_brightness));
+        form.addFormUI(F("Auto Brightness Value"), FormUI::SuffixHtml(F("<span class=\"input-group-text\">0-1023</span><span id=\"abr_sv\" class=\"input-group-text\"></span><button class=\"btn btn-secondary\" type=\"button\" id=\"dis_auto_br\" data-sensor-id=\"1\">Disable</button>")));
+        cfg.ambient.addRangeValidatorFor_auto_brightness(form);
 
-    form.addObjectGetterSetter(F("auto_bras"), FormGetterSetter(cfg.ambient, adjustment_speed));
-    form.addFormUI(F("Adjustment Speed"));
-    cfg.ambient.addRangeValidatorFor_adjustment_speed(form);
+        form.addObjectGetterSetter(F("auto_bras"), FormGetterSetter(cfg.ambient, adjustment_speed));
+        form.addFormUI(F("Adjustment Speed"));
+        cfg.ambient.addRangeValidatorFor_adjustment_speed(form);
 
-    group.end();
+        group.end();
+    }
 }
 
 void Sensor_AmbientLight::reconfigure(PGM_P source)
@@ -112,17 +115,26 @@ void Sensor_AmbientLight::begin(AmbientLightSensorHandler *handler, const Sensor
     _handler = nullptr;
     _sensor = sensor;
     switch(_sensor.type) {
-        case SensorType::BH1750FVI:
-            // power up and configure high res mode, continuously, 1lux, 120ms
-            Wire.beginTransmission(_sensor.bh1750FVI.i2cAddress);
-            Wire.write(BH1750FVI_POWER_UP);
-            if (Wire.endTransmission() == 0) {
+        case SensorType::BH1750FVI: {
+                config.initTwoWire();
+                // power up and configure high res mode, continuously, 1lux, 120ms
+                Wire.beginTransmission(_sensor.bh1750FVI.i2cAddress);
+                Wire.write(BH1750FVI_POWER_UP);
+                Wire.endTransmission();
                 delay(10); // wait for power up
                 Wire.beginTransmission(_sensor.bh1750FVI.i2cAddress);
                 Wire.write(BH1750FVI_MODE_HIGHRES);
-                Wire.endTransmission();
-            }
-            break;
+                #if DEBUG_IOT_SENSOR
+                    uint8_t status =
+                #endif
+                    Wire.endTransmission();
+                #if DEBUG_IOT_SENSOR
+                    if (status != 0) {
+                        __LDBG_printf("BH1750FVI status=%u addr=%02x mode", status, _sensor.bh1750FVI.i2cAddress);
+                        return;
+                    }
+                #endif
+            } break;
         case SensorType::INTERNAL_ADC:
             ADCManager::getInstance().addAutoReadTimer(Event::seconds(1), Event::milliseconds(30), 24);
             break;
@@ -174,18 +186,23 @@ void Sensor_AmbientLight::_timerCallback()
     }
     if (_handler && _handler->isAutobrightnessEnabled()) {
         const uint32_t speed = ((_config.adjustment_speed << 4) + 1000);
-        float value = std::clamp(_value / static_cast<float>(_config.auto_brightness), 0.1f, 1.0f);
-        if (_handler->_autoBrightnessValue == 0) {
-            _handler->_autoBrightnessValue = value;
+        if (_config.auto_brightness == -1) {
+            _handler->_autoBrightnessValue = 1;
         }
         else {
-            const float period = speed / 125;
-            const float count = period + 1;
-            _handler->_autoBrightnessValue = ((_handler->_autoBrightnessValue * period) + value) / count; // integrate over 2.5 seconds to get a smooth transition and avoid flickering
+            float value = std::clamp(_value / static_cast<float>(_config.auto_brightness), 0.1f, 1.0f);
+            if (_handler->_autoBrightnessValue == 0) {
+                _handler->_autoBrightnessValue = value;
+            }
+            else {
+                const float period = speed / 125;
+                const float count = period + 1;
+                _handler->_autoBrightnessValue = ((_handler->_autoBrightnessValue * period) + value) / count; // integrate over 2.5 seconds to get a smooth transition and avoid flickering
+            }
         }
 #if DEBUG_IOT_SENSOR
         static uint32_t start;
-        if ((millis() - start) > 1000U) {
+        if ((millis() - start) > 10000U) {
             start = millis();
             __LDBG_printf("value=%d auto_br=%d br=%.3f adj=%u", _value, _config.auto_brightness, _handler->_autoBrightnessValue, speed);
         }
@@ -194,9 +211,9 @@ void Sensor_AmbientLight::_timerCallback()
 
 }
 
-const __FlashStringHelper *Sensor_AmbientLight::_getId()
+String Sensor_AmbientLight::_getId()
 {
-    return F("light_sensor");
+    return PrintString(F("light_sensor_%02x"), _id);
 }
 
 String Sensor_AmbientLight::_getTopic()
@@ -255,7 +272,13 @@ int32_t Sensor_AmbientLight::_readBH1750FVI()
     if (Wire.requestFrom(_sensor.bh1750FVI.i2cAddress, sizeof(level)) == sizeof(level)) {
         level = Wire.read() << 8;
         level |= Wire.read();
-        __LDBG_printf("BH1750FVI light sensor level: %u", level);
+#if DEBUG_IOT_SENSOR
+        static uint32_t start;
+        if ((millis() - start) > 10000U) {
+            start = millis();
+            __LDBG_printf("BH1750FVI light sensor level: %u", level);
+        }
+#endif
 
 /*
 
@@ -272,6 +295,9 @@ X : MTreg value
         // return value is not lux
         // TODO implement displaying lux
         return level;
+    }
+    else {
+        __LDBG_printf("BH1750FVI requestFrom failed");
     }
     return -1;
 }

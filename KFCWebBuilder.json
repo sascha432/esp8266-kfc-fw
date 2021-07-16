@@ -73,8 +73,7 @@
             ],
             "#if !IOT_CLOCK && !IOT_LED_MATRIX": [
                 "./Resources/images/light.svg",
-                "./Resources/js/led-matrix.js",
-                "./Resources/js/forms/clock.js"
+                "./Resources/js/led-matrix.js"
             ],
             "#if !IOT_CLOCK || IOT_LED_MATRIX": [
                 "./Resources/html/clock.html",
@@ -94,7 +93,8 @@
                 "./Resources/html/blinds.html"
             ],
             "#if !IOT_SENSOR": [
-                "./Resources/html/sensor.html"
+                "./Resources/html/sensor.html",
+                "./Resources/js/forms/sensor.js"
             ],
             "#if !IOT_WEATHER_STATION": [
                 "./Resources/html/weather.html"

@@ -475,10 +475,6 @@ private:
 // Ambient light sensor
 // ------------------------------------------------------------------------
 #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR
-    virtual bool isAutobrightnessEnabled() const override {
-        return AmbientLightSensorHandler::isAutobrightnessEnabled() && _config.auto_brightness != -1;
-    }
-
 #endif
 
 // ------------------------------------------------------------------------
@@ -486,7 +482,6 @@ private:
 public:
     void _broadcastWebUI();
     void _webUIUpdateColor(int color = -1);
-    static void handleWebServer(AsyncWebServerRequest *request);
 
 private:
     bool isTempProtectionActive() const {
@@ -579,6 +574,10 @@ private:
     Clock::BlendAnimation *_blendAnimation;
     bool _running;
     Clock::ShowMethodType _method;
+
+#if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR2
+    AmbientLightSensorHandler _lightSensor2;
+#endif
 
 public:
     static Clock::ShowMethodType getShowMethod();

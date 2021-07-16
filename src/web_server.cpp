@@ -193,7 +193,7 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
     auto &url = request->url();
     // --------------------------------------------------------------------
     if (url == F("/is-alive")) {
-        response = request->beginResponse(200, FSPGM(mime_text_plain), String(request->arg(String('p')).toInt()));
+        response = request->beginResponse(200, FSPGM(mime_text_plain), std::move(String(request->arg(String('p')).toInt())));
         headers.addNoCache(true);
         headers.setResponseHeaders(response);
     }
@@ -218,7 +218,7 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
         headers.addNoCache(true);
         PrintHtmlEntitiesString str;
         WebTemplate::printSystemTime(time(nullptr), str);
-        response = new AsyncBasicResponse(200, FSPGM(mime_text_html), str);
+        response = new AsyncBasicResponse(200, FSPGM(mime_text_html), std::move(str));
         headers.setResponseHeaders(response);
     }
     // --------------------------------------------------------------------
@@ -333,15 +333,13 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
             request->send(response);
             return;
         }
-        int n = 0;
+        int id = request->arg(F("id")).toInt();
         Sensor_AmbientLight *lightSensor = nullptr;
         for(const auto &sensor: SensorPlugin::getSensors()) {
-            if (sensor->getType() == SensorPlugin::SensorType::AMBIENT_LIGHT) {
-                if (n == 0) {
-                    lightSensor = reinterpret_cast<Sensor_AmbientLight *>(sensor);
-                    break;
-                }
-                n--;
+            auto tmpSensor = reinterpret_cast<Sensor_AmbientLight *>(sensor);
+            if (sensor->getType() == SensorPlugin::SensorType::AMBIENT_LIGHT && tmpSensor->getId() == id && tmpSensor->enabled()) {
+                lightSensor = reinterpret_cast<Sensor_AmbientLight *>(sensor);
+                break;
             }
         }
         if (!lightSensor || lightSensor->getValue() == -1) {
@@ -351,8 +349,8 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
             return;
         }
         headers.addNoCache(true);
+        response = request->beginResponse(200, FSPGM(mime_text_plain), std::move(String(lightSensor->getValue())));
         headers.setResponseHeaders(response);
-        response = request->beginResponse(200, FSPGM(mime_text_plain), String(lightSensor->getValue()));
     }
 #endif
     // --------------------------------------------------------------------

@@ -72,16 +72,29 @@ public:
 
     static constexpr int16_t kAutoBrightnessOff = -1;
 
-    static constexpr uint8_t BH1750FVI_ADDR_LOW = 0x23;
-    static constexpr uint8_t BH1750FVI_ADDR_HIGH = 0x5c;
+    // https://www.mouser.com/datasheet/2/348/bh1750fvi-e-186247.pdf
 
-    static constexpr uint8_t BH1750FVI_POWER_DOWN = 0x00;
-    static constexpr uint8_t BH1750FVI_POWER_UP = 0x01;
-    static constexpr uint8_t BH1750FVI_RESET = 0x07;
+    static constexpr uint8_t BH1750FVI_ADDR_LOW =       0b00100011; // 0x23
+    static constexpr uint8_t BH1750FVI_ADDR_HIGH =      0b01011100; // 0x5c
 
-    static constexpr uint8_t BH1750FVI_MODE_HIGHRES = 0x10;
-    static constexpr uint8_t BH1750FVI_MODE_HIGHRES2 = 0x11;
-    static constexpr uint8_t BH1750FVI_MODE_LOWRES = 0x13;
+    static constexpr uint8_t BH1750FVI_POWER_DOWN =     0b00000000;
+    static constexpr uint8_t BH1750FVI_POWER_UP =       0b00000001;
+    static constexpr uint8_t BH1750FVI_RESET =          0b00000111;
+
+    // Continuously
+    static constexpr uint8_t BH1750FVI_MODE_HIGHRES =   0b00010000;
+    static constexpr uint8_t BH1750FVI_MODE_HIGHRES2 =  0b00010001;
+    static constexpr uint8_t BH1750FVI_MODE_LOWRES =    0b00010011;
+
+    // Measurement Time Register
+    static constexpr uint8_t BH1750FVI_MTREG_DEFAULT =  0b01000101; // 69
+
+     static constexpr uint8_t BH1750FVI_MTREG_HIGH(uint8_t value) {
+        return 0b01000000 | (value >> 5);
+    }
+    static constexpr uint8_t BH1750FVI_MTREG_LOW(uint8_t value) {
+        return 0b01100000 | (value & 0b11111);
+    }
 
     enum class SensorType {
         NONE = 0,
@@ -99,18 +112,28 @@ public:
             bool inverted;
             uint8_t adcPin;
             TinyPWM() {}
+            // use TinyPWM to read a photo resistor connected to one of the ADC pins
+            // measurement time for the value (integration time) is 2 seconds
             TinyPWM(uint8_t _i2cAddress, bool _inverted = true, uint8_t _adcPin = 0x11) : level(NAN), lastUpdate(0), i2cAddress(_i2cAddress), inverted(_inverted), adcPin(_adcPin) {}
         };
 
         struct BH1750FVI {
+            float illuminance;
             uint8_t i2cAddress;
+            bool highRes;
             BH1750FVI() {}
-            BH1750FVI(uint8_t _i2cAddress) : i2cAddress(_i2cAddress) {}
+            // highres mode displays lux (0.5lx, 1-65535) and is not suitable for auto brightness
+            // the update interval is 2 seconds
+            // the optical window can be changed to measure up to 100000lux with 16bit precision
+            // low res mode is 4lx and updated every 125ms, the available range is 0-1023
+            BH1750FVI(uint8_t _i2cAddress, bool _highRes) : illuminance(NAN), i2cAddress(_i2cAddress), highRes(_highRes) {}
         };
 
         struct ADC {
             bool inverted;
             ADC() {}
+            // use the internal ADC to read a photo resistor or another resistive device
+            // the value is an average over 24 measurements every 30 milliseconds
             ADC(bool _inverted) : inverted(_inverted) {}
         };
 

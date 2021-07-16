@@ -46,13 +46,11 @@ MQTT::AutoDiscovery::EntityPtr Sensor_AmbientLight::getAutoDiscovery(FormatType 
                 return discovery;
             }
             discovery->addStateTopic(MQTTClient::formatTopic(_getId()));
-            switch(_sensor.type) {
-                // case SensorType::BH1750FVI:
-                //     discovery->addUnitOfMeasurement(F("lx"));
-                //     break;
-                default:
-                    discovery->addUnitOfMeasurement(String('%'));
-                    break;
+            if (_sensor.type == Sensor_AmbientLight::SensorType::BH1750FVI && _sensor.bh1750FVI.highRes) {
+                discovery->addUnitOfMeasurement(F("lux"));
+            }
+            else {
+                discovery->addUnitOfMeasurement(String('%'));
             }
         }
         break;
@@ -77,7 +75,8 @@ void Sensor_AmbientLight::publishState()
 {
     // __LDBG_printf("client=%p connected=%u", client, client && client->isConnected() ? 1 : 0);
     if (isConnected()) {
-        publish(_getTopic(), true, String(getAutoBrightness(), 0));
+        auto value = (_sensor.type == SensorType::BH1750FVI && _sensor.bh1750FVI.highRes) ? String(_sensor.bh1750FVI.illuminance, 1) : String(getAutoBrightness(), 0);
+        publish(_getTopic(), true, value);
     }
 }
 
@@ -95,18 +94,21 @@ void Sensor_AmbientLight::createConfigureForm(AsyncWebServerRequest *request, Fo
 
         int32_t maxBrightness;
         auto suffix = F("<span class=\"input-group-text\">0-1023</span><span id=\"abr_sv\" class=\"input-group-text\"></span><button class=\"btn btn-secondary\" type=\"button\" id=\"dis_auto_br\">Disable</button>");
-        switch(_sensor.type) {
-            case Sensor_AmbientLight::SensorType::INTERNAL_ADC:
-                maxBrightness = ADCManager::kMaxADCValue;
-                break;
-            case Sensor_AmbientLight::SensorType::BH1750FVI:
-                maxBrightness = 65535;
-                suffix = F("<span class=\"input-group-text\">0-65535 lux</span><span id=\"abr_sv\" class=\"input-group-text\"></span><button class=\"btn btn-secondary\" type=\"button\" id=\"dis_auto_br\">Disable</button>");
-                break;
-            case Sensor_AmbientLight::SensorType::TINYPWM:
-            default:
-                maxBrightness = 1023;
-                break;
+        if (_sensor.type == Sensor_AmbientLight::SensorType::BH1750FVI && _sensor.bh1750FVI.highRes) {
+            maxBrightness = 65535;
+            suffix = F("<span class=\"input-group-text\">0-65535 lux</span><span id=\"abr_sv\" class=\"input-group-text\"></span><button class=\"btn btn-secondary\" type=\"button\" id=\"dis_auto_br\">Disable</button>");
+        }
+        else {
+            switch(_sensor.type) {
+                case Sensor_AmbientLight::SensorType::INTERNAL_ADC:
+                    maxBrightness = ADCManager::kMaxADCValue;
+                    break;
+                case Sensor_AmbientLight::SensorType::BH1750FVI:
+                case Sensor_AmbientLight::SensorType::TINYPWM:
+                default:
+                    maxBrightness = 1023;
+                    break;
+            }
         }
 
         form.addObjectGetterSetter(F("auto_br"), FormGetterSetter(cfg.ambient, auto_brightness));
@@ -132,25 +134,35 @@ void Sensor_AmbientLight::reconfigure(PGM_P source)
 
 void Sensor_AmbientLight::begin(AmbientLightSensorHandler *handler, const SensorConfig &sensor)
 {
+    uint32_t interval = 125;
     _handler = nullptr;
     _sensor = sensor;
     switch(_sensor.type) {
         case SensorType::BH1750FVI: {
                 config.initTwoWire();
-                // power up and configure high res mode, continuously, 1lux, 120ms
+                // power up
                 Wire.beginTransmission(_sensor.bh1750FVI.i2cAddress);
                 Wire.write(BH1750FVI_POWER_UP);
                 Wire.endTransmission();
                 delay(10); // wait for power up
                 Wire.beginTransmission(_sensor.bh1750FVI.i2cAddress);
-                Wire.write(BH1750FVI_MODE_HIGHRES);
+                if (_sensor.bh1750FVI.highRes) {
+                    // configure high res mode, continuously, 0.5lux, min. interval 120ms
+                    interval = 2000;
+                    Wire.write(BH1750FVI_MODE_HIGHRES2);
+                }
+                else {
+                    // configure low res mode, continuously, 4lux, min. interval 16ms
+                    interval = 125;
+                    Wire.write(BH1750FVI_MODE_LOWRES);
+                }
                 #if DEBUG_IOT_SENSOR
                     uint8_t status =
                 #endif
                     Wire.endTransmission();
                 #if DEBUG_IOT_SENSOR
                     if (status != 0) {
-                        __LDBG_printf("BH1750FVI status=%u addr=%02x mode", status, _sensor.bh1750FVI.i2cAddress);
+                        __LDBG_printf("BH1750FVI status=%u addr=%02x highres=%u", status, _sensor.bh1750FVI.i2cAddress, _sensor.bh1750FVI.highRes);
                         return;
                     }
                 #endif
@@ -165,7 +177,7 @@ void Sensor_AmbientLight::begin(AmbientLightSensorHandler *handler, const Sensor
     _timerCallback();
     _handler = handler;
     _handler->_ambientLightSensor = this;
-    _timer.add(Event::milliseconds(125), true, [this](Event::CallbackTimerPtr timer) {
+    _timer.add(Event::milliseconds(interval), true, [this](Event::CallbackTimerPtr timer) {
         _timerCallback();
     });
 }
@@ -191,6 +203,9 @@ void Sensor_AmbientLight::_timerCallback()
     switch(_sensor.type) {
         case SensorType::BH1750FVI:
             _value = _readBH1750FVI();
+            if (_sensor.bh1750FVI.highRes) {
+                // _updateLightSensorWebUI();
+            }
             break;
         case SensorType::TINYPWM:
             _value = _readTinyPwmADC();
@@ -243,6 +258,9 @@ String Sensor_AmbientLight::_getTopic()
 
 String Sensor_AmbientLight::_getLightSensorWebUIValue()
 {
+    if (_sensor.type == SensorType::BH1750FVI && _sensor.bh1750FVI.highRes) {
+        return PrintString(F("%.1f lux"), _sensor.bh1750FVI.illuminance);
+    }
     if (!_handler || !_handler->isAutobrightnessEnabled()) {
         return PrintString(F("<strong>OFF</strong><br> <span class=\"light-sensor-value\">Sensor value %d</span>"), getValue());
     }
@@ -292,28 +310,32 @@ int32_t Sensor_AmbientLight::_readBH1750FVI()
     if (Wire.requestFrom(_sensor.bh1750FVI.i2cAddress, sizeof(level)) == sizeof(level)) {
         level = Wire.read() << 8;
         level |= Wire.read();
+        if (!_sensor.bh1750FVI.highRes) {
+            level >>= 6;
+            _sensor.bh1750FVI.illuminance = NAN;
+        }
+        else {
+            // https://www.mouser.com/datasheet/2/348/bh1750fvi-e-186247.pdf
+
+            // The below formula is to calculate illuminance per 1 count.
+            // H-reslution mode : Illuminance per 1 count ( lx / count ) = 1 / 1.2 *( 69 / X )
+            // H-reslution mode2 : Illuminance per 1 count ( lx / count ) = 1 / 1.2 *( 69 / X ) / 2
+            // 1.2 : Measurement accuracy
+            // 69 : Default value of MTreg ( dec )
+            // X : MTreg value
+            // _sensor.bh1750FVI.illuminance = (level * 115) / (BH1750FVI_MTREG_DEFAULT * 2.0);  // mode
+            // _sensor.bh1750FVI.illuminance = level * (115 / (BH1750FVI_MTREG_DEFAULT * 2.0));  // mode
+            // _sensor.bh1750FVI.illuminance = (level * 115) / (BH1750FVI_MTREG_DEFAULT * 4.0);  // mode2
+            _sensor.bh1750FVI.illuminance = level * (115 / (BH1750FVI_MTREG_DEFAULT * 4.0));  // mode2
+        }
+
 #if DEBUG_IOT_SENSOR
         static uint32_t start;
         if ((millis() - start) > 10000U) {
             start = millis();
-            __LDBG_printf("BH1750FVI light sensor level: %u", level);
+            __LDBG_printf("BH1750FVI light sensor level=%u illuminance=%.1f", level, _sensor.bh1750FVI.illuminance);
         }
 #endif
-
-/*
-
-https://www.mouser.com/datasheet/2/348/bh1750fvi-e-186247.pdf
-
-The below formula is to calculate illuminance per 1 count.
-H-reslution mode : Illuminance per 1 count ( lx / count ) = 1 / 1.2 *( 69 / X )
-H-reslution mode2 : Illuminance per 1 count ( lx / count ) = 1 / 1.2 *( 69 / X ) / 2
-1.2 : Measurement accuracy
-69 : Default value of MTreg ( dec )
-X : MTreg value
-
-*/
-        // return value is not lux
-        // TODO implement displaying lux
         return level;
     }
     else {

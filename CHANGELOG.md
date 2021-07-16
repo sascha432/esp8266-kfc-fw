@@ -1,7 +1,7 @@
 # Changelog
 
 ## Version 0.0.5
-
+- Support for BH1750FVI Ambient Light Sensor
 - Removed persistant WiFi settings and improved stability
 - WebServer logging to Serial
 - Removed WebAlerts

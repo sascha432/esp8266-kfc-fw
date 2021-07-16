@@ -420,7 +420,7 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
             #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR2
                 else if (sensor->getType() == SensorPlugin::SensorType::AMBIENT_LIGHT && lightSensor->getId() == 1) {
                     auto config = Sensor_AmbientLight::SensorConfig(Sensor_AmbientLight::SensorType::BH1750FVI);
-                    config.bh1750FVI = Sensor_AmbientLight::SensorConfig::BH1750FVI(Sensor_AmbientLight::BH1750FVI_ADDR_LOW);
+                    config.bh1750FVI = Sensor_AmbientLight::SensorConfig::BH1750FVI(Sensor_AmbientLight::BH1750FVI_ADDR_LOW, true);
                     lightSensor->begin(&_lightSensor2, config);
                 }
             #endif

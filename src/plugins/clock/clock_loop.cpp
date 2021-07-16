@@ -128,7 +128,7 @@ void ClockPlugin::_loop()
         #endif
         if (options.doRedraw()) {
 
-            IF_IOT_CLOCK(
+            #if IOT_LED_MATRIX == 0
                 uint8_t displayColon = true;
                 // does the animation allow blinking and is it set?
                 if ((!_animation || (_animation && !_animation->isBlinkColonDisabled())) && (_config.blink_colon_speed >= kMinBlinkColonSpeed)) {
@@ -148,7 +148,7 @@ void ClockPlugin::_loop()
                 #endif
 
                 _display.setColons(displayColon ? Clock::SevenSegment::ColonType::BOTH : Clock::SevenSegment::ColonType::NONE);
-            )
+            #endif
 
             if (_blendAnimation) {
                 _animation->nextFrame(options.getMillis());
@@ -169,3 +169,4 @@ void ClockPlugin::_loop()
 
     _display.show();
 }
+

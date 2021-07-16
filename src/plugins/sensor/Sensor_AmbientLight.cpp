@@ -93,9 +93,29 @@ void Sensor_AmbientLight::createConfigureForm(AsyncWebServerRequest *request, Fo
         auto &cfg = Plugins::Sensor::getWriteableConfig();
         auto &group = form.addCardGroup(F("alscfg"), F(IOT_SENSOR_NAMES_AMBIENT_LIGHT_SENSOR), true);
 
+        int32_t maxBrightness;
+        auto suffix = F("<span class=\"input-group-text\">0-1023</span><span id=\"abr_sv\" class=\"input-group-text\"></span><button class=\"btn btn-secondary\" type=\"button\" id=\"dis_auto_br\">Disable</button>");
+        switch(_sensor.type) {
+            case Sensor_AmbientLight::SensorType::INTERNAL_ADC:
+                maxBrightness = ADCManager::kMaxADCValue;
+                break;
+            case Sensor_AmbientLight::SensorType::BH1750FVI:
+                maxBrightness = 65535;
+                suffix = F("<span class=\"input-group-text\">0-65535 lux</span><span id=\"abr_sv\" class=\"input-group-text\"></span><button class=\"btn btn-secondary\" type=\"button\" id=\"dis_auto_br\">Disable</button>");
+                break;
+            case Sensor_AmbientLight::SensorType::TINYPWM:
+            default:
+                maxBrightness = 1023;
+                break;
+        }
+
         form.addObjectGetterSetter(F("auto_br"), FormGetterSetter(cfg.ambient, auto_brightness));
-        form.addFormUI(F("Auto Brightness Value"), FormUI::SuffixHtml(F("<span class=\"input-group-text\">0-1023</span><span id=\"abr_sv\" class=\"input-group-text\"></span><button class=\"btn btn-secondary\" type=\"button\" id=\"dis_auto_br\" data-sensor-id=\"1\">Disable</button>")));
-        cfg.ambient.addRangeValidatorFor_auto_brightness(form);
+        form.addFormUI(F("Auto Brightness Value"),
+            FormUI::SuffixHtml(suffix),
+            FormUI::PlaceHolder(cfg.ambient.kDefaultValueFor_auto_brightness),
+            FormUI::MinMax(cfg.ambient.kMaxValueFor_auto_brightness, maxBrightness)
+        );
+        form.addValidator(FormUI::Validator::Range(static_cast<long>(cfg.ambient.kMaxValueFor_auto_brightness), static_cast<long>(maxBrightness)));
 
         form.addObjectGetterSetter(F("auto_bras"), FormGetterSetter(cfg.ambient, adjustment_speed));
         form.addFormUI(F("Adjustment Speed"));

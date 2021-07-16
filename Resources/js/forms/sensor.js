@@ -7,7 +7,7 @@ $(function() {
         $('#dis_auto_br').off('click').on('click', function() {
                 $('#auto_br').val(-1);
         });
-        var sensor_id = parseInt($('#dis_auto_br').attr('data-sensor-id'));
+        var sensor_id = 0;
         function load_sensor_value() {
             $.get('/ambient_light_sensor?SID=' + $.getSessionId() + '&id=' + sensor_id, function (value) {
                 value = parseInt(value);

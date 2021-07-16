@@ -79,6 +79,10 @@
 #define IOT_SENSOR_NAMES_AMBIENT_LIGHT_SENSOR   "Ambient Light Sensor"
 #endif
 
+#ifndef IOT_SENSOR_NAMES_AMBIENT_LIGHT_SENSOR2
+#define IOT_SENSOR_NAMES_AMBIENT_LIGHT_SENSOR2  "Illuminance Sensor"
+#endif
+
 #ifndef IOT_SENSOR_NAMES_DS3231
 #define IOT_SENSOR_NAMES_DS3231                 "DS3231 Temperature"
 #endif

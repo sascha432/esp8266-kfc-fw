@@ -7,6 +7,9 @@
 #include <Arduino_compat.h>
 #include "Sensor_BME280.h"
 
+#undef DEBUG_IOT_SENSOR
+#define DEBUG_IOT_SENSOR 1
+
 #if DEBUG_IOT_SENSOR
 #include <debug_helper_enable.h>
 #else
@@ -73,20 +76,28 @@ void Sensor_BME280::getValues(WebUINS::Events &array, bool timer)
 
 void Sensor_BME280::createWebUI(WebUINS::Root &webUI)
 {
-    WebUINS::Row row(
-        WebUINS::Sensor(_getId(FSPGM(temperature)), _name + F(" Temperature"), FSPGM(UTF8_degreeC)),
-        WebUINS::Sensor(_getId(FSPGM(humidity)), _name + F(" Humidity"), '%'),
-        WebUINS::Sensor(_getId(FSPGM(pressure)), _name + F(" Pressure"), FSPGM(hPa))
-    );
-    webUI.appendToLastRow(row);
-
-
-    // if ((*row)->size() > 1) {
-        // *row = &webUI.addRow();
-    // // }
-    // (*row)->addSensor(_getId(FSPGM(temperature)), _name + F(" Temperature"), FSPGM(UTF8_degreeC));
-    // (*row)->addSensor(_getId(FSPGM(humidity)), _name + F(" Humidity"), '%');
-    // (*row)->addSensor(_getId(FSPGM(pressure)), _name + F(" Pressure"), FSPGM(hPa));
+    static constexpr auto renderType = IOT_SENSOR_BME280_RENDER_TYPE;
+    {
+        auto sensor = WebUINS::Sensor(_getId(FSPGM(temperature)), _name + F(" Temperature"), FSPGM(UTF8_degreeC), renderType);
+        #ifdef IOT_SENSOR_BME280_RENDER_HEIGHT
+            sensor.append(WebUINS::NamedString(J(height), IOT_SENSOR_BME280_RENDER_HEIGHT));
+        #endif
+        webUI.appendToLastRow(WebUINS::Row(sensor));
+    }
+    {
+        auto sensor = WebUINS::Sensor(_getId(FSPGM(humidity)), _name + F(" Humidity"), '%', renderType);
+        #ifdef IOT_SENSOR_BME280_RENDER_HEIGHT
+            sensor.append(WebUINS::NamedString(J(height), IOT_SENSOR_BME280_RENDER_HEIGHT));
+        #endif
+        webUI.appendToLastRow(WebUINS::Row(sensor));
+    }
+    {
+        auto sensor = WebUINS::Sensor(_getId(FSPGM(pressure)), _name + F(" Pressure"), FSPGM(hPa), renderType);
+        #ifdef IOT_SENSOR_BME280_RENDER_HEIGHT
+            sensor.append(WebUINS::NamedString(J(height), IOT_SENSOR_BME280_RENDER_HEIGHT));
+        #endif
+        webUI.appendToLastRow(WebUINS::Row(sensor));
+    }
 }
 
 void Sensor_BME280::getStatus(Print &output)

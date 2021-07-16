@@ -105,7 +105,7 @@ void SensorPlugin::setup(SetupModeType mode, const PluginComponents::Dependencie
     addSensor<Sensor_Motion>(F(IOT_SENSOR_NAMES_MOTION_SENSOR));
 #endif
 #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR
-    addSensor<Sensor_AmbientLight>(F(IOT_SENSOR_NAMES_AMBIENT_LIGHT_SENSOR));
+    addSensor<Sensor_AmbientLight>(F(IOT_SENSOR_NAMES_AMBIENT_LIGHT_SENSOR), 0);
 #endif
 #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR2
     addSensor<Sensor_AmbientLight>(F(IOT_SENSOR_NAMES_AMBIENT_LIGHT_SENSOR), 1);

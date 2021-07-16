@@ -10,8 +10,8 @@
 #include "Sensor_AmbientLight.h"
 #include "sensor.h"
 
-#undef DEBUG_IOT_SENSOR
-#define DEBUG_IOT_SENSOR 1
+// #undef DEBUG_IOT_SENSOR
+// #define DEBUG_IOT_SENSOR 1
 
 #if DEBUG_IOT_SENSOR
 #include <debug_helper_enable.h>
@@ -30,10 +30,19 @@ Sensor_AmbientLight::Sensor_AmbientLight(const String &name, uint8_t id) :
 
 {
     REGISTER_SENSOR_CLIENT(this);
+    #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR2_BH1750FVI_I2C_ADDRESS
+        // auto setup for lux sensor
+        if (id == 1) {
+            auto config = SensorConfig(SensorType::BH1750FVI);
+            config.bh1750FVI = SensorConfig::BH1750FVI(IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR2_BH1750FVI_I2C_ADDRESS, true);
+            begin(nullptr, config);
+        }
+    #endif
 }
 
 Sensor_AmbientLight::~Sensor_AmbientLight()
 {
+    end();
     UNREGISTER_SENSOR_CLIENT(this);
 }
 
@@ -65,7 +74,8 @@ void Sensor_AmbientLight::getValues(WebUINS::Events &array, bool timer)
 
 void Sensor_AmbientLight::createWebUI(WebUINS::Root &webUI)
 {
-    auto sensor = WebUINS::Sensor(_getId(), F("Ambient Light Sensor"), F("<img src=\"/images/light.svg\" width=\"80\" height=\"80\" style=\"margin-top:-20px;margin-bottom:1rem\">"), WebUINS::SensorRenderType::COLUMN);
+    auto title = (_getId() == 1) ? F(IOT_SENSOR_NAMES_AMBIENT_LIGHT_SENSOR2) : F(IOT_SENSOR_NAMES_AMBIENT_LIGHT_SENSOR);
+    auto sensor = WebUINS::Sensor(_getId(), title, F("<img src=\"/images/light.svg\" width=\"80\" height=\"80\" style=\"margin-top:-20px;margin-bottom:1rem\">"), WebUINS::SensorRenderType::COLUMN);
     sensor.append(WebUINS::NamedString(J(height), F("15rem")));
     WebUINS::Row row(sensor);
     webUI.appendToLastRow(row);
@@ -82,8 +92,12 @@ void Sensor_AmbientLight::publishState()
 
 void Sensor_AmbientLight::getStatus(Print &output)
 {
-    output.print(F("IOT_SENSOR_NAMES_AMBIENT_LIGHT_SENSOR"));
-    output.println(F(HTML_S(br)));
+    if (_getId() == 1) {
+        output.print(F(IOT_SENSOR_NAMES_AMBIENT_LIGHT_SENSOR2 HTML_S(br)));
+    }
+    else {
+        output.print(F(IOT_SENSOR_NAMES_AMBIENT_LIGHT_SENSOR HTML_S(br)));
+    }
 }
 
 void Sensor_AmbientLight::createConfigureForm(AsyncWebServerRequest *request, FormUI::Form::BaseForm &form)
@@ -94,11 +108,15 @@ void Sensor_AmbientLight::createConfigureForm(AsyncWebServerRequest *request, Fo
 
         int32_t maxBrightness;
         auto suffix = F("<span class=\"input-group-text\">0-1023</span><span id=\"abr_sv\" class=\"input-group-text\"></span><button class=\"btn btn-secondary\" type=\"button\" id=\"dis_auto_br\">Disable</button>");
+        #if 0
+        // high res mode currently not supported
         if (_sensor.type == Sensor_AmbientLight::SensorType::BH1750FVI && _sensor.bh1750FVI.highRes) {
             maxBrightness = 65535;
             suffix = F("<span class=\"input-group-text\">0-65535 lux</span><span id=\"abr_sv\" class=\"input-group-text\"></span><button class=\"btn btn-secondary\" type=\"button\" id=\"dis_auto_br\">Disable</button>");
         }
-        else {
+        else
+        #endif
+        {
             switch(_sensor.type) {
                 case Sensor_AmbientLight::SensorType::INTERNAL_ADC:
                     maxBrightness = ADCManager::kMaxADCValue;
@@ -148,7 +166,7 @@ void Sensor_AmbientLight::begin(AmbientLightSensorHandler *handler, const Sensor
                 Wire.beginTransmission(_sensor.bh1750FVI.i2cAddress);
                 if (_sensor.bh1750FVI.highRes) {
                     // configure high res mode, continuously, 0.5lux, min. interval 120ms
-                    interval = 2000;
+                    interval = 1000;
                     Wire.write(BH1750FVI_MODE_HIGHRES2);
                 }
                 else {
@@ -196,6 +214,7 @@ void Sensor_AmbientLight::end()
         default:
             break;
     }
+    _sensor.type = SensorType::NONE;
 }
 
 void Sensor_AmbientLight::_timerCallback()
@@ -203,9 +222,6 @@ void Sensor_AmbientLight::_timerCallback()
     switch(_sensor.type) {
         case SensorType::BH1750FVI:
             _value = _readBH1750FVI();
-            if (_sensor.bh1750FVI.highRes) {
-                // _updateLightSensorWebUI();
-            }
             break;
         case SensorType::TINYPWM:
             _value = _readTinyPwmADC();

@@ -10,6 +10,9 @@
 #include "Sensor_BME680.h"
 #include "sensor.h"
 
+#undef DEBUG_IOT_SENSOR
+#define DEBUG_IOT_SENSOR 1
+
 #if DEBUG_IOT_SENSOR
 #include <debug_helper_enable.h>
 #else
@@ -23,11 +26,8 @@ Sensor_CCS811::Sensor_CCS811(const String &name, uint8_t address) :
 {
     REGISTER_SENSOR_CLIENT(this);
     config.initTwoWire();
-    _ccs811.beg
+    _ccs811.begin(_address);
     setUpdateRate(max<uint16_t>(1, DEFAULT_UPDATE_RATE / 3)); // faster update rate until valid data is available
-    _sensor.eCO2 = 0;
-    _sensor.TVOC = 0;
-    _sensor.available = false;
 }
 
 Sensor_CCS811::~Sensor_CCS811()
@@ -37,7 +37,7 @@ Sensor_CCS811::~Sensor_CCS811()
 
 MQTT::AutoDiscovery::EntityPtr Sensor_CCS811::getAutoDiscovery(FormatType format, uint8_t num)
 {
-    discovery = new MQTT::AutoDiscovery::Entity();
+    auto discovery = new MQTT::AutoDiscovery::Entity();
     switch(num) {
         case 0:
             if (discovery->create(this, _getId(F("eco2")), format)) {
@@ -57,41 +57,30 @@ MQTT::AutoDiscovery::EntityPtr Sensor_CCS811::getAutoDiscovery(FormatType format
     return discovery;
 }
 
-uint8_t Sensor_CCS811::getAutoDiscoveryCount() const
+void Sensor_CCS811::getValues(WebUINS::Events &array, bool timer)
 {
-    return 2;
-}
-
-void Sensor_CCS811::getValues(NamedJsonArray &array, bool timer)
-{
-
-}
-
-void Sensor_CCS811::getValues(JsonArray &array, bool timer)
-{
-    __LDBG_printf("Sensor_CCS811::getValues()");
-
     auto &sensor = _readSensor();
-    auto obj = &array.addObject(3);
-    obj->add(JJ(id), _getId(F("eco2")));
-    obj->add(JJ(state), sensor.available);
-    obj->add(JJ(value), sensor.eCO2);
-    obj = &array.addObject(3);
-    obj->add(JJ(id), _getId(F("tvoc")));
-    obj->add(JJ(state), sensor.available);
-    obj->add(JJ(value), sensor.TVOC);
+    array.append(WebUINS::Values(_getId(F("eco2")), sensor.eCO2, sensor.available));
+    array.append(WebUINS::Values(_getId(F("tvoc")), sensor.TVOC, sensor.available));
 }
 
 void Sensor_CCS811::createWebUI(WebUINS::Root &webUI)
 {
-    __LDBG_printf("Sensor_CCS811::createWebUI()");
-
-    if ((*row)->size() > 2) {
-        // *row = &webUI.addRow();
+    static constexpr auto renderType = IOT_SENSOR_CCS811_RENDER_TYPE;
+    {
+        auto sensor = WebUINS::Sensor(_getId(F("eco2")),  _name + F(" CO2"), F("ppm"), renderType);
+        #ifdef IOT_SENSOR_CCS811_RENDER_HEIGHT
+            sensor.append(WebUINS::NamedString(J(height), IOT_SENSOR_CCS811_RENDER_HEIGHT));
+        #endif
+        webUI.appendToLastRow(WebUINS::Row(sensor));
     }
-
-    (*row)->addSensor(_getId(F("eco2")), _name + F(" CO2"), F("ppm"));
-    (*row)->addSensor(_getId(F("tvoc")), _name + F(" TVOC"), F("ppb"));
+    {
+        auto sensor = WebUINS::Sensor(_getId(F("tvoc")),  _name + F(" TVOC"), F("ppb"), renderType);
+        #ifdef IOT_SENSOR_CCS811_RENDER_HEIGHT
+            sensor.append(WebUINS::NamedString(J(height), IOT_SENSOR_CCS811_RENDER_HEIGHT));
+        #endif
+        webUI.appendToLastRow(WebUINS::Row(sensor));
+    }
 }
 
 void Sensor_CCS811::getStatus(Print &output)
@@ -105,48 +94,44 @@ void Sensor_CCS811::publishState()
         auto &sensor = _readSensor();
         if (sensor.available) {
             using namespace MQTT::Json;
-            // PrintString str;
-            // JsonUnnamedObject json;
-            // json.add(F("eCO2"), sensor.eCO2);
-            // json.add(F("TVOC"), sensor.TVOC);
-            // json.printTo(str);
-
-            publish(MQTTClient::formatTopic(_getId()), _qos, true, Writer(NamedUnsignedShort(F("eCO2"), sensor.eCO2), NamedUnsignedShort(F("TVOC"), sensor.TVOC)).toString());
+            publish(_getTopic(), true, UnnamedObject(NamedUnsignedShort(F("eCO2"), sensor.eCO2), NamedUnsignedShort(F("TVOC"), sensor.TVOC)).toString());
         }
     }
 }
 
-Sensor_CCS811::SensorData_t &Sensor_CCS811::_readSensor()
+Sensor_CCS811::SensorData &Sensor_CCS811::_readSensor()
 {
 // use temperature and humidity for compensation
 #if IOT_SENSOR_HAVE_LM75A || IOT_SENSOR_HAVE_BME280 || IOT_SENSOR_HAVE_BME680
     auto &sensors = SensorPlugin::getSensors();
     for(auto sensor: sensors) {
-#if IOT_SENSOR_HAVE_BME280
-        if (sensor->getType() == BME280) {
-            auto data = reinterpret_cast<Sensor_BME280 *>(sensor)->_readSensor();
-            __LDBG_printf("Sensor_CCS811::_readSensor(): setEnvironmentalData(): BME280: humidity %u, temperature %.3f", (uint8_t)data.humidity, data.temperature);
-            _ccs811.setEnvironmentalData(data.humidity, data.temperature);
-        }
-#elif IOT_SENSOR_HAVE_BME680
-        if (sensor->getType() == BME680) {
-            auto data = reinterpret_cast<Sensor_BME680 *>(sensor)->_readSensor();
-            __LDBG_printf("Sensor_CCS811::_readSensor(): setEnvironmentalData(): BME680: humidity %u, temperature %.3f", (uint8_t)data.humidity, data.temperature);
-            _ccs811.setEnvironmentalData(data.humidity, data.temperature);
-        }
-#elif IOT_SENSOR_HAVE_LM75A
-        if (sensor->getType() == LM75A) {
-            auto temperature = reinterpret_cast<Sensor_BME680 *>(sensor)->_readSensor();
-            __LDBG_printf("Sensor_CCS811::_readSensor(): setEnvironmentalData(): LM75A: humidity 55, temperature %.3f", temperature);
-            _ccs811.setEnvironmentalData(55, temperature);
-        }
-#endif
+        #if IOT_SENSOR_HAVE_BME280
+            if (sensor->getType() == SensorType::BME280) {
+                auto data = reinterpret_cast<Sensor_BME280 *>(sensor)->_readSensor();
+                __LDBG_printf("CCS811: BME280: humidity %u, temperature %.3f", (uint8_t)data.humidity, data.temperature);
+                _ccs811.setEnvironmentalData(data.humidity, data.temperature);
+            }
+        #elif IOT_SENSOR_HAVE_BME680
+            if (sensor->getType() == SensorType::BME680) {
+                auto data = reinterpret_cast<Sensor_BME680 *>(sensor)->_readSensor();
+                __LDBG_printf("CCS811: BME680: humidity %u, temperature %.3f", (uint8_t)data.humidity, data.temperature);
+                _ccs811.setEnvironmentalData(data.humidity, data.temperature);
+            }
+        #elif IOT_SENSOR_HAVE_LM75A
+            if (sensor->getType() == SensorType::LM75A) {
+                auto temperature = reinterpret_cast<Sensor_BME680 *>(sensor)->_readSensor();
+                __LDBG_printf("CCS811: LM75A: humidity fixed 55, temperature %.3f", temperature);
+                _ccs811.setEnvironmentalData(55, temperature);
+            }
+        #endif
     }
+#else
+    _ccs811.setEnvironmentalData(55, 25);
 #endif
 
     bool available = _ccs811.available() && (_ccs811.readData() == 0);
     if (!available) {
-        __LDBG_printf("Sensor_CCS811::_readSensor(): address 0x%02x: available=0", _address, available);
+        __LDBG_printf("CCS811: address 0x%02x: available=0", _address, available);
         return _sensor;
     }
 
@@ -167,7 +152,7 @@ Sensor_CCS811::SensorData_t &Sensor_CCS811::_readSensor()
         _sensor.TVOC = 0;
     }
 
-    __LDBG_printf("Sensor_CCS811::_readSensor(): address 0x%02x: available=%u, eCO2 %uppm, TVOC %uppb, error=%u",
+    __LDBG_printf("CCS811: address 0x%02x: available=%u, eCO2 %uppm, TVOC %uppb, error=%u",
         _address, _sensor.available, _sensor.eCO2, _sensor.TVOC, _ccs811.checkError()
     );
 

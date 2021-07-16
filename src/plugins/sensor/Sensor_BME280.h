@@ -17,6 +17,15 @@
 #define IOT_SENSOR_BME280_HAVE_COMPENSATION_CALLBACK 0
 #endif
 
+#ifndef IOT_SENSOR_BME280_RENDER_TYPE
+#define IOT_SENSOR_BME280_RENDER_TYPE WebUINS::SensorRenderType::ROW
+#endif
+
+#ifndef IOT_SENSOR_BME280_RENDER_HEIGHT
+// #define IOT_SENSOR_BME280_RENDER_HEIGHT F("15rem")
+#endif
+
+
 class Sensor_CCS811;
 
 using KFCConfigurationClasses::Plugins;

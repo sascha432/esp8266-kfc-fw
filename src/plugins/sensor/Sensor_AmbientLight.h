@@ -11,24 +11,6 @@
 #include "plugins.h"
 #include "MQTTSensor.h"
 
-// support for TinyPWM I2C ADC
-#ifndef IOT_SENSOR_AMBIENT_HAVE_TINYPWM
-#define IOT_SENSOR_AMBIENT_HAVE_TINYPWM 0
-#endif
-
-#ifndef IOT_SENSOR_AMBIENT_TINYPWM_I2C_ADDRESS
-#define IOT_SENSOR_AMBIENT_TINYPWM_I2C_ADDRESS TINYPWM_I2C_ADDRESS
-#endif
-
-#ifndef IOT_SENSOR_AMBIENT_TINYPWM_ADC_PIN
-#define IOT_SENSOR_AMBIENT_TINYPWM_ADC_PIN 0x11
-#endif
-
-// support for ADC
-#ifndef IOT_SENSOR_AMBIENT_HAVE_ADC
-#define IOT_SENSOR_AMBIENT_HAVE_ADC 1
-#endif
-
 using KFCConfigurationClasses::Plugins;
 
 class Sensor_AmbientLight;
@@ -123,7 +105,7 @@ public:
             bool highRes;
             BH1750FVI() {}
             // highres mode displays lux (0.5lx, 1-65535) and is not suitable for auto brightness
-            // the update interval is 2 seconds
+            // the update interval is 1 second
             // the optical window can be changed to measure up to 100000lux with 16bit precision
             // low res mode is 4lx and updated every 125ms, the available range is 0-1023
             BH1750FVI(uint8_t _i2cAddress, bool _highRes) : illuminance(NAN), i2cAddress(_i2cAddress), highRes(_highRes) {}

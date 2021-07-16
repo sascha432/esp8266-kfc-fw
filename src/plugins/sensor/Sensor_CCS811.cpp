@@ -10,8 +10,8 @@
 #include "Sensor_BME680.h"
 #include "sensor.h"
 
-#undef DEBUG_IOT_SENSOR
-#define DEBUG_IOT_SENSOR 1
+// #undef DEBUG_IOT_SENSOR
+// #define DEBUG_IOT_SENSOR 1
 
 #if DEBUG_IOT_SENSOR
 #include <debug_helper_enable.h>
@@ -27,7 +27,7 @@ Sensor_CCS811::Sensor_CCS811(const String &name, uint8_t address) :
     REGISTER_SENSOR_CLIENT(this);
     config.initTwoWire();
     _ccs811.begin(_address);
-    setUpdateRate(max<uint16_t>(1, DEFAULT_UPDATE_RATE / 3)); // faster update rate until valid data is available
+    setUpdateRate(1); // faster update rate until valid data is available
 }
 
 Sensor_CCS811::~Sensor_CCS811()
@@ -60,8 +60,8 @@ MQTT::AutoDiscovery::EntityPtr Sensor_CCS811::getAutoDiscovery(FormatType format
 void Sensor_CCS811::getValues(WebUINS::Events &array, bool timer)
 {
     auto &sensor = _readSensor();
-    array.append(WebUINS::Values(_getId(F("eco2")), sensor.eCO2, sensor.available));
-    array.append(WebUINS::Values(_getId(F("tvoc")), sensor.TVOC, sensor.available));
+    array.append(WebUINS::Values(_getId(F("eco2")), sensor.eCO2, sensor.available == 1));
+    array.append(WebUINS::Values(_getId(F("tvoc")), sensor.TVOC, sensor.available == 1));
 }
 
 void Sensor_CCS811::createWebUI(WebUINS::Root &webUI)
@@ -92,7 +92,7 @@ void Sensor_CCS811::publishState()
 {
     if (isConnected()) {
         auto &sensor = _readSensor();
-        if (sensor.available) {
+        if (sensor.available == 1) {
             using namespace MQTT::Json;
             publish(_getTopic(), true, UnnamedObject(NamedUnsignedShort(F("eCO2"), sensor.eCO2), NamedUnsignedShort(F("TVOC"), sensor.TVOC)).toString());
         }
@@ -129,31 +129,32 @@ Sensor_CCS811::SensorData &Sensor_CCS811::_readSensor()
     _ccs811.setEnvironmentalData(55, 25);
 #endif
 
-    bool available = _ccs811.available() && (_ccs811.readData() == 0);
-    if (!available) {
-        __LDBG_printf("CCS811: address 0x%02x: available=0", _address, available);
+    bool available = _ccs811.available();
+    uint8_t error = available ? _ccs811.readData() : 0;
+    if (!available || error) {
+        if (error) {
+            if (_sensor.errors < 0xff) {
+                _sensor.errors++;
+            }
+            if (_sensor.errors > 10) {
+                // too many errors, mark as unavailable
+                _sensor.available = 0;
+            }
+        }
+        __LDBG_printf("CCS811 0x%02x: available=%u error=%d/%d #%u", _address, available, _ccs811.checkError(), error, _sensor.errors);
         return _sensor;
     }
 
-    _sensor.available = available;
-
-    if (_sensor.available) {
-        _sensor.eCO2 = _ccs811.geteCO2();
-        _sensor.TVOC = _ccs811.getTVOC();
-        if (!_sensor.eCO2 || !_sensor.TVOC) {
-            _sensor.available = false;
-        }
-        else {
-            setUpdateRate(DEFAULT_UPDATE_RATE);
-        }
-    }
-    else {
-        _sensor.eCO2 = 0;
-        _sensor.TVOC = 0;
+    _sensor.errors = 0;
+    _sensor.eCO2 = _ccs811.geteCO2();
+    _sensor.TVOC = _ccs811.getTVOC();
+    if (_sensor.eCO2 && _sensor.TVOC && _sensor.available == -1) { // if the first sensor data is available, set to default update rate
+        setUpdateRate(DEFAULT_UPDATE_RATE);
+        _sensor.available = 1;
     }
 
-    __LDBG_printf("CCS811: address 0x%02x: available=%u, eCO2 %uppm, TVOC %uppb, error=%u",
-        _address, _sensor.available, _sensor.eCO2, _sensor.TVOC, _ccs811.checkError()
+    __LDBG_printf("CCS811 0x%02x: available=%d/%d eCO2 %uppm TVOC %uppb error=%d",
+        _address, _sensor.available, available, _sensor.eCO2, _sensor.TVOC, _ccs811.checkError()
     );
 
     return _sensor;

@@ -36,6 +36,9 @@ public:
         float temperature;  // °C
         float humidity;     // %
         float pressure;     // hPa
+
+        SensorDataType() {}
+        SensorDataType(float _temperature, float _humidity, float _pressure) : temperature(_temperature), humidity(_humidity), pressure(_pressure) {}
     };
 
     using CompensationCallback = std::function<void(SensorDataType &data)>;
@@ -56,7 +59,6 @@ public:
     virtual void createWebUI(WebUINS::Root &webUI) override;
     virtual void getStatus(Print &output) override;
     virtual bool getSensorData(String &name, StringVector &values) override;
-
 
     SensorDataType readSensor();
 

@@ -7,8 +7,8 @@
 #include <Arduino_compat.h>
 #include "Sensor_BME280.h"
 
-#undef DEBUG_IOT_SENSOR
-#define DEBUG_IOT_SENSOR 1
+// #undef DEBUG_IOT_SENSOR
+// #define DEBUG_IOT_SENSOR 1
 
 #if DEBUG_IOT_SENSOR
 #include <debug_helper_enable.h>
@@ -146,7 +146,6 @@ void Sensor_BME280::publishState()
 {
     if (isConnected()) {
         auto sensor = _readSensor();
-
         using namespace MQTT::Json;
 
         publish(MQTTClient::formatTopic(_getId()), true, UnnamedObject(
@@ -159,11 +158,11 @@ void Sensor_BME280::publishState()
 
 Sensor_BME280::SensorDataType Sensor_BME280::_readSensor()
 {
-    SensorDataType sensor;
-
-    sensor.temperature = _bme280.readTemperature() + _cfg.temp_offset;
-    sensor.humidity = _bme280.readHumidity() + _cfg.humidity_offset;
-    sensor.pressure = (_bme280.readPressure() / 100.0) + _cfg.pressure_offset;
+    auto sensor = SensorDataType(
+        _bme280.readTemperature() + _cfg.temp_offset,
+        _bme280.readHumidity() + _cfg.humidity_offset,
+        (_bme280.readPressure() / 100.0) + _cfg.pressure_offset
+    );
 
     __LDBG_printf("address 0x%02x: %.2f %s, %.2f%%, %.2f hPa", _address, sensor.temperature, SPGM(UTF8_degreeC), sensor.humidity, sensor.pressure);
 

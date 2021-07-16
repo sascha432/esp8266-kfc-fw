@@ -25,10 +25,11 @@
 class Sensor_CCS811 : public MQTT::Sensor {
 public:
     struct SensorData {
-        bool available;
+        int8_t available;   // -1 init, 0 N/A, 1 available
+        uint8_t errors;
         uint16_t eCO2;      // ppm
         uint16_t TVOC;      // ppb
-        SensorData() : available(false), eCO2(0), TVOC(0) {}
+        SensorData() : available(-1), errors(0), eCO2(0), TVOC(0) {}
     };
 
     const uint8_t DEFAULT_UPDATE_RATE = MQTT::Sensor::DEFAULT_UPDATE_RATE;

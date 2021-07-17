@@ -22,11 +22,19 @@
 Sensor_CCS811::Sensor_CCS811(const String &name, uint8_t address) :
     MQTT::Sensor(MQTT::SensorType::CCS811),
     _name(name),
-    _address(address)
+    _address(address),
+    _state(_readStateFile())
 {
     REGISTER_SENSOR_CLIENT(this);
     config.initTwoWire();
     _ccs811.begin(_address);
+    if (_state) {
+        _ccs811.setBaseline(_state.baseline);
+    }
+    else {
+        // save first state after 5min.
+        _state = SensorFileEntry(_address, 0, time(nullptr) - IOT_SENSOR_CCS811_SAVE_STATE_INTERVAL + 60);
+    }
     setUpdateRate(1); // faster update rate until valid data is available
 }
 
@@ -152,9 +160,11 @@ Sensor_CCS811::SensorData &Sensor_CCS811::_readSensor()
         setUpdateRate(DEFAULT_UPDATE_RATE);
         _sensor.available = 1;
     }
+    _state.baseline = _ccs811.getBaseline();
+    _writeStateFile();
 
-    __LDBG_printf("CCS811 0x%02x: available=%d/%d eCO2 %uppm TVOC %uppb error=%d",
-        _address, _sensor.available, available, _sensor.eCO2, _sensor.TVOC, _ccs811.checkError()
+    __LDBG_printf("CCS811 0x%02x: available=%d/%d eCO2 %uppm TVOC %uppb error=%d baseline=%u",
+        _address, _sensor.available, available, _sensor.eCO2, _sensor.TVOC, _ccs811.checkError(), _state.baseline
     );
 
     return _sensor;
@@ -169,5 +179,117 @@ String Sensor_CCS811::_getId(const __FlashStringHelper *type)
     }
     return id;
 }
+
+Sensor_CCS811::SensorFileEntry Sensor_CCS811::_readStateFile() const
+{
+    auto file = KFCFS.open(FSPGM(iot_sensor_ccs811_state_file), fs::FileOpenMode::read);
+    if (file) {
+        SensorFileEntry entry;
+        while (file.read(entry, sizeof(entry)) == sizeof(entry)) {
+            __LDBG_printf("entry=%u address=0x%02x baseline=%u", (bool)entry, entry.address, entry.baseline);
+            if (entry && entry.address == _address) {
+                return entry;
+            }
+        }
+    }
+    return SensorFileEntry();
+}
+
+File Sensor_CCS811::_createStateFile() const
+{
+    auto file = KFCFS.open(FSPGM(iot_sensor_ccs811_state_file), fs::FileOpenMode::write);
+    if (!file) {
+        Logger_error(F("Cannot create CCS811 state file %s"), SPGM(iot_sensor_ccs811_state_file));
+    }
+    return file;
+}
+
+void Sensor_CCS811::_writeStateFile()
+{
+    uint32_t timestamp = time(nullptr);
+    if (!isTimeValid(timestamp)) {
+        __LDBG_printf("invalid timestamp=%u", timestamp);
+        return;
+    }
+    if (_state.baseline == 0) {
+        __LDBG_printf("invalid baseline=0");
+        return;
+    }
+    __LDBG_printf("timestamp=%u _state.timestamp=%u store=%u", timestamp, _state.timestamp, (timestamp > _state.timestamp + IOT_SENSOR_CCS811_SAVE_STATE_INTERVAL));
+    if (timestamp > _state.timestamp + IOT_SENSOR_CCS811_SAVE_STATE_INTERVAL) {
+        // update state timestamp
+        _state.address = _address;
+        _state.timestamp = timestamp;
+        _state.crc = _state.calcCrc();
+
+        auto file = KFCFS.open(FSPGM(iot_sensor_ccs811_state_file), fs::FileOpenMode::read);
+        if (!file) {
+            // create new file and store state
+            if (!(file = _createStateFile())) {
+                return;
+            }
+            file.write(_state, sizeof(_state));
+            __DBG_printf("CCS811 0x%02x: created new state file baseline=%u state=%u", _address, _state.baseline, (bool)_state);
+            return;
+        }
+
+        // read state file
+        auto size = file.size();
+        auto uniquePtr = std::unique_ptr<uint8_t[]>(new uint8_t[size]());
+        auto buf = uniquePtr.get();
+        if (!buf) {
+            __LDBG_printf("failed to allocate memory=%u", size);
+            return;
+        }
+        size = file.read(buf, size);
+        __LDBG_printf("read size=%u file_size=%u", size, file.size());
+        file.close();
+
+        // check if state exists and has changed
+        SensorFileEntry entry;
+        auto begin = buf;
+        auto end = buf + size;
+        while(begin + sizeof(entry) <= end) {
+            memcpy(&entry, begin, sizeof(entry)); // use memcpy for packed struct
+            begin += sizeof(entry);
+            if (entry && entry.address == _address) {
+                if (entry.baseline == _state.baseline) {
+                    __LDBG_printf("baseline=%u did not change", _state.baseline);
+                    return;
+                }
+            }
+        }
+
+        // create new state file and copy record
+        if (!(file = _createStateFile())) {
+            return;
+        }
+
+        // rewrite file
+        begin = buf;
+        while(begin + sizeof(entry) <= end) {
+            memcpy(&entry, begin, sizeof(entry));
+            begin += sizeof(entry);
+            if (entry) {
+                if (entry.address != _address) {
+                    file.write(entry, sizeof(entry));
+                }
+                else {
+                    // skip
+                    __LDBG_printf("old baseline=%u", entry.baseline);
+                }
+            }
+            else {
+                __LDBG_printf("invalid entry address=0x%02x baseline=%u", entry.address, entry.baseline);
+            }
+        }
+
+        // write new state
+        file.write(_state, sizeof(_state));
+        __DBG_printf("CCS811 0x%02x: state file baseline=%u state=%u updated", _address, _state.baseline, (bool)_state);
+
+    }
+}
+
 
 #endif

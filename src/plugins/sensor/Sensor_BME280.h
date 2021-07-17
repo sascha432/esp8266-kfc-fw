@@ -25,7 +25,6 @@
 // #define IOT_SENSOR_BME280_RENDER_HEIGHT F("15rem")
 #endif
 
-
 class Sensor_CCS811;
 
 using KFCConfigurationClasses::Plugins;

@@ -55,7 +55,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_AmbientLight::getAutoDiscovery(FormatType 
                 return discovery;
             }
             discovery->addStateTopic(MQTTClient::formatTopic(_getId()));
-            if (_sensor.type == Sensor_AmbientLight::SensorType::BH1750FVI && _sensor.bh1750FVI.highRes) {
+            if (_getId() == 1 && _sensor.type == Sensor_AmbientLight::SensorType::BH1750FVI && _sensor.bh1750FVI.highRes) {
                 discovery->addUnitOfMeasurement(F("lux"));
             }
             else {
@@ -75,8 +75,10 @@ void Sensor_AmbientLight::getValues(WebUINS::Events &array, bool timer)
 void Sensor_AmbientLight::createWebUI(WebUINS::Root &webUI)
 {
     auto title = (_getId() == 1) ? F(IOT_SENSOR_NAMES_AMBIENT_LIGHT_SENSOR2) : F(IOT_SENSOR_NAMES_AMBIENT_LIGHT_SENSOR);
-    auto sensor = WebUINS::Sensor(_getId(), title, F("<img src=\"/images/light.svg\" width=\"80\" height=\"80\" style=\"margin-top:-20px;margin-bottom:1rem\">"), WebUINS::SensorRenderType::COLUMN);
-    sensor.append(WebUINS::NamedString(J(height), F("15rem")));
+    auto sensor = WebUINS::Sensor(_getId(), title, F("<img src=\"/images/light.svg\" width=\"80\" height=\"80\" style=\"margin-top:-20px;margin-bottom:1rem\">"), IOT_SENSOR_AMBIENT_LIGHT_RENDER_TYPE);
+    #ifdef IOT_SENSOR_AMBIENT_LIGHT_RENDER_HEIGHT
+        sensor.append(WebUINS::NamedString(J(height), IOT_SENSOR_AMBIENT_LIGHT_RENDER_HEIGHT));
+    #endif
     WebUINS::Row row(sensor);
     webUI.appendToLastRow(row);
 }

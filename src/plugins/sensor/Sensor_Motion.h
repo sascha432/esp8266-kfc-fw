@@ -11,6 +11,15 @@
 #include "plugins.h"
 #include "MQTTSensor.h"
 
+#ifndef IOT_SENSOR_MOTION_RENDER_TYPE
+#define IOT_SENSOR_MOTION_RENDER_TYPE WebUINS::SensorRenderType::COLUMN
+#endif
+
+#ifndef IOT_SENSOR_MOTION_RENDER_HEIGHT
+#define IOT_SENSOR_MOTION_RENDER_HEIGHT F("15rem")
+#endif
+
+
 using KFCConfigurationClasses::Plugins;
 
 class Sensor_Motion;

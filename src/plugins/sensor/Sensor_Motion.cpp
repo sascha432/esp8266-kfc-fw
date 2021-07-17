@@ -38,10 +38,10 @@ MQTT::AutoDiscovery::EntityPtr Sensor_Motion::getAutoDiscovery(FormatType format
     auto discovery = new MQTT::AutoDiscovery::Entity();
     switch(num) {
         case 0:
-            if (!discovery->create(MQTTComponent::ComponentType::BINARY_SENSOR, F("motion"), format)) {
+            if (!discovery->create(MQTTComponent::ComponentType::BINARY_SENSOR, _getId(), format)) {
                 return discovery;
             }
-            discovery->addStateTopic(MQTTClient::formatTopic(F("motion")));
+            discovery->addStateTopic(_getTopic());
             break;
     }
     return discovery;
@@ -60,8 +60,10 @@ void Sensor_Motion::getValues(WebUINS::Events &array, bool timer)
 
 void Sensor_Motion::createWebUI(WebUINS::Root &webUI)
 {
-    auto sensor = WebUINS::Sensor(_getId(), _name, emptyString, WebUINS::SensorRenderType::COLUMN);
-    sensor.append(WebUINS::NamedString(J(height), F("15rem")));
+    auto sensor = WebUINS::Sensor(_getId(), _name, emptyString, IOT_SENSOR_MOTION_RENDER_TYPE);
+    #ifdef IOT_SENSOR_MOTION_RENDER_HEIGHT
+        sensor.append(WebUINS::NamedString(J(height), IOT_SENSOR_MOTION_RENDER_HEIGHT));
+    #endif
     WebUINS::Row row(sensor);
     webUI.appendToLastRow(row);
 }

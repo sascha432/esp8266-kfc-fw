@@ -14,16 +14,18 @@
 
 using namespace MQTT;
 
+uint16_t Sensor::_orderIdCounter = 10000;
+
 Sensor::Sensor(SensorType type) :
     MQTTComponent(ComponentType::SENSOR),
     _updateRate(DEFAULT_UPDATE_RATE),
     _mqttUpdateRate(DEFAULT_MQTT_UPDATE_RATE),
     _nextUpdate(0),
     _nextMqttUpdate(0),
+    _orderId(_getNextOrderId()),
     _type(type)
 {
     __LDBG_printf("ctor this=%p", this);
-    setup();
 }
 
 Sensor::~Sensor()

@@ -19,6 +19,13 @@
 #define IOT_SENSOR_AMBIENT_LIGHT_RENDER_HEIGHT F("15rem")
 #endif
 
+#if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR2
+// auto initialize illuminance sensor
+#   ifndef IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR2_BH1750FVI_I2C_ADDRESS
+// #    define IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR2_BH1750FVI_I2C_ADDRESS 0x23
+#   endif
+#endif
+
 using KFCConfigurationClasses::Plugins;
 
 class Sensor_AmbientLight;

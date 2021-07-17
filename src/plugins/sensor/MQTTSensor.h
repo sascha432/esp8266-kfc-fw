@@ -110,40 +110,70 @@ namespace MQTT {
 
         void timerEvent(WebUINS::Events *array, bool mqttIsConnected);
 
-        inline void setUpdateRate(uint16_t updateRate) {
-            _updateRate = updateRate;
-            forceUpdate();
-        }
-
-        inline void setMqttUpdateRate(uint16_t updateRate) {
-            _mqttUpdateRate = updateRate;
-            forceMqttUpdate();
-        }
-
-        inline void setNextMqttUpdate(uint16_t delay) {
-            _nextMqttUpdate = time(nullptr) + delay;
-        }
-
-        inline void forceUpdate() {
-            _nextUpdate = 0;
-        }
-
-        inline void forceMqttUpdate() {
-            _nextMqttUpdate = 0;
-        }
-
-        inline SensorType getType() const {
-            return _type;
-        }
+        void setUpdateRate(uint16_t updateRate);
+        void setMqttUpdateRate(uint16_t updateRate);
+        void setNextMqttUpdate(uint16_t delay);
+        void forceUpdate();
+        void forceMqttUpdate();
+        SensorType getType() const;
+        uint16_t getOrderId() const;
 
     protected:
         uint16_t _updateRate;
         uint16_t _mqttUpdateRate;
 
+        uint16_t _getNextOrderId() const;
+
+        static uint16_t _orderIdCounter;
+
     private:
         uint32_t _nextUpdate;
         uint32_t _nextMqttUpdate;
+        uint16_t _orderId;
         SensorType _type;
     };
+
+    inline void Sensor::setUpdateRate(uint16_t updateRate)
+    {
+        _updateRate = updateRate;
+        forceUpdate();
+    }
+
+    inline void Sensor::setMqttUpdateRate(uint16_t updateRate)
+    {
+        _mqttUpdateRate = updateRate;
+        forceMqttUpdate();
+    }
+
+    inline void Sensor::setNextMqttUpdate(uint16_t delay)
+    {
+        _nextMqttUpdate = time(nullptr) + delay;
+    }
+
+    inline void Sensor::forceUpdate()
+    {
+        _nextUpdate = 0;
+    }
+
+    inline void Sensor::forceMqttUpdate()
+    {
+        _nextMqttUpdate = 0;
+    }
+
+    inline Sensor::SensorType Sensor::getType() const
+    {
+        return _type;
+    }
+
+    inline uint16_t Sensor::getOrderId() const
+    {
+        return _orderId;
+    }
+
+    inline uint16_t Sensor::_getNextOrderId() const
+    {
+        _orderIdCounter += 100;
+        return _orderIdCounter;
+    }
 
 }

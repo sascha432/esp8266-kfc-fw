@@ -185,6 +185,8 @@ private:
         });
     }
 
+    void _sortSensors();
+
     SensorVector _sensors;
     Event::Timer _timer;
     AddCustomSensorCallback _addCustomSensors;

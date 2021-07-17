@@ -45,7 +45,7 @@ SensorPlugin::SensorPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(Sensor
 
 void SensorPlugin::getValues(WebUINS::Events &array)
 {
-    for(auto sensor: _sensors) {
+    for(const auto sensor: _sensors) {
         sensor->getValues(array, false);
     }
 }
@@ -55,10 +55,11 @@ void SensorPlugin::setValue(const String &id, const String &value, bool hasValue
     __LDBG_printf("setValue(%s)", id.c_str());
 }
 
-
 void SensorPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
-    _Timer(_timer).add(Event::milliseconds(1000), true, SensorPlugin::timerEvent);
+#if IOT_SENSOR_HAVE_MOTION_SENSOR
+    addSensor<Sensor_Motion>(F(IOT_SENSOR_NAMES_MOTION_SENSOR));
+#endif
 #if IOT_SENSOR_HAVE_LM75A
     addSensor<Sensor_LM75A>(F(IOT_SENSOR_NAMES_LM75A), config.initTwoWire(), IOT_SENSOR_HAVE_LM75A);
 #endif
@@ -101,9 +102,6 @@ void SensorPlugin::setup(SetupModeType mode, const PluginComponents::Dependencie
 #if IOT_SENSOR_HAVE_DHTxx
     addSensor<Sensor_DHTxx>(F(IOT_SENSOR_NAMES_DHTxx), IOT_SENSOR_HAVE_DHTxx_PIN);
 #endif
-#if IOT_SENSOR_HAVE_MOTION_SENSOR
-    addSensor<Sensor_Motion>(F(IOT_SENSOR_NAMES_MOTION_SENSOR));
-#endif
 #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR
     addSensor<Sensor_AmbientLight>(F(IOT_SENSOR_NAMES_AMBIENT_LIGHT_SENSOR), 0);
 #endif
@@ -114,10 +112,17 @@ void SensorPlugin::setup(SetupModeType mode, const PluginComponents::Dependencie
     addSensor<Sensor_SystemMetrics>();
 #endif
 
+    _sortSensors();
+    _Timer(_timer).add(Event::milliseconds(1000), true, SensorPlugin::timerEvent);
+    for(const auto sensor: _sensors) {
+        sensor->setup();
+    }
+
 }
 
 void SensorPlugin::reconfigure(const String &source)
 {
+    _sortSensors();
     for(const auto sensor: _sensors) {
         sensor->reconfigure(source.c_str());
     }
@@ -142,7 +147,7 @@ void SensorPlugin::_timerEvent()
         using namespace MQTT::Json;
         WebUINS::Events events;
         {
-            for(auto sensor: _sensors) {
+            for(const auto sensor: _sensors) {
                 __ASSERT_PTR(sensor);
                 sensor->timerEvent(&events, mqttIsConnected);
             }
@@ -152,17 +157,24 @@ void SensorPlugin::_timerEvent()
         }
     }
     else if (mqttIsConnected) {
-        for(auto sensor: _sensors) {
+        for(const auto sensor: _sensors) {
             __ASSERT_PTR(sensor);
             sensor->timerEvent(nullptr, true);
         }
     }
 }
 
+void SensorPlugin::_sortSensors()
+{
+    std::sort(_sensors.begin(), _sensors.end(), [](const MQTT::SensorPtr a, const MQTT::SensorPtr b) {
+         return b->getOrderId() >= a->getOrderId();
+    });
+}
+
 void SensorPlugin::shutdown()
 {
     _timer.remove();
-    for(auto sensor: _sensors) {
+    for(const auto sensor: _sensors) {
         __LDBG_printf("type=%u", sensor->getType());
         sensor->shutdown();
         delete sensor;
@@ -172,7 +184,7 @@ void SensorPlugin::shutdown()
 
 bool SensorPlugin::_hasConfigureForm() const
 {
-    for(auto sensor: _sensors) {
+    for(const auto sensor: _sensors) {
         if (sensor->hasForm()) {
             return true;
         }
@@ -183,7 +195,7 @@ bool SensorPlugin::_hasConfigureForm() const
 void SensorPlugin::createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
 {
     if (type == FormCallbackType::SAVE) {
-        for(auto sensor: _sensors) {
+        for(const auto sensor: _sensors) {
             sensor->configurationSaved(&form);
         }
     }
@@ -196,7 +208,7 @@ void SensorPlugin::createConfigureForm(FormCallbackType type, const String &form
     ui.setContainerId(F("sensors"));
     ui.setStyle(FormUI::WebUI::StyleType::ACCORDION);
 
-    for(auto sensor: _sensors) {
+    for(const auto sensor: _sensors) {
         sensor->createConfigureForm(request, form);
     }
 
@@ -256,14 +268,14 @@ void SensorPlugin::getStatus(Print &output)
 
 void SensorPlugin::atModeHelpGenerator()
 {
-    for(auto sensor: _sensors) {
+    for(const auto sensor: _sensors) {
         sensor->atModeHelpGenerator();
     }
 }
 
 bool SensorPlugin::atModeHandler(AtModeArgs &args)
 {
-    for(auto sensor: _sensors) {
+    for(const auto sensor: _sensors) {
         if (sensor->atModeHandler(args)) {
             return true;
         }

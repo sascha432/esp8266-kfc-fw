@@ -32,7 +32,7 @@ Sensor_AmbientLight::Sensor_AmbientLight(const String &name, uint8_t id) :
     REGISTER_SENSOR_CLIENT(this);
     #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR2_BH1750FVI_I2C_ADDRESS
         // auto setup for lux sensor
-        if (id == 1) {
+        if (_id == 1) {
             auto config = SensorConfig(SensorType::BH1750FVI);
             config.bh1750FVI = SensorConfig::BH1750FVI(IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR2_BH1750FVI_I2C_ADDRESS, true);
             begin(nullptr, config);
@@ -54,8 +54,8 @@ MQTT::AutoDiscovery::EntityPtr Sensor_AmbientLight::getAutoDiscovery(FormatType 
             if (!discovery->create(MQTTComponent::ComponentType::SENSOR, _getId(), format)) {
                 return discovery;
             }
-            discovery->addStateTopic(MQTTClient::formatTopic(_getId()));
-            if (_getId() == 1 && _sensor.type == Sensor_AmbientLight::SensorType::BH1750FVI && _sensor.bh1750FVI.highRes) {
+            discovery->addStateTopic(_getTopic());
+            if (_id == 1 && _sensor.type == Sensor_AmbientLight::SensorType::BH1750FVI && _sensor.bh1750FVI.highRes) {
                 discovery->addUnitOfMeasurement(F("lux"));
             }
             else {
@@ -74,7 +74,7 @@ void Sensor_AmbientLight::getValues(WebUINS::Events &array, bool timer)
 
 void Sensor_AmbientLight::createWebUI(WebUINS::Root &webUI)
 {
-    auto title = (_getId() == 1) ? F(IOT_SENSOR_NAMES_AMBIENT_LIGHT_SENSOR2) : F(IOT_SENSOR_NAMES_AMBIENT_LIGHT_SENSOR);
+    auto title = (_id == 1) ? F(IOT_SENSOR_NAMES_AMBIENT_LIGHT_SENSOR2) : F(IOT_SENSOR_NAMES_AMBIENT_LIGHT_SENSOR);
     auto sensor = WebUINS::Sensor(_getId(), title, F("<img src=\"/images/light.svg\" width=\"80\" height=\"80\" style=\"margin-top:-20px;margin-bottom:1rem\">"), IOT_SENSOR_AMBIENT_LIGHT_RENDER_TYPE);
     #ifdef IOT_SENSOR_AMBIENT_LIGHT_RENDER_HEIGHT
         sensor.append(WebUINS::NamedString(J(height), IOT_SENSOR_AMBIENT_LIGHT_RENDER_HEIGHT));
@@ -94,7 +94,7 @@ void Sensor_AmbientLight::publishState()
 
 void Sensor_AmbientLight::getStatus(Print &output)
 {
-    if (_getId() == 1) {
+    if (_id == 1) {
         output.print(F(IOT_SENSOR_NAMES_AMBIENT_LIGHT_SENSOR2 HTML_S(br)));
     }
     else {
@@ -104,7 +104,7 @@ void Sensor_AmbientLight::getStatus(Print &output)
 
 void Sensor_AmbientLight::createConfigureForm(AsyncWebServerRequest *request, FormUI::Form::BaseForm &form)
 {
-    if (getId() == 0) {
+    if (_id == 0) {
         auto &cfg = Plugins::Sensor::getWriteableConfig();
         auto &group = form.addCardGroup(F("alscfg"), F(IOT_SENSOR_NAMES_AMBIENT_LIGHT_SENSOR), true);
 
@@ -196,7 +196,9 @@ void Sensor_AmbientLight::begin(AmbientLightSensorHandler *handler, const Sensor
     }
     _timerCallback();
     _handler = handler;
-    _handler->_ambientLightSensor = this;
+    if (_handler) {
+        _handler->_ambientLightSensor = this;
+    }
     _timer.add(Event::milliseconds(interval), true, [this](Event::CallbackTimerPtr timer) {
         _timerCallback();
     });
@@ -205,8 +207,10 @@ void Sensor_AmbientLight::begin(AmbientLightSensorHandler *handler, const Sensor
 void Sensor_AmbientLight::end()
 {
     _timer.remove();
-    _handler->_ambientLightSensor = nullptr;
-    _handler = nullptr;
+    if (_handler) {
+        _handler->_ambientLightSensor = nullptr;
+        _handler = nullptr;
+    }
     switch(_sensor.type) {
         case SensorType::BH1750FVI:
             Wire.beginTransmission(_sensor.bh1750FVI.i2cAddress);

@@ -417,13 +417,13 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
                 #endif
                 lightSensor->begin(this, config);
             }
-            #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR2
-                else if (sensor->getType() == SensorPlugin::SensorType::AMBIENT_LIGHT && lightSensor->getId() == 1) {
-                    auto config = Sensor_AmbientLight::SensorConfig(Sensor_AmbientLight::SensorType::BH1750FVI);
-                    config.bh1750FVI = Sensor_AmbientLight::SensorConfig::BH1750FVI(Sensor_AmbientLight::BH1750FVI_ADDR_LOW, true);
-                    lightSensor->begin(&_lightSensor2, config);
-                }
-            #endif
+            // #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR2
+            //     else if (sensor->getType() == SensorPlugin::SensorType::AMBIENT_LIGHT && lightSensor->getId() == 1) {
+            //         auto config = Sensor_AmbientLight::SensorConfig(Sensor_AmbientLight::SensorType::BH1750FVI);
+            //         config.bh1750FVI = Sensor_AmbientLight::SensorConfig::BH1750FVI(Sensor_AmbientLight::BH1750FVI_ADDR_LOW, true);
+            //         lightSensor->begin(&_lightSensor2, config);
+            //     }
+            // #endif
         }
     #endif
 
@@ -528,7 +528,7 @@ void ClockPlugin::shutdown()
 
     #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR
         for(const auto &sensor: SensorPlugin::getSensors()) {
-            if (sensor->getType() == SensorPlugin::SensorType::AMBIENT_LIGHT) {
+            if (sensor->getType() == SensorPlugin::SensorType::AMBIENT_LIGHT && reinterpret_cast<Sensor_AmbientLight *>(sensor)->getId() == 0) {
                 reinterpret_cast<Sensor_AmbientLight *>(sensor)->end();
             }
         }

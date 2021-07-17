@@ -447,6 +447,7 @@ AUTO_STRING_DEF(www_google_com, "www.google.com")
 AUTO_STRING_DEF(yes, "yes")
 AUTO_STRING_DEF(mqtt_state_file, "/.pvt/mqtt.state")
 AUTO_STRING_DEF(scheduler_config_file, "/.pvt/.scheduler")
+AUTO_STRING_DEF(iot_sensor_ccs811_state_file, "/.pvt/sensor.ccs811")
 AUTO_STRING_DEF(Enable_UDP, "Enable UDP")
 AUTO_STRING_DEF(Enable_MQTT, "Enable MQTT")
 AUTO_STRING_DEF(UTF8_rocket, "\xf0\x9f\x9a\x80")        // 🚀 alt-128640

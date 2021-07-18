@@ -768,7 +768,7 @@ void ClockPlugin::setAnimation(AnimationType animation, uint16_t blendTime)
                 _setAnimation(new Clock::RainbowAnimation(*this, _config.rainbow.speed, _config.rainbow.multiplier, _config.rainbow.color));
             }
             else {
-                _setAnimation(new Clock::RainbowAnimationFastLED(*this, _config.rainbow.speed, _config.rainbow.hue));
+                _setAnimation(new Clock::RainbowAnimationFastLED(*this, _config.rainbow.bpm, _config.rainbow.hue));
             }
             break;
         case AnimationType::FLASHING:

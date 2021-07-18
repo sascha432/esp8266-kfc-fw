@@ -135,9 +135,9 @@ void Sensor_AmbientLight::createConfigureForm(AsyncWebServerRequest *request, Fo
         form.addFormUI(F("Auto Brightness Value"),
             FormUI::SuffixHtml(suffix),
             FormUI::PlaceHolder(cfg.ambient.kDefaultValueFor_auto_brightness),
-            FormUI::MinMax(cfg.ambient.kMaxValueFor_auto_brightness, maxBrightness)
+            FormUI::MinMax(cfg.ambient.kMinValueFor_auto_brightness, maxBrightness)
         );
-        form.addValidator(FormUI::Validator::Range(static_cast<long>(cfg.ambient.kMaxValueFor_auto_brightness), static_cast<long>(maxBrightness)));
+        form.addValidator(FormUI::Validator::Range(static_cast<long>(cfg.ambient.kMinValueFor_auto_brightness), static_cast<long>(maxBrightness)));
 
         form.addObjectGetterSetter(F("auto_bras"), FormGetterSetter(cfg.ambient, adjustment_speed));
         form.addFormUI(F("Adjustment Speed"));

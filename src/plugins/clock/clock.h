@@ -602,6 +602,9 @@ inline void ClockPlugin::standbyLoop()
 
 inline void ClockPlugin::enableLoop(bool enable)
 {
+    #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR
+        setAutobrightness(enable ? (_config.auto_brightness != -1) : false);
+    #endif
     _display.clear();
     _display.show();
     enableLoopNoClear(enable);

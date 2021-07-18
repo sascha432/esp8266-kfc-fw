@@ -275,20 +275,45 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             }
             args.print(F("show method: %s (%u)"), ClockPlugin::getShowMethod() == Clock::ShowMethodType::FASTLED ? PSTR("FastLED") : PSTR("internal"), ClockPlugin::getShowMethod());
         }
-        // ani[mation],<animation>
+        // ani[mation][,<animation>][,blend_time=4000ms]
         else if (args.startsWithIgnoreCase(0, F("ani"))) {
+            if (args.size() == 0) {
+                for(uint8_t i = 0; i < static_cast<uint8_t>(AnimationType::MAX); i++) {
+                    auto name = String(_config.getAnimationName(static_cast<AnimationType>(i)));
+                    name.toLowerCase().replace(' ', '_');
+                    args.print(F("%s animation (+LMC=ani,%s)"), _config.getAnimationName(static_cast<AnimationType>(i)), name.c_str());
+                }
+            }
+            else {
+                auto animation = args.toString(1);
+                animation.replace(' ', '_');
+                auto blendTime = args.toMillis(2, 0, 30000, 4000);
+                for(uint8_t i = 0; i < static_cast<uint8_t>(AnimationType::MAX); i++) {
+                    auto name = String(_config.getAnimationName(static_cast<AnimationType>(i)));
+                    name.replace(' ', '_');
+                    if (animation.equalsIgnoreCase(name)) {
+                        setAnimation(static_cast<AnimationType>(i), blendTime);
+                        break;
+                    }
+                }
+            }
+        }
+        // test,<1=pixel order|2=clock|3=row/col>[,#color=#330033][,<brightness=128>][,<speed=100ms>]
+        else if (args.startsWithIgnoreCase(0, F("test"))) {
             enableLoop(false);
             uint16_t x;
             uint16_t y;
             uint16_t n;
-            _display.setBrightness(32);
+            uint32_t speed = args.toMillis(4, 50, 10000, 100);
+            _display.setBrightness(args.toIntMinMax<uint8_t>(3, 1, 255, 128));
             _display.clear();
+            auto color = Color::fromString(args.toString(2, F("#330033")));
             auto displayPtr = &_display;
             switch(args.toInt(1)) {
                 case 1:
-                    _Scheduler.add(Event::milliseconds(100), true, [n, displayPtr](Event::CallbackTimerPtr timer) mutable {
+                    _Scheduler.add(Event::milliseconds(speed), true, [n, displayPtr, color](Event::CallbackTimerPtr timer) mutable {
                         displayPtr->fill(0);
-                        displayPtr->setPixel(n, Color(0x300030));
+                        displayPtr->setPixel(n, color);
                         displayPtr->show();
                         n++;
                         if (n >= displayPtr->kCols * displayPtr->kRows) {
@@ -299,8 +324,8 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                     });
                     break;
                 case 2:
-                    _Scheduler.add(Event::milliseconds(100), true, [n, displayPtr](Event::CallbackTimerPtr timer) mutable {
-                        displayPtr->fill(0x300030);
+                    _Scheduler.add(Event::milliseconds(speed), true, [n, displayPtr, color](Event::CallbackTimerPtr timer) mutable {
+                        displayPtr->fill(color);
                         displayPtr->hideAll();
                         displayPtr->setPixelState(n, true);
                         displayPtr->show();
@@ -313,9 +338,9 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                     });
                     break;
                 default:
-                    _Scheduler.add(Event::milliseconds(100), true, [x, y, displayPtr](Event::CallbackTimerPtr timer) mutable {
+                    _Scheduler.add(Event::milliseconds(speed), true, [x, y, displayPtr, color](Event::CallbackTimerPtr timer) mutable {
                         displayPtr->fill(0);
-                        displayPtr->setPixel(y, x, Color(0x300030));
+                        displayPtr->setPixel(y, x, color);
                         displayPtr->show();
                         x++;
                         if (x >= displayPtr->kCols) {
@@ -499,7 +524,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                 animations.toLowerCase();
                 animations.replace(',', '|');
                 animations.replace(' ', '_');
-                cmds.emplace_back(PrintString(F("ani[mation],<%s>"), animations.c_str()));
+                cmds.emplace_back(PrintString(F("ani[mation][,<%s>][,blend_time=4000ms]"), animations.c_str()));
             }
             cmds.emplace_back(F("out[put],<on|off>"));
             cmds.emplace_back(F("di[ther],<on|off>"));
@@ -507,6 +532,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             cmds.emplace_back(F("br[igthness],<level>"));
             cmds.emplace_back(F("cl[ear]"));
             cmds.emplace_back(PrintString(F("res[et][,<pixels=%u>]"), IOT_CLOCK_NUM_PIXELS));
+            cmds.emplace_back(F("test,<1=pixel order|2=clock|3=row/col>[,#color=#330033][,<brightness=128>][,<speed=100ms>]"));
             cmds.emplace_back(F("get[,<range>]"));
             cmds.emplace_back(F("set,<range(=0-7)>,[#color]"));
             #if IOT_LED_MATRIX == 0

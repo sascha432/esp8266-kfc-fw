@@ -600,6 +600,25 @@ inline void ClockPlugin::standbyLoop()
     ::delay(50); // energy saving mode
 }
 
+inline void ClockPlugin::enableLoop(bool enable)
+{
+    _display.clear();
+    _display.show();
+    enableLoopNoClear(enable);
+}
+
+inline void ClockPlugin::enableLoopNoClear(bool enable)
+{
+    __LDBG_printf("enable loop=%u", enable);
+    LoopFunctions::remove(standbyLoop);
+    if (enable) {
+        LoopFunctions::add(loop);
+    }
+    else {
+        LoopFunctions::remove(loop);
+    }
+}
+
 extern "C" uint8_t getNeopixelShowMethodInt();
 extern "C" const __FlashStringHelper *getNeopixelShowMethodStr();
 

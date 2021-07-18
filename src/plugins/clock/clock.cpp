@@ -638,25 +638,6 @@ void ClockPlugin::loop()
     plugin._loop();
 }
 
-void ClockPlugin::enableLoop(bool enable)
-{
-    _display.clear();
-    _display.show();
-    enableLoopNoClear(enable);
-}
-
-void ClockPlugin::enableLoopNoClear(bool enable)
-{
-    __LDBG_printf("enable loop=%u", enable);
-    LoopFunctions::remove(standbyLoop);
-    if (enable) {
-        LoopFunctions::add(loop);
-    }
-    else {
-        LoopFunctions::remove(loop);
-    }
-}
-
 #if !IOT_LED_MATRIX
 
 void ClockPlugin::setBlinkColon(uint16_t value)

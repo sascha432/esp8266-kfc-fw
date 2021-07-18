@@ -2685,7 +2685,6 @@ void at_mode_serial_handle_event(String &commandString)
         }
         else {
             args.print(F("calling panic()"));
-            delay(1000);
             panic();
         }
     }

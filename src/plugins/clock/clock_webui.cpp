@@ -193,9 +193,9 @@ void ClockPlugin::_createWebUI(WebUINS::Root &webUI)
 
     // animation
     auto height = F("15rem");
+    WebUINS::Row row;
     {
         constexpr uint8_t colspan = IOT_LED_MATRIX_WEBUI_COLSPAN_ANIMATION;
-        WebUINS::Row row;
 
         #if IOT_CLOCK_SAVE_STATE
             auto power = WebUINS::Switch(F("power"), F("Power<div class=\"p-1\"></div><span class=\"oi oi-power-standby\">"), true, WebUINS::NamePositionType::TOP, colspan);
@@ -208,25 +208,26 @@ void ClockPlugin::_createWebUI(WebUINS::Root &webUI)
         #endif
 
         auto animation = WebUINS::Listbox(F("ani"), F("Animation"), Plugins::ClockConfig::ClockConfig_t::getAnimationNames(), false, 5, colspan);
-        row.append(animation.append(WebUINS::NamedString(J(height), height)));
+        animation.append(WebUINS::NamedString(J(height), height));
+        row.append(animation);
 
-        webUI.addRow(row); //IF_IOT_CLOCK_SAVE_STATE(power, ) IF_IOT_CLOCK(colon, ) animation, IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(lightSensor));
-
+        #if IOT_CLOCK_TEMPERATURE_PROTECTION
+            webUI.addRow(row);
+        #endif
     }
 
     // protection
     {
         constexpr uint8_t colspan = IOT_LED_MATRIX_WEBUI_COLSPAN_PROTECTION;
-        // WebUINS::Row row;
-        webUI.addRow(WebUINS::Group(F("Protection"), false));
-
-        WebUINS::Row row;
 
         #if IOT_CLOCK_TEMPERATURE_PROTECTION
-        {
-            auto tempProtection = WebUINS::Sensor(F("tempp"), F("Temperature Protection"), '%', WebUINS::SensorRenderType::ROW, false, colspan);
-            row.append(tempProtection.append(WebUINS::NamedString(J(height), height)));
-        }
+            webUI.addRow(WebUINS::Group(F("Protection"), false));
+            WebUINS::Row row;
+
+            {
+                auto tempProtection = WebUINS::Sensor(F("tempp"), F("Temperature Protection"), '%', WebUINS::SensorRenderType::ROW, false, colspan);
+                row.append(tempProtection.append(WebUINS::NamedString(J(height), height)));
+            }
         #endif
 
         #if IOT_LED_MATRIX_FAN_CONTROL

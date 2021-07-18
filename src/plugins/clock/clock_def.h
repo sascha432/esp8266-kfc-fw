@@ -225,6 +225,7 @@
 #    define IOT_LED_MATRIX_ENABLE_PIN_INVERTED 0
 #endif
 
+// type of light sensor
 // 0 = disabled
 // 1 = sensor connected to ADC
 // 2 = TinyPwm I2C sensor
@@ -232,6 +233,8 @@
 #    define IOT_CLOCK_AMBIENT_LIGHT_SENSOR 0
 #endif
 
+// the higher the value, the brighter the ambient light. 1023 is maximum brightness (or the configured value for auto brightness)
+// invert ADC result
 #ifndef IOT_CLOCK_AMBIENT_LIGHT_SENSOR_INVERTED
 #define IOT_CLOCK_AMBIENT_LIGHT_SENSOR_INVERTED 0
 #endif
@@ -263,20 +266,6 @@
 #   else
 #       define IF_IOT_LED_MATRIX_ENABLE_PIN_INVERTED(a, b) (b)
 #   endif
-#endif
-
-
-#if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
-#    define IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(...) __VA_ARGS__
-#else
-#    define IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(...)
-#endif
-
-// update interval in ms, 0 to disable
-#if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
-#    ifndef IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
-#        define IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL 125
-#    endif
 #endif
 
 // add sensor for calculated power level to webui/mqtt

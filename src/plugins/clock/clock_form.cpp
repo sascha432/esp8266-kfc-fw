@@ -48,6 +48,13 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         AnimationType::INTERLEAVED, F("Interleaved")
     );
 
+    using RainbowMode = KFCConfigurationClasses::Plugins::ClockConfig::ClockConfig_t::RainbowMode;
+
+    auto rainbowModeItems = FormUI::Container::List(
+        RainbowMode::INTERNAL, F("Internal"),
+        RainbowMode::FASTLED, F("FastLED")
+    );
+
     #if IOT_LED_MATRIX
         auto &ui = form.createWebUI();
         ui.setTitle(F("LED Matrix Configuration"));
@@ -65,7 +72,7 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         // --------------------------------------------------------------------
         auto &animationGroup = form.addCardGroup(F("anicfg"), FSPGM(Animation), true);
 
-        form.addObjectGetterSetter(F("ani"), cfg, cfg.get_int_animation, cfg.set_int_animation);
+        form.addObjectGetterSetter(F("ani"), FormGetterSetter(cfg, animation));
         form.addFormUI(FSPGM(Type), animationTypeItems);
 
         form.add(F("col"), Color(cfg.solid_color.value).toString(), [&cfg](const String &value, FormUI::Field::BaseField &field, bool store) {
@@ -76,7 +83,7 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         }, FormUI::Field::Type::TEXT);
         form.addFormUI(FSPGM(Solid_Color));
 
-        form.addObjectGetterSetter(F("fsp"), cfg, cfg.get_bits_flashing_speed, cfg.set_bits_flashing_speed);
+        form.addObjectGetterSetter(F("fsp"), FormGetterSetter(cfg, flashing_speed));
         form.addFormUI(F("Flashing Speed"), FormUI::Suffix(FSPGM(milliseconds)));
         cfg.addRangeValidatorFor_flashing_speed(form);
 
@@ -84,6 +91,18 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
         // --------------------------------------------------------------------
         auto &rainbowGroup = form.addCardGroup(F("rainbow"), F("Rainbow Animation"), true);
+
+
+        form.addObjectGetterSetter(F("rb_mode"), FormGetterSetter(cfg.rainbow, mode));
+        form.addFormUI(F("Mode"), rainbowModeItems);
+
+        form.addObjectGetterSetter(F("rb_bpm"), FormGetterSetter(cfg.rainbow, bpm));
+        form.addFormUI(F("FastLED BPM"));
+        cfg.rainbow.addRangeValidatorFor_bpm(form);
+
+        form.addObjectGetterSetter(F("rb_hue"), FormGetterSetter(cfg.rainbow, hue));
+        form.addFormUI(F("FastLED Hue"));
+        cfg.rainbow.addRangeValidatorFor_hue(form);
 
         form.addPointerTriviallyCopyable(F("rb_mul"), &cfg.rainbow.multiplier.value);
         form.addFormUI(FSPGM(Multiplier));
@@ -101,9 +120,9 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         form.addFormUI(F("Maximum Multiplier"));
         form.addValidator(FormUI::Validator::Range(0.1f, 100.0f));
 
-        form.addPointerTriviallyCopyable(F("rb_sp"), &cfg.rainbow.speed);
-        form.addFormUI(FSPGM(Speed));
-        form.addValidator(FormUI::Validator::Range(kMinRainbowSpeed, 0xffff));
+        form.addObjectGetterSetter(F("rb_sp"), FormGetterSetter(cfg.rainbow, speed));
+        form.addFormUI(F("Speed"));
+        cfg.rainbow.addRangeValidatorFor_speed(form);
 
         form.add(F("rb_cf"), Color(cfg.rainbow.color.factor.value).toString(), [&cfg](const String &value, FormUI::Field::BaseField &field, bool store) {
             if (store) {

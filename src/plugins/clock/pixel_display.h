@@ -17,6 +17,9 @@ extern "C" uint8_t getNeopixelShowMethodInt();
 #include <debug_helper_disable.h>
 #endif
 
+#pragma GCC push_options
+#pragma GCC optimize ("O3")
+
 // class to address LED matrix displays by x and y coordinates mapping it to its real coordinates
 // the mapping is done during compilation and fixed for best performance
 //
@@ -29,8 +32,13 @@ namespace Clock {
         NONE = 0,
         FASTLED,
         NEOPIXEL,
+        NEOPIXEL_REPEAT,
         MAX
     };
+
+    inline static ShowMethodType getNeopixelShowMethodType() {
+        return static_cast<ShowMethodType>(getNeopixelShowMethodInt());
+    }
 
 #if IOT_LED_MATRIX_CONFIGURABLE_DISPLAY
 
@@ -107,6 +115,7 @@ namespace Clock {
         using TypesType::kPixelOffset;
         using TypesType::kMaxPixelAddress; // kPixelOffset + kNumPixels
 
+    public:
         static constexpr uint8_t kMappingTypeId = (_ReverseRows ? 0x01 : 0x00) | (_ReverseColumns ? 0x02 : 0x00) | (_Rotate ? 0x04 : 0) | (_Interleaved ? 0x08 : 0);
 
         struct CoordinateHelperType {
@@ -125,6 +134,7 @@ namespace Clock {
         // rotated
 
         template<typename _Ta = CoordinateHelperType, typename std::enable_if<_Ta::kRotate, int>::type = 0>
+        inline __attribute__((__always_inline__))
         typename _Ta::type getRow(typename _Ta::type row, typename _Ta::type col) const {
             return col;
         }
@@ -137,11 +147,13 @@ namespace Clock {
         // non-rotated
 
         template<typename _Ta = CoordinateHelperType, typename std::enable_if<!_Ta::kRotate, int>::type = 0>
+        inline __attribute__((__always_inline__))
         typename _Ta::type getRow(typename _Ta::type row, typename _Ta::type col) const {
             return row;
         }
 
         template<typename _Ta = CoordinateHelperType, typename std::enable_if<!_Ta::kRotate, int>::type = 0>
+        inline __attribute__((__always_inline__))
         typename _Ta::type getCol(typename _Ta::type row, typename _Ta::type col) const {
             return col;
         }
@@ -149,6 +161,7 @@ namespace Clock {
         // normalize rows
 
         template<typename _Ta = CoordinateHelperType, typename std::enable_if<!_Ta::kReverseRows && !_Ta::kInterleaved, int>::type = 0>
+        inline __attribute__((__always_inline__))
         typename _Ta::type _row(typename _Ta::type row, typename _Ta::type col) const {
             return row;
         }
@@ -159,16 +172,18 @@ namespace Clock {
         }
 
         template<typename _Ta = CoordinateHelperType, typename std::enable_if<!_Ta::kReverseRows && _Ta::kInterleaved, int>::type = 0>
+        inline __attribute__((__always_inline__))
         typename _Ta::type _row(typename _Ta::type row, typename _Ta::type col) const {
-            if (col % 2 == _Ta::kInterleaved) {
+            if ((col & 1) == _Ta::kInterleaved) {
                 return row;
             }
             return (kRows - 1) - row;
         }
 
         template<typename _Ta = CoordinateHelperType, typename std::enable_if<_Ta::kReverseRows && _Ta::kInterleaved, int>::type = 0>
+        inline __attribute__((__always_inline__))
         typename _Ta::type _row(typename _Ta::type row, typename _Ta::type col) const {
-            if (col % 2 == _Ta::kInterleaved) {
+            if ((col & 1) == _Ta::kInterleaved) {
                 return (kRows - 1) - row;
             }
             return row;
@@ -177,11 +192,13 @@ namespace Clock {
         // normalize columns
 
         template<typename _Ta = CoordinateHelperType, typename std::enable_if<!_Ta::kReverseColumns, int>::type = 0>
+        inline __attribute__((__always_inline__))
         typename _Ta::type _col(typename _Ta::type row, typename _Ta::type col) const {
             return col;
         }
 
         template<typename _Ta = CoordinateHelperType, typename std::enable_if<_Ta::kReverseColumns, int>::type = 0>
+        inline __attribute__((__always_inline__))
         typename _Ta::type _col(typename _Ta::type row, typename _Ta::type col) const {
             return (kCols - 1) - col;
         }
@@ -191,6 +208,7 @@ namespace Clock {
         // rotation
 
         template<typename _Ta = CoordinateHelperType>
+        inline __attribute__((__always_inline__))
         typename _Ta::type getRow(typename _Ta::type row, typename _Ta::type col) const {
             if constexpr (_Ta::kRotate) {
                 return col;
@@ -201,6 +219,7 @@ namespace Clock {
         }
 
         template<typename _Ta = CoordinateHelperType>
+        inline __attribute__((__always_inline__))
         typename _Ta::type getCol(typename _Ta::type row, typename _Ta::type col) const {
             if constexpr (_Ta::kRotate) {
                 return row;
@@ -213,16 +232,17 @@ namespace Clock {
         // reversed and interleaved rows
 
         template<typename _Ta = CoordinateHelperType>
+        inline __attribute__((__always_inline__))
         typename _Ta::type _row(typename _Ta::type row, typename _Ta::type col) const {
             if constexpr (_Ta::kInterleaved) {
                 if constexpr (_Ta::kReverseRows) {
-                    if (col % 2 == _Ta::kInterleaved) {
+                    if ((col & 1) == _Ta::kInterleaved) {
                         return (kRows - 1) - row;
                     }
                     return row;
                 }
                 else {
-                    if (col % 2 == _Ta::kInterleaved) {
+                    if ((col & 1) == _Ta::kInterleaved) {
                         return row;
                     }
                     return (kRows - 1) - row;
@@ -241,6 +261,7 @@ namespace Clock {
         // reversed columns
 
         template<typename _Ta = CoordinateHelperType>
+        inline __attribute__((__always_inline__))
         typename _Ta::type _col(typename _Ta::type row, typename _Ta::type col) const {
             if constexpr (_Ta::kReverseColumns) {
                 return (kCols - 1) - col;
@@ -253,19 +274,27 @@ namespace Clock {
 
 #endif
 
+        inline __attribute__((__always_inline__))
         PixelAddressType getAddress(CoordinateType row, CoordinateType col) const {
             // return row + col * kRows;
             return _row(getRow(row, col), getCol(row, col)) + (_col(getRow(row, col), getCol(row, col)) * kRows);
         }
 
+        inline __attribute__((__always_inline__))
         PixelAddressType getAddress(PixelCoordinatesType coords) const {
             return getAddress(coords.row(), coords.col());
         }
 
+        inline __attribute__((__always_inline__))
         PixelCoordinatesType getPoint(PixelAddressType address) const {
-            CoordinateType row = address % kRows;
-            CoordinateType col = address / kRows;
-            return PixelCoordinatesType(_row(getRow(row, col), getCol(row, col)), _col(getRow(row, col), getCol(row, col)));
+            if constexpr (kRows == 1) {
+                return PixelCoordinatesType(_row(getRow(0, address), getCol(0, address)), _col(getRow(0, address), getCol(0, address)));
+            }
+            else {
+                CoordinateType row = address % kRows;
+                CoordinateType col = address / kRows;
+                return PixelCoordinatesType(_row(getRow(row, col), getCol(row, col)), _col(getRow(row, col), getCol(row, col)));
+            }
         }
     };
 
@@ -313,28 +342,38 @@ namespace Clock {
             std::fill(begin(), end(), color);
         }
 
+        constexpr size_t getNumPixels() const {
+            return kNumPixels;
+        }
+
+        inline __attribute__((__always_inline__))
         void setPixel(CoordinateType row, CoordinateType col, ColorType color) {
             _set(getAddress(row, col), color);
         }
 
         // sequential pixel address 0 to kNumPixels - 1, addressing __pixels[kPixelOffset] to __pixels[kTotalPixels - 1]
+        inline __attribute__((__always_inline__))
         void setPixel(PixelAddressType numPixel, ColorType color) {
             _set(getAddress(getPoint(numPixel)), color);
         }
 
+        inline __attribute__((__always_inline__))
         void setPixel(PixelCoordinatesType point, ColorType color) {
             _set(getAddress(point), color);
         }
 
+        inline __attribute__((__always_inline__))
         const ColorType &getPixel(CoordinateType row, CoordinateType col) const {
             return _get(getAddress(row, col));
         }
 
         // sequential pixel address 0 to kNumPixels - 1, addressing __pixels[kPixelOffset] to __pixels[kTotalPixels - 1]
+        inline __attribute__((__always_inline__))
         const ColorType &getPixel(PixelAddressType numPixel) const {
             return _get(getAddress(getPoint(numPixel)));
         }
 
+        inline __attribute__((__always_inline__))
         const ColorType &getPixel(PixelCoordinatesType point) const {
             return _get(point);
         }
@@ -374,33 +413,40 @@ namespace Clock {
 #endif
 
         // access to all pixels, starting with first LED
+        inline __attribute__((__always_inline__))
         ColorType &pixels(PixelAddressType address) {
-            __DBG_assert_printf(address >= 0 && address < size(), "address out of bounds: %d", address);
+            // __DBG_assert_printf(address >= 0 && address < size(), "address out of bounds: %d", address);
             return __pixels[address];
         }
 
+        inline __attribute__((__always_inline__))
         ColorType pixels(PixelAddressType address) const {
-            __DBG_assert_printf(address >= 0 && address < size(), "address out of bounds: %d", address);
+            // __DBG_assert_printf(address >= 0 && address < size(), "address out of bounds: %d", address);
             return __pixels[address];
         }
 
         // access to LEDs without the pixel offset
+        inline __attribute__((__always_inline__))
         ColorType &operator [](PixelAddressType idx) {
             return _get(idx);
         }
 
+        inline __attribute__((__always_inline__))
         const ColorType &operator [](PixelAddressType idx) const {
             return _get(idx);
         }
 
+        inline __attribute__((__always_inline__))
         PixelBufferPtr begin() {
             return &_pixels[0];
         }
 
+        inline __attribute__((__always_inline__))
         const PixelBufferPtr begin() const {
             return &_pixels[0];
         }
 
+        inline __attribute__((__always_inline__))
         PixelBufferPtr end() {
             return &_pixels[kNumPixels];
         }
@@ -440,12 +486,14 @@ namespace Clock {
         }
 
     protected:
+        inline __attribute__((__always_inline__))
         void _set(PixelAddressType idx, ColorType color) {
             if (idx < kNumPixels) {
                 _pixels[idx] = color;
             }
         }
 
+        inline __attribute__((__always_inline__))
         ColorType &_get(PixelAddressType idx) {
             if (idx < kNumPixels) {
                 return _pixels[idx];
@@ -454,6 +502,7 @@ namespace Clock {
             return invalid;
         }
 
+        inline __attribute__((__always_inline__))
         const ColorType &_get(PixelAddressType idx) const {
             if (idx < kNumPixels) {
                 return _pixels[idx];
@@ -503,6 +552,7 @@ namespace Clock {
             setDither(false);
         }
 
+        inline __attribute__((__always_inline__))
         void setDither(bool enable) {
             FastLED.setDither(enable ? BINARY_DITHER : DISABLE_DITHER);
         }
@@ -512,28 +562,49 @@ namespace Clock {
             show();
         }
 
+        inline __attribute__((__always_inline__))
         void setBrightness(uint8_t brightness) {
             FastLED.setBrightness(brightness);
         }
 
+        inline __attribute__((__always_inline__))
         void show() {
             show(FastLED.getBrightness());
         }
 
-        void show(uint8_t brightness) {
-            if (getNeopixelShowMethodInt() == static_cast<uint8_t>(Clock::ShowMethodType::FASTLED)) {
-                #if NEOPIXEL_DEBUG
-                    NeoPixelEx::Context::validate(nullptr).getDebugContext().togglePin();
-                #endif
-                FastLED.show(brightness);
+        void showRepeat(uint8_t num, uint32_t delayMillis = 1) {
+            while(num--) {
+                show(FastLED.getBrightness());
+                ::delay(delayMillis);
             }
-            else if (getNeopixelShowMethodInt() == static_cast<uint8_t>(Clock::ShowMethodType::NEOPIXEL)) {
-                NeoPixelEx::StaticStrip::externalShow<NeoPixelEx::TimingsWS2812, NeoPixelEx::CRGB>(IOT_LED_MATRIX_OUTPUT_PIN, reinterpret_cast<uint8_t *>(_pixels), kNumPixels, brightness, NeoPixelEx::Context::validate(nullptr));
+        }
+
+        void show(uint8_t brightness) {
+            switch(getNeopixelShowMethodType()) {
+                case Clock::ShowMethodType::FASTLED:
+                    #if NEOPIXEL_DEBUG
+                        NeoPixelEx::Context::validate(nullptr).getDebugContext().togglePin();
+                    #endif
+                    FastLED.show(brightness);
+                    break;
+                case Clock::ShowMethodType::NEOPIXEL:
+                    NeoPixelEx::StaticStrip::externalShow<NeoPixelEx::TimingsWS2812, NeoPixelEx::CRGB>(IOT_LED_MATRIX_OUTPUT_PIN, reinterpret_cast<uint8_t *>(_pixels), kNumPixels, brightness, NeoPixelEx::Context::validate(nullptr));
+                    break;
+                case Clock::ShowMethodType::NEOPIXEL_REPEAT:
+                    for(uint8_t i = 0; i  < 5; i++) {
+                        if (NeoPixelEx::StaticStrip::externalShow<NeoPixelEx::TimingsWS2812, NeoPixelEx::CRGB>(IOT_LED_MATRIX_OUTPUT_PIN, reinterpret_cast<uint8_t *>(_pixels), kNumPixels, brightness, NeoPixelEx::Context::validate(nullptr))) {
+                            break;
+                        }
+                        ::delay(1);
+                    }
+                    break;
+                default:
+                    break;
             }
         }
 
         void delay(unsigned long ms) {
-            if ((getNeopixelShowMethodInt() == static_cast<uint8_t>(Clock::ShowMethodType::FASTLED)) && (_controller.getDither() != DISABLE_DITHER) && (FastLED.getBrightness() != 0) && (FastLED.getBrightness() != 255)) {
+            if ((getNeopixelShowMethodType() == Clock::ShowMethodType::FASTLED) && (_controller.getDither() != DISABLE_DITHER) && (FastLED.getBrightness() != 0) && (FastLED.getBrightness() != 255)) {
                 // use FastLED.delay for dithering
                 FastLED.delay(ms);
             }
@@ -547,6 +618,8 @@ namespace Clock {
     };
 
 }
+
+#pragma GCC pop_options
 
 #if DEBUG_IOT_CLOCK
 #include <debug_helper_disable.h>

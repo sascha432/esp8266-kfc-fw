@@ -449,9 +449,6 @@ namespace Clock {
         {
             _disableBlinkColon = false;
             _lastUpdate = 0;
-            // setAnimationCallback([this](PixelAddressType address, ColorType color, const SevenSegmentDisplay::Params_t &params) -> ColorType {
-
-            // });
         }
 
         virtual void loop(uint32_t millisValue) override
@@ -486,6 +483,8 @@ namespace Clock {
         void _copyTo(_Ta &display, uint32_t millisValue)
         {
             Color color;
+            CoordinateType row = 0;
+            CoordinateType col = 0;
             for (PixelAddressType i = 0; i < display.kNumPixels; i++) {
                 uint32_t ind = (i * _multiplier.value) + (millisValue / _speed);
                 uint8_t indMod = (ind % _mod);
@@ -503,12 +502,17 @@ namespace Clock {
                         color = _normalizeColor(_factor.red() * factor2, 0, _factor.blue() * factor1);
                         break;
                 }
-                CoordinateType row = i % kRows;
-                CoordinateType col = i / kRows;
+                // CoordinateType row = i % kRows;
+                // CoordinateType col = i / kRows;
                 // if (i % 2 == 1) {
                 //     row = (kRows - 1) - row;
                 // }
                 display.setPixel(row, col, color);
+                row++;
+                if (row >= kRows) {
+                    row = 0;
+                    col++;
+                }
             }
         }
 
@@ -556,27 +560,49 @@ namespace Clock {
         );
     }
 
-    // inline void RainbowAnimation::_INCREMENT(float *valuePtr, float min, float max, float *incrPtr)
-    // {
-    //     float value;
-    //     float incr;
-    //     // we need to use memcpy in case the pointer is not dword aligned
-    //     memcpy(&value, valuePtr, sizeof(value));
-    //     memcpy(&incr, incrPtr, sizeof(incr));
-    //     if (incr) {
-    //         value += incr;
-    //         if (value < min && incr < 0) {
-    //             value = min;
-    //             incr = -incr;
-    //         }
-    //         else if (value >= max && incr > 0) {
-    //             incr = -incr;
-    //             value = max + incr;
-    //         }
-    //     }
-    //     memcpy(valuePtr, &value, sizeof(*valuePtr));
-    //     memcpy(incrPtr, &incr, sizeof(*incrPtr));
-    // }
+    // ------------------------------------------------------------------------
+    // RainbowAnimationFastLED
+
+    class RainbowAnimationFastLED : public Animation {
+    public:
+        RainbowAnimationFastLED(ClockPlugin &clock, uint8_t bpm, uint8_t hue) :
+            Animation(clock),
+            _bpm(bpm),
+            _hue(hue)
+        {
+        }
+
+        void begin()
+        {
+            _disableBlinkColon = false;
+        }
+
+        virtual void copyTo(DisplayType &display, uint32_t millisValue) override
+        {
+            _copyTo(display, millisValue);
+        }
+
+        virtual void copyTo(DisplayBufferType &buffer, uint32_t millisValue) override
+        {
+            _copyTo(buffer, millisValue);
+        }
+
+        template<typename _Ta>
+        void _copyTo(_Ta &display, uint32_t millisValue)
+        {
+            fill_rainbow(reinterpret_cast<CRGB *>(display.begin()), display.getNumPixels(), beat8(_bpm, 255), _hue);
+        }
+
+        void update(uint8_t bpm, uint8_t hue)
+        {
+            _bpm = bpm;
+            _hue = hue;
+        }
+
+    private:
+        uint8_t _bpm;
+        uint8_t _hue;
+    };
 
     // ------------------------------------------------------------------------
     // FlashingAnimation

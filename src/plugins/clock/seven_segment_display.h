@@ -18,6 +18,9 @@
 #include <debug_helper_disable.h>
 #endif
 
+#pragma GCC push_options
+#pragma GCC optimize ("O3")
+
 // class for 7 segment display with various shapes that can be created with
 // the ./scripts/tools/create_7segment_display.py tool
 //
@@ -114,11 +117,13 @@ namespace SevenSegment {
     //     }
     // }
 
-    inline static bool operator==(SegmentType type, uint8_t segment) {
+    inline __attribute__((__always_inline__))
+    static bool operator==(SegmentType type, uint8_t segment) {
         return static_cast<uint8_t>(type) & _BV(segment);
     }
 
-    inline static bool operator==(ColonType type, uint8_t position) {
+    inline __attribute__((__always_inline__))
+    static bool operator==(ColonType type, uint8_t position) {
         return static_cast<uint8_t>(type) & _BV(position);
     }
 
@@ -143,6 +148,7 @@ namespace SevenSegment {
          * "12:00"="12:00", "#1.1#""=" 1.1 ", "## 00"="   00", ...
          *
          * */
+        inline __attribute__((__always_inline__))
         void print(const String &text) {
             print(text.c_str());
         }
@@ -196,6 +202,7 @@ namespace SevenSegment {
             }
         }
 
+        inline __attribute__((__always_inline__))
         void clearColon(uint8_t num) {
             setColon(num, ColonType::NONE);
         }
@@ -210,6 +217,7 @@ namespace SevenSegment {
             }
         }
 
+        inline __attribute__((__always_inline__))
         void clearColons() {
             setColons(ColonType::NONE);
         }
@@ -242,18 +250,22 @@ namespace SevenSegment {
         // -----------------------------------------------------------------
 
         // make pixel visible
+        inline __attribute__((__always_inline__))
         void setPixelState(PixelAddressType address, bool state) {
             _masked[address] = state;
         }
 
+        inline __attribute__((__always_inline__))
         bool getPixelState(PixelAddressType address) const {
             return _masked[address];
         }
 
+        inline __attribute__((__always_inline__))
         void hideAll() {
             _masked.reset();
         }
 
+        inline __attribute__((__always_inline__))
         void showAll() {
             _masked.set();
         }
@@ -278,6 +290,7 @@ namespace SevenSegment {
         }
 
     private:
+        inline __attribute__((__always_inline__))
         void _applyMask() {
             for(PixelAddressType i = 0; i < kNumPixels; i++) {
                 if (!_masked[i]) {
@@ -286,14 +299,17 @@ namespace SevenSegment {
             }
         }
 
+        inline __attribute__((__always_inline__))
         PixelAddressPtr getColonsArrayPtr(uint8_t num) const {
             return &colonTranslationTable[(num * kNumPixelsPerColon * 2)];
         }
 
+        inline __attribute__((__always_inline__))
         PixelAddressPtr getSegmentsArrayPtr(uint8_t num) const {
             return &digitsTranslationTable[(num * kNumPixelsPerDigit)];
         }
 
+        inline __attribute__((__always_inline__))
         PixelAddressPtr getSegmentPixelAddressPtr(uint8_t num, uint8_t segment) const {
             return &(getSegmentsArrayPtr(num)[(segment * kNumPixelsPerSegment)]);
         }
@@ -306,16 +322,18 @@ namespace SevenSegment {
 
     static constexpr auto kSevenSegmentTotalMemorySize = sizeof(Display);
 
-    inline SegmentType getSegments(uint8_t digit)
+    inline __attribute__((__always_inline__))
+    SegmentType getSegments(uint8_t digit)
     {
         return static_cast<SegmentType>(pgm_read_byte(segmentTypeTranslationTable + digit));
     }
 
 }
 
+#pragma GCC pop_options
+
 #if DEBUG_IOT_CLOCK
 #include <debug_helper_disable.h>
 #endif
-
 
 #endif

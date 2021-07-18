@@ -36,6 +36,10 @@
 #    define DEBUG_IOT_CLOCK 1
 #endif
 
+#ifndef DEBUG_MEASURE_ANIMATION
+#   define DEBUG_MEASURE_ANIMATION 1
+#endif
+
 // allows to diplay the RGB leds in the browser
 #ifndef IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
 #    define IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL 1

@@ -116,6 +116,12 @@
                     MAX,
                 };
 
+                enum class RainbowMode : uint8_t {
+                    INTERNAL,
+                    FASTLED,
+                    MAX,
+                };
+
                 static const __FlashStringHelper *getAnimationNames();
                 static const __FlashStringHelper *getAnimationNamesJsonArray();
                 static const __FlashStringHelper *getAnimationName(AnimationType type);
@@ -175,10 +181,23 @@
                     int8_t regulator_margin;
                 } protection;
 
-                struct __attribute__packed__ {
+                struct __attribute__packed__ RainbowAnimationType {
+                    using Type = RainbowAnimationType;
+
                     RainbowMultiplier_t multiplier;
                     RainbowColor_t color;
-                    uint16_t speed;
+                    CREATE_ENUM_D_BITFIELD(mode, RainbowMode, RainbowMode::FASTLED);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(speed, 14, 0, 16383, 60, 1);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(bpm, 8, 0, 255, 10, 1);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(hue, 8, 0, 255, 10, 1);
+
+                    RainbowAnimationType() :
+                        mode(kDefaultValueFor_mode),
+                        speed(kDefaultValueFor_speed),
+                        bpm(kDefaultValueFor_bpm),
+                        hue(kDefaultValueFor_hue)
+                    {
+                    }
                 } rainbow;
 
                 struct __attribute__packed__ {

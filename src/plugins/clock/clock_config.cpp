@@ -120,7 +120,6 @@ namespace KFCConfigurationClasses {
 #endif
         power({static_cast<uint16_t>(79.7617 * kPowerNumLeds), static_cast<uint16_t>(79.9648 * kPowerNumLeds), static_cast<uint16_t>(79.6055 * kPowerNumLeds), static_cast<uint16_t>(4.0586 * kPowerNumLeds)}),
         protection( { { 45, 60 }, 70, 25 } ),
-        rainbow{ RainbowMultiplier_t(), RainbowColor_t(), 30 },
         alarm{ { IOT_CLOCK_ALARM_COLOR }, IOT_CLOCK_ALARM_FLASHING_SPEED },
         fading{ fading.kDefaultValueFor_speed, fading.kDefaultValueFor_delay, 0xffffff },
         fire(),

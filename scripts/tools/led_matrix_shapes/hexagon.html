@@ -232,19 +232,19 @@
                     <div class="hexagon-face-container">
                         <div class="inner-hexagon-container">
                             <div class="pixels-top">
-                                <div class="pixel p5">5</div>
-                                <div class="spacer-top"></div>
                                 <div class="pixel p4">4</div>
-                            </div>
-                            <div class="pixels-center">
-                                <div class="pixel p6">6</div>
-                                <div class="spacer-center"></div>
+                                <div class="spacer-top"></div>
                                 <div class="pixel p3">3</div>
                             </div>
-                            <div class="pixels-bottom">
-                                <div class="pixel p1">1</div>
-                                <div class="spacer-bottom"></div>
+                            <div class="pixels-center">
+                                <div class="pixel p5">5</div>
+                                <div class="spacer-center"></div>
                                 <div class="pixel p2">2</div>
+                            </div>
+                            <div class="pixels-bottom">
+                                <div class="pixel p0">0</div>
+                                <div class="spacer-bottom"></div>
+                                <div class="pixel p1">1</div>
                             </div>
                         </div>
                     </div>
@@ -272,6 +272,14 @@
                 16: 'no_led',
                 17: 'no_led',
                 10: 'no_led',
+                18: [4, 3, 5, 2, 0, 1],
+                12: [7, 8, 6, 9, 11, 10],
+                20: [12 ,13, 17, 14, 16, 15],
+                13: [20, 21, 19, 22, 18, 23],
+                6: [25, 26, 24, 27, 29, 28],
+                5: [31, 32, 30, 33, 35, 34],
+                11: [36, 37, 41, 38, 40, 39],
+                7: [45, 46, 44, 47, 43, 42],
             }
             var num = 0;
             var container = $('#prototypes').find('.hexagon-container').parent();
@@ -288,6 +296,13 @@
                     }
                     else if (types[num] == 'no_led') {
                         $(con).find('.inner-hexagon-container').css('opacity', '0');
+                    }
+                    else if (typeof types[num] === "object") {
+                        var n = 0;
+                        $(con).find('.inner-hexagon-container').find('.pixel').each(function() {
+                            var pixel = types[num][n++];
+                            $(this).attr('class', 'pixel p' + pixel).html(pixel);
+                        });
                     }
                     column += $(con).html();
                     num++;

@@ -261,23 +261,26 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             }
             args.printf_P(PSTR("set color %s"), getColor().toString().c_str());
         }
-        // met[hod][,<fastled|neopixel|toggle>]
+        // met[hod][,<fastled|neopixel|none|toggle>]
         // +lmc=method,tog
         else if (args.startsWithIgnoreCase(0, F("met"))) {
             if (args.startsWithIgnoreCase(1, F("fast"))) {
                 ClockPlugin::setShowMethod(Clock::ShowMethodType::FASTLED);
             }
-            else if (args.startsWithIgnoreCase(1, F("neo"))) {
+            else if (args.startsWithIgnoreCase(1, F("neo")) || args.startsWithIgnoreCase(1, F("int"))) {
                 ClockPlugin::setShowMethod(Clock::ShowMethodType::NEOPIXEL);
+            }
+            else if (args.startsWithIgnoreCase(1, F("none"))) {
+                ClockPlugin::setShowMethod(Clock::ShowMethodType::NONE);
             }
             else {
                 ClockPlugin::toggleShowMethod();
             }
-            args.print(F("show method: %s (%u)"), ClockPlugin::getShowMethod() == Clock::ShowMethodType::FASTLED ? PSTR("FastLED") : PSTR("internal"), ClockPlugin::getShowMethod());
+            args.print(F("show method: %s (%u)"), ClockPlugin::getShowMethodStr(), ClockPlugin::getShowMethod());
         }
         // ani[mation][,<animation>][,blend_time=4000ms]
         else if (args.startsWithIgnoreCase(0, F("ani"))) {
-            if (args.size() == 0) {
+            if (args.size() <= 1) {
                 for(uint8_t i = 0; i < static_cast<uint8_t>(AnimationType::MAX); i++) {
                     auto name = String(_config.getAnimationName(static_cast<AnimationType>(i)));
                     name.toLowerCase().replace(' ', '_');
@@ -299,55 +302,70 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             }
         }
         // test,<1=pixel order|2=clock|3=row/col>[,#color=#330033][,<brightness=128>][,<speed=100ms>]
+        // +lmc=test,1,#ff0000,255,5000ms
         else if (args.startsWithIgnoreCase(0, F("test"))) {
             enableLoop(false);
-            uint16_t x;
-            uint16_t y;
-            uint16_t n;
-            uint32_t speed = args.toMillis(4, 50, 10000, 100);
-            _display.setBrightness(args.toIntMinMax<uint8_t>(3, 1, 255, 128));
+            uint16_t x = 0;
+            uint16_t y = 0;
+            uint16_t n = 0;
+            auto mode = args.toIntMinMax<uint8_t>(1, 1, 3, 1);
+            auto speed = args.toMillis(4, 50, 10000, 100);
+            auto brightness = args.toIntMinMax<uint8_t>(3, 1, 255, 128);
+            _display.setBrightness(brightness);
             _display.clear();
+            _display.showRepeat(5);
             auto color = Color::fromString(args.toString(2, F("#330033")));
+            args.print(F("test=%u color=%s speed=%ums brightness=%u"), mode, color.toString().c_str(), speed, brightness);
             auto displayPtr = &_display;
-            switch(args.toInt(1)) {
+            auto stream = &args.getStream();
+            switch(mode) {
                 case 1:
-                    _Scheduler.add(Event::milliseconds(speed), true, [n, displayPtr, color](Event::CallbackTimerPtr timer) mutable {
-                        displayPtr->fill(0);
-                        displayPtr->setPixel(n, color);
-                        displayPtr->show();
+                    _Scheduler.add(Event::milliseconds(speed), true, [n, displayPtr, color, stream](Event::CallbackTimerPtr timer) mutable {
+                        auto &display = *displayPtr;
+                        auto point = display.getPoint(n);
+                        stream->printf_P(PSTR("pixel=%u x=%u y=%u addr=%u\n"), n, point.col(), point.row(), display.getAddress(point));
+                        display.fill(0);
+                        display.setPixel(n, color);
+                        display.showRepeat(5);
                         n++;
-                        if (n >= displayPtr->kCols * displayPtr->kRows) {
-                            displayPtr->clear();
-                            displayPtr->show();
+                        if (n >= display.kCols * display.kRows) {
+                            display.clear();
+                            display.showRepeat(5);
                             timer->disarm();
                         }
                     });
                     break;
                 case 2:
-                    _Scheduler.add(Event::milliseconds(speed), true, [n, displayPtr, color](Event::CallbackTimerPtr timer) mutable {
-                        displayPtr->fill(color);
-                        displayPtr->hideAll();
-                        displayPtr->setPixelState(n, true);
-                        displayPtr->show();
+                    _Scheduler.add(Event::milliseconds(speed), true, [n, displayPtr, color, stream](Event::CallbackTimerPtr timer) mutable {
+                        auto &display = *displayPtr;
+                        auto point = display.getPoint(n);
+                        stream->printf_P(PSTR("pixel=%u x=%u y=%u addr=%u\n"), n, point.col(), point.row(), display.getAddress(point));
+                        display.fill(color);
+                        display.hideAll();
+                        display.setPixelState(n, true);
+                        display.showRepeat(5);
                         n++;
-                        if (n >= displayPtr->kCols * displayPtr->kRows) {
-                            displayPtr->clear();
-                            displayPtr->show();
+                        if (n >= display.kCols * display.kRows) {
+                            display.clear();
+                            display.showRepeat(5);
                             timer->disarm();
                         }
                     });
                     break;
                 default:
-                    _Scheduler.add(Event::milliseconds(speed), true, [x, y, displayPtr, color](Event::CallbackTimerPtr timer) mutable {
-                        displayPtr->fill(0);
-                        displayPtr->setPixel(y, x, color);
-                        displayPtr->show();
+                    _Scheduler.add(Event::milliseconds(speed), true, [x, y, displayPtr, color, stream](Event::CallbackTimerPtr timer) mutable {
+                        auto &display = *displayPtr;
+                        auto addr = display.getAddress(x, y);
+                        stream->printf_P(PSTR("pixel=%u x=%u y=%u\n"), addr, x, y);
+                        display.fill(0);
+                        display.setPixel(y, x, color);
+                        display.showRepeat(5);
                         x++;
-                        if (x >= displayPtr->kCols) {
+                        if (x >= display.kCols) {
                             y++;
-                            if (y >= displayPtr->kRows) {
-                                displayPtr->fill(0);
-                                displayPtr->show();
+                            if (y >= display.kRows) {
+                                display.clear();
+                                display.showRepeat(5);
                                 timer->disarm();
                             }
                         }
@@ -377,8 +395,14 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             auto &stats = NeoPixelEx::getStats();
             args.print(F("Internal: aborted frames=%u/%u fps=%u"), stats.getAbortedFrames(), stats.getFrames(), stats.getFps());
             args.print(F("FastLED: fps=%u"), FastLED.getFPS());
+            #if DEBUG_MEASURE_ANIMATION
+                Clock::animationStats.dump(args.getStream());
+            #endif
             if (args.size() > 1) {
                 stats.clear();
+                #if DEBUG_MEASURE_ANIMATION
+                    Clock::animationStats.clear();
+                #endif
                 args.print(F("reset"));
             }
         }

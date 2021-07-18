@@ -24,6 +24,10 @@
 #include <debug_helper_disable.h>
 #endif
 
+#if DEBUG_MEASURE_ANIMATION
+Clock::AnimationStats Clock::animationStats;
+#endif
+
 static ClockPlugin plugin;
 
 #if HAVE_PCF8574
@@ -145,6 +149,23 @@ Clock::ShowMethodType ClockPlugin::getShowMethod()
     return plugin._method;
 }
 
+const __FlashStringHelper *ClockPlugin::getShowMethodStr()
+{
+    switch(getShowMethod()) {
+        case Clock::ShowMethodType::NONE:
+            return F("None");
+        case Clock::ShowMethodType::FASTLED:
+            return F("FastLED");
+        case Clock::ShowMethodType::NEOPIXEL:
+            return F("NeoPixel");
+        case Clock::ShowMethodType::NEOPIXEL_REPEAT:
+            return F("NeoPixelRepeat");
+        default:
+            break;
+    }
+    return F("Unknown");
+}
+
 void ClockPlugin::setShowMethod(Clock::ShowMethodType method)
 {
     plugin._method = method;
@@ -152,7 +173,7 @@ void ClockPlugin::setShowMethod(Clock::ShowMethodType method)
 
 void ClockPlugin::toggleShowMethod()
 {
-    constexpr auto kFirst = static_cast<int>(Clock::ShowMethodType::NONE) + 1;
+    constexpr auto kFirst = static_cast<int>(Clock::ShowMethodType::NONE);
     constexpr auto kRange = static_cast<int>(Clock::ShowMethodType::MAX) - kFirst;
     auto method = static_cast<uint8_t>(plugin._method);
     method -= kFirst + 1;
@@ -743,7 +764,12 @@ void ClockPlugin::setAnimation(AnimationType animation, uint16_t blendTime)
             _setAnimation(new Clock::FadingAnimation(*this, _getColor(), Color().rnd(), _config.fading.speed, _config.fading.delay * 1000, _config.fading.factor.value));
             break;
         case AnimationType::RAINBOW:
-            _setAnimation(new Clock::RainbowAnimation(*this, _config.rainbow.speed, _config.rainbow.multiplier, _config.rainbow.color));
+            if (_config.rainbow.hue == 0) {
+                _setAnimation(new Clock::RainbowAnimation(*this, _config.rainbow.speed, _config.rainbow.multiplier, _config.rainbow.color));
+            }
+            else {
+                _setAnimation(new Clock::RainbowAnimationFastLED(*this, _config.rainbow.speed, _config.rainbow.hue));
+            }
             break;
         case AnimationType::FLASHING:
             _setAnimation(new Clock::FlashingAnimation(*this, _getColor(), _config.flashing_speed));
@@ -1254,13 +1280,21 @@ bool ClockPlugin::_loopSyncingAnimation(LoopOptionsType &options)
 
 #endif
 
+    static constexpr int abc  = Clock::DisplayType::kMappingTypeId;
 void ClockPlugin::_loop()
 {
     LoopOptionsType options(*this);
     _display.setBrightness(_getBrightness());
 
     if (_animation) {
+        #if DEBUG_MEASURE_ANIMATION
+            auto start = __clock_cycles();
+        #endif
         _animation->loop(options.getMillis());
+        #if DEBUG_MEASURE_ANIMATION
+            auto diff = __clock_cycles() - start;
+            Clock::animationStats.loop.add(diff);
+        #endif
     }
     if (_blendAnimation) {
         _blendAnimation->loop(options.getMillis());
@@ -1312,8 +1346,23 @@ void ClockPlugin::_loop()
                 }
             }
             else if (_animation) {
+                #if DEBUG_MEASURE_ANIMATION
+                    auto start = __clock_cycles();
+                #endif
                 _animation->nextFrame(options.getMillis());
+                #if DEBUG_MEASURE_ANIMATION
+                    auto diff = __clock_cycles() - start;
+                    Clock::animationStats.nextFrame.add(diff);
+                #endif
+
+                #if DEBUG_MEASURE_ANIMATION
+                    start = __clock_cycles();
+                #endif
                 _animation->copyTo(_display, options.getMillis());
+                #if DEBUG_MEASURE_ANIMATION
+                    diff = __clock_cycles() - start;
+                    Clock::animationStats.copyTo.add(diff);
+                #endif
             }
         }
     }

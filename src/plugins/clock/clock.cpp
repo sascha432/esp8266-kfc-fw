@@ -1100,22 +1100,25 @@ void ClockPlugin::_alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration
         struct {
             AnimationType animation;
             uint8_t targetBrightness;
-            IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(int16_t autoBrightness);
+            bool autoBrightness;
         } saved = {
             _config.getAnimation(),
             _targetBrightness,
-            // IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(_autoBrightness) TODO
+            #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR
+                isAutobrightnessEnabled()
+            #else
+                false
+            #endif
         };
 
-        __LDBG_printf("storing parameters brightness=%u auto=%d color=%s animation=%u", saved.targetBrightness, IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(saved.autoBrightness) -1, getColor().toString().c_str(), saved.animation);
+        __LDBG_printf("storing parameters brightness=%u auto=%d color=%s animation=%u", saved.targetBrightness, saved.autoBrightness, getColor().toString().c_str(), saved.animation);
         _resetAlarmFunc = [this, saved](Event::CallbackTimerPtr timer) {
-            //TODO
-            // #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
-            //     _autoBrightness = saved.autoBrightness;
-            // #endif
+            #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR
+                setAutobrightness(saved.autoBrightness);
+            #endif
             _targetBrightness = saved.targetBrightness;
             setAnimation(saved.animation);
-            __LDBG_printf("restored parameters brightness=%u auto=%d color=%s animation=%u timer=%u", saved.targetBrightness, IF_IOT_CLOCK_AMBIENT_LIGHT_SENSOR(saved.autoBrightness) -1, getColor().toString().c_str(), saved.animation, (bool)timer);
+            __LDBG_printf("restored parameters brightness=%u auto=%d color=%s animation=%u timer=%u", saved.targetBrightness, saved.autoBrightness, getColor().toString().c_str(), saved.animation, (bool)timer);
             timer->disarm();
             _resetAlarmFunc = nullptr;
         };
@@ -1124,11 +1127,9 @@ void ClockPlugin::_alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration
     // check if an alarm is already active
     if (!_alarmTimer) {
         __LDBG_printf("alarm brightness=%u color=%s", _targetBrightness, getColor().toString().c_str());
-        //TODO
-        // #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR
-        //     _autoBrightness = kAutoBrightnessOff;
-        // #endif
-
+        #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR
+            setAutobrightness(false);
+        #endif
         _targetBrightness = kMaxBrightness;
         _setAnimation(new Clock::FlashingAnimation(*this, _config.alarm.color.value, _config.alarm.speed));
     }

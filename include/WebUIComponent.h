@@ -155,9 +155,15 @@ namespace WebUINS {
             append(NamedBool(J(state), state));
         }
 
-        template<class ..._Args>
-        Component &append(_Args&& ... args) {
-            UnnamedObject::append(std::forward<_Args>(args) ...);
+        template<typename _Ta, class ..._Args>
+        Component &append(_Ta arg1, _Args&& ... args) {
+            UnnamedObject::append(arg1, std::forward<_Args>(args) ...);
+            return *this;
+        }
+
+        template<typename _Ta>
+        Component &append(_Ta arg) {
+            UnnamedObject::append(arg);
             return *this;
         }
 

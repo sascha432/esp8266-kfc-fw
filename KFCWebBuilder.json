@@ -73,11 +73,15 @@
             ],
             "#if !IOT_CLOCK && !IOT_LED_MATRIX": [
                 "./Resources/images/light.svg",
-                "./Resources/js/led-matrix.js"
+                "./Resources/js/led-matrix.js",
+                "./Resources/js/webui-led-matrix.js"
             ],
             "#if !IOT_CLOCK || IOT_LED_MATRIX": [
                 "./Resources/html/clock.html",
                 "./Resources/css/clock-led-matrix.css"
+            ],
+            "#if !IOT_LED_MATRIX_HEXAGON_PANEL": [
+                "./Resources/css/hexgon-panel.css"
             ],
             "#if IOT_CLOCK || !IOT_LED_MATRIX": [
                 "./Resources/html/led_matrix.html"
@@ -138,6 +142,7 @@
                         "./Resources/js/led-matrix.js",
                         "./Resources/js/ping-console.js",
                         "./Resources/js/webui.js",
+                        "./Resources/js/webui-led-matrix.js",
                         "./lib/KFCWebBuilder/Resources/charts-js-2.9.3-dist/Chart.js",
                         "./Resources/js/charts/chartjs-plugin-dragdata.min.js"
                     ]
@@ -188,6 +193,7 @@
                         "./Resources/css/form-help-block.css",
                         "./Resources/css/input-text-range.css",
                         "./Resources/css/clock-led-matrix.css",
+                        "./Resources/css/hexgon-panel.css",
                         "./lib/KFCWebBuilder/Resources/charts-js-2.9.3-dist/Chart.css"
                     ]
                 },

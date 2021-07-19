@@ -1,0 +1,162 @@
+/**
+ * Author: sascha_lammers@gmx.de
+ */
+
+ #pixel-container {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    padding: 0 0 0.5rem !important;
+    z-index: 9998;
+    min-height: 1rem;
+    min-width: 1rem;
+    width: 103.5rem;
+    overflow: hidden;
+}
+
+.pixel-container-inner {
+    width: 150rem;
+    height: 59.5rem;
+    max-height: 59.5rem;
+    overflow: hidden;
+    background-color: rgb(243, 239, 217);
+    /* padding: 1rem; */
+}
+
+.hexagon-container {
+    max-width: 19rem;
+    min-width: 19rem;
+    min-height: 17rem;
+    max-height: 17rem;
+    clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+    background-color: #000000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    display: inline-grid;
+    overflow: hidden;
+}
+
+.hexagon-container:nth-child(1) {
+    position: relative;
+}
+.hexagon-container:nth-child(2) {
+    position: relative;
+    top: 8rem;
+    left: -5.5rem;
+}
+.hexagon-container:nth-child(3) {
+    position: relative;
+    left: -11rem;
+}
+.hexagon-container:nth-child(4) {
+    position: relative;
+    top: 8rem;
+    left: -16.5rem;
+}
+.hexagon-container:nth-child(5) {
+    position: relative;
+    left: -22rem;
+}
+.hexagon-container:nth-child(6) {
+    position: relative;
+    top: 8rem;
+    left: -27.5rem;
+}
+.hexagon-container:nth-child(7) {
+    position: relative;
+    left: -33rem;
+}
+.hexagon-container:nth-child(8) {
+    position: relative;
+    top: 8rem;
+    left: -33rem;
+}
+
+.hexagon-column:nth-child(2) {
+    margin-top: -1rem;
+}
+.hexagon-column:nth-child(3) {
+    margin-top: -1rem;
+}
+.hexagon-column:nth-child(4) {
+    margin-top: -1rem;
+}
+.hexagon-column:nth-child(5) {
+    margin-top: -1rem;
+}
+.hexagon-column:nth-child(6) {
+    margin-top: -1rem;
+}
+
+.hexagon-face-container {
+    width: 18.0rem;
+    min-height: 16rem;
+    max-height: 16rem;
+    clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+    background-color: #ffffff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+}
+.inner-hexagon-container {
+    min-width: 18rem;
+    max-width: 18rem;
+    min-height: 16rem;
+    max-height: 16rem;
+    padding: 2.75rem;
+    clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+    overflow: visible;
+    opacity: 0.45;
+}
+.hexagon-container .pixels-top {
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: visible;
+    margin-top: 0.05rem;
+}
+.hexagon-container .pixels-bottom {
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: visible;
+    margin-top: 2.375rem;
+}
+.hexagon-container .px {
+    color: #606060;
+}
+.hexagon-container .pixels-center {
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: visible;
+    margin-top: 2.375rem;
+}
+.hexagon-container .spacer-top,
+.hexagon-container .spacer-bottom {
+    min-width: 3rem;
+}
+.hexagon-container .spacer-center {
+    min-width: 7.75rem;
+    text-align: center;
+}
+.inner-hexagon-container .px {
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    font-size: 0.75rem;
+    border: 1px solid #000000;
+    border-radius: 1rem;
+    padding: 0.25rem;
+    margin: 0.125rem;
+    width: 1rem;
+    height: 1rem;
+    min-width: 1rem;
+    min-height: 1rem;
+    text-align: center;
+    align-self: center;
+    overflow: visible;
+}

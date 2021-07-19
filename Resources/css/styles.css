@@ -208,6 +208,10 @@
     font-size: 1.25rem;
 }
 
+.md-font {
+    font-size: 1rem;
+}
+
 .sm-font {
     font-size: 0.75rem;
 }

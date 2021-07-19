@@ -424,7 +424,7 @@ $.webUIComponent = {
             }
         }
         if (value !== undefined) {
-            console.log('queue_update_element', id, element, component.converter ? value + '=>' + component.converter.from(value) : value)
+            // console.log('queue_update_element', id, element, component.converter ? value + '=>' + component.converter.from(value) : value)
             if (component.converter) {
                 value = component.converter.from(value);
             }

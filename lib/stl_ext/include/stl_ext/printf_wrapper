@@ -1,0 +1,7 @@
+/**
+ * Author: sascha_lammers@gmx.de
+ */
+
+#pragma once
+
+#include "printf_wrapper.h"

@@ -104,6 +104,38 @@ void printable_string(Print &output, const uint8_t *buffer, size_t length, size_
     }
 }
 
+int countDecimalPlaces(double value, uint8_t maxPrecision)
+{
+    // NaN, inf, -inf ...
+    if (maxPrecision == 0 || !isnormal(value)) {
+        return 0;
+    }
+    // check if we have any decimal places
+    if (maxPrecision == 1 || value - static_cast<int>(value) == 0) {
+        return 1;
+    }
+    char buf[std::numeric_limits<double>::digits + 1];
+    auto len = snprintf_P(buf, sizeof(buf), PSTR("%.*f"), maxPrecision, value);
+    // check if the data fit into the buffer
+    if (len == sizeof(buf)) {
+        return maxPrecision;
+    }
+    auto endPtr = strchr(buf, '.');
+    if (!endPtr) {
+        return 0;
+    }
+    auto dot = endPtr;
+    // keep 1 digit
+    endPtr += 2;
+    auto ptr = endPtr;
+    while(*ptr) {
+        if (*ptr++ != '0') {
+            endPtr = ptr;
+        }
+    }
+    return (endPtr - dot) - 1;
+}
+
 void append_slash(String &dir)
 {
     auto len = dir.length();

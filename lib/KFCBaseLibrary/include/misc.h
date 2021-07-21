@@ -14,7 +14,7 @@
 #include <type_traits>
 #include <utility>
 #include <float.h>
-#include <limits.h>
+#include <limits>
 
 #if defined(ESP8266) || defined(ESP32) || _WIN32
 #ifndef PROGMEM_DWORD_ALIGNED
@@ -116,6 +116,18 @@ inline void printable_string(Print &output, const void *buffer, size_t length, s
 }
 inline String printable_string(const void *buffer, size_t length, size_t maxLength = 0, PGM_P extra = nullptr, bool crlfAsText = false) {
     return printable_string(reinterpret_cast<const uint8_t *>(buffer), length, maxLength, extra, crlfAsText);
+}
+
+int countDecimalPlaces(double value, uint8_t maxPrecision);
+
+inline int countDecimalPlaces(float value)
+{
+    return countDecimalPlaces(value, std::numeric_limits<float>::digits10);
+}
+
+inline int countDecimalPlaces(double value)
+{
+    return countDecimalPlaces(value, std::numeric_limits<double>::digits10);
 }
 
 void append_slash(String &dir);

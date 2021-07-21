@@ -31,18 +31,30 @@ namespace STL_STD_EXT_NAMESPACE_EX {
         return compare_unique_ptr_function<_Ta>(ptr);
     }
 
+#pragma push_macro("new")
+#undef new
+
     template<typename _T>
     union __attribute__((aligned(4))) UninitializedClass {
         uint8_t buffer[(sizeof(_T) + 3) & ~3];
+        uint32_t buffer32[(sizeof(_T) + 3) / sizeof(uint32_t)];
         _T _object;
 
-        UninitializedClass() {}
+        UninitializedClass()
+#if DEBUG
+            // erase memory otherwise it will be random / previous data
+            : buffer32{}
+#endif
+        {
+        }
         ~UninitializedClass() {}
 
         inline void init() {
             ::new(static_cast<void *>(&_object)) _T();
         }
     };
+
+#pragma pop_macro("new")
 
 }
 

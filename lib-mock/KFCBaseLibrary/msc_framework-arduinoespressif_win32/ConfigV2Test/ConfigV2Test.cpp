@@ -11,7 +11,7 @@ namespace FlashStorage {
 	static constexpr uint32_t kMagic = 0x208a74e3;
 
 	struct Flags {
-		Flags() : _empty(true), _filler(~0U) {}
+		Flags() : _empty(true), _filler(~0) {}
 
 		bool isEmpty() const {
 			return _empty;
@@ -45,7 +45,7 @@ namespace FlashStorage {
 	};
 
 	struct Header {
-		Header() : _magic(kMagic), _crc(~0U), _size(~0U) {}
+		Header() : _magic(kMagic), _crc(~0U), _size(~0) {}
 
 		void setCrc(uint32_t crc) {
 			_crc = crc;
@@ -95,7 +95,6 @@ namespace FlashStorage {
 
 }
 
-
 void setup()
 {
 #if 0
@@ -108,6 +107,16 @@ void setup()
 #endif
 
 #if 1
+
+	Serial.println(countDecimalPlaces(1.5f));
+	Serial.println(countDecimalPlaces(1.2345f));
+	Serial.println(countDecimalPlaces(1.23456789f, 7));
+	Serial.println(countDecimalPlaces(1.0));
+	exit(0);
+
+#endif
+
+#if 0
 	if (!ESP.flashEraseSector(0)) {
 		Serial.println(F("Failed to erase sector 0"));
 	}

@@ -4,6 +4,7 @@
 
 #include <PrintString.h>
 #include <assert.h>
+#include <interrupts.h>
 #include "plugins.h"
 #include "session.h"
 #include "WebUISocket.h"
@@ -38,6 +39,7 @@ void WebUISocket::onText(uint8_t *data, size_t len)
 {
     __LDBG_printf("data=%p len=%d", data, len);
     if (isAuthenticated()) {
+        ScopeCounter(AsyncWebServer::_requestCounter);
         auto client = getClient();
         String command;
         std::array<String, 4> args;
@@ -99,11 +101,13 @@ void WebUISocket::onText(uint8_t *data, size_t len)
             }
             _sender = nullptr;
         }
+
     }
 }
 
 void WebUISocket::sendValues(AsyncWebSocketClient *client)
 {
+    ScopeCounter(AsyncWebServer::_responseCounter);
     WebUINS::Events events;
     for(const auto plugin: PluginComponents::Register::getPlugins()) {
         if (plugin->hasWebUI()) {

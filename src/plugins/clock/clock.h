@@ -307,6 +307,7 @@ public:
     virtual void createWebUI(WebUINS::Root &webUI) override {}
     virtual void getValues(WebUINS::Events &array) override;
     virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) override;
+    virtual bool getValue(const String &id, String &value, bool &state) override;
 
     void _createWebUI(WebUINS::Root &webUI);
     static void webUIHook(WebUINS::Root &webUI, SensorPlugin::SensorType type);

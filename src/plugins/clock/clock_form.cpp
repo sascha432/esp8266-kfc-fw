@@ -92,16 +92,15 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         // --------------------------------------------------------------------
         auto &rainbowGroup = form.addCardGroup(F("rainbow"), F("Rainbow Animation"), true);
 
-
         form.addObjectGetterSetter(F("rb_mode"), FormGetterSetter(cfg.rainbow, mode));
         form.addFormUI(F("Mode"), rainbowModeItems);
 
         form.addObjectGetterSetter(F("rb_bpm"), FormGetterSetter(cfg.rainbow, bpm));
-        form.addFormUI(F("FastLED BPM"));
+        form.addFormUI(F("BPM"));
         cfg.rainbow.addRangeValidatorFor_bpm(form);
 
         form.addObjectGetterSetter(F("rb_hue"), FormGetterSetter(cfg.rainbow, hue));
-        form.addFormUI(F("FastLED Hue"));
+        form.addFormUI(F("Hue"));
         cfg.rainbow.addRangeValidatorFor_hue(form);
 
         form.addPointerTriviallyCopyable(F("rb_mul"), &cfg.rainbow.multiplier.value);

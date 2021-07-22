@@ -104,13 +104,16 @@ void Sensor_BME280::getStatus(Print &output)
 {
     output.printf_P(PSTR("BME280 @ I2C address 0x%02x" HTML_S(br)), _address);
     if (_cfg.temp_offset) {
-        output.printf_P(PSTR("Temperature offset %.3f%s "), _cfg.temp_offset, SPGM(UTF8_degreeC));
+        output.printf_P(PSTR("Temperature offset %.*f%s "), countDecimalPlaces(_cfg.temp_offset), _cfg.temp_offset, SPGM(UTF8_degreeC));
     }
     if (_cfg.humidity_offset) {
-        output.printf_P(PSTR("Humidity offset %.3f%% "), _cfg.humidity_offset);
+        output.printf_P(PSTR("Humidity offset %.*f%% "), countDecimalPlaces(_cfg.humidity_offset), _cfg.humidity_offset);
     }
     if (_cfg.pressure_offset) {
-        output.printf_P(PSTR("Pressure offset %.3f%s"), _cfg.pressure_offset, FSPGM(hPa));
+        output.printf_P(PSTR("Pressure offset %.*f%s"), countDecimalPlaces(_cfg.pressure_offset), _cfg.pressure_offset, FSPGM(hPa));
+    }
+    if (_cfg.temp_offset || _cfg.humidity_offset || _cfg.pressure_offset) {
+        output.print(F(HTML_S(br)));
     }
 }
 

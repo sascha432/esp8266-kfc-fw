@@ -3,7 +3,7 @@
 */
 
 #include <Arduino_compat.h>
-#include <stl_ext/memory.h>
+#include <stl_ext/memory>
 #include "PluginComponent.h"
 #include "plugins_menu.h"
 #include <Form.h>
@@ -15,7 +15,7 @@
 #include <EventScheduler.h>
 #endif
 
-#define PLUGIN_RTC_MEM_MAX_ID       255
+#define PLUGIN_RTC_MEM_MAX_ID 255
 
 #if DEBUG_PLUGINS
 #include "debug_helper_enable.h"
@@ -23,13 +23,11 @@
 #include "debug_helper_disable.h"
 #endif
 
-#include "plugins_menu.h"
-
 using KFCConfigurationClasses::System;
 
 using namespace PluginComponents;
 
-using RegisterExUninitialized = stdex::UninitializedClass<RegisterEx>;
+using RegisterExUninitialized = stdex::UninitializedClass<PluginComponents::RegisterEx>;
 RegisterExUninitialized componentRegisterNoInit __attribute__((section(".noinit")));
 
 Register *Register::getInstance()

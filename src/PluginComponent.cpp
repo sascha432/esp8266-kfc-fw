@@ -130,6 +130,13 @@ void PluginComponent::setValue(const String &id, const String &value, bool hasVa
     __DBG_panic_pure_virtual();
 }
 
+bool PluginComponent::getValue(const String &id, String &value, bool &state)
+{
+    state = false;
+    value = String();
+    return false;
+}
+
 #if AT_MODE_SUPPORTED
 
 ATModeCommandHelpArrayPtr PluginComponent::atModeCommandHelp(size_t &size) const

@@ -86,6 +86,19 @@ void WebUISocket::onText(uint8_t *data, size_t len)
             }
             _sender = nullptr;
         }
+        else if (command.equalsIgnoreCase(F("+get"))) {
+            _sender = this;
+            for(auto plugin: PluginComponents::Register::getPlugins()) {
+                if (plugin->hasWebUI()) {
+                    String value;
+                    bool state;
+                    if (plugin->getValue(args[0], value, state)) {
+                        sendValue(client, FPSTR(args[0].c_str()), value, state);
+                    }
+                }
+            }
+            _sender = nullptr;
+        }
     }
 }
 
@@ -100,6 +113,11 @@ void WebUISocket::sendValues(AsyncWebSocketClient *client)
     if (events.hasAny()) {
         send(client, WebUINS::UpdateEvents(events));
     }
+}
+
+void WebUISocket::sendValue(AsyncWebSocketClient *client, const __FlashStringHelper *id, const String &value, bool state)
+{
+    send(client, WebUINS::UpdateEvents(WebUINS::Events(WebUINS::Values(id, value, state))));
 }
 
 WebUINS::Root WebUISocket::createWebUIJSON()

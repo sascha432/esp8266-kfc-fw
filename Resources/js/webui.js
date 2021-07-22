@@ -31,6 +31,9 @@ $.webUIComponent = {
         webui_button_group_col: '<div class="btn-group-vertical btn-group-lg">{{content}}</div>'
     },
 
+    init_functions: [],
+    event_handlers: [],
+
     short: function(from) {
         var to = {};
         for(var key in from) {
@@ -928,6 +931,9 @@ $.webUIComponent = {
                 next.css('background-image', self.create_slider_gradient(input.attr('min'), input.attr('max'), input.attr('rmin'), input.attr('rmax')));
             }
         });
+        for(var i = 0; i < this.init_functions.length; i++) {
+            this.init_functions[i].call(this);
+        }
         this.queue_delete();
         this.lock_publish = false;
     },
@@ -1057,7 +1063,7 @@ $.webUIComponent = {
                 while(pos < data.byteLength) {
                     var tmp = new Uint8Array(data, pos++, 1)[0];
                     var index = (tmp >> 4); // palette index
-					tmp &= 0xf;
+                    tmp &= 0xf;
                     if (tmp == 0xe) { // 8 bit data marker
                         rle = new Uint8Array(data, pos++, 1)[0] + 0xe;
                     } else if (tmp == 0xf) { // 15 bit data marker, low-hi-byte
@@ -1113,6 +1119,11 @@ $.webUIComponent = {
             try {
                 var json = JSON.parse(event.data);
                 if (json.type === this.short.to.update_events) {
+                    for(var i = 0; i < this.event_handlers.length; i++) {
+                        for(var j = 0; j < json.events.length; j++) {
+                            this.event_handlers[i](json.events[j]);
+                        }
+                    }
                     this.update_events(json.events);
                 }
             } catch(e) {

@@ -64,6 +64,7 @@ public:
 
     static WebUINS::Root createWebUIJSON();
     static void sendValues(AsyncWebSocketClient *client);
+    static void sendValue(AsyncWebSocketClient *client, const __FlashStringHelper *id, const String &value, bool state);
 
     inline static WebUISocket *getSender() {
         return _sender;

@@ -90,6 +90,7 @@
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\stl_ext\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib-mock\ets_impl;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib-mock\KFCEventScheduler;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib-mock\KFCBaseLibrary\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include;C:\Users\sascha\Documents\PlatformIO\Projects\libcrc16\src;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCJson\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCWebFramework\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCEventScheduler\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCSyslog\include;C:\Users\sascha\Documents\PlatformIO\Projects\boost_1_74_0\include_only;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib-extra\variant\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\include;C:\Users\sascha\.platformio\packages\framework-arduinoespressif8266;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <StringPooling>true</StringPooling>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

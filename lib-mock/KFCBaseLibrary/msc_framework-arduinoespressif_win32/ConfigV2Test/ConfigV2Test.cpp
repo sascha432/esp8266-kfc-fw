@@ -106,7 +106,7 @@ void setup()
 	exit(0);
 #endif
 
-#if 1
+#if 0
 
 	Serial.println(countDecimalPlaces(1.5f));
 	Serial.println(countDecimalPlaces(1.2345f));

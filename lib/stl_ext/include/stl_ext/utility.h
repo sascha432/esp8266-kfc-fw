@@ -5,9 +5,8 @@
 #pragma once
 
 #include "../stl_ext.h"
-#include <type_traits>
+#include "./type_traits.h"
 #include <stdlib.h>
-#include "type_traits.h"
 
 namespace STL_STD_EXT_NAMESPACE {
 

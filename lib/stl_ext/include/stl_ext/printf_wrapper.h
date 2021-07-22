@@ -5,8 +5,8 @@
 #pragma once
 
 #include "../stl_ext.h"
-#include <type_traits>
-#include "type_traits.h"
+#include "./type_traits.h"
+#include <cstdlib>
 
 namespace STL_STD_EXT_NAMESPACE_EX {
 
@@ -25,7 +25,7 @@ namespace STL_STD_EXT_NAMESPACE_EX {
 	// restrict access to data with _HeapStart, _HeapEnd
 	// try toString() and to_string() for objects
 	//
-	template<typename _Print, size_t _HeapStart = 0, size_t HeapEnd = ~0>
+	template<typename _Print, size_t _HeapStart = 0, size_t HeapEnd = ~0UL>
 	class printf_wrapper {
 	public:
 		printf_wrapper(_Print &output) : _output(output) {}

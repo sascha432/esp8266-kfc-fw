@@ -9,26 +9,26 @@
 #include "PluginComponent.h"
 #include "plugins_menu.h"
 #include "kfc_fw_config.h"
-#include "./plugins/mqtt/mqtt_client.h"
+#include "../src/plugins/mqtt/mqtt_client.h"
 
 #ifndef DEBUG_ALARM_FORM
-#define DEBUG_ALARM_FORM                                0
+#   define DEBUG_ALARM_FORM 0
 #endif
 
 #if !defined(IOT_ALARM_PLUGIN_ENABLED) || !IOT_ALARM_PLUGIN_ENABLED
-#error requires IOT_ALARM_PLUGIN_ENABLED=1
+#   error requires IOT_ALARM_PLUGIN_ENABLED=1
 #endif
 
 #if !NTP_HAVE_CALLBACKS
-#error requires NTP_HAVE_CALLBACKS=1
+#   error requires NTP_HAVE_CALLBACKS=1
 #endif
 
 #ifndef IOT_ALARM_PLUGIN_HAS_BUZZER
-#define IOT_ALARM_PLUGIN_HAS_BUZZER                     0
+#   define IOT_ALARM_PLUGIN_HAS_BUZZER 0
 #endif
 
 #ifndef IOT_ALARM_PLUGIN_HAS_SILENT
-#define IOT_ALARM_PLUGIN_HAS_SILENT                     0
+#   define IOT_ALARM_PLUGIN_HAS_SILENT 0
 #endif
 
 class AsyncWebServerRequest;

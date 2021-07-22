@@ -4,62 +4,47 @@
 
 #pragma once
 
-#ifndef DEBUG_IOT_SWITCH
-#define DEBUG_IOT_SWITCH                            0
-#endif
-
 #include <Arduino_compat.h>
+#include <stl_ext/memory>
 #include <EventScheduler.h>
 #include <WebUIComponent.h>
 #include <BitsToStr.h>
+#include "switch_def.h"
 #include "../src/plugins/mqtt/mqtt_json.h"
 #include "../src/plugins/plugins.h"
 #include "kfc_fw_config.h"
 
-#ifndef IOT_SWITCH_ON_STATE
-#define IOT_SWITCH_ON_STATE                         HIGH
-#endif
-
-// interval to publish the state of all channels in milliseconds, 0 to disable
-#ifndef IOT_SWITCH_PUBLISH_MQTT_INTERVAL
-#define IOT_SWITCH_PUBLISH_MQTT_INTERVAL            (120 * 1000)
-#endif
-
-// store states on file system
-#ifndef IOT_SWITCH_STORE_STATES
-#define IOT_SWITCH_STORE_STATES                     1
-#endif
-
-// write delay on the file system in milliseconds
-#ifndef IOT_SWITCH_STORE_STATES_WRITE_DELAY
-#define IOT_SWITCH_STORE_STATES_WRITE_DELAY         (10 * 1000)
-#endif
-
-#ifndef IOT_SWITCH_CHANNEL_NUM
-#error IOT_SWITCH_CHANNEL_NUM not defined
-#endif
-
-#ifndef IOT_SWITCH_CHANNEL_PINS
-#error IOT_SWITCH_CHANNEL_PINS not defined
-#endif
-
 class SwitchPlugin : public PluginComponent, public MQTTComponent {
+public:
+    using SwitchConfig = KFCConfigurationClasses::Plugins::IOTSwitch::SwitchConfig;
+    using SwitchStateEnum = KFCConfigurationClasses::Plugins::IOTSwitch::StateEnum;
+    using WebUIEnum = KFCConfigurationClasses::Plugins::IOTSwitch::WebUIEnum;
+    using PinArrayType = std::array<uint8_t, IOT_SWITCH_CHANNEL_NUM>;
+
 public:
     class States {
     public:
-        States() : _states(0) {}
+        States() : _states(0), _config(0) {}
 
         bool operator[](int index) const {
-            return _states & _BV(index);
+            return _states & _stateMask(index);
         }
 
         void setState(int index, bool state) {
             if (state) {
-                _states |= _BV(index);
+                _states |= _stateMask(index);
             }
             else {
-                _states &= ~_BV(index);
+                _states &= ~_stateMask(index);
             }
+        }
+
+        SwitchStateEnum getConfig(int index) const {
+            return static_cast<SwitchStateEnum>((_config & _configMask(index)) >> _configShift(index));
+        }
+
+        void setConfig(int index, SwitchStateEnum config) {
+            _config = (_config & ~_configMask(index)) | (static_cast<uint8_t>(config) << _configShift(index));
         }
 
         const String toString() const {
@@ -67,28 +52,54 @@ public:
         }
 
         bool write(File &file) const {
-            return file.write(getData(), length()) == length();
+            return file.write(*this, size()) == size();
         }
 
         bool read(File &file) {
-            return (size_t)file.read(getData(), length()) == length();
+            return static_cast<size_t>(file.read(*this, size())) == size();
+        }
+
+        bool compare(File &file) {
+            States state;
+            if (static_cast<size_t>(file.read(state, state.size())) != state.size()) {
+                return false;
+            }
+            uint32_t crc;
+            if (static_cast<size_t>(file.read(reinterpret_cast<uint8_t *>(&crc), sizeof(crc))) != sizeof(crc)) {
+                return false;
+            }
+            return (state._states == _states) && (state._config == _config) && (crc == crc32(state, sizeof(state)));
+        }
+
+        operator const uint8_t *() const {
+            return reinterpret_cast<const uint8_t *>(this);
+        }
+
+        operator uint8_t *() {
+            return reinterpret_cast<uint8_t *>(this);
+        }
+
+        constexpr size_t size() const {
+            return sizeof(*this);
         }
 
     private:
-        const uint8_t *getData() const {
-            return reinterpret_cast<const uint8_t *>(&_states);
+        inline uint32_t _stateMask(int index) const {
+            return 1 << index;
         }
 
-        uint8_t *getData() {
-            return reinterpret_cast<uint8_t *>(&_states);
+        inline uint32_t _configMask(int index) const {
+            return 3 << (1 << index);
         }
 
-        size_t length() const {
-            return sizeof(_states);
+        inline uint32_t _configShift(int index) const {
+            return index << 1;
+
         }
 
     private:
-        uint32_t _states;
+        uint32_t _states: 12;   // 1 bit per channel
+        uint32_t _config: 24;   // 2 bits per channel
     };
 
     class ChannelName {
@@ -148,13 +159,21 @@ public:
     virtual void onConnect() override;
     virtual void onMessage(const char *topic, const char *payload, size_t len) override;
 
+    String _formatTopic(uint8_t channel, bool state) const;
+
+#if IOT_SWITCH_STORE_STATES_RTC_MEM
+public:
+    static void _rtcMemStoreState();
+    static void _rtcMemLoadState();
+#endif
+
 private:
     void _publishState(int8_t channel = -1);
 
 #if IOT_SWITCH_PUBLISH_MQTT_INTERVAL
     Event::Timer _updateTimer;
 #endif
-#if IOT_SWITCH_STORE_STATES
+#if IOT_SWITCH_STORE_STATES_FS
     Event::Timer _delayedWrite;
 #endif
 
@@ -166,13 +185,19 @@ private:
     void _writeStatesDelayed();
     void _writeStatesNow();
 
-private:
-    using SwitchConfig = KFCConfigurationClasses::Plugins::IOTSwitch::SwitchConfig;
-    using SwitchStateEnum = KFCConfigurationClasses::Plugins::IOTSwitch::StateEnum;
-    using WebUIEnum = KFCConfigurationClasses::Plugins::IOTSwitch::WebUIEnum;
+    static constexpr uint8_t _channelPinValue(bool state) {
+        return state ? IOT_SWITCH_ON_STATE : !IOT_SWITCH_ON_STATE;
+    }
 
+private:
     std::array<ChannelName, IOT_SWITCH_CHANNEL_NUM> _names;
     std::array<SwitchConfig, IOT_SWITCH_CHANNEL_NUM> _configs;
-    States _states;
-    const std::array<uint8_t, IOT_SWITCH_CHANNEL_NUM> _pins;
+#if IOT_SWITCH_STORE_STATES_RTC_MEM
+    static PinArrayType &_pins;
+    static States &_states;
+#else
+    static PinArrayType _pins;
+    static States _states;
+#endif
+    static bool _statesInitialized;
 };

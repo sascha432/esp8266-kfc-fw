@@ -353,11 +353,17 @@ public:
     inline size_t write(const char *data, size_t len) {
         return write(reinterpret_cast<const uint8_t *>(data), len);
     }
+
     inline size_t write(const __FlashStringHelper *data, size_t len) {
         return write_P(reinterpret_cast<PGM_P>(data), len);
     }
+
     inline size_t write(const String &str) {
         return write(str.c_str(), str.length());
+    }
+
+    inline size_t writeString(const String &str) {
+        return write(str);
     }
 
     // read one byte and remove it from the buffer

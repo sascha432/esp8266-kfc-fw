@@ -22,6 +22,26 @@
 
 using KFCConfigurationClasses::Plugins;
 
+#if IOT_SWITCH_STORE_STATES_RTC_MEM
+
+    // static variables are initialized in preinit() / _rtcMemLoadState()
+    // all global variables used in preinit() must be initialized in the correct order manually
+    // cores/esp8266/core_esp8266_main.cpp do_global_ctors() is called after preinit() and ctors must not initialize the object
+
+    static stdex::UninitializedClass<SwitchPlugin::PinArrayType> pinsNoInit __attribute__((section(".noinit")));
+    static stdex::UninitializedClass<SwitchPlugin::States> statesNoInit __attribute__((section(".noinit")));
+    SwitchPlugin::PinArrayType &SwitchPlugin::_pins = pinsNoInit._object;
+    SwitchPlugin::States &SwitchPlugin::_states = statesNoInit._object;
+    bool SwitchPlugin::_statesInitialized __attribute__((section(".noinit")));
+
+#else
+
+    SwitchPlugin::States SwitchPlugin::_states;
+    bool SwitchPlugin::_statesInitialized = false;
+    SwitchPlugin::PinArrayType SwitchPlugin::_pins = { IOT_SWITCH_CHANNEL_PINS };
+
+#endif
+
 SwitchPlugin plugin;
 
 PROGMEM_DEFINE_PLUGIN_OPTIONS(
@@ -32,7 +52,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     "switch",           // config_forms
     "",                 // reconfigure_dependencies
     PluginComponent::PriorityType::SWITCH,
-    PluginComponent::RTCMemoryId::NONE,
+    PluginComponent::RTCMemoryId::SWITCH,
     static_cast<uint8_t>(PluginComponent::MenuType::AUTO),
     false,              // allow_safe_mode
     false,              // setup_after_deep_sleep
@@ -46,8 +66,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
 
 SwitchPlugin::SwitchPlugin() :
     PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(SwitchPlugin)),
-    MQTTComponent(ComponentType::SWITCH),
-    _pins({IOT_SWITCH_CHANNEL_PINS})
+    MQTTComponent(ComponentType::SWITCH)
 {
     REGISTER_PLUGIN(this, "SwitchPlugin");
 }
@@ -57,11 +76,20 @@ void SwitchPlugin::setup(SetupModeType mode, const PluginComponents::Dependencie
     _readConfig();
     _readStates();
     for (uint8_t i = 0; i < _pins.size(); i++) {
-        if (_configs[i].getState() == SwitchStateEnum::RESTORE) {
-            _setChannel(i, _states[i]);
-        }
-        else {
-            _setChannel(i, static_cast<bool>(_configs[i].getState()));
+        auto config = _configs[i].getState();
+        _states.setConfig(i, config);
+        switch(config) {
+            case SwitchStateEnum::RESTORE:
+                _setChannel(i, _states[i]);
+                break;
+            case SwitchStateEnum::ON:
+                _setChannel(i, true);
+                break;
+            case SwitchStateEnum::OFF:
+                _setChannel(i, false);
+                break;
+            case SwitchStateEnum::MAX:
+                break;
         }
         pinMode(_pins[i], OUTPUT);
     }
@@ -90,7 +118,7 @@ void SwitchPlugin::shutdown()
 #if IOT_SWITCH_PUBLISH_MQTT_INTERVAL
     _updateTimer.remove();
 #endif
-#if IOT_SWITCH_STORE_STATES
+#if IOT_SWITCH_STORE_STATES_FS
     if (_delayedWrite) {
         // stop timer
         _delayedWrite.remove();
@@ -153,11 +181,12 @@ void SwitchPlugin::createConfigureForm(FormCallbackType type, const String &form
 
         form.add(F_VAR(name, i), _names[i]);
         form.addFormUI(F("Name"));
+        _configs[i]._data.addRangeValidatorFor_length(form);
 
-        form.addObjectGetterSetter(F_VAR(state, i), _configs[i], _configs[i].get_bits__state, _configs[i].set_bits__state);
+        form.addObjectGetterSetter(F_VAR(state, i), FormGetterSetter(_configs[i]._data, state));
         form.addFormUI(F("Default State"), states);
 
-        form.addObjectGetterSetter(F_VAR(webui, i), _configs[i], _configs[i].get_bits__webUI, _configs[i].set_bits__webUI);
+        form.addObjectGetterSetter(F_VAR(webui, i), FormGetterSetter(_configs[i]._data, webUI));
         form.addFormUI(F("WebUI"), webUI);
 
         group.end();
@@ -215,8 +244,8 @@ MQTT::AutoDiscovery::EntityPtr SwitchPlugin::getAutoDiscovery(MQTT::FormatType f
         return discovery;
     }
     discovery->addName(_names[num].toString(num));
-    discovery->addStateTopic(MQTTClient::formatTopic(channel, FSPGM(_state)));
-    discovery->addCommandTopic(MQTTClient::formatTopic(channel, FSPGM(_set)));
+    discovery->addStateTopic(_formatTopic(num, true));
+    discovery->addCommandTopic(_formatTopic(num, false));
     return discovery;
 }
 
@@ -229,7 +258,7 @@ void SwitchPlugin::onConnect()
 {
     // subscribe to all channels
     for (uint8_t i = 0; i < _pins.size(); i++) {
-        subscribe(MQTT::Client::formatTopic(PrintString(FSPGM(channel__u), i), FSPGM(_set)));
+        subscribe(_formatTopic(i, false));
     }
     _publishState();
 }
@@ -248,17 +277,69 @@ void SwitchPlugin::onMessage(const char *topic, const char *payload, size_t len)
     }
 }
 
+String SwitchPlugin::_formatTopic(uint8_t num, bool state) const
+{
+    return MQTTClient::formatTopic(PrintString(FSPGM(channel__u), num), state ? FSPGM(_state) : FSPGM(_set));
+}
+
+#if IOT_SWITCH_STORE_STATES_RTC_MEM
+
+void SwitchPlugin::_rtcMemStoreState()
+{
+    if (!_statesInitialized) {
+        return;
+    }
+    if (!RTCMemoryManager::write(RTCMemoryManager::RTCMemoryId::SWITCH, _states, _states.size())) {
+        __LDBG_printf("failed to store states in RTC memory");
+    }
+}
+
+void SwitchPlugin::_rtcMemLoadState()
+{
+    static const uint8_t pins[] PROGMEM = { IOT_SWITCH_CHANNEL_PINS };
+
+    _statesInitialized = false;
+    pinsNoInit.init();
+    memcpy_P(_pins.data(), pins, sizeof(_pins));
+    statesNoInit.init();
+
+    States states;
+    if (RTCMemoryManager::read(RTCMemoryManager::RTCMemoryId::SWITCH, states, states.size()) == states.size()) {
+        _statesInitialized = true;
+        _states = states;
+        for (uint8_t i = 0; i < _pins.size(); i++) {
+#if DEBUG_IOT_SWITCH
+            ::printf(PSTR("_rtcMemLoadState: pin=%u state=%u\n"), _pins[i], _states[i]);
+#endif
+            digitalWrite(_pins[i], _channelPinValue(_states[i]));
+            pinMode(_pins[i], OUTPUT);
+        }
+    }
+    else {
+#if DEBUG_IOT_SWITCH
+        ::printf(PSTR("_rtcMemLoadState: failed to read states from RTC memory\n"));
+#endif
+        // __LDBG_printf("failed to read states from RTC memory");
+    }
+}
+
+void SwitchPlugin_rtcMemLoadState()
+{
+    SwitchPlugin::_rtcMemLoadState();
+}
+#endif
+
 void SwitchPlugin::_setChannel(uint8_t channel, bool state)
 {
     __LDBG_printf("channel=%u state=%u", channel, state);
-    digitalWrite(_pins[channel], state ? IOT_SWITCH_ON_STATE : !IOT_SWITCH_ON_STATE);
+    digitalWrite(_pins[channel], _channelPinValue(state));
     _states.setState(channel, state);
     _writeStatesDelayed();
 }
 
 bool SwitchPlugin::_getChannel(uint8_t channel) const
 {
-    return (digitalRead(_pins[channel]) == IOT_SWITCH_ON_STATE);
+    return (digitalRead(_pins[channel]) == _channelPinValue(true));
 }
 
 void SwitchPlugin::_readConfig()
@@ -268,20 +349,34 @@ void SwitchPlugin::_readConfig()
 
 void SwitchPlugin::_readStates()
 {
-#if IOT_SWITCH_STORE_STATES
-    auto file = KFCFS.open(FSPGM(iot_switch_states_file, "/.pvt/switch.states"), fs::FileOpenMode::read);
-    if (!file || !_states.read(file)) {
-        // reset on read error
-        _states = States();
-    }
-#endif
+    #if IOT_SWITCH_STORE_STATES_RTC_MEM
+        if (_statesInitialized) {
+            return;
+        }
+    #endif
+    #if IOT_SWITCH_STORE_STATES_FS
+        auto file = KFCFS.open(FSPGM(iot_switch_states_file, "/.pvt/switch.states"), fs::FileOpenMode::read);
+        if (!file || !_states.read(file)) {
+            // reset on read error
+            _states = States();
+        }
+        uint32_t crc = ~0U;
+        if ((static_cast<size_t>(file.read(reinterpret_cast<uint8_t *>(&crc), sizeof(crc))) != sizeof(crc)) || (crc != crc32(_states, sizeof(_states)))) {
+            __LDBG_printf("invalid stored=0x%08x crc=0x%08x", crc, crc32(_states, sizeof(_states)));
+            _states = States();
+        }
+    #endif
     __LDBG_printf("states=%s", _states.toString().c_str());
+    _statesInitialized = true;
 }
 
 void SwitchPlugin::_writeStatesDelayed()
 {
     __LDBG_printf("states=%s", _states.toString().c_str());
-#if IOT_SWITCH_STORE_STATES
+#if IOT_SWITCH_STORE_STATES_RTC_MEM
+    _rtcMemStoreState();
+#endif
+#if IOT_SWITCH_STORE_STATES_FS
     _Timer(_delayedWrite).add(IOT_SWITCH_STORE_STATES_WRITE_DELAY, false, [this](Event::CallbackTimerPtr) {
         __LDBG_printf("delayed write states=%s", _states.toString().c_str());
         _writeStatesNow();
@@ -292,10 +387,17 @@ void SwitchPlugin::_writeStatesDelayed()
 void SwitchPlugin::_writeStatesNow()
 {
     __LDBG_printf("states=%s", _states.toString().c_str());
-    auto file = KFCFS.open(FSPGM(iot_switch_states_file), fs::FileOpenMode::write);
+    auto file = KFCFS.open(FSPGM(iot_switch_states_file), fs::FileOpenMode::read);
+    if (file && _states.compare(file)) {
+        __LDBG_printf("write skipped no changes");
+        return;
+    }
+    file = KFCFS.open(FSPGM(iot_switch_states_file), fs::FileOpenMode::write);
     if (file && !_states.write(file)) {
         __LDBG_printf("failed to write states");
     }
+    uint32_t crc = crc32(_states, sizeof(_states));
+    file.write(reinterpret_cast<uint8_t *>(&crc), sizeof(crc));
 }
 
 void SwitchPlugin::_publishState(int8_t channel)
@@ -304,7 +406,7 @@ void SwitchPlugin::_publishState(int8_t channel)
         for (uint8_t i = 0; i < _pins.size(); i++) {
             if (channel == -1 || static_cast<uint8_t>(channel) == i) {
                 __LDBG_printf("pin=%u state=%u", _pins[i], _getChannel(i));
-                publish(MQTT::Client::formatTopic(PrintString(FSPGM(channel__u), i), FSPGM(_state)), true, MQTT::Client::toBoolOnOff(_getChannel(i)));
+                publish(_formatTopic(i, true), true, MQTT::Client::toBoolOnOff(_getChannel(i)));
             }
         }
     }

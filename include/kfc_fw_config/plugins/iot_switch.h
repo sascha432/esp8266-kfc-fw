@@ -8,42 +8,86 @@
         // --------------------------------------------------------------------
         // IOT Switch
 
+        #define IOT_SWITCH_NO_DECL
+        #include "../src/plugins/switch/switch_def.h"
+        #undef IOT_SWITCH_NO_DECL
+
         class IOTSwitch {
         public:
             enum class StateEnum : uint8_t {
                 OFF =       0x00,
                 ON =        0x01,
                 RESTORE =   0x02,
+                MAX
             };
+
             enum class WebUIEnum : uint8_t {
                 NONE =      0x00,
                 HIDE =      0x01,
                 NEW_ROW =   0x02,
                 TOP =       0x03,
+                MAX
             };
             struct __attribute__packed__ SwitchConfig {
                 using Type = SwitchConfig;
 
+                struct __attribute__packed__ DataType {
+                    using Type = DataType;
+
+                    CREATE_UINT8_BITFIELD_MIN_MAX(length, 8, 0, 31, 0, 1);
+                    CREATE_ENUM_D_BITFIELD(state, StateEnum, StateEnum::OFF);
+                    CREATE_ENUM_D_BITFIELD(webUI, WebUIEnum, WebUIEnum::NONE);
+
+                    DataType() : length(kDefaultValueFor_length), state(kDefaultValueFor_state), webUI(kDefaultValueFor_webUI) {}
+                    DataType(const String &_name, StateEnum _state, WebUIEnum _webUI) : length(_name.length()), state(static_cast<uint8_t>(_state)), webUI(static_cast<uint8_t>(_webUI)) {}
+
+                } _data;
+
                 void setLength(size_t length) {
-                    _length = length;
+                    _data.length = length;
                 }
+
+                size_t getNameLength() const {
+                    return _data.length;
+                }
+
                 size_t getLength() const {
-                    return _length;
+                    return getNameLength();
                 }
+
+                SwitchConfig &operator =(const String &name) {
+                    _data.length = name.length();
+                    return *this;
+                }
+
+                SwitchConfig &operator =(StateEnum state) {
+                    _data.state = static_cast<uint8_t>(state);
+                    return *this;
+                }
+
+                SwitchConfig &operator =(WebUIEnum webUI) {
+                    _data.webUI = static_cast<uint8_t>(webUI);
+                    return *this;
+                }
+
                 void setState(StateEnum state) {
-                    _state = static_cast<uint8_t>(state);
+                    _data.state = static_cast<uint8_t>(state);
                 }
+
                 StateEnum getState() const {
-                    return static_cast<StateEnum>(_state);
+                    return static_cast<StateEnum>(_data.state);
                 }
+
                 void setWebUI(WebUIEnum webUI) {
-                    _webUI = static_cast<uint8_t>(webUI);
+                    _data.webUI = static_cast<uint8_t>(webUI);
                 }
+
                 WebUIEnum getWebUI() const {
-                    return static_cast<WebUIEnum>(_webUI);
+                    return static_cast<WebUIEnum>(_data.webUI);
                 }
+
                 WebUINS::NamePositionType getWebUINamePosition() const {
-                    switch(static_cast<WebUIEnum>(_webUI)) {
+                    switch(static_cast<WebUIEnum>(_data.webUI)) {
                         case WebUIEnum::TOP:
                         case WebUIEnum::NEW_ROW:
                             return WebUINS::NamePositionType::TOP;
@@ -53,22 +97,30 @@
                     return WebUINS::NamePositionType::SHOW;
                 }
 
-                SwitchConfig() : _length(0), _state(0), _webUI(0) {}
-                SwitchConfig(const String &name, StateEnum state, WebUIEnum webUI) : _length(name.length()), _state(static_cast<uint8_t>(state)), _webUI(static_cast<uint8_t>(webUI)) {}
+                DataType data() const {
+                    return _data;
+                }
 
-                CREATE_UINT8_BITFIELD(_length, 8);
-                CREATE_UINT8_BITFIELD(_state, 4);
-                CREATE_UINT8_BITFIELD(_webUI, 4);
+                DataType &data() {
+                    return _data;
+                }
+
+                static constexpr size_t size() {
+                    return sizeof(DataType);
+                }
+
+                SwitchConfig() : _data() {}
+                SwitchConfig(const String &name, StateEnum state, WebUIEnum webUI) : _data(name, state, webUI) {}
             };
 
             static const uint8_t *getConfig(uint16_t &length);
             static void setConfig(const uint8_t *buf, size_t size);
 
             // T = std::array<String, N>, R = std::array<SwitchConfig, N>
-            template <class T, class R>
-            static void getConfig(T &names, R &configs) {
-                names = {};
-                configs = {};
+            template <class _List, class _Array>
+            static void getConfig(_List &names, _Array &configs) {
+                names = _List();
+                configs = _Array();
                 uint16_t length = 0;
                 auto ptr = getConfig(length);
 #if DEBUG_IOT_SWITCH
@@ -77,24 +129,32 @@
                 if (ptr) {
                     uint8_t i = 0;
                     auto endPtr = ptr + length;
-                    while(ptr + sizeof(SwitchConfig) <= endPtr && i < names.size()) {
-                        configs[i] = *reinterpret_cast<SwitchConfig *>(const_cast<uint8_t *>(ptr));
-                        ptr += sizeof(SwitchConfig);
-                        if (ptr + configs[i].getLength() <= endPtr) {
-                            names[i] = PrintString(ptr, configs[i].getLength());
+                    while(ptr + SwitchConfig::size() < endPtr && i < names.size()) {
+                        memcpy(&configs[i].data(), ptr, configs[i].size());
+                        ::printf("ptr=%p endPtr=%p i=%u sz=%u namelen=%u\n", ptr, endPtr, i, names.size(), configs[i].getNameLength());
+                        ptr += configs[i].size();
+                        auto len = configs[i].getNameLength();
+                        if (ptr + len < endPtr) {
+                            names[i] = PrintString(ptr, len);
                         }
-                        ptr += configs[i++].getLength();
+                        else {
+                            // invalid data, remove name
+                            names[i] = String();
+                            configs[i] = names[i];
+                        }
+                        ptr += len;
+                        i++;
                     }
                 }
             }
 
-            template <class T, class R>
-            static void setConfig(const T &names, R &configs) {
+            template <class _List, class _Array>
+            static void setConfig(const _List &names, _Array &configs) {
                 Buffer buffer;
                 for(uint8_t i = 0; i < names.size(); i++) {
-                    configs[i].setLength(names[i].length());
-                    buffer.push_back(configs[i]);
-                    buffer.write(static_cast<const String &>(names[i]));
+                    configs[i] = names[i];
+                    buffer.push_back(configs[i].data());
+                    buffer.writeString(names[i]);
                 }
                 setConfig(buffer.begin(), buffer.length());
 #if DEBUG_IOT_SWITCH

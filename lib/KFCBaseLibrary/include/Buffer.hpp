@@ -105,6 +105,9 @@ inline void Buffer::setBuffer(uint8_t *buffer, size_t size)
 inline size_t Buffer::write(const uint8_t *data, size_t len)
 {
     // __LDBG_printf("len=%d", len);
+    if (!len) {
+        return 0;
+    }
     if (reserve(_length + len)) {
         memmove(_buffer + _length, data, len);
         _length += len;
@@ -116,6 +119,9 @@ inline size_t Buffer::write(const uint8_t *data, size_t len)
 inline size_t Buffer::write_P(PGM_P data, size_t len)
 {
     // __LDBG_printf("len=%d", len);
+    if (!len) {
+        return 0;
+    }
     if (reserve(_length + len)) {
         memcpy_P(_buffer + _length, data, len);
         _length += len;

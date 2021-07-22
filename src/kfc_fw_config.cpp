@@ -25,8 +25,11 @@
 #include <Form/Types.h>
 #include <NeoPixelEx.h>
 #include "deep_sleep.h"
-#include "../src/plugins/plugins.h"
 #include "PinMonitor.h"
+#include "../src/plugins/plugins.h"
+#if IOT_SWITCH
+#include "../src/plugins/switch/switch.h"
+#endif
 
 #if defined(ESP8266)
 #include <sntp.h>
@@ -1163,12 +1166,18 @@ extern "C" void ClockPluginClearPixels();
 
 static void invoke_ESP_restart()
 {
-#if IOT_LED_MATRIX_OUTPUT_PIN
-    ClockPluginClearPixels();
-#endif
-#if __LED_BUILTIN == NEOPIXEL_PIN_ID
-    BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::OFF);
-#endif
+    #if IOT_LED_MATRIX_OUTPUT_PIN
+        ClockPluginClearPixels();
+    #endif
+    #if __LED_BUILTIN == NEOPIXEL_PIN_ID
+        BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::OFF);
+    #endif
+    #if IOT_SWITCH && IOT_SWITCH_STORE_STATES_RTC_MEM
+        SwitchPlugin::_rtcMemStoreState();
+    #endif
+    #if RTC_SUPPORT == 0
+        RTCMemoryManager::storeTime();
+    #endif
     ESP.restart();
 }
 
@@ -1187,21 +1196,18 @@ void KFCFWConfiguration::resetDevice(bool safeMode)
 
     SaveCrash::removeCrashCounterAndSafeMode();
     resetDetector.setSafeMode(safeMode);
-#if ENABLE_DEEP_SLEEP
-    DeepSleep::DeepSleepParam::reset();
-#endif
-#if RTC_SUPPORT == 0
-    RTCMemoryManager::storeTime();
-#endif
+    #if ENABLE_DEEP_SLEEP
+        DeepSleep::DeepSleepParam::reset();
+    #endif
     invoke_ESP_restart();
 }
 
 // enable debugging output (::printf) for shutdown sequence
 #define DEBUG_SHUTDOWN_SEQUENCE DEBUG
 #if DEBUG_SHUTDOWN_SEQUENCE
-#define _DPRINTF(msg, ...) ::printf(PSTR(msg "\n"), ##__VA_ARGS__)
+#   define _DPRINTF(msg, ...) ::printf(PSTR(msg "\n"), ##__VA_ARGS__)
 #else
-#define _DPRINTF(...)
+#   define _DPRINTF(...)
 #endif
 
 
@@ -1220,23 +1226,23 @@ void KFCFWConfiguration::restartDevice(bool safeMode)
 
     SaveCrash::removeCrashCounterAndSafeMode();
     resetDetector.setSafeMode(safeMode);
-#if ENABLE_DEEP_SLEEP
-    DeepSleep::DeepSleepParam::reset();
-#endif
+    #if ENABLE_DEEP_SLEEP
+        DeepSleep::DeepSleepParam::reset();
+    #endif
     if (_safeMode) {
-#if DEBUG_SHUTDOWN_SEQUENCE
-    _DPRINTF("safe mode: invoking restart");
-#endif
+        #if DEBUG_SHUTDOWN_SEQUENCE
+            _DPRINTF("safe mode: invoking restart");
+        #endif
         invoke_ESP_restart();
     }
 
     // clear queue silently
     ADCManager::terminate(false);
 
-#if HTTP2SERIAL_SUPPORT
-    _DPRINTF("terminating http2serial instance");
-    Http2Serial::destroyInstance();
-#endif
+    #if HTTP2SERIAL_SUPPORT
+        _DPRINTF("terminating http2serial instance");
+        Http2Serial::destroyInstance();
+    #endif
 
     _DPRINTF("scheduled tasks %u, WiFi callbacks %u, Loop Functions %u", _Scheduler.size(), WiFiCallbacks::getVector().size(), LoopFunctions::size());
 
@@ -1257,35 +1263,35 @@ void KFCFWConfiguration::restartDevice(bool safeMode)
 
     _DPRINTF("scheduled tasks %u, WiFi callbacks %u, Loop Functions %u", _Scheduler.size(), WiFiCallbacks::getVector().size(), LoopFunctions::size());
 
-#if PIN_MONITOR
-    _DPRINTF("terminating pin monitor");
-    PinMonitor::pinMonitor.end();
-#endif
+    #if PIN_MONITOR
+        _DPRINTF("terminating pin monitor");
+        PinMonitor::pinMonitor.end();
+    #endif
 
     _DPRINTF("terminating serial handlers");
     serialHandler.end();
-#if DEBUG
-    debugStreamWrapper.clear();
-#endif
+    #if DEBUG
+        debugStreamWrapper.clear();
+    #endif
 
-#if DEBUG_SHUTDOWN_SEQUENCE
-    _DPRINTF("clearing wifi callbacks");
-#endif
-    WiFiCallbacks::clear();
+    #if DEBUG_SHUTDOWN_SEQUENCE
+        _DPRINTF("clearing wifi callbacks");
+    #endif
+        WiFiCallbacks::clear();
 
-#if DEBUG_SHUTDOWN_SEQUENCE
-    _DPRINTF("clearing loop functions");
-#endif
-    LoopFunctions::clear();
+    #if DEBUG_SHUTDOWN_SEQUENCE
+        _DPRINTF("clearing loop functions");
+    #endif
+        LoopFunctions::clear();
 
-#if DEBUG_SHUTDOWN_SEQUENCE
-    _DPRINTF("terminating event scheduler");
-#endif
-    __Scheduler.end();
+    #if DEBUG_SHUTDOWN_SEQUENCE
+        _DPRINTF("terminating event scheduler");
+    #endif
+        __Scheduler.end();
 
-#if DEBUG_SHUTDOWN_SEQUENCE
-    _DPRINTF("invoking restart");
-#endif
+    #if DEBUG_SHUTDOWN_SEQUENCE
+        _DPRINTF("invoking restart");
+    #endif
     invoke_ESP_restart();
 }
 
@@ -1341,8 +1347,10 @@ bool KFCFWConfiguration::reconfigureWiFi(const __FlashStringHelper *msg)
 {
     if (msg) {
         Logger_notice(msg);
-        __DBG_printf("WiFi diagnostics");
-        WiFi.printDiag(DEBUG_OUTPUT);
+        #if DEBUG_KFC_CONFIG
+            __DBG_printf("WiFi diagnostics");
+            WiFi.printDiag(DEBUG_OUTPUT);
+        #endif
     }
     WiFi.persistent(false); // disable storing WiFi config
     WiFi.setAutoConnect(false);
@@ -1368,7 +1376,6 @@ bool KFCFWConfiguration::connectWiFi()
         WiFi.setAutoReconnect(true);
 
         auto network = Network::Settings::getConfig();
-
         bool result;
         if (flags.is_station_mode_dhcp_enabled) {
             result = WiFi.config((uint32_t)0, (uint32_t)0, (uint32_t)0, (uint32_t)0, (uint32_t)0);
@@ -1485,19 +1492,19 @@ bool KFCFWConfiguration::connectWiFi()
         WiFiCallbacks::remove(WiFiCallbacks::EventType::ANY, KFCFWConfiguration::apStandbyModehandler);
     }
 
-#if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID || ENABLE_BOOT_LOG
-    if (!station_mode_success || !ap_mode_success) {
-        BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FAST);
-    }
-#endif
+    #if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID || ENABLE_BOOT_LOG
+        if (!station_mode_success || !ap_mode_success) {
+            BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FAST);
+        }
+    #endif
 
     auto hostname = System::Device::getName();
-#if defined(ESP32)
-    WiFi.setHostname(hostname);
-    WiFi.softAPsetHostname(hostname);
-#elif defined(ESP8266)
-    WiFi.hostname(hostname);
-#endif
+    #if defined(ESP32)
+        WiFi.setHostname(hostname);
+        WiFi.softAPsetHostname(hostname);
+    #elif defined(ESP8266)
+        WiFi.hostname(hostname);
+    #endif
 
     return (station_mode_success && ap_mode_success);
 }

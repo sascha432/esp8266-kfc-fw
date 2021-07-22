@@ -4,9 +4,10 @@
 
 #pragma once
 
+#include <Arduino_compat.h>
+#include <stl_ext/memory>
 #include "plugins.h"
 #include <BootstrapMenu.h>
-#include <stl_ext/memory.h>
 
 struct NavMenu {
     BootstrapMenu::menu_item_id_t home;

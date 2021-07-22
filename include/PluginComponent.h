@@ -73,6 +73,7 @@ namespace PluginComponents {
         CONFIG,
         SERIAL2TCP,
         SAFE_MODE,
+        SWITCH,
         MAX
     };
 
@@ -307,6 +308,8 @@ public:
                 return F("RTC");
             case RTCMemoryId::SAFE_MODE:
                 return F("SAFE_MODE");
+            case RTCMemoryId::SWITCH:
+                return F("SWITCH");
             case RTCMemoryId::NONE:
             case RTCMemoryId::MAX:
                 break;
@@ -432,6 +435,7 @@ public:
     virtual void createWebUI(WebUINS::Root &webUI);
     virtual void getValues(WebUINS::Events &array);
     virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState);
+    virtual bool getValue(const String &id, String &value, bool &state);
 
 #if AT_MODE_SUPPORTED
     // returns array ATModeCommandHelp_t[size] or nullptr for no help

@@ -3,17 +3,19 @@
  */
 
 #include <Arduino_compat.h>
-#include <stl_ext/memory.h>
 #include "reset_detector.h"
 #include <LoopFunctions.h>
 #include <PluginComponent.h>
 #include <plugins_menu.h>
 #include <PrintHtmlEntitiesString.h>
 #include "save_crash.h"
+#if IOT_SWITCH
+#include "../src/plugins/switch/switch_def.h"
+#endif
 
 #undef __LDBG_printf
 #if DEBUG_RESET_DETECTOR
-#define __LDBG_printf(fmt, ...) ::printf_P(PSTR("RD%04u: " fmt "\r\n"), micros() / 1000, ##__VA_ARGS__)
+#define __LDBG_printf(fmt, ...) ::printf_P(PSTR("RD%04u (line %u): " fmt "\r\n"), micros() / 1000, __LINE__, ##__VA_ARGS__)
 #else
 #define __LDBG_printf(...)
 #endif
@@ -64,6 +66,7 @@ void ResetDetector::begin(HardwareSerial *serial, int baud)
         uart_flush(_uart);
         uart_uninit(_uart);
         _uart = nullptr;
+        __LDBG_printf("_uart=%p", _uart);
     }
     __LDBG_printf("serial=%p begin=%u", serial, baud);
     serial->begin(baud);
@@ -71,48 +74,63 @@ void ResetDetector::begin(HardwareSerial *serial, int baud)
 
 void ResetDetector::begin()
 {
-#if DEBUG_RESET_DETECTOR
-    auto oldUart = _uart;
-    __LDBG_printf("rd::begin(), _uart=%p", _uart);
-#endif
+    #if DEBUG_RESET_DETECTOR
+        auto oldUart = _uart;
+        __LDBG_printf("rd::begin(), _uart=%p", _uart);
+    #endif
 
-#if DEBUG_RESET_DETECTOR
-    if (_uart) {
-        __LDBG_printf("begin() called multiple times without end()");
-        end();
-    }
-#endif
-    _uart = uart_init(UART0, 115200, (int) SERIAL_8N1, (int) SERIAL_FULL, 1, 64, false);
-#if DEBUG_RESET_DETECTOR
-    __LDBG_printf("rd::begin() has been called, old_uart=%p _uart=%p", oldUart, _uart);
-#endif
+    #if DEBUG_RESET_DETECTOR
+        if (_uart) {
+            __LDBG_printf("begin() called multiple times without end()");
+            end();
+        }
+    #endif
+        _uart = uart_init(UART0, 115200, (int) SERIAL_8N1, (int) SERIAL_FULL, 1, 64, false);
+    #if DEBUG_RESET_DETECTOR
+        __LDBG_printf("rd::begin() has been called, old_uart=%p _uart=%p", oldUart, _uart);
+    #endif
 
     __LDBG_printf("init reset detector");
 
     _readData();
     ++_data;
 
-#if defined(ESP32)
-    _data.pushReason(esp_reset_reason());
-#elif defined(ESP8266)
-    struct rst_info &resetInfo = *system_get_rst_info();
-    _data.pushReason(resetInfo.reason);
-    __LDBG_printf("depc=%08x epc1=%08x epc2=%08x epc3=%08x exccause=%08x excvaddr=%08x reason=%u", resetInfo.depc, resetInfo.epc1, resetInfo.epc2, resetInfo.epc3, resetInfo.exccause, resetInfo.excvaddr, resetInfo.reason);
-#endif
+    #if defined(ESP32)
+        _data.pushReason(esp_reset_reason());
+    #elif defined(ESP8266)
+        struct rst_info &resetInfo = *system_get_rst_info();
+        _data.pushReason(resetInfo.reason);
+        __LDBG_printf("depc=%08x epc1=%08x epc2=%08x epc3=%08x exccause=%08x excvaddr=%08x reason=%u", resetInfo.depc, resetInfo.epc1, resetInfo.epc2, resetInfo.epc3, resetInfo.exccause, resetInfo.excvaddr, resetInfo.reason);
+
+        #if ENABLE_DEEP_SLEEP == 0
+            __DBG_printf("WIFI mode=%u default=%u", wifi_get_opmode(), wifi_get_opmode_default());
+            if (wifi_get_opmode() != WIFI_OFF) {
+                wifi_set_opmode_current(WIFI_OFF);
+            }
+            if (wifi_get_opmode_default() != WIFI_OFF) {
+                wifi_set_opmode(WIFI_OFF);
+            }
+        #endif
+
+    #endif
     __LDBG_printf("valid=%d safe_mode=%u counter=%u new=%u", !!_storedData, _storedData.isSafeMode(), _storedData.getResetCounter(), _data.getResetCounter());
     __LDBG_printf("info=%s crash=%u reset=%u reboot=%u wakeup=%u",
         getResetInfo().c_str(), hasCrashDetected(), hasResetDetected(), hasRebootDetected(), hasWakeUpDetected()
     );
-#if DEBUG_RESET_DETECTOR
-    __DBG_printf("reason history");
-    for(auto reason: _storedData) {
-        __DBG_printf("%u - %s", reason, getResetReason(reason));
-    }
-    __DBG_printf("%u - %s (recent)", _data.getReason(), getResetReason());
-#endif
+    #if DEBUG_RESET_DETECTOR
+        __DBG_printf("reason history");
+        for(auto reason: _storedData) {
+            __DBG_printf("%u - %s", reason, getResetReason(reason));
+        }
+        __DBG_printf("%u - %s (recent)", _data.getReason(), getResetReason());
+    #endif
 
     _writeData();
     armTimer();
+
+#if IOT_SWITCH && IOT_SWITCH_STORE_STATES_RTC_MEM
+    SwitchPlugin_rtcMemLoadState();
+#endif
 }
 
 const __FlashStringHelper *ResetDetector::getResetReason(uint8_t reason)

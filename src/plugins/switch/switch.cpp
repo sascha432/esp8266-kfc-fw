@@ -181,7 +181,7 @@ void SwitchPlugin::createConfigureForm(FormCallbackType type, const String &form
 
         form.add(F_VAR(name, i), _names[i]);
         form.addFormUI(F("Name"));
-        _configs[i]._data.addRangeValidatorFor_length(form);
+        _configs[i]._data.addRangeValidatorFor_length(form, true);
 
         form.addObjectGetterSetter(F_VAR(state, i), FormGetterSetter(_configs[i]._data, state));
         form.addFormUI(F("Default State"), states);
@@ -331,7 +331,7 @@ void SwitchPlugin_rtcMemLoadState()
 
 void SwitchPlugin::_setChannel(uint8_t channel, bool state)
 {
-    __LDBG_printf("channel=%u state=%u", channel, state);
+    // __LDBG_printf("channel=%u state=%u", channel, state);
     digitalWrite(_pins[channel], _channelPinValue(state));
     _states.setState(channel, state);
     _writeStatesDelayed();
@@ -405,7 +405,7 @@ void SwitchPlugin::_publishState(int8_t channel)
     if (isConnected()) {
         for (uint8_t i = 0; i < _pins.size(); i++) {
             if (channel == -1 || static_cast<uint8_t>(channel) == i) {
-                __LDBG_printf("pin=%u state=%u", _pins[i], _getChannel(i));
+                // __LDBG_printf("pin=%u state=%u", _pins[i], _getChannel(i));
                 publish(_formatTopic(i, true), true, MQTT::Client::toBoolOnOff(_getChannel(i)));
             }
         }
@@ -414,9 +414,11 @@ void SwitchPlugin::_publishState(int8_t channel)
     if (WebUISocket::hasAuthenticatedClients()) {
         WebUINS::Events events;
         for (uint8_t i = 0; i < _pins.size(); i++) {
-            PrintString channel(FSPGM(channel__u), i);
-            __LDBG_printf("channel=%s", channel.c_str());
-            events.append(WebUINS::Values(channel, _getChannel(i) ? 1 : 0, true));
+            if (channel == -1 || static_cast<uint8_t>(channel) == i) {
+                PrintString channel(FSPGM(channel__u), i);
+                // __LDBG_printf("channel=%s", channel.c_str());
+                events.append(WebUINS::Values(channel, _getChannel(i) ? 1 : 0, true));
+            }
         }
         __LDBG_printf("events=%s", events.toString().c_str());
         WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(events));

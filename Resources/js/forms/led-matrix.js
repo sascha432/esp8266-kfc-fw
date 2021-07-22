@@ -2,7 +2,7 @@
  * Author: sascha_lammers@gmx.de
  */
 
-if ($('#collapse-rainbow').length) {
+ $.initFormLedMatrixFunc = function() {
     var items = {
         0: [ 'rb_mul', 'rb_incr', 'rb_min', 'rb_max', 'rb_sp', 'rb_cf', 'rb_mv', 'rb_cre', 'rb_cgr', 'rb_cbl' ],
         1: [ 'rb_bpm', 'rb_hue' ]
@@ -20,4 +20,8 @@ if ($('#collapse-rainbow').length) {
             $('#' + list[i]).closest('.form-group').hide();
         }
     }).trigger('change');
+ };
+
+if ($('#collapse-rainbow').length) {
+    $.initFormLedMatrixFunc();
 }

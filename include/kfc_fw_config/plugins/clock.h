@@ -29,22 +29,28 @@
             };
 
             struct __attribute__packed__ RainbowMultiplier_t {
-                float value;
-                float min;
-                float max;
-                float incr;
-                RainbowMultiplier_t();
-                RainbowMultiplier_t(float value, float min, float max, float incr);
+                using Type = RainbowMultiplier_t;
+                CREATE_FLOAT_FIELD(value, 0.1, 100.0, 0);
+                CREATE_FLOAT_FIELD(min, 0.1, 100.0, 0);
+                CREATE_FLOAT_FIELD(max, 0.1, 100.0, 0);
+                CREATE_FLOAT_FIELD(incr, 0, 0.1, 0);
+                RainbowMultiplier_t(float _value = kDefaultValueFor_value, float _min = kDefaultValueFor_min, float _max = kDefaultValueFor_max, float _incr = kDefaultValueFor_incr) :
+                    value(_value), min(_min), max(_max), incr(_incr)
+                {
+                }
             };
 
             struct __attribute__packed__ RainbowColor_t {
+                using Type = RainbowColor_t;
                 ClockColor_t min;
                 ClockColor_t factor;
-                float red_incr;
-                float green_incr;
-                float blue_incr;
-                RainbowColor_t();
-                RainbowColor_t(uint32_t _min, uint32_t _max, float r, float g, float b);
+                CREATE_FLOAT_FIELD(red_incr, 0, 0.1, 0);
+                CREATE_FLOAT_FIELD(green_incr, 0, 0.1, 0);
+                CREATE_FLOAT_FIELD(blue_incr, 0, 0.1, 0);
+                RainbowColor_t(uint32_t _min = 0, uint32_t _factor = 0xffffff, float _red_incr = kDefaultValueFor_red_incr, float _green_incr = kDefaultValueFor_green_incr, float _blue_incr = kDefaultValueFor_blue_incr) :
+                    min(_min), factor(_factor), red_incr(_red_incr), green_incr(_green_incr), blue_incr(_blue_incr)
+                {
+                }
             };
 
             struct __attribute__packed__ FireAnimation_t {
@@ -57,10 +63,10 @@
                 };
 
                 using Type = FireAnimation_t;
-                uint8_t cooling;
-                uint8_t sparking;
-                uint8_t speed;
-                CREATE_ENUM_BITFIELD(orientation, Orientation);
+                CREATE_UINT8_BITFIELD_MIN_MAX(cooling, 8, 0, 255, 60, 1);
+                CREATE_UINT8_BITFIELD_MIN_MAX(sparking, 8, 0, 255, 95, 1);
+                CREATE_UINT8_BITFIELD_MIN_MAX(speed, 8, 1, 100, 50, 1);
+                CREATE_ENUM_BITFIELD_SIZE_DEFAULT(orientation, 1, Orientation, std::underlying_type<Orientation>::type, uint8, Orientation::VERTICAL);
                 CREATE_BOOL_BITFIELD(invert_direction);
                 ClockColor_t factor;
 
@@ -68,8 +74,15 @@
                     return get_enum_orientation(*this);
                 }
 
-                FireAnimation_t();
-
+                FireAnimation_t() :
+                    cooling(kDefaultValueFor_cooling),
+                    sparking(kDefaultValueFor_sparking),
+                    speed(kDefaultValueFor_speed),
+                    orientation(kDefaultValueFor_orientation),
+                    invert_direction(false),
+                    factor(0xffff00)
+                {
+                }
             };
 
             struct __attribute__packed__ VisualizerAnimation_t {
@@ -104,15 +117,15 @@
                     FLASHING,
                     FADING,
                     FIRE,
-#if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
-                    VISUALIZER,
-#endif
+                    #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
+                        VISUALIZER,
+                    #endif
                     INTERLEAVED,
-#if !IOT_LED_MATRIX
-                    COLON_SOLID,
-                    COLON_BLINK_FAST,
-                    COLON_BLINK_SLOWLY,
-#endif
+                    #if !IOT_LED_MATRIX
+                        COLON_SOLID,
+                        COLON_BLINK_FAST,
+                        COLON_BLINK_SLOWLY,
+                    #endif
                     MAX,
                 };
 
@@ -137,60 +150,64 @@
                 ClockColor_t solid_color;
                 CREATE_ENUM_BITFIELD(animation, AnimationType);
                 CREATE_ENUM_BITFIELD(initial_state, InitialStateType);
-                CREATE_UINT8_BITFIELD(time_format_24h, 1);
-                CREATE_UINT8_BITFIELD(dithering, 1);
-                CREATE_UINT8_BITFIELD(standby_led, 1);
+                CREATE_UINT8_BITFIELD_MIN_MAX(time_format_24h, 1, false, true, true, 1);
+                CREATE_UINT8_BITFIELD_MIN_MAX(dithering, 1, false, true, false, 1);
+                CREATE_UINT8_BITFIELD_MIN_MAX(standby_led, 1, false, true, true, 1);
                 CREATE_UINT8_BITFIELD(enabled, 1);
                 CREATE_UINT32_BITFIELD_MIN_MAX(fading_time, 6, 0, 60, 10, 1);
-#if IOT_CLOCK_HAVE_POWER_LIMIT || IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
-                CREATE_UINT32_BITFIELD_MIN_MAX(power_limit, 8, 0, 255, 0, 1);
-#endif
+                #if IOT_CLOCK_HAVE_POWER_LIMIT || IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
+                    CREATE_UINT32_BITFIELD_MIN_MAX(power_limit, 8, 0, 255, 0, 1);
+                #endif
                 CREATE_UINT32_BITFIELD_MIN_MAX(brightness, 8, 0, 255, 255 / 4, 1);
-                CREATE_INT32_BITFIELD_MIN_MAX(auto_brightness, 11, -1, 1023, -1, 1);
-#if !IOT_LED_MATRIX
-                CREATE_UINT32_BITFIELD_MIN_MAX(blink_colon_speed, 13, 50, 8000, 1000, 100);
-#endif
+                #if !IOT_LED_MATRIX
+                    CREATE_UINT32_BITFIELD_MIN_MAX(blink_colon_speed, 13, 50, 8000, 1000, 100);
+                #endif
                 CREATE_UINT32_BITFIELD_MIN_MAX(flashing_speed, 13, 50, 8000, 150, 100);
-#if IOT_CLOCK_HAVE_MOTION_SENSOR
-                CREATE_UINT32_BITFIELD_MIN_MAX(motion_auto_off, 10, 0, 1000, 0, 1);
-                CREATE_UINT32_BITFIELD_MIN_MAX(motion_trigger_timeout, 8, 1, 240, 15, 1);
-#endif
-#if IOT_LED_MATRIX_FAN_CONTROL
-                CREATE_UINT32_BITFIELD_MIN_MAX(fan_speed, 8, 0, 255, 0, 1);
-                CREATE_UINT32_BITFIELD_MIN_MAX(min_fan_speed, 8, 0, 255, 32, 1);
-                CREATE_UINT32_BITFIELD_MIN_MAX(max_fan_speed, 8, 0, 255, 255, 1);
-#endif
+                #if IOT_CLOCK_HAVE_MOTION_SENSOR
+                    CREATE_UINT32_BITFIELD_MIN_MAX(motion_auto_off, 10, 0, 1000, 0, 1);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(motion_trigger_timeout, 8, 1, 240, 15, 1);
+                #endif
+                #if IOT_LED_MATRIX_FAN_CONTROL
+                    CREATE_UINT32_BITFIELD_MIN_MAX(fan_speed, 8, 0, 255, 0, 1);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(min_fan_speed, 8, 0, 255, 32, 1);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(max_fan_speed, 8, 0, 255, 255, 1);
+                #endif
 
-                static const uint16_t kPowerNumLeds = 256;
+                static constexpr uint16_t kPowerNumLeds = 256;
+                #define kMultiplyNumLeds(value) static_cast<uint16_t>(value * 256)
 
-#if IOT_CLOCK_HAVE_POWER_LIMIT || IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
-                struct __attribute__packed__ {
-                    uint16_t red;
-                    uint16_t green;
-                    uint16_t blue;
-                    uint16_t idle;
-                } power;
-#endif
+                #if IOT_CLOCK_HAVE_POWER_LIMIT || IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
+                    struct __attribute__packed__ PowerType {
+                        using Type = PowerType;
+                        CREATE_UINT16_BITFIELD_MIN_MAX(red, 16, 0, 0xffff, kMultiplyNumLeds(79.7617), 1);
+                        CREATE_UINT16_BITFIELD_MIN_MAX(green, 16, 0, 0xffff, kMultiplyNumLeds(79.9648), 1);
+                        CREATE_UINT16_BITFIELD_MIN_MAX(blue, 16, 0, 0xffff, kMultiplyNumLeds(79.6055), 1);
+                        CREATE_UINT16_BITFIELD_MIN_MAX(idle, 16, 0, 0xffff, kMultiplyNumLeds(4.0586), 1);
+                        PowerType() : red(kDefaultValueFor_red), green(kDefaultValueFor_green), blue(kDefaultValueFor_blue), idle(kDefaultValueFor_idle) {}
+                    } power;
+                #endif
 
-                struct __attribute__packed__ {
-                    struct __attribute__packed__ {
-                        uint8_t min;
-                        uint8_t max;
+                struct __attribute__packed__ ProtectionType {
+                    using Type = ProtectionType;
+                    struct __attribute__packed__ TemperatureReduceRangeType {
+                        using Type = TemperatureReduceRangeType;
+                        CREATE_UINT8_BITFIELD_MIN_MAX(min, 8, 6, 85, 45, 1);
+                        CREATE_UINT8_BITFIELD_MIN_MAX(max, 8, 6, 85, 60, 1);
+                        TemperatureReduceRangeType() : min(kDefaultValueFor_min), max(kDefaultValueFor_max) {}
                     } temperature_reduce_range;
-                    uint8_t max_temperature;
-                    int8_t regulator_margin;
+                    CREATE_UINT8_BITFIELD_MIN_MAX(max_temperature, 8, 6, 105, 70, 1);
+                    CREATE_INT8_BITFIELD_MIN_MAX(regulator_margin, 8, -50, 50, 20, 1);
+                    ProtectionType() : max_temperature(kDefaultValueFor_max_temperature), regulator_margin(kDefaultValueFor_regulator_margin) {}
                 } protection;
 
                 struct __attribute__packed__ RainbowAnimationType {
                     using Type = RainbowAnimationType;
-
                     RainbowMultiplier_t multiplier;
                     RainbowColor_t color;
                     CREATE_ENUM_D_BITFIELD(mode, RainbowMode, RainbowMode::FASTLED);
                     CREATE_UINT32_BITFIELD_MIN_MAX(speed, 14, 0, 16383, 60, 1);
                     CREATE_UINT32_BITFIELD_MIN_MAX(bpm, 8, 0, 255, 10, 1);
                     CREATE_UINT32_BITFIELD_MIN_MAX(hue, 8, 0, 255, 10, 1);
-
                     RainbowAnimationType() :
                         mode(kDefaultValueFor_mode),
                         speed(kDefaultValueFor_speed),
@@ -200,16 +217,20 @@
                     }
                 } rainbow;
 
-                struct __attribute__packed__ {
+                struct __attribute__packed__ AlarmType {
+                    using Type = AlarmType;
                     ClockColor_t color;
-                    uint16_t speed;
+                    CREATE_UINT16_BITFIELD_MIN_MAX(speed, 16, 50, 0xffff, 0, 1);
+                    AlarmType();
                 } alarm;
 
-                typedef struct __attribute__packed__ fading_t {
-                    using Type = fading_t;
-                    CREATE_UINT32_BITFIELD_MIN_MAX(speed, 17, 100, 100000, 1000, 100)
-                    CREATE_UINT32_BITFIELD_MIN_MAX(delay, 12, 0, 3600, 3, 1)
+                typedef struct __attribute__packed__ FadingType {
+                    using Type = FadingType;
+                    CREATE_UINT32_BITFIELD_MIN_MAX(speed, 17, 100, 100000, 1000, 100);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(delay, 12, 0, 3600, 3, 1);
                     ClockColor_t factor;
+                    static constexpr uint32_t kDefaultValueFor_factor = 0xffffff;
+                    FadingType() : speed(kDefaultValueFor_speed), delay(kDefaultValueFor_delay), factor(kDefaultValueFor_factor) {}
                 } fading_t;
                 fading_t fading;
 
@@ -219,10 +240,12 @@
                 VisualizerAnimation_t visualizer;
 #endif
 
-                struct __attribute__packed__ {
-                    uint8_t rows;
-                    uint8_t cols;
-                    uint32_t time;
+                struct __attribute__packed__ InterleavedType {
+                    using Type = InterleavedType;
+                    CREATE_UINT32_BITFIELD_MIN_MAX(time, 32, 0, 0xffffffffU, 60000, 1);
+                    CREATE_UINT8_BITFIELD_MIN_MAX(rows, 8, 0, 0xff, 2, 1);
+                    CREATE_UINT8_BITFIELD_MIN_MAX(cols, 8, 0, 0xff, 0, 1);
+                    InterleavedType() : time(kDefaultValueFor_time), rows(kDefaultValueFor_rows), cols(kDefaultValueFor_cols) {}
                 } interleaved;
 
                 ClockConfig_t();
@@ -253,9 +276,9 @@
                         case AnimationType::SOLID:
                         case AnimationType::FLASHING:
                         case AnimationType::INTERLEAVED:
-#if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
-                        case AnimationType::VISUALIZER:
-#endif
+                        #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
+                            case AnimationType::VISUALIZER:
+                        #endif
                             return true;
                         default:
                             break;

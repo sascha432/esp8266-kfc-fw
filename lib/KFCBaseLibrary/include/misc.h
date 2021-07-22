@@ -48,6 +48,34 @@ extern "C" {
 #endif
 
 
+#define MISC_HAVE_INTERRUPT_LOCK 1
+
+#ifdef ESP8266
+#include <interrupts.h>
+using InterruptLock = esp8266::InterruptLock;
+#else
+struct InterruptLock {
+    constexpr uint32_t savedInterruptLevel() const {
+        return 0;
+    }
+};
+#endif
+
+// increment a counter and decrement when leaving then scope
+// interrupts are locked while modifying the counter
+template<typename _Ta>
+struct ScopeCounter {
+    _Ta *_ptr;
+    ScopeCounter(_Ta &value) : _ptr(std::addressof(value)) {
+        InterruptLock();
+        *_ptr++;
+    }
+    ~ScopeCounter() {
+        InterruptLock();
+        *_ptr--;
+    }
+};
+
 //class String;
 using StringVector = std::vector<String>;
 
@@ -538,6 +566,12 @@ inline uint32_t createIPv4Address(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
         obj.name = value; \
     } \
     inline static type get_##prefix##_##name(const Type &obj) { \
+        return obj.name; \
+    } \
+    inline static void set_##prefix##s_##name(Type &obj, type value) { \
+        obj.name = value; \
+    } \
+    inline static type get_##prefix##s_##name(const Type &obj) { \
         return obj.name; \
     } \
     inline void _set_##name(type value) { \

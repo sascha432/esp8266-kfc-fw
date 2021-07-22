@@ -17,68 +17,62 @@
 
 namespace KFCConfigurationClasses {
 
-#if IOT_LED_MATRIX
-    Plugins::ClockConfig::RainbowMultiplier_t::RainbowMultiplier_t() :
-        value(1.23),
-        min(2.5),
-        max(11.0),
-        incr(0.00326)
-    {
-    }
-#else
-    Plugins::ClockConfig::RainbowMultiplier_t::RainbowMultiplier_t() :
-        value(5.23),
-        min(0),
-        max(0),
-        incr(0)
-    {
-    }
-#endif
+// #if IOT_LED_MATRIX
+//     Plugins::ClockConfig::RainbowMultiplier_t::RainbowMultiplier_t() :
+//         value(1.23),
+//         min(2.5),
+//         max(11.0),
+//         incr(0.00326)
+//     {
+//     }
+// #else
+//     Plugins::ClockConfig::RainbowMultiplier_t::RainbowMultiplier_t() :
+//         value(5.23),
+//         min(0),
+//         max(0),
+//         incr(0)
+//     {
+//     }
+// #endif
 
-    Plugins::ClockConfig::RainbowMultiplier_t::RainbowMultiplier_t(float a, float b, float c, float d) :
-        value(a),
-        min(b),
-        max(c),
-        incr(d)
-    {
-    }
+    // Plugins::ClockConfig::RainbowMultiplier_t::RainbowMultiplier_t(float a, float b, float c, float d) :
+    //     value(a),
+    //     min(b),
+    //     max(c),
+    //     incr(d)
+    // {
+    // }
 
-#if IOT_LED_MATRIX
-    Plugins::ClockConfig::RainbowColor_t::RainbowColor_t() :
-        min(0x000000),
-        factor(0xffffff),
-        red_incr(0.1),
-        green_incr(0.25),
-        blue_incr(0.125)
-    {
-    }
-#else
-    Plugins::ClockConfig::RainbowColor_t::RainbowColor_t() :
-        min(0x000000),
-        factor(0xffffff),
-        red_incr(0),
-        green_incr(0),
-        blue_incr(0)
-    {
-    }
-#endif
+// #if IOT_LED_MATRIX
+//     Plugins::ClockConfig::RainbowColor_t::RainbowColor_t() :
+//         min(0x000000),
+//         factor(0xffffff),
+//         red_incr(0.1),
+//         green_incr(0.25),
+//         blue_incr(0.125)
+//     {
+//     }
+// #else
+//     Plugins::ClockConfig::RainbowColor_t::RainbowColor_t() :
+//         min(0x000000),
+//         factor(0xffffff),
+//         red_incr(0),
+//         green_incr(0),
+//         blue_incr(0)
+//     {
+//     }
+// #endif
 
-    Plugins::ClockConfig::RainbowColor_t::RainbowColor_t(uint32_t _min, uint32_t _max, float r, float g, float b) :
-        min(_min),
-        factor(_max),
-        red_incr(r),
-        green_incr(g),
-        blue_incr(b)
-    {
-    }
+    // Plugins::ClockConfig::RainbowColor_t::RainbowColor_t(uint32_t _min, uint32_t _max, float r, float g, float b) :
+    //     min(_min),
+    //     factor(_max),
+    //     red_incr(r),
+    //     green_incr(g),
+    //     blue_incr(b)
+    // {
+    // }
 
-    Plugins::ClockConfig::FireAnimation_t::FireAnimation_t() :
-        cooling(60),
-        sparking(95),
-        speed(50),
-        orientation(cast(Orientation::VERTICAL)),
-        invert_direction(false),
-        factor(0xffff00)
+    Plugins::ClockConfig::ClockConfig_t::AlarmType::AlarmType() : color(IOT_CLOCK_ALARM_COLOR), speed(IOT_CLOCK_ALARM_FLASHING_SPEED)
     {
     }
 
@@ -90,10 +84,10 @@ namespace KFCConfigurationClasses {
 #else
         animation(cast(AnimationType::RAINBOW)),
         initial_state(cast(InitialStateType::ON)),
-        time_format_24h(true),
+        time_format_24h(kDefaultValueFor_time_format_24h),
 #endif
-        dithering(false),
-        standby_led(true),
+        dithering(kDefaultValueFor_dithering),
+        standby_led(kDefaultValueFor_standby_led),
 #if IOT_LED_MATRIX
         enabled(false),
 #else
@@ -104,7 +98,6 @@ namespace KFCConfigurationClasses {
         power_limit(kDefaultValueFor_power_limit),
 #endif
         brightness(kDefaultValueFor_brightness),
-        auto_brightness(kDefaultValueFor_auto_brightness),
 #if !IOT_LED_MATRIX
         blink_colon_speed(kDefaultValueFor_blink_colon_speed),
 #endif
@@ -118,12 +111,7 @@ namespace KFCConfigurationClasses {
         min_fan_speed(kDefaultValueFor_min_fan_speed),
         max_fan_speed(kDefaultValueFor_max_fan_speed),
 #endif
-        power({static_cast<uint16_t>(79.7617 * kPowerNumLeds), static_cast<uint16_t>(79.9648 * kPowerNumLeds), static_cast<uint16_t>(79.6055 * kPowerNumLeds), static_cast<uint16_t>(4.0586 * kPowerNumLeds)}),
-        protection( { { 45, 60 }, 70, 25 } ),
-        alarm{ { IOT_CLOCK_ALARM_COLOR }, IOT_CLOCK_ALARM_FLASHING_SPEED },
-        fading{ fading.kDefaultValueFor_speed, fading.kDefaultValueFor_delay, 0xffffff },
-        fire(),
-        interleaved({ 2, 0, 60000 })
+        power()
     {
     }
 

@@ -10,7 +10,7 @@
 #include <DataProviderInterface.h>
 
 #ifndef DEBUG_SSI_PROXY_STREAM
-#define DEBUG_SSI_PROXY_STREAM                    0
+#   define DEBUG_SSI_PROXY_STREAM 0
 #endif
 
 class SSIProxyStream : public Stream {

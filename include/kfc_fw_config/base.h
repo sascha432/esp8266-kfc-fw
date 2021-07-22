@@ -136,26 +136,27 @@ namespace ConfigurationHelper {
 
 //name, size, type, min_value, max_value, default_value[, step_size]
 #define CREATE_BITFIELD_TYPE_MIN_MAX(name, size, type, min_value, max_value, ...) \
+    using common_type_t_##name = std::common_type_t<type, long>; \
     inline static FormUI::Validator::Range &addRangeValidatorFor_##name(FormUI::Form::BaseForm &form, bool allowZero = false) { \
         form.getLastField().getFormUI()->addItems(FormUI::PlaceHolder(kDefaultValueFor_##name), FormUI::MinMax(kMinValueFor_##name, kMaxValueFor_##name), \
             BOOST_PP_REMOVE_PARENS(BOOST_PP_IF(BOOST_PP_EQUAL(BOOST_PP_VARIADIC_SIZE(__VA_ARGS__),1),(FormUI::Type::NUMBER_RANGE),(FormUI::Attribute(F("step"),BOOST_PP_VARIADIC_ELEM(1,##__VA_ARGS__)),FormUI::Type::NUMBER_RANGE)))); \
-        return form.addValidator(FormUI::Validator::Range(static_cast<long>(kMinValueFor_##name), static_cast<long>(kMaxValueFor_##name), allowZero)); \
+        return form.addValidator(FormUI::Validator::Range(static_cast<common_type_t_##name>(kMinValueFor_##name), static_cast<common_type_t_##name>(kMaxValueFor_##name), allowZero)); \
     } \
     inline static FormUI::Validator::Range &addRangeValidatorFor_##name(const String &message, FormUI::Form::BaseForm &form, bool allowZero = false) { \
         form.getLastField().getFormUI()->addItems(FormUI::PlaceHolder(kDefaultValueFor_##name), FormUI::MinMax(kMinValueFor_##name, kMaxValueFor_##name), \
             BOOST_PP_REMOVE_PARENS(BOOST_PP_IF(BOOST_PP_EQUAL(BOOST_PP_VARIADIC_SIZE(__VA_ARGS__),1),(FormUI::Type::NUMBER_RANGE),(FormUI::Attribute(F("step"),BOOST_PP_VARIADIC_ELEM(1,##__VA_ARGS__)),FormUI::Type::NUMBER_RANGE)))); \
-        return form.addValidator(FormUI::Validator::Range(message, static_cast<long>(kMinValueFor_##name), static_cast<long>(kMaxValueFor_##name), allowZero)); \
+        return form.addValidator(FormUI::Validator::Range(message, static_cast<common_type_t_##name>(kMinValueFor_##name), static_cast<common_type_t_##name>(kMaxValueFor_##name), allowZero)); \
     } \
     static constexpr type kMinValueFor_##name = min_value; \
     static constexpr type kMaxValueFor_##name = max_value; \
     static constexpr type kDefaultValueFor_##name = BOOST_PP_VARIADIC_ELEM(0,##__VA_ARGS__); \
-    static constexpr type kTypeMinValueFor_##name = std::is_signed<type>::value ? -(1U << (size - 1)) + 1 : 0; \
-    static constexpr type kTypeMaxValueFor_##name = std::is_signed<type>::value ? (1U << (size - 1)) - 1 : (1U << size) - 1; \
+    static constexpr type kTypeMinValueFor_##name = std::is_signed<type>::value ? -(1LL << (size - 1)) : 0; \
+    static constexpr type kTypeMaxValueFor_##name = std::is_signed<type>::value ? (1LL << (size - 1)) - 1 : (1ULL << size) - 1; \
     static_assert(min_value >= kTypeMinValueFor_##name && min_value <= kTypeMaxValueFor_##name, "min_value value out of range (" _STRINGIFY(size) " bits)"); \
     static_assert(max_value >= kTypeMinValueFor_##name && max_value <= kTypeMaxValueFor_##name, "max_value value out of range (" _STRINGIFY(size) " bits)"); \
     static_assert(kDefaultValueFor_##name == 0 || (kDefaultValueFor_##name >= kTypeMinValueFor_##name && kDefaultValueFor_##name <= kTypeMaxValueFor_##name), "default_value value out of range"); \
-    static_assert(min_value >= std::numeric_limits<long>::min() && min_value <= std::numeric_limits<long>::max(), "min_value value out of range (type long)"); \
-    static_assert(max_value >= std::numeric_limits<long>::min() && max_value <= std::numeric_limits<long>::max(), "max_value value out of range (type long)"); \
+    static_assert(min_value >= std::numeric_limits<common_type_t_##name>::min() && min_value <= std::numeric_limits<common_type_t_##name>::max(), "min_value value out of range (common_type_t)"); \
+    static_assert(max_value >= std::numeric_limits<common_type_t_##name>::min() && max_value <= std::numeric_limits<common_type_t_##name>::max(), "max_value value out of range (common_type_t)"); \
     CREATE_BITFIELD_TYPE(name, size, type, bits)
 
 #define CREATE_BOOL_BITFIELD_MIN_MAX(name, ...) \
@@ -163,6 +164,9 @@ namespace ConfigurationHelper {
 
 #define CREATE_UINT8_BITFIELD_MIN_MAX(name, size, min_value, max_value, ...) \
     CREATE_BITFIELD_TYPE_MIN_MAX(name, size, uint8_t, min_value, max_value, ##__VA_ARGS__)
+
+#define CREATE_INT8_BITFIELD_MIN_MAX(name, size, min_value, max_value, ...) \
+    CREATE_BITFIELD_TYPE_MIN_MAX(name, size, int8_t, min_value, max_value, ##__VA_ARGS__)
 
 #define CREATE_INT16_BITFIELD_MIN_MAX(name, size, min_value, max_value, ...) \
     CREATE_BITFIELD_TYPE_MIN_MAX(name, size, int16_t, min_value, max_value, ##__VA_ARGS__)

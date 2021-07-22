@@ -8,9 +8,9 @@
         $.webUIComponent.event_handlers.push(function(events) {
             if (handler && events.i == 'animation-1') {
                 try {
-                    console.log(events, handler, events.i);
+                    // console.log(events, handler, events.i);
                     var json = JSON.parse(events.v);
-                    console.log(json);
+                    // console.log(json);
                     handler(json);
                     return true;
                 } catch(e) {
@@ -23,7 +23,7 @@
             var self = this;
             var on_change_animation = function() {
                 var value = parseInt($(this).val());
-                console.log(this, animation_config, value);
+                // console.log(this, animation_config, value);
                 if (value == animation_config) {
                     return;
                 }
@@ -36,32 +36,50 @@
                             dlg.find('.modal-loading').show();
                             dlg.find('.modal-inner-content').hide();
                             var buttons = dlg.find('.btn-primary');
-                            console.log(buttons);
-                            buttons.hide();
-                            $(buttons.get(0)).on('click', function() {
-
+                            var form = dlg.find('form');
+                            form.on('submit', function(event) {
+                                event.preventDefault();
+                                self.socket.send('+set animation-1 ' + $(this).serialize());
                             });
-                            $(buttons.get(1)).on('click', function() {
+                            // console.log(buttons);
+                            buttons.hide();
+                            $(buttons.get(0)).on('click', function(event) {
+                                event.preventDefault();
+                                form.submit();
+                            });
+                            $(buttons.get(1)).on('click', function(event) {
+                                event.preventDefault();
+                                form.submit();
                                 dlg.modal('hide');
                             });
                             handler = function(values) {
                                 handler = null;
-                                $('#rb_mode').val(values.mode);
-                                $('#rb_bpm').val(values.bpm);
-                                $('#rb_hue').val(values.hue);
-                                $('#rb_mul').val(values.mul[0]);
-                                $('#rb_incr').val(values.mul[1]);
-                                $('#rb_min').val(values.mul[2]);
-                                $('#rb_max').val(values.mul[3]);
-                                $('#rb_sp').val(values.speed);
-                                $('#rb_cf').val(values.cf);
-                                $('#rb_mv').val(values.cm);
-                                $('#rb_cre').val(values.ci[0]);
-                                $('#rb_cgr').val(values.ci[1]);
-                                $('#rb_cbl').val(values.ci[2]);
+                                var prefix = values._prefix;
+                                // console.log('values', values);
+                                $.each(values, function(key, val) {
+                                    // console.log('form_var', prefix, key, val)
+                                    if (key.substring(0, 1) != '_') {
+                                        $(prefix + key).val(val);
+                                    }
+                                });
+                                // $('#rb_mode').val(values.mode);
+                                // $('#rb_bpm').val(values.bpm);
+                                // $('#rb_hue').val(values.hue);
+                                // $('#rb_mul').val(values.mul[0]);
+                                // $('#rb_incr').val(values.mul[1]);
+                                // $('#rb_min').val(values.mul[2]);
+                                // $('#rb_max').val(values.mul[3]);
+                                // $('#rb_sp').val(values.speed);
+                                // $('#rb_cf').val(values.cf);
+                                // $('#rb_mv').val(values.cm);
+                                // $('#rb_cre').val(values.ci[0]);
+                                // $('#rb_cgr').val(values.ci[1]);
+                                // $('#rb_cbl').val(values.ci[2]);
                                 dlg.find('.modal-loading').hide();
                                 dlg.find('.modal-inner-content').show();
                                 buttons.show();
+                                $.formInitFunc(dlg);
+                                $.initFormLedMatrixFunc();
                             };
                             self.socket.send('+get animation-1');
                         });

@@ -119,7 +119,7 @@ Stream *StreamWrapper::getInput()
 
 void StreamWrapper::add(Stream *output)
 {
-    esp8266::InterruptLock lock;
+    InterruptLock lock;
     __DSW("add output=%p", output);
     if (std::find(_streams->begin(), _streams->end(), output) != _streams->end()) {
         __DSW("IGNORING DUPLICATE STREAM %p", output);
@@ -130,7 +130,7 @@ void StreamWrapper::add(Stream *output)
 
 void StreamWrapper::remove(Stream *output)
 {
-    esp8266::InterruptLock lock;
+    InterruptLock lock;
     __DSW("remove output=%p", output);
     _streams->erase(std::remove(_streams->begin(), _streams->end(), output), _streams->end());
     if (_streams->empty() || _input == output) {
@@ -140,7 +140,7 @@ void StreamWrapper::remove(Stream *output)
 
 void StreamWrapper::clear()
 {
-    esp8266::InterruptLock lock;
+    InterruptLock lock;
     __DSW("clear");
     _streams->clear();
     setInput(&NullSerial);
@@ -148,7 +148,7 @@ void StreamWrapper::clear()
 
 void StreamWrapper::replaceFirst(Stream *output, Stream *input)
 {
-    esp8266::InterruptLock lock;
+    InterruptLock lock;
     __DSW("output=%p size=%u", output, _streams->size());
     if (_streams->size() > 1) {
         if (_streams->front() == _input) {

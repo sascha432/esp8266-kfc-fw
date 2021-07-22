@@ -647,7 +647,17 @@ inline void BlindsControl::_loadState()
 inline void BlindsControl::_saveState()
 {
 #if IOT_BLINDS_CTRL_SAVE_STATE
-    auto file = KFCFS.open(FSPGM(iot_blinds_control_state_file), fs::FileOpenMode::write);
+    auto file = KFCFS.open(FSPGM(iot_blinds_control_state_file), fs::FileOpenMode::read);
+    if (file) {
+        decltype(_states) states;
+        if (file.read(states, states.sizeInBytes()) == states.sizeInBytes()) {
+            if (memcmp(&states, &_states, sizeof(states)) == 0) {
+                __LDBG_printf("file=%u state=%u,%u skipping save, no changes", (bool)file, _states[0], _states[1]);
+                return;
+            }
+        }
+    }
+    file = KFCFS.open(FSPGM(iot_blinds_control_state_file), fs::FileOpenMode::write);
     if (file) {
         //file.write(reinterpret_cast<const uint8_t *>(_states.data()), _states.size() * sizeof(*_states.data()));
         file.write(_states, _states.sizeInBytes());

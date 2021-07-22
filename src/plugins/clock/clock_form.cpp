@@ -13,7 +13,77 @@
 #include <debug_helper_disable.h>
 #endif
 
-#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
+// #pragma GCC diagnostic ignored "-Waddress-of-packed-member"
+
+void ClockPlugin::_createConfigureFormAniRainbow(FormUI::Form::BaseForm &form, Clock::ConfigType &cfg)
+{
+    using RainbowMode = KFCConfigurationClasses::Plugins::ClockConfig::ClockConfig_t::RainbowMode;
+
+    auto rainbowModeItems = FormUI::Container::List(
+        RainbowMode::INTERNAL, F("Internal"),
+        RainbowMode::FASTLED, F("FastLED")
+    );
+
+    form.addObjectGetterSetter(F("rb_mode"), FormGetterSetter(cfg.rainbow, mode));
+    form.addFormUI(F("Mode"), rainbowModeItems);
+
+    form.addObjectGetterSetter(F("rb_bpm"), FormGetterSetter(cfg.rainbow, bpm));
+    form.addFormUI(F("BPM"));
+    cfg.rainbow.addRangeValidatorFor_bpm(form);
+
+    form.addObjectGetterSetter(F("rb_hue"), FormGetterSetter(cfg.rainbow, hue));
+    form.addFormUI(F("Hue"));
+    cfg.rainbow.addRangeValidatorFor_hue(form);
+
+    form.addObjectGetterSetter(F("rb_mul"), FormGetterSetter(cfg.rainbow.multiplier, value));
+    form.addFormUI(FSPGM(Multiplier));
+    cfg.rainbow.multiplier.addRangeValidatorFor_value(form);
+
+    form.addObjectGetterSetter(F("rb_incr"), FormGetterSetter(cfg.rainbow.multiplier, incr));
+    form.addFormUI(F("Multiplier Increment Per Frame"));
+    cfg.rainbow.multiplier.addRangeValidatorFor_incr(form);
+
+    form.addObjectGetterSetter(F("rb_min"), FormGetterSetter(cfg.rainbow.multiplier, min));
+    form.addFormUI(F("Minimum Multiplier"));
+    cfg.rainbow.multiplier.addRangeValidatorFor_min(form);
+
+    form.addObjectGetterSetter(F("rb_max"), FormGetterSetter(cfg.rainbow.multiplier, max));
+    form.addFormUI(F("Maximum Multiplier"));
+    cfg.rainbow.multiplier.addRangeValidatorFor_max(form);
+
+    form.addObjectGetterSetter(F("rb_sp"), FormGetterSetter(cfg.rainbow, speed));
+    form.addFormUI(F("Animation Speed"));
+    cfg.rainbow.addRangeValidatorFor_speed(form);
+
+    form.add(F("rb_cf"), Color(cfg.rainbow.color.factor.value).toString(), [&cfg](const String &value, FormUI::Field::BaseField &field, bool store) {
+        if (store) {
+            cfg.rainbow.color.factor.value = Color::fromString(value);
+        }
+        return false;
+    });
+    form.addFormUI(F("Color Multiplier"));
+
+    form.add(F("rb_mv"), Color(cfg.rainbow.color.min.value).toString(), [&cfg](const String &value, FormUI::Field::BaseField &field, bool store) {
+        if (store) {
+            cfg.rainbow.color.min.value = Color::fromString(value);
+        }
+        return false;
+    });
+    form.addFormUI(F("Minimum Color Value"));
+
+    form.addObjectGetterSetter(F("rb_cre"), FormGetterSetter(cfg.rainbow.color, red_incr));
+    form.addFormUI(F("Color Increment Per Frame (Red)"));
+    cfg.rainbow.color.addRangeValidatorFor_red_incr(form);
+
+    form.addObjectGetterSetter(F("rb_cgr"), FormGetterSetter(cfg.rainbow.color, green_incr));
+    form.addFormUI(F("Color Increment Per Frame (Green)"));
+    cfg.rainbow.color.addRangeValidatorFor_green_incr(form);
+
+    form.addObjectGetterSetter(F("rb_cbl"), FormGetterSetter(cfg.rainbow.color, blue_incr));
+    form.addFormUI(F("Color Increment Per Frame (Blue)"));
+    cfg.rainbow.color.addRangeValidatorFor_blue_incr(form);
+
+}
 
 void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
 {
@@ -48,12 +118,17 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         AnimationType::INTERLEAVED, F("Interleaved")
     );
 
-    using RainbowMode = KFCConfigurationClasses::Plugins::ClockConfig::ClockConfig_t::RainbowMode;
+    if (formName == F("ani-rb")) {
 
-    auto rainbowModeItems = FormUI::Container::List(
-        RainbowMode::INTERNAL, F("Internal"),
-        RainbowMode::FASTLED, F("FastLED")
-    );
+        auto &ui = form.createWebUI();
+        ui.setTitle(F("Animation"));
+        ui.setContainerId(F("led_matrix_settings"));
+        ui.setStyle(FormUI::WebUI::StyleType::DEFAULT);
+
+        _createConfigureFormAniRainbow(form, cfg);
+
+        return;
+    }
 
     #if IOT_LED_MATRIX
         auto &ui = form.createWebUI();
@@ -92,64 +167,7 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         // --------------------------------------------------------------------
         auto &rainbowGroup = form.addCardGroup(F("rainbow"), F("Rainbow Animation"), true);
 
-        form.addObjectGetterSetter(F("rb_mode"), FormGetterSetter(cfg.rainbow, mode));
-        form.addFormUI(F("Mode"), rainbowModeItems);
-
-        form.addObjectGetterSetter(F("rb_bpm"), FormGetterSetter(cfg.rainbow, bpm));
-        form.addFormUI(F("BPM"));
-        cfg.rainbow.addRangeValidatorFor_bpm(form);
-
-        form.addObjectGetterSetter(F("rb_hue"), FormGetterSetter(cfg.rainbow, hue));
-        form.addFormUI(F("Hue"));
-        cfg.rainbow.addRangeValidatorFor_hue(form);
-
-        form.addPointerTriviallyCopyable(F("rb_mul"), &cfg.rainbow.multiplier.value);
-        form.addFormUI(FSPGM(Multiplier));
-        form.addValidator(FormUI::Validator::Range(0.1f, 100.0f));
-
-        form.addPointerTriviallyCopyable(F("rb_incr"), &cfg.rainbow.multiplier.incr);
-        form.addFormUI(F("Multiplier Increment Per Frame"));
-        form.addValidator(FormUI::Validator::Range(0.0f, 0.1f));
-
-        form.addPointerTriviallyCopyable(F("rb_min"), &cfg.rainbow.multiplier.min);
-        form.addFormUI(F("Minimum Multiplier"));
-        form.addValidator(FormUI::Validator::Range(0.1f, 100.0f));
-
-        form.addPointerTriviallyCopyable(F("rb_max"), &cfg.rainbow.multiplier.max);
-        form.addFormUI(F("Maximum Multiplier"));
-        form.addValidator(FormUI::Validator::Range(0.1f, 100.0f));
-
-        form.addObjectGetterSetter(F("rb_sp"), FormGetterSetter(cfg.rainbow, speed));
-        form.addFormUI(F("Speed"));
-        cfg.rainbow.addRangeValidatorFor_speed(form);
-
-        form.add(F("rb_cf"), Color(cfg.rainbow.color.factor.value).toString(), [&cfg](const String &value, FormUI::Field::BaseField &field, bool store) {
-            if (store) {
-                cfg.rainbow.color.factor.value = Color::fromString(value);
-            }
-            return false;
-        });
-        form.addFormUI(F("Color Multiplier"));
-
-        form.add(F("rb_mv"), Color(cfg.rainbow.color.min.value).toString(), [&cfg](const String &value, FormUI::Field::BaseField &field, bool store) {
-            if (store) {
-                cfg.rainbow.color.min.value = Color::fromString(value);
-            }
-            return false;
-        });
-        form.addFormUI(F("Minimum Color Value"));
-
-        form.addPointerTriviallyCopyable(F("rb_cre"), &cfg.rainbow.color.red_incr);
-        form.addFormUI(F("Color Increment Per Frame (Red)"));
-        form.addValidator(FormUI::Validator::Range(0.0f, 0.1f));
-
-        form.addPointerTriviallyCopyable(F("rb_cgr"), &cfg.rainbow.color.green_incr);
-        form.addFormUI(F("Color Increment Per Frame (Green)"));
-        form.addValidator(FormUI::Validator::Range(0.0f, 0.1f));
-
-        form.addPointerTriviallyCopyable(F("rb_cbl"), &cfg.rainbow.color.blue_incr);
-        form.addFormUI(F("Color Increment Per Frame (Blue)"));
-        form.addValidator(FormUI::Validator::Range(0.0f, 0.1f));
+        _createConfigureFormAniRainbow(form, cfg);
 
         rainbowGroup.end();
 
@@ -181,19 +199,19 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
         auto &fireGroup = form.addCardGroup(F("fire"), F("Fire Animation"), true);
 
-        form.addPointerTriviallyCopyable(F("fic"), &cfg.fire.cooling);
+        form.addObjectGetterSetter(F("fic"), FormGetterSetter(cfg.fire, cooling));
         form.addFormUI(F("Cooling Value:"));
-        form.addValidator(FormUI::Validator::Range(0, 255));
+        cfg.fire.addRangeValidatorFor_cooling(form);
 
-        form.addPointerTriviallyCopyable(F("fis"), &cfg.fire.sparking);
+        form.addObjectGetterSetter(F("fis"), FormGetterSetter(cfg.fire, sparking));
         form.addFormUI(F("Sparking Value"));
-        form.addValidator(FormUI::Validator::Range(0, 255));
+        cfg.fire.addRangeValidatorFor_sparking(form);
 
-        form.addPointerTriviallyCopyable(F("fip"), &cfg.fire.speed);
+        form.addObjectGetterSetter(F("fip"), FormGetterSetter(cfg.fire, speed));
         form.addFormUI(F("Speed"), FormUI::Suffix("milliseconds"));
-        form.addValidator(FormUI::Validator::Range(5, 100));
+        cfg.fire.addRangeValidatorFor_speed(form);
 
-        auto &invertHidden = form.addObjectGetterSetter(F("fiinv"), cfg.fire, cfg.fire.get_bit_invert_direction, cfg.fire.set_bit_invert_direction);
+        auto &invertHidden = form.addObjectGetterSetter(F("fiinv"), FormGetterSetter(cfg.fire, invert_direction));
         form.addFormUI(FormUI::Type::HIDDEN);
 
         auto orientationItems = FormUI::List(
@@ -201,7 +219,7 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
             Plugins::ClockConfig::FireAnimation_t::Orientation::HORIZONTAL, "Horizontal"
         );
 
-        form.addObjectGetterSetter(F("fiori"), cfg.fire, cfg.fire.get_int_orientation, cfg.fire.set_int_orientation);
+        form.addObjectGetterSetter(F("fiori"), FormGetterSetter(cfg.fire, orientation));
         form.addFormUI(F("Orientation"), orientationItems, FormUI::CheckboxButtonSuffix(invertHidden, F("Invert Direction")));
 
         form.add(F("ficf"), Color(cfg.fire.factor.value).toString(), [&cfg](const String &value, FormUI::Field::BaseField &field, bool store) {
@@ -218,15 +236,15 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
         auto &interleavedGroup = form.addCardGroup(F("ild"), F("Interleaved"), true);
 
-        form.addPointerTriviallyCopyable(F("ilr"), &cfg.interleaved.rows);
+        form.addObjectGetterSetter(F("ilr"), FormGetterSetter(cfg.interleaved, rows));
         form.addFormUI(F("Display every nth row"));
         // form.addValidator(FormUI::Validator::Range(0, IOT_LED_MATRIX_ROWS));
 
-        form.addPointerTriviallyCopyable(F("ilc"), &cfg.interleaved.cols);
+        form.addObjectGetterSetter(F("ilc"), FormGetterSetter(cfg.interleaved, cols));
         form.addFormUI(F("Display every nth column"));
         // form.addValidator(FormUI::Validator::Range(0, IOT_LED_MATRIX_COLS));
 
-        form.addPointerTriviallyCopyable(F("ilt"), &cfg.interleaved.time);
+        form.addObjectGetterSetter(F("ilt"), FormGetterSetter(cfg.interleaved, time));
         form.addFormUI(F("Rotate Through Rows And Columns"), FormUI::Suffix(F("milliseconds")), FormUI::IntAttribute(F("disabled-value"), 0));
 
         interleavedGroup.end();
@@ -265,7 +283,7 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
             });
             form.addFormUI(FSPGM(Color));
 
-            form.addPointerTriviallyCopyable(F("asp"), &cfg.alarm.speed);
+            form.addObjectGetterSetter(F("asp"), FormGetterSetter(cfg.alarm, speed));
             form.addFormUI(F("Flashing Speed"), FormUI::Suffix(FSPGM(milliseconds)));
             form.addValidator(FormUI::Validator::Range(50, 0xffff));
 
@@ -280,19 +298,20 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         #if IOT_CLOCK_TEMPERATURE_PROTECTION
             auto &protectionGroup = form.addCardGroup(F("prot"), FSPGM(Protection), true);
 
-            form.addPointerTriviallyCopyable(F("tmi"), &cfg.protection.temperature_reduce_range.min);
+            form.addObjectGetterSetter(F("tmi"), FormGetterSetter(cfg.protection.temperature_reduce_range, min));
             form.addFormUI(F("Minimum Temperature To Reduce Brightness"), FormUI::Suffix(FSPGM(UTF8_degreeC)));
             form.addValidator(FormUI::Validator::Range(kMinimumTemperatureThreshold, 85));
 
-            form.addPointerTriviallyCopyable(F("tma"), &cfg.protection.temperature_reduce_range.max);
+            form.addObjectGetterSetter(F("tma"), FormGetterSetter(cfg.protection.temperature_reduce_range, max));
             form.addFormUI(F("Maximum. Temperature To Reduce Brightness To 25%"), FormUI::Suffix(FSPGM(UTF8_degreeC)));
             form.addValidator(FormUI::Validator::Range(kMinimumTemperatureThreshold, 85));
 
-            form.addPointerTriviallyCopyable(F("tpm"), &cfg.protection.max_temperature);
+            //TODO
+            form.addObjectGetterSetter(F("tpm"), FormGetterSetter(cfg.protection, max_temperature));
             form.addFormUI(F("Over Temperature Protection"), FormUI::Suffix(FSPGM(UTF8_degreeC)));
             form.addValidator(FormUI::Validator::Range(kMinimumTemperatureThreshold, 105));
 
-            form.addPointerTriviallyCopyable(F("tpv"), &cfg.protection.regulator_margin);
+            form.addObjectGetterSetter(F("tpv"), FormGetterSetter(cfg.protection, regulator_margin));
             form.addFormUI(F("Extra Margin For Voltage Regulator"), FormUI::Suffix(FSPGM(UTF8_degreeC)));
             form.addValidator(FormUI::Validator::Range(-50, 50));
 
@@ -302,9 +321,10 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         #if IOT_LED_MATRIX_FAN_CONTROL
             auto &fanGroup = form.addCardGroup(F("fan"), F("Fan"), true);
 
-            form.addObjectGetterSetter(F("fs"), cfg, cfg.get_bits_fan_speed, cfg.set_bits_fan_speed);
+            form.addObjectGetterSetter(F("fs"), FormGetterSetter(cfg, fan_speed));
             form.addFormUI(F("Fan Speed"));
             form.addValidator(FormUI::Validator::Range(0, 255));
+            //TODO validator
 
             form.addObjectGetterSetter(F("mif"), cfg, cfg.get_bits_min_fan_speed, cfg.set_bits_min_fan_speed);
             form.addFormUI(F("Minimum Fan Speed"));
@@ -323,21 +343,21 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         form.addFormUI(F("Limit Maximum Power"), FormUI::Suffix(F("Watt")), FormUI::IntAttribute(F("disabled-value"), 0));
         cfg.addRangeValidatorFor_fading_time(form, true);
 
-        form.addPointerTriviallyCopyable(F("plr"), &cfg.power.red);
+        form.addObjectGetterSetter(F("plr"), FormGetterSetter(cfg.power, red));
         form.addFormUI(F("Power Consumption For 256 LEDs at 100% Red"), FormUI::Suffix(F("mW")));
-        form.addValidator(FormUI::Validator::Range(0, 65535));
+        cfg.power.addRangeValidatorFor_red(form);
 
-        form.addPointerTriviallyCopyable(F("plg"), &cfg.power.green);
+        form.addObjectGetterSetter(F("plg"), FormGetterSetter(cfg.power, green));
         form.addFormUI(F("Power Consumption 100% Green"), FormUI::Suffix(F("mW")));
-        form.addValidator(FormUI::Validator::Range(0, 65535));
+        cfg.power.addRangeValidatorFor_green(form);
 
-        form.addPointerTriviallyCopyable(F("plb"), &cfg.power.blue);
+        form.addObjectGetterSetter(F("plb"), FormGetterSetter(cfg.power, blue));
         form.addFormUI(F("Power Consumption 100% Blue"), FormUI::Suffix(F("mW")));
-        form.addValidator(FormUI::Validator::Range(0, 65535));
+        cfg.power.addRangeValidatorFor_blue(form);
 
-        form.addPointerTriviallyCopyable(F("pli"), &cfg.power.idle);
+        form.addObjectGetterSetter(F("pli"), FormGetterSetter(cfg.power, idle));
         form.addFormUI(F("Power Consumption While Idle"), FormUI::Suffix(F("mW")));
-        form.addValidator(FormUI::Validator::Range(0, 65535));
+        cfg.power.addRangeValidatorFor_idle(form);
 
         powerGroup.end();
 

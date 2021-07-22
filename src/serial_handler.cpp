@@ -202,7 +202,7 @@ namespace SerialHandler {
         auto ptr = std::addressof(client);
         // remove outside interrupts
         LoopFunctions::callOnce([ptr, this]() {
-            esp8266::InterruptLock lock;
+            InterruptLock lock;
             _clients.erase(std::remove_if(_clients.begin(), _clients.end(), [ptr](const ClientPtr &client) {
                 return client.get() == ptr;
             }), _clients.end());

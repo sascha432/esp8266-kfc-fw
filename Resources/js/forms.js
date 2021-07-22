@@ -145,34 +145,39 @@ $.urlParam = function(name, remove) {
     return decodeURI(results[2]) || 0;
 }
 
-$(function() {
+// init entire body or the forms inside the element passed
+$.formInitFunc = function(element) {
 
-    // execute first
-    if ($('body')[0].onload) {
-        $('body')[0].onload();
-        $('body')[0].onload = null;
-    }
-
-    try {
-        var message;
-        if (message = $.urlParam('_message', true)) {
-            pop_error($.urlParam('_type', true) || 'danger', $.urlParam('_title', true) || 'ERROR!', message, null, true);
+    if (!element) {
+        // execute first
+        if ($('body')[0].onload) {
+            $('body')[0].onload();
+            $('body')[0].onload = null;
         }
-    } catch(e) {
-        console.error(e);
+        element = $('body');
+
+        try {
+            var message;
+            if (message = $.urlParam('_message', true)) {
+                pop_error($.urlParam('_type', true) || 'danger', $.urlParam('_title', true) || 'ERROR!', message, null, true);
+            }
+        } catch(e) {
+            console.error(e);
+        }
+
     }
 
     // ---------------------------------------------------------------------------------
     // range slider
     // ---------------------------------------------------------------------------------
-    $('.form-enable-slider input[type="range"]').rangeslider({
+    element.find('.form-enable-slider input[type="range"]').rangeslider({
         polyfill : false
     });
 
     // ---------------------------------------------------------------------------------
     // allows to hide a group on input fields when the value of target changes
     // ---------------------------------------------------------------------------------
-    $('.form-dependency-group').each(function() {
+    element.find('.form-dependency-group').each(function() {
         var dep;
         var actionStr;
         try {
@@ -230,7 +235,7 @@ $(function() {
     // ---------------------------------------------------------------------------------
     (function() {
         var cookies = {}; // cookie cache
-        $('.card .collapse').each(function() {
+        element.find('.card .collapse').each(function() {
             var card = $(this);
             var parent = $(card.data('cookie'));
             if (parent.length) {
@@ -285,7 +290,7 @@ $(function() {
     // disabled-value-targets can be a selector of additional input fields to disable
     // Works with .input-text-range
     // ---------------------------------------------------------------------------------
-    $('[disabled-value]').each(function() {
+    element.find('[disabled-value]').each(function() {
         var self = $(this);
         var value = getIntFloatValue(self.attr('disabled-value'));
         var place_holder = self.attr('disabled-value-placeholder') || 'Disabled';
@@ -310,7 +315,7 @@ $(function() {
     // ---------------------------------------------------------------------------------
     // adds an input-group-append button to the field to test resolving zeroconf
     // ---------------------------------------------------------------------------------
-    $('.resolve-zerconf-button').on('click', function() {
+    element.find('.resolve-zerconf-button').on('click', function() {
         var button = $(this);
         var target = $(button.data('target'));
         if (target.length == 0) {
@@ -338,7 +343,7 @@ $(function() {
     // ---------------------------------------------------------------------------------
     // adds a warning to the top of the page if this value gets changed
     // ---------------------------------------------------------------------------------
-    $('.setting-requires-restart').change(function(e) {
+    element.find('.setting-requires-restart').change(function(e) {
         var $this = $(this);
         var id = "#alert-for-" + $this.attr('id');
         if ($this.attr('type') != 'hidden' && $this.val() != this.defaultValue && $(id).length === 0) {
@@ -355,7 +360,8 @@ $(function() {
                 $(this).closest('div').remove();
             });
             $html.alert();
-        } else if ($(id).length !== 0) {
+        }
+        else if ($(id).length !== 0) {
             $(id).alert('close');
         }
     });
@@ -378,7 +384,7 @@ $(function() {
         iconUnprotected: 'oi oi-shield',
     }, $.visible_password_options);
 
-    $('.visible-password').each(function() {
+    element.find('.visible-password').each(function() {
         var input = $(this);
         var options = $.extend({}, $.visible_password_options);
         var wrapper = input.wrap('<div class="input-group visible-password-group"></div>').closest('.visible-password-group');
@@ -431,7 +437,7 @@ $(function() {
     // <button data-color="primary" data-on-icon="oi oi-task" data-off-icon="oi oi-ban">
     // data-color="primary" adds the class "btn-primary" to the button if checked
     // ---------------------------------------------------------------------------------
-    $('.button-checkbox').each(function () {
+    element.find('.button-checkbox').each(function () {
         var widget = $(this);
         var button = widget.find('button');
         if (button.length == 0) {
@@ -495,7 +501,7 @@ $(function() {
     // ---------------------------------------------------------------------------------
     {
         var input_group_text_resize_handler = false;
-        $('.input-group-text.inline.hidden').each(function() {
+        element.find('.input-group-text.inline.hidden').each(function() {
             var text = $(this);
             var input = text.closest('div.input-group').find('input:first')
             input.addClass('input-text-inline-group');
@@ -543,7 +549,7 @@ $(function() {
     // output
     // <div class="input-group-append"><select id="shmp" class="input-group-text form-select" name="shmp"><option value="0">Enable for Channel 0</option><option value="1" selected>Enable for Channel 1</option></select></div>
     //
-    $('[data-action="transfer-hidden-field"]').each(function() {
+    element.find('[data-action="transfer-hidden-field"]').each(function() {
         var target = $(this).data('target');
         var src = $(target);
         var dst = $(this);
@@ -606,7 +612,7 @@ $(function() {
     // <input type="range" class="custom-range">
     // </div>
     // ---------------------------------------------------------------------------------
-    $('.input-text-range').each(function() {
+    element.find('.input-text-range').each(function() {
         var parent = $(this);
         var text = parent.find('input[type="text"]');
         var range = parent.find('input[type="range"]');
@@ -661,5 +667,10 @@ $(function() {
     });
 
 
-});
+};
 
+
+
+$(function() {
+    $.formInitFunc();
+});

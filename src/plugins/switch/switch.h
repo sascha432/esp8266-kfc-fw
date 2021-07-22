@@ -48,7 +48,25 @@ public:
         }
 
         const String toString() const {
-            return BitsToStr<IOT_SWITCH_CHANNEL_NUM, true>(_states).toString();
+            auto str = BitsToStr<IOT_SWITCH_CHANNEL_NUM, true>(_states).toString();
+            str += ' ';
+            for(uint8_t i = 0; i < IOT_SWITCH_CHANNEL_NUM; i++) {
+                switch(getConfig(i)) {
+                    case SwitchStateEnum::ON:
+                        str += '+';
+                        break;
+                    case SwitchStateEnum::RESTORE:
+                        str += '*';
+                        break;
+                    case SwitchStateEnum::OFF:
+                        str += '-';
+                        break;
+                    default:
+                        str += '?';
+                        break;
+                }
+            }
+            return str;
         }
 
         bool write(File &file) const {

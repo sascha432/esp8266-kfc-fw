@@ -58,7 +58,13 @@ bool ClockPlugin::getValue(const String &id, String &value, bool &state)
     state = false;
     if (id == F("animation-1")) {
         state = _config.getAnimation() == AnimationType::RAINBOW;
-        value = PrintString(F("{\"mode\":%u,\"bpm\":%u,\"hue\":%u,\"mul\":[%.*f,%.*f,%.*f,%.*f],\"speed\":%u,\"cf\":\"#%06X\",\"cm\":\"#%06X\",\"ci\":[%.*f,%.*f,%.*f]}"),
+        //TODO check if the data can be created from the Forms class
+        value = PrintString(F("{\"_prefix\":\"#rb_\","
+            "\"mode\":%u,\"bpm\":%u,\"hue\":%u,"
+            "\"mul\":%.*f,\"incr\":%.*f,\"min\":%.*f,\"max\":%.*f,"
+            "\"sp\":%u,\"cf\":\"#%06X\",\"mv\":\"#%06X\","
+            "\"cre\":%.*f,\"cgr\":%.*f,\"cbl\":%.*f}"
+        ),
             _config.rainbow._get_int_mode(),
             _config.rainbow.bpm,
             _config.rainbow.hue,

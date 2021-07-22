@@ -117,7 +117,7 @@ Configuration::WriteResultType Configuration::write()
     // create new configuration in memory
     {
         // locked skope
-        esp8266::InterruptLock lock;
+        InterruptLock lock;
         Buffer buffer;
 
         for (auto &parameter : _params) {

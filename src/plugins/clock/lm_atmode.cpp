@@ -394,11 +394,12 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
         else if (args.startsWithIgnoreCase(0, F("fr"))) {
             auto &stats = NeoPixelEx::getStats();
             args.print(F("Internal: aborted frames=%u/%u fps=%u"), stats.getAbortedFrames(), stats.getFrames(), stats.getFps());
-            args.print(F("FastLED: fps=%u"), FastLED.getFPS());
+            args.print(F("FastLED: fps=%u _fps=%.1f"), FastLED.getFPS(), _fps);
             #if DEBUG_MEASURE_ANIMATION
                 Clock::animationStats.dump(args.getStream());
             #endif
             if (args.size() > 1) {
+                FastLED.countFPS();
                 stats.clear();
                 #if DEBUG_MEASURE_ANIMATION
                     Clock::animationStats.clear();

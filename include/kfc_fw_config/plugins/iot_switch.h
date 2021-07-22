@@ -51,9 +51,9 @@
                     return _data.length;
                 }
 
-                size_t getLength() const {
-                    return getNameLength();
-                }
+                // size_t getLength() const {
+                //     return getNameLength();
+                // }
 
                 SwitchConfig &operator =(const String &name) {
                     _data.length = name.length();
@@ -70,17 +70,17 @@
                     return *this;
                 }
 
-                void setState(StateEnum state) {
-                    _data.state = static_cast<uint8_t>(state);
-                }
+                // void setState(StateEnum state) {
+                //     _data.state = static_cast<uint8_t>(state);
+                // }
 
                 StateEnum getState() const {
                     return static_cast<StateEnum>(_data.state);
                 }
 
-                void setWebUI(WebUIEnum webUI) {
-                    _data.webUI = static_cast<uint8_t>(webUI);
-                }
+                // void setWebUI(WebUIEnum webUI) {
+                //     _data.webUI = static_cast<uint8_t>(webUI);
+                // }
 
                 WebUIEnum getWebUI() const {
                     return static_cast<WebUIEnum>(_data.webUI);
@@ -123,15 +123,15 @@
                 configs = _Array();
                 uint16_t length = 0;
                 auto ptr = getConfig(length);
-#if DEBUG_IOT_SWITCH
-                __dump_binary_to(DEBUG_OUTPUT, ptr, length, length, PSTR("getConfig"));
-#endif
+                #if DEBUG_IOT_SWITCH
+                    __dump_binary_to(DEBUG_OUTPUT, ptr, length, length, PSTR("getConfig"));
+                #endif
                 if (ptr) {
                     uint8_t i = 0;
                     auto endPtr = ptr + length;
-                    while(ptr + SwitchConfig::size() < endPtr && i < names.size()) {
+                    while(ptr + SwitchConfig::size() <= endPtr && i < names.size()) {
                         memcpy(&configs[i].data(), ptr, configs[i].size());
-                        ::printf("ptr=%p endPtr=%p i=%u sz=%u namelen=%u\n", ptr, endPtr, i, names.size(), configs[i].getNameLength());
+                        // ::printf("ptr=%p endPtr=%p i=%u sz=%u namelen=%u\n", ptr, endPtr, i, names.size(), configs[i].getNameLength());
                         ptr += configs[i].size();
                         auto len = configs[i].getNameLength();
                         if (ptr + len < endPtr) {
@@ -152,13 +152,15 @@
             static void setConfig(const _List &names, _Array &configs) {
                 Buffer buffer;
                 for(uint8_t i = 0; i < names.size(); i++) {
-                    configs[i] = names[i];
+                    auto name = String(names[i]);
+                    name.rtrim();
+                    configs[i] = name;
                     buffer.push_back(configs[i].data());
-                    buffer.writeString(names[i]);
+                    buffer.writeString(name);
                 }
                 setConfig(buffer.begin(), buffer.length());
-#if DEBUG_IOT_SWITCH
-                __dump_binary_to(DEBUG_OUTPUT, buffer.begin(), buffer.length(), buffer.length(), PSTR("setConfig"));
-#endif
+                #if DEBUG_IOT_SWITCH
+                    __dump_binary_to(DEBUG_OUTPUT, buffer.begin(), buffer.length(), buffer.length(), PSTR("setConfig"));
+                #endif
             }
         };

@@ -164,6 +164,43 @@ namespace WebServer {
         UploadStatus *_validateSession(AsyncWebServerRequest *request, int index);
     };
 
+    enum class WebSocketAction {
+        NONE = 0,
+        DISCARD,
+        SAVE,
+        APPLY
+    };
+
+    // create AsyncWebServerRequest from post data
+    class AsyncWebServerRequestParser : public AsyncWebServerRequest
+    {
+    public:
+        enum { PARSE_REQ_START, PARSE_REQ_HEADERS, PARSE_REQ_BODY, PARSE_REQ_END, PARSE_REQ_FAIL };
+
+    public:
+        AsyncWebServerRequestParser(const String &postData) : AsyncWebServerRequest(nullptr, nullptr) {
+            // create fake request
+            _method = HTTP_POST;
+            _version = 1;
+            _parseState = PARSE_REQ_BODY;
+            _contentLength = postData.length();
+            auto ptr = reinterpret_cast<uint8_t *>(const_cast<char *>(postData.c_str()));
+            auto size = _contentLength;
+            // prevent the parser from ending the state
+            _contentLength += 2;
+            // feed data
+            while(size--) {
+                _parsePlainPostChar(*ptr++);
+            }
+            _parsePlainPostChar(0);
+            _parseState = PARSE_REQ_END;
+        }
+
+        LinkedList<AsyncWebParameter *> &_getParams() {
+            return _params;
+        }
+    };
+
     class Plugin : public PluginComponent {
     public:
         Plugin();
@@ -173,6 +210,7 @@ namespace WebServer {
         virtual void shutdown() override;
         virtual void getStatus(Print &output) override;
         virtual void createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request) override;
+        void handleFormData(const String &formName, AsyncWebServerRequest *request, PluginComponent &plugin);
 
     public:
         static Plugin &getInstance();

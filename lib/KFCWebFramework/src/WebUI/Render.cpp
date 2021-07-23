@@ -25,12 +25,23 @@ void Form::BaseForm::createHtml(PrintInterface &output)
     MicrosTimer duration;
     duration.start();
 #endif
+    if (!hasWebUIConfig()) {
+        __DBG_printf("form.createWebUI() must be called to create FormUI");
+        return;
+    }
     auto &ui = getWebUIConfig();
     __LDBG_printf("style=%u", ui.getStyle());
 
     switch(ui.getStyle()) {
         case WebUI::StyleType::ACCORDION: {
             output.printf_P(PSTR("<div class=\"accordion pt-3\" id=\"%s\"><div class=\"card bg-primary text-white mb-0\"><div class=\"card-header\" id=\"main-header\"><h3 class=\"mb-0 p-1\">%s</h3></div></div>"),
+                ui.getContainerId(),
+                ui.getTitle()
+            );
+        }
+        break;
+        case WebUI::StyleType::WEBUI: {
+            output.printf_P(PSTR("<div id=\"%s\" class=\"webui-modal-dialog-form\" data-title=\"%s\">"),
                 ui.getContainerId(),
                 ui.getTitle()
             );
@@ -61,6 +72,10 @@ void Form::BaseForm::createHtml(PrintInterface &output)
             else {
                 output.printf_P(PrintArgs::FormatType::HTML_CLOSE_DIV);
             }
+        }
+        break;
+        case WebUI::StyleType::WEBUI: {
+            output.printf_P(PrintArgs::FormatType::HTML_CLOSE_DIV);
         }
         break;
         default: {

@@ -366,8 +366,8 @@ public:
 
     // print(const __FlashStringHelper *fmt, ...) printf_P(fmt, ...) + "\n"
     template<typename _Ta, typename ... _Args>
-    void print(_Ta arg, _Args &&...args) const {
-        _printfLn((const __FlashStringHelper *)arg, std::forward<_Args>(args)...);
+    void print(_Ta arg, _Args ...args) const {
+        _printfLn((const __FlashStringHelper *)arg, args...);
     }
 
     // print(str) str + "\n"

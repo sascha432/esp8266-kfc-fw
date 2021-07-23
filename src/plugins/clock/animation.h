@@ -32,13 +32,29 @@ using KFCConfigurationClasses::Plugins;
 
 namespace Clock {
 
-    using DisplayBufferType = Clock::PixelDisplayBuffer<IOT_LED_MATRIX_PIXEL_OFFSET, IOT_LED_MATRIX_ROWS, IOT_LED_MATRIX_COLS, IOT_LED_MATRIX_OPTS_REVERSE_ROWS, IOT_LED_MATRIX_OPTS_REVERSE_COLS, IOT_LED_MATRIX_OPTS_ROTATE, IOT_LED_MATRIX_OPTS_INTERLEAVED>;
+    using DisplayBufferType = Clock::PixelDisplayBuffer<
+        IOT_LED_MATRIX_PIXEL_OFFSET,
+        IOT_LED_MATRIX_ROWS,
+        IOT_LED_MATRIX_COLS,
+        IOT_LED_MATRIX_OPTS_REVERSE_ROWS,
+        IOT_LED_MATRIX_OPTS_REVERSE_COLS,
+        IOT_LED_MATRIX_OPTS_ROTATE,
+        IOT_LED_MATRIX_OPTS_INTERLEAVED
+    >;
 
 #if IOT_LED_MATRIX
 
     using DisplayType = Clock::PixelDisplay<
             Clock::NeoPixelController<IOT_LED_MATRIX_OUTPUT_PIN>,
-            Clock::PixelDisplayBuffer<IOT_LED_MATRIX_PIXEL_OFFSET, IOT_LED_MATRIX_ROWS, IOT_LED_MATRIX_COLS, IOT_LED_MATRIX_OPTS_REVERSE_ROWS, IOT_LED_MATRIX_OPTS_REVERSE_COLS, IOT_LED_MATRIX_OPTS_ROTATE, IOT_LED_MATRIX_OPTS_INTERLEAVED>
+            Clock::PixelDisplayBuffer<
+                IOT_LED_MATRIX_PIXEL_OFFSET,
+                IOT_LED_MATRIX_ROWS,
+                IOT_LED_MATRIX_COLS,
+                IOT_LED_MATRIX_OPTS_REVERSE_ROWS,
+                IOT_LED_MATRIX_OPTS_REVERSE_COLS,
+                IOT_LED_MATRIX_OPTS_ROTATE,
+                IOT_LED_MATRIX_OPTS_INTERLEAVED
+            >
         >;
 
     using CoordinateType = DisplayType::CoordinateType;
@@ -49,7 +65,15 @@ namespace Clock {
 
     using BaseDisplayType = Clock::PixelDisplay<
             Clock::NeoPixelController<IOT_LED_MATRIX_OUTPUT_PIN>,
-            Clock::PixelDisplayBuffer<IOT_LED_MATRIX_PIXEL_OFFSET, IOT_LED_MATRIX_ROWS, IOT_LED_MATRIX_COLS, IOT_LED_MATRIX_OPTS_REVERSE_ROWS, IOT_LED_MATRIX_OPTS_REVERSE_COLS, IOT_LED_MATRIX_OPTS_ROTATE, IOT_LED_MATRIX_OPTS_INTERLEAVED>
+            Clock::PixelDisplayBuffer<
+                IOT_LED_MATRIX_PIXEL_OFFSET,
+                IOT_LED_MATRIX_ROWS,
+                IOT_LED_MATRIX_COLS,
+                IOT_LED_MATRIX_OPTS_REVERSE_ROWS,
+                IOT_LED_MATRIX_OPTS_REVERSE_COLS,
+                IOT_LED_MATRIX_OPTS_ROTATE,
+                IOT_LED_MATRIX_OPTS_INTERLEAVED
+            >
         >;
 
     using CoordinateType = BaseDisplayType::CoordinateType;

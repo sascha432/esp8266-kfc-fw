@@ -162,23 +162,40 @@ int stringlist_find_P_P(PGM_P list, PGM_P find, PGM_P separator/*, int &position
     // position = 0;
     do {
         ch = pgm_read_byte(ptr1);
-        if (strchr_P(separator, ch)) {    // end of one string
+        if (ch == '*') { // end of one string, expanding with wildcard
+            if (ptr2) { // stop comparing here, match
+                return num;
+            }
+            else {
+                ptr2 = find; // reset to compare with next string
+                num++;
+                // move to next string in list
+                while ((ch = pgm_read_byte(++ptr1)) != 0 && !strchr_P(separator, ch)) {
+                }
+            }
+        }
+        else if (strchr_P(separator, ch)) {    // end of one string
             if (ptr2 && pgm_read_byte(ptr2++) == 0) { // match
                 return num;
-            } else {
-                // position = ptr1 - list;
-                ptr2 = find; // compare with next string
-                num++;
             }
-        } else {
+            else {
+                // position = ptr1 - list;
+                ptr2 = find; // reset to compare with next string
+                num++;
+                // ptr1 points to the separator already, advancing to the next string in the list
+            }
+        }
+        else {
             if (ptr2 && pgm_read_byte(ptr2++) != ch) { // mismatch, stop comparing
                 ptr2 = nullptr;
-            } else if (ptr2 && !ch) { // match
+            }
+            else if (ptr2 && !ch) { // match
                 return num;
             }
         }
         ptr1++;
-    } while(ch);
+    }
+    while(ch);
 
     // position = -1;
     return -1;

@@ -52,45 +52,45 @@ void ClockPlugin::getValues(WebUINS::Events &array)
     #endif
 }
 
-bool ClockPlugin::getValue(const String &id, String &value, bool &state)
-{
-    bool result = false;
-    state = false;
-    if (id == F("animation-1")) {
-        state = _config.getAnimation() == AnimationType::RAINBOW;
-        //TODO check if the data can be created from the Forms class
-        value = PrintString(F("{\"_prefix\":\"#rb_\","
-            "\"mode\":%u,\"bpm\":%u,\"hue\":%u,"
-            "\"mul\":%.*f,\"incr\":%.*f,\"min\":%.*f,\"max\":%.*f,"
-            "\"sp\":%u,\"cf\":\"#%06X\",\"mv\":\"#%06X\","
-            "\"cre\":%.*f,\"cgr\":%.*f,\"cbl\":%.*f}"
-        ),
-            _config.rainbow._get_int_mode(),
-            _config.rainbow.bpm,
-            _config.rainbow.hue,
-            countDecimalPlaces(_config.rainbow.multiplier.value),
-            _config.rainbow.multiplier.value,
-            countDecimalPlaces(_config.rainbow.multiplier.incr),
-            _config.rainbow.multiplier.incr,
-            countDecimalPlaces(_config.rainbow.multiplier.min),
-            _config.rainbow.multiplier.min,
-            countDecimalPlaces(_config.rainbow.multiplier.max),
-            _config.rainbow.multiplier.max,
-            _config.rainbow.speed,
-            _config.rainbow.color.factor.value,
-            _config.rainbow.color.min.value,
-            countDecimalPlaces(_config.rainbow.color.red_incr),
-            _config.rainbow.color.red_incr,
-            countDecimalPlaces(_config.rainbow.color.green_incr),
-            _config.rainbow.color.green_incr,
-            countDecimalPlaces(_config.rainbow.color.blue_incr),
-            _config.rainbow.color.blue_incr
-        );
-        result = true;
-    }
-    __LDBG_printf("id=%s value=%s state=%u result=%u", id.c_str(), value.c_str(), state, result);
-    return result;
-}
+// bool ClockPlugin::getValue(const String &id, String &value, bool &state)
+// {
+//     bool result = false;
+//     state = false;
+//     if (id == F("animation-1")) {
+//         state = _config.getAnimation() == AnimationType::RAINBOW;
+//         //TODO check if the data can be created from the Forms class
+//         value = PrintString(F("{\"_prefix\":\"#rb_\","
+//             "\"mode\":%u,\"bpm\":%u,\"hue\":%u,"
+//             "\"mul\":%.*f,\"incr\":%.*f,\"min\":%.*f,\"max\":%.*f,"
+//             "\"sp\":%u,\"cf\":\"#%06X\",\"mv\":\"#%06X\","
+//             "\"cre\":%.*f,\"cgr\":%.*f,\"cbl\":%.*f}"
+//         ),
+//             _config.rainbow._get_int_mode(),
+//             _config.rainbow.bpm,
+//             _config.rainbow.hue,
+//             countDecimalPlaces(_config.rainbow.multiplier.value),
+//             _config.rainbow.multiplier.value,
+//             countDecimalPlaces(_config.rainbow.multiplier.incr),
+//             _config.rainbow.multiplier.incr,
+//             countDecimalPlaces(_config.rainbow.multiplier.min),
+//             _config.rainbow.multiplier.min,
+//             countDecimalPlaces(_config.rainbow.multiplier.max),
+//             _config.rainbow.multiplier.max,
+//             _config.rainbow.speed,
+//             _config.rainbow.color.factor.value,
+//             _config.rainbow.color.min.value,
+//             countDecimalPlaces(_config.rainbow.color.red_incr),
+//             _config.rainbow.color.red_incr,
+//             countDecimalPlaces(_config.rainbow.color.green_incr),
+//             _config.rainbow.color.green_incr,
+//             countDecimalPlaces(_config.rainbow.color.blue_incr),
+//             _config.rainbow.color.blue_incr
+//         );
+//         result = true;
+//     }
+//     __LDBG_printf("id=%s value=%s state=%u result=%u", id.c_str(), value.c_str(), state, result);
+//     return result;
+// }
 
 void ClockPlugin::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
 {
@@ -128,10 +128,11 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
             setAnimation(static_cast<AnimationType>(val));
             _saveStateDelayed();
         }
-        else if (id == F("animation-1")) {
-            StringVector items;
-            explode(value.c_str(), ',', items);
-            __DBG_printf("animation-1 %s", implode(',', items).c_str());
+        else if (id.startsWith(F("ani-"))) {
+            // create AsyncWebServerRequest from web socket post data and submit form
+            auto request = WebServer::AsyncWebServerRequestParser(value);
+            WebServer::Plugin::getInstance().handleFormData(id, &request, *this);
+            _saveStateDelayed();
         }
         else if (id == F("color")) {
             setColorAndRefresh(val);

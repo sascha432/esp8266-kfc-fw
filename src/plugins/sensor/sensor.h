@@ -170,8 +170,8 @@ public:
 
 protected:
     template<class _Sensor, typename... _Args>
-    void addSensor(_Args &&... args) {
-        auto sensor = new _Sensor(std::forward<_Args>(args)...);
+    void addSensor(_Args ... args) {
+        auto sensor = new _Sensor(args...);
         _sensors.push_back(sensor);
     }
 

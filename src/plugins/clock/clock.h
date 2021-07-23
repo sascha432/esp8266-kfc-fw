@@ -222,6 +222,8 @@ public:
     using milliseconds        = std::chrono::duration<uint32_t, std::ratio<1>>;
     using seconds             = std::chrono::duration<uint32_t, std::ratio<1000>>;
     using NamedArray          = PluginComponents::NamedArray;
+    using VisualizerType      = KFCConfigurationClasses::Plugins::ClockConfig::VisualizerAnimation_t::VisualizerType;
+    using RainbowMode         = KFCConfigurationClasses::Plugins::ClockConfig::ClockConfig_t::RainbowMode;
 
     static constexpr uint16_t kDefaultUpdateRate  = 1000;  // milliseconds
     static constexpr uint16_t kMinBlinkColonSpeed = 50;
@@ -262,7 +264,13 @@ public:
     virtual void createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request) override;
     virtual void createMenu() override;
 
-    void _createConfigureFormAniRainbow(FormUI::Form::BaseForm &form, Clock::ConfigType &cfg);
+    enum class TitleType {
+        NONE,
+        ADD_GROUP,          // surrounds the form with a group/animation title
+        SET_TITLE           // set FormUI title to the animation title
+    };
+
+    void _createConfigureFormAnimation(AnimationType animation, FormUI::Form::BaseForm &form, Clock::ConfigType &cfg, TitleType titleType);
 
 #if AT_MODE_SUPPORTED
 
@@ -309,7 +317,7 @@ public:
     virtual void createWebUI(WebUINS::Root &webUI) override {}
     virtual void getValues(WebUINS::Events &array) override;
     virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) override;
-    virtual bool getValue(const String &id, String &value, bool &state) override;
+    // virtual bool getValue(const String &id, String &value, bool &state) override;
 
     void _createWebUI(WebUINS::Root &webUI);
     static void webUIHook(WebUINS::Root &webUI, SensorPlugin::SensorType type);
@@ -334,7 +342,16 @@ private:
     void _setupTimer();
 
     // returns AnimationType::MAX if the name is invalid
-    AnimationType _getAnimationType(String name);
+    // searched for name, name slug or AnimationType as integer
+    // case insensitive
+    AnimationType _getAnimationType(const __FlashStringHelper *name) const;
+    // get name of the animation
+    const __FlashStringHelper *_getAnimationName(AnimationType type) const;
+    // get lower case names with dashes
+    // "Color Fade" ->  "color-fade"
+    const __FlashStringHelper *_getAnimationNameSlug(AnimationType type) const;
+    // get title for animation
+    const __FlashStringHelper *_getAnimationTitle(AnimationType type) const;
 
 public:
     void enableLoop(bool enable);
@@ -431,7 +448,7 @@ public:
 private:
     static void _reset();
     void _enable();
-    void _disable(uint8_t delayMillis = 10);
+    void _disable();
     bool _getEnabledState() const {
         return _config.enabled && _isEnabled && _targetBrightness && _tempBrightness != -1;
     }
@@ -874,14 +891,24 @@ inline float ClockPlugin::_getFadingBrightness() const
         _targetBrightness;
 }
 
-inline ClockPlugin::AnimationType ClockPlugin::_getAnimationType(String name)
+inline ClockPlugin::AnimationType ClockPlugin::_getAnimationType(const __FlashStringHelper *name) const
 {
-    auto list = Clock::ConfigType::getAnimationNames();
-    uint32_t animation = stringlist_ifind_P_P(list, name.c_str(), ',');
-    if (animation < static_cast<uint32_t>(AnimationType::MAX)) {
-        return static_cast<AnimationType>(animation);
-    }
-    return AnimationType::MAX;
+    return Plugins::ClockConfig::ClockConfig_t::getAnimationType(name);
+}
+
+inline const __FlashStringHelper * ClockPlugin::_getAnimationName(AnimationType type) const
+{
+    return Plugins::ClockConfig::ClockConfig_t::getAnimationName(type);
+}
+
+inline const __FlashStringHelper * ClockPlugin::_getAnimationNameSlug(AnimationType type) const
+{
+    return Plugins::ClockConfig::ClockConfig_t::getAnimationNameSlug(type);
+}
+
+inline const __FlashStringHelper *ClockPlugin::_getAnimationTitle(AnimationType type) const
+{
+    return Plugins::ClockConfig::ClockConfig_t::getAnimationTitle(type);
 }
 
 #if !IOT_LED_MATRIX

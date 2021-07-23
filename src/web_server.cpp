@@ -18,6 +18,7 @@
 #include "async_web_response.h"
 #include "async_web_handler.h"
 #include "kfc_fw_config.h"
+#include "templates.h"
 #include "blink_led_timer.h"
 #include "fs_mapping.h"
 #include "JsonTools.h"
@@ -1109,6 +1110,60 @@ bool Plugin::_handleFileRead(String path, bool client_accepts_gzip, AsyncWebServ
     }
 
     return _sendFile(mapping, formName, headers, client_accepts_gzip, isAuthenticated, request, webTemplate);
+}
+
+void Plugin::handleFormData(const String &formName, AsyncWebServerRequest *request, PluginComponent &plugin)
+{
+    auto action = WebSocketAction::NONE;
+    auto actionStr = request->arg(F("__websocket_action"));
+    if (actionStr == F("discard")) {
+        action = WebSocketAction::DISCARD;
+    }
+    else if (actionStr == F("save")) {
+        action = WebSocketAction::SAVE;
+    }
+    else if (actionStr == F("apply")) {
+        action = WebSocketAction::APPLY;
+    }
+
+    if (action == WebSocketAction::NONE) {
+        __LDBG_printf("plugin=%s form=%s invalid action=%s", plugin.getName_P(), formName.c_str(), actionStr.c_str());
+    }
+    else if (!plugin.canHandleForm(formName)) {
+        __LDBG_printf("plugin=%s cannot handle form=%s", plugin.getName_P(), formName.c_str());
+    }
+    else {
+        FormUI::Form::BaseForm *form = new SettingsForm(request);
+        plugin.createConfigureForm(PluginComponent::FormCallbackType::CREATE_POST, formName, *form, request);
+        bool modified = config.isDirty();
+        if (action == WebSocketAction::DISCARD || !form->validate()) {
+            modified = modified || form->hasChanged();
+            // form->dump(DEBUG_OUTPUT, emptyString);
+            __LDBG_printf("plugin=%s discard config changed=%u dirty=%u modified=%u form=%s action=%s", plugin.getName_P(), form->hasChanged(), config.isDirty(), modified, formName.c_str(), actionStr.c_str());
+            if (modified) {
+                plugin.createConfigureForm(PluginComponent::FormCallbackType::DISCARD, formName, *form, request);
+                config.discard();
+                plugin.reconfigure(formName);
+            }
+        }
+        else {
+            // form->dump(DEBUG_OUTPUT, emptyString);
+            modified = modified || form->hasChanged();
+            __LDBG_printf("plugin=%s validated changed=%u dirty=%u modified=%u form=%s action=%s", plugin.getName_P(), form->hasChanged(), config.isDirty(), modified, formName.c_str(), actionStr.c_str());
+            plugin.createConfigureForm(PluginComponent::FormCallbackType::SAVE, formName, *form, request);
+            if (action == WebSocketAction::SAVE && modified) {
+                // save current and previous changes from apply
+                config.write();
+            }
+            // only reconfigure if the form has changed
+            // if config is dirty, those changes have been applied already
+            if (form->hasChanged()) {
+                __LDBG_printf("reconfigure plugin=%s", plugin.getName_P());
+                plugin.reconfigure(formName);
+            }
+        }
+        delete form;
+    }
 }
 
 Plugin::Plugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(Plugin))

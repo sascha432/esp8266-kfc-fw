@@ -216,7 +216,7 @@ inline uint8_t Sensor_AmbientLight::getId() const
 
 inline bool Sensor_AmbientLight::enabled() const
 {
-    return _handler != nullptr && _timer != false;
+    return _handler && _timer != false;
 }
 
 #endif

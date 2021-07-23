@@ -84,7 +84,7 @@ void print_status_tinypwm(Print &output)
 
 #endif
 
-#define PLUGIN_OPTIONS_CONFIG_FORMS                     "settings,animations,protection,ani-rb"
+#define PLUGIN_OPTIONS_CONFIG_FORMS                     "settings,animations,protection,ani-*"
 
 PROGMEM_DEFINE_PLUGIN_OPTIONS(
     ClockPlugin,
@@ -378,34 +378,36 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
 
     #if IOT_CLOCK_SAVE_STATE
         auto state = _getState();
-        if (state.hasValidData()) {
-            switch(_config.getInitialState()) {
-                case InitialStateType::OFF:
-                    // start with clock turned off and the power button sets the configured brightness and animation
-                    _savedBrightness = _config.getBrightness();
-                    _config.enabled = false;
-                    _setBrightness(0);
-                    break;
-                case InitialStateType::ON:
-                    // start with clock turned on using default settings
-                    _savedBrightness = _config.getBrightness();
-                    _config.enabled = true;
-                    setBrightness(_savedBrightness);
-                    break;
-                case InitialStateType::RESTORE:
-                    // restore last settings
+        switch(_config.getInitialState()) {
+            case InitialStateType::OFF:
+                // start with clock turned off and the power button sets the configured brightness and animation
+                _savedBrightness = _config.getBrightness();
+                _config.enabled = false;
+                _setBrightness(0);
+                break;
+            case InitialStateType::ON:
+                // start with clock turned on using default settings
+                _savedBrightness = _config.getBrightness();
+                _config.enabled = true;
+                setBrightness(_savedBrightness);
+                break;
+            case InitialStateType::RESTORE:
+                // restore last settings
+                if (state.hasValidData()) {
                     _config = state.getConfig();
-                    _savedBrightness = _config.getBrightness();
-                    if (_config.enabled) {
-                        setBrightness(_savedBrightness);
-                    }
-                    else {
-                        _setBrightness(0);
-                    }
-                    break;
-                default:
-                    break;
-            }
+                }
+                _savedBrightness = _config.getBrightness();
+                if (_config.enabled) {
+                    setBrightness(_savedBrightness);
+                }
+                else {
+                    _setBrightness(0);
+                }
+                break;
+            default:
+                break;
+        }
+        if (state.hasValidData()) {
             setAnimation(state.getConfig().getAnimation(), 0);
         }
     #endif
@@ -421,20 +423,28 @@ void ClockPlugin::reconfigure(const String &source)
     #if IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
         _removeDisplayLedTimer();
     #endif
-    _disable();
+    if (source.startsWith(F("ani-"))) {
+        // do not reset just apply new config
+        _config.enabled = false;
+        _isEnabled = false;
+    }
+    else {
+        // reset entire state and all pixels
+        _disable();
+    }
     readConfig();
 
     #if IOT_LED_MATRIX_FAN_CONTROL
         _setFanSpeed(_config.fan_speed);
-    #endif
-    #if IOT_CLOCK_SAVE_STATE
-        _saveState();
     #endif
     _schedulePublishState = true;
     if (_targetBrightness) {
         _enable();
     }
     _isRunning = true;
+    #if IOT_CLOCK_SAVE_STATE
+        _saveState();
+    #endif
 }
 
 void ClockPlugin::shutdown()
@@ -654,11 +664,11 @@ void ClockPlugin::setAnimation(AnimationType animation, uint16_t blendTime)
             _setAnimation(new Clock::FadingAnimation(*this, _getColor(), Color().rnd(), _config.fading.speed, _config.fading.delay * 1000, _config.fading.factor.value));
             break;
         case AnimationType::RAINBOW:
-            if (_config.rainbow.hue == 0) {
-                _setAnimation(new Clock::RainbowAnimation(*this, _config.rainbow.speed, _config.rainbow.multiplier, _config.rainbow.color));
+            if (_config.rainbow.get_enum_mode(_config.rainbow) == Clock::ConfigType::RainbowMode::FASTLED) {
+                _setAnimation(new Clock::RainbowAnimationFastLED(*this, _config.rainbow.bpm, _config.rainbow.hue));
             }
             else {
-                _setAnimation(new Clock::RainbowAnimationFastLED(*this, _config.rainbow.bpm, _config.rainbow.hue));
+                _setAnimation(new Clock::RainbowAnimation(*this, _config.rainbow.speed, _config.rainbow.multiplier, _config.rainbow.color));
             }
             break;
         case AnimationType::FLASHING:
@@ -688,7 +698,6 @@ void ClockPlugin::setAnimation(AnimationType animation, uint16_t blendTime)
 void ClockPlugin::readConfig()
 {
     _config = Plugins::Clock::getConfig();
-    _config.rainbow.multiplier.value = std::clamp<float>(_config.rainbow.multiplier.value, 0.1, 100.0);
     _config.protection.max_temperature = std::max<uint8_t>(kMinimumTemperatureThreshold, _config.protection.max_temperature);
     #if IOT_CLOCK_USE_DITHERING
         _display.setDither(_config.dithering);
@@ -697,7 +706,7 @@ void ClockPlugin::readConfig()
     #endif
 
     #if IOT_CLOCK_HAVE_POWER_LIMIT || IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
-        __DBG_printf("limit=%u/%u r/g/b/idle=%u/%u/%u/%u", _config.power_limit, _getPowerLevelLimit(_config.power_limit), _config.power.red, _config.power.green, _config.power.blue, _config.power.idle);
+        __LDBG_printf("limit=%u/%u r/g/b/idle=%u/%u/%u/%u", _config.power_limit, _getPowerLevelLimit(_config.power_limit), _config.power.red, _config.power.green, _config.power.blue, _config.power.idle);
         FastLED.setMaxPowerInMilliWatts(_getPowerLevelLimit(_config.power_limit) IF_IOT_CLOCK_DISPLAY_POWER_CONSUMPTION(, &calcPowerFunction));
         FastLED.setPowerConsumptionInMilliwattsPer256(_config.power.red, _config.power.green, _config.power.blue, _config.power.idle);
     #endif
@@ -780,7 +789,7 @@ void ClockPlugin::_enable()
     #endif
 }
 
-void ClockPlugin::_disable(uint8_t delayMillis)
+void ClockPlugin::_disable()
 {
     __LDBG_printf("disable LED pin %u state %u (is_enabled=%u, config=%u)", IOT_LED_MATRIX_ENABLE_PIN, enablePinState(false), _isEnabled, _config.enabled);
 
@@ -807,6 +816,7 @@ void ClockPlugin::_disable(uint8_t delayMillis)
 
     #if IOT_LED_MATRIX_ENABLE_PIN != -1
         digitalWrite(IOT_LED_MATRIX_ENABLE_PIN, enablePinState(false));
+        ::delay(1);
     #endif
 
     #if IOT_LED_MATRIX_STANDBY_PIN != -1
@@ -821,9 +831,6 @@ void ClockPlugin::_disable(uint8_t delayMillis)
 
     LoopFunctions::remove(loop);
     LoopFunctions::add(standbyLoop);
-
-    // artificial delay to avoid switching on/off too quickly
-    delay(delayMillis);
 }
 
 #if IOT_ALARM_PLUGIN_ENABLED

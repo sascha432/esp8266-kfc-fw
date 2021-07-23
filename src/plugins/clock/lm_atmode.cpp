@@ -390,6 +390,22 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             }
             args.print(F("LED output %s"), state ? PSTR("enabled") : PSTR("disabled"));
         }
+        // map,<rows>,<cols>,<reverse_rows>,<reverse_columns>,<rotate>,<interleaved>
+        else if (args.startsWithIgnoreCase(0, F("map"))) {
+            #if IOT_LED_MATRIX_CONFIGURABLE_DISPLAY
+                if (args.size() == 7) {
+                    _display._rows = args.toInt(1, _display._rows);
+                    _display._cols = args.toInt(2, _display._cols);
+                    _display._reverseRows = args.isTrue(3, _display._reverseRows);
+                    _display._reverseColumns = args.isTrue(4, _display._reverseColumns);
+                    _display._rotate = args.isTrue(5, _display._rotate);
+                    _display._interleaved = args.isTrue(6, _display._interleaved);
+                }
+                args.print(F("+lmc=map,%u,%u,%u,%u,%u,%u"), _display._rows, _display._cols, _display._reverseRows, _display._reverseColumns, _display._rotate, _display._interleaved);
+            #else
+                args.print(F("not supported"));
+            #endif
+        }
         // fr[ames][,rst]
         else if (args.startsWithIgnoreCase(0, F("fr"))) {
             auto &stats = NeoPixelEx::getStats();
@@ -464,6 +480,37 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             auto value = args.isTrue(1);
             enableLoop(value);
             args.print(F("loop %s"), value ? PSTR("enabled") : PSTR("disabled"));
+        }
+        // st[ate]
+        else if (args.startsWithIgnoreCase(0, F("st"))) {
+            auto config = Plugins::Clock::getConfig();
+            auto initialState = PSTR("INVALID");
+            switch(_config.getInitialState()) {
+                case InitialStateType::ON:
+                    initialState = PSTR("ON");
+                    break;
+                case InitialStateType::OFF:
+                    initialState = PSTR("OFF");
+                    break;
+                case InitialStateType::RESTORE:
+                    initialState = PSTR("RESTORE");
+                    break;
+                default:
+                    break;
+            }
+            #if IOT_LED_MATRIX_ENABLE_PIN != -1
+                auto state = digitalRead(IOT_LED_MATRIX_ENABLE_PIN) == enablePinState(true);
+                args.print(F("enable pin=%u initial state=%s"), state, initialState);
+            #else
+                args.print(F("initial state=%s"), initialState);
+            #endif
+            args.print(F("state: _isEnabled=%u _isRunning=%u _targetBrightness=%u _autoOff=%u temp. protection=%u"), _isEnabled, _isRunning, _targetBrightness, _autoOff, isTempProtectionActive());
+            args.print(F("current config: enabled=%u brightness=%u animation=%s"), _config.enabled, _config.brightness, _config.getAnimationName(_config._get_enum_animation()));
+            args.print(F("stored config: enabled=%u brightness=%u animation=%s"), config.enabled, config.brightness, config.getAnimationName(config._get_enum_animation()));
+            auto cState = _getState();
+            config = cState.getConfig();
+            args.print(F("state config: enabled=%u brightness=%u animation=%s"), config.enabled, config.brightness, _config.getAnimationName(_config._get_enum_animation()));
+
         }
         // <temp>,<value>
         else if (args.startsWithIgnoreCase(0, F("tem"))) {
@@ -548,21 +595,23 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                 auto animations = String(Plugins::ClockConfig::ClockConfig_t::getAnimationNames());
                 animations.toLowerCase();
                 animations.replace(',', '|');
-                animations.replace(' ', '_');
+                animations.replace(' ', '-');
+                animations.replace('_', '-');
                 cmds.emplace_back(PrintString(F("ani[mation][,<%s>][,blend_time=4000ms]"), animations.c_str()));
             }
             cmds.emplace_back(F("out[put],<on|off>"));
             cmds.emplace_back(F("di[ther],<on|off>"));
             cmds.emplace_back(F("co[lor],<#color>"));
             cmds.emplace_back(F("br[igthness],<level>"));
+            cmds.emplace_back(F("map,<rows>,<cols>,<reverse_rows>,<reverse_columns>,<rotate>,<interleaved>"));
             cmds.emplace_back(F("cl[ear]"));
-            cmds.emplace_back(PrintString(F("res[et][,<pixels=%u>]"), IOT_CLOCK_NUM_PIXELS));
+            #if IOT_LED_MATRIX == 0
+                    cmds.emplace_back(F("pr[int],<display=00:00:00>"));
+            #endif
+            cmds.emplace_back(PrintString(F("res[et][,<pixels=%u>]"), _display.size()));
             cmds.emplace_back(F("test,<1=pixel order|2=clock|3=row/col>[,#color=#330033][,<brightness=128>][,<speed=100ms>]"));
             cmds.emplace_back(F("get[,<range>]"));
             cmds.emplace_back(F("set,<range(=0-7)>,[#color]"));
-            #if IOT_LED_MATRIX == 0
-            cmds.emplace_back(F("pr[int],<display=00:00:00>"));
-            #endif
             cmds.emplace_back(F("tem[perature],<value>"));
 
             auto last = &cmds.back();

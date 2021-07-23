@@ -65,11 +65,15 @@
 // configurable requires memory and CPU time of the maximum. number of configured LEDs, even if only 1 is active
 // set IOT_LED_MATRIX_COLS=1 and IOT_LED_MATRIX_ROWS=max. number of LEDs
 #ifndef IOT_LED_MATRIX_CONFIGURABLE_DISPLAY
-#   define IOT_LED_MATRIX_CONFIGURABLE_DISPLAY 0
+#   define IOT_LED_MATRIX_CONFIGURABLE_DISPLAY 1
 #endif
 
-#if IOT_LED_MATRIX_CONFIGURABLE_DISPLAY
-#   error currently not supported
+#ifndef IOT_CLOCK_PIXEL_MAPPING_TYPE
+#   if IOT_LED_MATRIX_CONFIGURABLE_DISPLAY
+#       define IOT_CLOCK_PIXEL_MAPPING_TYPE DynamicPixelMapping
+#   else
+#       define IOT_CLOCK_PIXEL_MAPPING_TYPE PixelMapping
+#   endif
 #endif
 
 // -1 to disable standby LED
@@ -171,12 +175,6 @@
 #    define IF_IOT_CLOCK_SAVE_STATE(...) __VA_ARGS__
 #else
 #    define IF_IOT_CLOCK_SAVE_STATE(...)
-#endif
-
-#if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
-#    define IF_IOT_LED_MATRIX_VIS(...) __VA_ARGS__
-#else
-#    define IF_IOT_LED_MATRIX_VIS(...)
 #endif
 
 // delay in seconds before any changes get stored except for power on/off

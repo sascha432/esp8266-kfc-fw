@@ -134,6 +134,7 @@ namespace FormUI {
         enum class StyleType : uint8_t {
             DEFAULT = 0,
             ACCORDION,
+            WEBUI,
             MAX
         };
 

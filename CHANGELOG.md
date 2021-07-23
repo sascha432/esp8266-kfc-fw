@@ -2,6 +2,7 @@
 
 ## Version 0.0.5
 
+- Inline forms for WebUI
 - Sort order for sensors
 - Support for BH1750FVI Ambient Light Sensor
 - Removed persistant WiFi settings and improved stability

@@ -74,12 +74,12 @@
                     return get_enum_orientation(*this);
                 }
 
-                FireAnimation_t() :
-                    cooling(kDefaultValueFor_cooling),
-                    sparking(kDefaultValueFor_sparking),
-                    speed(kDefaultValueFor_speed),
-                    orientation(kDefaultValueFor_orientation),
-                    invert_direction(false),
+                FireAnimation_t(uint8_t _cooling = kDefaultValueFor_cooling, uint8_t _sparking = kDefaultValueFor_sparking, uint8_t _speed = kDefaultValueFor_speed, Orientation _orientation = Orientation::VERTICAL, bool _invert_direction = false) :
+                    cooling(_cooling),
+                    sparking(_sparking),
+                    speed(_speed),
+                    orientation(cast(_orientation)),
+                    invert_direction(_invert_direction),
                     factor(0xffff00)
                 {
                 }
@@ -137,7 +137,10 @@
 
                 static const __FlashStringHelper *getAnimationNames();
                 static const __FlashStringHelper *getAnimationNamesJsonArray();
+                static AnimationType getAnimationType(const __FlashStringHelper *name);
                 static const __FlashStringHelper *getAnimationName(AnimationType type);
+                static const __FlashStringHelper *getAnimationNameSlug(AnimationType type);
+                static const __FlashStringHelper *getAnimationTitle(AnimationType type);
 
                 enum class InitialStateType : uint8_t  {
                     MIN = 0,
@@ -236,9 +239,9 @@
 
                 FireAnimation_t fire;
 
-#if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
-                VisualizerAnimation_t visualizer;
-#endif
+                #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
+                    VisualizerAnimation_t visualizer;
+                #endif
 
                 struct __attribute__packed__ InterleavedType {
                     using Type = InterleavedType;

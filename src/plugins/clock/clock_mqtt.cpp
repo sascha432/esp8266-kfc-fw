@@ -99,7 +99,7 @@ void ClockPlugin::onConnect()
     _publishState();
 }
 
-void ClockPlugin::onMessage(const char *topic, const  char *payload, size_t len)
+void ClockPlugin::onMessage(const char *topic, const char *payload, size_t len)
 {
     __LDBG_printf("topic=%s payload=%s", topic, payload);
 
@@ -116,7 +116,7 @@ void ClockPlugin::onMessage(const char *topic, const  char *payload, size_t len)
         } else
     #endif
     if (!strcmp_end_P(topic, SPGM(_effect_set))) {
-        auto animation = _getAnimationType(payload);
+        auto animation = _getAnimationType(FPSTR(payload));
         if (animation != AnimationType::MAX) {
             setAnimation(static_cast<AnimationType>(animation));
             _saveStateDelayed();

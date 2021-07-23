@@ -13,81 +13,212 @@
 #include <debug_helper_disable.h>
 #endif
 
-// #pragma GCC diagnostic ignored "-Waddress-of-packed-member"
-
-void ClockPlugin::_createConfigureFormAniRainbow(FormUI::Form::BaseForm &form, Clock::ConfigType &cfg)
+void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI::Form::BaseForm &form, Clock::ConfigType &cfg, TitleType titleType)
 {
-    using RainbowMode = KFCConfigurationClasses::Plugins::ClockConfig::ClockConfig_t::RainbowMode;
+    FormUI::Group *group;
+    switch(titleType) {
+        case TitleType::ADD_GROUP:
+            group = &form.addCardGroup(_getAnimationNameSlug(animation), _getAnimationTitle(animation), true);
+            break;
+        case TitleType::SET_TITLE:
+            form.getWebUIConfig().setTitle(_getAnimationTitle(animation));
+            // fall through
+        default:
+            group = nullptr;
+            break;
+    }
 
-    auto rainbowModeItems = FormUI::Container::List(
-        RainbowMode::INTERNAL, F("Internal"),
-        RainbowMode::FASTLED, F("FastLED")
-    );
+    switch(animation) {
+        case AnimationType::FADING: {
+                form.addObjectGetterSetter(F("fse"), cfg.fading, cfg.fading.get_bits_speed, cfg.fading.set_bits_speed);
+                form.addFormUI(F("Time Between Fading Colors"), FormUI::Suffix(FSPGM(milliseconds)));
+                cfg.fading.addRangeValidatorFor_speed(form);
 
-    form.addObjectGetterSetter(F("rb_mode"), FormGetterSetter(cfg.rainbow, mode));
-    form.addFormUI(F("Mode"), rainbowModeItems);
+                form.addObjectGetterSetter(F("fdy"), cfg.fading, cfg.fading.get_bits_delay, cfg.fading.set_bits_delay);
+                form.addFormUI(F("Delay Before Start Fading To Next Random Color"), FormUI::Suffix(FSPGM(seconds)));
+                cfg.fading.addRangeValidatorFor_delay(form);
 
-    form.addObjectGetterSetter(F("rb_bpm"), FormGetterSetter(cfg.rainbow, bpm));
-    form.addFormUI(F("BPM"));
-    cfg.rainbow.addRangeValidatorFor_bpm(form);
+                form.add(F("fcf"), Color(cfg.fading.factor.value).toString(), [&cfg](const String &value, FormUI::Field::BaseField &field, bool store) {
+                    if (store) {
+                        cfg.fading.factor.value = Color::fromString(value);
+                    }
+                    return false;
+                });
+                form.addFormUI(F("Random Color Factor"));
+            }
+            break;
+        case AnimationType::INTERLEAVED: {
+                form.addObjectGetterSetter(F("ilr"), FormGetterSetter(cfg.interleaved, rows));
+                form.addFormUI(F("Display every nth row"));
+                // form.addValidator(FormUI::Validator::Range(0, IOT_LED_MATRIX_ROWS));
 
-    form.addObjectGetterSetter(F("rb_hue"), FormGetterSetter(cfg.rainbow, hue));
-    form.addFormUI(F("Hue"));
-    cfg.rainbow.addRangeValidatorFor_hue(form);
+                form.addObjectGetterSetter(F("ilc"), FormGetterSetter(cfg.interleaved, cols));
+                form.addFormUI(F("Display every nth column"));
+                // form.addValidator(FormUI::Validator::Range(0, IOT_LED_MATRIX_COLS));
 
-    form.addObjectGetterSetter(F("rb_mul"), FormGetterSetter(cfg.rainbow.multiplier, value));
-    form.addFormUI(FSPGM(Multiplier));
-    cfg.rainbow.multiplier.addRangeValidatorFor_value(form);
+                form.addObjectGetterSetter(F("ilt"), FormGetterSetter(cfg.interleaved, time));
+                form.addFormUI(F("Rotate Through Rows And Columns"), FormUI::Suffix(F("milliseconds")), FormUI::IntAttribute(F("disabled-value"), 0));
+            }
+            break;
+        case AnimationType::FIRE: {
+                form.addObjectGetterSetter(F("fic"), FormGetterSetter(cfg.fire, cooling));
+                form.addFormUI(F("Cooling Value:"));
+                cfg.fire.addRangeValidatorFor_cooling(form);
 
-    form.addObjectGetterSetter(F("rb_incr"), FormGetterSetter(cfg.rainbow.multiplier, incr));
-    form.addFormUI(F("Multiplier Increment Per Frame"));
-    cfg.rainbow.multiplier.addRangeValidatorFor_incr(form);
+                form.addObjectGetterSetter(F("fis"), FormGetterSetter(cfg.fire, sparking));
+                form.addFormUI(F("Sparking Value"));
+                cfg.fire.addRangeValidatorFor_sparking(form);
 
-    form.addObjectGetterSetter(F("rb_min"), FormGetterSetter(cfg.rainbow.multiplier, min));
-    form.addFormUI(F("Minimum Multiplier"));
-    cfg.rainbow.multiplier.addRangeValidatorFor_min(form);
+                form.addObjectGetterSetter(F("fip"), FormGetterSetter(cfg.fire, speed));
+                form.addFormUI(F("Speed"), FormUI::Suffix("milliseconds"));
+                cfg.fire.addRangeValidatorFor_speed(form);
 
-    form.addObjectGetterSetter(F("rb_max"), FormGetterSetter(cfg.rainbow.multiplier, max));
-    form.addFormUI(F("Maximum Multiplier"));
-    cfg.rainbow.multiplier.addRangeValidatorFor_max(form);
+                auto &invertHidden = form.addObjectGetterSetter(F("fiinv"), FormGetterSetter(cfg.fire, invert_direction));
+                form.addFormUI(FormUI::Type::HIDDEN);
 
-    form.addObjectGetterSetter(F("rb_sp"), FormGetterSetter(cfg.rainbow, speed));
-    form.addFormUI(F("Animation Speed"));
-    cfg.rainbow.addRangeValidatorFor_speed(form);
+                auto orientationItems = FormUI::List(
+                    Plugins::ClockConfig::FireAnimation_t::Orientation::VERTICAL, "Vertical",
+                    Plugins::ClockConfig::FireAnimation_t::Orientation::HORIZONTAL, "Horizontal"
+                );
 
-    form.add(F("rb_cf"), Color(cfg.rainbow.color.factor.value).toString(), [&cfg](const String &value, FormUI::Field::BaseField &field, bool store) {
-        if (store) {
-            cfg.rainbow.color.factor.value = Color::fromString(value);
-        }
-        return false;
-    });
-    form.addFormUI(F("Color Multiplier"));
+                form.addObjectGetterSetter(F("fiori"), FormGetterSetter(cfg.fire, orientation));
+                form.addFormUI(F("Orientation"), orientationItems, FormUI::CheckboxButtonSuffix(invertHidden, F("Invert Direction")));
 
-    form.add(F("rb_mv"), Color(cfg.rainbow.color.min.value).toString(), [&cfg](const String &value, FormUI::Field::BaseField &field, bool store) {
-        if (store) {
-            cfg.rainbow.color.min.value = Color::fromString(value);
-        }
-        return false;
-    });
-    form.addFormUI(F("Minimum Color Value"));
+                form.add(F("ficf"), Color(cfg.fire.factor.value).toString(), [&cfg](const String &value, FormUI::Field::BaseField &field, bool store) {
+                    if (store) {
+                        cfg.fire.factor.value = Color::fromString(value);
+                    }
+                    return false;
+                });
+                form.addFormUI(F("Color Factor"));
+            }
+            break;
+        case AnimationType::FLASHING: {
+                form.addObjectGetterSetter(F("fsp"), FormGetterSetter(cfg, flashing_speed));
+                form.addFormUI(F("Flashing Speed"), FormUI::Suffix(FSPGM(milliseconds)));
+                cfg.addRangeValidatorFor_flashing_speed(form);
+            }
+            break;
+        case AnimationType::SOLID: {
+                form.add(F("col"), Color(cfg.solid_color.value).toString(), [&cfg](const String &value, FormUI::Field::BaseField &field, bool store) {
+                    if (store) {
+                        cfg.solid_color.value = Color::fromString(value);
+                    }
+                    return false;
+                }, FormUI::Field::Type::TEXT);
+                form.addFormUI(FSPGM(Solid_Color));
+            }
+            break;
+        #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
+            case AnimationType::VISUALIZER: {
+                    auto visualizerTypeItems = FormUI::Container::List(
+                        VisualizerType::RAINBOW, "Rainbow",
+                        VisualizerType::RAINBOW_DOUBLE_SIDED, "Rainbow Double Sided",
+                        VisualizerType::SINGLE_COLOR, "Single Color",
+                        VisualizerType::SINGLE_COLOR_DOUBLE_SIDED, "Single Color Double Sided"
+                    );
+                    form.addObjectGetterSetter(F("vln"), FormGetterSetter(cfg.visualizer, type));
+                    form.addFormUI(F("Visualization Type"), visualizerTypeItems);
 
-    form.addObjectGetterSetter(F("rb_cre"), FormGetterSetter(cfg.rainbow.color, red_incr));
-    form.addFormUI(F("Color Increment Per Frame (Red)"));
-    cfg.rainbow.color.addRangeValidatorFor_red_incr(form);
+                    form.add(F("vsc"), Color(cfg.visualizer.color).toString(), [&cfg](const String &value, FormUI::Field::BaseField &field, bool store) {
+                        if (store) {
+                            cfg.visualizer.color = Color::fromString(value);
+                        }
+                        return false;
+                    });
+                    form.addFormUI(F("Color For Single Color Mode"));
 
-    form.addObjectGetterSetter(F("rb_cgr"), FormGetterSetter(cfg.rainbow.color, green_incr));
-    form.addFormUI(F("Color Increment Per Frame (Green)"));
-    cfg.rainbow.color.addRangeValidatorFor_green_incr(form);
+                    form.addObjectGetterSetter(F("vport"), FormGetterSetter(cfg.visualizer, port));
+                    form.addFormUI(F("UDP Port"));
+                    cfg.visualizer.addRangeValidatorFor_port(form);
+                }
+                break;
+        #endif
+        case AnimationType::RAINBOW: {
+                auto rainbowModeItems = FormUI::Container::List(
+                    RainbowMode::INTERNAL, F("Internal"),
+                    RainbowMode::FASTLED, F("FastLED")
+                );
 
-    form.addObjectGetterSetter(F("rb_cbl"), FormGetterSetter(cfg.rainbow.color, blue_incr));
-    form.addFormUI(F("Color Increment Per Frame (Blue)"));
-    cfg.rainbow.color.addRangeValidatorFor_blue_incr(form);
+                form.addObjectGetterSetter(F("rb_mode"), FormGetterSetter(cfg.rainbow, mode));
+                form.addFormUI(F("Mode"), rainbowModeItems);
 
+                form.addObjectGetterSetter(F("rb_bpm"), FormGetterSetter(cfg.rainbow, bpm));
+                form.addFormUI(F("BPM"));
+                cfg.rainbow.addRangeValidatorFor_bpm(form);
+
+                form.addObjectGetterSetter(F("rb_hue"), FormGetterSetter(cfg.rainbow, hue));
+                form.addFormUI(F("Hue"));
+                cfg.rainbow.addRangeValidatorFor_hue(form);
+
+                form.addObjectGetterSetter(F("rb_mul"), FormGetterSetter(cfg.rainbow.multiplier, value));
+                form.addFormUI(FSPGM(Multiplier));
+                cfg.rainbow.multiplier.addRangeValidatorFor_value(form);
+
+                form.addObjectGetterSetter(F("rb_incr"), FormGetterSetter(cfg.rainbow.multiplier, incr));
+                form.addFormUI(F("Multiplier Increment Per Frame"));
+                cfg.rainbow.multiplier.addRangeValidatorFor_incr(form);
+
+                form.addObjectGetterSetter(F("rb_min"), FormGetterSetter(cfg.rainbow.multiplier, min));
+                form.addFormUI(F("Minimum Multiplier"));
+                cfg.rainbow.multiplier.addRangeValidatorFor_min(form);
+
+                form.addObjectGetterSetter(F("rb_max"), FormGetterSetter(cfg.rainbow.multiplier, max));
+                form.addFormUI(F("Maximum Multiplier"));
+                cfg.rainbow.multiplier.addRangeValidatorFor_max(form);
+
+                form.addObjectGetterSetter(F("rb_sp"), FormGetterSetter(cfg.rainbow, speed));
+                form.addFormUI(F("Animation Speed"));
+                cfg.rainbow.addRangeValidatorFor_speed(form);
+
+                form.add(F("rb_cf"), Color(cfg.rainbow.color.factor.value).toString(), [&cfg](const String &value, FormUI::Field::BaseField &field, bool store) {
+                    if (store) {
+                        cfg.rainbow.color.factor.value = Color::fromString(value);
+                    }
+                    return false;
+                });
+                form.addFormUI(F("Color Multiplier"));
+
+                form.add(F("rb_mv"), Color(cfg.rainbow.color.min.value).toString(), [&cfg](const String &value, FormUI::Field::BaseField &field, bool store) {
+                    if (store) {
+                        cfg.rainbow.color.min.value = Color::fromString(value);
+                    }
+                    return false;
+                });
+                form.addFormUI(F("Minimum Color Value"));
+
+                form.addObjectGetterSetter(F("rb_cre"), FormGetterSetter(cfg.rainbow.color, red_incr));
+                form.addFormUI(F("Color Increment Per Frame (Red)"));
+                cfg.rainbow.color.addRangeValidatorFor_red_incr(form);
+
+                form.addObjectGetterSetter(F("rb_cgr"), FormGetterSetter(cfg.rainbow.color, green_incr));
+                form.addFormUI(F("Color Increment Per Frame (Green)"));
+                cfg.rainbow.color.addRangeValidatorFor_green_incr(form);
+
+                form.addObjectGetterSetter(F("rb_cbl"), FormGetterSetter(cfg.rainbow.color, blue_incr));
+                form.addFormUI(F("Color Increment Per Frame (Blue)"));
+                cfg.rainbow.color.addRangeValidatorFor_blue_incr(form);
+            }
+            break;
+        case AnimationType::MAX:
+            break;
+    }
+
+    if (group) {
+        group->end();
+    }
 }
+
 
 void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
 {
-    __LDBG_printf("type=%u name=%s", type, formName.c_str());
+    __LDBG_printf("callback_type=%u name=%s", type, formName.c_str());
+
+    #if IOT_LED_MATRIX
+        #define FORM_TITLE "LED Matrix Configuration"
+    #else
+        #define FORM_TITLE "Clock Configuration"
+    #endif
 
     if (!isCreateFormCallbackType(type)) {
         return;
@@ -95,180 +226,59 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
     auto &cfg = getWriteableConfig();
 
-    #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
-        using VisualizerType = KFCConfigurationClasses::Plugins::ClockConfig::VisualizerAnimation_t::VisualizerType;
-
-        auto visualizerTypeItems = FormUI::Container::List(
-            VisualizerType::RAINBOW, "Rainbow",
-            VisualizerType::RAINBOW_DOUBLE_SIDED, "Rainbow Double Sided",
-            VisualizerType::SINGLE_COLOR, "Single Color",
-            VisualizerType::SINGLE_COLOR_DOUBLE_SIDED, "Single Color Double Sided"
-        );
-    #endif
-
-    auto animationTypeItems = FormUI::Container::List(
-        AnimationType::SOLID, FSPGM(Solid_Color),
-        AnimationType::RAINBOW, FSPGM(Rainbow),
-        AnimationType::FIRE, F("Fire"),
-        AnimationType::FLASHING, F("Flash"),
-        AnimationType::FADING, F("Color Fade"),
-        #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
-        AnimationType::VISUALIZER, F("Visualizer"),
-        #endif
-        AnimationType::INTERLEAVED, F("Interleaved")
-    );
-
-    if (formName == F("ani-rb")) {
-
-        auto &ui = form.createWebUI();
-        ui.setTitle(F("Animation"));
-        ui.setContainerId(F("led_matrix_settings"));
-        ui.setStyle(FormUI::WebUI::StyleType::DEFAULT);
-
-        _createConfigureFormAniRainbow(form, cfg);
-
+    // sub forms for the WebUI
+    if (formName.startsWith(F("ani-"))) {
+        auto animation = _getAnimationType(FPSTR(formName.c_str() + 4));
+        __DBG_printf("form=%s animation=%u valid=%u", formName.c_str() + 4, animation, animation != AnimationType::MAX);
+        if (animation != AnimationType::MAX) {
+            auto &ui = form.createWebUI();
+            ui.setContainerId(F("led-matrix-settings"));
+            ui.setStyle(FormUI::WebUI::StyleType::WEBUI);
+            _createConfigureFormAnimation(animation, form, cfg, TitleType::SET_TITLE);
+            form.finalize();
+        }
         return;
     }
 
-    #if IOT_LED_MATRIX
-        auto &ui = form.createWebUI();
-        ui.setTitle(F("LED Matrix Configuration"));
-        ui.setContainerId(F("led_matrix_settings"));
-        ui.setStyle(FormUI::WebUI::StyleType::ACCORDION);
-    #else
-        auto &ui = form.createWebUI();
-        ui.setTitle(F("Clock Configuration"));
-        ui.setContainerId(F("clock_settings"));
-        ui.setStyle(FormUI::WebUI::StyleType::ACCORDION);
-    #endif
+    auto &ui = form.createWebUI();
+    ui.setTitle(F(FORM_TITLE));
+    ui.setContainerId(F("led-matrix-settings"));
+    ui.setStyle(FormUI::WebUI::StyleType::ACCORDION);
 
     if (formName == F("animations")) {
 
         // --------------------------------------------------------------------
         auto &animationGroup = form.addCardGroup(F("anicfg"), FSPGM(Animation), true);
 
+        FormUI::Container::List animationTypeItems;
+        for(int i = 0; i < static_cast<int>(AnimationType::MAX); i++) {
+            animationTypeItems.emplace_back(static_cast<AnimationType>(i), _getAnimationName(static_cast<AnimationType>(i)));
+        }
+
         form.addObjectGetterSetter(F("ani"), FormGetterSetter(cfg, animation));
         form.addFormUI(FSPGM(Type), animationTypeItems);
 
-        form.add(F("col"), Color(cfg.solid_color.value).toString(), [&cfg](const String &value, FormUI::Field::BaseField &field, bool store) {
-            if (store) {
-                cfg.solid_color.value = Color::fromString(value);
-            }
-            return false;
-        }, FormUI::Field::Type::TEXT);
-        form.addFormUI(FSPGM(Solid_Color));
-
-        form.addObjectGetterSetter(F("fsp"), FormGetterSetter(cfg, flashing_speed));
-        form.addFormUI(F("Flashing Speed"), FormUI::Suffix(FSPGM(milliseconds)));
-        cfg.addRangeValidatorFor_flashing_speed(form);
+        _createConfigureFormAnimation(AnimationType::SOLID, form, cfg, TitleType::NONE);
+        _createConfigureFormAnimation(AnimationType::FLASHING, form, cfg, TitleType::NONE);
 
         animationGroup.end();
 
         // --------------------------------------------------------------------
-        auto &rainbowGroup = form.addCardGroup(F("rainbow"), F("Rainbow Animation"), true);
+        _createConfigureFormAnimation(AnimationType::RAINBOW, form, cfg, TitleType::ADD_GROUP);
 
-        _createConfigureFormAniRainbow(form, cfg);
-
-        rainbowGroup.end();
-
+        // --------------------------------------------------------------------
         #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
-
-            // --------------------------------------------------------------------
-            auto &visGroup = form.addCardGroup(F("vis"), F("Visualizer"), true);
-
-            form.addObjectGetterSetter(F("vln"), FormGetterSetter(cfg.visualizer, type));
-            form.addFormUI(F("Visualization Type"), visualizerTypeItems);
-
-            form.add(F("vsc"), Color(cfg.visualizer.color).toString(), [&cfg](const String &value, FormUI::Field::BaseField &field, bool store) {
-                if (store) {
-                    cfg.visualizer.color = Color::fromString(value);
-                }
-                return false;
-            });
-            form.addFormUI(F("Color For Single Color Mode"));
-
-            form.addObjectGetterSetter(F("vport"), FormGetterSetter(cfg.visualizer, port));
-            form.addFormUI(F("UDP Port"));
-            cfg.visualizer.addRangeValidatorFor_port(form);
-
-            visGroup.end();
-
+            _createConfigureFormAnimation(AnimationType::VISUALIZER, form, cfg, TitleType::ADD_GROUP);
         #endif
 
         // --------------------------------------------------------------------
-
-        auto &fireGroup = form.addCardGroup(F("fire"), F("Fire Animation"), true);
-
-        form.addObjectGetterSetter(F("fic"), FormGetterSetter(cfg.fire, cooling));
-        form.addFormUI(F("Cooling Value:"));
-        cfg.fire.addRangeValidatorFor_cooling(form);
-
-        form.addObjectGetterSetter(F("fis"), FormGetterSetter(cfg.fire, sparking));
-        form.addFormUI(F("Sparking Value"));
-        cfg.fire.addRangeValidatorFor_sparking(form);
-
-        form.addObjectGetterSetter(F("fip"), FormGetterSetter(cfg.fire, speed));
-        form.addFormUI(F("Speed"), FormUI::Suffix("milliseconds"));
-        cfg.fire.addRangeValidatorFor_speed(form);
-
-        auto &invertHidden = form.addObjectGetterSetter(F("fiinv"), FormGetterSetter(cfg.fire, invert_direction));
-        form.addFormUI(FormUI::Type::HIDDEN);
-
-        auto orientationItems = FormUI::List(
-            Plugins::ClockConfig::FireAnimation_t::Orientation::VERTICAL, "Vertical",
-            Plugins::ClockConfig::FireAnimation_t::Orientation::HORIZONTAL, "Horizontal"
-        );
-
-        form.addObjectGetterSetter(F("fiori"), FormGetterSetter(cfg.fire, orientation));
-        form.addFormUI(F("Orientation"), orientationItems, FormUI::CheckboxButtonSuffix(invertHidden, F("Invert Direction")));
-
-        form.add(F("ficf"), Color(cfg.fire.factor.value).toString(), [&cfg](const String &value, FormUI::Field::BaseField &field, bool store) {
-            if (store) {
-                cfg.fire.factor.value = Color::fromString(value);
-            }
-            return false;
-        });
-        form.addFormUI(F("Color Factor"));
-
-        fireGroup.end();
+        _createConfigureFormAnimation(AnimationType::FIRE, form, cfg, TitleType::ADD_GROUP);
 
         // --------------------------------------------------------------------
-
-        auto &interleavedGroup = form.addCardGroup(F("ild"), F("Interleaved"), true);
-
-        form.addObjectGetterSetter(F("ilr"), FormGetterSetter(cfg.interleaved, rows));
-        form.addFormUI(F("Display every nth row"));
-        // form.addValidator(FormUI::Validator::Range(0, IOT_LED_MATRIX_ROWS));
-
-        form.addObjectGetterSetter(F("ilc"), FormGetterSetter(cfg.interleaved, cols));
-        form.addFormUI(F("Display every nth column"));
-        // form.addValidator(FormUI::Validator::Range(0, IOT_LED_MATRIX_COLS));
-
-        form.addObjectGetterSetter(F("ilt"), FormGetterSetter(cfg.interleaved, time));
-        form.addFormUI(F("Rotate Through Rows And Columns"), FormUI::Suffix(F("milliseconds")), FormUI::IntAttribute(F("disabled-value"), 0));
-
-        interleavedGroup.end();
+        _createConfigureFormAnimation(AnimationType::INTERLEAVED, form, cfg, TitleType::ADD_GROUP);
 
         // --------------------------------------------------------------------
-        auto &fadingGroup = form.addCardGroup(F("fade"), F("Color Fade"), true);
-
-        form.addObjectGetterSetter(F("fse"), cfg.fading, cfg.fading.get_bits_speed, cfg.fading.set_bits_speed);
-        form.addFormUI(F("Time Between Fading Colors"), FormUI::Suffix(FSPGM(milliseconds)));
-        cfg.fading.addRangeValidatorFor_speed(form);
-
-        form.addObjectGetterSetter(F("fdy"), cfg.fading, cfg.fading.get_bits_delay, cfg.fading.set_bits_delay);
-        form.addFormUI(F("Delay Before Start Fading To Next Random Color"), FormUI::Suffix(FSPGM(seconds)));
-        cfg.fading.addRangeValidatorFor_delay(form);
-
-        form.add(F("fcf"), Color(cfg.fading.factor.value).toString(), [&cfg](const String &value, FormUI::Field::BaseField &field, bool store) {
-            if (store) {
-                cfg.fading.factor.value = Color::fromString(value);
-            }
-            return false;
-        });
-        form.addFormUI(F("Random Color Factor"));
-
-        fadingGroup.end();
+        _createConfigureFormAnimation(AnimationType::FADING, form, cfg, TitleType::ADD_GROUP);
 
         // --------------------------------------------------------------------
         #if IOT_ALARM_PLUGIN_ENABLED

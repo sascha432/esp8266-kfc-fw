@@ -40,12 +40,6 @@ namespace Clock {
         return static_cast<ShowMethodType>(getNeopixelShowMethodInt());
     }
 
-#if IOT_LED_MATRIX_CONFIGURABLE_DISPLAY
-
-    #error not supported yet
-
-#else
-
     template<class _CoordinateType, _CoordinateType _Rows, _CoordinateType _Columns>
     class PixelCoordinates {
     public:
@@ -115,8 +109,13 @@ namespace Clock {
         using TypesType::kPixelOffset;
         using TypesType::kMaxPixelAddress; // kPixelOffset + kNumPixels
 
-    public:
+    private:
         static constexpr uint8_t kMappingTypeId = (_ReverseRows ? 0x01 : 0x00) | (_ReverseColumns ? 0x02 : 0x00) | (_Rotate ? 0x04 : 0) | (_Interleaved ? 0x08 : 0);
+
+    public:
+        constexpr uint8_t getMappingTypeId() const {
+            return kMappingTypeId;
+        }
 
         struct CoordinateHelperType {
             using type = CoordinateType;
@@ -298,20 +297,143 @@ namespace Clock {
         }
     };
 
-#endif
+
+
+    template<size_t _PixelOffset, size_t _Rows, size_t _Columns, bool _ReverseRows, bool _ReverseColumns, bool _Rotate, bool _Interleaved>
+    class DynamicPixelMapping : public Types<_PixelOffset, _Rows, _Columns> {
+    public:
+        using TypesType = Types<_PixelOffset, _Rows, _Columns>;
+        using PixelAddressType = typename TypesType::PixelAddressType;
+        using CoordinateType = typename TypesType::CoordinateType;
+        using PixelCoordinatesType = typename TypesType::PixelCoordinatesType;
+        using TypesType::kRows;
+        using TypesType::kCols;
+        using TypesType::kNumPixels;
+    protected:
+        using TypesType::kPixelOffset;
+        using TypesType::kMaxPixelAddress; // kPixelOffset + kNumPixels
+
+    public:
+        // the arguments can be changed during runtime
+        // it is 10-30% slower than the static version
+        bool _reverseRows{_ReverseRows};
+        bool _reverseColumns{_ReverseColumns};
+        bool _rotate{_Rotate};
+        bool _interleaved{_Interleaved};
+        CoordinateType _rows{kRows};
+        CoordinateType _cols{kCols};
+
+        uint8_t getMappingTypeId() const {
+            return (_reverseRows ? 0x01 : 0x00) | (_reverseColumns ? 0x02 : 0x00) | (_rotate ? 0x04 : 0) | (_interleaved ? 0x08 : 0);
+        }
+
+
+        // rotation
+        inline __attribute__((__always_inline__))
+        CoordinateType getRow(CoordinateType row, CoordinateType col) const {
+            if (_rotate) {
+                return col;
+            }
+            else {
+                return row;
+            }
+        }
+
+        inline __attribute__((__always_inline__))
+        CoordinateType getCol(CoordinateType row, CoordinateType col) const {
+            if (_rotate) {
+                return row;
+            }
+            else {
+                return col;
+            }
+        }
+
+        // reversed and interleaved rows
+        inline __attribute__((__always_inline__))
+        CoordinateType _row(CoordinateType row, CoordinateType col) const {
+            if (_interleaved) {
+                if (_reverseRows) {
+                    if ((col & 1) == _interleaved) {
+                        return (_rows - 1) - row;
+                    }
+                    return row;
+                }
+                else {
+                    if ((col & 1) == _interleaved) {
+                        return row;
+                    }
+                    return (_rows - 1) - row;
+                }
+            }
+            else {
+                if (_reverseRows) {
+                    return (_rows - 1) - row;
+                }
+                else {
+                    return row;
+                }
+            }
+        }
+
+        // reversed columns
+        inline __attribute__((__always_inline__))
+        CoordinateType _col(CoordinateType row, CoordinateType col) const {
+            if (_reverseColumns) {
+                return (_cols - 1) - col;
+            }
+            else {
+                return col;
+            }
+
+        }
+
+        inline __attribute__((__always_inline__))
+        PixelAddressType getAddress(CoordinateType row, CoordinateType col) const {
+            // return row + col * _rows;
+            return _row(getRow(row, col), getCol(row, col)) + (_col(getRow(row, col), getCol(row, col)) * _rows);
+        }
+
+        inline __attribute__((__always_inline__))
+        PixelAddressType getAddress(PixelCoordinatesType coords) const {
+            return getAddress(coords.row(), coords.col());
+        }
+
+        inline __attribute__((__always_inline__))
+        PixelCoordinatesType getPoint(PixelAddressType address) const {
+            if (_rows == 1) {
+                return PixelCoordinatesType(_row(getRow(0, address), getCol(0, address)), _col(getRow(0, address), getCol(0, address)));
+            }
+            else {
+                CoordinateType row = address % _rows;
+                CoordinateType col = address / _rows;
+                return PixelCoordinatesType(_row(getRow(row, col), getCol(row, col)), _col(getRow(row, col), getCol(row, col)));
+            }
+        }
+    };
 
     // generic class for managing pixel mapping and shapes
 
     template<size_t _PixelOffset, size_t _Rows, size_t _Columns, bool _ReverseRows, bool _ReverseColumns, bool _Rotate, bool _Interleaved>
-    class PixelDisplayBuffer : public PixelMapping<_PixelOffset, _Rows, _Columns, _ReverseRows, _ReverseColumns, _Rotate, _Interleaved> {
+    class PixelDisplayBuffer : public IOT_CLOCK_PIXEL_MAPPING_TYPE<_PixelOffset, _Rows, _Columns, _ReverseRows, _ReverseColumns, _Rotate, _Interleaved> {
     public:
-        using PixelMappingType = PixelMapping<_PixelOffset, _Rows, _Columns, _ReverseRows, _ReverseColumns, _Rotate, _Interleaved>;
+        using PixelMappingType = IOT_CLOCK_PIXEL_MAPPING_TYPE<_PixelOffset, _Rows, _Columns, _ReverseRows, _ReverseColumns, _Rotate, _Interleaved>;
         using PixelMappingType::getPoint;
         using PixelMappingType::getAddress;
         using PixelMappingType::kRows;
         using PixelMappingType::kCols;
         using PixelMappingType::kPixelOffset;
         using PixelMappingType::kNumPixels;
+
+        #if IOT_LED_MATRIX_CONFIGURABLE_DISPLAY
+        using PixelMappingType::_reverseRows;
+        using PixelMappingType::_reverseColumns;
+        using PixelMappingType::_rotate;
+        using PixelMappingType::_interleaved;
+        using PixelMappingType::_rows;
+        using PixelMappingType::_cols;
+        #endif
+
     protected:
         using PixelMappingType::kMaxPixelAddress; // = kPixelOffset + kNumPixels
 

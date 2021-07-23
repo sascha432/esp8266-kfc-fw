@@ -13,6 +13,12 @@
 #include <debug_helper_disable.h>
 #endif
 
+#if IOT_LED_MATRIX
+#   define FORM_TITLE "LED Matrix Configuration"
+#else
+#   define FORM_TITLE "Clock Configuration"
+#endif
+
 void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI::Form::BaseForm &form, Clock::ConfigType &cfg, TitleType titleType)
 {
     FormUI::Group *group;
@@ -135,22 +141,6 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                 break;
         #endif
         case AnimationType::RAINBOW: {
-                auto rainbowModeItems = FormUI::Container::List(
-                    RainbowMode::INTERNAL, F("Internal"),
-                    RainbowMode::FASTLED, F("FastLED")
-                );
-
-                form.addObjectGetterSetter(F("rb_mode"), FormGetterSetter(cfg.rainbow, mode));
-                form.addFormUI(F("Mode"), rainbowModeItems);
-
-                form.addObjectGetterSetter(F("rb_bpm"), FormGetterSetter(cfg.rainbow, bpm));
-                form.addFormUI(F("BPM"));
-                cfg.rainbow.addRangeValidatorFor_bpm(form);
-
-                form.addObjectGetterSetter(F("rb_hue"), FormGetterSetter(cfg.rainbow, hue));
-                form.addFormUI(F("Hue"));
-                cfg.rainbow.addRangeValidatorFor_hue(form);
-
                 form.addObjectGetterSetter(F("rb_mul"), FormGetterSetter(cfg.rainbow.multiplier, value));
                 form.addFormUI(FSPGM(Multiplier));
                 cfg.rainbow.multiplier.addRangeValidatorFor_value(form);
@@ -200,6 +190,16 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                 cfg.rainbow.color.addRangeValidatorFor_blue_incr(form);
             }
             break;
+        case AnimationType::RAINBOW_FASTLED: {
+                form.addObjectGetterSetter(F("rb_bpm"), FormGetterSetter(cfg.rainbow, bpm));
+                form.addFormUI(F("BPM"));
+                cfg.rainbow.addRangeValidatorFor_bpm(form);
+
+                form.addObjectGetterSetter(F("rb_hue"), FormGetterSetter(cfg.rainbow, hue));
+                form.addFormUI(F("Hue"));
+                cfg.rainbow.addRangeValidatorFor_hue(form);
+            }
+            break;
         case AnimationType::MAX:
             break;
     }
@@ -209,16 +209,9 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
     }
 }
 
-
 void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
 {
     __LDBG_printf("callback_type=%u name=%s", type, formName.c_str());
-
-    #if IOT_LED_MATRIX
-        #define FORM_TITLE "LED Matrix Configuration"
-    #else
-        #define FORM_TITLE "Clock Configuration"
-    #endif
 
     if (!isCreateFormCallbackType(type)) {
         return;
@@ -265,6 +258,9 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
         // --------------------------------------------------------------------
         _createConfigureFormAnimation(AnimationType::RAINBOW, form, cfg, TitleType::ADD_GROUP);
+
+        // --------------------------------------------------------------------
+        _createConfigureFormAnimation(AnimationType::RAINBOW_FASTLED, form, cfg, TitleType::ADD_GROUP);
 
         // --------------------------------------------------------------------
         #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
@@ -404,10 +400,8 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
             cfg.addRangeValidatorFor_blink_colon_speed(form, true);
         #endif
 
-        #if IOT_CLOCK_USE_DITHERING
-            form.addObjectGetterSetter(F("dt"), FormGetterSetter(cfg, dithering));
-            form.addFormUI(F("FastLED Temporal Dithering"), FormUI::BoolItems(F("Enable"), F("Disable")));
-        #endif
+        form.addObjectGetterSetter(F("dt"), FormGetterSetter(cfg, dithering));
+        form.addFormUI(F("FastLED Temporal Dithering"), FormUI::BoolItems(F("Enable"), F("Disable")));
 
         #if IOT_LED_MATRIX_STANDBY_PIN != -1
             form.addObjectGetterSetter(F("sbl"), cfg, cfg.get_bits_standby_led, cfg.set_bits_standby_led);

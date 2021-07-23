@@ -223,7 +223,6 @@ public:
     using seconds             = std::chrono::duration<uint32_t, std::ratio<1000>>;
     using NamedArray          = PluginComponents::NamedArray;
     using VisualizerType      = KFCConfigurationClasses::Plugins::ClockConfig::VisualizerAnimation_t::VisualizerType;
-    using RainbowMode         = KFCConfigurationClasses::Plugins::ClockConfig::ClockConfig_t::RainbowMode;
 
     static constexpr uint16_t kDefaultUpdateRate  = 1000;  // milliseconds
     static constexpr uint16_t kMinBlinkColonSpeed = 50;

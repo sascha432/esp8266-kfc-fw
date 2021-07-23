@@ -55,12 +55,6 @@
 #    define IF_IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL(...)
 #endif
 
-// gives the user them option to activate dithering
-// https://github.com/FastLED/FastLED/wiki/FastLED-Temporal-Dithering
-#ifndef IOT_CLOCK_USE_DITHERING
-#   define IOT_CLOCK_USE_DITHERING 1
-#endif
-
 // the number of pixels and order can be changed if set to 1
 // configurable requires memory and CPU time of the maximum. number of configured LEDs, even if only 1 is active
 // set IOT_LED_MATRIX_COLS=1 and IOT_LED_MATRIX_ROWS=max. number of LEDs

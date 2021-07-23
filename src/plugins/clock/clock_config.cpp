@@ -127,6 +127,7 @@ namespace KFCConfigurationClasses {
         return F(
             "Solid,"
             "Rainbow,"
+            "Rainbow FastLED,"
             "Flash,"
             "Color Fade,"
             "Fire,"
@@ -142,6 +143,7 @@ namespace KFCConfigurationClasses {
         return F("["
             "\042Solid\042,"
             "\042Rainbow\042,"
+            "\042Rainbow FastLED\042,"
             "\042Flash\042,"
             "\042Color Fade\042,"
             #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
@@ -194,6 +196,8 @@ namespace KFCConfigurationClasses {
         switch(type) {
             case AnimationType::RAINBOW:
                 return F("Rainbow");
+            case AnimationType::RAINBOW_FASTLED:
+                return F("Rainbow FastLED");
             case AnimationType::FLASHING:
                 return F("Flash");
             case AnimationType::FADING:
@@ -228,6 +232,8 @@ namespace KFCConfigurationClasses {
         switch(type) {
             case AnimationType::RAINBOW:
                 return F("rainbow");
+            case AnimationType::RAINBOW_FASTLED:
+                return F("rainbow-fastled");
             case AnimationType::FLASHING:
                 return F("flash");
             case AnimationType::FADING:
@@ -261,6 +267,8 @@ namespace KFCConfigurationClasses {
         switch(type) {
             case AnimationType::RAINBOW:
                 return F("Rainbow Animation");
+            case AnimationType::RAINBOW_FASTLED:
+                return F("Rainbow Animation (FastLED)");
             case AnimationType::FLASHING:
                 return F("Flashing Animation");
             case AnimationType::FADING:

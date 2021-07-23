@@ -114,6 +114,7 @@
                     MIN = 0,
                     SOLID = 0,
                     RAINBOW,
+                    RAINBOW_FASTLED,
                     FLASHING,
                     FADING,
                     FIRE,
@@ -126,12 +127,6 @@
                         COLON_BLINK_FAST,
                         COLON_BLINK_SLOWLY,
                     #endif
-                    MAX,
-                };
-
-                enum class RainbowMode : uint8_t {
-                    INTERNAL,
-                    FASTLED,
                     MAX,
                 };
 
@@ -207,12 +202,10 @@
                     using Type = RainbowAnimationType;
                     RainbowMultiplier_t multiplier;
                     RainbowColor_t color;
-                    CREATE_ENUM_D_BITFIELD(mode, RainbowMode, RainbowMode::FASTLED);
                     CREATE_UINT32_BITFIELD_MIN_MAX(speed, 14, 0, 16383, 60, 1);
                     CREATE_UINT32_BITFIELD_MIN_MAX(bpm, 8, 0, 255, 10, 1);
                     CREATE_UINT32_BITFIELD_MIN_MAX(hue, 8, 0, 255, 10, 1);
                     RainbowAnimationType() :
-                        mode(kDefaultValueFor_mode),
                         speed(kDefaultValueFor_speed),
                         bpm(kDefaultValueFor_bpm),
                         hue(kDefaultValueFor_hue)

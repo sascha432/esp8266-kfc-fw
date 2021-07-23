@@ -132,7 +132,6 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
             // create AsyncWebServerRequest from web socket post data and submit form
             auto request = WebServer::AsyncWebServerRequestParser(value);
             WebServer::Plugin::getInstance().handleFormData(id, &request, *this);
-            _saveStateDelayed();
         }
         else if (id == F("color")) {
             setColorAndRefresh(val);

@@ -372,30 +372,28 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
     MQTT::Client::registerComponent(this);
 
     enableLoopNoClear(true);
+
     #if IOT_ALARM_PLUGIN_ENABLED
         AlarmPlugin::setCallback(alarmCallback);
     #endif
 
     #if IOT_CLOCK_SAVE_STATE
-        auto state = _getState();
+        // set initial state after reset
         switch(_config.getInitialState()) {
             case InitialStateType::OFF:
-                // start with clock turned off and the power button sets the configured brightness and animation
+                // keep device off after reset
                 _savedBrightness = _config.getBrightness();
                 _config.enabled = false;
                 _setBrightness(0);
                 break;
             case InitialStateType::ON:
-                // start with clock turned on using default settings
-                _savedBrightness = _config.getBrightness();
+                // turn device on after reset
+                _savedBrightness = std::max<uint8_t>(15, _config.getBrightness()); // restore last brightness but at least ~6%
                 _config.enabled = true;
                 setBrightness(_savedBrightness);
                 break;
             case InitialStateType::RESTORE:
                 // restore last settings
-                if (state.hasValidData()) {
-                    _config = state.getConfig();
-                }
                 _savedBrightness = _config.getBrightness();
                 if (_config.enabled) {
                     setBrightness(_savedBrightness);
@@ -406,9 +404,6 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
                 break;
             default:
                 break;
-        }
-        if (state.hasValidData()) {
-            setAnimation(state.getConfig().getAnimation(), 0);
         }
     #endif
 
@@ -664,12 +659,10 @@ void ClockPlugin::setAnimation(AnimationType animation, uint16_t blendTime)
             _setAnimation(new Clock::FadingAnimation(*this, _getColor(), Color().rnd(), _config.fading.speed, _config.fading.delay * 1000, _config.fading.factor.value));
             break;
         case AnimationType::RAINBOW:
-            if (_config.rainbow.get_enum_mode(_config.rainbow) == Clock::ConfigType::RainbowMode::FASTLED) {
-                _setAnimation(new Clock::RainbowAnimationFastLED(*this, _config.rainbow.bpm, _config.rainbow.hue));
-            }
-            else {
-                _setAnimation(new Clock::RainbowAnimation(*this, _config.rainbow.speed, _config.rainbow.multiplier, _config.rainbow.color));
-            }
+            _setAnimation(new Clock::RainbowAnimation(*this, _config.rainbow.speed, _config.rainbow.multiplier, _config.rainbow.color));
+            break;
+        case AnimationType::RAINBOW_FASTLED:
+            _setAnimation(new Clock::RainbowAnimationFastLED(*this, _config.rainbow.bpm, _config.rainbow.hue));
             break;
         case AnimationType::FLASHING:
             _setAnimation(new Clock::FlashingAnimation(*this, _getColor(), _config.flashing_speed));
@@ -697,13 +690,21 @@ void ClockPlugin::setAnimation(AnimationType animation, uint16_t blendTime)
 
 void ClockPlugin::readConfig()
 {
+    // read config
     _config = Plugins::Clock::getConfig();
-    _config.protection.max_temperature = std::max<uint8_t>(kMinimumTemperatureThreshold, _config.protection.max_temperature);
-    #if IOT_CLOCK_USE_DITHERING
-        _display.setDither(_config.dithering);
+    #if IOT_CLOCK_SAVE_STATE
+        // check if a config state is stored
+        auto state = _getState();
+        if (state.hasValidData()) {
+            _config = state.getConfig();
+        }
+        _config.protection.max_temperature = std::max<uint8_t>(kMinimumTemperatureThreshold, _config.protection.max_temperature);
+        Plugins::Clock::setConfig(_config);
     #else
-        _display.setDither(false);
+        _config.protection.max_temperature = std::max<uint8_t>(kMinimumTemperatureThreshold, _config.protection.max_temperature);
     #endif
+
+    _display.setDither(_config.dithering);
 
     #if IOT_CLOCK_HAVE_POWER_LIMIT || IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
         __LDBG_printf("limit=%u/%u r/g/b/idle=%u/%u/%u/%u", _config.power_limit, _getPowerLevelLimit(_config.power_limit), _config.power.red, _config.power.green, _config.power.blue, _config.power.idle);

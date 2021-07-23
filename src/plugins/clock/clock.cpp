@@ -84,7 +84,7 @@ void print_status_tinypwm(Print &output)
 
 #endif
 
-#define PLUGIN_OPTIONS_CONFIG_FORMS                     "settings,animations,protection,ani-*"
+#define PLUGIN_OPTIONS_CONFIG_FORMS                     "settings,animations,protection,matrix,ani-*"
 
 PROGMEM_DEFINE_PLUGIN_OPTIONS(
     ClockPlugin,
@@ -146,6 +146,9 @@ void ClockPlugin::createMenu()
     auto subMenu = configMenu.addSubMenu(getFriendlyName());
     subMenu.addMenuItem(F("Settings"), F(MENU_URI_PREFIX "settings.html"));
     subMenu.addMenuItem(F("Animations"), F(MENU_URI_PREFIX "animations.html"));
+    #if IOT_LED_MATRIX_CONFIGURABLE
+        subMenu.addMenuItem(F("Matrix"), F(MENU_URI_PREFIX "matrix.html"));
+    #endif
     subMenu.addMenuItem(F("Protection"), F(MENU_URI_PREFIX "protection.html"));
 }
 
@@ -290,7 +293,7 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
         WsClient::addClientCallback(webSocketCallback, this);
     #endif
 
-    readConfig();
+    readConfig(true);
     _targetBrightness = 0;
 
     #if IOT_LED_MATRIX == 0
@@ -427,7 +430,7 @@ void ClockPlugin::reconfigure(const String &source)
         // reset entire state and all pixels
         _disable();
     }
-    readConfig();
+    readConfig(false);
 
     #if IOT_LED_MATRIX_FAN_CONTROL
         _setFanSpeed(_config.fan_speed);
@@ -688,23 +691,40 @@ void ClockPlugin::setAnimation(AnimationType animation, uint16_t blendTime)
     _schedulePublishState = true;
 }
 
-void ClockPlugin::readConfig()
+void ClockPlugin::readConfig(bool setup)
 {
     // read config
     _config = Plugins::Clock::getConfig();
-    #if IOT_CLOCK_SAVE_STATE
-        // check if a config state is stored
-        auto state = _getState();
-        if (state.hasValidData()) {
-            _config = state.getConfig();
-        }
-        _config.protection.max_temperature = std::max<uint8_t>(kMinimumTemperatureThreshold, _config.protection.max_temperature);
-        Plugins::Clock::setConfig(_config);
-    #else
-        _config.protection.max_temperature = std::max<uint8_t>(kMinimumTemperatureThreshold, _config.protection.max_temperature);
-    #endif
+    if (setup) {
+        #if IOT_CLOCK_SAVE_STATE
+            if (_saveTimer) {
+                // save pending state
+                _saveState();
+            }
+            // check if a config state is stored
+            auto state = _getState();
+            if (state.hasValidData()) {
+                _config = state.getConfig();
+            }
+            _config.protection.max_temperature = std::max<uint8_t>(kMinimumTemperatureThreshold, _config.protection.max_temperature);
+            Plugins::Clock::setConfig(_config);
+        #else
+            _config.protection.max_temperature = std::max<uint8_t>(kMinimumTemperatureThreshold, _config.protection.max_temperature);
+        #endif
+    }
 
     _display.setDither(_config.dithering);
+
+    #if IOT_LED_MATRIX_CONFIGURABLE
+        if (_config.matrix.rows * _config.matrix.cols == _display.size()) {
+            _display._rows = _config.matrix.rows;
+            _display._cols = _config.matrix.cols;
+        }
+        _display._reverseRows = _config.matrix.reverse_rows;
+        _display._reverseColumns = _config.matrix.reverse_cols;
+        _display._rotate = _config.matrix.rotate;
+        _display._interleaved = _config.matrix.interleaved;
+    #endif
 
     #if IOT_CLOCK_HAVE_POWER_LIMIT || IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
         __LDBG_printf("limit=%u/%u r/g/b/idle=%u/%u/%u/%u", _config.power_limit, _getPowerLevelLimit(_config.power_limit), _config.power.red, _config.power.green, _config.power.blue, _config.power.idle);

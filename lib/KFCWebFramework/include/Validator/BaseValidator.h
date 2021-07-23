@@ -26,6 +26,7 @@ namespace FormUI {
             void setField(Field::BaseField *field);
             Field::BaseField &getField();
 
+            void setMessage(const String &message);
             virtual String getMessage();
             virtual bool validate();
 

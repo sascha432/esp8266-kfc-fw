@@ -368,6 +368,55 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         powerGroup.end();
 
     }
+    #if IOT_LED_MATRIX_CONFIGURABLE
+        else if (formName == F("matrix")) {
+
+            auto &mainGroup = form.addCardGroup(F("matrix"));
+
+            auto &reverseRows = form.addObjectGetterSetter(F("mx_rr"), FormGetterSetter(cfg.matrix, reverse_rows));
+            form.addFormUI(FormUI::Type::HIDDEN);
+
+            form.addObjectGetterSetter(F("mx_rows"), FormGetterSetter(cfg.matrix, rows));
+            form.addFormUI(F("Rows"), FormUI::CheckboxButtonSuffix(reverseRows, F("Reverse Rows")));
+            cfg.matrix.addRangeValidatorFor_rows(form);
+
+            auto &reverseCols = form.addObjectGetterSetter(F("mx_rc"), FormGetterSetter(cfg.matrix, reverse_cols));
+            form.addFormUI(FormUI::Type::HIDDEN);
+
+            form.addObjectGetterSetter(F("mx_cols"), FormGetterSetter(cfg.matrix, cols));
+            form.addFormUI(F("Columns"), FormUI::CheckboxButtonSuffix(reverseCols, F("Reverse Columns")));
+            cfg.matrix.addRangeValidatorFor_cols(form);
+
+            FormUI::Validator::CallbackTemplate<uint16_t> *validator;
+            validator = &form.addValidator(FormUI::Validator::CallbackTemplate<uint16_t>([&cfg, &validator, this](uint16_t cols, Field::BaseField &field) {
+                auto rows = field.getForm().getField(F("mx_rows"))->getValue().toInt();
+                if (rows * cols == static_cast<long>(_display.size())) {
+                    return true;
+                }
+                validator->setMessage(PrintString(F("rows * cols (%u * %u = %u) does not match the number of pixels (%u)"),
+                    static_cast<unsigned>(rows), static_cast<unsigned>(cols), static_cast<unsigned>(rows * cols), static_cast<unsigned>(_display.size()))
+                );
+                return false;
+            }));
+
+            form.addObjectGetterSetter(F("mx_px"), FormGetterSetter(cfg.matrix, pixels));
+            form.addFormUI(F("Number Of Pixels"), FormUI::ReadOnlyAttribute());
+            // cfg.matrix.addRangeValidatorFor_pixels(form);
+
+            form.addObjectGetterSetter(F("mx_ofs"), FormGetterSetter(cfg.matrix, offset));
+            form.addFormUI(F("First Pixel Offset"), FormUI::ReadOnlyAttribute());
+            // cfg.matrix.addRangeValidatorFor_offset(form);
+
+            form.addObjectGetterSetter(F("mx_rt"), FormGetterSetter(cfg.matrix, rotate));
+            form.addFormUI(F("90\xc2\xb0 Rotation"), FormUI::BoolItems());
+
+            form.addObjectGetterSetter(F("mx_il"), FormGetterSetter(cfg.matrix, rotate));
+            form.addFormUI(F("Interleaved"), FormUI::BoolItems());
+
+            mainGroup.end();
+
+        }
+    #endif
     else {
 
         auto &mainGroup = form.addCardGroup(FSPGM(config));

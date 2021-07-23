@@ -236,13 +236,49 @@
                     VisualizerAnimation_t visualizer;
                 #endif
 
-                struct __attribute__packed__ InterleavedType {
+                struct __attribute_packed__ InterleavedType {
                     using Type = InterleavedType;
                     CREATE_UINT32_BITFIELD_MIN_MAX(time, 32, 0, 0xffffffffU, 60000, 1);
                     CREATE_UINT8_BITFIELD_MIN_MAX(rows, 8, 0, 0xff, 2, 1);
                     CREATE_UINT8_BITFIELD_MIN_MAX(cols, 8, 0, 0xff, 0, 1);
                     InterleavedType() : time(kDefaultValueFor_time), rows(kDefaultValueFor_rows), cols(kDefaultValueFor_cols) {}
                 } interleaved;
+
+                #if IOT_LED_MATRIX_CONFIGURABLE
+                struct __attribute_packed__ MatrixType {
+                    using Type = MatrixType;
+                    CREATE_UINT16_BITFIELD_MIN_MAX(rows, 16, 1, 0xffff, IOT_LED_MATRIX_ROWS, 1);
+                    CREATE_UINT16_BITFIELD_MIN_MAX(cols, 16, 1, 0xffff, IOT_LED_MATRIX_COLS, 1);
+                    CREATE_UINT16_BITFIELD_MIN_MAX(pixels, 16, 1, 0xffff, IOT_CLOCK_NUM_PIXELS, 1);
+                    CREATE_UINT16_BITFIELD_MIN_MAX(offset, 16, 1, 0xffff, IOT_LED_MATRIX_PIXEL_OFFSET, 1);
+                    CREATE_UINT8_BITFIELD_MIN_MAX(reverse_rows, 1, false, true, IOT_LED_MATRIX_OPTS_REVERSE_ROWS, 1);
+                    CREATE_UINT8_BITFIELD_MIN_MAX(reverse_cols, 1, false, true, IOT_LED_MATRIX_OPTS_REVERSE_COLS, 1);
+                    CREATE_UINT8_BITFIELD_MIN_MAX(rotate, 1, false, true, IOT_LED_MATRIX_OPTS_ROTATE, 1);
+                    CREATE_UINT8_BITFIELD_MIN_MAX(interleaved, 1, false, true, IOT_LED_MATRIX_OPTS_INTERLEAVED, 1);
+                    MatrixType(
+                        uint16_t _rows = kDefaultValueFor_rows,
+                        uint16_t _cols = kDefaultValueFor_cols,
+                        uint16_t _pixels = kDefaultValueFor_pixels,
+                        uint16_t _offset = kDefaultValueFor_offset,
+                        bool _reverse_rows = kDefaultValueFor_reverse_rows,
+                        bool _reverse_cols = kDefaultValueFor_reverse_cols,
+                        bool _rotate = kDefaultValueFor_rotate,
+                        bool _interleaved = kDefaultValueFor_interleaved
+                    ) :
+                        rows(_rows),
+                        cols(_cols),
+                        pixels(_pixels),
+                        offset(_offset),
+                        reverse_rows(_reverse_rows),
+                        reverse_cols(_reverse_cols),
+                        rotate(_rotate),
+                        interleaved(_interleaved)
+                    {
+                    }
+                };
+
+                MatrixType matrix;
+                #endif
 
                 ClockConfig_t();
 

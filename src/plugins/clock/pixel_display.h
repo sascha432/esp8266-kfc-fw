@@ -425,7 +425,7 @@ namespace Clock {
         using PixelMappingType::kPixelOffset;
         using PixelMappingType::kNumPixels;
 
-        #if IOT_LED_MATRIX_CONFIGURABLE_DISPLAY
+        #if IOT_LED_MATRIX_CONFIGURABLE
         using PixelMappingType::_reverseRows;
         using PixelMappingType::_reverseColumns;
         using PixelMappingType::_rotate;

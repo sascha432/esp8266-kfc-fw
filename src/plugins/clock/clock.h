@@ -366,7 +366,7 @@ public:
     uint16_t _blendTime{Clock::BlendAnimation::kDefaultTime};
 
     // read defaults and copy to local storage
-    void readConfig();
+    void readConfig(bool setup);
     // get stored configuration and update it with local storage
     Clock::ConfigType &getWriteableConfig();
 
@@ -956,6 +956,13 @@ inline uint32_t ClockPlugin::_getColor() const
 inline Clock::ConfigType &ClockPlugin::getWriteableConfig()
 {
     auto &cfg = Plugins::Clock::getWriteableConfig();
+    #if IOT_CLOCK_SAVE_STATE
+        // check if a config state is stored
+        auto state = _getState();
+        if (state.hasValidData()) {
+            _config = state.getConfig();
+        }
+    #endif
     cfg = _config;
     return cfg;
 }

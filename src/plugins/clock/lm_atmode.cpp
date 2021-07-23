@@ -392,7 +392,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
         }
         // map,<rows>,<cols>,<reverse_rows>,<reverse_columns>,<rotate>,<interleaved>
         else if (args.startsWithIgnoreCase(0, F("map"))) {
-            #if IOT_LED_MATRIX_CONFIGURABLE_DISPLAY
+            #if IOT_LED_MATRIX_CONFIGURABLE
                 if (args.size() == 7) {
                     _display._rows = args.toInt(1, _display._rows);
                     _display._cols = args.toInt(2, _display._cols);

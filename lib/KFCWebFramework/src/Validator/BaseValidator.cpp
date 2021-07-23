@@ -34,6 +34,11 @@ void BaseValidator::setField(Field::BaseField *field)
     return *_field;
 }
 
+void BaseValidator::setMessage(const String &message)
+{
+    _message = message;
+}
+
 String BaseValidator::getMessage()
 {
     return _message;

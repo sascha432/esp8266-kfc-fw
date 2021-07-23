@@ -18,6 +18,7 @@ namespace FormUI {
         class CallbackTemplate : public BaseValidator {
         public:
             using Callback = std::function<bool(const _Ta &value, Field::BaseField &field)>;
+            using BaseValidator::setMessage;
 
             CallbackTemplate(Callback callback, const String &message = String()) :
                 BaseValidator(message),

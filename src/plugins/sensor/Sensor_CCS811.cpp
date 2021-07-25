@@ -235,6 +235,9 @@ void Sensor_CCS811::_writeStateFile()
 
         // read state file
         auto size = file.size();
+        if (size > sizeof(SensorFileEntry) * 4) { // do not read more than 4 entries, the number of devices per bus is limited to 2
+            size = sizeof(SensorFileEntry) * 4;
+        }
         auto uniquePtr = std::unique_ptr<uint8_t[]>(new uint8_t[size]());
         auto buf = uniquePtr.get();
         if (!buf) {

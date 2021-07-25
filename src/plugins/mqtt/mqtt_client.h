@@ -430,6 +430,7 @@ namespace MQTT {
         friend PersistantStorageComponent;
         friend Plugin;
 
+    public:
         Client();
         virtual ~Client();
 
@@ -692,7 +693,7 @@ public:
         IPAddress _address;
         String _username;
         String _password;
-        ConfigType _config;
+        MqttConfigType _config;
         AsyncMqttClient *_client;
         Event::Timer _timer;
         uint16_t _port;
@@ -821,7 +822,7 @@ public:
         if (_mqttClient) {
             return static_cast<QosType>(_mqttClient->_config.qos);
         }
-        return static_cast<QosType>(ClientConfig::getConfig().qos);
+        return static_cast<QosType>(MqttClient::getConfig().qos);
     }
 
     inline __attribute__((__always_inline__))

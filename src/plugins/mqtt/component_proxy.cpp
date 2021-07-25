@@ -18,7 +18,7 @@ using namespace MQTT;
 void ComponentProxy::init()
 {
     __LDBG_printf("ctor this=%p client=%p", this, _client);
-    MQTTClient::registerComponent(this);
+    MQTT::Client::registerComponent(this);
 }
 
 void ComponentProxy::unsubscribe()
@@ -37,7 +37,7 @@ ComponentProxy::~ComponentProxy()
     if (!_canDestroy) {
         __DBG_panic("object removed before clean");
     }
-    MQTTClient::unregisterComponent(this);
+    MQTT::Client::unregisterComponent(this);
 }
 
 void ComponentProxy::onDisconnect(AsyncMqttClientDisconnectReason reason)

@@ -159,10 +159,10 @@ bool VisualizerAnimation::_FadeUp(CRGB c, int start, int end, int update_rate, i
 void VisualizerAnimation::_ShiftLeds(int shiftAmount)
 {
     int cnt = shiftAmount;
-    for (int i = DisplayType::kNumPixels - 1; i >= cnt; i--) {
+    for (int i = _parent._display.size() - 1; i >= cnt; i--) {
         _leds[i] = _leds[i - cnt];
     }
-    // memmove(&_leds[cnt], &_leds[0], (DisplayType::kNumPixels - cnt) * sizeof(_leds[0]));
+    // memmove(&_leds[cnt], &_leds[0], (_parent._display.size() - cnt) * sizeof(_leds[0]));
     // std::copy(std::begin(_leds) + shiftAmount, std::begin(_leds), std::end(_leds));
 }
 
@@ -306,7 +306,7 @@ void VisualizerAnimation::_vuMeter(CHSV c, int mode)
     }
     else {
         for (int i = 0; i < toPaint; i++) {
-            _leds[i] = CHSV(((uint8_t)map(i, 0, DisplayType::kNumPixels, 0, 255)) + _gHue, 255, 255);
+            _leds[i] = CHSV(((uint8_t)map(i, 0, _parent._display.size(), 0, 255)) + _gHue, 255, 255);
         }
     }
 }
@@ -314,23 +314,23 @@ void VisualizerAnimation::_vuMeter(CHSV c, int mode)
 void VisualizerAnimation::_vuMeterTriColor()
 {
     if (!*_incomingPacket) {
-        fadeToBlackBy(_leds, DisplayType::kNumPixels, 5);
+        fadeToBlackBy(_leds, _parent._display.size(), 5);
         return;
     }
     int vol = _getVolume(_incomingPacket, kBandStart, kBandEnd, 1.75);
-    fill_solid(_leds, DisplayType::kNumPixels, CRGB::Black);
-    int toPaint = map(vol, 0, 255, 0, DisplayType::kNumPixels);
+    fill_solid(_leds, _parent._display.size(), CRGB::Black);
+    int toPaint = map(vol, 0, 255, 0, _parent._display.size());
     if (vol < 153) {
         fill_solid(_leds, toPaint, CRGB::Green);
     }
     else if (vol < 204) {
-        fill_solid(_leds, DisplayType::kNumPixels * 0.6, CRGB::Green);
-        fill_solid(_leds + (int(DisplayType::kNumPixels * 0.6)), toPaint - DisplayType::kNumPixels * 0.6, CRGB::Orange);
+        fill_solid(_leds, _parent._display.size() * 0.6, CRGB::Green);
+        fill_solid(_leds + (int(_parent._display.size() * 0.6)), toPaint - _parent._display.size() * 0.6, CRGB::Orange);
     }
     else if (vol >= 204) {
-        fill_solid(_leds, DisplayType::kNumPixels * 0.6, CRGB::Green);
-        fill_solid(_leds + (int(DisplayType::kNumPixels * 0.6)), DisplayType::kNumPixels * 0.2, CRGB::Orange);
-        fill_solid(_leds + (int(DisplayType::kNumPixels * 0.8)), toPaint - DisplayType::kNumPixels * 0.8, CRGB::Red);
+        fill_solid(_leds, _parent._display.size() * 0.6, CRGB::Green);
+        fill_solid(_leds + (int(_parent._display.size() * 0.6)), _parent._display.size() * 0.2, CRGB::Orange);
+        fill_solid(_leds + (int(_parent._display.size() * 0.8)), toPaint - _parent._display.size() * 0.8, CRGB::Red);
     }
 }
 
@@ -352,7 +352,7 @@ int VisualizerAnimation::_getPeakPosition()
 
 void VisualizerAnimation::_printPeak(CHSV c, int pos, int grpSize)
 {
-    fadeToBlackBy(_leds, DisplayType::kNumPixels, 12);
+    fadeToBlackBy(_leds, _parent._display.size(), 12);
     _leds[pos] = c;
     // CHSV c2 = c;
     // c2.v = 150;

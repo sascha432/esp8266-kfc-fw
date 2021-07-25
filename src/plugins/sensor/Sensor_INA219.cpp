@@ -55,35 +55,35 @@ MQTT::AutoDiscovery::EntityPtr Sensor_INA219::getAutoDiscovery(FormatType format
     switch(num) {
         case 0:
             if (discovery->create(this, _getId(SensorInputType::VOLTAGE), format)) {
-                discovery->addStateTopic(MQTTClient::formatTopic(_getId(SensorInputType::VOLTAGE)));
+                discovery->addStateTopic(MQTT::Client::formatTopic(_getId(SensorInputType::VOLTAGE)));
                 discovery->addUnitOfMeasurement('V');
                 discovery->addDeviceClass(F("voltage"));
             }
             break;
         case 1:
             if (discovery->create(this, _getId(SensorInputType::CURRENT), format)) {
-                discovery->addStateTopic(MQTTClient::formatTopic(_getId(SensorInputType::CURRENT)));
+                discovery->addStateTopic(MQTT::Client::formatTopic(_getId(SensorInputType::CURRENT)));
                 discovery->addUnitOfMeasurement(_getCurrentUnit());
                 discovery->addDeviceClass(F("current"));
             }
             break;
         case 2:
             if (discovery->create(this, _getId(SensorInputType::POWER), format)) {
-                discovery->addStateTopic(MQTTClient::formatTopic(_getId(SensorInputType::POWER)));
+                discovery->addStateTopic(MQTT::Client::formatTopic(_getId(SensorInputType::POWER)));
                 discovery->addUnitOfMeasurement(_getPowerUnit());
                 discovery->addDeviceClass(F("power"));
             }
             break;
         case 3:
             if (discovery->create(this, _getId(SensorInputType::PEAK_CURRENT), format)) {
-                discovery->addStateTopic(MQTTClient::formatTopic(_getId(SensorInputType::PEAK_CURRENT)));
+                discovery->addStateTopic(MQTT::Client::formatTopic(_getId(SensorInputType::PEAK_CURRENT)));
                 discovery->addUnitOfMeasurement(_getCurrentUnit());
                 discovery->addDeviceClass(F("current"));
             }
             break;
         case 4:
             if (discovery->create(this, _getId(SensorInputType::PEAK_POWER), format)) {
-                discovery->addStateTopic(MQTTClient::formatTopic(_getId(SensorInputType::PEAK_POWER)));
+                discovery->addStateTopic(MQTT::Client::formatTopic(_getId(SensorInputType::PEAK_POWER)));
                 discovery->addUnitOfMeasurement(_getPowerUnit());
                 discovery->addDeviceClass(F("power"));
             }
@@ -131,11 +131,11 @@ void Sensor_INA219::createWebUI(WebUINS::Root &webUI)
 void Sensor_INA219::publishState()
 {
     if (isConnected()) {
-        publish(MQTTClient::formatTopic(_getId(SensorInputType::VOLTAGE)), true, String(_mqttData.U(), 3));
-        publish(MQTTClient::formatTopic(_getId(SensorInputType::CURRENT)), true, String(_convertCurrent(_mqttData.I()), _getCurrentPrecision()));
-        publish(MQTTClient::formatTopic(_getId(SensorInputType::POWER)), true, String(_convertPower(_mqttData.P()), _getPowerPrecision()));
-        publish(MQTTClient::formatTopic(_getId(SensorInputType::PEAK_CURRENT)), true, String(_convertCurrent(_Ipeak), _getCurrentPrecision()));
-        publish(MQTTClient::formatTopic(_getId(SensorInputType::PEAK_POWER)), true, String(_convertPower(_Ppeak), _getPowerPrecision()));
+        publish(MQTT::Client::formatTopic(_getId(SensorInputType::VOLTAGE)), true, String(_mqttData.U(), 3));
+        publish(MQTT::Client::formatTopic(_getId(SensorInputType::CURRENT)), true, String(_convertCurrent(_mqttData.I()), _getCurrentPrecision()));
+        publish(MQTT::Client::formatTopic(_getId(SensorInputType::POWER)), true, String(_convertPower(_mqttData.P()), _getPowerPrecision()));
+        publish(MQTT::Client::formatTopic(_getId(SensorInputType::PEAK_CURRENT)), true, String(_convertCurrent(_Ipeak), _getCurrentPrecision()));
+        publish(MQTT::Client::formatTopic(_getId(SensorInputType::PEAK_POWER)), true, String(_convertPower(_Ppeak), _getPowerPrecision()));
     }
 }
 

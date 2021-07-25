@@ -5,26 +5,23 @@
 #include "kfc_fw_config/base.h"
 #include "ConfigurationHelper.h"
 
+#ifndef IOT_ALARM_PLUGIN_MAX_ALERTS
+#define IOT_ALARM_PLUGIN_MAX_ALERTS                         10
+#endif
+#ifndef IOT_ALARM_PLUGIN_DEFAULT_MAX_DURATION
+#define IOT_ALARM_PLUGIN_DEFAULT_MAX_DURATION               900
+#endif
+
+namespace KFCConfigurationClasses {
+
+    namespace Plugins {
+
         // --------------------------------------------------------------------
         // Alarm
 
-        #ifndef IOT_ALARM_PLUGIN_MAX_ALERTS
-        #define IOT_ALARM_PLUGIN_MAX_ALERTS                         10
-        #endif
-        #ifndef IOT_ALARM_PLUGIN_DEFAULT_MAX_DURATION
-        #define IOT_ALARM_PLUGIN_DEFAULT_MAX_DURATION               900
-        #endif
+        namespace AlarmConfigNS {
 
-        class AlarmConfig
-        {
-        public:
-            static constexpr uint8_t MAX_ALARMS = IOT_ALARM_PLUGIN_MAX_ALERTS;
-            static constexpr uint16_t DEFAULT_MAX_DURATION = IOT_ALARM_PLUGIN_DEFAULT_MAX_DURATION;
-            static constexpr uint16_t STOP_ALARM = std::numeric_limits<uint16_t>::max() - 1;
-
-            using TimeType = uint32_t;
-
-            enum class AlarmModeType : uint8_t {
+            enum class ModeType : uint8_t {
                 BOTH,       // can be used if silent or buzzer is not available
                 SILENT,
                 BUZZER,
@@ -44,7 +41,10 @@
                 WEEK_END = _BV(0)|_BV(6),
             };
 
-            typedef union __attribute__packed__ {
+            using TimeType = uint32_t;
+            using CallbackType = std::function<void(ModeType mode, uint16_t maxDuration)>;
+
+            union __attribute__packed__ WeekDay_t {
                 WeekDaysType week_days_enum;
                 uint8_t week_days;
                 struct {
@@ -56,9 +56,9 @@
                     uint8_t friday: 1;              // 5
                     uint8_t saturday: 1;            // 6
                 };
-            } WeekDay_t;
+            };
 
-            typedef struct __attribute__packed__ AlarmTime_t {
+            struct __attribute__packed__ AlarmTime_t {
                 using Type = AlarmTime_t;
                 TimeType timestamp;
                 CREATE_UINT8_BITFIELD(hour, 8);
@@ -71,47 +71,55 @@
                 static uint8_t get_bits_weekdays(const Type &obj) { \
                     return obj.week_day.week_days; \
                 }
-            } AlarmTime_t;
+            };
 
-            typedef struct __attribute__packed__ SingleAlarm_t {
-                using Type = SingleAlarm_t;
+            struct __attribute__packed__ SingleAlarmType {
+                using Type = SingleAlarmType;
                 AlarmTime_t time;
                 CREATE_UINT16_BITFIELD(max_duration, 16); // limit in seconds, 0 = unlimited
-                CREATE_ENUM_BITFIELD(mode, AlarmModeType);
+                CREATE_ENUM_BITFIELD(mode, ModeType);
                 CREATE_UINT8_BITFIELD(is_enabled, 1);
-            } SingleAlarm_t;
+            };
 
-            typedef struct __attribute__packed__ {
-                SingleAlarm_t alarms[MAX_ALARMS];
-            } Alarm_t;
-        };
+            struct __attribute__packed__ AlarmConfigType
+            {
+                using  Type = AlarmConfigType;
+                static constexpr uint8_t MAX_ALARMS = IOT_ALARM_PLUGIN_MAX_ALERTS;
+                static constexpr uint16_t DEFAULT_MAX_DURATION = IOT_ALARM_PLUGIN_DEFAULT_MAX_DURATION;
+                static constexpr uint16_t STOP_ALARM = std::numeric_limits<uint16_t>::max() - 1;
 
-        class Alarm : public AlarmConfig, public KFCConfigurationClasses::ConfigGetterSetter<AlarmConfig::Alarm_t, _H(MainConfig().plugins.alarm.cfg) CIF_DEBUG(, &handleNameAlarm_t)> {
-        public:
+                SingleAlarmType alarms[MAX_ALARMS];
+            };
 
-            Alarm();
+            class Alarm : public AlarmConfigType, public KFCConfigurationClasses::ConfigGetterSetter<AlarmConfigType, _H(MainConfig().plugins.alarm.cfg) CIF_DEBUG(, &handleNameAlarm_t)> {
+            public:
+                Alarm();
 
-            // update timestamp for a single alarm
-            // set now to the current time plus a safety margin to let the system install the alarm
-            // auto now = time(nullptr) + 30;
-            // auto tm = localtime(&now);
-            // - if the alarm is disabled, timestamp is set to 0
-            // - if any weekday is selected, the timestamp is set to 0
-            // - if none of the weekdays are selected, the timestamp is set to unixtime at hour:minute of today. if hour:minute has
-            // passed already, the alarm is set for tomorrow (+1 day) at hour:minute
-            static void updateTimestamp(const struct tm *tm, SingleAlarm_t &alarm);
+                // update timestamp for a single alarm
+                // set now to the current time plus a safety margin to let the system install the alarm
+                // auto now = time(nullptr) + 30;
+                // auto tm = localtime(&now);
+                // - if the alarm is disabled, timestamp is set to 0
+                // - if any weekday is selected, the timestamp is set to 0
+                // - if none of the weekdays are selected, the timestamp is set to unixtime at hour:minute of today. if hour:minute has
+                // passed already, the alarm is set for tomorrow (+1 day) at hour:minute
+                static void updateTimestamp(const struct tm *tm, SingleAlarmType &alarm);
 
-            // calls updateTimestamp() for each entry
-            static void updateTimestamps(const struct tm *tm, Alarm_t &cfg);
+                // calls updateTimestamp() for each entry
+                static void updateTimestamps(const struct tm *tm, AlarmConfigType &cfg);
 
-            // return time of the next alarm
-            static TimeType getTime(const struct tm *tm, SingleAlarm_t &alarm);
+                // return time of the next alarm
+                static TimeType getTime(const struct tm *tm, SingleAlarmType &alarm);
 
-            static void getWeekDays(Print &output, uint8_t weekdays, char none = 'x');
-            static String getWeekDaysString(uint8_t weekdays, char none = 'x');
+                static void getWeekDays(Print &output, uint8_t weekdays, char none = 'x');
+                static String getWeekDaysString(uint8_t weekdays, char none = 'x');
 
-            static void defaults();
-            static void dump(Print &output, Alarm_t &cfg);
+                static void defaults();
+                static void dump(Print &output, AlarmConfigType &cfg);
 
-            Alarm_t cfg;
-        };
+                AlarmConfigType cfg;
+            };
+
+        }
+    }
+}

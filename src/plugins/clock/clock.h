@@ -17,8 +17,6 @@
 #include "stored_state.h"
 #include "../src/plugins/plugins.h"
 
-using KFCConfigurationClasses::Plugins;
-
 namespace WebServer {
     class AsyncUpdateWebHandler;
 }
@@ -213,16 +211,24 @@ class ClockPlugin : public PluginComponent, public MQTTComponent
 #endif
 {
 public:
+
+    using Plugins = KFCConfigurationClasses::PluginsType;
+
     // using SevenSegmentDisplay = Clock::SevenSegmentDisplay;
-    using Color               = Clock::Color;
-    using AnimationType       = Clock::AnimationType;
-    using InitialStateType    = Clock::InitialStateType;
-    using StoredState         = Clock::StoredState;
-    using LoopOptionsType     = Clock::LoopOptionsType;
-    using milliseconds        = std::chrono::duration<uint32_t, std::ratio<1>>;
-    using seconds             = std::chrono::duration<uint32_t, std::ratio<1000>>;
-    using NamedArray          = PluginComponents::NamedArray;
-    using VisualizerType      = KFCConfigurationClasses::Plugins::ClockConfig::VisualizerAnimation_t::VisualizerType;
+    using ClockConfigType = Clock::ClockConfigType;
+    using Color = Clock::Color;
+    using AnimationType = Clock::AnimationType;
+    using InitialStateType = Clock::InitialStateType;
+    using StoredState = Clock::StoredState;
+    using LoopOptionsType = Clock::LoopOptionsType;
+    using milliseconds = std::chrono::duration<uint32_t, std::ratio<1>>;
+    using seconds = std::chrono::duration<uint32_t, std::ratio<1000>>;
+    using NamedArray = PluginComponents::NamedArray;
+    using VisualizerType = KFCConfigurationClasses::Plugins::ClockConfigNS::VisualizerAnimationType::VisualizerType;
+    using FireAnimationType = KFCConfigurationClasses::Plugins::ClockConfigNS::FireAnimationType;
+    using RainbowConfigType = KFCConfigurationClasses::Plugins::ClockConfigNS::RainbowAnimationType;
+    using RainbowMultiplierType = RainbowConfigType::MultiplierType;
+    using RainbowColorType = RainbowConfigType::ColorAnimationType;
 
     static constexpr uint16_t kDefaultUpdateRate  = 1000;  // milliseconds
     static constexpr uint16_t kMinBlinkColonSpeed = 50;
@@ -269,7 +275,7 @@ public:
         SET_TITLE           // set FormUI title to the animation title
     };
 
-    void _createConfigureFormAnimation(AnimationType animation, FormUI::Form::BaseForm &form, Clock::ConfigType &cfg, TitleType titleType);
+    void _createConfigureFormAnimation(AnimationType animation, FormUI::Form::BaseForm &form, ClockConfigType &cfg, TitleType titleType);
 
 #if AT_MODE_SUPPORTED
 
@@ -368,7 +374,7 @@ public:
     // read defaults and copy to local storage
     void readConfig(bool setup);
     // get stored configuration and update it with local storage
-    Clock::ConfigType &getWriteableConfig();
+    ClockConfigType &getWriteableConfig();
 
 // ------------------------------------------------------------------------
 // Motion sensor
@@ -506,12 +512,12 @@ private:
 #if IOT_ALARM_PLUGIN_ENABLED
 
 public:
-    using Alarm = Plugins::Alarm;
+    using AlarmModeType = KFCConfigurationClasses::Plugins::AlarmConfigNS::ModeType;
 
-    static void alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration);
+    static void alarmCallback(AlarmModeType mode, uint16_t maxDuration);
 
 private:
-    void _alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration);
+    void _alarmCallback(AlarmModeType mode, uint16_t maxDuration);
     bool _resetAlarm();  // returns true if alarm was reset
 
     Event::Timer _alarmTimer;
@@ -619,6 +625,7 @@ public:
 private:
     friend Clock::LEDMatrixLoopOptions;
     friend Clock::ClockLoopOptions;
+    friend Clock::VisualizerAnimation;
 
     // SevenSegmentDisplay _display;
     bool _schedulePublishState;
@@ -639,7 +646,7 @@ private:
     float _fps;
     String _overheatedInfo;
 
-    Clock::ConfigType _config;
+    ClockConfigType _config;
     Event::Timer _timer;
     uint32_t _timerCounter;
 
@@ -742,7 +749,7 @@ inline ClockPlugin &ClockPlugin::getInstance()
 
 #if IOT_ALARM_PLUGIN_ENABLED
 
-inline void ClockPlugin::alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration)
+inline void ClockPlugin::alarmCallback(AlarmModeType mode, uint16_t maxDuration)
 {
     getInstance()._alarmCallback(mode, maxDuration);
 }
@@ -797,7 +804,7 @@ inline void ClockPlugin::ntpCallback(time_t now)
 inline void ClockPlugin::setSyncing(bool sync)
 {
     __LDBG_printf("sync=%u", sync);
-    if (_tempProtection == ProtectionType::MAX) {
+    if (_tempProtection == ProtectionConfigType::MAX) {
         __LDBG_printf("temperature protection active");
         return;
     }
@@ -892,22 +899,22 @@ inline float ClockPlugin::_getFadingBrightness() const
 
 inline ClockPlugin::AnimationType ClockPlugin::_getAnimationType(const __FlashStringHelper *name) const
 {
-    return Plugins::ClockConfig::ClockConfig_t::getAnimationType(name);
+    return ClockConfigType::getAnimationType(name);
 }
 
 inline const __FlashStringHelper * ClockPlugin::_getAnimationName(AnimationType type) const
 {
-    return Plugins::ClockConfig::ClockConfig_t::getAnimationName(type);
+    return ClockConfigType::getAnimationName(type);
 }
 
 inline const __FlashStringHelper * ClockPlugin::_getAnimationNameSlug(AnimationType type) const
 {
-    return Plugins::ClockConfig::ClockConfig_t::getAnimationNameSlug(type);
+    return ClockConfigType::getAnimationNameSlug(type);
 }
 
 inline const __FlashStringHelper *ClockPlugin::_getAnimationTitle(AnimationType type) const
 {
-    return Plugins::ClockConfig::ClockConfig_t::getAnimationTitle(type);
+    return ClockConfigType::getAnimationTitle(type);
 }
 
 #if !IOT_LED_MATRIX
@@ -953,10 +960,15 @@ inline uint32_t ClockPlugin::_getColor() const
     return __color;
 }
 
-inline Clock::ConfigType &ClockPlugin::getWriteableConfig()
+inline Clock::ClockConfigType &ClockPlugin::getWriteableConfig()
 {
+    // get a writeable copy and update with it with the current config
     auto &cfg = Plugins::Clock::getWriteableConfig();
     #if IOT_CLOCK_SAVE_STATE
+        if (_saveTimer) {
+            // save pending state
+            _saveState();
+        }
         // check if a config state is stored
         auto state = _getState();
         if (state.hasValidData()) {

@@ -14,7 +14,7 @@
 #include "plugins.h"
 #include "MQTTSensor.h"
 
-using KFCConfigurationClasses::Plugins;
+using Plugins = KFCConfigurationClasses::PluginsType;
 
 // convert ADC value to voltage
 #ifndef IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1
@@ -170,7 +170,7 @@ public:
         COMPLETE
     };
 
-    using ConfigType = Plugins::Sensor::BatteryConfig_t;
+    using ConfigType = Plugins::Sensor::BatteryConfigType;
     using RegressFunction = std::function<float(float)>;
 
     class Status {
@@ -315,7 +315,7 @@ inline const __FlashStringHelper *Sensor_Battery::_getId(TopicType type)
 
 inline String Sensor_Battery::_getTopic(TopicType type)
 {
-    return MQTTClient::formatTopic(_getId(type));
+    return MQTT::Client::formatTopic(_getId(type));
 }
 
 #endif

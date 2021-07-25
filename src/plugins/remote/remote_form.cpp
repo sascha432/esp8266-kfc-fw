@@ -16,7 +16,7 @@
 #endif
 
 using KFCConfigurationClasses::MainConfig;
-using KFCConfigurationClasses::Plugins;
+using Plugins = KFCConfigurationClasses::PluginsType;
 using EventNameType = Plugins::RemoteControl::EventNameType;
 
 static FormUI::Container::List getActions()

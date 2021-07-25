@@ -14,7 +14,7 @@
 #endif
 
 using KFCConfigurationClasses::System;
-using KFCConfigurationClasses::Plugins;
+using Plugins = KFCConfigurationClasses::PluginsType;
 
 // ------------------------------------------------------------------------
 // class Task

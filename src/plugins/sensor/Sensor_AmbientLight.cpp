@@ -275,7 +275,7 @@ String Sensor_AmbientLight::_getId()
 
 String Sensor_AmbientLight::_getTopic()
 {
-    return MQTTClient::formatTopic(_getId());
+    return MQTT::Client::formatTopic(_getId());
 }
 
 String Sensor_AmbientLight::_getLightSensorWebUIValue()

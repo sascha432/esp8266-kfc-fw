@@ -26,8 +26,6 @@
 #   endif
 #endif
 
-using KFCConfigurationClasses::Plugins;
-
 class Sensor_AmbientLight;
 
 class AmbientLightSensorHandler {
@@ -65,7 +63,8 @@ private:
 
 class Sensor_AmbientLight : public MQTT::Sensor {
 public:
-    using ConfigType = Plugins::SensorConfig::AmbientLightSensorConfig_t;
+    using ConfigType = KFCConfigurationClasses::Plugins::SensorConfigNS::AmbientLightSensorConfigType;
+    using Plugins = KFCConfigurationClasses::PluginsType;
 
     static constexpr int16_t kAutoBrightnessOff = -1;
 

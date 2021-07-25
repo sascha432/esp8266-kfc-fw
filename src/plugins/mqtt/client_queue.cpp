@@ -10,9 +10,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-using namespace MQTT;
-
-uint16_t MQTTClient::subscribe(ComponentPtr component, const String &topic, QosType qos)
+uint16_t MQTT::Client::subscribe(ComponentPtr component, const String &topic, QosType qos)
 {
     PacketQueue queue(0, millis());
     if (_queue.empty()) {
@@ -24,7 +22,7 @@ uint16_t MQTTClient::subscribe(ComponentPtr component, const String &topic, QosT
     return queue.getInternalId();
 }
 
-uint16_t MQTTClient::unsubscribe(ComponentPtr component, const String &topic)
+uint16_t MQTT::Client::unsubscribe(ComponentPtr component, const String &topic)
 {
     PacketQueue queue(0, millis());
     if (_queue.empty()) {
@@ -36,7 +34,7 @@ uint16_t MQTTClient::unsubscribe(ComponentPtr component, const String &topic)
     return queue.getInternalId();
 }
 
-uint16_t MQTTClient::publish(ComponentPtr component, const String &topic, bool retain, const String &payload, QosType qos)
+uint16_t MQTT::Client::publish(ComponentPtr component, const String &topic, bool retain, const String &payload, QosType qos)
 {
     __LDBG_assert_panic(topic.length() != 0, "emtpy topic");
     __LDBG_assert_panic(payload.length() != 0, "empty payload");
@@ -51,26 +49,26 @@ uint16_t MQTTClient::publish(ComponentPtr component, const String &topic, bool r
     return queue.getInternalId();
 }
 
-uint16_t MQTTClient::publish(const String &topic, bool retain, const String &payload, QosType qos)
+uint16_t MQTT::Client::publish(const String &topic, bool retain, const String &payload, QosType qos)
 {
     return publish(nullptr, topic, retain, payload, qos);
 }
 
-PacketQueue MQTTClient::subscribeWithId(ComponentPtr component, const String &topic, QosType qos, uint16_t internalPacketId)
+MQTT::PacketQueue MQTT::Client::subscribeWithId(ComponentPtr component, const String &topic, QosType qos, uint16_t internalPacketId)
 {
     if (!isConnected() || !topic.length()) {
         __DBG_assert_printf(topic.length() != 0, "topic length is 0");
         return PacketQueue();
     }
     __LDBG_printf("component=%p topic=%s qos=%d conn=%s", component, topic.c_str(), qos, _connection());
-    auto result = recordId(_client->subscribe(topic.c_str(), MQTTClient::_translateQosType(qos)), _getDefaultQos(qos), internalPacketId);
+    auto result = recordId(_client->subscribe(topic.c_str(), MQTT::Client::_translateQosType(qos)), _getDefaultQos(qos), internalPacketId);
     if (result && component) {
         _topics.emplace_back(topic, component);
     }
     return result;
 }
 
-PacketQueue MQTTClient::unsubscribeWithId(ComponentPtr component, const String &topic, uint16_t internalPacketId)
+MQTT::PacketQueue MQTT::Client::unsubscribeWithId(ComponentPtr component, const String &topic, uint16_t internalPacketId)
 {
     if (!isConnected() || !topic.length()) {
         __DBG_assert_printf(topic.length() != 0, "topic length is 0");
@@ -89,17 +87,17 @@ PacketQueue MQTTClient::unsubscribeWithId(ComponentPtr component, const String &
     return result;
 }
 
-PacketQueue MQTTClient::publishWithId(ComponentPtr component, const String &topic, bool retain, const String &payload, QosType qos, uint16_t internalPacketId)
+MQTT::PacketQueue MQTT::Client::publishWithId(ComponentPtr component, const String &topic, bool retain, const String &payload, QosType qos, uint16_t internalPacketId)
 {
     if (!isConnected() || !topic.length()) {
         __DBG_assert_printf(topic.length() != 0, "topic length is 0 payload=%s", printable_string(payload.c_str(), payload.length(), DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str());
         return PacketQueue();
     }
     __LDBG_printf("topic=%s qos=%d retain=%d payload=%s conn=%s", topic.c_str(), qos, retain, printable_string(payload.c_str(), payload.length(), DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str(), _connection());
-    return recordId(_client->publish(topic.c_str(), MQTTClient::_translateQosType(qos), retain, payload.c_str(), payload.length()), _getDefaultQos(qos), internalPacketId);
+    return recordId(_client->publish(topic.c_str(), MQTT::Client::_translateQosType(qos), retain, payload.c_str(), payload.length()), _getDefaultQos(qos), internalPacketId);
 }
 
-PacketQueue MQTTClient::recordId(int packetId, QosType qos, uint16_t internalPacketId)
+MQTT::PacketQueue MQTT::Client::recordId(int packetId, QosType qos, uint16_t internalPacketId)
 {
     if (internalPacketId) {
         __LDBG_printf("packet_id=%u qos=%u internal=%u", packetId, qos, internalPacketId);
@@ -126,7 +124,7 @@ PacketQueue MQTTClient::recordId(int packetId, QosType qos, uint16_t internalPac
     return _packetQueue.back();
 }
 
-PacketQueue MQTTClient::getQueueStatus(int packetId)
+MQTT::PacketQueue MQTT::Client::getQueueStatus(int packetId)
 {
     auto iterator = std::find_if(_packetQueue.begin(), _packetQueue.end(), [packetId](const PacketQueue &queue) {
         return queue.getInternalId() == packetId;
@@ -137,16 +135,16 @@ PacketQueue MQTTClient::getQueueStatus(int packetId)
     return *iterator;
 }
 
-uint16_t MQTTClient::getNextInternalPacketId()
+uint16_t MQTT::Client::getNextInternalPacketId()
 {
-    return _mqttClient->_packetQueue.getNextPacketId();
+    return getClient()->_packetQueue.getNextPacketId();
 }
 
-void MQTTClient::_addQueue(QueueType type, ComponentPtr component, PacketQueue &queue, const String &topic, QosType qos, bool retain, const String &payload, uint16_t timeout)
+void MQTT::Client::_addQueue(QueueType type, ComponentPtr component, PacketQueue &queue, const String &topic, QosType qos, bool retain, const String &payload, uint16_t timeout)
 {
     __LDBG_printf("type=%u topic=%s", type, topic.c_str());
 
-    if (MQTTClient::_isMessageSizeExceeded(topic.length() + payload.length(), topic.c_str())) {
+    if (MQTT::Client::_isMessageSizeExceeded(topic.length() + payload.length(), topic.c_str())) {
         queue = PacketQueue();
         return;
     }
@@ -156,7 +154,7 @@ void MQTTClient::_addQueue(QueueType type, ComponentPtr component, PacketQueue &
     _queueStartTimer();
 }
 
-void MQTTClient::_queueStartTimer()
+void MQTT::Client::_queueStartTimer()
 {
     if (!_queue.getTimer()) {
         _Timer(_queue.getTimer()).add(kDeliveryQueueRetryDelay, true, [this](Event::CallbackTimerPtr timer) {
@@ -165,7 +163,7 @@ void MQTTClient::_queueStartTimer()
     }
 }
 
-void MQTTClient::_packetQueueStartTimer()
+void MQTT::Client::_packetQueueStartTimer()
 {
     if (!_packetQueue.getTimer()) {
         _Timer(_packetQueue.getTimer()).add(Event::seconds(1), true, [this](Event::CallbackTimerPtr timer) {
@@ -174,7 +172,7 @@ void MQTTClient::_packetQueueStartTimer()
     }
 }
 
-void MQTTClient::_packetQueueTimerCallback()
+void MQTT::Client::_packetQueueTimerCallback()
 {
     auto count = _packetQueue.size();
     _packetQueue.erase(std::remove_if(_packetQueue.begin(), _packetQueue.end(), [this](const PacketQueue &packet) {
@@ -195,7 +193,7 @@ void MQTTClient::_packetQueueTimerCallback()
     }
 }
 
-void MQTTClient::_queueTimerCallback()
+void MQTT::Client::_queueTimerCallback()
 {
     // process queue
     for(auto iterator = _queue.begin(); iterator != _queue.end(); ++iterator) {
@@ -260,16 +258,16 @@ void MQTT::Client::_onPacketAck(uint16_t packetId, PacketAckType type)
 
 void MQTT::Client::_onErrorPacketAck(uint16_t internalId, PacketAckType type)
 {
-#if DEBUG_MQTT_CLIENT
-    auto queue = _packetQueue.find(PacketQueueInternalId(internalId));
-    __DBG_printf_E("type=%u internal=%u queue=%s", type, internalId, (queue ? queue->toString() : emptyString).c_str());
-#endif
+    #if DEBUG_MQTT_CLIENT
+        auto queue = _packetQueue.find(PacketQueueInternalId(internalId));
+        __DBG_printf_E("type=%u internal=%u queue=%s", type, internalId, (queue ? queue->toString() : emptyString).c_str());
+    #endif
     for(auto component: _components) {
         component->onPacketAck(internalId, type);
     }
 }
 
-bool MQTTClient::_isMessageSizeExceeded(size_t len, const char *topic)
+bool MQTT::Client::_isMessageSizeExceeded(size_t len, const char *topic)
 {
     if (len > MQTT_MAX_MESSAGE_SIZE) {
         Logger_error(F("MQTT maximum message size exceeded: %u/%u: %s"), len, MQTT_MAX_MESSAGE_SIZE, topic);
@@ -280,37 +278,37 @@ bool MQTTClient::_isMessageSizeExceeded(size_t len, const char *topic)
 
 #if MQTT_GROUP_TOPIC
 
-void MQTTClient::subscribeWithGroup(ComponentPtr component, const String &topic, QosType qos)
-{
-    if (!_queue.empty() || subscribeWithId(component, topic, qos) == 0) {
-        _addQueue(QueueType::SUBSCRIBE, component, topic, qos, 0, String());
-    }
-    auto groupBaseTopic = ClientConfig::getGroupTopic();
-    if (*groupBaseTopic) {
-        String groupTopic;
-        if (_getGroupTopic(component, groupBaseTopic, groupTopic)) {
-            if (!_queue.empty() || subscribeWithId(component, groupTopic, qos) == 0) {
-                _addQueue(QueueType::SUBSCRIBE, component, groupTopic, qos, 0, String());
+    void MQTT::Client::subscribeWithGroup(ComponentPtr component, const String &topic, QosType qos)
+    {
+        if (!_queue.empty() || subscribeWithId(component, topic, qos) == 0) {
+            _addQueue(QueueType::SUBSCRIBE, component, topic, qos, 0, String());
+        }
+        auto groupBaseTopic = ClientConfig::getGroupTopic();
+        if (*groupBaseTopic) {
+            String groupTopic;
+            if (_getGroupTopic(component, groupBaseTopic, groupTopic)) {
+                if (!_queue.empty() || subscribeWithId(component, groupTopic, qos) == 0) {
+                    _addQueue(QueueType::SUBSCRIBE, component, groupTopic, qos, 0, String());
+                }
             }
         }
     }
-}
 
-void MQTTClient::unsubscribeWithGroup(ComponentPtr component, const String &topic)
-{
-    if (!_queue.empty() || unsubscribeWithId(component, topic) == 0) {
-        _addQueue(QueueType::UNSUBSCRIBE, component, topic, getDefaultQos(), 0, String());
-    }
-    auto groupBaseTopic = ClientConfig::getGroupTopic();
-    if (*groupBaseTopic) {
-        String groupTopic;
-        if (_getGroupTopic(component, groupBaseTopic, groupTopic)) {
-            if (!_queue.empty() || unsubscribeWithId(component, groupTopic) == 0) {
-                _addQueue(QueueType::UNSUBSCRIBE, component, groupTopic, getDefaultQos(), 0, String());
+    void MQTT::Client::unsubscribeWithGroup(ComponentPtr component, const String &topic)
+    {
+        if (!_queue.empty() || unsubscribeWithId(component, topic) == 0) {
+            _addQueue(QueueType::UNSUBSCRIBE, component, topic, getDefaultQos(), 0, String());
+        }
+        auto groupBaseTopic = ClientConfig::getGroupTopic();
+        if (*groupBaseTopic) {
+            String groupTopic;
+            if (_getGroupTopic(component, groupBaseTopic, groupTopic)) {
+                if (!_queue.empty() || unsubscribeWithId(component, groupTopic) == 0) {
+                    _addQueue(QueueType::UNSUBSCRIBE, component, groupTopic, getDefaultQos(), 0, String());
+                }
             }
         }
     }
-}
 
 #endif
 

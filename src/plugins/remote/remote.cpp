@@ -42,7 +42,7 @@
 #define SHORT_POINTER(ptr)      ptr
 #endif
 
-using KFCConfigurationClasses::Plugins;
+using Plugins = KFCConfigurationClasses::PluginsType;
 using namespace RemoteControl;
 
 static RemoteControlPlugin plugin;
@@ -449,7 +449,7 @@ void RemoteControlPlugin::_loop()
                     _hasEvents() ||
                     _isSystemComboActive() ||
 #if MQTT_AUTO_DISCOVERY
-                    MQTTClient::safeIsAutoDiscoveryRunning() ||
+                    MQTT::Client::safeIsAutoDiscoveryRunning() ||
 #endif
 #if HTTP2SERIAL_SUPPORT
                     Http2Serial::hasAuthenticatedClients() ||

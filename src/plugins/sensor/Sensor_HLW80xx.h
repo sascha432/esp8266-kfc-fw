@@ -348,7 +348,7 @@ inline float Sensor_HLW80xx::_getEnergy(uint8_t num) const
 
 inline String Sensor_HLW80xx::_getTopic()
 {
-    return MQTTClient::formatTopic(_getId());
+    return MQTT::Client::formatTopic(_getId());
 }
 
 

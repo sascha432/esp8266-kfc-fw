@@ -32,7 +32,7 @@
 #include <PinMonitor.h>
 #endif
 
-using KFCConfigurationClasses::Plugins;
+using Plugins = KFCConfigurationClasses::PluginsType;
 
 class AsyncWebServerRequest;
 

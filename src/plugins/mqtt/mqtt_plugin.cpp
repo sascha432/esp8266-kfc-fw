@@ -14,7 +14,7 @@
 #endif
 
 using KFCConfigurationClasses::System;
-using KFCConfigurationClasses::Plugins;
+using Plugins = KFCConfigurationClasses::PluginsType;
 
 using namespace MQTT;
 
@@ -73,7 +73,7 @@ void Plugin::shutdown()
     }
 #endif
     // crashing sometimes
-    // MQTTClient::deleteInstance();
+    // MQTT::Client::deleteInstance();
 }
 
 void Plugin::getStatus(Print &output)
@@ -129,7 +129,7 @@ bool Plugin::atModeHandler(AtModeArgs &args)
             switch(action) {
                 case 0: // connext
                 case 1: // con
-                    if (Plugins::MQTTClient::isEnabled()) {
+                    if (Plugins::MqttClient::isEnabled()) {
                         args.printf_P(PSTR("connecting to %s"), client.connectionStatusString().c_str());
                         client.setAutoReconnect();
                         client.connect();

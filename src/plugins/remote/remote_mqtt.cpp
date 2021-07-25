@@ -12,7 +12,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-using KFCConfigurationClasses::Plugins;
+using Plugins = KFCConfigurationClasses::PluginsType;
 
 static inline String get_button_name(uint8_t n)
 {

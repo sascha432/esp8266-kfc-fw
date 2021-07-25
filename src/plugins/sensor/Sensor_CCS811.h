@@ -96,7 +96,7 @@ inline uint8_t Sensor_CCS811::getAutoDiscoveryCount() const
 
 inline String Sensor_CCS811::_getTopic(const __FlashStringHelper *type)
 {
-    return MQTTClient::formatTopic(_getId(type));
+    return MQTT::Client::formatTopic(_getId(type));
 }
 
 #endif

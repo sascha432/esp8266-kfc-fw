@@ -24,7 +24,7 @@
 // #include "./plugins/sensor/EnvComp.h"
 // #endif
 
-using KFCConfigurationClasses::Plugins;
+using Plugins = KFCConfigurationClasses::PluginsType;
 
 // web accesss for screen capture
 //
@@ -663,12 +663,12 @@ uint8_t WeatherStationPlugin::_getNextScreen(uint8_t screen)
 
 #if IOT_ALARM_PLUGIN_ENABLED
 
-void WeatherStationPlugin::alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration)
+void WeatherStationPlugin::alarmCallback(Alarm::ModeType mode, uint16_t maxDuration)
 {
     plugin._alarmCallback(mode, maxDuration);
 }
 
-void WeatherStationPlugin::_alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration)
+void WeatherStationPlugin::_alarmCallback(Alarm::ModeType mode, uint16_t maxDuration)
 {
     if (maxDuration == Alarm::STOP_ALARM) {
         _resetAlarm();

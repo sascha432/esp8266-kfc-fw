@@ -120,16 +120,16 @@ namespace MQTT {
         using QueuePtr = std::unique_ptr<Queue>;
     };
 
+    using namespace KFCConfigurationClasses::Plugins::MQTTConfigNS;
+    // using MqttClient = KFCConfigurationClasses::Plugins::MQTTConfigNS::MqttClient;
+    // using MqttConfigType = KFCConfigurationClasses::Plugins::MQTTConfigNS::MqttConfigType;
 
+    using Plugins = KFCConfigurationClasses::PluginsType;
     using AutoReconnectType = uint16_t;
     using ComponentPtr = Component *;
     using ClientPtr = Client *;
     using NameType = const __FlashStringHelper *;
     using ComponentVector = std::vector<ComponentPtr>;
-    using ConfigType = KFCConfigurationClasses::Plugins::MQTTClient::MqttConfig_t;
-    using ModeType = KFCConfigurationClasses::Plugins::MQTTClient::ModeType;
-    using QosType = KFCConfigurationClasses::Plugins::MQTTClient::QosType;
-    using ClientConfig = KFCConfigurationClasses::Plugins::MQTTClient;
     using ResultCallback = std::function<void(ComponentPtr component, Client *client, bool result)>;
     using ComponentProxyPtr = std::unique_ptr<ComponentProxy>;
     using TopicVector = std::vector<ClientTopic>;
@@ -160,6 +160,3 @@ namespace MQTT {
 
 
 }
-
-using MQTTPlugin = MQTT::Plugin;
-using MQTTClient = MQTT::Client;

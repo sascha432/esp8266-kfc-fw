@@ -25,7 +25,7 @@ namespace KFCConfigurationClasses {
     struct MainConfig {
         System system;
         Network network;
-        Plugins plugins;
+        PluginsType plugins;
     };
 
 };

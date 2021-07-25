@@ -35,7 +35,7 @@ AUTO_STRING_DEF(ping_monitor_cancelled, "Ping cancelled")
 AUTO_STRING_DEF(ping_monitor_service, "Ping Monitor Service")
 
 using KFCConfigurationClasses::System;
-using KFCConfigurationClasses::Plugins;
+using Plugins = KFCConfigurationClasses::PluginsType;
 
 bool PingMonitor::resolveHost(const String &host, IPAddress &addr, PrintString &errorMessage)
 {

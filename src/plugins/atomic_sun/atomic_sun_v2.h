@@ -148,7 +148,7 @@ public:
 
     virtual void _onReceive(size_t length) override;
 
-   void publishState(MQTTClient *client = nullptr);
+   void publishState(MQTT::Client *client = nullptr);
 
 protected:
     void _begin();
@@ -156,9 +156,9 @@ protected:
     void _printStatus(Print &out);
 
 private:
-    void onJsonMessage(MQTTClient *client, MQTT::Json::Reader json, uint8_t index);
+    void onJsonMessage(MQTT::Client *client, MQTT::Json::Reader json, uint8_t index);
     String _createTopics(TopicType type, uint8_t channel = -1);
-    void _publishState(MQTTClient *client);
+    void _publishState(MQTT::Client *client);
 
     void _setChannels(float fadetime);
     void _getChannels();

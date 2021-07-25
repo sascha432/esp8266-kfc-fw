@@ -66,12 +66,12 @@ String Channel::_createTopics(TopicType type, bool full) const
             if (!full) {
                 return VALUEP FSPGM(_set);
             }
-            return MQTTClient::formatTopic(VALUE FSPGM(_set));
+            return MQTT::Client::formatTopic(VALUE FSPGM(_set));
         case TopicType::COMMAND_STATE:
             if (!full) {
                 return VALUEP FSPGM(_state);
             }
-            return MQTTClient::formatTopic(VALUE FSPGM(_state));
+            return MQTT::Client::formatTopic(VALUE FSPGM(_state));
         default:
             break;
     }
@@ -343,7 +343,7 @@ void Channel::publishState()
     // }
 
     // if (publishFlag & kMQTTUpdateFlag) {
-    //     publish(_createTopics(TopicType::COMMAND_STATE), true, PrintString(F("{\"state\":\"%s\",\"brightness\":%u}"), MQTTClient::toBoolOnOff(_brightness), _brightness));
+    //     publish(_createTopics(TopicType::COMMAND_STATE), true, PrintString(F("{\"state\":\"%s\",\"brightness\":%u}"), MQTT::Client::toBoolOnOff(_brightness), _brightness));
     //     _publishFlag &= ~kMQTTUpdateFlag;
     //     _mqttCounter = 0;
     // }

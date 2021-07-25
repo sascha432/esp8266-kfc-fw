@@ -20,8 +20,6 @@
 #endif
 
 
-using KFCConfigurationClasses::Plugins;
-
 class Sensor_Motion;
 
 class MotionSensorHandler {
@@ -52,7 +50,8 @@ private:
 
 class Sensor_Motion : public MQTT::Sensor {
 public:
-    using ConfigType = Plugins::SensorConfig::MotionSensorConfig_t;
+    using Plugins = KFCConfigurationClasses::PluginsType;
+    using ConfigType = KFCConfigurationClasses::Plugins::SensorConfigNS::MotionSensorConfigType;
 
 public:
     Sensor_Motion(const String &name);
@@ -102,7 +101,7 @@ inline const __FlashStringHelper *Sensor_Motion::_getId()
 
 inline String Sensor_Motion::_getTopic()
 {
-    return MQTTClient::formatTopic(_getId());
+    return MQTT::Client::formatTopic(_getId());
 }
 
 inline const __FlashStringHelper *Sensor_Motion::_getStateStr(uint8_t state) const

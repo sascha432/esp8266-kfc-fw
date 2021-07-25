@@ -325,38 +325,40 @@ namespace KFCConfigurationClasses {
     void storeStringConfig(HandleType handle, const __FlashStringHelper *str);
     void storeStringConfig(HandleType handle, const String &str);
 
-    template<typename ConfigType, HandleType handleArg CIF_DEBUG(, const char **handleName)>
+    template<typename _ConfigType, HandleType handleArg CIF_DEBUG(, const char **handleName)>
     class ConfigGetterSetter {
     public:
         static constexpr uint16_t kConfigStructHandle = handleArg;
-        using ConfigStructType = ConfigType;
+        using ConfigStructType = _ConfigType;
 
-        static ConfigType getConfig()
+    public:;
+
+        static ConfigStructType getConfig()
         {
-            __CDBG_printf("getConfig=%04x size=%u name=%s", kConfigStructHandle, sizeof(ConfigType), *handleName);
+            __CDBG_printf("getConfig=%04x size=%u name=%s", kConfigStructHandle, sizeof(ConfigStructType), *handleName);
             REGISTER_HANDLE_NAME(*handleName, __DBG__TYPE_GET);
-            uint16_t length = sizeof(ConfigType);
+            uint16_t length = sizeof(ConfigStructType);
             auto ptr = loadBinaryConfig(kConfigStructHandle, length);
-            if (!ptr || length != sizeof(ConfigType)) {
+            if (!ptr || length != sizeof(ConfigStructType)) {
                 // invalid data, just initialize default object
-                return ConfigType();
+                return ConfigStructType();
             }
             // return copy
-            return *reinterpret_cast<const ConfigType *>(ptr);
+            return *reinterpret_cast<const ConfigStructType *>(ptr);
         }
 
-        static void setConfig(const ConfigType &params)
+        static void setConfig(const ConfigStructType &params)
         {
-            __CDBG_printf("setConfig=%04x size=%u name=%s", kConfigStructHandle, sizeof(ConfigType), *handleName);
+            __CDBG_printf("setConfig=%04x size=%u name=%s", kConfigStructHandle, sizeof(ConfigStructType), *handleName);
             REGISTER_HANDLE_NAME(*handleName, __DBG__TYPE_SET);
-            storeBinaryConfig(kConfigStructHandle, &params, sizeof(ConfigType));
+            storeBinaryConfig(kConfigStructHandle, &params, sizeof(ConfigStructType));
         }
 
-        static ConfigType & getWriteableConfig()
+        static ConfigStructType & getWriteableConfig()
         {
-            __CDBG_printf("getWriteableConfig=%04x name=%s size=%u", kConfigStructHandle, *handleName, sizeof(ConfigType));
+            __CDBG_printf("getWriteableConfig=%04x name=%s size=%u", kConfigStructHandle, *handleName, sizeof(ConfigStructType));
             REGISTER_HANDLE_NAME(*handleName, __DBG__TYPE_W_GET);
-            return *reinterpret_cast<ConfigType *>(loadWriteableBinaryConfig(kConfigStructHandle, sizeof(ConfigType)));
+            return *reinterpret_cast<ConfigStructType *>(loadWriteableBinaryConfig(kConfigStructHandle, sizeof(ConfigStructType)));
         }
     };
 

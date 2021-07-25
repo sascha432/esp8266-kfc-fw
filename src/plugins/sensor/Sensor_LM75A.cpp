@@ -31,7 +31,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_LM75A::getAutoDiscovery(MQTT::FormatType f
             if (!discovery->create(this, _getId(), format)) {
                 return discovery;
             }
-            discovery->addStateTopic(MQTTClient::formatTopic(_getId()));
+            discovery->addStateTopic(MQTT::Client::formatTopic(_getId()));
             discovery->addUnitOfMeasurement(FSPGM(UTF8_degreeC));
             break;
     }
@@ -57,7 +57,7 @@ void Sensor_LM75A::createWebUI(WebUINS::Root &webUI)
 void Sensor_LM75A::publishState()
 {
     if (isConnected()) {
-        publish(MQTTClient::formatTopic(_getId()), true, String(_readSensor(), 2));
+        publish(MQTT::Client::formatTopic(_getId()), true, String(_readSensor(), 2));
     }
 }
 

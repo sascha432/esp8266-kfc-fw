@@ -14,18 +14,18 @@
 #include <debug_helper_disable.h>
 #endif
 
-using KFCConfigurationClasses::Plugins;
-
 namespace Clock {
+
+    using Plugins = KFCConfigurationClasses::PluginsType;
 
     class StoredState {
     public:
         struct FileFormat {
             uint32_t _crc;
-            ConfigType _config;
+            ClockConfigType _config;
 
             FileFormat() : _crc(~0U) {}
-            FileFormat(const ConfigType &config) : _crc(~0U), _config(config) {}
+            FileFormat(const ClockConfigType &config) : _crc(~0U), _config(config) {}
 
             operator uint8_t *() {
                 return reinterpret_cast<uint8_t *>(this);
@@ -41,7 +41,7 @@ namespace Clock {
         StoredState() : _storage()
         {}
 
-        StoredState(const ConfigType &config, bool enabled, uint8_t brightness) :
+        StoredState(const ClockConfigType &config, bool enabled, uint8_t brightness) :
             _storage(config)
         {
             _storage._config.enabled = enabled;
@@ -65,7 +65,7 @@ namespace Clock {
             return !operator==(state);
         }
 
-        const ConfigType &getConfig() const {
+        const ClockConfigType &getConfig() const {
             return _storage._config;
         }
 

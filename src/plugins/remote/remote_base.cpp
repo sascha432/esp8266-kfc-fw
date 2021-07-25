@@ -18,7 +18,7 @@
 #endif
 
 using KFCConfigurationClasses::System;
-using KFCConfigurationClasses::Plugins;
+using Plugins = KFCConfigurationClasses::PluginsType;
 
 namespace RemoteControl {
 

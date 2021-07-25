@@ -77,7 +77,7 @@ inline void Sensor_DimmerMetrics::getStatus(Print &output)
 
 inline String Sensor_DimmerMetrics::_getMetricsTopics() const
 {
-    return MQTTClient::formatTopic(F("metrics"));
+    return MQTT::Client::formatTopic(F("metrics"));
 }
 
 inline Sensor_DimmerMetrics::MetricsType &Sensor_DimmerMetrics::_updateMetrics(const MetricsType &metrics)

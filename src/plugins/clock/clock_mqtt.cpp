@@ -38,16 +38,16 @@ MQTT::AutoDiscovery::EntityPtr ClockPlugin::getAutoDiscovery(FormatType format, 
             if (!discovery->create(this, MQTT_NAME, format)) {
                 return discovery;
             }
-            discovery->addStateTopicAndPayloadOnOff(MQTTClient::formatTopic(FSPGM(_state)));
-            discovery->addCommandTopic(MQTTClient::formatTopic(FSPGM(_set)));
-            discovery->addBrightnessStateTopic(MQTTClient::formatTopic(FSPGM(_brightness_state)));
-            discovery->addBrightnessCommandTopic(MQTTClient::formatTopic(FSPGM(_brightness_set)));
+            discovery->addStateTopicAndPayloadOnOff(MQTT::Client::formatTopic(FSPGM(_state)));
+            discovery->addCommandTopic(MQTT::Client::formatTopic(FSPGM(_set)));
+            discovery->addBrightnessStateTopic(MQTT::Client::formatTopic(FSPGM(_brightness_state)));
+            discovery->addBrightnessCommandTopic(MQTT::Client::formatTopic(FSPGM(_brightness_set)));
             discovery->addBrightnessScale(kMaxBrightness);
-            discovery->addRGBStateTopic(MQTTClient::formatTopic(FSPGM(_color_state)));
-            discovery->addRGBCommandTopic(MQTTClient::formatTopic(FSPGM(_color_set)));
-            discovery->addEffectStateTopic(MQTTClient::formatTopic(FSPGM(_effect_state)));
-            discovery->addEffectCommandTopic(MQTTClient::formatTopic(FSPGM(_effect_set)));
-            discovery->addEffectList(Clock::ConfigType::getAnimationNamesJsonArray());
+            discovery->addRGBStateTopic(MQTT::Client::formatTopic(FSPGM(_color_state)));
+            discovery->addRGBCommandTopic(MQTT::Client::formatTopic(FSPGM(_color_set)));
+            discovery->addEffectStateTopic(MQTT::Client::formatTopic(FSPGM(_effect_state)));
+            discovery->addEffectCommandTopic(MQTT::Client::formatTopic(FSPGM(_effect_set)));
+            discovery->addEffectList(KFCConfigurationClasses::Plugins::ClockConfigNS::ClockConfigType::getAnimationNamesJsonArray());
         }
         break;
 #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
@@ -55,7 +55,7 @@ MQTT::AutoDiscovery::EntityPtr ClockPlugin::getAutoDiscovery(FormatType format, 
             if (!discovery->create(MQTTComponent::ComponentType::SENSOR, F("power"), format)) {
                 return discovery;
             }
-            discovery->addStateTopic(MQTTClient::formatTopic(F("power")));
+            discovery->addStateTopic(MQTT::Client::formatTopic(F("power")));
             discovery->addUnitOfMeasurement(String('W'));
             discovery->addDeviceClass(F("power"));
         }
@@ -66,10 +66,10 @@ MQTT::AutoDiscovery::EntityPtr ClockPlugin::getAutoDiscovery(FormatType format, 
             if (!discovery->create(MQTTComponent::ComponentType::FAN, F("fan"), format)) {
                 return discovery;
             }
-            discovery->addStateTopicAndPayloadOnOff(MQTTClient::formatTopic(F("/fan/on/state")));
-            discovery->addCommandTopic(MQTTClient::formatTopic(F("/fan/on/set")));
-            discovery->addPercentageStateTopic(MQTTClient::formatTopic(F("/fan/speed/state")));
-            discovery->addPercentageCommandTopic(MQTTClient::formatTopic(F("/fan/speed/set")));
+            discovery->addStateTopicAndPayloadOnOff(MQTT::Client::formatTopic(F("/fan/on/state")));
+            discovery->addCommandTopic(MQTT::Client::formatTopic(F("/fan/on/set")));
+            discovery->addPercentageStateTopic(MQTT::Client::formatTopic(F("/fan/speed/state")));
+            discovery->addPercentageCommandTopic(MQTT::Client::formatTopic(F("/fan/speed/set")));
             discovery->addSpeedRangeMin(_config.min_fan_speed);
             discovery->addSpeedRangeMax(_config.max_fan_speed);
         }
@@ -88,13 +88,13 @@ uint8_t ClockPlugin::getAutoDiscoveryCount() const
 
 void ClockPlugin::onConnect()
 {
-    subscribe(MQTTClient::formatTopic(FSPGM(_set)));
-    subscribe(MQTTClient::formatTopic(FSPGM(_color_set)));
-    subscribe(MQTTClient::formatTopic(FSPGM(_brightness_set)));
-    subscribe(MQTTClient::formatTopic(FSPGM(_effect_set)));
+    subscribe(MQTT::Client::formatTopic(FSPGM(_set)));
+    subscribe(MQTT::Client::formatTopic(FSPGM(_color_set)));
+    subscribe(MQTT::Client::formatTopic(FSPGM(_brightness_set)));
+    subscribe(MQTT::Client::formatTopic(FSPGM(_effect_set)));
     #if IOT_LED_MATRIX_FAN_CONTROL
-        subscribe(MQTTClient::formatTopic(F("/fan/on/set")));
-        subscribe(MQTTClient::formatTopic(F("/fan/speed/set")));
+        subscribe(MQTT::Client::formatTopic(F("/fan/on/set")));
+        subscribe(MQTT::Client::formatTopic(F("/fan/speed/set")));
     #endif
     _publishState();
 }
@@ -150,7 +150,7 @@ void ClockPlugin::onMessage(const char *topic, const char *payload, size_t len)
         }
     }
     else if (!strcmp_end_P(topic, SPGM(_set))) {
-        auto res = MQTTClient::toBool(payload);
+        auto res = MQTT::Client::toBool(payload);
         if (res >= 0) {
             _setState(res);
         }
@@ -160,12 +160,12 @@ void ClockPlugin::onMessage(const char *topic, const char *payload, size_t len)
 void ClockPlugin::_publishState()
 {
     if (isConnected()) {
-        publish(MQTTClient::formatTopic(FSPGM(_state)), true, MQTTClient::toBoolOnOff(_getEnabledState()));
-        publish(MQTTClient::formatTopic(FSPGM(_brightness_state)), true, String(_targetBrightness == 0 ? _savedBrightness : _targetBrightness));
-        publish(MQTTClient::formatTopic(FSPGM(_color_state)), true, getColor().implode(','));
-        publish(MQTTClient::formatTopic(FSPGM(_effect_state)), true, Clock::ConfigType::getAnimationName(_config.getAnimation()));
+        publish(MQTT::Client::formatTopic(FSPGM(_state)), true, MQTT::Client::toBoolOnOff(_getEnabledState()));
+        publish(MQTT::Client::formatTopic(FSPGM(_brightness_state)), true, String(_targetBrightness == 0 ? _savedBrightness : _targetBrightness));
+        publish(MQTT::Client::formatTopic(FSPGM(_color_state)), true, getColor().implode(','));
+        publish(MQTT::Client::formatTopic(FSPGM(_effect_state)), true, KFCConfigurationClasses::Plugins::ClockConfigNS::ClockConfigType::getAnimationName(_config.getAnimation()));
         #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
-            publish(MQTTClient::formatTopic(F("power")), true, String(_getPowerLevel(), 2));
+            publish(MQTT::Client::formatTopic(F("power")), true, String(_getPowerLevel(), 2));
         #endif
         #if IOT_LED_MATRIX_FAN_CONTROL
             publish(MQTT::Client::formatTopic(F("/fan/state")), true, MQTT::Client::toBoolOnOff(_fanSpeed >= _config.min_fan_speed));

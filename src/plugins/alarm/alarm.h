@@ -33,11 +33,9 @@
 
 class AsyncWebServerRequest;
 
-class AlarmPlugin : public PluginComponent, public MQTTComponent {
-public:
-    using Alarm = KFCConfigurationClasses::Plugins::Alarm;
-    using Callback = std::function<void(Alarm::AlarmModeType mode, uint16_t maxDuration)>;
+using namespace KFCConfigurationClasses::Plugins::AlarmConfigNS;
 
+class AlarmPlugin : public PluginComponent, public MQTTComponent {
 // PluginComponent
 public:
     AlarmPlugin();
@@ -59,7 +57,7 @@ public:
 
 public:
     static void resetAlarm();
-    static void setCallback(Callback callback);
+    static void setCallback(CallbackType callback);
     static bool getAlarmState();
     static void ntpCallback(time_t now);
     static void timerCallback(Event::CallbackTimerPtr timer);
@@ -79,23 +77,23 @@ private:
     void _publishState();
 
     inline static String _formatTopic(const __FlashStringHelper *topic) {
-        return MQTTClient::formatTopic(String(FSPGM(alarm)), topic);
+        return MQTT::Client::formatTopic(String(FSPGM(alarm)), topic);
     }
 
     class ActiveAlarm {
     public:
-        ActiveAlarm(Alarm::TimeType time, const Alarm::SingleAlarm_t &alarm) : _time(time), _alarm(alarm) {}
+        ActiveAlarm(TimeType time, const SingleAlarmType &alarm) : _time(time), _alarm(alarm) {}
 
-        Alarm::TimeType _time;
-        Alarm::SingleAlarm_t _alarm;
+        TimeType _time;
+        SingleAlarmType _alarm;
     };
 
     using ActiveAlarmVector = std::vector<ActiveAlarm>;
 
     Event::Timer _timer;
     ActiveAlarmVector _alarms;
-    Callback _callback;
-    Alarm::TimeType _nextAlarm;
+    CallbackType _callback;
+    TimeType _nextAlarm;
     bool _alarmState;
     int32_t _color;
 };

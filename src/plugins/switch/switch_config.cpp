@@ -5,16 +5,14 @@
 #include <Configuration.h>
 #include <kfc_fw_config.h>
 
-namespace KFCConfigurationClasses {
+using namespace KFCConfigurationClasses::Plugins::SwitchConfigNS;
 
-    void Plugins::IOTSwitch::setConfig(const uint8_t *buf, size_t size)
-    {
-        config.setBinary(_H(MainConfig().plugins.iotswitch), buf, size);
-    }
+void IotSwitch::setConfig(const uint8_t *buf, size_t size)
+{
+    config.setBinary(_H(MainConfig().plugins.iotswitch), buf, size);
+}
 
-    const uint8_t *Plugins::IOTSwitch::getConfig(uint16_t &length)
-    {
-        return config.getBinary(_H(MainConfig().plugins.iotswitch), length);
-    }
-
+const uint8_t *IotSwitch::getConfig(uint16_t &length)
+{
+    return config.getBinary(_H(MainConfig().plugins.iotswitch), length);
 }

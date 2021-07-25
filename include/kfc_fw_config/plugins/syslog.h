@@ -5,42 +5,38 @@
 #include "kfc_fw_config/base.h"
 #include "ConfigurationHelper.h"
 
+namespace KFCConfigurationClasses {
+
+    namespace Plugins {
+
         // --------------------------------------------------------------------
         // Syslog
 
-        class SyslogClientConfig {
-        public:
-            using SyslogProtocolType = ::SyslogProtocolType;
+        namespace SyslogConfigNS {
 
-            AUTO_DEFAULT_PORT_CONST_SECURE(514, 6514);
+            struct __attribute__packed__ SyslogClientConfig {
+                using Type =  SyslogClientConfig;
 
-            typedef struct __attribute__packed__ SyslogConfig_t {
-                union __attribute__packed__ {
-                    SyslogProtocolType protocol_enum;
-                    uint8_t protocol;
-                };
-                AUTO_DEFAULT_PORT_GETTER_SETTER_SECURE(__port, kPortDefault, kPortDefaultSecure, protocol_enum == SyslogProtocolType::TCP_TLS);
+                AUTO_DEFAULT_PORT_CONST_SECURE(514, 6514);
+                CREATE_ENUM_D_BITFIELD(protocol, SyslogProtocol, SyslogProtocol::TCP);
+                AUTO_DEFAULT_PORT_GETTER_SETTER_SECURE(__port, kPortDefault, kPortDefaultSecure, _get_enum_protocol() == SyslogProtocol::TCP_TLS);
 
-#if 0
-                template<class T>
-                void dump() {
-                    CONFIG_DUMP_STRUCT_INFO(T);
-                    CONFIG_DUMP_STRUCT_VAR(protocol);
-                    CONFIG_DUMP_STRUCT_VAR(__port);
+                SyslogClientConfig() : protocol(kDefaultValueFor_protocol), __port(kDefaultValueFor___port) {}
+            };
+
+            class SyslogClient : public KFCConfigurationClasses::ConfigGetterSetter<SyslogClientConfig, _H(MainConfig().plugins.syslog.cfg) CIF_DEBUG(, &handleNameSyslogConfig_t)>
+            {
+            public:
+                static void defaults();
+                static bool isEnabled();
+                static bool isEnabled(SyslogProtocol protocol);
+                inline static bool isEnabled(int protocol) {
+                    return isEnabled(static_cast<SyslogProtocol>(protocol));
                 }
-#endif
 
-                SyslogConfig_t() : protocol_enum(SyslogProtocolType::TCP), __port(kDefaultValueFor___port) {}
+                CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.syslog, Hostname, 1, 128);
+            };
 
-            } SyslogConfig_t;
-        };
-
-        class SyslogClient : public SyslogClientConfig, public KFCConfigurationClasses::ConfigGetterSetter<SyslogClientConfig::SyslogConfig_t, _H(MainConfig().plugins.syslog.cfg) CIF_DEBUG(, &handleNameSyslogConfig_t)>
-        {
-        public:
-            static void defaults();
-            static bool isEnabled();
-            static bool isEnabled(SyslogProtocolType protocol);
-
-            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.syslog, Hostname, 1, 128);
-        };
+        }
+    }
+}

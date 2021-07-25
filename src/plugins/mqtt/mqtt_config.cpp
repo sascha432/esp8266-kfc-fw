@@ -7,30 +7,38 @@
 
 namespace KFCConfigurationClasses {
 
-    void Plugins::MQTTClient::defaults()
-    {
-        System::Flags::getWriteableConfig().is_mqtt_enabled = true;
-        setConfig(MqttConfig_t());
-        setHostname(CREATE_ZERO_CONF(F("mqtt"), FSPGM(tcp), FSPGM(address), F("192.168.4.1")));
-        setBaseTopic(F("home/${device_name}"));
-        setAutoDiscoveryPrefix(F("homeassistant"));
-        // setSharedTopic(F("home/kfcfw/shared"));
-    }
+    namespace Plugins {
 
-    bool Plugins::MQTTClient::isEnabled()
-    {
-        return ::KFCConfigurationClasses::System::Flags::getConfig().is_mqtt_enabled && (ConfigStructType::get_enum_mode(getConfig()) != ModeType::DISABLED);
-    }
+        namespace MQTTConfigNS {
 
-    const uint8_t *Plugins::MQTTClient::getFingerPrint(uint16_t &size)
-    {
-        size = 0;
-        return config.getBinary(_H(MainConfig().plugins.mqtt.fingerprint), size);
-    }
+            void MqttClient::defaults()
+            {
+                System::Flags::getWriteableConfig().is_mqtt_enabled = true;
+                setConfig(MqttConfigType());
+                setHostname(CREATE_ZERO_CONF(F("mqtt"), FSPGM(tcp), FSPGM(address), F("192.168.4.1")));
+                setBaseTopic(F("home/${device_name}"));
+                setAutoDiscoveryPrefix(F("homeassistant"));
+                // setSharedTopic(F("home/kfcfw/shared"));
+            }
 
-    void Plugins::MQTTClient::setFingerPrint(const uint8_t *fingerprint, uint16_t size)
-    {
-        config.setBinary(_H(MainConfig().plugins.mqtt.fingerprint), fingerprint, size);
+            bool MqttClient::isEnabled()
+            {
+                return ::KFCConfigurationClasses::System::Flags::getConfig().is_mqtt_enabled && (getConfig()._get_enum_mode() != ModeType::DISABLED);
+            }
+
+            const uint8_t *MqttClient::getFingerPrint(uint16_t &size)
+            {
+                size = 0;
+                return config.getBinary(_H(MainConfig().plugins.mqtt.fingerprint), size);
+            }
+
+            void MqttClient::setFingerPrint(const uint8_t *fingerprint, uint16_t size)
+            {
+                config.setBinary(_H(MainConfig().plugins.mqtt.fingerprint), fingerprint, size);
+            }
+
+        }
+
     }
 
 }

@@ -86,10 +86,10 @@ private:
 public:
     using Alarm = KFCConfigurationClasses::Plugins::Alarm;
 
-    static void alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration);
+    static void alarmCallback(Alarm::ModeType mode, uint16_t maxDuration);
 
 private:
-    void _alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration);
+    void _alarmCallback(Alarm::ModeType mode, uint16_t maxDuration);
     bool _resetAlarm(); // returns true if alarm was reset
 
     Event::Timer _alarmTimer;

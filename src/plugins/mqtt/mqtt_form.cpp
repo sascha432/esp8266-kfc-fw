@@ -30,35 +30,36 @@ void Plugin::createMenu()
 }
 #endif
 
-
 void Plugin::createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
 {
+    using namespace KFCConfigurationClasses::Plugins::MQTTConfigNS;
+
     if (type == FormCallbackType::SAVE) {
         // update flags
-        System::Flags::getWriteableConfig().is_mqtt_enabled = (ClientConfig::ConfigStructType::get_enum_mode(ClientConfig::getWriteableConfig()) != ClientConfig::ModeType::DISABLED);
+        System::Flags::getWriteableConfig().is_mqtt_enabled = (MqttClient::getConfig()._get_enum_mode() != ModeType::DISABLED);
         return;
     }
     else if (!isCreateFormCallbackType(type)) {
         return;
     }
 
-    auto &cfg = ClientConfig::getWriteableConfig();
+    auto &cfg = MqttClient::getWriteableConfig();
 
     FormUI::Container::List modeItems(
-        ClientConfig::ModeType::DISABLED, FSPGM(Disabled),
-        ClientConfig::ModeType::UNSECURE, FSPGM(Enabled)
+        ModeType::DISABLED, FSPGM(Disabled),
+        ModeType::UNSECURE, FSPGM(Enabled)
     );
     FormUI::Container::List qosItems(
-        ClientConfig::QosType::AT_MOST_ONCE, F("At most once (0)"),
-        ClientConfig::QosType::AT_LEAST_ONCE, F("At least once (1)"),
-        ClientConfig::QosType::EXACTLY_ONCE, F("Exactly once (2)")
+        QosType::AT_MOST_ONCE, F("At most once (0)"),
+        QosType::AT_LEAST_ONCE, F("At least once (1)"),
+        QosType::EXACTLY_ONCE, F("Exactly once (2)")
 #if ASYNC_TCP_SSL_ENABLED
-       ,ClientConfig::ModeType::SECURE, F("TLS/Secure MQTT")
+       ,ModeType::SECURE, F("TLS/Secure MQTT")
 #endif
     );
 
     if (!System::Flags::getConfig().is_mqtt_enabled) {
-        ClientConfig::ConfigStructType::set_enum_mode(cfg, ClientConfig::ModeType::DISABLED); // set to disabled before adding value to form
+        cfg._set_enum_mode(ModeType::DISABLED); // set to disabled before adding value to form
     }
 
     auto &ui = form.createWebUI();
@@ -71,22 +72,22 @@ void Plugin::createConfigureForm(FormCallbackType type, const String &formName, 
 
     auto &commonGroup = form.addCardGroup(FSPGM(config));
 
-    form.addObjectGetterSetter(FSPGM(mode), cfg, cfg.get_enum_mode, cfg.set_enum_mode);
+    form.addObjectGetterSetter(FSPGM(mode), FormGetterSetter(cfg, mode));
     form.addFormUI(FSPGM(Mode), modeItems);
-    form.addValidator(FormUI::Validator::EnumRange<ClientConfig::ModeType>());
+    form.addValidator(FormUI::Validator::EnumRange<ModeType>());
 
     auto &connGroup = commonGroup.end().addCardGroup(F("conn"), FSPGM(Connection), true);
 
-    form.addStringGetterSetter(FSPGM(host), ClientConfig::getHostname, ClientConfig::setHostname);
+    form.addStringGetterSetter(FSPGM(host), MqttClient::getHostname, MqttClient::setHostname);
     form.addFormUI(FSPGM(Hostname), FormUI::ZeroconfSuffix());
     form.addValidator(FormUI::Validator::Hostname(FormUI::AllowedType::HOST_OR_IP_OR_ZEROCONF));
-    form.addValidator(FormUI::Validator::Length(3, ClientConfig::kHostnameMaxSize));
+    form.addValidator(FormUI::Validator::Length(3, MqttClient::kHostnameMaxSize));
 
     form.addCallbackSetter(FSPGM(port), cfg.getPortAsString(), [&cfg](const String &value, FormField &field) {
         cfg.setPort(value.toInt());
         field.setValue(cfg.getPortAsString());
     });
-    form.addFormUI(FormUI::Type::NUMBER, FSPGM(Port), FormUI::PlaceHolder(ClientConfig::kPortDefault));
+    form.addFormUI(FormUI::Type::NUMBER, FSPGM(Port), FormUI::PlaceHolder(MqttConfigType::kPortDefault));
     form.addValidator(FormUI::Validator::NetworkPort(true));
 
     form.addObjectGetterSetter(F("kat"), cfg, cfg.get_bits_keepalive, cfg.set_bits_keepalive);
@@ -107,16 +108,16 @@ void Plugin::createConfigureForm(FormCallbackType type, const String &formName, 
 
     auto &serverGroup = connGroup.end().addCardGroup(FSPGM(mqtt), F("Server Settings"), true);
 
-    form.addStringGetterSetter(F("mu"), ClientConfig::getUsername, ClientConfig::setUsername);
+    form.addStringGetterSetter(F("mu"), MqttClient::getUsername, MqttClient::setUsername);
     form.addFormUI(FSPGM(Username), FormUI::PlaceHolder(FSPGM(Anonymous)));
-    form.addValidator(FormUI::Validator::Length(0, ClientConfig::kUsernameMaxSize));
+    form.addValidator(FormUI::Validator::Length(0, MqttClient::kUsernameMaxSize));
 
-    form.addStringGetterSetter(F("mqttpass"), ClientConfig::getPassword, ClientConfig::setPassword);
+    form.addStringGetterSetter(F("mqttpass"), MqttClient::getPassword, MqttClient::setPassword);
     form.addFormUI(FormUI::Type::PASSWORD, FSPGM(Password));
-    ClientConfig::addPasswordLengthValidator(form, true);
+    MqttClient::addPasswordLengthValidator(form, true);
 
-    form.addStringGetterSetter(F("t"), ClientConfig::getBaseTopic, ClientConfig::setBaseTopic);
-    ClientConfig::addBaseTopicLengthValidator(form);
+    form.addStringGetterSetter(F("t"), MqttClient::getBaseTopic, MqttClient::setBaseTopic);
+    MqttClient::addBaseTopicLengthValidator(form);
     form.addFormUI(FSPGM(Topic));
 
 #if MQTT_GROUP_TOPIC
@@ -129,7 +130,7 @@ void Plugin::createConfigureForm(FormCallbackType type, const String &formName, 
 
     form.addObjectGetterSetter(F("qos"), cfg, cfg.get_enum_qos, cfg.set_enum_qos);
     form.addFormUI(F("Quality Of Service"), qosItems);
-    form.addValidator(FormUI::Validator::EnumRange<ClientConfig::QosType>(F("Invalid value for QoS")));
+    form.addValidator(FormUI::Validator::EnumRange<QosType>(F("Invalid value for QoS")));
 
     serverGroup.end();
 
@@ -141,9 +142,9 @@ void Plugin::createConfigureForm(FormCallbackType type, const String &formName, 
 
     auto &autoDiscoveryGroup = form.addDivGroup(F("adp"), F("{'i':'#ade','m':'$T.hide()','s':{'1':'$T.show()'}}"));
 
-    form.addStringGetterSetter(F("pf"), ClientConfig::getAutoDiscoveryPrefix, ClientConfig::setAutoDiscoveryPrefix);
+    form.addStringGetterSetter(F("pf"), MqttClient::getAutoDiscoveryPrefix, MqttClient::setAutoDiscoveryPrefix);
     form.addFormUI(F("Auto Discovery Prefix"));
-    form.addValidator(FormUI::Validator::Length(0, ClientConfig::kAutoDiscoveryPrefixMaxSize));
+    form.addValidator(FormUI::Validator::Length(0, MqttClient::kAutoDiscoveryPrefixMaxSize));
 
     form.addObjectGetterSetter(F("add"), cfg, cfg.get_bits_auto_discovery_delay, cfg.set_bits_auto_discovery_delay);
     form.addFormUI(F("Auto Discovery Delay"), FormUI::Suffix(FSPGM(seconds)), FormUI::IntAttribute(F("disabled-value"), 0), FormUI::FPStringAttribute(F("disabled-value-targets"), F("#adi")));

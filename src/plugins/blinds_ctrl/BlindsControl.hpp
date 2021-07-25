@@ -474,7 +474,7 @@ inline void BlindsControl::onMessage(const char *topic, const char *payload, siz
     else {
         channel = ChannelType::ALL;
     }
-    auto state = MQTTClient::toBool(payload, false);
+    auto state = MQTT::Client::toBool(payload, false);
     __LDBG_printf("topic=%s state=%u payload=%s", topic, state, payload);
     _executeAction(channel, state);
 }
@@ -514,10 +514,10 @@ inline void BlindsControl::getValues(WebUINS::Events &array)
 inline String BlindsControl::_getTopic(ChannelType channel, TopicType type)
 {
     if (type == TopicType::METRICS) {
-        return MQTTClient::formatTopic(FSPGM(metrics));
+        return MQTT::Client::formatTopic(FSPGM(metrics));
     }
     else if (type == TopicType::CHANNELS) {
-        return MQTTClient::formatTopic(FSPGM(channels));
+        return MQTT::Client::formatTopic(FSPGM(channels));
     }
     const __FlashStringHelper *str;
     switch(type) {
@@ -530,9 +530,9 @@ inline String BlindsControl::_getTopic(ChannelType channel, TopicType type)
             break;
     }
     if (channel == ChannelType::ALL) {
-        return MQTTClient::formatTopic(str);
+        return MQTT::Client::formatTopic(str);
     }
-    return MQTTClient::formatTopic(PrintString(FSPGM(channel__u), channel), str);
+    return MQTT::Client::formatTopic(PrintString(FSPGM(channel__u), channel), str);
 }
 
 inline void BlindsControl::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)

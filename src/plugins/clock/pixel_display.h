@@ -102,10 +102,10 @@ namespace Clock {
         using PixelAddressType = typename TypesType::PixelAddressType;
         using CoordinateType = typename TypesType::CoordinateType;
         using PixelCoordinatesType = typename TypesType::PixelCoordinatesType;
+    protected:
         using TypesType::kRows;
         using TypesType::kCols;
         using TypesType::kNumPixels;
-    protected:
         using TypesType::kPixelOffset;
         using TypesType::kMaxPixelAddress; // kPixelOffset + kNumPixels
 
@@ -115,6 +115,42 @@ namespace Clock {
     public:
         constexpr uint8_t getMappingTypeId() const {
             return kMappingTypeId;
+        }
+
+        constexpr PixelAddressType getOffset() const {
+            return kPixelOffset;
+        }
+
+        bool setParams(CoordinateType rows, CoordinateType cols, bool rowsReversed, bool colsReversed, bool rotated, bool interleaved, PixelAddressType offset) {
+            return false;
+        }
+
+        constexpr size_t size() const {
+            return kRows * kCols;
+        }
+
+        constexpr CoordinateType getRows() const {
+            return kRows;
+        }
+
+        constexpr CoordinateType getCols() const {
+            return kCols;
+        }
+
+        constexpr bool isRowsReversed() const{
+            return _ReverseRows;
+        }
+
+        constexpr bool isColsReversed() const{
+            return _ReverseColumns;
+        }
+
+        constexpr bool isRotated() const{
+            return _Rotate;
+        }
+
+        constexpr bool isInterleaved() const{
+            return _Interleaved;
         }
 
         struct CoordinateHelperType {
@@ -306,14 +342,13 @@ namespace Clock {
         using PixelAddressType = typename TypesType::PixelAddressType;
         using CoordinateType = typename TypesType::CoordinateType;
         using PixelCoordinatesType = typename TypesType::PixelCoordinatesType;
+    protected:
         using TypesType::kRows;
         using TypesType::kCols;
         using TypesType::kNumPixels;
-    protected:
         using TypesType::kPixelOffset;
         using TypesType::kMaxPixelAddress; // kPixelOffset + kNumPixels
 
-    public:
         // the arguments can be changed during runtime
         // it is 10-30% slower than the static version
         bool _reverseRows{_ReverseRows};
@@ -322,11 +357,62 @@ namespace Clock {
         bool _interleaved{_Interleaved};
         CoordinateType _rows{kRows};
         CoordinateType _cols{kCols};
+        PixelAddressType _offset{_PixelOffset};
 
+    public:
         uint8_t getMappingTypeId() const {
             return (_reverseRows ? 0x01 : 0x00) | (_reverseColumns ? 0x02 : 0x00) | (_rotate ? 0x04 : 0) | (_interleaved ? 0x08 : 0);
         }
 
+        PixelAddressType getOffset() const {
+            return _offset;
+        }
+
+        bool setParams(CoordinateType rows, CoordinateType cols, bool rowsReversed, bool colsReversed, bool rotated, bool interleaved, PixelAddressType offset)
+        {
+            if (offset >= kMaxPixelAddress) {
+                return false;
+            }
+            if (static_cast<size_t>((rows * cols) + offset) > kMaxPixelAddress) {
+                return false;
+            }
+            _rows = rows;
+            _cols = cols;
+            _reverseRows = rowsReversed;
+            _reverseColumns = colsReversed;
+            _rotate = rotated;
+            _interleaved = interleaved;
+            _offset = offset;
+            return true;
+        }
+
+        size_t size() const {
+            return getRows() * getCols();
+        }
+
+        CoordinateType getRows() const {
+            return _rows;
+        }
+
+        CoordinateType getCols() const {
+            return _cols;
+        }
+
+        bool isRowsReversed() const{
+            return _reverseRows;
+        }
+
+        bool isColsReversed() const{
+            return _reverseColumns;
+        }
+
+        bool isRotated() const{
+            return _rotate;
+        }
+
+        bool isInterleaved() const{
+            return _interleaved;
+        }
 
         // rotation
         inline __attribute__((__always_inline__))
@@ -420,19 +506,14 @@ namespace Clock {
         using PixelMappingType = IOT_CLOCK_PIXEL_MAPPING_TYPE<_PixelOffset, _Rows, _Columns, _ReverseRows, _ReverseColumns, _Rotate, _Interleaved>;
         using PixelMappingType::getPoint;
         using PixelMappingType::getAddress;
-        using PixelMappingType::kRows;
-        using PixelMappingType::kCols;
-        using PixelMappingType::kPixelOffset;
-        using PixelMappingType::kNumPixels;
-
-        #if IOT_LED_MATRIX_CONFIGURABLE
-        using PixelMappingType::_reverseRows;
-        using PixelMappingType::_reverseColumns;
-        using PixelMappingType::_rotate;
-        using PixelMappingType::_interleaved;
-        using PixelMappingType::_rows;
-        using PixelMappingType::_cols;
-        #endif
+        using PixelMappingType::isRowsReversed;
+        using PixelMappingType::isColsReversed;
+        using PixelMappingType::isRotated;
+        using PixelMappingType::isInterleaved;
+        using PixelMappingType::getOffset;
+        using PixelMappingType::size;
+        using PixelMappingType::getRows;
+        using PixelMappingType::getCols;
 
     protected:
         using PixelMappingType::kMaxPixelAddress; // = kPixelOffset + kNumPixels
@@ -448,8 +529,20 @@ namespace Clock {
 
     public:
 
-        PixelDisplayBuffer() : _pixels(__pixels.data() + kPixelOffset)
+        PixelDisplayBuffer() : _pixels(__pixels.data() + getOffset())
         {
+        }
+
+        bool setParams(CoordinateType rows, CoordinateType cols, bool rowsReversed, bool colsReversed, bool rotated, bool interleaved, PixelAddressType offset) {
+            if (!PixelMappingType::setParams(rows, cols, rowsReversed, colsReversed, rotated, interleaved, offset)) {
+                return true;
+            }
+            _pixels = __pixels.data() + getOffset();
+            return true;
+        }
+
+        size_t getMaxNumPixels() const {
+            return PixelMappingType::kNumPixels;
         }
 
         void reset() {
@@ -465,7 +558,7 @@ namespace Clock {
         }
 
         constexpr size_t getNumPixels() const {
-            return kNumPixels;
+            return size();
         }
 
         inline __attribute__((__always_inline__))
@@ -570,15 +663,11 @@ namespace Clock {
 
         inline __attribute__((__always_inline__))
         PixelBufferPtr end() {
-            return &_pixels[kNumPixels];
+            return &_pixels[size()];
         }
 
         constexpr const PixelBufferPtr end() const {
-            return &_pixels[kNumPixels];
-        }
-
-        constexpr size_t size() const {
-            return kNumPixels;
+            return &_pixels[size()];
         }
 
         // debug and dummy methods
@@ -604,20 +693,20 @@ namespace Clock {
         }
 
         void dump(Print &output) {
-            output.printf_P(PSTR("data=%p pixels=%p offset=%u num=%u mode=led_matrix brightness=%u\n"), __pixels.data(), _pixels, kPixelOffset, kNumPixels, FastLED.getBrightness());
+            output.printf_P(PSTR("data=%p pixels=%p offset=%u num=%u mode=led_matrix brightness=%u\n"), __pixels.data(), _pixels, getOffset(), size(), FastLED.getBrightness());
         }
 
     protected:
         inline __attribute__((__always_inline__))
         void _set(PixelAddressType idx, ColorType color) {
-            if (idx < kNumPixels) {
+            if (idx < size()) {
                 _pixels[idx] = color;
             }
         }
 
         inline __attribute__((__always_inline__))
         ColorType &_get(PixelAddressType idx) {
-            if (idx < kNumPixels) {
+            if (idx < size()) {
                 return _pixels[idx];
             }
             static ColorType invalid = ColorType(0);
@@ -626,7 +715,7 @@ namespace Clock {
 
         inline __attribute__((__always_inline__))
         const ColorType &_get(PixelAddressType idx) const {
-            if (idx < kNumPixels) {
+            if (idx < size()) {
                 return _pixels[idx];
             }
             static ColorType invalid = ColorType(0);
@@ -663,9 +752,15 @@ namespace Clock {
         using PixelBufferType::clear;
         using PixelBufferType::fill;
         using PixelBufferType::reset;
+        using PixelBufferType::isRowsReversed;
+        using PixelBufferType::isColsReversed;
+        using PixelBufferType::isRotated;
+        using PixelBufferType::isInterleaved;
+        using PixelBufferType::getOffset;
+        using PixelBufferType::setParams;
         using PixelBufferType::size;
-        using PixelBufferType::kPixelOffset;
-        using PixelBufferType::kNumPixels;
+        using PixelBufferType::getRows;
+        using PixelBufferType::getCols;
 
     public:
         PixelDisplay() :
@@ -710,11 +805,11 @@ namespace Clock {
                     FastLED.show(brightness);
                     break;
                 case Clock::ShowMethodType::NEOPIXEL:
-                    NeoPixelEx::StaticStrip::externalShow<NeoPixelEx::TimingsWS2812, NeoPixelEx::CRGB>(IOT_LED_MATRIX_OUTPUT_PIN, reinterpret_cast<uint8_t *>(_pixels), kNumPixels, brightness, NeoPixelEx::Context::validate(nullptr));
+                    NeoPixelEx::StaticStrip::externalShow<NeoPixelEx::TimingsWS2812, NeoPixelEx::CRGB>(IOT_LED_MATRIX_OUTPUT_PIN, reinterpret_cast<uint8_t *>(_pixels), size(), brightness, NeoPixelEx::Context::validate(nullptr));
                     break;
                 case Clock::ShowMethodType::NEOPIXEL_REPEAT:
                     for(uint8_t i = 0; i  < 5; i++) {
-                        if (NeoPixelEx::StaticStrip::externalShow<NeoPixelEx::TimingsWS2812, NeoPixelEx::CRGB>(IOT_LED_MATRIX_OUTPUT_PIN, reinterpret_cast<uint8_t *>(_pixels), kNumPixels, brightness, NeoPixelEx::Context::validate(nullptr))) {
+                        if (NeoPixelEx::StaticStrip::externalShow<NeoPixelEx::TimingsWS2812, NeoPixelEx::CRGB>(IOT_LED_MATRIX_OUTPUT_PIN, reinterpret_cast<uint8_t *>(_pixels), size(), brightness, NeoPixelEx::Context::validate(nullptr))) {
                             break;
                         }
                         ::delay(1);

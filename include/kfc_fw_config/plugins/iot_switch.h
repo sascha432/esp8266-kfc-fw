@@ -5,15 +5,19 @@
 #include "kfc_fw_config/base.h"
 #include "ConfigurationHelper.h"
 
+#define IOT_SWITCH_NO_DECL
+#include "../src/plugins/switch/switch_def.h"
+#undef IOT_SWITCH_NO_DECL
+
+namespace KFCConfigurationClasses {
+
+    namespace Plugins {
+
         // --------------------------------------------------------------------
         // IOT Switch
 
-        #define IOT_SWITCH_NO_DECL
-        #include "../src/plugins/switch/switch_def.h"
-        #undef IOT_SWITCH_NO_DECL
+        namespace SwitchConfigNS {
 
-        class IOTSwitch {
-        public:
             enum class StateEnum : uint8_t {
                 OFF =       0x00,
                 ON =        0x01,
@@ -28,8 +32,9 @@
                 TOP =       0x03,
                 MAX
             };
-            struct __attribute__packed__ SwitchConfig {
-                using Type = SwitchConfig;
+
+            struct __attribute__packed__ SwitchConfigType {
+                using Type = SwitchConfigType;
 
                 struct __attribute__packed__ DataType {
                     using Type = DataType;
@@ -55,17 +60,17 @@
                 //     return getNameLength();
                 // }
 
-                SwitchConfig &operator =(const String &name) {
+                SwitchConfigType &operator =(const String &name) {
                     _data.length = name.length();
                     return *this;
                 }
 
-                SwitchConfig &operator =(StateEnum state) {
+                SwitchConfigType &operator =(StateEnum state) {
                     _data.state = static_cast<uint8_t>(state);
                     return *this;
                 }
 
-                SwitchConfig &operator =(WebUIEnum webUI) {
+                SwitchConfigType &operator =(WebUIEnum webUI) {
                     _data.webUI = static_cast<uint8_t>(webUI);
                     return *this;
                 }
@@ -109,58 +114,65 @@
                     return sizeof(DataType);
                 }
 
-                SwitchConfig() : _data() {}
-                SwitchConfig(const String &name, StateEnum state, WebUIEnum webUI) : _data(name, state, webUI) {}
+                SwitchConfigType() : _data() {}
+                SwitchConfigType(const String &name, StateEnum state, WebUIEnum webUI) : _data(name, state, webUI) {}
             };
 
-            static const uint8_t *getConfig(uint16_t &length);
-            static void setConfig(const uint8_t *buf, size_t size);
 
-            // T = std::array<String, N>, R = std::array<SwitchConfig, N>
-            template <class _List, class _Array>
-            static void getConfig(_List &names, _Array &configs) {
-                names = _List();
-                configs = _Array();
-                uint16_t length = 0;
-                auto ptr = getConfig(length);
-                #if DEBUG_IOT_SWITCH
-                    __dump_binary_to(DEBUG_OUTPUT, ptr, length, length, PSTR("getConfig"));
-                #endif
-                if (ptr) {
-                    uint8_t i = 0;
-                    auto endPtr = ptr + length;
-                    while(ptr + SwitchConfig::size() <= endPtr && i < names.size()) {
-                        memcpy(&configs[i].data(), ptr, configs[i].size());
-                        // ::printf("ptr=%p endPtr=%p i=%u sz=%u namelen=%u\n", ptr, endPtr, i, names.size(), configs[i].getNameLength());
-                        ptr += configs[i].size();
-                        auto len = configs[i].getNameLength();
-                        if (ptr + len < endPtr) {
-                            names[i] = PrintString(ptr, len);
+            class IotSwitch {
+            public:
+                static const uint8_t *getConfig(uint16_t &length);
+                static void setConfig(const uint8_t *buf, size_t size);
+
+                // T = std::array<String, N>, R = std::array<SwitchConfig, N>
+                template <class _List, class _Array>
+                static void getConfig(_List &names, _Array &configs) {
+                    names = _List();
+                    configs = _Array();
+                    uint16_t length = 0;
+                    auto ptr = getConfig(length);
+                    #if DEBUG_IOT_SWITCH
+                        __dump_binary_to(DEBUG_OUTPUT, ptr, length, length, PSTR("getConfig"));
+                    #endif
+                    if (ptr) {
+                        uint8_t i = 0;
+                        auto endPtr = ptr + length;
+                        while(ptr + SwitchConfigType::size() <= endPtr && i < names.size()) {
+                            memcpy(&configs[i].data(), ptr, configs[i].size());
+                            // ::printf("ptr=%p endPtr=%p i=%u sz=%u namelen=%u\n", ptr, endPtr, i, names.size(), configs[i].getNameLength());
+                            ptr += configs[i].size();
+                            auto len = configs[i].getNameLength();
+                            if (ptr + len < endPtr) {
+                                names[i] = PrintString(ptr, len);
+                            }
+                            else {
+                                // invalid data, remove name
+                                names[i] = String();
+                                configs[i] = names[i];
+                            }
+                            ptr += len;
+                            i++;
                         }
-                        else {
-                            // invalid data, remove name
-                            names[i] = String();
-                            configs[i] = names[i];
-                        }
-                        ptr += len;
-                        i++;
                     }
                 }
-            }
 
-            template <class _List, class _Array>
-            static void setConfig(const _List &names, _Array &configs) {
-                Buffer buffer;
-                for(uint8_t i = 0; i < names.size(); i++) {
-                    auto name = String(names[i]);
-                    name.rtrim();
-                    configs[i] = name;
-                    buffer.push_back(configs[i].data());
-                    buffer.writeString(name);
+                template <class _List, class _Array>
+                static void setConfig(const _List &names, _Array &configs) {
+                    Buffer buffer;
+                    for(uint8_t i = 0; i < names.size(); i++) {
+                        auto name = String(names[i]);
+                        name.rtrim();
+                        configs[i] = name;
+                        buffer.push_back(configs[i].data());
+                        buffer.writeString(name);
+                    }
+                    setConfig(buffer.begin(), buffer.length());
+                    #if DEBUG_IOT_SWITCH
+                        __dump_binary_to(DEBUG_OUTPUT, buffer.begin(), buffer.length(), buffer.length(), PSTR("setConfig"));
+                    #endif
                 }
-                setConfig(buffer.begin(), buffer.length());
-                #if DEBUG_IOT_SWITCH
-                    __dump_binary_to(DEBUG_OUTPUT, buffer.begin(), buffer.length(), buffer.length(), PSTR("setConfig"));
-                #endif
-            }
-        };
+            };
+
+        }
+    }
+}

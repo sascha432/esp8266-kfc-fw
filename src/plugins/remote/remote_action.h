@@ -18,7 +18,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-using KFCConfigurationClasses::Plugins;
+using Plugins = KFCConfigurationClasses::PluginsType;
 
 namespace RemoteControl {
 
@@ -93,7 +93,7 @@ namespace RemoteControl {
         virtual void execute(Callback callback) override;
 
         virtual bool canSend() override {
-            return Action::canSend() && MQTTClient::safeIsConnected();
+            return Action::canSend() && MQTT::Client::safeIsConnected();
         }
 
         const String &getPayload() const {

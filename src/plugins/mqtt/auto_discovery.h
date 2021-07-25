@@ -284,9 +284,9 @@ namespace MQTT {
             FormatType _format;
             PrintString _discovery;
             String _topic;
-        #if MQTT_AUTO_DISCOVERY_USE_ABBREVIATIONS
-            String _baseTopic;
-        #endif
+            #if MQTT_AUTO_DISCOVERY_USE_ABBREVIATIONS
+                String _baseTopic;
+            #endif
         };
 
         inline String &Entity::getPayload()

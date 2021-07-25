@@ -6,6 +6,7 @@
 #include "clock.h"
 #include <KFCForms.h>
 #include "../src/plugins/sensor/sensor.h"
+#include "Utility/ProgMemHelper.h"
 
 #if DEBUG_IOT_CLOCK
 #include <debug_helper_enable.h>
@@ -19,7 +20,7 @@
 #   define FORM_TITLE "Clock Configuration"
 #endif
 
-void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI::Form::BaseForm &form, Clock::ConfigType &cfg, TitleType titleType)
+void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI::Form::BaseForm &form, ClockConfigType &cfg, TitleType titleType)
 {
     FormUI::Group *group;
     switch(titleType) {
@@ -83,8 +84,8 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                 form.addFormUI(FormUI::Type::HIDDEN);
 
                 auto orientationItems = FormUI::List(
-                    Plugins::ClockConfig::FireAnimation_t::Orientation::VERTICAL, "Vertical",
-                    Plugins::ClockConfig::FireAnimation_t::Orientation::HORIZONTAL, "Horizontal"
+                    FireAnimationType::OrientationType::VERTICAL, "Vertical",
+                    FireAnimationType::OrientationType::HORIZONTAL, "Horizontal"
                 );
 
                 form.addObjectGetterSetter(F("fiori"), FormGetterSetter(cfg.fire, orientation));
@@ -200,6 +201,24 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                 cfg.rainbow.addRangeValidatorFor_hue(form);
             }
             break;
+        case AnimationType::GRADIENT: {
+                PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, IOT_CLOCK_GRADIENT_ENTRIES, color, pixels);
+                for(uint8_t i = 0; i < cfg.gradient.kMaxEntries; i++) {
+
+                    form.add(F_VAR(color, i), Color(cfg.rainbow.color.min.value).toString(), [&cfg, i](const String &value, FormUI::Field::BaseField &field, bool store) {
+                        if (store) {
+                            cfg.gradient.entries[i].color = Color::fromString(value);
+                        }
+                        return false;
+                    });
+                    form.addFormUI(F("Color"));
+
+                    form.addObjectGetterSetter(F_VAR(pixels, i), FormGetterSetter(cfg.gradient.entries[i], pixel));
+                    form.addFormUI(F("Position"));
+                    form.addValidator(FormUI::Validator::Range(0, _display.size() - 1));
+                }
+            }
+            break;
         case AnimationType::MAX:
             break;
     }
@@ -255,6 +274,9 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         _createConfigureFormAnimation(AnimationType::FLASHING, form, cfg, TitleType::NONE);
 
         animationGroup.end();
+
+        // --------------------------------------------------------------------
+        _createConfigureFormAnimation(AnimationType::GRADIENT, form, cfg, TitleType::ADD_GROUP);
 
         // --------------------------------------------------------------------
         _createConfigureFormAnimation(AnimationType::RAINBOW, form, cfg, TitleType::ADD_GROUP);
@@ -390,11 +412,11 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
             FormUI::Validator::CallbackTemplate<uint16_t> *validator;
             validator = &form.addValidator(FormUI::Validator::CallbackTemplate<uint16_t>([&cfg, &validator, this](uint16_t cols, Field::BaseField &field) {
                 auto rows = field.getForm().getField(F("mx_rows"))->getValue().toInt();
-                if (rows * cols == static_cast<long>(_display.size())) {
+                if ((rows * cols) != 0 && (rows * cols) <= static_cast<long>(_display.getMaxNumPixels())) {
                     return true;
                 }
-                validator->setMessage(PrintString(F("rows * cols (%u * %u = %u) does not match the number of pixels (%u)"),
-                    static_cast<unsigned>(rows), static_cast<unsigned>(cols), static_cast<unsigned>(rows * cols), static_cast<unsigned>(_display.size()))
+                validator->setMessage(PrintString(F("rows * cols (%u * %u = %u) exceeds maximum number of pixels (%u)"),
+                    static_cast<unsigned>(rows), static_cast<unsigned>(cols), static_cast<unsigned>(rows * cols), static_cast<unsigned>(_display.getMaxNumPixels()))
                 );
                 return false;
             }));
@@ -404,13 +426,29 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
             // cfg.matrix.addRangeValidatorFor_pixels(form);
 
             form.addObjectGetterSetter(F("mx_ofs"), FormGetterSetter(cfg.matrix, offset));
-            form.addFormUI(F("First Pixel Offset"), FormUI::ReadOnlyAttribute());
-            // cfg.matrix.addRangeValidatorFor_offset(form);
+            form.addFormUI(F("First Pixel Offset"));
+            form.addValidator(FormUI::Validator::Range(0, _display.getMaxNumPixels()));
+            validator = &form.addValidator(FormUI::Validator::CallbackTemplate<uint16_t>([&cfg, &validator, this](uint16_t offset, Field::BaseField &field) {
+                auto rows = field.getForm().getField(F("mx_rows"))->getValue().toInt();
+                auto cols = field.getForm().getField(F("mx_cols"))->getValue().toInt();
+                if ((rows * cols) + offset <= static_cast<long>(_display.getMaxNumPixels())) {
+                    return true;
+                }
+                validator->setMessage(PrintString(F("offset + (rows * cols) = %u + (%u * %u) = %u exceeds exceeds maximum number of pixels (%u)"),
+                    static_cast<unsigned>(offset),
+                    static_cast<unsigned>(rows),
+                    static_cast<unsigned>(cols),
+                    static_cast<unsigned>((rows * cols) + offset),
+                    static_cast<unsigned>(_display.getMaxNumPixels()))
+                );
+                return false;
+            }));
+
 
             form.addObjectGetterSetter(F("mx_rt"), FormGetterSetter(cfg.matrix, rotate));
             form.addFormUI(F("90\xc2\xb0 Rotation"), FormUI::BoolItems());
 
-            form.addObjectGetterSetter(F("mx_il"), FormGetterSetter(cfg.matrix, rotate));
+            form.addObjectGetterSetter(F("mx_il"), FormGetterSetter(cfg.matrix, interleaved));
             form.addFormUI(F("Interleaved"), FormUI::BoolItems());
 
             mainGroup.end();

@@ -42,17 +42,17 @@ bool Entity::create(ComponentType componentType, const String &componentName, Fo
 
 String Entity::getWildcardTopic()
 {
-    return PrintString(F("%s/+/%s/#"), ClientConfig::getAutoDiscoveryPrefix(), System::Device::getName());
+    return PrintString(F("%s/+/%s/#"), MqttClient::getAutoDiscoveryPrefix(), System::Device::getName());
 }
 
 String Entity::getConfigWildcardTopic()
 {
-    return PrintString(F("%s/+/%s/config"), ClientConfig::getAutoDiscoveryPrefix(), System::Device::getName());
+    return PrintString(F("%s/+/%s/config"), MqttClient::getAutoDiscoveryPrefix(), System::Device::getName());
 }
 
 String Entity::getConfig2ndLevelWildcardTopic()
 {
-    return PrintString(F("%s/+/%s/+/config"), ClientConfig::getAutoDiscoveryPrefix(), System::Device::getName());
+    return PrintString(F("%s/+/%s/+/config"), MqttClient::getAutoDiscoveryPrefix(), System::Device::getName());
 }
 
 String Entity::getTriggersTopic()
@@ -65,7 +65,7 @@ bool Entity::_create(ComponentType componentType, const String &name, FormatType
     String uniqueId;
 
     _format = format;
-    _topic = ClientConfig::getAutoDiscoveryPrefix();
+    _topic = MqttClient::getAutoDiscoveryPrefix();
     _topic += '/';
     _topic += Component::getNameByType(componentType);
     if (!name.startsWith('/')) {
@@ -86,7 +86,7 @@ bool Entity::_create(ComponentType componentType, const String &name, FormatType
     if (_format == FormatType::JSON) {
         _discovery += '{';
 #if MQTT_AUTO_DISCOVERY_USE_ABBREVIATIONS
-        _baseTopic = MQTTClient::formatTopic(emptyString);
+        _baseTopic = MQTT::Client::formatTopic(emptyString);
         addParameter(F("~"), _baseTopic);
 #endif
     } else {
@@ -100,7 +100,7 @@ bool Entity::_create(ComponentType componentType, const String &name, FormatType
         if (format == FormatType::JSON) {
             addParameter(FSPGM(mqtt_unique_id), uniqueId);
         }
-        addParameter(FSPGM(mqtt_availability_topic), MQTTClient::formatTopic(MQTT_AVAILABILITY_TOPIC));
+        addParameter(FSPGM(mqtt_availability_topic), MQTT::Client::formatTopic(MQTT_AVAILABILITY_TOPIC));
 #if MQTT_AVAILABILITY_TOPIC_ADD_PAYLOAD_ON_OFF
         addParameter(FSPGM(mqtt_payload_available), MQTT_AVAILABILITY_TOPIC_ONLINE);
         addParameter(FSPGM(mqtt_payload_not_available), MQTT_AVAILABILITY_TOPIC_OFFLINE);

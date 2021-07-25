@@ -141,10 +141,9 @@ void SensorPlugin::timerEvent(Event::CallbackTimerPtr timer)
 // low priority timer executed in main loop()
 void SensorPlugin::_timerEvent()
 {
-    auto mqttIsConnected = MQTTClient::safeIsConnected();
+    auto mqttIsConnected = MQTT::Client::safeIsConnected();
 
     if (WebUISocket::hasAuthenticatedClients()) {
-        using namespace MQTT::Json;
         WebUINS::Events events;
         {
             for(const auto sensor: _sensors) {

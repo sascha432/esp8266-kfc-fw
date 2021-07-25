@@ -38,7 +38,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_BME280::getAutoDiscovery(FormatType format
     switch(num) {
         case 0:
             if (discovery->create(this, _getId(FSPGM(temperature, "temperature")), format)) {
-                discovery->addStateTopic(MQTTClient::formatTopic(_getId()));
+                discovery->addStateTopic(MQTT::Client::formatTopic(_getId()));
                 discovery->addUnitOfMeasurement(FSPGM(UTF8_degreeC));
                 discovery->addValueTemplate(FSPGM(temperature));
                 discovery->addDeviceClass(F("temperature"));
@@ -46,7 +46,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_BME280::getAutoDiscovery(FormatType format
             break;
         case 1:
             if (discovery->create(this, _getId(FSPGM(humidity, "humidity")), format)) {
-                discovery->addStateTopic(MQTTClient::formatTopic(_getId()));
+                discovery->addStateTopic(MQTT::Client::formatTopic(_getId()));
                 discovery->addUnitOfMeasurement('%');
                 discovery->addValueTemplate(FSPGM(humidity));
                 discovery->addDeviceClass(F("humidity"));
@@ -54,7 +54,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_BME280::getAutoDiscovery(FormatType format
             break;
         case 2:
             if (discovery->create(this, _getId(FSPGM(pressure, "pressure")), format)) {
-                discovery->addStateTopic(MQTTClient::formatTopic(_getId()));
+                discovery->addStateTopic(MQTT::Client::formatTopic(_getId()));
                 discovery->addUnitOfMeasurement(FSPGM(hPa, "hPa"));
                 discovery->addValueTemplate(FSPGM(pressure));
                 discovery->addDeviceClass(F("pressure"));
@@ -151,7 +151,7 @@ void Sensor_BME280::publishState()
         auto sensor = _readSensor();
         using namespace MQTT::Json;
 
-        publish(MQTTClient::formatTopic(_getId()), true, UnnamedObject(
+        publish(MQTT::Client::formatTopic(_getId()), true, UnnamedObject(
             NamedFormattedDouble(FSPGM(temperature), sensor.temperature, F("%.2f")),
             NamedFormattedDouble(FSPGM(humidity), sensor.humidity, F("%.2f")),
             NamedFormattedDouble(FSPGM(pressure), sensor.pressure, F("%.2f"))

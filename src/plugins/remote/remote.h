@@ -44,7 +44,7 @@ public:
 
     void publishAutoDiscovery() {
         if (isConnected()) {
-            __LDBG_printf("auto discovery running=%u registered=%u", client().isAutoDiscoveryRunning(), MQTTClient::isComponentRegistered(this));
+            __LDBG_printf("auto discovery running=%u registered=%u", client().isAutoDiscoveryRunning(), MQTT::Client::isComponentRegistered(this));
             if (client().publishAutoDiscovery()) {
                 _autoDiscoveryPending = false;
             }
@@ -56,7 +56,7 @@ public:
 
     void _setup() {
         _updateAutoDiscoveryCount();
-        MQTTClient::registerComponent(this);
+        MQTT::Client::registerComponent(this);
     }
 
     void _reconfigure() {
@@ -64,7 +64,7 @@ public:
     }
 
     void _shutdown() {
-        MQTTClient::unregisterComponent(this);
+        MQTT::Client::unregisterComponent(this);
     }
 
 private:

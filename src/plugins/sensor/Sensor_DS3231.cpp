@@ -35,18 +35,18 @@ MQTT::AutoDiscovery::EntityPtr Sensor_DS3231::getAutoDiscovery(FormatType format
     switch (num) {
     case 0:
         if (discovery->create(this, FSPGM(ds3231_id_temp), format)) {
-            discovery->addStateTopic(MQTTClient::formatTopic(FSPGM(ds3231_id_temp)));
+            discovery->addStateTopic(MQTT::Client::formatTopic(FSPGM(ds3231_id_temp)));
             discovery->addUnitOfMeasurement(FSPGM(UTF8_degreeC));
         }
         break;
     case 1:
         if (discovery->create(this, FSPGM(ds3231_id_time), format)) {
-            discovery->addStateTopic(MQTTClient::formatTopic(FSPGM(ds3231_id_time)));
+            discovery->addStateTopic(MQTT::Client::formatTopic(FSPGM(ds3231_id_time)));
         }
         break;
     case 2:
         if (discovery->create(this, FSPGM(ds3231_id_lost_power), format)) {
-            discovery->addStateTopic(MQTTClient::formatTopic(FSPGM(ds3231_id_lost_power)));
+            discovery->addStateTopic(MQTT::Client::formatTopic(FSPGM(ds3231_id_lost_power)));
         }
         break;
     }
@@ -79,9 +79,9 @@ void Sensor_DS3231::createWebUI(WebUINS::Root &webUI)
 void Sensor_DS3231::publishState()
 {
     if (isConnected()) {
-        publish(MQTTClient::formatTopic(FSPGM(ds3231_id_temp)), true, String(_readSensorTemp(), 2));
-        publish(MQTTClient::formatTopic(FSPGM(ds3231_id_time)), true, String((uint32_t)_readSensorTime()));
-        publish(MQTTClient::formatTopic(FSPGM(ds3231_id_lost_power)), true, String(_readSensorLostPower()));
+        publish(MQTT::Client::formatTopic(FSPGM(ds3231_id_temp)), true, String(_readSensorTemp(), 2));
+        publish(MQTT::Client::formatTopic(FSPGM(ds3231_id_time)), true, String((uint32_t)_readSensorTime()));
+        publish(MQTT::Client::formatTopic(FSPGM(ds3231_id_lost_power)), true, String(_readSensorLostPower()));
     }
 }
 

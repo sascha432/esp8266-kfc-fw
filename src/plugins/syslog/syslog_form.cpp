@@ -13,7 +13,8 @@
 #include <debug_helper_disable.h>
 #endif
 
-using SyslogClient = KFCConfigurationClasses::Plugins::SyslogClient;
+using Plugins = KFCConfigurationClasses::PluginsType;
+using namespace KFCConfigurationClasses::Plugins::SyslogConfigNS;
 
 void SyslogPlugin::createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
 {
@@ -21,18 +22,18 @@ void SyslogPlugin::createConfigureForm(FormCallbackType type, const String &form
 
     if (type == FormCallbackType::SAVE) {
 
-        auto &cfg = SyslogClient::getWriteableConfig();
-        System::Flags::getWriteableConfig().is_syslog_enabled = SyslogClient::isEnabled(cfg.protocol_enum);
+        auto &cfg = Plugins::SyslogClient::getWriteableConfig();
+        System::Flags::getWriteableConfig().is_syslog_enabled = SyslogClient::isEnabled(cfg.protocol);
         return;
 
     } else if (!isCreateFormCallbackType(type)) {
         return;
     }
 
-    auto &cfg = SyslogClient::getWriteableConfig();
+    auto &cfg = Plugins::SyslogClient::getWriteableConfig();
 
-    form.addMemberVariable(F("sl_proto"), cfg, &SyslogClient::ConfigStructType::protocol, FormUI::Field::Type::SELECT);
-    form.addValidator(FormUI::Validator::EnumRange<SyslogClient::SyslogProtocolType>());
+    form.addObjectGetterSetter(F("sl_proto"), FormGetterSetter(cfg, protocol), FormUI::Field::Type::SELECT);
+    form.addValidator(FormUI::Validator::EnumRange<SyslogProtocolType>());
 
     form.addStringGetterSetter(F("sl_host"), SyslogClient::getHostname, SyslogClient::setHostname);
     form.addValidator(FormUI::Validator::Hostname(FormUI::AllowedType::EMPTY_OR_HOST_OR_IP_OR_ZEROCONF));

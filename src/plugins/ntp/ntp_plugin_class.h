@@ -13,7 +13,7 @@
 class AtModeArgs;
 class AsyncWebServerRequest;
 
-using KFCConfigurationClasses::Plugins;
+using Plugins = KFCConfigurationClasses::PluginsType;
 
 class NTPPlugin : public PluginComponent {
 public:

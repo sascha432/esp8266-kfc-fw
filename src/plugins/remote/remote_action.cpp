@@ -35,7 +35,7 @@ void ActionUDP::execute(Callback callback)
 
 void ActionMQTT::execute(Callback callback)
 {
-    auto client = MQTTClient::getClient();
+    auto client = MQTT::Client::getClient();
     if (client && client->isConnected() && client->publish(MQTT::AutoDiscovery::Entity::getTriggersTopic(), false, _payload, _qos)) {
         // __LDBG_printf("execute succeeded client=%p connected=%u payload=%s", client, client && client->isConnected(), _payload.c_str());
         callback(true);

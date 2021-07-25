@@ -57,7 +57,7 @@ void AlarmPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
 #if NTP_HAVE_CALLBACKS
     addTimeUpdatedCallback(ntpCallback);
 #endif
-    MQTTClient::registerComponent(this);
+    MQTT::Client::registerComponent(this);
 }
 
 void AlarmPlugin::reconfigure(const String &source)
@@ -69,7 +69,7 @@ void AlarmPlugin::reconfigure(const String &source)
 void AlarmPlugin::shutdown()
 {
    _debug_println();
-     MQTTClient::unregisterComponent(this);
+     MQTT::Client::unregisterComponent(this);
     _removeAlarms();
 }
 
@@ -106,12 +106,12 @@ void AlarmPlugin::onMessage(const char *topic, const char *payload, size_t len)
     } else {
 
         if (_callback) {
-            _alarmState = MQTTClient::toBool(payload);
+            _alarmState = MQTT::Client::toBool(payload);
             if (_alarmState) {
-                _callback(Alarm::AlarmModeType::BOTH, Alarm::DEFAULT_MAX_DURATION);
+                _callback(ModeType::BOTH, Alarm::DEFAULT_MAX_DURATION);
             }
             else {
-                _callback(Alarm::AlarmModeType::BOTH, Alarm::STOP_ALARM);
+                _callback(ModeType::BOTH, Alarm::STOP_ALARM);
             }
             _publishState();
         }
@@ -163,7 +163,7 @@ void AlarmPlugin::createConfigureForm(FormCallbackType type, const String &formN
 #if IOT_ALARM_PLUGIN_HAS_BUZZER && IOT_ALARM_PLUGIN_HAS_SILENT
             form.addObjectGetterSetter(F_VAR(mt, i), alarm.mode, alarm.get_int_mode, alarm.set_int_mode);
 #else
-            alarm.mode = Alarm::AlarmConfig::SingleAlarm_t::cast_int_mode(Alarm::AlarmModeType::BOTH);
+            alarm.mode = SingleAlarmType::cast_int_mode(ModeType::BOTH);
 #endif
 
             form.addObjectGetterSetter(F_VAR(md, i), alarm, alarm.get_bits_max_duration, alarm.set_bits_max_duration);
@@ -176,7 +176,7 @@ void AlarmPlugin::createConfigureForm(FormCallbackType type, const String &formN
 #if IOT_ALARM_PLUGIN_HAS_BUZZER && IOT_ALARM_PLUGIN_HAS_SILENT
             form.add<uint8_t>(prefix + String('t'), alarm.mode, form_mode_callback);
 #else
-            alarm.mode = Alarm::AlarmConfig::SingleAlarm_t::cast_int_mode(Alarm::AlarmModeType::BOTH);
+            alarm.mode = Alarm::AlarmConfig::SingleAlarmType::cast_int_mode(Alarm::ModeType::BOTH);
 #endif
             --form.add<uint16_t>(prefix + 'd', alarm.max_duration, form_duration_callback);
 
@@ -195,7 +195,7 @@ void AlarmPlugin::resetAlarm()
     plugin._publishState();
 }
 
-void AlarmPlugin::setCallback(Callback callback)
+void AlarmPlugin::setCallback(CallbackType callback)
 {
     plugin._callback = callback;
 }
@@ -219,8 +219,8 @@ void AlarmPlugin::timerCallback(Event::CallbackTimerPtr timer)
 void AlarmPlugin::_installAlarms(Event::CallbackTimerPtr timer)
 {
     _debug_println();
-    Alarm::TimeType delay = 300;
-    Alarm::TimeType minAlarmTime = std::numeric_limits<Alarm::TimeType>::max();
+    TimeType delay = 300;
+    TimeType minAlarmTime = std::numeric_limits<TimeType>::max();
     _nextAlarm = 0;
 
     if (!isTimeValid()) {
@@ -247,7 +247,7 @@ void AlarmPlugin::_installAlarms(Event::CallbackTimerPtr timer)
             );
 #endif
 
-            if (alarmTime && alarmTime >= static_cast<Alarm::TimeType>(now)) {
+            if (alarmTime && alarmTime >= static_cast<TimeType>(now)) {
                 minAlarmTime = std::min(minAlarmTime, alarmTime);
                 _alarms.emplace_back(alarmTime, alarm);
             }
@@ -308,22 +308,22 @@ void AlarmPlugin::_timerCallback(Event::CallbackTimerPtr timer)
         bool triggered = false;
         auto now = time(nullptr) + 30;
         for(auto &alarm: _alarms) {
-            if (alarm._time && static_cast<Alarm::TimeType>(now) >= alarm._time) {
+            if (alarm._time && static_cast<TimeType>(now) >= alarm._time) {
                 auto ts = alarm._alarm.time.timestamp;
                 PrintString message = F("Alarm triggered");
                 if (ts) {
                     message.print(F(", one time"));
                 }
-                if (Alarm::AlarmConfig::SingleAlarm_t::cast_enum_mode(alarm._alarm.mode) == Alarm::AlarmModeType::SILENT) {
+                if (SingleAlarmType::cast_enum_mode(alarm._alarm.mode) == ModeType::SILENT) {
                     message.print(F(", silent"));
                 }
-                else if (Alarm::AlarmConfig::SingleAlarm_t::cast_enum_mode(alarm._alarm.mode) == Alarm::AlarmModeType::BUZZER) {
+                else if (SingleAlarmType::cast_enum_mode(alarm._alarm.mode) == ModeType::BUZZER) {
                     message.print(F(", buzzer"));
                 }
                 Logger_notice(message);
                 if (_callback) {
                     triggered = true;
-                    _callback(Alarm::AlarmConfig::SingleAlarm_t::cast_enum_mode(alarm._alarm.mode), alarm._alarm.max_duration);
+                    _callback(SingleAlarmType::cast_enum_mode(alarm._alarm.mode), alarm._alarm.max_duration);
                 }
 
                 if (ts) { // remove one time alarms

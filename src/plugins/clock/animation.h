@@ -14,9 +14,6 @@
 #include <debug_helper_disable.h>
 #endif
 
-using KFCConfigurationClasses::Plugins;
-
-
 #define _INCREMENT(value, min, max, incr) \
         if (incr) { \
             value += incr; \
@@ -320,7 +317,7 @@ namespace Clock {
             _target->copyTo(*_targetBuffer, millisValue);
 
             fract8 amount = ((timeLeft * 255) / _duration);
-            ::blend(_sourceBuffer->begin(), _targetBuffer->begin(), display.begin(), display.kNumPixels, amount);
+            ::blend(_sourceBuffer->begin(), _targetBuffer->begin(), display.begin(), display.size(), amount);
             return true;
         }
 
@@ -456,10 +453,12 @@ namespace Clock {
 
     class RainbowAnimation : public Animation {
     public:
-        using RainbowMultiplier = Plugins::ClockConfig::RainbowMultiplier_t;
-        using RainbowColor = Plugins::ClockConfig::RainbowColor_t;
+        using RainbowConfigType = KFCConfigurationClasses::Plugins::ClockConfigNS::RainbowAnimationType;
+        using RainbowMultiplierType = RainbowConfigType::MultiplierType;
+        using RainbowColorType = RainbowConfigType::ColorAnimationType;
+
     public:
-        RainbowAnimation(ClockPlugin &clock, uint16_t speed, RainbowMultiplier multiplier, RainbowColor color) :
+        RainbowAnimation(ClockPlugin &clock, uint16_t speed, RainbowMultiplierType multiplier, RainbowColorType color) :
             Animation(clock),
             _speed(speed),
             _multiplier(multiplier),
@@ -509,7 +508,7 @@ namespace Clock {
             Color color;
             CoordinateType row = 0;
             CoordinateType col = 0;
-            for (PixelAddressType i = 0; i < display.kNumPixels; i++) {
+            for (PixelAddressType i = 0; i < display.size(); i++) {
                 uint32_t ind = (i * _multiplier.value) + (millisValue / _speed);
                 uint8_t indMod = (ind % _mod);
                 uint8_t idx = (indMod / _divMul);
@@ -540,7 +539,7 @@ namespace Clock {
             }
         }
 
-        void update(uint16_t speed, RainbowMultiplier multiplier, RainbowColor color)
+        void update(uint16_t speed, RainbowMultiplierType multiplier, RainbowColorType color)
         {
             _speed = speed;
             _multiplier = multiplier;
@@ -551,8 +550,8 @@ namespace Clock {
         Color _normalizeColor(uint8_t red, uint8_t green, uint8_t blue) const;
 
         uint16_t _speed;
-        RainbowMultiplier _multiplier;
-        RainbowColor _color;
+        RainbowMultiplierType _multiplier;
+        RainbowColorType _color;
 
         struct ColorFactor {
             float _red;
@@ -738,8 +737,8 @@ namespace Clock {
     class FireAnimation : public Animation {
     public:
         // adapted from an example in FastLED, which is adapted from work done by Mark Kriegsman (called Fire2012).
-        using FireAnimationConfig = Plugins::ClockConfig::FireAnimation_t;
-        using Orientation = Plugins::ClockConfig::FireAnimation_t::Orientation;
+        using FireAnimationConfig = KFCConfigurationClasses::Plugins::ClockConfigNS::FireAnimationType;
+        using Orientation = FireAnimationConfig::OrientationType;
 
     private:
         class Line {
@@ -961,7 +960,7 @@ namespace Clock {
 
     class VisualizerAnimation : public Animation {
     public:
-        using VisualizerAnimationConfig = Plugins::ClockConfig::VisualizerAnimation_t;
+        using VisualizerAnimationConfig = KFCConfigurationClasses::Plugins::ClockConfigNS::VisualizerAnimationType;
         using DisplayType = Clock::DisplayType;
 
     public:

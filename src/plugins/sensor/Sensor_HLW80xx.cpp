@@ -20,7 +20,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-using KFCConfigurationClasses::Plugins;
+using Plugins = KFCConfigurationClasses::PluginsType;
 
 PROGMEM_STRING_DEF(iot_sensor_hlw80xx_state_file, "/.pvt/hlw80xx.state");
 
@@ -229,7 +229,7 @@ void Sensor_HLW80xx::configurationSaved(FormUI::Form::BaseForm *form)
     getEnergyPrimaryCounter() = cfg.energyCounter;
 }
 
-void Sensor_HLW80xx::publishState(MQTTClient *client)
+void Sensor_HLW80xx::publishState(MQTT::Client *client)
 {
     if (client && client->isConnected()) {
         PrintString str;

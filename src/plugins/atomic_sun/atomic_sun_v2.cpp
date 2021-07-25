@@ -136,25 +136,25 @@ String Driver_4ChDimmer::_createTopics(TopicType type, uint8_t channel)
     uint8_t index = 0xff;
     switch(type) {
         case TopicType::MAIN_SET:
-            str = MQTTClient::formatTopic(String(FSPGM(main)), FSPGM(_set));
+            str = MQTT::Client::formatTopic(String(FSPGM(main)), FSPGM(_set));
             index = 4;
             break;
         case TopicType::MAIN_STATE:
-            str = MQTTClient::formatTopic(String(FSPGM(main)), FSPGM(_state));
+            str = MQTT::Client::formatTopic(String(FSPGM(main)), FSPGM(_state));
             break;
         case TopicType::CHANNEL_SET:
-            str = MQTTClient::formatTopic(PrintString(FSPGM(channel__u), channel), FSPGM(_set));
+            str = MQTT::Client::formatTopic(PrintString(FSPGM(channel__u), channel), FSPGM(_set));
             index = 5;
             break;
         case TopicType::CHANNEL_STATE:
-            str = MQTTClient::formatTopic(PrintString(FSPGM(channel__u), channel), FSPGM(_state));
+            str = MQTT::Client::formatTopic(PrintString(FSPGM(channel__u), channel), FSPGM(_state));
             break;
         case TopicType::LOCK_SET:
-            str = MQTTClient::formatTopic(String(FSPGM(lock_channels)), F("/lock/set"));
+            str = MQTT::Client::formatTopic(String(FSPGM(lock_channels)), F("/lock/set"));
             index = channel;
             break;
         case TopicType::LOCK_STATE:
-            str = MQTTClient::formatTopic(String(FSPGM(lock_channels)), F("/lock/state"));
+            str = MQTT::Client::formatTopic(String(FSPGM(lock_channels)), F("/lock/state"));
             break;
         default:
             break;
@@ -165,7 +165,7 @@ String Driver_4ChDimmer::_createTopics(TopicType type, uint8_t channel)
     return str;
 }
 
-void Driver_4ChDimmer::onConnect(MQTTClient *client)
+void Driver_4ChDimmer::onConnect(MQTT::Client *client)
 {
     client->subscribe(this, _createTopics(TopicType::MAIN_SET));
     client->subscribe(this, _createTopics(TopicType::LOCK_SET));
@@ -175,7 +175,7 @@ void Driver_4ChDimmer::onConnect(MQTTClient *client)
     publishState(client);
 }
 
-void Driver_4ChDimmer::onMessage(MQTTClient *client, char *topic, char *payload, size_t len)
+void Driver_4ChDimmer::onMessage(MQTT::Client *client, char *topic, char *payload, size_t len)
 {
     auto crc = crc16_update(topic, strlen(topic));
     auto iterator = std::find(_topics.begin(), _topics.end(), crc);
@@ -189,7 +189,7 @@ void Driver_4ChDimmer::onMessage(MQTTClient *client, char *topic, char *payload,
     }
 }
 
-void Driver_4ChDimmer::onJsonMessage(MQTTClient *client, const MQTT::Json::Reader &json, uint8_t index)
+void Driver_4ChDimmer::onJsonMessage(MQTT::Client *client, const MQTT::Json::Reader &json, uint8_t index)
 {
     if (index < _channels.size()) {
 
@@ -378,12 +378,12 @@ void Driver_4ChDimmer::_getValues(JsonArray &array)
 }
 
 
-void Driver_4ChDimmer::publishState(MQTTClient *client)
+void Driver_4ChDimmer::publishState(MQTT::Client *client)
 {
     _debug_println();
 
     if (!client) {
-        client = MQTTClient::getClient();
+        client = MQTT::Client::getClient();
     }
     if (client && client->isConnected()) {
         client->publish(_data.state.state, true, String(_data.state.value ? 1 : 0));

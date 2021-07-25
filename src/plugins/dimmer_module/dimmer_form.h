@@ -10,7 +10,7 @@
 #include <kfc_fw_config.h>
 #include "../src/plugins/mqtt/component.h"
 
-using KFCConfigurationClasses::Plugins;
+using Plugins = KFCConfigurationClasses::PluginsType;
 
 namespace Dimmer {
 

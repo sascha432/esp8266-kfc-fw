@@ -252,7 +252,7 @@ void ClockPlugin::_createWebUI(WebUINS::Root &webUI)
             row.append(colon.append(WebUINS::NamedString(J(height), height)));
         #endif
 
-        auto animation = WebUINS::Listbox(F("ani"), F("Animation"), Plugins::ClockConfig::ClockConfig_t::getAnimationNames(), false, 5, colspan);
+        auto animation = WebUINS::Listbox(F("ani"), F("Animation"), _config.getAnimationNames(), false, 5, colspan);
         animation.append(WebUINS::NamedString(J(height), height));
         row.append(animation);
 

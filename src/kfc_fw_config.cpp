@@ -59,8 +59,7 @@ KFCFWConfiguration config;
 using MainConfig = KFCConfigurationClasses::MainConfig;
 using Network = KFCConfigurationClasses::Network;
 using System = KFCConfigurationClasses::System;
-using Plugins = KFCConfigurationClasses::Plugins;
-
+using Plugins = KFCConfigurationClasses::PluginsType;
 
 #if HAVE_PCF8574
 IOExpander::PCF8574 _PCF8574;
@@ -699,8 +698,10 @@ void KFCFWConfiguration::restoreFactorySettings()
     Network::Settings::defaults();
     Network::SoftAP::defaults();
 
+    using Plugins = KFCConfigurationClasses::PluginsType;
+
 #if MQTT_SUPPORT
-    Plugins::MQTTClient::defaults();
+    Plugins::MqttClient::defaults();
 #endif
 #if IOT_REMOTE_CONTROL
     Plugins::RemoteControl::defaults();

@@ -20,7 +20,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-using KFCConfigurationClasses::Plugins;
+using Plugins = KFCConfigurationClasses::PluginsType;
 
 #if IOT_SWITCH_STORE_STATES_RTC_MEM
 
@@ -149,7 +149,7 @@ void SwitchPlugin::createConfigureForm(FormCallbackType type, const String &form
 {
     if (type == FormCallbackType::SAVE) {
         __LDBG_printf("Storing config");
-        Plugins::IOTSwitch::setConfig(_names, _configs);
+        Plugins::IotSwitch::setConfig(_names, _configs);
         return;
     }
     else if (!isCreateFormCallbackType(type)) {
@@ -168,10 +168,10 @@ void SwitchPlugin::createConfigureForm(FormCallbackType type, const String &form
     );
 
     FormUI::Container::List webUI(
-        WebUIEnum::NONE, F("Display Channel Name"),
-        WebUIEnum::TOP, F("Display On Top (Large)"),
-        WebUIEnum::HIDE, F("Hide Switch"),
-        WebUIEnum::NEW_ROW, F("New Row After Switch")
+        SwitchWebUIEnum::NONE, F("Display Channel Name"),
+        SwitchWebUIEnum::TOP, F("Display On Top (Large)"),
+        SwitchWebUIEnum::HIDE, F("Hide Switch"),
+        SwitchWebUIEnum::NEW_ROW, F("New Row After Switch")
     );
 
     PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, IOT_SWITCH_CHANNEL_NUM, chan, name, state, webui);
@@ -202,10 +202,10 @@ void SwitchPlugin::createWebUI(WebUINS::Root &webUI)
     for (uint8_t i = 0; i < _pins.size(); i++) {
         WebUINS::Row row;
         __LDBG_printf("name=%s webui=%u pos=%u", _names[i].toString(i).c_str(), _configs[i].getWebUI(), _configs[i].getWebUINamePosition());
-        if (_configs[i].getWebUI() != WebUIEnum::HIDE) {
+        if (_configs[i].getWebUI() != SwitchWebUIEnum::HIDE) {
             row.append(WebUINS::Switch(PrintString(FSPGM(channel__u), i), _names[i].toString(i), true, _configs[i].getWebUINamePosition()));
         }
-        if (_configs[i].getWebUI() == WebUIEnum::NEW_ROW) {
+        if (_configs[i].getWebUI() == SwitchWebUIEnum::NEW_ROW) {
             webUI.addRow(row);
             webUI.addRow(WebUINS::Row());
         }
@@ -271,7 +271,7 @@ void SwitchPlugin::onMessage(const char *topic, const char *payload, size_t len)
         PrintString topicSuffix(FSPGM(channel__u), i);
         topicSuffix += FSPGM(_set);
         if (topicSuffix.endEquals(topic)) {
-            _setChannel(i, MQTTClient::toBool(payload, false));
+            _setChannel(i, MQTT::Client::toBool(payload, false));
             _publishState(i);
         }
     }
@@ -279,7 +279,7 @@ void SwitchPlugin::onMessage(const char *topic, const char *payload, size_t len)
 
 String SwitchPlugin::_formatTopic(uint8_t num, bool state) const
 {
-    return MQTTClient::formatTopic(PrintString(FSPGM(channel__u), num), state ? FSPGM(_state) : FSPGM(_set));
+    return MQTT::Client::formatTopic(PrintString(FSPGM(channel__u), num), state ? FSPGM(_state) : FSPGM(_set));
 }
 
 #if IOT_SWITCH_STORE_STATES_RTC_MEM
@@ -344,7 +344,7 @@ bool SwitchPlugin::_getChannel(uint8_t channel) const
 
 void SwitchPlugin::_readConfig()
 {
-    Plugins::IOTSwitch::getConfig(_names, _configs);
+    Plugins::IotSwitch::getConfig(_names, _configs);
 }
 
 void SwitchPlugin::_readStates()

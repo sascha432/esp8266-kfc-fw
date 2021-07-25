@@ -328,7 +328,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                         display.setPixel(n, color);
                         display.showRepeat(5);
                         n++;
-                        if (n >= display.kCols * display.kRows) {
+                        if (n >= display.size()) {
                             display.clear();
                             display.showRepeat(5);
                             timer->disarm();
@@ -345,7 +345,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                         display.setPixelState(n, true);
                         display.showRepeat(5);
                         n++;
-                        if (n >= display.kCols * display.kRows) {
+                        if (n >= display.size()) {
                             display.clear();
                             display.showRepeat(5);
                             timer->disarm();
@@ -361,9 +361,9 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                         display.setPixel(y, x, color);
                         display.showRepeat(5);
                         x++;
-                        if (x >= display.kCols) {
+                        if (x >= display.getCols()) {
                             y++;
-                            if (y >= display.kRows) {
+                            if (y >= display.getRows()) {
                                 display.clear();
                                 display.showRepeat(5);
                                 timer->disarm();
@@ -390,21 +390,22 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             }
             args.print(F("LED output %s"), state ? PSTR("enabled") : PSTR("disabled"));
         }
-        // map,<rows>,<cols>,<reverse_rows>,<reverse_columns>,<rotate>,<interleaved>
+        // map,<rows>,<cols>,<reverse_rows>,<reverse_columns>,<rotate>,<interleaved>,<offset>
         else if (args.startsWithIgnoreCase(0, F("map"))) {
-            #if IOT_LED_MATRIX_CONFIGURABLE
-                if (args.size() == 7) {
-                    _display._rows = args.toInt(1, _display._rows);
-                    _display._cols = args.toInt(2, _display._cols);
-                    _display._reverseRows = args.isTrue(3, _display._reverseRows);
-                    _display._reverseColumns = args.isTrue(4, _display._reverseColumns);
-                    _display._rotate = args.isTrue(5, _display._rotate);
-                    _display._interleaved = args.isTrue(6, _display._interleaved);
+            if (args.size() >= 7) {
+                if (!_display.setParams(
+                    args.toInt(1, _display.getRows()),
+                    args.toInt(2, _display.getCols()),
+                    args.isTrue(3, _display.isRowsReversed()),
+                    args.isTrue(4, _display.isColsReversed()),
+                    args.isTrue(5, _display.isRotated()),
+                    args.isTrue(6, _display.isInterleaved()),
+                    args.toInt(7, _display.getOffset())
+                )) {
+                    args.print(F("failed to set parameters"));
                 }
-                args.print(F("+lmc=map,%u,%u,%u,%u,%u,%u"), _display._rows, _display._cols, _display._reverseRows, _display._reverseColumns, _display._rotate, _display._interleaved);
-            #else
-                args.print(F("not supported"));
-            #endif
+            }
+            args.print(F("+lmc=map,%u,%u,%u,%u,%u,%u"), _display.getRows(), _display.getCols(), _display.isRowsReversed(), _display.isColsReversed(), _display.isRotated(), _display.isInterleaved());
         }
         // fr[ames][,rst]
         else if (args.startsWithIgnoreCase(0, F("fr"))) {
@@ -535,13 +536,13 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
         else if (args.equalsIgnoreCase(0, F("get")) || args.equalsIgnoreCase(0, F("set"))) {
             Color color;
             auto &stream = args.getStream();
-            auto range = args.toRange(1, 0, _display.kNumPixels - 1, PrintString(F("0,1")));
+            auto range = args.toRange(1, 0, _display.size() - 1, PrintString(F("0,1")));
 
-            if (_display.kRows > 1) {
-                args.print(F("Matrix %ux%u"), _display.kCols, _display.kRows);
+            if (_display.getRows() > 1) {
+                args.print(F("Matrix %ux%u"), _display.getCols(), _display.getRows());
             }
             else {
-                args.print(F("No shape, %u pixels"), _display.kCols * _display.kRows);
+                args.print(F("Strip, %u pixels"), _display.getCols() * _display.getRows());
             }
             // <set>,[<any|*>[,<range>,<#color>]
             if (args.equalsIgnoreCase(0, F("set"))) {
@@ -568,8 +569,8 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                 args.getStream().printf_P(PSTR("show=%s pin=%u "), getNeopixelShowMethodStr(), IOT_LED_MATRIX_OUTPUT_PIN);
                 _display.dump(args.getStream());
                 auto ofs = range.offset;
-                for(uint16_t y = 0; y < _display.kRows; y++) {
-                    for(uint16_t x = 0; x < _display.kCols; x++) {
+                for(uint16_t y = 0; y < _display.getRows(); y++) {
+                    for(uint16_t x = 0; x < _display.getCols(); x++) {
                         if (ofs > 0) {
                             ofs--;
                             if (ofs == 0) {
@@ -581,7 +582,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                         auto state = _display.getPixelState(address);
                         auto color = Color(_display._pixels[address]);
                         stream.printf_P(PSTR("%c%06x "), state ? '#' : '!', color.get());
-                        if ((_display.kRows == 1) && ((x % 10) == 9)) {
+                        if ((_display.getRows() == 1) && ((x % 10) == 9)) {
                             stream.println();
                         }
                         if (ofs >= range.size) {
@@ -597,7 +598,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             cmds.emplace_back(F("lo[op],<enable|disable>"));
             cmds.emplace_back(F("me[thod]<fast[led]|neo[pixel]>"));
             {
-                auto animations = String(Plugins::ClockConfig::ClockConfig_t::getAnimationNames());
+                auto animations = String(KFCConfigurationClasses::Plugins::ClockConfigNS::ClockConfigType::getAnimationNames());
                 animations.toLowerCase();
                 animations.replace(',', '|');
                 animations.replace(' ', '-');

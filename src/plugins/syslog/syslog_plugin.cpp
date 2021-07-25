@@ -13,7 +13,8 @@
 #include <debug_helper_disable.h>
 #endif
 
-using SyslogClient = KFCConfigurationClasses::Plugins::SyslogClient;
+using Plugins = KFCConfigurationClasses::PluginsType;
+using namespace KFCConfigurationClasses::Plugins::SyslogConfigNS;
 using KFCConfigurationClasses::System;
 
 static SyslogPlugin plugin;
@@ -114,12 +115,11 @@ void SyslogPlugin::_begin()
         auto cfg = SyslogClient::getConfig();
         String hostname = SyslogClient::getHostname();
         uint16_t port = cfg.getPort();
-        hostname.trim();
-        if (hostname.length() && port) {
+        if (hostname.trim().length() && port) {
             bool zeroconf = config.hasZeroConf(hostname);
 
             auto queue = new SyslogMemoryQueue(*this, SYSLOG_PLUGIN_QUEUE_SIZE);
-            auto syslog = SyslogFactory::create(System::Device::getName(), queue, cfg.protocol_enum, zeroconf ? emptyString : hostname, static_cast<uint16_t>(zeroconf ? SyslogFactory::kZeroconfPort : port));
+            auto syslog = SyslogFactory::create(System::Device::getName(), queue, cfg._get_enum_protocol(), zeroconf ? emptyString : hostname, static_cast<uint16_t>(zeroconf ? SyslogFactory::kZeroconfPort : port));
             _stream = new SyslogStream(syslog, _timer);
             _logger.setSyslog(_stream);
 
@@ -193,7 +193,7 @@ void SyslogPlugin::getStatus(Print &output)
 {
 #if SYSLOG_SUPPORT
     if (_stream) {
-        auto proto = protocolToString(SyslogClient::getConfig().protocol_enum);
+        auto proto = protocolToString(Plugins::SyslogClient::getConfig()._get_enum_protocol());
         if (!proto) {
             output.print(FSPGM(Disabled));
             return;
@@ -291,7 +291,7 @@ bool SyslogPlugin::atModeHandler(AtModeArgs &args)
             }
             else { // cmd == queue|info|<none/invalid>
                 auto cfg = SyslogClient::getConfig();
-                args.printf_P(PSTR("hostname=%s port=%u resolved=%s protocol=%s"), SyslogClient::getHostname(), cfg.getPort(), _stream->_syslog.getHostname().c_str(), protocolToString(cfg.protocol_enum));
+                args.printf_P(PSTR("hostname=%s port=%u resolved=%s protocol=%s"), SyslogClient::getHostname(), cfg.getPort(), _stream->_syslog.getHostname().c_str(), protocolToString(cfg._get_enum_protocol()));
                 args.print();
                 _stream->dumpQueue(args.getStream(), cmd != 1);         // show queue if cmd != info
             }

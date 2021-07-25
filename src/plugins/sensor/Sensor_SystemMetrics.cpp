@@ -184,7 +184,7 @@ void Sensor_SystemMetrics::createWebUI(WebUINS::Root &webUI)
 
 String Sensor_SystemMetrics::_getTopic() const
 {
-    return MQTTClient::formatTopic(F("sys"));
+    return MQTT::Client::formatTopic(F("sys"));
 }
 
 String Sensor_SystemMetrics::_getMetricsJson() const

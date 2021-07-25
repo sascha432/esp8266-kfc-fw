@@ -24,7 +24,7 @@
 
 
 using KFCConfigurationClasses::System;
-using KFCConfigurationClasses::Plugins;
+using Plugins = KFCConfigurationClasses::PluginsType;
 
 String WebTemplate::_aliveRedirection;
 

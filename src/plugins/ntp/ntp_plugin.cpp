@@ -30,7 +30,7 @@
 #endif
 
 using KFCConfigurationClasses::System;
-using KFCConfigurationClasses::Plugins;
+using Plugins = KFCConfigurationClasses::PluginsType;
 
 #if ESP8266
 static char *_GMT = _tzname[0]; // copy pointer, points to static char gmt[] = "GMT"; during startup

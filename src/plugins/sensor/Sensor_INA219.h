@@ -13,7 +13,7 @@
 #include "plugins.h"
 #include "MQTTSensor.h"
 
-using KFCConfigurationClasses::Plugins;
+using Plugins = KFCConfigurationClasses::PluginsType;
 
 #ifndef IOT_SENSOR_INA219_R_SHUNT
 // NOTE: 0.064 or 4x the value is required for a 0.016 shunt for an unknown reason (INA219_CONFIG_GAIN_2_80MV)
@@ -57,7 +57,7 @@ public:
         PEAK_POWER =    'n',
     };
 
-    using ConfigType = Plugins::Sensor::INA219Config_t;
+    using ConfigType = Plugins::Sensor::INA219ConfigType;
     using CurrentDisplayType = Plugins::Sensor::INA219CurrentDisplayType;
     using PowerDisplayType = Plugins::Sensor::INA219PowerDisplayType;
 

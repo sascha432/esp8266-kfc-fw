@@ -5,11 +5,15 @@
 #include "kfc_fw_config/base.h"
 #include "ConfigurationHelper.h"
 
-        // --------------------------------------------------------------------
-        // MQTTClient
+namespace KFCConfigurationClasses {
 
-        class MQTTClientConfig {
-        public:
+    namespace Plugins {
+
+        // --------------------------------------------------------------------
+        // MQTT::Client
+
+        namespace MQTTConfigNS {
+
             enum class ModeType : uint8_t {
                 MIN = 0,
                 DISABLED = MIN,
@@ -31,10 +35,10 @@
 
             static_assert(QosType::AUTO_DISCOVERY != QosType::AT_MOST_ONCE, "QoS 1 or 2 required");
 
-            AUTO_DEFAULT_PORT_CONST_SECURE(1883, 8883);
+            struct __attribute__packed__ MqttConfigType {
+                using Type = MqttConfigType;
 
-            typedef struct __attribute__packed__ MqttConfig_t {
-                using Type = MqttConfig_t;
+                AUTO_DEFAULT_PORT_CONST_SECURE(1883, 8883);
                 CREATE_UINT32_BITFIELD_MIN_MAX(auto_discovery, 1, 0, 1, 1);
                 CREATE_UINT32_BITFIELD_MIN_MAX(enable_shared_topic, 1, 0, 1, 1);
                 CREATE_UINT32_BITFIELD_MIN_MAX(keepalive, 10, 0, 900, 15, 1);
@@ -53,7 +57,7 @@
                     return auto_discovery && auto_discovery_delay ? auto_discovery_rebroadcast_interval : 0;
                 }
 
-                MqttConfig_t() :
+                MqttConfigType() :
                     auto_discovery(kDefaultValueFor_auto_discovery),
                     enable_shared_topic(kDefaultValueFor_enable_shared_topic),
                     keepalive(kDefaultValueFor_keepalive),
@@ -67,25 +71,28 @@
                     __port(kDefaultValueFor___port)
                 {}
 
-            } MqttConfig_t;
+            };
 
-            static constexpr size_t MqttConfig_tSize = sizeof(MqttConfig_t);
-        };
+            static constexpr size_t kConfigTypeSize = sizeof(MqttConfigType);
 
-        class MQTTClient : public MQTTClientConfig, public KFCConfigurationClasses::ConfigGetterSetter<MQTTClientConfig::MqttConfig_t, _H(MainConfig().plugins.mqtt.cfg) CIF_DEBUG(, &handleNameMqttConfig_t)> {
-        public:
-            static void defaults();
-            static bool isEnabled();
+            class MqttClient : public KFCConfigurationClasses::ConfigGetterSetter<MqttConfigType, _H(MainConfig().plugins.mqtt.cfg) CIF_DEBUG(, &handleNameMqttConfig_t)> {
+            public:
+                static void defaults();
+                static bool isEnabled();
 
-            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.mqtt, Hostname, 1, 128);
-            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.mqtt, Username, 0, 32);
-            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.mqtt, Password, 6, 32);
-            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.mqtt, BaseTopic, 4, 64);
-            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.mqtt, GroupTopic, 4, 64);
-            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.mqtt, AutoDiscoveryPrefix, 1, 32);
-            // CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.mqtt, SharedTopic, 4, 128);
+                CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.mqtt, Hostname, 1, 128);
+                CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.mqtt, Username, 0, 32);
+                CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.mqtt, Password, 6, 32);
+                CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.mqtt, BaseTopic, 4, 64);
+                CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.mqtt, GroupTopic, 4, 64);
+                CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.mqtt, AutoDiscoveryPrefix, 1, 32);
+                // CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.mqtt, SharedTopic, 4, 128);
 
-            static const uint8_t *getFingerPrint(uint16_t &size);
-            static void setFingerPrint(const uint8_t *fingerprint, uint16_t size);
-            static constexpr size_t kFingerprintMaxSize = 20;
-        };
+                static const uint8_t *getFingerPrint(uint16_t &size);
+                static void setFingerPrint(const uint8_t *fingerprint, uint16_t size);
+                static constexpr size_t kFingerprintMaxSize = 20;
+            };
+
+        }
+    }
+}

@@ -49,14 +49,14 @@ MQTT::AutoDiscovery::EntityPtr Sensor_CCS811::getAutoDiscovery(FormatType format
     switch(num) {
         case 0:
             if (discovery->create(this, _getId(F("eco2")), format)) {
-                discovery->addStateTopic(MQTTClient::formatTopic(_getId()));
+                discovery->addStateTopic(MQTT::Client::formatTopic(_getId()));
                 discovery->addUnitOfMeasurement(F("ppm"));
                 discovery->addValueTemplate(F("eCO2"));
             }
             break;
         case 1:
             if (discovery->create(this, _getId(F("tvoc")), format)) {
-                discovery->addStateTopic(MQTTClient::formatTopic(_getId()));
+                discovery->addStateTopic(MQTT::Client::formatTopic(_getId()));
                 discovery->addUnitOfMeasurement(F("ppb"));
                 discovery->addValueTemplate(F("TVOC"));
             }

@@ -27,7 +27,7 @@
 
 class Sensor_CCS811;
 
-using KFCConfigurationClasses::Plugins;
+// using namespace KFCConfigurationClasses::Plugins;
 
 class Sensor_BME280 : public MQTT::Sensor {
 public:
@@ -40,9 +40,11 @@ public:
         SensorDataType(float _temperature, float _humidity, float _pressure) : temperature(_temperature), humidity(_humidity), pressure(_pressure) {}
     };
 
+    using Plugins = KFCConfigurationClasses::PluginsType;
     using CompensationCallback = std::function<void(SensorDataType &data)>;
-    using SensorConfigType = Plugins::SensorConfig::BME280Sensor_t;
+    using SensorConfigType = KFCConfigurationClasses::Plugins::SensorConfigNS::BME280SensorType;
 
+public:
     Sensor_BME280(const String &name, TwoWire &wire, uint8_t address = 0x76);
     virtual ~Sensor_BME280();
 

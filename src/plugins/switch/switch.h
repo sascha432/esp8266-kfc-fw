@@ -16,9 +16,10 @@
 
 class SwitchPlugin : public PluginComponent, public MQTTComponent {
 public:
-    using SwitchConfig = KFCConfigurationClasses::Plugins::IOTSwitch::SwitchConfig;
-    using SwitchStateEnum = KFCConfigurationClasses::Plugins::IOTSwitch::StateEnum;
-    using WebUIEnum = KFCConfigurationClasses::Plugins::IOTSwitch::WebUIEnum;
+    using Plugins = KFCConfigurationClasses::PluginsType;
+    using SwitchConfig = KFCConfigurationClasses::Plugins::SwitchConfigNS::SwitchConfigType;
+    using SwitchStateEnum = KFCConfigurationClasses::Plugins::SwitchConfigNS::StateEnum;
+    using SwitchWebUIEnum = KFCConfigurationClasses::Plugins::SwitchConfigNS::WebUIEnum;
     using PinArrayType = std::array<uint8_t, IOT_SWITCH_CHANNEL_NUM>;
 
 public:

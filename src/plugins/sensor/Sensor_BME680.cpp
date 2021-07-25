@@ -29,28 +29,28 @@ MQTT::AutoDiscovery::EntityPtr Sensor_BME680::getAutoDiscovery(FormatType format
     switch(num) {
     case 0:
         if (discovery->create(this, _getId(FSPGM(temperature)), format)) {
-            discovery->addStateTopic(MQTTClient::formatTopic(_getId()));
+            discovery->addStateTopic(MQTT::Client::formatTopic(_getId()));
             discovery->addUnitOfMeasurement(FSPGM(UTF8_degreeC));
             discovery->addValueTemplate(FSPGM(temperature));
         }
         break;
     case 1:
         if (discovery->create(this, _getId(FSPGM(humidity)), format)) {
-            discovery->addStateTopic(MQTTClient::formatTopic(_getId()));
+            discovery->addStateTopic(MQTT::Client::formatTopic(_getId()));
             discovery->addUnitOfMeasurement('%');
             discovery->addValueTemplate(FSPGM(humidity));
         }
         break;
     case 2:
         if (discovery->create(this, _getId(FSPGM(pressure)), format)) {
-            discovery->addStateTopic(MQTTClient::formatTopic(_getId()));
+            discovery->addStateTopic(MQTT::Client::formatTopic(_getId()));
             discovery->addUnitOfMeasurement(FSPGM(hPa));
             discovery->addValueTemplate(FSPGM(pressure));
         }
         break;
     case 3:
         if (discovery->create(this, _getId(F("gas")), format)) {
-            discovery->addStateTopic(MQTTClient::formatTopic(_getId()));
+            discovery->addStateTopic(MQTT::Client::formatTopic(_getId()));
             discovery->addUnitOfMeasurement(F("ppm"));
             discovery->addValueTemplate(F("gas"));
         }
@@ -103,7 +103,7 @@ void Sensor_BME680::getStatus(Print &output)
     output.printf_P(PSTR("BME680 @ I2C address 0x%02x" HTML_S(br)), _address);
 }
 
-void Sensor_BME680::publishState(MQTTClient *client)
+void Sensor_BME680::publishState(MQTT::Client *client)
 {
     if (client && client->isConnected()) {
         auto sensor = _readSensor();
@@ -115,7 +115,7 @@ void Sensor_BME680::publishState(MQTTClient *client)
         json.add(F("gas"), JsonNumber(sensor.gas, 2));
         json.printTo(str);
 
-        client->publish(MQTTClient::formatTopic(_getId()), _qos, true, str);
+        client->publish(MQTT::Client::formatTopic(_getId()), _qos, true, str);
     }
 }
 

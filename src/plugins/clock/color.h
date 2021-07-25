@@ -13,8 +13,6 @@
 #include <debug_helper_disable.h>
 #endif
 
-using KFCConfigurationClasses::Plugins;
-
 namespace Clock {
 
     class Color {
@@ -26,6 +24,7 @@ namespace Clock {
         static constexpr uint8_t kRndAnyAbove = 127;
         static_assert((kRndMod - 1) * kRndMul == 255, "invalid mod or mul");
 
+        using ColorType = KFCConfigurationClasses::Plugins::ClockConfigNS::ColorType;
 
     public:
         Color();
@@ -45,12 +44,12 @@ namespace Clock {
 
         Color &operator=(CRGB value);
         Color &operator=(uint32_t value);
-        Color &operator=(ClockColor_t value);
+        Color &operator=(ColorType value);
         operator bool() const;
         operator int() const;
         operator uint32_t() const;
         operator CRGB() const;
-        operator ClockColor_t() const;
+        operator ColorType() const;
         bool operator==(int value) const;
         bool operator!=(int value) const;
         bool operator==(uint32_t value) const;
@@ -159,7 +158,7 @@ namespace Clock {
         return *this;
     }
 
-    inline Color &Color::operator=(ClockColor_t value)
+    inline Color &Color::operator=(ColorType value)
     {
         _value = value.value;
         return *this;
@@ -185,9 +184,9 @@ namespace Clock {
         return CRGB(_red, _green, _blue);
     }
 
-    inline Color::operator ClockColor_t() const
+    inline Color::operator ColorType() const
     {
-        return ClockColor_t(_value);
+        return ColorType(_value);
     }
 
     inline uint8_t Color::red() const

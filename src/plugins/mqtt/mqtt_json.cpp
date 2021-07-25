@@ -89,7 +89,7 @@ bool Reader::processElement() {
                 effect = _valueStr;
             }
             else if (path == F("state")) {
-                state = MQTTClient::toBool(_valueStr.c_str());
+                state = MQTT::Client::toBool(_valueStr.c_str());
             }
             break;
         case JsonType_t::JSON_TYPE_BOOLEAN:

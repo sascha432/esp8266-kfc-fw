@@ -31,14 +31,14 @@ MQTT::AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num)
     switch(num) {
         case 0:
             if (discovery->create(this, _getId(FSPGM(temperature)), format)) {
-                discovery->addStateTopic(MQTTClient::formatTopic(_getId()));
+                discovery->addStateTopic(MQTT::Client::formatTopic(_getId()));
                 discovery->addUnitOfMeasurement(FSPGM(UTF8_degreeC));
                 discovery->addValueTemplate(FSPGM(temperature));
             }
             break;
         case 1:
             if (discovery->create(this, _getId(FSPGM(humidity)), format)) {
-                discovery->addStateTopic(MQTTClient::formatTopic(_getId()));
+                discovery->addStateTopic(MQTT::Client::formatTopic(_getId()));
                 discovery->addUnitOfMeasurement(F("%"));
                 discovery->addValueTemplate(FSPGM(humidity));
             }
@@ -93,7 +93,7 @@ bool Sensor_DHTxx::getSensorData(String &name, StringVector &values)
     return true;
 }
 
-void Sensor_DHTxx::publishState(MQTTClient *client)
+void Sensor_DHTxx::publishState(MQTT::Client *client)
 {
     if (client && client->isConnected()) {
         SensorData_t sensor;
@@ -104,7 +104,7 @@ void Sensor_DHTxx::publishState(MQTTClient *client)
         json.add(FSPGM(humidity), JsonNumber(sensor.humidity, 2));
         json.printTo(str);
 
-        client->publish(MQTTClient::formatTopic(_getId()), _qos, true, str);
+        client->publish(MQTT::Client::formatTopic(_getId()), _qos, true, str);
     }
 }
 

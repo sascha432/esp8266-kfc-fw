@@ -11,7 +11,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-using KFCConfigurationClasses::Plugins;
+using Plugins = KFCConfigurationClasses::PluginsType;
 using namespace Dimmer;
 
 void Module::setup()

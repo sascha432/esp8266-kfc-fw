@@ -10,9 +10,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-using namespace MQTT;
-
-StringVector MQTTClient::_createAutoDiscoveryTopics() const
+StringVector MQTT::Client::_createAutoDiscoveryTopics() const
 {
     StringVector wildcards;
     wildcards.emplace_back(std::move(AutoDiscovery::Entity::getConfigWildcardTopic()));
@@ -20,7 +18,7 @@ StringVector MQTTClient::_createAutoDiscoveryTopics() const
     return wildcards;
 }
 
-String MQTTClient::connectionDetailsString()
+String MQTT::Client::connectionDetailsString()
 {
     auto message = PrintString(F("%s@%s:%u"), _username.length() ? _username.c_str() : SPGM(Anonymous), (IPAddress_isValid(_address) ? _address.toString().c_str() : _hostname.c_str()), _port);
 #if ASYNC_TCP_SSL_ENABLED
@@ -31,7 +29,7 @@ String MQTTClient::connectionDetailsString()
     return message;
 }
 
-String MQTTClient::connectionStatusString()
+String MQTT::Client::connectionStatusString()
 {
     String message = connectionDetailsString();
     switch(_connState) {
@@ -66,14 +64,14 @@ String MQTTClient::connectionStatusString()
 #if MQTT_AUTO_DISCOVERY
     if (_config.auto_discovery) {
         message += F(HTML_S(br) "Auto discovery prefix '");
-        message += ClientConfig::getAutoDiscoveryPrefix();
+        message += Plugins::MqttClient::getAutoDiscoveryPrefix();
         message += '\'';
     }
 #endif
     return message;
 }
 
-NameType MQTTClient::_reasonToString(AsyncMqttClientDisconnectReason reason) const
+MQTT::NameType MQTT::Client::_reasonToString(AsyncMqttClientDisconnectReason reason) const
 {
     switch(reason) {
         case AsyncMqttClientDisconnectReason::TCP_DISCONNECTED:
@@ -96,7 +94,7 @@ NameType MQTTClient::_reasonToString(AsyncMqttClientDisconnectReason reason) con
     return F("Unknown");
 }
 
-int8_t MQTTClient::toBool(const char *str, int8_t invalid)
+int8_t MQTT::Client::toBool(const char *str, int8_t invalid)
 {
     while(isspace(*str)) {
         str++;

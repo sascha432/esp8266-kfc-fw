@@ -17,7 +17,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-using KFCConfigurationClasses::Plugins;
+using Plugins = KFCConfigurationClasses::PluginsType;
 using KFCConfigurationClasses::System;
 
 using namespace MQTT::AutoDiscovery;
@@ -28,7 +28,7 @@ Queue::Queue(Client &client) :
     _packetId(0),
     _runFlags(RunFlags::DEFAULTS)
 {
-    MQTTClient::registerComponent(this);
+    MQTT::Client::registerComponent(this);
 }
 
 Queue::~Queue()
@@ -37,7 +37,7 @@ Queue::~Queue()
     clear();
 
     // if the component is still registered, publish done has not been called
-    if (MQTTClient::unregisterComponent(this)) {
+    if (MQTT::Client::unregisterComponent(this)) {
         _publishDone(StatusType::FAILURE);
     }
 
@@ -92,7 +92,8 @@ void Queue::onPacketAck(uint16_t packetId, PacketAckType type)
 bool Queue::isEnabled(bool force)
 {
 #if MQTT_AUTO_DISCOVERY
-    auto cfg = Plugins::MQTTClient::getConfig();
+    // auto cfg = ::KFCConfigurationClasses::Plugins::MQTTConfigNS::MqttClient::getConfig();
+    auto cfg = Plugins::MqttClient::getConfig();
     return
         System::Flags::getConfig().is_mqtt_enabled && cfg.auto_discovery && (force || (cfg.auto_discovery_delay != 0));
 #else
@@ -385,7 +386,7 @@ void Queue::clear()
 
 bool Queue::isUpdateScheduled()
 {
-    auto client = MQTTClient::getClient();
+    auto client = MQTT::Client::getClient();
     if (!client) {
         return false;
     }
@@ -433,7 +434,7 @@ void Queue::runPublish(uint32_t delayMillis)
                 // check when the next auto discovery is supposed to run
                 __LDBG_printf("last_success=%d last_failure=%d run=%d", _client._autoDiscoveryLastSuccess, _client._autoDiscoveryLastFailure, _client._autoDiscoveryLastSuccess > _client._autoDiscoveryLastFailure);
                 if (_client._autoDiscoveryLastSuccess > _client._autoDiscoveryLastFailure) {
-                    auto cfg = Plugins::MQTTClient::getConfig();
+                    auto cfg = Plugins::MqttClient::getConfig();
                     uint32_t next = _client._autoDiscoveryLastSuccess + (cfg.getAutoDiscoveryRebroadcastInterval() * 60);
                     int32_t diff = next - time(nullptr);
                     __LDBG_printf("last_published=%d wait_time=%d minutes", (diff / 60) + 1);
@@ -594,11 +595,11 @@ void Queue::_publishDone(StatusType result, uint16_t onErrorDelay)
         _crcs.crc32b(),
         _diff.add, _diff.modify, _diff.remove, _diff.unchanged
     );
-    MQTTClient::unregisterComponent(this);
+    MQTT::Client::unregisterComponent(this);
 
     Event::milliseconds delay;
     if (result == StatusType::SUCCESS) {
-        delay = Event::minutes(Plugins::MQTTClient::getConfig().getAutoDiscoveryRebroadcastInterval());
+        delay = Event::minutes(Plugins::MqttClient::getConfig().getAutoDiscoveryRebroadcastInterval());
     }
     else if (onErrorDelay) {
         delay = Event::minutes(onErrorDelay);

@@ -7,7 +7,7 @@
 
 namespace KFCConfigurationClasses {
 
-    Plugins::PingConfig::PingConfig_t::PingConfig_t() :
+    Plugins::PingConfigNS::PingConfig::PingConfig() :
         interval(kDefaultValueFor_interval),
         timeout(kDefaultValueFor_timeout),
         count(kDefaultValueFor_count),
@@ -16,9 +16,9 @@ namespace KFCConfigurationClasses {
     {
     }
 
-    void Plugins::Ping::defaults()
+    void Plugins::PingConfigNS::Ping::defaults()
     {
-        setConfig(PingConfig_t());
+        setConfig(PingConfig());
         auto hosts = getHosts();
         hosts.clear();
         hosts.append(FSPGM(_var_gateway));

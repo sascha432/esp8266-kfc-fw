@@ -31,7 +31,7 @@ namespace PingMonitor {
 
     inline static void validateValues(int &count, int &timeout)
     {
-        using PingConfig = KFCConfigurationClasses::Plugins::PingConfig::PingConfig_t;
+        using PingConfig = KFCConfigurationClasses::Plugins::PingConfigNS::PingConfig;
         count = std::clamp<int>(count, PingConfig::kTypeMinValueFor_count, PingConfig::kMaxValueFor_count);
         timeout = std::clamp<int>(timeout, PingConfig::kMinValueFor_timeout, PingConfig::kMaxValueFor_timeout);
     }

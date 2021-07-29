@@ -4,6 +4,8 @@
 
 #include "IOExpander.h"
 
+#error work in progress
+
 namespace IOExpander {
 
     #undef IOEXPANDER_INLINE

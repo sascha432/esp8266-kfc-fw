@@ -11,6 +11,7 @@
 #include <PrintString.h>
 #include <ListDir.h>
 #include <NeoPixelEx.h>
+#include <IOExpander.h>
 #include "kfc_fw_config.h"
 #include "blink_led_timer.h"
 #include "deep_sleep.h"
@@ -89,13 +90,14 @@ bool isSystemKeyComboPressed()
 }
 #endif
 
+#include <BitsToStr.h>
+
 void setup()
 {
     #if ENABLE_DEEP_SLEEP
         deepSleepPinState.merge();
     #endif
 
-    // resetDetector.armTimer();
     resetDetector.begin(&KFC_SAFE_MODE_SERIAL_PORT, KFC_SERIAL_RATE); // release uart and call Serial.begin()
     #if KFC_DEBUG_USE_SERIAL1
         Serial1.begin(KFC_DEBUG_USE_SERIAL1);
@@ -131,13 +133,13 @@ void setup()
 
     // PluginComponents::RegisterEx::getInstance().dumpList(KFC_SAFE_MODE_SERIAL_PORT);
 
-    #if DEBUG
-    {
-        PrintString prefix;
-        __debug_prefix(prefix);
-        KFCFWConfiguration::printDiag(DEBUG_OUTPUT, prefix);
-    }
-    #endif
+    // #if DEBUG
+    // {
+    //     PrintString prefix;
+    //     __debug_prefix(prefix);
+    //     KFCFWConfiguration::printDiag(DEBUG_OUTPUT, prefix);
+    // }
+    // #endif
 
     #if defined(HAVE_GDBSTUB) && HAVE_GDBSTUB
         if (resetDetector.getResetCounter()) {
@@ -150,21 +152,72 @@ void setup()
         Serial2Udp::initWiFi(F(CUSTOM_WIFI_SSID), F(CUSTOM_WIFI_PASSWORD), IPAddress(192, 168, 0, 3), 6577);
     #endif
 
-    #if HAVE_PCF8574
-        initialize_pcf8574();
+    #if HAVE_IOEXPANDER
+        // IOExpander::config.begin(KFCFWConfiguration::initTwoWire());
+        // __DBG_printf("IOExpander size=%u count=%u", sizeof(IOExpander::config), IOExpander::config.size());
     #endif
-    #if HAVE_PCF8575
-        initialize_pcf8575();
-    #endif
-    #if HAVE_TINYPWM
-        initialize_tinypwm();
-    #endif
-    #if HAVE_PCA9685
-        initialize_pca9785();
-    #endif
-    #if HAVE_MCP23017
-        initialize_mcp23017();
-    #endif
+
+#if 1
+    IOExpander::config.begin(KFCFWConfiguration::initTwoWire(true, &Serial));
+    Serial.printf("IOExpander size=%u count=%u\n", sizeof(IOExpander::config), IOExpander::config.size());
+    IOExpander::config.printStatus(Serial);
+
+    auto device = IOExpander::config._device;
+    Serial.printf("I2Caddress %02x\n", device.getAddress());
+
+    // for(uint8_t i = 0; i < 16; i++) {
+    //     device.pinMode(i, INPUT_PULLUP);
+    // }
+
+    device.pinMode(3, INPUT_PULLUP);
+    device.pinMode(11, INPUT_PULLUP);
+    device.pinMode(7, OUTPUT);
+    device.pinMode(15, OUTPUT);
+    bool state = false;
+
+    for(;;) {
+        Serial.printf("Port A=%02x B=%02x\n", device.readPortA(), device.readPortB());
+        // Serial.println(BitsToStr<8, true>(device.readPortA()).toString());
+        // Serial.print(F("PortB "));
+        // Serial.println(BitsToStr<8, true>(device.readPortB()).toString());
+        // Serial.print(F("PortAB "));
+        // Serial.println(BitsToStr<16, true>(device.readPortAB()).toString());
+        state = !state;
+        device.digitalWrite(7, state);
+        device.digitalWrite(15, state);
+        Serial.printf("digitalWrite %u=%u\n", 7, state);
+        uint32_t start = millis();
+        // Serial.println(F("i = input, p = all input pulldown, 0-7 set port to output, high "));
+        while(millis() - start < 5000) {
+            // if (Serial0.available()) {
+            //     int ch;
+            //     switch(ch = Serial0.read()) {
+            //         case 'i':
+            //             for(uint8_t i = 0; i < 16; i++) {
+            //                 device.pinMode(i, INPUT);
+            //             }
+            //             break;
+            //         case 'p':
+            //             for(uint8_t i = 0; i < 16; i++) {
+            //                 device.pinMode(i, INPUT_PULLUP);
+            //             }
+            //             break;
+            //         case 'x':
+            //             goto endTest;
+            //         default:
+            //             if (ch  >= '0' && ch <= '7') {
+            //                 ch -= '0';
+            //                 device.pinMode(ch, OUTPUT);
+            //                 device.digitalWrite(ch, true);
+            //             }
+            //             break;
+            //     }
+            // }
+            delay(10);
+        }
+    }
+    endTest:
+#endif
 
     bool safe_mode = false;
     #if KFC_DISABLE_CRASHCOUNTER == 0

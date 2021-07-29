@@ -392,23 +392,20 @@
 #define ENABLE_ARDUINO_OTA_AUTOSTART                        0
 #endif
 
-
 #ifndef HAVE_PCF8574
-#define HAVE_PCF8574                                        0
+#define HAVE_PCF8574 0
 #endif
 
-#ifndef PCF8574_I2C_ADDRESS
-#define PCF8574_I2C_ADDRESS                                 0x20
+#ifndef HAVE_TINYPWM
+#   define HAVE_TINYPWM 0
 #endif
 
-#ifndef PCF8574_PORT_RANGE_START
-#define PCF8574_PORT_RANGE_START                            128
-#define PCF8574_PORT_RANGE_END                              (PCF8574_PORT_RANGE_START + 8)
+#ifndef HAVE_MCP23017
+#   define HAVE_MCP23017 0
 #endif
 
-#ifndef TINYPWM_PORT_RANGE_START
-#define TINYPWM_PORT_RANGE_START                            140
-#define TINYPWM_PORT_RANGE_END                              (TINYPWM_PORT_RANGE_START + 2)
+#ifndef HAVE_PCA9685
+#   define HAVE_PCA9685 0
 #endif
 
 #ifndef HAVE_I2CSCANNER

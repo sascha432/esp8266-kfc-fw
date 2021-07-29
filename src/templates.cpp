@@ -258,29 +258,9 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         }
     }
 #endif
-#if HAVE_PCF8574
-    else if (key == F("PCF8574_STATUS")) {
-        print_status_pcf8574(output);
-    }
-#endif
-#if HAVE_PCF8575
-    else if (key == F("PCF8575_STATUS")) {
-        print_status_pcf8575(output);
-    }
-#endif
-#if HAVE_TINYPWM
-    else if (key == F("TINYPWM_STATUS")) {
-        print_status_tinypwm(output);
-    }
-#endif
-#if HAVE_PCA9685
-    else if (key == F("PCA9685_STATUS")) {
-        print_status_pca9685(output);
-    }
-#endif
-#if HAVE_MCP23017
-    else if (key == F("MCP23017_STATUS")) {
-        print_status_mcp23017(output);
+#if HAVE_IOEXPANDER
+    else if (key == F("IOEXPANDER_STATUS")) {
+        IOExpander::config.printStatus(output);
     }
 #endif
     else if (key == F("RTC_STATUS")) {

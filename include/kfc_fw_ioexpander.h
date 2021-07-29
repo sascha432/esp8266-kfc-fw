@@ -4,166 +4,40 @@
 
 #pragma once
 
-#if HAVE_PCF8574
+#if HAVE_PCF8574 || HAVE_TINYPWM || HAVE_MCP23017 || HAVE_PCA9685 || HAVE_IOEXPANDER
+
 #include <IOExpander.h>
-using _PCF8574Range = IOExpander::PCF8574_Range<PCF8574_PORT_RANGE_START, PCF8574_PORT_RANGE_END>;
-extern IOExpander::PCF8574 _PCF8574;
-// these functions must be implemented and exported
-extern void initialize_pcf8574();
-extern void print_status_pcf8574(Print &output);
-#endif
 
-#if HAVE_PCF8575
-#include <PCF8575.h>
-extern PCF8575 _PCF8575;
-extern void initialize_pcf8575();
-extern void print_status_pcf8575(Print &output);
-#endif
+#ifdef ESP8266
 
-#if HAVE_TINYPWM
-using _TinyPwmRange = IOExpander::TinyPwm_Range<TINYPWM_PORT_RANGE_START, TINYPWM_PORT_RANGE_END>;
-extern IOExpander::TinyPwm _TinyPwm;
-extern void initialize_tinypwm();
-extern void print_status_tinypwm(Print &output);
-#endif
+#include <core_esp8266_waveform.h>
+#include <interrupts.h>
+// #include <FunctionalInterrupt.h>
 
-#if HAVE_PCA9685
-extern void initialize_pca9785();
-extern void print_status_pca9785(Print &output);
-#endif
-#if HAVE_MCP23017
-extern void initialize_mcp23017();
-extern void print_status_mcp23017(Print &output);
-#endif
+extern "C" {
 
-inline static void _digitalWrite(uint8_t pin, uint8_t value) {
-#if HAVE_PCF8574
+    void pinMode(uint8_t pin, uint8_t mode);
+    void digitalWrite(uint8_t pin, uint8_t val);
+    int digitalRead(uint8_t pin);
+    int analogRead(uint8_t pin);
 
-    if (_PCF8574Range::inRange(pin)) {
-        _PCF8574.digitalWrite(_PCF8574Range::digitalPin2Pin(pin), value);
-    }
-    else
-#endif
-    {
-        digitalWrite(pin, value);
-    }
-}
+    int analogRead(uint8_t pin);
+    void analogReference(uint8_t mode);
+    void analogWrite(uint8_t pin, int val);
+    void analogWriteFreq(uint32_t freq);
 
-inline static uint8_t _digitalRead(uint8_t pin) {
-#if HAVE_PCF8574
-    if (_PCF8574Range::inRange(pin)) {
-        return _PCF8574.digitalRead(_PCF8574Range::digitalPin2Pin(pin));
-    }
-    else
-#endif
-    {
-        return digitalRead(pin);
-    }
-}
-
-inline static void _analogWrite(uint8_t pin, uint16_t value) {
-#if HAVE_PCF8574
-    if (_PCF8574Range::inRange(pin)) {
-        _PCF8574.digitalWrite(_PCF8574Range::digitalPin2Pin(pin), value ? HIGH : LOW);
-    }
-    else
-#endif
-#if HAVE_TINYPWM
-    if (_TinyPwmRange::inRange(pin)) {
-        _TinyPwm.analogWrite(pin, value);
-    }
-    else
-#endif
-    {
-        analogWrite(pin, value);
-    }
-}
-
-inline static uint16_t _analogRead(uint8_t pin) {
-#if HAVE_PCF8574
-    if (_PCF8574Range::inRange(pin)) {
-        return _PCF8574.digitalRead(_PCF8574Range::digitalPin2Pin(pin)) ? 1023 : 0;
-    }
-    else
-#endif
-#if HAVE_TINYPWM
-    if (_TinyPwmRange::inRange(pin)) {
-        return _TinyPwm.analogRead(pin);
-    }
-    else
-#endif
-    {
-        return analogRead(pin);
-    }
+    void __pinMode(uint8_t pin, uint8_t mode);
+    int __analogRead(uint8_t pin);
+    void __analogReference(uint8_t mode);
+    void __analogWrite(uint8_t pin, int val);
+    void __analogWriteFreq(uint32_t freq);
 
 }
 
-inline static void _pinMode(uint8_t pin, uint8_t mode) {
-#if HAVE_PCF8574
-    if (_PCF8574Range::inRange(pin)) {
-        _PCF8574.pinMode(_PCF8574Range::digitalPin2Pin(pin), mode);
-    }
-    else
-#endif
-    {
-        pinMode(pin, mode);
-    }
-}
-
-inline static size_t _pinName(uint8_t pin, char *buf, size_t size) {
-#if HAVE_PCF8574
-    if (_PCF8574Range::inRange(pin)) {
-        return snprintf_P(buf, size - 1, PSTR("%u (PCF8574 pin %u)"), pin, _PCF8574Range::digitalPin2Pin(pin));
-    }
-    else
-#endif
-    {
-        return snprintf_P(buf, size - 1, PSTR("%u"), pin);
-    }
-}
-
-inline static bool _pinHasAnalogRead(uint8_t pin) {
-#if HAVE_PCF8574
-    if (_PCF8574Range::inRange(pin)) {
-        return false;
-    }
-    else
-#endif
-    {
-#if ESP8266
-        return (pin == A0);
 #else
-#error missing
+
+#error platform not supported
+
 #endif
-    }
 
-}
-
-inline static bool _pinHasAnalogWrite(uint8_t pin) {
-#if HAVE_PCF8574
-    if (_PCF8574Range::inRange(pin)) {
-        return false;
-    }
-    else
 #endif
-    {
-#if ESP8266
-        return pin < A0;
-#else
-#error missing
-#endif
-    }
-
-}
-
-#include "blink_led_timer.h"
-
-inline  __attribute__((__always_inline__))
-void BlinkLEDTimer::_digitalWrite(uint8_t pin, uint8_t value) {
-    ::_digitalWrite(pin, value);
-}
-
-inline  __attribute__((__always_inline__))
-void BlinkLEDTimer::_digitalWrite(uint8_t value) {
-    ::_digitalWrite(_pin, value);
-}

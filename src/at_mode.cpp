@@ -79,7 +79,7 @@ void __kfcfw_queue_monitor(AsyncWebSocketMessage *dataMessage, AsyncClient *_cli
 
 #if HAVE_I2CSCANNER
 
-void check_if_exist_I2C(TwoWire &wire, Print &output, uint8_t startAddress, uint8_t endAddress)
+void check_if_exist_I2C(TwoWire &wire, Print &output, uint8_t startAddress, uint8_t endAddress, uint32_t delayMillis = 10)
 {
     int nDevices = 0;
     for (auto address = startAddress; address < endAddress; address++ ) {
@@ -95,6 +95,9 @@ void check_if_exist_I2C(TwoWire &wire, Print &output, uint8_t startAddress, uint
         else if (error == 4) {
             output.printf_P(PSTR("Unknown error at address 0x%02x\n"), address);
         }
+        if (delayMillis) {
+            delay(delayMillis);
+        }
     }
     if (nDevices == 0) {
         output.println(F("No I2C devices found"));
@@ -104,11 +107,12 @@ void check_if_exist_I2C(TwoWire &wire, Print &output, uint8_t startAddress, uint
 void scanI2C(Print &output, int8_t sda, int8_t scl, uint8_t startAddress, uint8_t endAddress)
 {
     TwoWire *wire;
-    output.printf_P(PSTR("Scanning (SDA : SCL) - GPIO%u : GPIO%u - "), sda, scl);
-    if (sda == -1 || scl == -1) {
-        wire = &config.initTwoWire(true, &output);
+    if (sda == 0xff || scl == 0xff || sda == scl || isFlashInterfacePin(sda) || isFlashInterfacePin(scl)) {
+        output.printf_P(PSTR("Scanning (SDA : SCL) - "));
+        wire = &config.initTwoWire(false, &output);
     }
     else {
+        output.printf_P(PSTR("Scanning (SDA : SCL) - GPIO%u : GPIO%u - "), sda, scl);
         Wire.begin(sda, scl);
         wire = &Wire;
     }
@@ -390,7 +394,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PANIC, "PANIC", "[<address|wdt|hwdt|alloc>
 
 #endif
 #if HAVE_I2CSCANNER
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CSCAN, "I2CSCAN", "[<start-address=1>][,<end-address=127>][,<sda=4|ANY>,<scl=5>]", "Scan I2C bus. If ANY is passed as third argument, all available PINs are probed for I2C devices");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CSCAN, "I2CSCAN", "[<start-address=1>][,<end-address=127>][,<sda=4|any|no-init>,<scl=5>]", "Scan I2C bus. If ANY is passed as third argument, all available PINs are probed for I2C devices");
 #endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CS, "I2CS", "<pin-sda>,<pin-scl>[,<speed=100000>,<clock-stretch=45000>,<start|stop>]", "Configure I2C");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CTM, "I2CTM", "<address>,<data,...>", "Transmsit data to slave");
@@ -602,23 +606,19 @@ public:
 
     void printGPIO() {
         Serial.printf_P(PSTR("+GPIO: "));
-#if defined(ESP8266)
-        for(uint8_t i = 0; i < NUM_DIGITAL_PINS; i++) {
-            if (i != 1 && !isFlashInterfacePin(i)) { // do not display TX and flash SPI
-                // pinMode(i, INPUT);
-                Serial.printf_P(PSTR("%u=%u "), i, digitalRead(i));
+        #if defined(ESP8266)
+            for(uint8_t i = 0; i < NUM_DIGITAL_PINS; i++) {
+                if (i != 1 && !isFlashInterfacePin(i)) { // do not display TX and flash SPI
+                    // pinMode(i, INPUT);
+                    Serial.printf_P(PSTR("%u=%u "), i, digitalRead(i));
+                }
             }
-        }
-        // pinMode(A0, INPUT);
-        Serial.printf_P(PSTR(" A0=%u\n"), analogRead(A0));
-#endif
-#if HAVE_PCF8574
-        Serial.printf_P(PSTR("+PCF8574@0x%02x: "), _PCF8574.getAddress());
-        for(uint8_t i = PCF8574_PORT_RANGE_START; i < PCF8574_PORT_RANGE_END; i++) {
-            Serial.printf_P(PSTR("%u(%i)=%u "), i, i - PCF8574_PORT_RANGE_START,  _digitalRead(i));
-        }
-        Serial.printf_P(PSTR("\n"));
-#endif
+            // pinMode(A0, INPUT);
+            Serial.printf_P(PSTR(" A0=%u\n"), analogRead(A0));
+        #endif
+        #if HAVE_IOEXPANDER
+            IOExpander::config.dumpPins(Serial);
+        #endif
     }
 
     void printRSSI() {
@@ -1908,8 +1908,11 @@ void at_mode_serial_handle_event(String &commandString)
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CSCAN))) {
         auto startAddress = args.toIntMinMax<uint8_t>(0, 1, 255, 1);
         auto endAddress = args.toIntMinMax<uint8_t>(1, startAddress, 255, 127);
-        auto sda = args.toIntMinMax<int8_t>(2, 0, 16, KFC_TWOWIRE_SDA);
-        auto scl = args.toIntMinMax<int8_t>(3, 0, 16, KFC_TWOWIRE_SCL);
+        auto sda = args.toIntMinMax<uint8_t>(2, 0, 16, KFC_TWOWIRE_SDA);
+        auto scl = args.toIntMinMax<uint8_t>(3, 0, 16, KFC_TWOWIRE_SCL);
+        if (args.has(F("noinit")) || args.has(F("no-init"))) {
+            sda = scl = 0xff;
+        }
         if (args.has(F("any"))) {
             scanPorts(args.getStream(), startAddress, endAddress);
         }
@@ -2259,9 +2262,7 @@ void at_mode_serial_handle_event(String &commandString)
             auto pin = args.toUint8(0);
             if (args.equalsIgnoreCase(1, F("waveform"))) {
                 if (pin > 16) {
-                    char buf[32];
-                    _pinName(pin, buf, sizeof(buf));
-                    args.print(F("%s does not support waveform"), buf);
+                    args.print(F("%u does not support waveform"), pin);
                 }
                 else {
                     uint32_t timeHighUS = args.toInt(2, ~0U);
@@ -2301,22 +2302,14 @@ void at_mode_serial_handle_event(String &commandString)
                 }
             }
             else if (args.equalsIgnoreCase(1, F("input"))) {
-
-                _digitalWrite(pin, LOW);
-                _pinMode(pin, INPUT);
-                char buf[32];
-                _pinName(pin, buf, sizeof(buf));
-                args.print(F("set pin=%s to INPUT"), buf);
-
+                digitalWrite(pin, LOW);
+                pinMode(pin, INPUT);
+                args.print(F("set pin=%u to INPUT"), pin);
             }
             else if (args.equalsIgnoreCase(1, F("input_pullup"))) {
-
-                _digitalWrite(pin, LOW);
-                _pinMode(pin, pin == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
-                char buf[32];
-                _pinName(pin, buf, sizeof(buf));
-                args.print(F("set pin=%s to %s"), buf, pin == 16 ? PSTR("INPUT_PULLDOWN_16") : PSTR("INPUT_PULLUP"));
-
+                digitalWrite(pin, LOW);
+                pinMode(pin, pin == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
+                args.print(F("set pin=%u to %s"), pin, pin == 16 ? PSTR("INPUT_PULLDOWN_16") : PSTR("INPUT_PULLUP"));
             }
             else {
 
@@ -2342,7 +2335,7 @@ void at_mode_serial_handle_event(String &commandString)
 
                 auto type = PSTR("digitalWrite");
 
-                _pinMode(pin, OUTPUT);
+                pinMode(pin, OUTPUT);
 #if defined(ESP8266)
                 analogWriteFreq(freq);
                 analogWriteRange(PWMRANGE);
@@ -2350,25 +2343,23 @@ void at_mode_serial_handle_event(String &commandString)
                 freq = 0;
 #endif
                 if (level == 0)  {
-                    _digitalWrite(pin, LOW);
+                    digitalWrite(pin, LOW);
                     freq = 0;
                 }
-                else if (level >= PWMRANGE - 1 || !_pinHasAnalogWrite(pin)) {
-                    _digitalWrite(pin, HIGH);
+                else if (level >= PWMRANGE - 1) {
+                    digitalWrite(pin, HIGH);
                     level = 1;
                     freq = 0;
                 }
                 else {
                     type = PSTR("analogWrite");
-                    _analogWrite(pin, level);
+                    analogWrite(pin, level);
                 }
                 if (duration) {
                     durationStr = PrintString(F(" for %ums"), duration);
                 }
                 if (freq == 0) {
-                    char buf[32];
-                    _pinName(pin, buf, sizeof(buf));
-                    args.print(F("%s(%s, %u)%s"), type, buf, level, durationStr.c_str());
+                    args.print(F("%s(%u, %u)%s"), type, pin, level, durationStr.c_str());
                 }
                 else {
                     float cycle = (1000000 / (float)freq);
@@ -2379,7 +2370,7 @@ void at_mode_serial_handle_event(String &commandString)
                     auto &stream = args.getStream();
                     _Scheduler.add(duration, false, [pin, &stream](Event::CallbackTimerPtr) mutable {
                         stream.printf_P(PSTR("+PWM: digitalWrite(%u, 0)\n"), pin);
-                        _digitalWrite(pin, LOW);
+                        digitalWrite(pin, LOW);
                     }, Event::PriorityType::TIMER);
                 }
             }

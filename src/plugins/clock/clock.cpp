@@ -59,17 +59,6 @@ void print_status_pcf8574(Print &output)
 
 #endif
 
-#if HAVE_TINYPWM
-
-void print_status_tinypwm(Print &output)
-{
-    output.printf_P(PSTR("TinyPWM @ I2C address 0x%02x"), TINYPWM_I2C_ADDRESS);
-    if (!_TinyPwm.isConnected()) {
-        output.print(F(HTML_S(br) "ERROR - Device not found!"));
-    }
-}
-
-#endif
 
 #if IOT_LED_MATRIX
 

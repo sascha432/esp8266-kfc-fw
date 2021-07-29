@@ -15,7 +15,6 @@
 #include <BitsToStr.h>
 #include "rotary_encoder.h"
 #include "logger.h"
-#include "kfc_fw_ioexpander.h"
 
 #if PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS
 #include <FunctionalInterrupt.h>
@@ -229,11 +228,11 @@ Pin &Monitor::_attach(Pin &pin, HardwarePinType type)
     });
     if (iterator == _pins.end()) {
 
-        _pinMode(pinNum, _pinModeFlag);
+        pinMode(pinNum, _pinModeFlag);
         switch(type) {
 #if PIN_MONITOR_DEBOUNCED_PUSHBUTTON
             case HardwarePinType::DEBOUNCE:
-                _pins.emplace_back(new DebouncedHardwarePin(pinNum, _digitalRead(pinNum)));
+                _pins.emplace_back(new DebouncedHardwarePin(pinNum, digitalRead(pinNum)));
                 break;
 #endif
 #if PIN_MONITOR_SIMPLE_PIN
@@ -309,7 +308,7 @@ void Monitor::_detach(Iterator begin, Iterator end, bool clear)
                 _detachInterrupt(digitalPinToInterrupt(pinNum));
     #endif
 #endif
-                _pinMode(pinNum, INPUT);
+                pinMode(pinNum, INPUT);
 
                 if (clear == false) {
                     _pins.erase(iterator);

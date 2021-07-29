@@ -71,7 +71,7 @@ private:
 
 void BlinkLEDTimer::run()
 {
-    _digitalWrite(_pin, BUILTIN_LED_STATE(_pattern.test(_counter++ % _pattern.size())));
+    digitalWrite(_pin, BUILTIN_LED_STATE(_pattern.test(_counter++ % _pattern.size())));
 }
 
 // void BlinkLEDTimer::set(uint16_t delay, Bitset &&pattern)
@@ -81,8 +81,8 @@ void BlinkLEDTimer::run()
 //     }
 //     _pattern = std::move(pattern);
 //     // reset pin
-//     _digitalWrite(_pin, BUILTIN_LED_STATE(false));
-//     _pinMode(_pin, OUTPUT);
+//     digitalWrite(_pin, BUILTIN_LED_STATE(false));
+//     pinMode(_pin, OUTPUT);
 //     _counter = 0;
 //     _delay = static_cast<BlinkType>(delay);
 //     setInverted(false);
@@ -92,7 +92,7 @@ void BlinkLEDTimer::run()
 
 void BlinkLEDTimer::detach()
 {
-    _digitalWrite(_pin, BUILTIN_LED_STATE(false));
+    digitalWrite(_pin, BUILTIN_LED_STATE(false));
     OSTimer::detach();
 }
 
@@ -111,8 +111,8 @@ void BlinkLEDTimer::set(uint16_t delay, uint8_t pin, Bitset &&pattern)
 {
     if (pin != _pin && !isPinValid(_pin)) {
         // disable LED on pin that was previously used
-        _digitalWrite(_pin, low());
-        _pinMode(_pin, INPUT);
+        digitalWrite(_pin, low());
+        pinMode(_pin, INPUT);
     }
     // check if new pin is valid
     if (!isPinValid(pin) || System::Device::getConfig().getStatusLedMode() == System::Device::StatusLEDModeType::OFF) {
@@ -121,8 +121,8 @@ void BlinkLEDTimer::set(uint16_t delay, uint8_t pin, Bitset &&pattern)
     _pin = pin;
     _pattern = std::move(pattern);
     // reset pin
-    _digitalWrite(_pin, low());
-    _pinMode(_pin, OUTPUT);
+    digitalWrite(_pin, low());
+    pinMode(_pin, OUTPUT);
     _counter = 0;
     _delay = static_cast<BlinkType>(delay);
     __LDBG_printf("start timer=%u", delay);
@@ -178,15 +178,15 @@ void BlinkLEDTimer::setBlink(uint8_t pin, uint16_t delay, int32_t color)
 #endif
     {
         // reset pin
-        _digitalWrite(pin, BUILTIN_LED_STATE(false));
-        _pinMode(pin, OUTPUT);
+        digitalWrite(pin, BUILTIN_LED_STATE(false));
+        pinMode(pin, OUTPUT);
 
         if (delay == static_cast<uint16_t>(BlinkLEDTimer::BlinkType::OFF)) {
             // already off
-            // _digitalWrite(pin, BUILTIN_LED_STATE(false));
+            // digitalWrite(pin, BUILTIN_LED_STATE(false));
         }
         else if (delay == static_cast<uint16_t>(BlinkLEDTimer::BlinkType::SOLID)) {
-            _digitalWrite(pin, BUILTIN_LED_STATE(true));
+            digitalWrite(pin, BUILTIN_LED_STATE(true));
         }
         else {
             ledTimer = new BlinkLEDTimer(pin);

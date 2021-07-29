@@ -5,11 +5,6 @@
 #pragma once
 
 #include "IOExpander.h"
-#include "debug_helper_disable.h"
-
-#ifndef IOEXPANDER_INLINE
-#define IOEXPANDER_INLINE inline
-#endif
 
 // DDR high = output, low = input. PORT is unchanged
 // PIN reads from the exapnder
@@ -149,49 +144,6 @@ namespace IOExpander {
     IOEXPANDER_INLINE uint8_t PCF8574::read8()
     {
         return static_cast<uint8_t>(PIN);
-    }
-
-    // ------------------------------------------------------------------
-    // TinyPwm
-    // ------------------------------------------------------------------
-
-    namespace TinyPwmNS {
-
-        enum class Commands : uint8_t {
-            ANALOG_WRITE = 0x10,            // 1 byte PWM value
-            ANALOG_READ = 0x11,             // one byte for the input channel, 0 = pb4, 1 = pb3. returns int16_t
-            SET_PWM_FREQUENCY = 0x51        // set PWM frequency, 2 byte uint16_t 488-65535 Hz
-        };
-
-    };
-
-    IOEXPANDER_INLINE int TinyPwm::analogRead(uint8_t pin)
-    {
-        _wire->beginTransmission(_address);
-        _wire->write(static_cast<uint8_t>(TinyPwmNS::Commands::ANALOG_READ));
-        _wire->write(pin);
-        if (_wire->endTransmission(true) == 0 && _wire->available()) {
-            int16_t value;
-            if (_wire->readBytes(reinterpret_cast<uint8_t *>(&value), sizeof(value)) == sizeof(value)) {
-                return value;
-            }
-        }
-        return 0;
-    }
-
-    IOEXPANDER_INLINE bool TinyPwm::analogWrite(uint8_t pin, uint8_t value)
-    {
-        _wire->beginTransmission(_address);
-        _wire->write(static_cast<uint8_t>(TinyPwmNS::Commands::ANALOG_WRITE));
-        _wire->write(value);
-        // _wire->write(static_cast<uint8_t>(TinyPwmNS::Commands::ANALOG_WRITE_EX));
-        // _wire->write(pin);
-        // _wire->write(value);
-        if (_wire->endTransmission(true) != 0) {
-            __DBG_printf("endTransmission() failed");
-            return false;
-        }
-        return true;
     }
 
 }

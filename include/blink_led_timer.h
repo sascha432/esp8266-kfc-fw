@@ -73,9 +73,6 @@ public:
     static bool isPinValid(uint8_t pin);
 
 protected:
-    static void _digitalWrite(uint8_t pin, uint8_t value);
-    void _digitalWrite(uint8_t value);
-
     static constexpr bool high() {
         return BUILTIN_LED_STATE(true);
     }

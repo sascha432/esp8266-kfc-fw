@@ -36,8 +36,8 @@
 
 #define HASH_SIZE                   64
 
-#include <kfc_fw_config_types.h>
-#include <kfc_fw_ioexpander.h>
+#include "kfc_fw_config_types.h"
+#include "kfc_fw_ioexpander.h"
 
 // NOTE using the new handlers (USE_WIFI_SET_EVENT_HANDLER_CB=0) costs 896 byte RAM with 5 handlers
 #ifndef USE_WIFI_SET_EVENT_HANDLER_CB
@@ -49,7 +49,7 @@
 #endif
 #endif
 
-#include <kfc_fw_config_classes.h>
+#include "kfc_fw_config_classes.h"
 
 class KFCFWConfiguration : public Configuration {
 public:

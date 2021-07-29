@@ -14,23 +14,19 @@ namespace KFCConfigurationClasses {
             // --------------------------------------------------------------------
             // Ping
 
-            class PingConfig {
-            public:
-                typedef struct __attribute__packed__ PingConfig_t {
-                    using Type = PingConfig_t;
+            struct __attribute__packed__ PingConfig {
+                using Type = PingConfig;
 
-                    CREATE_UINT16_BITFIELD_MIN_MAX(interval, 16, 1, (24 * 60) * 30, 5);
-                    CREATE_UINT16_BITFIELD_MIN_MAX(timeout, 16, 100, 60000, 5000);
-                    CREATE_UINT8_BITFIELD_MIN_MAX(count, 6, 0, 63, 4);
-                    CREATE_UINT8_BITFIELD_MIN_MAX(console, 1, 0, 1, true);
-                    CREATE_UINT8_BITFIELD_MIN_MAX(service, 1, 0, 1, false);
+                CREATE_UINT16_BITFIELD_MIN_MAX(interval, 16, 1, (24 * 60) * 30, 5);
+                CREATE_UINT16_BITFIELD_MIN_MAX(timeout, 16, 100, 60000, 5000);
+                CREATE_UINT8_BITFIELD_MIN_MAX(count, 6, 0, 63, 4);
+                CREATE_UINT8_BITFIELD_MIN_MAX(console, 1, 0, 1, true);
+                CREATE_UINT8_BITFIELD_MIN_MAX(service, 1, 0, 1, false);
 
-                    PingConfig_t();
-
-                } PingConfig_t;
+                PingConfig();
             };
 
-            class Ping : public PingConfig, public KFCConfigurationClasses::ConfigGetterSetter<PingConfig::PingConfig_t, _H(MainConfig().plugins.ping.cfg) CIF_DEBUG(, &handleNamePingConfig_t)>
+            class Ping : public KFCConfigurationClasses::ConfigGetterSetter<PingConfig, _H(MainConfig().plugins.ping.cfg) CIF_DEBUG(, &handleNamePingConfig_t)>
             {
             public:
                 static void defaults();

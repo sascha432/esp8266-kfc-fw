@@ -14,13 +14,19 @@
 
 namespace IOExpander {
 
-    #define ST <
+    #define LT <
     #define GT >
 
     ConfigIterator<IOEXPANDER_DEVICE_CONFIG> config;
 
-    #undef ST
+    #undef LT
     #undef GT
+
+    void IRAM_ATTR _interruptHandler(void *arg)
+    {
+        ::printf("interrupt %p\n", arg);
+        config._setInterruptFlagRecursive(arg);
+    }
 
 }
 

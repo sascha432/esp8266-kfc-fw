@@ -165,58 +165,36 @@ void setup()
     auto device = IOExpander::config._device;
     Serial.printf("I2Caddress %02x\n", device.getAddress());
 
-    // for(uint8_t i = 0; i < 16; i++) {
-    //     device.pinMode(i, INPUT_PULLUP);
-    // }
+    for(uint8_t i = 0; i < 16; i++) {
+        device.pinMode(i, INPUT_PULLUP);
+    }
 
-    device.pinMode(3, INPUT_PULLUP);
-    device.pinMode(11, INPUT_PULLUP);
+    // device.pinMode(3, INPUT_PULLUP);
+    // device.pinMode(11, INPUT_PULLUP);
     device.pinMode(7, OUTPUT);
     device.pinMode(15, OUTPUT);
     bool state = false;
 
+    IOExpander::config.attachInterrupt(14, &device, 0x0100, [&device](uint16_t pinState) {
+        Serial.printf_P(PSTR("%s interrupt %04x\n"), device.getDeviceName(), pinState);
+    }, CHANGE);
+
     for(;;) {
-        Serial.printf("Port A=%02x B=%02x\n", device.readPortA(), device.readPortB());
-        // Serial.println(BitsToStr<8, true>(device.readPortA()).toString());
-        // Serial.print(F("PortB "));
-        // Serial.println(BitsToStr<8, true>(device.readPortB()).toString());
-        // Serial.print(F("PortAB "));
-        // Serial.println(BitsToStr<16, true>(device.readPortAB()).toString());
-        state = !state;
-        device.digitalWrite(7, state);
-        device.digitalWrite(15, state);
-        Serial.printf("digitalWrite %u=%u\n", 7, state);
-        uint32_t start = millis();
-        // Serial.println(F("i = input, p = all input pulldown, 0-7 set port to output, high "));
-        while(millis() - start < 5000) {
-            // if (Serial0.available()) {
-            //     int ch;
-            //     switch(ch = Serial0.read()) {
-            //         case 'i':
-            //             for(uint8_t i = 0; i < 16; i++) {
-            //                 device.pinMode(i, INPUT);
-            //             }
-            //             break;
-            //         case 'p':
-            //             for(uint8_t i = 0; i < 16; i++) {
-            //                 device.pinMode(i, INPUT_PULLUP);
-            //             }
-            //             break;
-            //         case 'x':
-            //             goto endTest;
-            //         default:
-            //             if (ch  >= '0' && ch <= '7') {
-            //                 ch -= '0';
-            //                 device.pinMode(ch, OUTPUT);
-            //                 device.digitalWrite(ch, true);
-            //             }
-            //             break;
-            //     }
-            // }
-            delay(10);
+        uint16_t tmp = device.readPortAB();
+        // uint16_t tmp = 0;
+
+        for(uint8_t i = 0; i < 16; i++) {
+            if (i == 8) {
+                Serial.print(' ');
+            }
+            Serial.print(tmp & _BV(i) ? 1 : 0);
         }
+        Serial.println();
+        state = !state;
+        device.digitalWrite(15, state);
+
+        delay(1000);
     }
-    endTest:
 #endif
 
     bool safe_mode = false;

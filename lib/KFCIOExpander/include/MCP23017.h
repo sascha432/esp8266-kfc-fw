@@ -93,6 +93,7 @@ namespace IOExpander {
         void enableInterrupts(uint16_t pinMask, const InterruptCallback &callback, uint8_t mode);
         void disableInterrupts(uint16_t pinMask);
         bool interruptsEnabled();
+        void invokeCallback();
 
         void interruptHandler();
         bool setInterruptFlag();
@@ -122,9 +123,11 @@ namespace IOExpander {
         // read 8bit part of a 16 bit register
         void _read8(uint8_t regAddr, Register16 &regValue, Port port);
 
+    public:
         uint32_t _interruptsPending;
         InterruptCallback _callback;
 
+    protected:
         Register16 _IODIR;
         Register16 _GPPU;
         Register16 _GPIO;

@@ -11,6 +11,17 @@
 #include <vector>
 #include <Schedule.h>
 
+#ifndef DEBUG_IOEXPANDER
+#define DEBUG_IOEXPANDER 1
+#endif
+
+#if DEBUG_IOEXPANDER
+#include "debug_helper_enable.h"
+#else
+#include "debug_helper_disable.h"
+#endif
+
+
 #ifndef HAVE_IOEXPANDER
 #   if HAVE_PCF8574 || HAVE_TINYPWM || HAVE_MCP23017 || HAVE_PCA9685
 #       define HAVE_IOEXPANDER 1
@@ -21,21 +32,14 @@
 
 #if HAVE_IOEXPANDER
 
-#if 0
 // example
-#define IOEXPANDER_DEVICE_CONFIG \
-    Config<DeviceConfig<PCF8574, DeviceTypePCF8574, 0x20, 90, 98>, \
-        Config<DeviceConfig<PCF8574, DeviceTypePCF8574, 0x22, 98, 104>, \
-            Config<DeviceConfig<PCF8574, DeviceTypePCF8574, 0x24, 104, 112> \
-            > \
-        > \
-    >
-
+//
+// #define IOEXPANDER_DEVICE_CONFIG Config<DeviceConfig<PCF8574, DeviceTypePCF8574, 0x20, 90, 98>, Config<DeviceConfig<PCF8574, DeviceTypePCF8574, 0x22, 98, 104>,  Config<DeviceConfig<PCF8574, DeviceTypePCF8574, 0x24, 104, 112> >>>
+//
 // platformi.ini
-// replace "<" with "\ ST\ " and ">" with "\ GT\ "
-// -D IOEXPANDER_DEVICE_CONFIG=Config\ ST\ DeviceConfig\ ST\ MCP23017,DeviceTypeMCP23017,0x20,100\ GT\ ,Config\ ST\ DeviceConfig\ ST\ MCP23017,DeviceTypeMCP23017,0x21,120\ GT\ GT\ GT
-
-#endif
+// since PIO does not escape the CLI properly replace "<" with "\ LT\ " and ">" with "\ GT\ "
+// -D IOEXPANDER_DEVICE_CONFIG=Config\ LT\ DeviceConfig\ LT\ MCP23017,DeviceTypeMCP23017,0x20,100\ GT\ ,Config\ LT\ DeviceConfig\ LT\ MCP23017,DeviceTypeMCP23017,0x21,120\ GT\ GT\ GT
+//
 
 #if !defined(IOEXPANDER_DEVICE_CONFIG)
 #   error IOEXPANDER_DEVICE_CONFIG not defined
@@ -71,6 +75,8 @@ namespace IOExpander {
     };
 
     using InterruptCallback = std::function<void(uint16_t pinState)>;
+
+    void IRAM_ATTR _interruptHandler(void *arg);
 
     inline const __FlashStringHelper *getDeviceName(DeviceTypeEnum type) {
         switch(type) {
@@ -213,6 +219,10 @@ namespace IOExpander {
         }
 
         inline  __attribute__((__always_inline__))
+        void _setInterruptFlagRecursive(void *device) {
+        }
+
+        inline  __attribute__((__always_inline__))
         void _dumpPinsRecursive(Print &output)
         {
         }
@@ -303,14 +313,17 @@ namespace IOExpander {
         }
 
         // interrupts can only be enabled per device
-        // the hardware interrupt must be triggered from a gpioPin
-        // the callback will be called as scheduled_functions outside the interrupt handler
+        // the hardware interrupt must be triggered from a single GPIO pin
+        // the callback will be called as scheduled_function outside the interrupt handler
+        // and the handler does not have to be in IRAM
         void attachInterrupt(uint8_t gpioPin, void *device, uint16_t pinMask, const InterruptCallback &callback, int mode) {
+            __LDBG_printf("attachInterrupt gpio=%u device=%p", gpioPin, device);
             _attachInterruptRecursive(device, gpioPin, pinMask, callback, mode);
         }
 
         // remove interrupt handler
         void detachInterrupt(uint8_t gpioPin, void *device, uint16_t pinMask) {
+            __LDBG_printf("detachInterrupt gpio=%u device=%p", gpioPin, device);
             _detachInterruptRecursive(device, gpioPin, pinMask);
         }
 
@@ -335,24 +348,6 @@ namespace IOExpander {
             Serial.print('\n');
             _next._dumpPinsRecursive(output);
         }
-
-// void print_status_pcf8574(Print &output)
-// {
-//     output.printf_P(PSTR("PCF8574 @ I2C address 0x%02x"), PCF8574_I2C_ADDRESS);
-//     output.print(F(HTML_S(br) "Interrupt disabled" HTML_S(br)));
-//     if (_PCF8574.isConnected()) {
-//         output.print(HTML_S(small));
-//         uint8_t ddr = _PCF8574.DDR;
-//         uint8_t state = _PCF8574.PIN;
-//         for(uint8_t i = 0; i < 8; i++) {
-//             output.printf_P(PSTR("%u(%s)=%s "), i, (ddr & _BV(i) ? PSTR("OUT") : PSTR("IN")), (state & _BV(i)) ? PSTR("HIGH") : PSTR("LOW"));
-//         }
-//         output.print(HTML_E(small));
-//     }
-//     else {
-//         output.print(F(HTML_S(br) "ERROR - Device not found!"));
-//     }
-// }
 
         inline  __attribute__((__always_inline__))
         void _printStatusRecursive(Print &output) {
@@ -445,21 +440,22 @@ namespace IOExpander {
         void _attachInterruptRecursive(void *device, uint8_t gpioPin, uint16_t pinMask, const InterruptCallback &callback, int mode) {
             if (device == reinterpret_cast<void *>(&_device)) {
                 bool enabled = _device.interruptsEnabled();
-                _device.enableInterrupts(callback, mode);
-                // if interrupts have been disabled before, attach the interrupt handler
+                _device.enableInterrupts(pinMask, callback, mode);
+                // attach the interrupt handler if interrupts are not enabled for this GPIO pin
+                __LDBG_printf("attachInterruptArg gpio=%u enabled=%u", gpioPin, enabled);
                 if (enabled == false && _device.interruptsEnabled()) {
-                    attachInterruptArg(gpioPin, [](void *arg) {
-                        auto device = reinterpret_cast<DeviceClassType *>(arg);
-                    }, device, mode);
+                    ::pinMode(gpioPin, INPUT);
+                    ::attachInterruptArg(gpioPin, _interruptHandler, device, mode);
                 }
                 return;
             }
-            _next._attachInterruptArgRecursive(device, mode);
+            _next._attachInterruptRecursive(device, gpioPin, pinMask, callback, mode);
         }
 
         inline  __attribute__((__always_inline__))
         void _detachInterruptRecursive(void *device, uint8_t gpioPin, uint16_t pinMask) {
             if (device == reinterpret_cast<void *>(&_device)) {
+                __LDBG_printf("detachInterrupt gpio=%u enabled=%u", gpioPin, _device.interruptsEnabled());
                 if (_device.interruptsEnabled() == false) {
                     // remove interrupt handler
                     ::detachInterrupt(gpioPin);
@@ -470,17 +466,11 @@ namespace IOExpander {
             _next._detachInterruptRecursive(device);
         }
 
-        inline void IRAM_ATTR _interruptHandler(void *device) {
-            // set the interrupt received flag for the device
-            _setInterruptFlagRecursive(device);
-        }
-
         inline  __attribute__((__always_inline__))
         void _setInterruptFlagRecursive(void *device) {
             if (device == reinterpret_cast<void *>(&_device)) {
-                // setInterrutFlag() returns false if  any interrupts are pending
-                // the function will not be installed
-                // the interrupt handler continue to read interrupts until
+                // setInterrutFlag() returns false if any interrupts are pending
+                // the function will not be installed again until the flag has been cleared
                 if (_device.setInterruptFlag() == false) {
                     // run function outside ISR
                     schedule_function([this]() {

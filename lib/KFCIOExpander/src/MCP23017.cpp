@@ -92,6 +92,8 @@ namespace IOExpander {
         _GPPU = 0;
         _write16(GPPU, _GPPU);
         // disable interrupts
+        _INTCON = 0;
+        _DEFVAL = 0;
         _GPINTEN = 0;
         _write16(GPINTEN, _GPINTEN);
         // set gpio values to 0
@@ -180,20 +182,20 @@ namespace IOExpander {
         _IOCON.A = IOCON_MIRROR|IOCON_INTPOL;
         _write8(IOCON, _IOCON, Port::A);
 
-        if (mode == FALLING) {
-            _DEFVAL._value |= pinMask;
-            _write16(DEFVAL, _DEFVAL);
-        }
-        else if (mode == RISING) {
-            _DEFVAL._value &= ~pinMask;
-            _write16(DEFVAL, _DEFVAL);
-        }
-
         if (mode == CHANGE) {
-            _INTCON._value &= ~pinMask; // compare against DEFVAL
+            _INTCON._value &= ~pinMask; // interrupt on change
         }
         else {
-            _INTCON._value |= pinMask;
+            // setup DEFVAL
+            if (mode == FALLING) {
+                _DEFVAL._value |= pinMask;
+                _write16(DEFVAL, _DEFVAL);
+            }
+            else if (mode == RISING) {
+                _DEFVAL._value &= ~pinMask;
+                _write16(DEFVAL, _DEFVAL);
+            }
+            _INTCON._value |= pinMask; // compare against DEFVAL
         }
         _write16(INTCON, _INTCON);
 
@@ -208,6 +210,8 @@ namespace IOExpander {
 
         if (_GPINTEN._value == 0) {
 
+            _INTCON = 0;
+            _DEFVAL = 0;
             _read16(INTCAP, _INTCAP); // clear pending interrupts
             _INTCAP._value = 0;
 
@@ -223,6 +227,11 @@ namespace IOExpander {
         return _GPINTEN._value != 0;
     }
 
+    IOEXPANDER_INLINE void MCP23017::invokeCallback()
+    {
+        _callback(readPortAB()); // TODO read captured pin state
+    }
+
     IOEXPANDER_INLINE void MCP23017::interruptHandler()
     {
         uint32_t start = micros();
@@ -231,9 +240,9 @@ namespace IOExpander {
             _interruptsPending = 0;
             ets_intr_unlock();
 
-            _callback(0);
+            invokeCallback();
 
-            // check again if any new interupts occured while reading
+            // check again if any new interupts occured while processing
             ets_intr_lock();
             if (_interruptsPending) {
                 if (micros() - start > 2000) {
@@ -299,9 +308,9 @@ namespace IOExpander {
         _wire->write(regAddr);
         _wire->write(reinterpret_cast<uint8_t *>(&regValue._value), 2);
         if ((error = _wire->endTransmission(true)) != 0) {
-            __DBG_printf("_write16 regAddr %s %04x error=%u", __regAddrName(regAddr), regValue._value, error);
+            __DBG_printf("_write16 ERR regAddr=%s A=%02x B=%02x error=%u", __regAddrName(regAddr), regValue.A, regValue.B, error);
         }
-        __LDBG_printf("_write16 %s A%02x B%02x", __regAddrName(regAddr), regValue.A, regValue.B);
+        // __LDBG_printf("_write16 %s A=%02x B=%02x", __regAddrName(regAddr), regValue.A, regValue.B);
     }
 
     IOEXPANDER_INLINE void MCP23017::_read16(uint8_t regAddr, Register16 &regValue)
@@ -311,15 +320,15 @@ namespace IOExpander {
         _wire->beginTransmission(_address);
         _wire->write(regAddr);
         if ((error = _wire->endTransmission(false)) != 0) {
-            __DBG_printf("_read16 reg_addr=%s error=%u", __regAddrName(regAddr), error);
+            __DBG_printf("_read16 ERR reg_addr=%s error=%u", __regAddrName(regAddr), error);
             return;
         }
         if (_wire->requestFrom(_address, 2U, true) != 2) {
-            __DBG_printf("_read16 request=2 reg_addr=%s available=%u", __regAddrName(regAddr), _wire->available());
+            __DBG_printf("_read16 ERR request=2 reg_addr=%s available=%u", __regAddrName(regAddr), _wire->available());
             return;
         }
         _wire->readBytes(reinterpret_cast<uint8_t *>(&regValue._value), 2);
-        __LDBG_printf("_read16 reg_addr=%s A=%02x B=%02x", __regAddrName(regAddr), regValue.A, regValue.B);
+        // __LDBG_printf("_read16 reg_addr=%s A=%02x B=%02x", __regAddrName(regAddr), regValue.A, regValue.B);
     }
 
     IOEXPANDER_INLINE void MCP23017::_write8(uint8_t regAddr, Register16 regValue, Port port)
@@ -331,9 +340,9 @@ namespace IOExpander {
         _wire->write(regAddr);
         _wire->write(source);
         if ((error = _wire->endTransmission(true)) != 0) {
-            __DBG_printf("_write8 reg_addr=%s value=%02x error=%u", __regAddrName(regAddr), source, error);
+            __DBG_printf("_write8 ERR reg_addr=%s value=%02x error=%u", __regAddrName(regAddr), source, error);
         }
-        __LDBG_printf("_write8 reg_addr=%s %c=%02x", __regAddrName(regAddr), port == Port::A ? 'A' : 'B', source);
+        // __LDBG_printf("_write8 reg_addr=%s %c=%02x", __regAddrName(regAddr), port == Port::A ? 'A' : 'B', source);
     }
 
     IOEXPANDER_INLINE void MCP23017::_read8(uint8_t regAddr, Register16 &regValue, Port port)
@@ -344,15 +353,15 @@ namespace IOExpander {
         regAddr = _portAddress(regAddr, port);
         _wire->write(regAddr);
         if ((error = _wire->endTransmission(false)) != 0) {
-            __DBG_printf("_read8 reg_addr=%s error=%u", __regAddrName(regAddr), error);
+            __DBG_printf("_read8 ERR reg_addr=%s error=%u", __regAddrName(regAddr), error);
             return;
         }
         if (_wire->requestFrom(_address, 1U, true) != 1) {
-            __DBG_printf("_read8 request=1 reg_addr=%s available=%u", __regAddrName(regAddr), _wire->available());
+            __DBG_printf("_read8 ERR request=1 reg_addr=%s available=%u", __regAddrName(regAddr), _wire->available());
             return;
         }
         target = _wire->read();
-        __LDBG_printf("_read8 reg_addr=%s %c=%02x", __regAddrName(regAddr), port == Port::A ? 'A' : 'B', target);
+        // __LDBG_printf("_read8 reg_addr=%s %c=%02x", __regAddrName(regAddr), port == Port::A ? 'A' : 'B', target);
     }
 
 }

@@ -4,14 +4,74 @@
 
 #include "IOExpander.h"
 
-#error work in progress
+#ifndef DEBUG_IOEXPANDER_MCP23017
+#define DEBUG_IOEXPANDER_MCP23017 1
+#endif
+
+#if DEBUG_IOEXPANDER_MCP23017
+#include "debug_helper_enable.h"
+#else
+#include "debug_helper_disable.h"
+#endif
 
 namespace IOExpander {
 
     #undef IOEXPANDER_INLINE
     #define IOEXPANDER_INLINE
 
-    IOEXPANDER_INLINE MCP23017::MCP23017(uint8_t address, TwoWire *wire) : Base(address, wire), _interruptsPending(0)
+    #if DEBUG_IOEXPANDER_MCP23017
+
+        IOEXPANDER_INLINE const __FlashStringHelper *__regAddrName(uint8_t addr) {
+            switch(addr) {
+                case MCP23017::IODIR:
+                    return F("IODIRA");
+                case MCP23017::IODIR + MCP23017::PORT_BANK_INCREMENT:
+                    return F("IODIRB");
+                case MCP23017::IPOL:
+                    return F("IPOLA");
+                case MCP23017::IPOL + MCP23017::PORT_BANK_INCREMENT:
+                    return F("IPOLB");
+                case MCP23017::GPINTEN:
+                    return F("GPINTENA");
+                case MCP23017::GPINTEN + MCP23017::PORT_BANK_INCREMENT:
+                    return F("GPINTENB");
+                case MCP23017::DEFVAL:
+                    return F("DEFVALA");
+                case MCP23017::DEFVAL + MCP23017::PORT_BANK_INCREMENT:
+                    return F("DEFVALB");
+                case MCP23017::INTCON:
+                    return F("INTCONA");
+                case MCP23017::INTCON + MCP23017::PORT_BANK_INCREMENT:
+                    return F("INTCONB");
+                case MCP23017::IOCON:
+                    return F("IOCONA");
+                case MCP23017::IOCON + MCP23017::PORT_BANK_INCREMENT:
+                    return F("IOCONB");
+                case MCP23017::GPPU:
+                    return F("GPPUA");
+                case MCP23017::GPPU + MCP23017::PORT_BANK_INCREMENT:
+                    return F("GPPUB");
+                case MCP23017::INTF:
+                    return F("INTFA");
+                case MCP23017::INTF + MCP23017::PORT_BANK_INCREMENT:
+                    return F("INTFB");
+                case MCP23017::INTCAP:
+                    return F("INTCAPA");
+                case MCP23017::INTCAP + MCP23017::PORT_BANK_INCREMENT:
+                    return F("INTCAPB");
+                case MCP23017::GPIO:
+                    return F("GPIOA");
+                case MCP23017::GPIO + MCP23017::PORT_BANK_INCREMENT:
+                    return F("GPIOB");
+            }
+            return F("N/A");
+        }
+
+    #endif
+
+    IOEXPANDER_INLINE MCP23017::MCP23017(uint8_t address, TwoWire *wire) :
+        Base(address, wire),
+        _interruptsPending(0)
     {
     }
 
@@ -24,19 +84,15 @@ namespace IOExpander {
     IOEXPANDER_INLINE void MCP23017::begin(uint8_t address)
     {
         // default values for all register except _IODIR are 0
-
         _address = address;
         // set all pins to input
         _IODIR = 0xffff;
-        __DBG_printf("IODIR %02x", _IODIR._value);
         _write16(IODIR, _IODIR);
         // disable pullups
         _GPPU = 0;
-        __DBG_printf("GPPU %02x", _GPPU._value);
         _write16(GPPU, _GPPU);
         // disable interrupts
         _GPINTEN = 0;
-        __DBG_printf("_GPINTEN %02x", _GPINTEN._value);
         _write16(GPINTEN, _GPINTEN);
         // set gpio values to 0
         _GPIO = 0;
@@ -54,15 +110,18 @@ namespace IOExpander {
 
     IOEXPANDER_INLINE void MCP23017::digitalWrite(uint8_t pin, uint8_t value)
     {
-        __DBG_printf("digitalWrite %u=%u", pin, value);
-        _setBits(_GPIO, _pin2Port(pin), _BV(pin), value);
-        _write8(GPIO, _GPIO, _pin2Port(pin));
+        uint8_t mask;
+        auto port = _pin2PortAndMask(pin, mask);
+        _setBits(_GPIO, port, mask, value);
+        _write8(GPIO, _GPIO, port);
     }
 
     IOEXPANDER_INLINE uint8_t MCP23017::digitalRead(uint8_t pin)
     {
-        _read8(GPIO, _GPIO, _pin2Port(pin));
-        return _getBits(_GPIO, _pin2Port(pin), _BV(pin)) ? 1 : 0;
+        uint8_t mask;
+        Port port = _pin2PortAndMask(pin, mask);
+        _read8(GPIO, _GPIO, port);
+        return _getBits(_GPIO, port, mask) ? 1 : 0;
     }
 
     IOEXPANDER_INLINE uint8_t MCP23017::readPortA()
@@ -103,13 +162,13 @@ namespace IOExpander {
 
     IOEXPANDER_INLINE void MCP23017::pinMode(uint8_t pin, uint8_t mode)
     {
-        __DBG_printf("pinMode %u=%u", pin, mode);
-        _setBits(_IODIR, _pin2Port(pin), _BV(pin), mode == OUTPUT);
-        _setBits(_GPPU, _pin2Port(pin), _BV(pin), mode == INPUT_PULLUP);
-        __DBG_printf("IODIR %02x", _IODIR._value);
-        _write8(IODIR, _IODIR, _pin2Port(pin));
-        __DBG_printf("GPPU %02x", _GPPU._value);
-        _write8(GPPU, _GPPU, _pin2Port(pin));
+        __LDBG_printf("pinMode %u=%u", pin, mode);
+        uint8_t mask;
+        auto port = _pin2PortAndMask(pin, mask);
+        _setBits(_IODIR, port, mask, mode != OUTPUT);
+        _setBits(_GPPU, port, mask, mode == INPUT_PULLUP);
+        _write8(IODIR, _IODIR, port);
+        _write8(GPPU, _GPPU, port);
     }
 
     IOEXPANDER_INLINE void MCP23017::enableInterrupts(uint16_t pinMask, const InterruptCallback &callback, uint8_t mode)
@@ -189,133 +248,111 @@ namespace IOExpander {
         ets_intr_unlock();
     }
 
-    IOEXPANDER_INLINE uint8_t MCP23017::_portAddress(uint8_t regAddr, Port port)
+    IOEXPANDER_INLINE uint8_t MCP23017::_portAddress(uint8_t regAddr, Port port) const
     {
         if (port == Port::A) {
             return regAddr;
         }
-        if (port == Port::B) {
+        else {
             return regAddr + PORT_BANK_INCREMENT;
         }
-        return 0xff;
     }
 
     IOEXPANDER_INLINE uint8_t MCP23017::_getBits(Register16 regValue, Port port, uint8_t mask)
     {
-        auto source = regValue.BA;
-        if (port == Port::A) {
-            source++;
-        }
-        return *source & mask;
+        return regValue[port] & mask;
     }
 
     IOEXPANDER_INLINE void MCP23017::_setBits(Register16 &regValue, Port port, uint8_t mask, bool value)
     {
-        auto target = regValue.BA;
-        if (port == Port::A) {
-            target++;
-        }
+        auto &target = regValue[port];
         if (value) {
-            *target |= mask;
+            target |= mask;
         }
         else {
-            *target &= ~mask;
+            target &= ~mask;
         }
     }
 
-    IOEXPANDER_INLINE MCP23017::Port MCP23017::_pin2Port(uint8_t pin)
+    IOEXPANDER_INLINE MCP23017::Port MCP23017::_pin2Port(uint8_t pin) const
     {
         return (pin < 8) ? Port::A : Port::B;
     }
 
-    IOEXPANDER_INLINE void MCP23017::_write16(uint8_t regAddr, Register16 &regValue)
+    IOEXPANDER_INLINE MCP23017::Port MCP23017::_pin2PortAndMask(uint8_t pin, uint8_t &mask) const
     {
-        if constexpr (PORT_BANK_INCREMENT == 1) {
-            //TODO change to bulk write
-            _write8(regAddr, regValue, Port::A);
-            _write8(regAddr, regValue, Port::B);
+        if (pin < 8) {
+            mask = _BV(pin);
+            return Port::A;
         }
         else {
-            _write8(regAddr, regValue, Port::A);
-            _write8(regAddr, regValue, Port::B);
+            mask = _BV(pin - 8);
+            return Port::B;
         }
+    }
+
+    IOEXPANDER_INLINE void MCP23017::_write16(uint8_t regAddr, Register16 &regValue)
+    {
+        uint8_t error;
+        regAddr = _portAddress<Port::A>(regAddr);
+        _wire->beginTransmission(_address);
+        _wire->write(regAddr);
+        _wire->write(reinterpret_cast<uint8_t *>(&regValue._value), 2);
+        if ((error = _wire->endTransmission(true)) != 0) {
+            __DBG_printf("_write16 regAddr %s %04x error=%u", __regAddrName(regAddr), regValue._value, error);
+        }
+        __LDBG_printf("_write16 %s A%02x B%02x", __regAddrName(regAddr), regValue.A, regValue.B);
     }
 
     IOEXPANDER_INLINE void MCP23017::_read16(uint8_t regAddr, Register16 &regValue)
     {
-        if constexpr (PORT_BANK_INCREMENT == 1) {
-            //TODO change to bulk write
-            _read8(regAddr, regValue, Port::A);
-            _read8(regAddr, regValue, Port::B);
+        uint8_t error;
+        regAddr = _portAddress<Port::A>(regAddr);
+        _wire->beginTransmission(_address);
+        _wire->write(regAddr);
+        if ((error = _wire->endTransmission(false)) != 0) {
+            __DBG_printf("_read16 reg_addr=%s error=%u", __regAddrName(regAddr), error);
+            return;
         }
-        else {
-            _read8(regAddr, regValue, Port::A);
-            _read8(regAddr, regValue, Port::B);
+        if (_wire->requestFrom(_address, 2U, true) != 2) {
+            __DBG_printf("_read16 request=2 reg_addr=%s available=%u", __regAddrName(regAddr), _wire->available());
+            return;
         }
+        _wire->readBytes(reinterpret_cast<uint8_t *>(&regValue._value), 2);
+        __LDBG_printf("_read16 reg_addr=%s A=%02x B=%02x", __regAddrName(regAddr), regValue.A, regValue.B);
     }
 
     IOEXPANDER_INLINE void MCP23017::_write8(uint8_t regAddr, Register16 regValue, Port port)
     {
-        auto source = regValue.BA;
-        if (port == Port::A) {
-            source++;
-        }
-        __DBG_printf("_write8 %02x: %02x=%02x OP=%02x val16=%04x", _address, _portAddress(regAddr, port), *source, _OPW(), regValue._value);
-
         uint8_t error;
+        auto source = regValue[port];
+        regAddr = _portAddress(regAddr, port);
         _wire->beginTransmission(_address);
-        _wire->write(_OPW());
-        _wire->write(_portAddress(regAddr, port));
-        // if ((error = _wire->endTransmission(false)) != 0) {
-        //     __DBG_printf("WRITE ERROR reg_addr=%02x(%u) write cmd error=%u available=%u", regAddr, port, error, _wire->available());
-        //     return;
-        // }
-        // _wire->beginTransmission(_address);
-        _wire->write(*source);
+        _wire->write(regAddr);
+        _wire->write(source);
         if ((error = _wire->endTransmission(true)) != 0) {
-            __DBG_printf("_write8 regaddr=%02x(%u) cmd=%02x", _portAddress(regAddr, port), port, _OPW());
+            __DBG_printf("_write8 reg_addr=%s value=%02x error=%u", __regAddrName(regAddr), source, error);
         }
+        __LDBG_printf("_write8 reg_addr=%s %c=%02x", __regAddrName(regAddr), port == Port::A ? 'A' : 'B', source);
     }
 
     IOEXPANDER_INLINE void MCP23017::_read8(uint8_t regAddr, Register16 &regValue, Port port)
     {
-        auto target = regValue.BA;
-        if (port == Port::A) {
-            target++;
-        }
-
-        uint32_t start = micros();
-        uint32_t dur;
-
         uint8_t error;
+        auto &target = regValue[port];
         _wire->beginTransmission(_address);
-        _wire->write(_OPW());
-        _wire->write(_portAddress(regAddr, port));
+        regAddr = _portAddress(regAddr, port);
+        _wire->write(regAddr);
         if ((error = _wire->endTransmission(false)) != 0) {
-            __DBG_printf("_read8 regaddr=%02x(%u) cmd=%02x", _portAddress(regAddr, port), port, _OPW());
-            return;
-        }
-        _wire->write(_OPR());
-        if (_wire->endTransmission(false) != 0) {
-            __DBG_printf("_read8 regaddr=%02x(%u) cmd=%02x", _portAddress(regAddr, port), port, _OPR());
+            __DBG_printf("_read8 reg_addr=%s error=%u", __regAddrName(regAddr), error);
             return;
         }
         if (_wire->requestFrom(_address, 1U, true) != 1) {
-            __DBG_printf("_read8 regaddr=%02x(%u) available=%u", _portAddress(regAddr, port), port, _wire->available());
+            __DBG_printf("_read8 request=1 reg_addr=%s available=%u", __regAddrName(regAddr), _wire->available());
             return;
         }
-
-        *target = _wire->read();
-        dur = micros() - start;
-        __DBG_printf("read8 regaddr=%02x(%u) time=%u value=%02x val16=%04x", _portAddress(regAddr, port), port, dur, *target, regValue._value);
-    }
-
-    IOEXPANDER_INLINE uint8_t MCP23017::_OPR() {
-        return (_address << 1) | 1;
-    }
-
-    IOEXPANDER_INLINE uint8_t MCP23017::_OPW() {
-        return (_address << 1);
+        target = _wire->read();
+        __LDBG_printf("_read8 reg_addr=%s %c=%02x", __regAddrName(regAddr), port == Port::A ? 'A' : 'B', target);
     }
 
 }

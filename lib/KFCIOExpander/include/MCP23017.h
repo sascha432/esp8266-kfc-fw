@@ -14,7 +14,7 @@ namespace IOExpander {
         // static constexpr uint8_t PORT_BANK_MULTIPLIER = 1;
         // static constexpr uint8_t PORT_BANK_INCREMENT = 0x10;
 
-        // bank0, addresses are sequential
+        // bank0 default, addresses are sequential
         static constexpr uint8_t PORT_BANK_MULTIPLIER = 2;
         static constexpr uint8_t PORT_BANK_INCREMENT = 1;
 
@@ -26,7 +26,7 @@ namespace IOExpander {
         static constexpr uint8_t IOCON = 0x05 * PORT_BANK_MULTIPLIER;
         static constexpr uint8_t GPPU = 0x06 * PORT_BANK_MULTIPLIER;
         static constexpr uint8_t INTF = 0x07 * PORT_BANK_MULTIPLIER;
-        static constexpr uint8_t INTCAP = 0x07 * PORT_BANK_MULTIPLIER;
+        static constexpr uint8_t INTCAP = 0x08 * PORT_BANK_MULTIPLIER;
         static constexpr uint8_t GPIO = 0x09 * PORT_BANK_MULTIPLIER;
 
         // interrupt polarity, 1=active high, 0=active-low
@@ -44,14 +44,16 @@ namespace IOExpander {
         struct Register16 {
             union {
                 uint16_t _value;
-                struct {
+                struct __attribute__((__packed__)) {
                     uint8_t A;
                     uint8_t B;
                 };
-                uint8_t BA[2];
             };
             Register16() : _value(0) {}
             Register16(uint16_t value) : _value(value) {}
+            uint8_t &operator [](Port port) {
+                return port == Port::A ? A : B;
+            }
         };
 
     public:
@@ -97,9 +99,16 @@ namespace IOExpander {
 
     protected:
         // get port for pin #
-        Port _pin2Port(uint8_t pin);
+        Port _pin2Port(uint8_t pin) const;
+        // get port for pin # and mask
+        Port _pin2PortAndMask(uint8_t pin, uint8_t &mask) const;
         // get register adddress for port
-        uint8_t _portAddress(uint8_t regAddr, Port port);
+        uint8_t _portAddress(uint8_t regAddr, Port port) const;
+        // get register adddress for port
+        template<Port _Port>
+        constexpr uint8_t _portAddress(uint8_t regAddr) const {
+            return (_Port == Port::A) ? regAddr : regAddr + PORT_BANK_INCREMENT;
+        }
         // set or remove one or more bits defined in mask
         void _setBits(Register16 &regValue, Port port, uint8_t mask, bool value);
         // get bits defined in mask
@@ -112,11 +121,6 @@ namespace IOExpander {
         void _write8(uint8_t regAddr, Register16 regValue, Port port);
         // read 8bit part of a 16 bit register
         void _read8(uint8_t regAddr, Register16 &regValue, Port port);
-
-        // read opcode
-        uint8_t _OPR();
-        // write opcode
-        uint8_t _OPW();
 
         uint32_t _interruptsPending;
         InterruptCallback _callback;

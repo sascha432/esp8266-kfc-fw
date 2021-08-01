@@ -60,13 +60,21 @@ namespace IOExpander {
         return *_wire;
     }
 
-    #define LT <
-    #define GT >
+    #ifdef IOEXPANDER_DEVICE_CONFIG
 
-    extern ConfigIterator<IOEXPANDER_DEVICE_CONFIG> config;
+        #define LT <
+        #define GT >
 
-    #undef LT
-    #undef GT
+        extern ConfigIterator<IOEXPANDER_DEVICE_CONFIG> config;
+
+        #undef LT
+        #undef GT
+
+    #else
+
+        extern ConfigEndIterator config;
+
+    #endif
 
 }
 

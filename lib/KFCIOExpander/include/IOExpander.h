@@ -7,18 +7,11 @@
 #include <Arduino_compat.h>
 #include <FunctionalInterrupt.h>
 #include <wire.h>
-#include <PrintHtmlEntities.h>
 #include <vector>
 #include <Schedule.h>
 
-#ifndef DEBUG_IOEXPANDER
-#define DEBUG_IOEXPANDER 1
-#endif
-
-#if DEBUG_IOEXPANDER
-#include "debug_helper_enable.h"
-#else
-#include "debug_helper_disable.h"
+#if HAVE_KFC_FIRMWARE_VERSION
+#include <PrintHtmlEntities.h>
 #endif
 
 
@@ -31,6 +24,16 @@
 #endif
 
 #if HAVE_IOEXPANDER
+
+#ifndef DEBUG_IOEXPANDER
+#define DEBUG_IOEXPANDER 1
+#endif
+
+#if DEBUG_IOEXPANDER
+#include "debug_helper_enable.h"
+#else
+#include "debug_helper_disable.h"
+#endif
 
 // example
 //
@@ -50,10 +53,6 @@
 //
 // "-DIOEXPANDER_DEVICE_CONFIG=Config LT DeviceConfig LT MCP23017,DeviceTypeMCP23017,0x20,100 GT GT"
 //
-
-#if !defined(IOEXPANDER_DEVICE_CONFIG)
-#   error IOEXPANDER_DEVICE_CONFIG not defined
-#endif
 
 #ifndef __CONSTEXPR17
 #   if __GNUC__ >= 10
@@ -185,6 +184,7 @@ namespace IOExpander {
 
     struct ConfigEndIterator {
         void _beginRecursive(TwoWire &wire);
+        template<bool _HtmlOutput>
         void _printStatusRecursive(Print &output);
         constexpr size_t _sizeRecursive() const;
         void _pinModeRecursive(uint8_t pin, uint8_t mode);
@@ -231,59 +231,30 @@ namespace IOExpander {
         DeviceClassType _device;
         NextConfigIterator _next;
 
-        void begin(TwoWire &wire) {
-            _beginRecursive(wire);
-        }
+        void begin(TwoWire &wire);
+        void begin();
 
-        void begin() {
-            _beginRecursive(Wire);
-        }
+        // print status information about all devices
+        template<bool _HtmlOutput = true>
+        void printStatus(Print &output);
 
-        void printStatus(Print &output) {
-            _printStatusRecursive(output);
-        }
+        // print pin state of all devices
+        void dumpPins(Print &output);
 
-        constexpr size_t size() const {
-            return _sizeRecursive();
-        }
-
-        void pinMode(uint8_t pin, uint8_t mode) {
-            _pinModeRecursive(pin, mode);
-        }
-
-        void IRAM_ATTR digitalWrite(uint8_t pin, uint8_t val) {
-            _pinModeRecursive(pin, val);
-        }
-
-        int IRAM_ATTR digitalRead(uint8_t pin) {
-            return _digitalReadRecursive(pin);
-        }
-
-        int analogRead(uint8_t pin) {
-            return _analogReadRecursive(pin);
-        }
-
-        void analogReference(uint8_t mode)  {
-            _analogReferenceRecursive(mode);
-        }
-
-        void analogWrite(uint8_t pin, int val) {
-            _analogWriteRecursive(pin, val);
-        }
-
-        void analogWriteFreq(uint32_t freq) {
-            _analogWriteFreqRecursive(freq);
-        }
+        constexpr size_t size() const;
+        void pinMode(uint8_t pin, uint8_t mode);
+        void IRAM_ATTR digitalWrite(uint8_t pin, uint8_t val);
+        int IRAM_ATTR digitalRead(uint8_t pin);
+        int analogRead(uint8_t pin);
+        void analogReference(uint8_t mode);
+        void analogWrite(uint8_t pin, int val);
+        void analogWriteFreq(uint32_t freq);
 
         // return device pointer for given pin
-        void *getDevicePointer(uint8_t pin) {
-            return _getDevicePointerRecursive(pin);
-        }
+        void *getDevicePointer(uint8_t pin);
 
         // return true if any device has interrupts enabled
-        bool interruptsEnabled() {
-            return _interruptsEnabledRecursive();
-        }
+        bool interruptsEnabled();
 
         // interrupts can only be enabled per device
         // the hardware interrupt must be triggered from a single GPIO pin
@@ -292,181 +263,32 @@ namespace IOExpander {
         //
         // gpioPin is the GPIO pin for the interrupt
         // triggerMode is the interrupt mode for the GPIO pin
-        void attachInterrupt(uint8_t gpioPin, void *device, uint16_t pinMask, const InterruptCallback &callback, uint8_t mode, TriggerMode triggerMode = TriggerMode::DEVICE_DEFAULT) {
-            __LDBG_printf("attachInterrupt gpio=%u device=%p mode=%u trigger_mode=%u", gpioPin, device, mode, triggerMode);
-            _attachInterruptRecursive(device, gpioPin, pinMask, callback, mode, triggerMode);
-        }
+        void attachInterrupt(uint8_t gpioPin, void *device, uint16_t pinMask, const InterruptCallback &callback, uint8_t mode, TriggerMode triggerMode = TriggerMode::DEVICE_DEFAULT);
 
         // remove interrupt handler
-        void detachInterrupt(uint8_t gpioPin, void *device, uint16_t pinMask) {
-            __LDBG_printf("detachInterrupt gpio=%u device=%p", gpioPin, device);
-            _detachInterruptRecursive(device, gpioPin, pinMask);
-        }
+        void detachInterrupt(uint8_t gpioPin, void *device, uint16_t pinMask);
 
-        void dumpPins(Print &output)
-        {
-            _dumpPinsRecursive(output);
-        }
-
-        inline  __attribute__((__always_inline__))
-        void _beginRecursive(TwoWire &wire) {
-            _device.begin(DeviceConfigType::kI2CAddress, &wire);
-            _next._beginRecursive(wire);
-        }
-
-        inline  __attribute__((__always_inline__))
-        void _dumpPinsRecursive(Print &output)
-        {
-            output.printf_P(PSTR("+%s@0x%02x: "), _device.getDeviceName(), _device.getAddress());
-            for(uint8_t i = DeviceConfigType::kBeginPin; i < DeviceConfigType::kEndPin; i++) {
-                Serial.printf_P(PSTR("%u(%i)=%u "), i, i - DeviceConfigType::kBeginPin,  _device.analogRead(i));
-            }
-            Serial.print('\n');
-            _next._dumpPinsRecursive(output);
-        }
-
-        inline  __attribute__((__always_inline__))
-        void _printStatusRecursive(Print &output) {
-            output.printf_P(PSTR(HTML_S(div) "%s @ I2C address 0x%02x\n"), _device.getDeviceName(), _device.getAddress());
-            if __CONSTEXPR17 (DeviceType::kHasIsConnected) {
-                if (!_device.isConnected()) {
-                    output.print(F(HTML_S(br) "ERROR - Device not found!\n"));
-                }
-            }
-            output.print(F(HTML_E(div)));
-            _next._printStatusRecursive(output);
-        }
-
-        constexpr size_t _sizeRecursive() const {
-            return _next._sizeRecursive() + 1;
-        }
-
-        inline  __attribute__((__always_inline__))
-        void _pinModeRecursive(uint8_t pin, uint8_t mode) {
-            if (DeviceConfigType::pinMatch(pin)) {
-                _device.pinMode(pin, mode);
-                return;
-            }
-            _next._pinModeRecursive(pin, mode);
-        }
-
-        inline  __attribute__((__always_inline__))
-        void _digitalWriteRecursive(uint8_t pin, uint8_t val) {
-            if (DeviceConfigType::pinMatch(pin)) {
-                _device.digitalWrite(pin, val);
-                return;
-            }
-            _next._digitalWriteRecursive(pin, val);
-        }
-
-        inline  __attribute__((__always_inline__))
-        int _digitalReadRecursive(uint8_t pin) {
-            if (DeviceConfigType::pinMatch(pin)) {
-                return _device.digitalRead(pin);
-            }
-            return _next._digitalReadRecursive(pin);
-        }
-
-        inline  __attribute__((__always_inline__))
-        int _analogReadRecursive(uint8_t pin) {
-            if (DeviceConfigType::pinMatch(pin)) {
-                return _device.analogRead(pin);
-            }
-            return _next._analogReadRecursive(pin);
-        }
-
-        inline  __attribute__((__always_inline__))
-        void _analogReferenceRecursive(uint8_t mode) {
-            _device.analogReference(mode);
-            return _next._analogReferenceRecursive(mode);
-        }
-
-        inline  __attribute__((__always_inline__))
-        void _analogWriteRecursive(uint8_t pin, int val) {
-            if (DeviceConfigType::pinMatch(pin)) {
-                _device.analogWrite(pin, val);
-                return;
-            }
-            _next._analogWriteRecursive(pin, val);
-        }
-
-        inline  __attribute__((__always_inline__))
-        void _analogWriteFreqRecursive(uint32_t freq) {
-            _device.analogWriteFreq(freq);
-            _next._analogWriteFreqRecursive(freq);
-        }
-
-        inline  __attribute__((__always_inline__))
-        void *_getDevicePointerRecursive(uint8_t pin) {
-            if (DeviceConfigType::pinMatch(pin)) {
-                return reinterpret_cast<void *>(&_device);
-            }
-            _next._getDevicePointerRecursive(pin);
-        }
-
-        inline  __attribute__((__always_inline__))
-        bool _interruptsEnabledRecursive() {
-            if (_device.interruptsEnabled()) {
-                return true;
-            }
-            _next._interruptsEnabledRecursive();
-        }
-
-        inline  __attribute__((__always_inline__))
-        void _attachInterruptRecursive(void *device, uint8_t gpioPin, uint16_t pinMask, const InterruptCallback &callback, uint8_t mode, TriggerMode triggerMode) {
-            if (device == reinterpret_cast<void *>(&_device)) {
-                bool enabled = _device.interruptsEnabled();
-                _device.enableInterrupts(pinMask, callback, mode, triggerMode);
-                // attach the interrupt handler if interrupts are not enabled for this GPIO pin
-                if (enabled == false && _device.interruptsEnabled()) {
-                    // set pinMode if device has a preset
-                    if __CONSTEXPR17 (DeviceType::kIntPinMode) {
-                        ::pinMode(gpioPin, DeviceType::kIntPinMode);
-                    }
-                    static_assert(DeviceType::kIntTriggerMode != TriggerMode::NONE, "interrupts not available");
-                    __LDBG_printf("attachInterruptArg device=%s gpio=%u mode=%u", _device.getDeviceName(), gpioPin, triggerMode, _triggerMode2IntMode(triggerMode));
-                    ::attachInterruptArg(gpioPin, __interruptHandler, device, _triggerMode2IntMode(triggerMode));
-                }
-                return;
-            }
-            _next._attachInterruptRecursive(device, gpioPin, pinMask, callback, mode, triggerMode);
-        }
-
-        inline  __attribute__((__always_inline__))
-        void _detachInterruptRecursive(void *device, uint8_t gpioPin, uint16_t pinMask) {
-            if (device == reinterpret_cast<void *>(&_device)) {
-                if (_device.interruptsEnabled() == false) {
-                    // remove interrupt handler
-                    __LDBG_printf("detachInterrupt device=%s gpio=%u", _device.getDeviceName(), gpioPin);
-                    ::detachInterrupt(gpioPin);
-                }
-                _device.disableInterrupts();
-                return;
-            }
-            _next._detachInterruptRecursive(device);
-        }
-
-        inline  __attribute__((__always_inline__))
-        void _setInterruptFlagRecursive(void *device) {
-            if (device == reinterpret_cast<void *>(&_device)) {
-                // setInterrutFlag() returns false if any interrupts are pending
-                // the function will not be installed again until the flag has been cleared
-                if (_device.setInterruptFlag() == false) {
-                    // run function outside ISR
-                    schedule_function([this]() {
-                        _device.interruptHandler();
-                    });
-                }
-                return;
-            }
-            _next._setInterruptFlagRecursive(device);
-        }
+        // recursive methods
+        void _beginRecursive(TwoWire &wire);
+        void _dumpPinsRecursive(Print &output);
+        template<bool _HtmlOutput>
+        void _printStatusRecursive(Print &output);
+        constexpr size_t _sizeRecursive() const;
+        void _pinModeRecursive(uint8_t pin, uint8_t mode);
+        void _digitalWriteRecursive(uint8_t pin, uint8_t val);
+        int _digitalReadRecursive(uint8_t pin);
+        int _analogReadRecursive(uint8_t pin);
+        void _analogReferenceRecursive(uint8_t mode);
+        void _analogWriteRecursive(uint8_t pin, int val);
+        void _analogWriteFreqRecursive(uint32_t freq);
+        void *_getDevicePointerRecursive(uint8_t pin);
+        bool _interruptsEnabledRecursive();
+        void _attachInterruptRecursive(void *device, uint8_t gpioPin, uint16_t pinMask, const InterruptCallback &callback, uint8_t mode, TriggerMode triggerMode);
+        void _detachInterruptRecursive(void *device, uint8_t gpioPin, uint16_t pinMask);
+        void _setInterruptFlagRecursive(void *device);
 
     protected:
-        constexpr int _triggerMode2IntMode(TriggerMode mode) const {
-            return (mode == TriggerMode::DEVICE_DEFAULT) ? _triggerMode2IntMode(DeviceType::kIntTriggerMode) : (mode == TriggerMode::ACTIVE_HIGH) ? RISING : FALLING;
-        }
-
+        constexpr int _triggerMode2IntMode(TriggerMode mode) const;
     };
 
     template<typename _DeviceClassType, typename _DeviceType, uint8_t _Address, uint8_t _BeginPin, uint8_t _EndPin = 0>
@@ -591,6 +413,7 @@ namespace IOExpander {
 
 #include "IOExpander.hpp"
 #include "ConfigEndIterator.hpp"
+#include "ConfigIterator.hpp"
 #include "PCF8574.hpp"
 #include "TinyPwm.hpp"
 #include "MCP23017.hpp"

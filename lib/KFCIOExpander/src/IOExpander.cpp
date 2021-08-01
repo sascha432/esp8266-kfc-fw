@@ -9,13 +9,21 @@
 
 namespace IOExpander {
 
-    #define LT <
-    #define GT >
+    #if IOEXPANDER_DEVICE_CONFIG
 
-    ConfigIterator<IOEXPANDER_DEVICE_CONFIG> config;
+        #define LT <
+        #define GT >
 
-    #undef LT
-    #undef GT
+        ConfigIterator<IOEXPANDER_DEVICE_CONFIG> config;
+
+        #undef LT
+        #undef GT
+
+    #else
+
+    ConfigEndIterator config;
+
+    #endif
 
     void IRAM_ATTR __interruptHandler(void *arg)
     {
@@ -35,6 +43,20 @@ namespace IOExpander {
             delay(delayMillis);
         }
     }
+
+    #if !HAVE_KFC_FIRMWARE_VERSION
+
+        void ___DBG_printf(const char *msg, ...)
+        {
+            va_list arg;
+            va_start(arg, msg);
+            char temp[8];
+            size_t len = vsnprintf(temp, sizeof(temp) - 1, msg, arg);
+            va_end(arg);
+            Serial.write(temp, len);
+        }
+
+    #endif
 
 }
 

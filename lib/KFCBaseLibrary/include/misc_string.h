@@ -18,6 +18,14 @@ class __FlashStringHelper;
 #define PGM_VOID_P const void *
 #endif
 
+#ifndef __CONSTEXPR17
+#   if __GNUC__ >= 10
+#       define __CONSTEXPR17 constexpr
+#   else
+#       define __CONSTEXPR17
+#   endif
+#endif
+
 #define STRINGLIST_SEPARATOR                    ','
 #define STRLS                                   ","
 #define STRINGLIST_ITEM_NOT_FOUND(result)       (result < 0)
@@ -36,17 +44,19 @@ class __FlashStringHelper;
 int stringlist_find_P_P(PGM_P list, PGM_P find, PGM_P separator);
 int stringlist_ifind_P_P(PGM_P list, PGM_P find, PGM_P separator);
 
-inline static int stringlist_find_P(const __FlashStringHelper *list, const char *find, const __FlashStringHelper *separator)
+inline __attribute__((__always_inline__))
+int stringlist_find_P(const __FlashStringHelper *list, const char *find, const __FlashStringHelper *separator)
 {
     return stringlist_find_P_P(reinterpret_cast<PGM_P>(list), find, reinterpret_cast<PGM_P>(separator));
 }
 
-inline static int stringlist_ifind_P(const __FlashStringHelper *list, const char *find, const __FlashStringHelper *separator)
+inline __attribute__((__always_inline__))
+int stringlist_ifind_P(const __FlashStringHelper *list, const char *find, const __FlashStringHelper *separator)
 {
     return stringlist_ifind_P_P(reinterpret_cast<PGM_P>(list), find, reinterpret_cast<PGM_P>(separator));
 }
 
-inline static int stringlist_find_P_P(PGM_P list, PGM_P find, char separator = STRINGLIST_SEPARATOR)
+inline int stringlist_find_P_P(PGM_P list, PGM_P find, char separator = STRINGLIST_SEPARATOR)
 {
     if (!separator) {
         return -1;
@@ -58,27 +68,31 @@ inline static int stringlist_find_P_P(PGM_P list, PGM_P find, char separator = S
     return stringlist_find_P_P(list, find, separator_str);
 }
 
-inline static int stringlist_find_P(PGM_P list, PGM_P find, char separator = STRINGLIST_SEPARATOR)
+inline __attribute__((__always_inline__))
+int stringlist_find_P(PGM_P list, PGM_P find, char separator = STRINGLIST_SEPARATOR)
 {
     return stringlist_find_P_P(list, find, separator);
 }
 
-inline static int stringlist_find_P(const __FlashStringHelper *list, const char *find, char separator = STRINGLIST_SEPARATOR)
+inline __attribute__((__always_inline__))
+int stringlist_find_P(const __FlashStringHelper *list, const char *find, char separator = STRINGLIST_SEPARATOR)
 {
     return stringlist_find_P_P(reinterpret_cast<PGM_P>(list), find, separator);
 }
 
-inline static int stringlist_find_P_P(const __FlashStringHelper *list, const char *find, char separator = STRINGLIST_SEPARATOR)
+inline __attribute__((__always_inline__))
+int stringlist_find_P_P(const __FlashStringHelper *list, const char *find, char separator = STRINGLIST_SEPARATOR)
 {
     return stringlist_find_P_P(reinterpret_cast<PGM_P>(list), find, separator);
 }
 
-inline static int stringlist_find_P_P(const __FlashStringHelper *list, const __FlashStringHelper *find, char separator = STRINGLIST_SEPARATOR)
+inline __attribute__((__always_inline__))
+int stringlist_find_P_P(const __FlashStringHelper *list, const __FlashStringHelper *find, char separator = STRINGLIST_SEPARATOR)
 {
     return stringlist_find_P_P(reinterpret_cast<PGM_P>(list), reinterpret_cast<PGM_P>(find), separator);
 }
 
-inline static int stringlist_ifind_P_P(PGM_P list, PGM_P find, char separator = STRINGLIST_SEPARATOR)
+inline int stringlist_ifind_P_P(PGM_P list, PGM_P find, char separator = STRINGLIST_SEPARATOR)
 {
     if (!separator) {
         return -1;
@@ -90,22 +104,26 @@ inline static int stringlist_ifind_P_P(PGM_P list, PGM_P find, char separator = 
     return stringlist_ifind_P_P(list, find, separator_str);
 }
 
-inline static int stringlist_ifind_P(PGM_P list, PGM_P find, char separator = STRINGLIST_SEPARATOR)
+inline __attribute__((__always_inline__))
+int stringlist_ifind_P(PGM_P list, PGM_P find, char separator = STRINGLIST_SEPARATOR)
 {
     return stringlist_ifind_P_P(list, find, separator);
 }
 
-inline static int stringlist_ifind_P(const __FlashStringHelper *list, const char *find, char separator = STRINGLIST_SEPARATOR)
+inline __attribute__((__always_inline__))
+int stringlist_ifind_P(const __FlashStringHelper *list, const char *find, char separator = STRINGLIST_SEPARATOR)
 {
     return stringlist_ifind_P_P(reinterpret_cast<PGM_P>(list), find, separator);
 }
 
-inline static int stringlist_ifind_P_P(const __FlashStringHelper *list, const char *find, char separator = STRINGLIST_SEPARATOR)
+inline __attribute__((__always_inline__))
+int stringlist_ifind_P_P(const __FlashStringHelper *list, const char *find, char separator = STRINGLIST_SEPARATOR)
 {
     return stringlist_ifind_P_P(reinterpret_cast<PGM_P>(list), find, separator);
 }
 
-inline static int stringlist_ifind_P_P(const __FlashStringHelper *list, const __FlashStringHelper *find, char separator = STRINGLIST_SEPARATOR)
+inline __attribute__((__always_inline__))
+int stringlist_ifind_P_P(const __FlashStringHelper *list, const __FlashStringHelper *find, char separator = STRINGLIST_SEPARATOR)
 {
     return stringlist_ifind_P_P(reinterpret_cast<PGM_P>(list), reinterpret_cast<PGM_P>(find), separator);
 }
@@ -139,7 +157,7 @@ bool str_endswith_P(PGM_P str, char ch);
 
 #else
 
-static inline bool str_endswith_P(PGM_P str, char ch) {
+inline bool str_endswith_P(PGM_P str, char ch) {
     return str_endswith(str, ch);
 }
 
@@ -149,18 +167,23 @@ int strcmp_end(char *str1, size_t len1, const char *str2, size_t len2);
 int strcmp_end_P(const char *str1, size_t len1, PGM_P str2, size_t len2);
 int strcmp_end_P_P(PGM_P str1, size_t len1, PGM_P str2, size_t len2);
 
-inline static int strcmp_end(const char *str1, const char *str2) {
+inline __attribute__((__always_inline__))
+int strcmp_end(const char *str1, const char *str2) {
     return strcmp_end(const_cast<char *>(str1), strlen(str1), str2, strlen(str2));
 }
-inline static int strcmp_end_P(const char *str1, PGM_P str2) {
+
+inline __attribute__((__always_inline__))
+int strcmp_end_P(const char *str1, PGM_P str2) {
     return strcmp_end_P(str1, strlen(str1), str2, strlen_P(str2));
 }
 
-inline static int strcmp_end_P_P(PGM_P  str1, PGM_P str2) {
+inline __attribute__((__always_inline__))
+int strcmp_end_P_P(PGM_P  str1, PGM_P str2) {
     return strcmp_end_P_P(str1, strlen_P(str1), str2, strlen_P(str2));
 }
 
-inline static int strcmp_end_P_P(PGM_P str1, size_t len1, PGM_P str2) {
+inline __attribute__((__always_inline__))
+int strcmp_end_P_P(PGM_P str1, size_t len1, PGM_P str2) {
     return strcmp_end_P_P(str1, len1, str2, strlen_P(str2));
 }
 
@@ -202,4 +225,51 @@ size_t printTrimmedDouble(Print *output, double value, int digits = 6);
 template<typename T>
 String enumToString(T value) {
     return String(static_cast<typename std::underlying_type<T>::type>(value));
+}
+
+// convert integer to binary string
+// add a space every _Space bits
+// use 0xff to disable extra spaces
+// set _Reverse to true to display the lowest bit first
+template<typename _Ta, uint8_t _Space = 8, bool _Reverse = false>
+String decbin(_Ta value) {
+    constexpr uint8_t addSpaces = (sizeof(_Ta) << 3) < _Space ? 0xff : _Space;
+    constexpr uint8_t extraSpace = ((sizeof(_Ta) << 3) / addSpaces) + 1;
+    constexpr _Ta mask = _Reverse ? 1 : 1 << ((sizeof(_Ta) << 3) - 1);
+    char buf[(sizeof(_Ta) << 3) + extraSpace];
+    auto endPtr = &buf[(sizeof(_Ta) << 3)];
+    auto ptr = buf;
+    uint8_t space;
+    if __CONSTEXPR17 (addSpaces != 0xff) {
+        space = addSpaces;
+    }
+    for(;;) {
+        *ptr++ = (value & mask) ? '1' : '0';
+        if (ptr >= endPtr) {
+            break;
+        }
+        if __CONSTEXPR17 (_Reverse) {
+            value >>= 1;
+        }
+        else {
+            value <<= 1;
+        }
+        if __CONSTEXPR17 (addSpaces != 0xff) {
+            if (--space == 0) {
+                space = addSpaces;
+                *ptr++ = ' ';
+                endPtr++;
+            }
+        }
+    }
+    *ptr = 0;
+    return buf;
+}
+
+// convert integer to binary string
+// decbin with _Reverse = true
+template<typename _Ta, uint8_t _Space = 8>
+inline __attribute__((__always_inline__))
+String decrbin(_Ta value) {
+    return decbin<_Ta, _Space, true>(value);
 }

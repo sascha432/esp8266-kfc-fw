@@ -5,7 +5,7 @@
 #include "IOExpander.h"
 
 #ifndef DEBUG_IOEXPANDER_MCP23017
-#define DEBUG_IOEXPANDER_MCP23017 1
+#define DEBUG_IOEXPANDER_MCP23017 DEBUG_IOEXPANDER
 #endif
 
 #if DEBUG_IOEXPANDER_MCP23017
@@ -16,58 +16,51 @@
 
 namespace IOExpander {
 
-    #undef IOEXPANDER_INLINE
-    #define IOEXPANDER_INLINE
-
-    #if DEBUG_IOEXPANDER_MCP23017
-
-        IOEXPANDER_INLINE const __FlashStringHelper *__regAddrName(uint8_t addr) {
-            switch(addr) {
-                case MCP23017::IODIR:
-                    return F("IODIRA");
-                case MCP23017::IODIR + MCP23017::PORT_BANK_INCREMENT:
-                    return F("IODIRB");
-                case MCP23017::IPOL:
-                    return F("IPOLA");
-                case MCP23017::IPOL + MCP23017::PORT_BANK_INCREMENT:
-                    return F("IPOLB");
-                case MCP23017::GPINTEN:
-                    return F("GPINTENA");
-                case MCP23017::GPINTEN + MCP23017::PORT_BANK_INCREMENT:
-                    return F("GPINTENB");
-                case MCP23017::DEFVAL:
-                    return F("DEFVALA");
-                case MCP23017::DEFVAL + MCP23017::PORT_BANK_INCREMENT:
-                    return F("DEFVALB");
-                case MCP23017::INTCON:
-                    return F("INTCONA");
-                case MCP23017::INTCON + MCP23017::PORT_BANK_INCREMENT:
-                    return F("INTCONB");
-                case MCP23017::IOCON:
-                    return F("IOCONA");
-                case MCP23017::IOCON + MCP23017::PORT_BANK_INCREMENT:
-                    return F("IOCONB");
-                case MCP23017::GPPU:
-                    return F("GPPUA");
-                case MCP23017::GPPU + MCP23017::PORT_BANK_INCREMENT:
-                    return F("GPPUB");
-                case MCP23017::INTF:
-                    return F("INTFA");
-                case MCP23017::INTF + MCP23017::PORT_BANK_INCREMENT:
-                    return F("INTFB");
-                case MCP23017::INTCAP:
-                    return F("INTCAPA");
-                case MCP23017::INTCAP + MCP23017::PORT_BANK_INCREMENT:
-                    return F("INTCAPB");
-                case MCP23017::GPIO:
-                    return F("GPIOA");
-                case MCP23017::GPIO + MCP23017::PORT_BANK_INCREMENT:
-                    return F("GPIOB");
-            }
-            return F("N/A");
+    IOEXPANDER_INLINE const __FlashStringHelper *__regAddrName(uint8_t addr) {
+        switch(addr) {
+            case MCP23017::IODIR:
+                return F("IODIRA");
+            case MCP23017::IODIR + MCP23017::PORT_BANK_INCREMENT:
+                return F("IODIRB");
+            case MCP23017::IPOL:
+                return F("IPOLA");
+            case MCP23017::IPOL + MCP23017::PORT_BANK_INCREMENT:
+                return F("IPOLB");
+            case MCP23017::GPINTEN:
+                return F("GPINTENA");
+            case MCP23017::GPINTEN + MCP23017::PORT_BANK_INCREMENT:
+                return F("GPINTENB");
+            case MCP23017::DEFVAL:
+                return F("DEFVALA");
+            case MCP23017::DEFVAL + MCP23017::PORT_BANK_INCREMENT:
+                return F("DEFVALB");
+            case MCP23017::INTCON:
+                return F("INTCONA");
+            case MCP23017::INTCON + MCP23017::PORT_BANK_INCREMENT:
+                return F("INTCONB");
+            case MCP23017::IOCON:
+                return F("IOCONA");
+            case MCP23017::IOCON + MCP23017::PORT_BANK_INCREMENT:
+                return F("IOCONB");
+            case MCP23017::GPPU:
+                return F("GPPUA");
+            case MCP23017::GPPU + MCP23017::PORT_BANK_INCREMENT:
+                return F("GPPUB");
+            case MCP23017::INTF:
+                return F("INTFA");
+            case MCP23017::INTF + MCP23017::PORT_BANK_INCREMENT:
+                return F("INTFB");
+            case MCP23017::INTCAP:
+                return F("INTCAPA");
+            case MCP23017::INTCAP + MCP23017::PORT_BANK_INCREMENT:
+                return F("INTCAPB");
+            case MCP23017::GPIO:
+                return F("GPIOA");
+            case MCP23017::GPIO + MCP23017::PORT_BANK_INCREMENT:
+                return F("GPIOB");
         }
-
-    #endif
+        return F("N/A");
+    }
 
     IOEXPANDER_INLINE MCP23017::MCP23017(uint8_t address, TwoWire *wire) :
         Base(address, wire),
@@ -112,87 +105,90 @@ namespace IOExpander {
 
     IOEXPANDER_INLINE void MCP23017::digitalWrite(uint8_t pin, uint8_t value)
     {
-        uint8_t mask;
-        auto port = _pin2PortAndMask(pin, mask);
-        _setBits(_GPIO, port, mask, value);
-        _write8(GPIO, _GPIO, port);
+        auto pam = _pin2PortAndMask(pin);
+        _GPIO.set(pam.port, pam.mask, value);
+        _write8(GPIO, _GPIO, pam.port);
     }
 
     IOEXPANDER_INLINE uint8_t MCP23017::digitalRead(uint8_t pin)
     {
-        uint8_t mask;
-        Port port = _pin2PortAndMask(pin, mask);
-        _read8(GPIO, _GPIO, port);
-        return _getBits(_GPIO, port, mask) ? 1 : 0;
+        auto pam = _pin2PortAndMask(pin);
+        _read8(GPIO, _GPIO, pam.port);
+        return _GPIO.get(pam.port, pam.mask) ? 1 : 0;
     }
 
     IOEXPANDER_INLINE uint8_t MCP23017::readPortA()
     {
         _read8(GPIO, _GPIO, Port::A);
-        return _GPIO.A;
+        return _GPIO[Port::A];
     }
 
     IOEXPANDER_INLINE uint8_t MCP23017::readPortB()
     {
         _read8(GPIO, _GPIO, Port::B);
-        return _GPIO.B;
+        return _GPIO[Port::B];
     }
 
     IOEXPANDER_INLINE uint16_t MCP23017::readPortAB()
     {
         _read16(GPIO, _GPIO);
-        return _GPIO._value;
+        return _GPIO;
     }
 
     IOEXPANDER_INLINE void MCP23017::writePortA(uint8_t value)
     {
-        _GPIO.A = value;
+        _GPIO.reset<Port::A>(value);
         _write8(GPIO, _GPIO, Port::A);
     }
 
     IOEXPANDER_INLINE void MCP23017::writePortB(uint8_t value)
     {
-        _GPIO.B = value;
+        _GPIO.reset<Port::B>(value);
         _write8(GPIO, _GPIO, Port::B);
     }
 
     IOEXPANDER_INLINE void MCP23017::writePortAB(uint16_t value)
     {
-        _GPIO._value = value;
+        _GPIO = value;
         _write16(GPIO, _GPIO);
     }
 
     IOEXPANDER_INLINE void MCP23017::pinMode(uint8_t pin, uint8_t mode)
     {
         __LDBG_printf("pinMode %u=%u", pin, mode);
-        uint8_t mask;
-        auto port = _pin2PortAndMask(pin, mask);
-        _setBits(_IODIR, port, mask, mode != OUTPUT);
-        _setBits(_GPPU, port, mask, mode == INPUT_PULLUP);
-        _write8(IODIR, _IODIR, port);
-        _write8(GPPU, _GPPU, port);
+        auto pam = _pin2PortAndMask(pin);
+        _IODIR.set(pam.port, pam.mask, mode != OUTPUT);
+        _GPPU.set(pam.port, pam.mask, mode == INPUT_PULLUP);
+        _write8(IODIR, _IODIR, pam.port);
+        _write8(GPPU, _GPPU, pam.port);
     }
 
-    IOEXPANDER_INLINE void MCP23017::enableInterrupts(uint16_t pinMask, const InterruptCallback &callback, uint8_t mode)
+    IOEXPANDER_INLINE void MCP23017::enableInterrupts(uint16_t pinMask, const InterruptCallback &callback, uint8_t mode, TriggerMode triggerMode)
     {
         ets_intr_lock();
         _interruptsPending = 0;
         _callback = callback;
         ets_intr_unlock();
-        _IOCON.A = IOCON_MIRROR|IOCON_INTPOL;
+        _IOCON.reset<Port::A>(IOCON_MIRROR);
+        if (triggerMode == TriggerMode::OPEN_DRAIN) {
+            _IOCON.set<Port::A>(IOCON_ODR);
+        }
+        else if (triggerMode == TriggerMode::ACTIVE_HIGH) {
+            _IOCON.set<Port::A>(IOCON_INTPOL);
+        }
         _write8(IOCON, _IOCON, Port::A);
 
         if (mode == CHANGE) {
-            _INTCON._value &= ~pinMask; // interrupt on change
+            _INTCON &= ~pinMask; // interrupt on change
         }
         else {
             // setup DEFVAL
             if (mode == FALLING) {
-                _DEFVAL._value |= pinMask;
+                _DEFVAL |= pinMask;
                 _write16(DEFVAL, _DEFVAL);
             }
             else if (mode == RISING) {
-                _DEFVAL._value &= ~pinMask;
+                _DEFVAL &= ~pinMask;
                 _write16(DEFVAL, _DEFVAL);
             }
             _INTCON._value |= pinMask; // compare against DEFVAL
@@ -209,11 +205,10 @@ namespace IOExpander {
         _write16(GPINTEN, _GPINTEN);
 
         if (_GPINTEN._value == 0) {
-
             _INTCON = 0;
             _DEFVAL = 0;
             _read16(INTCAP, _INTCAP); // clear pending interrupts
-            _INTCAP._value = 0;
+            _INTCAP = 0;
 
             ets_intr_lock();
             _interruptsPending = 0;
@@ -229,7 +224,21 @@ namespace IOExpander {
 
     IOEXPANDER_INLINE void MCP23017::invokeCallback()
     {
-        _callback(readPortAB()); // TODO read captured pin state
+        // read captured ports that have PINs with interrupts
+        if (_GPINTEN.A && _GPINTEN.B) {
+            _read16(INTCAP, _INTCAP);
+        }
+        else if (_GPINTEN.A) {
+            _read8(INTCAP, _INTCAP, Port::A);
+        }
+        if (_GPINTEN.B) {
+            _read8(INTCAP, _INTCAP, Port::B);
+        }
+        auto port = Register16(readPortAB());
+
+        ::printf("INTCAP A=%02x B=%02X PORT A=%02x B=%02X\n", _INTCAP.A, _INTCAP.B, port.A, port.B);
+
+        _callback(static_cast<uint16_t>(_INTCAP)); // TODO read captured pin state
     }
 
     IOEXPANDER_INLINE void MCP23017::interruptHandler()
@@ -245,7 +254,7 @@ namespace IOExpander {
             // check again if any new interupts occured while processing
             ets_intr_lock();
             if (_interruptsPending) {
-                if (micros() - start > 2000) {
+                if (micros() - start > 10000) {
                     // abort after 2ms and reschedule
                     schedule_function([this]() {
                         interruptHandler();
@@ -267,36 +276,18 @@ namespace IOExpander {
         }
     }
 
-    IOEXPANDER_INLINE uint8_t MCP23017::_getBits(Register16 regValue, Port port, uint8_t mask)
-    {
-        return regValue[port] & mask;
-    }
-
-    IOEXPANDER_INLINE void MCP23017::_setBits(Register16 &regValue, Port port, uint8_t mask, bool value)
-    {
-        auto &target = regValue[port];
-        if (value) {
-            target |= mask;
-        }
-        else {
-            target &= ~mask;
-        }
-    }
-
     IOEXPANDER_INLINE MCP23017::Port MCP23017::_pin2Port(uint8_t pin) const
     {
         return (pin < 8) ? Port::A : Port::B;
     }
 
-    IOEXPANDER_INLINE MCP23017::Port MCP23017::_pin2PortAndMask(uint8_t pin, uint8_t &mask) const
+    IOEXPANDER_INLINE MCP23017::PortAndMask MCP23017::_pin2PortAndMask(uint8_t pin) const
     {
         if (pin < 8) {
-            mask = _BV(pin);
-            return Port::A;
+            return PortAndMask(Port::A, _BV(pin));
         }
         else {
-            mask = _BV(pin - 8);
-            return Port::B;
+            return PortAndMask(Port::B, _BV(pin - 8));
         }
     }
 

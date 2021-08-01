@@ -5,44 +5,60 @@
 #pragma once
 
 #include "IOExpander.h"
-#include "debug_helper_disable.h"
 
 #if HAVE_IOEXPANDER
+
+#if DEBUG_IOEXPANDER
+#include "debug_helper_enable.h"
+#else
+#include "debug_helper_disable.h"
+#endif
 
 #ifndef IOEXPANDER_INLINE
 #define IOEXPANDER_INLINE inline
 #endif
 
-// DDR high = output, low = input. PORT is unchanged
-// PIN reads from the exapnder
-// PORT writes to the expander if output it enabled
-
-#include "PCF8574.hpp"
-#include "TinyPwm.hpp"
-// #include "MCP23017.hpp"
-#include "PCA9685.hpp"
-
 namespace IOExpander {
 
-    // _EndPin = 0: auto mode
-    // _EndPin is _BeginPin + pin count, _BeginPin <= PINS < _EndPin
-    // template<typename _DeviceClassType, typename _DeviceType, uint8_t _Address, uint8_t _BeginPin, uint8_t _EndPin = 0>
-    // struct DeviceConfig {
-    //     using DeviceClassType = _DeviceClassType;
-    //     using DeviceType = _DeviceType;
+    template<typename _DeviceType, typename _DeviceClassType>
+    inline void Base<_DeviceType, _DeviceClassType>::begin(uint8_t address, TwoWire *wire)
+    {
+        _wire = wire;
+        begin(address);
+    }
 
-    //     static constexpr DeviceType kDeviceType = DeviceType::kDeviceType;
-    //     static constexpr uint8_t kI2CAddress = _Address;
-    //     static constexpr uint8_t kBeginPin = _BeginPin;
-    //     static constexpr uint8_t kEndPin = _EndPin == 0 ? (kBeginPin + DeviceType::kNumPins) : _EndPin;
-    //     static constexpr uint8_t kNumPins = kEndPin - kBeginPin;
+    template<typename _DeviceType, typename _DeviceClassType>
+    inline void Base<_DeviceType, _DeviceClassType>::begin(uint8_t address)
+    {
+        _address = address;
+    }
 
-    //     static_assert(_BeginPin >= kDigitalPinCount, "_BeginPin must be greater or eqal kDigitalPinCount");
+    template<typename _DeviceType, typename _DeviceClassType>
+    inline void Base<_DeviceType, _DeviceClassType>::begin()
+    {
+    }
 
-    //     static constexpr bool pinMatch(uint8_t pin) {
-    //         return pin >= kBeginPin && pin <= kEndPin;
-    //     }
-    // };
+    template<typename _DeviceType, typename _DeviceClassType>
+    inline bool Base<_DeviceType, _DeviceClassType>::isConnected() const
+    {
+        if (!_address || !_wire) {
+            return false;
+        }
+        _wire->beginTransmission(_address);
+        return (_wire->endTransmission() == 0);
+    }
+
+    template<typename _DeviceType, typename _DeviceClassType>
+    inline uint8_t Base<_DeviceType, _DeviceClassType>::getAddress() const
+    {
+        return _address;
+    }
+
+    template<typename _DeviceType, typename _DeviceClassType>
+    inline TwoWire &Base<_DeviceType, _DeviceClassType>::getWire()
+    {
+        return *_wire;
+    }
 
     #define LT <
     #define GT >

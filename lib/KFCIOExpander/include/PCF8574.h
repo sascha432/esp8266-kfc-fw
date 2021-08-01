@@ -84,39 +84,37 @@ namespace IOExpander {
         using Base::kDeviceType;
 
     public:
-    	PCF8574(uint8_t address = kDefaultAddress, TwoWire *wire = &Wire);
+        PCF8574(uint8_t address = kDefaultAddress, TwoWire *wire = &Wire);
 
-    	void begin(uint8_t address, TwoWire *wire);
+        void begin(uint8_t address, TwoWire *wire);
         void begin(uint8_t address);
 
-	    void pinMode(uint8_t pin, uint8_t mode);
+        void pinMode(uint8_t pin, uint8_t mode);
         void digitalWrite(uint8_t pin, uint8_t value);
         uint8_t digitalRead(uint8_t pin);
-    	void write8(uint8_t value);
-	    uint8_t read8();
 
-        int analogRead(uint8_t pin) {
-            return digitalRead(pin);
+        int analogRead(uint8_t pin);
+        void analogWrite(uint8_t pin, int val);
+
+        void writePort(uint8_t value);
+        uint8_t readPort();
+
+        inline  __attribute__((__always_inline__))
+        void writePortA(uint8_t value) {
+            writePort(value);
         }
 
-        void analogWrite(uint8_t pin, int val) {
-            digitalWrite(pin, val);
+        inline  __attribute__((__always_inline__))
+        uint8_t readPortA() {
+            return readPort();
         }
 
         void analogReference(uint8_t mode) {}
         void analogWriteFreq(uint32_t freq) {}
 
-        // interrupts are not supported
-        inline  __attribute__((__always_inline__))
-        void enableInterrupts(uint16_t pinMask, const InterruptCallback &callback, uint8_t mode) {}
-
-        inline  __attribute__((__always_inline__))
-        void disableInterrupts(uint16_t pinMask) {}
-
-        inline  __attribute__((__always_inline__))
-        bool interruptsEnabled() {
-            return false;
-        }
+        void enableInterrupts(uint8_t pinMask, const InterruptCallback &callback, uint8_t mode, TriggerMode triggerMode);
+        void disableInterrupts(uint8_t pinMask);
+        bool interruptsEnabled();
 
         inline  __attribute__((__always_inline__))
         void interruptHandler() {}
@@ -130,6 +128,11 @@ namespace IOExpander {
         DDRType DDR;
         PINType PIN;
         PORTType PORT;
+
+    protected:
+        uint8_t _intPins;
+        uint8_t _intState;
+        uint16_t _intMode;
     };
 
 }

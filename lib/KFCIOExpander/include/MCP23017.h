@@ -29,16 +29,40 @@ namespace IOExpander {
         static constexpr uint8_t INTCAP = 0x08 * PORT_BANK_MULTIPLIER;
         static constexpr uint8_t GPIO = 0x09 * PORT_BANK_MULTIPLIER;
 
-        // interrupt polarity, 1=active high, 0=active-low
+        // INTPOL: This bit sets the polarity of the INT output pin
+        // 1 = Active-high
+        // 0 = Active-low
         static constexpr uint8_t IOCON_INTPOL = _BV(1);
-        // mirror interrupts on INTA and INTB
+        // ODR: Configures the INT pin as an open-drain output
+        // 1 = Open-drain output (overrides the INTPOL bit.)
+        // 0 = Active driver output (INTPOL bit sets the polarity.)
+        static constexpr uint8_t IOCON_ODR = _BV(2);
+        // DISSLW: Slew Rate control bit for SDA output
+        // 1 = Slew rate disabled
+        // 0 = Slew rate enabled
+        static constexpr uint8_t IOCON_DISSLW = _BV(4);
+        // SEQOP: Sequential Operation mode bit
+        // 1 = Sequential operation disabled, address pointer does not increment.
+        // 0 = Sequential operation enabled, address pointer increments.
+        static constexpr uint8_t IOCON_SEQOP = _BV(5);
+        // MIRROR: INT Pins Mirror bit
+        // 1 = The INT pins are internally connected
+        // 0 = The INT pins are not connected. INTA is associated with PORTA and INTB is associated with PORTB
         static constexpr uint8_t IOCON_MIRROR = _BV(6);
-        // bank 0 or 1
+        // BANK: Controls how the registers are addressed
+        // 1 = The registers associated with each port are separated into different banks.
+        // 0 = The registers are in the same bank (addresses are sequential)
         static constexpr uint8_t IOCON_BANK = _BV(7);
 
-        enum class Port {
+        enum class Port : uint8_t {
             A,
             B,
+        };
+
+        struct PortAndMask {
+            Port port;
+            uint8_t mask;
+            PortAndMask(Port _port, uint8_t _mask) : port(_port), mask(_mask) {}
         };
 
         struct Register16 {
@@ -49,10 +73,94 @@ namespace IOExpander {
                     uint8_t B;
                 };
             };
+
+            // 16bit operations
+
             Register16() : _value(0) {}
             Register16(uint16_t value) : _value(value) {}
+
+            inline  __attribute__((__always_inline__))
+            operator uint16_t() const {
+                return _value;
+            }
+
+            inline  __attribute__((__always_inline__))
+            Register16 &operator =(uint16_t value) {
+                _value = value;
+                return *this;
+            }
+
+            inline  __attribute__((__always_inline__))
+            Register16 &operator |=(uint16_t value) {
+                _value |= value;
+                return *this;
+            }
+
+            inline  __attribute__((__always_inline__))
+            Register16 &operator &=(uint16_t value) {
+                _value &= value;
+                return *this;
+            }
+
+            // 8bit operations
+
+            inline  __attribute__((__always_inline__))
             uint8_t &operator [](Port port) {
                 return port == Port::A ? A : B;
+            }
+
+            inline  __attribute__((__always_inline__))
+            uint8_t operator [](Port port) const {
+                return port == Port::A ? A : B;
+            }
+
+            inline  __attribute__((__always_inline__))
+            uint8_t get(Port port, uint8_t mask) {
+                return (*this)[port] & mask;
+            }
+
+            inline  __attribute__((__always_inline__))
+            void set(Port port, uint8_t mask) {
+                (*this)[port] |= mask;
+            }
+
+            inline  __attribute__((__always_inline__))
+            void unset(Port port, uint8_t mask) {
+                (*this)[port] &= ~mask;
+            }
+
+            inline  __attribute__((__always_inline__))
+            void set(Port port, uint8_t mask, bool value) {
+                if (value) {
+                    set(port, mask);
+                }
+                else {
+                    unset(port, mask);
+                }
+            }
+
+            template<Port _Port>
+            inline  __attribute__((__always_inline__))
+            uint8_t get(uint8_t mask) {
+                return (_Port == Port::A ? A : B) & mask;
+            }
+
+            template<Port _Port>
+            inline  __attribute__((__always_inline__))
+            void reset(uint8_t value = 0) {
+                (_Port == Port::A ? A : B) = value;
+            }
+
+            template<Port _Port>
+            inline  __attribute__((__always_inline__))
+            void set(uint8_t mask) {
+                (_Port == Port::A ? A : B) |= mask;
+            }
+
+            template<Port _Port>
+            inline  __attribute__((__always_inline__))
+            void unset(uint8_t mask) {
+                (_Port == Port::A ? A : B) &= ~mask;
             }
         };
 
@@ -80,9 +188,19 @@ namespace IOExpander {
         uint8_t readPortB();
         uint16_t readPortAB();
 
+        inline  __attribute__((__always_inline__))
+        uint16_t readPort() {
+            return readPortAB();
+        }
+
         void writePortA(uint8_t value);
         void writePortB(uint8_t value);
         void writePortAB(uint16_t value);
+
+        inline  __attribute__((__always_inline__))
+        void writePort(uint16_t value) {
+            writePortAB(value);
+        }
 
         void pinMode(uint8_t pin, uint8_t mode);
 
@@ -90,7 +208,8 @@ namespace IOExpander {
         void analogWrite(uint8_t pin, int val) {}
         void analogWriteFreq(uint32_t freq) {}
 
-        void enableInterrupts(uint16_t pinMask, const InterruptCallback &callback, uint8_t mode);
+        // currently only mirrored interrupts for port A&B are supported
+        void enableInterrupts(uint16_t pinMask, const InterruptCallback &callback, uint8_t mode, TriggerMode triggerMode);
         void disableInterrupts(uint16_t pinMask);
         bool interruptsEnabled();
         void invokeCallback();
@@ -102,18 +221,14 @@ namespace IOExpander {
         // get port for pin #
         Port _pin2Port(uint8_t pin) const;
         // get port for pin # and mask
-        Port _pin2PortAndMask(uint8_t pin, uint8_t &mask) const;
-        // get register adddress for port
+        PortAndMask _pin2PortAndMask(uint8_t pin) const;
+        // get register adddress for port A or B
         uint8_t _portAddress(uint8_t regAddr, Port port) const;
-        // get register adddress for port
+        // get register adddress for port A or B
         template<Port _Port>
         constexpr uint8_t _portAddress(uint8_t regAddr) const {
             return (_Port == Port::A) ? regAddr : regAddr + PORT_BANK_INCREMENT;
         }
-        // set or remove one or more bits defined in mask
-        void _setBits(Register16 &regValue, Port port, uint8_t mask, bool value);
-        // get bits defined in mask
-        uint8_t _getBits(Register16 regValue, Port port, uint8_t mask);
         // write 16 bit register
         void _write16(uint8_t regAddr, Register16 &regValue);
         // read 16 bit register

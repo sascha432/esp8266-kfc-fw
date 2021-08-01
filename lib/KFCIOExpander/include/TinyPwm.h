@@ -57,7 +57,7 @@ namespace IOExpander {
 
         // interrupts are not supported
         inline  __attribute__((__always_inline__))
-        void enableInterrupts(uint16_t pinMask, const InterruptCallback &callback, uint8_t mode) {}
+        void enableInterrupts(uint16_t pinMask, const InterruptCallback &callback, uint8_t mode, TriggerMode triggerMode) {}
 
         inline  __attribute__((__always_inline__))
         void disableInterrupts(uint16_t pinMask) {}

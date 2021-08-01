@@ -34,28 +34,39 @@
 
 // example
 //
-// #define IOEXPANDER_DEVICE_CONFIG Config<DeviceConfig<PCF8574, DeviceTypePCF8574, 0x20, 90, 98>, Config<DeviceConfig<PCF8574, DeviceTypePCF8574, 0x22, 98, 104>,  Config<DeviceConfig<PCF8574, DeviceTypePCF8574, 0x24, 104, 112> >>>
+/*
+#define IOEXPANDER_DEVICE_CONFIG Config<DeviceConfig<PCF8574, DeviceTypePCF8574, 0x20, 90, 98>, \
+    Config<DeviceConfig<PCF8574, DeviceTypePCF8574, 0x22, 98, 104>, \
+        Config<DeviceConfig<PCF8574, DeviceTypePCF8574, 0x24, 104, 112> \
+        > \
+    > \
+>
+*/
 //
 // platformi.ini
-// since PIO does not escape the CLI properly replace "<" with "\ LT\ " and ">" with "\ GT\ "
+// since PIO does not escape the CLI properly replace '<'/'>' with " LT "/" GT "
+//
 // -D IOEXPANDER_DEVICE_CONFIG=Config\ LT\ DeviceConfig\ LT\ MCP23017,DeviceTypeMCP23017,0x20,100\ GT\ ,Config\ LT\ DeviceConfig\ LT\ MCP23017,DeviceTypeMCP23017,0x21,120\ GT\ GT\ GT
+//
+// "-DIOEXPANDER_DEVICE_CONFIG=Config LT DeviceConfig LT MCP23017,DeviceTypeMCP23017,0x20,100 GT GT"
 //
 
 #if !defined(IOEXPANDER_DEVICE_CONFIG)
 #   error IOEXPANDER_DEVICE_CONFIG not defined
 #endif
 
-#define IOEXPANDER_INCLUDE_HPP 1
-
-#ifndef __CONSTEXPR10
+#ifndef __CONSTEXPR17
 #   if __GNUC__ >= 10
-#       define __CONSTEXPR10 constexpr
+#       define __CONSTEXPR17 constexpr
 #   else
-#       define __CONSTEXPR10
+#       define __CONSTEXPR17
 #   endif
 #endif
 
 namespace IOExpander {
+
+    // scan bus for devices
+    void scanBus(Print &output, TwoWire &wire = Wire, uint8_t fromAddress = 0x01, uint8_t toAddress = 0x7f, uint32_t delayMillis = 1);
 
     // use the default digitalWrite/digitalRead/pinMode/etc functions
     // for pins between 0 and  kDigitalPinCount -1
@@ -74,9 +85,17 @@ namespace IOExpander {
         END
     };
 
+    enum class TriggerMode {
+        NONE,               // interrupts not available
+        DEVICE_DEFAULT,     // use default mode of the device
+        ACTIVE_HIGH,        // rising edge
+        ACTIVE_LOW,         // falling edge
+        OPEN_DRAIN,         // falling edge, requires pullup resistor
+    };
+
     using InterruptCallback = std::function<void(uint16_t pinState)>;
 
-    void IRAM_ATTR _interruptHandler(void *arg);
+    void IRAM_ATTR __interruptHandler(void *arg);
 
     inline const __FlashStringHelper *getDeviceName(DeviceTypeEnum type) {
         switch(type) {
@@ -112,20 +131,26 @@ namespace IOExpander {
         return getDeviceName(_DeviceType::kDeviceType);
     }
 
-
-    template<DeviceTypeEnum _DeviceTypeEnum, uint8_t _DefaultAddress, uint8_t _NumPins, bool _HasIsConnected>
+    template<DeviceTypeEnum _DeviceTypeEnum, uint8_t _DefaultAddress, uint8_t _NumPins, bool _HasIsConnected, uint8_t _GPIOInterruptPinMode = 0, TriggerMode _IntTriggerMode = TriggerMode::NONE>
     struct DeviceTypeTemplate {
         using DeviceType = DeviceTypeTemplate<_DeviceTypeEnum, _DefaultAddress, _NumPins, _HasIsConnected>;
 
         static constexpr DeviceTypeEnum kDeviceType = _DeviceTypeEnum;
         static constexpr uint8_t kNumPins = _NumPins;
+        // default I2C address
         static constexpr uint8_t kDefaultAddress = _DefaultAddress;
+        // has isConnected() method
         static constexpr bool kHasIsConnected = _HasIsConnected;
+        // pinMode for GPIO pin used for interrupts
+        static constexpr uint8_t kIntPinMode = _GPIOInterruptPinMode;
+        // interrupt trigger mode
+        static constexpr TriggerMode kIntTriggerMode = _IntTriggerMode;
+
     };
 
-    using DeviceTypePCF8574 = DeviceTypeTemplate<DeviceTypeEnum::PCF8574, 0x20 + 1, 8, true>;
+    using DeviceTypePCF8574 = DeviceTypeTemplate<DeviceTypeEnum::PCF8574, 0x20 + 1, 8, true, INPUT_PULLUP, TriggerMode::OPEN_DRAIN>;
     using DeviceTypeTinyPwm = DeviceTypeTemplate<DeviceTypeEnum::TINYPWM, 0x60, 2, true>;
-    using DeviceTypeMCP23017 = DeviceTypeTemplate<DeviceTypeEnum::MCP23017, 0x20, 16, true>;
+    using DeviceTypeMCP23017 = DeviceTypeTemplate<DeviceTypeEnum::MCP23017, 0x20, 16, true, INPUT, TriggerMode::ACTIVE_HIGH>;
     using DeviceTypePCA9685 = DeviceTypeTemplate<DeviceTypeEnum::PCA9685, 0x40, 16, false>;
 
     struct DeviceTypeEnd {
@@ -139,6 +164,7 @@ namespace IOExpander {
         static constexpr uint8_t kDefaultAddress = 0;
         static constexpr bool kHasIsConnected = false;
         static constexpr bool kHasNext = false;
+
 
         #if !HAVE_PCF8574
             static_assert(kDeviceType != DeviceTypeEnum::PCF8574, "PCF8574 not enabled");
@@ -158,75 +184,22 @@ namespace IOExpander {
     struct ConfigIterator;
 
     struct ConfigEndIterator {
-        inline  __attribute__((__always_inline__))
-        void _beginRecursive(TwoWire &wire) {
-        }
-
-        inline  __attribute__((__always_inline__))
-        void _printStatusRecursive(Print &output) {
-        }
-
-        constexpr size_t _sizeRecursive() const {
-            return 0;
-        }
-
-        inline  __attribute__((__always_inline__))
-        void _pinModeRecursive(uint8_t pin, uint8_t mode) {
-        }
-
-        inline  __attribute__((__always_inline__))
-        void _digitalWriteRecursive(uint8_t pin, uint8_t val) {
-        }
-
-        inline  __attribute__((__always_inline__))
-        int _digitalReadRecursive(uint8_t pin) {
-            return 0;
-        }
-
-        inline  __attribute__((__always_inline__))
-        void _analogReferenceRecursive(uint8_t mode) {
-        }
-
-        inline  __attribute__((__always_inline__))
-        void _analogWriteRecursive(uint8_t pin, int val) {
-        }
-
-        inline  __attribute__((__always_inline__))
-        int _analogReadRecursive(uint8_t pin) {
-            return 0;
-        }
-
-        inline  __attribute__((__always_inline__))
-        void _analogWriteFreqRecursive(uint32_t freq) {
-        }
-
-        inline  __attribute__((__always_inline__))
-        void *_getDevicePointerRecursive(uint8_t pin) {
-            return nullptr;
-        }
-
-        inline  __attribute__((__always_inline__))
-        bool interruptsEnabled() {
-            return false;
-        }
-
-        inline  __attribute__((__always_inline__))
-        void _attachInterruptRecursive(void *device, uint8_t gpioPin, uint16_t pinMask, const InterruptCallback &callback, int mode) {
-        }
-
-        inline  __attribute__((__always_inline__))
-        void _detachInterruptRecursive(void *device, uint8_t gpioPin, uint16_t pinMask) {
-        }
-
-        inline  __attribute__((__always_inline__))
-        void _setInterruptFlagRecursive(void *device) {
-        }
-
-        inline  __attribute__((__always_inline__))
-        void _dumpPinsRecursive(Print &output)
-        {
-        }
-
+        void _beginRecursive(TwoWire &wire);
+        void _printStatusRecursive(Print &output);
+        constexpr size_t _sizeRecursive() const;
+        void _pinModeRecursive(uint8_t pin, uint8_t mode);
+        void _digitalWriteRecursive(uint8_t pin, uint8_t val);
+        int _digitalReadRecursive(uint8_t pin);
+        void _analogReferenceRecursive(uint8_t mode);
+        void _analogWriteRecursive(uint8_t pin, int val);
+        int _analogReadRecursive(uint8_t pin);
+        void _analogWriteFreqRecursive(uint32_t freq);
+        void *_getDevicePointerRecursive(uint8_t pin);
+        bool interruptsEnabled();
+        void _attachInterruptRecursive(void *device, uint8_t gpioPin, uint16_t pinMask, const InterruptCallback &callback, uint8_t mode, TriggerMode triggerMode);
+        void _detachInterruptRecursive(void *device, uint8_t gpioPin, uint16_t pinMask);
+        void _setInterruptFlagRecursive(void *device);
+        void _dumpPinsRecursive(Print &output);
     };
 
     template<typename _DeviceConfigType, typename _NextConfigType = DeviceTypeEnd>
@@ -236,7 +209,7 @@ namespace IOExpander {
         using DeviceType = typename DeviceConfigType::DeviceType;
         using DeviceClassType = typename DeviceConfigType::DeviceClassType;
 
-        static constexpr bool kHasNext = !std::is_same_v<_NextConfigType, DeviceTypeEnd>;
+        static constexpr bool kHasNext = !std::is_same<_NextConfigType, DeviceTypeEnd>::value;
 
         using NextConfigType = _NextConfigType;
         using NextDeviceConfigType = typename std::conditional<kHasNext, typename NextConfigType::DeviceConfigType, DeviceConfigType>::type;
@@ -316,9 +289,12 @@ namespace IOExpander {
         // the hardware interrupt must be triggered from a single GPIO pin
         // the callback will be called as scheduled_function outside the interrupt handler
         // and the handler does not have to be in IRAM
-        void attachInterrupt(uint8_t gpioPin, void *device, uint16_t pinMask, const InterruptCallback &callback, int mode) {
-            __LDBG_printf("attachInterrupt gpio=%u device=%p", gpioPin, device);
-            _attachInterruptRecursive(device, gpioPin, pinMask, callback, mode);
+        //
+        // gpioPin is the GPIO pin for the interrupt
+        // triggerMode is the interrupt mode for the GPIO pin
+        void attachInterrupt(uint8_t gpioPin, void *device, uint16_t pinMask, const InterruptCallback &callback, uint8_t mode, TriggerMode triggerMode = TriggerMode::DEVICE_DEFAULT) {
+            __LDBG_printf("attachInterrupt gpio=%u device=%p mode=%u trigger_mode=%u", gpioPin, device, mode, triggerMode);
+            _attachInterruptRecursive(device, gpioPin, pinMask, callback, mode, triggerMode);
         }
 
         // remove interrupt handler
@@ -352,7 +328,7 @@ namespace IOExpander {
         inline  __attribute__((__always_inline__))
         void _printStatusRecursive(Print &output) {
             output.printf_P(PSTR(HTML_S(div) "%s @ I2C address 0x%02x\n"), _device.getDeviceName(), _device.getAddress());
-            if __CONSTEXPR10 (DeviceType::kHasIsConnected) {
+            if __CONSTEXPR17 (DeviceType::kHasIsConnected) {
                 if (!_device.isConnected()) {
                     output.print(F(HTML_S(br) "ERROR - Device not found!\n"));
                 }
@@ -437,27 +413,31 @@ namespace IOExpander {
         }
 
         inline  __attribute__((__always_inline__))
-        void _attachInterruptRecursive(void *device, uint8_t gpioPin, uint16_t pinMask, const InterruptCallback &callback, int mode) {
+        void _attachInterruptRecursive(void *device, uint8_t gpioPin, uint16_t pinMask, const InterruptCallback &callback, uint8_t mode, TriggerMode triggerMode) {
             if (device == reinterpret_cast<void *>(&_device)) {
                 bool enabled = _device.interruptsEnabled();
-                _device.enableInterrupts(pinMask, callback, mode);
+                _device.enableInterrupts(pinMask, callback, mode, triggerMode);
                 // attach the interrupt handler if interrupts are not enabled for this GPIO pin
-                __LDBG_printf("attachInterruptArg gpio=%u enabled=%u", gpioPin, enabled);
                 if (enabled == false && _device.interruptsEnabled()) {
-                    ::pinMode(gpioPin, INPUT);
-                    ::attachInterruptArg(gpioPin, _interruptHandler, device, mode);
+                    // set pinMode if device has a preset
+                    if __CONSTEXPR17 (DeviceType::kIntPinMode) {
+                        ::pinMode(gpioPin, DeviceType::kIntPinMode);
+                    }
+                    static_assert(DeviceType::kIntTriggerMode != TriggerMode::NONE, "interrupts not available");
+                    __LDBG_printf("attachInterruptArg device=%s gpio=%u mode=%u", _device.getDeviceName(), gpioPin, triggerMode, _triggerMode2IntMode(triggerMode));
+                    ::attachInterruptArg(gpioPin, __interruptHandler, device, _triggerMode2IntMode(triggerMode));
                 }
                 return;
             }
-            _next._attachInterruptRecursive(device, gpioPin, pinMask, callback, mode);
+            _next._attachInterruptRecursive(device, gpioPin, pinMask, callback, mode, triggerMode);
         }
 
         inline  __attribute__((__always_inline__))
         void _detachInterruptRecursive(void *device, uint8_t gpioPin, uint16_t pinMask) {
             if (device == reinterpret_cast<void *>(&_device)) {
-                __LDBG_printf("detachInterrupt gpio=%u enabled=%u", gpioPin, _device.interruptsEnabled());
                 if (_device.interruptsEnabled() == false) {
                     // remove interrupt handler
+                    __LDBG_printf("detachInterrupt device=%s gpio=%u", _device.getDeviceName(), gpioPin);
                     ::detachInterrupt(gpioPin);
                 }
                 _device.disableInterrupts();
@@ -480,6 +460,11 @@ namespace IOExpander {
                 return;
             }
             _next._setInterruptFlagRecursive(device);
+        }
+
+    protected:
+        constexpr int _triggerMode2IntMode(TriggerMode mode) const {
+            return (mode == TriggerMode::DEVICE_DEFAULT) ? _triggerMode2IntMode(DeviceType::kIntTriggerMode) : (mode == TriggerMode::ACTIVE_HIGH) ? RISING : FALLING;
         }
 
     };
@@ -513,58 +498,19 @@ namespace IOExpander {
         static constexpr DeviceTypeEnum kDeviceType = DeviceType::kDeviceType;
 
     public:
-        Base() : _address(0), _wire(nullptr)
-        {
-        }
+        Base(uint8_t address = 0, TwoWire *wire = &Wire) : _address(address), _wire(wire) {}
 
-        Base(uint8_t address, TwoWire *wire = &Wire)  : _address(address), _wire(wire)
-        {
-        }
+        void begin(uint8_t address, TwoWire *wire);
+        void begin(uint8_t address);
+        void begin();
 
-        void begin(uint8_t address, TwoWire *wire)
-        {
-            _address = address;
-            _wire = wire;
-        }
+        bool isConnected() const;
+        uint8_t getAddress() const;
+        TwoWire &getWire();
 
-        void begin(uint8_t address)
-        {
-            _address = address;
-        }
-
-        void begin()
-        {
-        }
-
-        bool isConnected() const
-        {
-            if (!hasWire()) {
-                return false;
-            }
-            _wire->beginTransmission(_address);
-            return (_wire->endTransmission() == 0);
-        }
-
-        uint8_t getAddress() const
-        {
-            return _address;
-        }
-
-        constexpr const __FlashStringHelper *getDeviceName()
-        {
+        constexpr const __FlashStringHelper *getDeviceName() {
             return IOExpander::getDeviceName<DeviceType>();
         }
-
-        TwoWire &getWire()
-        {
-            return *_wire;
-        }
-
-        bool hasWire() const
-        {
-            return _wire != nullptr;
-        }
-
 
     protected:
         uint8_t _address;
@@ -637,14 +583,17 @@ namespace IOExpander {
     }
 
 }
+
 #include "PCF8574.h"
 #include "TinyPwm.h"
 #include "MCP23017.h"
 #include "PCA9685.h"
 
-
-#if IOEXPANDER_INCLUDE_HPP
 #include "IOExpander.hpp"
-#endif
+#include "ConfigEndIterator.hpp"
+#include "PCF8574.hpp"
+#include "TinyPwm.hpp"
+#include "MCP23017.hpp"
+#include "PCA9685.hpp"
 
 #endif

@@ -153,49 +153,9 @@ void setup()
     #endif
 
     #if HAVE_IOEXPANDER
-        // IOExpander::config.begin(KFCFWConfiguration::initTwoWire());
-        // __DBG_printf("IOExpander size=%u count=%u", sizeof(IOExpander::config), IOExpander::config.size());
+        IOExpander::config.begin(KFCFWConfiguration::initTwoWire());
+        __DBG_printf("IOExpander size=%u count=%u", sizeof(IOExpander::config), IOExpander::config.size());
     #endif
-
-#if 1
-    IOExpander::config.begin(KFCFWConfiguration::initTwoWire(true, &Serial));
-    Serial.printf("IOExpander size=%u count=%u\n", sizeof(IOExpander::config), IOExpander::config.size());
-    IOExpander::config.printStatus(Serial);
-
-    auto device = IOExpander::config._device;
-    Serial.printf("I2Caddress %02x\n", device.getAddress());
-
-    for(uint8_t i = 0; i < 16; i++) {
-        device.pinMode(i, INPUT_PULLUP);
-    }
-
-    // device.pinMode(3, INPUT_PULLUP);
-    // device.pinMode(11, INPUT_PULLUP);
-    device.pinMode(7, OUTPUT);
-    device.pinMode(15, OUTPUT);
-    bool state = false;
-
-    IOExpander::config.attachInterrupt(14, &device, 0x0100, [&device](uint16_t pinState) {
-        Serial.printf_P(PSTR("%s interrupt %04x\n"), device.getDeviceName(), pinState);
-    }, CHANGE);
-
-    for(;;) {
-        uint16_t tmp = device.readPortAB();
-        // uint16_t tmp = 0;
-
-        for(uint8_t i = 0; i < 16; i++) {
-            if (i == 8) {
-                Serial.print(' ');
-            }
-            Serial.print(tmp & _BV(i) ? 1 : 0);
-        }
-        Serial.println();
-        state = !state;
-        device.digitalWrite(15, state);
-
-        delay(1000);
-    }
-#endif
 
     bool safe_mode = false;
     #if KFC_DISABLE_CRASHCOUNTER == 0

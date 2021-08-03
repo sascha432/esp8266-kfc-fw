@@ -5,6 +5,7 @@
 #include <Arduino_compat.h>
 #include "clock_button.h"
 #include "clock.h"
+#include <IOExpander.h>
 
 #if DEBUG_IOT_CLOCK
 #include <debug_helper_enable.h>
@@ -81,20 +82,19 @@ void ClockPlugin::setRotaryAction(uint8_t action)
     else {
         _rotaryActionTimer.remove();
     }
+    auto &_PCF8574 = IOExpander::config._device;
     switch(action) {
         case 0:
-            // _digitalWrite(132, HIGH); // green LED left side
-            // _digitalWrite(128, HIGH); // blue LED
-            // _digitalWrite(129, HIGH); // red LED
-            // _digitalWrite(130, HIGH); // green LED right side
+            // digitalWrite(132, HIGH); // green LED left side
+            // digitalWrite(128, HIGH); // blue LED
+            // digitalWrite(129, HIGH); // red LED
+            // digitalWrite(130, HIGH); // green LED right side
             _PCF8574.PORT |= 0b10111;
-            // _PCF8574.PORT = static_cast<uint8_t>(_PCF8574.PORT) & ~0b10111;
             break;
         case 1:
-            // _digitalWrite(128, LOW);
-            // _digitalWrite(129, LOW);
+            // digitalWrite(128, LOW);
+            // digitalWrite(129, LOW);
             _PCF8574.PORT &= ~0b11;
-            // _PCF8574.PORT = static_cast<uint8_t>(_PCF8574.PORT) & ~0b11;
             break;
     }
 }

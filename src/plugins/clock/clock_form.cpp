@@ -215,7 +215,7 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
 
                     form.addObjectGetterSetter(F_VAR(pixels, i), FormGetterSetter(cfg.gradient.entries[i], pixel));
                     form.addFormUI(F("Position"));
-                    form.addValidator(FormUI::Validator::Range(0, _display.size() - 1));
+                    // form.addValidator(FormUI::Validator::Range(0, _display.size() - 1));
                 }
             }
             break;

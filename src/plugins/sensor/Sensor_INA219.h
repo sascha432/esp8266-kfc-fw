@@ -57,9 +57,9 @@ public:
         PEAK_POWER =    'n',
     };
 
-    using ConfigType = Plugins::Sensor::INA219ConfigType;
-    using CurrentDisplayType = Plugins::Sensor::INA219CurrentDisplayType;
-    using PowerDisplayType = Plugins::Sensor::INA219PowerDisplayType;
+    using ConfigType = KFCConfigurationClasses::Plugins::SensorConfigNS::INA219ConfigType;
+    using CurrentDisplayType = KFCConfigurationClasses::Plugins::SensorConfigNS::INA219CurrentDisplayType;
+    using PowerDisplayType = KFCConfigurationClasses::Plugins::SensorConfigNS::INA219PowerDisplayType;
 
 public:
     Sensor_INA219(const String &name, TwoWire &wire, uint8_t address = IOT_SENSOR_HAVE_INA219);

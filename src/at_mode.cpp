@@ -33,10 +33,7 @@
 #include "plugins.h"
 #include "PinMonitor.h"
 #include <NeoPixelEx.h>
-#if HAVE_PCF8574
 #include <IOExpander.h>
-extern IOExpander::PCF8574 _PCF8574;
-#endif
 #include "../src/plugins/plugins.h"
 #include <umm_malloc/umm_malloc_cfg.h>
 #if ARDUINO_ESP8266_VERSION_COMBINED >= 0x030000
@@ -362,9 +359,6 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HEAP, "HEAP", "[interval in seconds|0=disa
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RSSI, "RSSI", "[interval in seconds|0=disable]", "Display WiFi RSSI");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(GPIO, "GPIO", "[interval in seconds|0=disable]", "Display GPIO states");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PWM, "PWM", "<pin>,<input|input_pullup|waveform|level=0-" __STRINGIFY(PWMRANGE) ">[,<frequency=100-40000Hz>[,<duration/ms>]]", "PWM output on PIN, min./max. level set it to LOW/HIGH"
-#if HAVE_PCF8574
-    "\nPCF8574 can be addressed using pin 128-135. PWM is not supported."
-#endif
 );
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(ADC, "ADC", "<off|display interval=1s>[,<period=1s>,<multiplier=1.0>,<unit=mV>,<read delay=5000us>]", "Read the ADC and display values");
 #if defined(ESP8266) && (ARDUINO_ESP8266_VERSION_COMBINED < 0x030000)

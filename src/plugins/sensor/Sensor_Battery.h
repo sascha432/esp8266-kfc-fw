@@ -170,7 +170,7 @@ public:
         COMPLETE
     };
 
-    using ConfigType = Plugins::Sensor::BatteryConfigType;
+    using ConfigType = KFCConfigurationClasses::Plugins::SensorConfigNS::BatteryConfigType;
     using RegressFunction = std::function<float(float)>;
 
     class Status {

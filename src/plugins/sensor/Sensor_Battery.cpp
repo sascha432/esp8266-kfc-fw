@@ -18,7 +18,7 @@
 float Sensor_Battery::maxVoltage = 0;
 
 using KFCConfigurationClasses::System;
-using SensorRecordType = Plugins::Sensor::SensorRecordType;
+using SensorRecordType = KFCConfigurationClasses::Plugins::SensorConfigNS::SensorRecordType;
 
 uint8_t operator&(SensorRecordType a, SensorRecordType b) {
     return static_cast<uint8_t>(a) & static_cast<uint8_t>(b);

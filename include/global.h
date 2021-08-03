@@ -392,22 +392,6 @@
 #define ENABLE_ARDUINO_OTA_AUTOSTART                        0
 #endif
 
-#ifndef HAVE_PCF8574
-#define HAVE_PCF8574 0
-#endif
-
-#ifndef HAVE_TINYPWM
-#   define HAVE_TINYPWM 0
-#endif
-
-#ifndef HAVE_MCP23017
-#   define HAVE_MCP23017 0
-#endif
-
-#ifndef HAVE_PCA9685
-#   define HAVE_PCA9685 0
-#endif
-
 #ifndef HAVE_I2CSCANNER
 #define HAVE_I2CSCANNER                                     1
 #endif
@@ -452,6 +436,14 @@
 
 #ifndef HAVE_GDBSTUB
 #define HAVE_GDBSTUB                                        0
+#endif
+
+#ifndef HAVE_IOEXPANDER
+#ifdef IOEXPANDER_DEVICE_CONFIG
+#define HAVE_IOEXPANDER 1
+#else
+#define HAVE_IOEXPANDER 0
+#endif
 #endif
 
 class Stream;

@@ -61,48 +61,6 @@ using Network = KFCConfigurationClasses::Network;
 using System = KFCConfigurationClasses::System;
 using Plugins = KFCConfigurationClasses::PluginsType;
 
-// #if HAVE_PCF8574
-// IOExpander::PCF8574 _PCF8574;
-// extern void initialize_pcf8574(void) __attribute__((weak));
-// extern void initialize_pcf8574(void)
-// {
-//     _PCF8574.begin(PCF8574_I2C_ADDRESS, &config.initTwoWire());
-// }
-// extern void print_status_pcf8574(Print &output) __attribute__((weak));
-// extern void print_status_pcf8574(Print &output)
-// {
-//     output.print(F("PCF8574 enabled"));
-// }
-// #endif
-
-// #if HAVE_PCF8575
-// IOExpander::PCF8575 _PCF8575;
-// extern void initialize_pcf8575(void) __attribute__((weak));
-// extern void initialize_pcf8575(void)
-// {
-//     _PCF8575.begin(PCF8575_I2C_ADDRESS, &config.initTwoWire());
-// }
-// extern void print_status_pcf8575(Print &output) __attribute__((weak));
-// extern void print_status_pcf8575(Print &output)
-// {
-//     outout.print(F("PCF8575 enabled"));
-// }
-// #endif
-
-// #if HAVE_TINYPWM
-// IOExpander::TinyPwm _TinyPwm;
-// extern void initialize_tinypwm(void) __attribute__((weak));
-// extern void initialize_tinypwm(void)
-// {
-//     _TinyPwm.begin(TINYPWM_I2C_ADDRESS, &config.initTwoWire());
-// }
-// extern void print_status_tinypwm(Print &output) __attribute__((weak));
-// extern void print_status_tinypwm(Print &output)
-// {
-//     output.print(F("TinyPwm enabled"));
-// }
-// #endif
-
 #if HAVE_IMPERIAL_MARCH
 
 // source
@@ -1780,3 +1738,7 @@ size_t session_get_token_min_size()
 {
     return System::Device::kTokenMinSize;
 }
+
+#if HAVE_IOEXPANDER
+#include "../lib/KFCIOExpander/src/IOExpander.cpp"
+#endif

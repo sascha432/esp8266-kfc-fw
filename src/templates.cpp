@@ -260,7 +260,7 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 #endif
 #if HAVE_IOEXPANDER
     else if (key == F("IOEXPANDER_STATUS")) {
-        IOExpander::config.printStatus(output);
+        IOExpander::config.printStatus<true>(output);
     }
 #endif
     else if (key == F("RTC_STATUS")) {

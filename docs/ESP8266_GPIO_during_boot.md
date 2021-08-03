@@ -13,8 +13,8 @@ Depending on the levelshifter, GPIO 1, 3, 9 and 10 can be used. GPIO 9 and 10 re
   NodeMCU | PIN | Description |
 |---|---|---|
 | D0 | GPIO16 | floating (or connected to reset, directly or via low value series resistor = pullup) |
-| D1 | GPIO5 | floating
-| D2 | GPIO4 | floating
+| D1 | GPIO5 | floating (SCL)
+| D2 | GPIO4 | floating (SDA)
 | D3 | GPIO0 | pullup
 | D4 | GPIO2 | pullup
 | D5 | GPIO14 | floating

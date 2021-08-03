@@ -30,36 +30,6 @@ Clock::AnimationStats Clock::animationStats;
 
 ClockPlugin ClockPlugin_plugin;
 
-#if HAVE_PCF8574
-
-void initialize_pcf8574()
-{
-    // begin sets all pins to high level output and then to pin mode input
-    _PCF8574.begin(PCF8574_I2C_ADDRESS, &config.initTwoWire());
-    _PCF8574.DDR = 0b00111111;
-}
-
-void print_status_pcf8574(Print &output)
-{
-    output.printf_P(PSTR("PCF8574 @ I2C address 0x%02x"), PCF8574_I2C_ADDRESS);
-    output.print(F(HTML_S(br) "Interrupt disabled" HTML_S(br)));
-    if (_PCF8574.isConnected()) {
-        output.print(HTML_S(small));
-        uint8_t ddr = _PCF8574.DDR;
-        uint8_t state = _PCF8574.PIN;
-        for(uint8_t i = 0; i < 8; i++) {
-            output.printf_P(PSTR("%u(%s)=%s "), i, (ddr & _BV(i) ? PSTR("OUT") : PSTR("IN")), (state & _BV(i)) ? PSTR("HIGH") : PSTR("LOW"));
-        }
-        output.print(HTML_E(small));
-    }
-    else {
-        output.print(F(HTML_S(br) "ERROR - Device not found!"));
-    }
-}
-
-#endif
-
-
 #if IOT_LED_MATRIX
 
 #define PLUGIN_OPTIONS_NAME                             "led_matrix"
@@ -211,9 +181,9 @@ void ClockPlugin::_setupTimer()
                             _setFanSpeed(255);
                         #endif
                         #if IOT_CLOCK_HAVE_OVERHEATED_PIN != -1
-                            _digitalWrite(IOT_CLOCK_HAVE_OVERHEATED_PIN, LOW);
+                            digitalWrite(IOT_CLOCK_HAVE_OVERHEATED_PIN, LOW);
                             #if IOT_LED_MATRIX_STANDBY_PIN != -1
-                                _digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(false));
+                                digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(false));
                             #endif
                         #endif
 
@@ -266,14 +236,20 @@ void ClockPlugin::preSetup(SetupModeType mode)
 
 void ClockPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
+    #if HAVE_IOEXPANDER
+        auto &_PCF8574 = IOExpander::config._device;
+        _PCF8574.DDR = 0b00111111;
+        _PCF8574.PORT = 0xff;
+    #endif
+
     #if IOT_LED_MATRIX_ENABLE_PIN != -1
         digitalWrite(IOT_LED_MATRIX_ENABLE_PIN, enablePinState(false));
         pinMode(IOT_LED_MATRIX_ENABLE_PIN, OUTPUT);
     #endif
 
     #if IOT_LED_MATRIX_STANDBY_PIN != -1
-        _digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(false));
-        _pinMode(IOT_LED_MATRIX_STANDBY_PIN, OUTPUT);
+        digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(false));
+        pinMode(IOT_LED_MATRIX_STANDBY_PIN, OUTPUT);
     #endif
 
     _disable();
@@ -302,12 +278,12 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
 
         __LDBG_printf("button at pin %u", IOT_CLOCK_BUTTON_PIN);
         pinMonitor.attach<Clock::Button>(IOT_CLOCK_BUTTON_PIN, 0, *this);
-        _pinMode(IOT_CLOCK_BUTTON_PIN, INPUT);
+        pinMode(IOT_CLOCK_BUTTON_PIN, INPUT);
 
         #if IOT_CLOCK_TOUCH_PIN != -1
             __LDBG_printf("touch sensor at pin %u", IOT_CLOCK_TOUCH_PIN);
             pinMonitor.attach<Clock::TouchButton>(IOT_CLOCK_TOUCH_PIN, 1, *this);
-            _pinMode(IOT_CLOCK_TOUCH_PIN, INPUT);
+            pinMode(IOT_CLOCK_TOUCH_PIN, INPUT);
         #endif
 
         #if IOT_CLOCK_HAVE_ROTARY_ENCODER
@@ -485,7 +461,9 @@ void ClockPlugin::shutdown()
         }
     #endif
 
-    #if HAVE_PCF8574
+    #if HAVE_IOEXPANDER
+        auto &_PCF8574 = IOExpander::config._device;
+        _PCF8574.DDR = 0b00111111;
         _PCF8574.PORT = 0xff;
     #endif
 
@@ -710,7 +688,7 @@ void ClockPlugin::readConfig(bool setup)
     // reset temperature protection
     _tempBrightness = 1.0;
     #if IOT_CLOCK_HAVE_OVERHEATED_PIN
-        _digitalWrite(IOT_CLOCK_HAVE_OVERHEATED_PIN, HIGH);
+        digitalWrite(IOT_CLOCK_HAVE_OVERHEATED_PIN, HIGH);
     #endif
 
     _setColor(_config.solid_color.value);
@@ -769,7 +747,7 @@ void ClockPlugin::_enable()
 
     #if IOT_LED_MATRIX_STANDBY_PIN != -1
         if (_config.standby_led) {
-            _digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(false));
+            digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(false));
         }
     #endif
     #if IOT_LED_MATRIX_FAN_CONTROL
@@ -817,7 +795,7 @@ void ClockPlugin::_disable()
 
     #if IOT_LED_MATRIX_STANDBY_PIN != -1
         if (_config.standby_led) {
-            _digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(true));
+            digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(true));
         }
     #endif
 

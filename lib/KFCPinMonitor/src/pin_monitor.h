@@ -72,7 +72,7 @@
 #error GPIO expander pins only supported with polling
 #endif
 
-// up to 16 IO expander pins can be used with _digitalRead()
+// up to 16 IO expander pins can be used with digitalRead()
 // the pins must be added to PIN_MONITOR_POLLING_GPIO_EXPANDER_PINS_TO_USE
 #if !defined(PIN_MONITOR_POLLING_GPIO_EXPANDER_PINS_TO_USE) && PIN_MONITOR_POLLING_GPIO_EXPANDER_SUPPORT
 #error PIN_MONITOR_POLLING_GPIO_EXPANDER_PINS_TO_USE must be defined

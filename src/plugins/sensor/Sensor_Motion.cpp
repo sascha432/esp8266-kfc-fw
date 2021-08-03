@@ -144,7 +144,7 @@ void Sensor_Motion::end()
 
 void Sensor_Motion::_timerCallback()
 {
-    bool state = _digitalRead(_pin);
+    bool state = digitalRead(_pin);
     if (_pinInverted) {
         state = !state;
     }

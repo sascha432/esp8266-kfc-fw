@@ -16,6 +16,11 @@
 #include "rotary_encoder.h"
 #include "logger.h"
 
+#if PIN_MONITOR_POLLING_GPIO_EXPANDER_SUPPORT
+#include <Wire.h>
+#include <IOExpander.h>
+#endif
+
 #if PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS
 #include <FunctionalInterrupt.h>
 #else
@@ -28,7 +33,6 @@
 #else
 #include <debug_helper_disable.h>
 #endif
-
 
 using namespace PinMonitor;
 
@@ -47,8 +51,7 @@ void PollingTimer::start()
     _expanderStates = 0;
     uint8_t n = 0;
     for(const auto pin: PinMonitor::Interrupt::kIOExpanderPins) {
-        bool value = _digitalRead(pin);
-        if (value) {
+        if (IOExpander::config.digitalRead(pin)) {
             _expanderStates |= _BV(n);
         }
         else {
@@ -85,9 +88,8 @@ void PollingTimer::run()
 #if PIN_MONITOR_POLLING_GPIO_EXPANDER_SUPPORT
     uint8_t n = 0;
     for(const auto pin: PinMonitor::Interrupt::kIOExpanderPins) {
-        bool value = _digitalRead(pin);
+        bool value = IOExpander::config.digitalRead(pin);
         if ((_expanderStates & _BV(n)) != value) {
-
             __DBG_printf("IO expander callback pin=%u value=%u mask=%u", pin, value, _BV(n));
             for(const auto &pinPtr: pinMonitor.getPins()) {
                 if (pinPtr->getPin() == pin) {

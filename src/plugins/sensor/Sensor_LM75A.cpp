@@ -12,7 +12,11 @@
 #include <debug_helper_disable.h>
 #endif
 
-Sensor_LM75A::Sensor_LM75A(const String &name, TwoWire &wire, uint8_t address) : MQTT::Sensor(SensorType::LM75A), _name(name), _wire(wire), _address(address)
+Sensor_LM75A::Sensor_LM75A(const String &name, TwoWire &wire, uint8_t address) :
+    MQTT::Sensor(SensorType::LM75A),
+    _name(name),
+    _wire(&wire),
+    _address(address)
 {
     REGISTER_SENSOR_CLIENT(this);
     config.initTwoWire();
@@ -79,19 +83,14 @@ bool Sensor_LM75A::getSensorData(String &name, StringVector &values)
     return true;
 }
 
-float Sensor_LM75A::_readSensor(uint8_t address)
+float Sensor_LM75A::_readSensor()
 {
-    if (address == 255) {
-        address = _address;
+    return NAN;
+    _wire->beginTransmission(_address);
+    _wire->write(0);
+    if (_wire->endTransmission(false) == 0 && _wire->requestFrom(_address, 2U) == 2) {
+        return ((_wire->read() << 8) | _wire->read()) / 256.0f;
     }
-    _wire.beginTransmission(address);
-    _wire.write(0x00);
-    if (_wire.endTransmission() == 0 && _wire.requestFrom(address, (uint8_t)2) == 2) {
-        float temp = (((uint8_t)Wire.read() << 8) | (uint8_t)Wire.read()) / 256.0;
-        __LDBG_printf("Sensor_LM75A::_readSensor(): address 0x%02x: %.2f", address, temp);
-        return temp;
-    }
-    __LDBG_printf("Sensor_LM75A::_readSensor(): address 0x%02x: error", address);
     return NAN;
 }
 

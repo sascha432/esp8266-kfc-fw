@@ -773,7 +773,7 @@ inline bool ClockPlugin::_resetAlarm()
 
 inline void ClockPlugin::eventMotionDetected(bool motion)
 {
-    _digitalWrite(131, !motion);
+    digitalWrite(131, !motion);
 }
 
 inline bool ClockPlugin::eventMotionAutoOff(bool off)
@@ -832,9 +832,8 @@ inline void ClockPlugin::_setFanSpeed(uint8_t speed)
     else {
         speed = std::min<uint8_t>(speed, _config.max_fan_speed);
     }
-    if (_TinyPwm.analogWrite(_TinyPwm.PB1, speed)) {
-        _fanSpeed = speed;
-    }
+    analogWrite(140, speed);
+    _fanSpeed = speed;
 #if DEBUG_IOT_CLOCK
     __DBG_printf("set %u speed %u result %u", setSpeed, speed, _fanSpeed);
 #endif

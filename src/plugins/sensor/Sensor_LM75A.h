@@ -29,9 +29,10 @@ public:
     virtual void getStatus(Print &output) override;
     virtual bool getSensorData(String &name, StringVector &values) override;
 
-    float readSensor(uint8_t address = 255) {
-        return _readSensor(address);
+    float readSensor() {
+        return _readSensor();
     }
+
     uint8_t getAddress() const {
         return _address;
     }
@@ -44,10 +45,10 @@ private:
     friend Sensor_CCS811;
 
     String _getId();
-    float _readSensor(uint8_t address = 255);
+    float _readSensor();
 
     String _name;
-    TwoWire &_wire;
+    TwoWire *_wire;
     uint8_t _address;
 };
 

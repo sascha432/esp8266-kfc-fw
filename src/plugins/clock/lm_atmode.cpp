@@ -505,6 +505,9 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             #else
                 args.print(F("initial state=%s"), initialState);
             #endif
+            #if !IOT_SENSOR_HAVE_MOTION_SENSOR
+            int _autoOff = 0;
+            #endif
             args.print(F("state: _isEnabled=%u _isRunning=%u _targetBrightness=%u _autoOff=%u temp. protection=%u"), _isEnabled, _isRunning, _targetBrightness, _autoOff, isTempProtectionActive());
             args.print(F("current config: enabled=%u brightness=%u animation=%s"), _config.enabled, _config.brightness, _config.getAnimationName(_config._get_enum_animation()));
             args.print(F("stored config: enabled=%u brightness=%u animation=%s"), config.enabled, config.brightness, config.getAnimationName(config._get_enum_animation()));

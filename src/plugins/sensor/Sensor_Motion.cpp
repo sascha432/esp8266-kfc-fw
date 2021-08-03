@@ -128,7 +128,7 @@ void Sensor_Motion::begin(MotionSensorHandler *handler, uint8_t pin, bool pinInv
     _handler = nullptr;
     _pin = pin;
     _pinInverted = pinInverted;
-    _pinMode(_pin, INPUT);
+    pinMode(_pin, INPUT);
     _timerCallback();
     _handler = handler;
     _timer.add(Event::seconds(1), true, [this](Event::CallbackTimerPtr) {

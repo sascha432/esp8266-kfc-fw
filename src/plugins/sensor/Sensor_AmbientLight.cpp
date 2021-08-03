@@ -305,7 +305,7 @@ int32_t Sensor_AmbientLight::_readTinyPwmADC()
     Wire.write(_sensor.tinyPWM.adcPin);
     Wire.write(0x00);
     if (
-        (Wire.endTransmission() == 0) &&
+        (Wire.endTransmission(false) == 0) &&
         (Wire.requestFrom(_sensor.tinyPWM.i2cAddress, sizeof(level)) == sizeof(level)) &&
         (Wire.readBytes(reinterpret_cast<uint8_t *>(&level), sizeof(level)) == sizeof(level))
      ) {

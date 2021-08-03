@@ -832,7 +832,7 @@ inline void ClockPlugin::_setFanSpeed(uint8_t speed)
     else {
         speed = std::min<uint8_t>(speed, _config.max_fan_speed);
     }
-    analogWrite(140, speed);
+    analogWrite(TINYPWM_BASE_PIN, speed);
     _fanSpeed = speed;
 #if DEBUG_IOT_CLOCK
     __DBG_printf("set %u speed %u result %u", setSpeed, speed, _fanSpeed);

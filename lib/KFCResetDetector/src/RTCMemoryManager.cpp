@@ -153,6 +153,10 @@ uint8_t *RTCMemoryManager::_readMemory(Header_t &header, uint16_t extraSize) {
                 size += kBlockSize - alignment;
             }
         }
+        if (size > kMemorySize) {
+            __DBG_printf("malloc failed length=%u max_size=%u", size, kMemorySize);
+            break;
+        }
         // auto buf = reinterpret_cast<uint8_t *>(calloc(size, 1));
         auto buf = new uint8_t[size]();
         if (!buf) {
@@ -297,6 +301,10 @@ bool RTCMemoryManager::write(RTCMemoryId id, const void *dataPtr, uint8_t dataLe
     }
     else {
         auto size = dataLength + kBlockSize + sizeof(header) + sizeof(Entry_t);
+        if (size > kMemorySize) {
+            __DBG_printf("malloc failed length=%u max_size=%u", size, kMemorySize);
+            return false;
+        }
         memUnqiuePtr.reset(new uint8_t[size]());
         memPtr = memUnqiuePtr.get();
         if (!memUnqiuePtr) {

@@ -391,6 +391,8 @@ void setup()
 
     // __DBG_printf("read config");
     config.read();
+    SaveCrash::Data::setMD5(KFCConfigurationClasses::System::Firmware::getFirmwareMD5());
+
     // __DBG_printf("starting safe_mode=%u", safe_mode);
     if (safe_mode) {
 

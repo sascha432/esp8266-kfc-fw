@@ -36,11 +36,6 @@ DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameRemoteConfig_t, "MainConfig().plugins
 // --------------------------------------------------------------------
 // exported static functions
 
-const char *getFirmwareMD5()
-{
-    return KFCConfigurationClasses::System::Firmware::getFirmwareMD5();
-}
-
 namespace KFCConfigurationClasses {
 
     System::Flags::ConfigFlags_t::ConfigFlags_t() :

@@ -29,9 +29,6 @@ class HttpHeaders;
 class AsyncWebServerResponse;
 class AsyncWebServerRequest;
 
-// src/kfc_fw_config_forms.cpp
-extern const char *getFirmwareMD5();
-
 namespace SaveCrash {
 
     // limit stack trace
@@ -141,7 +138,7 @@ namespace SaveCrash {
         LastFailAlloc _lastFailAlloc;
         uint32_t _fwVersion;
         struct rst_info _info;
-        uint8_t _md5[16];
+        static uint8_t _md5[16];
 
         Data() :
             _time(0),
@@ -150,7 +147,6 @@ namespace SaveCrash {
             _fwVersion(FirmwareVersion()),
             _info({})
         {
-            setMD5(getFirmwareMD5());
         }
 
         Data(uint32_t time, uint32_t stackStart, uint32_t stackEnd, uint32_t sp, void *lastFailAllocAddr, int lastFailAllocSize, const struct rst_info &rst_info) :
@@ -160,7 +156,6 @@ namespace SaveCrash {
             _fwVersion(FirmwareVersion()),
             _info(rst_info)
         {
-            setMD5(getFirmwareMD5());
         }
 
         operator bool() const;
@@ -211,7 +206,7 @@ namespace SaveCrash {
         // does not allocate memory
         void printReason(Print &output) const;
         void printMD5(Print &output) const;
-        bool setMD5(const char *str);
+        static bool setMD5(const char *str);
     };
 
     static constexpr auto kDataSize = sizeof(Data);

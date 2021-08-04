@@ -40,6 +40,8 @@ static void ets_printf_P(const char *str, ...) {
 
 namespace SaveCrash {
 
+    uint8_t Data::_md5[16];
+
     uint8_t getCrashCounter()
     {
 #if KFC_DISABLE_CRASHCOUNTER

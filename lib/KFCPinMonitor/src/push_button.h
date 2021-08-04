@@ -74,6 +74,8 @@ namespace PinMonitor {
         MAX_BITS                        = 10
     };
 
+
+
     class PushButton;
 
 #if PIN_MONITOR_BUTTON_GROUPS
@@ -85,8 +87,8 @@ namespace PinMonitor {
     // Object to manage a group of buttons with shared properties
     class SingleClickGroup {
     public:
-        static constexpr uint16_t kClickRepeatCountMax = (1 << 15) - 2;
-        static constexpr uint16_t kClickRepeatNotSet = (1 << 15) - 1;
+        static constexpr uint16_t kClickRepeatCountMax = std::numeric_limits<uint16_t>::max() - 1;
+        static constexpr uint16_t kClickRepeatNotSet = std::numeric_limits<uint16_t>::max();
 
         SingleClickGroup(uint16_t singleClickTimeout) :
             _timerOwner(nullptr),
@@ -129,8 +131,8 @@ namespace PinMonitor {
         // clicks in a row with less than _timeout milliseconds after the clicks
         // _repeatCount 1 = one click, 2 = double click, 3 tripple click etc...
         uint16_t _timeout;
-        uint16_t _repeatCount : 15;
-        uint16_t _timerRunning : 1;
+        uint16_t _repeatCount;
+        bool _timerRunning;
     };
 
     static constexpr size_t kSingleClickGroupSize = sizeof(SingleClickGroup);
@@ -164,7 +166,7 @@ namespace PinMonitor {
     inline uint16_t SingleClickGroup::getRepeatCount() const
     {
         return (_repeatCount == kClickRepeatNotSet) ? 0 : _repeatCount;
-        return _repeatCount; //(_repeatCount == kClickRepeatNotSet) ? 0 : _repeatCount;
+        // return _repeatCount; //(_repeatCount == kClickRepeatNotSet) ? 0 : _repeatCount;
     }
 
     inline uint32_t SingleClickGroup::getDuration() const
@@ -338,9 +340,9 @@ namespace PinMonitor {
 
         uint32_t _startTimer;
         uint32_t _duration;
-        uint16_t _repeatCount: 14;
-        uint16_t _startTimerRunning: 1;
-        uint16_t _holdRepeat: 1;
+        uint16_t _repeatCount;
+        bool _startTimerRunning;
+        bool _holdRepeat;
     };
 
     #if PIN_MONITOR_BUTTON_GROUPS

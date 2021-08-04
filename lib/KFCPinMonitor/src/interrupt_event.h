@@ -54,6 +54,11 @@ namespace PinMonitor {
                 _value(value)
                 // _value((value & kValueMask) | ((pin & kPinNumMask) << kPinNumBit) | (pin16 << kGPIO16Bit))
             {
+                #if DEBUG
+                    if (pin >= NUM_DIGITAL_PINS) {
+                        __DBG_panic("invalid pin=%u", pin);
+                    }
+                #endif
                 _pinNum = pin;
                 _pin16 = pin16;
             }
@@ -65,6 +70,11 @@ namespace PinMonitor {
                 _value(value)
                 // _value((value & kValueMask) | ((pin & kPinNumMask) << kPinNumBit))
             {
+                #if DEBUG
+                    if (pin >= NUM_DIGITAL_PINS) {
+                        __DBG_panic("invalid pin=%u", pin);
+                    }
+                #endif
                 _pinNum = pin;
                 _pin16 = 0;
             }

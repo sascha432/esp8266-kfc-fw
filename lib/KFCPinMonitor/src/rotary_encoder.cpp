@@ -18,6 +18,11 @@ RotaryEncoderPin::RotaryEncoderPin(uint8_t pin, RotaryEncoderDirection direction
     Pin(pin, encoder, StateType::UP_DOWN, state),
     _direction(direction)
 {
+    #if DEBUG
+        if (pin >= NUM_DIGITAL_PINS) {
+            __DBG_panic("invalid pin=%u", pin);
+        }
+    #endif
 }
 
 RotaryEncoderPin::~RotaryEncoderPin()
@@ -41,6 +46,8 @@ void RotaryEncoder::attachPins(uint8_t pin1, uint8_t pin2)
     static_assert(RotaryEncoderDirection::RIGHT == RotaryEncoderDirection::LAST, "LAST must be added last");
     _mask1 = _BV(pin1);
     _mask2 = _BV(pin2);
+    pinMode(pin1, PinMonitor::pinMonitor.getPinMode());
+    pinMode(pin2, PinMonitor::pinMonitor.getPinMode());
 }
 
 // https://github.com/buxtronix/arduino/blob/master/libraries/Rotary/Rotary.cpp

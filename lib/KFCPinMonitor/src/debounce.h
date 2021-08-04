@@ -111,10 +111,11 @@ namespace PinMonitor {
 
     private:
         friend Monitor;
+
         uint32_t _debounceTimer;
-        bool _state: 1;
-        bool _value: 1;
-        bool _debounceTimerRunning: 1;
+        bool _state;
+        bool _value;
+        bool _debounceTimerRunning;
     };
 
     inline void Debounce::setState(bool state)

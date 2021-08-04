@@ -5,6 +5,8 @@
 #pragma once
 
 #include <Arduino_compat.h>
+#include "polling_timer.h"
+#include "gpio_interrupt_lock.h"
 
 namespace PinMonitor {
 
@@ -113,9 +115,9 @@ namespace PinMonitor {
         const void *_arg;
         uint32_t _eventCounter;
         StateType _states;
-        uint8_t _pin: 4;
-        uint8_t _disabled: 1;
-        uint8_t _activeState: 1;
+        uint8_t _pin;
+        bool _disabled;
+        bool _activeState;
 
 #if DEBUG_PIN_MONITOR
         char name_buffer[16]{};
@@ -214,23 +216,20 @@ namespace PinMonitor {
         }
 
         inline void clearEvents() {
-            GPIOInterruptsDisable();
+            GPIOInterruptLock lock;
             _event = SimpleEventType::NONE;
-            GPIOInterruptsDisable();
         }
 
         inline SimpleEventType getEvent() const {
-            GPIOInterruptsDisable();
+            GPIOInterruptLock lock;
             auto tmp = _event;
-            GPIOInterruptsDisable();
             return tmp;
         }
 
         inline SimpleEventType getEventClear() {
-            GPIOInterruptsDisable();
+            GPIOInterruptLock lock;
             auto tmp = _event;
             _event = SimpleEventType::NONE;
-            GPIOInterruptsDisable();
             return tmp;
         }
 
@@ -278,7 +277,7 @@ namespace PinMonitor {
         }
 
         virtual void clear() override {
-            clearEventsNoInterrupts();
+            GPIOInterruptLock lock;
             // _debounce = Debounce(digitalRead(getPin()));
             _debounce.setState(digitalRead(getPin()));
         }
@@ -287,9 +286,9 @@ namespace PinMonitor {
             return const_cast<Debounce *>(&_debounce);
         }
 
-        // void IRAM_ATTR addEvent(uint32_t micros, bool value) {
         inline __attribute__((__always_inline__))
         void addEvent(uint32_t micros, bool value) {
+            GPIOInterruptLock lock;
             _events._micros = micros;
             _events._interruptCount++;
             _events._value = value;
@@ -297,34 +296,28 @@ namespace PinMonitor {
 
         inline __attribute__((__always_inline__))
         void clearEvents() {
-            GPIOInterruptsDisable();
-            clearEventsNoInterrupts();
-            GPIOInterruptsDisable();
-        }
-
-        // GPIO interrupts must be disabled when calling this method
-        inline __attribute__((__always_inline__))
-        void clearEventsNoInterrupts() {
+            GPIOInterruptLock lock;
             _events._interruptCount = 0;
         }
 
-        inline Events getEvents() const {
-            GPIOInterruptsDisable();
-            auto tmp = getEventsNoInterrupts();
-            GPIOInterruptsDisable();
+        inline __attribute__((__always_inline__))
+        Events getEvents() const {
+            GPIOInterruptLock lock;
+            return __getEvents();
+        }
+
+        inline __attribute__((__always_inline__))
+        Events getEventsClear() {
+            GPIOInterruptLock lock;
+            auto tmp = __getEvents();
+            clear();
             return tmp;
         }
 
-        inline Events getEventsClear() {
-            GPIOInterruptsDisable();
-            auto tmp = getEventsNoInterrupts();
-            clearEventsNoInterrupts();
-            GPIOInterruptsDisable();
-            return tmp;
-        }
-
+    protected:
         // GPIO interrupts must be disabled when calling this method
-        inline Events getEventsNoInterrupts() const {
+        inline __attribute__((__always_inline__))
+        Events __getEvents() const {
             auto tmp = Events(_events._micros, _events._interruptCount, _events._value);
             return tmp;
         }

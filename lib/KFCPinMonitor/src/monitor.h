@@ -5,40 +5,11 @@
 #pragma once
 
 #include <Arduino_compat.h>
-#include <EventScheduler.h>
+#include "polling_timer.h"
 
 // Monitors attached pins and sends state after debouncing
 
 namespace PinMonitor {
-
-#if PIN_MONITOR_USE_POLLING
-
-    class PollingTimer : public OSTimer {
-    public:
-        PollingTimer();
-
-        void start();
-        virtual void run();
-
-        uint16_t getStates() const;
-
-    private:
-        uint16_t _states;
-#if PIN_MONITOR_POLLING_GPIO_EXPANDER_SUPPORT
-        uint16_t _expanderStates;
-#endif
-    };
-
-    inline PollingTimer::PollingTimer() : _states(0)
-    {
-    }
-
-    inline uint16_t PollingTimer::getStates() const
-    {
-        return _states;
-    }
-
-#endif
 
     class Monitor
     {
@@ -51,6 +22,7 @@ namespace PinMonitor {
 
         // set default pin mode for adding new pins
         void setDefaultPinMode(uint8_t mode);
+        uint8_t getPinMode() const;
 
         // if the main loop is not executed fast enough, set useTimer to true
         void begin(bool useTimer = false);
@@ -123,6 +95,7 @@ namespace PinMonitor {
 
         uint8_t _pinModeFlag;
         uint8_t _debounceTime;
+        bool _running;
     };
 
 
@@ -140,6 +113,11 @@ namespace PinMonitor {
     inline void Monitor::setDefaultPinMode(uint8_t mode)
     {
         _pinModeFlag = mode;
+    }
+
+    inline uint8_t Monitor::getPinMode() const
+    {
+        return _pinModeFlag;
     }
 
     inline void Monitor::detach(Iterator begin, Iterator end)
@@ -163,9 +141,5 @@ namespace PinMonitor {
     }
 
     extern Monitor pinMonitor;
-
-    #if PIN_MONITOR_USE_POLLING
-        extern PollingTimer pollingTimer;
-    #endif
 
 }

@@ -5,14 +5,14 @@
 #pragma once
 
 #ifndef __RESET_DETECTOR_INSIDE_INCLUDE
-#define  __RESET_DETECTOR_INLINE__
-#define  __RESET_DETECTOR_INLINE_ALWAYS__
-#define __RESET_DETECTOR_INLINE_INLINE_DEFINED__
+#    define __RESET_DETECTOR_INLINE__
+#    define __RESET_DETECTOR_INLINE_ALWAYS__
+#    define __RESET_DETECTOR_INLINE_INLINE_DEFINED__
 #else
-#define  __RESET_DETECTOR_INLINE__ inline
-#define  __RESET_DETECTOR_INLINE_ALWAYS__ inline __attribute__((__always_inline__))
-#define __RESET_DETECTOR_INLINE_INLINE_DEFINED__
-#include "reset_detector.h"
+#    define __RESET_DETECTOR_INLINE__        inline
+#    define __RESET_DETECTOR_INLINE_ALWAYS__ inline __attribute__((__always_inline__))
+#    define __RESET_DETECTOR_INLINE_INLINE_DEFINED__
+#    include "reset_detector.h"
 #endif
 
 #if DEBUG_RESET_DETECTOR

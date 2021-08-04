@@ -427,23 +427,23 @@
 #endif
 
 #if (KFC_SAFEMODE_GPIO_RESULT & KFC_SAFEMODE_GPIO_MASK) != KFC_SAFEMODE_GPIO_RESULT
-#error invalid KFC_SAFEMODE_GPIO_RESULT for KFC_SAFEMODE_GPIO_MASK
+#   error invalid KFC_SAFEMODE_GPIO_RESULT for KFC_SAFEMODE_GPIO_MASK
 #endif
 
 #ifndef KFC_HAVCE_NEOPIXEL_EX
-#define KFC_HAVCE_NEOPIXEL_EX                               0
+#   define KFC_HAVCE_NEOPIXEL_EX 0
 #endif
 
 #ifndef HAVE_GDBSTUB
-#define HAVE_GDBSTUB                                        0
+#   define HAVE_GDBSTUB 0
 #endif
 
-#ifndef HAVE_IOEXPANDER
-#ifdef IOEXPANDER_DEVICE_CONFIG
-#define HAVE_IOEXPANDER 1
-#else
-#define HAVE_IOEXPANDER 0
+#if !defined(HAVE_IOEXPANDER) && defined(IOEXPANDER_DEVICE_CONFIG)
+#   error IOEXPANDER_DEVICE_CONFIG defined but HAVE_IOEXPANDER missing
 #endif
+
+#if HAVE_IOEXPANDER and !defined(IOEXPANDER_DEVICE_CONFIG)
+#   error HAVE_IOEXPANDER=1 but IOEXPANDER_DEVICE_CONFIG not defined
 #endif
 
 class Stream;

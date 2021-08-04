@@ -1738,7 +1738,3 @@ size_t session_get_token_min_size()
 {
     return System::Device::kTokenMinSize;
 }
-
-#if HAVE_IOEXPANDER
-#include "../lib/KFCIOExpander/src/IOExpander.cpp"
-#endif

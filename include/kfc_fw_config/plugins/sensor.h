@@ -5,6 +5,10 @@
 #include "kfc_fw_config/base.h"
 #include "ConfigurationHelper.h"
 
+#ifndef IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_CALIBRATION
+#define IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_CALIBRATION 1.0
+#endif
+
 namespace KFCConfigurationClasses {
 
     namespace Plugins {
@@ -14,7 +18,7 @@ namespace KFCConfigurationClasses {
 
         // send recorded data over UDP
         #ifndef IOT_SENSOR_HAVE_BATTERY_RECORDER
-        #define IOT_SENSOR_HAVE_BATTERY_RECORDER                        0
+        #define IOT_SENSOR_HAVE_BATTERY_RECORDER 0
         #endif
 
         namespace SensorConfigNS {
@@ -88,6 +92,8 @@ namespace KFCConfigurationClasses {
                     CREATE_UINT32_BITFIELD_MIN_MAX(webui_update_rate, 4, 1, 15, 2, 1);
                     CREATE_UINT32_BITFIELD_MIN_MAX(averaging_period, 10, 5, 900, 30, 1);
                     CREATE_UINT32_BITFIELD_MIN_MAX(hold_peak_time, 10, 5, 900, 60, 1);
+                    CREATE_FLOAT_FIELD(calibration, -100, 100, 1);
+                    CREATE_FLOAT_FIELD(offset, -1000, 1000, 0);
 
                     INA219CurrentDisplayType getDisplayCurrent() const {
                         return static_cast<INA219CurrentDisplayType>(display_current);

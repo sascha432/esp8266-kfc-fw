@@ -33,7 +33,7 @@ Sensor_INA219::Sensor_INA219(const String &name, TwoWire &wire, uint8_t address)
 {
     REGISTER_SENSOR_CLIENT(this);
     _ina219.begin(&config.initTwoWire());
-    _ina219.setCalibration(IOT_SENSOR_INA219_BUS_URANGE, IOT_SENSOR_INA219_GAIN, IOT_SENSOR_INA219_SHUNT_ADC_RES, IOT_SENSOR_INA219_R_SHUNT * 4);
+    _ina219.setCalibration(IOT_SENSOR_INA219_BUS_URANGE, IOT_SENSOR_INA219_GAIN, IOT_SENSOR_INA219_SHUNT_ADC_RES, IOT_SENSOR_INA219_R_SHUNT * _config.calibration, _config.offset);
 
     __LDBG_printf("address=%x voltage_range=%x gain=%x shunt_ADC_res=%x", _address, IOT_SENSOR_INA219_BUS_URANGE, IOT_SENSOR_INA219_GAIN, IOT_SENSOR_INA219_SHUNT_ADC_RES);
 
@@ -247,12 +247,21 @@ void Sensor_INA219::createConfigureForm(AsyncWebServerRequest *request, FormUI::
     form.addFormUI(F("Power Display Precision"));
     cfg.ina219.addRangeValidatorFor_webui_power_precision(form);
 
+    form.addObjectGetterSetter(F("ina219_cal"), FormGetterSetter(cfg.ina219, calibration));
+    form.addFormUI(F("Shunt Calibration"));
+    cfg.ina219.addRangeValidatorFor_calibration(form);
+
+    form.addObjectGetterSetter(F("ina219_io"), FormGetterSetter(cfg.ina219, offset));
+    form.addFormUI(F("Shunt Offset"), FormUI::Suffix(F("mA")));
+    cfg.ina219.addRangeValidatorFor_offset(form);
+
     group.end();
 }
 
 void Sensor_INA219::reconfigure(PGM_P source)
 {
     _config = _readConfig();
+    _ina219.setShunt(IOT_SENSOR_INA219_R_SHUNT * _config.calibration, _config.offset);
     setUpdateRate(_config.webui_update_rate);
     _updateTimer = 0;
     _holdPeakTimer = 0;

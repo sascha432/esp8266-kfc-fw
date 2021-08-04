@@ -203,6 +203,8 @@ private:
 public:
     class RtcTimer : public OSTimer {
     public:
+        RtcTimer() : OSTimer(OSTIMER_NAME("RtcTimer")) {}
+
         virtual void run() {
             RTCMemoryManager::storeTime();
         }

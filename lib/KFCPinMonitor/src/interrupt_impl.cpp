@@ -34,15 +34,15 @@ namespace PinMonitor {
         for(const auto &pinPtr: pinMonitor.getPins()) {
             pinPtr->clear();
         }
-#if PIN_MONITOR_ROTARY_ENCODER_SUPPORT
-        for(const auto pinNum: PinMonitor::Interrupt::kRotaryPins) {
-            GPC(pinNum) &= ~(0xF << GPCI);
-            GPC(pinNum) |= ((CHANGE & 0xF) << GPCI);
-        }
-        GPIEC = PinMonitor::Interrupt::kGPIORotaryMask;
-        ETS_GPIO_INTR_ATTACH(pin_monitor_interrupt_handler, nullptr);
-        interrupt_levels = GPI;
-#endif
+        #if PIN_MONITOR_ROTARY_ENCODER_SUPPORT
+            for(const auto pinNum: PinMonitor::Interrupt::kRotaryPins) {
+                GPC(pinNum) &= ~(0xF << GPCI);
+                GPC(pinNum) |= ((CHANGE & 0xF) << GPCI);
+            }
+            GPIEC = PinMonitor::Interrupt::kGPIORotaryMask;
+            ETS_GPIO_INTR_ATTACH(pin_monitor_interrupt_handler, nullptr);
+            interrupt_levels = GPI;
+        #endif
         ETS_GPIO_INTR_ENABLE();
     }
 
@@ -51,23 +51,23 @@ namespace PinMonitor {
         ETS_GPIO_INTR_DISABLE();
     }
 
-#if PIN_MONITOR_ROTARY_ENCODER_SUPPORT
-    void IRAM_ATTR pin_monitor_interrupt_handler(void *ptr)
-    {
-        uint32_t status32 = GPIE;
-        GPIEC = status32;
-        uint16_t status = static_cast<uint16_t>(status32);
-        auto levels = static_cast<uint16_t>(GPI); // we skip GPIO16 since it cannot handle interrupts anyway
-        ETS_GPIO_INTR_DISABLE();
-        for(const auto pinNum: PinMonitor::Interrupt::kRotaryPins) {
-            if ((interrupt_levels ^ levels) & status & _BV(pinNum)) {
-                PinMonitor::eventBuffer.emplace_back(micros(), pinNum, levels);
+    #if PIN_MONITOR_ROTARY_ENCODER_SUPPORT
+        void IRAM_ATTR pin_monitor_interrupt_handler(void *ptr)
+        {
+            uint32_t status32 = GPIE;
+            GPIEC = status32;
+            uint16_t status = static_cast<uint16_t>(status32);
+            auto levels = static_cast<uint16_t>(GPI); // we skip GPIO16 since it cannot handle interrupts anyway
+            ETS_GPIO_INTR_DISABLE();
+            for(const auto pinNum: PinMonitor::Interrupt::kRotaryPins) {
+                if ((interrupt_levels ^ levels) & status & _BV(pinNum)) {
+                    PinMonitor::eventBuffer.emplace_back(micros(), pinNum, levels);
+                }
             }
+            PinMonitor::interrupt_levels = levels;
+            ETS_GPIO_INTR_ENABLE();
         }
-        PinMonitor::interrupt_levels = levels;
-        ETS_GPIO_INTR_ENABLE();
-    }
-#endif
+    #endif
 
 #else
 
@@ -76,14 +76,14 @@ namespace PinMonitor {
         // #define GPCI   7  //INT_TYPE (3bits) 0:disable,1:rising,2:falling,3:change,4:low,5:high
 
         ETS_GPIO_INTR_DISABLE();
-#if PIN_MONITOR_ROTARY_ENCODER_SUPPORT
-        eventBuffer.clear();
-#endif
-#if PIN_MONITOR_SIMPLE_PIN || PIN_MONITOR_DEBOUNCED_PUSHBUTTON
-        for(const auto &pinPtr: pinMonitor.getPins()) {
-            pinPtr->clear();
-        }
-#endif
+        #if PIN_MONITOR_ROTARY_ENCODER_SUPPORT
+            eventBuffer.clear();
+        #endif
+        #if PIN_MONITOR_SIMPLE_PIN || PIN_MONITOR_DEBOUNCED_PUSHBUTTON
+            for(const auto &pinPtr: pinMonitor.getPins()) {
+                pinPtr->clear();
+            }
+        #endif
         for(auto pin: Interrupt::kPins) {
             GPC(pin) &= ~(0xF << GPCI);  // INT mode disabled
             GPC(pin) |= ((CHANGE & 0xF) << GPCI);  // INT mode "mode"
@@ -123,25 +123,25 @@ namespace PinMonitor {
             }
             // __DBG_printf("pin=%u set=%u last=%u new=%u", pinNum, status & mask, interrupt_levels & mask, levels & mask);
 
-#if PIN_MONITOR_ROTARY_ENCODER_SUPPORT || PIN_MONITOR_DEBOUNCED_PUSHBUTTON
-            auto _micros = micros();
-#endif
+            #if PIN_MONITOR_ROTARY_ENCODER_SUPPORT || PIN_MONITOR_DEBOUNCED_PUSHBUTTON
+                auto _micros = micros();
+            #endif
             switch(pin->_type) {
-#if PIN_MONITOR_DEBOUNCED_PUSHBUTTON
-                case HardwarePinType::DEBOUNCE:
-                    reinterpret_cast<DebouncedHardwarePin *>(pin)->addEvent(_micros, levels & mask);
-                    break;
-#endif
-#if PIN_MONITOR_SIMPLE_PIN
-                case HardwarePinType::SIMPLE:
-                    reinterpret_cast<SimpleHardwarePin *>(pin)->addEvent(levels & mask);
-                    break;
-#endif
-#if PIN_MONITOR_ROTARY_ENCODER_SUPPORT
-                case HardwarePinType::ROTARY:
-                    PinMonitor::eventBuffer.emplace_back(_micros, pinNum, levels);
-                    break;
-#endif
+                #if PIN_MONITOR_DEBOUNCED_PUSHBUTTON
+                    case HardwarePinType::DEBOUNCE:
+                        reinterpret_cast<DebouncedHardwarePin *>(pin)->addEvent(_micros, levels & mask);
+                        break;
+                #endif
+                #if PIN_MONITOR_SIMPLE_PIN
+                    case HardwarePinType::SIMPLE:
+                        reinterpret_cast<SimpleHardwarePin *>(pin)->addEvent(levels & mask);
+                        break;
+                #endif
+                #if PIN_MONITOR_ROTARY_ENCODER_SUPPORT
+                    case HardwarePinType::ROTARY:
+                        PinMonitor::eventBuffer.emplace_back(_micros, pinNum, levels);
+                        break;
+                #endif
                 default:
                     break;
             }

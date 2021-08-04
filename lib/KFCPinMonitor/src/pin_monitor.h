@@ -42,7 +42,7 @@
 
 
 #ifndef DEBUG_PIN_MONITOR
-#define DEBUG_PIN_MONITOR                                           0
+#define DEBUG_PIN_MONITOR 1
 #endif
 
 // use custom interrupt handler for push buttons and rotary encoder

@@ -69,3 +69,4 @@ def before_clean(source, target, env):
 env.AddPreAction("$BUILD_DIR/littlefs.bin", build_webui)
 #env.AddPreAction("buildfs", build_webui)
 env.AlwaysBuild(env.Alias("rebuildfs", None, rebuild_webui))
+env.AlwaysBuild(env.Alias("buildfs", None, build_webui))

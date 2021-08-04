@@ -2,6 +2,8 @@
 
 ## Version 0.0.5
 
+- Added CPPDEFINES ad dependency to KFCWebBuilder to detect any changes
+- Moved KFCIOExpander to separate git repo
 - Support for MCP23017 I2C IO-Expander
 - Support for multiple IO-Expander of the same type
 - Inline forms for WebUI

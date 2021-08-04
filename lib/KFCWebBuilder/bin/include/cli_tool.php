@@ -32,11 +32,21 @@ $argParser->addBoolOption('dependencies', array('--dep'), false, 'Display extern
 $argParser->addBoolOption('files', array('--files'), false, 'Scan for files and result');
 $argParser->addBoolOption('show_env', array('--show-env'), false, 'Show available environments');
 $argParser->addBoolOption('dump', array('-D', '--dump-config'), false, 'Display configuration as JSON string');
+$argParser->addBoolOption('defines', array('-DD', '--dump-defines'), false, 'Display CPPDEFINES from configuration');
 $argParser->addArgument('config', 1, '/path/to/ESPWebFramework.json', 'Configuration file for the project');
+$argParser->addOption('cppdefines', array('--defines-from'), '/path/to/defines.txt', null, 'Read CPPDEFINES from file');
 $argParser->parse();
 
 $configReader = new ConfigReader($argParser->getArgument('config'));
 $configReader->getPlatformIOParser()->setEnvironment($argParser->getOption('env'));
+try {
+    $filename = $argParser->getOption('cppdefines');
+    $configReader->getPlatformIOParser()->readDefines($filename);
+    $configReader->addDependency($filename);
+} catch (\Exception $exception) {
+    echo sprintf("Build failed with: %s\n", $exception->getMessage());
+    exit(1);
+}
 try {
     if ($configReader->read() === false) {
         echo $configReader->getLastError()."\n";
@@ -61,6 +71,10 @@ if ($argParser->isTrue('show_env')) {
 
 if ($argParser->isTrue('dump')) {
     DumpConfig::dump($configReader->getRawJson());
+    exit(0);
+}
+if ($argParser->isTrue('defines')) {
+    $configReader->getPlatformIOParser()->dumpDefines();
     exit(0);
 }
 

@@ -123,6 +123,13 @@ class ConfigReader {
     }
 
     /**
+     * @param string $filename
+    */
+    public function addDependency(string $filename): void {
+        $this->dependencies[] = $filename;
+    }
+
+    /**
      * @param string $val
      * @param array $from
      * @param array $to

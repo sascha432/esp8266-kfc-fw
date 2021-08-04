@@ -19,6 +19,11 @@ class PlatformIOParser {
     private $defines;
 
     /**
+     * @var bool parsse defines from .ini
+     */
+    private $parseDefines;
+
+    /**
      * @var string
      */
     private $environment;
@@ -67,13 +72,26 @@ class PlatformIOParser {
     {
         $this->defines = array();
         $this->environments = array();
+        $this->parseDefines = true;
     }
 
-    public function dump(): void
+    public function dumpDefines(): void
     {
         foreach($this->defines as $name => $value) {
             echo $name.'='.$value."\n";
         }
+    }
+
+    public function readDefines(string $file): void {
+        if (!file_exists($file)) {
+            throw new \RuntimeException("Cannot read $file");
+        }
+        $this->defines = array();
+        foreach(file($file, FILE_IGNORE_NEW_LINES) as $line) {
+            list($key, $val) = explode('=', $line, 2);
+            $this->defines[$key] = $val;
+        }
+        $this->parseDefines = false;
     }
 
     /**
@@ -304,19 +322,22 @@ class PlatformIOParser {
 
             $line = $this->resolveVariables($selectedEnv['build_flags']);
 
-            // TODO there might be quoted strings with space
-            $token = strtok($line, "\t ");
-            while($token) {
-                if ($token === '-D') {
-                    $token = strtok("\t ");
-                    if (!$token) {
-                        break;
-                    }
-                    @list($name, $value) = explode('=', $token, 2);
-                    $this->defines[$name] = $value;
+            // if not set, the defines have been read from file
+            if ($this->parseDefines) {
+                // TODO there might be quoted strings with space
+                $token = strtok($line, "\t ");
+                while($token) {
+                    if ($token === '-D') {
+                        $token = strtok("\t ");
+                        if (!$token) {
+                            break;
+                        }
+                        @list($name, $value) = explode('=', $token, 2);
+                        $this->defines[$name] = $value;
 
+                    }
+                    $token = strtok("\t ");
                 }
-                $token = strtok("\t ");
             }
         }
     }

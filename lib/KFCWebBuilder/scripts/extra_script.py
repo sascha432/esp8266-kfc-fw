@@ -7,6 +7,7 @@ except ImportError:
 from SCons.Script import ARGUMENTS
 import subprocess
 import os.path
+import os
 import subprocess
 import click
 
@@ -24,6 +25,17 @@ def build_webui(source, target, env, force = False):
     php_file = os.path.abspath(env.subst('$PROJECT_DIR/lib/KFCWebBuilder/bin/include/cli_tool.php'));
     json_file = os.path.abspath(env.subst('$PROJECT_DIR/KFCWebBuilder.json'));
 
+    defines = env.get('CPPDEFINES');
+    definesFile = env.subst('$BUILD_DIR/cppdefines.txt');
+    with open(definesFile, 'wt') as file:
+        for define in defines:
+            if isinstance(define, tuple):
+                (key, val) = define
+            else:
+                key = define
+                val = 1;
+            file.write('%s=%s\n' % (env.subst(key), env.subst(val)))
+
     if not os.path.isfile(php_bin):
         click.secho('cannot find php binary: %s: set custom_php_exe=<php binary>' % php_bin, fg='yellow')
         env.Exit(1)
@@ -34,7 +46,7 @@ def build_webui(source, target, env, force = False):
         click.secho('cannot find %s' % json_file, fg='yellow')
         env.Exit(1)
 
-    args = [ php_bin, php_file, json_file, '--branch', 'spiffs', '--env', 'env:%s' % env.subst('$PIOENV'), '--clean-exit-code', '0', '--dirty-exit-code', '0' ]
+    args = [ php_bin, php_file, json_file, '--branch', 'spiffs', '--env', 'env:%s' % env.subst('$PIOENV'), '--clean-exit-code', '0', '--dirty-exit-code', '0', '--defines-from', definesFile ]
     if force:
         args.append('--force')
 

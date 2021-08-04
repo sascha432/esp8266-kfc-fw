@@ -8,31 +8,32 @@
 #include <OSTimer.h>
 #include <dyn_bitset.h>
 
-#define INVALID_PIN_ID                  255
-#define IGNORE_BUILTIN_LED_PIN_ID       255
-#define NEOPIXEL_PIN_ID                 253
+#define INVALID_PIN_ID            255
+#define IGNORE_BUILTIN_LED_PIN_ID 255
+#define NEOPIXEL_PIN_ID           253
 
 #if INVERT_BUILTIN_LED
-#define BUILTIN_LED_STATE(state)        (state ? LOW : HIGH)
-#define BUILTIN_LED_STATEI(state)       (state)
+#    define BUILTIN_LED_STATE(state)  (state ? LOW : HIGH)
+#    define BUILTIN_LED_STATEI(state) (state)
 #else
-#define BUILTIN_LED_STATE(state)        state
-#define BUILTIN_LED_STATEI(state)       (state ? LOW : HIGH)
+#    define BUILTIN_LED_STATE(state)  state
+#    define BUILTIN_LED_STATEI(state) (state ? LOW : HIGH)
 #endif
 
 #if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID
-#define BUILDIN_LED_SET(mode)           BlinkLEDTimer::setBlink(__LED_BUILTIN, mode);
-#define forceTimeBUILDIN_LED_SETP(delay, patt)   BlinkLEDTimer::setPattern(__LED_BUILTIN, delay, patt);
-#define BUILDIN_LED_GET(mode)           BlinkLEDTimer::isBlink(__LED_BUILTIN, mode)
+#    define BUILDIN_LED_SET(mode)                  BlinkLEDTimer::setBlink(__LED_BUILTIN, mode);
+#    define forceTimeBUILDIN_LED_SETP(delay, patt) BlinkLEDTimer::setPattern(__LED_BUILTIN, delay, patt);
+#    define BUILDIN_LED_GET(mode)                  BlinkLEDTimer::isBlink(__LED_BUILTIN, mode)
 #else
-#define BUILDIN_LED_SET(...)
-#define BUILDIN_LED_SETP(...)
-#define BUILDIN_LED_GET(mode)           true
+#    define BUILDIN_LED_SET(...)
+#    define BUILDIN_LED_SETP(...)
+#    define BUILDIN_LED_GET(mode) true
 #endif
 
 class BlinkLEDTimer : public OSTimer {
 private:
     using OSTimer::startTimer;
+
 public:
     enum class BlinkType : uint16_t {
         SLOW = 1000,
@@ -91,12 +92,6 @@ protected:
     Bitset _pattern;
     BlinkType _delay;
 };
-
-inline BlinkLEDTimer::BlinkLEDTimer(uint8_t pin) :
-    _pin(pin),
-    _delay(BlinkType::INVALID)
-{
-}
 
 inline __attribute__((__always_inline__))
 void BlinkLEDTimer::set(uint16_t delay, Bitset &&pattern)

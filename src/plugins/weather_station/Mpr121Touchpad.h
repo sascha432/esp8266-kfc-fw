@@ -24,6 +24,7 @@ class WeatherStationPlugin;
 
 class Mpr121Timer : public OSTimer {
 public:
+    Mpr121Timer() : OSTimer(OSTIMER_NAME("Mpr121Timer")) {}
     virtual void run() override;
 };
 

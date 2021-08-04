@@ -4,34 +4,22 @@
 */
 
 #include <Arduino_compat.h>
-#include <stl_ext/algorithm.h>
-#include "Event.h"
 #include "OSTimer.h"
 
-#if DEBUG_OSTIMER
-#include <debug_helper_enable.h>
-#else
-#include <debug_helper_disable.h>
-#endif
-
-extern "C" void ICACHE_FLASH_ATTR _etstimer_callback(void *arg)
-{
-    reinterpret_cast<OSTimer *>(arg)->run();
+void ICACHE_FLASH_ATTR _EtsTimerLockedCallback(void *arg) {
 }
 
-void OSTimer::startTimer(int32_t delay, bool repeat, bool millis)
+void ICACHE_FLASH_ATTR OSTimer::_EtsTimerCallback(void *arg)
 {
-    delay = std::clamp<int32_t>(delay, Event::kMinDelay, Event::kMaxDelay);
-    ets_timer_disarm(&_etsTimer);
-    ets_timer_setfn(&_etsTimer, reinterpret_cast<ETSTimerFunc *>(_etstimer_callback), this);
-    ets_timer_arm_new(&_etsTimer, delay, repeat, millis);
-}
-
-void OSTimer::detach()
-{
-    if (_etsTimer.timer_arg == this) {
-        ets_timer_disarm(&_etsTimer);
-        ets_timer_done(&_etsTimer);
-        _etsTimer.timer_arg = nullptr;
+    auto &timer = *reinterpret_cast<OSTimer *>(arg);
+    if (!timer.lock()) {
+        return;
     }
+    timer.run();
+    OSTimer::unlock(timer);
 }
+
+#if DEBUG_OSTIMER
+#   define OSTIMER_INLINE
+#   include "OSTimer.hpp"
+#endif

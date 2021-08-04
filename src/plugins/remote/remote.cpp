@@ -106,9 +106,6 @@ void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::Depe
 {
     deepSleepPinState.merge();
 
-    // start pin monitor
-    pinMonitor.begin();
-
 #if PIN_MONITOR_BUTTON_GROUPS
     SingleClickGroupPtr group1;
     group1.reset(_config.click_time);
@@ -156,7 +153,8 @@ void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::Depe
     pinMode(IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN, INPUT_PULLUP);
 #endif
 
-    PinMonitor::GPIOInterruptsEnable();
+    // start pin monitor after adding the pins
+    pinMonitor.begin();
     ETS_GPIO_INTR_DISABLE();
 
     // states during boot

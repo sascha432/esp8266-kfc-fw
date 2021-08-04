@@ -153,8 +153,8 @@ void setup()
     #endif
 
     #if HAVE_IOEXPANDER
+        __DBG_printf("IOExpander::config.begin() size=%u count=%u", sizeof(IOExpander::config), IOExpander::config.size());
         IOExpander::config.begin(KFCFWConfiguration::initTwoWire());
-        __DBG_printf("IOExpander size=%u count=%u", sizeof(IOExpander::config), IOExpander::config.size());
     #endif
 
     bool safe_mode = false;

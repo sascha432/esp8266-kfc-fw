@@ -35,10 +35,13 @@
 #include <NeoPixelEx.h>
 #include <IOExpander.h>
 #include "../src/plugins/plugins.h"
-#include <umm_malloc/umm_malloc_cfg.h>
+#include <umm_malloc/umm_malloc.h>
+extern "C" {
+#include <umm_malloc/umm_local.h>
 #if ARDUINO_ESP8266_VERSION_COMBINED >= 0x030000
 #include <umm_malloc/umm_heap_select.h>
 #endif
+}
 
 #if ESP8266
 #include "core_esp8266_waveform.h"
@@ -367,7 +370,6 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF(CPU, "CPU", "<80|160>", "Set CPU speed", "Displ
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PSTORE, "PSTORE", "[<clear|remove|add>[,<key>[,<value>]]]", "Display/modify persistant storage");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(METRICS, "METRICS", "Display system metrics");
-
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMP, "DUMP", "[<dirty|config.name>]", "Display settings");
 #if DEBUG && ESP8266
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMPT, "DUMPT", "Dump timers");
@@ -596,6 +598,9 @@ public:
         }
         Serial.printf_P(PSTR("+HEAP: free=%u(%u/%u@%us) cpu=%dMHz frag=%u uptime=%us\n"), heap, _minHeap, _maxHeap, _maxHeapTime, ESP.getCpuFreqMHz(), ESP.getHeapFragmentation(), getSystemUptime());
         _minHeap = heap;
+        #if defined(UMM_STATS) || defined(UMM_STATS_FULL)
+        umm_print_stats(0);
+        #endif
     }
 
     void printGPIO() {
@@ -806,19 +811,29 @@ void at_mode_list_ets_timers(Print &output)
     ETSTimer *cur = timer_list;
     while(cur) {
         void *callback = nullptr;
-        for(const auto &timer: __Scheduler.__getTimers()) {
+        for(const auto timer: __Scheduler.__getTimers()) {
             if (&timer->_etsTimer == cur) {
                 callback = lambda_target(timer->_callback);
                 break;
             }
         }
-        float period_in_s = cur->timer_period / 312500.0;
-        output.printf_P(PSTR("ETSTimer=%p func=%p arg=%p period=%u (%.3fs) exp=%u callback=%p\n"),
+        float period_in_s = NAN;
+        auto timeUnit = emptyString.c_str();
+        if (cur->timer_period) {
+            timeUnit = PSTR("s");
+            period_in_s = cur->timer_period / 312500.0;
+            if (period_in_s < 1) {
+                period_in_s /= 1000.0;
+                timeUnit = PSTR("ms");
+            }
+        }
+        output.printf_P(PSTR("ETSTimer=%p func=%p arg=%p period=%u (%.3f%s) exp=%u callback=%p\n"),
             cur,
             cur->timer_func,
             cur->timer_arg,
             cur->timer_period,
             period_in_s,
+            timeUnit,
             cur->timer_expire,
             callback);
 

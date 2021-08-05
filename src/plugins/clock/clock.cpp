@@ -274,27 +274,23 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
     #endif
 
     #if IOT_CLOCK_BUTTON_PIN != -1
-        pinMonitor.begin();
 
         __LDBG_printf("button at pin %u", IOT_CLOCK_BUTTON_PIN);
         pinMonitor.attach<Clock::Button>(IOT_CLOCK_BUTTON_PIN, 0, *this);
-        pinMode(IOT_CLOCK_BUTTON_PIN, INPUT);
 
         #if IOT_CLOCK_TOUCH_PIN != -1
             __LDBG_printf("touch sensor at pin %u", IOT_CLOCK_TOUCH_PIN);
             pinMonitor.attach<Clock::TouchButton>(IOT_CLOCK_TOUCH_PIN, 1, *this);
-            pinMode(IOT_CLOCK_TOUCH_PIN, INPUT);
         #endif
 
         #if IOT_CLOCK_HAVE_ROTARY_ENCODER
             __LDBG_printf("rotary encoder at pin %u,%u active_low=%u", IOT_CLOCK_ROTARY_ENC_PINA, IOT_CLOCK_ROTARY_ENC_PINB, PIN_MONITOR_ACTIVE_STATE == ActiveStateType::ACTIVE_LOW);
             auto encoder = new Clock::RotaryEncoder(PIN_MONITOR_ACTIVE_STATE);
             encoder->attachPins(IOT_CLOCK_ROTARY_ENC_PINA, IOT_CLOCK_ROTARY_ENC_PINB);
-            pinMode(IOT_CLOCK_ROTARY_ENC_PINA, INPUT);
-            pinMode(IOT_CLOCK_ROTARY_ENC_PINB, INPUT);
         #endif
 
-        PinMonitor::GPIOInterruptsEnable();
+        pinMonitor.begin();
+
     #endif
 
     #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR || IOT_SENSOR_HAVE_MOTION_SENSOR
@@ -786,7 +782,9 @@ void ClockPlugin::_disable()
     #endif
 
     // avoid leakage through the level shifter
-    pinMode(IOT_LED_MATRIX_OUTPUT_PIN, INPUT);
+    // this will stop the LEDs from getting powered through data line
+    pinMode(IOT_LED_MATRIX_OUTPUT_PIN, OUTPUT);
+    digitalWrite(IOT_LED_MATRIX_OUTPUT_PIN, LOW);
 
     #if IOT_LED_MATRIX_ENABLE_PIN != -1
         digitalWrite(IOT_LED_MATRIX_ENABLE_PIN, enablePinState(false));

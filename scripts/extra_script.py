@@ -23,7 +23,7 @@ except ImportError:
 sys.path.insert(0, path.abspath(path.join(env.subst("$PROJECT_DIR"), 'scripts', 'libs')))
 
 def new_build(source, target, env):
-    args = [ env.subst('$PYTHONEXE'), env.subst('$PROJECT_DIR/scripts/build_number.py'), '-v', env.subst('$PROJECT_DIR/include/build.h') ]
+    args = [ env.subst('$PYTHONEXE'), env.subst('$PROJECT_DIR/scripts/build_number.py'), '-v', env.subst('$PROJECT_DIR/include/build.h.current') ]
     p = subprocess.Popen(args, text=True)
     p.wait()
 
@@ -228,16 +228,20 @@ def firmware_config(source, target, env, action):
 
 #     click.secho('Output file: %s' % target, fg='green')
 
+def dump_info(source, target, env):
+    print(source[0].get_abspath())
+    # print(target)
 
 env.AddPreAction('upload', modify_upload_command)
 env.AddPreAction('uploadota', modify_upload_command)
 env.AddPreAction('uploadfs', modify_upload_command_fs)
 env.AddPreAction('uploadfsota', modify_upload_command_fs)
 
+# env.AddPreAction(env['PIOMAINPROG'], dump_info)
+
 env.AlwaysBuild(env.Alias('newbuild', None, new_build))
 
-# env.AddPostAction(env['PIOMAINPROG'], mem_analyzer)
-env.AddPostAction('$BUILD_DIR/${PROGNAME}.elf', mem_analyzer)
+env.AddPostAction(env['PIOMAINPROG'], mem_analyzer)
 
 # env.AlwaysBuild(env.Alias('patch_file', None, create_patch_file))
 # env.AlwaysBuild(env.Alias('patch-file', None, create_patch_file))
@@ -251,5 +255,3 @@ env.AlwaysBuild(env.Alias('kfcfw_auto_discovery', None, lambda source, target, e
 env.AddCustomTarget('disassemble', None, [], title='disassemble main prog', description='run objdump to create disassembly', always_build=True)
 env.AddCustomTarget('kfcfw_factory', None, [], title='factory reset', description='KFC firmware OTA factory reset', always_build=False)
 env.AddCustomTarget('kfcfw_auto_discovery', None, [], title='auto discovery', description='KFC firmware OTA publish auto discovery', always_build=False)
-
-env.AddBuildMiddleware(lambda node: None, '$PROJECT_INCLUDE_DIR/build.h')

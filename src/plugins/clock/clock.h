@@ -786,6 +786,7 @@ inline bool ClockPlugin::eventMotionAutoOff(bool off)
     }
     if (!off && !_isEnabled && _autoOff) {
         // reactivate if disabled by the motion sensor
+        _autoOff = false;
         _enable();
         return true;
     }

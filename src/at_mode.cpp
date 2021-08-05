@@ -38,7 +38,7 @@
 #include <umm_malloc/umm_malloc.h>
 extern "C" {
 #include <umm_malloc/umm_local.h>
-#if ARDUINO_ESP8266_VERSION_COMBINED >= 0x030000
+#if ARDUINO_ESP8266_MAJOR == 3
 #include <umm_malloc/umm_heap_select.h>
 #endif
 }
@@ -599,7 +599,7 @@ public:
         Serial.printf_P(PSTR("+HEAP: free=%u(%u/%u@%us) cpu=%dMHz frag=%u uptime=%us\n"), heap, _minHeap, _maxHeap, _maxHeapTime, ESP.getCpuFreqMHz(), ESP.getHeapFragmentation(), getSystemUptime());
         _minHeap = heap;
         #if defined(UMM_STATS) || defined(UMM_STATS_FULL)
-        umm_print_stats(0);
+        umm_print_stats(2);
         #endif
     }
 
@@ -1649,7 +1649,7 @@ void at_mode_serial_handle_event(String &commandString)
 #endif
         args.print(F("Uptime: %u seconds / %s"), getSystemUptime(), formatTime(getSystemUptime(), true).c_str());
         args.print(F("Free heap/fragmentation: %u / %u"), ESP.getFreeHeap(), ESP.getHeapFragmentation());
-#if ARDUINO_ESP8266_VERSION_COMBINED >= 0x030000
+#if ARDUINO_ESP8266_MAJOR == 3
     #ifdef UMM_HEAP_IRAM
         {
             HeapSelectIram ephemeral;

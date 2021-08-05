@@ -12,6 +12,15 @@
 
 namespace PinMonitor {
 
+    struct GPIOInterruptLock {
+        GPIOInterruptLock() {
+            ETS_GPIO_INTR_DISABLE();
+        }
+        ~GPIOInterruptLock() {
+            ETS_GPIO_INTR_ENABLE();
+        }
+    };
+
 // custom interrupt handler, requires least amount of IRAM
 #if PIN_MONITOR_USE_GPIO_INTERRUPT || PIN_MONITOR_USE_POLLING
 
@@ -20,17 +29,17 @@ namespace PinMonitor {
     namespace Interrupt {
 
         #ifndef PIN_MONITOR_PINS_TO_USE
-        #error PIN_MONITOR_USE_GPIO_INTERRUPT=1 requires to define a list of pins used as PIN_MONITOR_PINS_TO_USE
+            #error PIN_MONITOR_USE_GPIO_INTERRUPT=1 requires to define a list of pins used as PIN_MONITOR_PINS_TO_USE
         #endif
         static constexpr auto kPins = stdex::array_of<const uint8_t>(PIN_MONITOR_PINS_TO_USE);
 
         #if PIN_MONITOR_POLLING_GPIO_EXPANDER_SUPPORT
-        static constexpr auto kIOExpanderPins = stdex::array_of<const uint8_t>(PIN_MONITOR_POLLING_GPIO_EXPANDER_PINS_TO_USE);
+            static constexpr auto kIOExpanderPins = stdex::array_of<const uint8_t>(PIN_MONITOR_POLLING_GPIO_EXPANDER_PINS_TO_USE);
         #endif
 
         #ifdef PIN_MONITOR_ROTARY_ENCODER_PINS
-        static constexpr auto kRotaryPins = stdex::array_of<const uint8_t>(PIN_MONITOR_ROTARY_ENCODER_PINS);
-        static constexpr auto kGPIORotaryMask = Interrupt::PinAndMask::mask_of(kRotaryPins);
+            static constexpr auto kRotaryPins = stdex::array_of<const uint8_t>(PIN_MONITOR_ROTARY_ENCODER_PINS);
+            static constexpr auto kGPIORotaryMask = Interrupt::PinAndMask::mask_of(kRotaryPins);
         #endif
 
     }

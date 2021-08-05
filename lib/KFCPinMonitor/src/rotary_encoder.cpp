@@ -184,7 +184,6 @@ const uint8_t ttable_P[7][4] PROGMEM = {
 };
 #endif
 
-
 void RotaryEncoder::processEvent(const Interrupt::Event &eventData)
 {
     // uint8_t value = ((eventData.gpiRegValue() & _mask1) != 0) | (((eventData.gpiRegValue() & _mask2) != 0) << 1);
@@ -192,15 +191,19 @@ void RotaryEncoder::processEvent(const Interrupt::Event &eventData)
     if (eventData.gpiRegValue() & _mask2) {
         value |= 0b10;
     }
-    uint8_t state = (_activeState == ActiveStateType::ACTIVE_LOW) ? value ^ 0b11 : value;
-
-    uint8_t ttable[7][4];
-    memcpy_P(ttable, ttable_P, sizeof(ttable));
-
-    // __DBG_printf("rotary state=0b%u%u _state=0x%02x/%u -> 0x%02x", state&1, state>>1, _state&0xf, state, ttable[_state & 0xf][state]);
-
-    _state = ttable[_state & 0xf][state];
-    if (_state >= DIR_CW) {
-        event(static_cast<EventType>(_state), eventData.getTime());
+    if (_activeState == ActiveStateType::ACTIVE_LOW) {
+        value ^= 0b11;
     }
+
+    // reads ttable_P[_state & 0xf][value]
+    uint8_t newState = pgm_read_byte(reinterpret_cast<const uint8_t *>(ttable_P) + (((_state & 0xf) * 4) + value));
+
+    __DBG_printf("rotary value=0b%u%u state=0x%02x/%u -> 0x%02x %02x", value&1, value>>1, _state&0xf, _state, newState);
+
+    // _state = ttable[_state & 0xf][state];
+    if (newState >= DIR_CW) {
+        event(static_cast<EventType>(newState), eventData.getTime());
+    }
+    _state = newState;
 }
+

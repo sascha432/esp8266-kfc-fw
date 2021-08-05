@@ -57,7 +57,7 @@ namespace PinMonitor {
         virtual ~RotaryEncoder() {}
 
         virtual void event(EventType eventType, uint32_t now) {
-            __LDBG_printf("event_type=%u now=%u", eventType, now);
+            __DBG_panic("pure virtual call event_type=%u now=%u", eventType, now);
         }
 
         void attachPins(uint8_t pin1, uint8_t pin2);

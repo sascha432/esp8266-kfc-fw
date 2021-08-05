@@ -64,6 +64,7 @@
 #endif
 
 // interval for the polling timer
+// >= 5ms
 #ifndef PIN_MONITOR_USE_POLLING_INTERVAL
 #   define PIN_MONITOR_USE_POLLING_INTERVAL 5
 #endif

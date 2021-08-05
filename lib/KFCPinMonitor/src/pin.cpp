@@ -21,7 +21,7 @@ using namespace PinMonitor;
 #if PIN_MONITOR_USE_GPIO_INTERRUPT == 0 || PIN_MONITOR_USE_POLLING == 1
 
 #if PIN_MONITOR_USE_POLLING == 1
-    void HardwarePin::callback(void *arg, uint16_t _GPI, uint16_t mask)
+    void HardwarePin::callback(void *arg, uint32_t _GPI, uint32_t mask)
 #else
     #define _GPI GPI
     #define mask _BV(pinPtr->getPin())

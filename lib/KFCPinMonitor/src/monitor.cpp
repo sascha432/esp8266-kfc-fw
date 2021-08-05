@@ -12,7 +12,6 @@
 #include "pin.h"
 #include "monitor.h"
 #include <PrintString.h>
-#include <BitsToStr.h>
 #include "rotary_encoder.h"
 #include "logger.h"
 
@@ -45,78 +44,82 @@ namespace PinMonitor {
         void PollingTimer::start()
         {
             // store initial values for GPIO ports
-            _states = GPI;
+            _states = _getGPIOStates();
             #if PIN_MONITOR_POLLING_GPIO_EXPANDER_SUPPORT
                 // store intial values for GPIO expander ports
-                _expanderStates = 0;
-                uint8_t n = 0;
-                for(const auto pin: PinMonitor::Interrupt::kIOExpanderPins) {
-                    if (IOExpander::config.digitalRead(pin)) {
-                        _expanderStates |= _BV(n);
-                    }
-                    else {
-                        _expanderStates &= ~_BV(n);
-                    }
-                    n++;
-                }
+                _expanderStates = _getIOExpanderStates();
             #endif
             startTimer(PIN_MONITOR_USE_POLLING_INTERVAL, true);
         }
 
-        void PollingTimer::disable()
-        {
-            detach();
-        }
+        #if PIN_MONITOR_POLLING_GPIO_EXPANDER_SUPPORT
 
-        void PollingTimer::enable()
-        {
-            startTimer(PIN_MONITOR_USE_POLLING_INTERVAL, true);
-        }
+            uint16_t PollingTimer::_getIOExpanderStates() const
+            {
+                // read IOExpanders pins
+                uint8_t maskBit = 0;
+                uint16_t states = 0;
+                for(const auto pin: PinMonitor::Interrupt::kIOExpanderPins) {
+                    uint32_t pinMask = _BV(maskBit);
+                    if (IOExpander::config.digitalRead(pin)) {
+                        states |= pinMask;
+                    }
+                    maskBit++;
+                }
+                return states;
+            }
+
+        #endif
 
         void PollingTimer::run()
         {
-            uint16_t states = GPI;
-            for(const auto &pinPtr: pinMonitor.getPins()) {
-                #if PIN_MONITOR_ROTARY_ENCODER_SUPPORT
-                        if (pinPtr->getHardwarePinType() == HardwarePinType::ROTARY) {
-                            continue;
-                        }
-                #endif
-                auto pin = pinPtr->getPin();
-                if (pin < 16) {
-                    auto pinMask = static_cast<uint16_t>(_BV(pin));
-                    auto newState = (states & pinMask) != 0;
-                    auto state = (_states & pinMask) != 0;
-                    if (state != newState) {
-                        // __DBG_printf("pin=%u changed=%u", pin, newState);
-                        pinPtr->callback(pinPtr.get(), _states, _BV(pin));
-                    }
-                }
+            // read GPIO
+            auto newStates = _getGPIOStates();
+            if (newStates != _states) {
+                __LDBG_printf("GPOI %s -> %s", decbin(_states).c_str(), decbin(newStates).c_str());
             }
-            _states = states;
-
             #if PIN_MONITOR_POLLING_GPIO_EXPANDER_SUPPORT
-                uint8_t n = 0;
-                for(const auto pin: PinMonitor::Interrupt::kIOExpanderPins) {
-                    bool value = IOExpander::config.digitalRead(pin);
-                    if ((_expanderStates & _BV(n)) != value) {
-                        __DBG_printf("IO expander callback pin=%u value=%u mask=%u", pin, value, _BV(n));
-                        for(const auto &pinPtr: pinMonitor.getPins()) {
-                            if (pinPtr->getPin() == pin) {
-                                pinPtr->callback(pinPtr.get(), _expanderStates, _BV(n));
-                            }
-                        }
-                        // store new value
-                        if (value) {
-                            _expanderStates |= _BV(n);
-                        }
-                        else {
-                            _expanderStates &= ~_BV(n);
-                        }
-                    }
-                    n++;
+                auto newExpanderStates = _getIOExpanderStates();
+                if (newExpanderStates != _expanderStates) {
+                    __LDBG_printf("GPIO(Expander) %s -> %s", decbin(_expanderStates).c_str(), decbin(newExpanderStates).c_str());
                 }
             #endif
+
+            for(const auto &pinPtr: pinMonitor.getPins()) {
+                #if PIN_MONITOR_ROTARY_ENCODER_SUPPORT
+                    if (pinPtr->getHardwarePinType() == HardwarePinType::ROTARY) {
+                        continue;
+                    }
+                #endif
+                auto pin = pinPtr->getPin();
+                if (pin < NUM_DIGITAL_PINS) {
+                    uint32_t pinMask = _BV(pin);
+                    if ((_states & pinMask) != (newStates & pinMask)) {
+                        __DBG_printf("GPIO pin=%u state=%u", pin, (newStates & pinMask) != 0);
+                        InterruptLock lock;
+                        pinPtr->callback(pinPtr.get(), newStates, pinMask);
+                    }
+                }
+                #if PIN_MONITOR_POLLING_GPIO_EXPANDER_SUPPORT
+                    else {
+                        uint8_t maskBit = 0;
+                        for(const auto expanderPin: PinMonitor::Interrupt::kIOExpanderPins) {
+                            if (expanderPin == pin) {
+                                uint16_t pinMask = _BV(maskBit);
+                                if ((_expanderStates & pinMask) != (newExpanderStates & pinMask)) {
+                                    __LDBG_printf("GPIO(Expander) pin=%u state=%u", pin, (newExpanderStates & pinMask) != 0);
+                                    InterruptLock lock;
+                                    pinPtr->callback(pinPtr.get(), newExpanderStates, pinMask);
+                                }
+                                break;
+                            }
+                            maskBit++;
+                        }
+                    }
+                #endif
+            }
+            _states = newStates;
+            _expanderStates = newExpanderStates;
         }
 
     #endif
@@ -163,35 +166,46 @@ namespace PinMonitor {
 
         #if PIN_MONITOR_USE_POLLING
             pollingTimer.detach();
+            while(OSTimer::isLocked(pollingTimer)) {
+                optimistic_yield(100);
+            }
         #endif
+
         if (_loopTimer) {
             delete _loopTimer;
             _loopTimer = nullptr;
         }
+        _running = false;
+
         _detach(_handlers.begin(), _handlers.end(), true);
 
         #if PIN_MONITOR_ROTARY_ENCODER_SUPPORT
             eventBuffer.clear();
         #endif
-
-        _running = false;
     }
-
 
     void Monitor::printStatus(Print &output)
     {
         #if PIN_MONITOR_USE_POLLING
-        #if PIN_MONITOR_POLLING_USE_INTERRUPTS
-            output.print(F("GPIO Polling with GPIO Interrupts" HTML_S(br)));
-        #else
-            output.print(F("GPIO Polling without Interrupts" HTML_S(br)));
-        #endif
-        #elif PIN_MONITOR_USE_GPIO_INTERRUPT
-            output.print(F("Interrupt Handler: Custom GPIO Interrupt handler" HTML_S(br)));
+            output.printf_P(PSTR("GPIO Polling (%ums) without Interrupts" HTML_S(br)), PIN_MONITOR_USE_POLLING_INTERVAL);
+            #if PIN_MONITOR_POLLING_GPIO_EXPANDER_SUPPORT
+                output.print(F("I/O-Expander Support: Enabled" HTML_S(br)));
+            #endif
         #elif PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS == 0
             output.print(F("Interrupt Handler: Optimized Functional Interrupts" HTML_S(br)));
+        #elif PIN_MONITOR_USE_GPIO_INTERRUPT
+            output.print(F("Interrupt Handler: Custom GPIO Interrupt Handler" HTML_S(br)));
         #else
             output.print(F("Interrupt Handler: Default Arduino Interrupts" HTML_S(br)));
+        #endif
+        #if PIN_MONITOR_ROTARY_ENCODER_SUPPORT
+            #if PIN_MONITOR_USE_POLLING
+                output.print(F("Rotary Encoder Support: Custom GPIO Interrupt Handler" HTML_S(br)));
+            #else
+                output.print(F("Rotary Encoder Support: Enabled" HTML_S(br)));
+            #endif
+        #else
+            output.print(F("Rotary Encoder Support: Disabled" HTML_S(br)));
         #endif
         #if PIN_MONITOR_BUTTON_GROUPS
             output.print(F("Button Groups: Enabled" HTML_S(br)));
@@ -413,62 +427,80 @@ namespace PinMonitor {
     void Monitor::_loop()
     {
         uint32_t now = millis();
+        if (now == _lastRun) { // limit to once per millisecond
+            return;
+        }
+        _lastRun = now;
+
+        #define MEASURE_PROCESSING_TIME 0
 
         #if PIN_MONITOR_ROTARY_ENCODER_SUPPORT
             {
+                #if MEASURE_PROCESSING_TIME
+                    uint32_t eventNum = 0;
+                    uint32_t start = micros();
+                #endif
+
                 // process all new events
+                // the GPIO interrupts must be disabled while reading from eventBuffer or writing to it
+                // new events might be added while processing
                 GPIOInterruptLock lock;
                 if (eventBuffer.size()) {
-
-                    // static uint16_t maxEventSize = 0;
-                    // if (eventBuffer.size() > maxEventSize) {
-                    //     maxEventSize = eventBuffer.size();
-                    //     __LDBG_printf("maxEventSize increased %u", maxEventSize);
-                    // }
-
                     auto bufIterator = eventBuffer.begin();
                     while (bufIterator != eventBuffer.end()) {
                         auto event = *bufIterator;
-                        lock.unlock();
+                        // destroy object to unlock GPIO interrupts
+                        lock.~GPIOInterruptLock();
+                        #if MEASURE_PROCESSING_TIME
+                            eventNum++;
+                        #endif
 
-                        // __DBG_printf("L-FEED: %s", event.toString().c_str());
-
-                        auto iterator = std::find_if(_pins.begin(), _pins.end(), [&event](const HardwarePinPtr &ptr) {
+                        auto pinIterator = std::find_if(_handlers.begin(), _handlers.end(), [&event](const PinPtr &ptr) {
                             return ptr->getPin() == event.pin();
                         });
-
-                        // __DBG_printf("pin=%u iter=%u feed=%s", event.pin(), iterator != _pins.end(), event.toString().c_str());
-
-                        if (iterator != _pins.end()) {
-                            auto pinIterator = std::find_if(_handlers.begin(), _handlers.end(), [&event](const PinPtr &ptr) {
-                                return ptr->getPin() == event.pin();
-                            });
-                            // __DBG_printf("rotary=%u iter=%u", event.pin(), pinIterator != _handlers.end());
-                            if (pinIterator != _handlers.end()) {
-                                auto encoder = reinterpret_cast<RotaryEncoderPin *>(pinIterator->get())->getEncoder();
-                                encoder->processEvent(event);
-                            }
+                        __LDBG_printf("GPIO pin=%u rotary_encoder=%u", event.pin(), pinIterator != _handlers.end());
+                        if (pinIterator != _handlers.end()) {
+                            auto encoder = reinterpret_cast<RotaryEncoderPin *>(pinIterator->get())->getEncoder();
+                            encoder->processEvent(event);
                         }
 
-                        lock.lock();
+                        // create in place to lock interrupts again
+                        // the destructor has been called already
+                        new(static_cast<void *>(&lock)) GPIOInterruptLock();
                         ++bufIterator;
                     }
                     if (bufIterator == eventBuffer.end()) {
                         eventBuffer.clear();
                     }
+                    #if MEASURE_PROCESSING_TIME
+                        uint32_t dur = micros() - start;
+                        __DBG_printf("processing rotarty events size=%u time=%u", eventNum, dur);
+                    #endif
+                    // update time
+                    now = millis();
                 }
-                now = millis();
             }
         #endif
 
         #if PIN_MONITOR_DEBOUNCED_PUSHBUTTON || PIN_MONITOR_SIMPLE_PIN
+            #if MEASURE_PROCESSING_TIME
+                uint32_t start = micros();
+                uint32_t eventNum = 0;
+            #endif
             for(const auto &pinPtr: _pins) {
                 switch(pinPtr->_type) {
                     #if PIN_MONITOR_DEBOUNCED_PUSHBUTTON
                         case HardwarePinType::DEBOUNCE: {
                                 auto &pin = *reinterpret_cast<DebouncedHardwarePin *>(pinPtr.get());
-                                auto event = pin.getEventsClear();
+                                DebouncedHardwarePin::Events event;
+                                {
+                                    InterruptLock lock;
+                                    event = pin.getEventsClear();
+                                }
                                 if (event._interruptCount) {
+                                    #if MEASURE_PROCESSING_TIME
+                                        eventNum++;
+                                    #endif
                                     _event(pin.getPin(), pin.getDebounce()->debounce(event._value, event._interruptCount, event._micros, now), now);
                                 }
                             }
@@ -476,8 +508,15 @@ namespace PinMonitor {
                     #endif
                     #if PIN_MONITOR_SIMPLE_PIN
                         case HardwarePinType::SIMPLE: {
+                                #if MEASURE_PROCESSING_TIME
+                                    eventNum++;
+                                #endif
                                 auto &pin = *reinterpret_cast<SimpleHardwarePin *>(pinPtr.get());
-                                auto event = pin.getEventClear();
+                                SimpleHardwarePin::Events event;
+                                {
+                                    InterruptLock lock;
+                                    event = pin.getEventsClear();
+                                }
                                 if (event != SimpleHardwarePin::SimpleEventType::NONE) {
                                     Serial.printf_P(PSTR("SIMPLE=%u event=%u\n"), pin.getPin(), event);
                                     _event(pin.getPin(), event == SimpleHardwarePin::SimpleEventType::HIGH_VALUE ? StateType::IS_HIGH : StateType::IS_LOW, now);
@@ -489,11 +528,13 @@ namespace PinMonitor {
                         break;
                 }
             }
+            #if MEASURE_PROCESSING_TIME
+                if (eventNum) {
+                    uint32_t dur = micros() - start;
+                    __DBG_printf("processing pins=%u time=%u events=%u", _pins.size(), dur, eventNum);
+                }
+            #endif
         #endif
-
-        if (now == _lastRun) { // may run up to 10-15x per millisecond
-            return;
-        }
 
         #if PIN_MONITOR_DEBOUNCED_PUSHBUTTON
 
@@ -513,7 +554,7 @@ namespace PinMonitor {
         for(const auto &handler: _handlers) {
             handler->loop();
         }
-        _lastRun = millis();
+        _lastRun = millis(); // update time again
     }
 
     void Monitor::_event(uint8_t pinNum, StateType state, uint32_t now)

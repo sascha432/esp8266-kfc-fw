@@ -6,7 +6,6 @@
 
 #include <Arduino_compat.h>
 #include "polling_timer.h"
-#include "gpio_interrupt_lock.h"
 
 namespace PinMonitor {
 
@@ -34,7 +33,9 @@ namespace PinMonitor {
         virtual ~Pin() {}
 
         // event handlers are not executed more than once per millisecond
-        virtual void event(StateType state, uint32_t now) {}
+        virtual void event(StateType state, uint32_t now) {
+            __DBG_panic("pure virtual call state=%u now=%u", state, now);
+        }
 
         // loop is called even if events are disabled
         virtual void loop() {}
@@ -162,7 +163,7 @@ namespace PinMonitor {
     public:
 
 #if PIN_MONITOR_USE_POLLING == 1
-        static void callback(void *arg, uint16_t _GPI, uint16_t mask);
+        static void callback(void *arg, uint32_t _GPI, uint32_t mask);
 #elif PIN_MONITOR_USE_GPIO_INTERRUPT == 0
         static void IRAM_ATTR callback(void *arg);
 #endif
@@ -215,28 +216,25 @@ namespace PinMonitor {
             _event = value ? SimpleEventType::HIGH_VALUE : SimpleEventType::LOW_VALUE;
         }
 
-        inline void clearEvents() {
-            GPIOInterruptLock lock;
+        inline __attribute__((__always_inline__))
+        void clearEvents() {
             _event = SimpleEventType::NONE;
         }
 
-        inline SimpleEventType getEvent() const {
-            GPIOInterruptLock lock;
+        inline __attribute__((__always_inline__))
+        SimpleEventType getEvents() const {
             auto tmp = _event;
             return tmp;
         }
 
-        inline SimpleEventType getEventClear() {
-            GPIOInterruptLock lock;
+        inline __attribute__((__always_inline__))
+        SimpleEventType getEventsClear() {
             auto tmp = _event;
-            _event = SimpleEventType::NONE;
+            clearEvents();
             return tmp;
         }
 
     private:
-        // #if PIN_MONITOR_USE_POLLING == 0
-        // volatile
-        // #endif
         SimpleEventType _event;
     };
 
@@ -246,16 +244,11 @@ namespace PinMonitor {
 
     class DebouncedHardwarePin : public SimpleHardwarePin {
     public:
-        // struct __attribute__((packed)) Events {
-        //     uint32_t _micros;
-        //     uint16_t _interruptCount: 15;
-        //     bool _value: 1;
-        //     Events() : _micros(0), _interruptCount(0), _value(0) {}
-        // };
         struct Events {
             uint32_t _micros;
             uint16_t _interruptCount;
             bool _value;
+
             Events(uint32_t micros = 0, uint16_t interruptCount = 0, bool value = 0) :
                 _micros(micros),
                 _interruptCount(interruptCount),
@@ -277,7 +270,6 @@ namespace PinMonitor {
         }
 
         virtual void clear() override {
-            GPIOInterruptLock lock;
             // _debounce = Debounce(digitalRead(getPin()));
             _debounce.setState(digitalRead(getPin()));
         }
@@ -288,7 +280,6 @@ namespace PinMonitor {
 
         inline __attribute__((__always_inline__))
         void addEvent(uint32_t micros, bool value) {
-            GPIOInterruptLock lock;
             _events._micros = micros;
             _events._interruptCount++;
             _events._value = value;
@@ -296,26 +287,22 @@ namespace PinMonitor {
 
         inline __attribute__((__always_inline__))
         void clearEvents() {
-            GPIOInterruptLock lock;
             _events._interruptCount = 0;
         }
 
         inline __attribute__((__always_inline__))
         Events getEvents() const {
-            GPIOInterruptLock lock;
             return __getEvents();
         }
 
         inline __attribute__((__always_inline__))
         Events getEventsClear() {
-            GPIOInterruptLock lock;
             auto tmp = __getEvents();
-            clear();
+            clearEvents();
             return tmp;
         }
 
     protected:
-        // GPIO interrupts must be disabled when calling this method
         inline __attribute__((__always_inline__))
         Events __getEvents() const {
             auto tmp = Events(_events._micros, _events._interruptCount, _events._value);

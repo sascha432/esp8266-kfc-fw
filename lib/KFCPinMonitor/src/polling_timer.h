@@ -20,14 +20,14 @@ namespace PinMonitor {
             void start();
             virtual void run();
 
-            void disable();
-            void enable();
-
-            uint16_t getStates() const;
+            // uint32_t getStates() const;
 
         private:
-            uint16_t _states;
+            uint32_t _getGPIOStates() const;
+            uint32_t _states;
+
             #if PIN_MONITOR_POLLING_GPIO_EXPANDER_SUPPORT
+                uint16_t _getIOExpanderStates() const;
                 uint16_t _expanderStates;
             #endif
         };
@@ -36,9 +36,9 @@ namespace PinMonitor {
         {
         }
 
-        inline uint16_t PollingTimer::getStates() const
+        inline uint32_t PollingTimer::_getGPIOStates() const
         {
-            return _states;
+            return GPI | ((GP16I & 0x01) << 16);
         }
 
     #endif

@@ -153,7 +153,7 @@ void setup()
     #endif
 
     #if HAVE_IOEXPANDER
-        __DBG_printf("IOExpander::config.begin() size=%u count=%u", sizeof(IOExpander::config), IOExpander::config.size());
+        __LDBG_printf("IOExpander::config.begin() size=%u count=%u", sizeof(IOExpander::config), IOExpander::config.size());
         IOExpander::config.begin(KFCFWConfiguration::initTwoWire());
     #endif
 

@@ -11,39 +11,40 @@
 
 #if DEBUG_OSTIMER
 
-void __DBG_printEtsTimer(ETSTimer &timer) {
-    ::printf(PSTR("func=%p arg=%p period=%u next=%p\n"), timer.timer_func, timer.timer_arg, timer.timer_period, timer.timer_next);
+static void __DBG_printEtsTimer(ETSTimer &timer) {
+    ::printf(PSTR("timer=%p func=%p arg=%p period=%u next=%p\n"), &timer, timer.timer_func, timer.timer_arg, timer.timer_period, timer.timer_next);
 }
-
-#else
-
-#define __DBG_printEtsTimer(...)
 
 #endif
 
-OSTIMER_INLINE ETSTimerEx::ETSTimerEx() : _magic(kMagic)
+
+#if DEBUG_OSTIMER
+    OSTIMER_INLINE ETSTimerEx::ETSTimerEx(const char *name) : _magic(kMagic), _name(name)
+#else
+    OSTIMER_INLINE ETSTimerEx::ETSTimerEx()
+#endif
 {
     clear();
 }
 
 OSTIMER_INLINE ETSTimerEx::~ETSTimerEx()
 {
-    #if DEBUG
+    #if DEBUG_OSTIMER
         if (_magic != kMagic) {
             __DBG_printEtsTimer(*this);
-            __DBG_panic("ETSTimerEx::~ETSTimerEx(): _magic=%08x<>%08x", _magic, kMagic);
+            __DBG_panic("ETSTimerEx::~ETSTimerEx(): name=%s _magic=%08x<>%08x", __S(_name), _magic, kMagic);
         }
         if (isRunning()) {
             __DBG_printEtsTimer(*this);
-            __DBG_panic("ETSTimerEx::~ETSTimerEx(): isRunning()");
+            __DBG_panic("ETSTimerEx::~ETSTimerEx(): name=%s isRunning()", __S(_name));
         }
         if (!isDone()) {
             __DBG_printEtsTimer(*this);
-            __DBG_panic("ETSTimerEx::~ETSTimerEx(). !isDone()");
+            __DBG_panic("ETSTimerEx::~ETSTimerEx(). name=%s !isDone()", __S(_name));
         }
+        _magic = 0;
     #endif
     clear();
-    _magic = 0;
 }
 
 OSTIMER_INLINE bool ETSTimerEx::isRunning() const
@@ -58,25 +59,26 @@ OSTIMER_INLINE bool ETSTimerEx::isDone() const
 
 OSTIMER_INLINE bool ETSTimerEx::isLocked() const
 {
-    return timer_func == OSTIMER_LOCKED_PTR;
+    return timer_func == reinterpret_cast<ETSTimerFunc *>(_EtsTimerLockedCallback);
 }
 
 OSTIMER_INLINE void ETSTimerEx::lock()
 {
-    #if DEBUG
+    #if DEBUG_OSTIMER
         if (!isRunning()) {
             __DBG_printEtsTimer(*this);
-            __DBG_panic("ETSTimerEx::lock()");
+            __DBG_panic("ETSTimerEx::lock() name=%s", __S(_name));
         }
     #endif
-    timer_func = OSTIMER_LOCKED_PTR;
+    timer_func = reinterpret_cast<ETSTimerFunc *>(_EtsTimerLockedCallback);
 }
 
-OSTIMER_INLINE void ETSTimerEx::unlock() {
-    #if DEBUG
+OSTIMER_INLINE void ETSTimerEx::unlock()
+{
+    #if DEBUG_OSTIMER
         if (!isLocked()) {
             __DBG_printEtsTimer(*this);
-            __DBG_panic("ETSTimerEx::unlock()");
+            __DBG_panic("ETSTimerEx::unlock() name=%s", __S(_name));
         }
     #endif
     timer_func = reinterpret_cast<ETSTimerFunc *>(OSTimer::_EtsTimerCallback);
@@ -84,10 +86,10 @@ OSTIMER_INLINE void ETSTimerEx::unlock() {
 
 OSTIMER_INLINE void ETSTimerEx::disarm()
 {
-    #if DEBUG
+    #if DEBUG_OSTIMER
         if (!find()) {
             __DBG_printEtsTimer(*this);
-            __DBG_panic("ETSTimerEx::disarm()");
+            __DBG_panic("ETSTimerEx::disarm() name=%s", __S(_name));
         }
     #endif
     ets_timer_disarm(this);
@@ -95,10 +97,10 @@ OSTIMER_INLINE void ETSTimerEx::disarm()
 
 OSTIMER_INLINE void ETSTimerEx::done()
 {
-    #if DEBUG
+    #if DEBUG_OSTIMER
         if (isRunning()) {
             __DBG_printEtsTimer(*this);
-            __DBG_panic("ETSTimerEx::done()");
+            __DBG_panic("ETSTimerEx::done() name=%s", __S(_name));
         }
     #endif
     ets_timer_done(this);
@@ -122,6 +124,13 @@ OSTIMER_INLINE ETSTimer *ETSTimerEx::find(ETSTimer *timer)
     ETSTimer *cur = timer_list;
     while(cur) {
         if (cur == timer) {
+            #if DEBUG_OSTIMER
+                auto &t = *reinterpret_cast<ETSTimerEx *>(timer);
+                if (t._magic != kMagic) {
+                    __DBG_printEtsTimer(t);
+                    __DBG_panic("ETSTimerEx::~ETSTimerEx(): name=%s _magic=%08x<>%08x", __S(t._name), t._magic, kMagic);
+                }
+            #endif
             return cur;
         }
         cur = cur->timer_next;
@@ -129,27 +138,12 @@ OSTIMER_INLINE ETSTimer *ETSTimerEx::find(ETSTimer *timer)
     return nullptr;
 }
 
-#if OSTIMER_USE_MAGIC
-    #define OSTIMER_VALIDATE_MAGIC(timer, ...) \
-        if ((timer)._magic != kMagic) { \
-            ::printf(PSTR("%p: invalid magic\n"), &(timer)); \
-        } else { __VA_ARGS__; }
-#else
-    define OSTIMER_VALIDATE_MAGIC(...)
-#endif
-
 OSTIMER_INLINE OSTimer::
 #if DEBUG_OSTIMER
-    OSTimer(const char *name) :
+    OSTimer(const char *name) : _etsTimer(name)
 #else
-    OSTimer() :
+    OSTimer()
 #endif
-        #if OSTIMER_USE_MAGIC
-            _magic(kMagic), _locked(false),
-        #endif
-        #if DEBUG_OSTIMER
-            _name(name)
-        #endif
 {
 }
 
@@ -157,15 +151,11 @@ OSTIMER_INLINE OSTimer::~OSTimer()
 {
     detach();
     _etsTimer.done();
-    #if OSTIMER_USE_MAGIC
-        _magic = 0;
-    #endif
 }
 
 OSTIMER_INLINE bool OSTimer::isRunning() const
 {
     return _etsTimer.isRunning();
-    // return (_etsTimer.timer_arg == this);
 }
 
 OSTIMER_INLINE OSTimer::operator bool() const
@@ -176,12 +166,6 @@ OSTIMER_INLINE OSTimer::operator bool() const
 OSTIMER_INLINE void OSTimer::startTimer(int32_t delay, bool repeat, bool millis)
 {
     delay = std::clamp<int32_t>(delay, Event::kMinDelay, Event::kMaxDelay);
-    #if DEBUG_OSTIMER
-        _delay = delay;
-        if (millis) {
-            _delay *= 1000;
-        }
-    #endif
     ets_timer_disarm(&_etsTimer);
     ets_timer_setfn(&_etsTimer, &_EtsTimerCallback, this);
     ets_timer_arm_new(&_etsTimer, delay, repeat, millis);
@@ -204,8 +188,6 @@ OSTIMER_INLINE bool OSTimer::lock()
         return false;
     }
     _etsTimer.lock();
-
-    OSTIMER_VALIDATE_MAGIC(*this, (!_locked ? (_locked = true) : false));
     return true;
 }
 
@@ -214,8 +196,6 @@ OSTIMER_INLINE void OSTimer::unlock(OSTimer &timer, uint32_t timeoutMicros)
     if (!ETSTimerEx::find(timer)) {
         return;
     }
-    OSTIMER_VALIDATE_MAGIC(timer);
-
     if (!timer._etsTimer.isLocked()) {
         return;
     }
@@ -234,8 +214,6 @@ OSTIMER_INLINE void OSTimer::unlock(OSTimer &timer, uint32_t timeoutMicros)
         #endif
         return;
     }
-    OSTIMER_VALIDATE_MAGIC(timer, timer._locked = false);
-
     if (!timer._etsTimer.isLocked()) {
         return;
     }
@@ -245,8 +223,6 @@ OSTIMER_INLINE void OSTimer::unlock(OSTimer &timer, uint32_t timeoutMicros)
 OSTIMER_INLINE void OSTimer::unlock(OSTimer &timer)
 {
     InterruptLock intrLock;
-    OSTIMER_VALIDATE_MAGIC(timer, timer._locked = false);
-
     if (!ETSTimerEx::find(timer)) {
         return;
     }
@@ -256,6 +232,5 @@ OSTIMER_INLINE void OSTimer::unlock(OSTimer &timer)
 OSTIMER_INLINE bool OSTimer::isLocked(OSTimer &timer)
 {
     InterruptLock intrLock;
-    OSTIMER_VALIDATE_MAGIC(timer);
     return ETSTimerEx::find(&timer._etsTimer) && timer._etsTimer.isLocked();
 }

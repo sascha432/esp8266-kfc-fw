@@ -6,7 +6,8 @@
 #include <Arduino_compat.h>
 #include "OSTimer.h"
 
-void ICACHE_FLASH_ATTR _EtsTimerLockedCallback(void *arg) {
+void ICACHE_FLASH_ATTR ETSTimerEx::_EtsTimerLockedCallback(void *arg)
+{
 }
 
 void ICACHE_FLASH_ATTR OSTimer::_EtsTimerCallback(void *arg)

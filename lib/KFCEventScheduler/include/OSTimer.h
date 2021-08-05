@@ -8,28 +8,11 @@
 #    define DEBUG_OSTIMER 1
 #endif
 
-#define OSTIMER_USE_MAGIC DEBUG_OSTIMER
-#define OSTIMER_USE_FIND_TIMER ESP8266
-
 #if DEBUG_OSTIMER
 #    define OSTIMER_NAME(name) PSTR(name)
 #else
 #    define OSTIMER_NAME(name)
 #endif
-
-struct TimerArg {
-    void *_arg;
-    TimerArg(const void *arg = nullptr) : _arg(const_cast<void *>(arg))
-    {}
-    operator const void *() const {
-        return this;
-    }
-    operator void *() {
-        return this;
-    }
-};
-
-extern void ICACHE_FLASH_ATTR _EtsTimerLockedCallback(void *arg);
 
 #include <Arduino_compat.h>
 #if defined(ESP8266)
@@ -45,12 +28,15 @@ extern void ICACHE_FLASH_ATTR _EtsTimerLockedCallback(void *arg);
     }
     #endif
 
-    #define OSTIMER_LOCKED_PTR reinterpret_cast<ETSTimerFunc *>(_EtsTimerLockedCallback)
-
     struct ETSTimerEx : ETSTimer {
-        static constexpr uint32_t kMagic = 0x73f281f1;
-        ETSTimerEx();
+        #if DEBUG_OSTIMER
+            static constexpr uint32_t kMagic = 0x73f281f1;
+            ETSTimerEx(const char *name);
+        #else
+            ETSTimerEx();
+        #endif
         ~ETSTimerEx();
+
         bool isRunning() const;
         bool isDone() const;
         bool isLocked() const;
@@ -61,15 +47,18 @@ extern void ICACHE_FLASH_ATTR _EtsTimerLockedCallback(void *arg);
         void clear();
         ETSTimer *find();
         static ETSTimer *find(ETSTimer *timer);
-        uint32_t _magic;
+
+        static void ICACHE_FLASH_ATTR _EtsTimerLockedCallback(void *arg);
+
+        #if DEBUG_OSTIMER
+            uint32_t _magic;
+            const char *_name;
+        #endif
     };
 
 #endif
 
 class OSTimer {
-public:
-    static constexpr uint32_t kMagic = 0x73f281f1 & 0x7fffffff;
-
 public:
     #if DEBUG_OSTIMER
         OSTimer(const char *name);
@@ -91,10 +80,6 @@ public:
     static void unlock(OSTimer &timer);
     static bool isLocked(OSTimer &timer);
 
-    // ETSTimerEx *_getEtsTimer() const {
-    //     return const_cast<ETSTimerEx *>(&_etsTimer);
-    // }
-
     static void ICACHE_FLASH_ATTR _EtsTimerCallback(void *arg);
 
 protected:
@@ -103,19 +88,6 @@ protected:
     operator ETSTimer *() const {
         return const_cast<ETSTimerEx *>(&_etsTimer);
     }
-
-    operator TimerArg() const {
-        return TimerArg(reinterpret_cast<const void *>(this));
-    }
-
-    #if OSTIMER_USE_MAGIC
-        volatile uint32_t _magic: 31;
-        volatile uint32_t _locked: 1;
-    #endif
-    #if DEBUG_OSTIMER
-        const char *_name;
-        uint32_t _delay;
-    #endif
 };
 
 // #if !DEBUG_OSTIMER

@@ -382,10 +382,10 @@ public:
 #if IOT_SENSOR_HAVE_MOTION_SENSOR
 public:
     virtual void eventMotionDetected(bool motion) override;
-    virtual bool eventMotionAutoOff(bool off);
+    virtual bool eventMotionAutoOff(bool state);
 
 private:
-    bool _autoOff{false};
+    bool _motionAutoOff{false};
 
 #endif
 
@@ -477,7 +477,7 @@ public:
     void _saveState() {}
 
 #endif
-    void _setState(bool state);
+    void _setState(bool state, bool autoOff = false);
 
 // ------------------------------------------------------------------------
 // Button
@@ -776,18 +776,16 @@ inline void ClockPlugin::eventMotionDetected(bool motion)
     digitalWrite(131, !motion);
 }
 
-inline bool ClockPlugin::eventMotionAutoOff(bool off)
+inline bool ClockPlugin::eventMotionAutoOff(bool state)
 {
-    if (off && _isEnabled) {
-        _disable();
-        // mark as deactivated by the motion sensor
-        _autoOff = true;
+    // state true = turn off
+    if (state && _isEnabled) {
+        _setState(false, true);
         return true;
     }
-    if (!off && !_isEnabled && _autoOff) {
-        // reactivate if disabled by the motion sensor
-        _autoOff = false;
-        _enable();
+    // state false = turn on
+    if (!state && !_isEnabled && _motionAutoOff == true) {
+        _setState(true, false);
         return true;
     }
     return false;

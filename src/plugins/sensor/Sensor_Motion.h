@@ -29,21 +29,26 @@ public:
     virtual void eventMotionDetected(bool motion) {}
 
 #if IOT_SENSOR_HAVE_MOTION_AUTO_OFF
-    MotionSensorHandler(bool autoOff = true) : _autoOff(autoOff) {}
+    MotionSensorHandler(bool autoOff = false) : _autoOff(autoOff) {}
 
-    // off = true: gets called when motion has not been detected for the configured timeout
-    // off = false: gets called when motion has not been after auto off was called
+    // state = true: turn device off, the auto off timeout without motion has been reached
+    // state = false: turn device on, motion was detected
     // return value true will result in logging the event
-    virtual bool eventMotionAutoOff(bool off) = 0;
+    virtual bool eventMotionAutoOff(bool state) = 0;
 
-    // enable/disable auto off events
-    void setMotionAutoOff(bool autoOff) {
+    // set state for auto off
+    void _setMotionAutoOff(bool autoOff) {
         _autoOff = autoOff;
+    }
+
+    bool _getMotionAutoOff() const {
+        return _autoOff;
     }
 
 private:
     friend Sensor_Motion;
 
+    Event::Timer _autoOffTimeout;
     bool _autoOff;
 #endif
 };
@@ -76,6 +81,7 @@ public:
     void end();
 
 private:
+    void _reset();
     void _timerCallback();
     const __FlashStringHelper *_getId();
     String _getTopic();
@@ -86,9 +92,9 @@ private:
     String _name;
     MotionSensorHandler *_handler;
     Event::Timer _timer;
+    Event::Timer _sensorTimeout;
     ConfigType _config;
-    uint32_t _motionLastUpdate;
-    uint8_t _motionState;
+    bool _motionState;
     uint8_t _pin;
     bool _pinInverted;
 };

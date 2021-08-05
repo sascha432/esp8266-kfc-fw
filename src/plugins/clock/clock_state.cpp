@@ -78,8 +78,9 @@ ClockPlugin::StoredState ClockPlugin::_getState() const
 
 #endif
 
-void ClockPlugin::_setState(bool state)
+void ClockPlugin::_setState(bool state, bool autoOff)
 {
+    _motionAutoOff = autoOff;
     if (state) {
         if (_targetBrightness == 0) {
             if (_savedBrightness) {

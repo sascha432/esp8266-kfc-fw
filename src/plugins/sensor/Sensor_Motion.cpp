@@ -9,7 +9,7 @@
 #include "Sensor_Motion.h"
 #include "sensor.h"
 
-#if DEBUG_IOT_SENSOR
+#if DEBUG_IOT_SENSOR || 1
 #include <debug_helper_enable.h>
 #else
 #include <debug_helper_disable.h>
@@ -20,8 +20,6 @@ Sensor_Motion::Sensor_Motion(const String &name) :
     _name(name),
     _handler(nullptr),
     _config(Plugins::Sensor::getConfig().motion),
-    _motionLastUpdate(0),
-    _motionState(0xff),
     _pin(0xff),
     _pinInverted(false)
 {
@@ -121,6 +119,7 @@ void Sensor_Motion::createConfigureForm(AsyncWebServerRequest *request, FormUI::
 void Sensor_Motion::reconfigure(PGM_P source)
 {
     _config = Plugins::Sensor::getConfig().motion;
+    _reset();
 }
 
 void Sensor_Motion::begin(MotionSensorHandler *handler, uint8_t pin, bool pinInverted)
@@ -129,8 +128,8 @@ void Sensor_Motion::begin(MotionSensorHandler *handler, uint8_t pin, bool pinInv
     _pin = pin;
     _pinInverted = pinInverted;
     pinMode(_pin, INPUT);
-    _timerCallback();
     _handler = handler;
+    _reset();
     _timer.add(Event::seconds(1), true, [this](Event::CallbackTimerPtr) {
         _timerCallback();
     });
@@ -138,8 +137,20 @@ void Sensor_Motion::begin(MotionSensorHandler *handler, uint8_t pin, bool pinInv
 
 void Sensor_Motion::end()
 {
+    _reset();
     _timer.remove();
     _handler = nullptr;
+}
+
+void Sensor_Motion::_reset()
+{
+    _motionState = false;
+    _sensorTimeout.remove();
+    #if IOT_SENSOR_HAVE_MOTION_AUTO_OFF
+        if (_handler) {
+            _handler->_autoOffTimeout.remove();
+        }
+    #endif
 }
 
 void Sensor_Motion::_timerCallback()
@@ -148,58 +159,61 @@ void Sensor_Motion::_timerCallback()
     if (_pinInverted) {
         state = !state;
     }
-    if (!state && _motionLastUpdate && (millis() - _motionLastUpdate) < (_config.motion_trigger_timeout * 60000UL)) {
-        // keep the motion signal on if any motion is detected within motion_trigger_timeout min.
-    }
-    else if (state != _motionState) {
-        // motion detected or timeout
-        _motionState = state;
-        if (_motionState) {
-            __LDBG_printf("motion detected: state=%u last=%.3fs auto_off=%us", _motionState, _motionLastUpdate ? (millis() - _motionLastUpdate) / 1000.0 : 0.0,  (_config.motion_auto_off * 60));
 
-            #if IOT_SENSOR_HAVE_MOTION_AUTO_OFF
-                if (_handler && _handler->_autoOff) {
-                    if (_motionLastUpdate == 0 && _config.motion_auto_off) {
-                        if (_handler->eventMotionAutoOff(true)) {
+    if (state) {
+        // reset timeout
+        _sensorTimeout.add(Event::minutes(_config.motion_trigger_timeout), false, [this](Event::CallbackTimerPtr) {
+            __LDBG_printf("motion timeout event: %umin", _config.motion_trigger_timeout);
+            _motionState = false;
+            publishState();
+            _publishWebUI();
+
+            if (_handler) {
+                _handler->eventMotionDetected(false);
+                #if IOT_SENSOR_HAVE_MOTION_AUTO_OFF
+                    // start auto off timeout
+                    if (_config.motion_auto_off && _handler->_getMotionAutoOff() == false) {
+                        _handler->_autoOffTimeout.add(Event::minutes(_config.motion_auto_off), false, [this](Event::CallbackTimerPtr) {
+                            __LDBG_printf("motion auto off event: %umin", _config.motion_auto_off);
+                            _handler->_setMotionAutoOff(true);
+                            if (_handler->eventMotionAutoOff(true)) {
+                                Logger_notice(F("No motion detected. Turning device off..."));
+                            }
+                        });
+                    }
+                #endif
+            }
+        });
+        // remove auto off timeout
+        #if IOT_SENSOR_HAVE_MOTION_AUTO_OFF
+            if (_handler && _config.motion_auto_off) {
+                _handler->_autoOffTimeout.remove();
+            }
+        #endif
+
+        // notify handler if state changed
+        if (_motionState == false) {
+            __LDBG_printf("motion detected event");
+            _motionState = true;
+            publishState();
+            _publishWebUI();
+
+            if (_handler) {
+                _handler->eventMotionDetected(true);
+                #if IOT_SENSOR_HAVE_MOTION_AUTO_OFF
+                    // device has been disabled by the auto off time
+                    // send notification
+                    if (_config.motion_auto_off && _handler->_getMotionAutoOff() == true) {
+                        __LDBG_printf("motion auto on event");
+                        _handler->_setMotionAutoOff(false);
+                        if (_handler->eventMotionAutoOff(false)) {
                             Logger_notice(F("Motion detected. Turning device on..."));
                         }
                     }
-                }
-            #endif
-
-            _motionLastUpdate = millis();
-            if (_motionLastUpdate == 0) {
-                _motionLastUpdate++;
+                #endif
             }
         }
-        else {
-            __LDBG_printf("motion sensor timeout");
-        }
-        if (_handler) {
-            _handler->eventMotionDetected(_motionState);
-        }
-        publishState();
-        _publishWebUI();
     }
-    else if (state && state == _motionState && _motionLastUpdate) {
-        // motion detected within timeout
-        __LDBG_printf("motion detected (retrigger): state=%u last=%.3fs auto_off=%us", _motionState, _motionLastUpdate ? (millis() - _motionLastUpdate) / 1000.0 : 0.0,  (_config.motion_auto_off * 60));
-        _motionLastUpdate = millis();
-        if (_motionLastUpdate == 0) {
-            _motionLastUpdate++;
-        }
-    }
-
-    #if IOT_SENSOR_HAVE_MOTION_AUTO_OFF
-        if (_handler && _handler->_autoOff) {
-            if (_motionLastUpdate && _config.motion_auto_off && get_time_diff(_motionLastUpdate, millis()) > (_config.motion_auto_off * 60000UL)) {
-                _motionLastUpdate = 0;
-                if (_handler->eventMotionAutoOff(true)) {
-                    Logger_notice(F("No motion detected. Turning device off..."));
-                }
-            }
-        }
-    #endif
 }
 
 #endif

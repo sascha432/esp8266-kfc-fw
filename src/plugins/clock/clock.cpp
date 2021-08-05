@@ -754,9 +754,6 @@ void ClockPlugin::_enable()
     _config.enabled = true;
     _isEnabled = true;
     _fps = 0;
-    #if IOT_SENSOR_HAVE_MOTION_SENSOR
-        _autoOff = false;
-    #endif
 }
 
 void ClockPlugin::_disable()
@@ -771,9 +768,6 @@ void ClockPlugin::_disable()
     _config.enabled = false;
     _isEnabled = false;
     _fps = NAN;
-    #if IOT_SENSOR_HAVE_MOTION_SENSOR
-        _autoOff = false;
-    #endif
 
     #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
         _powerLevelCurrentmW = 0;

@@ -13,8 +13,6 @@
 #define __RESET_DETECTOR_INCLUDED
 #define __RESET_DETECTOR_INSIDE_INCLUDE
 
-#define DEBUG_RESET_DETECTOR 1
-
 // enable debug outout
 #ifndef DEBUG_RESET_DETECTOR
     #define DEBUG_RESET_DETECTOR 0

@@ -11,11 +11,11 @@
 #include "plugins.h"
 
 #ifndef DEBUG_SERIAL2TCP
-#define DEBUG_SERIAL2TCP                        1
+#    define DEBUG_SERIAL2TCP 0
 #endif
 
 #if !SERIAL2TCP_SUPPORT
-#error SERIAL2TCP_SUPPORT must be set
+#    error SERIAL2TCP_SUPPORT must be set
 #endif
 
 class Serial2TcpPlugin : public PluginComponent

@@ -9,7 +9,7 @@
 #include "Sensor_Motion.h"
 #include "sensor.h"
 
-#if DEBUG_IOT_SENSOR || 1
+#if DEBUG_IOT_SENSOR
 #include <debug_helper_enable.h>
 #else
 #include <debug_helper_disable.h>

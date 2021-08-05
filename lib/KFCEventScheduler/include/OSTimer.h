@@ -5,7 +5,7 @@
 #pragma once
 
 #ifndef DEBUG_OSTIMER
-#    define DEBUG_OSTIMER 1
+#    define DEBUG_OSTIMER 0
 #endif
 
 #if DEBUG_OSTIMER
@@ -28,6 +28,10 @@
     }
     #endif
 
+    // to avoid calling the timer's run() while it is still running, the callback is changed to
+    // a dummy function and restored when run() has finished
+    //
+    // in debug mode the timers integrity is checked to protect against dangling pointers or invalid state
     struct ETSTimerEx : ETSTimer {
         #if DEBUG_OSTIMER
             static constexpr uint32_t kMagic = 0x73f281f1;

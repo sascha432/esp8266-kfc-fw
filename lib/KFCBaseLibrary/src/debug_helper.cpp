@@ -9,10 +9,23 @@
 #include <StreamWrapper.h>
 #include "debug_helper.h"
 
-// int DEBUG_OUTPUT_flush() {
-//     DEBUG_OUTPUT.flush();
-//     return 1;
-// }
+
+// use with "build_flags = -finstrument-functions"
+#if HAVE_INSTRUMENT_FUNCTIONS
+
+#include <stl_ext/fixed_circular_buffer>
+
+extern "C" {
+
+    void __cyg_profile_func_enter (void *this_fn, void *call_site) {
+    }
+
+    void __cyg_profile_func_exit  (void *this_fn, void *call_site) {
+    }
+
+}
+
+#endif
 
 uint8_t DebugContext::__state = DEBUG_HELPER_STATE_DISABLED; // needs to be disabled until the output stream has been initialized
 DebugContext DebugContext::__pos;

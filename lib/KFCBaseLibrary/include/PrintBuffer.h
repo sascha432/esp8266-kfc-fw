@@ -12,10 +12,30 @@ public:
 
     size_t write(uint8_t data) override;
     size_t write(const uint8_t *buffer, size_t size) override;
-    size_t write(const char *buffer, size_t size) {
-        return Buffer::write((uint8_t *)buffer, size);
-    }
-    size_t write(char *buffer, size_t size) {
-        return Buffer::write((uint8_t *)buffer, size);
-    }
+    size_t write(const char *buffer, size_t size);
+    size_t write(char *buffer, size_t size);
 };
+
+inline PrintBuffer::PrintBuffer(size_t size) : Buffer(size), Print()
+{
+}
+
+inline size_t PrintBuffer::write(uint8_t data)
+{
+    return Buffer::write(data);
+}
+
+inline size_t PrintBuffer::write(const uint8_t *buffer, size_t size)
+{
+    return Buffer::write(buffer, size);
+}
+
+inline size_t PrintBuffer::write(const char *buffer, size_t size)
+{
+    return Buffer::write(reinterpret_cast<const uint8_t *>(buffer), size);
+}
+
+inline size_t PrintBuffer::write(char *buffer, size_t size)
+{
+    return Buffer::write(reinterpret_cast<uint8_t *>(buffer), size);
+}

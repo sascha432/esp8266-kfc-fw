@@ -16,6 +16,9 @@
 #include "plugins.h"
 #include "stored_state.h"
 #include "../src/plugins/plugins.h"
+#if IOT_LED_MATRIX_HAVE_SSD1306
+#include <Adafruit_SSD1306.h>
+#endif
 
 namespace WebServer {
     class AsyncUpdateWebHandler;
@@ -277,43 +280,43 @@ public:
 
     void _createConfigureFormAnimation(AnimationType animation, FormUI::Form::BaseForm &form, ClockConfigType &cfg, TitleType titleType);
 
-#if AT_MODE_SUPPORTED
+    #if AT_MODE_SUPPORTED
 
-private:
-#if IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
-    struct LedMatrixDisplayTimer {
-        Event::Timer timer;
-        void *clientId;
-        String host;
-        uint16_t udpPort;
-        uint16_t wsPort;
-        uint32_t errors;
-        uint32_t maxErrors;
-        LedMatrixDisplayTimer(void *pClientId, uint32_t pMaxErrors) : clientId(pClientId), udpPort(0), wsPort(0), errors(0), maxErrors(pMaxErrors) {
-        }
-        ~LedMatrixDisplayTimer() {
-            timer.remove();
-            clientId = nullptr;
-        }
-        void print(const String &str) {
-            auto client = Http2Serial::getClientById(clientId);
-            if (client) {
-                client->text(str);
-            }
-            else {
-                Serial.println(str);
-            }
-        }
-    };
-    LedMatrixDisplayTimer *_displayLedTimer{nullptr};
+    private:
+        #if IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
+            struct LedMatrixDisplayTimer {
+                Event::Timer timer;
+                void *clientId;
+                String host;
+                uint16_t udpPort;
+                uint16_t wsPort;
+                uint32_t errors;
+                uint32_t maxErrors;
+                LedMatrixDisplayTimer(void *pClientId, uint32_t pMaxErrors) : clientId(pClientId), udpPort(0), wsPort(0), errors(0), maxErrors(pMaxErrors) {
+                }
+                ~LedMatrixDisplayTimer() {
+                    timer.remove();
+                    clientId = nullptr;
+                }
+                void print(const String &str) {
+                    auto client = Http2Serial::getClientById(clientId);
+                    if (client) {
+                        client->text(str);
+                    }
+                    else {
+                        Serial.println(str);
+                    }
+                }
+            };
+            LedMatrixDisplayTimer *_displayLedTimer{nullptr};
 
-    void _removeDisplayLedTimer();
-#endif
+            void _removeDisplayLedTimer();
+        #endif
 
-public:
-    virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const override;
-    virtual bool atModeHandler(AtModeArgs &args) override;
-#endif
+    public:
+        virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const override;
+        virtual bool atModeHandler(AtModeArgs &args) override;
+    #endif
 
 // ------------------------------------------------------------------------
 // WebUI
@@ -376,71 +379,71 @@ public:
     // get stored configuration and update it with local storage
     ClockConfigType &getWriteableConfig();
 
-// ------------------------------------------------------------------------
-// Motion sensor
-// ------------------------------------------------------------------------
-#if IOT_SENSOR_HAVE_MOTION_SENSOR
-public:
-    virtual void eventMotionDetected(bool motion) override;
-    virtual bool eventMotionAutoOff(bool state);
+    // ------------------------------------------------------------------------
+    // Motion sensor
+    // ------------------------------------------------------------------------
+    #if IOT_SENSOR_HAVE_MOTION_SENSOR
+    public:
+        virtual void eventMotionDetected(bool motion) override;
+        virtual bool eventMotionAutoOff(bool state);
 
-private:
-    bool _motionAutoOff{false};
+    private:
+        bool _motionAutoOff{false};
 
-#endif
+    #endif
 
-// ------------------------------------------------------------------------
-// Fan control
-// ------------------------------------------------------------------------
-#ifdef IOT_LED_MATRIX_FAN_CONTROL
+    // ------------------------------------------------------------------------
+    // Fan control
+    // ------------------------------------------------------------------------
+    #ifdef IOT_LED_MATRIX_FAN_CONTROL
 
-private:
-    void _setFanSpeed(uint8_t speed);
-    // void _webUIUpdateFanSpeed();
+    private:
+        void _setFanSpeed(uint8_t speed);
+        // void _webUIUpdateFanSpeed();
 
-private:
-    uint8_t _fanSpeed{0};
+    private:
+        uint8_t _fanSpeed{0};
 
-#endif
+    #endif
 
-// ------------------------------------------------------------------------
-// Power consumption sensor
-// ------------------------------------------------------------------------
-#if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION || IOT_CLOCK_HAVE_POWER_LIMIT
+    // ------------------------------------------------------------------------
+    // Power consumption sensor
+    // ------------------------------------------------------------------------
+    #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION || IOT_CLOCK_HAVE_POWER_LIMIT
 
-public:
-    static uint8_t calcPowerFunction(uint8_t scale, uint32_t data);
-    static void webSocketCallback(WsClient::ClientCallbackType type, WsClient *client, AsyncWebSocket *server, WsClient::ClientCallbackId id);
+    public:
+        static uint8_t calcPowerFunction(uint8_t scale, uint32_t data);
+        static void webSocketCallback(WsClient::ClientCallbackType type, WsClient *client, AsyncWebSocket *server, WsClient::ClientCallbackId id);
 
-private:
-    String _getPowerLevelStr();
-    void _updatePowerLevelWebUI();
-    uint8_t _calcPowerFunction(uint8_t scale, uint32_t data);
-    void _powerLevelCallback(uint32_t total_mW, uint32_t requested_mW, uint32_t max_mW, uint8_t target_brightness, uint8_t recommended_brightness);
-    void _webSocketCallback(WsClient::ClientCallbackType type, WsClient *client, AsyncWebSocket *server, WsClient::ClientCallbackId id);
-    void _calcPowerLevel();
-    float __getPowerLevel(float P_W, float min) const;
-    uint32_t _getPowerLevelLimit(uint32_t P_Watt) const;
+    private:
+        String _getPowerLevelStr();
+        void _updatePowerLevelWebUI();
+        uint8_t _calcPowerFunction(uint8_t scale, uint32_t data);
+        void _powerLevelCallback(uint32_t total_mW, uint32_t requested_mW, uint32_t max_mW, uint8_t target_brightness, uint8_t recommended_brightness);
+        void _webSocketCallback(WsClient::ClientCallbackType type, WsClient *client, AsyncWebSocket *server, WsClient::ClientCallbackId id);
+        void _calcPowerLevel();
+        float __getPowerLevel(float P_W, float min) const;
+        uint32_t _getPowerLevelLimit(uint32_t P_Watt) const;
 
-#if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
+        #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
 
-    float _getPowerLevel() const {
-        if (!_isEnabled || _tempBrightness == -1) {
-            return NAN;
-        }
-        return __getPowerLevel(_powerLevelAvg / 1000.0, 1.039);
-    }
+            float _getPowerLevel() const {
+                if (!_isEnabled || _tempBrightness == -1) {
+                    return NAN;
+                }
+                return __getPowerLevel(_powerLevelAvg / 1000.0, 1.039);
+            }
 
-private:
-    static constexpr uint32_t kPowerLevelUpdateRateMultiplier = 500000U;
+        private:
+            static constexpr uint32_t kPowerLevelUpdateRateMultiplier = 500000U;
 
-    float _powerLevelAvg;
-    uint32_t _powerLevelUpdateTimer{0};
-    uint32_t _powerLevelCurrentmW{0};
-    uint32_t _powerLevelUpdateRate{kUpdateMQTTInterval * kPowerLevelUpdateRateMultiplier};
-#endif
+            float _powerLevelAvg;
+            uint32_t _powerLevelUpdateTimer{0};
+            uint32_t _powerLevelCurrentmW{0};
+            uint32_t _powerLevelUpdateRate{kUpdateMQTTInterval * kPowerLevelUpdateRateMultiplier};
+        #endif
 
-#endif
+    #endif
 
 // ------------------------------------------------------------------------
 // Enable/disable LEDs
@@ -458,107 +461,102 @@ private:
         return _config.enabled && _isEnabled && _targetBrightness && _tempBrightness != -1;
     }
 
-// ------------------------------------------------------------------------
-// Save state
-// ------------------------------------------------------------------------
-#if IOT_CLOCK_SAVE_STATE
+    // ------------------------------------------------------------------------
+    // Save state
+    // ------------------------------------------------------------------------
+    #if IOT_CLOCK_SAVE_STATE
 
-public:
-    void _saveStateDelayed();
-    void _saveState();
-    StoredState _getState() const;
+    public:
+        void _saveStateDelayed();
+        void _saveState();
+        StoredState _getState() const;
 
-    Event::Timer _saveTimer;
-    uint32_t _saveTimestamp{0};
-#else
+        Event::Timer _saveTimer;
+        uint32_t _saveTimestamp{0};
+    #else
 
-public:
-    void _saveStateDelayed() {}
-    void _saveState() {}
+    public:
+        void _saveStateDelayed() {}
+        void _saveState() {}
 
-#endif
+    #endif
+
     void _setState(bool state, bool autoOff = false);
 
-// ------------------------------------------------------------------------
-// Button
-// ------------------------------------------------------------------------
-#if IOT_CLOCK_BUTTON_PIN != -1
+    // ------------------------------------------------------------------------
+    // Button
+    // ------------------------------------------------------------------------
+    #if IOT_CLOCK_BUTTON_PIN != -1
 
-public:
-    using EventType = Clock::Button::EventType;
-    void buttonCallback(uint8_t button, EventType eventType, uint16_t repeatCount);
+    public:
+        using EventType = Clock::Button::EventType;
+        void buttonCallback(uint8_t button, EventType eventType, uint16_t repeatCount);
 
-#if IOT_CLOCK_HAVE_ROTARY_ENCODER
-    void rotaryCallback(bool decrease, uint32_t now);
-    void setRotaryAction(uint8_t action);
+        #if IOT_CLOCK_HAVE_ROTARY_ENCODER
+            void rotaryCallback(bool decrease, uint32_t now);
+            void setRotaryAction(uint8_t action);
 
-private:
-    // acceleration per step
-    static constexpr int kRotaryAccelerationDivider = 1;
-    // max. acceleration
-    static constexpr int kRotaryMaxAcceleration = 10 * kRotaryAccelerationDivider;
+        private:
+            // acceleration per step
+            static constexpr int kRotaryAccelerationDivider = 1;
+            // max. acceleration
+            static constexpr int kRotaryMaxAcceleration = 10 * kRotaryAccelerationDivider;
 
-    uint32_t _lastRotaryUpdate{0};
-    uint8_t _rotaryAcceleration{kRotaryAccelerationDivider};
-    uint8_t _rotaryAction{0};
-    Event::Timer _rotaryActionTimer;
-#endif
+            uint32_t _lastRotaryUpdate{0};
+            uint8_t _rotaryAcceleration{kRotaryAccelerationDivider};
+            uint8_t _rotaryAction{0};
+            Event::Timer _rotaryActionTimer;
+        #endif
 
-#endif
+    #endif
 
-// ------------------------------------------------------------------------
-// Alarm Plugin
-// ------------------------------------------------------------------------
-#if IOT_ALARM_PLUGIN_ENABLED
+    // ------------------------------------------------------------------------
+    // Alarm Plugin
+    // ------------------------------------------------------------------------
+    #if IOT_ALARM_PLUGIN_ENABLED
 
-public:
-    using AlarmModeType = KFCConfigurationClasses::Plugins::AlarmConfigNS::ModeType;
+    public:
+        using AlarmModeType = KFCConfigurationClasses::Plugins::AlarmConfigNS::ModeType;
 
-    static void alarmCallback(AlarmModeType mode, uint16_t maxDuration);
+        static void alarmCallback(AlarmModeType mode, uint16_t maxDuration);
 
-private:
-    void _alarmCallback(AlarmModeType mode, uint16_t maxDuration);
-    bool _resetAlarm();  // returns true if alarm was reset
+    private:
+        void _alarmCallback(AlarmModeType mode, uint16_t maxDuration);
+        bool _resetAlarm();  // returns true if alarm was reset
 
-    Event::Timer _alarmTimer;
-    Event::Callback _resetAlarmFunc;
-#endif
+        Event::Timer _alarmTimer;
+        Event::Callback _resetAlarmFunc;
+    #endif
 
-#if !IOT_LED_MATRIX
+    #if !IOT_LED_MATRIX
 
-// ------------------------------------------------------------------------
-// Clock
-// ------------------------------------------------------------------------
+    // ------------------------------------------------------------------------
+    // Clock
+    // ------------------------------------------------------------------------
 
-// private:
-//     void _setSevenSegmentDisplay();
+    // private:
+    //     void _setSevenSegmentDisplay();
 
-public:
-    void setBlinkColon(uint16_t value);
+    public:
+        void setBlinkColon(uint16_t value);
 
-private:
-    // std::array<SevenSegmentDisplay::PixelAddressType, IOT_CLOCK_PIXEL_ORDER_LEN * IOT_CLOCK_NUM_DIGITS> _pixelOrder;
-    time_t _time{0};
+    private:
+        // std::array<SevenSegmentDisplay::PixelAddressType, IOT_CLOCK_PIXEL_ORDER_LEN * IOT_CLOCK_NUM_DIGITS> _pixelOrder;
+        time_t _time{0};
 
-#    if IOT_CLOCK_PIXEL_SYNC_ANIMATION
-public:
-    void setSyncing(bool sync);
-    static void ntpCallback(time_t now);
+    #    if IOT_CLOCK_PIXEL_SYNC_ANIMATION
+    public:
+        void setSyncing(bool sync);
+        static void ntpCallback(time_t now);
 
-private:
-    bool _loopSyncingAnimation(LoopOptionsType &options);
+    private:
+        bool _loopSyncingAnimation(LoopOptionsType &options);
 
-private:
-    bool _isSyncing{false};
-#    endif
+    private:
+        bool _isSyncing{false};
+    #    endif
 
-#endif
-
-// ------------------------------------------------------------------------
-// Ambient light sensor
-// ------------------------------------------------------------------------
-#if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR
-#endif
+    #endif
 
 // ------------------------------------------------------------------------
 
@@ -660,9 +658,26 @@ private:
     Clock::BlendAnimation *_blendAnimation;
     Clock::ShowMethodType _method;
 
-#if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR2
-    AmbientLightSensorHandler _lightSensor2;
-#endif
+    #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR2
+        AmbientLightSensorHandler _lightSensor2;
+    #endif
+
+    #if IOT_LED_MATRIX_HAVE_SSD1306
+    private:
+        #ifndef SSD1306_DISPLAY_CONFIG
+            #error SSD1306_DISPLAY_CONFIG not set
+        #endif
+        Adafruit_SSD1306 _ssd1306{SSD1306_DISPLAY_CONFIG};
+        Event::Timer _ssd1306Timer;
+        bool _ssd1306Blank{false};
+
+        void ssd1306Begin();
+        void ssd1306End();
+        void ssd1306Clear(bool display = true);
+        void ssd1306Update();
+        // enable screen saver/blank screen
+        void ssd1306Blank(bool state);
+    #endif
 
 public:
     static Clock::ShowMethodType getShowMethod();
@@ -774,6 +789,9 @@ inline bool ClockPlugin::_resetAlarm()
 inline void ClockPlugin::eventMotionDetected(bool motion)
 {
     digitalWrite(131, !motion);
+    #if IOT_LED_MATRIX_HAVE_SSD1306
+        ssd1306Blank(!motion);
+    #endif
 }
 
 inline bool ClockPlugin::eventMotionAutoOff(bool state)

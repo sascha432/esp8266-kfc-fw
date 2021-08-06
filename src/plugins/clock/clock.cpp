@@ -242,6 +242,10 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
         _PCF8574.PORT = 0xff;
     #endif
 
+    #if IOT_LED_MATRIX_HAVE_SSD1306
+        ssd1306Begin();
+    #endif
+
     #if IOT_LED_MATRIX_ENABLE_PIN != -1
         digitalWrite(IOT_LED_MATRIX_ENABLE_PIN, enablePinState(false));
         pinMode(IOT_LED_MATRIX_ENABLE_PIN, OUTPUT);
@@ -303,10 +307,10 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
                             auto lightSensor = reinterpret_cast<Sensor_AmbientLight *>(sensor);
                             if (lightSensor->getId() == 0) {
                                 #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR == 1
-                                    auto config = Sensor_AmbientLight::SensorConfig(Sensor_AmbientLight::SensorType::INTERNAL_ADC);
+                                    auto config = Sensor_AmbientLight::SensorInputConfig(Sensor_AmbientLight::SensorType::INTERNAL_ADC);
                                     config.adc.inverted = IOT_CLOCK_AMBIENT_LIGHT_SENSOR_INVERTED;
                                 #elif IOT_CLOCK_AMBIENT_LIGHT_SENSOR == 2
-                                    auto config = Sensor_AmbientLight::SensorConfig(Sensor_AmbientLight::SensorType::TINYPWM);
+                                    auto config = Sensor_AmbientLight::SensorInputConfig(Sensor_AmbientLight::SensorType::TINYPWM);
                                     config.tinyPWM = Sensor_AmbientLight::SensorConfig::TinyPWM(TINYPWM_I2C_ADDRESS, IOT_CLOCK_AMBIENT_LIGHT_SENSOR_INVERTED);
                                 #endif
                                 lightSensor->begin(this, config);
@@ -327,7 +331,6 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
             }
         }
     #endif
-
 
     #if IOT_LED_MATRIX_FAN_CONTROL
         _setFanSpeed(_config.fan_speed);
@@ -493,6 +496,10 @@ void ClockPlugin::shutdown()
             _display.delay(10);
         }
     }
+
+    #if IOT_LED_MATRIX_HAVE_SSD1306
+        ssd1306End();
+    #endif
 
     LoopFunctions::remove(loop);
 

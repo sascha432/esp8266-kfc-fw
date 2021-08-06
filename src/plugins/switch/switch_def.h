@@ -7,7 +7,7 @@
 #if IOT_SWITCH
 
 #ifndef DEBUG_IOT_SWITCH
-#   define DEBUG_IOT_SWITCH 1
+#   define DEBUG_IOT_SWITCH 0
 #endif
 
 #ifndef IOT_SWITCH_ON_STATE

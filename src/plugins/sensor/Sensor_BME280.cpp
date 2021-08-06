@@ -76,28 +76,24 @@ void Sensor_BME280::getValues(WebUINS::Events &array, bool timer)
 
 void Sensor_BME280::createWebUI(WebUINS::Root &webUI)
 {
-    static constexpr auto renderType = IOT_SENSOR_BME280_RENDER_TYPE;
-    {
-        auto sensor = WebUINS::Sensor(_getId(FSPGM(temperature)), _name + F(" Temperature"), FSPGM(UTF8_degreeC), renderType);
+    webUI.appendToLastRow(WebUINS::Row(WebUINS::Sensor(
+        _getId(FSPGM(temperature)), _name + F(" Temperature"), FSPGM(UTF8_degreeC), IOT_SENSOR_BME280_RENDER_TYPE)
         #ifdef IOT_SENSOR_BME280_RENDER_HEIGHT
-            sensor.append(WebUINS::NamedString(J(height), IOT_SENSOR_BME280_RENDER_HEIGHT));
+            .append(WebUINS::NamedString(J(height), IOT_SENSOR_BME280_RENDER_HEIGHT)
         #endif
-        webUI.appendToLastRow(WebUINS::Row(sensor));
-    }
-    {
-        auto sensor = WebUINS::Sensor(_getId(FSPGM(humidity)), _name + F(" Humidity"), '%', renderType);
+    )));
+    webUI.appendToLastRow(WebUINS::Row(WebUINS::Sensor(
+        _getId(FSPGM(humidity)), _name + F(" Humidity"), '%', IOT_SENSOR_BME280_RENDER_TYPE)
         #ifdef IOT_SENSOR_BME280_RENDER_HEIGHT
-            sensor.append(WebUINS::NamedString(J(height), IOT_SENSOR_BME280_RENDER_HEIGHT));
+            .append(WebUINS::NamedString(J(height), IOT_SENSOR_BME280_RENDER_HEIGHT)
         #endif
-        webUI.appendToLastRow(WebUINS::Row(sensor));
-    }
-    {
-        auto sensor = WebUINS::Sensor(_getId(FSPGM(pressure)), _name + F(" Pressure"), FSPGM(hPa), renderType);
+    )));
+    webUI.appendToLastRow(WebUINS::Row(WebUINS::Sensor(
+        _getId(FSPGM(pressure)), _name + F(" Pressure"), FSPGM(hPa), IOT_SENSOR_BME280_RENDER_TYPE)
         #ifdef IOT_SENSOR_BME280_RENDER_HEIGHT
-            sensor.append(WebUINS::NamedString(J(height), IOT_SENSOR_BME280_RENDER_HEIGHT));
+            .append(WebUINS::NamedString(J(height), IOT_SENSOR_BME280_RENDER_HEIGHT)
         #endif
-        webUI.appendToLastRow(WebUINS::Row(sensor));
-    }
+    )));
 }
 
 void Sensor_BME280::getStatus(Print &output)

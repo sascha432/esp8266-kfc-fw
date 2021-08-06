@@ -112,18 +112,50 @@ void Sensor_INA219::getValues(WebUINS::Events &array, bool timer)
 
 void Sensor_INA219::createWebUI(WebUINS::Root &webUI)
 {
-    WebUINS::Row row(WebUINS::Sensor(_getId(SensorInputType::VOLTAGE), _name, 'V'));
+    WebUINS::Row row(
+        WebUINS::Sensor(_getId(SensorInputType::VOLTAGE), _name, 'V', IOT_SENSOR_INA219_RENDER_TYPE)
+    );
     if (_config.webui_current) {
-        row.append(WebUINS::Sensor(_getId(SensorInputType::CURRENT), F("Current"), _getCurrentUnit()));
-        row.append(WebUINS::Sensor(_getId(SensorInputType::POWER), F("Power"), _getPowerUnit()));
+        row.append(
+            WebUINS::Sensor(_getId(SensorInputType::CURRENT), F("Current"), _getCurrentUnit(), IOT_SENSOR_INA219_RENDER_TYPE)
+            #ifdef IOT_SENSOR_INA219_RENDER_HEIGHT
+                .append(WebUINS::NamedString(J(height), IOT_SENSOR_INA219_RENDER_HEIGHT));
+            #endif
+        );
+        row.append(
+            WebUINS::Sensor(_getId(SensorInputType::POWER), F("Power"), _getPowerUnit(), IOT_SENSOR_INA219_RENDER_TYPE)
+            #ifdef IOT_SENSOR_INA219_RENDER_HEIGHT
+                .append(WebUINS::NamedString(J(height), IOT_SENSOR_INA219_RENDER_HEIGHT));
+            #endif
+        );
     }
     if (_config.webui_average) {
-        row.append(WebUINS::Sensor(_getId(SensorInputType::AVG_CURRENT), F("\xe2\x8c\x80 Current"), _getCurrentUnit()));
-        row.append(WebUINS::Sensor(_getId(SensorInputType::AVG_POWER), F("\xe2\x8c\x80 Power"), _getPowerUnit()));
+        row.append(
+            WebUINS::Sensor(_getId(SensorInputType::AVG_CURRENT), F("\xe2\x8c\x80 Current"), _getCurrentUnit(), IOT_SENSOR_INA219_RENDER_TYPE)
+            #ifdef IOT_SENSOR_INA219_RENDER_HEIGHT
+                .append(WebUINS::NamedString(J(height), IOT_SENSOR_INA219_RENDER_HEIGHT));
+            #endif
+        );
+        row.append(
+            WebUINS::Sensor(_getId(SensorInputType::AVG_POWER), F("\xe2\x8c\x80 Power"), _getPowerUnit(), IOT_SENSOR_INA219_RENDER_TYPE)
+            #ifdef IOT_SENSOR_INA219_RENDER_HEIGHT
+                .append(WebUINS::NamedString(J(height), IOT_SENSOR_INA219_RENDER_HEIGHT));
+            #endif
+        );
     }
     if (_config.webui_peak) {
-        row.append(WebUINS::Sensor(_getId(SensorInputType::PEAK_CURRENT), F("Peak Current"), _getCurrentUnit()));
-        row.append(WebUINS::Sensor(_getId(SensorInputType::PEAK_POWER), F("Peak Power"), _getPowerUnit()));
+        row.append(
+            WebUINS::Sensor(_getId(SensorInputType::PEAK_CURRENT), F("Peak Current"), _getCurrentUnit(), IOT_SENSOR_INA219_RENDER_TYPE)
+            #ifdef IOT_SENSOR_INA219_RENDER_HEIGHT
+                .append(WebUINS::NamedString(J(height), IOT_SENSOR_INA219_RENDER_HEIGHT));
+            #endif
+        );
+        row.append(
+            WebUINS::Sensor(_getId(SensorInputType::PEAK_POWER), F("Peak Power"), _getPowerUnit(), IOT_SENSOR_INA219_RENDER_TYPE)
+            #ifdef IOT_SENSOR_INA219_RENDER_HEIGHT
+                .append(WebUINS::NamedString(J(height), IOT_SENSOR_INA219_RENDER_HEIGHT));
+            #endif
+        );
     }
     webUI.addRow(row);
 }
@@ -293,7 +325,8 @@ bool Sensor_INA219::atModeHandler(AtModeArgs &args)
             delete _timer;
             _timer = nullptr;
             args.print(F("Timer stopped"));
-        } else {
+        }
+        else {
             _timer = new Event::Timer();
             Event::Timer &timer = *_timer;
 

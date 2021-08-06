@@ -15,31 +15,36 @@
 
 using Plugins = KFCConfigurationClasses::PluginsType;
 
+#ifndef IOT_SENSOR_INA219_RENDER_TYPE
+#   define IOT_SENSOR_INA219_RENDER_TYPE WebUINS::SensorRenderType::ROW
+#endif
+
+#ifndef IOT_SENSOR_INA219_RENDER_HEIGHT
+// #    define IOT_SENSOR_INA219_RENDER_HEIGHT F("15rem")
+#endif
+
 #ifndef IOT_SENSOR_INA219_R_SHUNT
-// NOTE: 0.064 or 4x the value is required for a 0.016 shunt for an unknown reason (INA219_CONFIG_GAIN_2_80MV)
-// The value is multiplied in the constructor
-// _ina219.setCalibration(..., IOT_SENSOR_INA219_R_SHUNT * 4);
-#define IOT_SENSOR_INA219_R_SHUNT           0.016
+#    define IOT_SENSOR_INA219_R_SHUNT 0.016
 #endif
 
 #ifndef IOT_SENSOR_INA219_GAIN
 // 80mV range, max. 5A @ 0.016R
-#define IOT_SENSOR_INA219_GAIN              INA219_CONFIG_GAIN_2_80MV
+#    define IOT_SENSOR_INA219_GAIN INA219_CONFIG_GAIN_2_80MV
 #endif
 
 #ifndef IOT_SENSOR_INA219_BUS_URANGE
 // bus voltage 32 = max. 26V
-#define IOT_SENSOR_INA219_BUS_URANGE        INA219_CONFIG_BVOLTAGERANGE_32V
+#    define IOT_SENSOR_INA219_BUS_URANGE INA219_CONFIG_BVOLTAGERANGE_32V
 #endif
 
 #ifndef IOT_SENSOR_INA219_SHUNT_ADC_RES
 // average 128x 12bit samples
-#define IOT_SENSOR_INA219_SHUNT_ADC_RES     INA219_CONFIG_SADCRES_12BIT_128S_69MS
+#    define IOT_SENSOR_INA219_SHUNT_ADC_RES INA219_CONFIG_SADCRES_12BIT_128S_69MS
 #endif
 
 #ifndef IOT_SENSOR_INA219_READ_INTERVAL
 // should close to the sample/averaging rate
-#define IOT_SENSOR_INA219_READ_INTERVAL     68
+#    define IOT_SENSOR_INA219_READ_INTERVAL 68
 #endif
 
 #pragma push_macro("_U")

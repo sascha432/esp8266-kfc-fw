@@ -5,7 +5,7 @@
 #pragma once
 
 #ifndef DEBUG_OSTIMER
-#    define DEBUG_OSTIMER 0
+#    define DEBUG_OSTIMER 1
 #endif
 
 #if DEBUG_OSTIMER
@@ -51,6 +51,9 @@
         void clear();
         ETSTimer *find();
         static ETSTimer *find(ETSTimer *timer);
+
+        // terminate all OSTimer instances
+        static void end();
 
         static void ICACHE_FLASH_ATTR _EtsTimerLockedCallback(void *arg);
 

@@ -138,6 +138,19 @@ OSTIMER_INLINE ETSTimer *ETSTimerEx::find(ETSTimer *timer)
     return nullptr;
 }
 
+OSTIMER_INLINE void ETSTimerEx::end()
+{
+    ETSTimer *cur = timer_list;
+    while(cur) {
+        auto next = cur->timer_next;
+        if (cur->timer_func == reinterpret_cast<ETSTimerFunc *>(_EtsTimerLockedCallback) || cur->timer_func == reinterpret_cast<ETSTimerFunc *>(OSTimer::_EtsTimerCallback)) {
+            ets_timer_disarm(cur);
+            ets_timer_done(cur);
+        }
+        cur = next;
+    }
+}
+
 OSTIMER_INLINE OSTimer::
 #if DEBUG_OSTIMER
     OSTimer(const char *name) : _etsTimer(name)

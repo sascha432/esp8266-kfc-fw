@@ -1700,84 +1700,11 @@ void at_mode_serial_handle_event(String &commandString)
         args.print(F("WiFiCallbacks: size=%u count=%u"), sizeof(WiFiCallbacks::Entry), WiFiCallbacks::getVector().size());
         args.print(F("LoopFunctions: size=%u count=%u"), sizeof(LoopFunctions::Entry), LoopFunctions::getVector().size());
 
-        args.print(F("sizeof(String) / SSOSIZE: %u / %u"), sizeof(String), StringSSOSize::getSSOSize());
-        args.print(F("sizeof(std::vector<int>): %u"), sizeof(std::vector<int>));
-        args.print(F("sizeof(std::vector<double>): %u"), sizeof(std::vector<double>));
-        args.print(F("sizeof(std::list<int>): %u"), sizeof(std::list<int>));
-        // args.print(F("sizeof(FormUI::Field::Base): %u"), sizeof(FormUI::Field::Base));
-        // args.print(F("sizeof(FormUI:UI): %u"), sizeof(FormUI::WebUI::Base));
-        args.print(F("sizeof(AsyncClient): %u"), sizeof(AsyncClient));
-        args.print(F("sizeof(CallbackTimer): %u"), sizeof(Event::CallbackTimer));
-        // args.print(F("sizeof(SerialTwoWire): %u"), sizeof(SerialTwoWire));
-
-
 #if PIN_MONITOR
         PrintString tmp;
         PinMonitor::pinMonitor.printStatus(tmp);
         tmp.replace(F(HTML_S(br)), "\n");
         args.print(tmp);
-#endif
-
-#if 0
-        uint32_t start = micros();
-        String dummy = F("test_string_long_compare_with_strcmp_P_test_string_long_compare_with_strcmp_P_test_string_long_compare_with_strcmp_P_test_string_long_compare_with_strcmp_P_test_string_long_compare_with_strcmp_P_test_string_long_compare_with_strcmp_P_test_string_long_compare_with_strcmp_P_test_string_long_compare_with_strcmp_P");
-        String dummy2 = dummy;
-        auto long_len = dummy.length();
-        auto ptr = dummy.begin();
-        auto ptr2 = dummy2.begin();
-        for(int i = 0; i < 10000; i++) {
-            if (strcmp(ptr, ptr2) == 0) {
-                ptr[0]++;
-                ptr2[0]++;
-            }
-        }
-        uint32_t dur_strcmp_long = micros() - start;
-        delay(100);
-        start = micros();
-        for(int i = 0; i < 10000; i++) {
-            if (strcmp_P(ptr, ptr2) == 0) {
-                ptr[0]++;
-                ptr2[0]++;
-            }
-        }
-        uint32_t dur_strcmp_P_long = micros() - start;
-        delay(100);
-        dummy = F("test_short");
-        dummy2 = dummy;
-        auto short_len = dummy.length();
-        ptr = dummy.begin();
-        ptr2 = dummy2.begin();
-        start = micros();
-        for(int i = 0; i < 10000; i++) {
-            if (strcmp(ptr, ptr2) == 0) {
-                ptr[0]++;
-                ptr2[0]++;
-            }
-        }
-        uint32_t dur_strcmp_short = micros() - start;
-        delay(100);
-        start = micros();
-        for(int i = 0; i < 10000; i++) {
-            if (strcmp_P(ptr, ptr2) == 0) {
-                ptr[0]++;
-                ptr2[0]++;
-            }
-        }
-        uint32_t dur_strcmp_P_short = micros() - start;
-        args.printf_P("10000x strcmp %u/%u: long=%uus short=%uus", long_len, short_len, dur_strcmp_long, dur_strcmp_short);
-        args.printf_P("10000x strcmp_P %u/%u: long=%uus short=%uus", long_len, short_len, dur_strcmp_P_long, dur_strcmp_P_short);
-
-        // NOTE: strcmp(ptr, ptr) is comparing pointers not content while strcmp_P(ptr, ptr) compares content!
-        // +METRICS: 10000x strcmp 77/10: long=33510us short=12775us
-        // +METRICS: 10000x strcmp_P 77/10: long=289023us short=46932us
-        // strcmp_P long 77: 289023/33510=8.62x slower
-        // strcmp_P short 10: 289023/33510=3.67x slower
-        // strcmp_long 311: 1133972/108363=10.4x slower
-        // METRICS: 10000x strcmp 311/10: long=108363us short=12775us
-        // +METRICS: 10000x strcmp_P 311/10: long=1133972us short=46902us
-        // conclusion: strcmp is about 10-12x faster than strcmp_P, but in most cases strcmp will
-        // improve performance by 3-5x times due to all the other overhead.
-
 #endif
 
         args.print(F("Firmware MD5: %s"), System::Firmware::getFirmwareMD5());

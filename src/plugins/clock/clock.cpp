@@ -317,7 +317,7 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
 
                 #if IOT_SENSOR_HAVE_MOTION_SENSOR
                     case SensorPlugin::SensorType::MOTION:
-                        reinterpret_cast<Sensor_Motion *>(sensor)->begin(this, IOT_CLOCK_MOTION_SENSOR_PIN, false);
+                        reinterpret_cast<Sensor_Motion *>(sensor)->begin(this, IOT_CLOCK_MOTION_SENSOR_PIN, IOT_CLOCK_MOTION_SENSOR_PIN_INVERTED);
                         break;
                 #endif
 
@@ -782,7 +782,6 @@ void ClockPlugin::_disable()
 
     #if IOT_LED_MATRIX_ENABLE_PIN != -1
         digitalWrite(IOT_LED_MATRIX_ENABLE_PIN, enablePinState(false));
-        ::delay(1);
     #endif
 
     #if IOT_LED_MATRIX_STANDBY_PIN != -1

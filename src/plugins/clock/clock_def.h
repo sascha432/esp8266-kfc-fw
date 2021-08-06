@@ -33,11 +33,11 @@
 #endif
 
 #ifndef DEBUG_IOT_CLOCK
-#    define DEBUG_IOT_CLOCK 1
+#    define DEBUG_IOT_CLOCK 0
 #endif
 
 #ifndef DEBUG_MEASURE_ANIMATION
-#   define DEBUG_MEASURE_ANIMATION 1
+#   define DEBUG_MEASURE_ANIMATION DEBUG_IOT_CLOCK
 #endif
 
 // allows to diplay the RGB leds in the browser
@@ -317,18 +317,12 @@
 #endif
 
 // support for motion sensor
-#ifndef IOT_CLOCK_HAVE_MOTION_SENSOR
-#    define IOT_CLOCK_HAVE_MOTION_SENSOR 0
+#if IOT_SENSOR_HAVE_MOTION_SENSOR && !defined(IOT_CLOCK_MOTION_SENSOR_PIN)
+#   error PIN not defined
 #endif
 
-#if IOT_CLOCK_HAVE_MOTION_SENSOR
-#    define IF_IOT_CLOCK_HAVE_MOTION_SENSOR(...) __VA_ARGS__
-#else
-#    define IF_IOT_CLOCK_HAVE_MOTION_SENSOR(...)
-#endif
-
-#ifndef IOT_CLOCK_HAVE_MOTION_SENSOR_PIN
-#    define IOT_CLOCK_HAVE_MOTION_SENSOR_PIN -1
+#ifndef IOT_CLOCK_MOTION_SENSOR_PIN_INVERTED
+#   define IOT_CLOCK_MOTION_SENSOR_PIN_INVERTED 0
 #endif
 
 // show rotating animation while the time is invalid

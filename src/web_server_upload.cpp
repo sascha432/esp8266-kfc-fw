@@ -161,11 +161,6 @@ errorResponse: ;
     else {
         Logger_security(F("Firmware upgrade successful"));
 
-#if IOT_CLOCK
-        // turn dispaly off since the update will take a few seconds and freeze the clock
-        ClockPlugin::getInstance()._setBrightness(0);
-#endif
-
         BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SLOW);
         Logger_notice(F("Rebooting after upgrade"));
 

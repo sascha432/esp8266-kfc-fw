@@ -1128,9 +1128,11 @@ static void invoke_ESP_restart()
     #if IOT_LED_MATRIX_OUTPUT_PIN
         ClockPluginClearPixels();
     #endif
-    #if __LED_BUILTIN == NEOPIXEL_PIN_ID
-        BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::OFF);
-    #endif
+    __Scheduler.end();
+    ETSTimerEx::end();
+    // #if __LED_BUILTIN == NEOPIXEL_PIN_ID
+    //     BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::OFF);
+    // #endif
     #if IOT_SWITCH && IOT_SWITCH_STORE_STATES_RTC_MEM
         SwitchPlugin::_rtcMemStoreState();
     #endif
@@ -1236,17 +1238,12 @@ void KFCFWConfiguration::restartDevice(bool safeMode)
     #if DEBUG_SHUTDOWN_SEQUENCE
         _DPRINTF("clearing wifi callbacks");
     #endif
-        WiFiCallbacks::clear();
+    WiFiCallbacks::clear();
 
     #if DEBUG_SHUTDOWN_SEQUENCE
         _DPRINTF("clearing loop functions");
     #endif
-        LoopFunctions::clear();
-
-    #if DEBUG_SHUTDOWN_SEQUENCE
-        _DPRINTF("terminating event scheduler");
-    #endif
-        __Scheduler.end();
+    LoopFunctions::clear();
 
     #if DEBUG_SHUTDOWN_SEQUENCE
         _DPRINTF("invoking restart");

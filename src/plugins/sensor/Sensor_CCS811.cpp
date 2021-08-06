@@ -26,7 +26,6 @@ Sensor_CCS811::Sensor_CCS811(const String &name, uint8_t address) :
     _state(_readStateFile())
 {
     REGISTER_SENSOR_CLIENT(this);
-    config.initTwoWire();
     _ccs811.begin(_address);
     if (_state) {
         _ccs811.setBaseline(_state.baseline);
@@ -35,7 +34,6 @@ Sensor_CCS811::Sensor_CCS811(const String &name, uint8_t address) :
         // save first state after 5min.
         _state = SensorFileEntry(_address, 0, time(nullptr) - IOT_SENSOR_CCS811_SAVE_STATE_INTERVAL + 60);
     }
-    setUpdateRate(1); // faster update rate until valid data is available
 }
 
 Sensor_CCS811::~Sensor_CCS811()
@@ -74,21 +72,8 @@ void Sensor_CCS811::getValues(WebUINS::Events &array, bool timer)
 
 void Sensor_CCS811::createWebUI(WebUINS::Root &webUI)
 {
-    static constexpr auto renderType = IOT_SENSOR_CCS811_RENDER_TYPE;
-    {
-        auto sensor = WebUINS::Sensor(_getId(F("eco2")),  _name + F(" CO2"), F("ppm"), renderType);
-        #ifdef IOT_SENSOR_CCS811_RENDER_HEIGHT
-            sensor.append(WebUINS::NamedString(J(height), IOT_SENSOR_CCS811_RENDER_HEIGHT));
-        #endif
-        webUI.appendToLastRow(WebUINS::Row(sensor));
-    }
-    {
-        auto sensor = WebUINS::Sensor(_getId(F("tvoc")),  _name + F(" TVOC"), F("ppb"), renderType);
-        #ifdef IOT_SENSOR_CCS811_RENDER_HEIGHT
-            sensor.append(WebUINS::NamedString(J(height), IOT_SENSOR_CCS811_RENDER_HEIGHT));
-        #endif
-        webUI.appendToLastRow(WebUINS::Row(sensor));
-    }
+    webUI.appendToLastRow(WebUINS::Row(WebUINS::Sensor(_getId(F("eco2")),  _name + F(" CO2"), F("ppm")).setConfig(_renderConfig)));
+    webUI.appendToLastRow(WebUINS::Row(WebUINS::Sensor(_getId(F("tvoc")),  _name + F(" TVOC"), F("ppb")).setConfig(_renderConfig)));
 }
 
 void Sensor_CCS811::getStatus(Print &output)
@@ -157,7 +142,6 @@ Sensor_CCS811::SensorData &Sensor_CCS811::_readSensor()
     _sensor.eCO2 = _ccs811.geteCO2();
     _sensor.TVOC = _ccs811.getTVOC();
     if (_sensor.eCO2 && _sensor.TVOC && _sensor.available == -1) { // if the first sensor data is available, set to default update rate
-        setUpdateRate(DEFAULT_UPDATE_RATE);
         _sensor.available = 1;
     }
     _state.baseline = _ccs811.getBaseline();

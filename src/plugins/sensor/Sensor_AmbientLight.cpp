@@ -19,8 +19,9 @@
 #include <debug_helper_disable.h>
 #endif
 
-Sensor_AmbientLight::Sensor_AmbientLight(const String &name, uint8_t id) :
+Sensor_AmbientLight::Sensor_AmbientLight(const String &name, uint8_t id, TwoWire &wire) :
     MQTT::Sensor(MQTT::SensorType::AMBIENT_LIGHT),
+    _wire(wire),
     _name(name),
     _handler(nullptr),
     _sensor({SensorType::NONE}),
@@ -33,8 +34,8 @@ Sensor_AmbientLight::Sensor_AmbientLight(const String &name, uint8_t id) :
     #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR2_BH1750FVI_I2C_ADDRESS
         // auto setup for lux sensor
         if (_id == 1) {
-            auto config = SensorConfig(SensorType::BH1750FVI);
-            config.bh1750FVI = SensorConfig::BH1750FVI(IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR2_BH1750FVI_I2C_ADDRESS, true);
+            auto config = SensorInputConfig(SensorType::BH1750FVI);
+            config.bh1750FVI = SensorInputConfig::BH1750FVI(IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR2_BH1750FVI_I2C_ADDRESS, true);
             begin(nullptr, config);
         }
     #endif
@@ -74,13 +75,7 @@ void Sensor_AmbientLight::getValues(WebUINS::Events &array, bool timer)
 
 void Sensor_AmbientLight::createWebUI(WebUINS::Root &webUI)
 {
-    auto title = (_id == 1) ? F(IOT_SENSOR_NAMES_AMBIENT_LIGHT_SENSOR2) : F(IOT_SENSOR_NAMES_AMBIENT_LIGHT_SENSOR);
-    auto sensor = WebUINS::Sensor(_getId(), title, F("<img src=\"/images/light.svg\" width=\"80\" height=\"80\" style=\"margin-top:-20px;margin-bottom:1rem\">"), IOT_SENSOR_AMBIENT_LIGHT_RENDER_TYPE);
-    #ifdef IOT_SENSOR_AMBIENT_LIGHT_RENDER_HEIGHT
-        sensor.append(WebUINS::NamedString(J(height), IOT_SENSOR_AMBIENT_LIGHT_RENDER_HEIGHT));
-    #endif
-    WebUINS::Row row(sensor);
-    webUI.appendToLastRow(row);
+    webUI.appendToLastRow(WebUINS::Row(WebUINS::Sensor(_getId(), _name, F("<img src=\"/images/light.svg\" width=\"80\" height=\"80\" style=\"margin-top:-20px;margin-bottom:1rem\">")).setConfig(_renderConfig)));
 }
 
 void Sensor_AmbientLight::publishState()
@@ -94,19 +89,15 @@ void Sensor_AmbientLight::publishState()
 
 void Sensor_AmbientLight::getStatus(Print &output)
 {
-    if (_id == 1) {
-        output.print(F(IOT_SENSOR_NAMES_AMBIENT_LIGHT_SENSOR2 HTML_S(br)));
-    }
-    else {
-        output.print(F(IOT_SENSOR_NAMES_AMBIENT_LIGHT_SENSOR HTML_S(br)));
-    }
+    output.print(_name);
+    output.print(F(HTML_S(br)));
 }
 
 void Sensor_AmbientLight::createConfigureForm(AsyncWebServerRequest *request, FormUI::Form::BaseForm &form)
 {
     if (_id == 0) {
         auto &cfg = Plugins::Sensor::getWriteableConfig();
-        auto &group = form.addCardGroup(F("alscfg"), F(IOT_SENSOR_NAMES_AMBIENT_LIGHT_SENSOR), true);
+        auto &group = form.addCardGroup(F("alscfg"), _name, true);
 
         int32_t maxBrightness;
         auto suffix = F("<span class=\"input-group-text\">0-1023</span><span id=\"abr_sv\" class=\"input-group-text\"></span><button class=\"btn btn-secondary\" type=\"button\" id=\"dis_auto_br\">Disable</button>");
@@ -152,34 +143,33 @@ void Sensor_AmbientLight::reconfigure(PGM_P source)
     _config = Plugins::Sensor::getConfig().ambient;
 }
 
-void Sensor_AmbientLight::begin(AmbientLightSensorHandler *handler, const SensorConfig &sensor)
+void Sensor_AmbientLight::begin(AmbientLightSensorHandler *handler, const SensorInputConfig &sensor)
 {
     uint32_t interval = 125;
     _handler = nullptr;
     _sensor = sensor;
     switch(_sensor.type) {
         case SensorType::BH1750FVI: {
-                auto &wire = config.initTwoWire();
                 // power up
-                wire.beginTransmission(_sensor.bh1750FVI.i2cAddress);
-                wire.write(BH1750FVI_POWER_UP);
-                wire.endTransmission();
+                _wire.beginTransmission(_sensor.bh1750FVI.i2cAddress);
+                _wire.write(BH1750FVI_POWER_UP);
+                _wire.endTransmission();
                 delay(10); // wait for power up
-                wire.beginTransmission(_sensor.bh1750FVI.i2cAddress);
+                _wire.beginTransmission(_sensor.bh1750FVI.i2cAddress);
                 if (_sensor.bh1750FVI.highRes) {
                     // configure high res mode, continuously, 0.5lux, min. interval 120ms
                     interval = 1000;
-                    wire.write(BH1750FVI_MODE_HIGHRES2);
+                    _wire.write(BH1750FVI_MODE_HIGHRES2);
                 }
                 else {
                     // configure low res mode, continuously, 4lux, min. interval 16ms
                     interval = 125;
-                    wire.write(BH1750FVI_MODE_LOWRES);
+                    _wire.write(BH1750FVI_MODE_LOWRES);
                 }
                 #if DEBUG_IOT_SENSOR
                     uint8_t status =
                 #endif
-                    wire.endTransmission();
+                    _wire.endTransmission();
                 #if DEBUG_IOT_SENSOR
                     if (status != 0) {
                         __LDBG_printf("BH1750FVI status=%u addr=%02x highres=%u", status, _sensor.bh1750FVI.i2cAddress, _sensor.bh1750FVI.highRes);
@@ -213,10 +203,9 @@ void Sensor_AmbientLight::end()
     }
     switch(_sensor.type) {
         case SensorType::BH1750FVI: {
-                auto &wire = config.initTwoWire();
-                wire.beginTransmission(_sensor.bh1750FVI.i2cAddress);
-                wire.write(BH1750FVI_POWER_DOWN);
-                wire.endTransmission();
+                _wire.beginTransmission(_sensor.bh1750FVI.i2cAddress);
+                _wire.write(BH1750FVI_POWER_DOWN);
+                _wire.endTransmission();
             }
             break;
         default:
@@ -303,14 +292,13 @@ void Sensor_AmbientLight::_updateLightSensorWebUI()
 int32_t Sensor_AmbientLight::_readTinyPwmADC()
 {
     uint16_t level;
-    auto &wire = config.initTwoWire();
-    wire.beginTransmission(_sensor.tinyPWM.i2cAddress);
-    wire.write(_sensor.tinyPWM.adcPin);
-    wire.write(0x00);
+    _wire.beginTransmission(_sensor.tinyPWM.i2cAddress);
+    _wire.write(_sensor.tinyPWM.adcPin);
+    _wire.write(0x00);
     if (
-        (wire.endTransmission(false) == 0) &&
-        (wire.requestFrom(_sensor.tinyPWM.i2cAddress, sizeof(level)) == sizeof(level)) &&
-        (wire.readBytes(reinterpret_cast<uint8_t *>(&level), sizeof(level)) == sizeof(level))
+        (_wire.endTransmission(false) == 0) &&
+        (_wire.requestFrom(_sensor.tinyPWM.i2cAddress, sizeof(level)) == sizeof(level)) &&
+        (_wire.readBytes(reinterpret_cast<uint8_t *>(&level), sizeof(level)) == sizeof(level))
      ) {
          if (_sensor.tinyPWM.inverted) {
             level = 1023 - level;
@@ -332,10 +320,9 @@ int32_t Sensor_AmbientLight::_readTinyPwmADC()
 int32_t Sensor_AmbientLight::_readBH1750FVI()
 {
     uint16_t level;
-    auto &wire = config.initTwoWire();
-    if (wire.requestFrom(_sensor.bh1750FVI.i2cAddress, sizeof(level)) == sizeof(level)) {
-        level = wire.read() << 8;
-        level |= wire.read();
+    if (_wire.requestFrom(_sensor.bh1750FVI.i2cAddress, sizeof(level)) == sizeof(level)) {
+        level = _wire.read() << 8;
+        level |= _wire.read();
         if (!_sensor.bh1750FVI.highRes) {
             level >>= 6;
             _sensor.bh1750FVI.illuminance = NAN;

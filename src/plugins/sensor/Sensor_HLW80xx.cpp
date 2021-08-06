@@ -157,6 +157,8 @@ void Sensor_HLW80xx::createWebUI(WebUINS::Root &webUI)
     (*row)->addSensor(_getId(FSPGM(voltage)), _name + F(" Voltage"), 'V');
     (*row)->addSensor(_getId(FSPGM(current)), _name + F(" Current"), 'A');
     (*row)->addSensor(_getId(FSPGM(pf)), _name + F(" Power Factor"), JsonString());
+
+    // .setConfig(_renderConfig)
 }
 
 void Sensor_HLW80xx::reconfigure(PGM_P source)

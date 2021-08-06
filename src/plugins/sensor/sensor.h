@@ -28,85 +28,86 @@
 #include "Sensor_AmbientLight.h"
 
 #ifndef IOT_SENSOR_NAMES_LM75A
-#define IOT_SENSOR_NAMES_LM75A                  "LM75A Temperature"
+#    define IOT_SENSOR_NAMES_LM75A "LM75A Temperature"
 #endif
 
 #ifndef IOT_SENSOR_NAMES_LM75A_2
-#define IOT_SENSOR_NAMES_LM75A_2                "LM75A Temperature"
+#    define IOT_SENSOR_NAMES_LM75A_2 "LM75A Temperature"
 #endif
 
 #ifndef IOT_SENSOR_NAMES_LM75A_3
-#define IOT_SENSOR_NAMES_LM75A_3                "LM75A Temperature"
+#    define IOT_SENSOR_NAMES_LM75A_3 "LM75A Temperature"
 #endif
 
 #ifndef IOT_SENSOR_NAMES_LM75A_4
-#define IOT_SENSOR_NAMES_LM75A_4                "LM75A Temperature"
+#    define IOT_SENSOR_NAMES_LM75A_4 "LM75A Temperature"
 #endif
 
 #ifndef IOT_SENSOR_NAMES_BME280
-#define IOT_SENSOR_NAMES_BME280                 "BME280"
+#    define IOT_SENSOR_NAMES_BME280 "BME280"
 #endif
 
 #ifndef IOT_SENSOR_NAMES_DHTxx
-#define IOT_SENSOR_NAMES_DHTxx                  "DHT11"
+#    define IOT_SENSOR_NAMES_DHTxx "DHT11"
 #endif
 
 #ifndef IOT_SENSOR_NAMES_BME680
-#define IOT_SENSOR_NAMES_BME680                 "BME680"
+#    define IOT_SENSOR_NAMES_BME680 "BME680"
 #endif
 
 #ifndef IOT_SENSOR_NAMES_CCS811
-#define IOT_SENSOR_NAMES_CCS811                 "CCS811"
+#    define IOT_SENSOR_NAMES_CCS811 "CCS811"
 #endif
 
 #ifndef IOT_SENSOR_NAMES_HLW8012
-#define IOT_SENSOR_NAMES_HLW8012                "HLW8012"
+#    define IOT_SENSOR_NAMES_HLW8012 "HLW8012"
 #endif
 
 #ifndef IOT_SENSOR_NAMES_HLW8032
-#define IOT_SENSOR_NAMES_HLW8032                "HLW8032"
+#    define IOT_SENSOR_NAMES_HLW8032 "HLW8032"
 #endif
 
 #ifndef IOT_SENSOR_NAMES_BATTERY
-#define IOT_SENSOR_NAMES_BATTERY                "Battery Voltage"
+#    define IOT_SENSOR_NAMES_BATTERY "Battery Voltage"
 #endif
 
 #ifndef IOT_SENSOR_NAMES_MOTION_SENSOR
-#define IOT_SENSOR_NAMES_MOTION_SENSOR          "Motion Sensor"
+#    define IOT_SENSOR_NAMES_MOTION_SENSOR "Motion Sensor"
 #endif
 
 #ifndef IOT_SENSOR_NAMES_AMBIENT_LIGHT_SENSOR
-#define IOT_SENSOR_NAMES_AMBIENT_LIGHT_SENSOR   "Ambient Light Sensor"
+#    define IOT_SENSOR_NAMES_AMBIENT_LIGHT_SENSOR "Ambient Light Sensor"
 #endif
 
-#ifndef IOT_SENSOR_NAMES_AMBIENT_LIGHT_SENSOR2
-#define IOT_SENSOR_NAMES_AMBIENT_LIGHT_SENSOR2  "Illuminance Sensor"
+#ifndef IOT_SENSOR_NAMES_ILLUMINANCE_LIGHT_SENSOR
+#    define IOT_SENSOR_NAMES_ILLUMINANCE_LIGHT_SENSOR "Illuminance Sensor"
 #endif
 
 #ifndef IOT_SENSOR_NAMES_DS3231
-#define IOT_SENSOR_NAMES_DS3231                 "DS3231 Temperature"
+#    define IOT_SENSOR_NAMES_DS3231 "DS3231 Temperature"
 #endif
 
 #ifndef IOT_SENSOR_NAMES_INA219
-#define IOT_SENSOR_NAMES_INA219                 "INA219 Voltage"
+#    define IOT_SENSOR_NAMES_INA219 "INA219 Voltage"
 #endif
 
 #ifndef IOT_SENSOR_NAMES_INA219_FORM_TITLE
-#define IOT_SENSOR_NAMES_INA219_FORM_TITLE      "INA219 Voltage And Current Sensor"
+#    define IOT_SENSOR_NAMES_INA219_FORM_TITLE "INA219 Voltage And Current Sensor"
 #endif
 
 #ifndef IOT_SENSOR_NAMES_DIMMER_METRICS
-#if IOT_ATOMIC_SUN_V2
-#define IOT_SENSOR_NAMES_DIMMER_METRICS         "Atomic Sun VCC"
-#else
-#define IOT_SENSOR_NAMES_DIMMER_METRICS         "Dimmer VCC"
-#endif
+#    if IOT_ATOMIC_SUN_V2
+#        define IOT_SENSOR_NAMES_DIMMER_METRICS "Atomic Sun VCC"
+#    else
+#        define IOT_SENSOR_NAMES_DIMMER_METRICS "Dimmer VCC"
+#    endif
 #endif
 
 class SensorPlugin : public PluginComponent {
 public:
     using Plugins = KFCConfigurationClasses::PluginsType;
     using SensorType = MQTT::SensorType;
+    using SensorConfig = WebUINS::SensorConfig;
     using SensorVector = std::vector<MQTT::SensorPtr>;
     using AddCustomSensorCallback = std::function<void(WebUINS::Root &webUI, SensorType nextType)>;
 
@@ -129,40 +130,21 @@ public:
 
     static void timerEvent(Event::CallbackTimerPtr timer);
 
-    static SensorVector &getSensors()
-    {
-        return getInstance()._sensors;
-    }
-
-    static size_t getSensorCount()
-    {
-        return getInstance()._sensors.size();
-    }
-
-    static SensorVector::iterator begin()
-    {
-        return getInstance()._sensors.begin();
-    }
-
-    static SensorVector::iterator end()
-    {
-        return getInstance()._sensors.end();
-    }
+    static SensorVector &getSensors();
+    static size_t getSensorCount();
+    static SensorVector::iterator begin();
+    static SensorVector::iterator end();
 
     static SensorPlugin &getInstance();
 
     // the callback is invoked before a sensor is added
     // before the title row, the first Sensor is SensorType::MIN
     // the last type is SensorType::MAX for appending a new sensor at the end
-    void setAddCustomSensorsCallback(AddCustomSensorCallback callback) {
-        _addCustomSensors = callback;
-    }
+    void setAddCustomSensorsCallback(AddCustomSensorCallback callback);
+
     // to use multiple callbacks, get the previous callback and call it from the new callback function
     // a copy, std:swap() or std::move() must be used
-    AddCustomSensorCallback &getAddCustomSensorsCallback() {
-        return _addCustomSensors;
-    }
-
+    AddCustomSensorCallback &getAddCustomSensorsCallback();
 
 #if AT_MODE_SUPPORTED
     virtual void atModeHelpGenerator() override;
@@ -172,19 +154,17 @@ public:
 protected:
     template<class _Sensor, typename... _Args>
     void addSensor(_Args ... args) {
-        auto sensor = new _Sensor(args...);
-        _sensors.push_back(sensor);
+        addSensor(new _Sensor(args...));
     }
+
+public:
+    void addSensor(MQTT::SensorPtr sensor, const SensorConfig &config = SensorConfig());
 
 private:
     bool _hasConfigureForm() const;
     void _timerEvent();
 
-    size_t _count() const {
-        return std::count_if(_sensors.begin(), _sensors.end(), [](const MQTT::SensorPtr sensor) {
-            return (sensor->getType() != SensorType::SYSTEM_METRICS && sensor->getType() != SensorType::DIMMER_METRICS);
-        });
-    }
+    size_t _count() const;
 
     void _sortSensors();
 
@@ -192,3 +172,46 @@ private:
     Event::Timer _timer;
     AddCustomSensorCallback _addCustomSensors;
 };
+
+inline SensorPlugin::SensorVector &SensorPlugin::getSensors()
+{
+    return getInstance()._sensors;
+}
+
+inline size_t SensorPlugin::getSensorCount()
+{
+    return getInstance()._sensors.size();
+}
+
+inline SensorPlugin::SensorVector::iterator SensorPlugin::begin()
+{
+    return getInstance()._sensors.begin();
+}
+
+inline SensorPlugin::SensorVector::iterator SensorPlugin::end()
+{
+    return getInstance()._sensors.end();
+}
+
+inline void SensorPlugin::addSensor(MQTT::SensorPtr sensor, const SensorConfig &config)
+{
+    sensor->setConfig(config);
+    _sensors.push_back(sensor);
+}
+
+inline size_t SensorPlugin::_count() const
+{
+    return std::count_if(_sensors.begin(), _sensors.end(), [](const MQTT::SensorPtr sensor) {
+        return (sensor->getType() != SensorType::SYSTEM_METRICS && sensor->getType() != SensorType::DIMMER_METRICS);
+    });
+}
+
+inline void SensorPlugin::setAddCustomSensorsCallback(AddCustomSensorCallback callback)
+{
+    _addCustomSensors = callback;
+}
+
+inline SensorPlugin::AddCustomSensorCallback &SensorPlugin::getAddCustomSensorsCallback()
+{
+    return _addCustomSensors;
+}

@@ -14,7 +14,7 @@
 
 using namespace MQTT;
 
-uint16_t Sensor::_orderIdCounter = 10000;
+int16_t Sensor::_orderIdCounter = 10000;
 
 Sensor::Sensor(SensorType type) :
     MQTTComponent(ComponentType::SENSOR),
@@ -34,7 +34,7 @@ Sensor::~Sensor()
     shutdown();
 #if DEBUG
     if (hasClient() && client().isComponentRegistered(this)) {
-        __DBG_panic("component=%p type=%d is still registered", this, (int)getType());
+        __DBG_panic("component=%p type=%d is still registered", this, getType());
     }
 #endif
 }

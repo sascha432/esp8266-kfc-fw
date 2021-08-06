@@ -45,7 +45,7 @@ public:
     using SensorConfigType = KFCConfigurationClasses::Plugins::SensorConfigNS::BME280SensorType;
 
 public:
-    Sensor_BME280(const String &name, TwoWire &wire, uint8_t address = 0x76);
+    Sensor_BME280(const String &name, uint8_t address = 0x76, TwoWire &wire = Wire);
     virtual ~Sensor_BME280();
 
     virtual AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num) override;

@@ -20,6 +20,7 @@ Sensor_Motion::Sensor_Motion(const String &name) :
     _name(name),
     _handler(nullptr),
     _config(Plugins::Sensor::getConfig().motion),
+    _motionState(false),
     _pin(0xff),
     _pinInverted(false)
 {
@@ -58,12 +59,7 @@ void Sensor_Motion::getValues(WebUINS::Events &array, bool timer)
 
 void Sensor_Motion::createWebUI(WebUINS::Root &webUI)
 {
-    auto sensor = WebUINS::Sensor(_getId(), _name, emptyString, IOT_SENSOR_MOTION_RENDER_TYPE);
-    #ifdef IOT_SENSOR_MOTION_RENDER_HEIGHT
-        sensor.append(WebUINS::NamedString(J(height), IOT_SENSOR_MOTION_RENDER_HEIGHT));
-    #endif
-    WebUINS::Row row(sensor);
-    webUI.appendToLastRow(row);
+    webUI.appendToLastRow(WebUINS::Row(WebUINS::Sensor(_getId(), _name, emptyString).setConfig(_renderConfig)));
 }
 
 void Sensor_Motion::publishState()

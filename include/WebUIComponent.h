@@ -85,6 +85,13 @@ WEBUI_PROGMEM_STRING_DECL(name)
 WEBUI_PROGMEM_STRING_DECL(heading_top)
 WEBUI_PROGMEM_STRING_DECL(heading_bottom)
 
+namespace MQTT {
+
+    class Sensor;
+    using SensorPtr = Sensor *;
+
+}
+
 namespace WebUINS {
 
     class Root;
@@ -109,6 +116,24 @@ namespace WebUINS {
         BADGE,
         ROW,
         COLUMN,
+    };
+
+    struct ConfigEndIterator {
+        ConfigEndIterator() {}
+    };
+
+    struct SensorConfig {
+        SensorRenderType _renderType;
+        const __FlashStringHelper *_renderHeight;
+        SensorConfig() : _renderType(SensorRenderType::ROW), _renderHeight(nullptr) {}
+        SensorConfig(SensorRenderType renderType) : _renderType(renderType), _renderHeight(nullptr) {}
+        SensorConfig(const __FlashStringHelper *renderHeight) : _renderType(SensorRenderType::ROW), _renderHeight(renderHeight) {}
+        SensorConfig(SensorRenderType renderType, const __FlashStringHelper *renderHeight) : _renderType(renderType), _renderHeight(renderHeight) {}
+    };
+
+    template<typename _NextConfig>
+    struct ConfigIterator {
+        ConfigIterator(MQTT::SensorPtr sensor, SensorConfig config, _NextConfig next);
     };
 
     class Component : public UnnamedObject {
@@ -167,6 +192,14 @@ namespace WebUINS {
             return *this;
         }
 
+        Component &setConfig(const SensorConfig &config) {
+            append(config._renderType);
+            if (config._renderHeight) {
+                append(WebUINS::NamedString(J(height), config._renderHeight));
+            }
+            return *this;
+        }
+
         void append(SensorRenderType render) {
             switch(render) {
             case SensorRenderType::BADGE:
@@ -220,7 +253,7 @@ namespace WebUINS {
     class Sensor : public Component {
     public:
         template<typename _Ta, typename _Tb, typename _Tc>
-        Sensor(_Ta id, _Tb title, _Tc unit, SensorRenderType render = SensorRenderType::ROW, bool binary = false, uint8_t colspan = 0) :
+        Sensor(_Ta id, _Tb title, _Tc unit, bool binary = false, uint8_t colspan = 0) :
             Component(
                 NamedString(J(type), binary ? J(binary_sensor) : J(sensor)),
                 Component::createNamedString(J(id), id),
@@ -228,7 +261,6 @@ namespace WebUINS {
                 Component::createNamedString(J(unit), unit)
             )
         {
-            append(render);
             colspan = colspanToColumns(colspan);
             if (colspan) {
                 append(NamedUint32(J(columns), colspan));
@@ -240,16 +272,17 @@ namespace WebUINS {
     public:
         template<typename _Ta, typename _Tb, typename _Tc>
         BadgeSensor(_Ta id, _Tb title, _Tc unit, uint8_t colspan = 0) :
-            Sensor(id, title, unit, SensorRenderType::BADGE, colspan)
+            Sensor(id, title, unit, colspan)
         {
+            append(SensorRenderType::BADGE);
         }
     };
 
     class BinarySensor : public Sensor {
     public:
         template<typename _Ta, typename _Tb, typename _Tc>
-        BinarySensor(_Ta id, _Tb title, _Tc unit, SensorRenderType render = SensorRenderType::ROW, uint8_t colspan = 0) :
-            Sensor(id, title, unit, render, true, colspan)
+        BinarySensor(_Ta id, _Tb title, _Tc unit, uint8_t colspan = 0) :
+            Sensor(id, title, unit, true, colspan)
         {
         }
     };

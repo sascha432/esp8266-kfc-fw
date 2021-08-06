@@ -67,7 +67,7 @@ public:
     using PowerDisplayType = KFCConfigurationClasses::Plugins::SensorConfigNS::INA219PowerDisplayType;
 
 public:
-    Sensor_INA219(const String &name, TwoWire &wire, uint8_t address = IOT_SENSOR_HAVE_INA219);
+    Sensor_INA219(const String &name, uint8_t address = IOT_SENSOR_HAVE_INA219, TwoWire &wire = Wire);
     virtual ~Sensor_INA219();
 
     virtual AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num) override;

@@ -22,7 +22,7 @@
 #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR2
 // auto initialize illuminance sensor
 #   ifndef IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR2_BH1750FVI_I2C_ADDRESS
-// #    define IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR2_BH1750FVI_I2C_ADDRESS 0x23
+#    define IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR2_BH1750FVI_I2C_ADDRESS 0x23
 #   endif
 #endif
 
@@ -99,7 +99,7 @@ public:
         BH1750FVI,
     };
 
-    struct SensorConfig {
+    struct SensorInputConfig {
 
         struct TinyPWM {
             float level;
@@ -139,12 +139,12 @@ public:
             BH1750FVI bh1750FVI;
             ADC adc;
         };
-        SensorConfig() {}
-        SensorConfig(SensorType _type) : type(_type) {}
+        SensorInputConfig() {}
+        SensorInputConfig(SensorType _type) : type(_type) {}
     };
 
 public:
-    Sensor_AmbientLight(const String &name, uint8_t id = 0);
+    Sensor_AmbientLight(const String &name, uint8_t id = 0, TwoWire &wire = Wire);
     virtual ~Sensor_AmbientLight();
 
     virtual AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num) override;
@@ -160,7 +160,7 @@ public:
 
     virtual void reconfigure(PGM_P source) override;
 
-    void begin(AmbientLightSensorHandler *handler, const SensorConfig &sensor);
+    void begin(AmbientLightSensorHandler *handler, const SensorInputConfig &sensor);
     void end();
 
     int32_t getValue() const;
@@ -179,10 +179,11 @@ private:
     int32_t _readBH1750FVI();
 
 private:
+    TwoWire &_wire;
     String _name;
     AmbientLightSensorHandler *_handler;
     Event::Timer _timer;
-    SensorConfig _sensor;
+    SensorInputConfig _sensor;
     ConfigType _config;
     int32_t _value;
     uint8_t _id;

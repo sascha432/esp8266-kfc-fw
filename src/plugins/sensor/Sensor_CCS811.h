@@ -72,6 +72,10 @@ public:
     virtual void createWebUI(WebUINS::Root &webUI) override;
     virtual void getStatus(Print &output) override;
 
+    const SensorData &readSensor() const {
+        return _sensor;
+    }
+
 private:
     String _getId(const __FlashStringHelper *type = nullptr);
     String _getTopic(const __FlashStringHelper *type = nullptr);

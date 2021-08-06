@@ -18,11 +18,15 @@
 #include "EnumBitset.h"
 
 #if DEBUG_IOT_SENSOR
-#define REGISTER_SENSOR_CLIENT(sensor)                  { ::printf("registerClient %s:%u\n", __BASENAME_FILE__, __LINE__); registerClient(sensor); }
+#    define REGISTER_SENSOR_CLIENT(sensor)                                   \
+        {                                                                    \
+            ::printf("registerClient %s:%u\n", __BASENAME_FILE__, __LINE__); \
+            registerClient(sensor);                                          \
+        }
 #else
-#define REGISTER_SENSOR_CLIENT(sensor)                  registerClient(sensor);
+#    define REGISTER_SENSOR_CLIENT(sensor) registerClient(sensor);
 #endif
-#define UNREGISTER_SENSOR_CLIENT(sensor)                unregisterClient(sensor);
+#define UNREGISTER_SENSOR_CLIENT(sensor) unregisterClient(sensor);
 
 namespace MQTT {
 
@@ -46,10 +50,6 @@ namespace MQTT {
         MAX
     };
 
-    class Sensor;
-
-    using SensorPtr = Sensor *;
-
     class Sensor : public MQTTComponent {
     public:
         static constexpr uint16_t DEFAULT_UPDATE_RATE = 5;
@@ -58,6 +58,7 @@ namespace MQTT {
         using SensorType = MQTT::SensorType;
         using SensorPtr = MQTT::SensorPtr;
         using NamedArray = MQTT::Json::NamedArray;
+        using SensorConfig = WebUINS::SensorConfig;
 
         Sensor(SensorType type);
         virtual ~Sensor();
@@ -115,22 +116,28 @@ namespace MQTT {
         void setNextMqttUpdate(uint16_t delay);
         void forceUpdate();
         void forceMqttUpdate();
+
         SensorType getType() const;
-        uint16_t getOrderId() const;
+        int16_t getOrderId() const;
+        void invertOrderId();
+        void setConfig(const SensorConfig &config);
 
     protected:
         uint16_t _updateRate;
         uint16_t _mqttUpdateRate;
 
-        uint16_t _getNextOrderId() const;
+        int16_t _getNextOrderId() const;
 
-        static uint16_t _orderIdCounter;
+        static int16_t _orderIdCounter;
 
     private:
         uint32_t _nextUpdate;
         uint32_t _nextMqttUpdate;
-        uint16_t _orderId;
+        int16_t _orderId;
+
+    protected:
         SensorType _type;
+        SensorConfig _renderConfig;
     };
 
     inline void Sensor::setUpdateRate(uint16_t updateRate)
@@ -165,15 +172,26 @@ namespace MQTT {
         return _type;
     }
 
-    inline uint16_t Sensor::getOrderId() const
+    inline int16_t Sensor::getOrderId() const
     {
         return _orderId;
     }
 
-    inline uint16_t Sensor::_getNextOrderId() const
+    inline void Sensor::invertOrderId()
+    {
+        _orderId = -_orderId;
+    }
+
+    inline int16_t Sensor::_getNextOrderId() const
     {
         _orderIdCounter += 100;
         return _orderIdCounter;
     }
 
+    inline void Sensor::setConfig(const SensorConfig &config)
+    {
+        _renderConfig = config;
+    }
+
 }
+

@@ -16,7 +16,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-Sensor_BME280::Sensor_BME280(const String &name, TwoWire &wire, uint8_t address) :
+Sensor_BME280::Sensor_BME280(const String &name, uint8_t address, TwoWire &wire) :
     MQTT::Sensor(MQTT::SensorType::BME280),
     _name(name),
     _address(address),
@@ -24,7 +24,7 @@ Sensor_BME280::Sensor_BME280(const String &name, TwoWire &wire, uint8_t address)
 {
     REGISTER_SENSOR_CLIENT(this);
     _readConfig();
-    _bme280.begin(_address, &config.initTwoWire());
+    _bme280.begin(_address, &wire);
 }
 
 Sensor_BME280::~Sensor_BME280()
@@ -76,24 +76,9 @@ void Sensor_BME280::getValues(WebUINS::Events &array, bool timer)
 
 void Sensor_BME280::createWebUI(WebUINS::Root &webUI)
 {
-    webUI.appendToLastRow(WebUINS::Row(WebUINS::Sensor(
-        _getId(FSPGM(temperature)), _name + F(" Temperature"), FSPGM(UTF8_degreeC), IOT_SENSOR_BME280_RENDER_TYPE)
-        #ifdef IOT_SENSOR_BME280_RENDER_HEIGHT
-            .append(WebUINS::NamedString(J(height), IOT_SENSOR_BME280_RENDER_HEIGHT)
-        #endif
-    )));
-    webUI.appendToLastRow(WebUINS::Row(WebUINS::Sensor(
-        _getId(FSPGM(humidity)), _name + F(" Humidity"), '%', IOT_SENSOR_BME280_RENDER_TYPE)
-        #ifdef IOT_SENSOR_BME280_RENDER_HEIGHT
-            .append(WebUINS::NamedString(J(height), IOT_SENSOR_BME280_RENDER_HEIGHT)
-        #endif
-    )));
-    webUI.appendToLastRow(WebUINS::Row(WebUINS::Sensor(
-        _getId(FSPGM(pressure)), _name + F(" Pressure"), FSPGM(hPa), IOT_SENSOR_BME280_RENDER_TYPE)
-        #ifdef IOT_SENSOR_BME280_RENDER_HEIGHT
-            .append(WebUINS::NamedString(J(height), IOT_SENSOR_BME280_RENDER_HEIGHT)
-        #endif
-    )));
+    webUI.appendToLastRow(WebUINS::Row(WebUINS::Sensor(_getId(FSPGM(temperature)), _name + F(" Temperature"), FSPGM(UTF8_degreeC)).setConfig(_renderConfig)));
+    webUI.appendToLastRow(WebUINS::Row(WebUINS::Sensor(_getId(FSPGM(humidity)), _name + F(" Humidity"), '%').setConfig(_renderConfig)));
+    webUI.appendToLastRow(WebUINS::Row(WebUINS::Sensor(_getId(FSPGM(pressure)), _name + F(" Pressure"), FSPGM(hPa)).setConfig(_renderConfig)));
 }
 
 void Sensor_BME280::getStatus(Print &output)

@@ -17,7 +17,7 @@ class Sensor_CCS811;
 
 class Sensor_LM75A : public MQTT::Sensor {
 public:
-    Sensor_LM75A(const String &name, TwoWire &wire, uint8_t address = 0x48);
+    Sensor_LM75A(const String &name, uint8_t address = 0x48, TwoWire &wire = Wire);
     virtual ~Sensor_LM75A();
 
     virtual AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num) override;

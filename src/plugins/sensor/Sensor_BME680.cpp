@@ -15,7 +15,6 @@
 Sensor_BME680::Sensor_BME680(const String &name, uint8_t address) : MQTT::Sensor(MQTT::SensorType::BME680), _name(name), _address(address)
 {
     REGISTER_SENSOR_CLIENT(this);
-    config.initTwoWire();
 }
 
 Sensor_BME680::~Sensor_BME680()

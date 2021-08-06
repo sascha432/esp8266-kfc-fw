@@ -17,7 +17,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-Sensor_INA219::Sensor_INA219(const String &name, TwoWire &wire, uint8_t address) :
+Sensor_INA219::Sensor_INA219(const String &name, uint8_t address, TwoWire &wire) :
     MQTT::Sensor(MQTT::SensorType::INA219),
     _name(name),
     _address(address),
@@ -32,7 +32,7 @@ Sensor_INA219::Sensor_INA219(const String &name, TwoWire &wire, uint8_t address)
     _ina219(address)
 {
     REGISTER_SENSOR_CLIENT(this);
-    _ina219.begin(&config.initTwoWire());
+    _ina219.begin(&wire);
     _ina219.setCalibration(IOT_SENSOR_INA219_BUS_URANGE, IOT_SENSOR_INA219_GAIN, IOT_SENSOR_INA219_SHUNT_ADC_RES, IOT_SENSOR_INA219_R_SHUNT * _config.calibration, _config.offset);
 
     __LDBG_printf("address=%x voltage_range=%x gain=%x shunt_ADC_res=%x", _address, IOT_SENSOR_INA219_BUS_URANGE, IOT_SENSOR_INA219_GAIN, IOT_SENSOR_INA219_SHUNT_ADC_RES);
@@ -112,50 +112,18 @@ void Sensor_INA219::getValues(WebUINS::Events &array, bool timer)
 
 void Sensor_INA219::createWebUI(WebUINS::Root &webUI)
 {
-    WebUINS::Row row(
-        WebUINS::Sensor(_getId(SensorInputType::VOLTAGE), _name, 'V', IOT_SENSOR_INA219_RENDER_TYPE)
-    );
+    WebUINS::Row row(WebUINS::Sensor(_getId(SensorInputType::VOLTAGE), _name, 'V').setConfig(_renderConfig));
     if (_config.webui_current) {
-        row.append(
-            WebUINS::Sensor(_getId(SensorInputType::CURRENT), F("Current"), _getCurrentUnit(), IOT_SENSOR_INA219_RENDER_TYPE)
-            #ifdef IOT_SENSOR_INA219_RENDER_HEIGHT
-                .append(WebUINS::NamedString(J(height), IOT_SENSOR_INA219_RENDER_HEIGHT));
-            #endif
-        );
-        row.append(
-            WebUINS::Sensor(_getId(SensorInputType::POWER), F("Power"), _getPowerUnit(), IOT_SENSOR_INA219_RENDER_TYPE)
-            #ifdef IOT_SENSOR_INA219_RENDER_HEIGHT
-                .append(WebUINS::NamedString(J(height), IOT_SENSOR_INA219_RENDER_HEIGHT));
-            #endif
-        );
+        row.append(WebUINS::Sensor(_getId(SensorInputType::CURRENT), F("Current"), _getCurrentUnit()).setConfig(_renderConfig));
+        row.append(WebUINS::Sensor(_getId(SensorInputType::POWER), F("Power"), _getPowerUnit()).setConfig(_renderConfig));
     }
     if (_config.webui_average) {
-        row.append(
-            WebUINS::Sensor(_getId(SensorInputType::AVG_CURRENT), F("\xe2\x8c\x80 Current"), _getCurrentUnit(), IOT_SENSOR_INA219_RENDER_TYPE)
-            #ifdef IOT_SENSOR_INA219_RENDER_HEIGHT
-                .append(WebUINS::NamedString(J(height), IOT_SENSOR_INA219_RENDER_HEIGHT));
-            #endif
-        );
-        row.append(
-            WebUINS::Sensor(_getId(SensorInputType::AVG_POWER), F("\xe2\x8c\x80 Power"), _getPowerUnit(), IOT_SENSOR_INA219_RENDER_TYPE)
-            #ifdef IOT_SENSOR_INA219_RENDER_HEIGHT
-                .append(WebUINS::NamedString(J(height), IOT_SENSOR_INA219_RENDER_HEIGHT));
-            #endif
-        );
+        row.append(WebUINS::Sensor(_getId(SensorInputType::AVG_CURRENT), F("\xe2\x8c\x80 Current"), _getCurrentUnit()).setConfig(_renderConfig));
+        row.append(WebUINS::Sensor(_getId(SensorInputType::AVG_POWER), F("\xe2\x8c\x80 Power"), _getPowerUnit()).setConfig(_renderConfig));
     }
     if (_config.webui_peak) {
-        row.append(
-            WebUINS::Sensor(_getId(SensorInputType::PEAK_CURRENT), F("Peak Current"), _getCurrentUnit(), IOT_SENSOR_INA219_RENDER_TYPE)
-            #ifdef IOT_SENSOR_INA219_RENDER_HEIGHT
-                .append(WebUINS::NamedString(J(height), IOT_SENSOR_INA219_RENDER_HEIGHT));
-            #endif
-        );
-        row.append(
-            WebUINS::Sensor(_getId(SensorInputType::PEAK_POWER), F("Peak Power"), _getPowerUnit(), IOT_SENSOR_INA219_RENDER_TYPE)
-            #ifdef IOT_SENSOR_INA219_RENDER_HEIGHT
-                .append(WebUINS::NamedString(J(height), IOT_SENSOR_INA219_RENDER_HEIGHT));
-            #endif
-        );
+        row.append(WebUINS::Sensor(_getId(SensorInputType::PEAK_CURRENT), F("Peak Current"), _getCurrentUnit()).setConfig(_renderConfig));
+        row.append(WebUINS::Sensor(_getId(SensorInputType::PEAK_POWER), F("Peak Power"), _getPowerUnit()).setConfig(_renderConfig));
     }
     webUI.addRow(row);
 }

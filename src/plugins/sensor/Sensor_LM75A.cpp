@@ -12,14 +12,13 @@
 #include <debug_helper_disable.h>
 #endif
 
-Sensor_LM75A::Sensor_LM75A(const String &name, TwoWire &wire, uint8_t address) :
+Sensor_LM75A::Sensor_LM75A(const String &name, uint8_t address, TwoWire &wire) :
     MQTT::Sensor(SensorType::LM75A),
     _name(name),
     _wire(&wire),
     _address(address)
 {
     REGISTER_SENSOR_CLIENT(this);
-    config.initTwoWire();
 }
 
 Sensor_LM75A::~Sensor_LM75A()
@@ -55,7 +54,7 @@ void Sensor_LM75A::getValues(WebUINS::Events &array, bool timer)
 
 void Sensor_LM75A::createWebUI(WebUINS::Root &webUI)
 {
-    webUI.appendToLastRow(WebUINS::Row(WebUINS::Sensor(_getId(), _name, FSPGM(UTF8_degreeC))));
+    webUI.appendToLastRow(WebUINS::Row(WebUINS::Sensor(_getId(), _name, FSPGM(UTF8_degreeC)).setConfig(_renderConfig)));
 }
 
 void Sensor_LM75A::publishState()

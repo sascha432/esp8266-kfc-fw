@@ -173,15 +173,15 @@ void Sensor_Battery::getValues(WebUINS::Events &array, bool timer)
 void Sensor_Battery::createWebUI(WebUINS::Root &webUI)
 {
     WebUINS::Row row(
-        WebUINS::Sensor(_getId(TopicType::VOLTAGE), _name, 'V')
+        WebUINS::Sensor(_getId(TopicType::VOLTAGE), _name, 'V').setConfig(_renderConfig)
 #if IOT_SENSOR_BATTERY_DISPLAY_LEVEL
-        , WebUINS::Sensor(_getId(TopicType::LEVEL), F("Level"), '%')
+        , WebUINS::Sensor(_getId(TopicType::LEVEL), F("Level"), '%').setConfig(_renderConfig)
 #endif
 #ifdef IOT_SENSOR_BATTERY_CHARGING
-        , WebUINS::Sensor(_getId(TopicType::CHARGING), F("Charging"), F(""))
+        , WebUINS::Sensor(_getId(TopicType::CHARGING), F("Charging"), F("")).setConfig(_renderConfig)
 #endif
 #if IOT_SENSOR_BATTERY_DSIPLAY_POWER_STATUS
-        , WebUINS::Sensor(_getId(TopicType::POWER), F("Status"), F(""))
+        , WebUINS::Sensor(_getId(TopicType::POWER), F("Status"), F("")).setConfig(_renderConfig)
 #endif
     );
     webUI.appendToLastRow(row);

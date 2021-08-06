@@ -73,12 +73,12 @@ namespace Event {
         int64_t _delay;
         RepeatType _repeat;
         PriorityType _priority;
-        uint32_t _remainingDelay : 17;
+        uint32_t _remainingDelay : 24;
         uint32_t _callbackScheduled : 1;
         uint32_t _maxDelayExceeded : 1;
 
 #if DEBUG_EVENT_SCHEDULER
-        uint32_t _line : 13;
+        uint32_t _line;
         const char *_file;
         String __getFilePos();
 #else

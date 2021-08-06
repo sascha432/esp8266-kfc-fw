@@ -69,15 +69,12 @@ namespace Event {
         void _sort();
 
     private:
-        using EventType = int32_t;
-
         TimerVector _timers;
-        int32_t _size: 16;
-        volatile EventType _hasEvent: 8;
-        int32_t _addedFlag : 1;
-        int32_t _removedFlag : 1;
-        volatile int32_t _checkTimers : 1;
-        int32_t __free : 5;
+        int16_t _size;
+        volatile PriorityType _hasEvent;
+        bool _addedFlag;
+        bool _removedFlag;
+        volatile bool _checkTimers;
 
 #if DEBUG_EVENT_SCHEDULER_RUNTIME_LIMIT_CONSTEXPR
         static constexpr uint32_t _runtimeLimit = kMaxRuntimeLimit;

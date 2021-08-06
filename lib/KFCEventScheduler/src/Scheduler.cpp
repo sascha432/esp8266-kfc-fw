@@ -46,7 +46,7 @@ using namespace Event;
  */
 Scheduler::Scheduler() :
     _size(0),
-    _hasEvent((EventType)PriorityType::NONE),
+    _hasEvent(PriorityType::NONE),
     _addedFlag(false),
     _removedFlag(false),
     _checkTimers(false)
@@ -99,7 +99,7 @@ void Scheduler::end()
         }
     }
     _size = 0;
-    _hasEvent = (EventType)PriorityType::NONE;
+    _hasEvent = PriorityType::NONE;
     _addedFlag = false;
     _removedFlag = false;
     _checkTimers = false;
@@ -191,7 +191,7 @@ void Scheduler::run()
 
 void Scheduler::_run(PriorityType runAbovePriority)
 {
-    if (_hasEvent > (EventType)runAbovePriority) {
+    if (_hasEvent > runAbovePriority) {
         for(int i = 0; i < _size; i++) {
             auto timer = _timers[i];
             if (timer) {
@@ -208,7 +208,7 @@ void Scheduler::_run()
 {
     // low priority run
     // any events scheduled?
-    if (_hasEvent != (EventType)PriorityType::NONE) {
+    if (_hasEvent != PriorityType::NONE) {
         uint32_t start = millis();
         uint32_t timeout = start + _runtimeLimit; // time limit for PriorityType::NORMAL and below
         for (int i = 0; i < _size; i++) {
@@ -226,14 +226,15 @@ void Scheduler::_run()
         }
 
         // reset event flag
-        noInterrupts();
-        _hasEvent = (EventType)PriorityType::NONE;
-        for (const auto &timer : _timers) {
-            if (timer && timer->_callbackScheduled && (EventType)timer->_priority > _hasEvent) {
-                _hasEvent = (EventType)timer->_priority;
+        {
+            InterruptLock lock;
+            _hasEvent = PriorityType::NONE;
+            for (const auto &timer : _timers) {
+                if (timer && timer->_callbackScheduled && timer->_priority > _hasEvent) {
+                    _hasEvent = timer->_priority;
+                }
             }
         }
-        interrupts();
 
     }
 
@@ -262,8 +263,8 @@ void Scheduler::__TimerCallback(void *arg)
     else {
         // schedule for execution in main loop
         timer->_callbackScheduled = true;
-        if ((EventType)timer->_priority > __Scheduler._hasEvent) {
-            __Scheduler._hasEvent = (EventType)timer->_priority;
+        if (timer->_priority > __Scheduler._hasEvent) {
+            __Scheduler._hasEvent = timer->_priority;
         }
     }
 }

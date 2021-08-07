@@ -4,11 +4,14 @@
 
 #include "clock.h"
 
-//
-// WiFI icons by Dryicons https://dryicons.com/icon/wifi-4589Icon
-//
+// ** work in progress **
 
 #if IOT_LED_MATRIX_HAVE_SSD1306
+
+//
+// WiFI icons by Dryicons https://dryicons.com/
+//
+#include "graphics/wlan.h"
 
 void ClockPlugin::ssd1306Begin()
 {
@@ -18,26 +21,13 @@ void ClockPlugin::ssd1306Begin()
     // boot screen
     ssd1306Clear(false);
     _ssd1306.setCursor(0, 5);
-    _ssd1306.setTextSize(2);
     _ssd1306.println(F("KFC Firmware"));
-    _ssd1306.setTextSize(1);
     _ssd1306.print('v');
     _ssd1306.print(config.getShortFirmwareVersion_P());
     _ssd1306.display();
 
     // start updating after 15 seconds
-    _ssd1306Timer.add(Event::seconds(15), false, [this](Event::CallbackTimerPtr) {
-
-        // update wifi icon
-        WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, [this](WiFiCallbacks::EventType event, void *) {
-            ssd1306Update();
-        }, this);
-
-        _ssd1306Timer.add(Event::seconds(1), true, [this](Event::CallbackTimerPtr) {
-            ssd1306Update();
-        });
-
-    });
+    _ssd1306Timer.add(Event::seconds(15), false, ssd1306InitTimer);
 }
 
 void ClockPlugin::ssd1306End()
@@ -61,12 +51,14 @@ void ClockPlugin::ssd1306Clear(bool display)
 
 void ClockPlugin::ssd1306Update()
 {
+    if (_ssd1306Blank) {
+        return;
+    }
     ssd1306Clear(false);
     if (WiFi.isConnected()) {
-        _ssd1306.println(F("WIFI"));
-    }
-    else {
-        _ssd1306.println(F("NO WIFI"));
+        uint8_t tmp[sizeof(wlan_icon)];
+        memcpy_P(tmp, wlan_icon, sizeof(tmp));
+        _ssd1306.drawBitmap(128 - 16, 0, tmp, 15, 14, WHITE);
     }
     PrintString timeStr;
     timeStr.strftime(F("%a %b %d %Y\n%H:%M:%S"), time(nullptr));
@@ -76,7 +68,11 @@ void ClockPlugin::ssd1306Update()
         if (sensorPtr->getType() == SensorPlugin::SensorType::BME280) {
             auto &sensor = *reinterpret_cast<Sensor_BME280 *>(sensorPtr);
             auto data = sensor.readSensor();
-            _ssd1306.printf_P(PSTR("%.1fC %.1f%% %.1fhPa\n"), data.temperature, data.humidity, data.pressure);
+            _ssd1306.printf_P(PSTR("%.1f"), data.temperature);
+            _ssd1306.setCursor(_ssd1306.getCursorX(), _ssd1306.getCursorY() - 2);
+            _ssd1306.print('\x09');
+            _ssd1306.setCursor(_ssd1306.getCursorX(), _ssd1306.getCursorY() + 2);
+            _ssd1306.printf_P(PSTR("C %.1f%% %.1fhPa\n"), data.humidity, data.pressure);
         }
         else if (sensorPtr->getType() == SensorPlugin::SensorType::CCS811) {
             auto &sensor = *reinterpret_cast<Sensor_CCS811 *>(sensorPtr);
@@ -109,6 +105,33 @@ void ClockPlugin::ssd1306Blank(bool state)
         _ssd1306Blank = false;
         ssd1306Update();
     }
+}
+
+void ClockPlugin::ssd1306InitTimer(Event::CallbackTimerPtr)
+{
+    auto &plugin = ClockPlugin::getInstance();
+
+    // update wifi icon
+    WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, ssd1306WiFiCallback, &plugin);
+
+    for(const auto sensorPtr: SensorPlugin::getSensors()) {
+        if (sensorPtr->getType() == SensorPlugin::SensorType::MOTION) {
+            plugin.ssd1306Blank(!reinterpret_cast<Sensor_Motion *>(sensorPtr)->getMotionState());
+            break;
+        }
+    }
+
+    plugin._ssd1306Timer.add(Event::seconds(1), true, ssd1306UpdateTimer);
+}
+
+void ClockPlugin::ssd1306UpdateTimer(Event::CallbackTimerPtr)
+{
+    ClockPlugin::getInstance().ssd1306Update();
+}
+
+void ClockPlugin::ssd1306WiFiCallback(WiFiCallbacks::EventType, void *)
+{
+    ClockPlugin::getInstance().ssd1306Update();
 }
 
 #endif

@@ -4,7 +4,9 @@
 
 #include <PrintString.h>
 #include <assert.h>
+#if ESP8266
 #include <interrupts.h>
+#endif
 #include "plugins.h"
 #include "session.h"
 #include "WebUISocket.h"

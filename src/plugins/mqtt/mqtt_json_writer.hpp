@@ -1054,7 +1054,7 @@ namespace MQTT {
 
             inline __attribute__((__always_inline__))
             void appendKey(FStr key) {
-                _output.printf_P(PSTR("\"%s\":"), key);
+                _output.printf_P(PSTR("\"%s\":"), reinterpret_cast<PGM_P>(key));
             }
 
             inline __attribute__((__always_inline__))
@@ -1303,7 +1303,7 @@ namespace MQTT {
             inline __attribute__((__always_inline__))
             void printTo(Print &print) const
             {
-                print.printf_P(PSTR("\"%s\":"), _key);
+                print.printf_P(PSTR("\"%s\":"), reinterpret_cast<PGM_P>(_key));
                 UnnamedArray::printTo(print);
             }
 
@@ -1333,7 +1333,7 @@ namespace MQTT {
             inline __attribute__((__always_inline__))
             void printTo(Print &print) const
             {
-                print.printf_P(PSTR("\"%s\":"), _key);
+                print.printf_P(PSTR("\"%s\":"), reinterpret_cast<PGM_P>(_key));
                 UnnamedObject::printTo(print);
             }
 

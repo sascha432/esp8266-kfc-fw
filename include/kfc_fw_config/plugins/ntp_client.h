@@ -5,6 +5,10 @@
 #include "kfc_fw_config/base.h"
 #include "ConfigurationHelper.h"
 
+#if ESP32
+#define SNTP_MAX_SERVERS 4
+#endif
+
 namespace KFCConfigurationClasses {
 
     namespace Plugins {

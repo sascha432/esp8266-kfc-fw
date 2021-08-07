@@ -37,7 +37,7 @@ namespace FormUI {
             }
 
             void setTitle(const __FlashStringHelper *title) {
-                __LDBG_assert_printf(_title == nullptr, "title=%s new_title=%s", _title, title);
+                __LDBG_assert_printf(_title == nullptr, "title=%s new_title=%s", _title, reinterpret_cast<PGM_P>(title));
                 _title = encodeHtmlEntities(title);
             }
             void setTitle(const String &title) {
@@ -46,7 +46,7 @@ namespace FormUI {
             }
 
             void setSaveButtonLabel(const __FlashStringHelper *label) {
-                __LDBG_assert_printf(_saveButtonLabel <= kDefaultButtonLabel, "label=%s new_label=%s", _saveButtonLabel, label);
+                __LDBG_assert_printf(_saveButtonLabel <= kDefaultButtonLabel, "label=%s new_label=%s", _saveButtonLabel, reinterpret_cast<PGM_P>(label));
                 _saveButtonLabel = encodeHtmlEntities(label);
             }
             void setSaveButtonLabel(const String &label) {
@@ -55,7 +55,7 @@ namespace FormUI {
             }
 
             void setContainerId(const __FlashStringHelper *id) {
-                __LDBG_assert_printf(_containerId == nullptr, "container_id=%s new_container_id=%s", _saveButtonLabel, id);
+                __LDBG_assert_printf(_containerId == nullptr, "container_id=%s new_container_id=%s", _saveButtonLabel, reinterpret_cast<PGM_P>(id));
                 _containerId = attachString(id);
             }
             void setContainerId(const String &id) {
@@ -100,7 +100,7 @@ namespace FormUI {
                 return _strings.attachString(str);
             }
             inline const char *attachString(const __FlashStringHelper *fpstr) {
-                return _strings.attachString(fpstr);
+                return _strings.attachString(reinterpret_cast<PGM_P>(fpstr));
             }
             inline const char *attachString(const String &str) {
                 return _strings.attachString(str);
@@ -110,7 +110,7 @@ namespace FormUI {
                 return encodeHtmlEntities(str, Mode::HTML);
             }
             inline const char *encodeHtmlEntities(const __FlashStringHelper *fpstr) {
-                return encodeHtmlEntities((PGM_P)fpstr);
+                return encodeHtmlEntities(reinterpret_cast<PGM_P>(fpstr));
             }
             inline const char *encodeHtmlEntities(const String &str) {
                 return encodeHtmlEntities(str.c_str());
@@ -120,7 +120,7 @@ namespace FormUI {
                 return encodeHtmlEntities(str, Mode::ATTRIBUTE);
             }
             inline const char *encodeHtmlAttribute(const __FlashStringHelper *fpstr) {
-                return encodeHtmlAttribute((PGM_P)fpstr);
+                return encodeHtmlAttribute(reinterpret_cast<PGM_P>(fpstr));
             }
             inline const char *encodeHtmlAttribute(const String &str) {
                 return encodeHtmlAttribute(str.c_str());

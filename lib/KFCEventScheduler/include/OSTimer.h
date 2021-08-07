@@ -15,8 +15,11 @@
 #endif
 
 #include <Arduino_compat.h>
-#if defined(ESP8266)
+#if ESP8266 || ESP32
+
+    #if ESP8266
     #include <osapi.h>
+    #endif
 
     #ifdef __cplusplus
     extern "C" {

@@ -131,7 +131,12 @@ public:
         return _stream->write(buf, size);
     }
 
-    virtual int read(uint8_t* buf, size_t size) {
+    #if ESP8266
+    virtual int read(uint8_t* buf, size_t size)
+    #else
+    virtual size_t read(uint8_t* buf, size_t size)
+    #endif
+    {
         if (!_stream) {
             return 0;
         }

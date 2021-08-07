@@ -29,7 +29,7 @@ using namespace DeepSleep;
 
 inline static void deep_sleep_wakeup_wifi()
 {
-#if ARDUINO_ESP8266_VERSION_COMBINED >= 0x030000
+#if ARDUINO_ESP8266_MAJOR >= 3
 // Starting from arduino core v3: wifi is disabled at boot time
 // WiFi.begin() or WiFi.softAP() will wake WiFi up
 #error TODO enable wifi or remove disabling via __disableWiFiAtBootTime

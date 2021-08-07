@@ -204,7 +204,7 @@ namespace ConfigurationHelper {
         return obj.name; \
     } \
     inline static FormUI::Validator::Hostname &addHostnameValidatorFor_##name(FormUI::Form::BaseForm &form, bool allowEmpty = true) { \
-        if constexpr (kDefaultValueFor_##name != 0) { \
+        if __CONSTEXPR17 (kDefaultValueFor_##name != 0) { \
             form.getLastField().getFormUI()->addItems(FormUI::PlaceHolder(kDefaultValueFor_##name)); \
         } \
         return form.addValidator(FormUI::Validator::Hostname(allowEmpty ? FormUI::HostnameValidator::AllowedType::EMPTY_OR_IP : FormUI::HostnameValidator::AllowedType::IPADDRESS)); \
@@ -222,13 +222,13 @@ namespace ConfigurationHelper {
         return obj.name; \
     } \
     inline static FormUI::Validator::Range &addRangeValidatorFor_##name(FormUI::Form::BaseForm &form, bool allowZero = false) { \
-        if constexpr (std::isnormal(kDefaultValueFor_##name)) { \
+        if __CONSTEXPR17 (std::isnormal(kDefaultValueFor_##name)) { \
             form.getLastField().getFormUI()->addItems(FormUI::PlaceHolder(kDefaultValueFor_##name)); \
         } \
         return form.addValidator(FormUI::Validator::Range(static_cast<float>(kMinValueFor_##name), static_cast<float>(kMaxValueFor_##name), allowZero)); \
     } \
     inline static FormUI::Validator::Range &addRangeValidatorFor_##name(const String &message, FormUI::Form::BaseForm &form, bool allowZero = false) { \
-        if constexpr (std::isnormal(kDefaultValueFor_##name)) { \
+        if __CONSTEXPR17 (std::isnormal(kDefaultValueFor_##name)) { \
             form.getLastField().getFormUI()->addItems(FormUI::PlaceHolder(kDefaultValueFor_##name)); \
         } \
         return form.addValidator(FormUI::Validator::Range(message, static_cast<float>(kMinValueFor_##name), static_cast<float>(kMaxValueFor_##name), allowZero)); \

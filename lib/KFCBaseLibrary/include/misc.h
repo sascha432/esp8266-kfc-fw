@@ -48,17 +48,23 @@ extern "C" {
 #endif
 
 
-#define MISC_HAVE_INTERRUPT_LOCK 1
-
 #ifdef ESP8266
-#include <interrupts.h>
-using InterruptLock = esp8266::InterruptLock;
+
+    #include <interrupts.h>
+    using InterruptLock = esp8266::InterruptLock;
+
 #else
-struct InterruptLock {
-    constexpr uint32_t savedInterruptLevel() const {
-        return 0;
-    }
-};
+
+    struct InterruptLock {
+        InterruptLock() {
+        }
+        ~InterruptLock() {
+        }
+        static constexpr uint32_t savedInterruptLevel() {
+            return 0;
+        }
+    };
+
 #endif
 
 // increment a counter and decrement when leaving then scope
@@ -395,24 +401,28 @@ String implode_cb(_Ta glue, const _Tb &pieces, _Tc toString, size_t max = ~0) {
     return tmp;
 }
 
-inline void explode(const char *str, const char *sep, StringVector &container, uint16_t limit = UINT16_MAX) {
+inline void explode(const char *str, const char *sep, StringVector &container, uint16_t limit = UINT16_MAX)
+{
     split::split(str, sep, [&container](const char *str, size_t size, int flags) {
         split::vector_callback(str, size, flags, container);
     }, split::SplitFlagsType::EMPTY, limit);
 }
 
-inline void explode_P(PGM_P str, PGM_P sep, StringVector &container, uint16_t limit = UINT16_MAX) {
+inline void explode_P(PGM_P str, PGM_P sep, StringVector &container, uint16_t limit = UINT16_MAX)
+{
     split::split_P(str, sep, [&container](const char *str, size_t size, int flags) {
         split::vector_callback(FPSTR(str), size, flags, container);
     }, split::SplitFlagsType::EMPTY, limit);
 }
 
-inline void explode(const char *str, char sep, StringVector &container, uint16_t limit = UINT16_MAX) {
+inline void explode(const char *str, char sep, StringVector &container, uint16_t limit = UINT16_MAX)
+{
     char buf[2] = { sep, 0 };
     explode(str, buf, container, limit);
 }
 
-inline void explode_P(PGM_P str, char sep, StringVector &container, uint16_t limit = UINT16_MAX) {
+inline void explode_P(PGM_P str, char sep, StringVector &container, uint16_t limit = UINT16_MAX)
+{
     char buf[2] = { sep, 0 };
     explode_P(str, buf, container, limit);
 }
@@ -434,17 +444,29 @@ void *lambda_target(T callback) {
 // auto address = convertToIPAddress("192.168.0.1");
 // if (IPAddress_isValid(address)) { //we can use the address }
 
+#if ESP8266
 
 // use instead of address.isSet()
 // performs additional checks to validate the stored IP address
 // some versions of the framework had issues doing it correctly
-inline bool IPAddress_isValid(const IPAddress &address) {
+inline bool IPAddress_isValid(const IPAddress &address)
+{
     return address != (uint32_t)0 && address != (uint32_t)0xffffffffU && address.isSet();
 }
 
+#elif ESP32
+
+inline bool IPAddress_isValid(const IPAddress &address)
+{
+    return address != (uint32_t)0 && address != (uint32_t)0xffffffffU;
+}
+
+#endif
+
 IPAddress convertToIPAddress(const char *hostname);
 
-inline IPAddress convertToIPAddress(const String &hostname) {
+inline IPAddress convertToIPAddress(const String &hostname)
+{
     return convertToIPAddress(hostname.c_str());
 }
 
@@ -491,11 +513,13 @@ constexpr size_t kGetRequiredBitsForValue(int64_t value, size_t count) {
 #undef min
 #endif
 
+#include <stl_ext/algorithm>
+
 // get number of bits to store values between from and to
 constexpr size_t kGetRequiredBitsForRange(int64_t from, int64_t to) {
     return from < 0 || to < 0 ?
-        std::max(_kGetRequiredBitsForValue(static_cast<uint64_t>(-std::min<int64_t>(from, to)), 1), _kGetRequiredBitsForValue(-from + to + 1, from <= 0 && to <= 0 ? 0 : 1)) :
-        std::max(_kGetRequiredBitsForValue(std::max<uint64_t>(from, to), 0), _kGetRequiredBitsForValue(from + to));
+        stdex::max(_kGetRequiredBitsForValue(static_cast<uint64_t>(-stdex::min<int64_t>(from, to)), 1), _kGetRequiredBitsForValue(-from + to + 1, from <= 0 && to <= 0 ? 0 : 1)) :
+        stdex::max(_kGetRequiredBitsForValue(stdex::max<uint64_t>(from, to), 0), _kGetRequiredBitsForValue(from + to));
 }
 
 // get number of bits for values from 0 to (num - offset)
@@ -629,47 +653,108 @@ inline uint32_t createIPv4Address(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
 
 #if ESP8266
 
-struct Pins {
-    union {
-        uint32_t _value;
-        struct {
-            uint32_t GPIO0: 1;
-            uint32_t GPIO1: 1;
-            uint32_t GPIO2: 1;
-            uint32_t GPIO3: 1;
-            uint32_t GPIO4: 1;
-            uint32_t GPIO6: 1;
-            uint32_t GPIO7: 1;
-            uint32_t GPIO8: 1;
-            uint32_t GPIO9: 1;
-            uint32_t GPIO10: 1;
-            uint32_t GPIO11: 1;
-            uint32_t GPIO12: 1;
-            uint32_t GPIO13: 1;
-            uint32_t GPIO14: 1;
-            uint32_t GPIO15: 1;
-            uint32_t GPIO16: 1;
+    struct Pins {
+        union {
+            uint32_t _value;
+            struct {
+                uint32_t GPIO0: 1;
+                uint32_t GPIO1: 1;
+                uint32_t GPIO2: 1;
+                uint32_t GPIO3: 1;
+                uint32_t GPIO4: 1;
+                uint32_t GPIO6: 1;
+                uint32_t GPIO7: 1;
+                uint32_t GPIO8: 1;
+                uint32_t GPIO9: 1;
+                uint32_t GPIO10: 1;
+                uint32_t GPIO11: 1;
+                uint32_t GPIO12: 1;
+                uint32_t GPIO13: 1;
+                uint32_t GPIO14: 1;
+                uint32_t GPIO15: 1;
+                uint32_t GPIO16: 1;
+            };
+            struct {
+                uint16_t _in;
+                uint8_t _in16: 1;
+            };
         };
+        Pins() : _value(0) {}
+        Pins(uint32_t value) : _value(value) {}
+        Pins(uint16_t in, uint8_t in16) : _in(in), _in16(in16) {}
+        operator int() const {
+            return _value;
+        }
     };
-    Pins() : _value(0) {}
-    Pins(uint32_t value) : _value(value) {}
-    operator int() const {
-        return _value;
-    }
-};
 
-inline Pins digitalReadAll()
-{
-    return Pins(GPI | (GP16I ? (1U << 16) : 0));
-}
+    inline Pins digitalReadAll()
+    {
+        return Pins(GPI, GP16I);
+        // return Pins(GPI | (GP16I ? (1U << 16) : 0));
+    }
 
 #elif ESP32
 
-#error TODO
+    struct Pins {
+        union {
+            uint64_t _value;
+            struct {
+                uint32_t GPIO0: 1;
+                uint32_t GPIO1: 1;
+                uint32_t GPIO2: 1;
+                uint32_t GPIO3: 1;
+                uint32_t GPIO4: 1;
+                uint32_t GPIO6: 1;
+                uint32_t GPIO7: 1;
+                uint32_t GPIO8: 1;
+                uint32_t GPIO9: 1;
+                uint32_t GPIO10: 1;
+                uint32_t GPIO11: 1;
+                uint32_t GPIO12: 1;
+                uint32_t GPIO13: 1;
+                uint32_t GPIO14: 1;
+                uint32_t GPIO15: 1;
+                uint32_t GPIO16: 1;
+                uint32_t GPIO17: 1;
+                uint32_t GPIO18: 1;
+                uint32_t GPIO19: 1;
+                uint32_t GPIO20: 1;
+                uint32_t GPIO21: 1;
+                uint32_t GPIO22: 1;
+                uint32_t GPIO23: 1;
+                uint32_t GPIO24: 1;
+                uint32_t GPIO25: 1;
+                uint32_t GPIO26: 1;
+                uint32_t GPIO27: 1;
+                uint32_t GPIO28: 1;
+                uint32_t GPIO29: 1;
+                uint32_t GPIO30: 1;
+                uint32_t GPIO31: 1;
+                uint8_t GPIO32: 1;
+                uint8_t GPIO33: 1;
+                uint8_t GPIO34: 1;
+                uint8_t GPIO35: 1;
+                uint8_t GPIO36: 1;
+                uint8_t GPIO37: 1;
+                uint8_t GPIO38: 1;
+                uint8_t GPIO39: 1;
+            };
+            struct {
+                uint32_t _in;
+                uint8_t _in1;
+            };
+        };
+        Pins() : _value(0) {}
+        Pins(uint64_t value) : _value(value) {}
+        Pins(uint32_t in, uint8_t in1) : _in(in), _in1(in1) {}
+        operator uint64_t() const {
+            return _value;
+        }
+    };
 
-// inline uint64_t digitalReadAll() {
-//     return 0;
-// }
+    inline Pins digitalReadAll() {
+        return Pins(GPIO.in, GPIO.in1.data);
+    }
 
 #else
 

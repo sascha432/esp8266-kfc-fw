@@ -7,12 +7,12 @@
 
 #include <global.h>
 
-#if ESP8266 && ARDUINO_ESP8266_VERSION_COMBINED >= 0x030000
+#if ESP8266 && ARDUINO_ESP8266_MAJOR >= 3
 
 #include <coredecls.h>
 #include <sys/_tz_structs.h>
 
-#elif ESP8266 && ARDUINO_ESP8266_VERSION_COMBINED >= 0x020701
+#elif ESP8266 && ARDUINO_ESP8266_MAJOR >= 2 && ARDUINO_ESP8266_MINOR >= 7
 
 #error remove wrapper
 

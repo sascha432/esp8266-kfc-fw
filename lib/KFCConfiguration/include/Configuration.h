@@ -14,7 +14,9 @@
 #include <type_traits>
 #include <stl_ext/chunked_list.h>
 #include <stl_ext/is_trivially_copyable.h>
+#if ESP8266
 #include <coredecls.h>
+#endif
 
 #include "ConfigurationHelper.h"
 #include "ConfigurationParameter.h"
@@ -186,7 +188,7 @@ public:
     static constexpr uint16_t kParamsOffset = kHeaderOffset + sizeof(Header);
     static_assert((kParamsOffset & 3) == 0, "not dword aligned");
 
-    constexpr uint16_t getDataOffset(uint16_t numParams) const {
+    static constexpr uint16_t getDataOffset(uint16_t numParams) {
         return kParamsOffset + (sizeof(ParameterHeaderType) * numParams);
     }
 

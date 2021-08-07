@@ -87,9 +87,12 @@ public:
     void read(bool wakeup = false);
     void write();
 
-    static const __FlashStringHelper *getSleepTypeStr(sleep_type_t type);
-    static const __FlashStringHelper *getWiFiOpModeStr(uint8_t mode);
-    static const __FlashStringHelper *getWiFiPhyModeStr(phy_mode_t mode);
+    #if ESP8266
+        static const __FlashStringHelper *getSleepTypeStr(sleep_type_t type);
+        static const __FlashStringHelper *getWiFiOpModeStr(uint8_t mode);
+        static const __FlashStringHelper *getWiFiPhyModeStr(phy_mode_t mode);
+    #endif
+
     static void printDiag(Print &output, const String &prefix);
 
     // support for zeroconf

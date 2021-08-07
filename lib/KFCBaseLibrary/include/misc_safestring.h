@@ -39,7 +39,7 @@ extern "C" {
 }
 #endif
 
-#if ESP8266
+#if defined(ESP8266)
 
 #include "umm_malloc/umm_malloc.h"
 

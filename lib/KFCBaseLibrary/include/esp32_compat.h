@@ -15,15 +15,33 @@
 
 #include <esp_timer.h>
 
-inline uint64_t micros64() {
+#define isFlashInterfacePin(p) false
+
+struct rst_info {
+    uint32_t reason;
+    uint32_t exccause;
+    uint32_t epc1;
+    uint32_t epc2;
+    uint32_t epc3;
+    uint32_t excvaddr;
+    uint32_t depc;
+};
+
+inline uint64_t micros64()
+{
     return esp_timer_get_time();
+}
+
+inline void *memmove_P(void *dst, const void *src, size_t len)
+{
+    return memmove(dst, src, len);
 }
 
 typedef esp_timer_cb_t os_timer_func_t_ptr;
 typedef struct esp_timer os_timer_t;
 
 #ifndef OS_TIMER_DEBUG
-#define OS_TIMER_DEBUG                      0
+#   define OS_TIMER_DEBUG 0
 #endif
 
 #include <esp_wifi.h>
@@ -41,7 +59,7 @@ enum RFMode {
 };
 
 #ifndef WL_MAC_ADDR_LENGTH
-#define WL_MAC_ADDR_LENGTH                  6
+#   define WL_MAC_ADDR_LENGTH 6
 #endif
 
 typedef struct {
@@ -215,9 +233,20 @@ inline void panic() {
     }
 }
 
-// emulation of callback
 extern "C" {
+
+    // emulation of callback
     void settimeofday_cb (void (*cb)(void));
+
+    uint32_t crc32_le(uint32_t crc, uint8_t const *buf, uint32_t len);
+
+    bool can_yield();
+
+}
+
+inline uint32_t crc32(const void *buf, size_t len, uint32_t crc = ~0)
+{
+    return crc32_le(crc, reinterpret_cast<const uint8_t *>(buf), len);
 }
 
 #endif

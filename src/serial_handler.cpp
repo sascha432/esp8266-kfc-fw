@@ -11,32 +11,38 @@
 #include "serial_handler.h"
 
 #if DEBUG_SERIAL_HANDLER
-#define DEBUG_SERIAL_HANDLER_BASE           1
-#define DEBUG_SERIAL_HANDLER_IO             1
+#    define DEBUG_SERIAL_HANDLER_BASE 1
+#    define DEBUG_SERIAL_HANDLER_IO   1
 #else
-#define DEBUG_SERIAL_HANDLER_BASE           0
-#define DEBUG_SERIAL_HANDLER_IO             0
+#    define DEBUG_SERIAL_HANDLER_BASE 0
+#    define DEBUG_SERIAL_HANDLER_IO   0
 #endif
 
 // number of lines to keep during the boot face. additional data is discarded
 #ifndef DEBUG_PREBOOT_HISTORY
-#define DEBUG_PREBOOT_HISTORY               0
+#    define DEBUG_PREBOOT_HISTORY 0
 #endif
 
 // serial handler
 #if DEBUG_SERIAL_HANDLER_BASE
-#define __DBGSH(fmt,...)            { ::printf(PSTR("SH:" fmt "\n"), ##__VA_ARGS__); }
-#define __IF_DBGSH(...)             __VA_ARGS__
+#    define __DBGSH(fmt, ...)                              \
+        {                                                  \
+            ::printf(PSTR("SH:" fmt "\n"), ##__VA_ARGS__); \
+        }
+#    define __IF_DBGSH(...) __VA_ARGS__
 #else
-#define __DBGSH(...)                ;
-#define __IF_DBGSH(...)             ;
+#    define __DBGSH(...)    ;
+#    define __IF_DBGSH(...) ;
 #endif
 
 // serial handler I/O
 #if DEBUG_SERIAL_HANDLER_IO
-#define __DBGSHIO(fmt,...)          { ::printf(PSTR("SH:" fmt "\n"), ##__VA_ARGS__); }
+#    define __DBGSHIO(fmt, ...)                            \
+        {                                                  \
+            ::printf(PSTR("SH:" fmt "\n"), ##__VA_ARGS__); \
+        }
 #else
-#define __DBGSHIO(...)              ;
+#    define __DBGSHIO(...) ;
 #endif
 
 NullStream NullSerial;
@@ -44,17 +50,19 @@ HardwareSerial Serial0(UART0);
 // stream wrapper allows to intercept send and receive on Serial
 SerialHandler::Wrapper serialHandler(&Serial0);
 Stream &Serial = serialHandler;
+// Stream &Serial = Serial0;
 
 #if DEBUG
-#if KFC_DEBUG_USE_SERIAL1
+#    if KFC_DEBUG_USE_SERIAL1
 StreamWrapper debugStreamWrapper(&Serial1);
 Stream &Serial = debugStreamWrapper;
-#elif 1
+#    elif 1
 StreamWrapper debugStreamWrapper(&Serial);
+// Stream &DebugSerial = Serial0;
 Stream &DebugSerial = debugStreamWrapper;
-#else
+#    else
 Stream &DebugSerial = serialHandler;
-#endif
+#    endif
 
 #else
 Stream &DebugSerial = NullSerial;

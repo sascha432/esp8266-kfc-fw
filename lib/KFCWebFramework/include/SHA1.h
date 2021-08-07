@@ -9,7 +9,7 @@
 #include <Arduino.h>
 #include "global.h"
 
-#if ARDUINO_ESP8266_VERSION_COMBINED >= 0x020603
+#if ARDUINO_ESP8266_MAJOR >= 3
 
 #include <bearssl/bearssl_hash.h>
 

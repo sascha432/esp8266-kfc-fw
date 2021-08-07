@@ -8,17 +8,13 @@
 #include "global.h"
 #include "esp8266_compat.h"
 
-#if ARDUINO_ESP8266_VERSION_COMBINED >= 0x020701
-
-    // settimeofday_cb() working again?
-
-#elif ARDUINO_ESP8266_VERSION_COMBINED == 0x020603
+#if ARDUINO_ESP8266_MAJOR == 2 && ARDUINO_ESP8266_MINOR == 6
 
     #include "esp_settimeofday_cb.h"
 
 #endif
 
-#if ARDUINO_ESP8266_VERSION_COMBINED >= 0x030000
+#if ARDUINO_ESP8266_MAJOR >= 3
 
     #include <LwipDhcpServer.h>
 

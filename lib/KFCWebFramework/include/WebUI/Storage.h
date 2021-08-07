@@ -241,7 +241,7 @@ namespace FormUI {
 
 #if DEBUG_KFC_FORMS_DISABLE_ASSERT == 0
             void __assert() {
-                __LDBG_assert_printf((count() > 0 && count() < kTypeMaxCount), "count=0 < %u(%u) < %u: out of range", count(), kTypeMaxCount);
+                __LDBG_assert_printf((count() > 0 && count() < kTypeMaxCount), "count=0 < %u < %u: out of range", count(), kTypeMaxCount);
                 __LDBG_assert_printf(type() >= Storage::Type::MIN && type() < Storage::Type::MAX, "invalid type %u", type());
             }
 #endif
@@ -318,7 +318,7 @@ namespace FormUI {
                 case Type::ATTRIBUTE_MIN_MAX:
                     return sizeof(Value::AttributeMinMax);
                 default:
-                    __LDBG_assert_printf(false, "type=%u not defined", type);
+                    __LDBG_assert_printf(false, "type=%u not defined", (unsigned)type);
                     break;
                 }
                 return 0;

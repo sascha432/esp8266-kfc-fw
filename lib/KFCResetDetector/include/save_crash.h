@@ -8,14 +8,16 @@
 #include <EventScheduler.h>
 #include <EEPROM.h>
 #include "SPIFlash.h"
-#include "coredecls.h"
+#if ESP8266
+#include <coredecls.h>
+#endif
 
 #ifndef DEBUG_SAVE_CRASH
-#define DEBUG_SAVE_CRASH                                    0
+#    define DEBUG_SAVE_CRASH 0
 #endif
 
 #ifndef KFC_DISABLE_CRASHCOUNTER
-#define KFC_DISABLE_CRASHCOUNTER                            0
+#    define KFC_DISABLE_CRASHCOUNTER 0
 #endif
 
 #if DEBUG_SAVE_CRASH

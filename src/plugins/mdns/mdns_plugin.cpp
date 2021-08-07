@@ -114,23 +114,23 @@ void MDNSPlugin::_wifiCallback(WiFiCallbacks::EventType event, void *payload)
     __LDBG_printf("event=%u, running=%u", event, _running);
     if (event == WiFiCallbacks::EventType::CONNECTED) {
         _end();
-#if MDNS_DELAYED_START_AFTER_WIFI_CONNECT
-        _Timer(_delayedStart).add(MDNS_DELAYED_START_AFTER_WIFI_CONNECT, false, [this](Event::CallbackTimerPtr timer) {
+        #if MDNS_DELAYED_START_AFTER_WIFI_CONNECT
+            _Timer(_delayedStart).add(MDNS_DELAYED_START_AFTER_WIFI_CONNECT, false, [this](Event::CallbackTimerPtr timer) {
+                _begin();
+            });
+        #else
             _begin();
-        });
-#else
-        _begin();
-#endif
+        #endif
 
-#if MDNS_NETBIOS_SUPPORT
-        if (isNetBIOSEnabled()) {
-#if DEBUG_MDNS_SD
-            auto result =
-#endif
-            NBNS.begin(System::Device::getName());
-            __LDBG_printf("NetBIOS result=%u", result);
+        #if MDNS_NETBIOS_SUPPORT
+            if (isNetBIOSEnabled()) {
+            #if DEBUG_MDNS_SD
+                    auto result =
+            #endif
+                NBNS.begin(System::Device::getName());
+                __LDBG_printf("NetBIOS result=%u", result);
         }
-#endif
+        #endif
 
         // start all queries in the queue
         __LDBG_printf("zerconf queries=%u", _queries.size());
@@ -142,11 +142,11 @@ void MDNSPlugin::_wifiCallback(WiFiCallbacks::EventType event, void *payload)
 
     }
     else if (event == WiFiCallbacks::EventType::DISCONNECTED) {
-#if MDNS_NETBIOS_SUPPORT
-        if (isNetBIOSEnabled()) {
-            NBNS.end();
-        }
-#endif
+        #if MDNS_NETBIOS_SUPPORT
+            if (isNetBIOSEnabled()) {
+                NBNS.end();
+            }
+        #endif
         _end();
     }
 }

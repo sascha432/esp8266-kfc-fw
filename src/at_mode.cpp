@@ -35,6 +35,8 @@
 #include <NeoPixelEx.h>
 #include <IOExpander.h>
 #include "../src/plugins/plugins.h"
+
+#if ESP8266
 #include <umm_malloc/umm_malloc.h>
 extern "C" {
 #include <umm_malloc/umm_local.h>
@@ -42,10 +44,8 @@ extern "C" {
 #include <umm_malloc/umm_heap_select.h>
 #endif
 }
-
-#if ESP8266
-#include "core_esp8266_waveform.h"
-#include "core_version.h"
+#include <core_esp8266_waveform.h>
+#include <core_version.h>
 #endif
 
 #if DEBUG_AT_MODE
@@ -364,7 +364,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(GPIO, "GPIO", "[interval in seconds|0=disa
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PWM, "PWM", "<pin>,<input|input_pullup|waveform|level=0-" __STRINGIFY(PWMRANGE) ">[,<frequency=100-40000Hz>[,<duration/ms>]]", "PWM output on PIN, min./max. level set it to LOW/HIGH"
 );
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(ADC, "ADC", "<off|display interval=1s>[,<period=1s>,<multiplier=1.0>,<unit=mV>,<read delay=5000us>]", "Read the ADC and display values");
-#if defined(ESP8266) && (ARDUINO_ESP8266_VERSION_COMBINED < 0x030000)
+#if defined(ESP8266) && (ARDUINO_ESP8266_MAJOR < 3)
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(CPU, "CPU", "<80|160>", "Set CPU speed", "Display CPU speed");
 #endif
 
@@ -442,7 +442,7 @@ void at_mode_help_commands()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(GPIO), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(PWM), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(ADC), name);
-#if defined(ESP8266) && (ARDUINO_ESP8266_VERSION_COMBINED < 0x030000)
+#if defined(ESP8266) && (ARDUINO_ESP8266_MAJOR < 3)
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(CPU), name);
 #endif
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(PSTORE), name);
@@ -1298,7 +1298,11 @@ void at_mode_serial_handle_event(String &commandString)
         return;
     }
 
+#if ESP8266
+    auto command = commandString.begin();
+#else
     auto command = const_cast<char *>(commandString.begin());
+#endif
     // remove leading '+'
     if (*command == '+') {
         command++;
@@ -1613,19 +1617,22 @@ void at_mode_serial_handle_event(String &commandString)
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(METRICS))) {
 #if 1
 
-
         args.print(F("Device name: %s"), System::Device::getName());
-#if ARDUINO_ESP8266_DEV
-    #ifndef ARDUINO_ESP8266_RELEASE_EX
-        #define ARDUINO_ESP8266_RELEASE_EX _STRINGIFY(ARDUINO_ESP8266_VERSION) "-dev " _STRINGIFY(ARDUINO_ESP8266_GIT_DESC) " " _STRINGIFY(ARDUINO_ESP8266_GIT_VER)
-    #endif
-#else
-    #ifndef ARDUINO_ESP8266_RELEASE_EX
-        #define ARDUINO_ESP8266_RELEASE_EX ARDUINO_ESP8266_RELEASE
-    #endif
-#endif
-        args.print(F("Framework Arduino ESP8266 " ARDUINO_ESP8266_RELEASE_EX));
-#if defined(HAVE_GDBSTUB) && HAVE_GDBSTUB
+        #if ESP32
+            args.print(F("Framework Arduino ESP32 " ARDUINO_ESP32_RELEASE));
+        #else
+            #if ARDUINO_ESP8266_DEV
+                #ifndef ARDUINO_ESP8266_RELEASE_EX
+                    #define ARDUINO_ESP8266_RELEASE_EX _STRINGIFY(ARDUINO_ESP8266_VERSION) "-dev " _STRINGIFY(ARDUINO_ESP8266_GIT_DESC) " " _STRINGIFY(ARDUINO_ESP8266_GIT_VER)
+                #endif
+            #else
+                #ifndef ARDUINO_ESP8266_RELEASE_EX
+                    #define ARDUINO_ESP8266_RELEASE_EX ARDUINO_ESP8266_RELEASE
+                #endif
+            #endif
+            args.print(F("Framework Arduino ESP8266 " ARDUINO_ESP8266_RELEASE_EX));
+        #endif
+        #if defined(HAVE_GDBSTUB) && HAVE_GDBSTUB
         {
             String options;
             #if GDBSTUB_USE_OWN_STACK
@@ -1646,23 +1653,23 @@ void at_mode_serial_handle_event(String &commandString)
 
             args.print(F("GDBStub: %s"), options.trim().c_str());
         }
-#endif
+        #endif
         args.print(F("Uptime: %u seconds / %s"), getSystemUptime(), formatTime(getSystemUptime(), true).c_str());
         args.print(F("Free heap/fragmentation: %u / %u"), ESP.getFreeHeap(), ESP.getHeapFragmentation());
-#if ARDUINO_ESP8266_MAJOR == 3
-    #ifdef UMM_HEAP_IRAM
-        {
-            HeapSelectIram ephemeral;
-            args.print(F("Free IRAM: %u"), ESP.getFreeHeap());
-        }
-    #endif
-    #if (UMM_NUM_HEAPS != 1)
-        {
-            HeapSelectDram ephemeral;
-            args.print(F("Free DRAM: %u"), ESP.getFreeHeap());
-        }
-    #endif
-#endif
+        #if ARDUINO_ESP8266_MAJOR >= 3
+            #ifdef UMM_HEAP_IRAM
+                {
+                    HeapSelectIram ephemeral;
+                    args.print(F("Free IRAM: %u"), ESP.getFreeHeap());
+                }
+            #endif
+            #if (UMM_NUM_HEAPS != 1)
+                {
+                    HeapSelectDram ephemeral;
+                    args.print(F("Free DRAM: %u"), ESP.getFreeHeap());
+                }
+            #endif
+        #endif
         PGM_P flashModeStr;
         switch(ESP.getFlashChipMode()) {
             case FM_DIO:
@@ -1700,12 +1707,12 @@ void at_mode_serial_handle_event(String &commandString)
         args.print(F("WiFiCallbacks: size=%u count=%u"), sizeof(WiFiCallbacks::Entry), WiFiCallbacks::getVector().size());
         args.print(F("LoopFunctions: size=%u count=%u"), sizeof(LoopFunctions::Entry), LoopFunctions::getVector().size());
 
-#if PIN_MONITOR
-        PrintString tmp;
-        PinMonitor::pinMonitor.printStatus(tmp);
-        tmp.replace(F(HTML_S(br)), "\n");
-        args.print(tmp);
-#endif
+        #if PIN_MONITOR
+            PrintString tmp;
+            PinMonitor::pinMonitor.printStatus(tmp);
+            tmp.replace(F(HTML_S(br)), "\n");
+            args.print(tmp);
+        #endif
 
         args.print(F("Firmware MD5: %s"), System::Firmware::getFirmwareMD5());
 #endif
@@ -2373,16 +2380,16 @@ void at_mode_serial_handle_event(String &commandString)
             }
         }
     }
-#if defined(ESP8266) && (ARDUINO_ESP8266_VERSION_COMBINED < 0x030000)
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CPU))) {
-        if (args.size() == 1) {
-            auto speed = (uint8_t)args.toInt(0, ESP.getCpuFreqMHz());
-            auto result = system_update_cpu_freq(speed);
-            args.print(F("Set %d MHz = %d"), speed, result);
+    #if defined(ESP8266) && (ARDUINO_ESP8266_MAJOR < 3)
+        else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CPU))) {
+            if (args.size() == 1) {
+                auto speed = (uint8_t)args.toInt(0, ESP.getCpuFreqMHz());
+                auto result = system_update_cpu_freq(speed);
+                args.print(F("Set %d MHz = %d"), speed, result);
+            }
+            args.print(F("%d MHz"), ESP.getCpuFreqMHz());
         }
-        args.print(F("%d MHz"), ESP.getCpuFreqMHz());
-    }
-#endif
+    #endif
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMP))) {
 
         auto version = System::Device::getConfig().config_version;

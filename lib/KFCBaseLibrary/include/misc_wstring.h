@@ -126,7 +126,7 @@ inline char *strcasestr_P(const char *str, PGM_P find, size_t findLen)
     return strcasestr_P(const_cast<char *>(str), find, findLen);
 }
 
-// using temporary and memrchr
+// using temporary buffer and memrchr
 inline void *memrchr_P(PGM_VOID_P ptr, int ch, size_t n)
 {
     if (!ptr) {
@@ -150,7 +150,7 @@ inline void *memrchr_P(PGM_VOID_P ptr, int ch, size_t n)
 }
 
 
-// using temporary and strncmp_P
+// using temporary buffer and strncmp_P
 inline int strncmp_PP(PGM_P str1, PGM_P str2, size_t size)
 {
     if (str1 == str2) {
@@ -170,7 +170,7 @@ inline int strncmp_PP(PGM_P str1, PGM_P str2, size_t size)
     }
 }
 
-// using temporary and strncasecmp_P
+// using temporary buffer and strncasecmp_P
 inline int strncasecmp_PP(PGM_P str1, PGM_P str2, size_t size)
 {
     if (str1 == str2) {
@@ -190,12 +190,25 @@ inline int strncasecmp_PP(PGM_P str1, PGM_P str2, size_t size)
     }
 }
 
+#if ESP32
+
+#define strcmp_PP(str1, str2) strncmp((str1), (str2), SIZE_IRRELEVANT)
+#define strcasecmp_PP(str1, str2) strncasecmp((str1), (str2), SIZE_IRRELEVANT)
+
+// comparing PROGMEM directly
+#define strcmp_P_P(str1, str2) strcmp((str1), (str2))
+#define strcasecmp_P_P(str1, str2) strcasecmp((str1), (str2))
+
+#else
+
 #define strcmp_PP(str1, str2) strncmp_PP((str1), (str2), SIZE_IRRELEVANT)
 #define strcasecmp_PP(str1, str2) strncasecmp_PP((str1), (str2), SIZE_IRRELEVANT)
 
 // comparing PROGMEM directly
 #define strcmp_P_P(str1, str2) strncmp_P_P((str1), (str2), SIZE_IRRELEVANT)
 #define strcasecmp_P_P(str1, str2) strncasecmp_P_P((str1), (str2), SIZE_IRRELEVANT)
+
+#endif
 
 inline char *stristr_P(char *str1, PGM_P str2, size_t len2 = ~0)
 {

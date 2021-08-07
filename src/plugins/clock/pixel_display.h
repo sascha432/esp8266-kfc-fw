@@ -245,7 +245,7 @@ namespace Clock {
         template<typename _Ta = CoordinateHelperType>
         inline __attribute__((__always_inline__))
         typename _Ta::type getRow(typename _Ta::type row, typename _Ta::type col) const {
-            if constexpr (_Ta::kRotate) {
+            if __CONSTEXPR17 (_Ta::kRotate) {
                 return col;
             }
             else {
@@ -256,7 +256,7 @@ namespace Clock {
         template<typename _Ta = CoordinateHelperType>
         inline __attribute__((__always_inline__))
         typename _Ta::type getCol(typename _Ta::type row, typename _Ta::type col) const {
-            if constexpr (_Ta::kRotate) {
+            if __CONSTEXPR17 (_Ta::kRotate) {
                 return row;
             }
             else {
@@ -269,8 +269,8 @@ namespace Clock {
         template<typename _Ta = CoordinateHelperType>
         inline __attribute__((__always_inline__))
         typename _Ta::type _row(typename _Ta::type row, typename _Ta::type col) const {
-            if constexpr (_Ta::kInterleaved) {
-                if constexpr (_Ta::kReverseRows) {
+            if __CONSTEXPR17 (_Ta::kInterleaved) {
+                if __CONSTEXPR17 (_Ta::kReverseRows) {
                     if ((col & 1) == _Ta::kInterleaved) {
                         return (kRows - 1) - row;
                     }
@@ -284,7 +284,7 @@ namespace Clock {
                 }
             }
             else {
-                if constexpr (_Ta::kReverseRows) {
+                if __CONSTEXPR17 (_Ta::kReverseRows) {
                     return (kRows - 1) - row;
                 }
                 else {
@@ -298,7 +298,7 @@ namespace Clock {
         template<typename _Ta = CoordinateHelperType>
         inline __attribute__((__always_inline__))
         typename _Ta::type _col(typename _Ta::type row, typename _Ta::type col) const {
-            if constexpr (_Ta::kReverseColumns) {
+            if __CONSTEXPR17 (_Ta::kReverseColumns) {
                 return (kCols - 1) - col;
             }
             else {
@@ -322,7 +322,7 @@ namespace Clock {
 
         inline __attribute__((__always_inline__))
         PixelCoordinatesType getPoint(PixelAddressType address) const {
-            if constexpr (kRows == 1) {
+            if __CONSTEXPR17 (kRows == 1) {
                 return PixelCoordinatesType(_row(getRow(0, address), getCol(0, address)), _col(getRow(0, address), getCol(0, address)));
             }
             else {
@@ -614,7 +614,7 @@ namespace Clock {
 
         template<typename _Ta, typename _Tb>
         static void copy(_Ta src, _Tb dst, PixelAddressType numPixel) {
-            if constexpr (_Ta::kMappingTypeId == _Tb::kMappingTypeId) {
+            if __CONSTEXPR17 (_Ta::kMappingTypeId == _Tb::kMappingTypeId) {
                 std::copy(src.begin(), src.begin() + numPixel, dst.begin());
             }
             else {

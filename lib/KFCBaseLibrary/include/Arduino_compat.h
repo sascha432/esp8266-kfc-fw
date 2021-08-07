@@ -61,13 +61,22 @@
 
 #if _MSC_VER
 
-#define PROGMEM_STRING_DECL(name)                       extern const char *PROGMEM_STRING_ID(name) PROGMEM;
-#define PROGMEM_STRING_DEF(name, value)                 const char *PROGMEM_STRING_ID(name) PROGMEM = (const char *)__register_flash_memory(value, constexpr_strlen(value) + 1, PSTR_ALIGN);
+#    define PROGMEM_STRING_DECL(name)       extern const char *PROGMEM_STRING_ID(name) PROGMEM;
+#    define PROGMEM_STRING_DEF(name, value) const char *PROGMEM_STRING_ID(name) PROGMEM = (const char *)__register_flash_memory(value, constexpr_strlen(value) + 1, PSTR_ALIGN);
 
 #else
 
-#define PROGMEM_STRING_DECL(name)                       extern const char PROGMEM_STRING_ID(name)[] __attribute__((__aligned__(PSTR_ALIGN))) PROGMEM;
-#define PROGMEM_STRING_DEF(name, value)                 const char PROGMEM_STRING_ID(name)[] __attribute__((__aligned__(PSTR_ALIGN))) PROGMEM = { value };
+#    if ESP32
+
+#        define PROGMEM_STRING_DECL(name)       extern const char PROGMEM_STRING_ID(name)[] PROGMEM;
+#        define PROGMEM_STRING_DEF(name, value) const char PROGMEM_STRING_ID(name)[] PROGMEM = { value };
+
+#    else
+
+#        define PROGMEM_STRING_DECL(name)       extern const char PROGMEM_STRING_ID(name)[] __attribute__((__aligned__(PSTR_ALIGN))) PROGMEM;
+#        define PROGMEM_STRING_DEF(name, value) const char PROGMEM_STRING_ID(name)[] __attribute__((__aligned__(PSTR_ALIGN))) PROGMEM = { value };
+
+#    endif
 
 #endif
 

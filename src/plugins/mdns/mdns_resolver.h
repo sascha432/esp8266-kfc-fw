@@ -7,8 +7,10 @@
 #if MDNS_PLUGIN
 
 #include <Arduino_compat.h>
-#include <ESP8266mDNS.h>
 #include <memory>
+#if ESP8266
+#include <ESP8266mDNS.h>
+#endif
 
 namespace MDNSResolver {
 
@@ -25,68 +27,74 @@ namespace MDNSResolver {
     using QueryPtr = std::shared_ptr<Query>;
     using Queries = std::list<QueryPtr>;
 
-    class MDNSServiceInfo : public MDNSResponder::MDNSServiceInfo {
-    public:
-        using ::MDNSResponder::MDNSServiceInfo::MDNSServiceInfo;
+    #if ESP8266
 
-        IPAddress findIP4Address(const IPAddress &myAddress);
-        char *findTxtValue(const String &key);
-    };
+        class MDNSServiceInfo : public MDNSResponder::MDNSServiceInfo {
+        public:
+            using ::MDNSResponder::MDNSServiceInfo::MDNSServiceInfo;
 
-    class Query {
-    public:
-        enum class StateType {
-            NONE = 0,
-            STARTED,
-            FINISHED,
+            IPAddress findIP4Address(const IPAddress &myAddress);
+            char *findTxtValue(const String &key);
         };
-    public:
-        Query(const String &name, const String &service, const String &proto, const String &addressValue, const String &portValue, const String &fallback, uint16_t port, const String &prefix, const String &suffix, ResolvedCallback callback, uint16_t timeout = 5000);
-        ~Query();
 
-        void begin();
-        void end();
+        class Query {
+        public:
+            enum class StateType {
+                NONE = 0,
+                STARTED,
+                FINISHED,
+            };
+        public:
+            Query(const String &name, const String &service, const String &proto, const String &addressValue, const String &portValue, const String &fallback, uint16_t port, const String &prefix, const String &suffix, ResolvedCallback callback, uint16_t timeout = 5000);
+            ~Query();
 
-        StateType getState() const;
-        void checkTimeout();
+            void begin();
+            void end();
 
-        void serviceCallback(bool map, MDNSResolver::MDNSServiceInfo &mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent);
+            StateType getState() const;
+            void checkTimeout();
 
-        void createZeroConf(Print &output) const;
-        String createZeroConfString() const;
+            void serviceCallback(bool map, MDNSResolver::MDNSServiceInfo &mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent);
 
-        static void dnsFoundCallback(const char *name, const ip_addr *ipaddr, void *arg);
+            void createZeroConf(Print &output) const;
+            String createZeroConfString() const;
 
-    private:
-        static constexpr uint8_t DATA_COLLECTED_NONE = 0x00;
-        static constexpr uint8_t DATA_COLLECTED_PORT = 0x01;
-        static constexpr uint8_t DATA_COLLECTED_ADDRESS = 0x02;
-        static constexpr uint8_t DATA_COLLECTED_HOSTNAME = 0x04;
+            static void dnsFoundCallback(const char *name, const ip_addr *ipaddr, void *arg);
 
-        static constexpr uint32_t END_TIME_NOT_STARTED = 0;
-        static constexpr uint32_t END_TIME_FINISHED = ~0;
+        private:
+            static constexpr uint8_t DATA_COLLECTED_NONE = 0x00;
+            static constexpr uint8_t DATA_COLLECTED_PORT = 0x01;
+            static constexpr uint8_t DATA_COLLECTED_ADDRESS = 0x02;
+            static constexpr uint8_t DATA_COLLECTED_HOSTNAME = 0x04;
 
-        String _name;
-        uint32_t _endTime;
-        uint8_t _dataCollected;
-        String _service;
-        String _proto;
-        String _addressValue;
-        String _portValue;
-        String _fallback;
-        uint16_t _fallbackPort;
-        String _hostname;
-        IPAddress _address;
-        uint16_t _port;
-        String _prefix;
-        String _suffix;
-        ResolvedCallback _callback;
-        uint16_t _timeout;
-        MDNSResponder::hMDNSServiceQuery _serviceQuery;
-        uint8_t _resolved: 1;
-        uint8_t _isAddress: 1;
-        uint8_t _isPort: 1;
-    };
+            static constexpr uint32_t END_TIME_NOT_STARTED = 0;
+            static constexpr uint32_t END_TIME_FINISHED = ~0;
+
+            String _name;
+            uint32_t _endTime;
+            String _service;
+            String _proto;
+            String _addressValue;
+            String _portValue;
+            String _fallback;
+            String _hostname;
+            IPAddress _address;
+            String _prefix;
+            String _suffix;
+            ResolvedCallback _callback;
+            MDNSResponder::hMDNSServiceQuery _serviceQuery;
+            uint16_t _port;
+            uint16_t _fallbackPort;
+            uint16_t _timeout;
+            uint8_t _dataCollected;
+            bool _resolved;
+            bool _isAddress;
+            bool _isPort;
+        };
+
+    #elif EPS32
+
+    #endif
 
 }
 

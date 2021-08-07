@@ -38,6 +38,8 @@ enum class SyslogProtocolType : uint8_t {
     MAX
 };
 
+#undef DISABLED
+
 namespace WebServerTypes {
 
     enum class ModeType : uint8_t {

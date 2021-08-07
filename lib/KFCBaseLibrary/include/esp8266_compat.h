@@ -26,14 +26,14 @@ extern "C" {
 
     extern "C" char *_tzname[2];
 
-#if ARDUINO_ESP8266_VERSION_COMBINED == 0x020603
+#if ARDUINO_ESP8266_MAJOR == 2 && ARDUINO_ESP8266_MINOR == 6
 
     void settimeofday_cb (void (*cb)(void));
 
 #endif
 
 
-#if ARDUINO_ESP8266_VERSION_COMBINED >= 0x030000
+#if ARDUINO_ESP8266_MAJOR >= 3
 
     #include <sys/_tz_structs.h>
 

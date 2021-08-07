@@ -109,7 +109,7 @@ namespace SevenSegment {
     };
 
     // inline static PixelAddressType readPixelAddress(PixelAddressPtr ptr) {
-    //     if constexpr (sizeof(PixelAddressType) == 2) {
+    //     if __CONSTEXPR17 (sizeof(PixelAddressType) == 2) {
     //         return pgm_read_word(ptr);
     //     }
     //     else {

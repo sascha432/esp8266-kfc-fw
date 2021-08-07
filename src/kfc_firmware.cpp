@@ -33,7 +33,7 @@
 
 // connect to wifi and serial2tcp before booting to see all debug output
 #ifndef DEBUG_PRE_INIT_SERIAL2TCP
-#define DEBUG_PRE_INIT_SERIAL2TCP       0
+#    define DEBUG_PRE_INIT_SERIAL2TCP 0
 #endif
 
 #if DEBUG_PRE_INIT_SERIAL2TCP
@@ -89,8 +89,6 @@ bool isSystemKeyComboPressed()
     return (count != 0);
 }
 #endif
-
-#include <BitsToStr.h>
 
 void setup()
 {
@@ -204,60 +202,59 @@ void setup()
         KFC_SAFE_MODE_SERIAL_PORT.println(F("Booting KFC firmware..."));
         KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("SAFE MODE %d, reset counter %d, wake up %d\n"), resetDetector.getSafeMode(), resetDetector.getResetCounter(), resetDetector.hasWakeUpDetected());
 
-#if KFC_SAFEMODE_GPIO_COMBO
-    // boot menu
-    //
-    // >1000ms start in safe mode (SOS signal)
-    // >12000ms reset factory settings and start in safe mode (flickering LED)
-    // >20000ms abort boot menu
+    #if KFC_SAFEMODE_GPIO_COMBO
+        // boot menu
+        //
+        // >1000ms start in safe mode (SOS signal)
+        // >12000ms reset factory settings and start in safe mode (flickering LED)
+        // >20000ms abort boot menu
 
-    if (isSystemKeyComboPressed()) {
-        auto start = millis();
-        uint8_t mode = 0;
-        BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::MEDIUM);
-        while(isSystemKeyComboPressed()) {
-            auto duration = millis() - start;
-            if (duration > 20000) {
-                BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
-                mode = 0;
-                break;
+        if (isSystemKeyComboPressed()) {
+            auto start = millis();
+            uint8_t mode = 0;
+            BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::MEDIUM);
+            while(isSystemKeyComboPressed()) {
+                auto duration = millis() - start;
+                if (duration > 20000) {
+                    BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
+                    mode = 0;
+                    break;
+                }
+                if (mode == 1 && duration > 12000) {
+                    BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
+                    mode++;
+                }
+                else if (mode == 0 && duration > 1000) {
+                    BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SOS);
+                    mode++;
+                }
             }
-            if (mode == 1 && duration > 12000) {
-                BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
-                mode++;
+            if (mode == 2) {
+                KFC_SAFE_MODE_SERIAL_PORT.println(F("Restoring factory defaults..."));
+                config.restoreFactorySettings();
+                config.write();
             }
-            else if (mode == 0 && duration > 1000) {
-                BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SOS);
-                mode++;
+            if (mode >= 1) {
+                safe_mode = true;
+                config.setSafeMode(safe_mode);
             }
         }
-        if (mode == 2) {
-            KFC_SAFE_MODE_SERIAL_PORT.println(F("Restoring factory defaults..."));
-            config.restoreFactorySettings();
-            config.write();
+        else {
         }
-        if (mode >= 1) {
-            safe_mode = true;
-            config.setSafeMode(safe_mode);
-        }
-    }
-    else {
-#endif
-
-#if KFC_RESTORE_FACTORY_SETTINGS_RESET_COUNT
+    #elif KFC_RESTORE_FACTORY_SETTINGS_RESET_COUNT
         if (resetDetector.hasResetDetected()) {
             if (resetDetector.getResetCounter() >= KFC_RESTORE_FACTORY_SETTINGS_RESET_COUNT) {
                 KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("%ux reset detected. Restoring factory defaults in a 5 seconds...\n"), KFC_RESTORE_FACTORY_SETTINGS_RESET_COUNT);
-#if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID
-                for(uint8_t i = 0; i < (RESET_DETECTOR_TIMEOUT + 500) / (100 + 250); i++) {
-                    BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SOLID);
-                    delay(100);
-                    BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
-                    delay(250);
-                }
-#else
-                delay(5000);
-#endif
+                #if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID
+                    for(uint8_t i = 0; i < (RESET_DETECTOR_TIMEOUT + 500) / (100 + 250); i++) {
+                        BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SOLID);
+                        delay(100);
+                        BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
+                        delay(250);
+                    }
+                #else
+                    delay(5000);
+                #endif
                 config.restoreFactorySettings();
                 config.write();
                 safe_mode = true;
@@ -265,23 +262,19 @@ void setup()
                 resetDetector.clearCounter();
             }
         }
-#endif
+    #endif
 
-#if KFC_SAFEMODE_GPIO_COMBO
+    if (resetDetector.getSafeMode()) {
+
+        KFC_SAFE_MODE_SERIAL_PORT.println(F("Starting in safe mode..."));
+        delay(KFC_SAFEMODE_BOOT_DELAY);
+        // normal boot after safe mode
+        resetDetector.setSafeModeAndClearCounter(false);
+        // activate safe mode
+        safe_mode = true;
     }
-#endif
 
-        if (resetDetector.getSafeMode()) {
-
-            KFC_SAFE_MODE_SERIAL_PORT.println(F("Starting in safe mode..."));
-            delay(KFC_SAFEMODE_BOOT_DELAY);
-            // normal boot after safe mode
-            resetDetector.setSafeModeAndClearCounter(false);
-            // activate safe mode
-            safe_mode = true;
-        }
-
-#if KFC_SHOW_BOOT_MENU_RESET_COUNT
+    #if KFC_SHOW_BOOT_MENU_RESET_COUNT
         else {
 
             if (resetDetector.getResetCounter() > KFC_SHOW_BOOT_MENU_RESET_COUNT) {
@@ -362,28 +355,28 @@ void setup()
                     #endif
                 }
                 delay(100);
-#if defined(ESP8266)
-                ESP.wdtFeed();
-#endif
+                #if defined(ESP8266)
+                    ESP.wdtFeed();
+                #endif
             }
         }
-#endif
+    #endif
 
         // __DBG_printf("FS begin");
         // start FS, we need it for getCrashCounter()
         // KFCFS.setConfig(LittleFSConfig(true));
         KFCFS.begin();
 
-#if KFC_AUTO_SAFE_MODE_CRASH_COUNT != 0 && KFC_DISABLE_CRASHCOUNTER == 0
-        if (resetDetector.hasCrashDetected() || increaseCrashCounter) {
-            uint8_t counter = SaveCrash::getCrashCounter();
-            if (counter >= KFC_AUTO_SAFE_MODE_CRASH_COUNT) {  // boot in safe mode if there were 3 (KFC_AUTO_SAFE_MODE_CRASH_COUNT) crashes within the 5 minutes (KFC_CRASH_RECOVERY_TIME)
-                resetDetector.setSafeModeAndClearCounter(false);
-                safe_mode = true;
-                RTCMemoryManager::clear();
+        #if KFC_AUTO_SAFE_MODE_CRASH_COUNT != 0 && KFC_DISABLE_CRASHCOUNTER == 0
+            if (resetDetector.hasCrashDetected() || increaseCrashCounter) {
+                uint8_t counter = SaveCrash::getCrashCounter();
+                if (counter >= KFC_AUTO_SAFE_MODE_CRASH_COUNT) {  // boot in safe mode if there were 3 (KFC_AUTO_SAFE_MODE_CRASH_COUNT) crashes within the 5 minutes (KFC_CRASH_RECOVERY_TIME)
+                    resetDetector.setSafeModeAndClearCounter(false);
+                    safe_mode = true;
+                    RTCMemoryManager::clear();
+                }
             }
-        }
-#endif
+        #endif
 
         config.setSafeMode(safe_mode);
 
@@ -445,13 +438,11 @@ void setup()
 
         auto &componentRegister = PluginComponents::RegisterEx::getInstance();
 
-        componentRegister.setup(
-#if ENABLE_DEEP_SLEEP
-            wakeup ?
-                PluginComponent::SetupModeType::AUTO_WAKE_UP :
-#endif
-                PluginComponent::SetupModeType::DEFAULT
-        );
+        #if ENABLE_DEEP_SLEEP
+            componentRegister.setup(wakeup ? PluginComponent::SetupModeType::AUTO_WAKE_UP : PluginComponent::SetupModeType::DEFAULT);
+        #else
+            componentRegister.setup(PluginComponent::SetupModeType::DEFAULT);
+        #endif
 
         if (wakeup) {
             _Scheduler.add(250, false, [](Event::CallbackTimerPtr) {
@@ -462,28 +453,22 @@ void setup()
             delayedSetup(false);
         }
 
-#if DEBUG_DEEP_SLEEP
-        __DBG_printf("wakeup=%u mode=%u", wakeup, deepSleepParams.getWakeupMode());
-        if (deepSleepParams.getWakeupMode() == DeepSleep::WakeupMode::AUTO) {
-            Logger_notice(F("Wakeup from deep sleep start-time=" TIME_T_FMT " sleep-time=%.3f rtc-offset=%.6f"), time(nullptr), deepSleepParams.getTotalTime(), DeepSleep::_realTimeOffset / 1000000.0);
-
-        }
-#endif
+        #if DEBUG_DEEP_SLEEP
+            __DBG_printf("wakeup=%u mode=%u", wakeup, deepSleepParams.getWakeupMode());
+            if (deepSleepParams.getWakeupMode() == DeepSleep::WakeupMode::AUTO) {
+                Logger_notice(F("Wakeup from deep sleep start-time=" TIME_T_FMT " sleep-time=%.3f rtc-offset=%.6f"), time(nullptr), deepSleepParams.getTotalTime(), DeepSleep::_realTimeOffset / 1000000.0);
+            }
+        #endif
     }
 
-#if DEBUG_ASSETS
-    __DBG_printf("DEBUG_ASSETS=1: " DEBUG_ASSETS_URL1 " " DEBUG_ASSETS_URL2);
-#endif
+    #if DEBUG_ASSETS
+        __DBG_printf("DEBUG_ASSETS=1: " DEBUG_ASSETS_URL1 " " DEBUG_ASSETS_URL2);
+    #endif
 
 }
 
-#undef HIGH
-
 void loop()
 {
-static bool toggle;
-toggle = !toggle;
-
     auto &loopFunctions = LoopFunctions::getVector();
     bool cleanUp = false;
     for(uint8_t i = 0; i < loopFunctions.size(); i++) { // do not use iterators since the vector can be modifed inside the callback
@@ -501,9 +486,7 @@ toggle = !toggle;
     }
     __Scheduler.run(); // check all events
 
-#if ESP32
-    run_scheduled_functions();
-#endif
+    #if ESP32
+        run_scheduled_functions();
+    #endif
 }
-
-

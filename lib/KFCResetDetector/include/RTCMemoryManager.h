@@ -30,24 +30,24 @@
 
 class RTCMemoryManager {
 public:
-#if HAVE_KFC_FIRMWARE_VERSION
-    using RTCMemoryId = PluginComponent::RTCMemoryId;
-#else
-    using RTCMemoryId = uint8_t;
-#endif
+    #if HAVE_KFC_FIRMWARE_VERSION
+        using RTCMemoryId = PluginComponent::RTCMemoryId;
+    #else
+        using RTCMemoryId = uint8_t;
+    #endif
 
-#if defined(ESP8266)
-    static constexpr uint16_t kMemorySize = 64 * 4; // fixed
-    // static constexpr uint16_t kMemoryLimit = kMemorySize - sizeof(Header_t);
-    static constexpr uint8_t kBlockSize = 4;
-    static constexpr uint8_t kBaseAddress = 64;
-    static constexpr uint8_t kLastAddress = kBaseAddress + (kMemorySize / kBlockSize) - 1;
-
-#elif defined(ESP32)
-    static const uint16_t kMemorySize = 256; // can be adjusted
-    static const uint8_t kBlockSize = 1;
-    static constexpr uint8_t kBaseOffset = 0;
-#endif
+    #if ESP8266
+        static constexpr uint16_t kMemorySize = 64 * 4; // fixed
+        // static constexpr uint16_t kMemoryLimit = kMemorySize - sizeof(Header_t);
+        static constexpr uint8_t kBlockSize = 4;
+        static constexpr uint8_t kBaseAddress = 64;
+        static constexpr uint8_t kLastAddress = kBaseAddress + (kMemorySize / kBlockSize) - 1;
+    #elif ESP32
+        static constexpr uint16_t kMemorySize = 64 * 4; // can be adjusted
+        static constexpr uint8_t kBlockSize = 1;
+        static constexpr uint8_t kBaseAddress = 0;
+        static constexpr uint8_t kLastAddress = kBaseAddress + (kMemorySize / kBlockSize) - 1;
+    #endif
 
     struct Header_t {
         uint16_t length;
@@ -100,25 +100,25 @@ public:
     };
 
     struct RtcTime {
-#if RTC_SUPPORT == 0
-        uint32_t time;
-#endif
+        #if RTC_SUPPORT == 0
+            uint32_t time;
+        #endif
         SyncStatus status;
 
         RtcTime(time_t _time = 0, SyncStatus _status = SyncStatus::UNKNOWN) :
-#if RTC_SUPPORT == 0
-            time(_time),
-#endif
+            #if RTC_SUPPORT == 0
+                time(_time),
+            #endif
             status(_status)
         {
         }
 
         uint32_t getTime() const {
-#if RTC_SUPPORT
-            return 0;
-#else
-            return time;
-#endif
+            #if RTC_SUPPORT
+                return 0;
+            #else
+                return time;
+            #endif
         }
 
         static const __FlashStringHelper *getStatus(SyncStatus status) {
@@ -199,19 +199,19 @@ private:
     static void _writeTime(const RtcTime &time);
     static void _clearTime();
 
-#if RTC_SUPPORT == 0
-public:
-    class RtcTimer : public OSTimer {
+    #if RTC_SUPPORT == 0
     public:
-        RtcTimer() : OSTimer(OSTIMER_NAME("RtcTimer")) {}
+        class RtcTimer : public OSTimer {
+        public:
+            RtcTimer() : OSTimer(OSTIMER_NAME("RtcTimer")) {}
 
-        virtual void run() {
-            RTCMemoryManager::storeTime();
-        }
-    };
+            virtual void run() {
+                RTCMemoryManager::storeTime();
+            }
+        };
 
-    static RtcTimer _rtcTimer;
-#endif
+        static RtcTimer _rtcTimer;
+    #endif
 };
 
 inline RTCMemoryManager::SyncStatus RTCMemoryManager::getSyncStatus()
@@ -228,12 +228,12 @@ inline void RTCMemoryManager::setTime(time_t time, SyncStatus status)
 
 #if RTC_SUPPORT == 0
 
-inline void RTCMemoryManager::storeTime()
-{
-    auto rtc = _readTime();
-    rtc.time = time(nullptr);
-    _writeTime(rtc);
-}
+    inline void RTCMemoryManager::storeTime()
+    {
+        auto rtc = _readTime();
+        rtc.time = time(nullptr);
+        _writeTime(rtc);
+    }
 
 #endif
 

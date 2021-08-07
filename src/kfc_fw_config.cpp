@@ -883,52 +883,56 @@ void KFCFWConfiguration::write()
     }
 }
 
-const __FlashStringHelper *KFCFWConfiguration::getSleepTypeStr(sleep_type_t type)
-{
-    switch(type) {
-        case sleep_type_t::NONE_SLEEP_T:
-            return F("None");
-        case sleep_type_t::LIGHT_SLEEP_T:
-            return F("Light");
-        case sleep_type_t::MODEM_SLEEP_T:
-            return F("Modem");
-        default:
-            break;
-    }
-    return F("Unknown");
-}
+#if ESP8266
 
-const __FlashStringHelper *KFCFWConfiguration::getWiFiOpModeStr(uint8_t mode)
-{
-    switch(mode) {
-        case WiFiMode_t::WIFI_STA:
-            return F("Station mode");
-        case WiFiMode_t::WIFI_AP:
-            return F("AP mode");
-        case WiFiMode_t::WIFI_AP_STA:
-            return F("AP and station mode");
-        case WiFiMode_t::WIFI_OFF:
-            return F("Off");
-        default:
-            break;
+    const __FlashStringHelper *KFCFWConfiguration::getSleepTypeStr(sleep_type_t type)
+    {
+        switch(type) {
+            case sleep_type_t::NONE_SLEEP_T:
+                return F("None");
+            case sleep_type_t::LIGHT_SLEEP_T:
+                return F("Light");
+            case sleep_type_t::MODEM_SLEEP_T:
+                return F("Modem");
+            default:
+                break;
+        }
+        return F("Unknown");
     }
-    return F("Unknown");
-}
 
-const __FlashStringHelper *KFCFWConfiguration::getWiFiPhyModeStr(phy_mode_t mode)
-{
-    switch(mode) {
-        case phy_mode_t::PHY_MODE_11B:
-            return F("802.11b");
-        case phy_mode_t::PHY_MODE_11G:
-            return F("802.11g");
-        case phy_mode_t::PHY_MODE_11N:
-            return F("802.11n");
-        default:
-            break;
+    const __FlashStringHelper *KFCFWConfiguration::getWiFiOpModeStr(uint8_t mode)
+    {
+        switch(mode) {
+            case WiFiMode_t::WIFI_STA:
+                return F("Station mode");
+            case WiFiMode_t::WIFI_AP:
+                return F("AP mode");
+            case WiFiMode_t::WIFI_AP_STA:
+                return F("AP and station mode");
+            case WiFiMode_t::WIFI_OFF:
+                return F("Off");
+            default:
+                break;
+        }
+        return F("Unknown");
     }
-    return F("");
-}
+
+    const __FlashStringHelper *KFCFWConfiguration::getWiFiPhyModeStr(phy_mode_t mode)
+    {
+        switch(mode) {
+            case phy_mode_t::PHY_MODE_11B:
+                return F("802.11b");
+            case phy_mode_t::PHY_MODE_11G:
+                return F("802.11g");
+            case phy_mode_t::PHY_MODE_11N:
+                return F("802.11n");
+            default:
+                break;
+        }
+        return F("");
+    }
+
+#endif
 
 void KFCFWConfiguration::printDiag(Print &output, const String &prefix)
 {

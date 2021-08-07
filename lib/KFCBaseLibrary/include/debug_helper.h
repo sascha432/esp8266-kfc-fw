@@ -129,7 +129,10 @@ extern const char ___debugPrefix[] PROGMEM;
 
 #else
 
-#error missing
+#define ___IsValidHeapPointer(ptr)                          true
+#define ___IsValidPROGMEMPointer(ptr)                       true
+#define ___IsValidPointer(ptr)                              true
+#define ___isValidPointerAlignment(ptr)                     true
 
 #endif
 

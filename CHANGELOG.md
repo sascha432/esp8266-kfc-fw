@@ -2,10 +2,11 @@
 
 ## Version 0.0.5
 
-- Added CPPDEFINES ad dependency to KFCWebBuilder to detect any changes
+- Merged Arduino Core 3.1.0-dev
+- Added CPPDEFINES dependency to KFCWebBuilder to detect any changes
 - Moved KFCIOExpander to separate git repo
-- Support for MCP23017 I2C IO-Expander
-- Support for multiple IO-Expander of the same type
+- Support for MCP23017 I2C I/O-Expander
+- Support for multiple I/O-Expander of the same type
 - Inline forms for WebUI
 - Sort order for sensors
 - Support for BH1750FVI Ambient Light Sensor
@@ -30,8 +31,8 @@
 - User customizable options for factory reset over the WebUI
 - Human readable uptime for MQTT system metrics
 - Fan control and light sensor for LED matrix
-- Support for TinyPwm I2C IO-Expander [https://github.com/sascha432/TinyPwm](https://github.com/sascha432/TinyPwm)
-- Support for PCF8574 I2C IO-Expander
+- Support for TinyPwm I2C I/O-Expander [https://github.com/sascha432/TinyPwm](https://github.com/sascha432/TinyPwm)
+- Support for PCF8574 I2C I/O-Expander
 - Support for [https://github.com/NimmLor/IoT-Audio-Visualization-Center](https://github.com/NimmLor/IoT-Audio-Visualization-Center)
 - Replaced RGB Silder with Bootstrap Color Picker Sliders
 - Fixed missing information for SSDP

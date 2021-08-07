@@ -16,8 +16,12 @@ public:
         WiFi.setAutoConnect(true);
         WiFi.setAutoReconnect(true);
         WiFi.enableSTA(true);
-        WiFi.begin(SSID, password);
-        WiFi.waitForConnectResult(WiFiTimeout);
+        WiFi.begin(SSID.c_str(), password.c_str());
+        WiFi.waitForConnectResult(
+            #if ESP8266
+                WiFiTimeout
+            #endif
+        );
         static Serial2Udp serial2UDP(address, port);
         Serial.println(F("BOOTING..."));
     }

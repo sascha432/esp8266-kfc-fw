@@ -12,7 +12,9 @@
 #include <algorithm>
 #include <vector>
 #include <ESPAsyncWebServer.h>
+#if ESP8266
 #include <interrupts.h>
+#endif
 #include "../src/plugins/mqtt/mqtt_strings.h"
 #include "../src/plugins/mqtt/mqtt_json.h"
 

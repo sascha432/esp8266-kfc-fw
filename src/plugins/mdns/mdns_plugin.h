@@ -13,27 +13,29 @@
 #include "plugins.h"
 #include "plugins_menu.h"
 #include "mdns_resolver.h"
-#if defined(ESP8266)
+#if ESP8266
 #include <ESP8266mDNS.h>
 #endif
-#if defined(ESP32)
+#if ESP32
 #include <ESPmDNS.h>
 #endif
 
-#ifndef DEBUG_MDNS_SD
-#define DEBUG_MDNS_SD                                       0
-#endif
+#    ifndef DEBUG_MDNS_SD
+#        define DEBUG_MDNS_SD 0
+#    endif
 
-#ifndef MDNS_DELAYED_START_AFTER_WIFI_CONNECT
-// #define MDNS_DELAYED_START_AFTER_WIFI_CONNECT               10000UL
-#define MDNS_DELAYED_START_AFTER_WIFI_CONNECT               0
-#endif
+#    ifndef MDNS_DELAYED_START_AFTER_WIFI_CONNECT
+// #        define MDNS_DELAYED_START_AFTER_WIFI_CONNECT 10000UL
+#        define MDNS_DELAYED_START_AFTER_WIFI_CONNECT 0
+#    endif
 
 class MDNSPlugin : public PluginComponent {
-#if ESP8266
 public:
+#if ESP8266
     using MDNSResponder = esp8266::MDNSImplementation::MDNSResponder;
 
+#elif ESP32
+    using MDNSResponder = MDNSResponder;
 #endif
 
     class ServiceInfo {
@@ -58,14 +60,23 @@ public:
     public:
         String _current;
         PrintString _output;
-        MDNSResponder::hMDNSServiceQuery _serviceQuery;
+        #if ESP8266
+            MDNSResponder::hMDNSServiceQuery _serviceQuery;
+        #endif
         uint32_t _timeout;
 
-        Output(uint32_t timeout) : _serviceQuery(nullptr), _timeout(timeout) {}
+        Output(uint32_t timeout) :
+            #if ESP8266
+                _serviceQuery(nullptr),
+            #endif
+            _timeout(timeout)
+        {}
         ~Output() {
+            #if ESP8266
             if (_serviceQuery) {
                 MDNS.removeServiceQuery(_serviceQuery);
             }
+            #endif
         }
 
         void begin() {
@@ -155,9 +166,9 @@ private:
 private:
     uint8_t _running: 1;
     uint8_t _enabled: 1;
-#if MDNS_DELAYED_START_AFTER_WIFI_CONNECT
-    Event::Timer _delayedStart;
-#endif
+    #if MDNS_DELAYED_START_AFTER_WIFI_CONNECT
+        Event::Timer _delayedStart;
+    #endif
 };
 
 #endif

@@ -270,7 +270,8 @@ void ClockPlugin::_createWebUI(WebUINS::Root &webUI)
             WebUINS::Row row;
 
             {
-                auto tempProtection = WebUINS::Sensor(F("tempp"), F("Temperature Protection"), '%', WebUINS::SensorRenderType::ROW, false, colspan);
+                auto tempProtection = WebUINS::Sensor(F("tempp"), F("Temperature Protection"), '%', false, colspan);
+                tempProtection.append(WebUINS::SensorRenderType::COLUMN);
                 row.append(tempProtection.append(WebUINS::NamedString(J(height), height)));
             }
         #endif

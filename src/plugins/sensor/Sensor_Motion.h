@@ -80,6 +80,8 @@ public:
     void begin(MotionSensorHandler *handler, uint8_t pin, bool pinInverted = false);
     void end();
 
+    bool getMotionState() const;
+
 private:
     void _reset();
     void _timerCallback();
@@ -99,6 +101,10 @@ private:
     bool _pinInverted;
 };
 
+inline bool Sensor_Motion::getMotionState() const
+{
+    return _motionState;
+}
 
 inline const __FlashStringHelper *Sensor_Motion::_getId()
 {

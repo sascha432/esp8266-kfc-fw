@@ -67,7 +67,27 @@ void SensorPlugin::setup(SetupModeType mode, const PluginComponents::Dependencie
 
     using namespace WebUINS;
 
-    #if 0
+    #if IOT_SENSOR_CONFIG_LEDMATRIX_LAMP
+
+        ConfigIterator(new Sensor_Motion(F(IOT_SENSOR_NAMES_MOTION_SENSOR)), SensorConfig(SensorRenderType::COLUMN, F("15rem")),
+            ConfigIterator(new Sensor_LM75A(F("Bottom Case Temperature"), IOT_SENSOR_HAVE_LM75A), SensorConfig(SensorRenderType::COLUMN, F("15rem")),
+                ConfigIterator(new Sensor_LM75A(F("LED Temperature"), 0x49), SensorConfig(SensorRenderType::COLUMN, F("15rem")),
+                    ConfigIterator(new Sensor_LM75A(F("Voltage Regulator"), 0x4b), SensorConfig(SensorRenderType::COLUMN, F("15rem")),
+                        ConfigIterator(new Sensor_INA219(F(IOT_SENSOR_NAMES_INA219), IOT_SENSOR_HAVE_INA219), SensorConfig(SensorRenderType::COLUMN, F("15rem")),
+                            ConfigIterator(new Sensor_Battery(F(IOT_SENSOR_NAMES_BATTERY)), SensorConfig(SensorRenderType::COLUMN, F("15rem")),
+                                ConfigIterator(new Sensor_AmbientLight(F(IOT_SENSOR_NAMES_AMBIENT_LIGHT_SENSOR), 0), SensorConfig(SensorRenderType::COLUMN, F("15rem")),
+                                    ConfigIterator(new Sensor_SystemMetrics(), SensorConfig(),
+                                        ConfigEndIterator()
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        );
+
+    #elif IOT_SENSOR_CONFIG_HEXPANEL
 
         ConfigIterator(new Sensor_Motion(F(IOT_SENSOR_NAMES_MOTION_SENSOR)), SensorConfig(SensorRenderType::COLUMN, F("15rem")),
             ConfigIterator(new Sensor_BME280(F(IOT_SENSOR_NAMES_BME280), IOT_SENSOR_HAVE_BME280), SensorConfig(SensorRenderType::COLUMN, F("15rem")),

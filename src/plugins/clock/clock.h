@@ -677,6 +677,10 @@ private:
         void ssd1306Update();
         // enable screen saver/blank screen
         void ssd1306Blank(bool state);
+
+        static void ssd1306InitTimer(Event::CallbackTimerPtr);
+        static void ssd1306UpdateTimer(Event::CallbackTimerPtr);
+        static void ssd1306WiFiCallback(WiFiCallbacks::EventType, void *);
     #endif
 
 public:

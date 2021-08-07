@@ -170,15 +170,8 @@ void Sensor_SystemMetrics::createWebUI(WebUINS::Root &webUI)
     webUI.addRow(WebUINS::Row(WebUINS::Group(PrintString(F("System Metrics<div class=\"version d-md-inline\">%s</div>"), config.getFirmwareVersion().c_str()), false)));
 
     WebUINS::Row row;
-
-    auto sensor1 = WebUINS::Sensor(_getId(MetricsType::UPTIME), F("Uptime"), F(""));
-    sensor1.append(WebUINS::NamedString(J(heading_bottom), F("h2")));
-    row.append(sensor1);
-
-    auto sensor2 = WebUINS::Sensor(_getId(MetricsType::MEMORY), F("Free Memory"), F(""));
-    sensor2.append(WebUINS::NamedString(J(heading_bottom), F("h2")));
-    row.append(sensor2);
-
+    row.append(WebUINS::Sensor(_getId(MetricsType::UPTIME), F("Uptime"), F("")).append(WebUINS::NamedString(J(heading_bottom), F("h2"))).setConfig(_renderConfig));
+    row.append(WebUINS::Sensor(_getId(MetricsType::MEMORY), F("Free Memory"), F("")).append(WebUINS::NamedString(J(heading_bottom), F("h2"))).setConfig(_renderConfig));
     webUI.addRow(row);
 }
 

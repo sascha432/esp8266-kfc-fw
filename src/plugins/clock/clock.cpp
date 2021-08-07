@@ -311,7 +311,7 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
                                     config.adc.inverted = IOT_CLOCK_AMBIENT_LIGHT_SENSOR_INVERTED;
                                 #elif IOT_CLOCK_AMBIENT_LIGHT_SENSOR == 2
                                     auto config = Sensor_AmbientLight::SensorInputConfig(Sensor_AmbientLight::SensorType::TINYPWM);
-                                    config.tinyPWM = Sensor_AmbientLight::SensorConfig::TinyPWM(TINYPWM_I2C_ADDRESS, IOT_CLOCK_AMBIENT_LIGHT_SENSOR_INVERTED);
+                                    config.tinyPWM = Sensor_AmbientLight::SensorInputConfig::TinyPWM(TINYPWM_I2C_ADDRESS, IOT_CLOCK_AMBIENT_LIGHT_SENSOR_INVERTED);
                                 #endif
                                 lightSensor->begin(this, config);
                             }

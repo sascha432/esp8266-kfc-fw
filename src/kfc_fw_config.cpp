@@ -1640,7 +1640,11 @@ void KFCFWConfiguration::printRTCStatus(Print &output, bool plain)
         auto nl = plain ? PSTR("\n") : PSTR(", ");
         output.print(F("Timestamp: "));
         output.print(nowStr);
-        output.printf_P(PSTR("%sTemperature: %.2f%s%sLost Power: %s"), nl, getRTCTemperature(), plain ? PSTR("C") : SPGM(UTF8_degreeC), nl, rtcLostPower() ? SPGM(Yes) : SPGM(No));
+        auto temp = getRTCTemperature();
+        if (!isnan(temp)) {
+            output.printf_P(PSTR("%sTemperature: %.2f%s"), nl, plain ? PSTR("C") : SPGM(UTF8_degreeC));
+        }
+        output.printf_P(PSTR("%sLost Power: %s"), nl, rtcLostPower() ? SPGM(Yes) : SPGM(No));
 #if RTC_SUPPORT
     }
     else {

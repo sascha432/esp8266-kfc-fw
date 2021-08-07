@@ -20,8 +20,6 @@
 +rtcm=set,0x55,0x55555555
 +rtcm=set,0x66,0x66666666
 +rtcm=dump
-
-
 */
 
 #include "RTCMemoryManager.h"
@@ -264,8 +262,6 @@ bool RTCMemoryManager::write(RTCMemoryId id, const void *dataPtr, uint8_t dataLe
     uint8_t *outPtr;
     auto memUnqiuePtr = std::unique_ptr<uint8_t[]>(_readMemory(header, dataLength));
     auto memPtr = memUnqiuePtr.get();
-
-    // auto memPtr = _readMemory(header, dataLength);
     if (memPtr) {
         // copy existing items
         auto ptr = header.begin(memPtr);
@@ -445,7 +441,7 @@ RTCMemoryManager::RtcTime RTCMemoryManager::_readTime()
         __LDBG_printf("read time=%u status=%s", time.getTime(), time.getStatus());
         return time;
     }
-    __DBG_printf("invalid RtcTime");
+    __LDBG_printf("invalid RtcTime");
 #endif
     return RtcTime();
 }

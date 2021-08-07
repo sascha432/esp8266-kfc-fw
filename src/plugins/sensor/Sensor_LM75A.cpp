@@ -84,7 +84,6 @@ bool Sensor_LM75A::getSensorData(String &name, StringVector &values)
 
 float Sensor_LM75A::_readSensor()
 {
-    return NAN;
     _wire->beginTransmission(_address);
     _wire->write(0);
     if (_wire->endTransmission(false) == 0 && _wire->requestFrom(_address, 2U) == 2) {

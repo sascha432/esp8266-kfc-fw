@@ -2,6 +2,8 @@
  * Author: sascha_lammers@gmx.de
  */
 
+#if 0
+
 #pragma once
 
 #include <Arduino_compat.h>
@@ -238,3 +240,5 @@ public:
 };
 
 extern AtomicSunPlugin dimmer_plugin;
+
+#endif

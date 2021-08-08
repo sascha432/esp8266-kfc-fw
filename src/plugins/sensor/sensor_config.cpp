@@ -27,11 +27,18 @@ namespace KFCConfigurationClasses {
             #endif
 
             #if (IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032)
-                #if defined(IOT_SENSOR_HLW8012_U)
-                    HLW80xxConfigType::HLW80xxConfigType() : calibrationU(IOT_SENSOR_HLW8012_U), calibrationI(IOT_SENSOR_HLW8012_I), calibrationP(IOT_SENSOR_HLW8012_P), energyCounter(0), extraDigits(kDefaultValueFor_extraDigits)
-                #else
-                    HLW80xxConfigType::HLW80xxConfigType() : calibrationU(1), calibrationI(1), calibrationP(1), energyCounter(0), extraDigits(kDefaultValueFor_extraDigits)
-                #endif
+                HLW80xxConfigType::HLW80xxConfigType() :
+                    #if defined(IOT_SENSOR_HLW8012_U)
+                        calibrationU(IOT_SENSOR_HLW8012_U),
+                        calibrationI(IOT_SENSOR_HLW8012_I),
+                        calibrationP(IOT_SENSOR_HLW8012_P),
+                    #else
+                        calibrationU(kDefaultValueFor_calibrationU),
+                        calibrationI(kDefaultValueFor_calibrationI),
+                        calibrationP(kDefaultValueFor_calibrationP),
+                    #endif
+                    energyCounter(0),
+                    extraDigits(kDefaultValueFor_extraDigits)
                 {
                 }
             #endif

@@ -4,12 +4,12 @@
 
 #include "dimmer_base.h"
 #include <WebUISocket.h>
-#if IOT_ATOMIC_SUN_V2
-#include "../src/plugins/atomic_sun/atomic_sun_v2.h"
-#else
+// #if IOT_ATOMIC_SUN_V2
+// #include "../src/plugins/atomic_sun/atomic_sun_v2.h"
+// #else
 #include "dimmer_module.h"
 #include "dimmer_plugin.h"
-#endif
+// #endif
 #include "../src/plugins/sensor/sensor.h"
 #include "firmware_protocol.h"
 

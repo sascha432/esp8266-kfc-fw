@@ -109,7 +109,7 @@ void SensorPlugin::setup(SetupModeType mode, const PluginComponents::Dependencie
             ConfigIterator(new Sensor_DS3231(F(IOT_SENSOR_NAMES_DS3231)), SensorConfig(SensorRenderType::COLUMN),
                 ConfigIterator(new Sensor_AmbientLight(F(IOT_SENSOR_NAMES_AMBIENT_LIGHT_SENSOR), 0), SensorConfig(SensorRenderType::COLUMN),
                     ConfigIterator(new Sensor_INA219(F(IOT_SENSOR_NAMES_INA219), IOT_SENSOR_HAVE_INA219), SensorConfig(SensorRenderType::COLUMN),
-                        ConfigIterator(new Sensor_SystemMetrics(), SensorConfig(SensorRenderType::COLUMN),
+                        ConfigIterator(new Sensor_SystemMetrics(), SensorConfig(),
                             ConfigEndIterator()
                         )
                     )

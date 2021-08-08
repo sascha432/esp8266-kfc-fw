@@ -42,58 +42,68 @@ MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::Form
     MQTT::AutoDiscovery::EntityPtr discovery = new MQTT::AutoDiscovery::Entity();
     switch(num) {
         case 0:
-            discovery->create(this, FSPGM(uptime), format);
-            discovery->addStateTopic(_getTopic());
-            discovery->addUnitOfMeasurement(FSPGM(seconds));
-            discovery->addValueTemplate(FSPGM(uptime));
+            if (discovery->create(this, FSPGM(uptime), format)) {
+                discovery->addStateTopic(_getTopic());
+                discovery->addUnitOfMeasurement(FSPGM(seconds));
+                discovery->addValueTemplate(FSPGM(uptime));
+            }
             break;
         case 1:
-            discovery->create(this, F("uptime_hr"), format);
-            discovery->addStateTopic(_getTopic());
-            discovery->addValueTemplate(F("uptime_hr"));
+            if (discovery->create(this, F("uptime_hr"), format)) {
+                discovery->addStateTopic(_getTopic());
+                discovery->addValueTemplate(F("uptime_hr"));
+            }
             break;
         case 2:
-            discovery->create(this, FSPGM(heap), format);
-            discovery->addStateTopic(_getTopic());
-            discovery->addUnitOfMeasurement(FSPGM(bytes));
-            discovery->addValueTemplate(FSPGM(heap));
+            if (discovery->create(this, FSPGM(heap), format)) {
+                discovery->addStateTopic(_getTopic());
+                discovery->addUnitOfMeasurement(FSPGM(bytes));
+                discovery->addValueTemplate(FSPGM(heap));
+            }
             break;
         case 3:
-            discovery->create(this, FSPGM(version), format);
-            discovery->addStateTopic(_getTopic());
-            discovery->addValueTemplate(FSPGM(version));
+            if (discovery->create(this, FSPGM(version), format)) {
+                discovery->addStateTopic(_getTopic());
+                discovery->addValueTemplate(FSPGM(version));
+            }
             break;
         case 4:
-            discovery->create(this, F("heap_frag"), format);
-            discovery->addStateTopic(_getTopic());
-            discovery->addValueTemplate(F("heap_frag"));
+            if (discovery->create(this, F("heap_frag"), format)) {
+                discovery->addStateTopic(_getTopic());
+                discovery->addValueTemplate(F("heap_frag"));
+            }
             break;
 #if PING_MONITOR_SUPPORT
         case 5:
-            discovery->create(this, F("ping_monitor_success"), format);
-            discovery->addStateTopic(_getTopic());
-            discovery->addValueTemplate(F("ping_monitor_success"));
+            if (discovery->create(this, F("ping_monitor_success"), format)) {
+                discovery->addStateTopic(_getTopic());
+                discovery->addValueTemplate(F("ping_monitor_success"));
+            }
             break;
         case 6:
-            discovery->create(this, F("ping_monitor_failure"), format);
-            discovery->addStateTopic(_getTopic());
-            discovery->addValueTemplate(F("ping_monitor_failure"));
+            if (discovery->create(this, F("ping_monitor_failure"), format)) {
+                discovery->addStateTopic(_getTopic());
+                discovery->addValueTemplate(F("ping_monitor_failure"));
+            }
             break;
         case 7:
-            discovery->create(this, F("ping_monitor_avg_resp_time"), format);
-            discovery->addStateTopic(_getTopic());
-            discovery->addValueTemplate(F("ping_monitor_avg_resp_time"));
-            discovery->addUnitOfMeasurement(F("ms"));
+            if (discovery->create(this, F("ping_monitor_avg_resp_time"), format)) {
+                discovery->addStateTopic(_getTopic());
+                discovery->addValueTemplate(F("ping_monitor_avg_resp_time"));
+                discovery->addUnitOfMeasurement(F("ms"));
+            }
             break;
         case 8:
-            discovery->create(this, F("ping_monitor_rcvd_pkts"), format);
-            discovery->addStateTopic(_getTopic());
-            discovery->addValueTemplate(F("ping_monitor_rcvd_pkts"));
+            if (discovery->create(this, F("ping_monitor_rcvd_pkts"), format)) {
+                discovery->addStateTopic(_getTopic());
+                discovery->addValueTemplate(F("ping_monitor_rcvd_pkts"));
+            }
             break;
         case 9:
-            discovery->create(this, F("ping_monitor_lost_pkts"), format);
-            discovery->addStateTopic(_getTopic());
-            discovery->addValueTemplate(F("ping_monitor_lost_pkts"));
+            if (discovery->create(this, F("ping_monitor_lost_pkts"), format)) {
+                discovery->addStateTopic(_getTopic());
+                discovery->addValueTemplate(F("ping_monitor_lost_pkts"));
+            }
             break;
 #endif
         default:
@@ -125,10 +135,9 @@ void Sensor_SystemMetrics::publishState()
 
 void Sensor_SystemMetrics::getValues(WebUINS::Events &array, bool timer)
 {
-    using namespace WebUINS;
     array.append(
-        Values(_getId(MetricsType::UPTIME), _getUptime(), true),
-        Values(_getId(MetricsType::MEMORY), PrintString(F("%.3f KB<br>%u%%"), ESP.getFreeHeap() / 1024.0, ESP.getHeapFragmentation()), true)
+        WebUINS::Values(_getId(MetricsType::UPTIME), _getUptime(), true),
+        WebUINS::Values(_getId(MetricsType::MEMORY), PrintString(F("%.3f KB<br>%u%%"), ESP.getFreeHeap() / 1024.0, ESP.getHeapFragmentation()), true)
     );
 }
 
@@ -166,7 +175,6 @@ String Sensor_SystemMetrics::_getUptime(const __FlashStringHelper *sep) const
 
 void Sensor_SystemMetrics::createWebUI(WebUINS::Root &webUI)
 {
-    __LDBG_println();
     webUI.addRow(WebUINS::Row(WebUINS::Group(PrintString(F("System Metrics<div class=\"version d-md-inline\">%s</div>"), config.getFirmwareVersion().c_str()), false)));
 
     WebUINS::Row row;

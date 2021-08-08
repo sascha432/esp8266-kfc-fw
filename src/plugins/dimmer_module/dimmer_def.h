@@ -92,24 +92,6 @@
 #define IOT_DIMMER_SINGLE_CHANNELS          1
 #endif
 
-// display order of the channels
-#ifndef IOT_DIMMER_HAVE_CHANNEL_ORDER
-#define IOT_DIMMER_HAVE_CHANNEL_ORDER       0
-#endif
-
-#if IOT_DIMMER_MODULE_CHANNELS && IOT_DIMMER_HAVE_CHANNEL_ORDER
-#error IOT_DIMMER_HAVE_CHANNEL_ORDER=1 requires more than one channel
-#endif
-
-//
-// #define IOT_DIMMER_MODULE_CHANNELS           3
-// #define IOT_DIMMER_CHANNEL_ORDER             3, 2, 1
-// const auto channelOrder = std::array<uint8_t, IOT_DIMMER_MODULE_CHANNELS>({IOT_DIMMER_CHANNEL_ORDER});
-//
-#if IOT_DIMMER_HAVE_CHANNEL_ORDER && !defined(IOT_DIMMER_CHANNEL_ORDER)
-#error IOT_DIMMER_HAVE_CHANNEL_ORDER=1 requires IOT_DIMMER_CHANNEL_ORDER
-#endif
-
 // adds a group switch for all channels to the title
 #ifndef IOT_DIMMER_GROUP_SWITCH
 #define IOT_DIMMER_GROUP_SWITCH             true

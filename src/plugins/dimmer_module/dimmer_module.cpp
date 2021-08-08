@@ -38,12 +38,18 @@ void Module::_beginMqtt()
         _channels[i].setup(this, i);
         MQTT::Client::registerComponent(&_channels[i]);
     }
+    #if IOT_DIMMER_HAS_COLOR_TEMP
+        MQTT::Client::registerComponent(&_color);
+    #endif
     MQTT::Client::registerComponent(this);
 }
 
 void Module::_endMqtt()
 {
     MQTT::Client::unregisterComponent(this);
+    #if IOT_DIMMER_HAS_COLOR_TEMP
+        MQTT::Client::unregisterComponent(&_color);
+    #endif
     for(uint8_t i = 0; i < _channels.size(); i++) {
         MQTT::Client::unregisterComponent(&_channels[i]);
     }
@@ -88,14 +94,14 @@ void Module::_getChannels()
                 _wire.read(level);
                 setChannel(i, level);
             }
-#if DEBUG_IOT_DIMMER_MODULE
-            String str;
-            for(uint8_t i = 0; i < _channels.size(); i++) {
-                str += String(_channels[i].getLevel());
-                str += ' ';
-            }
-            __LDBG_printf("%s", str.c_str());
-#endif
+            #if DEBUG_IOT_DIMMER_MODULE
+                String str;
+                for(uint8_t i = 0; i < _channels.size(); i++) {
+                    str += String(_channels[i].getLevel());
+                    str += ' ';
+                }
+                __LDBG_printf("%s", str.c_str());
+            #endif
         }
         _wire.unlock();
     }

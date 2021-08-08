@@ -15,6 +15,9 @@
 #include <Arduino_compat.h>
 #include "dimmer_form.h"
 #include "dimmer_buttons.h"
+#if IOT_DIMMER_HAS_COLOR_TEMP
+#include "dimmer_colortemp.h"
+#endif
 
 namespace Dimmer {
 
@@ -54,10 +57,17 @@ namespace Dimmer {
 
     private:
         void _getChannels();
+
+        #if IOT_DIMMER_HAS_COLOR_TEMP
+            ColorTemperature _color;
+        #endif
     };
 
     inline Module::Module() :
         MQTTComponent(ComponentType::SENSOR)
+        #if IOT_DIMMER_HAS_COLOR_TEMP
+            , _color(this)
+        #endif
     {
     }
 

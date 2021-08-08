@@ -41,16 +41,16 @@ namespace Dimmer {
             _topic = _createTopics(TopicType::COMMAND_SET, false);
         }
 
-    #if IOT_DIMMER_MODULE_HAS_BUTTONS
-        Channel(const Channel &) = delete;
-        Channel &operator=(const Channel &) = delete;
+        #if IOT_DIMMER_MODULE_HAS_BUTTONS
+            Channel(const Channel &) = delete;
+            Channel &operator=(const Channel &) = delete;
 
-        ~Channel() {
-            if (_delayTimer) {
-                delete _delayTimer;
+            ~Channel() {
+                if (_delayTimer) {
+                    delete _delayTimer;
+                }
             }
-        }
-    #endif
+        #endif
 
         virtual AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num) override;
         virtual uint8_t getAutoDiscoveryCount() const override;
@@ -72,9 +72,9 @@ namespace Dimmer {
         uint16_t getStorededBrightness() const;
 
     protected:
-    #if IOT_DIMMER_MODULE_HAS_BUTTONS
-        int _offDelayPrecheck(int16_t level, ConfigType *config = nullptr, int16_t storeLevel = -1);
-    #endif
+        #if IOT_DIMMER_MODULE_HAS_BUTTONS
+            int _offDelayPrecheck(int16_t level, ConfigType *config = nullptr, int16_t storeLevel = -1);
+        #endif
 
         void onJsonMessage(const MQTT::Json::Reader &json);
         virtual void _publishMQTT();
@@ -89,9 +89,9 @@ namespace Dimmer {
         String _topic;
         Event::Timer _publishTimer;
         uint32_t _publishLastTime;
-    #if IOT_DIMMER_MODULE_HAS_BUTTONS
-        Event::Timer *_delayTimer;
-    #endif
+        #if IOT_DIMMER_MODULE_HAS_BUTTONS
+            Event::Timer *_delayTimer;
+        #endif
         uint16_t _storedBrightness;
         uint16_t _brightness;
         uint8_t _channel;

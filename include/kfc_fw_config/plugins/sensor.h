@@ -55,9 +55,9 @@ namespace KFCConfigurationClasses {
                 struct __attribute__packed__ HLW80xxConfigType {
 
                     using Type = HLW80xxConfigType;
-                    float calibrationU;
-                    float calibrationI;
-                    float calibrationP;
+                    CREATE_FLOAT_FIELD(calibrationU, 0, 10, 1);
+                    CREATE_FLOAT_FIELD(calibrationI, 0, 10, 1);
+                    CREATE_FLOAT_FIELD(calibrationP, 0, 10, 1);
                     uint64_t energyCounter;
                     CREATE_UINT8_BITFIELD_MIN_MAX(extraDigits, 4, 0, 7, 0, 1);
                     HLW80xxConfigType();

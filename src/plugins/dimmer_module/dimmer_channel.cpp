@@ -20,9 +20,9 @@ Channel::Channel(Module *dimmer, uint8_t channel) :
     MQTTComponent(ComponentType::LIGHT),
     _dimmer(dimmer),
     _publishLastTime(0),
-#if IOT_DIMMER_MODULE_HAS_BUTTONS
-    _delayTimer(nullptr),
-#endif
+    #if IOT_DIMMER_MODULE_HAS_BUTTONS
+        _delayTimer(nullptr),
+    #endif
     _storedBrightness(0),
     _brightness(0),
     _channel(channel),
@@ -53,14 +53,14 @@ uint8_t Channel::getAutoDiscoveryCount() const
 
 String Channel::_createTopics(TopicType type, bool full) const
 {
-#if IOT_DIMMER_MODULE_CHANNELS > 1
-    String value = PrintString(FSPGM(channel__u), _channel);
-    #define VALUE value,
-    #define VALUEP value +
-#else
-    #define VALUE
-    #define VALUEP
-#endif
+    #if IOT_DIMMER_MODULE_CHANNELS > 1
+        String value = PrintString(FSPGM(channel__u), _channel);
+        #define VALUE value,
+        #define VALUEP value +
+    #else
+        #define VALUE
+        #define VALUEP
+    #endif
     switch(type) {
         case TopicType::COMMAND_SET:
             if (!full) {
@@ -270,6 +270,7 @@ int Channel::_offDelayPrecheck(int16_t level, ConfigType *config, int16_t storeL
     return 1;
 }
 
+#endif
 
 void Channel::_publishMQTT()
 {
@@ -352,5 +353,3 @@ void Channel::publishState()
     //     _publishFlag &= ~kWebUIUpdateFlag;
     // }
 }
-
-#endif

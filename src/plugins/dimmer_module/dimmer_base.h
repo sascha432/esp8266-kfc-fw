@@ -40,7 +40,7 @@ class AsyncWebServerRequest;
 
 namespace Dimmer {
 
-    using ConfigType = Plugins::DimmerConfig::DimmerConfig_t;
+    using ConfigType = KFCConfigurationClasses::Plugins::DimmerConfigNS::DimmerConfig::DimmerConfig_t;
 
     class Channel;
     class Module;
@@ -49,6 +49,7 @@ namespace Dimmer {
     class Channels;
     class Button;
     class Plugin;
+    class ColorTemperature;
 
     extern Plugin dimmer_plugin;
 
@@ -126,6 +127,7 @@ namespace Dimmer {
 
     protected:
         friend Channel;
+        friend ColorTemperature;
 
         void begin();
         void end();
@@ -134,9 +136,9 @@ namespace Dimmer {
         void _updateMetrics(const MetricsType &metrics);
 
         void _fade(uint8_t channel, int16_t toLevel, float fadeTime);
-    #if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
-        void _setDimmingLevels();
-    #endif
+        #if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
+            void _setDimmingLevels();
+        #endif
         void _forceMetricsUpdate(uint8_t delay);
         Sensor_DimmerMetrics *getMetricsSensor() const;
 

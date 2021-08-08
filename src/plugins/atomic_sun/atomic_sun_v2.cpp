@@ -4,6 +4,8 @@
 
 // v2 uses a 4 channel mosfet dimmer with a different serial protocol
 
+#if 0
+
 #include <PrintHtmlEntitiesString.h>
 #include <StreamString.h>
 #include "../include/templates.h"
@@ -65,22 +67,22 @@ void Driver_4ChDimmer::_end()
     Dimmer_Base::_end();
 }
 
-void AtomicSunPlugin::getStatus(Print &output)
-{
-    output.print(F("4 Channel MOSFET Dimmer "));
-    if (_isEnabled()) {
-        output.print(FSPGM(enabled));
-#if IOT_DIMMER_MODULE_INTERFACE_UART
-        output.print(F(" on Serial Port"));
-#else
-        output.print(F(" on I2C"));
-#endif
-        _printStatus(output);
-    }
-    else {
-        output.print(FSPGM(disabled));
-    }
-}
+// void AtomicSunPlugin::getStatus(Print &output)
+// {
+//     output.print(F("4 Channel MOSFET Dimmer "));
+//     if (_isEnabled()) {
+//         output.print(FSPGM(enabled));
+// #if IOT_DIMMER_MODULE_INTERFACE_UART
+//         output.print(F(" on Serial Port"));
+// #else
+//         output.print(F(" on I2C"));
+// #endif
+//         _printStatus(output);
+//     }
+//     else {
+//         output.print(FSPGM(disabled));
+//     }
+// }
 
 MQTT::AutoDiscovery::EntityPtr Driver_4ChDimmer::getAutoDiscovery(FormatType format, uint8_t num)
 {
@@ -729,3 +731,5 @@ void AtomicSunPlugin::createWebUI(WebUINS::Root &webUI)
         row->addSlider(PrintString(F("dimmer_channel%u"), order[j]), PrintString(F("Channel %u"), j + 1), 0, MAX_LEVEL);
     }
 }
+
+#endif

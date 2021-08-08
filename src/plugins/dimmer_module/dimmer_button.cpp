@@ -18,7 +18,7 @@
 #endif
 
 using namespace Dimmer;
-
+using namespace PinMonitor;
 
 Button::Button(uint8_t pin, uint8_t channel, uint8_t button, Buttons &dimmer, SingleClickGroupPtr singleClickGroup) :
     PushButton(pin, &dimmer, std::move(ButtonConfig(dimmer._getConfig())), singleClickGroup, dimmer._getConfig().pin_inverted(channel, button) ? ActiveStateType::INVERTED : ActiveStateType::NON_INVERTED),
@@ -86,7 +86,7 @@ void Button::event(EventType eventType, uint32_t now)
             break;
     }
     __DBG_IF(
-        __DBG_printf("%s type=%s (%02x) repeat=%u group-rep=%u btn=%u dur=%u group-dur=%u level=%u new=%u", name(), eventTypeToString(eventType), eventType, _repeatCount, groupRepeatCount, _button, _duration, _singleClickGroup->getDuration(), oldLevel, _dimmer.getChannel(_channel));
+        __DBG_printf("pin=%u type=%s (%02x) repeat=%u group-rep=%u btn=%u dur=%u group-dur=%u level=%u new=%u", _pin, eventTypeToString(eventType), eventType, _repeatCount, groupRepeatCount, _button, _duration, _singleClickGroup->getDuration(), oldLevel, _dimmer.getChannel(_channel));
     );
 }
 

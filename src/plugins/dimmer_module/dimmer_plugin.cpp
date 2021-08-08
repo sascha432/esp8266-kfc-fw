@@ -1,3 +1,6 @@
+/**
+ * Author: sascha_lammers@gmx.de
+ */
 
 #include "dimmer_plugin.h"
 #include <plugins.h>
@@ -159,9 +162,9 @@ void Plugin::createMenu()
     auto subMenu = root.addSubMenu(getFriendlyName());
     subMenu.addMenuItem(F("General"), F("dimmer/general.html"));
     subMenu.addMenuItem(F("Channel Configuration"), F("dimmer/channels.html"));
-#if IOT_DIMMER_MODULE_HAS_BUTTONS
-    subMenu.addMenuItem(F("Button Configuration"), F("dimmer/buttons.html"));
-#endif
+    #if IOT_DIMMER_MODULE_HAS_BUTTONS
+        subMenu.addMenuItem(F("Button Configuration"), F("dimmer/buttons.html"));
+    #endif
     subMenu.addMenuItem(F("Advanced Firmware Configuration"), F("dimmer/advanced.html"));
 }
 

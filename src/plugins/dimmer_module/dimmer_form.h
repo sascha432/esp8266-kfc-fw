@@ -14,7 +14,7 @@ using Plugins = KFCConfigurationClasses::PluginsType;
 
 namespace Dimmer {
 
-    using ConfigType = Plugins::DimmerConfig::DimmerConfig_t;
+    using ConfigType = KFCConfigurationClasses::Plugins::DimmerConfigNS::DimmerConfig::DimmerConfig_t;
 
     class Form {
     protected:

@@ -15,6 +15,7 @@
 #endif
 
 using namespace Dimmer;
+using namespace PinMonitor;
 
 static_assert(IOT_DIMMER_MODULE_CHANNELS <= 8, "max. channels exceeded");
 

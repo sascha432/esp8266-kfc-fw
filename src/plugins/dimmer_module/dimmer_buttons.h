@@ -20,12 +20,13 @@ namespace Dimmer {
     class NoButtonsImpl : public Base {
     public:
         using Base::Base;
+        using ChannelsArray = std::array<Channel, IOT_DIMMER_MODULE_CHANNELS>;
 
         void begin();
         void end();
 
     protected:
-        std::array<Channel, IOT_DIMMER_MODULE_CHANNELS> _channels;
+        ChannelsArray _channels;
     };
 
     inline void NoButtonsImpl::begin()
@@ -58,7 +59,7 @@ namespace Dimmer {
 
     inline void Buttons::end()
     {
-        pinMonitor.detach(static_cast<const void *>(this));
+        PinMonitor::pinMonitor.end();
     }
 
     #endif

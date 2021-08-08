@@ -178,8 +178,7 @@ class Sensor_HLW8032;
 class Sensor_HLW80xx : public MQTT::Sensor {
 public:
     using EnergyCounterArray = std::array<uint64_t, IOT_SENSOR_HLW80xx_NUM_ENERGY_COUNTERS>;
-    using ConfigType = KFCConfigurationClasses::Plugins::SensorConfig::SensorConfig_t;
-    using NamedJArray = PluginComponents::NamedJArray;
+    using ConfigType = KFCConfigurationClasses::Plugins::SensorConfigNS::HLW80xxConfigType;
 
 public:
     Sensor_HLW80xx(const String &name, MQTT::SensorType type);
@@ -188,7 +187,6 @@ public:
     virtual uint8_t getAutoDiscoveryCount() const override;
 
     virtual void publishState() override;
-    virtual void getValues(JsonArray &json, bool timer) override;
     virtual void getValues(WebUINS::Events &array, bool timer) override;
     virtual void createWebUI(WebUINS::Root &webUI) override;
 

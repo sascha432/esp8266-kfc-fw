@@ -103,6 +103,20 @@ void SensorPlugin::setup(SetupModeType mode, const PluginComponents::Dependencie
             )
         );
 
+    #elif defined(IOT_SENSOR_CONFIG_CLOCKV2)
+
+        ConfigIterator(new Sensor_LM75A(F(IOT_SENSOR_NAMES_LM75A), IOT_SENSOR_HAVE_LM75A), SensorConfig(SensorRenderType::COLUMN),
+            ConfigIterator(new Sensor_DS3231(F(IOT_SENSOR_NAMES_DS3231)), SensorConfig(SensorRenderType::COLUMN),
+                ConfigIterator(new Sensor_AmbientLight(F(IOT_SENSOR_NAMES_AMBIENT_LIGHT_SENSOR), 0), SensorConfig(SensorRenderType::COLUMN),
+                    ConfigIterator(new Sensor_INA219(F(IOT_SENSOR_NAMES_INA219), IOT_SENSOR_HAVE_INA219), SensorConfig(SensorRenderType::COLUMN),
+                        ConfigIterator(new Sensor_SystemMetrics(), SensorConfig(SensorRenderType::COLUMN),
+                            ConfigEndIterator()
+                        )
+                    )
+                )
+            )
+        );
+
     #elif defined(IOT_SENSOR_CONFIG)
 
         IOT_SENSOR_CONFIG;

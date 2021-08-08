@@ -30,38 +30,37 @@
 #include "../src/plugins/remote/remote_def.h"
 #endif
 
-#define DEBUG_DEEP_SLEEP                                    1
+#    define DEBUG_DEEP_SLEEP 1
 
 // enable debug output
-#ifndef DEBUG_DEEP_SLEEP
-    #define DEBUG_DEEP_SLEEP                                0
-#endif
+#    ifndef DEBUG_DEEP_SLEEP
+#        define DEBUG_DEEP_SLEEP 0
+#    endif
 
 // include methods in source code = 0, or in header as always inline = 1
 // use 1 for production, speeds everything up and reduces code size
 // use 0 for development to avoid recompiling half the program for every change
-#ifndef DEEP_SLEEP_INCLUDE_HPP_INLINE
-    #if DEBUG_DEEP_SLEEP
-        #define DEEP_SLEEP_INCLUDE_HPP_INLINE               1
-    #else
-        #define DEEP_SLEEP_INCLUDE_HPP_INLINE               1
-    #endif
-#endif
+#    ifndef DEEP_SLEEP_INCLUDE_HPP_INLINE
+#        if DEBUG_DEEP_SLEEP
+#            define DEEP_SLEEP_INCLUDE_HPP_INLINE 1
+#        else
+#            define DEEP_SLEEP_INCLUDE_HPP_INLINE 1
+#        endif
+#    endif
 
-#ifndef DEEP_SLEEP_BUTTON_ACTIVE_STATE
-    #define DEEP_SLEEP_BUTTON_ACTIVE_STATE                  PIN_MONITOR_ACTIVE_STATE
-#endif
+#    ifndef DEEP_SLEEP_BUTTON_ACTIVE_STATE
+#        define DEEP_SLEEP_BUTTON_ACTIVE_STATE PIN_MONITOR_ACTIVE_STATE
+#    endif
 
-#ifndef DEEP_SLEEP_BUTTON_PINS
-    #ifdef IOT_REMOTE_CONTROL
-        #define DEEP_SLEEP_BUTTON_PINS                      IOT_REMOTE_CONTROL_BUTTON_PINS
-    #else
-        #error DEEP_SLEEP_BUTTON_PINS not defined
-    #endif
-#endif
+#    ifndef DEEP_SLEEP_BUTTON_PINS
+#        ifdef IOT_REMOTE_CONTROL
+#            define DEEP_SLEEP_BUTTON_PINS IOT_REMOTE_CONTROL_BUTTON_PINS
+#        else
+#            error DEEP_SLEEP_BUTTON_PINS not defined
+#        endif
+#    endif
 
-namespace DeepSleep
-{
+namespace DeepSleep {
     using milliseconds = std::chrono::duration<uint32_t, std::milli>;
     using seconds = std::chrono::duration<uint32_t, std::ratio<1>>;
     using minutes = std::chrono::duration<uint32_t, std::ratio<60>>;
@@ -118,11 +117,11 @@ namespace DeepSleep
 
         uint32_t _time;
         uint32_t _state;
-#if DEBUG_PIN_STATE
-        uint32_t _states[16];
-        uint32_t _times[16];
-        uint8_t _count;
-#endif
+        #if DEBUG_PIN_STATE
+            uint32_t _states[16];
+            uint32_t _times[16];
+            uint8_t _count;
+        #endif
 
         PinState();
 
@@ -193,9 +192,9 @@ namespace DeepSleep
         DeepSleepParam(seconds deepSleepTime, RFMode mode = RF_NO_CAL);
         DeepSleepParam(milliseconds deepSleepTime, RFMode rfMode = RF_NO_CAL);
 
-#if DEBUG_DEEP_SLEEP
-        void dump();
-#endif
+        #if DEBUG_DEEP_SLEEP
+            void dump();
+        #endif
 
         static void enterDeepSleep(milliseconds time, RFMode rfMode = RF_NO_CAL);
         static void reset();
@@ -212,16 +211,15 @@ namespace DeepSleep
 
     static constexpr size_t DeepSleepParamSize = sizeof(DeepSleepParam);
 
-    #if DEEP_SLEEP_INCLUDE_HPP_INLINE
-        #include "deep_sleep.hpp"
-    #endif
-
-
     extern "C" uint64_t _realTimeOffset;
     extern "C" PinState &deepSleepPinState;
     extern "C" DeepSleepParam deepSleepParams;
 
-};
+}
+
+#    if DEEP_SLEEP_INCLUDE_HPP_INLINE
+#        include "deep_sleep.hpp"
+#    endif
 
 #endif
 

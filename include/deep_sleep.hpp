@@ -4,6 +4,8 @@
 
 #pragma once
 
+#if ENABLE_DEEP_SLEEP
+
 #ifndef __DEEP_SLEEP_INSIDE_INCLUDE
 #define __DEEP_SLEEP_INLINE__
 #define __DEEP_SLEEP_INLINE_AWLAYS__
@@ -15,115 +17,122 @@
 #include "deep_sleep.h"
 #endif
 
-// ------------------------------------------------------------------------
-// DeepSleep::PinState
-// ------------------------------------------------------------------------
+namespace DeepSleep {
 
-__DEEP_SLEEP_INLINE_AWLAYS__
-DeepSleep::PinState::PinState() : _time(0), _state(0)
-{
-}
+    // ------------------------------------------------------------------------
+    // DeepSleep::PinState
+    // ------------------------------------------------------------------------
 
-__DEEP_SLEEP_INLINE__
-void DeepSleep::PinState::init()
-{
-    _time = micros();
-#if DEBUG_PIN_STATE
-    _states[0] = _readStates();
-    _times[0] = micros();
-    _count = 1;
-    _setStates(_states[0]);
-#else
-    _setStates(_readStates());
-#endif
-}
-
-__DEEP_SLEEP_INLINE__
-void DeepSleep::PinState::merge()
-{
-#if DEBUG_PIN_STATE
-    _states[_count] = _readStates();
-    _times[_count] = micros();
-    _mergeStates(_states[_count]);
-    if (_count < sizeof(_states) / sizeof(_states[0]) - 1) {
-        _count++;
+    __DEEP_SLEEP_INLINE_AWLAYS__
+    PinState::PinState() : _time(0), _state(0)
+    {
     }
-#else
-    _mergeStates(_readStates());
-#endif
-}
 
-__DEEP_SLEEP_INLINE_AWLAYS__
-bool DeepSleep::PinState::isValid() const
-{
-    return _time != 0;
-}
-
-__DEEP_SLEEP_INLINE_AWLAYS__
-bool DeepSleep::PinState::anyPressed() const
-{
-    return _state & kButtonMask;
-}
-
-__DEEP_SLEEP_INLINE_AWLAYS__
-uint32_t DeepSleep::PinState::getStates() const
-{
-    return _state;
-}
-
-__DEEP_SLEEP_INLINE_AWLAYS__
-uint32_t DeepSleep::PinState::getValues() const
-{
-    return getValues(getStates());
-}
-
-__DEEP_SLEEP_INLINE_AWLAYS__
-uint32_t DeepSleep::PinState::getValues(uint32_t states) const
-{
-    return activeHigh() ? states : ~states;
-}
-
-__DEEP_SLEEP_INLINE_AWLAYS__
-bool DeepSleep::PinState::getState(uint8_t pin) const
-{
-    return _state & _BV(pin);
-}
-
-__DEEP_SLEEP_INLINE_AWLAYS__
-bool DeepSleep::PinState::getValue(uint8_t pin) const
-{
-    return (_state & _BV(pin)) == activeHigh();
-}
-
-__DEEP_SLEEP_INLINE__
-uint32_t DeepSleep::PinState::_readStates() const
-{
-    uint32_t state = GPI;
-    if (GP16I & 0x01) {
-        state |= _BV(16);
+    __DEEP_SLEEP_INLINE__
+    void PinState::init()
+    {
+        _time = micros();
+        #if DEBUG_PIN_STATE
+            _states[0] = _readStates();
+            _times[0] = micros();
+            _count = 1;
+            _setStates(_states[0]);
+        #else
+            _setStates(_readStates());
+        #endif
     }
-    return activeHigh() ? state : ~state;
-}
 
-__DEEP_SLEEP_INLINE_AWLAYS__
-void DeepSleep::PinState::_setStates(uint32_t state)
-{
-    _state = state;
-}
+    __DEEP_SLEEP_INLINE__
+    void PinState::merge()
+    {
+        #if DEBUG_PIN_STATE
+            _states[_count] = _readStates();
+            _times[_count] = micros();
+            _mergeStates(_states[_count]);
+            if (_count < sizeof(_states) / sizeof(_states[0]) - 1) {
+                _count++;
+            }
+        #else
+            _mergeStates(_readStates());
+        #endif
+    }
 
-__DEEP_SLEEP_INLINE_AWLAYS__
-void DeepSleep::PinState::_mergeStates(uint32_t state) {
-    _state |= state;
-}
+    __DEEP_SLEEP_INLINE_AWLAYS__
+    bool PinState::isValid() const
+    {
+        return _time != 0;
+    }
 
-__DEEP_SLEEP_INLINE_AWLAYS__
-uint32_t DeepSleep::PinState::getMillis() const {
-    return _time / 1000;
-}
+    __DEEP_SLEEP_INLINE_AWLAYS__
+    bool PinState::anyPressed() const
+    {
+        return _state & kButtonMask;
+    }
 
-__DEEP_SLEEP_INLINE_AWLAYS__
-uint32_t DeepSleep::PinState::getMicros() const {
-    return _time;
+    __DEEP_SLEEP_INLINE_AWLAYS__
+    uint32_t PinState::getStates() const
+    {
+        return _state;
+    }
+
+    __DEEP_SLEEP_INLINE_AWLAYS__
+    uint32_t PinState::getValues() const
+    {
+        return getValues(getStates());
+    }
+
+    __DEEP_SLEEP_INLINE_AWLAYS__
+    uint32_t PinState::getValues(uint32_t states) const
+    {
+        return activeHigh() ? states : ~states;
+    }
+
+    __DEEP_SLEEP_INLINE_AWLAYS__
+    bool PinState::getState(uint8_t pin) const
+    {
+        return _state & _BV(pin);
+    }
+
+    __DEEP_SLEEP_INLINE_AWLAYS__
+    bool PinState::getValue(uint8_t pin) const
+    {
+        return (_state & _BV(pin)) == activeHigh();
+    }
+
+    __DEEP_SLEEP_INLINE__
+    uint32_t PinState::_readStates() const
+    {
+        uint32_t state = GPI;
+        if (GP16I & 0x01) {
+            state |= _BV(16);
+        }
+        return activeHigh() ? state : ~state;
+    }
+
+    __DEEP_SLEEP_INLINE_AWLAYS__
+    void PinState::_setStates(uint32_t state)
+    {
+        _state = state;
+    }
+
+    __DEEP_SLEEP_INLINE_AWLAYS__
+    void PinState::_mergeStates(uint32_t state)
+    {
+        _state |= state;
+    }
+
+    __DEEP_SLEEP_INLINE_AWLAYS__
+    uint32_t PinState::getMillis() const
+    {
+        return _time / 1000;
+    }
+
+    __DEEP_SLEEP_INLINE_AWLAYS__
+    uint32_t PinState::getMicros() const
+    {
+        return _time;
+    }
+
 }
 
 // ------------------------------------------------------------------------
@@ -238,4 +247,6 @@ void DeepSleepParam::setRFMode(RFMode rfMode)
 #ifdef __DEEP_SLEEP_NOINLINE__
 #undef __DEEP_SLEEP_NOINLINE__
 #endif
+#endif
+
 #endif

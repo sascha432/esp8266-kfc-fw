@@ -14,12 +14,12 @@
 #include "../src/plugins/plugins.h"
 #include <plugins_menu.h>
 
-#undef __LDBG_printf
-#if DEBUG_DEEP_SLEEP
-#define __LDBG_printf(fmt, ...) ::printf_P(PSTR("DS%04u: " fmt "\n"), micros() / 1000, ##__VA_ARGS__)
-#else
-#define __LDBG_printf(...)
-#endif
+#    undef __LDBG_printf
+#    if DEBUG_DEEP_SLEEP
+#        define __LDBG_printf(fmt, ...) ::printf_P(PSTR("DS%04u: " fmt "\n"), micros() / 1000, ##__VA_ARGS__)
+#    else
+#        define __LDBG_printf(...)
+#    endif
 
 using DeepSleepPinStateUninitialized = stdex::UninitializedClass<DeepSleep::PinState>;
 static DeepSleepPinStateUninitialized deepSleepPinStateNoInit __attribute__((section(".noinit")));
@@ -29,11 +29,11 @@ using namespace DeepSleep;
 
 inline static void deep_sleep_wakeup_wifi()
 {
-#if ARDUINO_ESP8266_MAJOR >= 3
-// Starting from arduino core v3: wifi is disabled at boot time
-// WiFi.begin() or WiFi.softAP() will wake WiFi up
-#error TODO enable wifi or remove disabling via __disableWiFiAtBootTime
-#endif
+    #if ARDUINO_ESP8266_MAJOR >= 3
+    // Starting from arduino core v3: wifi is disabled at boot time
+    // WiFi.begin() or WiFi.softAP() will wake WiFi up
+    #error TODO enable wifi or remove disabling via __disableWiFiAtBootTime
+    #endif
 }
 
 inline static void deep_sleep_preinit()
@@ -50,16 +50,16 @@ inline static void deep_sleep_preinit()
             // deepSleepParams._currentSleepTime is not subtracted here... since we cannot
             // know how much of the time has passed already
             realTimeOffset = (deepSleepParams._totalSleepTime - deepSleepParams._remainingSleepTime) + (deepSleepParams._runtime / 1000);
-#if DEBUG_DEEP_SLEEP
-            __LDBG_printf("real time offset without the last cycle: %.6f", DeepSleep::_realTimeOffset / 1000000.0);
-#endif
+            #if DEBUG_DEEP_SLEEP
+                __LDBG_printf("real time offset without the last cycle: %.6f", DeepSleep::_realTimeOffset / 1000000.0);
+            #endif
         }
     }
 
     if (!resetDetector.hasWakeUpDetected()) {
-#if DEBUG_DEEP_SLEEP
-        __LDBG_printf("reason: %s", resetDetector.getResetReason());
-#endif
+        #if DEBUG_DEEP_SLEEP
+            __LDBG_printf("reason: %s", resetDetector.getResetReason());
+        #endif
         RTCMemoryManager::remove(RTCMemoryManager::RTCMemoryId::DEEP_SLEEP);
         RTCMemoryManager::updateTimeOffset((realTimeOffset + (micros() / 1000));
         return;
@@ -67,32 +67,32 @@ inline static void deep_sleep_preinit()
 
     // if kButtonMask is set, check if any of the buttons is pressed and exit deep sleep
     if (kButtonMask && deepSleepPinState.anyPressed()) {
-#if DEBUG_DEEP_SLEEP
-        __LDBG_printf("reason: USER_ACTION");
-#endif
+        #if DEBUG_DEEP_SLEEP
+            __LDBG_printf("reason: USER_ACTION");
+        #endif
         RTCMemoryManager::remove(RTCMemoryManager::RTCMemoryId::DEEP_SLEEP);
         deepSleepParams = DeepSleepParam(WakeupMode::USER);
         deep_sleep_wakeup_wifi(); // speed up wifi connection
         return;
     }
 
-#if IOT_REMOTE_CONTROL
-    if (digitalRead(IOT_REMOTE_CONTROL_CHARGING_PIN)) {
-#if DEBUG_DEEP_SLEEP
-        __LDBG_printf("reason: CHARGING_DETECTED");
-#endif
-        RTCMemoryManager::remove(RTCMemoryManager::RTCMemoryId::DEEP_SLEEP);
-        deepSleepParams = DeepSleepParam(WakeupMode::USER);
-        return;
-    }
-#endif
+    #if IOT_REMOTE_CONTROL
+        if (digitalRead(IOT_REMOTE_CONTROL_CHARGING_PIN)) {
+            #if DEBUG_DEEP_SLEEP
+                __LDBG_printf("reason: CHARGING_DETECTED");
+            #endif
+            RTCMemoryManager::remove(RTCMemoryManager::RTCMemoryId::DEEP_SLEEP);
+            deepSleepParams = DeepSleepParam(WakeupMode::USER);
+            return;
+        }
+    #endif
 
     __LDBG_printf("reason: %s", resetDetector.getResetReason());
 
     if (RTCMemoryManager::read(RTCMemoryManager::RTCMemoryId::DEEP_SLEEP, &deepSleepParams, sizeof(deepSleepParams))) {
-#if DEBUG_DEEP_SLEEP
-        deepSleepParams.dump();
-#endif
+        #if DEBUG_DEEP_SLEEP
+                deepSleepParams.dump();
+        #endif
 
         if (deepSleepParams.isValid()) {
 
@@ -102,11 +102,11 @@ inline static void deep_sleep_preinit()
             auto nextSleepTime = deepSleepParams._updateRemainingTime();
             if (nextSleepTime == 0) {
 
-#if DEBUG_DEEP_SLEEP
-                __LDBG_printf("wakeup (total=%ums remaining=%ums time=%ums wakeup-runtime/counter=%uµs/%u)",
-                    deepSleepParams._totalSleepTime, deepSleepParams._remainingSleepTime, deepSleepParams._currentSleepTime, deepSleepParams._runtime, deepSleepParams._counter
-                );
-#endif
+                #if DEBUG_DEEP_SLEEP
+                    __LDBG_printf("wakeup (total=%ums remaining=%ums time=%ums wakeup-runtime/counter=%uµs/%u)",
+                        deepSleepParams._totalSleepTime, deepSleepParams._remainingSleepTime, deepSleepParams._currentSleepTime, deepSleepParams._runtime, deepSleepParams._counter
+                    );
+                #endif
 
                 deepSleepParams._remainingSleepTime = 0;
                 deepSleepParams._currentSleepTime = 0;
@@ -122,11 +122,11 @@ inline static void deep_sleep_preinit()
             }
 
             if (nextSleepTime != 0) {
-#if DEBUG_DEEP_SLEEP
-                __LDBG_printf("going back to sleep (total=%ums remaining=%ums time=%ums wakeup-runtime/counter=%uµs/%u)",
-                    deepSleepParams._totalSleepTime, deepSleepParams._remainingSleepTime, deepSleepParams._currentSleepTime, deepSleepParams._runtime, deepSleepParams._counter
-                );
-#endif
+                #if DEBUG_DEEP_SLEEP
+                    __LDBG_printf("going back to sleep (total=%ums remaining=%ums time=%ums wakeup-runtime/counter=%uµs/%u)",
+                        deepSleepParams._totalSleepTime, deepSleepParams._remainingSleepTime, deepSleepParams._currentSleepTime, deepSleepParams._runtime, deepSleepParams._counter
+                    );
+                #endif
                 // go back to sleep
                 system_deep_sleep_set_option(static_cast<int>(deepSleepParams._rfMode));
                 system_deep_sleep_instant(deepSleepParams._currentSleepTime * 1000ULL);
@@ -173,10 +173,10 @@ void DeepSleepParam::enterDeepSleep(milliseconds sleep_time, RFMode rfMode)
 {
     deepSleepParams = DeepSleepParam(sleep_time, rfMode);
 
-#if DEBUG_DEEP_SLEEP
-    Logger_notice(F("entering deep sleep: time=" TIME_T_FMT " sleep-time=%.0f mode=%u"), time(nullptr), deepSleepParams.getTotalTime(), rfMode);
-    delay(250);
-#endif
+    #if DEBUG_DEEP_SLEEP
+        Logger_notice(F("entering deep sleep: time=" TIME_T_FMT " sleep-time=%.0f mode=%u"), time(nullptr), deepSleepParams.getTotalTime(), rfMode);
+        delay(250);
+    #endif
 
     deepSleepParams.updateRemainingTime();
     RTCMemoryManager::write(RTCMemoryManager::RTCMemoryId::DEEP_SLEEP, &deepSleepParams, sizeof(deepSleepParams));
@@ -184,19 +184,20 @@ void DeepSleepParam::enterDeepSleep(milliseconds sleep_time, RFMode rfMode)
     resetDetector.clearCounter();
     SaveCrash::removeCrashCounter();
 
-#if DEBUG_DEEP_SLEEP
-    __LDBG_printf("deep sleep %.2f remaining=%u mode=%u", (deepSleepParams.getDeepSleepTimeMicros() / 1000.0), deepSleepParams._remainingSleepTime, deepSleepParams._rfMode);
-#endif
-#if defined(ESP8266)
-    system_deep_sleep_set_option(static_cast<int>(deepSleepParams._rfMode));
-    system_deep_sleep_instant(deepSleepParams.getDeepSleepTimeMicros());
-    esp_yield();
-    system_deep_sleep_instant(0);
-    esp_yield();
-#else
-    ESP.deepSleep(deepSleepParams.getDeepSleepTimeMicros());
-    ESP.deepSleep(0);
-#endif
+    #if DEBUG_DEEP_SLEEP
+        __LDBG_printf("deep sleep %.2f remaining=%u mode=%u", (deepSleepParams.getDeepSleepTimeMicros() / 1000.0), deepSleepParams._remainingSleepTime, deepSleepParams._rfMode);
+    #endif
+
+    #if defined(ESP8266)
+        system_deep_sleep_set_option(static_cast<int>(deepSleepParams._rfMode));
+        system_deep_sleep_instant(deepSleepParams.getDeepSleepTimeMicros());
+        esp_yield();
+        system_deep_sleep_instant(0);
+        esp_yield();
+    #else
+        ESP.deepSleep(deepSleepParams.getDeepSleepTimeMicros());
+        ESP.deepSleep(0);
+    #endif
 
 }
 

@@ -75,7 +75,13 @@ void Sensor_AmbientLight::getValues(WebUINS::Events &array, bool timer)
 
 void Sensor_AmbientLight::createWebUI(WebUINS::Root &webUI)
 {
-    webUI.appendToLastRow(WebUINS::Row(WebUINS::Sensor(_getId(), _name, F("<img src=\"/images/light.svg\" width=\"80\" height=\"80\" style=\"margin-top:-20px;margin-bottom:1rem\">")).setConfig(_renderConfig)));
+    webUI.appendToLastRow(WebUINS::Row(WebUINS::Sensor(_getId(), _name,
+        #if IOT_SENSOR_CONFIG_CLOCKV2
+            F("<img src=\"/images/light.svg\" width=\"60\" height=\"60\" style=\"margin-top:-20px;margin-bottom:0.5rem\">")
+        #else
+            F("<img src=\"/images/light.svg\" width=\"80\" height=\"80\" style=\"margin-top:-20px;margin-bottom:1rem\">")
+        #endif
+    ).setConfig(_renderConfig)));
 }
 
 void Sensor_AmbientLight::publishState()
@@ -277,7 +283,11 @@ String Sensor_AmbientLight::_getLightSensorWebUIValue()
     if (!_handler || !_handler->isAutobrightnessEnabled()) {
         return PrintString(F("<strong>OFF</strong><br> <span class=\"light-sensor-value\">Sensor value %d</span>"), getValue());
     }
-    return PrintString(F("%.0f &#37;"), getAutoBrightness());
+    #if IOT_SENSOR_CONFIG_CLOCKV2
+        return PrintString(F("<span style=\"font-size: 1.75rem; padding-bottom: 0.75rem;\">%.0f &#37;</span>"), getAutoBrightness());
+    #else
+        return PrintString(F("%.0f &#37;"), getAutoBrightness());
+    #endif
 }
 
 void Sensor_AmbientLight::_updateLightSensorWebUI()

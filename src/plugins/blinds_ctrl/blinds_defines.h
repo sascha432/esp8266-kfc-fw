@@ -7,66 +7,67 @@
 #include <Arduino_compat.h>
 
 #ifndef DEBUG_IOT_BLINDS_CTRL
-#define DEBUG_IOT_BLINDS_CTRL               0
+#    define DEBUG_IOT_BLINDS_CTRL 0
 #endif
 
 // save last state on FS
 #ifndef IOT_BLINDS_CTRL_SAVE_STATE
-#define IOT_BLINDS_CTRL_SAVE_STATE          1
+#    define IOT_BLINDS_CTRL_SAVE_STATE 1
 #endif
 
 #ifndef IOT_BLINDS_CTRL_CHANNEL_COUNT
-#define IOT_BLINDS_CTRL_CHANNEL_COUNT       2
+#    define IOT_BLINDS_CTRL_CHANNEL_COUNT 2
 #endif
+
 #if IOT_BLINDS_CTRL_CHANNEL_COUNT != 2
-#error 2 channels supported only
+#    error 2 channels supported only
 #endif
 
 // enable RPM sensing, 0 = disable
 #ifndef IOT_BLINDS_CTRL_RPM_PIN
-#define IOT_BLINDS_CTRL_RPM_PIN             0
+#    define IOT_BLINDS_CTRL_RPM_PIN 0
 #endif
 
 // number of pulses per rotation
 #ifndef IOT_BLINDS_CTRL_RPM_PULSES
-#define IOT_BLINDS_CTRL_RPM_PULSES          3
+#    define IOT_BLINDS_CTRL_RPM_PULSES 3
 #endif
 
 // motor pins
 #ifndef IOT_BLINDS_CTRL_M1_PIN
-#define IOT_BLINDS_CTRL_M1_PIN              D1
+#    define IOT_BLINDS_CTRL_M1_PIN 5 // D1
 #endif
 
 #ifndef IOT_BLINDS_CTRL_M2_PIN
-#define IOT_BLINDS_CTRL_M2_PIN              D2
+#    define IOT_BLINDS_CTRL_M2_PIN 4 // D2
 #endif
 
 #ifndef IOT_BLINDS_CTRL_M3_PIN
-#define IOT_BLINDS_CTRL_M3_PIN              D6
+#    define IOT_BLINDS_CTRL_M3_PIN 12 // D6
 #endif
 
 #ifndef IOT_BLINDS_CTRL_M4_PIN
-#define IOT_BLINDS_CTRL_M4_PIN              D7
+#    define IOT_BLINDS_CTRL_M4_PIN 13 // D7
 #endif
 
 // pin for the shunt multiplexer
 #ifndef IOT_BLINDS_CTRL_MULTIPLEXER_PIN
-#define IOT_BLINDS_CTRL_MULTIPLEXER_PIN     D5
+#    define IOT_BLINDS_CTRL_MULTIPLEXER_PIN 14 // D5
 #endif
 
 // pin for the current limit
 #ifndef IOT_BLINDS_CTRL_DAC_PIN
-#define IOT_BLINDS_CTRL_DAC_PIN             16
+#    define IOT_BLINDS_CTRL_DAC_PIN 16
 #endif
 
 // time to wait after setting up ADC and DAC in milliseconds
 #ifndef IOT_BLINDS_CTRL_SETUP_DELAY
-#define IOT_BLINDS_CTRL_SETUP_DELAY         25
+#    define IOT_BLINDS_CTRL_SETUP_DELAY 25
 #endif
 
 // shunt resistance in milliohm
 #ifndef IOT_BLINDS_CTRL_SHUNT
-#define IOT_BLINDS_CTRL_SHUNT               100
+#    define IOT_BLINDS_CTRL_SHUNT 100
 #endif
 
 namespace BlindsControllerConversion {

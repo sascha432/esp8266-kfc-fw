@@ -80,7 +80,9 @@ ClockPlugin::StoredState ClockPlugin::_getState() const
 
 void ClockPlugin::_setState(bool state, bool autoOff)
 {
-    _motionAutoOff = autoOff;
+    #if IOT_SENSOR_HAVE_MOTION_SENSOR
+        _motionAutoOff = autoOff;
+    #endif
     if (state) {
         if (_targetBrightness == 0) {
             if (_savedBrightness) {

@@ -5,7 +5,6 @@
 #if AT_MODE_SUPPORTED
 
 #include <Arduino_compat.h>
-
 #include <Syslog.h>
 #include <ReadADC.h>
 #include <EventScheduler.h>
@@ -2256,10 +2255,6 @@ void at_mode_serial_handle_event(String &commandString)
             }
             else {
 
-#if ESP8266
-                #define PWMRANGE 1023
-#endif
-
                 auto level = (uint16_t)args.toIntMinMax(1, 0, PWMRANGE, 0);
                 if (level == 0) {
                     if (args.isAnyMatchIgnoreCase(1, F("h|hi|high"))) {
@@ -2279,12 +2274,12 @@ void at_mode_serial_handle_event(String &commandString)
                 auto type = PSTR("digitalWrite");
 
                 pinMode(pin, OUTPUT);
-#if defined(ESP8266)
-                analogWriteFreq(freq);
-                analogWriteRange(PWMRANGE);
-#else
-                freq = 0;
-#endif
+                #if defined(ESP8266)
+                    analogWriteFreq(freq);
+                    analogWriteRange(PWMRANGE);
+                #else
+                    freq = 0;
+                #endif
                 if (level == 0)  {
                     digitalWrite(pin, LOW);
                     freq = 0;

@@ -102,6 +102,10 @@ protected:
         uint8_t isOpenInt() const;
         bool isClosed() const;
 
+        explicit operator unsigned() const {
+            return static_cast<unsigned>(_state);
+        }
+
         NameType _getFPStr() const;
         static NameType __getFPStr(StateType state);
 
@@ -115,22 +119,22 @@ protected:
         using Type = std::array<ChannelState, N>;
         using Type::Type;
 
-#if DEBUG
-        ChannelState &at(size_t channel) {
-            if (channel < Type::size()) {
-                return Type::at(channel);
+        #if DEBUG
+            ChannelState &at(size_t channel) {
+                if (channel < Type::size()) {
+                    return Type::at(channel);
+                }
+                __DBG_panic("invalid channel %d", channel);
+                return Type::at(0);
             }
-            __DBG_panic("invalid channel %d", channel);
-            return Type::at(0);
-        }
-        ChannelState at(size_t channel) const {
-            if (channel < Type::size()) {
-                return Type::at(channel);
+            ChannelState at(size_t channel) const {
+                if (channel < Type::size()) {
+                    return Type::at(channel);
+                }
+                __DBG_panic("invalid channel %d", channel);
+                return Type::at(0);
             }
-            __DBG_panic("invalid channel %d", channel);
-            return Type::at(0);
-        }
-#endif
+        #endif
 
         ChannelState &operator[](size_t channel) {
             return at(channel);
@@ -145,14 +149,12 @@ protected:
             return Type::at(static_cast<size_t>(channel));
         }
 
-        operator uint8_t *() {
-            return reinterpret_cast<uint8_t *>(this);
+        bool read(File &file) {
+            return static_cast<size_t>(file.read(reinterpret_cast<uint8_t *>(Type::data()), Type::size() * sizeof(ChannelState))) == (Type::size() * sizeof(ChannelState));
         }
-        operator const uint8_t *() const {
-            return reinterpret_cast<const uint8_t *>(this);
-        }
-        size_t sizeInBytes() const {
-            return size() * sizeof(ChannelState);
+
+        bool write(File &file) const {
+            return file.write(reinterpret_cast<const uint8_t *>(Type::data()), Type::size() * sizeof(ChannelState)) == (Type::size() * sizeof(ChannelState));
         }
 
         constexpr std::array<ChannelType, N> channels() {

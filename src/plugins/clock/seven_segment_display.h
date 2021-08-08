@@ -134,6 +134,7 @@ namespace SevenSegment {
         using PixelCoordinatesType = BaseDisplayType::PixelCoordinatesType;
         using ColorType = BaseDisplayType::ColorType;
         using BaseDisplayType::fill;
+        using BaseDisplayType::kNumPixels;
 
     public:
         // high level methods

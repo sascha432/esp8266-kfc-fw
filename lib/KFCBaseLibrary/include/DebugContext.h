@@ -14,7 +14,7 @@ public:
     class Guard {
     public:
         Guard(DebugContext &&ctx);
-        Guard(DebugContext &&ctx, const char *fmt, ...);
+        Guard(DebugContext &&ctx, const char *fmt, ...) __attribute__ ((format (printf, 3, 4)));
         ~Guard();
 
         const String &getArgs() const;
@@ -64,16 +64,7 @@ public:
     }
 
     template<typename T>
-    inline T printfResult(T result, const char *format, ...) const {
-        if (isActive()) {
-            prefix();
-            va_list arg;
-            va_start(arg, format);
-            vprintf(format, arg);
-            va_end(arg);
-        }
-        return result;
-    }
+    T printfResult(T result, const char *format, ...) const __attribute__ ((format (printf, 3, 4)));
 
     void vprintf(const char *format, va_list arg) const;
 
@@ -115,10 +106,22 @@ public:
     Guard *_stackGuard;
     // String _functionName
 
-
     static Stack _stack;
 #endif
 
     static uint8_t __state;
     static DebugContext __pos;
 };
+
+template<typename T>
+inline T DebugContext::printfResult(T result, const char *format, ...) const
+{
+    if (isActive()) {
+        prefix();
+        va_list arg;
+        va_start(arg, format);
+        vprintf(format, arg);
+        va_end(arg);
+    }
+    return result;
+}

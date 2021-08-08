@@ -339,11 +339,10 @@ inline void BlindsControl::_setup()
         pinMode(pin, OUTPUT);
     }
 
-#if IOT_BLINDS_CTRL_RPM_PIN
-    attachScheduledInterrupt(digitalPinToInterrupt(IOT_BLINDS_CTRL_RPM_PIN), BlindsControl::rpmIntCallback, RISING);
-    pinMode(IOT_BLINDS_CTRL_RPM_PIN, INPUT);
-#endif
-
+    #if IOT_BLINDS_CTRL_RPM_PIN
+        attachScheduledInterrupt(digitalPinToInterrupt(IOT_BLINDS_CTRL_RPM_PIN), BlindsControl::rpmIntCallback, RISING);
+        pinMode(IOT_BLINDS_CTRL_RPM_PIN, INPUT);
+    #endif
 }
 
 inline void BlindsControl::_startTone()
@@ -357,11 +356,11 @@ inline void BlindsControl::_startTone()
             case PlayToneType::INTERVAL_SPEED_UP:
                 BlindsControl::startToneTimer(_queue.getAction().getTimeout());
                 break;
-#if HAVE_IMPERIAL_MARCH
-            case PlayToneType::IMPERIAL_MARCH:
-                BlindsControl::playImperialMarch(80, 0, 1);
-                break;
-#endif
+            #if HAVE_IMPERIAL_MARCH
+                case PlayToneType::IMPERIAL_MARCH:
+                    BlindsControl::playImperialMarch(80, 0, 1);
+                    break;
+            #endif
             default:
                 break;
         }
@@ -560,9 +559,9 @@ inline void BlindsControl::_playTone(uint8_t *pins, uint16_t pwm, uint32_t frequ
     __LDBG_printf("tone pins=%u,%u pwm=%u freq=%u", pins[0], pins[1], pwm, frequency);
     analogWriteFreq(frequency);
     analogWrite(pins[0], pwm);
-#if !defined(ESP8266)
-    if (pins[1] != kInvalidPin)
-#endif
+    #if !defined(ESP8266)
+        if (pins[1] != kInvalidPin)
+    #endif
     {
         analogWrite(pins[1], pwm);
     }
@@ -595,23 +594,11 @@ inline void BlindsControl::_stopToneTimer()
 inline void BlindsControl::_disableMotors()
 {
     // do not allow interrupts when changing a pin pair from high/high to low/low and vice versa
-    noInterrupts();
-
-// #if defined(ESP8266)
-//     using BlindsConfig = Plugins::BlindsConfig;
-//     // clear motors pins. gpio16 is not supported and stopWaveForm(...) must be called to disable PWM
-//     GPOC |= (
-//         _BV(_config.pins[BlindsConfig::kChannel0_OpenPinArrayIndex]) |
-//         _BV(_config.pins[BlindsConfig::kChannel0_ClosePinArrayIndex]) |
-//         _BV(_config.pins[BlindsConfig::kChannel1_OpenPinArrayIndex]) |
-//         _BV(_config.pins[BlindsConfig::kChannel1_ClosePinArrayIndex])
-//     ) & 0x7fffU;
-// #endif
+    InterruptLock lock;
 
     for(uint8_t i = 0; i < 2 * kChannelCount; i++) {
         digitalWrite(_config.pins[i], LOW);
     }
-    interrupts();
 }
 
 inline void BlindsControl::_stop()
@@ -634,53 +621,50 @@ inline void BlindsControl::_stop()
 
 inline void BlindsControl::_loadState()
 {
-#if IOT_BLINDS_CTRL_SAVE_STATE
-    auto file = KFCFS.open(FSPGM(iot_blinds_control_state_file), fs::FileOpenMode::read);
-    if (file) {
-        // file.read(reinterpret_cast<uint8_t *>(_states.data()), _states.size() * sizeof(*_states.data()));
-        file.read(_states, _states.sizeInBytes());
-    }
-    __LDBG_printf("file=%u state=%u,%u", (bool)file, _states[0], _states[1]);
-#endif
+    #if IOT_BLINDS_CTRL_SAVE_STATE
+        auto file = KFCFS.open(FSPGM(iot_blinds_control_state_file), fs::FileOpenMode::read);
+        if (file) {
+            if (!_states.read(file)) {
+                _states = {};
+            }
+        }
+        __LDBG_printf("file=%u state=%u,%u", static_cast<bool>(file), static_cast<unsigned>(_states[0]), static_cast<unsigned>(_states[1]));
+    #endif
 }
 
 inline void BlindsControl::_saveState()
 {
-#if IOT_BLINDS_CTRL_SAVE_STATE
-    auto file = KFCFS.open(FSPGM(iot_blinds_control_state_file), fs::FileOpenMode::read);
-    if (file) {
-        decltype(_states) states;
-        if (file.read(states, states.sizeInBytes()) == states.sizeInBytes()) {
-            if (memcmp(&states, &_states, sizeof(states)) == 0) {
-                __LDBG_printf("file=%u state=%u,%u skipping save, no changes", (bool)file, _states[0], _states[1]);
+    #if IOT_BLINDS_CTRL_SAVE_STATE
+        auto file = KFCFS.open(FSPGM(iot_blinds_control_state_file), fs::FileOpenMode::read);
+        if (file) {
+            decltype(_states) states;
+            if (states.read(file) && (memcmp(&states, &_states, sizeof(states)) == 0)) {
+                __LDBG_printf("file=%u state=%u,%u skipping save, no changes", static_cast<bool>(file), static_cast<unsigned>(_states[0]), static_cast<unsigned>(_states[1]));
                 return;
             }
         }
-    }
-    file = KFCFS.open(FSPGM(iot_blinds_control_state_file), fs::FileOpenMode::write);
-    if (file) {
-        //file.write(reinterpret_cast<const uint8_t *>(_states.data()), _states.size() * sizeof(*_states.data()));
-        file.write(_states, _states.sizeInBytes());
-    }
-    __LDBG_printf("file=%u state=%u,%u", (bool)file, _states[0], _states[1]);
-#endif
+        file = KFCFS.open(FSPGM(iot_blinds_control_state_file), fs::FileOpenMode::write);
+        if (file) {
+            _states.write(file);
+        }
+        __LDBG_printf("file=%u state=%u,%u", static_cast<bool>(file), static_cast<unsigned>(_states[0]), static_cast<unsigned>(_states[1]));
+    #endif
 }
 
 inline void BlindsControl::_saveState(StateType *channels, uint8_t numChannels)
 {
-#if IOT_BLINDS_CTRL_SAVE_STATE
-    ChannelStateArray<kChannelCount> _states;
+    #if IOT_BLINDS_CTRL_SAVE_STATE
+        ChannelStateArray<kChannelCount> _states;
 
-    for(uint8_t i = 0; i < numChannels; i++) {
-        _states[i] = std::clamp(channels[i], StateType::UNKNOWN, StateType::CLOSED);
-    }
+        for(uint8_t i = 0; i < numChannels; i++) {
+            _states[i] = std::clamp(channels[i], StateType::UNKNOWN, StateType::CLOSED);
+        }
 
-    auto file = KFCFS.open(FSPGM(iot_blinds_control_state_file), fs::FileOpenMode::write);
-    if (file) {
-        // file.write(reinterpret_cast<const uint8_t *>(_states.data()), _states.size() * sizeof(*_states.data()));
-        file.write(_states, _states.sizeInBytes());
-    }
-#endif
+        auto file = KFCFS.open(FSPGM(iot_blinds_control_state_file), fs::FileOpenMode::write);
+        if (file) {
+            _states.write(file);
+        }
+    #endif
 }
 
 inline void BlindsControl::_readConfig()

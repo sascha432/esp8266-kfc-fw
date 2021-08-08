@@ -156,23 +156,23 @@ extern "C" bool gdb_present(void);
 
 #include "esp8266_compat.h"
 
-#define SPGM(name, ...)                                 PROGMEM_STRING_ID(name)
-#define FSPGM(name, ...)                                FPSTR(SPGM(name))
-#define PSPGM(name, ...)                                (PGM_P)(SPGM(name))
+#    define SPGM(name, ...)  PROGMEM_STRING_ID(name)
+#    define FSPGM(name, ...) FPSTR(SPGM(name))
+#    define PSPGM(name, ...) (PGM_P)(SPGM(name))
 
-#ifndef __attribute__packed__
-#define __attribute_packed__                            __attribute__((packed))
-#define __attribute__packed__                           __attribute__((packed))
-#define __attribute__unaligned__                        __attribute__((__aligned__(1)))
-#define PSTR1(str)                                      PSTRN(str, 1)
-#endif
+#    ifndef __attribute__packed__
+#        define __attribute_packed__     __attribute__((packed))
+#        define __attribute__packed__    __attribute__((packed))
+#        define __attribute__unaligned__ __attribute__((__aligned__(1)))
+#        define PSTR1(str)               PSTRN(str, 1)
+#    endif
 
-#ifdef PWMRANGE
-#define PWMRANGE 1023
-#endif
+#    ifndef PWMRANGE
+#        define PWMRANGE 1023
+#    endif
 
-#include "debug_helper.h"
-#include "misc.h"
+#    include "debug_helper.h"
+#    include "misc.h"
 
 #elif _MSC_VER
 

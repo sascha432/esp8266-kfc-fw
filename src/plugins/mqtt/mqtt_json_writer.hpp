@@ -10,6 +10,12 @@
 
 #define MQTT_JSON_WRITER_DEBUG 1
 
+#if MQTT_JSON_WRITER_DEBUG
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
 namespace MQTT {
 
     namespace Json {
@@ -106,12 +112,21 @@ namespace MQTT {
         };
 
         inline static FStr F_cast(const char *str) {
+            #if MQTT_JSON_WRITER_DEBUG
+                __DBG_assert_printf(___IsValidPointer(str), "invalid ptr %p", str);
+            #endif
             return reinterpret_cast<FStr>(str);
         }
         inline static FStr F_cast(char *str) {
+            #if MQTT_JSON_WRITER_DEBUG
+                __DBG_assert_printf(___IsValidPointer(str) && !___IsValidStackPointer(str), "invalid ptr %p", str);
+            #endif
             return reinterpret_cast<FStr>(const_cast<const char *>(str));
         }
         inline static FStr F_cast(const String &str) {
+            #if MQTT_JSON_WRITER_DEBUG
+                __DBG_assert_printf(___IsValidPointer(str.c_str()) || ___IsValidStackPointer(str.c_str()), "invalid ptr %p", str.c_str());
+            #endif
             return reinterpret_cast<FStr>(str.c_str());
         }
 
@@ -167,7 +182,11 @@ namespace MQTT {
         struct StoredString {
             StoredString(const char *value) : _value(value) {}
             StoredString(const String &value) : _value(value) {}
-            StoredString(String &&value) : _value(std::move(value)) {}
+            StoredString(String &&value) : _value(std::move(value)) {
+                #if MQTT_JSON_WRITER_DEBUG
+                    __DBG_assert_printf(___IsValidPointer(_value.c_str()) || ___IsValidStackPointer(_value.c_str()), "invalid ptr %p", _value.c_str());
+                #endif
+            }
 
             String _value;
         };
@@ -228,6 +247,9 @@ namespace MQTT {
 
             inline __attribute__((__always_inline__))
             FStr key() const {
+                #if MQTT_JSON_WRITER_DEBUG
+                    __DBG_assert_printf(___IsValidPointer(_key) && !___IsValidStackPointer(_key), "invalid ptr %p", _key);
+                #endif
                 return _key;
             }
 
@@ -267,6 +289,9 @@ namespace MQTT {
             inline __attribute__((__always_inline__))
                 void printTo(PrintStringInterface &output) const {
                 if (std::isnormal(_value)) {
+                    #if MQTT_JSON_WRITER_DEBUG
+                        __DBG_assert_printf(___IsValidPointer(_format) && !___IsValidStackPointer(_format), "invalid ptr %p", _format);
+                    #endif
                     output.printf_P(reinterpret_cast<PGM_P>(_format), _value);
                 }
                 else {
@@ -286,6 +311,9 @@ namespace MQTT {
 
             inline __attribute__((__always_inline__))
             FStr key() const {
+                #if MQTT_JSON_WRITER_DEBUG
+                    __DBG_assert_printf(___IsValidPointer(_key) && !___IsValidStackPointer(_key), "invalid ptr %p", _key);
+                #endif
                 return _key;
             }
 
@@ -300,6 +328,9 @@ namespace MQTT {
 
             inline __attribute__((__always_inline__))
             FStr key() const {
+                #if MQTT_JSON_WRITER_DEBUG
+                    __DBG_assert_printf(___IsValidPointer(_key) && !___IsValidStackPointer(_key), "invalid ptr %p", _key);
+                #endif
                 return _key;
             }
 
@@ -348,6 +379,9 @@ namespace MQTT {
 
             inline __attribute__((__always_inline__))
             FStr key() const {
+                #if MQTT_JSON_WRITER_DEBUG
+                    __DBG_assert_printf(___IsValidPointer(_key) && !___IsValidStackPointer(_key), "invalid ptr %p", _key);
+                #endif
                 return _key;
             }
 
@@ -410,6 +444,9 @@ namespace MQTT {
 
             inline __attribute__((__always_inline__))
             FStr key() const {
+                #if MQTT_JSON_WRITER_DEBUG
+                    __DBG_assert_printf(___IsValidPointer(_key) && !___IsValidStackPointer(_key), "invalid ptr %p", _key);
+                #endif
                 return _key;
             }
 
@@ -433,6 +470,9 @@ namespace MQTT {
             UnnamedStoredString(String &&str) : _value(std::move(str)) {}
 
             const String &value() const {
+                #if MQTT_JSON_WRITER_DEBUG
+                    __DBG_assert_printf(___IsValidPointer(_value.c_str()) || ___IsValidStackPointer(_value.c_str()), "invalid ptr %p", _value.c_str());
+                #endif
                 return _value;
             }
 
@@ -454,6 +494,9 @@ namespace MQTT {
             NamedStoredString(const String &key, _Ta value) : UnnamedStoredString(std::forward<_Ta>(value)), _key(reinterpret_cast<FStr>(key.c_str())) {}
 
             FStr key() const {
+                #if MQTT_JSON_WRITER_DEBUG
+                    __DBG_assert_printf(___IsValidPointer(_key) && !___IsValidStackPointer(_key), "invalid ptr %p", _key);
+                #endif
                 return _key;
             }
 
@@ -501,6 +544,9 @@ namespace MQTT {
             {
                 // check if the c_str() pointer has changed
                 if (_format != reinterpret_cast<FStr>(_formatStr.c_str())) {
+                    #if MQTT_JSON_WRITER_DEBUG
+                        __DBG_assert_printf(___IsValidPointer(_formatStr.c_str()) || ___IsValidStackPointer(_formatStr.c_str()), "invalid ptr %p", _formatStr.c_str());
+                    #endif
                     _format = reinterpret_cast<FStr>(_formatStr.c_str());
                 }
             }
@@ -600,6 +646,9 @@ namespace MQTT {
         public:
             inline __attribute__((__always_inline__))
             const char *c_str() const {
+                #if MQTT_JSON_WRITER_DEBUG
+                    __DBG_assert_printf(___IsValidPointer(_output.c_str()), "invalid ptr %p", _output.c_str());
+                #endif
                 return _output.c_str();
             }
 
@@ -676,19 +725,19 @@ namespace MQTT {
             inline __attribute__((__always_inline__))
             void _setLast(char ch) {
                 if (_output.length() > 1) {
-#if MQTT_JSON_WRITER_DEBUG
-                    __DBG_assert_printf(_output.endsWith(']') || _output.endsWith('}') || _output.endsWith(','), "expected }, ] or ',': ...'%s'", _output.c_str() + std::max<int>(0, _output.length() - 10));
-#endif
+                    #if MQTT_JSON_WRITER_DEBUG
+                        __DBG_assert_printf(_output.endsWith(']') || _output.endsWith('}') || _output.endsWith(','), "expected }, ] or ',': ...'%s'", _output.c_str() + std::max<int>(0, _output.length() - 10));
+                    #endif
                     _output.setCharAt(_output.length() - 1, ch);
                 }
                 else {
                     // add closing brace
                     _output.print(ch);
-#if MQTT_JSON_WRITER_DEBUG
-                    __DBG_assert_printf(ch != '[' || (ch == '[' && _output.charAt(0) == '['), "expected [: '%.10s'", _output.c_str());
-                    __DBG_assert_printf(ch != '{' || (ch == '{' && _output.charAt(0) == '{'), "expected {: '%.10s'", _output.c_str());
-                    __DBG_assert_printf(_output.startsWith('{') || _output.startsWith('['), "expected { or [: '%.10s'", _output.c_str());
-#endif
+                    #if MQTT_JSON_WRITER_DEBUG
+                        __DBG_assert_printf(ch != '[' || (ch == '[' && _output.charAt(0) == '['), "expected [: '%.10s'", _output.c_str());
+                        __DBG_assert_printf(ch != '{' || (ch == '{' && _output.charAt(0) == '{'), "expected {: '%.10s'", _output.c_str());
+                        __DBG_assert_printf(_output.startsWith('{') || _output.startsWith('['), "expected { or [: '%.10s'", _output.c_str());
+                    #endif
                 }
             }
 
@@ -710,6 +759,9 @@ namespace MQTT {
             }
 
             int findNamed(FStr name) const {
+                #if MQTT_JSON_WRITER_DEBUG
+                    __DBG_assert_printf(___IsValidPointer(name) && !___IsValidStackPointer(name), "invalid ptr %p", name);
+                #endif
                 int ofs = 0;
                 auto len = strlen_P(reinterpret_cast<PGM_P>(name));
                 while ((ofs = _output.indexOf(name, ofs)) != -1) {
@@ -730,6 +782,9 @@ namespace MQTT {
 
             inline __attribute__((__always_inline__))
             int findNamed(PGM_P name) const {
+                #if MQTT_JSON_WRITER_DEBUG
+                    __DBG_assert_printf(___IsValidPointer(name) && !___IsValidStackPointer(name), "invalid ptr %p", name);
+                #endif
                 return findNamed(reinterpret_cast<FStr>(name));
             }
 
@@ -788,6 +843,9 @@ namespace MQTT {
         protected:
             inline __attribute__((__always_inline__))
             void appendValue(const char *value) {
+                #if MQTT_JSON_WRITER_DEBUG
+                    __DBG_assert_printf(___IsValidPointer(value), "invalid ptr %p", value);
+                #endif
                 JsonTools::Utf8Buffer buffer;
                 _output.print('"');
                 JsonTools::printToEscaped(_output, value, strlen(value), &buffer);
@@ -796,6 +854,9 @@ namespace MQTT {
 
             inline __attribute__((__always_inline__))
             void appendValue(FStr value) {
+                #if MQTT_JSON_WRITER_DEBUG
+                    __DBG_assert_printf(___IsValidPointer(value) && !___IsValidStackPointer(value), "invalid ptr %p", value);
+                #endif
                 JsonTools::Utf8Buffer buffer;
                 _output.print('"');
                 JsonTools::printToEscaped(_output, value, &buffer);
@@ -804,6 +865,9 @@ namespace MQTT {
 
             inline __attribute__((__always_inline__))
             void appendValue(const String &value) {
+                #if MQTT_JSON_WRITER_DEBUG
+                    __DBG_assert_printf(___IsValidPointer(value.c_str()) || ___IsValidStackPointer(value.c_str()), "invalid ptr %p", value.c_str());
+                #endif
                 JsonTools::Utf8Buffer buffer;
                 _output.print('"');
                 JsonTools::printToEscaped(_output, value, &buffer);
@@ -1044,16 +1108,25 @@ namespace MQTT {
         private:
             inline __attribute__((__always_inline__))
             void appendKey(const String &key) {
+                #if MQTT_JSON_WRITER_DEBUG
+                    __DBG_assert_printf(___IsValidPointer(key.c_str()), "invalid ptr %p", key.c_str());
+                #endif
                 _output.printf_P(PSTR("\"%s\":"), key.c_str());
             }
 
             inline __attribute__((__always_inline__))
             void appendKey(const char *key) {
+                #if MQTT_JSON_WRITER_DEBUG
+                    __DBG_assert_printf(___IsValidPointer(key), "invalid ptr %p", key);
+                #endif
                 _output.printf_P(PSTR("\"%s\":"), key);
             }
 
             inline __attribute__((__always_inline__))
             void appendKey(FStr key) {
+                #if MQTT_JSON_WRITER_DEBUG
+                    __DBG_assert_printf(___IsValidPointer(key), "invalid ptr %p", key);
+                #endif
                 _output.printf_P(PSTR("\"%s\":"), reinterpret_cast<PGM_P>(key));
             }
 
@@ -1082,7 +1155,7 @@ namespace MQTT {
             inline __attribute__((__always_inline__))
             void add(const _Ta &writer)
             {
-                // __DBG_printf("UnnamedObjectWriter::add(NamedObject)");
+                // __LDBG_printf("UnnamedObjectWriter::add(NamedObject)");
                 _output.reserve(_output.length() + writer.length() + 1);
                 writer.printTo(_output);
                 _output.print(',');
@@ -1092,7 +1165,7 @@ namespace MQTT {
             inline __attribute__((__always_inline__))
             void add(const _Ta &writer)
             {
-                // __DBG_printf("UnnamedObjectWriter::add(NamedArray)");
+                // __LDBG_printf("UnnamedObjectWriter::add(NamedArray)");
                 _output.reserve(_output.length() + writer.length() + 1);
                 writer.printTo(_output);
                 _output.print(',');
@@ -1365,7 +1438,7 @@ namespace MQTT {
         // inline __attribute__((__always_inline__))
         // void UnnamedObjectWriter::add(const NamedObject &writer)
         // {
-        //     __DBG_printf("UnnamedObjectWriter::add(NamedObject)");
+        //     __LDBG_printf("UnnamedObjectWriter::add(NamedObject)");
         //     _output.reserve(_output.length() + writer.length() + 1);
         //     writer.printTo(_output);
         //     _output.print(',');
@@ -1374,7 +1447,7 @@ namespace MQTT {
         // inline __attribute__((__always_inline__))
         // void UnnamedObjectWriter::add(const NamedArray &writer)
         // {
-        //     __DBG_printf("UnnamedObjectWriter::add(NamedArray)");
+        //     __LDBG_printf("UnnamedObjectWriter::add(NamedArray)");
         //     _output.reserve(_output.length() + writer.length() + 1);
         //     writer.printTo(_output);
         //     _output.print(',');
@@ -1417,3 +1490,7 @@ namespace MQTT {
     }
 
 }
+
+#if MQTT_JSON_WRITER_DEBUG
+#include <debug_helper_disable.h>
+#endif

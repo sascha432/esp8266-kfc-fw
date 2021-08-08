@@ -115,6 +115,7 @@ extern const char ___debugPrefix[] PROGMEM;
 // validate pointers from alloc
 #if _MSC_VER
 
+#define ___IsValidStackPointer(ptr)                         _CrtIsValidHeapPointer(ptr)
 #define ___IsValidHeapPointer(ptr)                          _CrtIsValidHeapPointer(ptr)
 #define ___IsValidPROGMEMPointer(ptr)                       _CrtIsValidHeapPointer(ptr)
 #define ___IsValidPointer(ptr)                              _CrtIsValidHeapPointer(ptr)
@@ -122,6 +123,7 @@ extern const char ___debugPrefix[] PROGMEM;
 
 #elif defined(ESP8266)
 
+#define ___IsValidStackPointer(ptr)                         ((uint32_t)ptr > SECTION_HEAP_END_ADDRESS && (uint32_t)ptr < 0x3fffffffU)
 #define ___IsValidHeapPointer(ptr)                          ((uint32_t)ptr >= SECTION_HEAP_START_ADDRESS && (uint32_t)ptr < SECTION_HEAP_END_ADDRESS)
 #define ___IsValidPROGMEMPointer(ptr)                       ((uint32_t)ptr >= SECTION_IROM0_TEXT_START_ADDRESS && (uint32_t)ptr < SECTION_IROM0_TEXT_END_ADDRESS)
 #define ___IsValidPointer(ptr)                              (___IsValidHeapPointer(ptr) || ___IsValidPROGMEMPointer(ptr))
@@ -129,6 +131,7 @@ extern const char ___debugPrefix[] PROGMEM;
 
 #else
 
+#define ___IsValidStackPointer(ptr)                         true
 #define ___IsValidHeapPointer(ptr)                          true
 #define ___IsValidPROGMEMPointer(ptr)                       true
 #define ___IsValidPointer(ptr)                              true

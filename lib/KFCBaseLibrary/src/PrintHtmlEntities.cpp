@@ -2,9 +2,10 @@
  * Author: sascha_lammers@gmx.de
  */
 
-//#include <Arduino_compat.h>
 #include "PrintHtmlEntities.h"
 #include "PrintHtmlEntitiesString.h"
+
+#define DEBUG_PTR_VALIDATION 1
 
 // #define PRINTHTMLENTITIES_COPY      "\xa9"  // 0xa9 = 169 = ©
 // #define PRINTHTMLENTITIES_DEGREE    "\xb0"  // 0xb0 = 176 = °
@@ -61,6 +62,10 @@ int PrintHtmlEntities::getTranslatedSize_P(PGM_P str, Mode mode)
     if (!str) {
         return kNoTranslationRequired;
     }
+    #if DEBUG_PTR_VALIDATION
+        __DBG_assert_printf(___IsValidPointer(str), "invalid ptr %p", str);
+    #endif
+
     auto kv = __getKeysAndValues(mode);
     int requiredSize = 0;
     int len = 0;
@@ -84,6 +89,10 @@ bool PrintHtmlEntities::translateTo(const char *str, String &target, Mode mode, 
     if (!str) {
         return false;
     }
+    #if DEBUG_PTR_VALIDATION
+        __DBG_assert_printf(___IsValidPointer(str), "invalid ptr %p", str);
+    #endif
+
     if (requiredSize == kInvalidSize) {
         requiredSize = getTranslatedSize_P(str, mode);
     }
@@ -106,9 +115,13 @@ bool PrintHtmlEntities::translateTo(const char *str, String &target, Mode mode, 
 
 char *PrintHtmlEntities::translateTo(const char *str, Mode mode, int requiredSize)
 {
-    if (!str){
+    if (!str) {
         return nullptr;
     }
+    #if DEBUG_PTR_VALIDATION
+        __DBG_assert_printf(___IsValidPointer(str), "invalid ptr %p", str);
+    #endif
+
     if (requiredSize == kInvalidSize) {
         requiredSize = getTranslatedSize_P(str, mode);
     }
@@ -141,6 +154,10 @@ size_t PrintHtmlEntities::printTo(Mode mode, const char *str, Print &output)
     if (!str) {
         return 0;
     }
+    #if DEBUG_PTR_VALIDATION
+        __DBG_assert_printf(___IsValidPointer(str), "invalid ptr %p", str);
+    #endif
+
     if (mode == Mode::RAW) {
         return output.print(FPSTR(str));
     }

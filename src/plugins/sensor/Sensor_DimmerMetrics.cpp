@@ -73,11 +73,12 @@ void Sensor_DimmerMetrics::_createWebUI(WebUINS::Root &webUI)
 void Sensor_DimmerMetrics::publishState()
 {
     if (isConnected()) {
-        publish(_getMetricsTopics(), true, MQTT::Json::UnnamedObject(
-            MQTT::Json::NamedTrimmedFormattedDouble(F("int_temp"), _metrics.metrics.get_int_temp(), WebUINS::DoubleBase::getPrecisionFormat(2)),
-            MQTT::Json::NamedTrimmedFormattedDouble(F("ntc_temp"), _metrics.metrics.get_ntc_temp(), WebUINS::DoubleBase::getPrecisionFormat(2)),
-            MQTT::Json::NamedTrimmedFormattedDouble(F("vcc"), _metrics.metrics.get_vcc(), WebUINS::DoubleBase::getPrecisionFormat(3)),
-            MQTT::Json::NamedFormattedDouble(F("frequency"), _metrics.metrics.get_freqency(), WebUINS::DoubleBase::getPrecisionFormat(2))
+        using namespace MQTT::Json;
+        publish(_getMetricsTopics(), true, UnnamedObject(
+            NamedTrimmedFormattedDouble(F("int_temp"), _metrics.metrics.get_int_temp(), UnnamedFormattedDouble::getPrecisionFormat(2)),
+            NamedTrimmedFormattedDouble(F("ntc_temp"), _metrics.metrics.get_ntc_temp(), UnnamedFormattedDouble::getPrecisionFormat(2)),
+            NamedTrimmedFormattedDouble(F("vcc"), _metrics.metrics.get_vcc(), UnnamedFormattedDouble::getPrecisionFormat(2)),
+            NamedFormattedDouble(F("frequency"), _metrics.metrics.get_freqency(), UnnamedFormattedDouble::getPrecisionFormat(2))
         ).toString());
     }
 }

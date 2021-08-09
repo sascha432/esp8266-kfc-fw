@@ -573,7 +573,7 @@ namespace WebUINS {
     class DoubleBase {
     public:
         DoubleBase(double value, const __FlashStringHelper *format) : _value(value), _format(format) {}
-        DoubleBase(double value, int precision = 2) : _value(value), _format(getPrecisionFormat(precision)) {}
+        DoubleBase(double value, int precision = 2) : _value(value), _format(UnnamedFormattedDouble::getPrecisionFormat(precision)) {}
 
         inline double getValue() const {
             return _value;
@@ -585,38 +585,6 @@ namespace WebUINS {
 
         inline bool isNormal() const {
             return std::isnormal(_value);
-        }
-
-        inline static FStr getPrecisionFormat(int precision) {
-#if 0
-            auto res = _getPrecisionFormat(precision);
-            __DBG_printf("format=%s precision=%u", res, precision);
-            return res;
-        }
-
-        inline static FStr _getPrecisionFormat(int precision) {
-#endif
-            switch (precision) {
-            case 0:
-                return F("%.0f");
-            case 1:
-                return F("%.1f");
-            // case 2:
-            //     return F("%.2f");
-            case 3:
-                return F("%.3f");
-            case 4:
-                return F("%.4f");
-            case 5:
-                return F("%.5f");
-            case 6:
-                return F("%.6f");
-            case 7:
-                return F("%.7f");
-            default:
-                break;
-            }
-            return F("%.2f");
         }
 
     private:

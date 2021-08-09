@@ -6,6 +6,10 @@
 #include "PrintHtmlEntitiesString.h"
 
 #define DEBUG_PTR_VALIDATION 1
+#if !DEBUG_PTR_VALIDATION
+#undef __DBG_validatePointer
+#define __DBG_validatePointer(...) true
+#endif
 
 // #define PRINTHTMLENTITIES_COPY      "\xa9"  // 0xa9 = 169 = ©
 // #define PRINTHTMLENTITIES_DEGREE    "\xb0"  // 0xb0 = 176 = °
@@ -59,13 +63,10 @@ const char *__values_javascript_P[] PROGMEM = {
 
 int PrintHtmlEntities::getTranslatedSize_P(PGM_P str, Mode mode)
 {
+    __DBG_validatePointer(str, VP_NHPS);
     if (!str) {
         return kNoTranslationRequired;
     }
-    #if DEBUG_PTR_VALIDATION
-        __DBG_assert_printf(___IsValidPointer(str), "invalid ptr %p", str);
-    #endif
-
     auto kv = __getKeysAndValues(mode);
     int requiredSize = 0;
     int len = 0;
@@ -86,13 +87,10 @@ int PrintHtmlEntities::getTranslatedSize_P(PGM_P str, Mode mode)
 
 bool PrintHtmlEntities::translateTo(const char *str, String &target, Mode mode, int requiredSize)
 {
+    __DBG_validatePointer(str, VP_NHPS);
     if (!str) {
         return false;
     }
-    #if DEBUG_PTR_VALIDATION
-        __DBG_assert_printf(___IsValidPointer(str), "invalid ptr %p", str);
-    #endif
-
     if (requiredSize == kInvalidSize) {
         requiredSize = getTranslatedSize_P(str, mode);
     }
@@ -115,13 +113,10 @@ bool PrintHtmlEntities::translateTo(const char *str, String &target, Mode mode, 
 
 char *PrintHtmlEntities::translateTo(const char *str, Mode mode, int requiredSize)
 {
+    __DBG_validatePointer(str, VP_NHPS);
     if (!str) {
         return nullptr;
     }
-    #if DEBUG_PTR_VALIDATION
-        __DBG_assert_printf(___IsValidPointer(str), "invalid ptr %p", str);
-    #endif
-
     if (requiredSize == kInvalidSize) {
         requiredSize = getTranslatedSize_P(str, mode);
     }
@@ -151,13 +146,10 @@ char *PrintHtmlEntities::translateTo(const char *str, Mode mode, int requiredSiz
 
 size_t PrintHtmlEntities::printTo(Mode mode, const char *str, Print &output)
 {
+    __DBG_validatePointer(str, VP_NHPS);
     if (!str) {
         return 0;
     }
-    #if DEBUG_PTR_VALIDATION
-        __DBG_assert_printf(___IsValidPointer(str), "invalid ptr %p", str);
-    #endif
-
     if (mode == Mode::RAW) {
         return output.print(FPSTR(str));
     }

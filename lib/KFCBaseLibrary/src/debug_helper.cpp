@@ -9,6 +9,61 @@
 #include <StreamWrapper.h>
 #include "debug_helper.h"
 
+#if ESP8266
+
+String &__validatePointer(const String &str, ValidatePointerType type, const char *file, int line, const char *func)
+{
+    __validatePointer(str.c_str(), type, file, line, func);
+    return const_cast<String &>(str);
+}
+
+void *__validatePointer(const void *ptr, ValidatePointerType type, const char *file, int line, const char *func)
+{
+    if (static_cast<int>(type) & static_cast<int>(ValidatePointerType::P_NULL) && (ptr == nullptr)) {
+        return nullptr;
+    }
+    if ((static_cast<int>(type) & static_cast<int>(ValidatePointerType::P_ALIGNED)) && (((uint32_t)ptr & 0x03) != 0)) {
+        __DBG_printf(_VT100(bold_red) "INVALID POINTER %p(%u) NOT ALIGNED=%u FILE=%s LINE=%u FUNC=%s" _VT100(reset), ptr, type, ((uint32_t)ptr & 0x03), file, line, func);
+        return const_cast<void *>(ptr);
+    }
+    if (static_cast<int>(type) & static_cast<int>(ValidatePointerType::P_STACK)) {
+        uint32_t stackPtr = 0;
+        if ((uint32_t)ptr > (uint32_t)&stackPtr && (uint32_t)ptr < 0x3fffffffU) {
+            return const_cast<void *>(ptr);
+        }
+    }
+    if (static_cast<int>(type) & static_cast<int>(ValidatePointerType::P_PROGMEM)) {
+        if (___IsValidPROGMEMPointer(ptr)) {
+            return const_cast<void *>(ptr);
+        }
+    }
+    if (static_cast<int>(type) & static_cast<int>(ValidatePointerType::P_HEAP)) {
+        if (___IsValidHeapPointer(ptr)) {
+            return const_cast<void *>(ptr);
+        }
+    }
+    __DBG_printf(_VT100(bold_red) "INVALID POINTER %p(%u) FILE=%s LINE=%u FUNC=%s" _VT100(reset), ptr, type, file, line, func);
+    __dump_binary_to(DEBUG_OUTPUT, ptr, 16, 16);
+    // __DBG_panic();
+    return nullptr;
+}
+
+#else
+
+#warning TODO
+
+String &__validatePointer(const String &str, ValidatePointerType type, const char *file, int line, const char *func)
+{
+    __validatePointer(str.c_str(), type, file, line, func);
+    return const_cast<String &>(str);
+}
+
+void *__validatePointer(const void *ptr, ValidatePointerType type, const char *file, int line, const char *func)
+{
+    return const_cast<void *>(ptr);
+}
+
+#endif
 
 // use with "build_flags = -finstrument-functions"
 #if HAVE_INSTRUMENT_FUNCTIONS

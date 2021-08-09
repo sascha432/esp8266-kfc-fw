@@ -41,6 +41,47 @@ extern int ___debugbreak_and_panic(const char *filename, int line, const char *f
 
 extern const char ___debugPrefix[] PROGMEM;
 
+enum class ValidatePointerType {
+    P_HEAP = 0x01,
+    P_STACK = 0x02,
+    P_PROGMEM = 0x04,
+    P_ALIGNED = 0x08,
+    P_NULL = 0x10,
+    P_HS = P_HEAP|P_STACK,
+    P_HP = P_HEAP|P_PROGMEM,
+    P_HPS = P_HEAP|P_STACK|P_PROGMEM,
+    P_NPS = P_STACK|P_PROGMEM,
+    P_NHS = P_HEAP|P_STACK|P_NULL,
+    P_NHP = P_HEAP|P_PROGMEM|P_NULL,
+    P_NHPS = P_HEAP|P_STACK|P_PROGMEM|P_NULL,
+    P_ANPS = P_STACK|P_PROGMEM|P_NULL|P_ALIGNED,
+    P_AHS = P_HEAP|P_STACK|P_ALIGNED,
+    P_AHP = P_HEAP|P_PROGMEM|P_ALIGNED,
+    P_AHPS = P_HEAP|P_STACK|P_PROGMEM|P_ALIGNED,
+    P_APS = P_STACK|P_PROGMEM|P_ALIGNED,
+    P_ANHS = P_HEAP|P_STACK|P_NULL|P_ALIGNED,
+    P_ANHP = P_HEAP|P_PROGMEM|P_NULL|P_ALIGNED,
+    P_ANHPS = P_HEAP|P_STACK|P_PROGMEM|P_NULL|P_ALIGNED,
+};
+
+void *__validatePointer(const void *ptr, ValidatePointerType type, const char *file, int line, const char *func);
+String &__validatePointer(const String &str, ValidatePointerType type, const char *file, int line, const char *func);
+
+template<typename _Ta>
+inline _Ta *__validatePointer(const _Ta *ptr, ValidatePointerType type, const char *file, int line, const char *func) {
+    return reinterpret_cast<_Ta *>(__validatePointer(reinterpret_cast<const void *>(ptr), type, file, line, func));
+}
+
+#define VP_HS                            ValidatePointerType::P_HS
+#define VP_HP                            ValidatePointerType::P_HP
+#define VP_HPS                           ValidatePointerType::P_HPS
+#define VP_PS                            ValidatePointerType::P_PS
+#define VP_NHS                           ValidatePointerType::P_NHS
+#define VP_NHP                           ValidatePointerType::P_NHP
+#define VP_NHPS                          ValidatePointerType::P_NHPS
+#define VP_NPS                           ValidatePointerType::P_NPS
+#define __DBG_validatePointer(ptr, type) __validatePointer(ptr, type, __BASENAME_FILE__, __LINE__, __DEBUG_FUNCTION__)
+
 // call in setup, after initializing the output stream
 #define DEBUG_HELPER_INIT()                                 DebugContext::__state = DEBUG_HELPER_STATE_DEFAULT;
 #define DEBUG_HELPER_SILENT()                               DebugContext::__state = DEBUG_HELPER_STATE_DISABLED;
@@ -123,7 +164,7 @@ extern const char ___debugPrefix[] PROGMEM;
 
 #elif defined(ESP8266)
 
-#define ___IsValidStackPointer(ptr)                         ((uint32_t)ptr > SECTION_HEAP_END_ADDRESS && (uint32_t)ptr < 0x3fffffffU)
+#define ___IsValidStackPointer(ptr)                         ((uint32_t)ptr >= SECTION_HEAP_END_ADDRESS && (uint32_t)ptr <= 0x3fffffffU)
 #define ___IsValidHeapPointer(ptr)                          ((uint32_t)ptr >= SECTION_HEAP_START_ADDRESS && (uint32_t)ptr < SECTION_HEAP_END_ADDRESS)
 #define ___IsValidPROGMEMPointer(ptr)                       ((uint32_t)ptr >= SECTION_IROM0_TEXT_START_ADDRESS && (uint32_t)ptr < SECTION_IROM0_TEXT_END_ADDRESS)
 #define ___IsValidPointer(ptr)                              (___IsValidHeapPointer(ptr) || ___IsValidPROGMEMPointer(ptr))
@@ -271,6 +312,8 @@ static inline int DEBUG_OUTPUT_flush() {
 #endif
 
 // new functions
+
+#define __DBG_validatePointer(ptr, ...)                     ptr
 
 #define isDebugContextActive()                              false
 #define DebugContext_prefix(...)

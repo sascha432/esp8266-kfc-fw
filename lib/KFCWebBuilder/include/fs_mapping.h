@@ -10,18 +10,18 @@
 using namespace fs;
 
 #ifndef DEBUG_FS_MAPPING
-#define DEBUG_FS_MAPPING                    0
+#    define DEBUG_FS_MAPPING 0
 #endif
 
 // timeout in milliseconds
 #ifndef FS_MAPPING_AUTO_RELEASE_MEMORY
-#define FS_MAPPING_AUTO_RELEASE_MEMORY      5000
+#    define FS_MAPPING_AUTO_RELEASE_MEMORY 5000
 #endif
 
 #ifdef SPIFFS_OBJ_NAME_LEN
-#define FS_MAPPING_MAX_FILENAME_LEN         (SPIFFS_OBJ_NAME_LEN + 1)
+#    define FS_MAPPING_MAX_FILENAME_LEN (SPIFFS_OBJ_NAME_LEN + 1)
 #else
-#define FS_MAPPING_MAX_FILENAME_LEN         KFCFS_MAX_FILE_LEN
+#    define FS_MAPPING_MAX_FILENAME_LEN KFCFS_MAX_FILE_LEN
 #endif
 
 #include <push_pack.h>
@@ -36,15 +36,19 @@ public:
     FileMapping(uint32_t uuid) : _uuid(uuid) {
         _openByUUID();
     }
+
     FileMapping(const char *filename) : _filename(filename) {
         _openByFilename();
     }
+
     FileMapping(const String &filename) : _filename(filename) {
         _openByFilename();
     }
+
     FileMapping(const __FlashStringHelper *filename) : _filename(filename) {
         _openByFilename();
     }
+
     FileMapping(const __FlashStringHelper *filename, bool prependSlash) : _filename('/') {
         _filename += filename;
         _openByFilename();

@@ -156,7 +156,6 @@ void Dimmer::Form::createConfigureForm(PluginComponent::FormCallbackType type, c
             //     auto from = field.getForm().getField(vars[i][0])->getValue().toInt();
             //     return (from < to.toInt());
             // }));
-
         }
 
         channelGroup.end();
@@ -249,9 +248,11 @@ void Dimmer::Form::createConfigureForm(PluginComponent::FormCallbackType type, c
         #endif
 
         #if DIMMER_FIRMWARE_VERSION <= 0x020105
+
             form.addPointerTriviallyCopyable(F("zc_offset"), &cfg.cfg.zero_crossing_delay_ticks);
             form.addFormUI(F("Zero Crossing Offset"), configValidAttr, FormUI::Suffix(FSPGM(ticks, "ticks")));
             form.addValidator(FormUI::Validator::Range(0, 65535));
+
         #endif
 
         #if DIMMER_FIRMWARE_VERSION >= 0x020200

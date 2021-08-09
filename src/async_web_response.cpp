@@ -634,10 +634,10 @@ size_t AsyncNetworkScanResponse::_fillBuffer(uint8_t *data, size_t len)
                 space -= tmp.length();
             }
             if ((l = snprintf_P(ptr, space, PSTR("\",\"channel\":%d,\"rssi\":%d,\"bssid\":\"%s\",\"encryption\":\"%s\"},"),
-                WiFi.channel(_position),
-                WiFi.RSSI(_position),
-                WiFi.BSSIDstr(_position).c_str(),
-                KFCFWConfiguration::getWiFiEncryptionType(WiFi.encryptionType(_position))
+                    WiFi.channel(_position),
+                    WiFi.RSSI(_position),
+                    WiFi.BSSIDstr(_position).c_str(),
+                    KFCFWConfiguration::getWiFiEncryptionType(WiFi.encryptionType(_position))
                 )) >= space)
             {
                 space = 0;

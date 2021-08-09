@@ -23,24 +23,52 @@ class STK500v1Programmer {
 public:
     typedef enum : uint8_t {
         Cmnd_STK_GET_SYNC =             0x30,
+        Cmnd_STK_GET_SIGN_ON =          0x31,
+
+        Cmnd_STK_SET_PARAMETER =        0x40,
+        Cmnd_STK_GET_PARAMETER =        0x41,
         Cmnd_STK_SET_DEVICE =           0x42,
+        Cmnd_STK_SET_DEVICE_EXT =       0x45,
+
         Cmnd_STK_ENTER_PROGMODE =       0x50,
         Cmnd_STK_LEAVE_PROGMODE =       0x51,
+        Cmnd_STK_CHIP_ERASE =           0x52,
+        Cmnd_STK_CHECK_AUTOINC =        0x53,
         Cmnd_STK_LOAD_ADDRESS =         0x55,
+        Cmnd_STK_UNIVERSAL =            0x56,
+        Cmnd_STK_UNIVERSAL_MULTI =      0x57,
+
+        Cmnd_STK_PROG_FLASH =           0x60,
+        Cmnd_STK_PROG_DATA =            0x61,
         Cmnd_STK_PROG_FUSE =            0x62,
+        Cmnd_STK_PROG_LOCK =            0x63,
         Cmnd_STK_PROG_PAGE =            0x64,
         Cmnd_STK_PROG_FUSE_EXT =        0x65,
+
+        Cmnd_STK_READ_FLASH =           0x70,
+        Cmnd_STK_READ_DATA =            0x71,
+        Cmnd_STK_READ_FUSE =            0x72,
+        Cmnd_STK_READ_LOCK =            0x73,
         Cmnd_STK_READ_PAGE =            0x74,
         Cmnd_STK_READ_SIGN =            0x75,
+        Cmnd_STK_READ_OSCCAL =          0x76,
         Cmnd_STK_READ_FUSE_EXT =        0x77,
+        Cmnd_STK_READ_OSCCAL_EXT =      0x78
     } CommandsEnum_t;
 
     typedef enum : uint8_t {
+        Resp_STK_ANY =                  0x00,
         Resp_STK_OK =                   0x10,
+        Resp_STK_FAILED =               0x11,
+        Resp_STK_UNKNOWN =              0x12,
+        Resp_STK_NODEVICE =             0x13,
         Resp_STK_INSYNC =               0x14,
-        Resp_STK_NOSYNC =               0x15,
-        Sync_CRC_EOP =                  0x20,
+        Resp_STK_NOSYNC =               0x15
     } ResponseEnum_t;
+
+    typedef enum : uint8_t {
+        Sync_CRC_EOP =                  0x20
+    } SyncEnum_t;
 
     typedef enum : uint8_t {
         TYPE_FLASH = 'F',
@@ -119,7 +147,7 @@ public:
 public:
     void setSignature(const char *signature);
     void setSignature_P(PGM_P signature);
-    void setFuseBytes(uint8_t low, uint8_t high, uint8_t extended);
+    // void setFuseBytes(uint8_t low, uint8_t high, uint8_t extended);
     static bool getSignature(const char *mcu, char *signature);
 
 private:
@@ -158,11 +186,16 @@ private:
     void _sendCommand(const char *command, uint8_t length) {
         _sendCommand_P(command, length);
     }
+    void _sendCommandEnterProgMode();
+    void _sendCommandLeaveProgMode();
     void _sendCommandSetOptions(const Options_t &options);
     void _sendCommandLoadAddress(uint16_t address);
     void _sendCommandProgPage(const uint8_t *data, uint16_t length);
     void _sendCommandReadPage(const uint8_t *data, uint16_t length);
-    void _sendProgFuseExt(uint8_t fuseLow, uint8_t fuseHigh, uint8_t fuseExt);
+    #if 0
+    void _sendCommandReadFuseExt();
+    void _sendCommandProgFuseExt(uint8_t fuseLow, uint8_t fuseHigh, uint8_t fuseExt);
+    #endif
     void _setExpectedResponse_P(PGM_P response, uint8_t length);
 
     // read response with timeout
@@ -173,6 +206,8 @@ private:
     // set timeout for response
     // timeout = 0 will use the timeout previously set
     void _setResponseTimeout(uint16_t timeout);
+
+    bool _compareResponse(const Buffer &respReceived, const Buffer &respExpected);
 
     void _printBuffer(Print &str, const Buffer &buffer);
     void _printResponse();
@@ -208,7 +243,9 @@ private:
 
 private:
     char _signature[3];
+    #if 0
     char _fuseBytes[3];
+    #endif
     IntelHexFormat _file;
     uint16_t _pageSize;
     uint8_t *_pageBuffer;

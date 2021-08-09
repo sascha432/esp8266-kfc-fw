@@ -41,9 +41,11 @@ STK500v1Programmer::STK500v1Programmer(Stream &serial) :
     _signature[0] = 0x1e;
     _signature[1] = 0x95;
     _signature[2] = 0x0f;
-    _fuseBytes[FUSE_LOW] = 0xff;
-    _fuseBytes[FUSE_HIGH] = 0xda;
-    _fuseBytes[FUSE_EXT] = 0xff;
+    #if 0
+        _fuseBytes[FUSE_LOW] = 0xff;
+        _fuseBytes[FUSE_HIGH] = 0xda;
+        _fuseBytes[FUSE_EXT] = 0xff;
+    #endif
     _pageBuffer = new uint8_t[_pageSize]();
     BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::MEDIUM);
 }
@@ -66,15 +68,12 @@ void STK500v1Programmer::begin(Callback_t cleanup)
     _pagePosition = 0;
     _clearPageBuffer();
 
-    // if (&_serial == &KFC_SERIAL_PORT)
-    {
+    if (&_serial == &Serial0) {
         // disable all output and handlers while flashing
         DEBUG_HELPER_SILENT();
         auto &flags = KFCConfigurationClasses::System::Flags::getWriteableConfig();
         _atMode = flags.is_at_mode_enabled;
         flags.is_at_mode_enabled = false;
-        // StreamString nul;
-        // disable_at_mode(nul);
         LoopFunctions::remove(SerialHandler::Wrapper::pollSerial);
     }
 
@@ -89,13 +88,10 @@ void STK500v1Programmer::end()
     _clearResponse(100, [this]() {
         LoopFunctions::remove(STK500v1Programmer::loopFunction);
 
-        // if (&_serial == &KFC_SERIAL_PORT)
-        {
+        if (&_serial == &Serial0) {
             DEBUG_HELPER_INIT();
             KFCConfigurationClasses::System::Flags::getWriteableConfig().is_at_mode_enabled = _atMode;
             LoopFunctions::add(SerialHandler::Wrapper::pollSerial);
-            // StreamString nul;
-            // enable_at_mode(nul);
         }
 
         _response.clear();
@@ -154,7 +150,7 @@ void STK500v1Programmer::_loopFunction()
         // read serial and compare expected response
         _serialRead();
         if (_response.length() >= _expectedResponse.length()) {
-            if (_response == _expectedResponse) {
+            if (_compareResponse(_response, _expectedResponse)) {
                 _callbackSuccess();
             }
             else {
@@ -353,111 +349,95 @@ void STK500v1Programmer::_flash()
                     _logPrintf_P(PSTR("Signature verified"));
                     _printResponse();
 
-                    // TODO does not get any response and times out
-                    // _sendProgFuseExt(_fuseBytes[FUSE_LOW], _fuseBytes[FUSE_HIGH], _fuseBytes[FUSE_EXT]);
+                    Options_t options = {};
+                    options.pageSizeHigh = highByte(_pageSize);
+                    options.pageSizeLow = lowByte(_pageSize);
+                    _sendCommandSetOptions(options);
 
-                    _skipResponse([this]() {
+                    _readResponse([this]() {
 
-                        // _logPrintf_P(PSTR("Fuse bits written"));
-                        // _printResponse();
+                        _logPrintf_P(PSTR("Options set"));
+                        _printResponse();
 
-                        Options_t options = {};
-                        options.pageSizeHigh = highByte(_pageSize);
-                        options.pageSizeLow = lowByte(_pageSize);
-                        _sendCommandSetOptions(options);
+                        _sendCommandEnterProgMode();
 
                         _readResponse([this]() {
 
-                            _logPrintf_P(PSTR("Options set"));
+                            _file.reset();
+                            _startPosition(F("\nWriting"));
+
+                            _logPrintf_P(PSTR("Entered programming mode"));
                             _printResponse();
 
-                            _setExpectedResponse_P(Response_INSYNC, sizeof(Response_INSYNC));
-                            _sendCommand_P(Command_ENTER_PROG_MODE, sizeof(Command_ENTER_PROG_MODE));
+                            _readFile(
+                                [this](uint16_t address, uint16_t length, Callback_t success, Callback_t failure) {
+                                    _writePage(address, length, success, failure);
+                                },
+                                [this]() {
 
-                            _readResponse([this]() {
+                                    _endPosition(F("Complete"), false);
+                                    _logPrintf_P(PSTR("Programming completed"));
 
-                                _file.reset();
-                                _startPosition(F("\nWriting"));
+                                    // reset file and page buffer
+                                    _file.reset();
+                                    _pageAddress = 0;
+                                    _pagePosition = 0;
+                                    _verified = 0;
+                                    _clearPageBuffer();
 
-                                _logPrintf_P(PSTR("Entered programming mode"));
-                                _printResponse();
+                                    _startPosition(F("Reading"));
 
-                                _readFile(
-                                    [this](uint16_t address, uint16_t length, Callback_t success, Callback_t failure) {
-                                        _writePage(address, length, success, failure);
-                                    },
-                                    [this]() {
+                                    _readFile(
+                                        [this](uint16_t address, uint16_t length, Callback_t success, Callback_t failure) {
+                                            _verifyPage(address, length, success, failure);
+                                        },
+                                        [this]() {
 
-                                        _endPosition(F("Complete"), false);
-                                        _logPrintf_P(PSTR("Programming completed"));
+                                            _endPosition(F("Complete"), false);
+                                            _log(F("%u bytes verified\n"), _verified);
 
-                                        // reset file and page buffer
-                                        _file.reset();
-                                        _pageAddress = 0;
-                                        _pagePosition = 0;
-                                        _verified = 0;
-                                        _clearPageBuffer();
+                                            _logPrintf_P(PSTR("Verification completed"));
 
-                                        _startPosition(F("Reading"));
+                                            _sendCommandLeaveProgMode();
 
-                                        _readFile(
-                                            [this](uint16_t address, uint16_t length, Callback_t success, Callback_t failure) {
-                                                _verifyPage(address, length, success, failure);
-                                            },
-                                            [this]() {
+                                            _readResponse([this]() {
 
-                                                _endPosition(F("Complete"), false);
-                                                _log(F("%u bytes verified\n"), _verified);
+                                                _logPrintf_P(PSTR("Left programming mode"));
+                                                _done(true);
 
-                                                _logPrintf_P(PSTR("Verification completed"));
+                                            }, [this]() {
 
-                                                _setExpectedResponse_P(Response_INSYNC, sizeof(Response_INSYNC));
-                                                _sendCommand_P(Command_LEAVE_PROG_MODE, sizeof(Command_LEAVE_PROG_MODE));
-
-                                                _readResponse([this]() {
-
-                                                    _logPrintf_P(PSTR("Left programming mode"));
-                                                    _done(true);
-
-                                                }, [this]() {
-
-                                                    _logPrintf_P(PSTR("Failed to leave programming mode"));
-                                                    _printResponse();
-                                                    _done(false);
-                                                });
-
-                                            },
-                                            [this]() {
-                                                _endPosition(F("READ ERROR"), true);
-
-                                                _logPrintf_P(PSTR("Verifying failed"));
+                                                _logPrintf_P(PSTR("Failed to leave programming mode"));
+                                                _printResponse();
                                                 _done(false);
-                                            }
-                                        );
+                                            });
 
-                                    },
-                                    [this]() {
-                                        _endPosition(F("WRITE ERROR"), true);
+                                        },
+                                        [this]() {
+                                            _endPosition(F("READ ERROR"), true);
 
-                                        _logPrintf_P(PSTR("Uploading failed"));
-                                        _done(false);
-                                    }
-                                );
+                                            _logPrintf_P(PSTR("Verifying failed"));
+                                            _done(false);
+                                        }
+                                    );
 
-                            }, [this]() {
-                                _logPrintf_P(PSTR("Failed to enter programming mode"));
-                                _printResponse();
-                                _done(false);
-                            });
+                                },
+                                [this]() {
+                                    _endPosition(F("WRITE ERROR"), true);
+
+                                    _logPrintf_P(PSTR("Uploading failed"));
+                                    _done(false);
+                                }
+                            );
 
                         }, [this]() {
-                            _logPrintf_P(PSTR("Failed to set options"));
+                            _logPrintf_P(PSTR("Failed to enter programming mode"));
                             _printResponse();
                             _done(false);
                         });
 
                     }, [this]() {
-                        _logPrintf_P(PSTR("Failed to write fuse bits"));
+                        _logPrintf_P(PSTR("Failed to set options"));
                         _printResponse();
                         _done(false);
                     });
@@ -512,20 +492,54 @@ void STK500v1Programmer::_sendCommand_P_repeat(PGM_P command, uint8_t length, ui
     }
 }
 
-void STK500v1Programmer::_sendProgFuseExt(uint8_t fuseLow, uint8_t fuseHigh, uint8_t fuseExt)
+#if 0
+
+void STK500v1Programmer::_sendCommandReadFuseExt()
+{
+    _expectedResponse.clear();
+    _expectedResponse.write(Resp_STK_INSYNC);
+    _expectedResponse.write(Resp_STK_ANY);
+    _expectedResponse.write(Resp_STK_ANY);
+    _expectedResponse.write(Resp_STK_ANY);
+    _expectedResponse.write(Resp_STK_OK);
+
+    _setExpectedResponse_P(Response_INSYNC, sizeof(Response_INSYNC));
+    _logPrintf_P(PSTR("Sending read fuse ext"));
+
+    _serialWrite(Cmnd_STK_READ_FUSE_EXT);
+    _serialWrite(Sync_CRC_EOP);
+    _setResponseTimeout(_defaultTimeout);
+}
+
+void STK500v1Programmer::_sendCommandProgFuseExt(uint8_t fuseLow, uint8_t fuseHigh, uint8_t fuseExt)
 {
     _setExpectedResponse_P(Response_INSYNC, sizeof(Response_INSYNC));
     _logPrintf_P(PSTR("Sending prog fuse ext, f:l=%02x,h=%02x, e:%02x"), fuseLow, fuseHigh, fuseExt);
 
-    const char buf[5] = { Cmnd_STK_PROG_FUSE_EXT, fuseLow, fuseHigh, fuseExt, Sync_CRC_EOP };
-    _sendCommand(buf, sizeof(buf));
+    _serialWrite(Cmnd_STK_PROG_FUSE_EXT);
+    _serialWrite(fuseLow);
+    _serialWrite(fuseHigh);
+    _serialWrite(fuseExt);
+    _serialWrite(Sync_CRC_EOP);
+    _setResponseTimeout(_defaultTimeout);
+}
 
-    // _serialWrite(Cmnd_STK_PROG_FUSE_EXT);
-    // _serialWrite(fuseLow);
-    // _serialWrite(fuseHigh);
-    // _serialWrite(fuseExt);
-    // _serialWrite(Sync_CRC_EOP);
-    // _setResponseTimeout(_defaultTimeout);
+#endif
+
+void STK500v1Programmer::_sendCommandEnterProgMode()
+{
+    _logPrintf_P(PSTR("Sending enter prog mode"));
+    _setExpectedResponse_P(Response_INSYNC, sizeof(Response_INSYNC));
+    _sendCommand_P(Command_ENTER_PROG_MODE, sizeof(Command_ENTER_PROG_MODE));
+    _setResponseTimeout(_defaultTimeout);
+}
+
+void STK500v1Programmer::_sendCommandLeaveProgMode()
+{
+    _logPrintf_P(PSTR("Sending leave prog mode"));
+    _setExpectedResponse_P(Response_INSYNC, sizeof(Response_INSYNC));
+    _sendCommand_P(Command_LEAVE_PROG_MODE, sizeof(Command_LEAVE_PROG_MODE));
+    _setResponseTimeout(_defaultTimeout);
 }
 
 void STK500v1Programmer::_sendCommandSetOptions(const STK500v1Programmer::Options_t &options)
@@ -569,9 +583,6 @@ void STK500v1Programmer::_sendCommandReadPage(const uint8_t *data, uint16_t leng
 {
     _expectedResponse.clear();
     _expectedResponse.write(Resp_STK_INSYNC);
-    // _expectedResponse.write((uint8_t)highByte(length));
-    // _expectedResponse.write((uint8_t)lowByte(length));
-    // _expectedResponse.write(TYPE_FLASH);
     _expectedResponse.write(data, length);
     _expectedResponse.write(Resp_STK_OK);
 
@@ -633,12 +644,16 @@ void STK500v1Programmer::setSignature_P(PGM_P signature)
     memmove_P(_signature, signature, sizeof(_signature));
 }
 
+#if 0
+
 void STK500v1Programmer::setFuseBytes(uint8_t low, uint8_t high, uint8_t extended)
 {
     _fuseBytes[FUSE_LOW] = low;
     _fuseBytes[FUSE_HIGH] = high;
     _fuseBytes[FUSE_EXT] = extended;
 }
+
+#endif
 
 void STK500v1Programmer::dumpLog(Stream &output)
 {
@@ -717,16 +732,33 @@ void STK500v1Programmer::_setResponseTimeout(uint16_t timeout)
     }
 }
 
+bool STK500v1Programmer::_compareResponse(const Buffer &respReceived, const Buffer &respExpected)
+{
+    if (respReceived.length() != respExpected.length()) {
+        return false;
+    }
+    auto received = respReceived.begin();
+    auto expected = respExpected.begin();
+    for(size_t i = 0; i < respReceived.length(); i++) {
+        if ((*expected != Resp_STK_ANY) && (*received != *expected)) {
+            return false;
+        }
+        received++;
+        expected++;
+    }
+    return true;
+}
+
 void STK500v1Programmer::_printBuffer(Print &str, const Buffer &buffer)
 {
-    auto ptr = buffer.getConstChar();
+    auto ptr = buffer.begin();
     auto count = buffer.length();
     const size_t maxLength = 8;
     if (count > maxLength) {
         count = maxLength;
     }
     while(count--) {
-        str.printf_P(PSTR("%02x "), *ptr++ & 0xff);
+        str.printf_P(PSTR("%02x "), *ptr++);
     }
     if (buffer.length() > maxLength) {
         str.print(F("..."));

@@ -114,6 +114,10 @@ bool STK500v1Plugin::atModeHandler(AtModeArgs &args) {
 
                 args.printf_P(PSTR("Flashing %s on %s\n"), filename.c_str(), portName);
 
+                // STK500v1Programmer test(Serial0);
+                // test._testSerial();
+                // return true;
+
                 stk500v1 = new STK500v1Programmer(*serialPort);
                 stk500v1->setSignature(_signature);
                 stk500v1->setFile(filename);

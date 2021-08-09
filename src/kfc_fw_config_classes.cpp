@@ -93,8 +93,21 @@ namespace KFCConfigurationClasses {
 
     FormUI::Container::List createFormPinList(uint8_t from, uint8_t to)
     {
-#if defined(ESP8266)
-        PROGMEM_DEF_LOCAL_PSTR_ARRAY(pinNames, "GPIO0", "U0TXD", "GPIO2", "U0RXD", "GPIO4", "GPIO5", "", "", "", "", "", "", "GPIO12", "GPIO13", "GPIO14", "GPIO15", "GPIO16/RTC_GPIO0");
+#if ESP8266
+        return FormUI::Container::List(
+            0, F("GPIO0"),
+            1, F("GPIO1/U0TXD"),
+            2, F("GPIO2"),
+            3, F("GPIO3/U0RXD"),
+            4, F("GPIO4"),
+            5, F("GPIO5"),
+            12, F("GPIO12"),
+            13, F("GPIO13"),
+            14, F("GPIO14"),
+            15, F("GPIO15"),
+            16, F("GPIO16/RTC_GPIO0")
+        );
+        // PROGMEM_DEF_LOCAL_PSTR_ARRAY(pinNames, "GPIO0", "U0TXD", "GPIO2", "U0RXD", "GPIO4", "GPIO5", "", "", "", "", "", "", "GPIO12", "GPIO13", "GPIO14", "GPIO15", "GPIO16/RTC_GPIO0");
 #else
         #ifndef NUM_DIGITAL_PINS
         #define NUM_DIGITAL_PINS 16
@@ -103,8 +116,6 @@ namespace KFCConfigurationClasses {
         #define isFlashInterfacePin(i) false
         #endif
         PROGMEM_DEF_LOCAL_PSTR_ARRAY_INDEXED(pinNames, 0, NUM_DIGITAL_PINS, "", GPIO);
-#endif
-
         FormUI::Container::List list;
         to = ((to >= NUM_DIGITAL_PINS) ? NUM_DIGITAL_PINS : to + 1);
         to = to ? to : NUM_DIGITAL_PINS;
@@ -121,6 +132,7 @@ namespace KFCConfigurationClasses {
             }
         }
         return list;
+#endif
     }
 
     // "${zeroconf:" service "." proto "," variable "|" default_value "}"
@@ -194,6 +206,7 @@ namespace KFCConfigurationClasses {
         ConfigFlags_t tmp = {};
         setConfig(tmp);
     }
+
     // --------------------------------------------------------------------
     // WebServer
 

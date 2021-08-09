@@ -7,6 +7,14 @@
 #include <Buffer.h>
 #include <PrintString.h>
 
+#ifndef STK500_HAVE_SOFTWARE_SERIAL
+#define STK500_HAVE_SOFTWARE_SERIAL 0
+#endif
+
+#ifndef STK500_HAVE_SOFTWARE_SERIAL_PINS
+#define STK500_HAVE_SOFTWARE_SERIAL_PINS D5, D6
+#endif
+
 PROGMEM_STRING_DECL(stk500v1_log_file);
 PROGMEM_STRING_DECL(stk500v1_sig_file);
 PROGMEM_STRING_DECL(stk500v1_tmp_file);
@@ -45,7 +53,7 @@ public:
         FUSE_EXT,
     } FuseEnum_t;
 
-    typedef struct {
+    struct Options_t {
         uint8_t deviceCode;
         uint8_t revision;
         uint8_t progType;
@@ -66,7 +74,7 @@ public:
         uint8_t flashSize3;
         uint8_t flashSize2;
         uint8_t flashSize1;
-    } Options_t;
+    };
 
     enum LoggingEnum {
         LOG_DISABLED =      0,
@@ -113,10 +121,6 @@ public:
     void setSignature_P(PGM_P signature);
     void setFuseBytes(uint8_t low, uint8_t high, uint8_t extended);
     static bool getSignature(const char *mcu, char *signature);
-
-    // test reset timing for bootloader
-    // required delay > ~70ms
-    void _testSerial();
 
 private:
     static void _parseSignature(const char *str, char *signature);

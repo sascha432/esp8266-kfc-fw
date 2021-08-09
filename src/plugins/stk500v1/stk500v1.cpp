@@ -3,12 +3,13 @@
  */
 
 #include "stk500v1.h"
-// SoftwareSerial removed, does not compile, type error
-//#include <SoftwareSerial.h>
 #include <EventScheduler.h>
 #include "at_mode.h"
 #include "plugins.h"
 #include "STK500v1Programmer.h"
+#if STK500_HAVE_SOFTWARE_SERIAL
+#include <SoftwareSerial.h>
+#endif
 
 #if DEBUG_STK500V1
 #include <debug_helper_enable.h>
@@ -93,19 +94,24 @@ bool STK500v1Plugin::atModeHandler(AtModeArgs &args) {
                 PGM_P portName;
                 Stream *serialPort;
                 String filename = args.get(0);
-                switch(args.toInt(1)) {
-                    // case 2:
-                    //     serialPort = new SoftwareSerial(D5, D6);
-                    //     reinterpret_cast<SoftwareSerial *>(serialPort)->begin(57600);
-                    //     portName = PSTR("SoftwareSerial");
-                    //     break;
+                uint8_t serialPortNum = args.toInt(1);
+                switch(serialPortNum) {
+                    #if STK500_HAVE_SOFTWARE_SERIAL
+                        case 2:
+                            serialPort = new SoftwareSerial(STK500_HAVE_SOFTWARE_SERIAL_PINS);
+                            reinterpret_cast<SoftwareSerial *>(serialPort)->begin(KFC_SERIAL_RATE);
+                            portName = PSTR("SoftwareSerial");
+                            break;
+                        #endif
                     case 1:
+                        // Serial1.begin(KFC_SERIAL_RATE);
                         Serial1.setRxBufferSize(512);
                         serialPort = &Serial1;
                         portName = PSTR("Serial1");
                         break;
                     case 0:
                     default:
+                        // Serial0.begin(KFC_SERIAL_RATE);
                         Serial0.setRxBufferSize(512);
                         serialPort = &Serial0;
                         portName = PSTR("Serial");
@@ -114,21 +120,33 @@ bool STK500v1Plugin::atModeHandler(AtModeArgs &args) {
 
                 args.printf_P(PSTR("Flashing %s on %s\n"), filename.c_str(), portName);
 
-                // STK500v1Programmer test(Serial0);
-                // test._testSerial();
-                // return true;
-
                 stk500v1 = new STK500v1Programmer(*serialPort);
                 stk500v1->setSignature(_signature);
                 stk500v1->setFile(filename);
                 stk500v1->setLogging(args.toInt(2, STK500v1Programmer::LOG_FILE));
 
                 // run in main loop
-                _Scheduler.add(1000, false, [this, serialPort](Event::CallbackTimerPtr timer) {
-                    stk500v1->begin([serialPort]() {
-                        // if (serialPort != &Serial && serialPort != &Serial1) {
-                        //     delete reinterpret_cast<SoftwareSerial *>(serialPort);
-                        // }
+                _Scheduler.add(1000, false, [this, serialPort, serialPortNum](Event::CallbackTimerPtr timer) {
+                    stk500v1->begin([serialPort, serialPortNum]() {
+                        switch(serialPortNum) {
+                            #if STK500_HAVE_SOFTWARE_SERIAL
+                                case 2:
+                                    delete reinterpret_cast<SoftwareSerial *>(serialPort);
+                                    break;
+                                #endif
+                            case 1:
+                                // Serial1.end();
+                                // TODO reinitialize if in use
+                                // Serial1.begin();
+                                Serial1.setRxBufferSize(256);
+                                break;
+                            case 0:
+                            default:
+                                Serial0.setRxBufferSize(256);
+                                Serial0.end();
+                                Serial0.begin(KFC_SERIAL_RATE);
+                                break;
+                        }
                         delete stk500v1;
                         stk500v1 = nullptr;
                     });

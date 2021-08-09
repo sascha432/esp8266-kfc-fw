@@ -26,7 +26,13 @@ PROGMEM_STRING_DEF(stk500v1_log_file, "/stk500v1/debug.log");
 PROGMEM_STRING_DEF(stk500v1_sig_file, "/stk500v1/atmega.csv");
 PROGMEM_STRING_DEF(stk500v1_tmp_file, "/stk500v1/firmware_tmp.hex");
 
-STK500v1Programmer::STK500v1Programmer(Stream &serial) : _serial(serial), _delayTimeout(0), _timeout(400), _pageSize(128), _logging(LOG_DISABLED)
+STK500v1Programmer::STK500v1Programmer(Stream &serial) :
+    _serial(serial),
+    _delayTimeout(0),
+    _timeout(400),
+    _pageSize(128),
+    _logging(LoggingEnum::LOG_DISABLED),
+    _success(false)
 {
     _signature[0] = 0x1e;
     _signature[1] = 0x95;
@@ -56,15 +62,17 @@ void STK500v1Programmer::begin(Callback_t cleanup)
     _pagePosition = 0;
     _clearPageBuffer();
 
-    if (&_serial == &KFC_SERIAL_PORT) {
-        // disable all output and handlers while flashing
-        StreamString nul;
-        disable_at_mode(nul);
-        LoopFunctions::remove(SerialHandler::Wrapper::pollSerial);
-        DEBUG_HELPER_SILENT();
-    }
+    // if (&_serial == &KFC_SERIAL_PORT) {
+    //     // disable all output and handlers while flashing
+    //     DEBUG_HELPER_SILENT();
+    //     StreamString nul;
+    //     disable_at_mode(nul);
+    //     LoopFunctions::remove(SerialHandler::Wrapper::pollSerial);
+    // }
 
     _readResponseTimeout = 0;
+    KFCConfigurationClasses::System::Flags::getWriteableConfig().is_at_mode_enabled = false;
+    LoopFunctions::remove(SerialHandler::Wrapper::pollSerial);
     LoopFunctions::add(STK500v1Programmer::loopFunction);
 
     _flash();
@@ -74,13 +82,15 @@ void STK500v1Programmer::end()
 {
     _clearResponse(100, [this]() {
         LoopFunctions::remove(STK500v1Programmer::loopFunction);
+        LoopFunctions::add(SerialHandler::Wrapper::pollSerial);
+        KFCConfigurationClasses::System::Flags::getWriteableConfig().is_at_mode_enabled = true;
 
-        if (&_serial == &KFC_SERIAL_PORT) {
-            DEBUG_HELPER_INIT();
-            LoopFunctions::add(SerialHandler::Wrapper::pollSerial);
-            StreamString nul;
-            enable_at_mode(nul);
-        }
+        // if (&_serial == &KFC_SERIAL_PORT) {
+        //     DEBUG_HELPER_INIT();
+        //     LoopFunctions::add(SerialHandler::Wrapper::pollSerial);
+        //     StreamString nul;
+        //     enable_at_mode(nul);
+        // }
 
         _response.clear();
         _expectedResponse.clear();
@@ -90,6 +100,11 @@ void STK500v1Programmer::end()
 
         _Scheduler.add(1000, false, [this](Event::CallbackTimerPtr timer) {
             _callbackCleanup();
+            if (!_success && _logging == LoggingEnum::LOG_FILE) {
+                Serial.println(F("+STK500V1L: --- start ---"));
+                STK500v1Programmer::dumpLog(Serial);
+                Serial.println(F("+STK500V1L: --- end ---"));
+            }
         });
     });
 }
@@ -125,11 +140,19 @@ void STK500v1Programmer::_loopFunction()
                     _callbackSuccess();
                 }
                 else {
-                    _logPrintf_P(PSTR("Response length %u != %u"), _response.length(), _expectedResponse.length());
+                    _logPrintf_P(PSTR("Response %s != %s"),
+                        printable_string(_response.begin(), _response.length()).c_str(),
+                        printable_string(_expectedResponse.begin(), _expectedResponse.length()).c_str()
+                    );
                     _callbackFailure();
                 }
                 break;
             }
+            else {
+                _logPrintf_P(PSTR("Response length %u != %u"), _response.length(), _expectedResponse.length());
+                _callbackFailure();
+            }
+            break;
         }
         if (_readResponseTimeout && millis() > _readResponseTimeout) {
             _logPrintf_P(PSTR("Response timeout"));
@@ -283,7 +306,7 @@ void STK500v1Programmer::_flash()
         _setResponse_P(Response_INSYNC, sizeof(Response_INSYNC));
 
         _reset();
-        _sendCommand_P_repeat(Command_SYNC, sizeof(Command_SYNC), 3, 50);
+        _sendCommand_P_repeat(Command_SYNC, sizeof(Command_SYNC), 3, 150);
 
         _retries = 12;
         _readResponse([this]() {
@@ -442,8 +465,7 @@ void STK500v1Programmer::_flash()
                     if (_retries % 4 == 0) {
                         _reset();
                         _delay(100, [this]() {
-
-                            _sendCommand_P_repeat(Command_SYNC, sizeof(Command_SYNC), 3, 50);
+                            _sendCommand_P_repeat(Command_SYNC, sizeof(Command_SYNC), 3, 150);
                             _sendCommand_P(Command_SYNC, sizeof(Command_SYNC));
                         });
                     }
@@ -583,6 +605,7 @@ void STK500v1Programmer::_done(bool success)
     str.printf_P(PSTR("Programming %s\n"), success ? PSTR("successful") : PSTR("failed"));
     _status(str);
     _logPrintf_P(PSTR("%s"), str.c_str());
+    _success = success;
 
     BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SOLID);
 
@@ -593,8 +616,10 @@ void STK500v1Programmer::_clearResponse(uint16_t delayTime, Callback_t callback)
 {
     _delay(delayTime, [this, callback] {
         _response.clear();
+        delay(1);
         while (_serial.available()) {
             _serial.read();
+            delay(1);
         }
         callback();
     });
@@ -734,20 +759,20 @@ void STK500v1Programmer::_reset()
     digitalWrite(STK500V1_RESET_PIN, LOW);
     pinMode(STK500V1_RESET_PIN, OUTPUT);
     digitalWrite(STK500V1_RESET_PIN, LOW);
-    delay(1);
+    delay(10);
     pinMode(STK500V1_RESET_PIN, INPUT);
 }
 
 void STK500v1Programmer::_status(const String &message)
 {
-#if HTTP2SERIAL_SUPPORT
-    auto http2server = Http2Serial::getServerSocket();
-    if (http2server) {
-        if (http2server->getClients().length()) {
-            WsClient::broadcast(http2server, nullptr, message.c_str(), message.length());
+    #if HTTP2SERIAL_SUPPORT
+        auto http2server = Http2Serial::getServerSocket();
+        if (http2server) {
+            if (http2server->getClients().length()) {
+                WsClient::broadcast(http2server, nullptr, message.c_str(), message.length());
+            }
         }
-    }
-#endif
+    #endif
 }
 
 void STK500v1Programmer::_logPrintf_P(PGM_P format, ...)

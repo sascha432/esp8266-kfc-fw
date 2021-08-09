@@ -28,6 +28,21 @@
 #endif
 #define UNREGISTER_SENSOR_CLIENT(sensor) unregisterClient(sensor);
 
+class Sensor_LM75A;
+class Sensor_AmbientLight;
+class Sensor_Battery;
+class Sensor_BME280;
+class Sensor_BME680;
+class Sensor_CCS811;
+class Sensor_HLW8012;
+class Sensor_HLW8032;
+class Sensor_DS3231;
+class Sensor_INA219;
+class Sensor_DHTxx;
+class Sensor_DimmerMetrics;
+class Sensor_Motion;
+class Sensor_SystemMetrics;
+
 namespace MQTT {
 
     enum class SensorType : uint8_t {
@@ -50,12 +65,47 @@ namespace MQTT {
         MAX
     };
 
+    template<SensorType _SensorType>
+    struct SensorClassType {
+        using type = std::conditional_t<
+            (_SensorType == SensorType::LM75A), Sensor_LM75A, std::conditional_t<
+                (_SensorType == SensorType::BME280), Sensor_BME280, std::conditional_t<
+                    (_SensorType == SensorType::BME680), Sensor_BME680, std::conditional_t<
+                        (_SensorType == SensorType::CCS811), Sensor_CCS811, std::conditional_t<
+                            (_SensorType == SensorType::HLW8012), Sensor_HLW8012, std::conditional_t<
+                                (_SensorType == SensorType::HLW8032), Sensor_HLW8032, std::conditional_t<
+                                    (_SensorType == SensorType::BATTERY), Sensor_Battery, std::conditional_t<
+                                        (_SensorType == SensorType::DS3231), Sensor_DS3231, std::conditional_t<
+                                            (_SensorType == SensorType::INA219), Sensor_INA219, std::conditional_t<
+                                                (_SensorType == SensorType::DHTxx), Sensor_DHTxx, std::conditional_t<
+                                                    (_SensorType == SensorType::DIMMER_METRICS), Sensor_DimmerMetrics, std::conditional_t<
+                                                        (_SensorType == SensorType::MOTION), Sensor_Motion, std::conditional_t<
+                                                            (_SensorType == SensorType::AMBIENT_LIGHT), Sensor_AmbientLight, std::conditional_t<
+                                                                (_SensorType == SensorType::SYSTEM_METRICS), Sensor_SystemMetrics, nullptr_t
+                                                            >
+                                                        >
+                                                    >
+                                                >
+                                            >
+                                        >
+                                    >
+                                >
+                            >
+                        >
+                    >
+                >
+            >
+        >;
+    };
+
     class Sensor : public MQTTComponent {
     public:
         static constexpr uint16_t DEFAULT_UPDATE_RATE = 5;
         static constexpr uint16_t DEFAULT_MQTT_UPDATE_RATE = 30;
 
         using SensorType = MQTT::SensorType;
+        template<SensorType _SensorType>
+        using SensorClassType = MQTT::SensorClassType<_SensorType>;
         using SensorPtr = MQTT::SensorPtr;
         using NamedArray = MQTT::Json::NamedArray;
         using SensorConfig = WebUINS::SensorConfig;

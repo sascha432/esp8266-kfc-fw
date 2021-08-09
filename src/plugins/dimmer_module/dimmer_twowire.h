@@ -51,21 +51,18 @@ namespace Dimmer {
         TwoWireEx(Stream &stream);
 
         bool lock() {
-            noInterrupts();
+            InterruptLock lock;
             if (_locked) {
-                interrupts();
                 __DBG_printf_E("wire locked");
                 return false;
             }
-            interrupts();
             _locked = true;
             return true;
         }
 
         void unlock() {
-            noInterrupts();
+            InterruptLock lock;
             _locked = false;
-            interrupts();
         }
 
     private:

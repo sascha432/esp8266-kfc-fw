@@ -46,6 +46,46 @@ namespace Dimmer {
             }
         }
 
+        void restoreFactory(uint8_t address = kDefaultSlaveAddress) {
+            if (lock()) {
+                beginTransmission(address);
+                write(DIMMER_REGISTER_COMMAND);
+                write(DIMMER_COMMAND_RESTORE_FS);
+                endTransmission();
+                unlock();
+            }
+        }
+
+        void printInfo(uint8_t address = kDefaultSlaveAddress) {
+            if (lock()) {
+                beginTransmission(address);
+                write(DIMMER_REGISTER_COMMAND);
+                write(DIMMER_COMMAND_PRINT_INFO);
+                endTransmission();
+                unlock();
+            }
+        }
+
+        void printConfig(uint8_t address = kDefaultSlaveAddress) {
+            if (lock()) {
+                beginTransmission(address);
+                write(DIMMER_REGISTER_COMMAND);
+                write(DIMMER_COMMAND_PRINT_CONFIG);
+                endTransmission();
+                unlock();
+            }
+        }
+
+        void writeConfig(uint8_t address = kDefaultSlaveAddress) {
+            if (lock()) {
+                beginTransmission(address);
+                write(DIMMER_REGISTER_COMMAND);
+                write(DIMMER_COMMAND_WRITE_CONFIG);
+                endTransmission();
+                unlock();
+            }
+        }
+
         void forceTemperatureCheck(uint8_t address = kDefaultSlaveAddress) {
             if (lock()) {
                 beginTransmission(address);

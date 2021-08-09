@@ -241,9 +241,9 @@ static void _appendHelpString(String &output, PGM_P str)
 
 void at_mode_display_help(Stream &output, StringVector *findText = nullptr)
 {
-#if DEBUG_AT_MODE
-    __LDBG_printf("size=%d, find=%s", atModeCommandHelp->size(), findText ? (findText->empty() ? PSTR("count=0") : implode(',', *findText).c_str()) : SPGM(null));
-#endif
+    #if DEBUG_AT_MODE
+        __LDBG_printf("size=%d, find=%s", atModeCommandHelp->size(), findText ? (findText->empty() ? PSTR("count=0") : implode(',', *findText).c_str()) : SPGM(null));
+    #endif
     if (findText && findText->empty()) {
         findText = nullptr;
     }
@@ -697,7 +697,8 @@ void at_mode_wifi_callback(WiFiCallbacks::EventType event, void *payload)
 {
     if (event == WiFiCallbacks::EventType::CONNECTED) {
         Serial.printf_P(PSTR("WiFi connected to %s - IP %s\n"), WiFi.SSID().c_str(), WiFi.localIP().toString().c_str());
-    } else if (event == WiFiCallbacks::EventType::DISCONNECTED) {
+    }
+    else if (event == WiFiCallbacks::EventType::DISCONNECTED) {
         Serial.println(F("WiFi connection lost"));
     }
 }
@@ -733,11 +734,11 @@ void disable_at_mode(Stream &output)
             _client = nullptr;
         }
         output.println(F("Disabling AT MODE."));
-#if DEBUG
-        if (displayTimer) {
-            displayTimer->remove();
-        }
-#endif
+        #if DEBUG
+            if (displayTimer) {
+                displayTimer->remove();
+            }
+        #endif
         System::Flags::getWriteableConfig().is_at_mode_enabled = false;
     }
 }
@@ -1091,7 +1092,8 @@ static void at_mode_adc_delete_object()
     }
 }
 
-static void at_mode_adc_loop() {
+static void at_mode_adc_loop()
+{
     if (atModeADC) {
         atModeADC->loop();
     }
@@ -1297,11 +1299,11 @@ void at_mode_serial_handle_event(String &commandString)
         return;
     }
 
-#if ESP8266
-    auto command = commandString.begin();
-#else
-    auto command = const_cast<char *>(commandString.begin());
-#endif
+    #if ESP8266
+        auto command = commandString.begin();
+    #else
+        auto command = const_cast<char *>(commandString.begin());
+    #endif
     // remove leading '+'
     if (*command == '+') {
         command++;
@@ -1343,35 +1345,31 @@ void at_mode_serial_handle_event(String &commandString)
     // store copy of command
     args.setCommand(command);
 
-#if DEBUG
-    if (args.isCommand(F("TT"))) { // test tokenizer
+    #if DEBUG
+        if (args.isCommand(F("TT"))) { // test tokenizer
 
-        args.print(F("command='%s' args_num=%u query_mode=%u at_command_mode=%u"), args.getCommand().c_str(), args.size(), args.isQueryMode(), atModeCommands);
-        for(uint8_t i = 0; i < args.size(); i++) {
-            args.print(F("arg#=%u value='%s'"), i, args[i]);
+            args.print(F("command='%s' args_num=%u query_mode=%u at_command_mode=%u"), args.getCommand().c_str(), args.size(), args.isQueryMode(), atModeCommands);
+            for(uint8_t i = 0; i < args.size(); i++) {
+                args.print(F("arg#=%u value='%s'"), i, args[i]);
+            }
+
         }
-
-    }
-    else
-#endif
+        else
+    #endif
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DSLP))) {
-
         KFCFWConfiguration::milliseconds time(args.toMillis(0));
         RFMode mode = (RFMode)args.toInt(1, RF_DEFAULT);
 
         //+dslp=15000,4
-
-
         args.print(F("Entering deep sleep... time=%ums deep_sleep_max=%.0fms mode=%u"), time.count(), (ESP.deepSleepMax() / 1000.0), mode);
 
-#if ENABLE_DEEP_SLEEP
-        deepSleepParams.enterDeepSleep(time, mode);
-#else
-        ESP.deepSleep(time.count() * 1000ULL, mode);
-        ESP.deepSleep(ESP.deepSleepMax() / 2, mode);
-        ESP.deepSleep(0, mode);
-#endif
-
+        #if ENABLE_DEEP_SLEEP
+            deepSleepParams.enterDeepSleep(time, mode);
+        #else
+            ESP.deepSleep(time.count() * 1000ULL, mode);
+            ESP.deepSleep(ESP.deepSleepMax() / 2, mode);
+            ESP.deepSleep(0, mode);
+        #endif
     }
     else
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(HELP))) {
@@ -1614,107 +1612,106 @@ void at_mode_serial_handle_event(String &commandString)
 
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(METRICS))) {
-#if 1
-
-        args.print(F("Device name: %s"), System::Device::getName());
-        #if ESP32
-            args.print(F("Framework Arduino ESP32 " ARDUINO_ESP32_RELEASE));
-        #else
-            #if ARDUINO_ESP8266_DEV
-                #ifndef ARDUINO_ESP8266_RELEASE_EX
-                    #define ARDUINO_ESP8266_RELEASE_EX _STRINGIFY(ARDUINO_ESP8266_VERSION) "-dev " _STRINGIFY(ARDUINO_ESP8266_GIT_DESC) " " _STRINGIFY(ARDUINO_ESP8266_GIT_VER)
-                #endif
+        #if 1
+            args.print(F("Device name: %s"), System::Device::getName());
+            #if ESP32
+                args.print(F("Framework Arduino ESP32 " ARDUINO_ESP32_RELEASE));
             #else
-                #ifndef ARDUINO_ESP8266_RELEASE_EX
-                    #define ARDUINO_ESP8266_RELEASE_EX ARDUINO_ESP8266_RELEASE
+                #if ARDUINO_ESP8266_DEV
+                    #ifndef ARDUINO_ESP8266_RELEASE_EX
+                        #define ARDUINO_ESP8266_RELEASE_EX _STRINGIFY(ARDUINO_ESP8266_VERSION) "-dev " _STRINGIFY(ARDUINO_ESP8266_GIT_DESC) " " _STRINGIFY(ARDUINO_ESP8266_GIT_VER)
+                    #endif
+                #else
+                    #ifndef ARDUINO_ESP8266_RELEASE_EX
+                        #define ARDUINO_ESP8266_RELEASE_EX ARDUINO_ESP8266_RELEASE
+                    #endif
+                #endif
+                args.print(F("Framework Arduino ESP8266 " ARDUINO_ESP8266_RELEASE_EX));
+            #endif
+            #if defined(HAVE_GDBSTUB) && HAVE_GDBSTUB
+            {
+                String options;
+                #if GDBSTUB_USE_OWN_STACK
+                options += F("USE_OWN_STACK ");
+                #endif
+                #if GDBSTUB_BREAK_ON_EXCEPTION
+                options += F("BREAK_ON_EXCEPTION ");
+                #endif
+                #if GDBSTUB_CTRLC_BREAK
+                options += F("CTRLC_BREAK ");
+                #endif
+                #if GDBSTUB_REDIRECT_CONSOLE_OUTPUT
+                options += F("REDIRECT_CONSOLE_OUTPUT ");
+                #endif
+                #if GDBSTUB_BREAK_ON_INIT
+                options += F("BREAK_ON_INIT ");
+                #endif
+
+                args.print(F("GDBStub: %s"), options.trim().c_str());
+            }
+            #endif
+            args.print(F("Uptime: %u seconds / %s"), getSystemUptime(), formatTime(getSystemUptime(), true).c_str());
+            args.print(F("Free heap/fragmentation: %u / %u"), ESP.getFreeHeap(), ESP.getHeapFragmentation());
+            #if ARDUINO_ESP8266_MAJOR >= 3
+                #ifdef UMM_HEAP_IRAM
+                    {
+                        HeapSelectIram ephemeral;
+                        args.print(F("Free IRAM: %u"), ESP.getFreeHeap());
+                    }
+                #endif
+                #if (UMM_NUM_HEAPS != 1)
+                    {
+                        HeapSelectDram ephemeral;
+                        args.print(F("Free DRAM: %u"), ESP.getFreeHeap());
+                    }
                 #endif
             #endif
-            args.print(F("Framework Arduino ESP8266 " ARDUINO_ESP8266_RELEASE_EX));
-        #endif
-        #if defined(HAVE_GDBSTUB) && HAVE_GDBSTUB
-        {
-            String options;
-            #if GDBSTUB_USE_OWN_STACK
-            options += F("USE_OWN_STACK ");
-            #endif
-            #if GDBSTUB_BREAK_ON_EXCEPTION
-            options += F("BREAK_ON_EXCEPTION ");
-            #endif
-            #if GDBSTUB_CTRLC_BREAK
-            options += F("CTRLC_BREAK ");
-            #endif
-            #if GDBSTUB_REDIRECT_CONSOLE_OUTPUT
-            options += F("REDIRECT_CONSOLE_OUTPUT ");
-            #endif
-            #if GDBSTUB_BREAK_ON_INIT
-            options += F("BREAK_ON_INIT ");
+            PGM_P flashModeStr;
+            switch(ESP.getFlashChipMode()) {
+                case FM_DIO:
+                    flashModeStr = PSTR("DIO");
+                    break;
+                case FM_DOUT:
+                    flashModeStr = PSTR("DOUT");
+                    break;
+                case FM_QIO:
+                    flashModeStr = PSTR("QIO");
+                    break;
+                case FM_QOUT:
+                    flashModeStr = PSTR("QOUT");
+                    break;
+                case FM_UNKNOWN:
+                default:
+                    flashModeStr = PSTR("UNKNOWN");
+                    break;
+            }
+
+            args.print(F("Heap start/size: 0x%x/%u"), SECTION_HEAP_START_ADDRESS, SECTION_HEAP_END_ADDRESS - SECTION_HEAP_START_ADDRESS);
+            args.print(F("irom0.text: 0x%08x-0x%08x"), SECTION_IROM0_TEXT_START_ADDRESS, SECTION_IROM0_TEXT_END_ADDRESS);
+            args.print(F("EEPROM: 0x%x/%u"), SECTION_EEPROM_START_ADDRESS, SECTION_EEPROM_END_ADDRESS - SECTION_EEPROM_START_ADDRESS);
+            args.print(F("SaveCrash: 0x%x/%u"), SECTION_SAVECRASH_START_ADDRESS, SECTION_SAVECRASH_END_ADDRESS - SECTION_SAVECRASH_START_ADDRESS);
+            args.print(F("KFCFW: 0x%x/%u"), SECTION_KFCFW_START_ADDRESS, SECTION_KFCFW_END_ADDRESS - SECTION_KFCFW_START_ADDRESS);
+            args.print(F("CPU frequency: %uMHz"), ESP.getCpuFreqMHz());
+            args.print(F("Flash size / Vendor / Mode: %s / %02x / %s"), formatBytes(ESP.getFlashChipRealSize()).c_str(), ESP.getFlashChipVendorId(), flashModeStr);
+            args.print(F("SDK / Core: %s / %s"), ESP.getSdkVersion(), ESP.getFullVersion().c_str());
+            args.print(F("Boot mode: %u, %u"), ESP.getBootVersion(), ESP.getBootMode());
+            args.print(F("Firmware size: %s"), formatBytes(ESP.getSketchSize()).c_str());
+            args.print(F("Version (uint32): %s (0x%08x)"), SaveCrash::Data::FirmwareVersion().toString().c_str(), SaveCrash::Data::FirmwareVersion().__version);
+            auto version = System::Device::getConfig().config_version;
+            args.print(F("Config version 0x%08x, %s"), version, SaveCrash::Data::FirmwareVersion(version).toString().c_str());
+            args.print(F("MD5 hash: %s"), SaveCrash::Data().getMD5().c_str());
+            args.print(F("WiFiCallbacks: size=%u count=%u"), sizeof(WiFiCallbacks::Entry), WiFiCallbacks::getVector().size());
+            args.print(F("LoopFunctions: size=%u count=%u"), sizeof(LoopFunctions::Entry), LoopFunctions::getVector().size());
+
+            #if PIN_MONITOR
+                PrintString tmp;
+                PinMonitor::pinMonitor.printStatus(tmp);
+                tmp.replace(F(HTML_S(br)), "\n");
+                args.print(tmp);
             #endif
 
-            args.print(F("GDBStub: %s"), options.trim().c_str());
-        }
+            args.print(F("Firmware MD5: %s"), System::Firmware::getFirmwareMD5());
         #endif
-        args.print(F("Uptime: %u seconds / %s"), getSystemUptime(), formatTime(getSystemUptime(), true).c_str());
-        args.print(F("Free heap/fragmentation: %u / %u"), ESP.getFreeHeap(), ESP.getHeapFragmentation());
-        #if ARDUINO_ESP8266_MAJOR >= 3
-            #ifdef UMM_HEAP_IRAM
-                {
-                    HeapSelectIram ephemeral;
-                    args.print(F("Free IRAM: %u"), ESP.getFreeHeap());
-                }
-            #endif
-            #if (UMM_NUM_HEAPS != 1)
-                {
-                    HeapSelectDram ephemeral;
-                    args.print(F("Free DRAM: %u"), ESP.getFreeHeap());
-                }
-            #endif
-        #endif
-        PGM_P flashModeStr;
-        switch(ESP.getFlashChipMode()) {
-            case FM_DIO:
-                flashModeStr = PSTR("DIO");
-                break;
-            case FM_DOUT:
-                flashModeStr = PSTR("DOUT");
-                break;
-            case FM_QIO:
-                flashModeStr = PSTR("QIO");
-                break;
-            case FM_QOUT:
-                flashModeStr = PSTR("QOUT");
-                break;
-            case FM_UNKNOWN:
-            default:
-                flashModeStr = PSTR("UNKNOWN");
-                break;
-        }
-
-        args.print(F("Heap start/size: 0x%x/%u"), SECTION_HEAP_START_ADDRESS, SECTION_HEAP_END_ADDRESS - SECTION_HEAP_START_ADDRESS);
-        args.print(F("irom0.text: 0x%08x-0x%08x"), SECTION_IROM0_TEXT_START_ADDRESS, SECTION_IROM0_TEXT_END_ADDRESS);
-        args.print(F("EEPROM: 0x%x/%u"), SECTION_EEPROM_START_ADDRESS, SECTION_EEPROM_END_ADDRESS - SECTION_EEPROM_START_ADDRESS);
-        args.print(F("SaveCrash: 0x%x/%u"), SECTION_SAVECRASH_START_ADDRESS, SECTION_SAVECRASH_END_ADDRESS - SECTION_SAVECRASH_START_ADDRESS);
-        args.print(F("KFCFW: 0x%x/%u"), SECTION_KFCFW_START_ADDRESS, SECTION_KFCFW_END_ADDRESS - SECTION_KFCFW_START_ADDRESS);
-        args.print(F("CPU frequency: %uMHz"), ESP.getCpuFreqMHz());
-        args.print(F("Flash size / Vendor / Mode: %s / %02x / %s"), formatBytes(ESP.getFlashChipRealSize()).c_str(), ESP.getFlashChipVendorId(), flashModeStr);
-        args.print(F("SDK / Core: %s / %s"), ESP.getSdkVersion(), ESP.getFullVersion().c_str());
-        args.print(F("Boot mode: %u, %u"), ESP.getBootVersion(), ESP.getBootMode());
-        args.print(F("Firmware size: %s"), formatBytes(ESP.getSketchSize()).c_str());
-        args.print(F("Version (uint32): %s (0x%08x)"), SaveCrash::Data::FirmwareVersion().toString().c_str(), SaveCrash::Data::FirmwareVersion().__version);
-        auto version = System::Device::getConfig().config_version;
-        args.print(F("Config version 0x%08x, %s"), version, SaveCrash::Data::FirmwareVersion(version).toString().c_str());
-        args.print(F("MD5 hash: %s"), SaveCrash::Data().getMD5().c_str());
-        args.print(F("WiFiCallbacks: size=%u count=%u"), sizeof(WiFiCallbacks::Entry), WiFiCallbacks::getVector().size());
-        args.print(F("LoopFunctions: size=%u count=%u"), sizeof(LoopFunctions::Entry), LoopFunctions::getVector().size());
-
-        #if PIN_MONITOR
-            PrintString tmp;
-            PinMonitor::pinMonitor.printStatus(tmp);
-            tmp.replace(F(HTML_S(br)), "\n");
-            args.print(tmp);
-        #endif
-
-        args.print(F("Firmware MD5: %s"), System::Firmware::getFirmwareMD5());
-#endif
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RST))) {
         bool safeMode = false;
@@ -1798,71 +1795,71 @@ void at_mode_serial_handle_event(String &commandString)
             }
         }
     }
-#if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LED))) {
-        if (args.requireArgs(1, 4)) {
-            BlinkLEDTimer::BlinkType type = BlinkLEDTimer::BlinkType::INVALID;
-            String mode = args.toString(0);
-            uint16_t delay = args.toInt(2, 50);
-            uint8_t pin = (uint8_t)args.toInt(3, __LED_BUILTIN);
-            if (mode.equalsIgnoreCase(F("pattern")) || mode.startsWith(F("pat"))) {
-                auto patternStr = args.toString(1);
-                auto pattern = BlinkLEDTimer::Bitset();
-                pattern.fromString(patternStr);
-                args.print(F("pattern %s delay %u"), pattern.toString().c_str(), delay);
-                BlinkLEDTimer::setPattern(pin, delay, std::move(pattern));
-                //+led=pattern,111111111111111111111111111111111111111111111111111111,100
-                //+led=pattern,1010,100
-            }
-            else {
-                int32_t color = args.toNumber(1, 0xff00ff);
-                if (__LED_BUILTIN == pin && !BlinkLEDTimer::isPinValid(pin)) {
-                    args.print(F("Invalid PIN"));
+    #if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID
+        else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LED))) {
+            if (args.requireArgs(1, 4)) {
+                BlinkLEDTimer::BlinkType type = BlinkLEDTimer::BlinkType::INVALID;
+                String mode = args.toString(0);
+                uint16_t delay = args.toInt(2, 50);
+                uint8_t pin = (uint8_t)args.toInt(3, __LED_BUILTIN);
+                if (mode.equalsIgnoreCase(F("pattern")) || mode.startsWith(F("pat"))) {
+                    auto patternStr = args.toString(1);
+                    auto pattern = BlinkLEDTimer::Bitset();
+                    pattern.fromString(patternStr);
+                    args.print(F("pattern %s delay %u"), pattern.toString().c_str(), delay);
+                    BlinkLEDTimer::setPattern(pin, delay, std::move(pattern));
+                    //+led=pattern,111111111111111111111111111111111111111111111111111111,100
+                    //+led=pattern,1010,100
                 }
                 else {
-                    if (mode.equalsIgnoreCase(F("slow"))) {
-                        BlinkLEDTimer::setBlink(pin, type = BlinkLEDTimer::BlinkType::SLOW, color);
-                    }
-                    else if (mode.equalsIgnoreCase(F("fast"))) {
-                        BlinkLEDTimer::setBlink(pin, type = BlinkLEDTimer::BlinkType::FAST, color);
-                    }
-                    else if (mode.equalsIgnoreCase(F("flicker"))) {
-                        BlinkLEDTimer::setBlink(pin, type = BlinkLEDTimer::BlinkType::FLICKER, color);
-                    }
-                    else if (mode.equalsIgnoreCase(F("solid"))) {
-                        BlinkLEDTimer::setBlink(pin, type = BlinkLEDTimer::BlinkType::SOLID, color);
-                    }
-                    else if (mode.equalsIgnoreCase(F("sos"))) {
-                        BlinkLEDTimer::setBlink(pin, type = BlinkLEDTimer::BlinkType::SOS, color);
+                    int32_t color = args.toNumber(1, 0xff00ff);
+                    if (__LED_BUILTIN == pin && !BlinkLEDTimer::isPinValid(pin)) {
+                        args.print(F("Invalid PIN"));
                     }
                     else {
-                        mode = F("OFF");
-                        color = 0;
-                        BlinkLEDTimer::setBlink(pin, type = BlinkLEDTimer::BlinkType::OFF);
+                        if (mode.equalsIgnoreCase(F("slow"))) {
+                            BlinkLEDTimer::setBlink(pin, type = BlinkLEDTimer::BlinkType::SLOW, color);
+                        }
+                        else if (mode.equalsIgnoreCase(F("fast"))) {
+                            BlinkLEDTimer::setBlink(pin, type = BlinkLEDTimer::BlinkType::FAST, color);
+                        }
+                        else if (mode.equalsIgnoreCase(F("flicker"))) {
+                            BlinkLEDTimer::setBlink(pin, type = BlinkLEDTimer::BlinkType::FLICKER, color);
+                        }
+                        else if (mode.equalsIgnoreCase(F("solid"))) {
+                            BlinkLEDTimer::setBlink(pin, type = BlinkLEDTimer::BlinkType::SOLID, color);
+                        }
+                        else if (mode.equalsIgnoreCase(F("sos"))) {
+                            BlinkLEDTimer::setBlink(pin, type = BlinkLEDTimer::BlinkType::SOS, color);
+                        }
+                        else {
+                            mode = F("OFF");
+                            color = 0;
+                            BlinkLEDTimer::setBlink(pin, type = BlinkLEDTimer::BlinkType::OFF);
+                        }
+                        args.print(F("LED pin=%u mode=%s type=%u color=0x%06x"), pin, mode.c_str(), type, color);
                     }
-                    args.print(F("LED pin=%u mode=%s type=%u color=0x%06x"), pin, mode.c_str(), type, color);
                 }
             }
         }
-    }
-#endif
-#if HAVE_I2CSCANNER
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CSCAN))) {
-        auto startAddress = args.toIntMinMax<uint8_t>(0, 1, 255, 1);
-        auto endAddress = args.toIntMinMax<uint8_t>(1, startAddress, 255, 127);
-        auto sda = args.toIntMinMax<uint8_t>(2, 0, 16, KFC_TWOWIRE_SDA);
-        auto scl = args.toIntMinMax<uint8_t>(3, 0, 16, KFC_TWOWIRE_SCL);
-        if (args.has(F("noinit")) || args.has(F("no-init"))) {
-            sda = scl = 0xff;
+    #endif
+    #if HAVE_I2CSCANNER
+        else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CSCAN))) {
+            auto startAddress = args.toIntMinMax<uint8_t>(0, 1, 255, 1);
+            auto endAddress = args.toIntMinMax<uint8_t>(1, startAddress, 255, 127);
+            auto sda = args.toIntMinMax<uint8_t>(2, 0, 16, KFC_TWOWIRE_SDA);
+            auto scl = args.toIntMinMax<uint8_t>(3, 0, 16, KFC_TWOWIRE_SCL);
+            if (args.has(F("noinit")) || args.has(F("no-init"))) {
+                sda = scl = 0xff;
+            }
+            if (args.has(F("any"))) {
+                scanPorts(args.getStream(), startAddress, endAddress);
+            }
+            else {
+                scanI2C(args.getStream(), sda, scl, startAddress, endAddress);
+            }
         }
-        if (args.has(F("any"))) {
-            scanPorts(args.getStream(), startAddress, endAddress);
-        }
-        else {
-            scanI2C(args.getStream(), sda, scl, startAddress, endAddress);
-        }
-    }
-#endif
+    #endif
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CS))) {
         uint8_t sda = args.toIntMinMax(0, 0, 16, KFC_TWOWIRE_SDA);
         uint8_t scl = args.toIntMinMax(1, 0, 16, KFC_TWOWIRE_SCL);
@@ -1927,24 +1924,24 @@ void at_mode_serial_handle_event(String &commandString)
     else if (args.isCommand(F("I2CT")) || args.isCommand(F("I2CA")) || args.isCommand(F("I2CR"))) {
         // ignore SerialTwoWire communication
     }
-#if ENABLE_ARDUINO_OTA
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(AOTA))) {
-        auto &plugin = WebServer::Plugin::getInstance();
-        if (args.equalsIgnoreCase(0, F("start"))) {
-            args.print(F("starting ArduinoOTA..."));
-            args.print(F("WARNING! running this service consumes about 1KB of RAM. To get all the memory back, the device needs to be restarted."));
-            plugin.ArduinoOTAbegin();
+    #if ENABLE_ARDUINO_OTA
+        else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(AOTA))) {
+            auto &plugin = WebServer::Plugin::getInstance();
+            if (args.equalsIgnoreCase(0, F("start"))) {
+                args.print(F("starting ArduinoOTA..."));
+                args.print(F("WARNING! running this service consumes about 1KB of RAM. To get all the memory back, the device needs to be restarted."));
+                plugin.ArduinoOTAbegin();
+            }
+            else if (args.equalsIgnoreCase(0, F("stop"))) {
+                args.print(F("stopping ArduinoOTA..."));
+                plugin.ArduinoOTAend();
+            }
+            else {
+                args.print(F("ArduinoOTA status:"));
+                plugin.ArduinoOTADumpInfo(args.getStream());
+            }
         }
-        else if (args.equalsIgnoreCase(0, F("stop"))) {
-            args.print(F("stopping ArduinoOTA..."));
-            plugin.ArduinoOTAend();
-        }
-        else {
-            args.print(F("ArduinoOTA status:"));
-            plugin.ArduinoOTADumpInfo(args.getStream());
-        }
-    }
-#endif
+    #endif
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(WIFI))) {
         if (!args.empty()) {
             auto arg0 = args.toString(0);
@@ -2012,19 +2009,19 @@ void at_mode_serial_handle_event(String &commandString)
             Network::SoftAP::getConfig().getAddress().toString().c_str()
         );
     }
-#if RTC_SUPPORT
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RTC))) {
-        if (!args.empty()) {
-            args.print(F("Time=" TIME_T_FMT ", rtc=%u, lostPower=%u"), time(nullptr), config.getRTC(), config.rtcLostPower());
-            output.print(F("+RTC: "));
-            config.printRTCStatus(output);
-            output.println();
+    #if RTC_SUPPORT
+        else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RTC))) {
+            if (!args.empty()) {
+                args.print(F("Time=" TIME_T_FMT ", rtc=%u, lostPower=%u"), time(nullptr), config.getRTC(), config.rtcLostPower());
+                output.print(F("+RTC: "));
+                config.printRTCStatus(output);
+                output.println();
+            }
+            else {
+                args.print(F("Set=%u, rtc=%u"), config.setRTC(time(nullptr)), config.getRTC());
+            }
         }
-        else {
-            args.print(F("Set=%u, rtc=%u"), config.setRTC(time(nullptr)), config.getRTC());
-        }
-    }
-#endif
+    #endif
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(REM))) {
         // ignore comment
     }
@@ -2072,21 +2069,21 @@ void at_mode_serial_handle_event(String &commandString)
             output.println(dir.fileName());
         }
     }
-#if ESP8266
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LSR))) {
-        auto dir = KFCFS.openDir(args.toString(0));
-        while(dir.next()) {
-            output.print(F("+LS: "));
-            if (dir.isFile()) {
-                output.printf_P(PSTR("%8.8s "), formatBytes(dir.fileSize()).c_str());
+    #if ESP8266
+        else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LSR))) {
+            auto dir = KFCFS.openDir(args.toString(0));
+            while(dir.next()) {
+                output.print(F("+LS: "));
+                if (dir.isFile()) {
+                    output.printf_P(PSTR("%8.8s "), formatBytes(dir.fileSize()).c_str());
+                }
+                else {
+                    output.print(F("[...]    "));
+                }
+                output.println(dir.fileName());
             }
-            else {
-                output.print(F("[...]    "));
-            }
-            output.println(dir.fileName());
         }
-    }
-#endif
+    #endif
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CAT))) {
         if (args.requireArgs(1, 1)) {
             StreamOutput::Cat::dump(args.toString(0), output, StreamOutput::Cat::kPrintInfo|StreamOutput::Cat::kPrintCrLfAsText);
@@ -2400,24 +2397,24 @@ void at_mode_serial_handle_event(String &commandString)
             config.dump(output);
         }
     }
-#if DEBUG && ESP8266
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPT))) {
-        at_mode_list_ets_timers(output);
-    }
-#endif
-#if DEBUG_CONFIGURATION_GETHANDLE
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPH))) {
-        if (args.toLowerChar(0) == 'c') {
-            ConfigurationHelper::writeHandles(true);
+    #if DEBUG && ESP8266
+        else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPT))) {
+            at_mode_list_ets_timers(output);
         }
-        else if (args.toLowerChar(0) == 'p') {
-            ConfigurationHelper::setPanicMode(true);
+    #endif
+    #if DEBUG_CONFIGURATION_GETHANDLE
+        else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPH))) {
+            if (args.toLowerChar(0) == 'c') {
+                ConfigurationHelper::writeHandles(true);
+            }
+            else if (args.toLowerChar(0) == 'p') {
+                ConfigurationHelper::setPanicMode(true);
+            }
+            else {
+                ConfigurationHelper::dumpHandles(output, args.toLowerChar(0) == 'l');
+            }
         }
-        else {
-            ConfigurationHelper::dumpHandles(output, args.toLowerChar(0) == 'l');
-        }
-    }
-#endif
+    #endif
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPM))) {
         if (args.requireArgs(1, 4)) {
             uintptr_t start = translateAddress(args.toString(0));
@@ -2468,13 +2465,13 @@ void at_mode_serial_handle_event(String &commandString)
             auto &stream = args.getStream();
             auto memoryId = static_cast<RTCMemoryManager::RTCMemoryId>(args.toNumber<uint32_t>(1));
             if (args.equalsIgnoreCase(0, F("qc")) || args.equalsIgnoreCase(0, F("quickconnect"))) {
-#if ENABLE_DEEP_SLEEP
-                config.storeQuickConnect(WiFi.BSSID(), WiFi.channel());
-                config.storeStationConfig(WiFi.localIP(), WiFi.subnetMask(), WiFi.gatewayIP());
-                args.print(F("Quick connect stored"));
-#else
+                #if ENABLE_DEEP_SLEEP
+                    config.storeQuickConnect(WiFi.BSSID(), WiFi.channel());
+                    config.storeStationConfig(WiFi.localIP(), WiFi.subnetMask(), WiFi.gatewayIP());
+                    args.print(F("Quick connect stored"));
+                #else
                     args.print(F("Quick connect not available"));
-#endif
+                #endif
             }
             else if (args.equalsIgnoreCase(0, F("list")) || args.equalsIgnoreCase(0, F("info"))) {
                 auto rtc = RTCMemoryManager::readTime();
@@ -2547,36 +2544,36 @@ void at_mode_serial_handle_event(String &commandString)
             }
         }
     }
-#if LOGGER
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LOGDBG))) {
-        if (args.requireArgs(1, 1)) {
-            bool enable = args.isTrue(0);
-            static File debugLog;
-            if (enable) {
-                if (!debugLog) {
-                    _logger.setExtraFileEnabled(Logger::Level::_DEBUG, true);
-                    _logger.__rotate(Logger::Level::_DEBUG);
-                    debugLog = _logger.__openLog(Logger::Level::_DEBUG, true);
-                    if (debugLog) {
-                        debugStreamWrapper.add(&debugLog);
-                        args.print(F("enabled=%s"), debugLog.fullName());
+    #if LOGGER
+        else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LOGDBG))) {
+            if (args.requireArgs(1, 1)) {
+                bool enable = args.isTrue(0);
+                static File debugLog;
+                if (enable) {
+                    if (!debugLog) {
+                        _logger.setExtraFileEnabled(Logger::Level::_DEBUG, true);
+                        _logger.__rotate(Logger::Level::_DEBUG);
+                        debugLog = _logger.__openLog(Logger::Level::_DEBUG, true);
+                        if (debugLog) {
+                            debugStreamWrapper.add(&debugLog);
+                            args.print(F("enabled=%s"), debugLog.fullName());
+                        }
                     }
                 }
-            }
-            else {
-                if (debugLog) {
-                    debugStreamWrapper.remove(&debugLog);
-                    debugLog.close();
-                    _logger.__rotate(Logger::Level::_DEBUG);
-                    _logger.setExtraFileEnabled(Logger::Level::_DEBUG, false);
+                else {
+                    if (debugLog) {
+                        debugStreamWrapper.remove(&debugLog);
+                        debugLog.close();
+                        _logger.__rotate(Logger::Level::_DEBUG);
+                        _logger.setExtraFileEnabled(Logger::Level::_DEBUG, false);
+                    }
+                }
+                if (!debugLog) {
+                    args.print(FSPGM(disabled));
                 }
             }
-            if (!debugLog) {
-                args.print(FSPGM(disabled));
-            }
         }
-    }
-#endif
+    #endif
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(PANIC))) {
         if (args.equalsIgnoreCase(0, F("wdt"))) {
             args.print(F("starting a loop to trigger the WDT"));
@@ -2593,36 +2590,36 @@ void at_mode_serial_handle_event(String &commandString)
             delay(1000);
             while(malloc(4096)) {
             }
-#ifndef _MSC_VER
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wnonnull"
-#endif
-            memset((void *)address, 0, 2147483647);
-            memset((void *)2147483647, 0, 2147483647);
-            memset((void *)0, 0, 2147483647);
-        }
-        else if (args.size()) {
-            auto address = args.toNumber<uint32_t>(0);
-            args.print(F("writing zeros to memory @ 0x%08x"), address);
-            delay(1000);
-            memset((void *)address, 0, 2147483647);
-            memset((void *)2147483647, 0, 2147483647);
-            memset((void *)0, 0, 2147483647);
-#ifndef _MSC_VER
-#pragma GCC diagnostic pop
-#endif
-        }
-        else {
-            args.print(F("calling panic()"));
-            panic();
-        }
-    }
-#endif
-#if DEBUG_COLLECT_STRING_ENABLE
-    else if (args.isCommand(PSTR("JSONSTRDUMP"))) {
-        __debug_json_string_dump(output);
-    }
-#endif
+            #ifndef _MSC_VER
+            #pragma GCC diagnostic push
+            #pragma GCC diagnostic ignored "-Wnonnull"
+            #endif
+                    memset((void *)address, 0, 2147483647);
+                    memset((void *)2147483647, 0, 2147483647);
+                    memset((void *)0, 0, 2147483647);
+                }
+                else if (args.size()) {
+                    auto address = args.toNumber<uint32_t>(0);
+                    args.print(F("writing zeros to memory @ 0x%08x"), address);
+                    delay(1000);
+                    memset((void *)address, 0, 2147483647);
+                    memset((void *)2147483647, 0, 2147483647);
+                    memset((void *)0, 0, 2147483647);
+            #ifndef _MSC_VER
+            #pragma GCC diagnostic pop
+            #endif
+                }
+                else {
+                    args.print(F("calling panic()"));
+                    panic();
+                }
+            }
+        #endif
+        #if DEBUG_COLLECT_STRING_ENABLE
+            else if (args.isCommand(PSTR("JSONSTRDUMP"))) {
+                __debug_json_string_dump(output);
+            }
+        #endif
     else {
         bool commandWasHandled = false;
         for(const auto plugin: PluginComponents::Register::getPlugins()) { // send command to plugins
@@ -2656,7 +2653,7 @@ void at_mode_serial_input_handler(Stream &client)
         auto serial = StreamWrapper(serialHandler.getStreams(), serialHandler.getInput()); // local output online
         while(client.available()) {
             int ch = client.read();
-            // __DBG_printf("read %u (%c)", (unsigned)((uint8_t)ch), isprint(ch) ? ch : '-');
+            __LDBG_printf("read %u (%c) cr=%u", (unsigned)((uint8_t)ch), isprint(ch) ? ch : '-', lastWasCR);
             if (lastWasCR == true && ch == '\n') {
                 lastWasCR = false;
                 continue;
@@ -2679,7 +2676,10 @@ void at_mode_serial_input_handler(Stream &client)
                     }
                     break;
                 case '\n':
+                    lastWasCR = false;
                     serial.write('\n');
+                    at_mode_serial_handle_event(line);
+                    line = String();
                     break;
                 case '\r':
                     lastWasCR = true;

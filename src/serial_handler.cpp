@@ -54,18 +54,17 @@ Stream &Serial = serialHandler;
 
 #if DEBUG
 #    if KFC_DEBUG_USE_SERIAL1
-StreamWrapper debugStreamWrapper(&Serial1);
-Stream &Serial = debugStreamWrapper;
+        StreamWrapper debugStreamWrapper(&Serial1);
+        Stream &Serial = debugStreamWrapper;
 #    elif 1
-StreamWrapper debugStreamWrapper(&Serial);
-// Stream &DebugSerial = Serial0;
-Stream &DebugSerial = debugStreamWrapper;
+        StreamWrapper debugStreamWrapper(&Serial);
+        // Stream &DebugSerial = Serial0;
+        Stream &DebugSerial = debugStreamWrapper;
 #    else
-Stream &DebugSerial = serialHandler;
+        Stream &DebugSerial = serialHandler;
 #    endif
-
 #else
-Stream &DebugSerial = NullSerial;
+    Stream &DebugSerial = NullSerial;
 #endif
 
 namespace SerialHandler {
@@ -109,7 +108,8 @@ namespace SerialHandler {
         if (buf.size() == Wrapper::kInitBufferSize) {
             buf.resize(Wrapper::kMinBufferSize);
             __DBGSH("client %p %s size=%u data=%u old_size=0", this, txTypeStr, buf.size(), size);
-        } else if (size > buf.room()) {
+        }
+        else if (size > buf.room()) {
             if (buf.size() < Wrapper::kMaxBufferSize) {
                 __IF_DBGSH(size_t room = buf.room());
                 buf.resizeAdd(Wrapper::kAddBufferSize);

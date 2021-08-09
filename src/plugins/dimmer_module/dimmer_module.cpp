@@ -62,7 +62,8 @@ void Module::getStatus(Print &out)
         out.printf_P(PSTR("Channel %u: "), i);
         if (_channels[i].getOnState()) {
             out.printf_P(PSTR("on - %.1f%%" HTML_S(br)), _channels[i].getLevel() / (IOT_DIMMER_MODULE_MAX_BRIGHTNESS * 100.0));
-        } else {
+        }
+        else {
             out.print(F("off" HTML_S(br)));
         }
     }

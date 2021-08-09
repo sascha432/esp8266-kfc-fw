@@ -68,13 +68,13 @@ public:
         uint8_t flashSize1;
     } Options_t;
 
-    typedef enum {
+    enum LoggingEnum {
         LOG_DISABLED =      0,
         LOG_LOGGER =        1,
         LOG_SERIAL =        2,
         LOG_SERIAL2HTTP =   3,
         LOG_FILE =          4,
-    } LoggingEnum_t;
+    };
 
     typedef std::function<void ()> Callback_t;
     typedef std::function<void (uint16_t address, uint16_t length, Callback_t success, Callback_t failure)> PageCallback_t;
@@ -102,8 +102,9 @@ public:
     }
 
     void setLogging(int logging) {
-        _logging = (LoggingEnum_t)logging;
+        _logging = (LoggingEnum)logging;
         if (_logging == LOG_FILE) {
+            KFCFS.remove(FSPGM(stk500v1_log_file));
             KFCFS.open(FSPGM(stk500v1_log_file), fs::FileOpenMode::write).close(); // truncate
         }
     }
@@ -178,7 +179,7 @@ private:
     void _logPrintf_P(PGM_P format, ...);
 
 private:
-    LoggingEnum_t _logging;
+    LoggingEnum _logging;
 
 private:
     void _startPosition(const String &message);
@@ -188,6 +189,7 @@ private:
 private:
     uint8_t _position;
     uint8_t _positionOld;
+    bool _success;
 };
 
 extern STK500v1Programmer *stk500v1;

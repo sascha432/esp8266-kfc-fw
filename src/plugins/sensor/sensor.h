@@ -107,6 +107,8 @@ class SensorPlugin : public PluginComponent {
 public:
     using Plugins = KFCConfigurationClasses::PluginsType;
     using SensorType = MQTT::SensorType;
+    template<SensorType _SensoeType>
+    using SensorClassType = MQTT::SensorClassType<_SensoeType>;
     using SensorConfig = WebUINS::SensorConfig;
     using SensorVector = std::vector<MQTT::SensorPtr>;
     using AddCustomSensorCallback = std::function<void(WebUINS::Root &webUI, SensorType nextType)>;
@@ -131,6 +133,18 @@ public:
     static void timerEvent(Event::CallbackTimerPtr timer);
 
     static SensorVector &getSensors();
+
+    template<typename _Ta>
+    static _Ta *getSensor(SensorType type);
+
+    template<typename _Ta>
+    static _Ta *getSensor(MQTT::SensorPtr sensor);
+
+    template<SensorType _Type>
+    static typename SensorClassType<_Type>::type *getSensor() {
+        return getSensor<typename SensorClassType<_Type>::type>(_Type);
+    }
+
     static size_t getSensorCount();
     static SensorVector::iterator begin();
     static SensorVector::iterator end();
@@ -197,6 +211,27 @@ inline void SensorPlugin::addSensor(MQTT::SensorPtr sensor, const SensorConfig &
 {
     sensor->setConfig(config);
     _sensors.push_back(sensor);
+}
+
+template<typename _Ta>
+inline _Ta *SensorPlugin::getSensor(SensorType type)
+{
+    auto &sensors = SensorPlugin::getSensors();
+    auto iterator = std::find_if(sensors.begin(), sensors.end(), [type](const MQTT::SensorPtr sensor) {
+        return sensor->getType() == type;
+
+    });
+    if (iterator == sensors.end()) {
+        return nullptr;
+    }
+    return reinterpret_cast<_Ta *>(*iterator);
+
+}
+
+template<typename _Ta>
+inline _Ta *SensorPlugin::getSensor(MQTT::SensorPtr sensor)
+{
+    return reinterpret_cast<_Ta *>(sensor);
 }
 
 inline size_t SensorPlugin::_count() const

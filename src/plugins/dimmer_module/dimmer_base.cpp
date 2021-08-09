@@ -32,51 +32,51 @@ Base::Base() :
 
 void Base::begin()
 {
-#if IOT_DIMMER_MODULE_INTERFACE_UART
-    _client = &serialHandler.addClient(onData, SerialHandler::EventType::READ);
-    #if AT_MODE_SUPPORTED
-        // disable_at_mode(Serial);
-        #if IOT_DIMMER_MODULE_BAUD_RATE != KFC_SERIAL_RATE
-            Serial.flush();
-            Serial.begin(IOT_DIMMER_MODULE_BAUD_RATE);
+    #if IOT_DIMMER_MODULE_INTERFACE_UART
+        _client = &serialHandler.addClient(onData, SerialHandler::EventType::READ);
+        #if AT_MODE_SUPPORTED
+            // disable_at_mode(Serial);
+            #if IOT_DIMMER_MODULE_BAUD_RATE != KFC_SERIAL_RATE
+                Serial.flush();
+                Serial.begin(IOT_DIMMER_MODULE_BAUD_RATE);
+            #endif
         #endif
+        // delay between request and response is ~25ms + ~450us per raw byte
+        _wire.setTimeout(500);
+        _wire.begin(DIMMER_I2C_MASTER_ADDRESS);
+        _wire.onReceive(Base::onReceive);
+    #else
     #endif
-    // delay between request and response is ~25ms + ~450us per raw byte
-    _wire.setTimeout(500);
-    _wire.begin(DIMMER_I2C_MASTER_ADDRESS);
-    _wire.onReceive(Base::onReceive);
-#else
-#endif
 
     _config = Plugins::Dimmer::getConfig();
     Base::readConfig(_config);
 
-#if IOT_DIMMER_MODULE_INTERFACE_UART == 0
-    // ESP8266 I2C does not support slave mode. Use timer to poll metrics instead
-    if (_config.config_valid) {
-        auto time = _config.config_valid && _config.fw.report_metrics_max_interval ? _config.fw.report_metrics_max_interval : 10;
-        _Timer(_timer).add(Event::seconds(time), true, Base::fetchMetrics);
-    }
-#endif
+    #if IOT_DIMMER_MODULE_INTERFACE_UART == 0
+        // ESP8266 I2C does not support slave mode. Use timer to poll metrics instead
+        if (_config.config_valid) {
+            auto time = _config.config_valid && _config.fw.report_metrics_max_interval ? _config.fw.report_metrics_max_interval : 10;
+            _Timer(_timer).add(Event::seconds(time), true, Base::fetchMetrics);
+        }
+    #endif
 }
 
 void Base::end()
 {
     _config.version = {};
 
-#if IOT_DIMMER_MODULE_INTERFACE_UART
-    _wire.onReceive(nullptr);
-    serialHandler.removeClient(*_client);
-    #if IOT_DIMMER_MODULE_BAUD_RATE != KFC_SERIAL_RATE
-        Serial.flush();
-        Serial.begin(KFC_SERIAL_RATE);
+    #if IOT_DIMMER_MODULE_INTERFACE_UART
+        _wire.onReceive(nullptr);
+        serialHandler.removeClient(*_client);
+        #if IOT_DIMMER_MODULE_BAUD_RATE != KFC_SERIAL_RATE
+            Serial.flush();
+            Serial.begin(KFC_SERIAL_RATE);
+        #endif
+        #if AT_MODE_SUPPORTED
+            // enable_at_mode(Serial);
+        #endif
+    #else
+        _timer.remove();
     #endif
-    #if AT_MODE_SUPPORTED
-        // enable_at_mode(Serial);
-    #endif
-#else
-    _timer.remove();
-#endif
 }
 
 // ------------------------------------------------------------------------
@@ -125,21 +125,21 @@ void Base::onReceive(int length)
 void Base::_onReceive(size_t length)
 {
     auto type = _wire.read();
-#ifdef DIMMER_EVENT_RESTART
-    if (type == DIMMER_EVENT_RESTART) {
-        auto reader = std::shared_ptr<ConfigReaderWriter>(new ConfigReaderWriter(_wire, DIMMER_I2C_ADDRESS));
-        reader->readConfig(10, 500, [this, reader](ConfigReaderWriter &config, bool status) {
-            if (status) {
-                _config.version = config.config().version;
-                _config.cfg = config.config().config;
-            }
-            else {
-                _config.version = {};
-            }
-        }, 100);
-    }
-    else
-#endif
+    #ifdef DIMMER_EVENT_RESTART
+        if (type == DIMMER_EVENT_RESTART) {
+            auto reader = std::shared_ptr<ConfigReaderWriter>(new ConfigReaderWriter(_wire, DIMMER_I2C_ADDRESS));
+            reader->readConfig(10, 500, [this, reader](ConfigReaderWriter &config, bool status) {
+                if (status) {
+                    _config.version = config.config().version;
+                    _config.cfg = config.config().config;
+                }
+                else {
+                    _config.version = {};
+                }
+            }, 100);
+        }
+        else
+    #endif
     if (type == DIMMER_EVENT_METRICS_REPORT && length >= sizeof(dimmer_metrics_t) + 1) {
         MetricsType metrics;
          _wire.read(metrics);
@@ -209,27 +209,33 @@ void Base::_fade(uint8_t channel, int16_t toLevel, float fadeTime)
     __LDBG_printf("channel=%u to_level=%u fadetime=%f max_time=%f real_to_level=%u", channel, toLevel, fadeTime, maxTime, _calcLevel(toLevel, channel));
 
     _wire.fadeTo(channel, DIMMER_CURRENT_LEVEL, _calcLevel(toLevel, channel), fadeTime);
-#if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
-    _setDimmingLevels();
-#endif
+    #if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
+        _setDimmingLevels();
+    #endif
 }
 
 #if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
 
-void Base::_setDimmingLevels()
-{
-    // this only works if all channels have about the same load
-    float level = 0;
-    for(uint8_t i = 0; i < getChannelCount(); i++) {
-        level += getChannel(i);
-    }
-    level = level / (float)(IOT_DIMMER_MODULE_MAX_BRIGHTNESS * getChannelCount());
-    for(auto sensor: SensorPlugin::getSensors()) {
-        if (sensor->getType() == MQTT::SensorType::HLW8012 || sensor->getType() == MQTT::SensorType::HLW8032) {
-            reinterpret_cast<Sensor_HLW80xx *>(sensor)->setDimmingLevel(level);
+    void Base::_setDimmingLevels()
+    {
+        // this only works if all channels have about the same load
+        float level = 0;
+        for(uint8_t i = 0; i < getChannelCount(); i++) {
+            level += getChannel(i);
         }
+        level = level / (float)(IOT_DIMMER_MODULE_MAX_BRIGHTNESS * getChannelCount());
+        #if IOT_SENSOR_HAVE_HLW8012
+            auto sensor = SensorPlugin::getSensor<MQTT::SensorType::HLW8012>();
+            if (sensor) {
+                sensor->setDimmingLevel(level);
+            }
+        #elif IOT_SENSOR_HAVE_HLW8032
+            auto sensor = SensorPlugin::getSensor<MQTT::SensorType::HLW8032>();
+            if (sensor) {
+                sensor->setDimmingLevel(level);
+            }
+        #endif
     }
-}
 
 #endif
 
@@ -280,23 +286,22 @@ void Base::_updateMetrics(const MetricsType &metrics)
 
 void Base::_forceMetricsUpdate(uint8_t delay)
 {
-#if IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032
-    for(auto sensor: SensorPlugin::getSensors()) {
-        if (sensor->getType() == MQTT::SensorType::HLW8012 || sensor->getType() == MQTT::SensorType::HLW8032) {
-            reinterpret_cast<Sensor_HLW80xx *>(sensor)->setNextMqttUpdate(delay);
+    #if IOT_SENSOR_HAVE_HLW8012
+        auto sensor = SensorPlugin::getSensor<MQTT::SensorType::HLW8012>();
+        if (sensor) {
+            sensor->setNextMqttUpdate(delay);
         }
-    }
-#endif
+    #elif IOT_SENSOR_HAVE_HLW8032
+        auto sensor = SensorPlugin::getSensor<MQTT::SensorType::HLW8032>();
+        if (sensor) {
+            sensor->setNextMqttUpdate(delay);
+        }
+    #endif
 }
 
 Sensor_DimmerMetrics *Base::getMetricsSensor() const
 {
-    for(auto sensor: SensorPlugin::getSensors()) {
-        if (sensor->getType() == MQTT::SensorType::DIMMER_METRICS) {
-            return reinterpret_cast<Sensor_DimmerMetrics *>(sensor);
-        }
-    }
-    return nullptr;
+    return SensorPlugin::getSensor<MQTT::SensorType::DIMMER_METRICS>();
 }
 
 float Base::getTransitionTime(int fromLevel, int toLevel, float transitionTimeOverride)
@@ -332,12 +337,12 @@ void Base::getValues(WebUINS::Events &array)
     for (uint8_t i = 0; i < getChannelCount(); i++) {
         PrintString id(F("d_chan%u"), i);
         auto value = static_cast<int32_t>(getChannel(i));
-        array.append(WebUINS::Values(id, value));
+        array.append(WebUINS::Values(id, value, true));
         if (getChannelState(i) && value) {
             on = 1;
         }
     }
-    array.append(WebUINS::Values(F("group-switch-0"), on));
+    array.append(WebUINS::Values(F("group-switch-0"), on, true));
 }
 
 void Base::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
@@ -350,11 +355,12 @@ void Base::setValue(const String &id, const String &value, bool hasValue, bool s
             for(uint8_t i = 0; i < getChannelCount(); i++) {
                 if (val) {
                     on(i);
-                } else {
+                }
+                else {
                     off(i);
                 }
                 publishChannel(i);
-                __DBG_printf("group switch value=%u channel=%u level=%u state=%u", val, i, getChannel(i), getChannelState(i));
+                __LDBG_printf("group switch value=%u channel=%u level=%u state=%u", val, i, getChannel(i), getChannelState(i));
             }
         }
     }
@@ -424,16 +430,16 @@ void Base::resetDimmerMCU()
 #undef PROGMEM_AT_MODE_HELP_COMMAND_PREFIX
 #define PROGMEM_AT_MODE_HELP_COMMAND_PREFIX "DIM"
 
-#define DIMMER_COMMANDS "reset|wree|display|modify|store|factory"
+#define DIMMER_COMMANDS "reset|weeprom|info|print|write|factory"
 #undef DISPLAY
 
 enum class DimmerCommandType {
     INVALID = -1,
     RESET,
     WRITE_EEPROM,
-    DISPLAY,
-    MODIFY,
-    STORE,
+    INFO,
+    PRINT,
+    WRITE,
     FACTORY
 };
 
@@ -456,7 +462,7 @@ bool Base::atModeHandler(AtModeArgs &args, const Base &dimmer, int32_t maxLevel)
 {
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DIMG))) {
         for(uint8_t i = 0; i < dimmer.getChannelCount(); i++) {
-            args.printf_P(PSTR("%u: %d (%s)"), i, getChannel(i), getChannelState(i) ? PSTR("on") : PSTR("off"), dimmer_plugin.getChannels().at(i).getStorededBrightness());
+            args.print(F("%u: %d (%s)"), i, getChannel(i), getChannelState(i) ? PSTR("on") : PSTR("off"), dimmer_plugin.getChannels().at(i).getStorededBrightness());
         }
         return true;
     }
@@ -466,7 +472,7 @@ bool Base::atModeHandler(AtModeArgs &args, const Base &dimmer, int32_t maxLevel)
             if (channel < dimmer.getChannelCount()) {
                 int level = args.toIntMinMax(1, 0, maxLevel);
                 float time = args.toFloat(2, -1);
-                args.printf_P(PSTR("Set %u: %d (time %.2f)"), channel, level, time);
+                args.print(F("Set %u: %d (time %.2f)"), channel, level, time);
                 setChannel(channel, level, time);
             }
             else {
@@ -480,9 +486,30 @@ bool Base::atModeHandler(AtModeArgs &args, const Base &dimmer, int32_t maxLevel)
         auto index = static_cast<DimmerCommandType>(stringlist_find_P(commands, args.get(0), '|'));
         switch(index) {
             case DimmerCommandType::RESET: {
-                    args.printf_P(PSTR("Pulling GPIO%u low for 10ms"), STK500V1_RESET_PIN);
+                    args.print(F("Pulling GPIO%u low for 10ms"), STK500V1_RESET_PIN);
                     dimmer.resetDimmerMCU();
-                    args.printf_P(PSTR("GPIO%u set to input"), STK500V1_RESET_PIN);
+                    args.print(F("GPIO%u set to input"), STK500V1_RESET_PIN);
+                }
+                break;
+            case DimmerCommandType::FACTORY: {
+                    _wire.restoreFactory();
+                    _wire.writeEEPROM();
+                    args.ok();
+                }
+                break;
+            case DimmerCommandType::INFO: {
+                    _wire.printInfo();
+                    args.ok();
+                }
+                break;
+            case DimmerCommandType::PRINT: {
+                    _wire.printConfig();
+                    args.ok();
+                }
+                break;
+            case DimmerCommandType::WRITE: {
+                    _wire.writeConfig();
+                    args.ok();
                 }
                 break;
             case DimmerCommandType::WRITE_EEPROM: {
@@ -490,10 +517,9 @@ bool Base::atModeHandler(AtModeArgs &args, const Base &dimmer, int32_t maxLevel)
                     args.ok();
                 }
                 break;
-            //TODO
             case DimmerCommandType::INVALID:
-            default:
-                args.printf_P(PSTR("Invalid command: %s: expected: <%s>"), args.toString(0).c_str(), commands);
+            // default:
+                args.print(F("Invalid command: %s: expected: <%s>"), args.toString(0).c_str(), commands);
                 break;
         }
         return true;

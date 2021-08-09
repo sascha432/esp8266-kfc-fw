@@ -124,6 +124,7 @@ namespace SerialHandler {
         virtual size_t readBytes(char *buffer, size_t length) override;
 
         Clients &getClients();
+        Wrapper &getInstance();
 
     public:
         // send data to serial port and all clients
@@ -240,6 +241,13 @@ namespace SerialHandler {
         return _clients;
     }
 
+    inline void Wrapper::_loop()
+    {
+        _pollSerial();
+        _transmitClientsRx();
+        _transmitClientsTx();
+    }
+
 };
 
 extern NullStream NullSerial;
@@ -248,3 +256,12 @@ extern Stream &Serial;
 extern Stream &DebugSerial;
 extern SerialHandler::Wrapper serialHandler;
 extern StreamWrapper debugStreamWrapper;
+
+namespace SerialHandler {
+
+    inline Wrapper &Wrapper::getInstance()
+    {
+        return serialHandler;
+    }
+
+}

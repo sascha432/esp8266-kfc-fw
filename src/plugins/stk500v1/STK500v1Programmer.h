@@ -15,6 +15,10 @@
 #define STK500_HAVE_SOFTWARE_SERIAL_PINS D5, D6
 #endif
 
+#ifndef STK500_HAVE_FUSES
+#define STK500_HAVE_FUSES 1
+#endif
+
 PROGMEM_STRING_DECL(stk500v1_log_file);
 PROGMEM_STRING_DECL(stk500v1_sig_file);
 PROGMEM_STRING_DECL(stk500v1_tmp_file);
@@ -129,20 +133,12 @@ public:
     static void dumpLog(Stream &output);
     static void loopFunction();
 
-    void setPageSize(uint16_t pageSize) {
-        _pageSize = pageSize;
-    }
+    void setPageSize(uint16_t pageSize);
 
     // set default timeout
     void setTimeout(uint16_t timeout);
 
-    void setLogging(int logging) {
-        _logging = (LoggingEnum)logging;
-        if (_logging == LOG_FILE) {
-            KFCFS.remove(FSPGM(stk500v1_log_file));
-            KFCFS.open(FSPGM(stk500v1_log_file), fs::FileOpenMode::write).close(); // truncate
-        }
-    }
+    void setLogging(int logging);
 
 public:
     void setSignature(const char *signature);
@@ -159,21 +155,9 @@ private:
     void _serialWrite(uint8_t data);
     void _serialWrite(const uint8_t *data, uint8_t length);
 
-    void _serialWrite(const char *data, uint8_t length) {
-        _serialWrite(reinterpret_cast<const uint8_t *>(data), length);
-    }
-
-    void _serialClear() {
-        while(_serial.available()) {
-            _serial.read();
-        }
-    }
-
-    void _serialRead() {
-        while(_serial.available()) {
-            _response.write(_serial.read());
-        }
-    }
+    void _serialWrite(const char *data, uint8_t length);
+    void _serialClear();
+    void _serialRead();
 
     // asynchronous delay
     void _delay(uint16_t time, Callback_t callback);
@@ -183,16 +167,14 @@ private:
 
     // send command
     void _sendCommand_P(PGM_P command, uint8_t length);
-    void _sendCommand(const char *command, uint8_t length) {
-        _sendCommand_P(command, length);
-    }
+    void _sendCommand(const char *command, uint8_t length);
     void _sendCommandEnterProgMode();
     void _sendCommandLeaveProgMode();
     void _sendCommandSetOptions(const Options_t &options);
     void _sendCommandLoadAddress(uint16_t address);
     void _sendCommandProgPage(const uint8_t *data, uint16_t length);
     void _sendCommandReadPage(const uint8_t *data, uint16_t length);
-    #if 0
+    #if STK500_HAVE_FUSES
     void _sendCommandReadFuseExt();
     void _sendCommandProgFuseExt(uint8_t fuseLow, uint8_t fuseHigh, uint8_t fuseExt);
     #endif
@@ -243,7 +225,7 @@ private:
 
 private:
     char _signature[3];
-    #if 0
+    #if STK500_HAVE_FUSES
     char _fuseBytes[3];
     #endif
     IntelHexFormat _file;
@@ -255,21 +237,14 @@ private:
 
 private:
     void _status(const String &message);
-
-    template<typename ..._Args>
-    void _status(const __FlashStringHelper *format, _Args ...args) {
-        PrintString str(format, args...);
-        _status(str);
-    }
-
     void _logPrintf_P(PGM_P format, ...) __attribute__((format(printf, 2, 3)));
-
     void _log(PGM_P format, ...) __attribute__((format(printf, 2, 3)));
 
     template<typename ..._Args>
-    void _log(const __FlashStringHelper *format, _Args ...args) {
-        _log(reinterpret_cast<PGM_P>(format), args...);
-    }
+    void _status(const __FlashStringHelper *format, _Args ...args);
+
+    template<typename ..._Args>
+    void _log(const __FlashStringHelper *format, _Args ...args);
 
 private:
     LoggingEnum _logging;
@@ -287,3 +262,102 @@ private:
 };
 
 extern STK500v1Programmer *stk500v1;
+
+inline STK500v1Programmer::~STK500v1Programmer()
+{
+    delete[] _pageBuffer;
+}
+
+inline void STK500v1Programmer::_readResponse(Callback_t success, Callback_t failure)
+{
+    _startTime = millis();
+    _response.clear();
+    _serialRead();
+    _callbackSuccess = success;
+    _callbackFailure = failure;
+}
+
+inline void STK500v1Programmer::_skipResponse(Callback_t success, Callback_t failure)
+{
+    success();
+}
+
+inline void STK500v1Programmer::_setExpectedResponse_P(PGM_P response, uint8_t length)
+{
+    _logPrintf_P(PSTR("Expected response length=%u"), length);
+    _expectedResponse.clear();
+    _expectedResponse.write_P(response, length);
+}
+
+inline void STK500v1Programmer::_delay(uint16_t time, Callback_t callback)
+{
+    _startTime = millis();
+    _delayTimeout = time;
+    _callbackDelay = callback;
+}
+
+inline void STK500v1Programmer::setFile(const String &filename)
+{
+    _file.open(filename);
+}
+
+inline void STK500v1Programmer::loopFunction()
+{
+    stk500v1->_loopFunction();
+}
+
+inline void STK500v1Programmer::setTimeout(uint16_t timeout)
+{
+    _defaultTimeout = timeout;
+}
+
+inline void STK500v1Programmer::setPageSize(uint16_t pageSize)
+{
+    _pageSize = pageSize;
+}
+
+inline void STK500v1Programmer::setLogging(int logging)
+{
+    _logging = (LoggingEnum)logging;
+    if (_logging == LOG_FILE) {
+        KFCFS.remove(FSPGM(stk500v1_log_file));
+        KFCFS.open(FSPGM(stk500v1_log_file), fs::FileOpenMode::write).close(); // truncate
+    }
+}
+
+inline void STK500v1Programmer::_serialWrite(const char *data, uint8_t length)
+{
+    _serialWrite(reinterpret_cast<const uint8_t *>(data), length);
+}
+
+inline void STK500v1Programmer::_serialClear()
+{
+    while(_serial.available()) {
+        _serial.read();
+    }
+}
+
+inline void STK500v1Programmer::_serialRead()
+{
+    while(_serial.available()) {
+        _response.write(_serial.read());
+    }
+}
+
+inline void STK500v1Programmer::_sendCommand(const char *command, uint8_t length)
+{
+    _sendCommand_P(command, length);
+}
+
+template<typename ..._Args>
+void STK500v1Programmer::_status(const __FlashStringHelper *format, _Args ...args)
+{
+    PrintString str(format, args...);
+    _status(str);
+}
+
+template<typename ..._Args>
+void STK500v1Programmer::_log(const __FlashStringHelper *format, _Args ...args)
+{
+    _log(reinterpret_cast<PGM_P>(format), args...);
+}

@@ -313,16 +313,4 @@ namespace SerialHandler {
         _txFlag = false;
     }
 
-    void Wrapper::_loop()
-    {
-        _pollSerial();
-        _transmitClientsRx();
-        _transmitClientsTx();
-    }
-
-    Wrapper &getInstance() {
-        return serialHandler;
-    }
-
-
-};
+}

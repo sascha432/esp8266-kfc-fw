@@ -34,30 +34,16 @@ STK500v1Programmer::STK500v1Programmer(Stream &serial) :
     _readResponseTimeout(_defaultTimeout),
     _delayTimeout(0),
     _retries(1),
+    _signature{0x1e, 0x95, 0x0f}, // ATMega328P
+    #if STK500_HAVE_FUSES
+        _fuseBytes{0xff, 0xda, 0xff}, // https://www.engbedded.com/fusecalc/
+    #endif
     _pageSize(128),
+    _pageBuffer(new uint8_t[_pageSize]()),
     _logging(LoggingEnum::LOG_DISABLED),
     _success(false)
 {
-    _signature[0] = 0x1e;
-    _signature[1] = 0x95;
-    _signature[2] = 0x0f;
-    #if 0
-        _fuseBytes[FUSE_LOW] = 0xff;
-        _fuseBytes[FUSE_HIGH] = 0xda;
-        _fuseBytes[FUSE_EXT] = 0xff;
-    #endif
-    _pageBuffer = new uint8_t[_pageSize]();
     BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::MEDIUM);
-}
-
-STK500v1Programmer::~STK500v1Programmer()
-{
-    delete[] _pageBuffer;
-}
-
-void STK500v1Programmer::setFile(const String &filename)
-{
-    _file.open(filename);
 }
 
 void STK500v1Programmer::begin(Callback_t cleanup)
@@ -109,30 +95,6 @@ void STK500v1Programmer::end()
             }
         });
     });
-}
-
-void STK500v1Programmer::loopFunction()
-{
-    stk500v1->_loopFunction();
-}
-
-void STK500v1Programmer::setTimeout(uint16_t timeout)
-{
-    _defaultTimeout = timeout;
-}
-
-void STK500v1Programmer::_readResponse(Callback_t success, Callback_t failure)
-{
-    _startTime = millis();
-    _response.clear();
-    _serialRead();
-    _callbackSuccess = success;
-    _callbackFailure = failure;
-}
-
-void STK500v1Programmer::_skipResponse(Callback_t success, Callback_t failure)
-{
-    success();
 }
 
 void STK500v1Programmer::_loopFunction()
@@ -281,7 +243,6 @@ void STK500v1Programmer::_serialWrite(const uint8_t *data, uint8_t length)
 {
     auto ptr = data;
     while(length--) {
-        // _serial.write(pgm_read_byte(ptr));
         _serialWrite(pgm_read_byte(ptr));
         ptr++;
     }
@@ -324,7 +285,6 @@ void STK500v1Programmer::_flash()
         _setExpectedResponse_P(Response_INSYNC, sizeof(Response_INSYNC));
 
         _reset();
-        _serialClear();
         _sendCommand_P_repeat(Command_SYNC, sizeof(Command_SYNC), 10, 100);
 
         _retries = 12;
@@ -462,7 +422,6 @@ void STK500v1Programmer::_flash()
 
                     if (_retries % 4 == 0) {
                         _reset();
-                        _serialClear();
                         _sendCommand_P_repeat(Command_SYNC, sizeof(Command_SYNC), 10, 100);
                     }
                     else {
@@ -474,15 +433,9 @@ void STK500v1Programmer::_flash()
     });
 }
 
-void STK500v1Programmer::_delay(uint16_t time, Callback_t callback)
-{
-    _startTime = millis();
-    _delayTimeout = time;
-    _callbackDelay = callback;
-}
-
 void STK500v1Programmer::_sendCommand_P_repeat(PGM_P command, uint8_t length, uint8_t num, uint16_t delayTime)
 {
+    _setResponseTimeout(_defaultTimeout);
     while(num--) {
         _sendCommand_P(command, length);
         delay(delayTime);
@@ -502,8 +455,6 @@ void STK500v1Programmer::_sendCommandReadFuseExt()
     _expectedResponse.write(Resp_STK_ANY);
     _expectedResponse.write(Resp_STK_ANY);
     _expectedResponse.write(Resp_STK_OK);
-
-    _setExpectedResponse_P(Response_INSYNC, sizeof(Response_INSYNC));
     _logPrintf_P(PSTR("Sending read fuse ext"));
 
     _serialWrite(Cmnd_STK_READ_FUSE_EXT);
@@ -556,7 +507,6 @@ void STK500v1Programmer::_sendCommandSetOptions(const STK500v1Programmer::Option
 void STK500v1Programmer::_sendCommandLoadAddress(uint16_t address)
 {
     _setExpectedResponse_P(Response_INSYNC, sizeof(Response_INSYNC));
-
     uint16_t wordAddress = ((address * _pageSize) >> 1);    // address is the page
 
     _serialWrite(Cmnd_STK_LOAD_ADDRESS);
@@ -712,14 +662,6 @@ bool STK500v1Programmer::getSignature(const char *mcu, char *signature)
     return true;
 }
 
-void STK500v1Programmer::_setExpectedResponse_P(PGM_P response, uint8_t length)
-{
-    _logPrintf_P(PSTR("Expected response length=%u"), length);
-    _response.clear();
-    _expectedResponse.clear();
-    _expectedResponse.write_P(response, length);
-}
-
 void STK500v1Programmer::_setResponseTimeout(uint16_t timeout)
 {
     _startTime = millis();
@@ -727,7 +669,7 @@ void STK500v1Programmer::_setResponseTimeout(uint16_t timeout)
     if (timeout) {
         if (_readResponseTimeout != timeout) {
             _readResponseTimeout = timeout;
-            _logPrintf_P(PSTR("Set response timeout=%u"), _readResponseTimeout);
+            // _logPrintf_P(PSTR("Set response timeout=%u"), _readResponseTimeout);
         }
     }
 }
@@ -790,6 +732,7 @@ void STK500v1Programmer::_reset()
     digitalWrite(STK500V1_RESET_PIN, LOW);
     delay(10);
     pinMode(STK500V1_RESET_PIN, INPUT);
+    _serialClear();
 }
 
 void STK500v1Programmer::_status(const String &message)

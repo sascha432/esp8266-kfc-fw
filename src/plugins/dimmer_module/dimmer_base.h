@@ -88,7 +88,7 @@ namespace Dimmer {
 
     class Base {
     public:
-        static const uint32_t METRICS_DEFAULT_UPDATE_RATE = 60000;
+        static const uint32_t kMetricsDefaultUpdateRate = 60000;
 
         // stepSize = IOT_DIMMER_MODULE_MAX_BRIGHTNESS * ((repeatTime / 1000.0) / fadetime)
         // fadetime = (IOT_DIMMER_MODULE_MAX_BRIGHTNESS * repeatTime) / (1000.0 * stepSize)

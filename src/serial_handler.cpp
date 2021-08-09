@@ -217,11 +217,6 @@ namespace SerialHandler {
         });
     }
 
-    void Wrapper::pollSerial()
-    {
-        serialHandler._pollSerial();
-    }
-
     size_t Wrapper::write(const uint8_t *buffer, size_t size)
     {
         __DBGSHIO("wrapper write %u", size);

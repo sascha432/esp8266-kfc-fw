@@ -264,4 +264,9 @@ namespace SerialHandler {
         return serialHandler;
     }
 
+    inline void Wrapper::pollSerial()
+    {
+        serialHandler._pollSerial();
+    }
+
 }

@@ -110,18 +110,6 @@ void Base::_updateConfig(ConfigType &config, Dimmer::ConfigReaderWriter &reader,
 
 #if IOT_DIMMER_MODULE_INTERFACE_UART
 
-void Base::onData(Stream &client)
-{
-    while(client.available()) {
-        dimmer_plugin._wire.feed(client.read());
-    }
-}
-
-void Base::onReceive(int length)
-{
-    dimmer_plugin._onReceive(length);
-}
-
 void Base::_onReceive(size_t length)
 {
     auto type = _wire.read();
@@ -149,23 +137,6 @@ void Base::_onReceive(size_t length)
         dimmer_over_temperature_event_t event;
         _wire.read(event);
         Logger_error(PrintString(F("Dimmer temperature alarm triggered: %u%s > %u%s"), event.current_temp, SPGM(UTF8_degreeC), event.max_temp, SPGM(UTF8_degreeC)));
-    }
-}
-
-#else
-
-void Base::fetchMetrics(Event::CallbackTimerPtr timer)
-{
-    timer->updateInterval(Event::milliseconds(METRICS_DEFAULT_UPDATE_RATE));
-    // using dimmer_plugin avoids adding extra static variable to Base
-    dimmer_plugin._fetchMetrics();
-}
-
-void Base::_fetchMetrics()
-{
-    auto metrics = _wire.getMetrics();
-    if (metrics) {
-        _updateMetrics(static_cast<dimmer_metrics_t>(metrics));
     }
 }
 

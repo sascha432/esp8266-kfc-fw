@@ -85,4 +85,37 @@ namespace Dimmer {
 
     extern Plugin dimmer_plugin;
 
+    #if IOT_DIMMER_MODULE_INTERFACE_UART
+
+        inline void Base::onData(Stream &client)
+        {
+            while(client.available()) {
+                dimmer_plugin._wire.feed(client.read());
+            }
+        }
+
+        inline void Base::onReceive(int length)
+        {
+            dimmer_plugin._onReceive(length);
+        }
+
+    #else
+
+        inline void Base::fetchMetrics(Event::CallbackTimerPtr timer)
+        {
+            timer->updateInterval(Event::milliseconds(kMetricsDefaultUpdateRate));
+            // using dimmer_plugin avoids adding extra static variable to Base
+            dimmer_plugin._fetchMetrics();
+        }
+
+        inline void Base::_fetchMetrics()
+        {
+            auto metrics = _wire.getMetrics();
+            if (metrics) {
+                _updateMetrics(static_cast<dimmer_metrics_t>(metrics));
+            }
+        }
+
+    #endif
+
 }

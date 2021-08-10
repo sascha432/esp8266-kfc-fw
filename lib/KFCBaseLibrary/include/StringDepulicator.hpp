@@ -142,12 +142,13 @@ inline const char *StringDeduplicator::attachString(const char *str)
 
 inline const char *StringDeduplicator::attachString(const __FlashStringHelper *str)
 {
-    __ASSERT_PTR(str);
+    __DBG_validatePointer(str, VP_HPS);
     return attachString(reinterpret_cast<const char *>(str));
 }
 
 inline const char *StringDeduplicator::attachString(const String &str)
 {
+    __DBG_validatePointer(str, VP_HPS);
     return attachString(str.c_str());
 }
 

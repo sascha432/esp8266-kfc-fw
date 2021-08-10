@@ -71,6 +71,13 @@ namespace Dimmer {
         return _channels;
     }
 
+    inline void Plugin::reconfigure(const String &source)
+    {
+        Base::readConfig(_config);
+        Module::shutdown();
+        Module::setup();
+    }
+
     #if AT_MODE_SUPPORTED
         inline ATModeCommandHelpArrayPtr Plugin::atModeCommandHelp(size_t &size) const
         {

@@ -33,35 +33,36 @@ Http2Serial *Http2Serial::_instance = nullptr;
 WsClientAsyncWebSocket *wsSerialConsole = nullptr;
 
 Http2Serial::Http2Serial() :
-    _client(serialHandler.addClient(onData, SerialHandler::EventType::RW))
+    _client(serialHandler.addClient(onData, SerialHandler::EventType::RW)),
+    _locked(false),
+    _outputBufferEnabled(true),
+    _clientLocked(false)
+
 {
-    _locked = false;
-#if defined(HTTP2SERIAL_BAUD) && HTTP2SERIAL_BAUD != KFC_SERIAL_RATE
-    __LDBG_printf("Reconfiguring serial port to %d baud", HTTP2SERIAL_BAUD);
-    Serial.flush();
-    Serial.begin(HTTP2SERIAL_BAUD);
-#endif
-#if AT_MODE_SUPPORTED && HTTP2SERIAL_DISABLE_AT_MODE
-    disable_at_mode(Serial);
-#endif
+    #if defined(HTTP2SERIAL_BAUD) && HTTP2SERIAL_BAUD != KFC_SERIAL_RATE
+        __LDBG_printf("Reconfiguring serial port to %d baud", HTTP2SERIAL_BAUD);
+        Serial.flush();
+        Serial.begin(HTTP2SERIAL_BAUD);
+    #endif
+    #if AT_MODE_SUPPORTED && HTTP2SERIAL_DISABLE_AT_MODE
+        disable_at_mode(Serial);
+    #endif
     resetOutputBufferTimer();
-    _outputBufferEnabled = true;
 
     LoopFunctions::add(Http2Serial::outputLoop);
 }
-
 
 Http2Serial::~Http2Serial()
 {
     LoopFunctions::remove(Http2Serial::outputLoop);
     serialHandler.removeClient(_client);
-#if defined(HTTP2SERIAL_BAUD) && HTTP2SERIAL_BAUD != KFC_SERIAL_RATE
-    Serial.flush();
-    Serial.begin(KFC_SERIAL_RATE);
-#endif
-#if AT_MODE_SUPPORTED && HTTP2SERIAL_DISABLE_AT_MODE
-    enable_at_mode(Serial);
-#endif
+    #if defined(HTTP2SERIAL_BAUD) && HTTP2SERIAL_BAUD != KFC_SERIAL_RATE
+        Serial.flush();
+        Serial.begin(KFC_SERIAL_RATE);
+    #endif
+    #if AT_MODE_SUPPORTED && HTTP2SERIAL_DISABLE_AT_MODE
+        enable_at_mode(Serial);
+    #endif
 }
 
 /**
@@ -100,38 +101,6 @@ void Http2Serial::writeOutputBuffer(Stream &client)
     }
 }
 
-bool Http2Serial::isTimeToSend()
-{
-    return (_outputBuffer.length() != 0) && (kOutputBufferFlushDelay == 0 || (millis() > _outputBufferFlushDelay));
-}
-
-void Http2Serial::resetOutputBufferTimer()
-{
-    _outputBufferFlushDelay = millis() + kOutputBufferFlushDelay;
-}
-
-void Http2Serial::clearOutputBuffer()
-{
-    _outputBuffer.clear();
-    resetOutputBufferTimer();
-}
-
-void Http2Serial::_outputLoop()
-{
-    if (kOutputBufferFlushDelay == 0 || isTimeToSend()) {
-        broadcastOutputBuffer();
-    }
-    // auto handler = getSerialHandler();
-    // if (handler != &SerialHandler::getInstance()) {
-    //     handler->serialLoop();
-    // }
-}
-
-void Http2Serial::outputLoop()
-{
-    Http2Serial::_instance->_outputLoop();
-}
-
 void Http2Serial::onData(Stream &client)
 {
     // Serial.printf_P(PSTR("Http2Serial::onData(%d, %p, %d): instance %p, locked %d\n"), type, buffer, len, Http2Serial::_instance, Http2Serial::_instance ? Http2Serial::_instance->_locked : -1);
@@ -141,49 +110,6 @@ void Http2Serial::onData(Stream &client)
         //Http2Serial::_instance->writeOutputBuffer(reinterpret_cast<const uint8_t *>(buffer), len);  // store data before sending
         Http2Serial::_instance->_locked = false;
     }
-}
-
-Http2Serial *Http2Serial::getInstance()
-{
-    return _instance;
-}
-
-void Http2Serial::createInstance()
-{
-    destroyInstance();
-    if (!_instance) {
-        _instance = new Http2Serial();
-    }
-    __LDBG_printf("inst=%p", _instance);
-}
-
-void Http2Serial::destroyInstance()
-{
-    __LDBG_printf("inst=%p", _instance);
-    if (_instance) {
-        delete _instance;
-        _instance = nullptr;
-    }
-}
-
-size_t Http2Serial::write(const uint8_t *buffer, int length)
-{
-    return _client.write(buffer, length);
-}
-
-// SerialHandler *Http2Serial::getSerialHandler() const
-// {
-//     return _serialHandler;
-// }
-
-WsClientAsyncWebSocket *Http2Serial::getServerSocket()
-{
-    return wsSerialConsole;
-}
-
-bool Http2Serial::hasAuthenticatedClients()
-{
-    return wsSerialConsole && wsSerialConsole->hasAuthenticatedClients();
 }
 
 AsyncWebSocketClient *Http2Serial::getClientById(const void *clientId)
@@ -198,12 +124,6 @@ AsyncWebSocketClient *Http2Serial::getClientById(const void *clientId)
     return nullptr;
 }
 
-
-void http2serial_event_handler(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len)
-{
-    WsClient::onWsEvent(server, client, type, data, len, arg, WsConsoleClient::getInstance);
-}
-
 class Http2SerialPlugin : public PluginComponent
 {
 public:
@@ -211,17 +131,19 @@ public:
 
     virtual void setup(SetupModeType mode, const DependenciesPtr &dependencies) override;
     // virtual void reconfigure(const String &source) override;
-    virtual void shutdown() override;
+    virtual void shutdown() override {
+        Http2Serial::destroyInstance();
+    }
 
     virtual void createMenu() override {
         bootstrapMenu.addMenuItem(FSPGM(Serial_Console), FSPGM(serial_console_html), navMenu.util);
         bootstrapMenu.addMenuItem(FSPGM(Serial_Console), FSPGM(serial_console_html), navMenu.home, bootstrapMenu.findMenuByURI(FSPGM(password_html), navMenu.home)->getId());
     }
 
-#if AT_MODE_SUPPORTED
-    virtual void atModeHelpGenerator() override;
-    virtual bool atModeHandler(AtModeArgs &args) override;
-#endif
+    #if AT_MODE_SUPPORTED
+        virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const override;
+        virtual bool atModeHandler(AtModeArgs &args) override;
+    #endif
 };
 
 static Http2SerialPlugin plugin;
@@ -257,23 +179,10 @@ void Http2SerialPlugin::setup(SetupModeType mode, const PluginComponents::Depend
     if (server) {
         // __LDBG_printf("server=%p console=%p", server, wsSerialConsole);
         auto ws = new WsClientAsyncWebSocket(FSPGM(_serial_console), &wsSerialConsole);
-        ws->onEvent(http2serial_event_handler);
+        ws->onEvent(Http2Serial::eventHandler);
         server->addHandler(ws);
         __LDBG_printf("Web socket for http2serial running on port %u", System::WebServer::getConfig().port);
     }
-}
-
-// void Http2SerialPlugin::reconfigure(const String &source)
-// {
-//     __LDBG_printf("source=%s", source.c_str());
-//     if (String_equals(source, SPGM(http))) {
-//         setup(SetupModeType::DEFAULT);
-//     }
-// }
-
-void Http2SerialPlugin::shutdown()
-{
-    Http2Serial::destroyInstance();
 }
 
 #if AT_MODE_SUPPORTED
@@ -282,10 +191,13 @@ void Http2SerialPlugin::shutdown()
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(H2SBD, "H2SBD", "<baud>", "Set serial port rate");
 
-void Http2SerialPlugin::atModeHelpGenerator()
+ATModeCommandHelpArrayPtr Http2SerialPlugin::atModeCommandHelp(size_t &size) const
 {
-    auto name = getName_P();
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(H2SBD), name);
+    static ATModeCommandHelpArray tmp PROGMEM = {
+        PROGMEM_AT_MODE_HELP_COMMAND(H2SBD),
+    };
+    size = sizeof(tmp) / sizeof(tmp[0]);
+    return tmp;
 }
 
 bool Http2SerialPlugin::atModeHandler(AtModeArgs &args)

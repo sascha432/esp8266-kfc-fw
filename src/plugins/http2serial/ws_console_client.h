@@ -9,7 +9,13 @@
 #include "web_socket.h"
 
 #ifndef DEBUG_WS_CONSOLE_CLIENT
-#define DEBUG_WS_CONSOLE_CLIENT                 0
+#define DEBUG_WS_CONSOLE_CLIENT 0
+#endif
+
+#if DEBUG_WS_CONSOLE_CLIENT
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
 #endif
 
 class WsConsoleClient : public WsClient {
@@ -33,3 +39,12 @@ public:
     }
 #endif
 };
+
+inline WsClient *WsConsoleClient::getInstance(AsyncWebSocketClient *socket)
+{
+    return new WsConsoleClient(socket);
+}
+
+#if DEBUG_WS_CONSOLE_CLIENT
+#include <debug_helper_disable.h>
+#endif

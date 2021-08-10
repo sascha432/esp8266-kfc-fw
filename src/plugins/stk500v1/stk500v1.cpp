@@ -23,7 +23,7 @@ class STK500v1Plugin : public PluginComponent {
 public:
     STK500v1Plugin();
 
-    virtual void atModeHelpGenerator() override;
+    virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const override;
     virtual bool atModeHandler(AtModeArgs &args) override;
 
 private:
@@ -62,12 +62,15 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(STK500V1F, "STK500V1F", "<filename>,[<0=Se
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(STK500V1S, "STK500V1S", "<atmega328p/0x1e1234/...>", "Set signature (/stk500v1/atmega.csv)", "Display signature");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(STK500V1L, "STK500V1L", "Dump debug log file (/stk500v1/debug.log)");
 
-void STK500v1Plugin::atModeHelpGenerator()
+ATModeCommandHelpArrayPtr STK500v1Plugin::atModeCommandHelp(size_t &size) const
 {
-    auto name = getName_P();
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(STK500V1F), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(STK500V1S), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(STK500V1L), name);
+    static ATModeCommandHelpArray tmp PROGMEM = {
+        PROGMEM_AT_MODE_HELP_COMMAND(STK500V1F),
+        PROGMEM_AT_MODE_HELP_COMMAND(STK500V1S),
+        PROGMEM_AT_MODE_HELP_COMMAND(STK500V1L),
+    };
+    size = sizeof(tmp) / sizeof(tmp[0]);
+    return tmp;
 }
 
 bool STK500v1Plugin::atModeHandler(AtModeArgs &args) {

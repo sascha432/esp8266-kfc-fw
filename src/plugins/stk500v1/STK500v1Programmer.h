@@ -16,7 +16,7 @@
 #endif
 
 #ifndef STK500_HAVE_FUSES
-#define STK500_HAVE_FUSES 1
+#define STK500_HAVE_FUSES 0
 #endif
 
 PROGMEM_STRING_DECL(stk500v1_log_file);
@@ -119,7 +119,8 @@ public:
     typedef std::function<void ()> Callback_t;
     typedef std::function<void (uint16_t address, uint16_t length, Callback_t success, Callback_t failure)> PageCallback_t;
 
-    static const int PROGRESS_BAR_LENGTH = 100;
+    static const int kProgressBarWidth = 100;
+    static const int kDefaultTimeout = 5000;
 
 public:
     STK500v1Programmer(Stream &serial);
@@ -163,11 +164,11 @@ private:
     void _delay(uint16_t time, Callback_t callback);
     // send command N times and wait delay milliseconds
     // abort if receiving any data
-    void _sendCommand_P_repeat(PGM_P command, uint8_t length, uint8_t num, uint16_t delay);
+    void _sendCommand_repeat(PGM_P command, uint8_t length, uint8_t num, uint16_t delay);
 
     // send command
-    void _sendCommand_P(PGM_P command, uint8_t length);
-    void _sendCommand(const char *command, uint8_t length);
+    void _sendCommand(PGM_P command, uint8_t length);
+    void _sendCommandReadSignature();
     void _sendCommandEnterProgMode();
     void _sendCommandLeaveProgMode();
     void _sendCommandSetOptions(const Options_t &options);
@@ -175,10 +176,11 @@ private:
     void _sendCommandProgPage(const uint8_t *data, uint16_t length);
     void _sendCommandReadPage(const uint8_t *data, uint16_t length);
     #if STK500_HAVE_FUSES
-    void _sendCommandReadFuseExt();
-    void _sendCommandProgFuseExt(uint8_t fuseLow, uint8_t fuseHigh, uint8_t fuseExt);
+        void _sendCommandReadFuseExt();
+        void _sendCommandProgFuseExt(uint8_t fuseLow, uint8_t fuseHigh, uint8_t fuseExt);
     #endif
-    void _setExpectedResponse_P(PGM_P response, uint8_t length);
+    // void _setExpectedResponse_P(PGM_P response, uint8_t length);
+    void _setExpectedResponseInSync();
 
     // read response with timeout
     void _readResponse(Callback_t success, Callback_t failure);
@@ -226,7 +228,7 @@ private:
 private:
     char _signature[3];
     #if STK500_HAVE_FUSES
-    char _fuseBytes[3];
+        char _fuseBytes[3];
     #endif
     IntelHexFormat _file;
     uint16_t _pageSize;
@@ -282,12 +284,12 @@ inline void STK500v1Programmer::_skipResponse(Callback_t success, Callback_t fai
     success();
 }
 
-inline void STK500v1Programmer::_setExpectedResponse_P(PGM_P response, uint8_t length)
-{
-    _logPrintf_P(PSTR("Expected response length=%u"), length);
-    _expectedResponse.clear();
-    _expectedResponse.write_P(response, length);
-}
+// inline void STK500v1Programmer::_setExpectedResponse_P(PGM_P response, uint8_t length)
+// {
+//     _logPrintf_P(PSTR("Expected response length=%u"), length);
+//     _expectedResponse.clear();
+//     _expectedResponse.write_P(response, length);
+// }
 
 inline void STK500v1Programmer::_delay(uint16_t time, Callback_t callback)
 {
@@ -318,8 +320,7 @@ inline void STK500v1Programmer::setPageSize(uint16_t pageSize)
 
 inline void STK500v1Programmer::setLogging(int logging)
 {
-    _logging = (LoggingEnum)logging;
-    if (_logging == LOG_FILE) {
+    if ((_logging = static_cast<LoggingEnum>(logging)) == LOG_FILE) {
         KFCFS.remove(FSPGM(stk500v1_log_file));
         KFCFS.open(FSPGM(stk500v1_log_file), fs::FileOpenMode::write).close(); // truncate
     }
@@ -342,11 +343,6 @@ inline void STK500v1Programmer::_serialRead()
     while(_serial.available()) {
         _response.write(_serial.read());
     }
-}
-
-inline void STK500v1Programmer::_sendCommand(const char *command, uint8_t length)
-{
-    _sendCommand_P(command, length);
 }
 
 template<typename ..._Args>

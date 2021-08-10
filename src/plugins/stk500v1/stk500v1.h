@@ -10,7 +10,7 @@
 // +stk500v1f=/firmware.hex,0,4
 //            ^^^^^^^^ the hex file must be on the file system
 //                          ^ 0=Serial/1=Serial1
-//                            ^ Write debug outout to /stk500v1.log (for more options see LoggingEnum_t)
+//                            ^ Write debug outout to /stk500v1/debug.log (for more options see LoggingEnum_t)
 // LED blinking: trying to sync with MCU
 // LED flashing: writing or reading data
 

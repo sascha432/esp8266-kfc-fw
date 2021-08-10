@@ -1499,7 +1499,7 @@ void KFCFWConfiguration::printInfo(Print &output)
     output.printf_P(PSTR("Device %s ready!\n"), System::Device::getName());
 
 #if AT_MODE_SUPPORTED
-    if (flags.is_at_mode_enabled) {
+    if (at_mode_enabled()) {
         output.println(F("Modified AT instruction set available.\n\nType AT? for help"));
     }
 #endif

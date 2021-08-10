@@ -8,6 +8,7 @@
 #include <kfc_fw_config.h>
 #include <PrintHtmlEntitiesString.h>
 #include <WebUIComponent.h>
+#include <web_server.h>
 #include <serial_handler.h>
 #include "dimmer_def.h"
 #include "../src/plugins/sensor/Sensor_DimmerMetrics.h"
@@ -30,6 +31,12 @@
 #error PIN_MONITOR=1 required
 #endif
 #include <PinMonitor.h>
+#endif
+
+#if DEBUG_IOT_DIMMER_MODULE
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
 #endif
 
 using Plugins = KFCConfigurationClasses::PluginsType;
@@ -98,18 +105,18 @@ namespace Dimmer {
         Base();
         virtual ~Base();
 
-    #if IOT_DIMMER_MODULE_INTERFACE_UART
-        static void onData(Stream &client);
-        static void onReceive(int length);
-    #else
-        static void fetchMetrics(Event::CallbackTimerPtr timer);
-    #endif
+        #if IOT_DIMMER_MODULE_INTERFACE_UART
+            static void onData(Stream &client);
+            static void onReceive(int length);
+        #else
+            static void fetchMetrics(Event::CallbackTimerPtr timer);
+        #endif
 
         virtual bool on(uint8_t channel = -1, float transition = NAN) = 0;
         virtual bool off(uint8_t channel = -1, float transition = NAN) = 0;
-    #if IOT_DIMMER_MODULE_HAS_BUTTONS
-        virtual bool isAnyOn() const = 0;
-    #endif
+        #if IOT_DIMMER_MODULE_HAS_BUTTONS
+            virtual bool isAnyOn() const = 0;
+        #endif
         virtual int16_t getChannel(uint8_t channel) const = 0;
         virtual bool getChannelState(uint8_t channel) const = 0;
         virtual void setChannel(uint8_t channel, int16_t level, float transition = NAN) = 0;
@@ -228,4 +235,28 @@ namespace Dimmer {
         return _config;
     }
 
+    inline void Base::setupWebServer()
+    {
+        __LDBG_printf("server=%p", WebServer::Plugin::getWebServerObject());
+        WebServer::Plugin::addHandler(F("/dimmer-reset-fw"), Base::handleWebServer);
+    }
+
+    inline void Base::resetDimmerMCU()
+    {
+        digitalWrite(STK500V1_RESET_PIN, LOW);
+        pinMode(STK500V1_RESET_PIN, OUTPUT);
+        digitalWrite(STK500V1_RESET_PIN, LOW);
+        delay(10);
+        pinMode(STK500V1_RESET_PIN, INPUT);
+    }
+
+    inline Sensor_DimmerMetrics *Base::getMetricsSensor() const
+    {
+        return SensorPlugin::getSensor<MQTT::SensorType::DIMMER_METRICS>();
+    }
+
 }
+
+#if DEBUG_IOT_DIMMER_MODULE
+#include <debug_helper_disable.h>
+#endif

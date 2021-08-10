@@ -3,15 +3,10 @@
  */
 
 #include "dimmer_base.h"
-#include <WebUISocket.h>
-// #if IOT_ATOMIC_SUN_V2
-// #include "../src/plugins/atomic_sun/atomic_sun_v2.h"
-// #else
 #include "dimmer_module.h"
 #include "dimmer_plugin.h"
-// #endif
 #include "../src/plugins/sensor/sensor.h"
-#include "firmware_protocol.h"
+#include <WebUISocket.h>
 
 #if DEBUG_IOT_DIMMER_MODULE
 #include <debug_helper_enable.h>
@@ -270,11 +265,6 @@ void Base::_forceMetricsUpdate(uint8_t delay)
     #endif
 }
 
-Sensor_DimmerMetrics *Base::getMetricsSensor() const
-{
-    return SensorPlugin::getSensor<MQTT::SensorType::DIMMER_METRICS>();
-}
-
 float Base::getTransitionTime(int fromLevel, int toLevel, float transitionTimeOverride)
 {
     if (transitionTimeOverride < 0) { // negative values are pass through
@@ -364,12 +354,6 @@ void Base::setValue(const String &id, const String &value, bool hasValue, bool s
 // web server and AT mode
 // ------------------------------------------------------------------------
 
-void Base::setupWebServer()
-{
-    __LDBG_printf("server=%p", WebServer::Plugin::getWebServerObject());
-    WebServer::Plugin::addHandler(F("/dimmer-reset-fw"), Base::handleWebServer);
-}
-
 void Base::handleWebServer(AsyncWebServerRequest *request)
 {
     if (WebServer::Plugin::getInstance().isAuthenticated(request) == true) {
@@ -383,15 +367,6 @@ void Base::handleWebServer(AsyncWebServerRequest *request)
     else {
         request->send(403);
     }
-}
-
-void Base::resetDimmerMCU()
-{
-    digitalWrite(STK500V1_RESET_PIN, LOW);
-    pinMode(STK500V1_RESET_PIN, OUTPUT);
-    digitalWrite(STK500V1_RESET_PIN, LOW);
-    delay(10);
-    pinMode(STK500V1_RESET_PIN, INPUT);
 }
 
 #if AT_MODE_SUPPORTED

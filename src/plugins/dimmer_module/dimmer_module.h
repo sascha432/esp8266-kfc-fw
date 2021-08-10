@@ -8,9 +8,6 @@
 // I2C or UART interface
 // 1 - 8 channels
 // https://github.com/sascha432/trailing_edge_dimmer
-//
-// default I2C pins are D3 (0) and D5 (14)
-// NOTE: I2C Wire.onReceive() is not working on ESP8266
 
 #include <Arduino_compat.h>
 #include "dimmer_form.h"
@@ -25,9 +22,9 @@ namespace Dimmer {
     public:
         Module();
 
-    #if IOT_DIMMER_MODULE_INTERFACE_UART == 0
-        virtual void onConnect() override;
-    #endif
+        #if IOT_DIMMER_MODULE_INTERFACE_UART == 0
+            virtual void onConnect() override;
+        #endif
 
         virtual bool on(uint8_t channel = -1, float transition = NAN) override;
         virtual bool off(uint8_t channel = -1, float transition = NAN) override;
@@ -72,10 +69,12 @@ namespace Dimmer {
     }
 
     #if IOT_DIMMER_MODULE_INTERFACE_UART == 0
-    inline void Module::onConnect()
-    {
-        _fetchMetrics();
-    }
+
+        inline void Module::onConnect()
+        {
+            _fetchMetrics();
+        }
+
     #endif
 
 

@@ -144,6 +144,7 @@ private:
         (_at_mode_progmem_command_help_prefix_##name) \
     };
 
+bool at_mode_enabled();
 void at_mode_setup();
 void at_mode_add_help(const ATModeCommandHelp *help);
 void at_mode_add_help(const ATModeCommandHelp_t *help, PGM_P pluginName);
@@ -156,8 +157,8 @@ void at_mode_print_prefix(Stream &output, const char *command);
 inline void at_mode_print_prefix(Stream &output, const String &command) {
     at_mode_print_prefix(output, (const char *)command.c_str());
 }
-void enable_at_mode(Stream &output);
-void disable_at_mode(Stream &output);
+void enable_at_mode(Stream *output);
+void disable_at_mode(Stream *output);
 
 using AtModeResolveACallback = std::function<void(const String &name)>;
 

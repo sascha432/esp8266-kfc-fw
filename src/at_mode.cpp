@@ -704,10 +704,17 @@ void at_mode_wifi_callback(WiFiCallbacks::EventType event, void *payload)
 }
 
 SerialHandler::Client *_client;
+bool is_at_mode_enabled;
+
+bool at_mode_enabled()
+{
+    return is_at_mode_enabled;
+}
 
 void at_mode_setup()
 {
-    __LDBG_printf("AT_MODE_ENABLED=%u", System::Flags::getConfig().is_at_mode_eabled);
+    is_at_mode_enabled = System::Flags::getConfig().is_at_mode_enabled;
+    __LDBG_printf("AT_MODE_ENABLED=%u", is_at_mode_enabled);
 
     if (_client) {
         serialHandler.removeClient(*_client);
@@ -717,29 +724,36 @@ void at_mode_setup()
     WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, at_mode_wifi_callback);
 }
 
-void enable_at_mode(Stream &output)
+void enable_at_mode(Stream *output)
 {
-    if (!System::Flags::getConfig().is_at_mode_enabled) {
-        output.println(F("Enabling AT MODE."));
-        System::Flags::getWriteableConfig().is_at_mode_enabled = true;
-        _client->start(SerialHandler::EventType::READ);
+    if (!is_at_mode_enabled) {
+        if (output) {
+            output->println(F("Enabling AT MODE."));
+        }
+        is_at_mode_enabled = true;
+        // if (!_client) {
+        //     _client = &serialHandler.addClient(at_mode_serial_input_handler, SerialHandler::EventType::READ);
+        // }
+        // _client->start(SerialHandler::EventType::READ);
     }
 }
 
-void disable_at_mode(Stream &output)
+void disable_at_mode(Stream *output)
 {
-    if (System::Flags::getConfig().is_at_mode_enabled) {
-        if (_client) {
-            serialHandler.removeClient(*_client);
-            _client = nullptr;
+    if (is_at_mode_enabled) {
+        // if (_client) {
+        //     serialHandler.removeClient(*_client);
+        //     _client = nullptr;
+        // }
+        if (output) {
+            output->println(F("Disabling AT MODE."));
         }
-        output.println(F("Disabling AT MODE."));
         #if DEBUG
             if (displayTimer) {
                 displayTimer->remove();
             }
         #endif
-        System::Flags::getWriteableConfig().is_at_mode_enabled = false;
+        is_at_mode_enabled = false;
     }
 }
 
@@ -760,7 +774,7 @@ void at_mode_dump_fs_info(Stream &output)
 
 void at_mode_print_help(Stream &output)
 {
-    output.println("AT? or AT+HELP=<command|text to find> for help");
+    output.println(F("AT? or AT+HELP=<command|text to find> for help"));
     if (config.isSafeMode()) {
         output.println(F("SAFE MODE ENABLED"));
     }
@@ -1789,9 +1803,10 @@ void at_mode_serial_handle_event(String &commandString)
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(ATMODE))) {
         if (args.requireArgs(1, 1)) {
             if (args.isTrue(0)) {
-                enable_at_mode(output);
-            } else {
-                disable_at_mode(output);
+                enable_at_mode(&output);
+            }
+            else {
+                disable_at_mode(&output);
             }
         }
     }
@@ -1800,8 +1815,8 @@ void at_mode_serial_handle_event(String &commandString)
             if (args.requireArgs(1, 4)) {
                 BlinkLEDTimer::BlinkType type = BlinkLEDTimer::BlinkType::INVALID;
                 String mode = args.toString(0);
-                uint16_t delay = args.toInt(2, 50);
-                uint8_t pin = (uint8_t)args.toInt(3, __LED_BUILTIN);
+                auto delay = static_cast<uint16_t>(args.toInt(2, 50));
+                auto pin = static_cast<uint8_t>(args.toInt(3, __LED_BUILTIN));
                 if (mode.equalsIgnoreCase(F("pattern")) || mode.startsWith(F("pat"))) {
                     auto patternStr = args.toString(1);
                     auto pattern = BlinkLEDTimer::Bitset();
@@ -1812,7 +1827,7 @@ void at_mode_serial_handle_event(String &commandString)
                     //+led=pattern,1010,100
                 }
                 else {
-                    int32_t color = args.toNumber(1, 0xff00ff);
+                    auto color = static_cast<int32_t>(args.toNumber(1, 0xff00ff));
                     if (__LED_BUILTIN == pin && !BlinkLEDTimer::isPinValid(pin)) {
                         args.print(F("Invalid PIN"));
                     }
@@ -1861,8 +1876,8 @@ void at_mode_serial_handle_event(String &commandString)
         }
     #endif
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CS))) {
-        uint8_t sda = args.toIntMinMax(0, 0, 16, KFC_TWOWIRE_SDA);
-        uint8_t scl = args.toIntMinMax(1, 0, 16, KFC_TWOWIRE_SCL);
+        auto sda = args.toIntMinMax<uint8_t>(0, 0, NUM_DIGITAL_PINS, KFC_TWOWIRE_SDA);
+        auto scl = args.toIntMinMax<uint8_t>(1, 0, NUM_DIGITAL_PINS, KFC_TWOWIRE_SCL);
         uint32_t speed = args.toInt(2, KFC_TWOWIRE_CLOCK_SPEED);
         uint32_t stretch = args.toInt(3, KFC_TWOWIRE_CLOCK_STRETCH);
         bool stop = args.has(F("stop"));
@@ -2646,10 +2661,10 @@ void at_mode_serial_handle_event(String &commandString)
 
 void at_mode_serial_input_handler(Stream &client)
 {
-    static String line;
-    static bool lastWasCR = false;
+    if (is_at_mode_enabled) {
+        static String line;
+        static bool lastWasCR = false;
 
-    if (System::Flags::getConfig().is_at_mode_enabled) {
         auto serial = StreamWrapper(serialHandler.getStreams(), serialHandler.getInput()); // local output online
         while(client.available()) {
             int ch = client.read();

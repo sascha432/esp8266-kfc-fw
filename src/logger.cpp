@@ -32,14 +32,14 @@ Logger _logger;
 
 Logger::Logger() :
     _logLevel(Level::NOTICE),
-#if ___DEBUG
-    _enabled(EnumHelper::Bitset::all(Level::ERROR, Level::WARNING, Level::SECURITY))
-#else
-    _enabled(EnumHelper::Bitset::all(Level::ERROR, Level::SECURITY))
-#endif
-#if SYSLOG_SUPPORT
-    , _syslog(nullptr)
-#endif
+    #if ___DEBUG
+        _enabled(EnumHelper::Bitset::all(Level::ERROR, Level::WARNING, Level::SECURITY))
+    #else
+        _enabled(EnumHelper::Bitset::all(Level::ERROR, Level::SECURITY))
+    #endif
+    #if SYSLOG_SUPPORT
+        , _syslog(nullptr)
+    #endif
 {
 }
 
@@ -173,10 +173,12 @@ void Logger::setLevel(Level logLevel)
 }
 
 #if SYSLOG_SUPPORT
+
 void Logger::setSyslog(SyslogStream *syslog)
 {
     _syslog = syslog;
 }
+
 #endif
 
 bool Logger::isExtraFileEnabled(Level level) const
@@ -226,53 +228,53 @@ void Logger::writeLog(Level logLevel, const char *message, va_list arg)
 
         _closeLog(file);
 
-#if LOGGER_SERIAL_OUTPUT
-        if (System::Flags::getConfig().is_at_mode_enabled) {
-            Serial.print(F("+LOGGER="));
-            Serial.print(header);
-            Serial.println(msg);
-        }
-        #if ___DEBUG
-        else {
+        #if LOGGER_SERIAL_OUTPUT
+            if (at_mode_enabled()) {
+                Serial.print(F("+LOGGER="));
+                Serial.print(header);
+                Serial.println(msg);
+            }
+            #if ___DEBUG
+            else {
+                DebugContext_prefix(DEBUG_OUTPUT.println(msg));
+            }
+            #endif
+        #else
             DebugContext_prefix(DEBUG_OUTPUT.println(msg));
-        }
         #endif
-#else
-        DebugContext_prefix(DEBUG_OUTPUT.println(msg));
-#endif
     }
 
-#if SYSLOG_SUPPORT
-    if (_syslog) {
-        __LDBG_printf("sending message to syslog level=%u", logLevel);
-        switch(logLevel) {
-            case Level::SECURITY:
-                _syslog->setSeverity(SYSLOG_WARN);
-                _syslog->setFacility(SYSLOG_FACILITY_SECURE);
-                break;
-            case Level::WARNING:
-                _syslog->setSeverity(SYSLOG_WARN);
-                _syslog->setFacility(SYSLOG_FACILITY_KERN);
-                break;
-            case Level::NOTICE:
-                _syslog->setSeverity(SYSLOG_NOTICE);
-                _syslog->setFacility(SYSLOG_FACILITY_KERN);
-                break;
-            case Level::DEBUG:
-                _syslog->setSeverity(SYSLOG_DEBUG);
-                _syslog->setFacility(SYSLOG_FACILITY_LOCAL0);
-                break;
-            case Level::ERROR:
-            default:
-                _syslog->setSeverity(SYSLOG_ERR);
-                _syslog->setFacility(SYSLOG_FACILITY_KERN);
-                break;
+    #if SYSLOG_SUPPORT
+        if (_syslog) {
+            __LDBG_printf("sending message to syslog level=%u", logLevel);
+            switch(logLevel) {
+                case Level::SECURITY:
+                    _syslog->setSeverity(SYSLOG_WARN);
+                    _syslog->setFacility(SYSLOG_FACILITY_SECURE);
+                    break;
+                case Level::WARNING:
+                    _syslog->setSeverity(SYSLOG_WARN);
+                    _syslog->setFacility(SYSLOG_FACILITY_KERN);
+                    break;
+                case Level::NOTICE:
+                    _syslog->setSeverity(SYSLOG_NOTICE);
+                    _syslog->setFacility(SYSLOG_FACILITY_KERN);
+                    break;
+                case Level::DEBUG:
+                    _syslog->setSeverity(SYSLOG_DEBUG);
+                    _syslog->setFacility(SYSLOG_FACILITY_LOCAL0);
+                    break;
+                case Level::ERROR:
+                default:
+                    _syslog->setSeverity(SYSLOG_ERR);
+                    _syslog->setFacility(SYSLOG_FACILITY_KERN);
+                    break;
+            }
+            _syslog->write(reinterpret_cast<const uint8_t *>(msg.c_str()), msg.length());
+            msg = String();
+            _syslog->flush();
         }
-        _syslog->write(reinterpret_cast<const uint8_t *>(msg.c_str()), msg.length());
-        msg = String();
-        _syslog->flush();
-    }
-#endif
+    #endif
 }
 
 String Logger::_getLogFilename(Level logLevel)
@@ -319,38 +321,38 @@ String Logger::_getBackupFilename(String filename, int num)
 
 void Logger::_closeLog(File file)
 {
-#if LOGGER_MAX_FILESIZE
-    if (file.size() >= LOGGER_MAX_FILESIZE) {
-        String filename = file.fullName();
-#if LOGGER_MAX_BACKUP_FILES
-        // rotation enabled
-        String backFilename;
-        int i;
-        for(i = 0; i < LOGGER_MAX_BACKUP_FILES; i++) {
-            backFilename = _getBackupFilename(filename, i);
-            if (!KFCFS.exists(backFilename)) { // available?
-                __LDBG_printf("rotating num=%u max=%u", i, LOGGER_MAX_BACKUP_FILES);
-                KFCFS.remove(_getBackupFilename(filename, i + 1)); // delete next logfile to keep rotating
-                break;
-            }
+    #if LOGGER_MAX_FILESIZE
+        if (file.size() >= LOGGER_MAX_FILESIZE) {
+            String filename = file.fullName();
+            #if LOGGER_MAX_BACKUP_FILES
+                // rotation enabled
+                String backFilename;
+                int i;
+                for(i = 0; i < LOGGER_MAX_BACKUP_FILES; i++) {
+                    backFilename = _getBackupFilename(filename, i);
+                    if (!KFCFS.exists(backFilename)) { // available?
+                        __LDBG_printf("rotating num=%u max=%u", i, LOGGER_MAX_BACKUP_FILES);
+                        KFCFS.remove(_getBackupFilename(filename, i + 1)); // delete next logfile to keep rotating
+                        break;
+                    }
+                }
+                if (i == LOGGER_MAX_BACKUP_FILES) { // max. rotations reached, restarting with 0
+                    __LDBG_printf("restarting rotation num=0 max=%u", LOGGER_MAX_BACKUP_FILES);
+                    backFilename = _getBackupFilename(filename, 0);
+                    KFCFS.remove(backFilename);
+                    KFCFS.remove(_getBackupFilename(filename, 1));
+                }
+            #else
+                // rotation enabled disabled
+                backFilename = _getBackupFilename(filename, 0);
+                KFCFS.remove(backFilename);
+            #endif
+            __LDBG_printf("renaming %s to %s", filename.c_str(), backFilename.c_str());
+            file.close();
+            KFCFS.rename(filename, backFilename);
+            return;
         }
-        if (i == LOGGER_MAX_BACKUP_FILES) { // max. rotations reached, restarting with 0
-            __LDBG_printf("restarting rotation num=0 max=%u", LOGGER_MAX_BACKUP_FILES);
-            backFilename = _getBackupFilename(filename, 0);
-            KFCFS.remove(backFilename);
-            KFCFS.remove(_getBackupFilename(filename, 1));
-        }
-#else
-        // rotation enabled disabled
-        backFilename = _getBackupFilename(filename, 0);
-        KFCFS.remove(backFilename);
-#endif
-        __LDBG_printf("renaming %s to %s", filename.c_str(), backFilename.c_str());
-        file.close();
-        KFCFS.rename(filename, backFilename);
-        return;
-    }
-#endif
+    #endif
     __LDBG_printf("filename=%s", file.fullName());
     file.close();
 }

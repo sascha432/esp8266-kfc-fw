@@ -80,7 +80,11 @@ namespace SerialHandler {
     {
     }
 
-    Client::Client(Callback cb, EventType events) : _cb(cb), _events(events), _rx(Wrapper::kInitBufferSize), _tx(Wrapper::kInitBufferSize)
+    Client::Client(const Callback &cb, EventType events) :
+        _cb(cb),
+        _events(events),
+        _rx(Wrapper::kInitBufferSize),
+        _tx(Wrapper::kInitBufferSize)
     {
         __DBGSH("create client %p", this);
         _allocateBuffers();
@@ -181,28 +185,6 @@ namespace SerialHandler {
         StreamWrapper(stream),
         _txFlag(false)
     {
-    }
-
-    void Wrapper::begin()
-    {
-        end();
-        __DBGSH("begin");
-        LoopFunctions::add([this]() {
-            this->_loop();
-        }, this);
-    }
-
-    void Wrapper::end()
-    {
-        __DBGSH("end");
-        LoopFunctions::remove(this);
-        _clients.clear();
-    }
-
-    Client &Wrapper::addClient(const Callback &cb, EventType events)
-    {
-        _clients.emplace_back(new Client(cb, events));
-        return *_clients.back().get();
     }
 
     void Wrapper::removeClient(const Client &client)

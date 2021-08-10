@@ -21,12 +21,10 @@
 #include <cbuf.h>
 
 #ifndef SERIAL_HANDLER_INPUT_BUFFER_MAX
-#define SERIAL_HANDLER_INPUT_BUFFER_MAX                     512
+#define SERIAL_HANDLER_INPUT_BUFFER_MAX 512
 #endif
 
 namespace SerialHandler {
-
-    // using cbuf = cbuf_ex::cbuf;
 
     enum class EventType : uint8_t {
         NONE =          0,
@@ -46,7 +44,7 @@ namespace SerialHandler {
         Client &operator=(const Client &) = delete;
 
         Client();
-        Client(Callback cb, EventType events);
+        Client(const Callback &cb, EventType events);
 
         bool operator==(const Client &cb);
         EventType getEvents() const;
@@ -93,6 +91,7 @@ namespace SerialHandler {
     public:
         using ClientPtr = std::unique_ptr<Client>;
         using Clients = std::list<ClientPtr>;
+
         // initial size
         static constexpr size_t kMinBufferSize = 128;
         // max. size before resizing stops
@@ -115,6 +114,8 @@ namespace SerialHandler {
         void begin();
         void end();
 
+        void addLoop();
+        void removeLoop();
         static void pollSerial();
 
     public:
@@ -124,7 +125,7 @@ namespace SerialHandler {
         virtual size_t readBytes(char *buffer, size_t length) override;
 
         Clients &getClients();
-        Wrapper &getInstance();
+        static Wrapper &getInstance();
 
     public:
         // send data to serial port and all clients
@@ -209,6 +210,38 @@ namespace SerialHandler {
     inline Wrapper::~Wrapper()
     {
         end();
+    }
+
+    inline void Wrapper::begin()
+    {
+        end();
+        addLoop();
+    }
+
+    inline void Wrapper::end()
+    {
+        removeLoop();
+        _clients.clear();
+    }
+
+    inline void Wrapper::addLoop()
+    {
+        LoopFunctions::add(pollSerial);
+        // LoopFunctions::add([this]() {
+        //     this->_loop();
+        // }, this);
+    }
+
+    inline void Wrapper::removeLoop()
+    {
+        LoopFunctions::remove(pollSerial);
+        // LoopFunctions::remove(this);
+    }
+
+    inline Client &Wrapper::addClient(const Callback &cb, EventType events)
+    {
+        _clients.emplace_back(new Client(cb, events));
+        return *_clients.back().get();
     }
 
     inline int Wrapper::available()

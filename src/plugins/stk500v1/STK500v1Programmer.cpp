@@ -10,6 +10,7 @@
 #include "serial_handler.h"
 #include "STK500v1Programmer.h"
 #include "blink_led_timer.h"
+#include "fs_mapping.h"
 #if HTTP2SERIAL_SUPPORT
 #include "../src/plugins/http2serial/http2serial.h"
 #endif
@@ -653,19 +654,20 @@ bool STK500v1Programmer::getSignature(const char *mcu, char *signature)
             mcu += 2;
         }
 
-        if (!strcasecmp_P(mcu, PSTR("328p"))) {
-            memmove_P(signature, PSTR("\x1e\x95\x0f"), 3);
-        }
-        else if (!strcasecmp_P(mcu, PSTR("328pb"))) {
-            memmove_P(signature, PSTR("\x1e\x95\x16"), 3);
-        }
-        else {
-            auto file = KFCFS.open(FSPGM(stk500v1_sig_file), fs::FileOpenMode::read);
+        // if (!strcasecmp_P(mcu, PSTR("328p"))) {
+        //     memmove_P(signature, PSTR("\x1e\x95\x0f"), 3);
+        // }
+        // else if (!strcasecmp_P(mcu, PSTR("328pb"))) {
+        //     memmove_P(signature, PSTR("\x1e\x95\x16"), 3);
+        // }
+        // else
+        {
+            auto file = FSWrapper::open(FSPGM(stk500v1_sig_file), fs::FileOpenMode::read);
             if (file) {
                 while(file.available()) {
                     auto nameStr = file.readStringUntil(',');
                     auto signatureStr = file.readStringUntil('\n');
-                    __DBG_printf("mcu=%s name=%s sig=%s", mcu, nameStr.c_str(), signatureStr.c_str());
+                    __LDBG_printf("mcu=%s name=%s sig=%s", mcu, nameStr.c_str(), signatureStr.c_str());
                     if (nameStr.equalsIgnoreCase(mcu) && signatureStr.length()) {
                         _parseSignature(signatureStr.c_str(), signature);
                         return true;
@@ -673,7 +675,7 @@ bool STK500v1Programmer::getSignature(const char *mcu, char *signature)
                 }
             }
             else {
-                __DBG_printf("file=%s read error", SPGM(stk500v1_sig_file));
+                __LDBG_printf("file=%s read error", SPGM(stk500v1_sig_file));
             }
             *signature = 0;
             return false;

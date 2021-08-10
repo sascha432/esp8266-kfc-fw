@@ -163,7 +163,6 @@ class Mapper implements PluginInterface
         foreach($this->mappedFiles as $file) {
             $listing .= pack('LLLLC', $file['uid'], $file['file_size'], $file['original_file_size'], $file['mtime'], $file['flags']);
             $listing .= $file['mapped_file']."\n";
-
             $plain_listing .= sprintf("%s:%08x:%08x:%08x:%08x:%02x:%s\n", substr($file['spiffs_file'], -8, 8), $file['uid'], $file['file_size'], $file['original_file_size'], $file['mtime'], $file['flags'], $file['mapped_file']);
         }
 
@@ -248,7 +247,7 @@ class Mapper implements PluginInterface
             'crc' => $mappedFileCrc,
             'flags' => $flags,
             'mtime' => $mtime,
-            'uid' => $mappedFileCrc,
+            'uid' => hexdec($mappedFileCrc),
             // 'hash' => call_user_func($this->hashFunction, $outFile, true),
         );
 

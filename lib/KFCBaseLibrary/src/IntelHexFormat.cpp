@@ -3,6 +3,7 @@
 */
 
 #include "IntelHexFormat.h"
+#include "fs_mapping.h"
 
 const char _error_0[] PROGMEM = { "" };
 const char _error_1[] PROGMEM = { "Failed to open" };
@@ -20,7 +21,7 @@ bool IntelHexFormat::open(const String &filename)
 {
     _error = NONE;
     _endAddress = 0;
-    _file = KFCFS.open(filename, fs::FileOpenMode::read);
+    _file = FSWrapper::open(filename, fs::FileOpenMode::read);
     if (!_file) {
         _error = FAILED_TO_OPEN;
         return false;

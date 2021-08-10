@@ -226,16 +226,16 @@ namespace SerialHandler {
 
     inline void Wrapper::addLoop()
     {
-        LoopFunctions::add(pollSerial);
-        // LoopFunctions::add([this]() {
-        //     this->_loop();
-        // }, this);
+        // LoopFunctions::add(pollSerial);
+        LoopFunctions::add([this]() {
+            this->_loop();
+        }, this);
     }
 
     inline void Wrapper::removeLoop()
     {
-        LoopFunctions::remove(pollSerial);
-        // LoopFunctions::remove(this);
+        // LoopFunctions::remove(pollSerial);
+        LoopFunctions::remove(this);
     }
 
     inline Client &Wrapper::addClient(const Callback &cb, EventType events)

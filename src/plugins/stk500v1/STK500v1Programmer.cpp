@@ -59,7 +59,6 @@ void STK500v1Programmer::begin(Callback_t cleanup)
         }
         Http2Serial::getInstance()->lockClient(true);
         SerialHandler::Wrapper::getInstance().removeLoop();
-        // LoopFunctions::remove(SerialHandler::Wrapper::pollSerial);
     }
 
     _readResponseTimeout = _defaultTimeout;
@@ -78,7 +77,6 @@ void STK500v1Programmer::end()
             if (_atMode) {
                 enable_at_mode(nullptr);
             }
-            // LoopFunctions::add(SerialHandler::Wrapper::pollSerial);
             SerialHandler::Wrapper::getInstance().addLoop();
             Http2Serial::getInstance()->lockClient(false);
             _logPrintf_P(PSTR("Enabling serial handler"));

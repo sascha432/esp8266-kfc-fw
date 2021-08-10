@@ -348,7 +348,7 @@ void STK500v1Programmer::_flash()
                                         [this]() {
 
                                             _endPosition(F("Complete"), false);
-                                            _log(F("%u bytes verified\n"), _verified);
+                                            _log(F("%u bytes verified"), _verified);
                                             _logPrintf_P(PSTR("Verification completed"));
                                             _sendCommandLeaveProgMode();
 
@@ -656,17 +656,24 @@ bool STK500v1Programmer::getSignature(const char *mcu, char *signature)
         if (!strcasecmp_P(mcu, PSTR("328p"))) {
             memmove_P(signature, PSTR("\x1e\x95\x0f"), 3);
         }
+        else if (!strcasecmp_P(mcu, PSTR("328pb"))) {
+            memmove_P(signature, PSTR("\x1e\x95\x16"), 3);
+        }
         else {
             auto file = KFCFS.open(FSPGM(stk500v1_sig_file), fs::FileOpenMode::read);
             if (file) {
                 while(file.available()) {
                     auto nameStr = file.readStringUntil(',');
                     auto signatureStr = file.readStringUntil('\n');
+                    __DBG_printf("mcu=%s name=%s sig=%s", mcu, nameStr.c_str(), signatureStr.c_str());
                     if (nameStr.equalsIgnoreCase(mcu) && signatureStr.length()) {
                         _parseSignature(signatureStr.c_str(), signature);
                         return true;
                     }
                 }
+            }
+            else {
+                __DBG_printf("file=%s read error", SPGM(stk500v1_sig_file));
             }
             *signature = 0;
             return false;
@@ -761,10 +768,8 @@ void STK500v1Programmer::_status(const String &message)
 {
     #if HTTP2SERIAL_SUPPORT
         auto http2server = Http2Serial::getServerSocket();
-        if (http2server) {
-            if (http2server->getClients().length()) {
-                WsClient::broadcast(http2server, nullptr, message.c_str(), message.length());
-            }
+        if (http2server && http2server->getClients().length()) {
+            WsClient::broadcast(http2server, nullptr, message.c_str(), message.length());
         }
     #endif
 }

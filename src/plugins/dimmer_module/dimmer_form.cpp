@@ -196,11 +196,11 @@ namespace Dimmer {
                 form.addFormUI(F("Max. Brightness"), FormUI::Suffix(F("%")));
                 cfg.addRangeValidatorFor_max_brightness(form);
 
-                form.addObjectGetterSetter(F("lpmaxb"), FormGetterSetter(cfg, max_brightness));
+                form.addObjectGetterSetter(F("lpmaxb"), FormGetterSetter(cfg, longpress_max_brightness));
                 form.addFormUI(F("Long Press Up/Max. Brightness"), FormUI::Suffix(F("%")), FormUI::IntAttribute(F("disabled-value"), 0));
                 cfg.addRangeValidatorFor_longpress_max_brightness(form, true);
 
-                form.addObjectGetterSetter(F("lpminb"), FormGetterSetter(cfg, min_brightness));
+                form.addObjectGetterSetter(F("lpminb"), FormGetterSetter(cfg, longpress_min_brightness));
                 form.addFormUI(F("Long Press Down/Min. Brightness"), FormUI::Suffix(F("%")), FormUI::IntAttribute(F("disabled-value"), 0));
                 cfg.addRangeValidatorFor_longpress_min_brightness(form, true);
 

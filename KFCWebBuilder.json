@@ -36,7 +36,8 @@
                 "./Resources/js/forms/dimmer.js"
             ],
             "#if !STK500V1": [
-                "./src/plugins/stk500v1/atmega.csv"
+                "./src/plugins/stk500v1/atmega.csv",
+                "./src/plugins/dimmer_module/firmware/hex"
             ],
             "#if !SSD1306_PLUGIN": [
                 "./src/plugins/ssd1306_plugin/fonts/7digit"
@@ -246,9 +247,12 @@
             "static_content": {
                 "target_dirs": {
                     "./data/webui/images": [ "./lib/KFCWebBuilder/Resources/images/spinner.gif", "./Resources/images/light.svg" ],
-                    "./data/webui/fonts": { "./lib/KFCWebBuilder/Resources/fonts": "/^open-iconic\\..*/" },
-                    "./data/stk500v1": [ "./src/plugins/stk500v1/atmega.csv" ],
-                    "./data/fonts": [ "./src/plugins/ssd1306_plugin/fonts/7digit" ]
+                    "./data/webui/fonts": { "./lib/KFCWebBuilder/Resources/fonts": "/^open-iconic\\..*/" }
+                    // "./data/stk500v1": {
+                    //     "./src/plugins/stk500v1": "/^atmega\\.csv/",
+                    //     "./src/plugins/dimmer_module/firmware/hex": "/^.*\\.hex/"
+                    // },
+                    // "./data/fonts": [ "./src/plugins/ssd1306_plugin/fonts/7digit" ]
                 },
                 "processors":  {
                     "compress": {
@@ -257,8 +261,19 @@
                     }
                 }
             },
+            "uncompressed": {
+                "target_dirs": {
+                    "./data/stk500v1": {
+                        "./src/plugins/stk500v1": "/^atmega\\.csv/",
+                        "./src/plugins/dimmer_module/firmware/hex": "/^.*\\.hex/"
+                    },
+                    "./data/fonts": [
+                        "./src/plugins/ssd1306_plugin/fonts/7digit"
+                    ]
+                }
+            },
             "after": {
-                "append": [ "js_main", "css_main", "html", "static_content" ],
+                "append": [ "js_main", "css_main", "html", "static_content", "uncompressed" ],
                 "processors":  {
                     "test": {
                         "branch": [ "test_www" ],

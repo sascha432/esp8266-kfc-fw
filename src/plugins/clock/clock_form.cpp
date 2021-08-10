@@ -220,9 +220,11 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
             }
             break;
         case AnimationType::MAX:
-        case AnimationType::COLON_SOLID:
-        case AnimationType::COLON_BLINK_SLOWLY:
-        case AnimationType::COLON_BLINK_FAST:
+        #if !IOT_LED_MATRIX
+            case AnimationType::COLON_SOLID:
+            case AnimationType::COLON_BLINK_SLOWLY:
+            case AnimationType::COLON_BLINK_FAST:
+        #endif
             break;
     }
 

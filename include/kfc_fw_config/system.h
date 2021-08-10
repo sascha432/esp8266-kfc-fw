@@ -15,36 +15,30 @@ namespace KFCConfigurationClasses {
 
         class FlagsConfig {
         public:
-            typedef struct __attribute__packed__ ConfigFlags_t {
+            struct __attribute__packed__ ConfigFlags_t {
                 using Type = ConfigFlags_t;
-                CREATE_BOOL_BITFIELD(is_factory_settings);
+                CREATE_BOOL_BITFIELD(is_factory_settings); // 0
                 CREATE_BOOL_BITFIELD(is_default_password);
                 CREATE_BOOL_BITFIELD(is_softap_enabled);
                 CREATE_BOOL_BITFIELD(is_softap_ssid_hidden);
                 CREATE_BOOL_BITFIELD(is_softap_standby_mode_enabled);
                 CREATE_BOOL_BITFIELD(is_softap_dhcpd_enabled);
                 CREATE_BOOL_BITFIELD(is_station_mode_enabled);
-                CREATE_BOOL_BITFIELD(is_station_mode_dhcp_enabled);
-
+                CREATE_BOOL_BITFIELD(is_station_mode_dhcp_enabled); // 7
                 CREATE_BOOL_BITFIELD(use_static_ip_during_wakeup);
-                bool __reserved: 1;
                 CREATE_BOOL_BITFIELD(is_at_mode_enabled);
                 CREATE_BOOL_BITFIELD(is_mdns_enabled);
                 CREATE_BOOL_BITFIELD(is_ntp_client_enabled);
                 CREATE_BOOL_BITFIELD(is_syslog_enabled);
                 CREATE_BOOL_BITFIELD(is_web_server_enabled);
-                bool ___reserved3: 1;
-
                 CREATE_BOOL_BITFIELD(is_mqtt_enabled);
-                CREATE_BOOL_BITFIELD(is_rest_api_enabled);
+                CREATE_BOOL_BITFIELD(is_rest_api_enabled); // 15
                 CREATE_BOOL_BITFIELD(is_serial2tcp_enabled);
                 CREATE_BOOL_BITFIELD(is_webui_enabled);
-                bool ___reserved4: 1;
                 CREATE_BOOL_BITFIELD(is_ssdp_enabled);
                 CREATE_BOOL_BITFIELD(is_netbios_enabled);
-                CREATE_BOOL_BITFIELD(is_log_login_failures_enabled);
-
-                uint8_t __reserved2;
+                CREATE_BOOL_BITFIELD(is_log_login_failures_enabled); // 20
+                uint32_t _reserved: 11; // 31
 
                 uint8_t getWifiMode() const {
                     return get_wifi_mode(*this);
@@ -64,8 +58,7 @@ namespace KFCConfigurationClasses {
                 static void set_webserver_mode(Type &obj, WebServerTypes::ModeType mode);
 
                 ConfigFlags_t();
-
-            } ConfigFlags_t;
+            };
         };
 
         static_assert(sizeof(FlagsConfig::ConfigFlags_t) == 4, "invalid size");
@@ -87,7 +80,7 @@ namespace KFCConfigurationClasses {
                 MAX
             };
 
-            typedef struct __attribute__packed__ DeviceConfig_t {
+            struct __attribute__packed__ DeviceConfig_t {
                 using Type = DeviceConfig_t;
 
                 uint32_t config_version;
@@ -111,8 +104,7 @@ namespace KFCConfigurationClasses {
                 }
 
                 DeviceConfig_t();
-
-            } DeviceConfig_t;
+            };
         };
 
         class Device : public DeviceConfig, public ConfigGetterSetter<DeviceConfig::DeviceConfig_t, _H(MainConfig().system.device.cfg) CIF_DEBUG(, &handleNameDeviceConfig_t)> {
@@ -131,11 +123,6 @@ namespace KFCConfigurationClasses {
             CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().system.device, Password, 6, 64);
             CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().system.device, Token, SESSION_DEVICE_TOKEN_MIN_LENGTH, 255);
 
-            // static constexpr uint16_t kZeroConfMinTimeout = 1000;
-            // static constexpr uint16_t kZeroConfMaxTimeout = 60000;
-
-            // static constexpr uint16_t kWebUICookieMinLifetime = 3;
-            // static constexpr uint16_t kWebUICookieMaxLifetime = 720;
         };
 
         // --------------------------------------------------------------------
@@ -164,35 +151,34 @@ namespace KFCConfigurationClasses {
 
             AUTO_DEFAULT_PORT_CONST_SECURE(80, 443);
 
-            typedef struct __attribute__packed__ WebServerConfig_t {
+            struct __attribute__packed__ WebServerConfig_t {
                 using Type = WebServerConfig_t;
 
                 CREATE_BOOL_BITFIELD(is_https);
-#if SECURITY_LOGIN_ATTEMPTS
-                CREATE_UINT8_BITFIELD_MIN_MAX(login_attempts, 7, 0, 100, 10, 1);
-                CREATE_UINT16_BITFIELD_MIN_MAX(login_timeframe, 12, 0, 3600, 300, 1);               // seconds
-                CREATE_UINT16_BITFIELD_MIN_MAX(login_rewrite_interval, 7, 1, 120, 5, 1);            // minutes
-                CREATE_UINT16_BITFIELD_MIN_MAX(login_storage_timeframe, 5, 1, 30, 1, 1);            // days
-#endif
-#if WEBSERVER_TLS_SUPPORT
-                AUTO_DEFAULT_PORT_GETTER_SETTER_SECURE(__port, kPortDefault, kPortDefaultSecure, is_https);
-#else
-                AUTO_DEFAULT_PORT_GETTER_SETTER(__port, kPortDefault);
-#endif
+                #if SECURITY_LOGIN_ATTEMPTS
+                    CREATE_UINT8_BITFIELD_MIN_MAX(login_attempts, 7, 0, 100, 10, 1);
+                    CREATE_UINT16_BITFIELD_MIN_MAX(login_timeframe, 12, 0, 3600, 300, 1);               // seconds
+                    CREATE_UINT16_BITFIELD_MIN_MAX(login_rewrite_interval, 7, 1, 120, 5, 1);            // minutes
+                    CREATE_UINT16_BITFIELD_MIN_MAX(login_storage_timeframe, 5, 1, 30, 1, 1);            // days
+                #endif
+                #if WEBSERVER_TLS_SUPPORT
+                    AUTO_DEFAULT_PORT_GETTER_SETTER_SECURE(__port, kPortDefault, kPortDefaultSecure, is_https);
+                #else
+                    AUTO_DEFAULT_PORT_GETTER_SETTER(__port, kPortDefault);
+                #endif
 
-#if SECURITY_LOGIN_ATTEMPTS
-                uint32_t getLoginRewriteInterval() const {
-                    return login_rewrite_interval * 60;
-                }
+                #if SECURITY_LOGIN_ATTEMPTS
+                    uint32_t getLoginRewriteInterval() const {
+                        return login_rewrite_interval * 60;
+                    }
 
-                uint32_t getLoginStorageTimeframe() const {
-                    return login_storage_timeframe * 86400;
-                }
-#endif
+                    uint32_t getLoginStorageTimeframe() const {
+                        return login_storage_timeframe * 86400;
+                    }
+                #endif
 
                 WebServerConfig_t();
-
-            } WebServerConfig_t;
+            };
         };
 
         class WebServer : public WebServerConfig, public ConfigGetterSetter<WebServerConfig::WebServerConfig_t, _H(MainConfig().system.webserver.cfg) CIF_DEBUG(, &handleNameWebServerConfig_t)> {

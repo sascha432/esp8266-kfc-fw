@@ -48,23 +48,18 @@ namespace KFCConfigurationClasses {
         is_station_mode_enabled(false),
         is_station_mode_dhcp_enabled(true),
         use_static_ip_during_wakeup(true),
-        __reserved(false),
         is_at_mode_enabled(true),
         is_mdns_enabled(true),
         is_ntp_client_enabled(true),
         is_syslog_enabled(false),
         is_web_server_enabled(true),
-        ___reserved3(false),
         is_mqtt_enabled(false),
         is_rest_api_enabled(),
         is_serial2tcp_enabled(true),
         is_webui_enabled(true),
-        ___reserved4(false),
-        // is_ssdp_enabled(true), //TODO disabled cause of crashing
-        is_ssdp_enabled(false),
+        is_ssdp_enabled(true),
         is_netbios_enabled(true),
-        is_log_login_failures_enabled(false),
-        __reserved2(0)
+        is_log_login_failures_enabled(false)
     {
     }
 
@@ -203,8 +198,7 @@ namespace KFCConfigurationClasses {
 
     void System::Flags::defaults()
     {
-        ConfigFlags_t tmp = {};
-        setConfig(tmp);
+        setConfig(ConfigFlags_t());
     }
 
     // --------------------------------------------------------------------

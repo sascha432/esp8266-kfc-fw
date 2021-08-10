@@ -230,14 +230,14 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                     form.addFormUI(FormUI::PlaceHolder(F("Disabled")), FormUI::Type::HIDDEN);
                     // form.addValidator(FormUI::Validator::Range(0, _display.size() - 1));
 
-                    form.add(F_VAR(color, i), Color(cfg.rainbow.color.min.value).toString(), [&cfg, i](String &value, FormUI::Field::BaseField &field, bool store) {
+                    form.addCallbackGetterSetter<String>(F_VAR(color, i), [&cfg, i](String &value, FormUI::Field::BaseField &field, bool store) {
                         if (store) {
                             cfg.gradient.entries[i].color = Color::fromString(value);
                         }
                         else {
                             value = Color(cfg.gradient.entries[i].color).toString();
                         }
-                        return false;
+                        return true;
                     });
                     form.addFormUI(F("Color / Pixel Position"), FormUI::TextInputSuffix(pos));
                 }

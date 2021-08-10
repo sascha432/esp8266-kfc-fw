@@ -2,6 +2,8 @@
 
 ## Version 0.0.5
 
+- Added gradient animation
+- Fixed timing issues with the integrated STK500v1 programmer
 - Merged Arduino Core 3.1.0-dev
 - Added CPPDEFINES dependency to KFCWebBuilder to detect any changes
 - Moved KFCIOExpander to separate git repo

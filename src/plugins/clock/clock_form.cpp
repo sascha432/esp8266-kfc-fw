@@ -202,18 +202,23 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
             }
             break;
         case AnimationType::GRADIENT: {
-                PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, IOT_CLOCK_GRADIENT_ENTRIES, color, pixels);
+                form.addObjectGetterSetter(F("gd_speed"), FormGetterSetter(cfg.gradient, speed));
+                form.addFormUI(F("Blending Speed"));
+                cfg.gradient.addRangeValidatorFor_speed(form);
+
+                PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, IOT_CLOCK_GRADIENT_ENTRIES, gd_c, gd_px);
+                cfg.gradient.sort();
                 for(uint8_t i = 0; i < cfg.gradient.kMaxEntries; i++) {
 
-                    auto &pos = form.addCallbackGetterSetter<String>(F_VAR(pixels, i), [&cfg, this, i](String &value, Field::BaseField &field, bool store) {
+                    auto &pos = form.addCallbackGetterSetter<String>(F_VAR(gd_px, i), [&cfg, this, i](String &value, Field::BaseField &field, bool store) {
                         if (store) {
-                            if (value.length() == 0) {
-                                cfg.gradient.entries[i].pixel = 0xffff;
+                            if (value.trim().length() == 0) {
+                                cfg.gradient.entries[i].pixel = cfg.gradient.kDisabled;
                             }
                             else {
                                 cfg.gradient.entries[i].pixel = static_cast<uint16_t>(value.toInt());
                                 if (cfg.gradient.entries[i].pixel > _display.size() - 1) {
-                                    cfg.gradient.entries[i].pixel = 0xffff;
+                                    cfg.gradient.entries[i].pixel = cfg.gradient.kDisabled;
                                 }
                             }
                         }
@@ -230,7 +235,7 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                     form.addFormUI(FormUI::PlaceHolder(F("Disabled")), FormUI::Type::HIDDEN);
                     // form.addValidator(FormUI::Validator::Range(0, _display.size() - 1));
 
-                    form.addCallbackGetterSetter<String>(F_VAR(color, i), [&cfg, i](String &value, FormUI::Field::BaseField &field, bool store) {
+                    form.addCallbackGetterSetter<String>(F_VAR(gd_c, i), [&cfg, i](String &value, FormUI::Field::BaseField &field, bool store) {
                         if (store) {
                             cfg.gradient.entries[i].color = Color::fromString(value);
                         }

@@ -640,11 +640,14 @@ void ClockPlugin::setAnimation(AnimationType animation, uint16_t blendTime)
         case AnimationType::FLASHING:
             _setAnimation(new Clock::FlashingAnimation(*this, _getColor(), _config.flashing_speed));
             break;
-        case  AnimationType::FIRE:
+        case AnimationType::FIRE:
             _setAnimation(new Clock::FireAnimation(*this, _config.fire));
             break;
-        case  AnimationType::INTERLEAVED:
+        case AnimationType::INTERLEAVED:
             _setAnimation(new Clock::InterleavedAnimation(*this, _getColor(), _config.interleaved.rows, _config.interleaved.cols, _config.interleaved.time));
+            break;
+        case AnimationType::GRADIENT:
+            _setAnimation(new Clock::GradientAnimation(*this, _config.gradient));
             break;
         #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
         case  AnimationType::VISUALIZER:

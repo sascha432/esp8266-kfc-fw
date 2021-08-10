@@ -155,21 +155,30 @@ namespace KFCConfigurationClasses {
             struct __attribute__packed__ GradientAnimationType {
                 using Type = GradientAnimationType;
                 static constexpr size_t kMaxEntries = IOT_CLOCK_GRADIENT_ENTRIES;
+                static constexpr uint16_t kDisabled = ~0;
 
                 struct __attribute__packed__ Entry {
                     using Type = Entry;
                     CREATE_COLOR_FIELD(color, 0);
-                    CREATE_UINT16_BITFIELD_MIN_MAX(pixel, 16, 0, 65535, ~0, 1);
+                    CREATE_UINT16_BITFIELD_MIN_MAX(pixel, 16, 0, 0xffff, kDisabled, 1);
                     Entry() : color(0), pixel(kDefaultValueFor_pixel) {}
+                    Entry(uint32_t _color, uint16_t _pixel) : color(_color), pixel(_pixel) {}
                 };
-                CREATE_UINT32_BITFIELD_MIN_MAX(speed, 24, 10, 16777215, 0, 1);
+                CREATE_UINT16_BITFIELD_MIN_MAX(speed, 16, 0, 0xffff - 256, 0, 1);
                 Entry entries[kMaxEntries];
                 void sort() {
                     std::sort(std::begin(entries), std::end(entries), [](const Entry &a, const Entry &b) {
-                        return b.pixel < a.pixel;
+                        return b.pixel > a.pixel;
                     });
                 }
-                GradientAnimationType() : speed(kDefaultValueFor_speed), entries{} {}
+                GradientAnimationType() :
+                    speed(kDefaultValueFor_speed),
+                    entries{
+                        Entry(0x0000ff, 0),
+                        Entry(0x00ff00, IOT_CLOCK_NUM_PIXELS / 2),
+                        Entry(0xff0000, IOT_CLOCK_NUM_PIXELS - 1)
+                    }
+                {}
             };
 
             struct __attribute__packed__ FireAnimationType {

@@ -61,10 +61,18 @@ void Container::CheckboxButtonSuffix::initButton(const FormField &hiddenField, c
 // FormUI::SelectSuffix
 // -----------------------------------------------------------------------
 
-// SelectSuffix::SelectSuffix(const FormField &hiddenField, const List &options) : _options(options)
-// {
 SelectSuffix::SelectSuffix(const FormField &hiddenField)
 {
     _items.emplace_back(F("<select data-target=\"#%s\" data-action=\"transfer-hidden-field\" class=\"input-group-text form-select\">"));
+    _items.emplace_back(FPSTR(hiddenField.getName()));
+}
+
+// -----------------------------------------------------------------------
+// FormUI::TextInputSuffix
+// -----------------------------------------------------------------------
+
+TextInputSuffix::TextInputSuffix(const FormField &hiddenField)
+{
+    _items.emplace_back(F("<input data-target=\"#%s\" data-action=\"transfer-hidden-field\" class=\"input-group-text\">"));
     _items.emplace_back(FPSTR(hiddenField.getName()));
 }

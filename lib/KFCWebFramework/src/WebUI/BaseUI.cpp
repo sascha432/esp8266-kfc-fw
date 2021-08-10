@@ -61,6 +61,25 @@ void WebUI::BaseUI::_addItem(const Container::SelectSuffix &suffix)
     _storage.push_back(Storage::Value::SuffixHtml(attachString(F("</select>"))));
 }
 
+void WebUI::BaseUI::_addItem(const Container::TextInputSuffix &suffix)
+{
+    __LDBG_assert_printf(suffix._items.empty() == false, "empty list");
+    if (suffix._items.empty()) {
+        return;
+    }
+    Storage::TypeByte tb(Storage::Value::SuffixHtml::type, suffix._items.size());
+    _storage.reserve_extend(tb.size());
+    __LDBG_printf("items=%u size=%u vector=%u", suffix._items.size(), tb.size(), _storage.size());
+
+    auto target = std::back_inserter<Storage::VectorBase>(_storage);
+    *target = tb.toByte();
+    ++target;
+
+    for(const auto &item: suffix._items) {
+        Storage::Value::SuffixHtml(attachString(item.getValue())).push_back(target);
+    }
+}
+
 void WebUI::BaseUI::_addItem(const Container::CheckboxButtonSuffix &suffix)
 {
     __LDBG_assert_printf(suffix._items.empty() == false, "empty list");

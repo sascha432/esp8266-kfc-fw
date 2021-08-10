@@ -205,17 +205,41 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                 PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, IOT_CLOCK_GRADIENT_ENTRIES, color, pixels);
                 for(uint8_t i = 0; i < cfg.gradient.kMaxEntries; i++) {
 
-                    form.add(F_VAR(color, i), Color(cfg.rainbow.color.min.value).toString(), [&cfg, i](const String &value, FormUI::Field::BaseField &field, bool store) {
+                    auto &pos = form.addCallbackGetterSetter<String>(F_VAR(pixels, i), [&cfg, this, i](String &value, Field::BaseField &field, bool store) {
+                        if (store) {
+                            if (value.length() == 0) {
+                                cfg.gradient.entries[i].pixel = 0xffff;
+                            }
+                            else {
+                                cfg.gradient.entries[i].pixel = static_cast<uint16_t>(value.toInt());
+                                if (cfg.gradient.entries[i].pixel > _display.size() - 1) {
+                                    cfg.gradient.entries[i].pixel = 0xffff;
+                                }
+                            }
+                        }
+                        else {
+                            if (cfg.gradient.entries[i].pixel > _display.size() - 1) {
+                                value = String();
+                            }
+                            else {
+                                value = String(cfg.gradient.entries[i].pixel);
+                            }
+                        }
+                        return true;
+                    }, InputFieldType::TEXT);
+                    form.addFormUI(FormUI::PlaceHolder(F("Disabled")), FormUI::Type::HIDDEN);
+                    // form.addValidator(FormUI::Validator::Range(0, _display.size() - 1));
+
+                    form.add(F_VAR(color, i), Color(cfg.rainbow.color.min.value).toString(), [&cfg, i](String &value, FormUI::Field::BaseField &field, bool store) {
                         if (store) {
                             cfg.gradient.entries[i].color = Color::fromString(value);
                         }
+                        else {
+                            value = Color(cfg.gradient.entries[i].color).toString();
+                        }
                         return false;
                     });
-                    form.addFormUI(F("Color"));
-
-                    form.addObjectGetterSetter(F_VAR(pixels, i), FormGetterSetter(cfg.gradient.entries[i], pixel));
-                    form.addFormUI(F("Position"));
-                    // form.addValidator(FormUI::Validator::Range(0, _display.size() - 1));
+                    form.addFormUI(F("Color / Pixel Position"), FormUI::TextInputSuffix(pos));
                 }
             }
             break;

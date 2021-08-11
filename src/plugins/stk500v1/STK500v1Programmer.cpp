@@ -15,6 +15,12 @@
 #include "../src/plugins/http2serial/http2serial.h"
 #endif
 
+#if DEBUG_STK500V1
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
 STK500v1Programmer *stk500v1 = nullptr;
 
 const char Command_SYNC[] PROGMEM = { STK500v1Programmer::Cmnd_STK_GET_SYNC, STK500v1Programmer::Sync_CRC_EOP };

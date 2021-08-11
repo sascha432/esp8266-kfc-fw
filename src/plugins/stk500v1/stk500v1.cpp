@@ -2,7 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#include "stk500v1.h"
 #include <EventScheduler.h>
 #include "at_mode.h"
 #include "plugins.h"

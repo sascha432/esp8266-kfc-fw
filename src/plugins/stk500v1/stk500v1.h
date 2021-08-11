@@ -35,13 +35,25 @@
 #include <Arduino_compat.h>
 
 #ifndef DEBUG_STK500V1
-#define DEBUG_STK500V1 0
+#    define DEBUG_STK500V1 0
 #endif
 
 #if !AT_MODE_SUPPORTED
-#error Requires AT_MODE_SUPPORTED=1
+#    error Requires AT_MODE_SUPPORTED=1
 #endif
 
 #ifndef STK500V1_RESET_PIN
-#error Reset pin not defined
+#    error Reset pin not defined
+#endif
+
+#ifndef STK500_HAVE_SOFTWARE_SERIAL
+#    define STK500_HAVE_SOFTWARE_SERIAL 0
+#endif
+
+#ifndef STK500_HAVE_SOFTWARE_SERIAL_PINS
+#    define STK500_HAVE_SOFTWARE_SERIAL_PINS D5, D6
+#endif
+
+#ifndef STK500_HAVE_FUSES
+#    define STK500_HAVE_FUSES 0
 #endif

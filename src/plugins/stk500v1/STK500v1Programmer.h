@@ -6,17 +6,12 @@
 #include <IntelHexFormat.h>
 #include <Buffer.h>
 #include <PrintString.h>
+#include "stk500v1.h"
 
-#ifndef STK500_HAVE_SOFTWARE_SERIAL
-#define STK500_HAVE_SOFTWARE_SERIAL 0
-#endif
-
-#ifndef STK500_HAVE_SOFTWARE_SERIAL_PINS
-#define STK500_HAVE_SOFTWARE_SERIAL_PINS D5, D6
-#endif
-
-#ifndef STK500_HAVE_FUSES
-#define STK500_HAVE_FUSES 0
+#if DEBUG_STK500V1
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
 #endif
 
 PROGMEM_STRING_DECL(stk500v1_log_file);
@@ -357,3 +352,7 @@ void STK500v1Programmer::_log(const __FlashStringHelper *format, _Args ...args)
 {
     _log(reinterpret_cast<PGM_P>(format), args...);
 }
+
+#if DEBUG_STK500V1
+#include <debug_helper_disable.h>
+#endif

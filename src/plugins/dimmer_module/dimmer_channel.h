@@ -70,6 +70,7 @@ namespace Dimmer {
         void setLevel(int32_t level, float transition = NAN, bool publish = true);
         void setStoredBrightness(int32_t store);
         uint16_t getStorededBrightness() const;
+        void stopFading();
 
     protected:
         #if IOT_DIMMER_MODULE_HAS_BUTTONS

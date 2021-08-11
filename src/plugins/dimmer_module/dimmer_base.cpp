@@ -180,6 +180,14 @@ void Base::_fade(uint8_t channel, int16_t toLevel, float fadeTime)
     #endif
 }
 
+void Base::_stopFading(uint8_t channel)
+{
+    _wire.fadeTo(channel, DIMMER_CURRENT_LEVEL, DIMMER_CURRENT_LEVEL, 0);
+    #if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
+        _setDimmingLevels();
+    #endif
+}
+
 #if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
 
     void Base::_setDimmingLevels()

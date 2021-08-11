@@ -11,7 +11,7 @@
 #include <web_server.h>
 #include <serial_handler.h>
 #include "dimmer_def.h"
-#include "../src/plugins/sensor/Sensor_DimmerMetrics.h"
+#include "../src/plugins/sensor/sensor.h"
 
 #ifndef STK500V1_RESET_PIN
 #error STK500V1_RESET_PIN not defined
@@ -120,6 +120,7 @@ namespace Dimmer {
         virtual int16_t getChannel(uint8_t channel) const = 0;
         virtual bool getChannelState(uint8_t channel) const = 0;
         virtual void setChannel(uint8_t channel, int16_t level, float transition = NAN) = 0;
+        virtual void stopFading(uint8_t channel) = 0;
         virtual uint8_t getChannelCount() const = 0;
 
         virtual int16_t getRange(uint8_t channel) const = 0;
@@ -143,6 +144,7 @@ namespace Dimmer {
         void _updateMetrics(const MetricsType &metrics);
 
         void _fade(uint8_t channel, int16_t toLevel, float fadeTime);
+        void _stopFading(uint8_t channel);
         #if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
             void _setDimmingLevels();
         #endif

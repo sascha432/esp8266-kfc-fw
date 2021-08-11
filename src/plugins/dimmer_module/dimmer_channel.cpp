@@ -169,6 +169,12 @@ void Channel::setLevel(int32_t level, float transition, bool publish)
     }
 }
 
+void Channel::stopFading()
+{
+    _dimmer->_stopFading(_channel);
+}
+
+
 bool Channel::_set(int32_t level, float transition, bool publish)
 {
     __LDBG_printf("set=%d transition=%f", level, transition);

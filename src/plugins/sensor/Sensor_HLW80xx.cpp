@@ -195,7 +195,7 @@ void Sensor_HLW80xx::createConfigureForm(AsyncWebServerRequest *request, FormUI:
     //     return true;
     // }));
     form.add(F("hlw80xx_2"), String(), FormUI::Field::Type::TEXT);
-    form.addFormUI(F("Energy"), FormUI::Label(FSPGM(kWh)), FormUI::PlaceHolder(IOT_SENSOR_HLW80xx_PULSE_TO_KWH(getEnergySecondaryCounter()), 3));
+    form.addFormUI(F("Energy"), FormUI::Suffix(FSPGM(kWh)), FormUI::PlaceHolder(IOT_SENSOR_HLW80xx_PULSE_TO_KWH(getEnergySecondaryCounter()), 3));
 
     // form.addValidator(FormUI::Validator::Callback([this](String value, FormField &field) {
     //     if (value.length()) {

@@ -8,7 +8,7 @@
 
 // support for
 // HLW8012 (and SSP1837, CSE7759, ...)
-// HLW8032 (and CSE7759B, ...)
+// HLW8032 (and CSE7759B, ...) ***not fully implemented***
 
 #include <Arduino_compat.h>
 #include <kfc_fw_config.h>
@@ -44,37 +44,32 @@
 // 0.01      4.0     4.30     200
 // 0.05      0.8     0.86      40
 
-
 // enables output for the HLW8012 live graph
 #ifndef IOT_SENSOR_HLW80xx_DATA_PLOT
-#define IOT_SENSOR_HLW80xx_DATA_PLOT                    0
+#    define IOT_SENSOR_HLW80xx_DATA_PLOT 0
 #endif
 
 // voltage divider for V2P
 #ifndef IOT_SENSOR_HLW80xx_V_RES_DIV
-#define IOT_SENSOR_HLW80xx_V_RES_DIV                    ((4 * 470) / 1.0)               // 4x470K : 1K
+#    define IOT_SENSOR_HLW80xx_V_RES_DIV ((4 * 470) / 1.0) // 4x470K : 1K
 #endif
 
 // current shunt resistance
 #ifndef IOT_SENSOR_HLW80xx_SHUNT
-#define IOT_SENSOR_HLW80xx_SHUNT                        0.008
+#    define IOT_SENSOR_HLW80xx_SHUNT 0.008
 #endif
 
 // compensate current when the load is dimmed or switched off
 #ifndef IOT_SENSOR_HLW80xx_ADJUST_CURRENT
-#define IOT_SENSOR_HLW80xx_ADJUST_CURRENT               0
+#    define IOT_SENSOR_HLW80xx_ADJUST_CURRENT 0
 #endif
 
+// adjust non linear error of the sensor
 #if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
-#define IOT_SENSOR_HLW80xx_ADJ_I_CALC(level, current)   ( \
-    level < 0 ? current : ( \
-        level == 0 ? \
-            ((IOT_SENSOR_HLW80xx_MIN_CURRENT > 0.009) ? 0.009f : current) : \
-            (level >= 1 ? current : (current * (1.0 / (1.013292 + (0.7352072 - 1.013292) / (1 + pow(level / 0.04869815, 1.033051)))))) \
-        ) \
-    )
+#    define IOT_SENSOR_HLW80xx_ADJ_I_CALC(level, current) ( \
+        level < 0 ? current : (level == 0 ? ((IOT_SENSOR_HLW80xx_MIN_CURRENT > 0.009) ? 0.009f : current) : (level >= 1 ? current : (current * (1.0 / (1.013292 + (0.7352072 - 1.013292) / (1 + pow(level / 0.04869815, 1.033051))))))))
 #else
-#define IOT_SENSOR_HLW80xx_ADJ_I_CALC(level, current)   current
+#    define IOT_SENSOR_HLW80xx_ADJ_I_CALC(level, current) current
 #endif
 
 // this option can be used to add a noise detection algorithm. it is only required if
@@ -82,64 +77,64 @@
 // load after the shunt. for example the HLW8012 power supply or/and a 470K-2M load resistor
 // depending on the shunt value
 #ifndef IOT_SENSOR_HLW80xx_NOISE_SUPPRESSION
-#define IOT_SENSOR_HLW80xx_NOISE_SUPPRESSION            0
+#    define IOT_SENSOR_HLW80xx_NOISE_SUPPRESSION 0
 #endif
 
 // 40µV input offset voltage
 #ifndef IOT_SENSOR_HLW80xx_INPUT_OFS_U
-#define IOT_SENSOR_HLW80xx_INPUT_OFS_U                  0.00004
+#    define IOT_SENSOR_HLW80xx_INPUT_OFS_U 0.00004
 #endif
 
 // +-43.5mV differential input voltage (max. ratings +-2.0V)
 #ifndef IOT_SENSOR_HLW80xx_DIFF_INPUT_U
-#define IOT_SENSOR_HLW80xx_DIFF_INPUT_U                 0.0435
+#    define IOT_SENSOR_HLW80xx_DIFF_INPUT_U 0.0435
 #endif
 
 // maximum noise level, 1000 = 1.0
 #ifndef IOT_SENSOR_HLW80xx_MAX_NOISE
-#define IOT_SENSOR_HLW80xx_MAX_NOISE                    40000
+#    define IOT_SENSOR_HLW80xx_MAX_NOISE 40000
 #endif
 
 #if IOT_SENSOR_HLW80xx_NOISE_SUPPRESSION
-#define IOT_SENSOR_HLW80xx_NO_NOISE(level)              (level < IOT_SENSOR_HLW80xx_MAX_NOISE)
+#    define IOT_SENSOR_HLW80xx_NO_NOISE(level) (level < IOT_SENSOR_HLW80xx_MAX_NOISE)
 #else
-#define IOT_SENSOR_HLW80xx_NO_NOISE(level)              true
+#    define IOT_SENSOR_HLW80xx_NO_NOISE(level) true
 #endif
 
-#define IOT_SENSOR_HLW80xx_MIN_CURRENT                  (IOT_SENSOR_HLW80xx_INPUT_OFS_U / IOT_SENSOR_HLW80xx_SHUNT)
-#define IOT_SENSOR_HLW80xx_MAX_CURRENT                  (IOT_SENSOR_HLW80xx_DIFF_INPUT_U / IOT_SENSOR_HLW80xx_SHUNT)
+#define IOT_SENSOR_HLW80xx_MIN_CURRENT (IOT_SENSOR_HLW80xx_INPUT_OFS_U / IOT_SENSOR_HLW80xx_SHUNT)
+#define IOT_SENSOR_HLW80xx_MAX_CURRENT (IOT_SENSOR_HLW80xx_DIFF_INPUT_U / IOT_SENSOR_HLW80xx_SHUNT)
 
-#define IOT_SENSOR_HLW80xx_CURRENT_MIN_PULSE            (uint32_t)((32.0 * IOT_SENSOR_HLW80xx_VREF) / (3.0 * IOT_SENSOR_HLW80xx_F_OSC * IOT_SENSOR_HLW80xx_MAX_CURRENT * IOT_SENSOR_HLW80xx_SHUNT))
-#define IOT_SENSOR_HLW80xx_CURRENT_MAX_PULSE            (uint32_t)((32.0 * IOT_SENSOR_HLW80xx_VREF) / (3.0 * IOT_SENSOR_HLW80xx_F_OSC * IOT_SENSOR_HLW80xx_MIN_CURRENT * IOT_SENSOR_HLW80xx_SHUNT))
+#define IOT_SENSOR_HLW80xx_CURRENT_MIN_PULSE (uint32_t)((32.0 * IOT_SENSOR_HLW80xx_VREF) / (3.0 * IOT_SENSOR_HLW80xx_F_OSC * IOT_SENSOR_HLW80xx_MAX_CURRENT * IOT_SENSOR_HLW80xx_SHUNT))
+#define IOT_SENSOR_HLW80xx_CURRENT_MAX_PULSE (uint32_t)((32.0 * IOT_SENSOR_HLW80xx_VREF) / (3.0 * IOT_SENSOR_HLW80xx_F_OSC * IOT_SENSOR_HLW80xx_MIN_CURRENT * IOT_SENSOR_HLW80xx_SHUNT))
 
 // update rate WebUI
 #ifndef IOT_SENSOR_HLW80xx_UPDATE_RATE
-#define IOT_SENSOR_HLW80xx_UPDATE_RATE                  2
+#    define IOT_SENSOR_HLW80xx_UPDATE_RATE 2
 #endif
 
 // update rate MQTT
 #ifndef IOT_SENSOR_HLW80xx_UPDATE_RATE_MQTT
-#define IOT_SENSOR_HLW80xx_UPDATE_RATE_MQTT             60
+#    define IOT_SENSOR_HLW80xx_UPDATE_RATE_MQTT 60
 #endif
 
 // internal voltage reference
 #ifndef IOT_SENSOR_HLW80xx_VREF
-#define IOT_SENSOR_HLW80xx_VREF                         2.43
+#    define IOT_SENSOR_HLW80xx_VREF 2.43
 #endif
 
 // oscillator frequency in MHz
 #ifndef IOT_SENSOR_HLW80xx_F_OSC
-#define IOT_SENSOR_HLW80xx_F_OSC                        3.579000
+#    define IOT_SENSOR_HLW80xx_F_OSC 3.579000
 #endif
 
 // interval to save energy counter to FS, 0 to disable
 #ifndef IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT
-#define IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT              (5 * 60 * 1000)
+#    define IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT (5 * 60 * 1000)
 #endif
 
 // number of energy counters, must be >= 2
 #ifndef IOT_SENSOR_HLW80xx_NUM_ENERGY_COUNTERS
-#define IOT_SENSOR_HLW80xx_NUM_ENERGY_COUNTERS          5
+#    define IOT_SENSOR_HLW80xx_NUM_ENERGY_COUNTERS 5
 #endif
 
 // https://datasheet.lcsc.com/szlcsc/1811151452_Hiliwei-Tech-HLW8012_C83804.pdf
@@ -162,15 +157,14 @@
 // fosc = 3.579Mhz
 // Vref = 2.43V
 
-
 // pulse is the duty cycle in µs (50% PWM)
-#define IOT_SENSOR_HLW80xx_CALC_U(pulse)                (((128.0 * IOT_SENSOR_HLW80xx_VREF * IOT_SENSOR_HLW80xx_V_RES_DIV) * _calibrationU) / (pulse * IOT_SENSOR_HLW80xx_F_OSC))
-#define IOT_SENSOR_HLW80xx_CALC_I(pulse)                (((32.0 * IOT_SENSOR_HLW80xx_VREF) * _calibrationI) / (pulse * (3.0 * IOT_SENSOR_HLW80xx_F_OSC * IOT_SENSOR_HLW80xx_SHUNT)))
-#define IOT_SENSOR_HLW80xx_CALC_P(pulse)                (((4.0 * IOT_SENSOR_HLW80xx_V_RES_DIV * IOT_SENSOR_HLW80xx_VREF * IOT_SENSOR_HLW80xx_VREF) * _calibrationP) / (pulse * (3.0 * IOT_SENSOR_HLW80xx_SHUNT * IOT_SENSOR_HLW80xx_F_OSC)))
+#define IOT_SENSOR_HLW80xx_CALC_U(pulse) (((128.0 * IOT_SENSOR_HLW80xx_VREF * IOT_SENSOR_HLW80xx_V_RES_DIV) * _calibrationU) / (pulse * IOT_SENSOR_HLW80xx_F_OSC))
+#define IOT_SENSOR_HLW80xx_CALC_I(pulse) (((32.0 * IOT_SENSOR_HLW80xx_VREF) * _calibrationI) / (pulse * (3.0 * IOT_SENSOR_HLW80xx_F_OSC * IOT_SENSOR_HLW80xx_SHUNT)))
+#define IOT_SENSOR_HLW80xx_CALC_P(pulse) (((4.0 * IOT_SENSOR_HLW80xx_V_RES_DIV * IOT_SENSOR_HLW80xx_VREF * IOT_SENSOR_HLW80xx_VREF) * _calibrationP) / (pulse * (3.0 * IOT_SENSOR_HLW80xx_SHUNT * IOT_SENSOR_HLW80xx_F_OSC)))
 
 // count is incremented on falling and raising edge
-#define IOT_SENSOR_HLW80xx_PULSE_TO_KWH(count)          (count * IOT_SENSOR_HLW80xx_CALC_P(1000000.0) / (1000.0 * 3600.0))
-#define IOT_SENSOR_HLW80xx_KWH_TO_PULSE(kwh)            (((1000.0 * 3600.0) * kwh) / IOT_SENSOR_HLW80xx_CALC_P(1000000.0))
+#define IOT_SENSOR_HLW80xx_PULSE_TO_KWH(count) (count * IOT_SENSOR_HLW80xx_CALC_P(1000000.0) / (1000.0 * 3600.0))
+#define IOT_SENSOR_HLW80xx_KWH_TO_PULSE(kwh)   (((1000.0 * 3600.0) * kwh) / IOT_SENSOR_HLW80xx_CALC_P(1000000.0))
 
 class Sensor_HLW8012;
 class Sensor_HLW8032;
@@ -179,6 +173,14 @@ class Sensor_HLW80xx : public MQTT::Sensor {
 public:
     using EnergyCounterArray = std::array<uint64_t, IOT_SENSOR_HLW80xx_NUM_ENERGY_COUNTERS>;
     using ConfigType = KFCConfigurationClasses::Plugins::SensorConfigNS::HLW80xxConfigType;
+
+    #if IOT_SENSOR_HAVE_HLW8012
+        using SensorSubType = Sensor_HLW8012;
+        static constexpr auto kSensorType = MQTT::SensorType::HLW8012;
+    #elif IOT_SENSOR_HAVE_HLW8032
+        using SensorSubType = Sensor_HLW8032;
+        static constexpr auto kSensorType = MQTT::SensorType::HLW8032;
+    #endif
 
 public:
     Sensor_HLW80xx(const String &name, MQTT::SensorType type);
@@ -209,15 +211,9 @@ public:
 #endif
 
     void resetEnergyCounter();
-    EnergyCounterArray &getEnergyCounters() {
-        return _energyCounter;
-    }
-    uint64_t &getEnergyPrimaryCounter() {
-        return _energyCounter[0];
-    }
-    uint64_t &getEnergySecondaryCounter() {
-        return _energyCounter[1];
-    }
+    EnergyCounterArray &getEnergyCounters();
+    uint64_t &getEnergyPrimaryCounter();
+    uint64_t &getEnergySecondaryCounter();
 
     virtual void dump(Print &output);
 
@@ -235,16 +231,7 @@ protected:
 
     String _getTopic();
 
-    static bool _compareFuncHLW8012(MQTT::Sensor &sensor, Sensor_HLW8012 &) {
-        return sensor.getType() == MQTT::SensorType::HLW8012;
-    }
-    static bool _compareFuncHLW8032(MQTT::Sensor &sensor, Sensor_HLW8032 &) {
-        return sensor.getType() == MQTT::SensorType::HLW8032;
-    }
-    static bool _compareFunc(MQTT::Sensor &sensor, Sensor_HLW80xx &) {
-        return (sensor.getType() == MQTT::SensorType::HLW8012 || sensor.getType() == MQTT::SensorType::HLW8032);
-    }
-
+protected:
     String _name;
     float _power;
     float _voltage;
@@ -255,7 +242,7 @@ protected:
     float _calibrationP;
     uint8_t _extraDigits;
 
-    unsigned long _saveEnergyCounterTimeout;
+    uint32_t _saveEnergyCounterTimeout;
 
 public:
     Event::Timer _dumpTimer;
@@ -270,9 +257,7 @@ protected:
 public:
     // can be used to compensate the current when the load is dimmed
     // -1 to disable
-    void setDimmingLevel(float dimmingLevel) {
-        _dimmingLevel = dimmingLevel;
-    }
+    void setDimmingLevel(float dimmingLevel);
 #endif
 
 #if IOT_SENSOR_HLW80xx_DATA_PLOT
@@ -296,10 +281,34 @@ private:
 #endif
 };
 
+#if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
+
+inline void Sensor_HLW80xx::setDimmingLevel(float dimmingLevel)
+{
+    _dimmingLevel = dimmingLevel;
+}
+
+#endif
+
+inline Sensor_HLW80xx::EnergyCounterArray &Sensor_HLW80xx::getEnergyCounters()
+{
+    return _energyCounter;
+}
+
 inline void Sensor_HLW80xx::resetEnergyCounter()
 {
     _energyCounter = {};
     _saveEnergyCounter();
+}
+
+inline uint64_t &Sensor_HLW80xx::getEnergyPrimaryCounter()
+{
+    return _energyCounter[0];
+}
+
+inline uint64_t &Sensor_HLW80xx::getEnergySecondaryCounter()
+{
+    return _energyCounter[1];
 }
 
 inline void Sensor_HLW80xx::_incrEnergyCounters(uint32_t count)

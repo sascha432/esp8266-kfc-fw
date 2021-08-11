@@ -310,9 +310,6 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         animationGroup.end();
 
         // --------------------------------------------------------------------
-        _createConfigureFormAnimation(AnimationType::GRADIENT, form, cfg, TitleType::ADD_GROUP);
-
-        // --------------------------------------------------------------------
         _createConfigureFormAnimation(AnimationType::RAINBOW, form, cfg, TitleType::ADD_GROUP);
 
         // --------------------------------------------------------------------
@@ -331,6 +328,9 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
         // --------------------------------------------------------------------
         _createConfigureFormAnimation(AnimationType::FADING, form, cfg, TitleType::ADD_GROUP);
+
+        // --------------------------------------------------------------------
+        _createConfigureFormAnimation(AnimationType::GRADIENT, form, cfg, TitleType::ADD_GROUP);
 
         // --------------------------------------------------------------------
         #if IOT_ALARM_PLUGIN_ENABLED

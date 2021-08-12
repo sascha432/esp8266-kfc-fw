@@ -276,6 +276,9 @@ void AsyncUpdateWebHandler::handleUpload(AsyncWebServerRequest *request, const S
                         size = 1048576;
                     #endif
                     command = U_FS;
+                    #ifndef ATOMIC_FS_UPDATE
+                        KFCFS.end();
+                    #endif
                 }
                 else {
                     size = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;

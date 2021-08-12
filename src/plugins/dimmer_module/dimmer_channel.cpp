@@ -8,7 +8,7 @@
 #include <stl_ext/algorithm.h>
 #include <stl_ext/utility.h>
 
-#if DEBUG_IOT_DIMMER_MODULE && 0
+#if DEBUG_IOT_DIMMER_MODULE
 #include <debug_helper_enable.h>
 #else
 #include <debug_helper_disable.h>
@@ -88,18 +88,23 @@ void Channel::onConnect()
 
 void Channel::onMessage(const char *topic, const char *payload, size_t len)
 {
+    __LDBG_printf("topic=%s payload=%s", topic, payload);
     if (strcmp_end_P(topic, _topic.c_str())) {
         return;
     }
     auto stream = HeapStream(payload, len);
     auto reader = MQTT::Json::Reader(&stream);
     if (reader.parse()) {
+        #if DEBUG_IOT_DIMMER_MODULE || 1
+            PrintString str;
+            reader.dump(str);
+            __DBG_printf("%s", str.c_str());
+        #endif
         onJsonMessage(reader);
     }
     else {
         __DBG_printf("parsing json failed=%s payload=%s", reader.getLastErrorMessage().c_str(), payload);
     }
-
 }
 
 void Channel::onJsonMessage(const MQTT::Json::Reader &json)

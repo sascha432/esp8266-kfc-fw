@@ -39,7 +39,7 @@ void MDNSPlugin::serviceCallback(Output &output, MDNSResponder::MDNSServiceInfo 
         return;
     }
 
-    noInterrupts();
+    InterruptLock lock;
 
     if (output._current != mdnsServiceInfo.serviceDomain()) {
         output.next();
@@ -93,10 +93,8 @@ void MDNSPlugin::serviceCallback(Output &output, MDNSResponder::MDNSServiceInfo 
     }
     if (output._output.length() + 1024 > ESP.getFreeHeap()) {
         output.end();
-        interrupts();
         __DBG_printf("out of memory len=%u", output._output.length());
     }
-    interrupts();
     // __DBG_printf("%s", output._output.c_str());
 }
 
@@ -105,69 +103,87 @@ void MDNSPlugin::serviceCallback(Output &output, MDNSResponder::MDNSServiceInfo 
 bool MDNSPlugin::atModeHandler(AtModeArgs &args)
 {
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(MDNSQ))) {
-        if (!_running) {
+        if (!_isRunning()) {
             args.print(F("MDNS service is not running"));
         }
         else if (args.requireArgs(2, 3)) {
-#if ESP8266
-            auto timeout = args.toMillis(2, 100, ~0, 2000);
-            auto query = PrintString(F("service=%s proto=%s wait=%ums"), args.toString(0).c_str(), args.toString(1).c_str(), timeout);
-            args.print(F("Querying: %s"), query.c_str());
+            #if ESP8266
+                auto timeout = args.toMillis(2, 100, ~0, 2000);
+                auto query = PrintString(F("service=%s proto=%s wait=%ums"), args.toString(0).c_str(), args.toString(1).c_str(), timeout);
+                args.print(F("Querying: %s"), query.c_str());
 
-            Output *output = new MDNSPlugin::Output(millis() + timeout);
+                auto output = new MDNSPlugin::Output(millis() + timeout);
+                if (output) {
+                    output->_serviceQuery = MDNS.installServiceQuery(args.toString(0).c_str(), args.toString(1).c_str(), [this, output](MDNSResponder::MDNSServiceInfo mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent) {
+                        serviceCallback(*output, mdnsServiceInfo, answerType, p_bSetContent);
+                    });
 
-            output->_serviceQuery = MDNS.installServiceQuery(args.toString(0).c_str(), args.toString(1).c_str(), [this, output](MDNSResponder::MDNSServiceInfo mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent) {
-                serviceCallback(*output, mdnsServiceInfo, answerType, p_bSetContent);
-            });
+                    _Scheduler.add(timeout, false, [args, output, this](Event::CallbackTimerPtr timer) {
+                        bool result;
+                        {
+                            InterruptLock lock;
+                            _IF_DEBUG(result = ) MDNS.removeServiceQuery(output->_serviceQuery);
+                            output->_serviceQuery = nullptr;
+                            output->end();
+                        }
 
-            _Scheduler.add(timeout, false, [args, output, this](Event::CallbackTimerPtr timer) {
-                _IF_DEBUG(auto result = ) MDNS.removeServiceQuery(output->_serviceQuery);
-                output->_serviceQuery = nullptr;
-                output->end();
+                        __LDBG_printf("removeServiceQuery=%u", result);
+                        if (output->_output.length() == 0) {
+                            args.print(F("No response"));
+                        }
+                        else {
+                            args.getStream().println(output->_output);
+                        }
 
-                __LDBG_printf("removeServiceQuery=%u", result);
-                if (output->_output.length() == 0) {
-                    args.print(F("No response"));
+                        InterruptLock lock;
+                        delete output;
+                    });
                 }
-                else {
-                    args.getStream().println(output->_output);
-                }
-                delete output;
-            });
-#endif
+            #endif
         }
         return true;
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(MDNSR))) {
 
+        enum class MDNSCommand : int8_t {
+            INVALID = -1,
+            STOP = 0,
+            START,
+            ENABLE,
+            DISABLE,
+            ZEROCONF,
+        };
+
         if (args.requireArgs(1)) {
-            auto action = stringlist_find_P_P(PSTR("stop|start|enable|disable|zeroconf"), args.get(0), '|');
+            auto action = static_cast<MDNSCommand>(stringlist_find_P_P(PSTR("stop|start|enable|disable|zeroconf"), args.get(0), '|'));
             switch(action) {
-                case 0: { // stop
-                    args.print(F("Stopping MDNS"));
-                    _end();
-                } break;
-                case 1: { // start
-                    args.printf_P(PSTR("Restarting MDNS, interface IP %s..."), WiFi.localIP().toString().c_str());
-                    _end();
-                    _begin();
-                } break;
-                case 2: { // enable
-                    args.print(F("MDNS enabled. Requires restart..."));
-                    auto &flags = System::Flags::getWriteableConfig();
-                    // flags.setMDNSEnabled(true);
-                    flags.is_mdns_enabled = true;
-                    config.write();
-                } break;
-                case 3: { // disable
-                    args.print(F("MDNS disabled. Requires restart..."));
-                    auto &flags = System::Flags::getWriteableConfig();
-                    //flags.setMDNSEnabled(false);
-                    flags.is_mdns_enabled = false;
-                    config.write();
-                } break;
-                case 4:
-                    if (args.requireArgs(2, 2)) { // zeroconf
+                case MDNSCommand::STOP: {
+                        args.print(F("Stopping MDNS"));
+                        end();
+                    }
+                    break;
+                case MDNSCommand::START: {
+                        args.printf_P(PSTR("Restarting MDNS, interface IP %s..."), WiFi.localIP().toString().c_str());
+                        end();
+                        begin();
+                    }
+                    break;
+                case MDNSCommand::ENABLE: {
+                        args.print(F("MDNS enabled. Requires restart..."));
+                        auto &flags = System::Flags::getWriteableConfig();
+                        flags.is_mdns_enabled = true;
+                        config.write();
+                    }
+                    break;
+                case MDNSCommand::DISABLE: {
+                        args.print(F("MDNS disabled. Requires restart..."));
+                        auto &flags = System::Flags::getWriteableConfig();
+                        flags.is_mdns_enabled = false;
+                        config.write();
+                    }
+                    break;
+                case MDNSCommand::ZEROCONF:
+                    if (args.requireArgs(2, 2)) {
                         auto conf = args.toString(1);
                         auto result = config.resolveZeroConf(getFriendlyName(), conf, 0, [args](const String &hostname, const IPAddress &address, uint16_t port, const String &resolved, MDNSResolver::ResponseType type) mutable {
                             args.printf_P(PSTR("ZeroConf response: host=%s ip=%s port=%u type=%u resolved=%s"), hostname.c_str(), address.toString().c_str(), port, type, resolved.c_str());
@@ -179,7 +195,8 @@ bool MDNSPlugin::atModeHandler(AtModeArgs &args)
                             args.printf_P(PSTR("Invalid config: %s"), conf.c_str());
                         }
 
-                    } break;
+                    }
+                    break;
                 default:
                     args.printf_P(PSTR("Invalid argument: %s"), args.get(0));
                     break;

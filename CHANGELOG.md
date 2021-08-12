@@ -2,6 +2,8 @@
 
 ## Version 0.0.5
 
+- Fixed MDNS for Arduino Core 3.x
+- Better response for dimmer buttons and fix for disabled "long press"
 - Added gradient animation
 - Fixed timing issues with the integrated STK500v1 programmer
 - Merged Arduino Core 3.1.0-dev

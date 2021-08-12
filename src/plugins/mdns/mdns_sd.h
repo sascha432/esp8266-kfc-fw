@@ -9,6 +9,7 @@
 // Wrapper for service discovery
 
 #include <Arduino_compat.h>
+
 class MDNSService {
 public:
     static bool addService(const String &service, const String &proto, uint16_t port);

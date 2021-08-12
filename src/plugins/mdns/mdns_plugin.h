@@ -9,10 +9,13 @@
 #include <Arduino_compat.h>
 #include <WiFiCallbacks.h>
 #include <EventScheduler.h>
-#include "kfc_fw_config.h"
-#include "plugins.h"
-#include "plugins_menu.h"
+#include <build.h>
+#include <kfc_fw_config.h>
+#include <plugins.h>
+#include <plugins_menu.h>
 #include "mdns_resolver.h"
+#include "mdns_sd.h"
+
 #if ESP8266
 #include <ESP8266mDNS.h>
 #endif
@@ -20,14 +23,20 @@
 #include <ESPmDNS.h>
 #endif
 
-#    ifndef DEBUG_MDNS_SD
-#        define DEBUG_MDNS_SD 0
-#    endif
+#ifndef DEBUG_MDNS_SD
+#   define DEBUG_MDNS_SD 1
+#endif
 
-#    ifndef MDNS_DELAYED_START_AFTER_WIFI_CONNECT
-// #        define MDNS_DELAYED_START_AFTER_WIFI_CONNECT 10000UL
-#        define MDNS_DELAYED_START_AFTER_WIFI_CONNECT 0
-#    endif
+#ifndef MDNS_DELAYED_START_AFTER_WIFI_CONNECT
+// #   define MDNS_DELAYED_START_AFTER_WIFI_CONNECT 10000UL
+#   define MDNS_DELAYED_START_AFTER_WIFI_CONNECT 0
+#endif
+
+#if DEBUG_MDNS_SD
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
 
 class MDNSPlugin : public PluginComponent {
 public:
@@ -71,6 +80,7 @@ public:
             #endif
             _timeout(timeout)
         {}
+
         ~Output() {
             #if ESP8266
             if (_serviceQuery) {
@@ -139,6 +149,8 @@ public:
     void begin();
     void end();
 
+    static MDNSPlugin &getInstance();
+
 public:
     void resolveZeroConf(MDNSResolver::Query *query);
     static void removeQuery(MDNSResolver::Query *query);
@@ -152,23 +164,67 @@ private:
 private:
     friend class MDNSService;
 
+    #if MDNS_NETBIOS_SUPPORT
+        void _setupNetBIOS();
+    #endif
+    void _startQueries();
+
     void _removeQuery(MDNSResolver::Query *query);
 
     bool _isRunning() const;
 
-    bool _MDNS_begin();
-    void _begin();
-    void _end();
     void _wifiCallback(WiFiCallbacks::EventType event, void *payload);
     void _loop();
     void _installWebServerHooks();
 
 private:
-    uint8_t _running: 1;
-    uint8_t _enabled: 1;
     #if MDNS_DELAYED_START_AFTER_WIFI_CONNECT
         Event::Timer _delayedStart;
     #endif
+    bool _running;
+    bool _enabled;
 };
+
+inline void MDNSPlugin::reconfigure(const String &source)
+{
+    __LDBG_printf("running=%u source=%s", _running, source.c_str());
+    if (source == F("http")) {
+        _installWebServerHooks();
+    }
+    else {
+        end();
+        begin();
+    }
+}
+
+inline void MDNSPlugin::shutdown()
+{
+    __LDBG_println();
+    end();
+}
+
+inline void MDNSPlugin::wifiCallback(WiFiCallbacks::EventType event, void *payload)
+{
+    getInstance()._wifiCallback(event, payload);
+}
+
+inline void MDNSPlugin::loop()
+{
+    getInstance()._loop();
+}
+
+inline bool MDNSPlugin::_isRunning() const
+{
+    return _running;
+}
+
+inline void MDNSPlugin::removeQuery(MDNSResolver::Query *query)
+{
+    getInstance()._removeQuery(query);
+}
+
+#if DEBUG_MDNS_SD
+#include <debug_helper_disable.h>
+#endif
 
 #endif

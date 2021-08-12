@@ -36,7 +36,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     "MDNS",                 // friendly name
     "",                     // web_templates
     "",                     // config_forms
-    "wifi,network",    // reconfigure_dependencies
+    "wifi,network,http",    // reconfigure_dependencies
     PluginComponent::PriorityType::MDNS,
     PluginComponent::RTCMemoryId::NONE,
     static_cast<uint8_t>(PluginComponent::MenuType::CUSTOM),
@@ -57,23 +57,23 @@ MDNSPlugin::MDNSPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(MDNSPlugin
 
 void MDNSService::announce()
 {
-    __LDBG_printf("running=%u", plugin._isRunning());
-#if ESP8266
-    if (plugin._isRunning()) {
-        MDNS.announce();
-    }
-#endif
+    __LDBG_printf("running=%u", MDNSPlugin::getInstance()._isRunning());
+    #if ESP8266
+        if (MDNSPlugin::getInstance()._isRunning()) {
+            MDNS.announce();
+        }
+    #endif
 }
 
 void MDNSPlugin::_installWebServerHooks()
 {
-#if ESP8266
-    auto server = WebServer::Plugin::getWebServerObject();
-    if (server) {
-        __LDBG_println();
-        WebServer::Plugin::addHandler(F("/mdns_discovery"), mdnsDiscoveryHandler);
-    }
-#endif
+    #if ESP8266
+        auto server = WebServer::Plugin::getWebServerObject();
+        if (server) {
+            __LDBG_println();
+            WebServer::Plugin::addHandler(F("/mdns_discovery"), mdnsDiscoveryHandler);
+        }
+    #endif
 }
 
 #if ESP8266
@@ -91,9 +91,13 @@ void MDNSPlugin::mdnsDiscoveryHandler(AsyncWebServerRequest *request)
             HttpHeaders httpHeaders(false);
             httpHeaders.addNoCache();
 
-            output->_serviceQuery = MDNS.installServiceQuery(String(FSPGM(kfcmdns)).c_str(), String(FSPGM(udp)).c_str(), [output](MDNSResponder::MDNSServiceInfo mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent) {
-                plugin.serviceCallback(*output, mdnsServiceInfo, answerType, p_bSetContent);
-            });
+            {
+                auto service = String(FSPGM(kfcmdns));
+                auto name = String(FSPGM(udp));
+                output->_serviceQuery = MDNS.installServiceQuery(service.c_str(), name.c_str(), [output](MDNSResponder::MDNSServiceInfo mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent) {
+                    plugin.serviceCallback(*output, mdnsServiceInfo, answerType, p_bSetContent);
+                });
+            }
             auto response = new AsyncMDNSResponse(output);
             httpHeaders.setResponseHeaders(response);
             request->send(response);
@@ -109,45 +113,48 @@ void MDNSPlugin::mdnsDiscoveryHandler(AsyncWebServerRequest *request)
 
 #endif
 
+#if MDNS_NETBIOS_SUPPORT
+
+void MDNSPlugin::_setupNetBIOS()
+{
+    if (isNetBIOSEnabled()) {
+        #if DEBUG_MDNS_SD
+            auto result =
+        #endif
+        NBNS.begin(System::Device::getName());
+        __LDBG_printf("NetBIOS result=%u", result);
+    }
+}
+
+#endif
+
+void MDNSPlugin::_startQueries()
+{
+    // start all queries in the queue
+    __LDBG_printf("zerconf queries=%u", _queries.size());
+    for(const auto &query: _queries) {
+        if (query->getState() == MDNSResolver::Query::StateType::NONE) {
+            query->begin();
+        }
+    }
+}
+
 void MDNSPlugin::_wifiCallback(WiFiCallbacks::EventType event, void *payload)
 {
     __LDBG_printf("event=%u, running=%u", event, _running);
     if (event == WiFiCallbacks::EventType::CONNECTED) {
-        _end();
+        end();
         #if MDNS_DELAYED_START_AFTER_WIFI_CONNECT
             _Timer(_delayedStart).add(MDNS_DELAYED_START_AFTER_WIFI_CONNECT, false, [this](Event::CallbackTimerPtr timer) {
-                _begin();
+                begin();
             });
         #else
-            _begin();
+            begin();
         #endif
-
-        #if MDNS_NETBIOS_SUPPORT
-            if (isNetBIOSEnabled()) {
-            #if DEBUG_MDNS_SD
-                    auto result =
-            #endif
-                NBNS.begin(System::Device::getName());
-                __LDBG_printf("NetBIOS result=%u", result);
-        }
-        #endif
-
-        // start all queries in the queue
-        __LDBG_printf("zerconf queries=%u", _queries.size());
-        for(const auto &query: _queries) {
-            if (query->getState() == MDNSResolver::Query::StateType::NONE) {
-               query->begin();
-            }
-        }
 
     }
     else if (event == WiFiCallbacks::EventType::DISCONNECTED) {
-        #if MDNS_NETBIOS_SUPPORT
-            if (isNetBIOSEnabled()) {
-                NBNS.end();
-            }
-        #endif
-        _end();
+        end();
     }
 }
 
@@ -172,12 +179,16 @@ void MDNSPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesP
         _enabled = true;
         begin();
 
-        _running = false;
-        // add wifi handler after all plugins have been initialized
-        WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, wifiCallback);
-        if (WiFi.isConnected()) {
-            _wifiCallback(WiFiCallbacks::EventType::CONNECTED, nullptr); // simulate event if already connected
-        }
+        #if ARDUINO_ESP8266_MAJOR >= 3
+        #else
+
+            // add wifi handler after all plugins have been initialized
+            WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, wifiCallback);
+            if (WiFi.isConnected()) {
+                _wifiCallback(WiFiCallbacks::EventType::CONNECTED, nullptr); // simulate event if already connected
+            }
+
+        #endif
 
         dependencies->dependsOn(FSPGM(http), [this](const PluginComponent *plugin, DependencyResponseType response) {
             if (response != DependencyResponseType::SUCCESS) {
@@ -188,56 +199,11 @@ void MDNSPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesP
     }
 }
 
-void MDNSPlugin::reconfigure(const String &source)
-{
-    __LDBG_printf("running=%u source=%s", _running, source.c_str());
-    // if (String_equals(source, SPGM(http))) {
-    //     _installWebServerHooks();
-    // }
-    // else {
-        _end();
-        _begin();
-    // }
-}
 
-void MDNSPlugin::shutdown()
-{
-    __LDBG_println();
-    end();
-}
 
-void MDNSPlugin::wifiCallback(WiFiCallbacks::EventType event, void *payload)
+MDNSPlugin &MDNSPlugin::getInstance()
 {
-    plugin._wifiCallback(event, payload);
-}
-
-void MDNSPlugin::loop()
-{
-    plugin._loop();
-}
-
-void MDNSPlugin::begin()
-{
-    __LDBG_println();
-
-    if (_MDNS_begin()) {
-        _running = true;
-        if (MDNSService::addService(FSPGM(kfcmdns), FSPGM(udp), 5353)) {
-            MDNSService::addServiceTxt(FSPGM(kfcmdns), FSPGM(udp), String('v'), FIRMWARE_VERSION_STR);
-            MDNSService::addServiceTxt(FSPGM(kfcmdns), FSPGM(udp), String('b'), String(__BUILD_NUMBER_INT));
-            MDNSService::addServiceTxt(FSPGM(kfcmdns), FSPGM(udp), String('t'), System::Device::getTitle());
-        }
-    }
-}
-
-void MDNSPlugin::end()
-{
-    __LDBG_printf("running=%u", _running);
-    if (_running) {
-        MDNSService::removeService(FSPGM(kfcmdns), FSPGM(udp));
-        MDNSService::announce();
-        _end();
-    }
+    return plugin;
 }
 
 void MDNSPlugin::resolveZeroConf(MDNSResolver::Query *query)
@@ -258,11 +224,6 @@ void MDNSPlugin::resolveZeroConf(MDNSResolver::Query *query)
     else if (_isRunning()) {
         query->begin();
     }
-}
-
-void MDNSPlugin::removeQuery(MDNSResolver::Query *query)
-{
-    plugin._removeQuery(query);
 }
 
 MDNSResolver::Query *MDNSPlugin::findQuery(void *query) const
@@ -291,59 +252,53 @@ void MDNSPlugin::_removeQuery(MDNSResolver::Query *query)
     }
 }
 
-bool MDNSPlugin::_isRunning() const
-{
-    return _running;
-}
-
-bool MDNSPlugin::_MDNS_begin()
-{
-#if ESP8266
-    auto address = WiFi.isConnected() ? WiFi.localIP() : INADDR_ANY;
-    __LDBG_printf("hostname=%s address=%s", System::Device::getName(), address.toString().c_str());
-    auto result = MDNS.begin(System::Device::getName(), address);
-    __LDBG_printf("result=%u", result);
-    return result;
-#else
-    __LDBG_printf("hostname=%s", System::Device::getName());
-    return _debug_print_result(MDNS.begin(System::Device::getName()));
-#endif
-}
-
 MDNSPlugin &MDNSPlugin::getPlugin()
 {
     return plugin;
 }
 
-void MDNSPlugin::_begin()
+void MDNSPlugin::begin()
 {
-    __LDBG_printf("running=%u", _running);
-    if (_MDNS_begin()) {
+    auto hostname = System::Device::getName();
+    __LDBG_printf("hostname=%s WiFi=%u running=%u", hostname, WiFi.isConnected(), _running);
+    if (MDNS.begin(hostname)) {
         _running = true;
         LoopFunctions::add(loop);
-        MDNSService::announce();
+        MDNSService::addService(FSPGM(kfcmdns), FSPGM(udp), 5353);
+        MDNSService::addServiceTxt(FSPGM(kfcmdns), FSPGM(udp), String('v'), FIRMWARE_VERSION_STR);
+        MDNSService::addServiceTxt(FSPGM(kfcmdns), FSPGM(udp), String('b'), String(__BUILD_NUMBER_INT));
+        MDNSService::addServiceTxt(FSPGM(kfcmdns), FSPGM(udp), String('t'), KFCConfigurationClasses::System::Device::getTitle());
+
+        #if MDNS_NETBIOS_SUPPORT
+            _setupNetBIOS();
+        #endif
+        _startQueries();
     }
     else {
-        _end();
+        LoopFunctions::remove(loop);
+        _running = false;
     }
 }
 
-void MDNSPlugin::_end()
+void MDNSPlugin::end()
 {
-#if MDNS_DELAYED_START_AFTER_WIFI_CONNECT
-    _delayedStart.remove();
-#endif
     __LDBG_printf("running=%u", _running);
     MDNS.end();
-    _running = false;
     LoopFunctions::remove(loop);
+    _running = false;
+
+    #if MDNS_NETBIOS_SUPPORT
+        if (isNetBIOSEnabled()) {
+            NBNS.end();
+        }
+    #endif
 }
 
 void MDNSPlugin::_loop()
 {
-#if ESP8266
-    MDNS.update();
-#endif
+    #if ESP8266
+        MDNS.update();
+    #endif
     if (!_queries.empty()) {
         for(auto &query: _queries) {
             query->checkTimeout();
@@ -359,9 +314,9 @@ void MDNSPlugin::getStatus(Print &output)
     }
     output.print(F("running"));
 
-#if MDNS_NETBIOS_SUPPORT
-    output.printf_P(PSTR(HTML_S(br) "NetBIOS %s"), isNetBIOSEnabled() ? SPGM(enabled) : SPGM(disabled));
-#endif
+    #if MDNS_NETBIOS_SUPPORT
+        output.printf_P(PSTR(HTML_S(br) "NetBIOS %s"), isNetBIOSEnabled() ? SPGM(enabled) : SPGM(disabled));
+    #endif
 }
 
 //void resolveZeroConf(const String &service, const String &proto, const String &field, const String &fallback, uint16_t port, ResolvedCallback callback);

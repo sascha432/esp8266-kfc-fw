@@ -20,10 +20,6 @@ using KFCConfigurationClasses::System;
 
     #include <lwip/dns.h>
 
-// extern "C" {
-//     #include "lwip/dns.h"
-// }
-
     IPAddress MDNSResolver::MDNSServiceInfo::findIP4Address(const IPAddress &myAddress)
     {
         IPAddress address;
@@ -42,7 +38,7 @@ using KFCConfigurationClasses::System;
             __LDBG_printf("address=%s my_address=%s closest=%s", address.toString().c_str(), myAddress.toString().c_str(), closestAddress.toString().c_str());
         }
         auto &result = IPAddress_isValid(closestAddress) ? closestAddress : address;
-        __LDBG_printf("found=%s", result.toString().c_str())
+        __LDBG_printf("found=%s", result.toString().c_str());
         return result;
     };
 
@@ -207,7 +203,7 @@ using KFCConfigurationClasses::System;
 
     void MDNSResolver::Query::serviceCallback(bool map, MDNSResolver::MDNSServiceInfo &mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent)
     {
-        __LDBG_printf("answerType=%u p_bSetContent=%u", answerType, p_bSetContent)
+        __LDBG_printf("answerType=%u p_bSetContent=%u", answerType, p_bSetContent);
         PrintString str;
 
         mdnsServiceInfo.serviceDomain();

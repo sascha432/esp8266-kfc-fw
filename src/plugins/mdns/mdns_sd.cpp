@@ -22,14 +22,14 @@ bool MDNSService::addService(const String &service, const String &proto, uint16_
     if (!MDNSPlugin::getPlugin()._isRunning()) {
         return false;
     }
-#if ESP8266
-    auto result = MDNS.addService(service, proto, port);
-    __LDBG_printf("result=%u", result);
-    return result;
-#else
-    MDNS.addService(service, proto, port);
-    return true;
-#endif
+    #if ESP8266
+        auto result = MDNS.addService(service, proto, port);
+        __LDBG_printf("result=%u", result);
+        return result;
+    #else
+        MDNS.addService(service, proto, port);
+        return true;
+    #endif
 }
 
 bool MDNSService::addServiceTxt(const String &service, const String &proto, const String &key, const String &value)
@@ -38,14 +38,14 @@ bool MDNSService::addServiceTxt(const String &service, const String &proto, cons
     if (!MDNSPlugin::getPlugin()._isRunning()) {
         return false;
     }
-#if ESP8266
-    auto result = MDNS.addServiceTxt(service, proto, key, value);
-    __LDBG_printf("result=%u", result);
-    return result;
-#else
-    MDNS.addServiceTxt(service, proto, key, value);
-    return true;
-#endif
+    #if ESP8266
+        auto result = MDNS.addServiceTxt(service, proto, key, value);
+        __LDBG_printf("result=%u", result);
+        return result;
+    #else
+        MDNS.addServiceTxt(service, proto, key, value);
+        return true;
+    #endif
 }
 
 bool MDNSService::removeService(const String &service, const String &proto)
@@ -54,13 +54,13 @@ bool MDNSService::removeService(const String &service, const String &proto)
     if (!MDNSPlugin::getPlugin()._isRunning()) {
         return false;
     }
-#if ESP8266
-    auto result = MDNS.removeService(nullptr, service.c_str(), proto.c_str());
-    __LDBG_printf("result=%u", result);
-    return result;
-#else
-    return true;
-#endif
+    #if ESP8266
+        auto result = MDNS.removeService(nullptr, service.c_str(), proto.c_str());
+        __LDBG_printf("result=%u", result);
+        return result;
+    #else
+        return true;
+    #endif
 }
 
 bool MDNSService::removeServiceTxt(const String &service, const String &proto, const String &key)
@@ -69,13 +69,13 @@ bool MDNSService::removeServiceTxt(const String &service, const String &proto, c
     if (!MDNSPlugin::getPlugin()._isRunning()) {
         return false;
     }
-#if ESP8266
-    auto result = MDNS.removeServiceTxt(nullptr, service.c_str(), proto.c_str(), key.c_str());
-    __LDBG_printf("result=%u", result);
-    return result;
-#else
-    return true;
-#endif
+    #if ESP8266
+        auto result = MDNS.removeServiceTxt(nullptr, service.c_str(), proto.c_str(), key.c_str());
+        __LDBG_printf("result=%u", result);
+        return result;
+    #else
+        return true;
+    #endif
 }
 
 

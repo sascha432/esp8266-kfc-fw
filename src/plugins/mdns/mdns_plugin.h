@@ -7,7 +7,6 @@
 #if MDNS_PLUGIN
 
 #include <Arduino_compat.h>
-#include <WiFiCallbacks.h>
 #include <EventScheduler.h>
 #include <build.h>
 #include <kfc_fw_config.h>
@@ -24,12 +23,7 @@
 #endif
 
 #ifndef DEBUG_MDNS_SD
-#   define DEBUG_MDNS_SD 1
-#endif
-
-#ifndef MDNS_DELAYED_START_AFTER_WIFI_CONNECT
-// #   define MDNS_DELAYED_START_AFTER_WIFI_CONNECT 10000UL
-#   define MDNS_DELAYED_START_AFTER_WIFI_CONNECT 0
+#   define DEBUG_MDNS_SD 0
 #endif
 
 #if DEBUG_MDNS_SD
@@ -126,7 +120,7 @@ public:
 
 #if ESP8266
     virtual void createMenu() override {
-        if (_enabled) {
+        if (isEnabled()) {
             bootstrapMenu.addMenuItem(F("MDNS Discovery"), F("mdns-discovery.html"), navMenu.util);
         }
     }
@@ -141,11 +135,8 @@ public:
 #endif
 
 public:
-    static void wifiCallback(WiFiCallbacks::EventType event, void *payload);
     static void loop();
 
-    // ESP8266: begin must be called once early in the program execution
-    // otherwise it crashes when adding services
     void begin();
     void end();
 
@@ -168,44 +159,25 @@ private:
         void _setupNetBIOS();
     #endif
     void _startQueries();
-
     void _removeQuery(MDNSResolver::Query *query);
-
     bool _isRunning() const;
-
-    void _wifiCallback(WiFiCallbacks::EventType event, void *payload);
     void _loop();
-    void _installWebServerHooks();
 
 private:
-    #if MDNS_DELAYED_START_AFTER_WIFI_CONNECT
-        Event::Timer _delayedStart;
-    #endif
     bool _running;
-    bool _enabled;
 };
 
 inline void MDNSPlugin::reconfigure(const String &source)
 {
     __LDBG_printf("running=%u source=%s", _running, source.c_str());
-    if (source == F("http")) {
-        _installWebServerHooks();
-    }
-    else {
-        end();
-        begin();
-    }
+    end();
+    begin();
 }
 
 inline void MDNSPlugin::shutdown()
 {
     __LDBG_println();
     end();
-}
-
-inline void MDNSPlugin::wifiCallback(WiFiCallbacks::EventType event, void *payload)
-{
-    getInstance()._wifiCallback(event, payload);
 }
 
 inline void MDNSPlugin::loop()

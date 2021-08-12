@@ -36,7 +36,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     "MDNS",                 // friendly name
     "",                     // web_templates
     "",                     // config_forms
-    "wifi,network,http",    // reconfigure_dependencies
+    "wifi,network",         // reconfigure_dependencies
     PluginComponent::PriorityType::MDNS,
     PluginComponent::RTCMemoryId::NONE,
     static_cast<uint8_t>(PluginComponent::MenuType::CUSTOM),
@@ -50,7 +50,9 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     0                   // __reserved
 );
 
-MDNSPlugin::MDNSPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(MDNSPlugin))
+MDNSPlugin::MDNSPlugin() :
+    PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(MDNSPlugin)),
+    _running(false)
 {
     REGISTER_PLUGIN(this, "MDNSPlugin");
 }
@@ -61,17 +63,6 @@ void MDNSService::announce()
     #if ESP8266
         if (MDNSPlugin::getInstance()._isRunning()) {
             MDNS.announce();
-        }
-    #endif
-}
-
-void MDNSPlugin::_installWebServerHooks()
-{
-    #if ESP8266
-        auto server = WebServer::Plugin::getWebServerObject();
-        if (server) {
-            __LDBG_println();
-            WebServer::Plugin::addHandler(F("/mdns_discovery"), mdnsDiscoveryHandler);
         }
     #endif
 }
@@ -139,67 +130,25 @@ void MDNSPlugin::_startQueries()
     }
 }
 
-void MDNSPlugin::_wifiCallback(WiFiCallbacks::EventType event, void *payload)
-{
-    __LDBG_printf("event=%u, running=%u", event, _running);
-    if (event == WiFiCallbacks::EventType::CONNECTED) {
-        end();
-        #if MDNS_DELAYED_START_AFTER_WIFI_CONNECT
-            _Timer(_delayedStart).add(MDNS_DELAYED_START_AFTER_WIFI_CONNECT, false, [this](Event::CallbackTimerPtr timer) {
-                begin();
-            });
-        #else
-            begin();
-        #endif
-
-    }
-    else if (event == WiFiCallbacks::EventType::DISCONNECTED) {
-        end();
-    }
-}
-
 bool MDNSPlugin::isEnabled()
 {
     auto flags = System::Flags::getConfig();
-    return flags.is_mdns_enabled && flags.is_station_mode_enabled;
+    return flags.is_mdns_enabled;
 }
 
 bool MDNSPlugin::isNetBIOSEnabled()
 {
     auto flags = System::Flags::getConfig();
-    return flags.is_mdns_enabled && flags.is_station_mode_enabled && flags.is_netbios_enabled;
-
+    return flags.is_mdns_enabled && flags.is_netbios_enabled;
 }
 
 void MDNSPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
     __DBG_assert_printf(mode != SetupModeType::AUTO_WAKE_UP, "not allowed SetupModeType::AUTO_WAKE_UP");;
-
     if (isEnabled()) {
-        _enabled = true;
         begin();
-
-        #if ARDUINO_ESP8266_MAJOR >= 3
-        #else
-
-            // add wifi handler after all plugins have been initialized
-            WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, wifiCallback);
-            if (WiFi.isConnected()) {
-                _wifiCallback(WiFiCallbacks::EventType::CONNECTED, nullptr); // simulate event if already connected
-            }
-
-        #endif
-
-        dependencies->dependsOn(FSPGM(http), [this](const PluginComponent *plugin, DependencyResponseType response) {
-            if (response != DependencyResponseType::SUCCESS) {
-                return;
-            }
-            _installWebServerHooks();
-        }, this);
     }
 }
-
-
 
 MDNSPlugin &MDNSPlugin::getInstance()
 {

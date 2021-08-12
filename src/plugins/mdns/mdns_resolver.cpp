@@ -44,8 +44,7 @@ using KFCConfigurationClasses::System;
 
     char *MDNSResolver::MDNSServiceInfo::findTxtValue(const String &key)
     {
-        for (auto kv = p_pMDNSResponder._answerKeyValue(p_hServiceQuery, p_u32AnswerIndex); kv != nullptr; kv = kv->m_pNext)
-        {
+        for (auto kv = p_pMDNSResponder._answerKeyValue(p_hServiceQuery, p_u32AnswerIndex); kv != nullptr; kv = kv->m_pNext) {
             __LDBG_printf("find_key=%s key=%s value=%s", key.c_str(), kv->m_pcKey, kv->m_pcValue);
             if (key.equals(kv->m_pcKey)) {
                 return kv->m_pcValue;
@@ -245,7 +244,7 @@ using KFCConfigurationClasses::System;
             if (!_isPort) {
                 auto value = mdnsServiceInfo.findTxtValue(_portValue);
                 if (value) {
-                    _port = (uint16_t)atoi(value);
+                    _port = static_cast<uint16_t>(atoi(value));
                     _dataCollected |= DATA_COLLECTED_PORT;
                 }
             }

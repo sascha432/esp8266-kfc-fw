@@ -249,7 +249,7 @@ size_t AsyncMDNSResponse::_fillBuffer(uint8_t *data, size_t len)
 
 size_t AsyncMDNSResponse::_fillBuffer(uint8_t *data, size_t len)
 {
-    noInterrupts();
+    InterruptLock lock;
     if (_output->_timeout && millis() > _output->_timeout) {
         _output->end();
     }
@@ -257,7 +257,6 @@ size_t AsyncMDNSResponse::_fillBuffer(uint8_t *data, size_t len)
     size_t keep = _output->_timeout == 0 ? 0 : 32;
     if (_output->_output.length() == 0 && keep == 0) {
         // __DBG_printf("length=0 keep=0");
-        interrupts();
         return 0;
     }
     else if (_output->_output.length() > keep) {
@@ -266,11 +265,9 @@ size_t AsyncMDNSResponse::_fillBuffer(uint8_t *data, size_t len)
         if (avail) {
             memcpy(data, _output->_output.c_str(), avail);
             _output->_output = _output->_output.c_str() + avail;
-            interrupts();
             return avail;
         }
     }
-    interrupts();
     // __DBG_printf("retry keep=%u", keep);
     return RESPONSE_TRY_AGAIN;
 }

@@ -119,10 +119,15 @@ bool MDNSPlugin::atModeHandler(AtModeArgs &args)
                     });
 
                     _Scheduler.add(timeout, false, [args, output, this](Event::CallbackTimerPtr timer) {
-                        bool result;
+                        #if DEBUG_MDNS_SD
+                            bool result;
+                        #endif
                         {
                             InterruptLock lock;
-                            _IF_DEBUG(result = ) MDNS.removeServiceQuery(output->_serviceQuery);
+                            #if DEBUG_MDNS_SD
+                                result =
+                            #endif
+                            MDNS.removeServiceQuery(output->_serviceQuery);
                             output->_serviceQuery = nullptr;
                             output->end();
                         }

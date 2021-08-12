@@ -275,6 +275,9 @@ namespace WebServer {
     private:
         void begin(bool restart);
         void end();
+        #if MDNS_PLUGIN
+            void _addMDNS();
+        #endif
         bool _isPublic(const String &pathString) const;
         bool _clientAcceptsGzip(AsyncWebServerRequest *request) const;
 

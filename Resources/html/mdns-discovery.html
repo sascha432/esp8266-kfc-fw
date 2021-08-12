@@ -110,13 +110,13 @@
                 try {
                     var self = this;
                     $(data['l']).each(function(key, val) {
-                        var name= val['s'];
+                        var name = val['s'];
                         var pos = name.indexOf('._');
                         if (pos == -1) {
                             pos = name.indexOf('.');
                         }
                         if (pos != -1) {
-                            name = name.substring(0, pos - 1);
+                            name = name.substring(0, pos);
                         }
                         var row = self.tbody.find('#mdns_id_' + name);
                         var version = val['v'];

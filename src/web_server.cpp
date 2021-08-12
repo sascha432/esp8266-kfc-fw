@@ -61,7 +61,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     "Web server",       // friendly name
     "",                 // web_templates
     "remote",           // config_forms
-    "network",          // reconfigure_dependencies
+    "network,mdns",     // reconfigure_dependencies
     PluginComponent::PriorityType::HTTP,
     PluginComponent::RTCMemoryId::NONE,
     static_cast<uint8_t>(PluginComponent::MenuType::NONE),
@@ -314,6 +314,12 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
         response = new AsyncResolveZeroconfResponse(request->arg(FSPGM(value)));
         headers.setResponseHeaders(response);
     }
+    #if MDNS_PLUGIN
+        else if (url == F("/mdns_discovery")) {
+            MDNSPlugin::mdnsDiscoveryHandler(request);
+            return;
+        }
+    #endif
     // --------------------------------------------------------------------
     else if (url == F("/savecrash.json")) {
         if (!plugin.isAuthenticated(request)) {
@@ -325,35 +331,35 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
         headers.addNoCache(true);
         response = SaveCrash::webHandler::json(request, headers);
     }
-#if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR
-    // --------------------------------------------------------------------
-    else if (url == F("/ambient_light_sensor")) {
-        if (!plugin.isAuthenticated(request)) {
-            auto response = request->beginResponse(403);
-            _logRequest(request, response);
-            request->send(response);
-            return;
-        }
-        int id = request->arg(F("id")).toInt();
-        Sensor_AmbientLight *lightSensor = nullptr;
-        for(const auto &sensor: SensorPlugin::getSensors()) {
-            auto tmpSensor = reinterpret_cast<Sensor_AmbientLight *>(sensor);
-            if (sensor->getType() == SensorPlugin::SensorType::AMBIENT_LIGHT && tmpSensor->getId() == id && tmpSensor->enabled()) {
-                lightSensor = reinterpret_cast<Sensor_AmbientLight *>(sensor);
-                break;
+    #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR
+        // --------------------------------------------------------------------
+        else if (url == F("/ambient_light_sensor")) {
+            if (!plugin.isAuthenticated(request)) {
+                auto response = request->beginResponse(403);
+                _logRequest(request, response);
+                request->send(response);
+                return;
             }
+            int id = request->arg(F("id")).toInt();
+            Sensor_AmbientLight *lightSensor = nullptr;
+            for(const auto &sensor: SensorPlugin::getSensors()) {
+                auto tmpSensor = reinterpret_cast<Sensor_AmbientLight *>(sensor);
+                if (sensor->getType() == SensorPlugin::SensorType::AMBIENT_LIGHT && tmpSensor->getId() == id && tmpSensor->enabled()) {
+                    lightSensor = reinterpret_cast<Sensor_AmbientLight *>(sensor);
+                    break;
+                }
+            }
+            if (!lightSensor || lightSensor->getValue() == -1) {
+                auto response = request->beginResponse(503);
+                _logRequest(request, response);
+                request->send(response);
+                return;
+            }
+            headers.addNoCache(true);
+            response = request->beginResponse(200, FSPGM(mime_text_plain), std::move(String(lightSensor->getValue())));
+            headers.setResponseHeaders(response);
         }
-        if (!lightSensor || lightSensor->getValue() == -1) {
-            auto response = request->beginResponse(503);
-            _logRequest(request, response);
-            request->send(response);
-            return;
-        }
-        headers.addNoCache(true);
-        response = request->beginResponse(200, FSPGM(mime_text_plain), std::move(String(lightSensor->getValue())));
-        headers.setResponseHeaders(response);
-    }
-#endif
+    #endif
     // --------------------------------------------------------------------
     else if (url.startsWith(F("/speedtest."))) { // handles speedtest.zip and speedtest.bmp
         plugin._handlerSpeedTest(request, !url.endsWith(F(".bmp")), headers);
@@ -670,9 +676,13 @@ inline static void ArduinoOTALoop()
 
 void Plugin::end()
 {
-#if ENABLE_ARDUINO_OTA
-    LoopFunctions::remove(ArduinoOTALoop);
-#endif
+    #if ENABLE_ARDUINO_OTA
+        LoopFunctions::remove(ArduinoOTALoop);
+    #endif
+    #if MDNS_PLUGIN
+        MDNSService::removeService(FSPGM(http, "http"), FSPGM(tcp));
+        MDNSService::removeService(FSPGM(https, "https"), FSPGM(tcp));
+    #endif
     __LDBG_printf("server=%p", _server.get());
     _server.reset();
     _loginFailures.reset();
@@ -776,6 +786,23 @@ void Plugin::ArduinoOTADumpInfo(Print &output)
 
 #endif
 
+#if MDNS_PLUGIN
+
+void Plugin::_addMDNS()
+{
+    MDNSService::removeService(FSPGM(http, "http"), FSPGM(tcp));
+    MDNSService::removeService(FSPGM(https, "https"), FSPGM(tcp));
+    auto cfg = System::WebServer::getConfig();
+    String service = FSPGM(http);
+    if (cfg.is_https) {
+        service += 's';
+    }
+    MDNSService::addService(service, FSPGM(tcp, "tcp"), cfg.getPort());
+    MDNSService::announce();
+}
+
+#endif
+
 void Plugin::begin(bool restart)
 {
     __LDBG_printf("restart=%u", restart);
@@ -799,13 +826,7 @@ void Plugin::begin(bool restart)
     }
 
     #if MDNS_PLUGIN
-        // add web server
-        String service = FSPGM(http);
-        if (cfg.is_https) {
-            service += 's';
-        }
-        MDNSService::addService(service, FSPGM(tcp, "tcp"), cfg.getPort());
-        MDNSService::announce();
+        _addMDNS();
     #endif
 
     if (System::Flags::getConfig().is_log_login_failures_enabled) {
@@ -1188,13 +1209,12 @@ void Plugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &
 
 void Plugin::reconfigure(const String &source)
 {
-    // if (source == F("mdns")) {
-    //     #if MDNS_PLUGIN
-    //         MDNSService::removeService(FSPGM(http, "http"), FSPGM(tcp));
-    //         MDNSService::removeService(FSPGM(https, "https"), FSPGM(tcp));
-    //     #endif
-    //     return;
-    // }
+    if (source == F("mdns")) {
+        #if MDNS_PLUGIN
+            _addMDNS();
+        #endif
+        return;
+    }
 
     HandlerStoragePtr storage;
     bool running = !!_server;
@@ -1209,10 +1229,6 @@ void Plugin::reconfigure(const String &source)
 
         // end web server
         end();
-        #if MDNS_PLUGIN
-            MDNSService::removeService(FSPGM(http, "http"), FSPGM(tcp));
-            MDNSService::removeService(FSPGM(https, "https"), FSPGM(tcp));
-        #endif
 
     }
 

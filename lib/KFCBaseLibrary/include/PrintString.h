@@ -11,13 +11,18 @@
 #include <Arduino_compat.h>
 
 #ifndef WSTRING_HAVE_SETLEN
-#if ESP8266
-#define WSTRING_HAVE_SETLEN                 1
-#elif defined(_MSC_VER)
-#define WSTRING_HAVE_SETLEN                 0
-#else
-#define WSTRING_HAVE_SETLEN                 1
+#    if ESP8266
+#        define WSTRING_HAVE_SETLEN 1
+#    elif defined(_MSC_VER)
+#        define WSTRING_HAVE_SETLEN 0
+#    else
+#        define WSTRING_HAVE_SETLEN 1
+#    endif
 #endif
+
+#if 0
+#    undef __DBG_validatePointer
+#    define __DBG_validatePointer(ptr, type) ptr
 #endif
 
 class PrintString : public String, public Print {
@@ -131,6 +136,7 @@ size_t PrintString::write(const char *buf, size_t size)
 inline __attribute__((__always_inline__))
 size_t PrintString::_write(const uint8_t *buf, size_t size)
 {
+    __DBG_validatePointer(buf, VP_HS);
     auto len = length();
     if (size && !reserve(len + size)) {
         return 0;
@@ -156,6 +162,7 @@ size_t PrintString::write_P(PGM_P buf, size_t size)
 inline __attribute__((__always_inline__))
 size_t PrintString::print(const __FlashStringHelper *str)
 {
+    __DBG_validatePointer(str, VP_HPS);
     return Print::print(str);
 }
 

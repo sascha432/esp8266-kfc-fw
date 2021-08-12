@@ -5,7 +5,6 @@
 #include <time.h>
 #include "PrintString.h"
 
-
 void PrintString::printFormatted(const __FlashStringHelper *format)
 {
     print(format);
@@ -41,6 +40,7 @@ size_t PrintString::print(double n, uint8_t digits, bool trimTrailingZeros)
 
 size_t PrintString::vprintf(const char *format, va_list arg)
 {
+    __DBG_validatePointer(format, VP_HPS);
     char temp[128];
     size_t len = vsnprintf(temp, sizeof(temp), format, arg);
     if (len > sizeof(temp) - 1) {
@@ -63,6 +63,7 @@ size_t PrintString::vprintf(const char *format, va_list arg)
 
 size_t PrintString::vprintf_P(PGM_P format, va_list arg)
 {
+    __DBG_validatePointer(format, VP_HPS);
     char temp[128];
     size_t len = vsnprintf_P(temp, sizeof(temp), format, arg);
     if (len > sizeof(temp) - 1) {
@@ -197,6 +198,7 @@ size_t PrintString::_print(PGM_P ptr)
 
 size_t PrintString::_write_P(const uint8_t *buf, size_t size)
 {
+    __DBG_validatePointer(buf, VP_HPS);
     auto len = length();
     if (size && !reserve(len + size)) {
         return 0;

@@ -26,12 +26,14 @@
 
 #define EAGLE_SOC_ADDRESSchar(name) extern "C" char *&name;
 #define EAGLE_SOC_ADDRESSuint32_t(name)  extern "C" uint32_t &name;
+#define EAGLE_SOC_ADDRESSvoid(name)  extern "C" void &*name;
 #define EAGLE_SOC_ADDRESS(type, name) EAGLE_SOC_ADDRESS##type(name)
 
 #else
 
 #define EAGLE_SOC_ADDRESSchar(name) extern "C" char name[];
 #define EAGLE_SOC_ADDRESSuint32_t(name)  extern "C" uint32_t name;
+#define EAGLE_SOC_ADDRESSvoid(name)  extern "C" void *name;
 #define EAGLE_SOC_ADDRESS(type, name) EAGLE_SOC_ADDRESS##type(name)
 
 #endif
@@ -54,6 +56,9 @@ EAGLE_SOC_ADDRESS(uint32_t, _EEPROM_end);
 #define SECTION_IROM0_TEXT_END_ADDRESS                      ((uint32_t)&_irom0_text_end)
 #define SECTION_HEAP_START_ADDRESS                          ((uint32_t)&_heap_start[0])
 #define SECTION_HEAP_END_ADDRESS                            0x3fffc000U
+#define SECTION_DRAM_START_ADDRESS                          0x3ffe8000U
+#define SECTION_DRAM_END_ADDRESS                            0x3fffffffU
+#define SECTION_STACK_END_ADDRESS                           0x3fffffffU
 #define SECTION_EEPROM_START_ADDRESS                        ((uint32_t)&_EEPROM_start)
 #define SECTION_EEPROM_END_ADDRESS                          ((uint32_t)&_EEPROM_end)
 #define SECTION_SAVECRASH_START_ADDRESS                     ((uint32_t)&_SAVECRASH_start)

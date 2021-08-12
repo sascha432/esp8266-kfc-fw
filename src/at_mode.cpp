@@ -1700,11 +1700,13 @@ void at_mode_serial_handle_event(String &commandString)
                     break;
             }
 
-            args.print(F("Heap start/size: 0x%x/%u"), SECTION_HEAP_START_ADDRESS, SECTION_HEAP_END_ADDRESS - SECTION_HEAP_START_ADDRESS);
             args.print(F("irom0.text: 0x%08x-0x%08x"), SECTION_IROM0_TEXT_START_ADDRESS, SECTION_IROM0_TEXT_END_ADDRESS);
             args.print(F("EEPROM: 0x%x/%u"), SECTION_EEPROM_START_ADDRESS, SECTION_EEPROM_END_ADDRESS - SECTION_EEPROM_START_ADDRESS);
             args.print(F("SaveCrash: 0x%x/%u"), SECTION_SAVECRASH_START_ADDRESS, SECTION_SAVECRASH_END_ADDRESS - SECTION_SAVECRASH_START_ADDRESS);
             args.print(F("KFCFW: 0x%x/%u"), SECTION_KFCFW_START_ADDRESS, SECTION_KFCFW_END_ADDRESS - SECTION_KFCFW_START_ADDRESS);
+            args.print(F("DRAM: 0x%08x-0x%08x/%u"), SECTION_DRAM_START_ADDRESS, SECTION_DRAM_END_ADDRESS, SECTION_DRAM_END_ADDRESS - SECTION_DRAM_START_ADDRESS);
+            args.print(F("HEAP: 0x%08x-0x%08x/%u"), SECTION_HEAP_START_ADDRESS, SECTION_HEAP_END_ADDRESS, SECTION_HEAP_END_ADDRESS - SECTION_HEAP_START_ADDRESS);
+            args.print(F("Stack: 0x%08x-0x%08x/%u"), (uint32)&flashModeStr, SECTION_STACK_END_ADDRESS, SECTION_STACK_END_ADDRESS - (uint32)&flashModeStr);
             args.print(F("CPU frequency: %uMHz"), ESP.getCpuFreqMHz());
             args.print(F("Flash size / Vendor / Mode: %s / %02x / %s"), formatBytes(ESP.getFlashChipRealSize()).c_str(), ESP.getFlashChipVendorId(), flashModeStr);
             args.print(F("SDK / Core: %s / %s"), ESP.getSdkVersion(), ESP.getFullVersion().c_str());

@@ -28,7 +28,7 @@ void *__validatePointer(const void *ptr, ValidatePointerType type, const char *f
     }
     if (static_cast<int>(type) & static_cast<int>(ValidatePointerType::P_STACK)) {
         uint32_t stackPtr = 0;
-        if ((uint32_t)ptr > (uint32_t)&stackPtr && (uint32_t)ptr < 0x3fffffffU) {
+        if ((uint32_t)ptr > SECTION_HEAP_END_ADDRESS && (uint32_t)ptr > (uint32_t)&stackPtr && (uint32_t)ptr < SECTION_STACK_END_ADDRESS) {
             return const_cast<void *>(ptr);
         }
     }
@@ -44,7 +44,10 @@ void *__validatePointer(const void *ptr, ValidatePointerType type, const char *f
     }
     __DBG_printf(_VT100(bold_red) "INVALID POINTER %p(%u) FILE=%s LINE=%u FUNC=%s" _VT100(reset), ptr, type, file, line, func);
     __dump_binary_to(DEBUG_OUTPUT, ptr, 16, 16);
-    // __DBG_panic();
+    // check if the pointer is in DRAM (compiled in data in RAM, outside the HEAP)
+    if (!___IsValidDRAMPointer(ptr)) {
+        __DBG_panic();
+    }
     return nullptr;
 }
 

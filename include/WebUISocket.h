@@ -67,13 +67,16 @@ public:
     static void sendValue(AsyncWebSocketClient *client, const __FlashStringHelper *id, const String &value, bool state);
 
     inline static WebUISocket *getSender() {
+        __DBG_validatePointer(_sender, ValidatePointerType::P_NHS);
         return _sender;
     }
 
     inline static bool hasAuthenticatedClients() {
+        __DBG_validatePointer(_server, ValidatePointerType::P_NHS);
         return _server && _server->hasAuthenticatedClients();
     }
     inline static WsClientAsyncWebSocket *getServerSocket() {
+        __DBG_validatePointer(_server, ValidatePointerType::P_NHS);
         return _server;
     }
 

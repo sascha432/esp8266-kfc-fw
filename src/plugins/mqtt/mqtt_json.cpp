@@ -26,8 +26,9 @@ Reader::Reader() : Reader(nullptr)
     clear();
 }
 
-bool Reader::processElement() {
-    // Serial.printf_P(PSTR("key=%s val=%s type=%s path=%s level=%u\n"), _keyStr.c_str(), _valueStr.c_str(), jsonType2String(getType()), getPath().c_str(), getLevel());
+bool Reader::processElement()
+{
+    __LDBG_printf("key=%s val=%s type=%s path=%s level=%u", _keyStr.c_str(), _valueStr.c_str(), jsonType2String(getType()), getPath().c_str(), getLevel());
     auto path = getPath();
     switch(getType()) {
         case JsonType_t::JSON_TYPE_INT:

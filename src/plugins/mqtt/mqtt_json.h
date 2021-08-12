@@ -90,6 +90,12 @@ namespace MQTT {
                 effect = String();
             }
 
+            void dump(Print &output) {
+                output.printf_P(PSTR("brightness=%d color_temp=%d rgb=%s transition=%f state=%d white_value=%d effect=%s"),
+                    brightness, color_temp, color.toString().c_str(), transition, state, white_value, effect.c_str()
+                );
+            }
+
         public:
             int32_t brightness;
             int32_t color_temp;

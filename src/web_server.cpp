@@ -781,11 +781,11 @@ void Plugin::begin(bool restart)
     __LDBG_printf("restart=%u", restart);
     auto mode = System::WebServer::getMode();
     if (mode == System::WebServer::ModeType::DISABLED) {
-#if MDNS_PLUGIN
-        // call announce to remove the web server from MDNS
-        // otherwise it shows until TTL is reached
-        MDNSService::announce();
-#endif
+        #if MDNS_PLUGIN
+            // call announce to remove the web server from MDNS
+            // otherwise it shows until TTL is reached
+            MDNSService::announce();
+        #endif
         return;
     }
 
@@ -798,15 +798,15 @@ void Plugin::begin(bool restart)
         return;
     }
 
-#if MDNS_PLUGIN
-    // add web server
-    String service = FSPGM(http);
-    if (cfg.is_https) {
-        service += 's';
-    }
-    MDNSService::addService(service, FSPGM(tcp, "tcp"), cfg.getPort());
-    MDNSService::announce();
-#endif
+    #if MDNS_PLUGIN
+        // add web server
+        String service = FSPGM(http);
+        if (cfg.is_https) {
+            service += 's';
+        }
+        MDNSService::addService(service, FSPGM(tcp, "tcp"), cfg.getPort());
+        MDNSService::announce();
+    #endif
 
     if (System::Flags::getConfig().is_log_login_failures_enabled) {
         _loginFailures.reset(new FailureCounterContainer());
@@ -1188,6 +1188,14 @@ void Plugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &
 
 void Plugin::reconfigure(const String &source)
 {
+    // if (source == F("mdns")) {
+    //     #if MDNS_PLUGIN
+    //         MDNSService::removeService(FSPGM(http, "http"), FSPGM(tcp));
+    //         MDNSService::removeService(FSPGM(https, "https"), FSPGM(tcp));
+    //     #endif
+    //     return;
+    // }
+
     HandlerStoragePtr storage;
     bool running = !!_server;
 
@@ -1201,10 +1209,10 @@ void Plugin::reconfigure(const String &source)
 
         // end web server
         end();
-#if MDNS_PLUGIN
-        MDNSService::removeService(FSPGM(http, "http"), FSPGM(tcp));
-        MDNSService::removeService(FSPGM(https, "https"), FSPGM(tcp));
-#endif
+        #if MDNS_PLUGIN
+            MDNSService::removeService(FSPGM(http, "http"), FSPGM(tcp));
+            MDNSService::removeService(FSPGM(https, "https"), FSPGM(tcp));
+        #endif
 
     }
 

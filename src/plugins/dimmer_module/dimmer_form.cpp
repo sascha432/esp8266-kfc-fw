@@ -186,6 +186,7 @@ namespace Dimmer {
 
                 form.addObjectGetterSetter(F("snrt"), FormGetterSetter(cfg, single_click_time));
                 form.addFormUI(F("Double Click Speed:"), FormUI::Suffix(FSPGM(milliseconds)));
+                form.setInvalidMissing(false);
                 cfg.addRangeValidatorFor_single_click_time(form);
 
                 form.addObjectGetterSetter(F("minbr"), FormGetterSetter(cfg, min_brightness));

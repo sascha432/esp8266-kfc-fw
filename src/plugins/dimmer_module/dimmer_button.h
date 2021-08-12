@@ -21,7 +21,7 @@ namespace Dimmer {
     public:
         ButtonConfig(ConfigType &config) :
             PushButtonConfig(
-                EnumHelper::Bitset::all(EventType::UP, EventType::DOWN, EventType::LONG_PRESSED, EventType::HOLD),
+                EnumHelper::Bitset::all(EventType::UP, EventType::DOWN, EventType::LONG_PRESSED, EventType::HOLD/*, EventType::REPEATED_CLICK*/),
                 config.shortpress_time,
                 config.longpress_time,
                 IOT_DIMMER_MODULE_HOLD_REPEAT_TIME,
@@ -49,7 +49,7 @@ namespace Dimmer {
 
     private:
         Buttons &_dimmer;
-        // stores current level for switch on/off
+        // stores current level for switching on/off
         int16_t _level;
         // channel number
         uint8_t _channel;

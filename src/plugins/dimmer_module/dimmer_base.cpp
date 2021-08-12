@@ -193,22 +193,15 @@ void Base::_stopFading(uint8_t channel)
     void Base::_setDimmingLevels()
     {
         // this only works if all channels have about the same load
-        float level = 0;
+        uint32_t levelSum = 0;
         for(uint8_t i = 0; i < getChannelCount(); i++) {
-            level += getChannel(i);
+            levelSum += getChannel(i);
         }
-        level = level / (float)(IOT_DIMMER_MODULE_MAX_BRIGHTNESS * getChannelCount());
-        #if IOT_SENSOR_HAVE_HLW8012
-            auto sensor = SensorPlugin::getSensor<MQTT::SensorType::HLW8012>();
-            if (sensor) {
-                sensor->setDimmingLevel(level);
-            }
-        #elif IOT_SENSOR_HAVE_HLW8032
-            auto sensor = SensorPlugin::getSensor<MQTT::SensorType::HLW8032>();
-            if (sensor) {
-                sensor->setDimmingLevel(level);
-            }
-        #endif
+        float level = levelSum / static_cast<float>(IOT_DIMMER_MODULE_MAX_BRIGHTNESS * getChannelCount());
+        auto sensor = SensorPlugin::getSensor<Sensor_HLW80xx::kSensorType>();
+        if (sensor) {
+            sensor->setDimmingLevel(level);
+        }
     }
 
 #endif
@@ -260,17 +253,10 @@ void Base::_updateMetrics(const MetricsType &metrics)
 
 void Base::_forceMetricsUpdate(uint8_t delay)
 {
-    #if IOT_SENSOR_HAVE_HLW8012
-        auto sensor = SensorPlugin::getSensor<MQTT::SensorType::HLW8012>();
-        if (sensor) {
-            sensor->setNextMqttUpdate(delay);
-        }
-    #elif IOT_SENSOR_HAVE_HLW8032
-        auto sensor = SensorPlugin::getSensor<MQTT::SensorType::HLW8032>();
-        if (sensor) {
-            sensor->setNextMqttUpdate(delay);
-        }
-    #endif
+    auto sensor = SensorPlugin::getSensor<Sensor_HLW80xx::kSensorType>();
+    if (sensor) {
+        sensor->setNextMqttUpdate(delay);
+    }
 }
 
 float Base::getTransitionTime(int fromLevel, int toLevel, float transitionTimeOverride)
@@ -279,19 +265,19 @@ float Base::getTransitionTime(int fromLevel, int toLevel, float transitionTimeOv
         return -transitionTimeOverride;
     }
     if (toLevel == 0) {
-        __DBG_printf("transition=%.2f off", _config.off_fadetime);
+        __LDBG_printf("transition=%.2f off", _config.off_fadetime);
         return _config.off_fadetime;
     }
     if (!isnan(transitionTimeOverride)) {
-        auto time = transitionTimeOverride / (abs(fromLevel - toLevel) / (float)DIMMER_MAX_LEVEL); // calculate how much time it takes to dim from 0-100%
-        __DBG_printf("transition=%.2f t100=%f", transitionTimeOverride, time);
+        auto time = transitionTimeOverride / (abs(fromLevel - toLevel) / static_cast<float>(DIMMER_MAX_LEVEL)); // calculate how much time it takes to dim from 0-100%
+        __LDBG_printf("transition=%.2f t100=%f", transitionTimeOverride, time);
         return time;
     }
     if (fromLevel == 0 && toLevel) {
-        __DBG_printf("transition=%.2f on", _config.on_fadetime);
+        __LDBG_printf("transition=%.2f on", _config.on_fadetime);
         return _config.on_fadetime;
     }
-    __DBG_printf("transition=%.2f fade", _config.lp_fadetime);
+    __LDBG_printf("transition=%.2f fade", _config.lp_fadetime);
     return _config.lp_fadetime;
 }
 

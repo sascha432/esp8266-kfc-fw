@@ -96,9 +96,25 @@ namespace Dimmer {
 
         inline void Base::onData(Stream &client)
         {
+            #define DEBUG_INCOMING_DATA 0
+            #if DEBUG_INCOMING_DATA
+                PrintString str1;
+                String str2;
+            #endif
             while(client.available()) {
-                dimmer_plugin._wire.feed(client.read());
+                #if DEBUG_INCOMING_DATA
+                    auto data = static_cast<uint8_t>(client.read());
+                    str1.printf_P(PSTR("%02x"), data);
+                    str2 += isprint(data) ? static_cast<char>(data) : '.';
+                    dimmer_plugin._wire.feed(data);
+                #else
+                    dimmer_plugin._wire.feed(client.read());
+                #endif
             }
+            #if DEBUG_INCOMING_DATA
+                __DBG_printf("feed %s [%s]", str1.c_str(), str2.c_str());
+            #endif
+            #undef DEBUG_INCOMING_DATA
         }
 
         inline void Base::onReceive(int length)

@@ -61,7 +61,7 @@ void Module::getStatus(Print &out)
     for(uint8_t i = 0; i < _channels.size(); i++) {
         out.printf_P(PSTR("Channel %u: "), i);
         if (_channels[i].getOnState()) {
-            out.printf_P(PSTR("on - %.1f%%" HTML_S(br)), _channels[i].getLevel() / (IOT_DIMMER_MODULE_MAX_BRIGHTNESS * 100.0));
+            out.printf_P(PSTR("on - %.1f%%" HTML_S(br)), static_cast<float>(_channels[i].getLevel() * 100) / IOT_DIMMER_MODULE_MAX_BRIGHTNESS);
         }
         else {
             out.print(F("off" HTML_S(br)));
@@ -110,7 +110,7 @@ void Module::_getChannels()
 
 void Module::_onReceive(size_t length)
 {
-    // __LDBG_printf("length=%u type=%02x", length, _wire.peek());
+    __LDBG_printf("length=%u type=%02x", length, _wire.peek());
     if (_wire.peek() == DIMMER_EVENT_FADING_COMPLETE) {
         _wire.read();
         length--;
@@ -122,10 +122,13 @@ void Module::_onReceive(size_t length)
                 auto level = _calcLevelReverse(event.level, event.channel);
                 auto curLevel = _channels[event.channel].getLevel();
                 if (curLevel != level) {  // update level if out of sync
-                    __LDBG_printf("out of sync %u!=%u", curLevel, level);
+                    __LDBG_printf("resync cur=%u lvl=%u", curLevel, level);
                     auto publish = (event.level == _calcLevel(curLevel, event.channel)); // check if the error comes from up or downsampling and do not publish in those cases
                     _channels[event.channel].setLevel(level, NAN, publish);
                 }
+            }
+            else {
+                __LDBG_printf("invalid channel=%u", event.channel);
             }
         }
 

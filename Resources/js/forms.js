@@ -97,7 +97,7 @@ $.addFormHelp = function(force) {
         targets.each(function() {
             var label = $('label[for="' + $(this).attr('id') + '"]');
             if (force || label.find('.form-help-addon').length == 0) {
-                console.debug('update #'+ $(this).attr('id'));
+                console.debug('adding help #'+ $(this).attr('id'));
                 var regex = RegExp(tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '.*');
                 label.html(label.html().replace(regex, '') + help);
                 label.find('.form-help-label-text').on('click', function(e) {

@@ -174,9 +174,11 @@ namespace KFCConfigurationClasses {
                 GradientAnimationType() :
                     speed(kDefaultValueFor_speed),
                     entries{
-                        Entry(0x0000ff, 0),
-                        Entry(0x00ff00, IOT_CLOCK_NUM_PIXELS / 2),
-                        Entry(0xff0000, IOT_CLOCK_NUM_PIXELS - 1)
+                        #ifdef IOT_CLOCK_NUM_PIXELS
+                            Entry(0x0000ff, 0),
+                            Entry(0x00ff00, IOT_CLOCK_NUM_PIXELS / 2),
+                            Entry(0xff0000, IOT_CLOCK_NUM_PIXELS - 1)
+                        #endif
                     }
                 {}
             };

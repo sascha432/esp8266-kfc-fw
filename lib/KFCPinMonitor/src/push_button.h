@@ -5,6 +5,7 @@
 #pragma once
 
 #include <Arduino_compat.h>
+#include <EnumHelper.h>
 #include <MicrosTimer.h>
 
 // #undef DEBUG_PIN_MONITOR

@@ -248,11 +248,6 @@
                 "target_dirs": {
                     "./data/webui/images": [ "./lib/KFCWebBuilder/Resources/images/spinner.gif", "./Resources/images/light.svg" ],
                     "./data/webui/fonts": { "./lib/KFCWebBuilder/Resources/fonts": "/^open-iconic\\..*/" }
-                    // "./data/stk500v1": {
-                    //     "./src/plugins/stk500v1": "/^atmega\\.csv/",
-                    //     "./src/plugins/dimmer_module/firmware/hex": "/^.*\\.hex/"
-                    // },
-                    // "./data/fonts": [ "./src/plugins/ssd1306_plugin/fonts/7digit" ]
                 },
                 "processors":  {
                     "compress": {

@@ -50,7 +50,7 @@
 
 // repeat rate for hold button
 #ifndef IOT_DIMMER_MODULE_HOLD_REPEAT_TIME
-#    define IOT_DIMMER_MODULE_HOLD_REPEAT_TIME 125
+#    define IOT_DIMMER_MODULE_HOLD_REPEAT_TIME 250
 #endif
 
 #ifndef IOT_DIMMER_MODULE_PINMODE

@@ -145,6 +145,7 @@ namespace Dimmer {
 
             PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, IOT_DIMMER_MODULE_CHANNELS, cn, cr, co);
 
+
             for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
                 form.addCallbackGetterSetter<String>(F_VAR(cn, i), [cfg, i](String &name, FormField &, bool store) {
                     if (store) {

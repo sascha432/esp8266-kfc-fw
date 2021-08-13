@@ -33,10 +33,6 @@ enum class AutoDiscoverySwitchEnum {
 MQTT::AutoDiscovery::EntityPtr ClockPlugin::getAutoDiscovery(FormatType format, uint8_t num)
 {
     auto discovery = new AutoDiscovery::Entity();
-    #if MQTT_AUTO_DISCOVERY_USE_NAME
-        String name = KFCConfigurationClasses::System::Device::getName();
-        name += ' ';
-    #endif
     switch(static_cast<AutoDiscoverySwitchEnum>(num)) {
         case AutoDiscoverySwitchEnum::BRIGHTNESS: {
             if (!discovery->create(this, MQTT_NAME, format)) {
@@ -54,9 +50,9 @@ MQTT::AutoDiscovery::EntityPtr ClockPlugin::getAutoDiscovery(FormatType format, 
             discovery->addEffectList(KFCConfigurationClasses::Plugins::ClockConfigNS::ClockConfigType::getAnimationNamesJsonArray());
             #if MQTT_AUTO_DISCOVERY_USE_NAME
                 #if IOT_LED_MATRIX
-                    discovery->addName(name + F("LED Matrix"));
+                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("LED Matrix")));
                 #else
-                    discovery->addName(name + F("Clock"));
+                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Clock")));
                 #endif
             #endif
         }
@@ -87,7 +83,7 @@ MQTT::AutoDiscovery::EntityPtr ClockPlugin::getAutoDiscovery(FormatType format, 
             discovery->addSpeedRangeMin(_config.min_fan_speed);
             discovery->addSpeedRangeMax(_config.max_fan_speed);
             #if MQTT_AUTO_DISCOVERY_USE_NAME
-                discovery->addName(name + F("Fan"));
+                discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Fan")));
             #endif
         }
         break;

@@ -85,10 +85,10 @@ bool Entity::_create(ComponentType componentType, const String &name, FormatType
 
     if (_format == FormatType::JSON) {
         _discovery += '{';
-#if MQTT_AUTO_DISCOVERY_USE_ABBREVIATIONS
-        _baseTopic = MQTT::Client::formatTopic(emptyString);
-        addParameter(F("~"), _baseTopic);
-#endif
+        #if MQTT_AUTO_DISCOVERY_USE_ABBREVIATIONS
+            _baseTopic = MQTT::Client::formatTopic(emptyString);
+            addParameter(F("~"), _baseTopic);
+        #endif
     } else {
         _discovery += Component::getNameByType(componentType);
         _discovery += F(":\n  - ");
@@ -101,10 +101,10 @@ bool Entity::_create(ComponentType componentType, const String &name, FormatType
             addParameter(FSPGM(mqtt_unique_id), uniqueId);
         }
         addParameter(FSPGM(mqtt_availability_topic), MQTT::Client::formatTopic(MQTT_AVAILABILITY_TOPIC));
-#if MQTT_AVAILABILITY_TOPIC_ADD_PAYLOAD_ON_OFF
-        addParameter(FSPGM(mqtt_payload_available), MQTT_AVAILABILITY_TOPIC_ONLINE);
-        addParameter(FSPGM(mqtt_payload_not_available), MQTT_AVAILABILITY_TOPIC_OFFLINE);
-#endif
+        #if MQTT_AVAILABILITY_TOPIC_ADD_PAYLOAD_ON_OFF
+            addParameter(FSPGM(mqtt_payload_available), MQTT_AVAILABILITY_TOPIC_ONLINE);
+            addParameter(FSPGM(mqtt_payload_not_available), MQTT_AVAILABILITY_TOPIC_OFFLINE);
+        #endif
     }
     if (_format == FormatType::JSON) {
         PrintString model;
@@ -151,15 +151,15 @@ void Entity::__addParameter(NameType name, const char *str, bool quotes)
             _discovery.print('"');
         }
         // _discovery.printf_P(PSTR("\"%s\":\""), name);
-#if MQTT_AUTO_DISCOVERY_USE_ABBREVIATIONS
-        auto len = strlen_P(RFPSTR(name));
-        if (len > 2 && pgm_read_word(RFPSTR(name) + len - 2) == (('_') | ('t' << 8))) { // check if the name ends with "_t"
-            if (strncmp_P(_baseTopic.c_str(), str, _baseTopic.length()) == 0) { // replace _baseTopic withj ~
-                str += _baseTopic.length();
-                _discovery.print('~');
-            }
-        }
-#endif
+        #if MQTT_AUTO_DISCOVERY_USE_ABBREVIATIONS
+                auto len = strlen_P(RFPSTR(name));
+                if (len > 2 && pgm_read_word(RFPSTR(name) + len - 2) == (('_') | ('t' << 8))) { // check if the name ends with "_t"
+                    if (strncmp_P(_baseTopic.c_str(), str, _baseTopic.length()) == 0) { // replace _baseTopic withj ~
+                        str += _baseTopic.length();
+                        _discovery.print('~');
+                    }
+                }
+        #endif
         if (quotes) {
             JsonTools::Utf8Buffer buffer;
             JsonTools::printToEscaped(_discovery, FPSTR(str), &buffer);

@@ -52,10 +52,6 @@ Sensor_INA219::~Sensor_INA219()
 MQTT::AutoDiscovery::EntityPtr Sensor_INA219::getAutoDiscovery(FormatType format, uint8_t num)
 {
     auto discovery = new AutoDiscovery::Entity();
-    #if MQTT_AUTO_DISCOVERY_USE_NAME
-        String name = KFCConfigurationClasses::System::Device::getName();
-        name += ' ';
-    #endif
     switch(num) {
         case 0:
             if (discovery->create(this, _getId(SensorInputType::VOLTAGE), format)) {
@@ -63,7 +59,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_INA219::getAutoDiscovery(FormatType format
                 discovery->addUnitOfMeasurement('V');
                 discovery->addDeviceClass(F("voltage"));
                 #if MQTT_AUTO_DISCOVERY_USE_NAME
-                    discovery->addName(name + F("Voltage"));
+                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Voltage")));
                 #endif
             }
             break;
@@ -73,7 +69,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_INA219::getAutoDiscovery(FormatType format
                 discovery->addUnitOfMeasurement(_getCurrentUnit());
                 discovery->addDeviceClass(F("current"));
                 #if MQTT_AUTO_DISCOVERY_USE_NAME
-                    discovery->addName(name + F("Current"));
+                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Current")));
                 #endif
             }
             break;
@@ -83,7 +79,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_INA219::getAutoDiscovery(FormatType format
                 discovery->addUnitOfMeasurement(_getPowerUnit());
                 discovery->addDeviceClass(F("power"));
                 #if MQTT_AUTO_DISCOVERY_USE_NAME
-                    discovery->addName(name + F("Power"));
+                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Power")));
                 #endif
             }
             break;
@@ -93,7 +89,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_INA219::getAutoDiscovery(FormatType format
                 discovery->addUnitOfMeasurement(_getCurrentUnit());
                 discovery->addDeviceClass(F("current"));
                 #if MQTT_AUTO_DISCOVERY_USE_NAME
-                    discovery->addName(name + F("Peak Current"));
+                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Peak Current")));
                 #endif
             }
             break;
@@ -103,7 +99,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_INA219::getAutoDiscovery(FormatType format
                 discovery->addUnitOfMeasurement(_getPowerUnit());
                 discovery->addDeviceClass(F("power"));
                 #if MQTT_AUTO_DISCOVERY_USE_NAME
-                    discovery->addName(name + F("Peak Power"));
+                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Peak Power")));
                 #endif
             }
             break;

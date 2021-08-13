@@ -37,7 +37,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_LM75A::getAutoDiscovery(MQTT::FormatType f
             discovery->addStateTopic(MQTT::Client::formatTopic(_getId()));
             discovery->addUnitOfMeasurement(FSPGM(UTF8_degreeC));
             #if MQTT_AUTO_DISCOVERY_USE_NAME
-                discovery->addName(String(KFCConfigurationClasses::System::Device::getName()) + F(" LM75A Temperature"));
+                discovery->addName(MQTT::Client::getAutoDiscoveryName(F(" LM75A Temperature")));
             #endif
             break;
     }

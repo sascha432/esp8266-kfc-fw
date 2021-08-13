@@ -243,7 +243,14 @@ MQTT::AutoDiscovery::EntityPtr SwitchPlugin::getAutoDiscovery(MQTT::FormatType f
     if (!discovery->create(this, channel, format)) {
         return discovery;
     }
-    discovery->addName(_names[num].toString(num));
+    #if MQTT_AUTO_DISCOVERY_USE_NAME
+        discovery->addName(MQTT::Client::getAutoDiscoveryName(FPSTR(_names[num].toString(num).c_str())));
+    #else
+        String fullname = KFCConfigurationClasses::System::Device::getName();
+        fullname += ' ';
+        fullname += _names[num].toString(num);
+        discovery->addName(fullname);
+    #endif
     discovery->addStateTopic(_formatTopic(num, true));
     discovery->addCommandTopic(_formatTopic(num, false));
     return discovery;

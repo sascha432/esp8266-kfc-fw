@@ -42,14 +42,17 @@ MQTT::AutoDiscovery::EntityPtr Channel::getAutoDiscovery(FormatType format, uint
                 discovery->addParameter(F("brightness"), true);
                 auto name = KFCConfigurationClasses::Plugins::DimmerConfigNS::Dimmer::getChannelName(_channel);
                 if (*name) {
-                    discovery->addName(name);
+                    String fullname = KFCConfigurationClasses::System::Device::getName();
+                    fullname += ' ';
+                    fullname += name;
+                    discovery->addName(fullname);
                 }
                 else {
                     #if MQTT_AUTO_DISCOVERY_USE_NAME
                         #if IOT_DIMMER_MODULE_CHANNELS > 1
-                            discovery->addName(String(KFCConfigurationClasses::System::Device::getName()) + PrintString(F(" Dimmer Channel %u"), _channel + 1));
+                            discovery->addName(MQTT::Client::getAutoDiscoveryName(FPSTR(PrintString(F("Dimmer Channel %u"), _channel + 1).c_str())));
                         #else
-                            discovery->addName(String(KFCConfigurationClasses::System::Device::getName()) + F(" Dimmer"));
+                            discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Dimmer")));
                         #endif
                     #endif
                 }

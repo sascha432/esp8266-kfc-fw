@@ -73,7 +73,7 @@
 #endif
 
 // add name to each MQTT device
-// Device Name + ' ' + Name
+// Device Name + ' ' + Component Name
 #ifndef MQTT_AUTO_DISCOVERY_USE_NAME
 #define MQTT_AUTO_DISCOVERY_USE_NAME                                0
 #endif

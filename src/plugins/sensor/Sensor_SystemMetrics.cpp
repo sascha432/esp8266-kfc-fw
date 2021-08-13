@@ -40,10 +40,6 @@ Sensor_SystemMetrics::~Sensor_SystemMetrics()
 MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::FormatType format, uint8_t num)
 {
     MQTT::AutoDiscovery::EntityPtr discovery = new MQTT::AutoDiscovery::Entity();
-    #if MQTT_AUTO_DISCOVERY_USE_NAME
-        String name = KFCConfigurationClasses::System::Device::getName();
-        name += ' ';
-    #endif
     switch(num) {
         case 0:
             if (discovery->create(this, FSPGM(uptime), format)) {
@@ -51,7 +47,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::Form
                 discovery->addUnitOfMeasurement(FSPGM(seconds));
                 discovery->addValueTemplate(FSPGM(uptime));
                 #if MQTT_AUTO_DISCOVERY_USE_NAME
-                    discovery->addName(name + F("System Uptime (seconds)"));
+                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("System Uptime (seconds)")));
                 #endif
             }
             break;
@@ -60,7 +56,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::Form
                 discovery->addStateTopic(_getTopic());
                 discovery->addValueTemplate(F("uptime_hr"));
                 #if MQTT_AUTO_DISCOVERY_USE_NAME
-                    discovery->addName(name + F("System Uptime"));
+                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("System Uptime")));
                 #endif
             }
             break;
@@ -70,7 +66,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::Form
                 discovery->addUnitOfMeasurement(FSPGM(bytes));
                 discovery->addValueTemplate(FSPGM(heap));
                 #if MQTT_AUTO_DISCOVERY_USE_NAME
-                    discovery->addName(name + F("Free Heap"));
+                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Free Heap")));
                 #endif
             }
             break;
@@ -79,7 +75,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::Form
                 discovery->addStateTopic(_getTopic());
                 discovery->addValueTemplate(FSPGM(version));
                 #if MQTT_AUTO_DISCOVERY_USE_NAME
-                    discovery->addName(name + F("Firmware Version"));
+                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Firmware Version")));
                 #endif
             }
             break;
@@ -88,7 +84,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::Form
                 discovery->addStateTopic(_getTopic());
                 discovery->addValueTemplate(F("heap_frag"));
                 #if MQTT_AUTO_DISCOVERY_USE_NAME
-                    discovery->addName(name + F("Heap Fragmentation"));
+                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Heap Fragmentation")));
                 #endif
             }
             break;

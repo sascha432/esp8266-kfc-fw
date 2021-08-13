@@ -35,10 +35,6 @@ Sensor_BME280::~Sensor_BME280()
 MQTT::AutoDiscovery::EntityPtr Sensor_BME280::getAutoDiscovery(FormatType format, uint8_t num)
 {
     auto discovery = new MQTT::AutoDiscovery::Entity();
-    #if MQTT_AUTO_DISCOVERY_USE_NAME
-        String name = KFCConfigurationClasses::System::Device::getName();
-        name += ' ';
-    #endif
     switch(num) {
         case 0:
             if (discovery->create(this, _getId(FSPGM(temperature, "temperature")), format)) {
@@ -47,7 +43,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_BME280::getAutoDiscovery(FormatType format
                 discovery->addValueTemplate(FSPGM(temperature));
                 discovery->addDeviceClass(F("temperature"));
                 #if MQTT_AUTO_DISCOVERY_USE_NAME
-                    discovery->addName(name + F("BME280 Temperature"));
+                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("BME280 Temperature")));
                 #endif
             }
             break;
@@ -58,7 +54,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_BME280::getAutoDiscovery(FormatType format
                 discovery->addValueTemplate(FSPGM(humidity));
                 discovery->addDeviceClass(F("humidity"));
                 #if MQTT_AUTO_DISCOVERY_USE_NAME
-                    discovery->addName(name + F("BME280 Humidity"));
+                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("BME280 Humidity")));
                 #endif
             }
             break;
@@ -69,7 +65,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_BME280::getAutoDiscovery(FormatType format
                 discovery->addValueTemplate(FSPGM(pressure));
                 discovery->addDeviceClass(F("pressure"));
                 #if MQTT_AUTO_DISCOVERY_USE_NAME
-                    discovery->addName(name + F("BME280 Pressure"));
+                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("BME280 Pressure")));
                 #endif
             }
             break;

@@ -604,6 +604,10 @@ public:
         // translate into 0, 1 or 2
         static uint8_t _translateQosType(QosType qos = QosType::DEFAULT);
 
+        #if MQTT_AUTO_DISCOVERY_USE_NAME
+            static String getAutoDiscoveryName(const __FlashStringHelper *componentName);
+        #endif
+
     private:
         static String _getBaseTopic();
     #if MQTT_GROUP_TOPIC
@@ -830,6 +834,26 @@ public:
     {
         return static_cast<uint8_t>(_getDefaultQos(qos));
     }
+
+    #if MQTT_AUTO_DISCOVERY_USE_NAME
+
+    inline String Client::getAutoDiscoveryName(const __FlashStringHelper *componentName)
+    {
+        String name = KFCConfigurationClasses::Plugins::MQTTConfigNS::MqttClient::getAutoDiscoveryName();
+        if (name.length() == 0) {
+            return String();
+        }
+        if (name.indexOf(F("${device_name}")) != -1) {
+            name.replace(F("${device_name}"), KFCConfigurationClasses::System::Device::getName());
+        }
+        if (name.indexOf(F("${device_title}")) != -1) {
+            name.replace(F("${device_title}"), KFCConfigurationClasses::System::Device::getTitle());
+        }
+        name.replace(F("${component_name}"), componentName);
+        return name;
+    }
+
+    #endif
 
     inline __attribute__((__always_inline__))
     AutoDiscovery::QueuePtr &Client::getAutoDiscoveryQueue() {

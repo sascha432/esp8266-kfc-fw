@@ -2,6 +2,7 @@
 
 ## Version 0.0.5
 
+- Friendly MQTT names
 - Fixed MDNS for Arduino Core 3.x
 - Better response for dimmer buttons and fix for disabled "long press"
 - Added gradient animation

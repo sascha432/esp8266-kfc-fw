@@ -16,10 +16,6 @@
 MQTT::AutoDiscovery::EntityPtr Sensor_DimmerMetrics::getAutoDiscovery(FormatType format, uint8_t num)
 {
     auto discovery = new AutoDiscovery::Entity();
-    #if MQTT_AUTO_DISCOVERY_USE_NAME
-        String name = KFCConfigurationClasses::System::Device::getName();
-        name += ' ';
-    #endif
     switch(num) {
         case 0:
             if (discovery->create(this, F("int_temp"), format)) {
@@ -27,7 +23,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_DimmerMetrics::getAutoDiscovery(FormatType
                 discovery->addValueTemplate(F("int_temp"));
                 discovery->addDeviceClass(F("temperature"), FSPGM(UTF8_degreeC));
                 #if MQTT_AUTO_DISCOVERY_USE_NAME
-                    discovery->addName(name + F("MCU Temperature"));
+                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("MCU Temperature")));
                 #endif
             }
             break;
@@ -37,7 +33,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_DimmerMetrics::getAutoDiscovery(FormatType
                 discovery->addValueTemplate(F("ntc_temp"));
                 discovery->addDeviceClass(F("temperature"), FSPGM(UTF8_degreeC));
                 #if MQTT_AUTO_DISCOVERY_USE_NAME
-                    discovery->addName(name + F("NTC Temperature"));
+                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("NTC Temperature")));
                 #endif
             }
             break;
@@ -47,7 +43,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_DimmerMetrics::getAutoDiscovery(FormatType
                 discovery->addValueTemplate(F("vcc"));
                 discovery->addDeviceClass(F("voltage"), 'V');
                 #if MQTT_AUTO_DISCOVERY_USE_NAME
-                    discovery->addName(name + F("MCU VCC"));
+                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("MCU VCC")));
                 #endif
             }
             break;
@@ -57,7 +53,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_DimmerMetrics::getAutoDiscovery(FormatType
                 discovery->addValueTemplate(FSPGM(frequency));
                 discovery->addUnitOfMeasurement(FSPGM(Hz, "Hz"));
                 #if MQTT_AUTO_DISCOVERY_USE_NAME
-                    discovery->addName(name + F("Mains Frequency"));
+                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Mains Frequency")));
                 #endif
             }
             break;

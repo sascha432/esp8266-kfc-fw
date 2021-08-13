@@ -144,15 +144,24 @@ void Plugin::createConfigureForm(FormCallbackType type, const String &formName, 
 
     form.addStringGetterSetter(F("pf"), MqttClient::getAutoDiscoveryPrefix, MqttClient::setAutoDiscoveryPrefix);
     form.addFormUI(F("Auto Discovery Prefix"));
+    MqttClient::addAutoDiscoveryPrefixLengthValidator(form, true);
     form.addValidator(FormUI::Validator::Length(0, MqttClient::kAutoDiscoveryPrefixMaxSize));
 
-    form.addObjectGetterSetter(F("add"), cfg, cfg.get_bits_auto_discovery_delay, cfg.set_bits_auto_discovery_delay);
+    form.addObjectGetterSetter(F("add"), FormGetterSetter(cfg, auto_discovery_delay));
     form.addFormUI(F("Auto Discovery Delay"), FormUI::Suffix(FSPGM(seconds)), FormUI::IntAttribute(F("disabled-value"), 0), FormUI::FPStringAttribute(F("disabled-value-targets"), F("#adi")));
     cfg.addRangeValidatorFor_auto_discovery_delay(form, true);
 
-    form.addObjectGetterSetter(F("adi"), cfg, cfg.get_bits_auto_discovery_rebroadcast_interval, cfg.set_bits_auto_discovery_rebroadcast_interval);
+    form.addObjectGetterSetter(F("adi"), FormGetterSetter(cfg, auto_discovery_rebroadcast_interval));
     form.addFormUI(F("Auto Discovery Rebroadcast"), FormUI::Suffix(FSPGM(minutes)), FormUI::IntAttribute(F("disabled-value"), 0));
     cfg.addRangeValidatorFor_auto_discovery_rebroadcast_interval(form, true);
+
+    #if MQTT_AUTO_DISCOVERY_USE_NAME
+
+        form.addStringGetterSetter(F("adn"), MqttClient::getAutoDiscoveryName, MqttClient::setAutoDiscoveryName);
+        form.addFormUI(F("Auto Discovery Name"), FormUI::PlaceHolder(F("Disabled")));
+        MqttClient::addAutoDiscoveryNameLengthValidator(form, true);
+
+    #endif
 
     autoDiscoveryGroup.end();
     hassGroup.end();

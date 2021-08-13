@@ -72,6 +72,13 @@ namespace MQTT {
                 addParameter(FSPGM(mqtt_state_topic), value);
             }
 
+            void addName(const String &value) {
+                if (value.length() == 0) {
+                    return;
+                }
+                addParameter(FSPGM(mqtt_name), value);
+            }
+
             template<typename _T>
             void addName(_T value) {
                 addParameter(FSPGM(mqtt_name), value);

@@ -54,10 +54,6 @@ MQTT::AutoDiscovery::EntityPtr Sensor_HLW80xx::getAutoDiscovery(MQTT::FormatType
 {
     String topic = _getTopic();
     auto discovery = new MQTT::AutoDiscovery::Entity();
-    #if MQTT_AUTO_DISCOVERY_USE_NAME
-        String name = KFCConfigurationClasses::System::Device::getName();
-        name += ' ';
-    #endif
     switch(num) {
         case 0:
             if (discovery->create(this, FSPGM(power), format)) {
@@ -66,7 +62,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_HLW80xx::getAutoDiscovery(MQTT::FormatType
                 discovery->addValueTemplate(FSPGM(power));
                 discovery->addDeviceClass(F("power"));
                 #if MQTT_AUTO_DISCOVERY_USE_NAME
-                    discovery->addName(name + F("Power"));
+                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Power")));
                 #endif
             }
             break;
@@ -77,7 +73,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_HLW80xx::getAutoDiscovery(MQTT::FormatType
                 discovery->addValueTemplate(FSPGM(energy_total));
                 discovery->addDeviceClass(F("energy"));
                 #if MQTT_AUTO_DISCOVERY_USE_NAME
-                    discovery->addName(name + F("Energy Total"));
+                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Energy Total")));
                 #endif
             }
             break;
@@ -88,7 +84,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_HLW80xx::getAutoDiscovery(MQTT::FormatType
                 discovery->addValueTemplate(FSPGM(energy));
                 discovery->addDeviceClass(F("energy"));
                 #if MQTT_AUTO_DISCOVERY_USE_NAME
-                    discovery->addName(name + F("Energy"));
+                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Energy")));
                 #endif
             }
             break;
@@ -99,7 +95,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_HLW80xx::getAutoDiscovery(MQTT::FormatType
                 discovery->addValueTemplate(FSPGM(voltage));
                 discovery->addDeviceClass(F("voltage"));
                 #if MQTT_AUTO_DISCOVERY_USE_NAME
-                    discovery->addName(name + F("Voltage"));
+                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Voltage")));
                 #endif
             }
             break;
@@ -110,7 +106,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_HLW80xx::getAutoDiscovery(MQTT::FormatType
                 discovery->addValueTemplate(FSPGM(current));
                 discovery->addDeviceClass(F("current"));
                 #if MQTT_AUTO_DISCOVERY_USE_NAME
-                    discovery->addName(name + F("Current"));
+                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Current")));
                 #endif
             }
             break;
@@ -121,7 +117,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_HLW80xx::getAutoDiscovery(MQTT::FormatType
                 discovery->addValueTemplate(FSPGM(pf));
                 discovery->addDeviceClass(F("power_factor"));
                 #if MQTT_AUTO_DISCOVERY_USE_NAME
-                    discovery->addName(name + F("Power Factor"));
+                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Power Factor")));
                 #endif
             }
             break;

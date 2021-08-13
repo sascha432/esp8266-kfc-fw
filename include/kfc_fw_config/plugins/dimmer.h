@@ -96,6 +96,114 @@ namespace KFCConfigurationClasses {
             {
             public:
                 static void defaults();
+
+                #if IOT_DIMMER_MODULE_CHANNELS >= 1
+                    CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.dimmer, Channel1Name, 0, 64);
+                #endif
+                #if IOT_DIMMER_MODULE_CHANNELS >= 2
+                    CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.dimmer, Channel2Name, 0, 64);
+                #endif
+                #if IOT_DIMMER_MODULE_CHANNELS >= 3
+                    CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.dimmer, Channel3Name, 0, 64);
+                #endif
+                #if IOT_DIMMER_MODULE_CHANNELS >= 4
+                    CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.dimmer, Channel4Name, 0, 64);
+                #endif
+                #if IOT_DIMMER_MODULE_CHANNELS >= 5
+                    CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.dimmer, Channel5Name, 0, 64);
+                #endif
+                #if IOT_DIMMER_MODULE_CHANNELS >= 6
+                    CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.dimmer, Channel6Name, 0, 64);
+                #endif
+                #if IOT_DIMMER_MODULE_CHANNELS >= 7
+                    CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.dimmer, Channel7Name, 0, 64);
+                #endif
+                #if IOT_DIMMER_MODULE_CHANNELS >= 8
+                    CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.dimmer, Channel8Name, 0, 64);
+                #endif
+
+                static const char *getChannelName(uint8_t channel) {
+                    switch(channel) {
+                        #if IOT_DIMMER_MODULE_CHANNELS >= 1
+                            case 0:
+                                return getChannel1Name();
+                        #endif
+                        #if IOT_DIMMER_MODULE_CHANNELS >= 2
+                            case 1:
+                                return getChannel2Name();
+                        #endif
+                        #if IOT_DIMMER_MODULE_CHANNELS >= 3
+                            case 2:
+                                return getChannelName();
+                        #endif
+                        #if IOT_DIMMER_MODULE_CHANNELS >= 4
+                            case 3:
+                                return getChannelName();
+                        #endif
+                        #if IOT_DIMMER_MODULE_CHANNELS >= 5
+                            case 4:
+                                return getChannelName();
+                        #endif
+                        #if IOT_DIMMER_MODULE_CHANNELS >= 6
+                            case 5:
+                                return getChannel6Name();
+                        #endif
+                        #if IOT_DIMMER_MODULE_CHANNELS >= 7
+                            case 6:
+                                return getChannel7Name();
+                        #endif
+                        #if IOT_DIMMER_MODULE_CHANNELS >= 8
+                            case 7:
+                                return getChannel8Name();
+                        #endif
+                    }
+                    return nullptr;
+                }
+
+                static void setChannelName(uint8_t channel, const String &name) {
+                    switch(channel) {
+                        #if IOT_DIMMER_MODULE_CHANNELS >= 1
+                            case 0:
+                                setChannel1Name(name);
+                                break;
+                        #endif
+                        #if IOT_DIMMER_MODULE_CHANNELS >= 2
+                            case 1:
+                                setChannel2Name(name);
+                                break;
+                        #endif
+                        #if IOT_DIMMER_MODULE_CHANNELS >= 3
+                            case 2:
+                                setChannel3Name(name);
+                                break;
+                        #endif
+                        #if IOT_DIMMER_MODULE_CHANNELS >= 4
+                            case 3:
+                                setChannel4Name(name);
+                                break;
+                        #endif
+                        #if IOT_DIMMER_MODULE_CHANNELS >= 5
+                            case 4:
+                                setChannel5Name(name);
+                                break;
+                        #endif
+                        #if IOT_DIMMER_MODULE_CHANNELS >= 6
+                            case 5:
+                                setChannel6Name(name);
+                                break;
+                        #endif
+                        #if IOT_DIMMER_MODULE_CHANNELS >= 7
+                            case 6:
+                                setChannel7Name(name);
+                                break;
+                        #endif
+                        #if IOT_DIMMER_MODULE_CHANNELS >= 8
+                            case 7:
+                                setChannel8Name(name);
+                                break;
+                        #endif
+                    }
+                }
             };
 
         }

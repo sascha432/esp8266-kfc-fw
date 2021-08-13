@@ -40,6 +40,10 @@ MQTT::AutoDiscovery::EntityPtr Channel::getAutoDiscovery(FormatType format, uint
                 discovery->addCommandTopic(_createTopics(TopicType::COMMAND_SET));
                 discovery->addBrightnessScale(getMaxLevel());
                 discovery->addParameter(F("brightness"), true);
+                auto name = KFCConfigurationClasses::Plugins::DimmerConfigNS::Dimmer::getChannelName(_channel);
+                if (*name) {
+                    discovery->addName(name);
+                }
             }
             break;
     }

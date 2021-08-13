@@ -421,24 +421,28 @@ inline MQTT::AutoDiscovery::EntityPtr BlindsControl::getAutoDiscovery(FormatType
         if (discovery->create(this, PrintString(FSPGM(channel__u, "channel_%u"), channel), format)) {
             discovery->addStateTopic(_getTopic(channel, TopicType::STATE));
             discovery->addCommandTopic(_getTopic(channel, TopicType::SET));
+            discovery->addName(String(Plugins::Blinds::getChannelName(static_cast<size_t>(channel))));
         }
     }
     else if (num == kChannelCount) {
         if (discovery->create(this, FSPGM(channels), format)) {
             discovery->addStateTopic(_getTopic(ChannelType::ALL, TopicType::STATE));
             discovery->addCommandTopic(_getTopic(ChannelType::ALL, TopicType::SET));
+            discovery->addName(F("Both Channels"));
         }
     }
     else if (num == kChannelCount + 1) {
         if (discovery->create(MQTTComponent::ComponentType::SENSOR, FSPGM(binary), format)) {
             discovery->addStateTopic(_getTopic(ChannelType::NONE, TopicType::METRICS));
             discovery->addValueTemplate(FSPGM(binary));
+            discovery->addName(F("Binary Status"));
         }
     }
     else if (num == kChannelCount + 2) {
         if (discovery->create(MQTTComponent::ComponentType::SENSOR, FSPGM(busy, "busy"), format)) {
             discovery->addStateTopic(_getTopic(ChannelType::NONE, TopicType::METRICS));
             discovery->addValueTemplate(FSPGM(busy));
+            discovery->addName(F("Status"));
         }
     }
     else if (num >= kChannelCount + 3) {
@@ -446,6 +450,7 @@ inline MQTT::AutoDiscovery::EntityPtr BlindsControl::getAutoDiscovery(FormatType
         if (discovery->create(MQTTComponent::ComponentType::SENSOR, PrintString(FSPGM(channel__u), channel), format)) {
             discovery->addStateTopic(_getTopic(ChannelType::NONE, TopicType::CHANNELS));
             discovery->addValueTemplate(PrintString(FSPGM(channel__u), channel));
+            discovery->addName(Plugins::Blinds::getChannelName(static_cast<size_t>(channel)));
         }
     }
     return discovery;

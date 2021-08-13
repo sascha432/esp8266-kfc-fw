@@ -232,7 +232,6 @@ void ClockPlugin::_createWebUI(WebUINS::Root &webUI)
         webUI.addRow(WebUINS::Group(F("Clock"), false));
     #endif
 
-
     webUI.addRow(WebUINS::Slider(FSPGM(brightness), FSPGM(brightness), 0, kMaxBrightness, true));
     webUI.addRow(WebUINS::RGBSlider(F("color"), F("Color")));
 

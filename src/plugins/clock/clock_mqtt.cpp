@@ -48,6 +48,12 @@ MQTT::AutoDiscovery::EntityPtr ClockPlugin::getAutoDiscovery(FormatType format, 
             discovery->addEffectStateTopic(MQTT::Client::formatTopic(FSPGM(_effect_state)));
             discovery->addEffectCommandTopic(MQTT::Client::formatTopic(FSPGM(_effect_set)));
             discovery->addEffectList(KFCConfigurationClasses::Plugins::ClockConfigNS::ClockConfigType::getAnimationNamesJsonArray());
+            #if IOT_LED_MATRIX
+                discovery->addName(F("LED Matrix"));
+            #else
+                discovery->addName(F("Clock"));
+            #endif
+
         }
         break;
 #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
@@ -58,6 +64,7 @@ MQTT::AutoDiscovery::EntityPtr ClockPlugin::getAutoDiscovery(FormatType format, 
             discovery->addStateTopic(MQTT::Client::formatTopic(F("power")));
             discovery->addUnitOfMeasurement(String('W'));
             discovery->addDeviceClass(F("power"));
+            discovery->addName(F("Estimated Power"));
         }
         break;
 #endif
@@ -72,6 +79,7 @@ MQTT::AutoDiscovery::EntityPtr ClockPlugin::getAutoDiscovery(FormatType format, 
             discovery->addPercentageCommandTopic(MQTT::Client::formatTopic(F("/fan/speed/set")));
             discovery->addSpeedRangeMin(_config.min_fan_speed);
             discovery->addSpeedRangeMax(_config.max_fan_speed);
+            discovery->addName(F("Fan"));
         }
         break;
 #endif

@@ -39,7 +39,7 @@ namespace WebServer {
                 auto session = getSession(id);
                 if (!session) {
                     __LDBG_printf("%s: no session", url);
-                    Plugin::message(request, MessageType::DANGER, F("This session has expired"), title, headers);
+                    Plugin::message(request, MessageType::DANGER, isTimeValid(time(nullptr)) ? F("This session has expired") : F("System time not available"), title, headers);
                     _error = StateType::EXPIRED;
                     return _error;
                 }

@@ -132,8 +132,10 @@ void Module::_onReceive(size_t length)
             }
         }
 
-        // update MQTT
-        _forceMetricsUpdate(5);
+        #if IOT_SENSOR_HAVE_HLW8012
+            // update MQTT
+            _forceMetricsUpdate(5);
+        #endif
     }
     else {
         Base::_onReceive(length);

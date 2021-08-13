@@ -251,6 +251,8 @@ void Base::_updateMetrics(const MetricsType &metrics)
     }
 }
 
+#if IOT_SENSOR_HAVE_HLW8012
+
 void Base::_forceMetricsUpdate(uint8_t delay)
 {
     auto sensor = SensorPlugin::getSensor<Sensor_HLW80xx::kSensorType>();
@@ -258,6 +260,8 @@ void Base::_forceMetricsUpdate(uint8_t delay)
         sensor->setNextMqttUpdate(delay);
     }
 }
+
+#endif
 
 float Base::getTransitionTime(int fromLevel, int toLevel, float transitionTimeOverride)
 {

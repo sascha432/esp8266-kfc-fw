@@ -148,7 +148,9 @@ namespace Dimmer {
         #if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
             void _setDimmingLevels();
         #endif
-        void _forceMetricsUpdate(uint8_t delay);
+        #if IOT_SENSOR_HAVE_HLW8012
+            void _forceMetricsUpdate(uint8_t delay);
+        #endif
         Sensor_DimmerMetrics *getMetricsSensor() const;
 
         // return absoluate fade time for changing to another level

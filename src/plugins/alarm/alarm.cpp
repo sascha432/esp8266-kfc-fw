@@ -83,6 +83,7 @@ MQTT::AutoDiscovery::EntityPtr AlarmPlugin::getAutoDiscovery(FormatType format, 
             discovery->addCommandTopic(_formatTopic(FSPGM(_set)));
             discovery->addRGBStateTopic(_formatTopic(F("/rgb/state")));
             discovery->addRGBCommandTopic(_formatTopic(F("/rgb/set")));
+            discovery->addName(F("Alarm"));
             break;
     }
     return discovery;

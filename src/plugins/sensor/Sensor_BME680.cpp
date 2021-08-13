@@ -25,13 +25,19 @@ Sensor_BME680::~Sensor_BME680()
 MQTT::AutoDiscovery::EntityPtr Sensor_BME680::getAutoDiscovery(FormatType format, uint8_t num)
 {
     auto discovery = new MQTT::AutoDiscovery::Entity();
+    #if MQTT_AUTO_DISCOVERY_USE_NAME
+        String name = KFCConfigurationClasses::System::Device::getName();
+        name += ' ';
+    #endif
     switch(num) {
     case 0:
         if (discovery->create(this, _getId(FSPGM(temperature)), format)) {
             discovery->addStateTopic(MQTT::Client::formatTopic(_getId()));
             discovery->addUnitOfMeasurement(FSPGM(UTF8_degreeC));
             discovery->addValueTemplate(FSPGM(temperature));
-            discovery->addName(F("BME680 Temperature"));
+            #if MQTT_AUTO_DISCOVERY_USE_NAME
+                discovery->addName(name + F("BME680 Temperature"));
+            #endif
         }
         break;
     case 1:
@@ -39,7 +45,9 @@ MQTT::AutoDiscovery::EntityPtr Sensor_BME680::getAutoDiscovery(FormatType format
             discovery->addStateTopic(MQTT::Client::formatTopic(_getId()));
             discovery->addUnitOfMeasurement('%');
             discovery->addValueTemplate(FSPGM(humidity));
-            discovery->addName(F("BME680 Humidity"));
+            #if MQTT_AUTO_DISCOVERY_USE_NAME
+                discovery->addName(name + F("BME680 Humidity"));
+            #endif
         }
         break;
     case 2:
@@ -47,7 +55,9 @@ MQTT::AutoDiscovery::EntityPtr Sensor_BME680::getAutoDiscovery(FormatType format
             discovery->addStateTopic(MQTT::Client::formatTopic(_getId()));
             discovery->addUnitOfMeasurement(FSPGM(hPa));
             discovery->addValueTemplate(FSPGM(pressure));
-            discovery->addName(F("BME680 Pressure"));
+            #if MQTT_AUTO_DISCOVERY_USE_NAME
+                discovery->addName(name + F("BME680 Pressure"));
+            #endif
         }
         break;
     case 3:
@@ -55,7 +65,9 @@ MQTT::AutoDiscovery::EntityPtr Sensor_BME680::getAutoDiscovery(FormatType format
             discovery->addStateTopic(MQTT::Client::formatTopic(_getId()));
             discovery->addUnitOfMeasurement(F("ppm"));
             discovery->addValueTemplate(F("gas"));
-            discovery->addName(F("BME680 Gas"));
+            #if MQTT_AUTO_DISCOVERY_USE_NAME
+                discovery->addName(name + F("BME680 Gas"));
+            #endif
         }
         break;
     }

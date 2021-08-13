@@ -44,6 +44,15 @@ MQTT::AutoDiscovery::EntityPtr Channel::getAutoDiscovery(FormatType format, uint
                 if (*name) {
                     discovery->addName(name);
                 }
+                else {
+                    #if MQTT_AUTO_DISCOVERY_USE_NAME
+                        #if IOT_DIMMER_MODULE_CHANNELS > 1
+                            discovery->addName(String(KFCConfigurationClasses::System::Device::getName()) + PrintString(F(" Dimmer Channel %u"), _channel + 1));
+                        #else
+                            discovery->addName(String(KFCConfigurationClasses::System::Device::getName()) + F(" Dimmer"));
+                        #endif
+                    #endif
+                }
             }
             break;
     }

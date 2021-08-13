@@ -72,6 +72,12 @@
 #define MQTT_AVAILABILITY_TOPIC_OFFLINE                             FSPGM(mqtt_status_topic_offline)
 #endif
 
+// add name to each MQTT devive
+// Device Name + ' ' + Name
+#ifndef MQTT_AUTO_DISCOVERY_USE_NAME
+#define MQTT_AUTO_DISCOVERY_USE_NAME 1
+#endif
+
 #if MQTT_SET_LAST_WILL_MODE == 1
 
 #if (defined(MQTT_LAST_WILL_TOPIC) || defined(MQTT_LAST_WILL_TOPIC_ONLINE) || defined(MQTT_LAST_WILL_TOPIC_OFFLINE))

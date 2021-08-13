@@ -35,6 +35,10 @@ Sensor_BME280::~Sensor_BME280()
 MQTT::AutoDiscovery::EntityPtr Sensor_BME280::getAutoDiscovery(FormatType format, uint8_t num)
 {
     auto discovery = new MQTT::AutoDiscovery::Entity();
+    #if MQTT_AUTO_DISCOVERY_USE_NAME
+        String name = KFCConfigurationClasses::System::Device::getName();
+        name += ' ';
+    #endif
     switch(num) {
         case 0:
             if (discovery->create(this, _getId(FSPGM(temperature, "temperature")), format)) {
@@ -42,7 +46,9 @@ MQTT::AutoDiscovery::EntityPtr Sensor_BME280::getAutoDiscovery(FormatType format
                 discovery->addUnitOfMeasurement(FSPGM(UTF8_degreeC));
                 discovery->addValueTemplate(FSPGM(temperature));
                 discovery->addDeviceClass(F("temperature"));
-                discovery->addName(F("BME280 Temperature"));
+                #if MQTT_AUTO_DISCOVERY_USE_NAME
+                    discovery->addName(name + F("BME280 Temperature"));
+                #endif
             }
             break;
         case 1:
@@ -51,7 +57,9 @@ MQTT::AutoDiscovery::EntityPtr Sensor_BME280::getAutoDiscovery(FormatType format
                 discovery->addUnitOfMeasurement('%');
                 discovery->addValueTemplate(FSPGM(humidity));
                 discovery->addDeviceClass(F("humidity"));
-                discovery->addName(F("BME280 Humidity"));
+                #if MQTT_AUTO_DISCOVERY_USE_NAME
+                    discovery->addName(name + F("BME280 Humidity"));
+                #endif
             }
             break;
         case 2:
@@ -60,7 +68,9 @@ MQTT::AutoDiscovery::EntityPtr Sensor_BME280::getAutoDiscovery(FormatType format
                 discovery->addUnitOfMeasurement(FSPGM(hPa, "hPa"));
                 discovery->addValueTemplate(FSPGM(pressure));
                 discovery->addDeviceClass(F("pressure"));
-                discovery->addName(F("BME280 Pressure"));
+                #if MQTT_AUTO_DISCOVERY_USE_NAME
+                    discovery->addName(name + F("BME280 Pressure"));
+                #endif
             }
             break;
     }

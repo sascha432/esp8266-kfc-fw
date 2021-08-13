@@ -44,13 +44,19 @@ Sensor_CCS811::~Sensor_CCS811()
 MQTT::AutoDiscovery::EntityPtr Sensor_CCS811::getAutoDiscovery(FormatType format, uint8_t num)
 {
     auto discovery = new MQTT::AutoDiscovery::Entity();
+    #if MQTT_AUTO_DISCOVERY_USE_NAME
+        String name = KFCConfigurationClasses::System::Device::getName();
+        name += ' ';
+    #endif
     switch(num) {
         case 0:
             if (discovery->create(this, _getId(F("eco2")), format)) {
                 discovery->addStateTopic(MQTT::Client::formatTopic(_getId()));
                 discovery->addUnitOfMeasurement(F("ppm"));
                 discovery->addValueTemplate(F("eCO2"));
-                discovery->addName(F("eCO2"));
+                #if MQTT_AUTO_DISCOVERY_USE_NAME
+                    discovery->addName(name + F("eCO2"));
+                #endif
             }
             break;
         case 1:
@@ -58,7 +64,9 @@ MQTT::AutoDiscovery::EntityPtr Sensor_CCS811::getAutoDiscovery(FormatType format
                 discovery->addStateTopic(MQTT::Client::formatTopic(_getId()));
                 discovery->addUnitOfMeasurement(F("ppb"));
                 discovery->addValueTemplate(F("TVOC"));
-                discovery->addName(F("TVOC"));
+                #if MQTT_AUTO_DISCOVERY_USE_NAME
+                    discovery->addName(name + F("TVOC"));
+                #endif
             }
             break;
     }

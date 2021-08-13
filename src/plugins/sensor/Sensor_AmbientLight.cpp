@@ -50,6 +50,10 @@ Sensor_AmbientLight::~Sensor_AmbientLight()
 MQTT::AutoDiscovery::EntityPtr Sensor_AmbientLight::getAutoDiscovery(FormatType format, uint8_t num)
 {
     auto discovery = new MQTT::AutoDiscovery::Entity();
+    #if MQTT_AUTO_DISCOVERY_USE_NAME
+        String name = KFCConfigurationClasses::System::Device::getName();
+        name += ' ';
+    #endif
     switch(num) {
         case 0: {
             if (!discovery->create(MQTTComponent::ComponentType::SENSOR, _getId(), format)) {
@@ -58,11 +62,15 @@ MQTT::AutoDiscovery::EntityPtr Sensor_AmbientLight::getAutoDiscovery(FormatType 
             discovery->addStateTopic(_getTopic());
             if (_id == 1 && _sensor.type == Sensor_AmbientLight::SensorType::BH1750FVI && _sensor.bh1750FVI.highRes) {
                 discovery->addUnitOfMeasurement(F("lux"));
-                discovery->addName(F("Illuminance"));
+                #if MQTT_AUTO_DISCOVERY_USE_NAME
+                    discovery->addName(name + F("Illuminance"));
+                #endif
             }
             else {
                 discovery->addUnitOfMeasurement(String('%'));
-                discovery->addName(F("Ambient Light Level"));
+                #if MQTT_AUTO_DISCOVERY_USE_NAME
+                    discovery->addName(name + F("Ambient Light Level"));
+                #endif
             }
         }
         break;

@@ -110,13 +110,19 @@ enum class AutoDiscoveryNumHelperType {
 MQTT::AutoDiscovery::EntityPtr Sensor_Battery::getAutoDiscovery(FormatType format, uint8_t num)
 {
     auto discovery = new MQTT::AutoDiscovery::Entity();
+    #if MQTT_AUTO_DISCOVERY_USE_NAME
+        String name = KFCConfigurationClasses::System::Device::getName();
+        name += ' ';
+    #endif
     switch(static_cast<AutoDiscoveryNumHelperType>(num)) {
         case AutoDiscoveryNumHelperType::VOLTAGE:
             if (discovery->create(this, _getId(TopicType::VOLTAGE), format)) {
                 discovery->addStateTopic(_getTopic(TopicType::VOLTAGE));
                 discovery->addUnitOfMeasurement('V');
                 discovery->addDeviceClass(F("voltage"));
-                discovery->addName(_name);
+                #if MQTT_AUTO_DISCOVERY_USE_NAME
+                    discovery->addName(name + _name);
+                #endif
             }
             break;
 #if IOT_SENSOR_BATTERY_DISPLAY_LEVEL
@@ -125,7 +131,9 @@ MQTT::AutoDiscovery::EntityPtr Sensor_Battery::getAutoDiscovery(FormatType forma
                 discovery->addStateTopic(_getTopic(TopicType::LEVEL));
                 discovery->addUnitOfMeasurement('%');
                 discovery->addDeviceClass(F("battery"));
-                discovery->addName(F("Battery Level"));
+                #if MQTT_AUTO_DISCOVERY_USE_NAME
+                    discovery->addName(name + F("Battery Level"));
+                #endif
             }
             break;
 #endif
@@ -133,7 +141,9 @@ MQTT::AutoDiscovery::EntityPtr Sensor_Battery::getAutoDiscovery(FormatType forma
         case AutoDiscoveryNumHelperType::CHARGING:
             if (discovery->create(ComponentType::SENSOR, _getId(TopicType::CHARGING), format)) {
                 discovery->addStateTopic(_getTopic(TopicType::CHARGING));
-                discovery->addName(F("Charging Status"));
+                #if MQTT_AUTO_DISCOVERY_USE_NAME
+                    discovery->addName(name + F("Charging Status"));
+                #endif
             }
             break;
 #endif
@@ -141,7 +151,9 @@ MQTT::AutoDiscovery::EntityPtr Sensor_Battery::getAutoDiscovery(FormatType forma
         case AutoDiscoveryNumHelperType::POWER:
             if (discovery->create(this, _getId(TopicType::POWER), format)) {
                 discovery->addStateTopic(_getTopic(TopicType::POWER));
-                discovery->addName(F("Power Status"));
+                #if MQTT_AUTO_DISCOVERY_USE_NAME
+                    discovery->addName(name + F("Power Status"));
+                #endif
             }
             break;
 #endif

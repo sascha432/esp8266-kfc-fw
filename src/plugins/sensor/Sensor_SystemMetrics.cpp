@@ -40,20 +40,28 @@ Sensor_SystemMetrics::~Sensor_SystemMetrics()
 MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::FormatType format, uint8_t num)
 {
     MQTT::AutoDiscovery::EntityPtr discovery = new MQTT::AutoDiscovery::Entity();
+    #if MQTT_AUTO_DISCOVERY_USE_NAME
+        String name = KFCConfigurationClasses::System::Device::getName();
+        name += ' ';
+    #endif
     switch(num) {
         case 0:
             if (discovery->create(this, FSPGM(uptime), format)) {
                 discovery->addStateTopic(_getTopic());
                 discovery->addUnitOfMeasurement(FSPGM(seconds));
                 discovery->addValueTemplate(FSPGM(uptime));
-                discovery->addName(F("System Uptime (seconds)"));
+                #if MQTT_AUTO_DISCOVERY_USE_NAME
+                    discovery->addName(name + F("System Uptime (seconds)"));
+                #endif
             }
             break;
         case 1:
             if (discovery->create(this, F("uptime_hr"), format)) {
                 discovery->addStateTopic(_getTopic());
                 discovery->addValueTemplate(F("uptime_hr"));
-                discovery->addName(F("System Uptime"));
+                #if MQTT_AUTO_DISCOVERY_USE_NAME
+                    discovery->addName(name + F("System Uptime"));
+                #endif
             }
             break;
         case 2:
@@ -61,21 +69,27 @@ MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::Form
                 discovery->addStateTopic(_getTopic());
                 discovery->addUnitOfMeasurement(FSPGM(bytes));
                 discovery->addValueTemplate(FSPGM(heap));
-                discovery->addName(F("Free Heap"));
+                #if MQTT_AUTO_DISCOVERY_USE_NAME
+                    discovery->addName(name + F("Free Heap"));
+                #endif
             }
             break;
         case 3:
             if (discovery->create(this, FSPGM(version), format)) {
                 discovery->addStateTopic(_getTopic());
                 discovery->addValueTemplate(FSPGM(version));
-                discovery->addName(F("Firmware Version"));
+                #if MQTT_AUTO_DISCOVERY_USE_NAME
+                    discovery->addName(name + F("Firmware Version"));
+                #endif
             }
             break;
         case 4:
             if (discovery->create(this, F("heap_frag"), format)) {
                 discovery->addStateTopic(_getTopic());
                 discovery->addValueTemplate(F("heap_frag"));
-                discovery->addName(F("Heap Fragmentation"));
+                #if MQTT_AUTO_DISCOVERY_USE_NAME
+                    discovery->addName(name + F("Heap Fragmentation"));
+                #endif
             }
             break;
 #if PING_MONITOR_SUPPORT

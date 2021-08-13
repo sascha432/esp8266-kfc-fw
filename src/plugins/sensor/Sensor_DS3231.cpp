@@ -32,24 +32,34 @@ Sensor_DS3231::~Sensor_DS3231()
 MQTT::AutoDiscovery::EntityPtr Sensor_DS3231::getAutoDiscovery(FormatType format, uint8_t num)
 {
     auto discovery = new AutoDiscovery::Entity();
+    #if MQTT_AUTO_DISCOVERY_USE_NAME
+        String name = KFCConfigurationClasses::System::Device::getName();
+        name += ' ';
+    #endif
     switch (num) {
     case 0:
         if (discovery->create(this, FSPGM(ds3231_id_temp), format)) {
             discovery->addStateTopic(MQTT::Client::formatTopic(FSPGM(ds3231_id_temp)));
             discovery->addUnitOfMeasurement(FSPGM(UTF8_degreeC));
-            discovery->addName(F("RTC Temperature"));
+            #if MQTT_AUTO_DISCOVERY_USE_NAME
+                discovery->addName(name + F("RTC Temperature"));
+            #endif
         }
         break;
     case 1:
         if (discovery->create(this, FSPGM(ds3231_id_time), format)) {
             discovery->addStateTopic(MQTT::Client::formatTopic(FSPGM(ds3231_id_time)));
-            discovery->addName(F("RTC Time"));
+            #if MQTT_AUTO_DISCOVERY_USE_NAME
+                discovery->addName(name + F("RTC Time"));
+            #endif
         }
         break;
     case 2:
         if (discovery->create(this, FSPGM(ds3231_id_lost_power), format)) {
             discovery->addStateTopic(MQTT::Client::formatTopic(FSPGM(ds3231_id_lost_power)));
-            discovery->addName(F("RTC Status"));
+            #if MQTT_AUTO_DISCOVERY_USE_NAME
+                discovery->addName(name + F("RTC Status"));
+            #endif
         }
         break;
     }

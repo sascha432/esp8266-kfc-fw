@@ -33,6 +33,10 @@ enum class AutoDiscoverySwitchEnum {
 MQTT::AutoDiscovery::EntityPtr ClockPlugin::getAutoDiscovery(FormatType format, uint8_t num)
 {
     auto discovery = new AutoDiscovery::Entity();
+    #if MQTT_AUTO_DISCOVERY_USE_NAME
+        String name = KFCConfigurationClasses::System::Device::getName();
+        name += ' ';
+    #endif
     switch(static_cast<AutoDiscoverySwitchEnum>(num)) {
         case AutoDiscoverySwitchEnum::BRIGHTNESS: {
             if (!discovery->create(this, MQTT_NAME, format)) {
@@ -48,12 +52,13 @@ MQTT::AutoDiscovery::EntityPtr ClockPlugin::getAutoDiscovery(FormatType format, 
             discovery->addEffectStateTopic(MQTT::Client::formatTopic(FSPGM(_effect_state)));
             discovery->addEffectCommandTopic(MQTT::Client::formatTopic(FSPGM(_effect_set)));
             discovery->addEffectList(KFCConfigurationClasses::Plugins::ClockConfigNS::ClockConfigType::getAnimationNamesJsonArray());
-            #if IOT_LED_MATRIX
-                discovery->addName(F("LED Matrix"));
-            #else
-                discovery->addName(F("Clock"));
+            #if MQTT_AUTO_DISCOVERY_USE_NAME
+                #if IOT_LED_MATRIX
+                    discovery->addName(name + F("LED Matrix"));
+                #else
+                    discovery->addName(name + F("Clock"));
+                #endif
             #endif
-
         }
         break;
 #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
@@ -64,7 +69,9 @@ MQTT::AutoDiscovery::EntityPtr ClockPlugin::getAutoDiscovery(FormatType format, 
             discovery->addStateTopic(MQTT::Client::formatTopic(F("power")));
             discovery->addUnitOfMeasurement(String('W'));
             discovery->addDeviceClass(F("power"));
-            discovery->addName(F("Estimated Power"));
+            #if MQTT_AUTO_DISCOVERY_USE_NAME
+                discovery->addName(name + F("Estimated Power"));
+            #endif
         }
         break;
 #endif
@@ -79,7 +86,9 @@ MQTT::AutoDiscovery::EntityPtr ClockPlugin::getAutoDiscovery(FormatType format, 
             discovery->addPercentageCommandTopic(MQTT::Client::formatTopic(F("/fan/speed/set")));
             discovery->addSpeedRangeMin(_config.min_fan_speed);
             discovery->addSpeedRangeMax(_config.max_fan_speed);
-            discovery->addName(F("Fan"));
+            #if MQTT_AUTO_DISCOVERY_USE_NAME
+                discovery->addName(name + F("Fan"));
+            #endif
         }
         break;
 #endif

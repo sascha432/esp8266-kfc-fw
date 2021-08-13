@@ -41,7 +41,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_Motion::getAutoDiscovery(FormatType format
                 return discovery;
             }
             discovery->addStateTopic(_getTopic());
-            discovery->addName(F("Motion Sensor"));
+            discovery->addName(String(KFCConfigurationClasses::System::Device::getName()) + F(" Motion Sensor"));
             break;
     }
     return discovery;

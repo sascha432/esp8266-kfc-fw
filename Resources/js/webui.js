@@ -79,6 +79,7 @@ $.webUIComponent = {
     queue_default_timeout: 100,
     queue_end_slider_default_timeout: 500,
     retry_time: 500,
+    selected_slider: null,
     //
     // create gradient depending in min/max/rmin/rmax value
     //
@@ -539,6 +540,38 @@ $.webUIComponent = {
         }
     },
     //
+    slider_onkeyup: function(event) {
+        var input = this.selected_slider;
+        if (!input) {
+            return;
+        }
+        var value, change, min, max;
+        function getInputData() {
+            value = parseInt(input.val());
+            min = parseInt(input.attr('min'));
+            max = parseInt(input.attr('max'));
+            var range = max - min;
+            change = Math.round(range / (event.ctrlKey ? 10 : 100));
+        }
+        // console.log(getInputData(), event, value, min, max, change);
+        if (event.key === 'ArrowRight') {
+            getInputData();
+            input.val(value + change).trigger('change');
+        }
+        else if (event.key === 'ArrowLeft') {
+            getInputData();
+            input.val(value - change).trigger('change');
+        }
+        else if (event.key === 'ArrowUp') {
+            getInputData();
+            input.val(min).trigger('change');
+        }
+        else if (event.key === 'ArrowDown') {
+            getInputData();
+            input.val(max).trigger('change');
+        }
+    },
+    //
     // items can be a json object or array
     // if parsing fails, the lists is treated as comma separated
     // if items is undefined or an empty string, an empty array is returned
@@ -783,8 +816,6 @@ $.webUIComponent = {
             }
         }
         this.container.append(row);
-
-
         // var self = this;
         // $(options.columns).each(function(idx) {
         //     // add extra column to align other columns on the right
@@ -925,6 +956,10 @@ $.webUIComponent = {
             input.rangeslider(options);
             var next = input.next();
             range_slider = { '$element': input, '$handle': next.find('.rangeslider__handle'), '$fill': next.find('.rangeslider__fill') };
+            $(range_slider.$handle).on('click', function(event) {
+                event.preventDefault();
+                self.selected_slider = input;
+            });
             self.components[input.attr('id')].range_slider = range_slider;
             self.slider_update_css(range_slider);
             if (input.attr('rmin') !== undefined && input.attr('rmax') !== undefined) {
@@ -1148,6 +1183,14 @@ $.webUIComponent = {
             event.self = self;
             self.socket_handler(event);
         });
+        $(window).on('keyup', function(event) {
+            self.slider_onkeyup(event);
+        }).on('click', function(event) {
+            if (!event.isDefaultPrevented()) {
+                self.selected_slider = null;
+            }
+        });
+
 
         if (this.console.is_debug_enabled()) {
             $('body').append('<textarea id="console" style="width:350px;height:150px;font-size:10px;font-family:consolas;z-index:999;position:fixed;right:5px;bottom:5px"></textarea>');

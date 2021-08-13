@@ -58,6 +58,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_INA219::getAutoDiscovery(FormatType format
                 discovery->addStateTopic(MQTT::Client::formatTopic(_getId(SensorInputType::VOLTAGE)));
                 discovery->addUnitOfMeasurement('V');
                 discovery->addDeviceClass(F("voltage"));
+                discovery->addName(F("Voltage"));
             }
             break;
         case 1:
@@ -65,6 +66,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_INA219::getAutoDiscovery(FormatType format
                 discovery->addStateTopic(MQTT::Client::formatTopic(_getId(SensorInputType::CURRENT)));
                 discovery->addUnitOfMeasurement(_getCurrentUnit());
                 discovery->addDeviceClass(F("current"));
+                discovery->addName(F("Current"));
             }
             break;
         case 2:
@@ -72,6 +74,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_INA219::getAutoDiscovery(FormatType format
                 discovery->addStateTopic(MQTT::Client::formatTopic(_getId(SensorInputType::POWER)));
                 discovery->addUnitOfMeasurement(_getPowerUnit());
                 discovery->addDeviceClass(F("power"));
+                discovery->addName(F("Power"));
             }
             break;
         case 3:
@@ -79,6 +82,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_INA219::getAutoDiscovery(FormatType format
                 discovery->addStateTopic(MQTT::Client::formatTopic(_getId(SensorInputType::PEAK_CURRENT)));
                 discovery->addUnitOfMeasurement(_getCurrentUnit());
                 discovery->addDeviceClass(F("current"));
+                discovery->addName(F("Peak Current"));
             }
             break;
         case 4:
@@ -86,6 +90,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_INA219::getAutoDiscovery(FormatType format
                 discovery->addStateTopic(MQTT::Client::formatTopic(_getId(SensorInputType::PEAK_POWER)));
                 discovery->addUnitOfMeasurement(_getPowerUnit());
                 discovery->addDeviceClass(F("power"));
+                discovery->addName(F("Peak Power"));
             }
             break;
     }

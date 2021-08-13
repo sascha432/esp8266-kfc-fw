@@ -37,16 +37,19 @@ MQTT::AutoDiscovery::EntityPtr Sensor_DS3231::getAutoDiscovery(FormatType format
         if (discovery->create(this, FSPGM(ds3231_id_temp), format)) {
             discovery->addStateTopic(MQTT::Client::formatTopic(FSPGM(ds3231_id_temp)));
             discovery->addUnitOfMeasurement(FSPGM(UTF8_degreeC));
+            discovery->addName(F("RTC Temperature"));
         }
         break;
     case 1:
         if (discovery->create(this, FSPGM(ds3231_id_time), format)) {
             discovery->addStateTopic(MQTT::Client::formatTopic(FSPGM(ds3231_id_time)));
+            discovery->addName(F("RTC Time"));
         }
         break;
     case 2:
         if (discovery->create(this, FSPGM(ds3231_id_lost_power), format)) {
             discovery->addStateTopic(MQTT::Client::formatTopic(FSPGM(ds3231_id_lost_power)));
+            discovery->addName(F("RTC Status"));
         }
         break;
     }

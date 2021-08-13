@@ -46,12 +46,14 @@ MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::Form
                 discovery->addStateTopic(_getTopic());
                 discovery->addUnitOfMeasurement(FSPGM(seconds));
                 discovery->addValueTemplate(FSPGM(uptime));
+                discovery->addName(F("System Uptime (seconds)"));
             }
             break;
         case 1:
             if (discovery->create(this, F("uptime_hr"), format)) {
                 discovery->addStateTopic(_getTopic());
                 discovery->addValueTemplate(F("uptime_hr"));
+                discovery->addName(F("System Uptime"));
             }
             break;
         case 2:
@@ -59,18 +61,21 @@ MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::Form
                 discovery->addStateTopic(_getTopic());
                 discovery->addUnitOfMeasurement(FSPGM(bytes));
                 discovery->addValueTemplate(FSPGM(heap));
+                discovery->addName(F("Free Heap"));
             }
             break;
         case 3:
             if (discovery->create(this, FSPGM(version), format)) {
                 discovery->addStateTopic(_getTopic());
                 discovery->addValueTemplate(FSPGM(version));
+                discovery->addName(F("Firmware Version"));
             }
             break;
         case 4:
             if (discovery->create(this, F("heap_frag"), format)) {
                 discovery->addStateTopic(_getTopic());
                 discovery->addValueTemplate(F("heap_frag"));
+                discovery->addName(F("Heap Fragmentation"));
             }
             break;
 #if PING_MONITOR_SUPPORT

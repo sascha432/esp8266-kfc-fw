@@ -116,6 +116,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_Battery::getAutoDiscovery(FormatType forma
                 discovery->addStateTopic(_getTopic(TopicType::VOLTAGE));
                 discovery->addUnitOfMeasurement('V');
                 discovery->addDeviceClass(F("voltage"));
+                discovery->addName(_name);
             }
             break;
 #if IOT_SENSOR_BATTERY_DISPLAY_LEVEL
@@ -124,6 +125,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_Battery::getAutoDiscovery(FormatType forma
                 discovery->addStateTopic(_getTopic(TopicType::LEVEL));
                 discovery->addUnitOfMeasurement('%');
                 discovery->addDeviceClass(F("battery"));
+                discovery->addName(F("Battery Level"));
             }
             break;
 #endif
@@ -131,6 +133,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_Battery::getAutoDiscovery(FormatType forma
         case AutoDiscoveryNumHelperType::CHARGING:
             if (discovery->create(ComponentType::SENSOR, _getId(TopicType::CHARGING), format)) {
                 discovery->addStateTopic(_getTopic(TopicType::CHARGING));
+                discovery->addName(F("Charging Status"));
             }
             break;
 #endif
@@ -138,6 +141,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_Battery::getAutoDiscovery(FormatType forma
         case AutoDiscoveryNumHelperType::POWER:
             if (discovery->create(this, _getId(TopicType::POWER), format)) {
                 discovery->addStateTopic(_getTopic(TopicType::POWER));
+                discovery->addName(F("Power Status"));
             }
             break;
 #endif

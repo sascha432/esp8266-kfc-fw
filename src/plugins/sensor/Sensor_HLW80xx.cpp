@@ -61,6 +61,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_HLW80xx::getAutoDiscovery(MQTT::FormatType
                 discovery->addUnitOfMeasurement('W');
                 discovery->addValueTemplate(FSPGM(power));
                 discovery->addDeviceClass(F("power"));
+                discovery->addName(F("Power"));
             }
             break;
         case 1:
@@ -69,6 +70,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_HLW80xx::getAutoDiscovery(MQTT::FormatType
                 discovery->addUnitOfMeasurement(FSPGM(kWh));
                 discovery->addValueTemplate(FSPGM(energy_total));
                 discovery->addDeviceClass(F("energy"));
+                discovery->addName(F("Energy Total"));
             }
             break;
         case 2:
@@ -77,6 +79,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_HLW80xx::getAutoDiscovery(MQTT::FormatType
                 discovery->addUnitOfMeasurement(FSPGM(kWh));
                 discovery->addValueTemplate(FSPGM(energy));
                 discovery->addDeviceClass(F("energy"));
+                discovery->addName(F("Energy"));
             }
             break;
         case 3:
@@ -85,6 +88,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_HLW80xx::getAutoDiscovery(MQTT::FormatType
                 discovery->addUnitOfMeasurement('V');
                 discovery->addValueTemplate(FSPGM(voltage));
                 discovery->addDeviceClass(F("voltage"));
+                discovery->addName(F("Voltage"));
             }
             break;
         case 4:
@@ -93,6 +97,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_HLW80xx::getAutoDiscovery(MQTT::FormatType
                 discovery->addUnitOfMeasurement('A');
                 discovery->addValueTemplate(FSPGM(current));
                 discovery->addDeviceClass(F("current"));
+                discovery->addName(F("Current"));
             }
             break;
         case 5:
@@ -101,6 +106,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_HLW80xx::getAutoDiscovery(MQTT::FormatType
                 discovery->addUnitOfMeasurement('%');
                 discovery->addValueTemplate(FSPGM(pf));
                 discovery->addDeviceClass(F("power_factor"));
+                discovery->addName(F("Power Factor"));
             }
             break;
     }

@@ -22,6 +22,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_DimmerMetrics::getAutoDiscovery(FormatType
                 discovery->addStateTopic(_getMetricsTopics());
                 discovery->addValueTemplate(F("int_temp"));
                 discovery->addDeviceClass(F("temperature"), FSPGM(UTF8_degreeC));
+                discovery->addName(F("MCU Temperature"));
             }
             break;
         case 1:
@@ -29,6 +30,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_DimmerMetrics::getAutoDiscovery(FormatType
                 discovery->addStateTopic(_getMetricsTopics());
                 discovery->addValueTemplate(F("ntc_temp"));
                 discovery->addDeviceClass(F("temperature"), FSPGM(UTF8_degreeC));
+                discovery->addName(F("NTC Temperature"));
             }
             break;
         case 2:
@@ -36,6 +38,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_DimmerMetrics::getAutoDiscovery(FormatType
                 discovery->addStateTopic(_getMetricsTopics());
                 discovery->addValueTemplate(F("vcc"));
                 discovery->addDeviceClass(F("voltage"), 'V');
+                discovery->addName(F("MCU VCC"));
             }
             break;
         case 3:
@@ -43,6 +46,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_DimmerMetrics::getAutoDiscovery(FormatType
                 discovery->addStateTopic(_getMetricsTopics());
                 discovery->addValueTemplate(FSPGM(frequency));
                 discovery->addUnitOfMeasurement(FSPGM(Hz, "Hz"));
+                discovery->addName(F("Mains Frequency"));
             }
             break;
     }

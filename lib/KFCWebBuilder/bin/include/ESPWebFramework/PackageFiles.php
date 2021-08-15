@@ -130,6 +130,13 @@ class PackageFiles {
     public function removeFileByName($filename): int
     {
         $count = 0;
+        if (strchr($filename, '*')) {
+            $files = glob($filename);
+            foreach($files as $filename) {
+                $count += $this->removeFileByName($filename);
+            }
+            return $count;
+        }
         foreach($this->files as $key => $file) {
             if ($file->getPath() === $filename) {
                 unset($this->files[$key]);

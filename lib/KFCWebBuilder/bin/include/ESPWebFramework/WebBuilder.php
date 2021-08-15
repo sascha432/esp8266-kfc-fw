@@ -345,7 +345,7 @@ class WebBuilder extends Logger {
             /* @var Processor\File[] $files */
             $files = $this->packageFiles->getFilesByGroup($group, Processor\File::class);
             if (!count($files)) {
-                echo "This group does not have any files assigned.\n";
+                echo $group->getName().": This group does not have any files assigned.\n";
                 continue;
             }
 

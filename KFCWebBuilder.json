@@ -25,19 +25,20 @@
         "conditional_excludes": {
             "#if 1": [
                 "./Resources/html/__prototypes.html",
-                "./Resources/html/__prototypes_webui.html",
-                "./lib/KFCWebBuilder/Resources/charts-js-2.9.3-dist/Chart.js",
-                "./lib/KFCWebBuilder/Resources/charts-js-2.9.3-dist/Chart.css",
-                "./Resources/js/charts/chartjs-plugin-dragdata.min.js"
-
+                "./Resources/html/__prototypes_webui.html"
             ],
             "#if !IOT_DIMMER_MODULE && !IOT_ATOMIC_SUN_V2": [
                 "./Resources/html/dimmer.html",
-                "./Resources/js/forms/dimmer.js"
+                "./Resources/html/dimmer-ci.html",
+                "./Resources/js/forms/dimmer.js",
+                "./Resources/js/dimmer-ci.js",
+                "./lib/KFCWebBuilder/Resources/charts-js-2.9.3-dist/Chart.js",
+                "./lib/KFCWebBuilder/Resources/charts-js-2.9.3-dist/Chart.css",
+                "./Resources/js/charts/chartjs-plugin-dragdata.min.js"
             ],
             "#if !STK500V1": [
                 "./src/plugins/stk500v1/atmega.csv",
-                "./src/plugins/dimmer_module/firmware/hex"
+                "./src/plugins/dimmer_module/firmware/hex/*"
             ],
             "#if !SSD1306_PLUGIN": [
                 "./src/plugins/ssd1306_plugin/fonts/7digit"
@@ -146,7 +147,8 @@
                         "./Resources/js/webui.js",
                         "./Resources/js/webui-led-matrix.js",
                         "./lib/KFCWebBuilder/Resources/charts-js-2.9.3-dist/Chart.js",
-                        "./Resources/js/charts/chartjs-plugin-dragdata.min.js"
+                        "./Resources/js/charts/chartjs-plugin-dragdata.min.js",
+                        "./Resources/js/dimmer-ci.js"
                     ]
                 },
                 "processors":  {

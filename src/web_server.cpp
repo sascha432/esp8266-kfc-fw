@@ -503,6 +503,7 @@ void Plugin::send(uint16_t httpCode, AsyncWebServerRequest *request, const Strin
 }
 
 #if WEBSERVER_LOG_SERIAL
+
 void Plugin::_logRequest(AsyncWebServerRequest *request, AsyncWebServerResponse *response)
 {
     PrintString log;
@@ -510,7 +511,13 @@ void Plugin::_logRequest(AsyncWebServerRequest *request, AsyncWebServerResponse 
     log.strftime_P(PSTR(" - - [%m/%d/%Y %H:%M:%S] \""), time(nullptr));
     log.print(request->methodToString());
     log.print(' ');
-    auto url = urlEncode(request->url(), F("\r\n\" "));
+    auto url = PrintString(urlEncode(request->url(), F("\r\n\" ")));
+    if (request->args()) {
+        for(size_t i = 0; i < request->args(); i++) {
+            auto param = request->getParam(i);
+            url.printf_P(PSTR("%c%s=%s"), (i == 0 ? '?' : '&'), param->name().c_str(), urlEncode(param->value(), F("\r\n\" ?=")).c_str());
+        }
+    }
     log.print(url);
     if (response) {
         auto contentLength = response->getContentLength();
@@ -522,6 +529,7 @@ void Plugin::_logRequest(AsyncWebServerRequest *request, AsyncWebServerResponse 
     }
     Serial.println(log);
 }
+
 #endif
 
 void Plugin::_handlerWebUI(AsyncWebServerRequest *request, HttpHeaders &headers)

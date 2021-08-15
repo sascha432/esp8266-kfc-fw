@@ -109,19 +109,20 @@ bool ConfigReaderWriter::storeConfig(uint8_t retries, uint16_t retryDelay)
     if (!_config.version) {
         return false;
     }
+    if (!_wire.lock()) {
+        return false;
+    }
     while(_retries) {
         _config.info.length = std::min<uint8_t>(_config.info.length, sizeof(_config.config));
-        if (_wire.lock()) {
-            _wire.beginTransmission(DIMMER_I2C_ADDRESS);
-            if (_wire.write(_config.info.cfg_start_address) == 1 &&
-                _wire.write(reinterpret_cast<uint8_t *>(&_config.config), _config.info.length) == _config.info.length &&
-                _wire.endTransmission() == 0)
-            {
-                _wire.unlock();
-                _wire.writeEEPROM();
-                return true;
-            }
+
+        _wire.beginTransmission(DIMMER_I2C_ADDRESS);
+        if (_wire.write(_config.info.cfg_start_address) == 1 &&
+            _wire.write(reinterpret_cast<uint8_t *>(&_config.config), _config.info.length) == _config.info.length &&
+            _wire.endTransmission() == 0)
+        {
             _wire.unlock();
+            _wire.writeEEPROM();
+            return true;
         }
         if (!can_yield()) {
             break;
@@ -130,6 +131,7 @@ bool ConfigReaderWriter::storeConfig(uint8_t retries, uint16_t retryDelay)
         _retries--;
     }
 
+    _wire.unlock();
     return false;
 }
 

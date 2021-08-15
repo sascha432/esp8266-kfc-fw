@@ -53,7 +53,7 @@ namespace Dimmer {
 
     inline void Plugin::createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
     {
-        Form::createConfigureForm(type, formName, form);
+        Base::createConfigureForm(type, formName, form);
     }
 
     inline void Plugin::getValues(WebUINS::Events &array)

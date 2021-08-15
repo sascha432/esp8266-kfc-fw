@@ -3,7 +3,6 @@
  */
 
 #include "dimmer_base.h"
-#include "dimmer_form.h"
 #include "Utility/ProgMemHelper.h"
 
 #if DEBUG_IOT_DIMMER_MODULE
@@ -18,7 +17,7 @@ using Plugins = KFCConfigurationClasses::PluginsType;
 
 namespace Dimmer {
 
-    void Form::createConfigureForm(PluginComponent::FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form)
+    void Base::createConfigureForm(PluginComponent::FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form)
     {
         if (type == PluginComponent::FormCallbackType::SAVE) {
             if (formName == F("channels")) {
@@ -30,7 +29,7 @@ namespace Dimmer {
                 }
             }
             else if (formName == F("advanced") || formName == F("general")) {
-                writeConfig(Plugins::Dimmer::getWriteableConfig());
+                writeConfig(_config);
             }
             return;
         }
@@ -49,10 +48,11 @@ namespace Dimmer {
                 }
             }
             else if (formName == F("advanced") || formName == F("general")) {
-                readConfig(cfg);
+                readConfig(_config);
             }
         }
-        auto configValidAttr = FormUI::Conditional<FormUI::DisabledAttribute>(!cfg.version, FormUI::DisabledAttribute());
+        auto &firmwareConfig = _config._firmwareConfig;
+        auto configValidAttr = FormUI::Conditional<FormUI::DisabledAttribute>(_config == false, FormUI::DisabledAttribute());
 
         auto &ui = form.createWebUI();
         ui.setTitle(F("Dimmer Configuration"));
@@ -83,20 +83,20 @@ namespace Dimmer {
             #endif
 
             #if DIMMER_FIRMWARE_VERSION <= 0x020105
-                form.addPointerTriviallyCopyable(F("lcf"), &cfg.cfg.linear_correction_factor);
+                form.addPointerTriviallyCopyable(F("lcf"), &firmwareConfig.linear_correction_factor);
                 form.addFormUI(F("Linear Correction Factor"), configValidAttr, FormUI::PlaceHolder(1.0, 1));
             #endif
 
-            form.addCallbackSetter(F("restore"), cfg.cfg.bits.restore_level, [&cfg](const uint8_t value, FormField &) {
-                cfg.cfg.bits.restore_level = value;
+            form.addCallbackSetter(F("restore"), firmwareConfig.bits.restore_level, [&firmwareConfig](const uint8_t value, FormField &) {
+                firmwareConfig.bits.restore_level = value;
             });
             form.addFormUI(F("After Power Failure"), configValidAttr, FormUI::BoolItems(F("Restore last brightness level"), F("Do not turn on")));
 
-            form.addPointerTriviallyCopyable(F("maxtmp"), &cfg.cfg.max_temp);
+            form.addPointerTriviallyCopyable(F("maxtmp"), &firmwareConfig.max_temp);
             form.addFormUI(F("Max. Temperature"), configValidAttr, FormUI::PlaceHolder(75), FormUI::Suffix(FSPGM(UTF8_degreeC)));
             form.addValidator(FormUI::Validator::Range(F("Temperature out of range: %min%-%max%"), 55, 125));
 
-            form.addPointerTriviallyCopyable(F("meint"), &cfg.cfg.report_metrics_interval);
+            form.addPointerTriviallyCopyable(F("meint"), &firmwareConfig.report_metrics_interval);
             form.addFormUI(F("Metrics Report Interval"), configValidAttr, FormUI::PlaceHolder(10), FormUI::Suffix(FSPGM(seconds)));
             form.addValidator(FormUI::Validator::Range(2, 60));
 
@@ -246,17 +246,17 @@ namespace Dimmer {
 
             #if DIMMER_FIRMWARE_VERSION >= 0x020200
 
-                form.addCallbackSetter(F("dmode"), cfg.cfg.bits.leading_edge, [&cfg](const bool value, FormField &) {
-                    cfg.cfg.bits.leading_edge = value;
+                form.addCallbackSetter(F("dmode"), firmwareConfig.bits.leading_edge, [&firmwareConfig](const bool value, FormField &) {
+                    firmwareConfig.bits.leading_edge = value;
                 });
                 form.addFormUI(F("Operation Mode"), configValidAttr, FormUI::Container::List(0, F("Trailing Edge"), 1, F("Leading Edge")));
 
-                form.addPointerTriviallyCopyable(F("rbeg"), &cfg.cfg.range_begin);
+                form.addPointerTriviallyCopyable(F("rbeg"), &firmwareConfig.range_begin);
                 form.addFormUI(F("Level Range Start"), configValidAttr, FormUI::Suffix(F("0 - Range End")));
                 form.addValidator(FormUI::Validator::Range(0, IOT_DIMMER_MODULE_MAX_BRIGHTNESS));
 
-                form.addCallbackSetter(F("rend"), cfg.cfg.get_range_end(), [&cfg](uint16_t value, FormField &) {
-                    cfg.cfg.set_range_end(value);
+                form.addCallbackSetter(F("rend"), firmwareConfig.get_range_end(), [&firmwareConfig](uint16_t value, FormField &) {
+                    firmwareConfig.set_range_end(value);
                 });
                 form.addFormUI(F("Level Range End"), configValidAttr, FormUI::Suffix(F("Range Start - " _STRINGIFY(IOT_DIMMER_MODULE_MAX_BRIGHTNESS))));
                 form.addValidator(FormUI::Validator::Range(0, IOT_DIMMER_MODULE_MAX_BRIGHTNESS));
@@ -265,7 +265,7 @@ namespace Dimmer {
 
             #if DIMMER_FIRMWARE_VERSION <= 0x020105
 
-                form.addPointerTriviallyCopyable(F("zc_offset"), &cfg.cfg.zero_crossing_delay_ticks);
+                form.addPointerTriviallyCopyable(F("zc_offset"), &firmwareConfig.zero_crossing_delay_ticks);
                 form.addFormUI(F("Zero Crossing Offset"), configValidAttr, FormUI::Suffix(FSPGM(ticks, "ticks")));
                 form.addValidator(FormUI::Validator::Range(0, 65535));
 
@@ -273,37 +273,37 @@ namespace Dimmer {
 
             #if DIMMER_FIRMWARE_VERSION >= 0x020200
 
-                auto &negativeZCOffset = form.addCallbackSetter(F("nzcd"), cfg.cfg.bits.negative_zc_delay, [&cfg](const uint8_t value, FormField &) {
-                    cfg.cfg.bits.negative_zc_delay = value;
+                auto &negativeZCOffset = form.addCallbackSetter(F("nzcd"), firmwareConfig.bits.negative_zc_delay, [&firmwareConfig](const uint8_t value, FormField &) {
+                    firmwareConfig.bits.negative_zc_delay = value;
                 });
                 form.addFormUI(FormUI::Type::HIDDEN, configValidAttr);
 
-                form.addPointerTriviallyCopyable(F("zc_offset"), &cfg.cfg.zero_crossing_delay_ticks);
+                form.addPointerTriviallyCopyable(F("zc_offset"), &firmwareConfig.zero_crossing_delay_ticks);
                 form.addFormUI(F("Zero Crossing Offset"), configValidAttr, FormUI::Suffix(FSPGM(ticks, "ticks")), FormUI::CheckboxButtonSuffix(negativeZCOffset, F("Negative Offset")));
                 form.addValidator(FormUI::Validator::Range(0, 65535));
 
 
-                form.addPointerTriviallyCopyable(F("adjhwc"), &cfg.cfg.halfwave_adjust_cycles);
+                form.addPointerTriviallyCopyable(F("adjhwc"), &firmwareConfig.halfwave_adjust_cycles);
                 form.addFormUI(F("Adjust Halfwave Length"), configValidAttr, FormUI::Suffix(F("Clock cycles")));
                 form.addValidator(FormUI::Validator::Range(-128, 127));
 
             #endif
 
-            form.addPointerTriviallyCopyable(F("min_on"), &cfg.cfg.minimum_on_time_ticks);
+            form.addPointerTriviallyCopyable(F("min_on"), &firmwareConfig.minimum_on_time_ticks);
             form.addFormUI(F("Minimum On-time"), configValidAttr, FormUI::Suffix(FSPGM(ticks)));
             form.addValidator(FormUI::Validator::Range(1, 65535));
 
-            form.addPointerTriviallyCopyable(F("min_off"), &cfg.cfg.minimum_off_time_ticks);
+            form.addPointerTriviallyCopyable(F("min_off"), &firmwareConfig.minimum_off_time_ticks);
             form.addFormUI(F("Minimum Off-time"), configValidAttr, FormUI::Suffix(FSPGM(ticks)));
             form.addValidator(FormUI::Validator::Range(1, 65535));
 
             #if DIMMER_FIRMWARE_VERSION >= 0x020200
 
-                form.addPointerTriviallyCopyable(F("swon_min_on"), &cfg.cfg.switch_on_minimum_ticks);
+                form.addPointerTriviallyCopyable(F("swon_min_on"), &firmwareConfig.switch_on_minimum_ticks);
                 form.addFormUI(F("Switch-On Minimum On-time"), configValidAttr, FormUI::Suffix(FSPGM(ticks)));
                 form.addValidator(FormUI::Validator::Range(0, 65535));
 
-                form.addPointerTriviallyCopyable(F("swon_count"), &cfg.cfg.switch_on_count);
+                form.addPointerTriviallyCopyable(F("swon_count"), &firmwareConfig.switch_on_count);
                 form.addFormUI(F("Switch-On Minimum On-time"), configValidAttr, FormUI::Suffix(F("Half Cycles")));
                 form.addValidator(FormUI::Validator::Range(0, 250));
 
@@ -311,45 +311,45 @@ namespace Dimmer {
 
             #if DIMMER_FIRMWARE_VERSION < 0x020200
 
-                form.addPointerTriviallyCopyable(F("vref11"), &cfg.cfg.internal_1_1v_ref);
+                form.addPointerTriviallyCopyable(F("vref11"), &firmwareConfig.internal_1_1v_ref);
                 form.addFormUI(F("ATmega 1.1V Reference Calibration"), configValidAttr, FormUI::PlaceHolder(1.1, 1), FormUI::Suffix(F("V")));
                 form.addValidator(FormUI::Validator::RangeDouble(1.0, 1.2, 1));
 
-                form.add<float>(F("temp_ofs"), (cfg.cfg.ntc_temp_offset / DIMMER_TEMP_OFFSET_DIVIDER), [&cfg](const float &value, FormField &, bool) {
-                    cfg.cfg.ntc_temp_offset = value * DIMMER_TEMP_OFFSET_DIVIDER;
+                form.add<float>(F("temp_ofs"), (firmwareConfig.ntc_temp_offset / DIMMER_TEMP_OFFSET_DIVIDER), [&firmwareConfig](const float &value, FormField &, bool) {
+                    firmwareConfig.ntc_temp_offset = value * DIMMER_TEMP_OFFSET_DIVIDER;
                     return false;
                 });
                 form.addFormUI(F("Temperature Offset (NTC)"), configValidAttr, FormUI::PlaceHolder(0), FormUI::Suffix(FSPGM(UTF8_degreeC)));
 
-                form.add<float>(F("temp2_ofs"), (cfg.cfg.int_temp_offset / DIMMER_TEMP_OFFSET_DIVIDER), [&cfg](const float &value, FormField &, bool) {
-                    cfg.cfg.int_temp_offset = value * DIMMER_TEMP_OFFSET_DIVIDER;
+                form.add<float>(F("temp2_ofs"), (firmwareConfig.int_temp_offset / DIMMER_TEMP_OFFSET_DIVIDER), [&firmwareConfig](const float &value, FormField &, bool) {
+                    firmwareConfig.int_temp_offset = value * DIMMER_TEMP_OFFSET_DIVIDER;
                     return false;
                 });
                 form.addFormUI(F("Temperature Offset 2 (ATmega)"), configValidAttr, FormUI::PlaceHolder(0), FormUI::Suffix(FSPGM(UTF8_degreeC)));
 
             #else
 
-                form.addCallbackSetter<float>(F("vref11"), cfg.cfg.internal_vref11, [&cfg](float value, FormField &) {
-                    cfg.cfg.internal_vref11 = value;
+                form.addCallbackSetter<float>(F("vref11"), firmwareConfig.internal_vref11, [&firmwareConfig](float value, FormField &) {
+                    firmwareConfig.internal_vref11 = value;
                 });
                 form.addFormUI(F("ATmega 1.1V Reference Calibration"), configValidAttr, FormUI::PlaceHolder(1.1, 1), FormUI::Suffix(F("V")));
                 form.addValidator(FormUI::Validator::RangeDouble(internal_vref11_t((int8_t)-128), internal_vref11_t((int8_t)127), 1));
 
-                form.add<float>(F("temp_ofs"), cfg.cfg.ntc_temp_cal_offset, [&cfg](const float value, FormField &, bool) {
-                    cfg.cfg.ntc_temp_cal_offset = value;
+                form.add<float>(F("temp_ofs"), firmwareConfig.ntc_temp_cal_offset, [&firmwareConfig](const float value, FormField &, bool) {
+                    firmwareConfig.ntc_temp_cal_offset = value;
                     return false;
                 });
                 form.addFormUI(F("Temperature Offset (NTC)"), configValidAttr, FormUI::PlaceHolder(0), FormUI::Suffix(FSPGM(UTF8_degreeC)));
 
-                form.addPointerTriviallyCopyable(F("tsofs"), &cfg.cfg.internal_temp_calibration.ts_offset);
+                form.addPointerTriviallyCopyable(F("tsofs"), &firmwareConfig.internal_temp_calibration.ts_offset);
                 form.addFormUI(F("TS Offset (ATmega Sensor)"), configValidAttr, FormUI::PlaceHolder(0), FormUI::Suffix(F("temperature sensor offset correction")));
                 form.addValidator(FormUI::Validator::Range(0, 255));
 
-                form.addPointerTriviallyCopyable(F("tsgain"), &cfg.cfg.internal_temp_calibration.ts_gain);
+                form.addPointerTriviallyCopyable(F("tsgain"), &firmwareConfig.internal_temp_calibration.ts_gain);
                 form.addFormUI(F("TS Gain"), configValidAttr, FormUI::PlaceHolder(0), FormUI::Suffix(F("8-bit unsigned fixed point 1/128th units")));
                 form.addValidator(FormUI::Validator::Range(0, 255));
-                // , [&cfg](const uint8_t value, FormField &) {
-                //     cfg.cfg.int_temp_offset = value;
+                // , [&firmwareConfig](const uint8_t value, FormField &) {
+                //     firmwareConfig.int_temp_offset = value;
                 //     return false;
                 // });
 

@@ -57,16 +57,27 @@ void Module::_endMqtt()
 
 void Module::getStatus(Print &out)
 {
-    out.print(F(", Fading enabled" HTML_S(br)));
+    out.print(F(", Fading enabled"));
+    auto &cfg = _getConfig();
+    if (cfg) {
+        auto &cfg = _config._firmwareConfig;
+        if (cfg.bits.cubic_interpolation) {
+            out.print(F(", Cubic Interpolation enabled"));
+        }
+    }
+    out.print(F(HTML_S(br)));
+
     for(uint8_t i = 0; i < _channels.size(); i++) {
         out.printf_P(PSTR("Channel %u: "), i);
         if (_channels[i].getOnState()) {
-            out.printf_P(PSTR("on - %.1f%%" HTML_S(br)), static_cast<float>(_channels[i].getLevel() * 100) / IOT_DIMMER_MODULE_MAX_BRIGHTNESS);
+            out.printf_P(PSTR("on - %.1f%%"), static_cast<float>(_channels[i].getLevel() * 100) / IOT_DIMMER_MODULE_MAX_BRIGHTNESS);
         }
         else {
-            out.print(F("off" HTML_S(br)));
+            out.print(F("off" ));
         }
     }
+    out.print(F(HTML_S(br)));
+
     Base::getStatus(out);
 }
 

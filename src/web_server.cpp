@@ -535,16 +535,12 @@ void Plugin::_logRequest(AsyncWebServerRequest *request, AsyncWebServerResponse 
 void Plugin::_handlerWebUI(AsyncWebServerRequest *request, HttpHeaders &headers)
 {
     if (!plugin.isAuthenticated(request)) {
-        auto response = request->beginResponse(403);
-        _logRequest(request, response);
-        request->send(response);
+        send(403, request);
         return;
     }
     // 503 if the webui is disabled
     if (!System::Flags::getConfig().is_webui_enabled) {
-        auto response = request->beginResponse(503);
-        _logRequest(request, response);
-        request->send(response);
+        send(503, request);
         return;
     }
     auto json = WebUISocket::createWebUIJSON();
@@ -645,9 +641,7 @@ void Plugin::_handlerImportSettings(AsyncWebServerRequest *request, HttpHeaders 
         message = AsyncWebServerResponse::responseCodeToString(405);
         status = 405;
     }
-    auto response = request->beginResponse(200, FSPGM(mime_text_plain), PrintString(F("{\"status\":%u,\"count\":%d,\"message\":\"%s\"}"), status, count, message));
-    _logRequest(request, response);
-    request->send(response);
+    send(request, request->beginResponse(200, FSPGM(mime_text_plain), PrintString(F("{\"status\":%u,\"count\":%d,\"message\":\"%s\"}"), status, count, message)));
 }
 
 void Plugin::_handlerExportSettings(AsyncWebServerRequest *request, HttpHeaders &headers)
@@ -669,8 +663,7 @@ void Plugin::_handlerExportSettings(AsyncWebServerRequest *request, HttpHeaders 
     config.exportAsJson(content, config.getFirmwareVersion());
     auto response = request->beginResponse(200, FSPGM(mime_application_json), content);
     headers.setResponseHeaders(response);
-    _logRequest(request, response);
-    request->send(response);
+    send(request, response);
 }
 
 #if ENABLE_ARDUINO_OTA

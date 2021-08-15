@@ -232,6 +232,7 @@ namespace WebServer {
         static void message(AsyncWebServerRequest *request, MessageType type, const String &msg, const String &title);
 
         static void send(uint16_t httpCode, AsyncWebServerRequest *request, const String &message = String());
+        static void send(AsyncWebServerRequest *request, AsyncWebServerResponse *response);
 
         // returns true for any html page
         static bool isHtmlContentType(AsyncWebServerRequest *request, HttpHeaders *headers = nullptr);
@@ -281,6 +282,7 @@ namespace WebServer {
         bool _isPublic(const String &pathString) const;
         bool _clientAcceptsGzip(AsyncWebServerRequest *request) const;
 
+    public:
         static void _logRequest(AsyncWebServerRequest *request, AsyncWebServerResponse *response);
 
 #if ENABLE_ARDUINO_OTA
@@ -405,6 +407,12 @@ namespace WebServer {
         }
         _logRequest(request, response);
         return false;
+    }
+
+    inline void Plugin::send(AsyncWebServerRequest *request, AsyncWebServerResponse *response)
+    {
+        _logRequest(request, response);
+        request->send(response);
     }
 
 #if WEBSERVER_LOG_SERIAL == 0

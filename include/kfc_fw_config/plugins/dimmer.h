@@ -14,19 +14,10 @@ namespace KFCConfigurationClasses {
 
         namespace DimmerConfigNS {
 
-            #if !IOT_DIMMER_MODULE && !IOT_ATOMIC_SUN_V2
-                    typedef struct {
-                    } register_mem_cfg_t;
-                    typedef struct  {
-                    } dimmer_version_t;
-            #endif
-
             class DimmerConfig {
             public:
                 struct __attribute__packed__ DimmerConfig_t {
                     using Type = DimmerConfig_t;
-                    dimmer_version_t version;
-                    register_mem_cfg_t cfg;
                     #if IOT_ATOMIC_SUN_V2
                         int8_t channel_mapping[IOT_DIMMER_MODULE_CHANNELS];
                     #endif

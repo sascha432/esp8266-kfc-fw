@@ -22,11 +22,11 @@ namespace Dimmer {
         ButtonConfig(ConfigType &config) :
             PushButtonConfig(
                 EnumHelper::Bitset::all(EventType::UP, EventType::DOWN, EventType::LONG_PRESSED, EventType::HOLD/*, EventType::REPEATED_CLICK*/),
-                config.shortpress_time,
-                config.longpress_time,
+                config._base.shortpress_time,
+                config._base.longpress_time,
                 IOT_DIMMER_MODULE_HOLD_REPEAT_TIME,
-                config.shortpress_steps,
-                config.single_click_time
+                config._base.shortpress_steps,
+                config._base.single_click_time
             )
         {
         }

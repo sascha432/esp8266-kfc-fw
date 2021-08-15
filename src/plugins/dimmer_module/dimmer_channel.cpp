@@ -213,9 +213,10 @@ bool Channel::_set(int32_t level, float transition, bool publish)
         }
     }
     else if (level != _brightness) {
+        auto &cfg = _dimmer->_getConfig()._base;
         auto tmp = _brightness;
-        _brightness = std::clamp<int32_t>(level, _dimmer->_getConfig().min_brightness * getMaxLevel() / 100, _dimmer->_getConfig().max_brightness * getMaxLevel() / 100);
-        __LDBG_printf("level=%u min=%u max=%u brightness=%u", level, _dimmer->_getConfig().min_brightness * getMaxLevel() / 100, _dimmer->_getConfig().max_brightness * getMaxLevel() / 100, _brightness);
+        _brightness = std::clamp<int32_t>(level, cfg.min_brightness * getMaxLevel() / 100, cfg.max_brightness * getMaxLevel() / 100);
+        __LDBG_printf("level=%u min=%u max=%u brightness=%u", level, cfg.min_brightness * getMaxLevel() / 100, cfg.max_brightness * getMaxLevel() / 100, _brightness);
         _dimmer->_fade(_channel, _brightness, _dimmer->getTransitionTime(tmp, _brightness, transition));
         _dimmer->_wire.writeEEPROM();
         if (publish) {
@@ -228,9 +229,9 @@ bool Channel::_set(int32_t level, float transition, bool publish)
 
 #if IOT_DIMMER_MODULE_HAS_BUTTONS
 
-int Channel::_offDelayPrecheck(int16_t level, ConfigType *config, int16_t storeLevel)
+int Channel::_offDelayPrecheck(int16_t level, ConfigType *configPtr, int16_t storeLevel)
 {
-    __LDBG_printf("timer=%p level=%d config=%p store=%d", _delayTimer, level, config, storeLevel);
+    __LDBG_printf("timer=%p level=%d config=%p store=%d", _delayTimer, level, configPtr, storeLevel);
     if (_delayTimer) {
         // restore brightness
         (*_delayTimer)->_callback(nullptr);
@@ -242,20 +243,21 @@ int Channel::_offDelayPrecheck(int16_t level, ConfigType *config, int16_t storeL
             return off(nullptr) ? -1 : 1;
         }
     }
-    if (level != 0 || config == nullptr) {
+    if (level != 0 || configPtr == nullptr) {
         // continue
         return 0;
     }
-    if (_brightness == 0 || config->off_delay == 0) {
+    auto &config = configPtr->_base;
+    if (_brightness == 0 || config.off_delay == 0) {
         // no delay, continue
         return 0;
     }
 
-    __LDBG_printf("off_delay=%d signal=%d", config->off_delay, config->off_delay_signal);
+    __LDBG_printf("off_delay=%d signal=%d", config.off_delay, config.off_delay_signal);
     _delayTimer = new Event::Timer();
 
-    if (config->off_delay >= 5 && config->off_delay_signal) {
-        auto delay = config->off_delay - 4;
+    if (config.off_delay >= 5 && config.off_delay_signal) {
+        auto delay = config.off_delay - 4;
         int16_t brightness = storeLevel + (storeLevel * 100 / getMaxLevel() > 70 ? getMaxLevel() * -0.3 : getMaxLevel() * 0.3);
         // flash once to signal confirmation
         _Timer(_delayTimer)->add(Event::milliseconds(1900), true, [this, delay, brightness, storeLevel](Event::CallbackTimerPtr timer) {
@@ -288,7 +290,7 @@ int Channel::_offDelayPrecheck(int16_t level, ConfigType *config, int16_t storeL
         }, Event::PriorityType::HIGHEST);
     }
     else {
-        _Timer(_delayTimer)->add(Event::seconds(config->off_delay), false, [this, storeLevel](Event::CallbackTimerPtr timer) {
+        _Timer(_delayTimer)->add(Event::seconds(config.off_delay), false, [this, storeLevel](Event::CallbackTimerPtr timer) {
             __LDBG_printf("timer=%p store_level=%d off=%u", timer, storeLevel, true);
             off(nullptr, storeLevel);
         }, Event::PriorityType::HIGHEST);
@@ -303,7 +305,7 @@ void Channel::_publishMQTT()
 {
     if (isConnected()) {
         using namespace MQTT::Json;
-        publish(_createTopics(TopicType::COMMAND_STATE), true, UnnamedObject(State(_brightness != 0), Brightness(_brightness), Transition(_dimmer->_getConfig().lp_fadetime)).toString());
+        publish(_createTopics(TopicType::COMMAND_STATE), true, UnnamedObject(State(_brightness != 0), Brightness(_brightness), Transition(_dimmer->_getConfig()._base.lp_fadetime)).toString());
     }
 }
 
@@ -380,3 +382,4 @@ void Channel::publishState()
     //     _publishFlag &= ~kWebUIUpdateFlag;
     // }
 }
+

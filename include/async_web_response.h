@@ -206,7 +206,7 @@ public:
     using Callback = std::function<void(bool *async, bool fillBuffer, AsyncFillBufferCallbackResponse *response)>;
 
 public:
-    AsyncFillBufferCallbackResponse(Callback callback);
+    AsyncFillBufferCallbackResponse(const Callback &callback);
     virtual ~AsyncFillBufferCallbackResponse();
 
     virtual bool _sourceValid() const override;

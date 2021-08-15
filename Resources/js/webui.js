@@ -540,6 +540,8 @@ $.webUIComponent = {
         }
     },
     //
+    // slider key handler activated by clicking on the handle
+    //
     slider_onkeyup: function(event) {
         var input = this.selected_slider;
         if (!input) {

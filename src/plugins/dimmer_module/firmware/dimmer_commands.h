@@ -25,6 +25,10 @@ namespace Dimmer {
     public:
         using TwoWireEx::TwoWireEx;
 
+        static constexpr uint8_t getChannelCount() {
+            return DIMMER_CHANNEL_COUNT;
+        }
+
         void fadeTo(uint8_t channel, int16_t fromLevel, int16_t toLevel, float fadeTime, uint8_t address = kDefaultSlaveAddress) {
             if (lock()) {
                 beginTransmission(address);
@@ -100,6 +104,36 @@ namespace Dimmer {
             }
         }
 
+        CubicInterpolation readCubicInterpolation(uint8_t channel, uint8_t address = kDefaultSlaveAddress) {
+            CubicInterpolation ci;
+            if (!lock()) {
+                return ci;
+            }
+            beginTransmission(address);
+            write(DIMMER_REGISTER_COMMAND);
+            write(DIMMER_COMMAND_READ_CUBIC_INT);
+            write(channel);
+            if (((endTransmission(false) == 0) && (requestFrom(DIMMER_I2C_ADDRESS, CubicInterpolation::size()) == CubicInterpolation::size()) && (read(ci._data) == CubicInterpolation::size()))) {
+                ci.setChannel(channel);
+            }
+            unlock();
+            return ci;
+        }
+
+        bool writeCubicInterpolation(const CubicInterpolation &ci, uint8_t address = kDefaultSlaveAddress) {
+            if (!lock()) {
+                return false;
+            }
+            beginTransmission(address);
+            write(DIMMER_REGISTER_COMMAND);
+            write(DIMMER_COMMAND_WRITE_CUBIC_INT);
+            write(ci._channel);
+            write(ci._data);
+            bool result = (endTransmission() == 0);
+            unlock();
+            return result;
+        }
+
         MetricsType getMetrics(uint8_t address = kDefaultSlaveAddress) {
             MetricsType metrics;
             if (lock()) {
@@ -109,8 +143,8 @@ namespace Dimmer {
                 // #warning //TODO not implemented
                 if (!(
                     (endTransmission() == 0) &&
-                    (requestFrom(DIMMER_I2C_ADDRESS, sizeof(metrics)) == sizeof(metrics)) &&
-                    (read(metrics) == sizeof(metrics))
+                    (requestFrom(DIMMER_I2C_ADDRESS, MetricsType::size()) == MetricsType::size()) &&
+                    (read(metrics) == MetricsType::size())
                 )) {
                     metrics.invalidate();
                 }

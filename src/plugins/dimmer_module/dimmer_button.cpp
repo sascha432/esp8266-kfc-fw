@@ -21,7 +21,7 @@ using namespace Dimmer;
 using namespace PinMonitor;
 
 Button::Button(uint8_t pin, uint8_t channel, uint8_t button, Buttons &dimmer, SingleClickGroupPtr singleClickGroup) :
-    PushButton(pin, &dimmer, std::move(ButtonConfig(dimmer._getConfig())), singleClickGroup, dimmer._getConfig().pin_inverted(channel, button) ? ActiveStateType::INVERTED : ActiveStateType::NON_INVERTED),
+    PushButton(pin, &dimmer, std::move(ButtonConfig(dimmer._getConfig())), singleClickGroup, dimmer._getConfig()._base.pin_inverted(channel, button) ? ActiveStateType::INVERTED : ActiveStateType::NON_INVERTED),
     _dimmer(dimmer),
     _level(0),
     _channel(channel),
@@ -60,11 +60,11 @@ void Button::event(EventType eventType, uint32_t now)
                 // _level += _button == 1 ? -levelChange : levelChange;
                 // calculate time for a single click to get a smooth transition to hold repeat
                 // _changeLevelSingle(_singleClickSteps, _button == 1, (_longpressTime * config.lp_fadetime / 950.0) / (config.lp_fadetime / _singleClickSteps));
-                if (config.longpress_time == 0) {
+                if (config._base.longpress_time == 0) {
                     _changeLevelRepeat(_repeatTime, _button == 1);
                 }
                 else {
-                    _changeLevelSingle(_singleClickSteps, _button == 1, config.lp_fadetime);
+                    _changeLevelSingle(_singleClickSteps, _button == 1, config._base.lp_fadetime);
                 }
             }
             else if (_button == 0) {
@@ -91,19 +91,19 @@ void Button::event(EventType eventType, uint32_t now)
                 }
             }
             else {
-                if (config.longpress_time == 0 && (_repeatCount > 1 || groupRepeatCount > 1)) {
+                if (config._base.longpress_time == 0 && (_repeatCount > 1 || groupRepeatCount > 1)) {
                     _freezeLevel();
                 }
             }
             break;
         case EventType::LONG_CLICK: {
-                int32_t level = _button == 0 ? config.longpress_max_brightness : config.longpress_min_brightness;
+                int32_t level = _button == 0 ? config._base.longpress_max_brightness : config._base.longpress_min_brightness;
                 if (level != 0) {
                     level = IOT_DIMMER_MODULE_MAX_BRIGHTNESS * level / 100;
                     if (!_dimmer.getChannelState(_channel)) {
                         _dimmer.on(_channel);
                     }
-                    _setLevel(level, config.lp_fadetime);
+                    _setLevel(level, config._base.lp_fadetime);
                 }
             }
             break;
@@ -131,7 +131,7 @@ void Button::_changeLevelSingle(uint16_t steps, bool invert, float time)
 
 void Button::_changeLevelRepeat(uint16_t repeatTime, bool invert)
 {
-    float fadeTime = _dimmer._config.lp_fadetime;
+    float fadeTime = _dimmer._config._base.lp_fadetime;
     int16_t levelChange = IOT_DIMMER_MODULE_MAX_BRIGHTNESS * ((repeatTime / 1000.0) / fadeTime);
     __LDBG_printf("fadetime=%f/%f repeat=%u level=%d", fadeTime, fadeTime * 1.1, repeatTime, invert ? -levelChange : levelChange);
     // to avoid choppy dimming, the time is 10% longer than the actual level change takes
@@ -152,8 +152,8 @@ void Button::_setLevel(int32_t newLevel, int16_t curLevel, float fadeTime)
     auto &config = _dimmer._getConfig();
     newLevel = std::clamp<int32_t>(
         newLevel,
-        IOT_DIMMER_MODULE_MAX_BRIGHTNESS * config.min_brightness / 100,
-        IOT_DIMMER_MODULE_MAX_BRIGHTNESS * config.max_brightness / 100
+        IOT_DIMMER_MODULE_MAX_BRIGHTNESS * config._base.min_brightness / 100,
+        IOT_DIMMER_MODULE_MAX_BRIGHTNESS * config._base.max_brightness / 100
     );
     if (curLevel != newLevel) {
         __LDBG_printf("#%u setChannel channel=%d new_level=%d time=%f", _button, _channel, newLevel, -fadeTime);

@@ -136,8 +136,8 @@ void Plugin::createWebUI(WebUINS::Root &webUI)
             #endif
 
             auto slider = WebUINS::Slider(PrintString(F("d_chan%u"), idx),  PrintString(F("Channel %u"), number), 0, IOT_DIMMER_MODULE_MAX_BRIGHTNESS);
-            slider.append(WebUINS::NamedInt32(J(range_min), IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config.min_brightness / 100));
-            slider.append(WebUINS::NamedInt32(J(range_max), IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config.max_brightness / 100));
+            slider.append(WebUINS::NamedInt32(J(range_min), IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config._base.min_brightness / 100));
+            slider.append(WebUINS::NamedInt32(J(range_max), IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config._base.max_brightness / 100));
             webUI.addRow(slider);
 
             // row = &webUI.addRow();
@@ -159,6 +159,7 @@ void Plugin::createMenu()
         subMenu.addMenuItem(F("Button Configuration"), F("dimmer/buttons.html"));
     #endif
     subMenu.addMenuItem(F("Advanced Firmware Configuration"), F("dimmer/advanced.html"));
+    subMenu.addMenuItem(F("Cubic Interpolation"), F("dimmer-ci.html"));
 }
 
 

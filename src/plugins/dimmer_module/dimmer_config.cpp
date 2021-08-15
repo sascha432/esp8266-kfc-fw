@@ -13,9 +13,6 @@ namespace KFCConfigurationClasses {
         namespace DimmerConfigNS {
 
             DimmerConfig::DimmerConfig_t::DimmerConfig_t() :
-                    version(),
-                    // info({}),
-                    cfg({}),
                     #if IOT_ATOMIC_SUN_V2
                         #ifdef IOT_ATOMIC_SUN_CHANNEL_WW1
                             channel_mapping{ IOT_ATOMIC_SUN_CHANNEL_WW1, IOT_ATOMIC_SUN_CHANNEL_WW2, IOT_ATOMIC_SUN_CHANNEL_CW1, IOT_ATOMIC_SUN_CHANNEL_CW2 },

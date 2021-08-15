@@ -5,8 +5,9 @@
 #include "dimmer_base.h"
 #include "dimmer_module.h"
 #include "dimmer_plugin.h"
-#include "../src/plugins/sensor/sensor.h"
 #include <WebUISocket.h>
+#include <async_web_response.h>
+#include "../src/plugins/sensor/sensor.h"
 
 #if DEBUG_IOT_DIMMER_MODULE
 #include <debug_helper_enable.h>
@@ -43,7 +44,7 @@ void Base::begin()
     #else
     #endif
 
-    _config = Plugins::Dimmer::getConfig();
+    _config._base = Plugins::Dimmer::getConfig();
     Base::readConfig(_config);
 
     #if IOT_DIMMER_MODULE_INTERFACE_UART == 0
@@ -57,7 +58,7 @@ void Base::begin()
 
 void Base::end()
 {
-    _config.version = {};
+    _config.invalidate();
 
     #if IOT_DIMMER_MODULE_INTERFACE_UART
         _wire.onReceive(nullptr);
@@ -81,12 +82,12 @@ void Base::end()
 void Base::_updateConfig(ConfigType &config, Dimmer::ConfigReaderWriter &reader, bool status)
 {
     if (status) {
-        config.version = reader.config().version;
+        config._version = reader.config().version;
         // config.info = reader.config().info;
-        config.cfg = reader.config().config;
+        config._firmwareConfig = reader.config().config;
 
-        if (config.version.major != DIMMER_FIRMWARE_VERSION_MAJOR || config.version.minor != DIMMER_FIRMWARE_VERSION_MINOR) {
-            Logger_error(PrintString(F("Dimmer firmware version %u.%u.%u not supported"), config.version.major, config.version.minor, config.version.revision));
+        if (config._version.major != DIMMER_FIRMWARE_VERSION_MAJOR || config._version.minor != DIMMER_FIRMWARE_VERSION_MINOR) {
+            Logger_error(PrintString(F("Dimmer firmware version %u.%u.%u not supported"), config._version.major, config._version.minor, config._version.revision));
         }
         else {
             LoopFunctions::callOnce([this]() {
@@ -99,7 +100,7 @@ void Base::_updateConfig(ConfigType &config, Dimmer::ConfigReaderWriter &reader,
         Logger_error(F("Reading firmware configuration failed"));
     }
     // failure
-    config.version = {};
+    config.invalidate();
 }
 
 
@@ -113,11 +114,11 @@ void Base::_onReceive(size_t length)
             auto reader = std::shared_ptr<ConfigReaderWriter>(new ConfigReaderWriter(_wire, DIMMER_I2C_ADDRESS));
             reader->readConfig(10, 500, [this, reader](ConfigReaderWriter &config, bool status) {
                 if (status) {
-                    _config.version = config.config().version;
-                    _config.cfg = config.config().config;
+                    _config._version = config.config().version;
+                    _config._firmwareConfig = config.config().config;
                 }
                 else {
-                    _config.version = {};
+                    _config.invalidate();
                 }
             }, 100);
         }
@@ -149,26 +150,33 @@ void Base::readConfig(ConfigType &config)
 
 void Base::writeConfig(ConfigType &config)
 {
-    if (!config.version) {
+    if (!config) {
         Logger_error(F("Cannot store invalid firmware configuration"));
         return;
     }
-    config.cfg.fade_in_time = config.on_fadetime;
+    config._firmwareConfig.fade_in_time = config._base.on_fadetime;
     // if address does not match member, copy data
     if (&config != &_config) {
         _config = config;
     }
-    auto writer = _wire.getConfigWriter();
-    writer.config().version = config.version;
-    writer.config().config = config.cfg;
-
-    writer.storeConfig(3, 50);
+    auto ptr = std::shared_ptr<ConfigReaderWriter>(new ConfigReaderWriter(std::move(_wire.getConfigWriter())));
+    if (ptr) {
+        ptr->config().version = config._version;
+        ptr->config().config = config._firmwareConfig;
+        LoopFunctions::callOnce([ptr]() {
+            if (!ptr->storeConfig(3, 100)) {
+                Logger_error(F("Error while writing firmware configuration"));
+            }
+        });
+    }
+    else {
+        Logger_error(F("Cannot store firmware configuration, memory allocation failed"));
+    }
 }
-
 
 void Base::_fade(uint8_t channel, int16_t toLevel, float fadeTime)
 {
-    auto maxTime = max(_config.lp_fadetime, max(_config.on_fadetime, _config.off_fadetime));
+    auto maxTime = std::max(_config._base.lp_fadetime, std::max(_config._base.on_fadetime, _config._base.off_fadetime));
     if (fadeTime > maxTime) {
         fadeTime = maxTime;
     }
@@ -230,16 +238,20 @@ void Base::getStatus(Print &out)
             out.print(F(", "));
         }
         written = true;
-         out.printf_P(PSTR("VCC %.3fV"), _metrics.metrics.vcc / 1000.0);
+        out.printf_P(PSTR("VCC %.3fV"), _metrics.metrics.vcc / 1000.0);
      }
      if (!isnan(_metrics.metrics.frequency) && _metrics.metrics.frequency) {
         if (written) {
             out.print(F(", "));
         }
+        written = true;
         out.printf_P(PSTR("AC frequency %.2fHz"), _metrics.metrics.frequency);
     }
-    if (_config.version) {
-        out.printf_P(PSTR(HTML_S(br) "Firmware Version %u.%u.%u"), _config.version.major, _config.version.minor, _config.version.revision);
+    if (_config) {
+        out.printf_P(PSTR(HTML_S(br) "Firmware Version %u.%u.%u"), _config._version.major, _config._version.minor, _config._version.revision);
+    }
+    else {
+        out.print(F(HTML_S(br) "Failed to read firmware configuration"));
     }
 }
 
@@ -247,6 +259,7 @@ void Base::_updateMetrics(const MetricsType &metrics)
 {
     auto sensor = getMetricsSensor();
     if (sensor) {
+        // update sensor metrics and restore copy
         _metrics = sensor->_updateMetrics(metrics);
     }
 }
@@ -270,19 +283,19 @@ float Base::getTransitionTime(int fromLevel, int toLevel, float transitionTimeOv
     }
     if (toLevel == 0) {
         __LDBG_printf("transition=%.2f off", _config.off_fadetime);
-        return _config.off_fadetime;
+        return _config._base.off_fadetime;
     }
     if (!isnan(transitionTimeOverride)) {
-        auto time = transitionTimeOverride / (abs(fromLevel - toLevel) / static_cast<float>(DIMMER_MAX_LEVEL)); // calculate how much time it takes to dim from 0-100%
+        auto time = transitionTimeOverride / (static_cast<float>(abs(fromLevel - toLevel)) / static_cast<float>(DIMMER_MAX_LEVEL)); // calculate how much time it takes to dim from 0-100%
         __LDBG_printf("transition=%.2f t100=%f", transitionTimeOverride, time);
         return time;
     }
     if (fromLevel == 0 && toLevel) {
-        __LDBG_printf("transition=%.2f on", _config.on_fadetime);
-        return _config.on_fadetime;
+        __LDBG_printf("transition=%.2f on", _config._base.on_fadetime);
+        return _config._base.on_fadetime;
     }
-    __LDBG_printf("transition=%.2f fade", _config.lp_fadetime);
-    return _config.lp_fadetime;
+    __LDBG_printf("transition=%.2f fade", _config._base.lp_fadetime);
+    return _config._base.lp_fadetime;
 }
 
 
@@ -352,18 +365,191 @@ void Base::setValue(const String &id, const String &value, bool hasValue, bool s
 // web server and AT mode
 // ------------------------------------------------------------------------
 
+class AsyncDimmerResponse : public AsyncFillBufferCallbackResponse {
+public:
+    using Callback = std::function<bool (AsyncDimmerResponse &)>;
+
+public:
+    AsyncDimmerResponse(const Callback &callback, uint32_t timeout = 2000) :
+        AsyncFillBufferCallbackResponse([this](bool *async, bool fillBuffer, AsyncFillBufferCallbackResponse *response) {
+            if (*async) {
+                if (fillBuffer) {
+                    if (_callback(*reinterpret_cast<AsyncDimmerResponse *>(response))) {
+                        AsyncFillBufferCallbackResponse::finished(async, response);
+                    }
+                    else {
+                        if (millis() - _start > _timeout) {
+                            response->getBuffer() = String(F("{\"error\":\"Timeout while processing request\"}"));
+                            AsyncFillBufferCallbackResponse::finished(async, response);
+                        }
+                    }
+                }
+            }
+        }),
+        _callback(callback),
+        _start(millis()),
+        _timeout(timeout)
+    {
+        _contentType = FSPGM(mime_application_json);
+    }
+
+private:
+    Callback _callback;
+    uint32_t _start;
+    uint32_t _timeout;
+};
+
+uint8_t Base::_getChannelFrom(AsyncWebServerRequest *request)
+{
+    // get and validate channel
+    auto channelParam = request->getParam(F("channel"));
+    if (!channelParam) {
+        __DBG_printf("channel missing");
+        WebServer::Plugin::send(400, request);
+        return 0xff;
+    }
+    auto channel = static_cast<uint8_t>(channelParam->value().toInt());
+    if (channel >= DIMMER_CHANNEL_COUNT) {
+        __DBG_printf("invalid channel=%u", channel);
+        WebServer::Plugin::send(400, request);
+        return 0xff;
+    }
+    return channel;
+}
+
 void Base::handleWebServer(AsyncWebServerRequest *request)
 {
     if (WebServer::Plugin::getInstance().isAuthenticated(request) == true) {
-        resetDimmerMCU();
-        HttpHeaders httpHeaders(false);
-        httpHeaders.addNoCache();
-        auto response = request->beginResponse_P(200, FSPGM(mime_text_plain), SPGM(OK));
-        httpHeaders.setResponseHeaders(response);
-        request->send(response);
+        auto type = request->getParam(F("type"));
+        if (!type) {
+            __DBG_printf("type missing");
+            WebServer::Plugin::send(400, request);
+            return;
+        }
+        if (type->value() == F("reset")) {
+            resetDimmerMCU();
+            HttpHeaders httpHeaders(false);
+            httpHeaders.addNoCache();
+            auto response = request->beginResponse_P(200, FSPGM(mime_text_plain), SPGM(OK));
+            httpHeaders.setResponseHeaders(response);
+            WebServer::Plugin::send(request, response);
+        }
+        else if (type->value() == F("read-config")) {
+            WebServer::Plugin::send(400, request);
+        }
+        else if (type->value() == F("write-ci")) {
+            auto channel = _getChannelFrom(request);
+            if (channel == 0xff) {
+                return;
+            }
+            auto param = request->getParam(F("data"));
+            if (!param) {
+                __DBG_printf("data missing");
+                WebServer::Plugin::send(400, request);
+                return;
+            }
+            auto &dataStr = param->value();
+            if ((dataStr.length() % 4) != 0 || dataStr.length() < 4 || dataStr.length() > CubicInterpolation::size() * 4) {
+                __DBG_printf("invalid data length=%u", dataStr.length());
+                auto response = request->beginResponse(400);
+                WebServer::Plugin::_logRequest(request, response);
+                request->send(response);
+                return;
+            }
+            auto data = std::shared_ptr<CubicInterpolation>(new CubicInterpolation());
+            if (!data) {
+                WebServer::Plugin::send(503, request);
+                return;
+            }
+            auto in = dataStr.c_str();
+            auto end = in + dataStr.length();
+            auto ptr = data->_data.points;
+            while(in < end) {
+                ptr->x = strtoul(in, nullptr, 16);
+                in += 2;
+                ptr->y = strtoul(in, nullptr, 16);
+                in += 2;
+                ptr++;
+            }
+            // store data in main loop
+            data->setChannel(channel);
+            LoopFunctions::callOnce([channel, data]() {
+                if (!dimmer_plugin._wire.writeCubicInterpolation(*data)) {
+                    __DBG_printf("failed to store ci for channel=%u", data->_channel);
+                }
+                dimmer_plugin._wire.writeConfig();
+                // copy with locked interrupts
+                InterruptLock lock;
+                *data = CubicInterpolation();
+            });
+            // create async http response that waits for the data
+            auto response = new AsyncDimmerResponse([data](AsyncDimmerResponse &response) -> bool {
+                // data written?
+                if (!*data) {
+                    response.getBuffer() = std::move(String(F("{\"error\":null}")));
+                    return true;
+                }
+                return false;
+            });
+            HttpHeaders httpHeaders(false);
+            httpHeaders.addNoCache();
+            httpHeaders.setResponseHeaders(response);
+            request->send(response);
+        }
+        else if (type->value() == F("read-ci")) {
+            auto channel = _getChannelFrom(request);
+            if (channel == 0xff) {
+                return;
+            }
+            // load data in main loop
+            auto data = std::shared_ptr<CubicInterpolation>(new CubicInterpolation());
+            if (!data) {
+                WebServer::Plugin::send(503, request);
+                return;
+            }
+            LoopFunctions::callOnce([channel, data]() {
+                auto ci = dimmer_plugin._wire.readCubicInterpolation(channel);
+                // copy with locked interrupts
+                InterruptLock lock;
+                *data = ci;
+            });
+            // create async http response that waits for the data
+            auto response = new AsyncDimmerResponse([data](AsyncDimmerResponse &response) -> bool {
+                // do we have valid data?
+                if (*data) {
+                    // create json array
+                    PrintString str = F("{\"error\":null,\"data\":[");
+                    uint8_t maxX = data->_data.points[0].x;
+                    for(uint8_t i = 0; i < data->count(); i++) {
+                        if (i) {
+                            if (data->_data.points[i].x < maxX) {
+                                break;
+                            }
+                            str.print(',');
+                            maxX = data->_data.points[i].x;
+                        }
+                        str.printf_P(PSTR("{\"x\":%u,\"y\":%u}"), data->_data.points[i].x, data->_data.points[i].y);
+                    }
+                    str.print(F("]}"));
+                    response.getBuffer() = std::move(str);
+                    // invalidate data
+                    data->invalidate();
+                    return true;
+                }
+                return false;
+            });
+            HttpHeaders httpHeaders(false);
+            httpHeaders.addNoCache();
+            httpHeaders.setResponseHeaders(response);
+            WebServer::Plugin::send(request, response);
+        }
+        else {
+            __DBG_printf("invalid type=%s", type->value().c_str());
+            WebServer::Plugin::send(400, request);
+        }
     }
     else {
-        request->send(403);
+        WebServer::Plugin::send(403, request);
     }
 }
 

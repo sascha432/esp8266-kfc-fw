@@ -771,7 +771,7 @@ size_t AsyncSpeedTestResponse::_fillBuffer(uint8_t *buf, size_t maxLen)
 }
 
 
-AsyncFillBufferCallbackResponse::AsyncFillBufferCallbackResponse(Callback callback) :
+AsyncFillBufferCallbackResponse::AsyncFillBufferCallbackResponse(const Callback &callback) :
     AsyncBaseResponse(true),
     _callback(callback),
     _finished(false),
@@ -829,12 +829,12 @@ size_t AsyncFillBufferCallbackResponse::_fillBuffer(uint8_t *data, size_t len)
 
 
 AsyncResolveZeroconfResponse::AsyncResolveZeroconfResponse(const String &value) : AsyncFillBufferCallbackResponse([value](bool *async, bool fillBuffer, AsyncFillBufferCallbackResponse *response) {
-    if (*async) { // indicator that "response" still exists
-        if (!fillBuffer) { // we don't do refills
-            reinterpret_cast<AsyncResolveZeroconfResponse *>(response)->_doStuff(async, value);
+        if (*async) { // indicator that "response" still exists
+            if (!fillBuffer) { // we don't do refills
+                reinterpret_cast<AsyncResolveZeroconfResponse *>(response)->_doStuff(async, value);
+            }
         }
-    }
-})
+    })
 {
 }
 

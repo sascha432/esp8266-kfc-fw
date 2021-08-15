@@ -47,7 +47,27 @@ class AsyncWebServerRequest;
 
 namespace Dimmer {
 
-    using ConfigType = KFCConfigurationClasses::Plugins::DimmerConfigNS::DimmerConfig::DimmerConfig_t;
+    struct ConfigType {
+
+        using DimmerConfig_t = KFCConfigurationClasses::Plugins::DimmerConfigNS::Dimmer::DimmerConfig_t;
+
+        ConfigType() : _version({}), _firmwareConfig({}), _base({}) {}
+
+        operator bool() const {
+            return _version;
+        }
+
+        void invalidate() {
+            _version = dimmer_version_t({});
+            _firmwareConfig = register_mem_cfg_t({});
+            _cubicInterpolation = CubicInterpolation();
+        }
+
+        dimmer_version_t _version;
+        register_mem_cfg_t _firmwareConfig;
+        DimmerConfig_t _base;
+        CubicInterpolation _cubicInterpolation;
+    };
 
     class Channel;
     class Module;
@@ -133,6 +153,8 @@ namespace Dimmer {
         // write config to dimmer
         void writeConfig(ConfigType &config);
 
+        void createConfigureForm(PluginComponent::FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form);
+
     protected:
         friend Channel;
         friend ColorTemperature;
@@ -168,9 +190,8 @@ namespace Dimmer {
         ConfigType &_getConfig();
 
     protected:
-        MetricsType _metrics;
         ConfigType _config;
-        // MinMaxLevelArray _minMaxLevel;
+        MetricsType _metrics;
 
     protected:
     #if IOT_DIMMER_MODULE_INTERFACE_UART
@@ -202,6 +223,8 @@ namespace Dimmer {
         static void setupWebServer();
         static void handleWebServer(AsyncWebServerRequest *request);
         static void resetDimmerMCU();
+    private:
+        static uint8_t _getChannelFrom(AsyncWebServerRequest *request);
     };
 
     inline Base::~Base()
@@ -213,8 +236,8 @@ namespace Dimmer {
         if (level == 0) {
             return 0;
         }
-        auto min = _config.level.from[channel];
-        auto max = _config.level.to[channel];
+        auto min = _config._base.level.from[channel];
+        auto max = _config._base.level.to[channel];
         return (level * (max - min) + (IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 2)) / IOT_DIMMER_MODULE_MAX_BRIGHTNESS + min;
     }
 
@@ -223,15 +246,15 @@ namespace Dimmer {
         if (level == 0) {
             return 0;
         }
-        auto min = _config.level.from[channel];
-        auto max = _config.level.to[channel];
+        auto min = _config._base.level.from[channel];
+        auto max = _config._base.level.to[channel];
         auto range = max - min;
         return ((level - min) * IOT_DIMMER_MODULE_MAX_BRIGHTNESS + (range / 2)) / range;
     }
 
     inline bool Base::_isEnabled() const
     {
-        return _config.version;
+        return _config._version;
     }
 
     inline ConfigType &Base::_getConfig()
@@ -242,7 +265,7 @@ namespace Dimmer {
     inline void Base::setupWebServer()
     {
         __LDBG_printf("server=%p", WebServer::Plugin::getWebServerObject());
-        WebServer::Plugin::addHandler(F("/dimmer-reset-fw"), Base::handleWebServer);
+        WebServer::Plugin::addHandler(F("/dimmer-fw"), Base::handleWebServer);
     }
 
     inline void Base::resetDimmerMCU()

@@ -10,7 +10,6 @@
 // https://github.com/sascha432/trailing_edge_dimmer
 
 #include <Arduino_compat.h>
-#include "dimmer_form.h"
 #include "dimmer_buttons.h"
 #if IOT_DIMMER_HAS_COLOR_TEMP
 #include "dimmer_colortemp.h"
@@ -18,7 +17,7 @@
 
 namespace Dimmer {
 
-    class Module: public MQTTComponent, public Buttons, public Form {
+    class Module: public MQTTComponent, public Buttons {
     public:
         Module();
 

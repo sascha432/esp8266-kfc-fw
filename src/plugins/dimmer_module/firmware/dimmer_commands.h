@@ -25,17 +25,34 @@ namespace Dimmer {
     public:
         using TwoWireEx::TwoWireEx;
 
+        struct Lock {
+            Lock(TwoWire &wire) : _wire(wire), _locked(_wire.lock()) {
+            }
+            ~Lock() {
+                if (_locked) {
+                    _wire.unlock();
+                    _locked = false;
+                }
+            }
+            operator bool() const {
+                return _locked;
+            }
+            TwoWire &_wire;
+            bool _locked;
+        };
+
         static constexpr uint8_t getChannelCount() {
             return DIMMER_CHANNEL_COUNT;
         }
 
         void fadeTo(uint8_t channel, int16_t fromLevel, int16_t toLevel, float fadeTime, uint8_t address = kDefaultSlaveAddress) {
-            if (lock()) {
-                beginTransmission(address);
-                write(dimmer_command_fade_t(channel, fromLevel, toLevel, fadeTime));
-                endTransmission();
-                unlock();
+            if (!lock()) {
+                return;
             }
+            beginTransmission(address);
+            write(dimmer_command_fade_t(channel, fromLevel, toLevel, fadeTime));
+            endTransmission();
+            unlock();
         }
 
         void writeEEPROM(bool noLocking = false, uint8_t address = kDefaultSlaveAddress) {
@@ -51,57 +68,65 @@ namespace Dimmer {
         }
 
         void restoreFactory(uint8_t address = kDefaultSlaveAddress) {
-            if (lock()) {
-                beginTransmission(address);
-                write(DIMMER_REGISTER_COMMAND);
-                write(DIMMER_COMMAND_RESTORE_FS);
-                endTransmission();
-                unlock();
+            if (!lock()) {
+                return;
             }
+            beginTransmission(address);
+            write(DIMMER_REGISTER_COMMAND);
+            write(DIMMER_COMMAND_RESTORE_FS);
+            endTransmission();
+            unlock();
         }
 
         void printInfo(uint8_t address = kDefaultSlaveAddress) {
-            if (lock()) {
-                beginTransmission(address);
-                write(DIMMER_REGISTER_COMMAND);
-                write(DIMMER_COMMAND_PRINT_INFO);
-                endTransmission();
-                unlock();
+            if (!lock()) {
+                return;
             }
+            beginTransmission(address);
+            write(DIMMER_REGISTER_COMMAND);
+            write(DIMMER_COMMAND_PRINT_INFO);
+            endTransmission();
+            unlock();
         }
 
         void printConfig(uint8_t address = kDefaultSlaveAddress) {
             #ifdef DIMMER_COMMAND_PRINT_CONFIG
-                if (lock()) {
-                    beginTransmission(address);
-                    write(DIMMER_REGISTER_COMMAND);
-                    write(DIMMER_COMMAND_PRINT_CONFIG);
-                    endTransmission();
-                    unlock();
+                if (!lock()) {
+                    return;
                 }
+                beginTransmission(address);
+                write(DIMMER_REGISTER_COMMAND);
+                write(DIMMER_COMMAND_PRINT_CONFIG);
+                endTransmission();
+                unlock();
             #endif
         }
 
-        void writeConfig(uint8_t address = kDefaultSlaveAddress) {
+        void writeConfig(bool noLocking = false, uint8_t address = kDefaultSlaveAddress) {
             #ifdef DIMMER_COMMAND_WRITE_CONFIG
-                if (lock()) {
+                if (noLocking || lock()) {
                     beginTransmission(address);
                     write(DIMMER_REGISTER_COMMAND);
                     write(DIMMER_COMMAND_WRITE_CONFIG);
                     endTransmission();
-                    unlock();
+                    if (!noLocking) {
+                        unlock();
+                    }
                 }
+            #else
+                writeEEPROM(noLocking);
             #endif
         }
 
         void forceTemperatureCheck(uint8_t address = kDefaultSlaveAddress) {
-            if (lock()) {
-                beginTransmission(address);
-                write(DIMMER_REGISTER_COMMAND);
-                write(DIMMER_COMMAND_FORCE_TEMP_CHECK);
-                endTransmission();
-                unlock();
+            if (!lock()) {
+                return;
             }
+            beginTransmission(address);
+            write(DIMMER_REGISTER_COMMAND);
+            write(DIMMER_COMMAND_FORCE_TEMP_CHECK);
+            endTransmission();
+            unlock();
         }
 
         CubicInterpolation readCubicInterpolation(uint8_t channel, uint8_t address = kDefaultSlaveAddress) {
@@ -178,6 +203,7 @@ namespace Dimmer {
             _retryDelay(rw._retryDelay),
             _callback(std::exchange(rw._callback, nullptr))
         {
+            rw._timer.remove();
         }
 
 
@@ -200,8 +226,9 @@ namespace Dimmer {
         bool readConfig(uint8_t retries, uint16_t retryDelay, Callback callback = nullptr, uint16_t initialDelay = 100);
         bool storeConfig(uint8_t retries, uint16_t delay);
 
-        bool getVersion();
-        bool getConfig();
+        // false = read version only
+        // true = read config and version
+        bool getConfig(bool config);
 
     private:
         void _rescheduleNextRetry(Event::CallbackTimerPtr timer);
@@ -225,7 +252,7 @@ namespace Dimmer {
 
     inline void ConfigReaderWriter::begin()
     {
-        _valid = 0;
+        _valid = kStopped;
         _timer.remove();
     }
 

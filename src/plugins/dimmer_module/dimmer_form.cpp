@@ -29,7 +29,9 @@ namespace Dimmer {
                 }
             }
             else if (formName == F("advanced") || formName == F("general")) {
-                writeConfig(_config);
+                LoopFunctions::callOnce([this]() {
+                    writeConfig(_config);
+                });
             }
             return;
         }

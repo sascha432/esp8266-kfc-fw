@@ -20,7 +20,7 @@ window.initDimmerCubicInterpolation = function () {
         load_data: function(channel) {
             var self = this;
             $.get('/dimmer-fw?type=read-ci&channel=' + channel, function(data) {
-                console.log(data);
+                // console.log(data);
                 self.running(false);
                 if (data.error) {
                     alert(data.error);
@@ -39,8 +39,9 @@ window.initDimmerCubicInterpolation = function () {
         },
         store_data: function(channel, data) {
             var self = this;
+            // console.log(channel, data);
             $.get('/dimmer-fw?type=write-ci&channel=' + channel + '&data='  + data, function(data) {
-                console.log(data);
+                // console.log(data);
                 self.running(false);
                 if (data.error) {
                     alert(data.error);
@@ -179,12 +180,12 @@ window.initDimmerCubicInterpolation = function () {
                     onClick: function (e, n) {
                         if (n.length) {
                             var tmp = n[0];
-                            var max_index = chart.data.datasets[tmp._datasetIndex].data.length - 1;
+                            var max_index = self.chart.data.datasets[tmp._datasetIndex].data.length - 1;
                             if (tmp._index > 0 && tmp._index < max_index) {
-                                self.openModalFunc(function () {
-                                    datapoints = remove(chart.data.datasets[tmp._datasetIndex].data, tmp._index);
-                                    chart.data.datasets[tmp._datasetIndex].data = datapoints;
-                                    chart.update();
+                                self.open_modal(function () {
+                                    self.datapoints = self.remove(self.chart.data.datasets[tmp._datasetIndex].data, tmp._index);
+                                    self.chart.data.datasets[tmp._datasetIndex].data = self.datapoints;
+                                    self.chart.update();
                                 }, 'Delete this point?');
                                 $('body').click();
                             }

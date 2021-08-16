@@ -38,14 +38,14 @@ void Base::begin()
             #endif
         #endif
         // delay between request and response is ~25ms + ~450us per raw byte
-        _wire.setTimeout(500);
+        _wire.setTimeout(1000);
         _wire.begin(DIMMER_I2C_MASTER_ADDRESS);
         _wire.onReceive(Base::onReceive);
     #else
     #endif
 
     _config._base = Plugins::Dimmer::getConfig();
-    Base::readConfig(_config);
+    readConfig(_getConfig());
 
     #if IOT_DIMMER_MODULE_INTERFACE_UART == 0
         // ESP8266 I2C does not support slave mode. Use timer to poll metrics instead
@@ -83,7 +83,6 @@ void Base::_updateConfig(ConfigType &config, Dimmer::ConfigReaderWriter &reader,
 {
     if (status) {
         config._version = reader.config().version;
-        // config.info = reader.config().info;
         config._firmwareConfig = reader.config().config;
 
         if (config._version.major != DIMMER_FIRMWARE_VERSION_MAJOR || config._version.minor != DIMMER_FIRMWARE_VERSION_MINOR) {
@@ -138,40 +137,37 @@ void Base::_onReceive(size_t length)
 
 #endif
 
-void Base::readConfig(ConfigType &config)
+bool Base::readConfig(ConfigType &config)
 {
     auto reader = _wire.getConfigReader();
-    _updateConfig(config, reader, reader.readConfig(5, 100));
+    _updateConfig(config, reader, reader.readConfig(3, 250));
     // if address does not match member, copy data
     if (&config != &_config) {
         _config = config;
     }
+    return _config;
 }
 
-void Base::writeConfig(ConfigType &config)
+bool Base::writeConfig(ConfigType &config)
 {
     if (!config) {
         Logger_error(F("Cannot store invalid firmware configuration"));
-        return;
+        return false;
     }
     config._firmwareConfig.fade_in_time = config._base.on_fadetime;
     // if address does not match member, copy data
     if (&config != &_config) {
         _config = config;
     }
-    auto ptr = std::shared_ptr<ConfigReaderWriter>(new ConfigReaderWriter(std::move(_wire.getConfigWriter())));
-    if (ptr) {
-        ptr->config().version = config._version;
-        ptr->config().config = config._firmwareConfig;
-        LoopFunctions::callOnce([ptr]() {
-            if (!ptr->storeConfig(3, 100)) {
-                Logger_error(F("Error while writing firmware configuration"));
-            }
-        });
+    __DBG_printf("getConfigWriter");
+    auto writer = _wire.getConfigWriter();
+    writer.config().version = config._version;
+    writer.config().config = config._firmwareConfig;
+    if (!writer.storeConfig(3, 250)) {
+        Logger_error(F("Error while writing firmware configuration"));
+        return false;
     }
-    else {
-        Logger_error(F("Cannot store firmware configuration, memory allocation failed"));
-    }
+    return true;
 }
 
 void Base::_fade(uint8_t channel, int16_t toLevel, float fadeTime)
@@ -420,12 +416,14 @@ uint8_t Base::_getChannelFrom(AsyncWebServerRequest *request)
 void Base::handleWebServer(AsyncWebServerRequest *request)
 {
     if (WebServer::Plugin::getInstance().isAuthenticated(request) == true) {
+        bool read;
         auto type = request->getParam(F("type"));
         if (!type) {
-            __DBG_printf("type missing");
-            WebServer::Plugin::send(400, request);
+            __LDBG_printf("type missing");
+            WebServer::Plugin::send(405, request);
             return;
         }
+        // ----------------------------------------------------------------
         if (type->value() == F("reset")) {
             resetDimmerMCU();
             HttpHeaders httpHeaders(false);
@@ -434,106 +432,135 @@ void Base::handleWebServer(AsyncWebServerRequest *request)
             httpHeaders.setResponseHeaders(response);
             WebServer::Plugin::send(request, response);
         }
-        else if (type->value() == F("read-config")) {
-            WebServer::Plugin::send(400, request);
-        }
-        else if (type->value() == F("write-ci")) {
-            auto channel = _getChannelFrom(request);
-            if (channel == 0xff) {
+        // ----------------------------------------------------------------
+        else if ((read = (type->value() == F("read-config"))) || type->value() == F("write-config")) {
+            auto redirect = request->getParam(F("redirect"));
+            if (!redirect) {
+                __LDBG_printf("redirect missing");
+                WebServer::Plugin::send(410, request);
                 return;
             }
-            auto param = request->getParam(F("data"));
-            if (!param) {
-                __DBG_printf("data missing");
-                WebServer::Plugin::send(400, request);
-                return;
-            }
-            auto &dataStr = param->value();
-            if ((dataStr.length() % 4) != 0 || dataStr.length() < 4 || dataStr.length() > CubicInterpolation::size() * 4) {
-                __DBG_printf("invalid data length=%u", dataStr.length());
-                auto response = request->beginResponse(400);
-                WebServer::Plugin::_logRequest(request, response);
-                request->send(response);
-                return;
-            }
-            auto data = std::shared_ptr<CubicInterpolation>(new CubicInterpolation());
+            auto data = std::shared_ptr<bool>(new bool(false));
             if (!data) {
                 WebServer::Plugin::send(503, request);
                 return;
             }
-            auto in = dataStr.c_str();
-            auto end = in + dataStr.length();
-            auto ptr = data->_data.points;
-            while(in < end) {
-                ptr->x = strtoul(in, nullptr, 16);
-                in += 2;
-                ptr->y = strtoul(in, nullptr, 16);
-                in += 2;
-                ptr++;
-            }
-            // store data in main loop
-            data->setChannel(channel);
-            LoopFunctions::callOnce([channel, data]() {
-                if (!dimmer_plugin._wire.writeCubicInterpolation(*data)) {
-                    __DBG_printf("failed to store ci for channel=%u", data->_channel);
+            LoopFunctions::callOnce([read, data]() {
+                if (read) {
+                    if (!dimmer_plugin.readConfig(dimmer_plugin._getConfig())) {
+                        __DBG_printf("failed to read configuration");
+                        return;
+                    }
                 }
-                dimmer_plugin._wire.writeConfig();
-                // copy with locked interrupts
+                else {
+                    if (!dimmer_plugin.writeConfig(dimmer_plugin._getConfig())) {
+                        __DBG_printf("failed to write configuration");
+                        return;
+                    }
+                }
                 InterruptLock lock;
-                *data = CubicInterpolation();
+                *data = true;
             });
-            // create async http response that waits for the data
+            // create async http response that waits for the config to be read
             auto response = new AsyncDimmerResponse([data](AsyncDimmerResponse &response) -> bool {
-                // data written?
-                if (!*data) {
-                    response.getBuffer() = std::move(String(F("{\"error\":null}")));
+                // config read?
+                if (*data) {
+                    response.getBuffer() = String();
                     return true;
                 }
                 return false;
             });
+            response->setCode(302);
             HttpHeaders httpHeaders(false);
             httpHeaders.addNoCache();
+            httpHeaders.add<HttpLocationHeader>(redirect->value());
+            httpHeaders.replace<HttpConnectionHeader>(HttpConnectionHeader::ConnectionType::CLOSE);
             httpHeaders.setResponseHeaders(response);
-            request->send(response);
+            WebServer::Plugin::send(request, response);
         }
-        else if (type->value() == F("read-ci")) {
+        // ----------------------------------------------------------------
+        else if ((read = (type->value() == F("read-ci"))) || type->value() == F("write-ci")) {
             auto channel = _getChannelFrom(request);
             if (channel == 0xff) {
                 return;
             }
-            // load data in main loop
             auto data = std::shared_ptr<CubicInterpolation>(new CubicInterpolation());
             if (!data) {
+                __LDBG_printf("out of memory");
                 WebServer::Plugin::send(503, request);
                 return;
             }
-            LoopFunctions::callOnce([channel, data]() {
-                auto ci = dimmer_plugin._wire.readCubicInterpolation(channel);
-                // copy with locked interrupts
-                InterruptLock lock;
-                *data = ci;
-            });
-            // create async http response that waits for the data
-            auto response = new AsyncDimmerResponse([data](AsyncDimmerResponse &response) -> bool {
-                // do we have valid data?
-                if (*data) {
-                    // create json array
-                    PrintString str = F("{\"error\":null,\"data\":[");
-                    uint8_t maxX = data->_data.points[0].x;
-                    for(uint8_t i = 0; i < data->count(); i++) {
-                        if (i) {
-                            if (data->_data.points[i].x < maxX) {
-                                break;
-                            }
-                            str.print(',');
-                            maxX = data->_data.points[i].x;
-                        }
-                        str.printf_P(PSTR("{\"x\":%u,\"y\":%u}"), data->_data.points[i].x, data->_data.points[i].y);
+            // read/write data in main loop
+            if (read) {
+                LoopFunctions::callOnce([channel, data]() {
+                    auto ci = dimmer_plugin._wire.readCubicInterpolation(channel);
+                    // copy with locked interrupts
+                    InterruptLock lock;
+                    *data = ci;
+                });
+            }
+            else {
+                auto param = request->getParam(F("data"));
+                if (!param) {
+                    __DBG_printf("data missing");
+                    WebServer::Plugin::send(406, request);
+                    return;
+                }
+                auto &dataStr = param->value();
+                if ((dataStr.length() % 4) != 0 || dataStr.length() < 4 || dataStr.length() > CubicInterpolation::size() * 4) {
+                    __DBG_printf("invalid data length=%u", dataStr.length());
+                    WebServer::Plugin::send(406, request);
+                    return;
+                }
+                auto in = dataStr.c_str();
+                auto end = in + dataStr.length();
+                auto ptr = data->_data.points;
+                char buf[3] = {};
+                while(in < end) {
+                    buf[0]  = *in++;
+                    buf[1]  = *in++;
+                    ptr->x = strtoul(buf, nullptr, 16);
+                    buf[0]  = *in++;
+                    buf[1]  = *in++;
+                    ptr->y = strtoul(buf, nullptr, 16);
+                    ptr++;
+                }
+                data->setChannel(channel);
+                LoopFunctions::callOnce([read, channel, data]() {
+                    if (!dimmer_plugin._wire.writeCubicInterpolation(*data)) {
+                        __DBG_printf("failed to store ci for channel=%u", data->_channel);
                     }
-                    str.print(F("]}"));
+                    dimmer_plugin._wire.writeConfig();
+                    // reset with locked interrupts
+                    InterruptLock lock;
+                    *data = CubicInterpolation();
+                });
+            }
+            // create async http response that waits for the data
+            auto response = new AsyncDimmerResponse([read, data](AsyncDimmerResponse &response) -> bool {
+                // data read/written?
+                if (*data == read) {
+                    PrintString str = F("{\"error\":null");
+                    if (read) {
+                        // create json array
+                        str.print(F(",\"data\":["));
+                        uint8_t maxX = data->_data.points[0].x;
+                        for(uint8_t i = 0; i < data->count(); i++) {
+                            if (i) {
+                                if (data->_data.points[i].x < maxX) {
+                                    break;
+                                }
+                                str.print(',');
+                                maxX = data->_data.points[i].x;
+                            }
+                            str.printf_P(PSTR("{\"x\":%u,\"y\":%u}"), data->_data.points[i].x, data->_data.points[i].y);
+                        }
+                        str.print(']');
+                        // invalidate data
+                        data->invalidate();
+                    }
+                    str.print('}');
                     response.getBuffer() = std::move(str);
-                    // invalidate data
-                    data->invalidate();
                     return true;
                 }
                 return false;
@@ -543,9 +570,10 @@ void Base::handleWebServer(AsyncWebServerRequest *request)
             httpHeaders.setResponseHeaders(response);
             WebServer::Plugin::send(request, response);
         }
+        // ----------------------------------------------------------------
         else {
-            __DBG_printf("invalid type=%s", type->value().c_str());
-            WebServer::Plugin::send(400, request);
+            __LDBG_printf("invalid type=%s", type->value().c_str());
+            WebServer::Plugin::send(405, request);
         }
     }
     else {

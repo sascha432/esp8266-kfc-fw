@@ -153,12 +153,12 @@ void Plugin::createMenu()
     auto root = bootstrapMenu.getMenuItem(navMenu.config);
 
     auto subMenu = root.addSubMenu(getFriendlyName());
-    subMenu.addMenuItem(F("General"), F("dimmer/general.html"));
+    subMenu.addMenuItem(F("General"), F("dimmer-fw?type=read-config&redirect=dimmer/general.html"));
     subMenu.addMenuItem(F("Channel Configuration"), F("dimmer/channels.html"));
     #if IOT_DIMMER_MODULE_HAS_BUTTONS
         subMenu.addMenuItem(F("Button Configuration"), F("dimmer/buttons.html"));
     #endif
-    subMenu.addMenuItem(F("Advanced Firmware Configuration"), F("dimmer/advanced.html"));
+    subMenu.addMenuItem(F("Advanced Firmware Configuration"), F("dimmer-fw?type=read-config&redirect=dimmer/advanced.html"));
     subMenu.addMenuItem(F("Cubic Interpolation"), F("dimmer-ci.html"));
 }
 

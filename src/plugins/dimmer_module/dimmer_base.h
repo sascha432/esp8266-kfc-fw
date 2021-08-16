@@ -149,9 +149,9 @@ namespace Dimmer {
         virtual void publishChannel(uint8_t channel) = 0;
 
         // read config from dimmer
-        void readConfig(ConfigType &config);
+        bool readConfig(ConfigType &config);
         // write config to dimmer
-        void writeConfig(ConfigType &config);
+        bool writeConfig(ConfigType &config);
 
         void createConfigureForm(PluginComponent::FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form);
 
@@ -187,6 +187,8 @@ namespace Dimmer {
         uint8_t _endTransmission();
 
         bool _isEnabled() const;
+
+    public:
         ConfigType &_getConfig();
 
     protected:

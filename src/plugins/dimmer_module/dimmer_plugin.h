@@ -21,8 +21,6 @@ namespace Dimmer {
         virtual void createWebUI(WebUINS::Root &webUI) override;
         virtual void createMenu() override;
 
-        virtual void readConfig(ConfigType &cfg);
-        virtual void writeConfig(ConfigType &cfg);
         virtual void createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request) override;
 
         virtual void getValues(WebUINS::Events &array) override;
@@ -39,16 +37,6 @@ namespace Dimmer {
     inline void Plugin::shutdown()
     {
         Module::shutdown();
-    }
-
-    inline void Plugin::readConfig(ConfigType &cfg)
-    {
-        Base::readConfig(cfg);
-    }
-
-    inline void Plugin::writeConfig(ConfigType &cfg)
-    {
-        Base::writeConfig(cfg);
     }
 
     inline void Plugin::createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)

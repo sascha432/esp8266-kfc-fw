@@ -46,7 +46,12 @@ void *__validatePointer(const void *ptr, ValidatePointerType type, const char *f
     __dump_binary_to(DEBUG_OUTPUT, ptr, 16, 16);
     // check if the pointer is in DRAM (compiled in data in RAM, outside the HEAP)
     if (!___IsValidDRAMPointer(ptr)) {
-        __DBG_panic();
+        #if 1
+            static auto buffer = "INVALID";
+            return const_cast<char *>(buffer);
+        #else
+            __DBG_panic();
+        #endif
     }
     return nullptr;
 }

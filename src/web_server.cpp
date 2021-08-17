@@ -879,10 +879,10 @@ AsyncWebServerResponse *Plugin::_beginFileResponse(const FileMapping &mapping, c
                 webTemplate = plugin->getWebTemplate(formName);
             }
             else if (nullptr != (plugin = PluginComponent::getForm(formName))) {
-#if IOT_WEATHER_STATION
-                __weatherStationDetachCanvas(true);
-                request->onDisconnect(__weatherStationAttachCanvas); // unlock on disconnect
-#endif
+                #if IOT_WEATHER_STATION
+                    __weatherStationDetachCanvas(true);
+                    request->onDisconnect(__weatherStationAttachCanvas); // unlock on disconnect
+                #endif
                 FormUI::Form::BaseForm *form = new SettingsForm(nullptr);
                 plugin->createConfigureForm(PluginComponent::FormCallbackType::CREATE_GET, formName, *form, request);
                 webTemplate = new ConfigTemplate(form, isAuthenticated);
@@ -1061,7 +1061,6 @@ bool Plugin::_handleFileRead(String path, bool client_accepts_gzip, AsyncWebServ
     if (isAuthenticated && request->method() == HTTP_POST) {  // http POST processing
 
         __LDBG_printf("HTTP post %s", path.c_str());
-
         headers.addNoCache(true);
 
         if (path.startsWith('/') && path.endsWith(FSPGM(_html))) {
@@ -1071,9 +1070,9 @@ bool Plugin::_handleFileRead(String path, bool client_accepts_gzip, AsyncWebServ
             auto plugin = PluginComponent::getForm(formName);
             if (plugin) {
                 __LDBG_printf("found=%p", plugin);
-#if IOT_WEATHER_STATION
-                __weatherStationDetachCanvas(true);
-#endif
+                #if IOT_WEATHER_STATION
+                    __weatherStationDetachCanvas(true);
+                #endif
                 FormUI::Form::BaseForm *form = new SettingsForm(request);
                 plugin->createConfigureForm(PluginComponent::FormCallbackType::CREATE_POST, formName, *form, request);
                 webTemplate = new ConfigTemplate(form, isAuthenticated);
@@ -1090,9 +1089,9 @@ bool Plugin::_handleFileRead(String path, bool client_accepts_gzip, AsyncWebServ
                 else {
                     plugin->createConfigureForm(PluginComponent::FormCallbackType::DISCARD, formName, *form, request);
                     config.discard();
-#if IOT_WEATHER_STATION
-                    request->onDisconnect(__weatherStationAttachCanvas); // unlock on disconnect
-#endif
+                    #if IOT_WEATHER_STATION
+                        request->onDisconnect(__weatherStationAttachCanvas); // unlock on disconnect
+                    #endif
                 }
             }
             else { // no plugin found
@@ -1107,14 +1106,14 @@ bool Plugin::_handleFileRead(String path, bool client_accepts_gzip, AsyncWebServ
                         else if (isFactoryHtml) {
                             config.restoreFactorySettings();
                             config.write();
-#if IOT_BLINDS_CTRL && IOT_BLINDS_CTRL_SAVE_STATE
-                            BlindsControl::StateType states[2] = {
-                                static_cast<BlindsControl::StateType>(request->arg(F("blindsctrl_channel0")).toInt()),
-                                static_cast<BlindsControl::StateType>(request->arg(F("blindsctrl_channel1")).toInt())
-                            };
-                            __DBG_printf("blinds factory channel states: 0=%s 1=%s", BlindsControl::ChannelState::__getFPStr(states[0]), BlindsControl::ChannelState::__getFPStr(states[1]));
-                            BlindsControlPlugin::_saveState(states, 2);
-#endif
+                            #if IOT_BLINDS_CTRL && IOT_BLINDS_CTRL_SAVE_STATE
+                                BlindsControl::StateType states[2] = {
+                                    static_cast<BlindsControl::StateType>(request->arg(F("blindsctrl_channel0")).toInt()),
+                                    static_cast<BlindsControl::StateType>(request->arg(F("blindsctrl_channel1")).toInt())
+                                };
+                                __DBG_printf("blinds factory channel states: 0=%s 1=%s", BlindsControl::ChannelState::__getFPStr(states[0]), BlindsControl::ChannelState::__getFPStr(states[1]));
+                                BlindsControlPlugin::_saveState(states, 2);
+                            #endif
                             RTCMemoryManager::clear();
                         }
                         Plugin::executeDelayed(request, [safeMode]() {
@@ -1265,14 +1264,14 @@ void Plugin::getStatus(Print &output)
     if (_server) {
         auto cfg = System::WebServer::getConfig();
         output.printf_P(PSTR("running on port %u"), cfg.getPort());
-#if WEBSERVER_TLS_SUPPORT
-        output.print(F(", TLS "));
-        if (cfg.is_https) {
-            output.print(FSPGM(enabled));
-        } else {
-            output.print(FSPGM(disabled));
-        }
-#endif
+        #if WEBSERVER_TLS_SUPPORT
+            output.print(F(", TLS "));
+            if (cfg.is_https) {
+                output.print(FSPGM(enabled));
+            } else {
+                output.print(FSPGM(disabled));
+            }
+        #endif
         size_t sockets = WsClient::_webSockets.size();
         size_t clients = 0;
         for(auto socket: WsClient::_webSockets) {

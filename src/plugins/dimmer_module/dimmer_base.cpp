@@ -44,7 +44,6 @@ void Base::begin()
     #else
     #endif
 
-    _config._base = Plugins::Dimmer::getConfig();
     readConfig(_getConfig());
 
     #if IOT_DIMMER_MODULE_INTERFACE_UART == 0
@@ -79,10 +78,11 @@ void Base::end()
 // configuration and I2C handling
 // ------------------------------------------------------------------------
 
-void Base::_updateConfig(ConfigType &config, Dimmer::ConfigReaderWriter &reader, bool status)
+void Base::_updateConfig(ConfigType &config, const Dimmer::ConfigReaderWriter &reader, bool status)
 {
     if (status) {
         config._version = reader.config().version;
+        config._info = reader.config().info;
         config._firmwareConfig = reader.config().config;
 
         if (config._version.major != DIMMER_FIRMWARE_VERSION_MAJOR || config._version.minor != DIMMER_FIRMWARE_VERSION_MINOR) {
@@ -112,13 +112,7 @@ void Base::_onReceive(size_t length)
         if (type == DIMMER_EVENT_RESTART) {
             auto reader = std::shared_ptr<ConfigReaderWriter>(new ConfigReaderWriter(_wire, DIMMER_I2C_ADDRESS));
             reader->readConfig(10, 500, [this, reader](ConfigReaderWriter &config, bool status) {
-                if (status) {
-                    _config._version = config.config().version;
-                    _config._firmwareConfig = config.config().config;
-                }
-                else {
-                    _config.invalidate();
-                }
+                _updateConfig(_config, *reader, status);
             }, 100);
         }
         else
@@ -145,6 +139,7 @@ bool Base::readConfig(ConfigType &config)
     if (&config != &_config) {
         _config = config;
     }
+    _config._base = Plugins::Dimmer::getConfig();
     return _config;
 }
 
@@ -162,6 +157,7 @@ bool Base::writeConfig(ConfigType &config)
     __DBG_printf("getConfigWriter");
     auto writer = _wire.getConfigWriter();
     writer.config().version = config._version;
+    writer.config().info = config._info;
     writer.config().config = config._firmwareConfig;
     if (!writer.storeConfig(3, 250)) {
         Logger_error(F("Error while writing firmware configuration"));

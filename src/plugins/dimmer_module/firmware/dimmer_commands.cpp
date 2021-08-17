@@ -22,7 +22,7 @@ ConfigReaderWriter::ConfigReaderWriter(TwoWire &wire, uint8_t address) :
 
 void ConfigReaderWriter::_rescheduleNextRetry(Event::CallbackTimerPtr timer)
 {
-    if (!(_valid & kStopped) && _retries) {
+    if (_retries) {
         __LDBG_printf("rearm retries=%u delay=%u", _retries, _retryDelay);
         _retries--;
         timer->rearm(Event::milliseconds(_retryDelay), false);
@@ -54,23 +54,25 @@ bool ConfigReaderWriter::getConfig(bool config)
 
         _wire.beginTransmission(_address);
         _wire.write<decltype(Dimmer::kRequestVersion)>(Dimmer::kRequestVersion);
-        if (_wire.endTransmission(false) == 0 &&
+        if (
+            _wire.endTransmission(false) == 0 &&
             _wire.requestFrom(_address, Config::kVersionSize, 0U) == Config::kVersionSize &&
-            _wire.readBytes(reinterpret_cast<uint8_t *>(&_config.version), Config::kVersionSize) == Config::kVersionSize &&
-            _config.version
+            _wire.readBytes(reinterpret_cast<uint8_t *>(&_config.version), Config::kVersionSize) == Config::kVersionSize
         ) {
             _valid |= kHasVersion;
             _config.info.length = std::min<uint8_t>(_config.info.length, sizeof(_config.config));
-
             __LDBG_printf("version=%u.%u.%u levels=%u channels=%u addr=0x%02x length=%u",
                 _config.version.major, _config.version.minor, _config.version.revision,
                 _config.info.max_levels, _config.info.channel_count, _config.info.cfg_start_address, _config.info.length
             );
         }
         else {
+            __LDBG_printf("failed to read version=%u.%u.%u levels=%u channels=%u addr=0x%02x length=%u",
+                _config.version.major, _config.version.minor, _config.version.revision,
+                _config.info.max_levels, _config.info.channel_count, _config.info.cfg_start_address, _config.info.length
+            );
             _config.version = {};
             _config.info = {};
-            __LDBG_printf("failed to read version");
             return false;
         }
 
@@ -95,14 +97,15 @@ bool ConfigReaderWriter::getConfig(bool config)
     return false;
 }
 
-// retries will be ignored if called from inside an ISR
-// delay between retries in milliseconds
-// _config has to be populated before using this methid
 bool ConfigReaderWriter::storeConfig(uint8_t retries, uint16_t retryDelay)
 {
     __LDBG_printf("store version=%u.%u.%u address=%02x length=%u", _config.version.major, _config.version.minor, _config.version.revision, _config.info.cfg_start_address, _config.info.length);
     if (!_config.version) {
         __LDBG_printf("invalid version");
+        return false;
+    }
+    if (!_config.info.cfg_start_address) {
+        __LDBG_printf("invalid address");
         return false;
     }
 
@@ -120,7 +123,8 @@ bool ConfigReaderWriter::storeConfig(uint8_t retries, uint16_t retryDelay)
             _wire.endTransmission() == 0
         ) {
             __LDBG_printf("config written address=%02x length=%u", _config.info.cfg_start_address, _config.info.length);
-            _wire.writeConfig(false);
+            _wire.writeConfig(true);
+            _config.version = dimmer_version_t({});
             return true;
         }
         if (!can_yield()) {
@@ -143,14 +147,12 @@ bool ConfigReaderWriter::readConfig(uint8_t retries, uint16_t retryDelay, Callba
     _retries = retries;
     _retryDelay = retryDelay;
     _callback = callback;
-    _valid = kStopped;
+    _valid = 0;
 
     if (_callback) {
         _timer.add(Event::milliseconds(initialDelay), false, [this](Event::CallbackTimerPtr timer) {
             __LDBG_printf("getConfig timer _valid=%u", _valid);
-            if (!(_valid & kStopped)) {
-                _readConfigTimer(timer);
-            }
+            _readConfigTimer(timer);
         });
         return true;
     }

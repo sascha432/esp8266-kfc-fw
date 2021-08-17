@@ -17,7 +17,7 @@ using Plugins = KFCConfigurationClasses::PluginsType;
 
 namespace Dimmer {
 
-    void Base::createConfigureForm(PluginComponent::FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form)
+    void Base::createConfigureForm(PluginComponent::FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
     {
         if (type == PluginComponent::FormCallbackType::SAVE) {
             if (formName == F("channels")) {
@@ -50,7 +50,17 @@ namespace Dimmer {
                 }
             }
             else if (formName == F("advanced") || formName == F("general")) {
-                readConfig(_config);
+                if (!_config._version) {
+                    auto str = PrintString(F("../dimmer-fw?type=read-config&redirect=dimmer/%s.html"), formName.c_str());
+                    auto response = request->beginResponse(302);
+                    HttpHeaders httpHeaders(false);
+                    httpHeaders.addNoCache();
+                    httpHeaders.add<HttpLocationHeader>(str);
+                    httpHeaders.replace<HttpConnectionHeader>(HttpConnectionHeader::ConnectionType::CLOSE);
+                    httpHeaders.setResponseHeaders(response);
+                    WebServer::Plugin::send(request, response);
+                    return;
+                }
             }
         }
         auto &firmwareConfig = _config._firmwareConfig;
@@ -74,7 +84,6 @@ namespace Dimmer {
             cfg.addRangeValidatorFor_off_fadetime(form);
 
             #if IOT_DIMMER_MODULE_HAS_BUTTONS
-
                 auto &offDelaySignal = form.addObjectGetterSetter(F("offdlys"), FormGetterSetter(cfg, off_delay_signal));
                 form.addFormUI(FormUI::Type::HIDDEN);
 

@@ -29,8 +29,17 @@ window.initDimmerCubicInterpolation = function () {
                 self.changes = false;
                 self.channel = channel;
                 self.datapoints = data.data;
-                self.chart.data.datasets[0].data = self.datapoints;
+                var max_x = 0;
+                for(var i = 0; i < self.datapoints.length; i++) {
+                    if (self.datapoints[i].x > 0) {
+                        max_x = self.datapoints[i].x;
+                    }
+                }
+                if (max_x == 0) {
+                    self.create_default_datapoints();
+                }
                 self.chart.data.datasets[0].label = 'Channel #' + (self.channel + 1);
+                self.chart.data.datasets[0].data = self.datapoints;
                 self.chart.update();
             }, 'json').fail(function() {
                 alert('HTTP error while loading channel');

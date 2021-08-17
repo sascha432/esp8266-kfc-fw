@@ -51,7 +51,7 @@ namespace Dimmer {
 
         using DimmerConfig_t = KFCConfigurationClasses::Plugins::DimmerConfigNS::Dimmer::DimmerConfig_t;
 
-        ConfigType() : _version({}), _firmwareConfig({}), _base({}) {}
+        ConfigType() : _version({}), _info({}), _firmwareConfig({}), _base({}) {}
 
         operator bool() const {
             return _version;
@@ -59,11 +59,13 @@ namespace Dimmer {
 
         void invalidate() {
             _version = dimmer_version_t({});
+            _info = dimmer_config_info_t({});
             _firmwareConfig = register_mem_cfg_t({});
             _cubicInterpolation = CubicInterpolation();
         }
 
         dimmer_version_t _version;
+        dimmer_config_info_t _info;
         register_mem_cfg_t _firmwareConfig;
         DimmerConfig_t _base;
         CubicInterpolation _cubicInterpolation;
@@ -153,7 +155,7 @@ namespace Dimmer {
         // write config to dimmer
         bool writeConfig(ConfigType &config);
 
-        void createConfigureForm(PluginComponent::FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form);
+        void createConfigureForm(PluginComponent::FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request);
 
     protected:
         friend Channel;
@@ -183,7 +185,7 @@ namespace Dimmer {
 
     protected:
         String _getMetricsTopics(uint8_t num) const;
-        void _updateConfig(ConfigType &config, ConfigReaderWriter &reader, bool status);
+        void _updateConfig(ConfigType &config, const ConfigReaderWriter &reader, bool status);
         uint8_t _endTransmission();
 
         bool _isEnabled() const;

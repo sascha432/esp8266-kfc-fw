@@ -40,6 +40,22 @@ namespace Dimmer {
             TwoWire &_wire;
             bool _locked;
         };
+        // struct Lock {
+        //     Lock(TwoWire &wire, bool noLocking = false) : _wire(wire), _locked(noLocking || _wire.lock()), _noLocking(noLocking) {
+        //     }
+        //     ~Lock() {
+        //         if (_noLocking == false && _locked) {
+        //             _wire.unlock();
+        //             _locked = false;
+        //         }
+        //     }
+        //     operator bool() const {
+        //         return _locked;
+        //     }
+        //     TwoWire &_wire;
+        //     bool _locked;
+        //     bool _noLocking;
+        // };
 
         static constexpr uint8_t getChannelCount() {
             return DIMMER_CHANNEL_COUNT;
@@ -189,7 +205,6 @@ namespace Dimmer {
         static constexpr uint8_t kHasVersion = 0x01;
         static constexpr uint8_t kHasConfig = 0x02;
         static constexpr uint8_t kIsValid = kHasVersion|kHasConfig;
-        static constexpr uint8_t kStopped = 0x80;
 
         using Callback = std::function<void(ConfigReaderWriter &config, bool)>;
 
@@ -215,6 +230,7 @@ namespace Dimmer {
 
         static bool isValid(VersionType version);
         Config &config();
+        const Config &config() const;
 
         // retries = number of retries
         // retryDelay = delay between retries in milliseconds
@@ -223,7 +239,7 @@ namespace Dimmer {
         // Note:
         // if not running in background, retries * retryDelay should not exceed 500ms
         // if executed inside an ISR / can_yield() is false, retries is set to 0
-        bool readConfig(uint8_t retries, uint16_t retryDelay, Callback callback = nullptr, uint16_t initialDelay = 100);
+        bool readConfig(uint8_t retries, uint16_t retryDelay, Callback callback = nullptr, uint16_t initialDelay = 0);
         bool storeConfig(uint8_t retries, uint16_t delay);
 
         // false = read version only
@@ -252,14 +268,13 @@ namespace Dimmer {
 
     inline void ConfigReaderWriter::begin()
     {
-        _valid = kStopped;
+        _valid = 0;
         _timer.remove();
     }
 
     inline void ConfigReaderWriter::end()
     {
         begin();
-        _valid = kStopped;
     }
 
     inline bool ConfigReaderWriter::isValid(VersionType version)
@@ -268,6 +283,11 @@ namespace Dimmer {
     }
 
     inline Config &ConfigReaderWriter::config()
+    {
+        return _config;
+    }
+
+    inline const Config &ConfigReaderWriter::config() const
     {
         return _config;
     }

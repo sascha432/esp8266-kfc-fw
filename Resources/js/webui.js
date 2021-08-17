@@ -191,11 +191,11 @@ $.webUIComponent = {
             if (this.type == 'slider') {
                 switch(this.color) {
                     case 'rgb':
-                        defaults = $.extend(defaults, self.defaults.column.color_picker);
+                        defaults = $.extend({}, defaults, self.defaults.column.color_picker);
                         this.type = 'color_picker'
                         break;
                     case 'temp':
-                        defaults = $.extend(defaults, self.defaults.column.color_slider);
+                        defaults = $.extend({}, defaults, self.defaults.column.color_slider);
                         break;
                 }
             }

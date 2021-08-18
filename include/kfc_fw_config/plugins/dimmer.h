@@ -36,7 +36,7 @@ namespace KFCConfigurationClasses {
                         CREATE_UINT16_BITFIELD_MIN_MAX(pin_ch0_up_inverted, 1, 0, 1, false);
                         CREATE_UINT16_BITFIELD_MIN_MAX(single_click_time, 14, 250, 16000, 750);
                         CREATE_UINT16_BITFIELD_MIN_MAX(longpress_time, 12, 0, 4000, 1000);
-                        CREATE_UINT16_BITFIELD_MIN_MAX(min_brightness, 7, 0, 95, 15);
+                        CREATE_UINT16_BITFIELD_MIN_MAX(min_brightness, 7, 0, 95, 1);
                         CREATE_UINT16_BITFIELD_MIN_MAX(shortpress_steps, 7, 4, 100, 15);
                         CREATE_UINT16_BITFIELD_MIN_MAX(longpress_max_brightness, 7, 0, 100, 80);
                         CREATE_UINT16_BITFIELD_MIN_MAX(longpress_min_brightness, 7, 0, 99, 33);

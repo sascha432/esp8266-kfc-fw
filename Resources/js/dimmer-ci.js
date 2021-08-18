@@ -248,7 +248,7 @@ window.initDimmerCubicInterpolation = function () {
                             scaleLabel: {
                                 display: true,
                                 fontSize: 18,
-                                labelString: 'Level in %'
+                                labelString: 'Level in % (Half-wave on-time)'
                             },
                             ticks: {
                                 callback: function (value) {

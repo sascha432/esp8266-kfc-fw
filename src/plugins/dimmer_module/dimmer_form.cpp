@@ -295,7 +295,7 @@ namespace Dimmer {
 
 
                 form.addPointerTriviallyCopyable(F("adjhwc"), &firmwareConfig.halfwave_adjust_cycles);
-                form.addFormUI(F("Adjust Halfwave Length"), configValidAttr, FormUI::Suffix(F("Clock cycles")));
+                form.addFormUI(F("Adjust Half-wave Length"), configValidAttr, FormUI::Suffix(F("Clock cycles")));
                 form.addValidator(FormUI::Validator::Range(-128, 127));
 
             #endif

@@ -22,6 +22,9 @@ void Module::setup()
     _beginMqtt();
     _Scheduler.add(Event::milliseconds(900), false, [this](Event::CallbackTimerPtr) {
         _getChannels();
+        #if IOT_DIMMER_HAS_COLOR_TEMP
+            _color._channelsToBrightness();
+        #endif
     });
 }
 
@@ -94,11 +97,12 @@ bool Module::isAnyOn() const
 // get brightness values from dimmer
 void Module::_getChannels()
 {
-    if (_wire.lock()) {
+    TwoWire::Lock lock(_wire);
+    if (lock) {
         _wire.beginTransmission(DIMMER_I2C_ADDRESS);
         _wire.write(DIMMER_REGISTER_COMMAND);
         _wire.write(DIMMER_COMMAND_READ_CHANNELS);
-        _wire.write(_channels.size() << 4);
+        _wire.write(_channels.size() << 4); // read 0 - (_channels.size() - 1)
         int16_t level;
         const int len = _channels.size() * sizeof(level);
         if (_wire.endTransmission() == 0 && _wire.requestFrom(DIMMER_I2C_ADDRESS, len) == len) {
@@ -115,7 +119,6 @@ void Module::_getChannels()
                 __LDBG_printf("%s", str.c_str());
             #endif
         }
-        _wire.unlock();
     }
 }
 
@@ -136,6 +139,12 @@ void Module::_onReceive(size_t length)
                     __LDBG_printf("resync cur=%u lvl=%u", curLevel, level);
                     auto publish = (event.level == _calcLevel(curLevel, event.channel)); // check if the error comes from up or downsampling and do not publish in those cases
                     _channels[event.channel].setLevel(level, NAN, publish);
+                    #if IOT_DIMMER_HAS_COLOR_TEMP
+                        if (publish) { // update color temperature if the brightness has changed
+                            _color._brightnessToChannels();
+                            _color._publish();
+                        }
+                    #endif
                 }
             }
             else {

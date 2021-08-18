@@ -17,7 +17,14 @@
 
 namespace Dimmer {
 
+    class ColorTemperature;
+
     class Module: public MQTTComponent, public Buttons {
+    protected:
+        friend ColorTemperature;
+
+        using Buttons::_channels;
+
     public:
         Module();
 
@@ -54,17 +61,10 @@ namespace Dimmer {
 
     private:
         void _getChannels();
-
-        #if IOT_DIMMER_HAS_COLOR_TEMP
-            ColorTemperature _color;
-        #endif
     };
 
     inline Module::Module() :
         MQTTComponent(ComponentType::SENSOR)
-        #if IOT_DIMMER_HAS_COLOR_TEMP
-            , _color(this)
-        #endif
     {
     }
 

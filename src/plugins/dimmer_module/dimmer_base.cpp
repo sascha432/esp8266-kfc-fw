@@ -18,11 +18,17 @@
 using namespace Dimmer;
 
 Base::Base() :
-#if IOT_DIMMER_MODULE_INTERFACE_UART
-    _wire(Serial)
-#else
-    _wire(static_cast<TwoWire &>(config.initTwoWire()))
-#endif
+    #if IOT_DIMMER_MODULE_INTERFACE_UART
+        _wire(Serial)
+    #else
+        _wire(static_cast<TwoWire &>(config.initTwoWire()))
+    #endif
+    #if IOT_DIMMER_HAS_COLOR_TEMP
+        , _color(this)
+    #endif
+    #if IOT_DIMMER_HAS_RGB
+        , _rgb(this)
+    #endif
 {
 }
 
@@ -52,6 +58,10 @@ void Base::begin()
             auto time = _config.config_valid && _config.fw.report_metrics_max_interval ? _config.fw.report_metrics_max_interval : 10;
             _Timer(_timer).add(Event::seconds(time), true, Base::fetchMetrics);
         }
+    #endif
+
+    #if IOT_DIMMER_HAS_COLOR_TEMP
+        _color.begin();
     #endif
 }
 
@@ -140,6 +150,12 @@ bool Base::readConfig(ConfigType &config)
         _config = config;
     }
     _config._base = Plugins::Dimmer::getConfig();
+    #if IOT_ATOMIC_SUN_V2
+        _color._channel_ww1 = _config._base.channel_mapping[0];
+        _color._channel_ww2 = _config._base.channel_mapping[1];
+        _color._channel_cw1 = _config._base.channel_mapping[2];
+        _color._channel_cw2 = _config._base.channel_mapping[3];
+    #endif
     return _config;
 }
 
@@ -168,7 +184,7 @@ bool Base::writeConfig(ConfigType &config)
 
 void Base::_fade(uint8_t channel, int16_t toLevel, float fadeTime)
 {
-    auto maxTime = std::max(_config._base.lp_fadetime, std::max(_config._base.on_fadetime, _config._base.off_fadetime));
+    auto maxTime = std::max(_config._base._fadetime(), std::max(_config._base.on_fadetime, _config._base.off_fadetime));
     if (fadeTime > maxTime) {
         fadeTime = maxTime;
     }
@@ -197,7 +213,7 @@ void Base::_stopFading(uint8_t channel)
         for(uint8_t i = 0; i < getChannelCount(); i++) {
             levelSum += getChannel(i);
         }
-        float level = levelSum / static_cast<float>(IOT_DIMMER_MODULE_MAX_BRIGHTNESS * getChannelCount());
+        auto level = levelSum / static_cast<float>(IOT_DIMMER_MODULE_MAX_BRIGHTNESS * getChannelCount());
         auto sensor = SensorPlugin::getSensor<Sensor_HLW80xx::kSensorType>();
         if (sensor) {
             sensor->setDimmingLevel(level);
@@ -274,7 +290,7 @@ float Base::getTransitionTime(int fromLevel, int toLevel, float transitionTimeOv
         return -transitionTimeOverride;
     }
     if (toLevel == 0) {
-        __LDBG_printf("transition=%.2f off", _config.off_fadetime);
+        __LDBG_printf("transition=%.2f off", _config._base.off_fadetime);
         return _config._base.off_fadetime;
     }
     if (!isnan(transitionTimeOverride)) {
@@ -286,8 +302,8 @@ float Base::getTransitionTime(int fromLevel, int toLevel, float transitionTimeOv
         __LDBG_printf("transition=%.2f on", _config._base.on_fadetime);
         return _config._base.on_fadetime;
     }
-    __LDBG_printf("transition=%.2f fade", _config._base.lp_fadetime);
-    return _config._base.lp_fadetime;
+    __LDBG_printf("transition=%.2f fade", _config._base._fadetime());
+    return _config._base._fadetime();
 }
 
 
@@ -299,7 +315,7 @@ void Base::getValues(WebUINS::Events &array)
 {
     int on = 0;
     for (uint8_t i = 0; i < getChannelCount(); i++) {
-        PrintString id(F("d_chan%u"), i);
+        PrintString id(F("d-chan%u"), i);
         auto value = static_cast<int32_t>(getChannel(i));
         array.append(WebUINS::Values(id, value, true));
         if (getChannelState(i) && value) {
@@ -307,6 +323,13 @@ void Base::getValues(WebUINS::Events &array)
         }
     }
     array.append(WebUINS::Values(F("group-switch-0"), on, true));
+
+    #if IOT_DIMMER_HAS_COLOR_TEMP
+        _color.getValues(array);
+    #endif
+    #if IOT_DIMMER_HAS_RGB
+        _rgb.getValues(array);
+    #endif
 }
 
 void Base::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
@@ -326,9 +349,15 @@ void Base::setValue(const String &id, const String &value, bool hasValue, bool s
                 publishChannel(i);
                 __LDBG_printf("group switch value=%u channel=%u level=%u state=%u", val, i, getChannel(i), getChannelState(i));
             }
+            #if IOT_DIMMER_HAS_COLOR_TEMP
+                _color._publish();
+            #endif
+            #if IOT_DIMMER_HAS_RGB
+                _rgb._publish();
+            #endif
         }
     }
-    else if (id.startsWith(F("d_chan"))) {
+    else if (id.startsWith(F("d-chan"))) {
         uint8_t channel = id[6] - '0';
         int val = value.toInt();
         __LDBG_printf("channel=%d has_value=%d value=%d has_state=%d state=%d", channel, hasValue, val, hasState, state);
@@ -349,7 +378,21 @@ void Base::setValue(const String &id, const String &value, bool hasValue, bool s
             if (hasValue) {
                 setChannel(channel, val);
             }
+            #if IOT_DIMMER_HAS_COLOR_TEMP
+                _color._publish();
+            #endif
+            #if IOT_DIMMER_HAS_RGB
+                _rgb._publish();
+            #endif
         }
+    }
+    else {
+        #if IOT_DIMMER_HAS_COLOR_TEMP
+            _color.setValue(id, value, hasValue, state, hasState);
+        #endif
+        #if IOT_DIMMER_HAS_RGB
+            _rgb.setValue(id, value, hasValue, state, hasState);
+        #endif
     }
 }
 

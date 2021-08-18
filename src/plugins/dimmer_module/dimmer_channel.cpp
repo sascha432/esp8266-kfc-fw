@@ -154,7 +154,7 @@ bool Channel::on(float transition)
 // #endif
     if (!_brightness) {
         if (!_storedBrightness)  {
-            _storedBrightness = MAX_LEVEL / 10;
+            _storedBrightness = kDefaultLevel;
         }
         return _set(_storedBrightness, transition);
     }
@@ -188,6 +188,11 @@ void Channel::setLevel(int32_t level, float transition, bool publish)
     else {
         _set(level, transition, publish);
     }
+    #if IOT_DIMMER_HAS_COLOR_TEMP
+        _dimmer->_color._channelsToBrightness();
+    #endif
+    #if IOT_DIMMER_HAS_RGB
+    #endif
 }
 
 void Channel::stopFading()
@@ -305,15 +310,16 @@ void Channel::_publishMQTT()
 {
     if (isConnected()) {
         using namespace MQTT::Json;
-        publish(_createTopics(TopicType::COMMAND_STATE), true, UnnamedObject(State(_brightness != 0), Brightness(_brightness), Transition(_dimmer->_getConfig()._base.lp_fadetime)).toString());
+        publish(_createTopics(TopicType::COMMAND_STATE), true, UnnamedObject(State(_brightness != 0), Brightness(_brightness), Transition(_dimmer->_getConfig()._base._fadetime())).toString());
     }
 }
 
 void Channel::_publishWebUI()
 {
     if (WebUISocket::hasAuthenticatedClients()) {
+        __LDBG_printf("channel=%u brightness=%u", _channel, _brightness);
         WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(WebUINS::Events(
-            WebUINS::Values(PrintString(F("d_chan%u"), _channel), _brightness, true),
+            WebUINS::Values(PrintString(F("d-chan%u"), _channel), _brightness, true),
             WebUINS::Values(F("group-switch-0"), _dimmer->isAnyOnInt(), true)
         )));
     }
@@ -333,7 +339,7 @@ void Channel::publishState()
         // __LDBG_printf("timer running");
         return;
     }
-    auto diff = get_time_diff(_publishLastTime, millis());
+    uint32_t diff = millis() - _publishLastTime;
     if (diff < 250 - 10) {
         __LDBG_printf("starting timer %u", 250 - diff);
         _Timer(_publishTimer).add(Event::milliseconds(250 - diff), false, [this](Event::CallbackTimerPtr) {
@@ -382,4 +388,3 @@ void Channel::publishState()
     //     _publishFlag &= ~kWebUIUpdateFlag;
     // }
 }
-

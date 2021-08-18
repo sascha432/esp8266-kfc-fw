@@ -5,7 +5,7 @@
 #pragma once
 
 #ifndef DEBUG_IOT_DIMMER_MODULE
-#    define DEBUG_IOT_DIMMER_MODULE 0
+#    define DEBUG_IOT_DIMMER_MODULE 1
 #endif
 
 // number of channels
@@ -69,10 +69,24 @@
 #    define IOT_DIMMER_HAS_RGBW 0
 #endif
 
+#if IOT_DIMMER_HAS_RGBW
+#    ifdef IOT_DIMMER_HAS_RGB && !IOT_DIMMER_HAS_RGB
+#        error IOT_DIMMER_HAS_RGB must be set to 1 if IOT_DIMMER_HAS_RGBW is set
+#    endif
+#    define IOT_DIMMER_HAS_RGB 1
+#endif
+
 // support for color temperature
 // requires at least 2 channels
 #ifndef IOT_DIMMER_HAS_COLOR_TEMP
 #    define IOT_DIMMER_HAS_COLOR_TEMP 0
+#endif
+
+#ifndef IOT_DIMMER_HAVE_CHANNEL_ORDER
+#    if IOT_ATOMIC_SUN_V2
+#        define IOT_DIMMER_HAVE_CHANNEL_ORDER 1
+#        define IOT_DIMMER_CHANNEL_ORDER      Base::_color._channel_ww1, Base::_color._channel_ww2, Base::_color._channel_cw1, Base::_color._channel_cw2
+#    endif
 #endif
 
 // allow dimming of each channel even if it belongs to RGB or color temperature group

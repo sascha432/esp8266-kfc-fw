@@ -234,7 +234,7 @@ public:
         _atModeHelpGenerator(getName_P());
     }
     virtual bool atModeHandler(AtModeArgs &args) override {
-        return _atModeHandler(args, *this, MAX_LEVEL);
+        return _atModeHandler(args, *this, kMaxLevel);
     }
 #endif
 };

@@ -9,6 +9,8 @@
 
 namespace Dimmer {
 
+    class ChannelsArray;
+
     class Plugin : public PluginComponent, public Module {
 
     public:
@@ -52,11 +54,6 @@ namespace Dimmer {
     inline void Plugin::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
     {
         Base::setValue(id, value, hasValue, state, hasState);
-    }
-
-    inline Plugin::ChannelsArray &Plugin::getChannels()
-    {
-        return _channels;
     }
 
     inline void Plugin::reconfigure(const String &source)

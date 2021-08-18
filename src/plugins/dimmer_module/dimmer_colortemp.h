@@ -7,11 +7,14 @@
 #if IOT_DIMMER_HAS_COLOR_TEMP
 
 #include <EventScheduler.h>
-#include "dimmer_base.h"
+#include "dimmer_def.h"
 #include "../src/plugins/mqtt/mqtt_json.h"
 #include "../src/plugins/mqtt/mqtt_client.h"
 
 namespace Dimmer {
+
+    class Base;
+    class Plugin;
 
     class ColorTemperature : public MQTTComponent {
     public:
@@ -38,28 +41,52 @@ namespace Dimmer {
 
     // WebUI
     public:
-        void _setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState);
+        // void _setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState);
         // void _getValues(JsonArray &array);
+        void getValues(WebUINS::Events &array);
+        void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState);
 
     private:
         String _createTopics(TopicType type);
 
-    // // channels are displayed in this order in the web ui
-    // // warm white
-    // int8_t channel_ww1;
-    // int8_t channel_ww2;
-    // // cold white
-    // int8_t channel_cw1;
-    // int8_t channel_cw2;
+    public:
+        void _channelsToBrightness();
+        void _brightnessToChannels();
+        void _publish();
+        void _publishMQTT();
+        void _publishWebUI();
 
-
-        // static constexpr uint8_t MAX_CHANNELS = 4;
-        // static constexpr int16_t MAX_LEVEL = IOT_ATOMIC_SUN_MAX_BRIGHTNESS;
-        // static constexpr int16_t MIN_LEVEL = (MAX_LEVEL / 100);    // below is treat as off
-        // static constexpr int16_t DEFAULT_LEVEL = MAX_LEVEL / 3;     // set this level if a channel is turned on without a brightness value
-        // static constexpr int32_t MAX_LEVEL_ALL_CHANNELS = MAX_LEVEL * MAX_CHANNELS;
     private:
+        void _setLockChannels(bool value);
+        void _calcRatios();
+
+        void begin();
+
+    private:
+        friend Base;
+        friend Plugin;
+
         Base &_base;
+        float _color;
+        float _colorPublished;
+        float _ratio[2];
+        int32_t _brightness;
+        int32_t _brightnessPublished;
+        bool _channelLock;
+        bool _channelLockPublished;
+        #if IOT_ATOMIC_SUN_V2
+            // warm white
+            int8_t _channel_ww1;
+            int8_t _channel_ww2;
+            // cold white
+            int8_t _channel_cw1;
+            int8_t _channel_cw2;
+        #else
+            // currently there is no generic methods to calculate brightness and color values
+            // supported are 2 WW (3000K or 2700K) and 2 CW (6000K or 5000K) channels
+            // the mireds shift is ~174, a little bit on the cold white side since those appear to be brighter for the human eye
+            #error not implemented
+        #endif
     };
 
 }

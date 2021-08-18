@@ -2,6 +2,9 @@
 
 ## Version 0.0.5
 
+- Merged Atomic Sun plugin into Dimmer plugin
+- Linear brightness levels with cubic interpolation for the dimmer plugin
+- Support for trailing edge dimmer v2.2.2 [https://github.com/sascha432/trailing_edge_dimmer](https://github.com/sascha432/trailing_edge_dimmer)
 - Friendly MQTT names
 - Fixed MDNS for Arduino Core 3.x
 - Better response for dimmer buttons and fix for disabled "long press"
@@ -21,7 +24,7 @@
 - Support for GDBStub
 - framework-arduinoespressif8266 3.1.0  / Arduino Core 3.0.1-dev
 - Cleanup of the Visual Studio mock libary for 3.0.0
-- arduinoespressif8266 patch files have been removed and moved to https://github.com/sascha432/Arduino/tree/master
+- arduinoespressif8266 patch files have been removed and moved to [https://github.com/sascha432/Arduino/tree/master](https://github.com/sascha432/Arduino/tree/master)
 - Removed internal memory debugger
 - New version for framework-arduinoespressif8266 3.30000.210519 (3.0.0) and GCC 10.2 changes
 

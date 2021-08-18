@@ -12,6 +12,7 @@
 #include "WebUIComponent.h"
 #include "plugins.h"
 #include "MQTTSensor.h"
+#include "../src/plugins/dimmer_module/firmware_protocol.h"
 
 namespace Dimmer {
     class Plugin;

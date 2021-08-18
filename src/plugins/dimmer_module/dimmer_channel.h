@@ -11,11 +11,15 @@
 
 namespace Dimmer {
 
+    class ChannelsArray;
+    class ColorTemperature;
+
     class Channel : public MQTTComponent {
     public:
-        static constexpr int16_t MAX_LEVEL = IOT_DIMMER_MODULE_MAX_BRIGHTNESS;
-        // static constexpr int16_t MIN_LEVEL = MAX_LEVEL / 100;
-        // static constexpr int16_t DEFAULT_LEVEL = MAX_LEVEL / 2;
+        static constexpr int16_t kMaxLevel = IOT_DIMMER_MODULE_MAX_BRIGHTNESS;
+        static constexpr uint32_t kMaxLevelSum = IOT_DIMMER_MODULE_MAX_BRIGHTNESS * IOT_DIMMER_MODULE_CHANNELS;
+        static constexpr int16_t kMinLevel = kMaxLevel / 100;           // 1%
+        static constexpr int16_t kDefaultLevel = kMaxLevel / 10;        // 10%
         static constexpr uint16_t kWebUIMaxUpdateRate = 150;
         static constexpr uint16_t kMQTTMaxUpdateRate = 600;
         static constexpr uint8_t kMQTTUpdateRateMultiplier = kMQTTMaxUpdateRate / kWebUIMaxUpdateRate;
@@ -62,7 +66,7 @@ namespace Dimmer {
         void publishState();
 
         static constexpr int16_t getMaxLevel() {
-            return MAX_LEVEL;
+            return kMaxLevel;
         }
 
         bool getOnState() const;
@@ -82,6 +86,9 @@ namespace Dimmer {
         virtual void _publishWebUI();
 
     private:
+        friend ChannelsArray;
+        friend ColorTemperature;
+
         void _publish();
         bool _set(int32_t level, float transition = NAN, bool publish = true);
         String _createTopics(TopicType type, bool full = true) const;
@@ -125,38 +132,5 @@ namespace Dimmer {
     {
         return _storedBrightness;
     }
-
-    using ChannelPtr = Channel *;
-
-    template<size_t _Channels>
-    class GroupArray : public std::array<ChannelPtr, _Channels>
-    {
-    public:
-        void setAll(int16_t value) {
-            for (auto channel: *this) {
-                channel->setLevel(value);
-            }
-        }
-
-        int32_t getSum() const {
-            int32_t sum = 0;
-            for (const auto channel: *this) {
-                sum += channel->getLevel();
-            }
-            return sum;
-        }
-
-        int32_t getSum(int16_t minLevel) const {
-            int32_t sum = 0;
-            for (const auto channel: *this) {
-                auto level = channel->getLevel();
-                if (level > minLevel) {
-                    sum += level;
-                }
-
-            }
-            return sum;
-        }
-    };
 
 }

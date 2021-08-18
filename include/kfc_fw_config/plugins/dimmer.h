@@ -72,9 +72,15 @@ namespace KFCConfigurationClasses {
                     #if IOT_ATOMIC_SUN_V2
                         CREATE_FLOAT_FIELD(on_fadetime, 1.0, 300.0, 12.5);
                         CREATE_FLOAT_FIELD(off_fadetime, 1.0, 300.0, 12.5);
+                        float _fadetime() const {
+                            return on_fadetime;
+                        }
                     #else
                         CREATE_FLOAT_FIELD(on_fadetime, 1.0, 300.0, 7.5);
                         CREATE_FLOAT_FIELD(off_fadetime, 1.0, 300.0, 7.5);
+                        float _fadetime() const {
+                            return lp_fadetime;
+                        }
                     #endif
 
                     DimmerConfig_t();
@@ -125,15 +131,15 @@ namespace KFCConfigurationClasses {
                         #endif
                         #if IOT_DIMMER_MODULE_CHANNELS >= 3
                             case 2:
-                                return getChannelName();
+                                return getChannel3Name();
                         #endif
                         #if IOT_DIMMER_MODULE_CHANNELS >= 4
                             case 3:
-                                return getChannelName();
+                                return getChannel4Name();
                         #endif
                         #if IOT_DIMMER_MODULE_CHANNELS >= 5
                             case 4:
-                                return getChannelName();
+                                return getChannel5Name();
                         #endif
                         #if IOT_DIMMER_MODULE_CHANNELS >= 6
                             case 5:

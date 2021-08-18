@@ -11,6 +11,7 @@
 #include <web_server.h>
 #include <serial_handler.h>
 #include "dimmer_def.h"
+#include "dimmer_colortemp.h"
 #include "../src/plugins/sensor/sensor.h"
 
 #ifndef STK500V1_RESET_PIN
@@ -51,7 +52,13 @@ namespace Dimmer {
 
         using DimmerConfig_t = KFCConfigurationClasses::Plugins::DimmerConfigNS::Dimmer::DimmerConfig_t;
 
-        ConfigType() : _version({}), _info({}), _firmwareConfig({}), _base({}) {}
+        ConfigType() :
+            _version({}),
+            _info({}),
+            _firmwareConfig({}),
+            _base({})
+        {
+        }
 
         operator bool() const {
             return _version;
@@ -79,6 +86,7 @@ namespace Dimmer {
     class Button;
     class Plugin;
     class ColorTemperature;
+    class RGBChannels;
 
     extern Plugin dimmer_plugin;
 
@@ -160,6 +168,8 @@ namespace Dimmer {
     protected:
         friend Channel;
         friend ColorTemperature;
+        friend RGBChannels;
+        friend Plugin;
 
         void begin();
         void end();
@@ -229,6 +239,14 @@ namespace Dimmer {
         static void resetDimmerMCU();
     private:
         static uint8_t _getChannelFrom(AsyncWebServerRequest *request);
+
+    protected:
+        #if IOT_DIMMER_HAS_COLOR_TEMP
+            ColorTemperature _color;
+        #endif
+        #if IOT_DIMMER_HAS_RGB
+            RGBChannels _rgb;
+        #endif
     };
 
     inline Base::~Base()

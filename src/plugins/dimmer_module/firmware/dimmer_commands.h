@@ -83,6 +83,23 @@ namespace Dimmer {
             }
         }
 
+        void writeConfig(bool noLocking = false, uint8_t address = kDefaultSlaveAddress) {
+            #ifdef DIMMER_COMMAND_WRITE_CONFIG
+                if (noLocking || lock()) {
+                    beginTransmission(address);
+                    write(DIMMER_REGISTER_COMMAND);
+                    write(DIMMER_COMMAND_WRITE_EEPROM);
+                    write(DIMMER_COMMAND_WRITE_CONFIG);
+                    endTransmission();
+                    if (!noLocking) {
+                        unlock();
+                    }
+                }
+            #else
+                writeEEPROM(noLocking);
+            #endif
+        }
+
         void restoreFactory(uint8_t address = kDefaultSlaveAddress) {
             if (!lock()) {
                 return;
@@ -115,22 +132,6 @@ namespace Dimmer {
                 write(DIMMER_COMMAND_PRINT_CONFIG);
                 endTransmission();
                 unlock();
-            #endif
-        }
-
-        void writeConfig(bool noLocking = false, uint8_t address = kDefaultSlaveAddress) {
-            #ifdef DIMMER_COMMAND_WRITE_CONFIG
-                if (noLocking || lock()) {
-                    beginTransmission(address);
-                    write(DIMMER_REGISTER_COMMAND);
-                    write(DIMMER_COMMAND_WRITE_CONFIG);
-                    endTransmission();
-                    if (!noLocking) {
-                        unlock();
-                    }
-                }
-            #else
-                writeEEPROM(noLocking);
             #endif
         }
 

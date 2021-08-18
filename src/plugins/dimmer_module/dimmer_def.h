@@ -5,7 +5,7 @@
 #pragma once
 
 #ifndef DEBUG_IOT_DIMMER_MODULE
-#    define DEBUG_IOT_DIMMER_MODULE 1
+#    define DEBUG_IOT_DIMMER_MODULE IOT_ATOMIC_SUN_V2
 #endif
 
 // number of channels

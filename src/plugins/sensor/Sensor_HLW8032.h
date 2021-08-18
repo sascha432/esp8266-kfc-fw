@@ -15,24 +15,24 @@
 
 // pin configuration
 #ifndef IOT_SENSOR_HLW8032_RX
-#define IOT_SENSOR_HLW8032_RX                   14
+#    define IOT_SENSOR_HLW8032_RX 14
 #endif
 
 #ifndef IOT_SENSOR_HLW8032_TX
-#define IOT_SENSOR_HLW8032_TX                   16
+#    define IOT_SENSOR_HLW8032_TX 16
 #endif
 
 // 0 to disable
 #ifndef IOT_SENSOR_HLW8032_PF
-#define IOT_SENSOR_HLW8032_PF                   12
+#    define IOT_SENSOR_HLW8032_PF 12
 #endif
 
 #ifndef IOT_SENSOR_HLW8032_SERIAL_INTERVAL
-#define IOT_SENSOR_HLW8032_SERIAL_INTERVAL      50
+#    define IOT_SENSOR_HLW8032_SERIAL_INTERVAL 50
 #endif
 
-#define IOT_SENSOR_HLW8032_VALUE_TO_INT(value)  ((value.high << 16) | (value.middle << 8) | value.low)
-#define IOT_SENSOR_HLW8032_WORD_TO_INT(value)   ((value.high << 8) | value.low)
+#define IOT_SENSOR_HLW8032_VALUE_TO_INT(value) ((value.high << 16) | (value.middle << 8) | value.low)
+#define IOT_SENSOR_HLW8032_WORD_TO_INT(value)  ((value.high << 8) | value.low)
 
 typedef struct {
     uint8_t high;

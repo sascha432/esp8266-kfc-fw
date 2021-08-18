@@ -32,7 +32,8 @@
 // - Check if the dimmer shows the correct readings and store the calibration with +STORE
 //
 // While turned off the current should be ~0.009A with a PF of 0.54. 0.0093A * 117.2V * 0.54 = ~0.589W
-// This requires a shunt >=0.005R, otherwise the current will be higher and the PF incorrect
+// This requires a shunt <=0.005R, otherwise the current will be higher and the PF incorrect
+// For the HLK-PM03 3W version I had quite a big difference ranging from 0.52-0.61W
 //
 // 	        measurement range
 // shunt      mA        A     absolute max. rating (A)

@@ -14,43 +14,43 @@
 
 // pin configuration
 #ifndef IOT_SENSOR_HLW8012_SEL
-#define IOT_SENSOR_HLW8012_SEL                      16
+#    define IOT_SENSOR_HLW8012_SEL 16
 #endif
 
 #ifndef IOT_SENSOR_HLW8012_SEL_VOLTAGE
-#define IOT_SENSOR_HLW8012_SEL_VOLTAGE              LOW
+#    define IOT_SENSOR_HLW8012_SEL_VOLTAGE LOW
 #endif
 
 #ifndef IOT_SENSOR_HLW8012_SEL_CURRENT
-#define IOT_SENSOR_HLW8012_SEL_CURRENT              HIGH
+#    define IOT_SENSOR_HLW8012_SEL_CURRENT HIGH
 #endif
 
 #ifndef IOT_SENSOR_HLW8012_CF
-#define IOT_SENSOR_HLW8012_CF                       14
+#    define IOT_SENSOR_HLW8012_CF 14
 #endif
 
 #ifndef IOT_SENSOR_HLW8012_CF1
-#define IOT_SENSOR_HLW8012_CF1                      12
+#    define IOT_SENSOR_HLW8012_CF1 12
 #endif
 
 // delay after switching to voltage mode before the sensor can be read
 #ifndef IOT_SENSOR_HLW8012_DELAY_START_U
-#define IOT_SENSOR_HLW8012_DELAY_START_U            1000
+#    define IOT_SENSOR_HLW8012_DELAY_START_U 1000
 #endif
 
 // measure voltage duration
 #ifndef IOT_SENSOR_HLW8012_MEASURE_LEN_U
-#define IOT_SENSOR_HLW8012_MEASURE_LEN_U            1500
+#    define IOT_SENSOR_HLW8012_MEASURE_LEN_U 1500
 #endif
 
 // delay after switching to current mode before the sensor can be read
 #ifndef IOT_SENSOR_HLW8012_DELAY_START_I
-#define IOT_SENSOR_HLW8012_DELAY_START_I            1250
+#    define IOT_SENSOR_HLW8012_DELAY_START_I 1250
 #endif
 
 // measure current duration
 #ifndef IOT_SENSOR_HLW8012_MEASURE_LEN_I
-#define IOT_SENSOR_HLW8012_MEASURE_LEN_I            12000
+#    define IOT_SENSOR_HLW8012_MEASURE_LEN_I 12000
 #endif
 
 class Sensor_HLW8012 : public Sensor_HLW80xx {
@@ -163,10 +163,10 @@ private:
     uint8_t _pinSel;
     uint8_t _pinCF;
     uint8_t _pinCF1;
-#if IOT_SENSOR_HLW80xx_NOISE_SUPPRESSION
-    NoiseBuffer _noiseBuffer;
-    float _noiseLevel;
-#endif
+    #if IOT_SENSOR_HLW80xx_NOISE_SUPPRESSION
+        NoiseBuffer _noiseBuffer;
+        float _noiseLevel;
+    #endif
     SensorInput _inputCF;
     SensorInput *_inputCF1;
     SensorInput _inputCFI;

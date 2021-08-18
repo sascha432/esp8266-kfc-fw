@@ -65,8 +65,7 @@ namespace KFCConfigurationClasses {
                             return 0xff;
                         }
                     #else
-                        // CREATE_BOOL_BITFIELD(config_valid);
-                        CREATE_UINT16_BITFIELD_MIN_MAX(min_brightness, 7, 0, 95, 15);
+                        CREATE_UINT16_BITFIELD_MIN_MAX(min_brightness, 7, 0, 95, 1);
                         CREATE_UINT16_BITFIELD_MIN_MAX(max_brightness, 7, 5, 100, 100);
                     #endif
                     #if IOT_ATOMIC_SUN_V2
